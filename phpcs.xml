@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<ruleset name="WordPress ActivityPub">
+	<description>WordPress ActivityPub Standards</description>
+	<file>./activitypub.php</file>
+	<file>./includes/</file>
+	<config name="minimum_supported_wp_version" value="4.7"/>
+	<exclude-pattern>*/includes/*\.(inc|css|js|svg)</exclude-pattern>
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<rule ref="PHPCompatibility"/>
+	<config name="testVersion" value="5.3-"/>
+	<rule ref="WordPress-Core" />
+	<rule ref="WordPress.Files.FileName">
+		<properties>
+			<property name="strict_class_file_names" value="false" />
+		</properties>
+	</rule>
+	<rule ref="WordPress.WP.DeprecatedFunctions" />
+	<rule ref="WordPress-Extra" />
+	<rule ref="WordPress.WP.I18n"/>
+	<config name="text_domain" value="activitypub,default"/>
+</ruleset>

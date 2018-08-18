@@ -1,0 +1,19 @@
+{
+    "name": "pfefferle/wordpress-activitypub",
+    "description": "The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.",
+    "type": "wordpress-plugin",
+    "require": {
+        "php": ">=5.3.0",
+        "composer/installers": "~1.0"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Matthias Pfefferle",
+            "email": "pfefferle@gmail.com"
+        }
+    ],
+    "extra": {
+        "installer-name": "activitypub"
+    }
+}

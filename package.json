@@ -1,0 +1,23 @@
+{
+  "name": "activitypub",
+  "description": "The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pfefferle/wordpress-activitypub.git"
+  },
+  "author": {
+    "name": "Matthias Pfefferle",
+    "web": "https://notiz.blog"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pfefferle/wordpress-activitypub/issues"
+  },
+  "homepage": "https://github.com/pfefferle/wordpress-activitypub#readme",
+  "devDependencies": {
+    "grunt": "^1.0.3",
+    "grunt-checktextdomain": "^1.0.1",
+    "grunt-wp-i18n": "^1.0.2",
+    "grunt-wp-readme-to-markdown": "^2.0.1"
+  }
+}
