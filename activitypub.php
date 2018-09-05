@@ -19,9 +19,13 @@ function activitypub_init() {
 	require_once dirname( __FILE__ ) . '/includes/functions.php';
 
 	require_once dirname( __FILE__ ) . '/includes/class-activitypub.php';
-	add_filter( 'template_include', array( 'Activity_Pub', 'render_profile' ), 99 );
-	add_action( 'webfinger_user_data', array( 'Activity_Pub', 'add_webfinger_discovery' ), 10, 3 );
-	add_filter( 'query_vars', array( 'Activity_Pub', 'add_query_vars' ) );
-	add_action( 'init', array( 'Activity_Pub', 'add_rewrite_endpoint' ) );
+	add_filter( 'template_include', array( 'Activitypub', 'render_profile' ), 99 );
+	add_action( 'webfinger_user_data', array( 'Activitypub', 'add_webfinger_discovery' ), 10, 3 );
+	add_filter( 'query_vars', array( 'Activitypub', 'add_query_vars' ) );
+	add_action( 'init', array( 'Activitypub', 'add_rewrite_endpoint' ) );
+
+	require_once dirname( __FILE__ ) . '/includes/class-activitypub-outbox.php';
+	// Configure the REST API route
+	add_action( 'rest_api_init', array( 'Activitypub_Outbox', 'register_routes' ) );
 }
 add_action( 'plugins_loaded', 'activitypub_init' );

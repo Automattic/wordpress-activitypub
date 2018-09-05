@@ -1,6 +1,6 @@
 <?php
 
-class Activity_Pub {
+class Activitypub {
 	public static function render_profile( $template ) {
 		if ( ! is_author() ) {
 			return $template;
