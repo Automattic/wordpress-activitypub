@@ -6,7 +6,7 @@ class Activitypub {
 			return $template;
 		}
 
-		$json_template = dirname( __FILE__ ) . '/../templates/author-profile.php';
+		$json_template = dirname( __FILE__ ) . '/../templates/profile.php';
 
 		global $wp_query;
 
@@ -61,6 +61,7 @@ class Activitypub {
 	 */
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
+
 		return $vars;
 	}
 

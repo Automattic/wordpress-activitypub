@@ -1,10 +1,4 @@
 <?php
-/**
- * Activity Streams 1 Feed Template for displaying AS1 Posts feed.
- *
- * @link https://github.com/pento/7B a lot of changes made by @pento
- */
-
 $author_id = get_the_author_meta( 'ID' );
 
 $json = new stdClass();
@@ -32,7 +26,7 @@ if ( has_header_image() ) {
 	);
 }
 
-$json->outbox = get_rest_url( null, '/activitypub/1.0/outbox' );
+$json->outbox = get_rest_url( null, "/activitypub/1.0/users/$author_id/outbox" );
 
 if ( method_exists( 'Magic_Sig', 'get_public_key' ) ) {
 	// phpcs:ignore
