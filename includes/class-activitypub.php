@@ -30,7 +30,8 @@ class Activitypub {
 
 		if (
 			! in_array( 'application/activity+json', $accept, true ) &&
-			! in_array( 'application/ld+json', $accept, true )
+			! in_array( 'application/ld+json', $accept, true ) &&
+			! in_array( 'application/json', $accept, true )
 		) {
 			return $template;
 		}
@@ -48,7 +49,7 @@ class Activitypub {
 	public static function add_webfinger_discovery( $array, $resource, $user ) {
 		$array['links'][] = array(
 			'rel'  => 'self',
-			'type' => 'aplication/activity+json',
+			'type' => 'application/activity+json',
 			'href' => get_author_posts_url( $user->ID ),
 		);
 

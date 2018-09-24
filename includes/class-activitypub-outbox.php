@@ -60,8 +60,9 @@ class Activitypub_Outbox {
 		) );
 
 		$json->first = add_query_arg( 'page', 0, $json->partOf );
-		$json->last  = add_query_arg( 'page', ( $json->totalItems%10 )-1, $json->partOf );
-		if ( $json->last < $page ) {
+		$json->last  = add_query_arg( 'page', ( ceil ( $json->totalItems / 10 ) ) - 1, $json->partOf );
+
+		if ( ( ceil ( $json->totalItems / 10 ) ) - 1 > $page ) {
 			$json->next  = add_query_arg( 'page', ++$page, $json->partOf );
 		}
 
@@ -87,21 +88,27 @@ class Activitypub_Outbox {
 	public static function post_to_json( $post ) {
 		$json = new stdClass();
 
-		$json->published = $post->post_date;
-		$json->id        = $post->guid;
+		$json->published = date( 'Y-m-d\TH:i:s\Z', strtotime( $post->post_date ) );
+		$json->id        = $post->guid . '&activitypub';
 		$json->type      = 'Create';
-		$json->actor     = 'https://mastodon.social/users/pfefferle';
+		$json->actor      = get_author_posts_url( $post->post_author );
 		$json->to        = array( 'https://www.w3.org/ns/activitystreams#Public' );
+		$json->cc        = array( 'https://www.w3.org/ns/activitystreams#Public' );
 
 		$json->object = array(
 			'id'         => $post->guid,
 			'type'       => 'Note',
-			'published'  => $post->post_date,
+			'published'  => date( 'Y-m-d\TH:i:s\Z', strtotime( $post->post_date ) ),
 			'to'         => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-			'content'    => $post->post_content,
+			'cc'         => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'summary'    => null,
+			'inReplyTo'  => null,
+			'content'    => esc_html( $post->post_content ),
 			'contentMap' => array(
 				strstr( get_locale(), '_', true ) => $post->post_content,
 			),
+			'attachment' => array(),
+			'tag'        => array(),
 		);
 
 		return $json;

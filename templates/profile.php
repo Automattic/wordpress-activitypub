@@ -11,8 +11,8 @@ $json->{'@context'} = array(
 $json->id                = get_author_posts_url( $author_id );
 $json->type              = 'Person';
 $json->name              = get_the_author_meta( 'display_name', $author_id );
-$json->summary           = get_the_author_meta( 'description', $author_id );
-$json->preferredUsername = get_the_author(); // phpcs:ignore
+$json->summary           = wp_strip_all_tags( get_the_author_meta( 'description', $author_id ) );
+$json->preferredUsername = get_the_author_meta( 'login', $author_id ); // phpcs:ignore
 $json->url               = get_author_posts_url( $author_id );
 $json->icon              = array(
 	'type' => 'Image',
@@ -26,6 +26,7 @@ if ( has_header_image() ) {
 	);
 }
 
+$json->inbox  = get_rest_url( null, "/activitypub/1.0/users/$author_id/inbox" );
 $json->outbox = get_rest_url( null, "/activitypub/1.0/users/$author_id/outbox" );
 
 if ( method_exists( 'Magic_Sig', 'get_public_key' ) ) {
