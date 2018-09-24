@@ -24,7 +24,7 @@ env:
 matrix:
   include:
     - php: 5.6
-      env: WP_VERSION=latest WP_MULTISITE=0 WP_PULUGIN_DEPLOY=1
+      env: WP_VERSION=latest WP_MULTISITE=0 WP_PLUGIN_DEPLOY=1
 
 before_script:
   - export PATH="$HOME/.composer/vendor/bin:$PATH"
