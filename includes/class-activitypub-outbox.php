@@ -32,7 +32,7 @@ class Activitypub_Outbox {
 			) );
 		}
 
-		$page = $request->get_param( 'page', 0 );
+		$page = $request->get_param( 'page' );
 
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
@@ -44,15 +44,42 @@ class Activitypub_Outbox {
 		$json->{'@context'} = array(
 			'https://www.w3.org/ns/activitystreams',
 			'https://w3id.org/security/v1',
+			array(
+				'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
+				'sensitive' => 'as:sensitive',
+				'movedTo' => array(
+					'@id' => 'as:movedTo',
+					'@type' => '@id',
+				),
+				'Hashtag' => 'as:Hashtag',
+				'ostatus' => 'http://ostatus.org#',
+				'atomUri' => 'ostatus:atomUri',
+				'inReplyToAtomUri' => 'ostatus:inReplyToAtomUri',
+				'conversation' => 'ostatus:conversation',
+				'toot' => 'http://joinmastodon.org/ns#',
+				'Emoji' => 'toot:Emoji',
+				'focalPoint' => array(
+					'@container' => '@list',
+					'@id' => 'toot:focalPoint',
+				),
+				'featured' => array(
+					'@id' => 'toot:featured',
+					'@type' => '@id',
+				),
+				'schema' => 'http://schema.org#',
+				'PropertyValue' => 'schema:PropertyValue',
+				'value' => 'schema:value',
+			),
 		);
 
-		$json->generator  = 'http://wordpress.org/?v=' . get_bloginfo_rss( 'version' );
-		$json->actor      = get_author_posts_url( $author_id );
-		$json->type       = 'OrderedCollectionPage';
-		$json->partOf     = get_rest_url( null, "/activitypub/1.0/users/$author_id/outbox" ); // phpcs:ignore
+		$json->id = home_url( add_query_arg( NULL, NULL ) );
+		$json->generator = 'http://wordpress.org/?v=' . get_bloginfo_rss( 'version' );
+		$json->actor = get_author_posts_url( $author_id );
+		$json->type = 'OrderedCollectionPage';
+		$json->partOf = get_rest_url( null, "/activitypub/1.0/users/$author_id/outbox" ); // phpcs:ignore
 
-		$count_posts      = wp_count_posts();
-		$json->totalItems = $count_posts->publish;
+		$count_posts = wp_count_posts();
+		$json->totalItems = intval( $count_posts->publish );
 
 		$posts = get_posts( array(
 			'author' => $author_id,
@@ -80,40 +107,10 @@ class Activitypub_Outbox {
 
 		$response = new WP_REST_Response( $json, 200 );
 
-		$response->header( 'Content-Type', 'application/activity-json' );
+		$response->header( 'Content-Type', 'application/activity+json' );
 
 		return $response;
 	}
-
-	public static function post_to_json( $post ) {
-		$json = new stdClass();
-
-		$json->published = date( 'Y-m-d\TH:i:s\Z', strtotime( $post->post_date ) );
-		$json->id        = $post->guid . '&activitypub';
-		$json->type      = 'Create';
-		$json->actor      = get_author_posts_url( $post->post_author );
-		$json->to        = array( 'https://www.w3.org/ns/activitystreams#Public' );
-		$json->cc        = array( 'https://www.w3.org/ns/activitystreams#Public' );
-
-		$json->object = array(
-			'id'         => $post->guid,
-			'type'       => 'Note',
-			'published'  => date( 'Y-m-d\TH:i:s\Z', strtotime( $post->post_date ) ),
-			'to'         => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-			'cc'         => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-			'summary'    => null,
-			'inReplyTo'  => null,
-			'content'    => esc_html( $post->post_content ),
-			'contentMap' => array(
-				strstr( get_locale(), '_', true ) => $post->post_content,
-			),
-			'attachment' => array(),
-			'tag'        => array(),
-		);
-
-		return $json;
-	}
-
 
 	public static function request_parameters() {
 		$params = array();
