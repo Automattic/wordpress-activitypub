@@ -1,12 +1,16 @@
 <?php
 
 class Activitypub {
-	public static function render_profile( $template ) {
-		if ( ! is_author() ) {
+	public static function render_json_template( $template ) {
+		if ( ! is_author() && ! is_singular() ) {
 			return $template;
 		}
 
-		$json_template = dirname( __FILE__ ) . '/../templates/profile.php';
+		if ( is_author() ) {
+			$json_template = dirname( __FILE__ ) . '/../templates/json-author.php';
+		} elseif ( is_singular() ) {
+			$json_template = dirname( __FILE__ ) . '/../templates/json-post.php';
+		}
 
 		global $wp_query;
 
@@ -70,6 +74,6 @@ class Activitypub {
 	 * Add our rewrite endpoint to permalinks and pages.
 	 */
 	public static function add_rewrite_endpoint() {
-		add_rewrite_endpoint( 'activitypub', EP_AUTHORS );
+		add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 	}
 }
