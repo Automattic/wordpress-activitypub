@@ -3,37 +3,7 @@ $author_id = get_the_author_meta( 'ID' );
 
 $json = new stdClass();
 
-$json->{'@context'} = array(
-	'https://www.w3.org/ns/activitystreams',
-	'https://w3id.org/security/v1',
-	array(
-		'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
-		'sensitive' => 'as:sensitive',
-		'movedTo' => array(
-			'@id' => 'as:movedTo',
-			'@type' => '@id',
-		),
-		'Hashtag' => 'as:Hashtag',
-		'ostatus' => 'http://ostatus.org#',
-		'atomUri' => 'ostatus:atomUri',
-		'inReplyToAtomUri' => 'ostatus:inReplyToAtomUri',
-		'conversation' => 'ostatus:conversation',
-		'toot' => 'http://joinmastodon.org/ns#',
-		'Emoji' => 'toot:Emoji',
-		'focalPoint' => array(
-			'@container' => '@list',
-			'@id' => 'toot:focalPoint',
-		),
-		'featured' => array(
-			'@id' => 'toot:featured',
-			'@type' => '@id',
-		),
-		'schema' => 'http://schema.org#',
-		'PropertyValue' => 'schema:PropertyValue',
-		'value' => 'schema:value',
-	),
-);
-
+$json->{'@context'} = get_activitypub_context();
 $json->id = get_author_posts_url( $author_id );
 $json->type = 'Person';
 $json->name = get_the_author_meta( 'display_name', $author_id );
@@ -56,11 +26,8 @@ if ( has_header_image() ) {
 
 $json->inbox = get_rest_url( null, "/activitypub/1.0/users/$author_id/inbox" );
 $json->outbox = get_rest_url( null, "/activitypub/1.0/users/$author_id/outbox" );
-//$json->following = get_rest_url( null, "/activitypub/1.0/users/$author_id/following" );
-//$json->followers = get_rest_url( null, "/activitypub/1.0/users/$author_id/followers" );
-//$json->featured  = get_rest_url( null, "/activitypub/1.0/users/$author_id/featured" );
 
-//$json->manuallyApprovesFollowers = apply_filters( 'activitypub_manually_approves_followers', __return_false() ); // phpcs:ignore
+$json->manuallyApprovesFollowers = apply_filters( 'activitypub_json_manually_approves_followers', __return_false() ); // phpcs:ignore
 
 if ( method_exists( 'Magic_Sig', 'get_public_key' ) ) {
 	// phpcs:ignore

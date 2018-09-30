@@ -1,6 +1,17 @@
 <?php
-
+/**
+ * ActivityPub Class
+ *
+ * @author Matthias Pfefferle
+ */
 class Activitypub {
+	/**
+	 * Return a AS2 JSON version of an author, post or page
+	 *
+	 * @param  string $template the path to the template object
+	 *
+	 * @return string the new path to the JSON template
+	 */
 	public static function render_json_template( $template ) {
 		if ( ! is_author() && ! is_singular() ) {
 			return $template;
@@ -14,7 +25,7 @@ class Activitypub {
 
 		global $wp_query;
 
-		if ( isset( $wp_query->query_vars['activitypub'] ) ) {
+		if ( isset( $wp_query->query_vars['as2'] ) ) {
 			return $json_template;
 		}
 
@@ -65,7 +76,7 @@ class Activitypub {
 	 * won't mangle it.
 	 */
 	public static function add_query_vars( $vars ) {
-		$vars[] = 'activitypub';
+		$vars[] = 'as2';
 
 		return $vars;
 	}
@@ -74,6 +85,6 @@ class Activitypub {
 	 * Add our rewrite endpoint to permalinks and pages.
 	 */
 	public static function add_rewrite_endpoint() {
-		add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
+		add_rewrite_endpoint( 'as2', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 	}
 }

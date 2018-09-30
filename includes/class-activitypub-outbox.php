@@ -32,7 +32,7 @@ class Activitypub_Outbox {
 			) );
 		}
 
-		$page = $request->get_param( 'page' );
+		$page = $request->get_param( 'page', 0 );
 
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
@@ -41,37 +41,7 @@ class Activitypub_Outbox {
 
 		$json = new stdClass();
 
-		$json->{'@context'} = array(
-			'https://www.w3.org/ns/activitystreams',
-			'https://w3id.org/security/v1',
-			array(
-				'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
-				'sensitive' => 'as:sensitive',
-				'movedTo' => array(
-					'@id' => 'as:movedTo',
-					'@type' => '@id',
-				),
-				'Hashtag' => 'as:Hashtag',
-				'ostatus' => 'http://ostatus.org#',
-				'atomUri' => 'ostatus:atomUri',
-				'inReplyToAtomUri' => 'ostatus:inReplyToAtomUri',
-				'conversation' => 'ostatus:conversation',
-				'toot' => 'http://joinmastodon.org/ns#',
-				'Emoji' => 'toot:Emoji',
-				'focalPoint' => array(
-					'@container' => '@list',
-					'@id' => 'toot:focalPoint',
-				),
-				'featured' => array(
-					'@id' => 'toot:featured',
-					'@type' => '@id',
-				),
-				'schema' => 'http://schema.org#',
-				'PropertyValue' => 'schema:PropertyValue',
-				'value' => 'schema:value',
-			),
-		);
-
+		$json->{'@context'} = get_activitypub_context();
 		$json->id = home_url( add_query_arg( NULL, NULL ) );
 		$json->generator = 'http://wordpress.org/?v=' . get_bloginfo_rss( 'version' );
 		$json->actor = get_author_posts_url( $author_id );
@@ -82,8 +52,9 @@ class Activitypub_Outbox {
 		$json->totalItems = intval( $count_posts->publish );
 
 		$posts = get_posts( array(
+			'posts_per_page' => 10,
 			'author' => $author_id,
-			'offset' => $page,
+			'offset' => $page * 10,
 		) );
 
 		$json->first = add_query_arg( 'page', 0, $json->partOf );
@@ -94,7 +65,8 @@ class Activitypub_Outbox {
 		}
 
 		foreach ( $posts as $post ) {
-			$json->orderedItems[] = self::post_to_json( $post ); // phpcs:ignore
+			$activitypub_post = new Activitypub_Post( $post );
+			$json->orderedItems[] = $activitypub_post->to_json_array(); // phpcs:ignore
 		}
 
 		// filter output

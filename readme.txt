@@ -4,7 +4,7 @@ Donate link: https://notiz.blog/donate/
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
 Tested up to: 4.9.8
-Stable tag: 0.0.1
+Stable tag: 0.0.2
 Requires PHP: 5.3
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -23,6 +23,11 @@ If you want to have a **decentralized social network**, please use [Mastodon](ht
 
 
 == Changelog ==
+
+= 0.0.2 =
+
+* refactorins
+* functional inbox
 
 = 0.0.1 =
 
