@@ -29,14 +29,12 @@ $json->outbox = get_rest_url( null, "/activitypub/1.0/users/$author_id/outbox" )
 
 $json->manuallyApprovesFollowers = apply_filters( 'activitypub_json_manually_approves_followers', __return_false() ); // phpcs:ignore
 
-if ( method_exists( 'Magic_Sig', 'get_public_key' ) ) {
-	// phpcs:ignore
-	$json->publicKey = array(
-		'id' => get_author_posts_url( $author_id ) . '#main-key',
-		'owner' => get_author_posts_url( $author_id ),
-		'publicKeyPem' => trim( Magic_Sig::get_public_key( $author_id ) ),
-	);
-}
+// phpcs:ignore
+$json->publicKey = array(
+	'id' => get_author_posts_url( $author_id ) . '#main-key',
+	'owner' => get_author_posts_url( $author_id ),
+	'publicKeyPem' => trim( Activitypub_Signature::get_public_key( $author_id ) ),
+);
 
 $json->tag = array();
 $json->attachment = array();

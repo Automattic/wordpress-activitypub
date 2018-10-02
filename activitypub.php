@@ -16,6 +16,7 @@
  * Initialize plugin
  */
 function activitypub_init() {
+	require_once dirname( __FILE__ ) . '/includes/class-activitypub-signature.php';
 	require_once dirname( __FILE__ ) . '/includes/class-activitypub-post.php';
 	require_once dirname( __FILE__ ) . '/includes/functions.php';
 
