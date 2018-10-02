@@ -7,7 +7,7 @@
 	<exclude-pattern>*/includes/*\.(inc|css|js|svg)</exclude-pattern>
 	<exclude-pattern>*/vendor/*</exclude-pattern>
 	<rule ref="PHPCompatibility"/>
-	<config name="testVersion" value="5.3-"/>
+	<config name="testVersion" value="5.6-"/>
 	<rule ref="WordPress-Core">
 		<exclude name="Generic.Formatting.MultipleStatementAlignment.NotSameWarning" />
 		<exclude name="WordPress.Arrays.MultipleStatementAlignment.DoubleArrowNotAligned" />
