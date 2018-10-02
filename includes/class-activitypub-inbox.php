@@ -13,7 +13,7 @@ class Activitypub_Inbox {
 			'activitypub/1.0', '/inbox', array(
 				array(
 					'methods'  => WP_REST_Server::EDITABLE,
-					'callback' => array( 'Activitypub_Inbox', 'shared_inbox' ),
+					'callback' => array( 'Activitypub_Inbox', 'global_inbox' ),
 				),
 			)
 		);
@@ -35,13 +35,19 @@ class Activitypub_Inbox {
 
 		$data = json_decode( $request->get_body(), true );
 
-		do_action( 'activitypub_inbox', $data );
+		$type = 'create';
+		if ( ! empty( $data['type'] ) ) {
+			$type = strtolower( $data['type'] );
+		}
+
+		do_action( 'activitypub_inbox', $data, $author_id, $type );
+		do_action( "activitypub_inbox_{$type}", $data, $author_id );
 
 		if ( ! is_array( $data ) || ! array_key_exists( 'type', $data ) ) {
 			return new WP_Error( 'rest_invalid_data', __( 'Invalid payload', 'activitypub' ), array( 'status' => 422 ) );
 		}
 
-		return new WP_REST_Response();
+		return new WP_REST_Response( null, 202 );
 	}
 
 	/**
@@ -51,7 +57,7 @@ class Activitypub_Inbox {
 	 *
 	 * @return WP_Error not yet implemented
 	 */
-	public static function shared_inbox( $request ) {
+	public static function global_inbox( $request ) {
 		// Create the response object
 		return new WP_Error( 'rest_not_implemented', __( 'This method is not yet implemented', 'activitypub' ), array( 'status' => 501 ) );
 	}
