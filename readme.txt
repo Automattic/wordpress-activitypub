@@ -28,6 +28,7 @@ If you want to have a **decentralized social network**, please use [Mastodon](ht
 
 * refactorins
 * functional inbox
+* nicer profile views
 
 = 0.0.1 =
 

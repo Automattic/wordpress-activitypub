@@ -7,7 +7,7 @@ $json->{'@context'} = get_activitypub_context();
 $json->id = get_author_posts_url( $author_id );
 $json->type = 'Person';
 $json->name = get_the_author_meta( 'display_name', $author_id );
-$json->summary = wp_strip_all_tags( get_the_author_meta( 'description', $author_id ) );
+$json->summary = esc_html( get_the_author_meta( 'description', $author_id ) );
 $json->preferredUsername = get_the_author_meta( 'login', $author_id ); // phpcs:ignore
 $json->url = get_author_posts_url( $author_id );
 $json->icon = array(
@@ -38,6 +38,27 @@ $json->publicKey = array(
 
 $json->tag = array();
 $json->attachment = array();
+
+$json->attachment[] = array(
+	'type' => 'PropertyValue',
+	'name' => __( 'Blog', 'activitypub' ),
+	'value' => esc_html( '<a rel="me" title="' . esc_attr( home_url( '/' ) ) . '" target="_blank" href="' . home_url( '/' ) . '">' . wp_parse_url( home_url( '/' ), PHP_URL_HOST ) . '</a>' ),
+);
+
+$json->attachment[] = array(
+	'type' => 'PropertyValue',
+	'name' => __( 'Profile', 'activitypub' ),
+	'value' => esc_html( '<a rel="me" title="' . esc_attr( get_author_posts_url( $author_id ) ) . '" target="_blank" href="' . get_author_posts_url( $author_id ) . '">' . wp_parse_url( get_author_posts_url( $author_id ), PHP_URL_HOST ) . '</a>' ),
+);
+
+if ( get_the_author_meta( 'user_url', $author_id ) ) {
+	$json->attachment[] = array(
+		'type' => 'PropertyValue',
+		'name' => __( 'Website', 'activitypub' ),
+		'value' => esc_html( '<a rel="me" title="' . esc_attr( get_the_author_meta( 'user_url', $author_id ) ) . '" target="_blank" href="' . get_the_author_meta( 'user_url', $author_id ) . '">' . wp_parse_url( get_the_author_meta( 'user_url', $author_id ), PHP_URL_HOST ) . '</a>' ),
+	);
+}
+
 //$json->endpoints = array(
 //	'sharedInbox' => get_rest_url( null, '/activitypub/1.0/inbox' ),
 //);
