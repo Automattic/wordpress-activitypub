@@ -5,6 +5,7 @@
 .travis.yml
 .codeclimate.yml
 .data
+.svnignore
 Gruntfile.js
 LINGUAS
 Makefile
