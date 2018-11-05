@@ -1,94 +1,95 @@
+sudo: false
+dist: trusty
 language: php
-
 notifications:
   email:
     on_success: never
     on_failure: change
 
-php:
-  - 5.6
-  - 7
+cache:
+  directories:
+    - vendor
+    - $HOME/.composer/cache
 
 after_success: bash bin/deploy.sh
 
 env:
   matrix:
-    - WP_VERSION=latest WP_MULTISITE=0
-    - WP_VERSION=nightly WP_MULTISITE=0
-
+  - WP_VERSION=latest WP_MULTISITE=0
   global:
-    - SVN_REPO: https://plugins.svn.wordpress.org/activitystream-extension/
-    - GH_REF: https://github.com/pfefferle/wordpress-activitystream-extension.git
-    - secure: "mNWrMScJrvoABY89j7eWG33cQnaIzvZ5q32bMhZO5kVVqiCI+XVKZuf7vC2DdSeF7BHTgh9PdkkkAzhW/6yhOT1IEXfRMF/5U1JrWbGkN5ByKH0cdxbExmuxKd1sSRC3zxkL7LYoE8vVhR6SXwuqyqa9uBNphJPvV+c6dHNwIjawPbJMlakUXc6a3hZSJbScn5F1a293jgc4Oe2souC1Hds/RTw2igoDdGqY1GC9J6EpXeCETltQcd1HKi+KD2kG47gBWb1B9JTKfkXH7x93wGYUq2JMb0FRzaCe/JzKcEkeyqdZgg/8IkxigY7uRxECF+amu+g5iO4fWPt4KgtoBno1+q4M3T9YHOZ4tv9iJ7Z9jjO/zraeIcXCC0mHP8m3Wqg4D4LWOWtCL+r/iCPIZN/26fQjOtH3MIrpWYEIw6BTrCMRxxYaf7ipc0xzw1rL8IJWRWyMYt21LinuQqAF8K8NMgQPXRbUJ0o6MThyBZuo15otz95cIoXc7ofJcZvEnBe3kwylUKSrO8QCrbfscMzd7wu1KXBDWGWM8jQA0PDN0cYLBIJuqrrLO9w0b3nhsqkuwbmOJG9yIySUkKQMKFIJ6rn7O2qWibNKMGoJWtyM+NOmJ4TlbyOGwSRtjxInUTUlecCZ9WoIwMb1JcB7YH8XAmeMAuRrooPOEx3n8xo="
+  - WP_TRAVISCI=travis:phpunit
+  - SVN_REPO: https://plugins.svn.wordpress.org/activitypub/
+  - GH_REF: https://github.com/pfefferle/wordpress-activitypub.git
+  - secure: "mNWrMScJrvoABY89j7eWG33cQnaIzvZ5q32bMhZO5kVVqiCI+XVKZuf7vC2DdSeF7BHTgh9PdkkkAzhW/6yhOT1IEXfRMF/5U1JrWbGkN5ByKH0cdxbExmuxKd1sSRC3zxkL7LYoE8vVhR6SXwuqyqa9uBNphJPvV+c6dHNwIjawPbJMlakUXc6a3hZSJbScn5F1a293jgc4Oe2souC1Hds/RTw2igoDdGqY1GC9J6EpXeCETltQcd1HKi+KD2kG47gBWb1B9JTKfkXH7x93wGYUq2JMb0FRzaCe/JzKcEkeyqdZgg/8IkxigY7uRxECF+amu+g5iO4fWPt4KgtoBno1+q4M3T9YHOZ4tv9iJ7Z9jjO/zraeIcXCC0mHP8m3Wqg4D4LWOWtCL+r/iCPIZN/26fQjOtH3MIrpWYEIw6BTrCMRxxYaf7ipc0xzw1rL8IJWRWyMYt21LinuQqAF8K8NMgQPXRbUJ0o6MThyBZuo15otz95cIoXc7ofJcZvEnBe3kwylUKSrO8QCrbfscMzd7wu1KXBDWGWM8jQA0PDN0cYLBIJuqrrLO9w0b3nhsqkuwbmOJG9yIySUkKQMKFIJ6rn7O2qWibNKMGoJWtyM+NOmJ4TlbyOGwSRtjxInUTUlecCZ9WoIwMb1JcB7YH8XAmeMAuRrooPOEx3n8xo="
 
 matrix:
   include:
-    - php: 7.2
-    - php: 7.1
-    - php: 7.0
-    - php: 5.6
-    - php: 5.6
-      env: WP_PLUGIN_DEPLOY=1
-    - php: 5.5
-    - php: 5.4
-    - php: 5.3
-      dist: precise
-    - php: 5.2
-      dist: precise
+  - php: 7.2
+  - php: 7.1
+  - php: 7.0
+  - php: 5.6
+  - php: 5.6
+    env: WP_PLUGIN_DEPLOY=1
+  - php: 5.5
+  - php: 5.4
+  - php: 5.3
+    dist: precise
+  - php: 5.2
+    dist: precise
 
 before_script:
-  - |
-    # Remove Xdebug for a huge performance increase:
-    if [ -f ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/xdebug.ini ]; then
-      phpenv config-rm xdebug.ini
-    else
-      echo "xdebug.ini does not exist"
-    fi
-  - |
-    # Export Composer's global bin dir to PATH:
-    composer config --list --global
-    export PATH=`composer config --list --global | grep '\[home\]' | { read a; echo "${a#* }/vendor/bin:$PATH"; }`
-  - |
-    # Install the specified version of PHPUnit depending on the PHP version:
-    if [[ "$WP_TRAVISCI" == "travis:phpunit" ]]; then
-      case "$TRAVIS_PHP_VERSION" in
-        7.2|7.1|7.0|nightly)
-          echo "Using PHPUnit 6.x"
-          composer global require "phpunit/phpunit:^6"
-          ;;
-        5.6|5.5|5.4|5.3)
-          echo "Using PHPUnit 4.x"
-          composer global require "phpunit/phpunit:^4"
-          ;;
-        5.2)
-          # Do nothing, use default PHPUnit 3.6.x
-          echo "Using default PHPUnit, hopefully 3.6"
-          ;;
-        *)
-          echo "No PHPUnit version handling for PHP version $TRAVIS_PHP_VERSION"
-          exit 1
-          ;;
-      esac
-    fi
-    if [[ "$WP_TRAVISCI" == "travis:phpcs" ]] ; then
-        composer install
-    fi
+- |
+  # Remove Xdebug for a huge performance increase:
+  if [ -f ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/xdebug.ini ]; then
+    phpenv config-rm xdebug.ini
+  else
+    echo "xdebug.ini does not exist"
+  fi
+- |
+  # Export Composer's global bin dir to PATH:
+  composer config --list --global
+  export PATH=`composer config --list --global | grep '\[home\]' | { read a; echo "${a#* }/vendor/bin:$PATH"; }`
+- |
+  # Install the specified version of PHPUnit depending on the PHP version:
+  if [[ "$WP_TRAVISCI" == "travis:phpunit" ]]; then
+    case "$TRAVIS_PHP_VERSION" in
+      7.2|7.1|7.0|nightly)
+        echo "Using PHPUnit 6.x"
+        composer global require "phpunit/phpunit:^6"
+        ;;
+      5.6|5.5|5.4|5.3)
+        echo "Using PHPUnit 4.x"
+        composer global require "phpunit/phpunit:^4"
+        ;;
+      5.2)
+        # Do nothing, use default PHPUnit 3.6.x
+        echo "Using default PHPUnit, hopefully 3.6"
+        ;;
+      *)
+        echo "No PHPUnit version handling for PHP version $TRAVIS_PHP_VERSION"
+        exit 1
+        ;;
+    esac
+  fi
+  if [[ "$WP_TRAVISCI" == "travis:phpcs" ]] ; then
+      composer install
+  fi
 
-  - mysql --version
-  - phpenv versions
-  - php --version
-  - php -m
-  - which phpunit
-  - phpunit --version
-  - curl --version
-  - grunt --version
-  - git --version
-  - svn --version
-  - locale -a
+- mysql --version
+- phpenv versions
+- php --version
+- php -m
+- which phpunit
+- phpunit --version
+- curl --version
+- grunt --version
+- git --version
+- svn --version
+- locale -a
 
 before_install:
-  - export PATH="$HOME/.composer/vendor/bin:$PATH"
-  - |
+- export PATH="$HOME/.composer/vendor/bin:$PATH"
+- |
     if [[ ! -z "$WP_VERSION" ]] ; then
       set -e
       bash bin/install-wp-tests.sh wordpress_test root '' localhost $WP_VERSION
