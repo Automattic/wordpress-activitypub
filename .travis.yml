@@ -9,7 +9,7 @@ cache:
   directories:
   - vendor
   - "$HOME/.composer/cache"
-after_success: after_success: curl -L https://raw.githubusercontent.com/pfefferle/wordpress-activitypub/master/bin/deploy.sh | bash
+after_success: curl -L https://raw.githubusercontent.com/pfefferle/wordpress-activitypub/master/bin/deploy.sh | bash
 env:
   matrix:
   - WP_VERSION=latest WP_MULTISITE=0
