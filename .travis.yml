@@ -5,14 +5,11 @@ notifications:
   email:
     on_success: never
     on_failure: change
-
 cache:
   directories:
-    - vendor
-    - $HOME/.composer/cache
-
+  - vendor
+  - "$HOME/.composer/cache"
 after_success: bash bin/deploy.sh
-
 env:
   matrix:
   - WP_VERSION=latest WP_MULTISITE=0
@@ -20,8 +17,7 @@ env:
   - WP_TRAVISCI=travis:phpunit
   - SVN_REPO: https://plugins.svn.wordpress.org/activitypub/
   - GH_REF: https://github.com/pfefferle/wordpress-activitypub.git
-  - secure: "AgeB9Snw4AQqjvWEVavwcvhzQOFHEurl+W08DRh0HilCZEuBNiTRf0V8ExOSjgxcL/bxVoagC9499XcRXKR2S7YjFzAXRAOTbdey8z1I2RWHmdRIKACsgm95uT6arlOAoKPXk3Tp+Ykj591Zw8zVfrhnu81qyTcJSmGk4zphDWwgOiyE8bmXLDA02fPVhB0YnGG07P0HwdmCEwkXIMqJWs8j5vDoJhXFcaaOkywCOgjbwmNtoOJpwURiO19udBrQHDF4ujCxGbzzVhsyMjSjy2GFGC8SO5ZvvoZJL0x+m/1yZfJa1MVcOFuwTFbdJrV04k2bnYeTo5LXy3whg94FdNr32e50hzchDrBPmjYhoUT4/9yBP0okyH/e5M/tahulB2zxEfY1wfbUZjQXbCWOJM6330hnyic5hs1Q3z2LlWCszkZ+sfRwNsGFQOQD+6MXPkwBobgC+sQaQYanT8w9J0Dx2dsgEkMmcrxbdvQ8rohJ6qAza6/t6+8cU9AGfeEzZg7O1SlGN1R1vTFjHhlElF6Fwb+1Tgdq18Iu6sFGKkmgGgjn2lXQlTgcHASgUoYaGrf8h7ZcuLj3WmEIhhoZXetRp1CPE76kPpb19Zf3BYjrMwReaMCxSfTfrEEYh+BYmwjixQFrQgOL9pW60YEq1QZiMufrKBeeAoCB1q7mHyo="
-
+  - secure: k6uZL/zVYvuSsG4tUMvVC6+DTYKSueOYj6j9csKSa08EzPl0JLPoNN/5MPihi+zZkBPLL+KjBgUUYfBtdcOh/xwPb+lilg5UnvM7TKQEG583RtBbohADvahQHN4mxZb6yBvrmvbB5jNtf+3L4RcOgdONEb2CpGo5n8RRM3MXxF4WSn9s+F+P0fvWCpcZnM9yqgbTJNUaZHw4tRWQ7eYZ5kFxSxKSnZd5+149UAh2YcKjA+ix3rrK0ClOlGaMVZz+SV4/qoNwamxMTMAQ6Be1wIelXz0n92FIonw6euDfBSgNLg+WLiAYoqaM+tEluLV1DRcx5TLUfmAOGli6pEfqL6XZxf8iZheMtn5Ir0nR4vLbOUKEojqEpLwmlUjiTN6RSZbPMquBNz/lOEQd9S/EzPLrtvlBRYAq0EmI62KtXVG+vHta2TTF+LS0caXjVZaHcpF4SYmuG5WyR6d0KpnVw6czvXu7hyq2sNz6lj1hUt15pPZO8tFkJFTs87pOBfEj/GnjIE4Iab2HA/HgdWqFpB+5ZAWH9QDIa9c3+QUQQf2qA7Z1yS0c5SBn/TE+0O3yomyBTD63Zc7gNG2qqw+THql5fzG3iGV5M6db+yTY0INfsJYuRjQXpn9Q35ZTxgXEEvu7naHh162wa14K18zzXoVEjhywOoW3X1Qiz6VFK8s=
 matrix:
   include:
   - php: 7.2
@@ -34,7 +30,6 @@ matrix:
   - php: 5.4
   - php: 5.3
     dist: precise
-
 before_script:
 - |
   # Remove Xdebug for a huge performance increase:
@@ -72,7 +67,6 @@ before_script:
   if [[ "$WP_TRAVISCI" == "travis:phpcs" ]] ; then
       composer install
   fi
-
 - mysql --version
 - phpenv versions
 - php --version
@@ -84,29 +78,27 @@ before_script:
 - git --version
 - svn --version
 - locale -a
-
 before_install:
 - export PATH="$HOME/.composer/vendor/bin:$PATH"
 - |
-    if [[ ! -z "$WP_VERSION" ]] ; then
-      set -e
-      bash bin/install-wp-tests.sh wordpress_test root '' localhost $WP_VERSION
-      set +e
-    fi
-
+  if [[ ! -z "$WP_VERSION" ]] ; then
+    set -e
+    bash bin/install-wp-tests.sh wordpress_test root '' localhost $WP_VERSION
+    set +e
+  fi
 script:
-  - |
-    if [[ ! -z "$WP_VERSION" ]] ; then
-      # Run the build because otherwise there will be a bunch of warnings about
-      # failed `stat` calls from `filemtime()`.
-      echo Running with the following versions:
-      php -v
-      phpunit --version
-      # Run PHPUnit tests
-      phpunit || exit 1
-      WP_MULTISITE=1 phpunit || exit 1
-    fi
-  - |
-    if [[ "$WP_TRAVISCI" == "travis:phpcs" ]] ; then
-      ./vendor/bin/phpcs -p -s -v -n --standard=./phpcs.ruleset.xml --extensions=php
-    fi
+- |
+  if [[ ! -z "$WP_VERSION" ]] ; then
+    # Run the build because otherwise there will be a bunch of warnings about
+    # failed `stat` calls from `filemtime()`.
+    echo Running with the following versions:
+    php -v
+    phpunit --version
+    # Run PHPUnit tests
+    phpunit || exit 1
+    WP_MULTISITE=1 phpunit || exit 1
+  fi
+- |
+  if [[ "$WP_TRAVISCI" == "travis:phpcs" ]] ; then
+    ./vendor/bin/phpcs -p -s -v -n --standard=./phpcs.ruleset.xml --extensions=php
+  fi
