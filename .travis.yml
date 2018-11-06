@@ -9,7 +9,7 @@ cache:
   directories:
   - vendor
   - "$HOME/.composer/cache"
-after_success: bash bin/deploy.sh
+after_success: ./bin/deploy.sh
 env:
   matrix:
   - WP_VERSION=latest WP_MULTISITE=0
