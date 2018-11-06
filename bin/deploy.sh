@@ -66,8 +66,6 @@ svn st | grep '^!' | sed -e 's/\![ ]*/svn del -q /g' | sh
 echo "Run svn add"
 svn st | grep '^?' | sed -e 's/\?[ ]*/svn add -q /g' | sh
 
-echo "Release tag: $TRAVIS_TAG as user: $SVN_USER"
-
 # If tag number and credentials are provided, commit to trunk.
 if [[ $TRAVIS_TAG && $SVN_USER && $SVN_PASS ]]; then
 	if [[ ! -d tags/$TRAVIS_TAG ]]; then
