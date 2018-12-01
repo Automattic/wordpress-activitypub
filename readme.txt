@@ -53,6 +53,8 @@ To implement:
 
 == Changelog ==
 
+Project maintained on github at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+
 = 0.0.2 =
 
 * refactorins
