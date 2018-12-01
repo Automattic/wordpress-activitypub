@@ -13,14 +13,43 @@ The ActivityPub protocol is a decentralized social networking protocol based upo
 
 ## Description ##
 
+This is **BETA** software, see the FAQ to see what works and what still needs to be implemented or is in planning.
+
 This plugin enables ActivityPub for your Blog. Your readers will be able to follow your Blogposts on Mastodon and other Federated Plattforms that support ActivityPub.
 
 ## Frequently Asked Questions ##
 
-### Why does the plugin not support following and other social network stuff ###
+### What is the status of this plugin? ###
 
-If you want to have a **decentralized social network**, please use [Mastodon](https://joinmastodon.org/) or [GNU.social](https://gnu.io/social/).
+Implemented:
 
+* profile pages (JSON representation)
+* custom links
+* functional inbox/outbox
+
+To implement:
+
+* follow (accept follows)
+* share posts
+* share comments
+
+### Why does the plugin not support ...? ###
+
+*ActivityPub* extends WordPress with some fediverse features, but it does not compete with plattforms like Friendi.ca or Mastodon. If you want to have a **decentralized social network**, please use [Mastodon](https://joinmastodon.org/) or [GNU.social](https://gnu.io/social/).
+
+### What are the differences to Pterotype? ###
+
+**PHP Version**
+
+*ActivityPub* needs PHP 5.6, *Pterotype* requires 7.2.x
+
+**Compatibility**
+
+*ActivityPub* is compatible with OStatus and the IndieWeb movement. *Pterotype* implements its own WebFinger endpoint, that is not compatible with the [WebFinger plugin](https://wordpress.org/plugins/webfinger/).
+
+**Custom tables**
+
+*Pterotype* creates/uses a bunch of custom tables, *ActivityPub* only uses the native tables and adds as few meta data as possible.
 
 ## Changelog ##
 
