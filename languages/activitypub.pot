@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ActivityPub 0.0.2\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/activitypub\n"
-"POT-Creation-Date: 2018-12-01 20:22:43+00:00\n"
+"POT-Creation-Date: 2018-12-07 23:01:55+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -13,28 +13,47 @@ msgstr ""
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "X-Generator: grunt-wp-i18n1.0.2\n"
 
-#: includes/class-activitypub-inbox.php:47
-msgid "Invalid payload"
+#: includes/class-activitypub-activities.php:13
+#: includes/class-activitypub-activities.php:39
+msgid "No \"Actor\" found"
 msgstr ""
 
-#: includes/class-activitypub-inbox.php:62
-msgid "This method is not yet implemented"
+#: includes/class-db-activitypub-actor.php:20
+msgid "No \"Inbox\" found"
 msgstr ""
 
-#: includes/class-activitypub-outbox.php:28
-#: includes/class-activitypub-outbox.php:30
+#: includes/class-db-activitypub-actor.php:36
+msgid "The \"actor\" is no valid URL"
+msgstr ""
+
+#: includes/class-db-activitypub-actor.php:60
+msgid "No valid JSON data"
+msgstr ""
+
+#: includes/class-rest-activitypub-followers.php:24
+#: includes/class-rest-activitypub-followers.php:26
+#: includes/class-rest-activitypub-outbox.php:28
+#: includes/class-rest-activitypub-outbox.php:30
 msgid "User not found"
 msgstr ""
 
-#: templates/json-author.php:44
+#: includes/class-rest-activitypub-inbox.php:47
+msgid "Invalid payload"
+msgstr ""
+
+#: includes/class-rest-activitypub-inbox.php:62
+msgid "This method is not yet implemented"
+msgstr ""
+
+#: templates/json-author.php:48
 msgid "Blog"
 msgstr ""
 
-#: templates/json-author.php:50
+#: templates/json-author.php:58
 msgid "Profile"
 msgstr ""
 
-#: templates/json-author.php:57
+#: templates/json-author.php:69
 msgid "Website"
 msgstr ""
 

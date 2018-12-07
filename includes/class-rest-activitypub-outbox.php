@@ -4,7 +4,7 @@
  *
  * @author Matthias Pfefferle
  */
-class Activitypub_Outbox {
+class Rest_Activitypub_Outbox {
 	/**
 	 * Register routes
 	 */
@@ -13,7 +13,7 @@ class Activitypub_Outbox {
 			'activitypub/1.0', '/users/(?P<id>\d+)/outbox', array(
 				array(
 					'methods'  => WP_REST_Server::READABLE,
-					'callback' => array( 'Activitypub_Outbox', 'get' ),
+					'callback' => array( 'Rest_Activitypub_Outbox', 'get' ),
 					'args'     => self::request_parameters(),
 				),
 			)

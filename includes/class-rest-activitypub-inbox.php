@@ -4,7 +4,7 @@
  *
  * @author Matthias Pfefferle
  */
-class Activitypub_Inbox {
+class Rest_Activitypub_Inbox {
 	/**
 	 * Register routes
 	 */
@@ -13,7 +13,7 @@ class Activitypub_Inbox {
 			'activitypub/1.0', '/inbox', array(
 				array(
 					'methods'  => WP_REST_Server::EDITABLE,
-					'callback' => array( 'Activitypub_Inbox', 'global_inbox' ),
+					'callback' => array( 'Rest_Activitypub_Inbox', 'global_inbox' ),
 				),
 			)
 		);
@@ -22,7 +22,7 @@ class Activitypub_Inbox {
 			'activitypub/1.0', '/users/(?P<id>\d+)/inbox', array(
 				array(
 					'methods'  => WP_REST_Server::EDITABLE,
-					'callback' => array( 'Activitypub_Inbox', 'user_inbox' ),
+					'callback' => array( 'Rest_Activitypub_Inbox', 'user_inbox' ),
 					'args'     => self::request_parameters(),
 				),
 			)

@@ -26,10 +26,10 @@ Implemented:
 * profile pages (JSON representation)
 * custom links
 * functional inbox/outbox
+* follow (accept follows)
 
 To implement:
 
-* follow (accept follows)
 * share posts
 * share comments
 
@@ -54,6 +54,10 @@ To implement:
 == Changelog ==
 
 Project maintained on github at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+
+= 0.1.0 =
+
+* fully functional "follow" activity
 
 = 0.0.2 =
 
