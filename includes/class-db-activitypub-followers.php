@@ -1,6 +1,6 @@
 <?php
 
-class Db_Activitypub_Actor {
+class Db_Activitypub_Followers {
 	/**
 	 * [get_inbox_by_actor description]
 	 * @param  [type] $actor [description]

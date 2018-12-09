@@ -13,7 +13,7 @@ class Activitypub_Activities {
 			return new WP_Error( 'activitypub_no_actor', __( 'No "Actor" found', 'activitypub' ), $metadata );
 		}
 
-		$inbox = Db_Activitypub_Actor::get_inbox_by_actor( $data['actor'] );
+		$inbox = Db_Activitypub_Followers::get_inbox_by_actor( $data['actor'] );
 
 		$activity = wp_json_encode(
 			array(
@@ -39,7 +39,7 @@ class Activitypub_Activities {
 			return new WP_Error( 'activitypub_no_actor', __( 'No "Actor" found', 'activitypub' ), $metadata );
 		}
 
-		Db_Activitypub_Actor::add_follower( $data['actor'], $author_id );
+		Db_Activitypub_Followers::add_follower( $data['actor'], $author_id );
 	}
 
 	/**
