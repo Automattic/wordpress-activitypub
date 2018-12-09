@@ -3,9 +3,9 @@ Contributors: pfefferle
 Donate link: https://notiz.blog/donate/
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
-Tested up to: 4.9.8
-Stable tag: 0.0.2
-Requires PHP: 5.3
+Tested up to: 5.0
+Stable tag: 0.1.0
+Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
 
@@ -57,6 +57,8 @@ Project maintained on github at [pfefferle/wordpress-activitypub](https://github
 
 = 0.1.0 =
 
+* added basic WebFinger support
+* added basic NodeInfo support
 * fully functional "follow" activity
 
 = 0.0.2 =
