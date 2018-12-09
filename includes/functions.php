@@ -48,7 +48,7 @@ if ( ! function_exists( 'base64_url_encode' ) ) {
 	 * @return string the encoded text
 	 */
 	function base64_url_encode( $input ) {
-		return strtr( base64_encode( $input ), '+/', '-_' );
+		return strtr( base64_encode( $input ), '+/', '-_' ); // phpcs:ignore
 	}
 }
 if ( ! function_exists( 'base64_url_decode' ) ) {
@@ -60,7 +60,7 @@ if ( ! function_exists( 'base64_url_decode' ) ) {
 	 * @return string the decoded text
 	 */
 	function base64_url_decode( $input ) {
-		return base64_decode( strtr( $input, '-_', '+/' ) );
+		return base64_decode( strtr( $input, '-_', '+/' ) ); // phpcs:ignore
 	}
 }
 
