@@ -17,7 +17,7 @@ env:
   - WP_TRAVISCI=travis:phpunit
   - SVN_REPO: https://plugins.svn.wordpress.org/activitypub/
   - GH_REF: https://github.com/pfefferle/wordpress-activitypub.git
-  - secure: k6uZL/zVYvuSsG4tUMvVC6+DTYKSueOYj6j9csKSa08EzPl0JLPoNN/5MPihi+zZkBPLL+KjBgUUYfBtdcOh/xwPb+lilg5UnvM7TKQEG583RtBbohADvahQHN4mxZb6yBvrmvbB5jNtf+3L4RcOgdONEb2CpGo5n8RRM3MXxF4WSn9s+F+P0fvWCpcZnM9yqgbTJNUaZHw4tRWQ7eYZ5kFxSxKSnZd5+149UAh2YcKjA+ix3rrK0ClOlGaMVZz+SV4/qoNwamxMTMAQ6Be1wIelXz0n92FIonw6euDfBSgNLg+WLiAYoqaM+tEluLV1DRcx5TLUfmAOGli6pEfqL6XZxf8iZheMtn5Ir0nR4vLbOUKEojqEpLwmlUjiTN6RSZbPMquBNz/lOEQd9S/EzPLrtvlBRYAq0EmI62KtXVG+vHta2TTF+LS0caXjVZaHcpF4SYmuG5WyR6d0KpnVw6czvXu7hyq2sNz6lj1hUt15pPZO8tFkJFTs87pOBfEj/GnjIE4Iab2HA/HgdWqFpB+5ZAWH9QDIa9c3+QUQQf2qA7Z1yS0c5SBn/TE+0O3yomyBTD63Zc7gNG2qqw+THql5fzG3iGV5M6db+yTY0INfsJYuRjQXpn9Q35ZTxgXEEvu7naHh162wa14K18zzXoVEjhywOoW3X1Qiz6VFK8s=
+  - secure: "WaeBLo0MDuK4X7NQvk5Ie5BVnexHtyDfHAV8v7dB8B67d8GCWy9K5I54jTECNRUC+CecMakLq5DOfn+ThtWdkJmoJKnGNFp8ZrWkMsfVJRi3CDED2HkccOrxkmXBj8Z6A8jZjcfVNrEmq/6697xVNRGeaS08l9rokh7pyb8INWY="
 matrix:
   include:
   - php: 7.2

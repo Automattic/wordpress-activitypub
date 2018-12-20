@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ActivityPub 0.1.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/activitypub\n"
-"POT-Creation-Date: 2018-12-09 21:09:03+00:00\n"
+"POT-Creation-Date: 2018-12-20 10:32:52+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -13,37 +13,63 @@ msgstr ""
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "X-Generator: grunt-wp-i18n1.0.2\n"
 
-#: includes/class-activitypub-activities.php:13
-#: includes/class-activitypub-activities.php:39
-msgid "No \"Actor\" found"
+#: includes/class-activitypub-admin.php:39
+msgid "Overview"
 msgstr ""
 
-#: includes/class-db-activitypub-actor.php:20
-msgid "No \"Inbox\" found"
+#: includes/class-activitypub-admin.php:41
+msgid ""
+"ActivityPub is a decentralized social networking protocol based on the "
+"ActivityStreams 2.0 data format. ActivityPub is an official W3C recommended "
+"standard published by the W3C Social Web Working Group. It provides a "
+"client to server API for creating, updating and deleting content, as well "
+"as a federated server to server API for delivering notifications and "
+"subscribing to content."
 msgstr ""
 
-#: includes/class-db-activitypub-actor.php:36
-msgid "The \"actor\" is no valid URL"
+#: includes/class-activitypub-admin.php:46
+msgid "For more information:"
 msgstr ""
 
-#: includes/class-db-activitypub-actor.php:60
-msgid "No valid JSON data"
+#: includes/class-activitypub-admin.php:47
+msgid "<a href=\"https://activitypub.rocks/\">Test Suite</a>"
+msgstr ""
+
+#: includes/class-activitypub-admin.php:48
+msgid "<a href=\"https://www.w3.org/TR/activitypub/\">W3C Spec</a>"
+msgstr ""
+
+#: includes/class-activitypub-admin.php:49
+msgid ""
+"<a href=\"https://github.com/pfefferle/wordpress-activitypub/issues\">Give "
+"us feedback</a>"
+msgstr ""
+
+#: includes/class-activitypub-admin.php:51
+msgid "<a href=\"https://notiz.blog/donate\">Donate</a>"
 msgstr ""
 
 #: includes/class-rest-activitypub-followers.php:24
 #: includes/class-rest-activitypub-followers.php:26
-#: includes/class-rest-activitypub-outbox.php:28
-#: includes/class-rest-activitypub-outbox.php:30
+#: includes/class-rest-activitypub-outbox.php:35
+#: includes/class-rest-activitypub-outbox.php:37
 #: includes/class-rest-activitypub-webfinger.php:45
 msgid "User not found"
 msgstr ""
 
-#: includes/class-rest-activitypub-inbox.php:47
+#: includes/class-rest-activitypub-inbox.php:82
 msgid "Invalid payload"
 msgstr ""
 
-#: includes/class-rest-activitypub-inbox.php:62
+#: includes/class-rest-activitypub-inbox.php:100
 msgid "This method is not yet implemented"
+msgstr ""
+
+#: includes/class-rest-activitypub-inbox.php:131
+#: includes/class-rest-activitypub-inbox.php:159
+#: includes/class-rest-activitypub-inbox.php:173
+#: includes/class-rest-activitypub-inbox.php:210
+msgid "No \"Actor\" found"
 msgstr ""
 
 #: includes/class-rest-activitypub-webfinger.php:32
@@ -54,16 +80,77 @@ msgstr ""
 msgid "Resouce host does not match blog host"
 msgstr ""
 
+#: includes/functions.php:97
+msgid "The \"actor\" is no valid URL"
+msgstr ""
+
+#: includes/functions.php:121
+msgid "No valid JSON data"
+msgstr ""
+
+#: includes/functions.php:149
+msgid "No \"Inbox\" found"
+msgstr ""
+
+#: includes/functions.php:175
+msgid "No \"Public-Key\" found"
+msgstr ""
+
 #: templates/json-author.php:48
 msgid "Blog"
 msgstr ""
 
-#: templates/json-author.php:58
+#: templates/json-author.php:58 templates/settings-page.php:9
 msgid "Profile"
 msgstr ""
 
 #: templates/json-author.php:69
 msgid "Website"
+msgstr ""
+
+#: templates/settings-page.php:2
+msgid "ActivityPub Settings"
+msgstr ""
+
+#: templates/settings-page.php:4
+msgid ""
+"ActivityPub turns your blog into a federated social network. This means you "
+"can share and talk to everyone using the ActivityPub protocol, including "
+"users of Friendi.ca, Pleroma and Mastodon."
+msgstr ""
+
+#: templates/settings-page.php:11
+msgid "All profile related settings."
+msgstr ""
+
+#: templates/settings-page.php:17
+msgid "Profile identifier"
+msgstr ""
+
+#: templates/settings-page.php:21
+msgid "Try to follow \"@%s\" in the mastodon/friendi.ca search field."
+msgstr ""
+
+#: templates/settings-page.php:29
+msgid "Followers"
+msgstr ""
+
+#: templates/settings-page.php:31
+msgid "All follower related settings."
+msgstr ""
+
+#: templates/settings-page.php:37
+msgid "List of followers"
+msgstr ""
+
+#: templates/settings-page.php:47
+msgid "No followers yet"
+msgstr ""
+
+#: templates/settings-page.php:62
+msgid ""
+"If you like this plugin, what about a small <a "
+"href=\"https://notiz.blog/donate\">donation</a>?"
 msgstr ""
 
 #. Plugin Name of the plugin/theme

@@ -3,37 +3,37 @@
 class Activitypub_Signature {
 
 	/**
-	 * @param int $author_id
+	 * @param int $user_id
 	 *
 	 * @return mixed
 	 */
-	public static function get_public_key( $author_id, $force = false ) {
-		$key = get_user_meta( $author_id, 'magic_sig_public_key' );
+	public static function get_public_key( $user_id, $force = false ) {
+		$key = get_user_meta( $user_id, 'magic_sig_public_key' );
 
 		if ( $key && ! $force ) {
 			return $key[0];
 		}
 
-		self::generate_key_pair( $author_id );
-		$key = get_user_meta( $author_id, 'magic_sig_public_key' );
+		self::generate_key_pair( $user_id );
+		$key = get_user_meta( $user_id, 'magic_sig_public_key' );
 
 		return $key[0];
 	}
 
 	/**
-	 * @param int $author_id
+	 * @param int $user_id
 	 *
 	 * @return mixed
 	 */
-	public static function get_private_key( $author_id, $force = false ) {
-		$key = get_user_meta( $author_id, 'magic_sig_private_key' );
+	public static function get_private_key( $user_id, $force = false ) {
+		$key = get_user_meta( $user_id, 'magic_sig_private_key' );
 
 		if ( $key && ! $force ) {
 			return $key[0];
 		}
 
-		self::generate_key_pair( $author_id );
-		$key = get_user_meta( $author_id, 'magic_sig_private_key' );
+		self::generate_key_pair( $user_id );
+		$key = get_user_meta( $user_id, 'magic_sig_private_key' );
 
 		return $key[0];
 	}
@@ -41,9 +41,9 @@ class Activitypub_Signature {
 	/**
 	 * Generates the pair keys
 	 *
-	 * @param int $author_id
+	 * @param int $user_id
 	 */
-	public static function generate_key_pair( $author_id ) {
+	public static function generate_key_pair( $user_id ) {
 		$config = array(
 			'digest_alg' => 'sha512',
 			'private_key_bits' => 2048,
@@ -56,18 +56,18 @@ class Activitypub_Signature {
 		openssl_pkey_export( $key, $priv_key );
 
 		// private key
-		update_user_meta( $author_id, 'magic_sig_private_key', $priv_key );
+		update_user_meta( $user_id, 'magic_sig_private_key', $priv_key );
 
 		$detail = openssl_pkey_get_details( $key );
 
 		// public key
-		update_user_meta( $author_id, 'magic_sig_public_key', $detail['key'] );
+		update_user_meta( $user_id, 'magic_sig_public_key', $detail['key'] );
 	}
 
-	public static function generate_signature( $author_id, $inbox, $date ) {
-		$key = self::get_private_key( $author_id );
+	public static function generate_signature( $user_id, $url, $date ) {
+		$key = self::get_private_key( $user_id );
 
-		$url_parts = wp_parse_url( $inbox );
+		$url_parts = wp_parse_url( $url );
 
 		$host = $url_parts['host'];
 		$path = '/';
@@ -86,14 +86,14 @@ class Activitypub_Signature {
 
 		$signature = null;
 		openssl_sign( $signed_string, $signature, $key, OPENSSL_ALGO_SHA256 );
-		$signature = base64_encode( $signature );
+		$signature = base64_encode( $signature ); // phpcs:ignore
 
-		$key_id = get_author_posts_url( $author_id ) . '#main-key';
+		$key_id = get_author_posts_url( $user_id ) . '#main-key';
 
 		return sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date",signature="%s"', $key_id, $signature );
 	}
 
-	public static function verify_signature() {
+	public static function verify_signature( $headers, $signature ) {
 
 	}
 }

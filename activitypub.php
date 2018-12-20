@@ -18,6 +18,7 @@
 function activitypub_init() {
 	require_once dirname( __FILE__ ) . '/includes/class-activitypub-signature.php';
 	require_once dirname( __FILE__ ) . '/includes/class-activitypub-post.php';
+	require_once dirname( __FILE__ ) . '/includes/class-activitypub-activity.php';
 	require_once dirname( __FILE__ ) . '/includes/class-db-activitypub-followers.php';
 	require_once dirname( __FILE__ ) . '/includes/functions.php';
 
@@ -29,9 +30,16 @@ function activitypub_init() {
 	// Configure the REST API route
 	require_once dirname( __FILE__ ) . '/includes/class-rest-activitypub-outbox.php';
 	add_action( 'rest_api_init', array( 'Rest_Activitypub_Outbox', 'register_routes' ) );
+	add_action( 'activitypub_send_post_activity', array( 'Rest_Activitypub_Outbox', 'send_post_activity' ) );
 
 	require_once dirname( __FILE__ ) . '/includes/class-rest-activitypub-inbox.php';
 	add_action( 'rest_api_init', array( 'Rest_Activitypub_Inbox', 'register_routes' ) );
+	//add_filter( 'rest_pre_serve_request', array( 'Rest_Activitypub_Inbox', 'serve_request' ), 11, 4 );
+	add_action( 'activitypub_inbox_follow', array( 'Rest_Activitypub_Inbox', 'handle_follow' ), 10, 2 );
+	add_action( 'activitypub_inbox_unfollow', array( 'Rest_Activitypub_Inbox', 'handle_unfollow' ), 10, 2 );
+	add_action( 'activitypub_inbox_like', array( 'Rest_Activitypub_Inbox', 'handle_reaction' ), 10, 2 );
+	add_action( 'activitypub_inbox_announce', array( 'Rest_Activitypub_Inbox', 'handle_reaction' ), 10, 2 );
+	add_action( 'activitypub_inbox_create', array( 'Rest_Activitypub_Inbox', 'handle_create' ), 10, 2 );
 
 	require_once dirname( __FILE__ ) . '/includes/class-rest-activitypub-followers.php';
 	add_action( 'rest_api_init', array( 'Rest_Activitypub_Followers', 'register_routes' ) );
@@ -45,11 +53,17 @@ function activitypub_init() {
 	add_filter( 'nodeinfo_data', array( 'Rest_Activitypub_Nodeinfo', 'add_nodeinfo_discovery' ), 10, 2 );
 	add_filter( 'nodeinfo2_data', array( 'Rest_Activitypub_Nodeinfo', 'add_nodeinfo2_discovery' ), 10 );
 
-	// Configure activities
-	require_once dirname( __FILE__ ) . '/includes/class-activitypub-activities.php';
-	add_action( 'activitypub_inbox_follow', array( 'Activitypub_Activities', 'accept' ), 10, 2 );
-	add_action( 'activitypub_inbox_follow', array( 'Activitypub_Activities', 'follow' ), 10, 2 );
-	add_action( 'activitypub_inbox_unfollow', array( 'Activitypub_Activities', 'unfollow' ), 10, 2 );
+	add_post_type_support( 'post', 'activitypub' );
+	add_post_type_support( 'page', 'activitypub' );
+
+	$post_types = get_post_types_by_support( 'activitypub' );
+	foreach ( $post_types as $post_type ) {
+		add_action( 'publish_' . $post_type, array( 'Activitypub', 'schedule_post_activity' ) );
+	}
+
+	require_once dirname( __FILE__ ) . '/includes/class-activitypub-admin.php';
+	add_action( 'admin_menu', array( 'Activitypub_Admin', 'admin_menu' ) );
+	add_action( 'admin_init', array( 'Activitypub_Admin', 'register_settings' ) );
 }
 add_action( 'plugins_loaded', 'activitypub_init' );
 

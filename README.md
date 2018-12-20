@@ -3,7 +3,7 @@
 **Donate link:** https://notiz.blog/donate/  
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
-**Tested up to:** 5.0  
+**Tested up to:** 5.0.2  
 **Stable tag:** 0.1.0  
 **Requires PHP:** 5.6  
 **License:** MIT  
@@ -13,9 +13,9 @@ The ActivityPub protocol is a decentralized social networking protocol based upo
 
 ## Description ##
 
-This is **BETA** software, see the FAQ to see what works and what still needs to be implemented or is in planning.
+This is **BETA** software, see the FAQ to see the current feature set or rather what is still planned.
 
-This plugin enables ActivityPub for your Blog. Your readers will be able to follow your Blogposts on Mastodon and other Federated Plattforms that support ActivityPub.
+This plugin implements the ActivityPub for your Blog. Your readers will be able to follow your Blogposts on Mastodon and other Federated Plattforms that support ActivityPub.
 
 ## Frequently Asked Questions ##
 
@@ -27,29 +27,33 @@ Implemented:
 * custom links
 * functional inbox/outbox
 * follow (accept follows)
+* share posts
+* receive comments/reactions
 
 To implement:
 
-* share posts
-* share comments
+* signature verification
+* better WordPress integration
+* better configuration possibilities
+* threaded comments support
 
 ### Why does the plugin not support ...? ###
 
 *ActivityPub* extends WordPress with some fediverse features, but it does not compete with plattforms like Friendi.ca or Mastodon. If you want to have a **decentralized social network**, please use [Mastodon](https://joinmastodon.org/) or [GNU.social](https://gnu.io/social/).
 
-### What are the differences to Pterotype? ###
+### What are the differences between this plugin and Pterotype? ###
 
 **PHP Version**
 
-*ActivityPub* needs PHP 5.6, *Pterotype* requires 7.2.x
+*This plugin* needs PHP 5.6, *Pterotype* requires 7.2.x
 
 **Compatibility**
 
-*ActivityPub* is compatible with OStatus and the IndieWeb movement. *Pterotype* implements its own WebFinger endpoint, that is not compatible with the [WebFinger plugin](https://wordpress.org/plugins/webfinger/).
+*This plugin* is compatible with OStatus and the IndieWeb movement. *Pterotype* implements for example its own WebFinger endpoint, which is not compatible with the [WebFinger plugin](https://wordpress.org/plugins/webfinger/).
 
 **Custom tables**
 
-*Pterotype* creates/uses a bunch of custom tables, *ActivityPub* only uses the native tables and adds as few meta data as possible.
+*Pterotype* creates/uses a bunch of custom tables, *this plugin* only uses the native tables and adds as few meta data as possible.
 
 ## Changelog ##
 
@@ -60,6 +64,8 @@ Project maintained on github at [pfefferle/wordpress-activitypub](https://github
 * added basic WebFinger support
 * added basic NodeInfo support
 * fully functional "follow" activity
+* send new posts to your followers
+* receive comments from your followers
 
 ### 0.0.2 ###
 

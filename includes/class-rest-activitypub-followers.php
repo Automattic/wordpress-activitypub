@@ -17,10 +17,10 @@ class Rest_Activitypub_Followers {
 	}
 
 	public static function get( $request ) {
-		$author_id = $request->get_param( 'id' );
-		$author    = get_user_by( 'ID', $author_id );
+		$user_id = $request->get_param( 'id' );
+		$user    = get_user_by( 'ID', $user_id );
 
-		if ( ! $author ) {
+		if ( ! $user ) {
 			return new WP_Error( 'rest_invalid_param', __( 'User not found', 'activitypub' ), array(
 				'status' => 404, 'params' => array(
 					'user_id' => __( 'User not found', 'activitypub' )
@@ -39,7 +39,7 @@ class Rest_Activitypub_Followers {
 
 		$json->{'@context'} = get_activitypub_context();
 
-		$followers = get_user_option( 'activitypub_followers', $author_id );
+		$followers = Db_Activitypub_Followers::get_followers( $user_id );
 
 		if ( ! is_array( $followers ) ) {
 			$followers = array();

@@ -29,6 +29,44 @@ class Rest_Activitypub_Inbox {
 		);
 	}
 
+	/**
+	 * Hooks into the REST API request to verify the signature.
+	 *
+	 * @param bool                      $served  Whether the request has already been served.
+	 * @param WP_HTTP_ResponseInterface $result  Result to send to the client. Usually a WP_REST_Response.
+	 * @param WP_REST_Request           $request Request used to generate the response.
+	 * @param WP_REST_Server            $server  Server instance.
+	 *
+	 * @return true
+	 */
+	public static function serve_request( $served, $result, $request, $server ) {
+		if ( '/activitypub' !== substr( $request->get_route(), 0, 12 ) ) {
+			return $served;
+		}
+
+		if ( 'POST' !== $request->get_method() ) {
+			return $served;
+		}
+
+		$signature = $request->get_header( 'signature' );
+
+		if ( ! $signature ) {
+			return $served;
+		}
+
+		$headers = $request->get_headers();
+
+		//Activitypub_Signature::verify_signature( $headers, $key );
+
+		return $served;
+	}
+
+	/**
+	 * Renders the user-inbox
+	 *
+	 * @param  WP_REST_Request   $request
+	 * @return WP_REST_Response
+	 */
 	public static function user_inbox( $request ) {
 		$author_id = $request->get_param( 'id' );
 		$author    = get_user_by( 'ID', $author_id );
@@ -40,14 +78,14 @@ class Rest_Activitypub_Inbox {
 			$type = strtolower( $data['type'] );
 		}
 
-		do_action( 'activitypub_inbox', $data, $author_id, $type );
-		do_action( "activitypub_inbox_{$type}", $data, $author_id );
-
 		if ( ! is_array( $data ) || ! array_key_exists( 'type', $data ) ) {
 			return new WP_Error( 'rest_invalid_data', __( 'Invalid payload', 'activitypub' ), array( 'status' => 422 ) );
 		}
 
-		return new WP_REST_Response( null, 202 );
+		do_action( 'activitypub_inbox', $data, $author_id, $type );
+		do_action( "activitypub_inbox_{$type}", $data, $author_id );
+
+		return new WP_REST_Response( array(), 202 );
 	}
 
 	/**
@@ -80,5 +118,121 @@ class Rest_Activitypub_Inbox {
 		);
 
 		return $params;
+	}
+
+	/**
+	 * Handles "Follow" requests
+	 *
+	 * @param  array $object  The activity-object
+	 * @param  int   $user_id The id of the local blog-user
+	 */
+	public static function handle_follow( $object, $user_id ) {
+		if ( ! array_key_exists( 'actor', $object ) ) {
+			return new WP_Error( 'activitypub_no_actor', __( 'No "Actor" found', 'activitypub' ), $metadata );
+		}
+
+		// save follower
+		Db_Activitypub_Followers::add_follower( $object['actor'], $user_id );
+
+		// get inbox
+		$inbox = activitypub_get_inbox_by_actor( $object['actor'] );
+
+		// send "Accept" activity
+		$activity = new Activitypub_Activity( 'Accept', Activitypub_Activity::TYPE_SIMPLE );
+		$activity->set_object( $object );
+		$activity->set_actor( get_author_posts_url( $user_id ) );
+		$activity->set_to( $object['actor'] );
+
+		$activity = $activity->to_simple_json();
+
+		$response = activitypub_safe_remote_post( $inbox, $activity, $user_id );
+	}
+
+	/**
+	 * Handles "Unfollow" requests
+	 *
+	 * @param  array $object  The activity-object
+	 * @param  int   $user_id The id of the local blog-user
+	 */
+	public static function handle_unfollow( $object, $user_id ) {
+		if ( ! array_key_exists( 'actor', $object ) ) {
+			return new WP_Error( 'activitypub_no_actor', __( 'No "Actor" found', 'activitypub' ), $metadata );
+		}
+
+		Db_Activitypub_Followers::remove_follower( $object['actor'], $user_id );
+	}
+
+	/**
+	 * Handles "Unfollow" requests
+	 *
+	 * @param  array $object  The activity-object
+	 * @param  int   $user_id The id of the local blog-user
+	 */
+	public static function handle_reaction( $object, $user_id ) {
+		if ( ! array_key_exists( 'actor', $object ) ) {
+			return new WP_Error( 'activitypub_no_actor', __( 'No "Actor" found', 'activitypub' ), $metadata );
+		}
+
+		$meta = activitypub_get_remote_metadata_by_actor( $object['actor'] );
+
+		$commentdata = array(
+			'comment_post_ID' => url_to_postid( $object['object'] ),
+			'comment_author' => esc_attr( $meta['name'] ),
+			'comment_author_email' => '',
+			'comment_author_url' => esc_url_raw( $object['actor'] ),
+			'comment_content' => esc_url_raw( $object['actor'] ),
+			'comment_type' => esc_attr( strtolower( $object['type'] ) ),
+			'comment_parent' => 0,
+			'comment_meta' => array(
+				'source_url' => esc_url_raw( $object['id'] ),
+				'avatar_url' => esc_url_raw( $meta['icon']['url'] ),
+				'protocol' => 'activitypub',
+			),
+		);
+
+		// disable flood control
+		remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+		$state = wp_new_comment( $commentdata, true );
+
+		// re-add flood control
+		add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Handles "Unfollow" requests
+	 *
+	 * @param  array $object  The activity-object
+	 * @param  int   $user_id The id of the local blog-user
+	 */
+	public static function handle_create( $object, $user_id ) {
+		if ( ! array_key_exists( 'actor', $object ) ) {
+			return new WP_Error( 'activitypub_no_actor', __( 'No "Actor" found', 'activitypub' ), $metadata );
+		}
+
+		$meta = activitypub_get_remote_metadata_by_actor( $object['actor'] );
+
+		$commentdata = array(
+			'comment_post_ID' => url_to_postid( $object['object']['inReplyTo'] ),
+			'comment_author' => esc_attr( $meta['name'] ),
+			'comment_author_url' => esc_url_raw( $object['actor'] ),
+			'comment_content' => wp_filter_kses( $object['object']['content'] ),
+			'comment_type' => '',
+			'comment_author_email' => '',
+			'comment_parent' => 0,
+			'comment_meta' => array(
+				'source_url' => esc_url_raw( $object['object']['url'] ),
+				'avatar_url' => esc_url_raw( $meta['icon']['url'] ),
+				'protocol' => 'activitypub',
+			),
+		);
+
+		// disable flood control
+		remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+		$state = wp_new_comment( $commentdata, true );
+
+		// re-add flood control
+		add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 	}
 }

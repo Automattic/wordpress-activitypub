@@ -70,4 +70,13 @@ class Activitypub {
 	public static function add_rewrite_endpoint() {
 		add_rewrite_endpoint( 'as2', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 	}
+
+	/**
+	 * Marks the post as "no webmentions sent yet"
+	 *
+	 * @param int $post_id
+	 */
+	public static function schedule_post_activity( $post_id ) {
+		wp_schedule_single_event( time() + wp_rand( 0, 120 ), 'activitypub_send_post_activity', array( $post_id ) );
+	}
 }
