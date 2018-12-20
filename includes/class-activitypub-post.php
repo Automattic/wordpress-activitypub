@@ -22,14 +22,12 @@ class Activitypub_Post {
 	public function to_array() {
 		$post = $this->post;
 
-		setup_postdata( $post );
-
 		$array = array(
 			'id' => get_permalink( $post ),
 			'type' => $this->get_object_type(),
 			'published' => date( 'Y-m-d\TH:i:s\Z', strtotime( $post->post_date ) ),
 			'attributedTo' => get_author_posts_url( $post->post_author ),
-			'summary' => apply_filters( 'the_excerpt', get_post_field( 'post_excerpt', $post->ID ) ),
+			'summary' => apply_filters( 'the_excerpt', activitypub_get_the_excerpt( $post->ID, 400 ) ),
 			'inReplyTo' => null,
 			'content' => apply_filters( 'the_content', get_post_field( 'post_content', $post->ID ) ),
 			'contentMap' => array(
@@ -40,8 +38,6 @@ class Activitypub_Post {
 			'attachment' => $this->get_attachments(),
 			'tag' => $this->get_tags(),
 		);
-
-		wp_reset_postdata();
 
 		return apply_filters( 'activitypub_post', $array );
 	}

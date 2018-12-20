@@ -59,6 +59,10 @@ To implement:
 
 Project maintained on github at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
+### 0.1.1 ###
+
+* fixed "excerpt" in AS JSON
+
 ### 0.1.0 ###
 
 * added basic WebFinger support
