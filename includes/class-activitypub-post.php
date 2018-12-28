@@ -27,7 +27,7 @@ class Activitypub_Post {
 			'type' => $this->get_object_type(),
 			'published' => date( 'Y-m-d\TH:i:s\Z', strtotime( $post->post_date ) ),
 			'attributedTo' => get_author_posts_url( $post->post_author ),
-			'summary' => apply_filters( 'the_excerpt', activitypub_get_the_excerpt( $post->ID, 400 ) ),
+			'summary' => get_option( 'activitypub_add_summary', false ) ? apply_filters( 'the_excerpt', activitypub_get_the_excerpt( $post->ID, 400 ) ) : null,
 			'inReplyTo' => null,
 			'content' => apply_filters( 'the_content', get_post_field( 'post_content', $post->ID ) ),
 			'contentMap' => array(
@@ -120,7 +120,7 @@ class Activitypub_Post {
 				$tag = array(
 					"type" => "Hashtag",
 					"href" => get_tag_link( $post_tag->term_id ),
-					"name" => '#' . $post_tag->name,
+					"name" => '#' . $post_tag->slug,
 				);
 				$tags[] = $tag;
 			}
@@ -138,6 +138,10 @@ class Activitypub_Post {
 	 * @return string the object-type
 	 */
 	public function get_object_type() {
+		if ( get_option( 'activitypub_object_type', 'note' ) !== "wordpress-post-format" ) {
+			return ucfirst( get_option( 'activitypub_object_type', 'note' ) );
+		}
+
 		$post_type = get_post_type( $this->post );
 		switch ( $post_type ) {
 			case 'post':

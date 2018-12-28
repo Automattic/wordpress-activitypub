@@ -29,7 +29,26 @@ class Activitypub_Admin {
 	 * Register PubSubHubbub settings
 	 */
 	public static function register_settings() {
-		register_setting( 'activitypub', 'activitypub_feed_use_excerpt' );
+		register_setting(
+			'activitypub', 'activitypub_add_summary', array(
+				'type'         => 'boolean',
+				'description'  => __( 'Adds a "summary" to the Activity-Objects', 'activitypub' ),
+				'show_in_rest' => true,
+				'default'      => 0,
+			)
+		);
+		register_setting(
+			'activitypub', 'activitypub_object_type', array(
+				'type'         => 'string',
+				'description'  => __( 'The Activity-Object-Type', 'activitypub' ),
+				'show_in_rest' => array(
+					'schema' => array(
+						'enum' => array( 'note', 'article', 'wordpress-post-format' )
+					),
+				),
+				'default'      => 'note',
+			)
+		);
 	}
 
 	public static function add_help_tab() {
