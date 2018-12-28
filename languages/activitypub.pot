@@ -2,9 +2,9 @@
 # This file is distributed under the MIT.
 msgid ""
 msgstr ""
-"Project-Id-Version: ActivityPub 0.1.0\n"
+"Project-Id-Version: ActivityPub 0.2.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/activitypub\n"
-"POT-Creation-Date: 2018-12-20 18:09:57+00:00\n"
+"POT-Creation-Date: 2018-12-28 21:46:59+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -13,11 +13,19 @@ msgstr ""
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "X-Generator: grunt-wp-i18n1.0.2\n"
 
-#: includes/class-activitypub-admin.php:39
+#: includes/class-activitypub-admin.php:35
+msgid "Adds a \"summary\" to the Activity-Objects"
+msgstr ""
+
+#: includes/class-activitypub-admin.php:43
+msgid "The Activity-Object-Type"
+msgstr ""
+
+#: includes/class-activitypub-admin.php:58
 msgid "Overview"
 msgstr ""
 
-#: includes/class-activitypub-admin.php:41
+#: includes/class-activitypub-admin.php:60
 msgid ""
 "ActivityPub is a decentralized social networking protocol based on the "
 "ActivityStreams 2.0 data format. ActivityPub is an official W3C recommended "
@@ -27,25 +35,25 @@ msgid ""
 "subscribing to content."
 msgstr ""
 
-#: includes/class-activitypub-admin.php:46
+#: includes/class-activitypub-admin.php:65
 msgid "For more information:"
 msgstr ""
 
-#: includes/class-activitypub-admin.php:47
+#: includes/class-activitypub-admin.php:66
 msgid "<a href=\"https://activitypub.rocks/\">Test Suite</a>"
 msgstr ""
 
-#: includes/class-activitypub-admin.php:48
+#: includes/class-activitypub-admin.php:67
 msgid "<a href=\"https://www.w3.org/TR/activitypub/\">W3C Spec</a>"
 msgstr ""
 
-#: includes/class-activitypub-admin.php:49
+#: includes/class-activitypub-admin.php:68
 msgid ""
 "<a href=\"https://github.com/pfefferle/wordpress-activitypub/issues\">Give "
 "us feedback</a>"
 msgstr ""
 
-#: includes/class-activitypub-admin.php:51
+#: includes/class-activitypub-admin.php:70
 msgid "<a href=\"https://notiz.blog/donate\">Donate</a>"
 msgstr ""
 
@@ -100,7 +108,7 @@ msgstr ""
 msgid "Blog"
 msgstr ""
 
-#: templates/json-author.php:58 templates/settings-page.php:9
+#: templates/json-author.php:58 templates/settings-page.php:45
 msgid "Profile"
 msgstr ""
 
@@ -119,35 +127,83 @@ msgid ""
 "users of Friendi.ca, Pleroma and Mastodon."
 msgstr ""
 
+#: templates/settings-page.php:9
+msgid "Activities"
+msgstr ""
+
 #: templates/settings-page.php:11
-msgid "All profile related settings."
+msgid "All activity related settings."
 msgstr ""
 
 #: templates/settings-page.php:17
-msgid "Profile identifier"
+msgid "Add the Post-Summary"
 msgstr ""
 
 #: templates/settings-page.php:21
-msgid "Try to follow \"@%s\" in the mastodon/friendi.ca search field."
+msgid ""
+"Adds the Post-Summary to the activity. Be aware, that Mastodon seems to use "
+"the \"summary\" as the \"content warning\" label."
 msgstr ""
 
-#: templates/settings-page.php:29
-msgid "Followers"
+#: templates/settings-page.php:26
+msgid "Activtity-Object-Type"
 msgstr ""
 
-#: templates/settings-page.php:31
-msgid "All follower related settings."
+#: templates/settings-page.php:30
+msgid "Note (default)"
 msgstr ""
 
-#: templates/settings-page.php:37
-msgid "List of followers"
+#: templates/settings-page.php:30
+msgid "Should work with most plattforms."
+msgstr ""
+
+#: templates/settings-page.php:33
+msgid "Article"
+msgstr ""
+
+#: templates/settings-page.php:33
+msgid ""
+"The presentation of the \"Article\" might change on different plattforms. "
+"Mastodon for example shows the \"Article\" type as a simple link."
+msgstr ""
+
+#: templates/settings-page.php:36
+msgid "WordPress Post-Format"
+msgstr ""
+
+#: templates/settings-page.php:36
+msgid "Maps the WordPress Post-Format to the ActivityPub Object Type."
 msgstr ""
 
 #: templates/settings-page.php:47
+msgid "All profile related settings."
+msgstr ""
+
+#: templates/settings-page.php:53
+msgid "Profile identifier"
+msgstr ""
+
+#: templates/settings-page.php:57
+msgid "Try to follow \"@%s\" in the mastodon/friendi.ca search field."
+msgstr ""
+
+#: templates/settings-page.php:65
+msgid "Followers"
+msgstr ""
+
+#: templates/settings-page.php:67
+msgid "All follower related settings."
+msgstr ""
+
+#: templates/settings-page.php:73
+msgid "List of followers"
+msgstr ""
+
+#: templates/settings-page.php:83
 msgid "No followers yet"
 msgstr ""
 
-#: templates/settings-page.php:62
+#: templates/settings-page.php:98
 msgid ""
 "If you like this plugin, what about a small <a "
 "href=\"https://notiz.blog/donate\">donation</a>?"

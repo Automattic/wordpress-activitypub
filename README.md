@@ -4,7 +4,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
 **Tested up to:** 5.0.2  
-**Stable tag:** 0.1.0  
+**Stable tag:** 0.2.0  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -59,9 +59,10 @@ To implement:
 
 Project maintained on github at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
-### 0.1.1 ###
+### 0.2.0 ###
 
 * fixed "excerpt" in AS JSON
+* added settings for the activity-summary and for the activity-object-type
 
 ### 0.1.0 ###
 

@@ -27,7 +27,7 @@
 					</th>
 					<td>
 						<p>
-							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="note" <?php echo checked( 'note', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Note (default)', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'Should work with the most plattforms.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="note" <?php echo checked( 'note', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Note (default)', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'Should work with most plattforms.', 'activitypub' ); ?></span>
 						</p>
 						<p>
 							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="article" <?php echo checked( 'article', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Article', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'The presentation of the "Article" might change on different plattforms. Mastodon for example shows the "Article" type as a simple link.', 'activitypub' ); ?></span>
