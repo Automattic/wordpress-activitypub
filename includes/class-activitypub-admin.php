@@ -30,10 +30,14 @@ class Activitypub_Admin {
 	 */
 	public static function register_settings() {
 		register_setting(
-			'activitypub', 'activitypub_add_summary', array(
-				'type'         => 'boolean',
-				'description'  => __( 'Adds a "summary" to the Activity-Objects', 'activitypub' ),
-				'show_in_rest' => true,
+			'activitypub', 'activitypub_post_content_type', array(
+				'type'         => 'string',
+				'description'  => __( 'Use summary or full content', 'activitypub' ),
+				'show_in_rest' => array(
+					'schema' => array(
+						'enum' => array( 'excerpt', 'content' )
+					),
+				),
 				'default'      => 0,
 			)
 		);

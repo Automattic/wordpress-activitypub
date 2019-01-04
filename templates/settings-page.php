@@ -14,11 +14,15 @@
 			<tbody>
 				<tr>
 					<th scope="row">
-						<label for="activitypub_add_summary"><?php esc_html_e( 'Add the Post-Summary', 'activitypub' ); ?></label>
+						<?php esc_html_e( 'Post-Content', 'activitypub' ); ?>
 					</th>
 					<td>
-						<input type="checkbox" name="activitypub_add_summary" id="activitypub_add_summary" value="1" <?php echo checked( true, get_option( 'activitypub_add_summary', false ) );  ?> />
-						<?php printf( __( 'Adds the Post-Summary to the activity. Be aware, that Mastodon seems to use the "summary" as the "content warning" label.', 'activitypub' ) ); ?>
+						<p>
+							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_excerpt" value="excerpt" <?php echo checked( 'excerpt', get_option( 'activitypub_post_content_type', 'excerpt' ) ); ?> /> <?php esc_html_e( 'Excerpt (default)', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'A content summary, shortened to 400 characters and without markup.', 'activitypub' ); ?></span>
+						</p>
+						<p>
+							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_content" value="content" <?php echo checked( 'content', get_option( 'activitypub_post_content_type', 'excerpt' ) ); ?> /> <?php esc_html_e( 'Content', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'The full content.', 'activitypub' ); ?></span>
+						</p>
 					</td>
 				</tr>
 				<tr>
@@ -27,10 +31,10 @@
 					</th>
 					<td>
 						<p>
-							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="note" <?php echo checked( 'note', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Note (default)', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'Should work with most plattforms.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type_note" value="note" <?php echo checked( 'note', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Note (default)', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'Should work with most plattforms.', 'activitypub' ); ?></span>
 						</p>
 						<p>
-							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="article" <?php echo checked( 'article', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Article', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'The presentation of the "Article" might change on different plattforms. Mastodon for example shows the "Article" type as a simple link.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type_article" value="article" <?php echo checked( 'article', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Article', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'The presentation of the "Article" might change on different plattforms. Mastodon for example shows the "Article" type as a simple link.', 'activitypub' ); ?></span>
 						</p>
 						<p>
 							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="wordpress-post-format" <?php echo checked( 'wordpress-post-format', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'WordPress Post-Format', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'Maps the WordPress Post-Format to the ActivityPub Object Type.', 'activitypub' ); ?></span>

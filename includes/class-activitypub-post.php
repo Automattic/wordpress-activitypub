@@ -27,11 +27,11 @@ class Activitypub_Post {
 			'type' => $this->get_object_type(),
 			'published' => date( 'Y-m-d\TH:i:s\Z', strtotime( $post->post_date ) ),
 			'attributedTo' => get_author_posts_url( $post->post_author ),
-			'summary' => get_option( 'activitypub_add_summary', false ) ? apply_filters( 'the_excerpt', activitypub_get_the_excerpt( $post->ID, 400 ) ) : null,
+			'summary' => null,
 			'inReplyTo' => null,
-			'content' => apply_filters( 'the_content', get_post_field( 'post_content', $post->ID ) ),
+			'content' => $this->get_the_content(),
 			'contentMap' => array(
-				strstr( get_locale(), '_', true ) => apply_filters( 'the_content', get_post_field( 'post_content', $post->ID ) ),
+				strstr( get_locale(), '_', true ) => $this->get_the_content(),
 			),
 			'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'cc' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
@@ -138,7 +138,7 @@ class Activitypub_Post {
 	 * @return string the object-type
 	 */
 	public function get_object_type() {
-		if ( get_option( 'activitypub_object_type', 'note' ) !== "wordpress-post-format" ) {
+		if ( 'wordpress-post-format' !== get_option( 'activitypub_object_type', 'note' ) ) {
 			return ucfirst( get_option( 'activitypub_object_type', 'note' ) );
 		}
 
@@ -192,5 +192,73 @@ class Activitypub_Post {
 		}
 
 		return $object_type;
+	}
+
+	public function get_the_content() {
+		if ( 'excerpt' === get_option( 'activitypub_post_content_type', 'excerpt' ) ) {
+			return $this->get_the_post_excerpt();
+		}
+
+		return $this->get_the_post_content();
+	}
+
+	/**
+	 * Get the excerpt for a post for use outside of the loop.
+	 *
+	 * @param int     Optional excerpt length.
+	 *
+	 * @return string The excerpt.
+	 */
+	public function get_the_post_excerpt( $excerpt_length = 400 ) {
+		$post = $this->post;
+
+		$excerpt = get_post_field( 'post_excerpt', $post );
+
+		if ( '' === $excerpt ) {
+
+			$content = get_post_field( 'post_content', $post );
+
+			// An empty string will make wp_trim_excerpt do stuff we do not want.
+			if ( '' !== $content ) {
+
+				$excerpt = strip_shortcodes( $content );
+
+				/** This filter is documented in wp-includes/post-template.php */
+				$excerpt = apply_filters( 'the_content', $excerpt );
+				$excerpt = str_replace( ']]>', ']]>', $excerpt );
+
+				$excerpt_length = apply_filters( 'excerpt_length', $excerpt_length );
+
+				/** This filter is documented in wp-includes/formatting.php */
+				$excerpt_more = apply_filters( 'excerpt_more', ' [...]' );
+
+				$excerpt = wp_trim_words( $excerpt, $excerpt_length, $excerpt_more );
+			}
+		}
+
+		$filtered_excerpt = apply_filters( 'the_excerpt', $excerpt );
+
+		$excerpt = $filtered_excerpt . "\n\n" . '<a rel="shortlink" href="' . esc_url( wp_get_shortlink( $this->post->ID ) ) . '">' . wp_get_shortlink( $this->post->ID ) . '</a>';
+
+		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a>' );
+
+		return trim( preg_replace( '/[\r\n]{2,}/', "\n\n", strip_tags( $excerpt, $allowed_html ) ) );
+	}
+
+	/**
+	 * Get the content for a post for use outside of the loop.
+	 *
+	 * @return string The content.
+	 */
+	public function get_the_post_content() {
+		$post = $this->post;
+
+		$content = get_post_field( 'post_content', $post );
+
+		$filtered_content = apply_filters( 'the_content', $content );
+
+		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a>' );
+
+		return trim( preg_replace( '/[\r\n]{2,}/', "\n\n", strip_tags( $filtered_content, $allowed_html ) ) );
 	}
 }
