@@ -64,6 +64,7 @@ function activitypub_init() {
 	require_once dirname( __FILE__ ) . '/includes/class-activitypub-admin.php';
 	add_action( 'admin_menu', array( 'Activitypub_Admin', 'admin_menu' ) );
 	add_action( 'admin_init', array( 'Activitypub_Admin', 'register_settings' ) );
+	add_action( 'show_user_profile', array( 'Activitypub_Admin', 'add_fediverse_profile' ) );
 }
 add_action( 'plugins_loaded', 'activitypub_init' );
 

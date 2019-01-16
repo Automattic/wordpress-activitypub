@@ -18,10 +18,21 @@
 					</th>
 					<td>
 						<p>
-							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_excerpt" value="excerpt" <?php echo checked( 'excerpt', get_option( 'activitypub_post_content_type', 'excerpt' ) ); ?> /> <?php esc_html_e( 'Excerpt (default)', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'A content summary, shortened to 400 characters and without markup.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_excerpt" value="excerpt" <?php echo checked( 'excerpt', get_option( 'activitypub_post_content_type', 'excerpt' ) ); ?> /> <?php esc_html_e( 'Excerpt (default)', 'activitypub' ); ?></label> - <span class="description"><?php esc_html_e( 'A content summary, shortened to 400 characters and without markup.', 'activitypub' ); ?></span>
 						</p>
 						<p>
-							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_content" value="content" <?php echo checked( 'content', get_option( 'activitypub_post_content_type', 'excerpt' ) ); ?> /> <?php esc_html_e( 'Content', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'The full content.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_content" value="content" <?php echo checked( 'content', get_option( 'activitypub_post_content_type', 'excerpt' ) ); ?> /> <?php esc_html_e( 'Content', 'activitypub' ); ?></label> - <span class="description"><?php esc_html_e( 'The full content.', 'activitypub' ); ?></span>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
+						<?php esc_html_e( 'Backlink', 'activitypub' ); ?>
+					</th>
+					<td>
+						<p>
+							<label><input type="checkbox" name="activitypub_use_shortlink" id="activitypub_use_shortlink" value="1" <?php echo checked( '1', get_option( 'activitypub_use_shortlink', '0' ) ); ?> /> <?php esc_html_e( 'Use the Shortlink instead of the permalink', 'activitypub' ); ?></label>
+							<p class="description"><?php printf( esc_html( 'I can recommend %sHum%s, to prettify the Shortlinks', 'activitypub' ), '<a href="https://wordpress.org/plugins/hum/" target="_blank">', '</a>' ); ?></p>
 						</p>
 					</td>
 				</tr>
@@ -31,13 +42,13 @@
 					</th>
 					<td>
 						<p>
-							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type_note" value="note" <?php echo checked( 'note', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Note (default)', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'Should work with most plattforms.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type_note" value="note" <?php echo checked( 'note', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Note (default)', 'activitypub' ); ?></label> - <span class="description"><?php esc_html_e( 'Should work with most plattforms.', 'activitypub' ); ?></span>
 						</p>
 						<p>
-							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type_article" value="article" <?php echo checked( 'article', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Article', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'The presentation of the "Article" might change on different plattforms. Mastodon for example shows the "Article" type as a simple link.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type_article" value="article" <?php echo checked( 'article', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Article', 'activitypub' ); ?></label> - <span class="description"><?php esc_html_e( 'The presentation of the "Article" might change on different plattforms. Mastodon for example shows the "Article" type as a simple link.', 'activitypub' ); ?></span>
 						</p>
 						<p>
-							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="wordpress-post-format" <?php echo checked( 'wordpress-post-format', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'WordPress Post-Format', 'activitypub' ); ?> - <span class="description"><?php esc_html_e( 'Maps the WordPress Post-Format to the ActivityPub Object Type.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="wordpress-post-format" <?php echo checked( 'wordpress-post-format', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'WordPress Post-Format', 'activitypub' ); ?></label> - <span class="description"><?php esc_html_e( 'Maps the WordPress Post-Format to the ActivityPub Object Type.', 'activitypub' ); ?></span>
 						</p>
 					</td>
 				</tr>
@@ -50,19 +61,7 @@
 
 		<p><?php esc_html_e( 'All profile related settings.', 'activitypub' ); ?></p>
 
-		<table class="form-table">
-			<tbody>
-				<tr>
-					<th scope="row">
-						<label><?php esc_html_e( 'Profile identifier', 'activitypub' ); ?></label>
-					</th>
-					<td>
-						<p><code><?php echo activitypub_get_webfinger_resource( get_current_user_id() ); ?></code> or <code><?php echo get_author_posts_url( get_current_user_id() ); ?></code></p>
-						<p class="description"><?php printf( __( 'Try to follow "@%s" in the mastodon/friendi.ca search field.', 'activitypub' ), activitypub_get_webfinger_resource( get_current_user_id() ) ); ?></p>
-					</td>
-				</tr>
-			</tbody>
-		</table>
+		<?php activitypub_get_identifier_settings( get_current_user_id() ); ?>
 
 		<?php do_settings_fields( 'activitypub', 'profile' ); ?>
 

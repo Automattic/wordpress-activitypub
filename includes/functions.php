@@ -183,3 +183,21 @@ function activitypub_get_follower_inboxes( $user_id, $followers ) {
 
 	return array_unique( $inboxes );
 }
+
+function activitypub_get_identifier_settings( $user_id ) {
+	?>
+<table class="form-table">
+	<tbody>
+		<tr>
+			<th scope="row">
+				<label><?php esc_html_e( 'Profile identifier', 'activitypub' ); ?></label>
+			</th>
+			<td>
+				<p><code><?php echo activitypub_get_webfinger_resource( $user_id ); ?></code> or <code><?php echo get_author_posts_url( $user_id ); ?></code></p>
+				<p class="description"><?php printf( __( 'Try to follow "@%s" in the mastodon/friendi.ca search field.', 'activitypub' ), activitypub_get_webfinger_resource( $user_id ) ); ?></p>
+			</td>
+		</tr>
+	</tbody>
+</table>
+	<?php
+}

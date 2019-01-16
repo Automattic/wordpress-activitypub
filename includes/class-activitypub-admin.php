@@ -31,26 +31,33 @@ class Activitypub_Admin {
 	public static function register_settings() {
 		register_setting(
 			'activitypub', 'activitypub_post_content_type', array(
-				'type'         => 'string',
-				'description'  => __( 'Use summary or full content', 'activitypub' ),
+				'type' => 'string',
+				'description' => __( 'Use summary or full content', 'activitypub' ),
 				'show_in_rest' => array(
 					'schema' => array(
-						'enum' => array( 'excerpt', 'content' )
+						'enum' => array( 'excerpt', 'content' ),
 					),
 				),
-				'default'      => 0,
+				'default' => 'excerpt',
 			)
 		);
 		register_setting(
 			'activitypub', 'activitypub_object_type', array(
-				'type'         => 'string',
-				'description'  => __( 'The Activity-Object-Type', 'activitypub' ),
+				'type' => 'string',
+				'description' => __( 'The Activity-Object-Type', 'activitypub' ),
 				'show_in_rest' => array(
 					'schema' => array(
-						'enum' => array( 'note', 'article', 'wordpress-post-format' )
+						'enum' => array( 'note', 'article', 'wordpress-post-format' ),
 					),
 				),
-				'default'      => 'note',
+				'default' => 'note',
+			)
+		);
+		register_setting(
+			'activitypub', 'activitypub_use_shortlink', array(
+				'type' => 'boolean',
+				'description' => __( 'Use the Shortlink instead of the permalink', 'activitypub' ),
+				'default' => 0,
 			)
 		);
 	}
@@ -73,5 +80,12 @@ class Activitypub_Admin {
 			'<hr />' .
 			'<p>' . __( '<a href="https://notiz.blog/donate">Donate</a>', 'activitypub' ) . '</p>'
 		);
+	}
+
+	public static function add_fediverse_profile( $user ) {
+	?>
+		<h2><?php esc_html_e( 'Fediverse', 'activitypub' ); ?></h2>
+	<?php
+		activitypub_get_identifier_settings( $user->ID );
 	}
 }

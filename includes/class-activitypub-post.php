@@ -27,7 +27,7 @@ class Activitypub_Post {
 			'type' => $this->get_object_type(),
 			'published' => date( 'Y-m-d\TH:i:s\Z', strtotime( $post->post_date ) ),
 			'attributedTo' => get_author_posts_url( $post->post_author ),
-			'summary' => null,
+			'summary' => ( $this->get_object_type() == 'Article' ) ? $this->get_the_post_excerpt( 400, false ) : null,
 			'inReplyTo' => null,
 			'content' => $this->get_the_content(),
 			'contentMap' => array(
@@ -209,7 +209,7 @@ class Activitypub_Post {
 	 *
 	 * @return string The excerpt.
 	 */
-	public function get_the_post_excerpt( $excerpt_length = 400 ) {
+	public function get_the_post_excerpt( $excerpt_length = 400, $with_link = true ) {
 		$post = $this->post;
 
 		$excerpt = get_post_field( 'post_excerpt', $post );
@@ -238,11 +238,21 @@ class Activitypub_Post {
 
 		$filtered_excerpt = apply_filters( 'the_excerpt', $excerpt );
 
-		$excerpt = $filtered_excerpt . "\n\n" . '<a rel="shortlink" href="' . esc_url( wp_get_shortlink( $this->post->ID ) ) . '">' . wp_get_shortlink( $this->post->ID ) . '</a>';
+		if ( $with_link ) {
+			$link = '';
+
+			if ( get_option( 'activitypub_use_shortlink', 0 ) ) {
+				$link = esc_url( wp_get_shortlink( $this->post->ID ) );
+			} else {
+				$link = esc_url( get_permalink( $this->post->ID ) );
+			}
+
+			$filtered_excerpt = $filtered_excerpt . "\n\n" . '<a href="' . $link . '">' . $link . '</a>';
+		}
 
 		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a>' );
 
-		return trim( preg_replace( '/[\r\n]{2,}/', "\n\n", strip_tags( $excerpt, $allowed_html ) ) );
+		return trim( preg_replace( '/[\r\n]{2,}/', "\n\n", strip_tags( $filtered_excerpt, $allowed_html ) ) );
 	}
 
 	/**
@@ -250,12 +260,24 @@ class Activitypub_Post {
 	 *
 	 * @return string The content.
 	 */
-	public function get_the_post_content() {
+	public function get_the_post_content( $with_link = true ) {
 		$post = $this->post;
 
 		$content = get_post_field( 'post_content', $post );
 
 		$filtered_content = apply_filters( 'the_content', $content );
+
+		if ( $with_link ) {
+			$link = '';
+
+			if ( get_option( 'activitypub_use_shortlink', 0 ) ) {
+				$link = esc_url( wp_get_shortlink( $this->post->ID ) );
+			} else {
+				$link = esc_url( get_permalink( $this->post->ID ) );
+			}
+
+			$filtered_content = $filtered_content . "\n\n" . '<a href="' . $link . '">' . $link . '</a>';
+		}
 
 		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a>' );
 
