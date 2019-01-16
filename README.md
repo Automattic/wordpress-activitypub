@@ -4,7 +4,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
 **Tested up to:** 5.0.2  
-**Stable tag:** 0.2.0  
+**Stable tag:** 0.2.1  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -43,10 +43,6 @@ To implement:
 
 ### What are the differences between this plugin and Pterotype? ###
 
-**PHP Version**
-
-*ActivityPub for WordPress* needs PHP 5.6, *Pterotype* requires 7.2.x
-
 **Compatibility**
 
 *ActivityPub for WordPress* is compatible with OStatus and IndieWeb plugin suites. *Pterotype* is incompatible with the standalone [WebFinger plugin](https://wordpress.org/plugins/webfinger/) plugin, so it can't be run together with OStatus.
@@ -58,6 +54,11 @@ To implement:
 ## Changelog ##
 
 Project maintained on github at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+
+### 0.2.1 ###
+
+* customizable backlink (permalink or shorturl)
+* show profile-identifiers also on profile settings
 
 ### 0.2.0 ###
 
