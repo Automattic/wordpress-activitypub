@@ -201,3 +201,19 @@ function activitypub_get_identifier_settings( $user_id ) {
 </table>
 	<?php
 }
+
+function activitypub_get_followers( $user_id ) {
+	$followers = Db_Activitypub_Followers::get_followers( $user_id );
+
+	if ( ! $followers ) {
+		return array();
+	}
+
+	return $followers;
+}
+
+function activitypub_count_followers( $user_id ) {
+	$followers = activitypub_get_followers( $user_id );
+
+	return count( $followers );
+}
