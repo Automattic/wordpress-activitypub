@@ -39,8 +39,8 @@ function activitypub_init() {
 	//add_filter( 'rest_pre_serve_request', array( 'Rest_Activitypub_Inbox', 'serve_request' ), 11, 4 );
 	add_action( 'activitypub_inbox_follow', array( 'Rest_Activitypub_Inbox', 'handle_follow' ), 10, 2 );
 	add_action( 'activitypub_inbox_unfollow', array( 'Rest_Activitypub_Inbox', 'handle_unfollow' ), 10, 2 );
-	add_action( 'activitypub_inbox_like', array( 'Rest_Activitypub_Inbox', 'handle_reaction' ), 10, 2 );
-	add_action( 'activitypub_inbox_announce', array( 'Rest_Activitypub_Inbox', 'handle_reaction' ), 10, 2 );
+	//add_action( 'activitypub_inbox_like', array( 'Rest_Activitypub_Inbox', 'handle_reaction' ), 10, 2 );
+	//add_action( 'activitypub_inbox_announce', array( 'Rest_Activitypub_Inbox', 'handle_reaction' ), 10, 2 );
 	add_action( 'activitypub_inbox_create', array( 'Rest_Activitypub_Inbox', 'handle_create' ), 10, 2 );
 
 	require_once dirname( __FILE__ ) . '/includes/class-rest-activitypub-followers.php';
