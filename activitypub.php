@@ -16,6 +16,8 @@
  * Initialize plugin
  */
 function activitypub_init() {
+	defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(^|\s|>)#([^\s<>]+)\b' );
+
 	require_once dirname( __FILE__ ) . '/includes/class-activitypub-signature.php';
 	require_once dirname( __FILE__ ) . '/includes/class-activitypub-post.php';
 	require_once dirname( __FILE__ ) . '/includes/class-activitypub-activity.php';
@@ -65,6 +67,10 @@ function activitypub_init() {
 	add_action( 'admin_menu', array( 'Activitypub_Admin', 'admin_menu' ) );
 	add_action( 'admin_init', array( 'Activitypub_Admin', 'register_settings' ) );
 	add_action( 'show_user_profile', array( 'Activitypub_Admin', 'add_fediverse_profile' ) );
+
+	require_once dirname( __FILE__ ) . '/includes/class-activitypub-hashtag.php';
+	add_filter( 'wp_insert_post', array( 'Activitypub_Hashtag', 'insert_post' ), 99, 2 );
+	add_filter( 'the_content', array( 'Activitypub_Hashtag', 'the_content' ), 99, 2 );
 }
 add_action( 'plugins_loaded', 'activitypub_init' );
 
