@@ -58,6 +58,7 @@ Project maintained on github at [pfefferle/wordpress-activitypub](https://github
 ### 0.3.0 ###
 
 * basic hashtag support
+* temporarily deactived likes and boosts
 
 ### 0.2.1 ###
 
