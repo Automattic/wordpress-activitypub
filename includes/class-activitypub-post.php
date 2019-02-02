@@ -43,7 +43,7 @@ class Activitypub_Post {
 	}
 
 	public function to_json() {
-		return wp_json_encode( $this->to_array(), JSON_UNESCAPED_UNICODE );
+		return wp_json_encode( $this->to_array(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT );
 	}
 
 	public function get_attachments() {
@@ -262,9 +262,9 @@ class Activitypub_Post {
 
 		$decoded_content = html_entity_decode( $filtered_content, ENT_QUOTES, 'UTF-8' );
 
-		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a>' );
+		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a><p>' );
 
-		return trim( preg_replace( '/[\r\n]{2,}/', "\n\n", strip_tags( $decoded_content, $allowed_html) ) );
+		return trim( preg_replace( '/[\r\n]{2,}/', '', strip_tags( $decoded_content, $allowed_html) ) );
 	}
 
 	/**
@@ -282,9 +282,9 @@ class Activitypub_Post {
 
 		$decoded_summary = html_entity_decode( $filtered_summary, ENT_QUOTES, 'UTF-8' );
 
-		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a>' );
+		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a><p>' );
 
-		return trim( preg_replace( '/[\r\n]{2,}/', "\n\n", strip_tags( $decoded_summary, $allowed_html) ) );
+		return trim( preg_replace( '/[\r\n]{2,}/', '', strip_tags( $decoded_summary, $allowed_html) ) );
 	}
 
 	public static function add_backlink( $content, $post ) {
@@ -296,6 +296,6 @@ class Activitypub_Post {
 			$link = esc_url( get_permalink( $post->ID ) );
 		}
 
-		return $content . "\n\n" . '<a href="' . $link . '">' . $link . '</a>';
+		return $content . '<p><a href="' . $link . '">' . $link . '</a></p>';
 	}
 }
