@@ -65,7 +65,7 @@ class Activitypub_Activity {
 	}
 
 	public function to_json() {
-		return wp_json_encode( $this->to_array() );
+		return wp_json_encode( $this->to_array(), JSON_UNESCAPED_UNICODE );
 	}
 
 	public function to_simple_array() {
@@ -79,6 +79,6 @@ class Activitypub_Activity {
 	}
 
 	public function to_simple_json() {
-		return wp_json_encode( $this->to_simple_array() );
+		return wp_json_encode( $this->to_simple_array(), JSON_UNESCAPED_UNICODE );
 	}
 }

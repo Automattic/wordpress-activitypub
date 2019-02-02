@@ -93,6 +93,8 @@ if ( get_query_var( 'pretty' ) ) {
 	$options |= JSON_PRETTY_PRINT; // phpcs:ignore
 }
 
+$options |= JSON_UNESCAPED_UNICODE;
+
 /*
  * Options to be passed to json_encode()
  *

@@ -27,7 +27,7 @@ class Activitypub_Post {
 			'type' => $this->get_object_type(),
 			'published' => date( 'Y-m-d\TH:i:s\Z', strtotime( $post->post_date ) ),
 			'attributedTo' => get_author_posts_url( $post->post_author ),
-			'summary' => ( $this->get_object_type() == 'Article' ) ? $this->get_the_post_excerpt( 400, false ) : null,
+			'summary' => $this->get_the_summary(),
 			'inReplyTo' => null,
 			'content' => $this->get_the_content(),
 			'contentMap' => array(
@@ -43,7 +43,7 @@ class Activitypub_Post {
 	}
 
 	public function to_json() {
-		return wp_json_encode( $this->to_array() );
+		return wp_json_encode( $this->to_array(), JSON_UNESCAPED_UNICODE );
 	}
 
 	public function get_attachments() {
@@ -196,10 +196,18 @@ class Activitypub_Post {
 
 	public function get_the_content() {
 		if ( 'excerpt' === get_option( 'activitypub_post_content_type', 'excerpt' ) ) {
-			return $this->get_the_post_excerpt();
+			return $this->get_the_post_summary();
 		}
 
 		return $this->get_the_post_content();
+	}
+
+	public function get_the_summary() {
+		if ( 'Article' === $this->get_object_type() ) {
+			return $this->get_the_post_excerpt( 400 );
+		}
+
+		return null;
 	}
 
 	/**
@@ -209,7 +217,7 @@ class Activitypub_Post {
 	 *
 	 * @return string The excerpt.
 	 */
-	public function get_the_post_excerpt( $excerpt_length = 400, $with_link = true ) {
+	public function get_the_post_excerpt( $excerpt_length = 400 ) {
 		$post = $this->post;
 
 		$excerpt = get_post_field( 'post_excerpt', $post );
@@ -236,23 +244,7 @@ class Activitypub_Post {
 			}
 		}
 
-		$filtered_excerpt = apply_filters( 'the_excerpt', $excerpt );
-
-		if ( $with_link ) {
-			$link = '';
-
-			if ( get_option( 'activitypub_use_shortlink', 0 ) ) {
-				$link = esc_url( wp_get_shortlink( $this->post->ID ) );
-			} else {
-				$link = esc_url( get_permalink( $this->post->ID ) );
-			}
-
-			$filtered_excerpt = $filtered_excerpt . "\n\n" . '<a href="' . $link . '">' . $link . '</a>';
-		}
-
-		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a>' );
-
-		return trim( preg_replace( '/[\r\n]{2,}/', "\n\n", strip_tags( $filtered_excerpt, $allowed_html ) ) );
+		return html_entity_decode( $excerpt, ENT_QUOTES, 'UTF-8' );
 	}
 
 	/**
@@ -266,21 +258,44 @@ class Activitypub_Post {
 		$content = get_post_field( 'post_content', $post );
 
 		$filtered_content = apply_filters( 'the_content', $content );
+		$filtered_content = apply_filters( 'activitypub_the_content', $filtered_content, $this->post );
 
-		if ( $with_link ) {
-			$link = '';
-
-			if ( get_option( 'activitypub_use_shortlink', 0 ) ) {
-				$link = esc_url( wp_get_shortlink( $this->post->ID ) );
-			} else {
-				$link = esc_url( get_permalink( $this->post->ID ) );
-			}
-
-			$filtered_content = $filtered_content . "\n\n" . '<a href="' . $link . '">' . $link . '</a>';
-		}
+		$decoded_content = html_entity_decode( $filtered_content, ENT_QUOTES, 'UTF-8' );
 
 		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a>' );
 
-		return trim( preg_replace( '/[\r\n]{2,}/', "\n\n", strip_tags( $filtered_content, $allowed_html ) ) );
+		return trim( preg_replace( '/[\r\n]{2,}/', "\n\n", strip_tags( $decoded_content, $allowed_html) ) );
+	}
+
+	/**
+	 * Get the excerpt for a post for use outside of the loop.
+	 *
+	 * @param int     Optional excerpt length.
+	 *
+	 * @return string The excerpt.
+	 */
+	public function get_the_post_summary( $summary_length = 400 ) {
+		$summary = $this->get_the_post_excerpt( $summary_length );
+
+		$filtered_summary = apply_filters( 'the_excerpt', $summary );
+		$filtered_summary = apply_filters( 'activitypub_the_summary', $filtered_summary, $this->post );
+
+		$decoded_summary = html_entity_decode( $filtered_summary, ENT_QUOTES, 'UTF-8' );
+
+		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a>' );
+
+		return trim( preg_replace( '/[\r\n]{2,}/', "\n\n", strip_tags( $decoded_summary, $allowed_html) ) );
+	}
+
+	public static function add_backlink( $content, $post ) {
+		$link = '';
+
+		if ( get_option( 'activitypub_use_shortlink', 0 ) ) {
+			$link = esc_url( wp_get_shortlink( $post->ID ) );
+		} else {
+			$link = esc_url( get_permalink( $post->ID ) );
+		}
+
+		return $content . "\n\n" . '<a href="' . $link . '">' . $link . '</a>';
 	}
 }

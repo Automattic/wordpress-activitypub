@@ -3,8 +3,8 @@
 **Donate link:** https://notiz.blog/donate/  
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
-**Tested up to:** 5.0.3  
-**Stable tag:** 0.2.1  
+**Tested up to:** 5.1.0  
+**Stable tag:** 0.3.0  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -59,6 +59,8 @@ Project maintained on github at [pfefferle/wordpress-activitypub](https://github
 
 * basic hashtag support
 * temporarily deactived likes and boosts
+* added support for actor objects
+* fixed encoding issue
 
 ### 0.2.1 ###
 
