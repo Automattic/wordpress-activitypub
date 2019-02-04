@@ -30,6 +30,7 @@ if ( has_header_image() ) {
 
 $json->inbox = get_rest_url( null, "/activitypub/1.0/users/$author_id/inbox" );
 $json->outbox = get_rest_url( null, "/activitypub/1.0/users/$author_id/outbox" );
+$json->followers = get_rest_url( null, "/activitypub/1.0/users/$author_id/followers" );
 
 $json->manuallyApprovesFollowers = apply_filters( 'activitypub_json_manually_approves_followers', __return_false() ); // phpcs:ignore
 
