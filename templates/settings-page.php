@@ -18,10 +18,10 @@
 					</th>
 					<td>
 						<p>
-							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_excerpt" value="excerpt" <?php echo checked( 'excerpt', get_option( 'activitypub_post_content_type', 'excerpt' ) ); ?> /> <?php esc_html_e( 'Excerpt (default)', 'activitypub' ); ?></label> - <span class="description"><?php esc_html_e( 'A content summary, shortened to 400 characters and without markup.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_excerpt" value="excerpt" <?php echo checked( 'excerpt', get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php esc_html_e( 'Excerpt', 'activitypub' ); ?></label> - <span class="description"><?php esc_html_e( 'A content summary, shortened to 400 characters and without markup.', 'activitypub' ); ?></span>
 						</p>
 						<p>
-							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_content" value="content" <?php echo checked( 'content', get_option( 'activitypub_post_content_type', 'excerpt' ) ); ?> /> <?php esc_html_e( 'Content', 'activitypub' ); ?></label> - <span class="description"><?php esc_html_e( 'The full content.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_content" value="content" <?php echo checked( 'content', get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php esc_html_e( 'Content (default)', 'activitypub' ); ?></label> - <span class="description"><?php esc_html_e( 'The full content.', 'activitypub' ); ?></span>
 						</p>
 					</td>
 				</tr>

@@ -58,6 +58,7 @@ Project maintained on github at [pfefferle/wordpress-activitypub](https://github
 ### 0.3.2 ###
 
 * added "followers" endpoint
+* change activity content from blog 'excerpt' to blog 'content'
 
 ### 0.3.1 ###
 

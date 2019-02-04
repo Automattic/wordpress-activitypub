@@ -2,9 +2,9 @@
 # This file is distributed under the MIT.
 msgid ""
 msgstr ""
-"Project-Id-Version: ActivityPub 0.3.1\n"
+"Project-Id-Version: ActivityPub 0.3.2\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/activitypub\n"
-"POT-Creation-Date: 2019-02-04 09:59:50+00:00\n"
+"POT-Creation-Date: 2019-02-04 12:33:44+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -160,7 +160,7 @@ msgid "Post-Content"
 msgstr ""
 
 #: templates/settings-page.php:21
-msgid "Excerpt (default)"
+msgid "Excerpt"
 msgstr ""
 
 #: templates/settings-page.php:21
@@ -168,7 +168,7 @@ msgid "A content summary, shortened to 400 characters and without markup."
 msgstr ""
 
 #: templates/settings-page.php:24
-msgid "Content"
+msgid "Content (default)"
 msgstr ""
 
 #: templates/settings-page.php:24

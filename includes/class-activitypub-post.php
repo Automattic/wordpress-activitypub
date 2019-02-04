@@ -195,7 +195,7 @@ class Activitypub_Post {
 	}
 
 	public function get_the_content() {
-		if ( 'excerpt' === get_option( 'activitypub_post_content_type', 'excerpt' ) ) {
+		if ( 'excerpt' === get_option( 'activitypub_post_content_type', 'content' ) ) {
 			return $this->get_the_post_summary();
 		}
 

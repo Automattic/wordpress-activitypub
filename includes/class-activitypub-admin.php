@@ -38,7 +38,7 @@ class Activitypub_Admin {
 						'enum' => array( 'excerpt', 'content' ),
 					),
 				),
-				'default' => 'excerpt',
+				'default' => 'content',
 			)
 		);
 		register_setting(
