@@ -3,7 +3,30 @@
 class Db_Activitypub_Followers {
 
 	public static function get_followers( $author_id ) {
-		return get_user_option( 'activitypub_followers', $author_id );
+		$followers = get_user_option( 'activitypub_followers', $author_id );
+
+		if ( ! $followers ) {
+			return $followers;
+		}
+
+		if ( count( $array ) == count( $array, COUNT_RECURSIVE ) ) {
+			return $followers;
+		}
+
+		foreach ( $followers as $key => $follower ) {
+			if (
+				is_array( $follower ) &&
+				isset( $follower['type'] ) &&
+				'Person' === $follower['type'] &&
+				isset( $follower['id'] ) &&
+				true === filter_var( $follower['id'], FILTER_VALIDATE_URL )
+			) {
+				unset( $followers[$key] );
+				$followers[] = $follower['id'];
+			}
+		}
+
+		return $followers;
 	}
 
 	public static function add_follower( $actor, $author_id ) {
