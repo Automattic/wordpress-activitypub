@@ -60,6 +60,13 @@ class Activitypub_Admin {
 				'default' => 0,
 			)
 		);
+		register_setting(
+			'activitypub', 'activitypub_use_hashtags', array(
+				'type' => 'boolean',
+				'description' => __( 'Use the Shortlink instead of the permalink', 'activitypub' ),
+				'default' => 0,
+			)
+		);
 	}
 
 	public static function add_help_tab() {

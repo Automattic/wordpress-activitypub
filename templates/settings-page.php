@@ -30,10 +30,8 @@
 						<?php esc_html_e( 'Backlink', 'activitypub' ); ?>
 					</th>
 					<td>
-						<p>
-							<label><input type="checkbox" name="activitypub_use_shortlink" id="activitypub_use_shortlink" value="1" <?php echo checked( '1', get_option( 'activitypub_use_shortlink', '0' ) ); ?> /> <?php esc_html_e( 'Use the Shortlink instead of the permalink', 'activitypub' ); ?></label>
-							<p class="description"><?php printf( esc_html( 'I can recommend %sHum%s, to prettify the Shortlinks', 'activitypub' ), '<a href="https://wordpress.org/plugins/hum/" target="_blank">', '</a>' ); ?></p>
-						</p>
+						<p><label><input type="checkbox" name="activitypub_use_shortlink" id="activitypub_use_shortlink" value="1" <?php echo checked( '1', get_option( 'activitypub_use_shortlink', '0' ) ); ?> /> <?php esc_html_e( 'Use the Shortlink instead of the permalink', 'activitypub' ); ?></label></p>
+						<p class="description"><?php printf( esc_html( 'I can recommend %sHum%s, to prettify the Shortlinks', 'activitypub' ), '<a href="https://wordpress.org/plugins/hum/" target="_blank">', '</a>' ); ?></p>
 					</td>
 				</tr>
 				<tr>
@@ -56,6 +54,27 @@
 		</table>
 
 		<?php do_settings_fields( 'activitypub', 'activity' ); ?>
+
+		<h2><?php esc_html_e( 'Hashtag', 'activitypub' ); ?></h2>
+
+		<p><?php esc_html_e( 'All #tag related settings', 'activitypub' ); ?></p>
+
+		<table class="form-table">
+			<tbody>
+				<tr>
+					<th scope="row">
+						<label><?php esc_html_e( 'Support Hashtags', 'activitypub' ); ?></label>
+					</th>
+					<td>
+						<p>
+							<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo checked( '1', get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php _e( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag-link.', 'activitypub' ); ?></label>
+						</p>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<?php do_settings_fields( 'activitypub', 'hashtag' ); ?>
 
 		<h2><?php esc_html_e( 'Profile', 'activitypub' ); ?></h2>
 

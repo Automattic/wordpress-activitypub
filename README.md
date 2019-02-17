@@ -55,6 +55,12 @@ To implement:
 
 Project maintained on github at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
+### 0.4.0 ###
+
+* added settings to enable/disable hashtag support
+* fixed follower list
+* send activities only for new posts, otherwise send updates
+
 ### 0.3.2 ###
 
 * added "followers" endpoint
