@@ -124,4 +124,21 @@ class Rest_Activitypub_Outbox {
 			$response = activitypub_safe_remote_post( $inbox, $activity, $user_id );
 		}
 	}
+
+	public static function send_update_activity( $post_id ) {
+		$post = get_post( $post_id );
+		$user_id = $post->post_author;
+
+		$activitypub_post = new Activitypub_Post( $post );
+		$activitypub_activity = new Activitypub_Activity( 'Update', Activitypub_Activity::TYPE_FULL );
+		$activitypub_activity->from_post( $activitypub_post->to_array() );
+
+		$activity = $activitypub_activity->to_json(); // phpcs:ignore
+
+		$followers = Db_Activitypub_Followers::get_followers( $user_id );
+
+		foreach ( activitypub_get_follower_inboxes( $user_id, $followers ) as $inbox ) {
+			$response = activitypub_safe_remote_post( $inbox, $activity, $user_id );
+		}
+	}
 }

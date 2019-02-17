@@ -36,6 +36,7 @@ function activitypub_init() {
 	require_once dirname( __FILE__ ) . '/includes/class-rest-activitypub-outbox.php';
 	add_action( 'rest_api_init', array( 'Rest_Activitypub_Outbox', 'register_routes' ) );
 	add_action( 'activitypub_send_post_activity', array( 'Rest_Activitypub_Outbox', 'send_post_activity' ) );
+	add_action( 'activitypub_send_update_activity', array( 'Rest_Activitypub_Outbox', 'send_update_activity' ) );
 
 	require_once dirname( __FILE__ ) . '/includes/class-rest-activitypub-inbox.php';
 	add_action( 'rest_api_init', array( 'Rest_Activitypub_Inbox', 'register_routes' ) );
@@ -62,9 +63,7 @@ function activitypub_init() {
 	add_post_type_support( 'page', 'activitypub' );
 
 	$post_types = get_post_types_by_support( 'activitypub' );
-	foreach ( $post_types as $post_type ) {
-		add_action( 'publish_' . $post_type, array( 'Activitypub', 'schedule_post_activity' ) );
-	}
+	add_action( 'transition_post_status', array( 'Activitypub', 'schedule_post_activity' ), 10, 3 );
 
 	require_once dirname( __FILE__ ) . '/includes/class-activitypub-admin.php';
 	add_action( 'admin_menu', array( 'Activitypub_Admin', 'admin_menu' ) );
