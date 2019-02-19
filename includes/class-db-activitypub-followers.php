@@ -9,20 +9,15 @@ class Db_Activitypub_Followers {
 			return $followers;
 		}
 
-		if ( count( $array ) == count( $array, COUNT_RECURSIVE ) ) {
-			return $followers;
-		}
-
 		foreach ( $followers as $key => $follower ) {
 			if (
 				is_array( $follower ) &&
 				isset( $follower['type'] ) &&
 				'Person' === $follower['type'] &&
 				isset( $follower['id'] ) &&
-				true === filter_var( $follower['id'], FILTER_VALIDATE_URL )
+				false !== filter_var( $follower['id'], FILTER_VALIDATE_URL )
 			) {
-				unset( $followers[$key] );
-				$followers[] = $follower['id'];
+				$followers[$key] = $follower['id'];
 			}
 		}
 
@@ -38,7 +33,7 @@ class Db_Activitypub_Followers {
 				isset( $actor['type'] ) &&
 				'Person' === $actor['type'] &&
 				isset( $actor['id'] ) &&
-				true === filter_var( $actor['id'], FILTER_VALIDATE_URL )
+				false !== filter_var( $actor['id'], FILTER_VALIDATE_URL )
 			) {
 				$actor = $actor['id'];
 			}
