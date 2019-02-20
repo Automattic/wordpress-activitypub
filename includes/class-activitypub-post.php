@@ -204,7 +204,9 @@ class Activitypub_Post {
 
 	public function get_the_summary() {
 		if ( 'Article' === $this->get_object_type() ) {
-			return $this->get_the_post_excerpt( 400 );
+			$excerpt = $this->get_the_post_excerpt( 400 );
+
+			return html_entity_decode( $excerpt, ENT_QUOTES, 'UTF-8' );
 		}
 
 		return null;
@@ -244,7 +246,7 @@ class Activitypub_Post {
 			}
 		}
 
-		return html_entity_decode( $excerpt, ENT_QUOTES, 'UTF-8' );
+		return $excerpt;
 	}
 
 	/**
