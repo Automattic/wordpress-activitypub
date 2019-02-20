@@ -83,4 +83,58 @@ class Activitypub {
 			wp_schedule_single_event( time() + wp_rand( 0, 120 ), 'activitypub_send_update_activity', array( $post->ID ) );
 		}
 	}
+
+	/**
+	 * Replaces the default avatar
+	 *
+	 * @param array             $args Arguments passed to get_avatar_data(), after processing.
+	 * @param int|string|object $id_or_email A user ID, email address, or comment object
+	 *
+	 * @return array $args
+	 */
+	public static function pre_get_avatar_data( $args, $id_or_email ) {
+		if ( ! $id_or_email instanceof WP_Comment ||
+		! isset( $id_or_email->comment_type ) ||
+		$id_or_email->user_id ) {
+			return $args;
+		}
+
+		$allowed_comment_types = apply_filters( 'get_avatar_comment_types', array( 'comment' ) );
+		if ( ! empty( $id_or_email->comment_type ) && ! in_array( $id_or_email->comment_type, (array) $allowed_comment_types, true ) ) {
+			$args['url'] = false;
+			/** This filter is documented in wp-includes/link-template.php */
+			return apply_filters( 'get_avatar_data', $args, $id_or_email );
+		}
+
+		// check if comment has an avatar
+		$avatar = self::get_avatar_url( $id_or_email->comment_ID );
+
+		if ( $avatar ) {
+			if ( ! isset( $args['class'] ) || ! is_array( $args['class'] ) ) {
+				$args['class'] = array( 'u-photo' );
+			} else {
+				$args['class'][] = 'u-photo';
+				$args['class']   = array_unique( $args['class'] );
+			}
+			$args['url']     = $avatar;
+			$args['class'][] = 'avatar-activitypub';
+		}
+
+		return $args;
+	}
+
+	/**
+	 * Function to retrieve Avatar URL if stored in meta
+	 *
+	 *
+	 * @param int|WP_Comment $comment
+	 *
+	 * @return string $url
+	 */
+	public static function get_avatar_url( $comment ) {
+		if ( is_numeric( $comment ) ) {
+			$comment = get_comment( $comment );
+		}
+		return get_comment_meta( $comment->comment_ID, 'avatar_url', true );
+	}
 }
