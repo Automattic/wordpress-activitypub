@@ -1,6 +1,13 @@
 <?php
 namespace Activitypub\Rest;
 
+/**
+ * ActivityPub OStatus REST-Class
+ *
+ * @author Matthias Pfefferle
+ *
+ * @see https://www.w3.org/community/ostatus/
+ */
 class Ostatus {
 	/**
 	 * Register routes
@@ -10,10 +17,14 @@ class Ostatus {
 			'activitypub/1.0', '/ostatus/remote-follow', array(
 				array(
 					'methods'  => \WP_REST_Server::READABLE,
-					'callback' => array( '\Activitypub\Rest\Ostatus', 'webfinger' ),
-					'args'     => self::request_parameters(),
+					'callback' => array( '\Activitypub\Rest\Ostatus', 'get' ),
+					// 'args'     => self::request_parameters(),
 				),
 			)
 		);
+	}
+
+	public static function get() {
+		// @todo implement
 	}
 }
