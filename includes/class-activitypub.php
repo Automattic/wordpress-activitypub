@@ -12,6 +12,12 @@ class Activitypub {
 		add_filter( 'query_vars', array( '\Activitypub\Activitypub', 'add_query_vars' ) );
 		add_action( 'init', array( '\Activitypub\Activitypub', 'add_rewrite_endpoint' ) );
 		add_filter( 'pre_get_avatar_data', array( '\Activitypub\Activitypub', 'pre_get_avatar_data' ), 11, 2 );
+
+		add_post_type_support( 'post', 'activitypub' );
+		add_post_type_support( 'page', 'activitypub' );
+
+		$post_types = get_post_types_by_support( 'activitypub' );
+		add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
 	}
 	/**
 	 * Return a AS2 JSON version of an author, post or page

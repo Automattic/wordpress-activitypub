@@ -47,12 +47,6 @@ function init() {
 	require_once dirname( __FILE__ ) . '/includes/rest/class-nodeinfo.php';
 	\Activitypub\Rest\NodeInfo::init();
 
-	add_post_type_support( 'post', 'activitypub' );
-	add_post_type_support( 'page', 'activitypub' );
-
-	$post_types = get_post_types_by_support( 'activitypub' );
-	add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
-
 	require_once dirname( __FILE__ ) . '/includes/class-admin.php';
 	\Activitypub\Admin::init();
 
