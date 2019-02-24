@@ -1,6 +1,11 @@
 <?php
+namespace Activitypub\Rest;
 
-class Rest_Activitypub_Webfinger {
+class Webfinger {
+	public static function init() {
+		add_action( 'rest_api_init', array( '\Activitypub\Rest\Webfinger', 'register_routes' ) );
+		add_action( 'webfinger_user_data', array( '\Activitypub\Rest\Webfinger', 'add_webfinger_discovery' ), 10, 3 );
+	}
 	/**
 	 * Register routes
 	 */
@@ -8,8 +13,8 @@ class Rest_Activitypub_Webfinger {
 		register_rest_route(
 			'activitypub/1.0', '/webfinger', array(
 				array(
-					'methods'  => WP_REST_Server::READABLE,
-					'callback' => array( 'Rest_Activitypub_Webfinger', 'webfinger' ),
+					'methods'  => \WP_REST_Server::READABLE,
+					'callback' => array( '\Activitypub\Rest\Webfinger', 'webfinger' ),
 					'args'     => self::request_parameters(),
 				),
 			)
@@ -29,20 +34,20 @@ class Rest_Activitypub_Webfinger {
 		$matched = preg_match( '/^acct:([^@]+)@(.+)$/', $resource, $matches );
 
 		if ( ! $matched ) {
-			return new WP_Error( 'activitypub_unsupported_resource', __( 'Resouce is invalid', 'activitypub' ), array( 'status' => 400 ) );
+			return new \WP_Error( 'activitypub_unsupported_resource', __( 'Resouce is invalid', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		$resource_identifier = $matches[1];
 		$resource_host = $matches[2];
 
 		if ( wp_parse_url( home_url( '/' ), PHP_URL_HOST ) !== $resource_host ) {
-			return new WP_Error( 'activitypub_wrong_host', __( 'Resouce host does not match blog host', 'activitypub' ), array( 'status' => 404 ) );
+			return new \WP_Error( 'activitypub_wrong_host', __( 'Resouce host does not match blog host', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$user = get_user_by( 'login', esc_sql( $resource_identifier ) );
 
 		if ( ! $user ) {
-			return new WP_Error( 'activitypub_user_not_found', __( 'User not found', 'activitypub' ), array( 'status' => 404 ) );
+			return new \WP_Error( 'activitypub_user_not_found', __( 'User not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$json = array(
@@ -64,7 +69,7 @@ class Rest_Activitypub_Webfinger {
 			),
 		);
 
-		return new WP_REST_Response( $json, 200 );
+		return new \WP_REST_Response( $json, 200 );
 	}
 
 	/**

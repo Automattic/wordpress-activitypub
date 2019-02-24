@@ -1,6 +1,7 @@
 <?php
+namespace Activitypub;
 
-class Activitypub_Signature {
+class Signature {
 
 	/**
 	 * @param int $user_id

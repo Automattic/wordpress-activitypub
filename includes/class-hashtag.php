@@ -1,8 +1,15 @@
 <?php
+namespace Activitypub;
+
 /**
  * ActivityPub Hashtag Class
  */
-class Activitypub_Hashtag {
+class Hashtag {
+	public static function init() {
+		add_filter( 'wp_insert_post', array( '\Activitypub\Hashtag', 'insert_post' ), 99, 2 );
+		add_filter( 'the_content', array( '\Activitypub\Hashtag', 'the_content' ), 99, 2 );
+	}
+
 	/**
 	 * Filter to save #tags as real WordPress tags
 	 *
@@ -25,7 +32,7 @@ class Activitypub_Hashtag {
 	 * @param string $the_content the post-content
 	 */
 	public static function the_content( $the_content ) {
-		$the_content = preg_replace_callback( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', array( 'Activitypub_Hashtag', 'replace_with_links' ), $the_content );
+		$the_content = preg_replace_callback( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', array( '\Activitypub\Hashtag', 'replace_with_links' ), $the_content );
 
 		return $the_content;
 	}

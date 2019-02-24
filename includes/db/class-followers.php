@@ -1,6 +1,7 @@
 <?php
+namespace Activitypub\Db;
 
-class Db_Activitypub_Followers {
+class Followers {
 
 	public static function get_followers( $author_id ) {
 		$followers = get_user_option( 'activitypub_followers', $author_id );
@@ -17,7 +18,7 @@ class Db_Activitypub_Followers {
 				isset( $follower['id'] ) &&
 				false !== filter_var( $follower['id'], FILTER_VALIDATE_URL )
 			) {
-				$followers[$key] = $follower['id'];
+				$followers[ $key ] = $follower['id'];
 			}
 		}
 
@@ -38,8 +39,8 @@ class Db_Activitypub_Followers {
 				$actor = $actor['id'];
 			}
 
-			return new WP_Error( 'invalid_actor_object', __( 'Unknown Actor schema', 'activitypub' ), array(
-				'status' => 404
+			return new \WP_Error( 'invalid_actor_object', __( 'Unknown Actor schema', 'activitypub' ), array(
+				'status' => 404,
 			) );
 		}
 
@@ -58,8 +59,8 @@ class Db_Activitypub_Followers {
 		$followers = get_user_option( 'activitypub_followers', $author_id );
 
 		foreach ( $followers as $key => $value ) {
-			if ( $value === $actor) {
-				unset( $followers[$key] );
+			if ( $value === $actor ) {
+				unset( $followers[ $key ] );
 			}
 		}
 

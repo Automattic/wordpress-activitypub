@@ -1,10 +1,21 @@
 <?php
+namespace Activitypub\Rest;
+
 /**
  * ActivityPub Inbox Class
  *
  * @author Matthias Pfefferle
  */
-class Rest_Activitypub_Inbox {
+class Inbox {
+	public static function init() {
+		add_action( 'rest_api_init', array( '\Activitypub\Rest\Inbox', 'register_routes' ) );
+		//add_filter( 'rest_pre_serve_request', array( '\Activitypub\Rest\Inbox', 'serve_request' ), 11, 4 );
+		add_action( 'activitypub_inbox_follow', array( '\Activitypub\Rest\Inbox', 'handle_follow' ), 10, 2 );
+		add_action( 'activitypub_inbox_unfollow', array( '\Activitypub\Rest\Inbox', 'handle_unfollow' ), 10, 2 );
+		//add_action( 'activitypub_inbox_like', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
+		//add_action( 'activitypub_inbox_announce', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
+		add_action( 'activitypub_inbox_create', array( '\Activitypub\Rest\Inbox', 'handle_create' ), 10, 2 );
+	}
 	/**
 	 * Register routes
 	 */
@@ -12,8 +23,8 @@ class Rest_Activitypub_Inbox {
 		register_rest_route(
 			'activitypub/1.0', '/inbox', array(
 				array(
-					'methods'  => WP_REST_Server::EDITABLE,
-					'callback' => array( 'Rest_Activitypub_Inbox', 'global_inbox' ),
+					'methods'  => \WP_REST_Server::EDITABLE,
+					'callback' => array( '\Activitypub\Rest\Inbox', 'global_inbox' ),
 				),
 			)
 		);
@@ -21,8 +32,8 @@ class Rest_Activitypub_Inbox {
 		register_rest_route(
 			'activitypub/1.0', '/users/(?P<id>\d+)/inbox', array(
 				array(
-					'methods'  => WP_REST_Server::EDITABLE,
-					'callback' => array( 'Rest_Activitypub_Inbox', 'user_inbox' ),
+					'methods'  => \WP_REST_Server::EDITABLE,
+					'callback' => array( '\Activitypub\Rest\Inbox', 'user_inbox' ),
 					'args'     => self::request_parameters(),
 				),
 			)
@@ -56,7 +67,7 @@ class Rest_Activitypub_Inbox {
 
 		$headers = $request->get_headers();
 
-		//Activitypub_Signature::verify_signature( $headers, $key );
+		//\Activitypub\Signature::verify_signature( $headers, $key );
 
 		return $served;
 	}
@@ -79,13 +90,13 @@ class Rest_Activitypub_Inbox {
 		}
 
 		if ( ! is_array( $data ) || ! array_key_exists( 'type', $data ) ) {
-			return new WP_Error( 'rest_invalid_data', __( 'Invalid payload', 'activitypub' ), array( 'status' => 422 ) );
+			return new \WP_Error( 'rest_invalid_data', __( 'Invalid payload', 'activitypub' ), array( 'status' => 422 ) );
 		}
 
 		do_action( 'activitypub_inbox', $data, $author_id, $type );
 		do_action( "activitypub_inbox_{$type}", $data, $author_id );
 
-		return new WP_REST_Response( array(), 202 );
+		return new \WP_REST_Response( array(), 202 );
 	}
 
 	/**
@@ -97,7 +108,7 @@ class Rest_Activitypub_Inbox {
 	 */
 	public static function global_inbox( $request ) {
 		// Create the response object
-		return new WP_Error( 'rest_not_implemented', __( 'This method is not yet implemented', 'activitypub' ), array( 'status' => 501 ) );
+		return new \WP_Error( 'rest_not_implemented', __( 'This method is not yet implemented', 'activitypub' ), array( 'status' => 501 ) );
 	}
 
 	/**
@@ -128,24 +139,24 @@ class Rest_Activitypub_Inbox {
 	 */
 	public static function handle_follow( $object, $user_id ) {
 		if ( ! array_key_exists( 'actor', $object ) ) {
-			return new WP_Error( 'activitypub_no_actor', __( 'No "Actor" found', 'activitypub' ), $metadata );
+			return new \WP_Error( 'activitypub_no_actor', __( 'No "Actor" found', 'activitypub' ), $metadata );
 		}
 
 		// save follower
-		Db_Activitypub_Followers::add_follower( $object['actor'], $user_id );
+		\Activitypub\Db\Followers::add_follower( $object['actor'], $user_id );
 
 		// get inbox
-		$inbox = activitypub_get_inbox_by_actor( $object['actor'] );
+		$inbox = \Activitypub\get_inbox_by_actor( $object['actor'] );
 
 		// send "Accept" activity
-		$activity = new Activitypub_Activity( 'Accept', Activitypub_Activity::TYPE_SIMPLE );
+		$activity = new \Activitypub\Activity( 'Accept', \Activitypub\Activity::TYPE_SIMPLE );
 		$activity->set_object( $object );
 		$activity->set_actor( get_author_posts_url( $user_id ) );
 		$activity->set_to( $object['actor'] );
 
 		$activity = $activity->to_simple_json();
 
-		$response = activitypub_safe_remote_post( $inbox, $activity, $user_id );
+		$response = \Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 	}
 
 	/**
@@ -156,10 +167,10 @@ class Rest_Activitypub_Inbox {
 	 */
 	public static function handle_unfollow( $object, $user_id ) {
 		if ( ! array_key_exists( 'actor', $object ) ) {
-			return new WP_Error( 'activitypub_no_actor', __( 'No "Actor" found', 'activitypub' ), $metadata );
+			return new \WP_Error( 'activitypub_no_actor', __( 'No "Actor" found', 'activitypub' ), $metadata );
 		}
 
-		Db_Activitypub_Followers::remove_follower( $object['actor'], $user_id );
+		\Activitypub\Db\Followers::remove_follower( $object['actor'], $user_id );
 	}
 
 	/**
@@ -170,10 +181,10 @@ class Rest_Activitypub_Inbox {
 	 */
 	public static function handle_reaction( $object, $user_id ) {
 		if ( ! array_key_exists( 'actor', $object ) ) {
-			return new WP_Error( 'activitypub_no_actor', __( 'No "Actor" found', 'activitypub' ), $metadata );
+			return new \WP_Error( 'activitypub_no_actor', __( 'No "Actor" found', 'activitypub' ), $metadata );
 		}
 
-		$meta = activitypub_get_remote_metadata_by_actor( $object['actor'] );
+		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
 
 		$commentdata = array(
 			'comment_post_ID' => url_to_postid( $object['object'] ),
@@ -207,10 +218,10 @@ class Rest_Activitypub_Inbox {
 	 */
 	public static function handle_create( $object, $user_id ) {
 		if ( ! array_key_exists( 'actor', $object ) ) {
-			return new WP_Error( 'activitypub_no_actor', __( 'No "Actor" found', 'activitypub' ), $metadata );
+			return new \WP_Error( 'activitypub_no_actor', __( 'No "Actor" found', 'activitypub' ), $metadata );
 		}
 
-		$meta = activitypub_get_remote_metadata_by_actor( $object['actor'] );
+		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
 
 		$commentdata = array(
 			'comment_post_ID' => url_to_postid( $object['object']['inReplyTo'] ),

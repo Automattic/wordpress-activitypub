@@ -1,10 +1,22 @@
 <?php
+namespace Activitypub\Rest;
+
 /**
  * ActivityPub Outbox Class
  *
  * @author Matthias Pfefferle
  */
-class Rest_Activitypub_Outbox {
+class Outbox {
+	/**
+	 * Undocumented function
+	 *
+	 * @return void
+	 */
+	public static function init() {
+		add_action( 'rest_api_init', array( '\Activitypub\Rest\Outbox', 'register_routes' ) );
+		add_action( 'activitypub_send_post_activity', array( '\Activitypub\Rest\Outbox', 'send_post_activity' ) );
+		add_action( 'activitypub_send_update_activity', array( '\Activitypub\Rest\Outbox', 'send_update_activity' ) );
+	}
 
 	/**
 	 * Register routes
@@ -13,8 +25,8 @@ class Rest_Activitypub_Outbox {
 		register_rest_route(
 			'activitypub/1.0', '/users/(?P<id>\d+)/outbox', array(
 				array(
-					'methods'  => WP_REST_Server::READABLE,
-					'callback' => array( 'Rest_Activitypub_Outbox', 'user_outbox' ),
+					'methods'  => \WP_REST_Server::READABLE,
+					'callback' => array( '\Activitypub\Rest\Outbox', 'user_outbox' ),
 					'args'     => self::request_parameters(),
 				),
 			)
@@ -32,10 +44,11 @@ class Rest_Activitypub_Outbox {
 		$author  = get_user_by( 'ID', $user_id );
 
 		if ( ! $author ) {
-			return new WP_Error( 'rest_invalid_param', __( 'User not found', 'activitypub' ), array(
-				'status' => 404, 'params' => array(
-					'user_id' => __( 'User not found', 'activitypub' )
-				)
+			return new \WP_Error( 'rest_invalid_param', __( 'User not found', 'activitypub' ), array(
+				'status' => 404,
+				'params' => array(
+					'user_id' => __( 'User not found', 'activitypub' ),
+				),
 			) );
 		}
 
@@ -46,17 +59,17 @@ class Rest_Activitypub_Outbox {
 		 */
 		do_action( 'activitypub_outbox_pre' );
 
-		$json = new stdClass();
+		$json = new \stdClass();
 
-		$json->{'@context'} = get_activitypub_context();
-		$json->id = home_url( add_query_arg( NULL, NULL ) );
+		$json->{'@context'} = \Activitypub\get_context();
+		$json->id = home_url( add_query_arg( null, null ) );
 		$json->generator = 'http://wordpress.org/?v=' . get_bloginfo_rss( 'version' );
 		$json->actor = get_author_posts_url( $user_id );
 		$json->type = 'OrderedCollectionPage';
 		$json->partOf = get_rest_url( null, "/activitypub/1.0/users/$user_id/outbox" ); // phpcs:ignore
 
 		$count_posts = wp_count_posts();
-		$json->totalItems = intval( $count_posts->publish );
+		$json->totalItems = intval( $count_posts->publish ); // phpcs:ignore
 
 		$posts = get_posts( array(
 			'posts_per_page' => 10,
@@ -64,16 +77,16 @@ class Rest_Activitypub_Outbox {
 			'offset' => $page * 10,
 		) );
 
-		$json->first = add_query_arg( 'page', 0, $json->partOf );
-		$json->last  = add_query_arg( 'page', ( ceil ( $json->totalItems / 10 ) ) - 1, $json->partOf );
+		$json->first = add_query_arg( 'page', 0, $json->partOf ); // phpcs:ignore
+		$json->last  = add_query_arg( 'page', ( ceil ( $json->totalItems / 10 ) ) - 1, $json->partOf ); // phpcs:ignore
 
-		if ( ( ceil ( $json->totalItems / 10 ) ) - 1 > $page ) {
-			$json->next  = add_query_arg( 'page', ++$page, $json->partOf );
+		if ( ( ceil ( $json->totalItems / 10 ) ) - 1 > $page ) { // phpcs:ignore
+			$json->next  = add_query_arg( 'page', ++$page, $json->partOf ); // phpcs:ignore
 		}
 
 		foreach ( $posts as $post ) {
-			$activitypub_post = new Activitypub_Post( $post );
-			$activitypub_activity = new Activitypub_Activity( 'Create', Activitypub_Activity::TYPE_NONE );
+			$activitypub_post = new \Activitypub\Post( $post );
+			$activitypub_activity = new \Activitypub\Activity( 'Create', \Activitypub\Activity::TYPE_NONE );
 			$activitypub_activity->from_post( $activitypub_post->to_array() );
 			$json->orderedItems[] = $activitypub_activity->to_array(); // phpcs:ignore
 		}
@@ -86,7 +99,7 @@ class Rest_Activitypub_Outbox {
 		 */
 		do_action( 'activitypub_outbox_post' );
 
-		$response = new WP_REST_Response( $json, 200 );
+		$response = new \WP_REST_Response( $json, 200 );
 
 		$response->header( 'Content-Type', 'application/activity+json' );
 
@@ -112,16 +125,16 @@ class Rest_Activitypub_Outbox {
 		$post = get_post( $post_id );
 		$user_id = $post->post_author;
 
-		$activitypub_post = new Activitypub_Post( $post );
-		$activitypub_activity = new Activitypub_Activity( 'Create', Activitypub_Activity::TYPE_FULL );
+		$activitypub_post = new \Activitypub\Post( $post );
+		$activitypub_activity = new \Activitypub\Activity( 'Create', \Activitypub\Activity::TYPE_FULL );
 		$activitypub_activity->from_post( $activitypub_post->to_array() );
 
 		$activity = $activitypub_activity->to_json(); // phpcs:ignore
 
-		$followers = Db_Activitypub_Followers::get_followers( $user_id );
+		$followers = \Activitypub\Db\Followers::get_followers( $user_id );
 
-		foreach ( activitypub_get_follower_inboxes( $user_id, $followers ) as $inbox ) {
-			$response = activitypub_safe_remote_post( $inbox, $activity, $user_id );
+		foreach ( \Activitypub\get_follower_inboxes( $user_id, $followers ) as $inbox ) {
+			$response = \Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
 	}
 
@@ -129,16 +142,16 @@ class Rest_Activitypub_Outbox {
 		$post = get_post( $post_id );
 		$user_id = $post->post_author;
 
-		$activitypub_post = new Activitypub_Post( $post );
-		$activitypub_activity = new Activitypub_Activity( 'Update', Activitypub_Activity::TYPE_FULL );
+		$activitypub_post = new \Activitypub\Post( $post );
+		$activitypub_activity = new \Activitypub\Activity( 'Update', \Activitypub\Activity::TYPE_FULL );
 		$activitypub_activity->from_post( $activitypub_post->to_array() );
 
 		$activity = $activitypub_activity->to_json(); // phpcs:ignore
 
-		$followers = Db_Activitypub_Followers::get_followers( $user_id );
+		$followers = \Activitypub\Db\Followers::get_followers( $user_id );
 
-		foreach ( activitypub_get_follower_inboxes( $user_id, $followers ) as $inbox ) {
-			$response = activitypub_safe_remote_post( $inbox, $activity, $user_id );
+		foreach ( \Activitypub\get_follower_inboxes( $user_id, $followers ) as $inbox ) {
+			$response = \Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
 	}
 }

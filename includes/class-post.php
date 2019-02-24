@@ -1,11 +1,21 @@
 <?php
+namespace Activitypub;
+
 /**
  * ActivityPub Post Class
  *
  * @author Matthias Pfefferle
  */
-class Activitypub_Post {
+class Post {
 	private $post;
+
+	/**
+	 *
+	 */
+	public static function init() {
+		add_filter( 'activitypub_the_summary', array( '\Activitypub\Post', 'add_backlink' ), 10, 2 );
+		add_filter( 'activitypub_the_content', array( '\Activitypub\Post', 'add_backlink' ), 10, 2 );
+	}
 
 	public function __construct( $post = null ) {
 		$this->post = get_post( $post );
@@ -65,7 +75,7 @@ class Activitypub_Post {
 			$max_images--;
 		}
 		// then list any image attachments
-		$query = new WP_Query(
+		$query = new \WP_Query(
 			array(
 				'post_parent' => $id,
 				'post_status' => 'inherit',
@@ -77,7 +87,7 @@ class Activitypub_Post {
 			)
 		);
 		foreach ( $query->get_posts() as $attachment ) {
-			if ( ! in_array( $attachment->ID, $image_ids ) ) {
+			if ( ! in_array( $attachment->ID, $image_ids, true ) ) {
 				$image_ids[] = $attachment->ID;
 			}
 		}
@@ -89,7 +99,7 @@ class Activitypub_Post {
 			if ( $thumbnail ) {
 				$images[] = array(
 					'url' => $thumbnail[0],
-					'type' => $mimetype
+					'type' => $mimetype,
 				);
 			}
 		}
@@ -100,9 +110,9 @@ class Activitypub_Post {
 		if ( $images ) {
 			foreach ( $images as $image ) {
 				$attachment = array(
-					"type" => "Image",
-					"url" => $image['url'],
-					"mediaType" => $image['type'],
+					'type' => 'Image',
+					'url' => $image['url'],
+					'mediaType' => $image['type'],
 				);
 				$attachments[] = $attachment;
 			}
@@ -118,9 +128,9 @@ class Activitypub_Post {
 		if ( $post_tags ) {
 			foreach( $post_tags as $post_tag ) {
 				$tag = array(
-					"type" => "Hashtag",
-					"href" => get_tag_link( $post_tag->term_id ),
-					"name" => '#' . $post_tag->slug,
+					'type' => 'Hashtag',
+					'href' => get_tag_link( $post_tag->term_id ),
+					'name' => '#' . $post_tag->slug,
 				);
 				$tags[] = $tag;
 			}
@@ -266,7 +276,7 @@ class Activitypub_Post {
 
 		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a><p>' );
 
-		return trim( preg_replace( '/[\r\n]{2,}/', '', strip_tags( $decoded_content, $allowed_html) ) );
+		return trim( preg_replace( '/[\r\n]{2,}/', '', strip_tags( $decoded_content, $allowed_html ) ) );
 	}
 
 	/**
@@ -286,7 +296,7 @@ class Activitypub_Post {
 
 		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a><p>' );
 
-		return trim( preg_replace( '/[\r\n]{2,}/', '', strip_tags( $decoded_summary, $allowed_html) ) );
+		return trim( preg_replace( '/[\r\n]{2,}/', '', strip_tags( $decoded_summary, $allowed_html ) ) );
 	}
 
 	public static function add_backlink( $content, $post ) {

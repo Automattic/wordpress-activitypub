@@ -1,6 +1,12 @@
 <?php
+namespace Activitypub\Rest;
 
-class Rest_Activitypub_Nodeinfo {
+class Nodeinfo {
+	public static function init() {
+		add_action( 'rest_api_init', array( '\Activitypub\Rest\Nodeinfo', 'register_routes' ) );
+		add_filter( 'nodeinfo_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo_discovery' ), 10, 2 );
+		add_filter( 'nodeinfo2_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo2_discovery' ), 10 );
+	}
 	/**
 	 * Register routes
 	 */
@@ -8,8 +14,8 @@ class Rest_Activitypub_Nodeinfo {
 		register_rest_route(
 			'activitypub/1.0', '/nodeinfo/discovery', array(
 				array(
-					'methods'  => WP_REST_Server::READABLE,
-					'callback' => array( 'Rest_Activitypub_Nodeinfo', 'discovery' ),
+					'methods'  => \WP_REST_Server::READABLE,
+					'callback' => array( '\Activitypub\Rest\Nodeinfo', 'discovery' ),
 				),
 			)
 		);
@@ -17,8 +23,8 @@ class Rest_Activitypub_Nodeinfo {
 		register_rest_route(
 			'activitypub/1.0', '/nodeinfo', array(
 				array(
-					'methods'  => WP_REST_Server::READABLE,
-					'callback' => array( 'Rest_Activitypub_Nodeinfo', 'nodeinfo' ),
+					'methods'  => \WP_REST_Server::READABLE,
+					'callback' => array( '\Activitypub\Rest\Nodeinfo', 'nodeinfo' ),
 				),
 			)
 		);
@@ -26,8 +32,8 @@ class Rest_Activitypub_Nodeinfo {
 		register_rest_route(
 			'activitypub/1.0', '/nodeinfo2', array(
 				array(
-					'methods'  => WP_REST_Server::READABLE,
-					'callback' => array( 'Rest_Activitypub_Nodeinfo', 'nodeinfo2' ),
+					'methods'  => \WP_REST_Server::READABLE,
+					'callback' => array( '\Activitypub\Rest\Nodeinfo', 'nodeinfo2' ),
 				),
 			)
 		);
@@ -37,6 +43,7 @@ class Rest_Activitypub_Nodeinfo {
 	 * Render NodeInfo file
 	 *
 	 * @param  WP_REST_Request   $request
+	 *
 	 * @return WP_REST_Response
 	 */
 	public static function nodeinfo( $request ) {
@@ -61,22 +68,23 @@ class Rest_Activitypub_Nodeinfo {
 		);
 
 		$nodeinfo['openRegistrations'] = false;
-		$nodeinfo['protocols'] = array('activitypub');
+		$nodeinfo['protocols'] = array( 'activitypub' );
 
 		$nodeinfo['services'] = array(
 			'inbound' => array(),
 			'outbound' => array(),
 		);
 
-		$nodeinfo['metadata'] = new stdClass;
+		$nodeinfo['metadata'] = new \stdClass();
 
-		return new WP_REST_Response( $nodeinfo, 200 );
+		return new \WP_REST_Response( $nodeinfo, 200 );
 	}
 
 	/**
 	 * Render NodeInfo file
 	 *
 	 * @param  WP_REST_Request   $request
+	 *
 	 * @return WP_REST_Response
 	 */
 	public static function nodeinfo2( $request ) {
@@ -103,22 +111,23 @@ class Rest_Activitypub_Nodeinfo {
 		);
 
 		$nodeinfo['openRegistrations'] = false;
-		$nodeinfo['protocols'] = array('activitypub');
+		$nodeinfo['protocols'] = array( 'activitypub' );
 
 		$nodeinfo['services'] = array(
 			'inbound' => array(),
 			'outbound' => array(),
 		);
 
-		$nodeinfo['metadata'] = new stdClass;
+		$nodeinfo['metadata'] = new \stdClass();
 
-		return new WP_REST_Response( $nodeinfo, 200 );
+		return new \WP_REST_Response( $nodeinfo, 200 );
 	}
 
 	/**
 	 * Render NodeInfo discovery file
 	 *
 	 * @param  WP_REST_Request   $request
+	 *
 	 * @return WP_REST_Response
 	 */
 	public static function discovery( $request ) {
@@ -130,33 +139,38 @@ class Rest_Activitypub_Nodeinfo {
 			),
 		);
 
-		return new WP_REST_Response( $discovery, 200 );
+		return new \WP_REST_Response( $discovery, 200 );
 	}
 
 	/**
 	 * Extend NodeInfo data
 	 *
-	 * @param array $nodeinfo NodeInfo data
-	 * @param array           updated data
+	 * @param array  $nodeinfo NodeInfo data
+	 * @param string           The NodeInfo Version
+	 *
+	 * @return array           The extended array
 	 */
 	public static function add_nodeinfo_discovery( $nodeinfo, $version ) {
-		if ( '2.0' == $version) {
+		if ( '2.0' === $version ) {
 			$nodeinfo['protocols'][] = 'activitypub';
 		} else {
 			$nodeinfo['protocols']['inbound'][] = 'activitypub';
 			$nodeinfo['protocols']['outbound'][] = 'activitypub';
 		}
+
 		return $nodeinfo;
 	}
 
 	/**
 	 * Extend NodeInfo2 data
 	 *
-	 * @param array $nodeinfo NodeInfo2 data
-	 * @param array           updated data
+	 * @param  array $nodeinfo NodeInfo2 data
+	 *
+	 * @return array           The extended array
 	 */
 	public static function add_nodeinfo2_discovery( $nodeinfo ) {
 		$nodeinfo['protocols'][] = 'activitypub';
+
 		return $nodeinfo;
 	}
 }

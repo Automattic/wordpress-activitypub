@@ -1,8 +1,15 @@
 <?php
+namespace Activitypub;
+
 /**
  * ActivityPub Admin Class
  */
-class Activitypub_Admin {
+class Admin {
+	public static function init() {
+		add_action( 'admin_menu', array( '\Activitypub\Admin', 'admin_menu' ) );
+		add_action( 'admin_init', array( '\Activitypub\Admin', 'register_settings' ) );
+		add_action( 'show_user_profile', array( '\Activitypub\Admin', 'add_fediverse_profile' ) );
+	}
 	/**
 	 * Add admin menu entry
 	 */
@@ -12,10 +19,10 @@ class Activitypub_Admin {
 			'ActivityPub',
 			'manage_options',
 			'activitypub',
-			array( 'Activitypub_Admin', 'settings_page' )
+			array( '\Activitypub\Admin', 'settings_page' )
 		);
 
-		add_action( 'load-' . $settings_page, array( 'Activitypub_Admin', 'add_help_tab' ) );
+		add_action( 'load-' . $settings_page, array( '\Activitypub\Admin', 'add_help_tab' ) );
 	}
 
 	/**
@@ -90,9 +97,9 @@ class Activitypub_Admin {
 	}
 
 	public static function add_fediverse_profile( $user ) {
-	?>
+		?>
 		<h2><?php esc_html_e( 'Fediverse', 'activitypub' ); ?></h2>
-	<?php
+		<?php
 		activitypub_get_identifier_settings( $user->ID );
 	}
 }

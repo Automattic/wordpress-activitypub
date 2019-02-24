@@ -3,7 +3,7 @@ $author_id = get_the_author_meta( 'ID' );
 
 $json = new stdClass();
 
-$json->{'@context'} = get_activitypub_context();
+$json->{'@context'} = \Activitypub\get_context();
 $json->id = get_author_posts_url( $author_id );
 $json->type = 'Person';
 $json->name = get_the_author_meta( 'display_name', $author_id );
@@ -38,7 +38,7 @@ $json->manuallyApprovesFollowers = apply_filters( 'activitypub_json_manually_app
 $json->publicKey = array(
 	'id' => get_author_posts_url( $author_id ) . '#main-key',
 	'owner' => get_author_posts_url( $author_id ),
-	'publicKeyPem' => trim( Activitypub_Signature::get_public_key( $author_id ) ),
+	'publicKeyPem' => trim( \Activitypub\Signature::get_public_key( $author_id ) ),
 );
 
 $json->tag = array();

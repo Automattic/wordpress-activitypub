@@ -80,7 +80,7 @@
 
 		<p><?php esc_html_e( 'All profile related settings.', 'activitypub' ); ?></p>
 
-		<?php activitypub_get_identifier_settings( get_current_user_id() ); ?>
+		<?php \Activitypub\get_identifier_settings( get_current_user_id() ); ?>
 
 		<?php do_settings_fields( 'activitypub', 'profile' ); ?>
 
@@ -95,9 +95,9 @@
 						<label><?php esc_html_e( 'List of followers', 'activitypub' ); ?></label>
 					</th>
 					<td>
-						<?php if ( Db_Activitypub_Followers::get_followers( get_current_user_id() ) ) { ?>
+						<?php if ( \Activitypub\Db\Followers::get_followers( get_current_user_id() ) ) { ?>
 						<ul>
-							<?php foreach( Db_Activitypub_Followers::get_followers( get_current_user_id() ) as $follower ) { ?>
+							<?php foreach( \Activitypub\Db\Followers::get_followers( get_current_user_id() ) as $follower ) { ?>
 							<li><?php echo esc_attr( $follower ); ?></li>
 							<?php } ?>
 						</ul>

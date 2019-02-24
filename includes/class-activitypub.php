@@ -1,10 +1,18 @@
 <?php
+namespace Activitypub;
+
 /**
  * ActivityPub Class
  *
  * @author Matthias Pfefferle
  */
 class Activitypub {
+	public static function init() {
+		add_filter( 'template_include', array( '\Activitypub\Activitypub', 'render_json_template' ), 99 );
+		add_filter( 'query_vars', array( '\Activitypub\Activitypub', 'add_query_vars' ) );
+		add_action( 'init', array( '\Activitypub\Activitypub', 'add_rewrite_endpoint' ) );
+		add_filter( 'pre_get_avatar_data', array( '\Activitypub\Activitypub', 'pre_get_avatar_data' ), 11, 2 );
+	}
 	/**
 	 * Return a AS2 JSON version of an author, post or page
 	 *
@@ -93,9 +101,11 @@ class Activitypub {
 	 * @return array $args
 	 */
 	public static function pre_get_avatar_data( $args, $id_or_email ) {
-		if ( ! $id_or_email instanceof WP_Comment ||
-		! isset( $id_or_email->comment_type ) ||
-		$id_or_email->user_id ) {
+		if (
+			! $id_or_email instanceof \WP_Comment ||
+			! isset( $id_or_email->comment_type ) ||
+			$id_or_email->user_id
+		) {
 			return $args;
 		}
 

@@ -1,8 +1,8 @@
 <?php
 $post = get_post();
 
-$activitypub_post = new Activitypub_Post( $post );
-$activitypub_activity = new Activitypub_Activity( 'Create', Activitypub_Activity::TYPE_FULL );
+$activitypub_post = new \Activitypub\Post( $post );
+$activitypub_activity = new \Activitypub\Activity( 'Create', \Activitypub\Activity::TYPE_FULL );
 $activitypub_activity->from_post( $activitypub_post->to_array() );
 
 // filter output

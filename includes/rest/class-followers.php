@@ -1,6 +1,11 @@
 <?php
+namespace Activitypub\Rest;
 
-class Rest_Activitypub_Followers {
+class Followers {
+	public static function init() {
+		add_action( 'rest_api_init', array( '\Activitypub\Rest\Followers', 'register_routes' ) );
+	}
+
 	/**
 	 * Register routes
 	 */
@@ -8,8 +13,8 @@ class Rest_Activitypub_Followers {
 		register_rest_route(
 			'activitypub/1.0', '/users/(?P<id>\d+)/followers', array(
 				array(
-					'methods'  => WP_REST_Server::READABLE,
-					'callback' => array( 'Rest_Activitypub_Followers', 'get' ),
+					'methods'  => \WP_REST_Server::READABLE,
+					'callback' => array( '\Activitypub\Rest\Followers', 'get' ),
 					'args'     => self::request_parameters(),
 				),
 			)
@@ -21,10 +26,11 @@ class Rest_Activitypub_Followers {
 		$user    = get_user_by( 'ID', $user_id );
 
 		if ( ! $user ) {
-			return new WP_Error( 'rest_invalid_param', __( 'User not found', 'activitypub' ), array(
-				'status' => 404, 'params' => array(
-					'user_id' => __( 'User not found', 'activitypub' )
-				)
+			return new \WP_Error( 'rest_invalid_param', __( 'User not found', 'activitypub' ), array(
+				'status' => 404,
+				'params' => array(
+					'user_id' => __( 'User not found', 'activitypub' ),
+				),
 			) );
 		}
 
@@ -35,20 +41,20 @@ class Rest_Activitypub_Followers {
 		 */
 		do_action( 'activitypub_outbox_pre' );
 
-		$json = new stdClass();
+		$json = new \stdClass();
 
 		$json->{'@context'} = get_activitypub_context();
 
-		$followers = Db_Activitypub_Followers::get_followers( $user_id );
+		$followers = \Activitypub\Db\Followers::get_followers( $user_id );
 
 		if ( ! is_array( $followers ) ) {
 			$followers = array();
 		}
 
-		$json->totlaItems = count( $followers );
-		$json->orderedItems = $followers;
+		$json->totlaItems = count( $followers ); // phpcs:ignore
+		$json->orderedItems = $followers; // phpcs:ignore
 
-		$response = new WP_REST_Response( $json, 200 );
+		$response = new \WP_REST_Response( $json, 200 );
 		$response->header( 'Content-Type', 'application/activity+json' );
 
 		return $response;

@@ -1,10 +1,12 @@
 <?php
+namespace Activitypub;
+
 /**
  * ActivityPub Post Class
  *
  * @author Matthias Pfefferle
  */
-class Activitypub_Activity {
+class Activity {
 	private $context = array( 'https://www.w3.org/ns/activitystreams' );
 	private $published = '';
 	private $id = '';
@@ -22,7 +24,7 @@ class Activitypub_Activity {
 		if ( 'none' === $context ) {
 			$this->context = null;
 		} elseif ( 'full' === $context ) {
-			$this->context = get_activitypub_context();
+			$this->context = \Activitypub\get_context();
 		}
 
 		$this->type = ucfirst( $type );

@@ -2,9 +2,9 @@
 # This file is distributed under the MIT.
 msgid ""
 msgstr ""
-"Project-Id-Version: ActivityPub 0.4.3\n"
+"Project-Id-Version: ActivityPub 0.5.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/activitypub\n"
-"POT-Creation-Date: 2019-02-20 20:05:05+00:00\n"
+"POT-Creation-Date: 2019-02-24 11:06:41+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -13,24 +13,24 @@ msgstr ""
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "X-Generator: grunt-wp-i18n1.0.2\n"
 
-#: includes/class-activitypub-admin.php:35
+#: includes/class-admin.php:42
 msgid "Use summary or full content"
 msgstr ""
 
-#: includes/class-activitypub-admin.php:47
+#: includes/class-admin.php:54
 msgid "The Activity-Object-Type"
 msgstr ""
 
-#: includes/class-activitypub-admin.php:59
-#: includes/class-activitypub-admin.php:66 templates/settings-page.php:33
+#: includes/class-admin.php:66 includes/class-admin.php:73
+#: templates/settings-page.php:33
 msgid "Use the Shortlink instead of the permalink"
 msgstr ""
 
-#: includes/class-activitypub-admin.php:76
+#: includes/class-admin.php:83
 msgid "Overview"
 msgstr ""
 
-#: includes/class-activitypub-admin.php:78
+#: includes/class-admin.php:85
 msgid ""
 "ActivityPub is a decentralized social networking protocol based on the "
 "ActivityStreams 2.0 data format. ActivityPub is an official W3C recommended "
@@ -40,89 +40,85 @@ msgid ""
 "subscribing to content."
 msgstr ""
 
-#: includes/class-activitypub-admin.php:83
+#: includes/class-admin.php:90
 msgid "For more information:"
 msgstr ""
 
-#: includes/class-activitypub-admin.php:84
+#: includes/class-admin.php:91
 msgid "<a href=\"https://activitypub.rocks/\">Test Suite</a>"
 msgstr ""
 
-#: includes/class-activitypub-admin.php:85
+#: includes/class-admin.php:92
 msgid "<a href=\"https://www.w3.org/TR/activitypub/\">W3C Spec</a>"
 msgstr ""
 
-#: includes/class-activitypub-admin.php:86
+#: includes/class-admin.php:93
 msgid ""
 "<a href=\"https://github.com/pfefferle/wordpress-activitypub/issues\">Give "
 "us feedback</a>"
 msgstr ""
 
-#: includes/class-activitypub-admin.php:88
+#: includes/class-admin.php:95
 msgid "<a href=\"https://notiz.blog/donate\">Donate</a>"
 msgstr ""
 
-#: includes/class-activitypub-admin.php:94
+#: includes/class-admin.php:101
 msgid "Fediverse"
 msgstr ""
 
-#: includes/class-db-activitypub-followers.php:41
+#: includes/db/class-followers.php:42
 msgid "Unknown Actor schema"
 msgstr ""
 
-#: includes/class-rest-activitypub-followers.php:24
-#: includes/class-rest-activitypub-followers.php:26
-#: includes/class-rest-activitypub-outbox.php:35
-#: includes/class-rest-activitypub-outbox.php:37
-#: includes/class-rest-activitypub-webfinger.php:45
-msgid "User not found"
-msgstr ""
-
-#: includes/class-rest-activitypub-inbox.php:82
-msgid "Invalid payload"
-msgstr ""
-
-#: includes/class-rest-activitypub-inbox.php:100
-msgid "This method is not yet implemented"
-msgstr ""
-
-#: includes/class-rest-activitypub-inbox.php:131
-#: includes/class-rest-activitypub-inbox.php:159
-#: includes/class-rest-activitypub-inbox.php:173
-#: includes/class-rest-activitypub-inbox.php:210
-msgid "No \"Actor\" found"
-msgstr ""
-
-#: includes/class-rest-activitypub-webfinger.php:32
-msgid "Resouce is invalid"
-msgstr ""
-
-#: includes/class-rest-activitypub-webfinger.php:39
-msgid "Resouce host does not match blog host"
-msgstr ""
-
-#: includes/functions.php:97
+#: includes/functions.php:99
 msgid "The \"actor\" is no valid URL"
 msgstr ""
 
-#: includes/functions.php:121
+#: includes/functions.php:123
 msgid "No valid JSON data"
 msgstr ""
 
-#: includes/functions.php:149
+#: includes/functions.php:151
 msgid "No \"Inbox\" found"
 msgstr ""
 
-#: includes/functions.php:175
+#: includes/functions.php:177
 msgid "No \"Public-Key\" found"
 msgstr ""
 
-#: includes/functions.php:193
+#: includes/functions.php:195
 msgid "Profile identifier"
 msgstr ""
 
-#: includes/functions.php:197
+#: includes/functions.php:199
 msgid "Try to follow \"@%s\" in the mastodon/friendi.ca search field."
+msgstr ""
+
+#: includes/rest/class-followers.php:29 includes/rest/class-followers.php:32
+#: includes/rest/class-outbox.php:47 includes/rest/class-outbox.php:50
+#: includes/rest/class-webfinger.php:50
+msgid "User not found"
+msgstr ""
+
+#: includes/rest/class-inbox.php:93
+msgid "Invalid payload"
+msgstr ""
+
+#: includes/rest/class-inbox.php:111
+msgid "This method is not yet implemented"
+msgstr ""
+
+#: includes/rest/class-inbox.php:142 includes/rest/class-inbox.php:170
+#: includes/rest/class-inbox.php:184 includes/rest/class-inbox.php:221
+msgid "No \"Actor\" found"
+msgstr ""
+
+#: includes/rest/class-webfinger.php:37
+msgid "Resouce is invalid"
+msgstr ""
+
+#: includes/rest/class-webfinger.php:44
+msgid "Resouce host does not match blog host"
 msgstr ""
 
 #: templates/json-author.php:49
