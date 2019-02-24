@@ -91,6 +91,11 @@ class Activitypub {
 	 * @param int $post_id
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
+		// do not send activities if post is password protected
+		if ( post_password_required( $post ) ) {
+			return;
+		}
+
 		if ( 'publish' === $new_status && 'publish' !== $old_status ) {
 			wp_schedule_single_event( time() + wp_rand( 0, 120 ), 'activitypub_send_post_activity', array( $post->ID ) );
 		} elseif ( 'publish' === $new_status ) {
