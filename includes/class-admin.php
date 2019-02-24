@@ -100,6 +100,6 @@ class Admin {
 		?>
 		<h2><?php esc_html_e( 'Fediverse', 'activitypub' ); ?></h2>
 		<?php
-		activitypub_get_identifier_settings( $user->ID );
+		\Activitypub\get_identifier_settings( $user->ID );
 	}
 }

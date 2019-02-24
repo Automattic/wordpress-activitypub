@@ -43,7 +43,7 @@ class Followers {
 
 		$json = new \stdClass();
 
-		$json->{'@context'} = get_activitypub_context();
+		$json->{'@context'} = \Activitypub\get_context();
 
 		$followers = \Activitypub\Db\Followers::get_followers( $user_id );
 

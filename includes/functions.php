@@ -134,7 +134,7 @@ function get_remote_metadata_by_actor( $actor ) {
  * @return [type]        [description]
  */
 function get_inbox_by_actor( $actor ) {
-	$metadata = get_remote_metadata_by_actor( $actor );
+	$metadata = \Activitypub\get_remote_metadata_by_actor( $actor );
 
 	if ( is_wp_error( $metadata ) ) {
 		return $metadata;
@@ -157,7 +157,7 @@ function get_inbox_by_actor( $actor ) {
  * @return [type]        [description]
  */
 function get_publickey_by_actor( $actor, $key_id ) {
-	$metadata = get_remote_metadata_by_actor( $actor );
+	$metadata = \Activitypub\get_remote_metadata_by_actor( $actor );
 
 	if ( is_wp_error( $metadata ) ) {
 		return $metadata;
