@@ -7,6 +7,9 @@ namespace Activitypub;
  * @author Matthias Pfefferle
  */
 class Activitypub {
+	/**
+	 * Initialize the class, registering WordPress hooks
+	 */
 	public static function init() {
 		add_filter( 'template_include', array( '\Activitypub\Activitypub', 'render_json_template' ), 99 );
 		add_filter( 'query_vars', array( '\Activitypub\Activitypub', 'add_query_vars' ) );

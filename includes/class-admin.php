@@ -3,8 +3,13 @@ namespace Activitypub;
 
 /**
  * ActivityPub Admin Class
+ *
+ * @author Matthias Pfefferle
  */
 class Admin {
+	/**
+	 * Initialize the class, registering WordPress hooks
+	 */
 	public static function init() {
 		add_action( 'admin_menu', array( '\Activitypub\Admin', 'admin_menu' ) );
 		add_action( 'admin_init', array( '\Activitypub\Admin', 'register_settings' ) );

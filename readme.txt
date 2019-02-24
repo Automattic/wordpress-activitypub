@@ -55,6 +55,11 @@ To implement:
 
 Project maintained on github at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
+= 0.5.0 =
+
+* complete refactoring
+* fixed bug #30: Password-protected posts are federated.
+
 = 0.4.4 =
 
 * show avatars

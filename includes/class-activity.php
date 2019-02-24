@@ -5,6 +5,8 @@ namespace Activitypub;
  * ActivityPub Post Class
  *
  * @author Matthias Pfefferle
+ *
+ * @see https://www.w3.org/TR/activitypub/
  */
 class Activity {
 	private $context = array( 'https://www.w3.org/ns/activitystreams' );

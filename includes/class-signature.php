@@ -1,6 +1,11 @@
 <?php
 namespace Activitypub;
 
+/**
+ * ActivityPub Signature Class
+ *
+ * @author Matthias Pfefferle
+ */
 class Signature {
 
 	/**

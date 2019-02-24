@@ -1,7 +1,17 @@
 <?php
 namespace Activitypub\Rest;
 
+/**
+ * ActivityPub Followers REST-Class
+ *
+ * @author Matthias Pfefferle
+ *
+ * @see https://www.w3.org/TR/activitypub/#followers
+ */
 class Followers {
+	/**
+	 * Initialize the class, registering WordPress hooks
+	 */
 	public static function init() {
 		add_action( 'rest_api_init', array( '\Activitypub\Rest\Followers', 'register_routes' ) );
 	}

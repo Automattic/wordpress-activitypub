@@ -1,7 +1,17 @@
 <?php
 namespace Activitypub\Rest;
 
+/**
+ * ActivityPub WebFinger REST-Class
+ *
+ * @author Matthias Pfefferle
+ *
+ * @see https://webfinger.net/
+ */
 class Webfinger {
+	/**
+	 * Initialize the class, registering WordPress hooks
+	 */
 	public static function init() {
 		add_action( 'rest_api_init', array( '\Activitypub\Rest\Webfinger', 'register_routes' ) );
 		add_action( 'webfinger_user_data', array( '\Activitypub\Rest\Webfinger', 'add_webfinger_discovery' ), 10, 3 );

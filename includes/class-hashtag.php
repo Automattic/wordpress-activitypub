@@ -3,8 +3,13 @@ namespace Activitypub;
 
 /**
  * ActivityPub Hashtag Class
+ *
+ * @author Matthias Pfefferle
  */
 class Hashtag {
+	/**
+	 * Initialize the class, registering WordPress hooks
+	 */
 	public static function init() {
 		add_filter( 'wp_insert_post', array( '\Activitypub\Hashtag', 'insert_post' ), 99, 2 );
 		add_filter( 'the_content', array( '\Activitypub\Hashtag', 'the_content' ), 99, 2 );

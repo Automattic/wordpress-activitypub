@@ -2,15 +2,15 @@
 namespace Activitypub\Rest;
 
 /**
- * ActivityPub Outbox Class
+ * ActivityPub Outbox REST-Class
  *
  * @author Matthias Pfefferle
+ *
+ * @see https://www.w3.org/TR/activitypub/#outbox
  */
 class Outbox {
 	/**
-	 * Undocumented function
-	 *
-	 * @return void
+	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
 		add_action( 'rest_api_init', array( '\Activitypub\Rest\Outbox', 'register_routes' ) );

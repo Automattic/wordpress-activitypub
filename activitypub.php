@@ -8,6 +8,7 @@
  * Author URI: https://notiz.blog/
  * License: MIT
  * License URI: http://opensource.org/licenses/MIT
+ * Requires PHP: 5.6
  * Text Domain: activitypub
  * Domain Path: /languages
  */
@@ -15,7 +16,7 @@
 namespace Activitypub;
 
 /**
- * Initialize pluginut
+ * Initialize plugin
  */
 function init() {
 	defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(^|\s|>)#([^\s<>]+)\b' );

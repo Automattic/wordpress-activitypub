@@ -1,7 +1,17 @@
 <?php
 namespace Activitypub\Rest;
 
+/**
+ * ActivityPub NodeInfo REST-Class
+ *
+ * @author Matthias Pfefferle
+ *
+ * @see http://nodeinfo.diaspora.software/
+ */
 class Nodeinfo {
+	/**
+	 * Initialize the class, registering WordPress hooks
+	 */
 	public static function init() {
 		add_action( 'rest_api_init', array( '\Activitypub\Rest\Nodeinfo', 'register_routes' ) );
 		add_filter( 'nodeinfo_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo_discovery' ), 10, 2 );

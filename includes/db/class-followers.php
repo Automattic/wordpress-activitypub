@@ -1,6 +1,11 @@
 <?php
 namespace Activitypub\Db;
 
+/**
+ * ActivityPub Followers DB-Class
+ *
+ * @author Matthias Pfefferle
+ */
 class Followers {
 
 	public static function get_followers( $author_id ) {

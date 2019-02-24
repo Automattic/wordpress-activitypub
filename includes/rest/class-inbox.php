@@ -2,11 +2,16 @@
 namespace Activitypub\Rest;
 
 /**
- * ActivityPub Inbox Class
+ * ActivityPub Inbox REST-Class
  *
  * @author Matthias Pfefferle
+ *
+ * @see https://www.w3.org/TR/activitypub/#inbox
  */
 class Inbox {
+	/**
+	 * Initialize the class, registering WordPress hooks
+	 */
 	public static function init() {
 		add_action( 'rest_api_init', array( '\Activitypub\Rest\Inbox', 'register_routes' ) );
 		//add_filter( 'rest_pre_serve_request', array( '\Activitypub\Rest\Inbox', 'serve_request' ), 11, 4 );

@@ -10,7 +10,7 @@ class Post {
 	private $post;
 
 	/**
-	 *
+	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
 		add_filter( 'activitypub_the_summary', array( '\Activitypub\Post', 'add_backlink' ), 10, 2 );
