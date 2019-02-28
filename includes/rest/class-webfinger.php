@@ -16,6 +16,7 @@ class Webfinger {
 		add_action( 'rest_api_init', array( '\Activitypub\Rest\Webfinger', 'register_routes' ) );
 		add_action( 'webfinger_user_data', array( '\Activitypub\Rest\Webfinger', 'add_webfinger_discovery' ), 10, 3 );
 	}
+
 	/**
 	 * Register routes
 	 */

@@ -21,6 +21,7 @@ class Inbox {
 		//add_action( 'activitypub_inbox_announce', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
 		add_action( 'activitypub_inbox_create', array( '\Activitypub\Rest\Inbox', 'handle_create' ), 10, 2 );
 	}
+
 	/**
 	 * Register routes
 	 */
@@ -81,6 +82,7 @@ class Inbox {
 	 * Renders the user-inbox
 	 *
 	 * @param  WP_REST_Request   $request
+	 *
 	 * @return WP_REST_Response
 	 */
 	public static function user_inbox( $request ) {

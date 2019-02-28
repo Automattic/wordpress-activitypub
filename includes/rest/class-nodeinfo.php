@@ -17,6 +17,7 @@ class Nodeinfo {
 		add_filter( 'nodeinfo_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo_discovery' ), 10, 2 );
 		add_filter( 'nodeinfo2_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo2_discovery' ), 10 );
 	}
+
 	/**
 	 * Register routes
 	 */

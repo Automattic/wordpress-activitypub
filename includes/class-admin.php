@@ -15,6 +15,7 @@ class Admin {
 		add_action( 'admin_init', array( '\Activitypub\Admin', 'register_settings' ) );
 		add_action( 'show_user_profile', array( '\Activitypub\Admin', 'add_fediverse_profile' ) );
 	}
+
 	/**
 	 * Add admin menu entry
 	 */

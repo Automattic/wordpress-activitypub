@@ -106,6 +106,11 @@ class Outbox {
 		return $response;
 	}
 
+	/**
+	 * The supported parameters
+	 *
+	 * @return array list of parameters
+	 */
 	public static function request_parameters() {
 		$params = array();
 
@@ -121,6 +126,11 @@ class Outbox {
 		return $params;
 	}
 
+	/**
+	 * Send "create" activities
+	 *
+	 * @param int $post_id
+	 */
 	public static function send_post_activity( $post_id ) {
 		$post = get_post( $post_id );
 		$user_id = $post->post_author;
@@ -138,6 +148,11 @@ class Outbox {
 		}
 	}
 
+	/**
+	 * Send "update" activities
+	 *
+	 * @param int $post_id
+	 */
 	public static function send_update_activity( $post_id ) {
 		$post = get_post( $post_id );
 		$user_id = $post->post_author;

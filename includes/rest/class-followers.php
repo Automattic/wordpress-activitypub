@@ -31,6 +31,13 @@ class Followers {
 		);
 	}
 
+	/**
+	 * Handle GET request
+	 *
+	 * @param  WP_REST_Request   $request
+	 *
+	 * @return WP_REST_Response
+	 */
 	public static function get( $request ) {
 		$user_id = $request->get_param( 'id' );
 		$user    = get_user_by( 'ID', $user_id );
