@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ActivityPub 0.5.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/activitypub\n"
-"POT-Creation-Date: 2019-02-24 11:06:41+00:00\n"
+"POT-Creation-Date: 2019-02-28 18:31:27+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -13,24 +13,24 @@ msgstr ""
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "X-Generator: grunt-wp-i18n1.0.2\n"
 
-#: includes/class-admin.php:42
+#: includes/class-admin.php:48
 msgid "Use summary or full content"
 msgstr ""
 
-#: includes/class-admin.php:54
+#: includes/class-admin.php:60
 msgid "The Activity-Object-Type"
 msgstr ""
 
-#: includes/class-admin.php:66 includes/class-admin.php:73
+#: includes/class-admin.php:72 includes/class-admin.php:79
 #: templates/settings-page.php:33
 msgid "Use the Shortlink instead of the permalink"
 msgstr ""
 
-#: includes/class-admin.php:83
+#: includes/class-admin.php:89
 msgid "Overview"
 msgstr ""
 
-#: includes/class-admin.php:85
+#: includes/class-admin.php:91
 msgid ""
 "ActivityPub is a decentralized social networking protocol based on the "
 "ActivityStreams 2.0 data format. ActivityPub is an official W3C recommended "
@@ -40,33 +40,33 @@ msgid ""
 "subscribing to content."
 msgstr ""
 
-#: includes/class-admin.php:90
+#: includes/class-admin.php:96
 msgid "For more information:"
 msgstr ""
 
-#: includes/class-admin.php:91
+#: includes/class-admin.php:97
 msgid "<a href=\"https://activitypub.rocks/\">Test Suite</a>"
 msgstr ""
 
-#: includes/class-admin.php:92
+#: includes/class-admin.php:98
 msgid "<a href=\"https://www.w3.org/TR/activitypub/\">W3C Spec</a>"
 msgstr ""
 
-#: includes/class-admin.php:93
+#: includes/class-admin.php:99
 msgid ""
 "<a href=\"https://github.com/pfefferle/wordpress-activitypub/issues\">Give "
 "us feedback</a>"
 msgstr ""
 
-#: includes/class-admin.php:95
+#: includes/class-admin.php:101
 msgid "<a href=\"https://notiz.blog/donate\">Donate</a>"
 msgstr ""
 
-#: includes/class-admin.php:101
+#: includes/class-admin.php:107
 msgid "Fediverse"
 msgstr ""
 
-#: includes/db/class-followers.php:42
+#: includes/db/class-followers.php:47
 msgid "Unknown Actor schema"
 msgstr ""
 
@@ -94,30 +94,30 @@ msgstr ""
 msgid "Try to follow \"@%s\" in the mastodon/friendi.ca search field."
 msgstr ""
 
-#: includes/rest/class-followers.php:29 includes/rest/class-followers.php:32
+#: includes/rest/class-followers.php:46 includes/rest/class-followers.php:49
 #: includes/rest/class-outbox.php:47 includes/rest/class-outbox.php:50
-#: includes/rest/class-webfinger.php:50
+#: includes/rest/class-webfinger.php:61
 msgid "User not found"
 msgstr ""
 
-#: includes/rest/class-inbox.php:93
+#: includes/rest/class-inbox.php:100
 msgid "Invalid payload"
 msgstr ""
 
-#: includes/rest/class-inbox.php:111
+#: includes/rest/class-inbox.php:118
 msgid "This method is not yet implemented"
 msgstr ""
 
-#: includes/rest/class-inbox.php:142 includes/rest/class-inbox.php:170
-#: includes/rest/class-inbox.php:184 includes/rest/class-inbox.php:221
+#: includes/rest/class-inbox.php:149 includes/rest/class-inbox.php:177
+#: includes/rest/class-inbox.php:191 includes/rest/class-inbox.php:228
 msgid "No \"Actor\" found"
 msgstr ""
 
-#: includes/rest/class-webfinger.php:37
+#: includes/rest/class-webfinger.php:48
 msgid "Resouce is invalid"
 msgstr ""
 
-#: includes/rest/class-webfinger.php:44
+#: includes/rest/class-webfinger.php:55
 msgid "Resouce host does not match blog host"
 msgstr ""
 
