@@ -19,9 +19,9 @@ class Activitypub {
 		add_post_type_support( 'post', 'activitypub' );
 		add_post_type_support( 'page', 'activitypub' );
 
-		$post_types = get_post_types_by_support( 'activitypub' );
 		add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
 	}
+
 	/**
 	 * Return a AS2 JSON version of an author, post or page
 	 *
@@ -96,6 +96,12 @@ class Activitypub {
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
 		// do not send activities if post is password protected
 		if ( post_password_required( $post ) ) {
+			return;
+		}
+
+		// check if post-type supports ActivityPub
+		$post_types = get_post_types_by_support( 'activitypub' );
+		if ( ! in_array( $post->post_type, $post_types, true ) ) {
 			return;
 		}
 
