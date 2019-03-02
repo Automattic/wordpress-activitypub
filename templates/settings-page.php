@@ -50,31 +50,23 @@
 						</p>
 					</td>
 				</tr>
-			</tbody>
-		</table>
-
-		<?php do_settings_fields( 'activitypub', 'activity' ); ?>
-
-		<h2><?php esc_html_e( 'Hashtag', 'activitypub' ); ?></h2>
-
-		<p><?php esc_html_e( 'All #tag related settings', 'activitypub' ); ?></p>
-
-		<table class="form-table">
-			<tbody>
 				<tr>
 					<th scope="row">
-						<label><?php esc_html_e( 'Support Hashtags', 'activitypub' ); ?></label>
+						<?php esc_html_e( 'Hashtags', 'activitypub' ); ?>
 					</th>
 					<td>
 						<p>
 							<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo checked( '1', get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php _e( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag-link.', 'activitypub' ); ?></label>
+						</p>
+						<p>
+							<label><input type="checkbox" name="activitypub_add_tags_as_hashtags" id="activitypub_add_tags_as_hashtags" value="1" <?php echo checked( '1', get_option( 'activitypub_add_tags_as_hashtags', '0' ) ); ?> /> <?php _e( 'Add all tags as hashtags to the end of each activity.', 'activitypub' ); ?></label>
 						</p>
 					</td>
 				</tr>
 			</tbody>
 		</table>
 
-		<?php do_settings_fields( 'activitypub', 'hashtag' ); ?>
+		<?php do_settings_fields( 'activitypub', 'activity' ); ?>
 
 		<h2><?php esc_html_e( 'Profile', 'activitypub' ); ?></h2>
 
@@ -97,7 +89,7 @@
 					<td>
 						<?php if ( \Activitypub\Db\Followers::get_followers( get_current_user_id() ) ) { ?>
 						<ul>
-							<?php foreach( \Activitypub\Db\Followers::get_followers( get_current_user_id() ) as $follower ) { ?>
+							<?php foreach ( \Activitypub\Db\Followers::get_followers( get_current_user_id() ) as $follower ) { ?>
 							<li><?php echo esc_attr( $follower ); ?></li>
 							<?php } ?>
 						</ul>

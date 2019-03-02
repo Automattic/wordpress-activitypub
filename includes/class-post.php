@@ -13,8 +13,8 @@ class Post {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		add_filter( 'activitypub_the_summary', array( '\Activitypub\Post', 'add_backlink' ), 10, 2 );
-		add_filter( 'activitypub_the_content', array( '\Activitypub\Post', 'add_backlink' ), 10, 2 );
+		add_filter( 'activitypub_the_summary', array( '\Activitypub\Post', 'add_backlink_to_content' ), 15, 2 );
+		add_filter( 'activitypub_the_content', array( '\Activitypub\Post', 'add_backlink_to_content' ), 15, 2 );
 	}
 
 	public function __construct( $post = null ) {
@@ -126,7 +126,7 @@ class Post {
 
 		$post_tags = get_the_tags( $this->post->ID );
 		if ( $post_tags ) {
-			foreach( $post_tags as $post_tag ) {
+			foreach ( $post_tags as $post_tag ) {
 				$tag = array(
 					'type' => 'Hashtag',
 					'href' => get_tag_link( $post_tag->term_id ),
@@ -299,7 +299,15 @@ class Post {
 		return trim( preg_replace( '/[\r\n]{2,}/', '', strip_tags( $decoded_summary, $allowed_html ) ) );
 	}
 
-	public static function add_backlink( $content, $post ) {
+	/**
+	 * Adds a backlink to the post/summary content
+	 *
+	 * @param string  $content
+	 * @param WP_Post $post
+	 *
+	 * @return string
+	 */
+	public static function add_backlink_to_content( $content, $post ) {
 		$link = '';
 
 		if ( get_option( 'activitypub_use_shortlink', 0 ) ) {

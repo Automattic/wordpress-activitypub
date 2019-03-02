@@ -76,7 +76,14 @@ class Admin {
 		register_setting(
 			'activitypub', 'activitypub_use_hashtags', array(
 				'type' => 'boolean',
-				'description' => __( 'Use the Shortlink instead of the permalink', 'activitypub' ),
+				'description' => __( 'Add hashtags in the content as native tags and replace the #tag with the tag-link', 'activitypub' ),
+				'default' => 0,
+			)
+		);
+		register_setting(
+			'activitypub', 'activitypub_add_tags_as_hashtags', array(
+				'type' => 'boolean',
+				'description' => __( 'Add all tags as hashtags at the end of each activity', 'activitypub' ),
 				'default' => 0,
 			)
 		);

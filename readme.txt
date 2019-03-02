@@ -55,6 +55,10 @@ To implement:
 
 Project maintained on github at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
+= 0.5.2 =
+
+* add tags as hashtags to the end of each activity
+
 = 0.5.1 =
 
 * fixed name-collision that cases an invenate loop

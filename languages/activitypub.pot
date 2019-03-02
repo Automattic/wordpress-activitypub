@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ActivityPub 0.5.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/activitypub\n"
-"POT-Creation-Date: 2019-03-02 19:31:03+00:00\n"
+"POT-Creation-Date: 2019-03-02 20:10:15+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -21,16 +21,25 @@ msgstr ""
 msgid "The Activity-Object-Type"
 msgstr ""
 
-#: includes/class-admin.php:72 includes/class-admin.php:79
-#: templates/settings-page.php:33
+#: includes/class-admin.php:72 templates/settings-page.php:33
 msgid "Use the Shortlink instead of the permalink"
 msgstr ""
 
-#: includes/class-admin.php:89
+#: includes/class-admin.php:79
+msgid ""
+"Add hashtags in the content as native tags and replace the #tag with the "
+"tag-link"
+msgstr ""
+
+#: includes/class-admin.php:86
+msgid "Add all tags as hashtags at the end of each activity"
+msgstr ""
+
+#: includes/class-admin.php:96
 msgid "Overview"
 msgstr ""
 
-#: includes/class-admin.php:91
+#: includes/class-admin.php:98
 msgid ""
 "ActivityPub is a decentralized social networking protocol based on the "
 "ActivityStreams 2.0 data format. ActivityPub is an official W3C recommended "
@@ -40,29 +49,29 @@ msgid ""
 "subscribing to content."
 msgstr ""
 
-#: includes/class-admin.php:96
+#: includes/class-admin.php:103
 msgid "For more information:"
 msgstr ""
 
-#: includes/class-admin.php:97
+#: includes/class-admin.php:104
 msgid "<a href=\"https://activitypub.rocks/\">Test Suite</a>"
 msgstr ""
 
-#: includes/class-admin.php:98
+#: includes/class-admin.php:105
 msgid "<a href=\"https://www.w3.org/TR/activitypub/\">W3C Spec</a>"
 msgstr ""
 
-#: includes/class-admin.php:99
+#: includes/class-admin.php:106
 msgid ""
 "<a href=\"https://github.com/pfefferle/wordpress-activitypub/issues\">Give "
 "us feedback</a>"
 msgstr ""
 
-#: includes/class-admin.php:101
+#: includes/class-admin.php:108
 msgid "<a href=\"https://notiz.blog/donate\">Donate</a>"
 msgstr ""
 
-#: includes/class-admin.php:107
+#: includes/class-admin.php:114
 msgid "Fediverse"
 msgstr ""
 
@@ -125,7 +134,7 @@ msgstr ""
 msgid "Blog"
 msgstr ""
 
-#: templates/json-author.php:59 templates/settings-page.php:79
+#: templates/json-author.php:59 templates/settings-page.php:71
 msgid "Profile"
 msgstr ""
 
@@ -206,45 +215,41 @@ msgstr ""
 msgid "Maps the WordPress Post-Format to the ActivityPub Object Type."
 msgstr ""
 
-#: templates/settings-page.php:58
-msgid "Hashtag"
+#: templates/settings-page.php:55
+msgid "Hashtags"
 msgstr ""
 
-#: templates/settings-page.php:60
-msgid "All #tag related settings"
-msgstr ""
-
-#: templates/settings-page.php:66
-msgid "Support Hashtags"
-msgstr ""
-
-#: templates/settings-page.php:70
+#: templates/settings-page.php:59
 msgid ""
 "Add hashtags in the content as native tags and replace the "
 "<code>#tag</code> with the tag-link."
 msgstr ""
 
-#: templates/settings-page.php:81
+#: templates/settings-page.php:62
+msgid "Add all tags as hashtags to the end of each activity."
+msgstr ""
+
+#: templates/settings-page.php:73
 msgid "All profile related settings."
 msgstr ""
 
-#: templates/settings-page.php:87
+#: templates/settings-page.php:79
 msgid "Followers"
 msgstr ""
 
-#: templates/settings-page.php:89
+#: templates/settings-page.php:81
 msgid "All follower related settings."
 msgstr ""
 
-#: templates/settings-page.php:95
+#: templates/settings-page.php:87
 msgid "List of followers"
 msgstr ""
 
-#: templates/settings-page.php:105
+#: templates/settings-page.php:97
 msgid "No followers yet"
 msgstr ""
 
-#: templates/settings-page.php:120
+#: templates/settings-page.php:112
 msgid ""
 "If you like this plugin, what about a small <a "
 "href=\"https://notiz.blog/donate\">donation</a>?"
