@@ -73,13 +73,19 @@ class Activity {
 	}
 
 	public function to_simple_array() {
-		return array(
+		$activity = array(
 			'@context' => $this->context,
 			'type' => $this->type,
 			'actor' => $this->actor,
 			'object' => $this->object,
 			'to' => $this->to,
 		);
+
+		if ( $this->id ) {
+			$activity['id'] = $this->id;
+		}
+
+		return $activity;
 	}
 
 	public function to_simple_json() {

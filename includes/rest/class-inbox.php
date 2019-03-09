@@ -160,6 +160,7 @@ class Inbox {
 		$activity->set_object( $object );
 		$activity->set_actor( get_author_posts_url( $user_id ) );
 		$activity->set_to( $object['actor'] );
+		$activity->set_id( get_author_posts_url( $user_id ) . '#follow' . preg_replace( '~^https?://~', '', $object['actor'] ) );
 
 		$activity = $activity->to_simple_json();
 
