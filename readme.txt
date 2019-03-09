@@ -55,9 +55,11 @@ To implement:
 
 Project maintained on github at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
-= 0.5.2 =
+= 0.6.0 =
 
 * add tags as hashtags to the end of each activity
+* fixed pleroma following issue
+* followers-list improvements
 
 = 0.5.1 =
 
