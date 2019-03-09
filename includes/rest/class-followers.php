@@ -68,8 +68,13 @@ class Followers {
 			$followers = array();
 		}
 
-		$json->totlaItems = count( $followers ); // phpcs:ignore
+		$json->partOf = get_rest_url( null, "/activitypub/1.0/users/$user_id/followers" ); // phpcs:ignore
+		$json->totalItems = count( $followers ); // phpcs:ignore
 		$json->orderedItems = $followers; // phpcs:ignore
+
+		$json->first = $json->partOf; // phpcs:ignore
+
+		$json->first = get_rest_url( null, "/activitypub/1.0/users/$user_id/followers" );
 
 		$response = new \WP_REST_Response( $json, 200 );
 		$response->header( 'Content-Type', 'application/activity+json' );
