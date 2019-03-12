@@ -24,13 +24,12 @@ if ( has_header_image() ) {
 		'type' => 'Image',
 		'url'  => get_header_image(),
 	);
-} else {
-	$json->image = array();
 }
 
 $json->inbox = get_rest_url( null, "/activitypub/1.0/users/$author_id/inbox" );
 $json->outbox = get_rest_url( null, "/activitypub/1.0/users/$author_id/outbox" );
 $json->followers = get_rest_url( null, "/activitypub/1.0/users/$author_id/followers" );
+$json->following = get_rest_url( null, "/activitypub/1.0/users/$author_id/following" );
 
 $json->manuallyApprovesFollowers = apply_filters( 'activitypub_json_manually_approves_followers', __return_false() ); // phpcs:ignore
 
