@@ -15,7 +15,7 @@ class Hashtag {
 			add_filter( 'wp_insert_post', array( '\Activitypub\Hashtag', 'insert_post' ), 99, 2 );
 			add_filter( 'the_content', array( '\Activitypub\Hashtag', 'the_content' ), 99, 2 );
 		}
-		if ( '1' === get_option( 'activitypub_add_tags_as_hashtags', '1' ) ) {
+		if ( '1' === get_option( 'activitypub_add_tags_as_hashtags', '0' ) ) {
 			add_filter( 'activitypub_the_summary', array( '\Activitypub\Hashtag', 'add_hashtags_to_content' ), 10, 2 );
 			add_filter( 'activitypub_the_content', array( '\Activitypub\Hashtag', 'add_hashtags_to_content' ), 10, 2 );
 		}
@@ -26,6 +26,8 @@ class Hashtag {
 	 *
 	 * @param int $id the rev-id
 	 * @param array $data the post-data as array
+	 *
+	 * @return
 	 */
 	public static function insert_post( $id, $data ) {
 		if ( preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $data->post_content, $match ) ) {
@@ -41,6 +43,8 @@ class Hashtag {
 	 * Filter to replace the #tags in the content with links
 	 *
 	 * @param string $the_content the post-content
+	 *
+	 * @return string the filtered post-content
 	 */
 	public static function the_content( $the_content ) {
 		$the_content = preg_replace_callback( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', array( '\Activitypub\Hashtag', 'replace_with_links' ), $the_content );
