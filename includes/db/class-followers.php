@@ -12,7 +12,7 @@ class Followers {
 		$followers = get_user_option( 'activitypub_followers', $author_id );
 
 		if ( ! $followers ) {
-			return $followers;
+			return array();
 		}
 
 		foreach ( $followers as $key => $follower ) {
