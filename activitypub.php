@@ -42,6 +42,9 @@ function init() {
 	require_once dirname( __FILE__ ) . '/includes/rest/class-followers.php';
 	\Activitypub\Rest\Followers::init();
 
+	require_once dirname( __FILE__ ) . '/includes/rest/class-following.php';
+	\Activitypub\Rest\Following::init();
+
 	require_once dirname( __FILE__ ) . '/includes/rest/class-webfinger.php';
 	\Activitypub\Rest\Webfinger::init();
 
