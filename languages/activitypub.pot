@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ActivityPub 0.6.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/activitypub\n"
-"POT-Creation-Date: 2019-03-09 18:39:33+00:00\n"
+"POT-Creation-Date: 2019-03-12 21:22:31+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -104,6 +104,7 @@ msgid "Try to follow \"@%s\" in the mastodon/friendi.ca search field."
 msgstr ""
 
 #: includes/rest/class-followers.php:46 includes/rest/class-followers.php:49
+#: includes/rest/class-following.php:46 includes/rest/class-following.php:49
 #: includes/rest/class-outbox.php:47 includes/rest/class-outbox.php:50
 #: includes/rest/class-webfinger.php:61
 msgid "User not found"
@@ -130,15 +131,15 @@ msgstr ""
 msgid "Resouce host does not match blog host"
 msgstr ""
 
-#: templates/json-author.php:49
+#: templates/json-author.php:48
 msgid "Blog"
 msgstr ""
 
-#: templates/json-author.php:59 templates/settings-page.php:71
+#: templates/json-author.php:58 templates/settings-page.php:71
 msgid "Profile"
 msgstr ""
 
-#: templates/json-author.php:70
+#: templates/json-author.php:69
 msgid "Website"
 msgstr ""
 
