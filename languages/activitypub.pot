@@ -2,9 +2,9 @@
 # This file is distributed under the MIT.
 msgid ""
 msgstr ""
-"Project-Id-Version: ActivityPub 0.6.0\n"
+"Project-Id-Version: ActivityPub 0.7.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/activitypub\n"
-"POT-Creation-Date: 2019-03-12 21:22:31+00:00\n"
+"POT-Creation-Date: 2019-03-14 22:10:06+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -79,27 +79,28 @@ msgstr ""
 msgid "Unknown Actor schema"
 msgstr ""
 
-#: includes/functions.php:99
+#: includes/functions.php:104
 msgid "The \"actor\" is no valid URL"
 msgstr ""
 
-#: includes/functions.php:123
+#: includes/functions.php:128
 msgid "No valid JSON data"
 msgstr ""
 
-#: includes/functions.php:151
+#: includes/functions.php:156
 msgid "No \"Inbox\" found"
 msgstr ""
 
-#: includes/functions.php:177
+#: includes/functions.php:182
 msgid "No \"Public-Key\" found"
 msgstr ""
 
-#: includes/functions.php:195
+#: includes/functions.php:207
 msgid "Profile identifier"
 msgstr ""
 
-#: includes/functions.php:199
+#: includes/functions.php:212
+#. translators: the webfinger resource
 msgid "Try to follow \"@%s\" in the mastodon/friendi.ca search field."
 msgstr ""
 

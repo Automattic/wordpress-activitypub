@@ -4,7 +4,7 @@ Donate link: https://notiz.blog/donate/
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
 Tested up to: 5.1.1
-Stable tag: 0.7.0
+Stable tag: 0.7.1
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -16,6 +16,13 @@ The ActivityPub protocol is a decentralized social networking protocol based upo
 This is **BETA** software, see the FAQ to see the current feature set or rather what is still planned.
 
 The plugin implements the ActivityPub protocol for your Blog. Your readers will be able to follow your Blogposts on Mastodon and other Federated Plattforms that support ActivityPub.
+
+The plugin works with the following federated plattforms:
+
+* [mastodon](https://joinmastodon.org/)
+* [pleroma](https://pleroma.social/)
+* [friendi.ca](https://friendi.ca/)
+* [hubzilla](https://hubzilla.org/)
 
 == Frequently Asked Questions ==
 
@@ -54,6 +61,10 @@ To implement:
 == Changelog ==
 
 Project maintained on github at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+
+= 0.7.1 =
+
+* fixed inbox problems with pleroma
 
 = 0.7.0 =
 

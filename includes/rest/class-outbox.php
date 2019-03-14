@@ -139,12 +139,11 @@ class Outbox {
 		$activitypub_activity = new \Activitypub\Activity( 'Create', \Activitypub\Activity::TYPE_FULL );
 		$activitypub_activity->from_post( $activitypub_post->to_array() );
 
-		$activity = $activitypub_activity->to_json(); // phpcs:ignore
+		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
+			$activitypub_activity->set_to( $to );
+			$activity = $activitypub_activity->to_json(); // phpcs:ignore
 
-		$followers = \Activitypub\Db\Followers::get_followers( $user_id );
-
-		foreach ( \Activitypub\get_follower_inboxes( $user_id, $followers ) as $inbox ) {
-			$response = \Activitypub\safe_remote_post( $inbox, $activity, $user_id );
+			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
 	}
 
@@ -161,12 +160,11 @@ class Outbox {
 		$activitypub_activity = new \Activitypub\Activity( 'Update', \Activitypub\Activity::TYPE_FULL );
 		$activitypub_activity->from_post( $activitypub_post->to_array() );
 
-		$activity = $activitypub_activity->to_json(); // phpcs:ignore
+		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
+			$activitypub_activity->set_to( $to );
+			$activity = $activitypub_activity->to_json(); // phpcs:ignore
 
-		$followers = \Activitypub\Db\Followers::get_followers( $user_id );
-
-		foreach ( \Activitypub\get_follower_inboxes( $user_id, $followers ) as $inbox ) {
-			$response = \Activitypub\safe_remote_post( $inbox, $activity, $user_id );
+			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
 	}
 }

@@ -79,6 +79,7 @@ class Activity {
 			'actor' => $this->actor,
 			'object' => $this->object,
 			'to' => $this->to,
+			'cc' => $this->cc,
 		);
 
 		if ( $this->id ) {

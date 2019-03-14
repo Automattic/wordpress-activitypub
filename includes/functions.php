@@ -61,7 +61,11 @@ function safe_remote_post( $url, $body, $user_id ) {
 		'body' => $body,
 	);
 
-	return wp_safe_remote_post( $url, $args );
+	$response = wp_safe_remote_post( $url, $args );
+
+	do_action( 'activitypub_safe_remote_post_response', $response, $url, $body, $user_id );
+
+	return $response;
 }
 
 /**
@@ -85,8 +89,9 @@ function get_webfinger_resource( $user_id ) {
 /**
  * [get_metadata_by_actor description]
  *
- * @param  [type] $actor [description]
- * @return [type]        [description]
+ * @param sting $actor
+ *
+ * @return array
  */
 function get_remote_metadata_by_actor( $actor ) {
 	$metadata = get_transient( 'activitypub_' . $actor );
@@ -177,13 +182,20 @@ function get_publickey_by_actor( $actor, $key_id ) {
 	return new \WP_Error( 'activitypub_no_public_key', __( 'No "Public-Key" found', 'activitypub' ), $metadata );
 }
 
-function get_follower_inboxes( $user_id, $followers ) {
+function get_follower_inboxes( $user_id ) {
+	$followers = \Activitypub\Db\Followers::get_followers( $user_id );
 	$inboxes = array();
+
 	foreach ( $followers as $follower ) {
-		$inboxes[] = \Activitypub\get_inbox_by_actor( $follower );
+		$inbox = \Activitypub\get_inbox_by_actor( $follower );
+		// init array if empty
+		if ( ! empty( $inboxes[ $inbox ] ) ) {
+			$inboxes[ $inbox ] = array();
+		}
+		$inboxes[ $inbox ][] = $follower;
 	}
 
-	return array_unique( $inboxes );
+	return $inboxes;
 }
 
 function get_identifier_settings( $user_id ) {
@@ -195,8 +207,9 @@ function get_identifier_settings( $user_id ) {
 				<label><?php esc_html_e( 'Profile identifier', 'activitypub' ); ?></label>
 			</th>
 			<td>
-				<p><code><?php echo \Activitypub\get_webfinger_resource( $user_id ); ?></code> or <code><?php echo get_author_posts_url( $user_id ); ?></code></p>
-				<p class="description"><?php printf( __( 'Try to follow "@%s" in the mastodon/friendi.ca search field.', 'activitypub' ), \Activitypub\get_webfinger_resource( $user_id ) ); ?></p>
+				<p><code><?php echo esc_html( \Activitypub\get_webfinger_resource( $user_id ) ); ?></code> or <code><?php echo esc_url( get_author_posts_url( $user_id ) ); ?></code></p>
+				<?php // translators: the webfinger resource ?>
+				<p class="description"><?php printf( esc_html__( 'Try to follow "@%s" in the mastodon/friendi.ca search field.', 'activitypub' ), esc_html( \Activitypub\get_webfinger_resource( $user_id ) ) ); ?></p>
 			</td>
 		</tr>
 	</tbody>
