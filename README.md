@@ -3,8 +3,8 @@
 **Donate link:** https://notiz.blog/donate/  
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
-**Tested up to:** 5.1.1  
-**Stable tag:** 0.7.1  
+**Tested up to:** 5.2  
+**Stable tag:** 0.7.2  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -61,6 +61,10 @@ To implement:
 ## Changelog ##
 
 Project maintained on github at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+
+### 0.7.2 ###
+
+* fixes JSON representation of posts https://merveilles.town/@xuv/101907542498716956
 
 ### 0.7.1 ###
 

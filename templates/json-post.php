@@ -2,11 +2,10 @@
 $post = get_post();
 
 $activitypub_post = new \Activitypub\Post( $post );
-$activitypub_activity = new \Activitypub\Activity( 'Create', \Activitypub\Activity::TYPE_FULL );
-$activitypub_activity->from_post( $activitypub_post->to_array() );
+$json = array_merge( array( '@context' => \Activitypub\get_context() ), $activitypub_post->to_array() );
 
 // filter output
-$json = apply_filters( 'activitypub_json_post_array', $activitypub_activity->to_array() );
+$json = apply_filters( 'activitypub_json_post_array', $json );
 
 /*
  * Action triggerd prior to the ActivityPub profile being created and sent to the client
