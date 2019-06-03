@@ -28,11 +28,11 @@ matrix:
   - php: 5.6
     env: WP_PLUGIN_DEPLOY=1
   - php: 5.5
-    env: WP_VERSION=latest WP_MULTISITE=0
+    env: WP_VERSION=4.7 WP_MULTISITE=0
   - php: 5.4
-    env: WP_VERSION=latest WP_MULTISITE=0
+    env: WP_VERSION=4.7 WP_MULTISITE=0
   - php: 5.3
-    env: WP_VERSION=latest WP_MULTISITE=0
+    env: WP_VERSION=4.7 WP_MULTISITE=0
     dist: precise
 before_script:
 - |
