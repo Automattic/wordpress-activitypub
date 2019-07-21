@@ -43,7 +43,7 @@ $json->publicKey = array(
 $json->tag = array();
 $json->attachment = array();
 
-$json->attachment[] = array(
+$json->attachment['blog'] = array(
 	'type' => 'PropertyValue',
 	'name' => __( 'Blog', 'activitypub' ),
 	'value' => html_entity_decode(
@@ -53,7 +53,7 @@ $json->attachment[] = array(
 	),
 );
 
-$json->attachment[] = array(
+$json->attachment['profile'] = array(
 	'type' => 'PropertyValue',
 	'name' => __( 'Profile', 'activitypub' ),
 	'value' => html_entity_decode(
@@ -64,7 +64,7 @@ $json->attachment[] = array(
 );
 
 if ( get_the_author_meta( 'user_url', $author_id ) ) {
-	$json->attachment[] = array(
+	$json->attachment['website'] = array(
 		'type' => 'PropertyValue',
 		'name' => __( 'Website', 'activitypub' ),
 		'value' => html_entity_decode(
@@ -81,6 +81,9 @@ if ( get_the_author_meta( 'user_url', $author_id ) ) {
 
 // filter output
 $json = apply_filters( 'activitypub_json_author_array', $json );
+
+// get rid of all attachment array keys
+$json->attachment = array_values( $json->attachment );
 
 /*
  * Action triggerd prior to the ActivityPub profile being created and sent to the client
