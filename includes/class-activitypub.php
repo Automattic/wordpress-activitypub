@@ -42,7 +42,7 @@ class Activitypub {
 
 		global $wp_query;
 
-		if ( isset( $wp_query->query_vars['as2'] ) ) {
+		if ( isset( $wp_query->query_vars['activitypub'] ) ) {
 			return $json_template;
 		}
 
@@ -76,7 +76,7 @@ class Activitypub {
 	 * won't mangle it.
 	 */
 	public static function add_query_vars( $vars ) {
-		$vars[] = 'as2';
+		$vars[] = 'activitypub';
 
 		return $vars;
 	}
@@ -85,7 +85,7 @@ class Activitypub {
 	 * Add our rewrite endpoint to permalinks and pages.
 	 */
 	public static function add_rewrite_endpoint() {
-		add_rewrite_endpoint( 'as2', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
+		add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 	}
 
 	/**
