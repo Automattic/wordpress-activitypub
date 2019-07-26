@@ -188,8 +188,11 @@ function get_follower_inboxes( $user_id ) {
 
 	foreach ( $followers as $follower ) {
 		$inbox = \Activitypub\get_inbox_by_actor( $follower );
+		if ( ! $inbox ) {
+			continue;
+		}
 		// init array if empty
-		if ( ! empty( $inboxes[ $inbox ] ) ) {
+		if ( ! isset( $inboxes[ $inbox ] ) ) {
 			$inboxes[ $inbox ] = array();
 		}
 		$inboxes[ $inbox ][] = $follower;
