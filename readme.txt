@@ -15,13 +15,13 @@ The ActivityPub protocol is a decentralized social networking protocol based upo
 
 This is **BETA** software, see the FAQ to see the current feature set or rather what is still planned.
 
-The plugin implements the ActivityPub protocol for your Blog. Your readers will be able to follow your Blogposts on Mastodon and other Federated Plattforms that support ActivityPub.
+The plugin implements the ActivityPub protocol for your blog. Your readers will be able to follow your blogposts on Mastodon and other federated platforms that support ActivityPub.
 
-The plugin works with the following federated plattforms:
+The plugin works with the following federated platforms:
 
 * [mastodon](https://joinmastodon.org/)
 * [pleroma](https://pleroma.social/)
-* [friendi.ca](https://friendi.ca/)
+* [friendica](https://friendi.ca/)
 * [hubzilla](https://hubzilla.org/)
 
 == Frequently Asked Questions ==
@@ -46,25 +46,35 @@ To implement:
 
 = What is "ActivityPub for WordPress" =
 
-*ActivityPub for WordPress* extends WordPress with some fediverse features, but it does not compete with plattforms like Friendi.ca or Mastodon. If you want to run a **decentralized social network**, please use [Mastodon](https://joinmastodon.org/) or [GNU.social](https://gnu.io/social/).
+*ActivityPub for WordPress* extends WordPress with some Fediverse features, but it does not compete with platforms like Friendica or Mastodon. If you want to run a **decentralized social network**, please use [Mastodon](https://joinmastodon.org/) or [GNU social](https://gnu.io/social/).
 
 = What are the differences between this plugin and Pterotype? =
 
 **Compatibility**
 
-*ActivityPub for WordPress* is compatible with OStatus and IndieWeb plugin suites. *Pterotype* is incompatible with the standalone [WebFinger plugin](https://wordpress.org/plugins/webfinger/) plugin, so it can't be run together with OStatus.
+*ActivityPub for WordPress* is compatible with OStatus and IndieWeb plugin suites. *Pterotype* is incompatible with the standalone [WebFinger plugin](https://wordpress.org/plugins/webfinger/), so it can't be run together with OStatus.
 
 **Custom tables**
 
-*Pterotype* creates/uses a bunch of custom tables, *ActivityPub for WordPress* only uses the native tables and adds as few meta data as possible.
+*Pterotype* creates/uses a bunch of custom tables, *ActivityPub for WordPress* only uses the native tables and adds as little meta data as possible.
+
+= What if you are running your blog in a subdirectory? =
+
+In order for webfinger to work, it must be mapped to the root directory of the URL on which your blog resides.
+
+**Apache**
+
+Add the following to the .htaccess file in the root directory:
+`RedirectMatch "^\/\.well-known(.*)$" "\/blog\/\.well-known$1"`
+Where 'blog' is the path to the subdirectory at which your blog resides.
 
 == Changelog ==
 
-Project maintained on github at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
 = 0.7.2 =
 
-* fixes JSON representation of posts https://merveilles.town/@xuv/101907542498716956
+* fixed JSON representation of posts https://merveilles.town/@xuv/101907542498716956
 
 = 0.7.1 =
 
@@ -77,7 +87,6 @@ Project maintained on github at [pfefferle/wordpress-activitypub](https://github
 * simplified "followers" endpoint
 * fixed default value problem
 
-
 = 0.6.0 =
 
 * add tags as hashtags to the end of each activity
@@ -86,7 +95,7 @@ Project maintained on github at [pfefferle/wordpress-activitypub](https://github
 
 = 0.5.1 =
 
-* fixed name-collision that cases an invenate loop
+* fixed name-collision that caused an infinite loop
 
 = 0.5.0 =
 
@@ -128,7 +137,7 @@ Project maintained on github at [pfefferle/wordpress-activitypub](https://github
 = 0.3.0 =
 
 * basic hashtag support
-* temporarily deactived likes and boosts
+* temporarily deactivated likes and boosts
 * added support for actor objects
 * fixed encoding issue
 
@@ -140,7 +149,7 @@ Project maintained on github at [pfefferle/wordpress-activitypub](https://github
 = 0.2.0 =
 
 * added option to switch between content and excerpt
-* removed html and duplicateded new-lines
+* removed html and duplicate new-lines
 
 = 0.1.1 =
 
@@ -157,7 +166,7 @@ Project maintained on github at [pfefferle/wordpress-activitypub](https://github
 
 = 0.0.2 =
 
-* refactorins
+* refactoring
 * functional inbox
 * nicer profile views
 

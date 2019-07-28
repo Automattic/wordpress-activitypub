@@ -4,14 +4,14 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ActivityPub 0.7.2\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/activitypub\n"
-"POT-Creation-Date: 2019-04-13 18:07:11+00:00\n"
+"POT-Creation-Date: 2019-07-28 20:11:43+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "PO-Revision-Date: 2019-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"X-Generator: grunt-wp-i18n1.0.2\n"
+"X-Generator: grunt-wp-i18n 1.0.3\n"
 
 #: includes/class-admin.php:48
 msgid "Use summary or full content"
@@ -95,18 +95,18 @@ msgstr ""
 msgid "No \"Public-Key\" found"
 msgstr ""
 
-#: includes/functions.php:207
+#: includes/functions.php:210
 msgid "Profile identifier"
 msgstr ""
 
-#: includes/functions.php:212
+#: includes/functions.php:215
 #. translators: the webfinger resource
-msgid "Try to follow \"@%s\" in the mastodon/friendi.ca search field."
+msgid "Try to follow \"@%s\" in the Mastodon/Friendica search field."
 msgstr ""
 
 #: includes/rest/class-followers.php:46 includes/rest/class-followers.php:49
 #: includes/rest/class-following.php:46 includes/rest/class-following.php:49
-#: includes/rest/class-outbox.php:45 includes/rest/class-outbox.php:48
+#: includes/rest/class-outbox.php:47 includes/rest/class-outbox.php:50
 #: includes/rest/class-webfinger.php:61
 msgid "User not found"
 msgstr ""
@@ -125,11 +125,11 @@ msgid "No \"Actor\" found"
 msgstr ""
 
 #: includes/rest/class-webfinger.php:48
-msgid "Resouce is invalid"
+msgid "Resource is invalid"
 msgstr ""
 
 #: includes/rest/class-webfinger.php:55
-msgid "Resouce host does not match blog host"
+msgid "Resource host does not match blog host"
 msgstr ""
 
 #: templates/json-author.php:48
@@ -152,7 +152,7 @@ msgstr ""
 msgid ""
 "ActivityPub turns your blog into a federated social network. This means you "
 "can share and talk to everyone using the ActivityPub protocol, including "
-"users of Friendi.ca, Pleroma and Mastodon."
+"users of Friendica, Pleroma and Mastodon."
 msgstr ""
 
 #: templates/settings-page.php:9
@@ -188,7 +188,7 @@ msgid "Backlink"
 msgstr ""
 
 #: templates/settings-page.php:39
-msgid "Activtity-Object-Type"
+msgid "Activity-Object-Type"
 msgstr ""
 
 #: templates/settings-page.php:43
@@ -196,7 +196,7 @@ msgid "Note (default)"
 msgstr ""
 
 #: templates/settings-page.php:43
-msgid "Should work with most plattforms."
+msgid "Should work with most platforms."
 msgstr ""
 
 #: templates/settings-page.php:46
@@ -205,7 +205,7 @@ msgstr ""
 
 #: templates/settings-page.php:46
 msgid ""
-"The presentation of the \"Article\" might change on different plattforms. "
+"The presentation of the \"Article\" might change on different platforms. "
 "Mastodon for example shows the \"Article\" type as a simple link."
 msgstr ""
 
