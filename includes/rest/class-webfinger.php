@@ -45,14 +45,14 @@ class Webfinger {
 		$matched = preg_match( '/^acct:([^@]+)@(.+)$/', $resource, $matches );
 
 		if ( ! $matched ) {
-			return new \WP_Error( 'activitypub_unsupported_resource', __( 'Resouce is invalid', 'activitypub' ), array( 'status' => 400 ) );
+			return new \WP_Error( 'activitypub_unsupported_resource', __( 'Resource is invalid', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		$resource_identifier = $matches[1];
 		$resource_host = $matches[2];
 
 		if ( wp_parse_url( home_url( '/' ), PHP_URL_HOST ) !== $resource_host ) {
-			return new \WP_Error( 'activitypub_wrong_host', __( 'Resouce host does not match blog host', 'activitypub' ), array( 'status' => 404 ) );
+			return new \WP_Error( 'activitypub_wrong_host', __( 'Resource host does not match blog host', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$user = get_user_by( 'login', esc_sql( $resource_identifier ) );
