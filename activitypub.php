@@ -19,7 +19,7 @@ namespace Activitypub;
  * Initialize plugin
  */
 function init() {
-	defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(^|\s|\/>)#([^\s<>]+)\b' );
+	defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?<=[\s>]|^)#(\w*[A-Za-z_]+\w*)\b(?!;)' );
 
 	require_once dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once dirname( __FILE__ ) . '/includes/class-activity.php';
