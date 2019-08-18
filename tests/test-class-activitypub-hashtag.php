@@ -15,7 +15,7 @@ class Test_Activitypub_Hashtag extends WP_UnitTestCase {
 
 	public function the_content_provider() {
 		$object = get_term_by( 'name', 'object', 'post_tag' );
-		$link = get_tag_link( $object );
+		$link = get_term_link( $object, 'post_tag' );
 
 		return array(
 			array( 'test', 'test' ),

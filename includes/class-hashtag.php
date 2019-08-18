@@ -60,7 +60,7 @@ class Hashtag {
 	 */
 	public static function replace_with_links( $result ) {
 		$tag = $result[1];
-		$tag_object = get_term_by( 'name', $result[1], 'post_tag' );
+		$tag_object = get_term_by( 'name', $tag, 'post_tag' );
 
 		if ( $tag_object ) {
 			$link = get_term_link( $tag_object, 'post_tag' );
