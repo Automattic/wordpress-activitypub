@@ -3,7 +3,7 @@ Contributors: pfefferle
 Donate link: https://notiz.blog/donate/
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
-Tested up to: 5.2
+Tested up to: 5.2.2
 Stable tag: 0.7.2
 Requires PHP: 5.6
 License: MIT
@@ -57,6 +57,18 @@ To implement:
 **Custom tables**
 
 *Pterotype* creates/uses a bunch of custom tables, *ActivityPub for WordPress* only uses the native tables and adds as few meta data as possible.
+
+= What if you are running your blog in a subdirectory? =
+
+In order for WebFinger to work, it must be mapped to the root directory of the URL on which your blog resides.
+
+**Apache**
+
+Add the following to the .htaccess file in the root directory:
+
+	RedirectMatch "^\/\.well-known(.*)$" "\/blog\/\.well-known$1"
+
+Where 'blog' is the path to the subdirectory at which your blog resides.
 
 == Changelog ==
 
