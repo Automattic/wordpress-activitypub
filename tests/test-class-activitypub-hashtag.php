@@ -1,6 +1,6 @@
 <?php
 class Test_Activitypub_Hashtag extends WP_UnitTestCase {
-	protected function setUp() {
+	public function setUp() {
 		wp_create_tag( 'object' );
 	}
 
