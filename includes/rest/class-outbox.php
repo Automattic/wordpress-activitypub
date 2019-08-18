@@ -14,8 +14,6 @@ class Outbox {
 	 */
 	public static function init() {
 		add_action( 'rest_api_init', array( '\Activitypub\Rest\Outbox', 'register_routes' ) );
-		add_action( 'activitypub_send_post_activity', array( '\Activitypub\Rest\Outbox', 'send_post_activity' ) );
-		add_action( 'activitypub_send_update_activity', array( '\Activitypub\Rest\Outbox', 'send_update_activity' ) );
 	}
 
 	/**
@@ -124,47 +122,5 @@ class Outbox {
 		);
 
 		return $params;
-	}
-
-	/**
-	 * Send "create" activities
-	 *
-	 * @param int $post_id
-	 */
-	public static function send_post_activity( $post_id ) {
-		$post = get_post( $post_id );
-		$user_id = $post->post_author;
-
-		$activitypub_post = new \Activitypub\Post( $post );
-		$activitypub_activity = new \Activitypub\Activity( 'Create', \Activitypub\Activity::TYPE_FULL );
-		$activitypub_activity->from_post( $activitypub_post->to_array() );
-
-		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
-			$activitypub_activity->set_to( $to );
-			$activity = $activitypub_activity->to_json(); // phpcs:ignore
-
-			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
-		}
-	}
-
-	/**
-	 * Send "update" activities
-	 *
-	 * @param int $post_id
-	 */
-	public static function send_update_activity( $post_id ) {
-		$post = get_post( $post_id );
-		$user_id = $post->post_author;
-
-		$activitypub_post = new \Activitypub\Post( $post );
-		$activitypub_activity = new \Activitypub\Activity( 'Update', \Activitypub\Activity::TYPE_FULL );
-		$activitypub_activity->from_post( $activitypub_post->to_array() );
-
-		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
-			$activitypub_activity->set_to( $to );
-			$activity = $activitypub_activity->to_json(); // phpcs:ignore
-
-			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
-		}
 	}
 }

@@ -26,11 +26,14 @@ function init() {
 	require_once dirname( __FILE__ ) . '/includes/db/class-followers.php';
 	require_once dirname( __FILE__ ) . '/includes/functions.php';
 
+	require_once dirname( __FILE__ ) . '/includes/class-activity-dispatcher.php';
+	\Activitypub\Activity_Dispatcher::init();
+
 	require_once dirname( __FILE__ ) . '/includes/class-post.php';
 	\Activitypub\Post::init();
 
 	require_once dirname( __FILE__ ) . '/includes/class-activitypub.php';
-	\Activitypub\ActivityPub::init();
+	\Activitypub\Activitypub::init();
 
 	// Configure the REST API route
 	require_once dirname( __FILE__ ) . '/includes/rest/class-outbox.php';
