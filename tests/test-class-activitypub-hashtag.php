@@ -16,11 +16,11 @@ class Test_Activitypub_Hashtag extends WP_UnitTestCase {
 	public function the_content_provider() {
 		$object_link = get_tag_link( 'object' );
 
-		return [
-			[ 'test', 'test' ],
-			[ '#test', '#test' ],
-			[ 'hallo #test test', 'hallo #test test' ],
-			[ 'hallo #object test', 'hallo <a rel="tag" class="u-tag u-category" href="' . $object_link . '">#object</a> test' ],
-		];
+		return array(
+			array( 'test', 'test' ),
+			array( '#test', '#test' ),
+			array( 'hallo #test test', 'hallo #test test' ),
+			array( 'hallo #object test', 'hallo <a rel="tag" class="u-tag u-category" href="' . $object_link . '">#object</a> test' ),
+		);
 	}
 }
