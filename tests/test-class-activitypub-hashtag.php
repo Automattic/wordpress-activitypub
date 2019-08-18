@@ -19,6 +19,13 @@ class Test_Activitypub_Hashtag extends WP_UnitTestCase {
 			array( '#test', '#test' ),
 			array( 'hallo #test test', 'hallo #test test' ),
 			array( 'hallo #object test', 'hallo <a rel="tag" class="u-tag u-category" href="' . $link . '">#object</a> test' ),
+			array( 'hallo <a href="http://test.test/#object">test</a> test', 'hallo <a href="http://test.test/#object">test</a> test' ),
+			array( 'hallo <a href="http://test.test/#object">#test</a> test', 'hallo <a href="http://test.test/#object">#test</a> test' ),
+			array( '<div>hallo #object test</div>', '<div>hallo <a rel="tag" class="u-tag u-category" href="' . $link . '">#object</a> test</div>' ),
+			array( '<div>hallo #object</div>', '<div>hallo <a rel="tag" class="u-tag u-category" href="' . $link . '">#object</a></div>' ),
+			array( '<div>#object</div>', '<div>#object</div>' ),
+			array( '<a>#object</a>', '<a>#object</a>' ),
+			array( '<div style="color: #ccc;">object</a>', '<div style="color: #ccc;">object</a>' ),
 		);
 	}
 }

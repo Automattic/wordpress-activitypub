@@ -19,7 +19,7 @@ namespace Activitypub;
  * Initialize plugin
  */
 function init() {
-	defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?<=[\s>]|^)#(\w*[A-Za-z_]+\w*)\b(?!;)' );
+	defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|^)#(\w*[A-Za-z_]+\w*)' );
 
 	require_once dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once dirname( __FILE__ ) . '/includes/class-activity.php';
@@ -59,6 +59,9 @@ function init() {
 
 	require_once dirname( __FILE__ ) . '/includes/class-hashtag.php';
 	\Activitypub\Hashtag::init();
+
+	require_once dirname( __FILE__ ) . '/includes/class-health-check.php';
+	\Activitypub\Health_Check::init();
 }
 add_action( 'plugins_loaded', '\Activitypub\init' );
 
