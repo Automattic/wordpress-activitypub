@@ -1,7 +1,7 @@
 <div class="wrap">
 	<h1><?php esc_html_e( 'ActivityPub Settings', 'activitypub' ); ?></h1>
 
-	<p><?php esc_html_e( 'ActivityPub turns your blog into a federated social network. This means you can share and talk to everyone using the ActivityPub protocol, including users of Friendi.ca, Pleroma and Mastodon.', 'activitypub' ); ?></p>
+	<p><?php esc_html_e( 'ActivityPub turns your blog into a federated social network. This means you can share and talk to everyone using the ActivityPub protocol, including users of Friendica, Pleroma and Mastodon.', 'activitypub' ); ?></p>
 
 	<form method="post" action="options.php">
 		<?php settings_fields( 'activitypub' ); ?>
@@ -36,14 +36,14 @@
 				</tr>
 				<tr>
 					<th scope="row">
-						<?php esc_html_e( 'Activtity-Object-Type', 'activitypub' ); ?>
+						<?php esc_html_e( 'Activity-Object-Type', 'activitypub' ); ?>
 					</th>
 					<td>
 						<p>
-							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type_note" value="note" <?php echo checked( 'note', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Note (default)', 'activitypub' ); ?></label> - <span class="description"><?php esc_html_e( 'Should work with most plattforms.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type_note" value="note" <?php echo checked( 'note', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Note (default)', 'activitypub' ); ?></label> - <span class="description"><?php esc_html_e( 'Should work with most platforms.', 'activitypub' ); ?></span>
 						</p>
 						<p>
-							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type_article" value="article" <?php echo checked( 'article', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Article', 'activitypub' ); ?></label> - <span class="description"><?php esc_html_e( 'The presentation of the "Article" might change on different plattforms. Mastodon for example shows the "Article" type as a simple link.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type_article" value="article" <?php echo checked( 'article', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'Article', 'activitypub' ); ?></label> - <span class="description"><?php esc_html_e( 'The presentation of the "Article" might change on different platforms. Mastodon for example shows the "Article" type as a simple link.', 'activitypub' ); ?></span>
 						</p>
 						<p>
 							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="wordpress-post-format" <?php echo checked( 'wordpress-post-format', get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php esc_html_e( 'WordPress Post-Format', 'activitypub' ); ?></label> - <span class="description"><?php esc_html_e( 'Maps the WordPress Post-Format to the ActivityPub Object Type.', 'activitypub' ); ?></span>
