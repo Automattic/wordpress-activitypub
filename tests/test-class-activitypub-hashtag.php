@@ -13,6 +13,7 @@ class Test_Activitypub_Hashtag extends WP_UnitTestCase {
 		return [
 			[ 'test', 'test' ],
 			[ '#test', '#test' ],
+			[ 'hallo #test test', 'hallo #test test' ],
 		];
 	}
 }

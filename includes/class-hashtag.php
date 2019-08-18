@@ -31,7 +31,7 @@ class Hashtag {
 	 */
 	public static function insert_post( $id, $data ) {
 		if ( preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $data->post_content, $match ) ) {
-			$tags = implode( ', ', $match[2] );
+			$tags = implode( ', ', $match[1] );
 
 			wp_add_post_tags( $data->post_parent, $tags );
 		}
@@ -59,16 +59,15 @@ class Hashtag {
 	 * @return string the final string
 	 */
 	public static function replace_with_links( $result ) {
-		$tag = $result[2];
-		$space = $result[1];
-		$tag_object = get_term_by( 'name', $result[2], 'post_tag' );
+		$tag = $result[1];
+		$tag_object = get_term_by( 'name', $result[1], 'post_tag' );
 
 		if ( $tag_object ) {
 			$link = get_term_link( $tag_object, 'post_tag' );
-			return "$space<a href='$link' rel='tag'>#$tag</a>";
+			return sprintf( '<a rel="tag" class="u-tag u-category" href="%s">#%s</a>', $link, $tag );
 		}
 
-		return $space . '#' . $tag;
+		return '#' . $tag;
 	}
 
 	/**
