@@ -4,7 +4,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
 **Tested up to:** 5.2.2  
-**Stable tag:** 0.7.2  
+**Stable tag:** 0.7.3  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -60,6 +60,16 @@ To implement:
 
 ### What if you are running your blog in a subdirectory? ###
 
+In order for webfinger to work, it must be mapped to the root directory of the URL on which your blog resides.
+
+**Apache**
+
+Add the following to the .htaccess file in the root directory:
+`RedirectMatch "^\/\.well-known(.*)$" "\/blog\/\.well-known$1"`
+Where 'blog' is the path to the subdirectory at which your blog resides.
+
+### What if you are running your blog in a subdirectory? ###
+
 In order for WebFinger to work, it must be mapped to the root directory of the URL on which your blog resides.
 
 **Apache**
@@ -73,6 +83,11 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 ## Changelog ##
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+
+### 0.7.3 ###
+
+* refactorings
+* fixed PHP warnings
 
 ### 0.7.2 ###
 
