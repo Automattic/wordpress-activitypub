@@ -84,6 +84,10 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
+= 0.7.4 =
+
+* added admin_email to metadata, to be able to "Manage your instance" on https://fediverse.network/manage/
+
 = 0.7.3 =
 
 * refactorings

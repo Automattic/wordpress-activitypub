@@ -129,7 +129,9 @@ class Nodeinfo {
 			'outbound' => array(),
 		);
 
-		$nodeinfo['metadata'] = new \stdClass();
+		$nodeinfo['metadata'] = array(
+			'email' => get_option( 'admin_email' ),
+		);
 
 		return new \WP_REST_Response( $nodeinfo, 200 );
 	}
