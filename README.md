@@ -88,6 +88,7 @@ Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github
 
 * refactorings
 * fixed PHP warnings
+* better hashtag regex
 
 ### 0.7.2 ###
 
