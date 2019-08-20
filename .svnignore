@@ -2,6 +2,7 @@
 .editorconfig
 .git
 .gitignore
+.github
 .travis.yml
 .codeclimate.yml
 .data
