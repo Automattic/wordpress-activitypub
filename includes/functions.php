@@ -188,7 +188,7 @@ function get_follower_inboxes( $user_id ) {
 
 	foreach ( $followers as $follower ) {
 		$inbox = \Activitypub\get_inbox_by_actor( $follower );
-		if ( ! $inbox ) {
+		if ( ! $inbox || is_wp_error( $inbox ) ) {
 			continue;
 		}
 		// init array if empty

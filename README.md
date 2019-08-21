@@ -84,6 +84,10 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
+### 0.8.1 ###
+
+* fixed PHP warnings
+
 ### 0.8.0 ###
 
 * Moved followers list to user-menu
