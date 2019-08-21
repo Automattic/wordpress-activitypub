@@ -30,6 +30,12 @@ class Followers {
 		return $followers;
 	}
 
+	public static function count_followers( $author_id ) {
+		$followers = self::get_followers( $author_id );
+
+		return count( $followers );
+	}
+
 	public static function add_follower( $actor, $author_id ) {
 		$followers = get_user_option( 'activitypub_followers', $author_id );
 

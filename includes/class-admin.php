@@ -28,14 +28,25 @@ class Admin {
 			array( '\Activitypub\Admin', 'settings_page' )
 		);
 
-		add_action( 'load-' . $settings_page, array( '\Activitypub\Admin', 'add_help_tab' ) );
+		add_action( 'load-' . $settings_page, array( '\Activitypub\Admin', 'add_settings_help_tab' ) );
+
+		$followers_list_page = add_users_page( __( 'Followers', 'activitypub' ), __( 'Followers (Fediverse)', 'activitypub' ), 'read', 'activitypub-followers-list', array( '\Activitypub\Admin', 'followers_list_page' ) );
+
+		add_action( 'load-' . $followers_list_page, array( '\Activitypub\Admin', 'add_followers_list_help_tab' ) );
 	}
 
 	/**
 	 * Load settings page
 	 */
 	public static function settings_page() {
-		load_template( dirname( __FILE__ ) . '/../templates/settings-page.php' );
+		load_template( dirname( __FILE__ ) . '/../templates/settings.php' );
+	}
+
+	/**
+	 * Load user settings page
+	 */
+	public static function followers_list_page() {
+		load_template( dirname( __FILE__ ) . '/../templates/followers-list.php' );
 	}
 
 	/**
@@ -89,7 +100,7 @@ class Admin {
 		);
 	}
 
-	public static function add_help_tab() {
+	public static function add_settings_help_tab() {
 		get_current_screen()->add_help_tab(
 			array(
 				'id'      => 'overview',
@@ -107,6 +118,10 @@ class Admin {
 			'<hr />' .
 			'<p>' . __( '<a href="https://notiz.blog/donate">Donate</a>', 'activitypub' ) . '</p>'
 		);
+	}
+
+	public static function add_followers_list_help_tab() {
+		// todo
 	}
 
 	public static function add_fediverse_profile( $user ) {

@@ -68,41 +68,6 @@
 
 		<?php do_settings_fields( 'activitypub', 'activity' ); ?>
 
-		<h2><?php esc_html_e( 'Profile', 'activitypub' ); ?></h2>
-
-		<p><?php esc_html_e( 'All profile related settings.', 'activitypub' ); ?></p>
-
-		<?php \Activitypub\get_identifier_settings( get_current_user_id() ); ?>
-
-		<?php do_settings_fields( 'activitypub', 'profile' ); ?>
-
-		<h2><?php esc_html_e( 'Followers', 'activitypub' ); ?></h2>
-
-		<p><?php esc_html_e( 'All follower related settings.', 'activitypub' ); ?></p>
-
-		<table class="form-table">
-			<tbody>
-				<tr>
-					<th scope="row">
-						<label><?php esc_html_e( 'List of followers', 'activitypub' ); ?></label>
-					</th>
-					<td>
-						<?php if ( \Activitypub\Db\Followers::get_followers( get_current_user_id() ) ) { ?>
-						<ul>
-							<?php foreach ( \Activitypub\Db\Followers::get_followers( get_current_user_id() ) as $follower ) { ?>
-							<li><?php echo esc_attr( $follower ); ?></li>
-							<?php } ?>
-						</ul>
-						<?php } else { ?>
-						<p><?php esc_html_e( 'No followers yet', 'activitypub' ); ?></p>
-						<?php } ?>
-					</td>
-				</tr>
-			</tbody>
-		</table>
-
-		<?php do_settings_fields( 'activitypub', 'followers' ); ?>
-
 		<?php do_settings_sections( 'activitypub' ); ?>
 
 		<?php submit_button(); ?>
