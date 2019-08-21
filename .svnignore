@@ -15,6 +15,7 @@ readme.md
 CODE_OF_CONDUCT.md
 LICENSE.md
 _site
+_config.yml
 bin
 composer.json
 composer.lock
