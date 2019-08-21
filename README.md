@@ -4,7 +4,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
 **Tested up to:** 5.2.2  
-**Stable tag:** 0.8.0  
+**Stable tag:** 0.8.1  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
