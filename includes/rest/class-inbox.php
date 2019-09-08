@@ -250,6 +250,7 @@ class Inbox {
 		remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
 
 		$state = wp_new_comment( $commentdata, true );
+		wp_set_comment_status( $state, 'hold' );
 
 		// re-add flood control
 		add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
