@@ -182,7 +182,7 @@ class Inbox {
 	}
 
 	/**
-	 * Handles "Unfollow" requests
+	 * Handles "Reaction" requests
 	 *
 	 * @param  array $object  The activity-object
 	 * @param  int   $user_id The id of the local blog-user
@@ -219,7 +219,7 @@ class Inbox {
 	}
 
 	/**
-	 * Handles "Unfollow" requests
+	 * Handles "Create" requests
 	 *
 	 * @param  array $object  The activity-object
 	 * @param  int   $user_id The id of the local blog-user
