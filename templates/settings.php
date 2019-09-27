@@ -51,6 +51,25 @@
 					</td>
 				</tr>
 				<tr>
+					<th scope="row"><?php \esc_html_e( 'Supported post types', 'activitypub' ); ?></th>
+					<td>
+						<fieldset>
+							<?php \esc_html_e( 'Enable ActivityPub support for the following post types:', 'activitypub' ); ?>
+
+							<?php $post_types = \get_post_types( array( 'public' => true ), 'objects' ); ?>
+							<?php $support_post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array(); ?>
+							<ul>
+							<?php foreach ( $post_types as $post_type ) { ?>
+								<li>
+									<input type="checkbox" id="activitypub_support_post_types" name="activitypub_support_post_types[]" value="<?php echo \esc_attr( $post_type->name ); ?>" <?php echo \checked( true, in_array( $post_type->name, $support_post_types, true ) ); ?> />
+									<label for="<?php echo \esc_attr( $post_type->name ); ?>"><?php echo \esc_html( $post_type->label ); ?></label>
+								</li>
+							<?php } ?>
+							</ul>
+						</fieldset>
+					</td>
+				</tr>
+				<tr>
 					<th scope="row">
 						<?php \esc_html_e( 'Hashtags', 'activitypub' ); ?>
 					</th>

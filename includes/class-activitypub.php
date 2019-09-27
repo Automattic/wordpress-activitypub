@@ -16,8 +16,12 @@ class Activitypub {
 		\add_action( 'init', array( '\Activitypub\Activitypub', 'add_rewrite_endpoint' ) );
 		\add_filter( 'pre_get_avatar_data', array( '\Activitypub\Activitypub', 'pre_get_avatar_data' ), 11, 2 );
 
-		\add_post_type_support( 'post', 'activitypub' );
-		\add_post_type_support( 'page', 'activitypub' );
+		// Add support for ActivityPub to custom post types
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array();
+
+		foreach ( $post_types as $post_type ) {
+			\add_post_type_support( $post_type, 'activitypub' );
+		}
 
 		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
 	}
@@ -89,7 +93,7 @@ class Activitypub {
 	}
 
 	/**
-	 * Marks the post as "no webmentions sent yet"
+	 * Schedule Activities
 	 *
 	 * @param int $post_id
 	 */

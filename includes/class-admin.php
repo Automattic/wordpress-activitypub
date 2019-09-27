@@ -98,6 +98,14 @@ class Admin {
 				'default' => 0,
 			)
 		);
+		\register_setting(
+			'activitypub', 'activitypub_support_post_types', array(
+				'type'         => 'string',
+				'description'  => \esc_html__( 'Enable ActivityPub support for post types', 'activitypub' ),
+				'show_in_rest' => true,
+				'default'      => array( 'post', 'pages' ),
+			)
+		);
 	}
 
 	public static function add_settings_help_tab() {
