@@ -38,15 +38,15 @@ function get_context() {
 		),
 	);
 
-	return apply_filters( 'activitypub_json_context', $context );
+	return \apply_filters( 'activitypub_json_context', $context );
 }
 
 function safe_remote_post( $url, $body, $user_id ) {
-	$date = gmdate( 'D, d M Y H:i:s T' );
+	$date = \gmdate( 'D, d M Y H:i:s T' );
 	$signature = \Activitypub\Signature::generate_signature( $user_id, $url, $date );
 
-	$wp_version = get_bloginfo( 'version' );
-	$user_agent = apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . get_bloginfo( 'url' ) );
+	$wp_version = \get_bloginfo( 'version' );
+	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
 	$args = array(
 		'timeout' => 100,
 		'limit_response_size' => 1048576,
@@ -61,9 +61,9 @@ function safe_remote_post( $url, $body, $user_id ) {
 		'body' => $body,
 	);
 
-	$response = wp_safe_remote_post( $url, $args );
+	$response = \wp_safe_remote_post( $url, $args );
 
-	do_action( 'activitypub_safe_remote_post_response', $response, $url, $body, $user_id );
+	\do_action( 'activitypub_safe_remote_post_response', $response, $url, $body, $user_id );
 
 	return $response;
 }
@@ -77,13 +77,13 @@ function safe_remote_post( $url, $body, $user_id ) {
  */
 function get_webfinger_resource( $user_id ) {
 	// use WebFinger plugin if installed
-	if ( function_exists( '\get_webfinger_resource' ) ) {
+	if ( \function_exists( '\get_webfinger_resource' ) ) {
 		return \get_webfinger_resource( $user_id, false );
 	}
 
-	$user = get_user_by( 'id', $user_id );
+	$user = \get_user_by( 'id', $user_id );
 
-	return $user->user_login . '@' . wp_parse_url( home_url(), PHP_URL_HOST );
+	return $user->user_login . '@' . \wp_parse_url( \home_url(), PHP_URL_HOST );
 }
 
 /**
@@ -94,19 +94,19 @@ function get_webfinger_resource( $user_id ) {
  * @return array
  */
 function get_remote_metadata_by_actor( $actor ) {
-	$metadata = get_transient( 'activitypub_' . $actor );
+	$metadata = \get_transient( 'activitypub_' . $actor );
 
 	if ( $metadata ) {
 		return $metadata;
 	}
 
-	if ( ! wp_http_validate_url( $actor ) ) {
-		return new \WP_Error( 'activitypub_no_valid_actor_url', __( 'The "actor" is no valid URL', 'activitypub' ), $actor );
+	if ( ! \wp_http_validate_url( $actor ) ) {
+		return new \WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), $actor );
 	}
 
-	$wp_version = get_bloginfo( 'version' );
+	$wp_version = \get_bloginfo( 'version' );
 
-	$user_agent = apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . get_bloginfo( 'url' ) );
+	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
 	$args       = array(
 		'timeout'             => 100,
 		'limit_response_size' => 1048576,
@@ -115,20 +115,20 @@ function get_remote_metadata_by_actor( $actor ) {
 		'headers'             => array( 'accept' => 'application/activity+json' ),
 	);
 
-	$response = wp_safe_remote_get( $actor, $args );
+	$response = \wp_safe_remote_get( $actor, $args );
 
-	if ( is_wp_error( $response ) ) {
+	if ( \is_wp_error( $response ) ) {
 		return $response;
 	}
 
-	$metadata = wp_remote_retrieve_body( $response );
-	$metadata = json_decode( $metadata, true );
+	$metadata = \wp_remote_retrieve_body( $response );
+	$metadata = \json_decode( $metadata, true );
 
 	if ( ! $metadata ) {
-		return new \WP_Error( 'activitypub_invalid_json', __( 'No valid JSON data', 'activitypub' ), $actor );
+		return new \WP_Error( 'activitypub_invalid_json', \__( 'No valid JSON data', 'activitypub' ), $actor );
 	}
 
-	set_transient( 'activitypub_' . $actor, $metadata, WEEK_IN_SECONDS );
+	\set_transient( 'activitypub_' . $actor, $metadata, WEEK_IN_SECONDS );
 
 	return $metadata;
 }
@@ -141,7 +141,7 @@ function get_remote_metadata_by_actor( $actor ) {
 function get_inbox_by_actor( $actor ) {
 	$metadata = \Activitypub\get_remote_metadata_by_actor( $actor );
 
-	if ( is_wp_error( $metadata ) ) {
+	if ( \is_wp_error( $metadata ) ) {
 		return $metadata;
 	}
 
@@ -149,7 +149,7 @@ function get_inbox_by_actor( $actor ) {
 		return $metadata['endpoints']['sharedInbox'];
 	}
 
-	if ( array_key_exists( 'inbox', $metadata ) ) {
+	if ( \array_key_exists( 'inbox', $metadata ) ) {
 		return $metadata['inbox'];
 	}
 
@@ -164,7 +164,7 @@ function get_inbox_by_actor( $actor ) {
 function get_publickey_by_actor( $actor, $key_id ) {
 	$metadata = \Activitypub\get_remote_metadata_by_actor( $actor );
 
-	if ( is_wp_error( $metadata ) ) {
+	if ( \is_wp_error( $metadata ) ) {
 		return $metadata;
 	}
 
@@ -179,7 +179,7 @@ function get_publickey_by_actor( $actor, $key_id ) {
 		return $metadata['publicKey']['publicKeyPem'];
 	}
 
-	return new \WP_Error( 'activitypub_no_public_key', __( 'No "Public-Key" found', 'activitypub' ), $metadata );
+	return new \WP_Error( 'activitypub_no_public_key', \__( 'No "Public-Key" found', 'activitypub' ), $metadata );
 }
 
 function get_follower_inboxes( $user_id ) {
@@ -188,7 +188,7 @@ function get_follower_inboxes( $user_id ) {
 
 	foreach ( $followers as $follower ) {
 		$inbox = \Activitypub\get_inbox_by_actor( $follower );
-		if ( ! $inbox || is_wp_error( $inbox ) ) {
+		if ( ! $inbox || \is_wp_error( $inbox ) ) {
 			continue;
 		}
 		// init array if empty
@@ -207,12 +207,12 @@ function get_identifier_settings( $user_id ) {
 	<tbody>
 		<tr>
 			<th scope="row">
-				<label><?php esc_html_e( 'Profile identifier', 'activitypub' ); ?></label>
+				<label><?php \esc_html_e( 'Profile identifier', 'activitypub' ); ?></label>
 			</th>
 			<td>
-				<p><code><?php echo esc_html( \Activitypub\get_webfinger_resource( $user_id ) ); ?></code> or <code><?php echo esc_url( get_author_posts_url( $user_id ) ); ?></code></p>
+				<p><code><?php echo \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ); ?></code> or <code><?php echo \esc_url( \get_author_posts_url( $user_id ) ); ?></code></p>
 				<?php // translators: the webfinger resource ?>
-				<p class="description"><?php printf( esc_html__( 'Try to follow "@%s" in the Mastodon/Friendica search field.', 'activitypub' ), esc_html( \Activitypub\get_webfinger_resource( $user_id ) ) ); ?></p>
+				<p class="description"><?php printf( \esc_html__( 'Try to follow "@%s" in the Mastodon/Friendica search field.', 'activitypub' ), \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ) ); ?></p>
 			</td>
 		</tr>
 	</tbody>
@@ -233,5 +233,5 @@ function get_followers( $user_id ) {
 function count_followers( $user_id ) {
 	$followers = \Activitypub\get_followers( $user_id );
 
-	return count( $followers );
+	return \count( $followers );
 }

@@ -8,7 +8,7 @@ if ( ! class_exists( '\WP_List_Table' ) ) {
 class Followers_List extends \WP_List_Table {
 	public function get_columns() {
 		return array(
-			'identifier' => __( 'Identifier', 'activitypub' ),
+			'identifier' => \__( 'Identifier', 'activitypub' ),
 		);
 	}
 
@@ -25,8 +25,8 @@ class Followers_List extends \WP_List_Table {
 
 		$this->items = array();
 
-		foreach ( \Activitypub\Db\Followers::get_followers( get_current_user_id() ) as $follower ) {
-			$this->items[]['identifier'] = esc_attr( $follower );
+		foreach ( \Activitypub\Db\Followers::get_followers( \get_current_user_id() ) as $follower ) {
+			$this->items[]['identifier'] = \esc_attr( $follower );
 		}
 	}
 

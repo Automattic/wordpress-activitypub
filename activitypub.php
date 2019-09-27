@@ -19,7 +19,7 @@ namespace Activitypub;
  * Initialize plugin
  */
 function init() {
-	defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|^)#(\w*[A-Za-z_]+\w*)' );
+	\defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|^)#(\w*[A-Za-z_]+\w*)' );
 
 	require_once dirname( __FILE__ ) . '/includes/table/followers-list.php';
 	require_once dirname( __FILE__ ) . '/includes/class-signature.php';
@@ -70,16 +70,16 @@ add_action( 'plugins_loaded', '\Activitypub\init' );
  * Add rewrite rules
  */
 function add_rewrite_rules() {
-	if ( ! class_exists( 'Webfinger' ) ) {
-		add_rewrite_rule( '^.well-known/webfinger', 'index.php?rest_route=/activitypub/1.0/webfinger', 'top' );
+	if ( ! \class_exists( 'Webfinger' ) ) {
+		\add_rewrite_rule( '^.well-known/webfinger', 'index.php?rest_route=/activitypub/1.0/webfinger', 'top' );
 	}
 
-	if ( ! class_exists( 'Nodeinfo' ) ) {
-		add_rewrite_rule( '^.well-known/nodeinfo', 'index.php?rest_route=/activitypub/1.0/nodeinfo/discovery', 'top' );
-		add_rewrite_rule( '^.well-known/x-nodeinfo2', 'index.php?rest_route=/activitypub/1.0/nodeinfo2', 'top' );
+	if ( ! \class_exists( 'Nodeinfo' ) ) {
+		\add_rewrite_rule( '^.well-known/nodeinfo', 'index.php?rest_route=/activitypub/1.0/nodeinfo/discovery', 'top' );
+		\add_rewrite_rule( '^.well-known/x-nodeinfo2', 'index.php?rest_route=/activitypub/1.0/nodeinfo2', 'top' );
 	}
 }
-add_action( 'init', '\Activitypub\add_rewrite_rules', 1 );
+\add_action( 'init', '\Activitypub\add_rewrite_rules', 1 );
 
 /**
  * Flush rewrite rules;
@@ -88,5 +88,5 @@ function flush_rewrite_rules() {
 	\Activitypub\add_rewrite_rules();
 	\flush_rewrite_rules();
 }
-register_activation_hook( __FILE__, '\Activitypub\flush_rewrite_rules' );
-register_deactivation_hook( __FILE__, '\flush_rewrite_rules' );
+\register_activation_hook( __FILE__, '\Activitypub\flush_rewrite_rules' );
+\register_deactivation_hook( __FILE__, '\flush_rewrite_rules' );

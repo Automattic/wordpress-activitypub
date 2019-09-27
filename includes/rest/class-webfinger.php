@@ -13,15 +13,15 @@ class Webfinger {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		add_action( 'rest_api_init', array( '\Activitypub\Rest\Webfinger', 'register_routes' ) );
-		add_action( 'webfinger_user_data', array( '\Activitypub\Rest\Webfinger', 'add_webfinger_discovery' ), 10, 3 );
+		\add_action( 'rest_api_init', array( '\Activitypub\Rest\Webfinger', 'register_routes' ) );
+		\add_action( 'webfinger_user_data', array( '\Activitypub\Rest\Webfinger', 'add_webfinger_discovery' ), 10, 3 );
 	}
 
 	/**
 	 * Register routes
 	 */
 	public static function register_routes() {
-		register_rest_route(
+		\register_rest_route(
 			'activitypub/1.0', '/webfinger', array(
 				array(
 					'methods'  => \WP_REST_Server::READABLE,
@@ -42,40 +42,40 @@ class Webfinger {
 		$resource = $request->get_param( 'resource' );
 
 		$matches = array();
-		$matched = preg_match( '/^acct:([^@]+)@(.+)$/', $resource, $matches );
+		$matched = \preg_match( '/^acct:([^@]+)@(.+)$/', $resource, $matches );
 
 		if ( ! $matched ) {
-			return new \WP_Error( 'activitypub_unsupported_resource', __( 'Resource is invalid', 'activitypub' ), array( 'status' => 400 ) );
+			return new \WP_Error( 'activitypub_unsupported_resource', \__( 'Resource is invalid', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		$resource_identifier = $matches[1];
 		$resource_host = $matches[2];
 
-		if ( wp_parse_url( home_url( '/' ), PHP_URL_HOST ) !== $resource_host ) {
-			return new \WP_Error( 'activitypub_wrong_host', __( 'Resource host does not match blog host', 'activitypub' ), array( 'status' => 404 ) );
+		if ( \wp_parse_url( \home_url( '/' ), PHP_URL_HOST ) !== $resource_host ) {
+			return new \WP_Error( 'activitypub_wrong_host', \__( 'Resource host does not match blog host', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
-		$user = get_user_by( 'login', esc_sql( $resource_identifier ) );
+		$user = \get_user_by( 'login', \esc_sql( $resource_identifier ) );
 
 		if ( ! $user ) {
-			return new \WP_Error( 'activitypub_user_not_found', __( 'User not found', 'activitypub' ), array( 'status' => 404 ) );
+			return new \WP_Error( 'activitypub_user_not_found', \__( 'User not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$json = array(
 			'subject' => $resource,
 			'aliases' => array(
-				get_author_posts_url( $user->ID ),
+				\get_author_posts_url( $user->ID ),
 			),
 			'links' => array(
 				array(
 					'rel'  => 'self',
 					'type' => 'application/activity+json',
-					'href' => get_author_posts_url( $user->ID ),
+					'href' => \get_author_posts_url( $user->ID ),
 				),
 				array(
 					'rel'  => 'http://webfinger.net/rel/profile-page',
 					'type' => 'text/html',
-					'href' => get_author_posts_url( $user->ID ),
+					'href' => \get_author_posts_url( $user->ID ),
 				),
 			),
 		);
@@ -111,7 +111,7 @@ class Webfinger {
 		$array['links'][] = array(
 			'rel'  => 'self',
 			'type' => 'application/activity+json',
-			'href' => get_author_posts_url( $user->ID ),
+			'href' => \get_author_posts_url( $user->ID ),
 		);
 
 		return $array;

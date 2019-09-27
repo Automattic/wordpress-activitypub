@@ -13,12 +13,12 @@ class Post {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		add_filter( 'activitypub_the_summary', array( '\Activitypub\Post', 'add_backlink_to_content' ), 15, 2 );
-		add_filter( 'activitypub_the_content', array( '\Activitypub\Post', 'add_backlink_to_content' ), 15, 2 );
+		\add_filter( 'activitypub_the_summary', array( '\Activitypub\Post', 'add_backlink_to_content' ), 15, 2 );
+		\add_filter( 'activitypub_the_content', array( '\Activitypub\Post', 'add_backlink_to_content' ), 15, 2 );
 	}
 
 	public function __construct( $post = null ) {
-		$this->post = get_post( $post );
+		$this->post = \get_post( $post );
 	}
 
 	public function get_post() {
@@ -33,15 +33,15 @@ class Post {
 		$post = $this->post;
 
 		$array = array(
-			'id' => get_permalink( $post ),
+			'id' => \get_permalink( $post ),
 			'type' => $this->get_object_type(),
-			'published' => date( 'Y-m-d\TH:i:s\Z', strtotime( $post->post_date ) ),
-			'attributedTo' => get_author_posts_url( $post->post_author ),
+			'published' => \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date ) ),
+			'attributedTo' => \get_author_posts_url( $post->post_author ),
 			'summary' => $this->get_the_summary(),
 			'inReplyTo' => null,
 			'content' => $this->get_the_content(),
 			'contentMap' => array(
-				strstr( get_locale(), '_', true ) => $this->get_the_content(),
+				\strstr( \get_locale(), '_', true ) => $this->get_the_content(),
 			),
 			'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'cc' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
@@ -49,15 +49,15 @@ class Post {
 			'tag' => $this->get_tags(),
 		);
 
-		return apply_filters( 'activitypub_post', $array );
+		return \apply_filters( 'activitypub_post', $array );
 	}
 
 	public function to_json() {
-		return wp_json_encode( $this->to_array(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT );
+		return \wp_json_encode( $this->to_array(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT );
 	}
 
 	public function get_attachments() {
-		$max_images = apply_filters( 'activitypub_max_images', 3 );
+		$max_images = \apply_filters( 'activitypub_max_images', 3 );
 
 		$images = array();
 
@@ -70,8 +70,8 @@ class Post {
 
 		$image_ids = array();
 		// list post thumbnail first if this post has one
-		if ( function_exists( 'has_post_thumbnail' ) && has_post_thumbnail( $id ) ) {
-			$image_ids[] = get_post_thumbnail_id( $id );
+		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
+			$image_ids[] = \get_post_thumbnail_id( $id );
 			$max_images--;
 		}
 		// then list any image attachments
@@ -87,14 +87,14 @@ class Post {
 			)
 		);
 		foreach ( $query->get_posts() as $attachment ) {
-			if ( ! in_array( $attachment->ID, $image_ids, true ) ) {
+			if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
 				$image_ids[] = $attachment->ID;
 			}
 		}
 		// get URLs for each image
 		foreach ( $image_ids as $id ) {
-			$thumbnail = wp_get_attachment_image_src( $id, 'full' );
-			$mimetype = get_post_mime_type( $id );
+			$thumbnail = \wp_get_attachment_image_src( $id, 'full' );
+			$mimetype = \get_post_mime_type( $id );
 
 			if ( $thumbnail ) {
 				$images[] = array(
@@ -124,12 +124,12 @@ class Post {
 	public function get_tags() {
 		$tags = array();
 
-		$post_tags = get_the_tags( $this->post->ID );
+		$post_tags = \get_the_tags( $this->post->ID );
 		if ( $post_tags ) {
 			foreach ( $post_tags as $post_tag ) {
 				$tag = array(
 					'type' => 'Hashtag',
-					'href' => get_tag_link( $post_tag->term_id ),
+					'href' => \get_tag_link( $post_tag->term_id ),
 					'name' => '#' . $post_tag->slug,
 				);
 				$tags[] = $tag;
@@ -148,14 +148,14 @@ class Post {
 	 * @return string the object-type
 	 */
 	public function get_object_type() {
-		if ( 'wordpress-post-format' !== get_option( 'activitypub_object_type', 'note' ) ) {
-			return ucfirst( get_option( 'activitypub_object_type', 'note' ) );
+		if ( 'wordpress-post-format' !== \get_option( 'activitypub_object_type', 'note' ) ) {
+			return \ucfirst( \get_option( 'activitypub_object_type', 'note' ) );
 		}
 
-		$post_type = get_post_type( $this->post );
+		$post_type = \get_post_type( $this->post );
 		switch ( $post_type ) {
 			case 'post':
-				$post_format = get_post_format( $this->post );
+				$post_format = \get_post_format( $this->post );
 				switch ( $post_format ) {
 					case 'aside':
 					case 'status':
@@ -182,8 +182,8 @@ class Post {
 				$object_type = 'Page';
 				break;
 			case 'attachment':
-				$mime_type = get_post_mime_type();
-				$media_type = preg_replace( '/(\/[a-zA-Z]+)/i', '', $mime_type );
+				$mime_type = \get_post_mime_type();
+				$media_type = \preg_replace( '/(\/[a-zA-Z]+)/i', '', $mime_type );
 				switch ( $media_type ) {
 					case 'audio':
 						$object_type = 'Audio';
@@ -205,7 +205,7 @@ class Post {
 	}
 
 	public function get_the_content() {
-		if ( 'excerpt' === get_option( 'activitypub_post_content_type', 'content' ) ) {
+		if ( 'excerpt' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
 			return $this->get_the_post_summary();
 		}
 
@@ -216,7 +216,7 @@ class Post {
 		if ( 'Article' === $this->get_object_type() ) {
 			$excerpt = $this->get_the_post_excerpt( 400 );
 
-			return html_entity_decode( $excerpt, ENT_QUOTES, 'UTF-8' );
+			return \html_entity_decode( $excerpt, ENT_QUOTES, 'UTF-8' );
 		}
 
 		return null;
@@ -232,27 +232,27 @@ class Post {
 	public function get_the_post_excerpt( $excerpt_length = 400 ) {
 		$post = $this->post;
 
-		$excerpt = get_post_field( 'post_excerpt', $post );
+		$excerpt = \get_post_field( 'post_excerpt', $post );
 
 		if ( '' === $excerpt ) {
 
-			$content = get_post_field( 'post_content', $post );
+			$content = \get_post_field( 'post_content', $post );
 
 			// An empty string will make wp_trim_excerpt do stuff we do not want.
 			if ( '' !== $content ) {
 
-				$excerpt = strip_shortcodes( $content );
+				$excerpt = \strip_shortcodes( $content );
 
 				/** This filter is documented in wp-includes/post-template.php */
-				$excerpt = apply_filters( 'the_content', $excerpt );
-				$excerpt = str_replace( ']]>', ']]>', $excerpt );
+				$excerpt = \apply_filters( 'the_content', $excerpt );
+				$excerpt = \str_replace( ']]>', ']]>', $excerpt );
 
-				$excerpt_length = apply_filters( 'excerpt_length', $excerpt_length );
+				$excerpt_length = \apply_filters( 'excerpt_length', $excerpt_length );
 
 				/** This filter is documented in wp-includes/formatting.php */
-				$excerpt_more = apply_filters( 'excerpt_more', ' [...]' );
+				$excerpt_more = \apply_filters( 'excerpt_more', ' [...]' );
 
-				$excerpt = wp_trim_words( $excerpt, $excerpt_length, $excerpt_more );
+				$excerpt = \wp_trim_words( $excerpt, $excerpt_length, $excerpt_more );
 			}
 		}
 
@@ -264,19 +264,19 @@ class Post {
 	 *
 	 * @return string The content.
 	 */
-	public function get_the_post_content( $with_link = true ) {
+	public function get_the_post_content() {
 		$post = $this->post;
 
-		$content = get_post_field( 'post_content', $post );
+		$content = \get_post_field( 'post_content', $post );
 
-		$filtered_content = apply_filters( 'the_content', $content );
-		$filtered_content = apply_filters( 'activitypub_the_content', $filtered_content, $this->post );
+		$filtered_content = \apply_filters( 'the_content', $content );
+		$filtered_content = \apply_filters( 'activitypub_the_content', $filtered_content, $this->post );
 
-		$decoded_content = html_entity_decode( $filtered_content, ENT_QUOTES, 'UTF-8' );
+		$decoded_content = \html_entity_decode( $filtered_content, ENT_QUOTES, 'UTF-8' );
 
-		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a><p>' );
+		$allowed_html = \apply_filters( 'activitypub_allowed_html', '<a><p>' );
 
-		return trim( preg_replace( '/[\r\n]{2,}/', '', strip_tags( $decoded_content, $allowed_html ) ) );
+		return \trim( \preg_replace( '/[\r\n]{2,}/', '', \strip_tags( $decoded_content, $allowed_html ) ) );
 	}
 
 	/**
@@ -289,14 +289,14 @@ class Post {
 	public function get_the_post_summary( $summary_length = 400 ) {
 		$summary = $this->get_the_post_excerpt( $summary_length );
 
-		$filtered_summary = apply_filters( 'the_excerpt', $summary );
-		$filtered_summary = apply_filters( 'activitypub_the_summary', $filtered_summary, $this->post );
+		$filtered_summary = \apply_filters( 'the_excerpt', $summary );
+		$filtered_summary = \apply_filters( 'activitypub_the_summary', $filtered_summary, $this->post );
 
-		$decoded_summary = html_entity_decode( $filtered_summary, ENT_QUOTES, 'UTF-8' );
+		$decoded_summary = \html_entity_decode( $filtered_summary, ENT_QUOTES, 'UTF-8' );
 
-		$allowed_html = apply_filters( 'activitypub_allowed_html', '<a><p>' );
+		$allowed_html = \apply_filters( 'activitypub_allowed_html', '<a><p>' );
 
-		return trim( preg_replace( '/[\r\n]{2,}/', '', strip_tags( $decoded_summary, $allowed_html ) ) );
+		return \trim( \preg_replace( '/[\r\n]{2,}/', '', \strip_tags( $decoded_summary, $allowed_html ) ) );
 	}
 
 	/**
@@ -310,10 +310,10 @@ class Post {
 	public static function add_backlink_to_content( $content, $post ) {
 		$link = '';
 
-		if ( get_option( 'activitypub_use_shortlink', 0 ) ) {
-			$link = esc_url( wp_get_shortlink( $post->ID ) );
+		if ( \get_option( 'activitypub_use_shortlink', 0 ) ) {
+			$link = \esc_url( \wp_get_shortlink( $post->ID ) );
 		} else {
-			$link = esc_url( get_permalink( $post->ID ) );
+			$link = \esc_url( \get_permalink( $post->ID ) );
 		}
 
 		return $content . '<p><a href="' . $link . '">' . $link . '</a></p>';
