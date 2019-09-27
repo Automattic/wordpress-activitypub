@@ -91,6 +91,9 @@ class Post {
 				$image_ids[] = $attachment->ID;
 			}
 		}
+
+		$image_ids = \array_unique( $image_ids );
+
 		// get URLs for each image
 		foreach ( $image_ids as $id ) {
 			$thumbnail = \wp_get_attachment_image_src( $id, 'full' );
