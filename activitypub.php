@@ -61,6 +61,9 @@ function init() {
 	require_once dirname( __FILE__ ) . '/includes/class-hashtag.php';
 	\Activitypub\Hashtag::init();
 
+	require_once dirname( __FILE__ ) . '/includes/class-debug.php';
+	\Activitypub\Debug::init();
+
 	#require_once dirname( __FILE__ ) . '/includes/class-health-check.php';
 	#\Activitypub\Health_Check::init();
 }

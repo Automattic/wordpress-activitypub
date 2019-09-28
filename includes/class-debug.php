@@ -17,7 +17,7 @@ class Debug {
 	}
 
 	public static function log_remote_post_responses( $response, $url, $body, $user_id ) {
-		\error_log( "Request to: {$url} with response: " . \print_r( $response, 'true' ) );
+		\error_log( "Request to: {$url} with response: " . \print_r( $response, true ) );
 	}
 
 	public static function write_log( $log ) {
