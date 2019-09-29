@@ -112,7 +112,9 @@ function get_remote_metadata_by_actor( $actor ) {
 		'limit_response_size' => 1048576,
 		'redirection'         => 3,
 		'user-agent'          => "$user_agent; ActivityPub",
-		'headers'             => array( 'accept' => 'application/activity+json' ),
+		'headers'             => array(
+			'accept' => 'application/activity+json, application/ld+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+		),
 	);
 
 	$response = \wp_safe_remote_get( $actor, $args );
