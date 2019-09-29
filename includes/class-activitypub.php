@@ -54,17 +54,20 @@ class Activitypub {
 			return $template;
 		}
 
-		// interpret accept header
-		$pos = \stripos( $_SERVER['HTTP_ACCEPT'], ';' );
-		if ( $pos ) {
-			$accept_header = \substr( $_SERVER['HTTP_ACCEPT'], 0, $pos );
-		} else {
-			$accept_header = $_SERVER['HTTP_ACCEPT'];
+		$accept_header = $_SERVER['HTTP_ACCEPT'];
+
+		if (
+			stristr( $accept_header, 'application/activity+json' ) ||
+			stristr( $accept_header, 'application/ld+json' )
+		) {
+			return $template;
 		}
+
 		// accept header as an array
 		$accept = \explode( ',', trim( $accept_header ) );
 
 		if (
+			! \in_array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', $accept, true ) &&
 			! \in_array( 'application/activity+json', $accept, true ) &&
 			! \in_array( 'application/ld+json', $accept, true ) &&
 			! \in_array( 'application/json', $accept, true )
