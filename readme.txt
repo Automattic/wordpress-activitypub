@@ -4,7 +4,7 @@ Donate link: https://notiz.blog/donate/
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
 Tested up to: 5.2.2
-Stable tag: 0.8.1
+Stable tag: 0.8.2
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -83,6 +83,14 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 == Changelog ==
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+
+= 0.8.2 =
+
+* add all required accept header
+* better/simpler accept-header handling
+* add debugging mechanism
+* Add setting to enable AP for different (public) Post-Types
+* explicit use of global functions
 
 = 0.8.1 =
 

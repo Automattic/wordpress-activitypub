@@ -2,10 +2,10 @@
 # This file is distributed under the MIT.
 msgid ""
 msgstr ""
-"Project-Id-Version: ActivityPub 0.8.1\n"
+"Project-Id-Version: ActivityPub 0.8.2\n"
 "Report-Msgid-Bugs-To: "
 "https://wordpress.org/support/plugin/wordpress-activitypub\n"
-"POT-Creation-Date: 2019-08-21 13:15:59+00:00\n"
+"POT-Creation-Date: 2019-09-29 18:04:39+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -44,11 +44,15 @@ msgstr ""
 msgid "Add all tags as hashtags at the end of each activity"
 msgstr ""
 
-#: includes/class-admin.php:107
+#: includes/class-admin.php:104
+msgid "Enable ActivityPub support for post types"
+msgstr ""
+
+#: includes/class-admin.php:115
 msgid "Overview"
 msgstr ""
 
-#: includes/class-admin.php:109
+#: includes/class-admin.php:117
 msgid ""
 "ActivityPub is a decentralized social networking protocol based on the "
 "ActivityStreams 2.0 data format. ActivityPub is an official W3C recommended "
@@ -58,29 +62,29 @@ msgid ""
 "subscribing to content."
 msgstr ""
 
-#: includes/class-admin.php:114
+#: includes/class-admin.php:122
 msgid "For more information:"
 msgstr ""
 
-#: includes/class-admin.php:115
+#: includes/class-admin.php:123
 msgid "<a href=\"https://activitypub.rocks/\">Test Suite</a>"
 msgstr ""
 
-#: includes/class-admin.php:116
+#: includes/class-admin.php:124
 msgid "<a href=\"https://www.w3.org/TR/activitypub/\">W3C Spec</a>"
 msgstr ""
 
-#: includes/class-admin.php:117
+#: includes/class-admin.php:125
 msgid ""
 "<a href=\"https://github.com/pfefferle/wordpress-activitypub/issues\">Give "
 "us feedback</a>"
 msgstr ""
 
-#: includes/class-admin.php:119
+#: includes/class-admin.php:127
 msgid "<a href=\"https://notiz.blog/donate\">Donate</a>"
 msgstr ""
 
-#: includes/class-admin.php:129
+#: includes/class-admin.php:137
 msgid "Fediverse"
 msgstr ""
 
@@ -92,23 +96,23 @@ msgstr ""
 msgid "The \"actor\" is no valid URL"
 msgstr ""
 
-#: includes/functions.php:128
+#: includes/functions.php:130
 msgid "No valid JSON data"
 msgstr ""
 
-#: includes/functions.php:156
+#: includes/functions.php:158
 msgid "No \"Inbox\" found"
 msgstr ""
 
-#: includes/functions.php:182
+#: includes/functions.php:184
 msgid "No \"Public-Key\" found"
 msgstr ""
 
-#: includes/functions.php:210
+#: includes/functions.php:212
 msgid "Profile identifier"
 msgstr ""
 
-#: includes/functions.php:215
+#: includes/functions.php:217
 #. translators: the webfinger resource
 msgid "Try to follow \"@%s\" in the Mastodon/Friendica search field."
 msgstr ""
@@ -234,21 +238,29 @@ msgstr ""
 msgid "Maps the WordPress Post-Format to the ActivityPub Object Type."
 msgstr ""
 
-#: templates/settings.php:55
+#: templates/settings.php:54
+msgid "Supported post types"
+msgstr ""
+
+#: templates/settings.php:57
+msgid "Enable ActivityPub support for the following post types:"
+msgstr ""
+
+#: templates/settings.php:74
 msgid "Hashtags"
 msgstr ""
 
-#: templates/settings.php:59
+#: templates/settings.php:78
 msgid ""
 "Add hashtags in the content as native tags and replace the "
 "<code>#tag</code> with the tag-link."
 msgstr ""
 
-#: templates/settings.php:62
+#: templates/settings.php:81
 msgid "Add all tags as hashtags to the end of each activity."
 msgstr ""
 
-#: templates/settings.php:77
+#: templates/settings.php:96
 msgid ""
 "If you like this plugin, what about a small <a "
 "href=\"https://notiz.blog/donate\">donation</a>?"
