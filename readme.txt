@@ -84,6 +84,10 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
+= 0.8.3 =
+
+* fixed accept header bug
+
 = 0.8.2 =
 
 * add all required accept header

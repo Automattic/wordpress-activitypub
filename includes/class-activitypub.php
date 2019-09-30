@@ -24,6 +24,8 @@ class Activitypub {
 		}
 
 		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
+
+		\add_action( 'trash_post', array( '\Activitypub\Activitypub', 'schedule_delete_activity' ), 10 );
 	}
 
 	/**
@@ -60,22 +62,22 @@ class Activitypub {
 			stristr( $accept_header, 'application/activity+json' ) ||
 			stristr( $accept_header, 'application/ld+json' )
 		) {
-			return $template;
+			return $json_template;
 		}
 
 		// accept header as an array
 		$accept = \explode( ',', trim( $accept_header ) );
 
 		if (
-			! \in_array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', $accept, true ) &&
-			! \in_array( 'application/activity+json', $accept, true ) &&
-			! \in_array( 'application/ld+json', $accept, true ) &&
-			! \in_array( 'application/json', $accept, true )
+			\in_array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', $accept, true ) ||
+			\in_array( 'application/activity+json', $accept, true ) ||
+			\in_array( 'application/ld+json', $accept, true ) ||
+			\in_array( 'application/json', $accept, true )
 		) {
-			return $template;
+			return $json_template;
 		}
 
-		return $json_template;
+		return $template;
 	}
 
 	/**
@@ -113,9 +115,11 @@ class Activitypub {
 		}
 
 		if ( 'publish' === $new_status && 'publish' !== $old_status ) {
-			\wp_schedule_single_event( time() + \wp_rand( 0, 120 ), 'activitypub_send_post_activity', array( $post->ID ) );
+			\wp_schedule_single_event( time(), 'activitypub_send_post_activity', array( $post->ID ) );
 		} elseif ( 'publish' === $new_status ) {
-			\wp_schedule_single_event( time() + \wp_rand( 0, 120 ), 'activitypub_send_update_activity', array( $post->ID ) );
+			\wp_schedule_single_event( time(), 'activitypub_send_update_activity', array( $post->ID ) );
+		} elseif ( 'trash' === $new_status ) {
+			\wp_schedule_single_event( time(), 'activitypub_send_delete_activity', array( get_permalink( $post ) ) );
 		}
 	}
 
