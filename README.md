@@ -60,16 +60,6 @@ To implement:
 
 ### What if you are running your blog in a subdirectory? ###
 
-In order for webfinger to work, it must be mapped to the root directory of the URL on which your blog resides.
-
-**Apache**
-
-Add the following to the .htaccess file in the root directory:
-`RedirectMatch "^\/\.well-known(.*)$" "\/blog\/\.well-known$1"`
-Where 'blog' is the path to the subdirectory at which your blog resides.
-
-### What if you are running your blog in a subdirectory? ###
-
 In order for WebFinger to work, it must be mapped to the root directory of the URL on which your blog resides.
 
 **Apache**
@@ -78,6 +68,17 @@ Add the following to the .htaccess file in the root directory:
 
 	RedirectMatch "^\/\.well-known(.*)$" "\/blog\/\.well-known$1"
 
+Where 'blog' is the path to the subdirectory at which your blog resides.
+
+**Nginx**
+
+Add the following to the site.conf in sites-available:
+
+	location ~* /.well-known {
+		allow all;
+		try_files $uri $uri/ /blog/?$args;
+	}
+	
 Where 'blog' is the path to the subdirectory at which your blog resides.
 
 ## Changelog ##
