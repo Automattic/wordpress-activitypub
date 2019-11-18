@@ -1,7 +1,7 @@
 <?php
 $post = \get_post();
 
-$activitypub_post = new \Activitypub\Post( $post );
+$activitypub_post = new \Activitypub\Model\Post( $post );
 $json = \array_merge( array( '@context' => \Activitypub\get_context() ), $activitypub_post->to_array() );
 
 // filter output

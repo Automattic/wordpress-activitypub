@@ -1,5 +1,5 @@
 <?php
-namespace Activitypub;
+namespace Activitypub\Model;
 
 /**
  * ActivityPub Post Class

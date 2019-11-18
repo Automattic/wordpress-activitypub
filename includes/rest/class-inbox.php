@@ -30,7 +30,7 @@ class Inbox {
 			'activitypub/1.0', '/inbox', array(
 				array(
 					'methods'  => \WP_REST_Server::EDITABLE,
-					'callback' => array( '\Activitypub\Rest\Inbox', 'global_inbox' ),
+					'callback' => array( '\Activitypub\Rest\Inbox', 'shared_inbox' ),
 				),
 			)
 		);
@@ -87,7 +87,6 @@ class Inbox {
 	 */
 	public static function user_inbox( $request ) {
 		$author_id = $request->get_param( 'id' );
-		$author    = \get_user_by( 'ID', $author_id );
 
 		$data = \json_decode( $request->get_body(), true );
 
@@ -113,9 +112,62 @@ class Inbox {
 	 *
 	 * @return WP_Error not yet implemented
 	 */
-	public static function global_inbox( $request ) {
-		// Create the response object
-		return new \WP_Error( 'rest_not_implemented', \__( 'This method is not yet implemented', 'activitypub' ), array( 'status' => 501 ) );
+	public static function shared_inbox( $request ) {
+		$data = \json_decode( $request->get_body(), true );
+
+		if ( empty( $data['to'] ) ) {
+			return new \WP_Error( 'rest_invalid_data', \__( 'No receiving actor set', 'activitypub' ), array( 'status' => 422 ) );
+		}
+
+		if ( \filter_var( $data['to'], \FILTER_VALIDATE_URL ) ) {
+			$author_id = \Activitypub\url_to_authorid( $data['to'] );
+
+			if ( ! $author_id ) {
+				return new \WP_Error( 'rest_invalid_data', \__( 'No matching user', 'activitypub' ), array( 'status' => 422 ) );
+			}
+		} else {
+			// get the identifier at the left of the '@'
+			$parts = \explode( '@', $data['to'] );
+
+			if ( 3 === \count( $parts ) ) {
+				$username = $parts[1];
+				$host = $parts[2];
+			} elseif ( 2 === \count( $parts ) ) {
+				$username = $parts[0];
+				$host = $parts[1];
+			}
+
+			if ( ! $username || ! $host ) {
+				return new \WP_Error( 'rest_invalid_data', \__( 'Invalid actor identifier', 'activitypub' ), array( 'status' => 422 ) );
+			}
+
+			// check domain
+			if ( ! \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== $host ) {
+				return new \WP_Error( 'rest_invalid_data', \__( 'Invalid host', 'activitypub' ), array( 'status' => 422 ) );
+			}
+
+			$author = \get_user_by( 'login', $username );
+
+			if ( ! $author ) {
+				return new \WP_Error( 'rest_invalid_data', \__( 'No matching user', 'activitypub' ), array( 'status' => 422 ) );
+			}
+
+			$author_id = $author->ID;
+		}
+
+		$type = 'create';
+		if ( ! empty( $data['type'] ) ) {
+			$type = \strtolower( $data['type'] );
+		}
+
+		if ( ! \is_array( $data ) || ! \array_key_exists( 'type', $data ) ) {
+			return new \WP_Error( 'rest_invalid_data', \__( 'Invalid payload', 'activitypub' ), array( 'status' => 422 ) );
+		}
+
+		\do_action( 'activitypub_inbox', $data, $author_id, $type );
+		\do_action( "activitypub_inbox_{$type}", $data, $author_id );
+
+		return new \WP_REST_Response( array(), 202 );
 	}
 
 	/**
@@ -150,13 +202,13 @@ class Inbox {
 		}
 
 		// save follower
-		\Activitypub\Db\Followers::add_follower( $object['actor'], $user_id );
+		\Activitypub\Peer\Followers::add_follower( $object['actor'], $user_id );
 
 		// get inbox
 		$inbox = \Activitypub\get_inbox_by_actor( $object['actor'] );
 
 		// send "Accept" activity
-		$activity = new \Activitypub\Activity( 'Accept', \Activitypub\Activity::TYPE_SIMPLE );
+		$activity = new \Activitypub\Model\Activity( 'Accept', \Activitypub\Model\Activity::TYPE_SIMPLE );
 		$activity->set_object( $object );
 		$activity->set_actor( \get_author_posts_url( $user_id ) );
 		$activity->set_to( $object['actor'] );
@@ -178,7 +230,7 @@ class Inbox {
 			return new \WP_Error( 'activitypub_no_actor', \__( 'No "Actor" found', 'activitypub' ) );
 		}
 
-		\Activitypub\Db\Followers::remove_follower( $object['actor'], $user_id );
+		\Activitypub\Peer\Followers::remove_follower( $object['actor'], $user_id );
 	}
 
 	/**

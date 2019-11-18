@@ -75,9 +75,9 @@ if ( \get_the_author_meta( 'user_url', $author_id ) ) {
 	);
 }
 
-//$json->endpoints = array(
-//	'sharedInbox' => \get_rest_url( null, '/activitypub/1.0/inbox' ),
-//);
+$json->endpoints = array(
+	'sharedInbox' => \get_rest_url( null, '/activitypub/1.0/inbox' ),
+);
 
 // filter output
 $json = \apply_filters( 'activitypub_json_author_array', $json );

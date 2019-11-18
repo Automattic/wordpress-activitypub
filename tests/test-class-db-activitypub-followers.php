@@ -9,7 +9,7 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		);
 		update_user_meta( 1, 'activitypub_followers', $followers );
 
-		$db_followers = \Activitypub\Db\Followers::get_followers( 1 );
+		$db_followers = \Activitypub\Peer\Followers::get_followers( 1 );
 
 		$this->assertEquals( 3, count( $db_followers ) );
 
@@ -18,9 +18,9 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 
 	public function test_add_follower() {
 		$follower = 'https://example.com/author/' . time();
-		\Activitypub\Db\Followers::add_follower( $follower, 1 );
+		\Activitypub\Peer\Followers::add_follower( $follower, 1 );
 
-		$db_followers = \Activitypub\Db\Followers::get_followers( 1 );
+		$db_followers = \Activitypub\Peer\Followers::get_followers( 1 );
 
 		$this->assertContains( $follower, $db_followers );
 	}

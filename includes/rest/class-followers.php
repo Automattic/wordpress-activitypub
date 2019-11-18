@@ -62,7 +62,7 @@ class Followers {
 
 		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/followers" ); // phpcs:ignore
 		$json->totalItems = \Activitypub\count_followers( $user_id ); // phpcs:ignore
-		$json->orderedItems = \Activitypub\Db\Followers::get_followers( $user_id ); // phpcs:ignore
+		$json->orderedItems = \Activitypub\Peer\Followers::get_followers( $user_id ); // phpcs:ignore
 
 		$json->first = $json->partOf; // phpcs:ignore
 

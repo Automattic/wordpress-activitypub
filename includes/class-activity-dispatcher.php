@@ -15,7 +15,7 @@ class Activity_Dispatcher {
 	public static function init() {
 		\add_action( 'activitypub_send_post_activity', array( '\Activitypub\Activity_Dispatcher', 'send_post_activity' ) );
 		\add_action( 'activitypub_send_update_activity', array( '\Activitypub\Activity_Dispatcher', 'send_update_activity' ) );
-		//\add_action( 'activitypub_send_delete_activity', array( '\Activitypub\Activity_Dispatcher', 'send_delete_activity' ) );
+		\add_action( 'activitypub_send_delete_activity', array( '\Activitypub\Activity_Dispatcher', 'send_delete_activity' ) );
 	}
 
 	/**
@@ -27,8 +27,8 @@ class Activity_Dispatcher {
 		$post = \get_post( $post_id );
 		$user_id = $post->post_author;
 
-		$activitypub_post = new \Activitypub\Post( $post );
-		$activitypub_activity = new \Activitypub\Activity( 'Create', \Activitypub\Activity::TYPE_FULL );
+		$activitypub_post = new \Activitypub\Model\Post( $post );
+		$activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_FULL );
 		$activitypub_activity->from_post( $activitypub_post->to_array() );
 
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
@@ -48,8 +48,8 @@ class Activity_Dispatcher {
 		$post = \get_post( $post_id );
 		$user_id = $post->post_author;
 
-		$activitypub_post = new \Activitypub\Post( $post );
-		$activitypub_activity = new \Activitypub\Activity( 'Update', \Activitypub\Activity::TYPE_FULL );
+		$activitypub_post = new \Activitypub\Model\Post( $post );
+		$activitypub_activity = new \Activitypub\Model\Activity( 'Update', \Activitypub\Model\Activity::TYPE_FULL );
 		$activitypub_activity->from_post( $activitypub_post->to_array() );
 
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
@@ -69,8 +69,8 @@ class Activity_Dispatcher {
 		$post = \get_post( $post_id );
 		$user_id = $post->post_author;
 
-		$activitypub_post = new \Activitypub\Post( $post );
-		$activitypub_activity = new \Activitypub\Activity( 'Delete', \Activitypub\Activity::TYPE_FULL );
+		$activitypub_post = new \Activitypub\Model\Post( $post );
+		$activitypub_activity = new \Activitypub\Model\Activity( 'Delete', \Activitypub\Model\Activity::TYPE_FULL );
 		$activitypub_activity->from_post( $activitypub_post->to_array() );
 
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {

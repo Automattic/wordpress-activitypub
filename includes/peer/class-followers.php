@@ -1,5 +1,5 @@
 <?php
-namespace Activitypub\Db;
+namespace Activitypub\Peer;
 
 /**
  * ActivityPub Followers DB-Class

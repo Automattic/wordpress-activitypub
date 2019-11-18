@@ -23,15 +23,15 @@ function init() {
 
 	require_once dirname( __FILE__ ) . '/includes/table/followers-list.php';
 	require_once dirname( __FILE__ ) . '/includes/class-signature.php';
-	require_once dirname( __FILE__ ) . '/includes/class-activity.php';
-	require_once dirname( __FILE__ ) . '/includes/db/class-followers.php';
+	require_once dirname( __FILE__ ) . '/includes/peer/class-followers.php';
 	require_once dirname( __FILE__ ) . '/includes/functions.php';
 
 	require_once dirname( __FILE__ ) . '/includes/class-activity-dispatcher.php';
 	\Activitypub\Activity_Dispatcher::init();
 
-	require_once dirname( __FILE__ ) . '/includes/class-post.php';
-	\Activitypub\Post::init();
+	require_once dirname( __FILE__ ) . '/includes/model/class-activity.php';
+	require_once dirname( __FILE__ ) . '/includes/model/class-post.php';
+	\Activitypub\Model\Post::init();
 
 	require_once dirname( __FILE__ ) . '/includes/class-activitypub.php';
 	\Activitypub\Activitypub::init();

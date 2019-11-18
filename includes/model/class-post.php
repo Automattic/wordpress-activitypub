@@ -1,5 +1,5 @@
 <?php
-namespace Activitypub;
+namespace Activitypub\Model;
 
 /**
  * ActivityPub Post Class
@@ -13,8 +13,8 @@ class Post {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_filter( 'activitypub_the_summary', array( '\Activitypub\Post', 'add_backlink_to_content' ), 15, 2 );
-		\add_filter( 'activitypub_the_content', array( '\Activitypub\Post', 'add_backlink_to_content' ), 15, 2 );
+		\add_filter( 'activitypub_the_summary', array( '\Activitypub\Model\Post', 'add_backlink_to_content' ), 15, 2 );
+		\add_filter( 'activitypub_the_content', array( '\Activitypub\Model\Post', 'add_backlink_to_content' ), 15, 2 );
 	}
 
 	public function __construct( $post = null ) {
