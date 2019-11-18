@@ -19,10 +19,13 @@ The plugin implements the ActivityPub protocol for your blog. Your readers will 
 
 The plugin works with the following federated platforms:
 
-* [mastodon](https://joinmastodon.org/)
-* [pleroma](https://pleroma.social/)
-* [friendica](https://friendi.ca/)
-* [hubzilla](https://hubzilla.org/)
+* [Mastodon](https://joinmastodon.org/)
+* [Pleroma](https://pleroma.social/)
+* [Friendica](https://friendi.ca/)
+* [HubZilla](https://hubzilla.org/)
+* [Pixelfed](https://pixelfed.org/)
+* [SocialHome](https://socialhome.network/)
+* [Misskey](https://join.misskey.page/)
 
 ## Frequently Asked Questions ##
 
@@ -60,7 +63,7 @@ To implement:
 
 ### What if you are running your blog in a subdirectory? ###
 
-In order for WebFinger to work, it must be mapped to the root directory of the URL on which your blog resides.
+In order for webfinger to work, it must be mapped to the root directory of the URL on which your blog resides.
 
 **Apache**
 
@@ -78,7 +81,7 @@ Add the following to the site.conf in sites-available:
 		allow all;
 		try_files $uri $uri/ /blog/?$args;
 	}
-	
+
 Where 'blog' is the path to the subdirectory at which your blog resides.
 
 ## Changelog ##

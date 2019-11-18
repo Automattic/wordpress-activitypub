@@ -19,10 +19,13 @@ The plugin implements the ActivityPub protocol for your blog. Your readers will 
 
 The plugin works with the following federated platforms:
 
-* [mastodon](https://joinmastodon.org/)
-* [pleroma](https://pleroma.social/)
-* [friendica](https://friendi.ca/)
-* [hubzilla](https://hubzilla.org/)
+* [Mastodon](https://joinmastodon.org/)
+* [Pleroma](https://pleroma.social/)
+* [Friendica](https://friendi.ca/)
+* [HubZilla](https://hubzilla.org/)
+* [Pixelfed](https://pixelfed.org/)
+* [SocialHome](https://socialhome.network/)
+* [Misskey](https://join.misskey.page/)
 
 == Frequently Asked Questions ==
 
@@ -65,17 +68,19 @@ In order for webfinger to work, it must be mapped to the root directory of the U
 **Apache**
 
 Add the following to the .htaccess file in the root directory:
-`RedirectMatch "^\/\.well-known(.*)$" "\/blog\/\.well-known$1"`
+
+	RedirectMatch "^\/\.well-known(.*)$" "\/blog\/\.well-known$1"
+
 Where 'blog' is the path to the subdirectory at which your blog resides.
 
 **Nginx**
 
 Add the following to the site.conf in sites-available:
 
-	`location ~* /.well-known {
+	location ~* /.well-known {
 		allow all;
 		try_files $uri $uri/ /blog/?$args;
-	}`
+	}
 
 Where 'blog' is the path to the subdirectory at which your blog resides.
 
