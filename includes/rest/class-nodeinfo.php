@@ -104,7 +104,7 @@ class Nodeinfo {
 		$nodeinfo = array();
 
 		$nodeinfo['version'] = '1.0';
-		$nodeinfo['software'] = array(
+		$nodeinfo['server'] = array(
 			'baseUrl' => home_url( '/' ),
 			'name' => \get_bloginfo( 'name' ),
 			'software' => 'wordpress',
