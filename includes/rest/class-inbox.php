@@ -90,13 +90,13 @@ class Inbox {
 
 		$data = \json_decode( $request->get_body(), true );
 
+		if ( ! \is_array( $data ) || ! \array_key_exists( 'type', $data ) ) {
+			return new \WP_Error( 'rest_invalid_data', \__( 'Invalid payload', 'activitypub' ), array( 'status' => 422 ) );
+		}
+
 		$type = 'create';
 		if ( ! empty( $data['type'] ) ) {
 			$type = \strtolower( $data['type'] );
-		}
-
-		if ( ! \is_array( $data ) || ! \array_key_exists( 'type', $data ) ) {
-			return new \WP_Error( 'rest_invalid_data', \__( 'Invalid payload', 'activitypub' ), array( 'status' => 422 ) );
 		}
 
 		\do_action( 'activitypub_inbox', $data, $author_id, $type );
@@ -155,13 +155,13 @@ class Inbox {
 			$author_id = $author->ID;
 		}
 
+		if ( ! \is_array( $data ) || ! \array_key_exists( 'type', $data ) ) {
+			return new \WP_Error( 'rest_invalid_data', \__( 'Invalid payload', 'activitypub' ), array( 'status' => 422 ) );
+		}
+
 		$type = 'create';
 		if ( ! empty( $data['type'] ) ) {
 			$type = \strtolower( $data['type'] );
-		}
-
-		if ( ! \is_array( $data ) || ! \array_key_exists( 'type', $data ) ) {
-			return new \WP_Error( 'rest_invalid_data', \__( 'Invalid payload', 'activitypub' ), array( 'status' => 422 ) );
 		}
 
 		\do_action( 'activitypub_inbox', $data, $author_id, $type );

@@ -24,8 +24,6 @@ class Activitypub {
 		}
 
 		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
-
-		\add_action( 'trash_post', array( '\Activitypub\Activitypub', 'schedule_delete_activity' ), 10 );
 	}
 
 	/**
