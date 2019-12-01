@@ -30,7 +30,7 @@ class Activity {
 		}
 
 		$this->type = \ucfirst( $type );
-		$this->published = \date( 'Y-m-d\TH:i:s\Z', strtotime( 'now' ) );
+		$this->published = \date( 'Y-m-d\TH:i:s\Z', \strtotime( 'now' ) );
 	}
 
 	public function __call( $method, $params ) {

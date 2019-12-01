@@ -57,14 +57,14 @@ class Activitypub {
 		$accept_header = $_SERVER['HTTP_ACCEPT'];
 
 		if (
-			stristr( $accept_header, 'application/activity+json' ) ||
-			stristr( $accept_header, 'application/ld+json' )
+			\stristr( $accept_header, 'application/activity+json' ) ||
+			\stristr( $accept_header, 'application/ld+json' )
 		) {
 			return $json_template;
 		}
 
 		// accept header as an array
-		$accept = \explode( ',', trim( $accept_header ) );
+		$accept = \explode( ',', \trim( $accept_header ) );
 
 		if (
 			\in_array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', $accept, true ) ||
@@ -113,11 +113,11 @@ class Activitypub {
 		}
 
 		if ( 'publish' === $new_status && 'publish' !== $old_status ) {
-			\wp_schedule_single_event( time(), 'activitypub_send_post_activity', array( $post->ID ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_post_activity', array( $post->ID ) );
 		} elseif ( 'publish' === $new_status ) {
-			\wp_schedule_single_event( time(), 'activitypub_send_update_activity', array( $post->ID ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_update_activity', array( $post->ID ) );
 		} elseif ( 'trash' === $new_status ) {
-			\wp_schedule_single_event( time(), 'activitypub_send_delete_activity', array( get_permalink( $post ) ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_delete_activity', array( get_permalink( $post ) ) );
 		}
 	}
 

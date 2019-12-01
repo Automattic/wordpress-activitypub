@@ -194,7 +194,7 @@ function get_identifier_settings( $user_id ) {
 			<td>
 				<p><code><?php echo \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ); ?></code> or <code><?php echo \esc_url( \get_author_posts_url( $user_id ) ); ?></code></p>
 				<?php // translators: the webfinger resource ?>
-				<p class="description"><?php printf( \esc_html__( 'Try to follow "@%s" in the Mastodon/Friendica search field.', 'activitypub' ), \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ) ); ?></p>
+				<p class="description"><?php \printf( \esc_html__( 'Try to follow "@%s" in the Mastodon/Friendica search field.', 'activitypub' ), \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ) ); ?></p>
 			</td>
 		</tr>
 	</tbody>
@@ -236,7 +236,7 @@ function url_to_authorid( $url ) {
 	}
 
 	// first, check to see if there is a 'author=N' to match against
-	if ( preg_match( '/[?&]author=(\d+)/i', $url, $values ) ) {
+	if ( \preg_match( '/[?&]author=(\d+)/i', $url, $values ) ) {
 		$id = absint( $values[1] );
 		if ( $id ) {
 			return $id;
@@ -253,10 +253,10 @@ function url_to_authorid( $url ) {
 
 	// generate rewrite rule for the author url
 	$author_rewrite = $wp_rewrite->get_author_permastruct();
-	$author_regexp = str_replace( '%author%', '', $author_rewrite );
+	$author_regexp = \str_replace( '%author%', '', $author_rewrite );
 
 	// match the rewrite rule with the passed url
-	if ( preg_match( '/https?:\/\/(.+)' . preg_quote( $author_regexp, '/' ) . '([^\/]+)/i', $url, $match ) ) {
+	if ( \preg_match( '/https?:\/\/(.+)' . \preg_quote( $author_regexp, '/' ) . '([^\/]+)/i', $url, $match ) ) {
 		$user = get_user_by( 'slug', $match[2] );
 		if ( $user ) {
 			return $user->ID;

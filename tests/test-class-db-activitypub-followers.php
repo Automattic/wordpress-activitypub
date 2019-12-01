@@ -11,13 +11,13 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 
 		$db_followers = \Activitypub\Peer\Followers::get_followers( 1 );
 
-		$this->assertEquals( 3, count( $db_followers ) );
+		$this->assertEquals( 3, \count( $db_followers ) );
 
 		$this->assertSame( array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' ), $db_followers );
 	}
 
 	public function test_add_follower() {
-		$follower = 'https://example.com/author/' . time();
+		$follower = 'https://example.com/author/' . \time();
 		\Activitypub\Peer\Followers::add_follower( $follower, 1 );
 
 		$db_followers = \Activitypub\Peer\Followers::get_followers( 1 );

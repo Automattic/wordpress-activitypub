@@ -252,7 +252,7 @@ class Inbox {
 			'comment_author_email' => '',
 			'comment_author_url' => \esc_url_raw( $object['actor'] ),
 			'comment_content' => \esc_url_raw( $object['actor'] ),
-			'comment_type' => \esc_attr( strtolower( $object['type'] ) ),
+			'comment_type' => \esc_attr( \strtolower( $object['type'] ) ),
 			'comment_parent' => 0,
 			'comment_meta' => array(
 				'source_url' => \esc_url_raw( $object['id'] ),

@@ -21,50 +21,50 @@ namespace Activitypub;
 function init() {
 	\defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|^)#(\w*[A-Za-z_]+\w*)' );
 
-	require_once dirname( __FILE__ ) . '/includes/table/followers-list.php';
-	require_once dirname( __FILE__ ) . '/includes/class-signature.php';
-	require_once dirname( __FILE__ ) . '/includes/peer/class-followers.php';
-	require_once dirname( __FILE__ ) . '/includes/functions.php';
+	require_once \dirname( __FILE__ ) . '/includes/table/followers-list.php';
+	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
+	require_once \dirname( __FILE__ ) . '/includes/peer/class-followers.php';
+	require_once \dirname( __FILE__ ) . '/includes/functions.php';
 
-	require_once dirname( __FILE__ ) . '/includes/class-activity-dispatcher.php';
+	require_once \dirname( __FILE__ ) . '/includes/class-activity-dispatcher.php';
 	\Activitypub\Activity_Dispatcher::init();
 
-	require_once dirname( __FILE__ ) . '/includes/model/class-activity.php';
-	require_once dirname( __FILE__ ) . '/includes/model/class-post.php';
+	require_once \dirname( __FILE__ ) . '/includes/model/class-activity.php';
+	require_once \dirname( __FILE__ ) . '/includes/model/class-post.php';
 	\Activitypub\Model\Post::init();
 
-	require_once dirname( __FILE__ ) . '/includes/class-activitypub.php';
+	require_once \dirname( __FILE__ ) . '/includes/class-activitypub.php';
 	\Activitypub\Activitypub::init();
 
 	// Configure the REST API route
-	require_once dirname( __FILE__ ) . '/includes/rest/class-outbox.php';
+	require_once \dirname( __FILE__ ) . '/includes/rest/class-outbox.php';
 	\Activitypub\Rest\Outbox::init();
 
-	require_once dirname( __FILE__ ) . '/includes/rest/class-inbox.php';
+	require_once \dirname( __FILE__ ) . '/includes/rest/class-inbox.php';
 	\Activitypub\Rest\Inbox::init();
 
-	require_once dirname( __FILE__ ) . '/includes/rest/class-followers.php';
+	require_once \dirname( __FILE__ ) . '/includes/rest/class-followers.php';
 	\Activitypub\Rest\Followers::init();
 
-	require_once dirname( __FILE__ ) . '/includes/rest/class-following.php';
+	require_once \dirname( __FILE__ ) . '/includes/rest/class-following.php';
 	\Activitypub\Rest\Following::init();
 
-	require_once dirname( __FILE__ ) . '/includes/rest/class-webfinger.php';
+	require_once \dirname( __FILE__ ) . '/includes/rest/class-webfinger.php';
 	\Activitypub\Rest\Webfinger::init();
 
-	require_once dirname( __FILE__ ) . '/includes/rest/class-nodeinfo.php';
+	require_once \dirname( __FILE__ ) . '/includes/rest/class-nodeinfo.php';
 	\Activitypub\Rest\NodeInfo::init();
 
-	require_once dirname( __FILE__ ) . '/includes/class-admin.php';
+	require_once \dirname( __FILE__ ) . '/includes/class-admin.php';
 	\Activitypub\Admin::init();
 
-	require_once dirname( __FILE__ ) . '/includes/class-hashtag.php';
+	require_once \dirname( __FILE__ ) . '/includes/class-hashtag.php';
 	\Activitypub\Hashtag::init();
 
-	require_once dirname( __FILE__ ) . '/includes/class-debug.php';
+	require_once \dirname( __FILE__ ) . '/includes/class-debug.php';
 	\Activitypub\Debug::init();
 
-	require_once dirname( __FILE__ ) . '/includes/class-health-check.php';
+	require_once \dirname( __FILE__ ) . '/includes/class-health-check.php';
 	\Activitypub\Health_Check::init();
 }
 add_action( 'plugins_loaded', '\Activitypub\init' );

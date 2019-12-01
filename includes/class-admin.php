@@ -39,14 +39,14 @@ class Admin {
 	 * Load settings page
 	 */
 	public static function settings_page() {
-		\load_template( dirname( __FILE__ ) . '/../templates/settings.php' );
+		\load_template( \dirname( __FILE__ ) . '/../templates/settings.php' );
 	}
 
 	/**
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {
-		\load_template( dirname( __FILE__ ) . '/../templates/followers-list.php' );
+		\load_template( \dirname( __FILE__ ) . '/../templates/followers-list.php' );
 	}
 
 	/**

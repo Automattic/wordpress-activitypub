@@ -78,7 +78,7 @@ class Outbox {
 		$json->first = \add_query_arg( 'page', 0, $json->partOf ); // phpcs:ignore
 		$json->last  = \add_query_arg( 'page', ( \ceil ( $json->totalItems / 10 ) ) - 1, $json->partOf ); // phpcs:ignore
 
-		if ( ( ceil ( $json->totalItems / 10 ) ) - 1 > $page ) { // phpcs:ignore
+		if ( ( \ceil ( $json->totalItems / 10 ) ) - 1 > $page ) { // phpcs:ignore
 			$json->next  = \add_query_arg( 'page', ++$page, $json->partOf ); // phpcs:ignore
 		}
 
