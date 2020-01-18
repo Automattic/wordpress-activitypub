@@ -96,32 +96,24 @@ class Post {
 
 		// get URLs for each image
 		foreach ( $image_ids as $id ) {
+			$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 			$thumbnail = \wp_get_attachment_image_src( $id, 'full' );
 			$mimetype = \get_post_mime_type( $id );
 
 			if ( $thumbnail ) {
-				$images[] = array(
-					'url' => $thumbnail[0],
-					'type' => $mimetype,
-				);
-			}
-		}
-
-		$attachments = array();
-
-		// add attachments
-		if ( $images ) {
-			foreach ( $images as $image ) {
-				$attachment = array(
+				$image = array(
 					'type' => 'Image',
-					'url' => $image['url'],
-					'mediaType' => $image['type'],
+					'url' => $thumbnail[0],
+					'mediaType' => $mimetype
 				);
-				$attachments[] = $attachment;
+				if ( $alt ) {
+					$image['name'] = $alt;
+				}
+				$images[] = $image;
 			}
 		}
 
-		return $attachments;
+		return $images;
 	}
 
 	public function get_tags() {
