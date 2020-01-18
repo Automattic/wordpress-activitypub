@@ -250,7 +250,7 @@ class Inbox {
 			'comment_post_ID' => \url_to_postid( $object['object'] ),
 			'comment_author' => \esc_attr( $meta['name'] ),
 			'comment_author_email' => '',
-			'comment_author_url' => \esc_url_raw( $object['actor'] ),
+			'comment_author_url' => \esc_url_raw( $object['id'] ),
 			'comment_content' => \esc_url_raw( $object['actor'] ),
 			'comment_type' => \esc_attr( \strtolower( $object['type'] ) ),
 			'comment_parent' => 0,
