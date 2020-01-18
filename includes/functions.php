@@ -84,6 +84,16 @@ function get_remote_metadata_by_actor( $actor ) {
 		return new \WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), $actor );
 	}
 
+	// we just need any user to generate a request signature
+	$user_id = \reset( \get_users( array (
+		'number' => 1,
+		'who'    => 'authors',
+		'fields' => 'ID'
+	) ) );
+
+	$date = \gmdate( 'D, d M Y H:i:s T' );
+	$signature = \Activitypub\Signature::generate_signature( $user_id, $url, $date );
+
 	$wp_version = \get_bloginfo( 'version' );
 
 	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
@@ -94,6 +104,8 @@ function get_remote_metadata_by_actor( $actor ) {
 		'user-agent'          => "$user_agent; ActivityPub",
 		'headers'             => array(
 			'accept' => 'application/activity+json, application/ld+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+			'Signature' => $signature,
+			'Date' => $date,
 		),
 	);
 
