@@ -37,7 +37,7 @@ class Post {
 			'type' => $this->get_object_type(),
 			'published' => \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date ) ),
 			'attributedTo' => \get_author_posts_url( $post->post_author ),
-			'summary' => $this->get_the_summary(),
+			'summary' => $this->get_the_title(),
 			'inReplyTo' => null,
 			'content' => $this->get_the_content(),
 			'contentMap' => array(
@@ -207,11 +207,11 @@ class Post {
 		return $this->get_the_post_content();
 	}
 
-	public function get_the_summary() {
+	public function get_the_title() {
 		if ( 'Article' === $this->get_object_type() ) {
-			$excerpt = $this->get_the_post_excerpt( 400 );
+			$title = \get_the_title( $this->post );
 
-			return \html_entity_decode( $excerpt, ENT_QUOTES, 'UTF-8' );
+			return \html_entity_decode( $title, ENT_QUOTES, 'UTF-8' );
 		}
 
 		return null;
