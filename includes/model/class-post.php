@@ -204,8 +204,8 @@ class Post {
 			return $this->get_the_post_summary();
 		}
 
-	        if ( 'title' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-	   	        return $this->get_the_title();
+		if ( 'title' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
+			return $this->get_the_title();
 		}
 
 		return $this->get_the_post_content();
