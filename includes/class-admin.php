@@ -59,7 +59,7 @@ class Admin {
 				'description' => \__( 'Use title and link, summary or full content', 'activitypub' ),
 				'show_in_rest' => array(
 					'schema' => array(
-						'enum' => array( 'titlelink', 'excerpt', 'content' ),
+						'enum' => array( 'title', 'excerpt', 'content' ),
 					),
 				),
 				'default' => 'content',
