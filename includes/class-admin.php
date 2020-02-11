@@ -56,10 +56,10 @@ class Admin {
 		\register_setting(
 			'activitypub', 'activitypub_post_content_type', array(
 				'type' => 'string',
-				'description' => \__( 'Use summary or full content', 'activitypub' ),
+				'description' => \__( 'Use title and link, summary or full content', 'activitypub' ),
 				'show_in_rest' => array(
 					'schema' => array(
-						'enum' => array( 'excerpt', 'content' ),
+						'enum' => array( 'title', 'excerpt', 'content' ),
 					),
 				),
 				'default' => 'content',
