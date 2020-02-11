@@ -88,6 +88,13 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
+### 0.10.0 ###
+
+* add image alt text to the ActivityStreams attachment property in a format that Mastodon can read. props [@BenLubar](https://github.com/BenLubar)
+* use the "summary" property for a title as Mastodon does. props [@BenLubar](https://github.com/BenLubar)
+* support authorized fetch to avoid having comments from "Anonymous". props [@BenLubar](https://github.com/BenLubar)
+* add new post type: "title and link only". props [@bgcarlisle](https://github.com/bgcarlisle)
+
 ### 0.9.1 ###
 
 * disable shared inbox
