@@ -48,6 +48,32 @@ function safe_remote_post( $url, $body, $user_id ) {
 	return $response;
 }
 
+function safe_remote_get( $url, $user_id ) {
+	$date = \gmdate( 'D, d M Y H:i:s T' );
+	$signature = \Activitypub\Signature::generate_signature( $user_id, $url, $date );
+
+	$wp_version = \get_bloginfo( 'version' );
+	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
+	$args = array(
+		'timeout' => 100,
+		'limit_response_size' => 1048576,
+		'redirection' => 3,
+		'user-agent' => "$user_agent; ActivityPub",
+		'headers' => array(
+			'Accept' => 'application/activity+json',
+			'Content-Type' => 'application/activity+json',
+			'Signature' => $signature,
+			'Date' => $date,
+		),
+	);
+
+	$response = \wp_safe_remote_get( $url, $args );
+
+	\do_action( 'activitypub_safe_remote_get_response', $response, $url, $user_id );
+
+	return $response;
+}
+
 /**
  * Returns a users WebFinger "resource"
  *
@@ -84,32 +110,16 @@ function get_remote_metadata_by_actor( $actor ) {
 		return new \WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), $actor );
 	}
 
-	// we just need any user to generate a request signature
-	$user_id = \reset( \get_users( array (
+	$user = \get_users( array (
 		'number' => 1,
 		'who'    => 'authors',
-		'fields' => 'ID'
-	) ) );
+		'fields' => 'ID',
+	) );
 
-	$date = \gmdate( 'D, d M Y H:i:s T' );
-	$signature = \Activitypub\Signature::generate_signature( $user_id, $url, $date );
+	// we just need any user to generate a request signature
+	$user_id = \reset( $user );
 
-	$wp_version = \get_bloginfo( 'version' );
-
-	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
-	$args       = array(
-		'timeout'             => 100,
-		'limit_response_size' => 1048576,
-		'redirection'         => 3,
-		'user-agent'          => "$user_agent; ActivityPub",
-		'headers'             => array(
-			'accept' => 'application/activity+json, application/ld+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
-			'Signature' => $signature,
-			'Date' => $date,
-		),
-	);
-
-	$response = \wp_safe_remote_get( $actor, $args );
+	$response = \Activitypub\safe_remote_get( $actor, $user_id );
 
 	if ( \is_wp_error( $response ) ) {
 		return $response;
