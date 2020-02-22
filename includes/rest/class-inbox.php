@@ -126,7 +126,7 @@ class Inbox {
 			'required' => true,
 			'type' => 'string',
 			'validate_callback' => function( $param, $request, $key ) {
-				if ( ! is_string( $param ) ) {
+				if ( ! \is_string( $param ) ) {
 					$param = $param['id'];
 				}
 				return ! \Activitypub\is_blacklisted( $param );
@@ -138,13 +138,13 @@ class Inbox {
 			'required' => true,
 			'type' => array( 'object', 'string' ),
 			'validate_callback' => function( $param, $request, $key ) {
-				if ( ! is_string( $param ) ) {
+				if ( ! \is_string( $param ) ) {
 					$param = $param['id'];
 				}
 				return ! \Activitypub\is_blacklisted( $param );
 			},
 			'sanitize_callback' => function( $param, $request, $key ) {
-				if ( ! is_string( $param ) ) {
+				if ( ! \is_string( $param ) ) {
 					$param = $param['id'];
 				}
 				return \esc_url_raw( $param );

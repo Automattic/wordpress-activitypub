@@ -300,7 +300,7 @@ function get_blacklist() {
 	$blacklist_hosts  = \explode( PHP_EOL, $blacklist );
 
 	// if no values have been set, revert to the defaults
-	if ( ! $blacklist || ! $blacklist_hosts || ! is_array( $blacklist_hosts ) ) {
+	if ( ! $blacklist || ! $blacklist_hosts || ! \is_array( $blacklist_hosts ) ) {
 		$blacklist_hosts = array(
 			'gab.com',
 		);

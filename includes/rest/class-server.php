@@ -19,7 +19,7 @@ class Server extends \WP_REST_Server {
 		$content_type = $request->get_content_type();
 
 		// check for content-sub-types like 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
-		if ( preg_match( '/application\/([a-zA-Z+_-]+\+)json/', $content_type['value'] ) ) {
+		if ( \preg_match( '/application\/([a-zA-Z+_-]+\+)json/', $content_type['value'] ) ) {
 			$request->set_header( 'Content-Type', 'application/json' );
 		}
 
