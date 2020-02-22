@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: ActivityPub 0.9.1\n"
 "Report-Msgid-Bugs-To: "
 "https://wordpress.org/support/plugin/wordpress-activitypub\n"
-"POT-Creation-Date: 2020-02-11 09:13:49+00:00\n"
+"POT-Creation-Date: 2020-02-21 10:08:48+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -48,11 +48,15 @@ msgstr ""
 msgid "Enable ActivityPub support for post types"
 msgstr ""
 
-#: includes/class-admin.php:115
+#: includes/class-admin.php:112
+msgid "Block fediverse instances"
+msgstr ""
+
+#: includes/class-admin.php:123
 msgid "Overview"
 msgstr ""
 
-#: includes/class-admin.php:117
+#: includes/class-admin.php:125
 msgid ""
 "ActivityPub is a decentralized social networking protocol based on the "
 "ActivityStreams 2.0 data format. ActivityPub is an official W3C recommended "
@@ -62,53 +66,53 @@ msgid ""
 "subscribing to content."
 msgstr ""
 
-#: includes/class-admin.php:122
+#: includes/class-admin.php:130
 msgid "For more information:"
 msgstr ""
 
-#: includes/class-admin.php:123
+#: includes/class-admin.php:131
 msgid "<a href=\"https://activitypub.rocks/\">Test Suite</a>"
 msgstr ""
 
-#: includes/class-admin.php:124
+#: includes/class-admin.php:132
 msgid "<a href=\"https://www.w3.org/TR/activitypub/\">W3C Spec</a>"
 msgstr ""
 
-#: includes/class-admin.php:125
+#: includes/class-admin.php:133
 msgid ""
 "<a href=\"https://github.com/pfefferle/wordpress-activitypub/issues\">Give "
 "us feedback</a>"
 msgstr ""
 
-#: includes/class-admin.php:127
+#: includes/class-admin.php:135
 msgid "<a href=\"https://notiz.blog/donate\">Donate</a>"
 msgstr ""
 
-#: includes/class-admin.php:137
+#: includes/class-admin.php:145
 msgid "Fediverse"
 msgstr ""
 
-#: includes/functions.php:84
+#: includes/functions.php:110
 msgid "The \"actor\" is no valid URL"
 msgstr ""
 
-#: includes/functions.php:122
+#: includes/functions.php:132
 msgid "No valid JSON data"
 msgstr ""
 
-#: includes/functions.php:150
+#: includes/functions.php:160
 msgid "No \"Inbox\" found"
 msgstr ""
 
-#: includes/functions.php:176
+#: includes/functions.php:186
 msgid "No \"Public-Key\" found"
 msgstr ""
 
-#: includes/functions.php:204
+#: includes/functions.php:214
 msgid "Profile identifier"
 msgstr ""
 
-#: includes/functions.php:209
+#: includes/functions.php:219
 #. translators: the webfinger resource
 msgid "Try to follow \"@%s\" in the Mastodon/Friendica search field."
 msgstr ""
@@ -122,31 +126,6 @@ msgstr ""
 #: includes/rest/class-outbox.php:45 includes/rest/class-outbox.php:48
 #: includes/rest/class-webfinger.php:61
 msgid "User not found"
-msgstr ""
-
-#: includes/rest/class-inbox.php:94 includes/rest/class-inbox.php:159
-msgid "Invalid payload"
-msgstr ""
-
-#: includes/rest/class-inbox.php:119
-msgid "No receiving actor set"
-msgstr ""
-
-#: includes/rest/class-inbox.php:126 includes/rest/class-inbox.php:152
-msgid "No matching user"
-msgstr ""
-
-#: includes/rest/class-inbox.php:141
-msgid "Invalid actor identifier"
-msgstr ""
-
-#: includes/rest/class-inbox.php:146
-msgid "Invalid host"
-msgstr ""
-
-#: includes/rest/class-inbox.php:201 includes/rest/class-inbox.php:230
-#: includes/rest/class-inbox.php:244 includes/rest/class-inbox.php:281
-msgid "No \"Actor\" found"
 msgstr ""
 
 #: includes/rest/class-webfinger.php:48
@@ -280,7 +259,26 @@ msgstr ""
 msgid "Add all tags as hashtags to the end of each activity."
 msgstr ""
 
-#: templates/settings.php:99
+#: templates/settings.php:93
+msgid "Server"
+msgstr ""
+
+#: templates/settings.php:95
+msgid "Server related settings."
+msgstr ""
+
+#: templates/settings.php:106
+msgid "Blacklist"
+msgstr ""
+
+#: templates/settings.php:110
+msgid ""
+"A list of hosts, you want to block, one host per line. Please use only the "
+"host/domain of the server you want to block, without <code>http://</code> "
+"and without <code>www.</code>. For example <code>example.com</code>."
+msgstr ""
+
+#: templates/settings.php:124
 msgid ""
 "If you like this plugin, what about a small <a "
 "href=\"https://notiz.blog/donate\">donation</a>?"

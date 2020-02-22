@@ -4,8 +4,6 @@
 	<file>./activitypub.php</file>
 	<file>./includes/</file>
 	<config name="minimum_supported_wp_version" value="4.7"/>
-	<config name="installed_paths" value="vendor/phpcompatibility/php-compatibility" />
-	<config name="installed_paths" value="vendor/wp-coding-standards/wpcs" />
 	<exclude-pattern>*\.(inc|css|js|svg)</exclude-pattern>
 	<exclude-pattern>*/vendor/*</exclude-pattern>
 	<exclude-pattern>*/node_modules/*</exclude-pattern>
