@@ -3,7 +3,7 @@ Contributors: pfefferle
 Donate link: https://notiz.blog/donate/
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
-Tested up to: 5.3
+Tested up to: 5.4
 Stable tag: 0.10.0
 Requires PHP: 5.6
 License: MIT
