@@ -11,7 +11,7 @@ class Debug {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		if ( WP_DEBUG_LOG ) {
+		if ( WP_DEBUG && WP_DEBUG_LOG ) {
 			\add_action( 'activitypub_safe_remote_post_response', array( '\Activitypub\Debug', 'log_remote_post_responses' ), 10, 4 );
 		}
 	}
