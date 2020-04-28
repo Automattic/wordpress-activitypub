@@ -301,9 +301,7 @@ function get_blacklist() {
 
 	// if no values have been set, revert to the defaults
 	if ( ! $blacklist || ! $blacklist_hosts || ! \is_array( $blacklist_hosts ) ) {
-		$blacklist_hosts = array(
-			'gab.com',
-		);
+		$blacklist_hosts = array();
 	}
 
 	// clean out any blank values
