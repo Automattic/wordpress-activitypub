@@ -136,7 +136,7 @@ class Inbox {
 
 		$params['actor'] = array(
 			'required' => true,
-			'type' => array( 'object', 'string' ),
+			//'type' => array( 'object', 'string' ),
 			'validate_callback' => function( $param, $request, $key ) {
 				if ( ! \is_string( $param ) ) {
 					$param = $param['id'];
@@ -153,8 +153,8 @@ class Inbox {
 
 		$params['type'] = array(
 			'required' => true,
-			'type' => 'enum',
-			'enum' => array( 'Create' ),
+			//'type' => 'enum',
+			//'enum' => array( 'Create' ),
 			'sanitize_callback' => function( $param, $request, $key ) {
 				return \strtolower( $param );
 			},
@@ -162,7 +162,7 @@ class Inbox {
 
 		$params['object'] = array(
 			'required' => true,
-			'type' => 'object',
+			//'type' => 'object',
 		);
 
 		return $params;
