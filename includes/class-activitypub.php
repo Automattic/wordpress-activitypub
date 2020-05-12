@@ -117,7 +117,7 @@ class Activitypub {
 		} elseif ( 'publish' === $new_status ) {
 			\wp_schedule_single_event( \time(), 'activitypub_send_update_activity', array( $post->ID ) );
 		} elseif ( 'trash' === $new_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_delete_activity', array( get_permalink( $post ) ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_delete_activity', array( \get_permalink( $post ) ) );
 		}
 	}
 

@@ -8,7 +8,7 @@ $finder = PhpCsFixer\Finder::create()
 
 return PhpCsFixer\Config::create()
     ->setRules([
-        'native_function_invocation' => true,
+        'native_function_invocation' => ['include' => ['@all']],
 		'native_constant_invocation' => true,
     ])
     ->setFinder($finder)

@@ -7,7 +7,7 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 			'id' => 'http://sally.example.org',
 			'name' => 'Sally Smith',
 		);
-		update_user_meta( 1, 'activitypub_followers', $followers );
+		\update_user_meta( 1, 'activitypub_followers', $followers );
 
 		$db_followers = \Activitypub\Peer\Followers::get_followers( 1 );
 

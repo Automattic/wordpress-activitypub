@@ -31,7 +31,7 @@ $json->outbox = \get_rest_url( null, "/activitypub/1.0/users/$author_id/outbox" 
 $json->followers = \get_rest_url( null, "/activitypub/1.0/users/$author_id/followers" );
 $json->following = \get_rest_url( null, "/activitypub/1.0/users/$author_id/following" );
 
-$json->manuallyApprovesFollowers = \apply_filters( 'activitypub_json_manually_approves_followers', __return_false() ); // phpcs:ignore
+$json->manuallyApprovesFollowers = \apply_filters( 'activitypub_json_manually_approves_followers', \__return_false() ); // phpcs:ignore
 
 // phpcs:ignore
 $json->publicKey = array(
@@ -45,7 +45,7 @@ $json->attachment = array();
 
 $json->attachment[] = array(
 	'type' => 'PropertyValue',
-	'name' => __( 'Blog', 'activitypub' ),
+	'name' => \__( 'Blog', 'activitypub' ),
 	'value' => \html_entity_decode(
 		'<a rel="me" title="' . \esc_attr( \home_url( '/' ) ) . '" target="_blank" href="' . \home_url( '/' ) . '">' . \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) . '</a>',
 		\ENT_QUOTES,
@@ -55,7 +55,7 @@ $json->attachment[] = array(
 
 $json->attachment[] = array(
 	'type' => 'PropertyValue',
-	'name' => __( 'Profile', 'activitypub' ),
+	'name' => \__( 'Profile', 'activitypub' ),
 	'value' => \html_entity_decode(
 		'<a rel="me" title="' . \esc_attr( \get_author_posts_url( $author_id ) ) . '" target="_blank" href="' . \get_author_posts_url( $author_id ) . '">' . \wp_parse_url( \get_author_posts_url( $author_id ), \PHP_URL_HOST ) . '</a>',
 		\ENT_QUOTES,
@@ -66,7 +66,7 @@ $json->attachment[] = array(
 if ( \get_the_author_meta( 'user_url', $author_id ) ) {
 	$json->attachment[] = array(
 		'type' => 'PropertyValue',
-		'name' => __( 'Website', 'activitypub' ),
+		'name' => \__( 'Website', 'activitypub' ),
 		'value' => \html_entity_decode(
 			'<a rel="me" title="' . \esc_attr( \get_the_author_meta( 'user_url', $author_id ) ) . '" target="_blank" href="' . \get_the_author_meta( 'user_url', $author_id ) . '">' . \wp_parse_url( \get_the_author_meta( 'user_url', $author_id ), \PHP_URL_HOST ) . '</a>',
 			\ENT_QUOTES,

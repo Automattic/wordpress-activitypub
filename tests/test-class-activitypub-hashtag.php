@@ -10,9 +10,9 @@ class Test_Activitypub_Hashtag extends WP_UnitTestCase {
 	}
 
 	public function the_content_provider() {
-		wp_create_term( 'object', 'post_tag' );
-		$object = get_term_by( 'name', 'object', 'post_tag' );
-		$link = get_term_link( $object, 'post_tag' );
+		\wp_create_term( 'object', 'post_tag' );
+		$object = \get_term_by( 'name', 'object', 'post_tag' );
+		$link = \get_term_link( $object, 'post_tag' );
 
 		return array(
 			array( 'test', 'test' ),

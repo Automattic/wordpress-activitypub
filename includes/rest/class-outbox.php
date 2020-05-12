@@ -42,7 +42,7 @@ class Outbox {
 		$author  = \get_user_by( 'ID', $user_id );
 
 		if ( ! $author ) {
-			return new \WP_Error( 'rest_invalid_param', __( 'User not found', 'activitypub' ), array(
+			return new \WP_Error( 'rest_invalid_param', \__( 'User not found', 'activitypub' ), array(
 				'status' => 404,
 				'params' => array(
 					'user_id' => \__( 'User not found', 'activitypub' ),

@@ -157,7 +157,7 @@ function get_inbox_by_actor( $actor ) {
 		return $metadata['inbox'];
 	}
 
-	return new \WP_Error( 'activitypub_no_inbox', __( 'No "Inbox" found', 'activitypub' ), $metadata );
+	return new \WP_Error( 'activitypub_no_inbox', \__( 'No "Inbox" found', 'activitypub' ), $metadata );
 }
 
 /**
@@ -253,13 +253,13 @@ function url_to_authorid( $url ) {
 	global $wp_rewrite;
 
 	// check if url hase the same host
-	if ( wp_parse_url( site_url(), \PHP_URL_HOST ) !== wp_parse_url( $url, \PHP_URL_HOST ) ) {
+	if ( \wp_parse_url( \site_url(), \PHP_URL_HOST ) !== \wp_parse_url( $url, \PHP_URL_HOST ) ) {
 		return 0;
 	}
 
 	// first, check to see if there is a 'author=N' to match against
 	if ( \preg_match( '/[?&]author=(\d+)/i', $url, $values ) ) {
-		$id = absint( $values[1] );
+		$id = \absint( $values[1] );
 		if ( $id ) {
 			return $id;
 		}
@@ -279,7 +279,7 @@ function url_to_authorid( $url ) {
 
 	// match the rewrite rule with the passed url
 	if ( \preg_match( '/https?:\/\/(.+)' . \preg_quote( $author_regexp, '/' ) . '([^\/]+)/i', $url, $match ) ) {
-		$user = get_user_by( 'slug', $match[2] );
+		$user = \get_user_by( 'slug', $match[2] );
 		if ( $user ) {
 			return $user->ID;
 		}

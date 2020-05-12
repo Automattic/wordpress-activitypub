@@ -24,7 +24,7 @@ class Server extends \WP_REST_Server {
 		}
 
 		// make request filterable
-		$request = apply_filters( 'activitypub_pre_dispatch_request', $request );
+		$request = \apply_filters( 'activitypub_pre_dispatch_request', $request );
 
 		return parent::dispatch( $request );
 	}

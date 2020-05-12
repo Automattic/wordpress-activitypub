@@ -14,7 +14,7 @@
 			<tbody>
 				<tr>
 					<th scope="row">
-						<?php esc_html_e( 'Post-Content', 'activitypub' ); ?>
+						<?php \esc_html_e( 'Post-Content', 'activitypub' ); ?>
 					</th>
 					<td>
 						<p>
@@ -34,7 +34,7 @@
 					</th>
 					<td>
 						<p><label><input type="checkbox" name="activitypub_use_shortlink" id="activitypub_use_shortlink" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_shortlink', '0' ) ); ?> /> <?php \esc_html_e( 'Use the Shortlink instead of the permalink', 'activitypub' ); ?></label></p>
-						<p class="description"><?php \printf( esc_html( 'I can recommend %sHum%s, to prettify the Shortlinks', 'activitypub' ), '<a href="https://wordpress.org/plugins/hum/" target="_blank">', '</a>' ); ?></p>
+						<p class="description"><?php \printf( \esc_html( 'I can recommend %sHum%s, to prettify the Shortlinks', 'activitypub' ), '<a href="https://wordpress.org/plugins/hum/" target="_blank">', '</a>' ); ?></p>
 					</td>
 				</tr>
 				<tr>
@@ -121,6 +121,6 @@
 	</form>
 
 	<p>
-		<small><?php _e( 'If you like this plugin, what about a small <a href="https://notiz.blog/donate">donation</a>?', 'activitypub' ); ?></small>
+		<small><?php \_e( 'If you like this plugin, what about a small <a href="https://notiz.blog/donate">donation</a>?', 'activitypub' ); ?></small>
 	</p>
 </div>
