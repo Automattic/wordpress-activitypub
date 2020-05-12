@@ -69,7 +69,7 @@ class Activity {
 	}
 
 	public function to_json() {
-		return \wp_json_encode( $this->to_array(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT );
+		return \wp_json_encode( $this->to_array(), \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
 	}
 
 	public function to_simple_array() {
@@ -90,6 +90,6 @@ class Activity {
 	}
 
 	public function to_simple_json() {
-		return \wp_json_encode( $this->to_simple_array(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT );
+		return \wp_json_encode( $this->to_simple_array(), \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
 	}
 }

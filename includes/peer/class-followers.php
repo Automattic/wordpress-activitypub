@@ -21,7 +21,7 @@ class Followers {
 				isset( $follower['type'] ) &&
 				'Person' === $follower['type'] &&
 				isset( $follower['id'] ) &&
-				false !== \filter_var( $follower['id'], FILTER_VALIDATE_URL )
+				false !== \filter_var( $follower['id'], \FILTER_VALIDATE_URL )
 			) {
 				$followers[ $key ] = $follower['id'];
 			}
@@ -45,7 +45,7 @@ class Followers {
 				isset( $actor['type'] ) &&
 				'Person' === $actor['type'] &&
 				isset( $actor['id'] ) &&
-				false !== \filter_var( $actor['id'], FILTER_VALIDATE_URL )
+				false !== \filter_var( $actor['id'], \FILTER_VALIDATE_URL )
 			) {
 				$actor = $actor['id'];
 			}

@@ -53,7 +53,7 @@ class Post {
 	}
 
 	public function to_json() {
-		return \wp_json_encode( $this->to_array(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT );
+		return \wp_json_encode( $this->to_array(), \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
 	}
 
 	public function get_attachments() {
@@ -215,7 +215,7 @@ class Post {
 		if ( 'Article' === $this->get_object_type() ) {
 			$title = \get_the_title( $this->post );
 
-			return \html_entity_decode( $title, ENT_QUOTES, 'UTF-8' );
+			return \html_entity_decode( $title, \ENT_QUOTES, 'UTF-8' );
 		}
 
 		return null;
@@ -271,7 +271,7 @@ class Post {
 		$filtered_content = \apply_filters( 'the_content', $content );
 		$filtered_content = \apply_filters( 'activitypub_the_content', $filtered_content, $this->post );
 
-		$decoded_content = \html_entity_decode( $filtered_content, ENT_QUOTES, 'UTF-8' );
+		$decoded_content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
 
 		$allowed_html = \apply_filters( 'activitypub_allowed_html', '<a><p><ul><ol><li><code><blockquote><pre>' );
 
@@ -291,7 +291,7 @@ class Post {
 		$filtered_summary = \apply_filters( 'the_excerpt', $summary );
 		$filtered_summary = \apply_filters( 'activitypub_the_summary', $filtered_summary, $this->post );
 
-		$decoded_summary = \html_entity_decode( $filtered_summary, ENT_QUOTES, 'UTF-8' );
+		$decoded_summary = \html_entity_decode( $filtered_summary, \ENT_QUOTES, 'UTF-8' );
 
 		$allowed_html = \apply_filters( 'activitypub_allowed_html', '<a><p>' );
 

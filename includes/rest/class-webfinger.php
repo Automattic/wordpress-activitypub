@@ -51,7 +51,7 @@ class Webfinger {
 		$resource_identifier = $matches[1];
 		$resource_host = $matches[2];
 
-		if ( \wp_parse_url( \home_url( '/' ), PHP_URL_HOST ) !== $resource_host ) {
+		if ( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) !== $resource_host ) {
 			return new \WP_Error( 'activitypub_wrong_host', \__( 'Resource host does not match blog host', 'activitypub' ), array( 'status' => 404 ) );
 		}
 

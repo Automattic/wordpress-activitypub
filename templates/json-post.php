@@ -15,10 +15,10 @@ $json = \apply_filters( 'activitypub_json_post_array', $json );
 $options = 0;
 // JSON_PRETTY_PRINT added in PHP 5.4
 if ( \get_query_var( 'pretty' ) ) {
-	$options |= JSON_PRETTY_PRINT; // phpcs:ignore
+	$options |= \JSON_PRETTY_PRINT; // phpcs:ignore
 }
 
-$options |= JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT;
+$options |= \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT;
 
 /*
  * Options to be passed to json_encode()

@@ -1,6 +1,6 @@
 <?php
 
-\error_reporting( E_ALL & ~E_NOTICE & ~E_STRICT & ~E_WARNING );
+\error_reporting( \E_ALL & ~\E_NOTICE & ~\E_STRICT & ~\E_WARNING );
 
 \define( 'WP_DEBUG', false );
 
@@ -18,4 +18,4 @@ tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
 require $_tests_dir . '/includes/bootstrap.php';
 
-\error_reporting( E_ALL & ~E_NOTICE & ~E_STRICT & ~E_WARNING );
+\error_reporting( \E_ALL & ~\E_NOTICE & ~\E_STRICT & ~\E_WARNING );

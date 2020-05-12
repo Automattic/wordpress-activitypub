@@ -89,7 +89,7 @@ function get_webfinger_resource( $user_id ) {
 
 	$user = \get_user_by( 'id', $user_id );
 
-	return $user->user_login . '@' . \wp_parse_url( \home_url(), PHP_URL_HOST );
+	return $user->user_login . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
 }
 
 /**
@@ -253,7 +253,7 @@ function url_to_authorid( $url ) {
 	global $wp_rewrite;
 
 	// check if url hase the same host
-	if ( wp_parse_url( site_url(), PHP_URL_HOST ) !== wp_parse_url( $url, PHP_URL_HOST ) ) {
+	if ( wp_parse_url( site_url(), \PHP_URL_HOST ) !== wp_parse_url( $url, \PHP_URL_HOST ) ) {
 		return 0;
 	}
 
@@ -297,7 +297,7 @@ function url_to_authorid( $url ) {
  */
 function get_blacklist() {
 	$blacklist = \get_option( 'activitypub_blacklist' );
-	$blacklist_hosts  = \explode( PHP_EOL, $blacklist );
+	$blacklist_hosts  = \explode( \PHP_EOL, $blacklist );
 
 	// if no values have been set, revert to the defaults
 	if ( ! $blacklist || ! $blacklist_hosts || ! \is_array( $blacklist_hosts ) ) {

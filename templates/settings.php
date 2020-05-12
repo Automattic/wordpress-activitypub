@@ -96,7 +96,7 @@
 
 		<?php
 		// load the existing blacklist from the WordPress options table
-		$activitypub_blacklist = \trim( \implode( PHP_EOL, \ActivityPub\get_blacklist() ), PHP_EOL );
+		$activitypub_blacklist = \trim( \implode( \PHP_EOL, \ActivityPub\get_blacklist() ), \PHP_EOL );
 		?>
 
 		<table class="form-table">

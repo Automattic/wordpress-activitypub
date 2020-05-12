@@ -53,7 +53,7 @@ class Signature {
 		$config = array(
 			'digest_alg' => 'sha512',
 			'private_key_bits' => 2048,
-			'private_key_type' => OPENSSL_KEYTYPE_RSA,
+			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
 		);
 
 		$key = \openssl_pkey_new( $config );
@@ -91,7 +91,7 @@ class Signature {
 		$signed_string = "(request-target): post $path\nhost: $host\ndate: $date";
 
 		$signature = null;
-		\openssl_sign( $signed_string, $signature, $key, OPENSSL_ALGO_SHA256 );
+		\openssl_sign( $signed_string, $signature, $key, \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature ); // phpcs:ignore
 
 		$key_id = \get_author_posts_url( $user_id ) . '#main-key';
