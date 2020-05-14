@@ -13,6 +13,7 @@ class Post {
 	private $summary;
 	private $content;
 	private $attachments;
+	private $tags;
 	private $object_type;
 
 	/**
@@ -26,7 +27,7 @@ class Post {
 	public function __construct( $post = null ) {
 		$this->post = \get_post( $post );
 
-		$this->post_author = $this->post->post_author();
+		$this->post_author = $this->post->post_author;
 		$this->permalink   = $this->generate_permalink();
 		$this->summary     = $this->generate_the_title();
 		$this->content     = $this->generate_the_content();
@@ -75,9 +76,8 @@ class Post {
 	}
 
 	public function generate_permalink() {
-		$post = $this->post;
-
-		$permalink = \generate_permalink( $post );
+		$post      = $this->post;
+		$permalink = \get_permalink( $post );
 
 		// replace 'trashed' for delete activity
 		return \str_replace( '__trashed', '', $permalink );
@@ -339,7 +339,7 @@ class Post {
 		if ( \get_option( 'activitypub_use_shortlink', 0 ) ) {
 			$link = \esc_url( \wp_get_shortlink( $post->ID ) );
 		} else {
-			$link = \esc_url( \generate_permalink( $post->ID ) );
+			$link = \esc_url( \get_permalink( $post->ID ) );
 		}
 
 		return $content . '<p><a href="' . $link . '">' . $link . '</a></p>';
