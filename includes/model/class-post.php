@@ -300,7 +300,7 @@ class Post {
 
 		$decoded_content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
 
-		$allowed_html = \apply_filters( 'activitypub_allowed_html', '<a><p><ul><ol><li><code><blockquote><pre>' );
+		$allowed_html = \apply_filters( 'activitypub_allowed_html', '<a><p><ul><ol><li><code><blockquote><pre><img>' );
 
 		return \trim( \preg_replace( '/[\r\n]{2,}/', '', \strip_tags( $decoded_content, $allowed_html ) ) );
 	}
