@@ -10,7 +10,7 @@ namespace Activitypub;
  */
 class Activity_Dispatcher {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		\add_action( 'activitypub_send_post_activity', array( '\Activitypub\Activity_Dispatcher', 'send_post_activity' ) );
@@ -19,22 +19,14 @@ class Activity_Dispatcher {
 	}
 
 	/**
-	 * Send "create" activities
+	 * Send "create" activities.
 	 *
-	 * @param int $post_id
+	 * @param \Activitypub\Model\Post $activitypub_post
 	 */
-	public static function send_post_activity( $post ) {
-		if ( \is_object( $post ) ) {
-			$post_id = $post->ID;
-		} else {
-			$post_id = $post;
-		}
-
+	public static function send_post_activity( $activitypub_post ) {
 		// get latest version of post
-		$post = \get_post( $post );
-		$user_id = $post->post_author;
+		$user_id = $activitypub_post->get_post_author();
 
-		$activitypub_post = new \Activitypub\Model\Post( $post );
 		$activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_FULL );
 		$activitypub_activity->from_post( $activitypub_post->to_array() );
 
@@ -47,22 +39,14 @@ class Activity_Dispatcher {
 	}
 
 	/**
-	 * Send "update" activities
+	 * Send "update" activities.
 	 *
-	 * @param int $post_id
+	 * @param \Activitypub\Model\Post $activitypub_post
 	 */
-	public static function send_update_activity( $post ) {
-		if ( \is_object( $post ) ) {
-			$post_id = $post->ID;
-		} else {
-			$post_id = $post;
-		}
-
+	public static function send_update_activity( $activitypub_post ) {
 		// get latest version of post
-		$post = \get_post( $post );
-		$user_id = $post->post_author;
+		$user_id = $activitypub_post->get_post_author();
 
-		$activitypub_post = new \Activitypub\Model\Post( $post );
 		$activitypub_activity = new \Activitypub\Model\Activity( 'Update', \Activitypub\Model\Activity::TYPE_FULL );
 		$activitypub_activity->from_post( $activitypub_post->to_array() );
 
@@ -75,14 +59,14 @@ class Activity_Dispatcher {
 	}
 
 	/**
-	 * Send "delete" activities
+	 * Send "delete" activities.
 	 *
-	 * @param int $post_id
+	 * @param \Activitypub\Model\Post $activitypub_post
 	 */
-	public static function send_delete_activity( $post ) {
-		$user_id = $post->post_author;
+	public static function send_delete_activity( $activitypub_post ) {
+		// get latest version of post
+		$user_id = $activitypub_post->get_post_author();
 
-		$activitypub_post = new \Activitypub\Model\Post( $post );
 		$activitypub_activity = new \Activitypub\Model\Activity( 'Delete', \Activitypub\Model\Activity::TYPE_FULL );
 		$activitypub_activity->from_post( $activitypub_post->to_array() );
 

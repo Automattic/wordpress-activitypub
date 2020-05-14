@@ -8,6 +8,12 @@ namespace Activitypub\Model;
  */
 class Post {
 	private $post;
+	private $post_author;
+	private $permalink;
+	private $summary;
+	private $content;
+	private $attachments;
+	private $object_type;
 
 	/**
 	 * Initialize the class, registering WordPress hooks
@@ -19,34 +25,46 @@ class Post {
 
 	public function __construct( $post = null ) {
 		$this->post = \get_post( $post );
+
+		$this->post_author = $this->post->post_author();
+		$this->permalink   = $this->generate_permalink();
+		$this->summary     = $this->generate_the_title();
+		$this->content     = $this->generate_the_content();
+		$this->attachments = $this->generate_attachments();
+		$this->tags        = $this->generate_tags();
+		$this->object_type = $this->generate_object_type();
 	}
 
-	public function get_post() {
-		return $this->post;
-	}
+	public function __call( $method, $params ) {
+		$var = \strtolower( \substr( $method, 4 ) );
 
-	public function get_post_author() {
-		return $this->post->post_author;
+		if ( \strncasecmp( $method, 'get', 3 ) === 0 ) {
+			return $this->$var;
+		}
+
+		if ( \strncasecmp( $method, 'set', 3 ) === 0 ) {
+			$this->$var = $params[0];
+		}
 	}
 
 	public function to_array() {
 		$post = $this->post;
 
 		$array = array(
-			'id' => $this->get_permalink(),
-			'type' => $this->get_object_type(),
+			'id' => $this->permalink,
+			'type' => $this->object_type,
 			'published' => \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date ) ),
 			'attributedTo' => \get_author_posts_url( $post->post_author ),
-			'summary' => $this->get_the_title(),
+			'summary' => $this->summary,
 			'inReplyTo' => null,
-			'content' => $this->get_the_content(),
+			'content' => $this->content,
 			'contentMap' => array(
-				\strstr( \get_locale(), '_', true ) => $this->get_the_content(),
+				\strstr( \get_locale(), '_', true ) => $this->content,
 			),
 			'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'cc' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-			'attachment' => $this->get_attachments(),
-			'tag' => $this->get_tags(),
+			'attachment' => $this->attachments,
+			'tag' => $this->tags,
 		);
 
 		return \apply_filters( 'activitypub_post', $array );
@@ -56,16 +74,16 @@ class Post {
 		return \wp_json_encode( $this->to_array(), \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
 	}
 
-	public function get_permalink() {
+	public function generate_permalink() {
 		$post = $this->post;
 
-		$permalink = \get_permalink( $post );
+		$permalink = \generate_permalink( $post );
 
 		// replace 'trashed' for delete activity
 		return \str_replace( '__trashed', '', $permalink );
 	}
 
-	public function get_attachments() {
+	public function generate_attachments() {
 		$max_images = \apply_filters( 'activitypub_max_images', 3 );
 
 		$images = array();
@@ -113,7 +131,7 @@ class Post {
 				$image = array(
 					'type' => 'Image',
 					'url' => $thumbnail[0],
-					'mediaType' => $mimetype
+					'mediaType' => $mimetype,
 				);
 				if ( $alt ) {
 					$image['name'] = $alt;
@@ -125,7 +143,7 @@ class Post {
 		return $images;
 	}
 
-	public function get_tags() {
+	public function generate_tags() {
 		$tags = array();
 
 		$post_tags = \get_the_tags( $this->post->ID );
@@ -151,7 +169,7 @@ class Post {
 	 *
 	 * @return string the object-type
 	 */
-	public function get_object_type() {
+	public function generate_object_type() {
 		if ( 'wordpress-post-format' !== \get_option( 'activitypub_object_type', 'note' ) ) {
 			return \ucfirst( \get_option( 'activitypub_object_type', 'note' ) );
 		}
@@ -208,21 +226,21 @@ class Post {
 		return $object_type;
 	}
 
-	public function get_the_content() {
+	public function generate_the_content() {
 		if ( 'excerpt' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return $this->get_the_post_summary();
+			return $this->generate_the_post_summary();
 		}
 
 		if ( 'title' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return $this->get_the_title();
+			return $this->generate_the_title();
 		}
 
-		return $this->get_the_post_content();
+		return $this->generate_the_post_content();
 	}
 
-	public function get_the_title() {
-		if ( 'Article' === $this->get_object_type() ) {
-			$title = \get_the_title( $this->post );
+	public function generate_the_title() {
+		if ( 'Article' === $this->generate_object_type() ) {
+			$title = \generate_the_title( $this->post );
 
 			return \html_entity_decode( $title, \ENT_QUOTES, 'UTF-8' );
 		}
@@ -237,7 +255,7 @@ class Post {
 	 *
 	 * @return string The excerpt.
 	 */
-	public function get_the_post_excerpt( $excerpt_length = 400 ) {
+	public function generate_the_post_excerpt( $excerpt_length = 400 ) {
 		$post = $this->post;
 
 		$excerpt = \get_post_field( 'post_excerpt', $post );
@@ -272,7 +290,7 @@ class Post {
 	 *
 	 * @return string The content.
 	 */
-	public function get_the_post_content() {
+	public function generate_the_post_content() {
 		$post = $this->post;
 
 		$content = \get_post_field( 'post_content', $post );
@@ -294,8 +312,8 @@ class Post {
 	 *
 	 * @return string The excerpt.
 	 */
-	public function get_the_post_summary( $summary_length = 400 ) {
-		$summary = $this->get_the_post_excerpt( $summary_length );
+	public function generate_the_post_summary( $summary_length = 400 ) {
+		$summary = $this->generate_the_post_excerpt( $summary_length );
 
 		$filtered_summary = \apply_filters( 'the_excerpt', $summary );
 		$filtered_summary = \apply_filters( 'activitypub_the_summary', $filtered_summary, $this->post );
@@ -321,7 +339,7 @@ class Post {
 		if ( \get_option( 'activitypub_use_shortlink', 0 ) ) {
 			$link = \esc_url( \wp_get_shortlink( $post->ID ) );
 		} else {
-			$link = \esc_url( \get_permalink( $post->ID ) );
+			$link = \esc_url( \generate_permalink( $post->ID ) );
 		}
 
 		return $content . '<p><a href="' . $link . '">' . $link . '</a></p>';
