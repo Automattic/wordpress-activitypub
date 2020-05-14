@@ -8,7 +8,7 @@ namespace Activitypub;
  */
 class Activitypub {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		\add_filter( 'template_include', array( '\Activitypub\Activitypub', 'render_json_template' ), 99 );
@@ -27,11 +27,11 @@ class Activitypub {
 	}
 
 	/**
-	 * Return a AS2 JSON version of an author, post or page
+	 * Return a AS2 JSON version of an author, post or page.
 	 *
-	 * @param  string $template the path to the template object
+	 * @param  string $template The path to the template object.
 	 *
-	 * @return string the new path to the JSON template
+	 * @return string The new path to the JSON template.
 	 */
 	public static function render_json_template( $template ) {
 		if ( ! \is_author() && ! \is_singular() ) {
@@ -63,7 +63,7 @@ class Activitypub {
 			return $json_template;
 		}
 
-		// accept header as an array
+		// Accept header as an array.
 		$accept = \explode( ',', \trim( $accept_header ) );
 
 		if (
@@ -79,8 +79,7 @@ class Activitypub {
 	}
 
 	/**
-	 * Add the 'photos' query variable so WordPress
-	 * won't mangle it.
+	 * Add the 'activitypub' query variable so WordPress won't mangle it.
 	 */
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
@@ -96,17 +95,19 @@ class Activitypub {
 	}
 
 	/**
-	 * Schedule Activities
+	 * Schedule Activities.
 	 *
-	 * @param int $post_id
+	 * @param string  $new_status New post status.
+	 * @param string  $old_status Old post status.
+	 * @param WP_Post $post       Post object.
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
-		// do not send activities if post is password protected
+		// Do not send activities if post is password protected.
 		if ( \post_password_required( $post ) ) {
 			return;
 		}
 
-		// check if post-type supports ActivityPub
+		// Check if post-type supports ActivityPub.
 		$post_types = \get_post_types_by_support( 'activitypub' );
 		if ( ! \in_array( $post->post_type, $post_types, true ) ) {
 			return;
@@ -122,10 +123,10 @@ class Activitypub {
 	}
 
 	/**
-	 * Replaces the default avatar
+	 * Replaces the default avatar.
 	 *
-	 * @param array             $args Arguments passed to get_avatar_data(), after processing.
-	 * @param int|string|object $id_or_email A user ID, email address, or comment object
+	 * @param array             $args        Arguments passed to get_avatar_data(), after processing.
+	 * @param int|string|object $id_or_email A user ID, email address, or comment object.
 	 *
 	 * @return array $args
 	 */
@@ -145,7 +146,7 @@ class Activitypub {
 			return \apply_filters( 'get_avatar_data', $args, $id_or_email );
 		}
 
-		// check if comment has an avatar
+		// Check if comment has an avatar.
 		$avatar = self::get_avatar_url( $id_or_email->comment_ID );
 
 		if ( $avatar ) {
@@ -163,8 +164,7 @@ class Activitypub {
 	}
 
 	/**
-	 * Function to retrieve Avatar URL if stored in meta
-	 *
+	 * Function to retrieve Avatar URL if stored in meta.
 	 *
 	 * @param int|WP_Comment $comment
 	 *
