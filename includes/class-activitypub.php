@@ -113,11 +113,11 @@ class Activitypub {
 		}
 
 		if ( 'publish' === $new_status && 'publish' !== $old_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_post_activity', array( $post->ID ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_post_activity', array( $post ) );
 		} elseif ( 'publish' === $new_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_update_activity', array( $post->ID ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_update_activity', array( $post ) );
 		} elseif ( 'trash' === $new_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_delete_activity', array( \get_permalink( $post ) ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_delete_activity', array( $post ) );
 		}
 	}
 

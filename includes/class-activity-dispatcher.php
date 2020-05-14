@@ -15,7 +15,7 @@ class Activity_Dispatcher {
 	public static function init() {
 		\add_action( 'activitypub_send_post_activity', array( '\Activitypub\Activity_Dispatcher', 'send_post_activity' ) );
 		\add_action( 'activitypub_send_update_activity', array( '\Activitypub\Activity_Dispatcher', 'send_update_activity' ) );
-		// \add_action( 'activitypub_send_delete_activity', array( '\Activitypub\Activity_Dispatcher', 'send_delete_activity' ) );
+		\add_action( 'activitypub_send_delete_activity', array( '\Activitypub\Activity_Dispatcher', 'send_delete_activity' ) );
 	}
 
 	/**
@@ -23,8 +23,15 @@ class Activity_Dispatcher {
 	 *
 	 * @param int $post_id
 	 */
-	public static function send_post_activity( $post_id ) {
-		$post = \get_post( $post_id );
+	public static function send_post_activity( $post ) {
+		if ( \is_object( $post ) ) {
+			$post_id = $post->ID;
+		} else {
+			$post_id = $post;
+		}
+
+		// get latest version of post
+		$post = \get_post( $post );
 		$user_id = $post->post_author;
 
 		$activitypub_post = new \Activitypub\Model\Post( $post );
@@ -44,8 +51,15 @@ class Activity_Dispatcher {
 	 *
 	 * @param int $post_id
 	 */
-	public static function send_update_activity( $post_id ) {
-		$post = \get_post( $post_id );
+	public static function send_update_activity( $post ) {
+		if ( \is_object( $post ) ) {
+			$post_id = $post->ID;
+		} else {
+			$post_id = $post;
+		}
+
+		// get latest version of post
+		$post = \get_post( $post );
 		$user_id = $post->post_author;
 
 		$activitypub_post = new \Activitypub\Model\Post( $post );
@@ -65,8 +79,7 @@ class Activity_Dispatcher {
 	 *
 	 * @param int $post_id
 	 */
-	public static function send_delete_activity( $post_id ) {
-		$post = \get_post( $post_id );
+	public static function send_delete_activity( $post ) {
 		$user_id = $post->post_author;
 
 		$activitypub_post = new \Activitypub\Model\Post( $post );

@@ -33,7 +33,7 @@ class Post {
 		$post = $this->post;
 
 		$array = array(
-			'id' => \get_permalink( $post ),
+			'id' => $this->get_permalink(),
 			'type' => $this->get_object_type(),
 			'published' => \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date ) ),
 			'attributedTo' => \get_author_posts_url( $post->post_author ),
@@ -54,6 +54,15 @@ class Post {
 
 	public function to_json() {
 		return \wp_json_encode( $this->to_array(), \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
+	}
+
+	public function get_permalink() {
+		$post = $this->post;
+
+		$permalink = \get_permalink( $post );
+
+		// replace 'trashed' for delete activity
+		return \str_replace( '__trashed', '', $permalink );
 	}
 
 	public function get_attachments() {
