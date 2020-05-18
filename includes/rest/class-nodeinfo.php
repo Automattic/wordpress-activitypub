@@ -92,9 +92,6 @@ class Nodeinfo {
 			'email' => \get_option( 'admin_email' ),
 		);
 
-		$nodeinfo['blog_public'] = array(
-			'blog_public' =>  \get_option('blog_public') );
-
 		return new \WP_REST_Response( $nodeinfo, 200 );
 	}
 
