@@ -325,7 +325,7 @@ function get_blacklist() {
  */
 function is_blacklisted( $url ) {
 	foreach ( \ActivityPub\get_blacklist() as $blacklisted_host ) {
-		if ( \strpos( $url, $blacklisted_host ) !== false ) {
+		if ( \stripos( $url, $blacklisted_host ) !== false ) {
 			return true;
 		}
 	}
