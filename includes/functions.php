@@ -296,7 +296,7 @@ function url_to_authorid( $url ) {
  * @uses apply_filters() Calls 'activitypub_blacklist' filter
  */
 function get_blacklist() {
-	$blacklist = \get_option( 'activitypub_blacklist' );
+	$blacklist = \get_option( 'activitypub_blacklist', 'gab.com' );
 	$blacklist_hosts  = \explode( \PHP_EOL, $blacklist );
 
 	// if no values have been set, revert to the defaults
