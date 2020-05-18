@@ -13,9 +13,11 @@ class Nodeinfo {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( '\Activitypub\Rest\Nodeinfo', 'register_routes' ) );
-		\add_filter( 'nodeinfo_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo_discovery' ), 10, 2 );
-		\add_filter( 'nodeinfo2_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo2_discovery' ), 10 );
+		if ( 1 === get_option('blog_public') ) {
+			\add_action( 'rest_api_init', array( '\Activitypub\Rest\Nodeinfo', 'register_routes' ) );
+			\add_filter( 'nodeinfo_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo_discovery' ), 10, 2 );
+			\add_filter( 'nodeinfo2_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo2_discovery' ), 10 );
+		}
 	}
 
 	/**
@@ -89,6 +91,9 @@ class Nodeinfo {
 		$nodeinfo['metadata'] = array(
 			'email' => \get_option( 'admin_email' ),
 		);
+
+		$nodeinfo['blog_public'] = array(
+			'blog_public' =>  \get_option('blog_public') );
 
 		return new \WP_REST_Response( $nodeinfo, 200 );
 	}
