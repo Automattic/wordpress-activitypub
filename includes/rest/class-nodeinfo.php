@@ -13,7 +13,7 @@ class Nodeinfo {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		if ( 1 === get_option('blog_public') ) {
+		if ( 1 === get_option( 'blog_public', 1 ) ) {
 			\add_action( 'rest_api_init', array( '\Activitypub\Rest\Nodeinfo', 'register_routes' ) );
 			\add_filter( 'nodeinfo_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo_discovery' ), 10, 2 );
 			\add_filter( 'nodeinfo2_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo2_discovery' ), 10 );
