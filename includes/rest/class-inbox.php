@@ -265,6 +265,13 @@ class Inbox {
 
 		$state = \wp_new_comment( $commentdata, true );
 
+		if ( 1 == get_option( 'require_name_email', 1 ) ) {
+			\wp_set_comment_status( $state, 'hold' );
+		}
+		if ( 1 == get_option( 'comment_registration', 0 ) ) {
+			\wp_set_comment_status( $state, 'hold' );
+		}
+
 		// re-add flood control
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 	}
