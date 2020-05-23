@@ -52,8 +52,11 @@ function init() {
 	require_once \dirname( __FILE__ ) . '/includes/rest/class-webfinger.php';
 	\Activitypub\Rest\Webfinger::init();
 
-	require_once \dirname( __FILE__ ) . '/includes/rest/class-nodeinfo.php';
-	\Activitypub\Rest\NodeInfo::init();
+	// load NodeInfo endpoints only if blog is public
+	if ( 1 === get_option( 'blog_public', 1 ) ) {
+		require_once \dirname( __FILE__ ) . '/includes/rest/class-nodeinfo.php';
+		\Activitypub\Rest\NodeInfo::init();
+	}
 
 	require_once \dirname( __FILE__ ) . '/includes/class-admin.php';
 	\Activitypub\Admin::init();
