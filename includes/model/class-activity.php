@@ -47,9 +47,17 @@ class Activity {
 
 	public function from_post( $object ) {
 		$this->object = $object;
-		$this->published = $object['published'];
-		$this->actor = $object['attributedTo'];
-		$this->id = $object['id'];
+		if ( isset( $object['published'] ) ) {
+			$this->published = $object['published'];
+		}
+
+		if ( isset( $object['attributedTo'] ) ) {
+			$this->actor = $object['attributedTo'];
+		}
+
+		if ( isset( $object['id'] ) ) {
+			$this->id = $object['id'];
+		}
 	}
 
 	public function from_comment( $object ) {
