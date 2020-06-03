@@ -22,8 +22,10 @@ function init() {
 	\defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|^)#(\w*[A-Za-z_]+\w*)' );
 
 	require_once \dirname( __FILE__ ) . '/includes/table/followers-list.php';
+	require_once \dirname( __FILE__ ) . '/includes/table/messages-list.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once \dirname( __FILE__ ) . '/includes/peer/class-followers.php';
+	require_once \dirname( __FILE__ ) . '/includes/peer/class-messages.php';
 	require_once \dirname( __FILE__ ) . '/includes/functions.php';
 
 	require_once \dirname( __FILE__ ) . '/includes/class-activity-dispatcher.php';

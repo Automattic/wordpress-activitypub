@@ -33,6 +33,10 @@ class Admin {
 		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers (Fediverse)', 'activitypub' ), 'read', 'activitypub-followers-list', array( '\Activitypub\Admin', 'followers_list_page' ) );
 
 		\add_action( 'load-' . $followers_list_page, array( '\Activitypub\Admin', 'add_followers_list_help_tab' ) );
+
+		$messages_list_page = \add_menu_page( \__( 'Messages', 'activitypub' ), \__( 'Messages', 'activitypub' ), 'read', 'activitypub-messages-list', array( '\Activitypub\Admin', 'messages_list_page' ), 'dashicons-format-chat', 26 );
+
+		\add_action( 'load-' . $messages_list_page, array( '\Activitypub\Admin', 'add_messages_list_help_tab' ) );
 	}
 
 	/**
@@ -47,6 +51,13 @@ class Admin {
 	 */
 	public static function followers_list_page() {
 		\load_template( \dirname( __FILE__ ) . '/../templates/followers-list.php' );
+	}
+
+	/**
+	 * Load user messages page
+	 */
+	public static function messages_list_page() {
+		\load_template( \dirname( __FILE__ ) . '/../templates/messages-list.php' );
 	}
 
 	/**
@@ -137,6 +148,9 @@ class Admin {
 	}
 
 	public static function add_followers_list_help_tab() {
+		// todo
+	}
+	public static function add_messages_list_help_tab() {
 		// todo
 	}
 

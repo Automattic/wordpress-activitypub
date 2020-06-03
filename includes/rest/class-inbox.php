@@ -84,7 +84,8 @@ class Inbox {
 	 */
 	public static function user_inbox( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-
+		//error_log( 'user_inbox $request' );
+		//error_log( print_r( $request, true ) );
 		$data = $request->get_params();
 		$type = $request->get_param( 'type' );
 
@@ -244,26 +245,68 @@ class Inbox {
 	 */
 	public static function handle_create( $object, $user_id ) {
 		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
+		///$to = get_user_by( 'id', $object['user_id'] );
+		$from = parse_url($object['actor']);
+
+		error_log( '$object');
+		error_log( print_r($object, true) );
 
 		$commentdata = array(
 			'comment_post_ID' => \url_to_postid( $object['object']['inReplyTo'] ),
 			'comment_author' => \esc_attr( $meta['name'] ),
 			'comment_author_url' => \esc_url_raw( $object['actor'] ),
 			'comment_content' => \wp_filter_kses( $object['object']['content'] ),
-			'comment_type' => '',
-			'comment_author_email' => '',
-			'comment_parent' => 0,
+			'comment_type' => 'activitypub',//activitypub_private_message
+			'comment_author_email' => $meta["name"] . '@' . $from["host"],
+			'comment_parent' => 0,//are threaded comments doable?
 			'comment_meta' => array(
+				'target_user' => $object['user_id'],
 				'source_url' => \esc_url_raw( $object['object']['url'] ),
 				'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
 				'protocol' => 'activitypub',
 			),
 		);
 
+// TODO Parse audience : set comment_type, comment_meta
+// Public
+// [to] ('https://www.w3.org/ns/activitystreams#Public')
+// [cc] ( [0]$self/.../followers, [1]tagged actors)
+// unlisted
+// [to] ($self/.../followers)
+// [cc] ( [0]/activitystreams#Public, [1]tagged actors)
+// follows_only
+// [to] ($object['attributedTo']/followers)
+// [cc] ([0]tagged actors)
+// DM/private
+// [to] ([0]tagged actors)
+//
+// TODO if $object['attachment']... append to content
+//
+	//DM
+		if ( empty( $object['cc'] )
+			&& ( !array_search( 'https://www.w3.org/ns/activitystreams#Public', $object['to'] )
+				|| !array_search( 'https://www.w3.org/ns/activitystreams#Public', $object['cc'] ) ) ) {
+			$commentdata['comment_type'] = 'activitypub_dm';
+			error_log( 'AP: Direct Message' );
+		}
+	//Followers Only
+		if ( $object['to'][0] === $object['object']['attributedTo'] . '/followers' ) {
+			$commentdata['comment_type'] = 'activitypub_fo';
+			error_log( 'AP: Followers Only' );
+		}
+
+		//error_log( print_r($commentdata, true) );
+
 		// disable flood control
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
 
 		$state = \wp_new_comment( $commentdata, true );
+
+		// if ($commentdata['comment_type'] === 'activitypub') {
+		// 	//site setting or user setting
+		// 	error_log('Auto Approve');
+		// //	\wp_set_comment_status( $state, 'approve' );
+		// }
 
 		// re-add flood control
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
