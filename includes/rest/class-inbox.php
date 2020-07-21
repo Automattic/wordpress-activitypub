@@ -104,7 +104,7 @@ class Inbox {
 	 */
 	public static function shared_inbox( $request ) {
 		$data = $request->get_params();
-		$type = strtoloer( $request->get_param( 'type' ) );
+		$type = \strtoloer( $request->get_param( 'type' ) );
 
 		foreach ( $users as $user ) {
 			\do_action( 'activitypub_inbox', $data, $user_id, $type );
