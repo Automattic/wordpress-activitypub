@@ -31,6 +31,7 @@ class Inbox {
 				array(
 					'methods'  => \WP_REST_Server::EDITABLE,
 					'callback' => array( '\Activitypub\Rest\Inbox', 'shared_inbox' ),
+					'args'     => self::shared_inbox_request_parameters(),
 				),
 			)
 		);
@@ -40,7 +41,7 @@ class Inbox {
 				array(
 					'methods'  => \WP_REST_Server::EDITABLE,
 					'callback' => array( '\Activitypub\Rest\Inbox', 'user_inbox' ),
-					'args'     => self::request_parameters(),
+					'args'     => self::user_inbox_request_parameters(),
 				),
 			)
 		);
@@ -97,12 +98,20 @@ class Inbox {
 	/**
 	 * The shared inbox
 	 *
-	 * @param  [type] $request [description]
+	 * @param  WP_REST_Request   $request
 	 *
-	 * @return WP_Error not yet implemented
+	 * @return WP_REST_Response
 	 */
 	public static function shared_inbox( $request ) {
+		$data = $request->get_params();
+		$type = strtoloer( $request->get_param( 'type' ) );
 
+		foreach ( $users as $user ) {
+			\do_action( 'activitypub_inbox', $data, $user_id, $type );
+			\do_action( "activitypub_inbox_{$type}", $data, $user_id );
+		}
+
+		return new \WP_REST_Response( array(), 202 );
 	}
 
 	/**
@@ -110,7 +119,7 @@ class Inbox {
 	 *
 	 * @return array list of parameters
 	 */
-	public static function request_parameters() {
+	public static function user_inbox_request_parameters() {
 		$params = array();
 
 		$params['page'] = array(
@@ -119,6 +128,58 @@ class Inbox {
 
 		$params['user_id'] = array(
 			'required' => true,
+			'type' => 'integer',
+		);
+
+		$params['id'] = array(
+			'required' => true,
+			'validate_callback' => function( $param, $request, $key ) {
+				if ( ! \is_string( $param ) ) {
+					$param = $param['id'];
+				}
+				return ! \Activitypub\is_blacklisted( $param );
+			},
+			'sanitize_callback' => 'esc_url_raw',
+		);
+
+		$params['actor'] = array(
+			'required' => true,
+			'validate_callback' => function( $param, $request, $key ) {
+				if ( ! \is_string( $param ) ) {
+					$param = $param['id'];
+				}
+				return ! \Activitypub\is_blacklisted( $param );
+			},
+			'sanitize_callback' => function( $param, $request, $key ) {
+				if ( ! \is_string( $param ) ) {
+					$param = $param['id'];
+				}
+				return \esc_url_raw( $param );
+			},
+		);
+
+		$params['type'] = array(
+			'required' => true,
+			//'type' => 'enum',
+			//'enum' => array( 'Create' ),
+		);
+
+		$params['object'] = array(
+			'required' => true,
+		);
+
+		return $params;
+	}
+
+	/**
+	 * The supported parameters
+	 *
+	 * @return array list of parameters
+	 */
+	public static function shared_inbox_request_parameters() {
+		$params = array();
+
+		$params['page'] = array(
 			'type' => 'integer',
 		);
 
@@ -155,14 +216,42 @@ class Inbox {
 			'required' => true,
 			//'type' => 'enum',
 			//'enum' => array( 'Create' ),
-			'sanitize_callback' => function( $param, $request, $key ) {
-				return \strtolower( $param );
-			},
 		);
 
 		$params['object'] = array(
 			'required' => true,
 			//'type' => 'object',
+		);
+
+		$params['to'] = array(
+			'required' => true,
+			'sanitize_callback' => function( $param, $request, $key ) {
+				if ( \is_string( $param ) ) {
+					$param = array( $param );
+				}
+
+				return $param;
+			},
+		);
+
+		$params['cc'] = array(
+			'sanitize_callback' => function( $param, $request, $key ) {
+				if ( \is_string( $param ) ) {
+					$param = array( $param );
+				}
+
+				return $param;
+			},
+		);
+
+		$params['bcc'] = array(
+			'sanitize_callback' => function( $param, $request, $key ) {
+				if ( \is_string( $param ) ) {
+					$param = array( $param );
+				}
+
+				return $param;
+			},
 		);
 
 		return $params;
@@ -186,7 +275,7 @@ class Inbox {
 		$activity->set_object( $object );
 		$activity->set_actor( \get_author_posts_url( $user_id ) );
 		$activity->set_to( $object['actor'] );
-		$activity->set_id( \get_author_posts_url( $user_id ) . '#follow' . \preg_replace( '~^https?://~', '', $object['actor'] ) );
+		$activity->set_id( \get_author_posts_url( $user_id ) . '#follow-' . \preg_replace( '~^https?://~', '', $object['actor'] ) );
 
 		$activity = $activity->to_simple_json();
 

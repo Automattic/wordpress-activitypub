@@ -64,6 +64,14 @@ class Activity {
 
 	}
 
+	public function to_comment() {
+
+	}
+
+	public function from_remote_array( $array ) {
+
+	}
+
 	public function to_array() {
 		$array = \get_object_vars( $this );
 
@@ -76,6 +84,11 @@ class Activity {
 		return $array;
 	}
 
+	/**
+	 * Convert to JSON
+	 *
+	 * @return void
+	 */
 	public function to_json() {
 		return \wp_json_encode( $this->to_array(), \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
 	}

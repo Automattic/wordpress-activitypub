@@ -9,26 +9,18 @@ namespace Activitypub\Model;
 class Post {
 	private $post;
 	private $post_author;
-	private $permalink;
+	private $id;
 	private $summary;
 	private $content;
 	private $attachments;
 	private $tags;
 	private $object_type;
 
-	/**
-	 * Initialize the class, registering WordPress hooks
-	 */
-	public static function init() {
-		\add_filter( 'activitypub_the_summary', array( '\Activitypub\Model\Post', 'add_backlink_to_content' ), 15, 2 );
-		\add_filter( 'activitypub_the_content', array( '\Activitypub\Model\Post', 'add_backlink_to_content' ), 15, 2 );
-	}
-
 	public function __construct( $post = null ) {
 		$this->post = \get_post( $post );
 
 		$this->post_author = $this->post->post_author;
-		$this->permalink   = $this->generate_permalink();
+		$this->id          = $this->generate_id();
 		$this->summary     = $this->generate_the_title();
 		$this->content     = $this->generate_the_content();
 		$this->attachments = $this->generate_attachments();
@@ -52,7 +44,7 @@ class Post {
 		$post = $this->post;
 
 		$array = array(
-			'id' => $this->permalink,
+			'id' => $this->id,
 			'type' => $this->object_type,
 			'published' => \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date ) ),
 			'attributedTo' => \get_author_posts_url( $post->post_author ),
@@ -75,7 +67,7 @@ class Post {
 		return \wp_json_encode( $this->to_array(), \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
 	}
 
-	public function generate_permalink() {
+	public function generate_id() {
 		$post      = $this->post;
 		$permalink = \get_permalink( $post );
 
@@ -227,25 +219,44 @@ class Post {
 	}
 
 	public function generate_the_content() {
+		$post = $this->post;
+		$content = $this->get_post_content_template();
+
+		$content = \str_replace( '%title%', \get_the_title( $post->ID ), $content );
+		$content = \str_replace( '%excerpt%', $this->get_the_post_excerpt(), $content );
+		$content = \str_replace( '%content%', $this->get_the_post_content(), $content );
+		$content = \str_replace( '%permalink%', $this->get_the_post_link( 'permalink' ), $content );
+		$content = \str_replace( '%shortlink%', $this->get_the_post_link( 'shortlink' ), $content );
+		$content = \str_replace( '%tags%', $this->get_the_post_hashtags(), $content );
+
+		$content = \trim( \preg_replace( '/[\r\n]{2,}/', '', $content ) );
+
+		$filtered_content = \apply_filters( 'activitypub_the_content', $content, $this->post );
+		$decoded_content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
+
+		$allowed_html = \apply_filters( 'activitypub_allowed_html', \get_option( 'activitypub_allowed_html', ACTIVITYPUB_ALLOWED_HTML ) );
+
+		if ( $allowed_html ) {
+			return \strip_tags( $decoded_content, $allowed_html );
+		}
+
+		return $decoded_content;
+	}
+
+	public function get_post_content_template() {
 		if ( 'excerpt' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return $this->generate_the_post_summary();
+			return "%excerpt%\n\n<p>%permalink%</p>";
 		}
 
 		if ( 'title' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return $this->generate_the_title();
+			return "<p><strong>%title%</strong></p>\n\n<p>%permalink%</p>";
 		}
 
-		return $this->generate_the_post_content();
-	}
-
-	public function generate_the_title() {
-		if ( 'Article' === $this->generate_object_type() ) {
-			$title = \generate_the_title( $this->post );
-
-			return \html_entity_decode( $title, \ENT_QUOTES, 'UTF-8' );
+		if ( 'content' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
+			return "%content%\n\n<p>%tags%</p>\n\n<p>%permalink%</p>";
 		}
 
-		return null;
+		return \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
 	}
 
 	/**
@@ -255,7 +266,7 @@ class Post {
 	 *
 	 * @return string The excerpt.
 	 */
-	public function generate_the_post_excerpt( $excerpt_length = 400 ) {
+	public function get_the_post_excerpt( $excerpt_length = 400 ) {
 		$post = $this->post;
 
 		$excerpt = \get_post_field( 'post_excerpt', $post );
@@ -282,7 +293,7 @@ class Post {
 			}
 		}
 
-		return $excerpt;
+		return \apply_filters( 'the_excerpt', $excerpt );
 	}
 
 	/**
@@ -290,39 +301,12 @@ class Post {
 	 *
 	 * @return string The content.
 	 */
-	public function generate_the_post_content() {
+	public function get_the_post_content() {
 		$post = $this->post;
 
 		$content = \get_post_field( 'post_content', $post );
 
-		$filtered_content = \apply_filters( 'the_content', $content );
-		$filtered_content = \apply_filters( 'activitypub_the_content', $filtered_content, $this->post );
-
-		$decoded_content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
-
-		$allowed_html = \apply_filters( 'activitypub_allowed_html', '<a><p><ul><ol><li><code><blockquote><pre><img>' );
-
-		return \trim( \preg_replace( '/[\r\n]{2,}/', '', \strip_tags( $decoded_content, $allowed_html ) ) );
-	}
-
-	/**
-	 * Get the excerpt for a post for use outside of the loop.
-	 *
-	 * @param int     Optional excerpt length.
-	 *
-	 * @return string The excerpt.
-	 */
-	public function generate_the_post_summary( $summary_length = 400 ) {
-		$summary = $this->generate_the_post_excerpt( $summary_length );
-
-		$filtered_summary = \apply_filters( 'the_excerpt', $summary );
-		$filtered_summary = \apply_filters( 'activitypub_the_summary', $filtered_summary, $this->post );
-
-		$decoded_summary = \html_entity_decode( $filtered_summary, \ENT_QUOTES, 'UTF-8' );
-
-		$allowed_html = \apply_filters( 'activitypub_allowed_html', '<a><p>' );
-
-		return \trim( \preg_replace( '/[\r\n]{2,}/', '', \strip_tags( $decoded_summary, $allowed_html ) ) );
+		return \apply_filters( 'the_content', $content );
 	}
 
 	/**
@@ -333,15 +317,42 @@ class Post {
 	 *
 	 * @return string
 	 */
-	public static function add_backlink_to_content( $content, $post ) {
-		$link = '';
+	public function get_the_post_link( $type = 'permalink' ) {
+		$post = $this->post;
 
-		if ( \get_option( 'activitypub_use_shortlink', 0 ) ) {
+		if ( 'shortlink' === $type ) {
 			$link = \esc_url( \wp_get_shortlink( $post->ID ) );
-		} else {
+		} elseif ( 'permalink' === $type ) {
 			$link = \esc_url( \get_permalink( $post->ID ) );
+		} else {
+			return '';
 		}
 
-		return $content . '<p><a href="' . $link . '">' . $link . '</a></p>';
+		return \sprintf( '<a href="%1$s">%1$s</a>', $link );
+	}
+
+	/**
+	 * Adds all tags as hashtags to the post/summary content
+	 *
+	 * @param string  $content
+	 * @param WP_Post $post
+	 *
+	 * @return string
+	 */
+	public function get_the_post_hashtags() {
+		$post = $this->post;
+		$tags = \get_the_tags( $post->ID );
+
+		if ( ! $tags ) {
+			return '';
+		}
+
+		$hash_tags = array();
+
+		foreach ( $tags as $tag ) {
+			$hash_tags[] = \sprintf( '<a rel="tag" class="u-tag u-category" href="%s">#%s</a>', \get_tag_link( $tag ), $tag->slug );
+		}
+
+		return \implode( ' ', $hash_tags );
 	}
 }

@@ -56,13 +56,21 @@ class Admin {
 		\register_setting(
 			'activitypub', 'activitypub_post_content_type', array(
 				'type' => 'string',
-				'description' => \__( 'Use title and link, summary or full content', 'activitypub' ),
+				'description' => \__( 'Use title and link, summary, full or custom content', 'activitypub' ),
 				'show_in_rest' => array(
 					'schema' => array(
 						'enum' => array( 'title', 'excerpt', 'content' ),
 					),
 				),
 				'default' => 'content',
+			)
+		);
+		\register_setting(
+			'activitypub', 'activitypub_custom_post_content', array(
+				'type' => 'string',
+				'description' => \__( 'Define your own custom post template', 'activitypub' ),
+				'show_in_rest' => true,
+				'default' => ACTIVITYPUB_CUSTOM_POST_CONTENT,
 			)
 		);
 		\register_setting(
@@ -78,13 +86,6 @@ class Admin {
 			)
 		);
 		\register_setting(
-			'activitypub', 'activitypub_use_shortlink', array(
-				'type' => 'boolean',
-				'description' => \__( 'Use the Shortlink instead of the permalink', 'activitypub' ),
-				'default' => 0,
-			)
-		);
-		\register_setting(
 			'activitypub', 'activitypub_use_hashtags', array(
 				'type' => 'boolean',
 				'description' => \__( 'Add hashtags in the content as native tags and replace the #tag with the tag-link', 'activitypub' ),
@@ -92,10 +93,10 @@ class Admin {
 			)
 		);
 		\register_setting(
-			'activitypub', 'activitypub_add_tags_as_hashtags', array(
-				'type' => 'boolean',
-				'description' => \__( 'Add all tags as hashtags at the end of each activity', 'activitypub' ),
-				'default' => 0,
+			'activitypub', 'activitypub_allowed_html', array(
+				'type' => 'string',
+				'description' => \__( 'List of HTML elements that are allowed in activities.', 'activitypub' ),
+				'default' => ACTIVITYPUB_ALLOWED_HTML,
 			)
 		);
 		\register_setting(
