@@ -29,9 +29,10 @@ class Inbox {
 		\register_rest_route(
 			'activitypub/1.0', '/inbox', array(
 				array(
-					'methods'  => \WP_REST_Server::EDITABLE,
-					'callback' => array( '\Activitypub\Rest\Inbox', 'shared_inbox' ),
-					'args'     => self::shared_inbox_request_parameters(),
+					'methods'             => \WP_REST_Server::EDITABLE,
+					'callback'            => array( '\Activitypub\Rest\Inbox', 'shared_inbox' ),
+					'args'                => self::shared_inbox_request_parameters(),
+					'permission_callback' => '__return_true',
 				),
 			)
 		);
@@ -39,9 +40,10 @@ class Inbox {
 		\register_rest_route(
 			'activitypub/1.0', '/users/(?P<user_id>\d+)/inbox', array(
 				array(
-					'methods'  => \WP_REST_Server::EDITABLE,
-					'callback' => array( '\Activitypub\Rest\Inbox', 'user_inbox' ),
-					'args'     => self::user_inbox_request_parameters(),
+					'methods'             => \WP_REST_Server::EDITABLE,
+					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox' ),
+					'args'                => self::user_inbox_request_parameters(),
+					'permission_callback' => '__return_true',
 				),
 			)
 		);
