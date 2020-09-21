@@ -20,6 +20,7 @@ env:
   - secure: "TFXc9CK6cG4Qpwm0sAhA0nEwMBfKKTdp3YN+rVV8KZrSmUDGw8QRlnFAxwWVG9yR1+TBVSS3Rrm38iRU8mvXkl5Vy6/HySqDF2QOO/gqhDZRpgCOq0mhxfzSc+tx2gGXbkRQw+eXt02p6VIHDi+bfll2rdvsE2XxkVgjvYJ+OMnfiqnESwac2+/rxii8qAvQwGnH/Cx7mpSFmt5KmRkR0XL05b9NEV+YkUpSQfSMx45IR2MZKlKAALTulDFIXvcwRMHSydgH8RoLDOioajgUzgFv1vBOWbCvdoHVvrNk2phtYgJ1yvOsMdKeb+Y5ZStag1HeKhZrzFMWJabe63N5Yukzo8gzU6doAPYaJ4CX6KaEEJoQyzxd5IUXZThNcnKStRVJbWngG850ROVCMg8rQYBQXr9HfeHMKGHCXzdXHc1zc13B5ycTL6pc0vWWys16Mdu8ivaPfk7qdnRZs2mpMeYZc4FoRy/xqavcyZX7kGnlONVcgoB4lP5eEQzu+wCWyjXcl4wrQfhCFCrS86jp1oLVUAS9GemPJRwVTWogEg+Rr5iMbWv6ZGh3F8fe5SEEAtThe8W9/hDC7NiZrbdA8hTyccRd91E7EEdCoZrTgc9VjKVkjxLjKHmocruevQQjafda5xsjRRZakAham9r9Rmfk4SH/4KBbWsFJlbHXZjE="
 matrix:
   include:
+  - php: 8
   - php: 7.4
   - php: 7.3
   - php: 7.2
@@ -44,7 +45,7 @@ before_script:
   # Install the specified version of PHPUnit depending on the PHP version:
   if [[ "$WP_TRAVISCI" == "travis:phpunit" ]]; then
     case "$TRAVIS_PHP_VERSION" in
-      7.4|7.3|7.2|7.1|7.0|nightly)
+      8|7.4|7.3|7.2|7.1|7.0|nightly)
         echo "Using PHPUnit 6.x"
         composer global require "phpunit/phpunit:^6"
         ;;
