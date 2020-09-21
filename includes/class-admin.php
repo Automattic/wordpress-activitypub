@@ -107,14 +107,6 @@ class Admin {
 				'default'      => array( 'post', 'pages' ),
 			)
 		);
-		\register_setting(
-			'activitypub', 'activitypub_blacklist', array(
-				'type'         => 'string',
-				'description'  => \esc_html__( 'Block fediverse instances', 'activitypub' ),
-				'show_in_rest' => true,
-				'default'      => 'gab.com',
-			)
-		);
 	}
 
 	public static function add_settings_help_tab() {

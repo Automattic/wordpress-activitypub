@@ -108,20 +108,14 @@
 
 		<p><?php \esc_html_e( 'Server related settings.', 'activitypub' ); ?></p>
 
-		<?php
-		// load the existing blacklist from the WordPress options table
-		$activitypub_blacklist = \trim( \implode( \PHP_EOL, \ActivityPub\get_blacklist() ), \PHP_EOL );
-		?>
-
 		<table class="form-table">
 			<tbody>
 				<tr>
 					<th scope="row">
-						<?php \esc_html_e( 'Blacklist', 'activitypub' ); ?>
+						<?php \esc_html_e( 'Blocklist', 'activitypub' ); ?>
 					</th>
 					<td>
-						<textarea name="activitypub_blacklist" id="activitypub_blacklist" rows="10" cols="50" class="large-text"><?php echo $activitypub_blacklist; ?></textarea>
-						<p class="description"><?php \_e( 'A list of hosts, you want to block, one host per line. Please use only the host/domain of the server you want to block, without <code>http://</code> and without <code>www.</code>. For example <code>example.com</code>.', 'activitypub' ); ?></p>
+						<p class="description"><?php \printf( \__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ), admin_url( 'options-discussion.php#disallowed_keys' ) ); ?></p>
 					</td>
 				</tr>
 			</tbody>

@@ -135,23 +135,11 @@ class Inbox {
 
 		$params['id'] = array(
 			'required' => true,
-			'validate_callback' => function( $param, $request, $key ) {
-				if ( ! \is_string( $param ) ) {
-					$param = $param['id'];
-				}
-				return ! \Activitypub\is_blacklisted( $param );
-			},
 			'sanitize_callback' => 'esc_url_raw',
 		);
 
 		$params['actor'] = array(
 			'required' => true,
-			'validate_callback' => function( $param, $request, $key ) {
-				if ( ! \is_string( $param ) ) {
-					$param = $param['id'];
-				}
-				return ! \Activitypub\is_blacklisted( $param );
-			},
 			'sanitize_callback' => function( $param, $request, $key ) {
 				if ( ! \is_string( $param ) ) {
 					$param = $param['id'];
@@ -188,24 +176,12 @@ class Inbox {
 		$params['id'] = array(
 			'required' => true,
 			'type' => 'string',
-			'validate_callback' => function( $param, $request, $key ) {
-				if ( ! \is_string( $param ) ) {
-					$param = $param['id'];
-				}
-				return ! \Activitypub\is_blacklisted( $param );
-			},
 			'sanitize_callback' => 'esc_url_raw',
 		);
 
 		$params['actor'] = array(
 			'required' => true,
 			//'type' => array( 'object', 'string' ),
-			'validate_callback' => function( $param, $request, $key ) {
-				if ( ! \is_string( $param ) ) {
-					$param = $param['id'];
-				}
-				return ! \Activitypub\is_blacklisted( $param );
-			},
 			'sanitize_callback' => function( $param, $request, $key ) {
 				if ( ! \is_string( $param ) ) {
 					$param = $param['id'];
