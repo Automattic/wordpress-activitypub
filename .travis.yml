@@ -48,9 +48,9 @@ before_script:
         echo "Using PHPUnit 6.x"
         composer global require "phpunit/phpunit:^6"
         ;;
-      5.6|5.5|5.4|5.3)
-        echo "Using PHPUnit 4.x"
-        composer global require "phpunit/phpunit:^4"
+      5.6)
+        echo "Using PHPUnit 5.x"
+        composer global require "phpunit/phpunit:^5"
         ;;
       *)
         echo "No PHPUnit version handling for PHP version $TRAVIS_PHP_VERSION"
