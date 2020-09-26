@@ -33,6 +33,10 @@ class Admin {
 		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers (Fediverse)', 'activitypub' ), 'read', 'activitypub-followers-list', array( '\Activitypub\Admin', 'followers_list_page' ) );
 
 		\add_action( 'load-' . $followers_list_page, array( '\Activitypub\Admin', 'add_followers_list_help_tab' ) );
+
+		$mentions_list_page = \add_menu_page( \__( 'Mentions', 'activitypub' ), \__( 'Mentions', 'activitypub' ), 'read', 'activitypub-mentions-list', array( '\Activitypub\Admin', 'mentions_list_page' ), 'dashicons-format-chat', 26 );
+
+		\add_action( 'load-' . $mentions_list_page, array( '\Activitypub\Admin', 'add_mentions_list_help_tab' ) );
 	}
 
 	/**
@@ -47,6 +51,13 @@ class Admin {
 	 */
 	public static function followers_list_page() {
 		\load_template( \dirname( __FILE__ ) . '/../templates/followers-list.php' );
+	}
+
+	/**
+	 * Load user mentions page
+	 */
+	public static function mentions_list_page() {
+		\load_template( \dirname( __FILE__ ) . '/../templates/mentions-list.php' );
 	}
 
 	/**
@@ -137,6 +148,9 @@ class Admin {
 	}
 
 	public static function add_followers_list_help_tab() {
+		// todo
+	}
+	public static function add_mentions_list_help_tab() {
 		// todo
 	}
 
