@@ -50,7 +50,7 @@ class Admin {
 	}
 
 	/**
-	 * Register PubSubHubbub settings
+	 * Register ActivityPub settings
 	 */
 	public static function register_settings() {
 		\register_setting(
