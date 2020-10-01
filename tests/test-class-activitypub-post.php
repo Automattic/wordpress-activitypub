@@ -12,12 +12,12 @@ class Test_Activitypub_Post extends WP_UnitTestCase {
 
 		$activitypub_post = new \Activitypub\Model\Post( $post );
 
-		$this->assertEquals( $permalink, $activitypub_post->get_permalink() );
+		$this->assertEquals( $permalink, $activitypub_post->get_id() );
 
 		\wp_trash_post( $post );
 
 		$activitypub_post = new \Activitypub\Model\Post( $post );
 
-		$this->assertEquals( $permalink, $activitypub_post->get_permalink() );
+		$this->assertEquals( $permalink, $activitypub_post->get_id() );
 	}
 }
