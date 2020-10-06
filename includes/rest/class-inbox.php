@@ -21,11 +21,6 @@ class Inbox {
 		//\add_action( 'activitypub_inbox_announce', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
 		\add_action( 'activitypub_inbox_create', array( '\Activitypub\Rest\Inbox', 'handle_create' ), 10, 2 );
 		
-		//Move to c2s or other place 
-		\add_filter( 'preprocess_comment' , array( '\Activitypub\Rest\Inbox', 'preprocess_comment_handler' ) );
-
-		//move to c2s
-		\add_filter( 'comment_post' , array( '\Activitypub\Rest\Inbox', 'postprocess_comment_handler' ), 10, 3 );
 	//	\add_action( 'pre_get_posts', array( '\Activitypub\Rest\Inbox', 'filter_private_messages' ), 11 );
 	//	\add_action( 'wp_count_comments', array( '\Activitypub\Rest\Inbox', 'count_comments' ), 11, 2 );
 	//	\add_filter( 'comments_clauses', array( '\Activitypub\Rest\Inbox', 'ap_personal_comment_list'), 11 );
@@ -49,7 +44,7 @@ class Inbox {
 		\register_rest_route(
 			'activitypub/1.0', '/users/(?P<user_id>\d+)/inbox', array(
 				array(
-					'methods'  =>  \WP_REST_Server::EDITABLE,
+					'methods'  => \WP_REST_Server::EDITABLE,
 					'callback' => array( '\Activitypub\Rest\Inbox', 'user_inbox' ),
 					'args'     => self::request_parameters(),
 					'permission_callback' => '__return_true'
@@ -113,7 +108,7 @@ class Inbox {
 		$type = $request->get_param( 'type' );
 
 		\do_action( 'activitypub_inbox', $data, $user_id, $type );
-//		\do_action( "activitypub_inbox_{$type}", $data, $user_id );
+		\do_action( "activitypub_inbox_{$type}", $data, $user_id );
 
 		return new \WP_REST_Response( array(), 202 );
 	}
@@ -339,10 +334,9 @@ class Inbox {
 	 */
 	public static function handle_create( $object, $user_id ) {
 		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
-		error_log( '$meta[actor]: ' . print_r( $meta, true ) );
-
-		$comment_post_ID = \url_to_postid( $object['object']['inReplyTo'] );
+		
 		$comment_parent = $comment_parent_ID = 0;
+		$comment_post_ID = \url_to_postid( $object['object']['inReplyTo'] );
 		//if not a direct reply to a post
 		if ( $comment_post_ID === 0 ) {
 			//verify if reply to a local or remote received comment
@@ -358,19 +352,16 @@ class Inbox {
 		if ( isset( $object['object']['url'] ) ) {
 			$source_url = \esc_url_raw( $object['object']['url'] );
 		} else {
+			//could also try $object['object']['source']?
 			$source_url = \esc_url_raw( $object['object']['id'] );
 		}
 
-		error_log( 'if $meta[name]: ' . print_r( $meta['name'], true ) );
-		// if no name is set use the peer username
+		// if no name is set use peer username
 		if ( !empty( $meta['name'] ) ) {
 			$name = \esc_attr( $meta['name'] );
-			error_log( '$meta[name]: ' . print_r( $meta['name'], true ) );
 		} else {
 			$name = \esc_attr( $meta['preferredUsername'] );
-			error_log( '$meta[preferredUsername]: ' . print_r( $meta['preferredUsername'], true ) );
 		}
-		error_log( 'inbox:handle_create:object: ' . print_r( $object, true ) );
 		
 		//Only create comments for public replies to posts
 // ??? Only create comments for public replies to PUBLIC posts
@@ -489,123 +480,6 @@ class Inbox {
 		}
 
 	}
-
-	/**
-	 * preprocess local comments for federated replies
-	 */
-	public static function preprocess_comment_handler( $commentdata ) {
-		
-		//should only process replies from local actors
-		if ( isset( $commentdata['user_id'] ) ) {
-			//\error_log( 'is_local user' );
-			
-			//federate direct replies to post
-			//inReplyTo source_url //delete - comment_post_ID, comment_parent
-
-			//federate replies to foreignAP replies
-			if ( !empty( $commentdata['comment_parent'] ) ) {
-				//has a parent comment
-				$activitypub = get_comment_meta( $commentdata['comment_parent'], 'protocol', true );//needed?
-				$source_url = get_comment_meta( $commentdata['comment_parent'], 'source_url', true );
-
-				if ( $activitypub && $source_url ) {
-					//parent comment is federated 
-					// set url to author_url, (user_url can be anything)
-					$commentdata['comment_author_url'] = get_author_posts_url($commentdata['user_id']);
-					$commentdata['comment_type'] = 'activitypub';
-					//error_log('preprocess_comment_handler: should only local');
-					if ( $source_url ) {
-						$op_url = \get_comment_author_url( $commentdata['comment_parent'] );
-						// error_log('preprocess_comment_handler:inReplyTo: ' . $op_url);
-						$commentdata['comment_meta']['replyTo'] = $op_url;
-						$commentdata['comment_meta']['inReplyTo'] = $source_url ;
-					}
-				}
-			} 
-		}
-    return $commentdata;
-  	}
-
-	/**
-	 * postprocess_comment_handler for federating replies and inbox-forwarding
-	 */
-	public static function postprocess_comment_handler( $comment_id, $comment_approved, $commentdata ) {
-
-		\error_log( 'postprocess_comment_handler: comment_status: ' . $comment_approved );
-		if ( $commentdata['comment_type'] === 'activitypub' ) {
-			if ( $comment_approved !== 0 ) {
-				// ^^^Remove after testing for lax moderation settings
-				// TODO determine if pseudo email (webfinger) would change how comments are treated
-				
-				//error_log( 'postprocess_comment_handler: comment_approved');
-				//should only federate replies to federated actors
-				$ap_object = unserialize( \get_comment_meta( $comment_id, 'ap_object', true ) );
-				// $replyto = get_comment_meta( $comment_id, 'replyto', true );
-				
-				//inbox forward prep
-				if ( !empty( $ap_object ) ) {
-					//if is foreign user (has ap_object)
-					error_log( 'postprocess_comment_handler: ap_object: ' );
-					error_log( print_r( $ap_object, true ) );
-					// TODO verify that deduplication check happens at object create.
-
-					//if to/cc/audience contains local followers collection 
-					$local_user = \get_comment_author_url( $comment_id );
-					$is_local_user = \Activitypub\url_to_authorid( $commentdata['comment_author_url'] );
-					if ( $is_local_user != 0 ) {
-						if ( in_array( $local_user, $ap_object['to'] )
-							|| in_array( $local_user, $ap_object['cc'] )
-							|| in_array( $local_user, $ap_object['audience'] )
-							|| in_array( $local_user, $ap_object['tag'] )
-							) {
-							//if inReplyTo, object, target and/or tag are (local-wp) objects 
-							//if ( str_contains( $ap_object['audience'], site_url() ) ) {
-								error_log('postprocess_comment_handler: do_inbox_forward_activity');
-								//\ActivityPub\Activity_Dispatcher::inbox_forward_activity( $comment_id );
-								\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $comment_id  ) );
-								//\wp_schedule_single_event( \time(), 'activitypub_inbox_forward_activity', array( $comment->comment_ID ) );//deprecated, was creating duplicates
-							//}
-							//original object 
-							// $ap_object['object'] / $ap_object->object
-						}
-					} 
-				} else {
-					//error_log( 'postprocess_comment_handler:prep_reply');
-					//error_log( print_r( $commentdata, true ) );
-					//should only federate replies from local actors
-					if ( ( $commentdata['user_id'] !== 0 ) && ( $commentdata['comment_type'] === 'activitypub') ) {
-						\error_log( 'postprocess_comment_handler: federate a reply' );
-						//error_log('federate reply comment, to post collection?');
-						//\ActivityPub\Activity_Dispatcher::send_comment_activity( $comment_id ); // performance > followers collection
-						\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $comment_id  ) );
-
-					}
-				}
-			} else {
-				error_log( 'postprocess_comment_handler: moderation pending');
-			}
-		}
-		/*
-		When Activities are received in the inbox, the server needs to forward these to recipients that the origin was unable to deliver them to. 
-		To do this,	the server MUST target and deliver to the values of to, cc, and/or audience if and only if all of the following are true:
-
-This is the first time the server has seen this Activity.
-The values of to, cc, and/or audience contain a Collection owned by the server. (user followers collection)
-The values of inReplyTo, object, target and/or tag are objects owned by the server. 
-The server SHOULD recurse through these values to look for linked objects owned by the server, 
-and SHOULD set a maximum limit for recursion (ie. the point at which the thread is so deep the recipients 
-followers may not mind if they are no longer getting updates that don't directly involve the recipient). 
-The server MUST only target the values of to, cc, and/or audience on the original object being forwarded, and not pick up 
-any new addressees whilst recursing through the linked objects (in case these addressees were purposefully amended by or via the client).
-*/
-		// if ( !empty( $ap_object) && ( $commentdata->comment_type == 'activitypub') ) {
-
-		// 		error_log('federate reply comment, to post collection?');
-		// 		\ActivityPub\Activity_Dispatcher::inbox_forward_activity($comment_id);
-		// 		//\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $comment->comment_ID ) );
-
-		// }
-  	}
 
 	public static function comments_styles() {
 		echo '<style>';

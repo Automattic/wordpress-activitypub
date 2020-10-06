@@ -82,7 +82,7 @@ function init() {
 		return '\Activitypub\Rest\Server';
 	} );
 }
-add_action( 'plugins_loaded', '\Activitypub\init' );
+\add_action( 'plugins_loaded', '\Activitypub\init' );
 
 /**
  * Add rewrite rules

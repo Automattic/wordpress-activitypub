@@ -17,15 +17,17 @@ class Activitypub {
 		\add_filter( 'pre_get_avatar_data', array( '\Activitypub\Activitypub', 'pre_get_avatar_data' ), 11, 2 );
 		\add_action( 'wp_head', array( '\Activitypub\Activitypub', 'author_atom_uri' ), 2 );
 		\add_filter( 'status_edit_pre', array( '\Activitypub\Activitypub', 'set_post_type_status_private'), 10, 2 );
+
 		// Add support for ActivityPub to custom post types
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array();
 		foreach ( $post_types as $post_type ) {
 			\add_post_type_support( $post_type, 'activitypub' );
 		}
-
+		
 		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
-		\add_action( 'transition_comment_status', array( '\Activitypub\Activitypub', 'schedule_comment_activity' ), 10, 3 );
-		//\add_action( 'transition_comment_status', array( '\Activitypub\Activitypub', 'schedule_inbox_forward_activity' ), 10, 3 );
+		\add_filter( 'preprocess_comment' , array( '\Activitypub\Activitypub', 'preprocess_comment_handler' ) );
+		\add_filter( 'comment_post' , array( '\Activitypub\Activitypub', 'postprocess_comment_handler' ), 10, 3 );
+		\add_action( 'transition_comment_status', array( '\Activitypub\Activitypub', 'schedule_comment_activity' ), 20, 3 );
 	}
 
 	/**
@@ -124,100 +126,139 @@ class Activitypub {
 		if ( \post_password_required( $post ) ) {
 			return;
 		}
-		error_log('schedule_post_activity ($new_status):' . $new_status . ': ' . $post->ID );
+
 		// check if post-type supports ActivityPub
 		$post_types = \get_post_types_by_support( 'activitypub' );
 		if ( ! \in_array( $post->post_type, $post_types, true ) ) {
 			return;
 		}
 
+		$activitypub_post = new \Activitypub\Model\Post( $post );
 		$audience = \get_post_meta( $post->ID, '_ap_audience_meta_key' );
 		
 		if ( 'publish' === $new_status && $new_status !== $old_status ) {
 			if ( in_array( 'private_message', $audience ) || in_array( 'followers_only', $audience ) ) {
 				$new_status = 'private_message';
-				error_log('schedule_post_activity ($new_status):' . $new_status . ': ' . $post->ID );
-				\wp_schedule_single_event( \time(), 'activitypub_send_private_activity', array( $post->ID ) );
+				error_log('schedule_post_activity ($new_status):' . $new_status . ': ' . $activitypub_post->ID );
+				\wp_schedule_single_event( \time(), 'activitypub_send_private_activity', array( $activitypub_post ) );
 			} else {
-				\wp_schedule_single_event( \time(), 'activitypub_send_post_activity', array( $post->ID ) );
+				\wp_schedule_single_event( \time(), 'activitypub_send_post_activity', array( $activitypub_post ) );
 			}
 		} elseif ( 'publish' === $new_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_private_activity', array( $post->ID ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_private_activity', array( $activitypub_post ) );
 		} elseif ( 'publish' === $new_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_update_activity', array( $post->ID ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_update_activity', array( $activitypub_post ) );
 		} elseif ( 'trash' === $new_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_delete_activity', array( get_permalink( $post ) ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_delete_activity', array( get_permalink( $activitypub_post ) ) );
 		}
 	}
 
+	/**
+	 * preprocess local comments for federated replies
+	 */
+	public static function preprocess_comment_handler( $commentdata ) {
+		
+		//should only process replies from local actors
+		if ( !empty( $commentdata['user_id'] ) ) {
+			//\error_log( 'is_local user' );//TODO Test
+			//TODO only for AP enabled post_types?
+			$commentdata['comment_type'] = 'activitypub';
+			//federate replies
+		}
+    	return $commentdata;
+  	}
+
+	/**
+	 * postprocess_comment_handler for federating replies and inbox-forwarding
+	 */
+	public static function postprocess_comment_handler( $comment_id, $comment_approved, $commentdata ) {
+		//Admin users comments bypass transition_comment_status (auto approved)
+
+		//\error_log( 'postprocess_comment_handler: comment_status: ' . $comment_approved );
+		if ( $commentdata['comment_type'] === 'activitypub' ) {
+			if ( 
+				( $comment_approved === 1 ) && 
+				! empty( $commentdata['user_id'] ) &&
+				( $user = get_userdata( $commentdata['user_id'] ) ) && // get the user data
+				in_array( 'administrator', $user->roles )                   // check the roles
+			)  {
+				// Only for Admins?
+				\error_log( 'postprocess_comment_handler: federate a comment_ID: ' . $comment_id );
+				//\error_log( 'postprocess_comment_handler: federate commentdata: ' . print_r($commentdata, true) );
+				//\ActivityPub\Activity_Dispatcher::send_comment_activity( $comment_id ); // performance > followers collection
+				\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $comment_id ) );
+				//error_log( 'postprocess_comment_handler: comment_approved');
+				 
+			} else {
+				
+				//error_log( 'postprocess_comment_handler: moderation pending');
+
+				// $replyto = get_comment_meta( $comment_id, 'replyto', true );
+				
+				//inbox forward prep
+				// if ( !empty( $ap_object ) ) {
+				// 	//if is remote user (has ap_object)
+				// 	\error_log( 'postprocess_comment_handler: ap_object: ' . print_r( $ap_object, true ) );
+				// 	//error_log( print_r( $ap_object, true ) );
+				// 	// TODO verify that deduplication check happens at object create.
+
+				// 	//if to/cc/audience contains local followers collection 
+				// 	//$local_user = \get_comment_author_url( $comment_id );
+				// 	//$is_local_user = \Activitypub\url_to_authorid( $commentdata['comment_author_url'] );
+					
+				// }
+			} 
+		}
+	}
+	  
 	/**
 	 * Schedule Activities
 	 *
 	 * @param int $comment
 	 */
-	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
-		\error_log( 'schedule_comment_activity');
+	public static function schedule_comment_activity( $new_status, $old_status, $activitypub_comment ) {
+		//\error_log( 'schedule_comment_activity: $activitypub_comment: ' . print_r( $activitypub_comment, true ) . ', status: ' . $new_status );
 		
-		// error_log( 'schedule_comment_activity: $new_status: ' . $new_status);
-		// error_log( 'schedule_comment_activity: $old_status: ' . $old_status );
-		
-		\error_log( print_r( $comment, true ) );
-
-		//reply to federated, 
-
-		//$ap_object = get_comment_meta( $comment->comment_ID, 'ap_object', true );
-		
+		// TODO format $activitypub_comment = new \Activitypub\Model\Comment( $comment );
 		if ( 'approved' === $new_status && 'approved' !== $old_status ) {
-			$ap_object = get_comment_meta( $comment->comment_ID, 'ap_object', true );
-			if ( $ap_object ) {
-				\error_log( 'schedule_inbox_forward_activity: ID: ' . $comment->comment_ID );
-				\error_log( print_r( $comment, true ) );
-				\wp_schedule_single_event( \time(), 'activitypub_inbox_forward_activity', array( $comment->comment_ID ) );
+			//should only federate replies from local actors
+			//should only federate replies to federated actors
+			
+			$ap_object = unserialize( \get_comment_meta( $activitypub_comment->comment_ID, 'ap_object', true ) );
+			if ( empty( $ap_object ) ) {
+				// \error_log( 'schedule_comment_activity: replyto: ' . comment_author_url( $comment->comment_parent ) );
+				\error_log( 'schedule_comment_activity: ID: ' . $activitypub_comment->comment_ID );
+				//\ActivityPub\Activity_Dispatcher::send_comment_activity( $activitypub_comment );
+				\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $activitypub_comment->comment_ID ) );
 			} else {
-				$replyto = comment_author_url( $comment->comment_parent );
-				\error_log( 'schedule_comment_activity: ID: ' . $comment->comment_ID );
-				error_log( 'schedule_comment_activity: replyto: ' . $replyto );
-				\wp_schedule_single_event( \time(), 'send_comment_activity', array( $comment->comment_ID ) );
+				//\error_log( 'activitypub_inbox_forward_activity: ap_object: ' . print_r( $ap_object, true ) );
+				//\error_log( 'activitypub_inbox_forward_activity: ID: ' . $activitypub_comment->comment_ID );
+				$local_user = \get_author_posts_url( $ap_object['user_id'] );
+				//\error_log( 'activitypub_inbox_forward_activity: $local_user: ' . $local_user );
+				//$commentdata['user_id'];
+				if ( !is_null( $local_user ) ) {
+					if ( in_array( $local_user, $ap_object['to'] )
+						|| in_array( $local_user, $ap_object['cc'] )
+						|| in_array( $local_user, $ap_object['audience'] )
+						|| in_array( $local_user, $ap_object['tag'] )
+						) {
+						//if inReplyTo, object, target and/or tag are (local-wp) objects 
+						//if ( str_contains( $ap_object['audience'], site_url() ) ) {
+							error_log('schedule_comment_activity: activitypub_inbox_forward_activity');
+							//\ActivityPub\Activity_Dispatcher::inbox_forward_activity( $activitypub_comment );
+							\wp_schedule_single_event( \time(), 'activitypub_inbox_forward_activity', array( $activitypub_comment->comment_ID  ) );
+							//\wp_schedule_single_event( \time(), 'activitypub_inbox_forward_activity', array( $activitypub_comment->comment_id  ) );//deprecated, was creating duplicates
+						//}
+						//original object 
+						// $ap_object['object'] / $ap_object->object
+					}
+				}				
 			}
-			
-			
-		// } elseif ( 'approved' === $new_status && ( $ap_object ) ) {
-		// 	error_log( 'approved: $replyto: ' . $replyto );
-		// 	\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $comment->comment_ID ) );
+		} elseif ( 'trash' === $new_status ) {
+				\error_log( 'schedule_delete_comment_activity: ID: ' . $activitypub_comment->comment_ID );
+			 	\wp_schedule_single_event( \time(), 'activitypub_send_delete_comment_activity', array( $activitypub_comment ) );
 		} else {
-			error_log( 'not_approved: other comment action: ' . print_r( $comment, true ) );
-		}
-	}
-
-	/**
-	 * Schedule Activities
-	 *
-	 * @param int $post_id
-	 */
-	public static function schedule_inbox_forward_activity( $new_status, $old_status, $comment ) {
-		error_log( 'schedule_inbox_forward_activity: ID: ' . $comment->comment_ID );
-		$ap_object = get_comment_meta( $comment->comment_ID, 'ap_object', true );
-		error_log( print_r( unserialize( $ap_object ), true ) );
-		if ( !$ap_object ) {
-			return;
-		}
-		// error_log( 'schedule_inbox_forward_activity: $new_status: ' . $new_status);
-		// error_log( 'schedule_inbox_forward_activity: $old_status: ' . $old_status );
-		
-		//foreign comment has just been approved: forward should happen here, no?
-		//error_log( print_r( $comment, true ) );
-
-		//$ap_object = get_comment_meta( $comment->comment_ID, 'ap_object', true );
-		$replyto = $comment->comment_author_url;
-		if ( ( 'approved' === $new_status && 'approved' !== $old_status ) && ( $ap_object ) ) {
-			//error_log( 'schedule_inbox_forward_activity>replyto: ' . $replyto );
-			//error_log( print_r( , true ) );
-			\wp_schedule_single_event( \time(), 'activitypub_inbox_forward_activity', array( $comment->comment_ID ) );
-		// } elseif ( 'approved' === $new_status && ( $ap_object ) ) {
-		// 	error_log( 'approved: $replyto: ' . $replyto );
-		// 	\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $comment->comment_ID ) );
-		} else {
-			error_log( 'schedule_inbox_forward_activity: not_approved: $from: ' . $replyto );
+			error_log( 'schedule_comment_activity: not approved: ' . $new_status . ': ' . print_r( $activitypub_comment, true ) );
 		}
 	}
 

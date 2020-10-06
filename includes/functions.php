@@ -40,7 +40,7 @@ function safe_remote_post( $url, $body, $user_id ) {
 		),
 		'body' => $body,
 	);
-//\error_log( 'signature:' . print_r( $args, true ) );
+
 	$response = \wp_safe_remote_post( $url, $args );
 
 	\do_action( 'activitypub_safe_remote_post_response', $response, $url, $body, $user_id );
@@ -50,7 +50,7 @@ function safe_remote_post( $url, $body, $user_id ) {
 
 function forward_remote_post( $url, $body, $user_id ) {
 	$date = \gmdate( 'D, d M Y H:i:s T' );
-	//$signature = \Activitypub\Signature::generate_signature( $user_id, $url, $date );
+	$signature = \Activitypub\Signature::generate_signature( $user_id, $url, $date );
 
 	$wp_version = \get_bloginfo( 'version' );
 	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
@@ -62,14 +62,14 @@ function forward_remote_post( $url, $body, $user_id ) {
 		'headers' => array(
 			'Accept' => 'application/activity+json',
 			'Content-Type' => 'application/activity+json',
-		//	'Signature' => $signature,
+			'Signature' => $signature,
 			'Date' => $date,
 		),
 		'body' => $body,
 	);
 
 	$response = \wp_safe_remote_post( $url, $args );
-
+	\error_log( 'forward_remote_post: wp_safe_remote_post: ' . print_r( $response, true ) );
 	\do_action( 'activitypub_forward_remote_post_response', $response, $url, $body, $user_id );
 
 	return $response;

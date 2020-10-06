@@ -41,7 +41,6 @@ class Activity {
 		}
 
 		if ( \strncasecmp( $method, 'set', 3 ) === 0 ) {
-			//\error_log('set_params: ' . print_r( $params, true ) );
 			$this->$var = $params[0];
 			//$this->$var = [ 'https://www.w3.org/ns/activitystreams#Public', $params[0][0]];
 		}
@@ -56,7 +55,6 @@ class Activity {
 	}
 
 	public function from_comment( $object ) {
-		\error_log( 'from_comment' );
 		$this->object = $object;
 		$this->published = $object['published'];
 		$this->actor = $object['attributedTo'];
