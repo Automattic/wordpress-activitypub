@@ -18,6 +18,7 @@ class Comment {
 		$this->comment_author_url = \get_author_posts_url( $this->comment->user_id );
 		$this->safe_comment_id   = $this->generate_comment_id();
 		$this->inReplyTo   = $this->generate_parent_url();
+		$this->contentWarning   = $this->generate_content_warning();
 		$this->permalink   = $this->generate_permalink();
 		$this->cc_recipients = $this->generate_recipients();
 		$this->tags        = $this->generate_tags();
@@ -43,7 +44,7 @@ class Comment {
 			'type' => 'Note',
 			'published' => \date( 'Y-m-d\TH:i:s\Z', \strtotime( $comment->comment_date ) ),
 			'attributedTo' => $this->comment_author_url,
-			'summary' => '',//$this->get_the_title(),
+			'summary' => $this->contentWarning,
 			'inReplyTo' => $this->inReplyTo,
 			'content' => $comment->comment_content,
 			'contentMap' => array(
@@ -90,6 +91,24 @@ class Comment {
 			$inReplyTo = \get_permalink( $comment->comment_post_ID );
 		}
 		return $inReplyTo;
+	}
+
+	/**
+	 * Generate Content Warning from peer
+	 * If peer used CW let's just copy it
+	 */
+	public function generate_content_warning() {
+		$comment = $this->comment;
+		$contentWarning = null;
+		$parent_comment = \get_comment( $comment->comment_parent );
+		if ( $parent_comment ) {
+			//get (received) comment
+			$ap_object = \unserialize( \get_comment_meta( $comment->comment_parent, 'ap_object', true ) );
+			if ( isset( $ap_object['object']['summary'] ) ) {
+				$contentWarning = $ap_object['object']['summary'];
+			}
+		} 
+		return $contentWarning;
 	}
 
 	/**
