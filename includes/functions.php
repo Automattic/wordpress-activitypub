@@ -322,8 +322,11 @@ function url_to_authorid( $url ) {
  * return int comment_id
  */
 function url_to_commentid( $comment_url ) {
+	if ( empty( $comment_url ) ) {
+		return null;
+	}
 	$post_url = \url_to_postid( $comment_url );
-	
+
 	if ( $post_url ) {
 		//for local comment parent
 		$comment_id = explode( '#comment-', $comment_url );
@@ -332,7 +335,7 @@ function url_to_commentid( $comment_url ) {
 		} else {
 			return null;
 		}
-		
+
 	} else {
 		//remote comment parent, assuming the parent was also recieved
 		//Compare inReplyTo with source_url from meta, to determine if local comment_id exists for peer replied object
@@ -394,7 +397,7 @@ function url_to_webfinger( $user_url ) {
  */
 function normalize_comment_url( $comment ) {
 	$comment_id = explode( '#comment-', \get_comment_link( $comment ) );
-	$comment_id = $comment_id[0] . '?' . $comment_id[1];
+	$comment_id = $comment_id[0] . '?comment-' . $comment_id[1];
 	return $comment_id;
 }
 
