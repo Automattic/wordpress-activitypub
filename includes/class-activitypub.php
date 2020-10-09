@@ -145,8 +145,6 @@ class Activitypub {
 				\wp_schedule_single_event( \time(), 'activitypub_send_post_activity', array( $activitypub_post ) );
 			}
 		} elseif ( 'publish' === $new_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_private_activity', array( $activitypub_post ) );
-		} elseif ( 'publish' === $new_status ) {
 			\wp_schedule_single_event( \time(), 'activitypub_send_update_activity', array( $activitypub_post ) );
 		} elseif ( 'trash' === $new_status ) {
 			\wp_schedule_single_event( \time(), 'activitypub_send_delete_activity', array( get_permalink( $activitypub_post ) ) );
@@ -161,9 +159,14 @@ class Activitypub {
 		//should only process replies from local actors
 		if ( !empty( $commentdata['user_id'] ) ) {
 			//\error_log( 'is_local user' );//TODO Test
-			//TODO only for AP enabled post_types?
-			$commentdata['comment_type'] = 'activitypub';
-			//federate replies
+			//TODO TEST
+			$post_type = \get_object_subtype( 'post', $commentdata['comment_post_ID'] );
+			$ap_post_types = \get_option( 'activitypub_support_post_types' );
+			if ( !\is_null( $ap_post_types ) ) {
+				if ( in_array( $post_type, $ap_post_types ) ) {
+					$commentdata['comment_type'] = 'activitypub';
+				}
+			}
 		}
     	return $commentdata;
   	}
