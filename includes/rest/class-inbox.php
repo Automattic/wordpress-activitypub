@@ -298,12 +298,9 @@ class Inbox {
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
 
 		// do not require email for AP entries
-		$option = get_option( 'require_name_email' );
-		update_option( 'require_name_email', 0 );
-
+		add_filter( 'pre_option_require_name_email', '__return_false' );
 		$state = \wp_new_comment( $commentdata, true );
-
-		update_option( 'require_name_email', $option );
+		remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 		// re-add flood control
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
@@ -337,12 +334,9 @@ class Inbox {
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
 
 		// do not require email for AP entries
-		$option = get_option( 'require_name_email' );
-		update_option( 'require_name_email', 0 );
-
+		add_filter( 'pre_option_require_name_email', '__return_false' );
 		$state = \wp_new_comment( $commentdata, true );
-
-		update_option( 'require_name_email', $option );
+		remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 		// re-add flood control
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
