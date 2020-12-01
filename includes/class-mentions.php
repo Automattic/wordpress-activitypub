@@ -8,15 +8,16 @@ namespace Activitypub;
  */
 class Mentions {
 
-  /**
+	/**
 	 * Initialize the class, registering the Custom Post Type
 	 */
 	public static function init() {
 		\add_action( 'init', array( '\Activitypub\Mentions', 'mentions_init' ), 20 );
 	//	\add_action( 'admin_notices', array( '\Activitypub\Mentions', 'post_type_dump' ) );
+		\add_filter( 'enter_title_here', array( '\Activitypub\Mentions', 'mentions_title' ), 20 );
 	}
 
-  	public static function mentions_init() {
+	public static function mentions_init() {
 		$labels = array(
 			'name'                  => _x( 'Mentions', 'Post type general name', 'activitypub' ),
 			'singular_name'         => _x( 'Mention', 'Post type singular name', 'activitypub' ),
@@ -42,17 +43,18 @@ class Mentions {
 			'filter_items_list'     => _x( 'Filter Mentions list', 'Screen reader text for the filter links heading on the post type listing screen. Default “Filter posts list”/”Filter pages list”. Added in 4.4', 'activitypub' ),
 			'items_list_navigation' => _x( 'Mentions list navigation', 'Screen reader text for the pagination heading on the post type listing screen. Default “Posts list navigation”/”Pages list navigation”. Added in 4.4', 'activitypub' ),
 			'items_list'            => _x( 'Mentions list', 'Screen reader text for the items list heading on the post type listing screen. Default “Posts list”/”Pages list”. Added in 4.4', 'activitypub' ),
-    	);
+		);
 
 		$post_type_args = array(
 			'label' => 'Mentions',//Change menu name to ActivityPub
 			'labels' => $labels,
-			'description' => 'Private and Direct Messages from the fediverse',
-			'public' => false,
-			'show_ui' => true,//TODO true for dev
-			'show_in_admin_bar' => true,//TODO true for dev
-			//'show_in_rest' => true,?
-			'menu_icon' => 'dashicons-format-chat',//TODO change to ActivityPub logo
+			'description' => 'Mentions to and from the fediverse',
+			'public' => true,
+			'show_ui' => true,
+			'show_in_admin_bar' => true,
+			//'show_in_rest' => true, //eventually use tagging via https://developer.wordpress.org/block-editor/components/autocomplete/
+			'has_archive' => true,
+			'menu_icon' => 'dashicons-format-chat',
 			// 'capability_type' => 'activitypub',
 			// 'capabilities' => array(
 			//  	'publish_posts' => 'publish_ap_posts',
@@ -66,64 +68,59 @@ class Mentions {
 			'supports' => array(
 				'title',
 				'editor',
-				//'page-attributes',
+				//'thumbnail',
+				//'comments',
+				//'trackbacks',
 				array(
-					'post_status' => 'private',
+					'post_status' => 'inbox',
 				)
-//			'comments',//for public coments? or no that complicates things?
 			),
 			'hierarchical' => true,//allows thread like comments
 			'has_archive' => false,
 			'rewrite' => false,
 			//'query_var' => false,
-			'delete_with_user' => true,
+			'delete_with_user' => true,//delete all personal posts
 		);
-		\register_post_type( 'activitypub_mentions', $post_type_args );
+		\register_post_type( 'mention', $post_type_args );
 
-		$private_message_args = array(
-				'label'                     => _x( 'Private Message', 'post' ),
-				'public'                    => false,
-				'exclude_from_search'       => false,
-				'show_in_admin_all_list'    => true,
-				'show_in_admin_status_list' => true,
-				'label_count'               => _n_noop( 'Private (%s)', 'Private (%s)' ),
-				'post_type'                 => array( 'activitypub_mentions' ),
-				'show_in_metabox_dropdown'  => true,
-				'show_in_inline_dropdown'   => true,
-				'dashicon'                  => 'dashicons-businessman',
+		$inbox_message_args = array(
+			'label'                     => _x( 'Inbox', 'post' ),
+			'label_count'               => _n_noop( 'Inbox (%s)', 'Inbox (%s)' ),
+			'public'                    => false,
+			'protected'       			=> true,
+			'exclude_from_search'       => false,
+			'show_in_admin_all_list'    => true,
+			'show_in_admin_status_list' => true,
+			'post_type'                 => array( 'mention' ),
 		);
-		\register_post_status( 'private_message', $private_message_args );
+		\register_post_status( 'inbox', $inbox_message_args );
 
-		$followers_only_args = array(
-				'label'                     => _x( 'Followers only', 'post' ),
-				'public'                    => false,
-				'exclude_from_search'       => false,
-				'show_in_admin_all_list'    => true,
-				'show_in_admin_status_list' => true,
-				'label_count'               => _n_noop( 'Followers only (%s)', 'Followers only (%s)' ),
+		$moderation_args = array(
+			'label'                     => _x( 'Moderation', 'post' ),
+			'label_count'               => _n_noop( 'Moderation (%s)', 'Moderation (%s)' ),
+			'public'                    => false,
+			'protected'       			=> true,
+			'exclude_from_search'       => false,//true?
+			'show_in_admin_all_list'    => true,
+			'show_in_admin_status_list' => true,
+			'post_type'                 => array( 'mention' ),
 		);
-		\register_post_status( 'followers_only', $followers_only_args );
+		\register_post_status( 'moderation', $moderation_args );
 
-		$unlisted_message_args = array(
-				'label'                     => _x( 'Unlisted', 'post' ),
-				'public'                    => false,
-				'exclude_from_search'       => false,
-				'show_in_admin_all_list'    => true,
-				'show_in_admin_status_list' => true,
-				'label_count'               => _n_noop( 'Unlisted post (%s)', 'Unlisted post (%s)' ),
-		);
-		\register_post_status( 'unlisted', $unlisted_message_args );
 
-		$public_message_args = array(
-				'label'                     => _x( 'Public', 'post' ),
-				'public'                    => false,
-				'exclude_from_search'       => false,
-				'show_in_admin_all_list'    => true,
-				'show_in_admin_status_list' => true,
-				'label_count'               => _n_noop( 'Public post (%s)', 'Public post (%s)' ),
-		);
-		\register_post_status( 'public', $public_message_args );
-  }
+	}
+
+	/**
+	 * Rename Title label
+	 * https://developer.wordpress.org/reference/hooks/enter_title_here/
+	 */
+  	public static function mentions_title ( $input ) {
+		if( 'mention' === get_post_type() ) {
+            return __( 'Add a Summary / Content Warning', 'activitypub' );
+        } else {
+            return $input;
+        }
+	}
 
 	public static function post_type_dump () {
 		global $wp_post_types;

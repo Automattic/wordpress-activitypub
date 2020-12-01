@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub;
 
+define('AS_PUBLIC', 'https://www.w3.org/ns/activitystreams#Public');
+
 /**
  * Returns the ActivityPub default JSON-context
  *
@@ -361,11 +363,85 @@ function url_to_commentid( $comment_url ) {
 	}	
 }
 
-function add_recipients( $recipient, $self ) {
-	$cc = array( 'https://www.w3.org/ns/activitystreams#Public' );
+//add recipients to CC 
+function add_recipients( $recipient ) {
+	$cc = array( AS_PUBLIC );
 	$cc[] = $recipient;
-	$cc[] = $self . 'followers';
 	return $cc;
+}
+
+/**
+ * Get tagged users from received AP object meta
+ * @param string $object_id a comment_id to search 
+ * @param boolean $post defaults to searching a comment_id
+ *
+ * @return array of tagged users 
+ */
+function get_recipients( $object_id, $post = null ) {
+	$tagged_users_name = null;
+	if ( $post ) {
+		//post
+		$ap_object = \unserialize( \get_post_meta( $object_id, '_ap_object' ) );
+	} else {
+		//comment
+		$ap_object = \unserialize( \get_comment_meta( $object_id, 'ap_object', true ) );
+	}
+
+	if ( !empty( $ap_object ) ) {
+		$tagged_users_name[] = \Activitypub\url_to_webfinger( $ap_object['actor'] );
+		if ( !empty( $ap_object['object']['tag'] ) ) { 
+			$author_post_url = \get_author_posts_url( $ap_object['user_id'] );
+			foreach ( $ap_object['object']['tag'] as $tag ) {
+				if ( $author_post_url == $tag['href'] ) {
+					continue;
+				} 
+				if ( in_array( 'Mention', $tag ) ) {
+					$tagged_users_name[] = $tag['name'];
+				}
+			}
+		}
+		return implode( ' ', $tagged_users_name );
+	}	
+}
+
+/**
+ * Add summary to reply 
+ */
+function get_summary( $comment_id ) {
+	$ap_object = \unserialize( \get_comment_meta( $comment_id, 'ap_object', true ) );
+	if ( !empty( $ap_object ) ) {
+		if ( !empty( $ap_object['object']['summary'] ) ) {
+			\error_log( 'summary: ' . $ap_object['object']['summary'] );
+			return \esc_attr( $ap_object['object']['summary'] );
+		}
+	}	
+}
+
+/**
+ * parse content for tags to transform
+ */
+function transform_tags( $content ) {
+	//#tags
+
+	//@Mentions
+	$mentions = null;
+	$webfinger_tags = \Activitypub\webfinger_extract( $content, true );
+	if ( !empty( $webfinger_tags) ) {
+		foreach ( $webfinger_tags[0] as $webfinger_tag ) {
+			$ap_profile = \Activitypub\Rest\Webfinger::webfinger_lookup( $webfinger_tag );
+			if ( ! empty( $ap_profile ) ) {
+				$short_tag = \Activitypub\webfinger_short_tag( $webfinger_tag );
+				$webfinger_link = "<span class='h-card'><a href=\"{$ap_profile['href']}\" class='u-url mention' rel='noopener noreferer' target='_blank'>{$short_tag}</a></span>";
+				//$webfinger_link = "<span class='h-card'><a href=\"{$ap_profile['href']}\" class='u-url mention' rel='noopener noreferer' target='_blank' title='{$webfinger_tag}'>{$short_tag}</a></span>";//trips at title attribute
+				$content = str_replace( $webfinger_tag, $webfinger_link, $content );
+				$mentions[] = $ap_profile;
+			}
+		} 
+	}
+	// Return mentions separately to attach to comment/post meta
+	$content_mentions['mentions'] = $mentions;
+	$content_mentions['content'] = $content;
+	return $content_mentions;
 }
 
 function tag_user( $recipient ) {
@@ -376,6 +452,18 @@ function tag_user( $recipient ) {
 	);
 	$tag[] = $tagged_user;
 	return $tag;
+}
+
+function webfinger_extract( $string ) {
+	preg_match_all("/@[\._a-zA-Z0-9-]+@[\._a-zA-Z0-9-]+/i", $string, $matches);
+	//preg_match_all("/(?:(?<!\"))+@[\._a-zA-Z0-9-]+@[\._a-zA-Z0-9-]+(?:(?!\"))/i", $string, $matches);//trips on title attribute (recursion)
+	return $matches;
+}
+
+
+function webfinger_short_tag( $webfinger ) {
+	$short_tag = explode( '@', $webfinger );
+	return '@' . $short_tag[1];
 }
 
 function url_to_webfinger( $user_url ) {
@@ -399,6 +487,27 @@ function normalize_comment_url( $comment ) {
 	$comment_id = explode( '#comment-', \get_comment_link( $comment ) );
 	$comment_id = $comment_id[0] . '?comment-' . $comment_id[1];
 	return $comment_id;
+}
+
+/**
+ * Determine AP audience of incoming object
+ */
+function get_audience( $object ) {
+	if ( in_array( AS_PUBLIC, $object['to'] ) ) {
+		return 'public';
+	}
+	if ( in_array( AS_PUBLIC, $object['cc'] ) ) {
+		return 'unlisted';//is unlisted even relevant?
+	}
+	if ( !in_array( AS_PUBLIC, $object['to'] ) && !in_array( AS_PUBLIC, $object['cc'] ) ) {
+		$author_post_url = get_author_posts_url( $object['user_id'] );
+		if ( in_array( $author_post_url, $object['cc'] ) ) {
+			return 'followers_only';
+		}
+		if ( in_array( $author_post_url, $object['to'] ) ) {
+			return 'private';
+		}
+	}
 }
 
 /**
@@ -444,32 +553,4 @@ function is_blacklisted( $url ) {
 	}
 
 	return false;
-}
-
-/**
- * in_audience
- * return true if wp_user is in an audience array 
- */
-// function in_audience( $needles, $haystack ) {
-//     foreach ($needles as $needle) {
-//         if ( \strpos( $haystack, $needle ) !== false ) {
-//             return true;
-//         }
-//     }
-// }
-
-// function in_audience( $needles, $haystack ) {
-//     foreach ($needles as $needle) {
-//         if ( \strpos( $haystack, $needle ) !== false ) {
-//             return true;
-//         }
-//     }
-// }
-
-/* polyfill against php 8 */
-// https://php.watch/versions/8.0/str_contains
-if ( !function_exists( 'str_contains' ) ) {
-    function str_contains( $haystack, $needle ) {
-        return '' === $needle || false !== \strpos( $haystack, $needle );
-    }
 }

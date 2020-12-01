@@ -14,20 +14,23 @@ class Activitypub {
 		\add_filter( 'template_include', array( '\Activitypub\Activitypub', 'render_json_template' ), 99 );
 		\add_filter( 'query_vars', array( '\Activitypub\Activitypub', 'add_query_vars' ) );
 		\add_action( 'init', array( '\Activitypub\Activitypub', 'add_rewrite_endpoint' ) );
-		\add_filter( 'pre_get_avatar_data', array( '\Activitypub\Activitypub', 'pre_get_avatar_data' ), 11, 2 );
-		\add_action( 'wp_head', array( '\Activitypub\Activitypub', 'author_atom_uri' ), 2 );
-		\add_filter( 'status_edit_pre', array( '\Activitypub\Activitypub', 'set_post_type_status_private'), 10, 2 );
 
 		// Add support for ActivityPub to custom post types
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array();
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page', 'mentions' ) );
 		foreach ( $post_types as $post_type ) {
 			\add_post_type_support( $post_type, 'activitypub' );
 		}
 		
+		\add_action( 'pre_get_posts', array( '\Activitypub\Activitypub', 'private_inbox' ), 10, 2 );
+		\add_filter( 'status_edit_pre', array( '\Activitypub\Activitypub', 'set_post_type_status_private' ), 10, 2 );
+		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'preprocess_post' ), 1, 3 );
 		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
-		\add_filter( 'preprocess_comment' , array( '\Activitypub\Activitypub', 'preprocess_comment_handler' ) );
-		\add_filter( 'comment_post' , array( '\Activitypub\Activitypub', 'postprocess_comment_handler' ), 10, 3 );
+		\add_filter( 'preprocess_comment' , array( '\Activitypub\Activitypub', 'preprocess_comment' ) );
+		\add_filter( 'comment_post' , array( '\Activitypub\Activitypub', 'postprocess_comment' ), 10, 3 );
 		\add_action( 'transition_comment_status', array( '\Activitypub\Activitypub', 'schedule_comment_activity' ), 20, 3 );
+		
+		\add_filter( 'pre_get_avatar_data', array( '\Activitypub\Activitypub', 'pre_get_avatar_data' ), 11, 2 );
+		\add_action( 'wp_head', array( '\Activitypub\Activitypub', 'author_atom_uri' ), 2 );// TODO test if needed 
 	}
 
 	/**
@@ -100,6 +103,50 @@ class Activitypub {
 	}
 
 	/**
+	 * Private Inbox
+	 * 
+	 * pre_get_posts
+	 */
+	public static function private_inbox( $query ) {
+		//TODO can the wp_post_count be updated? https://wordpress.stackexchange.com/a/151876/87622
+		if( is_admin() && $query->is_main_query() ) {
+			if ( $query->query['post_type'] === 'activitypub' ) {
+				
+				// Only show posts to their author
+				$query->set( 'author', \get_current_user_id() );
+				
+				// Hide reported posts from all_posts list 
+				if ( empty( $query->query['post_status'] ) ) {
+					$query->set( 'post_status', array( 'publish', 'pending', 'draft', 'auto-draft', 'private', 'future', 'inbox' ) );
+				}
+
+				// Allow moderators access to reported posts
+				// TODO create moderate_mentions capability (align with delete_posts or moderate_comments)
+				if ( $query->query['post_status'] === 'moderation' && current_user_can( 'moderate_comments' ) ) {
+					$query->set( 'author', '' );
+				}
+
+				// TODO orderby date desc
+				// Orderby
+				$orderby = $query->get( 'orderby');
+ 
+				// if( 'author' == $orderby ) {
+				// 	$query->set('meta_key','author');
+				// 	$query->set('orderby','meta_value');
+				// }
+				// if( 'type' == $orderby ) {
+				// 	$query->set('meta_key','type');
+				// 	$query->set('orderby','meta_value');
+				// }
+			}
+		}
+
+		if( ! is_admin() ) {
+			return;
+		}
+	}
+
+	/**
 	 * ActivityPub Audience sets Post status to private (but also immediately publishes post)
 	 * 
 	 * TODO: Unexpected outcome of set audience+save_draft (Private Publish)
@@ -108,9 +155,8 @@ class Activitypub {
 	 * @param string $status
 	 */
 	public static function set_post_type_status_private( $status, $post_id ) {
-		\error_log( '$status: ' . $status );
-		$audience = \get_post_meta( $post_id, '_ap_audience_meta_key' );
-		if ( in_array( 'private_message', $audience ) || in_array( 'followers_only', $audience ) ) {
+		$audience = \get_post_meta( $post_id, '_audience' );
+		if ( in_array( 'private', $audience ) || in_array( 'followers_only', $audience ) ) {
 			$status = 'private';
 		}
 		return $status;
@@ -118,6 +164,42 @@ class Activitypub {
 
 	/**
 	 * Schedule Activities
+	 * transition_post_status
+	 * https://developer.wordpress.org/reference/hooks/transition_post_status/
+	 */
+	public static function preprocess_post( $new_status, $old_status, $post ) {
+		if ( isset( $_POST['_audience'] ) ) {
+            update_post_meta( $post->ID, '_audience', $_POST['_audience'] );
+		}
+		if ( isset( $_POST['_mentions'] ) ) {
+            update_post_meta( $post->ID, '_mentions', $_POST['_mentions'] );
+		}
+		if ( isset( $_POST['post_content'] ) || isset( $_POST['post_parent'] ) ) {
+			
+			$update_post['ID'] = $post->ID;
+
+			// Tag users
+			$tagged_content = \Activitypub\transform_tags( $post->post_content );
+			if ( ! empty ( $tagged_content['mentions'] ) ) {
+
+				// TODO : How to not replace previously saved mentions?
+				// Only hook on publish?
+				\update_post_meta( $post->ID, '_mentions', $tagged_content['mentions'] );
+				$update_post['post_content'] = $tagged_content['content'];
+
+			}
+			// Set parent_post
+			if ( isset( $_POST['post_parent'] ) ) {
+				$update_post['post_parent'] = $_POST['post_parent'];
+			}
+
+			\wp_update_post( $update_post, true );
+		}
+	}
+
+	/**
+	 * Schedule Post Activities
+	 * https://developer.wordpress.org/reference/hooks/transition_post_status/
 	 *
 	 * @param int $post_id
 	 */
@@ -133,17 +215,21 @@ class Activitypub {
 			return;
 		}
 
+		// do not send inbox or moderation activities
+		if ( $new_status === 'inbox' || $new_status === 'moderation' ) {
+			return;
+		}
+		$audience = \get_post_meta( $post->ID, '_audience' );
 		$activitypub_post = new \Activitypub\Model\Post( $post );
-		$audience = \get_post_meta( $post->ID, '_ap_audience_meta_key' );
 		
 		if ( 'publish' === $new_status && $new_status !== $old_status ) {
-			if ( in_array( 'private_message', $audience ) || in_array( 'followers_only', $audience ) ) {
-				$new_status = 'private_message';
-				error_log('schedule_post_activity ($new_status):' . $new_status . ': ' . $activitypub_post->ID );
-				\wp_schedule_single_event( \time(), 'activitypub_send_private_activity', array( $activitypub_post ) );
+			if ( in_array( 'private', $audience ) || in_array( 'followers_only', $audience ) ) {
+				//\wp_schedule_single_event( \time(), 'activitypub_send_private_activity', array( $activitypub_post ) );
 			} else {
 				\wp_schedule_single_event( \time(), 'activitypub_send_post_activity', array( $activitypub_post ) );
 			}
+		} elseif ( 'private' === $new_status ) {
+			//\wp_schedule_single_event( \time(), 'activitypub_send_private_activity', array( $activitypub_post ) );
 		} elseif ( 'publish' === $new_status ) {
 			\wp_schedule_single_event( \time(), 'activitypub_send_update_activity', array( $activitypub_post ) );
 		} elseif ( 'trash' === $new_status ) {
@@ -154,9 +240,9 @@ class Activitypub {
 	/**
 	 * preprocess local comments for federated replies
 	 */
-	public static function preprocess_comment_handler( $commentdata ) {
+	public static function preprocess_comment( $commentdata ) {
 		
-		//should only process replies from local actors
+		//must only process replies from local actors
 		if ( !empty( $commentdata['user_id'] ) ) {
 			//\error_log( 'is_local user' );//TODO Test
 			//TODO TEST
@@ -165,6 +251,10 @@ class Activitypub {
 			if ( !\is_null( $ap_post_types ) ) {
 				if ( in_array( $post_type, $ap_post_types ) ) {
 					$commentdata['comment_type'] = 'activitypub';
+					// transform webfinger mentions to links and add @mentions to cc
+					$tagged_content = \Activitypub\transform_tags( $commentdata['comment_content'] );
+					$commentdata['comment_content'] = $tagged_content['content'];
+					$commentdata['comment_meta']['mentions'] = $tagged_content['mentions'];
 				}
 			}
 		}
@@ -172,9 +262,9 @@ class Activitypub {
   	}
 
 	/**
-	 * postprocess_comment_handler for federating replies and inbox-forwarding
+	 * postprocess_comment for federating replies and inbox-forwarding
 	 */
-	public static function postprocess_comment_handler( $comment_id, $comment_approved, $commentdata ) {
+	public static function postprocess_comment( $comment_id, $comment_approved, $commentdata ) {
 		//Admin users comments bypass transition_comment_status (auto approved)
 
 		//\error_log( 'postprocess_comment_handler: comment_status: ' . $comment_approved );
@@ -186,22 +276,22 @@ class Activitypub {
 				in_array( 'administrator', $user->roles )                   // check the roles
 			)  {
 				// Only for Admins?
-				\error_log( 'postprocess_comment_handler: federate a comment_ID: ' . $comment_id );
-				//\error_log( 'postprocess_comment_handler: federate commentdata: ' . print_r($commentdata, true) );
+				$mentions = \get_comment_meta( $comment_id, 'mentions', true );
 				//\ActivityPub\Activity_Dispatcher::send_comment_activity( $comment_id ); // performance > followers collection
 				\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $comment_id ) );
-				//error_log( 'postprocess_comment_handler: comment_approved');
 				 
 			} else {
+				// TODO check that this is unused
+				// TODO comment test as anon
+				// TODO comment test as registered 
+				// TODO comment test as anyother site settings
 				
-				//error_log( 'postprocess_comment_handler: moderation pending');
 
 				// $replyto = get_comment_meta( $comment_id, 'replyto', true );
 				
 				//inbox forward prep
 				// if ( !empty( $ap_object ) ) {
 				// 	//if is remote user (has ap_object)
-				// 	\error_log( 'postprocess_comment_handler: ap_object: ' . print_r( $ap_object, true ) );
 				// 	//error_log( print_r( $ap_object, true ) );
 				// 	// TODO verify that deduplication check happens at object create.
 
@@ -220,7 +310,6 @@ class Activitypub {
 	 * @param int $comment
 	 */
 	public static function schedule_comment_activity( $new_status, $old_status, $activitypub_comment ) {
-		//\error_log( 'schedule_comment_activity: $activitypub_comment: ' . print_r( $activitypub_comment, true ) . ', status: ' . $new_status );
 		
 		// TODO format $activitypub_comment = new \Activitypub\Model\Comment( $comment );
 		if ( 'approved' === $new_status && 'approved' !== $old_status ) {
@@ -229,16 +318,9 @@ class Activitypub {
 			
 			$ap_object = unserialize( \get_comment_meta( $activitypub_comment->comment_ID, 'ap_object', true ) );
 			if ( empty( $ap_object ) ) {
-				// \error_log( 'schedule_comment_activity: replyto: ' . comment_author_url( $comment->comment_parent ) );
-				\error_log( 'schedule_comment_activity: ID: ' . $activitypub_comment->comment_ID );
-				//\ActivityPub\Activity_Dispatcher::send_comment_activity( $activitypub_comment );
 				\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $activitypub_comment->comment_ID ) );
 			} else {
-				//\error_log( 'activitypub_inbox_forward_activity: ap_object: ' . print_r( $ap_object, true ) );
-				//\error_log( 'activitypub_inbox_forward_activity: ID: ' . $activitypub_comment->comment_ID );
 				$local_user = \get_author_posts_url( $ap_object['user_id'] );
-				//\error_log( 'activitypub_inbox_forward_activity: $local_user: ' . $local_user );
-				//$commentdata['user_id'];
 				if ( !is_null( $local_user ) ) {
 					if ( in_array( $local_user, $ap_object['to'] )
 						|| in_array( $local_user, $ap_object['cc'] )
@@ -246,22 +328,14 @@ class Activitypub {
 						|| in_array( $local_user, $ap_object['tag'] )
 						) {
 						//if inReplyTo, object, target and/or tag are (local-wp) objects 
-						//if ( str_contains( $ap_object['audience'], site_url() ) ) {
-							error_log('schedule_comment_activity: activitypub_inbox_forward_activity');
 							//\ActivityPub\Activity_Dispatcher::inbox_forward_activity( $activitypub_comment );
 							\wp_schedule_single_event( \time(), 'activitypub_inbox_forward_activity', array( $activitypub_comment->comment_ID  ) );
-							//\wp_schedule_single_event( \time(), 'activitypub_inbox_forward_activity', array( $activitypub_comment->comment_id  ) );//deprecated, was creating duplicates
-						//}
-						//original object 
-						// $ap_object['object'] / $ap_object->object
 					}
 				}				
 			}
 		} elseif ( 'trash' === $new_status ) {
-				\error_log( 'schedule_delete_comment_activity: ID: ' . $activitypub_comment->comment_ID );
 			 	\wp_schedule_single_event( \time(), 'activitypub_send_delete_comment_activity', array( $activitypub_comment ) );
 		} else {
-			error_log( 'schedule_comment_activity: not approved: ' . $new_status . ': ' . print_r( $activitypub_comment, true ) );
 		}
 	}
 

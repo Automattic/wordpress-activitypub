@@ -34,9 +34,7 @@ class Admin {
 
 		\add_action( 'load-' . $followers_list_page, array( '\Activitypub\Admin', 'add_followers_list_help_tab' ) );
 
-		$mentions_list_page = \add_menu_page( \__( 'Mentions', 'activitypub' ), \__( 'Mentions', 'activitypub' ), 'read', 'activitypub-mentions-list', array( '\Activitypub\Admin', 'mentions_list_page' ), 'dashicons-format-chat', 26 );
 
-		\add_action( 'load-' . $mentions_list_page, array( '\Activitypub\Admin', 'add_mentions_list_help_tab' ) );
 	}
 
 	/**
@@ -114,7 +112,7 @@ class Admin {
 				'type'         => 'string',
 				'description'  => \esc_html__( 'Enable ActivityPub support for post types', 'activitypub' ),
 				'show_in_rest' => true,
-				'default'      => array( 'post', 'pages' ),
+				'default'      => array( 'post', 'pages', 'mention' ),
 			)
 		);
 		\register_setting(

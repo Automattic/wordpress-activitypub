@@ -118,4 +118,34 @@ class Webfinger {
 
 		return $array;
 	}
+
+	public static function webfinger_lookup( $webfinger ) {
+		
+		if ( \substr($webfinger, 0, 1) === '@' ) {
+			$webfinger = substr( $webfinger, 1 );
+		} 
+		$url_host = \explode( '@', $webfinger );
+		$webfinger_query = 'https://' . \end( $url_host ) . '/.well-known/webfinger?resource=acct%3A' . \urlencode( $webfinger );
+
+		$response = \wp_safe_remote_get( $webfinger_query );
+		if ( ! is_wp_error( $response ) ) {
+			$ap_link = json_decode( $response['body'] );
+			if ( isset( $ap_link->links ) ) {
+				foreach ( $ap_link->links as $link ) {
+					if ( !property_exists( $link, 'type' ) ) {
+						continue;
+					}
+					if ( isset( $link->type ) && $link->type === 'application/activity+json' ) {
+						$activity_profile['href'] = $link->href;
+						$activity_profile['name'] = $webfinger;
+					}
+				}
+			} else {
+				$activity_profile = null;
+			}
+		} else {
+			$activity_profile = null;
+		}
+		return $activity_profile;
+	}
 }

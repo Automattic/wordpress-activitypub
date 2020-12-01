@@ -35,7 +35,7 @@ class Post {
 		$array = array(
 			'id' => \get_permalink( $post ),
 			'type' => $this->get_object_type(),
-			'published' => \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date ) ),
+			'published' => \get_gmt_from_date( \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date_gmt ) ) ),
 			'attributedTo' => \get_author_posts_url( $post->post_author ),
 			'summary' => $this->get_the_title(),
 			'inReplyTo' => null,
@@ -47,7 +47,7 @@ class Post {
 			'cc' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'attachment' => $this->get_attachments(),
 			'tag' => $this->get_tags(),
-			'replies' => array( //$this->get_the_comments(); 'activitypub/1.0/post/$post->ID/replies'
+			'replies' => array( 
 				'id' => \get_rest_url(null, 'activitypub/1.0/post/') . $post->ID . '/replies',
 				'type' => 'Collection',
 				'first' => array(
@@ -138,6 +138,20 @@ class Post {
 					'name' => '#' . $post_tag->slug,
 				);
 				$tags[] = $tag;
+			}
+		}
+
+		$mention_tags = \get_post_meta( $this->post->ID, '_mentions' );
+		if ( !empty( $mention_tags ) ) {
+			foreach ($mention_tags as $mention) {
+				if ( !empty( $mention ) ) {
+					$mention_tag = array(
+						'type' => 'Mention',
+						'href' => $mention['href'],
+						'name' => '@' . $mention['name'],
+					);
+					$tags[] = $mention_tag;
+				}
 			}
 		}
 

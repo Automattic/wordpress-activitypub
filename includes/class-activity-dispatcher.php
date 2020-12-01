@@ -18,7 +18,7 @@ class Activity_Dispatcher {
 		\add_action( 'activitypub_send_delete_activity', array( '\Activitypub\Activity_Dispatcher', 'send_delete_activity' ) );
 		\add_action( 'activitypub_send_comment_activity', array( '\Activitypub\Activity_Dispatcher', 'send_comment_activity' ) );
 		\add_action( 'activitypub_inbox_forward_activity', array( '\Activitypub\Activity_Dispatcher', 'inbox_forward_activity' ) );
-		//\add_action( 'activitypub_send_delete_comment_activity', array( '\Activitypub\Activity_Dispatcher', 'send_delete_comment_activity' ) );
+		\add_action( 'activitypub_send_delete_comment_activity', array( '\Activitypub\Activity_Dispatcher', 'send_delete_comment_activity' ) );
 	}
 
 	/**
@@ -109,7 +109,7 @@ class Activity_Dispatcher {
 			// }
 			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
-		// Reply (to followers and non-followers)
+		// TODO: Reply (to followers and non-followers)
 		// if( is_array( $replyto ) && count( $replyto ) > 1 ) {
 		// 	foreach ( $replyto as $to ) {
 		// 		$inbox = \Activitypub\get_inbox_by_actor( $to );
@@ -177,6 +177,29 @@ class Activity_Dispatcher {
 			//reset //unnecessary
 			//array_pop( $activitypub_activity->object->to[] );
 			//array_pop( $activitypub_activity->to[] );
+		}
+	}
+
+	/**
+	 * Send "delete" activities.
+	 *
+	 * @param \Activitypub\Model\Comment $activitypub_comment
+	 */
+	public static function send_delete_comment_activity( $activitypub_comment_id ) {
+		// get latest version of post
+		$activitypub_comment = \get_comment( $activitypub_comment_id );
+		$user_id = $activitypub_comment->post_author;
+		error_log( 'dispatch:send_delete_comment_activity: $user_id :' . print_r( $user_id , true ) );
+		
+		$activitypub_comment = new \Activitypub\Model\Comment( $activitypub_comment );
+		$activitypub_activity = new \Activitypub\Model\Activity( 'Delete', \Activitypub\Model\Activity::TYPE_FULL );
+		$activitypub_activity->from_comment( $activitypub_comment->to_array() );
+
+		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
+			$activitypub_activity->set_to( $to );
+			$activity = $activitypub_activity->to_json(); // phpcs:ignore
+
+			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
 	}
 }

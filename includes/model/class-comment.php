@@ -42,7 +42,7 @@ class Comment {
 		$array = array(
 			'id' => \Activitypub\Model\Comment::normalize_comment_id( $comment ),
 			'type' => 'Note',
-			'published' => \date( 'Y-m-d\TH:i:s\Z', \strtotime( $comment->comment_date ) ),
+			'published' => \date( 'Y-m-d\TH:i:s\Z', \strtotime( $comment->comment_date_gmt ) ),
 			'attributedTo' => $this->comment_author_url,
 			'summary' => $this->contentWarning,
 			'inReplyTo' => $this->inReplyTo,
@@ -52,7 +52,7 @@ class Comment {
 			),
 			'source' => \get_comment_link( $comment ),
 			'url' => \get_comment_link( $comment ),//link for mastodon
-			'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ),//audience logic
 			'cc' => $this->cc_recipients,
 			'tag' => $this->tags,
 		);
@@ -96,6 +96,10 @@ class Comment {
 	/**
 	 * Generate Content Warning from peer
 	 * If peer used CW let's just copy it
+	 * TODO: Move to preprocess_comment / row_actions
+	 * Add option for wrapping CW in Details/Summary markup
+	 * Figure out some CW syntax: [shortcode-style], {brackets-style}? 
+	 * So it can be inserted into reply textbox, and removed or modified at will
 	 */
 	public function generate_content_warning() {
 		$comment = $this->comment;
@@ -107,7 +111,11 @@ class Comment {
 			if ( isset( $ap_object['object']['summary'] ) ) {
 				$contentWarning = $ap_object['object']['summary'];
 			}
-		} 
+		}
+		/*$summary = \get_comment_meta( $this->comment->comment_ID, 'summary', true ) ;
+		if ( !empty( $summary ) ) {
+				$contentWarning = \Activitypub\add_summary( $summary );
+		} */
 		return $contentWarning;
 	}
 
@@ -115,15 +123,14 @@ class Comment {
 	 * Who is being replied to
 	 */
 	public function generate_recipients() {
-		$cc_recipients = null;
-		$parent_comment = \get_comment( $this->comment->comment_parent );
-		if ( $parent_comment ) {
-			//reply to local (received) comment
-			$self = \get_author_posts_url( $this->comment->comment_author );
-			$recipient = $parent_comment->comment_author_url;
-			//Add peer to cc and tag them
-			$cc_recipients = \Activitypub\add_recipients( $recipient, $self );
-		}
+		//TODO Add audience logic get parent audience
+		$cc_recipients = array( AS_PUBLIC );
+		$mentions = \get_comment_meta( $this->comment->comment_ID, 'mentions', true ) ;
+		if ( !empty( $mentions ) ) {
+			foreach ($mentions as $mention) {
+				$cc_recipients[] = $mention['href'];
+			}
+		} 
 		return $cc_recipients;
 	}
 
@@ -131,17 +138,17 @@ class Comment {
 	 * Mention user being replied to
 	 */
 	public function generate_tags() {
-		$parent_comment = \get_comment( $this->comment->comment_parent );
-		if ( $parent_comment ) {
-			//reply to a comment
-			$recipient = $parent_comment->comment_author_url;
-			$mention_tag = array(
-				'type' => 'Mention',
-				'href' => $recipient,
-				'name' => \Activitypub\url_to_webfinger( $recipient ),
-			);
-			return $mention_tag;
-		} 
+		$mentions = \get_comment_meta( $this->comment->comment_ID, 'mentions', true ) ;
+		if ( !empty( $mentions ) ) {
+			foreach ($mentions as $mention) {
+				$mention_tags[] = array(
+					'type' => 'Mention',
+					'href' => $mention['href'],
+					'name' => '@' . $mention['name'],
+				);
+			}
+			return $mention_tags;
+		}
 	}
 
 	/**
@@ -154,7 +161,7 @@ class Comment {
 	 */
 	public function normalize_comment_id( $comment ) {
 		$comment_id = explode( '#comment-', \get_comment_link( $comment ) );
-		$comment_id = $comment_id[0] . '?' . $comment_id[1];
+		$comment_id = $comment_id[0] . '?comment-' . $comment_id[1];
 		return $comment_id;
 	}
 }

@@ -23,7 +23,6 @@ class Inbox {
 		
 	//	\add_action( 'pre_get_posts', array( '\Activitypub\Rest\Inbox', 'filter_private_messages' ), 11 );
 	//	\add_action( 'wp_count_comments', array( '\Activitypub\Rest\Inbox', 'count_comments' ), 11, 2 );
-	//	\add_filter( 'comments_clauses', array( '\Activitypub\Rest\Inbox', 'ap_personal_comment_list'), 11 );
 	//	\add_action( 'admin_head', array( '\Activitypub\Rest\Inbox', 'comments_styles' ), 21 );
 	}
 
@@ -334,19 +333,28 @@ class Inbox {
 	 */
 	public static function handle_create( $object, $user_id ) {
 		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
+		$avatar_url = null;
+		$audience = \Activitypub\get_audience( $object );
 		
-		$comment_parent = $comment_parent_ID = 0;
-		$comment_post_ID = \url_to_postid( $object['object']['inReplyTo'] );
-		//if not a direct reply to a post
-		if ( $comment_post_ID === 0 ) {
-			//verify if reply to a local or remote received comment
-			$comment_parent_ID = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['inReplyTo'] ) );
-			if ( !is_null( $comment_parent_ID ) ) {
-				//replied to a local comment (which has a post_ID)
-				$comment_parent = get_comment( $comment_parent_ID );
-				$comment_post_ID = $comment_parent->comment_post_ID;
+		// Security TODO: 
+		// static function: enforce host check ($object['id'] must match $object['object']['url'] && $object['actor'] domain )
+		// move to before handle_create
+
+		//Determine parent post and/or parent comment
+		$comment_post_ID = $object_parent = $object_parent_ID = 0;
+		if ( isset( $object['object']['inReplyTo'] ) ) {
+			$comment_post_ID = \url_to_postid( $object['object']['inReplyTo'] );
+			//if not a direct reply to a post, remote post parent
+			if ( $comment_post_ID === 0 ) {
+				//verify if reply to a local or remote received comment
+				$object_parent_ID = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['inReplyTo'] ) );
+				if ( !is_null( $object_parent_ID ) ) {
+					//replied to a local comment (which has a post_ID)
+					$object_parent = get_comment( $object_parent_ID );
+					$comment_post_ID = $object_parent->comment_post_ID;
+				}
 			}
-		}
+		}		
 
 		//not all implementaions use url
 		if ( isset( $object['object']['url'] ) ) {
@@ -362,14 +370,25 @@ class Inbox {
 		} else {
 			$name = \esc_attr( $meta['preferredUsername'] );
 		}
+		// if avatar is set 
+		if ( !empty( $meta['icon']['url'] ) ) {
+			$avatar_url = \esc_attr( $meta['icon']['url'] );
+		}
+
+
+		// Check if has Parent(make WP_Comment) or Not(make WP_Post)
+		if ( !empty( $comment_post_ID ) ) {
+
+		}
 		
-		//Only create comments for public replies to posts
+		//TODO Then check PUBLIC/PRIVATE (assign comment_tye accordingly)
+		//Only create WP_Comment for public replies to posts
 // ??? Only create comments for public replies to PUBLIC posts
 // ??? Why not private replies to posts (should we manage private comments? [the global comments system])	
 		if ( ( in_array( 'https://www.w3.org/ns/activitystreams#Public', $object['to'] )
 			|| in_array( 'https://www.w3.org/ns/activitystreams#Public', $object['cc'] ) )
 			&& ( !empty( $comment_post_ID ) 
-			|| !empty ( $comment_parent ) 
+			|| !empty ( $object_parent ) 
 			) ) {
 			
 			$commentdata = array(
@@ -379,13 +398,10 @@ class Inbox {
 				'comment_content' => \wp_filter_kses( $object['object']['content'] ),
 				'comment_type' => 'activitypub',
 				'comment_author_email' => '',
-				'comment_parent' => $comment_parent_ID,
+				'comment_parent' => $object_parent_ID,
 				'comment_meta' => array(
-					//'local_user' => $object['user_id'],//access  get_post_field ('post_author', 'comment_post_ID');
-					'inReplyTo' => \esc_url_raw( $object['object']['inReplyTo'] ),//needed? (if replying to someone else on thread, but not received)non-wp status - comment_post_ID, comment_parent
+					'inReplyTo' => \esc_url_raw( $object['object']['inReplyTo'] ),//needed? (if replying to someone else on thread, but not received)non-wp status - comment_post_ID, object_parent
 					'source_url' => $source_url,
-					'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
-					'ap_object' => \serialize( $object ), //$object for inbox-forwarding
 					'protocol' => 'activitypub',
 				),
 			);
@@ -400,7 +416,6 @@ class Inbox {
 
 		} else {
 			//Not a public reply to a public post
-// TODO if $object['attachment']... append to content
 			$title = $summary = null;
 			if ( isset( $object['object']['summary'] ) ) {
 				$title = \wp_trim_words( $object['object']['summary'], 10 );
@@ -411,71 +426,26 @@ class Inbox {
 			error_log( 'inbox:handle_create:to: ' . $to_url );
 			// TODO if empty( $object['object']['summary'] ) trim+filter  $object['object']['content']  
 			$postdata = array(
+				'post_author' => $object['user_id'],
 				'post_content' => \wp_filter_kses( $object['object']['content'] ),
 				'post_title' => $title,
 				'post_excerpt' => $summary,
-				'post_status' => 'private_message',
-				'post_type' => 'activitypub_mentions',//activitypub
-				//'post_hierarchy' => comment_parent_ID
+				'post_status' => 'inbox',//private
+				'post_type' => 'mention',// . $audience,//activitypub
 				'post_parent' => \esc_url_raw( $object['object']['inReplyTo'] ),
 				'meta_input' => array(
-					'_local_user' => $object['user_id'],
-					'_ap_object' => $object,
-					'_read_status' => 'unread',
-					//'mention_type' => \esc_html($object['object']['type']),
+					'_audience' 	=> $audience,
+					'_ap_object' 	=> \serialize( $object ),
 					'_inreplyto' => \esc_url_raw( $object['object']['inReplyTo'] ),
-					'_author' => $name,
-					'_author_url' => \esc_url_raw( $object['actor'] ),
-					'_source_url' => $source_url,
-					'_avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
-					'_protocol' => 'activitypub',
+					'_author' 		=> $name,
+					'_author_url' 	=> \esc_url_raw( $object['actor'] ),
+					'_source_url' 	=> $source_url,
+					'_avatar_url' 	=> $avatar_url,
+					'_protocol' 	=> 'activitypub',
 				),
 			);
 
-			//NON-Public
-			if ( !in_array( 'https://www.w3.org/ns/activitystreams#Public', $object['to'] )
-					&& !in_array( 'https://www.w3.org/ns/activitystreams#Public', $object['cc'] ) ) {
-
-						if ( in_array($object['object']['attributedTo'] . '/followers', $object['to']) || in_array($object['object']['attributedTo'] . '/followers', $object['cc']) ) {
-							//Followers Only
-							error_log( 'AP: Followers Only: ' . $to->user_login  );
-							$postdata['post_status'] = 'followers_only';
-							$postdata['meta_input']['mention_type'] = 'activitypub_fo';
-						} elseif ( in_array( get_author_posts_url( $object['user_id'] ), $object['to']) || in_array(get_author_posts_url($to->ID), $object['cc']) ) {
-							//Private Message
-							error_log( 'AP: Private Message to: ' . $to->user_login );
-							$postdata['post_status'] = 'private_message';
-							$postdata['meta_input']['mention_type'] = 'activitypub_dm';
-						} else {
-							error_log( 'AP: WTF some type of non public mention to: ' . $to->user_login );
-						}
-			} elseif ( empty( \url_to_postid( $object['object']['inReplyTo'] ) ) ) {
-				// This should catch public mentions (non-reply)
-				// https://www.w3.org/ns/activitystreams#Public
-				if ( !in_array( 'https://www.w3.org/ns/activitystreams#Public', $object['to'] )
-						&& in_array( 'https://www.w3.org/ns/activitystreams#Public', $object['cc'] ) ) {
-							error_log( 'AP: Unlisted mention : ' . $to->user_login );
-							$postdata['post_status'] = 'unlisted';//or public?
-							$postdata['meta_input']['mention_type'] = 'activitypub_ul';
-				} else {
-					error_log( 'AP: Public mention : ' . $to->user_login );
-					$postdata['post_status'] = 'public';
-					$postdata['meta_input']['ap_object'] = \serialize( $object );
-					$postdata['meta_input']['mention_type'] = 'activitypub_public';//or just 'activitypub'
-				}
-
-			} else {
-				//Don't know wtf would end up here
-				error_log( 'AP: WTF : ' . $to->user_login );
-			}
-			$post_id = \wp_insert_post($postdata);
-
-			if( !is_wp_error($post_id) ) {
-				error_log($post_id);
-		    	wp_send_json_success(array('post_id' => $post_id), 200);
 		  } else {
-				error_log($post_id->get_error_message());
-		    	wp_send_json_error($post_id->get_error_message());
 		  }
 		}
 
@@ -490,21 +460,15 @@ class Inbox {
 
 	//\add_action( 'init', '\Activitypub\add_rewrite_rules', 1 );
 	public static function filter_private_messages( $query ) {
-		$ap_public_comments = array( 'activitypub_ul', 'activitypub' );
-		$ap_private_comments = array( 'activitypub_dm', 'activitypub_fo' );
 		//make public static constants for public/private comment_types
 
 		//if register setting for public comment moderation or not? if not merge arrays
-		$ap_types = array_merge( $ap_public_comments, $ap_private_comments );
 		if (is_admin()){
 
 			$current_screen = get_current_screen();
-			if( $current_screen->parent_base === 'activitypub-mentions-list'){
+			if( $current_screen->parent_base === 'edit-comments'){
 				//echo "<details><summary>current_screen</summary><pre>"; print_r( $current_screen ); echo "</pre></details>";
-			 	//echo "<details><summary>query</summary><pre>"; print_r( $query ); echo "</pre></details>";
 				//$query->set( 'post_status', 'private_message' );
-				// $query->query_vars['post_type'] = 'activitypub_messages';
-				// $query->query_vars['post_status'] = 'private_message';
 				//$query->query_vars['type__not_in'] = $ap_types;
 				//$query->query_vars['type__not_in'] = in_array( $query->query_vars['type__not_in'], $ap_types);
 			}
@@ -537,13 +501,11 @@ class Inbox {
 	// 		$clauses['join'] = "wp_posts";
 	// 		$clauses['where'] .= " AND wp_posts.post_author = ".$current_user->ID." AND wp_comments.comment_post_ID = wp_posts.ID";
 	// 	};
-	// 	// echo "<pre> comments_clauses </pre>";
-	// 	// echo "<pre style='padding-left:180px;'>"; print_r( $clauses ); echo "</pre>";
 	// 	return $clauses;
 	// }
 
 
-	//\add_action( 'pre_comment_approved', array( '\Activitypub\Rest\Inbox', 'filter_comments' ), 11, 2 );
+	
 	// public static function filter_comments( $approved, $data ) {
 	//  /* only allow 'my_custom_comment_type' when is required explicitly */
 	//  //echo "<pre>"; print_r( $query ); echo "</pre>";
