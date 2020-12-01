@@ -27,6 +27,7 @@ class Nodeinfo {
 				array(
 					'methods'  => \WP_REST_Server::READABLE,
 					'callback' => array( '\Activitypub\Rest\Nodeinfo', 'discovery' ),
+					'permission_callback' => '__return_true',
 				),
 			)
 		);
@@ -36,6 +37,7 @@ class Nodeinfo {
 				array(
 					'methods'  => \WP_REST_Server::READABLE,
 					'callback' => array( '\Activitypub\Rest\Nodeinfo', 'nodeinfo' ),
+					'permission_callback' => '__return_true',
 				),
 			)
 		);
@@ -45,6 +47,7 @@ class Nodeinfo {
 				array(
 					'methods'  => \WP_REST_Server::READABLE,
 					'callback' => array( '\Activitypub\Rest\Nodeinfo', 'nodeinfo2' ),
+					'permission_callback' => '__return_true',
 				),
 			)
 		);

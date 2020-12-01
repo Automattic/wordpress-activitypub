@@ -26,6 +26,7 @@ class Followers {
 					'methods'  => \WP_REST_Server::READABLE,
 					'callback' => array( '\Activitypub\Rest\Followers', 'get' ),
 					'args'     => self::request_parameters(),
+					'permission_callback' => '__return_true',
 				),
 			)
 		);

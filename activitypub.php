@@ -22,10 +22,8 @@ function init() {
 	\defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|^)#(\w*[A-Za-z_]+\w*)' );
 
 	require_once \dirname( __FILE__ ) . '/includes/table/followers-list.php';
-	require_once \dirname( __FILE__ ) . '/includes/table/messages-list.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once \dirname( __FILE__ ) . '/includes/peer/class-followers.php';
-	require_once \dirname( __FILE__ ) . '/includes/peer/class-messages.php';
 	require_once \dirname( __FILE__ ) . '/includes/functions.php';
 
 	require_once \dirname( __FILE__ ) . '/includes/class-activity-dispatcher.php';
@@ -34,6 +32,14 @@ function init() {
 	require_once \dirname( __FILE__ ) . '/includes/model/class-activity.php';
 	require_once \dirname( __FILE__ ) . '/includes/model/class-post.php';
 	\Activitypub\Model\Post::init();
+
+	require_once \dirname( __FILE__ ) . '/includes/model/class-comment.php';
+	
+	require_once \dirname( __FILE__ ) . '/includes/class-mentions.php';
+	\Activitypub\Mentions::init();
+
+	require_once \dirname( __FILE__ ) . '/includes/class-c2s.php';
+	\Activitypub\C2S::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/class-activitypub.php';
 	\Activitypub\Activitypub::init();
@@ -100,3 +106,11 @@ function flush_rewrite_rules() {
 }
 \register_activation_hook( __FILE__, '\Activitypub\flush_rewrite_rules' );
 \register_deactivation_hook( __FILE__, '\flush_rewrite_rules' );
+
+/**
+ * rewrite api
+ */
+// function rest_url_prefix( ) {
+//   return 'api';
+// }
+// \add_filter( 'rest_url_prefix', '\Activitypub\rest_url_prefix' );

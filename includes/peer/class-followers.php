@@ -10,7 +10,6 @@ class Followers {
 
 	public static function get_followers( $author_id ) {
 		$followers = \get_user_option( 'activitypub_followers', $author_id );
-
 		if ( ! $followers ) {
 			return array();
 		}
@@ -21,7 +20,7 @@ class Followers {
 				isset( $follower['type'] ) &&
 				'Person' === $follower['type'] &&
 				isset( $follower['id'] ) &&
-				false !== \filter_var( $follower['id'], \FILTER_VALIDATE_URL )
+				false !== \filter_var( $follower['id'], FILTER_VALIDATE_URL )
 			) {
 				$followers[ $key ] = $follower['id'];
 			}
@@ -45,7 +44,7 @@ class Followers {
 				isset( $actor['type'] ) &&
 				'Person' === $actor['type'] &&
 				isset( $actor['id'] ) &&
-				false !== \filter_var( $actor['id'], \FILTER_VALIDATE_URL )
+				false !== \filter_var( $actor['id'], FILTER_VALIDATE_URL )
 			) {
 				$actor = $actor['id'];
 			}
@@ -68,8 +67,12 @@ class Followers {
 
 	public static function remove_follower( $actor, $author_id ) {
 		$followers = \get_user_option( 'activitypub_followers', $author_id );
-
+		\error_log('author_id: ' . print_r( $author_id, true ) );
+		\error_log('actor: ' . print_r( $actor, true ) );
+		\error_log('followers_array: ' . print_r( $followers, true ) );
 		foreach ( $followers as $key => $value ) {
+			\error_log('value: ' . print_r( $value, true ) );
+			\error_log('key: ' . print_r( $key, true ) );
 			if ( $value === $actor ) {
 				unset( $followers[ $key ] );
 			}

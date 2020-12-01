@@ -6,7 +6,7 @@
 	<?php $token_table = new \Activitypub\Table\Followers_List(); ?>
 
 	<form method="get">
-		<input type="hidden" name="page" value="indieauth_user_token" />
+		<input type="hidden" name="page" value="activitypub-followers-list" />
 		<?php
 		$token_table->prepare_items();
 		$token_table->display();
