@@ -31,6 +31,7 @@ class Inbox {
 				array(
 					'methods'  => \WP_REST_Server::EDITABLE,
 					'callback' => array( '\Activitypub\Rest\Inbox', 'shared_inbox' ),
+					'permission_callback' => '__return_true'
 				),
 			)
 		);
@@ -41,9 +42,21 @@ class Inbox {
 					'methods'  => \WP_REST_Server::EDITABLE,
 					'callback' => array( '\Activitypub\Rest\Inbox', 'user_inbox' ),
 					'args'     => self::request_parameters(),
+					'permission_callback' => '__return_true'
 				),
 			)
 		);
+
+		// \register_rest_route(
+		// 	'activitypub/1.0', '/users/(?P<user_id>\d+)/inbox', array(
+		// 		array(
+		// 			'methods'  =>  \WP_REST_Server::READABLE,
+		// 			'callback' => array( '\Activitypub\Rest\Inbox', 'user_inbox_get' ),
+		// 			'args'     => self::get_parameters(),
+		// 			'permission_callback' => '__return_true'
+		// 		),
+		// 	)
+		// );
 	}
 
 	/**
@@ -84,8 +97,8 @@ class Inbox {
 	 */
 	public static function user_inbox( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		//error_log( 'user_inbox $request' );
-		//error_log( print_r( $request, true ) );
+
+//		error_log( 'user_inbox $request: ' . print_r( $request, true ) );
 		$data = $request->get_params();
 		$type = $request->get_param( 'type' );
 
@@ -93,6 +106,29 @@ class Inbox {
 		\do_action( "activitypub_inbox_{$type}", $data, $user_id );
 
 		return new \WP_REST_Response( array(), 202 );
+	}
+
+	/**
+	 * Renders the user-inbox
+	 *
+	 * @param  WP_REST_Request   $request
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function user_inbox_get( $request ) {
+		$user_id = $request->get_param( 'user_id' );
+
+		$json = new \stdClass();
+
+		$json->{'@context'} = \Activitypub\get_context();
+		$json->id = \get_rest_url( null, "/activitypub/1.0/users/$user_id/inbox" ); // phpcs:ignore
+		$json->type = 'OrderedCollection';
+		
+		$response = new \WP_REST_Response( $json, 200 );
+
+		$response->header( 'Content-Type', 'application/activity+json' );
+
+		return $response;
 	}
 
 	/**
@@ -170,6 +206,55 @@ class Inbox {
 	}
 
 	/**
+	 * The supported parameters
+	 *
+	 * @return array list of parameters
+	 */
+	public static function get_parameters() {
+		$params = array();
+
+		$params['page'] = array(
+			'type' => 'integer',
+		);
+
+		$params['user_id'] = array(
+			'required' => true,
+			'type' => 'integer',
+		);
+
+		$params['id'] = array(
+//			'required' => true,
+			'type' => 'string',
+			'validate_callback' => function( $param, $request, $key ) {
+				if ( ! \is_string( $param ) ) {
+					$param = $param['id'];
+				}
+				return ! \Activitypub\is_blacklisted( $param );
+			},
+			'sanitize_callback' => 'esc_url_raw',
+		);
+
+		$params['actor'] = array(
+//			'required' => true,
+			//'type' => array( 'object', 'string' ),
+			'validate_callback' => function( $param, $request, $key ) {
+				if ( ! \is_string( $param ) ) {
+					$param = $param['id'];
+				}
+				return ! \Activitypub\is_blacklisted( $param );
+			},
+			'sanitize_callback' => function( $param, $request, $key ) {
+				if ( ! \is_string( $param ) ) {
+					$param = $param['id'];
+				}
+				return \esc_url_raw( $param );
+			},
+		);
+
+		return $params;
+	}
+
+	/**
 	 * Handles "Follow" requests
 	 *
 	 * @param  array $object  The activity-object
@@ -190,7 +275,6 @@ class Inbox {
 		$activity->set_id( \get_author_posts_url( $user_id ) . '#follow' . \preg_replace( '~^https?://~', '', $object['actor'] ) );
 
 		$activity = $activity->to_simple_json();
-
 		$response = \Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 	}
 
@@ -222,7 +306,7 @@ class Inbox {
 			'comment_type' => \esc_attr( \strtolower( $object['type'] ) ),
 			'comment_parent' => 0,
 			'comment_meta' => array(
-				'source_url' => \esc_url_raw( $object['id'] ),
+				'source_url' => \esc_url_raw( $object['attributedTo'] ),
 				'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
 				'protocol' => 'activitypub',
 			),
@@ -245,70 +329,120 @@ class Inbox {
 	 */
 	public static function handle_create( $object, $user_id ) {
 		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
-		///$to = get_user_by( 'id', $object['user_id'] );
-		$from = parse_url($object['actor']);
+		$avatar_url = null;
+		$audience = \Activitypub\get_audience( $object );
+		
+		// Security TODO: 
+		// static function: enforce host check ($object['id'] must match $object['object']['url'] && $object['actor'] domain )
+		// move to before handle_create
 
-		error_log( '$object');
-		error_log( print_r($object, true) );
+		//Determine parent post and/or parent comment
+		$comment_post_ID = $object_parent = $object_parent_ID = 0;
+		if ( isset( $object['object']['inReplyTo'] ) ) {
+			$comment_post_ID = \url_to_postid( $object['object']['inReplyTo'] );
+			//if not a direct reply to a post, remote post parent
+			if ( $comment_post_ID === 0 ) {
+				//verify if reply to a local or remote received comment
+				$object_parent_ID = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['inReplyTo'] ) );
+				if ( !is_null( $object_parent_ID ) ) {
+					//replied to a local comment (which has a post_ID)
+					$object_parent = get_comment( $object_parent_ID );
+					$comment_post_ID = $object_parent->comment_post_ID;
+				}
+			}
+		}		
 
-		$commentdata = array(
-			'comment_post_ID' => \url_to_postid( $object['object']['inReplyTo'] ),
-			'comment_author' => \esc_attr( $meta['name'] ),
-			'comment_author_url' => \esc_url_raw( $object['actor'] ),
-			'comment_content' => \wp_filter_kses( $object['object']['content'] ),
-			'comment_type' => 'activitypub',//activitypub_private_message
-			'comment_author_email' => $meta["name"] . '@' . $from["host"],
-			'comment_parent' => 0,//are threaded comments doable?
-			'comment_meta' => array(
-				'target_user' => $object['user_id'],
-				'source_url' => \esc_url_raw( $object['object']['url'] ),
-				'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
-				'protocol' => 'activitypub',
-			),
-		);
-
-// TODO Parse audience : set comment_type, comment_meta
-// Public
-// [to] ('https://www.w3.org/ns/activitystreams#Public')
-// [cc] ( [0]$self/.../followers, [1]tagged actors)
-// unlisted
-// [to] ($self/.../followers)
-// [cc] ( [0]/activitystreams#Public, [1]tagged actors)
-// follows_only
-// [to] ($object['attributedTo']/followers)
-// [cc] ([0]tagged actors)
-// DM/private
-// [to] ([0]tagged actors)
-//
-// TODO if $object['attachment']... append to content
-//
-	//DM
-		if ( empty( $object['cc'] )
-			&& ( !array_search( 'https://www.w3.org/ns/activitystreams#Public', $object['to'] )
-				|| !array_search( 'https://www.w3.org/ns/activitystreams#Public', $object['cc'] ) ) ) {
-			$commentdata['comment_type'] = 'activitypub_dm';
-			error_log( 'AP: Direct Message' );
-		}
-	//Followers Only
-		if ( $object['to'][0] === $object['object']['attributedTo'] . '/followers' ) {
-			$commentdata['comment_type'] = 'activitypub_fo';
-			error_log( 'AP: Followers Only' );
+		//not all implementaions use url
+		if ( isset( $object['object']['url'] ) ) {
+			$source_url = \esc_url_raw( $object['object']['url'] );
+		} else {
+			//could also try $object['object']['source']?
+			$source_url = \esc_url_raw( $object['object']['id'] );
 		}
 
-		//error_log( print_r($commentdata, true) );
+		// if no name is set use peer username
+		if ( !empty( $meta['name'] ) ) {
+			$name = \esc_attr( $meta['name'] );
+		} else {
+			$name = \esc_attr( $meta['preferredUsername'] );
+		}
+		// if avatar is set 
+		if ( !empty( $meta['icon']['url'] ) ) {
+			$avatar_url = \esc_attr( $meta['icon']['url'] );
+		}
 
-		// disable flood control
-		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
 
-		$state = \wp_new_comment( $commentdata, true );
+		// Check if has Parent(make WP_Comment) or Not(make WP_Post)
+		if ( !empty( $comment_post_ID ) ) {
 
-		// if ($commentdata['comment_type'] === 'activitypub') {
-		// 	//site setting or user setting
-		// 	error_log('Auto Approve');
-		// //	\wp_set_comment_status( $state, 'approve' );
-		// }
+		}
+		
+		//TODO Then check PUBLIC/PRIVATE (assign comment_tye accordingly)
+		//Only create WP_Comment for public replies to posts
+		// ??? Only create comments for public replies to PUBLIC posts
+		// ??? Why not private replies to posts (should we manage private comments? [the global comments system])	
+		if ( ( in_array( 'https://www.w3.org/ns/activitystreams#Public', $object['to'] )
+			|| in_array( 'https://www.w3.org/ns/activitystreams#Public', $object['cc'] ) )
+			&& ( !empty( $comment_post_ID ) 
+			|| !empty ( $object_parent ) 
+			) ) {
+			
+			$commentdata = array(
+				'comment_post_ID' => $comment_post_ID,
+				'comment_author' => $name,
+				'comment_author_url' => \esc_url_raw( $object['actor'] ),
+				'comment_content' => \wp_filter_kses( $object['object']['content'] ),
+				'comment_type' => 'activitypub',
+				'comment_author_email' => '',
+				'comment_parent' => $object_parent_ID,
+				'comment_meta' => array(
+					'inReplyTo' => \esc_url_raw( $object['object']['inReplyTo'] ),//needed? (if replying to someone else on thread, but not received)non-wp status - comment_post_ID, object_parent
+					'source_url' => $source_url,
+					'protocol' => 'activitypub',
+				),
+			);
 
-		// re-add flood control
-		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+			// disable flood control
+			\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+			$state = \wp_new_comment( $commentdata, true );
+
+			// re-add flood control
+			\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+
+		} else {
+			//Not a public reply to a public post
+			$title = $summary = null;
+			if ( isset( $object['object']['summary'] ) ) {
+				$title = \wp_trim_words( $object['object']['summary'], 10 );
+				$summary = \wp_strip_all_tags( $object['object']['summary'] );
+			}
+			$to = get_user_by( 'id', $object['user_id'] );
+			$to_url = get_author_posts_url( $object['user_id'] );
+			error_log( 'inbox:handle_create:to: ' . $to_url );
+			// TODO if empty( $object['object']['summary'] ) trim+filter  $object['object']['content']  
+			$postdata = array(
+				'post_author' => $object['user_id'],
+				'post_content' => \wp_filter_kses( $object['object']['content'] ),
+				'post_title' => $title,
+				'post_excerpt' => $summary,
+				'post_status' => 'inbox',//private
+				'post_type' => 'mention',// . $audience,//activitypub
+				'post_parent' => \esc_url_raw( $object['object']['inReplyTo'] ),
+				'meta_input' => array(
+					'_audience' 	=> $audience,
+					'_ap_object' 	=> \serialize( $object ),
+					'_inreplyto' => \esc_url_raw( $object['object']['inReplyTo'] ),
+					'_author' 		=> $name,
+					'_author_url' 	=> \esc_url_raw( $object['actor'] ),
+					'_source_url' 	=> $source_url,
+					'_avatar_url' 	=> $avatar_url,
+					'_protocol' 	=> 'activitypub',
+				),
+			);
+
+		  
+		}
+
 	}
 }
