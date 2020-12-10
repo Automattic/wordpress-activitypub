@@ -70,7 +70,7 @@ class Signature {
 		\update_user_meta( $user_id, 'magic_sig_public_key', $detail['key'] );
 	}
 
-	public static function generate_signature( $user_id, $url, $date ) {
+	public static function generate_signature( $user_id, $url, $date, $digest = null ) {
 		$key = self::get_private_key( $user_id );
 
 		$url_parts = \wp_parse_url( $url );
@@ -88,7 +88,11 @@ class Signature {
 			$path .= '?' . $url_parts['query'];
 		}
 
-		$signed_string = "(request-target): post $path\nhost: $host\ndate: $date";
+		if ( ! empty( $digest ) ) {
+			$signed_string = "(request-target): post $path\nhost: $host\ndate: $date\ndigest: SHA-256=$digest";
+		} else {
+			$signed_string = "(request-target): post $path\nhost: $host\ndate: $date";
+		}
 
 		$signature = null;
 		\openssl_sign( $signed_string, $signature, $key, \OPENSSL_ALGO_SHA256 );
@@ -96,10 +100,19 @@ class Signature {
 
 		$key_id = \get_author_posts_url( $user_id ) . '#main-key';
 
-		return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date",signature="%s"', $key_id, $signature );
+		if ( ! empty( $digest ) ) {
+			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="%s"', $key_id, $signature );
+		} else {
+			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date",signature="%s"', $key_id, $signature );
+		}
 	}
 
 	public static function verify_signature( $headers, $signature ) {
 
+	}
+
+	public static function generate_digest( $body ) {
+		$digest = \base64_encode(  \hash('sha256', $body, true ) ); // phpcs:ignore
+		return "$digest";
 	}
 }

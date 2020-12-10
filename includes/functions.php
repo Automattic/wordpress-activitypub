@@ -23,7 +23,8 @@ function get_context() {
 
 function safe_remote_post( $url, $body, $user_id ) {
 	$date = \gmdate( 'D, d M Y H:i:s T' );
-	$signature = \Activitypub\Signature::generate_signature( $user_id, $url, $date );
+	$digest = \Activitypub\Signature::generate_digest( $body );
+	$signature = \Activitypub\Signature::generate_signature( $user_id, $url, $date, $digest );
 
 	$wp_version = \get_bloginfo( 'version' );
 	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
@@ -35,6 +36,7 @@ function safe_remote_post( $url, $body, $user_id ) {
 		'headers' => array(
 			'Accept' => 'application/activity+json',
 			'Content-Type' => 'application/activity+json',
+			'Digest' => "SHA-256=$digest",
 			'Signature' => $signature,
 			'Date' => $date,
 		),
