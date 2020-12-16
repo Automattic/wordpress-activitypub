@@ -18,24 +18,13 @@ class Server extends \WP_REST_Server {
 	public function dispatch( $request ) {
 		$content_type = $request->get_content_type();
 
-		if ( isset( $content_type['value'] ) ) {
-			// check for content-sub-types like 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
-			if ( \preg_match( '/application\/([a-zA-Z+_-]+\+)json/', $content_type['value'] ) ) {
-				$request->set_header( 'Content-Type', 'application/json' );
-			}
+		if ( ! $content_type ) {
+			return parent::dispatch( $request );
 		}
-		
-		$user_agent = $request->get_header('user_agent');
-		
-		if ( \Activitypub\str_contains( $user_agent, 'MastoPeek') 
-			|| \Activitypub\str_contains( $user_agent, 'Python' ) 
-			|| \Activitypub\str_contains( $user_agent, 'fediverse.space' ) 
-			|| \Activitypub\str_contains( $user_agent, 'Friendica' ) ) {
-			\error_log( 'Crawler: ' . $user_agent );
-			//$request->set_header('HTTP1.1 404 Not Found', true, 404);
-			$request->set_header('Location: https://layer8.space/', true, 301);
-			$request->set_body(null);
-			return new \WP_REST_Response($request, 404);
+
+		// check for content-sub-types like 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
+		if ( \preg_match( '/application\/([a-zA-Z+_-]+\+)json/', $content_type['value'] ) ) {
+			$request->set_header( 'Content-Type', 'application/json' );
 		}
 
 		// make request filterable

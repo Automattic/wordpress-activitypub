@@ -19,22 +19,30 @@
 					<td>
 						<p>
 							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_title_link" value="title" <?php echo \checked( 'title', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Title and link', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'Only the title and a link.', 'activitypub' ); ?></span>
-  						</p>
+						</p>
 						<p>
 							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_excerpt" value="excerpt" <?php echo \checked( 'excerpt', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Excerpt', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'A content summary, shortened to 400 characters and without markup.', 'activitypub' ); ?></span>
 						</p>
 						<p>
 							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_content" value="content" <?php echo \checked( 'content', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Content (default)', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'The full content.', 'activitypub' ); ?></span>
 						</p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row">
-						<?php \esc_html_e( 'Backlink', 'activitypub' ); ?>
-					</th>
-					<td>
-						<p><label><input type="checkbox" name="activitypub_use_shortlink" id="activitypub_use_shortlink" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_shortlink', '0' ) ); ?> /> <?php \esc_html_e( 'Use the Shortlink instead of the permalink', 'activitypub' ); ?></label></p>
-						<p class="description"><?php \printf( \esc_html( 'I can recommend %sHum%s, to prettify the Shortlinks', 'activitypub' ), '<a href="https://wordpress.org/plugins/hum/" target="_blank">', '</a>' ); ?></p>
+						<p>
+							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_custom" value="custom" <?php echo \checked( 'custom', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Custom', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'Use the text-area below, to customize your activities.', 'activitypub' ); ?></span>
+						</p>
+						<p>
+							<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo ACTIVITYPUB_CUSTOM_POST_CONTENT; ?>"><?php echo \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ); ?></textarea>
+							<div class="description">
+								<ul>
+									<li><code>%title%</code> - <?php \esc_html_e( 'The Post-Title.', 'activitypub' ); ?></li>
+									<li><code>%content%</code> - <?php \esc_html_e( 'The Post-Content.', 'activitypub' ); ?></li>
+									<li><code>%excerpt%</code> - <?php \esc_html_e( 'The Post-Excerpt (default 400 Chars).', 'activitypub' ); ?></li>
+									<li><code>%permalink%</code> - <?php \esc_html_e( 'The Post-Permalink.', 'activitypub' ); ?></li>
+									<li><code>%shortlink%</code> - <?php \printf( \esc_html( 'The Post-Shortlink. I can recommend %sHum%s, to prettify the Shortlinks', 'activitypub' ), '<a href="https://wordpress.org/plugins/hum/" target="_blank">', '</a>' ); ?></li>
+									<li><code>%hashtags%</code> - <?php \esc_html_e( 'The Tags as Hashtags.', 'activitypub' ); ?></li>
+								</ul>
+								<?php \printf( \__( '%sLet me know%s if you miss a template placeholder.', 'activitypub' ), '<a href="https://github.com/pfefferle/wordpress-activitypub/issues/new" target="_blank">', '</a>' ); ?>
+							</div>
+						</p>
 					</td>
 				</tr>
 				<tr>
@@ -80,9 +88,15 @@
 						<p>
 							<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php \_e( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag-link.', 'activitypub' ); ?></label>
 						</p>
-						<p>
-							<label><input type="checkbox" name="activitypub_add_tags_as_hashtags" id="activitypub_add_tags_as_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_add_tags_as_hashtags', '0' ) ); ?> /> <?php \_e( 'Add all tags as hashtags to the end of each activity.', 'activitypub' ); ?></label>
-						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
+						<?php \esc_html_e( 'HTML Whitelist', 'activitypub' ); ?>
+					</th>
+					<td>
+						<textarea name="activitypub_allowed_html" id="activitypub_allowed_html" rows="3" cols="50" class="large-text"><?php echo \get_option( 'activitypub_allowed_html', ACTIVITYPUB_ALLOWED_HTML ); ?></textarea>
+						<p class="description"><?php \_e( \sprintf( 'A list of HTML elements, you want to whitelist for your activities. <strong>Leave list empty to support all HTML elements.</strong> Default: <code>%s</code>.', \esc_html( ACTIVITYPUB_ALLOWED_HTML ) ), 'activitypub' ); ?></p>
 					</td>
 				</tr>
 			</tbody>
@@ -94,20 +108,14 @@
 
 		<p><?php \esc_html_e( 'Server related settings.', 'activitypub' ); ?></p>
 
-		<?php
-		// load the existing blacklist from the WordPress options table
-		$activitypub_blacklist = \trim( \implode( \PHP_EOL, \ActivityPub\get_blacklist() ), \PHP_EOL );
-		?>
-
 		<table class="form-table">
 			<tbody>
 				<tr>
 					<th scope="row">
-						<?php \esc_html_e( 'Blacklist', 'activitypub' ); ?>
+						<?php \esc_html_e( 'Blocklist', 'activitypub' ); ?>
 					</th>
 					<td>
-						<textarea name="activitypub_blacklist" id="activitypub_blacklist" rows="10" cols="50" class="large-text"><?php echo $activitypub_blacklist; ?></textarea>
-						<p class="description"><?php \_e( 'A list of hosts, you want to block, one host per line. Please use only the host/domain of the server you want to block, without <code>http://</code> and without <code>www.</code>. For example <code>example.com</code>.', 'activitypub' ); ?></p>
+						<p class="description"><?php \printf( \__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ), admin_url( 'options-discussion.php#disallowed_keys' ) ); ?></p>
 					</td>
 				</tr>
 			</tbody>

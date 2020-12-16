@@ -25,9 +25,9 @@ class Webfinger {
 		\register_rest_route(
 			'activitypub/1.0', '/webfinger', array(
 				array(
-					'methods'  => \WP_REST_Server::READABLE,
-					'callback' => array( '\Activitypub\Rest\Webfinger', 'webfinger' ),
-					'args'     => self::request_parameters(),
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( '\Activitypub\Rest\Webfinger', 'webfinger' ),
+					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),
 			)

@@ -17,6 +17,7 @@ class Inbox {
 		\add_filter( 'rest_pre_serve_request', array( '\Activitypub\Rest\Inbox', 'serve_request' ), 11, 4 );
 		\add_action( 'activitypub_inbox_follow', array( '\Activitypub\Rest\Inbox', 'handle_follow' ), 10, 2 );
 		\add_action( 'activitypub_inbox_unfollow', array( '\Activitypub\Rest\Inbox', 'handle_unfollow' ), 10, 2 );
+		\add_action( 'activitypub_inbox_undo', array( '\Activitypub\Rest\Inbox', 'handle_unfollow' ), 10, 2 );
 		//\add_action( 'activitypub_inbox_like', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
 		//\add_action( 'activitypub_inbox_announce', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
 		\add_action( 'activitypub_inbox_create', array( '\Activitypub\Rest\Inbox', 'handle_create' ), 10, 2 );
@@ -29,9 +30,10 @@ class Inbox {
 		\register_rest_route(
 			'activitypub/1.0', '/inbox', array(
 				array(
-					'methods'  => \WP_REST_Server::EDITABLE,
-					'callback' => array( '\Activitypub\Rest\Inbox', 'shared_inbox' ),
-					'permission_callback' => '__return_true'
+					'methods'             => \WP_REST_Server::EDITABLE,
+					'callback'            => array( '\Activitypub\Rest\Inbox', 'shared_inbox' ),
+					'args'                => self::shared_inbox_request_parameters(),
+					'permission_callback' => '__return_true',
 				),
 			)
 		);
@@ -39,10 +41,10 @@ class Inbox {
 		\register_rest_route(
 			'activitypub/1.0', '/users/(?P<user_id>\d+)/inbox', array(
 				array(
-					'methods'  => \WP_REST_Server::EDITABLE,
-					'callback' => array( '\Activitypub\Rest\Inbox', 'user_inbox' ),
-					'args'     => self::request_parameters(),
-					'permission_callback' => '__return_true'
+					'methods'             => \WP_REST_Server::EDITABLE,
+					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox' ),
+					'args'                => self::user_inbox_request_parameters(),
+					'permission_callback' => '__return_true',
 				),
 			)
 		);
@@ -134,12 +136,20 @@ class Inbox {
 	/**
 	 * The shared inbox
 	 *
-	 * @param  [type] $request [description]
+	 * @param  WP_REST_Request   $request
 	 *
-	 * @return WP_Error not yet implemented
+	 * @return WP_REST_Response
 	 */
 	public static function shared_inbox( $request ) {
+		$data = $request->get_params();
+		$type = \strtoloer( $request->get_param( 'type' ) );
 
+		foreach ( $users as $user ) {
+			\do_action( 'activitypub_inbox', $data, $user_id, $type );
+			\do_action( "activitypub_inbox_{$type}", $data, $user_id );
+		}
+
+		return new \WP_REST_Response( array(), 202 );
 	}
 
 	/**
@@ -147,7 +157,7 @@ class Inbox {
 	 *
 	 * @return array list of parameters
 	 */
-	public static function request_parameters() {
+	public static function user_inbox_request_parameters() {
 		$params = array();
 
 		$params['page'] = array(
@@ -161,25 +171,11 @@ class Inbox {
 
 		$params['id'] = array(
 			'required' => true,
-			'type' => 'string',
-			'validate_callback' => function( $param, $request, $key ) {
-				if ( ! \is_string( $param ) ) {
-					$param = $param['id'];
-				}
-				return ! \Activitypub\is_blacklisted( $param );
-			},
 			'sanitize_callback' => 'esc_url_raw',
 		);
 
 		$params['actor'] = array(
 			'required' => true,
-			//'type' => array( 'object', 'string' ),
-			'validate_callback' => function( $param, $request, $key ) {
-				if ( ! \is_string( $param ) ) {
-					$param = $param['id'];
-				}
-				return ! \Activitypub\is_blacklisted( $param );
-			},
 			'sanitize_callback' => function( $param, $request, $key ) {
 				if ( ! \is_string( $param ) ) {
 					$param = $param['id'];
@@ -192,14 +188,84 @@ class Inbox {
 			'required' => true,
 			//'type' => 'enum',
 			//'enum' => array( 'Create' ),
+		);
+
+		$params['object'] = array(
+			'required' => true,
+		);
+
+		return $params;
+	}
+
+	/**
+	 * The supported parameters
+	 *
+	 * @return array list of parameters
+	 */
+	public static function shared_inbox_request_parameters() {
+		$params = array();
+
+		$params['page'] = array(
+			'type' => 'integer',
+		);
+
+		$params['id'] = array(
+			'required' => true,
+			'type' => 'string',
+			'sanitize_callback' => 'esc_url_raw',
+		);
+
+		$params['actor'] = array(
+			'required' => true,
+			//'type' => array( 'object', 'string' ),
 			'sanitize_callback' => function( $param, $request, $key ) {
-				return \strtolower( $param );
+				if ( ! \is_string( $param ) ) {
+					$param = $param['id'];
+				}
+				return \esc_url_raw( $param );
 			},
+		);
+
+		$params['type'] = array(
+			'required' => true,
+			//'type' => 'enum',
+			//'enum' => array( 'Create' ),
 		);
 
 		$params['object'] = array(
 			'required' => true,
 			//'type' => 'object',
+		);
+
+		$params['to'] = array(
+			'required' => true,
+			'sanitize_callback' => function( $param, $request, $key ) {
+				if ( \is_string( $param ) ) {
+					$param = array( $param );
+				}
+
+				return $param;
+			},
+		);
+
+		$params['cc'] = array(
+			'sanitize_callback' => function( $param, $request, $key ) {
+				if ( \is_string( $param ) ) {
+					$param = array( $param );
+				}
+
+				return $param;
+			},
+		);
+
+		$params['bcc'] = array(
+			'sanitize_callback' => function( $param, $request, $key ) {
+				if ( \is_string( $param ) ) {
+					$param = array( $param );
+				}
+
+				return $param;
+			},
 		);
 
 		return $params;
@@ -272,7 +338,7 @@ class Inbox {
 		$activity->set_object( $object );
 		$activity->set_actor( \get_author_posts_url( $user_id ) );
 		$activity->set_to( $object['actor'] );
-		$activity->set_id( \get_author_posts_url( $user_id ) . '#follow' . \preg_replace( '~^https?://~', '', $object['actor'] ) );
+		$activity->set_id( \get_author_posts_url( $user_id ) . '#follow-' . \preg_replace( '~^https?://~', '', $object['actor'] ) );
 
 		$activity = $activity->to_simple_json();
 		$response = \Activitypub\safe_remote_post( $inbox, $activity, $user_id );
@@ -315,7 +381,10 @@ class Inbox {
 		// disable flood control
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
 
+		// do not require email for AP entries
+		add_filter( 'pre_option_require_name_email', '__return_false' );
 		$state = \wp_new_comment( $commentdata, true );
+		remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 		// re-add flood control
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
@@ -377,10 +446,7 @@ class Inbox {
 
 		}
 		
-		//TODO Then check PUBLIC/PRIVATE (assign comment_tye accordingly)
 		//Only create WP_Comment for public replies to posts
-		// ??? Only create comments for public replies to PUBLIC posts
-		// ??? Why not private replies to posts (should we manage private comments? [the global comments system])	
 		if ( ( in_array( 'https://www.w3.org/ns/activitystreams#Public', $object['to'] )
 			|| in_array( 'https://www.w3.org/ns/activitystreams#Public', $object['cc'] ) )
 			&& ( !empty( $comment_post_ID ) 
@@ -404,8 +470,11 @@ class Inbox {
 
 			// disable flood control
 			\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
-
+		
+			// do not require email for AP entries
+			\add_filter( 'pre_option_require_name_email', '__return_false' );
 			$state = \wp_new_comment( $commentdata, true );
+			\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 			// re-add flood control
 			\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
@@ -417,32 +486,34 @@ class Inbox {
 				$title = \wp_trim_words( $object['object']['summary'], 10 );
 				$summary = \wp_strip_all_tags( $object['object']['summary'] );
 			}
-			$to = get_user_by( 'id', $object['user_id'] );
-			$to_url = get_author_posts_url( $object['user_id'] );
-			error_log( 'inbox:handle_create:to: ' . $to_url );
-			// TODO if empty( $object['object']['summary'] ) trim+filter  $object['object']['content']  
+
 			$postdata = array(
 				'post_author' => $object['user_id'],
 				'post_content' => \wp_filter_kses( $object['object']['content'] ),
 				'post_title' => $title,
 				'post_excerpt' => $summary,
 				'post_status' => 'inbox',//private
-				'post_type' => 'mention',// . $audience,//activitypub
+				'post_type' => 'mention',
 				'post_parent' => \esc_url_raw( $object['object']['inReplyTo'] ),
 				'meta_input' => array(
-					'_audience' 	=> $audience,
-					'_ap_object' 	=> \serialize( $object ),
-					'_inreplyto' => \esc_url_raw( $object['object']['inReplyTo'] ),
-					'_author' 		=> $name,
-					'_author_url' 	=> \esc_url_raw( $object['actor'] ),
-					'_source_url' 	=> $source_url,
-					'_avatar_url' 	=> $avatar_url,
-					'_protocol' 	=> 'activitypub',
+					'audience' 	=> $audience,
+					'ap_object' 	=> \serialize( $object ),
+					'inreplyto' 	=> \esc_url_raw( $object['object']['inReplyTo'] ),
+					'author' 		=> $name,
+					'author_url' 	=> \esc_url_raw( $object['actor'] ),
+					'source_url' 	=> $source_url,
+					'avatar_url' 	=> $avatar_url,
+					'protocol' 	=> 'activitypub',
 				),
 			);
-
-		  
+			$post_id = \wp_insert_post( $postdata );
+			if( !is_wp_error( $post_id ) ) {
+				error_log( $post_id );
+				wp_send_json_success( array( 'post_id' => $post_id ), 200 );
+			} else {
+				error_log( $post_id->get_error_message() );
+				wp_send_json_error( $post_id->get_error_message() );
+			}
 		}
-
 	}
 }

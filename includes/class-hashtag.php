@@ -15,10 +15,6 @@ class Hashtag {
 			\add_filter( 'wp_insert_post', array( '\Activitypub\Hashtag', 'insert_post' ), 99, 2 );
 			\add_filter( 'the_content', array( '\Activitypub\Hashtag', 'the_content' ), 99, 2 );
 		}
-		if ( '1' === \get_option( 'activitypub_add_tags_as_hashtags', '0' ) ) {
-			\add_filter( 'activitypub_the_summary', array( '\Activitypub\Hashtag', 'add_hashtags_to_content' ), 10, 2 );
-			\add_filter( 'activitypub_the_content', array( '\Activitypub\Hashtag', 'add_hashtags_to_content' ), 10, 2 );
-		}
 	}
 
 	/**
@@ -68,29 +64,5 @@ class Hashtag {
 		}
 
 		return '#' . $tag;
-	}
-
-	/**
-	 * Adds all tags as hashtags to the post/summary content
-	 *
-	 * @param string  $content
-	 * @param WP_Post $post
-	 *
-	 * @return string
-	 */
-	public static function add_hashtags_to_content( $content, $post ) {
-		$tags = \get_the_tags( $post->ID );
-
-		if ( ! $tags ) {
-			return $content;
-		}
-
-		$hash_tags = array();
-
-		foreach ( $tags as $tag ) {
-			$hash_tags[] = \sprintf( '<a rel="tag" class="u-tag u-category" href="%s">#%s</a>', \get_tag_link( $tag ), $tag->slug );
-		}
-
-		return $content . '<p>' . \implode( ' ', $hash_tags ) . '</p>';
 	}
 }

@@ -34,9 +34,6 @@ class Admin {
 
 		\add_action( 'load-' . $followers_list_page, array( '\Activitypub\Admin', 'add_followers_list_help_tab' ) );
 
-		$messages_list_page = \add_menu_page( \__( 'Messages', 'activitypub' ), \__( 'Messages', 'activitypub' ), 'read', 'activitypub-messages-list', array( '\Activitypub\Admin', 'messages_list_page' ), 'dashicons-format-chat', 26 );
-
-		\add_action( 'load-' . $messages_list_page, array( '\Activitypub\Admin', 'add_messages_list_help_tab' ) );
 	}
 
 	/**
@@ -54,26 +51,27 @@ class Admin {
 	}
 
 	/**
-	 * Load user messages page
-	 */
-	public static function messages_list_page() {
-		\load_template( \dirname( __FILE__ ) . '/../templates/messages-list.php' );
-	}
-
-	/**
-	 * Register PubSubHubbub settings
+	 * Register ActivityPub settings
 	 */
 	public static function register_settings() {
 		\register_setting(
 			'activitypub', 'activitypub_post_content_type', array(
 				'type' => 'string',
-				'description' => \__( 'Use title and link, summary or full content', 'activitypub' ),
+				'description' => \__( 'Use title and link, summary, full or custom content', 'activitypub' ),
 				'show_in_rest' => array(
 					'schema' => array(
 						'enum' => array( 'title', 'excerpt', 'content' ),
 					),
 				),
 				'default' => 'content',
+			)
+		);
+		\register_setting(
+			'activitypub', 'activitypub_custom_post_content', array(
+				'type' => 'string',
+				'description' => \__( 'Define your own custom post template', 'activitypub' ),
+				'show_in_rest' => true,
+				'default' => ACTIVITYPUB_CUSTOM_POST_CONTENT,
 			)
 		);
 		\register_setting(
@@ -89,13 +87,6 @@ class Admin {
 			)
 		);
 		\register_setting(
-			'activitypub', 'activitypub_use_shortlink', array(
-				'type' => 'boolean',
-				'description' => \__( 'Use the Shortlink instead of the permalink', 'activitypub' ),
-				'default' => 0,
-			)
-		);
-		\register_setting(
 			'activitypub', 'activitypub_use_hashtags', array(
 				'type' => 'boolean',
 				'description' => \__( 'Add hashtags in the content as native tags and replace the #tag with the tag-link', 'activitypub' ),
@@ -103,10 +94,10 @@ class Admin {
 			)
 		);
 		\register_setting(
-			'activitypub', 'activitypub_add_tags_as_hashtags', array(
-				'type' => 'boolean',
-				'description' => \__( 'Add all tags as hashtags at the end of each activity', 'activitypub' ),
-				'default' => 0,
+			'activitypub', 'activitypub_allowed_html', array(
+				'type' => 'string',
+				'description' => \__( 'List of HTML elements that are allowed in activities.', 'activitypub' ),
+				'default' => ACTIVITYPUB_ALLOWED_HTML,
 			)
 		);
 		\register_setting(
@@ -115,14 +106,6 @@ class Admin {
 				'description'  => \esc_html__( 'Enable ActivityPub support for post types', 'activitypub' ),
 				'show_in_rest' => true,
 				'default'      => array( 'post', 'pages' ),
-			)
-		);
-		\register_setting(
-			'activitypub', 'activitypub_blacklist', array(
-				'type'         => 'string',
-				'description'  => \esc_html__( 'Block fediverse instances', 'activitypub' ),
-				'show_in_rest' => true,
-				'default'      => 'gab.com',
 			)
 		);
 	}
@@ -148,9 +131,6 @@ class Admin {
 	}
 
 	public static function add_followers_list_help_tab() {
-		// todo
-	}
-	public static function add_messages_list_help_tab() {
 		// todo
 	}
 

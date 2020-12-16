@@ -20,18 +20,19 @@ namespace Activitypub;
  */
 function init() {
 	\defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|^)#(\w*[A-Za-z_]+\w*)' );
+	\defined( 'ACTIVITYPUB_ALLOWED_HTML' ) || \define( 'ACTIVITYPUB_ALLOWED_HTML', '<strong><a><p><ul><ol><li><code><blockquote><pre><img>' );
+	\defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<p><strong>%title%</strong></p>\n\n%content%\n\n<p>%hashtags%</p>\n\n<p>%shortlink%</p>" );
 
 	require_once \dirname( __FILE__ ) . '/includes/table/followers-list.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once \dirname( __FILE__ ) . '/includes/peer/class-followers.php';
 	require_once \dirname( __FILE__ ) . '/includes/functions.php';
 
-	require_once \dirname( __FILE__ ) . '/includes/class-activity-dispatcher.php';
-	\Activitypub\Activity_Dispatcher::init();
-
 	require_once \dirname( __FILE__ ) . '/includes/model/class-activity.php';
 	require_once \dirname( __FILE__ ) . '/includes/model/class-post.php';
-	\Activitypub\Model\Post::init();
+
+	require_once \dirname( __FILE__ ) . '/includes/class-activity-dispatcher.php';
+	\Activitypub\Activity_Dispatcher::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/model/class-comment.php';
 	
@@ -60,8 +61,11 @@ function init() {
 	require_once \dirname( __FILE__ ) . '/includes/rest/class-webfinger.php';
 	\Activitypub\Rest\Webfinger::init();
 
-	require_once \dirname( __FILE__ ) . '/includes/rest/class-nodeinfo.php';
-	\Activitypub\Rest\NodeInfo::init();
+	// load NodeInfo endpoints only if blog is public
+	if ( 1 === \get_option( 'blog_public', 1 ) ) {
+		require_once \dirname( __FILE__ ) . '/includes/rest/class-nodeinfo.php';
+		\Activitypub\Rest\NodeInfo::init();
+	}
 
 	require_once \dirname( __FILE__ ) . '/includes/class-admin.php';
 	\Activitypub\Admin::init();

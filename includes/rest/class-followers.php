@@ -23,9 +23,9 @@ class Followers {
 		\register_rest_route(
 			'activitypub/1.0', '/users/(?P<id>\d+)/followers', array(
 				array(
-					'methods'  => \WP_REST_Server::READABLE,
-					'callback' => array( '\Activitypub\Rest\Followers', 'get' ),
-					'args'     => self::request_parameters(),
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( '\Activitypub\Rest\Followers', 'get' ),
+					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),
 			)
