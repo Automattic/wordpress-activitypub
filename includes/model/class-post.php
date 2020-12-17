@@ -228,6 +228,8 @@ class Post {
 		$content = \str_replace( '%permalink%', $this->get_the_post_link( 'permalink' ), $content );
 		$content = \str_replace( '%shortlink%', $this->get_the_post_link( 'shortlink' ), $content );
 		$content = \str_replace( '%hashtags%', $this->get_the_post_hashtags(), $content );
+		// backwards compatibility
+		$content = \str_replace( '%tags%', $this->get_the_post_hashtags(), $content );
 
 		$content = \trim( \preg_replace( '/[\r\n]{2,}/', '', $content ) );
 
@@ -253,7 +255,7 @@ class Post {
 		}
 
 		if ( 'content' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "%content%\n\n<p>%tags%</p>\n\n<p>%permalink%</p>";
+			return "%content%\n\n<p>%hashtags%</p>\n\n<p>%permalink%</p>";
 		}
 
 		return \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
