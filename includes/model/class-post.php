@@ -227,7 +227,7 @@ class Post {
 		$content = \str_replace( '%content%', $this->get_the_post_content(), $content );
 		$content = \str_replace( '%permalink%', $this->get_the_post_link( 'permalink' ), $content );
 		$content = \str_replace( '%shortlink%', $this->get_the_post_link( 'shortlink' ), $content );
-		$content = \str_replace( '%tags%', $this->get_the_post_hashtags(), $content );
+		$content = \str_replace( '%hashtags%', $this->get_the_post_hashtags(), $content );
 
 		$content = \trim( \preg_replace( '/[\r\n]{2,}/', '', $content ) );
 
