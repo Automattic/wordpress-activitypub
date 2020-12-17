@@ -112,7 +112,7 @@ class Signature {
 	}
 
 	public static function generate_digest( $body ) {
-		$digest = \base64_encode(  \hash('sha256', $body, true ) ); // phpcs:ignore
+		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore
 		return "$digest";
 	}
 }
