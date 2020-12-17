@@ -3,8 +3,8 @@ Contributors: pfefferle
 Donate link: https://notiz.blog/donate/
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
-Tested up to: 5.4.1
-Stable tag: 0.10.1
+Tested up to: 5.6
+Stable tag: 0.11.0
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -87,6 +87,15 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 == Changelog ==
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+
+= 0.11.0 =
+
+* add support for customizable post-content
+* first try of a delete activity
+* do not require email for AP entries. props [@akirk](https://github.com/akirk)
+* fix [timezones](https://github.com/pfefferle/wordpress-activitypub/issues/63) bug. props [@mediaformat](https://github.com/mediaformat)
+* fix [digest header](https://github.com/pfefferle/wordpress-activitypub/issues/104) bug. props [@mediaformat](https://github.com/mediaformat)
+
 
 = 0.10.1 =
 
