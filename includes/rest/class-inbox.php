@@ -152,6 +152,9 @@ class Inbox {
 			'required' => true,
 			//'type' => 'enum',
 			//'enum' => array( 'Create' ),
+			'sanitize_callback' => function( $param, $request, $key ) {
+				return \strtolower( $param );
+			},
 		);
 
 		$params['object'] = array(
@@ -194,6 +197,9 @@ class Inbox {
 			'required' => true,
 			//'type' => 'enum',
 			//'enum' => array( 'Create' ),
+			'sanitize_callback' => function( $param, $request, $key ) {
+				return \strtolower( $param );
+			},
 		);
 
 		$params['object'] = array(
