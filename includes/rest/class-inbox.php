@@ -287,8 +287,15 @@ class Inbox {
 	public static function handle_reaction( $object, $user_id ) {
 		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
 
+		$comment_post_id = \url_to_postid( $object['object'] );
+
+		// save only replys and reactions
+		if ( ! $comment_post_id ) {
+			return false;
+		}
+
 		$commentdata = array(
-			'comment_post_ID' => \url_to_postid( $object['object'] ),
+			'comment_post_ID' => $comment_post_id,
 			'comment_author' => \esc_attr( $meta['name'] ),
 			'comment_author_email' => '',
 			'comment_author_url' => \esc_url_raw( $object['actor'] ),
@@ -319,8 +326,15 @@ class Inbox {
 	public static function handle_create( $object, $user_id ) {
 		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
 
+		$comment_post_id = \url_to_postid( $object['object']['inReplyTo'] );
+
+		// save only replys and reactions
+		if ( ! $comment_post_id ) {
+			return false;
+		}
+
 		$commentdata = array(
-			'comment_post_ID' => \url_to_postid( $object['object']['inReplyTo'] ),
+			'comment_post_ID' => $comment_post_id,
 			'comment_author' => \esc_attr( $meta['name'] ),
 			'comment_author_url' => \esc_url_raw( $object['actor'] ),
 			'comment_content' => \wp_filter_kses( $object['object']['content'] ),
