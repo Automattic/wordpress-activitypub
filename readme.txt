@@ -1,5 +1,5 @@
 === ActivityPub ===
-Contributors: pfefferle
+Contributors: pfefferle, mediaformat
 Donate link: https://notiz.blog/donate/
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7

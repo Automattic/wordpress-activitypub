@@ -1,5 +1,5 @@
 # ActivityPub #
-**Contributors:** [pfefferle](https://profiles.wordpress.org/pfefferle)  
+**Contributors:** [pfefferle](https://profiles.wordpress.org/pfefferle), [mediaformat](https://profiles.wordpress.org/mediaformat)  
 **Donate link:** https://notiz.blog/donate/  
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
