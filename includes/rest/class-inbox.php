@@ -302,16 +302,12 @@ class Inbox {
 			),
 		);
 
-		// disable flood control
-		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
-
 		// do not require email for AP entries
-		add_filter( 'pre_option_require_name_email', '__return_false' );
-		$state = \wp_new_comment( $commentdata, true );
-		remove_filter( 'pre_option_require_name_email', '__return_false' );
+		\add_filter( 'pre_option_require_name_email', '__return_false' );
 
-		// re-add flood control
-		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+		$state = \wp_new_comment( $commentdata, true );
+
+		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 	}
 
 	/**
@@ -338,15 +334,11 @@ class Inbox {
 			),
 		);
 
-		// disable flood control
-		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
-
 		// do not require email for AP entries
-		add_filter( 'pre_option_require_name_email', '__return_false' );
-		$state = \wp_new_comment( $commentdata, true );
-		remove_filter( 'pre_option_require_name_email', '__return_false' );
+		\add_filter( 'pre_option_require_name_email', '__return_false' );
 
-		// re-add flood control
-		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+		$state = \wp_new_comment( $commentdata, true );
+
+		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 	}
 }
