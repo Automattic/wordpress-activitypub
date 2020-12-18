@@ -273,7 +273,9 @@ class Inbox {
 	 * @param  int   $user_id The id of the local blog-user
 	 */
 	public static function handle_unfollow( $object, $user_id ) {
-		\Activitypub\Peer\Followers::remove_follower( $object['actor'], $user_id );
+		if ( isset( $object['object'] ) && isset( $object['object']['type'] ) && 'Follow' === $object['object']['type'] ) {
+			\Activitypub\Peer\Followers::remove_follower( $object['actor'], $user_id );
+		}
 	}
 
 	/**
