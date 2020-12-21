@@ -4,7 +4,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
 **Tested up to:** 5.6  
-**Stable tag:** 0.11.2  
+**Stable tag:** 0.12.0  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -87,6 +87,12 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 ## Changelog ##
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+
+### 0.12.0 ###
+
+* use "pre_option_require_name_email" filter instead of "check_comment_flood". props [@akirk](https://github.com/akirk)
+* save only comments/replies
+* check for an explicit "undo -> follow" action. see https://wordpress.org/support/topic/qs-after-latest/
 
 ### 0.11.2 ###
 
