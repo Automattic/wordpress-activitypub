@@ -316,6 +316,7 @@ class Inbox {
 		\add_filter( 'pre_option_require_name_email', '__return_false' );
 
 		$state = \wp_new_comment( $commentdata, true );
+		\wp_set_comment_status( $state, 'hold' );
 
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
