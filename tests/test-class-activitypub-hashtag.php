@@ -10,15 +10,16 @@ class Test_Activitypub_Hashtag extends WP_UnitTestCase {
 	}
 
 	public function the_content_provider() {
-		wp_create_term( 'object', 'post_tag' );
-		$object = get_term_by( 'name', 'object', 'post_tag' );
-		$link = get_term_link( $object, 'post_tag' );
+		\wp_create_term( 'object', 'post_tag' );
+		$object = \get_term_by( 'name', 'object', 'post_tag' );
+		$link = \get_term_link( $object, 'post_tag' );
 
 		return array(
 			array( 'test', 'test' ),
 			array( '#test', '#test' ),
 			array( 'hallo #test test', 'hallo #test test' ),
 			array( 'hallo #object test', 'hallo <a rel="tag" class="u-tag u-category" href="' . $link . '">#object</a> test' ),
+			array( '#object test', '<a rel="tag" class="u-tag u-category" href="' . $link . '">#object</a> test' ),
 			array( 'hallo <a href="http://test.test/#object">test</a> test', 'hallo <a href="http://test.test/#object">test</a> test' ),
 			array( 'hallo <a href="http://test.test/#object">#test</a> test', 'hallo <a href="http://test.test/#object">#test</a> test' ),
 			array( '<div>hallo #object test</div>', '<div>hallo <a rel="tag" class="u-tag u-category" href="' . $link . '">#object</a> test</div>' ),

@@ -1,10 +1,10 @@
 === ActivityPub ===
-Contributors: pfefferle
+Contributors: pfefferle, mediaformat
 Donate link: https://notiz.blog/donate/
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
-Tested up to: 5.2.2
-Stable tag: 0.8.1
+Tested up to: 5.6
+Stable tag: 0.12.0
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -19,10 +19,13 @@ The plugin implements the ActivityPub protocol for your blog. Your readers will 
 
 The plugin works with the following federated platforms:
 
-* [mastodon](https://joinmastodon.org/)
-* [pleroma](https://pleroma.social/)
-* [friendica](https://friendi.ca/)
-* [hubzilla](https://hubzilla.org/)
+* [Mastodon](https://joinmastodon.org/)
+* [Pleroma](https://pleroma.social/)
+* [Friendica](https://friendi.ca/)
+* [HubZilla](https://hubzilla.org/)
+* [Pixelfed](https://pixelfed.org/)
+* [SocialHome](https://socialhome.network/)
+* [Misskey](https://join.misskey.page/)
 
 == Frequently Asked Questions ==
 
@@ -65,24 +68,82 @@ In order for webfinger to work, it must be mapped to the root directory of the U
 **Apache**
 
 Add the following to the .htaccess file in the root directory:
-`RedirectMatch "^\/\.well-known(.*)$" "\/blog\/\.well-known$1"`
-Where 'blog' is the path to the subdirectory at which your blog resides.
-
-= What if you are running your blog in a subdirectory? =
-
-In order for WebFinger to work, it must be mapped to the root directory of the URL on which your blog resides.
-
-**Apache**
-
-Add the following to the .htaccess file in the root directory:
 
 	RedirectMatch "^\/\.well-known(.*)$" "\/blog\/\.well-known$1"
+
+Where 'blog' is the path to the subdirectory at which your blog resides.
+
+**Nginx**
+
+Add the following to the site.conf in sites-available:
+
+	location ~* /.well-known {
+		allow all;
+		try_files $uri $uri/ /blog/?$args;
+	}
 
 Where 'blog' is the path to the subdirectory at which your blog resides.
 
 == Changelog ==
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+
+= 0.12.0 =
+
+* use "pre_option_require_name_email" filter instead of "check_comment_flood". props [@akirk](https://github.com/akirk)
+* save only comments/replies
+* check for an explicit "undo -> follow" action. see https://wordpress.org/support/topic/qs-after-latest/
+
+= 0.11.2 =
+
+* fix inconsistent `%tags%` placeholder
+
+= 0.11.1 =
+
+* fix follow/unfollow actions
+
+= 0.11.0 =
+
+* add support for customizable post-content
+* first try of a delete activity
+* do not require email for AP entries. props [@akirk](https://github.com/akirk)
+* fix [timezones](https://github.com/pfefferle/wordpress-activitypub/issues/63) bug. props [@mediaformat](https://github.com/mediaformat)
+* fix [digest header](https://github.com/pfefferle/wordpress-activitypub/issues/104) bug. props [@mediaformat](https://github.com/mediaformat)
+
+
+= 0.10.1 =
+
+* fix inbox activities, like follow
+* fix debug
+
+= 0.10.0 =
+
+* add image alt text to the ActivityStreams attachment property in a format that Mastodon can read. props [@BenLubar](https://github.com/BenLubar)
+* use the "summary" property for a title as Mastodon does. props [@BenLubar](https://github.com/BenLubar)
+* support authorized fetch to avoid having comments from "Anonymous". props [@BenLubar](https://github.com/BenLubar)
+* add new post type: "title and link only". props [@bgcarlisle](https://github.com/bgcarlisle)
+
+= 0.9.1 =
+
+* disable shared inbox
+* disable delete activity
+
+= 0.9.0 =
+
+* some code refactorings
+* fix #73
+
+= 0.8.3 =
+
+* fixed accept header bug
+
+= 0.8.2 =
+
+* add all required accept header
+* better/simpler accept-header handling
+* add debugging mechanism
+* Add setting to enable AP for different (public) Post-Types
+* explicit use of global functions
 
 = 0.8.1 =
 
@@ -206,7 +267,7 @@ Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github
 
 == Installation ==
 
-Follow the normal instructions for [installing WordPress plugins](https://codex.wordpress.org/Managing_Plugins#Installing_Plugins).
+Follow the normal instructions for [installing WordPress plugins](https://wordpress.org/support/article/managing-plugins/).
 
 = Automatic Plugin Installation =
 

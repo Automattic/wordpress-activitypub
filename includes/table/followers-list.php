@@ -1,14 +1,14 @@
 <?php
 namespace Activitypub\Table;
 
-if ( ! class_exists( '\WP_List_Table' ) ) {
+if ( ! \class_exists( '\WP_List_Table' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 }
 
 class Followers_List extends \WP_List_Table {
 	public function get_columns() {
 		return array(
-			'identifier' => __( 'Identifier', 'activitypub' ),
+			'identifier' => \__( 'Identifier', 'activitypub' ),
 		);
 	}
 
@@ -25,8 +25,8 @@ class Followers_List extends \WP_List_Table {
 
 		$this->items = array();
 
-		foreach ( \Activitypub\Db\Followers::get_followers( get_current_user_id() ) as $follower ) {
-			$this->items[]['identifier'] = esc_attr( $follower );
+		foreach ( \Activitypub\Peer\Followers::get_followers( \get_current_user_id() ) as $follower ) {
+			$this->items[]['identifier'] = \esc_attr( $follower );
 		}
 	}
 

@@ -7,6 +7,8 @@
 .codeclimate.yml
 .data
 .svnignore
+.wordpress-org
+.php_cs
 Gruntfile.js
 LINGUAS
 Makefile

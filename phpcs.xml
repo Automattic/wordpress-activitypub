@@ -4,8 +4,9 @@
 	<file>./activitypub.php</file>
 	<file>./includes/</file>
 	<config name="minimum_supported_wp_version" value="4.7"/>
-	<exclude-pattern>*/includes/*\.(inc|css|js|svg)</exclude-pattern>
+	<exclude-pattern>*\.(inc|css|js|svg)</exclude-pattern>
 	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
 	<rule ref="PHPCompatibility"/>
 	<config name="testVersion" value="5.6-"/>
 	<rule ref="WordPress-Core">
