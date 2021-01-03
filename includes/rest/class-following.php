@@ -21,7 +21,7 @@ class Following {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0', '/users/(?P<id>\d+)/following', array(
+			'activitypub/1.0', '/users/(?P<user_id>\d+)/following', array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( '\Activitypub\Rest\Following', 'get' ),
@@ -40,7 +40,7 @@ class Following {
 	 * @return WP_REST_Response
 	 */
 	public static function get( $request ) {
-		$user_id = $request->get_param( 'id' );
+		$user_id = $request->get_param( 'user_id' );
 		$user    = \get_user_by( 'ID', $user_id );
 
 		if ( ! $user ) {
@@ -87,7 +87,7 @@ class Following {
 			'type' => 'integer',
 		);
 
-		$params['id'] = array(
+		$params['user_id'] = array(
 			'required' => true,
 			'type' => 'integer',
 		);

@@ -21,7 +21,7 @@ class Outbox {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0', '/users/(?P<id>\d+)/outbox', array(
+			'activitypub/1.0', '/users/(?P<user_id>\d+)/outbox', array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( '\Activitypub\Rest\Outbox', 'user_outbox' ),
@@ -39,7 +39,7 @@ class Outbox {
 	 * @return WP_REST_Response
 	 */
 	public static function user_outbox( $request ) {
-		$user_id = $request->get_param( 'id' );
+		$user_id = $request->get_param( 'user_id' );
 		$author  = \get_user_by( 'ID', $user_id );
 
 		if ( ! $author ) {
@@ -117,7 +117,7 @@ class Outbox {
 			'type' => 'integer',
 		);
 
-		$params['id'] = array(
+		$params['user_id'] = array(
 			'required' => true,
 			'type' => 'integer',
 		);
