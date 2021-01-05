@@ -39,9 +39,9 @@ class Activitypub {
 		}
 
 		if ( \is_author() ) {
-			$json_template = \dirname( __FILE__ ) . '/../templates/json-author.php';
+			$json_template = \dirname( __FILE__ ) . '/../templates/author-json.php';
 		} elseif ( \is_singular() ) {
-			$json_template = \dirname( __FILE__ ) . '/../templates/json-post.php';
+			$json_template = \dirname( __FILE__ ) . '/../templates/post-json.php';
 		}
 
 		global $wp_query;

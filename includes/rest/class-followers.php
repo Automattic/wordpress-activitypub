@@ -61,6 +61,11 @@ class Followers {
 
 		$json->{'@context'} = \Activitypub\get_context();
 
+		$json->id = \home_url( \add_query_arg( null, null ) );
+		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
+		$json->actor = \get_author_posts_url( $user_id );
+		$json->type = 'OrderedCollectionPage';
+
 		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/followers" ); // phpcs:ignore
 		$json->totalItems = \Activitypub\count_followers( $user_id ); // phpcs:ignore
 		$json->orderedItems = \Activitypub\Peer\Followers::get_followers( $user_id ); // phpcs:ignore

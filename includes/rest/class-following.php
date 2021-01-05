@@ -61,13 +61,16 @@ class Following {
 
 		$json->{'@context'} = \Activitypub\get_context();
 
+		$json->id = \home_url( \add_query_arg( null, null ) );
+		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
+		$json->actor = \get_author_posts_url( $user_id );
+		$json->type = 'OrderedCollectionPage';
+
 		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/following" ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
-		$json->orderedItems = array(); // phpcs:ignore
+		$json->orderedItems = apply_filters( 'activitypub_following', array(), $user ); // phpcs:ignore
 
 		$json->first = $json->partOf; // phpcs:ignore
-
-		$json->first = \get_rest_url( null, "/activitypub/1.0/users/$user_id/following" );
 
 		$response = new \WP_REST_Response( $json, 200 );
 		$response->header( 'Content-Type', 'application/activity+json' );

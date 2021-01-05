@@ -30,7 +30,7 @@ class Inbox {
 			'activitypub/1.0', '/inbox', array(
 				array(
 					'methods'             => \WP_REST_Server::EDITABLE,
-					'callback'            => array( '\Activitypub\Rest\Inbox', 'shared_inbox' ),
+					'callback'            => array( '\Activitypub\Rest\Inbox', 'shared_inbox_post' ),
 					'args'                => self::shared_inbox_request_parameters(),
 					'permission_callback' => '__return_true',
 				),
@@ -41,8 +41,13 @@ class Inbox {
 			'activitypub/1.0', '/users/(?P<user_id>\d+)/inbox', array(
 				array(
 					'methods'             => \WP_REST_Server::EDITABLE,
-					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox' ),
+					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox_post' ),
 					'args'                => self::user_inbox_request_parameters(),
+					'permission_callback' => '__return_true',
+				),
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox_get' ),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -82,10 +87,66 @@ class Inbox {
 	 * Renders the user-inbox
 	 *
 	 * @param  WP_REST_Request   $request
+	 * @return WP_REST_Response
+	 */
+	public static function user_inbox_get( $request ) {
+		$user_id = $request->get_param( 'user_id' );
+		$author  = \get_user_by( 'ID', $user_id );
+
+		if ( ! $author ) {
+			return new \WP_Error( 'rest_invalid_param', \__( 'User not found', 'activitypub' ), array(
+				'status' => 404,
+				'params' => array(
+					'user_id' => \__( 'User not found', 'activitypub' ),
+				),
+			) );
+		}
+
+		$page = $request->get_param( 'page', 0 );
+
+		/*
+		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		 */
+		\do_action( 'activitypub_inbox_pre' );
+
+		$json = new \stdClass();
+
+		$json->{'@context'} = \Activitypub\get_context();
+		$json->id = \home_url( \add_query_arg( null, null ) );
+		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
+		$json->actor = \get_author_posts_url( $user_id );
+		$json->type = 'OrderedCollectionPage';
+		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/inbox" ); // phpcs:ignore
+
+		$json->totalItems = 0; // phpcs:ignore
+
+		$json->orderedItems = array(); // phpcs:ignore
+
+		$json->first = $json->partOf; // phpcs:ignore
+
+		// filter output
+		$json = \apply_filters( 'activitypub_inbox_array', $json );
+
+		/*
+		 * Action triggerd after the ActivityPub profile has been created and sent to the client
+		 */
+		\do_action( 'activitypub_inbox_post' );
+
+		$response = new \WP_REST_Response( $json, 200 );
+
+		$response->header( 'Content-Type', 'application/activity+json' );
+
+		return $response;
+	}
+
+	/**
+	 * Handles user-inbox requests
+	 *
+	 * @param  WP_REST_Request   $request
 	 *
 	 * @return WP_REST_Response
 	 */
-	public static function user_inbox( $request ) {
+	public static function user_inbox_post( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 
 		$data = $request->get_params();
@@ -104,7 +165,7 @@ class Inbox {
 	 *
 	 * @return WP_REST_Response
 	 */
-	public static function shared_inbox( $request ) {
+	public static function shared_inbox_post( $request ) {
 		$data = $request->get_params();
 		$type = \strtoloer( $request->get_param( 'type' ) );
 

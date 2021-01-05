@@ -24,7 +24,7 @@ class Outbox {
 			'activitypub/1.0', '/users/(?P<user_id>\d+)/outbox', array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Outbox', 'user_outbox' ),
+					'callback'            => array( '\Activitypub\Rest\Outbox', 'user_outbox_get' ),
 					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),
@@ -38,7 +38,7 @@ class Outbox {
 	 * @param  WP_REST_Request   $request
 	 * @return WP_REST_Response
 	 */
-	public static function user_outbox( $request ) {
+	public static function user_outbox_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 		$author  = \get_user_by( 'ID', $user_id );
 
