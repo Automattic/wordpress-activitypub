@@ -34,7 +34,7 @@ class Activitypub {
 	 * @return string The new path to the JSON template.
 	 */
 	public static function render_json_template( $template ) {
-		if ( ! \is_author() && ! \is_singular() ) {
+		if ( ! \is_author() && ! \is_singular() && ! \is_home() ) {
 			return $template;
 		}
 
@@ -42,6 +42,8 @@ class Activitypub {
 			$json_template = \dirname( __FILE__ ) . '/../templates/author-json.php';
 		} elseif ( \is_singular() ) {
 			$json_template = \dirname( __FILE__ ) . '/../templates/post-json.php';
+		} elseif ( \is_home() ) {
+			$json_template = \dirname( __FILE__ ) . '/../templates/blog-json.php';
 		}
 
 		global $wp_query;
