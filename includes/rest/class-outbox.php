@@ -70,24 +70,27 @@ class Outbox {
 		$count_posts = \wp_count_posts();
 		$json->totalItems = \intval( $count_posts->publish ); // phpcs:ignore
 
-		$posts = \get_posts( array(
-			'posts_per_page' => 10,
-			'author' => $user_id,
-			'offset' => $page * 10,
-		) );
+		$json->first = \add_query_arg( 'page', 1, $json->partOf ); // phpcs:ignore
+		$json->last  = \add_query_arg( 'page', \ceil ( $json->totalItems / 10 ), $json->partOf ); // phpcs:ignore
 
-		$json->first = \add_query_arg( 'page', 0, $json->partOf ); // phpcs:ignore
-		$json->last  = \add_query_arg( 'page', ( \ceil ( $json->totalItems / 10 ) ) - 1, $json->partOf ); // phpcs:ignore
-
-		if ( ( \ceil ( $json->totalItems / 10 ) ) - 1 > $page ) { // phpcs:ignore
-			$json->next  = \add_query_arg( 'page', ++$page, $json->partOf ); // phpcs:ignore
+		if ( $page && ( ( \ceil ( $json->totalItems / 10 ) ) > $page ) ) { // phpcs:ignore
+			$json->next  = \add_query_arg( 'page', $page + 1, $json->partOf ); // phpcs:ignore
 		}
 
-		foreach ( $posts as $post ) {
-			$activitypub_post = new \Activitypub\Model\Post( $post );
-			$activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_NONE );
-			$activitypub_activity->from_post( $activitypub_post->to_array() );
-			$json->orderedItems[] = $activitypub_activity->to_array(); // phpcs:ignore
+		if ( $page ) {
+			$posts = \get_posts( array(
+				'posts_per_page' => 10,
+				'author' => $user_id,
+				'offset' => ( $page - 1 ) * 10,
+				'post_type' => 'post',
+			) );
+
+			foreach ( $posts as $post ) {
+				$activitypub_post = new \Activitypub\Model\Post( $post );
+				$activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_NONE );
+				$activitypub_activity->from_post( $activitypub_post->to_array() );
+				$json->orderedItems[] = $activitypub_activity->to_array(); // phpcs:ignore
+			}
 		}
 
 		// filter output
