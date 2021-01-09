@@ -34,6 +34,11 @@ class Inbox {
 					'args'                => self::shared_inbox_request_parameters(),
 					'permission_callback' => '__return_true',
 				),
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( '\Activitypub\Rest\Inbox', 'inbox_get' ),
+					'permission_callback' => '__return_true',
+				),
 			)
 		);
 
@@ -47,7 +52,7 @@ class Inbox {
 				),
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox_get' ),
+					'callback'            => array( '\Activitypub\Rest\Inbox', 'inbox_get' ),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -89,19 +94,7 @@ class Inbox {
 	 * @param  WP_REST_Request   $request
 	 * @return WP_REST_Response
 	 */
-	public static function user_inbox_get( $request ) {
-		$user_id = $request->get_param( 'user_id' );
-		$author  = \get_user_by( 'ID', $user_id );
-
-		if ( ! $author ) {
-			return new \WP_Error( 'rest_invalid_param', \__( 'User not found', 'activitypub' ), array(
-				'status' => 404,
-				'params' => array(
-					'user_id' => \__( 'User not found', 'activitypub' ),
-				),
-			) );
-		}
-
+	public static function inbox_get( $request ) {
 		$page = $request->get_param( 'page', 0 );
 
 		/*
@@ -114,7 +107,6 @@ class Inbox {
 		$json->{'@context'} = \Activitypub\get_context();
 		$json->id = \home_url( \add_query_arg( null, null ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
-		$json->actor = \get_author_posts_url( $user_id );
 		$json->type = 'OrderedCollectionPage';
 		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/inbox" ); // phpcs:ignore
 
@@ -167,11 +159,26 @@ class Inbox {
 	 */
 	public static function shared_inbox_post( $request ) {
 		$data = $request->get_params();
-		$type = \strtoloer( $request->get_param( 'type' ) );
+		$type = $request->get_param( 'type' );
+
+		$users = self::extract_recipients( $data );
+
+		if ( ! $users ) {
+			return new \WP_Error( 'rest_invalid_param', \__( 'No recipients found', 'activitypub' ), array(
+				'status' => 404,
+				'params' => array(
+					'to' => \__( 'Please check/validate "to" field', 'activitypub' ),
+					'bto' => \__( 'Please check/validate "bto" field', 'activitypub' ),
+					'cc' => \__( 'Please check/validate "cc" field', 'activitypub' ),
+					'bcc' => \__( 'Please check/validate "bcc" field', 'activitypub' ),
+					'audience' => \__( 'Please check/validate "audience" field', 'activitypub' ),
+				),
+			) );
+		}
 
 		foreach ( $users as $user ) {
-			\do_action( 'activitypub_inbox', $data, $user_id, $type );
-			\do_action( "activitypub_inbox_{$type}", $data, $user_id );
+			\do_action( 'activitypub_inbox', $data, $user->ID, $type );
+			\do_action( "activitypub_inbox_{$type}", $data, $user->ID );
 		}
 
 		return new \WP_REST_Response( array(), 202 );
@@ -269,7 +276,7 @@ class Inbox {
 		);
 
 		$params['to'] = array(
-			'required' => true,
+			'required' => false,
 			'sanitize_callback' => function( $param, $request, $key ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );
@@ -427,5 +434,34 @@ class Inbox {
 
 		// re-add flood control
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	public static function extract_recipients( $data ) {
+		$recipients = array();
+		$users = array();
+
+		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
+			if ( array_key_exists( $i, $data ) ) {
+				$recipients = array_merge( $recipients, $data[ $i ] );
+			}
+
+			if ( array_key_exists( $i, $data['object'] ) ) {
+				$recipients = array_merge( $recipients, $data[ $i ] );
+			}
+		}
+
+		$recipients = array_unique( $recipients );
+
+		foreach ( $recipients as $recipient ) {
+			$user_id = \Activitypub\url_to_authorid( $recipient );
+
+			$user = get_user_by( 'id', $user_id );
+
+			if ( $user ) {
+				$users[] = $user;
+			}
+		}
+
+		return $users;
 	}
 }
