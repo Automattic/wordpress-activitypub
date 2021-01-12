@@ -14,7 +14,18 @@ function get_context() {
 			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
 			'PropertyValue' => 'schema:PropertyValue',
 			'schema' => 'http://schema.org#',
+			'pt' => 'https://joinpeertube.org/ns#',
+			'toot' => 'http://joinmastodon.org/ns#',
 			'value' => 'schema:value',
+			'Hashtag' => 'as:Hashtag',
+			'featured' => array(
+				'@id' => 'toot:featured',
+				'@type' => '@id'
+			),
+			'featuredTags' => array(
+				'@id' => 'toot:featuredTags',
+				'@type' => '@id'
+			),
 		),
 	);
 
