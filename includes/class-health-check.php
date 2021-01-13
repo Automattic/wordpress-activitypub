@@ -27,7 +27,7 @@ class Health_Check {
 
 	public static function test_profile_url() {
 		$result = array(
-			'label'       => \__( 'Profile URL accessible', 'activitypub' ),
+			'label'       => \__( 'Author URL accessible', 'activitypub' ),
 			'status'      => 'good',
 			'badge'       => array(
 				'label' => \__( 'ActivityPub', 'activitypub' ),
@@ -35,7 +35,7 @@ class Health_Check {
 			),
 			'description' => \sprintf(
 				'<p>%s</p>',
-				\__( 'Your profile URL is accessible and do not redirect to the home page.', 'activitypub' )
+				\__( 'Your author URL is accessible and supports the required "Accept" header.', 'activitypub' )
 			),
 			'actions'     => '',
 			'test'        => 'test_profile_url',
@@ -48,7 +48,7 @@ class Health_Check {
 			$result['label']       = \__( 'Profile URL is not accessible', 'activitypub' );
 			$result['description'] = \sprintf(
 				'<p>%s</p>',
-				\__( 'Authorization Headers are being blocked by your hosting provider. This will cause IndieAuth to fail.', 'activitypub' )
+				\__( 'Your author URL is not accessible and/or does not return valid JSON. Please check if the author URL is accessible and does not redirect to another page (often done by SEO plugins).', 'activitypub' )
 			);
 		}
 
@@ -58,9 +58,10 @@ class Health_Check {
 	public static function is_profile_url_accessible() {
 		$user = \wp_get_current_user();
 		$author_url = \get_author_posts_url( $user->ID );
+		$reference_author_url = self::get_author_posts_url( $user->ID, $user->user_nicename );
 
 		// check for "author" in URL
-		if ( false === \strpos( $author_url, 'author' ) ) {
+		if ( $author_url !== $reference_author_url ) {
 			return false;
 		}
 
@@ -79,5 +80,37 @@ class Health_Check {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Retrieve the URL to the author page for the user with the ID provided.
+	 *
+	 * @global WP_Rewrite $wp_rewrite WordPress rewrite component.
+	 *
+	 * @param int    $author_id       Author ID.
+	 * @param string $author_nicename Optional. The author's nicename (slug). Default empty.
+	 *
+	 * @return string The URL to the author's page.
+	 */
+	public static function get_author_posts_url( $author_id, $author_nicename = '' ) {
+		global $wp_rewrite;
+		$auth_id = (int) $author_id;
+		$link = $wp_rewrite->get_author_permastruct();
+
+		if ( empty( $link ) ) {
+			$file = home_url( '/' );
+			$link = $file . '?author=' . $auth_id;
+		} else {
+			if ( '' === $author_nicename ) {
+				$user = get_userdata( $author_id );
+				if ( ! empty( $user->user_nicename ) ) {
+					$author_nicename = $user->user_nicename;
+				}
+			}
+			$link = str_replace( '%author%', $author_nicename, $link );
+			$link = home_url( user_trailingslashit( $link ) );
+		}
+
+		return $link;
 	}
 }
