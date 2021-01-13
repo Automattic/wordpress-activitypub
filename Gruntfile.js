@@ -24,13 +24,12 @@ module.exports = function(grunt) {
       files: {
         src:  [
           '**/*.php',         // Include all files
-          'includes/*.php', // Include includes
-          '!sass/**',       // Exclude sass/
+          '!sass/**',         // Exclude sass/
           '!node_modules/**', // Exclude node_modules/
           '!tests/**',        // Exclude tests/
           '!vendor/**',       // Exclude vendor/
-          '!build/**',           // Exclude build/
-          '!static/**',   // Exclude static resources
+          '!build/**',        // Exclude build/
+          '!static/**',       // Exclude static resources
         ],
         expand: true
      }
@@ -42,25 +41,12 @@ module.exports = function(grunt) {
           'README.md': 'readme.txt'
         },
       },
-    },
-    makepot: {
-      target: {
-        options: {
-          mainFile: 'activitypub.php',
-          domainPath: '/languages',
-          exclude: ['bin/.*', '.git/.*', 'vendor/.*'],
-          potFilename: 'activitypub.pot',
-          type: 'wp-plugin',
-          updateTimestamp: true
-        }
-      }
     }
   });
 
   grunt.loadNpmTasks('grunt-wp-readme-to-markdown');
-  grunt.loadNpmTasks('grunt-wp-i18n');
   grunt.loadNpmTasks('grunt-checktextdomain');
 
   // Default task(s).
-  grunt.registerTask('default', ['wp_readme_to_markdown', 'makepot', 'checktextdomain']);
+  grunt.registerTask('default', ['wp_readme_to_markdown', 'checktextdomain']);
 };
