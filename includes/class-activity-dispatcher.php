@@ -31,7 +31,6 @@ class Activity_Dispatcher {
 		$activitypub_activity->from_post( $activitypub_post->to_array() );
 
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
-			$activitypub_activity->set_to( 'https://www.w3.org/ns/activitystreams#Public' );
 			$activitypub_activity->set_cc( $to );
 			$activity = $activitypub_activity->to_json(); // phpcs:ignore
 
@@ -52,7 +51,6 @@ class Activity_Dispatcher {
 		$activitypub_activity->from_post( $activitypub_post->to_array() );
 
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
-			$activitypub_activity->set_to( 'https://www.w3.org/ns/activitystreams#Public' );
 			$activitypub_activity->set_cc( $to );
 			$activity = $activitypub_activity->to_json(); // phpcs:ignore
 
@@ -73,7 +71,6 @@ class Activity_Dispatcher {
 		$activitypub_activity->from_post( $activitypub_post->to_array() );
 
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
-			$activitypub_activity->set_to( 'https://www.w3.org/ns/activitystreams#Public' );
 			$activitypub_activity->set_cc( $to );
 			$activity = $activitypub_activity->to_json(); // phpcs:ignore
 
