@@ -383,7 +383,12 @@ class Inbox {
 		// do not require email for AP entries
 		\add_filter( 'pre_option_require_name_email', '__return_false' );
 
+		// disable akismet if necessary
+		\add_filter( 'akismet_get_api_key', '__return_null');
+
 		$state = \wp_new_comment( $commentdata, true );
+
+		\remove_filter( 'akismet_get_api_key', '__return_null');
 
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
@@ -427,9 +432,12 @@ class Inbox {
 
 		// do not require email for AP entries
 		\add_filter( 'pre_option_require_name_email', '__return_false' );
+		// disable akismet if necessary
+		\add_filter( 'akismet_get_api_key', '__return_null');
 
 		$state = \wp_new_comment( $commentdata, true );
 
+		\remove_filter( 'akismet_get_api_key', '__return_null');
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 		// re-add flood control
