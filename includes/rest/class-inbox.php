@@ -17,8 +17,8 @@ class Inbox {
 		\add_filter( 'rest_pre_serve_request', array( '\Activitypub\Rest\Inbox', 'serve_request' ), 11, 4 );
 		\add_action( 'activitypub_inbox_follow', array( '\Activitypub\Rest\Inbox', 'handle_follow' ), 10, 2 );
 		\add_action( 'activitypub_inbox_undo', array( '\Activitypub\Rest\Inbox', 'handle_unfollow' ), 10, 2 );
-		//\add_action( 'activitypub_inbox_like', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
-		//\add_action( 'activitypub_inbox_announce', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
+		\add_action( 'activitypub_inbox_like', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
+		\add_action( 'activitypub_inbox_announce', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
 		\add_action( 'activitypub_inbox_create', array( '\Activitypub\Rest\Inbox', 'handle_create' ), 10, 2 );
 	}
 
@@ -362,14 +362,16 @@ class Inbox {
 			return false;
 		}
 
+		$name = isset( $meta['name'] ) ? ' from '.\esc_attr( $meta['name'] ) : '';
 		$commentdata = array(
 			'comment_post_ID' => $comment_post_id,
-			'comment_author' => \esc_attr( $meta['name'] ),
+			'comment_author' => 'Activitypub '.$object['type'].$name,
 			'comment_author_email' => '',
 			'comment_author_url' => \esc_url_raw( $object['actor'] ),
 			'comment_content' => \esc_url_raw( $object['actor'] ),
 			'comment_type' => \esc_attr( \strtolower( $object['type'] ) ),
 			'comment_parent' => 0,
+			'comment_type' => 'pingback',
 			'comment_meta' => array(
 				'source_url' => \esc_url_raw( $object['id'] ),
 				'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
@@ -415,6 +417,7 @@ class Inbox {
 			'comment_type' => '',
 			'comment_author_email' => '',
 			'comment_parent' => 0,
+			'comment_type' => 'comment',
 			'comment_meta' => array(
 				'source_url' => \esc_url_raw( $object['object']['url'] ),
 				'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
