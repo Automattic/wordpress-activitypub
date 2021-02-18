@@ -14,6 +14,9 @@ class Admin {
 		\add_action( 'admin_menu', array( '\Activitypub\Admin', 'admin_menu' ) );
 		\add_action( 'admin_init', array( '\Activitypub\Admin', 'register_settings' ) );
 		\add_action( 'show_user_profile', array( '\Activitypub\Admin', 'add_fediverse_profile' ) );
+		\add_action( 'admin_enqueue_scripts', array( '\Activitypub\Admin', 'scripts_reply_comments' ), 10, 2 );
+		\add_filter( 'comment_row_actions', array( '\Activitypub\Admin', 'reply_comments_actions' ), 10, 2 );
+
 	}
 
 	/**
@@ -139,4 +142,54 @@ class Admin {
 		<?php
 		\Activitypub\get_identifier_settings( $user->ID );
 	}
+
+	public static function reply_comments_actions( $actions, $comment ) {
+		//unset( $actions['reply'] );
+		$recipients = \Activitypub\get_recipients( $comment->comment_ID );
+		$summary = \Activitypub\get_summary( $comment->comment_ID );
+
+		//TODO revise for non-js reply action
+		// Public Reply
+		$reply_button = '<button type="button" data-comment-id="%d" data-post-id="%d" data-action="%s" class="%s button-link" aria-expanded="false" aria-label="%s" data-recipients="%s" data-summary="%s">%s</button>';
+		$actions['reply'] = sprintf(
+            $reply_button,
+            $comment->comment_ID,
+            $comment->comment_post_ID,
+            'replyto',
+            'vim-r comment-inline',
+			esc_attr__( 'Reply to this comment' ),
+			$recipients,
+			$summary,
+            __( 'Reply', 'activitypub' )
+		);
+		
+		// Private
+		// $actions['private_reply'] = sprintf(
+        //     $format,
+        //     $comment->comment_ID,
+        //     $comment->comment_post_ID,
+        //     'private_replyto',
+        //     'vim-r comment-inline',
+		// 	esc_attr__( 'Reply in private to this comment' ),
+		// 	$recipients,
+		// 	$summary,
+        //     __( 'Private reply', 'activitypub' )
+		// );
+
+		return $actions;
+	}
+
+	public static function scripts_reply_comments( $hook ) {
+		if ('edit-comments.php' !== $hook) {
+			return;
+		}
+		wp_enqueue_script( 'activitypub_client', 
+			plugin_dir_url(__FILE__) . '/activitypub.js', 
+			array('jquery'), 
+			filemtime( plugin_dir_path(__FILE__) . '/activitypub.js' ), 
+			true 
+		);
+	}
+	
+
 }

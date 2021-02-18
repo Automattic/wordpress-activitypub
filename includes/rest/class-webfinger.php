@@ -15,6 +15,8 @@ class Webfinger {
 	public static function init() {
 		\add_action( 'rest_api_init', array( '\Activitypub\Rest\Webfinger', 'register_routes' ) );
 		\add_action( 'webfinger_user_data', array( '\Activitypub\Rest\Webfinger', 'add_webfinger_discovery' ), 10, 3 );
+		\add_action( 'webfinger_lookup', array( '\Activitypub\Rest\Webfinger', 'webfinger_lookup' ), 10, 3 );
+
 	}
 
 	/**
@@ -116,5 +118,37 @@ class Webfinger {
 		);
 
 		return $array;
+	}
+
+	/**
+	 * WebFinger Lookup to find user uri
+	 *
+	 * @param string  $resource the WebFinger resource
+	 */
+	public static function webfinger_lookup( $webfinger ) {
+		$activity_profile = null;
+		if ( \substr($webfinger, 0, 1) === '@' ) {
+			$webfinger = substr( $webfinger, 1 );
+		} 
+		$url_host = \explode( '@', $webfinger );
+		$webfinger_query = 'https://' . \end( $url_host ) . '/.well-known/webfinger?resource=acct%3A' . \urlencode( $webfinger );
+
+		$response = \wp_safe_remote_get( $webfinger_query );
+		if ( ! is_wp_error( $response ) ) {
+			$ap_link = json_decode( $response['body'] );
+			if ( isset( $ap_link->links ) ) {
+				foreach ( $ap_link->links as $link ) {
+					if ( !property_exists( $link, 'type' ) ) {
+						continue;
+					}
+					if ( isset( $link->type ) && $link->type === 'application/activity+json' ) {
+						$activity_profile['href'] = $link->href;
+						$activity_profile['name'] = $webfinger;
+					}
+				}
+			} 
+		}
+		
+		return $activity_profile;
 	}
 }

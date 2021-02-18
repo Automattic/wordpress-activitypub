@@ -24,6 +24,11 @@ class Activitypub {
 		}
 
 		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
+
+		\add_filter( 'preprocess_comment' , array( '\Activitypub\Activitypub', 'preprocess_comment' ) );
+		\add_filter( 'comment_post' , array( '\Activitypub\Activitypub', 'postprocess_comment' ), 10, 3 );
+		\add_action( 'transition_comment_status', array( '\Activitypub\Activitypub', 'schedule_comment_activity' ), 20, 3 );
+
 	}
 
 	/**
@@ -126,6 +131,109 @@ class Activitypub {
 		}
 	}
 
+		/**
+	 * preprocess local comments for federated replies
+	 */
+	public static function preprocess_comment( $commentdata ) {
+		
+		//must only process replies from local actors
+		if ( !empty( $commentdata['user_id'] ) ) {
+			//\error_log( 'is_local user' );//TODO Test
+			//TODO TEST
+			$post_type = \get_object_subtype( 'post', $commentdata['comment_post_ID'] );
+			$ap_post_types = \get_option( 'activitypub_support_post_types' );
+			if ( !\is_null( $ap_post_types ) ) {
+				if ( in_array( $post_type, $ap_post_types ) ) {
+					$commentdata['comment_type'] = 'activitypub';
+					// transform webfinger mentions to links and add @mentions to cc
+					$tagged_content = \Activitypub\transform_tags( $commentdata['comment_content'] );
+					$commentdata['comment_content'] = $tagged_content['content'];
+					$commentdata['comment_meta']['mentions'] = $tagged_content['mentions'];
+				}
+			}
+		}
+    	return $commentdata;
+  	}
+
+	/**
+	 * postprocess_comment for federating replies and inbox-forwarding
+	 */
+	public static function postprocess_comment( $comment_id, $comment_approved, $commentdata ) {
+		//Admin users comments bypass transition_comment_status (auto approved)
+
+		//\error_log( 'postprocess_comment_handler: comment_status: ' . $comment_approved );
+		if ( $commentdata['comment_type'] === 'activitypub' ) {
+			if ( 
+				( $comment_approved === 1 ) && 
+				! empty( $commentdata['user_id'] ) &&
+				( $user = get_userdata( $commentdata['user_id'] ) ) && // get the user data
+				in_array( 'administrator', $user->roles )                   // check the roles
+			)  {
+				// Only for Admins?
+				$mentions = \get_comment_meta( $comment_id, 'mentions', true );
+				//\ActivityPub\Activity_Dispatcher::send_comment_activity( $comment_id ); // performance > followers collection
+				\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $comment_id ) );
+				 
+			} else {
+				// TODO check that this is unused
+				// TODO comment test as anon
+				// TODO comment test as registered 
+				// TODO comment test as anyother site settings
+				
+
+				// $replyto = get_comment_meta( $comment_id, 'replyto', true );
+				
+				//inbox forward prep
+				// if ( !empty( $ap_object ) ) {
+				// 	//if is remote user (has ap_object)
+				// 	//error_log( print_r( $ap_object, true ) );
+				// 	// TODO verify that deduplication check happens at object create.
+
+				// 	//if to/cc/audience contains local followers collection 
+				// 	//$local_user = \get_comment_author_url( $comment_id );
+				// 	//$is_local_user = \Activitypub\url_to_authorid( $commentdata['comment_author_url'] );
+					
+				// }
+			} 
+		}
+	}
+	  
+	/**
+	 * Schedule Activities
+	 *
+	 * @param int $comment
+	 */
+	public static function schedule_comment_activity( $new_status, $old_status, $activitypub_comment ) {
+		
+		// TODO format $activitypub_comment = new \Activitypub\Model\Comment( $comment );
+		if ( 'approved' === $new_status && 'approved' !== $old_status ) {
+			//should only federate replies from local actors
+			//should only federate replies to federated actors
+			
+			$ap_object = unserialize( \get_comment_meta( $activitypub_comment->comment_ID, 'ap_object', true ) );
+			if ( empty( $ap_object ) ) {
+				\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $activitypub_comment->comment_ID ) );
+			} else {
+				$local_user = \get_author_posts_url( $ap_object['user_id'] );
+				if ( !is_null( $local_user ) ) {
+					if ( in_array( $local_user, $ap_object['to'] )
+						|| in_array( $local_user, $ap_object['cc'] )
+						|| in_array( $local_user, $ap_object['audience'] )
+						|| in_array( $local_user, $ap_object['tag'] )
+						) {
+						//if inReplyTo, object, target and/or tag are (local-wp) objects 
+							//\ActivityPub\Activity_Dispatcher::inbox_forward_activity( $activitypub_comment );
+							\wp_schedule_single_event( \time(), 'activitypub_inbox_forward_activity', array( $activitypub_comment->comment_ID  ) );
+					}
+				}				
+			}
+		} elseif ( 'trash' === $new_status ) {
+			 	\wp_schedule_single_event( \time(), 'activitypub_send_delete_comment_activity', array( $activitypub_comment ) );
+		} else {
+		}
+	}
+
+
 	/**
 	 * Replaces the default avatar.
 	 *
@@ -143,7 +251,7 @@ class Activitypub {
 			return $args;
 		}
 
-		$allowed_comment_types = \apply_filters( 'get_avatar_comment_types', array( 'comment' ) );
+		$allowed_comment_types = \apply_filters( 'get_avatar_comment_types', array( 'comment', 'activitypub' ) );
 		if ( ! empty( $id_or_email->comment_type ) && ! \in_array( $id_or_email->comment_type, (array) $allowed_comment_types, true ) ) {
 			$args['url'] = false;
 			/** This filter is documented in wp-includes/link-template.php */

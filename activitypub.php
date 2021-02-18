@@ -30,6 +30,7 @@ function init() {
 
 	require_once \dirname( __FILE__ ) . '/includes/model/class-activity.php';
 	require_once \dirname( __FILE__ ) . '/includes/model/class-post.php';
+	require_once \dirname( __FILE__ ) . '/includes/model/class-comment.php';
 
 	require_once \dirname( __FILE__ ) . '/includes/class-activity-dispatcher.php';
 	\Activitypub\Activity_Dispatcher::init();

@@ -61,7 +61,12 @@ class Activity {
 	}
 
 	public function from_comment( $object ) {
-
+		$this->object = $object;
+		$this->published = $object['published'];
+		$this->actor = $object['attributedTo'];
+		$this->id = $object['id'] . '-activity';
+		$this->cc = $object['cc'];
+		$this->tag = $object['tag'];
 	}
 
 	public function to_comment() {
