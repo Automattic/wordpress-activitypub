@@ -7,11 +7,12 @@ $json->{'@context'} = \Activitypub\get_context();
 $json->id = \get_author_posts_url( $author_id );
 $json->type = 'Person';
 $json->name = \get_the_author_meta( 'display_name', $author_id );
-$json->summary = \html_entity_decode(
+$json->summary = apply_filters('activitypub_summary', \html_entity_decode(
 	\get_the_author_meta( 'description', $author_id ),
 	\ENT_QUOTES,
 	'UTF-8'
-);
+));
+
 $json->preferredUsername = \get_the_author_meta( 'login', $author_id ); // phpcs:ignore
 $json->url = \get_author_posts_url( $author_id );
 $json->icon = array(
@@ -43,7 +44,8 @@ $json->publicKey = array(
 $json->tag = array();
 $json->attachment = array();
 
-$json->attachment[] = array(
+$activitypub_default_meta = array(
+    array(
 	'type' => 'PropertyValue',
 	'name' => \__( 'Blog', 'activitypub' ),
 	'value' => \html_entity_decode(
@@ -51,9 +53,9 @@ $json->attachment[] = array(
 		\ENT_QUOTES,
 		'UTF-8'
 	),
-);
+),
 
-$json->attachment[] = array(
+array(
 	'type' => 'PropertyValue',
 	'name' => \__( 'Profile', 'activitypub' ),
 	'value' => \html_entity_decode(
@@ -61,10 +63,12 @@ $json->attachment[] = array(
 		\ENT_QUOTES,
 		'UTF-8'
 	),
-);
+)
+
+    );
 
 if ( \get_the_author_meta( 'user_url', $author_id ) ) {
-	$json->attachment[] = array(
+	$activitypub_default_meta[] = array(
 		'type' => 'PropertyValue',
 		'name' => \__( 'Website', 'activitypub' ),
 		'value' => \html_entity_decode(
@@ -74,6 +78,10 @@ if ( \get_the_author_meta( 'user_url', $author_id ) ) {
 		),
 	);
 }
+
+foreach (apply_filters('activitypub_meta', $activitypub_default_meta) as $meta) {
+    $json->attachment[] = $meta;
+ }
 
 /*
 $json->endpoints = array(
