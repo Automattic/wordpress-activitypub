@@ -82,12 +82,12 @@ $json->endpoints = array(
 */
 
 // filter output
-$json = \apply_filters( 'activitypub_json_author_array', $json );
+$json = \apply_filters( 'activitypub_json_author_array', $json, $author_id );
 
 /*
  * Action triggerd prior to the ActivityPub profile being created and sent to the client
  */
-\do_action( 'activitypub_json_author_pre' );
+\do_action( 'activitypub_json_author_pre', $author_id );
 
 $options = 0;
 // JSON_PRETTY_PRINT added in PHP 5.4
@@ -102,7 +102,7 @@ $options |= \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT;
  *
  * @param int $options The current options flags
  */
-$options = \apply_filters( 'activitypub_json_author_options', $options );
+$options = \apply_filters( 'activitypub_json_author_options', $options, $author_id );
 
 \header( 'Content-Type: application/activity+json' );
 echo \wp_json_encode( $json, $options );
@@ -110,4 +110,4 @@ echo \wp_json_encode( $json, $options );
 /*
  * Action triggerd after the ActivityPub profile has been created and sent to the client
  */
-\do_action( 'activitypub_json_author_post' );
+\do_action( 'activitypub_json_author_post', $author_id );
