@@ -20,11 +20,11 @@ function get_context() {
 			'Hashtag' => 'as:Hashtag',
 			'featured' => array(
 				'@id' => 'toot:featured',
-				'@type' => '@id'
+				'@type' => '@id',
 			),
 			'featuredTags' => array(
 				'@id' => 'toot:featuredTags',
-				'@type' => '@id'
+				'@type' => '@id',
 			),
 		),
 	);
