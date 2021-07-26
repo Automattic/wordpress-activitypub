@@ -34,11 +34,6 @@ class Inbox {
 					'args'                => self::shared_inbox_request_parameters(),
 					'permission_callback' => '__return_true',
 				),
-				array(
-					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Inbox', 'inbox_get' ),
-					'permission_callback' => '__return_true',
-				),
 			)
 		);
 
@@ -52,7 +47,7 @@ class Inbox {
 				),
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Inbox', 'inbox_get' ),
+					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox_get' ),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -94,7 +89,8 @@ class Inbox {
 	 * @param  WP_REST_Request   $request
 	 * @return WP_REST_Response
 	 */
-	public static function inbox_get( $request ) {
+	public static function user_inbox_get( $request ) {
+		$user_id = $request->get_param( 'user_id' );
 		$page = $request->get_param( 'page', 0 );
 
 		/*
