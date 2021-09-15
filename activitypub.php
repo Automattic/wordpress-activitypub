@@ -107,3 +107,12 @@ function flush_rewrite_rules() {
 }
 \register_activation_hook( __FILE__, '\Activitypub\flush_rewrite_rules' );
 \register_deactivation_hook( __FILE__, '\flush_rewrite_rules' );
+
+/**
+ * Only load code that needs BuddyPress to run once BP is loaded and initialized.
+ */
+function enable_buddypress_features() {
+	require_once \dirname( __FILE__ ) . '/integration/class-buddypress.php';
+	\Activitypub\Integration\Buddypress::init();
+}
+add_action( 'bp_include', '\Activitypub\enable_buddypress_features' );
