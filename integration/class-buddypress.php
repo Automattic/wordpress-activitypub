@@ -7,6 +7,8 @@ class Buddypress {
 	}
 
 	public static function add_user_metadata( $object, $author_id ) {
+		$object->url = bp_core_get_user_domain( $author_id ); //add BP member profile URL as user URL
+
 		// add BuddyPress' cover_image instead of WordPress' header_image
 		$cover_image_url = bp_attachments_get_attachment( 'url', array( 'item_id' => $author_id ) );
 
