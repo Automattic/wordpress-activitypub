@@ -139,6 +139,7 @@ class Inbox {
 
 		$data = $request->get_params();
 		$type = $request->get_param( 'type' );
+		$type = \strtolower( $type );
 
 		\do_action( 'activitypub_inbox', $data, $user_id, $type );
 		\do_action( "activitypub_inbox_{$type}", $data, $user_id );
@@ -173,6 +174,8 @@ class Inbox {
 		}
 
 		foreach ( $users as $user ) {
+			$type = \strtolower( $type );
+
 			\do_action( 'activitypub_inbox', $data, $user->ID, $type );
 			\do_action( "activitypub_inbox_{$type}", $data, $user->ID );
 		}
@@ -216,9 +219,9 @@ class Inbox {
 			'required' => true,
 			//'type' => 'enum',
 			//'enum' => array( 'Create' ),
-			'sanitize_callback' => function( $param, $request, $key ) {
-				return \strtolower( $param );
-			},
+			//'sanitize_callback' => function( $param, $request, $key ) {
+			//	return \strtolower( $param );
+			//},
 		);
 
 		$params['object'] = array(
@@ -261,9 +264,9 @@ class Inbox {
 			'required' => true,
 			//'type' => 'enum',
 			//'enum' => array( 'Create' ),
-			'sanitize_callback' => function( $param, $request, $key ) {
-				return \strtolower( $param );
-			},
+			//'sanitize_callback' => function( $param, $request, $key ) {
+			//	return \strtolower( $param );
+			//},
 		);
 
 		$params['object'] = array(
