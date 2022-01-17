@@ -55,8 +55,10 @@ class Activity {
 			$this->actor = $object['attributedTo'];
 		}
 
+		$type = \strtolower( $this->type );
+
 		if ( isset( $object['id'] ) ) {
-			$this->id = $object['id'];
+			$this->id = add_query_arg( 'activity', $type, $object['id'] );
 		}
 	}
 
