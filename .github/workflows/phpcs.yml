@@ -1,0 +1,29 @@
+name: PHP_CodeSniffer
+on: push
+jobs:
+  phpcs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          coverage: none
+          tools: composer, cs2pr
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+      - name: Setup cache
+        uses: pat-s/always-upload-cache@v1.1.4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          # Use the hash of composer.json as the key for your cache if you do not commit composer.lock. 
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.json') }}
+          #key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+      - name: Detect coding standard violations
+        run: ./vendor/bin/phpcs -n -q
