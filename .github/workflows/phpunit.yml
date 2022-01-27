@@ -1,0 +1,36 @@
+name: Unit Testing
+on: 
+    push:
+    pull_request:
+jobs:
+  phpcs:
+    runs-on: ubuntu-latest
+    services:
+     mysql:
+       image: mariadb:10.4
+       env:
+         MYSQL_ROOT_PASSWORD: root
+       ports:
+         - 3306:3306
+       options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=10s --health-retries=10
+    strategy:
+      matrix:
+        php-versions: ['5.6', '7.2', '7.3', '7.4']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-versions }}
+          coverage: none
+          tools: composer, phpunit-polyfills    
+          extensions: mysql
+      - name: Install Composer dependencies for PHP
+        uses: "ramsey/composer-install@v1"
+      - name: Setup Test Environment
+        run: bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1 latest
+      - name: Unit Testing
+        run: ./vendor/bin/phpunit
+        env:
+          PHP_VERSION: ${{ matrix.php-versions }}
