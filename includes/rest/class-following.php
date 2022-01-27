@@ -21,7 +21,9 @@ class Following {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0', '/users/(?P<user_id>\d+)/following', array(
+			'activitypub/1.0',
+			'/users/(?P<user_id>\d+)/following',
+			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( '\Activitypub\Rest\Following', 'get' ),
@@ -44,12 +46,16 @@ class Following {
 		$user    = \get_user_by( 'ID', $user_id );
 
 		if ( ! $user ) {
-			return new \WP_Error( 'rest_invalid_param', \__( 'User not found', 'activitypub' ), array(
-				'status' => 404,
-				'params' => array(
-					'user_id' => \__( 'User not found', 'activitypub' ),
-				),
-			) );
+			return new \WP_Error(
+				'rest_invalid_param',
+				\__( 'User not found', 'activitypub' ),
+				array(
+					'status' => 404,
+					'params' => array(
+						'user_id' => \__( 'User not found', 'activitypub' ),
+					),
+				)
+			);
 		}
 
 		/*

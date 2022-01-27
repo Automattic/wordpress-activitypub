@@ -14,7 +14,9 @@ class Ostatus {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0', '/ostatus/remote-follow', array(
+			'activitypub/1.0',
+			'/ostatus/remote-follow',
+			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( '\Activitypub\Rest\Ostatus', 'get' ),

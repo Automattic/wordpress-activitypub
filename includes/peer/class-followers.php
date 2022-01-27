@@ -50,9 +50,13 @@ class Followers {
 				$actor = $actor['id'];
 			}
 
-			return new \WP_Error( 'invalid_actor_object', \__( 'Unknown Actor schema', 'activitypub' ), array(
-				'status' => 404,
-			) );
+			return new \WP_Error(
+				'invalid_actor_object',
+				\__( 'Unknown Actor schema', 'activitypub' ),
+				array(
+					'status' => 404,
+				)
+			);
 		}
 
 		if ( ! \is_array( $followers ) ) {

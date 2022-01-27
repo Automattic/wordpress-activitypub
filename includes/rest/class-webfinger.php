@@ -24,7 +24,9 @@ class Webfinger {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0', '/webfinger', array(
+			'activitypub/1.0',
+			'/webfinger',
+			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( '\Activitypub\Rest\Webfinger', 'webfinger' ),

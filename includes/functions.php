@@ -153,11 +153,13 @@ function get_remote_metadata_by_actor( $actor ) {
 		return new \WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), $actor );
 	}
 
-	$user = \get_users( array (
-		'number' => 1,
-		'who'    => 'authors',
-		'fields' => 'ID',
-	) );
+	$user = \get_users(
+		array(
+			'number' => 1,
+			'who'    => 'authors',
+			'fields' => 'ID',
+		)
+	);
 
 	// we just need any user to generate a request signature
 	$user_id = \reset( $user );

@@ -23,7 +23,9 @@ class Nodeinfo {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0', '/nodeinfo/discovery', array(
+			'activitypub/1.0',
+			'/nodeinfo/discovery',
+			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( '\Activitypub\Rest\Nodeinfo', 'discovery' ),
@@ -33,7 +35,9 @@ class Nodeinfo {
 		);
 
 		\register_rest_route(
-			'activitypub/1.0', '/nodeinfo', array(
+			'activitypub/1.0',
+			'/nodeinfo',
+			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( '\Activitypub\Rest\Nodeinfo', 'nodeinfo' ),
@@ -43,7 +47,9 @@ class Nodeinfo {
 		);
 
 		\register_rest_route(
-			'activitypub/1.0', '/nodeinfo2', array(
+			'activitypub/1.0',
+			'/nodeinfo2',
+			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( '\Activitypub\Rest\Nodeinfo', 'nodeinfo2' ),
