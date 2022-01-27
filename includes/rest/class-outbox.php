@@ -21,7 +21,9 @@ class Outbox {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0', '/users/(?P<user_id>\d+)/outbox', array(
+			'activitypub/1.0',
+			'/users/(?P<user_id>\d+)/outbox',
+			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( '\Activitypub\Rest\Outbox', 'user_outbox_get' ),
@@ -43,12 +45,16 @@ class Outbox {
 		$author  = \get_user_by( 'ID', $user_id );
 
 		if ( ! $author ) {
-			return new \WP_Error( 'rest_invalid_param', \__( 'User not found', 'activitypub' ), array(
-				'status' => 404,
-				'params' => array(
-					'user_id' => \__( 'User not found', 'activitypub' ),
-				),
-			) );
+			return new \WP_Error(
+				'rest_invalid_param',
+				\__( 'User not found', 'activitypub' ),
+				array(
+					'status' => 404,
+					'params' => array(
+						'user_id' => \__( 'User not found', 'activitypub' ),
+					),
+				)
+			);
 		}
 
 		$page = $request->get_param( 'page', 0 );
@@ -78,12 +84,14 @@ class Outbox {
 		}
 
 		if ( $page ) {
-			$posts = \get_posts( array(
-				'posts_per_page' => 10,
-				'author' => $user_id,
-				'offset' => ( $page - 1 ) * 10,
-				'post_type' => 'post',
-			) );
+			$posts = \get_posts(
+				array(
+					'posts_per_page' => 10,
+					'author' => $user_id,
+					'offset' => ( $page - 1 ) * 10,
+					'post_type' => 'post',
+				)
+			);
 
 			foreach ( $posts as $post ) {
 				$activitypub_post = new \Activitypub\Model\Post( $post );

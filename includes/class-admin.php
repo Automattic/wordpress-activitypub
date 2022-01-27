@@ -54,7 +54,9 @@ class Admin {
 	 */
 	public static function register_settings() {
 		\register_setting(
-			'activitypub', 'activitypub_post_content_type', array(
+			'activitypub',
+			'activitypub_post_content_type',
+			array(
 				'type' => 'string',
 				'description' => \__( 'Use title and link, summary, full or custom content', 'activitypub' ),
 				'show_in_rest' => array(
@@ -66,7 +68,9 @@ class Admin {
 			)
 		);
 		\register_setting(
-			'activitypub', 'activitypub_custom_post_content', array(
+			'activitypub',
+			'activitypub_custom_post_content',
+			array(
 				'type' => 'string',
 				'description' => \__( 'Define your own custom post template', 'activitypub' ),
 				'show_in_rest' => true,
@@ -74,7 +78,9 @@ class Admin {
 			)
 		);
 		\register_setting(
-			'activitypub', 'activitypub_object_type', array(
+			'activitypub',
+			'activitypub_object_type',
+			array(
 				'type' => 'string',
 				'description' => \__( 'The Activity-Object-Type', 'activitypub' ),
 				'show_in_rest' => array(
@@ -86,21 +92,27 @@ class Admin {
 			)
 		);
 		\register_setting(
-			'activitypub', 'activitypub_use_hashtags', array(
+			'activitypub',
+			'activitypub_use_hashtags',
+			array(
 				'type' => 'boolean',
 				'description' => \__( 'Add hashtags in the content as native tags and replace the #tag with the tag-link', 'activitypub' ),
 				'default' => 0,
 			)
 		);
 		\register_setting(
-			'activitypub', 'activitypub_allowed_html', array(
+			'activitypub',
+			'activitypub_allowed_html',
+			array(
 				'type' => 'string',
 				'description' => \__( 'List of HTML elements that are allowed in activities.', 'activitypub' ),
 				'default' => ACTIVITYPUB_ALLOWED_HTML,
 			)
 		);
 		\register_setting(
-			'activitypub', 'activitypub_support_post_types', array(
+			'activitypub',
+			'activitypub_support_post_types',
+			array(
 				'type'         => 'string',
 				'description'  => \esc_html__( 'Enable ActivityPub support for post types', 'activitypub' ),
 				'show_in_rest' => true,

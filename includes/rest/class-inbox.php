@@ -27,7 +27,9 @@ class Inbox {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0', '/inbox', array(
+			'activitypub/1.0',
+			'/inbox',
+			array(
 				array(
 					'methods'             => \WP_REST_Server::EDITABLE,
 					'callback'            => array( '\Activitypub\Rest\Inbox', 'shared_inbox_post' ),
@@ -38,7 +40,9 @@ class Inbox {
 		);
 
 		\register_rest_route(
-			'activitypub/1.0', '/users/(?P<user_id>\d+)/inbox', array(
+			'activitypub/1.0',
+			'/users/(?P<user_id>\d+)/inbox',
+			array(
 				array(
 					'methods'             => \WP_REST_Server::EDITABLE,
 					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox_post' ),
@@ -161,16 +165,20 @@ class Inbox {
 		$users = self::extract_recipients( $data );
 
 		if ( ! $users ) {
-			return new \WP_Error( 'rest_invalid_param', \__( 'No recipients found', 'activitypub' ), array(
-				'status' => 404,
-				'params' => array(
-					'to' => \__( 'Please check/validate "to" field', 'activitypub' ),
-					'bto' => \__( 'Please check/validate "bto" field', 'activitypub' ),
-					'cc' => \__( 'Please check/validate "cc" field', 'activitypub' ),
-					'bcc' => \__( 'Please check/validate "bcc" field', 'activitypub' ),
-					'audience' => \__( 'Please check/validate "audience" field', 'activitypub' ),
-				),
-			) );
+			return new \WP_Error(
+				'rest_invalid_param',
+				\__( 'No recipients found', 'activitypub' ),
+				array(
+					'status' => 404,
+					'params' => array(
+						'to' => \__( 'Please check/validate "to" field', 'activitypub' ),
+						'bto' => \__( 'Please check/validate "bto" field', 'activitypub' ),
+						'cc' => \__( 'Please check/validate "cc" field', 'activitypub' ),
+						'bcc' => \__( 'Please check/validate "bcc" field', 'activitypub' ),
+						'audience' => \__( 'Please check/validate "audience" field', 'activitypub' ),
+					),
+				)
+			);
 		}
 
 		foreach ( $users as $user ) {

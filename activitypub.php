@@ -72,9 +72,12 @@ function init() {
 	\Activitypub\Health_Check::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/rest/class-server.php';
-	\add_filter( 'wp_rest_server_class', function() {
-		return '\Activitypub\Rest\Server';
-	} );
+	\add_filter(
+		'wp_rest_server_class',
+		function() {
+			return '\Activitypub\Rest\Server';
+		}
+	);
 
 	if ( \WP_DEBUG ) {
 		require_once \dirname( __FILE__ ) . '/includes/debug.php';

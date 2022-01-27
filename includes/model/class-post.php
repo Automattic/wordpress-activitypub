@@ -46,7 +46,7 @@ class Post {
 		$array = array(
 			'id' => $this->id,
 			'type' => $this->object_type,
-			'published' => \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date_gmt ) ),
+			'published' => \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date_gmt ) ),
 			'attributedTo' => \get_author_posts_url( $post->post_author ),
 			'summary' => $this->summary,
 			'inReplyTo' => null,
