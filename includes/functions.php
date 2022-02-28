@@ -182,6 +182,11 @@ function get_inbox_by_actor( $actor ) {
  */
 function get_publickey_by_actor( $actor, $key_id ) {
 	$metadata = \Activitypub\get_remote_metadata_by_actor( $actor );
+	
+	//Other Implementations may include an 'operations' query (Zap) 
+	if ( isset( $metadata['publicKey']['id'] ) ) {
+		$metadata['publicKey']['id'] = strtok($metadata['publicKey']['id'], "?");
+	}
 
 	if ( \is_wp_error( $metadata ) ) {
 		return $metadata;

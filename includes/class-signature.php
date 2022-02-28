@@ -1,12 +1,37 @@
 <?php
 namespace Activitypub;
 
+use phpseclib3\Crypt\RSA;
+
 /**
  * ActivityPub Signature Class
  *
  * @author Matthias Pfefferle
  */
 class Signature {
+
+	public const SIGNATURE_PATTERN = '/^
+        keyId="(?P<keyId>
+            (https?:\/\/[\w\-\.]+[\w]+)
+            (:[\d]+)?
+            ([\w\-\.#\/@]+)
+        )",
+        (algorithm="(?P<algorithm>[\w\s-]+)",)?
+        (headers="(?P<headers>[\(\)\w\s-]+)",)?
+        signature="(?P<signature>[\w+\/]+={0,2})"
+    /x';
+	
+	/**
+     * Allowed keys when splitting signature
+     *
+     * @var array
+     */
+    private $allowedKeys = [
+        'keyId',
+        'algorithm', // optional
+        'headers',   // optional
+        'signature',
+    ];
 
 	/**
 	 * @param int $user_id
@@ -109,6 +134,114 @@ class Signature {
 
 	public static function verify_signature( $headers, $signature ) {
 
+		// https://github.com/landrok/activitypub/blob/master/src/ActivityPhp/Server/Http/HttpSignature.php
+		$header_data = $request->get_headers(); 
+		$body = $request->get_body();	
+		if ( !$header_data['signature'][0] ) {
+            return false;
+        }
+        // Split it into its parts ( keyId, headers and signature )
+        $signature_parts = self::splitSignature( $header_data['signature'][0] );
+        if ( !count($signature_parts ) ) {
+            return false;
+        }
+        extract( $signature_parts );
+
+        // Fetch the public key linked from keyId
+        $actor = \strip_fragment_from_url( $keyId );
+        $publicKeyPem =  \Activitypub\get_publickey_by_actor( $actor,  $keyId );
+		
+		if (! is_wp_error( $publicKeyPem ) ) {
+			$pkey = \openssl_pkey_get_details( \openssl_pkey_get_public( $publicKeyPem ) );
+			$digest_gen = 'SHA-256=' . \base64_encode( \hash( 'sha256', $body, true ) );
+			if ( $digest_gen !== $header_data['digest'][0] ) {
+				return false;
+			}
+			// Create a comparison string from the plaintext headers we got 
+			// in the same order as was given in the signature header, 
+			$data_plain = self::getPlainText(
+				explode(' ', trim( $headers ) ), 
+				$request
+			);
+
+			// Verify that string using the public key and the original 
+			// signature.
+			$rsa = RSA::createKey()
+					->loadPublicKey( $pkey['key'])
+					->withHash('sha256'); 
+
+			$verified = $rsa->verify( $data_plain, \base64_decode( $signature ) );
+
+			if ( '1' === $verified ) {
+				return true;
+			} else {
+				return false;
+			}		
+		} else {
+			$activity = json_decode($body);
+			if ( $activity->type === 'Delete' ) {
+				// TODO eventually process ld signatures 
+			}
+		}
+	}
+
+	/**
+     * Split HTTP signature into its parts (keyId, headers and signature)
+     */
+    public static function splitSignature( $signature ) {
+	
+		$allowedKeys = [
+			'keyId',
+			'algorithm', // optional
+			'headers',   // optional
+			'signature',
+		];
+
+        if (!preg_match(self::SIGNATURE_PATTERN, $signature, $matches)) {
+            \error_log('Signature pattern failed' . print_r( $signature, true ) );
+            return [];
+        }
+
+        // Headers are optional
+        if (!isset($matches['headers']) || $matches['headers'] == '') {
+            $matches['headers'] = 'date';
+        }
+
+        return array_filter($matches, function($key) use ($allowedKeys) {
+                return !is_int($key) && in_array($key, $allowedKeys);
+        },  ARRAY_FILTER_USE_KEY );        
+    }
+
+	/**
+     * Get plain text that has been originally signed
+     * 
+     * @param  array $headers HTTP header keys
+     * @param  \Symfony\Component\HttpFoundation\Request $request 
+     */
+    public static function getPlainText( $headers, $request ) {
+
+		$url_params = $request->get_url_params();
+		if ( isset( $url_params ) && isset( $url_params['user_id'] ) ) {
+			$url_params = '';
+		}
+
+        $strings = [];
+        $request_target = sprintf(
+            '%s %s%s',
+            strtolower($request->get_method()),
+            $request->get_route(),
+            $url_params
+        );
+		 
+		 foreach ($headers as $value) {
+			 if ( $value == '(request-target)' ) {
+				 $strings[] = "$value: " . $request_target;
+			} else {
+				$strings[] = "$value: " . $request->get_header($value);
+			}
+		}
+
+        return implode("\n", $strings);   
 	}
 
 	public static function generate_digest( $body ) {

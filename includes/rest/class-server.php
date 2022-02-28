@@ -24,7 +24,7 @@ class Server extends \WP_REST_Server {
 
 		// check for content-sub-types like 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
 		if ( \preg_match( '/application\/([a-zA-Z+_-]+\+)json/', $content_type['value'] ) ) {
-			$request->set_header( 'Content-Type', 'application/json' );
+			// Signature Verification requires headers to be intact
 		}
 
 		// make request filterable

@@ -82,6 +82,7 @@ class Inbox {
 		$headers = $request->get_headers();
 
 		// verify signature
+		\Activitypub\Signature::verify_signature( $request );
 		//\Activitypub\Signature::verify_signature( $headers, $key );
 
 		return $served;

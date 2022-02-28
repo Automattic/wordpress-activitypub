@@ -15,6 +15,8 @@
 
 namespace Activitypub;
 
+require __DIR__ . '/vendor/autoload.php';
+
 /**
  * Initialize plugin
  */
