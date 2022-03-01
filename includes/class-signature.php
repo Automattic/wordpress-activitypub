@@ -20,18 +20,6 @@ class Signature {
         (headers="(?P<headers>[\(\)\w\s-]+)",)?
         signature="(?P<signature>[\w+\/]+={0,2})"
     /x';
-	
-	/**
-     * Allowed keys when splitting signature
-     *
-     * @var array
-     */
-    private $allowedKeys = [
-        'keyId',
-        'algorithm', // optional
-        'headers',   // optional
-        'signature',
-    ];
 
 	/**
 	 * @param int $user_id
@@ -132,7 +120,7 @@ class Signature {
 		}
 	}
 
-	public static function verify_signature( $headers, $signature ) {
+	public static function verify_signature( $request ) {
 
 		// https://github.com/landrok/activitypub/blob/master/src/ActivityPhp/Server/Http/HttpSignature.php
 		$header_data = $request->get_headers(); 
@@ -140,7 +128,8 @@ class Signature {
 		if ( !$header_data['signature'][0] ) {
             return false;
         }
-        // Split it into its parts ( keyId, headers and signature )
+        
+		// Split it into its parts ( keyId, headers and signature )
         $signature_parts = self::splitSignature( $header_data['signature'][0] );
         if ( !count($signature_parts ) ) {
             return false;
@@ -157,6 +146,7 @@ class Signature {
 			if ( $digest_gen !== $header_data['digest'][0] ) {
 				return false;
 			}
+
 			// Create a comparison string from the plaintext headers we got 
 			// in the same order as was given in the signature header, 
 			$data_plain = self::getPlainText(
@@ -177,12 +167,8 @@ class Signature {
 			} else {
 				return false;
 			}		
-		} else {
-			$activity = json_decode($body);
-			if ( $activity->type === 'Delete' ) {
-				// TODO eventually process ld signatures 
-			}
 		}
+		return true;
 	}
 
 	/**
@@ -198,7 +184,6 @@ class Signature {
 		];
 
         if (!preg_match(self::SIGNATURE_PATTERN, $signature, $matches)) {
-            \error_log('Signature pattern failed' . print_r( $signature, true ) );
             return [];
         }
 
