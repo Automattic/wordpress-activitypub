@@ -3,7 +3,7 @@ on:
     push:
     pull_request:
 jobs:
-  phpcs:
+  phpunit:
     runs-on: ubuntu-latest
     services:
      mysql:
