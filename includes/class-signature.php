@@ -129,21 +129,21 @@ class Signature {
             return false;
         }
         
-		// Split it into its parts ( keyId, headers and signature )
+		// Split signature into its parts
         $signature_parts = self::splitSignature( $header_data['signature'][0] );
-        if ( !count($signature_parts ) ) {
+		if ( !count( $signature_parts ) ) {
             return false;
         }
-        extract( $signature_parts );
+		extract( $signature_parts );// $keyId, $algorithm, $headers, $signature
 
         // Fetch the public key linked from keyId
         $actor = \strip_fragment_from_url( $keyId );
-        $publicKeyPem =  \Activitypub\get_publickey_by_actor( $actor,  $keyId );
+		$publicKeyPem = \Activitypub\get_publickey_by_actor( $actor,  $keyId );
 		
 		if (! is_wp_error( $publicKeyPem ) ) {
 			$pkey = \openssl_pkey_get_details( \openssl_pkey_get_public( $publicKeyPem ) );
 			$digest_gen = 'SHA-256=' . \base64_encode( \hash( 'sha256', $body, true ) );
-			if ( $digest_gen !== $header_data['digest'][0] ) {
+			if ( ! isset( $header_data['digest'][0] ) || ( $digest_gen !== $header_data['digest'][0] ) ) {
 				return false;
 			}
 
@@ -154,21 +154,41 @@ class Signature {
 				$request
 			);
 
-			// Verify that string using the public key and the original 
-			// signature.
+			// 2 methods because neither works ¯\_(ツ)_/¯
+			// phpseclib method
 			$rsa = RSA::createKey()
 					->loadPublicKey( $pkey['key'])
 					->withHash('sha256'); 
-
-			$verified = $rsa->verify( $data_plain, \base64_decode( $signature ) );
-
-			if ( '1' === $verified ) {
+			$verified = $rsa->verify( $signing_headers, \base64_decode( $signature ) );
+			if ( $verified > 0 ) {
+				\error_log( '$rsa->verify: //return true;' );
 				return true;
 			} else {
+				while ( $ossl_error = openssl_error_string() ) {
+					\error_log( '$rsa->verify(): ' . $ossl_error );
+				}
+				$activity = \json_decode( $body );
+				\error_log( 'activity->type: ' . print_r( $activity->type, true )  );
 				return false;
-			}		
+			}
+			
+			// openssl method
+			$verified = \openssl_verify( $signing_headers, 
+				\base64_decode( \normalize_whitespace( $signature ) ), 
+				$pkey['key'], 
+				\OPENSSL_ALGO_SHA256
+			);
+			if ( $verified > 0 ) {
+				\error_log( 'openssl_verify: //return true;' );
+				return true;
+			} else {
+				while ( $ossl_error = openssl_error_string() ) {
+					\error_log( 'openssl_error_string(): ' . $ossl_error );
+				}
+				return false;
+			}
 		}
-		return true;
+		return false;
 	}
 
 	/**
