@@ -140,8 +140,11 @@ class Signature {
         $actor = \strip_fragment_from_url( $keyId );
 		$publicKeyPem = \Activitypub\get_publickey_by_actor( $actor,  $keyId );
 		
-		if (! is_wp_error( $publicKeyPem ) ) {
+		if ( !is_wp_error( $publicKeyPem ) ) {
+			// Probably overkill since we already have a seemingly weelformed PEM
 			$pkey = \openssl_pkey_get_details( \openssl_pkey_get_public( $publicKeyPem ) );
+
+			// Verify Digest
 			$digest_gen = 'SHA-256=' . \base64_encode( \hash( 'sha256', $body, true ) );
 			if ( ! isset( $header_data['digest'][0] ) || ( $digest_gen !== $header_data['digest'][0] ) ) {
 				return false;
@@ -149,7 +152,7 @@ class Signature {
 
 			// Create a comparison string from the plaintext headers we got 
 			// in the same order as was given in the signature header, 
-			$data_plain = self::getPlainText(
+			$signing_headers = self::getPlainText(
 				explode(' ', trim( $headers ) ), 
 				$request
 			);
@@ -169,7 +172,7 @@ class Signature {
 				}
 				$activity = \json_decode( $body );
 				\error_log( 'activity->type: ' . print_r( $activity->type, true )  );
-				return false;
+				//return false;
 			}
 			
 			// openssl method
@@ -185,7 +188,7 @@ class Signature {
 				while ( $ossl_error = openssl_error_string() ) {
 					\error_log( 'openssl_error_string(): ' . $ossl_error );
 				}
-				return false;
+				//return false;
 			}
 		}
 		return false;
