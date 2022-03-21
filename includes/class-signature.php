@@ -10,7 +10,7 @@ use phpseclib3\Crypt\RSA;
  */
 class Signature {
 
-	public const SIGNATURE_PATTERN = '/^
+	const SIGNATURE_PATTERN = '/^
         keyId="(?P<keyId>
             (https?:\/\/[\w\-\.]+[\w]+)
             (:[\d]+)?
