@@ -27,7 +27,10 @@ class Activitypub {
 
 		\add_filter( 'preprocess_comment' , array( '\Activitypub\Activitypub', 'preprocess_comment' ) );
 		\add_filter( 'comment_post' , array( '\Activitypub\Activitypub', 'postprocess_comment' ), 10, 3 );
+		\add_filter( 'wp_update_comment_data', array( '\Activitypub\Activitypub', 'comment_updated_published' ), 20, 3 );
 		\add_action( 'transition_comment_status', array( '\Activitypub\Activitypub', 'schedule_comment_activity' ), 20, 3 );
+		\add_action( 'edit_comment', array( '\Activitypub\Activitypub', 'edit_comment' ), 20, 2 );//schedule_admin_comment_activity
+		\add_filter( 'get_comment_text', array( '\Activitypub\Activitypub', 'comment_append_edit_datetime' ), 10, 3 );
 
 	}
 
@@ -39,12 +42,16 @@ class Activitypub {
 	 * @return string The new path to the JSON template.
 	 */
 	public static function render_json_template( $template ) {
-		if ( ! \is_author() && ! \is_singular() && ! \is_home() ) {
+		if ( ! \is_author() && ! \is_singular() && ! \is_home() && ! \Activitypub\is_ap_comment() ) {
 			return $template;
 		}
 
 		if ( \is_author() ) {
 			$json_template = \dirname( __FILE__ ) . '/../templates/author-json.php';
+		} elseif ( \Activitypub\is_ap_replies() ) {
+			$json_template = \dirname( __FILE__ ) . '/../templates/replies-json.php';
+		} elseif ( \Activitypub\is_ap_comment() ) {
+			$json_template = \dirname( __FILE__ ) . '/../templates/comment-json.php';
 		} elseif ( \is_singular() ) {
 			$json_template = \dirname( __FILE__ ) . '/../templates/post-json.php';
 		} elseif ( \is_home() ) {
@@ -90,6 +97,12 @@ class Activitypub {
 	 */
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
+		$vars[] = 'ap_comment_id';//comment_id doesn't work, 'c' is probably too short and prone to collisions
+
+		//Collections review
+		$vars[] = 'replies';
+		$vars[] = 'collection_page';
+		$vars[] = 'only_other_accounts';
 
 		return $vars;
 	}
@@ -124,44 +137,35 @@ class Activitypub {
 
 		if ( 'publish' === $new_status && 'publish' !== $old_status ) {
 			\wp_schedule_single_event( \time(), 'activitypub_send_post_activity', array( $activitypub_post ) );
-		} elseif ( 'publish' === $new_status ) {
+		} elseif ( 'publish' === $new_status ) { //this triggers when restored post from trash, which may not be desired
 			\wp_schedule_single_event( \time(), 'activitypub_send_update_activity', array( $activitypub_post ) );
 		} elseif ( 'trash' === $new_status ) {
 			\wp_schedule_single_event( \time(), 'activitypub_send_delete_activity', array( $activitypub_post ) );
 		}
 	}
 
-		/**
+	/**
 	 * preprocess local comments for federated replies
 	 */
 	public static function preprocess_comment( $commentdata ) {
-		
-		//must only process replies from local actors
+		// only process replies from local actors
 		if ( !empty( $commentdata['user_id'] ) ) {
-			//\error_log( 'is_local user' );//TODO Test
-			//TODO TEST
-			$post_type = \get_object_subtype( 'post', $commentdata['comment_post_ID'] );
-			$ap_post_types = \get_option( 'activitypub_support_post_types' );
-			if ( !\is_null( $ap_post_types ) ) {
-				if ( in_array( $post_type, $ap_post_types ) ) {
-					$commentdata['comment_type'] = 'activitypub';
-					// transform webfinger mentions to links and add @mentions to cc
-					$tagged_content = \Activitypub\transform_tags( $commentdata['comment_content'] );
-					$commentdata['comment_content'] = $tagged_content['content'];
-					$commentdata['comment_meta']['mentions'] = $tagged_content['mentions'];
-				}
-			}
+			$commentdata['comment_type'] = 'activitypub';
+			// transform webfinger mentions to links and add @mentions to cc
+			$tagged_content = \Activitypub\transform_tags( $commentdata['comment_content'] );
+			$commentdata['comment_content'] = $tagged_content['content'];
+			$commentdata['comment_meta']['mentions'] = $tagged_content['mentions'];
 		}
-    	return $commentdata;
-  	}
+		return $commentdata;
+	}
 
 	/**
+	 * comment_post()
 	 * postprocess_comment for federating replies and inbox-forwarding
 	 */
 	public static function postprocess_comment( $comment_id, $comment_approved, $commentdata ) {
 		//Admin users comments bypass transition_comment_status (auto approved)
 
-		//\error_log( 'postprocess_comment_handler: comment_status: ' . $comment_approved );
 		if ( $commentdata['comment_type'] === 'activitypub' ) {
 			if ( 
 				( $comment_approved === 1 ) && 
@@ -176,7 +180,7 @@ class Activitypub {
 				 
 			} else {
 				// TODO check that this is unused
-				// TODO comment test as anon
+				// TODO comment test as anon / no auth_url, no fetchable status?
 				// TODO comment test as registered 
 				// TODO comment test as anyother site settings
 				
@@ -197,14 +201,27 @@ class Activitypub {
 			} 
 		}
 	}
-	  
+
+	/**
+	 * edit_comment()
+	 * 
+	 * Fires immediately after a comment is updated in the database.
+	 * Fires immediately before comment status transition hooks are fired. (useful only for admin)
+	 */
+	public static function edit_comment( $comment_ID, $data ) {
+		// advantage of ap_published is it would be set once, (does preprocess fire on edit?)
+		if ( ! is_null( $data['user_id'] ) ) {
+			\wp_schedule_single_event( \time(), 'activitypub_send_update_comment_activity', array( $comment_ID ) );
+		}
+	}
+
 	/**
 	 * Schedule Activities
-	 *
+	 * 
+	 * transition_comment_status()
 	 * @param int $comment
 	 */
 	public static function schedule_comment_activity( $new_status, $old_status, $activitypub_comment ) {
-		
 		// TODO format $activitypub_comment = new \Activitypub\Model\Comment( $comment );
 		if ( 'approved' === $new_status && 'approved' !== $old_status ) {
 			//should only federate replies from local actors
@@ -222,17 +239,35 @@ class Activitypub {
 						|| in_array( $local_user, $ap_object['tag'] )
 						) {
 						//if inReplyTo, object, target and/or tag are (local-wp) objects 
-							//\ActivityPub\Activity_Dispatcher::inbox_forward_activity( $activitypub_comment );
 							\wp_schedule_single_event( \time(), 'activitypub_inbox_forward_activity', array( $activitypub_comment->comment_ID  ) );
 					}
 				}				
 			}
 		} elseif ( 'trash' === $new_status ) {
-			 	\wp_schedule_single_event( \time(), 'activitypub_send_delete_comment_activity', array( $activitypub_comment ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_delete_comment_activity', array( $activitypub_comment ) );
+		} elseif ( $old_status === $new_status ) {
+			//TODO Test with non-admin user
+			\wp_schedule_single_event( \time(), 'activitypub_send_update_comment_activity', array( $activitypub_comment->comment_ID ) );
 		} else {
+			//error_log( 'schedule_update_comment_activity: else?:' );
 		}
 	}
-
+	
+	/**
+	 * get_comment_text( $comment )
+	 * 
+	 * Filters the comment content before it is updated in the database.
+	 */
+	public static function comment_append_edit_datetime( $comment_text, $comment, $args ) {
+		if ( 'activitypub' === $comment->comment_type ) {
+			$updated = \wp_date( 'Y-m-d H:i:s', \strtotime( \get_comment_meta( $comment->comment_ID, 'ap_last_modified', true ) ) );
+			if( $updated ) {
+				$append_updated = "<div>(Last edited on <time class='modified' datetime='{$updated}'>$updated</time>)</div>";
+				$comment_text .= $append_updated;
+			}
+		}
+		return $comment_text;
+	}
 
 	/**
 	 * Replaces the default avatar.

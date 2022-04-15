@@ -17,6 +17,7 @@ class Activity {
 	private $to = array( 'https://www.w3.org/ns/activitystreams#Public' );
 	private $cc = array( 'https://www.w3.org/ns/activitystreams#Public' );
 	private $object = null;
+	private $tag = null;
 
 	const TYPE_SIMPLE = 'simple';
 	const TYPE_FULL = 'full';
@@ -71,8 +72,13 @@ class Activity {
 		$this->tag = $object['tag'];
 	}
 
-	public function to_comment() {
-
+	public function to_comment( $timestamp ) {
+		if ( $this->trash ) {
+			$this->deleted = $timestamp['deleted'];
+		}
+		if ( $this->updated) {
+			$this->updated = $timestamp['updated'];
+		}
 	}
 
 	public function from_remote_array( $array ) {

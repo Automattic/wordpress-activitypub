@@ -15,6 +15,9 @@ class Post {
 	private $attachments;
 	private $tags;
 	private $object_type;
+	private $deleted;
+	private $updated;
+	private $slug;
 
 	public function __construct( $post = null ) {
 		$this->post = \get_post( $post );
@@ -26,6 +29,11 @@ class Post {
 		$this->attachments = $this->generate_attachments();
 		$this->tags        = $this->generate_tags();
 		$this->object_type = $this->generate_object_type();
+		$this->replies	   = $this->generate_replies();
+		//$this->updated	   = $this->generate_updated();
+		$this->slug		   = \get_permalink( $this->id );
+		$this->updated	   = null;
+		$this->delete	   = $this->get_deleted();
 	}
 
 	public function __call( $method, $params ) {
@@ -50,6 +58,7 @@ class Post {
 			'attributedTo' => \get_author_posts_url( $post->post_author ),
 			'summary' => $this->summary,
 			'inReplyTo' => null,
+			'url' => \get_permalink( $post->ID ),
 			'content' => $this->content,
 			'contentMap' => array(
 				\strstr( \get_locale(), '_', true ) => $this->content,
@@ -59,7 +68,18 @@ class Post {
 			'attachment' => $this->attachments,
 			'tag' => $this->tags,
 		);
-
+		if ( $this->replies ) {
+			$array['replies'] = $this->replies;
+		}
+		if ( $this->deleted ) {
+			$array['deleted'] = \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
+			// TODO if using slugs instead of ids  _ap_deleted_slug
+			//$deleted_post_slug = \get_post_meta( $post->ID, '_ap_deleted_slug', true );
+			//$array['id'] = $deleted_post_slug;
+		}
+		if ( $this->updated ) {
+			$array['updated'] = \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
+		}
 		return \apply_filters( 'activitypub_post', $array );
 	}
 
@@ -69,7 +89,12 @@ class Post {
 
 	public function generate_id() {
 		$post      = $this->post;
-		$permalink = \get_permalink( $post );
+		$permalink = \add_query_arg( //
+			array( 
+				'p' => $post->ID,
+			), 
+			trailingslashit( site_url() )
+		);
 
 		// replace 'trashed' for delete activity
 		return \str_replace( '__trashed', '', $permalink );
@@ -151,6 +176,48 @@ class Post {
 		}
 
 		return $tags;
+	}
+	
+	public function generate_replies() {
+		$replies = null;
+		//\error_log( 'generate_replies: $post' . print_r( $this->post, true ) );
+		if ( $this->post->comment_count > 0 ) {
+			$args = array(
+				'post_id' => $this->post->ID,   // Use post_id, not post_ID
+				'hierarchical' => false,
+    			'status'       => 'approve',
+			);
+			$comments = \get_comments( $args );
+			$items = [];
+			
+			foreach ( $comments as $comment ){
+				// include self replies
+				if ( $this->post->post_author === $comment->user_id ) {
+					//$comment_url = $comment->comment_ID;
+					$comment_url = \add_query_arg( //
+						array( 
+							'p' => $this->post->ID,
+							'ap_comment_id' => $comment->comment_ID
+						), 
+						trailingslashit( site_url() )
+					);
+					//\error_log( 'generate_replies: $comment' . print_r( $comment, true ) );
+					$items[] = $comment_url;
+				}
+			}
+			//\error_log( 'generate_replies: $comments' . print_r( $comments, true ) );
+			$replies = (object) [
+				'type'	=> 'Collection',
+				'id'	=> \add_query_arg( array( 'replies' => '' ), $this->id ),
+				'first'	=> (object) [
+					'type'	=> 'CollectionPage',
+					'partOf'=> \add_query_arg( array( 'replies' => '' ), $this->id ),
+					'next'	=> \add_query_arg( array( 'replies' => '', 'page' => 1 ), $this->id ),
+					'items'	=> $items
+				],
+			];
+		}
+		return $replies;
 	}
 
 	/**
@@ -356,5 +423,19 @@ class Post {
 		}
 
 		return \implode( ' ', $hash_tags );
+	}
+
+	/**
+	 * Get deleted datetime
+	 */
+	public function get_deleted() {
+		$post = $this->post;
+		$deleted = null;
+		if ( 'trash' == $post->post_status ) {
+			
+			$deleted = \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
+			\error_log( 'trash: ' . print_r( $deleted, true ) );
+		}
+		return $deleted;
 	}
 }

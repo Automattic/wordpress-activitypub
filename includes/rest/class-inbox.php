@@ -20,6 +20,8 @@ class Inbox {
 		//\add_action( 'activitypub_inbox_like', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
 		//\add_action( 'activitypub_inbox_announce', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
 		\add_action( 'activitypub_inbox_create', array( '\Activitypub\Rest\Inbox', 'handle_create' ), 10, 2 );
+		\add_action( 'activitypub_inbox_update', array( '\Activitypub\Rest\Inbox', 'handle_update' ), 10, 2 );
+		\add_action( 'activitypub_inbox_delete', array( '\Activitypub\Rest\Inbox', 'handle_delete' ), 10, 2 );
 	}
 
 	/**
@@ -409,28 +411,27 @@ class Inbox {
 		$avatar_url = null;
 		$audience = \Activitypub\get_audience( $object );
 
-		//Determine parent post and/or parent comment
-		$comment_post_ID = $object_parent = $object_parent_ID = 0;
+		//Determine comment_post_ID and/or comment_parent
+		$comment_post_ID = $comment_parent = $comment_parent_ID = 0;
 		if ( isset( $object['object']['inReplyTo'] ) ) {
-			$comment_post_ID = \url_to_postid( $object['object']['inReplyTo'] );
-			//if not a direct reply to a post, remote post parent
-			if ( $comment_post_ID === 0 ) {
-				//verify if reply to a local or remote received comment
-				$object_parent_ID = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['inReplyTo'] ) );
-				if ( !is_null( $object_parent_ID ) ) {
-					//replied to a local comment (which has a post_ID)
-					$object_parent = get_comment( $object_parent_ID );
-					$comment_post_ID = $object_parent->comment_post_ID;
-				}
+			
+			$comment_parent_ID = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['inReplyTo'] ) );
+			
+			if ( !is_null( $comment_parent_ID ) ) {
+				//inReplyTo a known local comment
+				$comment_parent = \get_comment( $comment_parent_ID );
+				$comment_post_ID = $comment_parent->comment_post_ID;
+			} else {
+				//inReplyTo a known post
+				$comment_post_ID = \url_to_postid( $object['object']['inReplyTo'] );
 			}
-		}
+		} 
 
 		//not all implementaions use url
-		if ( isset( $object['object']['url'] ) ) {
-			$source_url = \esc_url_raw( $object['object']['url'] );
-		} else {
-			//could also try $object['object']['source']?
+		if ( isset( $object['object']['id'] ) ) {
 			$source_url = \esc_url_raw( $object['object']['id'] );
+		} else {
+			$source_url = \esc_url_raw( $object['object']['url'] );
 		}
 
 		// if no name is set use peer username
@@ -448,7 +449,7 @@ class Inbox {
 		if ( ( in_array( AS_PUBLIC, $object['to'] )
 			|| in_array( AS_PUBLIC, $object['cc'] ) )
 			&& ( !empty( $comment_post_ID ) 
-			|| !empty ( $object_parent ) 
+			|| !empty ( $comment_parent ) 
 			) ) {
 
 			$commentdata = array(
@@ -458,7 +459,7 @@ class Inbox {
 				'comment_content' => \wp_filter_kses( $object['object']['content'] ),
 				'comment_type' => 'activitypub',
 				'comment_author_email' => '',
-				'comment_parent' => $object_parent_ID,
+				'comment_parent' => $comment_parent_ID,
 				'comment_meta' => array(
 					'ap_object' => \serialize( $object ),
 					'source_url' => $source_url,
@@ -468,7 +469,7 @@ class Inbox {
 			);
 
 			// disable flood control
-			\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+			//\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
 
 			// do not require email for AP entries
 			\add_filter( 'pre_option_require_name_email', '__return_false' );
@@ -478,9 +479,87 @@ class Inbox {
 			\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 			// re-add flood control
-			\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+			//\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
 		}		
+	}
+
+	/**
+	 * Handles "Update" requests
+	 *
+	 * @param  array $object  The activity-object
+	 * @param  int   $user_id The id of the local blog-user
+	 */
+	public static function handle_update( $object, $user_id ) {
+		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
+		$avatar_url = null;
+		$audience = \Activitypub\get_audience( $object );
+
+		//Determine comment_ID
+		$object_comment_ID = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['id'] ) );
+		if ( !is_null( $object_comment_ID ) ) {
+			
+			//found a local comment id
+			$commentdata = \get_comment( $object_comment_ID, ARRAY_A );
+
+			//$commentdata['comment_ID'] = \esc_url_raw( $object_comment_ID );
+			$commentdata['comment_content'] = \wp_filter_kses( $object['object']['content'] );
+			$commentdata['comment_meta']['ap_published'] = \wp_date( 'Y-m-d H:i:s', strtotime( $object['object']['published'] ) );
+			$commentdata['comment_meta']['ap_last_modified'] = $object['object']['updated'];
+			$commentdata['comment_meta']['ap_object'] = \serialize( $object );
+
+			//apply_filters( 'wp_update_comment_data', $data, $comment, $commentarr );
+ 
+ 			// disable flood control
+			\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+			// do not require email for AP entries
+			\add_filter( 'pre_option_require_name_email', '__return_false' );
+
+			$state = \wp_update_comment( $commentdata, true );
+
+			\remove_filter( 'pre_option_require_name_email', '__return_false' );
+
+			// re-add flood control
+			\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 ); 
+		} 
+	}
+
+	/**
+	 * Handles "Delete" requests
+	 *
+	 * @param  array $object  The activity-object
+	 * @param  int   $user_id The id of the local blog-user
+	 */
+	public static function handle_delete( $object, $user_id ) {
+		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
+		$avatar_url = null;
+		$audience = \Activitypub\get_audience( $object );
+
+		if ( ! isset( $object['object']['id'] ) ) {
+			return;
+		}
+		//Determine comment_ID
+		$object_comment_ID = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['id'] ) );
+		if ( !is_null( $object_comment_ID ) ) {
+			
+			//found a local comment id
+			$commentdata = \get_comment( $object_comment_ID, ARRAY_A );
+ 
+ 			// disable flood control
+			\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+			// do not require email for AP entries
+			\add_filter( 'pre_option_require_name_email', '__return_false' );
+
+			// Should we trash or send back to moderation
+			$state = \wp_trash_comment( $commentdata['comment_ID'], true );
+
+			//\remove_filter( 'pre_option_require_name_email', '__return_false' );
+
+			// re-add flood control
+			\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 ); 
+		} 
 	}
 
 	public static function extract_recipients( $data ) {

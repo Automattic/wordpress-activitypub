@@ -58,14 +58,15 @@ function safe_remote_post( $url, $body, $user_id ) {
 
 	$response = \wp_safe_remote_post( $url, $args );
 
-	\do_action( 'activitypub_safe_remote_post_response', $response, $url, $body, $user_id );
+	//\do_action( 'activitypub_safe_remote_post_response', $response, $url, $body, $user_id );
 
 	return $response;
 }
 
 function forward_remote_post( $url, $body, $user_id ) {
 	$date = \gmdate( 'D, d M Y H:i:s T' );
-	$signature = \Activitypub\Signature::generate_signature( $user_id, $url, $date );
+	$digest = \Activitypub\Signature::generate_digest( $body );
+	$signature = \Activitypub\Signature::generate_signature( 1, $url, $date );
 
 	$wp_version = \get_bloginfo( 'version' );
 	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
@@ -250,6 +251,24 @@ function get_follower_inboxes( $user_id ) {
 	return $inboxes;
 }
 
+function get_mentioned_inboxes( $mentions ) {
+	$inboxes = array();
+
+	foreach ( $mentions as $mention ) {
+		$inbox = \Activitypub\get_inbox_by_actor( $mention['href'] );
+		if ( ! $inbox || \is_wp_error( $inbox ) ) {
+			continue;
+		}
+		// init array if empty
+		if ( ! isset( $inboxes[ $inbox ] ) ) {
+			$inboxes[ $inbox ] = array();
+		}
+		$inboxes[ $inbox ][] = $mention;
+	}
+
+	return $inboxes;
+}
+
 function get_identifier_settings( $user_id ) {
 	?>
 <table class="form-table">
@@ -332,36 +351,40 @@ function url_to_authorid( $url ) {
 
 	return 0;
 }
+
 /**
- * Verify if url is a local comment, 
+ * Verify if in_replyto_url is a local comment, 
  * Or if it is a previously received remote comment
  * 
  * return int comment_id
  */
-function url_to_commentid( $comment_url ) {
-	if ( empty( $comment_url ) ) {
+function url_to_commentid( $in_replyto_url ) {
+	if ( empty( $in_replyto_url ) ) {
 		return null;
 	}
-	$post_url = \url_to_postid( $comment_url );
 
-	if ( $post_url ) {
-		//for local comment parent
-		$comment_id = explode( '#comment-', $comment_url );
-		if ( isset( $comment_id[1] ) ){
-			return $comment_id[1];
+	//rewrite for activitypub object id simplification
+	$url_maybe_id = \wp_parse_url( $in_replyto_url );
+	
+	if ( $url_maybe_id['scheme'] . '://' . $url_maybe_id['host'] == site_url() ) {
+		//is local post or comment
+		\parse_str( $url_maybe_id['query'], $reply_query );
+		if (isset( $reply_query['ap_comment_id'] ) && is_int( $reply_query['ap_comment_id'] ) ){
+			//is local comment
+			return $reply_query['ap_comment_id'];
 		} else {
+			//not a comment
 			return null;
 		}
-
 	} else {
-		//remote comment parent, assuming the parent was also recieved
-		//Compare inReplyTo with source_url from meta, to determine if local comment_id exists for peer replied object
+		//is remote url
+		//verify if in_replyto_url corresponds to a previously received comment 
 		$comment_args = array(
 			'type' => 'activitypub',
 			'meta_query' => array(
 				array(
-					'key' => 'source_url',
-					'value' => $comment_url,
+					'key' => 'source_url',//$object['object']['id']
+					'value' => $in_replyto_url,
 				)
 			)
 		);
@@ -369,13 +392,46 @@ function url_to_commentid( $comment_url ) {
 		$comments = $comments_query->query( $comment_args );
 		$found_comment_ids = array();
 		if ( $comments ) {
-			 foreach ( $comments as $comment ) {
-				 $found_comment_ids[] = $comment->comment_ID;
-			 }
-			 return $found_comment_ids[0];
+			foreach ( $comments as $comment ) {
+				$found_comment_ids[] = $comment->comment_ID;
+			}
+			return $found_comment_ids[0];
 		} 
 		return null;
-	}	
+	}
+}
+
+/**
+ * Verify if url is a wp_ap_comment, 
+ * Or if it is a previously received remote comment
+ * 
+ * return int comment_id
+ */
+function is_ap_comment() {
+	$comment_id = get_query_var( 'ap_comment_id', null );
+	if( ! is_null( $comment_id ) ) {
+		$comment = \get_comment( $comment_id );
+		// Only return local origin comments
+		if( $comment->user_id ) {
+			return $comment_id;
+		}
+	}
+	return null;
+}
+
+/**
+ * Verify if url is a /replies endoint, 
+ * 
+ * return int true
+ */
+function is_ap_replies() {
+	global $wp;
+	$replies = get_query_var( 'replies' );
+	//$page = get_query_var( 'collection_page' );
+	if( ( $replies ) ) {
+		return $replies;
+	}
+	return null;
 }
 
 /**
@@ -502,9 +558,33 @@ function url_to_webfinger( $user_url ) {
  */
 function normalize_comment_url( $comment ) {
 	$comment_id = explode( '#comment-', \get_comment_link( $comment ) );
-	$comment_id = $comment_id[0] . '?comment-' . $comment_id[1];
+	$comment_id = $comment_id[0] . '?ap_comment_id=' . $comment_id[1];
 	return $comment_id;
 }
+
+/**
+ * Set ap_comment_id
+ * 
+ * AP Object ID must be unique
+ * 
+ * https://www.w3.org/TR/activitypub/#obj-id
+ * https://github.com/tootsuite/mastodon/issues/13879
+ */
+function set_ap_comment_id( $comment ) {
+	$ap_comment_id = add_query_arg( 
+		array( 
+			'p' => $comment->comment_post_ID,
+			'ap_comment_id' => $comment->comment_ID,//should probably rename to ap_comment or something
+		), 
+		trailingslashit( site_url() )
+	);
+	return $ap_comment_id;
+}
+/*	comment_id_to_url( $comment_id ) { 
+		//get remote from post_id from comment meta 
+		//get local normalized comment_link 
+	}
+*/	
 
 /**
  * Determine AP audience of incoming object
@@ -527,4 +607,4 @@ function get_audience( $object ) {
 			return 'private';
 		}
 	}
-}
+} 
