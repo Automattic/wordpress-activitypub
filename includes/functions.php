@@ -489,7 +489,7 @@ function transform_tags( $content ) {
 
 	//@Mentions
 	$mentions = null;
-	$webfinger_tags = \Activitypub\webfinger_extract( $content, true );
+	$webfinger_tags = \Activitypub\webfinger_extract( $content );
 	if ( !empty( $webfinger_tags) ) {
 		foreach ( $webfinger_tags[0] as $webfinger_tag ) {
 			$ap_profile = \Activitypub\Rest\Webfinger::webfinger_lookup( $webfinger_tag );
