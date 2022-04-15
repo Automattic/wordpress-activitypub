@@ -25,8 +25,8 @@ class Activitypub {
 
 		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
 
-		\add_filter( 'preprocess_comment' , array( '\Activitypub\Activitypub', 'preprocess_comment' ) );
-		\add_filter( 'comment_post' , array( '\Activitypub\Activitypub', 'postprocess_comment' ), 10, 3 );
+		\add_filter( 'preprocess_comment', array( '\Activitypub\Activitypub', 'preprocess_comment' ) );
+		\add_filter( 'comment_post', array( '\Activitypub\Activitypub', 'postprocess_comment' ), 10, 3 );
 		\add_filter( 'wp_update_comment_data', array( '\Activitypub\Activitypub', 'comment_updated_published' ), 20, 3 );
 		\add_action( 'transition_comment_status', array( '\Activitypub\Activitypub', 'schedule_comment_activity' ), 20, 3 );
 		\add_action( 'edit_comment', array( '\Activitypub\Activitypub', 'edit_comment' ), 20, 2 );//schedule_admin_comment_activity
@@ -149,7 +149,7 @@ class Activitypub {
 	 */
 	public static function preprocess_comment( $commentdata ) {
 		// only process replies from local actors
-		if ( !empty( $commentdata['user_id'] ) ) {
+		if ( ! empty( $commentdata['user_id'] ) ) {
 			$commentdata['comment_type'] = 'activitypub';
 			// transform webfinger mentions to links and add @mentions to cc
 			$tagged_content = \Activitypub\transform_tags( $commentdata['comment_content'] );
@@ -167,44 +167,28 @@ class Activitypub {
 		//Admin users comments bypass transition_comment_status (auto approved)
 
 		if ( $commentdata['comment_type'] === 'activitypub' ) {
-			if ( 
-				( $comment_approved === 1 ) && 
+			if ( ( $comment_approved === 1 ) &&
 				! empty( $commentdata['user_id'] ) &&
 				( $user = get_userdata( $commentdata['user_id'] ) ) && // get the user data
 				in_array( 'administrator', $user->roles )                   // check the roles
-			)  {
+			) {
 				// Only for Admins?
 				$mentions = \get_comment_meta( $comment_id, 'mentions', true );
 				//\ActivityPub\Activity_Dispatcher::send_comment_activity( $comment_id ); // performance > followers collection
 				\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $comment_id ) );
-				 
+
 			} else {
 				// TODO check that this is unused
 				// TODO comment test as anon / no auth_url, no fetchable status?
-				// TODO comment test as registered 
+				// TODO comment test as registered
 				// TODO comment test as anyother site settings
-				
-
-				// $replyto = get_comment_meta( $comment_id, 'replyto', true );
-				
-				//inbox forward prep
-				// if ( !empty( $ap_object ) ) {
-				// 	//if is remote user (has ap_object)
-				// 	//error_log( print_r( $ap_object, true ) );
-				// 	// TODO verify that deduplication check happens at object create.
-
-				// 	//if to/cc/audience contains local followers collection 
-				// 	//$local_user = \get_comment_author_url( $comment_id );
-				// 	//$is_local_user = \Activitypub\url_to_authorid( $commentdata['comment_author_url'] );
-					
-				// }
-			} 
+			}
 		}
 	}
 
 	/**
 	 * edit_comment()
-	 * 
+	 *
 	 * Fires immediately after a comment is updated in the database.
 	 * Fires immediately before comment status transition hooks are fired. (useful only for admin)
 	 */
@@ -217,7 +201,7 @@ class Activitypub {
 
 	/**
 	 * Schedule Activities
-	 * 
+	 *
 	 * transition_comment_status()
 	 * @param int $comment
 	 */
@@ -226,42 +210,40 @@ class Activitypub {
 		if ( 'approved' === $new_status && 'approved' !== $old_status ) {
 			//should only federate replies from local actors
 			//should only federate replies to federated actors
-			
+
 			$ap_object = unserialize( \get_comment_meta( $activitypub_comment->comment_ID, 'ap_object', true ) );
 			if ( empty( $ap_object ) ) {
 				\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $activitypub_comment->comment_ID ) );
 			} else {
 				$local_user = \get_author_posts_url( $ap_object['user_id'] );
-				if ( !is_null( $local_user ) ) {
+				if ( ! is_null( $local_user ) ) {
 					if ( in_array( $local_user, $ap_object['to'] )
 						|| in_array( $local_user, $ap_object['cc'] )
 						|| in_array( $local_user, $ap_object['audience'] )
 						|| in_array( $local_user, $ap_object['tag'] )
 						) {
-						//if inReplyTo, object, target and/or tag are (local-wp) objects 
-							\wp_schedule_single_event( \time(), 'activitypub_inbox_forward_activity', array( $activitypub_comment->comment_ID  ) );
+						//if inReplyTo, object, target and/or tag are (local-wp) objects
+						\wp_schedule_single_event( \time(), 'activitypub_inbox_forward_activity', array( $activitypub_comment->comment_ID ) );
 					}
-				}				
+				}
 			}
 		} elseif ( 'trash' === $new_status ) {
 			\wp_schedule_single_event( \time(), 'activitypub_send_delete_comment_activity', array( $activitypub_comment ) );
 		} elseif ( $old_status === $new_status ) {
 			//TODO Test with non-admin user
 			\wp_schedule_single_event( \time(), 'activitypub_send_update_comment_activity', array( $activitypub_comment->comment_ID ) );
-		} else {
-			//error_log( 'schedule_update_comment_activity: else?:' );
-		}
+		} else {		}
 	}
-	
+
 	/**
 	 * get_comment_text( $comment )
-	 * 
+	 *
 	 * Filters the comment content before it is updated in the database.
 	 */
 	public static function comment_append_edit_datetime( $comment_text, $comment, $args ) {
 		if ( 'activitypub' === $comment->comment_type ) {
 			$updated = \wp_date( 'Y-m-d H:i:s', \strtotime( \get_comment_meta( $comment->comment_ID, 'ap_last_modified', true ) ) );
-			if( $updated ) {
+			if ( $updated ) {
 				$append_updated = "<div>(Last edited on <time class='modified' datetime='{$updated}'>$updated</time>)</div>";
 				$comment_text .= $append_updated;
 			}

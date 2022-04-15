@@ -76,7 +76,7 @@ class Activity {
 		if ( $this->trash ) {
 			$this->deleted = $timestamp['deleted'];
 		}
-		if ( $this->updated) {
+		if ( $this->updated ) {
 			$this->updated = $timestamp['updated'];
 		}
 	}

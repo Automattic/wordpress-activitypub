@@ -50,7 +50,7 @@ class Activity_Dispatcher {
 	 */
 	public static function send_update_activity( $activitypub_post ) {
 		// save permalink for delete
-		$post_id =  \url_to_postid( $activitypub_post->get_id() );
+		$post_id = \url_to_postid( $activitypub_post->get_id() );
 		//shouldn't this go in schedule_*_activity? yeah
 		\update_post_meta( $post_id, '_ap_deleted_slug', $activitypub_post->get_id() );
 
@@ -87,7 +87,7 @@ class Activity_Dispatcher {
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
 			$activitypub_activity->set_to( $to );
 			$activity = $activitypub_activity->to_json(); // phpcs:ignore
-			
+
 			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
 	}
@@ -100,7 +100,7 @@ class Activity_Dispatcher {
 	public static function send_comment_activity( $activitypub_comment_id ) {
 		//ONLY FOR LOCAL USERS ?
 		$activitypub_comment = \get_comment( $activitypub_comment_id );
-		$user_id =  $activitypub_comment->user_id;
+		$user_id = $activitypub_comment->user_id;
 		$replyto = get_comment_meta( $activitypub_comment->comment_parent, 'comment_author_url', true );// must include in replyto
 		$mentions = get_comment_meta( $activitypub_comment_id, 'mentions', true );//might be tagged
 
@@ -121,8 +121,8 @@ class Activity_Dispatcher {
 			$activity = $activitypub_activity->to_json(); // phpcs:ignore
 
 			// Send reply to followers, skip if replying to followers (avoid duplicate replies)
-			if( in_array( $cc, $replyto ) || in_array( $cc, $mentions )  ) {
-			 	continue;
+			if ( in_array( $cc, $replyto ) || in_array( $cc, $mentions ) ) {
+				continue;
 			}
 			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
@@ -139,24 +139,24 @@ class Activity_Dispatcher {
 		//original author should NOT recieve a copy of ther own post
 		$replyto[] = $activitypub_comment->comment_author_url;
 		$activitypub_activity = unserialize( get_comment_meta( $activitypub_comment->comment_ID, 'ap_object', true ) );
-		
+
 		//will be forwarded to the parent_comment->author or post_author followers collection
 		//TODO verify that ... what?
 		$parent_comment = \get_comment( $activitypub_comment->comment_parent );
-		if ( !is_null( $parent_comment ) ) {
+		if ( ! is_null( $parent_comment ) ) {
 			$user_id = $parent_comment->user_id;
 		} else {
-			$original_post = \get_post( $activitypub_comment->comment_post_ID ); 
+			$original_post = \get_post( $activitypub_comment->comment_post_ID );
 			$user_id = $original_post->post_author;
 		}
 
 		//remove user_id from $activitypub_comment
-		unset($activitypub_activity['user_id']);
-		
+		unset( $activitypub_activity['user_id'] );
+
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
-			
+
 			//Forward reply to followers, skip sender
-			if( in_array( $to, $replyto ) || ( $replyto == $to ) ) {
+			if ( in_array( $to, $replyto ) || ( $replyto == $to ) ) {
 				continue;
 			}
 
@@ -183,7 +183,7 @@ class Activity_Dispatcher {
 		}
 
 		$deleted = \wp_date( 'Y-m-d\TH:i:s\Z', \strtotime( $activitypub_comment->comment_date_gmt ) );
-		
+
 		$activitypub_comment = new \Activitypub\Model\Comment( $activitypub_comment );
 		$activitypub_comment->set_deleted( $deleted );
 		$activitypub_activity = new \Activitypub\Model\Activity( 'Delete', \Activitypub\Model\Activity::TYPE_FULL );

@@ -129,9 +129,9 @@ class Webfinger {
 	 */
 	public static function webfinger_lookup( $webfinger ) {
 		$activity_profile = null;
-		if ( \substr($webfinger, 0, 1) === '@' ) {
+		if ( \substr( $webfinger, 0, 1 ) === '@' ) {
 			$webfinger = substr( $webfinger, 1 );
-		} 
+		}
 		$url_host = \explode( '@', $webfinger );
 		$webfinger_query = 'https://' . \end( $url_host ) . '/.well-known/webfinger?resource=acct%3A' . \urlencode( $webfinger );
 
@@ -140,7 +140,7 @@ class Webfinger {
 			$ap_link = json_decode( $response['body'] );
 			if ( isset( $ap_link->links ) ) {
 				foreach ( $ap_link->links as $link ) {
-					if ( !property_exists( $link, 'type' ) ) {
+					if ( ! property_exists( $link, 'type' ) ) {
 						continue;
 					}
 					if ( isset( $link->type ) && $link->type === 'application/activity+json' ) {
@@ -148,9 +148,9 @@ class Webfinger {
 						$activity_profile['name'] = $webfinger;
 					}
 				}
-			} 
+			}
 		}
-		
+
 		return $activity_profile;
 	}
 }

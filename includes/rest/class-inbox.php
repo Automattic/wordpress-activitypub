@@ -414,10 +414,10 @@ class Inbox {
 		//Determine comment_post_ID and/or comment_parent
 		$comment_post_ID = $comment_parent = $comment_parent_ID = 0;
 		if ( isset( $object['object']['inReplyTo'] ) ) {
-			
+
 			$comment_parent_ID = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['inReplyTo'] ) );
-			
-			if ( !is_null( $comment_parent_ID ) ) {
+
+			if ( ! is_null( $comment_parent_ID ) ) {
 				//inReplyTo a known local comment
 				$comment_parent = \get_comment( $comment_parent_ID );
 				$comment_post_ID = $comment_parent->comment_post_ID;
@@ -425,7 +425,7 @@ class Inbox {
 				//inReplyTo a known post
 				$comment_post_ID = \url_to_postid( $object['object']['inReplyTo'] );
 			}
-		} 
+		}
 
 		//not all implementaions use url
 		if ( isset( $object['object']['id'] ) ) {
@@ -435,21 +435,21 @@ class Inbox {
 		}
 
 		// if no name is set use peer username
-		if ( !empty( $meta['name'] ) ) {
+		if ( ! empty( $meta['name'] ) ) {
 			$name = \esc_attr( $meta['name'] );
 		} else {
 			$name = \esc_attr( $meta['preferredUsername'] );
 		}
-		// if avatar is set 
-		if ( !empty( $meta['icon']['url'] ) ) {
+		// if avatar is set
+		if ( ! empty( $meta['icon']['url'] ) ) {
 			$avatar_url = \esc_attr( $meta['icon']['url'] );
 		}
 
 		//Only create WP_Comment for public replies to local posts
 		if ( ( in_array( AS_PUBLIC, $object['to'] )
 			|| in_array( AS_PUBLIC, $object['cc'] ) )
-			&& ( !empty( $comment_post_ID ) 
-			|| !empty ( $comment_parent ) 
+			&& ( ! empty( $comment_post_ID )
+			|| ! empty( $comment_parent )
 			) ) {
 
 			$commentdata = array(
@@ -463,7 +463,7 @@ class Inbox {
 				'comment_meta' => array(
 					'ap_object' => \serialize( $object ),
 					'source_url' => $source_url,
-					'avatar_url' 	=> $avatar_url,
+					'avatar_url'    => $avatar_url,
 					'protocol' => 'activitypub',
 				),
 			);
@@ -481,7 +481,7 @@ class Inbox {
 			// re-add flood control
 			//\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
-		}		
+		}
 	}
 
 	/**
@@ -497,8 +497,8 @@ class Inbox {
 
 		//Determine comment_ID
 		$object_comment_ID = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['id'] ) );
-		if ( !is_null( $object_comment_ID ) ) {
-			
+		if ( ! is_null( $object_comment_ID ) ) {
+
 			//found a local comment id
 			$commentdata = \get_comment( $object_comment_ID, ARRAY_A );
 
@@ -509,8 +509,8 @@ class Inbox {
 			$commentdata['comment_meta']['ap_object'] = \serialize( $object );
 
 			//apply_filters( 'wp_update_comment_data', $data, $comment, $commentarr );
- 
- 			// disable flood control
+
+			// disable flood control
 			\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
 
 			// do not require email for AP entries
@@ -521,8 +521,8 @@ class Inbox {
 			\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 			// re-add flood control
-			\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 ); 
-		} 
+			\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+		}
 	}
 
 	/**
@@ -541,12 +541,12 @@ class Inbox {
 		}
 		//Determine comment_ID
 		$object_comment_ID = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['id'] ) );
-		if ( !is_null( $object_comment_ID ) ) {
-			
+		if ( ! is_null( $object_comment_ID ) ) {
+
 			//found a local comment id
 			$commentdata = \get_comment( $object_comment_ID, ARRAY_A );
- 
- 			// disable flood control
+
+			// disable flood control
 			\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
 
 			// do not require email for AP entries
@@ -558,8 +558,8 @@ class Inbox {
 			//\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 			// re-add flood control
-			\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 ); 
-		} 
+			\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+		}
 	}
 
 	public static function extract_recipients( $data ) {
