@@ -92,16 +92,15 @@ function init() {
 /**
  * Add plugin settings link
  */
-function plugin_settings_link( $links ) {
-	$settings_link[] = \sprintf(
-		'<a href="%1s">%2s</a>',
-		\menu_page_url( 'activitypub', false ),
-		\__( 'Settings', 'activitypub' )
+function plugin_settings_link( $actions ) {
+	$settings_link[] = \sprintf( '<a href="%1s">%2s</a>', 
+		\menu_page_url( 'activitypub', false ), 
+		\__( 'Settings', 'activitypub' ) 
 	);
-
-	return \array_merge( $settings_link, $links );
+	
+	return \array_merge( $settings_link, $actions );
 }
-\add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), '\Activitypub\plugin_settings_link' );
+\add_filter( 'plugin_action_links_' . plugin_basename(__FILE__), '\Activitypub\plugin_settings_link'  );
 
 /**
  * Add rewrite rules
