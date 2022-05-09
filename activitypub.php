@@ -96,7 +96,7 @@ function plugin_settings_link( $actions ) {
 	$settings_link[] = \sprintf(
 		'<a href="%1s">%2s</a>',
 		\menu_page_url( 'activitypub', false ),
-		\__( 'Settings', 'activitypub' ),
+		\__( 'Settings', 'activitypub' )
 	);
 
 	return \array_merge( $settings_link, $actions );
