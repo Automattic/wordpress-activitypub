@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2022 Matthias Pfefferly <matthias@pfefferle.org>
+//
+// SPDX-License-Identifier: MIT
+
 <?php
 class Test_Activitypub_Post extends WP_UnitTestCase {
 	public function test_to_array() {

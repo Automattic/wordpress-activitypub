@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2022 Matthias Pfefferly <matthias@pfefferle.org>
+//
+// SPDX-License-Identifier: MIT
+
 <?php
 $author_id = \get_the_author_meta( 'ID' );
 

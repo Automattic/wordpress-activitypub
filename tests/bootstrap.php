@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2022 Matthias Pfefferly <matthias@pfefferle.org>
+//
+// SPDX-License-Identifier: MIT
+
 <?php
 
 $_tests_dir = \getenv( 'WP_TESTS_DIR' );

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2022 Matthias Pfefferle <matthias@pfefferle.org>
+//
+// SPDX-License-Identifier: MIT
+
 <?php
 namespace Activitypub\Model;
 

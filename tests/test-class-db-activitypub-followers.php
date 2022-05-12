@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2022 Matthias Pfefferly <matthias@pfefferle.org>
+//
+// SPDX-License-Identifier: MIT
+
 <?php
 class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 	public function test_get_followers() {

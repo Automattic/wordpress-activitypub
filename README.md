@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2022 Matthias Pfefferle <matthias@pfefferle.org>
+
+SPDX-License-Identifier: MIT
+-->
+
 # ActivityPub #
 **Contributors:** [pfefferle](https://profiles.wordpress.org/pfefferle), [mediaformat](https://profiles.wordpress.org/mediaformat)  
 **Donate link:** https://notiz.blog/donate/  
