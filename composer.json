@@ -15,6 +15,9 @@
         "yoast/phpunit-polyfills": "^1.0",
         "dealerdirect/phpcodesniffer-composer-installer": "^0.7.1"
     },
+    "config": {
+        "allow-plugins": true
+    },
     "allow-plugins": {
         "composer/installers": true
     },
