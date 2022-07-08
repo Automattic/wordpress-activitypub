@@ -3,8 +3,8 @@
 **Donate link:** https://notiz.blog/donate/  
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
-**Tested up to:** 5.9  
-**Stable tag:** 0.13.3  
+**Tested up to:** 6.0  
+**Stable tag:** 0.13.4  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -87,6 +87,10 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 ## Changelog ##
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+
+### 0.13.4 ###
+
+* fix webfinger for email identifiers
 
 ### 0.13.3 ###
 
