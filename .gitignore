@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2019 Matthias Pfefferle, <matthias@pfefferle.org>, 
+#
+# SPDX-License-Identifier: CC0-1.0
+
 /node_modules/
 /vendor/
 package-lock.json
