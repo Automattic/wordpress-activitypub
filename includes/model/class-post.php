@@ -330,7 +330,7 @@ class Post {
 			return '';
 		}
 
-		return \sprintf( '<a href="%1$s">%1$s</a>', $link );
+		return \apply_filters( 'activitypub_permalink_output', \sprintf( '<a href="%1$s">%1$s</a>', $link ), $link );
 	}
 
 	/**
