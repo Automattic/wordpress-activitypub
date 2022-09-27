@@ -23,7 +23,7 @@ class Comment {
 		$this->contentWarning   = $this->generate_content_warning();
 		$this->permalink   = $this->generate_permalink();
 		$this->context   = $this->generate_context();
-		$this->cc_recipients = $this->generate_recipients();
+		$this->to_recipients = $this->generate_mention_recipients();
 		$this->tags        = $this->generate_tags();
 		$this->update        = $this->generate_update();
 		$this->deleted        = $this->generate_trash();
@@ -59,9 +59,10 @@ class Comment {
 			'context' => $this->context,
 			//'source' => \get_comment_link( $comment ), //non-conforming, see https://www.w3.org/TR/activitypub/#source-property
 			'url' => \get_comment_link( $comment ), //link for mastodon
-			'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), //audience logic
-			'cc' => $this->cc_recipients,
+			'to' => $this->to_recipients,
+			'cc' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'tag' => $this->tags,
+			'replies' => $this->replies,
 		);
 		if ( $this->replies ) {
 			$array['replies'] = $this->replies;
@@ -85,7 +86,7 @@ class Comment {
 	}
 
 	public function generate_comment_id() {
-		return \Activitypub\set_ap_comment_id( $this->comment );
+		return \Activitypub\set_ap_comment_id( $this->comment->comment_ID );
 	}
 
 	public function generate_permalink() {
@@ -96,7 +97,7 @@ class Comment {
 	}
 
 	/**
-	 * What is status is being replied to
+	 * What is status being replied to
 	 * Comment ID or Post ID
 	 */
 	public function generate_parent_url() {
@@ -114,31 +115,43 @@ class Comment {
 					trailingslashit( site_url() )
 				);
 			}
-		} else {
-			$inReplyTo = add_query_arg(
-				array(
-					'p' => $comment->comment_post_ID,
-				),
-				trailingslashit( site_url() )
-			);
+		} else { //parent is_post
+			// Backwards compatibility
+			$pretty_permalink = \get_post_meta( $comment->comment_post_ID, '_activitypub_permalink_compat', true ); // TODO finalize meta
+			if ( $pretty_permalink ) {
+				$inReplyTo = $pretty_permalink;
+			} else {
+				$inReplyTo = add_query_arg(
+					array(
+						'p' => $comment->comment_post_ID,
+					),
+					trailingslashit( site_url() )
+				);
+			}
 		}
 		return $inReplyTo;
 	}
 
 	public function generate_context() {
 		$comment = $this->comment;
-		$inReplyTo = add_query_arg(
-			array(
-				'p' => $comment->comment_post_ID,
-			),
-			trailingslashit( site_url() )
-		);
-		return $inReplyTo;
+		// support pretty_permalinks
+		$pretty_permalink = \get_post_meta( $comment->comment_post_ID, '_activitypub_permalink_compat', true );
+		if ( $pretty_permalink ) {
+			$context = $pretty_permalink;
+		} else {
+			$context = add_query_arg(
+				array(
+					'p' => $comment->comment_post_ID,
+				),
+				trailingslashit( site_url() )
+			);
+		}
+		return $context;
 	}
 
 	/**
 	 * Generate courtesy Content Warning
-	 * If peer used CW let's just copy it
+	 * If parent status used CW let's just copy it
 	 * TODO: Move to preprocess_comment / row_actions
 	 * Add option for wrapping CW in Details/Summary markup
 	 * Figure out some CW syntax: [shortcode-style], {brackets-style}?
@@ -148,7 +161,7 @@ class Comment {
 		$comment = $this->comment;
 		$contentWarning = null;
 
-		// TODO Replace auto CW, with Title field or CW shortcode
+		// Temporarily generate Summary from parent
 		$parent_comment = \get_comment( $comment->comment_parent );
 		if ( $parent_comment ) {
 			//get (received) comment
@@ -157,9 +170,10 @@ class Comment {
 				$contentWarning = $ap_object['object']['summary'];
 			}
 		}
+		// TODO Replace auto generate with Summary shortcode
 		/*summary = \get_comment_meta( $this->comment->comment_ID, 'summary', true ) ;
 		if ( !empty( $summary ) ) {
-				$contentWarning = \Activitypub\add_summary( $summary ); //TODO
+				$contentWarning = \Activitypub\add_summary( $summary );
 		} */
 		return $contentWarning;
 	}
@@ -167,9 +181,7 @@ class Comment {
 	/**
 	 * Who is being replied to
 	 */
-	public function generate_recipients() {
-		//TODO Add audience logic get parent audience
-		//TODO shouldn't mentions go in 'to'?
+	public function generate_mention_recipients() {
 		$recipients = array( AS_PUBLIC );
 		$mentions = \get_comment_meta( $this->comment->comment_ID, 'mentions', true );
 		if ( ! empty( $mentions ) ) {
@@ -226,40 +238,41 @@ class Comment {
 	 */
 	public function generate_replies() {
 		$comment = $this->comment;
+		$replies = [];
 		$args = array(
 			'post_id'       => $comment->comment_post_ID,
 			'parent'        => $comment->comment_ID,
-			'author__in'    => $comment->user_id,
 			'status'        => 'approve',
 			'hierarchical'  => false,
 		);
-		$children = \get_comments( $args );
-		$replies = null;
-		if ( $children ) {
+		$comments_list = \get_comments( $args );
+
+		if ( $comments_list ) {
 			$items = array();
-			foreach ( $children as $child_comment ) {
-				$comment_url = \add_query_arg(
-					array(
-						'p' => $child_comment->comment_post_ID,
-						'ap_comment_id' => $child_comment->comment_ID,
-					),
-					trailingslashit( site_url() )
-				);
-				$items[] = $comment_url;
+			foreach ( $comments_list as $comment ) {
+				// remote replies
+				$source_url = \get_comment_meta( $comment->comment_ID, 'source_url', true );
+				if ( ! empty( $source_url ) ){
+					$items[] = $source_url;
+				} else {
+					// local replies
+					$comment_url = \add_query_arg( //
+						array(
+							'p' => $comment->comment_post_ID,
+							'ap_comment_id' => $comment->comment_ID,
+						),
+						trailingslashit( site_url() )
+					);
+					$items[] = $comment_url;
+				}
 			}
+			
 			$replies = (object) array(
 				'type'  => 'Collection',
 				'id'    => \add_query_arg( array( 'replies' => '' ), $this->id ),
 				'first' => (object) array(
 					'type'  => 'CollectionPage',
 					'partOf' => \add_query_arg( array( 'replies' => '' ), $this->id ),
-					'next'  => \add_query_arg(
-						array(
-							'replies' => '',
-							'page' => 1,
-						),
-						$this->id
-					),
 					'items' => $items,
 				),
 			);

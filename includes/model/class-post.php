@@ -30,9 +30,7 @@ class Post {
 		$this->tags        = $this->generate_tags();
 		$this->object_type = $this->generate_object_type();
 		$this->replies     = $this->generate_replies();
-		//$this->updated	   = $this->generate_updated();
-		$this->slug        = \get_permalink( $this->id );
-		$this->updated     = null;
+		$this->updated	   = $this->generate_updated();
 		$this->delete      = $this->get_deleted();
 	}
 
@@ -73,9 +71,10 @@ class Post {
 		}
 		if ( $this->deleted ) {
 			$array['deleted'] = \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
-			// TODO if using slugs instead of ids  _ap_deleted_slug
-			//$deleted_post_slug = \get_post_meta( $post->ID, '_ap_deleted_slug', true );
-			//$array['id'] = $deleted_post_slug;
+			$deleted_post_slug = \get_post_meta( $post->ID, '_activitypub_permalink_compat', true );
+			if ( $deleted_post_slug ) {
+				$array['id'] = $deleted_post_slug;
+			}
 		}
 		if ( $this->updated ) {
 			$array['updated'] = \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
@@ -89,15 +88,19 @@ class Post {
 
 	public function generate_id() {
 		$post      = $this->post;
-		$permalink = \add_query_arg( //
-			array(
-				'p' => $post->ID,
-			),
-			trailingslashit( site_url() )
-		);
+		$pretty_permalink	   = \get_post_meta( $post->ID, '_activitypub_permalink_compat', true );
 
-		// replace 'trashed' for delete activity
-		return \str_replace( '__trashed', '', $permalink );
+		if( ! empty( $pretty_permalink ) ) {
+			$object_id = $pretty_permalink;
+		} else {
+			$object_id = \add_query_arg( //
+				array(
+					'p' => $post->ID,
+				),
+				trailingslashit( site_url() )
+			);
+		}
+		return $object_id;
 	}
 
 	public function generate_attachments() {
@@ -180,10 +183,9 @@ class Post {
 
 	public function generate_replies() {
 		$replies = null;
-		//\error_log( 'generate_replies: $post' . print_r( $this->post, true ) );
 		if ( $this->post->comment_count > 0 ) {
 			$args = array(
-				'post_id' => $this->post->ID,   // Use post_id, not post_ID
+				'post_id' => $this->post->ID,
 				'hierarchical' => false,
 				'status'       => 'approve',
 			);
@@ -193,7 +195,6 @@ class Post {
 			foreach ( $comments as $comment ) {
 				// include self replies
 				if ( $this->post->post_author === $comment->user_id ) {
-					//$comment_url = $comment->comment_ID;
 					$comment_url = \add_query_arg( //
 						array(
 							'p' => $this->post->ID,
@@ -201,24 +202,23 @@ class Post {
 						),
 						trailingslashit( site_url() )
 					);
-					//\error_log( 'generate_replies: $comment' . print_r( $comment, true ) );
 					$items[] = $comment_url;
+				} else {	
+					$ap_object = \unserialize(\get_comment_meta( $comment->comment_ID, 'ap_object', true ));
+					$comment_url = \get_comment_meta( $comment->comment_ID, 'source_url', true );
+					if ( ! empty( $comment_url ) ){
+						$items[] = \get_comment_meta( $comment->comment_ID, 'source_url', true );	
+					}
+					
 				}
 			}
-			//\error_log( 'generate_replies: $comments' . print_r( $comments, true ) );
+
 			$replies = (object) array(
 				'type'  => 'Collection',
 				'id'    => \add_query_arg( array( 'replies' => '' ), $this->id ),
 				'first' => (object) array(
 					'type'  => 'CollectionPage',
 					'partOf' => \add_query_arg( array( 'replies' => '' ), $this->id ),
-					'next'  => \add_query_arg(
-						array(
-							'replies' => '',
-							'page' => 1,
-						),
-						$this->id
-					),
 					'items' => $items,
 				),
 			);

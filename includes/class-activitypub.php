@@ -42,7 +42,7 @@ class Activitypub {
 	 * @return string The new path to the JSON template.
 	 */
 	public static function render_json_template( $template ) {
-		if ( ! \is_author() && ! \is_singular() && ! \is_home() && ! \Activitypub\is_ap_comment() ) {
+		if ( ! \is_author() && ! \is_singular() && ! \is_home() && ! \Activitypub\is_ap_comment() && ! \Activitypub\is_ap_replies() ) {
 			return $template;
 		}
 
@@ -169,12 +169,11 @@ class Activitypub {
 		if ( $commentdata['comment_type'] === 'activitypub' ) {
 			if ( ( $comment_approved === 1 ) &&
 				! empty( $commentdata['user_id'] ) &&
-				( $user = get_userdata( $commentdata['user_id'] ) ) && // get the user data
-				in_array( 'administrator', $user->roles )                   // check the roles
+				( $user = \get_userdata( $commentdata['user_id'] ) ) && // get the user data
+				\in_array( 'administrator', $user->roles )                   // check the roles
 			) {
-				// Only for Admins?
+				// Only for Admins
 				$mentions = \get_comment_meta( $comment_id, 'mentions', true );
-				//\ActivityPub\Activity_Dispatcher::send_comment_activity( $comment_id ); // performance > followers collection
 				\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $comment_id ) );
 
 			} else {
@@ -193,7 +192,6 @@ class Activitypub {
 	 * Fires immediately before comment status transition hooks are fired. (useful only for admin)
 	 */
 	public static function edit_comment( $comment_ID, $data ) {
-		// advantage of ap_published is it would be set once, (does preprocess fire on edit?)
 		if ( ! is_null( $data['user_id'] ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_send_update_comment_activity', array( $comment_ID ) );
 		}

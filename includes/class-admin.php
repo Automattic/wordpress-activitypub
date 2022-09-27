@@ -164,44 +164,31 @@ class Admin {
 		// Public Reply
 		$reply_button = '<button type="button" data-comment-id="%d" data-post-id="%d" data-action="%s" class="%s button-link" aria-expanded="false" aria-label="%s" data-recipients="%s" data-summary="%s">%s</button>';
 		$actions['reply'] = sprintf(
-            $reply_button,
-            $comment->comment_ID,
-            $comment->comment_post_ID,
-            'replyto',
-            'vim-r comment-inline',
+			$reply_button,
+			$comment->comment_ID,
+			$comment->comment_post_ID,
+			'replyto',
+			'vim-r comment-inline',
 			esc_attr__( 'Reply to this comment' ),
 			$recipients,
 			$summary,
-            __( 'Reply', 'activitypub' )
+			__( 'Reply', 'activitypub' )
 		);
-		
-		// Private
-		// $actions['private_reply'] = sprintf(
-        //     $format,
-        //     $comment->comment_ID,
-        //     $comment->comment_post_ID,
-        //     'private_replyto',
-        //     'vim-r comment-inline',
-		// 	esc_attr__( 'Reply in private to this comment' ),
-		// 	$recipients,
-		// 	$summary,
-        //     __( 'Private reply', 'activitypub' )
-		// );
 
 		return $actions;
 	}
 
 	public static function scripts_reply_comments( $hook ) {
-		if ('edit-comments.php' !== $hook) {
+		if ( 'edit-comments.php' !== $hook ) {
 			return;
 		}
-		wp_enqueue_script( 'activitypub_client', 
-			plugin_dir_url(__FILE__) . '/activitypub.js', 
-			array('jquery'), 
-			filemtime( plugin_dir_path(__FILE__) . '/activitypub.js' ), 
-			true 
+		wp_enqueue_script(
+			'activitypub_client',
+			plugin_dir_url( __FILE__ ) . '/activitypub.js',
+			array( 'jquery' ),
+			filemtime( plugin_dir_path( __FILE__ ) . '/activitypub.js' ),
+			true
 		);
 	}
-	
 
 }

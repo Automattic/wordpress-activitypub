@@ -427,13 +427,6 @@ class Inbox {
 			}
 		}
 
-		//not all implementaions use url
-		if ( isset( $object['object']['id'] ) ) {
-			$source_url = \esc_url_raw( $object['object']['id'] );
-		} else {
-			$source_url = \esc_url_raw( $object['object']['url'] );
-		}
-
 		// if no name is set use peer username
 		if ( ! empty( $meta['name'] ) ) {
 			$name = \esc_attr( $meta['name'] );
@@ -446,10 +439,10 @@ class Inbox {
 		}
 
 		//Only create WP_Comment for public replies to local posts
-		if ( ( in_array( AS_PUBLIC, $object['to'] )
-			|| in_array( AS_PUBLIC, $object['cc'] ) )
+		if ( ( 'public' === $audience )
+			|| ( 'unlisted' === $audience )
 			&& ( ! empty( $comment_post_ID )
-			|| ! empty( $comment_parent )
+			|| ! empty( $comment_parent_ID )
 			) ) {
 
 			$commentdata = array(
@@ -462,7 +455,7 @@ class Inbox {
 				'comment_parent' => $comment_parent_ID,
 				'comment_meta' => array(
 					'ap_object' => \serialize( $object ),
-					'source_url' => $source_url,
+					'source_url' => \esc_url_raw( $object['object']['id'] ),
 					'avatar_url'    => $avatar_url,
 					'protocol' => 'activitypub',
 				),

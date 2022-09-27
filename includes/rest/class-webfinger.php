@@ -126,6 +126,7 @@ class Webfinger {
 	 * WebFinger Lookup to find user uri
 	 *
 	 * @param string  $resource the WebFinger resource
+	 * @return array  ['href', 'name']. ex: href=https://domain.tld/user/webfinger, name=webfinger@domain.tld
 	 */
 	public static function webfinger_lookup( $webfinger ) {
 		$activity_profile = null;

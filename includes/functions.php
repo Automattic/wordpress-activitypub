@@ -251,6 +251,12 @@ function get_follower_inboxes( $user_id ) {
 	return $inboxes;
 }
 
+/**
+ * 
+ * @param $mentions array of mentioned actors, each mention is an array of actor URI (href), and webfinger (name) 
+ * 
+ * @return array of (shared) inboxes
+ */
 function get_mentioned_inboxes( $mentions ) {
 	$inboxes = array();
 
@@ -259,7 +265,7 @@ function get_mentioned_inboxes( $mentions ) {
 		if ( ! $inbox || \is_wp_error( $inbox ) ) {
 			continue;
 		}
-		// init array if empty
+		
 		if ( ! isset( $inboxes[ $inbox ] ) ) {
 			$inboxes[ $inbox ] = array();
 		}
@@ -355,7 +361,10 @@ function url_to_authorid( $url ) {
 /**
  * Verify if in_replyto_url is a local comment,
  * Or if it is a previously received remote comment
- * return int comment_id
+ * (For threading comments locally) 
+ * 
+ * @param string activitypub object id URI
+ * @return int comment_id
  */
 function url_to_commentid( $in_replyto_url ) {
 	if ( empty( $in_replyto_url ) ) {
@@ -364,16 +373,12 @@ function url_to_commentid( $in_replyto_url ) {
 
 	//rewrite for activitypub object id simplification
 	$url_maybe_id = \wp_parse_url( $in_replyto_url );
-
-	if ( site_url() === $url_maybe_id['scheme'] . '://' . $url_maybe_id['host'] ) {
+	if ( site_url() === $url_maybe_id['scheme'] . '://' . $url_maybe_id['host'] && !empty( $url_maybe_id['query'] )) {
 		//is local post or comment
 		\parse_str( $url_maybe_id['query'], $reply_query );
-		if ( isset( $reply_query['ap_comment_id'] ) && is_int( $reply_query['ap_comment_id'] ) ) {
+		if ( isset( $reply_query['ap_comment_id'] ) ) {
 			//is local comment
 			return $reply_query['ap_comment_id'];
-		} else {
-			//not a comment
-			return null;
 		}
 	} else {
 		//is remote url
@@ -396,14 +401,14 @@ function url_to_commentid( $in_replyto_url ) {
 			}
 			return $found_comment_ids[0];
 		}
-		return null;
 	}
+	return null;
 }
 
 /**
  * Verify if url is a wp_ap_comment,
  * Or if it is a previously received remote comment
- * return int comment_id
+ * @return int comment_id
  */
 function is_ap_comment() {
 	$comment_id = get_query_var( 'ap_comment_id', null );
@@ -418,11 +423,10 @@ function is_ap_comment() {
 }
 
 /**
- * Verify if url is a /replies endoint,
- * return int true
+ * Verify if url has a replies query,
+ * @return bool
  */
 function is_ap_replies() {
-	global $wp;
 	$replies = get_query_var( 'replies' );
 	if ( $replies ) {
 		return $replies;
@@ -476,8 +480,10 @@ function get_summary( $comment_id ) {
 }
 
 /**
- * parse content for tags to transform
+ * Parse content for tags to transform
+ * 
  * @param string $content to search
+ * @return array content, mentions (for storage in post_meta)
  */
 function transform_tags( $content ) {
 	//#tags
@@ -544,21 +550,8 @@ function url_to_webfinger( $user_url ) {
 }
 
 /**
- * Transform comment url, replace #fragment with ?query
- *
- * AP Object ID must be unique
- *
- * https://www.w3.org/TR/activitypub/#obj-id
- * https://github.com/tootsuite/mastodon/issues/13879
- */
-function normalize_comment_url( $comment ) {
-	$comment_id = explode( '#comment-', \get_comment_link( $comment ) );
-	$comment_id = $comment_id[0] . '?ap_comment_id=' . $comment_id[1];
-	return $comment_id;
-}
-
-/**
- * Set ap_comment_id
+ * @param $comment or $comment_id
+ * @return ActivityPub URI of comment 
  *
  * AP Object ID must be unique
  *
@@ -566,20 +559,16 @@ function normalize_comment_url( $comment ) {
  * https://github.com/tootsuite/mastodon/issues/13879
  */
 function set_ap_comment_id( $comment ) {
+	$comment = \get_comment( $comment );
 	$ap_comment_id = add_query_arg(
 		array(
 			'p' => $comment->comment_post_ID,
-			'ap_comment_id' => $comment->comment_ID, //should probably rename to ap_comment or something
+			'ap_comment_id' => $comment->comment_ID,
 		),
 		trailingslashit( site_url() )
 	);
 	return $ap_comment_id;
 }
-/*  comment_id_to_url( $comment_id ) {
-		//get remote from post_id from comment meta
-		//get local normalized comment_link
-	}
-*/
 
 /**
  * Determine AP audience of incoming object
@@ -591,7 +580,7 @@ function get_audience( $object ) {
 		return 'public';
 	}
 	if ( in_array( AS_PUBLIC, $object['cc'] ) ) {
-		return 'unlisted';//is unlisted even relevant?
+		return 'unlisted';
 	}
 	if ( ! in_array( AS_PUBLIC, $object['to'] ) && ! in_array( AS_PUBLIC, $object['cc'] ) ) {
 		$author_post_url = get_author_posts_url( $object['user_id'] );

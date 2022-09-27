@@ -1,5 +1,5 @@
 <?php
-$comment = \get_comment( get_query_var('ap_comment_id') );
+$comment = \get_comment( \get_query_var( 'ap_comment_id' ) );
 
 $activitypub_comment = new \Activitypub\Model\Comment( $comment );
 $json = \array_merge( array( '@context' => \Activitypub\get_context() ), $activitypub_comment->to_array() );
