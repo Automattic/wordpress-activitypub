@@ -74,7 +74,7 @@ class Activity_Dispatcher {
 		$user_id = $activitypub_post->get_post_author();
 		$deleted = \current_time( 'Y-m-d\TH:i:s\Z', true );
 		if ( $permalink ) {
-			$activitypub_post->set_id( $permalink );	
+			$activitypub_post->set_id( $permalink );
 		}
 		$activitypub_post->set_deleted( $deleted );
 
@@ -110,7 +110,7 @@ class Activity_Dispatcher {
 			$activitypub_activity->set_to( $to );//all users at shared inbox
 			$activity = $activitypub_activity->to_json(); // phpcs:ignore
 			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
-			
+
 			$mentioned_actors[] = $to;
 		}
 
@@ -136,7 +136,7 @@ class Activity_Dispatcher {
 
 		//original author should NOT recieve a copy of their own post
 		$replyto[] = $activitypub_comment->comment_author_url;
-		$activitypub_activity = unserialize( get_comment_meta( $activitypub_comment->comment_ID, 'ap_object', true ) );
+		$activitypub_activity = \unserialize( get_comment_meta( $activitypub_comment->comment_ID, 'ap_object', true ) );
 
 		//will be forwarded to the parent_comment->author or post_author followers collection
 		$parent_comment = \get_comment( $activitypub_comment->comment_parent );

@@ -407,23 +407,23 @@ class Inbox {
 	 * @param  int   $user_id The id of the local blog-user
 	 */
 	public static function handle_create( $object, $user_id ) {
+		$comment_post_id = 0;
+		$comment_parent = 0;
+		$comment_parent_id = 0;
 		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
 		$avatar_url = null;
 		$audience = \Activitypub\get_audience( $object );
 
-		//Determine comment_post_ID and/or comment_parent
-		$comment_post_ID = $comment_parent = $comment_parent_ID = 0;
 		if ( isset( $object['object']['inReplyTo'] ) ) {
+			$comment_parent_id = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['inReplyTo'] ) );
 
-			$comment_parent_ID = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['inReplyTo'] ) );
-
-			if ( ! is_null( $comment_parent_ID ) ) {
+			if ( ! is_null( $comment_parent_id ) ) {
 				//inReplyTo a known local comment
-				$comment_parent = \get_comment( $comment_parent_ID );
-				$comment_post_ID = $comment_parent->comment_post_ID;
+				$comment_parent = \get_comment( $comment_parent_id );
+				$comment_post_id = $comment_parent->comment_post_ID;
 			} else {
 				//inReplyTo a known post
-				$comment_post_ID = \url_to_postid( $object['object']['inReplyTo'] );
+				$comment_post_id = \url_to_postid( $object['object']['inReplyTo'] );
 			}
 		}
 
@@ -441,18 +441,18 @@ class Inbox {
 		//Only create WP_Comment for public replies to local posts
 		if ( ( 'public' === $audience )
 			|| ( 'unlisted' === $audience )
-			&& ( ! empty( $comment_post_ID )
-			|| ! empty( $comment_parent_ID )
+			&& ( ! empty( $comment_post_id )
+			|| ! empty( $comment_parent_id )
 			) ) {
 
 			$commentdata = array(
-				'comment_post_ID' => $comment_post_ID,
+				'comment_post_ID' => $comment_post_id,
 				'comment_author' => $name,
 				'comment_author_url' => \esc_url_raw( $object['actor'] ),
 				'comment_content' => \wp_filter_kses( $object['object']['content'] ),
 				'comment_type' => 'activitypub',
 				'comment_author_email' => '',
-				'comment_parent' => $comment_parent_ID,
+				'comment_parent' => $comment_parent_id,
 				'comment_meta' => array(
 					'ap_object' => \serialize( $object ),
 					'source_url' => \esc_url_raw( $object['object']['id'] ),
@@ -462,7 +462,7 @@ class Inbox {
 			);
 
 			// disable flood control
-			//\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+			\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
 
 			// do not require email for AP entries
 			\add_filter( 'pre_option_require_name_email', '__return_false' );
@@ -472,7 +472,7 @@ class Inbox {
 			\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 			// re-add flood control
-			//\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+			\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
 		}
 	}
@@ -489,19 +489,17 @@ class Inbox {
 		$audience = \Activitypub\get_audience( $object );
 
 		//Determine comment_ID
-		$object_comment_ID = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['id'] ) );
-		if ( ! is_null( $object_comment_ID ) ) {
+		$object_comment_id = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['id'] ) );
+		if ( ! is_null( $object_comment_id ) ) {
 
 			//found a local comment id
-			$commentdata = \get_comment( $object_comment_ID, ARRAY_A );
+			$commentdata = \get_comment( $object_comment_id, ARRAY_A );
 
-			//$commentdata['comment_ID'] = \esc_url_raw( $object_comment_ID );
+			//$commentdata['comment_ID'] = \esc_url_raw( $object_comment_id );
 			$commentdata['comment_content'] = \wp_filter_kses( $object['object']['content'] );
 			$commentdata['comment_meta']['ap_published'] = \wp_date( 'Y-m-d H:i:s', strtotime( $object['object']['published'] ) );
 			$commentdata['comment_meta']['ap_last_modified'] = $object['object']['updated'];
 			$commentdata['comment_meta']['ap_object'] = \serialize( $object );
-
-			//apply_filters( 'wp_update_comment_data', $data, $comment, $commentarr );
 
 			// disable flood control
 			\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
@@ -533,11 +531,11 @@ class Inbox {
 			return;
 		}
 		//Determine comment_ID
-		$object_comment_ID = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['id'] ) );
-		if ( ! is_null( $object_comment_ID ) ) {
+		$object_comment_id = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['id'] ) );
+		if ( ! is_null( $object_comment_id ) ) {
 
 			//found a local comment id
-			$commentdata = \get_comment( $object_comment_ID, ARRAY_A );
+			$commentdata = \get_comment( $object_comment_id, ARRAY_A );
 
 			// disable flood control
 			\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
@@ -548,7 +546,7 @@ class Inbox {
 			// Should we trash or send back to moderation
 			$state = \wp_trash_comment( $commentdata['comment_ID'], true );
 
-			//\remove_filter( 'pre_option_require_name_email', '__return_false' );
+			\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 			// re-add flood control
 			\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );

@@ -30,7 +30,7 @@ class Post {
 		$this->tags        = $this->generate_tags();
 		$this->object_type = $this->generate_object_type();
 		$this->replies     = $this->generate_replies();
-		$this->updated	   = $this->generate_updated();
+		$this->updated     = $this->generate_updated();
 		$this->delete      = $this->get_deleted();
 	}
 
@@ -70,14 +70,14 @@ class Post {
 			$array['replies'] = $this->replies;
 		}
 		if ( $this->deleted ) {
-			$array['deleted'] = \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
+			$array['deleted'] = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
 			$deleted_post_slug = \get_post_meta( $post->ID, '_activitypub_permalink_compat', true );
 			if ( $deleted_post_slug ) {
 				$array['id'] = $deleted_post_slug;
 			}
 		}
 		if ( $this->updated ) {
-			$array['updated'] = \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
+			$array['updated'] = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
 		}
 		return \apply_filters( 'activitypub_post', $array );
 	}
@@ -87,10 +87,10 @@ class Post {
 	}
 
 	public function generate_id() {
-		$post      = $this->post;
-		$pretty_permalink	   = \get_post_meta( $post->ID, '_activitypub_permalink_compat', true );
+		$post = $this->post;
+		$pretty_permalink = \get_post_meta( $post->ID, '_activitypub_permalink_compat', true );
 
-		if( ! empty( $pretty_permalink ) ) {
+		if ( ! empty( $pretty_permalink ) ) {
 			$object_id = $pretty_permalink;
 		} else {
 			$object_id = \add_query_arg( //
@@ -203,13 +203,12 @@ class Post {
 						trailingslashit( site_url() )
 					);
 					$items[] = $comment_url;
-				} else {	
-					$ap_object = \unserialize(\get_comment_meta( $comment->comment_ID, 'ap_object', true ));
+				} else {
+					$ap_object = \unserialize( \get_comment_meta( $comment->comment_ID, 'ap_object', true ) );
 					$comment_url = \get_comment_meta( $comment->comment_ID, 'source_url', true );
-					if ( ! empty( $comment_url ) ){
-						$items[] = \get_comment_meta( $comment->comment_ID, 'source_url', true );	
+					if ( ! empty( $comment_url ) ) {
+						$items[] = \get_comment_meta( $comment->comment_ID, 'source_url', true );
 					}
-					
 				}
 			}
 
@@ -437,10 +436,8 @@ class Post {
 	public function get_deleted() {
 		$post = $this->post;
 		$deleted = null;
-		if ( 'trash' == $post->post_status ) {
-
-			$deleted = \date( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
-			\error_log( 'trash: ' . print_r( $deleted, true ) );
+		if ( 'trash' === $post->post_status ) {
+			$deleted = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
 		}
 		return $deleted;
 	}

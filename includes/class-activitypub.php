@@ -165,22 +165,16 @@ class Activitypub {
 	 */
 	public static function postprocess_comment( $comment_id, $comment_approved, $commentdata ) {
 		//Admin users comments bypass transition_comment_status (auto approved)
-
-		if ( $commentdata['comment_type'] === 'activitypub' ) {
-			if ( ( $comment_approved === 1 ) &&
+		$user = \get_userdata( $commentdata['user_id'] );
+		if ( 'activitypub' === $commentdata['comment_type'] ) {
+			if (
+				( 1 === $comment_approved ) &&
 				! empty( $commentdata['user_id'] ) &&
-				( $user = \get_userdata( $commentdata['user_id'] ) ) && // get the user data
-				\in_array( 'administrator', $user->roles )                   // check the roles
+				\in_array( 'administrator', $user->roles )
 			) {
 				// Only for Admins
 				$mentions = \get_comment_meta( $comment_id, 'mentions', true );
 				\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $comment_id ) );
-
-			} else {
-				// TODO check that this is unused
-				// TODO comment test as anon / no auth_url, no fetchable status?
-				// TODO comment test as registered
-				// TODO comment test as anyother site settings
 			}
 		}
 	}
@@ -191,9 +185,9 @@ class Activitypub {
 	 * Fires immediately after a comment is updated in the database.
 	 * Fires immediately before comment status transition hooks are fired. (useful only for admin)
 	 */
-	public static function edit_comment( $comment_ID, $data ) {
+	public static function edit_comment( $comment_id, $data ) {
 		if ( ! is_null( $data['user_id'] ) ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_update_comment_activity', array( $comment_ID ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_update_comment_activity', array( $comment_id ) );
 		}
 	}
 
@@ -204,7 +198,6 @@ class Activitypub {
 	 * @param int $comment
 	 */
 	public static function schedule_comment_activity( $new_status, $old_status, $activitypub_comment ) {
-		// TODO format $activitypub_comment = new \Activitypub\Model\Comment( $comment );
 		if ( 'approved' === $new_status && 'approved' !== $old_status ) {
 			//should only federate replies from local actors
 			//should only federate replies to federated actors
@@ -230,7 +223,7 @@ class Activitypub {
 		} elseif ( $old_status === $new_status ) {
 			//TODO Test with non-admin user
 			\wp_schedule_single_event( \time(), 'activitypub_send_update_comment_activity', array( $activitypub_comment->comment_ID ) );
-		} else {		}
+		}
 	}
 
 	/**

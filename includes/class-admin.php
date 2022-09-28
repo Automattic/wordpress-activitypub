@@ -163,16 +163,16 @@ class Admin {
 		//TODO revise for non-js reply action
 		// Public Reply
 		$reply_button = '<button type="button" data-comment-id="%d" data-post-id="%d" data-action="%s" class="%s button-link" aria-expanded="false" aria-label="%s" data-recipients="%s" data-summary="%s">%s</button>';
-		$actions['reply'] = sprintf(
+		$actions['reply'] = \sprintf(
 			$reply_button,
 			$comment->comment_ID,
 			$comment->comment_post_ID,
 			'replyto',
 			'vim-r comment-inline',
-			esc_attr__( 'Reply to this comment' ),
+			\esc_attr__( 'Reply to this comment', 'activitypub' ),
 			$recipients,
 			$summary,
-			__( 'Reply', 'activitypub' )
+			\__( 'Reply', 'activitypub' )
 		);
 
 		return $actions;
@@ -182,11 +182,11 @@ class Admin {
 		if ( 'edit-comments.php' !== $hook ) {
 			return;
 		}
-		wp_enqueue_script(
+		\wp_enqueue_script(
 			'activitypub_client',
-			plugin_dir_url( __FILE__ ) . '/activitypub.js',
+			\plugin_dir_url( __FILE__ ) . '/activitypub.js',
 			array( 'jquery' ),
-			filemtime( plugin_dir_path( __FILE__ ) . '/activitypub.js' ),
+			\filemtime( \plugin_dir_path( __FILE__ ) . '/activitypub.js' ),
 			true
 		);
 	}

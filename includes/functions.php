@@ -252,10 +252,8 @@ function get_follower_inboxes( $user_id ) {
 }
 
 /**
- * 
- * @param $mentions array of mentioned actors, each mention is an array of actor URI (href), and webfinger (name) 
- * 
- * @return array of (shared) inboxes
+ * @param $mentions array of mentioned actors, each mention is an array of actor URI (href), and webfinger (name).
+ * @return array of (shared) inboxes.
  */
 function get_mentioned_inboxes( $mentions ) {
 	$inboxes = array();
@@ -265,7 +263,7 @@ function get_mentioned_inboxes( $mentions ) {
 		if ( ! $inbox || \is_wp_error( $inbox ) ) {
 			continue;
 		}
-		
+
 		if ( ! isset( $inboxes[ $inbox ] ) ) {
 			$inboxes[ $inbox ] = array();
 		}
@@ -361,8 +359,8 @@ function url_to_authorid( $url ) {
 /**
  * Verify if in_replyto_url is a local comment,
  * Or if it is a previously received remote comment
- * (For threading comments locally) 
- * 
+ * (For threading comments locally)
+ *
  * @param string activitypub object id URI
  * @return int comment_id
  */
@@ -373,7 +371,7 @@ function url_to_commentid( $in_replyto_url ) {
 
 	//rewrite for activitypub object id simplification
 	$url_maybe_id = \wp_parse_url( $in_replyto_url );
-	if ( site_url() === $url_maybe_id['scheme'] . '://' . $url_maybe_id['host'] && !empty( $url_maybe_id['query'] )) {
+	if ( site_url() === $url_maybe_id['scheme'] . '://' . $url_maybe_id['host'] && ! empty( $url_maybe_id['query'] ) ) {
 		//is local post or comment
 		\parse_str( $url_maybe_id['query'], $reply_query );
 		if ( isset( $reply_query['ap_comment_id'] ) ) {
@@ -455,7 +453,7 @@ function get_recipients( $object_id, $post = null ) {
 		if ( ! empty( $ap_object['object']['tag'] ) ) {
 			$author_post_url = \get_author_posts_url( $ap_object['user_id'] );
 			foreach ( $ap_object['object']['tag'] as $tag ) {
-				if ( $author_post_url == $tag['href'] ) {
+				if ( $author_post_url === $tag['href'] ) {
 					continue;
 				}
 				if ( in_array( 'Mention', $tag ) ) {
@@ -481,7 +479,7 @@ function get_summary( $comment_id ) {
 
 /**
  * Parse content for tags to transform
- * 
+ *
  * @param string $content to search
  * @return array content, mentions (for storage in post_meta)
  */
@@ -542,16 +540,16 @@ function webfinger_short_tag( $webfinger ) {
  */
 function url_to_webfinger( $user_url ) {
 	$user_url = \untrailingslashit( $user_url );
-	$user_url_array = explode( '/', $user_url );
-	$user_name = end( $user_url_array );
-	$url_host = parse_url( $user_url, PHP_URL_HOST );
+	$user_url_array = \explode( '/', $user_url );
+	$user_name = \end( $user_url_array );
+	$url_host = \wp_parse_url( $user_url, PHP_URL_HOST );
 	$webfinger = '@' . $user_name . '@' . $url_host;
 	return $webfinger;
 }
 
 /**
  * @param $comment or $comment_id
- * @return ActivityPub URI of comment 
+ * @return ActivityPub URI of comment
  *
  * AP Object ID must be unique
  *
@@ -560,12 +558,12 @@ function url_to_webfinger( $user_url ) {
  */
 function set_ap_comment_id( $comment ) {
 	$comment = \get_comment( $comment );
-	$ap_comment_id = add_query_arg(
+	$ap_comment_id = \add_query_arg(
 		array(
 			'p' => $comment->comment_post_ID,
 			'ap_comment_id' => $comment->comment_ID,
 		),
-		trailingslashit( site_url() )
+		\trailingslashit( site_url() )
 	);
 	return $ap_comment_id;
 }

@@ -18,16 +18,16 @@ class Comment {
 		$this->comment = $comment;
 		$this->id = $this->generate_comment_id();
 		$this->comment_author_url = \get_author_posts_url( $this->comment->user_id );
-		$this->safe_comment_id   = $this->generate_comment_id();
-		$this->inReplyTo   = $this->generate_parent_url();
-		$this->contentWarning   = $this->generate_content_warning();
-		$this->permalink   = $this->generate_permalink();
-		$this->context   = $this->generate_context();
-		$this->to_recipients = $this->generate_mention_recipients();
-		$this->tags        = $this->generate_tags();
-		$this->update        = $this->generate_update();
-		$this->deleted        = $this->generate_trash();
-		$this->replies        = $this->generate_replies();
+		$this->safe_comment_id    = $this->generate_comment_id();
+		$this->in_reply_to        = $this->generate_parent_url();
+		$this->content_warning    = $this->generate_content_warning();
+		$this->permalink          = $this->generate_permalink();
+		$this->context            = $this->generate_context();
+		$this->to_recipients      = $this->generate_mention_recipients();
+		$this->tags               = $this->generate_tags();
+		$this->update             = $this->generate_update();
+		$this->deleted            = $this->generate_trash();
+		$this->replies            = $this->generate_replies();
 	}
 
 	public function __call( $method, $params ) {
@@ -48,10 +48,10 @@ class Comment {
 		$array = array(
 			'id' => $this->safe_comment_id,
 			'type' => 'Note',
-			'published' => \date( 'Y-m-d\TH:i:s\Z', \strtotime( $comment->comment_date_gmt ) ),
+			'published' => \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $comment->comment_date_gmt ) ),
 			'attributedTo' => $this->comment_author_url,
-			'summary' => $this->contentWarning,
-			'inReplyTo' => $this->inReplyTo,
+			'summary' => $this->content_warning,
+			'inReplyTo' => $this->in_reply_to,
 			'content' => $comment->comment_content,
 			'contentMap' => array(
 				\strstr( \get_locale(), '_', true ) => $comment->comment_content,
@@ -105,9 +105,9 @@ class Comment {
 		$parent_comment = \get_comment( $comment->comment_parent );
 		if ( $comment->comment_parent ) {
 			//is parent remote?
-			$inReplyTo = \get_comment_meta( $comment->comment_parent, 'source_url', true );
-			if ( ! $inReplyTo ) {
-				$inReplyTo = add_query_arg(
+			$in_reply_to = \get_comment_meta( $comment->comment_parent, 'source_url', true );
+			if ( ! $in_reply_to ) {
+				$in_reply_to = add_query_arg(
 					array(
 						'p' => $comment->comment_post_ID,
 						'ap_comment_id' => $comment->comment_parent,
@@ -119,9 +119,9 @@ class Comment {
 			// Backwards compatibility
 			$pretty_permalink = \get_post_meta( $comment->comment_post_ID, '_activitypub_permalink_compat', true ); // TODO finalize meta
 			if ( $pretty_permalink ) {
-				$inReplyTo = $pretty_permalink;
+				$in_reply_to = $pretty_permalink;
 			} else {
-				$inReplyTo = add_query_arg(
+				$in_reply_to = add_query_arg(
 					array(
 						'p' => $comment->comment_post_ID,
 					),
@@ -129,7 +129,7 @@ class Comment {
 				);
 			}
 		}
-		return $inReplyTo;
+		return $in_reply_to;
 	}
 
 	public function generate_context() {
@@ -159,7 +159,7 @@ class Comment {
 	 */
 	public function generate_content_warning() {
 		$comment = $this->comment;
-		$contentWarning = null;
+		$content_warning = null;
 
 		// Temporarily generate Summary from parent
 		$parent_comment = \get_comment( $comment->comment_parent );
@@ -167,15 +167,15 @@ class Comment {
 			//get (received) comment
 			$ap_object = \unserialize( \get_comment_meta( $comment->comment_parent, 'ap_object', true ) );
 			if ( isset( $ap_object['object']['summary'] ) ) {
-				$contentWarning = $ap_object['object']['summary'];
+				$content_warning = $ap_object['object']['summary'];
 			}
 		}
 		// TODO Replace auto generate with Summary shortcode
 		/*summary = \get_comment_meta( $this->comment->comment_ID, 'summary', true ) ;
 		if ( !empty( $summary ) ) {
-				$contentWarning = \Activitypub\add_summary( $summary );
+				$content_warning = \Activitypub\add_summary( $summary );
 		} */
-		return $contentWarning;
+		return $content_warning;
 	}
 
 	/**
@@ -227,8 +227,8 @@ class Comment {
 	public function generate_trash() {
 		$comment = $this->comment;
 		$deleted = null;
-		if ( 'trash' == $comment->status ) {
-			$deleted = \date( 'Y-m-d\TH:i:s\Z', \strtotime( $comment->comment_date_gmt ) );
+		if ( 'trash' === $comment->status ) {
+			$deleted = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $comment->comment_date_gmt ) );
 		}
 		return $deleted;
 	}
@@ -238,7 +238,7 @@ class Comment {
 	 */
 	public function generate_replies() {
 		$comment = $this->comment;
-		$replies = [];
+		$replies = array();
 		$args = array(
 			'post_id'       => $comment->comment_post_ID,
 			'parent'        => $comment->comment_ID,
@@ -252,7 +252,7 @@ class Comment {
 			foreach ( $comments_list as $comment ) {
 				// remote replies
 				$source_url = \get_comment_meta( $comment->comment_ID, 'source_url', true );
-				if ( ! empty( $source_url ) ){
+				if ( ! empty( $source_url ) ) {
 					$items[] = $source_url;
 				} else {
 					// local replies
@@ -266,7 +266,7 @@ class Comment {
 					$items[] = $comment_url;
 				}
 			}
-			
+
 			$replies = (object) array(
 				'type'  => 'Collection',
 				'id'    => \add_query_arg( array( 'replies' => '' ), $this->id ),
