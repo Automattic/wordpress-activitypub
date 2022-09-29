@@ -25,7 +25,7 @@ class Posts {
 		}
 	}
 
-	public static function get_posts( $args = null ) {
+	public static function get_posts() {
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
 		$args = array(
 			'numberposts'  => -1,
