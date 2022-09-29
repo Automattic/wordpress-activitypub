@@ -13,6 +13,7 @@ class Admin {
 	public static function init() {
 		\add_action( 'admin_menu', array( '\Activitypub\Admin', 'admin_menu' ) );
 		\add_action( 'admin_init', array( '\Activitypub\Admin', 'register_settings' ) );
+		\add_action( 'admin_init', array( '\Activitypub\Admin', 'version_check' ), 1 );
 		\add_action( 'show_user_profile', array( '\Activitypub\Admin', 'add_fediverse_profile' ) );
 		\add_action( 'admin_enqueue_scripts', array( '\Activitypub\Admin', 'scripts_reply_comments' ), 10, 2 );
 		\add_filter( 'comment_row_actions', array( '\Activitypub\Admin', 'reply_comments_actions' ), 10, 2 );
@@ -122,6 +123,33 @@ class Admin {
 				'default'      => array( 'post', 'pages' ),
 			)
 		);
+	}
+
+	/**
+	 * Update ActivityPub plugin
+	 */
+	public static function version_check() {
+		if( ! function_exists('get_plugin_data') ){
+			require_once( ABSPATH . 'wp-admin/includes/plugin.php' );
+		}
+		$plugin_data = \get_plugin_data( ACTIVITYPUB_PLUGIN );		
+		$activitypub_db_version = \get_option( 'activitypub_version' );
+		
+		// Needs update
+		if ( empty( $activitypub_db_version ) || $plugin_data['Version'] > $activitypub_db_version ) {
+			// Check for specific migrations
+			
+			if ( '0.13.5' > $activitypub_db_version ) {
+				// This updates post_meta with _activitypub_permalink_compat. 
+				// Posts that have this meta will be backwards compatible with their permalink based ActivityPub ID (URI)
+				
+				// This will create false positives, where the permalink has changed (slug, permalink structure) since federation, 
+				// for those cases a delete_url will allow for federating a delete based on the federated object ID
+
+				\Activitypub\Migrate\Posts::backcompat_posts();
+			}
+		}
+		\update_option( 'activitypub_version', $plugin_data['Version'] );
 	}
 
 	public static function add_settings_help_tab() {

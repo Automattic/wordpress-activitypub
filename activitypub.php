@@ -22,11 +22,14 @@ function init() {
 	\defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|^)#(\w*[A-Za-z_]+\w*)' );
 	\defined( 'ACTIVITYPUB_ALLOWED_HTML' ) || \define( 'ACTIVITYPUB_ALLOWED_HTML', '<strong><a><p><ul><ol><li><code><blockquote><pre><img>' );
 	\defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<p><strong>%title%</strong></p>\n\n%content%\n\n<p>%hashtags%</p>\n\n<p>%shortlink%</p>" );
+	\defined( 'ACTIVITYPUB_PLUGIN' ) || \define( 'ACTIVITYPUB_PLUGIN', __FILE__ );
+
 
 	require_once \dirname( __FILE__ ) . '/includes/table/followers-list.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once \dirname( __FILE__ ) . '/includes/peer/class-followers.php';
 	require_once \dirname( __FILE__ ) . '/includes/functions.php';
+	require_once \dirname( __FILE__ ) . '/includes/class-migrate.php';
 
 	require_once \dirname( __FILE__ ) . '/includes/model/class-activity.php';
 	require_once \dirname( __FILE__ ) . '/includes/model/class-post.php';
@@ -123,6 +126,19 @@ function flush_rewrite_rules() {
 	\flush_rewrite_rules();
 }
 \register_activation_hook( __FILE__, '\Activitypub\flush_rewrite_rules' );
+
+/**
+ * Activate plugin;
+ */
+function activate_plugin() {
+	if( ! function_exists('get_plugin_data') ){
+		require_once( ABSPATH . 'wp-admin/includes/plugin.php' );
+	}
+	$plugin_data = \get_plugin_data( __FILE__ );
+	\add_option( 'activitypub_version', $plugin_data['Version'] );
+}
+\register_activation_hook( __FILE__, '\Activitypub\activate_plugin' );
+
 \register_deactivation_hook( __FILE__, '\flush_rewrite_rules' );
 
 /**

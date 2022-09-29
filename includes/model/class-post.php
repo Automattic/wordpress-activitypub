@@ -17,7 +17,7 @@ class Post {
 	private $object_type;
 	private $deleted;
 	private $updated;
-	private $slug;
+	private $permalink;
 
 	public function __construct( $post = null ) {
 		$this->post = \get_post( $post );
@@ -32,6 +32,7 @@ class Post {
 		$this->replies     = $this->generate_replies();
 		$this->updated     = $this->generate_updated();
 		$this->delete      = $this->get_deleted();
+		$this->permalink   = $this->get_the_post_link();
 	}
 
 	public function __call( $method, $params ) {
@@ -56,7 +57,7 @@ class Post {
 			'attributedTo' => \get_author_posts_url( $post->post_author ),
 			'summary' => $this->summary,
 			'inReplyTo' => null,
-			'url' => \get_permalink( $post->ID ),
+			'url' => $this->permalink,
 			'content' => $this->content,
 			'contentMap' => array(
 				\strstr( \get_locale(), '_', true ) => $this->content,
