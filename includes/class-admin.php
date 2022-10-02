@@ -143,15 +143,15 @@ class Admin {
 		}
 		$plugin_data = \get_plugin_data( ACTIVITYPUB_PLUGIN );
 		$activitypub_db_version = \get_option( 'activitypub_version' );
-		
+
 		// Needs update
 		if ( empty( $activitypub_db_version ) || $plugin_data['Version'] > $activitypub_db_version ) {
 			// Check for specific migrations
-			
+
 			if ( '0.13.5' > $activitypub_db_version ) {
 				// This updates post_meta with _activitypub_permalink_compat.
 				// Posts that have this meta will be backwards compatible with their permalink based ActivityPub ID (URI)
-				
+
 				// This may create false positives, where the permalink has changed (slug, permalink structure) since federation,
 				// for those cases a delete_url will allow for federating a delete based on the federated object ID (the old permalink)
 

@@ -17,7 +17,7 @@ class Migrate_List extends \WP_List_Table {
 	}
 
 	public function get_sortable_columns() {
-        return array();
+		return array();
 	}
 
 	public function prepare_items() {
@@ -31,10 +31,10 @@ class Migrate_List extends \WP_List_Table {
 		foreach ( \Activitypub\Migrate\Posts::get_posts() as $post ) {
 			$this->items[] = array(
 				'post_author' => $post->post_author,
-				'title'      => \sprintf( 
-					'<a href="%1s">%2s</a>', 
-					\get_permalink( $post->ID ), 
-					$post->post_title 
+				'title'      => \sprintf(
+					'<a href="%1s">%2s</a>',
+					\get_permalink( $post->ID ),
+					$post->post_title
 				),
 				'date'       => $post->post_date,
 				'comments'   => $post->comment_count,
@@ -42,34 +42,34 @@ class Migrate_List extends \WP_List_Table {
 			);
 		}
 
-		/* pagination */
-        $per_page = $this->get_items_per_page('elements_per_page', 10);
-        $current_page = $this->get_pagenum();
-        $total_items = count($this->items);
-        $table_data = array_slice( $this->items, ( ( $current_page - 1 ) * $per_page ), $per_page );
-        $this->set_pagination_args(
+		// pagination
+		$per_page = $this->get_items_per_page( 'elements_per_page', 10 );
+		$current_page = $this->get_pagenum();
+		$total_items = count( $this->items );
+		$table_data = array_slice( $this->items, ( ( $current_page - 1 ) * $per_page ), $per_page );
+		$this->set_pagination_args(
 			array(
-                'total_items' => $total_items,
-                'per_page'    => $per_page,
-                'total_pages' => ceil( $total_items / $per_page )
+				'total_items' => $total_items,
+				'per_page'    => $per_page,
+				'total_pages' => ceil( $total_items / $per_page ),
 			)
 		);
 
-		/* actions */
+		// actions
 		if ( isset( $_REQUEST['_wpnonce'] ) ) {
 			$nonce = \esc_attr( $_REQUEST['_wpnonce'] );
 		}
 		// delete
-		if (isset($_REQUEST['action']) && $_REQUEST['page'] == "activitypub_tools" && $_REQUEST['action'] == "delete") {
+		if ( isset( $_REQUEST['action'] ) && 'activitypub_tools' === $_REQUEST['page'] && 'delete' === $_REQUEST['action'] ) {
 			if ( wp_verify_nonce( $nonce, 'activitypub_delete_post' ) ) {
-				\Activitypub\Migrate\Posts::delete_url( rawurldecode( $_REQUEST['post_url'] ),  absint( $_REQUEST['post_author'] )  );
+				\Activitypub\Migrate\Posts::delete_url( rawurldecode( $_REQUEST['post_url'] ), absint( $_REQUEST['post_author'] ) );
 				\delete_post_meta( \url_to_postid( $_REQUEST['post_url'] ), '_activitypub_permalink_compat' );
 			}
 		}
 		// delete and announce
-		if (isset($_REQUEST['action']) && $_REQUEST['page'] == "activitypub_tools" && $_REQUEST['action'] == "delete_and_boost") {
+		if ( isset( $_REQUEST['action'] ) && 'activitypub_tools' === $_REQUEST['page'] && 'delete_announce' === $_REQUEST['action'] ) {
 			if ( wp_verify_nonce( $nonce, 'activitypub_delete_announce_post' ) ) {
-				\Activitypub\Migrate\Posts::migrate_post( rawurldecode( $_REQUEST['post_url'] ),  absint( $_REQUEST['post_author'] )  );
+				\Activitypub\Migrate\Posts::migrate_post( rawurldecode( $_REQUEST['post_url'] ), absint( $_REQUEST['post_author'] ) );
 				\delete_post_meta( \url_to_postid( $_REQUEST['post_url'] ), '_activitypub_permalink_compat' );
 			}
 		}
@@ -92,32 +92,34 @@ class Migrate_List extends \WP_List_Table {
 			case 'migrate':
 				return $item[ $column_name ];
 			default:
-				return print_r( $item, true ); //Show the whole array for troubleshooting purposes
+				return print_r( $item, true );
 		}
-	  }
+	}
 
-	function column_title( $item ) {
+	public function column_title( $item ) {
 		$delete_announce_nonce = wp_create_nonce( 'activitypub_delete_announce_post' );
 		$delete_nonce = wp_create_nonce( 'activitypub_delete_post' );
 
 		$actions = array(
-	            'delete_boost' => sprintf('<a href="?page=%s&action=%s&post_author=%s&post_url=%s&_wpnonce=%s">%s</a>',
-								esc_attr($_REQUEST['page']),
-								'delete_and_boost',
-								$item['post_author'],
-								\rawurlencode( $item['migrate'] ),
-								$delete_announce_nonce,
-								__( 'Delete & Announce', 'activitypub' )
-							),
-	            'delete' => sprintf('<a href="?page=%s&action=%s&post_author=%s&post_url=%s&_wpnonce=%s">%s</a>',
-								esc_attr($_REQUEST['page']),
-								'delete',
-								$item['post_author'],
-								\rawurlencode( $item['migrate'] ),
-								$delete_nonce,
-								__( 'Delete', 'activitypub' )
-							),
-	        );
-	  return sprintf('%1$s %2$s', $item['title'], $this->row_actions($actions, true) );
+			'delete_announce' => sprintf(
+				'<a href="?page=%s&action=%s&post_author=%s&post_url=%s&_wpnonce=%s">%s</a>',
+				esc_attr( $_REQUEST['page'] ),
+				'delete_announce',
+				$item['post_author'],
+				\rawurlencode( $item['migrate'] ),
+				$delete_announce_nonce,
+				__( 'Delete & Announce', 'activitypub' )
+			),
+			'delete' => sprintf(
+				'<a href="?page=%s&action=%s&post_author=%s&post_url=%s&_wpnonce=%s">%s</a>',
+				esc_attr( $_REQUEST['page'] ),
+				'delete',
+				$item['post_author'],
+				\rawurlencode( $item['migrate'] ),
+				$delete_nonce,
+				__( 'Delete', 'activitypub' )
+			),
+		);
+		return sprintf( '%1$s %2$s', $item['title'], $this->row_actions( $actions, true ) );
 	}
 }

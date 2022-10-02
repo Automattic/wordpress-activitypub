@@ -128,7 +128,12 @@ class Activity_Dispatcher {
 		$activitypub_activity = new \Activitypub\Model\Activity( 'Delete', \Activitypub\Model\Activity::TYPE_SIMPLE );
 		$activitypub_activity->set_id( $activitypub_url . '#delete' );
 		$activitypub_activity->set_actor( $actor );
-		$activitypub_activity->set_object( array( "id" => $activitypub_url, "type" => "Tombstone" ) );
+		$activitypub_activity->set_object(
+			array(
+				'id' => $activitypub_url,
+				'type' => 'Tombstone',
+			)
+		);
 		$activitypub_activity->set_deleted( $deleted );
 
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
