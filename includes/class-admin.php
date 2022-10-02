@@ -37,6 +37,8 @@ class Admin {
 		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers (Fediverse)', 'activitypub' ), 'read', 'activitypub-followers-list', array( '\Activitypub\Admin', 'followers_list_page' ) );
 
 		\add_action( 'load-' . $followers_list_page, array( '\Activitypub\Admin', 'add_followers_list_help_tab' ) );
+
+		\add_management_page( \__( 'ActivityPub Management', 'activitypub' ), \__( 'ActivityPub Management', 'activitypub' ), 'manage_options', 'activitypub_tools', array( '\Activitypub\Admin', 'migrate_tools_page' ) );
 	}
 
 	/**
@@ -51,6 +53,13 @@ class Admin {
 	 */
 	public static function followers_list_page() {
 		\load_template( \dirname( __FILE__ ) . '/../templates/followers-list.php' );
+	}
+
+	/**
+	 * Load ActivityPub Tools page
+	 */
+	public static function migrate_tools_page() {
+		\load_template( \dirname( __FILE__ ) . '/../templates/migrate-page.php' );
 	}
 
 	/**
@@ -129,10 +138,10 @@ class Admin {
 	 * Update ActivityPub plugin
 	 */
 	public static function version_check() {
-		if( ! function_exists('get_plugin_data') ){
+		if ( ! function_exists( 'get_plugin_data' ) ) {
 			require_once( ABSPATH . 'wp-admin/includes/plugin.php' );
 		}
-		$plugin_data = \get_plugin_data( ACTIVITYPUB_PLUGIN );		
+		$plugin_data = \get_plugin_data( ACTIVITYPUB_PLUGIN );
 		$activitypub_db_version = \get_option( 'activitypub_version' );
 		
 		// Needs update
@@ -140,11 +149,11 @@ class Admin {
 			// Check for specific migrations
 			
 			if ( '0.13.5' > $activitypub_db_version ) {
-				// This updates post_meta with _activitypub_permalink_compat. 
+				// This updates post_meta with _activitypub_permalink_compat.
 				// Posts that have this meta will be backwards compatible with their permalink based ActivityPub ID (URI)
 				
-				// This will create false positives, where the permalink has changed (slug, permalink structure) since federation, 
-				// for those cases a delete_url will allow for federating a delete based on the federated object ID
+				// This may create false positives, where the permalink has changed (slug, permalink structure) since federation,
+				// for those cases a delete_url will allow for federating a delete based on the federated object ID (the old permalink)
 
 				\Activitypub\Migrate\Posts::backcompat_posts();
 			}
@@ -218,5 +227,4 @@ class Admin {
 			true
 		);
 	}
-
 }

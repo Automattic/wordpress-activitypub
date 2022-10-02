@@ -14,8 +14,10 @@ class Activity_Dispatcher {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_send_post_activity', array( '\Activitypub\Activity_Dispatcher', 'send_post_activity' ) );
+		\add_action( 'activitypub_send_announce_activity', array( '\Activitypub\Activity_Dispatcher', 'send_announce_activity' ) );
 		\add_action( 'activitypub_send_update_activity', array( '\Activitypub\Activity_Dispatcher', 'send_update_activity' ) );
-		\add_action( 'activitypub_send_delete_activity', array( '\Activitypub\Activity_Dispatcher', 'send_delete_activity', 2 ) );
+		\add_action( 'activitypub_send_delete_activity', array( '\Activitypub\Activity_Dispatcher', 'send_delete_activity' ) );
+		\add_action( 'activitypub_send_delete_url_activity', array( '\Activitypub\Activity_Dispatcher', 'send_delete_url_activity' ), 10, 2 );
 
 		\add_action( 'activitypub_send_comment_activity', array( '\Activitypub\Activity_Dispatcher', 'send_comment_activity' ) );
 		\add_action( 'activitypub_send_update_comment_activity', array( '\Activitypub\Activity_Dispatcher', 'send_update_comment_activity' ) );
@@ -44,6 +46,27 @@ class Activity_Dispatcher {
 	}
 
 	/**
+	 * Send "announce" activities.
+	 *
+	 * @param \Activitypub\Model\Post $activitypub_post
+	 */
+	public static function send_announce_activity( $activitypub_post ) {
+		// get latest version of post
+		$user_id = $activitypub_post->get_post_author();
+		$activitypub_announce = new \Activitypub\Model\Activity( 'Announce', \Activitypub\Model\Activity::TYPE_FULL );
+		$activitypub_announce->set_actor( \get_author_posts_url( $user_id ) );
+		$activitypub_create = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_NONE );
+		$activitypub_create->from_post( $activitypub_post->to_array() );
+		$activitypub_announce->from_post( $activitypub_create->to_array() );
+
+		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
+			$activitypub_announce->set_to( $to );
+			$activity = $activitypub_announce->to_json(); // phpcs:ignore
+			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
+		}
+	}
+
+	/**
 	 * Send "update" activities.
 	 *
 	 * @param \Activitypub\Model\Post $activitypub_post
@@ -67,9 +90,10 @@ class Activity_Dispatcher {
 	/**
 	 * Send "delete" activities.
 	 *
-	 * @param \Activitypub\Model\Post $activitypub_post
+	 * @param str $activitypub_url
+	 * @param int $user_id
 	 */
-	public static function send_delete_activity( $activitypub_post, $permalink = null ) {
+	public static function send_delete_activity( $activitypub_url, $user_id ) {
 		// get latest version of post
 		$user_id = $activitypub_post->get_post_author();
 		$deleted = \current_time( 'Y-m-d\TH:i:s\Z', true );
@@ -86,6 +110,30 @@ class Activity_Dispatcher {
 			$activitypub_activity->set_to( $to );
 			$activity = $activitypub_activity->to_json(); // phpcs:ignore
 
+			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
+		}
+	}
+
+	/**
+	 * Send "delete" activities.
+	 *
+	 * @param str $activitypub_url
+	 * @param int $user_id
+	 */
+	public static function send_delete_url_activity( $activitypub_url, $user_id ) {
+		// get latest version of post
+		$actor = \get_author_posts_url( $user_id );
+		$deleted = \current_time( 'Y-m-d\TH:i:s\Z', true );
+
+		$activitypub_activity = new \Activitypub\Model\Activity( 'Delete', \Activitypub\Model\Activity::TYPE_SIMPLE );
+		$activitypub_activity->set_id( $activitypub_url . '#delete' );
+		$activitypub_activity->set_actor( $actor );
+		$activitypub_activity->set_object( array( "id" => $activitypub_url, "type" => "Tombstone" ) );
+		$activitypub_activity->set_deleted( $deleted );
+
+		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
+			$activitypub_activity->set_to( $to );
+			$activity = $activitypub_activity->to_json(); // phpcs:ignore
 			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
 	}

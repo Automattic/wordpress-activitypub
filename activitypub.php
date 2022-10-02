@@ -26,6 +26,7 @@ function init() {
 
 
 	require_once \dirname( __FILE__ ) . '/includes/table/followers-list.php';
+	require_once \dirname( __FILE__ ) . '/includes/table/migrate-list.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once \dirname( __FILE__ ) . '/includes/peer/class-followers.php';
 	require_once \dirname( __FILE__ ) . '/includes/functions.php';
@@ -131,7 +132,7 @@ function flush_rewrite_rules() {
  * Activate plugin;
  */
 function activate_plugin() {
-	if( ! function_exists('get_plugin_data') ){
+	if ( ! function_exists( 'get_plugin_data' ) ) {
 		require_once( ABSPATH . 'wp-admin/includes/plugin.php' );
 	}
 	$plugin_data = \get_plugin_data( __FILE__ );
