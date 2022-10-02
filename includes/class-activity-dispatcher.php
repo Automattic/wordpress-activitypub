@@ -93,13 +93,9 @@ class Activity_Dispatcher {
 	 * @param str $activitypub_url
 	 * @param int $user_id
 	 */
-	public static function send_delete_activity( $activitypub_url, $user_id ) {
+	public static function send_delete_activity( $activitypub_post ) {
 		// get latest version of post
-		$user_id = $activitypub_post->get_post_author();
 		$deleted = \current_time( 'Y-m-d\TH:i:s\Z', true );
-		if ( $permalink ) {
-			$activitypub_post->set_id( $permalink );
-		}
 		$activitypub_post->set_deleted( $deleted );
 
 		$activitypub_activity = new \Activitypub\Model\Activity( 'Delete', \Activitypub\Model\Activity::TYPE_FULL );
