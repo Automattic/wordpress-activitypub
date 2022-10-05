@@ -49,7 +49,7 @@ class Activity_Dispatcher {
 	 * Send "announce" activities.
 	 *
 	 * @param str $activitypub_url (ActivityPub object ID)
-	 * @param absint $user_id 
+	 * @param absint $user_id
 	 */
 	public static function send_announce_activity( $activitypub_url, $user_id ) {
 		// get latest version of post

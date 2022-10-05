@@ -109,7 +109,7 @@ class Migrate_List extends \WP_List_Table {
 				\rawurlencode( $item['migrate'] ),
 				$delete_announce_nonce,
 				__( 'Delete the federated post, and re-share the original post', 'activitypub' ),
-				__( 'Delete & Re-share original', 'activitypub' ),
+				__( 'Delete & Re-share original', 'activitypub' )
 			),
 			'delete' => sprintf(
 				'<a href="?page=%s&action=%s&post_author=%s&post_url=%s&_wpnonce=%s" title="%s">%s</a>',
@@ -119,7 +119,7 @@ class Migrate_List extends \WP_List_Table {
 				\rawurlencode( $item['migrate'] ),
 				$delete_nonce,
 				__( 'Delete the federated post', 'activitypub' ),
-				__( 'Delete', 'activitypub' ),
+				__( 'Delete', 'activitypub' )
 			),
 		);
 		return sprintf( '%1$s %2$s', $item['title'], $this->row_actions( $actions, true ) );
