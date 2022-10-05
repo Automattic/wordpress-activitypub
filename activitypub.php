@@ -30,7 +30,7 @@ function init() {
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once \dirname( __FILE__ ) . '/includes/peer/class-followers.php';
 	require_once \dirname( __FILE__ ) . '/includes/functions.php';
-	require_once \dirname( __FILE__ ) . '/includes/class-migrate.php';
+	require_once \dirname( __FILE__ ) . '/includes/class-tools.php';
 
 	require_once \dirname( __FILE__ ) . '/includes/model/class-activity.php';
 	require_once \dirname( __FILE__ ) . '/includes/model/class-post.php';
