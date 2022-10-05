@@ -38,7 +38,7 @@ class Admin {
 
 		\add_action( 'load-' . $followers_list_page, array( '\Activitypub\Admin', 'add_followers_list_help_tab' ) );
 
-		\add_management_page( \__( 'ActivityPub Management', 'activitypub' ), \__( 'ActivityPub Management', 'activitypub' ), 'manage_options', 'activitypub_tools', array( '\Activitypub\Admin', 'migrate_tools_page' ) );
+		\add_management_page( \__( 'ActivityPub Management', 'activitypub' ), \__( 'ActivityPub Tools', 'activitypub' ), 'manage_options', 'activitypub_tools', array( '\Activitypub\Admin', 'migrate_tools_page' ) );
 	}
 
 	/**
@@ -59,7 +59,7 @@ class Admin {
 	 * Load ActivityPub Tools page
 	 */
 	public static function migrate_tools_page() {
-		\load_template( \dirname( __FILE__ ) . '/../templates/migrate-page.php' );
+		\load_template( \dirname( __FILE__ ) . '/../templates/tools-page.php' );
 	}
 
 	/**
@@ -145,17 +145,17 @@ class Admin {
 		$activitypub_db_version = \get_option( 'activitypub_version' );
 
 		// Needs update
-		if ( empty( $activitypub_db_version ) || $plugin_data['Version'] > $activitypub_db_version ) {
+		if ( empty( $activitypub_db_version ) || \version_compare( $plugin_data['Version'], $activitypub_db_version, '>' ) ) {
 			// Check for specific migrations
 
-			if ( '0.13.5' > $activitypub_db_version ) {
+			if ( version_compare( '0.13.5', $activitypub_db_version, '>' ) ) {
 				// This updates post_meta with _activitypub_permalink_compat.
 				// Posts that have this meta will be backwards compatible with their permalink based ActivityPub ID (URI)
 
 				// This may create false positives, where the permalink has changed (slug, permalink structure) since federation,
 				// for those cases a delete_url will allow for federating a delete based on the federated object ID (the old permalink)
 
-				\Activitypub\Migrate\Posts::backcompat_posts();
+				\Activitypub\Tools\Posts::mark_posts_to_migrate();
 			}
 		}
 		\update_option( 'activitypub_version', $plugin_data['Version'] );

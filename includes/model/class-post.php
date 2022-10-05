@@ -32,7 +32,7 @@ class Post {
 		$this->replies     = $this->generate_replies();
 		$this->updated     = $this->generate_updated();
 		$this->delete      = $this->get_deleted();
-		$this->permalink   = $this->get_the_post_link();
+		$this->permalink   = $this->get_the_permalink();
 	}
 
 	public function __call( $method, $params ) {
@@ -89,17 +89,17 @@ class Post {
 
 	public function generate_id() {
 		$post = $this->post;
+		$object_id = \add_query_arg( //
+			array(
+				'p' => $post->ID,
+			),
+			trailingslashit( site_url() )
+		);
+		
 		$pretty_permalink = \get_post_meta( $post->ID, '_activitypub_permalink_compat', true );
-
+		
 		if ( ! empty( $pretty_permalink ) ) {
 			$object_id = $pretty_permalink;
-		} else {
-			$object_id = \add_query_arg( //
-				array(
-					'p' => $post->ID,
-				),
-				trailingslashit( site_url() )
-			);
 		}
 		return $object_id;
 	}
@@ -404,6 +404,18 @@ class Post {
 		}
 
 		return \sprintf( '<a href="%1$s">%1$s</a>', $link );
+	}
+
+	/**
+	 * Gets the federated permalink
+	 *
+	 * @return string
+	 */
+	public function get_the_permalink() {
+		$post = $this->post;
+
+		$link = \get_permalink( $post->ID );
+		return $link;
 	}
 
 	/**

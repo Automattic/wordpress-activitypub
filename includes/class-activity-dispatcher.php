@@ -14,7 +14,7 @@ class Activity_Dispatcher {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_send_post_activity', array( '\Activitypub\Activity_Dispatcher', 'send_post_activity' ) );
-		\add_action( 'activitypub_send_announce_activity', array( '\Activitypub\Activity_Dispatcher', 'send_announce_activity' ) );
+		\add_action( 'activitypub_send_announce_activity', array( '\Activitypub\Activity_Dispatcher', 'send_announce_activity' ), 10, 2 );
 		\add_action( 'activitypub_send_update_activity', array( '\Activitypub\Activity_Dispatcher', 'send_update_activity' ) );
 		\add_action( 'activitypub_send_delete_activity', array( '\Activitypub\Activity_Dispatcher', 'send_delete_activity' ) );
 		\add_action( 'activitypub_send_delete_url_activity', array( '\Activitypub\Activity_Dispatcher', 'send_delete_url_activity' ), 10, 2 );
@@ -48,16 +48,27 @@ class Activity_Dispatcher {
 	/**
 	 * Send "announce" activities.
 	 *
-	 * @param \Activitypub\Model\Post $activitypub_post
+	 * @param str $activitypub_url (ActivityPub object ID)
+	 * @param absint $user_id 
 	 */
-	public static function send_announce_activity( $activitypub_post ) {
+	public static function send_announce_activity( $activitypub_url, $user_id ) {
 		// get latest version of post
-		$user_id = $activitypub_post->get_post_author();
-		$activitypub_announce = new \Activitypub\Model\Activity( 'Announce', \Activitypub\Model\Activity::TYPE_FULL );
+		$time = \current_datetime()->format( DATE_ISO8601 );
+		$post = \get_post( \url_to_postid( $activitypub_url ) );
+
+		$activitypub_announce = new \Activitypub\Model\Activity( 'Announce', \Activitypub\Model\Activity::TYPE_SIMPLE );
+		$activitypub_announce->set_published( $time );
+
+		if ( $post ) {
+			$activitypub_id = $post->guid;
+			$activitypub_post = new \Activitypub\Model\Post( $post );
+			$activitypub_announce->from_post( $activitypub_post->to_array() );
+		} else {
+			$activitypub_id = $activitypub_url;
+			$activitypub_announce->set_object( $activitypub_id );
+		}
+		$activitypub_announce->set_id( add_query_arg( 'activity', 'announce', $activitypub_id ) );
 		$activitypub_announce->set_actor( \get_author_posts_url( $user_id ) );
-		$activitypub_create = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_NONE );
-		$activitypub_create->from_post( $activitypub_post->to_array() );
-		$activitypub_announce->from_post( $activitypub_create->to_array() );
 
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
 			$activitypub_announce->set_to( $to );

@@ -28,7 +28,7 @@ class Migrate_List extends \WP_List_Table {
 		$this->process_action();
 		$this->_column_headers = array( $columns, $hidden, $sortable );
 
-		foreach ( \Activitypub\Migrate\Posts::get_posts() as $post ) {
+		foreach ( \Activitypub\Tools\Posts::get_posts_to_migrate() as $post ) {
 			$this->items[] = array(
 				'post_author' => $post->post_author,
 				'title'      => \sprintf(
@@ -62,14 +62,14 @@ class Migrate_List extends \WP_List_Table {
 		// delete
 		if ( isset( $_REQUEST['action'] ) && 'activitypub_tools' === $_REQUEST['page'] && 'delete' === $_REQUEST['action'] ) {
 			if ( wp_verify_nonce( $nonce, 'activitypub_delete_post' ) ) {
-				\Activitypub\Migrate\Posts::delete_url( rawurldecode( $_REQUEST['post_url'] ), absint( $_REQUEST['post_author'] ) );
+				\Activitypub\Tools\Posts::delete_url( rawurldecode( $_REQUEST['post_url'] ), absint( $_REQUEST['post_author'] ) );
 				\delete_post_meta( \url_to_postid( $_REQUEST['post_url'] ), '_activitypub_permalink_compat' );
 			}
 		}
 		// delete and announce
 		if ( isset( $_REQUEST['action'] ) && 'activitypub_tools' === $_REQUEST['page'] && 'delete_announce' === $_REQUEST['action'] ) {
 			if ( wp_verify_nonce( $nonce, 'activitypub_delete_announce_post' ) ) {
-				\Activitypub\Migrate\Posts::migrate_post( rawurldecode( $_REQUEST['post_url'] ), absint( $_REQUEST['post_author'] ) );
+				\Activitypub\Tools\Posts::migrate_post( rawurldecode( $_REQUEST['post_url'] ), absint( $_REQUEST['post_author'] ) );
 				\delete_post_meta( \url_to_postid( $_REQUEST['post_url'] ), '_activitypub_permalink_compat' );
 			}
 		}
@@ -102,22 +102,24 @@ class Migrate_List extends \WP_List_Table {
 
 		$actions = array(
 			'delete_announce' => sprintf(
-				'<a href="?page=%s&action=%s&post_author=%s&post_url=%s&_wpnonce=%s">%s</a>',
+				'<a href="?page=%s&action=%s&post_author=%s&post_url=%s&_wpnonce=%s" title="%s">%s</a>',
 				esc_attr( $_REQUEST['page'] ),
 				'delete_announce',
 				$item['post_author'],
 				\rawurlencode( $item['migrate'] ),
 				$delete_announce_nonce,
-				__( 'Delete & Announce', 'activitypub' )
+				__( 'Delete the federated post, and re-share the original post', 'activitypub' ),
+				__( 'Delete & Re-share original', 'activitypub' ),
 			),
 			'delete' => sprintf(
-				'<a href="?page=%s&action=%s&post_author=%s&post_url=%s&_wpnonce=%s">%s</a>',
+				'<a href="?page=%s&action=%s&post_author=%s&post_url=%s&_wpnonce=%s" title="%s">%s</a>',
 				esc_attr( $_REQUEST['page'] ),
 				'delete',
 				$item['post_author'],
 				\rawurlencode( $item['migrate'] ),
 				$delete_nonce,
-				__( 'Delete', 'activitypub' )
+				__( 'Delete the federated post', 'activitypub' ),
+				__( 'Delete', 'activitypub' ),
 			),
 		);
 		return sprintf( '%1$s %2$s', $item['title'], $this->row_actions( $actions, true ) );
