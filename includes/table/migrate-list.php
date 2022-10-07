@@ -6,12 +6,14 @@ if ( ! \class_exists( '\WP_List_Table' ) ) {
 }
 
 class Migrate_List extends \WP_List_Table {
+
 	public function get_columns() {
 		return array(
+			'cb'      => '<input type="checkbox" />',
 			'post_author' => \__( 'Post Author (user_id)', 'activitypub' ),
 			'title' => \__( 'Post', 'activitypub' ),
-			'date' => \__( 'Publication Date', 'activitypub' ),
 			'comments' => \__( 'Comments', 'activitypub' ),
+			'date' => \__( 'Publication Date', 'activitypub' ),
 			'migrate' => \__( 'Migrate', 'activitypub' ),
 		);
 	}
@@ -36,8 +38,8 @@ class Migrate_List extends \WP_List_Table {
 					\get_permalink( $post->ID ),
 					$post->post_title
 				),
-				'date'       => $post->post_date,
 				'comments'   => $post->comment_count,
+				'date'       => $post->post_date,
 				'migrate'     => \get_post_meta( $post->ID, '_activitypub_permalink_compat', true ),
 			);
 		}
@@ -60,19 +62,37 @@ class Migrate_List extends \WP_List_Table {
 			$nonce = \esc_attr( $_REQUEST['_wpnonce'] );
 		}
 		// delete
-		if ( isset( $_REQUEST['action'] ) && 'activitypub_tools' === $_REQUEST['page'] && 'delete' === $_REQUEST['action'] ) {
-			if ( wp_verify_nonce( $nonce, 'activitypub_delete_post' ) ) {
-				\Activitypub\Tools\Posts::delete_url( rawurldecode( $_REQUEST['post_url'] ), absint( $_REQUEST['post_author'] ) );
+		if ( isset( $_REQUEST['action'] ) && 'activitypub_tools' === $_REQUEST['page'] && 'delete_notice' === $_REQUEST['action'] ) {
+			if ( wp_verify_nonce( $nonce, 'activitypub_migrate_actions' ) ) {
+				//\Activitypub\Tools\Posts::delete_url( rawurldecode( $_REQUEST['post_url'] ), absint( $_REQUEST['post_author'] ) );
 				\delete_post_meta( \url_to_postid( $_REQUEST['post_url'] ), '_activitypub_permalink_compat' );
 			}
 		}
 		// delete and announce
-		if ( isset( $_REQUEST['action'] ) && 'activitypub_tools' === $_REQUEST['page'] && 'delete_announce' === $_REQUEST['action'] ) {
-			if ( wp_verify_nonce( $nonce, 'activitypub_delete_announce_post' ) ) {
+		if ( isset( $_REQUEST['action'] ) && 'activitypub_tools' === $_REQUEST['page'] && 'delete' === $_REQUEST['action'] ) {
+			if ( wp_verify_nonce( $nonce, 'activitypub_migrate_actions' ) ) {
 				\Activitypub\Tools\Posts::migrate_post( rawurldecode( $_REQUEST['post_url'] ), absint( $_REQUEST['post_author'] ) );
 				\delete_post_meta( \url_to_postid( $_REQUEST['post_url'] ), '_activitypub_permalink_compat' );
 			}
 		}
+	}
+
+	public function single_row( $item ) {
+		$inline_styles = ( $item['comments'] > 0 ) ? 'warning' : ''; ?>
+		<tr class="<?php echo $inline_styles; ?>"><?php $this->single_row_columns( $item ); ?></tr><?php
+	}
+
+	/**
+	 * Render the bulk edit checkbox
+	 *
+	 * @param array $item
+	 *
+	 * @return string
+	 */
+	function column_cb( $item ) {
+		return sprintf(
+	    '<input type="checkbox" name="selected[]" value="%s" />', $item['migrate']
+	  );
 	}
 
 	/**
@@ -85,10 +105,11 @@ class Migrate_List extends \WP_List_Table {
 	 */
 	public function column_default( $item, $column_name ) {
 		switch ( $column_name ) {
+			case 'cb':
 			case 'post_author':
 			case 'title':
-			case 'date':
 			case 'comments':
+			case 'date':
 			case 'migrate':
 				return $item[ $column_name ];
 			default:
@@ -97,29 +118,36 @@ class Migrate_List extends \WP_List_Table {
 	}
 
 	public function column_title( $item ) {
-		$delete_announce_nonce = wp_create_nonce( 'activitypub_delete_announce_post' );
-		$delete_nonce = wp_create_nonce( 'activitypub_delete_post' );
+		$migrate_action_nonce = wp_create_nonce( 'activitypub_migrate_actions' );
 
 		$actions = array(
-			'delete_announce' => sprintf(
-				'<a href="?page=%s&action=%s&post_author=%s&post_url=%s&_wpnonce=%s" title="%s">%s</a>',
-				esc_attr( $_REQUEST['page'] ),
-				'delete_announce',
-				$item['post_author'],
-				\rawurlencode( $item['migrate'] ),
-				$delete_announce_nonce,
-				__( 'Delete the federated post, and re-share the original post', 'activitypub' ),
-				__( 'Delete & Re-share original', 'activitypub' )
-			),
 			'delete' => sprintf(
-				'<a href="?page=%s&action=%s&post_author=%s&post_url=%s&_wpnonce=%s" title="%s">%s</a>',
+				'<a href="?page=%s&action=%s&post_author=%s&post_url=%s&_wpnonce=%s" class="%s" title="%s" data-post_author="%s" data-post_url="%s" data-nonce="%s">%s</a>',
 				esc_attr( $_REQUEST['page'] ),
-				'delete',
+				'delete',// using this id for style reasons
 				$item['post_author'],
 				\rawurlencode( $item['migrate'] ),
-				$delete_nonce,
-				__( 'Delete the federated post', 'activitypub' ),
-				__( 'Delete', 'activitypub' )
+				$migrate_action_nonce,
+				'delete_annouce aria-button-ui-if-js',
+				__( 'Delete the federated post, and re-share the post with a new id', 'activitypub' ),
+				$item['post_author'],
+				\rawurlencode( $item['migrate'] ),
+				$migrate_action_nonce,
+				__( 'Migrate post', 'activitypub' )
+			),
+			'delete_notice' => sprintf(
+				'<a href="?page=%s&action=%s&post_author=%s&post_url=%s&_wpnonce=%s" class="%s" title="%s" data-post_author="%s" data-post_url="%s" data-nonce="%s">%s</a>',
+				esc_attr( $_REQUEST['page'] ),
+				'delete_notice',
+				$item['post_author'],
+				\rawurlencode( $item['migrate'] ),
+				$migrate_action_nonce,
+				'delete aria-button-ui-if-js',
+				__( 'Delete this notice and backwards compatibility', 'activitypub' ),
+				$item['post_author'],
+				\rawurlencode( $item['migrate'] ),
+				$migrate_action_nonce,
+				__( 'Remove notice', 'activitypub' )
 			),
 		);
 		return sprintf( '%1$s %2$s', $item['title'], $this->row_actions( $actions, true ) );

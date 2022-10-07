@@ -15,7 +15,8 @@ class Admin {
 		\add_action( 'admin_init', array( '\Activitypub\Admin', 'register_settings' ) );
 		\add_action( 'admin_init', array( '\Activitypub\Admin', 'version_check' ), 1 );
 		\add_action( 'show_user_profile', array( '\Activitypub\Admin', 'add_fediverse_profile' ) );
-		\add_action( 'admin_enqueue_scripts', array( '\Activitypub\Admin', 'scripts_reply_comments' ), 10, 2 );
+		\add_action( 'admin_enqueue_scripts', array( '\Activitypub\Admin', 'enqueue_script_actions' ), 10, 2 );
+		\add_action( 'wp_ajax_migrate_post', array( '\Activitypub\Admin', 'migrate_post_action' ) );
 		\add_filter( 'comment_row_actions', array( '\Activitypub\Admin', 'reply_comments_actions' ), 10, 2 );
 
 	}
@@ -144,21 +145,15 @@ class Admin {
 		$plugin_data = \get_plugin_data( ACTIVITYPUB_PLUGIN );
 		$activitypub_db_version = \get_option( 'activitypub_version' );
 
-		// Needs update
 		if ( empty( $activitypub_db_version ) || \version_compare( $plugin_data['Version'], $activitypub_db_version, '>' ) ) {
 			// Check for specific migrations
 
-			if ( version_compare( '0.13.5', $activitypub_db_version, '>' ) ) {
-				// This updates post_meta with _activitypub_permalink_compat.
-				// Posts that have this meta will be backwards compatible with their permalink based ActivityPub ID (URI)
-
-				// This may create false positives, where the permalink has changed (slug, permalink structure) since federation,
-				// for those cases a delete_url will allow for federating a delete based on the federated object ID (the old permalink)
-
+			if ( version_compare( '0.13.4', $activitypub_db_version, '>' ) ) {
 				\Activitypub\Tools\Posts::mark_posts_to_migrate();
 			}
 		}
 		\update_option( 'activitypub_version', $plugin_data['Version'] );
+		//\delete_option( 'activitypub_version' );
 	}
 
 	public static function add_settings_help_tab() {
@@ -192,13 +187,35 @@ class Admin {
 		\Activitypub\get_identifier_settings( $user->ID );
 	}
 
+	public static function enqueue_script_actions( $hook ) {
+		if ( 'edit-comments.php' === $hook || 'tools_page_activitypub_tools' === $hook ) {
+			\wp_enqueue_script(
+				'activitypub_actions',
+				\plugin_dir_url( __FILE__ ) . '/activitypub.js',
+				array( 'jquery' ),
+				\filemtime( \plugin_dir_path( __FILE__ ) . '/activitypub.js' ),
+				true
+			);
+		}
+	}
+
+	/**
+	 * Migrate post (Ajax)
+	 */
+	public static function migrate_post_action() {
+		if ( wp_verify_nonce( $_POST['nonce'], 'activitypub_migrate_actions' ) ) {
+			\Activitypub\Tools\Posts::migrate_post( rawurldecode( $_POST['post_url'] ), absint( $_POST['post_author'] ) );
+			\delete_post_meta( \url_to_postid( $_POST['post_url'] ), '_activitypub_permalink_compat' );	
+		} else {
+			$error = new WP_Error( 'nonce_failure', __( 'Unauthorized', 'activitypub' ) );
+			wp_send_json_error( $error );
+		}
+		wp_die();
+	}
+
 	public static function reply_comments_actions( $actions, $comment ) {
-		//unset( $actions['reply'] );
 		$recipients = \Activitypub\get_recipients( $comment->comment_ID );
 		$summary = \Activitypub\get_summary( $comment->comment_ID );
-
-		//TODO revise for non-js reply action
-		// Public Reply
 		$reply_button = '<button type="button" data-comment-id="%d" data-post-id="%d" data-action="%s" class="%s button-link" aria-expanded="false" aria-label="%s" data-recipients="%s" data-summary="%s">%s</button>';
 		$actions['reply'] = \sprintf(
 			$reply_button,
@@ -211,20 +228,6 @@ class Admin {
 			$summary,
 			\__( 'Reply', 'activitypub' )
 		);
-
 		return $actions;
-	}
-
-	public static function scripts_reply_comments( $hook ) {
-		if ( 'edit-comments.php' !== $hook ) {
-			return;
-		}
-		\wp_enqueue_script(
-			'activitypub_client',
-			\plugin_dir_url( __FILE__ ) . '/activitypub.js',
-			array( 'jquery' ),
-			\filemtime( \plugin_dir_path( __FILE__ ) . '/activitypub.js' ),
-			true
-		);
 	}
 }

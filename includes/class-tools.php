@@ -33,8 +33,19 @@ class Posts {
 			'meta_key' => '_activitypub_permalink_compat',
 			'order'   => 'ASC',
 		);
-		$posts_to_migrate = \get_posts( $args );
-		return $posts_to_migrate;
+		return \get_posts( $args );
+	}
+
+	public static function get_posts_with_activitypub_comments() {
+		$args = array(
+			'comment_type' => 'activitypub',
+		);
+		$activitypub_comments = \get_comments( $args );
+		$activitypub_comments_posts = array();
+		foreach ( $activitypub_comments as $comment ) {
+			$activitypub_comments_posts[] = $comment->comment_post_ID;
+		}
+		return \get_posts( \array_unique( $activitypub_comments_posts ) );
 	}
 
 	public static function count_posts_to_migrate() {

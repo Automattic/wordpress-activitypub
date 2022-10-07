@@ -10,26 +10,32 @@ if ( isset( $_REQUEST['post_url'] ) && $_REQUEST['page'] == "activitypub_tools" 
 }
 ?>
 <div class="wrap">
-	<h1><?php \esc_html_e( 'Migrate posts (Fediverse)', 'activitypub' ); ?></h1>
+	<h1><?php \esc_html_e( 'Manage ActivityPub posts (Fediverse)', 'activitypub' ); ?></h1>
 
-	<p><?php \printf(
-		\__( 'You currently have %s posts to migrate.', 'activitypub' ),
-		\esc_attr( \Activitypub\Tools\Posts::count_posts_to_migrate() )
-	); ?></p>
+	<?php if ( \Activitypub\Tools\Posts::count_posts_to_migrate() > 0 ): ?>
 
-	<p><?php \printf(
-		\__( 'Posts with ActivityPub Comments, should be treated with care, existing interactions in the fediverse but not on site will be lost.', 'activitypub' ),
-		\esc_attr( \Activitypub\Tools\Posts::count_posts_to_migrate() )
-	); ?></p>
+		<div class="notice notice-warning">
+			<p><?php \printf(
+				\__( 'The following table lists ActivityPub posts which have been marked as backwards compatible, and ready for migration. <br>
+				Migration here means updating the Activity ID by federating a Delete activity removing the original post from the fediverse, and then Sharing the new post ID with an Announce activity. <br>
+				Posts with comments should be treated with care, existing interactions in the fediverse will be lost.', 'activitypub' ),
+				\esc_attr( \Activitypub\Tools\Posts::count_posts_to_migrate() )
+			); ?></p>
+		</div>
 
-	<?php $token_table = new \Activitypub\Table\Migrate_List(); ?>
+		<p><?php \printf(
+			\__( 'You currently have %s posts to migrate.', 'activitypub' ),
+			\esc_attr( \Activitypub\Tools\Posts::count_posts_to_migrate() )
+		); ?></p>
 
-	<form method="POST" id="table">
-		<?php
-		$token_table->prepare_items();
-		$token_table->display();
-		?>
-	</form>
+		<?php $token_table = new \Activitypub\Table\Migrate_List(); ?>
+		<form method="POST" id="table">
+			<?php
+			$token_table->prepare_items();
+			$token_table->display();
+			?>
+		</form>
+	<?php endif; ?>
 	<hr class="separator">
 	<form method="POST" id="delete">
 		<div>
