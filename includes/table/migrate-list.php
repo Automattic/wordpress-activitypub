@@ -21,10 +21,10 @@ class Migrate_List extends \WP_List_Table {
 	public function get_sortable_columns() {
 		return array();
 	}
-	
-	function get_bulk_actions() {
+
+	public function get_bulk_actions() {
 		$actions = array(
-		  'delete'    => 'Remove backwards compatibility'
+			'delete'    => 'Remove backwards compatibility',
 		);
 		return $actions;
 	}
@@ -34,25 +34,29 @@ class Migrate_List extends \WP_List_Table {
 		$comments_posts_count = \Activitypub\Tools\Posts::count_posts_with_comments_to_migrate();
 		$activitypub_tools_page = 'tools.php?page=activitypub_tools';
 		$view_slugs = array(
-			array('all', NULL, __('All', 'activitypub'), $posts_count), 
-			array('comments', 'activitypub', __('Posts with Comments', 'activitypub'), $comments_posts_count), 
+			array( 'all', null, __( 'All', 'activitypub' ), $posts_count ),
+			array( 'comments', 'activitypub', __( 'Posts with Comments', 'activitypub' ), $comments_posts_count ),
 		);
-		$post_status_var = get_query_var('comments');
-		$view_count = count($view_slugs);
-		for ($x = 0; $x < $view_count; $x++) {
-			$class = ($post_status_var == $view_slugs[$x][1]) ? ' class="current"' : '';
-			$post_status_temp = $view_slugs[$x][1];
-			if($post_status_temp != '') {
-				$post_status_temp = '&comments='.$view_slugs[$x][1];
+		$post_status_var = get_query_var( 'comments' );
+		$view_count = count( $view_slugs );
+		for ( $x = 0; $x < $view_count; $x++ ) {
+			$class = ( $post_status_var == $view_slugs[ $x ][1] ) ? ' class="current"' : '';
+			$post_status_temp = $view_slugs[ $x ][1];
+			if ( $post_status_temp != '' ) {
+				$post_status_temp = '&comments=' . $view_slugs[ $x ][1];
 			}
-			$views[$view_slugs[$x][0]] = sprintf(__('<a href="' .
-								   $activitypub_tools_page .
-								   $post_status_temp . '"' .
-								   $class .
-								   ' >' .
-								   $view_slugs[$x][2] .
-								   ' <span class="count">(%d)</span></a>'), 
-								$view_slugs[$x][3]);
+			$views[ $view_slugs[ $x ][0] ] = sprintf(
+				__(
+					'<a href="' .
+						$activitypub_tools_page .
+						$post_status_temp . '"' .
+						$class .
+						' >' .
+						$view_slugs[ $x ][2] .
+					' <span class="count">(%d)</span></a>'
+				),
+				$view_slugs[ $x ][3]
+			);
 		}
 		return $views;
 	}
@@ -132,7 +136,8 @@ class Migrate_List extends \WP_List_Table {
 
 	public function single_row( $item ) {
 		$inline_styles = ( $item['comments'] > 0 ) ? 'warning' : ''; ?>
-		<tr class="<?php echo $inline_styles; ?>"><?php $this->single_row_columns( $item ); ?></tr><?php
+		<tr class="<?php echo $inline_styles; ?>"><?php $this->single_row_columns( $item ); ?></tr>
+		<?php
 	}
 
 	/**
@@ -142,10 +147,11 @@ class Migrate_List extends \WP_List_Table {
 	 *
 	 * @return string
 	 */
-	function column_cb( $item ) {
+	public function column_cb( $item ) {
 		return sprintf(
-	    '<input type="checkbox" name="selected[]" value="%s" />', $item['migrate']
-	  );
+			'<input type="checkbox" name="selected[]" value="%s" />',
+			$item['migrate']
+		);
 	}
 
 	/**
@@ -177,7 +183,7 @@ class Migrate_List extends \WP_List_Table {
 			'delete' => sprintf(
 				'<a href="?page=%s&action=%s&post_author=%s&post_url=%s&_wpnonce=%s" class="%s" title="%s" data-post_author="%s" data-post_url="%s" data-nonce="%s">%s</a>',
 				esc_attr( $_REQUEST['page'] ),
-				'delete',// using this id for style reasons
+				'delete', // using this id for style reasons
 				$item['post_author'],
 				\rawurlencode( $item['migrate'] ),
 				$migrate_action_nonce,

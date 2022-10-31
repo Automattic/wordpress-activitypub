@@ -140,7 +140,7 @@ class Admin {
 	 */
 	public static function version_check() {
 		if ( ! function_exists( 'get_plugin_data' ) ) {
-			require_once( ABSPATH . 'wp-admin/includes/plugin.php' );
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
 		$plugin_data = \get_plugin_data( ACTIVITYPUB_PLUGIN );
 		$activitypub_db_version = \get_option( 'activitypub_version' );
