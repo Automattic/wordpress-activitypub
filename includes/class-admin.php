@@ -18,7 +18,7 @@ class Admin {
 		\add_action( 'admin_enqueue_scripts', array( '\Activitypub\Admin', 'enqueue_script_actions' ), 10, 2 );
 		\add_action( 'wp_ajax_migrate_post', array( '\Activitypub\Admin', 'migrate_post_action' ) );
 		\add_filter( 'comment_row_actions', array( '\Activitypub\Admin', 'reply_comments_actions' ), 10, 2 );
-
+		\add_filter( 'views_tools_page_activitypub_tools', array( '\Activitypub\Table\Migrate_List', 'get_activitypub_tools_views' ), 10 );
 	}
 
 	/**
@@ -213,6 +213,10 @@ class Admin {
 		wp_die();
 	}
 
+	/**
+	 * hook comment_row_actions
+	 * Reply to ActivityPub Comments from the edit-comments.php screen
+	 */
 	public static function reply_comments_actions( $actions, $comment ) {
 		$recipients = \Activitypub\get_recipients( $comment->comment_ID );
 		$summary = \Activitypub\get_summary( $comment->comment_ID );

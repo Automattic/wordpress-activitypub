@@ -9,6 +9,15 @@ if ( isset( $_REQUEST['post_url'] ) && $_REQUEST['page'] == "activitypub_tools" 
 	}
 }
 ?>
+<style>
+	#the-list tr.warning {
+		background-color: #fcf9e8;
+ 		box-shadow: inset 0 -1px 0 rgba(0,0,0,.1);
+	}
+	#the-list tr.warning th.check-column {
+		border-left: 4px solid #d63638;
+	}
+</style>
 <div class="wrap">
 	<h1><?php \esc_html_e( 'Manage ActivityPub posts (Fediverse)', 'activitypub' ); ?></h1>
 
@@ -24,15 +33,16 @@ if ( isset( $_REQUEST['post_url'] ) && $_REQUEST['page'] == "activitypub_tools" 
 		</div>
 
 		<p><?php \printf(
-			\__( 'You currently have %s posts to migrate.', 'activitypub' ),
+			\__( 'You currently have %s posts marked for review.', 'activitypub' ),
 			\esc_attr( \Activitypub\Tools\Posts::count_posts_to_migrate() )
 		); ?></p>
 
 		<?php $token_table = new \Activitypub\Table\Migrate_List(); ?>
 		<form method="POST" id="table">
 			<?php
-			$token_table->prepare_items();
-			$token_table->display();
+				$token_table->views();
+				$token_table->prepare_items();
+				$token_table->display();
 			?>
 		</form>
 	<?php endif; ?>

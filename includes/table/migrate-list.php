@@ -21,27 +21,80 @@ class Migrate_List extends \WP_List_Table {
 	public function get_sortable_columns() {
 		return array();
 	}
+	
+	function get_bulk_actions() {
+		$actions = array(
+		  'delete'    => 'Remove backwards compatibility'
+		);
+		return $actions;
+	}
+
+	public static function get_activitypub_tools_views() {
+		$posts_count = \Activitypub\Tools\Posts::count_posts_to_migrate();
+		$comments_posts_count = \Activitypub\Tools\Posts::count_posts_with_comments_to_migrate();
+		$activitypub_tools_page = 'tools.php?page=activitypub_tools';
+		$view_slugs = array(
+			array('all', NULL, __('All', 'activitypub'), $posts_count), 
+			array('comments', 'activitypub', __('Posts with Comments', 'activitypub'), $comments_posts_count), 
+		);
+		$post_status_var = get_query_var('comments');
+		$view_count = count($view_slugs);
+		for ($x = 0; $x < $view_count; $x++) {
+			$class = ($post_status_var == $view_slugs[$x][1]) ? ' class="current"' : '';
+			$post_status_temp = $view_slugs[$x][1];
+			if($post_status_temp != '') {
+				$post_status_temp = '&comments='.$view_slugs[$x][1];
+			}
+			$views[$view_slugs[$x][0]] = sprintf(__('<a href="' .
+								   $activitypub_tools_page .
+								   $post_status_temp . '"' .
+								   $class .
+								   ' >' .
+								   $view_slugs[$x][2] .
+								   ' <span class="count">(%d)</span></a>'), 
+								$view_slugs[$x][3]);
+		}
+		return $views;
+	}
 
 	public function prepare_items() {
 		$columns = $this->get_columns();
 		$hidden  = array( 'post_author', 'migrate' );
 		$sortable = $this->get_sortable_columns();
-
-		$this->process_action();
 		$this->_column_headers = array( $columns, $hidden, $sortable );
 
-		foreach ( \Activitypub\Tools\Posts::get_posts_to_migrate() as $post ) {
-			$this->items[] = array(
-				'post_author' => $post->post_author,
-				'title'      => \sprintf(
-					'<a href="%1s">%2s</a>',
-					\get_permalink( $post->ID ),
-					$post->post_title
-				),
-				'comments'   => $post->comment_count,
-				'date'       => $post->post_date,
-				'migrate'     => \get_post_meta( $post->ID, '_activitypub_permalink_compat', true ),
-			);
+		$this->items = array();
+		$this->process_action();
+		if ( 'activitypub_tools' === $_REQUEST['page'] ) {
+			if ( isset( $_REQUEST['comments'] ) && 'activitypub' === $_REQUEST['comments'] ) {
+				foreach ( \Activitypub\Tools\Posts::get_posts_with_activitypub_comments() as $ap_post ) {
+					$this->items[] = array(
+						'post_author' => $ap_post->post_author,
+						'title'      => \sprintf(
+							'<a href="%1s">%2s</a>',
+							\get_permalink( $ap_post->ID ),
+							$ap_post->post_title
+						),
+						'comments'   => $ap_post->comment_count,
+						'date'       => $ap_post->post_date,
+						'migrate'     => \get_post_meta( $ap_post->ID, '_activitypub_permalink_compat', true ),
+					);
+				}
+			} else {
+				foreach ( \Activitypub\Tools\Posts::get_posts_to_migrate() as $post ) {
+					$this->items[] = array(
+						'post_author' => $post->post_author,
+						'title'      => \sprintf(
+							'<a href="%1s">%2s</a>',
+							\get_permalink( $post->ID ),
+							$post->post_title
+						),
+						'comments'   => $post->comment_count,
+						'date'       => $post->post_date,
+						'migrate'     => \get_post_meta( $post->ID, '_activitypub_permalink_compat', true ),
+					);
+				}
+			}
 		}
 
 		// pagination
@@ -64,7 +117,7 @@ class Migrate_List extends \WP_List_Table {
 		// delete
 		if ( isset( $_REQUEST['action'] ) && 'activitypub_tools' === $_REQUEST['page'] && 'delete_notice' === $_REQUEST['action'] ) {
 			if ( wp_verify_nonce( $nonce, 'activitypub_migrate_actions' ) ) {
-				//\Activitypub\Tools\Posts::delete_url( rawurldecode( $_REQUEST['post_url'] ), absint( $_REQUEST['post_author'] ) );
+				\Activitypub\Tools\Posts::delete_url( rawurldecode( $_REQUEST['post_url'] ), absint( $_REQUEST['post_author'] ) );
 				\delete_post_meta( \url_to_postid( $_REQUEST['post_url'] ), '_activitypub_permalink_compat' );
 			}
 		}

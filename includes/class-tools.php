@@ -39,17 +39,27 @@ class Posts {
 	public static function get_posts_with_activitypub_comments() {
 		$args = array(
 			'comment_type' => 'activitypub',
+			'status' => 'all',
 		);
 		$activitypub_comments = \get_comments( $args );
 		$activitypub_comments_posts = array();
 		foreach ( $activitypub_comments as $comment ) {
+			$meta = \get_post_meta( $comment->comment_post_ID, '_activitypub_permalink_compat', true );
+			if ( ! $meta ) {
+				continue;
+			}
 			$activitypub_comments_posts[] = $comment->comment_post_ID;
 		}
-		return \get_posts( \array_unique( $activitypub_comments_posts ) );
+		return ( empty( \array_unique( $activitypub_comments_posts ) ) ? $activitypub_comments_posts : \get_posts( \array_unique( $activitypub_comments_posts ) ) );
 	}
 
 	public static function count_posts_to_migrate() {
 		$posts = self::get_posts_to_migrate();
+		return \count( $posts );
+	}
+
+	public static function count_posts_with_comments_to_migrate() {
+		$posts = self::get_posts_with_activitypub_comments();
 		return \count( $posts );
 	}
 
