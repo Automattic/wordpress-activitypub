@@ -133,7 +133,7 @@ function flush_rewrite_rules() {
  */
 function activate_plugin() {
 	if ( ! function_exists( 'get_plugin_data' ) ) {
-		require_once( ABSPATH . 'wp-admin/includes/plugin.php' );
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
 	}
 	$plugin_data = \get_plugin_data( __FILE__ );
 	\add_option( 'activitypub_version', $plugin_data['Version'] );

@@ -205,7 +205,7 @@ class Admin {
 	public static function migrate_post_action() {
 		if ( wp_verify_nonce( $_POST['nonce'], 'activitypub_migrate_actions' ) ) {
 			\Activitypub\Tools\Posts::migrate_post( rawurldecode( $_POST['post_url'] ), absint( $_POST['post_author'] ) );
-			\delete_post_meta( \url_to_postid( $_POST['post_url'] ), '_activitypub_permalink_compat' );	
+			\delete_post_meta( \url_to_postid( $_POST['post_url'] ), '_activitypub_permalink_compat' );
 		} else {
 			$error = new WP_Error( 'nonce_failure', __( 'Unauthorized', 'activitypub' ) );
 			wp_send_json_error( $error );

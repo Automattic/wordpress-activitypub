@@ -95,9 +95,9 @@ class Post {
 			),
 			trailingslashit( site_url() )
 		);
-		
+
 		$pretty_permalink = \get_post_meta( $post->ID, '_activitypub_permalink_compat', true );
-		
+
 		if ( ! empty( $pretty_permalink ) ) {
 			$object_id = $pretty_permalink;
 		}
