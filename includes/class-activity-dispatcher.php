@@ -101,11 +101,11 @@ class Activity_Dispatcher {
 	/**
 	 * Send "delete" activities.
 	 *
-	 * @param str $activitypub_url
-	 * @param int $user_id
+	 * @param \Activitypub\Model\Post $activitypub_post
 	 */
 	public static function send_delete_activity( $activitypub_post ) {
 		// get latest version of post
+		$user_id = $activitypub_post->get_post_author();
 		$deleted = \current_time( 'Y-m-d\TH:i:s\Z', true );
 		$activitypub_post->set_deleted( $deleted );
 
