@@ -70,7 +70,7 @@ class Signature {
 		\update_user_meta( $user_id, 'magic_sig_public_key', $detail['key'] );
 	}
 
-	public static function generate_signature( $user_id, $url, $date, $digest = null ) {
+	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
 		$key = self::get_private_key( $user_id );
 
 		$url_parts = \wp_parse_url( $url );
@@ -89,9 +89,9 @@ class Signature {
 		}
 
 		if ( ! empty( $digest ) ) {
-			$signed_string = "(request-target): post $path\nhost: $host\ndate: $date\ndigest: SHA-256=$digest";
+			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date\ndigest: SHA-256=$digest";
 		} else {
-			$signed_string = "(request-target): post $path\nhost: $host\ndate: $date";
+			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date";
 		}
 
 		$signature = null;
