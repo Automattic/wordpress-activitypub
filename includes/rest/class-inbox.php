@@ -390,7 +390,12 @@ class Inbox {
 		// do not require email for AP entries
 		\add_filter( 'pre_option_require_name_email', '__return_false' );
 
-		$state = \wp_new_comment( $commentdata, true );
+		$commentid = \wp_new_comment( $commentdata, true );
+
+		if ('spam' === \wp_get_comment_status($commentid)) {
+			\wp_set_comment_status($commentid, 0);
+			\wp_notify_moderator( $commentid );
+		}
 
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
@@ -435,7 +440,13 @@ class Inbox {
 		// do not require email for AP entries
 		\add_filter( 'pre_option_require_name_email', '__return_false' );
 
-		$state = \wp_new_comment( $commentdata, true );
+		$commentid = \wp_new_comment( $commentdata, true );
+
+		if ('spam' === \wp_get_comment_status($commentid)) {
+			\wp_set_comment_status($commentid, 0);
+			\wp_notify_moderator( $commentid );
+		}
+
 
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
