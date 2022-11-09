@@ -16,7 +16,7 @@ $json->preferredUsername = \get_the_author_meta( 'login', $author_id ); // phpcs
 $json->url = \get_author_posts_url( $author_id );
 $json->icon = array(
 	'type' => 'Image',
-	'url'  => 'https://akirk.blog/wp-content/uploads/2022/11/alex.kirk-small.jpg',
+	'url'  => \get_avatar_url( $author_id, array( 'size' => 120 ) ),
 );
 
 if ( \has_header_image() ) {
