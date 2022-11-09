@@ -153,7 +153,7 @@ class Webfinger {
 		}
 
 		foreach ( $body['links'] as $link ) {
-			if ( $link['rel'] === 'self' && $link['type'] == 'application/activity+json' ) {
+			if ( 'self' === $link['rel'] && 'application/activity+json' === $link['type'] ) {
 				return $link['href'];
 			}
 		}
