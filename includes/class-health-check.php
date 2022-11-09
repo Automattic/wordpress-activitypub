@@ -224,7 +224,7 @@ class Health_Check {
 				),
 			);
 			$message = null;
-			if ( isset( $messages[ $url->get_error_code() ] ) ) {
+			if ( isset( $health_messages[ $url->get_error_code() ] ) ) {
 				$message = $health_messages[ $url->get_error_code() ];
 			}
 			return new \WP_Error(
