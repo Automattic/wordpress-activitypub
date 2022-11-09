@@ -75,7 +75,7 @@ class Activity {
 	}
 
 	public function to_array() {
-		$array = \get_object_vars( $this );
+		$array = array_filter( \get_object_vars( $this ) );
 
 		if ( $this->context ) {
 			$array = array( '@context' => $this->context ) + $array;

@@ -132,3 +132,11 @@ function enable_buddypress_features() {
 	\Activitypub\Integration\Buddypress::init();
 }
 add_action( 'bp_include', '\Activitypub\enable_buddypress_features' );
+
+add_action(
+	'friends_load_parsers',
+	function( \Friends\Feed $friends_feed ) {
+		require_once __DIR__ . '/integration/class-friends-feed-parser-activitypub.php';
+		$friends_feed->register_parser( Friends_Feed_Parser_ActivityPub::SLUG, new Friends_Feed_Parser_ActivityPub( $friends_feed ) );
+	}
+);

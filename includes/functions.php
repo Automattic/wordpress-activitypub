@@ -108,11 +108,19 @@ function get_webfinger_resource( $user_id ) {
 /**
  * [get_metadata_by_actor description]
  *
- * @param sting $actor
+ * @param string $actor
  *
  * @return array
  */
 function get_remote_metadata_by_actor( $actor ) {
+	if ( preg_match( '/^@?[^@]+@((?:[a-z0-9-]+\.)+[a-z]+)$/i', $actor ) ) {
+		$actor = Rest\Webfinger::resolve( $actor );
+	}
+
+	if ( ! $actor ) {
+		return null;
+	}
+
 	$metadata = \get_transient( 'activitypub_' . $actor );
 
 	if ( $metadata ) {
