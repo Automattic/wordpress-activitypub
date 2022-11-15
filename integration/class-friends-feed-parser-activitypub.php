@@ -20,8 +20,10 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 
 		\add_action( 'activitypub_inbox_create', array( $this, 'handle_received_activity' ), 10, 2 );
 		\add_action( 'activitypub_inbox_accept', array( $this, 'handle_received_activity' ), 10, 2 );
-		\add_filter( 'friends_user_feed_activated', array( $this, 'follow_user' ), 10 );
-		\add_filter( 'friends_user_feed_deactivated', array( $this, 'unfollow_user' ), 10 );
+		\add_filter( 'friends_user_feed_activated', array( $this, 'queue_follow_user' ), 10 );
+		\add_filter( 'friends_user_feed_deactivated', array( $this, 'queue_unfollow_user' ), 10 );
+		\add_filter( 'friends_feed_parser_activitypub_follow', array( $this, 'follow_user' ), 10 );
+		\add_filter( 'friends_feed_parser_activitypub_unfollow', array( $this, 'unfollow_user' ), 10 );
 		\add_filter( 'friends_rewrite_incoming_url', array( $this, 'friends_rewrite_incoming_url' ), 10, 2 );
 	}
 
@@ -154,6 +156,18 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		$this->friends_feed->process_incoming_feed_items( array( $item ), $user_feed );
 	}
 
+	public function queue_follow_user( \Friends\User_Feed $user_feed ) {
+		if ( self::SLUG != $user_feed->get_parser() ) {
+			return;
+		}
+
+		if ( wp_next_scheduled( 'friends_feed_parser_activitypub_follow', array( $user_feed  ) ) ) {
+			return;
+		}
+
+		return \wp_schedule_single_event( \time(), 'friends_feed_parser_activitypub_follow', array( $user_feed  ) );
+	}
+
 	public function follow_user( \Friends\User_Feed $user_feed ) {
 		if ( self::SLUG != $user_feed->get_parser() ) {
 			return;
@@ -173,6 +187,18 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		$activity->set_id( $actor . '#follow-' . \preg_replace( '~^https?://~', '', $to ) );
 		$activity = $activity->to_json();
 		\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
+	}
+
+	public function queue_unfollow_user( \Friends\User_Feed $user_feed ) {
+		if ( self::SLUG != $user_feed->get_parser() ) {
+			return;
+		}
+
+		if ( wp_next_scheduled( 'friends_feed_parser_activitypub_unfollow', array( $user_feed  ) ) ) {
+			return;
+		}
+
+		return \wp_schedule_single_event( \time(), 'friends_feed_parser_activitypub_unfollow', array( $user_feed ) );
 	}
 
 	public function unfollow_user( \Friends\User_Feed $user_feed ) {
