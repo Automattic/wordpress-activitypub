@@ -8,7 +8,7 @@
 		<?php
 		\printf(
 			\__(
-				'People can follow you by using the username <code>%s</code> or the URL <code>%s</code>. Users, that can not access this settings page, will find their username on the <a href="%s">Edit Profile</a> page.',
+				'People can follow you by using the username <code>%s</code> or the URL <code>%s</code>. Users who can not access this settings page will find their username on the <a href="%s">Edit Profile</a> page.',
 				'activitypub'
 			),
 			\Activitypub\get_webfinger_resource( wp_get_current_user()->ID ),
