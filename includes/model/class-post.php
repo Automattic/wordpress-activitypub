@@ -15,9 +15,10 @@ class Post {
 	private $attachments;
 	private $tags;
 	private $object_type;
-	private $deleted;
+	private $delete;
 	private $updated;
 	private $permalink;
+	private $replies;
 
 	public function __construct( $post = null ) {
 		$this->post = \get_post( $post );
@@ -29,10 +30,10 @@ class Post {
 		$this->attachments = $this->generate_attachments();
 		$this->tags        = $this->generate_tags();
 		$this->object_type = $this->generate_object_type();
-		$this->replies     = $this->generate_replies();
-		$this->updated     = $this->generate_updated();
 		$this->delete      = $this->get_deleted();
+		$this->updated     = $this->generate_updated();
 		$this->permalink   = $this->get_the_permalink();
+		$this->replies     = $this->generate_replies();
 	}
 
 	public function __call( $method, $params ) {
