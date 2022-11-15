@@ -42,6 +42,9 @@ function init() {
 	require_once \dirname( __FILE__ ) . '/includes/class-activitypub.php';
 	\Activitypub\Activitypub::init();
 
+	require_once \dirname( __FILE__ ) . '/includes/class-comments.php';
+	\Activitypub\Comments::init();
+
 	// Configure the REST API route
 	require_once \dirname( __FILE__ ) . '/includes/rest/class-outbox.php';
 	\Activitypub\Rest\Outbox::init();
