@@ -20,10 +20,10 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 
 		\add_action( 'activitypub_inbox_create', array( $this, 'handle_received_activity' ), 10, 2 );
 		\add_action( 'activitypub_inbox_accept', array( $this, 'handle_received_activity' ), 10, 2 );
-		\add_filter( 'friends_user_feed_activated', array( $this, 'queue_follow_user' ), 10 );
-		\add_filter( 'friends_user_feed_deactivated', array( $this, 'queue_unfollow_user' ), 10 );
-		\add_filter( 'friends_feed_parser_activitypub_follow', array( $this, 'follow_user' ), 10 );
-		\add_filter( 'friends_feed_parser_activitypub_unfollow', array( $this, 'unfollow_user' ), 10 );
+		\add_action( 'friends_user_feed_activated', array( $this, 'queue_follow_user' ), 10 );
+		\add_action( 'friends_user_feed_deactivated', array( $this, 'queue_unfollow_user' ), 10 );
+		\add_action( 'friends_feed_parser_activitypub_follow', array( $this, 'follow_user' ), 10, 2 );
+		\add_action( 'friends_feed_parser_activitypub_unfollow', array( $this, 'unfollow_user' ), 10, 2 );
 		\add_filter( 'friends_rewrite_incoming_url', array( $this, 'friends_rewrite_incoming_url' ), 10, 2 );
 	}
 
@@ -161,14 +161,16 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 			return;
 		}
 
-		if ( wp_next_scheduled( 'friends_feed_parser_activitypub_follow', array( $user_feed  ) ) ) {
+		$args = array( $user_feed->get_id(), get_current_user_id() );
+		if ( wp_next_scheduled( 'friends_feed_parser_activitypub_follow', $args ) ) {
 			return;
 		}
 
-		return \wp_schedule_single_event( \time(), 'friends_feed_parser_activitypub_follow', array( $user_feed  ) );
+		return \wp_schedule_single_event( \time(), 'friends_feed_parser_activitypub_follow', $args );
 	}
 
-	public function follow_user( \Friends\User_Feed $user_feed ) {
+	public function follow_user( $user_feed_id, $user_id ) {
+		$user_feed = \Friends\User_Feed::get_by_id( $user_feed_id );
 		if ( self::SLUG != $user_feed->get_parser() ) {
 			return;
 		}
@@ -176,7 +178,6 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		$meta = \Activitypub\get_remote_metadata_by_actor( $user_feed->get_url() );
 		$to = $meta['id'];
 		$inbox = \Activitypub\get_inbox_by_actor( $to );
-		$user_id = get_current_user_id();
 		$actor = \get_author_posts_url( $user_id );
 
 		$activity = new \Activitypub\Model\Activity( 'Follow', \Activitypub\Model\Activity::TYPE_SIMPLE );
@@ -194,14 +195,16 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 			return;
 		}
 
-		if ( wp_next_scheduled( 'friends_feed_parser_activitypub_unfollow', array( $user_feed  ) ) ) {
+		$args = array( $user_feed->get_id(), get_current_user_id() );
+		if ( wp_next_scheduled( 'friends_feed_parser_activitypub_unfollow', $args ) ) {
 			return;
 		}
 
-		return \wp_schedule_single_event( \time(), 'friends_feed_parser_activitypub_unfollow', array( $user_feed ) );
+		return \wp_schedule_single_event( \time(), 'friends_feed_parser_activitypub_unfollow', $args );
 	}
 
-	public function unfollow_user( \Friends\User_Feed $user_feed ) {
+	public function unfollow_user( $user_feed_id, $user_id ) {
+		$user_feed = \Friends\User_Feed::get_by_id( $user_feed_id );
 		if ( self::SLUG != $user_feed->get_parser() ) {
 			return;
 		}
@@ -209,7 +212,6 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		$meta = \Activitypub\get_remote_metadata_by_actor( $user_feed->get_url() );
 		$to = $meta['id'];
 		$inbox = \Activitypub\get_inbox_by_actor( $to );
-		$user_id = get_current_user_id();
 		$actor = \get_author_posts_url( $user_id );
 
 		$activity = new \Activitypub\Model\Activity( 'Unfollow', \Activitypub\Model\Activity::TYPE_SIMPLE );
