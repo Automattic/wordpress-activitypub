@@ -48,9 +48,8 @@
 
 \get_current_screen()->set_help_sidebar(
 	'<p><strong>' . \__( 'For more information:', 'activitypub' ) . '</strong></p>' .
-	'<p>' . \__( '<a href="https://activitypub.rocks/">Test Suite</a>', 'activitypub' ) . '</p>' .
-	'<p>' . \__( '<a href="https://www.w3.org/TR/activitypub/">W3C Spec</a>', 'activitypub' ) . '</p>' .
-	'<p>' . \__( '<a href="https://github.com/pfefferle/wordpress-activitypub/issues">Give us feedback</a>', 'activitypub' ) . '</p>' .
+	'<p>' . \__( '<a href="https://wordpress.org/support/plugin/activitypub/">Get support</a>', 'activitypub' ) . '</p>' .
+	'<p>' . \__( '<a href="https://github.com/pfefferle/wordpress-activitypub/issues">Report an issue</a>', 'activitypub' ) . '</p>' .
 	'<hr />' .
 	'<p>' . \__( '<a href="https://notiz.blog/donate">Donate</a>', 'activitypub' ) . '</p>'
 );
