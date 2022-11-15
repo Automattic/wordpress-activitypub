@@ -19,5 +19,5 @@
 	</p>
 	<p><?php \printf( __( 'If you have problems using this plugin, please check the <a href="%s">Site Health</a> to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).', 'activitypub' ), admin_url( '/wp-admin/site-health.php' ) ); ?></p>
 	<hr />
-	<p><?php \_e( 'To follow people on Mastodon or similar platforms using your own WordPress, you can use the <a href="https://wordpress.org/plugins/friends">Friends Plugin for WordPress</a> which uses this plugin to receive posts and display them on your own WordPress, thus making your own WordPress a Mastodon instance of its own.', 'activitypub' ); ?></p>
+	<p><?php \_e( 'To follow people on Mastodon or similar platforms using your own WordPress, you can use the <a href="https://wordpress.org/plugins/friends">Friends Plugin for WordPress</a> which uses this plugin to receive posts and display them on your own WordPress.', 'activitypub' ); ?></p>
 </div>
