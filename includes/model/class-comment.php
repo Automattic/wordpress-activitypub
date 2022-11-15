@@ -8,17 +8,26 @@ namespace Activitypub\Model;
  */
 class Comment {
 	private $comment;
-	private $updated;
+	private $id;
+	private $comment_author_url;
+	private $post_author;
+	private $in_reply_to;
+	private $content_warning;
+	private $permalink;
+	private $context;
+	private $to_recipients;
+	private $tags;
+	private $update;
 	private $deleted;
+	private $replies;
 
 	/**
 	 * Initialize the class
 	 */
 	public function __construct( $comment = null ) {
-		$this->comment = $comment;
-		$this->id = $this->generate_comment_id();
+		$this->comment 			  = $comment;
+		$this->id 				  = $this->generate_comment_id();
 		$this->comment_author_url = \get_author_posts_url( $this->comment->user_id );
-		$this->safe_comment_id    = $this->generate_comment_id();
 		$this->in_reply_to        = $this->generate_parent_url();
 		$this->content_warning    = $this->generate_content_warning();
 		$this->permalink          = $this->generate_permalink();
@@ -46,7 +55,7 @@ class Comment {
 		$comment = $this->comment;
 
 		$array = array(
-			'id' => $this->safe_comment_id,
+			'id' => $this->id,
 			'type' => 'Note',
 			'published' => \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $comment->comment_date_gmt ) ),
 			'attributedTo' => $this->comment_author_url,
