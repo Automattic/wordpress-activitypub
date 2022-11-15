@@ -95,7 +95,7 @@ function safe_remote_get( $url, $user_id ) {
  * @return string The user-resource
  */
 function get_webfinger_resource( $user_id ) {
-	return \Activitypub\Webfinger::get_resource( $user_id );
+	return \Activitypub\Webfinger::get_user_resource( $user_id );
 }
 
 /**

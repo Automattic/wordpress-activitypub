@@ -16,7 +16,7 @@ class Webfinger {
 	 *
 	 * @return string The user-resource
 	 */
-	public static function get_resource( $user_id ) {
+	public static function get_user_resource( $user_id ) {
 		// use WebFinger plugin if installed
 		if ( \function_exists( '\get_webfinger_resource' ) ) {
 			return \get_webfinger_resource( $user_id, false );
