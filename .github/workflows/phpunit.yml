@@ -1,5 +1,5 @@
 name: Unit Testing
-on: 
+on:
     push:
     pull_request:
 jobs:
@@ -15,7 +15,7 @@ jobs:
        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=10s --health-retries=10
     strategy:
       matrix:
-        php-versions: ['5.6', '7.2', '7.3', '7.4', '8.0', '8.1']
+        php-versions: ['5.6', '7.2', '7.3', '7.4', '8.0', '8.1', '8.2']
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -24,7 +24,7 @@ jobs:
         with:
           php-version: ${{ matrix.php-versions }}
           coverage: none
-          tools: composer, phpunit-polyfills    
+          tools: composer, phpunit-polyfills
           extensions: mysql
       - name: Install Composer dependencies for PHP
         uses: "ramsey/composer-install@v1"
