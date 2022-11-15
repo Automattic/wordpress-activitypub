@@ -162,6 +162,13 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		}
 
 		$args = array( $user_feed->get_id(), get_current_user_id() );
+
+		$unfollow_timestamp = wp_next_scheduled( 'friends_feed_parser_activitypub_unfollow', $args );
+		if ( $unfollow_timestamp ) {
+			// If we just unfollowed, we don't want the event to potentially be executed after our follow event.
+			wp_unschedule_event( $unfollow_timestamp, $args );
+		}
+
 		if ( wp_next_scheduled( 'friends_feed_parser_activitypub_follow', $args ) ) {
 			return;
 		}
@@ -196,6 +203,13 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		}
 
 		$args = array( $user_feed->get_id(), get_current_user_id() );
+
+		$follow_timestamp = wp_next_scheduled( 'friends_feed_parser_activitypub_follow', $args );
+		if ( $follow_timestamp ) {
+			// If we just followed, we don't want the event to potentially be executed after our unfollow event.
+			wp_unschedule_event( $follow_timestamp, $args );
+		}
+
 		if ( wp_next_scheduled( 'friends_feed_parser_activitypub_unfollow', $args ) ) {
 			return;
 		}
