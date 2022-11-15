@@ -155,6 +155,6 @@ class Admin {
 	}
 
 	public static function admin_style() {
-		wp_enqueue_style( 'admin-styles', plugin_dir_url( __FILE__ ) . '../assets/css/admin.css' );
+		wp_enqueue_style( 'admin-styles', plugin_dir_url( __FILE__ ) . '../assets/css/admin.css', array(), '1.0.0' );
 	}
 }
