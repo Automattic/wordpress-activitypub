@@ -95,14 +95,7 @@ function safe_remote_get( $url, $user_id ) {
  * @return string The user-resource
  */
 function get_webfinger_resource( $user_id ) {
-	// use WebFinger plugin if installed
-	if ( \function_exists( '\get_webfinger_resource' ) ) {
-		return \get_webfinger_resource( $user_id, false );
-	}
-
-	$user = \get_user_by( 'id', $user_id );
-
-	return $user->user_login . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+	return \Activitypub\Webfinger::get_resource( $user_id );
 }
 
 /**

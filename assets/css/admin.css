@@ -1,0 +1,46 @@
+.activitypub-settings-header {
+	text-align: center;
+	margin: 0 0 1rem;
+	background: #fff;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.activitypub-settings-title-section {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	clear: both;
+	padding-top: 8px;
+}
+
+.settings_page_activitypub #wpcontent,
+.settings_page_activitypub-settings #wpcontent {
+	padding-left: 0;
+}
+
+.activitypub-settings-tabs-wrapper {
+	display: -ms-inline-grid;
+	-ms-grid-columns: 1fr 1fr;
+	vertical-align: top;
+	display: inline-grid;
+	grid-template-columns: 1fr 1fr;
+}
+
+.activitypub-settings-tab.active {
+	box-shadow: inset 0 -3px #3582c4;
+	font-weight: 600;
+}
+
+.activitypub-settings-tab {
+	display: block;
+	text-decoration: none;
+	color: inherit;
+	padding: .5rem 1rem 1rem;
+	margin: 0 1rem;
+	transition: box-shadow .5s ease-in-out;
+}
+
+.wp-header-end {
+	visibility: hidden;
+	margin: -2px 0 0;
+}

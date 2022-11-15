@@ -14,21 +14,32 @@ class Admin {
 		\add_action( 'admin_menu', array( '\Activitypub\Admin', 'admin_menu' ) );
 		\add_action( 'admin_init', array( '\Activitypub\Admin', 'register_settings' ) );
 		\add_action( 'show_user_profile', array( '\Activitypub\Admin', 'add_fediverse_profile' ) );
+		\add_action( 'admin_enqueue_scripts', array( '\Activitypub\Admin', 'admin_style' ) );
 	}
 
 	/**
 	 * Add admin menu entry
 	 */
 	public static function admin_menu() {
-		$settings_page = \add_options_page(
-			'ActivityPub',
+		$settings_page = \add_submenu_page(
+			null,
+			'ActivityPub Settings',
 			'ActivityPub',
 			'manage_options',
-			'activitypub',
+			'activitypub-settings',
 			array( '\Activitypub\Admin', 'settings_page' )
 		);
 
+		$welcome_page = \add_options_page(
+			'Welcome',
+			'ActivityPub',
+			'manage_options',
+			'activitypub',
+			array( '\Activitypub\Admin', 'welcome_page' )
+		);
+
 		\add_action( 'load-' . $settings_page, array( '\Activitypub\Admin', 'add_settings_help_tab' ) );
+		\add_action( 'load-' . $welcome_page, array( '\Activitypub\Admin', 'add_settings_help_tab' ) );
 
 		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers (Fediverse)', 'activitypub' ), 'read', 'activitypub-followers-list', array( '\Activitypub\Admin', 'followers_list_page' ) );
 
@@ -40,6 +51,13 @@ class Admin {
 	 */
 	public static function settings_page() {
 		\load_template( \dirname( __FILE__ ) . '/../templates/settings.php' );
+	}
+
+	/**
+	 * Load welcome page
+	 */
+	public static function welcome_page() {
+		\load_template( \dirname( __FILE__ ) . '/../templates/welcome.php' );
 	}
 
 	/**
@@ -122,23 +140,7 @@ class Admin {
 	}
 
 	public static function add_settings_help_tab() {
-		\get_current_screen()->add_help_tab(
-			array(
-				'id'      => 'overview',
-				'title'   => \__( 'Overview', 'activitypub' ),
-				'content' =>
-					'<p>' . \__( 'ActivityPub is a decentralized social networking protocol based on the ActivityStreams 2.0 data format. ActivityPub is an official W3C recommended standard published by the W3C Social Web Working Group. It provides a client to server API for creating, updating and deleting content, as well as a federated server to server API for delivering notifications and subscribing to content.', 'activitypub' ) . '</p>',
-			)
-		);
-
-		\get_current_screen()->set_help_sidebar(
-			'<p><strong>' . \__( 'For more information:', 'activitypub' ) . '</strong></p>' .
-			'<p>' . \__( '<a href="https://activitypub.rocks/">Test Suite</a>', 'activitypub' ) . '</p>' .
-			'<p>' . \__( '<a href="https://www.w3.org/TR/activitypub/">W3C Spec</a>', 'activitypub' ) . '</p>' .
-			'<p>' . \__( '<a href="https://github.com/pfefferle/wordpress-activitypub/issues">Give us feedback</a>', 'activitypub' ) . '</p>' .
-			'<hr />' .
-			'<p>' . \__( '<a href="https://notiz.blog/donate">Donate</a>', 'activitypub' ) . '</p>'
-		);
+		require_once \dirname( __FILE__ ) . '/help.php';
 	}
 
 	public static function add_followers_list_help_tab() {
@@ -147,8 +149,12 @@ class Admin {
 
 	public static function add_fediverse_profile( $user ) {
 		?>
-		<h2><?php \esc_html_e( 'Fediverse', 'activitypub' ); ?></h2>
+		<h2 id="fediverse"><?php \esc_html_e( 'Fediverse', 'activitypub' ); ?></h2>
 		<?php
 		\Activitypub\get_identifier_settings( $user->ID );
+	}
+
+	public static function admin_style() {
+		wp_enqueue_style( 'admin-styles', plugin_dir_url( __FILE__ ) . '../assets/css/admin.css' );
 	}
 }

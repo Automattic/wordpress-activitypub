@@ -95,10 +95,6 @@ class Nodeinfo {
 			'outbound' => array(),
 		);
 
-		$nodeinfo['metadata'] = array(
-			'email' => \get_option( 'admin_email' ),
-		);
-
 		return new \WP_REST_Response( $nodeinfo, 200 );
 	}
 
@@ -138,10 +134,6 @@ class Nodeinfo {
 		$nodeinfo['services'] = array(
 			'inbound' => array(),
 			'outbound' => array(),
-		);
-
-		$nodeinfo['metadata'] = array(
-			'email' => \get_option( 'admin_email' ),
 		);
 
 		return new \WP_REST_Response( $nodeinfo, 200 );

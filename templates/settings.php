@@ -1,12 +1,14 @@
-<div class="wrap">
-	<h1><?php \esc_html_e( 'ActivityPub Settings', 'activitypub' ); ?></h1>
+<?php \load_template( \dirname( __FILE__ ) . '/admin-header.php', true, array( 'settings' => 'active', 'welcome' => '' ) ); ?>
 
-	<p><?php \esc_html_e( 'ActivityPub turns your blog into a federated social network. This means you can share and talk to everyone using the ActivityPub protocol, including users of Friendica, Pleroma and Mastodon.', 'activitypub' ); ?></p>
+<div class="privacy-settings-body hide-if-no-js">
+	<h2><?php \esc_html_e( 'Settings', 'activitypub' ); ?></h2>
+
+	<p><?php \esc_html_e( 'Customize your ActivityPub settings to suit your needs.', 'activitypub' ) ?></p>
 
 	<form method="post" action="options.php">
 		<?php \settings_fields( 'activitypub' ); ?>
 
-		<h2><?php \esc_html_e( 'Activities', 'activitypub' ); ?></h2>
+		<h3><?php \esc_html_e( 'Activities', 'activitypub' ); ?></h3>
 
 		<p><?php \esc_html_e( 'All activity related settings.', 'activitypub' ); ?></p>
 
@@ -104,7 +106,7 @@
 
 		<?php \do_settings_fields( 'activitypub', 'activity' ); ?>
 
-		<h2><?php \esc_html_e( 'Server', 'activitypub' ); ?></h2>
+		<h3><?php \esc_html_e( 'Server', 'activitypub' ); ?></h3>
 
 		<p><?php \esc_html_e( 'Server related settings.', 'activitypub' ); ?></p>
 
@@ -127,8 +129,4 @@
 
 		<?php \submit_button(); ?>
 	</form>
-
-	<p>
-		<small><?php \_e( 'If you like this plugin, what about a small <a href="https://notiz.blog/donate">donation</a>?', 'activitypub' ); ?></small>
-	</p>
 </div>
