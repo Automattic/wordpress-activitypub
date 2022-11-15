@@ -13,7 +13,7 @@
 			),
 			\Activitypub\get_webfinger_resource( wp_get_current_user()->ID ),
 			\get_author_posts_url( wp_get_current_user()->ID ),
-			\admin_url( 'profile.php#fediverse' )
+			\admin_url( 'profile.php#activitypub' )
 		);
 		?>
 	</p>

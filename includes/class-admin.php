@@ -149,7 +149,7 @@ class Admin {
 
 	public static function add_fediverse_profile( $user ) {
 		?>
-		<h2 id="fediverse"><?php \esc_html_e( 'Fediverse', 'activitypub' ); ?></h2>
+		<h2 id="activitypub"><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h2>
 		<?php
 		\Activitypub\get_identifier_settings( $user->ID );
 	}
