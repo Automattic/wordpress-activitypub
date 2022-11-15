@@ -110,14 +110,14 @@ class Comment {
 				$in_reply_to = add_query_arg(
 					array(
 						'p' => $comment->comment_post_ID,
-						'ap_comment_id' => $comment->comment_parent,
+						'replytocom' => $comment->comment_parent,
 					),
 					trailingslashit( site_url() )
 				);
 			}
 		} else { //parent is_post
 			// Backwards compatibility
-			$pretty_permalink = \get_post_meta( $comment->comment_post_ID, '_activitypub_permalink_compat', true ); // TODO finalize meta
+			$pretty_permalink = \get_post_meta( $comment->comment_post_ID, '_activitypub_permalink_compat', true );
 			if ( $pretty_permalink ) {
 				$in_reply_to = $pretty_permalink;
 			} else {
@@ -259,7 +259,7 @@ class Comment {
 					$comment_url = \add_query_arg( //
 						array(
 							'p' => $comment->comment_post_ID,
-							'ap_comment_id' => $comment->comment_ID,
+							'replytocom' => $comment->comment_ID,
 						),
 						trailingslashit( site_url() )
 					);

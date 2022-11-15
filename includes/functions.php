@@ -374,9 +374,9 @@ function url_to_commentid( $in_replyto_url ) {
 	if ( site_url() === $url_maybe_id['scheme'] . '://' . $url_maybe_id['host'] && ! empty( $url_maybe_id['query'] ) ) {
 		//is local post or comment
 		\parse_str( $url_maybe_id['query'], $reply_query );
-		if ( isset( $reply_query['ap_comment_id'] ) ) {
+		if ( isset( $reply_query['replytocom'] ) ) {
 			//is local comment
-			return $reply_query['ap_comment_id'];
+			return $reply_query['replytocom'];
 		}
 	} else {
 		//is remote url
@@ -409,7 +409,7 @@ function url_to_commentid( $in_replyto_url ) {
  * @return int comment_id
  */
 function is_ap_comment() {
-	$comment_id = get_query_var( 'ap_comment_id', null );
+	$comment_id = get_query_var( 'replytocom', null );
 	if ( ! is_null( $comment_id ) ) {
 		$comment = \get_comment( $comment_id );
 		// Only return local origin comments
@@ -561,7 +561,7 @@ function set_ap_comment_id( $comment ) {
 	$ap_comment_id = \add_query_arg(
 		array(
 			'p' => $comment->comment_post_ID,
-			'ap_comment_id' => $comment->comment_ID,
+			'replytocom' => $comment->comment_ID,
 		),
 		\trailingslashit( site_url() )
 	);

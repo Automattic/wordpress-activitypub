@@ -199,7 +199,7 @@ class Post {
 					$comment_url = \add_query_arg( //
 						array(
 							'p' => $this->post->ID,
-							'ap_comment_id' => $comment->comment_ID,
+							'replytocom' => $comment->comment_ID,
 						),
 						trailingslashit( site_url() )
 					);

@@ -14,7 +14,7 @@ $args = array(
 $comments = get_comments( $args );
 
 $replies_request = \add_query_arg( $_SERVER['QUERY_STRING'], '', $post->guid );
-$collection_id = \remove_query_arg(['page', 'ap_comment_id'], $replies_request );
+$collection_id = \remove_query_arg(['page', 'replytocom'], $replies_request );
 
 $json = new \stdClass();
 $json->{'@context'} = 'https://www.w3.org/ns/activitystreams';

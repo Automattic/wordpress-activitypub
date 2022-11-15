@@ -97,12 +97,12 @@ class Activitypub {
 	 */
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
-		$vars[] = 'ap_comment_id';//comment_id doesn't work, 'c' is probably too short and prone to collisions
+		$vars[] = 'replytocom';
 
 		//Collections review
 		$vars[] = 'replies';
 		$vars[] = 'collection_page';
-		$vars[] = 'only_other_accounts';
+		//$vars[] = 'only_other_accounts';
 
 		return $vars;
 	}
