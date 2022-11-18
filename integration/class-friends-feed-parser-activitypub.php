@@ -69,8 +69,8 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 			$feed_details['title'] = $meta['preferredUsername'];
 		}
 
-		if ( isset( $meta['url'] ) ) {
-			$feed_details['url'] = $meta['url'];
+		if ( isset( $meta['id'] ) ) {
+			$feed_details['url'] = $meta['id'];
 		}
 
 		return $feed_details;
@@ -277,11 +277,16 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		$inbox = \Activitypub\get_inbox_by_actor( $to );
 		$actor = \get_author_posts_url( $user_id );
 
-		$activity = new \Activitypub\Model\Activity( 'Unfollow', \Activitypub\Model\Activity::TYPE_SIMPLE );
+		$activity = new \Activitypub\Model\Activity( 'Undo', \Activitypub\Model\Activity::TYPE_SIMPLE );
 		$activity->set_to( null );
 		$activity->set_cc( null );
 		$activity->set_actor( $actor );
-		$activity->set_object( $to );
+		$activity->set_object( array(
+			'type' => 'Follow',
+			'actor' => $actor,
+			'object' => $to,
+			'id' => $to,
+		) );
 		$activity->set_id( $actor . '#unfollow-' . \preg_replace( '~^https?://~', '', $to ) );
 		$activity = $activity->to_json();
 		\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
