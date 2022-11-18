@@ -54,11 +54,18 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 	 */
 	public function update_feed_details( $feed_details ) {
 		$meta = \Activitypub\get_remote_metadata_by_actor( $feed_details['url'] );
-		if ( $meta && ! is_wp_error( $meta ) ) {
-		if ( isset( $meta['preferredUsername'] ) ) {
-				$feed_details['title'] = $meta['preferredUsername'];
-			}
-			$feed_details['url'] = $meta['id'];
+		if ( ! $meta && is_wp_error( $meta ) ) {
+			return $meta;
+		}
+
+		if ( isset( $meta['name'] ) ) {
+			$feed_details['title'] = $meta['name'];
+		} elseif ( isset( $meta['preferredUsername'] ) ) {
+			$feed_details['title'] = $meta['preferredUsername'];
+		}
+
+		if ( isset( $meta['url'] ) ) {
+			$feed_details['url'] = $meta['url'];
 		}
 
 		return $feed_details;
@@ -90,7 +97,7 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 			$discovered_feeds[ $meta['id'] ] = array(
 				'type'        => 'application/activity+json',
 				'rel'         => 'self',
-				'post-format' => 'autodetect',
+				'post-format' => 'status',
 				'parser'      => self::SLUG,
 				'autoselect'  => true,
 			);
