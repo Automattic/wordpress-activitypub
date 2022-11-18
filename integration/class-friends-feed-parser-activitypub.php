@@ -15,6 +15,11 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 	const URL = 'https://www.w3.org/TR/activitypub/';
 	private $friends_feed;
 
+	/**
+	 * Constructor.
+	 *
+	 * @param      \Friends\Feed  $friends_feed  The friends feed
+	 */
 	public function __construct( \Friends\Feed $friends_feed ) {
 		$this->friends_feed = $friends_feed;
 
@@ -71,6 +76,14 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		return $feed_details;
 	}
 
+	/**
+	 * Rewrite a Mastodon style URL @username@server to a URL via webfinger.
+	 *
+	 * @param      string  $url           The URL to filter.
+	 * @param      string  $incoming_url  Potentially a mastodon identifier.
+	 *
+	 * @return     <type>  ( description_of_the_return_value )
+	 */
 	public function friends_rewrite_incoming_url( $url, $incoming_url ) {
 		if ( preg_match( '/^@?[^@]+@((?:[a-z0-9-]+\.)+[a-z]+)$/i', $incoming_url ) ) {
 			$resolved_url = \Activitypub\Rest\Webfinger::resolve( $incoming_url );
@@ -145,10 +158,23 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		return true;
 	}
 
+	/**
+	 * Map the Activity type to a post fomat.
+	 *
+	 * @param      string  $type   The type.
+	 *
+	 * @return     string  The determined post format.
+	 */
 	private function map_type_to_post_format( $type ) {
 		return 'status';
 	}
 
+	/**
+	 * We received a post for a feed, handle it.
+	 *
+	 * @param      array               $object     The object from ActivityPub.
+	 * @param      \Friends\User_Feed  $user_feed  The user feed.
+	 */
 	private function handle_incoming_post( $object, \Friends\User_Feed $user_feed ) {
 		$item = new \Friends\Feed_Item(
 			array(
@@ -163,12 +189,19 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		$this->friends_feed->process_incoming_feed_items( array( $item ), $user_feed );
 	}
 
+	/**
+	 * Prepare to follow the user via a scheduled event.
+	 *
+	 * @param      \Friends\User_Feed  $user_feed  The user feed.
+	 *
+	 * @return     bool|WP_Error              Whether the event was queued.
+	 */
 	public function queue_follow_user( \Friends\User_Feed $user_feed ) {
 		if ( self::SLUG != $user_feed->get_parser() ) {
 			return;
 		}
 
-		$args = array( $user_feed->get_id(), get_current_user_id() );
+		$args = array( $user_feed->get_url(), get_current_user_id() );
 
 		$unfollow_timestamp = wp_next_scheduled( 'friends_feed_parser_activitypub_unfollow', $args );
 		if ( $unfollow_timestamp ) {
@@ -183,13 +216,14 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		return \wp_schedule_single_event( \time(), 'friends_feed_parser_activitypub_follow', $args );
 	}
 
-	public function follow_user( $user_feed_id, $user_id ) {
-		$user_feed = \Friends\User_Feed::get_by_id( $user_feed_id );
-		if ( self::SLUG != $user_feed->get_parser() ) {
-			return;
-		}
-
-		$meta = \Activitypub\get_remote_metadata_by_actor( $user_feed->get_url() );
+	/**
+	 * Follow a user via ActivityPub at a URL.
+	 *
+	 * @param      string  $url    The url.
+	 * @param      int  $user_id   The current user id.
+	 */
+	public function follow_user( $url, $user_id ) {
+		$meta = \Activitypub\get_remote_metadata_by_actor( $url );
 		$to = $meta['id'];
 		$inbox = \Activitypub\get_inbox_by_actor( $to );
 		$actor = \get_author_posts_url( $user_id );
@@ -197,19 +231,26 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		$activity = new \Activitypub\Model\Activity( 'Follow', \Activitypub\Model\Activity::TYPE_SIMPLE );
 		$activity->set_to( null );
 		$activity->set_cc( null );
-		$activity->set_actor( \get_author_posts_url( $user_id ) );
+		$activity->set_actor( $actor );
 		$activity->set_object( $to );
 		$activity->set_id( $actor . '#follow-' . \preg_replace( '~^https?://~', '', $to ) );
 		$activity = $activity->to_json();
 		\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 	}
 
+	/**
+	 * Prepare to unfollow the user via a scheduled event.
+	 *
+	 * @param      \Friends\User_Feed  $user_feed  The user feed.
+	 *
+	 * @return     bool|WP_Error              Whether the event was queued.
+	 */
 	public function queue_unfollow_user( \Friends\User_Feed $user_feed ) {
 		if ( self::SLUG != $user_feed->get_parser() ) {
-			return;
+			return false;
 		}
 
-		$args = array( $user_feed->get_id(), get_current_user_id() );
+		$args = array( $user_feed->get_url(), get_current_user_id() );
 
 		$follow_timestamp = wp_next_scheduled( 'friends_feed_parser_activitypub_follow', $args );
 		if ( $follow_timestamp ) {
@@ -218,19 +259,20 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		}
 
 		if ( wp_next_scheduled( 'friends_feed_parser_activitypub_unfollow', $args ) ) {
-			return;
+			return true;
 		}
 
 		return \wp_schedule_single_event( \time(), 'friends_feed_parser_activitypub_unfollow', $args );
 	}
 
-	public function unfollow_user( $user_feed_id, $user_id ) {
-		$user_feed = \Friends\User_Feed::get_by_id( $user_feed_id );
-		if ( self::SLUG != $user_feed->get_parser() ) {
-			return;
-		}
-
-		$meta = \Activitypub\get_remote_metadata_by_actor( $user_feed->get_url() );
+	/**
+	 * Unfllow a user via ActivityPub at a URL.
+	 *
+	 * @param      string  $url    The url.
+	 * @param      int  $user_id   The current user id.
+	 */
+	public function unfollow_user( $url, $user_id ) {
+		$meta = \Activitypub\get_remote_metadata_by_actor( $url );
 		$to = $meta['id'];
 		$inbox = \Activitypub\get_inbox_by_actor( $to );
 		$actor = \get_author_posts_url( $user_id );
@@ -238,7 +280,7 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		$activity = new \Activitypub\Model\Activity( 'Unfollow', \Activitypub\Model\Activity::TYPE_SIMPLE );
 		$activity->set_to( null );
 		$activity->set_cc( null );
-		$activity->set_actor( \get_author_posts_url( $user_id ) );
+		$activity->set_actor( $actor );
 		$activity->set_object( $to );
 		$activity->set_id( $actor . '#unfollow-' . \preg_replace( '~^https?://~', '', $to ) );
 		$activity = $activity->to_json();
