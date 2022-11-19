@@ -415,7 +415,7 @@ class Inbox {
 		$audience = \Activitypub\get_audience( $object );
 
 		if ( isset( $object['object']['inReplyTo'] ) ) {
-			$comment_parent_id = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['inReplyTo'] ) );
+			$comment_parent_id = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['inReplyTo'] ) ); // Only checks ap_comment_id for local or source_url for remote
 
 			if ( ! is_null( $comment_parent_id ) ) {
 				//inReplyTo a known local comment
@@ -423,7 +423,7 @@ class Inbox {
 				$comment_post_id = $comment_parent->comment_post_ID;
 			} else {
 				//inReplyTo a known post
-				$comment_post_id = \url_to_postid( $object['object']['inReplyTo'] );
+				$comment_post_id = \Activitypub\url_to_postid( $object['object']['inReplyTo'] );
 			}
 		}
 

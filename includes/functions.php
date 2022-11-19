@@ -357,6 +357,43 @@ function url_to_authorid( $url ) {
 }
 
 /**
+ * Verify if in_replyto_url is a local Post,
+ * (For backwards compatibility)
+ *
+ * @param string activitypub object id URI
+ * @return int post_id
+ */
+function url_to_postid( $in_replyto_url ) {
+	if ( !empty( $in_replyto_url ) ) {
+		$tentative_postid = \url_to_postid( $in_replyto_url );
+		if ( is_null( $tentative_postid ) ) {
+			$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
+			$query_args = array(
+				'type' => $post_types,
+				'meta_query' => array(
+					array(
+						'key' => '_activitypub_permalink_compat',
+						'value' => $in_replyto_url,
+					),
+				),
+			);
+			$posts_query = new \WP_Query();
+			$posts = $posts_query->query( $query_args );
+			$found_post_ids = array();
+			if ( $posts ) {
+				foreach ( $posts as $post ) {
+					$found_post_ids[] = $post->comment_ID;
+				}
+				return $found_post_ids[0];
+			}
+		} else {
+			return $tentative_postid;
+		}
+	}
+	return null;
+}
+
+/**
  * Verify if in_replyto_url is a local comment,
  * Or if it is a previously received remote comment
  * (For threading comments locally)
