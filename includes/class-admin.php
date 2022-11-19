@@ -191,9 +191,9 @@ class Admin {
 		if ( 'edit-comments.php' === $hook || 'tools_page_activitypub_tools' === $hook ) {
 			\wp_enqueue_script(
 				'activitypub_actions',
-				\plugin_dir_url( __FILE__ ) . '/assets/js/activitypub.js',
+				\plugin_dir_url( ACTIVITYPUB_PLUGIN ) . '/assets/js/activitypub.js',
 				array( 'jquery' ),
-				\filemtime( \plugin_dir_path( __FILE__ ) . '/assets/js/activitypub.js' ),
+				\filemtime( \plugin_dir_path( ACTIVITYPUB_PLUGIN ) . 'assets/js/activitypub.js' ),
 				true
 			);
 		}
