@@ -1,6 +1,10 @@
 <?php \load_template( \dirname( __FILE__ ) . '/admin-header.php', true, array( 'settings' => 'active', 'welcome' => '' ) ); ?>
 
 <div class="privacy-settings-body hide-if-no-js">
+	<div class="notice notice-info">
+		<p><?php \printf( __( 'If you have problems using this plugin, please check the <a href="%s">Site Health</a> to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).', 'activitypub' ), admin_url( '/wp-admin/site-health.php' ) ); ?></p>
+	</div>
+
 	<h2><?php \esc_html_e( 'Settings', 'activitypub' ); ?></h2>
 
 	<p><?php \esc_html_e( 'Customize your ActivityPub settings to suit your needs.', 'activitypub' ) ?></p>
