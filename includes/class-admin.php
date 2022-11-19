@@ -154,7 +154,9 @@ class Admin {
 		\Activitypub\get_identifier_settings( $user->ID );
 	}
 
-	public static function admin_style() {
-		wp_enqueue_style( 'admin-styles', plugin_dir_url( __FILE__ ) . '../assets/css/admin.css', array(), '1.0.0' );
+	public static function admin_style( $hook_suffix ) {
+		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
+			wp_enqueue_style( 'admin-styles', plugin_dir_url( __FILE__ ) . '../assets/css/admin.css', array(), '1.0.0' );
+		}
 	}
 }
