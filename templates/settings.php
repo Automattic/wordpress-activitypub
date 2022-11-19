@@ -33,18 +33,21 @@
 						</p>
 						<p>
 							<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo ACTIVITYPUB_CUSTOM_POST_CONTENT; ?>"><?php echo \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ); ?></textarea>
-							<div class="description">
-								<ul>
-									<li><code>%title%</code> - <?php \esc_html_e( 'The Post-Title.', 'activitypub' ); ?></li>
-									<li><code>%content%</code> - <?php \esc_html_e( 'The Post-Content.', 'activitypub' ); ?></li>
-									<li><code>%excerpt%</code> - <?php \esc_html_e( 'The Post-Excerpt (default 400 Chars).', 'activitypub' ); ?></li>
-									<li><code>%permalink%</code> - <?php \esc_html_e( 'The Post-Permalink.', 'activitypub' ); ?></li>
-									<li><code>%shortlink%</code> - <?php \printf( \esc_html( 'The Post-Shortlink. I can recommend %sHum%s, to prettify the Shortlinks', 'activitypub' ), '<a href="https://wordpress.org/plugins/hum/" target="_blank">', '</a>' ); ?></li>
-									<li><code>%hashtags%</code> - <?php \esc_html_e( 'The Tags as Hashtags.', 'activitypub' ); ?></li>
-								</ul>
-								<?php \printf( \__( '%sLet me know%s if you miss a template placeholder.', 'activitypub' ), '<a href="https://github.com/pfefferle/wordpress-activitypub/issues/new" target="_blank">', '</a>' ); ?>
-							</div>
+							<details>
+								<summary><?php _e( 'See the complete list of template patterns.', 'activitypub' ); ?></summary>
+								<div class="description">
+									<ul>
+										<li><code>%title%</code> - <?php \esc_html_e( 'The Post-Title.', 'activitypub' ); ?></li>
+										<li><code>%content%</code> - <?php \esc_html_e( 'The Post-Content.', 'activitypub' ); ?></li>
+										<li><code>%excerpt%</code> - <?php \esc_html_e( 'The Post-Excerpt (default 400 Chars).', 'activitypub' ); ?></li>
+										<li><code>%permalink%</code> - <?php \esc_html_e( 'The Post-Permalink.', 'activitypub' ); ?></li>
+										<li><code>%shortlink%</code> - <?php \printf( \esc_html( 'The Post-Shortlink. I can recommend %sHum%s, to prettify the Shortlinks', 'activitypub' ), '<a href="https://wordpress.org/plugins/hum/" target="_blank">', '</a>' ); ?></li>
+										<li><code>%hashtags%</code> - <?php \esc_html_e( 'The Tags as Hashtags.', 'activitypub' ); ?></li>
+									</ul>
+								</div>
+							</details>
 						</p>
+						<p><?php \printf( \__( '%sLet me know%s if you miss a template pattern.', 'activitypub' ), '<a href="https://github.com/pfefferle/wordpress-activitypub/issues/new" target="_blank">', '</a>' ); ?></p>
 					</td>
 				</tr>
 				<tr>

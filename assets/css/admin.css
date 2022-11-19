@@ -44,3 +44,9 @@
 	visibility: hidden;
 	margin: -2px 0 0;
 }
+
+summary {
+	cursor: pointer;
+	text-decoration: underline;
+	color: #2271b1;
+}
