@@ -67,12 +67,12 @@ class Migrate_List extends \WP_List_Table {
 		$sortable = $this->get_sortable_columns();
 		$this->_column_headers = array( $columns, $hidden, $sortable );
 
-		$this->items = array();
+		$items = array();
 		$this->process_action();
 		if ( 'activitypub_tools' === $_REQUEST['page'] ) {
 			if ( isset( $_REQUEST['comments'] ) && 'activitypub' === $_REQUEST['comments'] ) {
 				foreach ( \Activitypub\Tools\Posts::get_posts_with_activitypub_comments() as $ap_post ) {
-					$this->items[] = array(
+					$items[] = array(
 						'post_author' => $ap_post->post_author,
 						'title'      => \sprintf(
 							'<a href="%1s">%2s</a>',
@@ -86,7 +86,7 @@ class Migrate_List extends \WP_List_Table {
 				}
 			} else {
 				foreach ( \Activitypub\Tools\Posts::get_posts_to_migrate() as $post ) {
-					$this->items[] = array(
+					$items[] = array(
 						'post_author' => $post->post_author,
 						'title'      => \sprintf(
 							'<a href="%1s">%2s</a>',
@@ -104,8 +104,8 @@ class Migrate_List extends \WP_List_Table {
 		// pagination
 		$per_page = $this->get_items_per_page( 'elements_per_page', 10 );
 		$current_page = $this->get_pagenum();
-		$total_items = count( $this->items );
-		$table_data = array_slice( $this->items, ( ( $current_page - 1 ) * $per_page ), $per_page );
+		$total_items = count( $items );
+		$table_data = array_slice( $items, ( ( $current_page - 1 ) * $per_page ), $per_page );
 		$this->set_pagination_args(
 			array(
 				'total_items' => $total_items,
@@ -113,6 +113,7 @@ class Migrate_List extends \WP_List_Table {
 				'total_pages' => ceil( $total_items / $per_page ),
 			)
 		);
+		$this->items = $table_data;
 
 		// actions
 		if ( isset( $_REQUEST['_wpnonce'] ) ) {
