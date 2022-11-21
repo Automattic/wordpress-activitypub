@@ -15,6 +15,7 @@ class Health_Check {
 	 */
 	public static function init() {
 		\add_filter( 'site_status_tests', array( '\Activitypub\Health_Check', 'add_tests' ) );
+		\add_filter( 'debug_information', array( '\Activitypub\Health_Check', 'debug_information' ) );
 	}
 
 	public static function add_tests( $tests ) {
@@ -286,5 +287,31 @@ class Health_Check {
 		}
 
 		return $link;
+	}
+
+	/**
+	 * Static function for generating site debug data when required.
+	 *
+	 * @param array $info The debug information to be added to the core information page.
+	 * @return array The filtered informations
+	 */
+	public static function debug_information( $info ) {
+		$info['activitypub'] = array(
+			'label'  => __( 'ActivityPub' ),
+			'fields' => array(
+				'webfinger' => array(
+					'label'   => __( 'WebFinger', 'activitypub' ),
+					'value'   => \Activitypub\Webfinger::get_user_resource( wp_get_current_user()->ID ),
+					'private' => true,
+				),
+				'author_url' => array(
+					'label'   => __( 'Author URL', 'activitypub' ),
+					'value'   => get_author_posts_url( wp_get_current_user()->ID ),
+					'private' => true,
+				),
+			),
+		);
+
+		return $info;
 	}
 }
