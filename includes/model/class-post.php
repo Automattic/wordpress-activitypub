@@ -74,7 +74,12 @@ class Post {
 		// replace 'trashed' for delete activity
 		return \str_replace( '__trashed', '', $permalink );
 	}
-
+	
+	public function generate_the_title(){
+		$post = $this->post;
+		return \get_the_title( $post->ID );
+	}
+	
 	public function generate_attachments() {
 		$max_images = \apply_filters( 'activitypub_max_images', 3 );
 
