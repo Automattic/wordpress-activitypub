@@ -75,9 +75,14 @@ class Post {
 		return \str_replace( '__trashed', '', $permalink );
 	}
 	
-	public function generate_the_title(){
-		$post = $this->post;
-		return \get_the_title( $post->ID );
+	public function generate_the_title() {
+		if ( 'Article' === $this->generate_object_type() ) {
+			$title = \generate_the_title( $this->post );
+
+			return \html_entity_decode( $title, \ENT_QUOTES, 'UTF-8' );
+		}
+
+		return null;
 	}
 	
 	public function generate_attachments() {
