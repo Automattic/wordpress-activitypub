@@ -76,12 +76,10 @@ class Post {
 	}
 	
 	public function generate_the_title() {
-		if ( 'Article' === $this->generate_object_type() ) {
-			$title = \generate_the_title( $this->post );
-
+		if ( 'Note' === $this->generate_object_type() ) {
+			$title = \get_the_title( $post->ID );
 			return \html_entity_decode( $title, \ENT_QUOTES, 'UTF-8' );
 		}
-
 		return null;
 	}
 	
