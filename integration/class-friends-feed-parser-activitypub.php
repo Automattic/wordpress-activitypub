@@ -179,7 +179,6 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		$item = new \Friends\Feed_Item(
 			array(
 				'permalink' => $object['url'],
-				// 'title' => '',
 				'content' => $object['content'],
 				'post_format' => $this->map_type_to_post_format( $object['type'] ),
 				'date' => $object['published'],
@@ -197,7 +196,7 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 	 * @return     bool|WP_Error              Whether the event was queued.
 	 */
 	public function queue_follow_user( \Friends\User_Feed $user_feed ) {
-		if ( self::SLUG != $user_feed->get_parser() ) {
+		if ( self::SLUG !== $user_feed->get_parser() ) {
 			return;
 		}
 
@@ -246,7 +245,7 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 	 * @return     bool|WP_Error              Whether the event was queued.
 	 */
 	public function queue_unfollow_user( \Friends\User_Feed $user_feed ) {
-		if ( self::SLUG != $user_feed->get_parser() ) {
+		if ( self::SLUG !== $user_feed->get_parser() ) {
 			return false;
 		}
 
@@ -281,12 +280,14 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		$activity->set_to( null );
 		$activity->set_cc( null );
 		$activity->set_actor( $actor );
-		$activity->set_object( array(
-			'type' => 'Follow',
-			'actor' => $actor,
-			'object' => $to,
-			'id' => $to,
-		) );
+		$activity->set_object(
+			array(
+				'type' => 'Follow',
+				'actor' => $actor,
+				'object' => $to,
+				'id' => $to,
+			)
+		);
 		$activity->set_id( $actor . '#unfollow-' . \preg_replace( '~^https?://~', '', $to ) );
 		$activity = $activity->to_json();
 		\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
