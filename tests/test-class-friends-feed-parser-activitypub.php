@@ -253,6 +253,7 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 		$this->assertEquals( $post_count + 2, count( $posts ) );
 		$this->assertEquals( $content, $posts[0]->post_content );
 		$this->assertEquals( $this->friend_id, $posts[0]->post_author );
+		$this->assertEquals( $this->friend_name, get_post_meta( $posts[0]->ID, 'author', true ) );
 	}
 
 	public function test_incoming_announce() {
@@ -304,6 +305,7 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 		$this->assertEquals( $post_count + 1, count( $posts ) );
 		$this->assertStringContainsString( 'Dezentrale Netzwerke', $posts[0]->post_content );
 		$this->assertEquals( $this->friend_id, $posts[0]->post_author );
+		$this->assertEquals( 'Matthias Pfefferle', get_post_meta( $posts[0]->ID, 'author', true ) );
 
 	}
 }

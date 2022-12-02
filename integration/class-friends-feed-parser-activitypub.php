@@ -231,9 +231,9 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 			$meta = \Activitypub\get_remote_metadata_by_actor( $object['attributedTo'] );
 			$this->log( 'Attributed to ' . $object['attributedTo'], compact( 'meta' ) );
 			if ( isset( $meta['name'] ) ) {
-				$override_author = $meta['name'];
+				$data['author'] = $meta['name'];
 			} elseif ( isset( $meta['preferredUsername'] ) ) {
-				$override_author = $meta['preferredUsername'];
+				$data['author'] = $meta['preferredUsername'];
 			}
 		}
 
