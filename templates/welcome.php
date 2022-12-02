@@ -1,4 +1,13 @@
-<?php \load_template( \dirname( __FILE__ ) . '/admin-header.php', true, array( 'settings' => '', 'welcome' => 'active' ) ); ?>
+<?php
+\load_template(
+	\dirname( __FILE__ ) . '/admin-header.php',
+	true,
+	array(
+		'settings' => '',
+		'welcome' => 'active',
+	)
+);
+?>
 
 <div class="privacy-settings-body hide-if-no-js">
 	<h2><?php \esc_html_e( 'Welcome', 'activitypub' ); ?></h2>
@@ -7,21 +16,37 @@
 	<p>
 		<?php
 		\printf(
-			\__(
-				'People can follow you by using the username <code>%s</code> or the URL <code>%s</code>. Users who can not access this settings page will find their username on the <a href="%s">Edit Profile</a> page.',
+			// translators:
+			\esc_html__(
+				'People can follow you by using the username %1$s or the URL %2$s. Users who can not access this settings page will find their username on the %3$sEdit Profile%4$s page.',
 				'activitypub'
 			),
-			\esc_attr( \Activitypub\get_webfinger_resource( wp_get_current_user()->ID ) ),
-			\esc_url_raw( \get_author_posts_url( wp_get_current_user()->ID ) ),
-			\esc_url_raw( \admin_url( 'profile.php#activitypub' ) )
+			\sprintf(
+				'<code>%s</code>',
+				\esc_attr( \Activitypub\get_webfinger_resource( wp_get_current_user()->ID ) )
+			),
+			\sprintf(
+				'<code>%s</code>',
+				\esc_url_raw( \get_author_posts_url( wp_get_current_user()->ID ) )
+			),
+			\sprintf(
+				'<a href="%s">',
+				\esc_url_raw( \admin_url( 'profile.php#activitypub' ) )
+			),
+			'</a>'
 		);
 		?>
 	</p>
 	<p>
 		<?php
 		\printf(
-			\__( 'If you have problems using this plugin, please check the <a href="%s">Site Health</a> to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).', 'activitypub' ),
-			\esc_url_raw( admin_url( '/wp-admin/site-health.php' ) )
+			// translators:
+			\esc_html__( 'If you have problems using this plugin, please check the %1$sSite Health%2$s to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).', 'activitypub' ),
+			\sprintf(
+				'<a href="%s">',
+				\esc_url_raw( admin_url( '/wp-admin/site-health.php' ) )
+			),
+			'</a>'
 		);
 		?>
 	</p>

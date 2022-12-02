@@ -1,11 +1,32 @@
-<?php \load_template( \dirname( __FILE__ ) . '/admin-header.php', true, array( 'settings' => 'active', 'welcome' => '' ) ); ?>
+<?php
+\load_template(
+	\dirname( __FILE__ ) . '/admin-header.php',
+	true,
+	array(
+		'settings' => 'active',
+		'welcome' => '',
+	)
+);
+?>
 
 <div class="privacy-settings-body hide-if-no-js">
 	<div class="notice notice-info">
-		<p><?php \printf( __( 'If you have problems using this plugin, please check the <a href="%s">Site Health</a> to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).', 'activitypub' ), admin_url( '/wp-admin/site-health.php' ) ); ?></p>
+		<p>
+			<?php
+			\printf(
+				// translators:
+				\esc_html__( 'If you have problems using this plugin, please check the %1$sSite Health%2$s to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).', 'activitypub' ),
+				\sprintf(
+					'<a href="%s">',
+					\esc_url_raw( \admin_url( '/wp-admin/site-health.php' ) )
+				),
+				'</a>'
+			);
+			?>
+		</p>
 	</div>
 
-	<p><?php \esc_html_e( 'Customize your ActivityPub settings to suit your needs.', 'activitypub' ) ?></p>
+	<p><?php \esc_html_e( 'Customize your ActivityPub settings to suit your needs.', 'activitypub' ); ?></p>
 
 	<form method="post" action="options.php">
 		<?php \settings_fields( 'activitypub' ); ?>
@@ -36,20 +57,22 @@
 						<p>
 							<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo ACTIVITYPUB_CUSTOM_POST_CONTENT; ?>"><?php echo \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ); ?></textarea>
 							<details>
-								<summary><?php _e( 'See the complete list of template patterns.', 'activitypub' ); ?></summary>
+								<summary><?php esc_html_e( 'See the complete list of template patterns.', 'activitypub' ); ?></summary>
 								<div class="description">
 									<ul>
 										<li><code>%title%</code> - <?php \esc_html_e( 'The Post-Title.', 'activitypub' ); ?></li>
 										<li><code>%content%</code> - <?php \esc_html_e( 'The Post-Content.', 'activitypub' ); ?></li>
 										<li><code>%excerpt%</code> - <?php \esc_html_e( 'The Post-Excerpt (default 400 Chars).', 'activitypub' ); ?></li>
 										<li><code>%permalink%</code> - <?php \esc_html_e( 'The Post-Permalink.', 'activitypub' ); ?></li>
-										<li><code>%shortlink%</code> - <?php \printf( \esc_html( 'The Post-Shortlink. I can recommend %sHum%s, to prettify the Shortlinks', 'activitypub' ), '<a href="https://wordpress.org/plugins/hum/" target="_blank">', '</a>' ); ?></li>
+										<?php // translators: ?>
+										<li><code>%shortlink%</code> - <?php \printf( \esc_html__( 'The Post-Shortlink. I can recommend %1$sHum%2$s, to prettify the Shortlinks', 'activitypub' ), '<a href="https://wordpress.org/plugins/hum/" target="_blank">', '</a>' ); ?></li>
 										<li><code>%hashtags%</code> - <?php \esc_html_e( 'The Tags as Hashtags.', 'activitypub' ); ?></li>
 									</ul>
 								</div>
 							</details>
 						</p>
-						<p><?php \printf( \__( '%sLet me know%s if you miss a template pattern.', 'activitypub' ), '<a href="https://github.com/pfefferle/wordpress-activitypub/issues/new" target="_blank">', '</a>' ); ?></p>
+						<?php // translators: ?>
+						<p><?php \printf( \esc_html__( '%1$sLet me know%2$s if you miss a template pattern.', 'activitypub' ), '<a href="https://github.com/pfefferle/wordpress-activitypub/issues/new" target="_blank">', '</a>' ); ?></p>
 					</td>
 				</tr>
 				<tr>
@@ -77,6 +100,7 @@
 							<?php $post_types = \get_post_types( array( 'public' => true ), 'objects' ); ?>
 							<?php $support_post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array(); ?>
 							<ul>
+							<?php // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited ?>
 							<?php foreach ( $post_types as $post_type ) { ?>
 								<li>
 									<input type="checkbox" id="activitypub_support_post_types" name="activitypub_support_post_types[]" value="<?php echo \esc_attr( $post_type->name ); ?>" <?php echo \checked( true, \in_array( $post_type->name, $support_post_types, true ) ); ?> />
@@ -102,8 +126,21 @@
 						<?php \esc_html_e( 'HTML Whitelist', 'activitypub' ); ?>
 					</th>
 					<td>
-						<textarea name="activitypub_allowed_html" id="activitypub_allowed_html" rows="3" cols="50" class="large-text"><?php echo \get_option( 'activitypub_allowed_html', ACTIVITYPUB_ALLOWED_HTML ); ?></textarea>
-						<p class="description"><?php \_e( \sprintf( 'A list of HTML elements, you want to whitelist for your activities. <strong>Leave list empty to support all HTML elements.</strong> Default: <code>%s</code>.', \esc_html( ACTIVITYPUB_ALLOWED_HTML ) ), 'activitypub' ); ?></p>
+						<textarea name="activitypub_allowed_html" id="activitypub_allowed_html" rows="3" cols="50" class="large-text"><?php echo esc_html( \get_option( 'activitypub_allowed_html', ACTIVITYPUB_ALLOWED_HTML ) ); ?></textarea>
+						<p class="description">
+							<?php
+							\printf(
+								// translators:
+								\esc_html__( 'A list of HTML elements, you want to whitelist for your activities. %1$sLeave list empty to support all HTML elements.%2$s Default: %3$s.', 'activitypub' ),
+								'<strong>',
+								'</strong>',
+								\sprintf(
+									'<code>%s</code>',
+									\esc_html( ACTIVITYPUB_ALLOWED_HTML )
+								)
+							);
+							?>
+						</p>
 					</td>
 				</tr>
 			</tbody>
@@ -122,7 +159,19 @@
 						<?php \esc_html_e( 'Blocklist', 'activitypub' ); ?>
 					</th>
 					<td>
-						<p class="description"><?php \printf( \__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ), admin_url( 'options-discussion.php#disallowed_keys' ) ); ?></p>
+						<p class="description">
+							<?php
+							\printf(
+								// translators:
+								\esc_html__( 'To block servers, add the host of the server to the "%1$sDisallowed Comment Keys%2$s" list.', 'activitypub' ),
+								\sprintf(
+									'<a href="%s">',
+									esc_url_raw( admin_url( 'options-discussion.php#disallowed_keys' ) )
+								),
+								'</a>'
+							);
+							?>
+						</p>
 					</td>
 				</tr>
 			</tbody>
