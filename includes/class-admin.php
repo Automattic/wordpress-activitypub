@@ -14,7 +14,7 @@ class Admin {
 		\add_action( 'admin_menu', array( '\Activitypub\Admin', 'admin_menu' ) );
 		\add_action( 'admin_init', array( '\Activitypub\Admin', 'register_settings' ) );
 		\add_action( 'show_user_profile', array( '\Activitypub\Admin', 'add_fediverse_profile' ) );
-		\add_action( 'admin_enqueue_scripts', array( '\Activitypub\Admin', 'admin_style' ) );
+		\add_action( 'admin_enqueue_scripts', array( '\Activitypub\Admin', 'enqueue_scripts' ) );
 	}
 
 	/**
@@ -154,9 +154,10 @@ class Admin {
 		\Activitypub\get_identifier_settings( $user->ID );
 	}
 
-	public static function admin_style( $hook_suffix ) {
+	public static function enqueue_scripts( $hook_suffix ) {
 		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
-			wp_enqueue_style( 'admin-styles', plugin_dir_url( __FILE__ ) . '../assets/css/admin.css', array(), '1.0.0' );
+			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), '1.0.0' );
+			wp_enqueue_script( 'activitypub-admin-styles', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), '1.0.0', false );
 		}
 	}
 }
