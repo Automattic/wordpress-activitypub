@@ -6,6 +6,146 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 	private $friend_name;
 	private $actor;
 
+	public function test_incoming_post() {
+		$now = time() - 10;
+		$status_id = 123;
+
+		$posts = get_posts(
+			array(
+				'post_type' => \Friends\Friends::CPT,
+				'author' => $this->friend_id,
+			)
+		);
+
+		$post_count = count( $posts );
+
+		// Let's post a new Note through the REST API.
+		$date = gmdate( \DATE_W3C, $now++ );
+		$id = 'test' . $status_id;
+		$content = 'Test ' . $date . ' ' . rand();
+
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/' . get_current_user_id() . '/inbox' );
+		$request->set_param( 'type', 'Create' );
+		$request->set_param( 'id', $id );
+		$request->set_param( 'actor', $this->actor );
+
+		$request->set_param(
+			'object',
+			array(
+				'type' => 'Note',
+				'id' => $id,
+				'attributedTo' => $this->actor,
+				'content' => $content,
+				'url' => 'https://mastodon.local/users/akirk/statuses/' . ( $status_id++ ),
+				'published' => $date,
+			)
+		);
+
+		$response = $this->server->dispatch( $request );
+		$this->assertEquals( 202, $response->get_status() );
+
+		$posts = get_posts(
+			array(
+				'post_type' => \Friends\Friends::CPT,
+				'author' => $this->friend_id,
+			)
+		);
+
+		$this->assertEquals( $post_count + 1, count( $posts ) );
+		$this->assertEquals( $content, $posts[0]->post_content );
+		$this->assertEquals( $this->friend_id, $posts[0]->post_author );
+
+		// Do another test post, this time with a URL that has an @-id.
+		$date = gmdate( \DATE_W3C, $now++ );
+		$id = 'test' . $status_id;
+		$content = 'Test ' . $date . ' ' . rand();
+
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/' . get_current_user_id() . '/inbox' );
+		$request->set_param( 'type', 'Create' );
+		$request->set_param( 'id', $id );
+		$request->set_param( 'actor', 'https://mastodon.local/@akirk' );
+		$request->set_param(
+			'object',
+			array(
+				'type' => 'Note',
+				'id' => $id,
+				'attributedTo' => 'https://mastodon.local/@akirk',
+				'content' => $content,
+				'url' => 'https://mastodon.local/users/akirk/statuses/' . ( $status_id++ ),
+				'published' => $date,
+			)
+		);
+
+		$response = $this->server->dispatch( $request );
+		$this->assertEquals( 202, $response->get_status() );
+
+		$posts = get_posts(
+			array(
+				'post_type' => \Friends\Friends::CPT,
+				'author' => $this->friend_id,
+			)
+		);
+
+		$this->assertEquals( $post_count + 2, count( $posts ) );
+		$this->assertEquals( $content, $posts[0]->post_content );
+		$this->assertEquals( $this->friend_id, $posts[0]->post_author );
+		$this->assertEquals( $this->friend_name, get_post_meta( $posts[0]->ID, 'author', true ) );
+	}
+
+	public function test_incoming_announce() {
+		$now = time() - 10;
+		$status_id = 123;
+
+		self::$users['https://notiz.blog/author/matthias-pfefferle/'] = array(
+			'url' => 'https://notiz.blog/author/matthias-pfefferle/',
+			'name'  => 'Matthias Pfefferle',
+		);
+
+		$posts = get_posts(
+			array(
+				'post_type' => \Friends\Friends::CPT,
+				'author' => $this->friend_id,
+			)
+		);
+
+		$post_count = count( $posts );
+
+		$date = gmdate( \DATE_W3C, $now++ );
+		$id = 'test' . $status_id;
+
+		$object = 'https://notiz.blog/2022/11/14/the-at-protocol/';
+
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/' . get_current_user_id() . '/inbox' );
+		$request->set_param( 'type', 'Announce' );
+		$request->set_param( 'id', $id );
+		$request->set_param( 'actor', $this->actor );
+		$request->set_param( 'published', $date );
+		$request->set_param( 'object', $object );
+
+		$response = $this->server->dispatch( $request );
+		$this->assertEquals( 202, $response->get_status() );
+
+		$p = wp_parse_url( $object );
+		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.response';
+		$this->assertFileExists( $cache );
+
+		$object = json_decode( wp_remote_retrieve_body( unserialize( file_get_contents( $cache ) ) ) );
+
+		$posts = get_posts(
+			array(
+				'post_type' => \Friends\Friends::CPT,
+				'author' => $this->friend_id,
+			)
+		);
+
+		$this->assertEquals( $post_count + 1, count( $posts ) );
+		$this->assertStringContainsString( 'Dezentrale Netzwerke', $posts[0]->post_content );
+		$this->assertEquals( $this->friend_id, $posts[0]->post_author );
+		$this->assertEquals( 'Matthias Pfefferle', get_post_meta( $posts[0]->ID, 'author', true ) );
+
+	}
+
+
 	public function set_up() {
 		if ( ! class_exists( '\Friends\Friends' ) ) {
 			return $this->markTestSkipped( 'The Friends plugin is not loaded.' );
@@ -168,144 +308,5 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 			);
 		}
 		return $response;
-	}
-
-	public function test_incoming_post() {
-		$now = time() - 10;
-		$status_id = 123;
-
-		$posts = get_posts(
-			array(
-				'post_type' => \Friends\Friends::CPT,
-				'author' => $this->friend_id,
-			)
-		);
-
-		$post_count = count( $posts );
-
-		// Let's post a new Note through the REST API.
-		$date = gmdate( \DATE_W3C, $now++ );
-		$id = 'test' . $status_id;
-		$content = 'Test ' . $date . ' ' . rand();
-
-		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/' . get_current_user_id() . '/inbox' );
-		$request->set_param( 'type', 'Create' );
-		$request->set_param( 'id', $id );
-		$request->set_param( 'actor', $this->actor );
-
-		$request->set_param(
-			'object',
-			array(
-				'type' => 'Note',
-				'id' => $id,
-				'attributedTo' => $this->actor,
-				'content' => $content,
-				'url' => 'https://mastodon.local/users/akirk/statuses/' . ( $status_id++ ),
-				'published' => $date,
-			)
-		);
-
-		$response = $this->server->dispatch( $request );
-		$this->assertEquals( 202, $response->get_status() );
-
-		$posts = get_posts(
-			array(
-				'post_type' => \Friends\Friends::CPT,
-				'author' => $this->friend_id,
-			)
-		);
-
-		$this->assertEquals( $post_count + 1, count( $posts ) );
-		$this->assertEquals( $content, $posts[0]->post_content );
-		$this->assertEquals( $this->friend_id, $posts[0]->post_author );
-
-		// Do another test post, this time with a URL that has an @-id.
-		$date = gmdate( \DATE_W3C, $now++ );
-		$id = 'test' . $status_id;
-		$content = 'Test ' . $date . ' ' . rand();
-
-		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/' . get_current_user_id() . '/inbox' );
-		$request->set_param( 'type', 'Create' );
-		$request->set_param( 'id', $id );
-		$request->set_param( 'actor', 'https://mastodon.local/@akirk' );
-		$request->set_param(
-			'object',
-			array(
-				'type' => 'Note',
-				'id' => $id,
-				'attributedTo' => 'https://mastodon.local/@akirk',
-				'content' => $content,
-				'url' => 'https://mastodon.local/users/akirk/statuses/' . ( $status_id++ ),
-				'published' => $date,
-			)
-		);
-
-		$response = $this->server->dispatch( $request );
-		$this->assertEquals( 202, $response->get_status() );
-
-		$posts = get_posts(
-			array(
-				'post_type' => \Friends\Friends::CPT,
-				'author' => $this->friend_id,
-			)
-		);
-
-		$this->assertEquals( $post_count + 2, count( $posts ) );
-		$this->assertEquals( $content, $posts[0]->post_content );
-		$this->assertEquals( $this->friend_id, $posts[0]->post_author );
-		$this->assertEquals( $this->friend_name, get_post_meta( $posts[0]->ID, 'author', true ) );
-	}
-
-	public function test_incoming_announce() {
-		$now = time() - 10;
-		$status_id = 123;
-
-		self::$users['https://notiz.blog/author/matthias-pfefferle/'] = array(
-			'url' => 'https://notiz.blog/author/matthias-pfefferle/',
-			'name'  => 'Matthias Pfefferle',
-		);
-
-		$posts = get_posts(
-			array(
-				'post_type' => \Friends\Friends::CPT,
-				'author' => $this->friend_id,
-			)
-		);
-
-		$post_count = count( $posts );
-
-		$date = gmdate( \DATE_W3C, $now++ );
-		$id = 'test' . $status_id;
-
-		$object = 'https://notiz.blog/2022/11/14/the-at-protocol/';
-
-		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/' . get_current_user_id() . '/inbox' );
-		$request->set_param( 'type', 'Announce' );
-		$request->set_param( 'id', $id );
-		$request->set_param( 'actor', $this->actor );
-		$request->set_param( 'published', $date );
-		$request->set_param( 'object', $object );
-
-		$response = $this->server->dispatch( $request );
-		$this->assertEquals( 202, $response->get_status() );
-
-		$p = wp_parse_url( $object );
-		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.response';
-		$this->assertFileExists( $cache );
-
-		$object = json_decode( wp_remote_retrieve_body( unserialize( file_get_contents( $cache ) ) ) );
-
-		$posts = get_posts(
-			array(
-				'post_type' => \Friends\Friends::CPT,
-				'author' => $this->friend_id,
-			)
-		);
-
-		$this->assertEquals( $post_count + 1, count( $posts ) );
-		$this->assertStringContainsString( 'Dezentrale Netzwerke', $posts[0]->post_content );
-		$this->assertEquals( $this->friend_id, $posts[0]->post_author );
-		$this->assertEquals( 'Matthias Pfefferle', get_post_meta( $posts[0]->ID, 'author', true ) );
-
 	}
 }
