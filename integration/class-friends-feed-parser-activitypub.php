@@ -237,6 +237,29 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 			}
 		}
 
+		if ( ! empty( $object['attachment'] ) ) {
+			foreach ( $object['attachment'] as $attachment ) {
+				if ( ! isset( $attachment['type'] ) || ! isset( $attachment['mediaType'] ) ) {
+					continue;
+				}
+				if ( 'Document' !== $attachment['type'] || strpos( $attachment['mediaType'], 'image/' ) !== 0 ) {
+					continue;
+				}
+
+				$data['content'] .= PHP_EOL;
+				$data['content'] .= '<!-- wp:image -->';
+				$data['content'] .= '<p><img src="' . esc_url( $attachment['url'] ) . '" width="' . esc_attr( $attachment['width'] ) . '"  height="' . esc_attr( $attachment['height'] ) . '" /></p>';
+				$data['content'] .= '<!-- /wp:image  -->';
+			}
+			$meta = \Activitypub\get_remote_metadata_by_actor( $object['attributedTo'] );
+			$this->log( 'Attributed to ' . $object['attributedTo'], compact( 'meta' ) );
+			if ( isset( $meta['name'] ) ) {
+				$data['author'] = $meta['name'];
+			} elseif ( isset( $meta['preferredUsername'] ) ) {
+				$data['author'] = $meta['preferredUsername'];
+			}
+		}
+
 		$this->log(
 			'Received feed item',
 			array(

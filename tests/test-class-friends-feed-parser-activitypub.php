@@ -29,6 +29,9 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 		$request->set_param( 'id', $id );
 		$request->set_param( 'actor', $this->actor );
 
+		$attachment_url = 'https://mastodon.local/files/original/1234.png';
+		$attachment_width = 400;
+		$attachment_height = 600;
 		$request->set_param(
 			'object',
 			array(
@@ -38,6 +41,18 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 				'content' => $content,
 				'url' => 'https://mastodon.local/users/akirk/statuses/' . ( $status_id++ ),
 				'published' => $date,
+				'attachment' => array(
+					array(
+						'type' => 'Document',
+						'mediaType' => 'image/png',
+						'url' => $attachment_url,
+						'name' => '',
+						'blurhash' => '',
+						'width' => $attachment_width,
+						'height' => $attachment_height,
+
+					),
+				),
 			)
 		);
 
@@ -52,7 +67,8 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 		);
 
 		$this->assertEquals( $post_count + 1, count( $posts ) );
-		$this->assertEquals( $content, $posts[0]->post_content );
+		$this->assertStringStartsWith( $content, $posts[0]->post_content );
+		$this->assertStringContainsString( '<img src="' . esc_url( $attachment_url ) . '" width="' . esc_attr( $attachment_width ) . '" height="' . esc_attr( $attachment_height ) . '" />', $posts[0]->post_content );
 		$this->assertEquals( $this->friend_id, $posts[0]->post_author );
 
 		// Do another test post, this time with a URL that has an @-id.
@@ -144,8 +160,6 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 		$this->assertEquals( 'Matthias Pfefferle', get_post_meta( $posts[0]->ID, 'author', true ) );
 
 	}
-
-
 	public function set_up() {
 		if ( ! class_exists( '\Friends\Friends' ) ) {
 			return $this->markTestSkipped( 'The Friends plugin is not loaded.' );
