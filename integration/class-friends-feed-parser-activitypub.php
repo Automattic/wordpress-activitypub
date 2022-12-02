@@ -153,7 +153,8 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 				// We don't need to handle 'Accept' types since it's handled by the ActivityPub plugin itself.
 				'create',
 				'announce',
-			)
+			),
+			true
 		) ) {
 				return false;
 		}
@@ -215,16 +216,35 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 	 * @param      \Friends\User_Feed  $user_feed  The user feed.
 	 */
 	private function handle_incoming_post( $object, \Friends\User_Feed $user_feed ) {
-		$item = new \Friends\Feed_Item(
-			array(
-				'permalink' => $object['url'],
-				'content' => $object['content'],
-				'post_format' => $this->map_type_to_post_format( $object['type'] ),
-				'date' => $object['published'],
-			)
+		$data = array(
+			'permalink' => $object['url'],
+			'content' => $object['content'],
+			'post_format' => $this->map_type_to_post_format( $object['type'] ),
+			'date' => $object['published'],
 		);
 
+		if ( isset( $object['attributedTo'] ) ) {
+			$meta = \Activitypub\get_remote_metadata_by_actor( $object['attributedTo'] );
+			$this->log( 'Attributed to ' . $object['attributedTo'], compact( 'meta' ) );
+			if ( isset( $meta['name'] ) ) {
+				$override_author = $meta['name'];
+			} elseif ( isset( $meta['preferredUsername'] ) ) {
+				$override_author = $meta['preferredUsername'];
+			}
+		}
+
+		$this->log(
+			'Received feed item',
+			array(
+				'url' => $object['url'],
+				'data' => $data,
+			)
+		);
+		$item = new \Friends\Feed_Item( $data );
+
 		$this->friends_feed->process_incoming_feed_items( array( $item ), $user_feed );
+
+		return true;
 	}
 
 	/**
@@ -250,27 +270,7 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		}
 		$this->log( 'Received response', compact( 'url', 'object' ) );
 
-		$data = array(
-			'permalink' => $url,
-			'content' => $object['content'],
-			'post_format' => $this->map_type_to_post_format( $object['type'] ),
-			'date' => $object['published'],
-		);
-
-		if ( isset( $object['attributedTo'] ) ) {
-			$meta = \Activitypub\get_remote_metadata_by_actor( $object['attributedTo'] );
-			$this->log( 'Attributed to ' . $object['attributedTo'], compact( 'meta' ) );
-			if ( isset( $meta['name'] ) ) {
-				$data['author'] = $meta['name'];
-			} elseif ( isset( $meta['preferredUsername'] ) ) {
-				$data['author'] = $meta['preferredUsername'];
-			}
-		}
-		$this->log( 'Received feed item', compact( 'url', 'data' ) );
-
-		$item = new \Friends\Feed_Item( $data );
-
-		$this->friends_feed->process_incoming_feed_items( array( $item ), $user_feed );
+		return $this->handle_incoming_post( $object, $user_feed );
 	}
 
 	/**

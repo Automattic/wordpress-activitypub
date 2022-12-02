@@ -113,6 +113,10 @@ function get_webfinger_resource( $user_id ) {
  * @return array
  */
 function get_remote_metadata_by_actor( $actor ) {
+	$pre = apply_filters( 'pre_get_remote_metadata_by_actor', false, $actor );
+	if ( $pre ) {
+		return $pre;
+	}
 	if ( preg_match( '/^@?[^@]+@((?:[a-z0-9-]+\.)+[a-z]+)$/i', $actor ) ) {
 		$actor = Rest\Webfinger::resolve( $actor );
 	}

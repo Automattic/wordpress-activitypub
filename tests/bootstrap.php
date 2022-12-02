@@ -19,6 +19,10 @@ require_once $_tests_dir . '/includes/functions.php';
  */
 function _manually_load_plugin() {
 	require \dirname( \dirname( __FILE__ ) ) . '/activitypub.php';
+	$friends_plugin = \dirname( \dirname( \dirname( __FILE__ ) ) ) . '/friends/friends.php';
+	if ( file_exists( $friends_plugin ) ) {
+		require $friends_plugin;
+	}
 }
 \tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
