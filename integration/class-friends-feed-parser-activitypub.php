@@ -23,13 +23,22 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 	public function __construct( \Friends\Feed $friends_feed ) {
 		$this->friends_feed = $friends_feed;
 
-		\add_action( 'activitypub_inbox_create', array( $this, 'handle_received_activity' ), 10, 2 );
-		\add_action( 'activitypub_inbox_accept', array( $this, 'handle_received_activity' ), 10, 2 );
+		\add_action( 'activitypub_inbox', array( $this, 'handle_received_activity' ), 10, 3 );
 		\add_action( 'friends_user_feed_activated', array( $this, 'queue_follow_user' ), 10 );
 		\add_action( 'friends_user_feed_deactivated', array( $this, 'queue_unfollow_user' ), 10 );
 		\add_action( 'friends_feed_parser_activitypub_follow', array( $this, 'follow_user' ), 10, 2 );
 		\add_action( 'friends_feed_parser_activitypub_unfollow', array( $this, 'unfollow_user' ), 10, 2 );
 		\add_filter( 'friends_rewrite_incoming_url', array( $this, 'friends_rewrite_incoming_url' ), 10, 2 );
+	}
+
+	/**
+	 * Allow logging a message via an action.
+	 * @param string $message The message to log.
+	 * @param array $objects Optional objects as meta data.
+	 * @return void
+	 */
+	private function log( $message, $objects = array() ) {
+		do_action( 'friends_activitypub_log', $message, $objects );
 	}
 
 	/**
@@ -135,23 +144,53 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 	 *
 	 * @param  array $object  The activity-object
 	 * @param  int   $user_id The id of the local blog-user
+	 * @param string $type  The type of the activity.
 	 */
-	public function handle_received_activity( $object, $user_id ) {
-		$user_feed = $this->friends_feed->get_user_feed_by_url( $object['actor'] );
-		if ( is_wp_error( $user_feed ) ) {
-			$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
-			$user_feed = $this->friends_feed->get_user_feed_by_url( $meta['url'] );
-			if ( is_wp_error( $user_feed ) ) {
-				// We're not following this user.
+	public function handle_received_activity( $object, $user_id, $type ) {
+		if ( ! in_array(
+			$type,
+			array(
+				// We don't need to handle 'Accept' types since it's handled by the ActivityPub plugin itself.
+				'create',
+				'announce',
+			)
+		) ) {
+				return false;
+		}
+
+		$actor_url = $object['actor'];
+		$user_feed = false;
+		if ( \wp_http_validate_url( $actor_url ) ) {
+			// Let's check if we follow this actor. If not it might be a different URL representation.
+			$user_feed = $this->friends_feed->get_user_feed_by_url( $actor_url );
+		}
+
+		if ( is_wp_error( $user_feed ) || ! \wp_http_validate_url( $actor_url ) ) {
+			$meta = \Activitypub\get_remote_metadata_by_actor( $actor_url );
+			if ( ! $meta || ! isset( $meta['url'] ) ) {
+				$this->log( 'Received invalid meta for ' . $actor_url );
+				return false;
+			}
+
+			$actor_url = $meta['url'];
+			if ( ! \wp_http_validate_url( $actor_url ) ) {
+				$this->log( 'Received invalid meta url for ' . $actor_url );
 				return false;
 			}
 		}
-		switch ( $object['type'] ) {
-			case 'Accept':
-				// nothing to do.
-				break;
-			case 'Create':
-				$this->handle_incoming_post( $object['object'], $user_feed );
+
+		$user_feed = $this->friends_feed->get_user_feed_by_url( $actor_url );
+		if ( ! $user_feed || is_wp_error( $user_feed ) ) {
+			$this->log( 'We\'re not following ' . $actor_url );
+			// We're not following this user.
+			return false;
+		}
+
+		switch ( $type ) {
+			case 'create':
+				return $this->handle_incoming_post( $object['object'], $user_feed );
+			case 'announce':
+				return $this->handle_incoming_announce( $object['object'], $user_feed, $user_id );
 
 		}
 
@@ -184,6 +223,52 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 				'date' => $object['published'],
 			)
 		);
+
+		$this->friends_feed->process_incoming_feed_items( array( $item ), $user_feed );
+	}
+
+	/**
+	 * We received an announced URL (boost) for a feed, handle it.
+	 *
+	 * @param      array               $url     The announced URL.
+	 * @param      \Friends\User_Feed  $user_feed  The user feed.
+	 */
+	private function handle_incoming_announce( $url, \Friends\User_Feed $user_feed, $user_id ) {
+		$this->log( 'Received announce for ' . $url );
+		if ( ! \wp_http_validate_url( $url ) ) {
+			return false;
+		}
+		$response = \Activitypub\safe_remote_get( $url, $user_id );
+		if ( \is_wp_error( $response ) ) {
+			return $response;
+		}
+		$json = \wp_remote_retrieve_body( $response );
+		$object = \json_decode( $json, true );
+		if ( ! $object ) {
+			$this->log( 'Received invalid json', compact( 'json' ) );
+			return false;
+		}
+		$this->log( 'Received response', compact( 'url', 'object' ) );
+
+		$data = array(
+			'permalink' => $url,
+			'content' => $object['content'],
+			'post_format' => $this->map_type_to_post_format( $object['type'] ),
+			'date' => $object['published'],
+		);
+
+		if ( isset( $object['attributedTo'] ) ) {
+			$meta = \Activitypub\get_remote_metadata_by_actor( $object['attributedTo'] );
+			$this->log( 'Attributed to ' . $object['attributedTo'], compact( 'meta' ) );
+			if ( isset( $meta['name'] ) ) {
+				$data['author'] = $meta['name'];
+			} elseif ( isset( $meta['preferredUsername'] ) ) {
+				$data['author'] = $meta['preferredUsername'];
+			}
+		}
+		$this->log( 'Received feed item', compact( 'url', 'data' ) );
+
+		$item = new \Friends\Feed_Item( $data );
 
 		$this->friends_feed->process_incoming_feed_items( array( $item ), $user_feed );
 	}
