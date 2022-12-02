@@ -19,6 +19,8 @@ require_once $_tests_dir . '/includes/functions.php';
  */
 function _manually_load_plugin() {
 	require \dirname( \dirname( __FILE__ ) ) . '/activitypub.php';
+
+	// Load the Friends plugin if available to test the integrations.
 	$friends_plugin = \dirname( \dirname( \dirname( __FILE__ ) ) ) . '/friends/friends.php';
 	if ( file_exists( $friends_plugin ) ) {
 		require $friends_plugin;

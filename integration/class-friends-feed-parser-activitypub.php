@@ -156,9 +156,8 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 			),
 			true
 		) ) {
-				return false;
+			return false;
 		}
-
 		$actor_url = $object['actor'];
 		$user_feed = false;
 		if ( \wp_http_validate_url( $actor_url ) ) {
@@ -216,8 +215,13 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 	 * @param      \Friends\User_Feed  $user_feed  The user feed.
 	 */
 	private function handle_incoming_post( $object, \Friends\User_Feed $user_feed ) {
+		$permalink = $object['id'];
+		if ( isset( $object['url'] ) ) {
+			$permalink = $object['url'];
+		}
+
 		$data = array(
-			'permalink' => $object['url'],
+			'permalink' => $permalink,
 			'content' => $object['content'],
 			'post_format' => $this->map_type_to_post_format( $object['type'] ),
 			'date' => $object['published'],
@@ -236,7 +240,7 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		$this->log(
 			'Received feed item',
 			array(
-				'url' => $object['url'],
+				'url' => $permalink,
 				'data' => $data,
 			)
 		);
@@ -254,10 +258,12 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 	 * @param      \Friends\User_Feed  $user_feed  The user feed.
 	 */
 	private function handle_incoming_announce( $url, \Friends\User_Feed $user_feed, $user_id ) {
-		$this->log( 'Received announce for ' . $url );
 		if ( ! \wp_http_validate_url( $url ) ) {
+			$this->log( 'Received invalid announce', compact( 'url' ) );
 			return false;
 		}
+		$this->log( 'Received announce for ' . $url );
+
 		$response = \Activitypub\safe_remote_get( $url, $user_id );
 		if ( \is_wp_error( $response ) ) {
 			return $response;
