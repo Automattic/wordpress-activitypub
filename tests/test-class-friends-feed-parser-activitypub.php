@@ -68,7 +68,7 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 
 		$this->assertEquals( $post_count + 1, count( $posts ) );
 		$this->assertStringStartsWith( $content, $posts[0]->post_content );
-		$this->assertStringContainsString( '<img src="' . esc_url( $attachment_url ) . '" width="' . esc_attr( $attachment_width ) . '" height="' . esc_attr( $attachment_height ) . '" />', $posts[0]->post_content );
+		$this->assertStringContainsString( '<img src="' . esc_url( $attachment_url ) . '" width="' . esc_attr( $attachment_width ) . '" height="' . esc_attr( $attachment_height ) . '"', $posts[0]->post_content );
 		$this->assertEquals( $this->friend_id, $posts[0]->post_author );
 
 		// Do another test post, this time with a URL that has an @-id.

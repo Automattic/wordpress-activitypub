@@ -248,7 +248,7 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 
 				$data['content'] .= PHP_EOL;
 				$data['content'] .= '<!-- wp:image -->';
-				$data['content'] .= '<p><img src="' . esc_url( $attachment['url'] ) . '" width="' . esc_attr( $attachment['width'] ) . '"  height="' . esc_attr( $attachment['height'] ) . '" /></p>';
+				$data['content'] .= '<p><img src="' . esc_url( $attachment['url'] ) . '" width="' . esc_attr( $attachment['width'] ) . '"  height="' . esc_attr( $attachment['height'] ) . '" class="size-full" /></p>';
 				$data['content'] .= '<!-- /wp:image  -->';
 			}
 			$meta = \Activitypub\get_remote_metadata_by_actor( $object['attributedTo'] );
