@@ -327,7 +327,7 @@ class Inbox {
 		\Activitypub\Peer\Followers::add_follower( $object['actor'], $user_id );
 
 		// get inbox
-		$inbox = \Activitypub\get_inbox_by_actor( $object['actor'] );
+		$inbox = \Activitypub\get_inbox_by_actor( $object['object'] );
 
 		// send "Accept" activity
 		$activity = new \Activitypub\Model\Activity( 'Accept', \Activitypub\Model\Activity::TYPE_SIMPLE );
