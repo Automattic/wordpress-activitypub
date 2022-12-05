@@ -15,38 +15,30 @@
 	<p><?php \esc_html_e( 'With ActivityPub your blog becomes part of a federated social network. This means you can share and talk to everyone using the ActivityPub protocol, including users of Friendica, Pleroma and Mastodon.', 'activitypub' ); ?></p>
 	<p>
 		<?php
-		\printf(
-			// translators:
-			\esc_html__(
-				'People can follow you by using the username %1$s or the URL %2$s. Users who can not access this settings page will find their username on the %3$sEdit Profile%4$s page.',
-				'activitypub'
-			),
+		echo wp_kses(
 			\sprintf(
-				'<code>@%s</code>',
-				\esc_attr( \Activitypub\get_webfinger_resource( wp_get_current_user()->ID ) )
-			),
-			\sprintf(
-				'<code>%s</code>',
-				\esc_url_raw( \get_author_posts_url( wp_get_current_user()->ID ) )
-			),
-			\sprintf(
-				'<a href="%s">',
+				// translators:
+				\__(
+					'People can follow you by using the username <code>%1$s</code> or the URL <code>%2$s</code>. Users who can not access this settings page will find their username on the <a href="%3$s">Edit Profile</a> page.',
+					'activitypub'
+				),
+				\esc_attr( \Activitypub\get_webfinger_resource( wp_get_current_user()->ID ) ),
+				\esc_url_raw( \get_author_posts_url( wp_get_current_user()->ID ) ),
 				\esc_url_raw( \admin_url( 'profile.php#activitypub' ) )
 			),
-			'</a>'
+			'default'
 		);
 		?>
 	</p>
 	<p>
 		<?php
-		\printf(
-			// translators:
-			\esc_html__( 'If you have problems using this plugin, please check the %1$sSite Health%2$s to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).', 'activitypub' ),
+		echo wp_kses(
 			\sprintf(
-				'<a href="%s">',
+				// translators:
+				\__( 'If you have problems using this plugin, please check the <a href="%s">Site Health</a> to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).', 'activitypub' ),
 				\esc_url_raw( admin_url( '/wp-admin/site-health.php' ) )
 			),
-			'</a>'
+			'default'
 		);
 		?>
 	</p>
