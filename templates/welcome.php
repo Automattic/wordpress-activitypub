@@ -80,7 +80,7 @@
 		</div>
 		<h4 class="activitypub-settings-accordion-heading">
 			<button aria-expanded="false" class="activitypub-settings-accordion-trigger" aria-controls="activitypub-settings-accordion-block-activitypub-webfinger-plugin" type="button">
-				<span class="title"><?php \esc_html_e( 'WebFinger Plugin', 'activitypub' ); ?></span>
+				<span class="title"><?php \esc_html_e( 'Advanced WebFinger Support 'activitypub' ); ?></span>
 				<span class="icon"></span>
 			</button>
 		</h4>
