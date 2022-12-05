@@ -12,7 +12,7 @@
 <div class="privacy-settings-body hide-if-no-js">
 	<h2><?php \esc_html_e( 'Welcome', 'activitypub' ); ?></h2>
 
-	<p><?php \esc_html_e( 'ActivityPub turns your blog into a federated social network. This means you can share and talk to everyone using the ActivityPub protocol, including users of Friendica, Pleroma and Mastodon.', 'activitypub' ); ?></p>
+	<p><?php \esc_html_e( 'With ActivityPub your blog becomes part of a federated social network. This means you can share and talk to everyone using the ActivityPub protocol, including users of Friendica, Pleroma and Mastodon.', 'activitypub' ); ?></p>
 	<p>
 		<?php
 		\printf(
@@ -53,9 +53,9 @@
 
 	<hr />
 
-	<h3><?php \esc_html_e( 'Recommendet Plugins', 'activitypub' ); ?></h3>
+	<h3><?php \esc_html_e( 'Recommended Plugins', 'activitypub' ); ?></h3>
 
-	<p><?php \esc_html_e( 'ActivityPub works as is and there is no need for you to install additional plugins, nevertheless there are some that extends the functionality of ActivityPub.', 'activitypub' ); ?></p>
+	<p><?php \esc_html_e( 'ActivityPub works as is and there is no need for you to install additional plugins, nevertheless there are some plugins that extends the functionality of ActivityPub.', 'activitypub' ); ?></p>
 
 	<div class="activitypub-settings-accordion">
 		<h4 class="activitypub-settings-accordion-heading">
