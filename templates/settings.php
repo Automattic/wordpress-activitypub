@@ -128,15 +128,13 @@
 						<textarea name="activitypub_allowed_html" id="activitypub_allowed_html" rows="3" cols="50" class="large-text"><?php echo esc_html( \get_option( 'activitypub_allowed_html', ACTIVITYPUB_ALLOWED_HTML ) ); ?></textarea>
 						<p class="description">
 							<?php
-							\printf(
-								// translators:
-								\esc_html__( 'A list of HTML elements, you want to whitelist for your activities. %1$sLeave list empty to support all HTML elements.%2$s Default: %3$s.', 'activitypub' ),
-								'<strong>',
-								'</strong>',
+							echo \wp_kses(
 								\sprintf(
-									'<code>%s</code>',
+									// translators:
+									\__( 'A list of HTML elements, you want to whitelist for your activities. <strong>Leave list empty to support all HTML elements</strong>. Default: <code>%s</code>', 'activitypub' ),
 									\esc_html( ACTIVITYPUB_ALLOWED_HTML )
-								)
+								),
+								'default'
 							);
 							?>
 						</p>
