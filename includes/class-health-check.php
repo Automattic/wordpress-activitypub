@@ -1,8 +1,6 @@
 <?php
 namespace Activitypub;
 
-use Activitypub\Rest\Webfinger;
-
 /**
  * ActivityPub Health_Check Class
  *
@@ -204,7 +202,7 @@ class Health_Check {
 		$user    = \wp_get_current_user();
 		$account = \Activitypub\get_webfinger_resource( $user->ID );
 
-		$url = Webfinger::resolve( $account );
+		$url = Activitypub\Webfinger::resolve( $account );
 		if ( \is_wp_error( $url ) ) {
 			$health_messages = array(
 				'webfinger_url_not_accessible' => \sprintf(
