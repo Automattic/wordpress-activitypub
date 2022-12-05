@@ -161,7 +161,6 @@ class Inbox {
 	public static function shared_inbox_post( $request ) {
 		$data = $request->get_params();
 		$type = $request->get_param( 'type' );
-
 		$users = self::extract_recipients( $data );
 
 		if ( ! $users ) {
@@ -406,6 +405,10 @@ class Inbox {
 	 */
 	public static function handle_create( $object, $user_id ) {
 		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
+
+		if ( ! isset( $object['object']['inReplyTo'] ) ) {
+			return;
+		}
 
 		$comment_post_id = \url_to_postid( $object['object']['inReplyTo'] );
 
