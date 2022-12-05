@@ -122,7 +122,7 @@
 				</tr>
 				<tr>
 					<th scope="row">
-						<?php \esc_html_e( 'HTML Whitelist', 'activitypub' ); ?>
+						<?php \esc_html_e( 'HTML Allowlist', 'activitypub' ); ?>
 					</th>
 					<td>
 						<textarea name="activitypub_allowed_html" id="activitypub_allowed_html" rows="3" cols="50" class="large-text"><?php echo esc_html( \get_option( 'activitypub_allowed_html', ACTIVITYPUB_ALLOWED_HTML ) ); ?></textarea>
@@ -131,7 +131,7 @@
 							echo \wp_kses(
 								\sprintf(
 									// translators:
-									\__( 'A list of HTML elements, you want to whitelist for your activities. <strong>Leave list empty to support all HTML elements</strong>. Default: <code>%s</code>', 'activitypub' ),
+									\__( 'A list of HTML elements, you want to allowlist for your activities. <strong>Leave list empty to support all HTML elements</strong>. Default: <code>%s</code>', 'activitypub' ),
 									\esc_html( ACTIVITYPUB_ALLOWED_HTML )
 								),
 								'default'
