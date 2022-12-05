@@ -97,7 +97,7 @@
 		</h4>
 		<div id="activitypub-settings-accordion-block-activitypub-nodeinfo-plugin" class="activitypub-settings-accordion-panel" hidden="hidden">
 			<p><?php \esc_html_e( 'NodeInfo is an effort to create a standardized way of exposing metadata about a server running one of the distributed social networks. The two key goals are being able to get better insights into the user base of distributed social networking and the ability to build tools that allow users to choose the best fitting software and server for their needs.', 'activitypub' ); ?></p>
-			<p><?php \esc_html_e( 'The ActivityPub plugin comes with a simple NodeInfo endpoint, if you need more configuration options and compatibility with other Fediverse plugins, please install the NodeInfo plugin.', 'activitypub' ); ?></p>
+			<p><?php \esc_html_e( 'The ActivityPub plugin comes with a simple NodeInfo endpoint. If you need more configuration options and compatibility with other Fediverse plugins, please install the NodeInfo plugin.', 'activitypub' ); ?></p>
 			<p><a href="https://wordpress.org/plugins/nodeinfo" class="button"><?php \esc_html_e( 'Install NodeInfo Plugin for WordPress', 'activitypub' ); ?></a></p>
 		</div>
 	</div>
