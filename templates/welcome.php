@@ -60,7 +60,7 @@
 	<div class="activitypub-settings-accordion">
 		<h4 class="activitypub-settings-accordion-heading">
 			<button aria-expanded="true" class="activitypub-settings-accordion-trigger" aria-controls="activitypub-settings-accordion-block-friends-plugin" type="button">
-				<span class="title"><?php \esc_html_e( 'Friends Plugin', 'activitypub' ); ?></span>
+				<span class="title"><?php \esc_html_e( 'Following Others', 'activitypub' ); ?></span>
 				<span class="icon"></span>
 			</button>
 		</h4>
