@@ -19,7 +19,7 @@ namespace Activitypub;
  * Initialize plugin
  */
 function init() {
-	\defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|^)#(\w*[A-Za-z_]+\w*)' );
+	\defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))' );
 	\defined( 'ACTIVITYPUB_ALLOWED_HTML' ) || \define( 'ACTIVITYPUB_ALLOWED_HTML', '<strong><a><p><ul><ol><li><code><blockquote><pre><img>' );
 	\defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<p><strong>%title%</strong></p>\n\n%content%\n\n<p>%hashtags%</p>\n\n<p>%shortlink%</p>" );
 	\define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -136,3 +136,11 @@ function enable_buddypress_features() {
 	\Activitypub\Integration\Buddypress::init();
 }
 add_action( 'bp_include', '\Activitypub\enable_buddypress_features' );
+
+add_action(
+	'friends_load_parsers',
+	function( \Friends\Feed $friends_feed ) {
+		require_once __DIR__ . '/integration/class-friends-feed-parser-activitypub.php';
+		$friends_feed->register_parser( Friends_Feed_Parser_ActivityPub::SLUG, new Friends_Feed_Parser_ActivityPub( $friends_feed ) );
+	}
+);
