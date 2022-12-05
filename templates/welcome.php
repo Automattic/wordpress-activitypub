@@ -70,7 +70,7 @@
 		</div>
 		<h4 class="activitypub-settings-accordion-heading">
 			<button aria-expanded="false" class="activitypub-settings-accordion-trigger" aria-controls="activitypub-settings-accordion-block-activitypub-hum-plugin" type="button">
-				<span class="title"><?php \esc_html_e( 'Hum Plugin', 'activitypub' ); ?></span>
+				<span class="title"><?php \esc_html_e( 'Add a URL Shortener', 'activitypub' ); ?></span>
 				<span class="icon"></span>
 			</button>
 		</h4>
