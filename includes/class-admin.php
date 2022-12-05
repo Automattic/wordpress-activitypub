@@ -57,6 +57,10 @@ class Admin {
 	 * Load welcome page
 	 */
 	public static function welcome_page() {
+		wp_enqueue_script( 'plugin-install' );
+		add_thickbox();
+		wp_enqueue_script( 'updates' );
+
 		\load_template( \dirname( __FILE__ ) . '/../templates/welcome.php' );
 	}
 
