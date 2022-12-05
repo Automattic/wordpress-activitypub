@@ -66,7 +66,7 @@
 		</h4>
 		<div id="activitypub-settings-accordion-block-friends-plugin" class="activitypub-settings-accordion-panel">
 			<p><?php \esc_html_e( 'To follow people on Mastodon or similar platforms using your own WordPress, you can use the Friends Plugin for WordPress which uses this plugin to receive posts and display them on your own WordPress, thus making your own WordPress a Fediverse instance of its own.', 'activitypub' ); ?></p>
-			<p><a href="https://wordpress.org/plugins/friends" class="button"><?php \esc_html_e( 'Install Friends Plugin for WordPress', 'activitypub' ); ?></a></p>
+			<p><a href="https://wordpress.org/plugins/friends" class="button"><?php \esc_html_e( 'Install the Friends Plugin for WordPress', 'activitypub' ); ?></a></p>
 		</div>
 		<h4 class="activitypub-settings-accordion-heading">
 			<button aria-expanded="false" class="activitypub-settings-accordion-trigger" aria-controls="activitypub-settings-accordion-block-activitypub-hum-plugin" type="button">
