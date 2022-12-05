@@ -22,7 +22,7 @@
 				'activitypub'
 			),
 			\sprintf(
-				'<code>%s</code>',
+				'<code>@%s</code>',
 				\esc_attr( \Activitypub\get_webfinger_resource( wp_get_current_user()->ID ) )
 			),
 			\sprintf(
