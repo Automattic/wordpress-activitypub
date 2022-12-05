@@ -13,14 +13,13 @@
 	<div class="notice notice-info">
 		<p>
 			<?php
-			\printf(
-				// translators:
-				\esc_html__( 'If you have problems using this plugin, please check the %1$sSite Health%2$s to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).', 'activitypub' ),
+			echo \wp_kses(
 				\sprintf(
-					'<a href="%s">',
-					\esc_url_raw( \admin_url( '/wp-admin/site-health.php' ) )
+					// translators:
+					\__( 'If you have problems using this plugin, please check the <a href="%s">Site Health</a> to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).', 'activitypub' ),
+					\esc_url_raw( \admin_url( 'site-health.php' ) )
 				),
-				'</a>'
+				'default'
 			);
 			?>
 		</p>
@@ -55,7 +54,7 @@
 							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_custom" value="custom" <?php echo \checked( 'custom', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Custom', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'Use the text-area below, to customize your activities.', 'activitypub' ); ?></span>
 						</p>
 						<p>
-							<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo ACTIVITYPUB_CUSTOM_POST_CONTENT; ?>"><?php echo \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ); ?></textarea>
+							<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo wp_kses( ACTIVITYPUB_CUSTOM_POST_CONTENT, 'post' ); ?>"><?php echo wp_kses( \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ), 'post' ); ?></textarea>
 							<details>
 								<summary><?php esc_html_e( 'See the complete list of template patterns.', 'activitypub' ); ?></summary>
 								<div class="description">
@@ -65,14 +64,14 @@
 										<li><code>%excerpt%</code> - <?php \esc_html_e( 'The Post-Excerpt (default 400 Chars).', 'activitypub' ); ?></li>
 										<li><code>%permalink%</code> - <?php \esc_html_e( 'The Post-Permalink.', 'activitypub' ); ?></li>
 										<?php // translators: ?>
-										<li><code>%shortlink%</code> - <?php \printf( \esc_html__( 'The Post-Shortlink. I can recommend %1$sHum%2$s, to prettify the Shortlinks', 'activitypub' ), '<a href="https://wordpress.org/plugins/hum/" target="_blank">', '</a>' ); ?></li>
+										<li><code>%shortlink%</code> - <?php echo \wp_kses( \__( 'The Post-Shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks', 'activitypub' ), 'default' ); ?></li>
 										<li><code>%hashtags%</code> - <?php \esc_html_e( 'The Tags as Hashtags.', 'activitypub' ); ?></li>
 									</ul>
 								</div>
 							</details>
 						</p>
 						<?php // translators: ?>
-						<p><?php \printf( \esc_html__( '%1$sLet me know%2$s if you miss a template pattern.', 'activitypub' ), '<a href="https://github.com/pfefferle/wordpress-activitypub/issues/new" target="_blank">', '</a>' ); ?></p>
+						<p><?php echo \wp_kses( \__( '<a href="https://github.com/pfefferle/wordpress-activitypub/issues/new" target="_blank">Let me know</a> if you miss a template pattern.', 'activitypub' ), 'default' ); ?></p>
 					</td>
 				</tr>
 				<tr>
@@ -117,7 +116,7 @@
 					</th>
 					<td>
 						<p>
-							<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php \_e( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag-link.', 'activitypub' ); ?></label>
+							<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag-link.', 'activitypub' ), 'default' ); ?></label>
 						</p>
 					</td>
 				</tr>
@@ -162,7 +161,7 @@
 						<p class="description">
 							<?php
 							echo \wp_kses(
-								\sprintf(								
+								\sprintf(
 									// translators: %s is a URL.
 									\__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ),
 									\esc_attr( \admin_url( 'options-discussion.php#disallowed_keys' ) )

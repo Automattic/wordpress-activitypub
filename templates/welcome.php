@@ -36,7 +36,7 @@
 			\sprintf(
 				// translators:
 				\__( 'If you have problems using this plugin, please check the <a href="%s">Site Health</a> to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).', 'activitypub' ),
-				\esc_url_raw( admin_url( '/wp-admin/site-health.php' ) )
+				\esc_url_raw( admin_url( 'site-health.php' ) )
 			),
 			'default'
 		);
