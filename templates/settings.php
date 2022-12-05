@@ -161,14 +161,13 @@
 					<td>
 						<p class="description">
 							<?php
-							\printf(
-								// translators:
-								\esc_html__( 'To block servers, add the host of the server to the "%1$sDisallowed Comment Keys%2$s" list.', 'activitypub' ),
-								\sprintf(
-									'<a href="%s">',
-									esc_url_raw( admin_url( 'options-discussion.php#disallowed_keys' ) )
+							echo \wp_kses(
+								\sprintf(								
+									// translators: %s is a URL.
+									\__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ),
+									\esc_attr( \admin_url( 'options-discussion.php#disallowed_keys' ) )
 								),
-								'</a>'
+								'default'
 							);
 							?>
 						</p>
