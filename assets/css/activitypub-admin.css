@@ -111,11 +111,7 @@ summary {
 }
 
 .activitypub-settings-accordion-trigger .icon, .activitypub-settings-accordion-viewed .icon {
-	border: solid #50575e;
-	  border-top-width: medium;
-	  border-right-width: medium;
-	  border-bottom-width: medium;
-	  border-left-width: medium;
+	border: solid #50575e medium;
 	border-width: 0 2px 2px 0;
 	height: .5rem;
 	pointer-events: none;
