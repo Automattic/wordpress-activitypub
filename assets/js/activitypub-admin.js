@@ -14,7 +14,6 @@ jQuery( function( $ ) {
 	
 	$(document).on( 'wp-plugin-install-success', function( event, response ) {
 		setTimeout( function() {
-			debugger;
 			$( '.activate-now' ).removeClass( 'thickbox open-plugin-details-modal' );
 		}, 1200 );
 	} );	
