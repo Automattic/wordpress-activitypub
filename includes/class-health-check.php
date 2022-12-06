@@ -279,7 +279,7 @@ class Health_Check {
 			'label'  => __( 'ActivityPub' ),
 			'fields' => array(
 				'webfinger' => array(
-					'label'   => __( 'WebFinger', 'activitypub' ),
+					'label'   => __( 'WebFinger Resource', 'activitypub' ),
 					'value'   => \Activitypub\Webfinger::get_user_resource( wp_get_current_user()->ID ),
 					'private' => true,
 				),
