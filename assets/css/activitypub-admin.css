@@ -1,4 +1,4 @@
-.settings_page_activitypub-settings .notice-info {
+.settings_page_activitypub .notice {
 	max-width: 800px;
 	margin: 0 auto;
 }
@@ -18,8 +18,7 @@
 	padding-top: 8px;
 }
 
-.settings_page_activitypub #wpcontent,
-.settings_page_activitypub-settings #wpcontent {
+.settings_page_activitypub #wpcontent {
 	padding-left: 0;
 }
 

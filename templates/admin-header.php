@@ -8,7 +8,7 @@
 			<?php \esc_html_e( 'Welcome', 'activitypub' ); ?>
 		</a>
 
-		<a href="<?php echo \esc_url_raw( admin_url( 'options-general.php?page=activitypub-settings' ) ); ?>" class="activitypub-settings-tab <?php echo \esc_attr( $args['settings'] ); ?>">
+		<a href="<?php echo \esc_url_raw( admin_url( 'options-general.php?page=activitypub&tab=settings' ) ); ?>" class="activitypub-settings-tab <?php echo \esc_attr( $args['settings'] ); ?>">
 			<?php \esc_html_e( 'Settings', 'activitypub' ); ?>
 		</a>
 	</nav>

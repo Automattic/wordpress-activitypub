@@ -21,25 +21,15 @@ class Admin {
 	 * Add admin menu entry
 	 */
 	public static function admin_menu() {
-		$settings_page = \add_submenu_page(
-			null,
-			'ActivityPub Settings',
-			'ActivityPub',
-			'manage_options',
-			'activitypub-settings',
-			array( '\Activitypub\Admin', 'settings_page' )
-		);
-
-		$welcome_page = \add_options_page(
+		$settings_page = \add_options_page(
 			'Welcome',
 			'ActivityPub',
 			'manage_options',
 			'activitypub',
-			array( '\Activitypub\Admin', 'welcome_page' )
+			array( '\Activitypub\Admin', 'settings_page' )
 		);
 
 		\add_action( 'load-' . $settings_page, array( '\Activitypub\Admin', 'add_settings_help_tab' ) );
-		\add_action( 'load-' . $welcome_page, array( '\Activitypub\Admin', 'add_settings_help_tab' ) );
 
 		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers (Fediverse)', 'activitypub' ), 'read', 'activitypub-followers-list', array( '\Activitypub\Admin', 'followers_list_page' ) );
 
@@ -50,18 +40,27 @@ class Admin {
 	 * Load settings page
 	 */
 	public static function settings_page() {
-		\load_template( \dirname( __FILE__ ) . '/../templates/settings.php' );
-	}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( empty( $_GET['tab'] ) ) {
+			$tab = 'welcome';
+		} else {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$tab = sanitize_key( $_GET['tab'] );
+		}
 
-	/**
-	 * Load welcome page
-	 */
-	public static function welcome_page() {
-		wp_enqueue_script( 'plugin-install' );
-		add_thickbox();
-		wp_enqueue_script( 'updates' );
+		switch ( $tab ) {
+			case 'settings':
+				\load_template( \dirname( __FILE__ ) . '/../templates/settings.php' );
+				break;
+			case 'welcome':
+			default:
+				wp_enqueue_script( 'plugin-install' );
+				add_thickbox();
+				wp_enqueue_script( 'updates' );
 
-		\load_template( \dirname( __FILE__ ) . '/../templates/welcome.php' );
+				\load_template( \dirname( __FILE__ ) . '/../templates/welcome.php' );
+				break;
+		}
 	}
 
 	/**
