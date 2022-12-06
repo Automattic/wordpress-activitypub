@@ -276,7 +276,7 @@ class Health_Check {
 	 */
 	public static function debug_information( $info ) {
 		$info['activitypub'] = array(
-			'label'  => __( 'ActivityPub' ),
+			'label'  => __( 'ActivityPub', 'activitypub' ),
 			'fields' => array(
 				'webfinger' => array(
 					'label'   => __( 'WebFinger Resource', 'activitypub' ),
