@@ -45,14 +45,22 @@ class Activity {
 		}
 	}
 
-	public function from_post( $object ) {
+	public function from_post( Post $post ) {
+		$object = apply_filters( 'activitypub_from_post_array', $post->to_array() );
 		$this->object = $object;
+
 		if ( isset( $object['published'] ) ) {
 			$this->published = $object['published'];
 		}
+		$this->cc = array( \get_rest_url( null, '/activitypub/1.0/users/' . intval( $post->get_post_author() ) . '/followers' ) );
 
 		if ( isset( $object['attributedTo'] ) ) {
 			$this->actor = $object['attributedTo'];
+		}
+
+		$mentions = apply_filters( 'activitypub_extract_mentions', array(), $post );
+		foreach ( $mentions as $mention ) {
+			$this->cc[] = $mention;
 		}
 
 		$type = \strtolower( $this->type );

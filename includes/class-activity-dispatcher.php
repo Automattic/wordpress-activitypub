@@ -23,15 +23,34 @@ class Activity_Dispatcher {
 	 *
 	 * @param \Activitypub\Model\Post $activitypub_post
 	 */
-	public static function send_post_activity( $activitypub_post ) {
+	public static function send_post_activity( Model\Post $activitypub_post ) {
 		// get latest version of post
 		$user_id = $activitypub_post->get_post_author();
 
 		$activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_FULL );
-		$activitypub_activity->from_post( $activitypub_post->to_array() );
+		$activitypub_activity->from_post( $activitypub_post );
 
+		$sent = array();
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
+			$sent[ $to ] = true;
 			$activitypub_activity->set_to( $to );
+			$activity = $activitypub_activity->to_json(); // phpcs:ignore
+
+			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
+		}
+		$followers_url = \get_rest_url( null, '/activitypub/1.0/users/' . intval( $user_id ) . '/followers' );
+		foreach ( $activitypub_activity->get_cc() as $cc ) {
+			if ( $cc === $followers_url ) {
+				continue;
+			}
+			$inbox = \Activitypub\get_inbox_by_actor( $cc );
+			if ( ! $inbox || \is_wp_error( $inbox ) ) {
+				continue;
+			}
+			if ( isset( $sent[ $cc ] ) ) {
+				continue;
+			}
+			$sent[ $cc ] = true;
 			$activity = $activitypub_activity->to_json(); // phpcs:ignore
 
 			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
