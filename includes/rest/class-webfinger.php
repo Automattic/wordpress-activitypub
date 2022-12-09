@@ -123,6 +123,12 @@ class Webfinger {
 		if ( ! preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $account, $m ) ) {
 			return null;
 		}
+		$transient_key = 'activitypub_resolve_' . ltrim( $account, '@' );
+
+		$link = \get_transient( $transient_key );
+		if ( $link ) {
+			return $link;
+		}
 
 		$url = \add_query_arg( 'resource', 'acct:' . ltrim( $account, '@' ), 'https://' . $m[1] . '/.well-known/webfinger' );
 		if ( ! \wp_http_validate_url( $url ) ) {
@@ -139,7 +145,9 @@ class Webfinger {
 		);
 
 		if ( \is_wp_error( $response ) ) {
-			return new \WP_Error( 'webfinger_url_not_accessible', null, $url );
+			$link = new \WP_Error( 'webfinger_url_not_accessible', null, $url );
+			\set_transient( $transient_key, $link, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
+			return $link;
 		}
 
 		$response_code = \wp_remote_retrieve_response_code( $response );
@@ -148,15 +156,20 @@ class Webfinger {
 		$body = \json_decode( $body, true );
 
 		if ( ! isset( $body['links'] ) ) {
-			return new \WP_Error( 'webfinger_url_invalid_response', null, $url );
+			$link = new \WP_Error( 'webfinger_url_invalid_response', null, $url );
+			\set_transient( $transient_key, $link, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
+			return $link;
 		}
 
 		foreach ( $body['links'] as $link ) {
 			if ( 'self' === $link['rel'] && 'application/activity+json' === $link['type'] ) {
+				\set_transient( $transient_key, $link['href'], WEEK_IN_SECONDS );
 				return $link['href'];
 			}
 		}
 
-		return new \WP_Error( 'webfinger_url_no_activity_pub', null, $body );
+		$link = new \WP_Error( 'webfinger_url_no_activity_pub', null, $body );
+		\set_transient( $transient_key, $link, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
+		return $link;
 	}
 }

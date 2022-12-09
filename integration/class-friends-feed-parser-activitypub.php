@@ -30,6 +30,7 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		\add_action( 'friends_feed_parser_activitypub_unfollow', array( $this, 'unfollow_user' ), 10, 2 );
 		\add_filter( 'friends_rewrite_incoming_url', array( $this, 'friends_rewrite_incoming_url' ), 10, 2 );
 
+		\add_filter( 'the_content', array( $this, 'the_content' ), 99, 2 );
 		\add_filter( 'activitypub_extract_mentions', array( $this, 'activitypub_extract_mentions' ), 10, 2 );
 	}
 
@@ -410,14 +411,22 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 	}
 
-	public function activitypub_extract_mentions( $mentions, \ActivityPub\Model\Post $post ) {
-		$feeds = \Friends\User_Feed::get_by_parser( 'activitypub' );
-		$users = array();
-		foreach ( $feeds as $feed ) {
-			$user = $feed->get_friend_user();
-			$slug = sanitize_title( $user->user_nicename );
-			$users[ '@' . $slug ] = $feed->get_url();
+	public function get_possible_mentions() {
+		static $users = null;
+		if ( is_null( $users ) ) {
+			$feeds = \Friends\User_Feed::get_by_parser( 'activitypub' );
+			$users = array();
+			foreach ( $feeds as $feed ) {
+				$user = $feed->get_friend_user();
+				$slug = sanitize_title( $user->user_nicename );
+				$users[ '@' . $slug ] = $feed->get_url();
+			}
 		}
+		return $users;
+	}
+
+	public function activitypub_extract_mentions( $mentions, \ActivityPub\Model\Post $post ) {
+		$users = $this->get_possible_mentions();
 		preg_match_all( '/@(?:[a-zA-Z0-9_-]+)/', $post->get_content(), $matches );
 		foreach ( $matches[0] as $match ) {
 			if ( isset( $users[ $match ] ) ) {
@@ -425,5 +434,21 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 			}
 		}
 		return $mentions;
+	}
+
+
+	public function the_content( $the_content ) {
+		$the_content = \preg_replace_callback( '/@(?:[a-zA-Z0-9_-]+)/', array( $this, 'replace_with_links' ), $the_content );
+
+		return $the_content;
+	}
+
+	public function replace_with_links( $result ) {
+		$users = $this->get_possible_mentions();
+		if ( isset( $users[ $result[0] ] ) ) {
+			return \Activitypub\Mention::replace_with_links( array( $users[ $result[0] ] ) );
+		}
+
+		return $result[0];
 	}
 }

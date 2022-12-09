@@ -19,8 +19,8 @@ class Test_Activitypub_Mention extends ActivityPub_TestCase_Cache_HTTP {
 
 	public function the_content_provider() {
 		return array(
-			array( 'hallo @username@example.org test', 'hallo <a rel="mention" class="u-url mention href="https://example.org/users/username">@<span>username</span></a> test' ),
-			array( 'hallo @pfefferle@notiz.blog test', 'hallo <a rel="mention" class="u-url mention href="https://notiz.blog/author/matthias-pfefferle/">@<span>pfefferle</span></a> test' ),
+			array( 'hallo @username@example.org test', 'hallo <a rel="mention" class="u-url mention" href="https://example.org/users/username">@<span>username</span></a> test' ),
+			array( 'hallo @pfefferle@notiz.blog test', 'hallo <a rel="mention" class="u-url mention" href="https://notiz.blog/author/matthias-pfefferle/">@<span>pfefferle</span></a> test' ),
 		);
 	}
 

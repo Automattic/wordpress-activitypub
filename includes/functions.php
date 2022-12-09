@@ -122,7 +122,8 @@ function get_remote_metadata_by_actor( $actor ) {
 		return $actor;
 	}
 
-	$metadata = \get_transient( 'activitypub_' . $actor );
+	$transient_key = 'activitypub_' . $actor;
+	$metadata = \get_transient( $transient_key );
 
 	if ( $metadata ) {
 		return $metadata;
@@ -153,10 +154,12 @@ function get_remote_metadata_by_actor( $actor ) {
 	$metadata = \json_decode( $metadata, true );
 
 	if ( ! $metadata ) {
-		return new \WP_Error( 'activitypub_invalid_json', \__( 'No valid JSON data', 'activitypub' ), $actor );
+		$metadata = new \WP_Error( 'activitypub_invalid_json', \__( 'No valid JSON data', 'activitypub' ), $actor );
+		\set_transient( $transient_key, $metadata, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
+		return $metadata;
 	}
 
-	\set_transient( 'activitypub_' . $actor, $metadata, WEEK_IN_SECONDS );
+	\set_transient( $transient_key, $metadata, WEEK_IN_SECONDS );
 
 	return $metadata;
 }

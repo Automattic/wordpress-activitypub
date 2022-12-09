@@ -16,34 +16,33 @@ class Mention {
 	}
 
 	/**
-	 * Filter to replace the #tags in the content with links
+	 * Filter to replace the mentions in the content with links
 	 *
 	 * @param string $the_content the post-content
 	 *
 	 * @return string the filtered post-content
 	 */
 	public static function the_content( $the_content ) {
-		$the_content = \preg_replace_callback( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i', array( '\Activitypub\Mention', 'replace_with_links' ), $the_content );
+		$the_content = \preg_replace_callback( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', array( '\Activitypub\Mention', 'replace_with_links' ), $the_content );
 
 		return $the_content;
 	}
 
 	/**
-	 * A callback for preg_replace to build the term links
+	 * A callback for preg_replace to build the user links
 	 *
 	 * @param array $result the preg_match results
 	 * @return string the final string
 	 */
 	public static function replace_with_links( $result ) {
 		$metadata = \ActivityPub\get_remote_metadata_by_actor( $result[0] );
-
 		if ( ! is_wp_error( $metadata ) ) {
 			$username = $metadata['name'];
 			if ( ! empty( $metadata['preferredUsername'] ) ) {
 				$username = $metadata['preferredUsername'];
 			}
 			$username = '@<span>' . $username . '</span>';
-			return \sprintf( '<a rel="mention" class="u-url mention href="%s">%s</a>', $metadata['url'], $username );
+			return \sprintf( '<a rel="mention" class="u-url mention" href="%s">%s</a>', $metadata['url'], $username );
 		}
 
 		return $result[0];

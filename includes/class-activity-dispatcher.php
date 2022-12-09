@@ -49,7 +49,7 @@ class Activity_Dispatcher {
 		}
 
 		foreach ( $inboxes as $inbox => $to ) {
-			$to = array_unique( $to );
+			$to = array_values( array_unique( $to ) );
 			$activitypub_activity->set_to( $to );
 			$activity = $activitypub_activity->to_json();
 
