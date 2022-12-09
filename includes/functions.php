@@ -95,14 +95,7 @@ function safe_remote_get( $url, $user_id ) {
  * @return string The user-resource
  */
 function get_webfinger_resource( $user_id ) {
-	// use WebFinger plugin if installed
-	if ( \function_exists( '\get_webfinger_resource' ) ) {
-		return \get_webfinger_resource( $user_id, false );
-	}
-
-	$user = \get_user_by( 'id', $user_id );
-
-	return $user->user_login . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+	return \Activitypub\Webfinger::get_user_resource( $user_id );
 }
 
 /**
@@ -118,7 +111,7 @@ function get_remote_metadata_by_actor( $actor ) {
 		return $pre;
 	}
 	if ( preg_match( '/^@?[^@]+@((?:[a-z0-9-]+\.)+[a-z]+)$/i', $actor ) ) {
-		$actor = Rest\Webfinger::resolve( $actor );
+		$actor = \Acivitypub\Webfinger::resolve( $actor );
 	}
 
 	if ( ! $actor ) {
@@ -243,7 +236,7 @@ function get_identifier_settings( $user_id ) {
 			<td>
 				<p><code><?php echo \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ); ?></code> or <code><?php echo \esc_url( \get_author_posts_url( $user_id ) ); ?></code></p>
 				<?php // translators: the webfinger resource ?>
-				<p class="description"><?php \printf( \esc_html__( 'Try to follow "@%s" in the Mastodon/Friendica search field.', 'activitypub' ), \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ) ); ?></p>
+				<p class="description"><?php \printf( \esc_html__( 'Try to follow "@%s" by searching for it on Mastodon,Friendica & Co.', 'activitypub' ), \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ) ); ?></p>
 			</td>
 		</tr>
 	</tbody>

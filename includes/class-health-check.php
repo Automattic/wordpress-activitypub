@@ -1,8 +1,6 @@
 <?php
 namespace Activitypub;
 
-use Activitypub\Rest\Webfinger;
-
 /**
  * ActivityPub Health_Check Class
  *
@@ -17,6 +15,7 @@ class Health_Check {
 	 */
 	public static function init() {
 		\add_filter( 'site_status_tests', array( '\Activitypub\Health_Check', 'add_tests' ) );
+		\add_filter( 'debug_information', array( '\Activitypub\Health_Check', 'debug_information' ) );
 	}
 
 	public static function add_tests( $tests ) {
@@ -203,7 +202,7 @@ class Health_Check {
 		$user    = \wp_get_current_user();
 		$account = \Activitypub\get_webfinger_resource( $user->ID );
 
-		$url = Webfinger::resolve( $account );
+		$url = \Activitypub\Webfinger::resolve( $account );
 		if ( \is_wp_error( $url ) ) {
 			$health_messages = array(
 				'webfinger_url_not_accessible' => \sprintf(
@@ -267,5 +266,31 @@ class Health_Check {
 		}
 
 		return $link;
+	}
+
+	/**
+	 * Static function for generating site debug data when required.
+	 *
+	 * @param array $info The debug information to be added to the core information page.
+	 * @return array The filtered informations
+	 */
+	public static function debug_information( $info ) {
+		$info['activitypub'] = array(
+			'label'  => __( 'ActivityPub', 'activitypub' ),
+			'fields' => array(
+				'webfinger' => array(
+					'label'   => __( 'WebFinger Resource', 'activitypub' ),
+					'value'   => \Activitypub\Webfinger::get_user_resource( wp_get_current_user()->ID ),
+					'private' => true,
+				),
+				'author_url' => array(
+					'label'   => __( 'Author URL', 'activitypub' ),
+					'value'   => get_author_posts_url( wp_get_current_user()->ID ),
+					'private' => true,
+				),
+			),
+		);
+
+		return $info;
 	}
 }
