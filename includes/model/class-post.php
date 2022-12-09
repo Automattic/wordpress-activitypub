@@ -278,6 +278,18 @@ class Post {
 			}
 		}
 
+		$mentions = apply_filters( 'activitypub_extract_mentions', array(), $this );
+		if ( $mentions ) {
+			foreach ( $mentions as $mention => $url ) {
+				$tag = array(
+					'type' => 'Mention',
+					'href' => $url,
+					'name' => $mention,
+				);
+				$tags[] = $tag;
+			}
+		}
+
 		$this->tags = $tags;
 
 		return $tags;

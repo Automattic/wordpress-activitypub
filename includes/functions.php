@@ -110,8 +110,8 @@ function get_remote_metadata_by_actor( $actor ) {
 	if ( $pre ) {
 		return $pre;
 	}
-	if ( preg_match( '/^@?[^@]+@((?:[a-z0-9-]+\.)+[a-z]+)$/i', $actor ) ) {
-		$actor = \Activitypub\Webfinger::resolve( $actor );
+	if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $actor ) ) {
+		$actor = Rest\Webfinger::resolve( $actor );
 	}
 
 	if ( ! $actor ) {
@@ -135,7 +135,7 @@ function get_remote_metadata_by_actor( $actor ) {
 	$user = \get_users(
 		array(
 			'number' => 1,
-			'who'    => 'authors',
+			'capability__in' => array( 'publish_posts' ),
 			'fields' => 'ID',
 		)
 	);

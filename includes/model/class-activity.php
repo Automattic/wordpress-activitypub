@@ -46,8 +46,7 @@ class Activity {
 	}
 
 	public function from_post( Post $post ) {
-		$object = apply_filters( 'activitypub_from_post_array', $post->to_array() );
-		$this->object = $object;
+		$this->object = $post->to_array();
 
 		if ( isset( $object['published'] ) ) {
 			$this->published = $object['published'];
@@ -58,9 +57,10 @@ class Activity {
 			$this->actor = $object['attributedTo'];
 		}
 
-		$mentions = apply_filters( 'activitypub_extract_mentions', array(), $post );
-		foreach ( $mentions as $mention ) {
-			$this->cc[] = $mention;
+		foreach ( $post->get_tags() as $tag ) {
+			if ( 'Mention' === $tag['type'] ) {
+				$this->cc[] = $tag['href'];
+			}
 		}
 
 		$type = \strtolower( $this->type );

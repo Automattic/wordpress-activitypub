@@ -161,29 +161,43 @@ class Test_Friends_Feed_Parser_ActivityPub extends ActivityPub_TestCase_Cache_HT
 		$this->assertEquals( 'Matthias Pfefferle', get_post_meta( $posts[0]->ID, 'author', true ) );
 
 	}
+
+	public function test_friend_mentions() {
+		$post = \wp_insert_post(
+			array(
+				'post_author' => 1,
+				'post_content' => '@' . sanitize_title( $this->friend_nicename ) . '  hello',
+			)
+		);
+
+		$activitypub_post = new \Activitypub\Model\Post( $post );
+
+		$activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_FULL );
+		$activitypub_activity->from_post( $activitypub_post );
+
+		$this->assertContains(
+			array(
+				'type' => 'Mention',
+				'href' => $this->actor,
+				'name' => '@' . $this->friend_nicename,
+			),
+			$activitypub_post->get_tags()
+		);
+
+		$this->assertContains( \get_rest_url( null, '/activitypub/1.0/users/1/followers' ), $activitypub_activity->get_cc() );
+		$this->assertContains( $this->actor, $activitypub_activity->get_cc() );
+
+		remove_all_filters( 'activitypub_from_post_object' );
+		\wp_trash_post( $post );
+
+	}
+
 	public function set_up() {
 		if ( ! class_exists( '\Friends\Friends' ) ) {
 			return $this->markTestSkipped( 'The Friends plugin is not loaded.' );
 		}
 		parent::set_up();
 
-		// Manually activate the REST server.
-		global $wp_rest_server;
-		$wp_rest_server = new \Spy_REST_Server();
-		$this->server   = $wp_rest_server;
-		do_action( 'rest_api_init' );
-
-		add_filter(
-			'rest_url',
-			function() {
-				return get_option( 'home' ) . '/wp-json/';
-			}
-		);
-
-		add_filter( 'pre_http_request', array( get_called_class(), 'pre_http_request' ), 10, 3 );
-		add_filter( 'http_response', array( get_called_class(), 'http_response' ), 10, 3 );
-		add_filter( 'http_request_host_is_external', array( get_called_class(), 'http_request_host_is_external' ), 10, 2 );
-		add_filter( 'http_request_args', array( get_called_class(), 'http_request_args' ), 10, 2 );
 		add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ), 10, 2 );
 
 		$user_id = $this->factory->user->create(
@@ -200,7 +214,9 @@ class Test_Friends_Feed_Parser_ActivityPub extends ActivityPub_TestCase_Cache_HT
 		if ( is_wp_error( $user_feed ) ) {
 			$this->friend_id = $this->factory->user->create(
 				array(
+					'user_login' => 'akirk.blog',
 					'display_name' => $this->friend_name,
+					'nicename' => $this->friend_nicename,
 					'role'       => 'friend',
 				)
 			);
@@ -214,6 +230,8 @@ class Test_Friends_Feed_Parser_ActivityPub extends ActivityPub_TestCase_Cache_HT
 		} else {
 			$this->friend_id = $user_feed->get_friend_user()->ID;
 		}
+		$userdata = get_userdata( $this->friend_id );
+		$this->friend_nicename = $userdata->user_nicename;
 
 		self::$users[ $this->actor ] = array(
 			'url' => $this->actor,

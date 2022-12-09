@@ -29,6 +29,8 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		\add_action( 'friends_feed_parser_activitypub_follow', array( $this, 'follow_user' ), 10, 2 );
 		\add_action( 'friends_feed_parser_activitypub_unfollow', array( $this, 'unfollow_user' ), 10, 2 );
 		\add_filter( 'friends_rewrite_incoming_url', array( $this, 'friends_rewrite_incoming_url' ), 10, 2 );
+
+		\add_filter( 'activitypub_extract_mentions', array( $this, 'activitypub_extract_mentions' ), 10, 2 );
 	}
 
 	/**
@@ -94,8 +96,8 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 	 * @return     <type>  ( description_of_the_return_value )
 	 */
 	public function friends_rewrite_incoming_url( $url, $incoming_url ) {
-		if ( preg_match( '/^@?[^@]+@((?:[a-z0-9-]+\.)+[a-z]+)$/i', $incoming_url ) ) {
-			$resolved_url = \Activitypub\Webfinger::resolve( $incoming_url );
+		if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $incoming_url ) ) {
+			$resolved_url = \Activitypub\Rest\Webfinger::resolve( $incoming_url );
 			if ( ! is_wp_error( $resolved_url ) ) {
 				return $resolved_url;
 			}
@@ -124,6 +126,7 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 				'autoselect'  => true,
 			);
 		}
+
 		return $discovered_feeds;
 	}
 
@@ -405,5 +408,22 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		$activity->set_id( $actor . '#unfollow-' . \preg_replace( '~^https?://~', '', $to ) );
 		$activity = $activity->to_json();
 		\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
+	}
+
+	public function activitypub_extract_mentions( $mentions, \ActivityPub\Model\Post $post ) {
+		$feeds = \Friends\User_Feed::get_by_parser( 'activitypub' );
+		$users = array();
+		foreach ( $feeds as $feed ) {
+			$user = $feed->get_friend_user();
+			$slug = sanitize_title( $user->user_nicename );
+			$users[ '@' . $slug ] = $feed->get_url();
+		}
+		preg_match_all( '/@(?:[a-zA-Z0-9_-]+)/', $post->get_content(), $matches );
+		foreach ( $matches[0] as $match ) {
+			if ( isset( $users[ $match ] ) ) {
+				$mentions[ $match ] = $users[ $match ];
+			}
+		}
+		return $mentions;
 	}
 }
