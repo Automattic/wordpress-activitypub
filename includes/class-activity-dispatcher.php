@@ -30,14 +30,8 @@ class Activity_Dispatcher {
 		$activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_FULL );
 		$activitypub_activity->from_post( $activitypub_post );
 
-		$sent = array();
-		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
-			$sent[ $to ] = true;
-			$activitypub_activity->set_to( $to );
-			$activity = $activitypub_activity->to_json(); // phpcs:ignore
+		$inboxes = \Activitypub\get_follower_inboxes( $user_id );
 
-			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
-		}
 		$followers_url = \get_rest_url( null, '/activitypub/1.0/users/' . intval( $user_id ) . '/followers' );
 		foreach ( $activitypub_activity->get_cc() as $cc ) {
 			if ( $cc === $followers_url ) {
@@ -47,21 +41,27 @@ class Activity_Dispatcher {
 			if ( ! $inbox || \is_wp_error( $inbox ) ) {
 				continue;
 			}
-			if ( isset( $sent[ $cc ] ) ) {
-				continue;
+			// init array if empty
+			if ( ! isset( $inboxes[ $inbox ] ) ) {
+				$inboxes[ $inbox ] = array();
 			}
-			$sent[ $cc ] = true;
-			$activity = $activitypub_activity->to_json(); // phpcs:ignore
+			$inboxes[ $inbox ][] = $cc;
+		}
+
+		foreach ( $inboxes as $inbox => $to ) {
+			$to = array_unique( $to );
+			$activitypub_activity->set_to( $to );
+			$activity = $activitypub_activity->to_json();
 
 			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
 	}
 
-	/**
-	 * Send "update" activities.
-	 *
-	 * @param \Activitypub\Model\Post $activitypub_post
-	 */
+			/**
+			 * Send "update" activities.
+			 *
+			 * @param \Activitypub\Model\Post $activitypub_post
+			 */
 	public static function send_update_activity( $activitypub_post ) {
 		// get latest version of post
 		$user_id = $activitypub_post->get_post_author();
@@ -77,11 +77,11 @@ class Activity_Dispatcher {
 		}
 	}
 
-	/**
-	 * Send "delete" activities.
-	 *
-	 * @param \Activitypub\Model\Post $activitypub_post
-	 */
+			/**
+			 * Send "delete" activities.
+			 *
+			 * @param \Activitypub\Model\Post $activitypub_post
+			 */
 	public static function send_delete_activity( $activitypub_post ) {
 		// get latest version of post
 		$user_id = $activitypub_post->get_post_author();

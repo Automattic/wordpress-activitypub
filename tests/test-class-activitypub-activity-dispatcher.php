@@ -1,6 +1,44 @@
 <?php
-class Test_Activitypub_Activity_Dispatcher extends WP_UnitTestCase {
-	public static $users = array();
+class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HTTP {
+	public static $users = array(
+		'username@example.org' => array(
+			'url' => 'https://example.org/users/username',
+			'inbox' => 'https://example.org/users/username/inbox',
+			'name'  => 'username',
+		),
+		'jon@example.com' => array(
+			'url' => 'https://example.com/author/jon',
+			'inbox' => 'https://example.com/author/jon/inbox',
+			'name'  => 'jon',
+		),
+	);
+
+	public function test_dispatch_activity() {
+		$followers = array( 'https://example.com/author/jon', 'https://example.org/users/username' );
+		\update_user_meta( 1, 'activitypub_followers', $followers );
+
+		$post = \wp_insert_post(
+			array(
+				'post_author' => 1,
+				'post_content' => 'hello',
+			)
+		);
+
+		$pre_http_request = new MockAction();
+		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
+
+		$activitypub_post = new \Activitypub\Model\Post( $post );
+		\Activitypub\Activity_Dispatcher::send_post_activity( $activitypub_post );
+
+		$this->assertSame( 2, $pre_http_request->get_call_count() );
+		$all_args = $pre_http_request->get_args();
+		$first_call_args = array_shift( $all_args );
+		$this->assertEquals( 'https://example.com/author/jon/inbox', $first_call_args[2] );
+		$second_call_args = array_shift( $all_args );
+		$this->assertEquals( 'https://example.org/users/username/inbox', $second_call_args[2] );
+
+		remove_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10 );
+	}
 	public function test_dispatch_mentions() {
 		$post = \wp_insert_post(
 			array(
@@ -41,21 +79,11 @@ class Test_Activitypub_Activity_Dispatcher extends WP_UnitTestCase {
 
 	public function set_up() {
 		parent::set_up();
-
-		add_filter( 'pre_http_request', array( get_called_class(), 'pre_http_request' ), 10, 3 );
-		add_filter( 'http_response', array( get_called_class(), 'http_response' ), 10, 3 );
-		add_filter( 'http_request_host_is_external', array( get_called_class(), 'http_request_host_is_external' ), 10, 2 );
-		add_filter( 'http_request_args', array( get_called_class(), 'http_request_args' ), 10, 2 );
 		add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ), 10, 2 );
-
 		_delete_all_posts();
 	}
 
 	public function tear_down() {
-		remove_filter( 'pre_http_request', array( get_called_class(), 'pre_http_request' ) );
-		remove_filter( 'http_response', array( get_called_class(), 'http_response' ) );
-		remove_filter( 'http_request_host_is_external', array( get_called_class(), 'http_request_host_is_external' ) );
-		remove_filter( 'http_request_args', array( get_called_class(), 'http_request_args' ) );
 		remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ) );
 		parent::tear_down();
 	}
@@ -63,6 +91,11 @@ class Test_Activitypub_Activity_Dispatcher extends WP_UnitTestCase {
 	public static function pre_get_remote_metadata_by_actor( $pre, $actor ) {
 		if ( isset( self::$users[ $actor ] ) ) {
 			return self::$users[ $actor ];
+		}
+		foreach ( self::$users as $username => $data ) {
+			if ( $data['url'] === $actor ) {
+				return $data;
+			}
 		}
 		return $pre;
 	}
@@ -79,6 +112,7 @@ class Test_Activitypub_Activity_Dispatcher extends WP_UnitTestCase {
 		}
 		return $args;
 	}
+
 	public static function pre_http_request( $preempt, $request, $url ) {
 		return array(
 			'headers'  => array(
