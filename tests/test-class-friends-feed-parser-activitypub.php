@@ -22,7 +22,7 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 		// Let's post a new Note through the REST API.
 		$date = gmdate( \DATE_W3C, $now++ );
 		$id = 'test' . $status_id;
-		$content = 'Test ' . $date . ' ' . rand();
+		$content = 'Test ' . $date . ' ' . wp_rand();
 
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/' . get_current_user_id() . '/inbox' );
 		$request->set_param( 'type', 'Create' );
@@ -74,7 +74,7 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 		// Do another test post, this time with a URL that has an @-id.
 		$date = gmdate( \DATE_W3C, $now++ );
 		$id = 'test' . $status_id;
-		$content = 'Test ' . $date . ' ' . rand();
+		$content = 'Test ' . $date . ' ' . wp_rand();
 
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/' . get_current_user_id() . '/inbox' );
 		$request->set_param( 'type', 'Create' );
@@ -142,10 +142,10 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 		$this->assertEquals( 202, $response->get_status() );
 
 		$p = wp_parse_url( $object );
-		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.response';
+		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.json';
 		$this->assertFileExists( $cache );
 
-		$object = json_decode( wp_remote_retrieve_body( unserialize( file_get_contents( $cache ) ) ) );
+		$object = json_decode( wp_remote_retrieve_body( json_decode( file_get_contents( $cache ), true ) ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 
 		$posts = get_posts(
 			array(
@@ -244,18 +244,18 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 		return $in;
 	}
 	public static function http_request_args( $args, $url ) {
-		if ( in_array( parse_url( $url, PHP_URL_HOST ), array( 'mastodon.local' ), true ) ) {
+		if ( in_array( wp_parse_url( $url, PHP_URL_HOST ), array( 'mastodon.local' ), true ) ) {
 			$args['reject_unsafe_urls'] = false;
 		}
 		return $args;
 	}
 	public static function pre_http_request( $preempt, $request, $url ) {
 		$p = wp_parse_url( $url );
-		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.response';
+		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.json';
 		if ( file_exists( $cache ) ) {
 			return apply_filters(
 				'fake_http_response',
-				unserialize( file_get_contents( $cache ) ),
+				json_decode( file_get_contents( $cache ), true ), // phpcs:ignore
 				$p['scheme'] . '://' . $p['host'],
 				$url,
 				$request
@@ -305,12 +305,12 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 
 	public static function http_response( $response, $args, $url ) {
 		$p = wp_parse_url( $url );
-		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.response';
+		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.json';
 		if ( ! file_exists( $cache ) ) {
 			$headers = wp_remote_retrieve_headers( $response );
-			file_put_contents(
+			file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
 				$cache,
-				serialize(
+				wp_json_encode(
 					array(
 						'headers'  => $headers->getAll(),
 						'body'     => wp_remote_retrieve_body( $response ),

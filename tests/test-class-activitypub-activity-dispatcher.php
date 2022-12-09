@@ -74,7 +74,7 @@ class Test_Activitypub_Activity_Dispatcher extends WP_UnitTestCase {
 		return $in;
 	}
 	public static function http_request_args( $args, $url ) {
-		if ( in_array( parse_url( $url, PHP_URL_HOST ), array( 'example.com', 'example.org' ), true ) ) {
+		if ( in_array( wp_parse_url( $url, PHP_URL_HOST ), array( 'example.com', 'example.org' ), true ) ) {
 			$args['reject_unsafe_urls'] = false;
 		}
 		return $args;
