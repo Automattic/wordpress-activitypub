@@ -10,12 +10,11 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 
 		add_filter(
 			'activitypub_extract_mentions',
-			function( $mentions, $post ) {
-				$mentions[] = 'https://example.com/alex';
+			function( $mentions ) {
+				$mentions['@alex'] = 'https://example.com/alex';
 				return $mentions;
 			},
-			10,
-			2
+			10
 		);
 
 		$activitypub_post = new \Activitypub\Model\Post( $post );
@@ -26,7 +25,7 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 		$this->assertContains( \get_rest_url( null, '/activitypub/1.0/users/1/followers' ), $activitypub_activity->get_cc() );
 		$this->assertContains( 'https://example.com/alex', $activitypub_activity->get_cc() );
 
-		remove_all_filters( 'activitypub_from_post_object' );
+		remove_all_filters( 'activitypub_extract_mentions' );
 		\wp_trash_post( $post );
 	}
 }

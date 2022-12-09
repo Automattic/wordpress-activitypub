@@ -1,9 +1,10 @@
 <?php
 
-class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
+class Test_Friends_Feed_Parser_ActivityPub extends ActivityPub_TestCase_Cache_HTTP {
 	public static $users = array();
 	private $friend_id;
 	private $friend_name;
+	private $friend_nicename;
 	private $actor;
 
 	public function test_incoming_post() {
@@ -224,11 +225,8 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 	}
 
 	public function tear_down() {
-		remove_filter( 'pre_http_request', array( get_called_class(), 'pre_http_request' ) );
-		remove_filter( 'http_response', array( get_called_class(), 'http_response' ) );
-		remove_filter( 'http_request_host_is_external', array( get_called_class(), 'http_request_host_is_external' ) );
-		remove_filter( 'http_request_args', array( get_called_class(), 'http_request_args' ) );
 		remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ) );
+		parent::tear_down();
 	}
 
 	public static function pre_get_remote_metadata_by_actor( $pre, $actor ) {
@@ -236,91 +234,5 @@ class Test_Friends_Feed_Parser_ActivityPub extends \WP_UnitTestCase {
 			return self::$users[ $actor ];
 		}
 		return $pre;
-	}
-	public static function http_request_host_is_external( $in, $host ) {
-		if ( in_array( $host, array( 'mastodon.local' ), true ) ) {
-			return true;
-		}
-		return $in;
-	}
-	public static function http_request_args( $args, $url ) {
-		if ( in_array( wp_parse_url( $url, PHP_URL_HOST ), array( 'mastodon.local' ), true ) ) {
-			$args['reject_unsafe_urls'] = false;
-		}
-		return $args;
-	}
-	public static function pre_http_request( $preempt, $request, $url ) {
-		$p = wp_parse_url( $url );
-		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.json';
-		if ( file_exists( $cache ) ) {
-			return apply_filters(
-				'fake_http_response',
-				json_decode( file_get_contents( $cache ), true ), // phpcs:ignore
-				$p['scheme'] . '://' . $p['host'],
-				$url,
-				$request
-			);
-		}
-
-		$home_url = home_url();
-
-		// Pretend the url now is the requested one.
-		update_option( 'home', $p['scheme'] . '://' . $p['host'] );
-		$rest_prefix = home_url() . '/wp-json';
-
-		if ( false === strpos( $url, $rest_prefix ) ) {
-			// Restore the old home_url.
-			update_option( 'home', $home_url );
-			return $preempt;
-		}
-
-		$url = substr( $url, strlen( $rest_prefix ) );
-		$r   = new \WP_REST_Request( $request['method'], $url );
-		if ( ! empty( $request['body'] ) ) {
-			foreach ( $request['body'] as $key => $value ) {
-				$r->set_param( $key, $value );
-			}
-		}
-		global $wp_rest_server;
-		$response = $wp_rest_server->dispatch( $r );
-		// Restore the old url.
-		update_option( 'home', $home_url );
-
-		return apply_filters(
-			'fake_http_response',
-			array(
-				'headers'  => array(
-					'content-type' => 'text/json',
-				),
-				'body'     => wp_json_encode( $response->data ),
-				'response' => array(
-					'code' => $response->status,
-				),
-			),
-			$p['scheme'] . '://' . $p['host'],
-			$url,
-			$request
-		);
-	}
-
-	public static function http_response( $response, $args, $url ) {
-		$p = wp_parse_url( $url );
-		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.json';
-		if ( ! file_exists( $cache ) ) {
-			$headers = wp_remote_retrieve_headers( $response );
-			file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
-				$cache,
-				wp_json_encode(
-					array(
-						'headers'  => $headers->getAll(),
-						'body'     => wp_remote_retrieve_body( $response ),
-						'response' => array(
-							'code' => wp_remote_retrieve_response_code( $response ),
-						),
-					)
-				)
-			);
-		}
-		return $response;
 	}
 }
