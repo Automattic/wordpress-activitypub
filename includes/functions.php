@@ -111,7 +111,7 @@ function get_remote_metadata_by_actor( $actor ) {
 		return $pre;
 	}
 	if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $actor ) ) {
-		$actor = Rest\Webfinger::resolve( $actor );
+		$actor = Webfinger::resolve( $actor );
 	}
 
 	if ( ! $actor ) {

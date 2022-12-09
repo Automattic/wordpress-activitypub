@@ -98,7 +98,7 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 	 */
 	public function friends_rewrite_incoming_url( $url, $incoming_url ) {
 		if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $incoming_url ) ) {
-			$resolved_url = \Activitypub\Rest\Webfinger::resolve( $incoming_url );
+			$resolved_url = \Activitypub\Webfinger::resolve( $incoming_url );
 			if ( ! is_wp_error( $resolved_url ) ) {
 				return $resolved_url;
 			}

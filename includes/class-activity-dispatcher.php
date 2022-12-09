@@ -57,11 +57,11 @@ class Activity_Dispatcher {
 		}
 	}
 
-			/**
-			 * Send "update" activities.
-			 *
-			 * @param \Activitypub\Model\Post $activitypub_post
-			 */
+	/**
+	 * Send "update" activities.
+	 *
+	 * @param \Activitypub\Model\Post $activitypub_post
+	 */
 	public static function send_update_activity( $activitypub_post ) {
 		// get latest version of post
 		$user_id = $activitypub_post->get_post_author();
@@ -77,11 +77,11 @@ class Activity_Dispatcher {
 		}
 	}
 
-			/**
-			 * Send "delete" activities.
-			 *
-			 * @param \Activitypub\Model\Post $activitypub_post
-			 */
+	/**
+	 * Send "delete" activities.
+	 *
+	 * @param \Activitypub\Model\Post $activitypub_post
+	 */
 	public static function send_delete_activity( $activitypub_post ) {
 		// get latest version of post
 		$user_id = $activitypub_post->get_post_author();

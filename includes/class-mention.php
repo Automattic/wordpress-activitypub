@@ -58,7 +58,7 @@ class Mention {
 	public static function extract_mentions( $mentions, $post_content ) {
 		\preg_match_all( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i', $post_content, $matches );
 		foreach ( $matches[0] as $match ) {
-			$link = \Activitypub\Rest\Webfinger::resolve( $match );
+			$link = \Activitypub\Webfinger::resolve( $match );
 			if ( ! is_wp_error( $link ) ) {
 				$mentions[ $match ] = $link;
 			}
