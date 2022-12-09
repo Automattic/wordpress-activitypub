@@ -53,8 +53,8 @@ class Activity {
 		}
 		$this->cc = array( \get_rest_url( null, '/activitypub/1.0/users/' . intval( $post->get_post_author() ) . '/followers' ) );
 
-		if ( isset( $object['attributedTo'] ) ) {
-			$this->actor = $object['attributedTo'];
+		if ( isset( $this->object['attributedTo'] ) ) {
+			$this->actor = $this->object['attributedTo'];
 		}
 
 		foreach ( $post->get_tags() as $tag ) {
@@ -65,8 +65,8 @@ class Activity {
 
 		$type = \strtolower( $this->type );
 
-		if ( isset( $object['id'] ) ) {
-			$this->id = add_query_arg( 'activity', $type, $object['id'] );
+		if ( isset( $this->object['id'] ) ) {
+			$this->id = add_query_arg( 'activity', $type, $this->object['id'] );
 		}
 	}
 

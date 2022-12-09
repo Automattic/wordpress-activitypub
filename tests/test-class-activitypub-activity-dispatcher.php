@@ -34,6 +34,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 		$all_args = $pre_http_request->get_args();
 		$first_call_args = array_shift( $all_args );
 		$this->assertEquals( 'https://example.com/author/jon/inbox', $first_call_args[2] );
+
 		$second_call_args = array_shift( $all_args );
 		$this->assertEquals( 'https://example.org/users/username/inbox', $second_call_args[2] );
 
@@ -72,6 +73,9 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 		$all_args = $pre_http_request->get_args();
 		$first_call_args = $all_args[0];
 		$this->assertEquals( 'https://example.com/alex/inbox', $first_call_args[2] );
+
+		$body = json_decode( $first_call_args[1]['body'], true );
+		$this->assertArrayHasKey( 'id', $body );
 
 		remove_all_filters( 'activitypub_from_post_object' );
 		remove_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10 );
