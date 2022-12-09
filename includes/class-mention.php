@@ -46,7 +46,7 @@ class Mention {
 			return \sprintf( '<a rel="mention" class="u-url mention href="%s">%s</a>', $metadata['url'], $username );
 		}
 
-		return $username;
+		return $result[0];
 	}
 
 	public static function extract_mentions( $mentions, \ActivityPub\Model\Post $post ) {

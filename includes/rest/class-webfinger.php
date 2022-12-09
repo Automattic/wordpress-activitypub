@@ -126,8 +126,6 @@ class Webfinger {
 
 		$url = \add_query_arg( 'resource', 'acct:' . ltrim( $account, '@' ), 'https://' . $m[1] . '/.well-known/webfinger' );
 		if ( ! \wp_http_validate_url( $url ) ) {
-			echo $url;
-			exit;
 			return new \WP_Error( 'invalid_webfinger_url', null, $url );
 		}
 
