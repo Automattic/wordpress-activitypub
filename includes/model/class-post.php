@@ -278,7 +278,7 @@ class Post {
 			}
 		}
 
-		$mentions = apply_filters( 'activitypub_extract_mentions', array(), $this );
+		$mentions = apply_filters( 'activitypub_extract_mentions', array(), $this->post->post_content, $this );
 		if ( $mentions ) {
 			foreach ( $mentions as $mention => $url ) {
 				$tag = array(
@@ -456,4 +456,28 @@ class Post {
 		return $content;
 	}
 
+	/**
+	 * Adds all tags as hashtags to the post/summary content
+	 *
+	 * @param string  $content
+	 * @param WP_Post $post
+	 *
+	 * @return string
+	 */
+	public function get_the_mentions() {
+		$post = $this->post;
+		$tags = \get_the_tags( $post->ID );
+
+		if ( ! $tags ) {
+			return '';
+		}
+
+		$hash_tags = array();
+
+		foreach ( $tags as $tag ) {
+			$hash_tags[] = \sprintf( '<a rel="tag" class="u-tag u-category" href="%s">#%s</a>', \get_tag_link( $tag ), $tag->slug );
+		}
+
+		return \implode( ' ', $hash_tags );
+	}
 }

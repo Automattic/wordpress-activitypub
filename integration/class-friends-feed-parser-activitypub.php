@@ -413,7 +413,7 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 
 	public function get_possible_mentions() {
 		static $users = null;
-		if ( is_null( $users ) ) {
+		if ( is_null( $users ) || true ) {
 			$feeds = \Friends\User_Feed::get_by_parser( 'activitypub' );
 			$users = array();
 			foreach ( $feeds as $feed ) {
@@ -425,9 +425,16 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		return $users;
 	}
 
-	public function activitypub_extract_mentions( $mentions, \ActivityPub\Model\Post $post ) {
+	/**
+	 * Extract the mentions from the post_content.
+	 *
+	 * @param array $mentions The already found mentions.
+	 * @param string $post_content The post content.
+	 * @return mixed The discovered mentions.
+	 */
+	public function activitypub_extract_mentions( $mentions, $post_content ) {
 		$users = $this->get_possible_mentions();
-		preg_match_all( '/@(?:[a-zA-Z0-9_-]+)/', $post->get_content(), $matches );
+		preg_match_all( '/@(?:[a-zA-Z0-9_-]+)/', $post_content, $matches );
 		foreach ( $matches[0] as $match ) {
 			if ( isset( $users[ $match ] ) ) {
 				$mentions[ $match ] = $users[ $match ];

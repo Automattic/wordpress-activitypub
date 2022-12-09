@@ -48,8 +48,15 @@ class Mention {
 		return $result[0];
 	}
 
-	public static function extract_mentions( $mentions, \ActivityPub\Model\Post $post ) {
-		\preg_match_all( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i', $post->get_content(), $matches );
+	/**
+	 * Extract the mentions from the post_content.
+	 *
+	 * @param array $mentions The already found mentions.
+	 * @param string $post_content The post content.
+	 * @return mixed The discovered mentions.
+	 */
+	public static function extract_mentions( $mentions, $post_content ) {
+		\preg_match_all( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i', $post_content, $matches );
 		foreach ( $matches[0] as $match ) {
 			$link = \Activitypub\Rest\Webfinger::resolve( $match );
 			if ( ! is_wp_error( $link ) ) {
