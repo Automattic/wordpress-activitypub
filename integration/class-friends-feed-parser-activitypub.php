@@ -497,7 +497,7 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 				</fieldset>
 				<p class="description">
 				<?php
-				esc_html_e( "If an incoming post from ActivityPub starts with an @mention of someone else you don't follow, it won't be hidden automatically.", 'activitypub' );
+				esc_html_e( "If an incoming post from ActivityPub starts with an @mention of someone you don't follow, it won't be hidden automatically.", 'activitypub' );
 				?>
 				</p>
 			</td>
