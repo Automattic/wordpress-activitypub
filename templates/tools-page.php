@@ -1,7 +1,7 @@
 <?php 
 
 $action_nonce = wp_create_nonce( 'activitypub_action' );
-if ( isset( $_REQUEST['post_url'] ) && $_REQUEST['page'] == "activitypub_tools" ) {
+if ( isset( $_REQUEST['post_url'] ) && $_REQUEST['page'] === "activitypub_tools" ) {
 	$post_url = $_REQUEST['post_url'];
 	$user_id = get_current_user_id();
 	if ( isset( $_REQUEST['submit_delete'] ) && wp_verify_nonce( $action_nonce, 'activitypub_action' ) ) {
