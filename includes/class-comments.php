@@ -27,8 +27,8 @@ class Comments {
 	 */
 	public static function preprocess_comment( $commentdata ) {
 		// only process replies from local actors
-		if ( ! empty( $commentdata['user_id'] ) ) {
-			$commentdata['comment_type'] = 'activitypub';
+		$user = \get_userdata( $commentdata['user_id'] );
+		if ( $user->has_cap( 'publish_post' ) ) {
 			// transform webfinger mentions to links and add @mentions to cc
 			$tagged_content = \Activitypub\transform_tags( $commentdata['comment_content'] );
 			$commentdata['comment_content'] = $tagged_content['content'];
@@ -42,18 +42,14 @@ class Comments {
 	 * postprocess_comment for federating replies and inbox-forwarding
 	 */
 	public static function postprocess_comment( $comment_id, $comment_approved, $commentdata ) {
-		//Admin users comments bypass transition_comment_status (auto approved)
+		//Adminstrator role users comments bypass transition_comment_status (auto approved)
 		$user = \get_userdata( $commentdata['user_id'] );
-		if ( 'activitypub' === $commentdata['comment_type'] ) {
-			if (
-				( 1 === $comment_approved ) &&
-				! empty( $commentdata['user_id'] ) &&
-				\in_array( 'administrator', $user->roles )
-			) {
-				// Only for Admins
-				$mentions = \get_comment_meta( $comment_id, 'mentions', true );
-				\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $comment_id ) );
-			}
+		if (
+			( 1 === $comment_approved ) &&
+			\in_array( 'administrator', $user->roles )
+		) {
+			// Only for Admins
+			\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $comment_id ) );
 		}
 	}
 

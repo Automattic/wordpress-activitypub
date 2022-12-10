@@ -435,7 +435,7 @@ class Inbox {
 		}
 		// if avatar is set
 		if ( ! empty( $meta['icon']['url'] ) ) {
-			$avatar_url = \esc_attr( $meta['icon']['url'] );
+			$avatar_url = \esc_url_raw( $meta['icon']['url'] );
 		}
 
 		//Only create WP_Comment for public replies to local posts
@@ -450,7 +450,7 @@ class Inbox {
 				'comment_author' => $name,
 				'comment_author_url' => \esc_url_raw( $object['actor'] ),
 				'comment_content' => \wp_filter_kses( $object['object']['content'] ),
-				'comment_type' => 'activitypub',
+				'comment_type' => '',
 				'comment_author_email' => '',
 				'comment_parent' => $comment_parent_id,
 				'comment_meta' => array(
@@ -485,8 +485,6 @@ class Inbox {
 	 */
 	public static function handle_update( $object, $user_id ) {
 		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
-		$avatar_url = null;
-		$audience = \Activitypub\get_audience( $object );
 
 		//Determine comment_ID
 		$object_comment_id = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['id'] ) );
@@ -494,9 +492,9 @@ class Inbox {
 
 			//found a local comment id
 			$commentdata = \get_comment( $object_comment_id, ARRAY_A );
-
-			//$commentdata['comment_ID'] = \esc_url_raw( $object_comment_id );
+			$commentdata['comment_author'] = \esc_attr( $meta['name'] ? $meta['name'] : $meta['preferredUsername']  );
 			$commentdata['comment_content'] = \wp_filter_kses( $object['object']['content'] );
+			$commentdata['comment_meta']['avatar_url'] =  \esc_url_raw($meta['icon']['url']);
 			$commentdata['comment_meta']['ap_published'] = \wp_date( 'Y-m-d H:i:s', strtotime( $object['object']['published'] ) );
 			$commentdata['comment_meta']['ap_last_modified'] = $object['object']['updated'];
 			$commentdata['comment_meta']['ap_object'] = \serialize( $object );
@@ -523,10 +521,6 @@ class Inbox {
 	 * @param  int   $user_id The id of the local blog-user
 	 */
 	public static function handle_delete( $object, $user_id ) {
-		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
-		$avatar_url = null;
-		$audience = \Activitypub\get_audience( $object );
-
 		if ( ! isset( $object['object']['id'] ) ) {
 			return;
 		}
