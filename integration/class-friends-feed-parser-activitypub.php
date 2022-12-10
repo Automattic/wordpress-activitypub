@@ -489,14 +489,14 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		if ( ! $has_activitypub_feed ) {
 			return;
 		}
-		$show_replies = $friend->get_user_option( 'activitypub_friends_show_replies' );
+
 		?>
 		<tr>
 			<th>ActivityPub</th>
 			<td>
 				<fieldset>
 					<div>
-						<input type="checkbox" name="friends_show_replies" id="friends_show_replies" value="1" <?php checked( '1', $show_replies ); ?> />
+						<input type="checkbox" name="friends_show_replies" id="friends_show_replies" value="1" <?php checked( '1', $friend->get_user_option( 'activitypub_friends_show_replies' ) ); ?> />
 						<label for="friends_show_replies"><?php esc_html_e( "Don't hide @mentions of others", 'activitypub' ); ?></label>
 						</div>
 				</fieldset>
@@ -507,7 +507,7 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 				</p>
 			</td>
 		</tr>
-			<?php
+		<?php
 	}
 
 		/**
