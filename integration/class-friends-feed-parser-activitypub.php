@@ -30,6 +30,10 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		\add_action( 'friends_feed_parser_activitypub_unfollow', array( $this, 'unfollow_user' ), 10, 2 );
 		\add_filter( 'friends_rewrite_incoming_url', array( $this, 'friends_rewrite_incoming_url' ), 10, 2 );
 
+		\add_filter( 'friends_edit_friend_table_end', array( $this, 'activitypub_settings' ), 10 );
+		\add_filter( 'friends_edit_friend_after_form_submit', array( $this, 'activitypub_save_settings' ), 10 );
+		\add_filter( 'friends_modify_feed_item', array( $this, 'modify_incoming_item' ), 9, 3 );
+
 		\add_filter( 'the_content', array( $this, 'the_content' ), 99, 2 );
 		\add_filter( 'activitypub_extract_mentions', array( $this, 'activitypub_extract_mentions' ), 10, 2 );
 	}
@@ -461,5 +465,72 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 		}
 
 		return $result[0];
+	}
+
+	public function activitypub_save_settings( \Friends\User $friend ) {
+		if ( isset( $_POST['_wpnonce'] ) && wp_verify_nonce( $_POST['_wpnonce'], 'edit-friend-feeds-' . $friend->ID ) ) {
+
+			if ( isset( $_POST['friends_show_replies'] ) && $_POST['friends_show_replies'] ) {
+				$friend->update_user_option( 'activitypub_friends_show_replies', '1' );
+			} else {
+				$friend->delete_user_option( 'activitypub_friends_show_replies' );
+			}
+		}
+	}
+
+	public function activitypub_settings( \Friends\User $friend ) {
+		foreach ( $friend->get_active_feeds() as $feed ) {
+			if ( 'activitypub' === $feed->parser ) {
+				return;
+			}
+		}
+		$show_replies = $friend->get_user_option( 'activitypub_friends_show_replies' );
+		?>
+		<tr>
+			<th>ActivityPub</th>
+			<td>
+				<fieldset>
+					<div>
+						<input type="checkbox" name="friends_show_replies" id="friends_show_replies" value="1" <?php checked( '1', $show_replies ); ?> />
+						<label for="friends_show_replies"><?php esc_html_e( "Don't hide @mentions of others", 'activitypub' ); ?></label>
+						</div>
+				</fieldset>
+				<p class="description">
+			<?php
+			esc_html_e( 'If an incoming post from ActivityPub starts with an @mention of someone else, it will be not be hidden automatically.', 'activitypub' );
+			?>
+				</p>
+			</td>
+		</tr>
+			<?php
+	}
+
+		/**
+	 * Apply the feed rules
+	 *
+	 * @param  \Friends\Feed_Item $item         The feed item.
+	 * @param  \Friends\User_Feed $feed         The feed object.
+	 * @param  \Friends\User      $friend_user The friend user.
+	 * @return \Friends\Feed_Item The modified feed item.
+	 */
+	public function modify_incoming_item( \Friends\Feed_Item $item, \Friends\User_Feed $feed = null, \Friends\User $friend_user = null ) {
+		if ( ! $feed || 'activitypub' !== $feed->get_parser() ) {
+			return $item;
+		}
+
+		if ( ! $friend_user->get_user_option( 'activitypub_friends_show_replies' ) ) {
+			$plain_text_content = \wp_strip_all_tags( $item->post_content );
+
+			if ( preg_match( ' /^@(?:[a-zA-Z0-9_.-]+)/i', $plain_text_content, $m ) ) {
+				$users = $this->get_possible_mentions();
+				if ( ! isset( $users[ $m[0] ] ) ) {
+					$item->_feed_rule_transform = array(
+						'post_status' => 'trash',
+					);
+				}
+			}
+		}
+
+		return $item;
 	}
 }

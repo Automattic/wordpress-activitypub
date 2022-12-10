@@ -8,6 +8,7 @@ class Test_Friends_Feed_Parser_ActivityPub extends ActivityPub_TestCase_Cache_HT
 	private $actor;
 
 	public function test_incoming_post() {
+		update_user_option( 'activitypub_friends_show_replies', '1', $this->friend_id );
 		$now = time() - 10;
 		$status_id = 123;
 
@@ -107,6 +108,60 @@ class Test_Friends_Feed_Parser_ActivityPub extends ActivityPub_TestCase_Cache_HT
 		$this->assertEquals( $content, $posts[0]->post_content );
 		$this->assertEquals( $this->friend_id, $posts[0]->post_author );
 		$this->assertEquals( $this->friend_name, get_post_meta( $posts[0]->ID, 'author', true ) );
+
+		delete_user_option( 'activitypub_friends_show_replies', $this->friend_id );
+
+	}
+
+	public function test_incoming_mention_of_others() {
+		$now = time() - 10;
+		$status_id = 123;
+
+		$posts = get_posts(
+			array(
+				'post_type' => \Friends\Friends::CPT,
+				'author' => $this->friend_id,
+			)
+		);
+
+		$post_count = count( $posts );
+
+		// Let's post a new Note through the REST API.
+		$date = gmdate( \DATE_W3C, $now++ );
+		$id = 'test' . $status_id;
+		$content = '<a rel="mention" class="u-url mention" href="https://example.org/users/abc">@<span>abc</span></a> Test ' . $date . ' ' . wp_rand();
+
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/' . get_current_user_id() . '/inbox' );
+		$request->set_param( 'type', 'Create' );
+		$request->set_param( 'id', $id );
+		$request->set_param( 'actor', $this->actor );
+
+		$request->set_param(
+			'object',
+			array(
+				'type' => 'Note',
+				'id' => $id,
+				'attributedTo' => $this->actor,
+				'content' => $content,
+				'url' => 'https://mastodon.local/users/akirk/statuses/' . ( $status_id++ ),
+				'published' => $date,
+			)
+		);
+
+		$response = $this->server->dispatch( $request );
+		$this->assertEquals( 202, $response->get_status() );
+
+		$posts = get_posts(
+			array(
+				'post_type' => \Friends\Friends::CPT,
+				'author' => $this->friend_id,
+				'post_status' => 'trash',
+			)
+		);
+
+		$this->assertEquals( $post_count + 1, count( $posts ) );
+		$this->assertStringStartsWith( $content, $posts[0]->post_content );
+		$this->assertEquals( $this->friend_id, $posts[0]->post_author );
 	}
 
 	public function test_incoming_announce() {
@@ -159,11 +214,10 @@ class Test_Friends_Feed_Parser_ActivityPub extends ActivityPub_TestCase_Cache_HT
 		$this->assertStringContainsString( 'Dezentrale Netzwerke', $posts[0]->post_content );
 		$this->assertEquals( $this->friend_id, $posts[0]->post_author );
 		$this->assertEquals( 'Matthias Pfefferle', get_post_meta( $posts[0]->ID, 'author', true ) );
-
 	}
 
 	public function test_friend_mentions() {
-		add_filter( 'friends_cache_possible_mentions', '__return_false' );
+		add_filter( 'activitypub_cache_possible_friend_mentions', '__return_false' );
 		$post = \wp_insert_post(
 			array(
 				'post_author' => 1,
