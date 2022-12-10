@@ -44,16 +44,15 @@ class Webfinger {
 	public static function webfinger( $request ) {
 		$resource = $request->get_param( 'resource' );
 
-		$matched = \str_contains( $resource, '@' );
+		$matches = array();
+		$matched = \preg_match( '/^acct:([^@]+)@(.+)$/', $resource, $matches );
 
 		if ( ! $matched ) {
 			return new \WP_Error( 'activitypub_unsupported_resource', \__( 'Resource is invalid', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
-		$resource = \str_replace( 'acct:', '', $resource );
-
-		$resource_identifier = \substr( $resource, 0, \strrpos( $resource, '@' ) );
-		$resource_host = \substr( \strrchr( $resource, '@' ), 1 );
+		$resource_identifier = $matches[1];
+		$resource_host = $matches[2];
 
 		if ( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) !== $resource_host ) {
 			return new \WP_Error( 'activitypub_wrong_host', \__( 'Resource host does not match blog host', 'activitypub' ), array( 'status' => 404 ) );
@@ -98,7 +97,7 @@ class Webfinger {
 		$params['resource'] = array(
 			'required' => true,
 			'type' => 'string',
-			'pattern' => '^acct:(.+)@(.+)$',
+			'pattern' => '^acct:([^@]+)@(.+)$',
 		);
 
 		return $params;
