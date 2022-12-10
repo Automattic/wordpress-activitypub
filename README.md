@@ -112,7 +112,7 @@ Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github
 
 ### 0.14.0 ###
 
-* Friends support: https://wordpress.org/plugins/friends/ . props [@akirk](https://github.com/akirk)
+* Friends support: https://wordpress.org/plugins/friends/ props [@akirk](https://github.com/akirk)
 * Massive guidance improvements. props [mediaformat](https://github.com/mediaformat) & [@akirk](https://github.com/akirk)
 * Add Custom Post Type support to outbox API. props [blueset](https://github.com/blueset)
 * Better hash-tag support. props [bocops](https://github.com/bocops)
