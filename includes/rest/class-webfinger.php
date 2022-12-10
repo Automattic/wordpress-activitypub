@@ -44,9 +44,7 @@ class Webfinger {
 	public static function webfinger( $request ) {
 		$resource = $request->get_param( 'resource' );
 
-		$matched = \str_contains( $resource, '@' );
-
-		if ( ! $matched ) {
+		if ( \strpos( $resource, '@' ) === false ) {
 			return new \WP_Error( 'activitypub_unsupported_resource', \__( 'Resource is invalid', 'activitypub' ), array( 'status' => 400 ) );
 		}
 

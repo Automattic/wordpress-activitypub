@@ -88,6 +88,10 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
+### 0.14.1 ###
+
+* Fix "WebFinger not compatible with PHP < 8.0". props [@mexon](https://github.com/mexon)
+
 ### 0.14.0 ###
 
 * Friends support: https://wordpress.org/plugins/friends/ props [@akirk](https://github.com/akirk)
