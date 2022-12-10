@@ -4,7 +4,7 @@ Donate link: https://notiz.blog/donate/
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
 Tested up to: 6.1
-Stable tag: 0.14.0
+Stable tag: 0.14.1
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
