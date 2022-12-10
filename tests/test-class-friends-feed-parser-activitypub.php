@@ -163,6 +163,7 @@ class Test_Friends_Feed_Parser_ActivityPub extends ActivityPub_TestCase_Cache_HT
 	}
 
 	public function test_friend_mentions() {
+		add_filter( 'friends_cache_possible_mentions', '__return_false' );
 		$post = \wp_insert_post(
 			array(
 				'post_author' => 1,
@@ -188,6 +189,8 @@ class Test_Friends_Feed_Parser_ActivityPub extends ActivityPub_TestCase_Cache_HT
 		$this->assertContains( $this->actor, $activitypub_activity->get_cc() );
 
 		remove_all_filters( 'activitypub_from_post_object' );
+		remove_all_filters( 'activitypub_cache_possible_friend_mentions' );
+
 		\wp_trash_post( $post );
 
 	}

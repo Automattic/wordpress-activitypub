@@ -413,7 +413,11 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 
 	public function get_possible_mentions() {
 		static $users = null;
-		if ( is_null( $users ) || true ) {
+		if ( ! method_exists( '\Friends\User_Feed', 'get_by_parser' ) ) {
+			return array();
+		}
+
+		if ( is_null( $users ) || ! apply_filters( 'activitypub_cache_possible_friend_mentions', true ) ) {
 			$feeds = \Friends\User_Feed::get_by_parser( 'activitypub' );
 			$users = array();
 			foreach ( $feeds as $feed ) {
