@@ -45,7 +45,7 @@ class Webfinger {
 		$resource = $request->get_param( 'resource' );
 
 		$matches = array();
-		$matched = \preg_match( '/^acct:([^@]+)@(.+)$/', $resource, $matches );
+		$matched = \preg_match( '/^acct:(.+)@([^@]+)$/', $resource, $matches );
 
 		if ( ! $matched ) {
 			return new \WP_Error( 'activitypub_unsupported_resource', \__( 'Resource is invalid', 'activitypub' ), array( 'status' => 400 ) );
@@ -97,7 +97,7 @@ class Webfinger {
 		$params['resource'] = array(
 			'required' => true,
 			'type' => 'string',
-			'pattern' => '^acct:([^@]+)@(.+)$',
+			'pattern' => '^acct:(.+)@([^@]+)$',
 		);
 
 		return $params;
