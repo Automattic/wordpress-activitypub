@@ -479,10 +479,15 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 	}
 
 	public function activitypub_settings( \Friends\User $friend ) {
+		$has_activitypub_feed = false;
 		foreach ( $friend->get_active_feeds() as $feed ) {
-			if ( 'activitypub' === $feed->parser ) {
-				return;
+			if ( 'activitypub' === $feed->get_parser() ) {
+				$has_activitypub_feed = true;
 			}
+		}
+
+		if ( ! $has_activitypub_feed ) {
+			return;
 		}
 		$show_replies = $friend->get_user_option( 'activitypub_friends_show_replies' );
 		?>
