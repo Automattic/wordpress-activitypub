@@ -111,7 +111,7 @@ function get_remote_metadata_by_actor( $actor ) {
 		return $pre;
 	}
 	if ( preg_match( '/^@?[^@]+@((?:[a-z0-9-]+\.)+[a-z]+)$/i', $actor ) ) {
-		$actor = \Acivitypub\Webfinger::resolve( $actor );
+		$actor = \Activitypub\Webfinger::resolve( $actor );
 	}
 
 	if ( ! $actor ) {
