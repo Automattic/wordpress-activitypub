@@ -35,9 +35,13 @@ class Mention {
 	 * @return string the final string
 	 */
 	public static function replace_with_links( $result ) {
+		error_log($result[0]);
 		$metadata = \ActivityPub\get_remote_metadata_by_actor( $result[0] );
 		if ( ! is_wp_error( $metadata ) ) {
-			$username = $metadata['name'];
+			$username = ltrim( $result[0], '@');
+			if ( ! empty( $metadata['name'] ) ) {
+				$username = $metadata['name'];
+			}
 			if ( ! empty( $metadata['preferredUsername'] ) ) {
 				$username = $metadata['preferredUsername'];
 			}

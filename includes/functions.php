@@ -61,14 +61,14 @@ function safe_remote_post( $url, $body, $user_id ) {
 	return $response;
 }
 
-function safe_remote_get( $url, $user_id ) {
+function safe_remote_get( $url, $user_id, $override_args = array() ) {
 	$date = \gmdate( 'D, d M Y H:i:s T' );
 	$signature = \Activitypub\Signature::generate_signature( $user_id, 'get', $url, $date );
 
 	$wp_version = \get_bloginfo( 'version' );
 	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
 	$args = array(
-		'timeout' => 100,
+		'timeout' => apply_filters( 'activitypub_remote_get_timeout', 100 ),
 		'limit_response_size' => 1048576,
 		'redirection' => 3,
 		'user-agent' => "$user_agent; ActivityPub",
@@ -130,7 +130,9 @@ function get_remote_metadata_by_actor( $actor ) {
 	}
 
 	if ( ! \wp_http_validate_url( $actor ) ) {
-		return new \WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), $actor );
+		$metadata = new \WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), $actor );
+		\set_transient( $transient_key, $metadata, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
+		return $metadata;
 	}
 
 	$user = \get_users(
@@ -143,10 +145,14 @@ function get_remote_metadata_by_actor( $actor ) {
 
 	// we just need any user to generate a request signature
 	$user_id = \reset( $user );
-
+	$short_timeout = function() {
+		return 3;
+	};
+	add_filter( 'activitypub_remote_get_timeout', $short_timeout );
 	$response = \Activitypub\safe_remote_get( $actor, $user_id );
-
+	remove_filter( 'activitypub_remote_get_timeout', $short_timeout );
 	if ( \is_wp_error( $response ) ) {
+		\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 		return $response;
 	}
 

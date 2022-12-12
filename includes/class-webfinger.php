@@ -40,7 +40,9 @@ class Webfinger {
 
 		$url = \add_query_arg( 'resource', 'acct:' . ltrim( $account, '@' ), 'https://' . $m[1] . '/.well-known/webfinger' );
 		if ( ! \wp_http_validate_url( $url ) ) {
-			return new \WP_Error( 'invalid_webfinger_url', null, $url );
+			$response = new \WP_Error( 'invalid_webfinger_url', null, $url );
+			\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
+			return $response;
 		}
 
 		// try to access author URL
@@ -49,6 +51,7 @@ class Webfinger {
 			array(
 				'headers' => array( 'Accept' => 'application/activity+json' ),
 				'redirection' => 0,
+				'timeout' => 2,
 			)
 		);
 
@@ -58,12 +61,10 @@ class Webfinger {
 			return $link;
 		}
 
-		$response_code = \wp_remote_retrieve_response_code( $response );
-
 		$body = \wp_remote_retrieve_body( $response );
 		$body = \json_decode( $body, true );
 
-		if ( ! isset( $body['links'] ) ) {
+		if ( empty( $body['links'] ) ) {
 			$link = new \WP_Error( 'webfinger_url_invalid_response', null, $url );
 			\set_transient( $transient_key, $link, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 			return $link;
