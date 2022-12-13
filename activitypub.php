@@ -159,7 +159,6 @@ add_action(
 /**
  * Disable webfinger for known example domains.
 */
-
 add_filter(
 	'pre_get_remote_metadata_by_actor',
 	function( $metadata, $actor ) {
@@ -181,7 +180,7 @@ add_filter(
 					}
 				}
 			}
-			if ( strtok( $domain, '.' ) === 'example' ) {
+			if ( rtrim( strtok( $domain, '.' ), '0123456789' ) === 'example' ) {
 				$metadata = array(
 					'url' => sprintf( 'https://%s/users/%s/', $domain, $username ),
 					'name' => $username,
@@ -190,6 +189,6 @@ add_filter(
 		}
 		return $metadata;
 	},
-	10,
+	9,
 	2
 );

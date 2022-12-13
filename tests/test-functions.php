@@ -12,7 +12,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 
 		add_filter( 'pre_http_request', array( $this, 'invalid_http_response' ), 8, 3 );
 		foreach ( array( 'user', 'test' ) as $username ) {
-			foreach ( array( 'example.org', 'example.net' ) as $domain ) {
+			foreach ( array( 'example.org', 'example.net', 'example2.com' ) as $domain ) {
 				foreach ( array( '@', '' ) as $leading_at ) {
 					$metadata = \ActivityPub\get_remote_metadata_by_actor( $username . '@' . $domain );
 					$this->assertEquals( sprintf( 'https://%s/users/%s/', $domain, $username ), $metadata['url'], $username . '@' . $domain );
