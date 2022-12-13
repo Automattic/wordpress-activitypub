@@ -24,7 +24,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	public function example_actors() {
 		$actors = array();
 		foreach ( array( 'user', 'test' ) as $username ) {
-			foreach ( array( 'example.org', 'example.net', 'example2.com' ) as $domain ) {
+			foreach ( array( 'example.org', 'example.net', 'example2.com', 'my-domain.com', 'your-domain.org', 'test.net' ) as $domain ) {
 				foreach ( array( '@', '' ) as $leading_at ) {
 					$actors[] = array( $leading_at . $username . '@' . $domain, $domain, $username );
 				}
@@ -33,6 +33,9 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				$actors[] = array( sprintf( 'https://%s/@%s', $domain, $username ), $domain, $username );
 			}
 		}
+
+		$actors[] = array( 'example@abc.org', 'abc.org', 'example' );
+
 		return $actors;
 	}
 }

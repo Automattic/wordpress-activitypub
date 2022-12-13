@@ -180,7 +180,16 @@ add_filter(
 					}
 				}
 			}
-			if ( rtrim( strtok( $domain, '.' ), '0123456789' ) === 'example' ) {
+			if ( preg_match( '/[^a-zA-Z0-9.-]/', $domain ) ) {// invalid characters
+				return $metadata;
+			}
+
+			if (
+				rtrim( strtok( $domain, '.' ), '0123456789' ) === 'example' // classic example.org domain
+				|| preg_match( '/(my|your|our)-(domain)/', $domain )
+				|| preg_match( '/(test)/', $domain )
+				|| in_array( $username, array( 'example' ), true )
+				) {
 				$metadata = array(
 					'url' => sprintf( 'https://%s/users/%s/', $domain, $username ),
 					'name' => $username,
