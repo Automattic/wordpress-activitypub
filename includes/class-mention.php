@@ -23,7 +23,21 @@ class Mention {
 	 * @return string the filtered post-content
 	 */
 	public static function the_content( $the_content ) {
+		$protected_tags = array();
+		$the_content = preg_replace_callback(
+			'#<a.*?href=[^>]+>.*?</a>#i',
+			function( $m ) use ( &$protected_tags ) {
+				$c = count( $protected_tags );
+				$protect = '!#!#PROTECT' . $c . '#!#!';
+				$protected_tags[ $protect ] = $m[0];
+				return $protect;
+			},
+			$the_content
+		);
+
 		$the_content = \preg_replace_callback( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', array( '\Activitypub\Mention', 'replace_with_links' ), $the_content );
+
+		$the_content = str_replace( array_keys( $protected_tags ), array_values( $protected_tags ), $the_content );
 
 		return $the_content;
 	}
