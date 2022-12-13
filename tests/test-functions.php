@@ -14,7 +14,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		foreach ( array( 'user', 'test' ) as $username ) {
 			foreach ( array( 'example.org', 'example.net', 'example2.com' ) as $domain ) {
 				foreach ( array( '@', '' ) as $leading_at ) {
-					$metadata = \ActivityPub\get_remote_metadata_by_actor( $username . '@' . $domain );
+					$metadata = \ActivityPub\get_remote_metadata_by_actor( $leading_at . $username . '@' . $domain );
 					$this->assertEquals( sprintf( 'https://%s/users/%s/', $domain, $username ), $metadata['url'], $username . '@' . $domain );
 					$this->assertEquals( $username, $metadata['name'], $username . '@' . $domain );
 				}
