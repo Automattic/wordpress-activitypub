@@ -22,7 +22,7 @@ function init() {
 	\defined( 'ACTIVITYPUB_EXCERPT_LENGTH' ) || \define( 'ACTIVITYPUB_EXCERPT_LENGTH', 400 );
 	\defined( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS' ) || \define( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS', 3 );
 	\defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))' );
-	\defined( 'ACTIVITYPUB_USERNAME_REGEXP' ) || \define( 'ACTIVITYPUB_USERNAME_REGEXP', '(?:[A-Za-z0-9_-]+@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))' );
+	\defined( 'ACTIVITYPUB_USERNAME_REGEXP' ) || \define( 'ACTIVITYPUB_USERNAME_REGEXP', '(?:([A-Za-z0-9_-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))' );
 	\defined( 'ACTIVITYPUB_ALLOWED_HTML' ) || \define( 'ACTIVITYPUB_ALLOWED_HTML', '<strong><a><p><ul><ol><li><code><blockquote><pre><img>' );
 	\defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<p><strong>[ap_title]</strong></p>\n\n[ap_content]\n\n<p>[ap_hashtags]</p>\n\n<p>[ap_shortlink]</p>" );
 	\define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -154,4 +154,42 @@ add_action(
 		require_once __DIR__ . '/integration/class-friends-feed-parser-activitypub.php';
 		$friends_feed->register_parser( Friends_Feed_Parser_ActivityPub::SLUG, new Friends_Feed_Parser_ActivityPub( $friends_feed ) );
 	}
+);
+
+/**
+ * Disable webfinger for known example domains.
+*/
+
+add_filter(
+	'pre_get_remote_metadata_by_actor',
+	function( $metadata, $actor ) {
+		if ( ! $metadata ) {
+			$username = null;
+			$domain = null;
+			if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $actor, $m ) ) {
+				$username = $m[1];
+				$domain = $m[2];
+			} else {
+				$p = parse_url( $actor );
+				if ( $p ) {
+					if ( isset( $p['host'] ) ) {
+						$domain = $p['host'];
+					}
+					if ( isset( $p['path'] ) ) {
+						$path_parts = explode( '/', trim( $p['path'], '/' ) );
+						$username = array_pop( $path_parts );
+					}
+				}
+			}
+			if ( strtok( $domain, '.' ) === 'example' ) {
+				$metadata = array(
+					'url' => sprintf( 'https://%s/users/%s/', $domain, $username ),
+					'name' => $username,
+				);
+			}
+		}
+		return $metadata;
+	},
+	10,
+	2
 );

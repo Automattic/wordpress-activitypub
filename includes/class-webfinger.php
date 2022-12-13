@@ -38,7 +38,7 @@ class Webfinger {
 			return $link;
 		}
 
-		$url = \add_query_arg( 'resource', 'acct:' . ltrim( $account, '@' ), 'https://' . $m[1] . '/.well-known/webfinger' );
+		$url = \add_query_arg( 'resource', 'acct:' . ltrim( $account, '@' ), 'https://' . $m[2] . '/.well-known/webfinger' );
 		if ( ! \wp_http_validate_url( $url ) ) {
 			$response = new \WP_Error( 'invalid_webfinger_url', null, $url );
 			\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
