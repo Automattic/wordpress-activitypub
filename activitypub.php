@@ -169,14 +169,14 @@ add_filter(
 				$username = $m[1];
 				$domain = $m[2];
 			} else {
-				$p = parse_url( $actor );
+				$p = wp_parse_url( $actor );
 				if ( $p ) {
 					if ( isset( $p['host'] ) ) {
 						$domain = $p['host'];
 					}
 					if ( isset( $p['path'] ) ) {
 						$path_parts = explode( '/', trim( $p['path'], '/' ) );
-						$username = array_pop( $path_parts );
+						$username = ltrim( array_pop( $path_parts ), '@' );
 					}
 				}
 			}
