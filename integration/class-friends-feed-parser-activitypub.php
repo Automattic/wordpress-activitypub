@@ -68,7 +68,7 @@ class Friends_Feed_Parser_ActivityPub extends \Friends\Feed_Parser {
 	 */
 	public function update_feed_details( $feed_details ) {
 		$meta = \Activitypub\get_remote_metadata_by_actor( $feed_details['url'] );
-		if ( ! $meta && is_wp_error( $meta ) ) {
+		if ( ! $meta || is_wp_error( $meta ) ) {
 			return $meta;
 		}
 

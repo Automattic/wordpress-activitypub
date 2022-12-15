@@ -118,6 +118,10 @@ function get_remote_metadata_by_actor( $actor ) {
 		return null;
 	}
 
+	if ( is_wp_error( $actor ) ) {
+		return $actor;
+	}
+
 	$metadata = \get_transient( 'activitypub_' . $actor );
 
 	if ( $metadata ) {
