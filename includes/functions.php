@@ -61,7 +61,7 @@ function safe_remote_post( $url, $body, $user_id ) {
 	return $response;
 }
 
-function safe_remote_get( $url, $user_id, $override_args = array() ) {
+function safe_remote_get( $url, $user_id ) {
 	$date = \gmdate( 'D, d M Y H:i:s T' );
 	$signature = \Activitypub\Signature::generate_signature( $user_id, 'get', $url, $date );
 
