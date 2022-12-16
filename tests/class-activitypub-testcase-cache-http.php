@@ -19,30 +19,15 @@ class ActivityPub_TestCase_Cache_HTTP extends \WP_UnitTestCase {
 
 		add_filter( 'pre_http_request', array( get_called_class(), 'pre_http_request' ), 10, 3 );
 		add_filter( 'http_response', array( get_called_class(), 'http_response' ), 10, 3 );
-		add_filter( 'http_request_host_is_external', array( get_called_class(), 'http_request_host_is_external' ), 10, 2 );
-		add_filter( 'http_request_args', array( get_called_class(), 'http_request_args' ), 10, 2 );
 	}
 
 	public function tear_down() {
 		remove_filter( 'pre_http_request', array( get_called_class(), 'pre_http_request' ) );
 		remove_filter( 'http_response', array( get_called_class(), 'http_response' ) );
-		remove_filter( 'http_request_host_is_external', array( get_called_class(), 'http_request_host_is_external' ) );
-		remove_filter( 'http_request_args', array( get_called_class(), 'http_request_args' ) );
 		parent::tear_down();
 	}
 
-	public static function http_request_host_is_external( $in, $host ) {
-		if ( in_array( $host, array( 'mastodon.local' ), true ) ) {
-			return true;
-		}
-		return $in;
-	}
-	public static function http_request_args( $args, $url ) {
-		if ( in_array( wp_parse_url( $url, PHP_URL_HOST ), array( 'mastodon.local' ), true ) ) {
-			$args['reject_unsafe_urls'] = false;
-		}
-		return $args;
-	}
+
 	public static function pre_http_request( $preempt, $request, $url ) {
 		$p = wp_parse_url( $url );
 		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.json';
