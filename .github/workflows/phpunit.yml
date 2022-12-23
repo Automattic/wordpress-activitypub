@@ -1,5 +1,5 @@
 name: Unit Testing
-on: 
+on:
     push:
     pull_request:
 jobs:
@@ -24,7 +24,7 @@ jobs:
         with:
           php-version: ${{ matrix.php-versions }}
           coverage: none
-          tools: composer, phpunit-polyfills    
+          tools: composer, phpunit-polyfills
           extensions: mysql
       - name: Install Composer dependencies for PHP
         uses: "ramsey/composer-install@v1"
