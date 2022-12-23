@@ -490,9 +490,9 @@ class Inbox {
 
 			//found a local comment id
 			$commentdata = \get_comment( $object_comment_id, ARRAY_A );
-			$commentdata['comment_author'] = \esc_attr( $meta['name'] ? $meta['name'] : $meta['preferredUsername']  );
+			$commentdata['comment_author'] = \esc_attr( $meta['name'] ? $meta['name'] : $meta['preferredUsername'] );
 			$commentdata['comment_content'] = \wp_filter_kses( $object['object']['content'] );
-			$commentdata['comment_meta']['avatar_url'] =  \esc_url_raw($meta['icon']['url']);
+			$commentdata['comment_meta']['avatar_url'] = \esc_url_raw( $meta['icon']['url'] );
 			$commentdata['comment_meta']['ap_published'] = \wp_date( 'Y-m-d H:i:s', strtotime( $object['object']['published'] ) );
 			$commentdata['comment_meta']['ap_last_modified'] = $object['object']['updated'];
 			$commentdata['comment_meta']['ap_object'] = \serialize( $object );

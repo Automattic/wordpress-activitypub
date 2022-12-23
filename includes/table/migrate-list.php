@@ -40,21 +40,13 @@ class Migrate_List extends \WP_List_Table {
 		$post_status_var = get_query_var( 'comments' );
 		$view_count = count( $view_slugs );
 		for ( $x = 0; $x < $view_count; $x++ ) {
-			$class = ( $post_status_var == $view_slugs[ $x ][1] ) ? ' class="current"' : '';
+			$class = ( $post_status_var === $view_slugs[ $x ][1] ) ? ' class="current"' : '';
 			$post_status_temp = $view_slugs[ $x ][1];
-			if ( $post_status_temp != '' ) {
+			if ( ! empty( $post_status_temp ) ) {
 				$post_status_temp = '&comments=' . $view_slugs[ $x ][1];
 			}
 			$views[ $view_slugs[ $x ][0] ] = sprintf(
-				__(
-					'<a href="' .
-						$activitypub_tools_page .
-						$post_status_temp . '"' .
-						$class .
-						' >' .
-						$view_slugs[ $x ][2] .
-					' <span class="count">(%d)</span></a>'
-				),
+				'<a href="' . $activitypub_tools_page . $post_status_temp . '"' . $class . ' >' . $view_slugs[ $x ][2] . ' <span class="count">(%s)</span></a>',
 				$view_slugs[ $x ][3]
 			);
 		}
@@ -137,7 +129,7 @@ class Migrate_List extends \WP_List_Table {
 
 	public function single_row( $item ) {
 		$inline_styles = ( $item['comments'] > 0 ) ? 'warning' : ''; ?>
-		<tr class="<?php echo $inline_styles; ?>"><?php $this->single_row_columns( $item ); ?></tr>
+		<tr class="<?php echo esc_attr( $inline_styles ); ?>"><?php $this->single_row_columns( $item ); ?></tr>
 		<?php
 	}
 

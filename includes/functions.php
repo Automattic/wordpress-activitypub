@@ -373,7 +373,7 @@ function url_to_authorid( $url ) {
  * @return int post_id
  */
 function url_to_postid( $in_replyto_url ) {
-	if ( !empty( $in_replyto_url ) ) {
+	if ( ! empty( $in_replyto_url ) ) {
 		$tentative_postid = \url_to_postid( $in_replyto_url );
 		if ( is_null( $tentative_postid ) ) {
 			$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
@@ -431,7 +431,7 @@ function url_to_commentid( $in_replyto_url ) {
 			'type' => 'activitypub',
 			'meta_query' => array(
 				array(
-					'key' => 'source_url', //$object['object']['id']
+					'key' => 'source_url', // $object['object']['id']
 					'value' => $in_replyto_url,
 				),
 			),
