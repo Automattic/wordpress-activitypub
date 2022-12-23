@@ -1,7 +1,7 @@
 name: Unit Testing
 on:
-    push:
-    pull_request:
+  push:
+  pull_request:
 jobs:
   phpunit:
     runs-on: ubuntu-latest
