@@ -1,10 +1,10 @@
 # ActivityPub #
-**Contributors:** [pfefferle](https://profiles.wordpress.org/pfefferle), [mediaformat](https://profiles.wordpress.org/mediaformat)  
+**Contributors:** [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [akirk](https://profiles.wordpress.org/akirk/)  
 **Donate link:** https://notiz.blog/donate/  
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
-**Tested up to:** 6.0  
-**Stable tag:** 0.13.4  
+**Tested up to:** 6.1  
+**Stable tag:** 0.14.3  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -87,6 +87,26 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 ## Changelog ##
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+
+### 0.14.3 ###
+
+* Better error handling. props [@akirk](https://github.com/akirk)
+
+### 0.14.2 ###
+
+* Fix Critical error when using Friends Plugin and adding new URL to follow. props [@akirk](https://github.com/akirk)
+
+### 0.14.1 ###
+
+* Fix "WebFinger not compatible with PHP < 8.0". props [@mexon](https://github.com/mexon)
+
+### 0.14.0 ###
+
+* Friends support: https://wordpress.org/plugins/friends/ . props [@akirk](https://github.com/akirk)
+* Massive guidance improvements. props [mediaformat](https://github.com/mediaformat) & [@akirk](https://github.com/akirk)
+* Add Custom Post Type support to outbox API. props [blueset](https://github.com/blueset)
+* Better hash-tag support. props [bocops](https://github.com/bocops)
+* Fix user-count (NodeInfo). props [mediaformat](https://github.com/mediaformat)
 
 ### 0.13.4 ###
 

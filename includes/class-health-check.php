@@ -15,6 +15,7 @@ class Health_Check {
 	 */
 	public static function init() {
 		\add_filter( 'site_status_tests', array( '\Activitypub\Health_Check', 'add_tests' ) );
+		\add_filter( 'debug_information', array( '\Activitypub\Health_Check', 'debug_information' ) );
 	}
 
 	public static function add_tests( $tests ) {
@@ -198,58 +199,37 @@ class Health_Check {
 	 * @return boolean|WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
-		$user      = \wp_get_current_user();
-		$webfinger = \Activitypub\get_webfinger_resource( $user->ID );
+		$user    = \wp_get_current_user();
+		$account = \Activitypub\get_webfinger_resource( $user->ID );
 
-		$url = \wp_parse_url( \home_url(), \PHP_URL_SCHEME ) . '://' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
-
-		if ( \wp_parse_url( \home_url(), \PHP_URL_PORT ) ) {
-			$url .= ':' . \wp_parse_url( \home_url(), \PHP_URL_PORT );
-		}
-
-		$url = \trailingslashit( $url ) . '.well-known/webfinger';
-
-		$url = \add_query_arg( 'resource', 'acct:' . $webfinger, $url );
-
-		// try to access author URL
-		$response = \wp_remote_get(
-			$url,
-			array(
-				'headers' => array( 'Accept' => 'application/activity+json' ),
-				'redirection' => 0,
-			)
-		);
-
-		if ( \is_wp_error( $response ) ) {
-			return new \WP_Error(
-				'webfinger_url_not_accessible',
-				\sprintf(
+		$url = \Activitypub\Webfinger::resolve( $account );
+		if ( \is_wp_error( $url ) ) {
+			$health_messages = array(
+				'webfinger_url_not_accessible' => \sprintf(
 					// translators: %s: Author URL
 					\__(
 						'<p>Your WebFinger endpoint <code>%s</code> is not accessible. Please check your WordPress setup or permalink structure.</p>',
 						'activitypub'
 					),
-					$url
-				)
-			);
-		}
-
-		$response_code = \wp_remote_retrieve_response_code( $response );
-
-		// check if response is JSON
-		$body = \wp_remote_retrieve_body( $response );
-
-		if ( ! \is_string( $body ) || ! \is_array( \json_decode( $body, true ) ) ) {
-			return new \WP_Error(
-				'webfinger_url_not_accessible',
-				\sprintf(
+					$url->get_error_data()
+				),
+				'webfinger_url_invalid_response' => \sprintf(
 					// translators: %s: Author URL
 					\__(
 						'<p>Your WebFinger endpoint <code>%s</code> does not return valid JSON for <code>application/jrd+json</code>.</p>',
 						'activitypub'
 					),
-					$url
-				)
+					$url->get_error_data()
+				),
+			);
+			$message = null;
+			if ( isset( $health_messages[ $url->get_error_code() ] ) ) {
+				$message = $health_messages[ $url->get_error_code() ];
+			}
+			return new \WP_Error(
+				$url->get_error_code(),
+				$message,
+				$url->get_error_data()
 			);
 		}
 
@@ -286,5 +266,31 @@ class Health_Check {
 		}
 
 		return $link;
+	}
+
+	/**
+	 * Static function for generating site debug data when required.
+	 *
+	 * @param array $info The debug information to be added to the core information page.
+	 * @return array The filtered informations
+	 */
+	public static function debug_information( $info ) {
+		$info['activitypub'] = array(
+			'label'  => __( 'ActivityPub', 'activitypub' ),
+			'fields' => array(
+				'webfinger' => array(
+					'label'   => __( 'WebFinger Resource', 'activitypub' ),
+					'value'   => \Activitypub\Webfinger::get_user_resource( wp_get_current_user()->ID ),
+					'private' => true,
+				),
+				'author_url' => array(
+					'label'   => __( 'Author URL', 'activitypub' ),
+					'value'   => get_author_posts_url( wp_get_current_user()->ID ),
+					'private' => true,
+				),
+			),
+		);
+
+		return $info;
 	}
 }

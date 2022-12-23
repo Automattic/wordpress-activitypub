@@ -163,7 +163,6 @@ class Inbox {
 	public static function shared_inbox_post( $request ) {
 		$data = $request->get_params();
 		$type = $request->get_param( 'type' );
-
 		$users = self::extract_recipients( $data );
 
 		if ( ! $users ) {
@@ -473,7 +472,6 @@ class Inbox {
 
 			// re-add flood control
 			\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
-
 		}
 	}
 

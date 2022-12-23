@@ -15,10 +15,10 @@ class Admin {
 		\add_action( 'admin_init', array( '\Activitypub\Admin', 'register_settings' ) );
 		\add_action( 'admin_init', array( '\Activitypub\Admin', 'version_check' ), 1 );
 		\add_action( 'show_user_profile', array( '\Activitypub\Admin', 'add_fediverse_profile' ) );
-		\add_action( 'admin_enqueue_scripts', array( '\Activitypub\Admin', 'enqueue_script_actions' ), 10, 2 );
 		\add_action( 'wp_ajax_migrate_post', array( '\Activitypub\Admin', 'migrate_post_action' ) );
 		\add_filter( 'comment_row_actions', array( '\Activitypub\Admin', 'reply_comments_actions' ), 10, 2 );
 		\add_filter( 'views_tools_page_activitypub_tools', array( '\Activitypub\Table\Migrate_List', 'get_activitypub_tools_views' ), 10 );
+		\add_action( 'admin_enqueue_scripts', array( '\Activitypub\Admin', 'enqueue_scripts' ) );
 	}
 
 	/**
@@ -26,7 +26,7 @@ class Admin {
 	 */
 	public static function admin_menu() {
 		$settings_page = \add_options_page(
-			'ActivityPub',
+			'Welcome',
 			'ActivityPub',
 			'manage_options',
 			'activitypub',
@@ -46,7 +46,27 @@ class Admin {
 	 * Load settings page
 	 */
 	public static function settings_page() {
-		\load_template( \dirname( __FILE__ ) . '/../templates/settings.php' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( empty( $_GET['tab'] ) ) {
+			$tab = 'welcome';
+		} else {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$tab = sanitize_key( $_GET['tab'] );
+		}
+
+		switch ( $tab ) {
+			case 'settings':
+				\load_template( \dirname( __FILE__ ) . '/../templates/settings.php' );
+				break;
+			case 'welcome':
+			default:
+				wp_enqueue_script( 'plugin-install' );
+				add_thickbox();
+				wp_enqueue_script( 'updates' );
+
+				\load_template( \dirname( __FILE__ ) . '/../templates/welcome.php' );
+				break;
+		}
 	}
 
 	/**
@@ -157,23 +177,7 @@ class Admin {
 	}
 
 	public static function add_settings_help_tab() {
-		\get_current_screen()->add_help_tab(
-			array(
-				'id'      => 'overview',
-				'title'   => \__( 'Overview', 'activitypub' ),
-				'content' =>
-					'<p>' . \__( 'ActivityPub is a decentralized social networking protocol based on the ActivityStreams 2.0 data format. ActivityPub is an official W3C recommended standard published by the W3C Social Web Working Group. It provides a client to server API for creating, updating and deleting content, as well as a federated server to server API for delivering notifications and subscribing to content.', 'activitypub' ) . '</p>',
-			)
-		);
-
-		\get_current_screen()->set_help_sidebar(
-			'<p><strong>' . \__( 'For more information:', 'activitypub' ) . '</strong></p>' .
-			'<p>' . \__( '<a href="https://activitypub.rocks/">Test Suite</a>', 'activitypub' ) . '</p>' .
-			'<p>' . \__( '<a href="https://www.w3.org/TR/activitypub/">W3C Spec</a>', 'activitypub' ) . '</p>' .
-			'<p>' . \__( '<a href="https://github.com/pfefferle/wordpress-activitypub/issues">Give us feedback</a>', 'activitypub' ) . '</p>' .
-			'<hr />' .
-			'<p>' . \__( '<a href="https://notiz.blog/donate">Donate</a>', 'activitypub' ) . '</p>'
-		);
+		require_once \dirname( __FILE__ ) . '/help.php';
 	}
 
 	public static function add_followers_list_help_tab() {
@@ -182,21 +186,9 @@ class Admin {
 
 	public static function add_fediverse_profile( $user ) {
 		?>
-		<h2><?php \esc_html_e( 'Fediverse', 'activitypub' ); ?></h2>
+		<h2 id="activitypub"><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h2>
 		<?php
 		\Activitypub\get_identifier_settings( $user->ID );
-	}
-
-	public static function enqueue_script_actions( $hook ) {
-		if ( 'edit-comments.php' === $hook || 'tools_page_activitypub_tools' === $hook ) {
-			\wp_enqueue_script(
-				'activitypub_actions',
-				\plugin_dir_url( ACTIVITYPUB_PLUGIN ) . '/assets/js/activitypub.js',
-				array( 'jquery' ),
-				\filemtime( \plugin_dir_path( ACTIVITYPUB_PLUGIN ) . 'assets/js/activitypub.js' ),
-				true
-			);
-		}
 	}
 
 	/**
@@ -233,5 +225,22 @@ class Admin {
 			\__( 'Reply', 'activitypub' )
 		);
 		return $actions;
+	}
+
+	public static function enqueue_scripts( $hook_suffix ) {
+		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
+			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), '1.0.0' );
+			wp_enqueue_script( 'activitypub-admin-styles', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), '1.0.0', false );
+		}
+  
+    if ( 'edit-comments.php' === $hook_suffix || 'tools_page_activitypub_tools' === $hook_suffix ) {
+			\wp_enqueue_script(
+				'activitypub_actions',
+				\plugin_dir_url( ACTIVITYPUB_PLUGIN ) . '/assets/js/activitypub.js',
+				array( 'jquery' ),
+				\filemtime( \plugin_dir_path( ACTIVITYPUB_PLUGIN ) . 'assets/js/activitypub.js' ),
+				true
+			);
+		}
 	}
 }

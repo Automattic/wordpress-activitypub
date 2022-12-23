@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/pfefferle/wordpress-activitypub/
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 0.14.0-RC1
+ * Version: 0.15.0
  * Author: Matthias Pfefferle
  * Author URI: https://notiz.blog/
  * License: MIT
@@ -22,12 +22,15 @@ function init() {
 	\defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))' );
 	\defined( 'ACTIVITYPUB_ALLOWED_HTML' ) || \define( 'ACTIVITYPUB_ALLOWED_HTML', '<strong><a><p><ul><ol><li><code><blockquote><pre><img>' );
 	\defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<p><strong>%title%</strong></p>\n\n%content%\n\n<p>%hashtags%</p>\n\n<p>%shortlink%</p>" );
-	\defined( 'ACTIVITYPUB_PLUGIN' ) || \define( 'ACTIVITYPUB_PLUGIN', __FILE__ );
-
+	
+  \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+	\define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
 
 	require_once \dirname( __FILE__ ) . '/includes/table/followers-list.php';
 	require_once \dirname( __FILE__ ) . '/includes/table/migrate-list.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
+	require_once \dirname( __FILE__ ) . '/includes/class-webfinger.php';
 	require_once \dirname( __FILE__ ) . '/includes/peer/class-followers.php';
 	require_once \dirname( __FILE__ ) . '/includes/functions.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-tools.php';
@@ -115,7 +118,7 @@ function add_rewrite_rules() {
 		\add_rewrite_rule( '^.well-known/webfinger', 'index.php?rest_route=/activitypub/1.0/webfinger', 'top' );
 	}
 
-	if ( ! \class_exists( 'Nodeinfo' ) ) {
+	if ( ! \class_exists( 'Nodeinfo' ) || ! (bool) \get_option( 'blog_public', 1 ) ) {
 		\add_rewrite_rule( '^.well-known/nodeinfo', 'index.php?rest_route=/activitypub/1.0/nodeinfo/discovery', 'top' );
 		\add_rewrite_rule( '^.well-known/x-nodeinfo2', 'index.php?rest_route=/activitypub/1.0/nodeinfo2', 'top' );
 	}
@@ -153,3 +156,11 @@ function enable_buddypress_features() {
 	\Activitypub\Integration\Buddypress::init();
 }
 add_action( 'bp_include', '\Activitypub\enable_buddypress_features' );
+
+add_action(
+	'friends_load_parsers',
+	function( \Friends\Feed $friends_feed ) {
+		require_once __DIR__ . '/integration/class-friends-feed-parser-activitypub.php';
+		$friends_feed->register_parser( Friends_Feed_Parser_ActivityPub::SLUG, new Friends_Feed_Parser_ActivityPub( $friends_feed ) );
+	}
+);

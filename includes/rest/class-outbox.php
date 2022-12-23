@@ -73,8 +73,11 @@ class Outbox {
 		$json->actor = \get_author_posts_url( $user_id );
 		$json->type = 'OrderedCollectionPage';
 		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/outbox" ); // phpcs:ignore
+		$json->totalItems = 0; // phpcs:ignore
 
+		// phpcs:ignore
 		$json->totalItems = 0;
+
 		foreach ( $post_types as $post_type ) {
 			$count_posts = \wp_count_posts( $post_type );
 			$json->totalItems += \intval( $count_posts->publish ); // phpcs:ignore

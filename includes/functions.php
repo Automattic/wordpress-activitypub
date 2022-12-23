@@ -37,7 +37,7 @@ function get_context() {
 function safe_remote_post( $url, $body, $user_id ) {
 	$date = \gmdate( 'D, d M Y H:i:s T' );
 	$digest = \Activitypub\Signature::generate_digest( $body );
-	$signature = \Activitypub\Signature::generate_signature( $user_id, $url, $date, $digest );
+	$signature = \Activitypub\Signature::generate_signature( $user_id, 'post', $url, $date, $digest );
 
 	$wp_version = \get_bloginfo( 'version' );
 	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
@@ -94,7 +94,7 @@ function forward_remote_post( $url, $body, $user_id ) {
 
 function safe_remote_get( $url, $user_id ) {
 	$date = \gmdate( 'D, d M Y H:i:s T' );
-	$signature = \Activitypub\Signature::generate_signature( $user_id, $url, $date );
+	$signature = \Activitypub\Signature::generate_signature( $user_id, 'get', $url, $date );
 
 	$wp_version = \get_bloginfo( 'version' );
 	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
@@ -126,24 +126,33 @@ function safe_remote_get( $url, $user_id ) {
  * @return string The user-resource
  */
 function get_webfinger_resource( $user_id ) {
-	// use WebFinger plugin if installed
-	if ( \function_exists( '\get_webfinger_resource' ) ) {
-		return \get_webfinger_resource( $user_id, false );
-	}
-
-	$user = \get_user_by( 'id', $user_id );
-
-	return $user->user_login . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+	return \Activitypub\Webfinger::get_user_resource( $user_id );
 }
 
 /**
  * [get_metadata_by_actor description]
  *
- * @param sting $actor
+ * @param string $actor
  *
  * @return array
  */
 function get_remote_metadata_by_actor( $actor ) {
+	$pre = apply_filters( 'pre_get_remote_metadata_by_actor', false, $actor );
+	if ( $pre ) {
+		return $pre;
+	}
+	if ( preg_match( '/^@?[^@]+@((?:[a-z0-9-]+\.)+[a-z]+)$/i', $actor ) ) {
+		$actor = \Activitypub\Webfinger::resolve( $actor );
+	}
+
+	if ( ! $actor ) {
+		return null;
+	}
+
+	if ( is_wp_error( $actor ) ) {
+		return $actor;
+	}
+
 	$metadata = \get_transient( 'activitypub_' . $actor );
 
 	if ( $metadata ) {
@@ -284,7 +293,7 @@ function get_identifier_settings( $user_id ) {
 			<td>
 				<p><code><?php echo \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ); ?></code> or <code><?php echo \esc_url( \get_author_posts_url( $user_id ) ); ?></code></p>
 				<?php // translators: the webfinger resource ?>
-				<p class="description"><?php \printf( \esc_html__( 'Try to follow "@%s" in the Mastodon/Friendica search field.', 'activitypub' ), \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ) ); ?></p>
+				<p class="description"><?php \printf( \esc_html__( 'Try to follow "@%s" by searching for it on Mastodon,Friendica & Co.', 'activitypub' ), \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ) ); ?></p>
 			</td>
 		</tr>
 	</tbody>

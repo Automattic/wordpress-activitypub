@@ -5,3 +5,5 @@ composer.lock
 .DS_Store
 .idea/
 .php_cs.cache
+.vscode/settings.json
+.phpunit.result.cache
