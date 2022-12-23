@@ -1,55 +1,54 @@
 <?php
+$post = \get_post(); // phpcs:ignore
+$page = \get_query_var( 'page' ); // phpcs:ignore
 
-$post = \get_post();
-
-$page =  \get_query_var( 'page' );
 $args = array(
 	'status'  => 'approve',
 	'number'  => '10',
-    'offset'  => $page,
-    'type'    => 'activitypub',
+	'offset'  => $page,
+	'type'    => 'activitypub',
 	'post_id' => $post->ID,
-    'order'   => 'ASC',
+	'order'   => 'ASC',
 );
-$comments = get_comments( $args );
+$comments = get_comments( $args ); // phpcs:ignore
 
 $replies_request = \add_query_arg( $_SERVER['QUERY_STRING'], '', $post->guid );
-$collection_id = \remove_query_arg(['page', 'replytocom'], $replies_request );
+$collection_id = \remove_query_arg( array( 'page', 'replytocom' ), $replies_request );
 
 $json = new \stdClass();
 $json->{'@context'} = 'https://www.w3.org/ns/activitystreams';
 $json->id = $collection_id;
 
-$collectionPage = new \stdClass();
-$collectionPage->type = 'CollectionPage';
-$collectionPage->partOf = $collection_id;
-$collectionPage->totalItems = \count( $comments ); // phpcs:ignore
+$collection_page = new \stdClass();
+$collection_page->type = 'CollectionPage';
+$collection_page->partOf = $collection_id; // phpcs:ignore
+$collection_page->totalItems = \count( $comments ); // phpcs:ignore
 
-if ( $page && ( ( \ceil ( $collectionPage->totalItems / 10 ) ) > $page ) ) { // phpcs:ignore
-    $collectionPage->first = \add_query_arg( 'page', 1, $collectionPage->partOf ); // phpcs:ignore TODO
-    $collectionPage->next  = \add_query_arg( 'page', $page + 1, $collectionPage->partOf ); // phpcs:ignore 
-    $collectionPage->last  = \add_query_arg( 'page', \ceil ( $collectionPage->totalItems / 10 ), $collectionPage->partOf ); // phpcs:ignore
+if ( $page && ( ( \ceil ( $collection_page->totalItems / 10 ) ) > $page ) ) { // phpcs:ignore
+	$collection_page->first = \add_query_arg( 'page', 1, $collection_page->partOf ); // phpcs:ignore
+	$collection_page->next  = \add_query_arg( 'page', $page + 1, $collection_page->partOf ); // phpcs:ignore
+	$collection_page->last  = \add_query_arg( 'page', \ceil ( $collection_page->totalItems / 10 ), $collection_page->partOf ); // phpcs:ignore
 }
 
 foreach ( $comments as $comment ) {
-    $remote_url = \get_comment_meta( $comment->comment_ID, 'source_url', true ); 
-    if ( $remote_url ) { //
-        $collectionPage->items[] = $remote_url; 
-    } else {
-        $activitypub_comment = new \Activitypub\Model\Comment( $comment );
-        $activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_NONE );
-        $activitypub_activity->from_post( $activitypub_comment->to_array() );
-        $collectionPage->items[] = $activitypub_activity->to_array(); // phpcs:ignore
-    }
+	$remote_url = \get_comment_meta( $comment->comment_ID, 'source_url', true );
+	if ( $remote_url ) { //
+		$collection_page->items[] = $remote_url;
+	} else {
+		$activitypub_comment = new \Activitypub\Model\Comment( $comment );
+		$activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_NONE );
+		$activitypub_activity->from_post( $activitypub_comment->to_array() );
+		$collection_page->items[] = $activitypub_activity->to_array(); // phpcs:ignore
+	}
 }
 
 if ( ! \get_query_var( 'collection_page' ) ) {
-    $json->type = 'Collection';
-    //if +10, embed first
-    $json->first = $collectionPage;
+	$json->type = 'Collection';
+	//if +10, embed first
+	$json->first = $collection_page;
 } else {
-    $json = $collectionPage;
-    
+	$json = $collection_page;
+
 }
 
 // filter output

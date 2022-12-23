@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 $action_nonce = wp_create_nonce( 'activitypub_action' );
 if ( isset( $_REQUEST['post_url'] ) && $_REQUEST['page'] === "activitypub_tools" ) {
@@ -12,7 +12,7 @@ if ( isset( $_REQUEST['post_url'] ) && $_REQUEST['page'] === "activitypub_tools"
 <style>
 	#the-list tr.warning {
 		background-color: #fcf9e8;
- 		box-shadow: inset 0 -1px 0 rgba(0,0,0,.1);
+		box-shadow: inset 0 -1px 0 rgba(0,0,0,.1);
 	}
 	#the-list tr.warning th.check-column {
 		border-left: 4px solid #d63638;
