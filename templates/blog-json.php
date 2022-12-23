@@ -27,10 +27,10 @@ if ( \has_header_image() ) {
 	);
 }
 
-$json->inbox = \get_rest_url( null, "/activitypub/1.0/blog/inbox" );
-$json->outbox = \get_rest_url( null, "/activitypub/1.0/blog/outbox" );
-$json->followers = \get_rest_url( null, "/activitypub/1.0/blog/followers" );
-$json->following = \get_rest_url( null, "/activitypub/1.0/blog/following" );
+$json->inbox = \get_rest_url( null, '/activitypub/1.0/blog/inbox' );
+$json->outbox = \get_rest_url( null, '/activitypub/1.0/blog/outbox' );
+$json->followers = \get_rest_url( null, '/activitypub/1.0/blog/followers' );
+$json->following = \get_rest_url( null, '/activitypub/1.0/blog/following' );
 
 $json->manuallyApprovesFollowers = \apply_filters( 'activitypub_json_manually_approves_followers', \__return_false() ); // phpcs:ignore
 
@@ -53,12 +53,6 @@ $json->attachment[] = array(
 		'UTF-8'
 	),
 );
-
-/*
-$json->endpoints = array(
-	'sharedInbox' => \get_rest_url( null, '/activitypub/1.0/inbox' ),
-);
-*/
 
 // filter output
 $json = \apply_filters( 'activitypub_json_blog_array', $json );
