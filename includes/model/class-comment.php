@@ -25,8 +25,8 @@ class Comment {
 	 * Initialize the class
 	 */
 	public function __construct( $comment = null ) {
-		$this->comment 			  = $comment;
-		$this->id 				  = $this->generate_comment_id();
+		$this->comment            = $comment;
+		$this->id                 = $this->generate_comment_id();
 		$this->comment_author_url = \get_author_posts_url( $this->comment->user_id );
 		$this->in_reply_to        = $this->generate_parent_url();
 		$this->content_warning    = $this->generate_content_warning();
@@ -66,7 +66,7 @@ class Comment {
 				\strstr( \get_locale(), '_', true ) => $comment->comment_content,
 			),
 			'context' => $this->context,
-			//'source' => \get_comment_link( $comment ), //non-conforming, see https://www.w3.org/TR/activitypub/#source-property
+			// 'source' => \get_comment_link( $comment ), //non-conforming, see https://www.w3.org/TR/activitypub/#source-property
 			'url' => \get_comment_link( $comment ), //link for mastodon
 			'to' => $this->to_recipients,
 			'cc' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
