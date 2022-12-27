@@ -1,9 +1,6 @@
 <?php
 class Test_Activitypub_Post extends WP_UnitTestCase {
 	public function test_to_array() {
-		\add_action( 'wp_trash_post', array( '\Activitypub\Activitypub', 'trash_post' ), 1 );
-		\add_action( 'untrash_post', array( '\Activitypub\Activitypub', 'untrash_post' ), 1 );
-
 		$post = \wp_insert_post(
 			array(
 				'post_author' => 1,
