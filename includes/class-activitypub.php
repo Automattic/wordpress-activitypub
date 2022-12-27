@@ -38,6 +38,11 @@ class Activitypub {
 			return $template;
 		}
 
+		// check if user can publish posts
+		if ( \is_author() && ! user_can( \get_the_author_meta( 'ID' ), 'publish_posts' ) ) {
+			return $template;
+		}
+
 		if ( \is_author() ) {
 			$json_template = \dirname( __FILE__ ) . '/../templates/author-json.php';
 		} elseif ( \is_singular() ) {

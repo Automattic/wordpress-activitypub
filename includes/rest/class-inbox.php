@@ -33,7 +33,7 @@ class Inbox {
 				array(
 					'methods'             => \WP_REST_Server::EDITABLE,
 					'callback'            => array( '\Activitypub\Rest\Inbox', 'shared_inbox_post' ),
-					'args'                => self::shared_inbox_request_parameters(),
+					'args'                => self::shared_inbox_post_parameters(),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -46,12 +46,13 @@ class Inbox {
 				array(
 					'methods'             => \WP_REST_Server::EDITABLE,
 					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox_post' ),
-					'args'                => self::user_inbox_request_parameters(),
+					'args'                => self::user_inbox_post_parameters(),
 					'permission_callback' => '__return_true',
 				),
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox_get' ),
+					'args'                => self::user_inbox_get_parameters(),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -195,7 +196,7 @@ class Inbox {
 	 *
 	 * @return array list of parameters
 	 */
-	public static function user_inbox_request_parameters() {
+	public static function user_inbox_get_parameters() {
 		$params = array();
 
 		$params['page'] = array(
@@ -205,6 +206,32 @@ class Inbox {
 		$params['user_id'] = array(
 			'required' => true,
 			'type' => 'integer',
+			'validate_callback' => function( $param, $request, $key ) {
+				return user_can( $param, 'publish_posts' );
+			},
+		);
+
+		return $params;
+	}
+
+	/**
+	 * The supported parameters
+	 *
+	 * @return array list of parameters
+	 */
+	public static function user_inbox_post_parameters() {
+		$params = array();
+
+		$params['page'] = array(
+			'type' => 'integer',
+		);
+
+		$params['user_id'] = array(
+			'required' => true,
+			'type' => 'integer',
+			'validate_callback' => function( $param, $request, $key ) {
+				return user_can( $param, 'publish_posts' );
+			},
 		);
 
 		$params['id'] = array(
@@ -243,7 +270,7 @@ class Inbox {
 	 *
 	 * @return array list of parameters
 	 */
-	public static function shared_inbox_request_parameters() {
+	public static function shared_inbox_post_parameters() {
 		$params = array();
 
 		$params['page'] = array(
