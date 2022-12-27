@@ -24,8 +24,8 @@ class Activitypub {
 		}
 
 		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
-		\add_action( 'wp_trash_post', array( '\Activitypub\Activitypub', 'trash_post' ), 10 );
-		\add_action( 'untrash_post', array( '\Activitypub\Activitypub', 'untrash_post' ), 10 );
+		\add_action( 'wp_trash_post', array( '\Activitypub\Activitypub', 'trash_post' ), 1 );
+		\add_action( 'untrash_post', array( '\Activitypub\Activitypub', 'untrash_post' ), 1 );
 	}
 
 	/**
@@ -196,7 +196,7 @@ class Activitypub {
 	 * @return void
 	 */
 	public static function trash_post( $post_id ) {
-		\add_post_meta( $post_id, 'activitypub_canonical_url', \get_permalink( $post_id ) );
+		\add_post_meta( $post_id, 'activitypub_canonical_url', \get_permalink( $post_id ), true );
 	}
 
 	/**
