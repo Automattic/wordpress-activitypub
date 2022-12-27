@@ -32,10 +32,10 @@
         "installer-name": "activitypub"
     },
     "scripts": {
-        "test": [
-            "composer install",
-            "bin/install-wp-tests.sh wordpress wordpress wordpress",
-            "vendor/bin/phpunit"
-        ]
+      "test": [
+        "composer install",
+        "bin/install-wp-tests.sh activitypub-test root activitypub-test test-db latest true",
+        "vendor/bin/phpunit"
+      ]
     }
 }

@@ -1,0 +1,17 @@
+version: '2'
+services:
+  test-db:
+    image: mysql:5.7
+    environment:
+      MYSQL_DATABASE: activitypub-test
+      MYSQL_ROOT_PASSWORD: activitypub-test
+
+  test-php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    links:
+      - test-db
+    volumes:
+      - .:/app
+    command: ["composer", "run-script", "test"]
