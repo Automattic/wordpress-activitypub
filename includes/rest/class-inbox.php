@@ -437,6 +437,12 @@ class Inbox {
 			return;
 		}
 
+		// check if Activity is public or not
+		if ( ! self::is_activity_public( $object ) ) {
+			// @todo maybe send email
+			return;
+		}
+
 		$comment_post_id = \url_to_postid( $object['object']['inReplyTo'] );
 
 		// save only replys and reactions
@@ -473,21 +479,53 @@ class Inbox {
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 	}
 
+	/**
+	 * Extract recipient URLs from Activity object
+	 *
+	 * @param  array $data
+	 *
+	 * @return array The list of user URLs
+	 */
 	public static function extract_recipients( $data ) {
-		$recipients = array();
-		$users = array();
+		$recipient_items = array();
 
 		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
 			if ( array_key_exists( $i, $data ) ) {
-				$recipients = array_merge( $recipients, $data[ $i ] );
+				$recipient_items = array_merge( $recipient_items, $data[ $i ] );
 			}
 
 			if ( array_key_exists( $i, $data['object'] ) ) {
-				$recipients = array_merge( $recipients, $data[ $i ] );
+				$recipient_items = array_merge( $recipient_items, $data[ $i ] );
 			}
 		}
 
-		$recipients = array_unique( $recipients );
+		$recipients = array();
+
+		// flatten array
+		foreach ( $recipient_items as $recipient ) {
+			if ( is_array( $recipient ) ) {
+				// check if recipient is an object
+				if ( array_key_exists( 'id', $recipient ) ) {
+					$recipients[] = $recipient['id'];
+				}
+			} else {
+				$recipients[] = $recipient;
+			}
+		}
+
+		return array_unique( $recipients );
+	}
+
+	/**
+	 * Get local user recipients
+	 *
+	 * @param  array $data
+	 *
+	 * @return array The list of local users
+	 */
+	public static function get_recipients( $data ) {
+		$recipients = self::extract_recipients( $data );
+		$users = array();
 
 		foreach ( $recipients as $recipient ) {
 			$user_id = \Activitypub\url_to_authorid( $recipient );
@@ -500,5 +538,17 @@ class Inbox {
 		}
 
 		return $users;
+	}
+
+	/**
+	 * Check if passed Activity is Public
+	 *
+	 * @param array $data
+	 * @return boolean
+	 */
+	public static function is_activity_public( $data ) {
+		$recipients = self::extract_recipients( $data );
+
+		return in_array( 'https://www.w3.org/ns/activitystreams#Public', $recipients, true );
 	}
 }
