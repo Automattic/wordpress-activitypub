@@ -1,6 +1,8 @@
 <?php
 class Test_Activitypub_Post extends WP_UnitTestCase {
 	public function test_to_array() {
+		\Activitypub\Activitypub::init();
+
 		$post = \wp_insert_post(
 			array(
 				'post_author' => 1,
@@ -15,8 +17,6 @@ class Test_Activitypub_Post extends WP_UnitTestCase {
 		$this->assertEquals( $permalink, $activitypub_post->get_id() );
 
 		\wp_trash_post( $post );
-
-		\sleep( 3 );
 
 		$activitypub_post = new \Activitypub\Model\Post( $post );
 
