@@ -68,11 +68,16 @@ class Post {
 	}
 
 	public function generate_id() {
-		$post      = $this->post;
-		$permalink = \get_permalink( $post );
+		$post = $this->post;
+
+		if ( 'trash' === get_post_status( $post ) ) {
+			$permalink = \get_post_meta( $post, 'activitypub_canonical_url', true );
+		} else {
+			$permalink = \get_permalink( $post );
+		}
 
 		// replace 'trashed' for delete activity
-		return \str_replace( '__trashed', '', $permalink );
+		return $permalink;
 	}
 
 	public function generate_attachments() {

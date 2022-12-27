@@ -24,6 +24,8 @@ class Activitypub {
 		}
 
 		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
+		\add_action( 'wp_trash_post', array( '\Activitypub\Activitypub', 'trash_post' ), 10 );
+		\add_action( 'untrash_post', array( '\Activitypub\Activitypub', 'untrash_post' ), 10 );
 	}
 
 	/**
@@ -184,5 +186,27 @@ class Activitypub {
 			$comment = \get_comment( $comment );
 		}
 		return \get_comment_meta( $comment->comment_ID, 'avatar_url', true );
+	}
+
+	/**
+	 * Store permalink in meta, to send delete Activity
+	 *
+	 * @param string $post_id The Post ID
+	 *
+	 * @return void
+	 */
+	public static function trash_post( $post_id ) {
+		\add_post_meta( $post_id, 'activitypub_canonical_url', \get_permalink( $post_id ) );
+	}
+
+	/**
+	 * Delete permalink from meta
+	 *
+	 * @param string $post_id The Post ID
+	 *
+	 * @return void
+	 */
+	public static function untrash_post( $post_id ) {
+		\delete_post_meta( $post_id, 'activitypub_canonical_url' );
 	}
 }
