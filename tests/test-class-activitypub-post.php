@@ -16,6 +16,8 @@ class Test_Activitypub_Post extends WP_UnitTestCase {
 
 		\wp_trash_post( $post );
 
+		\sleep( 3 );
+
 		$activitypub_post = new \Activitypub\Model\Post( $post );
 
 		$this->assertEquals( $permalink, $activitypub_post->get_id() );
