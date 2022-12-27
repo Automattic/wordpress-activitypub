@@ -91,7 +91,7 @@ Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github
 = 0.15.0 =
 
 * Enable ActivityPub only for users that can `publish_posts`
-
+* Fix remote-delete
 
 = 0.14.3 =
 
