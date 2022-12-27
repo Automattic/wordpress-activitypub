@@ -76,7 +76,6 @@ class Post {
 			$permalink = \get_permalink( $post );
 		}
 
-		// replace 'trashed' for delete activity
 		return $permalink;
 	}
 
