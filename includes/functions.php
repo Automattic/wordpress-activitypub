@@ -320,3 +320,44 @@ function url_to_authorid( $url ) {
 
 	return 0;
 }
+
+/**
+ * Examine a comment ID and look up an existing comment it represents.
+ *
+ * @param string $id ActivityPub object ID (usually a URL) to check.
+ *
+ * @return WP_Comment, or undef if no comment could be found.
+ */
+function object_id_to_comment( $id ) {
+	$comment_query = new \WP_Comment_Query(
+		array(
+			'meta_key' => 'source_id',
+			'meta_value' => $id,
+		)
+	);
+	if ( ! $comment_query->comments ) {
+		return;
+	}
+	if ( count( $comment_query->comments ) > 1 ) {
+		\error_log( "More than one comment under {$id}" );
+		return;
+	}
+	return $comment_query->comments[0];
+}
+
+/**
+ * Examine an activity object and find the post that the specified URL field refers to.
+ *
+ * @param string $field_name The name of the URL field in the object to query.
+ *
+ * @return int Post ID, or null on failure.
+ */
+function object_to_post_id_by_field_name( $object, $field_name ) {
+	if ( ! isset( $object['object'][ $field_name ] ) ) {
+		return;
+	}
+	$result = \url_to_postid( $object['object'][ $field_name ] );
+	if ( $result > 0 ) {
+		return $result;
+	}
+}
