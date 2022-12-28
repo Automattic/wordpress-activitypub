@@ -431,19 +431,47 @@ class Inbox {
 	 * @param  int   $user_id The id of the local blog-user
 	 */
 	public static function handle_create( $object, $user_id ) {
-		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
-
-		if ( ! isset( $object['object']['inReplyTo'] ) ) {
-			return;
-		}
-
 		// check if Activity is public or not
 		if ( ! self::is_activity_public( $object ) ) {
 			// @todo maybe send email
-			return;
+			return false;
 		}
 
-		$comment_post_id = \url_to_postid( $object['object']['inReplyTo'] );
+		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
+
+		$comment_post_id = 0;
+		// TODO: search for an existing comment with the source url and abandon if it's already there
+
+		if ( isset( $object['object']['context'] ) ) {
+			$comment_post_id = \url_to_postid( $object['object']['context'] );
+		}
+
+		if ( ! $comment_post_id && isset( $object['object']['inReplyTo'] ) ) {
+			$comment_post_id = \url_to_postid( $object['object']['inReplyTo'] );
+		}
+
+		$comment_parent_id = 0;
+		$comment_meta = array(
+			'source_id' => \esc_url_raw( $object['object']['id'] ),
+			'source_url' => \esc_url_raw( $object['object']['url'] ),
+			'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
+			'protocol' => 'activitypub',
+		);
+
+		if ( isset( $object['object']['inReplyTo'] ) ) {
+			$comment_meta['parent_url'] = $object['object']['inReplyTo'];
+			$comment_query = new \WP_Comment_Query( array( 'meta_key' => 'source_id', 'meta_value' => $object['object']['inReplyTo'] ) );
+			if ( $comment_query->comments ) {
+				foreach ( $comment_query->comments as $comment ) {
+                                	if ( ! $comment_parent_id ) {
+                                        	$comment_parent_id = $comment->comment_ID;
+                                        }
+					if ( ! $comment_post_id ) {
+						$comment_post_id = $comment->comment_post_ID;
+					}
+				}
+			}
+		}
 
 		// save only replys and reactions
 		if ( ! $comment_post_id ) {
@@ -457,12 +485,8 @@ class Inbox {
 			'comment_content' => \wp_filter_kses( $object['object']['content'] ),
 			'comment_type' => '',
 			'comment_author_email' => '',
-			'comment_parent' => 0,
-			'comment_meta' => array(
-				'source_url' => \esc_url_raw( $object['object']['url'] ),
-				'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
-				'protocol' => 'activitypub',
-			),
+			'comment_parent' => $comment_parent_id,
+			'comment_meta' => $comment_meta,
 		);
 
 		// disable flood control
@@ -472,6 +496,7 @@ class Inbox {
 		\add_filter( 'pre_option_require_name_email', '__return_false' );
 
 		$state = \wp_new_comment( $commentdata, true );
+		// TODO: search for comments with that source url as their parent url and update their parent
 
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
