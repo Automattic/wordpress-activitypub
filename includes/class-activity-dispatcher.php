@@ -33,6 +33,7 @@ class Activity_Dispatcher {
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
 			$activitypub_activity->set_to( $to );
 			$activity = $activitypub_activity->to_json(); // phpcs:ignore
+			\error_log("@@@ send_post_activity: inbox " . $inbox . " user id " . $user_id . " activity " . $activity);
 
 			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
@@ -53,6 +54,7 @@ class Activity_Dispatcher {
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
 			$activitypub_activity->set_to( $to );
 			$activity = $activitypub_activity->to_json(); // phpcs:ignore
+			\error_log("@@@ send_update_activity: inbox " . $inbox . " user id " . $user_id . " activity " . $activity);
 
 			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
@@ -73,6 +75,7 @@ class Activity_Dispatcher {
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
 			$activitypub_activity->set_to( $to );
 			$activity = $activitypub_activity->to_json(); // phpcs:ignore
+			\error_log("@@@ send_delete_activity: inbox " . $inbox . " user id " . $user_id . " activity " . $activity);
 
 			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
