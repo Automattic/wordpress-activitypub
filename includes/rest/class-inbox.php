@@ -425,12 +425,13 @@ class Inbox {
 	}
 
 	/**
-	 * Handles "Create" requests
+	 * Converts a new ActivityPub object to comment data suitable for creating a comment
 	 *
-	 * @param  array $object  The activity-object
-	 * @param  int   $user_id The id of the local blog-user
+	 * @param  array $object  The activity-object.
+	 *
+	 * @return array Comment data suitable for creating a comment.
 	 */
-	public static function handle_create( $object, $user_id ) {
+	private static function convert_object_to_comment_data( $object ) {
 		// check if Activity is public or not
 		if ( ! self::is_activity_public( $object ) ) {
 			// @todo maybe send email
@@ -439,55 +440,62 @@ class Inbox {
 
 		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
 
-		$comment_post_id = 0;
-		// TODO: search for an existing comment with the source url and abandon if it's already there
+		// Objects must have IDs
+		if ( ! isset( $object['object']['id'] ) ) {
+			\error_log( "Comment provided without ID" );
+			return;
+		}
+		$id = $object['object']['id'];
 
-		if ( isset( $object['object']['context'] ) ) {
-			$comment_post_id = \url_to_postid( $object['object']['context'] );
+		// Only handle replies
+		if ( ! isset( $object['object']['inReplyTo'] ) ) {
+			return;
+		}
+		$in_reply_to = $object['object']['inReplyTo'];
+
+		// Comment already exists
+		if ( \Activitypub\object_id_to_comment( $id ) ) {
+			return;
 		}
 
-		if ( ! $comment_post_id && isset( $object['object']['inReplyTo'] ) ) {
-			$comment_post_id = \url_to_postid( $object['object']['inReplyTo'] );
-		}
+		$parent_comment = \Activitypub\object_id_to_comment( $in_reply_to );
 
-		$comment_parent_id = 0;
-		$comment_meta = array(
-			'source_id' => \esc_url_raw( $object['object']['id'] ),
-			'source_url' => \esc_url_raw( $object['object']['url'] ),
-			'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
-			'protocol' => 'activitypub',
-		);
-
-		if ( isset( $object['object']['inReplyTo'] ) ) {
-			$comment_meta['parent_url'] = $object['object']['inReplyTo'];
-			$comment_query = new \WP_Comment_Query( array( 'meta_key' => 'source_id', 'meta_value' => $object['object']['inReplyTo'] ) );
-			if ( $comment_query->comments ) {
-				foreach ( $comment_query->comments as $comment ) {
-                                	if ( ! $comment_parent_id ) {
-                                        	$comment_parent_id = $comment->comment_ID;
-                                        }
-					if ( ! $comment_post_id ) {
-						$comment_post_id = $comment->comment_post_ID;
-					}
-				}
-			}
-		}
-
-		// save only replys and reactions
+		// save only replies and reactions
+		$comment_post_id = \Activitypub\object_to_post_id_by_field_name( $object, 'context' ) ??
+	   			   \Activitypub\object_to_post_id_by_field_name( $object, 'inReplyTo' ) ??
+				    ( $parent_comment ? $parent_comment->comment_post_ID : 0 );
 		if ( ! $comment_post_id ) {
-			return false;
+			return;
 		}
 
-		$commentdata = array(
+		return array(
 			'comment_post_ID' => $comment_post_id,
 			'comment_author' => \esc_attr( $meta['name'] ),
 			'comment_author_url' => \esc_url_raw( $object['actor'] ),
 			'comment_content' => \wp_filter_kses( $object['object']['content'] ),
 			'comment_type' => '',
 			'comment_author_email' => '',
-			'comment_parent' => $comment_parent_id,
-			'comment_meta' => $comment_meta,
+			'comment_parent' => $parent_comment ? $parent_comment->comment_ID : 0,
+			'comment_meta' => array(
+				'source_id' => \esc_url_raw( $id ),
+				'source_url' => \esc_url_raw( $object['object']['url'] ),
+				'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
+				'protocol' => 'activitypub',
+			),
 		);
+	}
+
+	/**
+	 * Handles "Create" requests
+	 *
+	 * @param  array $object  The activity-object
+	 * @param  int   $user_id The id of the local blog-user
+	 */
+	public static function handle_create( $object, $user_id ) {
+		$commentdata = self::convert_object_to_comment_data( $object );
+		if ( !$commentdata ) {
+			return false;
+		}
 
 		// disable flood control
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
