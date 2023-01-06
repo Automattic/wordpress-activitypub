@@ -38,7 +38,7 @@
 			<tbody>
 				<tr>
 					<th scope="row">
-						<?php \esc_html_e( 'Post-Content', 'activitypub' ); ?>
+						<?php \esc_html_e( 'Post Content', 'activitypub' ); ?>
 					</th>
 					<td>
 						<p>
@@ -76,7 +76,7 @@
 				</tr>
 				<tr>
 					<th scope="row">
-						<?php \esc_html_e( 'Activity-Object-Type', 'activitypub' ); ?>
+						<?php \esc_html_e( 'Activity Object Type', 'activitypub' ); ?>
 					</th>
 					<td>
 						<p>
