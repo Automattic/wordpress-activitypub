@@ -55,6 +55,26 @@ summary {
 	color: #2271b1;
 }
 
+.activitypub_post_content_details {
+	margin-left: 40px;
+	padding: 10px;
+	background-color: lightgrey;
+}
+
+.activitypub_post_content_details pre {
+	margin-top: 0px;
+}
+
+.activitypub_post_content_details hr {
+	margin-bottom: 14px;
+}
+
+.activitypub_post_content_type_details {
+	cursor: pointer;
+	text-decoration: underline;
+	color: #2271b1;
+}
+
 .activitypub-settings-accordion {
 	border: 1px solid #c3c4c7;
 }

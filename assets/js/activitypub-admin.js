@@ -11,10 +11,43 @@ jQuery( function( $ ) {
 			$( '#' + $( this ).attr( 'aria-controls' ) ).attr( 'hidden', false );
 		}
 	} );
-	
+
+	$(document).on( 'click', '#activitypub_post_content_type_title_link_details', function() {
+		var content = $( '#activitypub_post_content_type_title_link_details_content');
+		var isExpanded = ( 'block' === content.css( 'display' ) );
+
+		if ( isExpanded ) {
+			content.css( 'display', 'none' );
+		} else {
+			content.css( 'display', 'block' );
+		}
+	} );
+
+	$(document).on( 'click', '#activitypub_post_content_type_excerpt_link_details', function() {
+		var content = $( '#activitypub_post_content_type_excerpt_link_details_content');
+		var isExpanded = ( 'block' === content.css( 'display' ) );
+
+		if ( isExpanded ) {
+			content.css( 'display', 'none' );
+		} else {
+			content.css( 'display', 'block' );
+		}
+	} );
+
+	$(document).on( 'click', '#activitypub_post_content_type_content_link_details', function() {
+		var content = $( '#activitypub_post_content_type_content_link_details_content');
+		var isExpanded = ( 'block' === content.css( 'display' ) );
+
+		if ( isExpanded ) {
+			content.css( 'display', 'none' );
+		} else {
+			content.css( 'display', 'block' );
+		}
+	} );
+
 	$(document).on( 'wp-plugin-install-success', function( event, response ) {
 		setTimeout( function() {
 			$( '.activate-now' ).removeClass( 'thickbox open-plugin-details-modal' );
 		}, 1200 );
-	} );	
+	} );
 } );

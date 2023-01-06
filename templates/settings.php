@@ -42,13 +42,32 @@
 					</th>
 					<td>
 						<p>
-							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_title_link" value="title" <?php echo \checked( 'title', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Title and link', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'Only the title and a link.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_title_link" value="title" <?php echo \checked( 'title', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Title and link', 'activitypub' ); ?></label> - <span class="description"><?php echo \wp_kses( sprintf( __( 'Only the title and a link (%sdetails%s).', 'activitypub' ), '<span class="activitypub_post_content_type_details" id="activitypub_post_content_type_title_link_details">', '</span>' ), 'post' ); ?></span>
+							<div class="activitypub_post_content_details" style="display: none" id="activitypub_post_content_type_title_link_details_content">
+								<pre><?php echo esc_html("<p><strong>%title%</strong></p>\n\n<p>%permalink%</p>"); ?></pre>
+								<hr>
+								<p><strong>Title</strong></p>
+								<p><?php echo esc_html( 'http://localhost' . get_option( 'permalink_structure' ) ); ?></p>
+							</div>
 						</p>
 						<p>
-							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_excerpt" value="excerpt" <?php echo \checked( 'excerpt', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Excerpt', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'A content summary, shortened to 400 characters and without markup.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_excerpt" value="excerpt" <?php echo \checked( 'excerpt', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Excerpt', 'activitypub' ); ?></label> - <span class="description"><?php echo \wp_kses( sprintf( __( 'A content summary, shortened to 400 characters and without markup (%sdetails%s).', 'activitypub' ), '<span class="activitypub_post_content_type_details" id="activitypub_post_content_type_excerpt_link_details">', '</span>' ), 'post' ); ?></span>
+							<div class="activitypub_post_content_details" style="display: none" id="activitypub_post_content_type_excerpt_link_details_content">
+								<pre><?php echo esc_html("%excerpt%\n\n<p>%permalink%</p>"); ?></pre>
+								<hr>
+								A short excerpt of your post.
+								<p><?php echo esc_html( 'http://localhost' . get_option( 'permalink_structure' ) ); ?></p>
+							</div>
 						</p>
 						<p>
-							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_content" value="content" <?php echo \checked( 'content', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Content (default)', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'The full content.', 'activitypub' ); ?></span>
+							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_content" value="content" <?php echo \checked( 'content', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Content (default)', 'activitypub' ); ?></label> - <span class="description"><?php echo \wp_kses( sprintf( __( 'The full content (%sdetails%s).', 'activitypub' ), '<span class="activitypub_post_content_type_details" id="activitypub_post_content_type_content_link_details">', '</span>' ), 'post' ); ?></span>
+							<div class="activitypub_post_content_details" style="display: none" id="activitypub_post_content_type_content_link_details_content">
+								<pre><?php echo esc_html("%content%\n\n<p>%hashtags%</p>\n\n<p>%permalink%</p>"); ?></pre>
+								<hr>
+								The full content of your post.
+								<p>#HashTagOne #HashTagTwo</p>
+								<p><?php echo esc_html( 'http://localhost' . get_option( 'permalink_structure' ) ); ?></p>
+							</div>
 						</p>
 						<p>
 							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_custom" value="custom" <?php echo \checked( 'custom', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Custom', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'Use the text-area below, to customize your activities.', 'activitypub' ); ?></span>
