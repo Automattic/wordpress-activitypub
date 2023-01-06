@@ -110,7 +110,7 @@
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php \esc_html_e( 'Supported post types', 'activitypub' ); ?></th>
+					<th scope="row"><?php \esc_html_e( 'Supported Post Types', 'activitypub' ); ?></th>
 					<td>
 						<fieldset>
 							<?php \esc_html_e( 'Enable ActivityPub support for the following post types:', 'activitypub' ); ?>
