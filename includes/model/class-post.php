@@ -228,6 +228,18 @@ class Post {
 		$content = \str_replace( '%permalink%', $this->get_the_post_link( 'permalink' ), $content );
 		$content = \str_replace( '%shortlink%', $this->get_the_post_link( 'shortlink' ), $content );
 		$content = \str_replace( '%hashtags%', $this->get_the_post_hashtags(), $content );
+		$content = \str_replace( '%thumbnail%', $this->get_the_post_image( 'thumbnail' ), $content );
+		$content = \str_replace( '%image%', $this->get_the_post_image(), $content );
+		$content = \str_replace( '%hashcats%', $this->get_the_post_categories(), $content );
+		$content = \str_replace( '%author%', $this->get_the_post_author(), $content );
+		$content = \str_replace( '%authorurl%', $this->get_the_post_author_url(), $content );
+		$content = \str_replace( '%blogurl%', \bloginfo('url'), $content );
+		$content = \str_replace( '%blogname%', \bloginfo('name'), $content );
+		$content = \str_replace( '%blogdesc%', \bloginfo('description'), $content );
+		$content = \str_replace( '%date%', $this->get_the_post_datetime( 'time' ), $content );
+		$content = \str_replace( '%time%', $this->get_the_post_time( 'date' ), $content );
+		$content = \str_replace( '%datetime%', $this->get_the_post_time( 'both' ), $content );
+
 		// backwards compatibility
 		$content = \str_replace( '%tags%', $this->get_the_post_hashtags(), $content );
 
@@ -353,4 +365,112 @@ class Post {
 
 		return \implode( ' ', $hash_tags );
 	}
+
+	/**
+	 * Adds the featured image url to the post/summary content
+	 *
+	 * @param string  $size
+	 *
+	 * @return string
+	 */
+	public function get_the_post_image( $size = 'full' ) {
+		$post = $this->post;
+
+		if( $size == '' ) { $size = 'full'; }
+
+		$image = \get_the_post_thumbnail_url( $post->ID, $size );
+
+		if ( ! $image ) {
+			return '';
+		}
+
+		return $image;
+	}
+
+	/**
+	 * Adds all categories as hashtags to the post/summary content
+	 *
+	 * @return string
+	 */
+	public function get_the_post_categories() {
+		$post = $this->post;
+		$categories = \get_the_category( $post->ID );
+
+		if ( ! $categories ) {
+			return '';
+		}
+
+		$hash_tags = array();
+
+		foreach ( $categories as $category ) {
+			$hash_tags[] = \sprintf( '<a rel="tag" class="u-tag u-category" href="%s">#%s</a>', \get_category_link( $category ), $category->slug );
+		}
+
+		return \implode( ' ', $hash_tags );
+	}
+
+	/**
+	 * Adds author to the post/summary content
+	 *
+	 * @return string
+	 */
+	public function get_the_post_author() {
+		$post = $this->post;
+		$name = \get_the_author_meta( 'display_name', $post->post_author );
+
+		if ( ! $name ) {
+			return '';
+		}
+
+		return $name;
+	}
+
+	/**
+	 * Adds author's url to the post/summary content
+	 *
+	 * @return string
+	 */
+	public function get_the_post_profile_url() {
+		$post = $this->post;
+		$url = \get_the_author_meta( 'user_url', $post->post_author );
+
+		if ( ! $url ) {
+			return '';
+		}
+
+		return $url;
+	}
+
+	/**
+	 * Adds the post date/time to the post/summary content
+	 *
+	 * @param string display
+	 *
+	 * @return string
+	 */
+	public function get_the_post_date( $display = 'both' ) {
+		$post = $this->post;
+		$datetime = \get_post_datetime( $post_id );
+		$dateformat = \get_option( 'date_format' );
+		$timeformat = \get_option( 'time_format' );
+
+		switch( $display ) {
+			case 'date':
+				$date = $datetime->format( $dateformat );
+				break;
+			case 'time':
+				$date = $datetime->format( $timeformat );
+				break;
+			default:
+				$date = $datetime->format( $dateformat . ' @ ' . $timeformat );
+				break;
+		}
+
+		if ( ! $date ) {
+			return '';
+		}
+
+		return $date;
+	}
+
 }

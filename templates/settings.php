@@ -7,6 +7,10 @@
 		'welcome' => '',
 	)
 );
+
+$image_sizes = wp_get_registered_image_subsizes();
+$thumnail_size = $image_sizes['thumbnail']['width'] . 'px X ' . $image_sizes['thumbnail']['height'] . 'px';
+
 ?>
 
 <div class="privacy-settings-body hide-if-no-js">
@@ -66,6 +70,17 @@
 										<?php // translators: ?>
 										<li><code>%shortlink%</code> - <?php echo \wp_kses( \__( 'The post\'s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks', 'activitypub' ), 'default' ); ?></li>
 										<li><code>%hashtags%</code> - <?php \esc_html_e( 'The post\'s tags as hashtags.', 'activitypub' ); ?></li>
+										<li><code>%hashcats%</code> - <?php \esc_html_e( 'The post\'s categories as hashtags.', 'activitypub' ); ?></li>
+										<li><code>%image%</code> - <?php \esc_html_e( 'The URL for the post\'s featured image, full size.', 'activitypub' ); ?></li>
+										<li><code>%thumbnail%</code> - <?php echo \wp_kses( sprintf( __( 'The URL for the post\'s featured image thumbnail size (%s).', 'activitypub'), $thumnail_size ), 'default' ); ?></li>
+										<li><code>%author%</code> - <?php \esc_html_e( 'The author\'s name.', 'activitypub' ); ?></li>
+										<li><code>%authorurl%</code> - <?php \esc_html_e( 'The URL to the author\'s profile page.', 'activitypub' ); ?></li>
+										<li><code>%date%</code> - <?php \esc_html_e( 'The post\'s date.', 'activitypub' ); ?></li>
+										<li><code>%time%</code> - <?php \esc_html_e( 'The post\'s time.', 'activitypub' ); ?></li>
+										<li><code>%datetime%</code> - <?php \esc_html_e( 'The post\'s date/time formated as "date @ time".', 'activitypub' ); ?></li>
+										<li><code>%blogurl%</code> - <?php \esc_html_e( 'The URL to the site.', 'activitypub' ); ?></li>
+										<li><code>%blogname%</code> - <?php \esc_html_e( 'The name of the site.', 'activitypub' ); ?></li>
+										<li><code>%blogdesc%</code> - <?php \esc_html_e( 'The description of the site.', 'activitypub' ); ?></li>
 									</ul>
 								</div>
 							</details>
