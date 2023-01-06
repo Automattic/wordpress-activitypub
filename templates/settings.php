@@ -59,13 +59,13 @@
 								<summary><?php esc_html_e( 'See the complete list of template patterns.', 'activitypub' ); ?></summary>
 								<div class="description">
 									<ul>
-										<li><code>%title%</code> - <?php \esc_html_e( 'The Post-Title.', 'activitypub' ); ?></li>
-										<li><code>%content%</code> - <?php \esc_html_e( 'The Post-Content.', 'activitypub' ); ?></li>
-										<li><code>%excerpt%</code> - <?php \esc_html_e( 'The Post-Excerpt (default 400 Chars).', 'activitypub' ); ?></li>
-										<li><code>%permalink%</code> - <?php \esc_html_e( 'The Post-Permalink.', 'activitypub' ); ?></li>
+										<li><code>%title%</code> - <?php \esc_html_e( 'The post\'s title.', 'activitypub' ); ?></li>
+										<li><code>%content%</code> - <?php \esc_html_e( 'The post\'s content.', 'activitypub' ); ?></li>
+										<li><code>%excerpt%</code> - <?php \esc_html_e( 'The post\'s excerpt (default 400 Chars).', 'activitypub' ); ?></li>
+										<li><code>%permalink%</code> - <?php \esc_html_e( 'The post\'s permalink.', 'activitypub' ); ?></li>
 										<?php // translators: ?>
-										<li><code>%shortlink%</code> - <?php echo \wp_kses( \__( 'The Post-Shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks', 'activitypub' ), 'default' ); ?></li>
-										<li><code>%hashtags%</code> - <?php \esc_html_e( 'The Tags as Hashtags.', 'activitypub' ); ?></li>
+										<li><code>%shortlink%</code> - <?php echo \wp_kses( \__( 'The post\'s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks', 'activitypub' ), 'default' ); ?></li>
+										<li><code>%hashtags%</code> - <?php \esc_html_e( 'The post\'s tags as hashtags.', 'activitypub' ); ?></li>
 									</ul>
 								</div>
 							</details>
