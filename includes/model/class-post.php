@@ -314,8 +314,7 @@ class Post {
 	/**
 	 * Adds a backlink to the post/summary content
 	 *
-	 * @param string  $content
-	 * @param WP_Post $post
+	 * @param string  $type
 	 *
 	 * @return string
 	 */
@@ -335,9 +334,6 @@ class Post {
 
 	/**
 	 * Adds all tags as hashtags to the post/summary content
-	 *
-	 * @param string  $content
-	 * @param WP_Post $post
 	 *
 	 * @return string
 	 */
