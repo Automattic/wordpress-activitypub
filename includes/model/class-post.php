@@ -76,7 +76,7 @@ class Post {
 	}
 
 	public function generate_attachments() {
-		$max_images = \apply_filters( 'activitypub_max_images', 3 );
+		$max_images = intval( \apply_filters( 'activitypub_max_images', \get_option( 'activitypub_number_images', ACTIVITYPUB_NUMBER_IMAGES ) ) );
 
 		$images = array();
 
@@ -94,20 +94,22 @@ class Post {
 			$max_images--;
 		}
 		// then list any image attachments
-		$query = new \WP_Query(
-			array(
-				'post_parent' => $id,
-				'post_status' => 'inherit',
-				'post_type' => 'attachment',
-				'post_mime_type' => 'image',
-				'order' => 'ASC',
-				'orderby' => 'menu_order ID',
-				'posts_per_page' => $max_images,
-			)
-		);
-		foreach ( $query->get_posts() as $attachment ) {
-			if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
-				$image_ids[] = $attachment->ID;
+		if ( $max_images > 0 ) {
+			$query = new \WP_Query(
+				array(
+					'post_parent' => $id,
+					'post_status' => 'inherit',
+					'post_type' => 'attachment',
+					'post_mime_type' => 'image',
+					'order' => 'ASC',
+					'orderby' => 'menu_order ID',
+					'posts_per_page' => $max_images,
+				)
+			);
+			foreach ( $query->get_posts() as $attachment ) {
+				if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
+					$image_ids[] = $attachment->ID;
+				}
 			}
 		}
 

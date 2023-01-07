@@ -76,6 +76,26 @@
 				</tr>
 				<tr>
 					<th scope="row">
+						<?php \esc_html_e( 'Number of images', 'activitypub' ); ?>
+					</th>
+					<td>
+						<textarea name="activitypub_number_images" id="activitypub_number_images" rows="1" cols="50" class="large-text"><?php echo esc_html( \get_option( 'activitypub_number_images', ACTIVITYPUB_NUMBER_IMAGES ) ); ?></textarea>
+						<p class="description">
+							<?php
+							echo \wp_kses(
+								\sprintf(
+									// translators:
+									\__( 'The number of images to attach to posts. Default: <code>%s</code>', 'activitypub' ),
+									\esc_html( ACTIVITYPUB_NUMBER_IMAGES )
+								),
+								'default'
+							);
+							?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
 						<?php \esc_html_e( 'Activity-Object-Type', 'activitypub' ); ?>
 					</th>
 					<td>
