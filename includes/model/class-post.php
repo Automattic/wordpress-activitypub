@@ -233,9 +233,9 @@ class Post {
 		$content = \str_replace( '%hashcats%', $this->get_the_post_categories(), $content );
 		$content = \str_replace( '%author%', $this->get_the_post_author(), $content );
 		$content = \str_replace( '%authorurl%', $this->get_the_post_author_url(), $content );
-		$content = \str_replace( '%blogurl%', \bloginfo('url'), $content );
-		$content = \str_replace( '%blogname%', \bloginfo('name'), $content );
-		$content = \str_replace( '%blogdesc%', \bloginfo('description'), $content );
+		$content = \str_replace( '%blogurl%', \get_bloginfo('url'), $content );
+		$content = \str_replace( '%blogname%', \get_bloginfo('name'), $content );
+		$content = \str_replace( '%blogdesc%', \get_bloginfo('description'), $content );
 		$content = \str_replace( '%date%', $this->get_the_post_datetime( 'time' ), $content );
 		$content = \str_replace( '%time%', $this->get_the_post_time( 'date' ), $content );
 		$content = \str_replace( '%datetime%', $this->get_the_post_time( 'both' ), $content );
