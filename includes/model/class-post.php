@@ -76,7 +76,7 @@ class Post {
 	}
 
 	public function generate_attachments() {
-		$max_images = intval( \apply_filters( 'activitypub_max_images', \get_option( 'activitypub_number_images', ACTIVITYPUB_NUMBER_IMAGES ) ) );
+		$max_images = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
 
 		$images = array();
 
