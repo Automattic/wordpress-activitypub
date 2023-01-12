@@ -101,6 +101,9 @@ class Followers {
 		$params['user_id'] = array(
 			'required' => true,
 			'type' => 'integer',
+			'validate_callback' => function( $param, $request, $key ) {
+				return user_can( $param, 'publish_posts' );
+			},
 		);
 
 		return $params;

@@ -38,7 +38,7 @@ $json->manuallyApprovesFollowers = \apply_filters( 'activitypub_json_manually_ap
 $json->publicKey = array(
 	'id' => \get_home_url( '/' ) . '#main-key',
 	'owner' => \get_home_url( '/' ),
-	'publicKeyPem' => \trim(),
+	'publicKeyPem' => '',
 );
 
 $json->tag = array();
