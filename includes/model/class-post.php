@@ -82,7 +82,7 @@ class Post {
 
 		// max images can't be negative or zero
 		if ( $max_images <= 0 ) {
-			$max_images = 1;
+			return $images;
 		}
 
 		$id = $this->post->ID;
@@ -94,22 +94,20 @@ class Post {
 			$max_images--;
 		}
 		// then list any image attachments
-		if ( $max_images > 0 ) {
-			$query = new \WP_Query(
-				array(
-					'post_parent' => $id,
-					'post_status' => 'inherit',
-					'post_type' => 'attachment',
-					'post_mime_type' => 'image',
-					'order' => 'ASC',
-					'orderby' => 'menu_order ID',
-					'posts_per_page' => $max_images,
-				)
-			);
-			foreach ( $query->get_posts() as $attachment ) {
-				if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
-					$image_ids[] = $attachment->ID;
-				}
+		$query = new \WP_Query(
+			array(
+				'post_parent' => $id,
+				'post_status' => 'inherit',
+				'post_type' => 'attachment',
+				'post_mime_type' => 'image',
+				'order' => 'ASC',
+				'orderby' => 'menu_order ID',
+				'posts_per_page' => $max_images,
+			)
+		);
+		foreach ( $query->get_posts() as $attachment ) {
+			if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
+				$image_ids[] = $attachment->ID;
 			}
 		}
 
