@@ -26,6 +26,12 @@ class Post {
 		$this->attachments = $this->generate_attachments();
 		$this->tags        = $this->generate_tags();
 		$this->object_type = $this->generate_object_type();
+
+		$shortcodes = array( 'ap_title', 'ap_excerpt', 'ap_content', 'ap_permalink', 'ap_shortlink', 'ap_hashtags', 'ap_thumbnail', 'ap_image', 'ap_hashcats', 'ap_author', 'ap_authorurl', 'ap_blogurl', 'ap_blogname', 'ap_blogdesc', 'ap_date', 'ap_time', 'ap_datetime' );
+
+		foreach( $shortcodes as $tag ) {
+			add_shortcode( $tag, [ $this, 'shortcode_content' ] );
+		}
 	}
 
 	public function __call( $method, $params ) {
@@ -226,18 +232,88 @@ class Post {
 		return $object_type;
 	}
 
+	public function shortcode_content( $atts, $content, $tag ) {
+		$tag = strtolower( $tag );
+		$post = $this->post;
+
+		switch( $tag ) {
+			case 'ap_title':
+				echo \get_the_title( $post->ID );
+
+				break;
+			case 'ap_excerpt':
+				echo $this->get_the_post_excerpt();
+
+				break;
+			case 'ap_content':
+				echo $this->get_the_post_content();
+
+				break;
+			case 'ap_permalink':
+				echo $this->get_the_post_link( 'permalink' );
+
+				break;
+			case 'ap_shortlink':
+				echo $this->get_the_post_link( 'shortlink' );
+
+				break;
+			case 'ap_hashtags':
+				echo $this->get_the_post_hashtags();
+
+				break;
+			case 'ap_thumbnail':
+				echo $this->get_the_post_image( 'thumbnail' );
+
+				break;
+			case 'ap_image':
+				echo $this->get_the_post_image();
+
+				break;
+			case 'ap_hashcats':
+				echo $this->get_the_post_categories();
+
+				break;
+			case 'ap_author':
+				echo $this->get_the_post_author();
+
+				break;
+			case 'ap_authorurl':
+				echo $this->get_the_post_author_url();
+
+				break;
+			case 'ap_blogurl':
+				echo \get_bloginfo('url');
+
+				break;
+			case 'ap_blogname':
+				echo \get_bloginfo('name');
+
+				break;
+			case 'ap_blogdesc':
+				echo \get_bloginfo('description');
+
+				break;
+			case 'ap_date':
+				echo  $this->get_the_post_date( 'time' );
+
+				break;
+			case 'ap_time':
+				echo $this->get_the_post_date( 'date' );
+
+				break;
+			case 'ap_datetime':
+				echo $this->get_the_post_date( 'both' );
+
+				break;
+		}
+	}
+
 	public function generate_the_content() {
 		$post = $this->post;
 		$content = $this->get_post_content_template();
 
-		$content = \str_replace( '%title%', \get_the_title( $post->ID ), $content );
-		$content = \str_replace( '%excerpt%', $this->get_the_post_excerpt(), $content );
-		$content = \str_replace( '%content%', $this->get_the_post_content(), $content );
-		$content = \str_replace( '%permalink%', $this->get_the_post_link( 'permalink' ), $content );
-		$content = \str_replace( '%shortlink%', $this->get_the_post_link( 'shortlink' ), $content );
-		$content = \str_replace( '%hashtags%', $this->get_the_post_hashtags(), $content );
-		// backwards compatibility
-		$content = \str_replace( '%tags%', $this->get_the_post_hashtags(), $content );
+		// Fill in the shortcodes.
+		$content = do_shortcode( $content );
 
 		$content = \trim( \preg_replace( '/[\r\n]{2,}/', '', $content ) );
 
@@ -255,18 +331,36 @@ class Post {
 
 	public function get_post_content_template() {
 		if ( 'excerpt' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "%excerpt%\n\n<p>%permalink%</p>";
+			return "[ap_excerpt]\n\n<p>[ap_permalink]</p>";
 		}
 
 		if ( 'title' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "<p><strong>%title%</strong></p>\n\n<p>%permalink%</p>";
+			return "<p><strong>[ap_title]</strong></p>\n\n<p>[ap_permalink]</p>";
 		}
 
 		if ( 'content' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "%content%\n\n<p>%hashtags%</p>\n\n<p>%permalink%</p>";
+			return "[ap_content]\n\n<p>[ap_hashtags]</p>\n\n<p>[ap_permalink]</p>";
 		}
 
-		return \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+		// Get the custom template.
+		$content = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+		$old_content = $content;
+
+		// Backwards compatibility, templates are now deprecated convert to shortcodes instead.
+		$content = \str_replace( '%title%', '[ap_title]', $content );
+		$content = \str_replace( '%excerpt%', '[ap_excerpt]', $content );
+		$content = \str_replace( '%content%', '[ap_content]', $content );
+		$content = \str_replace( '%permalink%', '[ap_permalink]', $content );
+		$content = \str_replace( '%shortlink%', '[ap_shortlink]', $content );
+		$content = \str_replace( '%hashtags%', '[ap_hashtags]', $content );
+		$content = \str_replace( '%tags%', '[ap_hashtags]', $content );
+
+		// Store the new template if required.
+		if( $content != $old_content ) {
+			\update_option( 'activitypub_custom_post_content', $content );
+		}
+
+		return $content;
 	}
 
 	/**
@@ -322,8 +416,7 @@ class Post {
 	/**
 	 * Adds a backlink to the post/summary content
 	 *
-	 * @param string  $content
-	 * @param WP_Post $post
+	 * @param string  $type
 	 *
 	 * @return string
 	 */
@@ -344,9 +437,6 @@ class Post {
 	/**
 	 * Adds all tags as hashtags to the post/summary content
 	 *
-	 * @param string  $content
-	 * @param WP_Post $post
-	 *
 	 * @return string
 	 */
 	public function get_the_post_hashtags() {
@@ -365,4 +455,112 @@ class Post {
 
 		return \implode( ' ', $hash_tags );
 	}
+
+	/**
+	 * Adds the featured image url to the post/summary content
+	 *
+	 * @param string  $size
+	 *
+	 * @return string
+	 */
+	public function get_the_post_image( $size = 'full' ) {
+		$post = $this->post;
+
+		if( $size == '' ) { $size = 'full'; }
+
+		$image = \get_the_post_thumbnail_url( $post->ID, $size );
+
+		if ( ! $image ) {
+			return '';
+		}
+
+		return $image;
+	}
+
+	/**
+	 * Adds all categories as hashtags to the post/summary content
+	 *
+	 * @return string
+	 */
+	public function get_the_post_categories() {
+		$post = $this->post;
+		$categories = \get_the_category( $post->ID );
+
+		if ( ! $categories ) {
+			return '';
+		}
+
+		$hash_tags = array();
+
+		foreach ( $categories as $category ) {
+			$hash_tags[] = \sprintf( '<a rel="tag" class="u-tag u-category" href="%s">#%s</a>', \get_category_link( $category ), $category->slug );
+		}
+
+		return \implode( ' ', $hash_tags );
+	}
+
+	/**
+	 * Adds author to the post/summary content
+	 *
+	 * @return string
+	 */
+	public function get_the_post_author() {
+		$post = $this->post;
+		$name = \get_the_author_meta( 'display_name', $post->post_author );
+
+		if ( ! $name ) {
+			return '';
+		}
+
+		return $name;
+	}
+
+	/**
+	 * Adds author's url to the post/summary content
+	 *
+	 * @return string
+	 */
+	public function get_the_post_profile_url() {
+		$post = $this->post;
+		$url = \get_the_author_meta( 'user_url', $post->post_author );
+
+		if ( ! $url ) {
+			return '';
+		}
+
+		return $url;
+	}
+
+	/**
+	 * Adds the post date/time to the post/summary content
+	 *
+	 * @param string display
+	 *
+	 * @return string
+	 */
+	public function get_the_post_date( $display = 'both' ) {
+		$post = $this->post;
+		$datetime = \get_post_datetime( $post );
+		$dateformat = \get_option( 'date_format' );
+		$timeformat = \get_option( 'time_format' );
+
+		switch( $display ) {
+			case 'date':
+				$date = $datetime->format( $dateformat );
+				break;
+			case 'time':
+				$date = $datetime->format( $timeformat );
+				break;
+			default:
+				$date = $datetime->format( $dateformat . ' @ ' . $timeformat );
+				break;
+		}
+
+		if ( ! $date ) {
+			return '';
+		}
+
+		return $date;
+	}
+
 }
