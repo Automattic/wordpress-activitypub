@@ -309,24 +309,24 @@ class Post {
 		$current_excerpt_length = strlen( $excerpt );
 
 		// Setup a variable to keep track of our target length.
-		$target_excerpt_length = $current_excerpt_length - $excerpt_more_len;
+		$target_excerpt_length = $excerpt_length - $excerpt_more_len;
 
 		// Setup a variable to keep track of the current max length.
-		$current_expcerpt_max = $target_excerpt_length;
+		$current_excerpt_max = $target_excerpt_length;
 
 		// This is a loop since we can't calculate word break the string after 'the_excpert' filter has run (we would break
 		// all kinds of html tags), so we have to cut the excerpt down a bit at a time until we hit our target length.
-		while( $current_excerpt_length > $target_excerpt_length && $current_expcerpt_max > 0 ) {
+		while( $current_excerpt_length > $target_excerpt_length && $current_excerpt_max > 0 ) {
 			// Trim the excerpt based on wordwrap() positioning.
 			// Note: we're using <br> as the linebreak just in case there are any newlines existing in the excerpt from the user.
 			//       There won't be any <br> left after we've run wp_strip_all_tags() in the code above, so they're
 			//       safe to use here.  It won't be included in the final excerpt as the substr() will trim it off.
-			$excerpt = substr( $excerpt, 0, strpos( wordwrap( $excerpt, $current_expcerpt_max, '<br>' ), '<br>' ) );
+			$excerpt = substr( $excerpt, 0, strpos( wordwrap( $excerpt, $current_excerpt_max, '<br>' ), '<br>' ) );
 
 			// If something went wrong, or we're in a language that wordwrap() doesn't understand,
 			// just chop it off and don't worry about breaking in the middle of a word.
 			if( strlen( $excerpt ) > $excerpt_length - $excerpt_more_len ) {
-				$excerpt = substr( $excerpt, 0, $current_expcerpt_max );
+				$excerpt = substr( $excerpt, 0, $current_excerpt_max );
 			}
 
 			// Add in the more indicator.
@@ -341,7 +341,7 @@ class Post {
 			// Check to see if we're over the target length.
 			if( $current_excerpt_length > $target_excerpt_length ) {
 				// If so, remove 20 characters from the current max and run the loop again.
-				$current_expcerpt_max = $current_expcerpt_max - 20;
+				$current_excerpt_max = $current_excerpt_max - 20;
 			}
 		}
 
