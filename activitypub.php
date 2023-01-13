@@ -19,6 +19,7 @@ namespace Activitypub;
  * Initialize plugin
  */
 function init() {
+	\defined( 'ACTIVITYPUB_EXCERPT_LENGTH' ) || \define( 'ACTIVITYPUB_EXCERPT_LENGTH', 400 );
 	\defined( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS' ) || \define( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS', 3 );
 	\defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))' );
 	\defined( 'ACTIVITYPUB_ALLOWED_HTML' ) || \define( 'ACTIVITYPUB_ALLOWED_HTML', '<strong><a><p><ul><ol><li><code><blockquote><pre><img>' );

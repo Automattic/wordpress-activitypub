@@ -242,7 +242,15 @@ class Post {
 
 				break;
 			case 'ap_excerpt':
-				echo $this->get_the_post_excerpt();
+				$length = ACTIVITYPUB_EXCERPT_LENGTH;
+
+				if( is_array( $atts ) && array_key_exists( 'length', $atts ) ) {
+					$length = intval( $atts['length'] );
+				}
+
+				if( $length == 0 ) { $length = ACTIVITYPUB_EXCERPT_LENGTH; }
+
+				echo $this->get_the_post_excerpt( $length );
 
 				break;
 			case 'ap_content':
@@ -370,7 +378,7 @@ class Post {
 	 *
 	 * @return string The excerpt.
 	 */
-	public function get_the_post_excerpt( $excerpt_length = 400 ) {
+	public function get_the_post_excerpt( $excerpt_length = ACTIVITYPUB_EXCERPT_LENGTH ) {
 		$post = $this->post;
 
 		$excerpt = \get_post_field( 'post_excerpt', $post );
