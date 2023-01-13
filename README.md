@@ -88,6 +88,10 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
+### v.next ###
+
+* Add configuration item for number of images to attach. props [@mexon](https://github.com/mexon)
+
 ### 0.15.0 ###
 
 * Enable ActivityPub only for users that can `publish_posts`
