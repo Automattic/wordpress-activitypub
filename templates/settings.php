@@ -79,7 +79,7 @@
 						<?php \esc_html_e( 'Number of images', 'activitypub' ); ?>
 					</th>
 					<td>
-						<textarea name="activitypub_max_image_attachments" id="activitypub_max_image_attachments" rows="1" cols="50" class="large-text"><?php echo esc_html( \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ); ?></textarea>
+						<input value="<?php echo esc_attr( \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ); ?>" name="activitypub_max_image_attachments" id="activitypub_max_image_attachments" type="number" min="0" />
 						<p class="description">
 							<?php
 							echo \wp_kses(
