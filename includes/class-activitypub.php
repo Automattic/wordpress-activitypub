@@ -46,11 +46,11 @@ class Activitypub {
 		}
 
 		if ( \is_author() ) {
-			$json_template = \dirname( __FILE__ ) . '/../templates/author-json.php';
+			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/author-json.php';
 		} elseif ( \is_singular() ) {
-			$json_template = \dirname( __FILE__ ) . '/../templates/post-json.php';
+			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
 		} elseif ( \is_home() ) {
-			$json_template = \dirname( __FILE__ ) . '/../templates/blog-json.php';
+			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
 		global $wp_query;
