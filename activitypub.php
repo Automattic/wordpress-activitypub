@@ -116,6 +116,8 @@ function add_rewrite_rules() {
 		\add_rewrite_rule( '^.well-known/nodeinfo', 'index.php?rest_route=/activitypub/1.0/nodeinfo/discovery', 'top' );
 		\add_rewrite_rule( '^.well-known/x-nodeinfo2', 'index.php?rest_route=/activitypub/1.0/nodeinfo2', 'top' );
 	}
+
+	\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 }
 \add_action( 'init', '\Activitypub\add_rewrite_rules', 1 );
 
