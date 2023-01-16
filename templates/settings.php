@@ -132,11 +132,11 @@
 				</tr>
 				<tr>
 					<th scope="row">
-						<?php \esc_html_e( 'Hashtags', 'activitypub' ); ?>
+						<?php \esc_html_e( 'Hashtags (beta)', 'activitypub' ); ?>
 					</th>
 					<td>
 						<p>
-							<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag-link.', 'activitypub' ), 'default' ); ?></label>
+							<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag-link. <strong>This feature is experimental! Please disable it, if you find any HTML or CSS errors.</strong>', 'activitypub' ), 'default' ); ?></label>
 						</p>
 					</td>
 				</tr>
