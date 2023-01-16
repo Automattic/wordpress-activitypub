@@ -234,6 +234,14 @@ class Post {
 		return $object_type;
 	}
 
+	/**
+	 * Outputs the shortcode content.
+	 *
+	 * @param array $atts the attributes of the shortcode
+	 * @param string $content the content between opening and closing shortcodes
+	 * @param string $tag the name of the shortcode being processed
+	 *
+	 */
 	public function shortcode_content( $atts, $content, $tag ) {
 		$tag = strtolower( $tag );
 		$post = $this->post;
@@ -318,6 +326,11 @@ class Post {
 		}
 	}
 
+	/**
+	 * Generates the content for the activitypub item.
+	 *
+	 * @return string the content
+	 */
 	public function generate_the_content() {
 		$post = $this->post;
 		$content = $this->get_post_content_template();
@@ -339,6 +352,11 @@ class Post {
 		return $decoded_content;
 	}
 
+	/**
+	 * Gets the template to use to generate the content of the activitypub item.
+	 *
+	 * @return string the template
+	 */
 	public function get_post_content_template() {
 		if ( 'excerpt' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
 			return "[ap_excerpt]\n\n<p>[ap_permalink]</p>";
@@ -352,11 +370,32 @@ class Post {
 			return "[ap_content]\n\n<p>[ap_hashtags]</p>\n\n<p>[ap_permalink]</p>";
 		}
 
-		// Get the custom template.
-		$content = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
-		$old_content = $content;
+		// Upgrade from old template codes to shortcodes.
+		$content = $this->upgrade_post_content_template();
 
-		// Backwards compatibility, templates are now deprecated convert to shortcodes instead.
+		return $content;
+	}
+
+	/**
+	 * Updates the custom template to use shortcodes instead of the deprecated templates.
+	 *
+	 * @return string the updated template content
+	 */
+	public function upgrade_post_content_template() {
+		// Get the custom template.
+		$old_content = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+
+		// If the old content exists but is a blank string, we're going to need a flag to updated it even
+		// after setting it to the default contents.
+		$need_update = false;
+
+		// If the old contents is blank, use the defaults.
+		if( $old_content == "" ) { $old_content = ACTIVITYPUB_CUSTOM_POST_CONTENT; $need_update = true; }
+
+		// Set the new content to be the old content.
+		$content = $old_content;
+
+		// Convert old templates to shortcodes.
 		$content = \str_replace( '%title%', '[ap_title]', $content );
 		$content = \str_replace( '%excerpt%', '[ap_excerpt]', $content );
 		$content = \str_replace( '%content%', '[ap_content]', $content );
@@ -366,7 +405,7 @@ class Post {
 		$content = \str_replace( '%tags%', '[ap_hashtags]', $content );
 
 		// Store the new template if required.
-		if( $content != $old_content ) {
+		if( $content != $old_content || $need_update ) {
 			\update_option( 'activitypub_custom_post_content', $content );
 		}
 
