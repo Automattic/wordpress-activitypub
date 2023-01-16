@@ -302,7 +302,7 @@ class Post {
 
 		/** This filter is documented in wp-includes/formatting.php */
 		$excerpt_more = \apply_filters( 'excerpt_more', ' [...]' );
-		$excerpt_more_len = strlen( $excerpt_more  );
+		$excerpt_more_len = strlen( $excerpt_more );
 
 		// We now have a excerpt, but we need to check it's length, it may be longer than we want for two reasons:
 		//
@@ -324,7 +324,7 @@ class Post {
 
 		// This is a loop since we can't calculate word break the string after 'the_excpert' filter has run (we would break
 		// all kinds of html tags), so we have to cut the excerpt down a bit at a time until we hit our target length.
-		while( $current_excerpt_length > $target_excerpt_length && $current_excerpt_max > 0 ) {
+		while ( $current_excerpt_length > $target_excerpt_length && $current_excerpt_max > 0 ) {
 			// Trim the excerpt based on wordwrap() positioning.
 			// Note: we're using <br> as the linebreak just in case there are any newlines existing in the excerpt from the user.
 			//       There won't be any <br> left after we've run wp_strip_all_tags() in the code above, so they're
@@ -333,7 +333,7 @@ class Post {
 
 			// If something went wrong, or we're in a language that wordwrap() doesn't understand,
 			// just chop it off and don't worry about breaking in the middle of a word.
-			if( strlen( $excerpt ) > $excerpt_length - $excerpt_more_len ) {
+			if ( strlen( $excerpt ) > $excerpt_length - $excerpt_more_len ) {
 				$excerpt = substr( $excerpt, 0, $current_excerpt_max );
 			}
 
@@ -347,7 +347,7 @@ class Post {
 			$current_excerpt_length = strlen( $excerpt_filtered );
 
 			// Check to see if we're over the target length.
-			if( $current_excerpt_length > $target_excerpt_length ) {
+			if ( $current_excerpt_length > $target_excerpt_length ) {
 				// If so, remove 20 characters from the current max and run the loop again.
 				$current_excerpt_max = $current_excerpt_max - 20;
 			}
