@@ -230,7 +230,6 @@ class Post {
 		$post = $this->post;
 		$content = $this->get_post_content_template();
 
-		global $post;
 		setup_postdata( $post );
 		$content = do_shortcode( $content );
 		wp_reset_postdata();
