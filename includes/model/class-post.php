@@ -230,6 +230,11 @@ class Post {
 		$post = $this->post;
 		$content = $this->get_post_content_template();
 
+		global $post;
+		setup_postdata( $post );
+		$content = do_shortcode( $content );
+		wp_reset_postdata();
+
 		$content = \str_replace( '%title%', \get_the_title( $post->ID ), $content );
 		$content = \str_replace( '%excerpt%', $this->get_the_post_excerpt(), $content );
 		$content = \str_replace( '%content%', $this->get_the_post_content(), $content );

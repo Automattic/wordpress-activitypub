@@ -76,6 +76,9 @@ function init() {
 	require_once \dirname( __FILE__ ) . '/includes/class-health-check.php';
 	\Activitypub\Health_Check::init();
 
+	require_once \dirname( __FILE__ ) . '/includes/class-shortcode.php';
+	\Activitypub\Shortcode::init();
+
 	require_once \dirname( __FILE__ ) . '/includes/rest/class-server.php';
 	\add_filter(
 		'wp_rest_server_class',
