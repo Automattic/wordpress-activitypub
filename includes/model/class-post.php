@@ -17,15 +17,17 @@ class Post {
 	private $object_type;
 
 	public function __construct( $post = null ) {
-		$this->post = \get_post( $post );
+		if( $post ) {
+			$this->post = \get_post( $post );
 
-		$this->post_author = $this->post->post_author;
-		$this->id          = $this->generate_id();
-		$this->summary     = $this->generate_the_title();
-		$this->content     = $this->generate_the_content();
-		$this->attachments = $this->generate_attachments();
-		$this->tags        = $this->generate_tags();
-		$this->object_type = $this->generate_object_type();
+			$this->post_author = $this->post->post_author;
+			$this->id          = $this->generate_id();
+			$this->summary     = $this->generate_the_title();
+			$this->content     = $this->generate_the_content();
+			$this->attachments = $this->generate_attachments();
+			$this->tags        = $this->generate_tags();
+			$this->object_type = $this->generate_object_type();
+		}
 
 		$shortcodes = array( 'ap_title', 'ap_excerpt', 'ap_content', 'ap_permalink', 'ap_shortlink', 'ap_hashtags', 'ap_thumbnail', 'ap_image', 'ap_hashcats', 'ap_author', 'ap_authorurl', 'ap_blogurl', 'ap_blogname', 'ap_blogdesc', 'ap_date', 'ap_time', 'ap_datetime' );
 
