@@ -22,7 +22,7 @@ class Activitypub {
 			\add_post_type_support( $post_type, 'activitypub' );
 		}
 
-		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
+		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 33, 3 );
 		\add_action( 'wp_trash_post', array( '\Activitypub\Activitypub', 'trash_post' ), 1 );
 		\add_action( 'untrash_post', array( '\Activitypub\Activitypub', 'untrash_post' ), 1 );
 	}
