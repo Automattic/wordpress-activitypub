@@ -29,11 +29,6 @@ class Post {
 			$this->object_type = $this->generate_object_type();
 		}
 
-		$shortcodes = array( 'ap_title', 'ap_excerpt', 'ap_content', 'ap_permalink', 'ap_shortlink', 'ap_hashtags', 'ap_thumbnail', 'ap_image', 'ap_hashcats', 'ap_author', 'ap_authorurl', 'ap_blogurl', 'ap_blogname', 'ap_blogdesc', 'ap_date', 'ap_time', 'ap_datetime' );
-
-		foreach( $shortcodes as $tag ) {
-			add_shortcode( $tag, [ $this, 'shortcode_content' ] );
-		}
 	}
 
 	public function __call( $method, $params ) {
@@ -246,9 +241,11 @@ class Post {
 		$tag = strtolower( $tag );
 		$post = $this->post;
 
+		$text = '';
+
 		switch( $tag ) {
 			case 'ap_title':
-				echo \get_the_title( $post->ID );
+				$text = \get_the_title( $post->ID );
 
 				break;
 			case 'ap_excerpt':
@@ -260,70 +257,72 @@ class Post {
 
 				if( $length == 0 ) { $length = ACTIVITYPUB_EXCERPT_LENGTH; }
 
-				echo $this->get_the_post_excerpt( $length );
+				$text = $this->get_the_post_excerpt( $length );
 
 				break;
 			case 'ap_content':
-				echo $this->get_the_post_content();
+				$text = $this->get_the_post_content();
 
 				break;
 			case 'ap_permalink':
-				echo $this->get_the_post_link( 'permalink' );
+				$text = $this->get_the_post_link( 'permalink' );
 
 				break;
 			case 'ap_shortlink':
-				echo $this->get_the_post_link( 'shortlink' );
+				$text = $this->get_the_post_link( 'shortlink' );
 
 				break;
 			case 'ap_hashtags':
-				echo $this->get_the_post_hashtags();
+				$text = $this->get_the_post_hashtags();
 
 				break;
 			case 'ap_thumbnail':
-				echo $this->get_the_post_image( 'thumbnail' );
+				$text = $this->get_the_post_image( 'thumbnail' );
 
 				break;
 			case 'ap_image':
-				echo $this->get_the_post_image();
+				$text = $this->get_the_post_image();
 
 				break;
 			case 'ap_hashcats':
-				echo $this->get_the_post_categories();
+				$text = $this->get_the_post_categories();
 
 				break;
 			case 'ap_author':
-				echo $this->get_the_post_author();
+				$text = $this->get_the_post_author();
 
 				break;
 			case 'ap_authorurl':
-				echo $this->get_the_post_author_url();
+				$text = $this->get_the_post_author_url();
 
 				break;
 			case 'ap_blogurl':
-				echo \get_bloginfo('url');
+				$text = \get_bloginfo('url');
 
 				break;
 			case 'ap_blogname':
-				echo \get_bloginfo('name');
+				$text = \get_bloginfo('name');
 
 				break;
 			case 'ap_blogdesc':
-				echo \get_bloginfo('description');
+				$text = \get_bloginfo('description');
 
 				break;
 			case 'ap_date':
-				echo  $this->get_the_post_date( 'time' );
+				$text =  $this->get_the_post_date( 'time' );
 
 				break;
 			case 'ap_time':
-				echo $this->get_the_post_date( 'date' );
+				$text = $this->get_the_post_date( 'date' );
 
 				break;
 			case 'ap_datetime':
-				echo $this->get_the_post_date( 'both' );
+				$text = $this->get_the_post_date( 'both' );
 
 				break;
 		}
+
+		return $text;
 	}
 
 	/**
@@ -334,6 +333,12 @@ class Post {
 	public function generate_the_content() {
 		$post = $this->post;
 		$content = $this->get_post_content_template();
+
+		$shortcodes = array( 'ap_title', 'ap_excerpt', 'ap_content', 'ap_permalink', 'ap_shortlink', 'ap_hashtags', 'ap_thumbnail', 'ap_image', 'ap_hashcats', 'ap_author', 'ap_authorurl', 'ap_blogurl', 'ap_blogname', 'ap_blogdesc', 'ap_date', 'ap_time', 'ap_datetime' );
+
+		foreach( $shortcodes as $tag ) {
+			add_shortcode( $tag, [ $this, 'shortcode_content' ] );
+		}
 
 		// Fill in the shortcodes.
 		$content = do_shortcode( $content );
