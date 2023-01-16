@@ -13,7 +13,6 @@ class Activitypub {
 	public static function init() {
 		\add_filter( 'template_include', array( '\Activitypub\Activitypub', 'render_json_template' ), 99 );
 		\add_filter( 'query_vars', array( '\Activitypub\Activitypub', 'add_query_vars' ) );
-		\add_action( 'init', array( '\Activitypub\Activitypub', 'add_rewrite_endpoint' ) );
 		\add_filter( 'pre_get_avatar_data', array( '\Activitypub\Activitypub', 'pre_get_avatar_data' ), 11, 2 );
 
 		// Add support for ActivityPub to custom post types
@@ -94,13 +93,6 @@ class Activitypub {
 		$vars[] = 'activitypub';
 
 		return $vars;
-	}
-
-	/**
-	 * Add our rewrite endpoint to permalinks and pages.
-	 */
-	public static function add_rewrite_endpoint() {
-		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 	}
 
 	/**
