@@ -164,10 +164,12 @@ class Admin {
 		<h2 id="activitypub"><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h2>
 		<?php
 		\Activitypub\get_identifier_settings( $user->ID );
+
+		\Activitypub\get_followers_settings( $user->ID );
 	}
 
 	public static function enqueue_scripts( $hook_suffix ) {
-		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
+		if ( false !== strpos( $hook_suffix, 'activitypub' ) || false !== strpos( $hook_suffix, 'profile.php' ) ) {
 			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), '1.0.0' );
 			wp_enqueue_script( 'activitypub-admin-styles', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), '1.0.0', false );
 		}

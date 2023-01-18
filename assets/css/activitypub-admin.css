@@ -139,3 +139,16 @@ summary {
 	outline: 2px solid #2271b1;
 	background-color: #f6f7f7;
 }
+
+div.activitypub-followers-table > form > table > tfoot > tr > th.column-avatar,
+div.activitypub-followers-table > form > table > thead > tr > th.column-avatar,
+div.activitypub-followers-table > form > table > tbody > tr > td.column-avatar {
+	width: 6em;
+	text-align: center;
+}
+
+div.activitypub-followers-table > form > table > tbody > tr > td.column-avatar > span {
+	height: 60px;
+	width: 60px;
+	font-size: 60px;
+}

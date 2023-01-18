@@ -248,6 +248,24 @@ function get_identifier_settings( $user_id ) {
 	<?php
 }
 
+function get_followers_settings( $user_id ) {
+	?>
+<table class="form-table">
+	<tbody>
+		<tr>
+			<th scope="row">
+				<label><?php \esc_html_e( 'Followers', 'activitypub' ); ?></label>
+			</th>
+			<td>
+				<p><?php \printf( \esc_html__( 'You currently have %s%s%s followers.', 'activitypub' ), '<a href=" ' . get_admin_url() . 'users.php?page=activitypub-followers-list">', \esc_attr( \Activitypub\Peer\Followers::count_followers( \get_current_user_id() ) ), '</a>' ); ?></p>
+			</td>
+		</tr>
+	</tbody>
+</table>
+	<?php
+
+}
+
 function get_followers( $user_id ) {
 	$followers = \Activitypub\Peer\Followers::get_followers( $user_id );
 
