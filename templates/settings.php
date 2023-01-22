@@ -9,7 +9,15 @@
 );
 
 $image_sizes = wp_get_registered_image_subsizes();
-$thumnail_size = $image_sizes['thumbnail']['width'] . 'x' . $image_sizes['thumbnail']['height'] . ' px';
+$thumbnail_size = $image_sizes['thumbnail']['width'] . 'x' . $image_sizes['thumbnail']['height'] . ' px';
+$registered_sizes = '';
+
+foreach( $image_sizes as $name => $size ) {
+	$registered_sizes .= $name . ', ';
+}
+
+$registered_sizes = trim( $registered_sizes, ', ' );
+$registered_sizes .= '.';
 
 ?>
 
@@ -73,8 +81,8 @@ $thumnail_size = $image_sizes['thumbnail']['width'] . 'x' . $image_sizes['thumbn
 										<li><code>[ap_shortlink]</code> - <?php echo \wp_kses( \__( 'The post\'s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks', 'activitypub' ), 'default' ); ?></li>
 										<li><code>[ap_hashtags]</code> - <?php \esc_html_e( 'The post\'s tags as hashtags.', 'activitypub' ); ?></li>
 										<li><code>[ap_hashcats]</code> - <?php \esc_html_e( 'The post\'s categories as hashtags.', 'activitypub' ); ?></li>
-										<li><code>[ap_image]</code> - <?php \esc_html_e( 'The URL for the post\'s featured image, full size.', 'activitypub' ); ?></li>
-										<li><code>[ap_thumbnail]</code> - <?php echo \wp_kses( sprintf( __( 'The URL for the post\'s featured image thumbnail size (%s).', 'activitypub'), $thumnail_size ), 'default' ); ?></li>
+										<li><code>[ap_image <i>size=xxx</i>]</code> - <?php \esc_html_e( 'The URL for the post\'s featured image, defaults to full size.  The size attribute can be any of the following: ', 'activitypub' ); echo esc_html( $registered_sizes ); ?></li>
+										<li><code>[ap_thumbnail]</code> - <?php echo \wp_kses( sprintf( __( 'The URL for the post\'s featured image thumbnail size (%s).', 'activitypub'), $thumbnail_size ), 'default' ); ?></li>
 										<li><code>[ap_author]</code> - <?php \esc_html_e( 'The author\'s name.', 'activitypub' ); ?></li>
 										<li><code>[ap_authorurl]</code> - <?php \esc_html_e( 'The URL to the author\'s profile page.', 'activitypub' ); ?></li>
 										<li><code>[ap_date]</code> - <?php \esc_html_e( 'The post\'s date.', 'activitypub' ); ?></li>

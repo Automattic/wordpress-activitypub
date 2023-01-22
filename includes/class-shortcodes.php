@@ -257,7 +257,19 @@ class Shortcodes {
 			return '';
 		}
 
-		$image = \get_the_post_thumbnail_url( $this->post->ID, 'full' );
+		$size = 'full';
+
+		if( is_array( $atts ) && array_key_exists( 'size', $atts ) ) {
+			$registered_sizes = wp_get_registered_image_subsizes();
+
+			if( array_key_exists( $atts['size'], $registered_sizes ) ) {
+				$size = intval( $atts['size'] );
+			}
+		}
+
+		if( ! $size ) { $size = 'full'; }
+
+		$image = \get_the_post_thumbnail_url( $this->post->ID, $size );
 
 		if ( ! $image ) {
 			return '';
