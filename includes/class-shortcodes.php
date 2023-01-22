@@ -2,8 +2,18 @@
 namespace Activitypub;
 
 class Shortcodes {
+	/**
+	 * The post object we're currently working on
+	 *
+	 * @var WP_Post  $post    A WordPress Post Object
+	 */
 	private $post;
 
+	/**
+	 * Class constructor, registering WordPress then shortcodes
+	 *
+	 * @param WP_Post  $post    A WordPress Post Object
+	 */
 	public function __construct( $post = null ) {
 		if( $post == null ) {
 			$post = \get_post();
@@ -16,7 +26,7 @@ class Shortcodes {
 		}
 
 		foreach( get_class_methods( $this ) as $shortcode ) {
-			if( $shortcode != 'init' && strpos( $shortcode, '__' ) !== 0 ) {
+			if( strpos( $shortcode, '__' ) !== 0 ) {
 				add_shortcode( 'ap_' . $shortcode, array( $this, $shortcode ) );
 			}
 		}
