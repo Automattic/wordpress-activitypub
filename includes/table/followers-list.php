@@ -40,15 +40,20 @@ class Followers_List extends \WP_List_Table {
 
 		$this->items = array();
 
+		$dateformat = \get_option( 'date_format' );
+		$timeformat = \get_option( 'time_format' );
+		$dtformat = $dateformat . ' @ ' . $timeformat;
+
 		foreach ( \Activitypub\Peer\Followers::get_followers_extended( \get_current_user_id(), $per_page, ( $current_page - 1 ) * $per_page ) as $follower ) {
+
 			$this->items[] = array(
 									//'avatar'     => '<span class="dashicons dashicons-admin-users"></span>',
 									'avatar'     => '<img class="activitypub-avatar" src="' . \esc_attr( $follower['avatar'] ) . '">',
-									'identifier' => \esc_attr( $follower['follower'] ),
+									'identifier' => '<a href="' . \esc_attr( $follower['follower'] ) . '" target="_blank">' . \esc_attr( $follower['follower'] ) . '</a>',
 									'name'       => \esc_attr( $follower['name'] ),
 									'desc'       => \esc_attr( $follower['description'] ),
-									'service'    => \esc_attr( $follower['service'] ),
-									'since'      => \esc_attr( $follower['since'] ),
+									'service'    => '<a href="https://' . \esc_attr( $follower['server'] ) . '" target="_blank">' . \esc_attr( $follower['service'] ) . ' (' . \esc_attr( $follower['version'] ) . ')</a>',
+									'since'      => \esc_attr( wp_date( $dtformat, strtotime( $follower['since'] ) ) ) ,
 									'is_bot'     => $follower['is_bot'] ? __('Yes', 'activitypub') : __('No', 'activitypub'),
 								);
 		}
