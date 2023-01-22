@@ -10,7 +10,11 @@ class Followers_List extends \WP_List_Table {
 		return array(
 			'avatar' => \__( 'Avatar', 'activitypub' ),
 			'identifier' => \__( 'Identifier', 'activitypub' ),
+			'name' => \__( 'Name', 'activitypub' ),
+			'desc' => \__( 'Description', 'activitypub' ),
 			'service' => \__( 'From Service', 'activitypub' ),
+			'since' => \__( 'Since', 'activitypub' ),
+			'bot' => \__( 'Is Bot?', 'activitypub' ),
 		);
 	}
 
@@ -21,10 +25,10 @@ class Followers_List extends \WP_List_Table {
 					);
 	}
 
-
 	public function no_items() {
   		_e( 'No followers found.' );
 	}
+
 	public function prepare_items() {
 		$columns = $this->get_columns();
 		$hidden  = array();
