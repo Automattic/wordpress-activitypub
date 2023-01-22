@@ -13,7 +13,6 @@ class Activitypub {
 	public static function init() {
 		\add_filter( 'template_include', array( '\Activitypub\Activitypub', 'render_json_template' ), 99 );
 		\add_filter( 'query_vars', array( '\Activitypub\Activitypub', 'add_query_vars' ) );
-		\add_action( 'init', array( '\Activitypub\Activitypub', 'add_rewrite_endpoint' ) );
 		\add_filter( 'pre_get_avatar_data', array( '\Activitypub\Activitypub', 'pre_get_avatar_data' ), 11, 2 );
 
 		// Add support for ActivityPub to custom post types
@@ -23,7 +22,7 @@ class Activitypub {
 			\add_post_type_support( $post_type, 'activitypub' );
 		}
 
-		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
+		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 33, 3 );
 		\add_action( 'wp_trash_post', array( '\Activitypub\Activitypub', 'trash_post' ), 1 );
 		\add_action( 'untrash_post', array( '\Activitypub\Activitypub', 'untrash_post' ), 1 );
 	}
@@ -94,13 +93,6 @@ class Activitypub {
 		$vars[] = 'activitypub';
 
 		return $vars;
-	}
-
-	/**
-	 * Add our rewrite endpoint to permalinks and pages.
-	 */
-	public static function add_rewrite_endpoint() {
-		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 	}
 
 	/**
