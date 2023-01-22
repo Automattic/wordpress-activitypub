@@ -12,8 +12,7 @@ class Mastodon {
 	/**
 	 * Returns a user's profile info
 	 *
-	 * @param string $server    Name of the server
-	 * @param string $account   Name of the user
+	 * @param string $follower   The follower to retrieve the profile data for.
 	 *
 	 * @return WP_Error|array   A WP_Error object if an error occurs, or an array of the decoded json profile
 	 */
