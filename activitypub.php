@@ -30,6 +30,7 @@ function init() {
 	require_once \dirname( __FILE__ ) . '/includes/table/followers-list.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-webfinger.php';
+	require_once \dirname( __FILE__ ) . '/includes/class-nodeinfo.php';
 	require_once \dirname( __FILE__ ) . '/includes/peer/class-followers.php';
 	require_once \dirname( __FILE__ ) . '/includes/functions.php';
 
