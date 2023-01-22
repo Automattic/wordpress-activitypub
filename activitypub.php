@@ -28,6 +28,7 @@ function init() {
 	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
 
+	require_once \dirname( __FILE__ ) . '/includes/class-shortcodes.php';
 	require_once \dirname( __FILE__ ) . '/includes/table/followers-list.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-webfinger.php';
