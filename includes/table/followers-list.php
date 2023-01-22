@@ -14,7 +14,7 @@ class Followers_List extends \WP_List_Table {
 			'desc' => \__( 'Description', 'activitypub' ),
 			'service' => \__( 'From Service', 'activitypub' ),
 			'since' => \__( 'Since', 'activitypub' ),
-			'bot' => \__( 'Is Bot?', 'activitypub' ),
+			'is_bot' => \__( 'Is Bot?', 'activitypub' ),
 		);
 	}
 
@@ -40,10 +40,16 @@ class Followers_List extends \WP_List_Table {
 
 		$this->items = array();
 
-		foreach ( \Activitypub\Peer\Followers::get_followers( \get_current_user_id() ) as $follower ) {
-			$this->items[] = array( 'avatar'     => '<span class="dashicons dashicons-admin-users"></span>',
-									'identifier' => \esc_attr( $follower ),
-									'service'    => __( 'Unknown', 'activitypub' ),
+		foreach ( \Activitypub\Peer\Followers::get_followers_extended( \get_current_user_id(), $per_page, ( $current_page - 1 ) * $per_page ) as $follower ) {
+			$this->items[] = array(
+									//'avatar'     => '<span class="dashicons dashicons-admin-users"></span>',
+									'avatar'     => '<img class="activitypub-avatar" src="' . \esc_attr( $follower['avatar'] ) . '">',
+									'identifier' => \esc_attr( $follower['follower'] ),
+									'name'       => \esc_attr( $follower['name'] ),
+									'desc'       => \esc_attr( $follower['description'] ),
+									'service'    => \esc_attr( $follower['service'] ),
+									'since'      => \esc_attr( $follower['since'] ),
+									'is_bot'     => $follower['is_bot'] ? __('Yes', 'activitypub') : __('No', 'activitypub'),
 								);
 		}
 

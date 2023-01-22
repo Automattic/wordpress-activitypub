@@ -147,7 +147,8 @@ div.activitypub-followers-table > form > table > tbody > tr > td.column-avatar {
 	text-align: center;
 }
 
-div.activitypub-followers-table > form > table > tbody > tr > td.column-avatar > span {
+div.activitypub-followers-table > form > table > tbody > tr > td.column-avatar > span,
+div.activitypub-followers-table > form > table > tbody > tr > td.column-avatar > img {
 	height: 60px;
 	width: 60px;
 	font-size: 60px;
