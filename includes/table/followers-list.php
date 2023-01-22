@@ -46,9 +46,14 @@ class Followers_List extends \WP_List_Table {
 
 		foreach ( \Activitypub\Peer\Followers::get_followers_extended( \get_current_user_id(), $per_page, ( $current_page - 1 ) * $per_page ) as $follower ) {
 
+			$avatar = '<span class="dashicons dashicons-admin-users"></span>';
+
+			if( $follower['avatar'] != '' ) {
+				$avatar = '<img class="activitypub-avatar" src="' . \esc_attr( $follower['avatar'] ) . '">';
+			}
+
 			$this->items[] = array(
-									//'avatar'     => '<span class="dashicons dashicons-admin-users"></span>',
-									'avatar'     => '<img class="activitypub-avatar" src="' . \esc_attr( $follower['avatar'] ) . '">',
+									'avatar'     => $avatar,
 									'identifier' => '<a href="' . \esc_attr( $follower['follower'] ) . '" target="_blank">' . \esc_attr( $follower['follower'] ) . '</a>',
 									'name'       => \esc_attr( $follower['name'] ),
 									'desc'       => \esc_attr( $follower['description'] ),
