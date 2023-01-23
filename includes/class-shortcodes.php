@@ -92,10 +92,10 @@ class Shortcodes {
 			$tag
 		);
 
-		$length = intval( $atts['length'] );
+		$excerpt_length = intval( $atts['length'] );
 
-		if ( 0 === $length ) {
-			$length = ACTIVITYPUB_EXCERPT_LENGTH;
+		if ( 0 === $excerpt_length ) {
+			$excerpt_length = ACTIVITYPUB_EXCERPT_LENGTH;
 		}
 
 		$excerpt = \get_post_field( 'post_excerpt', $post );
