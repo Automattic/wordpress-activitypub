@@ -214,17 +214,13 @@ class Shortcodes {
 
 		$atts = shortcode_atts(
 			array(
-				'type' => 'html',
+				'type' => 'url',
 			),
 			$atts,
 			$tag
 		);
 
-		if ( 'raw' === $atts['type'] ) {
-			return \get_permalink( $post->ID );
-		}
-
-		if ( 'esc' === $atts['type'] ) {
+		if ( 'url' === $atts['type'] ) {
 			return \esc_url( \get_permalink( $post->ID ) );
 		}
 
@@ -249,17 +245,13 @@ class Shortcodes {
 
 		$atts = shortcode_atts(
 			array(
-				'type' => 'html',
+				'type' => 'url',
 			),
 			$atts,
 			$tag
 		);
 
-		if ( 'raw' === $atts['type'] ) {
-			return \wp_get_shortlink( $post->ID );
-		}
-
-		if ( 'esc' === $atts['type'] ) {
+		if ( 'url' === $atts['type'] ) {
 			return \esc_url( \wp_get_shortlink( $post->ID ) );
 		}
 
@@ -306,7 +298,7 @@ class Shortcodes {
 			return '';
 		}
 
-		return $image;
+		return \esc_url( $image );
 	}
 
 	/**
@@ -387,7 +379,7 @@ class Shortcodes {
 			return '';
 		}
 
-		return $url;
+		return \esc_url( $url );
 	}
 
 	/**
@@ -400,7 +392,7 @@ class Shortcodes {
 	 * @return string
 	 */
 	public static function blogurl( $atts, $content, $tag ) {
-		return \get_bloginfo( 'url' );
+		return \esc_url( \get_bloginfo( 'url' ) );
 	}
 
 	/**

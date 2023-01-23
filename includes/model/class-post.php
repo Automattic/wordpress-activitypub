@@ -306,8 +306,8 @@ class Post {
 		$content = \str_replace( '%title%', '[ap_title]', $content );
 		$content = \str_replace( '%excerpt%', '[ap_excerpt]', $content );
 		$content = \str_replace( '%content%', '[ap_content]', $content );
-		$content = \str_replace( '%permalink%', '[ap_permalink]', $content );
-		$content = \str_replace( '%shortlink%', '[ap_shortlink]', $content );
+		$content = \str_replace( '%permalink%', '[ap_permalink type="html"]', $content );
+		$content = \str_replace( '%shortlink%', '[ap_shortlink type="html"]', $content );
 		$content = \str_replace( '%hashtags%', '[ap_hashtags]', $content );
 		$content = \str_replace( '%tags%', '[ap_hashtags]', $content );
 

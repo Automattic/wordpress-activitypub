@@ -91,6 +91,7 @@ Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github
 = v.next =
 
 * Add configuration item for number of images to attach. props [@mexon](https://github.com/mexon)
+* Use shortcodes instead of custom templates, to setup the Activity Post-Content. props [@toolstack](https://github.com/toolstack)
 
 = 0.15.0 =
 
