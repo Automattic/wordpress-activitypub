@@ -92,7 +92,7 @@ $registered_sizes .= '.';
 										<li><code>[ap_blogname]</code> - <?php \esc_html_e( 'The name of the site.', 'activitypub' ); ?></li>
 										<li><code>[ap_blogdesc]</code> - <?php \esc_html_e( 'The description of the site.', 'activitypub' ); ?></li>
 									</ul>
-									<p><?php esc_html_e( 'Note: the old template codes are now deprecated and automatically converted to the new shortcodes.'); ?>
+									<p><?php esc_html_e( 'Note: the old template codes are now deprecated and automatically converted to the new shortcodes.', 'activitypub' ); ?>
 								</div>
 							</details>
 						</p>
