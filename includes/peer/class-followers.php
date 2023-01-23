@@ -62,6 +62,16 @@ class Followers {
 		return \count( $followers );
 	}
 
+	public static function count_followers_extended( $author_id ) {
+		GLOBAL $wpdb;
+
+		$sql = $wpdb->prepare( 'SELECT count( follower ) FROM `' . $wpdb->prefix . 'ap_followers' . '` WHERE ID = %d;', $author_id );
+
+		$result = $wpdb->get_var( $sql );
+
+		return intval( $result );
+	}
+
 	public static function add_follower( $actor, $author_id ) {
 		$followers = \get_user_option( 'activitypub_followers', $author_id );
 
@@ -278,6 +288,8 @@ class Followers {
 	}
 
 	public static function remove_follower( $actor, $author_id ) {
+		GLOBAL $wpdb;
+
 		$followers = \get_user_option( 'activitypub_followers', $author_id );
 
 		foreach ( $followers as $key => $value ) {
@@ -287,5 +299,13 @@ class Followers {
 		}
 
 		\update_user_meta( $author_id, 'activitypub_followers', $followers );
+
+		// Remove the follower in the followers table.
+		$where = array(
+						'ID'       => $author_id,
+						'follower' => $actor,
+					);
+
+		$wpdb->delete( $wpdb->prefix . 'ap_followers', $where );
 	}
 }
