@@ -20,7 +20,7 @@ class Upgrade {
 			// Check to see if we're older than the first version that stored the version number.
 			if( $current_version == false ) {
 				// If so, let's convert the old followers format to the new one.
-				self:upgrade_followers();
+				self::upgrade_followers();
 			}
 		}
 
@@ -45,9 +45,9 @@ class Upgrade {
 								  			`ID` bigint(20) NOT NULL,
 								  			`follower` varchar(255) NOT NULL,
 								  			`since` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-											PRIMARY KEY (`follower`),
-											KEY `ID` (`ID`),
-											KEY `since` (`since`)
+											PRIMARY KEY  (follower),
+											KEY ID (ID),
+											KEY since (since)
 										) $charset_collate;";
 
 	    dbDelta( $sql );
@@ -64,9 +64,9 @@ class Upgrade {
 											`description` text NOT NULL,
 											`is_bot` tinyint(1) NOT NULL,
 											`last_updated` timestamp NOT NULL DEFAULT current_timestamp(),
-											PRIMARY KEY (`follower`),
-											KEY `server` (`server`),
-											KEY `last_updated` (`last_updated`)
+											PRIMARY KEY  (follower),
+											KEY server (server),
+											KEY last_updated (last_updated)
 										) $charset_collate;";
 
 	    dbDelta( $sql );
@@ -80,8 +80,8 @@ class Upgrade {
 											`version` text NOT NULL,
 											`open_reg` tinyint(1) NOT NULL,
 											`last_updated` timestamp NOT NULL DEFAULT current_timestamp().
-											PRIMARY KEY (`server`(255));
-											KEY `service` (`service`),
+											PRIMARY KEY  (server(255)),
+											KEY service (service)
 										) $charset_collate;";
 
 	    dbDelta( $sql );
@@ -91,23 +91,23 @@ class Upgrade {
 	 * Processes the followers upgrade from a user option to the database tables.
 	 */
 	public static function upgrade_followers() {
-    	$users = wp_get_users();
+    	$users = \get_users();
 
     	// Loop through all the sites users.
     	foreach( $users as $user ) {
     		// Retrieve the list of followers for the user.
-    		$followers = get_user_option( 'activitypub_followers', $user->ID );
+    		$followers = \get_user_option( 'activitypub_followers', $user->ID );
 
     		// Check to see if we have any followers to process.
     		if( $followers != false && is_array( $followers ) ) {
     			// If so, loop through them.
     			foreach( $followers as $follower ) {
     				// Call the standard all followers code to process them.
-    				\Activitypub\Peer\Followers\add_follower( $follower );
+    				\Activitypub\Peer\Followers::add_follower( $follower, $user->ID );
     			}
 
     			// Now delete the older followers list.
-    			delete_user_option( $user->ID, 'activitypub_followers' );
+    			\delete_user_option( $user->ID, 'activitypub_followers' );
     		}
     	}
 

@@ -132,7 +132,7 @@ class Followers {
 	public static function store_service_info( $server ) {
 		GLOBAL $wpdb;
 
-		$ni = new Activitypub\Nodeinfo();
+		$ni = new \Activitypub\Nodeinfo();
 
 		// Retrieve the nodeinfo.
 		$nodeinfo = $ni->resolve( $server );
@@ -162,7 +162,7 @@ class Followers {
 								'last_updated' => date( 'Y-m-d H:i:s', time() ),
 							);
 
-				if( count( self::get_service_info( $service ) ) > 0 ) {
+				if( count( self::get_service_info( $server ) ) > 0 ) {
 					$wpdb->update( $wpdb->prefix . 'ap_services', $data, array( 'server' => $server ) );
 				} else {
 					$wpdb->insert( $wpdb->prefix . 'ap_services', $data );
@@ -177,12 +177,10 @@ class Followers {
 		GLOBAL $wpdb;
 
 		$sql = $wpdb->prepare( 'SELECT * FROM ' . $wpdb->prefix . 'ap_services WHERE server = %s;', $server );
-		$raw_services = $wpdb->get_results( $sql, ARRAY_A );
+		$services = $wpdb->get_results( $sql, ARRAY_A );
 
-		var_dump($sql);
-
-		if( is_array( $raw_services ) ) {
-			return $raw_services[0];
+		if( is_array( $services ) && count( $services ) > 0 ) {
+			return $services[0];
 		}
 
 		return array();
@@ -246,7 +244,7 @@ class Followers {
 		$results = $wpdb->get_row( $sql, ARRAY_A );
 
 		if( is_array( $results ) && count( $results ) > 0 ) {
-			return $results[0];
+			return $results;
 		}
 
 		return array();
@@ -254,11 +252,11 @@ class Followers {
 	}
 
 	public static function get_mastodon_user_info( $follower ) {
-		$ma = new Activitypub\Mastodon();
+		$ma = new \Activitypub\Mastodon();
 
 		$mastodon_info = $ma->resolve( $follower );
 
-		if( $is_array( $mastodon_info ) ) {
+		if( is_array( $mastodon_info ) ) {
 			return $mastodon_info;
 		}
 
