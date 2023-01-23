@@ -76,9 +76,9 @@ $registered_sizes .= '.';
 										<li><code>[ap_title]</code> - <?php \esc_html_e( 'The post\'s title.', 'activitypub' ); ?></li>
 										<li><code>[ap_content]</code> - <?php \esc_html_e( 'The post\'s content.', 'activitypub' ); ?></li>
 										<li><code>[ap_excerpt <i>lenght=nnn</i>]</code> - <?php \esc_html_e( 'The post\'s excerpt (default 400 chars). length parameter is optional.', 'activitypub' ); ?></li>
-										<li><code>[ap_permalink <i>type=xxx</i>]</code> - <?php \esc_html_e( 'The post\'s permalink. Type can be either: raw (the raw url, no escaping), esc (the html escaped url), html (default, an a tag to the url), blank (an a tag to the url that opens in a new window).', 'activitypub' ); ?></li>
+										<li><code>[ap_permalink <i>type=xxx</i>]</code> - <?php \esc_html_e( 'The post\'s permalink. Type can be either: raw (the raw url, no escaping), esc (the html escaped url), html (default, an a tag to the url).', 'activitypub' ); ?></li>
 										<?php // translators: ?>
-										<li><code>[ap_shortlink <i>type=xxx</i>]</code> - <?php echo \wp_kses( \__( 'The post\'s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks. Type can be either: raw (the raw url, no escaping), esc (the html escaped url), html (default, an a tag to the url), blank (an a tag to the url that opens in a new window).', 'activitypub' ), 'default' ); ?></li>
+										<li><code>[ap_shortlink <i>type=xxx</i>]</code> - <?php echo \wp_kses( \__( 'The post\'s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks. Type can be either: raw (the raw url, no escaping), esc (the html escaped url), html (default, an a tag to the url).', 'activitypub' ), 'default' ); ?></li>
 										<li><code>[ap_hashtags]</code> - <?php \esc_html_e( 'The post\'s tags as hashtags.', 'activitypub' ); ?></li>
 										<li><code>[ap_hashcats]</code> - <?php \esc_html_e( 'The post\'s categories as hashtags.', 'activitypub' ); ?></li>
 										<li><code>[ap_image <i>size=xxx</i>]</code> - <?php \esc_html_e( 'The URL for the post\'s featured image, defaults to full size.  The size attribute can be any of the following: ', 'activitypub' ); echo esc_html( $registered_sizes ); ?></li>

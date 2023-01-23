@@ -40,7 +40,11 @@ class Shortcodes {
 		$hash_tags = array();
 
 		foreach ( $tags as $tag ) {
-			$hash_tags[] = \sprintf( '<a rel="tag" class="u-tag u-category" href="%s">#%s</a>', \get_tag_link( $tag ), $tag->slug );
+			$hash_tags[] = \sprintf(
+				'<a rel="tag" class="u-tag u-category" href="%s">#%s</a>',
+				\get_tag_link( $tag ),
+				$tag->slug
+			);
 		}
 
 		return \implode( ' ', $hash_tags );
@@ -82,12 +86,17 @@ class Shortcodes {
 			return '';
 		}
 
-		$atts = shortcode_atts( array( 'length' => ACTIVITYPUB_EXCERPT_LENGTH ), $atts, $tag );
+		$atts = shortcode_atts(
+			array( 'length' => ACTIVITYPUB_EXCERPT_LENGTH ),
+			$atts,
+			$tag
+		);
 
 		$length = intval( $atts['length'] );
 
 		if ( 0 === $length ) {
-			$length = ACTIVITYPUB_EXCERPT_LENGTH; }
+			$length = ACTIVITYPUB_EXCERPT_LENGTH;
+		}
 
 		$excerpt = \get_post_field( 'post_excerpt', $post );
 
@@ -219,10 +228,6 @@ class Shortcodes {
 			return \esc_url( \get_permalink( $post->ID ) );
 		}
 
-		if ( 'blank' === $atts['type'] ) {
-			return \sprintf( '<a href="%1$s" target="_blank">%1$s</a>', \esc_url( \get_permalink( $post->ID ) ) );
-		}
-
 		return \sprintf( '<a href="%1$s">%1$s</a>', \esc_url( \get_permalink( $post->ID ) ) );
 	}
 
@@ -256,10 +261,6 @@ class Shortcodes {
 
 		if ( 'esc' === $atts['type'] ) {
 			return \esc_url( \wp_get_shortlink( $post->ID ) );
-		}
-
-		if ( 'blank' === $atts['type'] ) {
-			return \sprintf( '<a href="%1$s" target="_blank">%1$s</a>', \esc_url( \wp_get_shortlink( $post->ID ) ) );
 		}
 
 		return \sprintf( '<a href="%1$s">%1$s</a>', \esc_url( \wp_get_shortlink( $post->ID ) ) );
