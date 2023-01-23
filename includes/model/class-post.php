@@ -276,7 +276,7 @@ class Post {
 		}
 
 		// Upgrade from old template codes to shortcodes.
-		$content = $this->upgrade_post_content_template();
+		$content = self::upgrade_post_content_template();
 
 		return $content;
 	}
