@@ -56,10 +56,10 @@
 						<p>
 							<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo wp_kses( ACTIVITYPUB_CUSTOM_POST_CONTENT, 'post' ); ?>"><?php echo wp_kses( \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ), 'post' ); ?></textarea>
 							<details>
-								<summary><?php esc_html_e( 'See the complete list of activitypub shortcodes.', 'activitypub' ); ?></summary>
+								<summary><?php esc_html_e( 'See the complete list of ActivityPub shortcodes.', 'activitypub' ); ?></summary>
 								<div class="description">
 									<p><?php esc_html_e( 'You may use any shortcode normally available to you on your site, however be aware that shortcodes may significantly increase the size of your content depending on what they do.', 'activitypub' ); ?>
-									<p><?php esc_html_e( 'In addition, the following shortcodes are available during an activitypub post:', 'activitypub' ); ?>
+									<p><?php esc_html_e( 'In addition, the following shortcodes are available during an ActivityPub post:', 'activitypub' ); ?>
 									<ul>
 										<li><code>[ap_title]</code> - <?php \esc_html_e( 'The post\'s title.', 'activitypub' ); ?></li>
 										<li><code>[ap_content]</code> - <?php \esc_html_e( 'The post\'s content.', 'activitypub' ); ?></li>
