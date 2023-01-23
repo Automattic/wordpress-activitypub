@@ -307,5 +307,34 @@ class Followers {
 					);
 
 		$wpdb->delete( $wpdb->prefix . 'ap_followers', $where );
+
+		// Check to see if this is the last user that followers the user.
+		$sql = $wpdb->prepare( 'SELECT count( follower ) FROM `' . $wpdb->prefix . 'ap_followers' . '` WHERE follower = %s;', $actor );
+		$result = $wpdb->get_var( $sql );
+
+		// If there are no more users following this follower, remove them from the follower table.
+		if( $result == 0 ) {
+			$follower = self::get_follower_info( $actor );
+
+			$where = array(
+							'follower' => $actor,
+						);
+
+			$wpdb->delete( $wpdb->prefix . 'ap_follower', $where );
+
+			// Now see if this was the last follower of the service.
+			$sql = $wpdb->prepare( 'SELECT count( server ) FROM `' . $wpdb->prefix . 'ap_follower' . '` WHERE server = %s;', $follower['server'] );
+			$result = $wpdb->get_var( $sql );
+
+			// If there are now more followers with this service, remove it as well.
+			if( $result == 0 ) {
+				$where = array(
+								'server' => $follower['server'],
+							);
+
+				$wpdb->delete( $wpdb->prefix . 'ap_services', $where );
+			}
+
+		}
 	}
 }
