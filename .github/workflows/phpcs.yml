@@ -1,5 +1,7 @@
 name: PHP_CodeSniffer
-on: push
+on:
+  push:
+  pull_request:
 jobs:
   phpcs:
     runs-on: ubuntu-latest
