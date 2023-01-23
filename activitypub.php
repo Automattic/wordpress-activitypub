@@ -19,10 +19,11 @@ namespace Activitypub;
  * Initialize plugin
  */
 function init() {
+	\defined( 'ACTIVITYPUB_EXCERPT_LENGTH' ) || \define( 'ACTIVITYPUB_EXCERPT_LENGTH', 400 );
 	\defined( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS' ) || \define( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS', 3 );
 	\defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))' );
 	\defined( 'ACTIVITYPUB_ALLOWED_HTML' ) || \define( 'ACTIVITYPUB_ALLOWED_HTML', '<strong><a><p><ul><ol><li><code><blockquote><pre><img>' );
-	\defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<p><strong>%title%</strong></p>\n\n%content%\n\n<p>%hashtags%</p>\n\n<p>%shortlink%</p>" );
+	\defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<p><strong>[ap_title]</strong></p>\n\n[ap_content]\n\n<p>[ap_hashtags]</p>\n\n<p>[ap_shortlink]</p>" );
 	\define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
@@ -69,6 +70,9 @@ function init() {
 
 	require_once \dirname( __FILE__ ) . '/includes/class-hashtag.php';
 	\Activitypub\Hashtag::init();
+
+	require_once \dirname( __FILE__ ) . '/includes/class-shortcodes.php';
+	\Activitypub\Shortcodes::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/class-debug.php';
 	\Activitypub\Debug::init();

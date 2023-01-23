@@ -56,22 +56,22 @@
 						<p>
 							<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo wp_kses( ACTIVITYPUB_CUSTOM_POST_CONTENT, 'post' ); ?>"><?php echo wp_kses( \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ), 'post' ); ?></textarea>
 							<details>
-								<summary><?php esc_html_e( 'See the complete list of template patterns.', 'activitypub' ); ?></summary>
+								<summary><?php esc_html_e( 'See a list of ActivityPub Template Tags.', 'activitypub' ); ?></summary>
 								<div class="description">
 									<ul>
-										<li><code>%title%</code> - <?php \esc_html_e( 'The Post-Title.', 'activitypub' ); ?></li>
-										<li><code>%content%</code> - <?php \esc_html_e( 'The Post-Content.', 'activitypub' ); ?></li>
-										<li><code>%excerpt%</code> - <?php \esc_html_e( 'The Post-Excerpt (default 400 Chars).', 'activitypub' ); ?></li>
-										<li><code>%permalink%</code> - <?php \esc_html_e( 'The Post-Permalink.', 'activitypub' ); ?></li>
-										<?php // translators: ?>
-										<li><code>%shortlink%</code> - <?php echo \wp_kses( \__( 'The Post-Shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks', 'activitypub' ), 'default' ); ?></li>
-										<li><code>%hashtags%</code> - <?php \esc_html_e( 'The Tags as Hashtags.', 'activitypub' ); ?></li>
+										<li><code>[ap_title]</code> - <?php \esc_html_e( 'The post\'s title.', 'activitypub' ); ?></li>
+										<li><code>[ap_content]</code> - <?php \esc_html_e( 'The post\'s content.', 'activitypub' ); ?></li>
+										<li><code>[ap_excerpt]</code> - <?php \esc_html_e( 'The post\'s excerpt (default 400 chars).', 'activitypub' ); ?></li>
+										<li><code>[ap_permalink]</code> - <?php \esc_html_e( 'The post\'s permalink.', 'activitypub' ); ?></li>
+										<li><code>[ap_shortlink]</code> - <?php echo \wp_kses( \__( 'The post\'s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>.', 'activitypub' ), 'default' ); ?></li>
+										<li><code>[ap_hashtags]</code> - <?php \esc_html_e( 'The post\'s tags as hashtags.', 'activitypub' ); ?></li>
+										<li><code>[ap_hashcats]</code> - <?php \esc_html_e( 'The post\'s categories as hashtags.', 'activitypub' ); ?></li>
+										<li><code>[ap_image]</code> - <?php \esc_html_e( 'The URL for the post\'s featured image.', 'activitypub' ); ?></li>
 									</ul>
+									<p><?php \esc_html_e( 'You can find the full list with all possible attributes in the help section on the top-right of the screen.', 'activitypub' ); ?></p>
 								</div>
 							</details>
 						</p>
-						<?php // translators: ?>
-						<p><?php echo \wp_kses( \__( '<a href="https://github.com/pfefferle/wordpress-activitypub/issues/new" target="_blank">Let me know</a> if you miss a template pattern.', 'activitypub' ), 'default' ); ?></p>
 					</td>
 				</tr>
 				<tr>

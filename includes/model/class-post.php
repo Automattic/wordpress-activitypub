@@ -16,7 +16,7 @@ class Post {
 	private $tags;
 	private $object_type;
 
-	public function __construct( $post = null ) {
+	public function __construct( $post ) {
 		$this->post = \get_post( $post );
 
 		$this->post_author = $this->post->post_author;
@@ -226,18 +226,22 @@ class Post {
 		return $object_type;
 	}
 
+	/**
+	 * Generates the content for the activitypub item.
+	 *
+	 * @return string the content
+	 */
 	public function generate_the_content() {
 		$post = $this->post;
 		$content = $this->get_post_content_template();
 
-		$content = \str_replace( '%title%', \get_the_title( $post->ID ), $content );
-		$content = \str_replace( '%excerpt%', $this->get_the_post_excerpt(), $content );
-		$content = \str_replace( '%content%', $this->get_the_post_content(), $content );
-		$content = \str_replace( '%permalink%', $this->get_the_post_link( 'permalink' ), $content );
-		$content = \str_replace( '%shortlink%', $this->get_the_post_link( 'shortlink' ), $content );
-		$content = \str_replace( '%hashtags%', $this->get_the_post_hashtags(), $content );
-		// backwards compatibility
-		$content = \str_replace( '%tags%', $this->get_the_post_hashtags(), $content );
+		// Register the shortcodes.
+		$shortcodes = new \Activitypub\Shortcodes( $post );
+
+		// Fill in the shortcodes.
+		setup_postdata( $post );
+		$content = do_shortcode( $content );
+		wp_reset_postdata();
 
 		$content = \trim( \preg_replace( '/[\r\n]{2,}/', '', $content ) );
 
@@ -253,166 +257,66 @@ class Post {
 		return $decoded_content;
 	}
 
+	/**
+	 * Gets the template to use to generate the content of the activitypub item.
+	 *
+	 * @return string the template
+	 */
 	public function get_post_content_template() {
 		if ( 'excerpt' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "%excerpt%\n\n<p>%permalink%</p>";
+			return "[ap_excerpt]\n\n<p>[ap_permalink]</p>";
 		}
 
 		if ( 'title' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "<p><strong>%title%</strong></p>\n\n<p>%permalink%</p>";
+			return "<p>[ap_title]</p>\n\n<p>[ap_permalink]</p>";
 		}
 
 		if ( 'content' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "%content%\n\n<p>%hashtags%</p>\n\n<p>%permalink%</p>";
+			return "[ap_content]\n\n<p>[ap_hashtags]</p>\n\n<p>[ap_permalink]</p>";
 		}
 
-		return \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+		// Upgrade from old template codes to shortcodes.
+		$content = self::upgrade_post_content_template();
+
+		return $content;
 	}
 
 	/**
-	 * Get the excerpt for a post for use outside of the loop.
+	 * Updates the custom template to use shortcodes instead of the deprecated templates.
 	 *
-	 * @param int     Optional excerpt length.
-	 *
-	 * @return string The excerpt.
+	 * @return string the updated template content
 	 */
-	public function get_the_post_excerpt( $excerpt_length = 400 ) {
-		$post = $this->post;
+	public static function upgrade_post_content_template() {
+		// Get the custom template.
+		$old_content = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
 
-		$excerpt = \get_post_field( 'post_excerpt', $post );
+		// If the old content exists but is a blank string, we're going to need a flag to updated it even
+		// after setting it to the default contents.
+		$need_update = false;
 
-		if ( '' === $excerpt ) {
+		// If the old contents is blank, use the defaults.
+		if ( '' === $old_content ) {
+			$old_content = ACTIVITYPUB_CUSTOM_POST_CONTENT;
+			$need_update = true; }
 
-			$content = \get_post_field( 'post_content', $post );
+		// Set the new content to be the old content.
+		$content = $old_content;
 
-			// An empty string will make wp_trim_excerpt do stuff we do not want.
-			if ( '' !== $content ) {
+		// Convert old templates to shortcodes.
+		$content = \str_replace( '%title%', '[ap_title]', $content );
+		$content = \str_replace( '%excerpt%', '[ap_excerpt]', $content );
+		$content = \str_replace( '%content%', '[ap_content]', $content );
+		$content = \str_replace( '%permalink%', '[ap_permalink type="html"]', $content );
+		$content = \str_replace( '%shortlink%', '[ap_shortlink type="html"]', $content );
+		$content = \str_replace( '%hashtags%', '[ap_hashtags]', $content );
+		$content = \str_replace( '%tags%', '[ap_hashtags]', $content );
 
-				$excerpt = \strip_shortcodes( $content );
-
-				/** This filter is documented in wp-includes/post-template.php */
-				$excerpt = \apply_filters( 'the_content', $excerpt );
-				$excerpt = \str_replace( ']]>', ']]>', $excerpt );
-
-			}
+		// Store the new template if required.
+		if ( $content !== $old_content || $need_update ) {
+			\update_option( 'activitypub_custom_post_content', $content );
 		}
 
-		// Strip out any remaining tags.
-		$excerpt = \wp_strip_all_tags( $excerpt );
-
-		/** This filter is documented in wp-includes/formatting.php */
-		$excerpt_more = \apply_filters( 'excerpt_more', ' [...]' );
-		$excerpt_more_len = strlen( $excerpt_more );
-
-		// We now have a excerpt, but we need to check it's length, it may be longer than we want for two reasons:
-		//
-		//   * The user has entered a manual excerpt which is longer that what we want.
-		//   * No manual excerpt exists so we've used the content which might be longer than we want.
-		//
-		// Either way, let's trim it up if we need too.  Also, don't forget to take into account the more indicator
-		// as part of the total length.
-		//
-
-		// Setup a variable to hold the current excerpts length.
-		$current_excerpt_length = strlen( $excerpt );
-
-		// Setup a variable to keep track of our target length.
-		$target_excerpt_length = $excerpt_length - $excerpt_more_len;
-
-		// Setup a variable to keep track of the current max length.
-		$current_excerpt_max = $target_excerpt_length;
-
-		// This is a loop since we can't calculate word break the string after 'the_excpert' filter has run (we would break
-		// all kinds of html tags), so we have to cut the excerpt down a bit at a time until we hit our target length.
-		while ( $current_excerpt_length > $target_excerpt_length && $current_excerpt_max > 0 ) {
-			// Trim the excerpt based on wordwrap() positioning.
-			// Note: we're using <br> as the linebreak just in case there are any newlines existing in the excerpt from the user.
-			//       There won't be any <br> left after we've run wp_strip_all_tags() in the code above, so they're
-			//       safe to use here.  It won't be included in the final excerpt as the substr() will trim it off.
-			$excerpt = substr( $excerpt, 0, strpos( wordwrap( $excerpt, $current_excerpt_max, '<br>' ), '<br>' ) );
-
-			// If something went wrong, or we're in a language that wordwrap() doesn't understand,
-			// just chop it off and don't worry about breaking in the middle of a word.
-			if ( strlen( $excerpt ) > $excerpt_length - $excerpt_more_len ) {
-				$excerpt = substr( $excerpt, 0, $current_excerpt_max );
-			}
-
-			// Add in the more indicator.
-			$excerpt = $excerpt . $excerpt_more;
-
-			// Run it through the excerpt filter which will add some html tags back in.
-			$excerpt_filtered = apply_filters( 'the_excerpt', $excerpt );
-
-			// Now set the current excerpt length to this new filtered length.
-			$current_excerpt_length = strlen( $excerpt_filtered );
-
-			// Check to see if we're over the target length.
-			if ( $current_excerpt_length > $target_excerpt_length ) {
-				// If so, remove 20 characters from the current max and run the loop again.
-				$current_excerpt_max = $current_excerpt_max - 20;
-			}
-		}
-
-		return \apply_filters( 'the_excerpt', $excerpt );
+		return $content;
 	}
 
-	/**
-	 * Get the content for a post for use outside of the loop.
-	 *
-	 * @return string The content.
-	 */
-	public function get_the_post_content() {
-		$post = $this->post;
-
-		$content = \get_post_field( 'post_content', $post );
-
-		return \apply_filters( 'the_content', $content );
-	}
-
-	/**
-	 * Adds a backlink to the post/summary content
-	 *
-	 * @param string  $content
-	 * @param WP_Post $post
-	 *
-	 * @return string
-	 */
-	public function get_the_post_link( $type = 'permalink' ) {
-		$post = $this->post;
-
-		if ( 'shortlink' === $type ) {
-			$link = \esc_url( \wp_get_shortlink( $post->ID ) );
-		} elseif ( 'permalink' === $type ) {
-			$link = \esc_url( \get_permalink( $post->ID ) );
-		} else {
-			return '';
-		}
-
-		return \sprintf( '<a href="%1$s">%1$s</a>', $link );
-	}
-
-	/**
-	 * Adds all tags as hashtags to the post/summary content
-	 *
-	 * @param string  $content
-	 * @param WP_Post $post
-	 *
-	 * @return string
-	 */
-	public function get_the_post_hashtags() {
-		$post = $this->post;
-		$tags = \get_the_tags( $post->ID );
-
-		if ( ! $tags ) {
-			return '';
-		}
-
-		$hash_tags = array();
-
-		foreach ( $tags as $tag ) {
-			$hash_tags[] = \sprintf( '<a rel="tag" class="u-tag u-category" href="%s">#%s</a>', \get_tag_link( $tag ), $tag->slug );
-		}
-
-		return \implode( ' ', $hash_tags );
-	}
 }

@@ -50,6 +50,8 @@ class Admin {
 
 		switch ( $tab ) {
 			case 'settings':
+				\Activitypub\Model\Post::upgrade_post_content_template();
+
 				\load_template( \dirname( __FILE__ ) . '/../templates/settings.php' );
 				break;
 			case 'welcome':
