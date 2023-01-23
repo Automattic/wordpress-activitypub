@@ -229,43 +229,6 @@ function get_follower_inboxes( $user_id ) {
 	return $inboxes;
 }
 
-function get_identifier_settings( $user_id ) {
-	?>
-<table class="form-table">
-	<tbody>
-		<tr>
-			<th scope="row">
-				<label><?php \esc_html_e( 'Profile identifier', 'activitypub' ); ?></label>
-			</th>
-			<td>
-				<p><code><?php echo \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ); ?></code> or <code><?php echo \esc_url( \get_author_posts_url( $user_id ) ); ?></code></p>
-				<?php // translators: the webfinger resource ?>
-				<p class="description"><?php \printf( \esc_html__( 'Try to follow "@%s" by searching for it on Mastodon, Friendica & Co., etc.', 'activitypub' ), \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ) ); ?></p>
-			</td>
-		</tr>
-	</tbody>
-</table>
-	<?php
-}
-
-function get_followers_settings( $user_id ) {
-	?>
-<table class="form-table">
-	<tbody>
-		<tr>
-			<th scope="row">
-				<label><?php \esc_html_e( 'Followers', 'activitypub' ); ?></label>
-			</th>
-			<td>
-				<p><?php \printf( \esc_html__( 'You currently have %s%s%s followers.', 'activitypub' ), '<a href=" ' . get_admin_url() . 'users.php?page=activitypub-followers-list">', \esc_attr( \Activitypub\Peer\Followers::count_followers( \get_current_user_id() ) ), '</a>' ); ?></p>
-			</td>
-		</tr>
-	</tbody>
-</table>
-	<?php
-
-}
-
 function get_followers( $user_id ) {
 	$followers = \Activitypub\Peer\Followers::get_followers( $user_id );
 
