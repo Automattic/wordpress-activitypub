@@ -21,7 +21,10 @@ class Followers_List extends \WP_List_Table {
 	public function get_sortable_columns() {
 		return array(
 						'identifier' => array( 'identifier', false ),
-						'service' => array( 'service', false ),
+						'service'    => array( 'service', false ),
+						'name'       => array( 'name', false ),
+						'since'      => array( 'since', false ),
+						'is_bot'     => array( 'is_bot', false ),
 					);
 	}
 
@@ -43,12 +46,14 @@ class Followers_List extends \WP_List_Table {
 		$dateformat = \get_option( 'date_format' );
 		$timeformat = \get_option( 'time_format' );
 		$dtformat = $dateformat . ' @ ' . $timeformat;
+		$enable_avatars = \get_option( 'activitypub_enable_avatars', '0' );
+		$offset = ( $current_page - 1 ) * $per_page;
 
-		foreach ( \Activitypub\Peer\Followers::get_followers_extended( \get_current_user_id(), $per_page, ( $current_page - 1 ) * $per_page ) as $follower ) {
+		foreach ( \Activitypub\Peer\Followers::get_followers_extended( \get_current_user_id(), $per_page, $offset ) as $follower ) {
 
 			$avatar = '<span class="dashicons dashicons-admin-users"></span>';
 
-			if( $follower['avatar'] != '' ) {
+			if( $follower['avatar'] != '' && $enable_avatars ) {
 				$avatar = '<img class="activitypub-avatar" src="' . \esc_attr( $follower['avatar'] ) . '">';
 			}
 
@@ -63,16 +68,12 @@ class Followers_List extends \WP_List_Table {
 								);
 		}
 
-		$found_data = array_slice($this->items,(($current_page-1)*$per_page),$per_page);
-
 		$this->set_pagination_args(
 									array(
-										    'total_items' => count( $this->items ),
+										    'total_items' => \Activitypub\Peer\Followers::count_followers_extended( \get_current_user_id() ),
 										    'per_page'    => $per_page,
 										)
 								);
-
-		$this->items = $found_data;
 	}
 
 	public function column_default( $item, $column_name ) {
