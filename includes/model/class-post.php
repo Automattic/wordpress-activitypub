@@ -68,46 +68,54 @@ class Post {
 	}
 
 	public function generate_id() {
-		$post      = $this->post;
-		$permalink = \get_permalink( $post );
+		$post = $this->post;
 
-		// replace 'trashed' for delete activity
-		return \str_replace( '__trashed', '', $permalink );
+		if ( 'trash' === get_post_status( $post ) ) {
+			$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
+		} else {
+			$permalink = \get_permalink( $post );
+		}
+
+		return $permalink;
 	}
 
 	public function generate_attachments() {
-		$max_images = \apply_filters( 'activitypub_max_images', 3 );
+		$max_images = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
 
 		$images = array();
 
 		// max images can't be negative or zero
 		if ( $max_images <= 0 ) {
-			$max_images = 1;
+			return $images;
 		}
 
 		$id = $this->post->ID;
 
 		$image_ids = array();
+
 		// list post thumbnail first if this post has one
 		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
 			$image_ids[] = \get_post_thumbnail_id( $id );
 			$max_images--;
 		}
-		// then list any image attachments
-		$query = new \WP_Query(
-			array(
-				'post_parent' => $id,
-				'post_status' => 'inherit',
-				'post_type' => 'attachment',
-				'post_mime_type' => 'image',
-				'order' => 'ASC',
-				'orderby' => 'menu_order ID',
-				'posts_per_page' => $max_images,
-			)
-		);
-		foreach ( $query->get_posts() as $attachment ) {
-			if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
-				$image_ids[] = $attachment->ID;
+
+		if ( $max_images > 0 ) {
+			// then list any image attachments
+			$query = new \WP_Query(
+				array(
+					'post_parent' => $id,
+					'post_status' => 'inherit',
+					'post_type' => 'attachment',
+					'post_mime_type' => 'image',
+					'order' => 'ASC',
+					'orderby' => 'menu_order ID',
+					'posts_per_page' => $max_images,
+				)
+			);
+			foreach ( $query->get_posts() as $attachment ) {
+				if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
+					$image_ids[] = $attachment->ID;
+				}
 			}
 		}
 
@@ -286,12 +294,62 @@ class Post {
 				$excerpt = \apply_filters( 'the_content', $excerpt );
 				$excerpt = \str_replace( ']]>', ']]>', $excerpt );
 
-				$excerpt_length = \apply_filters( 'excerpt_length', $excerpt_length );
+			}
+		}
 
-				/** This filter is documented in wp-includes/formatting.php */
-				$excerpt_more = \apply_filters( 'excerpt_more', ' [...]' );
+		// Strip out any remaining tags.
+		$excerpt = \wp_strip_all_tags( $excerpt );
 
-				$excerpt = \wp_trim_words( $excerpt, $excerpt_length, $excerpt_more );
+		/** This filter is documented in wp-includes/formatting.php */
+		$excerpt_more = \apply_filters( 'excerpt_more', ' [...]' );
+		$excerpt_more_len = strlen( $excerpt_more );
+
+		// We now have a excerpt, but we need to check it's length, it may be longer than we want for two reasons:
+		//
+		//   * The user has entered a manual excerpt which is longer that what we want.
+		//   * No manual excerpt exists so we've used the content which might be longer than we want.
+		//
+		// Either way, let's trim it up if we need too.  Also, don't forget to take into account the more indicator
+		// as part of the total length.
+		//
+
+		// Setup a variable to hold the current excerpts length.
+		$current_excerpt_length = strlen( $excerpt );
+
+		// Setup a variable to keep track of our target length.
+		$target_excerpt_length = $excerpt_length - $excerpt_more_len;
+
+		// Setup a variable to keep track of the current max length.
+		$current_excerpt_max = $target_excerpt_length;
+
+		// This is a loop since we can't calculate word break the string after 'the_excpert' filter has run (we would break
+		// all kinds of html tags), so we have to cut the excerpt down a bit at a time until we hit our target length.
+		while ( $current_excerpt_length > $target_excerpt_length && $current_excerpt_max > 0 ) {
+			// Trim the excerpt based on wordwrap() positioning.
+			// Note: we're using <br> as the linebreak just in case there are any newlines existing in the excerpt from the user.
+			//       There won't be any <br> left after we've run wp_strip_all_tags() in the code above, so they're
+			//       safe to use here.  It won't be included in the final excerpt as the substr() will trim it off.
+			$excerpt = substr( $excerpt, 0, strpos( wordwrap( $excerpt, $current_excerpt_max, '<br>' ), '<br>' ) );
+
+			// If something went wrong, or we're in a language that wordwrap() doesn't understand,
+			// just chop it off and don't worry about breaking in the middle of a word.
+			if ( strlen( $excerpt ) > $excerpt_length - $excerpt_more_len ) {
+				$excerpt = substr( $excerpt, 0, $current_excerpt_max );
+			}
+
+			// Add in the more indicator.
+			$excerpt = $excerpt . $excerpt_more;
+
+			// Run it through the excerpt filter which will add some html tags back in.
+			$excerpt_filtered = apply_filters( 'the_excerpt', $excerpt );
+
+			// Now set the current excerpt length to this new filtered length.
+			$current_excerpt_length = strlen( $excerpt_filtered );
+
+			// Check to see if we're over the target length.
+			if ( $current_excerpt_length > $target_excerpt_length ) {
+				// If so, remove 20 characters from the current max and run the loop again.
+				$current_excerpt_max = $current_excerpt_max - 20;
 			}
 		}
 

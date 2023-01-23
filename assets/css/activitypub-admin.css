@@ -1,6 +1,7 @@
 .settings_page_activitypub .notice {
 	max-width: 800px;
-	margin: 0 auto;
+	margin: auto;
+	margin-top: 10px;
 }
 
 .activitypub-settings-header {

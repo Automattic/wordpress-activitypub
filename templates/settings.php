@@ -95,6 +95,26 @@
 				</tr>
 				<tr>
 					<th scope="row">
+						<?php \esc_html_e( 'Number of images', 'activitypub' ); ?>
+					</th>
+					<td>
+						<input value="<?php echo esc_attr( \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ); ?>" name="activitypub_max_image_attachments" id="activitypub_max_image_attachments" type="number" min="0" />
+						<p class="description">
+							<?php
+							echo \wp_kses(
+								\sprintf(
+									// translators:
+									\__( 'The number of images to attach to posts. Default: <code>%s</code>', 'activitypub' ),
+									\esc_html( ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS )
+								),
+								'default'
+							);
+							?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
 						<?php \esc_html_e( 'Activity Object Type', 'activitypub' ); ?>
 					</th>
 					<td>
@@ -131,11 +151,11 @@
 				</tr>
 				<tr>
 					<th scope="row">
-						<?php \esc_html_e( 'Hashtags', 'activitypub' ); ?>
+						<?php \esc_html_e( 'Hashtags (beta)', 'activitypub' ); ?>
 					</th>
 					<td>
 						<p>
-							<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag-link.', 'activitypub' ), 'default' ); ?></label>
+							<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag-link. <strong>This feature is experimental! Please disable it, if you find any HTML or CSS errors.</strong>', 'activitypub' ), 'default' ); ?></label>
 						</p>
 					</td>
 				</tr>

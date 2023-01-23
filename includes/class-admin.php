@@ -100,6 +100,15 @@ class Admin {
 		);
 		\register_setting(
 			'activitypub',
+			'activitypub_max_image_attachments',
+			array(
+				'type' => 'integer',
+				'description' => \__( 'Number of images to attach to posts.', 'activitypub' ),
+				'default' => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
+			)
+		);
+		\register_setting(
+			'activitypub',
 			'activitypub_object_type',
 			array(
 				'type' => 'string',
