@@ -8,8 +8,8 @@ class Shortcodes {
 	 * @param WP_Post  $post    A WordPress Post Object
 	 */
 	public static function init() {
-		foreach( get_class_methods( 'Activitypub\Shortcodes' ) as $shortcode ) {
-			if( $shortcode != 'init' ) {
+		foreach ( get_class_methods( 'Activitypub\Shortcodes' ) as $shortcode ) {
+			if ( $shortcode != 'init' ) {
 				add_shortcode( 'ap_' . $shortcode, array( 'Activitypub\Shortcodes', $shortcode ) );
 			}
 		}
@@ -18,16 +18,16 @@ class Shortcodes {
 	/**
 	 * Generates output for the ap_hashtags shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function hashtags( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
+		if ( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
@@ -49,35 +49,36 @@ class Shortcodes {
 	/**
 	 * Generates output for the ap_title shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function title( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
+		if ( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		return \get_the_title( $post->ID );;
+		return \get_the_title( $post->ID );
+
 	}
 
 	/**
 	 * Generates output for the ap_excerpt shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function excerpt( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
+		if ( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
@@ -85,7 +86,8 @@ class Shortcodes {
 
 		$length = intval( $atts['length'] );
 
-		if( $length == 0 ) { $length = ACTIVITYPUB_EXCERPT_LENGTH; }
+		if ( $length == 0 ) {
+			$length = ACTIVITYPUB_EXCERPT_LENGTH; }
 
 		$excerpt = \get_post_field( 'post_excerpt', $post );
 
@@ -167,16 +169,16 @@ class Shortcodes {
 	/**
 	 * Generates output for the ap_content shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function content( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
+		if ( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
@@ -188,31 +190,31 @@ class Shortcodes {
 	/**
 	 * Generates output for the ap_permalink shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function permalink( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
+		if ( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
 		$atts = shortcode_atts( array( 'type' => 'html' ), $atts, $tag );
 
-		if( is_array( $atts ) && array_key_exists( 'type', $atts ) ) {
-			if( $atts['type'] == 'raw' ) {
+		if ( is_array( $atts ) && array_key_exists( 'type', $atts ) ) {
+			if ( $atts['type'] == 'raw' ) {
 				return \get_permalink( $post->ID );
 			}
 
-			if( $atts['type'] == 'esc' ) {
+			if ( $atts['type'] == 'esc' ) {
 				return \esc_url( \get_permalink( $post->ID ) );
 			}
 
-			if( $atts['type'] == 'blank' ) {
+			if ( $atts['type'] == 'blank' ) {
 				return \sprintf( '<a href="%1$s" target="_blank">%1$s</a>', \esc_url( \get_permalink( $post->ID ) ) );
 			}
 		}
@@ -223,31 +225,31 @@ class Shortcodes {
 	/**
 	 * Generates output for the ap_shortlink shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function shortlink( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
+		if ( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
 		$atts = shortcode_atts( array( 'type' => 'html' ), $atts, $tag );
 
-		if( is_array( $atts ) && array_key_exists( 'type', $atts ) ) {
-			if( $atts['type'] == 'raw' ) {
+		if ( is_array( $atts ) && array_key_exists( 'type', $atts ) ) {
+			if ( $atts['type'] == 'raw' ) {
 				return \wp_get_shortlink( $post->ID );
 			}
 
-			if( $atts['type'] == 'esc' ) {
+			if ( $atts['type'] == 'esc' ) {
 				return \esc_url( \wp_get_shortlink( $post->ID ) );
 			}
 
-			if( $atts['type'] == 'blank' ) {
+			if ( $atts['type'] == 'blank' ) {
 				return \sprintf( '<a href="%1$s" target="_blank">%1$s</a>', \esc_url( \wp_get_shortlink( $post->ID ) ) );
 			}
 		}
@@ -258,16 +260,16 @@ class Shortcodes {
 	/**
 	 * Generates output for the ap_thumbnail shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function thumbnail( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
+		if ( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
@@ -283,30 +285,31 @@ class Shortcodes {
 	/**
 	 * Generates output for the ap_image shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function image( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
+		if ( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
 		$atts = shortcode_atts( array( 'size' => 'full' ), $atts, $tag );
 
-		if( is_array( $atts ) && array_key_exists( 'size', $atts ) ) {
+		if ( is_array( $atts ) && array_key_exists( 'size', $atts ) ) {
 			$registered_sizes = wp_get_registered_image_subsizes();
 
-			if( array_key_exists( $atts['size'], $registered_sizes ) ) {
+			if ( array_key_exists( $atts['size'], $registered_sizes ) ) {
 				$size = intval( $atts['size'] );
 			}
 		}
 
-		if( ! $size ) { $size = 'full'; }
+		if ( ! $size ) {
+			$size = 'full'; }
 
 		$image = \get_the_post_thumbnail_url( $post->ID, $size );
 
@@ -320,16 +323,16 @@ class Shortcodes {
 	/**
 	 * Generates output for the ap_hashcats shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function hashcats( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
+		if ( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
@@ -351,16 +354,16 @@ class Shortcodes {
 	/**
 	 * Generates output for the ap_author shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function author( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
+		if ( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
@@ -376,16 +379,16 @@ class Shortcodes {
 	/**
 	 * Generates output for the ap_authorurl shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function authorurl( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
+		if ( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
@@ -401,55 +404,55 @@ class Shortcodes {
 	/**
 	 * Generates output for the ap_blogurl shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function blogurl( $atts, $content, $tag ) {
-		return \get_bloginfo('url');
+		return \get_bloginfo( 'url' );
 	}
 
 	/**
 	 * Generates output for the ap_blogname shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function blogname( $atts, $content, $tag ) {
-		return \get_bloginfo('name');
+		return \get_bloginfo( 'name' );
 	}
 
 	/**
 	 * Generates output for the ap_blogdesc shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function blogdesc( $atts, $content, $tag ) {
-		return \get_bloginfo('description');
+		return \get_bloginfo( 'description' );
 	}
 
 	/**
 	 * Generates output for the ap_date shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function date( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
+		if ( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
@@ -469,16 +472,16 @@ class Shortcodes {
 	/**
 	 * Generates output for the ap_time shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function time( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
+		if ( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
@@ -498,16 +501,16 @@ class Shortcodes {
 	/**
 	 * Generates output for the ap_datetime shortcode
 	 *
-	 * @param array  $atts 		shortcode attributes
-	 * @param string $content 	shortcode content
-	 * @param string $tag 		shortcode tag name
+	 * @param array  $atts      shortcode attributes
+	 * @param string $content   shortcode content
+	 * @param string $tag       shortcode tag name
 	 *
 	 * @return string
 	 */
 	public static function datetime( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
+		if ( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 

@@ -17,7 +17,7 @@ class Post {
 	private $object_type;
 
 	public function __construct( $post = null ) {
-		if( $post ) {
+		if ( $post ) {
 			$this->post = \get_post( $post );
 
 			$this->post_author = $this->post->post_author;
@@ -298,7 +298,9 @@ class Post {
 		$need_update = false;
 
 		// If the old contents is blank, use the defaults.
-		if( $old_content == "" ) { $old_content = ACTIVITYPUB_CUSTOM_POST_CONTENT; $need_update = true; }
+		if ( $old_content == '' ) {
+			$old_content = ACTIVITYPUB_CUSTOM_POST_CONTENT;
+			$need_update = true; }
 
 		// Set the new content to be the old content.
 		$content = $old_content;
@@ -313,7 +315,7 @@ class Post {
 		$content = \str_replace( '%tags%', '[ap_hashtags]', $content );
 
 		// Store the new template if required.
-		if( $content != $old_content || $need_update ) {
+		if ( $content != $old_content || $need_update ) {
 			\update_option( 'activitypub_custom_post_content', $content );
 		}
 
