@@ -268,7 +268,7 @@ class Post {
 		}
 
 		if ( 'title' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "<p><strong>[ap_title]</strong></p>\n\n<p>[ap_permalink]</p>";
+			return "<p>[ap_title]</p>\n\n<p>[ap_permalink]</p>";
 		}
 
 		if ( 'content' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
