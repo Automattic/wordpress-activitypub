@@ -12,7 +12,7 @@ $image_sizes = wp_get_registered_image_subsizes();
 $thumbnail_size = $image_sizes['thumbnail']['width'] . 'x' . $image_sizes['thumbnail']['height'] . ' px';
 $registered_sizes = '';
 
-foreach( $image_sizes as $name => $size ) {
+foreach ( $image_sizes as $name => $size ) {
 	$registered_sizes .= $name . ', ';
 }
 
@@ -70,18 +70,18 @@ $registered_sizes .= '.';
 							<details>
 								<summary><?php esc_html_e( 'See the complete list of activitypub shortcodes.', 'activitypub' ); ?></summary>
 								<div class="description">
-									<p><?php esc_html_e( 'You may use any shortcode normally available to you on your site, however be aware that shortcodes may significantly increase the size of your content depending on what they do. '); ?>
-									<p><?php esc_html_e( 'In addition, the following shortcodes are available during an activitypub post:'); ?>
+									<p><?php esc_html_e( 'You may use any shortcode normally available to you on your site, however be aware that shortcodes may significantly increase the size of your content depending on what they do.', 'activitypub' ); ?>
+									<p><?php esc_html_e( 'In addition, the following shortcodes are available during an activitypub post:', 'activitypub' ); ?>
 									<ul>
 										<li><code>[ap_title]</code> - <?php \esc_html_e( 'The post\'s title.', 'activitypub' ); ?></li>
 										<li><code>[ap_content]</code> - <?php \esc_html_e( 'The post\'s content.', 'activitypub' ); ?></li>
-										<li><code>[ap_excerpt <i>lenght=nnn</i>]</code> - <?php \esc_html_e( 'The post\'s excerpt (default 400 chars). length parameter is optional.', 'activitypub' ); ?></li>
+										<li><code>[ap_excerpt <i>lenght=400</i>]</code> - <?php \esc_html_e( 'The post\'s excerpt (default 400 chars). length parameter is optional.', 'activitypub' ); ?></li>
 										<li><code>[ap_permalink <i>type=xxx</i>]</code> - <?php \esc_html_e( 'The post\'s permalink. Type can be either: raw (the raw url, no escaping), esc (the html escaped url), html (default, an a tag to the url).', 'activitypub' ); ?></li>
 										<?php // translators: ?>
 										<li><code>[ap_shortlink <i>type=xxx</i>]</code> - <?php echo \wp_kses( \__( 'The post\'s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks. Type can be either: raw (the raw url, no escaping), esc (the html escaped url), html (default, an a tag to the url).', 'activitypub' ), 'default' ); ?></li>
 										<li><code>[ap_hashtags]</code> - <?php \esc_html_e( 'The post\'s tags as hashtags.', 'activitypub' ); ?></li>
 										<li><code>[ap_hashcats]</code> - <?php \esc_html_e( 'The post\'s categories as hashtags.', 'activitypub' ); ?></li>
-										<li><code>[ap_image <i>size=xxx</i>]</code> - <?php \esc_html_e( 'The URL for the post\'s featured image, defaults to full size.  The size attribute can be any of the following: ', 'activitypub' ); echo esc_html( $registered_sizes ); ?></li>
+										<li><code>[ap_image <i>size=xxx</i>]</code> - <?php \esc_html_e( 'The URL for the post\'s featured image, defaults to full size. The size attribute can be any of the following:', 'activitypub' ); echo esc_html( $registered_sizes ); ?></li>
 										<li><code>[ap_thumbnail]</code> - <?php echo \wp_kses( sprintf( __( 'The URL for the post\'s featured image thumbnail size (%s).', 'activitypub'), $thumbnail_size ), 'default' ); ?></li>
 										<li><code>[ap_author]</code> - <?php \esc_html_e( 'The author\'s name.', 'activitypub' ); ?></li>
 										<li><code>[ap_authorurl]</code> - <?php \esc_html_e( 'The URL to the author\'s profile page.', 'activitypub' ); ?></li>
@@ -97,7 +97,7 @@ $registered_sizes .= '.';
 							</details>
 						</p>
 						<?php // translators: ?>
-						<p><?php echo \wp_kses( \__( '<a href="https://github.com/pfefferle/wordpress-activitypub/issues/new" target="_blank">Let me know</a> if you miss a template pattern.', 'activitypub' ), 'default' ); ?></p>
+						<p><?php echo \wp_kses( \__( '<a href="https://github.com/pfefferle/wordpress-activitypub/issues/new" target="_blank">Let me know</a> if you miss a template pattern.', 'activitypub' ), 'activitypub' ); ?></p>
 					</td>
 				</tr>
 				<tr>
