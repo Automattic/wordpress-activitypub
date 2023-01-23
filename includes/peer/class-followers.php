@@ -8,22 +8,12 @@ namespace Activitypub\Peer;
  */
 class Followers {
 	public static function get_followers( $author_id ) {
-		$followers = \get_user_option( 'activitypub_followers', $author_id );
+		$extended_followers = self::get_followers_extended( $author_id );
 
-		if ( ! $followers ) {
-			return array();
-		}
+		$followers = array();
 
-		foreach ( $followers as $key => $follower ) {
-			if (
-				\is_array( $follower ) &&
-				isset( $follower['type'] ) &&
-				'Person' === $follower['type'] &&
-				isset( $follower['id'] ) &&
-				false !== \filter_var( $follower['id'], \FILTER_VALIDATE_URL )
-			) {
-				$followers[ $key ] = $follower['id'];
-			}
+		foreach( $extended_followers as $follower ) {
+			$followers[] = $follower['ID'];
 		}
 
 		return $followers;
@@ -73,8 +63,6 @@ class Followers {
 	}
 
 	public static function add_follower( $actor, $author_id ) {
-		$followers = \get_user_option( 'activitypub_followers', $author_id );
-
 		if ( ! \is_string( $actor ) ) {
 			if (
 				\is_array( $actor ) &&
@@ -95,17 +83,9 @@ class Followers {
 			);
 		}
 
-		if ( ! \is_array( $followers ) ) {
-			$followers = array( $actor );
-		} else {
-			$followers[] = $actor;
-		}
-
-		$followers = \array_unique( $followers );
-
 		self::store_follower( $actor, $author_id );
 
-		$server = parse_url( $follower, PHP_URL_HOST );
+		$server = parse_url( $actor, PHP_URL_HOST );
 
 		$service_data = self::store_service_info( $server );
 
@@ -116,8 +96,6 @@ class Followers {
 		}
 
 		self::store_follower_info( $actor, $service, $server );
-
-		\update_user_meta( $author_id, 'activitypub_followers', $followers );
 	}
 
 	public static function store_follower( $follower, $author_id ){
@@ -289,16 +267,6 @@ class Followers {
 
 	public static function remove_follower( $actor, $author_id ) {
 		GLOBAL $wpdb;
-
-		$followers = \get_user_option( 'activitypub_followers', $author_id );
-
-		foreach ( $followers as $key => $value ) {
-			if ( $value === $actor ) {
-				unset( $followers[ $key ] );
-			}
-		}
-
-		\update_user_meta( $author_id, 'activitypub_followers', $followers );
 
 		// Remove the follower in the followers table.
 		$where = array(

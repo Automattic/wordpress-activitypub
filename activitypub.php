@@ -26,6 +26,7 @@ function init() {
 	\define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
+	\define( 'ACTIVITYPUB_VERSION', '0.15.0' );
 
 	require_once \dirname( __FILE__ ) . '/includes/table/followers-list.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
@@ -85,6 +86,9 @@ function init() {
 			return '\Activitypub\Rest\Server';
 		}
 	);
+
+	require_once \dirname( __FILE__ ) . '/includes/class-upgrade.php';
+	\Activitypub\Upgrade::init();
 
 	if ( \WP_DEBUG ) {
 		require_once \dirname( __FILE__ ) . '/includes/debug.php';
