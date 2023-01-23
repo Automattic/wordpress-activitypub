@@ -16,19 +16,16 @@ class Post {
 	private $tags;
 	private $object_type;
 
-	public function __construct( $post = null ) {
-		if ( $post ) {
-			$this->post = \get_post( $post );
+	public function __construct( $post ) {
+		$this->post = \get_post( $post );
 
-			$this->post_author = $this->post->post_author;
-			$this->id          = $this->generate_id();
-			$this->summary     = $this->generate_the_title();
-			$this->content     = $this->generate_the_content();
-			$this->attachments = $this->generate_attachments();
-			$this->tags        = $this->generate_tags();
-			$this->object_type = $this->generate_object_type();
-		}
-
+		$this->post_author = $this->post->post_author;
+		$this->id          = $this->generate_id();
+		$this->summary     = $this->generate_the_title();
+		$this->content     = $this->generate_the_content();
+		$this->attachments = $this->generate_attachments();
+		$this->tags        = $this->generate_tags();
+		$this->object_type = $this->generate_object_type();
 	}
 
 	public function __call( $method, $params ) {
@@ -289,7 +286,7 @@ class Post {
 	 *
 	 * @return string the updated template content
 	 */
-	public function upgrade_post_content_template() {
+	public static function upgrade_post_content_template() {
 		// Get the custom template.
 		$old_content = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
 

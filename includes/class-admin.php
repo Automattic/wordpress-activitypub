@@ -50,8 +50,7 @@ class Admin {
 
 		switch ( $tab ) {
 			case 'settings':
-				$post_model = new \Activitypub\Model\Post();
-				$post_model->upgrade_post_content_template();
+				\Activitypub\Model\Post::upgrade_post_content_template();
 
 				\load_template( \dirname( __FILE__ ) . '/../templates/settings.php' );
 				break;
