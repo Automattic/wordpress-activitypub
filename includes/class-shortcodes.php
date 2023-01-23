@@ -267,31 +267,6 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the ap_thumbnail shortcode
-	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
-	 *
-	 * @return string
-	 */
-	public static function thumbnail( $atts, $content, $tag ) {
-		$post_id = get_the_ID();
-
-		if ( ! $post_id ) {
-			return '';
-		}
-
-		$image = \get_the_post_thumbnail_url( $post_id, 'thumbnail' );
-
-		if ( ! $image ) {
-			return '';
-		}
-
-		return $image;
-	}
-
-	/**
 	 * Generates output for the ap_image shortcode
 	 *
 	 * @param array  $atts      shortcode attributes
@@ -307,18 +282,22 @@ class Shortcodes {
 			return '';
 		}
 
-		$atts = shortcode_atts( array( 'size' => 'full' ), $atts, $tag );
+		$atts = shortcode_atts(
+			array(
+				'type' => 'full',
+			),
+			$atts,
+			$tag
+		);
 
-		if ( is_array( $atts ) && array_key_exists( 'size', $atts ) ) {
-			$registered_sizes = wp_get_registered_image_subsizes();
+		$size = 'full';
 
-			if ( array_key_exists( $atts['size'], $registered_sizes ) ) {
-				$size = intval( $atts['size'] );
-			}
-		}
-
-		if ( ! $size ) {
-			$size = 'full';
+		if ( in_array(
+			$atts['type'],
+			array( 'thumbnail', 'medium', 'large', 'full' ),
+			true
+		) ) {
+			$size = $atts['type'];
 		}
 
 		$image = \get_the_post_thumbnail_url( $post_id, $size );
