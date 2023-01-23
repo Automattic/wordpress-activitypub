@@ -235,9 +235,6 @@ class Post {
 		$post = $this->post;
 		$content = $this->get_post_content_template();
 
-		// Register the shortcodes.
-		$shortcodes = new \Activitypub\Shortcodes( $post );
-
 		// Fill in the shortcodes.
 		setup_postdata( $post );
 		$content = do_shortcode( $content );
