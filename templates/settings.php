@@ -56,35 +56,22 @@
 						<p>
 							<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo wp_kses( ACTIVITYPUB_CUSTOM_POST_CONTENT, 'post' ); ?>"><?php echo wp_kses( \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ), 'post' ); ?></textarea>
 							<details>
-								<summary><?php esc_html_e( 'See the complete list of ActivityPub shortcodes.', 'activitypub' ); ?></summary>
+								<summary><?php esc_html_e( 'See a list of ActivityPub Template Tags.', 'activitypub' ); ?></summary>
 								<div class="description">
-									<p><?php esc_html_e( 'You may use any shortcode normally available to you on your site, however be aware that shortcodes may significantly increase the size of your content depending on what they do.', 'activitypub' ); ?>
-									<p><?php esc_html_e( 'In addition, the following shortcodes are available during an ActivityPub post:', 'activitypub' ); ?>
 									<ul>
 										<li><code>[ap_title]</code> - <?php \esc_html_e( 'The post\'s title.', 'activitypub' ); ?></li>
 										<li><code>[ap_content]</code> - <?php \esc_html_e( 'The post\'s content.', 'activitypub' ); ?></li>
-										<li><code>[ap_excerpt <i>lenght=400</i>]</code> - <?php \esc_html_e( 'The post\'s excerpt (default 400 chars). length parameter is optional.', 'activitypub' ); ?></li>
-										<li><code>[ap_permalink <i>type=url</i>]</code> - <?php \esc_html_e( 'The post\'s permalink. Type can be either: url (default, the escaped url), html (an a tag to the url).', 'activitypub' ); ?></li>
-										<?php // translators: ?>
-										<li><code>[ap_shortlink <i>type=url</i>]</code> - <?php echo \wp_kses( \__( 'The post\'s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks. Type can be either: url (default, the escaped url), html (an a tag to the url).', 'activitypub' ), 'default' ); ?></li>
+										<li><code>[ap_excerpt]</code> - <?php \esc_html_e( 'The post\'s excerpt (default 400 chars).', 'activitypub' ); ?></li>
+										<li><code>[ap_permalink]</code> - <?php \esc_html_e( 'The post\'s permalink.', 'activitypub' ); ?></li>
+										<li><code>[ap_shortlink]</code> - <?php echo \wp_kses( \__( 'The post\'s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>.', 'activitypub' ), 'default' ); ?></li>
 										<li><code>[ap_hashtags]</code> - <?php \esc_html_e( 'The post\'s tags as hashtags.', 'activitypub' ); ?></li>
 										<li><code>[ap_hashcats]</code> - <?php \esc_html_e( 'The post\'s categories as hashtags.', 'activitypub' ); ?></li>
-										<li><code>[ap_image <i>type=full</i>]</code> - <?php \esc_html_e( 'The URL for the post\'s featured image, defaults to full size. The type attribute can be any of the following: thumbnail, medium, large, full', 'activitypub' ); ?></li>
-										<li><code>[ap_author]</code> - <?php \esc_html_e( 'The author\'s name.', 'activitypub' ); ?></li>
-										<li><code>[ap_authorurl]</code> - <?php \esc_html_e( 'The URL to the author\'s profile page.', 'activitypub' ); ?></li>
-										<li><code>[ap_date]</code> - <?php \esc_html_e( 'The post\'s date.', 'activitypub' ); ?></li>
-										<li><code>[ap_time]</code> - <?php \esc_html_e( 'The post\'s time.', 'activitypub' ); ?></li>
-										<li><code>[ap_datetime]</code> - <?php \esc_html_e( 'The post\'s date/time formated as "date @ time".', 'activitypub' ); ?></li>
-										<li><code>[ap_blogurl]</code> - <?php \esc_html_e( 'The URL to the site.', 'activitypub' ); ?></li>
-										<li><code>[ap_blogname]</code> - <?php \esc_html_e( 'The name of the site.', 'activitypub' ); ?></li>
-										<li><code>[ap_blogdesc]</code> - <?php \esc_html_e( 'The description of the site.', 'activitypub' ); ?></li>
+										<li><code>[ap_image]</code> - <?php \esc_html_e( 'The URL for the post\'s featured image.', 'activitypub' ); ?></li>
 									</ul>
-									<p><?php esc_html_e( 'Note: the old template codes are now deprecated and automatically converted to the new shortcodes.', 'activitypub' ); ?>
+									<p><?php \esc_html_e( 'You can find the full list with all possible attributes in the help section on the top-right of the screen.', 'activitypub' ); ?></p>
 								</div>
 							</details>
 						</p>
-						<?php // translators: ?>
-						<p><?php echo \wp_kses( \__( '<a href="https://github.com/pfefferle/wordpress-activitypub/issues/new" target="_blank">Let me know</a> if you miss a template pattern.', 'activitypub' ), 'activitypub' ); ?></p>
 					</td>
 				</tr>
 				<tr>
