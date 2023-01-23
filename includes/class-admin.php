@@ -66,7 +66,7 @@ class Admin {
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {
-		\load_template( \dirname( __FILE__ ) . '/../templates/followers-list.php' );
+		\load_template( \dirname( __FILE__ ) . '/../templates/user-activitypub.php' );
 	}
 
 	/**
