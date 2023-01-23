@@ -298,7 +298,7 @@ class Post {
 		$need_update = false;
 
 		// If the old contents is blank, use the defaults.
-		if ( $old_content == '' ) {
+		if ( '' === $old_content ) {
 			$old_content = ACTIVITYPUB_CUSTOM_POST_CONTENT;
 			$need_update = true; }
 
@@ -315,7 +315,7 @@ class Post {
 		$content = \str_replace( '%tags%', '[ap_hashtags]', $content );
 
 		// Store the new template if required.
-		if ( $content != $old_content || $need_update ) {
+		if ( $content !== $old_content || $need_update ) {
 			\update_option( 'activitypub_custom_post_content', $content );
 		}
 
