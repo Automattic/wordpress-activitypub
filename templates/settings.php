@@ -160,6 +160,16 @@
 						</p>
 					</td>
 				</tr>
+				<tr>
+					<th scope="row">
+						<?php \esc_html_e( 'Enable avatars', 'activitypub' ); ?>
+					</th>
+					<td>
+						<p>
+							<label><input type="checkbox" name="activitypub_enable_avatars" id="activitypub_enable_avatars" value="1" <?php echo \checked( '1', \get_option( 'activitypub_enable_avatars', '0' ) ); ?>> <?php echo wp_kses( \__( 'Enable the display of avatars in the followers list, these avatars are hosted on remote sites and might add significant load to the followers list.', 'activitypub' ), 'default' ); ?></label>
+						</p>
+					</td>
+				</tr>
 			</tbody>
 		</table>
 

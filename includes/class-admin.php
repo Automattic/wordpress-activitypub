@@ -149,6 +149,16 @@ class Admin {
 				'default'      => array( 'post', 'pages' ),
 			)
 		);
+		\register_setting(
+			'activitypub',
+			'activitypub_enable_avatars',
+			array(
+				'type'         => 'boolean',
+				'description'  => \esc_html__( 'Enable the display of avatars in the followers table', 'activitypub' ),
+				'show_in_rest' => true,
+				'default'      => 0,
+			)
+		);
 	}
 
 	public static function add_settings_help_tab() {
