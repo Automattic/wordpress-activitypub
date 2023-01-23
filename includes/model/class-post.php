@@ -242,7 +242,9 @@ class Post {
 		$shortcodes = new \Activitypub\Shortcodes( $post );
 
 		// Fill in the shortcodes.
+		setup_postdata( $post );
 		$content = do_shortcode( $content );
+		wp_reset_postdata();
 
 		$content = \trim( \preg_replace( '/[\r\n]{2,}/', '', $content ) );
 

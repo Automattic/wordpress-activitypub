@@ -3,31 +3,14 @@ namespace Activitypub;
 
 class Shortcodes {
 	/**
-	 * The post object we're currently working on
-	 *
-	 * @var WP_Post  $post    A WordPress Post Object
-	 */
-	private $post;
-
-	/**
 	 * Class constructor, registering WordPress then shortcodes
 	 *
 	 * @param WP_Post  $post    A WordPress Post Object
 	 */
-	public function __construct( $post = null ) {
-		if( $post == null ) {
-			$post = \get_post();
-		}
-
-		if( \is_object( $post ) && ! $post instanceof WP_POST ) {
-			$this->post = $post;
-		} else {
-			$this->post = false;
-		}
-
-		foreach( get_class_methods( $this ) as $shortcode ) {
-			if( strpos( $shortcode, '__' ) !== 0 ) {
-				add_shortcode( 'ap_' . $shortcode, array( $this, $shortcode ) );
+	public static function init() {
+		foreach( get_class_methods( 'Activitypub\Shortcodes' ) as $shortcode ) {
+			if( $shortcode != 'init' ) {
+				add_shortcode( 'ap_' . $shortcode, array( 'Activitypub\Shortcodes', $shortcode ) );
 			}
 		}
 	}
@@ -41,12 +24,14 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function hashtags( $atts, $content, $tag ) {
-		if( $this->post === false ) {
+	public static function hashtags( $atts, $content, $tag ) {
+		$post = get_post();
+
+		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		$tags = \get_the_tags( $this->post->ID );
+		$tags = \get_the_tags( $post->ID );
 
 		if ( ! $tags ) {
 			return '';
@@ -70,12 +55,14 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function title( $atts, $content, $tag ) {
-		if( $this->post === false ) {
+	public static function title( $atts, $content, $tag ) {
+		$post = get_post();
+
+		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		return \get_the_title( $this->post->ID );;
+		return \get_the_title( $post->ID );;
 	}
 
 	/**
@@ -87,24 +74,24 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function excerpt( $atts, $content, $tag ) {
-		if( $this->post === false ) {
+	public static function excerpt( $atts, $content, $tag ) {
+		$post = get_post();
+
+		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		$length = ACTIVITYPUB_EXCERPT_LENGTH;
+		$atts = shortcode_atts( array( 'length' => ACTIVITYPUB_EXCERPT_LENGTH ), $atts, $tag );
 
-		if( is_array( $atts ) && array_key_exists( 'length', $atts ) ) {
-			$length = intval( $atts['length'] );
-		}
+		$length = intval( $atts['length'] );
 
 		if( $length == 0 ) { $length = ACTIVITYPUB_EXCERPT_LENGTH; }
 
-		$excerpt = \get_post_field( 'post_excerpt', $this->post );
+		$excerpt = \get_post_field( 'post_excerpt', $post );
 
 		if ( '' === $excerpt ) {
 
-			$content = \get_post_field( 'post_content', $this->post );
+			$content = \get_post_field( 'post_content', $post );
 
 			// An empty string will make wp_trim_excerpt do stuff we do not want.
 			if ( '' !== $content ) {
@@ -186,12 +173,14 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function content( $atts, $content, $tag ) {
-		if( $this->post === false ) {
+	public static function content( $atts, $content, $tag ) {
+		$post = get_post();
+
+		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		$content = \get_post_field( 'post_content', $this->post );
+		$content = \get_post_field( 'post_content', $post );
 
 		return \apply_filters( 'the_content', $content );
 	}
@@ -205,12 +194,30 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function permalink( $atts, $content, $tag ) {
-		if( $this->post === false ) {
+	public static function permalink( $atts, $content, $tag ) {
+		$post = get_post();
+
+		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		return \sprintf( '<a href="%1$s">%1$s</a>', \esc_url( \get_permalink( $this->post->ID ) ) );
+		$atts = shortcode_atts( array( 'type' => 'html' ), $atts, $tag );
+
+		if( is_array( $atts ) && array_key_exists( 'type', $atts ) ) {
+			if( $atts['type'] == 'raw' ) {
+				return \get_permalink( $post->ID );
+			}
+
+			if( $atts['type'] == 'esc' ) {
+				return \esc_url( \get_permalink( $post->ID ) );
+			}
+
+			if( $atts['type'] == 'blank' ) {
+				return \sprintf( '<a href="%1$s" target="_blank">%1$s</a>', \esc_url( \get_permalink( $post->ID ) ) );
+			}
+		}
+
+		return \sprintf( '<a href="%1$s">%1$s</a>', \esc_url( \get_permalink( $post->ID ) ) );
 	}
 
 	/**
@@ -222,12 +229,30 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function shortlink( $atts, $content, $tag ) {
-		if( $this->post === false ) {
+	public static function shortlink( $atts, $content, $tag ) {
+		$post = get_post();
+
+		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		return \sprintf( '<a href="%1$s">%1$s</a>', \esc_url( \wp_get_shortlink( $this->post->ID ) ) );
+		$atts = shortcode_atts( array( 'type' => 'html' ), $atts, $tag );
+
+		if( is_array( $atts ) && array_key_exists( 'type', $atts ) ) {
+			if( $atts['type'] == 'raw' ) {
+				return \wp_get_shortlink( $post->ID );
+			}
+
+			if( $atts['type'] == 'esc' ) {
+				return \esc_url( \wp_get_shortlink( $post->ID ) );
+			}
+
+			if( $atts['type'] == 'blank' ) {
+				return \sprintf( '<a href="%1$s" target="_blank">%1$s</a>', \esc_url( \wp_get_shortlink( $post->ID ) ) );
+			}
+		}
+
+		return \sprintf( '<a href="%1$s">%1$s</a>', \esc_url( \wp_get_shortlink( $post->ID ) ) );
 	}
 
 	/**
@@ -239,12 +264,14 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function thumbnail( $atts, $content, $tag ) {
-		if( $this->post === false ) {
+	public static function thumbnail( $atts, $content, $tag ) {
+		$post = get_post();
+
+		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		$image = \get_the_post_thumbnail_url( $this->post->ID, 'thumbnail' );
+		$image = \get_the_post_thumbnail_url( $post->ID, 'thumbnail' );
 
 		if ( ! $image ) {
 			return '';
@@ -262,12 +289,14 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function image( $atts, $content, $tag ) {
-		if( $this->post === false ) {
+	public static function image( $atts, $content, $tag ) {
+		$post = get_post();
+
+		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		$size = 'full';
+		$atts = shortcode_atts( array( 'size' => 'full' ), $atts, $tag );
 
 		if( is_array( $atts ) && array_key_exists( 'size', $atts ) ) {
 			$registered_sizes = wp_get_registered_image_subsizes();
@@ -279,7 +308,7 @@ class Shortcodes {
 
 		if( ! $size ) { $size = 'full'; }
 
-		$image = \get_the_post_thumbnail_url( $this->post->ID, $size );
+		$image = \get_the_post_thumbnail_url( $post->ID, $size );
 
 		if ( ! $image ) {
 			return '';
@@ -297,12 +326,14 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function hashcats( $atts, $content, $tag ) {
-		if( $this->post === false ) {
+	public static function hashcats( $atts, $content, $tag ) {
+		$post = get_post();
+
+		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		$categories = \get_the_category( $this->post->ID );
+		$categories = \get_the_category( $post->ID );
 
 		if ( ! $categories ) {
 			return '';
@@ -326,12 +357,14 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function author( $atts, $content, $tag ) {
-		if( $this->post === false ) {
+	public static function author( $atts, $content, $tag ) {
+		$post = get_post();
+
+		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		$name = \get_the_author_meta( 'display_name', $this->post->post_author );
+		$name = \get_the_author_meta( 'display_name', $post->post_author );
 
 		if ( ! $name ) {
 			return '';
@@ -349,12 +382,14 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function authorurl( $atts, $content, $tag ) {
-		if( $this->post === false ) {
+	public static function authorurl( $atts, $content, $tag ) {
+		$post = get_post();
+
+		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		$url = \get_the_author_meta( 'user_url', $this->post->post_author );
+		$url = \get_the_author_meta( 'user_url', $post->post_author );
 
 		if ( ! $url ) {
 			return '';
@@ -372,7 +407,7 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function blogurl( $atts, $content, $tag ) {
+	public static function blogurl( $atts, $content, $tag ) {
 		return \get_bloginfo('url');
 	}
 
@@ -385,7 +420,7 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function blogname( $atts, $content, $tag ) {
+	public static function blogname( $atts, $content, $tag ) {
 		return \get_bloginfo('name');
 	}
 
@@ -398,7 +433,7 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function blogdesc( $atts, $content, $tag ) {
+	public static function blogdesc( $atts, $content, $tag ) {
 		return \get_bloginfo('description');
 	}
 
@@ -411,12 +446,14 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function date( $atts, $content, $tag ) {
-		if( $this->post === false ) {
+	public static function date( $atts, $content, $tag ) {
+		$post = get_post();
+
+		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		$datetime = \get_post_datetime( $this->post );
+		$datetime = \get_post_datetime( $post );
 		$dateformat = \get_option( 'date_format' );
 		$timeformat = \get_option( 'time_format' );
 
@@ -438,12 +475,14 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function time( $atts, $content, $tag ) {
-		if( $this->post === false ) {
+	public static function time( $atts, $content, $tag ) {
+		$post = get_post();
+
+		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		$datetime = \get_post_datetime( $this->post );
+		$datetime = \get_post_datetime( $post );
 		$dateformat = \get_option( 'date_format' );
 		$timeformat = \get_option( 'time_format' );
 
@@ -465,12 +504,14 @@ class Shortcodes {
 	 *
 	 * @return string
 	 */
-	public function datetime( $atts, $content, $tag ) {
-		if( $this->post === false ) {
+	public static function datetime( $atts, $content, $tag ) {
+		$post = get_post();
+
+		if( ! \is_object( $post ) || ( \is_object( $post ) && get_class( $post ) != 'WP_Post' ) ) {
 			return '';
 		}
 
-		$datetime = \get_post_datetime( $this->post );
+		$datetime = \get_post_datetime( $post );
 		$dateformat = \get_option( 'date_format' );
 		$timeformat = \get_option( 'time_format' );
 
