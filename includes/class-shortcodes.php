@@ -204,20 +204,23 @@ class Shortcodes {
 		}
 
 		$atts = shortcode_atts(
-			array( 'type' => 'html' ), $atts, $tag );
+			array(
+				'type' => 'html',
+			),
+			$atts,
+			$tag
+		);
 
-		if ( is_array( $atts ) && array_key_exists( 'type', $atts ) ) {
-			if ( $atts['type'] == 'raw' ) {
-				return \get_permalink( $post->ID );
-			}
+		if ( 'raw' === $atts['type'] ) {
+			return \get_permalink( $post->ID );
+		}
 
-			if ( $atts['type'] == 'esc' ) {
-				return \esc_url( \get_permalink( $post->ID ) );
-			}
+		if ( 'esc' === $atts['type'] ) {
+			return \esc_url( \get_permalink( $post->ID ) );
+		}
 
-			if ( $atts['type'] == 'blank' ) {
-				return \sprintf( '<a href="%1$s" target="_blank">%1$s</a>', \esc_url( \get_permalink( $post->ID ) ) );
-			}
+		if ( 'blank' === $atts['type'] ) {
+			return \sprintf( '<a href="%1$s" target="_blank">%1$s</a>', \esc_url( \get_permalink( $post->ID ) ) );
 		}
 
 		return \sprintf( '<a href="%1$s">%1$s</a>', \esc_url( \get_permalink( $post->ID ) ) );
@@ -239,20 +242,24 @@ class Shortcodes {
 			return '';
 		}
 
-		$atts = shortcode_atts( array( 'type' => 'html' ), $atts, $tag );
+		$atts = shortcode_atts(
+			array(
+				'type' => 'html',
+			),
+			$atts,
+			$tag
+		);
 
-		if ( is_array( $atts ) && array_key_exists( 'type', $atts ) ) {
-			if ( $atts['type'] == 'raw' ) {
-				return \wp_get_shortlink( $post->ID );
-			}
+		if ( 'raw' === $atts['type'] ) {
+			return \wp_get_shortlink( $post->ID );
+		}
 
-			if ( $atts['type'] == 'esc' ) {
-				return \esc_url( \wp_get_shortlink( $post->ID ) );
-			}
+		if ( 'esc' === $atts['type'] ) {
+			return \esc_url( \wp_get_shortlink( $post->ID ) );
+		}
 
-			if ( $atts['type'] == 'blank' ) {
-				return \sprintf( '<a href="%1$s" target="_blank">%1$s</a>', \esc_url( \wp_get_shortlink( $post->ID ) ) );
-			}
+		if ( 'blank' === $atts['type'] ) {
+			return \sprintf( '<a href="%1$s" target="_blank">%1$s</a>', \esc_url( \wp_get_shortlink( $post->ID ) ) );
 		}
 
 		return \sprintf( '<a href="%1$s">%1$s</a>', \esc_url( \wp_get_shortlink( $post->ID ) ) );
