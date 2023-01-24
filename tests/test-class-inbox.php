@@ -19,7 +19,7 @@ class Test_Inbox extends WP_UnitTestCase {
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( '\Test_Inbox', 'get_remote_metadata_by_actor' ), 10, 2);
 	}
 
-	public function get_remote_metadata_by_actor( $value, $actor ) {
+	public static function get_remote_metadata_by_actor( $value, $actor ) {
         	return array(
                 	"name" => "Example User",
                         "icon" => array(
