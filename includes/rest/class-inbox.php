@@ -432,10 +432,10 @@ class Inbox {
 	 * @return array Comment data suitable for creating a comment.
 	 */
 	public static function convert_object_to_comment_data( $object ) {
-        	if ( ! isset( $object['object'] ) ) {
+		if ( ! isset( $object['object'] ) ) {
 			return false;
-                }
-                
+		}
+
 		// check if Activity is public or not
 		if ( ! self::is_activity_public( $object ) ) {
 			// @todo maybe send email
@@ -446,7 +446,7 @@ class Inbox {
 
 		// Objects must have IDs
 		if ( ! isset( $object['object']['id'] ) ) {
-			\error_log( "Comment provided without ID" );
+			\error_log( 'Comment provided without ID' );
 			return;
 		}
 		$id = $object['object']['id'];
@@ -465,9 +465,13 @@ class Inbox {
 		$parent_comment = \Activitypub\object_id_to_comment( $in_reply_to );
 
 		// save only replies and reactions
-		$comment_post_id = \Activitypub\object_to_post_id_by_field_name( $object, 'context' ) ??
-	   			   \Activitypub\object_to_post_id_by_field_name( $object, 'inReplyTo' ) ??
-				    ( $parent_comment ? $parent_comment->comment_post_ID : 0 );
+		$comment_post_id = \Activitypub\object_to_post_id_by_field_name( $object, 'context' );
+		if ( ! $comment_post_id ) {
+			$comment_post_id = \Activitypub\object_to_post_id_by_field_name( $object, 'inReplyTo' );
+		}
+		if ( ! $comment_post_id ) {
+			$comment_post_id = $parent_comment->comment_post_ID;
+		}
 		if ( ! $comment_post_id ) {
 			return;
 		}
@@ -497,7 +501,7 @@ class Inbox {
 	 */
 	public static function handle_create( $object, $user_id ) {
 		$commentdata = self::convert_object_to_comment_data( $object );
-		if ( !$commentdata ) {
+		if ( ! $commentdata ) {
 			return false;
 		}
 

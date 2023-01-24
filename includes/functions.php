@@ -320,11 +320,16 @@ function url_to_authorid( $url ) {
  * @return WP_Comment, or undef if no comment could be found.
  */
 function object_id_to_comment( $id ) {
-	$comment_query = new \WP_Comment_Query( array( 'meta_key' => 'source_id', 'meta_value' => $id ) );
-	if ( !$comment_query->comments ) {
+	$comment_query = new \WP_Comment_Query(
+		array(
+			'meta_key' => 'source_id',
+			'meta_value' => $id,
+		)
+	);
+	if ( ! $comment_query->comments ) {
 		return;
 	}
-	if ( count( $comment_query->comments ) > 1 ){
+	if ( count( $comment_query->comments ) > 1 ) {
 		\error_log( "More than one comment under {$id}" );
 		return;
 	}
@@ -339,10 +344,10 @@ function object_id_to_comment( $id ) {
  * @return int Post ID, or null on failure.
  */
 function object_to_post_id_by_field_name( $object, $field_name ) {
-	if ( ! isset( $object['object'][$field_name] ) ) {
+	if ( ! isset( $object['object'][ $field_name ] ) ) {
 		return;
 	}
-	$result = \url_to_postid( $object['object'][$field_name] );
+	$result = \url_to_postid( $object['object'][ $field_name ] );
 	if ( $result > 0 ) {
 		return $result;
 	}
