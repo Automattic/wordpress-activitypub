@@ -1,10 +1,11 @@
 <?php
 class Test_Inbox extends WP_UnitTestCase {
+       	#[\ReturnTypeWillChange]
 
 	var $post_permalink;
         var $user_url;
 
-	public function setUp(): void {
+	public function setUp() {
         	$authordata = \get_userdata( 1 );
                 $this->user_url = $authordata->user_url;
 
