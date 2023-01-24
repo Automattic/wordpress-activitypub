@@ -431,7 +431,11 @@ class Inbox {
 	 *
 	 * @return array Comment data suitable for creating a comment.
 	 */
-	private static function convert_object_to_comment_data( $object ) {
+	public static function convert_object_to_comment_data( $object ) {
+        	if ( ! isset( $object['object'] ) ) {
+			return false;
+                }
+                
 		// check if Activity is public or not
 		if ( ! self::is_activity_public( $object ) ) {
 			// @todo maybe send email
