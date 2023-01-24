@@ -134,15 +134,6 @@ class Admin {
 		);
 		\register_setting(
 			'activitypub',
-			'activitypub_allowed_html',
-			array(
-				'type' => 'string',
-				'description' => \__( 'List of HTML elements that are allowed in activities.', 'activitypub' ),
-				'default' => ACTIVITYPUB_ALLOWED_HTML,
-			)
-		);
-		\register_setting(
-			'activitypub',
 			'activitypub_support_post_types',
 			array(
 				'type'         => 'string',
