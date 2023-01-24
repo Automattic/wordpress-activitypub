@@ -343,7 +343,6 @@ function object_to_post_id_by_field_name( $object, $field_name ) {
 		return;
 	}
 	$result = \url_to_postid( $object['object'][$field_name] );
-	\error_log( "@@@ found result for " . $field_name . ": " . $result );
 	if ( $result > 0 ) {
 		return $result;
 	}
