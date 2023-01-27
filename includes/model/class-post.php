@@ -7,27 +7,103 @@ namespace Activitypub\Model;
  * @author Matthias Pfefferle
  */
 class Post {
+	/**
+	 * The WordPress Post Object.
+	 *
+	 * @var WP_Post
+	 */
 	private $post;
-	private $post_author;
-	private $id;
-	private $summary;
-	private $content;
-	private $attachments;
-	private $tags;
-	private $object_type;
 
+	/**
+	 * The Post Author.
+	 *
+	 * @var string
+	 */
+	private $post_author;
+
+	/**
+	 * The Object ID.
+	 *
+	 * @var string
+	 */
+	private $id;
+
+	/**
+	 * The Object Summary.
+	 *
+	 * @var string
+	 */
+	private $summary;
+
+	/**
+	 * The Object Summary
+	 *
+	 * @var string
+	 */
+	private $content;
+
+	/**
+	 * The Object Attachments. This is usually a list of Images.
+	 *
+	 * @var array
+	 */
+	private $attachments;
+
+	/**
+	 * The Object Tags. This is usually the list of used Hashtags.
+	 *
+	 * @var array
+	 */
+	private $tags;
+
+	/**
+	 * The Onject Type
+	 *
+	 * @var string
+	 */
+	private $object_type = 'Note';
+
+	/**
+	 * The Allowed Tags, used in the content.
+	 *
+	 * @var array
+	 */
+	private $allowed_tags = array(
+		'a' => array(
+			'href' => array(),
+			'title' => array(),
+			'class' => array(),
+			'rel' => array(),
+		),
+		'br' => array(),
+		'p' => array(
+			'class' => array(),
+		),
+		'span' => array(
+			'class' => array(),
+		),
+		'div' => array(
+			'class' => array(),
+		),
+	);
+
+	/**
+	 * Constructor
+	 *
+	 * @param WP_Post $post
+	 */
 	public function __construct( $post ) {
 		$this->post = \get_post( $post );
-
-		$this->post_author = $this->post->post_author;
-		$this->id          = $this->generate_id();
-		$this->summary     = $this->generate_the_title();
-		$this->content     = $this->generate_the_content();
-		$this->attachments = $this->generate_attachments();
-		$this->tags        = $this->generate_tags();
-		$this->object_type = $this->generate_object_type();
 	}
 
+	/**
+	 * Magic function to implement getter and setter
+	 *
+	 * @param string $method
+	 * @param string $params
+	 *
+	 * @return void
+	 */
 	public function __call( $method, $params ) {
 		$var = \strtolower( \substr( $method, 4 ) );
 
@@ -40,34 +116,53 @@ class Post {
 		}
 	}
 
+	/**
+	 * Converts this Object into an Array.
+	 *
+	 * @return array
+	 */
 	public function to_array() {
 		$post = $this->post;
 
 		$array = array(
-			'id' => $this->id,
-			'type' => $this->object_type,
+			'id' => $this->get_id(),
+			'type' => $this->get_object_type(),
 			'published' => \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date_gmt ) ),
 			'attributedTo' => \get_author_posts_url( $post->post_author ),
-			'summary' => $this->summary,
+			'summary' => $this->get_summary(),
 			'inReplyTo' => null,
-			'content' => $this->content,
+			'content' => $this->get_content(),
 			'contentMap' => array(
-				\strstr( \get_locale(), '_', true ) => $this->content,
+				\strstr( \get_locale(), '_', true ) => $this->get_content(),
 			),
 			'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'cc' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-			'attachment' => $this->attachments,
-			'tag' => $this->tags,
+			'attachment' => $this->get_attachments(),
+			'tag' => $this->get_tags(),
 		);
 
 		return \apply_filters( 'activitypub_post', $array );
 	}
 
+	/**
+	 * Converts this Object into a JSON String
+	 *
+	 * @return string
+	 */
 	public function to_json() {
 		return \wp_json_encode( $this->to_array(), \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
 	}
 
-	public function generate_id() {
+	/**
+	 * Returns the ID of an Activity Object
+	 *
+	 * @return string
+	 */
+	public function get_id() {
+		if ( $this->id ) {
+			return $this->id;
+		}
+
 		$post = $this->post;
 
 		if ( 'trash' === get_post_status( $post ) ) {
@@ -76,10 +171,21 @@ class Post {
 			$permalink = \get_permalink( $post );
 		}
 
+		$this->id = $permalink;
+
 		return $permalink;
 	}
 
-	public function generate_attachments() {
+	/**
+	 * Returns a list of Image Attachments
+	 *
+	 * @return array
+	 */
+	public function get_attachments() {
+		if ( $this->attachments ) {
+			return $this->attachments;
+		}
+
 		$max_images = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
 
 		$images = array();
@@ -140,10 +246,21 @@ class Post {
 			}
 		}
 
+		$this->attachments = $images;
+
 		return $images;
 	}
 
-	public function generate_tags() {
+	/**
+	 * Returns a list of Tags, used in the Post
+	 *
+	 * @return array
+	 */
+	public function get_tags() {
+		if ( $this->tags ) {
+			return $this->tags;
+		}
+
 		$tags = array();
 
 		$post_tags = \get_the_tags( $this->post->ID );
@@ -158,18 +275,21 @@ class Post {
 			}
 		}
 
+		$this->tags = $tags;
+
 		return $tags;
 	}
 
 	/**
 	 * Returns the as2 object-type for a given post
 	 *
-	 * @param string $type the object-type
-	 * @param Object $post the post-object
-	 *
 	 * @return string the object-type
 	 */
-	public function generate_object_type() {
+	public function get_object_type() {
+		if ( $this->object_type ) {
+			return $this->object_type;
+		}
+
 		if ( 'wordpress-post-format' !== \get_option( 'activitypub_object_type', 'note' ) ) {
 			return \ucfirst( \get_option( 'activitypub_object_type', 'note' ) );
 		}
@@ -223,15 +343,21 @@ class Post {
 				break;
 		}
 
+		$this->object_type = $object_type;
+
 		return $object_type;
 	}
 
 	/**
-	 * Generates the content for the activitypub item.
+	 * Returns the content for the ActivityPub Item.
 	 *
 	 * @return string the content
 	 */
-	public function generate_the_content() {
+	public function get_content() {
+		if ( $this->content ) {
+			return $this->content;
+		}
+
 		$post = $this->post;
 		$content = $this->get_post_content_template();
 
@@ -240,18 +366,16 @@ class Post {
 		$content = do_shortcode( $content );
 		wp_reset_postdata();
 
-		$content = \trim( \preg_replace( '/[\r\n]{2,}/', '', $content ) );
+		$content = \wpautop( \wp_kses( $content, $this->allowed_tags ) );
 
-		$filtered_content = \apply_filters( 'activitypub_the_content', $content, $this->post );
+		$filtered_content = \apply_filters( 'activitypub_the_content', $content, $post );
 		$decoded_content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
 
-		$allowed_html = \apply_filters( 'activitypub_allowed_html', \get_option( 'activitypub_allowed_html', ACTIVITYPUB_ALLOWED_HTML ) );
+		$content = \trim( \preg_replace( '/[\n\r]/', '', $content ) );
 
-		if ( $allowed_html ) {
-			return \strip_tags( $decoded_content, $allowed_html );
-		}
+		$this->content = $content;
 
-		return $decoded_content;
+		return $content;
 	}
 
 	/**
@@ -261,15 +385,15 @@ class Post {
 	 */
 	public function get_post_content_template() {
 		if ( 'excerpt' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_excerpt]\n\n<p>[ap_permalink]</p>";
+			return "[ap_excerpt]\n\n[ap_permalink]";
 		}
 
 		if ( 'title' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "<p>[ap_title]</p>\n\n<p>[ap_permalink]</p>";
+			return "[ap_title]\n\n[ap_permalink]";
 		}
 
 		if ( 'content' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_content]\n\n<p>[ap_hashtags]</p>\n\n<p>[ap_permalink]</p>";
+			return "[ap_content]\n\n[ap_hashtags]\n\n[ap_permalink]";
 		}
 
 		// Upgrade from old template codes to shortcodes.
@@ -294,7 +418,8 @@ class Post {
 		// If the old contents is blank, use the defaults.
 		if ( '' === $old_content ) {
 			$old_content = ACTIVITYPUB_CUSTOM_POST_CONTENT;
-			$need_update = true; }
+			$need_update = true;
+		}
 
 		// Set the new content to be the old content.
 		$content = $old_content;
