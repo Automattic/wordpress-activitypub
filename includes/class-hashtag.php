@@ -21,15 +21,15 @@ class Hashtag {
 	 * Filter to save #tags as real WordPress tags
 	 *
 	 * @param int $id the rev-id
-	 * @param array $data the post-data as array
+	 * @param WP_Post $post the post
 	 *
 	 * @return
 	 */
-	public static function insert_post( $id, $data ) {
-		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $data->post_content, $match ) ) {
+	public static function insert_post( $id, $post ) {
+		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $post->post_content, $match ) ) {
 			$tags = \implode( ', ', $match[1] );
 
-			\wp_add_post_tags( $data->post_parent, $tags );
+			\wp_add_post_tags( $post->post_parent, $tags );
 		}
 
 		return $id;
