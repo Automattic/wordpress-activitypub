@@ -1,6 +1,6 @@
 <?php
 class ActivityPub_TestCase_Cache_HTTP extends \WP_UnitTestCase {
-
+	public $server;
 	public function set_up() {
 		parent::set_up();
 
