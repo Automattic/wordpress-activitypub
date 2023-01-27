@@ -108,6 +108,9 @@ class Post {
 		$var = \strtolower( \substr( $method, 4 ) );
 
 		if ( \strncasecmp( $method, 'get', 3 ) === 0 ) {
+			if ( empty( $this->$var ) && ! empty( $this->post->$var ) ) {
+				return $this->post->$var;
+			}
 			return $this->$var;
 		}
 
