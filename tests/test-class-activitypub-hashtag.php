@@ -19,7 +19,7 @@ class Test_Activitypub_Hashtag extends WP_UnitTestCase {
 		$code = '<code>text with some #object and <a> tag inside</code>';
 		$style = <<<ENDSTYLE
 <style type="text/css">
-<![[
+<![CDATA[
 color: #ccc;
 ]]>
 </style>

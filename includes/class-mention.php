@@ -24,24 +24,25 @@ class Mention {
 	 */
 	public static function the_content( $the_content ) {
 		$protected_tags = array();
+		$protect = function( $m ) use ( &$protected_tags ) {
+			$c = count( $protected_tags );
+			$protect = '!#!#PROTECT' . $c . '#!#!';
+			$protected_tags[ $protect ] = $m[0];
+			return $protect;
+		};
+		$the_content = preg_replace_callback(
+			'#<![CDATA[.*?]]>#is',
+			$protect,
+			$the_content
+		);
 		$the_content = preg_replace_callback(
 			'#<(pre|code|textarea|style)\b[^>]*>.*?</\1[^>]*>#is',
-			function( $m ) use ( &$protected_tags ) {
-				$c = count( $protected_tags );
-				$protect = '!#!#PROTECT' . $c . '#!#!';
-				$protected_tags[ $protect ] = $m[0];
-				return $protect;
-			},
+			$protect,
 			$the_content
 		);
 		$the_content = preg_replace_callback(
 			'#<a.*?href=[^>]+>.*?</a>#i',
-			function( $m ) use ( &$protected_tags ) {
-				$c = count( $protected_tags );
-				$protect = '!#!#PROTECT' . $c . '#!#!';
-				$protected_tags[ $protect ] = $m[0];
-				return $protect;
-			},
+			$protect,
 			$the_content
 		);
 
