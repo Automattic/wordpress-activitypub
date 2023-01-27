@@ -25,7 +25,7 @@ class Mention {
 	public static function the_content( $the_content ) {
 		$protected_tags = array();
 		$the_content = preg_replace_callback(
-			'#<(code|textarea|style)\b[^>]*>.*?</\1[^>]*>#i',
+			'#<(pre|code|textarea|style)\b[^>]*>.*?</\1[^>]*>#is',
 			function( $m ) use ( &$protected_tags ) {
 				$c = count( $protected_tags );
 				$protect = '!#!#PROTECT' . $c . '#!#!';

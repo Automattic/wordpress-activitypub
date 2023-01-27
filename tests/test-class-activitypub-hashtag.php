@@ -5,6 +5,7 @@ class Test_Activitypub_Hashtag extends WP_UnitTestCase {
 	 */
 	public function test_the_content( $content, $content_with_hashtag ) {
 		\wp_create_term( 'object', 'post_tag' );
+		\wp_create_term( 'touch', 'post_tag' );
 		\wp_create_term( 'ccc', 'post_tag' );
 		$object = \get_term_by( 'name', 'object', 'post_tag' );
 		$link = \get_term_link( $object, 'post_tag' );
@@ -23,6 +24,12 @@ color: #ccc;
 ]]>
 </style>
 ENDSTYLE;
+		$pre = <<<ENDPRE
+<pre>
+Please don't #touch
+  this.
+</pre>
+ENDPRE;
 		$textarea = '<textarea name="test" rows="20">color: #ccc</textarea>';
 		return array(
 			array( 'test', 'test' ),
@@ -40,6 +47,7 @@ ENDSTYLE;
 			array( $code, $code ),
 			array( $style, $style ),
 			array( $textarea, $textarea ),
+			array( $pre, $pre ),
 		);
 	}
 }
