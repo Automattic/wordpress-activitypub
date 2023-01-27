@@ -74,7 +74,7 @@ function init() {
 
 	require_once \dirname( __FILE__ ) . '/includes/class-shortcodes.php';
 	\Activitypub\Shortcodes::init();
-	
+
 	require_once \dirname( __FILE__ ) . '/includes/class-mention.php';
 	\Activitypub\Mention::init();
 
