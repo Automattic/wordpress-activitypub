@@ -5,6 +5,7 @@ class Test_Activitypub_Hashtag extends WP_UnitTestCase {
 	 */
 	public function test_the_content( $content, $content_with_hashtag ) {
 		\wp_create_term( 'object', 'post_tag' );
+		\wp_create_term( 'ccc', 'post_tag' );
 		$object = \get_term_by( 'name', 'object', 'post_tag' );
 		$link = \get_term_link( $object, 'post_tag' );
 
@@ -14,6 +15,15 @@ class Test_Activitypub_Hashtag extends WP_UnitTestCase {
 	}
 
 	public function the_content_provider() {
+		$code = '<code>text with some #object and <a> tag inside</code>';
+		$style = <<<ENDSTYLE
+<style type="text/css">
+<![[
+color: #ccc;
+]]>
+</style>
+ENDSTYLE;
+		$textarea = '<textarea name="test" rows="20">color: #ccc</textarea>';
 		return array(
 			array( 'test', 'test' ),
 			array( '#test', '#test' ),
@@ -27,6 +37,9 @@ class Test_Activitypub_Hashtag extends WP_UnitTestCase {
 			array( '<div>#object</div>', '<div>#object</div>' ),
 			array( '<a>#object</a>', '<a>#object</a>' ),
 			array( '<div style="color: #ccc;">object</a>', '<div style="color: #ccc;">object</a>' ),
+			array( $code, $code ),
+			array( $style, $style ),
+			array( $textarea, $textarea ),
 		);
 	}
 }

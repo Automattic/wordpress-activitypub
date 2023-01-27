@@ -20,7 +20,7 @@ class Hashtag {
 	/**
 	 * Filter to save #tags as real WordPress tags
 	 *
-	 * @param int $id the rev-id
+	 * @param int     $id the rev-id
 	 * @param WP_Post $post the post
 	 *
 	 * @return
@@ -44,6 +44,16 @@ class Hashtag {
 	 */
 	public static function the_content( $the_content ) {
 		$protected_tags = array();
+		$the_content = preg_replace_callback(
+			'#<(code|textarea|style)\b[^>]*>.*?</\1[^>]*>#i',
+			function( $m ) use ( &$protected_tags ) {
+				$c = count( $protected_tags );
+				$protect = '!#!#PROTECT' . $c . '#!#!';
+				$protected_tags[ $protect ] = $m[0];
+				return $protect;
+			},
+			$the_content
+		);
 		$the_content = preg_replace_callback(
 			'#<[^>]+>#i',
 			function( $m ) use ( &$protected_tags ) {
