@@ -31,7 +31,7 @@ class Mention {
 			return $protect;
 		};
 		$the_content = preg_replace_callback(
-			'#<![CDATA[.*?]]>#is',
+			'#<!\[CDATA\[.*?\]\]>#is',
 			$protect,
 			$the_content
 		);
@@ -48,7 +48,7 @@ class Mention {
 
 		$the_content = \preg_replace_callback( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', array( '\Activitypub\Mention', 'replace_with_links' ), $the_content );
 
-		$the_content = str_replace( array_keys( $protected_tags ), array_values( $protected_tags ), $the_content );
+		$the_content = str_replace( array_reverse( array_keys( $protected_tags ) ), array_reverse( array_values( $protected_tags ) ), $the_content );
 
 		return $the_content;
 	}

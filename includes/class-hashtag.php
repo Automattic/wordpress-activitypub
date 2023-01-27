@@ -51,7 +51,7 @@ class Hashtag {
 			return $protect;
 		};
 		$the_content = preg_replace_callback(
-			'#<![CDATA[.*?]]>#is',
+			'#<!\[CDATA\[.*?\]\]>#is',
 			$protect,
 			$the_content
 		);
@@ -68,7 +68,7 @@ class Hashtag {
 
 		$the_content = \preg_replace_callback( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', array( '\Activitypub\Hashtag', 'replace_with_links' ), $the_content );
 
-		$the_content = str_replace( array_keys( $protected_tags ), array_values( $protected_tags ), $the_content );
+		$the_content = str_replace( array_reverse( array_keys( $protected_tags ) ), array_reverse( array_values( $protected_tags ) ), $the_content );
 
 		return $the_content;
 	}
