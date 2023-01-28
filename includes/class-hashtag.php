@@ -12,8 +12,8 @@ class Hashtag {
 	 */
 	public static function init() {
 		if ( '1' === \get_option( 'activitypub_use_hashtags', '1' ) ) {
-			\add_filter( 'wp_insert_post', array( '\Activitypub\Hashtag', 'insert_post' ), 99, 2 );
-			\add_filter( 'the_content', array( '\Activitypub\Hashtag', 'the_content' ), 99, 2 );
+			\add_filter( 'wp_insert_post', array( '\Activitypub\Hashtag', 'insert_post' ), 10, 2 );
+			\add_filter( 'the_content', array( '\Activitypub\Hashtag', 'the_content' ), 10, 2 );
 		}
 	}
 
@@ -21,15 +21,15 @@ class Hashtag {
 	 * Filter to save #tags as real WordPress tags
 	 *
 	 * @param int $id the rev-id
-	 * @param array $data the post-data as array
+	 * @param WP_Post $post the post
 	 *
 	 * @return
 	 */
-	public static function insert_post( $id, $data ) {
-		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $data->post_content, $match ) ) {
+	public static function insert_post( $id, $post ) {
+		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $post->post_content, $match ) ) {
 			$tags = \implode( ', ', $match[1] );
 
-			\wp_add_post_tags( $data->post_parent, $tags );
+			\wp_add_post_tags( $post->post_parent, $tags );
 		}
 
 		return $id;
@@ -43,7 +43,21 @@ class Hashtag {
 	 * @return string the filtered post-content
 	 */
 	public static function the_content( $the_content ) {
+		$protected_tags = array();
+		$the_content = preg_replace_callback(
+			'#<[^>]+>#i',
+			function( $m ) use ( &$protected_tags ) {
+				$c = count( $protected_tags );
+				$protect = '!#!#PROTECT' . $c . '#!#!';
+				$protected_tags[ $protect ] = $m[0];
+				return $protect;
+			},
+			$the_content
+		);
+
 		$the_content = \preg_replace_callback( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', array( '\Activitypub\Hashtag', 'replace_with_links' ), $the_content );
+
+		$the_content = str_replace( array_keys( $protected_tags ), array_values( $protected_tags ), $the_content );
 
 		return $the_content;
 	}

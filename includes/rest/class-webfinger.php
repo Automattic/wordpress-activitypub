@@ -61,7 +61,7 @@ class Webfinger {
 
 		$user = \get_user_by( 'login', \esc_sql( $resource_identifier ) );
 
-		if ( ! $user ) {
+		if ( ! $user || ! user_can( $user, 'publish_posts' ) ) {
 			return new \WP_Error( 'activitypub_user_not_found', \__( 'User not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 

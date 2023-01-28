@@ -56,6 +56,8 @@ class Admin {
 
 		switch ( $tab ) {
 			case 'settings':
+				\Activitypub\Model\Post::upgrade_post_content_template();
+
 				\load_template( \dirname( __FILE__ ) . '/../templates/settings.php' );
 				break;
 			case 'welcome':
@@ -113,6 +115,15 @@ class Admin {
 		);
 		\register_setting(
 			'activitypub',
+			'activitypub_max_image_attachments',
+			array(
+				'type' => 'integer',
+				'description' => \__( 'Number of images to attach to posts.', 'activitypub' ),
+				'default' => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
+			)
+		);
+		\register_setting(
+			'activitypub',
 			'activitypub_object_type',
 			array(
 				'type' => 'string',
@@ -132,15 +143,6 @@ class Admin {
 				'type' => 'boolean',
 				'description' => \__( 'Add hashtags in the content as native tags and replace the #tag with the tag-link', 'activitypub' ),
 				'default' => 0,
-			)
-		);
-		\register_setting(
-			'activitypub',
-			'activitypub_allowed_html',
-			array(
-				'type' => 'string',
-				'description' => \__( 'List of HTML elements that are allowed in activities.', 'activitypub' ),
-				'default' => ACTIVITYPUB_ALLOWED_HTML,
 			)
 		);
 		\register_setting(

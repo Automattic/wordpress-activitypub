@@ -88,6 +88,17 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
+= v.next =
+
+* Add configuration item for number of images to attach. props [@mexon](https://github.com/mexon)
+* Use shortcodes instead of custom templates, to setup the Activity Post-Content. props [@toolstack](https://github.com/toolstack)
+
+= 0.15.0 =
+
+* Enable ActivityPub only for users that can `publish_posts`
+* Persist only public Activities
+* Fix remote-delete
+
 = 0.14.3 =
 
 * Better error handling. props [@akirk](https://github.com/akirk)
@@ -102,7 +113,7 @@ Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github
 
 = 0.14.0 =
 
-* Friends support: https://wordpress.org/plugins/friends/ . props [@akirk](https://github.com/akirk)
+* Friends support: https://wordpress.org/plugins/friends/ props [@akirk](https://github.com/akirk)
 * Massive guidance improvements. props [mediaformat](https://github.com/mediaformat) & [@akirk](https://github.com/akirk)
 * Add Custom Post Type support to outbox API. props [blueset](https://github.com/blueset)
 * Better hash-tag support. props [bocops](https://github.com/bocops)

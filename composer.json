@@ -34,7 +34,7 @@
     "scripts": {
         "test": [
             "composer install",
-            "bin/install-wp-tests.sh wordpress wordpress wordpress",
+            "bin/install-wp-tests.sh activitypub-test root activitypub-test test-db latest true",
             "vendor/bin/phpunit"
         ]
     }

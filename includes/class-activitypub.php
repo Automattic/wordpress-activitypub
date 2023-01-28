@@ -13,7 +13,6 @@ class Activitypub {
 	public static function init() {
 		\add_filter( 'template_include', array( '\Activitypub\Activitypub', 'render_json_template' ), 99 );
 		\add_filter( 'query_vars', array( '\Activitypub\Activitypub', 'add_query_vars' ) );
-		\add_action( 'init', array( '\Activitypub\Activitypub', 'add_rewrite_endpoint' ) );
 		\add_filter( 'pre_get_avatar_data', array( '\Activitypub\Activitypub', 'pre_get_avatar_data' ), 11, 2 );
 
 		// Add support for ActivityPub to custom post types
@@ -23,8 +22,9 @@ class Activitypub {
 			\add_post_type_support( $post_type, 'activitypub' );
 		}
 
-		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 10, 3 );
-
+		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 33, 3 );
+		\add_action( 'wp_trash_post', array( '\Activitypub\Activitypub', 'trash_post' ), 1 );
+		\add_action( 'untrash_post', array( '\Activitypub\Activitypub', 'untrash_post' ), 1 );
 	}
 
 	/**
@@ -39,6 +39,11 @@ class Activitypub {
 			return $template;
 		}
 
+		// check if user can publish posts
+		if ( \is_author() && ! user_can( \get_the_author_meta( 'ID' ), 'publish_posts' ) ) {
+			return $template;
+		}
+
 		if ( \is_author() ) {
 			$json_template = \dirname( __FILE__ ) . '/../templates/author-json.php';
 		} elseif ( \Activitypub\is_ap_replies() ) {
@@ -46,9 +51,9 @@ class Activitypub {
 		} elseif ( \Activitypub\is_ap_comment() ) {
 			$json_template = \dirname( __FILE__ ) . '/../templates/comment-json.php';
 		} elseif ( \is_singular() ) {
-			$json_template = \dirname( __FILE__ ) . '/../templates/post-json.php';
+			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
 		} elseif ( \is_home() ) {
-			$json_template = \dirname( __FILE__ ) . '/../templates/blog-json.php';
+			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
 		global $wp_query;
@@ -97,13 +102,6 @@ class Activitypub {
 		$vars[] = 'collection_page';
 
 		return $vars;
-	}
-
-	/**
-	 * Add our rewrite endpoint to permalinks and pages.
-	 */
-	public static function add_rewrite_endpoint() {
-		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 	}
 
 	/**
@@ -189,5 +187,27 @@ class Activitypub {
 			$comment = \get_comment( $comment );
 		}
 		return \get_comment_meta( $comment->comment_ID, 'avatar_url', true );
+	}
+
+	/**
+	 * Store permalink in meta, to send delete Activity
+	 *
+	 * @param string $post_id The Post ID
+	 *
+	 * @return void
+	 */
+	public static function trash_post( $post_id ) {
+		\add_post_meta( $post_id, 'activitypub_canonical_url', \get_permalink( $post_id ), true );
+	}
+
+	/**
+	 * Delete permalink from meta
+	 *
+	 * @param string $post_id The Post ID
+	 *
+	 * @return void
+	 */
+	public static function untrash_post( $post_id ) {
+		\delete_post_meta( $post_id, 'activitypub_canonical_url' );
 	}
 }

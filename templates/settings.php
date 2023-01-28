@@ -56,22 +56,42 @@
 						<p>
 							<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo wp_kses( ACTIVITYPUB_CUSTOM_POST_CONTENT, 'post' ); ?>"><?php echo wp_kses( \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ), 'post' ); ?></textarea>
 							<details>
-								<summary><?php esc_html_e( 'See the complete list of template patterns.', 'activitypub' ); ?></summary>
+								<summary><?php esc_html_e( 'See a list of ActivityPub Template Tags.', 'activitypub' ); ?></summary>
 								<div class="description">
 									<ul>
-										<li><code>%title%</code> - <?php \esc_html_e( 'The Post-Title.', 'activitypub' ); ?></li>
-										<li><code>%content%</code> - <?php \esc_html_e( 'The Post-Content.', 'activitypub' ); ?></li>
-										<li><code>%excerpt%</code> - <?php \esc_html_e( 'The Post-Excerpt (default 400 Chars).', 'activitypub' ); ?></li>
-										<li><code>%permalink%</code> - <?php \esc_html_e( 'The Post-Permalink.', 'activitypub' ); ?></li>
-										<?php // translators: ?>
-										<li><code>%shortlink%</code> - <?php echo \wp_kses( \__( 'The Post-Shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks', 'activitypub' ), 'default' ); ?></li>
-										<li><code>%hashtags%</code> - <?php \esc_html_e( 'The Tags as Hashtags.', 'activitypub' ); ?></li>
+										<li><code>[ap_title]</code> - <?php \esc_html_e( 'The post\'s title.', 'activitypub' ); ?></li>
+										<li><code>[ap_content]</code> - <?php \esc_html_e( 'The post\'s content.', 'activitypub' ); ?></li>
+										<li><code>[ap_excerpt]</code> - <?php \esc_html_e( 'The post\'s excerpt (default 400 chars).', 'activitypub' ); ?></li>
+										<li><code>[ap_permalink]</code> - <?php \esc_html_e( 'The post\'s permalink.', 'activitypub' ); ?></li>
+										<li><code>[ap_shortlink]</code> - <?php echo \wp_kses( \__( 'The post\'s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>.', 'activitypub' ), 'default' ); ?></li>
+										<li><code>[ap_hashtags]</code> - <?php \esc_html_e( 'The post\'s tags as hashtags.', 'activitypub' ); ?></li>
+										<li><code>[ap_hashcats]</code> - <?php \esc_html_e( 'The post\'s categories as hashtags.', 'activitypub' ); ?></li>
+										<li><code>[ap_image]</code> - <?php \esc_html_e( 'The URL for the post\'s featured image.', 'activitypub' ); ?></li>
 									</ul>
+									<p><?php \esc_html_e( 'You can find the full list with all possible attributes in the help section on the top-right of the screen.', 'activitypub' ); ?></p>
 								</div>
 							</details>
 						</p>
-						<?php // translators: ?>
-						<p><?php echo \wp_kses( \__( '<a href="https://github.com/pfefferle/wordpress-activitypub/issues/new" target="_blank">Let me know</a> if you miss a template pattern.', 'activitypub' ), 'default' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
+						<?php \esc_html_e( 'Number of images', 'activitypub' ); ?>
+					</th>
+					<td>
+						<input value="<?php echo esc_attr( \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ); ?>" name="activitypub_max_image_attachments" id="activitypub_max_image_attachments" type="number" min="0" />
+						<p class="description">
+							<?php
+							echo \wp_kses(
+								\sprintf(
+									// translators:
+									\__( 'The number of images to attach to posts. Default: <code>%s</code>', 'activitypub' ),
+									\esc_html( ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS )
+								),
+								'default'
+							);
+							?>
+						</p>
 					</td>
 				</tr>
 				<tr>
@@ -112,31 +132,11 @@
 				</tr>
 				<tr>
 					<th scope="row">
-						<?php \esc_html_e( 'Hashtags', 'activitypub' ); ?>
+						<?php \esc_html_e( 'Hashtags (beta)', 'activitypub' ); ?>
 					</th>
 					<td>
 						<p>
-							<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag-link.', 'activitypub' ), 'default' ); ?></label>
-						</p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row">
-						<?php \esc_html_e( 'HTML Allowlist', 'activitypub' ); ?>
-					</th>
-					<td>
-						<textarea name="activitypub_allowed_html" id="activitypub_allowed_html" rows="3" cols="50" class="large-text"><?php echo esc_html( \get_option( 'activitypub_allowed_html', ACTIVITYPUB_ALLOWED_HTML ) ); ?></textarea>
-						<p class="description">
-							<?php
-							echo \wp_kses(
-								\sprintf(
-									// translators:
-									\__( 'A list of HTML elements, you want to allowlist for your activities. <strong>Leave list empty to support all HTML elements</strong>. Default: <code>%s</code>', 'activitypub' ),
-									\esc_html( ACTIVITYPUB_ALLOWED_HTML )
-								),
-								'default'
-							);
-							?>
+							<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag-link. <strong>This feature is experimental! Please disable it, if you find any HTML or CSS errors.</strong>', 'activitypub' ), 'default' ); ?></label>
 						</p>
 					</td>
 				</tr>
