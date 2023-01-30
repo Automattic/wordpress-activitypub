@@ -425,45 +425,85 @@ class Inbox {
 	}
 
 	/**
-	 * Handles "Create" requests
+	 * Converts a new ActivityPub object to comment data suitable for creating a comment
 	 *
-	 * @param  array $object  The activity-object
-	 * @param  int   $user_id The id of the local blog-user
+	 * @param  array $object  The activity-object.
+	 *
+	 * @return array Comment data suitable for creating a comment.
 	 */
-	public static function handle_create( $object, $user_id ) {
-		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
-
-		if ( ! isset( $object['object']['inReplyTo'] ) ) {
-			return;
+	public static function convert_object_to_comment_data( $object ) {
+		if ( ! isset( $object['object'] ) ) {
+			return false;
 		}
 
 		// check if Activity is public or not
 		if ( ! self::is_activity_public( $object ) ) {
 			// @todo maybe send email
-			return;
-		}
-
-		$comment_post_id = \url_to_postid( $object['object']['inReplyTo'] );
-
-		// save only replys and reactions
-		if ( ! $comment_post_id ) {
 			return false;
 		}
 
-		$commentdata = array(
+		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
+
+		// Objects must have IDs
+		if ( ! isset( $object['object']['id'] ) ) {
+			\error_log( 'Comment provided without ID' );
+			return;
+		}
+		$id = $object['object']['id'];
+
+		// Only handle replies
+		if ( ! isset( $object['object']['inReplyTo'] ) ) {
+			return;
+		}
+		$in_reply_to = $object['object']['inReplyTo'];
+
+		// Comment already exists
+		if ( \Activitypub\object_id_to_comment( $id ) ) {
+			return;
+		}
+
+		$parent_comment = \Activitypub\object_id_to_comment( $in_reply_to );
+
+		// save only replies and reactions
+		$comment_post_id = \Activitypub\object_to_post_id_by_field_name( $object, 'context' );
+		if ( ! $comment_post_id ) {
+			$comment_post_id = \Activitypub\object_to_post_id_by_field_name( $object, 'inReplyTo' );
+		}
+		if ( ! $comment_post_id ) {
+			$comment_post_id = $parent_comment->comment_post_ID;
+		}
+		if ( ! $comment_post_id ) {
+			return;
+		}
+
+		return array(
 			'comment_post_ID' => $comment_post_id,
 			'comment_author' => \esc_attr( $meta['name'] ),
 			'comment_author_url' => \esc_url_raw( $object['actor'] ),
 			'comment_content' => \wp_filter_kses( $object['object']['content'] ),
 			'comment_type' => '',
 			'comment_author_email' => '',
-			'comment_parent' => 0,
+			'comment_parent' => $parent_comment ? $parent_comment->comment_ID : 0,
 			'comment_meta' => array(
+				'source_id' => \esc_url_raw( $id ),
 				'source_url' => \esc_url_raw( $object['object']['url'] ),
 				'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
 				'protocol' => 'activitypub',
 			),
 		);
+	}
+
+	/**
+	 * Handles "Create" requests
+	 *
+	 * @param  array $object  The activity-object
+	 * @param  int   $user_id The id of the local blog-user
+	 */
+	public static function handle_create( $object, $user_id ) {
+		$commentdata = self::convert_object_to_comment_data( $object );
+		if ( ! $commentdata ) {
+			return false;
+		}
 
 		// disable flood control
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
@@ -472,6 +512,7 @@ class Inbox {
 		\add_filter( 'pre_option_require_name_email', '__return_false' );
 
 		$state = \wp_new_comment( $commentdata, true );
+		// TODO: search for comments with that source url as their parent url and update their parent
 
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
