@@ -126,7 +126,7 @@ class Comment {
 			}
 		} else { //parent is_post
 			// Backwards compatibility
-			$pretty_permalink = \get_post_meta( $comment->comment_post_ID, '_activitypub_permalink_compat', true );
+			$pretty_permalink = \get_post_meta( $comment->comment_post_ID, 'activitypub_canonical_url', true );
 			if ( $pretty_permalink ) {
 				$in_reply_to = $pretty_permalink;
 			} else {
@@ -144,7 +144,7 @@ class Comment {
 	public function generate_context() {
 		$comment = $this->comment;
 		// support pretty_permalinks
-		$pretty_permalink = \get_post_meta( $comment->comment_post_ID, '_activitypub_permalink_compat', true );
+		$pretty_permalink = \get_post_meta( $comment->comment_post_ID, 'activitypub_canonical_url', true );
 		if ( $pretty_permalink ) {
 			$context = $pretty_permalink;
 		} else {
