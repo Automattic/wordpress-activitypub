@@ -15,9 +15,7 @@ class Admin {
 		\add_action( 'admin_init', array( '\Activitypub\Admin', 'register_settings' ) );
 		\add_action( 'admin_init', array( '\Activitypub\Admin', 'version_check' ), 1 );
 		\add_action( 'show_user_profile', array( '\Activitypub\Admin', 'add_fediverse_profile' ) );
-		\add_action( 'wp_ajax_migrate_post', array( '\Activitypub\Admin', 'migrate_post_action' ) );
 		\add_filter( 'comment_row_actions', array( '\Activitypub\Admin', 'reply_comments_actions' ), 10, 2 );
-		\add_filter( 'views_tools_page_activitypub_tools', array( '\Activitypub\Table\Migrate_List', 'get_activitypub_tools_views' ), 10 );
 		\add_action( 'admin_enqueue_scripts', array( '\Activitypub\Admin', 'enqueue_scripts' ) );
 	}
 
@@ -39,7 +37,6 @@ class Admin {
 
 		\add_action( 'load-' . $followers_list_page, array( '\Activitypub\Admin', 'add_followers_list_help_tab' ) );
 
-		\add_management_page( \__( 'ActivityPub Management', 'activitypub' ), \__( 'ActivityPub Tools', 'activitypub' ), 'manage_options', 'activitypub_tools', array( '\Activitypub\Admin', 'migrate_tools_page' ) );
 	}
 
 	/**
@@ -76,13 +73,6 @@ class Admin {
 	 */
 	public static function followers_list_page() {
 		\load_template( \dirname( __FILE__ ) . '/../templates/followers-list.php' );
-	}
-
-	/**
-	 * Load ActivityPub Tools page
-	 */
-	public static function migrate_tools_page() {
-		\load_template( \dirname( __FILE__ ) . '/../templates/tools-page.php' );
 	}
 
 	/**
@@ -157,27 +147,6 @@ class Admin {
 		);
 	}
 
-	/**
-	 * Update ActivityPub plugin
-	 */
-	public static function version_check() {
-		if ( ! function_exists( 'get_plugin_data' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/plugin.php';
-		}
-		$plugin_data = \get_plugin_data( ACTIVITYPUB_PLUGIN );
-		$activitypub_db_version = \get_option( 'activitypub_version' );
-
-		if ( empty( $activitypub_db_version ) || \version_compare( $plugin_data['Version'], $activitypub_db_version, '>' ) ) {
-			// Check for specific migrations
-
-			if ( version_compare( '0.13.4', $activitypub_db_version, '>' ) ) {
-				\Activitypub\Tools\Posts::mark_posts_to_migrate();
-			}
-		}
-		\update_option( 'activitypub_version', $plugin_data['Version'] );
-		//\delete_option( 'activitypub_version' );
-	}
-
 	public static function add_settings_help_tab() {
 		require_once \dirname( __FILE__ ) . '/help.php';
 	}
@@ -191,20 +160,6 @@ class Admin {
 		<h2 id="activitypub"><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h2>
 		<?php
 		\Activitypub\get_identifier_settings( $user->ID );
-	}
-
-	/**
-	 * Migrate post (Ajax)
-	 */
-	public static function migrate_post_action() {
-		if ( wp_verify_nonce( $_POST['nonce'], 'activitypub_migrate_actions' ) ) {
-			\Activitypub\Tools\Posts::migrate_post( rawurldecode( $_POST['post_url'] ), absint( $_POST['post_author'] ) );
-			\delete_post_meta( \url_to_postid( $_POST['post_url'] ), '_activitypub_permalink_compat' );
-		} else {
-			$error = new WP_Error( 'nonce_failure', __( 'Unauthorized', 'activitypub' ) );
-			wp_send_json_error( $error );
-		}
-		wp_die();
 	}
 
 	/**
