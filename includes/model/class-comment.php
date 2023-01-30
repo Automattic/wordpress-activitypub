@@ -68,7 +68,7 @@ class Comment {
 			'context' => $this->context,
 			// 'source' => \get_comment_link( $comment ), //non-conforming, see https://www.w3.org/TR/activitypub/#source-property
 			'url' => \get_comment_link( $comment ), //link for mastodon
-			'to' => $this->to_recipients,
+			'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'cc' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'tag' => $this->tags,
 			'replies' => $this->replies,
@@ -205,17 +205,27 @@ class Comment {
 	 * Mention user being replied to
 	 */
 	public function generate_tags() {
-		$mentions = \get_comment_meta( $this->comment->comment_ID, 'mentions', true );
-		if ( ! empty( $mentions ) ) {
-			foreach ( $mentions as $mention ) {
-				$mention_tags[] = array(
-					'type' => 'Mention',
-					'href' => $mention['href'],
-					'name' => '@' . $mention['name'],
-				);
-			}
-			return $mention_tags;
+		if ( $this->tags ) {
+			return $this->tags;
 		}
+
+		$tags = array();
+
+		$mentions = apply_filters( 'activitypub_extract_mentions', array(), $this->comment->comment_content, $this );
+		if ( $mentions ) {
+			foreach ( $mentions as $mention => $url ) {
+				$tag = array(
+					'type' => 'Mention',
+					'href' => $url,
+					'name' => $mention,
+				);
+				$tags[] = $tag;
+			}
+		}
+
+		$this->tags = $tags;
+
+		return $tags;
 	}
 
 	/**
