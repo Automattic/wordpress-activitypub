@@ -235,12 +235,12 @@ class Admin {
 			wp_enqueue_script( 'activitypub-admin-styles', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), '1.0.0', false );
 		}
 
-		if ( 'edit-comments.php' === $hook_suffix || 'tools_page_activitypub_tools' === $hook_suffix ) {
+		if ( 'edit-comments.php' === $hook_suffix ) {
 			\wp_enqueue_script(
 				'activitypub_actions',
-				\plugin_dir_url( ACTIVITYPUB_PLUGIN ) . '/assets/js/activitypub.js',
+				\plugin_dir_url( ACTIVITYPUB_PLUGIN ) . '/assets/js/activitypub-admin.js',
 				array( 'jquery' ),
-				\filemtime( \plugin_dir_path( ACTIVITYPUB_PLUGIN ) . 'assets/js/activitypub.js' ),
+				\filemtime( \plugin_dir_path( ACTIVITYPUB_PLUGIN ) . 'assets/js/activitypub-admin.js' ),
 				true
 			);
 		}
