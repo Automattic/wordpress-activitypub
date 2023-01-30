@@ -13,11 +13,11 @@ class Comments {
 	public static function init() {
 
 		\add_filter( 'preprocess_comment', array( '\Activitypub\Comments', 'preprocess_comment' ) );
+		\add_filter( 'comment_text', array( '\Activitypub\Comments', 'comment_content_filter' ), 10, 3 );
 		\add_filter( 'comment_post', array( '\Activitypub\Comments', 'postprocess_comment' ), 10, 3 );
 		\add_filter( 'wp_update_comment_data', array( '\Activitypub\Comments', 'comment_updated_published' ), 20, 3 );
-		\add_action( 'transition_comment_status', array( '\Activitypub\Comments', 'schedule_comment_activity' ), 20, 3 );
 		\add_action( 'edit_comment', array( '\Activitypub\Comments', 'edit_comment' ), 20, 2 );//schedule_admin_comment_activity
-		\add_filter( 'get_comment_text', array( '\Activitypub\Comments', 'comment_append_edit_datetime' ), 10, 3 );
+		\add_action( 'transition_comment_status', array( '\Activitypub\Comments', 'schedule_comment_activity' ), 20, 3 );
 
 	}
 
@@ -26,15 +26,36 @@ class Comments {
 	 * preprocess local comments for federated replies
 	 */
 	public static function preprocess_comment( $commentdata ) {
-		// only process replies from local actors
+		// only process replies from authorized local actors, for ap enabled post types
 		$user = \get_userdata( $commentdata['user_id'] );
-		if ( $user->has_cap( 'publish_post' ) ) {
-			// transform webfinger mentions to links and add @mentions to cc
-			$tagged_content = \Activitypub\transform_tags( $commentdata['comment_content'] );
-			$commentdata['comment_content'] = $tagged_content['content'];
-			$commentdata['comment_meta']['mentions'] = $tagged_content['mentions'];
+		$comment_post_type = \get_post_type( $commentdata['comment_post_ID'] );
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
+
+		if ( $user->has_cap( 'publish_post' ) && \in_array( $comment_post_type, $post_types, true ) ) {
+			$commentdata['comment_meta']['protocol'] = 'activitypub';
 		}
 		return $commentdata;
+	}
+
+	/**
+	 * comment_text( $comment )
+	 * Filters the comment text for display.
+	 *
+	 * @param string $comment_text
+	 * @param WP_Comment $comment
+	 * @param array $args
+	 * @return void
+	 */
+	public static function comment_content_filter( $comment_text, $comment, $args ) {
+		$protocol  = \get_comment_meta( $comment->comment_ID, 'protocol', true );
+		// TODO Test if this is returned by Model/Comment
+		if ( 'activitypub' === $protocol ) {
+			$updated = \wp_date( 'Y-m-d H:i:s', \strtotime( \get_comment_meta( $comment->comment_ID, 'ap_last_modified', true ) ) );
+			if ( $updated ) {
+				$comment_text .= "<div>(Last edited on <time class='modified' datetime='{$updated}'>$updated</time>)</div>";
+			}
+		}
+		return $comment_text;
 	}
 
 	/**
@@ -42,7 +63,7 @@ class Comments {
 	 * postprocess_comment for federating replies and inbox-forwarding
 	 */
 	public static function postprocess_comment( $comment_id, $comment_approved, $commentdata ) {
-		//Adminstrator role users comments bypass transition_comment_status (auto approved)
+		//Administrator role users comments bypass transition_comment_status (auto approved)
 		$user = \get_userdata( $commentdata['user_id'] );
 		if (
 			( 1 === $comment_approved ) &&
@@ -61,6 +82,7 @@ class Comments {
 	 */
 	public static function edit_comment( $comment_id, $data ) {
 		if ( ! is_null( $data['user_id'] ) ) {
+			// TODO Test with non-admin user has_publish cap
 			\wp_schedule_single_event( \time(), 'activitypub_send_update_comment_activity', array( $comment_id ) );
 		}
 	}
@@ -98,22 +120,6 @@ class Comments {
 			//TODO Test with non-admin user
 			\wp_schedule_single_event( \time(), 'activitypub_send_update_comment_activity', array( $activitypub_comment->comment_ID ) );
 		}
-	}
-
-	/**
-	 * get_comment_text( $comment )
-	 *
-	 * Filters the comment content before it is updated in the database.
-	 */
-	public static function comment_append_edit_datetime( $comment_text, $comment, $args ) {
-		if ( 'activitypub' === $comment->comment_type ) {
-			$updated = \wp_date( 'Y-m-d H:i:s', \strtotime( \get_comment_meta( $comment->comment_ID, 'ap_last_modified', true ) ) );
-			if ( $updated ) {
-				$append_updated = "<div>(Last edited on <time class='modified' datetime='{$updated}'>$updated</time>)</div>";
-				$comment_text .= $append_updated;
-			}
-		}
-		return $comment_text;
 	}
 
 }
