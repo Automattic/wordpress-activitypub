@@ -47,7 +47,7 @@ class Comments {
 	 * @return void
 	 */
 	public static function comment_content_filter( $comment_text, $comment, $args ) {
-		$protocol  = \get_comment_meta( $comment->comment_ID, 'protocol', true );
+		$protocol = \get_comment_meta( $comment->comment_ID, 'protocol', true );
 		// TODO Test if this is returned by Model/Comment
 		if ( 'activitypub' === $protocol ) {
 			$updated = \wp_date( 'Y-m-d H:i:s', \strtotime( \get_comment_meta( $comment->comment_ID, 'ap_last_modified', true ) ) );
