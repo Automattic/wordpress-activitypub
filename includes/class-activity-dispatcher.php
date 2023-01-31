@@ -67,7 +67,7 @@ class Activity_Dispatcher {
 		$user_id = $activitypub_post->get_post_author();
 
 		$activitypub_activity = new \Activitypub\Model\Activity( 'Update', \Activitypub\Model\Activity::TYPE_FULL );
-		$activitypub_activity->from_post( $activitypub_post->to_array() );
+		$activitypub_activity->from_post( $activitypub_post );
 
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
 			$activitypub_activity->set_to( $to );
@@ -87,7 +87,7 @@ class Activity_Dispatcher {
 		$user_id = $activitypub_post->get_post_author();
 
 		$activitypub_activity = new \Activitypub\Model\Activity( 'Delete', \Activitypub\Model\Activity::TYPE_FULL );
-		$activitypub_activity->from_post( $activitypub_post->to_array() );
+		$activitypub_activity->from_post( $activitypub_post );
 
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
 			$activitypub_activity->set_to( $to );
