@@ -102,8 +102,8 @@ class Outbox {
 
 			foreach ( $posts as $post ) {
 				$activitypub_post = new \Activitypub\Model\Post( $post );
-				$activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_NONE );
-				$activitypub_activity->from_post( $activitypub_post->to_array() );
+				$activitypub_activity = new \Activitypub\Model\Activity( 'Create', false );
+				$activitypub_activity->from_post( $activitypub_post );
 				$json->orderedItems[] = $activitypub_activity->to_array(); // phpcs:ignore
 			}
 		}
