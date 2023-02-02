@@ -59,7 +59,7 @@ class Activity_Dispatcher {
 		// get latest version of post
 		$user_id = $activitypub_post->get_post_author();
 
-		$activitypub_activity = new \Activitypub\Model\Activity( $activity_type, \Activitypub\Model\Activity::TYPE_FULL );
+		$activitypub_activity = new \Activitypub\Model\Activity( $activity_type );
 		$activitypub_activity->from_post( $activitypub_post );
 
 		$inboxes = \Activitypub\get_follower_inboxes( $user_id, $activitypub_activity->get_cc() );

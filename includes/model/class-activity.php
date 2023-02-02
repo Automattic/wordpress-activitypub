@@ -9,7 +9,27 @@ namespace Activitypub\Model;
  * @see https://www.w3.org/TR/activitypub/
  */
 class Activity {
-	private $context = array( 'https://www.w3.org/ns/activitystreams' );
+	private $context = array(
+		'https://www.w3.org/ns/activitystreams',
+		'https://w3id.org/security/v1',
+		array(
+			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
+			'PropertyValue' => 'schema:PropertyValue',
+			'schema' => 'http://schema.org#',
+			'pt' => 'https://joinpeertube.org/ns#',
+			'toot' => 'http://joinmastodon.org/ns#',
+			'value' => 'schema:value',
+			'Hashtag' => 'as:Hashtag',
+			'featured' => array(
+				'@id' => 'toot:featured',
+				'@type' => '@id',
+			),
+			'featuredTags' => array(
+				'@id' => 'toot:featuredTags',
+				'@type' => '@id',
+			),
+		),
+	);
 	private $published = '';
 	private $id = '';
 	private $type = 'Create';
@@ -18,15 +38,9 @@ class Activity {
 	private $cc = array();
 	private $object = null;
 
-	const TYPE_SIMPLE = 'simple';
-	const TYPE_FULL = 'full';
-	const TYPE_NONE = 'none';
-
-	public function __construct( $type = 'Create', $context = self::TYPE_SIMPLE ) {
-		if ( 'none' === $context ) {
+	public function __construct( $type = 'Create', $context = true ) {
+		if ( true !== $context ) {
 			$this->context = null;
-		} elseif ( 'full' === $context ) {
-			$this->context = \Activitypub\get_context();
 		}
 
 		$this->type = \ucfirst( $type );

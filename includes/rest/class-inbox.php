@@ -356,7 +356,7 @@ class Inbox {
 		$inbox = \Activitypub\get_inbox_by_actor( $object['actor'] );
 
 		// send "Accept" activity
-		$activity = new \Activitypub\Model\Activity( 'Accept', \Activitypub\Model\Activity::TYPE_SIMPLE );
+		$activity = new \Activitypub\Model\Activity( 'Accept' );
 		$activity->set_object( $object );
 		$activity->set_actor( \get_author_posts_url( $user_id ) );
 		$activity->set_to( $object['actor'] );
