@@ -55,7 +55,7 @@ class Activity_Dispatcher {
 	 * @param [type] $activity_type
 	 * @return void
 	 */
-	public function send_activity( Model\Post $activitypub_post, $activity_type ) {
+	public static function send_activity( Model\Post $activitypub_post, $activity_type ) {
 		// get latest version of post
 		$user_id = $activitypub_post->get_post_author();
 
