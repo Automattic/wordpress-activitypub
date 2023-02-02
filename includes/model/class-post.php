@@ -144,7 +144,7 @@ class Post {
 			'tag' => $this->get_tags(),
 		);
 
-		return \apply_filters( 'activitypub_post', $array );
+		return \apply_filters( 'activitypub_post', $array, $this->post );
 	}
 
 	/**
