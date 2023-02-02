@@ -87,7 +87,22 @@ class Post {
 		),
 	);
 
+	/**
+	 * List of audience
+	 *
+	 * Also used for visibility
+	 *
+	 * @var array
+	 */
 	private $to = array( 'https://www.w3.org/ns/activitystreams#Public' );
+
+	/**
+	 * List of audience
+	 *
+	 * Also used for visibility
+	 *
+	 * @var array
+	 */
 	private $cc = array();
 
 	/**
