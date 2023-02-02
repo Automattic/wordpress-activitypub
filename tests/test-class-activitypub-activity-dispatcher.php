@@ -30,6 +30,8 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 		$activitypub_post = new \Activitypub\Model\Post( $post );
 		\Activitypub\Activity_Dispatcher::send_post_activity( $activitypub_post );
 
+		$this->assertNotEmpty( $activitypub_post->get_content() );
+
 		$this->assertSame( 2, $pre_http_request->get_call_count() );
 		$all_args = $pre_http_request->get_args();
 		$first_call_args = array_shift( $all_args );
@@ -68,6 +70,8 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 
 		$activitypub_post = new \Activitypub\Model\Post( $post );
 		\Activitypub\Activity_Dispatcher::send_post_activity( $activitypub_post );
+
+		$this->assertNotEmpty( $activitypub_post->get_content() );
 
 		$this->assertSame( 1, $pre_http_request->get_call_count() );
 		$all_args = $pre_http_request->get_args();

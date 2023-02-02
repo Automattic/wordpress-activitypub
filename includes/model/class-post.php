@@ -369,11 +369,14 @@ class Post {
 	 * @return string the content
 	 */
 	public function get_content() {
+		global $post;
+
 		if ( $this->content ) {
 			return $this->content;
 		}
 
-		$post = $this->post;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$post    = $this->post;
 		$content = $this->get_post_content_template();
 
 		// Fill in the shortcodes.
@@ -386,7 +389,7 @@ class Post {
 		$filtered_content = \apply_filters( 'activitypub_the_content', $content, $post );
 		$decoded_content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
 
-		$content = \trim( \preg_replace( '/[\n\r]/', '', $content ) );
+		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
 
 		$this->content = $content;
 
@@ -454,30 +457,5 @@ class Post {
 		}
 
 		return $content;
-	}
-
-	/**
-	 * Adds all tags as hashtags to the post/summary content
-	 *
-	 * @param string  $content
-	 * @param WP_Post $post
-	 *
-	 * @return string
-	 */
-	public function get_the_mentions() {
-		$post = $this->post;
-		$tags = \get_the_tags( $post->ID );
-
-		if ( ! $tags ) {
-			return '';
-		}
-
-		$hash_tags = array();
-
-		foreach ( $tags as $tag ) {
-			$hash_tags[] = \sprintf( '<a rel="tag" class="u-tag u-category" href="%s">#%s</a>', \get_tag_link( $tag ), $tag->slug );
-		}
-
-		return \implode( ' ', $hash_tags );
 	}
 }
