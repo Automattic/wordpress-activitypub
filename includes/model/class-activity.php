@@ -15,7 +15,7 @@ class Activity {
 	private $type = 'Create';
 	private $actor = '';
 	private $to = array( 'https://www.w3.org/ns/activitystreams#Public' );
-	private $cc = array( 'https://www.w3.org/ns/activitystreams#Public' );
+	private $cc = array();
 	private $object = null;
 
 	const TYPE_SIMPLE = 'simple';
@@ -54,6 +54,8 @@ class Activity {
 			} else {
 				array_push( $this->$var, $params[0] );
 			}
+
+			$this->$var = array_unique( $this->$var );
 		}
 	}
 
