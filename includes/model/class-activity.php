@@ -43,6 +43,18 @@ class Activity {
 		if ( \strncasecmp( $method, 'set', 3 ) === 0 ) {
 			$this->$var = $params[0];
 		}
+
+		if ( \strncasecmp( $method, 'add', 3 ) === 0 ) {
+			if ( ! is_array( $this->$var ) ) {
+				$this->$var = $params[0];
+			}
+
+			if ( is_array( $params[0] ) ) {
+				$this->$var = array_merge( $this->$var, $params[0] );
+			} else {
+				array_push( $this->$var, $params[0] );
+			}
+		}
 	}
 
 	public function from_post( Post $post ) {
@@ -51,7 +63,8 @@ class Activity {
 		if ( isset( $object['published'] ) ) {
 			$this->published = $object['published'];
 		}
-		$this->cc = array( \get_rest_url( null, '/activitypub/1.0/users/' . intval( $post->get_post_author() ) . '/followers' ) );
+
+		$this->add_to( \get_rest_url( null, '/activitypub/1.0/users/' . intval( $post->get_post_author() ) . '/followers' ) );
 
 		if ( isset( $this->object['attributedTo'] ) ) {
 			$this->actor = $this->object['attributedTo'];
@@ -59,7 +72,7 @@ class Activity {
 
 		foreach ( $post->get_tags() as $tag ) {
 			if ( 'Mention' === $tag['type'] ) {
-				$this->cc[] = $tag['href'];
+				$this->add_cc( $tag['href'] );
 			}
 		}
 

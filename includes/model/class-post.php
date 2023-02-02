@@ -386,7 +386,7 @@ class Post {
 		$filtered_content = \apply_filters( 'activitypub_the_content', $content, $post );
 		$decoded_content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
 
-		$content = \trim( \preg_replace( '/[\n\r]/', '', $content ) );
+		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
 
 		$this->content = $content;
 
