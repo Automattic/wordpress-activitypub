@@ -427,72 +427,86 @@ class Inbox {
 	}
 
 	/**
+	 * Converts a new ActivityPub object to comment data suitable for creating a comment
+	 *
+	 * @param  array $object  The activity-object.
+	 *
+	 * @return array Comment data suitable for creating a comment.
+	 */
+	public static function convert_object_to_comment_data( $object ) {
+		if ( ! isset( $object['object'] ) ) {
+			return false;
+		}
+
+		// check if Activity is public or not
+		if ( ! self::is_activity_public( $object ) ) {
+			// @todo maybe send email
+			return false;
+		}
+
+		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
+
+		// Objects must have IDs
+		if ( ! isset( $object['object']['id'] ) ) {
+			\error_log( 'Comment provided without ID' );
+			return;
+		}
+		$id = $object['object']['id'];
+
+		// Only handle replies
+		if ( ! isset( $object['object']['inReplyTo'] ) ) {
+			return;
+		}
+		$in_reply_to = $object['object']['inReplyTo'];
+
+		// Comment already exists
+		if ( \Activitypub\object_id_to_comment( $id ) ) {
+			return;
+		}
+
+		$parent_comment = \Activitypub\object_id_to_comment( $in_reply_to );
+
+		// save only replies and reactions
+		$comment_post_id = \Activitypub\object_to_post_id_by_field_name( $object, 'context' );
+		if ( ! $comment_post_id ) {
+			$comment_post_id = \Activitypub\object_to_post_id_by_field_name( $object, 'inReplyTo' );
+		}
+		if ( ! $comment_post_id ) {
+			$comment_post_id = $parent_comment->comment_post_ID;
+		}
+		if ( ! $comment_post_id ) {
+			return;
+		}
+
+		return array(
+			'comment_post_ID' => $comment_post_id,
+			'comment_author' => \esc_attr( $meta['name'] ),
+			'comment_author_url' => \esc_url_raw( $object['actor'] ),
+			'comment_content' => \wp_filter_kses( $object['object']['content'] ),
+			'comment_type' => '',
+			'comment_author_email' => '',
+			'comment_parent' => $parent_comment ? $parent_comment->comment_ID : 0,
+			'comment_meta' => array(
+				'ap_object' => \serialize( $object ),
+				'source_id' => \esc_url_raw( $id ),
+				'source_url' => \esc_url_raw( $object['object']['url'] ),
+				'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
+				'protocol' => 'activitypub',
+			),
+		);
+	}
+
+	/**
 	 * Handles "Create" requests
 	 *
 	 * @param  array $object  The activity-object
 	 * @param  int   $user_id The id of the local blog-user
 	 */
 	public static function handle_create( $object, $user_id ) {
-		$comment_post_id = 0;
-		$comment_parent = 0;
-		$comment_parent_id = 0;
-		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
-
-		// check if Activity is public or not
-		if ( ! self::is_activity_public( $object ) ) {
-			// @todo maybe send email
-			return;
+		$commentdata = self::convert_object_to_comment_data( $object );
+		if ( ! $commentdata ) {
+			return false;
 		}
-
-		$avatar_url = null;
-		$audience = \Activitypub\get_audience( $object );
-
-		if ( isset( $object['object']['inReplyTo'] ) ) {
-			$comment_parent_id = \Activitypub\url_to_commentid( \esc_url_raw( $object['object']['inReplyTo'] ) ); // Only checks ap_comment_id for local or source_url for remote
-
-			if ( ! is_null( $comment_parent_id ) ) {
-				//inReplyTo a known local comment
-				$comment_parent = \get_comment( $comment_parent_id );
-				$comment_post_id = $comment_parent->comment_post_ID;
-			} else {
-				//inReplyTo a known post
-				$comment_post_id = \Activitypub\url_to_postid( $object['object']['inReplyTo'] );
-			}
-		}
-
-		// if no name is set use peer username
-		if ( ! empty( $meta['name'] ) ) {
-			$name = \esc_attr( $meta['name'] );
-		} else {
-			$name = \esc_attr( $meta['preferredUsername'] );
-		}
-		// if avatar is set
-		if ( ! empty( $meta['icon']['url'] ) ) {
-			$avatar_url = \esc_url_raw( $meta['icon']['url'] );
-		}
-
-		//Only create WP_Comment for public replies to local posts
-		if ( ( 'public' === $audience )
-			|| ( 'unlisted' === $audience )
-			&& ( ! empty( $comment_post_id )
-			|| ! empty( $comment_parent_id )
-			) ) {
-
-			$commentdata = array(
-				'comment_post_ID' => $comment_post_id,
-				'comment_author' => $name,
-				'comment_author_url' => \esc_url_raw( $object['actor'] ),
-				'comment_content' => \wp_filter_kses( $object['object']['content'] ),
-				'comment_type' => '',
-				'comment_author_email' => '',
-				'comment_parent' => $comment_parent_id,
-				'comment_meta' => array(
-					'ap_object' => \serialize( $object ),
-					'source_url' => \esc_url_raw( $object['object']['id'] ),
-					'avatar_url'    => $avatar_url,
-					'protocol' => 'activitypub',
-				),
-			);
 
 			// disable flood control
 			\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
