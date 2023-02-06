@@ -4,7 +4,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
 **Tested up to:** 6.1  
-**Stable tag:** 0.15.0  
+**Stable tag:** 0.16.2  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -88,9 +88,22 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
-### v.next ###
+### 0.16.2 ###
 
-* Add configuration item for number of images to attach. props [@mexon](https://github.com/mexon)
+* Fix fatal error in outbox
+
+### 0.16.1 ###
+
+* Fix "update and create, posts appear blank on Mastodon" issue
+
+### 0.16.0 ###
+
+* Add "Outgoing Mentions" ([#213](https://github.com/pfefferle/wordpress-activitypub/pull/213)) props [@akirk](https://github.com/akirk)
+* Add configuration item for number of images to attach ([#248](https://github.com/pfefferle/wordpress-activitypub/pull/248)) props [@mexon](https://github.com/mexon)
+* Use shortcodes instead of custom templates, to setup the Activity Post-Content ([#250](https://github.com/pfefferle/wordpress-activitypub/pull/250)) props [@toolstack](https://github.com/toolstack)
+* Remove custom REST Server, because the needed changes are now merged into Core.
+* Fix hashtags ([#261](https://github.com/pfefferle/wordpress-activitypub/pull/261)) props [@akirk](https://github.com/akirk)
+* Change priorites, to maybe fix the hashtag issue
 
 ### 0.15.0 ###
 

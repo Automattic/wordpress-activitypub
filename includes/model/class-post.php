@@ -148,17 +148,17 @@ class Post {
 			'attachment' => $this->get_attachments(),
 			'tag' => $this->get_tags(),
 		);
-		if ( $this->replies ) {
-			$array['replies'] = $this->replies;
+		if ( $this->replies ) { //has comments
+			$array['replies'] = $this->get_replies();
 		}
-		if ( $this->deleted ) {
+		if ( $this->deleted ) { //is trash
 			$array['deleted'] = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
 			$deleted_post_slug = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
 			if ( $deleted_post_slug ) {
 				$array['id'] = $deleted_post_slug;
 			}
 		}
-		if ( $this->updated ) {
+		if ( $this->updated ) { //post_modified
 			$array['updated'] = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
 		}
 		return \apply_filters( 'activitypub_post', $array );
@@ -188,7 +188,7 @@ class Post {
 		if ( 'trash' === get_post_status( $post ) && \get_post_meta( $post->ID, 'activitypub_canonical_url', true ) ) {
 			$object_id = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
 		} else {
-			$object_id = \add_query_arg( //
+			$object_id = \add_query_arg(
 				array(
 					'p' => $post->ID,
 				),
@@ -317,7 +317,11 @@ class Post {
 		return $tags;
 	}
 
-	public function generate_replies() {
+	public function get_replies() {
+		if ( $this->replies ) {
+			return $this->replies;
+		}
+
 		$replies = null;
 		if ( $this->post->comment_count > 0 ) {
 			$args = array(
@@ -358,6 +362,9 @@ class Post {
 				),
 			);
 		}
+
+		$this->replies = $replies;
+
 		return $replies;
 	}
 
@@ -435,11 +442,14 @@ class Post {
 	 * @return string the content
 	 */
 	public function get_content() {
+		global $post;
+
 		if ( $this->content ) {
 			return $this->content;
 		}
 
-		$post = $this->post;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$post    = $this->post;
 		$content = $this->get_post_content_template();
 
 		// Fill in the shortcodes.
@@ -452,7 +462,7 @@ class Post {
 		$filtered_content = \apply_filters( 'activitypub_the_content', $content, $post );
 		$decoded_content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
 
-		$content = \trim( \preg_replace( '/[\n\r]/', '', $content ) );
+		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
 
 		$this->content = $content;
 
@@ -523,38 +533,13 @@ class Post {
 	}
 
 	/**
-	 * Adds all tags as hashtags to the post/summary content
-	 *
-	 * @param string  $content
-	 * @param WP_Post $post
-	 *
-	 * @return string
-	 */
-	public function get_the_mentions() {
-		$post = $this->post;
-		$tags = \get_the_tags( $post->ID );
-
-		if ( ! $tags ) {
-			return '';
-		}
-
-		$hash_tags = array();
-
-		foreach ( $tags as $tag ) {
-			$hash_tags[] = \sprintf( '<a rel="tag" class="u-tag u-category" href="%s">#%s</a>', \get_tag_link( $tag ), $tag->slug );
-		}
-
-		return \implode( ' ', $hash_tags );
-	}
-
-	/**
 	 * Get deleted datetime
 	 */
 	public function get_deleted() {
 		$post = $this->post;
 		$deleted = null;
 		if ( 'trash' === $post->post_status ) {
-			$deleted = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
+			$this->deleted = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
 		}
 		return $deleted;
 	}

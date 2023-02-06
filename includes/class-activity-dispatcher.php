@@ -107,7 +107,7 @@ class Activity_Dispatcher {
 		$updated = \wp_date( 'Y-m-d\TH:i:s\Z', \strtotime( $activitypub_post->get_updated() ) );
 
 		$activitypub_activity = new \Activitypub\Model\Activity( 'Update', \Activitypub\Model\Activity::TYPE_FULL );
-		$activitypub_activity->from_post( $activitypub_post->to_array() );
+		$activitypub_activity->from_post( $activitypub_post );
 
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
 			$activitypub_activity->set_to( $to );
@@ -125,12 +125,9 @@ class Activity_Dispatcher {
 	public static function send_delete_activity( $activitypub_post ) {
 		// get latest version of post
 		$user_id = $activitypub_post->get_post_author();
-		$deleted = \current_time( 'Y-m-d\TH:i:s\Z', true );
-		$activitypub_post->set_deleted( $deleted );
 
 		$activitypub_activity = new \Activitypub\Model\Activity( 'Delete', \Activitypub\Model\Activity::TYPE_FULL );
-		$activitypub_activity->from_post( $activitypub_post->to_array() );
-		$activitypub_activity->set_deleted( $deleted );
+		$activitypub_activity->from_post( $activitypub_post );
 
 		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
 			$activitypub_activity->set_to( $to );

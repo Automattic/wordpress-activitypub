@@ -9,14 +9,14 @@
 			'<dl>' .
 				'<dt><code>[ap_title]</code></dt>' .
 				'<dd>' . \wp_kses( __( 'The post\'s title.', 'activitypub' ), 'default' ) . '</dd>' .
-				'<dt><code>[ap_content]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s content.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dt><code>[ap_content apply_filters="yes"]</code></dt>' .
+				'<dd>' . \wp_kses( __( 'The post\'s content. With <code>apply_filters</code> you can decide if filters should be applied or not (default is <code>yes</code>). The values can be <code>yes</code> or <code>no</code>. <code>apply_filters</code> attribute is optional.', 'activitypub' ), 'default' ) . '</dd>' .
 				'<dt><code>[ap_excerpt lenght="400"]</code></dt>' .
 				'<dd>' . \wp_kses( __( 'The post\'s excerpt (default 400 chars). <code>length</code> attribute is optional.', 'activitypub' ), 'default' ) . '</dd>' .
 				'<dt><code>[ap_permalink type="url"]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s permalink. Type can be either: <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). <code>type</code> attribute is optional.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The post\'s permalink. <code>type</code> can be either: <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). <code>type</code> attribute is optional.', 'activitypub' ), 'default' ) . '</dd>' .
 				'<dt><code>[ap_shortlink type="url"]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s shortlink. Type can be either <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks. <code>type</code> attribute is optional.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The post\'s shortlink. <code>type</code> can be either <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks. <code>type</code> attribute is optional.', 'activitypub' ), 'default' ) . '</dd>' .
 				'<dt><code>[ap_hashtags]</code></dt>' .
 				'<dd>' . \wp_kses( __( 'The post\'s tags as hashtags.', 'activitypub' ), 'default' ) . '</dd>' .
 				'<dt><code>[ap_hashcats]</code></dt>' .

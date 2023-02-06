@@ -191,9 +191,23 @@ class Shortcodes {
 			return '';
 		}
 
+		$atts = shortcode_atts(
+			array( 'apply_filters' => 'yes' ),
+			$atts,
+			$tag
+		);
+
 		$content = \get_post_field( 'post_content', $post );
 
-		return \apply_filters( 'the_content', $content );
+		if ( 'yes' === $atts['apply_filters'] ) {
+			$content = \apply_filters( 'the_content', $content );
+		} else {
+			$content = do_blocks( $content );
+			$content = wptexturize( $content );
+			$content = wp_filter_content_tags( $content );
+		}
+
+		return $content;
 	}
 
 	/**
