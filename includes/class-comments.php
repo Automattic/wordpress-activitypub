@@ -27,6 +27,9 @@ class Comments {
 	 */
 	public static function preprocess_comment( $commentdata ) {
 		// only process replies from authorized local actors, for ap enabled post types
+		if ( ! isset( $commentdata['user_id'] ) ) {
+			return $commentdata;
+		}
 		$user = \get_userdata( $commentdata['user_id'] );
 		$comment_post_type = \get_post_type( $commentdata['comment_post_ID'] );
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
