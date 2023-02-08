@@ -403,15 +403,15 @@ class Post {
 	 */
 	public function get_post_content_template() {
 		if ( 'excerpt' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_excerpt]\n\n[ap_permalink]";
+			return "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
 		}
 
 		if ( 'title' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_title]\n\n[ap_permalink]";
+			return "[ap_title]\n\n[ap_permalink type=\"html\"]";
 		}
 
 		if ( 'content' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_content]\n\n[ap_hashtags]\n\n[ap_permalink]";
+			return "[ap_content]\n\n[ap_hashtags]\n\n[ap_permalink type=\"html\"]";
 		}
 
 		// Upgrade from old template codes to shortcodes.
