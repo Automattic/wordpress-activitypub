@@ -387,9 +387,7 @@ class Post {
 		$content = \wpautop( \wp_kses( $content, $this->allowed_tags ) );
 
 		$filtered_content = \apply_filters( 'activitypub_the_content', $content, $post );
-		$decoded_content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
-
-		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+		$content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
 
 		$this->content = $content;
 

@@ -208,6 +208,8 @@ class Shortcodes {
 			$content = wp_filter_content_tags( $content );
 		}
 
+		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+
 		return $content;
 	}
 
