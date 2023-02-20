@@ -106,7 +106,6 @@ class Shortcodes {
 
 			// An empty string will make wp_trim_excerpt do stuff we do not want.
 			if ( '' !== $content ) {
-
 				$excerpt = \strip_shortcodes( $content );
 
 				/** This filter is documented in wp-includes/post-template.php */
@@ -198,6 +197,9 @@ class Shortcodes {
 		);
 
 		$content = \get_post_field( 'post_content', $post );
+
+		// replace script and style elements
+		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
 
 		if ( 'yes' === $atts['apply_filters'] ) {
 			$content = \apply_filters( 'the_content', $content );
