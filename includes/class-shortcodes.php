@@ -197,9 +197,6 @@ class Shortcodes {
 
 		$content = \get_post_field( 'post_content', $post );
 
-		// replace script and style elements
-		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
-
 		if ( 'yes' === $atts['apply_filters'] ) {
 			$content = \apply_filters( 'the_content', $content );
 		} else {
@@ -207,6 +204,9 @@ class Shortcodes {
 			$content = wptexturize( $content );
 			$content = wp_filter_content_tags( $content );
 		}
+
+		// replace script and style elements
+		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
 
 		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
 

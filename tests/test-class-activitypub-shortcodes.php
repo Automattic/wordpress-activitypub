@@ -10,7 +10,7 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 		$post->post_date = current_time( 'mysql' );
 		$post->post_date_gmt = current_time( 'mysql', 1 );
 		$post->post_title = 'Some title or other';
-		$post->post_content = '<script>test</script>hallo';
+		$post->post_content = '<script>test</script>hallo<script type="javascript">{"asdf": "qwerty"}</script><style></style>';
 		$post->post_status = 'publish';
 		$post->comment_status = 'closed';
 		$post->ping_status = 'closed';
