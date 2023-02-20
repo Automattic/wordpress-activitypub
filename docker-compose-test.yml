@@ -1,6 +1,7 @@
 version: '2'
 services:
   test-db:
+    platform: linux/x86_64
     image: mysql:5.7
     environment:
       MYSQL_DATABASE: activitypub-test

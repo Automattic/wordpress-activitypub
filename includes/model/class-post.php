@@ -177,7 +177,7 @@ class Post {
 			'tag' => $this->get_tags(),
 		);
 
-		return \apply_filters( 'activitypub_post', $array );
+		return \apply_filters( 'activitypub_post', $array, $this->post );
 	}
 
 	/**
@@ -402,11 +402,14 @@ class Post {
 	 * @return string the content
 	 */
 	public function get_content() {
+		global $post;
+
 		if ( $this->content ) {
 			return $this->content;
 		}
 
-		$post = $this->post;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$post    = $this->post;
 		$content = $this->get_post_content_template();
 
 		// Fill in the shortcodes.
@@ -415,11 +418,10 @@ class Post {
 		wp_reset_postdata();
 
 		$content = \wpautop( \wp_kses( $content, $this->allowed_tags ) );
-
-		$filtered_content = \apply_filters( 'activitypub_the_content', $content, $post );
-		$decoded_content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
-
 		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+
+		$content = \apply_filters( 'activitypub_the_content', $content, $post );
+		$content = \html_entity_decode( $content, \ENT_QUOTES, 'UTF-8' );
 
 		$this->content = $content;
 
@@ -433,15 +435,15 @@ class Post {
 	 */
 	public function get_post_content_template() {
 		if ( 'excerpt' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_excerpt]\n\n[ap_permalink]";
+			return "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
 		}
 
 		if ( 'title' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_title]\n\n[ap_permalink]";
+			return "[ap_title]\n\n[ap_permalink type=\"html\"]";
 		}
 
 		if ( 'content' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_content]\n\n[ap_hashtags]\n\n[ap_permalink]";
+			return "[ap_content]\n\n[ap_hashtags]\n\n[ap_permalink type=\"html\"]";
 		}
 
 		// Upgrade from old template codes to shortcodes.
@@ -487,30 +489,5 @@ class Post {
 		}
 
 		return $content;
-	}
-
-	/**
-	 * Adds all tags as hashtags to the post/summary content
-	 *
-	 * @param string  $content
-	 * @param WP_Post $post
-	 *
-	 * @return string
-	 */
-	public function get_the_mentions() {
-		$post = $this->post;
-		$tags = \get_the_tags( $post->ID );
-
-		if ( ! $tags ) {
-			return '';
-		}
-
-		$hash_tags = array();
-
-		foreach ( $tags as $tag ) {
-			$hash_tags[] = \sprintf( '<a rel="tag" class="u-tag u-category" href="%s">#%s</a>', \get_tag_link( $tag ), $tag->slug );
-		}
-
-		return \implode( ' ', $hash_tags );
 	}
 }

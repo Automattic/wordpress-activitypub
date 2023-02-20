@@ -1,5 +1,5 @@
 {
-  "name": "activitypub",
+  "name": "wordpress-activitypub",
   "description": "The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.",
   "repository": {
     "type": "git",
