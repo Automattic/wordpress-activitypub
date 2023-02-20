@@ -19,6 +19,8 @@ $json->icon = array(
 	'url'  => \get_avatar_url( $author_id, array( 'size' => 120 ) ),
 );
 
+$json->published = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( \get_the_author_meta( 'registered', $author_id ) ) );
+
 if ( \has_header_image() ) {
 	$json->image = array(
 		'type' => 'Image',
