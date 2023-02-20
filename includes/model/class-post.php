@@ -385,9 +385,10 @@ class Post {
 		wp_reset_postdata();
 
 		$content = \wpautop( \wp_kses( $content, $this->allowed_tags ) );
+		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
 
-		$filtered_content = \apply_filters( 'activitypub_the_content', $content, $post );
-		$content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
+		$content = \apply_filters( 'activitypub_the_content', $content, $post );
+		$content = \html_entity_decode( $content, \ENT_QUOTES, 'UTF-8' );
 
 		$this->content = $content;
 
