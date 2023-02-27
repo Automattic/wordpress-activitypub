@@ -82,7 +82,7 @@ class Shortcodes {
 	public static function excerpt( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if ( ! $post ) {
+		if ( ! $post || \post_password_required( $post ) ) {
 			return '';
 		}
 
@@ -185,7 +185,7 @@ class Shortcodes {
 	public static function content( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if ( ! $post ) {
+		if ( ! $post || \post_password_required( $post ) ) {
 			return '';
 		}
 
