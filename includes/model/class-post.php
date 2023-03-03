@@ -85,6 +85,23 @@ class Post {
 		'div' => array(
 			'class' => array(),
 		),
+		'ul' => array(),
+		'ol' => array(),
+		'li' => array(),
+		'strong' => array(
+			'class' => array(),
+		),
+		'b' => array(
+			'class' => array(),
+		),
+		'i' => array(
+			'class' => array(),
+		),
+		'em' => array(
+			'class' => array(),
+		),
+		'blockquote' => array(),
+		'cite' => array(),
 	);
 
 	/**
