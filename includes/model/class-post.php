@@ -61,7 +61,7 @@ class Post {
 	 *
 	 * @var string
 	 */
-	private $object_type = 'Note';
+	private $object_type;
 
 	/**
 	 * The Allowed Tags, used in the content.
