@@ -249,7 +249,7 @@ class Activity_Dispatcher {
 	 */
 	public static function send_update_comment_activity( $activitypub_comment_id ) {
 		$activitypub_comment = \get_comment( $activitypub_comment_id );
-		$updated = \wp_date( 'Y-m-d\TH:i:s\Z' );
+		$updated = \get_comment_meta( $comment->comment_ID, 'ap_last_modified', true );
 
 		$user_id = $activitypub_comment->user_id;
 		if ( ! $user_id ) { // Prevent sending received/anonymous comments.

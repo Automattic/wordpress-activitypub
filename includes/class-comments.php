@@ -16,10 +16,9 @@ class Comments {
 		\add_filter( 'comment_excerpt', array( '\Activitypub\Comments', 'comment_excerpt' ), 10, 3 );
 		\add_filter( 'comment_text', array( '\Activitypub\Comments', 'comment_content_filter' ), 10, 3 );
 		\add_filter( 'comment_post', array( '\Activitypub\Comments', 'postprocess_comment' ), 10, 3 );
+		\add_action( 'edit_comment', array( '\Activitypub\Comments', 'edit_comment' ), 20, 2 ); //schedule_admin_comment_activity
 		\add_filter( 'wp_update_comment_data', array( '\Activitypub\Comments', 'comment_updated_published' ), 20, 3 );
-		\add_action( 'edit_comment', array( '\Activitypub\Comments', 'edit_comment' ), 20, 2 );//schedule_admin_comment_activity
 		\add_action( 'transition_comment_status', array( '\Activitypub\Comments', 'schedule_comment_activity' ), 20, 3 );
-
 	}
 
 	/**
@@ -70,9 +69,15 @@ class Comments {
 		$protocol = \get_comment_meta( $comment->comment_ID, 'protocol', true );
 		// TODO Test if this is returned by Model/Comment
 		if ( 'activitypub' === $protocol ) {
-			$updated = \wp_date( 'Y-m-d H:i:s', \strtotime( \get_comment_meta( $comment->comment_ID, 'ap_last_modified', true ) ) );
+			$updated = \strtotime( \get_comment_meta( $comment->comment_ID, 'ap_last_modified', true ) );
 			if ( $updated ) {
-				$comment_text .= "<div>(Last edited on <time class='modified' datetime='{$updated}'>$updated</time>)</div>";
+				$comment_text .= '<small>' . wp_sprintf(
+					_x( '(Last edited %1$s ago)', '%2$s = human-readable time difference', 'activitypub' ),
+					human_time_diff(
+						$updated,
+						current_time( 'timestamp' )
+					)
+				) . '</small>';
 			}
 		}
 		return $comment_text;
@@ -101,8 +106,9 @@ class Comments {
 	 * Fires immediately before comment status transition hooks are fired. (useful only for admin)
 	 */
 	public static function edit_comment( $comment_id, $data ) {
-		if ( ! is_null( $data['user_id'] ) ) {
-			// TODO Test with non-admin user has_publish cap
+		update_comment_meta( $comment_id, 'ap_last_modified', \wp_date( 'Y-m-d H:i:s' ) );
+		$user = \get_userdata( $data['user_id'] );
+		if ( \in_array( 'administrator', $user->roles ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_send_update_comment_activity', array( $comment_id ) );
 		}
 	}
