@@ -13,6 +13,7 @@ class Comments {
 	public static function init() {
 
 		\add_filter( 'preprocess_comment', array( '\Activitypub\Comments', 'preprocess_comment' ) );
+		\add_filter( 'comment_excerpt', array( '\Activitypub\Comments', 'comment_excerpt' ), 10, 3 );
 		\add_filter( 'comment_text', array( '\Activitypub\Comments', 'comment_content_filter' ), 10, 3 );
 		\add_filter( 'comment_post', array( '\Activitypub\Comments', 'postprocess_comment' ), 10, 3 );
 		\add_filter( 'wp_update_comment_data', array( '\Activitypub\Comments', 'comment_updated_published' ), 20, 3 );
@@ -38,6 +39,21 @@ class Comments {
 			$commentdata['comment_meta']['protocol'] = 'activitypub';
 		}
 		return $commentdata;
+	}
+
+	/**
+	 * comment_excerpt( $comment_excerpt, $comment_ID )
+	 * Filters the comment text for display in the Recently Published Dashboard Widget.
+	 *
+	 * @param string $comment_text
+	 * @param int $comment_ID
+	 * @param array $args
+	 * @return void
+	 */
+	public static function comment_excerpt( $comment_excerpt, $comment_ID ) {
+		$comment = get_comment( $comment_ID );
+		$comment_excerpt = \apply_filters( 'the_content', $comment_excerpt, $comment );
+		return $comment_excerpt;
 	}
 
 	/**

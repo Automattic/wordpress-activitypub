@@ -19,7 +19,7 @@ jQuery( function( $ ) {
 	} );
 
 	//Reply Comment-edit screen
-    if ( $('body').hasClass('edit-comments-php') ) {
+    if ( $('body').hasClass('edit-comments-php') || $('body').hasClass('index-php') ) {
         //Insert Mentions into comment content on reply
         $( '.comment-inline.button-link' ).on( 'click', function( event ) {
             var recipients = $(this).attr('data-recipients') ? $(this).attr('data-recipients') + ' ' : '';
