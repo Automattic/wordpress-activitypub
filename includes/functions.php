@@ -534,7 +534,7 @@ function is_ap_replies() {
  * @param boolean $post defaults to searching a comment_id
  * @return string space separated webfinger of tagged users
  */
-function reply_recipients( $object_id, $post = null ) { //TODO rename to avoid confusion with \Activitypub\Inbox::extract_recipients
+function reply_recipients( $object_id, $post = null ) {
 	$recipients = null;
 	if ( $post ) {
 		//post

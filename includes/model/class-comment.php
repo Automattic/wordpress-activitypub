@@ -193,7 +193,7 @@ class Comment {
 			return $this->content;
 		}
 
-		$comment_content    = $comment->comment_content;
+		$comment_content = $comment->comment_content;
 
 		$filtered_content = \apply_filters( 'the_content', $comment_content, $comment );
 		$decoded_content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
