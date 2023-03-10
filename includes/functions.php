@@ -581,63 +581,6 @@ function get_summary( $comment_id ) {
 }
 
 /**
- * Parse content for tags to transform
- *
- * @param string $content to search
- * @return array content, mentions (for storage in post_meta)
- */
-function transform_tags( $content ) {
-	//#tags
-
-	//@Mentions
-	$mentions = null;
-	$webfinger_tags = \Activitypub\webfinger_extract( $content );
-	if ( ! empty( $webfinger_tags ) ) {
-		foreach ( $webfinger_tags[0] as $webfinger_tag ) {
-			$ap_profile = \Activitypub\Rest\Webfinger::webfinger_lookup( $webfinger_tag );
-			if ( ! empty( $ap_profile ) ) {
-				$short_tag = \Activitypub\webfinger_short_tag( $webfinger_tag );
-				$webfinger_link = "<span class='h-card'><a href=\"{$ap_profile['href']}\" class='u-url mention' rel='noopener noreferer' target='_blank'>{$short_tag}</a></span>";
-				$content = str_replace( $webfinger_tag, $webfinger_link, $content );
-				$mentions[] = $ap_profile;
-			}
-		}
-	}
-	// Return mentions separately to attach to comment/post meta
-	$content_mentions['mentions'] = $mentions;
-	$content_mentions['content'] = $content;
-	return $content_mentions;
-}
-
-function tag_user( $recipient ) {
-	$tagged_user = array(
-		'type' => 'Mention',
-		'href' => $recipient,
-		'name' => \Activitypub\url_to_webfinger( $recipient ),
-	);
-	$tag[] = $tagged_user;
-	return $tag;
-}
-
-/**
- * @param string $content
- * @return array of all matched webfinger
- */
-function webfinger_extract( $string ) {
-	preg_match_all( '/@[\._a-zA-Z0-9-]+@[\._a-zA-Z0-9-]+/i', $string, $matches );
-	return $matches;
-}
-
-/**
- * @param string full $webfinger
- * @return string short @webfinger
- */
-function webfinger_short_tag( $webfinger ) {
-	$short_tag = explode( '@', $webfinger );
-	return '@' . $short_tag[1];
-}
-
-/**
  * @param string $user_url
  * @return string $webfinger
  */
