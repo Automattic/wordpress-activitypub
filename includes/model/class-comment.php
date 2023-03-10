@@ -61,9 +61,9 @@ class Comment {
 			'attributedTo' => $this->comment_author_url,
 			'summary' => $this->content_warning,
 			'inReplyTo' => $this->in_reply_to,
-			'content' => $comment->comment_content,
+			'content' => $this->get_content(),
 			'contentMap' => array(
-				\strstr( \get_locale(), '_', true ) => $comment->comment_content,
+				\strstr( \get_locale(), '_', true ) => $this->get_content(),
 			),
 			'context' => $this->context,
 			// 'source' => \get_comment_link( $comment ), //non-conforming, see https://www.w3.org/TR/activitypub/#source-property
@@ -99,10 +99,7 @@ class Comment {
 	}
 
 	public function generate_permalink() {
-		$comment = $this->comment;
-		$permalink = \get_comment_link( $comment );
-		// replace 'trashed' for delete activity
-		return \str_replace( '__trashed', '', $permalink );
+		return \get_comment_link( $this->comment );
 	}
 
 	/**
@@ -190,15 +187,23 @@ class Comment {
 	/**
 	 * Who is being replied to
 	 */
-	public function generate_mention_recipients() {
-		$recipients = array( AS_PUBLIC );
-		$mentions = \get_comment_meta( $this->comment->comment_ID, 'mentions', true );
-		if ( ! empty( $mentions ) ) {
-			foreach ( $mentions as $mention ) {
-				$recipients[] = $mention['href'];
-			}
+	public function get_content() {
+		$comment = $this->comment;
+
+		if ( isset( $this->content ) ) {
+			return $this->content;
 		}
-		return $recipients;
+
+		$comment_content    = $comment->comment_content;
+
+		$filtered_content = \apply_filters( 'the_content', $comment_content, $comment );
+		$decoded_content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
+
+		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $decoded_content ) );
+
+		$this->content = $content;
+
+		return $content;
 	}
 
 	/**
