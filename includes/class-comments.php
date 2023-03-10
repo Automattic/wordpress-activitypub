@@ -17,7 +17,6 @@ class Comments {
 		\add_filter( 'comment_text', array( '\Activitypub\Comments', 'comment_content_filter' ), 10, 3 );
 		\add_filter( 'comment_post', array( '\Activitypub\Comments', 'postprocess_comment' ), 10, 3 );
 		\add_action( 'edit_comment', array( '\Activitypub\Comments', 'edit_comment' ), 20, 2 ); //schedule_admin_comment_activity
-		\add_filter( 'wp_update_comment_data', array( '\Activitypub\Comments', 'comment_updated_published' ), 20, 3 );
 		\add_action( 'transition_comment_status', array( '\Activitypub\Comments', 'schedule_comment_activity' ), 20, 3 );
 	}
 
@@ -41,9 +40,11 @@ class Comments {
 	}
 
 	/**
+	 * Filters the comment text to display webfinger in the Recently Published Dashboard Widget.
 	 * comment_excerpt( $comment_excerpt, $comment_ID )
-	 * Filters the comment text for display in the Recently Published Dashboard Widget.
 	 *
+	 * doesn't work on received webfinger links as get_comment_excerpt strips tags
+	 * https://developer.wordpress.org/reference/functions/get_comment_excerpt/
 	 * @param string $comment_text
 	 * @param int $comment_ID
 	 * @param array $args
