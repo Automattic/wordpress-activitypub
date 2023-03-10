@@ -166,7 +166,7 @@ class Admin {
 	 * Reply to ActivityPub Comments from the edit-comments.php screen
 	 */
 	public static function reply_comments_actions( $actions, $comment ) {
-		$recipients = \Activitypub\get_recipients( $comment->comment_ID );
+		$recipients = \Activitypub\reply_recipients( $comment->comment_ID );
 		$summary = \Activitypub\get_summary( $comment->comment_ID );
 		$reply_button = '<button type="button" data-comment-id="%d" data-post-id="%d" data-action="%s" class="%s button-link" aria-expanded="false" aria-label="%s" data-recipients="%s" data-summary="%s">%s</button>';
 		$actions['reply'] = \sprintf(

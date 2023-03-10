@@ -529,13 +529,13 @@ function is_ap_replies() {
 }
 
 /**
- * Get tagged users from received AP object meta
+ * Get recipients to insert/tag in reply tag from received AP object meta
  * @param string $object_id a comment_id to search
  * @param boolean $post defaults to searching a comment_id
- * @return array of tagged users
+ * @return string space separated webfinger of tagged users
  */
-function get_recipients( $object_id, $post = null ) {
-	$tagged_users_name = null;
+function reply_recipients( $object_id, $post = null ) { //TODO rename to avoid confusion with \Activitypub\Inbox::extract_recipients
+	$recipients = null;
 	if ( $post ) {
 		//post
 		$ap_object = \unserialize( \get_post_meta( $object_id, 'ap_object', true ) );
@@ -545,19 +545,26 @@ function get_recipients( $object_id, $post = null ) {
 	}
 
 	if ( ! empty( $ap_object ) ) {
-		$tagged_users_name[] = \Activitypub\url_to_webfinger( $ap_object['actor'] );
-		if ( ! empty( $ap_object['object']['tag'] ) ) {
-			$author_post_url = \get_author_posts_url( $ap_object['user_id'] );
-			foreach ( $ap_object['object']['tag'] as $tag ) {
+		// Replying to remote comments.
+		$recipients[] = \ActivityPub\url_to_webfinger( $ap_object['actor'] ); // Reply to Object actor!
+
+		if ( ! empty( $ap_object['object']['tag'] ) ) { // Reply to other tagged users.
+			$author_post_url = \get_author_posts_url( $ap_object['user_id'] );// ignore self tag.
+			foreach ( $ap_object['object']['tag'] as $tag ) { // Other tagged users
 				if ( $author_post_url === $tag['href'] ) {
 					continue;
 				}
 				if ( in_array( 'Mention', $tag ) ) {
-					$tagged_users_name[] = $tag['name'];
+					$recipients[] = $tag['name'];
 				}
 			}
 		}
-		return implode( ' ', $tagged_users_name );
+		return implode( ' ', $recipients );
+	} else {
+		// Replying to self with others.
+		$comment = \get_comment( $object_id );
+		preg_match_all( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', $comment->comment_content, $recipients );
+		return implode( ' ', $recipients[0] );
 	}
 }
 
