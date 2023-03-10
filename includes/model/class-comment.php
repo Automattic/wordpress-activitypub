@@ -71,7 +71,6 @@ class Comment {
 			'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'cc' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'tag' => $this->tags,
-			'replies' => $this->replies,
 		);
 		if ( $this->replies ) {
 			$array['replies'] = $this->replies;
