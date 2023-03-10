@@ -175,29 +175,32 @@ class Activity_Dispatcher {
 		//ONLY FOR LOCAL USERS ?
 		$activitypub_comment = \get_comment( $activitypub_comment_id );
 		$user_id = $activitypub_comment->user_id;
-		$mentions[] = \get_comment_meta( $activitypub_comment_id, 'mentions', true );// mention[href, name]
-
 		$activitypub_comment = new \Activitypub\Model\Comment( $activitypub_comment );
 		$activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_FULL );
 		$activitypub_activity->from_comment( $activitypub_comment->to_array() );
 
-		$mentioned_actors = array();
-		foreach ( \Activitypub\get_mentioned_inboxes( $mentions ) as $inbox => $to ) {
-			$activitypub_activity->set_to( $to );//all users at shared inbox
-			$activity = $activitypub_activity->to_json(); // phpcs:ignore
-			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
+		$inboxes = \Activitypub\get_follower_inboxes( $user_id );
 
-			$mentioned_actors[] = $to;
-		}
-
-		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $cc ) {
-			$activitypub_activity->set_cc( $cc );//set_cc
-			$activity = $activitypub_activity->to_json(); // phpcs:ignore
-
-			// Send reply to followers, skip if mentioned followers (avoid duplicate replies)
-			if ( in_array( $cc, $mentioned_actors ) ) {
+		$followers_url = \get_rest_url( null, '/activitypub/1.0/users/' . intval( $user_id ) . '/followers' );
+		foreach ( $activitypub_activity->get_cc() as $cc ) {
+			if ( $cc === $followers_url ) {
 				continue;
 			}
+			$inbox = \Activitypub\get_inbox_by_actor( $cc );
+			if ( ! $inbox || \is_wp_error( $inbox ) ) {
+				continue;
+			}
+			// init array if empty
+			if ( ! isset( $inboxes[ $inbox ] ) ) {
+				$inboxes[ $inbox ] = array();
+			}
+			$inboxes[ $inbox ][] = $cc;
+		}
+
+		foreach ( $inboxes as $inbox => $to ) {
+			$to = array_values( array_unique( $to ) );
+			$activitypub_activity->set_to( $to );
+			$activity = $activitypub_activity->to_json();
 			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
 	}
@@ -240,6 +243,51 @@ class Activity_Dispatcher {
 	}
 
 	/**
+	 * Send "update" activities.
+	 *
+	 * @param \Activitypub\Model\Comment $activitypub_comment
+	 */
+	public static function send_update_comment_activity( $activitypub_comment_id ) {
+		$activitypub_comment = \get_comment( $activitypub_comment_id );
+		$updated = \wp_date( 'Y-m-d\TH:i:s\Z' );
+
+		$user_id = $activitypub_comment->user_id;
+		if ( ! $user_id ) { // Prevent sending received/anonymous comments.
+			return;
+		}
+		$activitypub_comment = new \Activitypub\Model\Comment( $activitypub_comment );
+		$activitypub_comment->set_update( $updated );
+		$activitypub_activity = new \Activitypub\Model\Activity( 'Update', \Activitypub\Model\Activity::TYPE_FULL );
+		$activitypub_activity->from_comment( $activitypub_comment->to_array() );
+		$activitypub_activity->set_update( $updated );
+
+		$inboxes = \Activitypub\get_follower_inboxes( $user_id );
+		$followers_url = \get_rest_url( null, '/activitypub/1.0/users/' . intval( $user_id ) . '/followers' );
+
+		foreach ( $activitypub_activity->get_cc() as $cc ) {
+			if ( $cc === $followers_url ) {
+				continue;
+			}
+			$inbox = \Activitypub\get_inbox_by_actor( $cc );
+			if ( ! $inbox || \is_wp_error( $inbox ) ) {
+				continue;
+			}
+			// init array if empty
+			if ( ! isset( $inboxes[ $inbox ] ) ) {
+				$inboxes[ $inbox ] = array();
+			}
+			$inboxes[ $inbox ][] = $cc;
+		}
+
+		foreach ( $inboxes as $inbox => $to ) {
+			$to = array_values( array_unique( $to ) );
+			$activitypub_activity->set_to( $to );
+			$activity = $activitypub_activity->to_json();
+			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
+		}
+	}
+
+	/**
 	 * Send "delete" activities.
 	 *
 	 * @param \Activitypub\Model\Comment $activitypub_comment
@@ -261,9 +309,28 @@ class Activity_Dispatcher {
 		$activitypub_activity->from_comment( $activitypub_comment->to_array() );
 		$activitypub_activity->set_deleted( $deleted );
 
-		foreach ( \Activitypub\get_follower_inboxes( $user_id ) as $inbox => $to ) {
+		$inboxes = \Activitypub\get_follower_inboxes( $user_id );
+		$followers_url = \get_rest_url( null, '/activitypub/1.0/users/' . intval( $user_id ) . '/followers' );
+
+		foreach ( $activitypub_activity->get_cc() as $cc ) {
+			if ( $cc === $followers_url ) {
+				continue;
+			}
+			$inbox = \Activitypub\get_inbox_by_actor( $cc );
+			if ( ! $inbox || \is_wp_error( $inbox ) ) {
+				continue;
+			}
+			// init array if empty
+			if ( ! isset( $inboxes[ $inbox ] ) ) {
+				$inboxes[ $inbox ] = array();
+			}
+			$inboxes[ $inbox ][] = $cc;
+		}
+
+		foreach ( $inboxes as $inbox => $to ) {
+			$to = array_values( array_unique( $to ) );
 			$activitypub_activity->set_to( $to );
-			$activity = $activitypub_activity->to_json(); // phpcs:ignore
+			$activity = $activitypub_activity->to_json();
 			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
 		}
 	}
