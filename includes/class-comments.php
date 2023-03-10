@@ -32,10 +32,10 @@ class Comments {
 			return $commentdata;
 		}
 		$user = \get_userdata( $commentdata['user_id'] );
-		$comment_post_type = \get_post_type( $commentdata['comment_post_ID'] );
+		$comment_parent_post = \get_post_type( $commentdata['comment_post_ID'] );
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
 
-		if ( $user->has_cap( 'publish_post' ) && \in_array( $comment_post_type, $post_types, true ) ) {
+		if ( $user->has_cap( 'publish_post', $commentdata['comment_post_ID'] ) && \in_array( $comment_parent_post, $post_types, true ) ) {
 			$commentdata['comment_meta']['protocol'] = 'activitypub';
 		}
 		return $commentdata;
