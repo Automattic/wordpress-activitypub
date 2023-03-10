@@ -82,7 +82,7 @@ class Shortcodes {
 	public static function excerpt( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if ( ! $post ) {
+		if ( ! $post || \post_password_required( $post ) ) {
 			return '';
 		}
 
@@ -106,13 +106,11 @@ class Shortcodes {
 
 			// An empty string will make wp_trim_excerpt do stuff we do not want.
 			if ( '' !== $content ) {
-
 				$excerpt = \strip_shortcodes( $content );
 
 				/** This filter is documented in wp-includes/post-template.php */
 				$excerpt = \apply_filters( 'the_content', $excerpt );
 				$excerpt = \str_replace( ']]>', ']]>', $excerpt );
-
 			}
 		}
 
@@ -187,7 +185,7 @@ class Shortcodes {
 	public static function content( $atts, $content, $tag ) {
 		$post = get_post();
 
-		if ( ! $post ) {
+		if ( ! $post || \post_password_required( $post ) ) {
 			return '';
 		}
 
@@ -206,6 +204,11 @@ class Shortcodes {
 			$content = wptexturize( $content );
 			$content = wp_filter_content_tags( $content );
 		}
+
+		// replace script and style elements
+		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
+
+		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
 
 		return $content;
 	}
