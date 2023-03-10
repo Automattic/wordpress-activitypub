@@ -66,6 +66,7 @@ class Comments {
 	 * @return void
 	 */
 	public static function comment_content_filter( $comment_text, $comment, $args ) {
+		$comment_text = \apply_filters( 'the_content', $comment_text, $comment );
 		$protocol = \get_comment_meta( $comment->comment_ID, 'protocol', true );
 		// TODO Test if this is returned by Model/Comment
 		if ( 'activitypub' === $protocol ) {
