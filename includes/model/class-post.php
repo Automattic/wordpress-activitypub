@@ -61,7 +61,7 @@ class Post {
 	 *
 	 * @var string
 	 */
-	private $object_type = 'Note';
+	private $object_type;
 
 	/**
 	 * The Allowed Tags, used in the content.
@@ -85,6 +85,23 @@ class Post {
 		'div' => array(
 			'class' => array(),
 		),
+		'ul' => array(),
+		'ol' => array(),
+		'li' => array(),
+		'strong' => array(
+			'class' => array(),
+		),
+		'b' => array(
+			'class' => array(),
+		),
+		'i' => array(
+			'class' => array(),
+		),
+		'em' => array(
+			'class' => array(),
+		),
+		'blockquote' => array(),
+		'cite' => array(),
 	);
 
 	/**
@@ -385,11 +402,10 @@ class Post {
 		wp_reset_postdata();
 
 		$content = \wpautop( \wp_kses( $content, $this->allowed_tags ) );
-
-		$filtered_content = \apply_filters( 'activitypub_the_content', $content, $post );
-		$decoded_content = \html_entity_decode( $filtered_content, \ENT_QUOTES, 'UTF-8' );
-
 		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+
+		$content = \apply_filters( 'activitypub_the_content', $content, $post );
+		$content = \html_entity_decode( $content, \ENT_QUOTES, 'UTF-8' );
 
 		$this->content = $content;
 
@@ -403,15 +419,15 @@ class Post {
 	 */
 	public function get_post_content_template() {
 		if ( 'excerpt' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_excerpt]\n\n[ap_permalink]";
+			return "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
 		}
 
 		if ( 'title' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_title]\n\n[ap_permalink]";
+			return "[ap_title]\n\n[ap_permalink type=\"html\"]";
 		}
 
 		if ( 'content' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_content]\n\n[ap_hashtags]\n\n[ap_permalink]";
+			return "[ap_content]\n\n[ap_hashtags]\n\n[ap_permalink type=\"html\"]";
 		}
 
 		// Upgrade from old template codes to shortcodes.

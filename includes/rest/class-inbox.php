@@ -492,11 +492,21 @@ class Inbox {
 
 		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
 			if ( array_key_exists( $i, $data ) ) {
-				$recipient_items = array_merge( $recipient_items, $data[ $i ] );
+				if ( is_array( $data[ $i ] ) ) {
+					$recipient = $data[ $i ];
+				} else {
+					$recipient = array( $data[ $i ] );
+				}
+				$recipient_items = array_merge( $recipient_items, $recipient );
 			}
 
 			if ( array_key_exists( $i, $data['object'] ) ) {
-				$recipient_items = array_merge( $recipient_items, $data[ $i ] );
+				if ( is_array( $data['object'][ $i ] ) ) {
+					$recipient = $data['object'][ $i ];
+				} else {
+					$recipient = array( $data['object'][ $i ] );
+				}
+				$recipient_items = array_merge( $recipient_items, $recipient );
 			}
 		}
 

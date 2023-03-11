@@ -1,10 +1,9 @@
 === ActivityPub ===
-Contributors: pfefferle, mediaformat, akirk
-Donate link: https://notiz.blog/donate/
+Contributors: pfefferle, mediaformat, akirk, automattic
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
 Tested up to: 6.1
-Stable tag: 0.16.2
+Stable tag: 0.17.0
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -87,6 +86,25 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 == Changelog ==
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+
+= 0.17.0 =
+
+* Fix type-selector
+* Allow more HTML elements in Activity-Objects
+
+= 0.16.5 =
+
+* Return empty content/excerpt on password protected posts/pages
+
+= 0.16.4 =
+
+* Remove scripts later in the queue, to also handle scripts added by blocks
+* Add published date to author profiles
+
+= 0.16.3 =
+
+* "cc", "to", ... fields can either be an array or a string
+* Remove "style" and "script" HTML elements from content
 
 = 0.16.2 =
 
