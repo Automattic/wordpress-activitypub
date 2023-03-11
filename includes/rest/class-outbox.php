@@ -43,6 +43,7 @@ class Outbox {
 	public static function user_outbox_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 		$author  = \get_user_by( 'ID', $user_id );
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
 
 		if ( ! $author ) {
 			return new \WP_Error(
@@ -72,9 +73,15 @@ class Outbox {
 		$json->actor = \get_author_posts_url( $user_id );
 		$json->type = 'OrderedCollectionPage';
 		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/outbox" ); // phpcs:ignore
+		$json->totalItems = 0; // phpcs:ignore
 
-		$count_posts = \wp_count_posts();
-		$json->totalItems = \intval( $count_posts->publish ); // phpcs:ignore
+		// phpcs:ignore
+		$json->totalItems = 0;
+
+		foreach ( $post_types as $post_type ) {
+			$count_posts = \wp_count_posts( $post_type );
+			$json->totalItems += \intval( $count_posts->publish ); // phpcs:ignore
+		}
 
 		$json->first = \add_query_arg( 'page', 1, $json->partOf ); // phpcs:ignore
 		$json->last  = \add_query_arg( 'page', \ceil ( $json->totalItems / 10 ), $json->partOf ); // phpcs:ignore
@@ -89,14 +96,14 @@ class Outbox {
 					'posts_per_page' => 10,
 					'author' => $user_id,
 					'offset' => ( $page - 1 ) * 10,
-					'post_type' => 'post',
+					'post_type' => $post_types,
 				)
 			);
 
 			foreach ( $posts as $post ) {
 				$activitypub_post = new \Activitypub\Model\Post( $post );
 				$activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_NONE );
-				$activitypub_activity->from_post( $activitypub_post->to_array() );
+				$activitypub_activity->from_post( $activitypub_post );
 				$json->orderedItems[] = $activitypub_activity->to_array(); // phpcs:ignore
 			}
 		}
@@ -131,6 +138,9 @@ class Outbox {
 		$params['user_id'] = array(
 			'required' => true,
 			'type' => 'integer',
+			'validate_callback' => function( $param, $request, $key ) {
+				return user_can( $param, 'publish_posts' );
+			},
 		);
 
 		return $params;

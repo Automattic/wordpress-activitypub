@@ -33,7 +33,7 @@ class Inbox {
 				array(
 					'methods'             => \WP_REST_Server::EDITABLE,
 					'callback'            => array( '\Activitypub\Rest\Inbox', 'shared_inbox_post' ),
-					'args'                => self::shared_inbox_request_parameters(),
+					'args'                => self::shared_inbox_post_parameters(),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -46,12 +46,13 @@ class Inbox {
 				array(
 					'methods'             => \WP_REST_Server::EDITABLE,
 					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox_post' ),
-					'args'                => self::user_inbox_request_parameters(),
+					'args'                => self::user_inbox_post_parameters(),
 					'permission_callback' => '__return_true',
 				),
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox_get' ),
+					'args'                => self::user_inbox_get_parameters(),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -162,7 +163,6 @@ class Inbox {
 	public static function shared_inbox_post( $request ) {
 		$data = $request->get_params();
 		$type = $request->get_param( 'type' );
-
 		$users = self::extract_recipients( $data );
 
 		if ( ! $users ) {
@@ -197,7 +197,7 @@ class Inbox {
 	 *
 	 * @return array list of parameters
 	 */
-	public static function user_inbox_request_parameters() {
+	public static function user_inbox_get_parameters() {
 		$params = array();
 
 		$params['page'] = array(
@@ -207,6 +207,32 @@ class Inbox {
 		$params['user_id'] = array(
 			'required' => true,
 			'type' => 'integer',
+			'validate_callback' => function( $param, $request, $key ) {
+				return user_can( $param, 'publish_posts' );
+			},
+		);
+
+		return $params;
+	}
+
+	/**
+	 * The supported parameters
+	 *
+	 * @return array list of parameters
+	 */
+	public static function user_inbox_post_parameters() {
+		$params = array();
+
+		$params['page'] = array(
+			'type' => 'integer',
+		);
+
+		$params['user_id'] = array(
+			'required' => true,
+			'type' => 'integer',
+			'validate_callback' => function( $param, $request, $key ) {
+				return user_can( $param, 'publish_posts' );
+			},
 		);
 
 		$params['id'] = array(
@@ -245,7 +271,7 @@ class Inbox {
 	 *
 	 * @return array list of parameters
 	 */
-	public static function shared_inbox_request_parameters() {
+	public static function shared_inbox_post_parameters() {
 		$params = array();
 
 		$params['page'] = array(
@@ -408,6 +434,16 @@ class Inbox {
 	public static function handle_create( $object, $user_id ) {
 		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
 
+		if ( ! isset( $object['object']['inReplyTo'] ) ) {
+			return;
+		}
+
+		// check if Activity is public or not
+		if ( ! self::is_activity_public( $object ) ) {
+			// @todo maybe send email
+			return;
+		}
+
 		$comment_post_id = \url_to_postid( $object['object']['inReplyTo'] );
 
 		// save only replys and reactions
@@ -444,21 +480,53 @@ class Inbox {
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 	}
 
+	/**
+	 * Extract recipient URLs from Activity object
+	 *
+	 * @param  array $data
+	 *
+	 * @return array The list of user URLs
+	 */
 	public static function extract_recipients( $data ) {
-		$recipients = array();
-		$users = array();
+		$recipient_items = array();
 
 		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
 			if ( array_key_exists( $i, $data ) ) {
-				$recipients = array_merge( $recipients, $data[ $i ] );
+				$recipient_items = array_merge( $recipient_items, $data[ $i ] );
 			}
 
 			if ( array_key_exists( $i, $data['object'] ) ) {
-				$recipients = array_merge( $recipients, $data[ $i ] );
+				$recipient_items = array_merge( $recipient_items, $data[ $i ] );
 			}
 		}
 
-		$recipients = array_unique( $recipients );
+		$recipients = array();
+
+		// flatten array
+		foreach ( $recipient_items as $recipient ) {
+			if ( is_array( $recipient ) ) {
+				// check if recipient is an object
+				if ( array_key_exists( 'id', $recipient ) ) {
+					$recipients[] = $recipient['id'];
+				}
+			} else {
+				$recipients[] = $recipient;
+			}
+		}
+
+		return array_unique( $recipients );
+	}
+
+	/**
+	 * Get local user recipients
+	 *
+	 * @param  array $data
+	 *
+	 * @return array The list of local users
+	 */
+	public static function get_recipients( $data ) {
+		$recipients = self::extract_recipients( $data );
+		$users = array();
 
 		foreach ( $recipients as $recipient ) {
 			$user_id = \Activitypub\url_to_authorid( $recipient );
@@ -471,5 +539,17 @@ class Inbox {
 		}
 
 		return $users;
+	}
+
+	/**
+	 * Check if passed Activity is Public
+	 *
+	 * @param array $data
+	 * @return boolean
+	 */
+	public static function is_activity_public( $data ) {
+		$recipients = self::extract_recipients( $data );
+
+		return in_array( 'https://www.w3.org/ns/activitystreams#Public', $recipients, true );
 	}
 }

@@ -1,12 +1,36 @@
-<div class="wrap">
-	<h1><?php \esc_html_e( 'ActivityPub Settings', 'activitypub' ); ?></h1>
+<?php
+\load_template(
+	\dirname( __FILE__ ) . '/admin-header.php',
+	true,
+	array(
+		'settings' => 'active',
+		'welcome' => '',
+	)
+);
+?>
 
-	<p><?php \esc_html_e( 'ActivityPub turns your blog into a federated social network. This means you can share and talk to everyone using the ActivityPub protocol, including users of Friendica, Pleroma and Mastodon.', 'activitypub' ); ?></p>
+<div class="privacy-settings-body hide-if-no-js">
+	<div class="notice notice-info">
+		<p>
+			<?php
+			echo \wp_kses(
+				\sprintf(
+					// translators:
+					\__( 'If you have problems using this plugin, please check the <a href="%s">Site Health</a> to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).', 'activitypub' ),
+					\esc_url_raw( \admin_url( 'site-health.php' ) )
+				),
+				'default'
+			);
+			?>
+		</p>
+	</div>
+
+	<p><?php \esc_html_e( 'Customize your ActivityPub settings to suit your needs.', 'activitypub' ); ?></p>
 
 	<form method="post" action="options.php">
 		<?php \settings_fields( 'activitypub' ); ?>
 
-		<h2><?php \esc_html_e( 'Activities', 'activitypub' ); ?></h2>
+		<h3><?php \esc_html_e( 'Activities', 'activitypub' ); ?></h3>
 
 		<p><?php \esc_html_e( 'All activity related settings.', 'activitypub' ); ?></p>
 
@@ -30,18 +54,43 @@
 							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_custom" value="custom" <?php echo \checked( 'custom', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Custom', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'Use the text-area below, to customize your activities.', 'activitypub' ); ?></span>
 						</p>
 						<p>
-							<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo ACTIVITYPUB_CUSTOM_POST_CONTENT; ?>"><?php echo \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ); ?></textarea>
-							<div class="description">
-								<ul>
-									<li><code>%title%</code> - <?php \esc_html_e( 'The Post-Title.', 'activitypub' ); ?></li>
-									<li><code>%content%</code> - <?php \esc_html_e( 'The Post-Content.', 'activitypub' ); ?></li>
-									<li><code>%excerpt%</code> - <?php \esc_html_e( 'The Post-Excerpt (default 400 Chars).', 'activitypub' ); ?></li>
-									<li><code>%permalink%</code> - <?php \esc_html_e( 'The Post-Permalink.', 'activitypub' ); ?></li>
-									<li><code>%shortlink%</code> - <?php \printf( \esc_html( 'The Post-Shortlink. I can recommend %sHum%s, to prettify the Shortlinks', 'activitypub' ), '<a href="https://wordpress.org/plugins/hum/" target="_blank">', '</a>' ); ?></li>
-									<li><code>%hashtags%</code> - <?php \esc_html_e( 'The Tags as Hashtags.', 'activitypub' ); ?></li>
-								</ul>
-								<?php \printf( \__( '%sLet me know%s if you miss a template placeholder.', 'activitypub' ), '<a href="https://github.com/pfefferle/wordpress-activitypub/issues/new" target="_blank">', '</a>' ); ?>
-							</div>
+							<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo wp_kses( ACTIVITYPUB_CUSTOM_POST_CONTENT, 'post' ); ?>"><?php echo wp_kses( \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ), 'post' ); ?></textarea>
+							<details>
+								<summary><?php esc_html_e( 'See a list of ActivityPub Template Tags.', 'activitypub' ); ?></summary>
+								<div class="description">
+									<ul>
+										<li><code>[ap_title]</code> - <?php \esc_html_e( 'The post\'s title.', 'activitypub' ); ?></li>
+										<li><code>[ap_content]</code> - <?php \esc_html_e( 'The post\'s content.', 'activitypub' ); ?></li>
+										<li><code>[ap_excerpt]</code> - <?php \esc_html_e( 'The post\'s excerpt (default 400 chars).', 'activitypub' ); ?></li>
+										<li><code>[ap_permalink]</code> - <?php \esc_html_e( 'The post\'s permalink.', 'activitypub' ); ?></li>
+										<li><code>[ap_shortlink]</code> - <?php echo \wp_kses( \__( 'The post\'s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>.', 'activitypub' ), 'default' ); ?></li>
+										<li><code>[ap_hashtags]</code> - <?php \esc_html_e( 'The post\'s tags as hashtags.', 'activitypub' ); ?></li>
+										<li><code>[ap_hashcats]</code> - <?php \esc_html_e( 'The post\'s categories as hashtags.', 'activitypub' ); ?></li>
+										<li><code>[ap_image]</code> - <?php \esc_html_e( 'The URL for the post\'s featured image.', 'activitypub' ); ?></li>
+									</ul>
+									<p><?php \esc_html_e( 'You can find the full list with all possible attributes in the help section on the top-right of the screen.', 'activitypub' ); ?></p>
+								</div>
+							</details>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
+						<?php \esc_html_e( 'Number of images', 'activitypub' ); ?>
+					</th>
+					<td>
+						<input value="<?php echo esc_attr( \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ); ?>" name="activitypub_max_image_attachments" id="activitypub_max_image_attachments" type="number" min="0" />
+						<p class="description">
+							<?php
+							echo \wp_kses(
+								\sprintf(
+									// translators:
+									\__( 'The number of images to attach to posts. Default: <code>%s</code>', 'activitypub' ),
+									\esc_html( ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS )
+								),
+								'default'
+							);
+							?>
 						</p>
 					</td>
 				</tr>
@@ -70,6 +119,7 @@
 							<?php $post_types = \get_post_types( array( 'public' => true ), 'objects' ); ?>
 							<?php $support_post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array(); ?>
 							<ul>
+							<?php // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited ?>
 							<?php foreach ( $post_types as $post_type ) { ?>
 								<li>
 									<input type="checkbox" id="activitypub_support_post_types" name="activitypub_support_post_types[]" value="<?php echo \esc_attr( $post_type->name ); ?>" <?php echo \checked( true, \in_array( $post_type->name, $support_post_types, true ) ); ?> />
@@ -82,21 +132,12 @@
 				</tr>
 				<tr>
 					<th scope="row">
-						<?php \esc_html_e( 'Hashtags', 'activitypub' ); ?>
+						<?php \esc_html_e( 'Hashtags (beta)', 'activitypub' ); ?>
 					</th>
 					<td>
 						<p>
-							<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php \_e( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag-link.', 'activitypub' ); ?></label>
+							<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag-link. <strong>This feature is experimental! Please disable it, if you find any HTML or CSS errors.</strong>', 'activitypub' ), 'default' ); ?></label>
 						</p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row">
-						<?php \esc_html_e( 'HTML Whitelist', 'activitypub' ); ?>
-					</th>
-					<td>
-						<textarea name="activitypub_allowed_html" id="activitypub_allowed_html" rows="3" cols="50" class="large-text"><?php echo \get_option( 'activitypub_allowed_html', ACTIVITYPUB_ALLOWED_HTML ); ?></textarea>
-						<p class="description"><?php \_e( \sprintf( 'A list of HTML elements, you want to whitelist for your activities. <strong>Leave list empty to support all HTML elements.</strong> Default: <code>%s</code>.', \esc_html( ACTIVITYPUB_ALLOWED_HTML ) ), 'activitypub' ); ?></p>
 					</td>
 				</tr>
 			</tbody>
@@ -104,7 +145,7 @@
 
 		<?php \do_settings_fields( 'activitypub', 'activity' ); ?>
 
-		<h2><?php \esc_html_e( 'Server', 'activitypub' ); ?></h2>
+		<h3><?php \esc_html_e( 'Server', 'activitypub' ); ?></h3>
 
 		<p><?php \esc_html_e( 'Server related settings.', 'activitypub' ); ?></p>
 
@@ -115,7 +156,18 @@
 						<?php \esc_html_e( 'Blocklist', 'activitypub' ); ?>
 					</th>
 					<td>
-						<p class="description"><?php \printf( \__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ), admin_url( 'options-discussion.php#disallowed_keys' ) ); ?></p>
+						<p class="description">
+							<?php
+							echo \wp_kses(
+								\sprintf(
+									// translators: %s is a URL.
+									\__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ),
+									\esc_attr( \admin_url( 'options-discussion.php#disallowed_keys' ) )
+								),
+								'default'
+							);
+							?>
+						</p>
 					</td>
 				</tr>
 			</tbody>
@@ -127,8 +179,4 @@
 
 		<?php \submit_button(); ?>
 	</form>
-
-	<p>
-		<small><?php \_e( 'If you like this plugin, what about a small <a href="https://notiz.blog/donate">donation</a>?', 'activitypub' ); ?></small>
-	</p>
 </div>

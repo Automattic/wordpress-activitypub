@@ -22,6 +22,8 @@ bin
 composer.json
 composer.lock
 docker-compose.yml
+docker-compose-test.yml
+Dockerfile
 gulpfile.js
 package.json
 node_modules

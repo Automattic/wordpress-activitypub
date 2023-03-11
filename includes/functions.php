@@ -35,7 +35,7 @@ function get_context() {
 function safe_remote_post( $url, $body, $user_id ) {
 	$date = \gmdate( 'D, d M Y H:i:s T' );
 	$digest = \Activitypub\Signature::generate_digest( $body );
-	$signature = \Activitypub\Signature::generate_signature( $user_id, $url, $date, $digest );
+	$signature = \Activitypub\Signature::generate_signature( $user_id, 'post', $url, $date, $digest );
 
 	$wp_version = \get_bloginfo( 'version' );
 	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
@@ -63,12 +63,12 @@ function safe_remote_post( $url, $body, $user_id ) {
 
 function safe_remote_get( $url, $user_id ) {
 	$date = \gmdate( 'D, d M Y H:i:s T' );
-	$signature = \Activitypub\Signature::generate_signature( $user_id, $url, $date );
+	$signature = \Activitypub\Signature::generate_signature( $user_id, 'get', $url, $date );
 
 	$wp_version = \get_bloginfo( 'version' );
 	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
 	$args = array(
-		'timeout' => 100,
+		'timeout' => apply_filters( 'activitypub_remote_get_timeout', 100 ),
 		'limit_response_size' => 1048576,
 		'redirection' => 3,
 		'user-agent' => "$user_agent; ActivityPub",
@@ -95,48 +95,64 @@ function safe_remote_get( $url, $user_id ) {
  * @return string The user-resource
  */
 function get_webfinger_resource( $user_id ) {
-	// use WebFinger plugin if installed
-	if ( \function_exists( '\get_webfinger_resource' ) ) {
-		return \get_webfinger_resource( $user_id, false );
-	}
-
-	$user = \get_user_by( 'id', $user_id );
-
-	return $user->user_login . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+	return \Activitypub\Webfinger::get_user_resource( $user_id );
 }
 
 /**
  * [get_metadata_by_actor description]
  *
- * @param sting $actor
+ * @param string $actor
  *
  * @return array
  */
 function get_remote_metadata_by_actor( $actor ) {
-	$metadata = \get_transient( 'activitypub_' . $actor );
+	$pre = apply_filters( 'pre_get_remote_metadata_by_actor', false, $actor );
+	if ( $pre ) {
+		return $pre;
+	}
+	if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $actor ) ) {
+		$actor = Webfinger::resolve( $actor );
+	}
+
+	if ( ! $actor ) {
+		return null;
+	}
+
+	if ( is_wp_error( $actor ) ) {
+		return $actor;
+	}
+
+	$transient_key = 'activitypub_' . $actor;
+	$metadata = \get_transient( $transient_key );
 
 	if ( $metadata ) {
 		return $metadata;
 	}
 
 	if ( ! \wp_http_validate_url( $actor ) ) {
-		return new \WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), $actor );
+		$metadata = new \WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), $actor );
+		\set_transient( $transient_key, $metadata, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
+		return $metadata;
 	}
 
 	$user = \get_users(
 		array(
 			'number' => 1,
-			'who'    => 'authors',
+			'capability__in' => array( 'publish_posts' ),
 			'fields' => 'ID',
 		)
 	);
 
 	// we just need any user to generate a request signature
 	$user_id = \reset( $user );
-
+	$short_timeout = function() {
+		return 3;
+	};
+	add_filter( 'activitypub_remote_get_timeout', $short_timeout );
 	$response = \Activitypub\safe_remote_get( $actor, $user_id );
-
+	remove_filter( 'activitypub_remote_get_timeout', $short_timeout );
 	if ( \is_wp_error( $response ) ) {
+		\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 		return $response;
 	}
 
@@ -144,10 +160,12 @@ function get_remote_metadata_by_actor( $actor ) {
 	$metadata = \json_decode( $metadata, true );
 
 	if ( ! $metadata ) {
-		return new \WP_Error( 'activitypub_invalid_json', \__( 'No valid JSON data', 'activitypub' ), $actor );
+		$metadata = new \WP_Error( 'activitypub_invalid_json', \__( 'No valid JSON data', 'activitypub' ), $actor );
+		\set_transient( $transient_key, $metadata, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
+		return $metadata;
 	}
 
-	\set_transient( 'activitypub_' . $actor, $metadata, WEEK_IN_SECONDS );
+	\set_transient( $transient_key, $metadata, WEEK_IN_SECONDS );
 
 	return $metadata;
 }
@@ -236,7 +254,7 @@ function get_identifier_settings( $user_id ) {
 			<td>
 				<p><code><?php echo \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ); ?></code> or <code><?php echo \esc_url( \get_author_posts_url( $user_id ) ); ?></code></p>
 				<?php // translators: the webfinger resource ?>
-				<p class="description"><?php \printf( \esc_html__( 'Try to follow "@%s" in the Mastodon/Friendica search field.', 'activitypub' ), \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ) ); ?></p>
+				<p class="description"><?php \printf( \esc_html__( 'Try to follow "@%s" by searching for it on Mastodon,Friendica & Co.', 'activitypub' ), \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ) ); ?></p>
 			</td>
 		</tr>
 	</tbody>

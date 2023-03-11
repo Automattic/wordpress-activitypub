@@ -1,4 +1,5 @@
 <?php
+// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 $post = \get_post();
 
 $activitypub_post = new \Activitypub\Model\Post( $post );
