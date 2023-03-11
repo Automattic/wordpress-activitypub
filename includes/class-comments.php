@@ -41,17 +41,17 @@ class Comments {
 
 	/**
 	 * Filters the comment text to display webfinger in the Recently Published Dashboard Widget.
-	 * comment_excerpt( $comment_excerpt, $comment_ID )
+	 * comment_excerpt( $comment_excerpt, $comment_id )
 	 *
 	 * doesn't work on received webfinger links as get_comment_excerpt strips tags
 	 * https://developer.wordpress.org/reference/functions/get_comment_excerpt/
 	 * @param string $comment_text
-	 * @param int $comment_ID
+	 * @param int $comment_id
 	 * @param array $args
 	 * @return void
 	 */
-	public static function comment_excerpt( $comment_excerpt, $comment_ID ) {
-		$comment = get_comment( $comment_ID );
+	public static function comment_excerpt( $comment_excerpt, $comment_id ) {
+		$comment = get_comment( $comment_id );
 		$comment_excerpt = \apply_filters( 'the_content', $comment_excerpt, $comment );
 		return $comment_excerpt;
 	}
@@ -70,15 +70,17 @@ class Comments {
 		$protocol = \get_comment_meta( $comment->comment_ID, 'protocol', true );
 		// TODO Test if this is returned by Model/Comment
 		if ( 'activitypub' === $protocol ) {
-			$updated = \strtotime( \get_comment_meta( $comment->comment_ID, 'ap_last_modified', true ) );
+			$updated = \get_comment_meta( $comment->comment_ID, 'ap_last_modified', true );
 			if ( $updated ) {
-				$comment_text .= '<small>' . wp_sprintf(
-					_x( '(Last edited %1$s ago)', '%2$s = human-readable time difference', 'activitypub' ),
-					human_time_diff(
-						$updated,
-						current_time( 'timestamp' )
-					)
-				) . '</small>';
+				$format = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
+				$formatted_datetime = \date_i18n( $format, \strtotime( $updated ) );
+				$iso_date = \wp_date( 'c', \strtotime( $updated ) );
+				$i18n_text = sprintf(
+					/* translators: %s: Displays comment last modified date and time */
+					__( '(Last edited on %s)', 'activitypub' ),
+					"<time class='modified' datetime='{$iso_date}'>$formatted_datetime</time>"
+				);
+				$comment_text .= "<small>$i18n_text<small>";
 			}
 		}
 		return $comment_text;
