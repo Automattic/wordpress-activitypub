@@ -14,6 +14,7 @@ class Admin {
 		\add_action( 'admin_menu', array( '\Activitypub\Admin', 'admin_menu' ) );
 		\add_action( 'admin_init', array( '\Activitypub\Admin', 'register_settings' ) );
 		\add_action( 'show_user_profile', array( '\Activitypub\Admin', 'add_fediverse_profile' ) );
+		\add_action( 'personal_options_update', array( '\Activitypub\Admin', 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( '\Activitypub\Admin', 'enqueue_scripts' ) );
 	}
 
@@ -153,10 +154,27 @@ class Admin {
 	}
 
 	public static function add_fediverse_profile( $user ) {
+		$ap_description = get_user_meta( $user->ID, ACTIVITYPUB_USER_DESCRIPTION_KEY, true );
 		?>
 		<h2 id="activitypub"><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h2>
 		<?php
 		\Activitypub\get_identifier_settings( $user->ID );
+		?>
+		<table class="form-table" role="presentation">
+			<tr class="activitypub-user-description-wrap">
+				<th><label for="activitypub-user-description"><?php _e( 'Fediverse Biography', 'activitypub' ); ?></label></th>
+				<td><textarea name="activitypub-user-description" id="activitypub-user-description" rows="5" cols="30"><?php echo \esc_html( $ap_description ) ?></textarea>
+				<p><?php _e( 'If you wish to use different biographical info for the fediverse, enter your alternate bio here.', 'activitypub' ); ?></p></td>
+			</tr>
+		</table>
+		<?php
+	}
+
+	public static function save_user_description( $user_id ) {
+		if ( ! current_user_can( 'edit_user', $user_id ) ) {
+			return false;
+		}
+		update_user_meta( $user_id, ACTIVITYPUB_USER_DESCRIPTION_KEY, sanitize_text_field( $_POST['activitypub-user-description'] ) );
 	}
 
 	public static function enqueue_scripts( $hook_suffix ) {
