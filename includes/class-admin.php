@@ -162,9 +162,9 @@ class Admin {
 		?>
 		<table class="form-table" role="presentation">
 			<tr class="activitypub-user-description-wrap">
-				<th><label for="activitypub-user-description"><?php _e( 'Fediverse Biography', 'activitypub' ); ?></label></th>
-				<td><textarea name="activitypub-user-description" id="activitypub-user-description" rows="5" cols="30"><?php echo \esc_html( $ap_description ) ?></textarea>
-				<p><?php _e( 'If you wish to use different biographical info for the fediverse, enter your alternate bio here.', 'activitypub' ); ?></p></td>
+				<th><label for="activitypub-user-description"><?php \esc_html_e( 'Fediverse Biography', 'activitypub' ); ?></label></th>
+				<td><textarea name="activitypub-user-description" id="activitypub-user-description" rows="5" cols="30"><?php echo \esc_html( $ap_description ); ?></textarea>
+				<p><?php \esc_html_e( 'If you wish to use different biographical info for the fediverse, enter your alternate bio here.', 'activitypub' ); ?></p></td>
 			</tr>
 		</table>
 		<?php
