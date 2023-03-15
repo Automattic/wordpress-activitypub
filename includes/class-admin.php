@@ -165,12 +165,16 @@ class Admin {
 				<th><label for="activitypub-user-description"><?php \esc_html_e( 'Fediverse Biography', 'activitypub' ); ?></label></th>
 				<td><textarea name="activitypub-user-description" id="activitypub-user-description" rows="5" cols="30"><?php echo \esc_html( $ap_description ); ?></textarea>
 				<p><?php \esc_html_e( 'If you wish to use different biographical info for the fediverse, enter your alternate bio here.', 'activitypub' ); ?></p></td>
+				<?php wp_nonce_field( 'activitypub-user-description', '_apnonce' ); ?>
 			</tr>
 		</table>
 		<?php
 	}
 
 	public static function save_user_description( $user_id ) {
+		if ( ! wp_verify_nonce( $_REQUEST['_apnonce'], 'activitypub-user-description' ) ) {
+			return false;
+		}
 		if ( ! current_user_can( 'edit_user', $user_id ) ) {
 			return false;
 		}
