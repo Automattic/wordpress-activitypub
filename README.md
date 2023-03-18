@@ -12,11 +12,11 @@ The ActivityPub protocol is a decentralized social networking protocol based upo
 
 ## Description ##
 
-This is **BETA** software, see the FAQ to see the current feature set or rather what is still planned.
+This is BETA software, see the FAQ to see the current feature set or rather what is still planned.
 
-The plugin implements the ActivityPub protocol for your blog. Your readers will be able to follow your blogposts on Mastodon and other federated platforms that support ActivityPub.
+The plugin implements the ActivityPub protocol for your blog, which means that your readers will be able to follow your blog posts on Mastodon and other federated platforms that support ActivityPub. In addition, replies to your posts on Mastodon and related platforms will automatically become comments on your blog post.
 
-The plugin works with the following federated platforms:
+The plugin works with the following tested federated platforms, but there may be more that it works with as well:
 
 * [Mastodon](https://joinmastodon.org/)
 * [Pleroma](https://pleroma.social/)
@@ -26,7 +26,43 @@ The plugin works with the following federated platforms:
 * [SocialHome](https://socialhome.network/)
 * [Misskey](https://join.misskey.page/)
 
+Here’s what that means and what you can expect.
+
+Once the ActivityPub plugin is installed, each author’s page on your WordPress blog will become its own federated instance. In other words, if you have two authors, Jane and Bob, on your website, `example.com`, then your authors would have their own author pages at `example.com/author/jane` and `example.com/author/bob`. Each of those author pages would now be available to Mastodon users (and all other federated platform users) as a profile that can be followed. Let’s break that down further. Let’s say you have a friend on Mastodon who tells you to follow them and they give you their profile name `@janelivesheresomeofthetime@mastodon.social`. You search for her name, see her profile, and click the follow button, right? From then on, everything Jane posts on her profile shows up in your Home feed. Okay, similarly, now that Jane has installed the ActivityPub plugin on her `example.com` site, her friends can also follow her on Mastodon by searching for `@jane@example.com` and clicking the Follow button on that profile.
+
+From now on, every blog post Jane publishes on example.com will show up on your Home feed because you follow her `@jane@example.com` profile.
+Of course, if no one follows your author instance, then no one will ever see the posts - including you! So the easiest way to even know if the plugin is working is to follow your new profile yourself. If you already have a Mastodon profile, just follow your new one from there.
+
+Some things to note:
+
+  1. Many single-author blogs have chosen to turn off or redirect their author profile pages, usually via an SEO plugin like Yoast or Rank Math. This is usually done to avoid duplicate content with your blog’s home page. If your author page has been deactivated in this way, then ActivityPub won’t work for you. Instead, you can turn your author profile page back on, and then use the option in your SEO plugin to noindex the author page. This will enable the page to be live and ActivityPub will now work, but the live page won’t cause any duplicate content issues with search engines.
+  2. Once ActivityPub is installed, only new posts going forward will be available in the fediverse. Likewise, even if you’ve been using ActivityPub for a while, anyone who follows your site, will only see new posts you publish from that moment on. They will never see previously-published posts in their Home feed. This process is very similar to subscribing to a newsletter. If you subscribe to a newsletter, you will only receive future emails, but not the old archived ones. With ActivityPub, if someone follows your site, they will only receive new blog posts you publish from then on.
+
+So what’s the process?
+
+  1. Install the ActivityPub plugin.
+  2. Go to the plugin’s settings page and adjust the settings to your liking. Click the Save button when ready.
+  3. Make sure your blog’s author profile page is active.
+  4. Go to Mastodon or any other federated platform, search for your author’s new federated profile, and follow it. Your new profile will be in the form of @yourauthorname@yourwebsite.com, so that is what you’ll search for.
+  5. On your blog, publish a new post.
+  6. From Mastodon, check to see if the new post appears in your Home feed.
+
+Please note that it may take up to 15 minutes or so for the new post to show up in your federated feed. This is because the messages are sent to the federated platforms using a delayed cron. This avoids breaking the publishing process for those cases where users might have lots of followers. So please don’t assume that just because you didn’t see it show up right away that something is broken. Give it some time. In most cases, it will show up within a few minutes, and you’ll know everything is working as expected.
+
 ## Frequently Asked Questions ##
+
+### tl;dr ###
+
+This plugin connects your WordPress blog to popular social platforms like Mastodon, making your posts more accessible to a wider audience. Once installed, your blog's author pages can be followed by users on these platforms, allowing them to receive your new posts in their feeds.
+
+Here's how it works:
+
+  1. Install the plugin and adjust settings as needed.
+  2. Ensure your blog's author profile page is active.
+  3. On Mastodon or other supported platforms, search for and follow your author's new profile (e.g., `@yourauthorname@yourwebsite.com`).
+  4. Publish a new post on your blog and check if it appears in your Mastodon feed.
+
+Please note that it may take up to 15 minutes for a new post to appear in your feed, as messages are sent on a delay to avoid overwhelming your followers. Be patient and give it some time.
 
 ### What is the status of this plugin? ###
 
@@ -49,16 +85,6 @@ To implement:
 ### What is "ActivityPub for WordPress" ###
 
 *ActivityPub for WordPress* extends WordPress with some Fediverse features, but it does not compete with platforms like Friendica or Mastodon. If you want to run a **decentralized social network**, please use [Mastodon](https://joinmastodon.org/) or [GNU social](https://gnusocial.network/).
-
-### What are the differences between this plugin and Pterotype? ###
-
-**Compatibility**
-
-*ActivityPub for WordPress* is compatible with OStatus and IndieWeb plugin suites. *Pterotype* is incompatible with the standalone [WebFinger plugin](https://wordpress.org/plugins/webfinger/), so it can't be run together with OStatus.
-
-**Custom tables**
-
-*Pterotype* creates/uses a bunch of custom tables, *ActivityPub for WordPress* only uses the native tables and adds as little meta data as possible.
 
 ### What if you are running your blog in a subdirectory? ###
 
@@ -356,12 +382,12 @@ Follow the normal instructions for [installing WordPress plugins](https://wordpr
 To add a WordPress Plugin using the [built-in plugin installer](https://codex.wordpress.org/Administration_Screens#Add_New_Plugins):
 
 1. Go to [Plugins](https://codex.wordpress.org/Administration_Screens#Plugins) > [Add New](https://codex.wordpress.org/Plugins_Add_New_Screen).
-1. Type "`activitypub`" into the **Search Plugins** box.
-1. Find the WordPress Plugin you wish to install.
+2. Type "`activitypub`" into the **Search Plugins** box.
+3. Find the WordPress Plugin you wish to install.
     1. Click **Details** for more information about the Plugin and instructions you may wish to print or save to help setup the Plugin.
-    1. Click **Install Now** to install the WordPress Plugin.
-1. The resulting installation screen will list the installation as successful or note any problems during the install.
-1. If successful, click **Activate Plugin** to activate it, or **Return to Plugin Installer** for further actions.
+    2. Click **Install Now** to install the WordPress Plugin.
+4. The resulting installation screen will list the installation as successful or note any problems during the install.
+5. If successful, click **Activate Plugin** to activate it, or **Return to Plugin Installer** for further actions.
 
 ### Manual Plugin Installation ###
 
