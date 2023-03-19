@@ -35,17 +35,17 @@ Of course, if no one follows your author instance, then no one will ever see the
 
 Some things to note:
 
-  1. Many single-author blogs have chosen to turn off or redirect their author profile pages, usually via an SEO plugin like Yoast or Rank Math. This is usually done to avoid duplicate content with your blog’s home page. If your author page has been deactivated in this way, then ActivityPub won’t work for you. Instead, you can turn your author profile page back on, and then use the option in your SEO plugin to noindex the author page. This will enable the page to be live and ActivityPub will now work, but the live page won’t cause any duplicate content issues with search engines.
-  2. Once ActivityPub is installed, only new posts going forward will be available in the fediverse. Likewise, even if you’ve been using ActivityPub for a while, anyone who follows your site, will only see new posts you publish from that moment on. They will never see previously-published posts in their Home feed. This process is very similar to subscribing to a newsletter. If you subscribe to a newsletter, you will only receive future emails, but not the old archived ones. With ActivityPub, if someone follows your site, they will only receive new blog posts you publish from then on.
+1. Many single-author blogs have chosen to turn off or redirect their author profile pages, usually via an SEO plugin like Yoast or Rank Math. This is usually done to avoid duplicate content with your blog’s home page. If your author page has been deactivated in this way, then ActivityPub won’t work for you. Instead, you can turn your author profile page back on, and then use the option in your SEO plugin to noindex the author page. This will enable the page to be live and ActivityPub will now work, but the live page won’t cause any duplicate content issues with search engines.
+1. Once ActivityPub is installed, only new posts going forward will be available in the fediverse. Likewise, even if you’ve been using ActivityPub for a while, anyone who follows your site, will only see new posts you publish from that moment on. They will never see previously-published posts in their Home feed. This process is very similar to subscribing to a newsletter. If you subscribe to a newsletter, you will only receive future emails, but not the old archived ones. With ActivityPub, if someone follows your site, they will only receive new blog posts you publish from then on.
 
 So what’s the process?
 
-  1. Install the ActivityPub plugin.
-  2. Go to the plugin’s settings page and adjust the settings to your liking. Click the Save button when ready.
-  3. Make sure your blog’s author profile page is active.
-  4. Go to Mastodon or any other federated platform, search for your author’s new federated profile, and follow it. Your new profile will be in the form of @yourauthorname@yourwebsite.com, so that is what you’ll search for.
-  5. On your blog, publish a new post.
-  6. From Mastodon, check to see if the new post appears in your Home feed.
+1. Install the ActivityPub plugin.
+1. Go to the plugin’s settings page and adjust the settings to your liking. Click the Save button when ready.
+1. Make sure your blog’s author profile page is active.
+1. Go to Mastodon or any other federated platform, search for your author’s new federated profile, and follow it. Your new profile will be in the form of @yourauthorname@yourwebsite.com, so that is what you’ll search for.
+1. On your blog, publish a new post.
+1. From Mastodon, check to see if the new post appears in your Home feed.
 
 Please note that it may take up to 15 minutes or so for the new post to show up in your federated feed. This is because the messages are sent to the federated platforms using a delayed cron. This avoids breaking the publishing process for those cases where users might have lots of followers. So please don’t assume that just because you didn’t see it show up right away that something is broken. Give it some time. In most cases, it will show up within a few minutes, and you’ll know everything is working as expected.
 
@@ -57,10 +57,10 @@ This plugin connects your WordPress blog to popular social platforms like Mastod
 
 Here's how it works:
 
-  1. Install the plugin and adjust settings as needed.
-  2. Ensure your blog's author profile page is active.
-  3. On Mastodon or other supported platforms, search for and follow your author's new profile (e.g., `@yourauthorname@yourwebsite.com`).
-  4. Publish a new post on your blog and check if it appears in your Mastodon feed.
+1. Install the plugin and adjust settings as needed.
+1. Ensure your blog's author profile page is active.
+1. On Mastodon or other supported platforms, search for and follow your author's new profile (e.g., `@yourauthorname@yourwebsite.com`).
+1. Publish a new post on your blog and check if it appears in your Mastodon feed.
 
 Please note that it may take up to 15 minutes for a new post to appear in your feed, as messages are sent on a delay to avoid overwhelming your followers. Be patient and give it some time.
 
@@ -382,12 +382,12 @@ Follow the normal instructions for [installing WordPress plugins](https://wordpr
 To add a WordPress Plugin using the [built-in plugin installer](https://codex.wordpress.org/Administration_Screens#Add_New_Plugins):
 
 1. Go to [Plugins](https://codex.wordpress.org/Administration_Screens#Plugins) > [Add New](https://codex.wordpress.org/Plugins_Add_New_Screen).
-2. Type "`activitypub`" into the **Search Plugins** box.
-3. Find the WordPress Plugin you wish to install.
+1. Type "`activitypub`" into the **Search Plugins** box.
+1. Find the WordPress Plugin you wish to install.
     1. Click **Details** for more information about the Plugin and instructions you may wish to print or save to help setup the Plugin.
-    2. Click **Install Now** to install the WordPress Plugin.
-4. The resulting installation screen will list the installation as successful or note any problems during the install.
-5. If successful, click **Activate Plugin** to activate it, or **Return to Plugin Installer** for further actions.
+    1. Click **Install Now** to install the WordPress Plugin.
+1. The resulting installation screen will list the installation as successful or note any problems during the install.
+1. If successful, click **Activate Plugin** to activate it, or **Return to Plugin Installer** for further actions.
 
 = Manual Plugin Installation =
 
