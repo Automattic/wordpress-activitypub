@@ -84,7 +84,6 @@ class Inbox {
 
 		// verify signature
 		\Activitypub\Signature::verify_signature( $request );
-		//\Activitypub\Signature::verify_signature( $headers, $key );
 
 		return $served;
 	}
@@ -331,6 +330,16 @@ class Inbox {
 		);
 
 		$params['bcc'] = array(
+			'sanitize_callback' => function( $param, $request, $key ) {
+				if ( \is_string( $param ) ) {
+					$param = array( $param );
+				}
+
+				return $param;
+			},
+		);
+
+		$params['validated'] = array(
 			'sanitize_callback' => function( $param, $request, $key ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );

@@ -1,7 +1,8 @@
 <?php
 namespace Activitypub;
 
-use phpseclib3\Crypt\RSA;
+// use DateTime;
+// use DateTimeZone;
 
 /**
  * ActivityPub Signature Class
@@ -10,16 +11,13 @@ use phpseclib3\Crypt\RSA;
  */
 class Signature {
 
-	const SIGNATURE_PATTERN = '/^
-        keyId="(?P<keyId>
-            (https?:\/\/[\w\-\.]+[\w]+)
-            (:[\d]+)?
-            ([\w\-\.#\/@]+)
-        )",
-        (algorithm="(?P<algorithm>[\w\s-]+)",)?
-        (headers="(?P<headers>[\(\)\w\s-]+)",)?
-        signature="(?P<signature>[\w+\/]+={0,2})"
-    /x';
+	/**
+	 * How much leeway to provide on the date header in seconds.
+	 * Not everybody uses NTP.
+	 */
+	const MAX_TIME_OFFSET = 10800;
+
+	const DEFAULT_SIGNING_ALGORITHM = 'sha256';
 
 	/**
 	 * @param int $user_id
@@ -120,136 +118,176 @@ class Signature {
 		}
 	}
 
-	public static function verify_signature( $request ) {
+	public static function verify_signature( $request = null ) {
+		$headers = $request->get_headers();
+		$headers["(request-target)"][0] = strtolower( $request->get_method() ) . ' /wp-json' . $request->get_route();
 
-		// https://github.com/landrok/activitypub/blob/master/src/ActivityPhp/Server/Http/HttpSignature.php
-		$header_data = $request->get_headers(); 
-		$body = $request->get_body();	
-		if ( !$header_data['signature'][0] ) {
-            return false;
-        }
-        
-		// Split signature into its parts
-        $signature_parts = self::splitSignature( $header_data['signature'][0] );
-		if ( !count( $signature_parts ) ) {
-            return false;
-        }
-		extract( $signature_parts );// $keyId, $algorithm, $headers, $signature
+		if ( !$headers ) {
+			$headers = self::default_server_headers();
+		}
+		if ( array_key_exists( 'signature', $headers ) ) {
+			$signature_block = self::parse_signature_header( $headers['signature'] );
+		} elseif ( array_key_exists( 'authorization', $headers ) ) {
+			$signature_block = self::parse_signature_header( $headers['authorization'] );
+		}
 
-        // Fetch the public key linked from keyId
-        $actor = \strip_fragment_from_url( $keyId );
-		$publicKeyPem = \Activitypub\get_publickey_by_actor( $actor,  $keyId );
-		
-		if ( !is_wp_error( $publicKeyPem ) ) {
-			// Probably overkill since we already have a seemingly weelformed PEM
-			$pkey = \openssl_pkey_get_details( \openssl_pkey_get_public( $publicKeyPem ) );
+		if ( !$signature_block ) {
+			return false;
+		}
 
-			// Verify Digest
-			$digest_gen = 'SHA-256=' . \base64_encode( \hash( 'sha256', $body, true ) );
-			if ( ! isset( $header_data['digest'][0] ) || ( $digest_gen !== $header_data['digest'][0] ) ) {
+		$signed_headers = $signature_block['headers'];
+		if ( ! $signed_headers ) {
+			$signed_headers = ['date'];
+		}
+
+		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
+		if ( ! $signed_data ) {
+			return false;
+		}
+
+		$algorithm = self::get_signature_algorithm( $signature_block );
+		if ( ! $algorithm ) {
+			return false;
+		}
+
+		if ( in_array( 'digest', $signed_headers ) && isset( $body ) ) {
+			$digest = explode( '=', $headers['digest'], 2 );
+			if ( $digest[0] === 'SHA-256' ) {
+				$hashalg = 'sha256';
+			}
+			if ( $digest[0] === 'SHA-512' ) {
+				$hashalg = 'sha512';
+			}
+
+			// TODO Test
+			if ( base64_encode( hash( $hashalg, $body, true ) ) !== $digest[1] ) {
 				return false;
 			}
+		}
 
-			// Create a comparison string from the plaintext headers we got 
-			// in the same order as was given in the signature header, 
-			$signing_headers = self::getPlainText(
-				explode(' ', trim( $headers ) ), 
-				$request
-			);
+		$public_key = $key?? self::get_key( $signature_block['keyId'] );
 
-			// 2 methods because neither works ¯\_(ツ)_/¯
-			// phpseclib method
-			$rsa = RSA::createKey()
-					->loadPublicKey( $pkey['key'])
-					->withHash('sha256'); 
-			$verified = $rsa->verify( $signing_headers, \base64_decode( $signature ) );
-			if ( $verified > 0 ) {
-				\error_log( '$rsa->verify: //return true;' );
-				return true;
-			} else {
-				while ( $ossl_error = openssl_error_string() ) {
-					\error_log( '$rsa->verify(): ' . $ossl_error );
-				}
-				$activity = \json_decode( $body );
-				\error_log( 'activity->type: ' . print_r( $activity->type, true )  );
-				//return false;
+		return \openssl_verify( $signed_data,$signature_block['signature'], $public_key, $algorithm ) > 0;
+
+	}
+
+	public static function default_server_headers() {
+		$headers = 	array(
+			'(request-target)' => strtolower( $_SERVER['REQUEST_METHOD'] ) . ' ' . $_SERVER['REQUEST_URI'],
+			'content-type' => $_SERVER['CONTENT_TYPE'],
+			'content-length' => $_SERVER['CONTENT_LENGTH'],
+		);
+		foreach ( $_SERVER as $k => $v ) {
+			if ( strpos( $k, 'HTTP_' ) === 0 ) {
+				$field = str_replace( '_', '-', strtolower( substr( $k, 5 ) ) );
+				$headers[$field] = $v;
 			}
-			
-			// openssl method
-			$verified = \openssl_verify( $signing_headers, 
-				\base64_decode( \normalize_whitespace( $signature ) ), 
-				$pkey['key'], 
-				\OPENSSL_ALGO_SHA256
-			);
-			if ( $verified > 0 ) {
-				\error_log( 'openssl_verify: //return true;' );
-				return true;
-			} else {
-				while ( $ossl_error = openssl_error_string() ) {
-					\error_log( 'openssl_error_string(): ' . $ossl_error );
-				}
-				//return false;
-			}
+		}
+		return $headers;
+	}
+
+	public static function get_signature_algorithm( $signature_block ) {
+		switch ( $signature_block['algorithm'] ) {
+			case 'rsa-sha256':
+				return 'sha256';
+			case 'rsa-sha-512':
+				return 'sha512';
+			case 'hs2019':
+				return self::DEFAULT_SIGNING_ALGORITHM;
 		}
 		return false;
 	}
 
-	/**
-     * Split HTTP signature into its parts (keyId, headers and signature)
-     */
-    public static function splitSignature( $signature ) {
-	
-		$allowedKeys = [
-			'keyId',
-			'algorithm', // optional
-			'headers',   // optional
-			'signature',
-		];
+	public static function parse_signature_header( $header ) {
+		$ret = [];
+		$matches = [];
+		$h_string = implode( ',', (array) $header[0] );
 
-        if (!preg_match(self::SIGNATURE_PATTERN, $signature, $matches)) {
-            return [];
-        }
-
-        // Headers are optional
-        if (!isset($matches['headers']) || $matches['headers'] == '') {
-            $matches['headers'] = 'date';
-        }
-
-        return array_filter($matches, function($key) use ($allowedKeys) {
-                return !is_int($key) && in_array($key, $allowedKeys);
-        },  ARRAY_FILTER_USE_KEY );        
-    }
-
-	/**
-     * Get plain text that has been originally signed
-     * 
-     * @param  array $headers HTTP header keys
-     * @param  \Symfony\Component\HttpFoundation\Request $request 
-     */
-    public static function getPlainText( $headers, $request ) {
-
-		$url_params = $request->get_url_params();
-		if ( isset( $url_params ) && isset( $url_params['user_id'] ) ) {
-			$url_params = '';
+		if ( preg_match( '/keyId="(.*?)"/ism', $h_string, $matches ) ) {
+			$ret['keyId'] = $matches[1];
+		}
+		if ( preg_match( '/created=([0-9]*)/ism', $h_string, $matches ) ) {
+			$ret['(created)'] = $matches[1];
+		}
+		if ( preg_match( '/expires=([0-9]*)/ism', $h_string, $matches ) ) {
+			$ret['(expires)'] = $matches[1];
+		}
+		if ( preg_match( '/algorithm="(.*?)"/ism', $h_string, $matches ) ) {
+			$ret['algorithm'] = $matches[1];
+		}
+		if ( preg_match( '/headers="(.*?)"/ism', $h_string, $matches ) ) {
+			$ret['headers'] = explode( ' ', $matches[1] );
+		}
+		if ( preg_match( '/signature="(.*?)"/ism', $h_string, $matches ) ) {
+			$ret['signature'] = base64_decode( preg_replace( '/\s+/', '', $matches[1] ) );
 		}
 
-        $strings = [];
-        $request_target = sprintf(
-            '%s %s%s',
-            strtolower($request->get_method()),
-            $request->get_route(),
-            $url_params
-        );
-		 
-		 foreach ($headers as $value) {
-			 if ( $value == '(request-target)' ) {
-				 $strings[] = "$value: " . $request_target;
-			} else {
-				$strings[] = "$value: " . $request->get_header($value);
+		if ( ( $ret['signature'] ) && ( $ret['algorithm'] ) && ( !$ret['headers'] ) ) {
+			$ret['headers'] = ['date'];
+		}
+
+		return $ret;
+	}
+
+	public static function get_key( $keyId ) {
+		// If there was no key passed to verify, it will find the keyId and call this
+		// function to fetch the public key from stored data or a network fetch.
+		$actor = \strip_fragment_from_url( $keyId );
+		$publicKeyPem = \Activitypub\get_publickey_by_actor( $actor,  $keyId );
+		return rtrim( $publicKeyPem );
+	}
+
+
+	public static function get_signed_data( $signed_headers, $signature_block, $headers ) {
+
+		$signed_data = '';
+		// This also verifies time-based values by returning false if any of these are out of range.
+		foreach ( $signed_headers as $header ) {
+			if ( array_key_exists($header, $headers ) ) {
+				if ( $header === 'host' ) {
+					if ( isset( $headers['x_original_host'] ) ) {
+						$signed_data .= 'host: ' . $headers['x_original_host'][0] . "\n";
+					} else {
+						$signed_data .= $header . ': ' . $headers[$header][0] . "\n";
+					}
+				} else {
+					$signed_data .= $header . ': ' . $headers[$header][0] . "\n";
+				}
+			}
+			if ( $header === '(created)' ) {
+				if ( !empty( $signature_block['(created)'] ) && intval( $signature_block['(created)'] ) > time() ) {
+					// created in future
+					return false;
+				}
+				$signed_data .= '(created): ' . $signature_block['(created)'] . "\n";
+			}
+			if ( $header === '(expires)' ) {
+				if ( !empty( $signature_block['(expires)'] ) && intval( $signature_block['(expires)'] ) < time() ) {
+					// expired in past
+					return false;
+				}
+				$signed_data .= '(expires): ' . $signature_block['(expires)'] . "\n";
+			}
+			if ( $header === 'content-type' ) {
+				$signed_data .= $header . ': ' . $headers['content_type'][0] . "\n";
+			}
+			if ( $header === 'date' ) {
+				// allow a bit of leeway for misconfigured clocks.
+				$d = new DateTime( $headers[$header][0] );
+				$d->setTimeZone( new DateTimeZone('UTC') );
+
+				$dplus = time() + self::MAX_TIME_OFFSET;
+				$dminus = time() - self::MAX_TIME_OFFSET;
+				$c = wp_date( 'U' );
+
+				if ( $c > $dplus || $c < $dminus ) {
+					// time out of range
+					return false;
+				}
 			}
 		}
-
-        return implode("\n", $strings);   
+		// error_log( '$signed_data: ' . print_r( rtrim( $signed_data, "\n" ), true ) );
+		return rtrim($signed_data, "\n");
 	}
 
 	public static function generate_digest( $body ) {
