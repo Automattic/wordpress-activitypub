@@ -74,16 +74,9 @@ class Inbox {
 			return $served;
 		}
 
-		$signature = $request->get_header( 'signature' );
-
-		if ( ! $signature ) {
+		if ( ! \Activitypub\Signature::verify_http_signature( $request ) ) {
 			return $served;
 		}
-
-		$headers = $request->get_headers();
-
-		// verify signature
-		\Activitypub\Signature::verify_signature( $request );
 
 		return $served;
 	}
@@ -237,6 +230,12 @@ class Inbox {
 		$params['id'] = array(
 			'required' => true,
 			'sanitize_callback' => 'esc_url_raw',
+			'validate_callback' => function( $param, $request, $key ) {
+				if ( ! \Activitypub\Signature::verify_http_signature( $request ) ) {
+					return false;
+				}
+				return $param;
+			},
 		);
 
 		$params['actor'] = array(
@@ -281,6 +280,12 @@ class Inbox {
 			'required' => true,
 			'type' => 'string',
 			'sanitize_callback' => 'esc_url_raw',
+			'validate_callback' => function( $param, $request, $key ) {
+				if ( ! \Activitypub\Signature::verify_http_signature( $request ) ) {
+					return false;
+				}
+				return $param;
+			},
 		);
 
 		$params['actor'] = array(
@@ -330,16 +335,6 @@ class Inbox {
 		);
 
 		$params['bcc'] = array(
-			'sanitize_callback' => function( $param, $request, $key ) {
-				if ( \is_string( $param ) ) {
-					$param = array( $param );
-				}
-
-				return $param;
-			},
-		);
-
-		$params['validated'] = array(
 			'sanitize_callback' => function( $param, $request, $key ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );
