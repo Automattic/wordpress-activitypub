@@ -11,11 +11,6 @@ use DateTimeZone;
  */
 class Signature {
 
-	/**
-	 * How much leeway to provide on the date header in seconds.
-	 * Not everybody uses NTP.
-	 */
-
 	const DEFAULT_SIGNING_ALGORITHM = 'sha256';
 
 	/**
@@ -252,7 +247,7 @@ class Signature {
 				}
 			}
 			if ( '(created)' === $header ) {
-				if ( ! \empty( $signature_block['(created)'] ) && \intval( $signature_block['(created)'] ) > \time() ) {
+				if ( ! empty( $signature_block['(created)'] ) && \intval( $signature_block['(created)'] ) > \time() ) {
 					// created in future
 					return false;
 				}
