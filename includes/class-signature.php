@@ -263,6 +263,9 @@ class Signature {
 			if ( 'content-type' === $header ) {
 				$signed_data .= $header . ': ' . $headers['content_type'][0] . "\n";
 			}
+			if ( 'content-length' === $header ) {
+				$signed_data .= $header . ': ' . $headers['content_length'][0] . "\n";
+			}
 			if ( 'date' === $header ) {
 				// allow a bit of leeway for misconfigured clocks.
 				$d = new DateTime( $headers[ $header ][0] );
