@@ -221,7 +221,7 @@ function get_publickey_by_actor( $actor, $key_id ) {
 
 function get_actor_from_key( $key_id ) {
 	$actor = \strip_fragment_from_url( $key_id );
- 	if ( $actor === $key_id ) {
+	if ( $actor === $key_id ) {
 		// strip /main-key/ for GoToSocial.
 		$actor = \dirname( $key_id );
 	}
