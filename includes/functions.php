@@ -223,7 +223,7 @@ function get_actor_from_key( $key_id ) {
 	$actor = \strip_fragment_from_url( $key_id );
  	if ( $actor === $key_id ) {
 		// strip /main-key/ for GoToSocial.
-		$actor = \dirname( $key_id, 1 );
+		$actor = \dirname( $key_id );
 	}
 	return $actor;
 }
