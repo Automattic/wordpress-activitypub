@@ -225,7 +225,7 @@ class Signature {
 	public static function get_key( $keyId ) { // phpcs:ignore
 		// If there was no key passed to verify, it will find the keyId and call this
 		// function to fetch the public key from stored data or a network fetch.
-		$actor = \strip_fragment_from_url( $keyId ); // phpcs:ignore
+		$actor = \Activitypub\get_actor_from_key( $keyId ); // phpcs:ignore
 		$publicKeyPem = \Activitypub\get_publickey_by_actor( $actor, $keyId ); // phpcs:ignore
 		return \rtrim( $publicKeyPem ); // phpcs:ignore
 	}
