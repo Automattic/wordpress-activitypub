@@ -11,8 +11,6 @@ use DateTimeZone;
  */
 class Signature {
 
-	const DEFAULT_SIGNING_ALGORITHM = 'sha256';
-
 	/**
 	 * @param int $user_id
 	 *
@@ -181,12 +179,10 @@ class Signature {
 
 	public static function get_signature_algorithm( $signature_block ) {
 		switch ( $signature_block['algorithm'] ) {
-			case 'rsa-sha256':
-				return 'sha256';
 			case 'rsa-sha-512':
 				return 'sha512';
-			case 'hs2019':
-				return self::DEFAULT_SIGNING_ALGORITHM;
+			default:
+				return 'sha256';
 		}
 		return false;
 	}
@@ -223,8 +219,6 @@ class Signature {
 	}
 
 	public static function get_key( $keyId ) { // phpcs:ignore
-		// If there was no key passed to verify, it will find the keyId and call this
-		// function to fetch the public key from stored data or a network fetch.
 		$actor = \Activitypub\get_actor_from_key( $keyId ); // phpcs:ignore
 		$publicKeyPem = \Activitypub\get_publickey_by_actor( $actor, $keyId ); // phpcs:ignore
 		return \rtrim( $publicKeyPem ); // phpcs:ignore
