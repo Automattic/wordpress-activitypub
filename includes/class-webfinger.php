@@ -23,6 +23,9 @@ class Webfinger {
 		}
 
 		$user = \get_user_by( 'id', $user_id );
+		if ( ! $user ) {
+			return '';
+		}
 
 		return $user->user_login . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
 	}
