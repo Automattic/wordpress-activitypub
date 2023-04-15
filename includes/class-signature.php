@@ -112,7 +112,7 @@ class Signature {
 
 	public static function verify_http_signature( $request = null ) {
 		$headers = $request->get_headers();
-		$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '' ;
+		$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '';
 		$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' /wp-json' . $request->get_route();
 
 		if ( ! $headers ) {
