@@ -74,10 +74,6 @@ class Inbox {
 			return $served;
 		}
 
-		if ( ! \Activitypub\Signature::verify_http_signature( $request ) ) {
-			return $served;
-		}
-
 		return $served;
 	}
 
@@ -230,9 +226,13 @@ class Inbox {
 		$params['id'] = array(
 			'required' => true,
 			'sanitize_callback' => 'esc_url_raw',
+		);
+
+		$params['signature'] = array(
+			'required' => true,
 			'validate_callback' => function( $param, $request, $key ) {
 				if ( ! \Activitypub\Signature::verify_http_signature( $request ) ) {
-					return false;
+					return false; // returns http 400 rest_invalid_param
 				}
 				return $param;
 			},

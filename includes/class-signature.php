@@ -112,6 +112,7 @@ class Signature {
 
 	public static function verify_http_signature( $request = null ) {
 		$headers = $request->get_headers();
+		$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '' ;
 		$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' /wp-json' . $request->get_route();
 
 		if ( ! $headers ) {
@@ -123,7 +124,7 @@ class Signature {
 			$signature_block = self::parse_signature_header( $headers['authorization'] );
 		}
 
-		if ( ! $signature_block ) {
+		if ( ! isset( $signature_block ) || ! $signature_block ) {
 			return false;
 		}
 
@@ -143,6 +144,9 @@ class Signature {
 		}
 
 		if ( \in_array( 'digest', $signed_headers, true ) && isset( $body ) ) {
+			if ( is_array( $headers['digest'] ) ) {
+				$headers['digest'] = $headers['digest'][0];
+			}
 			$digest = explode( '=', $headers['digest'], 2 );
 			if ( 'SHA-256' === $digest[0] ) {
 				$hashalg = 'sha256';
@@ -156,7 +160,7 @@ class Signature {
 			}
 		}
 
-		$public_key = isset( $key ) ? $key : self::get_key( $signature_block['keyId'] );
+		$public_key = \rtrim( \Activitypub\get_publickey_by_actor( $actor, $signature_block['keyId'] ) ); // phpcs:ignore
 
 		return \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
 
@@ -217,13 +221,6 @@ class Signature {
 
 		return $ret;
 	}
-
-	public static function get_key( $keyId ) { // phpcs:ignore
-		$actor = \Activitypub\get_actor_from_key( $keyId ); // phpcs:ignore
-		$publicKeyPem = \Activitypub\get_publickey_by_actor( $actor, $keyId ); // phpcs:ignore
-		return \rtrim( $publicKeyPem ); // phpcs:ignore
-	}
-
 
 	public static function get_signed_data( $signed_headers, $signature_block, $headers ) {
 		$signed_data = '';
