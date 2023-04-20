@@ -13,7 +13,7 @@ class Outbox {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( '\Activitypub\Rest\Outbox', 'register_routes' ) );
+		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
 	}
 
 	/**
@@ -26,7 +26,7 @@ class Outbox {
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Outbox', 'user_outbox_get' ),
+					'callback'            => array( self::class, 'user_outbox_get' ),
 					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),
@@ -102,7 +102,8 @@ class Outbox {
 
 			foreach ( $posts as $post ) {
 				$activitypub_post = new \Activitypub\Model\Post( $post );
-				$activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_NONE );
+				$activitypub_activity = new \Activitypub\Model\Activity( 'Create', false );
+
 				$activitypub_activity->from_post( $activitypub_post );
 				$json->orderedItems[] = $activitypub_activity->to_array(); // phpcs:ignore
 			}

@@ -9,24 +9,38 @@ namespace Activitypub\Model;
  * @see https://www.w3.org/TR/activitypub/
  */
 class Activity {
-	private $context = array( 'https://www.w3.org/ns/activitystreams' );
+	private $context = array(
+		'https://www.w3.org/ns/activitystreams',
+		'https://w3id.org/security/v1',
+		array(
+			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
+			'PropertyValue' => 'schema:PropertyValue',
+			'schema' => 'http://schema.org#',
+			'pt' => 'https://joinpeertube.org/ns#',
+			'toot' => 'http://joinmastodon.org/ns#',
+			'value' => 'schema:value',
+			'Hashtag' => 'as:Hashtag',
+			'featured' => array(
+				'@id' => 'toot:featured',
+				'@type' => '@id',
+			),
+			'featuredTags' => array(
+				'@id' => 'toot:featuredTags',
+				'@type' => '@id',
+			),
+		),
+	);
 	private $published = '';
 	private $id = '';
 	private $type = 'Create';
 	private $actor = '';
 	private $to = array( 'https://www.w3.org/ns/activitystreams#Public' );
-	private $cc = array( 'https://www.w3.org/ns/activitystreams#Public' );
+	private $cc = array();
 	private $object = null;
 
-	const TYPE_SIMPLE = 'simple';
-	const TYPE_FULL = 'full';
-	const TYPE_NONE = 'none';
-
-	public function __construct( $type = 'Create', $context = self::TYPE_SIMPLE ) {
-		if ( 'none' === $context ) {
+	public function __construct( $type = 'Create', $context = true ) {
+		if ( true !== $context ) {
 			$this->context = null;
-		} elseif ( 'full' === $context ) {
-			$this->context = \Activitypub\get_context();
 		}
 
 		$this->type = \ucfirst( $type );
@@ -43,6 +57,20 @@ class Activity {
 		if ( \strncasecmp( $method, 'set', 3 ) === 0 ) {
 			$this->$var = $params[0];
 		}
+
+		if ( \strncasecmp( $method, 'add', 3 ) === 0 ) {
+			if ( ! is_array( $this->$var ) ) {
+				$this->$var = $params[0];
+			}
+
+			if ( is_array( $params[0] ) ) {
+				$this->$var = array_merge( $this->$var, $params[0] );
+			} else {
+				array_push( $this->$var, $params[0] );
+			}
+
+			$this->$var = array_unique( $this->$var );
+		}
 	}
 
 	public function from_post( Post $post ) {
@@ -51,7 +79,8 @@ class Activity {
 		if ( isset( $object['published'] ) ) {
 			$this->published = $object['published'];
 		}
-		$this->cc = array( \get_rest_url( null, '/activitypub/1.0/users/' . intval( $post->get_post_author() ) . '/followers' ) );
+
+		$this->add_to( \get_rest_url( null, '/activitypub/1.0/users/' . intval( $post->get_post_author() ) . '/followers' ) );
 
 		if ( isset( $this->object['attributedTo'] ) ) {
 			$this->actor = $this->object['attributedTo'];
@@ -59,7 +88,7 @@ class Activity {
 
 		foreach ( $post->get_tags() as $tag ) {
 			if ( 'Mention' === $tag['type'] ) {
-				$this->cc[] = $tag['href'];
+				$this->add_cc( $tag['href'] );
 			}
 		}
 

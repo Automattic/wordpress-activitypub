@@ -11,10 +11,10 @@ class Admin {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'admin_menu', array( '\Activitypub\Admin', 'admin_menu' ) );
-		\add_action( 'admin_init', array( '\Activitypub\Admin', 'register_settings' ) );
-		\add_action( 'show_user_profile', array( '\Activitypub\Admin', 'add_fediverse_profile' ) );
-		\add_action( 'admin_enqueue_scripts', array( '\Activitypub\Admin', 'enqueue_scripts' ) );
+		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
+		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
+		\add_action( 'show_user_profile', array( self::class, 'add_fediverse_profile' ) );
+		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 	}
 
 	/**
@@ -26,14 +26,14 @@ class Admin {
 			'ActivityPub',
 			'manage_options',
 			'activitypub',
-			array( '\Activitypub\Admin', 'settings_page' )
+			array( self::class, 'settings_page' )
 		);
 
-		\add_action( 'load-' . $settings_page, array( '\Activitypub\Admin', 'add_settings_help_tab' ) );
+		\add_action( 'load-' . $settings_page, array( self::class, 'add_settings_help_tab' ) );
 
-		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers (Fediverse)', 'activitypub' ), 'read', 'activitypub-followers-list', array( '\Activitypub\Admin', 'followers_list_page' ) );
+		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers (Fediverse)', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
 
-		\add_action( 'load-' . $followers_list_page, array( '\Activitypub\Admin', 'add_followers_list_help_tab' ) );
+		\add_action( 'load-' . $followers_list_page, array( self::class, 'add_followers_list_help_tab' ) );
 	}
 
 	/**

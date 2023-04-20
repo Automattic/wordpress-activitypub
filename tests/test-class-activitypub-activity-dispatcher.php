@@ -28,7 +28,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		$activitypub_post = new \Activitypub\Model\Post( $post );
-		\Activitypub\Activity_Dispatcher::send_post_activity( $activitypub_post );
+		\Activitypub\Activity_Dispatcher::send_create_activity( $activitypub_post );
 
 		$this->assertNotEmpty( $activitypub_post->get_content() );
 
@@ -69,7 +69,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		$activitypub_post = new \Activitypub\Model\Post( $post );
-		\Activitypub\Activity_Dispatcher::send_post_activity( $activitypub_post );
+		\Activitypub\Activity_Dispatcher::send_create_activity( $activitypub_post );
 
 		$this->assertNotEmpty( $activitypub_post->get_content() );
 

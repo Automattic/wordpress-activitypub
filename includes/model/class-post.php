@@ -105,12 +105,31 @@ class Post {
 	);
 
 	/**
+	 * List of audience
+	 *
+	 * Also used for visibility
+	 *
+	 * @var array
+	 */
+	private $to = array( 'https://www.w3.org/ns/activitystreams#Public' );
+
+	/**
+	 * List of audience
+	 *
+	 * Also used for visibility
+	 *
+	 * @var array
+	 */
+	private $cc = array();
+
+	/**
 	 * Constructor
 	 *
 	 * @param WP_Post $post
 	 */
 	public function __construct( $post ) {
 		$this->post = \get_post( $post );
+		$this->add_to( \get_rest_url( null, '/activitypub/1.0/users/' . intval( $this->get_post_author() ) . '/followers' ) );
 	}
 
 	/**
@@ -134,6 +153,20 @@ class Post {
 		if ( \strncasecmp( $method, 'set', 3 ) === 0 ) {
 			$this->$var = $params[0];
 		}
+
+		if ( \strncasecmp( $method, 'add', 3 ) === 0 ) {
+			if ( ! is_array( $this->$var ) ) {
+				$this->$var = $params[0];
+			}
+
+			if ( is_array( $params[0] ) ) {
+				$this->$var = array_merge( $this->$var, $params[0] );
+			} else {
+				array_push( $this->$var, $params[0] );
+			}
+
+			$this->$var = array_unique( $this->$var );
+		}
 	}
 
 	/**
@@ -155,8 +188,8 @@ class Post {
 			'contentMap' => array(
 				\strstr( \get_locale(), '_', true ) => $this->get_content(),
 			),
-			'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-			'cc' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'to' => $this->get_to(),
+			'cc' => $this->get_cc(),
 			'attachment' => $this->get_attachments(),
 			'tag' => $this->get_tags(),
 		);

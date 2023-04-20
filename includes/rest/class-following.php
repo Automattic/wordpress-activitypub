@@ -13,7 +13,7 @@ class Following {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( '\Activitypub\Rest\Following', 'register_routes' ) );
+		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
 	}
 
 	/**
@@ -26,7 +26,7 @@ class Following {
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Following', 'get' ),
+					'callback'            => array( self::class, 'get' ),
 					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),

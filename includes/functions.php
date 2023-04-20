@@ -228,8 +228,11 @@ function get_actor_from_key( $key_id ) {
 	return $actor;
 }
 
-function get_follower_inboxes( $user_id ) {
+function get_follower_inboxes( $user_id, $cc = array() ) {
 	$followers = \Activitypub\Peer\Followers::get_followers( $user_id );
+	$followers = array_merge( $followers, $cc );
+	$followers = array_unique( $followers );
+
 	$inboxes = array();
 
 	foreach ( $followers as $follower ) {

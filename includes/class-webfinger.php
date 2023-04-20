@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub;
 
+use WP_Error;
+
 /**
  * ActivityPub WebFinger Class
  *
@@ -23,6 +25,9 @@ class Webfinger {
 		}
 
 		$user = \get_user_by( 'id', $user_id );
+		if ( ! $user ) {
+			return '';
+		}
 
 		return $user->user_login . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
 	}
@@ -40,7 +45,7 @@ class Webfinger {
 
 		$url = \add_query_arg( 'resource', 'acct:' . ltrim( $account, '@' ), 'https://' . $m[2] . '/.well-known/webfinger' );
 		if ( ! \wp_http_validate_url( $url ) ) {
-			$response = new \WP_Error( 'invalid_webfinger_url', null, $url );
+			$response = new WP_Error( 'invalid_webfinger_url', null, $url );
 			\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 			return $response;
 		}
@@ -56,7 +61,7 @@ class Webfinger {
 		);
 
 		if ( \is_wp_error( $response ) ) {
-			$link = new \WP_Error( 'webfinger_url_not_accessible', null, $url );
+			$link = new WP_Error( 'webfinger_url_not_accessible', null, $url );
 			\set_transient( $transient_key, $link, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 			return $link;
 		}
@@ -65,7 +70,7 @@ class Webfinger {
 		$body = \json_decode( $body, true );
 
 		if ( empty( $body['links'] ) ) {
-			$link = new \WP_Error( 'webfinger_url_invalid_response', null, $url );
+			$link = new WP_Error( 'webfinger_url_invalid_response', null, $url );
 			\set_transient( $transient_key, $link, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 			return $link;
 		}
@@ -77,7 +82,7 @@ class Webfinger {
 			}
 		}
 
-		$link = new \WP_Error( 'webfinger_url_no_activity_pub', null, $body );
+		$link = new WP_Error( 'webfinger_url_no_activity_pub', null, $body );
 		\set_transient( $transient_key, $link, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 		return $link;
 	}

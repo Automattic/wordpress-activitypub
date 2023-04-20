@@ -65,8 +65,6 @@
 										<li><code>[ap_permalink]</code> - <?php \esc_html_e( 'The post\'s permalink.', 'activitypub' ); ?></li>
 										<li><code>[ap_shortlink]</code> - <?php echo \wp_kses( \__( 'The post\'s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>.', 'activitypub' ), 'default' ); ?></li>
 										<li><code>[ap_hashtags]</code> - <?php \esc_html_e( 'The post\'s tags as hashtags.', 'activitypub' ); ?></li>
-										<li><code>[ap_hashcats]</code> - <?php \esc_html_e( 'The post\'s categories as hashtags.', 'activitypub' ); ?></li>
-										<li><code>[ap_image]</code> - <?php \esc_html_e( 'The URL for the post\'s featured image.', 'activitypub' ); ?></li>
 									</ul>
 									<p><?php \esc_html_e( 'You can find the full list with all possible attributes in the help section on the top-right of the screen.', 'activitypub' ); ?></p>
 								</div>
