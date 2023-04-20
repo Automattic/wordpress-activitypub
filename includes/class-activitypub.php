@@ -117,7 +117,7 @@ class Activitypub {
 		$activitypub_post = new \Activitypub\Model\Post( $post );
 
 		if ( 'publish' === $new_status && 'publish' !== $old_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_post_activity', array( $activitypub_post ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_create_activity', array( $activitypub_post ) );
 		} elseif ( 'publish' === $new_status ) {
 			\wp_schedule_single_event( \time(), 'activitypub_send_update_activity', array( $activitypub_post ) );
 		} elseif ( 'trash' === $new_status ) {
