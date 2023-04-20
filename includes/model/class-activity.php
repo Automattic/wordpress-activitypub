@@ -1,8 +1,6 @@
 <?php
 namespace Activitypub\Model;
 
-use function Activitypub\get_context;
-
 /**
  * ActivityPub Post Class
  *
