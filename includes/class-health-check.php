@@ -14,19 +14,19 @@ class Health_Check {
 	 * @return void
 	 */
 	public static function init() {
-		\add_filter( 'site_status_tests', array( '\Activitypub\Health_Check', 'add_tests' ) );
-		\add_filter( 'debug_information', array( '\Activitypub\Health_Check', 'debug_information' ) );
+		\add_filter( 'site_status_tests', array( self::class, 'add_tests' ) );
+		\add_filter( 'debug_information', array( self::class, 'debug_information' ) );
 	}
 
 	public static function add_tests( $tests ) {
 		$tests['direct']['activitypub_test_author_url'] = array(
 			'label' => \__( 'Author URL test', 'activitypub' ),
-			'test'  => array( '\Activitypub\Health_Check', 'test_author_url' ),
+			'test'  => array( self::class, 'test_author_url' ),
 		);
 
 		$tests['direct']['activitypub_test_webfinger'] = array(
 			'label' => __( 'WebFinger Test', 'activitypub' ),
-			'test'  => array( '\Activitypub\Health_Check', 'test_webfinger' ),
+			'test'  => array( self::class, 'test_webfinger' ),
 		);
 
 		return $tests;

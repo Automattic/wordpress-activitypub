@@ -39,50 +39,50 @@ function init() {
 	require_once \dirname( __FILE__ ) . '/includes/model/class-post.php';
 
 	require_once \dirname( __FILE__ ) . '/includes/class-activity-dispatcher.php';
-	\Activitypub\Activity_Dispatcher::init();
+	Activity_Dispatcher::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/class-activitypub.php';
-	\Activitypub\Activitypub::init();
+	Activitypub::init();
 
 	// Configure the REST API route
 	require_once \dirname( __FILE__ ) . '/includes/rest/class-outbox.php';
-	\Activitypub\Rest\Outbox::init();
+	Rest\Outbox::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/rest/class-inbox.php';
-	\Activitypub\Rest\Inbox::init();
+	Rest\Inbox::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/rest/class-followers.php';
-	\Activitypub\Rest\Followers::init();
+	Rest\Followers::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/rest/class-following.php';
-	\Activitypub\Rest\Following::init();
+	Rest\Following::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/rest/class-webfinger.php';
-	\Activitypub\Rest\Webfinger::init();
+	Rest\Webfinger::init();
 
 	// load NodeInfo endpoints only if blog is public
 	if ( true === (bool) \get_option( 'blog_public', 1 ) ) {
 		require_once \dirname( __FILE__ ) . '/includes/rest/class-nodeinfo.php';
-		\Activitypub\Rest\NodeInfo::init();
+		Rest\NodeInfo::init();
 	}
 
 	require_once \dirname( __FILE__ ) . '/includes/class-admin.php';
-	\Activitypub\Admin::init();
+	Admin::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/class-hashtag.php';
-	\Activitypub\Hashtag::init();
+	Hashtag::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/class-shortcodes.php';
-	\Activitypub\Shortcodes::init();
+	Shortcodes::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/class-mention.php';
-	\Activitypub\Mention::init();
+	Mention::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/class-debug.php';
-	\Activitypub\Debug::init();
+	Debug::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/class-health-check.php';
-	\Activitypub\Health_Check::init();
+	Health_Check::init();
 
 	if ( \WP_DEBUG ) {
 		require_once \dirname( __FILE__ ) . '/includes/debug.php';
@@ -136,6 +136,6 @@ function flush_rewrite_rules() {
  */
 function enable_buddypress_features() {
 	require_once \dirname( __FILE__ ) . '/integration/class-buddypress.php';
-	\Activitypub\Integration\Buddypress::init();
+	Integration\Buddypress::init();
 }
 add_action( 'bp_include', '\Activitypub\enable_buddypress_features' );

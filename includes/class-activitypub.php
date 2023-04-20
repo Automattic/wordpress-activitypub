@@ -11,9 +11,9 @@ class Activitypub {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_filter( 'template_include', array( '\Activitypub\Activitypub', 'render_json_template' ), 99 );
-		\add_filter( 'query_vars', array( '\Activitypub\Activitypub', 'add_query_vars' ) );
-		\add_filter( 'pre_get_avatar_data', array( '\Activitypub\Activitypub', 'pre_get_avatar_data' ), 11, 2 );
+		\add_filter( 'template_include', array( self::class, 'render_json_template' ), 99 );
+		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
+		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
 
 		// Add support for ActivityPub to custom post types
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array();
@@ -22,9 +22,9 @@ class Activitypub {
 			\add_post_type_support( $post_type, 'activitypub' );
 		}
 
-		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 33, 3 );
-		\add_action( 'wp_trash_post', array( '\Activitypub\Activitypub', 'trash_post' ), 1 );
-		\add_action( 'untrash_post', array( '\Activitypub\Activitypub', 'untrash_post' ), 1 );
+		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
+		\add_action( 'wp_trash_post', array( self::class, 'trash_post' ), 1 );
+		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
 	}
 
 	/**
