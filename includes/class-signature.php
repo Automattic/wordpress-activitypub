@@ -175,7 +175,10 @@ class Signature {
 		} else {
 			$public_key = \rtrim( $public_key );
 		}
-		return \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0 ?? new \WP_Error( 'activitypub_signature', 'Invalid signature', array( 'status' => 403 ) );
+		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
+		if ( ! $verified ) {
+			return new \WP_Error( 'activitypub_signature', 'Invalid signature', array( 'status' => 403 ) ); // phpcs:ignore null coalescing operator
+		}
 
 	}
 
