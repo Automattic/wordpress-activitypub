@@ -110,6 +110,13 @@ class Signature {
 		}
 	}
 
+	/**
+	 * Verifies the http signatures
+	 *
+	 * @param WP_REQUEST | Array $request
+	 * @return void
+	 * @author Django Doucet
+	 */
 	public static function verify_http_signature( $request ) {
 		$headers = $request->get_headers();
 
@@ -172,21 +179,13 @@ class Signature {
 
 	}
 
-	public static function default_server_headers() {
-		$headers = array(
-			'(request-target)' => strtolower( $_SERVER['REQUEST_METHOD'] ) . ' ' . $_SERVER['REQUEST_URI'],
-			'content-type' => $_SERVER['CONTENT_TYPE'],
-			'content-length' => $_SERVER['CONTENT_LENGTH'],
-		);
-		foreach ( $_SERVER as $k => $v ) {
-			if ( \strpos( $k, 'HTTP_' ) === 0 ) {
-				$field = \str_replace( '_', '-', \strtolower( \substr( $k, 5 ) ) );
-				$headers[ $field ] = $v;
-			}
-		}
-		return $headers;
-	}
-
+	/**
+	 * Gets the signature algorithm from the signature header
+	 *
+	 * @param array $signature_block
+	 * @return string algorithm
+	 * @author Django Doucet
+	 */
 	public static function get_signature_algorithm( $signature_block ) {
 		if ( $signature_block['algorithm'] ) {
 			switch ( $signature_block['algorithm'] ) {
@@ -199,6 +198,13 @@ class Signature {
 		return false;
 	}
 
+	/**
+	 * Parses the Signature header
+	 *
+	 * @param array $header
+	 * @return array signature parts
+	 * @author Django Doucet <django.doucet@webdevstudios.com>
+	 */
 	public static function parse_signature_header( $header ) {
 		$ret = array();
 		$matches = array();
@@ -230,6 +236,15 @@ class Signature {
 		return $ret;
 	}
 
+	/**
+	 * Gets the header data from the included pseudo headers
+	 *
+	 * @param array $signed_headers
+	 * @param array $signature_block (pseudo-headers)
+	 * @param array $headers (original http headers)
+	 * @return signed headers for comparison
+	 * @author Django Doucet
+	 */
 	public static function get_signed_data( $signed_headers, $signature_block, $headers ) {
 		$signed_data = '';
 		// This also verifies time-based values by returning false if any of these are out of range.
