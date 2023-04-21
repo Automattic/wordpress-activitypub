@@ -17,8 +17,6 @@ class Inbox {
 	public static function init() {
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
 		\add_filter( 'rest_pre_serve_request', array( self::class, 'serve_request' ), 11, 4 );
-		\add_action( 'activitypub_inbox_follow', array( self::class, 'handle_follow' ), 10, 2 );
-		\add_action( 'activitypub_inbox_undo', array( self::class, 'handle_unfollow' ), 10, 2 );
 		//\add_action( 'activitypub_inbox_like', array( self::class, 'handle_reaction' ), 10, 2 );
 		//\add_action( 'activitypub_inbox_announce', array( self::class, 'handle_reaction' ), 10, 2 );
 		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_create' ), 10, 2 );

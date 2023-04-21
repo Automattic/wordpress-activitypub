@@ -29,7 +29,7 @@ function init() {
 	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
 
-	require_once \dirname( __FILE__ ) . '/includes/table/followers-list.php';
+	require_once \dirname( __FILE__ ) . '/includes/table/class-followers.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-webfinger.php';
 	require_once \dirname( __FILE__ ) . '/includes/peer/class-followers.php';
@@ -43,6 +43,9 @@ function init() {
 
 	require_once \dirname( __FILE__ ) . '/includes/class-activitypub.php';
 	Activitypub::init();
+
+	require_once \dirname( __FILE__ ) . '/includes/collection/class-followers.php';
+	Collection\Followers::init();
 
 	// Configure the REST API route
 	require_once \dirname( __FILE__ ) . '/includes/rest/class-outbox.php';
