@@ -59,8 +59,7 @@ class Followers extends WP_List_Table {
 
 	public function get_bulk_actions() {
 		return array(
-			'revoke' => __( 'Revoke', 'activitypub' ),
-			'verify' => __( 'Verify', 'activitypub' ),
+			'delete' => __( 'Delete', 'activitypub' ),
 		);
 	}
 
@@ -79,6 +78,16 @@ class Followers extends WP_List_Table {
 	}
 
 	public function column_cb( $item ) {
-		return sprintf( '<input type="checkbox" name="tokens[]" value="%s" />', esc_attr( $item['identifier'] ) );
+		return sprintf( '<input type="checkbox" name="followers[]" value="%s" />', esc_attr( $item['identifier'] ) );
+	}
+
+	public function process_action() {
+		$followers = isset( $_REQUEST['followers'] ) ? $_REQUEST['followers'] : array(); // phpcs:ignore
+
+		switch ( $this->current_action() ) {
+			case 'delete':
+				FollowerCollection::remove_follower( \get_current_user_id(), $followers );
+				break;
+		}
 	}
 }

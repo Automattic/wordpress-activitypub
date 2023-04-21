@@ -199,6 +199,10 @@ class Followers {
 		wp_set_object_terms( $user_id, $actor, self::TAXONOMY, true );
 	}
 
+	public static function remove_follower( $user_id, $actor ) {
+		wp_remove_object_terms( $user_id, $actor, self::TAXONOMY );
+	}
+
 	/**
 	 * Undocumented function
 	 *
@@ -225,7 +229,7 @@ class Followers {
 	 * @param  int   $user_id
 	 * @param  int   $number
 	 * @param  int   $offset
-	 * @return array The Term list of followers
+	 * @return array The Term list of Followers
 	 */
 	public static function get_followers( $user_id, $number = null, $offset = null ) {
 		//self::migrate_followers( $user_id );
