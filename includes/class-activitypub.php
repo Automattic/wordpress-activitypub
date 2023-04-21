@@ -39,6 +39,8 @@ class Activitypub {
 			return $template;
 		}
 
+		header( 'Vary: Accept' );
+
 		// check if user can publish posts
 		if ( \is_author() && ! user_can( \get_the_author_meta( 'ID' ), 'publish_posts' ) ) {
 			return $template;
