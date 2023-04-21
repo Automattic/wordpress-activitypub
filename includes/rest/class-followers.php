@@ -1,6 +1,12 @@
 <?php
 namespace Activitypub\Rest;
 
+use WP_Error;
+use stdClass;
+use WP_REST_Server;
+use WP_REST_Response;
+use Activitypub\Collection\Followers as FollowerCollection;
+
 /**
  * ActivityPub Followers REST-Class
  *
@@ -25,7 +31,7 @@ class Followers {
 			'/users/(?P<user_id>\d+)/followers',
 			array(
 				array(
-					'methods'             => \WP_REST_Server::READABLE,
+					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'get' ),
 					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
@@ -46,7 +52,7 @@ class Followers {
 		$user    = \get_user_by( 'ID', $user_id );
 
 		if ( ! $user ) {
-			return new \WP_Error(
+			return new WP_Error(
 				'rest_invalid_param',
 				\__( 'User not found', 'activitypub' ),
 				array(
@@ -63,7 +69,7 @@ class Followers {
 		 */
 		\do_action( 'activitypub_outbox_pre' );
 
-		$json = new \stdClass();
+		$json = new stdClass();
 
 		$json->{'@context'} = \Activitypub\get_context();
 
@@ -73,14 +79,14 @@ class Followers {
 		$json->type = 'OrderedCollectionPage';
 
 		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/followers" ); // phpcs:ignore
-		$json->totalItems = \Activitypub\count_followers( $user_id ); // phpcs:ignore
-		$json->orderedItems = \Activitypub\Peer\Followers::get_followers( $user_id ); // phpcs:ignore
-
 		$json->first = $json->partOf; // phpcs:ignore
+		$json->totalItems = FollowerCollection::count_followers( $user_id ); // phpcs:ignore
+		$json->orderedItems = array(); // phpcs:ignore
+		foreach ( FollowerCollection::get_followers( $user_id ) as $follower ) {
+			$json->orderedItems[] = $follower->name; // phpcs:ignore
+		}
 
-		$json->first = \get_rest_url( null, "/activitypub/1.0/users/$user_id/followers" );
-
-		$response = new \WP_REST_Response( $json, 200 );
+		$response = new WP_REST_Response( $json, 200 );
 		$response->header( 'Content-Type', 'application/activity+json' );
 
 		return $response;
