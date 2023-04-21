@@ -152,8 +152,10 @@ class Followers {
 	}
 
 	/**
-	 * Undocumented function
+	 * Add a new Follower
 	 *
+	 * @param int    $user_id The WordPress user
+	 * @param string $actor   The Actor URL
 	 * @return void
 	 */
 	public static function add_follower( $user_id, $actor ) {
@@ -197,6 +199,11 @@ class Followers {
 		wp_set_object_terms( $user_id, $actor, self::TAXONOMY, true );
 	}
 
+	/**
+	 * Undocumented function
+	 *
+	 * @return void
+	 */
 	public static function send_ack() {
 		// get inbox
 		$inbox = \Activitypub\get_inbox_by_actor( $object['actor'] );
@@ -212,6 +219,14 @@ class Followers {
 		$response = safe_remote_post( $inbox, $activity, $user_id );
 	}
 
+	/**
+	 * Get the Followers of a given user
+	 *
+	 * @param  int   $user_id
+	 * @param  int   $number
+	 * @param  int   $offset
+	 * @return array The Term list of followers
+	 */
 	public static function get_followers( $user_id, $number = null, $offset = null ) {
 		//self::migrate_followers( $user_id );
 
@@ -228,6 +243,12 @@ class Followers {
 		return $terms->get_terms();
 	}
 
+	/**
+	 * Count the total number of followers
+	 *
+	 * @param  int $user_id The WordPress user
+	 * @return int          The number of Followers
+	 */
 	public static function count_followers( $user_id ) {
 		return count( self::get_followers( $user_id ) );
 	}
