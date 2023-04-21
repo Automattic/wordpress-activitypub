@@ -39,6 +39,7 @@ class Activitypub {
 			return $template;
 		}
 
+		// Ensure that edge caches know that this page can deliver both HTML and JSON.
 		header( 'Vary: Accept' );
 
 		// check if user can publish posts
