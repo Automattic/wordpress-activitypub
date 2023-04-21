@@ -1,7 +1,10 @@
 <?php
 namespace Activitypub\Rest;
 
+use WP_REST_Response;
+use Activitypub\Signature;
 use Activitypub\Model\Activity;
+use \Activitypub\Peer\Followers;
 
 /**
  * ActivityPub Inbox REST-Class
@@ -116,7 +119,7 @@ class Inbox {
 		 */
 		\do_action( 'activitypub_inbox_post' );
 
-		$response = new \WP_REST_Response( $json, 200 );
+		$response = new WP_REST_Response( $json, 200 );
 
 		$response->header( 'Content-Type', 'application/activity+json' );
 
@@ -140,7 +143,7 @@ class Inbox {
 		\do_action( 'activitypub_inbox', $data, $user_id, $type );
 		\do_action( "activitypub_inbox_{$type}", $data, $user_id );
 
-		return new \WP_REST_Response( array(), 202 );
+		return new WP_REST_Response( array(), 202 );
 	}
 
 	/**
@@ -179,7 +182,7 @@ class Inbox {
 			\do_action( "activitypub_inbox_{$type}", $data, $user->ID );
 		}
 
-		return new \WP_REST_Response( array(), 202 );
+		return new WP_REST_Response( array(), 202 );
 	}
 
 	/**
@@ -233,7 +236,7 @@ class Inbox {
 		$params['signature'] = array(
 			'required' => true,
 			'validate_callback' => function( $param, $request, $key ) {
-				if ( ! \Activitypub\Signature::verify_http_signature( $request ) ) {
+				if ( ! Signature::verify_http_signature( $request ) ) {
 					return false; // returns http 400 rest_invalid_param
 				}
 				return $param;
@@ -283,7 +286,7 @@ class Inbox {
 			'type' => 'string',
 			'sanitize_callback' => 'esc_url_raw',
 			'validate_callback' => function( $param, $request, $key ) {
-				if ( ! \Activitypub\Signature::verify_http_signature( $request ) ) {
+				if ( ! Signature::verify_http_signature( $request ) ) {
 					return false;
 				}
 				return $param;
@@ -357,7 +360,7 @@ class Inbox {
 	 */
 	public static function handle_follow( $object, $user_id ) {
 		// save follower
-		\Activitypub\Peer\Followers::add_follower( $object['actor'], $user_id );
+		Followers::add_follower( $object['actor'], $user_id );
 
 		// get inbox
 		$inbox = \Activitypub\get_inbox_by_actor( $object['actor'] );
@@ -382,7 +385,7 @@ class Inbox {
 	 */
 	public static function handle_unfollow( $object, $user_id ) {
 		if ( isset( $object['object'] ) && isset( $object['object']['type'] ) && 'Follow' === $object['object']['type'] ) {
-			\Activitypub\Peer\Followers::remove_follower( $object['actor'], $user_id );
+			Followers::remove_follower( $object['actor'], $user_id );
 		}
 	}
 
