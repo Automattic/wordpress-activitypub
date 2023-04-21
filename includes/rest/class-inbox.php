@@ -134,10 +134,6 @@ class Inbox {
 	 * @return WP_REST_Response
 	 */
 	public static function user_inbox_post( $request ) {
-		// SecureMode/Authorized fetch.
-		if ( ! \Activitypub\Signature::verify_http_signature( $request ) ) {
-			return new \WP_REST_Response( array(), 403 );
-		}
 
 		$user_id = $request->get_param( 'user_id' );
 
@@ -159,10 +155,6 @@ class Inbox {
 	 * @return WP_REST_Response
 	 */
 	public static function shared_inbox_post( $request ) {
-		// SecureMode/Authorized fetch.
-		if ( ! \Activitypub\Signature::verify_http_signature( $request ) ) {
-			return new \WP_REST_Response( array(), 403 );
-		}
 
 		$data = $request->get_params();
 		$type = $request->get_param( 'type' );

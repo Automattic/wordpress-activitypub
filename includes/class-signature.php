@@ -114,7 +114,7 @@ class Signature {
 		$headers = $request->get_headers();
 
 		if ( ! $headers ) {
-			return false;
+			return new \WP_Error( 'activitypub_signature', 'Request not signed', array( 'status' => 403 ) );
 		}
 
 		$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '';
@@ -127,7 +127,7 @@ class Signature {
 		}
 
 		if ( ! isset( $signature_block ) || ! $signature_block ) {
-			return false;
+			return new \WP_Error( 'activitypub_signature', 'Incompatible request signature. keyId and signature are required', array( 'status' => 403 ) );
 		}
 
 		$signed_headers = $signature_block['headers'];
@@ -137,12 +137,12 @@ class Signature {
 
 		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
 		if ( ! $signed_data ) {
-			return false;
+			return new \WP_Error( 'activitypub_signature', 'Signed request date outside acceptable time window', array( 'status' => 403 ) );
 		}
 
 		$algorithm = self::get_signature_algorithm( $signature_block );
 		if ( ! $algorithm ) {
-			return false;
+			return new \WP_Error( 'activitypub_signature', 'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)', array( 'status' => 403 ) );
 		}
 
 		if ( \in_array( 'digest', $signed_headers, true ) && isset( $body ) ) {
@@ -158,13 +158,17 @@ class Signature {
 			}
 
 			if ( \base64_encode( \hash( $hashalg, $body, true ) ) !== $digest[1] ) { // phpcs:ignore
-				return false;
+				return new \WP_Error( 'activitypub_signature', 'Invalid Digest header', array( 'status' => 403 ) );
 			}
 		}
 
-		$public_key = \rtrim( \Activitypub\get_publickey_by_actor( $actor, $signature_block['keyId'] ) ); // phpcs:ignore
-
-		return \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
+		$public_key = \Activitypub\get_publickey_by_actor( $actor, $signature_block['keyId'] ); // phpcs:ignore
+		if ( \is_wp_error( $public_key ) ) {
+			return $public_key;
+		} else {
+			$public_key = \rtrim( $public_key );
+		}
+		return \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0 ?? new \WP_Error( 'activitypub_signature', 'Invalid signature', array( 'status' => 403 ) );
 
 	}
 
