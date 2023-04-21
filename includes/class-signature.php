@@ -184,11 +184,13 @@ class Signature {
 	}
 
 	public static function get_signature_algorithm( $signature_block ) {
-		switch ( $signature_block['algorithm'] ) {
-			case 'rsa-sha-512':
-				return 'sha512';
-			default:
-				return 'sha256';
+		if ( $signature_block['algorithm'] ) {
+			switch ( $signature_block['algorithm'] ) {
+				case 'rsa-sha-512':
+					return 'sha512'; //hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12
+				default:
+					return 'sha256';
+			}
 		}
 		return false;
 	}
