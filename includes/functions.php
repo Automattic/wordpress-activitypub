@@ -219,7 +219,7 @@ function get_publickey_by_actor( $actor, $key_id ) {
 	return new \WP_Error( 'activitypub_no_public_key', \__( 'No "Public-Key" found', 'activitypub' ), $metadata );
 }
 
-function get_follower_inboxes( $user_id ) {
+function get_follower_inboxes( $user_id, $cc = array() ) {
 	$followers = \Activitypub\Peer\Followers::get_followers( $user_id );
 	$followers = array_merge( $followers, $cc );
 	$followers = array_unique( $followers );
