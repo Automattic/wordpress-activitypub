@@ -12,5 +12,6 @@
 		$token_table->prepare_items();
 		$token_table->display();
 		?>
+		<?php wp_nonce_field( 'activitypub-followers-list', '_apnonce' ); ?>
 		</form>
 </div>

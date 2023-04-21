@@ -82,7 +82,19 @@ class Followers extends WP_List_Table {
 	}
 
 	public function process_action() {
-		$followers = isset( $_REQUEST['followers'] ) ? $_REQUEST['followers'] : array(); // phpcs:ignore
+		if ( ! isset( $_REQUEST['followers'] ) || ! isset( $_REQUEST['_apnonce'] ) ) {
+			return false;
+		}
+
+		if ( ! wp_verify_nonce( $_REQUEST['_apnonce'], 'activitypub-followers-list' ) ) {
+			return false;
+		}
+
+		if ( ! current_user_can( 'edit_user', \get_current_user_id() ) ) {
+			return false;
+		}
+
+		$followers = $_REQUEST['followers']; // phpcs:ignore
 
 		switch ( $this->current_action() ) {
 			case 'delete':
