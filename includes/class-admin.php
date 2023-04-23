@@ -31,7 +31,7 @@ class Admin {
 
 		\add_action( 'load-' . $settings_page, array( self::class, 'add_settings_help_tab' ) );
 
-		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers (Fediverse)', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
+		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
 
 		\add_action( 'load-' . $followers_list_page, array( self::class, 'add_followers_list_help_tab' ) );
 	}
