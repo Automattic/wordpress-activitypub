@@ -29,6 +29,13 @@ class Post {
 	private $id;
 
 	/**
+	 * The Object URL.
+	 *
+	 * @var string
+	 */
+	private $url;
+
+	/**
 	 * The Object Summary.
 	 *
 	 * @var string
@@ -179,6 +186,7 @@ class Post {
 
 		$array = array(
 			'id' => $this->get_id(),
+			'url' => $this->get_url(),
 			'type' => $this->get_object_type(),
 			'published' => \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date_gmt ) ),
 			'attributedTo' => \get_author_posts_url( $post->post_author ),
@@ -207,6 +215,29 @@ class Post {
 	}
 
 	/**
+	 * Returns the URL of an Activity Object
+	 *
+	 * @return string
+	 */
+	public function get_url() {
+		if ( $this->url ) {
+			return $this->url;
+		}
+
+		$post = $this->post;
+
+		if ( 'trash' === get_post_status( $post ) ) {
+			$permalink = \get_post_meta( $post->url, 'activitypub_canonical_url', true );
+		} else {
+			$permalink = \get_permalink( $post );
+		}
+
+		$this->url = $permalink;
+
+		return $permalink;
+	}
+
+	/**
 	 * Returns the ID of an Activity Object
 	 *
 	 * @return string
@@ -216,17 +247,9 @@ class Post {
 			return $this->id;
 		}
 
-		$post = $this->post;
+		$this->id = $this->get_url();
 
-		if ( 'trash' === get_post_status( $post ) ) {
-			$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
-		} else {
-			$permalink = \get_permalink( $post );
-		}
-
-		$this->id = $permalink;
-
-		return $permalink;
+		return $this->id;
 	}
 
 	/**
