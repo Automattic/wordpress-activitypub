@@ -312,15 +312,23 @@ class Post {
 			 * the image strings returned will use the Photon URL.
 			 * We don't want that since Fediverse instances already do caching on their end.
 			 * Let the CDN only be used for visitors of the site.
+			 *
+			 * Old versions of Jetpack used the Jetpack_Photon class to do this.
+			 * New versions use the Image_CDN class.
+			 * Let's handle both.
 			 */
-			if ( class_exists( 'Jetpack_Photon' ) ) {
+			if ( \class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN' ) ) {
+				\remove_filter( 'image_downsize', array( \Automattic\Jetpack\Image_CDN\Image_CDN::instance(), 'filter_image_downsize' ) );
+			} elseif ( \class_exists( 'Jetpack_Photon' ) ) {
 				\remove_filter( 'image_downsize', array( \Jetpack_Photon::instance(), 'filter_image_downsize' ) );
 			}
 
 			$thumbnail = \wp_get_attachment_image_src( $id, 'full' );
 
 			// Re-enable Photon now that the image URL has been built.
-			if ( class_exists( 'Jetpack_Photon' ) ) {
+			if ( \class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN' ) ) {
+				\add_filter( 'image_downsize', array( \Automattic\Jetpack\Image_CDN\Image_CDN::instance(), 'filter_image_downsize' ), 10, 3 );
+			} elseif ( \class_exists( 'Jetpack_Photon' ) ) {
 				\add_filter( 'image_downsize', array( \Jetpack_Photon::instance(), 'filter_image_downsize' ), 10, 3 );
 			}
 
