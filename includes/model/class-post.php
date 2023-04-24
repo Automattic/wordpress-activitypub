@@ -306,7 +306,24 @@ class Post {
 		// get URLs for each image
 		foreach ( $image_ids as $id ) {
 			$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
+
+			/**
+			 * If you use the Jetpack plugin and its Image CDN, aka Photon,
+			 * the image strings returned will use the Photon URL.
+			 * We don't want that since Fediverse instances already do caching on their end.
+			 * Let the CDN only be used for visitors of the site.
+			 */
+			if ( class_exists( 'Jetpack_Photon' ) ) {
+				\remove_filter( 'image_downsize', array( \Jetpack_Photon::instance(), 'filter_image_downsize' ) );
+			}
+
 			$thumbnail = \wp_get_attachment_image_src( $id, 'full' );
+
+			// Re-enable Photon now that the image URL has been built.
+			if ( class_exists( 'Jetpack_Photon' ) ) {
+				\add_filter( 'image_downsize', array( \Jetpack_Photon::instance(), 'filter_image_downsize' ), 10, 3 );
+			}
+
 			$mimetype = \get_post_mime_type( $id );
 
 			if ( $thumbnail ) {
