@@ -227,7 +227,7 @@ class Post {
 		$post = $this->post;
 
 		if ( 'trash' === get_post_status( $post ) ) {
-			$permalink = \get_post_meta( $post->url, 'activitypub_canonical_url', true );
+			$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
 		} else {
 			$permalink = \get_permalink( $post );
 		}
