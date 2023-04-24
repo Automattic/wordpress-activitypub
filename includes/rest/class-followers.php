@@ -81,10 +81,7 @@ class Followers {
 		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/followers" ); // phpcs:ignore
 		$json->first = $json->partOf; // phpcs:ignore
 		$json->totalItems = FollowerCollection::count_followers( $user_id ); // phpcs:ignore
-		$json->orderedItems = array(); // phpcs:ignore
-		foreach ( FollowerCollection::get_followers( $user_id ) as $follower ) {
-			$json->orderedItems[] = $follower->name; // phpcs:ignore
-		}
+		$json->orderedItems = FollowerCollection::get_followers( $user_id, ARRAY_N ); // phpcs:ignore
 
 		$response = new WP_REST_Response( $json, 200 );
 		$response->header( 'Content-Type', 'application/activity+json' );

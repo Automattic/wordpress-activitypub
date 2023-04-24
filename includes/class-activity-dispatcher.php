@@ -3,6 +3,7 @@ namespace Activitypub;
 
 use Activitypub\Model\Post;
 use Activitypub\Model\Activity;
+use Activitypub\Collection\Followers;
 
 /**
  * ActivityPub Activity_Dispatcher Class
@@ -66,11 +67,9 @@ class Activity_Dispatcher {
 		$activitypub_activity = new Activity( $activity_type );
 		$activitypub_activity->from_post( $activitypub_post );
 
-		$inboxes = \Activitypub\get_follower_inboxes( $user_id, $activitypub_activity->get_cc() );
+		$inboxes = FollowerCollection::get_inboxes( $user_id );
 
-		foreach ( $inboxes as $inbox => $cc ) {
-			$cc = array_values( array_unique( $cc ) );
-			$activitypub_activity->add_cc( $cc );
+		foreach ( $inboxes as $inbox ) {
 			$activity = $activitypub_activity->to_json();
 
 			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );

@@ -17,8 +17,7 @@ class Inbox {
 	public static function init() {
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
 		\add_filter( 'rest_pre_serve_request', array( self::class, 'serve_request' ), 11, 4 );
-		//\add_action( 'activitypub_inbox_like', array( self::class, 'handle_reaction' ), 10, 2 );
-		//\add_action( 'activitypub_inbox_announce', array( self::class, 'handle_reaction' ), 10, 2 );
+
 		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_create' ), 10, 2 );
 	}
 
@@ -340,43 +339,6 @@ class Inbox {
 		);
 
 		return $params;
-	}
-
-	/**
-	 * Handles "Follow" requests
-	 *
-	 * @param  array $object  The activity-object
-	 * @param  int   $user_id The id of the local blog-user
-	 */
-	public static function handle_follow( $object, $user_id ) {
-		// save follower
-		\Activitypub\Peer\Followers::add_follower( $object['actor'], $user_id );
-
-		// get inbox
-		$inbox = \Activitypub\get_inbox_by_actor( $object['actor'] );
-
-		// send "Accept" activity
-		$activity = new Activity( 'Accept' );
-		$activity->set_object( $object );
-		$activity->set_actor( \get_author_posts_url( $user_id ) );
-		$activity->set_to( $object['actor'] );
-		$activity->set_id( \get_author_posts_url( $user_id ) . '#follow-' . \preg_replace( '~^https?://~', '', $object['actor'] ) );
-
-		$activity = $activity->to_simple_json();
-
-		$response = \Activitypub\safe_remote_post( $inbox, $activity, $user_id );
-	}
-
-	/**
-	 * Handles "Unfollow" requests
-	 *
-	 * @param  array $object  The activity-object
-	 * @param  int   $user_id The id of the local blog-user
-	 */
-	public static function handle_unfollow( $object, $user_id ) {
-		if ( isset( $object['object'] ) && isset( $object['object']['type'] ) && 'Follow' === $object['object']['type'] ) {
-			\Activitypub\Peer\Followers::remove_follower( $object['actor'], $user_id );
-		}
 	}
 
 	/**

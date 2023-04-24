@@ -29,6 +29,8 @@ function init() {
 	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
 
+	\define( 'ACTIVITYPUB_OBJECT', 'ACTIVITYPUB_OBJECT' );
+
 	require_once \dirname( __FILE__ ) . '/includes/table/class-followers.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-webfinger.php';
@@ -37,6 +39,7 @@ function init() {
 
 	require_once \dirname( __FILE__ ) . '/includes/model/class-activity.php';
 	require_once \dirname( __FILE__ ) . '/includes/model/class-post.php';
+	require_once \dirname( __FILE__ ) . '/includes/model/class-follower.php';
 
 	require_once \dirname( __FILE__ ) . '/includes/class-activity-dispatcher.php';
 	Activity_Dispatcher::init();

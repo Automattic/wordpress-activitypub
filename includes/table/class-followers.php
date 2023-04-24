@@ -33,7 +33,7 @@ class Followers extends WP_List_Table {
 		$page_num = $this->get_pagenum();
 		$per_page = 20;
 
-		$follower = FollowerCollection::get_followers( \get_current_user_id(), $per_page, ( $page_num - 1 ) * $per_page );
+		$follower = FollowerCollection::get_followers( \get_current_user_id(), ACTIVITYPUB_OBJECT, $per_page, ( $page_num - 1 ) * $per_page );
 		$counter  = FollowerCollection::count_followers( \get_current_user_id() );
 
 		$this->items = array();
@@ -47,10 +47,10 @@ class Followers extends WP_List_Table {
 
 		foreach ( $follower as $follower ) {
 			$item = array(
-				'avatar'     => esc_attr( get_term_meta( $follower->term_id, 'avatar', true ) ),
-				'name'       => esc_attr( get_term_meta( $follower->term_id, 'name', true ) ),
-				'username'   => esc_attr( get_term_meta( $follower->term_id, 'username', true ) ),
-				'identifier' => esc_attr( $follower->name ),
+				'avatar'     => esc_attr( $follower->get_avatar() ),
+				'name'       => esc_attr( $follower->get_name() ),
+				'username'   => esc_attr( $follower->get_username() ),
+				'identifier' => esc_attr( $follower->get_actor() ),
 			);
 
 			$this->items[] = $item;

@@ -63,7 +63,7 @@ function safe_remote_post( $url, $body, $user_id ) {
 
 function safe_remote_get( $url, $user_id ) {
 	$date = \gmdate( 'D, d M Y H:i:s T' );
-	$signature = \Activitypub\Signature::generate_signature( $user_id, 'get', $url, $date );
+	$signature = Signature::generate_signature( $user_id, 'get', $url, $date );
 
 	$wp_version = \get_bloginfo( 'version' );
 	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
@@ -95,15 +95,14 @@ function safe_remote_get( $url, $user_id ) {
  * @return string The user-resource
  */
 function get_webfinger_resource( $user_id ) {
-	return \Activitypub\Webfinger::get_user_resource( $user_id );
+	return Webfinger::get_user_resource( $user_id );
 }
 
 /**
- * [get_metadata_by_actor description]
+ * Requests the Meta-Data from the Actors profile
  *
- * @param string $actor
- *
- * @return array
+ * @param  string $actor The Actor URL
+ * @return array         The Actor profile as array
  */
 function get_remote_metadata_by_actor( $actor ) {
 	$pre = apply_filters( 'pre_get_remote_metadata_by_actor', false, $actor );
@@ -165,80 +164,7 @@ function get_remote_metadata_by_actor( $actor ) {
 		return $metadata;
 	}
 
-	\set_transient( $transient_key, $metadata, WEEK_IN_SECONDS );
-
 	return $metadata;
-}
-
-/**
- * [get_inbox_by_actor description]
- * @param  [type] $actor [description]
- * @return [type]        [description]
- */
-function get_inbox_by_actor( $actor ) {
-	$metadata = \Activitypub\get_remote_metadata_by_actor( $actor );
-
-	if ( \is_wp_error( $metadata ) ) {
-		return $metadata;
-	}
-
-	if ( isset( $metadata['endpoints'] ) && isset( $metadata['endpoints']['sharedInbox'] ) ) {
-		return $metadata['endpoints']['sharedInbox'];
-	}
-
-	if ( \array_key_exists( 'inbox', $metadata ) ) {
-		return $metadata['inbox'];
-	}
-
-	return new \WP_Error( 'activitypub_no_inbox', \__( 'No "Inbox" found', 'activitypub' ), $metadata );
-}
-
-/**
- * [get_inbox_by_actor description]
- * @param  [type] $actor [description]
- * @return [type]        [description]
- */
-function get_publickey_by_actor( $actor, $key_id ) {
-	$metadata = \Activitypub\get_remote_metadata_by_actor( $actor );
-
-	if ( \is_wp_error( $metadata ) ) {
-		return $metadata;
-	}
-
-	if (
-		isset( $metadata['publicKey'] ) &&
-		isset( $metadata['publicKey']['id'] ) &&
-		isset( $metadata['publicKey']['owner'] ) &&
-		isset( $metadata['publicKey']['publicKeyPem'] ) &&
-		$key_id === $metadata['publicKey']['id'] &&
-		$actor === $metadata['publicKey']['owner']
-	) {
-		return $metadata['publicKey']['publicKeyPem'];
-	}
-
-	return new \WP_Error( 'activitypub_no_public_key', \__( 'No "Public-Key" found', 'activitypub' ), $metadata );
-}
-
-function get_follower_inboxes( $user_id, $cc = array() ) {
-	$followers = \Activitypub\Peer\Followers::get_followers( $user_id );
-	$followers = array_merge( $followers, $cc );
-	$followers = array_unique( $followers );
-
-	$inboxes = array();
-
-	foreach ( $followers as $follower ) {
-		$inbox = \Activitypub\get_inbox_by_actor( $follower );
-		if ( ! $inbox || \is_wp_error( $inbox ) ) {
-			continue;
-		}
-		// init array if empty
-		if ( ! isset( $inboxes[ $inbox ] ) ) {
-			$inboxes[ $inbox ] = array();
-		}
-		$inboxes[ $inbox ][] = $follower;
-	}
-
-	return $inboxes;
 }
 
 function get_identifier_settings( $user_id ) {
@@ -261,19 +187,11 @@ function get_identifier_settings( $user_id ) {
 }
 
 function get_followers( $user_id ) {
-	$followers = \Activitypub\Peer\Followers::get_followers( $user_id );
-
-	if ( ! $followers ) {
-		return array();
-	}
-
-	return $followers;
+	return Collection\Followers::get_followers( $user_id );
 }
 
 function count_followers( $user_id ) {
-	$followers = \Activitypub\get_followers( $user_id );
-
-	return \count( $followers );
+	return Collection\Followers::count_followers( $user_id );
 }
 
 /**

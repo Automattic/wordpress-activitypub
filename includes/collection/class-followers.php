@@ -5,10 +5,10 @@ use WP_Error;
 use WP_Term_Query;
 use Activitypub\Webfinger;
 use Activitypub\Model\Activity;
+use Activitypub\Model\Follower;
 
 use function Activitypub\safe_remote_get;
 use function Activitypub\safe_remote_post;
-use function Activitypub\get_remote_metadata_by_actor;
 
 /**
  * ActivityPub Followers Collection
@@ -29,6 +29,8 @@ class Followers {
 
 		\add_action( 'activitypub_inbox_follow', array( self::class, 'handle_follow_request' ), 10, 2 );
 		\add_action( 'activitypub_inbox_undo', array( self::class, 'handle_undo_request' ), 10, 2 );
+
+		\add_action( 'activitypub_followers_post_follow', array( self::class, 'send_follow_response' ), 10, 4 );
 	}
 
 	/**
@@ -58,16 +60,6 @@ class Followers {
 
 		register_taxonomy( self::TAXONOMY, 'user', $args );
 		register_taxonomy_for_object_type( self::TAXONOMY, 'user' );
-
-		register_term_meta(
-			self::TAXONOMY,
-			'user_id',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				//'sanitize_callback' => array( self::class, 'validate_username' ),
-			)
-		);
 
 		register_term_meta(
 			self::TAXONOMY,
@@ -101,21 +93,21 @@ class Followers {
 
 		register_term_meta(
 			self::TAXONOMY,
-			'created_at',
+			'inbox',
 			array(
 				'type'              => 'string',
 				'single'            => true,
-				//'sanitize_callback' => array( self::class, 'validate_created_at' ),
+				//'sanitize_callback' => array( self::class, 'validate_inbox' ),
 			)
 		);
 
 		register_term_meta(
 			self::TAXONOMY,
-			'inbox',
+			'updated_at',
 			array(
 				'type'              => 'string',
 				'single'            => true,
-				//'sanitize_callback' => array( self::class, 'validate_created_at' ),
+				//'sanitize_callback' => array( self::class, 'validate_updated_at' ),
 			)
 		);
 
@@ -127,12 +119,13 @@ class Followers {
 	 *
 	 * @param array $object    The JSON "Follow" Activity
 	 * @param int   $user_id The ID of the WordPress User
-	 *
 	 * @return void
 	 */
 	public static function handle_follow_request( $object, $user_id ) {
 		// save follower
-		self::add_follower( $user_id, $object['actor'] );
+		$follower = self::add_follower( $user_id, $object['actor'] );
+
+		do_action( 'activitypub_followers_post_follow', $object['actor'], $object, $user_id, $follower );
 	}
 
 	/**
@@ -156,68 +149,67 @@ class Followers {
 	 *
 	 * @param int    $user_id The WordPress user
 	 * @param string $actor   The Actor URL
-	 * @return void
+	 * @return array|WP_Error The Follower (WP_Term array) or an WP_Error
 	 */
 	public static function add_follower( $user_id, $actor ) {
-		$remote_data = get_remote_metadata_by_actor( $actor );
+		$follower = new Follower( $actor );
+		$follower->upsert();
 
-		if ( ! $remote_data || is_wp_error( $remote_data ) || ! is_array( $remote_data ) ) {
-			$remote_data = array();
+		$result = wp_set_object_terms( $user_id, $follower->get_actor(), self::TAXONOMY, true );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		} else {
+			return $follower;
 		}
-
-		$term = term_exists( $actor, self::TAXONOMY );
-
-		if ( ! $term ) {
-			$term = wp_insert_term(
-				$actor,
-				self::TAXONOMY,
-				array(
-					'slug'        => sanitize_title( $actor ),
-					'description' => wp_json_encode( $remote_data ),
-				)
-			);
-		}
-
-		$term_id = $term['term_id'];
-
-		$map_meta = array(
-			'name'              => 'name',
-			'preferredUsername' => 'username',
-			'inbox'             => 'inbox',
-		);
-
-		foreach ( $map_meta as $remote => $internal ) {
-			if ( ! empty( $remote_data[ $remote ] ) ) {
-				update_term_meta( $term_id, $internal, esc_html( $remote_data[ $remote ] ), true );
-			}
-		}
-
-		if ( ! empty( $remote_data['icon']['url'] ) ) {
-			update_term_meta( $term_id, 'avatar', esc_url_raw( $remote_data['icon']['url'] ), true );
-		}
-
-		wp_set_object_terms( $user_id, $actor, self::TAXONOMY, true );
-	}
-
-	public static function remove_follower( $user_id, $actor ) {
-		wp_remove_object_terms( $user_id, $actor, self::TAXONOMY );
 	}
 
 	/**
-	 * Undocumented function
+	 * Remove a Follower
 	 *
+	 * @param  int           $user_id The WordPress user_id
+	 * @param  string        $actor   The Actor URL
+	 * @return bool|WP_Error          True on success, false or WP_Error on failure.
+	 */
+	public static function remove_follower( $user_id, $actor ) {
+		return wp_remove_object_terms( $user_id, $actor, self::TAXONOMY );
+	}
+
+	/**
+	 * Remove a Follower
+	 *
+	 * @param  string                      $actor The Actor URL
+	 * @return \Activitypub\Model\Follower        The Follower object
+	 */
+	public static function get_follower( $actor ) {
+		$term = get_term_by( 'name', $actor, self::TAXONOMY );
+
+		return new Follower( $term->name );
+	}
+
+	/**
+	 * Send Accept response
+	 *
+	 * @param string                     $actor    The Actor URL
+	 * @param array                      $object   The Activity object
+	 * @param int                        $user_id  The WordPress user_id
+	 * @param Activitypub\Model\Follower $follower The Follower object
 	 * @return void
 	 */
-	public static function send_ack() {
+	public static function send_follow_response( $actor, $object, $user_id, $follower ) {
+		//if ( is_wp_error( $follower ) ) {
+			// @todo send error message
+		//}
+
 		// get inbox
-		$inbox = \Activitypub\get_inbox_by_actor( $object['actor'] );
+		$inbox = $follower->get_inbox();
 
 		// send "Accept" activity
 		$activity = new Activity( 'Accept' );
 		$activity->set_object( $object );
 		$activity->set_actor( \get_author_posts_url( $user_id ) );
-		$activity->set_to( $object['actor'] );
-		$activity->set_id( \get_author_posts_url( $user_id ) . '#follow-' . \preg_replace( '~^https?://~', '', $object['actor'] ) );
+		$activity->set_to( $actor );
+		$activity->set_id( \get_author_posts_url( $user_id ) . '#follow-' . \preg_replace( '~^https?://~', '', $actor ) );
 
 		$activity = $activity->to_simple_json();
 		$response = safe_remote_post( $inbox, $activity, $user_id );
@@ -226,12 +218,13 @@ class Followers {
 	/**
 	 * Get the Followers of a given user
 	 *
-	 * @param  int   $user_id
-	 * @param  int   $number
-	 * @param  int   $offset
-	 * @return array The Term list of Followers
+	 * @param  int    $user_id The WordPress user_id
+	 * @param  string $output  The output format, supported ARRAY_N, OBJECT and ACTIVITYPUB_OBJECT
+	 * @param  int    $number  Limts the result
+	 * @param  int    $offset  Offset
+	 * @return array           The Term list of Followers, the format depends on $output
 	 */
-	public static function get_followers( $user_id, $number = null, $offset = null ) {
+	public static function get_followers( $user_id, $output = ARRAY_N, $number = null, $offset = null ) {
 		//self::migrate_followers( $user_id );
 
 		$terms = new WP_Term_Query(
@@ -244,7 +237,24 @@ class Followers {
 			)
 		);
 
-		return $terms->get_terms();
+		$items = array();
+
+		// change output format
+		switch ( $output ) {
+			case ACTIVITYPUB_OBJECT:
+				foreach ( $terms->get_terms() as $follower ) {
+					$items[] = new Follower( $follower->name ); // phpcs:ignore
+				}
+				return $items;
+			case OBJECT:
+				return $terms->get_terms();
+			case ARRAY_N:
+			default:
+				foreach ( $terms->get_terms() as $follower ) {
+					$items[] = $follower->name; // phpcs:ignore
+				}
+				return $items;
+		}
 	}
 
 	/**
@@ -257,6 +267,39 @@ class Followers {
 		return count( self::get_followers( $user_id ) );
 	}
 
+	public static function get_inboxes( $user_id ) {
+		// get all Followers of a WordPress user
+		$terms = new WP_Term_Query(
+			array(
+				'taxonomy'   => self::TAXONOMY,
+				'hide_empty' => false,
+				'object_ids' => $user_id,
+				'fields'     => 'ids',
+			)
+		);
+
+		$terms = $terms->get_terms();
+
+		global $wpdb;
+		$results = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT DISTINCT meta_value FROM {$wpdb->termmeta}
+				WHERE term_id IN (" . implode( ', ', array_fill( 0, count( $terms ), '%d' ) ) . ")
+				AND meta_key = 'shared_inbox'
+				AND meta_value IS NOT NULL",
+				$terms
+			)
+		);
+
+		return array_filter( $results );
+	}
+
+	/**
+	 * Undocumented function
+	 *
+	 * @param [type] $user_id
+	 * @return void
+	 */
 	public static function migrate_followers( $user_id ) {
 		$followes = get_user_meta( $user_id, 'activitypub_followers', true );
 

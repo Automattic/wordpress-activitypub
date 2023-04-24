@@ -11,11 +11,7 @@ class Followers {
 	public static function get_followers( $author_id ) {
 		_deprecated_function( __METHOD__, '1.0.0', '\Activitypub\Collection\Followers::get_followers' );
 
-		$items = array(); // phpcs:ignore
-		foreach ( \Activitypub\Collection\Followers::get_followers( $author_id ) as $follower ) {
-			$items[] = $follower->name; // phpcs:ignore
-		}
-		return $items;
+		return \Activitypub\Collection\Followers::get_followers( $author_id );
 	}
 
 	public static function count_followers( $author_id ) {
