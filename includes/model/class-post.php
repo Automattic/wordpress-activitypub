@@ -305,41 +305,16 @@ class Post {
 
 		// get URLs for each image
 		foreach ( $image_ids as $id ) {
-			$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
-
-			/**
-			 * If you use the Jetpack plugin and its Image CDN, aka Photon,
-			 * the image strings returned will use the Photon URL.
-			 * We don't want that since Fediverse instances already do caching on their end.
-			 * Let the CDN only be used for visitors of the site.
-			 *
-			 * Old versions of Jetpack used the Jetpack_Photon class to do this.
-			 * New versions use the Image_CDN class.
-			 * Let's handle both.
-			 */
-			if ( \class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN' ) ) {
-				\remove_filter( 'image_downsize', array( \Automattic\Jetpack\Image_CDN\Image_CDN::instance(), 'filter_image_downsize' ) );
-			} elseif ( \class_exists( 'Jetpack_Photon' ) ) {
-				\remove_filter( 'image_downsize', array( \Jetpack_Photon::instance(), 'filter_image_downsize' ) );
-			}
-
-			$thumbnail = \wp_get_attachment_image_src( $id, 'full' );
-
-			// Re-enable Photon now that the image URL has been built.
-			if ( \class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN' ) ) {
-				\add_filter( 'image_downsize', array( \Automattic\Jetpack\Image_CDN\Image_CDN::instance(), 'filter_image_downsize' ), 10, 3 );
-			} elseif ( \class_exists( 'Jetpack_Photon' ) ) {
-				\add_filter( 'image_downsize', array( \Jetpack_Photon::instance(), 'filter_image_downsize' ), 10, 3 );
-			}
-
-			$mimetype = \get_post_mime_type( $id );
-
+			$thumbnail = $this->get_image( $id );
 			if ( $thumbnail ) {
-				$image = array(
-					'type' => 'Image',
-					'url' => $thumbnail[0],
+				$mimetype = \get_post_mime_type( $id );
+				$alt      = \get_post_meta( $id, '_wp_attachment_image_alt', true );
+				$image    = array(
+					'type'      => 'Image',
+					'url'       => $thumbnail[0],
 					'mediaType' => $mimetype,
 				);
+
 				if ( $alt ) {
 					$image['name'] = $alt;
 				}
@@ -350,6 +325,54 @@ class Post {
 		$this->attachments = $images;
 
 		return $images;
+	}
+
+	/**
+	 * Return details about an image attachment.
+	 *
+	 * Can return a CDNized URL if Jetpack's image CDN is active.
+	 * This can be disabled with a filter.
+	 *
+	 * @param int $id The attachment ID.
+	 *
+	 * @return array|false Array of image data, or boolean false if no image is available.
+	 */
+	public function get_image( $id ) {
+		/**
+		 * Allow bypassing Jetpack's Image CDN when returning image URLs.
+		 *
+		 * @param bool $should_use_cdn Whether to use the Jetpack Image CDN. True by default.
+		 */
+		$should_use_cdn = apply_filters( 'activitypub_images_use_jetpack_image_cdn', true );
+
+		if ( $should_use_cdn ) {
+			// Return the full URL, using a CDN URL if Jetpack's image CDN is active.
+			return \wp_get_attachment_image_src( $id, 'full' );
+		}
+
+		/*
+		 * Disable Jetpacks image CDN image processing for this request.
+		 *
+		 * Note: old versions of Jetpack used the Jetpack_Photon class to do this.
+		 * New versions use the Image_CDN class.
+		 * Let's handle both.
+		 */
+		if ( \class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN' ) ) {
+			\remove_filter( 'image_downsize', array( \Automattic\Jetpack\Image_CDN\Image_CDN::instance(), 'filter_image_downsize' ) );
+		} elseif ( \class_exists( 'Jetpack_Photon' ) ) {
+			\remove_filter( 'image_downsize', array( \Jetpack_Photon::instance(), 'filter_image_downsize' ) );
+		}
+
+		$thumbnail = \wp_get_attachment_image_src( $id, 'full' );
+
+		// Re-enable Photon now that the image URL has been built.
+		if ( \class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN' ) ) {
+			\add_filter( 'image_downsize', array( \Automattic\Jetpack\Image_CDN\Image_CDN::instance(), 'filter_image_downsize' ), 10, 3 );
+		} elseif ( \class_exists( 'Jetpack_Photon' ) ) {
+			\add_filter( 'image_downsize', array( \Jetpack_Photon::instance(), 'filter_image_downsize' ), 10, 3 );
+		}
+
+		return $thumbnail;
 	}
 
 	/**
