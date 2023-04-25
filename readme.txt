@@ -2,7 +2,7 @@
 Contributors: pfefferle, mediaformat, akirk, automattic
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
-Tested up to: 6.1
+Tested up to: 6.2
 Stable tag: 0.17.0
 Requires PHP: 5.6
 License: MIT
@@ -116,6 +116,7 @@ Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github
 = Next =
 
 * Compatibility: add filter to allow disabling Jetpack's image CDN when returning images in ActivityPub requests.
+* Compatibility: indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.2.
 
 = 0.17.0 =
 
