@@ -113,6 +113,10 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
+= Next =
+
+* Compatibility: indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.2.
+
 = 0.17.0 =
 
 * Fix type-selector
