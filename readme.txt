@@ -113,6 +113,10 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
 
+= Next =
+
+* Compatibility: add filter to allow disabling Jetpack's image CDN when returning images in ActivityPub requests.
+
 = 0.17.0 =
 
 * Fix type-selector
