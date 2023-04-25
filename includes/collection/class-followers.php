@@ -240,6 +240,8 @@ class Followers {
 				'object_ids' => $user_id,
 				'number'     => $number,
 				'offset'     => $offset,
+				'orderby'    => 'id',
+				'order'      => 'ASC',
 			)
 		);
 
@@ -293,6 +295,10 @@ class Followers {
 		);
 
 		$terms = $terms->get_terms();
+
+		if ( ! $terms ) {
+			return array();
+		}
 
 		global $wpdb;
 		$results = $wpdb->get_col(

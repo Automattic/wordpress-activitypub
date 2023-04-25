@@ -5,17 +5,22 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 			'url' => 'https://example.org/users/username',
 			'inbox' => 'https://example.org/users/username/inbox',
 			'name'  => 'username',
+			'prefferedUsername'  => 'username',
 		),
 		'jon@example.com' => array(
 			'url' => 'https://example.com/author/jon',
 			'inbox' => 'https://example.com/author/jon/inbox',
 			'name'  => 'jon',
+			'prefferedUsername'  => 'jon',
 		),
 	);
 
 	public function test_dispatch_activity() {
 		$followers = array( 'https://example.com/author/jon', 'https://example.org/users/username' );
-		\update_user_meta( 1, 'activitypub_followers', $followers );
+
+		foreach ( $followers as $follower ) {
+			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		}
 
 		$post = \wp_insert_post(
 			array(

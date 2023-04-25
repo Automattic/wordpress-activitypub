@@ -23,7 +23,7 @@ class Followers {
 	public static function add_follower( $actor, $author_id ) {
 		_deprecated_function( __METHOD__, '1.0.0', '\Activitypub\Collection\Followers::add_follower' );
 
-		return \Activitypub\Collection\Followers::add_followers( $author_id, $actor );
+		return \Activitypub\Collection\Followers::add_follower( $author_id, $actor );
 	}
 
 	public static function remove_follower( $actor, $author_id ) {
