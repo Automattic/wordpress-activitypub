@@ -118,7 +118,8 @@ class Followers {
 	 * Handle the "Follow" Request
 	 *
 	 * @param array $object    The JSON "Follow" Activity
-	 * @param int   $user_id The ID of the WordPress User
+	 * @param int   $user_id The ID of the ID of the WordPress User
+	 *
 	 * @return void
 	 */
 	public static function handle_follow_request( $object, $user_id ) {
@@ -131,8 +132,8 @@ class Followers {
 	/**
 	 * Handles "Unfollow" requests
 	 *
-	 * @param  array $object  The JSON "Undo" Activity
-	 * @param  int   $user_id The ID of the WordPress User
+	 * @param array $object  The JSON "Undo" Activity
+	 * @param int   $user_id The ID of the ID of the WordPress User
 	 */
 	public static function handle_undo_request( $object, $user_id ) {
 		if (
@@ -147,8 +148,9 @@ class Followers {
 	/**
 	 * Add a new Follower
 	 *
-	 * @param int    $user_id The WordPress user
+	 * @param int    $user_id The ID of the WordPress User
 	 * @param string $actor   The Actor URL
+	 *
 	 * @return array|WP_Error The Follower (WP_Term array) or an WP_Error
 	 */
 	public static function add_follower( $user_id, $actor ) {
@@ -167,9 +169,10 @@ class Followers {
 	/**
 	 * Remove a Follower
 	 *
-	 * @param  int           $user_id The WordPress user_id
-	 * @param  string        $actor   The Actor URL
-	 * @return bool|WP_Error          True on success, false or WP_Error on failure.
+	 * @param  int    $user_id The ID of the WordPress User
+	 * @param  string $actor   The Actor URL
+	 *
+	 * @return bool|WP_Error True on success, false or WP_Error on failure.
 	 */
 	public static function remove_follower( $user_id, $actor ) {
 		return wp_remove_object_terms( $user_id, $actor, self::TAXONOMY );
@@ -178,7 +181,8 @@ class Followers {
 	/**
 	 * Remove a Follower
 	 *
-	 * @param  string                      $actor The Actor URL
+	 * @param string $actor The Actor URL
+	 *
 	 * @return \Activitypub\Model\Follower        The Follower object
 	 */
 	public static function get_follower( $actor ) {
@@ -192,8 +196,9 @@ class Followers {
 	 *
 	 * @param string                     $actor    The Actor URL
 	 * @param array                      $object   The Activity object
-	 * @param int                        $user_id  The WordPress user_id
+	 * @param int                        $user_id  The ID of the WordPress User
 	 * @param Activitypub\Model\Follower $follower The Follower object
+	 *
 	 * @return void
 	 */
 	public static function send_follow_response( $actor, $object, $user_id, $follower ) {
@@ -218,11 +223,12 @@ class Followers {
 	/**
 	 * Get the Followers of a given user
 	 *
-	 * @param  int    $user_id The WordPress user_id
-	 * @param  string $output  The output format, supported ARRAY_N, OBJECT and ACTIVITYPUB_OBJECT
-	 * @param  int    $number  Limts the result
-	 * @param  int    $offset  Offset
-	 * @return array           The Term list of Followers, the format depends on $output
+	 * @param int    $user_id The ID of the WordPress User
+	 * @param string $output  The output format, supported ARRAY_N, OBJECT and ACTIVITYPUB_OBJECT
+	 * @param int    $number  Limts the result
+	 * @param int    $offset  Offset
+	 *
+	 * @return array The Term list of Followers, the format depends on $output
 	 */
 	public static function get_followers( $user_id, $output = ARRAY_N, $number = null, $offset = null ) {
 		//self::migrate_followers( $user_id );
@@ -260,15 +266,23 @@ class Followers {
 	/**
 	 * Count the total number of followers
 	 *
-	 * @param  int $user_id The WordPress user
-	 * @return int          The number of Followers
+	 * @param int $user_id The ID of the WordPress User
+	 *
+	 * @return int The number of Followers
 	 */
 	public static function count_followers( $user_id ) {
 		return count( self::get_followers( $user_id ) );
 	}
 
+	/**
+	 * Returns all Inboxes fo a Users Followers
+	 *
+	 * @param int $user_id The ID of the WordPress User
+	 *
+	 * @return array The list of Inboxes
+	 */
 	public static function get_inboxes( $user_id ) {
-		// get all Followers of a WordPress user
+		// get all Followers of a ID of the WordPress User
 		$terms = new WP_Term_Query(
 			array(
 				'taxonomy'   => self::TAXONOMY,
@@ -295,9 +309,9 @@ class Followers {
 	}
 
 	/**
-	 * Undocumented function
+	 * Migrate Followers
 	 *
-	 * @param [type] $user_id
+	 * @param int $user_id The ID of the WordPress User
 	 * @return void
 	 */
 	public static function migrate_followers( $user_id ) {

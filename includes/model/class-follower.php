@@ -8,32 +8,97 @@ use function Activitypub\get_remote_metadata_by_actor;
 /**
  * ActivityPub Follower Class
  *
+ * This Object represents a single Follower.
+ * There is no direct reference to a WordPress User here.
+ *
  * @author Matthias Pfefferle
  *
  * @see https://www.w3.org/TR/activitypub/#follow-activity-inbox
  */
 class Follower {
-
+	/**
+	 * The Object ID
+	 *
+	 * @var int
+	 */
 	private $id;
 
+	/**
+	 * The Actor-URL of the Follower
+	 *
+	 * @var string
+	 */
 	private $actor;
 
+	/**
+	 * The Object slug
+	 *
+	 * This is a requirement of the Term-Meta but will not
+	 * be actively used in the ActivityPub context.
+	 *
+	 * @var string
+	 */
 	private $slug;
 
+	/**
+	 * The Object Name
+	 *
+	 * This is the same as the Actor-URL
+	 *
+	 * @var string
+	 */
 	private $name;
 
+	/**
+	 * The Username
+	 *
+	 * @var string
+	 */
 	private $username;
 
+	/**
+	 * The Avatar URL
+	 *
+	 * @var string
+	 */
 	private $avatar;
 
+	/**
+	 * The URL to the Followers Inbox
+	 *
+	 * @var string
+	 */
 	private $inbox;
 
+	/**
+	 * The URL to the Servers Shared-Inbox
+	 *
+	 * If the Server does not support Shared-Inboxes,
+	 * the Inbox will be stored.
+	 *
+	 * @var string
+	 */
 	private $shared_inbox;
 
+	/**
+	 * The date, the Follower was updated
+	 *
+	 * @var string untixtimestamp
+	 */
 	private $updated_at;
 
+	/**
+	 * The complete Remote-Profile of the Follower
+	 *
+	 * @var array
+	 */
 	private $meta;
 
+	/**
+	 * Maps the meta fields to the local db fields
+	 *
+	 * @var array
+	 */
 	private $map_meta = array(
 		'name'              => 'name',
 		'preferredUsername' => 'username',
