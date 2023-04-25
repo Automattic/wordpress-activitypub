@@ -67,7 +67,11 @@ class Activity_Dispatcher {
 		$activitypub_activity = new Activity( $activity_type );
 		$activitypub_activity->from_post( $activitypub_post );
 
-		$inboxes = Followers::get_inboxes( $user_id );
+		$follower_inboxes = Followers::get_inboxes( $user_id );
+		$mentioned_inboxes = Mention::get_inboxes( $activitypub_activity->get_cc() );
+
+		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
+		$inboxes = array_unique( $inboxes );
 
 		foreach ( $inboxes as $inbox ) {
 			$activity = $activitypub_activity->to_json();
