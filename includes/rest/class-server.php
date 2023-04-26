@@ -42,13 +42,13 @@ class Server {
 				}
 			} else {
 				// SecureMode/Authorized fetch.
-				$secure_mode = \get_option( 'activitypub_use_secure_mode', '0' );
-
-				if ( $secure_mode ) {
-					if ( \is_wp_error( $verified_request ) ) {
-						return $verified_request;
-					}
-				}
+				// $secure_mode = \get_option( 'activitypub_use_secure_mode', '0' );
+				// if ( $secure_mode ) {
+				//	$verified_request = Signature::verify_http_signature( $request );
+				// 	if ( \is_wp_error( $verified_request ) ) {
+				// 		return $verified_request;
+				// 	}
+				// }
 			}
 		}
 	}
