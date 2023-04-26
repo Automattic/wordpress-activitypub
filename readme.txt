@@ -115,7 +115,7 @@ Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github
 
 = Next =
 
-* Compatibility: add filter to allow disabling Jetpack's image CDN when returning images in ActivityPub requests.
+* Compatibility: add hooks to allow modifying images returned in ActivityPub requests.
 * Compatibility: indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.2.
 
 = 0.17.0 =

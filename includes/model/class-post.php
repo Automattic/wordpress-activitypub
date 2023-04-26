@@ -305,7 +305,22 @@ class Post {
 
 		// get URLs for each image
 		foreach ( $image_ids as $id ) {
-			$thumbnail = $this->get_image( $id );
+			$image_size = 'full';
+
+			/**
+			 * Filter the image URL returned for each post.
+			 *
+			 * @param array|false $thumbnail The image URL, or false if no image is available.
+			 * @param int         $id        The attachment ID.
+			 * @param string      $image_size The image size to retrieve. Set to 'full' by default.
+			 */
+			$thumbnail = apply_filters(
+				'activitypub_get_image',
+				$this->get_image( $id, $image_size ),
+				$id,
+				$image_size
+			);
+
 			if ( $thumbnail ) {
 				$mimetype = \get_post_mime_type( $id );
 				$alt      = \get_post_meta( $id, '_wp_attachment_image_alt', true );
@@ -333,44 +348,29 @@ class Post {
 	 * Can return a CDNized URL if Jetpack's image CDN is active.
 	 * This can be disabled with a filter.
 	 *
-	 * @param int $id The attachment ID.
+	 * @param int    $id         The attachment ID.
+	 * @param string $image_size The image size to retrieve. Set to 'full' by default.
 	 *
 	 * @return array|false Array of image data, or boolean false if no image is available.
 	 */
-	public function get_image( $id ) {
+	public function get_image( $id, $image_size = 'full' ) {
 		/**
-		 * Allow bypassing Jetpack's Image CDN when returning image URLs.
+		 * Hook into the image retrieval process. Before image retrieval.
 		 *
-		 * @param bool $should_use_cdn Whether to use the Jetpack Image CDN. True by default.
+		 * @param int    $id         The attachment ID.
+		 * @param string $image_size The image size to retrieve. Set to 'full' by default.
 		 */
-		$should_use_cdn = apply_filters( 'activitypub_images_use_jetpack_image_cdn', true );
+		do_action( 'activitypub_get_image_pre', $id, $image_size );
 
-		if ( $should_use_cdn ) {
-			// Return the full URL, using a CDN URL if Jetpack's image CDN is active.
-			return \wp_get_attachment_image_src( $id, 'full' );
-		}
+		$thumbnail = \wp_get_attachment_image_src( $id, $image_size );
 
-		/*
-		 * Disable Jetpacks image CDN image processing for this request.
+		/**
+		 * Hook into the image retrieval process. After image retrieval.
 		 *
-		 * Note: old versions of Jetpack used the Jetpack_Photon class to do this.
-		 * New versions use the Image_CDN class.
-		 * Let's handle both.
+		 * @param int    $id         The attachment ID.
+		 * @param string $image_size The image size to retrieve. Set to 'full' by default.
 		 */
-		if ( \class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN' ) ) {
-			\remove_filter( 'image_downsize', array( \Automattic\Jetpack\Image_CDN\Image_CDN::instance(), 'filter_image_downsize' ) );
-		} elseif ( \class_exists( 'Jetpack_Photon' ) ) {
-			\remove_filter( 'image_downsize', array( \Jetpack_Photon::instance(), 'filter_image_downsize' ) );
-		}
-
-		$thumbnail = \wp_get_attachment_image_src( $id, 'full' );
-
-		// Re-enable Photon now that the image URL has been built.
-		if ( \class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN' ) ) {
-			\add_filter( 'image_downsize', array( \Automattic\Jetpack\Image_CDN\Image_CDN::instance(), 'filter_image_downsize' ), 10, 3 );
-		} elseif ( \class_exists( 'Jetpack_Photon' ) ) {
-			\add_filter( 'image_downsize', array( \Jetpack_Photon::instance(), 'filter_image_downsize' ), 10, 3 );
-		}
+		do_action( 'activitypub_get_image_pre', $id, $image_size );
 
 		return $thumbnail;
 	}
