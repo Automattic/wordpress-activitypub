@@ -345,9 +345,6 @@ class Post {
 	/**
 	 * Return details about an image attachment.
 	 *
-	 * Can return a CDNized URL if Jetpack's image CDN is active.
-	 * This can be disabled with a filter.
-	 *
 	 * @param int    $id         The attachment ID.
 	 * @param string $image_size The image size to retrieve. Set to 'full' by default.
 	 *
