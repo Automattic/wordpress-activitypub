@@ -183,12 +183,27 @@ class Followers {
 	 *
 	 * @param string $actor The Actor URL
 	 *
-	 * @return \Activitypub\Model\Follower        The Follower object
+	 * @return \Activitypub\Model\Follower The Follower object
 	 */
-	public static function get_follower( $actor ) {
-		$term = get_term_by( 'name', $actor, self::TAXONOMY );
+	public static function get_follower( $user_id, $actor ) {
+		$terms = new WP_Term_Query(
+			array(
+				'name'       => $actor,
+				'taxonomy'   => self::TAXONOMY,
+				'hide_empty' => false,
+				'object_ids' => $user_id,
+				'number'     => 1,
+			)
+		);
 
-		return new Follower( $term->name );
+		$term = $terms->get_terms();
+
+		if ( is_array( $term ) && ! empty( $term ) ) {
+			$term = reset( $term );
+			return new Follower( $term->name );
+		}
+
+		return null;
 	}
 
 	/**

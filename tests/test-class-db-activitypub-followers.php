@@ -50,6 +50,23 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		$this->assertContains( $follower, $db_followers );
 	}
 
+	public function test_get_follower() {
+		$followers = array( 'https://example.com/author/jon' );
+
+		$pre_http_request = new MockAction();
+		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
+
+		foreach ( $followers as $follower ) {
+			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		}
+
+		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->get_actor() );
+
+		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'http://sally.example.org' );
+		$this->assertNull( $follower );
+	}
+
 	public static function http_request_host_is_external( $in, $host ) {
 		if ( in_array( $host, array( 'example.com', 'example.org' ), true ) ) {
 			return true;
