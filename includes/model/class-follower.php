@@ -229,21 +229,21 @@ class Follower {
 
 		foreach ( $this->map_meta as $remote => $internal ) {
 			if ( ! empty( $meta[ $remote ] ) ) {
-				update_term_meta( $this->id, $internal, esc_html( $meta[ $remote ] ), true );
+				update_term_meta( $this->id, $internal, $meta[ $remote ], true );
 				$this->$internal = $meta[ $remote ];
 			}
 		}
 
 		if ( ! empty( $meta['icon']['url'] ) ) {
-			update_term_meta( $this->id, 'avatar', esc_url_raw( $meta['icon']['url'] ), true );
+			update_term_meta( $this->id, 'avatar', $meta['icon']['url'], true );
 			$this->avatar = $meta['icon']['url'];
 		}
 
 		if ( ! empty( $meta['endpoints']['sharedInbox'] ) ) {
-			update_term_meta( $this->id, 'shared_inbox', esc_url_raw( $meta['endpoints']['sharedInbox'] ), true );
+			update_term_meta( $this->id, 'shared_inbox', $meta['endpoints']['sharedInbox'], true );
 			$this->shared_inbox = $meta['endpoints']['sharedInbox'];
 		} elseif ( ! empty( $meta['inbox'] ) ) {
-			update_term_meta( $this->id, 'shared_inbox', esc_url_raw( $meta['inbox'] ), true );
+			update_term_meta( $this->id, 'shared_inbox', $meta['inbox'], true );
 			$this->shared_inbox = $meta['inbox'];
 		}
 

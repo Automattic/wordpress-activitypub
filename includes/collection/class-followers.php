@@ -2,6 +2,7 @@
 namespace Activitypub\Collection;
 
 use WP_Error;
+use Exception;
 use WP_Term_Query;
 use Activitypub\Webfinger;
 use Activitypub\Model\Activity;
@@ -67,7 +68,9 @@ class Followers {
 			array(
 				'type'              => 'string',
 				'single'            => true,
-				//'sanitize_callback' => array( self::class, 'validate_displayname' ),
+				'sanitize_callback' => function( $value ) {
+					return sanitize_user( $value );
+				},
 			)
 		);
 
@@ -77,7 +80,9 @@ class Followers {
 			array(
 				'type'              => 'string',
 				'single'            => true,
-				//'sanitize_callback' => array( self::class, 'validate_username' ),
+				'sanitize_callback' => function( $value ) {
+					return sanitize_user( $value, true );
+				},
 			)
 		);
 
@@ -87,7 +92,13 @@ class Followers {
 			array(
 				'type'              => 'string',
 				'single'            => true,
-				//'sanitize_callback' => array( self::class, 'validate_avatar' ),
+				'sanitize_callback' => function( $value ) {
+					if ( filter_var( $value, FILTER_VALIDATE_URL ) === false ) {
+						return '';
+					}
+
+					return esc_url_raw( $value );
+				},
 			)
 		);
 
@@ -97,7 +108,29 @@ class Followers {
 			array(
 				'type'              => 'string',
 				'single'            => true,
-				//'sanitize_callback' => array( self::class, 'validate_inbox' ),
+				'sanitize_callback' => function( $value ) {
+					if ( filter_var( $value, FILTER_VALIDATE_URL ) === false ) {
+						throw new Exception( '"inbox" has to be a valid URL' );
+					}
+
+					return esc_url_raw( $value );
+				},
+			)
+		);
+
+		register_term_meta(
+			self::TAXONOMY,
+			'shared_inbox',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'sanitize_callback' => function( $value ) {
+					if ( filter_var( $value, FILTER_VALIDATE_URL ) === false ) {
+						return null;
+					}
+
+					return esc_url_raw( $value );
+				},
 			)
 		);
 
@@ -107,7 +140,13 @@ class Followers {
 			array(
 				'type'              => 'string',
 				'single'            => true,
-				//'sanitize_callback' => array( self::class, 'validate_updated_at' ),
+				'sanitize_callback' => function( $value ) {
+					if ( ! is_numeric( $value ) && (int) $value !== $value ) {
+						$value = strtotime( 'now' );
+					}
+
+					return $value;
+				},
 			)
 		);
 
