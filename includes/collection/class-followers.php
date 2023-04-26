@@ -208,8 +208,8 @@ class Followers {
 	/**
 	 * Remove a Follower
 	 *
-	 * @param  int    $user_id The ID of the WordPress User
-	 * @param  string $actor   The Actor URL
+	 * @param int    $user_id The ID of the WordPress User
+	 * @param string $actor   The Actor URL
 	 *
 	 * @return bool|WP_Error True on success, false or WP_Error on failure.
 	 */
@@ -220,7 +220,8 @@ class Followers {
 	/**
 	 * Remove a Follower
 	 *
-	 * @param string $actor The Actor URL
+	 * @param int   $user_id The ID of the WordPress User
+	 * @param string $actor  The Actor URL
 	 *
 	 * @return \Activitypub\Model\Follower The Follower object
 	 */
