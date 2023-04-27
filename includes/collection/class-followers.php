@@ -10,6 +10,7 @@ use Activitypub\Model\Follower;
 
 use function Activitypub\safe_remote_get;
 use function Activitypub\safe_remote_post;
+use function Activitypub\get_remote_metadata_by_actor;
 
 /**
  * ActivityPub Followers Collection
@@ -193,7 +194,14 @@ class Followers {
 	 * @return array|WP_Error The Follower (WP_Term array) or an WP_Error
 	 */
 	public static function add_follower( $user_id, $actor ) {
+		$meta = get_remote_metadata_by_actor( $actor );
+
+		if ( ! $meta || is_wp_error( $meta ) || ! is_array( $meta ) ) {
+			return $meta;
+		}
+
 		$follower = new Follower( $actor );
+		$follower->from_meta( $meta );
 		$follower->upsert();
 
 		$result = wp_set_object_terms( $user_id, $follower->get_actor(), self::TAXONOMY, true );
@@ -286,8 +294,6 @@ class Followers {
 	 * @return array The Term list of Followers, the format depends on $output
 	 */
 	public static function get_followers( $user_id, $output = ARRAY_N, $number = null, $offset = null ) {
-		//self::migrate_followers( $user_id );
-
 		$terms = new WP_Term_Query(
 			array(
 				'taxonomy'   => self::TAXONOMY,

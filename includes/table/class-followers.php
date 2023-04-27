@@ -77,6 +77,14 @@ class Followers extends WP_List_Table {
 		);
 	}
 
+	public function column_identifier( $item ) {
+		return sprintf(
+			'<a href="%s" target="_blank">%s</a>',
+			$item['identifier'],
+			$item['identifier']
+		);
+	}
+
 	public function column_cb( $item ) {
 		return sprintf( '<input type="checkbox" name="followers[]" value="%s" />', esc_attr( $item['identifier'] ) );
 	}

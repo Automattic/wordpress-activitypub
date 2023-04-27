@@ -3,8 +3,6 @@ namespace Activitypub\Model;
 
 use Activitypub\Collection\Followers;
 
-use function Activitypub\get_remote_metadata_by_actor;
-
 /**
  * ActivityPub Follower Class
  *
@@ -111,16 +109,14 @@ class Follower {
 	 * @param WP_Post $post
 	 */
 	public function __construct( $actor ) {
-		$term = get_term_by( 'name', $actor, Followers::TAXONOMY );
-
 		$this->actor = $actor;
+
+		$term = get_term_by( 'name', $actor, Followers::TAXONOMY );
 
 		if ( $term ) {
 			$this->id = $term->term_id;
 			$this->slug = $term->slug;
 			$this->meta = json_decode( $term->meta );
-		} else {
-			$this->slug = sanitize_title( $actor );
 		}
 	}
 
@@ -147,46 +143,72 @@ class Follower {
 		}
 	}
 
+	public function from_meta( $meta ) {
+		$this->meta = $meta;
+
+		foreach ( $this->map_meta as $remote => $internal ) {
+			if ( ! empty( $meta[ $remote ] ) ) {
+				$this->$internal = $meta[ $remote ];
+			}
+		}
+
+		if ( ! empty( $meta['icon']['url'] ) ) {
+			$this->avatar = $meta['icon']['url'];
+		}
+
+		if ( ! empty( $meta['endpoints']['sharedInbox'] ) ) {
+			$this->shared_inbox = $meta['endpoints']['sharedInbox'];
+		} elseif ( ! empty( $meta['inbox'] ) ) {
+			$this->shared_inbox = $meta['inbox'];
+		}
+
+		$this->updated_at = \strtotime( 'now' );
+	}
+
 	public function get( $attribute ) {
 		if ( $this->$attribute ) {
 			return $this->$attribute;
 		}
 
-		if ( ! $this->id ) {
-			$this->$attribute = $this->get_meta_by( $attribute );
-			return $this->$attribute;
+		$attribute = get_term_meta( $this->id, $attribute, true );
+		if ( $attribute ) {
+			$this->$attribute = $attribute;
+			return $attribute;
 		}
 
-		$this->$attribute = get_term_meta( $this->id, $attribute, true );
-		return $this->$attribute;
+		$attribute = $this->get_meta_by( $attribute );
+		if ( $attribute ) {
+			$this->$attribute = $attribute;
+			return $attribute;
+		}
+
+		return null;
 	}
 
-	public function get_meta_by( $attribute, $force = false ) {
-		$meta = $this->get_meta( $force );
+	public function get_meta_by( $attribute ) {
+		$meta = $this->get_meta();
 
+		// try mapped data ($this->map_meta)
 		foreach ( $this->map_meta as $remote => $local ) {
 			if ( $attribute === $local && isset( $meta[ $remote ] ) ) {
 				return $meta[ $remote ];
 			}
 		}
 
+		// try ActivityPub attribtes
+		if ( ! empty( $this->map_meta[ $attribute ] ) ) {
+			return $this->map_meta[ $attribute ];
+		}
+
 		return null;
 	}
 
-	public function get_meta( $force = false ) {
-		if ( $this->meta && false === (bool) $force ) {
+	public function get_meta() {
+		if ( $this->meta ) {
 			return $this->meta;
 		}
 
-		$remote_data = get_remote_metadata_by_actor( $this->actor );
-
-		if ( ! $remote_data || is_wp_error( $remote_data ) || ! is_array( $remote_data ) ) {
-			$remote_data = array();
-		}
-
-		$this->meta = $remote_data;
-
-		return $this->meta;
+		return null;
 	}
 
 	public function update() {
@@ -225,28 +247,12 @@ class Follower {
 	}
 
 	protected function update_term_meta() {
-		$meta = $this->get_meta();
+		$attributes = array( 'inbox', 'shared_inbox', 'avatar', 'updated_at', 'name', 'username' );
 
-		foreach ( $this->map_meta as $remote => $internal ) {
-			if ( ! empty( $meta[ $remote ] ) ) {
-				update_term_meta( $this->id, $internal, $meta[ $remote ], true );
-				$this->$internal = $meta[ $remote ];
+		foreach ( $attributes as $attribute ) {
+			if ( $this->get( $attribute ) ) {
+				update_term_meta( $this->id, $attribute, $this->get( $attribute ), true );
 			}
 		}
-
-		if ( ! empty( $meta['icon']['url'] ) ) {
-			update_term_meta( $this->id, 'avatar', $meta['icon']['url'], true );
-			$this->avatar = $meta['icon']['url'];
-		}
-
-		if ( ! empty( $meta['endpoints']['sharedInbox'] ) ) {
-			update_term_meta( $this->id, 'shared_inbox', $meta['endpoints']['sharedInbox'], true );
-			$this->shared_inbox = $meta['endpoints']['sharedInbox'];
-		} elseif ( ! empty( $meta['inbox'] ) ) {
-			update_term_meta( $this->id, 'shared_inbox', $meta['inbox'], true );
-			$this->shared_inbox = $meta['inbox'];
-		}
-
-		update_term_meta( $this->id, 'updated_at', \strtotime( 'now' ), true );
 	}
 }

@@ -102,12 +102,10 @@ function get_webfinger_resource( $user_id ) {
  * Requests the Meta-Data from the Actors profile
  *
  * @param string $actor The Actor URL
- * @param bool   $cache Enable/Disable caching of the meta.
- *                      This does not effect Error-Caching.
  *
  * @return array The Actor profile as array
  */
-function get_remote_metadata_by_actor( $actor, $cache = false ) {
+function get_remote_metadata_by_actor( $actor ) {
 	$pre = apply_filters( 'pre_get_remote_metadata_by_actor', false, $actor );
 	if ( $pre ) {
 		return $pre;
@@ -161,9 +159,7 @@ function get_remote_metadata_by_actor( $actor, $cache = false ) {
 	$metadata = \wp_remote_retrieve_body( $response );
 	$metadata = \json_decode( $metadata, true );
 
-	if ( true === $cache ) {
-		\set_transient( $transient_key, $metadata, WEEK_IN_SECONDS );
-	}
+	\set_transient( $transient_key, $metadata, WEEK_IN_SECONDS );
 
 	if ( ! $metadata ) {
 		$metadata = new \WP_Error( 'activitypub_invalid_json', \__( 'No valid JSON data', 'activitypub' ), $actor );
