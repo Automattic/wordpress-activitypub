@@ -35,14 +35,14 @@ class Migration {
 	 */
 	public static function maybe_migrate() {
 		if ( self::is_latest_version() ) {
-			//return;
+			return;
 		}
 
 		$version_from_db = self::get_version();
 
-		//if ( version_compare( $version_from_db, '1.0.0', '<' ) ) {
+		if ( version_compare( $version_from_db, '1.0.0', '<' ) ) {
 			self::migrate_to_1_0_0();
-		//}
+		}
 
 		update_option( 'activitypub_db_version', self::$target_version );
 	}
