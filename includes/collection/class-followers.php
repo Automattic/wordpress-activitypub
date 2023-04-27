@@ -374,20 +374,4 @@ class Followers {
 
 		return array_filter( $results );
 	}
-
-	/**
-	 * Migrate Followers
-	 *
-	 * @param int $user_id The ID of the WordPress User
-	 * @return void
-	 */
-	public static function migrate_followers( $user_id ) {
-		$followes = get_user_meta( $user_id, 'activitypub_followers', true );
-
-		if ( $followes ) {
-			foreach ( $followes as $follower ) {
-				self::add_follower( $user_id, $follower );
-			}
-		}
-	}
 }

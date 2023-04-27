@@ -32,8 +32,10 @@ function init() {
 	\define( 'ACTIVITYPUB_OBJECT', 'ACTIVITYPUB_OBJECT' );
 
 	require_once \dirname( __FILE__ ) . '/includes/table/class-followers.php';
+	require_once \dirname( __FILE__ ) . '/includes/class-http.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-webfinger.php';
+	require_once \dirname( __FILE__ ) . '/includes/class-migration.php';
 	require_once \dirname( __FILE__ ) . '/includes/peer/class-followers.php';
 	require_once \dirname( __FILE__ ) . '/includes/functions.php';
 

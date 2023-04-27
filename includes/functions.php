@@ -33,58 +33,11 @@ function get_context() {
 }
 
 function safe_remote_post( $url, $body, $user_id ) {
-	$date = \gmdate( 'D, d M Y H:i:s T' );
-	$digest = \Activitypub\Signature::generate_digest( $body );
-	$signature = \Activitypub\Signature::generate_signature( $user_id, 'post', $url, $date, $digest );
-
-	$wp_version = \get_bloginfo( 'version' );
-	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
-	$args = array(
-		'timeout' => 100,
-		'limit_response_size' => 1048576,
-		'redirection' => 3,
-		'user-agent' => "$user_agent; ActivityPub",
-		'headers' => array(
-			'Accept' => 'application/activity+json',
-			'Content-Type' => 'application/activity+json',
-			'Digest' => "SHA-256=$digest",
-			'Signature' => $signature,
-			'Date' => $date,
-		),
-		'body' => $body,
-	);
-
-	$response = \wp_safe_remote_post( $url, $args );
-
-	\do_action( 'activitypub_safe_remote_post_response', $response, $url, $body, $user_id );
-
-	return $response;
+	return \Activitypub\Http::post( $url, $body, $user_id );
 }
 
 function safe_remote_get( $url, $user_id ) {
-	$date = \gmdate( 'D, d M Y H:i:s T' );
-	$signature = Signature::generate_signature( $user_id, 'get', $url, $date );
-
-	$wp_version = \get_bloginfo( 'version' );
-	$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
-	$args = array(
-		'timeout' => apply_filters( 'activitypub_remote_get_timeout', 100 ),
-		'limit_response_size' => 1048576,
-		'redirection' => 3,
-		'user-agent' => "$user_agent; ActivityPub",
-		'headers' => array(
-			'Accept' => 'application/activity+json',
-			'Content-Type' => 'application/activity+json',
-			'Signature' => $signature,
-			'Date' => $date,
-		),
-	);
-
-	$response = \wp_safe_remote_get( $url, $args );
-
-	\do_action( 'activitypub_safe_remote_get_response', $response, $url, $user_id );
-
-	return $response;
+	return \Activitypub\Http::get( $url, $user_id );
 }
 
 /**
@@ -149,7 +102,7 @@ function get_remote_metadata_by_actor( $actor ) {
 		return 3;
 	};
 	add_filter( 'activitypub_remote_get_timeout', $short_timeout );
-	$response = \Activitypub\safe_remote_get( $actor, $user_id );
+	$response = Http::get( $actor, $user_id );
 	remove_filter( 'activitypub_remote_get_timeout', $short_timeout );
 	if ( \is_wp_error( $response ) ) {
 		\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
