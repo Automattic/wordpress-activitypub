@@ -9,6 +9,10 @@ class Migration {
 	 */
 	private static $target_version = '1.0.0';
 
+	public static function init() {
+		\add_action( 'activitypub_schedule_migration', array( self::class, 'maybe_migrate' ) );
+	}
+
 	public static function get_target_version() {
 		return self::$target_version;
 	}

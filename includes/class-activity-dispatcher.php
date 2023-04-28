@@ -61,6 +61,9 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	public static function send_activity( Post $activitypub_post, $activity_type ) {
+		// check if a migration is needed before sending new posts
+		\Activitypub\Migration::maybe_migrate();
+
 		// get latest version of post
 		$user_id = $activitypub_post->get_post_author();
 

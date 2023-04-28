@@ -35,13 +35,15 @@ function init() {
 	require_once \dirname( __FILE__ ) . '/includes/class-http.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-webfinger.php';
-	require_once \dirname( __FILE__ ) . '/includes/class-migration.php';
 	require_once \dirname( __FILE__ ) . '/includes/peer/class-followers.php';
 	require_once \dirname( __FILE__ ) . '/includes/functions.php';
 
 	require_once \dirname( __FILE__ ) . '/includes/model/class-activity.php';
 	require_once \dirname( __FILE__ ) . '/includes/model/class-post.php';
 	require_once \dirname( __FILE__ ) . '/includes/model/class-follower.php';
+
+	require_once \dirname( __FILE__ ) . '/includes/class-migration.php';
+	Migration::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/class-activity-dispatcher.php';
 	Activity_Dispatcher::init();
