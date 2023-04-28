@@ -4,6 +4,7 @@ namespace Activitypub\Collection;
 use WP_Error;
 use Exception;
 use WP_Term_Query;
+use Activitypub\Http;
 use Activitypub\Webfinger;
 use Activitypub\Model\Activity;
 use Activitypub\Model\Follower;
@@ -269,6 +270,11 @@ class Followers {
 			// @todo send error message
 		//}
 
+		if ( isset( $object['user_id'] ) ) {
+			unset( $object['user_id'] );
+			unset( $object['@context'] );
+		}
+
 		// get inbox
 		$inbox = $follower->get_inbox();
 
@@ -280,7 +286,7 @@ class Followers {
 		$activity->set_id( \get_author_posts_url( $user_id ) . '#follow-' . \preg_replace( '~^https?://~', '', $actor ) );
 
 		$activity = $activity->to_simple_json();
-		$response = safe_remote_post( $inbox, $activity, $user_id );
+		$response = Http::post( $inbox, $activity, $user_id );
 	}
 
 	/**

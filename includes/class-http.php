@@ -40,7 +40,7 @@ class Http {
 			'body' => $body,
 		);
 
-		$response = \wp_safe_remote_get( $url, $args );
+		$response = \wp_safe_remote_post( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );
 
 		if ( 400 >= $code && 500 <= $code ) {
