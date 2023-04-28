@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub\Rest;
 
+use Activitypub\Model\Activity;
+
 /**
  * ActivityPub Inbox REST-Class
  *
@@ -13,13 +15,13 @@ class Inbox {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( '\Activitypub\Rest\Inbox', 'register_routes' ) );
-		\add_filter( 'rest_pre_serve_request', array( '\Activitypub\Rest\Inbox', 'serve_request' ), 11, 4 );
-		\add_action( 'activitypub_inbox_follow', array( '\Activitypub\Rest\Inbox', 'handle_follow' ), 10, 2 );
-		\add_action( 'activitypub_inbox_undo', array( '\Activitypub\Rest\Inbox', 'handle_unfollow' ), 10, 2 );
-		//\add_action( 'activitypub_inbox_like', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
-		//\add_action( 'activitypub_inbox_announce', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
-		\add_action( 'activitypub_inbox_create', array( '\Activitypub\Rest\Inbox', 'handle_create' ), 10, 2 );
+		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		\add_filter( 'rest_pre_serve_request', array( self::class, 'serve_request' ), 11, 4 );
+		\add_action( 'activitypub_inbox_follow', array( self::class, 'handle_follow' ), 10, 2 );
+		\add_action( 'activitypub_inbox_undo', array( self::class, 'handle_unfollow' ), 10, 2 );
+		//\add_action( 'activitypub_inbox_like', array( self::class, 'handle_reaction' ), 10, 2 );
+		//\add_action( 'activitypub_inbox_announce', array( self::class, 'handle_reaction' ), 10, 2 );
+		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_create' ), 10, 2 );
 	}
 
 	/**
@@ -32,7 +34,7 @@ class Inbox {
 			array(
 				array(
 					'methods'             => \WP_REST_Server::EDITABLE,
-					'callback'            => array( '\Activitypub\Rest\Inbox', 'shared_inbox_post' ),
+					'callback'            => array( self::class, 'shared_inbox_post' ),
 					'args'                => self::shared_inbox_post_parameters(),
 					'permission_callback' => '__return_true',
 				),
@@ -45,13 +47,13 @@ class Inbox {
 			array(
 				array(
 					'methods'             => \WP_REST_Server::EDITABLE,
-					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox_post' ),
+					'callback'            => array( self::class, 'user_inbox_post' ),
 					'args'                => self::user_inbox_post_parameters(),
 					'permission_callback' => '__return_true',
 				),
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox_get' ),
+					'callback'            => array( self::class, 'user_inbox_get' ),
 					'args'                => self::user_inbox_get_parameters(),
 					'permission_callback' => '__return_true',
 				),
@@ -356,7 +358,7 @@ class Inbox {
 		$inbox = \Activitypub\get_inbox_by_actor( $object['actor'] );
 
 		// send "Accept" activity
-		$activity = new \Activitypub\Model\Activity( 'Accept', \Activitypub\Model\Activity::TYPE_SIMPLE );
+		$activity = new Activity( 'Accept' );
 		$activity->set_object( $object );
 		$activity->set_actor( \get_author_posts_url( $user_id ) );
 		$activity->set_to( $object['actor'] );

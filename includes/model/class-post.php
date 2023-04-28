@@ -29,6 +29,13 @@ class Post {
 	private $id;
 
 	/**
+	 * The Object URL.
+	 *
+	 * @var string
+	 */
+	private $url;
+
+	/**
 	 * The Object Summary.
 	 *
 	 * @var string
@@ -105,12 +112,31 @@ class Post {
 	);
 
 	/**
+	 * List of audience
+	 *
+	 * Also used for visibility
+	 *
+	 * @var array
+	 */
+	private $to = array( 'https://www.w3.org/ns/activitystreams#Public' );
+
+	/**
+	 * List of audience
+	 *
+	 * Also used for visibility
+	 *
+	 * @var array
+	 */
+	private $cc = array();
+
+	/**
 	 * Constructor
 	 *
 	 * @param WP_Post $post
 	 */
 	public function __construct( $post ) {
 		$this->post = \get_post( $post );
+		$this->add_to( \get_rest_url( null, '/activitypub/1.0/users/' . intval( $this->get_post_author() ) . '/followers' ) );
 	}
 
 	/**
@@ -134,6 +160,20 @@ class Post {
 		if ( \strncasecmp( $method, 'set', 3 ) === 0 ) {
 			$this->$var = $params[0];
 		}
+
+		if ( \strncasecmp( $method, 'add', 3 ) === 0 ) {
+			if ( ! is_array( $this->$var ) ) {
+				$this->$var = $params[0];
+			}
+
+			if ( is_array( $params[0] ) ) {
+				$this->$var = array_merge( $this->$var, $params[0] );
+			} else {
+				array_push( $this->$var, $params[0] );
+			}
+
+			$this->$var = array_unique( $this->$var );
+		}
 	}
 
 	/**
@@ -146,6 +186,7 @@ class Post {
 
 		$array = array(
 			'id' => $this->get_id(),
+			'url' => $this->get_url(),
 			'type' => $this->get_object_type(),
 			'published' => \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date_gmt ) ),
 			'attributedTo' => \get_author_posts_url( $post->post_author ),
@@ -155,8 +196,8 @@ class Post {
 			'contentMap' => array(
 				\strstr( \get_locale(), '_', true ) => $this->get_content(),
 			),
-			'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-			'cc' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'to' => $this->get_to(),
+			'cc' => $this->get_cc(),
 			'attachment' => $this->get_attachments(),
 			'tag' => $this->get_tags(),
 		);
@@ -174,13 +215,13 @@ class Post {
 	}
 
 	/**
-	 * Returns the ID of an Activity Object
+	 * Returns the URL of an Activity Object
 	 *
 	 * @return string
 	 */
-	public function get_id() {
-		if ( $this->id ) {
-			return $this->id;
+	public function get_url() {
+		if ( $this->url ) {
+			return $this->url;
 		}
 
 		$post = $this->post;
@@ -191,9 +232,24 @@ class Post {
 			$permalink = \get_permalink( $post );
 		}
 
-		$this->id = $permalink;
+		$this->url = $permalink;
 
 		return $permalink;
+	}
+
+	/**
+	 * Returns the ID of an Activity Object
+	 *
+	 * @return string
+	 */
+	public function get_id() {
+		if ( $this->id ) {
+			return $this->id;
+		}
+
+		$this->id = $this->get_url();
+
+		return $this->id;
 	}
 
 	/**
@@ -250,7 +306,32 @@ class Post {
 		// get URLs for each image
 		foreach ( $image_ids as $id ) {
 			$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
+
+			/**
+			 * If you use the Jetpack plugin and its Image CDN, aka Photon,
+			 * the image strings returned will use the Photon URL.
+			 * We don't want that since Fediverse instances already do caching on their end.
+			 * Let the CDN only be used for visitors of the site.
+			 *
+			 * Old versions of Jetpack used the Jetpack_Photon class to do this.
+			 * New versions use the Image_CDN class.
+			 * Let's handle both.
+			 */
+			if ( \class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN' ) ) {
+				\remove_filter( 'image_downsize', array( \Automattic\Jetpack\Image_CDN\Image_CDN::instance(), 'filter_image_downsize' ) );
+			} elseif ( \class_exists( 'Jetpack_Photon' ) ) {
+				\remove_filter( 'image_downsize', array( \Jetpack_Photon::instance(), 'filter_image_downsize' ) );
+			}
+
 			$thumbnail = \wp_get_attachment_image_src( $id, 'full' );
+
+			// Re-enable Photon now that the image URL has been built.
+			if ( \class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN' ) ) {
+				\add_filter( 'image_downsize', array( \Automattic\Jetpack\Image_CDN\Image_CDN::instance(), 'filter_image_downsize' ), 10, 3 );
+			} elseif ( \class_exists( 'Jetpack_Photon' ) ) {
+				\add_filter( 'image_downsize', array( \Jetpack_Photon::instance(), 'filter_image_downsize' ), 10, 3 );
+			}
+
 			$mimetype = \get_post_mime_type( $id );
 
 			if ( $thumbnail ) {

@@ -1,6 +1,9 @@
 <?php
 namespace Activitypub\Rest;
 
+use WP_Error;
+use WP_REST_Response;
+
 /**
  * ActivityPub WebFinger REST-Class
  *
@@ -13,8 +16,8 @@ class Webfinger {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( '\Activitypub\Rest\Webfinger', 'register_routes' ) );
-		\add_action( 'webfinger_user_data', array( '\Activitypub\Rest\Webfinger', 'add_webfinger_discovery' ), 10, 3 );
+		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		\add_action( 'webfinger_user_data', array( self::class, 'add_webfinger_discovery' ), 10, 3 );
 	}
 
 	/**
@@ -27,7 +30,7 @@ class Webfinger {
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Webfinger', 'webfinger' ),
+					'callback'            => array( self::class, 'webfinger' ),
 					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),
@@ -45,22 +48,23 @@ class Webfinger {
 		$resource = $request->get_param( 'resource' );
 
 		if ( \strpos( $resource, '@' ) === false ) {
-			return new \WP_Error( 'activitypub_unsupported_resource', \__( 'Resource is invalid', 'activitypub' ), array( 'status' => 400 ) );
+			return new WP_Error( 'activitypub_unsupported_resource', \__( 'Resource is invalid', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		$resource = \str_replace( 'acct:', '', $resource );
 
 		$resource_identifier = \substr( $resource, 0, \strrpos( $resource, '@' ) );
-		$resource_host = \substr( \strrchr( $resource, '@' ), 1 );
+		$resource_host = \str_replace( 'www.', '', \substr( \strrchr( $resource, '@' ), 1 ) );
+		$blog_host = \str_replace( 'www.', '', \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
 
-		if ( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) !== $resource_host ) {
-			return new \WP_Error( 'activitypub_wrong_host', \__( 'Resource host does not match blog host', 'activitypub' ), array( 'status' => 404 ) );
+		if ( $blog_host !== $resource_host ) {
+			return new WP_Error( 'activitypub_wrong_host', \__( 'Resource host does not match blog host', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$user = \get_user_by( 'login', \esc_sql( $resource_identifier ) );
 
-		if ( ! $user || ! user_can( $user, 'publish_posts' ) ) {
-			return new \WP_Error( 'activitypub_user_not_found', \__( 'User not found', 'activitypub' ), array( 'status' => 404 ) );
+		if ( ! $user || ! \user_can( $user, 'publish_posts' ) ) {
+			return new WP_Error( 'activitypub_user_not_found', \__( 'User not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$json = array(
@@ -82,7 +86,7 @@ class Webfinger {
 			),
 		);
 
-		return new \WP_REST_Response( $json, 200 );
+		return new WP_REST_Response( $json, 200 );
 	}
 
 	/**

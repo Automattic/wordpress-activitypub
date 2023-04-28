@@ -14,19 +14,19 @@ class Health_Check {
 	 * @return void
 	 */
 	public static function init() {
-		\add_filter( 'site_status_tests', array( '\Activitypub\Health_Check', 'add_tests' ) );
-		\add_filter( 'debug_information', array( '\Activitypub\Health_Check', 'debug_information' ) );
+		\add_filter( 'site_status_tests', array( self::class, 'add_tests' ) );
+		\add_filter( 'debug_information', array( self::class, 'debug_information' ) );
 	}
 
 	public static function add_tests( $tests ) {
 		$tests['direct']['activitypub_test_author_url'] = array(
 			'label' => \__( 'Author URL test', 'activitypub' ),
-			'test'  => array( '\Activitypub\Health_Check', 'test_author_url' ),
+			'test'  => array( self::class, 'test_author_url' ),
 		);
 
 		$tests['direct']['activitypub_test_webfinger'] = array(
 			'label' => __( 'WebFinger Test', 'activitypub' ),
-			'test'  => array( '\Activitypub\Health_Check', 'test_webfinger' ),
+			'test'  => array( self::class, 'test_webfinger' ),
 		);
 
 		return $tests;
@@ -35,7 +35,7 @@ class Health_Check {
 	/**
 	 * Author URL tests
 	 *
-	 * @return void
+	 * @return array
 	 */
 	public static function test_author_url() {
 		$result = array(
@@ -73,7 +73,7 @@ class Health_Check {
 	/**
 	 * WebFinger tests
 	 *
-	 * @return void
+	 * @return array
 	 */
 	public static function test_webfinger() {
 		$result = array(
@@ -85,7 +85,7 @@ class Health_Check {
 			),
 			'description' => \sprintf(
 				'<p>%s</p>',
-				\__( 'Your WebFinger endpoint is accessible and returns the correct informations.', 'activitypub' )
+				\__( 'Your WebFinger endpoint is accessible and returns the correct information.', 'activitypub' )
 			),
 			'actions'     => '',
 			'test'        => 'test_webfinger',
@@ -109,9 +109,9 @@ class Health_Check {
 	}
 
 	/**
-	 * Check if `author_posts_url` is accessible and that requerst returns correct JSON
+	 * Check if `author_posts_url` is accessible and that request returns correct JSON
 	 *
-	 * @return boolean|WP_Error
+	 * @return boolean|\WP_Error
 	 */
 	public static function is_author_url_accessible() {
 		$user = \wp_get_current_user();
@@ -194,9 +194,9 @@ class Health_Check {
 	}
 
 	/**
-	 * Check if WebFinger endoint is accessible and profile requerst returns correct JSON
+	 * Check if WebFinger endpoint is accessible and profile request returns correct JSON
 	 *
-	 * @return boolean|WP_Error
+	 * @return boolean|\WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
 		$user    = \wp_get_current_user();
@@ -272,7 +272,7 @@ class Health_Check {
 	 * Static function for generating site debug data when required.
 	 *
 	 * @param array $info The debug information to be added to the core information page.
-	 * @return array The filtered informations
+	 * @return array The filtered information
 	 */
 	public static function debug_information( $info ) {
 		$info['activitypub'] = array(

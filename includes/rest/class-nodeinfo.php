@@ -13,9 +13,9 @@ class Nodeinfo {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( '\Activitypub\Rest\Nodeinfo', 'register_routes' ) );
-		\add_filter( 'nodeinfo_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo_discovery' ), 10, 2 );
-		\add_filter( 'nodeinfo2_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo2_discovery' ), 10 );
+		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		\add_filter( 'nodeinfo_data', array( self::class, 'add_nodeinfo_discovery' ), 10, 2 );
+		\add_filter( 'nodeinfo2_data', array( self::class, 'add_nodeinfo2_discovery' ), 10 );
 	}
 
 	/**
@@ -28,7 +28,7 @@ class Nodeinfo {
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Nodeinfo', 'discovery' ),
+					'callback'            => array( self::class, 'discovery' ),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -40,7 +40,7 @@ class Nodeinfo {
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Nodeinfo', 'nodeinfo' ),
+					'callback'            => array( self::class, 'nodeinfo' ),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -52,7 +52,7 @@ class Nodeinfo {
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Nodeinfo', 'nodeinfo2' ),
+					'callback'            => array( self::class, 'nodeinfo2' ),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -75,13 +75,24 @@ class Nodeinfo {
 			'version' => \get_bloginfo( 'version' ),
 		);
 
-		$users = \count_users();
+		$users = \get_users(
+			array(
+				'capability__in' => array( 'publish_posts' ),
+			)
+		);
+
+		if ( is_array( $users ) ) {
+			$users = count( $users );
+		} else {
+			$users = 1;
+		}
+
 		$posts = \wp_count_posts();
 		$comments = \wp_count_comments();
 
 		$nodeinfo['usage'] = array(
 			'users' => array(
-				'total' => (int) $users['total_users'],
+				'total' => $users,
 			),
 			'localPosts' => (int) $posts->publish,
 			'localComments' => (int) $comments->approved,

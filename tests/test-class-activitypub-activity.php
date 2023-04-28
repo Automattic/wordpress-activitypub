@@ -19,10 +19,10 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 
 		$activitypub_post = new \Activitypub\Model\Post( $post );
 
-		$activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_FULL );
+		$activitypub_activity = new \Activitypub\Model\Activity( 'Create' );
 		$activitypub_activity->from_post( $activitypub_post );
 
-		$this->assertContains( \get_rest_url( null, '/activitypub/1.0/users/1/followers' ), $activitypub_activity->get_cc() );
+		$this->assertContains( \get_rest_url( null, '/activitypub/1.0/users/1/followers' ), $activitypub_activity->get_to() );
 		$this->assertContains( 'https://example.com/alex', $activitypub_activity->get_cc() );
 
 		remove_all_filters( 'activitypub_extract_mentions' );

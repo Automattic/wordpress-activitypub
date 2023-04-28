@@ -11,8 +11,8 @@ class Mention {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_filter( 'the_content', array( '\Activitypub\Mention', 'the_content' ), 99, 2 );
-		\add_filter( 'activitypub_extract_mentions', array( '\Activitypub\Mention', 'extract_mentions' ), 99, 2 );
+		\add_filter( 'the_content', array( self::class, 'the_content' ), 99, 2 );
+		\add_filter( 'activitypub_extract_mentions', array( self::class, 'extract_mentions' ), 99, 2 );
 	}
 
 	/**
@@ -46,7 +46,13 @@ class Mention {
 			$the_content
 		);
 
-		$the_content = \preg_replace_callback( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', array( '\Activitypub\Mention', 'replace_with_links' ), $the_content );
+		$the_content = preg_replace_callback(
+			'#<img.*?[^>]+>#i',
+			$protect,
+			$the_content
+		);
+
+		$the_content = \preg_replace_callback( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', array( self::class, 'replace_with_links' ), $the_content );
 
 		$the_content = str_replace( array_reverse( array_keys( $protected_tags ) ), array_reverse( array_values( $protected_tags ) ), $the_content );
 
