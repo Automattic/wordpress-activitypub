@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub;
 
+use Activitypub\Model\Post;
+
 /**
  * ActivityPub Admin Class
  *
@@ -14,6 +16,7 @@ class Admin {
 		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
 		\add_action( 'show_user_profile', array( self::class, 'add_fediverse_profile' ) );
+		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 	}
 
@@ -50,9 +53,9 @@ class Admin {
 
 		switch ( $tab ) {
 			case 'settings':
-				\Activitypub\Model\Post::upgrade_post_content_template();
+				Post::upgrade_post_content_template();
 
-				\load_template( \dirname( __FILE__ ) . '/../templates/settings.php' );
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php' );
 				break;
 			case 'welcome':
 			default:
@@ -60,7 +63,7 @@ class Admin {
 				add_thickbox();
 				wp_enqueue_script( 'updates' );
 
-				\load_template( \dirname( __FILE__ ) . '/../templates/welcome.php' );
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/welcome.php' );
 				break;
 		}
 	}
@@ -69,7 +72,7 @@ class Admin {
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {
-		\load_template( \dirname( __FILE__ ) . '/../templates/followers-list.php' );
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php' );
 	}
 
 	/**
@@ -145,7 +148,7 @@ class Admin {
 	}
 
 	public static function add_settings_help_tab() {
-		require_once \dirname( __FILE__ ) . '/help.php';
+		require_once ACTIVITYPUB_PLUGIN_DIR . 'includes/help.php';
 	}
 
 	public static function add_followers_list_help_tab() {
@@ -153,10 +156,25 @@ class Admin {
 	}
 
 	public static function add_fediverse_profile( $user ) {
-		?>
-		<h2 id="activitypub"><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h2>
-		<?php
-		\Activitypub\get_identifier_settings( $user->ID );
+		$description = get_user_meta( $user->ID, ACTIVITYPUB_USER_DESCRIPTION_KEY, true );
+
+		\load_template(
+			ACTIVITYPUB_PLUGIN_DIR . 'templates/user-settings.php',
+			true,
+			array(
+				'description' => $description,
+			)
+		);
+	}
+
+	public static function save_user_description( $user_id ) {
+		if ( isset( $_REQUEST['_apnonce'] ) && ! wp_verify_nonce( $_REQUEST['_apnonce'], 'activitypub-user-description' ) ) {
+			return false;
+		}
+		if ( ! current_user_can( 'edit_user', $user_id ) ) {
+			return false;
+		}
+		update_user_meta( $user_id, ACTIVITYPUB_USER_DESCRIPTION_KEY, sanitize_text_field( $_POST['activitypub-user-description'] ) );
 	}
 
 	public static function enqueue_scripts( $hook_suffix ) {
