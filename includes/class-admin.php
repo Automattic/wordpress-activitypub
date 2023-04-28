@@ -14,7 +14,7 @@ class Admin {
 		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
 		\add_action( 'show_user_profile', array( self::class, 'add_fediverse_profile' ) );
-    \add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
+		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 	}
 
