@@ -197,3 +197,17 @@ function url_to_authorid( $url ) {
 
 	return 0;
 }
+
+/**
+ * Return the custom Activity Pub description, if set, or default author description.
+ *
+ * @param int $user_id The user ID.
+ * @return string
+ */
+function get_author_description( $user_id ) {
+	$description = get_user_meta( $user_id, ACTIVITYPUB_USER_DESCRIPTION_KEY, true );
+	if ( empty( $description ) ) {
+		$description = get_user_meta( $user_id, 'description', true );
+	}
+	return $description;
+}

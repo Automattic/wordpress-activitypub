@@ -29,6 +29,13 @@ class Post {
 	private $id;
 
 	/**
+	 * The Object URL.
+	 *
+	 * @var string
+	 */
+	private $url;
+
+	/**
 	 * The Object Summary.
 	 *
 	 * @var string
@@ -179,6 +186,7 @@ class Post {
 
 		$array = array(
 			'id' => $this->get_id(),
+			'url' => $this->get_url(),
 			'type' => $this->get_object_type(),
 			'published' => \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date_gmt ) ),
 			'attributedTo' => \get_author_posts_url( $post->post_author ),
@@ -207,13 +215,13 @@ class Post {
 	}
 
 	/**
-	 * Returns the ID of an Activity Object
+	 * Returns the URL of an Activity Object
 	 *
 	 * @return string
 	 */
-	public function get_id() {
-		if ( $this->id ) {
-			return $this->id;
+	public function get_url() {
+		if ( $this->url ) {
+			return $this->url;
 		}
 
 		$post = $this->post;
@@ -224,9 +232,24 @@ class Post {
 			$permalink = \get_permalink( $post );
 		}
 
-		$this->id = $permalink;
+		$this->url = $permalink;
 
 		return $permalink;
+	}
+
+	/**
+	 * Returns the ID of an Activity Object
+	 *
+	 * @return string
+	 */
+	public function get_id() {
+		if ( $this->id ) {
+			return $this->id;
+		}
+
+		$this->id = $this->get_url();
+
+		return $this->id;
 	}
 
 	/**
@@ -283,7 +306,32 @@ class Post {
 		// get URLs for each image
 		foreach ( $image_ids as $id ) {
 			$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
+
+			/**
+			 * If you use the Jetpack plugin and its Image CDN, aka Photon,
+			 * the image strings returned will use the Photon URL.
+			 * We don't want that since Fediverse instances already do caching on their end.
+			 * Let the CDN only be used for visitors of the site.
+			 *
+			 * Old versions of Jetpack used the Jetpack_Photon class to do this.
+			 * New versions use the Image_CDN class.
+			 * Let's handle both.
+			 */
+			if ( \class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN' ) ) {
+				\remove_filter( 'image_downsize', array( \Automattic\Jetpack\Image_CDN\Image_CDN::instance(), 'filter_image_downsize' ) );
+			} elseif ( \class_exists( 'Jetpack_Photon' ) ) {
+				\remove_filter( 'image_downsize', array( \Jetpack_Photon::instance(), 'filter_image_downsize' ) );
+			}
+
 			$thumbnail = \wp_get_attachment_image_src( $id, 'full' );
+
+			// Re-enable Photon now that the image URL has been built.
+			if ( \class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN' ) ) {
+				\add_filter( 'image_downsize', array( \Automattic\Jetpack\Image_CDN\Image_CDN::instance(), 'filter_image_downsize' ), 10, 3 );
+			} elseif ( \class_exists( 'Jetpack_Photon' ) ) {
+				\add_filter( 'image_downsize', array( \Jetpack_Photon::instance(), 'filter_image_downsize' ), 10, 3 );
+			}
+
 			$mimetype = \get_post_mime_type( $id );
 
 			if ( $thumbnail ) {

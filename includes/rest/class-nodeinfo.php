@@ -75,13 +75,24 @@ class Nodeinfo {
 			'version' => \get_bloginfo( 'version' ),
 		);
 
-		$users = \count_users();
+		$users = \get_users(
+			array(
+				'capability__in' => array( 'publish_posts' ),
+			)
+		);
+
+		if ( is_array( $users ) ) {
+			$users = count( $users );
+		} else {
+			$users = 1;
+		}
+
 		$posts = \wp_count_posts();
 		$comments = \wp_count_comments();
 
 		$nodeinfo['usage'] = array(
 			'users' => array(
-				'total' => (int) $users['total_users'],
+				'total' => $users,
 			),
 			'localPosts' => (int) $posts->publish,
 			'localComments' => (int) $comments->approved,

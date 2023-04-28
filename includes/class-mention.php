@@ -48,6 +48,12 @@ class Mention {
 			$the_content
 		);
 
+		$the_content = preg_replace_callback(
+			'#<img.*?[^>]+>#i',
+			$protect,
+			$the_content
+		);
+
 		$the_content = \preg_replace_callback( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', array( self::class, 'replace_with_links' ), $the_content );
 
 		$the_content = str_replace( array_reverse( array_keys( $protected_tags ) ), array_reverse( array_values( $protected_tags ) ), $the_content );
