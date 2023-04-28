@@ -60,7 +60,7 @@ class Migration {
 	 */
 	public static function migrate_to_1_0_0() {
 		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
-			$followes = get_user_meta( $user_id, 'activitypub_followers', true );
+			$followers = get_user_meta( $user_id, 'activitypub_followers', true );
 
 			if ( $followes ) {
 				foreach ( $followes as $follower ) {
