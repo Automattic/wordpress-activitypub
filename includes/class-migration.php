@@ -62,8 +62,8 @@ class Migration {
 		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
 			$followers = get_user_meta( $user_id, 'activitypub_followers', true );
 
-			if ( $followes ) {
-				foreach ( $followes as $follower ) {
+			if ( $followers ) {
+				foreach ( $followers as $follower ) {
 					Collection\Followers::add_follower( $user_id, $follower );
 				}
 			}
