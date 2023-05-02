@@ -19,7 +19,6 @@ class Inbox {
 	 */
 	public static function init() {
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
-		\add_filter( 'rest_pre_serve_request', array( self::class, 'serve_request' ), 11, 4 );
 		\add_action( 'activitypub_inbox_follow', array( self::class, 'handle_follow' ), 10, 2 );
 		\add_action( 'activitypub_inbox_undo', array( self::class, 'handle_unfollow' ), 10, 2 );
 		//\add_action( 'activitypub_inbox_like', array( self::class, 'handle_reaction' ), 10, 2 );
@@ -62,24 +61,6 @@ class Inbox {
 				),
 			)
 		);
-	}
-
-	/**
-	 * Hooks into the REST API request to verify the signature.
-	 *
-	 * @param bool                      $served  Whether the request has already been served.
-	 * @param WP_HTTP_ResponseInterface $result  Result to send to the client. Usually a WP_REST_Response.
-	 * @param WP_REST_Request           $request Request used to generate the response.
-	 * @param WP_REST_Server            $server  Server instance.
-	 *
-	 * @return true
-	 */
-	public static function serve_request( $served, $result, $request, $server ) {
-		if ( '/activitypub' !== \substr( $request->get_route(), 0, 12 ) ) {
-			return $served;
-		}
-
-		return $served;
 	}
 
 	/**
