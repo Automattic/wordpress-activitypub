@@ -54,8 +54,6 @@ class Admin {
 
 		switch ( $tab ) {
 			case 'settings':
-				Post::upgrade_post_content_template();
-
 				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php' );
 				break;
 			case 'welcome':
