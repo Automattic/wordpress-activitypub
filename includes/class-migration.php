@@ -52,7 +52,7 @@ class Migration {
 	 *
 	 * @return void
 	 */
-	public static function migrate_from_0_17() {
+	private static function migrate_from_0_17() {
 		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
 			$followers = get_user_meta( $user_id, 'activitypub_followers', true );
 
@@ -69,7 +69,7 @@ class Migration {
 	 *
 	 * @return void
 	 */
-	public static function migrate_from_0_16() {
+	private static function migrate_from_0_16() {
 		// Get the custom template.
 		$old_content = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
 
