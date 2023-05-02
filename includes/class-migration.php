@@ -7,7 +7,7 @@ class Migration {
 	}
 
 	public static function get_target_version() {
-		return plugin_version();
+		return get_plugin_version();
 	}
 
 	public static function get_version() {
