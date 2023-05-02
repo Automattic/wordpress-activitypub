@@ -211,3 +211,24 @@ function get_author_description( $user_id ) {
 	}
 	return $description;
 }
+
+/**
+ * Check for Tombstone Objects
+ *
+ * @see https://www.w3.org/TR/activitypub/#delete-activity-outbox
+ *
+ * @param WP_Error $wp_error A WP_Error-Response of an HTTP-Request
+ *
+ * @return boolean true if HTTP-Code is 410 or 404
+ */
+function is_tombstone( $wp_error ) {
+	if ( ! is_wp_error( $wp_error ) ) {
+		return false;
+	}
+
+	if ( in_array( (int) $wp_error->get_error_code(), array( 404, 410 ), true ) ) {
+		return true;
+	}
+
+	return false;
+}

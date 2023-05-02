@@ -9,8 +9,7 @@ use Activitypub\Webfinger;
 use Activitypub\Model\Activity;
 use Activitypub\Model\Follower;
 
-use function Activitypub\safe_remote_get;
-use function Activitypub\safe_remote_post;
+use function Activitypub\is_tombstone;
 use function Activitypub\get_remote_metadata_by_actor;
 
 /**
@@ -152,6 +151,22 @@ class Followers {
 			)
 		);
 
+		register_term_meta(
+			self::TAXONOMY,
+			'errors',
+			array(
+				'type'              => 'string',
+				'single'            => false,
+				'sanitize_callback' => function( $value ) {
+					if ( ! is_string( $value ) ) {
+						throw new Exception( 'Error message is no valid string' );
+					}
+
+					return esc_sql( $value );
+				},
+			)
+		);
+
 		do_action( 'activitypub_after_register_taxonomy' );
 	}
 
@@ -197,12 +212,16 @@ class Followers {
 	public static function add_follower( $user_id, $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
 
-		if ( ! $meta || is_wp_error( $meta ) || ! is_array( $meta ) ) {
-			return $meta;
+		$follower = new Follower( $actor );
+
+		if ( is_tombstone( $meta ) ) {
+			return;
+		} if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
+			$follower->set_error( $meta );
+		} else {
+			$follower->from_meta( $meta );
 		}
 
-		$follower = new Follower( $actor );
-		$follower->from_meta( $meta );
 		$follower->upsert();
 
 		$result = wp_set_object_terms( $user_id, $follower->get_actor(), self::TAXONOMY, true );
@@ -299,18 +318,28 @@ class Followers {
 	 *
 	 * @return array The Term list of Followers, the format depends on $output
 	 */
-	public static function get_followers( $user_id, $output = ARRAY_N, $number = null, $offset = null ) {
-		$terms = new WP_Term_Query(
-			array(
-				'taxonomy'   => self::TAXONOMY,
-				'hide_empty' => false,
-				'object_ids' => $user_id,
-				'number'     => $number,
-				'offset'     => $offset,
-				'orderby'    => 'id',
-				'order'      => 'ASC',
-			)
+	public static function get_followers( $user_id, $output = ARRAY_N, $number = null, $offset = null, $hide_errors = false, $args = array() ) {
+		$defaults = array(
+			'taxonomy'   => self::TAXONOMY,
+			'hide_empty' => false,
+			'object_ids' => $user_id,
+			'number'     => $number,
+			'offset'     => $offset,
+			'orderby'    => 'id',
+			'order'      => 'ASC',
 		);
+
+		if ( true === $hide_errors ) {
+			$defaults['meta_query'] = array(
+				array(
+					'key' => 'errors',
+					'compare' => 'NOT EXISTS',
+				),
+			);
+		}
+
+		$args  = wp_parse_args( $args, $defaults );
+		$terms = new WP_Term_Query( $args );
 
 		$items = array();
 
@@ -358,6 +387,12 @@ class Followers {
 				'hide_empty' => false,
 				'object_ids' => $user_id,
 				'fields'     => 'ids',
+				'meta_query' => array(
+					array(
+						'key'     => 'inbox',
+						'compare' => 'EXISTS',
+					),
+				),
 			)
 		);
 

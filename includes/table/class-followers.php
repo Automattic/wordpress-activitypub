@@ -11,11 +11,13 @@ if ( ! \class_exists( '\WP_List_Table' ) ) {
 class Followers extends WP_List_Table {
 	public function get_columns() {
 		return array(
-			'cb'         => '<input type="checkbox" />',
-			'avatar'     => \__( 'Avatar', 'activitypub' ),
-			'name'       => \__( 'Name', 'activitypub' ),
-			'username'   => \__( 'Username', 'activitypub' ),
-			'identifier' => \__( 'Identifier', 'activitypub' ),
+			'cb'           => '<input type="checkbox" />',
+			'avatar'       => \__( 'Avatar', 'activitypub' ),
+			'name'         => \__( 'Name', 'activitypub' ),
+			'username'     => \__( 'Username', 'activitypub' ),
+			'identifier'   => \__( 'Identifier', 'activitypub' ),
+			'errors'       => \__( 'Errors', 'activitypub' ),
+			'latest-error' => \__( 'Latest Error Message', 'activitypub' ),
 		);
 	}
 
@@ -47,10 +49,12 @@ class Followers extends WP_List_Table {
 
 		foreach ( $follower as $follower ) {
 			$item = array(
-				'avatar'     => esc_attr( $follower->get_avatar() ),
-				'name'       => esc_attr( $follower->get_name() ),
-				'username'   => esc_attr( $follower->get_username() ),
-				'identifier' => esc_attr( $follower->get_actor() ),
+				'avatar'       => esc_attr( $follower->get_avatar() ),
+				'name'         => esc_attr( $follower->get_name() ),
+				'username'     => esc_attr( $follower->get_username() ),
+				'identifier'   => esc_attr( $follower->get_actor() ),
+				'errors'       => $follower->count_errors(),
+				'latest-error' => $follower->get_latest_error_message(),
 			);
 
 			$this->items[] = $item;

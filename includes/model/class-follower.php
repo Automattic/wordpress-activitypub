@@ -93,6 +93,22 @@ class Follower {
 	private $meta;
 
 	/**
+	 * The latest received error.
+	 *
+	 * This will only temporary and will saved to $this->errors
+	 *
+	 * @var string
+	 */
+	private $error;
+
+	/**
+	 * A list of errors
+	 *
+	 * @var array
+	 */
+	private $errors;
+
+	/**
 	 * Maps the meta fields to the local db fields
 	 *
 	 * @var array
@@ -185,10 +201,39 @@ class Follower {
 		return null;
 	}
 
+	public function get_errors() {
+		if ( $this->errors ) {
+			return $this->errors;
+		}
+
+		$this->errors = get_term_meta( $this->id, 'errors' );
+		return $this->errors;
+	}
+
+	public function count_errors() {
+		$errors = $this->get_errors();
+
+		if ( is_array( $errors ) && ! empty( $errors ) ) {
+			return count( $errors );
+		}
+
+		return 0;
+	}
+
+	public function get_latest_error_message() {
+		$errors = $this->get_errors();
+
+		if ( is_array( $errors ) && ! empty( $errors ) ) {
+			return reset( $errors );
+		}
+
+		return '';
+	}
+
 	public function get_meta_by( $attribute ) {
 		$meta = $this->get_meta();
 
-		// try mapped data ($this->map_meta)
+		// try mapped data (see $this->map_meta)
 		foreach ( $this->map_meta as $remote => $local ) {
 			if ( $attribute === $local && isset( $meta[ $remote ] ) ) {
 				return $meta[ $remote ];
@@ -251,8 +296,21 @@ class Follower {
 
 		foreach ( $attributes as $attribute ) {
 			if ( $this->get( $attribute ) ) {
-				update_term_meta( $this->id, $attribute, $this->get( $attribute ), true );
+				update_term_meta( $this->id, $attribute, $this->get( $attribute ) );
 			}
 		}
+
+		if ( $this->error ) {
+			if ( is_string( $this->error ) ) {
+				$error = $this->error;
+			} elseif ( is_wp_error( $this->error ) ) {
+				$error = $this->error->get_error_message();
+			} else {
+				$error = __( 'Unknown Error or misconfigured Error-Message', 'activitypub' );
+			}
+
+			add_term_meta( $this->id, 'errors', $error );
+		}
+
 	}
 }
