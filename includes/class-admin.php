@@ -142,6 +142,15 @@ class Admin {
 				'default'      => array( 'post', 'pages' ),
 			)
 		);
+		\register_setting(
+			'activitypub',
+			'activitypub_use_secure_mode',
+			array(
+				'type' => 'boolean',
+				'description' => \__( 'Secure mode allows blocking servers from fetching public activities', 'activitypub' ),
+				'default' => 0,
+			)
+		);
 	}
 
 	public static function add_settings_help_tab() {

@@ -171,6 +171,21 @@
 			</tbody>
 		</table>
 
+		<table class="form-table">
+			<tbody>
+				<tr>
+					<th scope="row">
+						<?php \esc_html_e( 'Secure Mode', 'activitypub' ); ?>
+					</th>
+					<td>
+						<p>
+							<label><input type="checkbox" name="activitypub_use_secure_mode" id="activitypub_use_secure_mode" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_secure_mode', '0' ) ); ?> /> <?php echo wp_kses( \__( 'In secure mode every ActivityPub request must be signed. This disallows anonymous requests and prevents serving content to servers listed in the Blocklist.', 'activitypub' ), 'default' ); ?></label>
+						</p>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
 		<?php \do_settings_fields( 'activitypub', 'server' ); ?>
 
 		<?php \do_settings_sections( 'activitypub' ); ?>

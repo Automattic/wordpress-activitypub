@@ -115,6 +115,7 @@ class Inbox {
 	 * @return WP_REST_Response
 	 */
 	public static function user_inbox_post( $request ) {
+
 		$user_id = $request->get_param( 'user_id' );
 
 		$data = $request->get_params();
@@ -135,6 +136,7 @@ class Inbox {
 	 * @return WP_REST_Response
 	 */
 	public static function shared_inbox_post( $request ) {
+
 		$data = $request->get_params();
 		$type = $request->get_param( 'type' );
 		$users = self::extract_recipients( $data );
@@ -214,16 +216,6 @@ class Inbox {
 			'sanitize_callback' => 'esc_url_raw',
 		);
 
-		$params['signature'] = array(
-			'required' => true,
-			'validate_callback' => function( $param, $request, $key ) {
-				if ( ! Signature::verify_http_signature( $request ) ) {
-					return false; // returns http 400 rest_invalid_param
-				}
-				return $param;
-			},
-		);
-
 		$params['actor'] = array(
 			'required' => true,
 			'sanitize_callback' => function( $param, $request, $key ) {
@@ -266,12 +258,6 @@ class Inbox {
 			'required' => true,
 			'type' => 'string',
 			'sanitize_callback' => 'esc_url_raw',
-			'validate_callback' => function( $param, $request, $key ) {
-				if ( ! Signature::verify_http_signature( $request ) ) {
-					return false;
-				}
-				return $param;
-			},
 		);
 
 		$params['actor'] = array(

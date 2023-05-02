@@ -110,14 +110,23 @@ class Signature {
 		}
 	}
 
+	/**
+	 * Verifies the http signatures
+	 *
+	 * @param WP_REQUEST | Array $request
+	 * @return void
+	 * @author Django Doucet
+	 */
 	public static function verify_http_signature( $request ) {
 		$headers = $request->get_headers();
-		$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '';
-		$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' /wp-json' . $request->get_route();
 
 		if ( ! $headers ) {
-			$headers = self::default_server_headers();
+			return new \WP_Error( 'activitypub_signature', 'Request not signed', array( 'status' => 403 ) );
 		}
+
+		$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '';
+		$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' /' . rest_get_url_prefix() . $request->get_route();
+
 		if ( array_key_exists( 'signature', $headers ) ) {
 			$signature_block = self::parse_signature_header( $headers['signature'] );
 		} elseif ( array_key_exists( 'authorization', $headers ) ) {
@@ -125,7 +134,7 @@ class Signature {
 		}
 
 		if ( ! isset( $signature_block ) || ! $signature_block ) {
-			return false;
+			return new \WP_Error( 'activitypub_signature', 'Incompatible request signature. keyId and signature are required', array( 'status' => 403 ) );
 		}
 
 		$signed_headers = $signature_block['headers'];
@@ -135,12 +144,12 @@ class Signature {
 
 		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
 		if ( ! $signed_data ) {
-			return false;
+			return new \WP_Error( 'activitypub_signature', 'Signed request date outside acceptable time window', array( 'status' => 403 ) );
 		}
 
 		$algorithm = self::get_signature_algorithm( $signature_block );
 		if ( ! $algorithm ) {
-			return false;
+			return new \WP_Error( 'activitypub_signature', 'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)', array( 'status' => 403 ) );
 		}
 
 		if ( \in_array( 'digest', $signed_headers, true ) && isset( $body ) ) {
@@ -156,41 +165,49 @@ class Signature {
 			}
 
 			if ( \base64_encode( \hash( $hashalg, $body, true ) ) !== $digest[1] ) { // phpcs:ignore
-				return false;
+				return new \WP_Error( 'activitypub_signature', 'Invalid Digest header', array( 'status' => 403 ) );
 			}
 		}
 
-		$public_key = \rtrim( \Activitypub\get_publickey_by_actor( $actor, $signature_block['keyId'] ) ); // phpcs:ignore
-
-		return \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
-
-	}
-
-	public static function default_server_headers() {
-		$headers = array(
-			'(request-target)' => strtolower( $_SERVER['REQUEST_METHOD'] ) . ' ' . $_SERVER['REQUEST_URI'],
-			'content-type' => $_SERVER['CONTENT_TYPE'],
-			'content-length' => $_SERVER['CONTENT_LENGTH'],
-		);
-		foreach ( $_SERVER as $k => $v ) {
-			if ( \strpos( $k, 'HTTP_' ) === 0 ) {
-				$field = \str_replace( '_', '-', \strtolower( \substr( $k, 5 ) ) );
-				$headers[ $field ] = $v;
-			}
+		$public_key = \Activitypub\get_publickey_by_actor( $actor, $signature_block['keyId'] ); // phpcs:ignore
+		if ( \is_wp_error( $public_key ) ) {
+			return $public_key;
+		} else {
+			$public_key = \rtrim( $public_key );
 		}
-		return $headers;
+		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
+		if ( ! $verified ) {
+			return new \WP_Error( 'activitypub_signature', 'Invalid signature', array( 'status' => 403 ) ); // phpcs:ignore null coalescing operator
+		}
+
 	}
 
+	/**
+	 * Gets the signature algorithm from the signature header
+	 *
+	 * @param array $signature_block
+	 * @return string algorithm
+	 * @author Django Doucet
+	 */
 	public static function get_signature_algorithm( $signature_block ) {
-		switch ( $signature_block['algorithm'] ) {
-			case 'rsa-sha-512':
-				return 'sha512';
-			default:
-				return 'sha256';
+		if ( $signature_block['algorithm'] ) {
+			switch ( $signature_block['algorithm'] ) {
+				case 'rsa-sha-512':
+					return 'sha512'; //hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12
+				default:
+					return 'sha256';
+			}
 		}
 		return false;
 	}
 
+	/**
+	 * Parses the Signature header
+	 *
+	 * @param array $header
+	 * @return array signature parts
+	 * @author Django Doucet <django.doucet@webdevstudios.com>
+	 */
 	public static function parse_signature_header( $header ) {
 		$ret = array();
 		$matches = array();
@@ -222,6 +239,15 @@ class Signature {
 		return $ret;
 	}
 
+	/**
+	 * Gets the header data from the included pseudo headers
+	 *
+	 * @param array $signed_headers
+	 * @param array $signature_block (pseudo-headers)
+	 * @param array $headers (original http headers)
+	 * @return signed headers for comparison
+	 * @author Django Doucet
+	 */
 	public static function get_signed_data( $signed_headers, $signature_block, $headers ) {
 		$signed_data = '';
 		// This also verifies time-based values by returning false if any of these are out of range.
