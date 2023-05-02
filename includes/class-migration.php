@@ -37,9 +37,11 @@ class Migration {
 
 		$version_from_db = self::get_version();
 
-		if ( version_compare( $version_from_db, '1.0.0', '<' ) ) {
-			self::migrate_from_0_17();
+		if ( version_compare( $version_from_db, '0.16.0', '<' ) ) {
 			self::migrate_from_0_16();
+		}
+		if ( version_compare( $version_from_db, '0.17.0', '<' ) ) {
+			self::migrate_from_0_17();
 		}
 
 		update_option( 'activitypub_db_version', self::get_target_version() );
