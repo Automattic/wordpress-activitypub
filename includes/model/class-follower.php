@@ -265,6 +265,7 @@ class Follower {
 			)
 		);
 
+		$this->updated_at = \strtotime( 'now' );
 		$this->update_term_meta();
 	}
 
