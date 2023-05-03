@@ -217,6 +217,7 @@ class Followers {
 		}
 
 		$follower = new Follower( $actor );
+		$follower->from_meta( $meta );
 		$follower->upsert();
 
 		$result = wp_set_object_terms( $user_id, $follower->get_actor(), self::TAXONOMY, true );
