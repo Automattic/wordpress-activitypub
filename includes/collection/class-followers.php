@@ -212,16 +212,11 @@ class Followers {
 	public static function add_follower( $user_id, $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
 
-		$follower = new Follower( $actor );
-
-		if ( is_tombstone( $meta ) ) {
-			return;
-		} if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-			$follower->set_error( $meta );
-		} else {
-			$follower->from_meta( $meta );
+		if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
+			return $meta;
 		}
 
+		$follower = new Follower( $actor );
 		$follower->upsert();
 
 		$result = wp_set_object_terms( $user_id, $follower->get_actor(), self::TAXONOMY, true );
@@ -285,9 +280,11 @@ class Followers {
 	 * @return void
 	 */
 	public static function send_follow_response( $actor, $object, $user_id, $follower ) {
-		//if ( is_wp_error( $follower ) ) {
-			// @todo send error message
-		//}
+		if ( is_wp_error( $follower ) ) {
+			// it is not even possible to send a "Reject" because
+			// we can not get the Remote-Inbox
+			return;
+		}
 
 		if ( isset( $object['user_id'] ) ) {
 			unset( $object['user_id'] );
@@ -318,7 +315,7 @@ class Followers {
 	 *
 	 * @return array The Term list of Followers, the format depends on $output
 	 */
-	public static function get_followers( $user_id, $output = ARRAY_N, $number = null, $offset = null, $hide_errors = false, $args = array() ) {
+	public static function get_followers( $user_id, $output = ARRAY_N, $number = null, $offset = null, $args = array() ) {
 		$defaults = array(
 			'taxonomy'   => self::TAXONOMY,
 			'hide_empty' => false,
@@ -328,15 +325,6 @@ class Followers {
 			'orderby'    => 'id',
 			'order'      => 'ASC',
 		);
-
-		if ( true === $hide_errors ) {
-			$defaults['meta_query'] = array(
-				array(
-					'key' => 'errors',
-					'compare' => 'NOT EXISTS',
-				),
-			);
-		}
 
 		$args  = wp_parse_args( $args, $defaults );
 		$terms = new WP_Term_Query( $args );
