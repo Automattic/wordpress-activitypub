@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub;
 
+use Acctivitypub\Model\Follower;
+
 class Migration {
 	public static function init() {
 		\add_action( 'activitypub_schedule_migration', array( self::class, 'maybe_migrate' ) );
@@ -58,7 +60,21 @@ class Migration {
 
 			if ( $followers ) {
 				foreach ( $followers as $follower ) {
-					Collection\Followers::add_follower( $user_id, $follower );
+					$meta = get_remote_metadata_by_actor( $actor );
+
+					$follower = new Follower( $actor );
+
+					if ( is_tombstone( $meta ) ) {
+						continue;
+					} if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
+						$follower->set_error( $meta );
+					} else {
+						$follower->from_meta( $meta );
+					}
+
+					$follower->upsert();
+
+					$result = wp_set_object_terms( $user_id, $follower->get_actor(), self::TAXONOMY, true );
 				}
 			}
 		}
