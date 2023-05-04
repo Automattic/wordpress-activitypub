@@ -194,7 +194,7 @@ class Post {
 			'inReplyTo' => null,
 			'content' => $this->get_content(),
 			'contentMap' => array(
-				\strstr( \get_locale(), '_', true ) => $this->get_content(),
+				\strtolower( \str_replace( '_', '-', \get_locale() ) ) => $this->get_content(),
 			),
 			'to' => $this->get_to(),
 			'cc' => $this->get_cc(),
