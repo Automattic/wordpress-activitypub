@@ -136,3 +136,38 @@ function enable_buddypress_features() {
 	Integration\Buddypress::init();
 }
 add_action( 'bp_include', '\Activitypub\enable_buddypress_features' );
+
+/**
+ * `get_plugin_data` wrapper
+ *
+ * @return array The plugin metadata array
+ */
+function get_plugin_meta( $default_headers = array() ) {
+	if ( ! $default_headers ) {
+		$default_headers = array(
+			'Name'        => 'Plugin Name',
+			'PluginURI'   => 'Plugin URI',
+			'Version'     => 'Version',
+			'Description' => 'Description',
+			'Author'      => 'Author',
+			'AuthorURI'   => 'Author URI',
+			'TextDomain'  => 'Text Domain',
+			'DomainPath'  => 'Domain Path',
+			'Network'     => 'Network',
+			'RequiresWP'  => 'Requires at least',
+			'RequiresPHP' => 'Requires PHP',
+			'UpdateURI'   => 'Update URI',
+		);
+	}
+
+	return \get_file_data( __FILE__, $default_headers, 'plugin' );
+}
+
+/**
+ * Plugin Version Number used for caching.
+ */
+function get_plugin_version() {
+	$meta = get_plugin_meta( array( 'Version' => 'Version' ) );
+
+	return $meta['Version'];
+}
