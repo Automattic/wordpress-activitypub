@@ -111,7 +111,7 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 == Changelog ==
 
-Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
 
 = Next =
 
