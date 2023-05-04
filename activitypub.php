@@ -81,7 +81,6 @@ require_once \dirname( __FILE__ ) . '/includes/functions.php';
 
 // load NodeInfo endpoints only if blog is public
 if ( true === (bool) \get_option( 'blog_public', 1 ) ) {
-	require_once \dirname( __FILE__ ) . '/includes/rest/class-nodeinfo.php';
 	Rest\NodeInfo::init();
 }
 
