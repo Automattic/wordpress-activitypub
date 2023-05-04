@@ -312,7 +312,7 @@ function url_to_authorid( $url ) {
  * @return string
  */
 function get_author_description( $user_id ) {
-	$description = get_user_meta( $user_id, ACTIVITYPUB_USER_DESCRIPTION_KEY, true );
+	$description = get_user_meta( $user_id, 'activitypub_user_description', true );
 	if ( empty( $description ) ) {
 		$description = get_user_meta( $user_id, 'description', true );
 	}

@@ -156,7 +156,7 @@ class Admin {
 	}
 
 	public static function add_fediverse_profile( $user ) {
-		$description = get_user_meta( $user->ID, ACTIVITYPUB_USER_DESCRIPTION_KEY, true );
+		$description = get_user_meta( $user->ID, 'activitypub_user_description', true );
 
 		\load_template(
 			ACTIVITYPUB_PLUGIN_DIR . 'templates/user-settings.php',
@@ -174,7 +174,7 @@ class Admin {
 		if ( ! current_user_can( 'edit_user', $user_id ) ) {
 			return false;
 		}
-		update_user_meta( $user_id, ACTIVITYPUB_USER_DESCRIPTION_KEY, sanitize_text_field( $_POST['activitypub-user-description'] ) );
+		update_user_meta( $user_id, 'activitypub_user_description', sanitize_text_field( $_POST['activitypub-user-description'] ) );
 	}
 
 	public static function enqueue_scripts( $hook_suffix ) {
