@@ -179,7 +179,7 @@ class Admin {
 		if ( ! current_user_can( 'edit_user', $user_id ) ) {
 			return false;
 		}
-		update_user_meta( $user_id, ACTIVITYPUB_USER_DESCRIPTION_KEY, sanitize_text_field( $_POST['activitypub-user-description'] ) );
+		update_user_meta( $user_id, 'activitypub_user_description', sanitize_text_field( $_POST['activitypub-user-description'] ) );
 	}
 
 	public static function enqueue_scripts( $hook_suffix ) {
