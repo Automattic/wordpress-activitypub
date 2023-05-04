@@ -25,6 +25,40 @@ class Activitypub {
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
 		\add_action( 'wp_trash_post', array( self::class, 'trash_post' ), 1 );
 		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
+
+		\add_action( 'init', array( self::class, 'add_rewrite_rules' ) );
+	}
+
+	/**
+	 * Activation Hook
+	 *
+	 * @return void
+	 */
+	public static function activate() {
+		self::flush_rewrite_rules();
+
+		if ( ! \wp_next_scheduled( 'activitypub_update_followers' ) ) {
+			\wp_schedule_event( time(), 'hourly', 'activitypub_update_followers' );
+		}
+	}
+
+	/**
+	 * Deactivation Hook
+	 *
+	 * @return void
+	 */
+	public static function deactivate() {
+		self::flush_rewrite_rules();
+
+		wp_unschedule_hook( 'activitypub_update_followers' );
+	}
+
+	/**
+	 * Uninstall Hook
+	 *
+	 * @return void
+	 */
+	public static function uninstall() {
 	}
 
 	/**
@@ -203,5 +237,29 @@ class Activitypub {
 	 */
 	public static function untrash_post( $post_id ) {
 		\delete_post_meta( $post_id, 'activitypub_canonical_url' );
+	}
+
+	/**
+	 * Add rewrite rules
+	 */
+	public static function add_rewrite_rules() {
+		if ( ! \class_exists( 'Webfinger' ) ) {
+			\add_rewrite_rule( '^.well-known/webfinger', 'index.php?rest_route=/activitypub/1.0/webfinger', 'top' );
+		}
+
+		if ( ! \class_exists( 'Nodeinfo' ) || (bool) \get_option( 'blog_public', 1 ) ) {
+			\add_rewrite_rule( '^.well-known/nodeinfo', 'index.php?rest_route=/activitypub/1.0/nodeinfo/discovery', 'top' );
+			\add_rewrite_rule( '^.well-known/x-nodeinfo2', 'index.php?rest_route=/activitypub/1.0/nodeinfo2', 'top' );
+		}
+
+		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
+	}
+
+	/**
+	 * Flush rewrite rules;
+	 */
+	public static function flush_rewrite_rules() {
+		self::add_rewrite_rules();
+		\flush_rewrite_rules();
 	}
 }
