@@ -15,7 +15,8 @@ class Admin {
 	public static function init() {
 		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
-		\add_action( 'show_user_profile', array( self::class, 'add_fediverse_profile' ) );
+		\add_action( 'admin_init', array( self::class, 'schedule_migration' ) );
+		\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
 		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 	}
@@ -53,8 +54,6 @@ class Admin {
 
 		switch ( $tab ) {
 			case 'settings':
-				Post::upgrade_post_content_template();
-
 				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php' );
 				break;
 			case 'welcome':
@@ -147,6 +146,12 @@ class Admin {
 		);
 	}
 
+	public static function schedule_migration() {
+		if ( ! \wp_next_scheduled( 'activitypub_schedule_migration' ) ) {
+			\wp_schedule_single_event( \time(), 'activitypub_schedule_migration' );
+		}
+	}
+
 	public static function add_settings_help_tab() {
 		require_once ACTIVITYPUB_PLUGIN_DIR . 'includes/help.php';
 	}
@@ -155,8 +160,8 @@ class Admin {
 		// todo
 	}
 
-	public static function add_fediverse_profile( $user ) {
-		$description = get_user_meta( $user->ID, 'activitypub_user_description', true );
+	public static function add_profile( $user ) {
+		$description = get_user_meta( $user->ID, ACTIVITYPUB_USER_DESCRIPTION_KEY, true );
 
 		\load_template(
 			ACTIVITYPUB_PLUGIN_DIR . 'templates/user-settings.php',

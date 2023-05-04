@@ -29,7 +29,10 @@ function init() {
 	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
 
-	require_once \dirname( __FILE__ ) . '/includes/table/followers-list.php';
+	\define( 'ACTIVITYPUB_OBJECT', 'ACTIVITYPUB_OBJECT' );
+
+	require_once \dirname( __FILE__ ) . '/includes/table/class-followers.php';
+	require_once \dirname( __FILE__ ) . '/includes/class-http.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-signature.php';
 	require_once \dirname( __FILE__ ) . '/includes/class-webfinger.php';
 	require_once \dirname( __FILE__ ) . '/includes/peer/class-followers.php';
@@ -37,12 +40,19 @@ function init() {
 
 	require_once \dirname( __FILE__ ) . '/includes/model/class-activity.php';
 	require_once \dirname( __FILE__ ) . '/includes/model/class-post.php';
+	require_once \dirname( __FILE__ ) . '/includes/model/class-follower.php';
+
+	require_once \dirname( __FILE__ ) . '/includes/class-migration.php';
+	Migration::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/class-activity-dispatcher.php';
 	Activity_Dispatcher::init();
 
 	require_once \dirname( __FILE__ ) . '/includes/class-activitypub.php';
 	Activitypub::init();
+
+	require_once \dirname( __FILE__ ) . '/includes/collection/class-followers.php';
+	Collection\Followers::init();
 
 	// Configure the REST API route
 	require_once \dirname( __FILE__ ) . '/includes/rest/class-outbox.php';
@@ -139,3 +149,38 @@ function enable_buddypress_features() {
 	Integration\Buddypress::init();
 }
 add_action( 'bp_include', '\Activitypub\enable_buddypress_features' );
+
+/**
+ * `get_plugin_data` wrapper
+ *
+ * @return array The plugin metadata array
+ */
+function get_plugin_meta( $default_headers = array() ) {
+	if ( ! $default_headers ) {
+		$default_headers = array(
+			'Name'        => 'Plugin Name',
+			'PluginURI'   => 'Plugin URI',
+			'Version'     => 'Version',
+			'Description' => 'Description',
+			'Author'      => 'Author',
+			'AuthorURI'   => 'Author URI',
+			'TextDomain'  => 'Text Domain',
+			'DomainPath'  => 'Domain Path',
+			'Network'     => 'Network',
+			'RequiresWP'  => 'Requires at least',
+			'RequiresPHP' => 'Requires PHP',
+			'UpdateURI'   => 'Update URI',
+		);
+	}
+
+	return \get_file_data( __FILE__, $default_headers, 'plugin' );
+}
+
+/**
+ * Plugin Version Number used for caching.
+ */
+function get_plugin_version() {
+	$meta = get_plugin_meta( array( 'Version' => 'Version' ) );
+
+	return $meta['Version'];
+}
