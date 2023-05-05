@@ -161,7 +161,7 @@ class Admin {
 	}
 
 	public static function add_profile( $user ) {
-		$description = get_user_meta( $user->ID, ACTIVITYPUB_USER_DESCRIPTION_KEY, true );
+		$description = get_user_meta( $user->ID, 'activitypub_user_description', true );
 
 		\load_template(
 			ACTIVITYPUB_PLUGIN_DIR . 'templates/user-settings.php',
