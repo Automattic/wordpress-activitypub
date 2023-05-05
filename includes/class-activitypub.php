@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub;
 
+use Activitypub\Signature;
+
 /**
  * ActivityPub Class
  *
@@ -66,23 +68,24 @@ class Activitypub {
 		}
 
 		$accept_header = $_SERVER['HTTP_ACCEPT'];
-
-		if (
-			\stristr( $accept_header, 'application/activity+json' ) ||
-			\stristr( $accept_header, 'application/ld+json' )
-		) {
-			return $json_template;
-		}
-
 		// Accept header as an array.
 		$accept = \explode( ',', \trim( $accept_header ) );
-
 		if (
+			\stristr( $accept_header, 'application/activity+json' ) ||
+			\stristr( $accept_header, 'application/ld+json' ) ||
 			\in_array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', $accept, true ) ||
 			\in_array( 'application/activity+json', $accept, true ) ||
 			\in_array( 'application/ld+json', $accept, true ) ||
 			\in_array( 'application/json', $accept, true )
 		) {
+			$secure_mode = \get_option( 'activitypub_use_secure_mode', '0' );
+			if ( $secure_mode ) {
+				$verification = Signature::verify_http_signature( $_SERVER );
+				if ( \is_wp_error( $verification ) ) {
+					// fallback as template_loader can't return http headers
+					return $template;
+				}
+			}
 			return $json_template;
 		}
 
