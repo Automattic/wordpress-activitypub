@@ -18,7 +18,6 @@ class Inbox {
 	 */
 	public static function init() {
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
-		\add_filter( 'rest_pre_serve_request', array( self::class, 'serve_request' ), 11, 4 );
 
 		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_create' ), 10, 2 );
 	}
