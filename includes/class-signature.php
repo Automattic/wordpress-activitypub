@@ -22,7 +22,7 @@ class Signature {
 		}
 
 		if ( -1 === $user_id ) {
-			$key = array( \get_option('activitypub_magic_sig_public_key' ) );
+			$key = array( \get_option( 'activitypub_magic_sig_public_key' ) );
 		} else {
 			$key = \get_user_meta( $user_id, 'magic_sig_public_key' );
 		}
@@ -41,7 +41,7 @@ class Signature {
 		}
 
 		if ( -1 === $user_id ) {
-			$key = \get_option('activitypub_magic_sig_private_key' );
+			$key = \get_option( 'activitypub_magic_sig_private_key' );
 		} else {
 			$key = \get_user_meta( $user_id, 'magic_sig_private_key' );
 		}
@@ -69,10 +69,10 @@ class Signature {
 
 		if ( -1 === $user_id ) {
 			// private key
-			\add_option('activitypub_magic_sig_private_key', $priv_key );
+			\add_option( 'activitypub_magic_sig_private_key', $priv_key );
 
 			// public key
-			\add_option('activitypub_magic_sig_public_key', $detail['key'] );
+			\add_option( 'activitypub_magic_sig_public_key', $detail['key'] );
 
 		} else {
 			// private key
@@ -127,19 +127,31 @@ class Signature {
 	/**
 	 * Verifies the http signatures
 	 *
-	 * @param WP_REQUEST | Array $request
+	 * @param WP_REQUEST | Array $_SERVER
 	 * @return void
 	 * @author Django Doucet
 	 */
 	public static function verify_http_signature( $request ) {
-		$headers = $request->get_headers();
-
-		if ( ! $headers ) {
-			return new \WP_Error( 'activitypub_signature', 'Request not signed', array( 'status' => 403 ) );
+		if ( is_object( $request ) ) { // REST Request object
+			$headers = $request->get_headers();
+			error_log( 'verify: $request: ' . print_r( $request, true ) );
+			$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '';
+			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' /wp-json' . $request->get_route();
+			error_log( 'request $headers: ' . print_r( $headers['(request-target)'], true ) );
+		} else {
+			$request = self::format_server_request( $request );
+			$headers = $request['headers']; // $_SERVER array
+			// error_log( print_r( $headers, true ) );
+			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
+			// $post = get_page_by_path( $headers['request_uri'], ARRAY_A );
+			// $actor = post['post_author'] ?? '';
+			$actor = '';
+			error_log( 'request $headers: ' . print_r( $headers, true ) );
 		}
 
-		$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '';
-		$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' /' . rest_get_url_prefix() . $request->get_route();
+		if ( ! isset( $headers['signature'] ) ) {
+			return new \WP_Error( 'activitypub_signature', 'Request not signed', array( 'status' => 403 ) );
+		}
 
 		if ( array_key_exists( 'signature', $headers ) ) {
 			$signature_block = self::parse_signature_header( $headers['signature'] );
@@ -183,7 +195,8 @@ class Signature {
 			}
 		}
 
-		$public_key = \Activitypub\get_publickey_by_actor( $actor, $signature_block['keyId'] ); // phpcs:ignore
+		strtok( $signature_block['keyId'], '?');
+		$public_key = \Activitypub\get_remote_metadata_by_actor( $signature_block['keyId'] ); // phpcs:ignore
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		} else {
@@ -191,9 +204,9 @@ class Signature {
 		}
 		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
 		if ( ! $verified ) {
-			return new \WP_Error( 'activitypub_signature', 'Invalid signature', array( 'status' => 403 ) ); // phpcs:ignore null coalescing operator
+			return new \WP_Error( 'activitypub_signature', 'Invalid signature', array( 'status' => 403 ) );
 		}
-
+		return $verified;
 	}
 
 	/**
@@ -220,7 +233,7 @@ class Signature {
 	 *
 	 * @param array $header
 	 * @return array signature parts
-	 * @author Django Doucet <django.doucet@webdevstudios.com>
+	 * @author Django Doucet
 	 */
 	public static function parse_signature_header( $header ) {
 		$ret = array();
@@ -258,7 +271,7 @@ class Signature {
 	 *
 	 * @param array $signed_headers
 	 * @param array $signature_block (pseudo-headers)
-	 * @param array $headers (original http headers)
+	 * @param array $headers (http headers)
 	 * @return signed headers for comparison
 	 * @author Django Doucet
 	 */
