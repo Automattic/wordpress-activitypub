@@ -36,8 +36,8 @@ function safe_remote_post( $url, $body, $user_id ) {
 	return \Activitypub\Http::post( $url, $body, $user_id );
 }
 
-function safe_remote_get( $url, $user_id ) {
-	return \Activitypub\Http::get( $url, $user_id );
+function safe_remote_get( $url ) {
+	return \Activitypub\Http::get( $url );
 }
 
 /**
@@ -88,21 +88,11 @@ function get_remote_metadata_by_actor( $actor ) {
 		return $metadata;
 	}
 
-	$user = \get_users(
-		array(
-			'number' => 1,
-			'capability__in' => array( 'publish_posts' ),
-			'fields' => 'ID',
-		)
-	);
-
-	// we just need any user to generate a request signature
-	$user_id = \reset( $user );
 	$short_timeout = function() {
 		return 3;
 	};
 	add_filter( 'activitypub_remote_get_timeout', $short_timeout );
-	$response = Http::get( $actor, $user_id );
+	$response = Http::get( $actor );
 	remove_filter( 'activitypub_remote_get_timeout', $short_timeout );
 	if ( \is_wp_error( $response ) ) {
 		\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.

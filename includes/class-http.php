@@ -60,9 +60,9 @@ class Http {
 	 *
 	 * @return array|WP_Error The GET Response or an WP_ERROR
 	 */
-	public static function get( $url, $user_id ) {
+	public static function get( $url ) {
 		$date = \gmdate( 'D, d M Y H:i:s T' );
-		$signature = Signature::generate_signature( $user_id, 'get', $url, $date );
+		$signature = Signature::generate_signature( -1, 'get', $url, $date );
 
 		$wp_version = \get_bloginfo( 'version' );
 		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );

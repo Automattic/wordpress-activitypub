@@ -35,14 +35,15 @@ class Signature {
 	 * @return mixed
 	 */
 	public static function get_private_key( $user_id, $force = false ) {
-		$key = \get_user_meta( $user_id, 'magic_sig_private_key' );
-
-		if ( $key && ! $force ) {
-			return $key[0];
+		if ( $force ) {
+			self::generate_key_pair( $user_id );
 		}
 
-		self::generate_key_pair( $user_id );
-		$key = \get_user_meta( $user_id, 'magic_sig_private_key' );
+		if ( -1 === $user_id ) {
+			$key = \get_option('activitypub_magic_sig_private_key' );
+		} else {
+			$key = \get_user_meta( $user_id, 'magic_sig_private_key' );
+		}
 
 		return $key[0];
 	}
@@ -63,14 +64,22 @@ class Signature {
 		$priv_key = null;
 
 		\openssl_pkey_export( $key, $priv_key );
-
-		// private key
-		\update_user_meta( $user_id, 'magic_sig_private_key', $priv_key );
-
 		$detail = \openssl_pkey_get_details( $key );
 
-		// public key
-		\update_user_meta( $user_id, 'magic_sig_public_key', $detail['key'] );
+		if ( -1 === $user_id ) {
+			// private key
+			\add_option('activitypub_magic_sig_private_key', $priv_key );
+
+			// public key
+			\add_option('activitypub_magic_sig_public_key', $detail['key'] );
+
+		} else {
+			// private key
+			\update_user_meta( $user_id, 'magic_sig_private_key', $priv_key );
+
+			// public key
+			\update_user_meta( $user_id, 'magic_sig_public_key', $detail['key'] );
+		}
 	}
 
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
@@ -101,7 +110,11 @@ class Signature {
 		\openssl_sign( $signed_string, $signature, $key, \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature ); // phpcs:ignore
 
-		$key_id = \get_author_posts_url( $user_id ) . '#main-key';
+		if ( -1 === $user_id ) {
+			$key_id = \get_rest_url( null, 'activitypub/1.0/service#main-key' );
+		} else {
+			$key_id = \get_author_posts_url( $user_id ) . '#main-key';
+		}
 
 		if ( ! empty( $digest ) ) {
 			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="%s"', $key_id, $signature );
