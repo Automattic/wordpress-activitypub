@@ -109,6 +109,12 @@ class Post {
 		),
 		'blockquote' => array(),
 		'cite' => array(),
+		'code' => array(
+			'class' => array(),
+		),
+		'pre' => array(
+			'class' => array(),
+		),
 	);
 
 	/**
