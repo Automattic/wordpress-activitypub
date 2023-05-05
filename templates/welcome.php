@@ -42,7 +42,7 @@
 		);
 		?>
 	</p>
-
+	<?php if ( ACTIVITYPUB_SHOW_PLUGIN_RECOMMENDATIONS ) : ?>
 	<hr />
 
 	<h3><?php \esc_html_e( 'Recommended Plugins', 'activitypub' ); ?></h3>
@@ -93,4 +93,5 @@
 			<p><a href="<?php echo \esc_url_raw( \admin_url( 'plugin-install.php?tab=plugin-information&plugin=nodeinfo&TB_iframe=true' ) ); ?>" class="thickbox open-plugin-details-modal button install-now" target="_blank"><?php \esc_html_e( 'Install NodeInfo Plugin for WordPress', 'activitypub' ); ?></a></p>
 		</div>
 	</div>
+	<?php endif; ?>
 </div>
