@@ -52,6 +52,9 @@ function init() {
 }
 \add_action( 'plugins_loaded', '\Activitypub\init' );
 
+/**
+ * Class Autoloader
+ */
 spl_autoload_register(
 	function ( $class ) {
 		$base_dir = trailingslashit( __DIR__ ) . 'includes' . DIRECTORY_SEPARATOR;

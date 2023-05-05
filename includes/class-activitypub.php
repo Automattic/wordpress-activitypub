@@ -40,6 +40,10 @@ class Activitypub {
 		if ( ! \wp_next_scheduled( 'activitypub_update_followers' ) ) {
 			\wp_schedule_event( time(), 'hourly', 'activitypub_update_followers' );
 		}
+
+		if ( ! \wp_next_scheduled( 'activitypub_cleanup_followers' ) ) {
+			\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_followers' );
+		}
 	}
 
 	/**
@@ -51,6 +55,7 @@ class Activitypub {
 		self::flush_rewrite_rules();
 
 		wp_unschedule_hook( 'activitypub_update_followers' );
+		wp_unschedule_hook( 'activitypub_cleanup_followers' );
 	}
 
 	/**
@@ -154,11 +159,23 @@ class Activitypub {
 		$activitypub_post = new \Activitypub\Model\Post( $post );
 
 		if ( 'publish' === $new_status && 'publish' !== $old_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_create_activity', array( $activitypub_post ) );
+			\wp_schedule_single_event(
+				\time(),
+				'activitypub_send_create_activity',
+				array( $activitypub_post )
+			);
 		} elseif ( 'publish' === $new_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_update_activity', array( $activitypub_post ) );
+			\wp_schedule_single_event(
+				\time(),
+				'activitypub_send_update_activity',
+				array( $activitypub_post )
+			);
 		} elseif ( 'trash' === $new_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_delete_activity', array( $activitypub_post ) );
+			\wp_schedule_single_event(
+				\time(),
+				'activitypub_send_delete_activity',
+				array( $activitypub_post )
+			);
 		}
 	}
 
@@ -180,7 +197,14 @@ class Activitypub {
 		}
 
 		$allowed_comment_types = \apply_filters( 'get_avatar_comment_types', array( 'comment' ) );
-		if ( ! empty( $id_or_email->comment_type ) && ! \in_array( $id_or_email->comment_type, (array) $allowed_comment_types, true ) ) {
+		if (
+			! empty( $id_or_email->comment_type ) &&
+			! \in_array(
+				$id_or_email->comment_type,
+				(array) $allowed_comment_types,
+				true
+			)
+		) {
 			$args['url'] = false;
 			/** This filter is documented in wp-includes/link-template.php */
 			return \apply_filters( 'get_avatar_data', $args, $id_or_email );
@@ -225,7 +249,12 @@ class Activitypub {
 	 * @return void
 	 */
 	public static function trash_post( $post_id ) {
-		\add_post_meta( $post_id, 'activitypub_canonical_url', \get_permalink( $post_id ), true );
+		\add_post_meta(
+			$post_id,
+			'activitypub_canonical_url',
+			\get_permalink( $post_id ),
+			true
+		);
 	}
 
 	/**
@@ -244,12 +273,24 @@ class Activitypub {
 	 */
 	public static function add_rewrite_rules() {
 		if ( ! \class_exists( 'Webfinger' ) ) {
-			\add_rewrite_rule( '^.well-known/webfinger', 'index.php?rest_route=/activitypub/1.0/webfinger', 'top' );
+			\add_rewrite_rule(
+				'^.well-known/webfinger',
+				'index.php?rest_route=/activitypub/1.0/webfinger',
+				'top'
+			);
 		}
 
 		if ( ! \class_exists( 'Nodeinfo' ) || (bool) \get_option( 'blog_public', 1 ) ) {
-			\add_rewrite_rule( '^.well-known/nodeinfo', 'index.php?rest_route=/activitypub/1.0/nodeinfo/discovery', 'top' );
-			\add_rewrite_rule( '^.well-known/x-nodeinfo2', 'index.php?rest_route=/activitypub/1.0/nodeinfo2', 'top' );
+			\add_rewrite_rule(
+				'^.well-known/nodeinfo',
+				'index.php?rest_route=/activitypub/1.0/nodeinfo/discovery',
+				'top'
+			);
+			\add_rewrite_rule(
+				'^.well-known/x-nodeinfo2',
+				'index.php?rest_route=/activitypub/1.0/nodeinfo2',
+				'top'
+			);
 		}
 
 		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
