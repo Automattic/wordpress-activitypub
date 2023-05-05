@@ -49,15 +49,15 @@ class Server {
 		$json->{'@context'} = \Activitypub\get_context();
 		$json->id = \get_rest_url( null, 'activitypub/1.0/application' );
 		$json->type = 'Application';
-		$json->preferredUsername = parse_url( get_site_url(), PHP_URL_HOST );
+		$json->preferredUsername = parse_url( get_site_url(), PHP_URL_HOST ); // phpcs:ignore snake_case
 		$json->name = get_bloginfo( 'name' );
-		$json->summary = "WordPress-ActivityPub application actor";
-		$json->manuallyApprovesFollowers = TRUE;
-		$json->icon = [ get_site_icon_url() ];
-		$json->publicKey = (object) array(
+		$json->summary = 'WordPress-ActivityPub application actor';
+		$json->manuallyApprovesFollowers = true; // phpcs:ignore snake_case
+		$json->icon = [ get_site_icon_url() ]; // phpcs:ignore short array syntax
+		$json->publicKey = (object) array( // phpcs:ignore snake_case
 			'id' => \get_rest_url( null, 'activitypub/1.0/application#main-key' ),
 			'owner' => \get_rest_url( null, 'activitypub/1.0/application' ),
-			'publicKeyPem' => Signature::get_public_key( -1 ),
+			'publicKeyPem' => Signature::get_public_key( -1 ), // phpcs:ignore snake_case
 		);
 
 		$response = new WP_REST_Response( $json, 200 );
