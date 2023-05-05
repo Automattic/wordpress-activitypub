@@ -134,19 +134,13 @@ class Signature {
 	public static function verify_http_signature( $request ) {
 		if ( is_object( $request ) ) { // REST Request object
 			$headers = $request->get_headers();
-			error_log( 'verify: $request: ' . print_r( $request, true ) );
 			$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '';
 			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' /wp-json' . $request->get_route();
-			error_log( 'request $headers: ' . print_r( $headers['(request-target)'], true ) );
 		} else {
 			$request = self::format_server_request( $request );
 			$headers = $request['headers']; // $_SERVER array
-			// error_log( print_r( $headers, true ) );
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
-			// $post = get_page_by_path( $headers['request_uri'], ARRAY_A );
-			// $actor = post['post_author'] ?? '';
 			$actor = '';
-			error_log( 'request $headers: ' . print_r( $headers, true ) );
 		}
 
 		if ( ! isset( $headers['signature'] ) ) {
