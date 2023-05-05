@@ -195,8 +195,7 @@ class Signature {
 			}
 		}
 
-		strtok( $signature_block['keyId'], '?');
-		$public_key = \Activitypub\get_remote_metadata_by_actor( $signature_block['keyId'] ); // phpcs:ignore
+		$public_key = \Activitypub\get_remote_metadata_by_actor( strtok( strip_fragment_from_url( $signature_block['keyId'] ), '?' ) ); // phpcs:ignore
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		} else {
