@@ -319,4 +319,29 @@ class Signature {
 		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore
 		return "$digest";
 	}
+
+	/**
+	 * Formats the $_SERVER to resemble the WP_REST_REQUEST array,
+	 * for use with verify_http_signature()
+	 *
+	 * @param array $_SERVER
+	 * @return array $request
+	 */
+	public static function format_server_request( $server ) {
+		$request = array();
+		foreach ( $server as $param_key => $param_val ) {
+			$req_param = strtolower( $param_key );
+			if ( 'REQUEST_URI' === $req_param ) {
+				$request['headers']['route'][] = $param_val;
+			} else {
+				$header_key = str_replace(
+					'http_',
+					'',
+					$req_param
+				);
+				$request['headers'][ $header_key ][] = \wp_unslash( $param_val );
+			}
+		}
+		return $request;
+	}
 }
