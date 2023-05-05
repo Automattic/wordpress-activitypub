@@ -17,14 +17,15 @@ class Signature {
 	 * @return mixed
 	 */
 	public static function get_public_key( $user_id, $force = false ) {
-		$key = \get_user_meta( $user_id, 'magic_sig_public_key' );
-
-		if ( $key && ! $force ) {
-			return $key[0];
+		if ( $force ) {
+			self::generate_key_pair( $user_id );
 		}
 
-		self::generate_key_pair( $user_id );
-		$key = \get_user_meta( $user_id, 'magic_sig_public_key' );
+		if ( -1 === $user_id ) {
+			$key = array( \get_option('activitypub_magic_sig_public_key' ) );
+		} else {
+			$key = \get_user_meta( $user_id, 'magic_sig_public_key' );
+		}
 
 		return $key[0];
 	}
