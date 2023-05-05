@@ -29,6 +29,13 @@ class Post {
 	private $id;
 
 	/**
+	 * The Object URL.
+	 *
+	 * @var string
+	 */
+	private $url;
+
+	/**
 	 * The Object Summary.
 	 *
 	 * @var string
@@ -179,6 +186,7 @@ class Post {
 
 		$array = array(
 			'id' => $this->get_id(),
+			'url' => $this->get_url(),
 			'type' => $this->get_object_type(),
 			'published' => \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date_gmt ) ),
 			'attributedTo' => \get_author_posts_url( $post->post_author ),
@@ -207,13 +215,13 @@ class Post {
 	}
 
 	/**
-	 * Returns the ID of an Activity Object
+	 * Returns the URL of an Activity Object
 	 *
 	 * @return string
 	 */
-	public function get_id() {
-		if ( $this->id ) {
-			return $this->id;
+	public function get_url() {
+		if ( $this->url ) {
+			return $this->url;
 		}
 
 		$post = $this->post;
@@ -224,9 +232,24 @@ class Post {
 			$permalink = \get_permalink( $post );
 		}
 
-		$this->id = $permalink;
+		$this->url = $permalink;
 
 		return $permalink;
+	}
+
+	/**
+	 * Returns the ID of an Activity Object
+	 *
+	 * @return string
+	 */
+	public function get_id() {
+		if ( $this->id ) {
+			return $this->id;
+		}
+
+		$this->id = $this->get_url();
+
+		return $this->id;
 	}
 
 	/**
@@ -282,16 +305,31 @@ class Post {
 
 		// get URLs for each image
 		foreach ( $image_ids as $id ) {
-			$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
-			$thumbnail = \wp_get_attachment_image_src( $id, 'full' );
-			$mimetype = \get_post_mime_type( $id );
+			$image_size = 'full';
+
+			/**
+			 * Filter the image URL returned for each post.
+			 *
+			 * @param array|false $thumbnail The image URL, or false if no image is available.
+			 * @param int         $id        The attachment ID.
+			 * @param string      $image_size The image size to retrieve. Set to 'full' by default.
+			 */
+			$thumbnail = apply_filters(
+				'activitypub_get_image',
+				$this->get_image( $id, $image_size ),
+				$id,
+				$image_size
+			);
 
 			if ( $thumbnail ) {
-				$image = array(
-					'type' => 'Image',
-					'url' => $thumbnail[0],
+				$mimetype = \get_post_mime_type( $id );
+				$alt      = \get_post_meta( $id, '_wp_attachment_image_alt', true );
+				$image    = array(
+					'type'      => 'Image',
+					'url'       => $thumbnail[0],
 					'mediaType' => $mimetype,
 				);
+
 				if ( $alt ) {
 					$image['name'] = $alt;
 				}
@@ -302,6 +340,36 @@ class Post {
 		$this->attachments = $images;
 
 		return $images;
+	}
+
+	/**
+	 * Return details about an image attachment.
+	 *
+	 * @param int    $id         The attachment ID.
+	 * @param string $image_size The image size to retrieve. Set to 'full' by default.
+	 *
+	 * @return array|false Array of image data, or boolean false if no image is available.
+	 */
+	public function get_image( $id, $image_size = 'full' ) {
+		/**
+		 * Hook into the image retrieval process. Before image retrieval.
+		 *
+		 * @param int    $id         The attachment ID.
+		 * @param string $image_size The image size to retrieve. Set to 'full' by default.
+		 */
+		do_action( 'activitypub_get_image_pre', $id, $image_size );
+
+		$thumbnail = \wp_get_attachment_image_src( $id, $image_size );
+
+		/**
+		 * Hook into the image retrieval process. After image retrieval.
+		 *
+		 * @param int    $id         The attachment ID.
+		 * @param string $image_size The image size to retrieve. Set to 'full' by default.
+		 */
+		do_action( 'activitypub_get_image_pre', $id, $image_size );
+
+		return $thumbnail;
 	}
 
 	/**
@@ -461,48 +529,6 @@ class Post {
 
 		if ( 'content' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
 			return "[ap_content]\n\n[ap_hashtags]\n\n[ap_permalink type=\"html\"]";
-		}
-
-		// Upgrade from old template codes to shortcodes.
-		$content = self::upgrade_post_content_template();
-
-		return $content;
-	}
-
-	/**
-	 * Updates the custom template to use shortcodes instead of the deprecated templates.
-	 *
-	 * @return string the updated template content
-	 */
-	public static function upgrade_post_content_template() {
-		// Get the custom template.
-		$old_content = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
-
-		// If the old content exists but is a blank string, we're going to need a flag to updated it even
-		// after setting it to the default contents.
-		$need_update = false;
-
-		// If the old contents is blank, use the defaults.
-		if ( '' === $old_content ) {
-			$old_content = ACTIVITYPUB_CUSTOM_POST_CONTENT;
-			$need_update = true;
-		}
-
-		// Set the new content to be the old content.
-		$content = $old_content;
-
-		// Convert old templates to shortcodes.
-		$content = \str_replace( '%title%', '[ap_title]', $content );
-		$content = \str_replace( '%excerpt%', '[ap_excerpt]', $content );
-		$content = \str_replace( '%content%', '[ap_content]', $content );
-		$content = \str_replace( '%permalink%', '[ap_permalink type="html"]', $content );
-		$content = \str_replace( '%shortlink%', '[ap_shortlink type="html"]', $content );
-		$content = \str_replace( '%hashtags%', '[ap_hashtags]', $content );
-		$content = \str_replace( '%tags%', '[ap_hashtags]', $content );
-
-		// Store the new template if required.
-		if ( $content !== $old_content || $need_update ) {
-			\update_option( 'activitypub_custom_post_content', $content );
 		}
 
 		return $content;

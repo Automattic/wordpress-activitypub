@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub;
 
+use Activitypub\Model\Post;
+
 /**
  * ActivityPub Admin Class
  *
@@ -13,7 +15,9 @@ class Admin {
 	public static function init() {
 		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
-		\add_action( 'show_user_profile', array( self::class, 'add_fediverse_profile' ) );
+		\add_action( 'admin_init', array( self::class, 'schedule_migration' ) );
+		\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
+		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 	}
 
@@ -31,7 +35,7 @@ class Admin {
 
 		\add_action( 'load-' . $settings_page, array( self::class, 'add_settings_help_tab' ) );
 
-		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers (Fediverse)', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
+		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
 
 		\add_action( 'load-' . $followers_list_page, array( self::class, 'add_followers_list_help_tab' ) );
 	}
@@ -50,9 +54,7 @@ class Admin {
 
 		switch ( $tab ) {
 			case 'settings':
-				\Activitypub\Model\Post::upgrade_post_content_template();
-
-				\load_template( \dirname( __FILE__ ) . '/../templates/settings.php' );
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php' );
 				break;
 			case 'welcome':
 			default:
@@ -60,7 +62,7 @@ class Admin {
 				add_thickbox();
 				wp_enqueue_script( 'updates' );
 
-				\load_template( \dirname( __FILE__ ) . '/../templates/welcome.php' );
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/welcome.php' );
 				break;
 		}
 	}
@@ -69,7 +71,7 @@ class Admin {
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {
-		\load_template( \dirname( __FILE__ ) . '/../templates/followers-list.php' );
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php' );
 	}
 
 	/**
@@ -153,19 +155,40 @@ class Admin {
 		);
 	}
 
+	public static function schedule_migration() {
+		if ( ! \wp_next_scheduled( 'activitypub_schedule_migration' ) ) {
+			\wp_schedule_single_event( \time(), 'activitypub_schedule_migration' );
+		}
+	}
+
 	public static function add_settings_help_tab() {
-		require_once \dirname( __FILE__ ) . '/help.php';
+		require_once ACTIVITYPUB_PLUGIN_DIR . 'includes/help.php';
 	}
 
 	public static function add_followers_list_help_tab() {
 		// todo
 	}
 
-	public static function add_fediverse_profile( $user ) {
-		?>
-		<h2 id="activitypub"><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h2>
-		<?php
-		\Activitypub\get_identifier_settings( $user->ID );
+	public static function add_profile( $user ) {
+		$description = get_user_meta( $user->ID, 'activitypub_user_description', true );
+
+		\load_template(
+			ACTIVITYPUB_PLUGIN_DIR . 'templates/user-settings.php',
+			true,
+			array(
+				'description' => $description,
+			)
+		);
+	}
+
+	public static function save_user_description( $user_id ) {
+		if ( isset( $_REQUEST['_apnonce'] ) && ! wp_verify_nonce( $_REQUEST['_apnonce'], 'activitypub-user-description' ) ) {
+			return false;
+		}
+		if ( ! current_user_can( 'edit_user', $user_id ) ) {
+			return false;
+		}
+		update_user_meta( $user_id, 'activitypub_user_description', sanitize_text_field( $_POST['activitypub-user-description'] ) );
 	}
 
 	public static function enqueue_scripts( $hook_suffix ) {

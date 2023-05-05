@@ -8,7 +8,7 @@ $json->id = \get_author_posts_url( $author_id );
 $json->type = 'Person';
 $json->name = \get_the_author_meta( 'display_name', $author_id );
 $json->summary = \html_entity_decode(
-	\get_the_author_meta( 'description', $author_id ),
+	\Activitypub\get_author_description( $author_id ),
 	\ENT_QUOTES,
 	'UTF-8'
 );

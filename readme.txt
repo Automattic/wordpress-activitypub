@@ -2,7 +2,7 @@
 Contributors: pfefferle, mediaformat, akirk, automattic
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
-Tested up to: 6.1
+Tested up to: 6.2
 Stable tag: 0.17.0
 Requires PHP: 5.6
 License: MIT
@@ -111,7 +111,12 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 == Changelog ==
 
-Project maintained on GitHub at [pfefferle/wordpress-activitypub](https://github.com/pfefferle/wordpress-activitypub).
+Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
+
+= Next =
+
+* Compatibility: add hooks to allow modifying images returned in ActivityPub requests.
+* Compatibility: indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.2.
 
 = 0.17.0 =
 

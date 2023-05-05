@@ -3,6 +3,7 @@ namespace Activitypub;
 
 use Activitypub\Model\Post;
 use Activitypub\Model\Activity;
+use Activitypub\Collection\Followers;
 
 /**
  * ActivityPub Activity_Dispatcher Class
@@ -60,17 +61,22 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	public static function send_activity( Post $activitypub_post, $activity_type ) {
+		// check if a migration is needed before sending new posts
+		\Activitypub\Migration::maybe_migrate();
+
 		// get latest version of post
 		$user_id = $activitypub_post->get_post_author();
 
 		$activitypub_activity = new Activity( $activity_type );
 		$activitypub_activity->from_post( $activitypub_post );
 
-		$inboxes = \Activitypub\get_follower_inboxes( $user_id, $activitypub_activity->get_cc() );
+		$follower_inboxes = Followers::get_inboxes( $user_id );
+		$mentioned_inboxes = Mention::get_inboxes( $activitypub_activity->get_cc() );
 
-		foreach ( $inboxes as $inbox => $cc ) {
-			$cc = array_values( array_unique( $cc ) );
-			$activitypub_activity->add_cc( $cc );
+		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
+		$inboxes = array_unique( $inboxes );
+
+		foreach ( $inboxes as $inbox ) {
 			$activity = $activitypub_activity->to_json();
 
 			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
