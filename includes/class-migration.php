@@ -59,7 +59,7 @@ class Migration {
 			$followers = get_user_meta( $user_id, 'activitypub_followers', true );
 
 			if ( $followers ) {
-				foreach ( $followers as $follower ) {
+				foreach ( $followers as $actor ) {
 					$meta = get_remote_metadata_by_actor( $actor );
 
 					$follower = new Follower( $actor );
