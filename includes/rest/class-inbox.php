@@ -4,7 +4,6 @@ namespace Activitypub\Rest;
 use WP_REST_Response;
 use Activitypub\Signature;
 use Activitypub\Model\Activity;
-use \Activitypub\Peer\Followers;
 
 /**
  * ActivityPub Inbox REST-Class
