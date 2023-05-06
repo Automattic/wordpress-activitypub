@@ -190,8 +190,6 @@ class Signature {
 		$public_key = self::get_remote_key( $signature_block['keyId'] );
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
-		} else {
-			$public_key = \rtrim( $public_key );
 		}
 		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
 		if ( ! $verified ) {
