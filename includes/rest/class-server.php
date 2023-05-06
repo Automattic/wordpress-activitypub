@@ -79,22 +79,22 @@ class Server {
 	 * @return mixed|\WP_Error
 	 */
 	public static function authorize_activitypub_requests( $response, $handler, $request ) {
-
-		$maybe_activitypub = $request->get_route();
-		if ( str_starts_with( $maybe_activitypub, '/activitypub' ) ) {
+		$route = $request->get_route();
+		if ( str_starts_with( $route, '/activitypub' ) ) {
 			if ( 'POST' === $request->get_method() ) {
 				$verified_request = Signature::verify_http_signature( $request );
-
 				if ( \is_wp_error( $verified_request ) ) {
 					return $verified_request;
 				}
 			} else {
-				// SecureMode/Authorized fetch.
-				$secure_mode = \get_option( 'activitypub_use_secure_mode', '0' );
-				if ( $secure_mode ) {
-					$verified_request = Signature::verify_http_signature( $request );
-					if ( \is_wp_error( $verified_request ) ) {
-						return $verified_request;
+				if ( '/activitypub/1.0/webfinger' !== $route ) {
+					// SecureMode/Authorized fetch.
+					$secure_mode = \get_option( 'activitypub_use_secure_mode', '0' );
+					if ( $secure_mode ) {
+						$verified_request = Signature::verify_http_signature( $request );
+						if ( \is_wp_error( $verified_request ) ) {
+							return $verified_request;
+						}
 					}
 				}
 			}
