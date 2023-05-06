@@ -187,7 +187,7 @@ class Signature {
 			}
 		}
 
-		$public_key = \Activitypub\get_remote_metadata_by_actor( strtok( strip_fragment_from_url( $signature_block['keyId'] ), '?' ) ); // phpcs:ignore
+		$public_key = self::get_remote_key( $signature_block['keyId'] );
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		} else {
@@ -198,6 +198,24 @@ class Signature {
 			return new \WP_Error( 'activitypub_signature', 'Invalid signature', array( 'status' => 403 ) );
 		}
 		return $verified;
+	}
+
+	/**
+	 * Get public key from key_id
+	 *
+	 * @param string $key_id
+	 * @return string $publicKeyPem
+	 * @author Django Doucet <django.doucet@webdevstudios.com>
+	 */
+	public static function get_remote_key( $key_id ) { // phpcs:ignore
+		$actor = \Activitypub\get_remote_metadata_by_actor( strtok( strip_fragment_from_url( $key_id ), '?' ) ); // phpcs:ignore
+		if ( \is_wp_error( $actor ) ) {
+			return $actor;
+		}
+		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
+			return \rtrim( $actor['publicKey']['publicKeyPem'] ); // phpcs:ignore
+		}
+		return null;
 	}
 
 	/**
