@@ -86,7 +86,7 @@ class Http {
 			$response = new WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ) );
 		}
 
-		\do_action( 'activitypub_safe_remote_get_response', $response, $url, $user_id );
+		\do_action( 'activitypub_safe_remote_get_response', $response, $url );
 
 		return $response;
 	}
