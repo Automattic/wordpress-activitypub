@@ -22,12 +22,12 @@ class Signature {
 		}
 
 		if ( -1 === $user_id ) {
-			$key = array( \get_option( 'activitypub_magic_sig_public_key' ) );
+			$key = \get_option( 'activitypub_magic_sig_public_key' );
 		} else {
-			$key = \get_user_meta( $user_id, 'magic_sig_public_key' );
+			$key = \get_user_meta( $user_id, 'magic_sig_public_key', true );
 		}
 
-		return $key[0];
+		return $key;
 	}
 
 	/**
@@ -43,10 +43,10 @@ class Signature {
 		if ( -1 === $user_id ) {
 			$key = \get_option( 'activitypub_magic_sig_private_key' );
 		} else {
-			$key = \get_user_meta( $user_id, 'magic_sig_private_key' );
+			$key = \get_user_meta( $user_id, 'magic_sig_private_key', true );
 		}
 
-		return $key[0];
+		return $key;
 	}
 
 	/**
@@ -69,10 +69,10 @@ class Signature {
 
 		if ( -1 === $user_id ) {
 			// private key
-			\add_option( 'activitypub_magic_sig_private_key', $priv_key );
+			\update_option( 'activitypub_magic_sig_private_key', $priv_key );
 
 			// public key
-			\add_option( 'activitypub_magic_sig_public_key', $detail['key'] );
+			\update_option( 'activitypub_magic_sig_public_key', $detail['key'] );
 
 		} else {
 			// private key
