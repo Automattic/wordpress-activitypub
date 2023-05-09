@@ -78,7 +78,7 @@ class Activitypub {
 			\in_array( 'application/ld+json', $accept, true ) ||
 			\in_array( 'application/json', $accept, true )
 		) {
-			$secure_mode = \get_option( 'activitypub_use_secure_mode', '0' );
+			$secure_mode = (bool) \get_option( 'activitypub_use_secure_mode', '0' );
 			if ( $secure_mode ) {
 				$verification = Signature::verify_http_signature( $_SERVER );
 				if ( \is_wp_error( $verification ) ) {
