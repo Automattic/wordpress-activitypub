@@ -116,8 +116,6 @@ class Signature {
 			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date";
 		}
 
-		var_dump($key);
-
 		$signature = null;
 		\openssl_sign( $signed_string, $signature, $key, \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature ); // phpcs:ignore
