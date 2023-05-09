@@ -28,6 +28,10 @@ class Signature {
 			$key = \get_user_meta( $user_id, 'magic_sig_public_key', true );
 		}
 
+		if ( ! $key ) {
+			return self::generate_key_pair( $user_id, true );
+		}
+
 		return $key;
 	}
 
@@ -45,6 +49,10 @@ class Signature {
 			$key = \get_option( 'activitypub_magic_sig_private_key' );
 		} else {
 			$key = \get_user_meta( $user_id, 'magic_sig_private_key', true );
+		}
+
+		if ( ! $key ) {
+			return self::generate_key_pair( $user_id, true );
 		}
 
 		return $key;
@@ -107,6 +115,8 @@ class Signature {
 		} else {
 			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date";
 		}
+
+		var_dump($key);
 
 		$signature = null;
 		\openssl_sign( $signed_string, $signature, $key, \OPENSSL_ALGO_SHA256 );
