@@ -29,7 +29,7 @@ class Signature {
 		}
 
 		if ( ! $key ) {
-			return self::generate_key_pair( $user_id, true );
+			return self::get_public_key( $user_id, true );
 		}
 
 		return $key;
@@ -52,7 +52,7 @@ class Signature {
 		}
 
 		if ( ! $key ) {
-			return self::generate_key_pair( $user_id, true );
+			return self::get_private_key( $user_id, true );
 		}
 
 		return $key;
