@@ -80,24 +80,28 @@ class Server {
 	 */
 	public static function authorize_activitypub_requests( $response, $handler, $request ) {
 		$route = $request->get_route();
-		if ( str_starts_with( $route, '/activitypub' ) ) {
-			if ( 'POST' === $request->get_method() ) {
-				$verified_request = Signature::verify_http_signature( $request );
-				if ( \is_wp_error( $verified_request ) ) {
-					return $verified_request;
-				}
-			} else {
-				if ( '/activitypub/1.0/webfinger' !== $route ) {
-					// SecureMode/Authorized fetch.
-					$secure_mode = \get_option( 'activitypub_use_secure_mode', '0' );
-					if ( $secure_mode ) {
-						$verified_request = Signature::verify_http_signature( $request );
-						if ( \is_wp_error( $verified_request ) ) {
-							return $verified_request;
-						}
+		if ( ! str_starts_with( $route, '/activitypub' ) ) {
+			return $response;
+		}
+
+		if ( 'POST' === $request->get_method() ) {
+			$verified_request = Signature::verify_http_signature( $request );
+			if ( \is_wp_error( $verified_request ) ) {
+				return $verified_request;
+			}
+		} else {
+			if ( '/activitypub/1.0/webfinger' !== $route ) {
+				// SecureMode/Authorized fetch.
+				$secure_mode = \get_option( 'activitypub_use_secure_mode', '0' );
+				if ( $secure_mode ) {
+					$verified_request = Signature::verify_http_signature( $request );
+					if ( \is_wp_error( $verified_request ) ) {
+						return $verified_request;
 					}
 				}
 			}
 		}
+
+		return $response;
 	}
 }
