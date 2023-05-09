@@ -186,7 +186,7 @@ class Followers {
 	}
 
 	/**
-	 * Handles "Unfollow" requests
+	 * Handle "Unfollow" requests
 	 *
 	 * @param array $object  The JSON "Undo" Activity
 	 * @param int   $user_id The ID of the ID of the WordPress User
@@ -202,7 +202,7 @@ class Followers {
 	}
 
 	/**
-	 * Add a new Follower
+	 * Add new Follower
 	 *
 	 * @param int    $user_id The ID of the WordPress User
 	 * @param string $actor   The Actor URL
