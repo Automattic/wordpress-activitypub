@@ -19,6 +19,7 @@ use function Activitypub\get_remote_metadata_by_actor;
  */
 class Followers {
 	const TAXONOMY = 'activitypub-followers';
+	const CACHE_KEY_INBOXES = 'activitypub_follower_inboxes_for_%s';
 
 	/**
 	 * Register WordPress hooks/actions and register Taxonomy
@@ -225,6 +226,8 @@ class Followers {
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		} else {
+			$cache_key = sprintf( self::CACHE_KEY_INBOXES, $user_id );
+			wp_cache_delete( $cache_key );
 			return $follower;
 		}
 	}
@@ -238,6 +241,8 @@ class Followers {
 	 * @return bool|WP_Error True on success, false or WP_Error on failure.
 	 */
 	public static function remove_follower( $user_id, $actor ) {
+		$cache_key = sprintf( self::CACHE_KEY_INBOXES, $user_id );
+		wp_cache_delete( $cache_key );
 		return wp_remove_object_terms( $user_id, $actor, self::TAXONOMY );
 	}
 
@@ -369,6 +374,13 @@ class Followers {
 	 * @return array The list of Inboxes
 	 */
 	public static function get_inboxes( $user_id ) {
+		$cache_key = sprintf( self::CACHE_KEY_INBOXES, $user_id );
+		$inboxes = wp_cache_get( $cache_key );
+
+		if ( $inboxes ) {
+			return $inboxes;
+		}
+
 		// get all Followers of a ID of the WordPress User
 		$terms = new WP_Term_Query(
 			array(
@@ -402,6 +414,9 @@ class Followers {
 			)
 		);
 
-		return array_filter( $results );
+		$inboxes = array_filter( $results );
+		wp_cache_set( $cache_key, $inboxes );
+
+		return $inboxes;
 	}
 }
