@@ -102,7 +102,7 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 
 		$follower = new \Activitypub\Model\Follower( 'https://example.com/author/jon' );
 
-		update_term_meta( $follower->get_id(), 'updated_at', strtotime( 'now' ) - 804800 );
+		update_term_meta( $follower->get_id(), 'updated_at', \time() - 804800 );
 
 		$followers = \Activitypub\Collection\Followers::get_outdated_followers();
 		$this->assertEquals( 1, count( $followers ) );

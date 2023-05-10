@@ -185,7 +185,7 @@ class Follower {
 			$this->shared_inbox = $meta['inbox'];
 		}
 
-		$this->updated_at = \strtotime( 'now' );
+		$this->updated_at = \time();
 	}
 
 	/**
@@ -320,7 +320,7 @@ class Follower {
 			)
 		);
 
-		$this->updated_at = \strtotime( 'now' );
+		$this->updated_at = \time();
 		$this->update_term_meta();
 	}
 

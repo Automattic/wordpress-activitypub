@@ -44,7 +44,7 @@ class Activity {
 		}
 
 		$this->type = \ucfirst( $type );
-		$this->published = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( 'now' ) );
+		$this->published = \gmdate( 'Y-m-d\TH:i:s\Z', \time() );
 	}
 
 	public function __call( $method, $params ) {

@@ -143,7 +143,7 @@ class Followers {
 				'single'            => true,
 				'sanitize_callback' => function( $value ) {
 					if ( ! is_numeric( $value ) && (int) $value !== $value ) {
-						$value = strtotime( 'now' );
+						$value = \time();
 					}
 
 					return $value;
