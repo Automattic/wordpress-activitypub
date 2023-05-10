@@ -139,8 +139,8 @@ class Follower {
 	/**
 	 * Magic function to implement getter and setter
 	 *
-	 * @param string $method
-	 * @param string $params
+	 * @param string $method The method name.
+	 * @param string $params The method params.
 	 *
 	 * @return void
 	 */
@@ -159,6 +159,13 @@ class Follower {
 		}
 	}
 
+	/**
+	 * Prefill the Object with the meta data.
+	 *
+	 * @param array $meta The meta data.
+	 *
+	 * @return void
+	 */
 	public function from_meta( $meta ) {
 		$this->meta = $meta;
 
@@ -181,6 +188,13 @@ class Follower {
 		$this->updated_at = \strtotime( 'now' );
 	}
 
+	/**
+	 * Get the data by the given attribute
+	 *
+	 * @param string $attribute The attribute name.
+	 *
+	 * @return mixed The attribute value.
+	 */
 	public function get( $attribute ) {
 		if ( $this->$attribute ) {
 			return $this->$attribute;
@@ -201,6 +215,11 @@ class Follower {
 		return null;
 	}
 
+	/**
+	 * Get the errors.
+	 *
+	 * @return mixed
+	 */
 	public function get_errors() {
 		if ( $this->errors ) {
 			return $this->errors;
@@ -210,10 +229,20 @@ class Follower {
 		return $this->errors;
 	}
 
+	/**
+	 * Reset (delete) all errors.
+	 *
+	 * @return void
+	 */
 	public function reset_errors() {
 		delete_term_meta( $this->id, 'errors' );
 	}
 
+	/**
+	 * Count the errors.
+	 *
+	 * @return int The number of errors.
+	 */
 	public function count_errors() {
 		$errors = $this->get_errors();
 
@@ -224,6 +253,11 @@ class Follower {
 		return 0;
 	}
 
+	/**
+	 * Return the latest error message.
+	 *
+	 * @return string The error message.
+	 */
 	public function get_latest_error_message() {
 		$errors = $this->get_errors();
 
@@ -234,6 +268,13 @@ class Follower {
 		return '';
 	}
 
+	/**
+	 * Get the meta data by the given attribute.
+	 *
+	 * @param string $attribute The attribute name.
+	 *
+	 * @return mixed $attribute The attribute value.
+	 */
 	public function get_meta_by( $attribute ) {
 		$meta = $this->get_meta();
 
@@ -252,6 +293,11 @@ class Follower {
 		return null;
 	}
 
+	/**
+	 * Get the meta data.
+	 *
+	 * @return array $meta The meta data.
+	 */
 	public function get_meta() {
 		if ( $this->meta ) {
 			return $this->meta;
@@ -260,6 +306,11 @@ class Follower {
 		return null;
 	}
 
+	/**
+	 * Update the current Follower-Object.
+	 *
+	 * @return void
+	 */
 	public function update() {
 		$term = wp_update_term(
 			$this->id,
@@ -273,6 +324,11 @@ class Follower {
 		$this->update_term_meta();
 	}
 
+	/**
+	 * Save the current Follower-Object.
+	 *
+	 * @return void
+	 */
 	public function save() {
 		$term = wp_insert_term(
 			$this->actor,
@@ -288,6 +344,11 @@ class Follower {
 		$this->update_term_meta();
 	}
 
+	/**
+	 * Upsert the current Follower-Object.
+	 *
+	 * @return void
+	 */
 	public function upsert() {
 		if ( $this->id ) {
 			$this->update();
@@ -296,10 +357,20 @@ class Follower {
 		}
 	}
 
+	/**
+	 * Delete the current Follower-Object.
+	 *
+	 * @return void
+	 */
 	public function delete() {
 		wp_delete_term( $this->id, Followers::TAXONOMY );
 	}
 
+	/**
+	 * Update the term meta.
+	 *
+	 * @return void
+	 */
 	protected function update_term_meta() {
 		$attributes = array( 'inbox', 'shared_inbox', 'avatar', 'updated_at', 'name', 'username' );
 
@@ -320,6 +391,5 @@ class Follower {
 
 			add_term_meta( $this->id, 'errors', $error );
 		}
-
 	}
 }
