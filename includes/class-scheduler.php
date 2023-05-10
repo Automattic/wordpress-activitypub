@@ -121,7 +121,9 @@ class Scheduler {
 		foreach ( $followers as $follower ) {
 			$meta = get_remote_metadata_by_actor( $follower->get_actor() );
 
-			if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
+			if ( is_tombstone( $meta ) ) {
+				$follower->delete();
+			} elseif ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
 				if ( 5 >= $follower->count_errors() ) {
 					$follower->delete();
 				} else {
