@@ -22,7 +22,6 @@ class Activitypub {
 			\add_post_type_support( $post_type, 'activitypub' );
 		}
 
-		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
 		\add_action( 'wp_trash_post', array( self::class, 'trash_post' ), 1 );
 		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
 
@@ -37,13 +36,7 @@ class Activitypub {
 	public static function activate() {
 		self::flush_rewrite_rules();
 
-		if ( ! \wp_next_scheduled( 'activitypub_update_followers' ) ) {
-			\wp_schedule_event( time(), 'hourly', 'activitypub_update_followers' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_cleanup_followers' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_followers' );
-		}
+		Scheduler::register_schedules();
 	}
 
 	/**
@@ -54,8 +47,7 @@ class Activitypub {
 	public static function deactivate() {
 		self::flush_rewrite_rules();
 
-		wp_unschedule_hook( 'activitypub_update_followers' );
-		wp_unschedule_hook( 'activitypub_cleanup_followers' );
+		Scheduler::deregister_schedules();
 	}
 
 	/**
@@ -135,48 +127,6 @@ class Activitypub {
 		$vars[] = 'activitypub';
 
 		return $vars;
-	}
-
-	/**
-	 * Schedule Activities.
-	 *
-	 * @param string  $new_status New post status.
-	 * @param string  $old_status Old post status.
-	 * @param WP_Post $post       Post object.
-	 */
-	public static function schedule_post_activity( $new_status, $old_status, $post ) {
-		// Do not send activities if post is password protected.
-		if ( \post_password_required( $post ) ) {
-			return;
-		}
-
-		// Check if post-type supports ActivityPub.
-		$post_types = \get_post_types_by_support( 'activitypub' );
-		if ( ! \in_array( $post->post_type, $post_types, true ) ) {
-			return;
-		}
-
-		$activitypub_post = new \Activitypub\Model\Post( $post );
-
-		if ( 'publish' === $new_status && 'publish' !== $old_status ) {
-			\wp_schedule_single_event(
-				\time(),
-				'activitypub_send_create_activity',
-				array( $activitypub_post )
-			);
-		} elseif ( 'publish' === $new_status ) {
-			\wp_schedule_single_event(
-				\time(),
-				'activitypub_send_update_activity',
-				array( $activitypub_post )
-			);
-		} elseif ( 'trash' === $new_status ) {
-			\wp_schedule_single_event(
-				\time(),
-				'activitypub_send_delete_activity',
-				array( $activitypub_post )
-			);
-		}
 	}
 
 	/**

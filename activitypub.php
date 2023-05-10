@@ -49,6 +49,7 @@ function init() {
 	Mention::init();
 	Debug::init();
 	Health_Check::init();
+	Scheduler::init();
 }
 \add_action( 'plugins_loaded', '\Activitypub\init' );
 

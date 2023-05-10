@@ -3,7 +3,15 @@ namespace Activitypub;
 
 use Acctivitypub\Model\Follower;
 
+/**
+ * ActivityPub Migration Class
+ *
+ * @author Matthias Pfefferle
+ */
 class Migration {
+	/**
+	 * Initialize the class, registering WordPress hooks
+	 */
 	public static function init() {
 		\add_action( 'activitypub_schedule_migration', array( self::class, 'maybe_migrate' ) );
 	}
@@ -59,7 +67,7 @@ class Migration {
 			$followers = get_user_meta( $user_id, 'activitypub_followers', true );
 
 			if ( $followers ) {
-				foreach ( $followers as $follower ) {
+				foreach ( $followers as $actor ) {
 					$meta = get_remote_metadata_by_actor( $actor );
 
 					$follower = new Follower( $actor );

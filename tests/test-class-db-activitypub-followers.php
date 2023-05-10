@@ -90,6 +90,60 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		$this->assertNull( $follower );
 	}
 
+	public function test_get_outdated_followers() {
+		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
+
+		$pre_http_request = new MockAction();
+		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
+
+		foreach ( $followers as $follower ) {
+			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		}
+
+		$follower = new \Activitypub\Model\Follower( 'https://example.com/author/jon' );
+
+		update_term_meta( $follower->get_id(), 'updated_at', strtotime( 'now' ) - 804800 );
+
+		$followers = \Activitypub\Collection\Followers::get_outdated_followers();
+		$this->assertEquals( 1, count( $followers ) );
+		$this->assertEquals( 'https://example.com/author/jon', $followers[0] );
+	}
+
+	public function test_get_faulty_followers() {
+		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
+
+		$pre_http_request = new MockAction();
+		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
+
+		foreach ( $followers as $follower ) {
+			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		}
+
+		$follower = new \Activitypub\Model\Follower( 'http://sally.example.org' );
+
+		for ( $i = 1; $i <= 15; $i++ ) {
+			add_term_meta( $follower->get_id(), 'errors', 'error ' . $i );
+		}
+
+		$follower = new \Activitypub\Model\Follower( 'http://sally.example.org' );
+		$count = $follower->count_errors();
+
+		$followers = \Activitypub\Collection\Followers::get_faulty_followers();
+
+		$this->assertEquals( 1, count( $followers ) );
+		$this->assertEquals( 'http://sally.example.org', $followers[0] );
+
+		$follower->reset_errors();
+
+		$follower = new \Activitypub\Model\Follower( 'http://sally.example.org' );
+		$count = $follower->count_errors();
+
+		$followers = \Activitypub\Collection\Followers::get_faulty_followers();
+
+		$this->assertEquals( 0, count( $followers ) );
+	}
+
+
 	public static function http_request_host_is_external( $in, $host ) {
 		if ( in_array( $host, array( 'example.com', 'example.org' ), true ) ) {
 			return true;

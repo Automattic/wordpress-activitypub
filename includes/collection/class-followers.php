@@ -404,4 +404,82 @@ class Followers {
 
 		return array_filter( $results );
 	}
+
+	/**
+	 * Undocumented function
+	 *
+	 * @return void
+	 */
+	public static function get_outdated_followers( $output = ARRAY_N, $number = 50, $older_than = 604800 ) {
+		$args = array(
+			'taxonomy'   => self::TAXONOMY,
+			'number'     => $number,
+			'meta_key'   => 'updated_at',
+			'orderby'    => 'meta_value_num',
+			'order'      => 'DESC',
+			'meta_query' => array(
+				array(
+					'key'        => 'updated_at',
+					'value'      => strtotime( 'now' ) - $older_than,
+					'type'       => 'numeric',
+					'compare'    => '<=',
+				),
+			),
+		);
+
+		$terms = new WP_Term_Query( $args );
+
+		$items = array();
+
+		// change output format
+		switch ( $output ) {
+			case ACTIVITYPUB_OBJECT:
+				foreach ( $terms->get_terms() as $follower ) {
+					$items[] = new Follower( $follower->name ); // phpcs:ignore
+				}
+				return $items;
+			case OBJECT:
+				return $terms->get_terms();
+			case ARRAY_N:
+			default:
+				foreach ( $terms->get_terms() as $follower ) {
+					$items[] = $follower->name; // phpcs:ignore
+				}
+				return $items;
+		}
+	}
+
+	public static function get_faulty_followers( $output = ARRAY_N, $number = 10 ) {
+		$args = array(
+			'taxonomy'   => self::TAXONOMY,
+			'number'     => $number,
+			'meta_query' => array(
+				array(
+					'key'        => 'errors',
+					'compare'    => 'EXISTS',
+				),
+			),
+		);
+
+		$terms = new WP_Term_Query( $args );
+
+		$items = array();
+
+		// change output format
+		switch ( $output ) {
+			case ACTIVITYPUB_OBJECT:
+				foreach ( $terms->get_terms() as $follower ) {
+					$items[] = new Follower( $follower->name ); // phpcs:ignore
+				}
+				return $items;
+			case OBJECT:
+				return $terms->get_terms();
+			case ARRAY_N:
+			default:
+				foreach ( $terms->get_terms() as $follower ) {
+					$items[] = $follower->name; // phpcs:ignore
+				}
+				return $items;
+		}
+	}
 }

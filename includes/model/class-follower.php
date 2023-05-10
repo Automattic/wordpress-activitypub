@@ -210,6 +210,10 @@ class Follower {
 		return $this->errors;
 	}
 
+	public function reset_errors() {
+		delete_term_meta( $this->id, 'errors' );
+	}
+
 	public function count_errors() {
 		$errors = $this->get_errors();
 
@@ -290,6 +294,10 @@ class Follower {
 		} else {
 			$this->save();
 		}
+	}
+
+	public function delete() {
+		wp_delete_term( $this->id, Followers::TAXONOMY );
 	}
 
 	protected function update_term_meta() {
