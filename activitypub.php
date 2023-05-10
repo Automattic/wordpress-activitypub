@@ -71,7 +71,7 @@ spl_autoload_register(
 				$base_dir = $base_dir . $sub_dir . DIRECTORY_SEPARATOR;
 			}
 
-			$filename = 'class-' . str_replace( '_', '-', $class );
+			$filename = 'class-' . strtr( $class, '_', '-' );
 			$file     = $base_dir . $filename . '.php';
 
 			if ( file_exists( $file ) ) {
