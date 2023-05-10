@@ -424,7 +424,7 @@ class Followers {
 			'meta_query' => array(
 				array(
 					'key'        => 'updated_at',
-					'value'      => strtotime( 'now' ) - $older_than,
+					'value'      => time() - $older_than,
 					'type'       => 'numeric',
 					'compare'    => '<=',
 				),
