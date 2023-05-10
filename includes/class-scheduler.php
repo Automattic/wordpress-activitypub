@@ -21,6 +21,11 @@ class Scheduler {
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
 	}
 
+	/**
+	 * Schedule all ActivityPub schedules.
+	 *
+	 * @return void
+	 */
 	public static function register_schedules() {
 		if ( ! \wp_next_scheduled( 'activitypub_update_followers' ) ) {
 			\wp_schedule_event( time(), 'hourly', 'activitypub_update_followers' );
@@ -31,6 +36,11 @@ class Scheduler {
 		}
 	}
 
+	/**
+	 * Unscedule all ActivityPub schedules.
+	 *
+	 * @return void
+	 */
 	public static function deregister_schedules() {
 		wp_unschedule_hook( 'activitypub_update_followers' );
 		wp_unschedule_hook( 'activitypub_cleanup_followers' );

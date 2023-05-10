@@ -406,9 +406,13 @@ class Followers {
 	}
 
 	/**
-	 * Undocumented function
+	 * Get all Followers that have not been updated for a given time
 	 *
-	 * @return void
+	 * @param enum $output     The output format, supported ARRAY_N, OBJECT and ACTIVITYPUB_OBJECT.
+	 * @param int  $number     Limits the result.
+	 * @param int  $older_than The time in seconds.
+	 *
+	 * @return mixed The Term list of Followers, the format depends on $output.
 	 */
 	public static function get_outdated_followers( $output = ARRAY_N, $number = 50, $older_than = 604800 ) {
 		$args = array(
@@ -449,6 +453,14 @@ class Followers {
 		}
 	}
 
+	/**
+	 * Get all Followers that had errors
+	 *
+	 * @param enum    $output The output format, supported ARRAY_N, OBJECT and ACTIVITYPUB_OBJECT
+	 * @param integer $number The number of Followers to return.
+	 *
+	 * @return mixed The Term list of Followers, the format depends on $output.
+	 */
 	public static function get_faulty_followers( $output = ARRAY_N, $number = 10 ) {
 		$args = array(
 			'taxonomy'   => self::TAXONOMY,
