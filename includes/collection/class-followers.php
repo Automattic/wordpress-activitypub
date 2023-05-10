@@ -19,7 +19,7 @@ use function Activitypub\get_remote_metadata_by_actor;
  */
 class Followers {
 	const TAXONOMY = 'activitypub-followers';
-	const CACHE_KEY_INBOXES = 'activitypub_follower_inboxes_for_%s';
+	const CACHE_KEY_INBOXES = 'follower_inboxes_%s';
 
 	/**
 	 * Register WordPress hooks/actions and register Taxonomy
@@ -226,8 +226,7 @@ class Followers {
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		} else {
-			$cache_key = sprintf( self::CACHE_KEY_INBOXES, $user_id );
-			wp_cache_delete( $cache_key );
+			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 			return $follower;
 		}
 	}
@@ -241,8 +240,7 @@ class Followers {
 	 * @return bool|WP_Error True on success, false or WP_Error on failure.
 	 */
 	public static function remove_follower( $user_id, $actor ) {
-		$cache_key = sprintf( self::CACHE_KEY_INBOXES, $user_id );
-		wp_cache_delete( $cache_key );
+		wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		return wp_remove_object_terms( $user_id, $actor, self::TAXONOMY );
 	}
 
@@ -375,7 +373,7 @@ class Followers {
 	 */
 	public static function get_inboxes( $user_id ) {
 		$cache_key = sprintf( self::CACHE_KEY_INBOXES, $user_id );
-		$inboxes = wp_cache_get( $cache_key );
+		$inboxes = wp_cache_get( $cache_key, 'activitypub' );
 
 		if ( $inboxes ) {
 			return $inboxes;
@@ -415,7 +413,7 @@ class Followers {
 		);
 
 		$inboxes = array_filter( $results );
-		wp_cache_set( $cache_key, $inboxes );
+		wp_cache_set( $cache_key, $inboxes, 'activitypub' );
 
 		return $inboxes;
 	}
