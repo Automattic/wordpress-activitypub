@@ -74,7 +74,7 @@ spl_autoload_register(
 			$filename = 'class-' . strtr( $class, '_', '-' );
 			$file     = $base_dir . $filename . '.php';
 
-			if ( file_exists( $file ) ) {
+			if ( file_exists( $file ) && is_readable( $file ) ) {
 				require_once $file;
 			}
 		}
