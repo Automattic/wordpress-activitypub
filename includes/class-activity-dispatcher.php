@@ -5,6 +5,8 @@ use Activitypub\Model\Post;
 use Activitypub\Model\Activity;
 use Activitypub\Collection\Followers;
 
+use function Activitypub\safe_remote_post;
+
 /**
  * ActivityPub Activity_Dispatcher Class
  *
@@ -37,7 +39,7 @@ class Activity_Dispatcher {
 	/**
 	 * Send "update" activities.
 	 *
-	 * @param Activitypub\Model\Post $activitypub_post
+	 * @param Activitypub\Model\Post $activitypub_post The ActivityPub Post.
 	 */
 	public static function send_update_activity( Post $activitypub_post ) {
 		self::send_activity( $activitypub_post, 'Update' );
@@ -46,23 +48,23 @@ class Activity_Dispatcher {
 	/**
 	 * Send "delete" activities.
 	 *
-	 * @param Activitypub\Model\Post $activitypub_post
+	 * @param Activitypub\Model\Post $activitypub_post The ActivityPub Post.
 	 */
 	public static function send_delete_activity( Post $activitypub_post ) {
 		self::send_activity( $activitypub_post, 'Delete' );
 	}
 
 	/**
-	 * Undocumented function
+	 * Send Activities to followers and mentioned users.
 	 *
-	 * @param Activitypub\Model\Post $activitypub_post
-	 * @param [type] $activity_type
+	 * @param Activitypub\Model\Post $activitypub_post The ActivityPub Post.
+	 * @param string                 $activity_type    The Activity-Type.
 	 *
 	 * @return void
 	 */
 	public static function send_activity( Post $activitypub_post, $activity_type ) {
 		// check if a migration is needed before sending new posts
-		\Activitypub\Migration::maybe_migrate();
+		Migration::maybe_migrate();
 
 		// get latest version of post
 		$user_id = $activitypub_post->get_post_author();
@@ -79,7 +81,7 @@ class Activity_Dispatcher {
 		foreach ( $inboxes as $inbox ) {
 			$activity = $activitypub_activity->to_json();
 
-			\Activitypub\safe_remote_post( $inbox, $activity, $user_id );
+			safe_remote_post( $inbox, $activity, $user_id );
 		}
 	}
 }

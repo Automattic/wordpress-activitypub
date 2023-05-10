@@ -9,6 +9,11 @@ namespace Activitypub\Model;
  * @see https://www.w3.org/TR/activitypub/
  */
 class Activity {
+	/**
+	 * The JSON-LD context.
+	 *
+	 * @var array
+	 */
 	private $context = array(
 		'https://www.w3.org/ns/activitystreams',
 		'https://w3id.org/security/v1',
@@ -30,14 +35,62 @@ class Activity {
 			),
 		),
 	);
+
+	/**
+	 * The published date.
+	 *
+	 * @var string
+	 */
 	private $published = '';
+
+	/**
+	 * The Activity-ID.
+	 *
+	 * @var string
+	 */
 	private $id = '';
+
+	/**
+	 * The Activity-Type.
+	 *
+	 * @var string
+	 */
 	private $type = 'Create';
+
+	/**
+	 * The Activity-Actor.
+	 *
+	 * @var string
+	 */
 	private $actor = '';
+
+	/**
+	 * The Audience.
+	 *
+	 * @var array
+	 */
 	private $to = array( 'https://www.w3.org/ns/activitystreams#Public' );
+
+	/**
+	 * The CC.
+	 *
+	 * @var array
+	 */
 	private $cc = array();
+
+	/**
+	 * The Activity-Object.
+	 *
+	 * @var array
+	 */
 	private $object = null;
 
+	/**
+	 * The Class-Constructor.
+	 *
+	 * @param string  $type    The Activity-Type.
+	 * @param boolean $context The JSON-LD context.
+	 */
 	public function __construct( $type = 'Create', $context = true ) {
 		if ( true !== $context ) {
 			$this->context = null;
@@ -47,6 +100,14 @@ class Activity {
 		$this->published = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( 'now' ) );
 	}
 
+	/**
+	 * Magic Getter/Setter
+	 *
+	 * @param string $method The method name.
+	 * @param string $params The method params.
+	 *
+	 * @return mixed The value.
+	 */
 	public function __call( $method, $params ) {
 		$var = \strtolower( \substr( $method, 4 ) );
 
@@ -73,6 +134,13 @@ class Activity {
 		}
 	}
 
+	/**
+	 * Convert from a Post-Object.
+	 *
+	 * @param Post $post The Post-Object.
+	 *
+	 * @return void
+	 */
 	public function from_post( Post $post ) {
 		$this->object = $post->to_array();
 
@@ -111,6 +179,11 @@ class Activity {
 
 	}
 
+	/**
+	 * Convert to an Array.
+	 *
+	 * @return array The Array.
+	 */
 	public function to_array() {
 		$array = array_filter( \get_object_vars( $this ) );
 
@@ -126,12 +199,17 @@ class Activity {
 	/**
 	 * Convert to JSON
 	 *
-	 * @return void
+	 * @return string The JSON.
 	 */
 	public function to_json() {
 		return \wp_json_encode( $this->to_array(), \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
 	}
 
+	/**
+	 * Convert to a Simple Array.
+	 *
+	 * @return string The array.
+	 */
 	public function to_simple_array() {
 		$activity = array(
 			'@context' => $this->context,
@@ -149,6 +227,11 @@ class Activity {
 		return $activity;
 	}
 
+	/**
+	 * Convert to a Simple JSON.
+	 *
+	 * @return string The JSON.
+	 */
 	public function to_simple_json() {
 		return \wp_json_encode( $this->to_simple_array(), \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
 	}

@@ -43,9 +43,9 @@ function safe_remote_get( $url, $user_id ) {
 /**
  * Returns a users WebFinger "resource"
  *
- * @param int $user_id
+ * @param int $user_id The User-ID.
  *
- * @return string The user-resource
+ * @return string The User-Resource.
  */
 function get_webfinger_resource( $user_id ) {
 	return Webfinger::get_user_resource( $user_id );
@@ -123,29 +123,24 @@ function get_remote_metadata_by_actor( $actor ) {
 	return $metadata;
 }
 
-function get_identifier_settings( $user_id ) {
-	?>
-<table class="form-table">
-	<tbody>
-		<tr>
-			<th scope="row">
-				<label><?php \esc_html_e( 'Profile identifier', 'activitypub' ); ?></label>
-			</th>
-			<td>
-				<p><code><?php echo \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ); ?></code> or <code><?php echo \esc_url( \get_author_posts_url( $user_id ) ); ?></code></p>
-				<?php // translators: the webfinger resource ?>
-				<p class="description"><?php \printf( \esc_html__( 'Try to follow "@%s" by searching for it on Mastodon,Friendica & Co.', 'activitypub' ), \esc_html( \Activitypub\get_webfinger_resource( $user_id ) ) ); ?></p>
-			</td>
-		</tr>
-	</tbody>
-</table>
-	<?php
-}
-
+/**
+ * Returns the followers of a given user.
+ *
+ * @param int $user_id The User-ID.
+ *
+ * @return array The followers.
+ */
 function get_followers( $user_id ) {
 	return Collection\Followers::get_followers( $user_id );
 }
 
+/**
+ * Count the number of followers for a given user.
+ *
+ * @param int $user_id The User-ID.
+ *
+ * @return int The number of followers.
+ */
 function count_followers( $user_id ) {
 	return Collection\Followers::count_followers( $user_id );
 }
@@ -202,7 +197,8 @@ function url_to_authorid( $url ) {
  * Return the custom Activity Pub description, if set, or default author description.
  *
  * @param int $user_id The user ID.
- * @return string
+ *
+ * @return string The author description.
  */
 function get_author_description( $user_id ) {
 	$description = get_user_meta( $user_id, 'activitypub_user_description', true );
