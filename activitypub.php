@@ -82,7 +82,7 @@ spl_autoload_register(
 require_once \dirname( __FILE__ ) . '/includes/functions.php';
 
 // load NodeInfo endpoints only if blog is public
-if ( true === (bool) \get_option( 'blog_public', 1 ) ) {
+if ( \get_option( 'blog_public', 1 ) ) {
 	Rest\NodeInfo::init();
 }
 
