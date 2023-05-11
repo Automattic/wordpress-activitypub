@@ -316,7 +316,7 @@ class Followers {
 	 *
 	 * @return array The Term list of Followers, the format depends on $output
 	 */
-	public static function get_followers( $user_id, $output = ARRAY_N, $number = null, $offset = null, $args = array() ) {
+	public static function get_followers( $user_id, $number = null, $offset = null, $args = array() ) {
 		$defaults = array(
 			'taxonomy'   => self::TAXONOMY,
 			'hide_empty' => false,
@@ -329,25 +329,13 @@ class Followers {
 
 		$args  = wp_parse_args( $args, $defaults );
 		$terms = new WP_Term_Query( $args );
-
 		$items = array();
 
-		// change output format
-		switch ( $output ) {
-			case ACTIVITYPUB_OBJECT:
-				foreach ( $terms->get_terms() as $follower ) {
-					$items[] = new Follower( $follower->name ); // phpcs:ignore
-				}
-				return $items;
-			case OBJECT:
-				return $terms->get_terms();
-			case ARRAY_N:
-			default:
-				foreach ( $terms->get_terms() as $follower ) {
-					$items[] = $follower->name; // phpcs:ignore
-				}
-				return $items;
+		foreach ( $terms->get_terms() as $follower ) {
+			$items[] = new Follower( $follower->name ); // phpcs:ignore
 		}
+
+		return $items;
 	}
 
 	/**
@@ -414,7 +402,7 @@ class Followers {
 	 *
 	 * @return mixed The Term list of Followers, the format depends on $output.
 	 */
-	public static function get_outdated_followers( $output = ARRAY_N, $number = 50, $older_than = 604800 ) {
+	public static function get_outdated_followers( $number = 50, $older_than = 604800 ) {
 		$args = array(
 			'taxonomy'   => self::TAXONOMY,
 			'number'     => $number,
@@ -432,25 +420,13 @@ class Followers {
 		);
 
 		$terms = new WP_Term_Query( $args );
-
 		$items = array();
 
-		// change output format
-		switch ( $output ) {
-			case ACTIVITYPUB_OBJECT:
-				foreach ( $terms->get_terms() as $follower ) {
-					$items[] = new Follower( $follower->name ); // phpcs:ignore
-				}
-				return $items;
-			case OBJECT:
-				return $terms->get_terms();
-			case ARRAY_N:
-			default:
-				foreach ( $terms->get_terms() as $follower ) {
-					$items[] = $follower->name; // phpcs:ignore
-				}
-				return $items;
+		foreach ( $terms->get_terms() as $follower ) {
+			$items[] = new Follower( $follower->name ); // phpcs:ignore
 		}
+
+		return $items;
 	}
 
 	/**
@@ -461,7 +437,7 @@ class Followers {
 	 *
 	 * @return mixed The Term list of Followers, the format depends on $output.
 	 */
-	public static function get_faulty_followers( $output = ARRAY_N, $number = 10 ) {
+	public static function get_faulty_followers( $number = 10 ) {
 		$args = array(
 			'taxonomy'   => self::TAXONOMY,
 			'number'     => $number,
@@ -474,24 +450,12 @@ class Followers {
 		);
 
 		$terms = new WP_Term_Query( $args );
-
 		$items = array();
 
-		// change output format
-		switch ( $output ) {
-			case ACTIVITYPUB_OBJECT:
-				foreach ( $terms->get_terms() as $follower ) {
-					$items[] = new Follower( $follower->name ); // phpcs:ignore
-				}
-				return $items;
-			case OBJECT:
-				return $terms->get_terms();
-			case ARRAY_N:
-			default:
-				foreach ( $terms->get_terms() as $follower ) {
-					$items[] = $follower->name; // phpcs:ignore
-				}
-				return $items;
+		foreach ( $terms->get_terms() as $follower ) {
+			$items[] = new Follower( $follower->name ); // phpcs:ignore
 		}
+
+		return $items;
 	}
 }

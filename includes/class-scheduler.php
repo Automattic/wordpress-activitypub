@@ -95,7 +95,7 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function update_followers() {
-		$followers = Followers::get_outdated_followers( ACTIVITYPUB_OBJECT );
+		$followers = Followers::get_outdated_followers();
 
 		foreach ( $followers as $follower ) {
 			$meta = get_remote_metadata_by_actor( $follower->get_actor() );
@@ -116,7 +116,7 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function cleanup_followers() {
-		$followers = Followers::get_faulty_followers( ACTIVITYPUB_OBJECT );
+		$followers = Followers::get_faulty_followers();
 
 		foreach ( $followers as $follower ) {
 			$meta = get_remote_metadata_by_actor( $follower->get_actor() );

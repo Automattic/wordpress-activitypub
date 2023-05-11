@@ -58,6 +58,13 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 
 		$this->assertEquals( 3, \count( $db_followers ) );
 
+		$db_followers = array_map(
+			function( $item ) {
+				return $item->get_actor();
+			},
+			$db_followers
+		);
+
 		$this->assertSame( array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' ), $db_followers );
 	}
 

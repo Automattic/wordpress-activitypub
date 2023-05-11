@@ -160,6 +160,15 @@ class Follower {
 	}
 
 	/**
+	 * Magic function to return the Actor-URL when the Object is used as a string
+	 *
+	 * @return string
+	 */
+	public function __toString() {
+		return $this->get_actor();
+	}
+
+	/**
 	 * Prefill the Object with the meta data.
 	 *
 	 * @param array $meta The meta data.

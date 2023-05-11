@@ -29,8 +29,6 @@ function init() {
 	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
 
-	\define( 'ACTIVITYPUB_OBJECT', 'ACTIVITYPUB_OBJECT' );
-
 	Migration::init();
 	Activity_Dispatcher::init();
 	Activitypub::init();
