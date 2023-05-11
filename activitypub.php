@@ -88,8 +88,9 @@ if ( \get_option( 'blog_public', 1 ) ) {
 	Rest\NodeInfo::init();
 }
 
-if ( \WP_DEBUG ) {
-	require_once \dirname( __FILE__ ) . '/includes/debug.php';
+$debug_file = \dirname( __FILE__ ) . '/includes/debug.php';
+if ( \WP_DEBUG && file_exists( $debug_file ) && is_readable( $debug_file ) ) {
+	require_once $debug_file;
 }
 
 /**
