@@ -27,10 +27,12 @@ if ( \has_header_image() ) {
 	);
 }
 
-$json->inbox = \get_rest_url( null, '/activitypub/1.0/blog/inbox' );
-$json->outbox = \get_rest_url( null, '/activitypub/1.0/blog/outbox' );
-$json->followers = \get_rest_url( null, '/activitypub/1.0/blog/followers' );
-$json->following = \get_rest_url( null, '/activitypub/1.0/blog/following' );
+$blog_base = sprintf( '/%s/blog/', ACTIVITYPUB_REST_NAMESPACE );
+
+$json->inbox = \get_rest_url( null, $blog_base . 'inbox' );
+$json->outbox = \get_rest_url( null, $blog_base . 'outbox' );
+$json->followers = \get_rest_url( null, $blog_base . 'followers' );
+$json->following = \get_rest_url( null, $blog_base . 'following' );
 
 $json->manuallyApprovesFollowers = \apply_filters( 'activitypub_json_manually_approves_followers', \__return_false() ); // phpcs:ignore
 

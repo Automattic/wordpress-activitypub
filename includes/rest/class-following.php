@@ -21,7 +21,7 @@ class Following {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/users/(?P<user_id>\d+)/following',
 			array(
 				array(
@@ -72,7 +72,7 @@ class Following {
 		$json->actor = \get_author_posts_url( $user_id );
 		$json->type = 'OrderedCollectionPage';
 
-		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/following" ); // phpcs:ignore
+		$json->partOf = \get_rest_url( null, sprintf( '/%s/users/%d/following', ACTIVITYPUB_REST_NAMESPACE, $user_id ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
 		$json->orderedItems = apply_filters( 'activitypub_following', array(), $user ); // phpcs:ignore
 

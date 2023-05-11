@@ -27,7 +27,7 @@ class Followers {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/users/(?P<user_id>\d+)/followers',
 			array(
 				array(
@@ -78,7 +78,7 @@ class Followers {
 		$json->actor = \get_author_posts_url( $user_id );
 		$json->type = 'OrderedCollectionPage';
 
-		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/followers" ); // phpcs:ignore
+		$json->partOf = \get_rest_url( null, sprintf( '/%s/users/%d/followers', ACTIVITYPUB_REST_NAMESPACE, $user_id ) ); // phpcs:ignore
 		$json->first = $json->partOf; // phpcs:ignore
 		$json->totalItems = FollowerCollection::count_followers( $user_id ); // phpcs:ignore
 		$json->orderedItems = FollowerCollection::get_followers( $user_id, ARRAY_N ); // phpcs:ignore

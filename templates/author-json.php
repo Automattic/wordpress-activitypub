@@ -28,10 +28,10 @@ if ( \has_header_image() ) {
 	);
 }
 
-$json->inbox = \get_rest_url( null, "/activitypub/1.0/users/$author_id/inbox" );
-$json->outbox = \get_rest_url( null, "/activitypub/1.0/users/$author_id/outbox" );
-$json->followers = \get_rest_url( null, "/activitypub/1.0/users/$author_id/followers" );
-$json->following = \get_rest_url( null, "/activitypub/1.0/users/$author_id/following" );
+$json->inbox = \get_rest_url( null, sprintf( '/%s/users/%d/inbox', ACTIVITYPUB_REST_NAMESPACE, $author_id ) );
+$json->outbox = \get_rest_url( null, sprintf( '/%s/users/%d/outbox', ACTIVITYPUB_REST_NAMESPACE, $author_id ) );
+$json->followers = \get_rest_url( null, sprintf( '/%s/users/%d/followers', ACTIVITYPUB_REST_NAMESPACE, $author_id ) );
+$json->following = \get_rest_url( null, sprintf( '/%s/users/%d/following', ACTIVITYPUB_REST_NAMESPACE, $author_id ) );
 
 $json->manuallyApprovesFollowers = \apply_filters( 'activitypub_json_manually_approves_followers', \__return_false() ); // phpcs:ignore
 

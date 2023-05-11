@@ -25,6 +25,7 @@ function init() {
 	\defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))' );
 	\defined( 'ACTIVITYPUB_USERNAME_REGEXP' ) || \define( 'ACTIVITYPUB_USERNAME_REGEXP', '(?:([A-Za-z0-9_-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))' );
 	\defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<strong>[ap_title]</strong>\n\n[ap_content]\n\n[ap_hashtags]\n\n[ap_shortlink]" );
+	defined( 'ACTIVITYPUB_REST_NAMESPACE' ) || define( 'ACTIVITYPUB_REST_NAMESPACE', 'activitypub/1.0' );
 
 	\define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -120,12 +121,12 @@ function plugin_settings_link( $actions ) {
  */
 function add_rewrite_rules() {
 	if ( ! \class_exists( 'Webfinger' ) ) {
-		\add_rewrite_rule( '^.well-known/webfinger', 'index.php?rest_route=/activitypub/1.0/webfinger', 'top' );
+		\add_rewrite_rule( '^.well-known/webfinger', 'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger', 'top' );
 	}
 
 	if ( ! \class_exists( 'Nodeinfo' ) || ! (bool) \get_option( 'blog_public', 1 ) ) {
-		\add_rewrite_rule( '^.well-known/nodeinfo', 'index.php?rest_route=/activitypub/1.0/nodeinfo/discovery', 'top' );
-		\add_rewrite_rule( '^.well-known/x-nodeinfo2', 'index.php?rest_route=/activitypub/1.0/nodeinfo2', 'top' );
+		\add_rewrite_rule( '^.well-known/nodeinfo', 'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo/discovery', 'top' );
+		\add_rewrite_rule( '^.well-known/x-nodeinfo2', 'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo2', 'top' );
 	}
 
 	\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );

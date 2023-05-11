@@ -23,7 +23,7 @@ class Nodeinfo {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/nodeinfo/discovery',
 			array(
 				array(
@@ -35,7 +35,7 @@ class Nodeinfo {
 		);
 
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/nodeinfo',
 			array(
 				array(
@@ -47,7 +47,7 @@ class Nodeinfo {
 		);
 
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/nodeinfo2',
 			array(
 				array(
@@ -173,7 +173,7 @@ class Nodeinfo {
 		$discovery['links'] = array(
 			array(
 				'rel' => 'http://nodeinfo.diaspora.software/ns/schema/2.0',
-				'href' => \get_rest_url( null, 'activitypub/1.0/nodeinfo' ),
+				'href' => \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo' ),
 			),
 		);
 

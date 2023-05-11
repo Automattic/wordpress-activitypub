@@ -148,7 +148,8 @@ class Activity {
 			$this->published = $object['published'];
 		}
 
-		$this->add_to( \get_rest_url( null, '/activitypub/1.0/users/' . intval( $post->get_post_author() ) . '/followers' ) );
+		$url = sprintf( '/%/users/%d/followers', ACTIVITYPUB_REST_NAMESPACE, intval( $post->get_post_author() ) );
+		$this->add_to( \get_rest_url( null, $url ) );
 
 		if ( isset( $this->object['attributedTo'] ) ) {
 			$this->actor = $this->object['attributedTo'];

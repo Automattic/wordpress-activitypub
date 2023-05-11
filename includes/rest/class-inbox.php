@@ -26,7 +26,7 @@ class Inbox {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/inbox',
 			array(
 				array(
@@ -39,7 +39,7 @@ class Inbox {
 		);
 
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/users/(?P<user_id>\d+)/inbox',
 			array(
 				array(
@@ -108,7 +108,7 @@ class Inbox {
 		$json->id = \home_url( \add_query_arg( null, null ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
 		$json->type = 'OrderedCollectionPage';
-		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/inbox" ); // phpcs:ignore
+		$json->partOf = \get_rest_url( null, sprintf( '/%s/users/%d/inbox', ACTIVITYPUB_REST_NAMESPACE, $user_id ) ); // phpcs:ignore
 
 		$json->totalItems = 0; // phpcs:ignore
 
