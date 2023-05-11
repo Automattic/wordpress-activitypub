@@ -65,7 +65,9 @@ spl_autoload_register(
 			$class = str_replace( 'activitypub\\', '', $class );
 
 			if ( false !== strpos( $class, '\\' ) ) {
-				list( $sub_dir, $class ) = explode( '\\', $class );
+				$parts    = explode( '\\', $class );
+				$class    = array_pop( $parts );
+				$sub_dir  = implode( '/', $parts );
 				$base_dir = $base_dir . $sub_dir . '/';
 			}
 
