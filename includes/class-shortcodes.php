@@ -42,8 +42,8 @@ class Shortcodes {
 		foreach ( $tags as $tag ) {
 			$hash_tags[] = \sprintf(
 				'<a rel="tag" class="u-tag u-category" href="%s">#%s</a>',
-				\get_tag_link( $tag ),
-				$tag->slug
+				\esc_url( \get_tag_link( $tag ) ),
+				\esc_html( $tag->slug )
 			);
 		}
 
@@ -66,7 +66,7 @@ class Shortcodes {
 			return '';
 		}
 
-		return \get_the_title( $post_id );
+		return \esc_html( \get_the_title( $post_id ) );
 
 	}
 
@@ -170,7 +170,7 @@ class Shortcodes {
 			}
 		}
 
-		return \apply_filters( 'the_excerpt', $excerpt );
+		return $excerpt;
 	}
 
 	/**
@@ -189,21 +189,11 @@ class Shortcodes {
 			return '';
 		}
 
-		$atts = shortcode_atts(
-			array( 'apply_filters' => 'yes' ),
-			$atts,
-			$tag
-		);
-
 		$content = \get_post_field( 'post_content', $post );
 
-		if ( 'yes' === $atts['apply_filters'] ) {
-			$content = \apply_filters( 'the_content', $content );
-		} else {
-			$content = do_blocks( $content );
-			$content = wptexturize( $content );
-			$content = wp_filter_content_tags( $content );
-		}
+		$content = do_blocks( $content );
+		$content = wptexturize( $content );
+		$content = wp_filter_content_tags( $content );
 
 		// replace script and style elements
 		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
@@ -343,7 +333,11 @@ class Shortcodes {
 		$hash_tags = array();
 
 		foreach ( $categories as $category ) {
-			$hash_tags[] = \sprintf( '<a rel="tag" class="u-tag u-category" href="%s">#%s</a>', \get_category_link( $category ), $category->slug );
+			$hash_tags[] = \sprintf(
+				'<a rel="tag" class="u-tag u-category" href="%s">#%s</a>',
+				\esc_url( \get_category_link( $category ) ),
+				\esc_html( $category->slug )
+			);
 		}
 
 		return \implode( ' ', $hash_tags );
@@ -365,13 +359,13 @@ class Shortcodes {
 			return '';
 		}
 
-		$name = \get_the_author_meta( 'display_name', $post->post_author );
+		$name = \esc_html( \get_the_author_meta( 'display_name', $post->post_author ) );
 
 		if ( ! $name ) {
 			return '';
 		}
 
-		return $name;
+		return \esc_html( $name );
 	}
 
 	/**
@@ -422,7 +416,7 @@ class Shortcodes {
 	 * @return string
 	 */
 	public static function blogname( $atts, $content, $tag ) {
-		return \get_bloginfo( 'name' );
+		return \esc_html( \get_bloginfo( 'name' ) );
 	}
 
 	/**
@@ -435,7 +429,7 @@ class Shortcodes {
 	 * @return string
 	 */
 	public static function blogdesc( $atts, $content, $tag ) {
-		return \get_bloginfo( 'description' );
+		return \esc_html( \get_bloginfo( 'description' ) );
 	}
 
 	/**
@@ -464,7 +458,7 @@ class Shortcodes {
 			return '';
 		}
 
-		return $date;
+		return \esc_html( $date );
 	}
 
 	/**
@@ -493,7 +487,7 @@ class Shortcodes {
 			return '';
 		}
 
-		return $date;
+		return \esc_html( $date );
 	}
 
 	/**
@@ -522,6 +516,6 @@ class Shortcodes {
 			return '';
 		}
 
-		return $date;
+		return \esc_html( $date );
 	}
 }

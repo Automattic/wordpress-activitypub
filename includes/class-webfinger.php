@@ -51,7 +51,7 @@ class Webfinger {
 		}
 
 		// try to access author URL
-		$response = \wp_remote_get(
+		$response = \wp_safe_remote_get(
 			$url,
 			array(
 				'headers' => array( 'Accept' => 'application/activity+json' ),
