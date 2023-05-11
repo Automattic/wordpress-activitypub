@@ -143,10 +143,12 @@ class Signature {
 	public static function verify_http_signature( $request ) {
 		if ( is_object( $request ) ) { // REST Request object
 			$headers = $request->get_headers();
+			$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '';
 			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' /' . rest_get_url_prefix() . $request->get_route();
 		} else {
 			$request = self::format_server_request( $request );
 			$headers = $request['headers']; // $_SERVER array
+			$actor = null;
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
@@ -196,7 +198,11 @@ class Signature {
 			}
 		}
 
-		$public_key = self::get_remote_key( $signature_block['keyId'] );
+		if ( $actor ) {
+			$public_key = self::get_remote_key( $actor );
+		} else {
+			$public_key = self::get_remote_key( $signature_block['keyId'] );
+		}
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		}
