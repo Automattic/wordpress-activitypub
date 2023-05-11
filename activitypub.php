@@ -58,7 +58,7 @@ function init() {
  */
 spl_autoload_register(
 	function ( $class ) {
-		$base_dir = trailingslashit( __DIR__ ) . 'includes' . DIRECTORY_SEPARATOR;
+		$base_dir = \dirname( __FILE__ ) . '/includes/';
 		$base     = 'activitypub';
 
 		$class = strtolower( $class );
@@ -68,7 +68,7 @@ spl_autoload_register(
 
 			if ( false !== strpos( $class, '\\' ) ) {
 				list( $sub_dir, $class ) = explode( '\\', $class );
-				$base_dir = $base_dir . $sub_dir . DIRECTORY_SEPARATOR;
+				$base_dir = $base_dir . $sub_dir . '/';
 			}
 
 			$filename = 'class-' . strtr( $class, '_', '-' );
