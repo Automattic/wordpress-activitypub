@@ -1,7 +1,8 @@
 <?php
 namespace Activitypub;
 
-use Acctivitypub\Model\Follower;
+use Activitypub\Model\Follower;
+use Activitypub\Collection\Followers;
 
 /**
  * ActivityPub Migration Class
@@ -82,7 +83,7 @@ class Migration {
 
 					$follower->upsert();
 
-					$result = wp_set_object_terms( $user_id, $follower->get_actor(), self::TAXONOMY, true );
+					$result = wp_set_object_terms( $user_id, $follower->get_actor(), Followers::TAXONOMY, true );
 				}
 			}
 		}
