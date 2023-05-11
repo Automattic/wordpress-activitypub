@@ -55,11 +55,11 @@ function init() {
  * Class Autoloader
  */
 spl_autoload_register(
-	function ( $class ) {
+	function ( $full_class ) {
 		$base_dir = \dirname( __FILE__ ) . '/includes/';
 		$base     = 'activitypub';
 
-		$class = strtolower( $class );
+		$class = strtolower( $full_class );
 
 		if ( strncmp( $class, $base, strlen( $base ) ) === 0 ) {
 			$class = str_replace( 'activitypub\\', '', $class );
@@ -76,6 +76,9 @@ spl_autoload_register(
 
 			if ( file_exists( $file ) && is_readable( $file ) ) {
 				require_once $file;
+			} else {
+				// translators: %s is the class name
+				\wp_die( sprintf( esc_html__( 'Required class not found or not readable: %s', 'activitypub' ), esc_html( $full_class ) ) );
 			}
 		}
 	}
