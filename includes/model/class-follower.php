@@ -225,6 +225,18 @@ class Follower {
 	}
 
 	/**
+	 * Set new Error
+	 *
+	 * @param mixed $error The latest HTTP-Error.
+	 *
+	 * @return void
+	 */
+	public function set_error( $error ) {
+		$this->errors = array();
+		$this->error  = $error;
+	}
+
+	/**
 	 * Get the errors.
 	 *
 	 * @return mixed
