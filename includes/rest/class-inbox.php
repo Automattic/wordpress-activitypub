@@ -2,6 +2,7 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Model\Activity;
+use function Activitypub\get_rest_url_by_path;
 
 /**
  * ActivityPub Inbox REST-Class

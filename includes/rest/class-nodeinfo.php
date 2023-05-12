@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub\Rest;
 
+use function Activitypub\get_rest_url_by_path;
+
 /**
  * ActivityPub NodeInfo REST-Class
  *

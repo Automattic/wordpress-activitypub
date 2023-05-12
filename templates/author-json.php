@@ -1,4 +1,6 @@
 <?php
+use function Activitypub\get_rest_url_by_path;
+
 $author_id = \get_the_author_meta( 'ID' );
 
 $json = new \stdClass();

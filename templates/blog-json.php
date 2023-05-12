@@ -1,4 +1,6 @@
 <?php
+use function Activitypub\get_rest_url_by_path;
+
 $json = new \stdClass();
 
 $json->{'@context'} = \Activitypub\get_context();
