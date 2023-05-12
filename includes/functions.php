@@ -239,10 +239,7 @@ function get_rest_url_by_path( $path = '' ) {
 	// we'll handle the leading slash.
 	$path = ltrim( $path, '/' );
 	$namespaced_path = sprintf( '/%s/%s', ACTIVITYPUB_REST_NAMESPACE, $path );
-	$rest_url = \get_rest_url( null, $namespaced_path );
-	// Just in case there are non-default ways of handling REST URLs.
-	$rest_url = \apply_filters( 'activitypub_rest_url', $rest_url, $path, ACTIVITYPUB_REST_NAMESPACE );
-	return $rest_url;
+	return \get_rest_url( null, $namespaced_path );
 }
 
 /**
