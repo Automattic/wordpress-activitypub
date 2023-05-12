@@ -9,13 +9,17 @@ use DateTimeZone;
  * ActivityPub Signature Class
  *
  * @author Matthias Pfefferle
+ * @author Django Doucet
  */
 class Signature {
 
 	/**
-	 * @param int $user_id
+	 * Return the public key for a given user.
 	 *
-	 * @return mixed
+	 * @param int  $user_id The WordPress User ID.
+	 * @param bool $force   Force the generation of a new key pair.
+	 *
+	 * @return mixed The public key.
 	 */
 	public static function get_public_key( $user_id, $force = false ) {
 		if ( $force ) {
@@ -36,9 +40,12 @@ class Signature {
 	}
 
 	/**
-	 * @param int $user_id
+	 * Return the private key for a given user.
 	 *
-	 * @return mixed
+	 * @param int  $user_id The WordPress User ID.
+	 * @param bool $force   Force the generation of a new key pair.
+	 *
+	 * @return mixed The private key.
 	 */
 	public static function get_private_key( $user_id, $force = false ) {
 		if ( $force ) {
@@ -61,7 +68,9 @@ class Signature {
 	/**
 	 * Generates the pair keys
 	 *
-	 * @param int $user_id
+	 * @param int $user_id The WordPress User ID.
+	 *
+	 * @return void
 	 */
 	public static function generate_key_pair( $user_id ) {
 		$config = array(
@@ -92,6 +101,17 @@ class Signature {
 		}
 	}
 
+	/**
+	 * Generates the Signature for a HTTP Request
+	 *
+	 * @param int    $user_id     The WordPress User ID.
+	 * @param string $http_method The HTTP method.
+	 * @param string $url         The URL to send the request to.
+	 * @param string $date        The date the request is sent.
+	 * @param string $digest      The digest of the request body.
+	 *
+	 * @return string The signature.
+	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
 		$key = self::get_private_key( $user_id );
 
@@ -136,9 +156,9 @@ class Signature {
 	/**
 	 * Verifies the http signatures
 	 *
-	 * @param WP_REQUEST | Array $_SERVER
-	 * @return void
-	 * @author Django Doucet
+	 * @param WP_REQUEST|array $request The request object or $_SERVER array.
+	 *
+	 * @return mixed A boolean or WP_Error.
 	 */
 	public static function verify_http_signature( $request ) {
 		if ( is_object( $request ) ) { // REST Request object
@@ -217,8 +237,8 @@ class Signature {
 	 * Get public key from key_id
 	 *
 	 * @param string $key_id
+	 *
 	 * @return string $publicKeyPem
-	 * @author Django Doucet <django.doucet@webdevstudios.com>
 	 */
 	public static function get_remote_key( $key_id ) { // phpcs:ignore
 		$actor = \Activitypub\get_remote_metadata_by_actor( strtok( strip_fragment_from_url( $key_id ), '?' ) ); // phpcs:ignore
@@ -235,8 +255,8 @@ class Signature {
 	 * Gets the signature algorithm from the signature header
 	 *
 	 * @param array $signature_block
+	 *
 	 * @return string algorithm
-	 * @author Django Doucet
 	 */
 	public static function get_signature_algorithm( $signature_block ) {
 		if ( $signature_block['algorithm'] ) {
@@ -254,8 +274,8 @@ class Signature {
 	 * Parses the Signature header
 	 *
 	 * @param array $header
+	 *
 	 * @return array signature parts
-	 * @author Django Doucet
 	 */
 	public static function parse_signature_header( $header ) {
 		$ret = array();
@@ -293,9 +313,9 @@ class Signature {
 	 *
 	 * @param array $signed_headers
 	 * @param array $signature_block (pseudo-headers)
-	 * @param array $headers (http headers)
+	 * @param array $headers         (http headers)
+	 *
 	 * @return signed headers for comparison
-	 * @author Django Doucet
 	 */
 	public static function get_signed_data( $signed_headers, $signature_block, $headers ) {
 		$signed_data = '';
@@ -360,6 +380,7 @@ class Signature {
 	 * for use with verify_http_signature()
 	 *
 	 * @param array $_SERVER
+	 *
 	 * @return array $request
 	 */
 	public static function format_server_request( $server ) {

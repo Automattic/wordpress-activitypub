@@ -41,7 +41,7 @@ class Server {
 	/**
 	 * Render Application actor profile
 	 *
-	 * @return WP_REST_Response
+	 * @return WP_REST_Response The JSON profile of the Application Actor.
 	 */
 	public static function application_actor() {
 		$json = new \stdClass();
@@ -72,11 +72,12 @@ class Server {
 	 *
 	 * @see \WP_REST_Request
 	 *
-	 * @param                  $response
-	 * @param                  $handler
-	 * @param \WP_REST_Request $request
+	 * @param WP_REST_Response|WP_HTTP_Response|WP_Error|mixed $response Result to send to the client.
+	 *                                                                   Usually a WP_REST_Response or WP_Error.
+	 * @param array                                            $handler  Route handler used for the request.
+	 * @param WP_REST_Request                                  $request  Request used to generate the response.
 	 *
-	 * @return mixed|\WP_Error
+	 * @return mixed|WP_Error The response, error, or modified response.
 	 */
 	public static function authorize_activitypub_requests( $response, $handler, $request ) {
 		$route = $request->get_route();
