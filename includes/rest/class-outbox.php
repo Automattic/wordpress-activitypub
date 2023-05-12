@@ -72,7 +72,7 @@ class Outbox {
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
 		$json->actor = \get_author_posts_url( $user_id );
 		$json->type = 'OrderedCollectionPage';
-		$json->partOf = \get_rest_url( null, sprintf( '/%s/users/%d/outbox', ACTIVITYPUB_REST_NAMESPACE, $user_id ) ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
 
 		// phpcs:ignore

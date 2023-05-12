@@ -24,6 +24,7 @@ class Webfinger {
 	 * Register routes
 	 */
 	public static function register_routes() {
+		\l( 'register webfinger' );
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
 			'/webfinger',

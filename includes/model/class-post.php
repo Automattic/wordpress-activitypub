@@ -142,8 +142,8 @@ class Post {
 	 */
 	public function __construct( $post ) {
 		$this->post = \get_post( $post );
-		$url = sprintf( '/%/users/%d/followers', ACTIVITYPUB_REST_NAMESPACE, intval( $post->get_post_author() ) );
-		$this->add_to( \get_rest_url( null, $url ) );
+		$path = sprintf( 'users/%d/followers', intval( $this->get_post_author() ) );
+		$this->add_to( get_rest_url_by_path( $path ) );
 	}
 
 	/**

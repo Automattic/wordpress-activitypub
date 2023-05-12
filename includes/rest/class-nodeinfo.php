@@ -173,7 +173,7 @@ class Nodeinfo {
 		$discovery['links'] = array(
 			array(
 				'rel' => 'http://nodeinfo.diaspora.software/ns/schema/2.0',
-				'href' => \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo' ),
+				'href' => get_rest_url_by_path( 'nodeinfo' ),
 			),
 		);
 
