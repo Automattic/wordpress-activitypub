@@ -94,7 +94,7 @@ class Server {
 		} else {
 			if ( '/activitypub/1.0/webfinger' !== $route ) {
 				// SecureMode/Authorized fetch.
-				if ( \get_option( 'activitypub_use_secure_mode', '0' ) ) {
+				if ( ACTIVITYPUB_SECURE_MODE ) {
 					$verified_request = Signature::verify_http_signature( $request );
 					if ( \is_wp_error( $verified_request ) ) {
 						return $verified_request;

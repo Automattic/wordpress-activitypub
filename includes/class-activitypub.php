@@ -78,7 +78,7 @@ class Activitypub {
 			\in_array( 'application/ld+json', $accept, true ) ||
 			\in_array( 'application/json', $accept, true )
 		) {
-			if ( \get_option( 'activitypub_use_secure_mode', '0' ) ) {
+			if ( ACTIVITYPUB_SECURE_MODE ) {
 				$verification = Signature::verify_http_signature( $_SERVER );
 				if ( \is_wp_error( $verification ) ) {
 					// fallback as template_loader can't return http headers
