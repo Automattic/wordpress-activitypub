@@ -3,6 +3,7 @@ namespace Activitypub\Rest;
 
 use WP_REST_Response;
 use Activitypub\Signature;
+use Activitypub\Model\User;
 
 /**
  * ActivityPub Server REST-Class
@@ -57,7 +58,7 @@ class Server {
 		$json->publicKey = (object) array( // phpcs:ignore WordPress.NamingConventions
 			'id' => \get_rest_url( null, 'activitypub/1.0/application#main-key' ),
 			'owner' => \get_rest_url( null, 'activitypub/1.0/application' ),
-			'publicKeyPem' => Signature::get_public_key( -1 ), // phpcs:ignore WordPress.NamingConventions
+			'publicKeyPem' => Signature::get_public_key( User::APPLICATION_USER_ID ), // phpcs:ignore WordPress.NamingConventions
 		);
 
 		$response = new WP_REST_Response( $json, 200 );

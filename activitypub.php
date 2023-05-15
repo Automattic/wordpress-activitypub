@@ -41,6 +41,7 @@ function init() {
 
 	require_once \dirname( __FILE__ ) . '/includes/model/class-activity.php';
 	require_once \dirname( __FILE__ ) . '/includes/model/class-post.php';
+	require_once \dirname( __FILE__ ) . '/includes/model/class-user.php';
 	require_once \dirname( __FILE__ ) . '/includes/model/class-follower.php';
 
 	require_once \dirname( __FILE__ ) . '/includes/class-migration.php';

@@ -4,6 +4,7 @@ namespace Activitypub;
 use WP_Error;
 use DateTime;
 use DateTimeZone;
+use Activitypub\Model\User;
 
 /**
  * ActivityPub Signature Class
@@ -26,7 +27,7 @@ class Signature {
 			self::generate_key_pair( $user_id );
 		}
 
-		if ( -1 === $user_id ) {
+		if ( User::APPLICATION_USER_ID === $user_id ) {
 			$key = \get_option( 'activitypub_magic_sig_public_key' );
 		} else {
 			$key = \get_user_meta( $user_id, 'magic_sig_public_key', true );
@@ -52,7 +53,7 @@ class Signature {
 			self::generate_key_pair( $user_id );
 		}
 
-		if ( -1 === $user_id ) {
+		if ( User::APPLICATION_USER_ID === $user_id ) {
 			$key = \get_option( 'activitypub_magic_sig_private_key' );
 		} else {
 			$key = \get_user_meta( $user_id, 'magic_sig_private_key', true );
@@ -85,7 +86,7 @@ class Signature {
 		\openssl_pkey_export( $key, $priv_key );
 		$detail = \openssl_pkey_get_details( $key );
 
-		if ( -1 === $user_id ) {
+		if ( User::APPLICATION_USER_ID === $user_id ) {
 			// private key
 			\update_option( 'activitypub_magic_sig_private_key', $priv_key );
 
@@ -140,7 +141,7 @@ class Signature {
 		\openssl_sign( $signed_string, $signature, $key, \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature ); // phpcs:ignore
 
-		if ( -1 === $user_id ) {
+		if ( User::APPLICATION_USER_ID === $user_id ) {
 			$key_id = \get_rest_url( null, 'activitypub/1.0/service#main-key' );
 		} else {
 			$key_id = \get_author_posts_url( $user_id ) . '#main-key';
