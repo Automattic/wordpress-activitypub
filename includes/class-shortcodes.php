@@ -3,14 +3,12 @@ namespace Activitypub;
 
 class Shortcodes {
 	/**
-	 * Class constructor, registering WordPress then shortcodes
-	 *
-	 * @param WP_Post  $post    A WordPress Post Object
+	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		foreach ( get_class_methods( 'Activitypub\Shortcodes' ) as $shortcode ) {
+		foreach ( get_class_methods( self::class ) as $shortcode ) {
 			if ( 'init' !== $shortcode ) {
-				add_shortcode( 'ap_' . $shortcode, array( 'Activitypub\Shortcodes', $shortcode ) );
+				add_shortcode( 'ap_' . $shortcode, array( self::class, $shortcode ) );
 			}
 		}
 	}

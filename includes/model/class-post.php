@@ -537,6 +537,6 @@ class Post {
 			return "[ap_content]\n\n[ap_hashtags]\n\n[ap_permalink type=\"html\"]";
 		}
 
-		return $content;
+		return \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
 	}
 }
