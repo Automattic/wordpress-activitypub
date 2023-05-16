@@ -1,9 +1,18 @@
 <?php
 namespace Activitypub;
 
-use Acctivitypub\Model\Follower;
+use Activitypub\Model\Follower;
+use Activitypub\Collection\Followers;
 
+/**
+ * ActivityPub Migration Class
+ *
+ * @author Matthias Pfefferle
+ */
 class Migration {
+	/**
+	 * Initialize the class, registering WordPress hooks
+	 */
 	public static function init() {
 		\add_action( 'activitypub_schedule_migration', array( self::class, 'maybe_migrate' ) );
 	}
@@ -74,7 +83,7 @@ class Migration {
 
 					$follower->upsert();
 
-					$result = wp_set_object_terms( $user_id, $follower->get_actor(), self::TAXONOMY, true );
+					$result = wp_set_object_terms( $user_id, $follower->get_actor(), Followers::TAXONOMY, true );
 				}
 			}
 		}
