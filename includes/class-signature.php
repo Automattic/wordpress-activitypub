@@ -142,7 +142,7 @@ class Signature {
 		$signature = \base64_encode( $signature ); // phpcs:ignore
 
 		if ( User::APPLICATION_USER_ID === $user_id ) {
-			$key_id = \get_rest_url( null, 'activitypub/1.0/service#main-key' );
+			$key_id = \get_rest_url( null, 'activitypub/1.0/application#main-key' );
 		} else {
 			$key_id = \get_author_posts_url( $user_id ) . '#main-key';
 		}
