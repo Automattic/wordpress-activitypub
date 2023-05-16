@@ -82,7 +82,13 @@ class Followers {
 		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/followers', $user_id ) ); // phpcs:ignore
 		$json->first = $json->partOf; // phpcs:ignore
 		$json->totalItems = FollowerCollection::count_followers( $user_id ); // phpcs:ignore
-		$json->orderedItems = FollowerCollection::get_followers( $user_id, ARRAY_N ); // phpcs:ignore
+		// phpcs:ignore
+		$json->orderedItems = array_map(
+			function( $item ) {
+				return $item->get_actor();
+			},
+			FollowerCollection::get_followers( $user_id )
+		);
 
 		$response = new WP_REST_Response( $json, 200 );
 		$response->header( 'Content-Type', 'application/activity+json' );
