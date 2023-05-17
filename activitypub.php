@@ -32,8 +32,8 @@ function init() {
 	\define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
 
 	Migration::init();
-	Activity_Dispatcher::init();
 	Activitypub::init();
+	Activity_Dispatcher::init();
 	Collection\Followers::init();
 
 	// Configure the REST API route
@@ -41,13 +41,13 @@ function init() {
 	Rest\Inbox::init();
 	Rest\Followers::init();
 	Rest\Following::init();
+	Rest\Nodeinfo::init();
 	Rest\Webfinger::init();
 
 	Admin::init();
 	Hashtag::init();
 	Shortcodes::init();
 	Mention::init();
-	Debug::init();
 	Health_Check::init();
 	Scheduler::init();
 }
@@ -96,6 +96,7 @@ if ( \get_option( 'blog_public', 1 ) ) {
 $debug_file = \dirname( __FILE__ ) . '/includes/debug.php';
 if ( \WP_DEBUG && file_exists( $debug_file ) && is_readable( $debug_file ) ) {
 	require_once $debug_file;
+	Debug::init();
 }
 
 /**
