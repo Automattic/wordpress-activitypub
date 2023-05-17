@@ -17,6 +17,7 @@ class Webfinger {
 	 */
 	public static function init() {
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		\add_action( 'parse_request', array( self::class, 'parse_request' ) );
 		\add_action( 'webfinger_user_data', array( self::class, 'add_webfinger_discovery' ), 10, 3 );
 	}
 
@@ -30,7 +31,7 @@ class Webfinger {
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( self::class, 'webfinger' ),
+					'callback'            => array( self::class, 'get' ),
 					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),
@@ -39,16 +40,67 @@ class Webfinger {
 	}
 
 	/**
-	 * Render JRD file
+	 * Render API output
 	 *
-	 * @param  WP_REST_Request   $request
-	 * @return WP_REST_Response
+	 * @param  WP_REST_Request $request The REST request.
+	 *
+	 * @return WP_REST_Response|WP_Error The REST response or an Error object.
 	 */
-	public static function webfinger( $request ) {
+	public static function get( $request ) {
 		$resource = $request->get_param( 'resource' );
+		$json     = self::webfinger( $resource );
+
+		header( 'Access-Control-Allow-Origin: *' );
+
+		return new WP_REST_Response( $json, 200 );
+	}
+
+	/**
+	 * Parse the WebFinger request and render the document.
+	 *
+	 * @param WP $wp WordPress request context
+	 *
+	 * @uses apply_filters() Calls 'webfinger' on webfinger data array
+	 * @uses do_action() Calls 'webfinger_render' to render webfinger data
+	 */
+	public static function parse_request( $wp ) {
+		// check if it is a webfinger request or not
+		if (
+			! array_key_exists( 'well-known', $wp->query_vars ) ||
+			'webfinger' !== $wp->query_vars['well-known']
+		) {
+			return;
+		}
+
+		header( 'Access-Control-Allow-Origin: *' );
+
+		$json = self::webfinger( $wp->query_vars['resource'] );
+
+		wp_send_json( $json );
+	}
+
+	/**
+	 * Build JRD file
+	 *
+	 * @param  string $request The WebFinger resource
+	 *
+	 * @return array|WP_Error The JRD data or an Error object.
+	 */
+	public static function webfinger( $resource ) {
+		if ( empty( $resource ) ) {
+			return new WP_Error(
+				'activitypub_missing_resource',
+				\__( 'Resource parameter is missing', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
 
 		if ( \strpos( $resource, '@' ) === false ) {
-			return new WP_Error( 'activitypub_unsupported_resource', \__( 'Resource is invalid', 'activitypub' ), array( 'status' => 400 ) );
+			return new WP_Error(
+				'activitypub_unsupported_resource',
+				\__( 'Resource is invalid', 'activitypub' ),
+				array( 'status' => 400 )
+			);
 		}
 
 		$resource = \str_replace( 'acct:', '', $resource );
@@ -58,13 +110,21 @@ class Webfinger {
 		$blog_host = \str_replace( 'www.', '', \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
 
 		if ( $blog_host !== $resource_host ) {
-			return new WP_Error( 'activitypub_wrong_host', \__( 'Resource host does not match blog host', 'activitypub' ), array( 'status' => 404 ) );
+			return new WP_Error(
+				'activitypub_wrong_host',
+				\__( 'Resource host does not match blog host', 'activitypub' ),
+				array( 'status' => 404 )
+			);
 		}
 
 		$user = \get_user_by( 'login', \esc_sql( $resource_identifier ) );
 
 		if ( ! $user || ! \user_can( $user, 'publish_posts' ) ) {
-			return new WP_Error( 'activitypub_user_not_found', \__( 'User not found', 'activitypub' ), array( 'status' => 404 ) );
+			return new WP_Error(
+				'activitypub_user_not_found',
+				\__( 'User not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
 		}
 
 		$json = array(
@@ -86,7 +146,7 @@ class Webfinger {
 			),
 		);
 
-		return new WP_REST_Response( $json, 200 );
+		return $json;
 	}
 
 	/**
