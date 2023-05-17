@@ -128,7 +128,7 @@ function plugin_settings_link( $actions ) {
 	)
 );
 
-register_uninstall_hook(
+\register_uninstall_hook(
 	__FILE__,
 	array(
 		__NAMESPACE__ . '\Activitypub',
