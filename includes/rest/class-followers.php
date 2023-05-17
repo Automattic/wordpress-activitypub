@@ -7,6 +7,8 @@ use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Collection\Followers as FollowerCollection;
 
+use function Activitypub\get_rest_url_by_path;
+
 /**
  * ActivityPub Followers REST-Class
  *
@@ -27,7 +29,7 @@ class Followers {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/users/(?P<user_id>\d+)/followers',
 			array(
 				array(
@@ -78,7 +80,7 @@ class Followers {
 		$json->actor = \get_author_posts_url( $user_id );
 		$json->type = 'OrderedCollectionPage';
 
-		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/followers" ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/followers', $user_id ) ); // phpcs:ignore
 		$json->first = $json->partOf; // phpcs:ignore
 		$json->totalItems = FollowerCollection::count_followers( $user_id ); // phpcs:ignore
 		// phpcs:ignore

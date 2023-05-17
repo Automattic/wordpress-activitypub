@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub\Model;
 
+use function Activitypub\get_rest_url_by_path;
+
 /**
  * ActivityPub Post Class
  *
@@ -148,7 +150,8 @@ class Activity {
 			$this->published = $object['published'];
 		}
 
-		$this->add_to( \get_rest_url( null, '/activitypub/1.0/users/' . intval( $post->get_post_author() ) . '/followers' ) );
+		$path = sprintf( 'users/%d/followers', intval( $post->get_post_author() ) );
+		$this->add_to( get_rest_url_by_path( $path ) );
 
 		if ( isset( $this->object['attributedTo'] ) ) {
 			$this->actor = $this->object['attributedTo'];

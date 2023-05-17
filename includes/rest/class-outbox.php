@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub\Rest;
 
+use function Activitypub\get_rest_url_by_path;
+
 /**
  * ActivityPub Outbox REST-Class
  *
@@ -21,7 +23,7 @@ class Outbox {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/users/(?P<user_id>\d+)/outbox',
 			array(
 				array(
@@ -72,7 +74,7 @@ class Outbox {
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
 		$json->actor = \get_author_posts_url( $user_id );
 		$json->type = 'OrderedCollectionPage';
-		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/outbox" ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
 
 		// phpcs:ignore
