@@ -16,8 +16,8 @@ class Nodeinfo {
 	 */
 	public static function init() {
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
-		\add_filter( 'nodeinfo_data', array( self::class, 'add_nodeinfo_discovery' ), 10, 2 );
-		\add_filter( 'nodeinfo2_data', array( self::class, 'add_nodeinfo2_discovery' ), 10 );
+		\add_filter( 'nodeinfo_data', array( self::class, 'add_nodeinfo_data' ), 10, 2 );
+		\add_filter( 'nodeinfo2_data', array( self::class, 'add_nodeinfo2_data' ), 10 );
 	}
 
 	/**
@@ -64,7 +64,7 @@ class Nodeinfo {
 	/**
 	 * Render NodeInfo file
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param  WP_REST_Request $request The REST request.
 	 *
 	 * @return WP_REST_Response
 	 */
@@ -114,7 +114,6 @@ class Nodeinfo {
 	/**
 	 * Render NodeInfo file
 	 *
-	 * @param  WP_REST_Request   $request
 	 *
 	 * @return WP_REST_Response
 	 */
