@@ -244,6 +244,21 @@ function get_rest_url_by_path( $path = '' ) {
 }
 
 /**
+ * Get the Rewrite-Rule based on the ACTIVITYPUB_WELL_KNOWN_HANDLER const.
+ *
+ * @param string $path The path used by the well-known resource.
+ *
+ * @return string The Rewrite-Rule.
+ */
+function get_well_known_rewrite_rule_by_path( $path = '' ) {
+	if ( ACTIVITYPUB_WELL_KNOWN_HANDLER_QUERY === ACTIVITYPUB_WELL_KNOWN_HANDLER ) {
+		return 'index.php?well-known=' . $path;
+	}
+
+	return 'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/' . $path;
+}
+
+/**
  * Check if a request is for an ActivityPub request.
  *
  * @return bool False by default.

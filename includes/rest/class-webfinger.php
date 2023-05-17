@@ -56,7 +56,7 @@ class Webfinger {
 	}
 
 	/**
-	 * Parse the WebFinger request and render the document.
+	 * Render query output
 	 *
 	 * @param WP $wp WordPress request context
 	 *

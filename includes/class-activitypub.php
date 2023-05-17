@@ -126,6 +126,8 @@ class Activitypub {
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
 		$vars[] = 'well-known';
+		$vars[] = 'nodeinfo2';
+		$vars[] = 'nodeinfo/discovery';
 		$vars[] = 'resource';
 
 		return $vars;
@@ -227,20 +229,20 @@ class Activitypub {
 		if ( ! \class_exists( 'Webfinger' ) ) {
 			\add_rewrite_rule(
 				'^.well-known/webfinger',
-				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger',
+				get_well_known_rewrite_rule_by_path( 'webfinger' ),
 				'top'
 			);
 		}
 
-		if ( ! \class_exists( 'Nodeinfo' ) && true === (bool) \get_option( 'blog_public', 1 ) ) {
+		if ( ! \class_exists( 'Nodeinfo' ) && \get_option( 'blog_public', 1 ) ) {
 			\add_rewrite_rule(
 				'^.well-known/nodeinfo',
-				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo/discovery',
+				get_well_known_rewrite_rule_by_path( 'nodeinfo/discovery' ),
 				'top'
 			);
 			\add_rewrite_rule(
 				'^.well-known/x-nodeinfo2',
-				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo2',
+				get_well_known_rewrite_rule_by_path( 'nodeinfo2' ),
 				'top'
 			);
 		}
