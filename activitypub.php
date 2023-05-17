@@ -41,7 +41,6 @@ function init() {
 	Rest\Inbox::init();
 	Rest\Followers::init();
 	Rest\Following::init();
-	Rest\Nodeinfo::init();
 	Rest\Webfinger::init();
 
 	Admin::init();
