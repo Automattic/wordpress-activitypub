@@ -1,6 +1,4 @@
 <?php
-use function Activitypub\get_rest_url_by_path;
-
 $json = new \stdClass();
 
 $json->{'@context'} = \Activitypub\get_context();
@@ -29,10 +27,10 @@ if ( \has_header_image() ) {
 	);
 }
 
-$json->inbox = get_rest_url_by_path( 'blog/inbox' );
-$json->outbox = get_rest_url_by_path( 'blog/outbox' );
-$json->followers = get_rest_url_by_path( 'blog/followers' );
-$json->following = get_rest_url_by_path( 'blog/following' );
+$json->inbox = \Activitypub\get_rest_url_by_path( 'blog/inbox' );
+$json->outbox = \Activitypub\get_rest_url_by_path( 'blog/outbox' );
+$json->followers = \Activitypub\get_rest_url_by_path( 'blog/followers' );
+$json->following = \Activitypub\get_rest_url_by_path( 'blog/following' );
 
 $json->manuallyApprovesFollowers = \apply_filters( 'activitypub_json_manually_approves_followers', \__return_false() ); // phpcs:ignore
 
