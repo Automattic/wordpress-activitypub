@@ -30,7 +30,7 @@ function init() {
 	\define( 'ACTIVITYPUB_WELL_KNOWN_HANDLER_REST', 'rest' );
 	\define( 'ACTIVITYPUB_WELL_KNOWN_HANDLER_QUERY', 'query' );
 	// can be "rest" or "query"
-	\defined( 'ACTIVITYPUB_WELL_KNOWN_HANDLER' ) || \define( 'ACTIVITYPUB_WELL_KNOWN_HANDLER', ACTIVITYPUB_WELL_KNOWN_HANDLER_QUERY );
+	\defined( 'ACTIVITYPUB_WELL_KNOWN_HANDLER' ) || \define( 'ACTIVITYPUB_WELL_KNOWN_HANDLER', ACTIVITYPUB_WELL_KNOWN_HANDLER_REST );
 
 	\define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
