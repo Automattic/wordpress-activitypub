@@ -179,6 +179,8 @@ class Nodeinfo {
 			),
 		);
 
+		$discovery = apply_filters( 'activitypub_nodeinfo_discovery', $discovery );
+
 		return new \WP_REST_Response( $discovery, 200 );
 	}
 
