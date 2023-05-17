@@ -193,7 +193,7 @@ class Nodeinfo {
 	 * @return array           The extended array
 	 */
 	public static function add_nodeinfo_discovery( $nodeinfo, $version ) {
-		if ( '2.0' === $version ) {
+		if ( '2.0' <= $version ) {
 			$nodeinfo['protocols'][] = 'activitypub';
 		} else {
 			$nodeinfo['protocols']['inbound'][]  = 'activitypub';
