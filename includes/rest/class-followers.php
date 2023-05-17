@@ -6,6 +6,7 @@ use stdClass;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Collection\Followers as FollowerCollection;
+
 use function Activitypub\get_rest_url_by_path;
 
 /**
