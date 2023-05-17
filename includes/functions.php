@@ -233,6 +233,7 @@ function is_tombstone( $wp_error ) {
  * Get the REST URL relative to this plugin's namespace.
  *
  * @param string $path Optional. REST route path. Otherwise this plugin's namespaced root.
+ *
  * @return string REST URL relative to this plugin's namespace.
  */
 function get_rest_url_by_path( $path = '' ) {
