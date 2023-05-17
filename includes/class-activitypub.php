@@ -126,8 +126,6 @@ class Activitypub {
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
 		$vars[] = 'well-known';
-		$vars[] = 'nodeinfo2';
-		$vars[] = 'nodeinfo/discovery';
 		$vars[] = 'resource';
 
 		return $vars;

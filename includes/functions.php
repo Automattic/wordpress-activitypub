@@ -251,7 +251,7 @@ function get_rest_url_by_path( $path = '' ) {
  * @return string The Rewrite-Rule.
  */
 function get_well_known_rewrite_rule_by_path( $path = '' ) {
-	if ( ACTIVITYPUB_WELL_KNOWN_HANDLER_QUERY === ACTIVITYPUB_WELL_KNOWN_HANDLER ) {
+	if ( 'query' === ACTIVITYPUB_WELL_KNOWN_HANDLER ) {
 		return 'index.php?well-known=' . $path;
 	}
 

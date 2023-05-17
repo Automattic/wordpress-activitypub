@@ -27,10 +27,8 @@ function init() {
 	\defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<strong>[ap_title]</strong>\n\n[ap_content]\n\n[ap_hashtags]\n\n[ap_shortlink]" );
 	\defined( 'ACTIVITYPUB_REST_NAMESPACE' ) || \define( 'ACTIVITYPUB_REST_NAMESPACE', 'activitypub/1.0' );
 
-	\define( 'ACTIVITYPUB_WELL_KNOWN_HANDLER_REST', 'rest' );
-	\define( 'ACTIVITYPUB_WELL_KNOWN_HANDLER_QUERY', 'query' );
 	// can be "rest" or "query"
-	\defined( 'ACTIVITYPUB_WELL_KNOWN_HANDLER' ) || \define( 'ACTIVITYPUB_WELL_KNOWN_HANDLER', ACTIVITYPUB_WELL_KNOWN_HANDLER_REST );
+	\defined( 'ACTIVITYPUB_WELL_KNOWN_HANDLER' ) || \define( 'ACTIVITYPUB_WELL_KNOWN_HANDLER', 'rest' );
 
 	\define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
