@@ -26,14 +26,15 @@ function init() {
 	\defined( 'ACTIVITYPUB_USERNAME_REGEXP' ) || \define( 'ACTIVITYPUB_USERNAME_REGEXP', '(?:([A-Za-z0-9_-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))' );
 	\defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<strong>[ap_title]</strong>\n\n[ap_content]\n\n[ap_hashtags]\n\n[ap_shortlink]" );
 	\defined( 'ACTIVITYPUB_SECURE_MODE' ) || \define( 'ACTIVITYPUB_SECURE_MODE', apply_filters( 'activitypub_secure_mode', $value = false ) );
+	\defined( 'ACTIVITYPUB_REST_NAMESPACE' ) || \define( 'ACTIVITYPUB_REST_NAMESPACE', 'activitypub/1.0' );
 
 	\define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
 
 	Migration::init();
-	Activity_Dispatcher::init();
 	Activitypub::init();
+	Activity_Dispatcher::init();
 	Collection\Followers::init();
 
 	// Configure the REST API route
@@ -41,13 +42,13 @@ function init() {
 	Rest\Inbox::init();
 	Rest\Followers::init();
 	Rest\Following::init();
+	Rest\Nodeinfo::init();
 	Rest\Webfinger::init();
 
 	Admin::init();
 	Hashtag::init();
 	Shortcodes::init();
 	Mention::init();
-	Debug::init();
 	Health_Check::init();
 	Scheduler::init();
 }
@@ -96,6 +97,7 @@ if ( \get_option( 'blog_public', 1 ) ) {
 $debug_file = \dirname( __FILE__ ) . '/includes/debug.php';
 if ( \WP_DEBUG && file_exists( $debug_file ) && is_readable( $debug_file ) ) {
 	require_once $debug_file;
+	Debug::init();
 }
 
 /**
@@ -135,7 +137,6 @@ register_uninstall_hook(
 		'uninstall',
 	)
 );
-
 
 /**
  * Only load code that needs BuddyPress to run once BP is loaded and initialized.

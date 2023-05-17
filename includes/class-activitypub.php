@@ -227,7 +227,7 @@ class Activitypub {
 		if ( ! \class_exists( 'Webfinger' ) ) {
 			\add_rewrite_rule(
 				'^.well-known/webfinger',
-				'index.php?rest_route=/activitypub/1.0/webfinger',
+				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger',
 				'top'
 			);
 		}
@@ -235,12 +235,12 @@ class Activitypub {
 		if ( ! \class_exists( 'Nodeinfo' ) && true === (bool) \get_option( 'blog_public', 1 ) ) {
 			\add_rewrite_rule(
 				'^.well-known/nodeinfo',
-				'index.php?rest_route=/activitypub/1.0/nodeinfo/discovery',
+				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo/discovery',
 				'top'
 			);
 			\add_rewrite_rule(
 				'^.well-known/x-nodeinfo2',
-				'index.php?rest_route=/activitypub/1.0/nodeinfo2',
+				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo2',
 				'top'
 			);
 		}
