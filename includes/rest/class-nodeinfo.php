@@ -16,6 +16,7 @@ class Nodeinfo {
 	 */
 	public static function init() {
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		\add_action( 'parse_request', array( self::class, 'parse_request' ) );
 		\add_filter( 'nodeinfo_data', array( self::class, 'add_nodeinfo_data' ), 10, 2 );
 		\add_filter( 'nodeinfo2_data', array( self::class, 'add_nodeinfo2_data' ), 10 );
 	}
@@ -66,7 +67,7 @@ class Nodeinfo {
 	 *
 	 * @param  WP_REST_Request $request The REST request.
 	 *
-	 * @return WP_REST_Response
+	 * @return WP_REST_Response The response data.
 	 */
 	public static function nodeinfo( $request ) {
 		$nodeinfo = array();
@@ -114,8 +115,9 @@ class Nodeinfo {
 	/**
 	 * Render NodeInfo file
 	 *
+	 * @param  WP_REST_Request|WP $request The REST or WordPress query request.
 	 *
-	 * @return WP_REST_Response
+	 * @return WP_REST_Response The response data.
 	 */
 	public static function nodeinfo2( $request ) {
 		$nodeinfo = array();
@@ -159,15 +161,19 @@ class Nodeinfo {
 			'outbound' => array(),
 		);
 
-		return new \WP_REST_Response( $nodeinfo, 200 );
+		if ( $request instanceof WP_REST_Request ) {
+			return new \WP_REST_Response( $nodeinfo, 200 );
+		} else {
+			wp_send_json( $nodeinfo );
+		}
 	}
 
 	/**
 	 * Render NodeInfo discovery file
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param  WP_REST_Request|WP $request The REST or WordPress query request.
 	 *
-	 * @return WP_REST_Response
+	 * @return WP_REST_Response The response data.
 	 */
 	public static function discovery( $request ) {
 		$discovery = array();
@@ -180,7 +186,32 @@ class Nodeinfo {
 
 		$discovery = apply_filters( 'activitypub_nodeinfo_discovery', $discovery );
 
-		return new \WP_REST_Response( $discovery, 200 );
+		if ( $request instanceof WP_REST_Request ) {
+			return new \WP_REST_Response( $discovery, 200 );
+		} else {
+			wp_send_json( $discovery );
+		}
+	}
+
+	/**
+	 * Render query output
+	 *
+	 * @param WP $wp WordPress request context.
+	 */
+	public static function parse_request( $wp ) {
+		// check if it is a webfinger request or not
+		if (
+			! array_key_exists( 'well-known', $wp->query_vars ) ||
+			! in_array( $wp->query_vars['well-known'], array( 'nodeinfo2', 'nodeinfo/discovery' ), true )
+		) {
+			return;
+		}
+
+		if ( 'nodeinfo2' === $wp->query_vars['well-known'] ) {
+			self::nodeinfo2( $wp );
+		} else {
+			self::discovery( $wp );
+		}
 	}
 
 	/**
@@ -191,8 +222,8 @@ class Nodeinfo {
 	 *
 	 * @return array           The extended array
 	 */
-	public static function add_nodeinfo_discovery( $nodeinfo, $version ) {
-		if ( '2.0' <= $version ) {
+	public static function add_nodeinfo_data( $nodeinfo, $version ) {
+		if ( version_compare( $version, '2.0', '>=' ) ) {
 			$nodeinfo['protocols'][] = 'activitypub';
 		} else {
 			$nodeinfo['protocols']['inbound'][]  = 'activitypub';
@@ -209,7 +240,7 @@ class Nodeinfo {
 	 *
 	 * @return array           The extended array
 	 */
-	public static function add_nodeinfo2_discovery( $nodeinfo ) {
+	public static function add_nodeinfo2_data( $nodeinfo ) {
 		$nodeinfo['protocols'][] = 'activitypub';
 
 		return $nodeinfo;
