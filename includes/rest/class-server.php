@@ -52,7 +52,7 @@ class Server {
 		$json->{'@context'} = \Activitypub\get_context();
 		$json->id = get_rest_url_by_path( 'application' );
 		$json->type = 'Application';
-		$json->preferredUsername = str_replace( array( '.' ), '-' , wp_parse_url( get_site_url(), PHP_URL_HOST )  ); // phpcs:ignore WordPress.NamingConventions
+		$json->preferredUsername = str_replace( array( '.' ), '-', wp_parse_url( get_site_url(), PHP_URL_HOST ) ); // phpcs:ignore WordPress.NamingConventions
 		$json->name = get_bloginfo( 'name' );
 		$json->summary = 'WordPress-ActivityPub application actor';
 		$json->manuallyApprovesFollowers = true; // phpcs:ignore WordPress.NamingConventions
