@@ -4,6 +4,8 @@ namespace Activitypub\Rest;
 use WP_REST_Response;
 use Activitypub\Signature;
 use Activitypub\Model\User;
+use function Activitypub\get_rest_url_by_path;
+
 
 /**
  * ActivityPub Server REST-Class
@@ -18,8 +20,8 @@ class Server {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_filter( 'rest_request_before_callbacks', array( self::class, 'authorize_activitypub_requests' ), 10, 3 );
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		\add_filter( 'rest_request_before_callbacks', array( self::class, 'authorize_activitypub_requests' ), 10, 3 );
 	}
 
 	/**
@@ -27,7 +29,7 @@ class Server {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/application',
 			array(
 				array(
@@ -48,16 +50,16 @@ class Server {
 		$json = new \stdClass();
 
 		$json->{'@context'} = \Activitypub\get_context();
-		$json->id = \get_rest_url( null, 'activitypub/1.0/application' );
+		$json->id = get_rest_url_by_path( 'application' );
 		$json->type = 'Application';
-		$json->preferredUsername = wp_parse_url( get_site_url(), PHP_URL_HOST ); // phpcs:ignore WordPress.NamingConventions
+		$json->preferredUsername = str_replace( array( '.' ), '-' , wp_parse_url( get_site_url(), PHP_URL_HOST )  ); // phpcs:ignore WordPress.NamingConventions
 		$json->name = get_bloginfo( 'name' );
 		$json->summary = 'WordPress-ActivityPub application actor';
 		$json->manuallyApprovesFollowers = true; // phpcs:ignore WordPress.NamingConventions
 		$json->icon = array( get_site_icon_url() ); // phpcs:ignore WordPress.NamingConventions short array syntax
 		$json->publicKey = (object) array( // phpcs:ignore WordPress.NamingConventions
-			'id' => \get_rest_url( null, 'activitypub/1.0/application#main-key' ),
-			'owner' => \get_rest_url( null, 'activitypub/1.0/application' ),
+			'id' => get_rest_url_by_path( 'application#main-key' ),
+			'owner' => get_rest_url_by_path( 'application' ),
 			'publicKeyPem' => Signature::get_public_key( User::APPLICATION_USER_ID ), // phpcs:ignore WordPress.NamingConventions
 		);
 
@@ -92,7 +94,7 @@ class Server {
 				return $verified_request;
 			}
 		} else {
-			if ( '/activitypub/1.0/webfinger' !== $route ) {
+			if ( get_rest_url_by_path( 'webfinger' ) !== $route ) {
 				// SecureMode/Authorized fetch.
 				if ( ACTIVITYPUB_SECURE_MODE ) {
 					$verified_request = Signature::verify_http_signature( $request );
