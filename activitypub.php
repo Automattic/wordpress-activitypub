@@ -44,6 +44,7 @@ function init() {
 	Rest\Following::init();
 	Rest\Nodeinfo::init();
 	Rest\Webfinger::init();
+	Rest\Server::init();
 
 	Admin::init();
 	Hashtag::init();
