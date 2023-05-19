@@ -9,7 +9,7 @@ if ( ! \class_exists( '\WP_List_Table' ) ) {
 }
 
 class Followers extends WP_List_Table {
-	public function get_columns() {
+	public static function get_default_columns() {
 		return array(
 			'cb'           => '<input type="checkbox" />',
 			'avatar'       => \__( 'Avatar', 'activitypub' ),
@@ -19,6 +19,10 @@ class Followers extends WP_List_Table {
 			'errors'       => \__( 'Errors', 'activitypub' ),
 			'latest-error' => \__( 'Latest Error Message', 'activitypub' ),
 		);
+	}
+
+	public function get_columns() {
+		return self::get_default_columns();
 	}
 
 	public function get_sortable_columns() {

@@ -37,6 +37,19 @@ class Admin {
 
 		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
 
+		add_filter( "manage_{$followers_list_page}_columns", array( '\Activitypub\Table\Followers', 'get_default_columns' ) );
+		add_filter(
+			'screen_options_show_screen',
+			function( $show_screen, $screen ) use ( $followers_list_page ) {
+				if ( $followers_list_page === $screen->base ) {
+					return true;
+				}
+				return $show_screen;
+			},
+			2,
+			10
+		);
+
 		\add_action( 'load-' . $followers_list_page, array( self::class, 'add_followers_list_help_tab' ) );
 	}
 
@@ -71,6 +84,16 @@ class Admin {
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {
+		add_screen_option(
+			'per_page',
+			array(
+				'default' => 100,
+				'option'  => 'edit_1_per_page',
+			)
+		);
+
+		add_screen_option( 'layout_columns', array( 'max' => 2, 'default' => 2 ) );
+
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php' );
 	}
 
