@@ -8,6 +8,7 @@ use WP_REST_Response;
 use Activitypub\Model\Post;
 use Activitypub\Model\Activity;
 
+use function Activitypub\get_context;
 use function Activitypub\get_rest_url_by_path;
 
 /**
