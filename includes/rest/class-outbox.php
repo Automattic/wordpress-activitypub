@@ -144,7 +144,6 @@ class Outbox {
 			'required' => true,
 			'type' => 'integer',
 			'validate_callback' => function( $param, $request, $key ) {
-				// this is probably ok on multisite still?
 				return user_can( $param, 'publish_posts' );
 			},
 		);
