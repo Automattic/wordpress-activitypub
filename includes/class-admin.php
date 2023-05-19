@@ -84,16 +84,6 @@ class Admin {
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {
-		add_screen_option(
-			'per_page',
-			array(
-				'default' => 100,
-				'option'  => 'edit_1_per_page',
-			)
-		);
-
-		add_screen_option( 'layout_columns', array( 'max' => 2, 'default' => 2 ) );
-
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php' );
 	}
 
