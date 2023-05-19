@@ -1,6 +1,13 @@
 <?php
 namespace Activitypub\Rest;
 
+use stdClass;
+use WP_Error;
+use WP_REST_Server;
+use WP_REST_Response;
+use Activitypub\Model\Post;
+use Activitypub\Model\Activity;
+
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -27,7 +34,7 @@ class Outbox {
 			'/users/(?P<user_id>\d+)/outbox',
 			array(
 				array(
-					'methods'             => \WP_REST_Server::READABLE,
+					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'user_outbox_get' ),
 					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
@@ -48,7 +55,7 @@ class Outbox {
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
 
 		if ( ! $author ) {
-			return new \WP_Error(
+			return new WP_Error(
 				'rest_invalid_param',
 				\__( 'User not found', 'activitypub' ),
 				array(
@@ -67,9 +74,9 @@ class Outbox {
 		 */
 		\do_action( 'activitypub_outbox_pre' );
 
-		$json = new \stdClass();
+		$json = new stdClass();
 
-		$json->{'@context'} = \Activitypub\get_context();
+		$json->{'@context'} = get_context();
 		$json->id = \home_url( \add_query_arg( null, null ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
 		$json->actor = \get_author_posts_url( $user_id );
@@ -103,8 +110,8 @@ class Outbox {
 			);
 
 			foreach ( $posts as $post ) {
-				$activitypub_post = new \Activitypub\Model\Post( $post );
-				$activitypub_activity = new \Activitypub\Model\Activity( 'Create', false );
+				$activitypub_post = new Post( $post );
+				$activitypub_activity = new Activity( 'Create', false );
 
 				$activitypub_activity->from_post( $activitypub_post );
 				$json->orderedItems[] = $activitypub_activity->to_array(); // phpcs:ignore
@@ -119,7 +126,7 @@ class Outbox {
 		 */
 		\do_action( 'activitypub_outbox_post' );
 
-		$response = new \WP_REST_Response( $json, 200 );
+		$response = new WP_REST_Response( $json, 200 );
 
 		$response->header( 'Content-Type', 'application/activity+json' );
 
