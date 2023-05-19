@@ -1,9 +1,15 @@
 <?php
 namespace Activitypub\Rest;
 
+use WP_Error;
+use WP_REST_Server;
+use WP_REST_Response;
 use Activitypub\Model\Activity;
 
+use function Activitypub\get_context;
+use function Activitypub\url_to_authorid;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_remote_metadata_by_actor;
 
 /**
  * ActivityPub Inbox REST-Class
@@ -32,7 +38,7 @@ class Inbox {
 			'/inbox',
 			array(
 				array(
-					'methods'             => \WP_REST_Server::EDITABLE,
+					'methods'             => WP_REST_Server::EDITABLE,
 					'callback'            => array( self::class, 'shared_inbox_post' ),
 					'args'                => self::shared_inbox_post_parameters(),
 					'permission_callback' => '__return_true',
@@ -45,13 +51,13 @@ class Inbox {
 			'/users/(?P<user_id>\d+)/inbox',
 			array(
 				array(
-					'methods'             => \WP_REST_Server::EDITABLE,
+					'methods'             => WP_REST_Server::EDITABLE,
 					'callback'            => array( self::class, 'user_inbox_post' ),
 					'args'                => self::user_inbox_post_parameters(),
 					'permission_callback' => '__return_true',
 				),
 				array(
-					'methods'             => \WP_REST_Server::READABLE,
+					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'user_inbox_get' ),
 					'args'                => self::user_inbox_get_parameters(),
 					'permission_callback' => '__return_true',
@@ -106,7 +112,7 @@ class Inbox {
 
 		$json = new \stdClass();
 
-		$json->{'@context'} = \Activitypub\get_context();
+		$json->{'@context'} = get_context();
 		$json->id = \home_url( \add_query_arg( null, null ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
 		$json->type = 'OrderedCollectionPage';
@@ -126,7 +132,7 @@ class Inbox {
 		 */
 		\do_action( 'activitypub_inbox_post' );
 
-		$response = new \WP_REST_Response( $json, 200 );
+		$response = new WP_REST_Response( $json, 200 );
 
 		$response->header( 'Content-Type', 'application/activity+json' );
 
@@ -150,7 +156,7 @@ class Inbox {
 		\do_action( 'activitypub_inbox', $data, $user_id, $type );
 		\do_action( "activitypub_inbox_{$type}", $data, $user_id );
 
-		return new \WP_REST_Response( array(), 202 );
+		return new WP_REST_Response( array(), 202 );
 	}
 
 	/**
@@ -166,7 +172,7 @@ class Inbox {
 		$users = self::extract_recipients( $data );
 
 		if ( ! $users ) {
-			return new \WP_Error(
+			return new WP_Error(
 				'rest_invalid_param',
 				\__( 'No recipients found', 'activitypub' ),
 				array(
@@ -189,7 +195,7 @@ class Inbox {
 			\do_action( "activitypub_inbox_{$type}", $data, $user->ID );
 		}
 
-		return new \WP_REST_Response( array(), 202 );
+		return new WP_REST_Response( array(), 202 );
 	}
 
 	/**
@@ -350,7 +356,7 @@ class Inbox {
 	 * @param  int   $user_id The id of the local blog-user
 	 */
 	public static function handle_reaction( $object, $user_id ) {
-		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
+		$meta = get_remote_metadata_by_actor( $object['actor'] );
 
 		$comment_post_id = \url_to_postid( $object['object'] );
 
@@ -395,7 +401,7 @@ class Inbox {
 	 * @param  int   $user_id The id of the local blog-user
 	 */
 	public static function handle_create( $object, $user_id ) {
-		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
+		$meta = get_remote_metadata_by_actor( $object['actor'] );
 
 		if ( ! isset( $object['object']['inReplyTo'] ) ) {
 			return;
@@ -502,7 +508,7 @@ class Inbox {
 		$users = array();
 
 		foreach ( $recipients as $recipient ) {
-			$user_id = \Activitypub\url_to_authorid( $recipient );
+			$user_id = url_to_authorid( $recipient );
 
 			$user = get_user_by( 'id', $user_id );
 
