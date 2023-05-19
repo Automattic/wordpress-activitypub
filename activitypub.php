@@ -50,7 +50,7 @@ function init() {
 	Health_Check::init();
 	Scheduler::init();
 }
-\add_action( 'plugins_loaded', '\Activitypub\init' );
+\add_action( 'plugins_loaded', __NAMESPACE__ . '\init' );
 
 /**
  * Class Autoloader
@@ -143,7 +143,7 @@ function enable_buddypress_features() {
 	require_once \dirname( __FILE__ ) . '/integration/class-buddypress.php';
 	Integration\Buddypress::init();
 }
-add_action( 'bp_include', '\Activitypub\enable_buddypress_features' );
+add_action( 'bp_include', __NAMESPACE__ . '\enable_buddypress_features' );
 
 /**
  * `get_plugin_data` wrapper
