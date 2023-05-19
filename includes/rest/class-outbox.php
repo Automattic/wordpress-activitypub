@@ -80,6 +80,8 @@ class Outbox {
 		// phpcs:ignore
 		$json->totalItems = 0;
 
+		// We can query this more directly based on the supplied post types.
+		// And cache these counts and invalidate them on publish_post.
 		foreach ( $post_types as $post_type ) {
 			$count_posts = \wp_count_posts( $post_type );
 			$json->totalItems += \intval( $count_posts->publish ); // phpcs:ignore
@@ -142,6 +144,7 @@ class Outbox {
 			'required' => true,
 			'type' => 'integer',
 			'validate_callback' => function( $param, $request, $key ) {
+				// this is probably ok on multisite still?
 				return user_can( $param, 'publish_posts' );
 			},
 		);
