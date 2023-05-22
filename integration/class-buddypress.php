@@ -3,7 +3,7 @@ namespace Activitypub\Integration;
 
 class Buddypress {
 	public static function init() {
-		\add_filter( 'activitypub_json_author_array', array( 'Activitypub\Integration\Buddypress', 'add_user_metadata' ), 11, 2 );
+		\add_filter( 'activitypub_json_author_array', array( self::class, 'add_user_metadata' ), 11, 2 );
 	}
 
 	public static function add_user_metadata( $object, $author_id ) {

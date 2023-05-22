@@ -94,7 +94,7 @@ In order for webfinger to work, it must be mapped to the root directory of the U
 
 Add the following to the .htaccess file in the root directory:
 
-	RedirectMatch "^\/\.well-known(.*)$" "\/blog\/\.well-known$1"
+	RedirectMatch "^\/\.well-known/(webfinger|nodeinfo|x-nodeinfo2)(.*)$" "\/blog\/\.well-known$1$2"
 
 Where 'blog' is the path to the subdirectory at which your blog resides.
 

@@ -53,7 +53,7 @@ function init() {
 	Health_Check::init();
 	Scheduler::init();
 }
-\add_action( 'plugins_loaded', '\Activitypub\init' );
+\add_action( 'plugins_loaded', __NAMESPACE__ . '\init' );
 
 /**
  * Class Autoloader
@@ -142,11 +142,25 @@ function plugin_settings_link( $actions ) {
 /**
  * Only load code that needs BuddyPress to run once BP is loaded and initialized.
  */
-function enable_buddypress_features() {
-	require_once \dirname( __FILE__ ) . '/integration/class-buddypress.php';
-	Integration\Buddypress::init();
-}
-add_action( 'bp_include', '\Activitypub\enable_buddypress_features' );
+add_action(
+	'bp_include',
+	function() {
+		require_once \dirname( __FILE__ ) . '/integration/class-buddypress.php';
+		Integration\Buddypress::init();
+	},
+	0
+);
+
+add_action(
+	'plugins_loaded',
+	function() {
+		if ( defined( 'WP_SWEEP_VERSION' ) ) {
+			require_once \dirname( __FILE__ ) . '/integration/class-wp-sweep.php';
+			Integration\Wp_Sweep::init();
+		}
+	},
+	0
+);
 
 /**
  * `get_plugin_data` wrapper
