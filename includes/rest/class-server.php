@@ -88,11 +88,11 @@ class Server {
 	public static function authorize_activitypub_requests( $response, $handler, $request ) {
 		$route = $request->get_route();
 
-		if ( ! str_starts_with( $route, '/activitypub' ) ) {
-			return $response;
-		}
-
-		if ( get_rest_url_by_path( 'webfinger' ) !== $route ) {
+		if (
+			! str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ||
+			str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'webfinger' ) ||
+			str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'nodeinfo' )
+		) {
 			return $response;
 		}
 
