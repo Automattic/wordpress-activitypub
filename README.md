@@ -94,7 +94,7 @@ In order for webfinger to work, it must be mapped to the root directory of the U
 
 Add the following to the .htaccess file in the root directory:
 
-	RedirectMatch "^\/\.well-known(.*)$" "\/blog\/\.well-known$1"
+	RedirectMatch "^\/\.well-known/(webfinger|nodeinfo|x-nodeinfo2)(.*)$" "\/blog\/\.well-known$1"
 
 Where 'blog' is the path to the subdirectory at which your blog resides.
 
@@ -115,6 +115,8 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 
 ### Next ###
 
+* Compatibility: add a new conditional, `\Activitypub\is_activitypub_request()`, to allow third-party plugins to detect ActivityPub requests.
+* Compatibility: add hooks to allow modifying images returned in ActivityPub requests.
 * Compatibility: indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.2.
 
 ### 0.17.0 ###
