@@ -339,6 +339,25 @@ class Followers {
 	}
 
 	/**
+	 * Get all Followers
+	 *
+	 * @param array $args The WP_Term_Query arguments.
+	 *
+	 * @return array The Term list of Followers.
+	 */
+	public static function get_all_followers( $args = array() ) {
+		$defaults = array(
+			'taxonomy'   => self::TAXONOMY,
+			'hide_empty' => false,
+		);
+
+		$args  = wp_parse_args( $args, $defaults );
+		$terms = new WP_Term_Query( $args );
+
+		return $terms->get_terms();
+	}
+
+	/**
 	 * Count the total number of followers
 	 *
 	 * @param int $user_id The ID of the WordPress User
