@@ -27,6 +27,7 @@ function init() {
 	\defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))' );
 	\defined( 'ACTIVITYPUB_USERNAME_REGEXP' ) || \define( 'ACTIVITYPUB_USERNAME_REGEXP', '(?:([A-Za-z0-9_-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))' );
 	\defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<strong>[ap_title]</strong>\n\n[ap_content]\n\n[ap_hashtags]\n\n[ap_shortlink]" );
+
 	\define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
@@ -139,11 +140,25 @@ function plugin_settings_link( $actions ) {
 /**
  * Only load code that needs BuddyPress to run once BP is loaded and initialized.
  */
-function enable_buddypress_features() {
-	require_once \dirname( __FILE__ ) . '/integration/class-buddypress.php';
-	Integration\Buddypress::init();
-}
-add_action( 'bp_include', __NAMESPACE__ . '\enable_buddypress_features' );
+add_action(
+	'bp_include',
+	function() {
+		require_once \dirname( __FILE__ ) . '/integration/class-buddypress.php';
+		Integration\Buddypress::init();
+	},
+	0
+);
+
+add_action(
+	'plugins_loaded',
+	function() {
+		if ( defined( 'WP_SWEEP_VERSION' ) ) {
+			require_once \dirname( __FILE__ ) . '/integration/class-wp-sweep.php';
+			Integration\Wp_Sweep::init();
+		}
+	},
+	0
+);
 
 /**
  * `get_plugin_data` wrapper
