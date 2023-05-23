@@ -205,7 +205,7 @@ function get_author_description( $user_id ) {
 	if ( empty( $description ) ) {
 		$description = get_user_meta( $user_id, 'description', true );
 	}
-	return $description;
+	return \wpautop( \wp_kses( $description, 'default' ) );
 }
 
 /**
