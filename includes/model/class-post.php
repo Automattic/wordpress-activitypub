@@ -95,8 +95,13 @@ class Post {
 			'class' => array(),
 		),
 		'ul' => array(),
-		'ol' => array(),
-		'li' => array(),
+		'ol' => array(
+			'reversed' => array(),
+			'start'    => array(),
+		),
+		'li' => array(
+			'value' => array(),
+		),
 		'strong' => array(
 			'class' => array(),
 		),
