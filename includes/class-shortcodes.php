@@ -43,7 +43,7 @@ class Shortcodes {
 			$hash_tags[] = \sprintf(
 				'<a rel="tag" class="u-tag u-category" href="%s">#%s</a>',
 				\esc_url( \get_tag_link( $tag ) ),
-				\esc_html( $tag->slug )
+				\wp_strip_all_tags( $tag->slug )
 			);
 		}
 
@@ -66,7 +66,7 @@ class Shortcodes {
 			return '';
 		}
 
-		return \esc_html( \get_the_title( $post_id ) );
+		return \wp_strip_all_tags( \get_the_title( $post_id ), true );
 
 	}
 
@@ -170,7 +170,7 @@ class Shortcodes {
 			}
 		}
 
-		return $excerpt;
+		return \apply_filters( 'the_excerpt', $excerpt );
 	}
 
 	/**
@@ -183,22 +183,35 @@ class Shortcodes {
 	 * @return string
 	 */
 	public static function content( $atts, $content, $tag ) {
+		// prevent inception
+		remove_shortcode( 'ap_content' );
+
 		$post = get_post();
 
 		if ( ! $post || \post_password_required( $post ) ) {
 			return '';
 		}
 
+		$atts = shortcode_atts(
+			array( 'apply_filters' => 'yes' ),
+			$atts,
+			$tag
+		);
+
 		$content = \get_post_field( 'post_content', $post );
 
-		$content = do_blocks( $content );
-		$content = wptexturize( $content );
-		$content = wp_filter_content_tags( $content );
+		if ( 'yes' === $atts['apply_filters'] ) {
+			$content = \apply_filters( 'the_content', $content );
+		} else {
+			$content = do_blocks( $content );
+			$content = wptexturize( $content );
+			$content = wp_filter_content_tags( $content );
+		}
 
-		// replace script and style elements
-		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
-
+		$content = strip_shortcodes( $content );
 		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+
+		add_shortcode( 'ap_content', array( 'Activitypub\Shortcodes', 'content' ) );
 
 		return $content;
 	}
@@ -231,7 +244,10 @@ class Shortcodes {
 			return \esc_url( \get_permalink( $post->ID ) );
 		}
 
-		return \sprintf( '<a href="%1$s">%1$s</a>', \esc_url( \get_permalink( $post->ID ) ) );
+		return \sprintf(
+			'<a href="%1$s">%1$s</a>',
+			\esc_url( \get_permalink( $post->ID ) )
+		);
 	}
 
 	/**
@@ -262,7 +278,10 @@ class Shortcodes {
 			return \esc_url( \wp_get_shortlink( $post->ID ) );
 		}
 
-		return \sprintf( '<a href="%1$s">%1$s</a>', \esc_url( \wp_get_shortlink( $post->ID ) ) );
+		return \sprintf(
+			'<a href="%1$s">%1$s</a>',
+			\esc_url( \wp_get_shortlink( $post->ID ) )
+		);
 	}
 
 	/**
@@ -336,7 +355,7 @@ class Shortcodes {
 			$hash_tags[] = \sprintf(
 				'<a rel="tag" class="u-tag u-category" href="%s">#%s</a>',
 				\esc_url( \get_category_link( $category ) ),
-				\esc_html( $category->slug )
+				\wp_strip_all_tags( $category->slug )
 			);
 		}
 
@@ -359,13 +378,13 @@ class Shortcodes {
 			return '';
 		}
 
-		$name = \esc_html( \get_the_author_meta( 'display_name', $post->post_author ) );
+		$name = \get_the_author_meta( 'display_name', $post->post_author );
 
 		if ( ! $name ) {
 			return '';
 		}
 
-		return \esc_html( $name );
+		return wp_strip_all_tags( $name );
 	}
 
 	/**
@@ -416,7 +435,7 @@ class Shortcodes {
 	 * @return string
 	 */
 	public static function blogname( $atts, $content, $tag ) {
-		return \esc_html( \get_bloginfo( 'name' ) );
+		return \wp_strip_all_tags( \get_bloginfo( 'name' ) );
 	}
 
 	/**
@@ -429,7 +448,7 @@ class Shortcodes {
 	 * @return string
 	 */
 	public static function blogdesc( $atts, $content, $tag ) {
-		return \esc_html( \get_bloginfo( 'description' ) );
+		return \wp_strip_all_tags( \get_bloginfo( 'description' ) );
 	}
 
 	/**
@@ -458,7 +477,7 @@ class Shortcodes {
 			return '';
 		}
 
-		return \esc_html( $date );
+		return $date;
 	}
 
 	/**
@@ -487,15 +506,15 @@ class Shortcodes {
 			return '';
 		}
 
-		return \esc_html( $date );
+		return $date;
 	}
 
 	/**
 	 * Generates output for the ap_datetime shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    shortcode attributes
+	 * @param string $content shortcode content
+	 * @param string $tag     shortcode tag name
 	 *
 	 * @return string
 	 */
@@ -516,6 +535,6 @@ class Shortcodes {
 			return '';
 		}
 
-		return \esc_html( $date );
+		return $date;
 	}
 }

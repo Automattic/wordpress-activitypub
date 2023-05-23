@@ -508,8 +508,12 @@ class Post {
 		$content = do_shortcode( $content );
 		wp_reset_postdata();
 
-		$content = \wpautop( \wp_kses( $content, $this->allowed_tags ) );
-		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+		// replace script and style elements
+		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
+		$content = \wp_kses( $content, $this->allowed_tags );
+		$content = \wpautop( $content );
+		$content = \preg_replace( '/[\n\r\t]/', '', $content );
+		$content = \trim( $content );
 
 		$content = \apply_filters( 'activitypub_the_content', $content, $post );
 		$content = \html_entity_decode( $content, \ENT_QUOTES, 'UTF-8' );
@@ -537,6 +541,6 @@ class Post {
 			return "[ap_content]\n\n[ap_hashtags]\n\n[ap_permalink type=\"html\"]";
 		}
 
-		return $content;
+		return \get_option( 'activitypub_custom_post_content' );
 	}
 }
