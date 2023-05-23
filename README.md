@@ -20,11 +20,12 @@ The plugin works with the following tested federated platforms, but there may be
 
 * [Mastodon](https://joinmastodon.org/)
 * [Pleroma](https://pleroma.social/)
-* [Friendica](https://friendi.ca/)
-* [HubZilla](https://hubzilla.org/)
+* [friendica](https://friendi.ca/)
+* [Hubzilla](https://hubzilla.org/)
 * [Pixelfed](https://pixelfed.org/)
-* [SocialHome](https://socialhome.network/)
+* [Socialhome](https://socialhome.network/)
 * [Misskey](https://join.misskey.page/)
+* [Calckey](https://calckey.org/)
 
 Here’s what that means and what you can expect.
 
