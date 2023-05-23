@@ -508,8 +508,6 @@ class Post {
 		$content = do_shortcode( $content );
 		wp_reset_postdata();
 
-		// replace script and style elements
-		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
 		$content = \wp_kses( $content, $this->allowed_tags );
 		$content = \wpautop( $content );
 		$content = \preg_replace( '/[\n\r\t]/', '', $content );

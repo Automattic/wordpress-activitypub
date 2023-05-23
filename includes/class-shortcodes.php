@@ -208,6 +208,8 @@ class Shortcodes {
 			$content = wp_filter_content_tags( $content );
 		}
 
+		// replace script and style elements
+		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
 		$content = strip_shortcodes( $content );
 		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
 
