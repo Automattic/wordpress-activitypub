@@ -205,7 +205,7 @@ function get_author_description( $user_id ) {
 	if ( empty( $description ) ) {
 		$description = get_user_meta( $user_id, 'description', true );
 	}
-	return $description;
+	return \wpautop( \wp_kses( $description, 'default' ) );
 }
 
 /**
@@ -224,6 +224,64 @@ function is_tombstone( $wp_error ) {
 
 	if ( in_array( (int) $wp_error->get_error_code(), array( 404, 410 ), true ) ) {
 		return true;
+	}
+
+	return false;
+}
+
+/**
+ * Get the REST URL relative to this plugin's namespace.
+ *
+ * @param string $path Optional. REST route path. Otherwise this plugin's namespaced root.
+ *
+ * @return string REST URL relative to this plugin's namespace.
+ */
+function get_rest_url_by_path( $path = '' ) {
+	// we'll handle the leading slash.
+	$path = ltrim( $path, '/' );
+	$namespaced_path = sprintf( '/%s/%s', ACTIVITYPUB_REST_NAMESPACE, $path );
+	return \get_rest_url( null, $namespaced_path );
+}
+
+/**
+ * Check if a request is for an ActivityPub request.
+ *
+ * @return bool False by default.
+ */
+function is_activitypub_request() {
+	global $wp_query;
+
+	/*
+	 * ActivityPub requests are currently only made for
+	 * author archives, singular posts, and the homepage.
+	 */
+	if ( ! \is_author() && ! \is_singular() && ! \is_home() ) {
+		return false;
+	}
+
+	// One can trigger an ActivityPub request by adding ?activitypub to the URL.
+	global $wp_query;
+	if ( isset( $wp_query->query_vars['activitypub'] ) ) {
+		return true;
+	}
+
+	/*
+	 * The other (more common) option to make an ActivityPub request
+	 * is to send an Accept header.
+	 */
+	if ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
+		$accept = $_SERVER['HTTP_ACCEPT'];
+
+		/*
+		 * $accept can be a single value, or a comma separated list of values.
+		 * We want to support both scenarios,
+		 * and return true when the header includes at least one of the following:
+		 * - application/activity+json
+		 * - application/ld+json
+		 */
+		if ( preg_match( '/(application\/(ld\+json|activity\+json))/', $accept ) ) {
+			return true;
+		}
 	}
 
 	return false;

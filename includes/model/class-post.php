@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub\Model;
 
+use function Activitypub\get_rest_url_by_path;
+
 /**
  * ActivityPub Post Class
  *
@@ -93,8 +95,13 @@ class Post {
 			'class' => array(),
 		),
 		'ul' => array(),
-		'ol' => array(),
-		'li' => array(),
+		'ol' => array(
+			'reversed' => array(),
+			'start'    => array(),
+		),
+		'li' => array(
+			'value' => array(),
+		),
 		'strong' => array(
 			'class' => array(),
 		),
@@ -142,7 +149,8 @@ class Post {
 	 */
 	public function __construct( $post ) {
 		$this->post = \get_post( $post );
-		$this->add_to( \get_rest_url( null, '/activitypub/1.0/users/' . intval( $this->get_post_author() ) . '/followers' ) );
+		$path = sprintf( 'users/%d/followers', intval( $this->get_post_author() ) );
+		$this->add_to( get_rest_url_by_path( $path ) );
 	}
 
 	/**
@@ -539,6 +547,6 @@ class Post {
 			return "[ap_content]\n\n[ap_hashtags]\n\n[ap_permalink type=\"html\"]";
 		}
 
-		return \get_option( 'activitypub_custom_post_content' );
+		return \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
 	}
 }

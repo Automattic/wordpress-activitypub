@@ -19,6 +19,7 @@ use function Activitypub\get_remote_metadata_by_actor;
  */
 class Followers {
 	const TAXONOMY = 'activitypub-followers';
+	const CACHE_KEY_INBOXES = 'follower_inboxes_%s';
 
 	/**
 	 * Register WordPress hooks/actions and register Taxonomy
@@ -143,7 +144,7 @@ class Followers {
 				'single'            => true,
 				'sanitize_callback' => function( $value ) {
 					if ( ! is_numeric( $value ) && (int) $value !== $value ) {
-						$value = strtotime( 'now' );
+						$value = \time();
 					}
 
 					return $value;
@@ -186,7 +187,7 @@ class Followers {
 	}
 
 	/**
-	 * Handles "Unfollow" requests
+	 * Handle "Unfollow" requests
 	 *
 	 * @param array $object  The JSON "Undo" Activity
 	 * @param int   $user_id The ID of the ID of the WordPress User
@@ -202,7 +203,7 @@ class Followers {
 	}
 
 	/**
-	 * Add a new Follower
+	 * Add new Follower
 	 *
 	 * @param int    $user_id The ID of the WordPress User
 	 * @param string $actor   The Actor URL
@@ -225,6 +226,7 @@ class Followers {
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		} else {
+			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 			return $follower;
 		}
 	}
@@ -238,6 +240,7 @@ class Followers {
 	 * @return bool|WP_Error True on success, false or WP_Error on failure.
 	 */
 	public static function remove_follower( $user_id, $actor ) {
+		wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		return wp_remove_object_terms( $user_id, $actor, self::TAXONOMY );
 	}
 
@@ -316,7 +319,7 @@ class Followers {
 	 *
 	 * @return array The Term list of Followers, the format depends on $output
 	 */
-	public static function get_followers( $user_id, $output = ARRAY_N, $number = null, $offset = null, $args = array() ) {
+	public static function get_followers( $user_id, $number = null, $offset = null, $args = array() ) {
 		$defaults = array(
 			'taxonomy'   => self::TAXONOMY,
 			'hide_empty' => false,
@@ -329,25 +332,32 @@ class Followers {
 
 		$args  = wp_parse_args( $args, $defaults );
 		$terms = new WP_Term_Query( $args );
-
 		$items = array();
 
-		// change output format
-		switch ( $output ) {
-			case ACTIVITYPUB_OBJECT:
-				foreach ( $terms->get_terms() as $follower ) {
-					$items[] = new Follower( $follower->name ); // phpcs:ignore
-				}
-				return $items;
-			case OBJECT:
-				return $terms->get_terms();
-			case ARRAY_N:
-			default:
-				foreach ( $terms->get_terms() as $follower ) {
-					$items[] = $follower->name; // phpcs:ignore
-				}
-				return $items;
+		foreach ( $terms->get_terms() as $follower ) {
+			$items[] = new Follower( $follower->name ); // phpcs:ignore
 		}
+
+		return $items;
+	}
+
+	/**
+	 * Get all Followers
+	 *
+	 * @param array $args The WP_Term_Query arguments.
+	 *
+	 * @return array The Term list of Followers.
+	 */
+	public static function get_all_followers( $args = array() ) {
+		$defaults = array(
+			'taxonomy'   => self::TAXONOMY,
+			'hide_empty' => false,
+		);
+
+		$args  = wp_parse_args( $args, $defaults );
+		$terms = new WP_Term_Query( $args );
+
+		return $terms->get_terms();
 	}
 
 	/**
@@ -369,6 +379,13 @@ class Followers {
 	 * @return array The list of Inboxes
 	 */
 	public static function get_inboxes( $user_id ) {
+		$cache_key = sprintf( self::CACHE_KEY_INBOXES, $user_id );
+		$inboxes = wp_cache_get( $cache_key, 'activitypub' );
+
+		if ( $inboxes ) {
+			return $inboxes;
+		}
+
 		// get all Followers of a ID of the WordPress User
 		$terms = new WP_Term_Query(
 			array(
@@ -402,6 +419,75 @@ class Followers {
 			)
 		);
 
-		return array_filter( $results );
+		$inboxes = array_filter( $results );
+		wp_cache_set( $cache_key, $inboxes, 'activitypub' );
+
+		return $inboxes;
+	}
+
+	/**
+	 * Get all Followers that have not been updated for a given time
+	 *
+	 * @param enum $output     The output format, supported ARRAY_N, OBJECT and ACTIVITYPUB_OBJECT.
+	 * @param int  $number     Limits the result.
+	 * @param int  $older_than The time in seconds.
+	 *
+	 * @return mixed The Term list of Followers, the format depends on $output.
+	 */
+	public static function get_outdated_followers( $number = 50, $older_than = 604800 ) {
+		$args = array(
+			'taxonomy'   => self::TAXONOMY,
+			'number'     => $number,
+			'meta_key'   => 'updated_at',
+			'orderby'    => 'meta_value_num',
+			'order'      => 'DESC',
+			'meta_query' => array(
+				array(
+					'key'        => 'updated_at',
+					'value'      => time() - $older_than,
+					'type'       => 'numeric',
+					'compare'    => '<=',
+				),
+			),
+		);
+
+		$terms = new WP_Term_Query( $args );
+		$items = array();
+
+		foreach ( $terms->get_terms() as $follower ) {
+			$items[] = new Follower( $follower->name ); // phpcs:ignore
+		}
+
+		return $items;
+	}
+
+	/**
+	 * Get all Followers that had errors
+	 *
+	 * @param enum    $output The output format, supported ARRAY_N, OBJECT and ACTIVITYPUB_OBJECT
+	 * @param integer $number The number of Followers to return.
+	 *
+	 * @return mixed The Term list of Followers, the format depends on $output.
+	 */
+	public static function get_faulty_followers( $number = 10 ) {
+		$args = array(
+			'taxonomy'   => self::TAXONOMY,
+			'number'     => $number,
+			'meta_query' => array(
+				array(
+					'key'        => 'errors',
+					'compare'    => 'EXISTS',
+				),
+			),
+		);
+
+		$terms = new WP_Term_Query( $args );
+		$items = array();
+
+		foreach ( $terms->get_terms() as $follower ) {
+			$items[] = new Follower( $follower->name ); // phpcs:ignore
+		}
+
+		return $items;
 	}
 }

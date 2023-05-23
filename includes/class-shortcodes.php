@@ -6,9 +6,9 @@ class Shortcodes {
 	 * Class constructor, registering WordPress then Shortcodes
 	 */
 	public static function init() {
-		foreach ( get_class_methods( 'Activitypub\Shortcodes' ) as $shortcode ) {
+		foreach ( get_class_methods( self::class ) as $shortcode ) {
 			if ( 'init' !== $shortcode ) {
-				add_shortcode( 'ap_' . $shortcode, array( 'Activitypub\Shortcodes', $shortcode ) );
+				add_shortcode( 'ap_' . $shortcode, array( self::class, $shortcode ) );
 			}
 		}
 	}

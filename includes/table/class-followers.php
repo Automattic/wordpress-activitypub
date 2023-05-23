@@ -35,7 +35,7 @@ class Followers extends WP_List_Table {
 		$page_num = $this->get_pagenum();
 		$per_page = 20;
 
-		$follower = FollowerCollection::get_followers( \get_current_user_id(), ACTIVITYPUB_OBJECT, $per_page, ( $page_num - 1 ) * $per_page );
+		$follower = FollowerCollection::get_followers( \get_current_user_id(), $per_page, ( $page_num - 1 ) * $per_page );
 		$counter  = FollowerCollection::count_followers( \get_current_user_id() );
 
 		$this->items = array();
