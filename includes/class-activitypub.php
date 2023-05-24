@@ -97,6 +97,7 @@ class Activitypub {
 					return $template;
 				}
 			}
+
 			return $json_template;
 		}
 

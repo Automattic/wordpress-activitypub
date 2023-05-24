@@ -88,4 +88,8 @@ class Blog_User extends User {
 
 		return \gmdate( 'Y-m-d\TH:i:s\Z', $time );
 	}
+
+	public function get_public_key() {
+		return '';
+	}
 }
