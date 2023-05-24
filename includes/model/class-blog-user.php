@@ -52,11 +52,11 @@ class Blog_User extends User {
 	 * @return string The User-Url.
 	 */
 	public function get_url() {
-		return '';
+		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_username() );
 	}
 
 	public function get_username() {
-		return '';
+		return \esc_html( \get_bloginfo( 'activitypub_blog_identifier', 'feed' ) );
 	}
 
 	public function get_avatar() {
