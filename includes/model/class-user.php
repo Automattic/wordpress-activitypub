@@ -3,6 +3,7 @@ namespace Activitypub\Model;
 
 use WP_Query;
 use WP_Error;
+use Activitypub\Signature;
 use Activitypub\Model\User;
 use Activitypub\User_Factory;
 
@@ -121,8 +122,7 @@ class User {
 	}
 
 	public function get_public_key() {
-		//return Signature::get_public_key( $this->user_id );
-		return null;
+		return Signature::get_public_key( $this->user_id );
 	}
 
 	/**

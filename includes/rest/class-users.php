@@ -13,7 +13,7 @@ use Activitypub\User_Factory;
  *
  * @see https://www.w3.org/TR/activitypub/#followers
  */
-class User {
+class Users {
 	/**
 	 * Initialize the class, registering WordPress hooks
 	 */

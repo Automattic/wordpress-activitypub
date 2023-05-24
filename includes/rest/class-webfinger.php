@@ -47,8 +47,7 @@ class Webfinger {
 	 */
 	public static function webfinger( $request ) {
 		$resource = $request->get_param( 'resource' );
-
-		$user = User_Factory::get_by_resource( $resource );
+		$user     = User_Factory::get_by_resource( $resource );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;
