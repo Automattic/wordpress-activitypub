@@ -2,13 +2,9 @@
 namespace Activitypub\Rest;
 
 use WP_Error;
-use stdClass;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\User_Factory;
-use Activitypub\Collection\Followers as FollowerCollection;
-
-use function Activitypub\get_rest_url_by_path;
 
 /**
  * ActivityPub Followers REST-Class
@@ -17,7 +13,7 @@ use function Activitypub\get_rest_url_by_path;
  *
  * @see https://www.w3.org/TR/activitypub/#followers
  */
-class Followers {
+class User {
 	/**
 	 * Initialize the class, registering WordPress hooks
 	 */
@@ -31,7 +27,7 @@ class Followers {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>\w+)/followers',
+			'/users/(?P<user_id>\w+)',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -63,25 +59,7 @@ class Followers {
 		 */
 		\do_action( 'activitypub_outbox_pre' );
 
-		$json = new stdClass();
-
-		$json->{'@context'} = \Activitypub\get_context();
-
-		$json->id = \home_url( \add_query_arg( null, null ) );
-		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
-		$json->actor = $user->get_id();
-		$json->type = 'OrderedCollectionPage';
-
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/followers', $user->get_user_id() ) ); // phpcs:ignore
-		$json->first = $json->partOf; // phpcs:ignore
-		$json->totalItems = FollowerCollection::count_followers( $user->get_user_id() ); // phpcs:ignore
-		// phpcs:ignore
-		$json->orderedItems = array_map(
-			function( $item ) {
-				return $item->get_url();
-			},
-			FollowerCollection::get_followers( $user->get_user_id() )
-		);
+		$json = $user->to_array();
 
 		$response = new WP_REST_Response( $json, 200 );
 		$response->header( 'Content-Type', 'application/activity+json' );
@@ -98,7 +76,7 @@ class Followers {
 		$params = array();
 
 		$params['page'] = array(
-			'type' => 'integer',
+			'type' => 'string',
 		);
 
 		$params['user_id'] = array(

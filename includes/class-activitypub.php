@@ -224,6 +224,11 @@ class Activitypub {
 				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo2',
 				'top'
 			);
+			\add_rewrite_rule(
+				'^@([\w]+)',
+				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/users/$matches[1]',
+				'top'
+			);
 		}
 
 		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );

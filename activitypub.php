@@ -39,6 +39,7 @@ function init() {
 	Collection\Followers::init();
 
 	// Configure the REST API route
+	Rest\User::init();
 	Rest\Outbox::init();
 	Rest\Inbox::init();
 	Rest\Followers::init();

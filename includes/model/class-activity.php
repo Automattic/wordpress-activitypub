@@ -11,12 +11,8 @@ use function Activitypub\get_rest_url_by_path;
  * @see https://www.w3.org/TR/activitypub/
  */
 class Activity {
-	/**
-	 * The JSON-LD context.
-	 *
-	 * @var array
-	 */
-	private $context = array(
+
+	const CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
 		'https://w3id.org/security/v1',
 		array(
@@ -37,6 +33,13 @@ class Activity {
 			),
 		),
 	);
+
+	/**
+	 * The JSON-LD context.
+	 *
+	 * @var array
+	 */
+	private $context = self::CONTEXT;
 
 	/**
 	 * The published date.

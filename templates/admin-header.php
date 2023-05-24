@@ -11,6 +11,10 @@
 		<a href="<?php echo \esc_url_raw( admin_url( 'options-general.php?page=activitypub&tab=settings' ) ); ?>" class="activitypub-settings-tab <?php echo \esc_attr( $args['settings'] ); ?>">
 			<?php \esc_html_e( 'Settings', 'activitypub' ); ?>
 		</a>
+
+		<a href="<?php echo \esc_url_raw( admin_url( 'options-general.php?page=activitypub&tab=followers' ) ); ?>" class="activitypub-settings-tab <?php echo \esc_attr( $args['followers'] ); ?>">
+			<?php \esc_html_e( 'Followers', 'activitypub' ); ?>
+		</a>
 	</nav>
 </div>
 <hr class="wp-header-end">

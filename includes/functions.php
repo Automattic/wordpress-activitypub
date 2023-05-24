@@ -7,27 +7,7 @@ namespace Activitypub;
  * @return array the activitypub context
  */
 function get_context() {
-	$context = array(
-		'https://www.w3.org/ns/activitystreams',
-		'https://w3id.org/security/v1',
-		array(
-			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
-			'PropertyValue' => 'schema:PropertyValue',
-			'schema' => 'http://schema.org#',
-			'pt' => 'https://joinpeertube.org/ns#',
-			'toot' => 'http://joinmastodon.org/ns#',
-			'value' => 'schema:value',
-			'Hashtag' => 'as:Hashtag',
-			'featured' => array(
-				'@id' => 'toot:featured',
-				'@type' => '@id',
-			),
-			'featuredTags' => array(
-				'@id' => 'toot:featuredTags',
-				'@type' => '@id',
-			),
-		),
-	);
+	$context = Model\Activity::CONTEXT;
 
 	return \apply_filters( 'activitypub_json_context', $context );
 }
@@ -185,21 +165,6 @@ function url_to_authorid( $url ) {
 	}
 
 	return 0;
-}
-
-/**
- * Return the custom Activity Pub description, if set, or default author description.
- *
- * @param int $user_id The user ID.
- *
- * @return string The author description.
- */
-function get_author_description( $user_id ) {
-	$description = get_user_meta( $user_id, 'activitypub_user_description', true );
-	if ( empty( $description ) ) {
-		$description = get_user_meta( $user_id, 'description', true );
-	}
-	return \wpautop( \wp_kses( $description, 'default' ) );
 }
 
 /**

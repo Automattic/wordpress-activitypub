@@ -4,6 +4,10 @@
 	margin-top: 10px;
 }
 
+.settings_page_activitypub .wrap {
+	padding-left: 22px;
+}
+
 .activitypub-settings-header {
 	text-align: center;
 	margin: 0 0 1rem;
@@ -28,7 +32,7 @@
 	-ms-grid-columns: 1fr 1fr;
 	vertical-align: top;
 	display: inline-grid;
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: 1fr 1fr 1fr;
 }
 
 .activitypub-settings-tab.active {

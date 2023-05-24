@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub\Rest;
 
+use Activitypub\User_Factory;
+
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -24,7 +26,7 @@ class Following {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>\d+)/following',
+			'/users/(?P<user_id>\w+)/following',
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
@@ -45,19 +47,10 @@ class Following {
 	 */
 	public static function get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = \get_user_by( 'ID', $user_id );
+		$user    = User_Factory::get_by_various( $user_id );
 
-		if ( ! $user ) {
-			return new \WP_Error(
-				'rest_invalid_param',
-				\__( 'User not found', 'activitypub' ),
-				array(
-					'status' => 404,
-					'params' => array(
-						'user_id' => \__( 'User not found', 'activitypub' ),
-					),
-				)
-			);
+		if ( is_wp_error( $user ) ) {
+			return $user;
 		}
 
 		/*
@@ -71,10 +64,10 @@ class Following {
 
 		$json->id = \home_url( \add_query_arg( null, null ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
-		$json->actor = \get_author_posts_url( $user_id );
+		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/following', $user_id ) ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/following', $user->get_user_id() ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
 		$json->orderedItems = apply_filters( 'activitypub_following', array(), $user ); // phpcs:ignore
 
@@ -100,10 +93,7 @@ class Following {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'integer',
-			'validate_callback' => function( $param, $request, $key ) {
-				return user_can( $param, 'publish_posts' );
-			},
+			'type' => 'string',
 		);
 
 		return $params;
