@@ -6,6 +6,7 @@ use WP_Error;
 use WP_REST_Server;
 use WP_REST_Request;
 use WP_REST_Response;
+use Activitypub\User_Factory;
 use Activitypub\Model\Post;
 use Activitypub\Model\Activity;
 
@@ -33,7 +34,7 @@ class Outbox {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>\d+)/outbox',
+			'/users/(?P<user_id>\w+)/outbox',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -53,21 +54,13 @@ class Outbox {
 	 */
 	public static function user_outbox_get( WP_REST_Request $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$author  = \get_user_by( 'ID', $user_id );
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
+		$user    = User_Factory::get_by_various( $user_id );
 
-		if ( ! $author ) {
-			return new WP_Error(
-				'rest_invalid_param',
-				\__( 'User not found', 'activitypub' ),
-				array(
-					'status' => 404,
-					'params' => array(
-						'user_id' => \__( 'User not found', 'activitypub' ),
-					),
-				)
-			);
+		if ( is_wp_error( $user ) ) {
+			return $user;
 		}
+
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
 
 		$page = $request->get_param( 'page', 0 );
 
@@ -81,9 +74,9 @@ class Outbox {
 		$json->{'@context'} = get_context();
 		$json->id = \home_url( \add_query_arg( null, null ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
-		$json->actor = \get_author_posts_url( $user_id );
+		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user->get_user_id() ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
 
 		// phpcs:ignore
@@ -105,7 +98,7 @@ class Outbox {
 			$posts = \get_posts(
 				array(
 					'posts_per_page' => 10,
-					'author' => $user_id,
+					'author' => $user->get_user_id(),
 					'offset' => ( $page - 1 ) * 10,
 					'post_type' => $post_types,
 				)
@@ -149,10 +142,7 @@ class Outbox {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'integer',
-			'validate_callback' => function( $param, $request, $key ) {
-				return user_can( $param, 'publish_posts' );
-			},
+			'type' => 'string',
 		);
 
 		return $params;

@@ -3,6 +3,7 @@ namespace Activitypub\Rest;
 
 use WP_Error;
 use WP_REST_Response;
+use Activitypub\User_Factory;
 
 /**
  * ActivityPub WebFinger REST-Class
@@ -47,41 +48,27 @@ class Webfinger {
 	public static function webfinger( $request ) {
 		$resource = $request->get_param( 'resource' );
 
-		if ( \strpos( $resource, '@' ) === false ) {
-			return new WP_Error( 'activitypub_unsupported_resource', \__( 'Resource is invalid', 'activitypub' ), array( 'status' => 400 ) );
-		}
+		$user = User_Factory::get_by_resource( $resource );
 
-		$resource = \str_replace( 'acct:', '', $resource );
-
-		$resource_identifier = \substr( $resource, 0, \strrpos( $resource, '@' ) );
-		$resource_host = \str_replace( 'www.', '', \substr( \strrchr( $resource, '@' ), 1 ) );
-		$blog_host = \str_replace( 'www.', '', \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
-
-		if ( $blog_host !== $resource_host ) {
-			return new WP_Error( 'activitypub_wrong_host', \__( 'Resource host does not match blog host', 'activitypub' ), array( 'status' => 404 ) );
-		}
-
-		$user = \get_user_by( 'login', \esc_sql( $resource_identifier ) );
-
-		if ( ! $user || ! \user_can( $user, 'publish_posts' ) ) {
-			return new WP_Error( 'activitypub_user_not_found', \__( 'User not found', 'activitypub' ), array( 'status' => 404 ) );
+		if ( is_wp_error( $user ) ) {
+			return $user;
 		}
 
 		$json = array(
 			'subject' => $resource,
 			'aliases' => array(
-				\get_author_posts_url( $user->ID ),
+				$user->get_url(),
 			),
 			'links' => array(
 				array(
 					'rel'  => 'self',
 					'type' => 'application/activity+json',
-					'href' => \get_author_posts_url( $user->ID ),
+					'href' => $user->get_url(),
 				),
 				array(
 					'rel'  => 'http://webfinger.net/rel/profile-page',
 					'type' => 'text/html',
-					'href' => \get_author_posts_url( $user->ID ),
+					'href' => $user->get_url(),
 				),
 			),
 		);

@@ -13,6 +13,10 @@ class Admin {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
+		if ( ! current_user_can( 'publish_posts' ) ) {
+			return;
+		}
+
 		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
 		\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
@@ -24,6 +28,11 @@ class Admin {
 	 * Add admin menu entry
 	 */
 	public static function admin_menu() {
+		// user has to be able to publish posts
+		if ( ! current_user_can( 'publish_posts' ) ) {
+			return;
+		}
+
 		$settings_page = \add_options_page(
 			'Welcome',
 			'ActivityPub',
@@ -55,6 +64,9 @@ class Admin {
 			case 'settings':
 				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php' );
 				break;
+			case 'followers':
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php' );
+				break;
 			case 'welcome':
 			default:
 				wp_enqueue_script( 'plugin-install' );
@@ -70,6 +82,9 @@ class Admin {
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {
+		if ( ! current_user_can( 'publish_posts' ) ) {
+			return;
+		}
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php' );
 	}
 

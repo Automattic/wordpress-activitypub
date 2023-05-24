@@ -9,6 +9,24 @@ if ( ! \class_exists( '\WP_List_Table' ) ) {
 }
 
 class Followers extends WP_List_Table {
+	private $user_id;
+
+	public function __construct() {
+		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
+			$this->user_id = -1;
+		} else {
+			$this->user_id = \get_current_user_id();
+		}
+
+		parent::__construct(
+			array(
+				'singular' => \__( 'Follower', 'activitypub' ),
+				'plural'   => \__( 'Followers', 'activitypub' ),
+				'ajax'     => false,
+			)
+		);
+	}
+
 	public function get_columns() {
 		return array(
 			'cb'           => '<input type="checkbox" />',
@@ -36,8 +54,8 @@ class Followers extends WP_List_Table {
 		$page_num = $this->get_pagenum();
 		$per_page = 20;
 
-		$followers = FollowerCollection::get_followers( \get_current_user_id(), $per_page, ( $page_num - 1 ) * $per_page );
-		$counter   = FollowerCollection::count_followers( \get_current_user_id() );
+		$follower = FollowerCollection::get_followers( $this->user_id, $per_page, ( $page_num - 1 ) * $per_page );
+		$counter  = FollowerCollection::count_followers( $this->user_id );
 
 		$this->items = array();
 		$this->set_pagination_args(
@@ -104,7 +122,7 @@ class Followers extends WP_List_Table {
 			return false;
 		}
 
-		if ( ! current_user_can( 'edit_user', \get_current_user_id() ) ) {
+		if ( ! current_user_can( 'edit_user', $this->user_id ) ) {
 			return false;
 		}
 
@@ -120,5 +138,9 @@ class Followers extends WP_List_Table {
 				}
 				break;
 		}
+	}
+
+	public function get_user_count() {
+		return FollowerCollection::count_followers( $this->user_id );
 	}
 }
