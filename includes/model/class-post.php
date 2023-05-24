@@ -516,8 +516,10 @@ class Post {
 		$content = do_shortcode( $content );
 		wp_reset_postdata();
 
-		$content = \wpautop( \wp_kses( $content, $this->allowed_tags ) );
-		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+		$content = \wp_kses( $content, $this->allowed_tags );
+		$content = \wpautop( $content );
+		$content = \preg_replace( '/[\n\r\t]/', '', $content );
+		$content = \trim( $content );
 
 		$content = \apply_filters( 'activitypub_the_content', $content, $post );
 		$content = \html_entity_decode( $content, \ENT_QUOTES, 'UTF-8' );

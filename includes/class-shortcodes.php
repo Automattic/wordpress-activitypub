@@ -3,7 +3,7 @@ namespace Activitypub;
 
 class Shortcodes {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Class constructor, registering WordPress then Shortcodes
 	 */
 	public static function init() {
 		foreach ( get_class_methods( self::class ) as $shortcode ) {
@@ -14,13 +14,13 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the ap_hashtags shortcode
+	 * Generates output for the 'ap_hashtags' shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
-	 * @return string
+	 * @return string The post tags as hashtags.
 	 */
 	public static function hashtags( $atts, $content, $tag ) {
 		$post_id = get_the_ID();
@@ -40,8 +40,8 @@ class Shortcodes {
 		foreach ( $tags as $tag ) {
 			$hash_tags[] = \sprintf(
 				'<a rel="tag" class="u-tag u-category" href="%s">#%s</a>',
-				\get_tag_link( $tag ),
-				$tag->slug
+				\esc_url( \get_tag_link( $tag ) ),
+				\wp_strip_all_tags( $tag->slug )
 			);
 		}
 
@@ -49,13 +49,13 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the ap_title shortcode
+	 * Generates output for the 'ap_title' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
-	 * @return string
+	 * @return string The post title.
 	 */
 	public static function title( $atts, $content, $tag ) {
 		$post_id = get_the_ID();
@@ -64,18 +64,18 @@ class Shortcodes {
 			return '';
 		}
 
-		return \get_the_title( $post_id );
+		return \wp_strip_all_tags( \get_the_title( $post_id ), true );
 
 	}
 
 	/**
-	 * Generates output for the ap_excerpt shortcode
+	 * Generates output for the 'ap_excerpt' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
-	 * @return string
+	 * @return string The post excerpt.
 	 */
 	public static function excerpt( $atts, $content, $tag ) {
 		$post = get_post();
@@ -172,15 +172,18 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the ap_content shortcode
+	 * Generates output for the 'ap_content' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
-	 * @return string
+	 * @return string The post content.
 	 */
 	public static function content( $atts, $content, $tag ) {
+		// prevent inception
+		remove_shortcode( 'ap_content' );
+
 		$post = get_post();
 
 		if ( ! $post || \post_password_required( $post ) ) {
@@ -205,20 +208,22 @@ class Shortcodes {
 
 		// replace script and style elements
 		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
-
+		$content = strip_shortcodes( $content );
 		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+
+		add_shortcode( 'ap_content', array( 'Activitypub\Shortcodes', 'content' ) );
 
 		return $content;
 	}
 
 	/**
-	 * Generates output for the ap_permalink shortcode
+	 * Generates output for the 'ap_permalink' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
-	 * @return string
+	 * @return string The post permalink.
 	 */
 	public static function permalink( $atts, $content, $tag ) {
 		$post = get_post();
@@ -239,17 +244,20 @@ class Shortcodes {
 			return \esc_url( \get_permalink( $post->ID ) );
 		}
 
-		return \sprintf( '<a href="%1$s">%1$s</a>', \esc_url( \get_permalink( $post->ID ) ) );
+		return \sprintf(
+			'<a href="%1$s">%1$s</a>',
+			\esc_url( \get_permalink( $post->ID ) )
+		);
 	}
 
 	/**
-	 * Generates output for the ap_shortlink shortcode
+	 * Generates output for the 'ap_shortlink' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
-	 * @return string
+	 * @return string The post shortlink.
 	 */
 	public static function shortlink( $atts, $content, $tag ) {
 		$post = get_post();
@@ -270,15 +278,18 @@ class Shortcodes {
 			return \esc_url( \wp_get_shortlink( $post->ID ) );
 		}
 
-		return \sprintf( '<a href="%1$s">%1$s</a>', \esc_url( \wp_get_shortlink( $post->ID ) ) );
+		return \sprintf(
+			'<a href="%1$s">%1$s</a>',
+			\esc_url( \wp_get_shortlink( $post->ID ) )
+		);
 	}
 
 	/**
-	 * Generates output for the ap_image shortcode
+	 * Generates output for the 'ap_image' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
 	 * @return string
 	 */
@@ -317,13 +328,13 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the ap_hashcats shortcode
+	 * Generates output for the 'ap_hashcats' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
-	 * @return string
+	 * @return string The post categories as hashtags.
 	 */
 	public static function hashcats( $atts, $content, $tag ) {
 		$post_id = get_the_ID();
@@ -341,20 +352,24 @@ class Shortcodes {
 		$hash_tags = array();
 
 		foreach ( $categories as $category ) {
-			$hash_tags[] = \sprintf( '<a rel="tag" class="u-tag u-category" href="%s">#%s</a>', \get_category_link( $category ), $category->slug );
+			$hash_tags[] = \sprintf(
+				'<a rel="tag" class="u-tag u-category" href="%s">#%s</a>',
+				\esc_url( \get_category_link( $category ) ),
+				\wp_strip_all_tags( $category->slug )
+			);
 		}
 
 		return \implode( ' ', $hash_tags );
 	}
 
 	/**
-	 * Generates output for the ap_author shortcode
+	 * Generates output for the 'ap_author' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
-	 * @return string
+	 * @return string The author name.
 	 */
 	public static function author( $atts, $content, $tag ) {
 		$post = get_post();
@@ -369,17 +384,17 @@ class Shortcodes {
 			return '';
 		}
 
-		return $name;
+		return wp_strip_all_tags( $name );
 	}
 
 	/**
-	 * Generates output for the ap_authorurl shortcode
+	 * Generates output for the 'ap_authorurl' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
-	 * @return string
+	 * @return string The author URL.
 	 */
 	public static function authorurl( $atts, $content, $tag ) {
 		$post = get_post();
@@ -398,52 +413,52 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the ap_blogurl shortcode
+	 * Generates output for the 'ap_blogurl' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
-	 * @return string
+	 * @return string The site URL.
 	 */
 	public static function blogurl( $atts, $content, $tag ) {
 		return \esc_url( \get_bloginfo( 'url' ) );
 	}
 
 	/**
-	 * Generates output for the ap_blogname shortcode
+	 * Generates output for the 'ap_blogname' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
 	 * @return string
 	 */
 	public static function blogname( $atts, $content, $tag ) {
-		return \get_bloginfo( 'name' );
+		return \wp_strip_all_tags( \get_bloginfo( 'name' ) );
 	}
 
 	/**
-	 * Generates output for the ap_blogdesc shortcode
+	 * Generates output for the 'ap_blogdesc' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
-	 * @return string
+	 * @return string The site description.
 	 */
 	public static function blogdesc( $atts, $content, $tag ) {
-		return \get_bloginfo( 'description' );
+		return \wp_strip_all_tags( \get_bloginfo( 'description' ) );
 	}
 
 	/**
-	 * Generates output for the ap_date shortcode
+	 * Generates output for the 'ap_date' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
-	 * @return string
+	 * @return string The post date.
 	 */
 	public static function date( $atts, $content, $tag ) {
 		$post = get_post();
@@ -466,13 +481,13 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the ap_time shortcode
+	 * Generates output for the 'ap_time' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
-	 * @return string
+	 * @return string The post time.
 	 */
 	public static function time( $atts, $content, $tag ) {
 		$post = get_post();
@@ -495,13 +510,13 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the ap_datetime shortcode
+	 * Generates output for the 'ap_datetime' Shortcode
 	 *
-	 * @param array  $atts      shortcode attributes
-	 * @param string $content   shortcode content
-	 * @param string $tag       shortcode tag name
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
 	 *
-	 * @return string
+	 * @return string The post date/time.
 	 */
 	public static function datetime( $atts, $content, $tag ) {
 		$post = get_post();

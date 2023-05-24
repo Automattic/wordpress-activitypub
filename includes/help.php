@@ -8,37 +8,37 @@
 			'<p>' . __( 'The following Template Tags are available:', 'activitypub' ) . '</p>' .
 			'<dl>' .
 				'<dt><code>[ap_title]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s title.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The post\'s title.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_content apply_filters="yes"]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s content. With <code>apply_filters</code> you can decide if filters should be applied or not (default is <code>yes</code>). The values can be <code>yes</code> or <code>no</code>. <code>apply_filters</code> attribute is optional.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The post\'s content. With <code>apply_filters</code> you can decide if filters (<code>apply_filters( \'the_content\', $content )</code>) should be applied or not (default is <code>yes</code>). The values can be <code>yes</code> or <code>no</code>. <code>apply_filters</code> attribute is optional.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_excerpt lenght="400"]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s excerpt (default 400 chars). <code>length</code> attribute is optional.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The post\'s excerpt (default 400 chars). <code>length</code> attribute is optional.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_permalink type="url"]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s permalink. <code>type</code> can be either: <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). <code>type</code> attribute is optional.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The post\'s permalink. <code>type</code> can be either: <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). <code>type</code> attribute is optional.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_shortlink type="url"]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s shortlink. <code>type</code> can be either <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks. <code>type</code> attribute is optional.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The post\'s shortlink. <code>type</code> can be either <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks. <code>type</code> attribute is optional.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_hashtags]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s tags as hashtags.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The post\'s tags as hashtags.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_hashcats]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s categories as hashtags.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The post\'s categories as hashtags.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_image type=full]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The URL for the post\'s featured image, defaults to full size. The type attribute can be any of the following: <code>thumbnail</code>, <code>medium</code>, <code>large</code>, <code>full</code>. <code>type</code> attribute is optional.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The URL for the post\'s featured image, defaults to full size. The type attribute can be any of the following: <code>thumbnail</code>, <code>medium</code>, <code>large</code>, <code>full</code>. <code>type</code> attribute is optional.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_author]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The author\'s name.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The author\'s name.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_authorurl]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The URL to the author\'s profile page.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The URL to the author\'s profile page.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_date]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s date.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The post\'s date.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_time]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s time.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The post\'s time.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_datetime]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s date/time formated as "date @ time".', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The post\'s date/time formated as "date @ time".', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_blogurl]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The URL to the site.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The URL to the site.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_blogname]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The name of the site.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The name of the site.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_blogdesc]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The description of the site.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The description of the site.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 			'</dl>' .
 			'<p>' . __( 'You may also use any Shortcode normally available to you on your site, however be aware that Shortcodes may significantly increase the size of your content depending on what they do.', 'activitypub' ) . '</p>' .
 			'<p>' . __( 'Note: the old Template Tags are now deprecated and automatically converted to the new ones.', 'activitypub' ) . '</p>' .
@@ -48,8 +48,8 @@
 
 \get_current_screen()->add_help_tab(
 	array(
-		'id'      => 'glossar',
-		'title'   => \__( 'Glossar', 'activitypub' ),
+		'id'      => 'glossary',
+		'title'   => \__( 'Glossary', 'activitypub' ),
 		'content' =>
 			'<p><h2>' . \__( 'Fediverse', 'activitypub' ) . '</h2></p>' .
 			'<p>' . \__( 'The Fediverse is a new word made of two words: "federation" + "universe"', 'activitypub' ) . '</p>' .
