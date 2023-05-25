@@ -56,7 +56,7 @@ class Blog_User extends User {
 	}
 
 	public function get_username() {
-		return \esc_html( \get_bloginfo( 'activitypub_blog_identifier', 'feed' ) );
+		return \esc_html( \get_option( 'activitypub_blog_identifier', 'feed' ) );
 	}
 
 	public function get_avatar() {
