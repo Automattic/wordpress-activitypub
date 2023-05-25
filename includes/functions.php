@@ -267,3 +267,12 @@ function is_activitypub_request() {
 
 	return false;
 }
+
+/**
+ * Check if the current site is in single-user mode.
+ *
+ * @return boolean
+ */
+function is_single_user_mode() {
+	return ACTIVITYPUB_SINGLE_USER_MODE;
+}
