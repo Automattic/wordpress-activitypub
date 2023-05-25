@@ -38,6 +38,6 @@ class Application_User extends Blog_User {
 	}
 
 	public function get_name() {
-		return \esc_html( \get_bloginfo( 'activitypub_application_identifier', 'application' ) );
+		return \esc_html( \get_option( 'activitypub_application_identifier', 'application' ) );
 	}
 }
