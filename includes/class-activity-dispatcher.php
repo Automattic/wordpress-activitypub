@@ -3,6 +3,7 @@ namespace Activitypub;
 
 use Activitypub\Model\Post;
 use Activitypub\Model\Activity;
+use Activitypub\User_Factory;
 use Activitypub\Collection\Followers;
 
 use function Activitypub\safe_remote_post;
@@ -66,11 +67,31 @@ class Activity_Dispatcher {
 		// check if a migration is needed before sending new posts
 		Migration::maybe_migrate();
 
-		// get latest version of post
-		$user_id = $activitypub_post->get_post_author();
+		if ( ! is_single_user_mode() ) {
+			// send User-Activity
+			self::send_user_activity( $activitypub_post, $activity_type );
+		}
+
+		// send Blog-User-Activity
+		self::send_user_activity( $activitypub_post, $activity_type, User_Factory::BLOG_USER_ID );
+	}
+
+	public static function send_user_activity( Post $activitypub_post, $activity_type, $user_id = null ) {
+		if ( $user_id ) {
+			$user  = User_Factory::get_by_id( $user_id );
+			$actor = $user->get_url();
+		} else {
+			// get latest version of post
+			$user_id = $activitypub_post->get_post_author();
+			$actor   = null;
+		}
 
 		$activitypub_activity = new Activity( $activity_type );
 		$activitypub_activity->from_post( $activitypub_post );
+
+		if ( $actor ) {
+			$activitypub_activity->set_actor( $actor );
+		}
 
 		$follower_inboxes = Followers::get_inboxes( $user_id );
 		$mentioned_inboxes = Mention::get_inboxes( $activitypub_activity->get_cc() );
