@@ -322,42 +322,31 @@ class Signature {
 		$signed_data = '';
 		// This also verifies time-based values by returning false if any of these are out of range.
 		foreach ( $signed_headers as $header ) {
-			if ( \array_key_exists( $header, $headers ) ) {
-				if ( 'host' === $header ) {
-					if ( isset( $headers['x_original_host'] ) ) {
-						$signed_data .= $header . ': ' . $headers['x_original_host'][0] . "\n";
-					} else {
-						$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
-					}
-				} else {
-					$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
+			if ( 'host' === $header ) {
+				if ( isset( $headers['x_original_host'] ) ) {
+					$signed_data .= $header . ': ' . $headers['x_original_host'][0] . "\n";
+					continue;
 				}
+			}
+			if ( '(request-target)' === $header ) {
+				$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
+				continue;
+			}
+			if ( str_contains( $header, '-' ) ) {
+				$signed_data .= $header . ': ' . $headers[ str_replace( '-', '_', $header ) ][0] . "\n";
+				continue;
 			}
 			if ( '(created)' === $header ) {
 				if ( ! empty( $signature_block['(created)'] ) && \intval( $signature_block['(created)'] ) > \time() ) {
 					// created in future
 					return false;
 				}
-				$signed_data .= '(created): ' . $signature_block['(created)'] . "\n";
 			}
 			if ( '(expires)' === $header ) {
 				if ( ! empty( $signature_block['(expires)'] ) && \intval( $signature_block['(expires)'] ) < \time() ) {
 					// expired in past
 					return false;
 				}
-				$signed_data .= '(expires): ' . $signature_block['(expires)'] . "\n";
-			}
-			if ( 'content-type' === $header ) {
-				$signed_data .= $header . ': ' . $headers['content_type'][0] . "\n";
-			}
-			if ( 'content-length' === $header ) {
-				$signed_data .= $header . ': ' . $headers['content_length'][0] . "\n";
-			}
-			if ( 'user-agent' === $header ) {
-				$signed_data .= $header . ': ' . $headers['user_agent'][0] . "\n";
-			}
-			if ( 'accept' === $header ) {
-				$signed_data .= $header . ': ' . $headers['accept'][0] . "\n";
 			}
 			if ( 'date' === $header ) {
 				// allow a bit of leeway for misconfigured clocks.
@@ -373,6 +362,7 @@ class Signature {
 					return false;
 				}
 			}
+			$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
 		}
 		return \rtrim( $signed_data, "\n" );
 	}
