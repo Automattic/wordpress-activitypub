@@ -58,8 +58,13 @@ class User_Factory {
 	 */
 	public static function get_by_username( $username ) {
 		// check for blog user.
-		if ( get_option( 'activitypub_blog_identifier', null ) === $username ) {
+		if ( get_option( 'activitypub_blog_user_identifier', null ) === $username ) {
 			return self::get_by_id( self::BLOG_USER_ID );
+		}
+
+		// check for application user.
+		if ( get_option( 'activitypub_application_user_identifier', null ) === $username ) {
+			return self::get_by_id( self::APPLICATION_USER_ID );
 		}
 
 		// check for 'activitypub_username' meta
@@ -71,7 +76,7 @@ class User_Factory {
 				'meta_query' => array(
 					'relation' => 'OR',
 					array(
-						'key'     => 'activitypub_identifier',
+						'key'     => 'activitypub_user_identifier',
 						'value'   => $username,
 						'compare' => 'LIKE',
 					),

@@ -33,7 +33,7 @@ class Outbox {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>\w+)/outbox',
+			'/users/(?P<user_id>[\w\-\.]+)/outbox',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,

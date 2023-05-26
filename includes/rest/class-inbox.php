@@ -48,7 +48,7 @@ class Inbox {
 
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>\w+)/inbox',
+			'/users/(?P<user_id>[\w\-\.]+)/inbox',
 			array(
 				array(
 					'methods'             => WP_REST_Server::EDITABLE,
