@@ -27,7 +27,7 @@ class Users {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>\d+)/remote-follow',
+			'/users/(?P<user_id>[\w\-\.]+)/remote-follow',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -51,7 +51,7 @@ class Users {
 
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>\w+)',
+			'/users/(?P<user_id>[\w\-\.]+)',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,

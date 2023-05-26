@@ -32,18 +32,25 @@ class Webfinger {
 		return $user->user_login . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
 	}
 
-	public static function resolve( $account ) {
-		if ( ! preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $account, $m ) ) {
+	/**
+	 * Resolve a WebFinger resource
+	 *
+	 * @param string $resource The WebFinger resource
+	 *
+	 * @return string|WP_Error The URL or WP_Error
+	 */
+	public static function resolve( $resource ) {
+		if ( ! preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $resource, $m ) ) {
 			return null;
 		}
-		$transient_key = 'activitypub_resolve_' . ltrim( $account, '@' );
+		$transient_key = 'activitypub_resolve_' . ltrim( $resource, '@' );
 
 		$link = \get_transient( $transient_key );
 		if ( $link ) {
 			return $link;
 		}
 
-		$url = \add_query_arg( 'resource', 'acct:' . ltrim( $account, '@' ), 'https://' . $m[2] . '/.well-known/webfinger' );
+		$url = \add_query_arg( 'resource', 'acct:' . ltrim( $resource, '@' ), 'https://' . $m[2] . '/.well-known/webfinger' );
 		if ( ! \wp_http_validate_url( $url ) ) {
 			$response = new WP_Error( 'invalid_webfinger_url', null, $url );
 			\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
@@ -82,7 +89,7 @@ class Webfinger {
 			}
 		}
 
-		$link = new WP_Error( 'webfinger_url_no_activity_pub', null, $body );
+		$link = new WP_Error( 'webfinger_url_no_activitypub', null, $body );
 		\set_transient( $transient_key, $link, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 		return $link;
 	}

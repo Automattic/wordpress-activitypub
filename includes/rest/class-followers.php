@@ -31,7 +31,7 @@ class Followers {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>\w+)/followers',
+			'/users/(?P<user_id>[\w\-\.]+)/followers',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,

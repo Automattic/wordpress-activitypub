@@ -26,7 +26,7 @@ class Following {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>\w+)/following',
+			'/users/(?P<user_id>[\w\-\.]+)/following',
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
