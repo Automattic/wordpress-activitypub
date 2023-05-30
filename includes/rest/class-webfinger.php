@@ -53,12 +53,16 @@ class Webfinger {
 			return $user;
 		}
 
+		$aliases = array(
+			$user->get_url(),
+			$user->get_canonical_url(),
+			$user->get_at_url(),
+		);
+
 		$json = array(
 			'subject' => $resource,
-			'aliases' => array(
-				$user->get_url(),
-			),
-			'links' => array(
+			'aliases' => array_values( array_unique( $aliases ) ),
+			'links'   => array(
 				array(
 					'rel'  => 'self',
 					'type' => 'application/activity+json',
