@@ -59,8 +59,55 @@ class Blog_User extends User {
 		return \get_home_url();
 	}
 
+	/**
+	 * Generate and save a default Username.
+	 *
+	 * @return string The auto-generated Username.
+	 */
+	public static function get_default_username() {
+		$username = \get_option( 'activitypub_blog_user_identifier' );
+
+		if ( $username ) {
+			return $username;
+		}
+
+		// check if domain host has a subdomain
+		$host       = \wp_parse_url( \get_home_url(), \PHP_URL_HOST );
+		$host       = \str_replace( 'www.', '', $host );
+		$host_parts = \explode( '.', $host );
+
+		if ( \count( $host_parts ) <= 2 && strlen( $host ) <= 15 ) {
+			\update_option( 'activitypub_blog_user_identifier', $host );
+			return $host;
+		}
+
+		// check blog title
+		$blog_title = \get_bloginfo( 'name' );
+		$blog_title = \sanitize_title( $blog_title );
+
+		if ( strlen( $blog_title ) <= 15 ) {
+			\update_option( 'activitypub_blog_user_identifier', $blog_title );
+			return $blog_title;
+		}
+
+		$default_identifier = array(
+			'feed',
+			'all',
+			'everyone',
+			'authors',
+			'follow',
+			'posts',
+		);
+
+		// get random item of $default_identifier
+		$default = $default_identifier[ \array_rand( $default_identifier ) ];
+		\update_option( 'activitypub_blog_user_identifier', $default );
+
+		return $default;
+	}
+
 	public function get_username() {
-		return \esc_html( \get_option( 'activitypub_blog_user_identifier', 'feed' ) );
+		return self::get_default_username();
 	}
 
 	public function get_avatar() {

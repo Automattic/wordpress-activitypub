@@ -58,7 +58,7 @@ class User_Factory {
 	 */
 	public static function get_by_username( $username ) {
 		// check for blog user.
-		if ( get_option( 'activitypub_blog_user_identifier', null ) === $username ) {
+		if ( Blog_User::get_default_username() === $username ) {
 			return self::get_by_id( self::BLOG_USER_ID );
 		}
 
