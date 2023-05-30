@@ -28,6 +28,8 @@ class Activitypub {
 		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
 
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ) );
+
+		\add_action( 'after_setup_theme', array( self::class, 'theme_compat' ), 99 );
 	}
 
 	/**
@@ -241,5 +243,32 @@ class Activitypub {
 	public static function flush_rewrite_rules() {
 		self::add_rewrite_rules();
 		\flush_rewrite_rules();
+	}
+
+	public static function theme_compat() {
+		$site_icon = get_theme_support( 'custom-logo' );
+
+		if ( ! $site_icon ) {
+			// custom logo support
+			add_theme_support(
+				'custom-logo',
+				array(
+					'height' => 80,
+					'width'  => 80,
+				)
+			);
+		}
+
+		$custom_header = get_theme_support( 'custom-header' );
+
+		if ( ! $custom_header ) {
+			// This theme supports a custom header
+			$custom_header_args = array(
+				'width'       => 1250,
+				'height'      => 600,
+				'header-text' => true,
+			);
+			add_theme_support( 'custom-header', $custom_header_args );
+		}
 	}
 }
