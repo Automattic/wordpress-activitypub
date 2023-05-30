@@ -32,7 +32,25 @@
 
 		<h3><?php \esc_html_e( 'Blog-User', 'activitypub' ); ?></h3>
 
-		<p><?php \esc_html_e( 'All activity related settings.', 'activitypub' ); ?></p>
+		<p><?php \esc_html_e( 'All settings for the Blog-User (Catch-All Account)', 'activitypub' ); ?></p>
+
+		<table class="form-table" id="activitypub-images">
+			<tbody>
+				<tr>
+					<th scope="row">
+						<?php \esc_html_e( 'Cover & Avatar', 'activitypub' ); ?>
+					</th>
+					<td>
+						<div class="header-image" style="background-image: url('<?php echo esc_url( get_header_image() ); ?>');">
+							<img class="logo" src="<?php echo get_site_icon_url(); ?>" />
+						</div>
+						<p class="description">
+							<?php esc_html_e( 'Change cover and avatar in the customizer.', 'activitypub' ); ?>
+						</p>
+					</td>
+				</tr>
+			</tbody>
+		</table>
 
 		<table class="form-table">
 			<tbody>
