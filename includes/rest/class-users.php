@@ -112,7 +112,7 @@ class Users {
 
 		// redirect to canonical URL if it is not an ActivityPub request
 		if ( ! is_activitypub_request() ) {
-			header( 'Location: ' . $user->get_canonical_url() );
+			header( 'Location: ' . $user->get_canonical_url(), true, 301 );
 			exit;
 		}
 
