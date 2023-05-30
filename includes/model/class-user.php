@@ -96,6 +96,10 @@ class User {
 		return \esc_url( \get_author_posts_url( $this->user_id ) );
 	}
 
+	public function get_canonical_url() {
+		return $this->get_url();
+	}
+
 	public function get_username() {
 		return \esc_attr( \get_the_author_meta( 'login', $this->user_id ) );
 	}

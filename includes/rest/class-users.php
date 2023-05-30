@@ -6,6 +6,8 @@ use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\User_Factory;
 
+use function Activitypub\is_activitypub_request;
+
 /**
  * ActivityPub Followers REST-Class
  *
@@ -54,6 +56,12 @@ class Users {
 			return $user;
 		}
 
+		// redirect to canonical URL if it is not an ActivityPub request
+		if ( ! is_activitypub_request() ) {
+			header( 'Location: ' . $user->get_canonical_url() );
+			exit;
+		}
+
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
@@ -81,7 +89,7 @@ class Users {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
 		);
 
 		return $params;

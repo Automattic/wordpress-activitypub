@@ -236,7 +236,7 @@ function is_activitypub_request() {
 	 * ActivityPub requests are currently only made for
 	 * author archives, singular posts, and the homepage.
 	 */
-	if ( ! \is_author() && ! \is_singular() && ! \is_home() ) {
+	if ( ! \is_author() && ! \is_singular() && ! \is_home() && ! defined( 'REST_REQUEST' ) && ! REST_REQUEST ) {
 		return false;
 	}
 
