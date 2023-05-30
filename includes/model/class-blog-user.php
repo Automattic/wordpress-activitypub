@@ -55,6 +55,10 @@ class Blog_User extends User {
 		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_username() );
 	}
 
+	public function get_canonical_url() {
+		return \get_home_url();
+	}
+
 	public function get_username() {
 		return \esc_html( \get_option( 'activitypub_blog_user_identifier', 'feed' ) );
 	}

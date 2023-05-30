@@ -6,6 +6,8 @@ use WP_REST_Request;
 use Activitypub\Webfinger;
 use Activitypub\Collection\Users as User_Collection;
 
+use function Activitypub\is_activitypub_request;
+
 /**
  * ActivityPub OStatus REST-Class
  *
@@ -108,6 +110,12 @@ class Users {
 			return $user;
 		}
 
+		// redirect to canonical URL if it is not an ActivityPub request
+		if ( ! is_activitypub_request() ) {
+			header( 'Location: ' . $user->get_canonical_url() );
+			exit;
+		}
+
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
@@ -135,7 +143,7 @@ class Users {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
 		);
 
 		return $params;
