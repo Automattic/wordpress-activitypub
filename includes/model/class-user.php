@@ -100,6 +100,10 @@ class User {
 		return $this->get_url();
 	}
 
+	public function get_at_url() {
+		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_username() );
+	}
+
 	public function get_username() {
 		return \esc_attr( \get_the_author_meta( 'login', $this->user_id ) );
 	}
