@@ -42,10 +42,19 @@
 					</th>
 					<td>
 						<div class="header-image" style="background-image: url('<?php echo esc_url( get_header_image() ); ?>');">
-							<img class="logo" src="<?php echo get_site_icon_url(); ?>" />
+							<img class="logo" src="<?php echo esc_url( get_site_icon_url() ); ?>" />
 						</div>
 						<p class="description">
-							<?php esc_html_e( 'Change cover and avatar in the customizer.', 'activitypub' ); ?>
+							<?php
+							echo \wp_kses(
+								\sprintf(
+									// translators: %s is the link is to the customizer.
+									\__( 'Change the Avatar and the Cover using the <a href="%s">Customizer</a>.', 'activitypub' ),
+									\esc_url_raw( \admin_url( 'customize.php' ) )
+								),
+								'default'
+							);
+							?>
 						</p>
 					</td>
 				</tr>

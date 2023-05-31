@@ -247,4 +247,8 @@ class User {
 
 		return $array;
 	}
+
+	public function get_resource() {
+		return $this->get_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+	}
 }
