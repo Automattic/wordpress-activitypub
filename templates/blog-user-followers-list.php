@@ -15,7 +15,7 @@
 
 	<?php $followers_table = new \Activitypub\Table\Followers(); ?>
 
-	<?php // translators: ?>
+	<?php // translators: The follower count. ?>
 	<p><?php \printf( \esc_html__( 'You currently have %s followers.', 'activitypub' ), \esc_attr( $followers_table->get_user_count() ) ); ?></p>
 
 	<form method="get">
