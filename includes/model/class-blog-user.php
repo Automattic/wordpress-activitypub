@@ -2,6 +2,7 @@
 namespace Activitypub\Model;
 
 use WP_Query;
+use Activitypub\Signature;
 use Activitypub\User_Factory;
 
 class Blog_User extends User {
@@ -141,6 +142,42 @@ class Blog_User extends User {
 	}
 
 	public function get_public_key() {
-		return '';
+		$key = \get_option( 'activitypub_blog_user_public_key', true );
+
+		if ( $key ) {
+			return $key;
+		}
+
+		$this->generate_key_pair();
+
+		$key = \get_option( 'activitypub_blog_user_public_key', true );
+
+		return $key;
+	}
+
+	/**
+	 * @param int $user_id
+	 *
+	 * @return mixed
+	 */
+	public function get_private_key() {
+		$key = \get_option( 'activitypub_blog_user_private_key', true );
+
+		if ( $key ) {
+			return $key;
+		}
+
+		$this->generate_key_pair();
+
+		return \get_option( 'activitypub_blog_user_private_key', true );
+	}
+
+	private function generate_key_pair() {
+		$key_pair = Signature::generate_key_pair();
+
+		if ( ! is_wp_error( $key_pair ) ) {
+			\update_option( 'activitypub_blog_user_public_key', $key_pair['public_key'], true );
+			\update_option( 'activitypub_blog_user_private_key', $key_pair['private_key'], true );
+		}
 	}
 }
