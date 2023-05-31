@@ -114,7 +114,7 @@ class Mention {
 	 * @return string The Inbox-URL
 	 */
 	public static function get_inbox_by_mentioned_actor( $actor ) {
-		$metadata = get_remote_metadata_by_actor( $actor, true );
+		$metadata = get_remote_metadata_by_actor( $actor );
 
 		if ( \is_wp_error( $metadata ) ) {
 			return $metadata;

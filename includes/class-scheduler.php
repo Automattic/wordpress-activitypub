@@ -100,7 +100,7 @@ class Scheduler {
 		$followers = Followers::get_outdated_followers();
 
 		foreach ( $followers as $follower ) {
-			$meta = get_remote_metadata_by_actor( $follower->get_actor() );
+			$meta = get_remote_metadata_by_actor( $follower->get_actor(), true );
 
 			if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
 				$follower->set_error( $meta );
@@ -121,7 +121,7 @@ class Scheduler {
 		$followers = Followers::get_faulty_followers();
 
 		foreach ( $followers as $follower ) {
-			$meta = get_remote_metadata_by_actor( $follower->get_actor() );
+			$meta = get_remote_metadata_by_actor( $follower->get_actor(), true );
 
 			if ( is_tombstone( $meta ) ) {
 				$follower->delete();
