@@ -245,6 +245,11 @@ class Activitypub {
 		\flush_rewrite_rules();
 	}
 
+	/**
+	 * Theme compatibility stuff
+	 *
+	 * @return void
+	 */
 	public static function theme_compat() {
 		$site_icon = get_theme_support( 'custom-logo' );
 

@@ -24,7 +24,7 @@ class Blog_User extends User {
 	 *
 	 * @param int $user_id The User-ID.
 	 */
-	public function __construct( $user_id ) {
+	public function __construct( $user_id = null ) {
 		add_filter( 'activitypub_json_author_array', array( $this, 'add_api_endpoints' ), 10, 2 );
 	}
 
