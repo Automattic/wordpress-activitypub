@@ -56,6 +56,7 @@ class Activitypub {
 	 * @return void
 	 */
 	public static function uninstall() {
+		Scheduler::deregister_schedules();
 	}
 
 	/**
