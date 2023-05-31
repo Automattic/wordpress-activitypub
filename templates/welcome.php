@@ -21,7 +21,7 @@
 			\sprintf(
 				// translators:
 				\__(
-					'People can follow your Blog by using the username <code>%1$s</code> or the URL <code>%2$s</code>. This Blog-User will federate all posts written on your Blog, regardless of the User who posted it. You can customize the Blog-User on the <a href="%3$s">Settings Page</a>.',
+					'People can follow your Blog by using the username <code>%1$s</code> or the URL <code>%2$s</code>. This Blog-User will federate all posts written on your Blog, regardless of the User who posted it. You can customize the Blog-User on the <a href="%3$s">Settings</a> page.',
 					'activitypub'
 				),
 				\esc_attr( $blog_user->get_resource() ),
