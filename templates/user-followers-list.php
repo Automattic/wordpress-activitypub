@@ -1,17 +1,3 @@
-<?php
-if ( get_current_screen()->id === 'settings_page_activitypub' ) {
-	\load_template(
-		\dirname( __FILE__ ) . '/admin-header.php',
-		true,
-		array(
-			'settings' => '',
-			'welcome' => '',
-			'followers' => 'active',
-		)
-	);
-}
-?>
-
 <div class="wrap">
 	<h1><?php \esc_html_e( 'Followers', 'activitypub' ); ?></h1>
 	<?php Activitypub\Migration::maybe_migrate(); ?>
