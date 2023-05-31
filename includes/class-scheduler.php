@@ -19,6 +19,8 @@ class Scheduler {
 
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
+
+		\add_action( 'admin_init', array( self::class, 'schedule_migration' ) );
 	}
 
 	/**
@@ -133,6 +135,17 @@ class Scheduler {
 			} else {
 				$follower->reset_errors();
 			}
+		}
+	}
+
+	/**
+	 * Schedule migration if DB-Version is not up to date.
+	 *
+	 * @return void
+	 */
+	public static function schedule_migration() {
+		if ( ! \wp_next_scheduled( 'activitypub_schedule_migration' ) && ! Migration::is_latest_version() ) {
+			\wp_schedule_single_event( \time(), 'activitypub_schedule_migration' );
 		}
 	}
 }
