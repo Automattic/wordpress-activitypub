@@ -1,5 +1,5 @@
 <?php
-$user = \Activitypub\User_Factory::get_by_id( 0 );
+$user = new \Activitypub\Model\Blog_User();
 
 /*
  * Action triggerd prior to the ActivityPub profile being created and sent to the client

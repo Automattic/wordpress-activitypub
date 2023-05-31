@@ -76,22 +76,28 @@ class Activity_Dispatcher {
 		self::send_user_activity( $activitypub_post, $activity_type, User_Factory::BLOG_USER_ID );
 	}
 
+	/**
+	 * Send Activities to followers and mentioned users.
+	 *
+	 * @param Post   $activitypub_post The ActivityPub Post.
+	 * @param string $activity_type    The Activity-Type.
+	 * @param int    $user_id          The User-ID.
+	 *
+	 * @return void
+	 */
 	public static function send_user_activity( Post $activitypub_post, $activity_type, $user_id = null ) {
 		if ( $user_id ) {
-			$user  = User_Factory::get_by_id( $user_id );
-			$actor = $user->get_url();
+			$user    = User_Factory::get_by_id( $user_id );
+			$user_id = $user->get_id();
+			$actor   = $user->get_url();
 		} else {
-			// get latest version of post
 			$user_id = $activitypub_post->get_post_author();
-			$actor   = null;
+			$actor   = $activitypub_activity->get_actor();
 		}
 
 		$activitypub_activity = new Activity( $activity_type );
 		$activitypub_activity->from_post( $activitypub_post );
-
-		if ( $actor ) {
-			$activitypub_activity->set_actor( $actor );
-		}
+		$activitypub_activity->set_actor( $actor );
 
 		$follower_inboxes = Followers::get_inboxes( $user_id );
 		$mentioned_inboxes = Mention::get_inboxes( $activitypub_activity->get_cc() );
