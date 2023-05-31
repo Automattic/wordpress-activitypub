@@ -65,7 +65,7 @@ class Admin {
 				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php' );
 				break;
 			case 'followers':
-				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php' );
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-user-followers-list.php' );
 				break;
 			case 'welcome':
 			default:
@@ -85,7 +85,7 @@ class Admin {
 		if ( ! current_user_can( 'publish_posts' ) ) {
 			return;
 		}
-		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php' );
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-followers-list.php' );
 	}
 
 	/**
