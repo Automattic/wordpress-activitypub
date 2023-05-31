@@ -3,8 +3,9 @@
 	\dirname( __FILE__ ) . '/admin-header.php',
 	true,
 	array(
-		'settings' => 'active',
-		'welcome' => '',
+		'settings'  => 'active',
+		'welcome'   => '',
+		'followers' => '',
 	)
 );
 ?>
