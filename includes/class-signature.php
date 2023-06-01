@@ -166,7 +166,7 @@ class Signature {
 	public static function verify_http_signature( $request ) {
 		if ( is_object( $request ) ) { // REST Request object
 			// check if route starts with "index.php"
-			if ( str_starts_with( $request->get_route(), 'index.php' ) ) {
+			if ( str_starts_with( $request->get_route(), '/index.php' ) ) {
 				$route = $request->get_route();
 			} else {
 				$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
