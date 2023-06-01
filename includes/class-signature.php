@@ -169,7 +169,7 @@ class Signature {
 			if ( str_starts_with( $request->get_route(), 'index.php' ) ) {
 				$route = $request->get_route();
 			} else {
-				$route = rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
+				$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
 			}
 			$headers = $request->get_headers();
 			$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '';
