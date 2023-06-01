@@ -4,6 +4,7 @@ namespace Activitypub\Rest;
 use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
+use Activitypub\Signature;
 use Activitypub\Model\Activity;
 
 use function Activitypub\get_context;
@@ -24,7 +25,6 @@ class Inbox {
 	 */
 	public static function init() {
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
-		\add_filter( 'rest_pre_serve_request', array( self::class, 'serve_request' ), 11, 4 );
 
 		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_create' ), 10, 2 );
 	}
@@ -64,35 +64,6 @@ class Inbox {
 				),
 			)
 		);
-	}
-
-	/**
-	 * Hooks into the REST API request to verify the signature.
-	 *
-	 * @param bool                      $served  Whether the request has already been served.
-	 * @param WP_HTTP_ResponseInterface $result  Result to send to the client. Usually a WP_REST_Response.
-	 * @param WP_REST_Request           $request Request used to generate the response.
-	 * @param WP_REST_Server            $server  Server instance.
-	 *
-	 * @return true
-	 */
-	public static function serve_request( $served, $result, $request, $server ) {
-		if ( '/activitypub' !== \substr( $request->get_route(), 0, 12 ) ) {
-			return $served;
-		}
-
-		$signature = $request->get_header( 'signature' );
-
-		if ( ! $signature ) {
-			return $served;
-		}
-
-		$headers = $request->get_headers();
-
-		// verify signature
-		//\Activitypub\Signature::verify_signature( $headers, $key );
-
-		return $served;
 	}
 
 	/**
@@ -147,6 +118,7 @@ class Inbox {
 	 * @return WP_REST_Response
 	 */
 	public static function user_inbox_post( $request ) {
+
 		$user_id = $request->get_param( 'user_id' );
 
 		$data = $request->get_params();
@@ -167,6 +139,7 @@ class Inbox {
 	 * @return WP_REST_Response
 	 */
 	public static function shared_inbox_post( $request ) {
+
 		$data = $request->get_params();
 		$type = $request->get_param( 'type' );
 		$users = self::extract_recipients( $data );

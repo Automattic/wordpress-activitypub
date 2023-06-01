@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub;
 
+use Activitypub\Signature;
+
 /**
  * ActivityPub Class
  *
@@ -87,34 +89,14 @@ class Activitypub {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
-		global $wp_query;
-
-		if ( isset( $wp_query->query_vars['activitypub'] ) ) {
-			return $json_template;
-		}
-
-		if ( ! isset( $_SERVER['HTTP_ACCEPT'] ) ) {
-			return $template;
-		}
-
-		$accept_header = $_SERVER['HTTP_ACCEPT'];
-
-		if (
-			\stristr( $accept_header, 'application/activity+json' ) ||
-			\stristr( $accept_header, 'application/ld+json' )
-		) {
-			return $json_template;
-		}
-
-		// Accept header as an array.
-		$accept = \explode( ',', \trim( $accept_header ) );
-
-		if (
-			\in_array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', $accept, true ) ||
-			\in_array( 'application/activity+json', $accept, true ) ||
-			\in_array( 'application/ld+json', $accept, true ) ||
-			\in_array( 'application/json', $accept, true )
-		) {
+		if ( is_activitypub_request() ) {
+			if ( ACTIVITYPUB_SECURE_MODE ) {
+				$verification = Signature::verify_http_signature( $_SERVER );
+				if ( \is_wp_error( $verification ) ) {
+					// fallback as template_loader can't return http headers
+					return $template;
+				}
+			}
 			return $json_template;
 		}
 

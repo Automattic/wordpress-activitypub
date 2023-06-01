@@ -2,6 +2,7 @@
 namespace Activitypub;
 
 use WP_Error;
+use Activitypub\Model\User;
 
 /**
  * ActivityPub HTTP Class
@@ -33,7 +34,7 @@ class Http {
 			'headers' => array(
 				'Accept' => 'application/activity+json',
 				'Content-Type' => 'application/activity+json',
-				'Digest' => "SHA-256=$digest",
+				'Digest' => $digest,
 				'Signature' => $signature,
 				'Date' => $date,
 			),
@@ -60,9 +61,9 @@ class Http {
 	 *
 	 * @return array|WP_Error The GET Response or an WP_ERROR
 	 */
-	public static function get( $url, $user_id ) {
+	public static function get( $url ) {
 		$date = \gmdate( 'D, d M Y H:i:s T' );
-		$signature = Signature::generate_signature( $user_id, 'get', $url, $date );
+		$signature = Signature::generate_signature( User::APPLICATION_USER_ID, 'get', $url, $date );
 
 		$wp_version = \get_bloginfo( 'version' );
 		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
@@ -86,7 +87,7 @@ class Http {
 			$response = new WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ) );
 		}
 
-		\do_action( 'activitypub_safe_remote_get_response', $response, $url, $user_id );
+		\do_action( 'activitypub_safe_remote_get_response', $response, $url );
 
 		return $response;
 	}
