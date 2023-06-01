@@ -247,9 +247,9 @@ class Signature {
 	/**
 	 * Get public key from key_id
 	 *
-	 * @param string $key_id
+	 * @param string $key_id The URL to the public key.
 	 *
-	 * @return string $publicKeyPem
+	 * @return string The public key.
 	 */
 	public static function get_remote_key( $key_id ) { // phpcs:ignore
 		$actor = \Activitypub\get_remote_metadata_by_actor( strtok( strip_fragment_from_url( $key_id ), '?' ) ); // phpcs:ignore
@@ -267,7 +267,7 @@ class Signature {
 	 *
 	 * @param array $signature_block
 	 *
-	 * @return string algorithm
+	 * @return string The signature algorithm.
 	 */
 	public static function get_signature_algorithm( $signature_block ) {
 		if ( $signature_block['algorithm'] ) {
@@ -284,39 +284,39 @@ class Signature {
 	/**
 	 * Parses the Signature header
 	 *
-	 * @param array $header
+	 * @param array $header The signature header.
 	 *
 	 * @return array signature parts
 	 */
 	public static function parse_signature_header( $header ) {
-		$ret = array();
-		$matches = array();
-		$h_string = \implode( ',', (array) $header[0] );
+		$parsed_header = array();
+		$matches       = array();
+		$h_string      = \implode( ',', (array) $header[0] );
 
 		if ( \preg_match( '/keyId="(.*?)"/ism', $h_string, $matches ) ) {
-			$ret['keyId'] = $matches[1];
+			$parsed_header['keyId'] = $matches[1];
 		}
 		if ( \preg_match( '/created=([0-9]*)/ism', $h_string, $matches ) ) {
-			$ret['(created)'] = $matches[1];
+			$parsed_header['(created)'] = $matches[1];
 		}
 		if ( \preg_match( '/expires=([0-9]*)/ism', $h_string, $matches ) ) {
-			$ret['(expires)'] = $matches[1];
+			$parsed_header['(expires)'] = $matches[1];
 		}
 		if ( \preg_match( '/algorithm="(.*?)"/ism', $h_string, $matches ) ) {
-			$ret['algorithm'] = $matches[1];
+			$parsed_header['algorithm'] = $matches[1];
 		}
 		if ( \preg_match( '/headers="(.*?)"/ism', $h_string, $matches ) ) {
-			$ret['headers'] = \explode( ' ', $matches[1] );
+			$parsed_header['headers'] = \explode( ' ', $matches[1] );
 		}
 		if ( \preg_match( '/signature="(.*?)"/ism', $h_string, $matches ) ) {
-			$ret['signature'] = \base64_decode( preg_replace( '/\s+/', '', $matches[1] ) ); // phpcs:ignore
+			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', $matches[1] ) ); // phpcs:ignore
 		}
 
-		if ( ( $ret['signature'] ) && ( $ret['algorithm'] ) && ( ! $ret['headers'] ) ) {
-			$ret['headers'] = array( 'date' );
+		if ( ( $parsed_header['signature'] ) && ( $parsed_header['algorithm'] ) && ( ! $parsed_header['headers'] ) ) {
+			$parsed_header['headers'] = array( 'date' );
 		}
 
-		return $ret;
+		return $parsed_header;
 	}
 
 	/**
@@ -326,7 +326,7 @@ class Signature {
 	 * @param array $signature_block (pseudo-headers)
 	 * @param array $headers         (http headers)
 	 *
-	 * @return signed headers for comparison
+	 * @return string signed headers for comparison
 	 */
 	public static function get_signed_data( $signed_headers, $signature_block, $headers ) {
 		$signed_data = '';
@@ -377,6 +377,13 @@ class Signature {
 		return \rtrim( $signed_data, "\n" );
 	}
 
+	/**
+	 * Generates the digest for a HTTP Request
+	 *
+	 * @param string $body The body of the request.
+	 *
+	 * @return string The digest.
+	 */
 	public static function generate_digest( $body ) {
 		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore
 		return "SHA-256=$digest";
@@ -386,9 +393,9 @@ class Signature {
 	 * Formats the $_SERVER to resemble the WP_REST_REQUEST array,
 	 * for use with verify_http_signature()
 	 *
-	 * @param array $_SERVER
+	 * @param array $_SERVER The $_SERVER array.
 	 *
-	 * @return array $request
+	 * @return array $request The formatted request array.
 	 */
 	public static function format_server_request( $server ) {
 		$request = array();
