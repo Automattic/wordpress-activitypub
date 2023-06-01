@@ -242,6 +242,11 @@ class Signature {
 	 * @return string $publicKeyPem
 	 */
 	public static function get_remote_key( $key_id ) { // phpcs:ignore
+		$pre = apply_filters( 'pre_get_remote_key', false, $key_id );
+		if ( $pre ) {
+			return $pre;
+		}
+
 		$actor = \Activitypub\get_remote_metadata_by_actor( strtok( strip_fragment_from_url( $key_id ), '?' ) ); // phpcs:ignore
 		if ( \is_wp_error( $actor ) ) {
 			return $actor;
