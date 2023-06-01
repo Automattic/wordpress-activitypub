@@ -2,7 +2,10 @@
 namespace Activitypub\Model;
 
 use WP_Query;
+use Activitypub\Signature;
 use Activitypub\User_Factory;
+
+use function Activitypub\get_rest_url_by_path;
 
 class Application_User extends Blog_User {
 	/**
@@ -24,7 +27,7 @@ class Application_User extends Blog_User {
 	 *
 	 * @param int $user_id The User-ID.
 	 */
-	public function __construct( $user_id ) {
+	public function __construct( $user_id = null ) {
 		// do nothing
 	}
 
@@ -34,11 +37,15 @@ class Application_User extends Blog_User {
 	 * @return string The User-Url.
 	 */
 	public function get_url() {
-		return '';
+		return get_rest_url_by_path( 'application' );
 	}
 
 	public function get_name() {
-		return \esc_html( \get_option( 'activitypub_application_identifier', 'application' ) );
+		return 'application';
+	}
+
+	public function get_username() {
+		return $this::get_name();
 	}
 
 	public function get_public_key() {

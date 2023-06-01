@@ -5,6 +5,7 @@ use WP_Error;
 use WP_User_Query;
 use Activitypub\Model\User;
 use Activitypub\Model\Blog_User;
+use Activitypub\Model\Application_User;
 
 class User_Factory {
 	/**
@@ -63,7 +64,7 @@ class User_Factory {
 		}
 
 		// check for application user.
-		if ( get_option( 'activitypub_application_user_identifier', null ) === $username ) {
+		if ( 'application' === $username ) {
 			return self::get_by_id( self::APPLICATION_USER_ID );
 		}
 

@@ -42,7 +42,9 @@ class Test_Activitypub_Signature_Verification extends WP_UnitTestCase {
 		$signed_headers = $signature_block['headers'];
 		$signed_data = Activitypub\Signature::get_signed_data( $signed_headers, $signature_block, $headers );
 
-		$public_key = Activitypub\Signature::get_public_key( 1 );
+		$user = Activitypub\User_Factory::get_by_id( 1 );
+
+		$public_key = $user->get_public_key();
 
 		// signature_verification
 		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, 'rsa-sha256' ) > 0;
@@ -53,6 +55,8 @@ class Test_Activitypub_Signature_Verification extends WP_UnitTestCase {
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
 			function( $json, $actor ) {
+				$user = Activitypub\User_Factory::get_by_id( 1 );
+				$public_key = $user->get_public_key();
 				// return ActivityPub Profile with signature
 				return array(
 					'id' => $actor,
@@ -60,7 +64,7 @@ class Test_Activitypub_Signature_Verification extends WP_UnitTestCase {
 					'publicKey' => array(
 						'id' => $actor . '#main-key',
 						'owner' => $actor,
-						'publicKeyPem' => \Activitypub\Signature::get_public_key( 1 ),
+						'publicKeyPem' => $public_key,
 					),
 				);
 			},
