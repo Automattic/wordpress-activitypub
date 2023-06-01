@@ -165,9 +165,15 @@ class Signature {
 	 */
 	public static function verify_http_signature( $request ) {
 		if ( is_object( $request ) ) { // REST Request object
+			// check if route starts with "index.php"
+			if ( str_starts_with( $request->get_route(), 'index.php' ) ) {
+				$route = $request->get_route();
+			} else {
+				$route = rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
+			}
 			$headers = $request->get_headers();
 			$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '';
-			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . $request->get_route();
+			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . $route;
 		} else {
 			$request = self::format_server_request( $request );
 			$headers = $request['headers']; // $_SERVER array
