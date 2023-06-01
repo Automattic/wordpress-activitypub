@@ -26,6 +26,8 @@ class Test_Activitypub_Rest_Post_Signature_Verification extends WP_UnitTestCase 
 		$date = gmdate( 'D, d M Y H:i:s T' );
 		$signature = Activitypub\Signature::generate_signature( 1, 'POST', $remote_actor, $date, $digest );
 
+		$this->assertRegExp( '/keyId="http:\/\/example\.org\/\?author=1#main-key",algorithm="rsa-sha256",headers="\(request-target\) host date digest",signature="[^"]*"/', $signature );
+
 		//  Signed headers
 		$url_parts = wp_parse_url( $remote_actor );
 		$route = $url_parts['path'] . '?' . $url_parts['query'];
@@ -48,7 +50,7 @@ class Test_Activitypub_Rest_Post_Signature_Verification extends WP_UnitTestCase 
 
 		// signature_verification
 		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, 'rsa-sha256' ) > 0;
-		$this->assertTRUE( $verified );
+		$this->assertTrue( $verified );
 
 		remove_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10 );
 	}
