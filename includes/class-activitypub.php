@@ -88,27 +88,7 @@ class Activitypub {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
-		global $wp_query;
-
-		if ( isset( $wp_query->query_vars['activitypub'] ) ) {
-			return $json_template;
-		}
-
-		if ( ! isset( $_SERVER['HTTP_ACCEPT'] ) ) {
-			return $template;
-		}
-
-		$accept_header = $_SERVER['HTTP_ACCEPT'];
-		// Accept header as an array.
-		$accept = \explode( ',', \trim( $accept_header ) );
-		if (
-			\stristr( $accept_header, 'application/activity+json' ) ||
-			\stristr( $accept_header, 'application/ld+json' ) ||
-			\in_array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', $accept, true ) ||
-			\in_array( 'application/activity+json', $accept, true ) ||
-			\in_array( 'application/ld+json', $accept, true ) ||
-			\in_array( 'application/json', $accept, true )
-		) {
+		if ( is_activitypub_request() ) {
 			if ( ACTIVITYPUB_SECURE_MODE ) {
 				$verification = Signature::verify_http_signature( $_SERVER );
 				if ( \is_wp_error( $verification ) ) {
