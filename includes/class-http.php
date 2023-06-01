@@ -34,7 +34,7 @@ class Http {
 			'headers' => array(
 				'Accept' => 'application/activity+json',
 				'Content-Type' => 'application/activity+json',
-				'Digest' => "SHA-256=$digest",
+				'Digest' => $digest,
 				'Signature' => $signature,
 				'Date' => $date,
 			),

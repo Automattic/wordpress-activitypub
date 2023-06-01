@@ -131,8 +131,10 @@ class Signature {
 			$path .= '?' . $url_parts['query'];
 		}
 
+		$http_method = \strtolower( $http_method );
+
 		if ( ! empty( $digest ) ) {
-			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date\ndigest: SHA-256=$digest";
+			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date\ndigest: $digest";
 		} else {
 			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date";
 		}
@@ -165,7 +167,7 @@ class Signature {
 		if ( is_object( $request ) ) { // REST Request object
 			$headers = $request->get_headers();
 			$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '';
-			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' /' . rest_get_url_prefix() . $request->get_route();
+			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . $request->get_route();
 		} else {
 			$request = self::format_server_request( $request );
 			$headers = $request['headers']; // $_SERVER array
@@ -227,7 +229,9 @@ class Signature {
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		}
+
 		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
+
 		if ( ! $verified ) {
 			return new WP_Error( 'activitypub_signature', 'Invalid signature', array( 'status' => 403 ) );
 		}
@@ -242,11 +246,6 @@ class Signature {
 	 * @return string $publicKeyPem
 	 */
 	public static function get_remote_key( $key_id ) { // phpcs:ignore
-		$pre = apply_filters( 'pre_get_remote_key', false, $key_id );
-		if ( $pre ) {
-			return $pre;
-		}
-
 		$actor = \Activitypub\get_remote_metadata_by_actor( strtok( strip_fragment_from_url( $key_id ), '?' ) ); // phpcs:ignore
 		if ( \is_wp_error( $actor ) ) {
 			return $actor;
@@ -374,7 +373,7 @@ class Signature {
 
 	public static function generate_digest( $body ) {
 		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore
-		return "$digest";
+		return "SHA-256=$digest";
 	}
 
 	/**
