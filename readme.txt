@@ -116,6 +116,8 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 
 = Next =
 
+* Add: Signature Verification: https://docs.joinmastodon.org/spec/security/ .
+* Update: Complete rewrite of the Follower-System based on Taxonomies.
 * Compatibility: add a new conditional, `\Activitypub\is_activitypub_request()`, to allow third-party plugins to detect ActivityPub requests.
 * Compatibility: add hooks to allow modifying images returned in ActivityPub requests.
 * Compatibility: indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.2.
