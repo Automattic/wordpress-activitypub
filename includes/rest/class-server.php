@@ -4,11 +4,7 @@ namespace Activitypub\Rest;
 use stdClass;
 use WP_REST_Response;
 use Activitypub\Signature;
-use Activitypub\Model\User;
-
-use function Activitypub\get_context;
-use function Activitypub\get_rest_url_by_path;
-
+use Activitypub\Model\Application_User;
 
 /**
  * ActivityPub Server REST-Class
@@ -18,7 +14,6 @@ use function Activitypub\get_rest_url_by_path;
  * @see https://www.w3.org/TR/activitypub/#security-verification
  */
 class Server {
-
 	/**
 	 * Initialize the class, registering WordPress hooks
 	 */
@@ -50,21 +45,8 @@ class Server {
 	 * @return WP_REST_Response The JSON profile of the Application Actor.
 	 */
 	public static function application_actor() {
-		$json = new stdClass();
-
-		$json->{'@context'} = get_context();
-		$json->id = get_rest_url_by_path( 'application' );
-		$json->type = 'Application';
-		$json->preferredUsername = str_replace( array( '.' ), '-', wp_parse_url( get_site_url(), PHP_URL_HOST ) ); // phpcs:ignore WordPress.NamingConventions
-		$json->name = get_bloginfo( 'name' );
-		$json->summary = __( 'WordPress-ActivityPub application actor', 'activitypub' );
-		$json->manuallyApprovesFollowers = true; // phpcs:ignore WordPress.NamingConventions
-		$json->icon = array( get_site_icon_url() ); // phpcs:ignore WordPress.NamingConventions short array syntax
-		$json->publicKey = array( // phpcs:ignore WordPress.NamingConventions
-			'id' => get_rest_url_by_path( 'application#main-key' ),
-			'owner' => get_rest_url_by_path( 'application' ),
-			'publicKeyPem' => Signature::get_public_key( User::APPLICATION_USER_ID ), // phpcs:ignore WordPress.NamingConventions
-		);
+		$user = new Application_User();
+		$json = $user->to_array();
 
 		$response = new WP_REST_Response( $json, 200 );
 

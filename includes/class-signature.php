@@ -245,7 +245,7 @@ class Signature {
 	 * @return string The public key.
 	 */
 	public static function get_remote_key( $key_id ) { // phpcs:ignore
-		$actor = \Activitypub\get_remote_metadata_by_actor( strtok( strip_fragment_from_url( $key_id ), '?' ) ); // phpcs:ignore
+		$actor = get_remote_metadata_by_actor( strtok( strip_fragment_from_url( $key_id ), '?' ) ); // phpcs:ignore
 		if ( \is_wp_error( $actor ) ) {
 			return $actor;
 		}
