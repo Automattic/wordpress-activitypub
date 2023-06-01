@@ -2,7 +2,7 @@
 namespace Activitypub;
 
 use WP_Error;
-use Activitypub\Model\User;
+use Activitypub\User_Factory;
 
 /**
  * ActivityPub HTTP Class
@@ -63,7 +63,7 @@ class Http {
 	 */
 	public static function get( $url ) {
 		$date = \gmdate( 'D, d M Y H:i:s T' );
-		$signature = Signature::generate_signature( User::APPLICATION_USER_ID, 'get', $url, $date );
+		$signature = Signature::generate_signature( User_Factory::APPLICATION_USER_ID, 'get', $url, $date );
 
 		$wp_version = \get_bloginfo( 'version' );
 		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
