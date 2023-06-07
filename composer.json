@@ -12,7 +12,7 @@
         "phpcompatibility/phpcompatibility-wp": "*",
         "squizlabs/php_codesniffer": "3.*",
         "wp-coding-standards/wpcs": "*",
-        "yoast/phpunit-polyfills": "^1.0",
+        "yoast/phpunit-polyfills": "^2.0",
         "dealerdirect/phpcodesniffer-composer-installer": "^1.0.0"
     },
     "config": {
