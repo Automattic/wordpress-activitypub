@@ -9,6 +9,7 @@ use Activitypub\Collection\Followers;
  * This Object represents a single Follower.
  * There is no direct reference to a WordPress User here.
  *
+ * @author Matt Wiebe
  * @author Matthias Pfefferle
  *
  * @see https://www.w3.org/TR/activitypub/#follow-activity-inbox
@@ -62,6 +63,11 @@ class Follower {
 	private $avatar;
 
 	/**
+	 * The URL to the Follower
+	 */
+	private $url;
+
+	/**
 	 * The URL to the Followers Inbox
 	 *
 	 * @var string
@@ -109,6 +115,12 @@ class Follower {
 	private $errors;
 
 	/**
+	 * The WordPress User ID, or 0 for whole site.
+	 * @var int
+	 */
+	private $user_id;
+
+	/**
 	 * Maps the meta fields to the local db fields
 	 *
 	 * @var array
@@ -117,22 +129,29 @@ class Follower {
 		'name'              => 'name',
 		'preferredUsername' => 'username',
 		'inbox'             => 'inbox',
+		'url'               => 'url',
 	);
 
 	/**
 	 * Constructor
 	 *
-	 * @param WP_Post $post
+	 * @param string|WP_Post $actor The Actor-URL or WP_Post Object.
+	 * @param int            $user_id The WordPress User ID. 0 Represents the whole site.
 	 */
-	public function __construct( $actor ) {
-		$this->actor = $actor;
+	public function __construct( $actor, $user_id = 0 ) {
+		$this->user_id = $user_id;
+		if ( is_a( $actor, 'WP_Post' ) ) {
+			$post = $actor;
+			$this->actor = $post->post_name;
+			$this->user_id = $post->post_author;
+		} else {
+			$this->actor = $actor;
+			$post = Followers::get_follower( $user_id, $actor );
+		}
 
-		$term = get_term_by( 'name', $actor, Followers::TAXONOMY );
-
-		if ( $term ) {
-			$this->id = $term->term_id;
-			$this->slug = $term->slug;
-			$this->meta = json_decode( $term->meta );
+		if ( $post ) {
+			$this->id = $term->post_id;
+			$this->slug = $term->post_name;
 		}
 	}
 
@@ -205,23 +224,36 @@ class Follower {
 	 * @return mixed The attribute value.
 	 */
 	public function get( $attribute ) {
-		if ( $this->$attribute ) {
+		if ( ! is_null( $this->$attribute ) ) {
 			return $this->$attribute;
 		}
-
-		$attribute = get_term_meta( $this->id, $attribute, true );
-		if ( $attribute ) {
-			$this->$attribute = $attribute;
-			return $attribute;
+		$attribute_value = get_post_meta( $this->id, $attribute, true );
+		if ( $attribute_value ) {
+			$this->$attribute = $attribute_value;
+			return $attribute_value;
 		}
 
-		$attribute = $this->get_meta_by( $attribute );
-		if ( $attribute ) {
-			$this->$attribute = $attribute;
-			return $attribute;
+		$attribute_value = $this->get_meta_by( $attribute );
+		if ( $attribute_value ) {
+			$this->$attribute = $attribute_value;
+			return $attribute_value;
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get a URL for the follower. Creates one out of the actor if no URL was set.
+	 */
+	public function get_url() {
+		if ( $this->get( 'url' ) ) {
+			return $this->get( 'url' );
+		}
+		$actor = $this->get_actor();
+		// normalize
+		$actor = ltrim( $actor, '@' );
+		$parts = explode( '@', $actor );
+		return sprintf( 'https://%s/@%s', $parts[1], $parts[0] );
 	}
 
 	/**
@@ -246,7 +278,7 @@ class Follower {
 			return $this->errors;
 		}
 
-		$this->errors = get_term_meta( $this->id, 'errors' );
+		$this->errors = get_post_meta( $this->id, 'errors' );
 		return $this->errors;
 	}
 
@@ -298,17 +330,14 @@ class Follower {
 	 */
 	public function get_meta_by( $attribute ) {
 		$meta = $this->get_meta();
-
+		if ( ! is_array( $meta ) ) {
+			return null;
+		}
 		// try mapped data (see $this->map_meta)
 		foreach ( $this->map_meta as $remote => $local ) {
 			if ( $attribute === $local && isset( $meta[ $remote ] ) ) {
 				return $meta[ $remote ];
 			}
-		}
-
-		// try ActivityPub attribtes
-		if ( ! empty( $this->map_meta[ $attribute ] ) ) {
-			return $this->map_meta[ $attribute ];
 		}
 
 		return null;
@@ -333,16 +362,8 @@ class Follower {
 	 * @return void
 	 */
 	public function update() {
-		$term = wp_update_term(
-			$this->id,
-			Followers::TAXONOMY,
-			array(
-				'description' => wp_json_encode( $this->get_meta( true ) ),
-			)
-		);
-
 		$this->updated_at = \time();
-		$this->update_term_meta();
+		$this->save( $this->id );
 	}
 
 	/**
@@ -350,19 +371,16 @@ class Follower {
 	 *
 	 * @return void
 	 */
-	public function save() {
-		$term = wp_insert_term(
-			$this->actor,
-			Followers::TAXONOMY,
-			array(
-				'slug'        => sanitize_title( $this->get_actor() ),
-				'description' => wp_json_encode( $this->get_meta() ),
-			)
+	public function save( $post_id = null ) {
+		$args = array(
+			'ID' => $post_id,
+			'post_name' => $this->actor,
+			'post_author' => $this->user_id,
+			'post_type' => Followers::POST_TYPE,
+			'meta_input' => $this->get_post_meta_input(),
 		);
-
-		$this->id = $term['term_id'];
-
-		$this->update_term_meta();
+		$post = wp_insert_post( $args );
+		$this->id = $post->ID;
 	}
 
 	/**
@@ -384,7 +402,7 @@ class Follower {
 	 * @return void
 	 */
 	public function delete() {
-		wp_delete_term( $this->id, Followers::TAXONOMY );
+		wp_delete_post( $this->id );
 	}
 
 	/**
@@ -392,12 +410,14 @@ class Follower {
 	 *
 	 * @return void
 	 */
-	protected function update_term_meta() {
-		$attributes = array( 'inbox', 'shared_inbox', 'avatar', 'updated_at', 'name', 'username' );
+	protected function get_post_meta_input() {
+		$attributes = array( 'inbox', 'shared_inbox', 'avatar', 'updated_at', 'name', 'username', 'url' );
+
+		$meta_input = array();
 
 		foreach ( $attributes as $attribute ) {
 			if ( $this->get( $attribute ) ) {
-				update_term_meta( $this->id, $attribute, $this->get( $attribute ) );
+				$meta_input[ $attribute ] = $this->get( $attribute );
 			}
 		}
 
@@ -410,7 +430,9 @@ class Follower {
 				$error = __( 'Unknown Error or misconfigured Error-Message', 'activitypub' );
 			}
 
-			add_term_meta( $this->id, 'errors', $error );
+			$meta_input['errors'] = array( $error );
 		}
+
+		return $meta_input;
 	}
 }
