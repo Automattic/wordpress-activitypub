@@ -56,9 +56,10 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		return $actor;
 	}
 
+	$transient_key = 'activitypub_' . $actor;
+
 	// only check the cache if needed.
 	if ( $cached ) {
-		$transient_key = 'activitypub_' . $actor;
 		$metadata = \get_transient( $transient_key );
 
 		if ( $metadata ) {
