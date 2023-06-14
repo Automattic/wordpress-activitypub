@@ -70,22 +70,29 @@ class Scheduler {
 
 		$activitypub_post = new Post( $post );
 
+		$activity_type = false;
+
 		if ( 'publish' === $new_status && 'publish' !== $old_status ) {
-			\wp_schedule_single_event(
-				\time(),
-				'activitypub_send_create_activity',
-				array( $activitypub_post )
-			);
+			$activity_type = 'Create';
 		} elseif ( 'publish' === $new_status ) {
-			\wp_schedule_single_event(
-				\time(),
-				'activitypub_send_update_activity',
-				array( $activitypub_post )
-			);
+			$activity_type = 'Update';
 		} elseif ( 'trash' === $new_status ) {
+			$activity_type = 'Delete';
+		}
+
+		if ( $activity_type ) {
 			\wp_schedule_single_event(
 				\time(),
-				'activitypub_send_delete_activity',
+				'activitypub_send_activity',
+				array( $activitypub_post, $activity_type )
+			);
+
+			\wp_schedule_single_event(
+				\time(),
+				sprintf(
+					'activitypub_send_%s_activity',
+					\strtolower( $activity_type )
+				),
 				array( $activitypub_post )
 			);
 		}

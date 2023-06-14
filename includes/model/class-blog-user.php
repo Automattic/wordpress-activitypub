@@ -44,7 +44,12 @@ class Blog_User extends User {
 	 * @return string The User-Description.
 	 */
 	public function get_summary() {
-		return \wpautop( \wp_kses( \get_bloginfo( 'description' ), 'default' ) );
+		return \wpautop(
+			\wp_kses(
+				\get_bloginfo( 'description' ),
+				'default'
+			)
+		);
 	}
 
 	/**

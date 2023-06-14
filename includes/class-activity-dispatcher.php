@@ -26,6 +26,8 @@ class Activity_Dispatcher {
 		\add_action( 'activitypub_send_create_activity', array( self::class, 'send_create_activity' ) );
 		\add_action( 'activitypub_send_update_activity', array( self::class, 'send_update_activity' ) );
 		\add_action( 'activitypub_send_delete_activity', array( self::class, 'send_delete_activity' ) );
+
+		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity' ), 10, 2 );
 	}
 
 	/**
@@ -67,13 +69,8 @@ class Activity_Dispatcher {
 		// check if a migration is needed before sending new posts
 		Migration::maybe_migrate();
 
-		if ( ! is_single_user_mode() ) {
-			// send User-Activity
-			self::send_user_activity( $activitypub_post, $activity_type );
-		}
-
 		// send Blog-User-Activity
-		self::send_user_activity( $activitypub_post, $activity_type, User_Factory::BLOG_USER_ID );
+		self::send_user_activity( $activitypub_post, $activity_type );
 	}
 
 	/**
@@ -92,12 +89,15 @@ class Activity_Dispatcher {
 			$actor   = $user->get_url();
 		} else {
 			$user_id = $activitypub_post->get_post_author();
-			$actor   = $activitypub_activity->get_actor();
+			$actor   = null;
 		}
 
 		$activitypub_activity = new Activity( $activity_type );
 		$activitypub_activity->from_post( $activitypub_post );
-		$activitypub_activity->set_actor( $actor );
+
+		if ( $actor ) {
+			$activitypub_activity->set_actor( $actor );
+		}
 
 		$follower_inboxes = Followers::get_inboxes( $user_id );
 		$mentioned_inboxes = Mention::get_inboxes( $activitypub_activity->get_cc() );
