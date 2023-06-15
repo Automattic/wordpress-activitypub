@@ -109,7 +109,8 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 
 		$follower = new \Activitypub\Model\Follower( 'https://example.com/author/jon' );
 
-		update_term_meta( $follower->get_id(), 'updated_at', \time() - 804800 );
+		$follower->set_updates_at( \time() - 804800 );
+		$follower->update();
 
 		$followers = \Activitypub\Collection\Followers::get_outdated_followers();
 		$this->assertEquals( 1, count( $followers ) );
@@ -129,7 +130,7 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		$follower = new \Activitypub\Model\Follower( 'http://sally.example.org' );
 
 		for ( $i = 1; $i <= 15; $i++ ) {
-			add_term_meta( $follower->get_id(), 'errors', 'error ' . $i );
+			add_post_meta( $follower->get_id(), 'errors', 'error ' . $i );
 		}
 
 		$follower = new \Activitypub\Model\Follower( 'http://sally.example.org' );

@@ -367,7 +367,10 @@ class Follower {
 	 * @return void
 	 */
 	public function update() {
-		$this->updated_at = \time();
+		if ( ! $this->updated_at ) {
+			$this->updated_at = \time();
+		}
+
 		$this->save();
 	}
 
