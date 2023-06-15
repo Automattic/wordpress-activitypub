@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub\Model;
 
+use WP_Query;
 use Activitypub\Collection\Followers;
 
 /**
@@ -28,16 +29,6 @@ class Follower {
 	 * @var string
 	 */
 	private $actor;
-
-	/**
-	 * The Object slug
-	 *
-	 * This is a requirement of the Term-Meta but will not
-	 * be actively used in the ActivityPub context.
-	 *
-	 * @var string
-	 */
-	private $slug;
 
 	/**
 	 * The Object Name
@@ -138,20 +129,32 @@ class Follower {
 	 * @param string|WP_Post $actor The Actor-URL or WP_Post Object.
 	 * @param int            $user_id The WordPress User ID. 0 Represents the whole site.
 	 */
-	public function __construct( $actor, $user_id = 0 ) {
-		$this->user_id = $user_id;
-		if ( is_a( $actor, 'WP_Post' ) ) {
+	public function __construct( $actor ) {
+		$post = null;
+
+		if ( \is_a( $actor, 'WP_Post' ) ) {
 			$post = $actor;
-			$this->actor = $post->post_name;
-			$this->user_id = $post->post_author;
 		} else {
-			$this->actor = $actor;
-			$post = Followers::get_follower( $user_id, $actor );
+			global $wpdb;
+
+			$post_id = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT ID FROM $wpdb->posts WHERE guid=%s",
+					esc_sql( $actor )
+				)
+			);
+
+			if ( $post_id ) {
+				$post = get_post( $post_id );
+			} else {
+				$this->actor = $actor;
+			}
 		}
 
 		if ( $post ) {
-			$this->id = $term->post_id;
-			$this->slug = $term->post_name;
+			$this->id         = $post->ID;
+			$this->actor      = $post->guid;
+			$this->updated_at = $post->post_modified;
 		}
 	}
 
@@ -227,7 +230,9 @@ class Follower {
 		if ( ! is_null( $this->$attribute ) ) {
 			return $this->$attribute;
 		}
+
 		$attribute_value = get_post_meta( $this->id, $attribute, true );
+
 		if ( $attribute_value ) {
 			$this->$attribute = $attribute_value;
 			return $attribute_value;
@@ -288,7 +293,7 @@ class Follower {
 	 * @return void
 	 */
 	public function reset_errors() {
-		delete_term_meta( $this->id, 'errors' );
+		delete_post_meta( $this->id, 'errors' );
 	}
 
 	/**
@@ -363,7 +368,7 @@ class Follower {
 	 */
 	public function update() {
 		$this->updated_at = \time();
-		$this->save( $this->id );
+		$this->save();
 	}
 
 	/**
@@ -371,16 +376,19 @@ class Follower {
 	 *
 	 * @return void
 	 */
-	public function save( $post_id = null ) {
+	public function save() {
 		$args = array(
-			'ID' => $post_id,
-			'post_name' => $this->actor,
-			'post_author' => $this->user_id,
-			'post_type' => Followers::POST_TYPE,
-			'meta_input' => $this->get_post_meta_input(),
+			'ID'            => $this->id,
+			'guid'          => $this->actor,
+			'post_title'    => $this->get_name(),
+			'post_author'   => 0,
+			'post_type'     => Followers::POST_TYPE,
+			'post_content'  => wp_json_encode( $this->meta ),
+			'post_modified' => gmdate( 'Y-m-d H:i:s', $this->updated_at ),
+			'meta_input'    => $this->get_post_meta_input(),
 		);
-		$post = wp_insert_post( $args );
-		$this->id = $post->ID;
+		$post_id = wp_insert_post( $args );
+		$this->id = $post_id;
 	}
 
 	/**
@@ -406,12 +414,12 @@ class Follower {
 	}
 
 	/**
-	 * Update the term meta.
+	 * Update the post meta.
 	 *
 	 * @return void
 	 */
 	protected function get_post_meta_input() {
-		$attributes = array( 'inbox', 'shared_inbox', 'avatar', 'updated_at', 'name', 'username', 'url' );
+		$attributes = array( 'inbox', 'shared_inbox', 'avatar', 'name', 'username' );
 
 		$meta_input = array();
 
