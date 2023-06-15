@@ -3,7 +3,7 @@ namespace Activitypub\Collection;
 
 use WP_Error;
 use Exception;
-use WP_Term_Query;
+use WP_Query;
 use Activitypub\Http;
 use Activitypub\Webfinger;
 use Activitypub\Model\Activity;
@@ -19,7 +19,7 @@ use function Activitypub\get_remote_metadata_by_actor;
  * @author Matthias Pfefferle
  */
 class Followers {
-	const POST_TYPE = 'activitypub_followers';
+	const POST_TYPE = 'activitypub_follower';
 	const CACHE_KEY_INBOXES = 'follower_inboxes_%s';
 
 	/**
@@ -50,7 +50,7 @@ class Followers {
 					'name'          => _x( 'Followers', 'post_type plural name', 'activitypub' ),
 					'singular_name' => _x( 'Follower', 'post_type single name', 'activitypub' ),
 				),
-				'public'           => false,
+				'public'           => true,
 				'hierarchical'     => false,
 				'rewrite'          => false,
 				'query_var'        => false,
@@ -213,16 +213,15 @@ class Followers {
 			return $meta;
 		}
 
-		$follower = new Follower( $actor, $user_id );
+		$follower = new Follower( $actor );
 		$follower->from_meta( $meta );
 		$follower->upsert();
 
-		if ( is_wp_error( $result ) ) {
-			return $result;
-		} else {
-			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
-			return $follower;
-		}
+		add_post_meta( $follower->get_id(), 'user_id', $user_id );
+
+		wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+
+		return $follower;
 	}
 
 	/**
@@ -235,20 +234,34 @@ class Followers {
 	 */
 	public static function remove_follower( $user_id, $actor ) {
 		wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+
 		return wp_remove_object_terms( $user_id, $actor, self::POST_TYPE );
 	}
 
 	/**
-	 * Remove a Follower
+	 * Get a Follower
 	 *
 	 * @param int   $user_id The ID of the WordPress User
 	 * @param string $actor  The Actor URL
 	 *
 	 * @return \Activitypub\Model\Follower The Follower object
 	 */
-	public static function get_follower( $user_id, $actor ) {
-		$posts = self::get_followers( $user_id, null, null, array( 'name' => $actor ) );
-		return is_empty( $posts ) ? null : $posts[0];
+	public static function get_follower( $actor ) {
+		global $wpdb;
+
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s",
+				esc_sql( $actor )
+			)
+		);
+
+		if ( $post_id ) {
+			$post = get_post( $post_id );
+			return new Follower( $post );
+		}
+
+		return null;
 	}
 
 	/**
@@ -299,12 +312,17 @@ class Followers {
 	 */
 	public static function get_followers( $user_id, $number = null, $offset = null, $args = array() ) {
 		$defaults = array(
-			'post_type'  => self::POST_TYPE,
-			'author'     => $user_id,
-			'number'     => $number,
-			'offset'     => $offset,
-			'orderby'    => 'id',
-			'order'      => 'DESC',
+			'post_type'      => self::POST_TYPE,
+			'posts_per_page' => $number,
+			'offset'         => $offset,
+			'orderby'        => 'ID',
+			'order'          => 'DESC',
+			'meta_query'     => array(
+				array(
+					'key'   => 'user_id',
+					'value' => $user_id,
+				),
+			),
 		);
 
 		$args  = wp_parse_args( $args, $defaults );
@@ -362,11 +380,10 @@ class Followers {
 		}
 
 		// get all Followers of a ID of the WordPress User
-		$terms = new WP_Term_Query(
+		$terms = new WP_Query(
 			array(
-				'taxonomy'   => self::POST_TYPE,
-				'hide_empty' => false,
-				'object_ids' => $user_id,
+				'post_type'  => self::POST_TYPE,
+				'author'     => $user_id,
 				'fields'     => 'ids',
 				'meta_query' => array(
 					array(
@@ -377,16 +394,16 @@ class Followers {
 			)
 		);
 
-		$terms = $terms->get_terms();
+		$posts = $posts->get_posts();
 
-		if ( ! $terms ) {
+		if ( ! $posts ) {
 			return array();
 		}
 
 		global $wpdb;
 		$results = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT DISTINCT meta_value FROM {$wpdb->termmeta}
+				"SELECT DISTINCT meta_value FROM {$wpdb->posts}
 				WHERE term_id IN (" . implode( ', ', array_fill( 0, count( $terms ), '%d' ) ) . ")
 				AND meta_key = 'shared_inbox'
 				AND meta_value IS NOT NULL",
@@ -446,9 +463,9 @@ class Followers {
 	 */
 	public static function get_faulty_followers( $number = 10 ) {
 		$args = array(
-			'taxonomy'   => self::POST_TYPE,
-			'number'     => $number,
-			'meta_query' => array(
+			'post_type'      => self::POST_TYPE,
+			'posts_per_page' => $number,
+			'meta_query'     => array(
 				array(
 					'key'        => 'errors',
 					'compare'    => 'EXISTS',
