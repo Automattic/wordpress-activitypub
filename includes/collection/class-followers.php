@@ -431,25 +431,22 @@ class Followers {
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 604800 ) {
 		$args = array(
-			'taxonomy'   => self::POST_TYPE,
-			'number'     => $number,
-			'meta_key'   => 'updated_at',
-			'orderby'    => 'meta_value_num',
-			'order'      => 'DESC',
-			'meta_query' => array(
+			'post_type'      => self::POST_TYPE,
+			'posts_per_page' => $number,
+			'orderby'        => 'modified',
+			'order'          => 'DESC',
+			'date_query' => array(
 				array(
-					'key'        => 'updated_at',
-					'value'      => time() - $older_than,
-					'type'       => 'numeric',
-					'compare'    => '<=',
+					'column' => 'post_modified_gmt',
+					'before' => 604800,
 				),
 			),
 		);
 
-		$terms = new WP_Term_Query( $args );
+		$posts = new WP_Query( $args );
 		$items = array();
 
-		foreach ( $terms->get_terms() as $follower ) {
+		foreach ( $posts->get_posts() as $follower ) {
 			$items[] = new Follower( $follower ); // phpcs:ignore
 		}
 
@@ -470,16 +467,16 @@ class Followers {
 			'posts_per_page' => $number,
 			'meta_query'     => array(
 				array(
-					'key'        => 'errors',
-					'compare'    => 'EXISTS',
+					'key'     => 'errors',
+					'compare' => 'EXISTS',
 				),
 			),
 		);
 
-		$terms = new WP_Term_Query( $args );
+		$posts = new WP_Query( $args );
 		$items = array();
 
-		foreach ( $terms->get_terms() as $follower ) {
+		foreach ( $posts->get_posts() as $follower ) {
 			$items[] = new Follower( $follower ); // phpcs:ignore
 		}
 
