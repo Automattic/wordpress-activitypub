@@ -380,15 +380,18 @@ class Followers {
 		}
 
 		// get all Followers of a ID of the WordPress User
-		$terms = new WP_Query(
+		$posts = new WP_Query(
 			array(
 				'post_type'  => self::POST_TYPE,
-				'author'     => $user_id,
 				'fields'     => 'ids',
 				'meta_query' => array(
 					array(
 						'key'     => 'inbox',
 						'compare' => 'EXISTS',
+					),
+					array(
+						'key'   => 'user_id',
+						'value' => $user_id,
 					),
 				),
 			)
