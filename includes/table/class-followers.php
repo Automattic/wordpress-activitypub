@@ -16,6 +16,7 @@ class Followers extends WP_List_Table {
 			'name'         => \__( 'Name', 'activitypub' ),
 			'username'     => \__( 'Username', 'activitypub' ),
 			'identifier'   => \__( 'Identifier', 'activitypub' ),
+			'updated_at'   => \__( 'Last updated', 'activitypub' ),
 			'errors'       => \__( 'Errors', 'activitypub' ),
 			'latest-error' => \__( 'Latest Error Message', 'activitypub' ),
 		);
@@ -35,8 +36,8 @@ class Followers extends WP_List_Table {
 		$page_num = $this->get_pagenum();
 		$per_page = 20;
 
-		$follower = FollowerCollection::get_followers( \get_current_user_id(), $per_page, ( $page_num - 1 ) * $per_page );
-		$counter  = FollowerCollection::count_followers( \get_current_user_id() );
+		$followers = FollowerCollection::get_followers( \get_current_user_id(), $per_page, ( $page_num - 1 ) * $per_page );
+		$counter   = FollowerCollection::count_followers( \get_current_user_id() );
 
 		$this->items = array();
 		$this->set_pagination_args(
@@ -47,12 +48,13 @@ class Followers extends WP_List_Table {
 			)
 		);
 
-		foreach ( $follower as $follower ) {
+		foreach ( $followers as $follower ) {
 			$item = array(
 				'avatar'       => esc_attr( $follower->get_avatar() ),
 				'name'         => esc_attr( $follower->get_name() ),
 				'username'     => esc_attr( $follower->get_username() ),
 				'identifier'   => esc_attr( $follower->get_actor() ),
+				'updated_at'   => esc_attr( $follower->get_updated_at() ),
 				'errors'       => $follower->count_errors(),
 				'latest-error' => $follower->get_latest_error_message(),
 			);
