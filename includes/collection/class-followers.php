@@ -241,12 +241,12 @@ class Followers {
 	/**
 	 * Get a Follower
 	 *
-	 * @param int   $user_id The ID of the WordPress User
-	 * @param string $actor  The Actor URL
+	 * @param int    $user_id The ID of the WordPress User
+	 * @param string $actor   The Actor URL
 	 *
 	 * @return \Activitypub\Model\Follower The Follower object
 	 */
-	public static function get_follower( $actor ) {
+	public static function get_follower( $user_id, $actor ) {
 		global $wpdb;
 
 		$post_id = $wpdb->get_var(
