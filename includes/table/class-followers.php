@@ -112,7 +112,12 @@ class Followers extends WP_List_Table {
 
 		switch ( $this->current_action() ) {
 			case 'delete':
-				FollowerCollection::remove_follower( \get_current_user_id(), $followers );
+				if ( ! is_array( $followers ) ) {
+					$followers = array( $followers );
+				}
+				foreach ( $followers as $follower ) {
+					FollowerCollection::remove_follower( \get_current_user_id(), $follower );
+				}
 				break;
 		}
 	}

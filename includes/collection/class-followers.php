@@ -368,9 +368,20 @@ class Followers {
 	 * @return int The number of Followers
 	 */
 	public static function count_followers( $user_id ) {
-		// todo: rethink this. Don't we already get a total_posts count out of WP_Query?
-		// in the absence of that: caching.
-		return count( self::get_followers( $user_id ) );
+		$query = new WP_Query(
+			array(
+				'post_type'  => self::POST_TYPE,
+				'fields'     => 'ids',
+				'meta_query' => array(
+					array(
+						'key'   => 'user_id',
+						'value' => $user_id,
+					),
+				),
+			)
+		);
+
+		return $query->found_posts;
 	}
 
 	/**
