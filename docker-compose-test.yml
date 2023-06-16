@@ -6,11 +6,19 @@ services:
     environment:
       MYSQL_DATABASE: activitypub-test
       MYSQL_ROOT_PASSWORD: activitypub-test
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:3306"]
+        interval: 5s
+        timeout: 2s
+        retries: 5
 
   test-php:
     build:
       context: .
       dockerfile: Dockerfile
+    depends_on:
+      test-db:
+        condition: service_healthy
     links:
       - test-db
     volumes:

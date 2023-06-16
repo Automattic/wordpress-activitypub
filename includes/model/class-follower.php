@@ -367,10 +367,7 @@ class Follower {
 	 * @return void
 	 */
 	public function update() {
-		if ( ! $this->updated_at ) {
-			$this->updated_at = \time();
-		}
-
+		$this->updated_at = \time();
 		$this->save();
 	}
 
@@ -387,6 +384,7 @@ class Follower {
 			'post_author'   => 0,
 			'post_type'     => Followers::POST_TYPE,
 			'post_content'  => wp_json_encode( $this->meta ),
+			'post_status'   => 'publish',
 			'post_modified' => gmdate( 'Y-m-d H:i:s', $this->updated_at ),
 			'meta_input'    => $this->get_post_meta_input(),
 		);

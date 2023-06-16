@@ -217,7 +217,7 @@ class Followers {
 		$follower->from_meta( $meta );
 		$follower->upsert();
 
-		add_post_meta( $follower->get_id(), 'user_id', $user_id );
+		update_post_meta( $follower->get_id(), 'user_id', $user_id, $user_id );
 
 		wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 
@@ -339,14 +339,13 @@ class Followers {
 	/**
 	 * Get all Followers
 	 *
-	 * @param array $args The WP_Term_Query arguments.
+	 * @param array $args The WP_Query arguments.
 	 *
 	 * @return array The Term list of Followers.
 	 */
 	public static function get_all_followers( $user_id = null ) {
 		$args = array(
-			'author' => null,
-			'nopaging' => true,
+			'meta_query' => array(),
 		);
 		return self::get_followers( $user_id, null, null, $args );
 	}
@@ -358,10 +357,10 @@ class Followers {
 	 *
 	 * @return int The number of Followers
 	 */
-	public static function count_followers( $user_id = null ) {
+	public static function count_followers( $user_id ) {
 		// todo: rethink this. Don't we already get a total_posts count out of WP_Query?
 		// in the absence of that: caching.
-		return count( self::get_all_followers( $user_id ) );
+		return count( self::get_followers( $user_id ) );
 	}
 
 	/**
@@ -406,11 +405,11 @@ class Followers {
 		global $wpdb;
 		$results = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT DISTINCT meta_value FROM {$wpdb->posts}
-				WHERE term_id IN (" . implode( ', ', array_fill( 0, count( $terms ), '%d' ) ) . ")
+				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
+				WHERE post_id IN (" . implode( ', ', array_fill( 0, count( $posts ), '%d' ) ) . ")
 				AND meta_key = 'shared_inbox'
 				AND meta_value IS NOT NULL",
-				$terms
+				$posts
 			)
 		);
 
@@ -435,10 +434,11 @@ class Followers {
 			'posts_per_page' => $number,
 			'orderby'        => 'modified',
 			'order'          => 'DESC',
-			'date_query' => array(
+			'post_status'    => 'any', // 'any' includes 'trash
+			'date_query'     => array(
 				array(
 					'column' => 'post_modified_gmt',
-					'before' => 604800,
+					'before' => gmdate( 'Y-m-d', \time() - $older_than ),
 				),
 			),
 		);

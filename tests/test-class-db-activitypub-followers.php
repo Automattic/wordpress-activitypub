@@ -65,7 +65,7 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 			$db_followers
 		);
 
-		$this->assertSame( array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' ), $db_followers );
+		$this->assertEquals( array( 'http://sally.example.org', 'https://example.org/author/doe', 'https://example.com/author/jon' ), $db_followers );
 	}
 
 	public function test_add_follower() {
@@ -109,8 +109,28 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 
 		$follower = new \Activitypub\Model\Follower( 'https://example.com/author/jon' );
 
-		$follower->set_updates_at( \time() - 804800 );
-		$follower->update();
+		global $wpdb;
+
+		//eg. time one year ago..
+		$time = time() - 804800;
+		$mysql_time_format = 'Y-m-d H:i:s';
+
+		$post_modified = gmdate( $mysql_time_format, $time );
+		$post_modified_gmt = gmdate( $mysql_time_format, ( $time + get_option( 'gmt_offset' ) * HOUR_IN_SECONDS ) );
+		$post_id = $follower->get_id();
+
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE $wpdb->posts SET post_modified = %s, post_modified_gmt = %s WHERE ID = %s",
+				array(
+					$post_modified,
+					$post_modified_gmt,
+					$post_id,
+				)
+			)
+		);
+
+		clean_post_cache( $post_id );
 
 		$followers = \Activitypub\Collection\Followers::get_outdated_followers();
 		$this->assertEquals( 1, count( $followers ) );
