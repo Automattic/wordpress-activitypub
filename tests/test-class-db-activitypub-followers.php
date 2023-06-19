@@ -123,7 +123,10 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 	}
 
 	public function test_delete_follower() {
-		$followers = array( 'https://example.com/author/jon' );
+		$followers = array(
+			'https://example.com/author/jon',
+			'https://example.org/author/doe',
+		);
 		$followers2 = array( 'https://user2.example.com' );
 
 		$pre_http_request = new MockAction();
@@ -143,6 +146,9 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower->get_actor() );
 
+		$followers = \Activitypub\Collection\Followers::get_followers( 1 );
+		$this->assertEquals( 2, count( $followers ) );
+
 		$follower2 = \Activitypub\Collection\Followers::get_follower( 2, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_actor() );
 
@@ -153,6 +159,9 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 
 		$follower2 = \Activitypub\Collection\Followers::get_follower( 2, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_actor() );
+
+		$followers = \Activitypub\Collection\Followers::get_followers( 1 );
+		$this->assertEquals( 1, count( $followers ) );
 	}
 
 	public function test_get_outdated_followers() {
