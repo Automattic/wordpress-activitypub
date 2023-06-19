@@ -31,6 +31,12 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 			'name'  => '12345',
 			'prefferedUsername'  => '12345',
 		),
+		'user2@example.com' => array(
+			'url' => 'https://user2.example.com',
+			'inbox' => 'https://user2.example.com/inbox',
+			'name'  => 'user2',
+			'prefferedUsername'  => 'user2',
+		),
 	);
 
 	public function set_up() {
@@ -73,15 +79,21 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		$follower = 'https://12345.example.com';
+		$follower2 = 'https://user2.example.com';
 		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		\Activitypub\Collection\Followers::add_follower( 2, $follower );
+		\Activitypub\Collection\Followers::add_follower( 2, $follower2 );
 
 		$db_followers = \Activitypub\Collection\Followers::get_followers( 1 );
+		$db_followers2 = \Activitypub\Collection\Followers::get_followers( 2 );
 
 		$this->assertContains( $follower, $db_followers );
+		$this->assertContains( $follower2, $db_followers2 );
 	}
 
 	public function test_get_follower() {
 		$followers = array( 'https://example.com/author/jon' );
+		$followers2 = array( 'https://user2.example.com' );
 
 		$pre_http_request = new MockAction();
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
@@ -90,11 +102,57 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 			\Activitypub\Collection\Followers::add_follower( 1, $follower );
 		}
 
+		foreach ( $followers2 as $follower ) {
+			\Activitypub\Collection\Followers::add_follower( 2, $follower );
+		}
+
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower->get_actor() );
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'http://sally.example.org' );
 		$this->assertNull( $follower );
+
+		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://user2.example.com' );
+		$this->assertNull( $follower );
+
+		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->get_actor() );
+
+		$follower2 = \Activitypub\Collection\Followers::get_follower( 2, 'https://user2.example.com' );
+		$this->assertEquals( 'https://user2.example.com', $follower2->get_actor() );
+	}
+
+	public function test_delete_follower() {
+		$followers = array( 'https://example.com/author/jon' );
+		$followers2 = array( 'https://user2.example.com' );
+
+		$pre_http_request = new MockAction();
+		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
+
+		foreach ( $followers as $follower ) {
+			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+			\Activitypub\Collection\Followers::add_follower( 2, $follower );
+		}
+
+		foreach ( $followers2 as $follower2 ) {
+			\Activitypub\Collection\Followers::add_follower( 2, $follower2 );
+		}
+
+		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->get_actor() );
+
+		$follower2 = \Activitypub\Collection\Followers::get_follower( 2, 'https://example.com/author/jon' );
+		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_actor() );
+
+		\Activitypub\Collection\Followers::remove_follower( 1, 'https://example.com/author/jon' );
+
+		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$this->assertNull( $follower );
+
+		$follower2 = \Activitypub\Collection\Followers::get_follower( 2, 'https://example.com/author/jon' );
+		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_actor() );
 	}
 
 	public function test_get_outdated_followers() {
