@@ -54,11 +54,6 @@ class Follower {
 	private $avatar;
 
 	/**
-	 * The URL to the Follower
-	 */
-	private $url;
-
-	/**
 	 * The URL to the Followers Inbox
 	 *
 	 * @var string
@@ -120,7 +115,6 @@ class Follower {
 		'name'              => 'name',
 		'preferredUsername' => 'username',
 		'inbox'             => 'inbox',
-		'url'               => 'url',
 	);
 
 	/**
@@ -245,20 +239,6 @@ class Follower {
 		}
 
 		return null;
-	}
-
-	/**
-	 * Get a URL for the follower. Creates one out of the actor if no URL was set.
-	 */
-	public function get_url() {
-		if ( $this->get( 'url' ) ) {
-			return $this->get( 'url' );
-		}
-		$actor = $this->get_actor();
-		// normalize
-		$actor = ltrim( $actor, '@' );
-		$parts = explode( '@', $actor );
-		return sprintf( 'https://%s/@%s', $parts[1], $parts[0] );
 	}
 
 	/**
