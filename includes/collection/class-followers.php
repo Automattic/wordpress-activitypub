@@ -217,9 +217,12 @@ class Followers {
 		$follower->from_meta( $meta );
 		$follower->upsert();
 
-		update_post_meta( $follower->get_id(), 'user_id', $user_id, $user_id );
+		$meta = get_post_meta( $follower->get_id(), 'user_id' );
 
-		wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+		if ( is_array( $meta ) && ! in_array( $user_id, $meta, true ) ) {
+			add_post_meta( $follower->get_id(), 'user_id', $user_id );
+			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+		}
 
 		return $follower;
 	}
