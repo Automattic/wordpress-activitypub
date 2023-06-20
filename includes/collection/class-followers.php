@@ -19,7 +19,7 @@ use function Activitypub\get_remote_metadata_by_actor;
  * @author Matthias Pfefferle
  */
 class Followers {
-	const POST_TYPE = 'activitypub_follower';
+	const POST_TYPE = 'ap_follower';
 	const CACHE_KEY_INBOXES = 'follower_inboxes_%s';
 
 	/**
