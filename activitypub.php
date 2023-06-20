@@ -49,6 +49,7 @@ function init() {
 	Admin::init();
 	Hashtag::init();
 	Shortcodes::init();
+	Blocks::init();
 	Mention::init();
 	Health_Check::init();
 	Scheduler::init();

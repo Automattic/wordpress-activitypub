@@ -1,0 +1,28 @@
+{
+  "name": "activitypub/followers",
+  "apiVersion": 2,
+  "version": "1.0.0",
+  "title": "Fediverse Follows",
+  "category": "widgets",
+  "description": "Display your followers from the Fediverse on your website.",
+  "icon": "groups",
+  "supports": {
+    "html": false
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "default": "Fediverse Followers"
+    },
+    "selectedUser": {
+      "type": "string",
+      "default": "site"
+    },
+    "followersToShow": {
+      "type": "number",
+      "default": 10
+    }
+  },
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./index.css"
+}
