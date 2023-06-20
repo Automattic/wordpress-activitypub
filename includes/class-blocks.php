@@ -36,6 +36,20 @@ class Blocks {
 		if ( $title ) {
 			$html .= '<h2>' . $title . '</h2>';
 		}
+		if ( 0 === $follower_count ) {
+			if ( is_user_logged_in() ) {
+				$html .= '<p>' . __( 'No followers yet, keep publishing and that will change!', 'activitypub' ) . '</p>';
+			}
+			// @todo display a follow button to logged out users
+			// reuse whatever ~lightbox-like thing we plan to use in the Follow block. Or can we just outright render it here? Probably.
+			return $html . '</div>';
+		} else {
+			$html .= '<p>' . sprintf(
+				// Translators: %s is the number of followers from the Fediverse (like Mastodon)
+				_n( '%s follower', '%s followers', $follower_count, 'activitypub' ),
+				number_format_i18n( $follower_count )
+			) . '</p>';
+		}
 		$html .= '<ul>';
 		foreach ( $followers as $follower ) {
 			$html .= '<li>' . self::render_follower( $follower ) . '</li>';
@@ -46,13 +60,25 @@ class Blocks {
 
 	public static function render_follower( $follower ) {
 		$template = '<a href="%s" title="%s"><img width="32" height="32" src="%s" class="avatar activitypub-avatar" />%s/%s</a>';
+		$actor = $follower->get_actor();
 		return sprintf(
 			$template,
-			esc_url( $follower->get_url() ),
+			esc_url( $actor ),
 			esc_attr( $follower->get_name() ),
 			esc_attr( $follower->get_avatar() ),
 			esc_html( $follower->get_name() ),
-			esc_html( $follower->get_actor() )
+			esc_html( self::get_actor_nicename( $actor ) )
 		);
+	}
+
+	// todo: move this into the Follower class?
+	private static function get_actor_nicename( $actor ) {
+		$actor_nicename = $actor;
+		if ( strpos( $actor, 'http' ) === 0 ) {
+			$parts = wp_parse_url( $actor );
+			$handle = preg_replace( '|^/@?|', '', $parts['path'] );
+			$actor_nicename = sprintf( '%s@%s', $handle, $parts['host'] );
+		}
+		return $actor_nicename;
 	}
 }
