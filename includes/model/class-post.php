@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub\Model;
 
+use Activitypub\User_Factory;
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -191,9 +192,18 @@ class Post {
 	}
 
 	/**
+	 * Returns the User ID.
+	 *
+	 * @return int the User ID.
+	 */
+	public function get_user_id() {
+		return apply_filters( 'activitypub_post_user_id', $this->post_author, $this->post );
+	}
+
+	/**
 	 * Converts this Object into an Array.
 	 *
-	 * @return array
+	 * @return array the array representation of a Post.
 	 */
 	public function to_array() {
 		$post = $this->post;
@@ -203,7 +213,7 @@ class Post {
 			'url' => $this->get_url(),
 			'type' => $this->get_object_type(),
 			'published' => \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date_gmt ) ),
-			'attributedTo' => \get_author_posts_url( $post->post_author ),
+			'attributedTo' => $this->get_actor(),
 			'summary' => $this->get_summary(),
 			'inReplyTo' => null,
 			'content' => $this->get_content(),
@@ -217,6 +227,17 @@ class Post {
 		);
 
 		return \apply_filters( 'activitypub_post', $array, $this->post );
+	}
+
+	/**
+	 * Returns the Actor of this Object.
+	 *
+	 * @return string The URL of the Actor.
+	 */
+	public function get_actor() {
+		$user = User_Factory::get_by_id( $this->get_user_id() );
+
+		return $user->get_url();
 	}
 
 	/**
