@@ -80,22 +80,24 @@ class Scheduler {
 			$activity_type = 'Delete';
 		}
 
-		if ( $activity_type ) {
-			\wp_schedule_single_event(
-				\time(),
-				'activitypub_send_activity',
-				array( $activitypub_post, $activity_type )
-			);
-
-			\wp_schedule_single_event(
-				\time(),
-				sprintf(
-					'activitypub_send_%s_activity',
-					\strtolower( $activity_type )
-				),
-				array( $activitypub_post )
-			);
+		if ( ! $activity_type ) {
+			return;
 		}
+
+		\wp_schedule_single_event(
+			\time(),
+			'activitypub_send_activity',
+			array( $activitypub_post, $activity_type )
+		);
+
+		\wp_schedule_single_event(
+			\time(),
+			sprintf(
+				'activitypub_send_%s_activity',
+				\strtolower( $activity_type )
+			),
+			array( $activitypub_post )
+		);
 	}
 
 	/**
