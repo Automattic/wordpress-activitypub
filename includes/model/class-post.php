@@ -197,7 +197,7 @@ class Post {
 	 * @return int the User ID.
 	 */
 	public function get_user_id() {
-		return apply_filters( 'activitypub_post_user_id', $this->post_author, $this->post );
+		return apply_filters( 'activitypub_post_user_id', $this->get_post_author(), $this->post );
 	}
 
 	/**
