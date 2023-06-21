@@ -30,6 +30,15 @@ class Activitypub {
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ) );
 
 		\add_action( 'after_setup_theme', array( self::class, 'theme_compat' ), 99 );
+
+		if ( is_single_user_mode() ) {
+			add_filter(
+				'activitypub_post_user_id',
+				function( $actor ) {
+					return User_Factory::BLOG_USER_ID;
+				}
+			);
+		}
 	}
 
 	/**
@@ -71,12 +80,15 @@ class Activitypub {
 	 * @return string The new path to the JSON template.
 	 */
 	public static function render_json_template( $template ) {
-		if ( ! \is_author() && ! \is_singular() && ! \is_home() ) {
+		if ( ! is_activitypub_request() ) {
 			return $template;
 		}
 
-		// Ensure that edge caches know that this page can deliver both HTML and JSON.
-		header( 'Vary: Accept' );
+		$json_template = false;
+
+		if ( ! \is_author() && ! \is_singular() && ! \is_home() ) {
+			return $template;
+		}
 
 		// check if user can publish posts
 		if ( \is_author() && ! user_can( \get_the_author_meta( 'ID' ), 'publish_posts' ) ) {
@@ -91,15 +103,12 @@ class Activitypub {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
-		if ( is_activitypub_request() ) {
-			if ( ACTIVITYPUB_SECURE_MODE ) {
-				$verification = Signature::verify_http_signature( $_SERVER );
-				if ( \is_wp_error( $verification ) ) {
-					// fallback as template_loader can't return http headers
-					return $template;
-				}
+		if ( ACTIVITYPUB_SECURE_MODE ) {
+			$verification = Signature::verify_http_signature( $_SERVER );
+			if ( \is_wp_error( $verification ) ) {
+				// fallback as template_loader can't return http headers
+				return $template;
 			}
-
 			return $json_template;
 		}
 
