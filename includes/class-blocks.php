@@ -32,9 +32,9 @@ class Blocks {
 		$follower_count = Followers::count_followers( $followee_user_id );
 		$is_followers_truncated = $follower_count > $followers_to_show;
 		$title = $attrs['title'];
-		$html = '<div>';
+		$html = '<div class="activitypub-follower-block">';
 		if ( $title ) {
-			$html .= '<h2>' . $title . '</h2>';
+			$html .= '<h3>' . $title . '</h3>';
 		}
 		if ( 0 === $follower_count ) {
 			if ( is_user_logged_in() ) {
@@ -43,13 +43,15 @@ class Blocks {
 			// @todo display a follow button to logged out users
 			// reuse whatever ~lightbox-like thing we plan to use in the Follow block. Or can we just outright render it here? Probably.
 			return $html . '</div>';
-		} else {
+		} /* unsure. else {
+
 			$html .= '<p>' . sprintf(
 				// Translators: %s is the number of followers from the Fediverse (like Mastodon)
 				_n( '%s follower', '%s followers', $follower_count, 'activitypub' ),
 				number_format_i18n( $follower_count )
 			) . '</p>';
 		}
+		*/
 		$html .= '<ul>';
 		foreach ( $followers as $follower ) {
 			$html .= '<li>' . self::render_follower( $follower ) . '</li>';
@@ -59,7 +61,11 @@ class Blocks {
 	}
 
 	public static function render_follower( $follower ) {
-		$template = '<a href="%s" title="%s"><img width="32" height="32" src="%s" class="avatar activitypub-avatar" />%s/%s</a>';
+		$template =
+			'<a href="%s" title="%s">
+				<img width="40" height="40" src="%s" class="avatar activitypub-avatar" />
+				<span class="activitypub-actor"><strong>%s</strong><span class="sep">/</span>%s</span>
+			</a>';
 		$actor = $follower->get_actor();
 		return sprintf(
 			$template,

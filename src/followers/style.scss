@@ -1,0 +1,32 @@
+.activitypub-follower-block {
+	ul {
+		margin: 0;
+		padding: 0;
+	}
+	li {
+		display: flex;
+
+		margin-bottom: 1rem;
+	}
+	img {
+		border-radius: 50%;
+		width: 40px;
+		height: 40px;
+		margin-right: var( --wp--preset--spacing--20, .5rem );
+	}
+	a {
+		display: flex;
+		flex-flow: row wrap;
+		align-items: center;
+		color: inherit !important;
+	}
+	strong {
+		font-size: var( --wp--preset--font-size--normal, 16px );
+	}
+	.activitypub-actor {
+		font-size: var( --wp--preset--font-size--small, 13px );
+	}
+	.sep {
+		padding: 0 .2rem;
+	}
+}
