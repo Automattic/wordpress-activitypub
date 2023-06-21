@@ -130,8 +130,8 @@ class User_Factory {
 		$resource = \str_replace( 'acct:', '', $resource );
 
 		$resource_identifier = \substr( $resource, 0, \strrpos( $resource, '@' ) );
-		$resource_host = \str_replace( 'www.', '', \substr( \strrchr( $resource, '@' ), 1 ) );
-		$blog_host = \str_replace( 'www.', '', \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
+		$resource_host = self::normalize_host( \substr( \strrchr( $resource, '@' ), 1 ) );
+		$blog_host = self::normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
 
 		if ( $blog_host !== $resource_host ) {
 			return new WP_Error(
@@ -159,5 +159,16 @@ class User_Factory {
 		} else {
 			return self::get_by_username( $id );
 		}
+	}
+
+	/**
+	 * Normalize the host.
+	 *
+	 * @param string $host The host.
+	 *
+	 * @return string The normalized host.
+	 */
+	public static function normalize_host( $host ) {
+		return \str_replace( 'www.', '', $host );
 	}
 }
