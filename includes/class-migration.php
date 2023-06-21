@@ -83,7 +83,7 @@ class Migration {
 
 					$follower->upsert();
 
-					$result = wp_set_object_terms( $user_id, $follower->get_actor(), Followers::TAXONOMY, true );
+					add_post_meta( $follower->get_id(), 'user_id', $user_id );
 				}
 			}
 		}

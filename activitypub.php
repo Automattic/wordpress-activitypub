@@ -151,17 +151,6 @@ add_action(
 	0
 );
 
-add_action(
-	'plugins_loaded',
-	function() {
-		if ( defined( 'WP_SWEEP_VERSION' ) ) {
-			require_once \dirname( __FILE__ ) . '/integration/class-wp-sweep.php';
-			Integration\Wp_Sweep::init();
-		}
-	},
-	0
-);
-
 /**
  * `get_plugin_data` wrapper
  *

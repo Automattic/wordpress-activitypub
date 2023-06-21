@@ -31,6 +31,12 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 			'name'  => '12345',
 			'prefferedUsername'  => '12345',
 		),
+		'user2@example.com' => array(
+			'url' => 'https://user2.example.com',
+			'inbox' => 'https://user2.example.com/inbox',
+			'name'  => 'user2',
+			'prefferedUsername'  => 'user2',
+		),
 	);
 
 	public function set_up() {
@@ -65,7 +71,7 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 			$db_followers
 		);
 
-		$this->assertSame( array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' ), $db_followers );
+		$this->assertEquals( array( 'http://sally.example.org', 'https://example.org/author/doe', 'https://example.com/author/jon' ), $db_followers );
 	}
 
 	public function test_add_follower() {
@@ -73,15 +79,21 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		$follower = 'https://12345.example.com';
+		$follower2 = 'https://user2.example.com';
 		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		\Activitypub\Collection\Followers::add_follower( 2, $follower );
+		\Activitypub\Collection\Followers::add_follower( 2, $follower2 );
 
 		$db_followers = \Activitypub\Collection\Followers::get_followers( 1 );
+		$db_followers2 = \Activitypub\Collection\Followers::get_followers( 2 );
 
 		$this->assertContains( $follower, $db_followers );
+		$this->assertContains( $follower2, $db_followers2 );
 	}
 
 	public function test_get_follower() {
 		$followers = array( 'https://example.com/author/jon' );
+		$followers2 = array( 'https://user2.example.com' );
 
 		$pre_http_request = new MockAction();
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
@@ -90,11 +102,66 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 			\Activitypub\Collection\Followers::add_follower( 1, $follower );
 		}
 
+		foreach ( $followers2 as $follower ) {
+			\Activitypub\Collection\Followers::add_follower( 2, $follower );
+		}
+
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower->get_actor() );
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'http://sally.example.org' );
 		$this->assertNull( $follower );
+
+		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://user2.example.com' );
+		$this->assertNull( $follower );
+
+		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->get_actor() );
+
+		$follower2 = \Activitypub\Collection\Followers::get_follower( 2, 'https://user2.example.com' );
+		$this->assertEquals( 'https://user2.example.com', $follower2->get_actor() );
+	}
+
+	public function test_delete_follower() {
+		$followers = array(
+			'https://example.com/author/jon',
+			'https://example.org/author/doe',
+		);
+		$followers2 = array( 'https://user2.example.com' );
+
+		$pre_http_request = new MockAction();
+		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
+
+		foreach ( $followers as $follower ) {
+			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+			\Activitypub\Collection\Followers::add_follower( 2, $follower );
+		}
+
+		foreach ( $followers2 as $follower2 ) {
+			\Activitypub\Collection\Followers::add_follower( 2, $follower2 );
+		}
+
+		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->get_actor() );
+
+		$followers = \Activitypub\Collection\Followers::get_followers( 1 );
+		$this->assertEquals( 2, count( $followers ) );
+
+		$follower2 = \Activitypub\Collection\Followers::get_follower( 2, 'https://example.com/author/jon' );
+		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_actor() );
+
+		\Activitypub\Collection\Followers::remove_follower( 1, 'https://example.com/author/jon' );
+
+		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
+		$this->assertNull( $follower );
+
+		$follower2 = \Activitypub\Collection\Followers::get_follower( 2, 'https://example.com/author/jon' );
+		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_actor() );
+
+		$followers = \Activitypub\Collection\Followers::get_followers( 1 );
+		$this->assertEquals( 1, count( $followers ) );
 	}
 
 	public function test_get_outdated_followers() {
@@ -109,7 +176,28 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 
 		$follower = new \Activitypub\Model\Follower( 'https://example.com/author/jon' );
 
-		update_term_meta( $follower->get_id(), 'updated_at', \time() - 804800 );
+		global $wpdb;
+
+		//eg. time one year ago..
+		$time = time() - 804800;
+		$mysql_time_format = 'Y-m-d H:i:s';
+
+		$post_modified = gmdate( $mysql_time_format, $time );
+		$post_modified_gmt = gmdate( $mysql_time_format, ( $time + get_option( 'gmt_offset' ) * HOUR_IN_SECONDS ) );
+		$post_id = $follower->get_id();
+
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE $wpdb->posts SET post_modified = %s, post_modified_gmt = %s WHERE ID = %s",
+				array(
+					$post_modified,
+					$post_modified_gmt,
+					$post_id,
+				)
+			)
+		);
+
+		clean_post_cache( $post_id );
 
 		$followers = \Activitypub\Collection\Followers::get_outdated_followers();
 		$this->assertEquals( 1, count( $followers ) );
@@ -129,7 +217,7 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		$follower = new \Activitypub\Model\Follower( 'http://sally.example.org' );
 
 		for ( $i = 1; $i <= 15; $i++ ) {
-			add_term_meta( $follower->get_id(), 'errors', 'error ' . $i );
+			add_post_meta( $follower->get_id(), 'errors', 'error ' . $i );
 		}
 
 		$follower = new \Activitypub\Model\Follower( 'http://sally.example.org' );

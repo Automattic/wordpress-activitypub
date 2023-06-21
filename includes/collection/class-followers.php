@@ -3,7 +3,7 @@ namespace Activitypub\Collection;
 
 use WP_Error;
 use Exception;
-use WP_Term_Query;
+use WP_Query;
 use Activitypub\Http;
 use Activitypub\Webfinger;
 use Activitypub\Model\Activity;
@@ -15,10 +15,11 @@ use function Activitypub\get_remote_metadata_by_actor;
 /**
  * ActivityPub Followers Collection
  *
+ * @author Matt Wiebe
  * @author Matthias Pfefferle
  */
 class Followers {
-	const TAXONOMY = 'activitypub-followers';
+	const POST_TYPE = 'ap_follower';
 	const CACHE_KEY_INBOXES = 'follower_inboxes_%s';
 
 	/**
@@ -27,8 +28,8 @@ class Followers {
 	 * @return void
 	 */
 	public static function init() {
-		// register "followers" taxonomy
-		self::register_taxonomy();
+		// register "followers" post_type
+		self::register_post_type();
 
 		\add_action( 'activitypub_inbox_follow', array( self::class, 'handle_follow_request' ), 10, 2 );
 		\add_action( 'activitypub_inbox_undo', array( self::class, 'handle_undo_request' ), 10, 2 );
@@ -41,31 +42,26 @@ class Followers {
 	 *
 	 * @return void
 	 */
-	public static function register_taxonomy() {
-		$args = array(
-			'labels'            => array(
-				'name'          => _x( 'Followers', 'taxonomy general name', 'activitypub' ),
-				'singular_name' => _x( 'Followers', 'taxonomy singular name', 'activitypub' ),
-				'menu_name'     => __( 'Followers', 'activitypub' ),
-			),
-			'hierarchical'      => false,
-			'show_ui'           => false,
-			'show_in_menu'      => false,
-			'show_in_nav_menus' => false,
-			'show_admin_column' => false,
-			'query_var'         => false,
-			'rewrite'           => false,
-			'public'            => false,
-			'capabilities'      => array(
-				'edit_terms' => null,
-			),
+	private static function register_post_type() {
+		register_post_type(
+			self::POST_TYPE,
+			array(
+				'labels'           => array(
+					'name'          => _x( 'Followers', 'post_type plural name', 'activitypub' ),
+					'singular_name' => _x( 'Follower', 'post_type single name', 'activitypub' ),
+				),
+				'public'           => false,
+				'hierarchical'     => false,
+				'rewrite'          => false,
+				'query_var'        => false,
+				'delete_with_user' => false,
+				'can_export'       => true,
+				'supports'         => array(),
+			)
 		);
 
-		register_taxonomy( self::TAXONOMY, 'user', $args );
-		register_taxonomy_for_object_type( self::TAXONOMY, 'user' );
-
-		register_term_meta(
-			self::TAXONOMY,
+		register_post_meta(
+			self::POST_TYPE,
 			'name',
 			array(
 				'type'              => 'string',
@@ -76,8 +72,8 @@ class Followers {
 			)
 		);
 
-		register_term_meta(
-			self::TAXONOMY,
+		register_post_meta(
+			self::POST_TYPE,
 			'username',
 			array(
 				'type'              => 'string',
@@ -88,56 +84,48 @@ class Followers {
 			)
 		);
 
-		register_term_meta(
-			self::TAXONOMY,
+		register_post_meta(
+			self::POST_TYPE,
 			'avatar',
 			array(
 				'type'              => 'string',
 				'single'            => true,
-				'sanitize_callback' => function( $value ) {
-					if ( filter_var( $value, FILTER_VALIDATE_URL ) === false ) {
-						return '';
-					}
-
-					return esc_url_raw( $value );
-				},
+				'sanitize_callback' => array( self::class, 'sanitize_url' ),
 			)
 		);
 
-		register_term_meta(
-			self::TAXONOMY,
+		register_post_meta(
+			self::POST_TYPE,
+			'url',
+			array(
+				'type'              => 'string',
+				'single'            => false,
+				'sanitize_callback' => array( self::class, 'sanitize_url' ),
+			)
+		);
+
+		register_post_meta(
+			self::POST_TYPE,
 			'inbox',
 			array(
 				'type'              => 'string',
 				'single'            => true,
-				'sanitize_callback' => function( $value ) {
-					if ( filter_var( $value, FILTER_VALIDATE_URL ) === false ) {
-						throw new Exception( '"inbox" has to be a valid URL' );
-					}
-
-					return esc_url_raw( $value );
-				},
+				'sanitize_callback' => array( self::class, 'sanitize_url' ),
 			)
 		);
 
-		register_term_meta(
-			self::TAXONOMY,
+		register_post_meta(
+			self::POST_TYPE,
 			'shared_inbox',
 			array(
 				'type'              => 'string',
 				'single'            => true,
-				'sanitize_callback' => function( $value ) {
-					if ( filter_var( $value, FILTER_VALIDATE_URL ) === false ) {
-						return null;
-					}
-
-					return esc_url_raw( $value );
-				},
+				'sanitize_callback' => array( self::class, 'sanitize_url' ),
 			)
 		);
 
-		register_term_meta(
-			self::TAXONOMY,
+		register_post_meta(
+			self::POST_TYPE,
 			'updated_at',
 			array(
 				'type'              => 'string',
@@ -152,8 +140,8 @@ class Followers {
 			)
 		);
 
-		register_term_meta(
-			self::TAXONOMY,
+		register_post_meta(
+			self::POST_TYPE,
 			'errors',
 			array(
 				'type'              => 'string',
@@ -168,7 +156,15 @@ class Followers {
 			)
 		);
 
-		do_action( 'activitypub_after_register_taxonomy' );
+		do_action( 'activitypub_after_register_post_type' );
+	}
+
+	public static function sanitize_url( $value ) {
+		if ( filter_var( $value, FILTER_VALIDATE_URL ) === false ) {
+			return null;
+		}
+
+		return esc_url_raw( $value );
 	}
 
 	/**
@@ -221,14 +217,14 @@ class Followers {
 		$follower->from_meta( $meta );
 		$follower->upsert();
 
-		$result = wp_set_object_terms( $user_id, $follower->get_actor(), self::TAXONOMY, true );
+		$meta = get_post_meta( $follower->get_id(), 'user_id' );
 
-		if ( is_wp_error( $result ) ) {
-			return $result;
-		} else {
+		if ( is_array( $meta ) && ! in_array( $user_id, $meta, true ) ) {
+			add_post_meta( $follower->get_id(), 'user_id', $user_id );
 			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
-			return $follower;
 		}
+
+		return $follower;
 	}
 
 	/**
@@ -241,33 +237,41 @@ class Followers {
 	 */
 	public static function remove_follower( $user_id, $actor ) {
 		wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
-		return wp_remove_object_terms( $user_id, $actor, self::TAXONOMY );
+
+		$follower = self::get_follower( $user_id, $actor );
+
+		if ( ! $follower ) {
+			return false;
+		}
+
+		return delete_post_meta( $follower->get_id(), 'user_id', $user_id );
 	}
 
 	/**
-	 * Remove a Follower
+	 * Get a Follower
 	 *
-	 * @param int   $user_id The ID of the WordPress User
-	 * @param string $actor  The Actor URL
+	 * @param int    $user_id The ID of the WordPress User
+	 * @param string $actor   The Actor URL
 	 *
 	 * @return \Activitypub\Model\Follower The Follower object
 	 */
 	public static function get_follower( $user_id, $actor ) {
-		$terms = new WP_Term_Query(
-			array(
-				'name'       => $actor,
-				'taxonomy'   => self::TAXONOMY,
-				'hide_empty' => false,
-				'object_ids' => $user_id,
-				'number'     => 1,
+		global $wpdb;
+
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = 'user_id' AND pm.meta_value = %d AND p.guid = %s",
+				array(
+					esc_sql( self::POST_TYPE ),
+					esc_sql( $user_id ),
+					esc_sql( $actor ),
+				)
 			)
 		);
 
-		$term = $terms->get_terms();
-
-		if ( is_array( $term ) && ! empty( $term ) ) {
-			$term = reset( $term );
-			return new Follower( $term->name );
+		if ( $post_id ) {
+			$post = get_post( $post_id );
+			return new Follower( $post );
 		}
 
 		return null;
@@ -321,21 +325,25 @@ class Followers {
 	 */
 	public static function get_followers( $user_id, $number = null, $offset = null, $args = array() ) {
 		$defaults = array(
-			'taxonomy'   => self::TAXONOMY,
-			'hide_empty' => false,
-			'object_ids' => $user_id,
-			'number'     => $number,
-			'offset'     => $offset,
-			'orderby'    => 'id',
-			'order'      => 'ASC',
+			'post_type'      => self::POST_TYPE,
+			'posts_per_page' => $number,
+			'offset'         => $offset,
+			'orderby'        => 'ID',
+			'order'          => 'DESC',
+			'meta_query'     => array(
+				array(
+					'key'   => 'user_id',
+					'value' => $user_id,
+				),
+			),
 		);
 
 		$args  = wp_parse_args( $args, $defaults );
-		$terms = new WP_Term_Query( $args );
+		$query = new WP_Query( $args );
 		$items = array();
 
-		foreach ( $terms->get_terms() as $follower ) {
-			$items[] = new Follower( $follower->name ); // phpcs:ignore
+		foreach ( $query->get_posts() as $post ) {
+			$items[] = new Follower( $post ); // phpcs:ignore
 		}
 
 		return $items;
@@ -344,20 +352,15 @@ class Followers {
 	/**
 	 * Get all Followers
 	 *
-	 * @param array $args The WP_Term_Query arguments.
+	 * @param array $args The WP_Query arguments.
 	 *
 	 * @return array The Term list of Followers.
 	 */
-	public static function get_all_followers( $args = array() ) {
-		$defaults = array(
-			'taxonomy'   => self::TAXONOMY,
-			'hide_empty' => false,
+	public static function get_all_followers( $user_id = null ) {
+		$args = array(
+			'meta_query' => array(),
 		);
-
-		$args  = wp_parse_args( $args, $defaults );
-		$terms = new WP_Term_Query( $args );
-
-		return $terms->get_terms();
+		return self::get_followers( $user_id, null, null, $args );
 	}
 
 	/**
@@ -368,7 +371,20 @@ class Followers {
 	 * @return int The number of Followers
 	 */
 	public static function count_followers( $user_id ) {
-		return count( self::get_followers( $user_id ) );
+		$query = new WP_Query(
+			array(
+				'post_type'  => self::POST_TYPE,
+				'fields'     => 'ids',
+				'meta_query' => array(
+					array(
+						'key'   => 'user_id',
+						'value' => $user_id,
+					),
+				),
+			)
+		);
+
+		return $query->found_posts;
 	}
 
 	/**
@@ -387,35 +403,37 @@ class Followers {
 		}
 
 		// get all Followers of a ID of the WordPress User
-		$terms = new WP_Term_Query(
+		$posts = new WP_Query(
 			array(
-				'taxonomy'   => self::TAXONOMY,
-				'hide_empty' => false,
-				'object_ids' => $user_id,
+				'post_type'  => self::POST_TYPE,
 				'fields'     => 'ids',
 				'meta_query' => array(
 					array(
 						'key'     => 'inbox',
 						'compare' => 'EXISTS',
 					),
+					array(
+						'key'   => 'user_id',
+						'value' => $user_id,
+					),
 				),
 			)
 		);
 
-		$terms = $terms->get_terms();
+		$posts = $posts->get_posts();
 
-		if ( ! $terms ) {
+		if ( ! $posts ) {
 			return array();
 		}
 
 		global $wpdb;
 		$results = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT DISTINCT meta_value FROM {$wpdb->termmeta}
-				WHERE term_id IN (" . implode( ', ', array_fill( 0, count( $terms ), '%d' ) ) . ")
+				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
+				WHERE post_id IN (" . implode( ', ', array_fill( 0, count( $posts ), '%d' ) ) . ")
 				AND meta_key = 'shared_inbox'
 				AND meta_value IS NOT NULL",
-				$terms
+				$posts
 			)
 		);
 
@@ -436,26 +454,24 @@ class Followers {
 	 */
 	public static function get_outdated_followers( $number = 50, $older_than = 604800 ) {
 		$args = array(
-			'taxonomy'   => self::TAXONOMY,
-			'number'     => $number,
-			'meta_key'   => 'updated_at',
-			'orderby'    => 'meta_value_num',
-			'order'      => 'DESC',
-			'meta_query' => array(
+			'post_type'      => self::POST_TYPE,
+			'posts_per_page' => $number,
+			'orderby'        => 'modified',
+			'order'          => 'DESC',
+			'post_status'    => 'any', // 'any' includes 'trash
+			'date_query'     => array(
 				array(
-					'key'        => 'updated_at',
-					'value'      => time() - $older_than,
-					'type'       => 'numeric',
-					'compare'    => '<=',
+					'column' => 'post_modified_gmt',
+					'before' => gmdate( 'Y-m-d', \time() - $older_than ),
 				),
 			),
 		);
 
-		$terms = new WP_Term_Query( $args );
+		$posts = new WP_Query( $args );
 		$items = array();
 
-		foreach ( $terms->get_terms() as $follower ) {
-			$items[] = new Follower( $follower->name ); // phpcs:ignore
+		foreach ( $posts->get_posts() as $follower ) {
+			$items[] = new Follower( $follower ); // phpcs:ignore
 		}
 
 		return $items;
@@ -471,21 +487,21 @@ class Followers {
 	 */
 	public static function get_faulty_followers( $number = 10 ) {
 		$args = array(
-			'taxonomy'   => self::TAXONOMY,
-			'number'     => $number,
-			'meta_query' => array(
+			'post_type'      => self::POST_TYPE,
+			'posts_per_page' => $number,
+			'meta_query'     => array(
 				array(
-					'key'        => 'errors',
-					'compare'    => 'EXISTS',
+					'key'     => 'errors',
+					'compare' => 'EXISTS',
 				),
 			),
 		);
 
-		$terms = new WP_Term_Query( $args );
+		$posts = new WP_Query( $args );
 		$items = array();
 
-		foreach ( $terms->get_terms() as $follower ) {
-			$items[] = new Follower( $follower->name ); // phpcs:ignore
+		foreach ( $posts->get_posts() as $follower ) {
+			$items[] = new Follower( $follower ); // phpcs:ignore
 		}
 
 		return $items;
