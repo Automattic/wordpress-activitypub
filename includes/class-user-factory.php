@@ -30,24 +30,32 @@ class User_Factory {
 	 * @return \Acitvitypub\Model\User The User.
 	 */
 	public static function get_by_id( $user_id ) {
-		$user_id = (int) $user_id;
-
-		if ( self::BLOG_USER_ID === $user_id ) {
-			return new Blog_User( $user_id );
-		} elseif ( self::APPLICATION_USER_ID === $user_id ) {
-			return new Application_User( $user_id );
-		} else {
-			$user = get_user_by( 'ID', $user_id );
-			if ( ! $user || ! \user_can( $user, 'publish_posts' ) ) {
-				return new WP_Error(
-					'activitypub_user_not_found',
-					\__( 'User not found', 'activitypub' ),
-					array( 'status' => 404 )
-				);
-			}
-
-			return new User( $user->ID );
+		if ( is_string( $user_id ) || is_numeric( $user_id ) ) {
+			$user_id = (int) $user_id;
 		}
+
+		if (
+			self::BLOG_USER_ID === $user_id &&
+			is_user_enabled( $user_id )
+		) {
+			return new Blog_User( $user_id );
+		} elseif (
+			self::APPLICATION_USER_ID === $user_id &&
+			is_user_enabled( $user_id )
+		) {
+			return new Application_User( $user_id );
+		} elseif (
+			$user_id > 0 &&
+			is_user_enabled( $user_id )
+		) {
+			return new User( $user_id );
+		}
+
+		return new WP_Error(
+			'activitypub_user_not_found',
+			\__( 'User not found', 'activitypub' ),
+			array( 'status' => 404 )
+		);
 	}
 
 	/**

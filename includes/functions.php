@@ -277,3 +277,49 @@ function is_activitypub_request() {
 function is_single_user_mode() {
 	return ACTIVITYPUB_SINGLE_USER_MODE;
 }
+
+/**
+ * This function checks if a user is enabled for ActivityPub.
+ *
+ * @param int $user_id The User-ID.
+ *
+ * @return boolean True if the user is enabled, false otherwise.
+ */
+function is_user_enabled( $user_id ) {
+	switch ( $user_id ) {
+		// if the user is the application user, it's always enabled.
+		case \Activitypub\User_Factory::APPLICATION_USER_ID:
+			return true;
+		// if the user is the blog user, it's only enabled in single-user mode.
+		case \Activitypub\User_Factory::BLOG_USER_ID:
+			if ( is_single_user_mode() ) {
+				return true;
+			}
+
+			return false;
+		// if the user is any other user, it's enabled if it can publish posts.
+		default:
+			if (
+				! is_single_user_mode() &&
+				\user_can( $user_id, 'publish_posts' )
+			) {
+				return true;
+			}
+
+			return false;
+	}
+}
+
+if ( ! function_exists( 'get_self_link' ) ) {
+	/**
+	 * Get the correct self URL
+	 *
+	 * @return boolean
+	 */
+	function get_self_link() {
+		$host = wp_parse_url( home_url() );
+
+		return esc_url( apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . wp_unslash( $_SERVER['REQUEST_URI'] ) ) ) );
+	}
+}
+
