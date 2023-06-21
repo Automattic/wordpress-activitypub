@@ -1,47 +1,60 @@
 import { SelectControl, RangeControl } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { useMemo } from '@wordpress/element';
-
-function View( { attributes } ) {
-
-}
+import { InspectorControls } from '@wordpress/block-editor';
+import { __ } from '@wordpress/i18n';
+import { Followers } from './followers';
 
 export default function Edit( { attributes, setAttributes } ) {
-  const { selectedUser, followersToShow, isEditing } = attributes;
-  const users = useSelect( ( select ) => select( 'core' ).getUsers( { who: 'authors' } ) );
-  const usersOptions = useMemo( () => {
+	const { selectedUser, followersToShow, title } = attributes;
+	const users = useSelect( ( select ) => select( 'core' ).getUsers( { who: 'authors' } ) );
+	const usersOptions = useMemo( () => {
 		if ( ! users ) {
 			return null;
 		}
-    const withBlogUser =[ {
+		const withBlogUser =[ {
 			label: 'Whole Site',
 			value: 'site'
 		} ];
-    return users.reduce( ( acc, user ) => {
+		return users.reduce( ( acc, user ) => {
 			acc.push({
 				label: user.name,
 				value: user.id
 			} );
 			return acc;
-    }, withBlogUser );
-  }, [ users ] );
+		}, withBlogUser );
+	}, [ users ] );
 
-  return (
-      <div>
-          { usersOptions && <SelectControl
-              label="Select User"
-              value={ selectedUser }
-              options={ usersOptions }
-              onChange={ value => setAttributes( { selectedUser: value } ) }
-          />
-					}
-          <RangeControl
-              label="Number of Followers to Show"
-              value={ followersToShow }
-              onChange={ value => setAttributes( { followersToShow: value } ) }
-              min={ 1 }
-              max={ 100 }
-          />
-      </div>
-  );
+	return (
+		<div>
+			<InspectorControls key="setting">
+				<div id="activitypub-followers-settings">
+					<fieldset>
+						<legend className="blocks-base-control__label">
+							{ __( 'Select User', 'activitypub' ) }
+						</legend>
+						<SelectControl
+							label="Select User"
+							value={ selectedUser }
+							options={ usersOptions }
+							onChange={ value => setAttributes( { selectedUser: value } ) }
+						/>
+					</fieldset>
+					<fieldset>
+						<legend className="blocks-base-control__label">
+							{ __( 'Number of Followers to Show', 'activitypub' ) }
+						</legend>
+						<RangeControl
+							label="Number of Followers to Show"
+							value={ followersToShow }
+							onChange={ value => setAttributes( { followersToShow: value } ) }
+							min={ 1 }
+							max={ 100 }
+						/>
+					</fieldset>
+				</div>
+			</InspectorControls>
+			<Followers selectedUser={ selectedUser } followersToShow={ followersToShow } />
+		</div>
+	);
 }

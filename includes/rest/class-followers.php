@@ -51,19 +51,9 @@ class Followers {
 	 */
 	public static function get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = \get_user_by( 'ID', $user_id );
-
-		if ( ! $user ) {
-			return new WP_Error(
-				'rest_invalid_param',
-				\__( 'User not found', 'activitypub' ),
-				array(
-					'status' => 404,
-					'params' => array(
-						'user_id' => \__( 'User not found', 'activitypub' ),
-					),
-				)
-			);
+		$context = $request->get_param( 'context' );
+		if ( 'view' === $context ) {
+			return self::get_followers( $user_id );
 		}
 
 		/*
@@ -97,6 +87,22 @@ class Followers {
 		return $response;
 	}
 
+	private static function get_followers( $user_id ) {
+		$followers = FollowerCollection::get_followers( $user_id );
+
+		$output = array();
+		foreach ( $followers as $follower ) {
+			$output[] = array(
+				'name' => $follower->get_name(),
+				'url' => $follower->get_actor(),
+				'avatar' => $follower->get_avatar(),
+				'handle' => $follower->get_actor(),
+			);
+		}
+
+		return $output;
+	}
+
 	/**
 	 * The supported parameters
 	 *
@@ -113,7 +119,15 @@ class Followers {
 			'required' => true,
 			'type' => 'integer',
 			'validate_callback' => function( $param, $request, $key ) {
-				return user_can( $param, 'publish_posts' );
+				return 0 === $param || user_can( $param, 'publish_posts' );
+			},
+		);
+
+		$params['context'] = array(
+			'type' => 'string',
+			'default' => 'outbox',
+			'validate_callback' => function( $param, $request, $key ) {
+				return in_array( $param, array( 'outbox', 'view' ), true );
 			},
 		);
 
