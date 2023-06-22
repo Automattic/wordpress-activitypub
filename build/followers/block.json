@@ -1,8 +1,9 @@
 {
+  "$schema": "https://schemas.wp.org/trunk/block.json",
   "name": "activitypub/followers",
-  "apiVersion": 2,
+  "apiVersion": 3,
   "version": "1.0.0",
-  "title": "Fediverse Follows",
+  "title": "Fediverse Followers",
   "category": "widgets",
   "description": "Display your followers from the Fediverse on your website.",
   "icon": "groups",
@@ -21,10 +22,13 @@
     "followersToShow": {
       "type": "number",
       "default": 10
+    },
+    "sort": {
+      "type": "string",
+      "default": "DESC"
     }
   },
   "editorScript": "file:./index.js",
-  "editorStyle": "file:./index.css",
   "viewScript": "file:./view.js",
   "style": "file:./style-view.css"
 }
