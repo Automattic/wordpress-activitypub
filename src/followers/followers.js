@@ -39,21 +39,24 @@ export function Followers( { selectedUser, per_page, order, title } ) {
 					</li>
 				) ) }
 				</ul>
-				<Pagination { ...{ pages, page, setPage, total } } />
+				<Pagination { ...{ pages, page, setPage, total, per_page } } />
 		</div>
 	);
 }
 
-function Pagination( { pages, page, setPage, total } ) {
+function Pagination( { pages, page, setPage, total, per_page } ) {
 
 	const canPage = pages > 1;
 	const canNextPage = page < pages;
 	const canPrevPage = page > 1;
+	const start = ( page - 1 ) * per_page + 1;
+	const end = page * per_page > total ? total : page * per_page;
 	if ( ! canPage ) {
 		return null;
 	}
 	return (
 		<>
+			<span>{ start }-{ end } / { total } Followers</span>
 			{ canPrevPage && <button onClick={ () => setPage( page - 1 ) }>🔙Prev</button> }
 			{ canNextPage && <button onClick={ () => setPage( page + 1 ) }>Next➡️</button> }
 		</>
