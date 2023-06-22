@@ -324,6 +324,28 @@ class Followers {
 	 * @return array The Term list of Followers, the format depends on $output
 	 */
 	public static function get_followers( $user_id, $number = null, $offset = null, $args = array() ) {
+		$query = self::get_followers_query( $user_id, $number, $offset, $args );
+		$items = array();
+
+		foreach ( $query->get_posts() as $post ) {
+			$items[] = new Follower( $post ); // phpcs:ignore
+		}
+
+		return $items;
+	}
+
+	/**
+	 * Get the Followers of a given user, as WP_Query results.
+	 * Each post should be wrapped in a Follower object.
+	 *
+	 * @param int    $user_id The ID of the WordPress User
+	 * @param int    $number  Limts the result
+	 * @param int    $offset  Offset
+	 * @param array  $args    The WP_Query arguments.
+	 *
+	 * @return WP_Query The WP_Query object
+	 */
+	public static function get_followers_query( $user_id, $number = null, $offset = null, $args = array() ) {
 		$defaults = array(
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,
@@ -339,14 +361,7 @@ class Followers {
 		);
 
 		$args  = wp_parse_args( $args, $defaults );
-		$query = new WP_Query( $args );
-		$items = array();
-
-		foreach ( $query->get_posts() as $post ) {
-			$items[] = new Follower( $post ); // phpcs:ignore
-		}
-
-		return $items;
+		return new WP_Query( $args );
 	}
 
 	/**

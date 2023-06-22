@@ -19,13 +19,17 @@
       "type": "string",
       "default": "site"
     },
-    "followersToShow": {
+    "per_page": {
       "type": "number",
       "default": 10
     },
-    "sort": {
+    "order": {
       "type": "string",
-      "default": "DESC"
+      "default": "desc",
+      "enum": [
+        "asc",
+        "desc"
+      ]
     }
   },
   "editorScript": "file:./index.js",

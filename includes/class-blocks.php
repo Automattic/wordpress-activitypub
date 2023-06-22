@@ -27,10 +27,10 @@ class Blocks {
 
 	public static function render_follower_block( $attrs, $content, $block ) {
 		$followee_user_id = self::get_user_id( $attrs['selectedUser'] );
-		$followers_to_show = absint( $attrs['followersToShow'] );
-		$followers = Followers::get_followers( $followee_user_id, $followers_to_show );
+		$per_page = absint( $attrs['per_page'] );
+		$followers = Followers::get_followers( $followee_user_id, $per_page );
 		$follower_count = Followers::count_followers( $followee_user_id );
-		$is_followers_truncated = $follower_count > $followers_to_show;
+		$is_followers_truncated = $follower_count > $per_page;
 		$title = $attrs['title'];
 		$html = '<div class="activitypub-follower-block">';
 		if ( $title ) {

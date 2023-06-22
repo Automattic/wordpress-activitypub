@@ -6,11 +6,11 @@ import { __ } from '@wordpress/i18n';
 import { Followers } from './followers';
 
 export default function Edit( { attributes, setAttributes } ) {
-	const { selectedUser, followersToShow, sort } = attributes;
+	const { order, per_page, selectedUser } = attributes;
 	const blockProps = useBlockProps();
-	const sortOptions = [
-		{ label: __( 'New to old', 'activitypub' ), value: 'DESC' },
-		{ label: __( 'Old to new', 'activitypub' ), value: 'ASC' },
+	const orderOptions = [
+		{ label: __( 'New to old', 'activitypub' ), value: 'desc' },
+		{ label: __( 'Old to new', 'activitypub' ), value: 'asc' },
 	];
 	const users = useSelect( ( select ) => select( 'core' ).getUsers( { who: 'authors' } ) );
 	const usersOptions = useMemo( () => {
@@ -42,14 +42,14 @@ export default function Edit( { attributes, setAttributes } ) {
 					/>
 					<SelectControl
 						label={ __( 'Sort', 'activitypub' ) }
-						value={ sort }
-						options={ sortOptions }
-						onChange={ value => setAttributes( { sort: value } ) }
+						value={ order }
+						options={ orderOptions }
+						onChange={ value => setAttributes( { order: value } ) }
 					/>
 					<RangeControl
 						label={ __( 'Number of Followers', 'activitypub' ) }
-						value={ followersToShow }
-						onChange={ value => setAttributes( { followersToShow: value } ) }
+						value={ per_page }
+						onChange={ value => setAttributes( { per_page: value } ) }
 						min={ 1 }
 						max={ 10 }
 					/>

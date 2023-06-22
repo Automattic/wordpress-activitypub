@@ -1,26 +1,64 @@
 import { useState, useEffect } from 'react';
 import apiFetch from '@wordpress/api-fetch';
+import { addQueryArgs } from '@wordpress/url';
 
-export function Followers( { selectedUser, followersToShow, title } ) {
+function getPath( userId, per_page, order, page ) {
+	const path = `/activitypub/1.0/users/${ userId }/followers`;
+	const args = {
+		per_page,
+		order,
+		page,
+		context: 'view'
+	};
+	return addQueryArgs( path, args );
+}
+
+export function Followers( { selectedUser, per_page, order, title } ) {
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
 	const [ followers, setFollowers ] = useState( [] );
+	const [ pages, setPages ] = useState( 0 );
+	const [ page, setPage ] = useState( 1 );
+	const [ total, setTotal ] = useState( 0 );
 	useEffect( () => {
-		apiFetch( { path: `/activitypub/1.0/users/${ userId }/followers?context=view` } )
-			.then( ( followers ) => setFollowers( followers ) )
+		const path = getPath( userId, per_page, order, page );
+		apiFetch( { path } )
+			.then( ( data ) => {
+				setPages( data.total_pages );
+				setTotal( data.total );
+				setFollowers( data.followers );
+			} )
 			.catch( ( error ) => console.error( error ) );
-	}, [ userId ] );
+	}, [ userId, per_page, order, page ] );
 	return (
 		<div className="activitypub-follower-block">
 			<h3>{ title }</h3>
 				<ul>
 				{ followers && followers.map( ( follower ) => (
-					<li key={ follower.id }>
+					<li key={ follower.url }>
 						<Follower { ...follower } />
 					</li>
 				) ) }
 				</ul>
+				<Pagination { ...{ pages, page, setPage, total } } />
 		</div>
 	);
+}
+
+function Pagination( { pages, page, setPage, total } ) {
+
+	const canPage = pages > 1;
+	const canNextPage = page < pages;
+	const canPrevPage = page > 1;
+	if ( ! canPage ) {
+		return null;
+	}
+	return (
+		<>
+			{ canPrevPage && <button onClick={ () => setPage( page - 1 ) }>🔙Prev</button> }
+			{ canNextPage && <button onClick={ () => setPage( page + 1 ) }>Next➡️</button> }
+		</>
+	)
+
 }
 
 function Follower( { name, avatar, url, handle } ) {

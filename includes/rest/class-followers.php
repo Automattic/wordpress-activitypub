@@ -6,6 +6,7 @@ use stdClass;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Collection\Followers as FollowerCollection;
+use Activitypub\Model\Follower;
 
 use function Activitypub\get_rest_url_by_path;
 
@@ -53,7 +54,7 @@ class Followers {
 		$user_id = $request->get_param( 'user_id' );
 		$context = $request->get_param( 'context' );
 		if ( 'view' === $context ) {
-			return self::get_followers( $user_id );
+			return self::get_followers( $request );
 		}
 
 		/*
@@ -87,12 +88,18 @@ class Followers {
 		return $response;
 	}
 
-	private static function get_followers( $user_id ) {
-		$followers = FollowerCollection::get_followers( $user_id );
+	private static function get_followers( $request ) {
+		$user_id = $request->get_param( 'user_id' );
+		$order = $request->get_param( 'order' );
+		$per_page = $request->get_param( 'per_page' );
+		$page = $request->get_param( 'page' );
+		$offset = ( $page - 1 ) * $per_page;
+		$query = FollowerCollection::get_followers_query( $user_id, $per_page, $offset, array( 'order' => ucwords( $order ) ) );
 
-		$output = array();
-		foreach ( $followers as $follower ) {
-			$output[] = array(
+		$followers = array();
+		foreach ( $query->get_posts() as $post ) {
+			$follower = new Follower( $post );
+			$followers[] = array(
 				'name' => $follower->get_name(),
 				'url' => $follower->get_actor(),
 				'avatar' => $follower->get_avatar(),
@@ -100,7 +107,10 @@ class Followers {
 			);
 		}
 
-		return $output;
+		$total = $query->found_posts;
+		$total_pages = ceil( $total / (int) $query->query_vars['posts_per_page'] );
+
+		return compact( 'followers', 'total', 'total_pages' );
 	}
 
 	/**
@@ -113,12 +123,26 @@ class Followers {
 
 		$params['page'] = array(
 			'type' => 'integer',
+			'default' => 1,
+		);
+
+		$params['per_page'] = array(
+			'type' => 'integer',
+			'default' => 10,
+		);
+
+		$params['order'] = array(
+			'type'    => 'string',
+			'default' => 'desc',
+			'enum'    => array( 'asc', 'desc' ),
 		);
 
 		$params['user_id'] = array(
 			'required' => true,
 			'type' => 'integer',
 			'validate_callback' => function( $param, $request, $key ) {
+				// despite being an integer, user_id is passed as string.
+				$param = (int) $param;
 				return 0 === $param || user_can( $param, 'publish_posts' );
 			},
 		);
