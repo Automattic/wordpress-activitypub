@@ -47,6 +47,13 @@ class Follower {
 	private $username;
 
 	/**
+	 * The User-Summary
+	 *
+	 * @var string
+	 */
+	private $summary;
+
+	/**
 	 * The Avatar URL
 	 *
 	 * @var string
@@ -329,19 +336,6 @@ class Follower {
 	}
 
 	/**
-	 * Get the meta data.
-	 *
-	 * @return array $meta The meta data.
-	 */
-	public function get_meta() {
-		if ( $this->meta ) {
-			return $this->meta;
-		}
-
-		return null;
-	}
-
-	/**
 	 * Update the current Follower-Object.
 	 *
 	 * @return void
@@ -363,7 +357,7 @@ class Follower {
 			'post_title'    => $this->get_name(),
 			'post_author'   => 0,
 			'post_type'     => Followers::POST_TYPE,
-			'post_content'  => wp_json_encode( $this->meta ),
+			'post_content'  => $this->get_summary(),
 			'post_status'   => 'publish',
 			'post_modified' => gmdate( 'Y-m-d H:i:s', $this->updated_at ),
 			'meta_input'    => $this->get_post_meta_input(),
@@ -400,7 +394,7 @@ class Follower {
 	 * @return void
 	 */
 	protected function get_post_meta_input() {
-		$attributes = array( 'inbox', 'shared_inbox', 'avatar', 'name', 'username' );
+		$attributes = array( 'inbox', 'shared_inbox', 'avatar', 'name', 'username', 'meta' );
 
 		$meta_input = array();
 
