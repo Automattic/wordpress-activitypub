@@ -1,12 +1,13 @@
 import { SelectControl, RangeControl } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { useMemo } from '@wordpress/element';
-import { InspectorControls } from '@wordpress/block-editor';
+import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { Followers } from './followers';
 
 export default function Edit( { attributes, setAttributes } ) {
 	const { selectedUser, followersToShow, title } = attributes;
+	const blockProps = useBlockProps();
 	const users = useSelect( ( select ) => select( 'core' ).getUsers( { who: 'authors' } ) );
 	const usersOptions = useMemo( () => {
 		if ( ! users ) {
@@ -26,7 +27,7 @@ export default function Edit( { attributes, setAttributes } ) {
 	}, [ users ] );
 
 	return (
-		<div>
+		<div { ...blockProps }>
 			<InspectorControls key="setting">
 				<div id="activitypub-followers-settings">
 					<fieldset>
@@ -54,7 +55,7 @@ export default function Edit( { attributes, setAttributes } ) {
 					</fieldset>
 				</div>
 			</InspectorControls>
-			<Followers selectedUser={ selectedUser } followersToShow={ followersToShow } />
+			<Followers selectedUser={ selectedUser } followersToShow={ followersToShow } title={ title } />
 		</div>
 	);
 }
