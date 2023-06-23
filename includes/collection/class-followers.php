@@ -76,9 +76,7 @@ class Followers {
 			self::POST_TYPE,
 			'icon',
 			array(
-				//'type'              => 'string',
 				'single'            => true,
-				//'sanitize_callback' => array( self::class, 'sanitize_url' ),
 			)
 		);
 

@@ -524,7 +524,10 @@ class Activity_Object {
 			$this->$key = array();
 		}
 
-		$this->$key[] = $value;
+		$attributes   = $this->$key;
+		$attributes[] = $value;
+
+		$this->$key = $attributes;
 
 		return $this->$key;
 	}
