@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
+import { __ } from '@wordpress/i18n';
+import { Pagination } from './pagination';
 
 function getPath( userId, per_page, order, page ) {
 	const path = `/activitypub/1.0/users/${ userId }/followers`;
@@ -39,29 +41,18 @@ export function Followers( { selectedUser, per_page, order, title, page, setPage
 					</li>
 				) ) }
 				</ul>
-				<Pagination { ...{ pages, page, setPage, total, per_page } } />
+				{ pages > 1 && (
+					<Pagination
+						page={ page }
+						perPage={ per_page }
+						total={ total }
+						pageClick={ setPage }
+						nextLabel={ __( 'More', 'activitypub' ) }
+						prevLabel={ __( 'Back', 'activitypub' ) }
+					/>
+				) }
 		</div>
 	);
-}
-
-function Pagination( { pages, page, setPage, total, per_page } ) {
-
-	const canPage = pages > 1;
-	const canNextPage = page < pages;
-	const canPrevPage = page > 1;
-	const start = ( page - 1 ) * per_page + 1;
-	const end = page * per_page > total ? total : page * per_page;
-	if ( ! canPage ) {
-		return null;
-	}
-	return (
-		<>
-			<span>{ start }-{ end } / { total } Followers</span>
-			{ canPrevPage && <button onClick={ () => setPage( page - 1 ) }>🔙Prev</button> }
-			{ canNextPage && <button onClick={ () => setPage( page + 1 ) }>Next➡️</button> }
-		</>
-	)
-
 }
 
 function Follower( { name, avatar, url, handle } ) {
