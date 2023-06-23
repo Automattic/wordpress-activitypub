@@ -112,22 +112,6 @@ class Followers {
 
 		register_post_meta(
 			self::POST_TYPE,
-			'updated',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'sanitize_callback' => function( $value ) {
-					if ( ! is_numeric( $value ) && (int) $value !== $value ) {
-						$value = \time();
-					}
-
-					return $value;
-				},
-			)
-		);
-
-		register_post_meta(
-			self::POST_TYPE,
 			'_errors',
 			array(
 				'type'              => 'string',
@@ -292,7 +276,7 @@ class Followers {
 		}
 
 		if ( isset( $object['user_id'] ) ) {
-			unset( $object['_user_id'] );
+			unset( $object['user_id'] );
 			unset( $object['@context'] );
 		}
 
