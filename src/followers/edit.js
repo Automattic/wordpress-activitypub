@@ -1,6 +1,6 @@
 import { SelectControl, RangeControl, PanelBody } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
-import { useMemo } from '@wordpress/element';
+import { useMemo, useState } from '@wordpress/element';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { Followers } from './followers';
@@ -8,6 +8,7 @@ import { Followers } from './followers';
 export default function Edit( { attributes, setAttributes } ) {
 	const { order, per_page, selectedUser } = attributes;
 	const blockProps = useBlockProps();
+	const [ page, setPage ] = useState( 1 );
 	const orderOptions = [
 		{ label: __( 'New to old', 'activitypub' ), value: 'desc' },
 		{ label: __( 'Old to new', 'activitypub' ), value: 'asc' },
@@ -29,6 +30,12 @@ export default function Edit( { attributes, setAttributes } ) {
 			return acc;
 		}, withBlogUser );
 	}, [ users ] );
+	const setAttributestAndResetPage = ( key ) => {
+		return ( value ) => {
+			setPage( 1 );
+			setAttributes( { [ key ]: value } );
+		};
+	}
 
 	return (
 		<div { ...blockProps }>
@@ -38,24 +45,24 @@ export default function Edit( { attributes, setAttributes } ) {
 						label="Select User"
 						value={ selectedUser }
 						options={ usersOptions }
-						onChange={ value => setAttributes( { selectedUser: value } ) }
+						onChange={ setAttributestAndResetPage( 'selectedUser' ) }
 					/>
 					<SelectControl
 						label={ __( 'Sort', 'activitypub' ) }
 						value={ order }
 						options={ orderOptions }
-						onChange={ value => setAttributes( { order: value } ) }
+						onChange={ setAttributestAndResetPage( 'order' ) }
 					/>
 					<RangeControl
 						label={ __( 'Number of Followers', 'activitypub' ) }
 						value={ per_page }
-						onChange={ value => setAttributes( { per_page: value } ) }
+						onChange={ setAttributestAndResetPage( 'per_page' ) }
 						min={ 1 }
 						max={ 10 }
 					/>
 				</PanelBody>
 			</InspectorControls>
-			<Followers { ...attributes } />
+			<Followers { ...attributes } page={ page } setPage={ setPage } />
 		</div>
 	);
 }

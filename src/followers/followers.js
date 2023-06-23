@@ -13,12 +13,12 @@ function getPath( userId, per_page, order, page ) {
 	return addQueryArgs( path, args );
 }
 
-export function Followers( { selectedUser, per_page, order, title } ) {
+export function Followers( { selectedUser, per_page, order, title, page, setPage } ) {
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
 	const [ followers, setFollowers ] = useState( [] );
 	const [ pages, setPages ] = useState( 0 );
-	const [ page, setPage ] = useState( 1 );
 	const [ total, setTotal ] = useState( 0 );
+
 	useEffect( () => {
 		const path = getPath( userId, per_page, order, page );
 		apiFetch( { path } )
