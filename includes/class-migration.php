@@ -22,7 +22,8 @@ class Migration {
 	}
 
 	public static function get_version() {
-		return get_option( 'activitypub_db_version', 0 );
+		return 0;
+		//return get_option( 'activitypub_db_version', 0 );
 	}
 
 	/**
@@ -71,19 +72,19 @@ class Migration {
 				foreach ( $followers as $actor ) {
 					$meta = get_remote_metadata_by_actor( $actor );
 
-					$follower = new Follower( $actor );
-
 					if ( is_tombstone( $meta ) ) {
 						continue;
-					} if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
+					}
+
+					$follower = Follower::from_array( $meta );
+
+					if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
 						$follower->set_error( $meta );
-					} else {
-						$follower->from_meta( $meta );
 					}
 
 					$follower->upsert();
 
-					add_post_meta( $follower->get_id(), 'user_id', $user_id );
+					add_post_meta( $follower->get__id(), '_user_id', $user_id );
 				}
 			}
 		}
