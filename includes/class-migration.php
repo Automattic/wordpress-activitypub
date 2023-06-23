@@ -22,8 +22,7 @@ class Migration {
 	}
 
 	public static function get_version() {
-		return 0;
-		//return get_option( 'activitypub_db_version', 0 );
+		return get_option( 'activitypub_db_version', 0 );
 	}
 
 	/**
