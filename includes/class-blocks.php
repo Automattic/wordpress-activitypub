@@ -32,26 +32,18 @@ class Blocks {
 		$follower_count = Followers::count_followers( $followee_user_id );
 		$is_followers_truncated = $follower_count > $per_page;
 		$title = $attrs['title'];
-		$html = '<div class="activitypub-follower-block">';
+		$wrapper_attributes = get_block_wrapper_attributes(
+			array(
+				'aria-label' => __( 'Fediverse Followers', 'activitypub' ),
+				'class'      => 'activitypub-follower-block',
+				'data-attrs' => wp_json_encode( $attrs ),
+			)
+		);
+
+		$html = '<div class="activitypub-follower-block" ' . $wrapper_attributes . '>';
 		if ( $title ) {
 			$html .= '<h3>' . $title . '</h3>';
 		}
-		if ( 0 === $follower_count ) {
-			if ( is_user_logged_in() ) {
-				$html .= '<p>' . __( 'No followers yet, keep publishing and that will change!', 'activitypub' ) . '</p>';
-			}
-			// @todo display a follow button to logged out users
-			// reuse whatever ~lightbox-like thing we plan to use in the Follow block. Or can we just outright render it here? Probably.
-			return $html . '</div>';
-		} /* unsure. else {
-
-			$html .= '<p>' . sprintf(
-				// Translators: %s is the number of followers from the Fediverse (like Mastodon)
-				_n( '%s follower', '%s followers', $follower_count, 'activitypub' ),
-				number_format_i18n( $follower_count )
-			) . '</p>';
-		}
-		*/
 		$html .= '<ul>';
 		foreach ( $followers as $follower ) {
 			$html .= '<li>' . self::render_follower( $follower ) . '</li>';
