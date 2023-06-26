@@ -12,7 +12,7 @@ namespace Activitypub\Activity;
  *
  * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-person
  */
-class Person extends Activity_Object {
+class Person extends Base_Object {
 	/**
 	 * @var string
 	 */

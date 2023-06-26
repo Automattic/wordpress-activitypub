@@ -7,11 +7,11 @@
 
 namespace Activitypub\Activity;
 
-class Actor extends Activity_Object {
+class Actor extends Base_Object {
 	/**
 	 * @var string
 	 */
-	protected $type = 'Object';
+	protected $type = 'Person';
 
 	/**
 	 * A reference to an ActivityStreams OrderedCollection comprised of

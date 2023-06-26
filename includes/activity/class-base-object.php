@@ -10,7 +10,7 @@ namespace Activitypub\Activity;
 use WP_Error;
 
 use function Activitypub\camel_to_snake_case;
-
+use function Activitypub\snake_to_camel_case;
 /**
  * ObjectType is an implementation of one of the
  * Activity Streams Core Types.
@@ -23,7 +23,7 @@ use function Activitypub\camel_to_snake_case;
  *
  * @see https://www.w3.org/TR/activitystreams-core/#object
  */
-class Activity_Object {
+class Base_Object {
 	/**
 	 * The object's unique global identifier
 	 *
@@ -561,5 +561,32 @@ class Activity_Object {
 		}
 
 		return $object;
+	}
+
+	/**
+	 * Convert Object to an array.
+	 *
+	 * It tries to get the object attributes if they exist
+	 * and falls back to the getters. Empty values are ignored.
+	 *
+	 * @return array An array built from the Object.
+	 */
+	public function to_array() {
+		$array = array();
+		$vars  = get_object_vars( $this );
+
+		foreach ( $vars as $key => $value ) {
+			// if value is empty, try to get it from a getter.
+			if ( ! $value ) {
+				$value = call_user_func( array( $this, 'get_' . $key ) );
+			}
+
+			// if value is still empty, ignore it for the array and continue.
+			if ( $value ) {
+				$array[ snake_to_camel_case( $key ) ] = $value;
+			}
+		}
+
+		return $array;
 	}
 }

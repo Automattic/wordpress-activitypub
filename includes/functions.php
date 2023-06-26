@@ -249,6 +249,17 @@ function camel_to_snake_case( $string ) {
 }
 
 /**
+ * Convert a string from snake_case to camelCase.
+ *
+ * @param string $string The string to convert.
+ *
+ * @return string The converted string.
+ */
+function snake_to_camel_case( $string ) {
+	return lcfirst( str_replace( '_', '', ucwords( $string, '_' ) ) );
+}
+
+/**
  * Check if a request is for an ActivityPub request.
  *
  * @return bool False by default.
