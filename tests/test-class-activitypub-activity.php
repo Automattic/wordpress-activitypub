@@ -28,4 +28,17 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 		remove_all_filters( 'activitypub_extract_mentions' );
 		\wp_trash_post( $post );
 	}
+
+	public function test_object_transformation() {
+		$test_array = array(
+			'id'      => 'https://example.com/post/123',
+			'type'    => 'Note',
+			'content' => 'Hello world!',
+		);
+
+		$object = \Activitypub\Activity\Base_Object::from_array( $test_array );
+
+		$this->assertEquals( 'Hello world!', $object->get_content() );
+		$this->assertEquals( $test_array, $object->to_array() );
+	}
 }

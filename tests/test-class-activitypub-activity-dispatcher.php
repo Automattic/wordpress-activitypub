@@ -2,12 +2,14 @@
 class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HTTP {
 	public static $users = array(
 		'username@example.org' => array(
+			'id' => 'https://example.org/users/username',
 			'url' => 'https://example.org/users/username',
 			'inbox' => 'https://example.org/users/username/inbox',
 			'name'  => 'username',
 			'prefferedUsername'  => 'username',
 		),
 		'jon@example.com' => array(
+			'id' => 'https://example.com/author/jon',
 			'url' => 'https://example.com/author/jon',
 			'inbox' => 'https://example.com/author/jon/inbox',
 			'name'  => 'jon',
@@ -56,6 +58,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 		);
 
 		self::$users['https://example.com/alex'] = array(
+			'id' => 'https://example.com/alex',
 			'url' => 'https://example.com/alex',
 			'inbox' => 'https://example.com/alex/inbox',
 			'name'  => 'alex',
