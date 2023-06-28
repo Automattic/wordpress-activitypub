@@ -16,9 +16,9 @@ class Followers extends WP_List_Table {
 			'name'         => \__( 'Name', 'activitypub' ),
 			'username'     => \__( 'Username', 'activitypub' ),
 			'identifier'   => \__( 'Identifier', 'activitypub' ),
-			'updated_at'   => \__( 'Last updated', 'activitypub' ),
-			'errors'       => \__( 'Errors', 'activitypub' ),
-			'latest-error' => \__( 'Latest Error Message', 'activitypub' ),
+			'updated'      => \__( 'Last updated', 'activitypub' ),
+			//'errors'       => \__( 'Errors', 'activitypub' ),
+			//'latest-error' => \__( 'Latest Error Message', 'activitypub' ),
 		);
 	}
 
@@ -50,11 +50,11 @@ class Followers extends WP_List_Table {
 
 		foreach ( $followers as $follower ) {
 			$item = array(
-				'avatar'       => esc_attr( $follower->get_avatar() ),
+				'icon'         => esc_attr( $follower->get_icon_url() ),
 				'name'         => esc_attr( $follower->get_name() ),
-				'username'     => esc_attr( $follower->get_username() ),
-				'identifier'   => esc_attr( $follower->get_actor() ),
-				'updated_at'   => esc_attr( $follower->get_updated_at() ),
+				'username'     => esc_attr( $follower->get_preferred_username() ),
+				'identifier'   => esc_attr( $follower->get_url() ),
+				'updated'      => esc_attr( $follower->get_updated() ),
 				'errors'       => $follower->count_errors(),
 				'latest-error' => $follower->get_latest_error_message(),
 			);
@@ -79,7 +79,7 @@ class Followers extends WP_List_Table {
 	public function column_avatar( $item ) {
 		return sprintf(
 			'<img src="%s" width="25px;" />',
-			$item['avatar']
+			$item['icon']
 		);
 	}
 

@@ -77,7 +77,7 @@ class Followers {
 		// phpcs:ignore
 		$json->orderedItems = array_map(
 			function( $item ) {
-				return $item->get_actor();
+				return $item->get_url();
 			},
 			FollowerCollection::get_followers( $user_id )
 		);

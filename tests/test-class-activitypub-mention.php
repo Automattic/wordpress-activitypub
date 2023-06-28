@@ -2,6 +2,7 @@
 class Test_Activitypub_Mention extends ActivityPub_TestCase_Cache_HTTP {
 	public static $users = array(
 		'username@example.org' => array(
+			'id'  => 'https://example.org/users/username',
 			'url'  => 'https://example.org/users/username',
 			'name' => 'username',
 		),

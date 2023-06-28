@@ -238,6 +238,28 @@ function get_rest_url_by_path( $path = '' ) {
 }
 
 /**
+ * Convert a string from camelCase to snake_case.
+ *
+ * @param string $string The string to convert.
+ *
+ * @return string The converted string.
+ */
+function camel_to_snake_case( $string ) {
+	return strtolower( preg_replace( '/(?<!^)[A-Z]/', '_$0', $string ) );
+}
+
+/**
+ * Convert a string from snake_case to camelCase.
+ *
+ * @param string $string The string to convert.
+ *
+ * @return string The converted string.
+ */
+function snake_to_camel_case( $string ) {
+	return lcfirst( str_replace( '_', '', ucwords( $string, '_' ) ) );
+}
+
+/**
  * Check if a request is for an ActivityPub request.
  *
  * @return bool False by default.
