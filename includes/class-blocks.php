@@ -6,6 +6,17 @@ use Activitypub\Collection\Followers as Followers;
 class Blocks {
 	public static function init() {
 		\add_action( 'init', array( self::class, 'register_blocks' ) );
+		\add_action( 'wp_enqueue_scripts', array( self::class, 'add_data' ) );
+		\add_action( 'enqueue_block_editor_assets', array( self::class, 'add_data' ) );
+	}
+
+	public static function add_data() {
+		$handle = is_admin() ? 'activitypub-followers-editor-script' : 'activitypub-followers-view-script';
+		$data = array(
+			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
+		);
+		$js = sprintf( 'var _activityPubOptions = %s;', wp_json_encode( $data ) );
+		\wp_add_inline_script( $handle, $js, 'before' );
 	}
 
 	public static function register_blocks() {
