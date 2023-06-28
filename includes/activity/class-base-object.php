@@ -463,6 +463,24 @@ class Base_Object {
 	}
 
 	/**
+	 * Magic function, to transform the object to string.
+	 *
+	 * @return string The object id.
+	 */
+	public function __toString() {
+		return $this->to_string();
+	}
+
+	/**
+	 * Function to transform the object to string.
+	 *
+	 * @return string The object id.
+	 */
+	public function to_string() {
+		return $this->get_id();
+	}
+
+	/**
 	 * Generic getter.
 	 *
 	 * @param string $key The key to get.
@@ -575,6 +593,11 @@ class Base_Object {
 		$vars  = get_object_vars( $this );
 
 		foreach ( $vars as $key => $value ) {
+			// ignotre all _prefixed keys.
+			if ( '_' === substr( $key, 0, 1 ) ) {
+				continue;
+			}
+
 			// if value is empty, try to get it from a getter.
 			if ( ! isset( $value ) ) {
 				$value = call_user_func( array( $this, 'get_' . $key ) );
