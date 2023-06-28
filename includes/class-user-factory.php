@@ -62,6 +62,10 @@ class User_Factory {
 			return self::get_by_id( self::BLOG_USER_ID );
 		}
 
+		if ( get_option( 'activitypub_blog_user_identifier' ) === $username ) {
+			return self::get_by_id( self::BLOG_USER_ID );
+		}
+
 		// check for application user.
 		if ( 'application' === $username ) {
 			return self::get_by_id( self::APPLICATION_USER_ID );
