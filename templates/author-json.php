@@ -1,6 +1,10 @@
 <?php
 $user = \Activitypub\User_Factory::get_by_id( \get_the_author_meta( 'ID' ) );
 
+$user->set_context(
+	\Activitypub\Model\Activity::CONTEXT
+);
+
 /*
  * Action triggerd prior to the ActivityPub profile being created and sent to the client
  */

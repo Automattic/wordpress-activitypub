@@ -1,6 +1,10 @@
 <?php
 $user = new \Activitypub\Model\Blog_User();
 
+$user->set_context(
+	\Activitypub\Model\Activity::CONTEXT
+);
+
 /*
  * Action triggerd prior to the ActivityPub profile being created and sent to the client
  */
