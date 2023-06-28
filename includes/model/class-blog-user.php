@@ -150,7 +150,7 @@ class Blog_User extends User {
 		return \gmdate( 'Y-m-d\TH:i:s\Z', $time );
 	}
 
-	public function get_public_key() {
+	public function get__public_key() {
 		$key = \get_option( 'activitypub_blog_user_public_key' );
 
 		if ( $key ) {
@@ -169,7 +169,7 @@ class Blog_User extends User {
 	 *
 	 * @return mixed
 	 */
-	public function get_private_key() {
+	public function get__private_key() {
 		$key = \get_option( 'activitypub_blog_user_private_key' );
 
 		if ( $key ) {
@@ -192,5 +192,9 @@ class Blog_User extends User {
 
 	public function get_attachment() {
 		return array();
+	}
+
+	public function get_canonical_url() {
+		return \home_url();
 	}
 }

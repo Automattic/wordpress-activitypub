@@ -472,7 +472,6 @@ class Base_Object {
 	public function get( $key ) {
 		if ( ! $this->has( $key ) ) {
 			return new WP_Error( 'invalid_key', 'Invalid key' );
-
 		}
 
 		return $this->$key;
