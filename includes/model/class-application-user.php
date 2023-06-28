@@ -78,4 +78,24 @@ class Application_User extends Blog_User {
 			\update_option( 'activitypub_application_user_private_key', $key_pair['private_key'] );
 		}
 	}
+
+	public function get_inbox() {
+		return null;
+	}
+
+	public function get_outbox() {
+		return null;
+	}
+
+	public function get_followers() {
+		return null;
+	}
+
+	public function get_following() {
+		return null;
+	}
+
+	public function get_attachment() {
+		return array();
+	}
 }
