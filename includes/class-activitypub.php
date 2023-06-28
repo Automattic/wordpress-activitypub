@@ -109,10 +109,9 @@ class Activitypub {
 				// fallback as template_loader can't return http headers
 				return $template;
 			}
-			return $json_template;
 		}
 
-		return $template;
+		return $json_template;
 	}
 
 	/**
