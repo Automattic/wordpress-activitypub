@@ -270,40 +270,32 @@ function is_activitypub_request() {
 }
 
 /**
- * Check if the current site is in single-user mode.
- *
- * @return boolean
- */
-function is_single_user_mode() {
-	return ACTIVITYPUB_SINGLE_USER_MODE;
-}
-
-/**
- * This function checks if a user is enabled for ActivityPub.
+ * This function checks if a user is disabled for ActivityPub.
  *
  * @param int $user_id The User-ID.
  *
- * @return boolean True if the user is enabled, false otherwise.
+ * @return boolean True if the user is disabled, false otherwise.
  */
-function is_user_enabled( $user_id ) {
+function is_user_disabled( $user_id ) {
 	switch ( $user_id ) {
 		// if the user is the application user, it's always enabled.
 		case \Activitypub\User_Factory::APPLICATION_USER_ID:
-			return true;
+			return false;
 		// if the user is the blog user, it's only enabled in single-user mode.
 		case \Activitypub\User_Factory::BLOG_USER_ID:
-			if ( is_single_user_mode() ) {
-				return true;
+			if ( defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) ) {
+				return ACTIVITYPUB_DISABLE_BLOG_USER;
 			}
 
 			return false;
 		// if the user is any other user, it's enabled if it can publish posts.
 		default:
-			if (
-				! is_single_user_mode() &&
-				\user_can( $user_id, 'publish_posts' )
-			) {
+			if ( ! \user_can( $user_id, 'publish_posts' ) ) {
 				return true;
+			}
+
+			if ( defined( 'ACTIVITYPUB_DISABLE_USER' ) ) {
+				return ACTIVITYPUB_DISABLE_USER;
 			}
 
 			return false;

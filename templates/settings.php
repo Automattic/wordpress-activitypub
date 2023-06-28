@@ -31,36 +31,11 @@
 	<form method="post" action="options.php">
 		<?php \settings_fields( 'activitypub' ); ?>
 
+		<?php if ( ! \Activitypub\is_user_disabled( \ActivityPub\User_Factory::BLOG_USER_ID ) ) : ?>
+
 		<h3><?php \esc_html_e( 'Blog-User', 'activitypub' ); ?></h3>
 
 		<p><?php \esc_html_e( 'All settings for the Blog-User (Catch-All Account)', 'activitypub' ); ?></p>
-
-		<table class="form-table" id="activitypub-images">
-			<tbody>
-				<tr>
-					<th scope="row">
-						<?php \esc_html_e( 'Cover & Avatar', 'activitypub' ); ?>
-					</th>
-					<td>
-						<div class="header-image" style="background-image: url('<?php echo esc_url( get_header_image() ); ?>');">
-							<img class="logo" src="<?php echo esc_url( get_site_icon_url() ); ?>" />
-						</div>
-						<p class="description">
-							<?php
-							echo \wp_kses(
-								\sprintf(
-									// translators: %s is the link is to the customizer.
-									\__( 'Change the Avatar and the Cover using the <a href="%s">Customizer</a>.', 'activitypub' ),
-									\esc_url_raw( \admin_url( 'customize.php' ) )
-								),
-								'default'
-							);
-							?>
-						</p>
-					</td>
-				</tr>
-			</tbody>
-		</table>
 
 		<table class="form-table">
 			<tbody>
@@ -82,6 +57,8 @@
 		</table>
 
 		<?php \do_settings_fields( 'activitypub', 'blog-user' ); ?>
+
+		<?php endif; ?>
 
 		<h3><?php \esc_html_e( 'Activities', 'activitypub' ); ?></h3>
 

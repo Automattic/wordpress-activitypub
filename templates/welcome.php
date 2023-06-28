@@ -14,6 +14,9 @@
 	<h2><?php \esc_html_e( 'Welcome', 'activitypub' ); ?></h2>
 
 	<p><?php \esc_html_e( 'With ActivityPub your blog becomes part of a federated social network. This means you can share and talk to everyone using the ActivityPub protocol, including users of Friendica, Pleroma and Mastodon.', 'activitypub' ); ?></p>
+
+	<?php if ( ! \Activitypub\is_user_disabled( \ActivityPub\User_Factory::BLOG_USER_ID ) ) : ?>
+
 	<h3><?php \esc_html_e( 'Blog Account', 'activitypub' ); ?></h3>
 	<p>
 		<?php
@@ -33,6 +36,11 @@
 		);
 		?>
 	</p>
+
+	<?php endif; ?>
+
+	<?php if ( ! \Activitypub\is_user_disabled( get_current_user_id() ) ) : ?>
+
 	<h3><?php \esc_html_e( 'Personal Account', 'activitypub' ); ?></h3>
 	<p>
 		<?php
@@ -52,6 +60,9 @@
 		);
 		?>
 	</p>
+
+	<?php endif; ?>
+
 	<h3><?php \esc_html_e( 'Troubleshooting', 'activitypub' ); ?></h3>
 	<p>
 		<?php

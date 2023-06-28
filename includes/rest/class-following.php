@@ -67,7 +67,7 @@ class Following {
 		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/following', $user->get_user_id() ) ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/following', $user->get__id() ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
 		$json->orderedItems = apply_filters( 'activitypub_following', array(), $user ); // phpcs:ignore
 
