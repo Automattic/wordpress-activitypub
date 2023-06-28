@@ -587,6 +587,13 @@ class Base_Object {
 			}
 		}
 
+		// replace 'context' key with '@context' and move it to the top.
+		if ( array_key_exists( 'context', $array ) ) {
+			$context = $array['context'];
+			unset( $array['context'] );
+			$array = array_merge( array( '@context' => $context ), $array );
+		}
+
 		$class = new \ReflectionClass( $this );
 		$class = strtolower( $class->getShortName() );
 
