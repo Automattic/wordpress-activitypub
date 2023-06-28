@@ -34,7 +34,7 @@ class Followers extends WP_List_Table {
 			'avatar'       => \__( 'Avatar', 'activitypub' ),
 			'name'         => \__( 'Name', 'activitypub' ),
 			'username'     => \__( 'Username', 'activitypub' ),
-			'identifier'   => \__( 'Identifier', 'activitypub' ),
+			'url'          => \__( 'URL', 'activitypub' ),
 			'updated'      => \__( 'Last updated', 'activitypub' ),
 			//'errors'       => \__( 'Errors', 'activitypub' ),
 			//'latest-error' => \__( 'Latest Error Message', 'activitypub' ),
@@ -55,8 +55,8 @@ class Followers extends WP_List_Table {
 		$page_num = $this->get_pagenum();
 		$per_page = 20;
 
-		$follower = FollowerCollection::get_followers( $this->user_id, $per_page, ( $page_num - 1 ) * $per_page );
-		$counter  = FollowerCollection::count_followers( $this->user_id );
+		$followers = FollowerCollection::get_followers( $this->user_id, $per_page, ( $page_num - 1 ) * $per_page );
+		$counter   = FollowerCollection::count_followers( $this->user_id );
 
 		$this->items = array();
 		$this->set_pagination_args(
@@ -72,7 +72,8 @@ class Followers extends WP_List_Table {
 				'icon'         => esc_attr( $follower->get_icon_url() ),
 				'name'         => esc_attr( $follower->get_name() ),
 				'username'     => esc_attr( $follower->get_preferred_username() ),
-				'identifier'   => esc_attr( $follower->get_url() ),
+				'url'          => esc_attr( $follower->get_url() ),
+				'identifier'   => esc_attr( $follower->get_id() ),
 				'updated'      => esc_attr( $follower->get_updated() ),
 				'errors'       => $follower->count_errors(),
 				'latest-error' => $follower->get_latest_error_message(),
@@ -102,11 +103,11 @@ class Followers extends WP_List_Table {
 		);
 	}
 
-	public function column_identifier( $item ) {
+	public function column_url( $item ) {
 		return sprintf(
 			'<a href="%s" target="_blank">%s</a>',
-			$item['identifier'],
-			$item['identifier']
+			$item['url'],
+			$item['url']
 		);
 	}
 
@@ -135,7 +136,7 @@ class Followers extends WP_List_Table {
 					$followers = array( $followers );
 				}
 				foreach ( $followers as $follower ) {
-					FollowerCollection::remove_follower( \get_current_user_id(), $follower );
+					FollowerCollection::remove_follower( $this->user_id, $follower );
 				}
 				break;
 		}
