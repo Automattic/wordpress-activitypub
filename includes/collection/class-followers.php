@@ -62,19 +62,7 @@ class Followers {
 
 		register_post_meta(
 			self::POST_TYPE,
-			'name',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'sanitize_callback' => function( $value ) {
-					return sanitize_user( $value );
-				},
-			)
-		);
-
-		register_post_meta(
-			self::POST_TYPE,
-			'username',
+			'preferred_username',
 			array(
 				'type'              => 'string',
 				'single'            => true,
@@ -86,11 +74,9 @@ class Followers {
 
 		register_post_meta(
 			self::POST_TYPE,
-			'avatar',
+			'icon',
 			array(
-				'type'              => 'string',
 				'single'            => true,
-				'sanitize_callback' => array( self::class, 'sanitize_url' ),
 			)
 		);
 
@@ -116,7 +102,7 @@ class Followers {
 
 		register_post_meta(
 			self::POST_TYPE,
-			'shared_inbox',
+			'_shared_inbox',
 			array(
 				'type'              => 'string',
 				'single'            => true,
@@ -126,23 +112,7 @@ class Followers {
 
 		register_post_meta(
 			self::POST_TYPE,
-			'updated_at',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'sanitize_callback' => function( $value ) {
-					if ( ! is_numeric( $value ) && (int) $value !== $value ) {
-						$value = \time();
-					}
-
-					return $value;
-				},
-			)
-		);
-
-		register_post_meta(
-			self::POST_TYPE,
-			'errors',
+			'_errors',
 			array(
 				'type'              => 'string',
 				'single'            => false,
@@ -151,6 +121,18 @@ class Followers {
 						throw new Exception( 'Error message is no valid string' );
 					}
 
+					return esc_sql( $value );
+				},
+			)
+		);
+
+		register_post_meta(
+			self::POST_TYPE,
+			'_actor',
+			array(
+				'type'              => 'string',
+				'single'            => false,
+				'sanitize_callback' => function( $value ) {
 					return esc_sql( $value );
 				},
 			)
@@ -213,14 +195,13 @@ class Followers {
 			return $meta;
 		}
 
-		$follower = new Follower( $actor );
-		$follower->from_meta( $meta );
+		$follower = Follower::from_array( $meta );
 		$follower->upsert();
 
-		$meta = get_post_meta( $follower->get_id(), 'user_id' );
+		$meta = get_post_meta( $follower->get__id(), '_user_id' );
 
 		if ( is_array( $meta ) && ! in_array( $user_id, $meta, true ) ) {
-			add_post_meta( $follower->get_id(), 'user_id', $user_id );
+			add_post_meta( $follower->get__id(), '_user_id', $user_id );
 			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 
@@ -244,7 +225,7 @@ class Followers {
 			return false;
 		}
 
-		return delete_post_meta( $follower->get_id(), 'user_id', $user_id );
+		return delete_post_meta( $follower->get__id(), '_user_id', $user_id );
 	}
 
 	/**
@@ -260,7 +241,7 @@ class Followers {
 
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = 'user_id' AND pm.meta_value = %d AND p.guid = %s",
+				"SELECT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = '_user_id' AND pm.meta_value = %d AND p.guid = %s",
 				array(
 					esc_sql( self::POST_TYPE ),
 					esc_sql( $user_id ),
@@ -271,7 +252,7 @@ class Followers {
 
 		if ( $post_id ) {
 			$post = get_post( $post_id );
-			return new Follower( $post );
+			return Follower::from_custom_post_type( $post );
 		}
 
 		return null;
@@ -304,7 +285,7 @@ class Followers {
 
 		// send "Accept" activity
 		$activity = new Activity( 'Accept' );
-		$activity->set_object( $object );
+		$activity->set_activity_object( $object );
 		$activity->set_actor( \get_author_posts_url( $user_id ) );
 		$activity->set_to( $actor );
 		$activity->set_id( \get_author_posts_url( $user_id ) . '#follow-' . \preg_replace( '~^https?://~', '', $actor ) );
@@ -324,28 +305,6 @@ class Followers {
 	 * @return array The Term list of Followers, the format depends on $output
 	 */
 	public static function get_followers( $user_id, $number = null, $offset = null, $args = array() ) {
-		$query = self::get_followers_query( $user_id, $number, $offset, $args );
-		$items = array();
-
-		foreach ( $query->get_posts() as $post ) {
-			$items[] = new Follower( $post ); // phpcs:ignore
-		}
-
-		return $items;
-	}
-
-	/**
-	 * Get the Followers of a given user, as WP_Query results.
-	 * Each post should be wrapped in a Follower object.
-	 *
-	 * @param int    $user_id The ID of the WordPress User
-	 * @param int    $number  Limts the result
-	 * @param int    $offset  Offset
-	 * @param array  $args    The WP_Query arguments.
-	 *
-	 * @return WP_Query The WP_Query object
-	 */
-	public static function get_followers_query( $user_id, $number = null, $offset = null, $args = array() ) {
 		$defaults = array(
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,
@@ -354,14 +313,21 @@ class Followers {
 			'order'          => 'DESC',
 			'meta_query'     => array(
 				array(
-					'key'   => 'user_id',
+					'key'   => '_user_id',
 					'value' => $user_id,
 				),
 			),
 		);
 
 		$args  = wp_parse_args( $args, $defaults );
-		return new WP_Query( $args );
+		$query = new WP_Query( $args );
+		$items = array();
+
+		foreach ( $query->get_posts() as $post ) {
+			$items[] = Follower::from_custom_post_type( $post ); // phpcs:ignore
+		}
+
+		return $items;
 	}
 
 	/**
@@ -392,7 +358,7 @@ class Followers {
 				'fields'     => 'ids',
 				'meta_query' => array(
 					array(
-						'key'   => 'user_id',
+						'key'   => '_user_id',
 						'value' => $user_id,
 					),
 				),
@@ -424,11 +390,11 @@ class Followers {
 				'fields'     => 'ids',
 				'meta_query' => array(
 					array(
-						'key'     => 'inbox',
+						'key'     => '_shared_inbox',
 						'compare' => 'EXISTS',
 					),
 					array(
-						'key'   => 'user_id',
+						'key'   => '_user_id',
 						'value' => $user_id,
 					),
 				),
@@ -446,7 +412,7 @@ class Followers {
 			$wpdb->prepare(
 				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
 				WHERE post_id IN (" . implode( ', ', array_fill( 0, count( $posts ), '%d' ) ) . ")
-				AND meta_key = 'shared_inbox'
+				AND meta_key = '_shared_inbox'
 				AND meta_value IS NOT NULL",
 				$posts
 			)
@@ -486,7 +452,7 @@ class Followers {
 		$items = array();
 
 		foreach ( $posts->get_posts() as $follower ) {
-			$items[] = new Follower( $follower ); // phpcs:ignore
+			$items[] = Follower::from_custom_post_type( $follower ); // phpcs:ignore
 		}
 
 		return $items;
@@ -516,7 +482,7 @@ class Followers {
 		$items = array();
 
 		foreach ( $posts->get_posts() as $follower ) {
-			$items[] = new Follower( $follower ); // phpcs:ignore
+			$items[] = Follower::from_custom_post_type( $follower ); // phpcs:ignore
 		}
 
 		return $items;
