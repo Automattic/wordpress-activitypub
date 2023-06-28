@@ -107,7 +107,7 @@ class Signature {
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
 		$user = User_Factory::get_by_id( $user_id );
-		$key  = $user->get_private_key();
+		$key  = $user->get__private_key();
 
 		$url_parts = \wp_parse_url( $url );
 

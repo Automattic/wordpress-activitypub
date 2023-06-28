@@ -55,7 +55,6 @@ class Webfinger {
 
 		$aliases = array(
 			$user->get_url(),
-			$user->get_canonical_url(),
 			$user->get_at_url(),
 		);
 

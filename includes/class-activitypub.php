@@ -71,15 +71,15 @@ class Activitypub {
 	 * @return string The new path to the JSON template.
 	 */
 	public static function render_json_template( $template ) {
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return $template;
+		}
+
 		if ( ! is_activitypub_request() ) {
 			return $template;
 		}
 
 		$json_template = false;
-
-		if ( ! \is_author() && ! \is_singular() && ! \is_home() ) {
-			return $template;
-		}
 
 		// check if user can publish posts
 		if ( \is_author() && ! User_Factory::get_by_id( \get_the_author_meta( 'ID' ) ) ) {

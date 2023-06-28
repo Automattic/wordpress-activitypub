@@ -121,6 +121,10 @@ class Users {
 		 */
 		\do_action( 'activitypub_outbox_pre' );
 
+		$user->set_context(
+			\Activitypub\Model\Activity::CONTEXT
+		);
+
 		$json = $user->to_array();
 
 		$response = new WP_REST_Response( $json, 200 );

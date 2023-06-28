@@ -123,6 +123,19 @@ class User extends Actor {
 	}
 
 	public function get_public_key() {
+		return array(
+			'id'       => $this->get_id() . '#main-key',
+			'owner'    => $this->get_id(),
+			'publicKeyPem' => $this->get__public_key(),
+		);
+	}
+
+	/**
+	 * @param int $this->get__id()
+	 *
+	 * @return mixed
+	 */
+	public function get__public_key() {
 		$key = \get_user_meta( $this->get__id(), 'magic_sig_public_key', true );
 
 		if ( $key ) {
@@ -139,7 +152,7 @@ class User extends Actor {
 	 *
 	 * @return mixed
 	 */
-	public function get_private_key() {
+	public function get__private_key() {
 		$key = \get_user_meta( $this->get__id(), 'magic_sig_private_key', true );
 
 		if ( $key ) {
@@ -241,5 +254,9 @@ class User extends Actor {
 
 	public function get_resource() {
 		return $this->get_preferred_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+	}
+
+	public function get_canonical_url() {
+		return $this->get_url();
 	}
 }

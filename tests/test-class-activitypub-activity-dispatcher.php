@@ -49,6 +49,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 
 		remove_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10 );
 	}
+
 	public function test_dispatch_mentions() {
 		$post = \wp_insert_post(
 			array(

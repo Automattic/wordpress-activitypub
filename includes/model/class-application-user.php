@@ -39,7 +39,7 @@ class Application_User extends Blog_User {
 		return $this::get_name();
 	}
 
-	public function get_public_key() {
+	public function get__public_key() {
 		$key = \get_option( 'activitypub_application_user_public_key' );
 
 		if ( $key ) {
@@ -58,7 +58,7 @@ class Application_User extends Blog_User {
 	 *
 	 * @return mixed
 	 */
-	public function get_private_key() {
+	public function get__private_key() {
 		$key = \get_option( 'activitypub_application_user_private_key' );
 
 		if ( $key ) {
