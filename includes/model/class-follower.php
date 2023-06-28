@@ -55,15 +55,6 @@ class Follower extends Actor {
 	protected $_errors; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
-	 * Magic function to return the Actor-URL when the Object is used as a string
-	 *
-	 * @return string
-	 */
-	public function __toString() {
-		return $this->get_url();
-	}
-
-	/**
 	 * Set new Error
 	 *
 	 * @param mixed $error The latest HTTP-Error.
