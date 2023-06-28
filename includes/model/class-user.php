@@ -26,45 +26,22 @@ class User extends Actor {
 	 */
 	protected $type = 'Person';
 
-	/**
-	 * The User constructor.
-	 *
-	 * @param numeric $user_id The User-ID.
-	 */
-	public function __construct() {
-		add_filter( 'activitypub_activity_user_object_array', array( $this, 'add_api_endpoints' ), 10, 2 );
-		add_filter( 'activitypub_activity_user_object_array', array( $this, 'add_attachments' ), 10, 2 );
-	}
-
 	public static function from_wp_user( $user_id ) {
-		if ( is_user_disabled( $user_id ) ) {
-			return null;
+		if (
+			is_user_disabled( $user_id ) ||
+			! get_user_by( 'id', $user_id )
+		) {
+			return new WP_Error(
+				'activitypub_user_not_found',
+				\__( 'User not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
 		}
 
 		$object = new static();
 		$object->_id = $user_id;
 
 		return $object;
-	}
-
-	/**
-	 * Magic function to implement getter and setter
-	 *
-	 * @param string $method
-	 * @param string $params
-	 *
-	 * @return void
-	 */
-	public function __call( $method, $params ) {
-		$var = \strtolower( \substr( $method, 4 ) );
-
-		if ( \strncasecmp( $method, 'get', 3 ) === 0 ) {
-			return $this->$var;
-		}
-
-		if ( \strncasecmp( $method, 'has', 3 ) === 0 ) {
-			return (bool) call_user_func( 'get_' . $var, $this );
-		}
 	}
 
 	/**
@@ -158,7 +135,7 @@ class User extends Actor {
 	}
 
 	/**
-	 * @param int $user_id
+	 * @param int $this->get__id()
 	 *
 	 * @return mixed
 	 */
@@ -184,34 +161,50 @@ class User extends Actor {
 	}
 
 	/**
-	 * Extend the User-Output with API-Endpoints.
+	 * Returns the Inbox-API-Endpoint.
 	 *
-	 * @param array   $array   The User-Output.
-	 * @param numeric $user_id The User-ID.
-	 *
-	 * @return array The extended User-Output.
+	 * @return string The Inbox-Endpoint.
 	 */
-	public function add_api_endpoints( $array, $user_id ) {
-		$array['inbox']     = get_rest_url_by_path( sprintf( 'users/%d/inbox', $user_id ) );
-		$array['outbox']    = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) );
-		$array['followers'] = get_rest_url_by_path( sprintf( 'users/%d/followers', $user_id ) );
-		$array['following'] = get_rest_url_by_path( sprintf( 'users/%d/following', $user_id ) );
+	public function get_inbox() {
+		return get_rest_url_by_path( sprintf( 'users/%d/inbox', $this->get__id() ) );
+	}
 
-		return $array;
+	/**
+	 * Returns the Outbox-API-Endpoint.
+	 *
+	 * @return string The Outbox-Endpoint.
+	 */
+	public function get_outbox() {
+		return get_rest_url_by_path( sprintf( 'users/%d/outbox', $this->get__id() ) );
+	}
+
+	/**
+	 * Returns the Followers-API-Endpoint.
+	 *
+	 * @return string The Followers-Endpoint.
+	 */
+	public function get_followers() {
+		return get_rest_url_by_path( sprintf( 'users/%d/followers', $this->get__id() ) );
+	}
+
+	/**
+	 * Returns the Following-API-Endpoint.
+	 *
+	 * @return string The Following-Endpoint.
+	 */
+	public function get_following() {
+		return get_rest_url_by_path( sprintf( 'users/%d/following', $this->get__id() ) );
 	}
 
 	/**
 	 * Extend the User-Output with Attachments.
 	 *
-	 * @param array   $array   The User-Output.
-	 * @param numeric $user_id The User-ID.
-	 *
 	 * @return array The extended User-Output.
 	 */
-	public function add_attachments( $array, $user_id ) {
-		$array['attachment'] = array();
+	public function get_attachment() {
+		$array = array();
 
-		$array['attachment']['blog_url'] = array(
+		$array[] = array(
 			'type' => 'PropertyValue',
 			'name' => \__( 'Blog', 'activitypub' ),
 			'value' => \html_entity_decode(
@@ -221,22 +214,22 @@ class User extends Actor {
 			),
 		);
 
-		$array['attachment']['profile_url'] = array(
+		$array[] = array(
 			'type' => 'PropertyValue',
 			'name' => \__( 'Profile', 'activitypub' ),
 			'value' => \html_entity_decode(
-				'<a rel="me" title="' . \esc_attr( \get_author_posts_url( $user_id ) ) . '" target="_blank" href="' . \get_author_posts_url( $user_id ) . '">' . \wp_parse_url( \get_author_posts_url( $user_id ), \PHP_URL_HOST ) . '</a>',
+				'<a rel="me" title="' . \esc_attr( \get_author_posts_url( $this->get__id() ) ) . '" target="_blank" href="' . \get_author_posts_url( $this->get__id() ) . '">' . \wp_parse_url( \get_author_posts_url( $this->get__id() ), \PHP_URL_HOST ) . '</a>',
 				\ENT_QUOTES,
 				'UTF-8'
 			),
 		);
 
-		if ( \get_the_author_meta( 'user_url', $user_id ) ) {
-			$array['attachment']['user_url'] = array(
+		if ( \get_the_author_meta( 'user_url', $this->get__id() ) ) {
+			$array[] = array(
 				'type' => 'PropertyValue',
 				'name' => \__( 'Website', 'activitypub' ),
 				'value' => \html_entity_decode(
-					'<a rel="me" title="' . \esc_attr( \get_the_author_meta( 'user_url', $user_id ) ) . '" target="_blank" href="' . \get_the_author_meta( 'user_url', $user_id ) . '">' . \wp_parse_url( \get_the_author_meta( 'user_url', $user_id ), \PHP_URL_HOST ) . '</a>',
+					'<a rel="me" title="' . \esc_attr( \get_the_author_meta( 'user_url', $this->get__id() ) ) . '" target="_blank" href="' . \get_the_author_meta( 'user_url', $this->get__id() ) . '">' . \wp_parse_url( \get_the_author_meta( 'user_url', $this->get__id() ), \PHP_URL_HOST ) . '</a>',
 					\ENT_QUOTES,
 					'UTF-8'
 				),

@@ -5,6 +5,8 @@ use WP_Query;
 use Activitypub\Signature;
 use Activitypub\User_Factory;
 
+use function Activitypub\is_user_disabled;
+
 class Blog_User extends User {
 	/**
 	 * The User-ID
@@ -20,13 +22,19 @@ class Blog_User extends User {
 	 */
 	protected $type = 'Person';
 
-	/**
-	 * The User constructor.
-	 *
-	 * @param int $user_id The User-ID.
-	 */
-	public function __construct() {
-		add_filter( 'activitypub_activity_blog_user_object_array', array( $this, 'add_api_endpoints' ), 10, 2 );
+	public static function from_wp_user( $user_id ) {
+		if ( is_user_disabled( $user_id ) ) {
+			return new WP_Error(
+				'activitypub_user_not_found',
+				\__( 'User not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$object = new static();
+		$object->_id = $user_id;
+
+		return $object;
 	}
 
 	/**
@@ -180,5 +188,9 @@ class Blog_User extends User {
 			\update_option( 'activitypub_blog_user_public_key', $key_pair['public_key'] );
 			\update_option( 'activitypub_blog_user_private_key', $key_pair['private_key'] );
 		}
+	}
+
+	public function get_attachment() {
+		return array();
 	}
 }
