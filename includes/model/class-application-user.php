@@ -13,23 +13,14 @@ class Application_User extends Blog_User {
 	 *
 	 * @var int
 	 */
-	public $user_id = User_Factory::APPLICATION_USER_ID;
+	protected $_id = User_Factory::APPLICATION_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
 	 * The User-Type
 	 *
 	 * @var string
 	 */
-	private $type = 'Application';
-
-	/**
-	 * The User constructor.
-	 *
-	 * @param int $user_id The User-ID.
-	 */
-	public function __construct( $user_id = null ) {
-		// do nothing
-	}
+	protected $type = 'Application';
 
 	/**
 	 * Get the User-Url.

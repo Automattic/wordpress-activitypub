@@ -30,15 +30,6 @@ class Activitypub {
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ) );
 
 		\add_action( 'after_setup_theme', array( self::class, 'theme_compat' ), 99 );
-
-		if ( is_single_user_mode() ) {
-			add_filter(
-				'activitypub_post_user_id',
-				function( $actor ) {
-					return User_Factory::BLOG_USER_ID;
-				}
-			);
-		}
 	}
 
 	/**
@@ -91,7 +82,7 @@ class Activitypub {
 		}
 
 		// check if user can publish posts
-		if ( \is_author() && ! user_can( \get_the_author_meta( 'ID' ), 'publish_posts' ) ) {
+		if ( \is_author() && ! User_Factory::get_by_id( \get_the_author_meta( 'ID' ) ) ) {
 			return $template;
 		}
 

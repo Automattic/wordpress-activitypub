@@ -93,7 +93,7 @@ class Inbox {
 		$json->id = \home_url( \add_query_arg( null, null ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
 		$json->type = 'OrderedCollectionPage';
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/inbox', $user->get_user_id() ) ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/inbox', $user->get__id() ) ); // phpcs:ignore
 
 		$json->totalItems = 0; // phpcs:ignore
 
@@ -136,8 +136,8 @@ class Inbox {
 		$type = $request->get_param( 'type' );
 		$type = \strtolower( $type );
 
-		\do_action( 'activitypub_inbox', $data, $user->get_user_id(), $type );
-		\do_action( "activitypub_inbox_{$type}", $data, $user->get_user_id() );
+		\do_action( 'activitypub_inbox', $data, $user->get__id(), $type );
+		\do_action( "activitypub_inbox_{$type}", $data, $user->get__id() );
 
 		return new WP_REST_Response( array(), 202 );
 	}

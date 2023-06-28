@@ -577,15 +577,21 @@ class Base_Object {
 
 		foreach ( $vars as $key => $value ) {
 			// if value is empty, try to get it from a getter.
-			if ( ! $value ) {
+			if ( ! isset( $value ) ) {
 				$value = call_user_func( array( $this, 'get_' . $key ) );
 			}
 
 			// if value is still empty, ignore it for the array and continue.
-			if ( $value ) {
+			if ( isset( $value ) ) {
 				$array[ snake_to_camel_case( $key ) ] = $value;
 			}
 		}
+
+		$class = new \ReflectionClass( $this );
+		$class = strtolower( $class->getShortName() );
+
+		$array = \apply_filters( 'activitypub_activity_object_array', $array, $class, $this->id, $this );
+		$array = \apply_filters( "activitypub_activity_{$class}_object_array", $array, $this->id, $this );
 
 		return $array;
 	}

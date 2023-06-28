@@ -34,21 +34,12 @@ class User_Factory {
 			$user_id = (int) $user_id;
 		}
 
-		if (
-			self::BLOG_USER_ID === $user_id &&
-			is_user_enabled( $user_id )
-		) {
-			return new Blog_User( $user_id );
-		} elseif (
-			self::APPLICATION_USER_ID === $user_id &&
-			is_user_enabled( $user_id )
-		) {
-			return new Application_User( $user_id );
-		} elseif (
-			$user_id > 0 &&
-			is_user_enabled( $user_id )
-		) {
-			return new User( $user_id );
+		if ( self::BLOG_USER_ID === $user_id ) {
+			return Blog_User::from_wp_user( $user_id );
+		} elseif ( self::APPLICATION_USER_ID === $user_id ) {
+			return Application_User::from_wp_user( $user_id );
+		} elseif ( $user_id > 0 ) {
+			return User::from_wp_user( $user_id );
 		}
 
 		return new WP_Error(

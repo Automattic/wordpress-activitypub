@@ -72,15 +72,15 @@ class Followers {
 		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/followers', $user->get_user_id() ) ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/followers', $user->get__id() ) ); // phpcs:ignore
 		$json->first = $json->partOf; // phpcs:ignore
-		$json->totalItems = FollowerCollection::count_followers( $user->get_user_id() ); // phpcs:ignore
+		$json->totalItems = FollowerCollection::count_followers( $user->get__id() ); // phpcs:ignore
 		// phpcs:ignore
 		$json->orderedItems = array_map(
 			function( $item ) {
 				return $item->get_url();
 			},
-			FollowerCollection::get_followers( $user->get_user_id() )
+			FollowerCollection::get_followers( $user->get__id() )
 		);
 
 		$response = new WP_REST_Response( $json, 200 );

@@ -11,22 +11,22 @@ class Blog_User extends User {
 	 *
 	 * @var int
 	 */
-	public $user_id = User_Factory::BLOG_USER_ID;
+	protected $_id = User_Factory::BLOG_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
 	 * The User-Type
 	 *
 	 * @var string
 	 */
-	private $type = 'Person';
+	protected $type = 'Person';
 
 	/**
 	 * The User constructor.
 	 *
 	 * @param int $user_id The User-ID.
 	 */
-	public function __construct( $user_id = null ) {
-		add_filter( 'activitypub_json_author_array', array( $this, 'add_api_endpoints' ), 10, 2 );
+	public function __construct() {
+		add_filter( 'activitypub_activity_blog_user_object_array', array( $this, 'add_api_endpoints' ), 10, 2 );
 	}
 
 	/**
@@ -59,10 +59,6 @@ class Blog_User extends User {
 	 */
 	public function get_url() {
 		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_username() );
-	}
-
-	public function get_canonical_url() {
-		return \get_home_url();
 	}
 
 	/**

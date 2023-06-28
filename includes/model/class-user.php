@@ -6,34 +6,45 @@ use WP_Error;
 use Activitypub\Signature;
 use Activitypub\Model\User;
 use Activitypub\User_Factory;
+use Activitypub\Activity\Actor;
 
+use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
 
-class User {
+class User extends Actor {
 	/**
 	 * The User-ID
 	 *
 	 * @var int
 	 */
-	public $user_id;
+	protected $_id; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
 	 * The User-Type
 	 *
 	 * @var string
 	 */
-	private $type = 'Person';
+	protected $type = 'Person';
 
 	/**
 	 * The User constructor.
 	 *
 	 * @param numeric $user_id The User-ID.
 	 */
-	public function __construct( $user_id ) {
-		$this->user_id = $user_id;
+	public function __construct() {
+		add_filter( 'activitypub_activity_user_object_array', array( $this, 'add_api_endpoints' ), 10, 2 );
+		add_filter( 'activitypub_activity_user_object_array', array( $this, 'add_attachments' ), 10, 2 );
+	}
 
-		add_filter( 'activitypub_json_author_array', array( $this, 'add_api_endpoints' ), 10, 2 );
-		add_filter( 'activitypub_json_author_array', array( $this, 'add_attachments' ), 10, 2 );
+	public static function from_wp_user( $user_id ) {
+		if ( is_user_disabled( $user_id ) ) {
+			return null;
+		}
+
+		$object = new static();
+		$object->_id = $user_id;
+
+		return $object;
 	}
 
 	/**
@@ -71,7 +82,7 @@ class User {
 	 * @return string The User-Name.
 	 */
 	public function get_name() {
-		return \esc_attr( \get_the_author_meta( 'display_name', $this->user_id ) );
+		return \esc_attr( \get_the_author_meta( 'display_name', $this->_id ) );
 	}
 
 	/**
@@ -80,9 +91,9 @@ class User {
 	 * @return string The User-Description.
 	 */
 	public function get_summary() {
-		$description = get_user_meta( $this->user_id, 'activitypub_user_description', true );
+		$description = get_user_meta( $this->_id, 'activitypub_user_description', true );
 		if ( empty( $description ) ) {
-			$description = get_user_meta( $this->user_id, 'description', true );
+			$description = get_user_meta( $this->_id, 'description', true );
 		}
 		return \wpautop( \wp_kses( $description, 'default' ) );
 	}
@@ -93,44 +104,49 @@ class User {
 	 * @return string The User-Url.
 	 */
 	public function get_url() {
-		return \esc_url( \get_author_posts_url( $this->user_id ) );
-	}
-
-	public function get_canonical_url() {
-		return $this->get_url();
+		return \esc_url( \get_author_posts_url( $this->_id ) );
 	}
 
 	public function get_at_url() {
 		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_username() );
 	}
 
-	public function get_username() {
-		return \esc_attr( \get_the_author_meta( 'login', $this->user_id ) );
+	public function get_preferred_username() {
+		return \esc_attr( \get_the_author_meta( 'login', $this->_id ) );
 	}
 
-	public function get_avatar() {
-		return \esc_url(
+	public function get_icon() {
+		$icon = \esc_url(
 			\get_avatar_url(
-				$this->user_id,
+				$this->_id,
 				array( 'size' => 120 )
 			)
 		);
+
+		return array(
+			'type' => 'Image',
+			'url'  => $icon,
+		);
 	}
 
-	public function get_header_image() {
+	public function get_image() {
 		if ( \has_header_image() ) {
-			return \esc_url( \get_header_image() );
+			$image = \esc_url( \get_header_image() );
+			return array(
+				'type' => 'Image',
+				'url'  => $image,
+			);
 		}
 
 		return null;
 	}
 
 	public function get_published() {
-		return \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( \get_the_author_meta( 'registered', $this->user_id ) ) );
+		return \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( \get_the_author_meta( 'registered', $this->_id ) ) );
 	}
 
 	public function get_public_key() {
-		$key = \get_user_meta( $this->get_user_id(), 'magic_sig_public_key', true );
+		$key = \get_user_meta( $this->get__id(), 'magic_sig_public_key', true );
 
 		if ( $key ) {
 			return $key;
@@ -138,7 +154,7 @@ class User {
 
 		$this->generate_key_pair();
 
-		return \get_user_meta( $this->get_user_id(), 'magic_sig_public_key', true );
+		return \get_user_meta( $this->get__id(), 'magic_sig_public_key', true );
 	}
 
 	/**
@@ -147,7 +163,7 @@ class User {
 	 * @return mixed
 	 */
 	public function get_private_key() {
-		$key = \get_user_meta( $this->get_user_id(), 'magic_sig_private_key', true );
+		$key = \get_user_meta( $this->get__id(), 'magic_sig_private_key', true );
 
 		if ( $key ) {
 			return $key;
@@ -155,68 +171,16 @@ class User {
 
 		$this->generate_key_pair();
 
-		return \get_user_meta( $this->get_user_id(), 'magic_sig_private_key', true );
+		return \get_user_meta( $this->get__id(), 'magic_sig_private_key', true );
 	}
 
 	private function generate_key_pair() {
 		$key_pair = Signature::generate_key_pair();
 
 		if ( ! is_wp_error( $key_pair ) ) {
-			\update_user_meta( $this->get_user_id(), 'magic_sig_public_key', $key_pair['public_key'], true );
-			\update_user_meta( $this->get_user_id(), 'magic_sig_private_key', $key_pair['private_key'], true );
+			\update_user_meta( $this->get__id(), 'magic_sig_public_key', $key_pair['public_key'], true );
+			\update_user_meta( $this->get__id(), 'magic_sig_private_key', $key_pair['private_key'], true );
 		}
-	}
-
-	/**
-	 * Array representation of the User.
-	 *
-	 * @param bool $context Whether to include the @context.
-	 *
-	 * @return array The array representation of the User.
-	 */
-	public function to_array( $context = true ) {
-		$output = array();
-
-		if ( $context ) {
-			$output['@context'] = Activity::CONTEXT;
-		}
-
-		$output['id'] = $this->get_url();
-		$output['type'] = $this->get_type();
-		$output['name'] = $this->get_name();
-		$output['summary'] = \html_entity_decode(
-			$this->get_summary(),
-			\ENT_QUOTES,
-			'UTF-8'
-		);
-		$output['preferredUsername'] = $this->get_username(); // phpcs:ignore
-		$output['url'] = $this->get_url();
-		$output['icon'] = array(
-			'type' => 'Image',
-			'url'  => $this->get_avatar(),
-		);
-
-		if ( $this->has_header_image() ) {
-			$output['image'] = array(
-				'type' => 'Image',
-				'url'  => $this->get_header_image(),
-			);
-		}
-
-		$output['published'] = $this->get_published();
-
-		$output['publicKey'] = array(
-			'id' => $this->get_url() . '#main-key',
-			'owner' => $this->get_url(),
-			'publicKeyPem' => \trim( $this->get_public_key() ),
-		);
-
-		$output['manuallyApprovesFollowers'] = \apply_filters( 'activitypub_json_manually_approves_followers', \__return_false() ); // phpcs:ignore
-
-		// filter output
-		$output = \apply_filters( 'activitypub_json_author_array', $output, $this->user_id, $this );
-
-		return $output;
 	}
 
 	/**
@@ -283,6 +247,6 @@ class User {
 	}
 
 	public function get_resource() {
-		return $this->get_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+		return $this->get_preferred_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
 	}
 }

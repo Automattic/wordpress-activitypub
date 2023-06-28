@@ -13,10 +13,6 @@ class Admin {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		if ( ! current_user_can( 'publish_posts' ) ) {
-			return;
-		}
-
 		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
 		\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
@@ -28,11 +24,6 @@ class Admin {
 	 * Add admin menu entry
 	 */
 	public static function admin_menu() {
-		// user has to be able to publish posts
-		if ( ! current_user_can( 'publish_posts' ) ) {
-			return;
-		}
-
 		$settings_page = \add_options_page(
 			'Welcome',
 			'ActivityPub',
@@ -43,9 +34,12 @@ class Admin {
 
 		\add_action( 'load-' . $settings_page, array( self::class, 'add_settings_help_tab' ) );
 
-		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
+		// user has to be able to publish posts
+		if ( ! is_user_disabled( get_current_user_id() ) ) {
+			$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
 
-		\add_action( 'load-' . $followers_list_page, array( self::class, 'add_followers_list_help_tab' ) );
+			\add_action( 'load-' . $followers_list_page, array( self::class, 'add_followers_list_help_tab' ) );
+		}
 	}
 
 	/**
