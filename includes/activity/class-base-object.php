@@ -11,15 +11,16 @@ use WP_Error;
 
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\snake_to_camel_case;
+
 /**
- * ObjectType is an implementation of one of the
+ * Base_Object is an implementation of one of the
  * Activity Streams Core Types.
  *
  * The Object is the primary base type for the Activity Streams
  * vocabulary.
  *
  * Note: Object is a reserved keyword in PHP. It has been suffixed with
- * 'Type' for this reason.
+ * 'Base_' for this reason.
  *
  * @see https://www.w3.org/TR/activitystreams-core/#object
  */
