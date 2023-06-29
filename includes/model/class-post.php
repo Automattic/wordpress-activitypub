@@ -147,9 +147,17 @@ class Post {
 	 * Constructor
 	 *
 	 * @param WP_Post $post
+	 * @param int     $post_author
 	 */
-	public function __construct( $post ) {
+	public function __construct( $post, $post_author = null ) {
 		$this->post = \get_post( $post );
+
+		if ( $post_author ) {
+			$this->post_author = $post_author;
+		} else {
+			$this->post_author = $this->post->post_author;
+		}
+
 		$path = sprintf( 'users/%d/followers', intval( $this->get_post_author() ) );
 		$this->add_to( get_rest_url_by_path( $path ) );
 	}
