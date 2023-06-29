@@ -98,13 +98,7 @@ class Followers {
 
 		$followers = array();
 		foreach ( $query->get_posts() as $post ) {
-			$follower = new Follower( $post );
-			$followers[] = array(
-				'name' => $follower->get_name(),
-				'url' => $follower->get_actor(),
-				'avatar' => $follower->get_avatar(),
-				'handle' => $follower->get_actor(),
-			);
+			$followers[] = Follower::from_custom_post_type( $post )->to_array();
 		}
 
 		$total = $query->found_posts;

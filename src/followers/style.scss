@@ -20,8 +20,18 @@
 		flex-flow: row wrap;
 		align-items: center;
 		color: inherit !important;
+		text-decoration: none !important; // overrides core styles for external links
 	}
-	strong {
+	.activitypub-name, .activitypub-handle {
+		text-decoration: underline;
+		text-decoration-thickness: .8px;
+		text-underline-position: under;
+
+		&:hover {
+			text-decoration: none;
+		}
+	}
+	.activitypub-name {
 		font-size: var( --wp--preset--font-size--normal, 16px );
 	}
 	.activitypub-actor {

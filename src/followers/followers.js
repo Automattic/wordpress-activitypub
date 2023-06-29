@@ -66,11 +66,16 @@ export function Followers( { selectedUser, per_page, order, title, page: passedP
 	);
 }
 
-function Follower( { name, avatar, url, handle } ) {
+function Follower( { name, icon, url, preferredUsername } ) {
+	const handle = `@${ preferredUsername }`;
 	return (
 		<ExternalLink href={ url } title={ handle } onClick={ event => event.preventDefault() }>
-			<img width="40" height="40" src={ avatar } class="avatar activitypub-avatar" />
-			<span class="activitypub-actor"><strong>{ name }</strong><span class="sep">/</span>{ handle }</span>
+			<img width="40" height="40" src={ icon.url } class="avatar activitypub-avatar" />
+			<span class="activitypub-actor">
+				<strong className="activitypub-name">{ name }</strong>
+				<span class="sep">/</span>
+				<span class="activitypub-handle">{ handle }</span>
+			</span>
 		</ExternalLink>
 	)
 }
