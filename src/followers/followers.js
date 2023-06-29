@@ -31,6 +31,18 @@ export function Followers( { selectedUser, per_page, order, title, page: passedP
 	const [ localPage, setLocalPage ] = usePage();
 	const page = passedPage || localPage;
 	const setPage = passedSetPage || setLocalPage;
+	const prevLabel = (
+		<>
+			<span class="wp-block-query-pagination-previous-arrow is-arrow-arrow" aria-hidden="true">←</span>
+			{ __( 'Less', 'activitypub' ) }
+		</>
+	);
+	const nextLabel = (
+		<>
+			{ __( 'More', 'activitypub' ) }
+			<span class="wp-block-query-pagination-next-arrow is-arrow-arrow" aria-hidden="true">→</span>
+		</>
+	);
 
 	useEffect( () => {
 		const path = getPath( userId, per_page, order, page );
@@ -58,8 +70,8 @@ export function Followers( { selectedUser, per_page, order, title, page: passedP
 						perPage={ per_page }
 						total={ total }
 						pageClick={ setPage }
-						nextLabel={ __( 'More', 'activitypub' ) }
-						prevLabel={ __( 'Back', 'activitypub' ) }
+						nextLabel={ nextLabel }
+						prevLabel={ prevLabel }
 					/>
 				) }
 		</div>
@@ -69,7 +81,7 @@ export function Followers( { selectedUser, per_page, order, title, page: passedP
 function Follower( { name, icon, url, preferredUsername } ) {
 	const handle = `@${ preferredUsername }`;
 	return (
-		<ExternalLink href={ url } title={ handle } onClick={ event => event.preventDefault() }>
+		<ExternalLink className="activitypub-link" href={ url } title={ handle } onClick={ event => event.preventDefault() }>
 			<img width="40" height="40" src={ icon.url } class="avatar activitypub-avatar" />
 			<span class="activitypub-actor">
 				<strong className="activitypub-name">{ name }</strong>

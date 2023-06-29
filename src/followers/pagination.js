@@ -1,4 +1,5 @@
 // Adapted from: https://github.com/Automattic/wp-calypso/tree/trunk/client/components/pagination
+// Markup adapted to imitate the core query-pagination component so we can inherit those styles.
 import classnames from 'classnames';
 import { PaginationPage } from './pagination-page';
 
@@ -31,43 +32,49 @@ export function Pagination( { compact, nextLabel, page, pageClick, perPage, prev
 	};
 
 	const pageList = getPageList( page, Math.ceil( total / perPage ) );
+	const className = classnames( 'alignwide wp-block-query-pagination is-content-justification-space-between is-layout-flex wp-block-query-pagination-is-layout-flex', `is-${ variant }`, {
+		'is-compact': compact,
+	} );
 
 	return (
-		<nav className={ classnames( 'followers-pagination', `is-${ variant }`, { 'is-compact': compact } ) }>
-			<ul className="pagination__list">
-				{ prevLabel && (
-					<PaginationPage
-						key="prev"
-						page={ page - 1 }
-						pageClick={ pageClick }
-						disabled={ page === 1 }
-						aria-label={ prevLabel }
-					>
-						{ prevLabel }
-					</PaginationPage>
-				) }
+		<nav className={ className }>
+			{ prevLabel && (
+				<PaginationPage
+					key="prev"
+					page={ page - 1 }
+					pageClick={ pageClick }
+					active={ page === 1 }
+					aria-label={ prevLabel }
+					className="wp-block-query-pagination-previous block-editor-block-list__block"
+				>
+					{ prevLabel }
+				</PaginationPage>
+			) }
+			<div className="block-editor-block-list__block wp-block wp-block-query-pagination-numbers">
 				{ pageList.map( pageNumber => (
 					<PaginationPage
 						key={ pageNumber }
 						page={ pageNumber }
 						pageClick={ pageClick }
 						active={ pageNumber === page }
+						className="page-numbers"
 					>
 						{ pageNumber }
 					</PaginationPage>
 				) ) }
-				{ nextLabel && (
-					<PaginationPage
-						key="next"
-						page={ page + 1 }
-						pageClick={ pageClick }
-						disabled={ page === Math.ceil( total / perPage ) }
-						aria-label={ nextLabel }
-					>
-						{ nextLabel }
-					</PaginationPage>
-				) }
-			</ul>
+			</div>
+			{ nextLabel && (
+				<PaginationPage
+					key="next"
+					page={ page + 1 }
+					pageClick={ pageClick }
+					active={ page === Math.ceil( total / perPage ) }
+					aria-label={ nextLabel }
+					className="wp-block-query-pagination-next block-editor-block-list__block"
+				>
+					{ nextLabel }
+				</PaginationPage>
+			) }
 		</nav>
 	);
 }

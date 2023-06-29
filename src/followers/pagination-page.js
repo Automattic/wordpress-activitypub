@@ -1,27 +1,18 @@
 import classNames from 'classnames';
-import { Button } from '@wordpress/components'
 
-export function PaginationPage( { active, children, disabled, page, pageClick } ) {
+export function PaginationPage( { active, children, page, pageClick, className } ) {
 	const handleClick = event => {
 		event.preventDefault();
-		pageClick( page );
+		! active && pageClick( page );
 	};
 
-	const listClass = classNames( 'pagination__list-item', {
-		'is-active': active,
-		'is-disabled': disabled,
+	const classes = classNames( 'wp-block activitypub-pager', className , {
+		'current': active,
 	} );
 
 	return (
-		<li className={ listClass }>
-			<Button
-				className="pagination__list-button"
-				borderless
-				onClick={ handleClick }
-				disabled={ disabled }
-			>
-				{ children }
-			</Button>
-		</li>
+		<a className={ classes }onClick={ handleClick }>
+			{ children }
+		</a>
 	);
 }
