@@ -68,35 +68,35 @@ class Scheduler {
 			return;
 		}
 
-		$activitypub_post = new Post( $post );
-
-		$activity_type = false;
+		$type = false;
 
 		if ( 'publish' === $new_status && 'publish' !== $old_status ) {
-			$activity_type = 'Create';
+			$type = 'Create';
 		} elseif ( 'publish' === $new_status ) {
-			$activity_type = 'Update';
+			$type = 'Update';
 		} elseif ( 'trash' === $new_status ) {
-			$activity_type = 'Delete';
+			$type = 'Delete';
 		}
 
-		if ( ! $activity_type ) {
+		if ( ! $type ) {
 			return;
 		}
 
 		// send User activities
-		if ( ! is_user_disabled( $activitypub_post->get_user_id() ) ) {
+		if ( ! is_user_disabled( $post->post_author ) ) {
+			$activitypub_post = new Post( $post );
+
 			\wp_schedule_single_event(
 				\time(),
 				'activitypub_send_activity',
-				array( $activitypub_post, $activity_type )
+				array( $activitypub_post, $type )
 			);
 
 			\wp_schedule_single_event(
 				\time(),
 				sprintf(
 					'activitypub_send_%s_activity',
-					\strtolower( $activity_type )
+					\strtolower( $type )
 				),
 				array( $activitypub_post )
 			);
@@ -104,19 +104,19 @@ class Scheduler {
 
 		// send Blog-User activities
 		if ( ! is_user_disabled( User_Factory::BLOG_USER_ID ) ) {
-			$activitypub_post->set_post_author( User_Factory::BLOG_USER_ID );
+			$activitypub_post = new Post( $post, User_Factory::BLOG_USER_ID );
 
 			\wp_schedule_single_event(
 				\time(),
 				'activitypub_send_activity',
-				array( $activitypub_post, $activity_type )
+				array( $activitypub_post, $type )
 			);
 
 			\wp_schedule_single_event(
 				\time(),
 				sprintf(
 					'activitypub_send_%s_activity',
-					\strtolower( $activity_type )
+					\strtolower( $type )
 				),
 				array( $activitypub_post )
 			);
