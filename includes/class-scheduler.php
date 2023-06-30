@@ -4,7 +4,7 @@ namespace Activitypub;
 
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
-use \Activitypub\Transformer\Post;
+use Activitypub\Transformer\Post;
 
 /**
  * ActivityPub Scheduler Class
@@ -82,6 +82,8 @@ class Scheduler {
 		if ( ! $type ) {
 			return;
 		}
+
+		$activitypub_post = new Post( $post, User_Factory::BLOG_USER_ID );
 
 		\wp_schedule_single_event(
 			\time(),
