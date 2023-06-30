@@ -82,45 +82,22 @@ class Scheduler {
 			return;
 		}
 
-		// send User activities
-		if ( ! is_user_disabled( $post->post_author ) ) {
-			$activitypub_post = new Post( $post );
+		$activitypub_post = new Post( $post, Users::BLOG_USER_ID );
 
-			\wp_schedule_single_event(
-				\time(),
-				'activitypub_send_activity',
-				array( $activitypub_post, $type )
-			);
+		\wp_schedule_single_event(
+			\time(),
+			'activitypub_send_activity',
+			array( $activitypub_post, $type )
+		);
 
-			\wp_schedule_single_event(
-				\time(),
-				sprintf(
-					'activitypub_send_%s_activity',
-					\strtolower( $type )
-				),
-				array( $activitypub_post )
-			);
-		}
-
-		// send Blog-User activities
-		if ( ! is_user_disabled( User_Factory::BLOG_USER_ID ) ) {
-			$activitypub_post = new Post( $post, User_Factory::BLOG_USER_ID );
-
-			\wp_schedule_single_event(
-				\time(),
-				'activitypub_send_activity',
-				array( $activitypub_post, $type )
-			);
-
-			\wp_schedule_single_event(
-				\time(),
-				sprintf(
-					'activitypub_send_%s_activity',
-					\strtolower( $type )
-				),
-				array( $activitypub_post )
-			);
-		}
+		\wp_schedule_single_event(
+			\time(),
+			sprintf(
+				'activitypub_send_%s_activity',
+				\strtolower( $type )
+			),
+			array( $activitypub_post )
+		);
 	}
 
 	/**
