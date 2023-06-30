@@ -50,19 +50,21 @@ export function Pagination( { compact, nextLabel, page, pageClick, perPage, prev
 					{ prevLabel }
 				</PaginationPage>
 			) }
-			<div className="block-editor-block-list__block wp-block wp-block-query-pagination-numbers">
-				{ pageList.map( pageNumber => (
-					<PaginationPage
-						key={ pageNumber }
-						page={ pageNumber }
-						pageClick={ pageClick }
-						active={ pageNumber === page }
-						className="page-numbers"
-					>
-						{ pageNumber }
-					</PaginationPage>
-				) ) }
-			</div>
+			{ ! compact && (
+				<div className="block-editor-block-list__block wp-block wp-block-query-pagination-numbers">
+					{ pageList.map( pageNumber => (
+						<PaginationPage
+							key={ pageNumber }
+							page={ pageNumber }
+							pageClick={ pageClick }
+							active={ pageNumber === page }
+							className="page-numbers"
+						>
+							{ pageNumber }
+						</PaginationPage>
+					) ) }
+				</div>
+			) }
 			{ nextLabel && (
 				<PaginationPage
 					key="next"

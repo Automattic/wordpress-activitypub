@@ -6,7 +6,7 @@ import { __ } from '@wordpress/i18n';
 import { Followers } from './followers';
 
 export default function Edit( { attributes, setAttributes } ) {
-	const { order, per_page, selectedUser } = attributes;
+	const { order, per_page, selectedUser, className } = attributes;
 	const blockProps = useBlockProps();
 	const [ page, setPage ] = useState( 1 );
 	const orderOptions = [

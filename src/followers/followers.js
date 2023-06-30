@@ -23,7 +23,15 @@ function usePage() {
 	return [ page, setPage ];
 }
 
-export function Followers( { selectedUser, per_page, order, title, page: passedPage, setPage: passedSetPage } ) {
+export function Followers( {
+	selectedUser,
+	per_page,
+	order,
+	title,
+	page: passedPage,
+	setPage: passedSetPage,
+	className = ''
+} ) {
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
 	const [ followers, setFollowers ] = useState( [] );
 	const [ pages, setPages ] = useState( 0 );
@@ -55,7 +63,7 @@ export function Followers( { selectedUser, per_page, order, title, page: passedP
 			.catch( ( error ) => console.error( error ) );
 	}, [ userId, per_page, order, page ] );
 	return (
-		<div className="activitypub-follower-block">
+		<div className={ "activitypub-follower-block " + className }>
 			<h3>{ title }</h3>
 				<ul>
 				{ followers && followers.map( ( follower ) => (
@@ -72,6 +80,7 @@ export function Followers( { selectedUser, per_page, order, title, page: passedP
 						pageClick={ setPage }
 						nextLabel={ nextLabel }
 						prevLabel={ prevLabel }
+						compact={ className === 'is-style-compact' }
 					/>
 				) }
 		</div>

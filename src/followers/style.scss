@@ -1,4 +1,25 @@
 .activitypub-follower-block {
+	&.is-style-compact {
+		.activitypub-handle, .sep {
+			display: none;
+		}
+	}
+	&.is-style-with-lines {
+		ul li {
+			border-bottom: .5px solid var( --wp--preset--color--contrast, #222 );
+			padding-bottom: .5rem;
+			margin-bottom: .5rem;
+			&:last-child {
+				border-bottom: none;
+			}
+		}
+		.activitypub-name, .activitypub-handle {
+			text-decoration: none;
+			&:hover {
+				text-decoration: underline;
+			}
+		}
+	}
 	ul {
 		margin: 0;
 		padding: 0;

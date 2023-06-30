@@ -32,6 +32,21 @@
       ]
     }
   },
+  "styles": [
+    {
+      "name": "default",
+      "label": "No Lines",
+      "isDefault": true
+    },
+    {
+      "name": "with-lines",
+      "label": "Lines"
+    },
+    {
+      "name": "compact",
+      "label": "Compact"
+    }
+  ],
   "editorScript": "file:./index.js",
   "viewScript": "file:./view.js",
   "style": [
