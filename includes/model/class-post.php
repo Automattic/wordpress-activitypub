@@ -1,7 +1,7 @@
 <?php
 namespace Activitypub\Model;
 
-use Activitypub\User_Factory;
+use Activitypub\Collection\Users;
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -243,7 +243,7 @@ class Post {
 	 * @return string The URL of the Actor.
 	 */
 	public function get_actor() {
-		$user = User_Factory::get_by_id( $this->get_user_id() );
+		$user = Users::get_by_id( $this->get_user_id() );
 
 		return $user->get_url();
 	}

@@ -3,7 +3,7 @@ namespace Activitypub;
 
 use Activitypub\Model\Post;
 use Activitypub\Model\Activity;
-use Activitypub\User_Factory;
+use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 
 use function Activitypub\safe_remote_post;

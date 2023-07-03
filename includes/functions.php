@@ -279,10 +279,10 @@ function is_activitypub_request() {
 function is_user_disabled( $user_id ) {
 	switch ( $user_id ) {
 		// if the user is the application user, it's always enabled.
-		case \Activitypub\User_Factory::APPLICATION_USER_ID:
+		case \Activitypub\Collection\Users::APPLICATION_USER_ID:
 			return false;
 		// if the user is the blog user, it's only enabled in single-user mode.
-		case \Activitypub\User_Factory::BLOG_USER_ID:
+		case \Activitypub\Collection\Users::BLOG_USER_ID:
 			if ( defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) ) {
 				return ACTIVITYPUB_DISABLE_BLOG_USER;
 			}

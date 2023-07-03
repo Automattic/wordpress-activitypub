@@ -5,7 +5,7 @@ use stdClass;
 use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
-use Activitypub\User_Factory;
+use Activitypub\Collection\Users;
 use Activitypub\Model\Post;
 use Activitypub\Model\Activity;
 
@@ -53,7 +53,7 @@ class Outbox {
 	 */
 	public static function user_outbox_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = User_Factory::get_by_various( $user_id );
+		$user    = Users::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;

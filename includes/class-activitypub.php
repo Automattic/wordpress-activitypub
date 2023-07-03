@@ -82,7 +82,7 @@ class Activitypub {
 		$json_template = false;
 
 		// check if user can publish posts
-		if ( \is_author() && ! User_Factory::get_by_id( \get_the_author_meta( 'ID' ) ) ) {
+		if ( \is_author() && ! Users::get_by_id( \get_the_author_meta( 'ID' ) ) ) {
 			return $template;
 		}
 

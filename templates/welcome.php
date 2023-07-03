@@ -15,7 +15,7 @@
 
 	<p><?php \esc_html_e( 'With ActivityPub your blog becomes part of a federated social network. This means you can share and talk to everyone using the ActivityPub protocol, including users of Friendica, Pleroma and Mastodon.', 'activitypub' ); ?></p>
 
-	<?php if ( ! \Activitypub\is_user_disabled( \ActivityPub\User_Factory::BLOG_USER_ID ) ) : ?>
+	<?php if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) : ?>
 
 	<h3><?php \esc_html_e( 'Blog Account', 'activitypub' ); ?></h3>
 	<p>
@@ -44,7 +44,7 @@
 	<h3><?php \esc_html_e( 'Personal Account', 'activitypub' ); ?></h3>
 	<p>
 		<?php
-		$user = \Activitypub\User_Factory::get_by_id( wp_get_current_user()->ID );
+		$user = \Activitypub\Collection\Users::get_by_id( wp_get_current_user()->ID );
 		echo wp_kses(
 			\sprintf(
 				// translators:
