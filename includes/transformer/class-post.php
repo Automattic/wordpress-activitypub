@@ -2,8 +2,8 @@
 namespace Activitypub\Transformer;
 
 use WP_Post;
-use \Activitypub\Activity\Base_Object;
-use \Activitypub\Collection\Users;
+use Activitypub\Collection\Users;
+use Activitypub\Activity\Base_Object;
 
 use function Activitypub\get_rest_url_by_path;
 

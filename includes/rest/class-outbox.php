@@ -6,9 +6,9 @@ use WP_Error;
 use WP_REST_Server;
 use WP_REST_Request;
 use WP_REST_Response;
-use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users;
 use Activitypub\Transformer\Post;
+use Activitypub\Activity\Activity;
 
 use function Activitypub\get_context;
 use function Activitypub\get_rest_url_by_path;
