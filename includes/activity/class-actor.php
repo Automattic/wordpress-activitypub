@@ -7,6 +7,14 @@
 
 namespace Activitypub\Activity;
 
+/**
+ * \Activitypub\Activity\Actor is an implementation of
+ * one an Activity Streams Actor.
+ *
+ * Represents an individual actor.
+ *
+ * @see https://www.w3.org/TR/activitystreams-vocabulary/#actor-types
+ */
 class Actor extends Base_Object {
 	/**
 	 * @var string

@@ -4,6 +4,7 @@ namespace Activitypub\Rest;
 use WP_REST_Server;
 use WP_REST_Request;
 use Activitypub\Webfinger;
+use Activitypub\Model\Activity;
 use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\is_activitypub_request;
@@ -104,7 +105,7 @@ class Users {
 	 */
 	public static function get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = User_Factory::get_by_various( $user_id );
+		$user    = User_Collection::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;
@@ -122,7 +123,7 @@ class Users {
 		\do_action( 'activitypub_outbox_pre' );
 
 		$user->set_context(
-			\Activitypub\Model\Activity::CONTEXT
+			Activity::CONTEXT
 		);
 
 		$json = $user->to_array();

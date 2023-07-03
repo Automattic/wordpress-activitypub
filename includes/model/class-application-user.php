@@ -3,7 +3,7 @@ namespace Activitypub\Model;
 
 use WP_Query;
 use Activitypub\Signature;
-use Activitypub\User_Factory;
+use Activitypub\Collection\Users;
 
 use function Activitypub\get_rest_url_by_path;
 
@@ -13,7 +13,7 @@ class Application_User extends Blog_User {
 	 *
 	 * @var int
 	 */
-	protected $_id = User_Factory::APPLICATION_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
+	protected $_id = Users::APPLICATION_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
 	 * The User-Type

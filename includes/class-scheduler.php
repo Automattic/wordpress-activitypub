@@ -3,6 +3,7 @@
 namespace Activitypub;
 
 use Activitypub\Model\Post;
+use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 
 /**
@@ -82,7 +83,7 @@ class Scheduler {
 			return;
 		}
 
-		$activitypub_post = new Post( $post, Users::BLOG_USER_ID );
+		$activitypub_post = new Post( $post );
 
 		\wp_schedule_single_event(
 			\time(),

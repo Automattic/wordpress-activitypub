@@ -5,7 +5,7 @@ use WP_Error;
 use DateTime;
 use DateTimeZone;
 use Activitypub\Model\User;
-use Activitypub\User_Factory;
+use Activitypub\Collection\Users;
 
 /**
  * ActivityPub Signature Class
@@ -106,7 +106,7 @@ class Signature {
 	 * @return string The signature.
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
-		$user = User_Factory::get_by_id( $user_id );
+		$user = Users::get_by_id( $user_id );
 		$key  = $user->get__private_key();
 
 		$url_parts = \wp_parse_url( $url );
@@ -136,7 +136,7 @@ class Signature {
 		\openssl_sign( $signed_string, $signature, $key, \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature ); // phpcs:ignore
 
-		$user   = User_Factory::get_by_id( $user_id );
+		$user   = Users::get_by_id( $user_id );
 		$key_id = $user->get_url() . '#main-key';
 
 		if ( ! empty( $digest ) ) {

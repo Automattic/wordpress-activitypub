@@ -3,7 +3,7 @@ namespace Activitypub\Model;
 
 use WP_Query;
 use Activitypub\Signature;
-use Activitypub\User_Factory;
+use Activitypub\Collection\Users;
 
 use function Activitypub\is_user_disabled;
 
@@ -13,7 +13,7 @@ class Blog_User extends User {
 	 *
 	 * @var int
 	 */
-	protected $_id = User_Factory::BLOG_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
+	protected $_id = Users::BLOG_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
 	 * The User-Type
