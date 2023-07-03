@@ -1,23 +1,27 @@
 <?php
 namespace Activitypub;
 
+use Activitypub\Http;
+use Activitypub\Activity\Activity;
+use Activitypub\Collection\Followers;
+
 /**
  * Returns the ActivityPub default JSON-context
  *
  * @return array the activitypub context
  */
 function get_context() {
-	$context = Model\Activity::CONTEXT;
+	$context = Activity::CONTEXT;
 
 	return \apply_filters( 'activitypub_json_context', $context );
 }
 
 function safe_remote_post( $url, $body, $user_id ) {
-	return \Activitypub\Http::post( $url, $body, $user_id );
+	return Http::post( $url, $body, $user_id );
 }
 
 function safe_remote_get( $url ) {
-	return \Activitypub\Http::get( $url );
+	return Http::get( $url );
 }
 
 /**
@@ -106,7 +110,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
  * @return array The followers.
  */
 function get_followers( $user_id ) {
-	return Collection\Followers::get_followers( $user_id );
+	return Followers::get_followers( $user_id );
 }
 
 /**
@@ -117,7 +121,7 @@ function get_followers( $user_id ) {
  * @return int The number of followers.
  */
 function count_followers( $user_id ) {
-	return Collection\Followers::count_followers( $user_id );
+	return Followers::count_followers( $user_id );
 }
 
 /**
