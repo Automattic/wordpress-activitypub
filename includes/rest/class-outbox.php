@@ -5,9 +5,9 @@ use stdClass;
 use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
-use Activitypub\Collection\Users;
 use Activitypub\Transformer\Post;
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\get_context;
 use function Activitypub\get_rest_url_by_path;
@@ -53,7 +53,7 @@ class Outbox {
 	 */
 	public static function user_outbox_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = Users::get_by_various( $user_id );
+		$user    = User_Collection::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;
@@ -73,7 +73,7 @@ class Outbox {
 		$json->{'@context'} = get_context();
 		$json->id = \home_url( \add_query_arg( null, null ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
-		//$json->actor = $user->get_id();
+		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore

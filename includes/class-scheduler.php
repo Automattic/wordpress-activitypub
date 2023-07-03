@@ -4,7 +4,7 @@ namespace Activitypub;
 
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
-use \Activitypub\Transformer\Post;
+use Activitypub\Transformer\Post;
 
 /**
  * ActivityPub Scheduler Class
