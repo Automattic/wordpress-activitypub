@@ -1,17 +1,16 @@
 <?php
 namespace Activitypub\Rest;
 
+use WP_Error;
 use WP_REST_Server;
-use WP_REST_Request;
 use WP_REST_Response;
-use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\is_activitypub_request;
 
 /**
- * ActivityPub OStatus REST-Class
+ * ActivityPub Followers REST-Class
  *
  * @author Matthias Pfefferle
  *
@@ -31,30 +30,6 @@ class Users {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/remote-follow',
-			array(
-				array(
-					'methods'             => WP_REST_Server::READABLE,
-					'callback'            => array( self::class, 'remote_follow_get' ),
-					'args'                => array(
-						'resource' => array(
-							'required'          => true,
-							'sanitize_callback' => '',
-						),
-						'action' => array(
-							'required'          => false,
-							'default'           => 'show',
-							'type'              => 'enum',
-							'enum'              => array( 'redirect', 'show' ),
-						),
-					),
-					'permission_callback' => '__return_true',
-				),
-			)
-		);
-
-		\register_rest_route(
-			ACTIVITYPUB_REST_NAMESPACE,
 			'/users/(?P<user_id>[\w\-\.]+)',
 			array(
 				array(
@@ -68,36 +43,6 @@ class Users {
 	}
 
 	/**
-	 * Endpoint for remote follow UI/Block
-	 *
-	 * @param WP_REST_Request $request The request object.
-	 *
-	 * @return void|string The URL to the remote follow page
-	 */
-	public static function remote_follow_get( WP_REST_Request $request ) {
-		$resource = $request->get_param( 'resource' );
-		$action   = $request->get_param( 'action' );
-		$user_id  = $request->get_param( 'user_id' );
-
-		$template = WebFinger::get_remote_follow_endpoint( $resource );
-
-		$resource = Webfinger::get_user_resource( $user_id );
-
-		if ( is_wp_error( $template ) ) {
-			return $template;
-		}
-
-		$url = str_replace( '{uri}', $resource, $template );
-
-		if ( 'redirect' === $action ) {
-			header( 'Location: ' . $url, true, 301 );
-			exit;
-		}
-
-		return array( 'redirect' => $url );
-	}
-
-	/*
 	 * Handle GET request
 	 *
 	 * @param  WP_REST_Request   $request
