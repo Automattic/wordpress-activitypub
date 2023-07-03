@@ -604,6 +604,10 @@ class Base_Object {
 				$value = call_user_func( array( $this, 'get_' . $key ) );
 			}
 
+			if ( is_object( $value ) ) {
+				$value = $value->to_array();
+			}
+
 			// if value is still empty, ignore it for the array and continue.
 			if ( isset( $value ) ) {
 				$array[ snake_to_camel_case( $key ) ] = $value;
@@ -624,5 +628,16 @@ class Base_Object {
 		$array = \apply_filters( "activitypub_activity_{$class}_object_array", $array, $this->id, $this );
 
 		return $array;
+	}
+
+	/**
+	 * Convert Object to JSON.
+	 *
+	 * @return string The JSON string.
+	 */
+	public function to_json() {
+		$array = $this->to_array();
+
+		return \wp_json_encode( $array );
 	}
 }

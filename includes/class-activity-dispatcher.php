@@ -1,10 +1,11 @@
 <?php
 namespace Activitypub;
 
-use Activitypub\Model\Post;
-use Activitypub\Model\Activity;
+use WP_Post;
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Transformer\Post;
 
 use function Activitypub\safe_remote_post;
 
@@ -23,66 +24,73 @@ class Activity_Dispatcher {
 		// legacy
 		\add_action( 'activitypub_send_post_activity', array( self::class, 'send_create_activity' ) );
 
-		\add_action( 'activitypub_send_create_activity', array( self::class, 'send_create_activity' ) );
-		\add_action( 'activitypub_send_update_activity', array( self::class, 'send_update_activity' ) );
-		\add_action( 'activitypub_send_delete_activity', array( self::class, 'send_delete_activity' ) );
-
-		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity' ), 10, 2 );
-	}
-
-	/**
-	 * Send "create" activities.
-	 *
-	 * @param Activitypub\Model\Post $activitypub_post
-	 */
-	public static function send_create_activity( Post $activitypub_post ) {
-		self::send_activity( $activitypub_post, 'Create' );
-	}
-
-	/**
-	 * Send "update" activities.
-	 *
-	 * @param Activitypub\Model\Post $activitypub_post The ActivityPub Post.
-	 */
-	public static function send_update_activity( Post $activitypub_post ) {
-		self::send_activity( $activitypub_post, 'Update' );
-	}
-
-	/**
-	 * Send "delete" activities.
-	 *
-	 * @param Activitypub\Model\Post $activitypub_post The ActivityPub Post.
-	 */
-	public static function send_delete_activity( Post $activitypub_post ) {
-		self::send_activity( $activitypub_post, 'Delete' );
+		\add_action( 'activitypub_send_activity', array( self::class, 'send_user_activity' ), 10, 2 );
+		\add_action( 'activitypub_send_activity', array( self::class, 'send_blog_activity' ), 10, 2 );
 	}
 
 	/**
 	 * Send Activities to followers and mentioned users.
 	 *
-	 * @param Activitypub\Model\Post $activitypub_post The ActivityPub Post.
-	 * @param string                 $activity_type    The Activity-Type.
+	 * @param WP_Post $post The ActivityPub Post.
+	 * @param string  $type The Activity-Type.
 	 *
 	 * @return void
 	 */
-	public static function send_activity( Post $activitypub_post, $activity_type ) {
+	public static function send_user_activity( WP_Post $post, $type ) {
 		// check if a migration is needed before sending new posts
 		Migration::maybe_migrate();
 
-		$activitypub_activity = new Activity( $activity_type );
-		$activitypub_activity->from_post( $activitypub_post );
+		$object = Post::transform( $post )->to_object();
 
-		$user_id           = $activitypub_post->get_user_id();
+		$activity = new Activity();
+		$activity->set_type( $type );
+		$activity->set_object( $object );
+
+		$user_id           = $post->post_author;
 		$follower_inboxes  = Followers::get_inboxes( $user_id );
-		$mentioned_inboxes = Mention::get_inboxes( $activitypub_activity->get_cc() );
+		$mentioned_inboxes = Mention::get_inboxes( $activity->get_cc() );
 
 		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
 		$inboxes = array_unique( $inboxes );
 
-		foreach ( $inboxes as $inbox ) {
-			$activity = $activitypub_activity->to_json();
+		$array = $activity->to_json();
 
-			safe_remote_post( $inbox, $activity, $user_id );
+		foreach ( $inboxes as $inbox ) {
+			safe_remote_post( $inbox, $array, $user_id );
+		}
+	}
+
+		/**
+	 * Send Activities to followers and mentioned users.
+	 *
+	 * @param WP_Post $post The ActivityPub Post.
+	 * @param string  $type The Activity-Type.
+	 *
+	 * @return void
+	 */
+	public static function send_blog_activity( WP_Post $post, $type ) {
+		// check if a migration is needed before sending new posts
+		Migration::maybe_migrate();
+
+		$user = Users::get_by_id( Users::BLOG_USER_ID );
+
+		$object = Post::transform( $post )->to_object();
+		$object->set_attributed_to( $user->get_url() );
+
+		$activity = new Activity();
+		$activity->set_type( $type );
+		$activity->set_object( $object );
+
+		$follower_inboxes  = Followers::get_inboxes( $user->get__id() );
+		$mentioned_inboxes = Mention::get_inboxes( $activity->get_cc() );
+
+		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
+		$inboxes = array_unique( $inboxes );
+
+		$array = $activity->to_array();
+
+		foreach ( $inboxes as $inbox ) {
+			safe_remote_post( $inbox, $array, $user_id );
 		}
 	}
 }

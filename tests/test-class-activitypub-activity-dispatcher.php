@@ -34,10 +34,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 		$pre_http_request = new MockAction();
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
-		$activitypub_post = new \Activitypub\Model\Post( $post );
-		\Activitypub\Activity_Dispatcher::send_create_activity( $activitypub_post );
-
-		$this->assertNotEmpty( $activitypub_post->get_content() );
+		\Activitypub\Activity_Dispatcher::send_user_activity( get_post( $post ), 'Create' );
 
 		$this->assertSame( 2, $pre_http_request->get_call_count() );
 		$all_args = $pre_http_request->get_args();
@@ -77,10 +74,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 		$pre_http_request = new MockAction();
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
-		$activitypub_post = new \Activitypub\Model\Post( $post );
-		\Activitypub\Activity_Dispatcher::send_create_activity( $activitypub_post );
-
-		$this->assertNotEmpty( $activitypub_post->get_content() );
+		\Activitypub\Activity_Dispatcher::send_user_activity( get_post( $post ), 'Create' );
 
 		$this->assertSame( 1, $pre_http_request->get_call_count() );
 		$all_args = $pre_http_request->get_args();

@@ -1,8 +1,6 @@
 <?php
 namespace Activitypub;
 
-use Activitypub\Model\Post;
-
 /**
  * ActivityPub Admin Class
  *

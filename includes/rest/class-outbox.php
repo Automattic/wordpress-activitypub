@@ -5,9 +5,9 @@ use stdClass;
 use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users;
-use Activitypub\Model\Post;
-use Activitypub\Model\Activity;
+use Activitypub\Transformer\Post;
 
 use function Activitypub\get_context;
 use function Activitypub\get_rest_url_by_path;
@@ -73,9 +73,9 @@ class Outbox {
 		$json->{'@context'} = get_context();
 		$json->id = \home_url( \add_query_arg( null, null ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
-		$json->actor = $user->get_id();
+		//$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user->get__id() ) ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
 
 		// phpcs:ignore
@@ -97,18 +97,20 @@ class Outbox {
 			$posts = \get_posts(
 				array(
 					'posts_per_page' => 10,
-					'author' => $user->get__id(),
+					'author' => $user_id,
 					'offset' => ( $page - 1 ) * 10,
 					'post_type' => $post_types,
 				)
 			);
 
 			foreach ( $posts as $post ) {
-				$activitypub_post = new Post( $post );
-				$activitypub_activity = new Activity( 'Create', false );
+				$post = Post::transform( $post )->to_object();
+				$activity = new Activity();
+				$activity->set_type( 'Create' );
+				$activity->set_context( null );
+				$activity->set_object( $post );
 
-				$activitypub_activity->from_post( $activitypub_post );
-				$json->orderedItems[] = $activitypub_activity->to_array(); // phpcs:ignore
+				$json->orderedItems[] = $activity->to_array(); // phpcs:ignore
 			}
 		}
 

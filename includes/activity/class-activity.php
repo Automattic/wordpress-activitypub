@@ -7,6 +7,8 @@
 
 namespace Activitypub\Activity;
 
+use Activitypub\Activity\Base_Object;
+
 /**
  * \Activitypub\Activity\Activity implements the common
  * attributes of an Activity.
@@ -162,4 +164,40 @@ class Activity extends Base_Object {
 	 *    | null
 	 */
 	protected $instrument;
+
+	/**
+	 * Set the object and copy Object properties to the Activity.
+	 *
+	 * Any to, bto, cc, bcc, and audience properties specified on the object
+	 * MUST be copied over to the new Create activity by the server.
+	 *
+	 * @see https://www.w3.org/TR/activitypub/#object-without-create
+	 *
+	 * @param \Activitypub\Activity\Base_Object $object
+	 *
+	 * @return void
+	 */
+	public function set_object( Base_Object $object ) {
+		parent::set_object( $object );
+
+		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
+			$this->set( $i, $object->get( $i ) );
+		}
+
+		if ( $object->get_published() && ! $this->get_published() ) {
+			$this->set( 'published', $object->get_published() );
+		}
+
+		if ( $object->get_updated() && ! $this->get_updated() ) {
+			$this->set( 'updated', $object->get_updated() );
+		}
+
+		if ( $object->attributed_to() && ! $this->get_actor() ) {
+			$this->set( 'actor', $object->attributed_to() );
+		}
+
+		if ( $object->get_id() && ! $this->get_id() ) {
+			$this->set( 'id', $object->get_id() . '#activity' );
+		}
+	}
 }
