@@ -5,7 +5,7 @@ use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Collection\Users;
-use Activitypub\Model\Activity;
+use Activitypub\Activity\Activity;
 
 use function Activitypub\get_context;
 use function Activitypub\url_to_authorid;

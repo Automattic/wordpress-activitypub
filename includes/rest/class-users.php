@@ -3,8 +3,9 @@ namespace Activitypub\Rest;
 
 use WP_REST_Server;
 use WP_REST_Request;
+use WP_REST_Response;
 use Activitypub\Webfinger;
-use Activitypub\Model\Activity;
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\is_activitypub_request;

@@ -2,6 +2,7 @@
 namespace Activitypub;
 
 use Activitypub\Signature;
+use Activitypub\Collection\Users;
 
 /**
  * ActivityPub Class

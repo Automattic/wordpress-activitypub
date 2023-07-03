@@ -2,7 +2,7 @@
 $user = \Activitypub\Collection\Users::get_by_id( \get_the_author_meta( 'ID' ) );
 
 $user->set_context(
-	\Activitypub\Model\Activity::CONTEXT
+	\Activitypub\Activity\Activity::CONTEXT
 );
 
 /*

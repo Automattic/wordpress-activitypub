@@ -17,10 +17,11 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 			10
 		);
 
-		$activitypub_post = new \Activitypub\Model\Post( $post );
+		$activitypub_post = \Activitypub\Transformer\Post::transform( get_post( $post ) )->to_object();
 
-		$activitypub_activity = new \Activitypub\Model\Activity( 'Create' );
-		$activitypub_activity->from_post( $activitypub_post );
+		$activitypub_activity = new \Activitypub\Activity\Activity();
+		$activitypub_activity->set_type( 'Create' );
+		$activitypub_activity->set_object( $activitypub_post );
 
 		$this->assertContains( \Activitypub\get_rest_url_by_path( 'users/1/followers' ), $activitypub_activity->get_to() );
 		$this->assertContains( 'https://example.com/alex', $activitypub_activity->get_cc() );

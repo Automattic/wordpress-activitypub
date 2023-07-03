@@ -2,7 +2,7 @@
 $user = new \Activitypub\Model\Blog_User();
 
 $user->set_context(
-	\Activitypub\Model\Activity::CONTEXT
+	\Activitypub\Activity\Activity::CONTEXT
 );
 
 /*

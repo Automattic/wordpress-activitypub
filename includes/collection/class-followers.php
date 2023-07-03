@@ -6,8 +6,8 @@ use Exception;
 use WP_Query;
 use Activitypub\Http;
 use Activitypub\Webfinger;
-use Activitypub\Model\Activity;
 use Activitypub\Model\Follower;
+use Activitypub\Activity\Activity;
 
 use function Activitypub\is_tombstone;
 use function Activitypub\get_remote_metadata_by_actor;

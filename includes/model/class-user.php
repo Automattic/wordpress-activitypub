@@ -4,7 +4,6 @@ namespace Activitypub\Model;
 use WP_Query;
 use WP_Error;
 use Activitypub\Signature;
-use Activitypub\Model\User;
 use Activitypub\Collection\Users;
 use Activitypub\Activity\Actor;
 
