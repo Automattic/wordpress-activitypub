@@ -3,7 +3,7 @@ namespace Activitypub\Rest;
 
 use WP_Error;
 use WP_REST_Response;
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Users as User_Collection;
 
 /**
  * ActivityPub WebFinger REST-Class
@@ -47,7 +47,7 @@ class Webfinger {
 	 */
 	public static function webfinger( $request ) {
 		$resource = $request->get_param( 'resource' );
-		$user     = Users::get_by_resource( $resource );
+		$user     = User_Collection::get_by_resource( $resource );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;
