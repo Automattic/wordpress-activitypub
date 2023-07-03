@@ -1,5 +1,5 @@
 <?php
-namespace Activitypub;
+namespace Activitypub\Collection;
 
 use WP_Error;
 use WP_User_Query;
@@ -7,7 +7,7 @@ use Activitypub\Model\User;
 use Activitypub\Model\Blog_User;
 use Activitypub\Model\Application_User;
 
-class User_Factory {
+class Users {
 	/**
 	 * The ID of the Blog User
 	 *

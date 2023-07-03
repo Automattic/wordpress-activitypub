@@ -2,11 +2,10 @@
 namespace Activitypub;
 
 use WP_Post;
-
-use Activitypub\User_Factory;
-use Activitypub\Model\Post;
-use Activitypub\Model\Activity;
+use Activitypub\Activity\Activity;
+use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Transformer\Post;
 
 use function Activitypub\is_user_disabled;
 use function Activitypub\safe_remote_post;
@@ -55,10 +54,10 @@ class Activity_Dispatcher {
 		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
 		$inboxes = array_unique( $inboxes );
 
-		foreach ( $inboxes as $inbox ) {
-			$activity = $activitypub_activity->to_json();
+		$array = $activity->to_json();
 
-			safe_remote_post( $inbox, $activity, $user_id );
+		foreach ( $inboxes as $inbox ) {
+			safe_remote_post( $inbox, $array, $user_id );
 		}
 	}
 
@@ -90,10 +89,10 @@ class Activity_Dispatcher {
 		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
 		$inboxes = array_unique( $inboxes );
 
-		foreach ( $inboxes as $inbox ) {
-			$activity = $activitypub_activity->to_json();
+		$array = $activity->to_json();
 
-			safe_remote_post( $inbox, $activity, $user_id );
+		foreach ( $inboxes as $inbox ) {
+			safe_remote_post( $inbox, $array, $user_id );
 		}
 	}
 }

@@ -4,8 +4,8 @@ namespace Activitypub\Rest;
 use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
-use Activitypub\User_Factory;
-use Activitypub\Model\Activity;
+use Activitypub\Collection\Users;
+use Activitypub\Activity\Activity;
 
 use function Activitypub\get_context;
 use function Activitypub\url_to_authorid;
@@ -74,7 +74,7 @@ class Inbox {
 	 */
 	public static function user_inbox_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = User_Factory::get_by_various( $user_id );
+		$user    = Users::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;
@@ -126,7 +126,7 @@ class Inbox {
 	public static function user_inbox_post( $request ) {
 
 		$user_id = $request->get_param( 'user_id' );
-		$user    = User_Factory::get_by_various( $user_id );
+		$user    = Users::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;

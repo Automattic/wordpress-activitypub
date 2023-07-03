@@ -2,9 +2,9 @@
 
 namespace Activitypub;
 
-use Activitypub\Model\Post;
-use Activitypub\User_Factory;
+use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use \Activitypub\Transformer\Post;
 
 /**
  * ActivityPub Scheduler Class

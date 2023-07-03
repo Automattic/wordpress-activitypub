@@ -24,7 +24,7 @@ class Webfinger {
 			return \get_webfinger_resource( $user_id, false );
 		}
 
-		$user = User_Factory::get_by_id( $user_id );
+		$user = Users::get_by_id( $user_id );
 		if ( ! $user ) {
 			return '';
 		}

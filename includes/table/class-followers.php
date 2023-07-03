@@ -2,7 +2,7 @@
 namespace Activitypub\Table;
 
 use WP_List_Table;
-use Activitypub\User_Factory;
+use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers as FollowerCollection;
 
 if ( ! \class_exists( '\WP_List_Table' ) ) {
@@ -14,7 +14,7 @@ class Followers extends WP_List_Table {
 
 	public function __construct() {
 		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
-			$this->user_id = User_Factory::BLOG_USER_ID;
+			$this->user_id = Users::BLOG_USER_ID;
 		} else {
 			$this->user_id = \get_current_user_id();
 		}

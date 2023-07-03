@@ -4,8 +4,7 @@ namespace Activitypub\Model;
 use WP_Query;
 use WP_Error;
 use Activitypub\Signature;
-use Activitypub\Model\User;
-use Activitypub\User_Factory;
+use Activitypub\Collection\Users;
 use Activitypub\Activity\Actor;
 
 use function Activitypub\is_user_disabled;
@@ -13,7 +12,7 @@ use function Activitypub\get_rest_url_by_path;
 
 class User extends Actor {
 	/**
-	 * The User-ID
+	 * The local User-ID (WP_User).
 	 *
 	 * @var int
 	 */

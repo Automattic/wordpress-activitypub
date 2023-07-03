@@ -1,7 +1,7 @@
 <?php
 namespace Activitypub\Rest;
 
-use Activitypub\User_Factory;
+use Activitypub\Collection\Users;
 
 use function Activitypub\get_rest_url_by_path;
 
@@ -47,7 +47,7 @@ class Following {
 	 */
 	public static function get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = User_Factory::get_by_various( $user_id );
+		$user    = Users::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;
