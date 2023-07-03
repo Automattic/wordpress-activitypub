@@ -2,11 +2,10 @@
 namespace Activitypub;
 
 use WP_Post;
-
-use Activitypub\User_Factory;
-use Activitypub\Model\Post;
-use Activitypub\Model\Activity;
+use Activitypub\Activity\Activity;
+use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Transformer\Post;
 
 use function Activitypub\is_user_disabled;
 use function Activitypub\safe_remote_post;
@@ -31,11 +30,11 @@ class Activity_Dispatcher {
 	 * Send Activities to followers and mentioned users.
 	 *
 	 * @param WP_Post $wp_post The ActivityPub Post.
-	 * @param string  $activity_type    The Activity-Type.
+	 * @param string  $type    The Activity-Type.
 	 *
 	 * @return void
 	 */
-	public static function send_user_activity( WP_Post $wp_post, $activity_type ) {
+	public static function send_user_activity( WP_Post $wp_post, $type ) {
 		// check if a migration is needed before sending new posts
 		Migration::maybe_migrate();
 
@@ -43,22 +42,23 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$post = new Post( $wp_post );
+		$object = Post::transform( $wp_post )->to_object();
 
-		$activitypub_activity = new Activity( $activity_type );
-		$activitypub_activity->from_post( $post );
+		$activity = new Activity();
+		$activity->set_type( $type );
+		$activity->set_object( $object );
 
 		$user_id           = $wp_post->post_author;
 		$follower_inboxes  = Followers::get_inboxes( $user_id );
-		$mentioned_inboxes = Mention::get_inboxes( $activitypub_activity->get_cc() );
+		$mentioned_inboxes = Mention::get_inboxes( $activity->get_cc() );
 
 		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
 		$inboxes = array_unique( $inboxes );
 
-		foreach ( $inboxes as $inbox ) {
-			$activity = $activitypub_activity->to_json();
+		$json = $activity->to_json();
 
-			safe_remote_post( $inbox, $activity, $user_id );
+		foreach ( $inboxes as $inbox ) {
+			safe_remote_post( $inbox, $json, $user_id );
 		}
 	}
 
@@ -66,11 +66,11 @@ class Activity_Dispatcher {
 	 * Send Activities to followers and mentioned users.
 	 *
 	 * @param WP_Post $wp_post The ActivityPub Post.
-	 * @param string  $activity_type    The Activity-Type.
+	 * @param string  $type    The Activity-Type.
 	 *
 	 * @return void
 	 */
-	public static function send_blog_activity( WP_Post $wp_post, $activity_type ) {
+	public static function send_blog_activity( WP_Post $wp_post, $type ) {
 		// check if a migration is needed before sending new posts
 		Migration::maybe_migrate();
 
@@ -78,22 +78,26 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$post = new Post( $wp_post, User_Factory::BLOG_USER_ID );
+		$user = User_Factory::get_user( User_Factory::BLOG_USER_ID );
 
-		$activitypub_activity = new Activity( $activity_type );
-		$activitypub_activity->from_post( $post );
+		$object = Post::transform( $wp_post )->to_object();
+		$object->set_attributed_to( $user->get_id() );
+
+		$activity = new Activity();
+		$activity->set_type( $type );
+		$activity->set_object( $object );
 
 		$user_id           = User_Factory::BLOG_USER_ID;
 		$follower_inboxes  = Followers::get_inboxes( $user_id );
-		$mentioned_inboxes = Mention::get_inboxes( $activitypub_activity->get_cc() );
+		$mentioned_inboxes = Mention::get_inboxes( $activity->get_cc() );
 
 		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
 		$inboxes = array_unique( $inboxes );
 
-		foreach ( $inboxes as $inbox ) {
-			$activity = $activitypub_activity->to_json();
+		$json = $activity->to_json();
 
-			safe_remote_post( $inbox, $activity, $user_id );
+		foreach ( $inboxes as $inbox ) {
+			safe_remote_post( $inbox, $json, $user_id );
 		}
 	}
 }
