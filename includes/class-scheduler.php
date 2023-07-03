@@ -83,12 +83,10 @@ class Scheduler {
 			return;
 		}
 
-		$activitypub_post = new Post( $post, User_Factory::BLOG_USER_ID );
-
 		\wp_schedule_single_event(
 			\time(),
 			'activitypub_send_activity',
-			array( $activitypub_post, $type )
+			array( $post, $type )
 		);
 
 		\wp_schedule_single_event(
@@ -97,7 +95,7 @@ class Scheduler {
 				'activitypub_send_%s_activity',
 				\strtolower( $type )
 			),
-			array( $activitypub_post )
+			array( $post )
 		);
 	}
 
