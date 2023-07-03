@@ -115,7 +115,7 @@ class Post {
 		$object->set_url( \esc_url( \get_permalink( $wp_post->ID ) ) );
 		$object->set_type( $this->get_object_type() );
 		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $wp_post->post_date_gmt ) ) );
-		$object->attributed_to( Users::get_by_id( $wp_post->post_author )->get_url() );
+		$object->set_attributed_to( Users::get_by_id( $wp_post->post_author )->get_url() );
 		$object->set_content( $this->get_content() );
 		$object->set_content_map(
 			array(
