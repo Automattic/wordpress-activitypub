@@ -50,7 +50,7 @@ class Outbox {
 	 * @param  WP_REST_Request   $request
 	 * @return WP_REST_Response
 	 */
-	public static function user_outbox_get( $request ) {
+	public static function user_outbox_get( WP_REST_Request $request ) {
 		$user_id = $request->get_param( 'user_id' );
 		$author  = \get_user_by( 'ID', $user_id );
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
