@@ -40,6 +40,24 @@ class Users {
 				),
 			)
 		);
+
+		\register_rest_route(
+			ACTIVITYPUB_REST_NAMESPACE,
+			'/users/(?P<user_id>[\w\-\.]+)/remote-follow',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( self::class, 'remote_follow' ),
+					'args'                => array(
+						'resource' => array(
+							'required'          => true,
+							//'sanitize_callback' => '',
+						),
+					),
+					'permission_callback' => '__return_true',
+				),
+			)
+		);
 	}
 
 	/**
@@ -78,6 +96,23 @@ class Users {
 		$response->header( 'Content-Type', 'application/activity+json' );
 
 		return $response;
+	}
+
+	public static function remote_follow( WP_REST_Request $request ) {
+		$resource = $request->get_param( 'resource' );
+		$user_id = $request->get_param( 'user_id' );
+
+		$template = WebFinger::get_remote_follow_endpoint( $resource );
+
+		$resource = Webfinger::get_user_resource( $user_id );
+
+		if ( is_wp_error( $template ) ) {
+			return $template;
+		}
+
+		$url = str_replace( '{uri}', $resource, $template );
+
+		return $url;
 	}
 
 	/**
