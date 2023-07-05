@@ -79,7 +79,7 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-object-term
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Objectr
 	 *    | Link
 	 *    | null
 	 */
@@ -173,12 +173,16 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#object-without-create
 	 *
-	 * @param \Activitypub\Activity\Base_Object $object
+	 * @param string|Base_Objectr|Link|null $object
 	 *
 	 * @return void
 	 */
-	public function set_object( Base_Object $object ) {
-		parent::set_object( $object );
+	public function set_object( $object ) {
+		$this->set( 'object', $object );
+
+		if ( ! is_object( $object ) ) {
+			return;
+		}
 
 		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
 			$this->set( $i, $object->get( $i ) );
