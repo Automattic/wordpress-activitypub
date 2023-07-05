@@ -88,7 +88,7 @@ class Post {
 	 * @return void
 	 */
 	public static function transform( WP_Post $wp_post ) {
-		return new self( $wp_post );
+		return new static( $wp_post );
 	}
 
 	/**
