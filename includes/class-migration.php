@@ -1,7 +1,6 @@
 <?php
 namespace Activitypub;
 
-use Activitypub\Model\Follower;
 use Activitypub\Collection\Followers;
 
 /**
@@ -69,21 +68,7 @@ class Migration {
 
 			if ( $followers ) {
 				foreach ( $followers as $actor ) {
-					$meta = get_remote_metadata_by_actor( $actor );
-
-					if ( is_tombstone( $meta ) ) {
-						continue;
-					}
-
-					$follower = Follower::from_array( $meta );
-
-					if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-						$follower->set_error( $meta );
-					}
-
-					$follower->upsert();
-
-					add_post_meta( $follower->get__id(), '_user_id', $user_id );
+					Followers::add_follower( $user_id, $actor );
 				}
 			}
 		}
