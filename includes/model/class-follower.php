@@ -148,6 +148,7 @@ class Follower extends Actor {
 			'post_title'    => $this->get_name(),
 			'post_author'   => 0,
 			'post_type'     => Followers::POST_TYPE,
+			'post_name'     => $this->get_id(),
 			'post_content'  => $this->get_summary(),
 			'post_status'   => 'publish',
 			'meta_input'    => $this->get_post_meta_input(),
