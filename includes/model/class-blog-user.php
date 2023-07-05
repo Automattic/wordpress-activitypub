@@ -66,7 +66,7 @@ class Blog_User extends User {
 	 * @return string The User-Url.
 	 */
 	public function get_url() {
-		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_username() );
+		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() );
 	}
 
 	/**
@@ -116,17 +116,29 @@ class Blog_User extends User {
 		return $default;
 	}
 
-	public function get_username() {
+	public function get_preferred_username() {
 		return self::get_default_username();
 	}
 
-	public function get_avatar() {
-		return \esc_url( \get_site_icon_url( 120 ) );
+	public function get_icon() {
+		$image = wp_get_attachment_image_src( get_theme_mod( 'custom_logo' ) );
+
+		if ( $image ) {
+			return array(
+				'type' => 'Image',
+				'url'  => esc_url( $image[0] ),
+			);
+		}
+
+		return null;
 	}
 
 	public function get_header_image() {
 		if ( \has_header_image() ) {
-			return esc_url( \get_header_image() );
+			return array(
+				'type' => 'Image',
+				'url'  => esc_url( \get_header_image() ),
+			);
 		}
 
 		return null;
