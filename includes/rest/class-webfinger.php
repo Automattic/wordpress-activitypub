@@ -18,7 +18,8 @@ class Webfinger {
 	 */
 	public static function init() {
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
-		\add_action( 'webfinger_user_data', array( self::class, 'add_webfinger_discovery' ), 10, 3 );
+		\add_filter( 'webfinger_user_data', array( self::class, 'add_user_discovery' ), 10, 3 );
+		\add_filter( 'webfinger_data', array( self::class, 'add_pseudo_user_discovery' ), 99, 2 );
 	}
 
 	/**
@@ -47,35 +48,9 @@ class Webfinger {
 	 */
 	public static function webfinger( $request ) {
 		$resource = $request->get_param( 'resource' );
-		$user     = User_Collection::get_by_resource( $resource );
+		$response = self::get_profile( $resource );
 
-		if ( is_wp_error( $user ) ) {
-			return $user;
-		}
-
-		$aliases = array(
-			$user->get_url(),
-			$user->get_at_url(),
-		);
-
-		$json = array(
-			'subject' => $resource,
-			'aliases' => array_values( array_unique( $aliases ) ),
-			'links'   => array(
-				array(
-					'rel'  => 'self',
-					'type' => 'application/activity+json',
-					'href' => $user->get_url(),
-				),
-				array(
-					'rel'  => 'http://webfinger.net/rel/profile-page',
-					'type' => 'text/html',
-					'href' => $user->get_url(),
-				),
-			),
-		);
-
-		return new WP_REST_Response( $json, 200 );
+		return new WP_REST_Response( $response, 200 );
 	}
 
 	/**
@@ -102,7 +77,7 @@ class Webfinger {
 	 * @param string  $resource the WebFinger resource
 	 * @param WP_User $user     the WordPress user
 	 */
-	public static function add_webfinger_discovery( $array, $resource, $user ) {
+	public static function add_user_discovery( $array, $resource, $user ) {
 		$array['links'][] = array(
 			'rel'  => 'self',
 			'type' => 'application/activity+json',
@@ -110,5 +85,53 @@ class Webfinger {
 		);
 
 		return $array;
+	}
+
+	/**
+	 * Add WebFinger discovery links
+	 *
+	 * @param array   $array    the jrd array
+	 * @param string  $resource the WebFinger resource
+	 * @param WP_User $user     the WordPress user
+	 */
+	public static function add_pseudo_user_discovery( $array, $resource ) {
+		if ( ! $array ) {
+			$array = array();
+		}
+
+		$profile = self::get_profile( $resource );
+
+		return array_merge( $array, $profile );
+	}
+
+	public static function get_profile( $resource ) {
+		$user = User_Collection::get_by_resource( $resource );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		$aliases = array(
+			$user->get_url(),
+		);
+
+		$profile = array(
+			'subject' => $resource,
+			'aliases' => array_values( array_unique( $aliases ) ),
+			'links'   => array(
+				array(
+					'rel'  => 'self',
+					'type' => 'application/activity+json',
+					'href' => $user->get_url(),
+				),
+				array(
+					'rel'  => 'http://webfinger.net/rel/profile-page',
+					'type' => 'text/html',
+					'href' => $user->get_url(),
+				),
+			),
+		);
+
+		return $profile;
 	}
 }
