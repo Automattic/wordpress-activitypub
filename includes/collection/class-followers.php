@@ -7,7 +7,9 @@ use WP_Query;
 use Activitypub\Http;
 use Activitypub\Webfinger;
 use Activitypub\Model\Follower;
+use Activitypub\Collection\Users;
 use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
 
 use function Activitypub\is_tombstone;
 use function Activitypub\get_remote_metadata_by_actor;
@@ -131,7 +133,7 @@ class Followers {
 			'_actor',
 			array(
 				'type'              => 'string',
-				'single'            => false,
+				'single'            => true,
 				'sanitize_callback' => function( $value ) {
 					return esc_sql( $value );
 				},
@@ -191,7 +193,7 @@ class Followers {
 	public static function add_follower( $user_id, $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
 
-		if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
+		if ( is_tombstone( $meta ) ) {
 			return $meta;
 		}
 
@@ -241,7 +243,7 @@ class Followers {
 
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = '_user_id' AND pm.meta_value = %d AND p.guid = %s",
+				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = '_user_id' AND pm.meta_value = %d AND p.guid = %s",
 				array(
 					esc_sql( self::POST_TYPE ),
 					esc_sql( $user_id ),
@@ -280,17 +282,21 @@ class Followers {
 			unset( $object['@context'] );
 		}
 
+		$user = Users::get_by_id( $user_id );
+
 		// get inbox
 		$inbox = $follower->get_inbox();
 
 		// send "Accept" activity
-		$activity = new Activity( 'Accept' );
-		$activity->set_activity_object( $object );
-		$activity->set_actor( \get_author_posts_url( $user_id ) );
+		$activity = new Activity();
+		$activity->set_type( 'Accept' );
+		$activity->set_object( $object );
+		$activity->set_actor( $user->get_id() );
 		$activity->set_to( $actor );
-		$activity->set_id( \get_author_posts_url( $user_id ) . '#follow-' . \preg_replace( '~^https?://~', '', $actor ) );
+		$activity->set_id( $user->get_id() . '#follow-' . \preg_replace( '~^https?://~', '', $actor ) );
 
-		$activity = $activity->to_simple_json();
+		$activity = $activity->to_json();
+
 		$response = Http::post( $inbox, $activity, $user_id );
 	}
 
