@@ -111,7 +111,6 @@ class Follower extends Actor {
 			'post_type'    => Followers::POST_TYPE,
 			'post_name'    => esc_url_raw( $this->get_id() ),
 			'post_excerpt' => esc_html( $this->get_summary() ) ? $this->get_summary() : '',
-			'post_content' => esc_sql( $this->to_json() ),
 			'post_status'  => 'publish',
 			'meta_input'   => $this->get_post_meta_input(),
 		);
@@ -150,7 +149,8 @@ class Follower extends Actor {
 	 */
 	protected function get_post_meta_input() {
 		$meta_input = array();
-		$meta_input['activitypub_inbox'] = esc_url_raw( $this->get_shared_inbox() );
+		$meta_input['activitypub_inbox'] = $this->get_shared_inbox();
+		$meta_input['activitypub_actor_json'] = $this->to_json();
 
 		return $meta_input;
 	}
@@ -197,7 +197,8 @@ class Follower extends Actor {
 	 * @return array Activitypub\Model\Follower
 	 */
 	public static function init_from_cpt( $post ) {
-		$object = self::init_from_json( $post->post_content );
+		$actor_json = get_post_meta( $post->ID, 'activitypub_actor_json', true );
+		$object = self::init_from_json( $actor_json );
 		$object->set__id( $post->ID );
 		$object->set_id( $post->guid );
 		$object->set_published( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_published ) ) );

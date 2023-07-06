@@ -100,6 +100,18 @@ class Followers {
 			)
 		);
 
+		register_post_meta(
+			self::POST_TYPE,
+			'activitypub_actor_json',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'sanitize_callback' => function( $value ) {
+					return sanitize_text_field( $value );
+				},
+			)
+		);
+
 		do_action( 'activitypub_after_register_post_type' );
 	}
 
@@ -254,13 +266,14 @@ class Followers {
 
 		if ( isset( $object['user_id'] ) ) {
 			unset( $object['user_id'] );
-			unset( $object['@context'] );
 		}
+
+		unset( $object['@context'] );
 
 		$user = Users::get_by_id( $user_id );
 
 		// get inbox
-		$inbox = $follower->get_inbox();
+		$inbox = $follower->get_shared_inbox();
 
 		// send "Accept" activity
 		$activity = new Activity();
