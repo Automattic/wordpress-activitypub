@@ -55,7 +55,7 @@ class Followers extends WP_List_Table {
 		$page_num = $this->get_pagenum();
 		$per_page = 20;
 
-		$followers = FollowerCollection::get_followers( $this->user_id, $per_page, ( $page_num - 1 ) * $per_page );
+		$followers = FollowerCollection::get_followers( $this->user_id, $per_page, $page_num );
 		$counter   = FollowerCollection::count_followers( $this->user_id );
 
 		$this->items = array();

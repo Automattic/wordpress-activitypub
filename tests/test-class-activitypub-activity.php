@@ -37,7 +37,7 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 			'content' => 'Hello world!',
 		);
 
-		$object = \Activitypub\Activity\Base_Object::from_array( $test_array );
+		$object = \Activitypub\Activity\Base_Object::init_from_array( $test_array );
 
 		$this->assertEquals( 'Hello world!', $object->get_content() );
 		$this->assertEquals( $test_array, $object->to_array() );

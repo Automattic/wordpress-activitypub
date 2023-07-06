@@ -111,12 +111,11 @@ class Scheduler {
 			$meta = get_remote_metadata_by_actor( $follower->get_url(), true );
 
 			if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-				$follower->set_error( $meta );
+				Followers::add_error( $follower->get__id(), $meta );
 			} else {
-				$follower->from_meta( $meta );
+				$follower->from_array( $meta );
+				$follower->update();
 			}
-
-			$follower->update();
 		}
 	}
 
@@ -137,8 +136,7 @@ class Scheduler {
 				if ( 5 <= $follower->count_errors() ) {
 					$follower->delete();
 				} else {
-					$follower->set_error( $meta );
-					$follower->update();
+					Followers::add_error( $follower->get__id(), $meta );
 				}
 			} else {
 				$follower->reset_errors();
