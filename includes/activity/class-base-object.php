@@ -555,12 +555,12 @@ class Base_Object {
 	 *
 	 * @return string The JSON string.
 	 *
-	 * @return array An Object built from the JSON string.
+	 * @return \Activitypub\Activity\Base_Object An Object built from the JSON string.
 	 */
-	public static function from_json( $json ) {
-		$array = wp_json_decode( $json, true );
+	public static function init_from_json( $json ) {
+		$array = \json_decode( $json, true );
 
-		return self::from_array( $array );
+		return self::init_from_array( $array );
 	}
 
 	/**
@@ -568,9 +568,9 @@ class Base_Object {
 	 *
 	 * @return string The object array.
 	 *
-	 * @return array An Object built from the JSON string.
+	 * @return \Activitypub\Activity\Base_Object An Object built from the JSON string.
 	 */
-	public static function from_array( $array ) {
+	public static function init_from_array( $array ) {
 		$object = new static();
 
 		foreach ( $array as $key => $value ) {
@@ -579,6 +579,29 @@ class Base_Object {
 		}
 
 		return $object;
+	}
+
+	/**
+	 * Convert JSON input to an array and pre-fill the object.
+	 *
+	 * @param string $json The JSON string.
+	 */
+	public function from_json( $json ) {
+		$array = \json_decode( $json, true );
+
+		$this->from_array( $array );
+	}
+
+	/**
+	 * Convert JSON input to an array and pre-fill the object.
+	 *
+	 * @param array $array The array.
+	 */
+	public function from_array( $array ) {
+		foreach ( $array as $key => $value ) {
+			$key = camel_to_snake_case( $key );
+			$this->set( $key, $value );
+		}
 	}
 
 	/**

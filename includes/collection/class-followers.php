@@ -64,37 +64,7 @@ class Followers {
 
 		register_post_meta(
 			self::POST_TYPE,
-			'preferred_username',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'sanitize_callback' => function( $value ) {
-					return sanitize_user( $value, true );
-				},
-			)
-		);
-
-		register_post_meta(
-			self::POST_TYPE,
-			'icon',
-			array(
-				'single'            => true,
-			)
-		);
-
-		register_post_meta(
-			self::POST_TYPE,
-			'url',
-			array(
-				'type'              => 'string',
-				'single'            => false,
-				'sanitize_callback' => array( self::class, 'sanitize_url' ),
-			)
-		);
-
-		register_post_meta(
-			self::POST_TYPE,
-			'inbox',
+			'activitypub_inbox',
 			array(
 				'type'              => 'string',
 				'single'            => true,
@@ -104,17 +74,7 @@ class Followers {
 
 		register_post_meta(
 			self::POST_TYPE,
-			'_shared_inbox',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'sanitize_callback' => array( self::class, 'sanitize_url' ),
-			)
-		);
-
-		register_post_meta(
-			self::POST_TYPE,
-			'_errors',
+			'activitypub_errors',
 			array(
 				'type'              => 'string',
 				'single'            => false,
@@ -130,10 +90,10 @@ class Followers {
 
 		register_post_meta(
 			self::POST_TYPE,
-			'_actor',
+			'activitypub_user_id',
 			array(
 				'type'              => 'string',
-				'single'            => true,
+				'single'            => false,
 				'sanitize_callback' => function( $value ) {
 					return esc_sql( $value );
 				},
@@ -197,13 +157,28 @@ class Followers {
 			return $meta;
 		}
 
-		$follower = Follower::from_array( $meta );
+		$error = null;
+
+		$follower = new Follower();
+
+		if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
+			$follower->set_id( $actor );
+			$follower->set_url( $actor );
+			$error = $meta;
+		} else {
+			$follower->from_array( $meta );
+		}
+
 		$follower->upsert();
 
-		$meta = get_post_meta( $follower->get__id(), '_user_id' );
+		$meta = get_post_meta( $follower->get__id(), 'activitypub_user_id' );
+
+		if ( $error ) {
+			self::add_error( $follower->get__id(), $error );
+		}
 
 		if ( is_array( $meta ) && ! in_array( $user_id, $meta, true ) ) {
-			add_post_meta( $follower->get__id(), '_user_id', $user_id );
+			add_post_meta( $follower->get__id(), 'activitypub_user_id', $user_id );
 			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 
@@ -227,7 +202,7 @@ class Followers {
 			return false;
 		}
 
-		return delete_post_meta( $follower->get__id(), '_user_id', $user_id );
+		return delete_post_meta( $follower->get__id(), 'activitypub_user_id', $user_id );
 	}
 
 	/**
@@ -243,7 +218,7 @@ class Followers {
 
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = '_user_id' AND pm.meta_value = %d AND p.guid = %s",
+				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = 'activitypub_user_id' AND pm.meta_value = %d AND p.guid = %s",
 				array(
 					esc_sql( self::POST_TYPE ),
 					esc_sql( $user_id ),
@@ -254,7 +229,7 @@ class Followers {
 
 		if ( $post_id ) {
 			$post = get_post( $post_id );
-			return Follower::from_custom_post_type( $post );
+			return Follower::init_from_cpt( $post );
 		}
 
 		return null;
@@ -310,16 +285,16 @@ class Followers {
 	 *
 	 * @return array The Term list of Followers, the format depends on $output
 	 */
-	public static function get_followers( $user_id, $number = null, $offset = null, $args = array() ) {
+	public static function get_followers( $user_id, $number = null, $page = null, $args = array() ) {
 		$defaults = array(
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,
-			'offset'         => $offset,
+			'paged'          => $page,
 			'orderby'        => 'ID',
 			'order'          => 'DESC',
 			'meta_query'     => array(
 				array(
-					'key'   => '_user_id',
+					'key'   => 'activitypub_user_id',
 					'value' => $user_id,
 				),
 			),
@@ -330,7 +305,7 @@ class Followers {
 		$items = array();
 
 		foreach ( $query->get_posts() as $post ) {
-			$items[] = Follower::from_custom_post_type( $post ); // phpcs:ignore
+			$items[] = Follower::init_from_cpt( $post ); // phpcs:ignore
 		}
 
 		return $items;
@@ -343,11 +318,11 @@ class Followers {
 	 *
 	 * @return array The Term list of Followers.
 	 */
-	public static function get_all_followers( $user_id = null ) {
+	public static function get_all_followers() {
 		$args = array(
 			'meta_query' => array(),
 		);
-		return self::get_followers( $user_id, null, null, $args );
+		return self::get_followers( null, null, null, $args );
 	}
 
 	/**
@@ -364,7 +339,7 @@ class Followers {
 				'fields'     => 'ids',
 				'meta_query' => array(
 					array(
-						'key'   => '_user_id',
+						'key'   => 'activitypub_user_id',
 						'value' => $user_id,
 					),
 				),
@@ -396,11 +371,11 @@ class Followers {
 				'fields'     => 'ids',
 				'meta_query' => array(
 					array(
-						'key'     => '_shared_inbox',
+						'key'     => 'activitypub_inbox',
 						'compare' => 'EXISTS',
 					),
 					array(
-						'key'   => '_user_id',
+						'key'   => 'activitypub_user_id',
 						'value' => $user_id,
 					),
 				),
@@ -418,7 +393,7 @@ class Followers {
 			$wpdb->prepare(
 				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
 				WHERE post_id IN (" . implode( ', ', array_fill( 0, count( $posts ), '%d' ) ) . ")
-				AND meta_key = '_shared_inbox'
+				AND meta_key = 'activitypub_inbox'
 				AND meta_value IS NOT NULL",
 				$posts
 			)
@@ -457,7 +432,7 @@ class Followers {
 		$items = array();
 
 		foreach ( $posts->get_posts() as $follower ) {
-			$items[] = Follower::from_custom_post_type( $follower ); // phpcs:ignore
+			$items[] = Follower::init_from_cpt( $follower ); // phpcs:ignore
 		}
 
 		return $items;
@@ -477,7 +452,7 @@ class Followers {
 			'posts_per_page' => $number,
 			'meta_query'     => array(
 				array(
-					'key'     => 'errors',
+					'key'     => 'activitypub_errors',
 					'compare' => 'EXISTS',
 				),
 			),
@@ -487,9 +462,28 @@ class Followers {
 		$items = array();
 
 		foreach ( $posts->get_posts() as $follower ) {
-			$items[] = Follower::from_custom_post_type( $follower ); // phpcs:ignore
+			$items[] = Follower::init_from_cpt( $follower ); // phpcs:ignore
 		}
 
 		return $items;
+	}
+
+	/**
+	 * Undocumented function
+	 *
+	 * @param [type] $post_id
+	 * @param [type] $error
+	 * @return void
+	 */
+	public static function add_error( $post_id, $error ) {
+		if ( is_string( $error ) ) {
+			$error_message = $error;
+		} elseif ( is_wp_error( $error ) ) {
+			$error_message = $error->get_error_message();
+		} else {
+			$error_message = __( 'Unknown Error or misconfigured Error-Message', 'activitypub' );
+		}
+
+		return add_post_meta( $post_id, 'activitypub_errors', $error_message );
 	}
 }
