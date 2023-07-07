@@ -80,8 +80,12 @@ class Followers {
 		$json->first = \add_query_arg( 'page', 1, $json->partOf ); // phpcs:ignore
 		$json->last  = \add_query_arg( 'page', \ceil ( $json->totalItems / 20 ), $json->partOf ); // phpcs:ignore
 
-		if ( $page && ( ( \ceil ( $json->totalItems / 20 ) ) >= $page ) ) { // phpcs:ignore
+		if ( $page && ( ( \ceil ( $json->totalItems / 20 ) ) > $page ) ) { // phpcs:ignore
 			$json->next  = \add_query_arg( 'page', $page + 1, $json->partOf ); // phpcs:ignore
+		}
+
+		if ( $page && ( $page > 1 ) ) { // phpcs:ignore
+			$json->prev  = \add_query_arg( 'page', $page - 1, $json->partOf ); // phpcs:ignore
 		}
 
 		// phpcs:ignore
