@@ -23,7 +23,7 @@ class Activity_Dispatcher {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_user_activity' ), 10, 2 );
-		\add_action( 'activitypub_send_activity', array( self::class, 'send_blog_activity' ), 10, 2 );
+		\add_action( 'activitypub_send_activity', array( self::class, 'send_announce_activity' ), 10, 2 );
 	}
 
 	/**
@@ -74,6 +74,10 @@ class Activity_Dispatcher {
 		// check if a migration is needed before sending new posts
 		Migration::maybe_migrate();
 
+		if ( ! in_array( $type, array( 'Create', 'Update' ), true ) ) {
+			return;
+		}
+
 		if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
 			return;
 		}
@@ -110,9 +114,13 @@ class Activity_Dispatcher {
 	 *
 	 * @return void
 	 */
-	public static function send_blog_announce_activity( WP_Post $wp_post, $type ) {
+	public static function send_announce_activity( WP_Post $wp_post, $type ) {
 		// check if a migration is needed before sending new posts
 		Migration::maybe_migrate();
+
+		if ( ! in_array( $type, array( 'Create', 'Update' ), true ) ) {
+			return;
+		}
 
 		if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
 			return;
