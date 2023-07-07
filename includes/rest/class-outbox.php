@@ -61,7 +61,7 @@ class Outbox {
 
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
 
-		$page = $request->get_param( 'page', 0 );
+		$page = $request->get_param( 'page', 1 );
 
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
@@ -78,9 +78,6 @@ class Outbox {
 		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
 
-		// phpcs:ignore
-		$json->totalItems = 0;
-
 		foreach ( $post_types as $post_type ) {
 			$count_posts = \wp_count_posts( $post_type );
 			$json->totalItems += \intval( $count_posts->publish ); // phpcs:ignore
@@ -93,13 +90,17 @@ class Outbox {
 			$json->next  = \add_query_arg( 'page', $page + 1, $json->partOf ); // phpcs:ignore
 		}
 
+		if ( $page && ( $page > 1 ) ) { // phpcs:ignore
+			$json->prev  = \add_query_arg( 'page', $page - 1, $json->partOf ); // phpcs:ignore
+		}
+
 		if ( $page ) {
 			$posts = \get_posts(
 				array(
 					'posts_per_page' => 10,
-					'author' => $user_id,
-					'offset' => ( $page - 1 ) * 10,
-					'post_type' => $post_types,
+					'author'         => $user_id,
+					'paged'          => $page,
+					'post_type'      => $post_types,
 				)
 			);
 
@@ -139,6 +140,7 @@ class Outbox {
 
 		$params['page'] = array(
 			'type' => 'integer',
+			'default' => 1,
 		);
 
 		$params['user_id'] = array(
