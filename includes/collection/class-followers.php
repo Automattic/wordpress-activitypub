@@ -298,7 +298,7 @@ class Followers {
 	 *
 	 * @return array The Term list of Followers, the format depends on $output
 	 */
-	public static function get_followers( $user_id, $number = null, $page = null, $args = array() ) {
+	public static function get_followers( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,

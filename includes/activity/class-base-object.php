@@ -661,6 +661,6 @@ class Base_Object {
 	public function to_json() {
 		$array = $this->to_array();
 
-		return \wp_json_encode( $array );
+		return \wp_json_encode( $array, \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
 	}
 }

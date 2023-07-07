@@ -62,7 +62,7 @@ class Followers extends WP_List_Table {
 		$this->set_pagination_args(
 			array(
 				'total_items' => $counter,
-				'total_pages' => round( $counter / $per_page ),
+				'total_pages' => ceil( $counter / $per_page ),
 				'per_page'    => $per_page,
 			)
 		);
