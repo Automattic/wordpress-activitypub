@@ -107,7 +107,7 @@ class Followers {
 				'type'              => 'string',
 				'single'            => true,
 				'sanitize_callback' => function( $value ) {
-					return esc_sql( $value );
+					return sanitize_text_field( $value );
 				},
 			)
 		);
@@ -315,9 +315,10 @@ class Followers {
 
 		$args  = wp_parse_args( $args, $defaults );
 		$query = new WP_Query( $args );
+		$posts = $query->get_posts();
 		$items = array();
 
-		foreach ( $query->get_posts() as $post ) {
+		foreach ( $posts as $post ) {
 			$items[] = Follower::init_from_cpt( $post ); // phpcs:ignore
 		}
 
