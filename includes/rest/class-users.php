@@ -51,7 +51,13 @@ class Users {
 					'args'                => array(
 						'resource' => array(
 							'required'          => true,
-							//'sanitize_callback' => '',
+							'sanitize_callback' => '',
+						),
+						'action' => array(
+							'required'          => false,
+							'default'           => 'show',
+							'type'              => 'enum',
+							'enum'              => array( 'redirect', 'show' ),
 						),
 					),
 					'permission_callback' => '__return_true',
@@ -100,7 +106,8 @@ class Users {
 
 	public static function remote_follow( WP_REST_Request $request ) {
 		$resource = $request->get_param( 'resource' );
-		$user_id = $request->get_param( 'user_id' );
+		$action   = $request->get_param( 'action' );
+		$user_id  = $request->get_param( 'user_id' );
 
 		$template = WebFinger::get_remote_follow_endpoint( $resource );
 
@@ -112,7 +119,12 @@ class Users {
 
 		$url = str_replace( '{uri}', $resource, $template );
 
-		return $url;
+		if ( 'redirect' === $action ) {
+			header( 'Location: ' . $url, true, 301 );
+			exit;
+		}
+
+		return array( 'redirect' => $url );
 	}
 
 	/**
