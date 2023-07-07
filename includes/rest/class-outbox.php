@@ -4,6 +4,7 @@ namespace Activitypub\Rest;
 use stdClass;
 use WP_Error;
 use WP_REST_Server;
+use WP_REST_Request;
 use WP_REST_Response;
 use Activitypub\Model\Post;
 use Activitypub\Model\Activity;

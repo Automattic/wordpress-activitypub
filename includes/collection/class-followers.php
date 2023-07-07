@@ -427,7 +427,6 @@ class Followers {
 	/**
 	 * Get all Followers that have not been updated for a given time
 	 *
-	 * @param enum $output     The output format, supported ARRAY_N, OBJECT and ACTIVITYPUB_OBJECT.
 	 * @param int  $number     Limits the result.
 	 * @param int  $older_than The time in seconds.
 	 *
