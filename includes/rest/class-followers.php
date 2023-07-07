@@ -58,6 +58,8 @@ class Followers {
 			return $user;
 		}
 
+		$page = $request->get_param( 'page', 1 );
+
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
@@ -72,15 +74,22 @@ class Followers {
 		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/followers', $user->get__id() ) ); // phpcs:ignore
-		$json->first = $json->partOf; // phpcs:ignore
 		$json->totalItems = FollowerCollection::count_followers( $user->get__id() ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/followers', $user->get__id() ) ); // phpcs:ignore
+
+		$json->first = \add_query_arg( 'page', 1, $json->partOf ); // phpcs:ignore
+		$json->last  = \add_query_arg( 'page', \ceil ( $json->totalItems / 20 ), $json->partOf ); // phpcs:ignore
+
+		if ( $page && ( ( \ceil ( $json->totalItems / 20 ) ) >= $page ) ) { // phpcs:ignore
+			$json->next  = \add_query_arg( 'page', $page + 1, $json->partOf ); // phpcs:ignore
+		}
+
 		// phpcs:ignore
 		$json->orderedItems = array_map(
 			function( $item ) {
 				return $item->get_url();
 			},
-			FollowerCollection::get_followers( $user->get__id() )
+			FollowerCollection::get_followers( $user->get__id(), 20, $page )
 		);
 
 		$response = new WP_REST_Response( $json, 200 );
@@ -99,6 +108,7 @@ class Followers {
 
 		$params['page'] = array(
 			'type' => 'integer',
+			'default' => 1,
 		);
 
 		$params['user_id'] = array(
