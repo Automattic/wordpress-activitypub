@@ -78,9 +78,9 @@ class Activity_Dispatcher {
 		$wp_post->post_author = Users::BLOG_USER_ID;
 
 		if ( is_single_user() ) {
-			self::send_user_activity( $wp_post, $type );
+			self::send_activity( $wp_post, $type );
 		} else {
-			self::send_announce_activity( $wp_post, $type );
+			self::send_announce( $wp_post, $type );
 		}
 	}
 
