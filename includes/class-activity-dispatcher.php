@@ -31,6 +31,28 @@ class Activity_Dispatcher {
 	}
 
 	/**
+	 * Send Activities to followers and mentioned users or `Announce` (boost) a blog post.
+	 *
+	 * @param WP_Post $wp_post The ActivityPub Post.
+	 * @param string  $type    The Activity-Type.
+	 *
+	 * @return void
+	 */
+	public static function send_activity_or_announce( WP_Post $wp_post, $type ) {
+		if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
+			return;
+		}
+
+		$wp_post->post_author = Users::BLOG_USER_ID;
+
+		if ( is_single_user() ) {
+			self::send_activity( $wp_post, $type );
+		} else {
+			self::send_announce( $wp_post, $type );
+		}
+	}
+
+	/**
 	 * Send Activities to followers and mentioned users.
 	 *
 	 * @param WP_Post $wp_post The ActivityPub Post.
@@ -58,34 +80,12 @@ class Activity_Dispatcher {
 		$json = $activity->to_json();
 
 		foreach ( $inboxes as $inbox ) {
-			safe_remote_post( $inbox, $json, $user_id );
+			safe_remote_post( $inbox, $json, $wp_post->post_author );
 		}
 	}
 
 	/**
-	 * Send Activities to followers and mentioned users or `Announce` (boost) a blog post.
-	 *
-	 * @param WP_Post $wp_post The ActivityPub Post.
-	 * @param string  $type    The Activity-Type.
-	 *
-	 * @return void
-	 */
-	public static function send_activity_or_announce( WP_Post $wp_post, $type ) {
-		if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
-			return;
-		}
-
-		$wp_post->post_author = Users::BLOG_USER_ID;
-
-		if ( is_single_user() ) {
-			self::send_activity( $wp_post, $type );
-		} else {
-			self::send_announce( $wp_post, $type );
-		}
-	}
-
-	/**
-	 * Send Activities to followers and mentioned users.
+	 * Send Announces to followers and mentioned users.
 	 *
 	 * @param WP_Post $wp_post The ActivityPub Post.
 	 * @param string  $type    The Activity-Type.
@@ -122,7 +122,7 @@ class Activity_Dispatcher {
 		$json = $activity->to_json();
 
 		foreach ( $inboxes as $inbox ) {
-			safe_remote_post( $inbox, $json, $user_id );
+			safe_remote_post( $inbox, $json, $wp_post->post_author );
 		}
 	}
 }
