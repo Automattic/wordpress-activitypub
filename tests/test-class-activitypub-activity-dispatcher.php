@@ -47,6 +47,8 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 
 		$json = json_decode( $second_call_args[1]['body'] );
 		$this->assertEquals( 'Create', $json->type );
+		$this->assertEquals( 'http://example.org/?author=1', $json->actor );
+		$this->assertEquals( 'http://example.org/?author=1', $json->object->attributedTo );
 
 		remove_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10 );
 	}
@@ -121,6 +123,47 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 		$json = json_decode( $first_call_args[1]['body'] );
 		$this->assertEquals( 'Announce', $json->type );
 		$this->assertEquals( $user->get_url(), $json->actor );
+
+		remove_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10 );
+	}
+
+	public function test_dispatch_blog_activity() {
+		$followers = array( 'https://example.com/author/jon' );
+
+		add_filter(
+			'activitypub_is_single_user',
+			function( $return ) {
+				return true;
+			}
+		);
+
+		foreach ( $followers as $follower ) {
+			\Activitypub\Collection\Followers::add_follower( \Activitypub\Collection\Users::BLOG_USER_ID, $follower );
+		}
+
+		$post = \wp_insert_post(
+			array(
+				'post_author' => 1,
+				'post_content' => 'hello',
+			)
+		);
+
+		$pre_http_request = new MockAction();
+		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
+
+		\Activitypub\Activity_Dispatcher::send_activity_or_announce( get_post( $post ), 'Create' );
+
+		$all_args = $pre_http_request->get_args();
+		$first_call_args = $all_args[0];
+
+		$this->assertSame( 1, $pre_http_request->get_call_count() );
+
+		$user = new \Activitypub\Model\Blog_User();
+
+		$json = json_decode( $first_call_args[1]['body'] );
+		$this->assertEquals( 'Create', $json->type );
+		$this->assertEquals( $user->get_url(), $json->actor );
+		$this->assertEquals( $user->get_url(), $json->object->attributedTo );
 
 		remove_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10 );
 	}

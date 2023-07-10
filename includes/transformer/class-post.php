@@ -3,7 +3,7 @@ namespace Activitypub\Transformer;
 
 use WP_Post;
 use Activitypub\Collection\Users;
-use Activitypub\Collection\Blog_Users;
+use Activitypub\Model\Blog_User;
 use Activitypub\Activity\Base_Object;
 
 use function Activitypub\is_single_user;
