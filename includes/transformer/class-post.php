@@ -152,7 +152,7 @@ class Post {
 			return $user->get_url();
 		}
 
-		return Users::get_by_id( $wp_post->post_author )->get_url();
+		return Users::get_by_id( $this->wp_post->post_author )->get_url();
 	}
 
 	/**
