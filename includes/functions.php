@@ -306,11 +306,27 @@ function is_user_disabled( $user_id ) {
 	}
 }
 
+/**
+ * Check if the blog is in single-user mode.
+ *
+ * @return boolean True if the blog is in single-user mode, false otherwise.
+ */
+function is_single_user() {
+	if (
+		false === ACTIVITYPUB_DISABLE_BLOG_USER &&
+		true === ACTIVITYPUB_DISABLE_USER
+	) {
+		return true;
+	}
+
+	return false;
+}
+
 if ( ! function_exists( 'get_self_link' ) ) {
 	/**
-	 * Get the correct self URL
+	 * Returns the link for the currently displayed feed.
 	 *
-	 * @return boolean
+	 * @return string Correct link for the atom:self element.
 	 */
 	function get_self_link() {
 		$host = wp_parse_url( home_url() );
