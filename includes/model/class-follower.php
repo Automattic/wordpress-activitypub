@@ -34,6 +34,22 @@ class Follower extends Actor {
 	}
 
 	/**
+	 * Getter for URL attribute.
+	 *
+	 * Falls back to ID, if no URL is set. This is relevant for
+	 * Plattforms like Lemmy, where the ID is the URL.
+	 *
+	 * @return string The URL.
+	 */
+	public function get_url() {
+		if ( $this->url ) {
+			return $this->url;
+		}
+
+		return $this->id;
+	}
+
+	/**
 	 * Reset (delete) all errors.
 	 *
 	 * @return void
