@@ -312,14 +312,16 @@ function is_user_disabled( $user_id ) {
  * @return boolean True if the blog is in single-user mode, false otherwise.
  */
 function is_single_user() {
+	$return = false;
+
 	if (
 		false === ACTIVITYPUB_DISABLE_BLOG_USER &&
 		true === ACTIVITYPUB_DISABLE_USER
 	) {
-		return true;
+		$return = true;
 	}
 
-	return false;
+	return apply_filters( 'activitypub_is_single_user', $return );
 }
 
 if ( ! function_exists( 'get_self_link' ) ) {
