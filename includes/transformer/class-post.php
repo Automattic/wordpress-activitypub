@@ -3,8 +3,10 @@ namespace Activitypub\Transformer;
 
 use WP_Post;
 use Activitypub\Collection\Users;
+use Activitypub\Collection\Blog_Users;
 use Activitypub\Activity\Base_Object;
 
+use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -115,7 +117,7 @@ class Post {
 		$object->set_url( \esc_url( \get_permalink( $wp_post->ID ) ) );
 		$object->set_type( $this->get_object_type() );
 		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $wp_post->post_date_gmt ) ) );
-		$object->set_attributed_to( Users::get_by_id( $wp_post->post_author )->get_url() );
+		$object->set_attributed_to( $this->get_attributed_to() );
 		$object->set_content( $this->get_content() );
 		$object->set_content_map(
 			array(
@@ -135,6 +137,22 @@ class Post {
 		$object->set_tag( $this->get_tags() );
 
 		return $object;
+	}
+
+	/**
+	 * Returns the User-URL of the Author of the Post.
+	 *
+	 * If `single_user` mode is enabled, the URL of the Blog-User is returned.
+	 *
+	 * @return string The User-URL.
+	 */
+	protected function get_attributed_to() {
+		if ( is_single_user() ) {
+			$user = new Blog_User();
+			return $user->get_url();
+		}
+
+		return Users::get_by_id( $wp_post->post_author )->get_url();
 	}
 
 	/**
