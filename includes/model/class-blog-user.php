@@ -20,7 +20,7 @@ class Blog_User extends User {
 	 *
 	 * @var string
 	 */
-	protected $type = 'Person';
+	protected $type = 'Group';
 
 	public static function from_wp_user( $user_id ) {
 		if ( is_user_disabled( $user_id ) ) {
