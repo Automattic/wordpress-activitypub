@@ -196,8 +196,8 @@ class Activity extends Base_Object {
 			$this->set( 'updated', $object->get_updated() );
 		}
 
-		if ( $object->attributed_to() && ! $this->get_actor() ) {
-			$this->set( 'actor', $object->attributed_to() );
+		if ( $object->get_attributed_to() && ! $this->get_actor() ) {
+			$this->set( 'actor', $object->get_attributed_to() );
 		}
 
 		if ( $object->get_id() && ! $this->get_id() ) {
