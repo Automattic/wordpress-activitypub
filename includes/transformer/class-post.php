@@ -116,7 +116,17 @@ class Post {
 		$object->set_id( \esc_url( \get_permalink( $wp_post->ID ) ) );
 		$object->set_url( \esc_url( \get_permalink( $wp_post->ID ) ) );
 		$object->set_type( $this->get_object_type() );
-		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $wp_post->post_date_gmt ) ) );
+
+		$published = \strtotime( $wp_post->post_date_gmt );
+
+		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', $published ) );
+
+		$updated = \strtotime( $wp_post->post_modified_gmt );
+
+		if ( $updated > $published ) {
+			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', $updated ) );
+		}
+
 		$object->set_attributed_to( $this->get_attributed_to() );
 		$object->set_content( $this->get_content() );
 		$object->set_content_map(
