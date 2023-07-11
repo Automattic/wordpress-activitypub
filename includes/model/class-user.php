@@ -26,10 +26,7 @@ class User extends Actor {
 	protected $type = 'Person';
 
 	public static function from_wp_user( $user_id ) {
-		if (
-			is_user_disabled( $user_id ) ||
-			! get_user_by( 'id', $user_id )
-		) {
+		if ( is_user_disabled( $user_id ) ) {
 			return new WP_Error(
 				'activitypub_user_not_found',
 				\__( 'User not found', 'activitypub' ),

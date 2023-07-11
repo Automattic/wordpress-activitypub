@@ -124,7 +124,6 @@ class Inbox {
 	 * @return WP_REST_Response
 	 */
 	public static function user_inbox_post( $request ) {
-
 		$user_id = $request->get_param( 'user_id' );
 		$user    = User_Collection::get_by_various( $user_id );
 
@@ -150,7 +149,6 @@ class Inbox {
 	 * @return WP_REST_Response
 	 */
 	public static function shared_inbox_post( $request ) {
-
 		$data = $request->get_params();
 		$type = $request->get_param( 'type' );
 		$users = self::extract_recipients( $data );
