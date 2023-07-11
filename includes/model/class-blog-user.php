@@ -83,7 +83,7 @@ class Blog_User extends User {
 
 		// check if domain host has a subdomain
 		$host       = \wp_parse_url( \get_home_url(), \PHP_URL_HOST );
-		$host       = \str_replace( 'www.', '', $host );
+		$host       = \preg_replace( '/^www\./i', '', $host );
 		$host_parts = \explode( '.', $host );
 
 		if ( \count( $host_parts ) <= 2 && strlen( $host ) <= 15 ) {
