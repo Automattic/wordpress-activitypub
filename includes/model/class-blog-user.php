@@ -5,6 +5,7 @@ use WP_Query;
 use Activitypub\Signature;
 use Activitypub\Collection\Users;
 
+use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
 
 class Blog_User extends User {
@@ -205,5 +206,20 @@ class Blog_User extends User {
 
 	public function get_canonical_url() {
 		return \home_url();
+	}
+
+	/**
+	 * Get the type of the object.
+	 *
+	 * If the Blog is in "single user" mode, return "Person" insted of "Group".
+	 *
+	 * @return string The type of the object.
+	 */
+	public function get_type() {
+		if ( is_single_user() ) {
+			return 'Person';
+		} else {
+			return $this->type;
+		}
 	}
 }
