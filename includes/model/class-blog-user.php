@@ -71,7 +71,7 @@ class Blog_User extends User {
 	}
 
 	/**
-	 * Generate and save a default Username.
+	 * Generate a default Username.
 	 *
 	 * @return string The auto-generated Username.
 	 */
@@ -105,9 +105,19 @@ class Blog_User extends User {
 		// get random item of $default_identifier
 		$default = $default_identifier[ \array_rand( $default_identifier ) ];
 
-		return $default;
+		/**
+		 * Filter the default blog username.
+		 *
+		 * @param string $default The default username.
+		 */
+		return apply_filters( 'activitypub_default_blog_username', $default );
 	}
 
+	/**
+	 * Get the preferred User-Name.
+	 *
+	 * @return string The User-Name.
+	 */
 	public function get_preferred_username() {
 		$username = \get_option( 'activitypub_blog_user_identifier' );
 
@@ -118,6 +128,11 @@ class Blog_User extends User {
 		return self::get_default_username();
 	}
 
+	/**
+	 * Get the User-Icon.
+	 *
+	 * @return array|null The User-Icon.
+	 */
 	public function get_icon() {
 		$image = wp_get_attachment_image_src( get_theme_mod( 'custom_logo' ) );
 
@@ -131,6 +146,11 @@ class Blog_User extends User {
 		return null;
 	}
 
+	/**
+	 * Get the User-Header-Image.
+	 *
+	 * @return array|null The User-Header-Image.
+	 */
 	public function get_header_image() {
 		if ( \has_header_image() ) {
 			return array(
@@ -175,6 +195,8 @@ class Blog_User extends User {
 	}
 
 	/**
+	 * Get the User-Private-Key.
+	 *
 	 * @param int $user_id
 	 *
 	 * @return mixed
