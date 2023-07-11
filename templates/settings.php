@@ -31,7 +31,7 @@
 	<form method="post" action="options.php">
 		<?php \settings_fields( 'activitypub' ); ?>
 
-		<?php if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) : ?>
+	<?php if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) : ?>
 
 		<h3><?php \esc_html_e( 'Blog-User', 'activitypub' ); ?></h3>
 
@@ -58,7 +58,7 @@
 
 		<?php \do_settings_fields( 'activitypub', 'blog-user' ); ?>
 
-		<?php endif; ?>
+	<?php endif; ?>
 
 		<h3><?php \esc_html_e( 'Activities', 'activitypub' ); ?></h3>
 
