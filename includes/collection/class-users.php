@@ -7,6 +7,8 @@ use Activitypub\Model\User;
 use Activitypub\Model\Blog_User;
 use Activitypub\Model\Application_User;
 
+use function Activitypub\is_user_disabled;
+
 class Users {
 	/**
 	 * The ID of the Blog User
@@ -32,6 +34,14 @@ class Users {
 	public static function get_by_id( $user_id ) {
 		if ( is_string( $user_id ) || is_numeric( $user_id ) ) {
 			$user_id = (int) $user_id;
+		}
+
+		if ( is_user_disabled( $user_id ) ) {
+			return new WP_Error(
+				'activitypub_user_not_found',
+				\__( 'User not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
 		}
 
 		if ( self::BLOG_USER_ID === $user_id ) {
