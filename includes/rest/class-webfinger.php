@@ -14,7 +14,9 @@ use Activitypub\Collection\Users as User_Collection;
  */
 class Webfinger {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
@@ -23,7 +25,9 @@ class Webfinger {
 	}
 
 	/**
-	 * Register routes
+	 * Register routes.
+	 *
+	 * @return void
 	 */
 	public static function register_routes() {
 		\register_rest_route(
@@ -41,10 +45,11 @@ class Webfinger {
 	}
 
 	/**
-	 * Render JRD file
+	 * WebFinger endpoint.
 	 *
-	 * @param  WP_REST_Request   $request
-	 * @return WP_REST_Response
+	 * @param WP_REST_Request $request The request object.
+	 *
+	 * @return WP_REST_Response The response object.
 	 */
 	public static function webfinger( $request ) {
 		$resource = $request->get_param( 'resource' );
@@ -76,12 +81,16 @@ class Webfinger {
 	 * @param array   $array    the jrd array
 	 * @param string  $resource the WebFinger resource
 	 * @param WP_User $user     the WordPress user
+	 *
+	 * @return array the jrd array
 	 */
 	public static function add_user_discovery( $array, $resource, $user ) {
+		$user = User_Collection::get_by_id( $user->ID );
+
 		$array['links'][] = array(
 			'rel'  => 'self',
 			'type' => 'application/activity+json',
-			'href' => \get_author_posts_url( $user->ID ),
+			'href' => $user->get_url(),
 		);
 
 		return $array;
@@ -93,17 +102,24 @@ class Webfinger {
 	 * @param array   $array    the jrd array
 	 * @param string  $resource the WebFinger resource
 	 * @param WP_User $user     the WordPress user
+	 *
+	 * @return array the jrd array
 	 */
 	public static function add_pseudo_user_discovery( $array, $resource ) {
-		if ( ! $array ) {
-			$array = array();
+		if ( $array ) {
+			return $array;
 		}
 
-		$profile = self::get_profile( $resource );
-
-		return array_merge( $array, $profile );
+		return self::get_profile( $resource );
 	}
 
+	/**
+	 * Get the WebFinger profile.
+	 *
+	 * @param string $resource the WebFinger resource.
+	 *
+	 * @return array the WebFinger profile.
+	 */
 	public static function get_profile( $resource ) {
 		$user = User_Collection::get_by_resource( $resource );
 
