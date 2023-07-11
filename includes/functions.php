@@ -281,29 +281,39 @@ function is_activitypub_request() {
  * @return boolean True if the user is disabled, false otherwise.
  */
 function is_user_disabled( $user_id ) {
+	$return = false;
+
 	switch ( $user_id ) {
 		// if the user is the application user, it's always enabled.
 		case \Activitypub\Collection\Users::APPLICATION_USER_ID:
-			return false;
+			$return = false;
+			break;
 		// if the user is the blog user, it's only enabled in single-user mode.
 		case \Activitypub\Collection\Users::BLOG_USER_ID:
 			if ( defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) ) {
-				return ACTIVITYPUB_DISABLE_BLOG_USER;
+				$return = ACTIVITYPUB_DISABLE_BLOG_USER;
+				break;
 			}
 
-			return false;
+			$return = false;
+			break;
 		// if the user is any other user, it's enabled if it can publish posts.
 		default:
 			if ( defined( 'ACTIVITYPUB_DISABLE_USER' ) ) {
-				return ACTIVITYPUB_DISABLE_USER;
+				$return = ACTIVITYPUB_DISABLE_USER;
+				break;
 			}
 
 			if ( ! \user_can( $user_id, 'publish_posts' ) ) {
-				return true;
+				$return = true;
+				break;
 			}
 
-			return false;
+			$return = false;
+			break;
 	}
+
+	return apply_filters( 'activitypub_is_user_disabled', $return, $user_id );
 }
 
 /**
