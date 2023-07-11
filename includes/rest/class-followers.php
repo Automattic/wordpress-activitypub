@@ -6,7 +6,7 @@ use stdClass;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Collection\Users as User_Collection;
-use Activitypub\Collection\Followers as FollowerCollection;
+use Activitypub\Collection\Followers as Follower_Collection;
 
 use function Activitypub\get_rest_url_by_path;
 
@@ -74,7 +74,7 @@ class Followers {
 		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 
-		$json->totalItems = FollowerCollection::count_followers( $user->get__id() ); // phpcs:ignore
+		$json->totalItems = Follower_Collection::count_followers( $user->get__id() ); // phpcs:ignore
 		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/followers', $user->get__id() ) ); // phpcs:ignore
 
 		$json->first = \add_query_arg( 'page', 1, $json->partOf ); // phpcs:ignore
@@ -93,7 +93,7 @@ class Followers {
 			function( $item ) {
 				return $item->get_url();
 			},
-			FollowerCollection::get_followers( $user->get__id(), 20, $page )
+			Follower_Collection::get_followers( $user->get__id(), 20, $page )
 		);
 
 		$response = new WP_REST_Response( $json, 200 );

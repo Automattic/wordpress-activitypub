@@ -483,11 +483,16 @@ class Followers {
 	}
 
 	/**
-	 * Undocumented function
+	 * This function is used to store errors that occur when
+	 * sending an ActivityPub message to a Follower.
 	 *
-	 * @param [type] $post_id
-	 * @param [type] $error
-	 * @return void
+	 * The error will be stored in the
+	 * post meta.
+	 *
+	 * @param int   $post_id The ID of the WordPress Custom-Post-Type.
+	 * @param mixed $error   The error message. Can be a string or a WP_Error.
+	 *
+	 * @return int|false The meta ID on success, false on failure.
 	 */
 	public static function add_error( $post_id, $error ) {
 		if ( is_string( $error ) ) {
@@ -495,9 +500,16 @@ class Followers {
 		} elseif ( is_wp_error( $error ) ) {
 			$error_message = $error->get_error_message();
 		} else {
-			$error_message = __( 'Unknown Error or misconfigured Error-Message', 'activitypub' );
+			$error_message = __(
+				'Unknown Error or misconfigured Error-Message',
+				'activitypub'
+			);
 		}
 
-		return add_post_meta( $post_id, 'activitypub_errors', $error_message );
+		return add_post_meta(
+			$post_id,
+			'activitypub_errors',
+			$error_message
+		);
 	}
 }

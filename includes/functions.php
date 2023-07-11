@@ -294,12 +294,12 @@ function is_user_disabled( $user_id ) {
 			return false;
 		// if the user is any other user, it's enabled if it can publish posts.
 		default:
-			if ( ! \user_can( $user_id, 'publish_posts' ) ) {
-				return true;
-			}
-
 			if ( defined( 'ACTIVITYPUB_DISABLE_USER' ) ) {
 				return ACTIVITYPUB_DISABLE_USER;
+			}
+
+			if ( ! \user_can( $user_id, 'publish_posts' ) ) {
+				return true;
 			}
 
 			return false;
