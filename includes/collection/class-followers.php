@@ -189,7 +189,8 @@ class Followers {
 			self::add_error( $follower->get__id(), $error );
 		}
 
-		if ( is_array( $meta ) && ! in_array( $user_id, $meta, true ) ) {
+		// phpcs:ignore WordPress.PHP.StrictInArray.MissingTrueStrict
+		if ( is_array( $meta ) && ! in_array( $user_id, $meta ) ) {
 			add_post_meta( $follower->get__id(), 'activitypub_user_id', $user_id );
 			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
