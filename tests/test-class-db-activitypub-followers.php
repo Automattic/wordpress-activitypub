@@ -244,6 +244,29 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		$this->assertEquals( 0, count( $followers ) );
 	}
 
+	public function test_add_duplicate_follower() {
+		$pre_http_request = new MockAction();
+		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
+
+		$follower = 'https://12345.example.com';
+
+		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+
+		$db_followers = \Activitypub\Collection\Followers::get_followers( 1 );
+
+		$this->assertContains( $follower, $db_followers );
+
+		$follower = current( $db_followers );
+		$meta     = get_post_meta( $follower->get__id(), 'activitypub_user_id' );
+
+		$this->assertCount( 1, $meta );
+	}
+
 
 	public static function http_request_host_is_external( $in, $host ) {
 		if ( in_array( $host, array( 'example.com', 'example.org' ), true ) ) {
