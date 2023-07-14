@@ -51,13 +51,12 @@ class Followers {
 	 * @return WP_REST_Response
 	 */
 	public static function get( $request ) {
-		$user_id = $request->get_param( 'user_id' );
 		$context = $request->get_param( 'context' );
 		if ( 'view' === $context ) {
 			return self::get_followers( $request );
 		}
-
-		$user = User_Collection::get_by_various( $user_id );
+		$user_id = $request->get_param( 'user_id' );
+		$user    = User_Collection::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;
@@ -113,7 +112,7 @@ class Followers {
 		$per_page = $request->get_param( 'per_page' );
 		$page = $request->get_param( 'page' );
 		$offset = ( $page - 1 ) * $per_page;
-		$query = FollowerCollection::get_followers_query( $user_id, $per_page, $offset, array( 'order' => ucwords( $order ) ) );
+		$query = Follower_Collection::get_followers_query( $user_id, $per_page, $offset, array( 'order' => ucwords( $order ) ) );
 
 		$followers = array();
 		foreach ( $query->get_posts() as $post ) {
