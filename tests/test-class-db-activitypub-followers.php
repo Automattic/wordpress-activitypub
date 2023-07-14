@@ -6,42 +6,42 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 			'url' => 'https://example.org/users/username',
 			'inbox' => 'https://example.org/users/username/inbox',
 			'name'  => 'username',
-			'prefferedUsername'  => 'username',
+			'preferredUsername'  => 'username',
 		),
 		'jon@example.com' => array(
 			'id' => 'https://example.com/author/jon',
 			'url' => 'https://example.com/author/jon',
 			'inbox' => 'https://example.com/author/jon/inbox',
 			'name'  => 'jon',
-			'prefferedUsername'  => 'jon',
+			'preferredUsername'  => 'jon',
 		),
 		'doe@example.org' => array(
 			'id' => 'https://example.org/author/doe',
 			'url' => 'https://example.org/author/doe',
 			'inbox' => 'https://example.org/author/doe/inbox',
 			'name'  => 'doe',
-			'prefferedUsername'  => 'doe',
+			'preferredUsername'  => 'doe',
 		),
 		'sally@example.org' => array(
 			'id' => 'http://sally.example.org',
 			'url' => 'http://sally.example.org',
 			'inbox' => 'http://sally.example.org/inbox',
 			'name'  => 'jon',
-			'prefferedUsername'  => 'jon',
+			'preferredUsername'  => 'jon',
 		),
 		'12345@example.com' => array(
 			'id' => 'https://12345.example.com',
 			'url' => 'https://12345.example.com',
 			'inbox' => 'https://12345.example.com/inbox',
 			'name'  => '12345',
-			'prefferedUsername'  => '12345',
+			'preferredUsername'  => '12345',
 		),
 		'user2@example.com' => array(
 			'id' => 'https://user2.example.com',
 			'url' => 'https://user2.example.com',
 			'inbox' => 'https://user2.example.com/inbox',
 			'name'  => 'user2',
-			'prefferedUsername'  => 'user2',
+			'preferredUsername'  => 'user2',
 		),
 	);
 
@@ -223,7 +223,7 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'http://sally.example.org' );
 
 		for ( $i = 1; $i <= 15; $i++ ) {
-			add_post_meta( $follower->get__id(), 'errors', 'error ' . $i );
+			add_post_meta( $follower->get__id(), 'activitypub_errors', 'error ' . $i );
 		}
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'http://sally.example.org' );
@@ -242,6 +242,29 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		$followers = \Activitypub\Collection\Followers::get_faulty_followers();
 
 		$this->assertEquals( 0, count( $followers ) );
+	}
+
+	public function test_add_duplicate_follower() {
+		$pre_http_request = new MockAction();
+		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
+
+		$follower = 'https://12345.example.com';
+
+		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+
+		$db_followers = \Activitypub\Collection\Followers::get_followers( 1 );
+
+		$this->assertContains( $follower, $db_followers );
+
+		$follower = current( $db_followers );
+		$meta     = get_post_meta( $follower->get__id(), 'activitypub_user_id' );
+
+		$this->assertCount( 1, $meta );
 	}
 
 

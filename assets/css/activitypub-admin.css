@@ -1,7 +1,16 @@
+.activitypub-settings-body {
+	max-width: 800px;
+	margin: 0 auto;
+}
+
 .settings_page_activitypub .notice {
 	max-width: 800px;
 	margin: auto;
 	margin-top: 10px;
+}
+
+.settings_page_activitypub .wrap {
+	padding-left: 22px;
 }
 
 .activitypub-settings-header {
@@ -25,10 +34,10 @@
 
 .activitypub-settings-tabs-wrapper {
 	display: -ms-inline-grid;
-	-ms-grid-columns: 1fr 1fr;
+	-ms-grid-columns: auto auto auto;
 	vertical-align: top;
 	display: inline-grid;
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: auto auto auto;
 }
 
 .activitypub-settings-tab.active {
@@ -111,7 +120,8 @@ summary {
 	flex-grow: 1;
 }
 
-.activitypub-settings-accordion-trigger .icon, .activitypub-settings-accordion-viewed .icon {
+.activitypub-settings-accordion-trigger .icon,
+.activitypub-settings-accordion-viewed .icon {
 	border: solid #50575e medium;
 	border-width: 0 2px 2px 0;
 	height: .5rem;
@@ -127,7 +137,8 @@ summary {
 	transform: translateY(-30%) rotate(-135deg);
 }
 
-.activitypub-settings-accordion-trigger:active, .activitypub-settings-accordion-trigger:hover {
+.activitypub-settings-accordion-trigger:active,
+.activitypub-settings-accordion-trigger:hover {
 	background: #f6f7f7;
 }
 
@@ -138,4 +149,30 @@ summary {
 	outline-offset: -1px;
 	outline: 2px solid #2271b1;
 	background-color: #f6f7f7;
+}
+
+.activitypub-settings-body
+input.blog-user-identifier {
+	text-align: right;
+}
+
+.activitypub-settings-body
+.header-image {
+	width: 100%;
+	height: 80px;
+	position: relative;
+	display: block;
+	margin-bottom: 40px;
+	background-image: rgb(168,165,175);
+	background-image: linear-gradient(180deg, red, yellow);
+	background-size: cover;
+}
+
+.activitypub-settings-body
+.logo {
+	height: 80px;
+	width: 80px;
+	position: relative;
+	top: 40px;
+	left: 40px;
 }

@@ -3,13 +3,14 @@
 	\dirname( __FILE__ ) . '/admin-header.php',
 	true,
 	array(
-		'settings' => 'active',
-		'welcome' => '',
+		'settings'  => 'active',
+		'welcome'   => '',
+		'followers' => '',
 	)
 );
 ?>
 
-<div class="privacy-settings-body hide-if-no-js">
+<div class="activitypub-settings-body hide-if-no-js">
 	<div class="notice notice-info">
 		<p>
 			<?php
@@ -30,6 +31,35 @@
 	<form method="post" action="options.php">
 		<?php \settings_fields( 'activitypub' ); ?>
 
+	<?php if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) : ?>
+
+		<h3><?php \esc_html_e( 'Blog-User', 'activitypub' ); ?></h3>
+
+		<p><?php \esc_html_e( 'All settings for the Blog-User (Catch-All Account)', 'activitypub' ); ?></p>
+
+		<table class="form-table">
+			<tbody>
+				<tr>
+					<th scope="row">
+						<?php \esc_html_e( 'User-Identifier', 'activitypub' ); ?>
+					</th>
+					<td>
+						<label for="activitypub_blog_user_identifier">
+							<input class="blog-user-identifier" name="activitypub_blog_user_identifier" id="activitypub_blog_user_identifier" type="text" value="<?php echo esc_attr( \get_option( 'activitypub_blog_user_identifier', \Activitypub\Model\Blog_User::get_default_username() ) ); ?>" />
+							@<?php echo esc_html( \wp_parse_url( \home_url(), PHP_URL_HOST ) ); ?>
+						</label>
+						<p class="description">
+
+						</p>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<?php \do_settings_fields( 'activitypub', 'blog-user' ); ?>
+
+	<?php endif; ?>
+
 		<h3><?php \esc_html_e( 'Activities', 'activitypub' ); ?></h3>
 
 		<p><?php \esc_html_e( 'All activity related settings.', 'activitypub' ); ?></p>
@@ -42,16 +72,44 @@
 					</th>
 					<td>
 						<p>
-							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_title_link" value="title" <?php echo \checked( 'title', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Title and link', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'Only the title and a link.', 'activitypub' ); ?></span>
+							<label for="activitypub_post_content_type_title_link">
+								<input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_title_link" value="title" <?php echo \checked( 'title', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> />
+								<?php \esc_html_e( 'Title and link', 'activitypub' ); ?>
+								-
+								<span class="description">
+									<?php \esc_html_e( 'Only the title and a link.', 'activitypub' ); ?>
+								</span>
+							</label>
 						</p>
 						<p>
-							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_excerpt" value="excerpt" <?php echo \checked( 'excerpt', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Excerpt', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'A content summary, shortened to 400 characters and without markup.', 'activitypub' ); ?></span>
+							<label for="activitypub_post_content_type_excerpt">
+								<input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_excerpt" value="excerpt" <?php echo \checked( 'excerpt', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> />
+								<?php \esc_html_e( 'Excerpt', 'activitypub' ); ?>
+								-
+								<span class="description">
+									<?php \esc_html_e( 'A content summary, shortened to 400 characters and without markup.', 'activitypub' ); ?>
+								</span>
+							</label>
 						</p>
 						<p>
-							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_content" value="content" <?php echo \checked( 'content', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Content (default)', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'The full content.', 'activitypub' ); ?></span>
+							<label for="activitypub_post_content_type_content">
+								<input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_content" value="content" <?php echo \checked( 'content', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> />
+								<?php \esc_html_e( 'Content (default)', 'activitypub' ); ?>
+								-
+								<span class="description">
+									<?php \esc_html_e( 'The full content.', 'activitypub' ); ?>
+								</span>
+							</label>
 						</p>
 						<p>
-							<label><input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_custom" value="custom" <?php echo \checked( 'custom', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> /> <?php \esc_html_e( 'Custom', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'Use the text-area below, to customize your activities.', 'activitypub' ); ?></span>
+							<label for="activitypub_post_content_type_custom">
+								<input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_custom" value="custom" <?php echo \checked( 'custom', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> />
+								<?php \esc_html_e( 'Custom', 'activitypub' ); ?>
+								-
+								<span class="description">
+									<?php \esc_html_e( 'Use the text-area below, to customize your activities.', 'activitypub' ); ?>
+								</span>
+							</label>
 						</p>
 						<p>
 							<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo wp_kses( ACTIVITYPUB_CUSTOM_POST_CONTENT, 'post' ); ?>"><?php echo wp_kses( \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ), 'post' ); ?></textarea>
@@ -98,13 +156,34 @@
 					</th>
 					<td>
 						<p>
-							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type_note" value="note" <?php echo \checked( 'note', \get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php \esc_html_e( 'Note (default)', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'Should work with most platforms.', 'activitypub' ); ?></span>
+							<label for="activitypub_object_type_note">
+								<input type="radio" name="activitypub_object_type" id="activitypub_object_type_note" value="note" <?php echo \checked( 'note', \get_option( 'activitypub_object_type', 'note' ) ); ?> />
+								<?php \esc_html_e( 'Note (default)', 'activitypub' ); ?>
+								-
+								<span class="description">
+									<?php \esc_html_e( 'Should work with most platforms.', 'activitypub' ); ?>
+								</span>
+							</label>
 						</p>
 						<p>
-							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type_article" value="article" <?php echo \checked( 'article', \get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php \esc_html_e( 'Article', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'The presentation of the "Article" might change on different platforms. Mastodon for example shows the "Article" type as a simple link.', 'activitypub' ); ?></span>
+							<label for="activitypub_object_type_article">
+								<input type="radio" name="activitypub_object_type" id="activitypub_object_type_article" value="article" <?php echo \checked( 'article', \get_option( 'activitypub_object_type', 'note' ) ); ?> />
+								<?php \esc_html_e( 'Article', 'activitypub' ); ?>
+								-
+								<span class="description">
+									<?php \esc_html_e( 'The presentation of the "Article" might change on different platforms. Mastodon for example shows the "Article" type as a simple link.', 'activitypub' ); ?>
+								</span>
+							</label>
 						</p>
 						<p>
-							<label><input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="wordpress-post-format" <?php echo \checked( 'wordpress-post-format', \get_option( 'activitypub_object_type', 'note' ) ); ?> /> <?php \esc_html_e( 'WordPress Post-Format', 'activitypub' ); ?></label> - <span class="description"><?php \esc_html_e( 'Maps the WordPress Post-Format to the ActivityPub Object Type.', 'activitypub' ); ?></span>
+							<label>
+								<input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="wordpress-post-format" <?php echo \checked( 'wordpress-post-format', \get_option( 'activitypub_object_type', 'note' ) ); ?> />
+								<?php \esc_html_e( 'WordPress Post-Format', 'activitypub' ); ?>
+								-
+								<span class="description">
+									<?php \esc_html_e( 'Maps the WordPress Post-Format to the ActivityPub Object Type.', 'activitypub' ); ?>
+								</span>
+							</label>
 						</p>
 					</td>
 				</tr>

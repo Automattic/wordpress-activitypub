@@ -1,8 +1,6 @@
 <?php
 namespace Activitypub;
 
-use Activitypub\Model\Post;
-
 /**
  * ActivityPub Admin Class
  *
@@ -34,9 +32,12 @@ class Admin {
 
 		\add_action( 'load-' . $settings_page, array( self::class, 'add_settings_help_tab' ) );
 
-		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
+		// user has to be able to publish posts
+		if ( ! is_user_disabled( get_current_user_id() ) ) {
+			$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
 
-		\add_action( 'load-' . $followers_list_page, array( self::class, 'add_followers_list_help_tab' ) );
+			\add_action( 'load-' . $followers_list_page, array( self::class, 'add_followers_list_help_tab' ) );
+		}
 	}
 
 	/**
@@ -55,6 +56,9 @@ class Admin {
 			case 'settings':
 				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php' );
 				break;
+			case 'followers':
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-user-followers-list.php' );
+				break;
 			case 'welcome':
 			default:
 				wp_enqueue_script( 'plugin-install' );
@@ -70,7 +74,10 @@ class Admin {
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {
-		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php' );
+		if ( ! current_user_can( 'publish_posts' ) ) {
+			return;
+		}
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-followers-list.php' );
 	}
 
 	/**
@@ -85,7 +92,11 @@ class Admin {
 				'description' => \__( 'Use title and link, summary, full or custom content', 'activitypub' ),
 				'show_in_rest' => array(
 					'schema' => array(
-						'enum' => array( 'title', 'excerpt', 'content' ),
+						'enum' => array(
+							'title',
+							'excerpt',
+							'content',
+						),
 					),
 				),
 				'default' => 'content',
@@ -118,7 +129,11 @@ class Admin {
 				'description' => \__( 'The Activity-Object-Type', 'activitypub' ),
 				'show_in_rest' => array(
 					'schema' => array(
-						'enum' => array( 'note', 'article', 'wordpress-post-format' ),
+						'enum' => array(
+							'note',
+							'article',
+							'wordpress-post-format',
+						),
 					),
 				),
 				'default' => 'note',
@@ -141,6 +156,27 @@ class Admin {
 				'description'  => \esc_html__( 'Enable ActivityPub support for post types', 'activitypub' ),
 				'show_in_rest' => true,
 				'default'      => array( 'post', 'pages' ),
+			)
+		);
+		\register_setting(
+			'activitypub',
+			'activitypub_blog_user_identifier',
+			array(
+				'type'              => 'string',
+				'description'       => \esc_html__( 'The Identifier of th Blog-User', 'activitypub' ),
+				'show_in_rest'      => true,
+				'default'           => 'feed',
+				'sanitize_callback' => function( $value ) {
+					// hack to allow dots in the username
+					$parts     = explode( '.', $value );
+					$sanitized = array();
+
+					foreach ( $parts as $part ) {
+						$sanitized[] = \sanitize_title( $part );
+					}
+
+					return implode( '.', $sanitized );
+				},
 			)
 		);
 	}

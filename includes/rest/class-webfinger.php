@@ -3,6 +3,7 @@ namespace Activitypub\Rest;
 
 use WP_Error;
 use WP_REST_Response;
+use Activitypub\Collection\Users as User_Collection;
 
 /**
  * ActivityPub WebFinger REST-Class
@@ -13,15 +14,20 @@ use WP_REST_Response;
  */
 class Webfinger {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
-		\add_action( 'webfinger_user_data', array( self::class, 'add_webfinger_discovery' ), 10, 3 );
+		\add_filter( 'webfinger_user_data', array( self::class, 'add_user_discovery' ), 10, 3 );
+		\add_filter( 'webfinger_data', array( self::class, 'add_pseudo_user_discovery' ), 99, 2 );
 	}
 
 	/**
-	 * Register routes
+	 * Register routes.
+	 *
+	 * @return void
 	 */
 	public static function register_routes() {
 		\register_rest_route(
@@ -39,54 +45,17 @@ class Webfinger {
 	}
 
 	/**
-	 * Render JRD file
+	 * WebFinger endpoint.
 	 *
-	 * @param  WP_REST_Request   $request
-	 * @return WP_REST_Response
+	 * @param WP_REST_Request $request The request object.
+	 *
+	 * @return WP_REST_Response The response object.
 	 */
 	public static function webfinger( $request ) {
 		$resource = $request->get_param( 'resource' );
+		$response = self::get_profile( $resource );
 
-		if ( \strpos( $resource, '@' ) === false ) {
-			return new WP_Error( 'activitypub_unsupported_resource', \__( 'Resource is invalid', 'activitypub' ), array( 'status' => 400 ) );
-		}
-
-		$resource = \str_replace( 'acct:', '', $resource );
-
-		$resource_identifier = \substr( $resource, 0, \strrpos( $resource, '@' ) );
-		$resource_host = \str_replace( 'www.', '', \substr( \strrchr( $resource, '@' ), 1 ) );
-		$blog_host = \str_replace( 'www.', '', \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
-
-		if ( $blog_host !== $resource_host ) {
-			return new WP_Error( 'activitypub_wrong_host', \__( 'Resource host does not match blog host', 'activitypub' ), array( 'status' => 404 ) );
-		}
-
-		$user = \get_user_by( 'login', \esc_sql( $resource_identifier ) );
-
-		if ( ! $user || ! \user_can( $user, 'publish_posts' ) ) {
-			return new WP_Error( 'activitypub_user_not_found', \__( 'User not found', 'activitypub' ), array( 'status' => 404 ) );
-		}
-
-		$json = array(
-			'subject' => $resource,
-			'aliases' => array(
-				\get_author_posts_url( $user->ID ),
-			),
-			'links' => array(
-				array(
-					'rel'  => 'self',
-					'type' => 'application/activity+json',
-					'href' => \get_author_posts_url( $user->ID ),
-				),
-				array(
-					'rel'  => 'http://webfinger.net/rel/profile-page',
-					'type' => 'text/html',
-					'href' => \get_author_posts_url( $user->ID ),
-				),
-			),
-		);
-
-		return new WP_REST_Response( $json, 200 );
+		return new WP_REST_Response( $response, 200 );
 	}
 
 	/**
@@ -112,14 +81,73 @@ class Webfinger {
 	 * @param array   $array    the jrd array
 	 * @param string  $resource the WebFinger resource
 	 * @param WP_User $user     the WordPress user
+	 *
+	 * @return array the jrd array
 	 */
-	public static function add_webfinger_discovery( $array, $resource, $user ) {
+	public static function add_user_discovery( $array, $resource, $user ) {
+		$user = User_Collection::get_by_id( $user->ID );
+
 		$array['links'][] = array(
 			'rel'  => 'self',
 			'type' => 'application/activity+json',
-			'href' => \get_author_posts_url( $user->ID ),
+			'href' => $user->get_url(),
 		);
 
 		return $array;
+	}
+
+	/**
+	 * Add WebFinger discovery links
+	 *
+	 * @param array   $array    the jrd array
+	 * @param string  $resource the WebFinger resource
+	 * @param WP_User $user     the WordPress user
+	 *
+	 * @return array the jrd array
+	 */
+	public static function add_pseudo_user_discovery( $array, $resource ) {
+		if ( $array ) {
+			return $array;
+		}
+
+		return self::get_profile( $resource );
+	}
+
+	/**
+	 * Get the WebFinger profile.
+	 *
+	 * @param string $resource the WebFinger resource.
+	 *
+	 * @return array the WebFinger profile.
+	 */
+	public static function get_profile( $resource ) {
+		$user = User_Collection::get_by_resource( $resource );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		$aliases = array(
+			$user->get_url(),
+		);
+
+		$profile = array(
+			'subject' => $resource,
+			'aliases' => array_values( array_unique( $aliases ) ),
+			'links'   => array(
+				array(
+					'rel'  => 'self',
+					'type' => 'application/activity+json',
+					'href' => $user->get_url(),
+				),
+				array(
+					'rel'  => 'http://webfinger.net/rel/profile-page',
+					'type' => 'text/html',
+					'href' => $user->get_url(),
+				),
+			),
+		);
+
+		return $profile;
 	}
 }

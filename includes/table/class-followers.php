@@ -2,6 +2,7 @@
 namespace Activitypub\Table;
 
 use WP_List_Table;
+use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers as FollowerCollection;
 
 if ( ! \class_exists( '\WP_List_Table' ) ) {
@@ -9,13 +10,31 @@ if ( ! \class_exists( '\WP_List_Table' ) ) {
 }
 
 class Followers extends WP_List_Table {
+	private $user_id;
+
+	public function __construct() {
+		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
+			$this->user_id = Users::BLOG_USER_ID;
+		} else {
+			$this->user_id = \get_current_user_id();
+		}
+
+		parent::__construct(
+			array(
+				'singular' => \__( 'Follower', 'activitypub' ),
+				'plural'   => \__( 'Followers', 'activitypub' ),
+				'ajax'     => false,
+			)
+		);
+	}
+
 	public function get_columns() {
 		return array(
 			'cb'           => '<input type="checkbox" />',
 			'avatar'       => \__( 'Avatar', 'activitypub' ),
 			'name'         => \__( 'Name', 'activitypub' ),
 			'username'     => \__( 'Username', 'activitypub' ),
-			'identifier'   => \__( 'Identifier', 'activitypub' ),
+			'url'          => \__( 'URL', 'activitypub' ),
 			'updated'      => \__( 'Last updated', 'activitypub' ),
 			//'errors'       => \__( 'Errors', 'activitypub' ),
 			//'latest-error' => \__( 'Latest Error Message', 'activitypub' ),
@@ -36,14 +55,14 @@ class Followers extends WP_List_Table {
 		$page_num = $this->get_pagenum();
 		$per_page = 20;
 
-		$followers = FollowerCollection::get_followers( \get_current_user_id(), $per_page, ( $page_num - 1 ) * $per_page );
-		$counter   = FollowerCollection::count_followers( \get_current_user_id() );
+		$followers = FollowerCollection::get_followers( $this->user_id, $per_page, $page_num );
+		$counter   = FollowerCollection::count_followers( $this->user_id );
 
 		$this->items = array();
 		$this->set_pagination_args(
 			array(
 				'total_items' => $counter,
-				'total_pages' => round( $counter / $per_page ),
+				'total_pages' => ceil( $counter / $per_page ),
 				'per_page'    => $per_page,
 			)
 		);
@@ -53,7 +72,8 @@ class Followers extends WP_List_Table {
 				'icon'         => esc_attr( $follower->get_icon_url() ),
 				'name'         => esc_attr( $follower->get_name() ),
 				'username'     => esc_attr( $follower->get_preferred_username() ),
-				'identifier'   => esc_attr( $follower->get_url() ),
+				'url'          => esc_attr( $follower->get_url() ),
+				'identifier'   => esc_attr( $follower->get_id() ),
 				'updated'      => esc_attr( $follower->get_updated() ),
 				'errors'       => $follower->count_errors(),
 				'latest-error' => $follower->get_latest_error_message(),
@@ -83,11 +103,11 @@ class Followers extends WP_List_Table {
 		);
 	}
 
-	public function column_identifier( $item ) {
+	public function column_url( $item ) {
 		return sprintf(
 			'<a href="%s" target="_blank">%s</a>',
-			$item['identifier'],
-			$item['identifier']
+			$item['url'],
+			$item['url']
 		);
 	}
 
@@ -104,7 +124,7 @@ class Followers extends WP_List_Table {
 			return false;
 		}
 
-		if ( ! current_user_can( 'edit_user', \get_current_user_id() ) ) {
+		if ( ! current_user_can( 'edit_user', $this->user_id ) ) {
 			return false;
 		}
 
@@ -116,9 +136,13 @@ class Followers extends WP_List_Table {
 					$followers = array( $followers );
 				}
 				foreach ( $followers as $follower ) {
-					FollowerCollection::remove_follower( \get_current_user_id(), $follower );
+					FollowerCollection::remove_follower( $this->user_id, $follower );
 				}
 				break;
 		}
+	}
+
+	public function get_user_count() {
+		return FollowerCollection::count_followers( $this->user_id );
 	}
 }

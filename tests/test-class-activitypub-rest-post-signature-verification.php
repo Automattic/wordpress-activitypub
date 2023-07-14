@@ -10,9 +10,10 @@ class Test_Activitypub_Signature_Verification extends WP_UnitTestCase {
 			)
 		);
 		$remote_actor = \get_author_posts_url( 2 );
-		$activitypub_post = new \Activitypub\Model\Post( $post );
-		$activitypub_activity = new Activitypub\Model\Activity( 'Create' );
-		$activitypub_activity->from_post( $activitypub_post );
+		$activitypub_post = \Activitypub\Transformer\Post::transform( get_post( $post ) )->to_object();
+		$activitypub_activity = new Activitypub\Activity\Activity( 'Create' );
+		$activitypub_activity->set_type( 'Create' );
+		$activitypub_activity->set_object( $activitypub_post );
 		$activitypub_activity->add_cc( $remote_actor );
 		$activity = $activitypub_activity->to_json();
 
@@ -42,7 +43,9 @@ class Test_Activitypub_Signature_Verification extends WP_UnitTestCase {
 		$signed_headers = $signature_block['headers'];
 		$signed_data = Activitypub\Signature::get_signed_data( $signed_headers, $signature_block, $headers );
 
-		$public_key = Activitypub\Signature::get_public_key( 1 );
+		$user = Activitypub\Collection\Users::get_by_id( 1 );
+
+		$public_key = $user->get__public_key();
 
 		// signature_verification
 		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, 'rsa-sha256' ) > 0;
@@ -53,6 +56,8 @@ class Test_Activitypub_Signature_Verification extends WP_UnitTestCase {
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
 			function( $json, $actor ) {
+				$user = Activitypub\Collection\Users::get_by_id( 1 );
+				$public_key = $user->get__public_key();
 				// return ActivityPub Profile with signature
 				return array(
 					'id' => $actor,
@@ -60,7 +65,7 @@ class Test_Activitypub_Signature_Verification extends WP_UnitTestCase {
 					'publicKey' => array(
 						'id' => $actor . '#main-key',
 						'owner' => $actor,
-						'publicKeyPem' => \Activitypub\Signature::get_public_key( 1 ),
+						'publicKeyPem' => $public_key,
 					),
 				);
 			},
@@ -77,9 +82,10 @@ class Test_Activitypub_Signature_Verification extends WP_UnitTestCase {
 		);
 		$remote_actor = \get_author_posts_url( 2 );
 		$remote_actor_inbox = Activitypub\get_rest_url_by_path( '/inbox' );
-		$activitypub_post = new \Activitypub\Model\Post( $post );
-		$activitypub_activity = new Activitypub\Model\Activity( 'Create' );
-		$activitypub_activity->from_post( $activitypub_post );
+		$activitypub_post = \Activitypub\Transformer\Post::transform( \get_post( $post ) )->to_object();
+		$activitypub_activity = new Activitypub\Activity\Activity();
+		$activitypub_activity->set_type( 'Create' );
+		$activitypub_activity->set_object( $activitypub_post );
 		$activitypub_activity->add_cc( $remote_actor_inbox );
 		$activity = $activitypub_activity->to_json();
 

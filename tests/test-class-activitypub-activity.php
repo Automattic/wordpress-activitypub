@@ -17,10 +17,11 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 			10
 		);
 
-		$activitypub_post = new \Activitypub\Model\Post( $post );
+		$activitypub_post = \Activitypub\Transformer\Post::transform( get_post( $post ) )->to_object();
 
-		$activitypub_activity = new \Activitypub\Model\Activity( 'Create' );
-		$activitypub_activity->from_post( $activitypub_post );
+		$activitypub_activity = new \Activitypub\Activity\Activity();
+		$activitypub_activity->set_type( 'Create' );
+		$activitypub_activity->set_object( $activitypub_post );
 
 		$this->assertContains( \Activitypub\get_rest_url_by_path( 'users/1/followers' ), $activitypub_activity->get_to() );
 		$this->assertContains( 'https://example.com/alex', $activitypub_activity->get_cc() );
@@ -36,7 +37,7 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 			'content' => 'Hello world!',
 		);
 
-		$object = \Activitypub\Activity\Base_Object::from_array( $test_array );
+		$object = \Activitypub\Activity\Base_Object::init_from_array( $test_array );
 
 		$this->assertEquals( 'Hello world!', $object->get_content() );
 		$this->assertEquals( $test_array, $object->to_array() );

@@ -11,15 +11,16 @@ use WP_Error;
 
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\snake_to_camel_case;
+
 /**
- * ObjectType is an implementation of one of the
+ * Base_Object is an implementation of one of the
  * Activity Streams Core Types.
  *
  * The Object is the primary base type for the Activity Streams
  * vocabulary.
  *
  * Note: Object is a reserved keyword in PHP. It has been suffixed with
- * 'Type' for this reason.
+ * 'Base_' for this reason.
  *
  * @see https://www.w3.org/TR/activitystreams-core/#object
  */
@@ -463,6 +464,24 @@ class Base_Object {
 	}
 
 	/**
+	 * Magic function, to transform the object to string.
+	 *
+	 * @return string The object id.
+	 */
+	public function __toString() {
+		return $this->to_string();
+	}
+
+	/**
+	 * Function to transform the object to string.
+	 *
+	 * @return string The object id.
+	 */
+	public function to_string() {
+		return $this->get_id();
+	}
+
+	/**
 	 * Generic getter.
 	 *
 	 * @param string $key The key to get.
@@ -472,7 +491,6 @@ class Base_Object {
 	public function get( $key ) {
 		if ( ! $this->has( $key ) ) {
 			return new WP_Error( 'invalid_key', 'Invalid key' );
-
 		}
 
 		return $this->$key;
@@ -537,12 +555,12 @@ class Base_Object {
 	 *
 	 * @return string The JSON string.
 	 *
-	 * @return array An Object built from the JSON string.
+	 * @return \Activitypub\Activity\Base_Object An Object built from the JSON string.
 	 */
-	public static function from_json( $json ) {
-		$array = wp_json_decode( $json, true );
+	public static function init_from_json( $json ) {
+		$array = \json_decode( $json, true );
 
-		return self::from_array( $array );
+		return self::init_from_array( $array );
 	}
 
 	/**
@@ -550,9 +568,9 @@ class Base_Object {
 	 *
 	 * @return string The object array.
 	 *
-	 * @return array An Object built from the JSON string.
+	 * @return \Activitypub\Activity\Base_Object An Object built from the JSON string.
 	 */
-	public static function from_array( $array ) {
+	public static function init_from_array( $array ) {
 		$object = new static();
 
 		foreach ( $array as $key => $value ) {
@@ -561,6 +579,29 @@ class Base_Object {
 		}
 
 		return $object;
+	}
+
+	/**
+	 * Convert JSON input to an array and pre-fill the object.
+	 *
+	 * @param string $json The JSON string.
+	 */
+	public function from_json( $json ) {
+		$array = \json_decode( $json, true );
+
+		$this->from_array( $array );
+	}
+
+	/**
+	 * Convert JSON input to an array and pre-fill the object.
+	 *
+	 * @param array $array The array.
+	 */
+	public function from_array( $array ) {
+		foreach ( $array as $key => $value ) {
+			$key = camel_to_snake_case( $key );
+			$this->set( $key, $value );
+		}
 	}
 
 	/**
@@ -576,17 +617,50 @@ class Base_Object {
 		$vars  = get_object_vars( $this );
 
 		foreach ( $vars as $key => $value ) {
+			// ignotre all _prefixed keys.
+			if ( '_' === substr( $key, 0, 1 ) ) {
+				continue;
+			}
+
 			// if value is empty, try to get it from a getter.
-			if ( ! $value ) {
+			if ( ! isset( $value ) ) {
 				$value = call_user_func( array( $this, 'get_' . $key ) );
 			}
 
+			if ( is_object( $value ) ) {
+				$value = $value->to_array();
+			}
+
 			// if value is still empty, ignore it for the array and continue.
-			if ( $value ) {
+			if ( isset( $value ) ) {
 				$array[ snake_to_camel_case( $key ) ] = $value;
 			}
 		}
 
+		// replace 'context' key with '@context' and move it to the top.
+		if ( array_key_exists( 'context', $array ) ) {
+			$context = $array['context'];
+			unset( $array['context'] );
+			$array = array_merge( array( '@context' => $context ), $array );
+		}
+
+		$class = new \ReflectionClass( $this );
+		$class = strtolower( $class->getShortName() );
+
+		$array = \apply_filters( 'activitypub_activity_object_array', $array, $class, $this->id, $this );
+		$array = \apply_filters( "activitypub_activity_{$class}_object_array", $array, $this->id, $this );
+
 		return $array;
+	}
+
+	/**
+	 * Convert Object to JSON.
+	 *
+	 * @return string The JSON string.
+	 */
+	public function to_json() {
+		$array = $this->to_array();
+
+		return \wp_json_encode( $array, \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
 	}
 }

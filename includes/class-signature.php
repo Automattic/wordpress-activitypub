@@ -5,6 +5,7 @@ use WP_Error;
 use DateTime;
 use DateTimeZone;
 use Activitypub\Model\User;
+use Activitypub\Collection\Users;
 
 /**
  * ActivityPub Signature Class
@@ -73,7 +74,7 @@ class Signature {
 	 *
 	 * @return void
 	 */
-	public static function generate_key_pair( $user_id ) {
+	public static function generate_key_pair() {
 		$config = array(
 			'digest_alg' => 'sha512',
 			'private_key_bits' => 2048,
@@ -84,22 +85,13 @@ class Signature {
 		$priv_key = null;
 
 		\openssl_pkey_export( $key, $priv_key );
+
 		$detail = \openssl_pkey_get_details( $key );
 
-		if ( User::APPLICATION_USER_ID === $user_id ) {
-			// private key
-			\update_option( 'activitypub_magic_sig_private_key', $priv_key );
-
-			// public key
-			\update_option( 'activitypub_magic_sig_public_key', $detail['key'] );
-
-		} else {
-			// private key
-			\update_user_meta( $user_id, 'magic_sig_private_key', $priv_key );
-
-			// public key
-			\update_user_meta( $user_id, 'magic_sig_public_key', $detail['key'] );
-		}
+		return array(
+			'private_key' => $priv_key,
+			'public_key'  => $detail['key'],
+		);
 	}
 
 	/**
@@ -114,7 +106,8 @@ class Signature {
 	 * @return string The signature.
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
-		$key = self::get_private_key( $user_id );
+		$user = Users::get_by_id( $user_id );
+		$key  = $user->get__private_key();
 
 		$url_parts = \wp_parse_url( $url );
 
@@ -143,11 +136,8 @@ class Signature {
 		\openssl_sign( $signed_string, $signature, $key, \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature ); // phpcs:ignore
 
-		if ( User::APPLICATION_USER_ID === $user_id ) {
-			$key_id = \get_rest_url( null, 'activitypub/1.0/application#main-key' );
-		} else {
-			$key_id = \get_author_posts_url( $user_id ) . '#main-key';
-		}
+		$user   = Users::get_by_id( $user_id );
+		$key_id = $user->get_url() . '#main-key';
 
 		if ( ! empty( $digest ) ) {
 			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="%s"', $key_id, $signature );
@@ -252,7 +242,7 @@ class Signature {
 	 * @return string The public key.
 	 */
 	public static function get_remote_key( $key_id ) { // phpcs:ignore
-		$actor = \Activitypub\get_remote_metadata_by_actor( strtok( strip_fragment_from_url( $key_id ), '?' ) ); // phpcs:ignore
+		$actor = get_remote_metadata_by_actor( strtok( strip_fragment_from_url( $key_id ), '?' ) ); // phpcs:ignore
 		if ( \is_wp_error( $actor ) ) {
 			return $actor;
 		}

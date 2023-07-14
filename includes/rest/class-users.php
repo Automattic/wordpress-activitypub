@@ -1,18 +1,22 @@
 <?php
 namespace Activitypub\Rest;
 
+use WP_Error;
+use WP_REST_Server;
+use WP_REST_Response;
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
 
-use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_activitypub_request;
 
 /**
- * ActivityPub Following REST-Class
+ * ActivityPub Followers REST-Class
  *
  * @author Matthias Pfefferle
  *
- * @see https://www.w3.org/TR/activitypub/#following
+ * @see https://www.w3.org/TR/activitypub/#followers
  */
-class Following {
+class Users {
 	/**
 	 * Initialize the class, registering WordPress hooks
 	 */
@@ -26,10 +30,10 @@ class Following {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/following',
+			'/users/(?P<user_id>[\w\-\.]+)',
 			array(
 				array(
-					'methods'             => \WP_REST_Server::READABLE,
+					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'get' ),
 					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
@@ -53,27 +57,24 @@ class Following {
 			return $user;
 		}
 
+		// redirect to canonical URL if it is not an ActivityPub request
+		if ( ! is_activitypub_request() ) {
+			header( 'Location: ' . $user->get_canonical_url(), true, 301 );
+			exit;
+		}
+
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
 		\do_action( 'activitypub_outbox_pre' );
 
-		$json = new \stdClass();
+		$user->set_context(
+			Activity::CONTEXT
+		);
 
-		$json->{'@context'} = \Activitypub\get_context();
+		$json = $user->to_array();
 
-		$json->id = \home_url( \add_query_arg( null, null ) );
-		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
-		$json->actor = $user->get_id();
-		$json->type = 'OrderedCollectionPage';
-
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/following', $user->get__id() ) ); // phpcs:ignore
-		$json->totalItems = 0; // phpcs:ignore
-		$json->orderedItems = apply_filters( 'activitypub_following', array(), $user ); // phpcs:ignore
-
-		$json->first = $json->partOf; // phpcs:ignore
-
-		$response = new \WP_REST_Response( $json, 200 );
+		$response = new WP_REST_Response( $json, 200 );
 		$response->header( 'Content-Type', 'application/activity+json' );
 
 		return $response;
@@ -88,12 +89,12 @@ class Following {
 		$params = array();
 
 		$params['page'] = array(
-			'type' => 'integer',
+			'type' => 'string',
 		);
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
 		);
 
 		return $params;

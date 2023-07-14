@@ -2,6 +2,7 @@
 namespace Activitypub;
 
 use Activitypub\Signature;
+use Activitypub\Collection\Users;
 
 /**
  * ActivityPub Class
@@ -28,6 +29,8 @@ class Activitypub {
 		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
 
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ) );
+
+		\add_action( 'after_setup_theme', array( self::class, 'theme_compat' ), 99 );
 	}
 
 	/**
@@ -69,15 +72,18 @@ class Activitypub {
 	 * @return string The new path to the JSON template.
 	 */
 	public static function render_json_template( $template ) {
-		if ( ! \is_author() && ! \is_singular() && ! \is_home() ) {
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
 			return $template;
 		}
 
-		// Ensure that edge caches know that this page can deliver both HTML and JSON.
-		header( 'Vary: Accept' );
+		if ( ! is_activitypub_request() ) {
+			return $template;
+		}
+
+		$json_template = false;
 
 		// check if user can publish posts
-		if ( \is_author() && ! user_can( \get_the_author_meta( 'ID' ), 'publish_posts' ) ) {
+		if ( \is_author() && ! Users::get_by_id( \get_the_author_meta( 'ID' ) ) ) {
 			return $template;
 		}
 
@@ -89,18 +95,15 @@ class Activitypub {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
-		if ( is_activitypub_request() ) {
-			if ( ACTIVITYPUB_SECURE_MODE ) {
-				$verification = Signature::verify_http_signature( $_SERVER );
-				if ( \is_wp_error( $verification ) ) {
-					// fallback as template_loader can't return http headers
-					return $template;
-				}
+		if ( ACTIVITYPUB_SECURE_MODE ) {
+			$verification = Signature::verify_http_signature( $_SERVER );
+			if ( \is_wp_error( $verification ) ) {
+				// fallback as template_loader can't return http headers
+				return $template;
 			}
-			return $json_template;
 		}
 
-		return $template;
+		return $json_template;
 	}
 
 	/**
@@ -224,6 +227,11 @@ class Activitypub {
 				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo2',
 				'top'
 			);
+			\add_rewrite_rule(
+				'^@([\w\-\.]+)',
+				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/users/$matches[1]',
+				'top'
+			);
 		}
 
 		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
@@ -235,5 +243,37 @@ class Activitypub {
 	public static function flush_rewrite_rules() {
 		self::add_rewrite_rules();
 		\flush_rewrite_rules();
+	}
+
+	/**
+	 * Theme compatibility stuff
+	 *
+	 * @return void
+	 */
+	public static function theme_compat() {
+		$site_icon = get_theme_support( 'custom-logo' );
+
+		if ( ! $site_icon ) {
+			// custom logo support
+			add_theme_support(
+				'custom-logo',
+				array(
+					'height' => 80,
+					'width'  => 80,
+				)
+			);
+		}
+
+		$custom_header = get_theme_support( 'custom-header' );
+
+		if ( ! $custom_header ) {
+			// This theme supports a custom header
+			$custom_header_args = array(
+				'width'       => 1250,
+				'height'      => 600,
+				'header-text' => true,
+			);
+			add_theme_support( 'custom-header', $custom_header_args );
+		}
 	}
 }

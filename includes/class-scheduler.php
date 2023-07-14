@@ -2,8 +2,9 @@
 
 namespace Activitypub;
 
-use Activitypub\Model\Post;
+use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Transformer\Post;
 
 /**
  * ActivityPub Scheduler Class
@@ -68,27 +69,34 @@ class Scheduler {
 			return;
 		}
 
-		$activitypub_post = new Post( $post );
+		$type = false;
 
 		if ( 'publish' === $new_status && 'publish' !== $old_status ) {
-			\wp_schedule_single_event(
-				\time(),
-				'activitypub_send_create_activity',
-				array( $activitypub_post )
-			);
+			$type = 'Create';
 		} elseif ( 'publish' === $new_status ) {
-			\wp_schedule_single_event(
-				\time(),
-				'activitypub_send_update_activity',
-				array( $activitypub_post )
-			);
+			$type = 'Update';
 		} elseif ( 'trash' === $new_status ) {
-			\wp_schedule_single_event(
-				\time(),
-				'activitypub_send_delete_activity',
-				array( $activitypub_post )
-			);
+			$type = 'Delete';
 		}
+
+		if ( ! $type ) {
+			return;
+		}
+
+		\wp_schedule_single_event(
+			\time(),
+			'activitypub_send_activity',
+			array( $post, $type )
+		);
+
+		\wp_schedule_single_event(
+			\time(),
+			sprintf(
+				'activitypub_send_%s_activity',
+				\strtolower( $type )
+			),
+			array( $post )
+		);
 	}
 
 	/**
@@ -103,12 +111,11 @@ class Scheduler {
 			$meta = get_remote_metadata_by_actor( $follower->get_url(), true );
 
 			if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-				$follower->set_error( $meta );
+				Followers::add_error( $follower->get__id(), $meta );
 			} else {
-				$follower->from_meta( $meta );
+				$follower->from_array( $meta );
+				$follower->update();
 			}
-
-			$follower->update();
 		}
 	}
 
@@ -129,8 +136,7 @@ class Scheduler {
 				if ( 5 <= $follower->count_errors() ) {
 					$follower->delete();
 				} else {
-					$follower->set_error( $meta );
-					$follower->update();
+					Followers::add_error( $follower->get__id(), $meta );
 				}
 			} else {
 				$follower->reset_errors();

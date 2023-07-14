@@ -1,7 +1,7 @@
 <?php
 namespace Activitypub;
 
-use Activitypub\Model\Follower;
+use Activitypub\Model\Blog_User;
 use Activitypub\Collection\Followers;
 
 /**
@@ -17,10 +17,23 @@ class Migration {
 		\add_action( 'activitypub_schedule_migration', array( self::class, 'maybe_migrate' ) );
 	}
 
+	/**
+	 * Get the target version.
+	 *
+	 * This is the version that the database structure will be updated to.
+	 * It is the same as the plugin version.
+	 *
+	 * @return string The target version.
+	 */
 	public static function get_target_version() {
 		return get_plugin_version();
 	}
 
+	/**
+	 * The current version of the database structure.
+	 *
+	 * @return string The current version.
+	 */
 	public static function get_version() {
 		return get_option( 'activitypub_db_version', 0 );
 	}
@@ -28,7 +41,7 @@ class Migration {
 	/**
 	 * Whether the database structure is up to date.
 	 *
-	 * @return bool
+	 * @return bool True if the database structure is up to date, false otherwise.
 	 */
 	public static function is_latest_version() {
 		return (bool) version_compare(
@@ -64,28 +77,20 @@ class Migration {
 	 * @return void
 	 */
 	private static function migrate_from_0_17() {
+		// migrate followers
 		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
 			$followers = get_user_meta( $user_id, 'activitypub_followers', true );
 
 			if ( $followers ) {
 				foreach ( $followers as $actor ) {
-					$meta = get_remote_metadata_by_actor( $actor );
-
-					if ( is_tombstone( $meta ) ) {
-						continue;
-					}
-
-					$follower = Follower::from_array( $meta );
-
-					if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-						$follower->set_error( $meta );
-					}
-
-					$follower->upsert();
-
-					add_post_meta( $follower->get__id(), '_user_id', $user_id );
+					Followers::add_follower( $user_id, $actor );
 				}
 			}
+		}
+
+		// set the default username for the Blog User
+		if ( ! \get_option( 'activitypub_blog_user_identifier' ) ) {
+			\update_option( 'activitypub_blog_user_identifier', Blog_User::get_default_username() );
 		}
 	}
 
