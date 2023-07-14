@@ -4,8 +4,8 @@ namespace Activitypub\Rest;
 use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
-use Activitypub\Signature;
-use Activitypub\Model\Activity;
+use Activitypub\Activity\Activity;
+use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\get_context;
 use function Activitypub\url_to_authorid;
@@ -48,7 +48,7 @@ class Inbox {
 
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>\d+)/inbox',
+			'/users/(?P<user_id>[\w\-\.]+)/inbox',
 			array(
 				array(
 					'methods'             => WP_REST_Server::EDITABLE,
@@ -74,6 +74,12 @@ class Inbox {
 	 */
 	public static function user_inbox_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
+		$user    = User_Collection::get_by_various( $user_id );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
+
 		$page = $request->get_param( 'page', 0 );
 
 		/*
@@ -87,7 +93,7 @@ class Inbox {
 		$json->id = \home_url( \add_query_arg( null, null ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
 		$json->type = 'OrderedCollectionPage';
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/inbox', $user_id ) ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/inbox', $user->get__id() ) ); // phpcs:ignore
 
 		$json->totalItems = 0; // phpcs:ignore
 
@@ -118,15 +124,19 @@ class Inbox {
 	 * @return WP_REST_Response
 	 */
 	public static function user_inbox_post( $request ) {
-
 		$user_id = $request->get_param( 'user_id' );
+		$user    = User_Collection::get_by_various( $user_id );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
 
 		$data = $request->get_params();
 		$type = $request->get_param( 'type' );
 		$type = \strtolower( $type );
 
-		\do_action( 'activitypub_inbox', $data, $user_id, $type );
-		\do_action( "activitypub_inbox_{$type}", $data, $user_id );
+		\do_action( 'activitypub_inbox', $data, $user->get__id(), $type );
+		\do_action( "activitypub_inbox_{$type}", $data, $user->get__id() );
 
 		return new WP_REST_Response( array(), 202 );
 	}
@@ -139,7 +149,6 @@ class Inbox {
 	 * @return WP_REST_Response
 	 */
 	public static function shared_inbox_post( $request ) {
-
 		$data = $request->get_params();
 		$type = $request->get_param( 'type' );
 		$users = self::extract_recipients( $data );
@@ -185,10 +194,7 @@ class Inbox {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'integer',
-			'validate_callback' => function( $param, $request, $key ) {
-				return user_can( $param, 'publish_posts' );
-			},
+			'type' => 'string',
 		);
 
 		return $params;
@@ -208,10 +214,7 @@ class Inbox {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'integer',
-			'validate_callback' => function( $param, $request, $key ) {
-				return user_can( $param, 'publish_posts' );
-			},
+			'type' => 'string',
 		);
 
 		$params['id'] = array(

@@ -2,7 +2,7 @@
 namespace Activitypub;
 
 use WP_Error;
-use Activitypub\Model\User;
+use Activitypub\Collection\Users;
 
 /**
  * ActivityPub HTTP Class
@@ -25,6 +25,12 @@ class Http {
 		$signature = Signature::generate_signature( $user_id, 'post', $url, $date, $digest );
 
 		$wp_version = \get_bloginfo( 'version' );
+
+		/**
+		 * Filter the HTTP headers user agent.
+		 *
+		 * @param string $user_agent The user agent string.
+		 */
 		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
 		$args = array(
 			'timeout' => 100,
@@ -63,10 +69,17 @@ class Http {
 	 */
 	public static function get( $url ) {
 		$date = \gmdate( 'D, d M Y H:i:s T' );
-		$signature = Signature::generate_signature( User::APPLICATION_USER_ID, 'get', $url, $date );
+		$signature = Signature::generate_signature( Users::APPLICATION_USER_ID, 'get', $url, $date );
 
 		$wp_version = \get_bloginfo( 'version' );
+
+		/**
+		 * Filter the HTTP headers user agent.
+		 *
+		 * @param string $user_agent The user agent string.
+		 */
 		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
+
 		$args = array(
 			'timeout' => apply_filters( 'activitypub_remote_get_timeout', 100 ),
 			'limit_response_size' => 1048576,

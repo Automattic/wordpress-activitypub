@@ -5,8 +5,9 @@ use stdClass;
 use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
-use Activitypub\Model\Post;
-use Activitypub\Model\Activity;
+use Activitypub\Transformer\Post;
+use Activitypub\Activity\Activity;
+use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\get_context;
 use function Activitypub\get_rest_url_by_path;
@@ -32,7 +33,7 @@ class Outbox {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>\d+)/outbox',
+			'/users/(?P<user_id>[\w\-\.]+)/outbox',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -52,23 +53,15 @@ class Outbox {
 	 */
 	public static function user_outbox_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$author  = \get_user_by( 'ID', $user_id );
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
+		$user    = User_Collection::get_by_various( $user_id );
 
-		if ( ! $author ) {
-			return new WP_Error(
-				'rest_invalid_param',
-				\__( 'User not found', 'activitypub' ),
-				array(
-					'status' => 404,
-					'params' => array(
-						'user_id' => \__( 'User not found', 'activitypub' ),
-					),
-				)
-			);
+		if ( is_wp_error( $user ) ) {
+			return $user;
 		}
 
-		$page = $request->get_param( 'page', 0 );
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
+
+		$page = $request->get_param( 'page', 1 );
 
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
@@ -80,13 +73,10 @@ class Outbox {
 		$json->{'@context'} = get_context();
 		$json->id = \home_url( \add_query_arg( null, null ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
-		$json->actor = \get_author_posts_url( $user_id );
+		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
-
-		// phpcs:ignore
-		$json->totalItems = 0;
 
 		foreach ( $post_types as $post_type ) {
 			$count_posts = \wp_count_posts( $post_type );
@@ -100,22 +90,28 @@ class Outbox {
 			$json->next  = \add_query_arg( 'page', $page + 1, $json->partOf ); // phpcs:ignore
 		}
 
+		if ( $page && ( $page > 1 ) ) { // phpcs:ignore
+			$json->prev  = \add_query_arg( 'page', $page - 1, $json->partOf ); // phpcs:ignore
+		}
+
 		if ( $page ) {
 			$posts = \get_posts(
 				array(
 					'posts_per_page' => 10,
-					'author' => $user_id,
-					'offset' => ( $page - 1 ) * 10,
-					'post_type' => $post_types,
+					'author'         => $user_id,
+					'paged'          => $page,
+					'post_type'      => $post_types,
 				)
 			);
 
 			foreach ( $posts as $post ) {
-				$activitypub_post = new Post( $post );
-				$activitypub_activity = new Activity( 'Create', false );
+				$post = Post::transform( $post )->to_object();
+				$activity = new Activity();
+				$activity->set_type( 'Create' );
+				$activity->set_context( null );
+				$activity->set_object( $post );
 
-				$activitypub_activity->from_post( $activitypub_post );
-				$json->orderedItems[] = $activitypub_activity->to_array(); // phpcs:ignore
+				$json->orderedItems[] = $activity->to_array(); // phpcs:ignore
 			}
 		}
 
@@ -144,14 +140,12 @@ class Outbox {
 
 		$params['page'] = array(
 			'type' => 'integer',
+			'default' => 1,
 		);
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'integer',
-			'validate_callback' => function( $param, $request, $key ) {
-				return user_can( $param, 'publish_posts' );
-			},
+			'type' => 'string',
 		);
 
 		return $params;

@@ -5,8 +5,8 @@ use WP_Error;
 use stdClass;
 use WP_REST_Server;
 use WP_REST_Response;
-use Activitypub\Collection\Followers as FollowerCollection;
-use Activitypub\Model\Follower;
+use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Collection\Followers as Follower_Collection;
 
 use function Activitypub\get_rest_url_by_path;
 
@@ -31,7 +31,7 @@ class Followers {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>\d+)/followers',
+			'/users/(?P<user_id>[\w\-\.]+)/followers',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -57,6 +57,14 @@ class Followers {
 			return self::get_followers( $request );
 		}
 
+		$user = User_Collection::get_by_various( $user_id );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		$page = $request->get_param( 'page', 1 );
+
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
@@ -68,18 +76,29 @@ class Followers {
 
 		$json->id = \home_url( \add_query_arg( null, null ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
-		$json->actor = \get_author_posts_url( $user_id );
+		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/followers', $user_id ) ); // phpcs:ignore
-		$json->first = $json->partOf; // phpcs:ignore
-		$json->totalItems = FollowerCollection::count_followers( $user_id ); // phpcs:ignore
+		$json->totalItems = Follower_Collection::count_followers( $user->get__id() ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/followers', $user->get__id() ) ); // phpcs:ignore
+
+		$json->first = \add_query_arg( 'page', 1, $json->partOf ); // phpcs:ignore
+		$json->last  = \add_query_arg( 'page', \ceil ( $json->totalItems / 20 ), $json->partOf ); // phpcs:ignore
+
+		if ( $page && ( ( \ceil ( $json->totalItems / 20 ) ) > $page ) ) { // phpcs:ignore
+			$json->next  = \add_query_arg( 'page', $page + 1, $json->partOf ); // phpcs:ignore
+		}
+
+		if ( $page && ( $page > 1 ) ) { // phpcs:ignore
+			$json->prev  = \add_query_arg( 'page', $page - 1, $json->partOf ); // phpcs:ignore
+		}
+
 		// phpcs:ignore
 		$json->orderedItems = array_map(
 			function( $item ) {
 				return $item->get_url();
 			},
-			FollowerCollection::get_followers( $user_id )
+			Follower_Collection::get_followers( $user->get__id(), 20, $page )
 		);
 
 		$response = new WP_REST_Response( $json, 200 );
@@ -133,7 +152,7 @@ class Followers {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'integer',
+			'type' => 'string',
 			'validate_callback' => function( $param, $request, $key ) {
 				// despite being an integer, user_id is passed as string.
 				$param = (int) $param;

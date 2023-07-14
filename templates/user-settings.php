@@ -1,3 +1,4 @@
+<?php $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 <h2 id="activitypub"><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h2>
 
 <table class="form-table">
@@ -8,11 +9,11 @@
 			</th>
 			<td>
 				<p>
-					<code><?php echo \esc_html( \Activitypub\get_webfinger_resource( \get_current_user_id() ) ); ?></code> or
-					<code><?php echo \esc_url( \get_author_posts_url( \get_current_user_id() ) ); ?></code>
+					<code><?php echo \esc_html( $user->get_resource() ); ?></code> or
+					<code><?php echo \esc_url( $user->get_url() ); ?></code>
 				</p>
 				<?php // translators: the webfinger resource ?>
-				<p class="description"><?php \printf( \esc_html__( 'Try to follow "@%s" by searching for it on Mastodon,Friendica & Co.', 'activitypub' ), \esc_html( \Activitypub\get_webfinger_resource( \get_current_user_id() ) ) ); ?></p>
+				<p class="description"><?php \printf( \esc_html__( 'Try to follow "@%s" by searching for it on Mastodon,Friendica & Co.', 'activitypub' ), \esc_html( $user->get_resource() ) ); ?></p>
 			</td>
 		</tr>
 		<tr class="activitypub-user-description-wrap">

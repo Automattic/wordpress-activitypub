@@ -1,83 +1,39 @@
 <?php
-namespace Activitypub\Model;
+namespace Activitypub\Transformer;
 
+use WP_Post;
+use Activitypub\Collection\Users;
+use Activitypub\Model\Blog_User;
+use Activitypub\Activity\Base_Object;
+
+use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
 
 /**
- * ActivityPub Post Class
+ * WordPress Post Transformer
  *
- * @author Matthias Pfefferle
+ * The Post Transformer is responsible for transforming a WP_Post object into different othe
+ * Object-Types.
+ *
+ * Currently supported are:
+ *
+ * - Activitypub\Activity\Base_Object
  */
 class Post {
+
 	/**
-	 * The WordPress Post Object.
+	 * The WP_Post object.
 	 *
 	 * @var WP_Post
 	 */
-	private $post;
-
-	/**
-	 * The Post Author.
-	 *
-	 * @var string
-	 */
-	private $post_author;
-
-	/**
-	 * The Object ID.
-	 *
-	 * @var string
-	 */
-	private $id;
-
-	/**
-	 * The Object URL.
-	 *
-	 * @var string
-	 */
-	private $url;
-
-	/**
-	 * The Object Summary.
-	 *
-	 * @var string
-	 */
-	private $summary;
-
-	/**
-	 * The Object Summary
-	 *
-	 * @var string
-	 */
-	private $content;
-
-	/**
-	 * The Object Attachments. This is usually a list of Images.
-	 *
-	 * @var array
-	 */
-	private $attachments;
-
-	/**
-	 * The Object Tags. This is usually the list of used Hashtags.
-	 *
-	 * @var array
-	 */
-	private $tags;
-
-	/**
-	 * The Onject Type
-	 *
-	 * @var string
-	 */
-	private $object_type;
+	protected $wp_post;
 
 	/**
 	 * The Allowed Tags, used in the content.
 	 *
 	 * @var array
 	 */
-	private $allowed_tags = array(
+	protected $allowed_tags = array(
 		'a' => array(
 			'href' => array(),
 			'title' => array(),
@@ -125,157 +81,96 @@ class Post {
 	);
 
 	/**
-	 * List of audience
+	 * Static function to Transform a WP_Post Object.
 	 *
-	 * Also used for visibility
+	 * This helps to chain the output of the Transformer.
 	 *
-	 * @var array
-	 */
-	private $to = array( 'https://www.w3.org/ns/activitystreams#Public' );
-
-	/**
-	 * List of audience
-	 *
-	 * Also used for visibility
-	 *
-	 * @var array
-	 */
-	private $cc = array();
-
-	/**
-	 * Constructor
-	 *
-	 * @param WP_Post $post
-	 */
-	public function __construct( $post ) {
-		$this->post = \get_post( $post );
-		$path = sprintf( 'users/%d/followers', intval( $this->get_post_author() ) );
-		$this->add_to( get_rest_url_by_path( $path ) );
-	}
-
-	/**
-	 * Magic function to implement getter and setter
-	 *
-	 * @param string $method
-	 * @param string $params
+	 * @param WP_Post $wp_post The WP_Post object
 	 *
 	 * @return void
 	 */
-	public function __call( $method, $params ) {
-		$var = \strtolower( \substr( $method, 4 ) );
-
-		if ( \strncasecmp( $method, 'get', 3 ) === 0 ) {
-			if ( empty( $this->$var ) && ! empty( $this->post->$var ) ) {
-				return $this->post->$var;
-			}
-			return $this->$var;
-		}
-
-		if ( \strncasecmp( $method, 'set', 3 ) === 0 ) {
-			$this->$var = $params[0];
-		}
-
-		if ( \strncasecmp( $method, 'add', 3 ) === 0 ) {
-			if ( ! is_array( $this->$var ) ) {
-				$this->$var = $params[0];
-			}
-
-			if ( is_array( $params[0] ) ) {
-				$this->$var = array_merge( $this->$var, $params[0] );
-			} else {
-				array_push( $this->$var, $params[0] );
-			}
-
-			$this->$var = array_unique( $this->$var );
-		}
+	public static function transform( WP_Post $wp_post ) {
+		return new static( $wp_post );
 	}
 
 	/**
-	 * Converts this Object into an Array.
 	 *
-	 * @return array
+	 *
+	 * @param WP_Post $wp_post
 	 */
-	public function to_array() {
-		$post = $this->post;
+	public function __construct( WP_Post $wp_post ) {
+		$this->wp_post = $wp_post;
+	}
 
-		$array = array(
-			'id' => $this->get_id(),
-			'url' => $this->get_url(),
-			'type' => $this->get_object_type(),
-			'published' => \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date_gmt ) ),
-			'attributedTo' => \get_author_posts_url( $post->post_author ),
-			'summary' => $this->get_summary(),
-			'inReplyTo' => null,
-			'content' => $this->get_content(),
-			'contentMap' => array(
+	/**
+	 * Transforms the WP_Post object to an ActivityPub Object
+	 *
+	 * @see \Activitypub\Activity\Base_Object
+	 *
+	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
+	 */
+	public function to_object() {
+		$wp_post = $this->wp_post;
+		$object = new Base_Object();
+
+		$object->set_id( \esc_url( \get_permalink( $wp_post->ID ) ) );
+		$object->set_url( \esc_url( \get_permalink( $wp_post->ID ) ) );
+		$object->set_type( $this->get_object_type() );
+
+		$published = \strtotime( $wp_post->post_date_gmt );
+
+		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', $published ) );
+
+		$updated = \strtotime( $wp_post->post_modified_gmt );
+
+		if ( $updated > $published ) {
+			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', $updated ) );
+		}
+
+		$object->set_attributed_to( $this->get_attributed_to() );
+		$object->set_content( $this->get_content() );
+		$object->set_content_map(
+			array(
 				\strstr( \get_locale(), '_', true ) => $this->get_content(),
-			),
-			'to' => $this->get_to(),
-			'cc' => $this->get_cc(),
-			'attachment' => $this->get_attachments(),
-			'tag' => $this->get_tags(),
+			)
 		);
+		$path = sprintf( 'users/%d/followers', intval( $wp_post->post_author ) );
 
-		return \apply_filters( 'activitypub_post', $array, $this->post );
+		$object->set_to(
+			array(
+				'https://www.w3.org/ns/activitystreams#Public',
+				get_rest_url_by_path( $path ),
+			)
+		);
+		$object->set_cc( $this->get_cc() );
+		$object->set_attachment( $this->get_attachments() );
+		$object->set_tag( $this->get_tags() );
+
+		return $object;
 	}
 
 	/**
-	 * Converts this Object into a JSON String
+	 * Returns the User-URL of the Author of the Post.
 	 *
-	 * @return string
+	 * If `single_user` mode is enabled, the URL of the Blog-User is returned.
+	 *
+	 * @return string The User-URL.
 	 */
-	public function to_json() {
-		return \wp_json_encode( $this->to_array(), \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
+	protected function get_attributed_to() {
+		if ( is_single_user() ) {
+			$user = new Blog_User();
+			return $user->get_url();
+		}
+
+		return Users::get_by_id( $this->wp_post->post_author )->get_url();
 	}
 
 	/**
-	 * Returns the URL of an Activity Object
+	 * Generates all Image Attachments for a Post.
 	 *
-	 * @return string
+	 * @return array The Image Attachments.
 	 */
-	public function get_url() {
-		if ( $this->url ) {
-			return $this->url;
-		}
-
-		$post = $this->post;
-
-		if ( 'trash' === get_post_status( $post ) ) {
-			$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
-		} else {
-			$permalink = \get_permalink( $post );
-		}
-
-		$this->url = $permalink;
-
-		return $permalink;
-	}
-
-	/**
-	 * Returns the ID of an Activity Object
-	 *
-	 * @return string
-	 */
-	public function get_id() {
-		if ( $this->id ) {
-			return $this->id;
-		}
-
-		$this->id = $this->get_url();
-
-		return $this->id;
-	}
-
-	/**
-	 * Returns a list of Image Attachments
-	 *
-	 * @return array
-	 */
-	public function get_attachments() {
-		if ( $this->attachments ) {
-			return $this->attachments;
-		}
-
+	protected function get_attachments() {
 		$max_images = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
 
 		$images = array();
@@ -285,7 +180,7 @@ class Post {
 			return $images;
 		}
 
-		$id = $this->post->ID;
+		$id = $this->wp_post->ID;
 
 		$image_ids = array();
 
@@ -364,7 +259,7 @@ class Post {
 	 *
 	 * @return array|false Array of image data, or boolean false if no image is available.
 	 */
-	public function get_image( $id, $image_size = 'full' ) {
+	protected function get_image( $id, $image_size = 'full' ) {
 		/**
 		 * Hook into the image retrieval process. Before image retrieval.
 		 *
@@ -387,64 +282,22 @@ class Post {
 	}
 
 	/**
-	 * Returns a list of Tags, used in the Post
+	 * Returns the ActivityStreams 2.0 Object-Type for a Post based on the
+	 * settings and the Post-Type.
 	 *
-	 * @return array
-	 */
-	public function get_tags() {
-		if ( $this->tags ) {
-			return $this->tags;
-		}
-
-		$tags = array();
-
-		$post_tags = \get_the_tags( $this->post->ID );
-		if ( $post_tags ) {
-			foreach ( $post_tags as $post_tag ) {
-				$tag = array(
-					'type' => 'Hashtag',
-					'href' => \get_tag_link( $post_tag->term_id ),
-					'name' => '#' . $post_tag->slug,
-				);
-				$tags[] = $tag;
-			}
-		}
-
-		$mentions = apply_filters( 'activitypub_extract_mentions', array(), $this->post->post_content, $this );
-		if ( $mentions ) {
-			foreach ( $mentions as $mention => $url ) {
-				$tag = array(
-					'type' => 'Mention',
-					'href' => $url,
-					'name' => $mention,
-				);
-				$tags[] = $tag;
-			}
-		}
-
-		$this->tags = $tags;
-
-		return $tags;
-	}
-
-	/**
-	 * Returns the as2 object-type for a given post
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#activity-types
 	 *
-	 * @return string the object-type
+	 * @return string The Object-Type.
 	 */
-	public function get_object_type() {
-		if ( $this->object_type ) {
-			return $this->object_type;
-		}
-
+	protected function get_object_type() {
 		if ( 'wordpress-post-format' !== \get_option( 'activitypub_object_type', 'note' ) ) {
 			return \ucfirst( \get_option( 'activitypub_object_type', 'note' ) );
 		}
 
-		$post_type = \get_post_type( $this->post );
+		$post_type = \get_post_type( $this->wp_post );
 		switch ( $post_type ) {
 			case 'post':
-				$post_format = \get_post_format( $this->post );
+				$post_format = \get_post_format( $this->wp_post );
 				switch ( $post_format ) {
 					case 'aside':
 					case 'status':
@@ -490,25 +343,78 @@ class Post {
 				break;
 		}
 
-		$this->object_type = $object_type;
-
 		return $object_type;
+	}
+
+	/**
+	 * Returns a list of Mentions, used in the Post.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#Mention
+	 *
+	 * @return array The list of Mentions.
+	 */
+	protected function get_cc() {
+		$cc = array();
+
+		$mentions = $this->get_mentions();
+		if ( $mentions ) {
+			foreach ( $mentions as $mention => $url ) {
+				$cc[] = $url;
+			}
+		}
+
+		return $cc;
+	}
+
+	/**
+	 * Returns a list of Tags, used in the Post.
+	 *
+	 * This includes Hash-Tags and Mentions.
+	 *
+	 * @return array The list of Tags.
+	 */
+	protected function get_tags() {
+		$tags = array();
+
+		$post_tags = \get_the_tags( $this->wp_post->ID );
+		if ( $post_tags ) {
+			foreach ( $post_tags as $post_tag ) {
+				$tag = array(
+					'type' => 'Hashtag',
+					'href' => esc_url( \get_tag_link( $post_tag->term_id ) ),
+					'name' => '#' . \esc_attr( $post_tag->slug ),
+				);
+				$tags[] = $tag;
+			}
+		}
+
+		$mentions = $this->get_mentions();
+		if ( $mentions ) {
+			foreach ( $mentions as $mention => $url ) {
+				$tag = array(
+					'type' => 'Mention',
+					'href' => \esc_url( $url ),
+					'name' => \esc_html( $mention ),
+				);
+				$tags[] = $tag;
+			}
+		}
+
+		return $tags;
 	}
 
 	/**
 	 * Returns the content for the ActivityPub Item.
 	 *
-	 * @return string the content
+	 * The content will be generated based on the user settings.
+	 *
+	 * @return string The content.
 	 */
-	public function get_content() {
+	protected function get_content() {
 		global $post;
 
-		if ( $this->content ) {
-			return $this->content;
-		}
-
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		$post    = $this->post;
+		$post    = $this->wp_post;
 		$content = $this->get_post_content_template();
 
 		// Fill in the shortcodes.
@@ -524,17 +430,15 @@ class Post {
 		$content = \apply_filters( 'activitypub_the_content', $content, $post );
 		$content = \html_entity_decode( $content, \ENT_QUOTES, 'UTF-8' );
 
-		$this->content = $content;
-
 		return $content;
 	}
 
 	/**
 	 * Gets the template to use to generate the content of the activitypub item.
 	 *
-	 * @return string the template
+	 * @return string The Template.
 	 */
-	public function get_post_content_template() {
+	protected function get_post_content_template() {
 		if ( 'excerpt' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
 			return "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
 		}
@@ -548,5 +452,14 @@ class Post {
 		}
 
 		return \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+	}
+
+	/**
+	 * Helper function to get the @-Mentions from the post content.
+	 *
+	 * @return array The list of @-Mentions.
+	 */
+	protected function get_mentions() {
+		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_post->post_content, $this->wp_post );
 	}
 }

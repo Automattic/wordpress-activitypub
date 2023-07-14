@@ -7,6 +7,14 @@
 
 namespace Activitypub\Activity;
 
+/**
+ * \Activitypub\Activity\Actor is an implementation of
+ * one an Activity Streams Actor.
+ *
+ * Represents an individual actor.
+ *
+ * @see https://www.w3.org/TR/activitystreams-vocabulary/#actor-types
+ */
 class Actor extends Base_Object {
 	/**
 	 * @var string
@@ -114,4 +122,18 @@ class Actor extends Base_Object {
 	 * @var string|array|null
 	 */
 	protected $public_key;
+
+	/**
+	 * It's not part of the ActivityPub protocol but it's a quite common
+	 * practice to lock an account. If anabled, new followers will not be
+	 * automatically accepted, but will instead require you to manually
+	 * approve them.
+	 *
+	 * WordPress does only support 'false' at the moment.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#as
+	 *
+	 * @var boolean
+	 */
+	protected $manually_approves_followers = false;
 }

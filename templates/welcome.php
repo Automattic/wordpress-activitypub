@@ -3,8 +3,9 @@
 	\dirname( __FILE__ ) . '/admin-header.php',
 	true,
 	array(
-		'settings' => '',
-		'welcome' => 'active',
+		'settings'  => '',
+		'welcome'   => 'active',
+		'followers' => '',
 	)
 );
 ?>
@@ -13,29 +14,65 @@
 	<h2><?php \esc_html_e( 'Welcome', 'activitypub' ); ?></h2>
 
 	<p><?php \esc_html_e( 'With ActivityPub your blog becomes part of a federated social network. This means you can share and talk to everyone using the ActivityPub protocol, including users of Friendica, Pleroma and Mastodon.', 'activitypub' ); ?></p>
+
+	<?php if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) : ?>
+
+	<h3><?php \esc_html_e( 'Blog Account', 'activitypub' ); ?></h3>
 	<p>
 		<?php
+		$blog_user = new \Activitypub\Model\Blog_User();
 		echo wp_kses(
 			\sprintf(
 				// translators:
 				\__(
-					'People can follow you by using the username <code>%1$s</code> or the URL <code>%2$s</code>. Users who can not access this settings page will find their username on the <a href="%3$s">Edit Profile</a> page.',
+					'People can follow your Blog by using the username <code>%1$s</code> or the URL <code>%2$s</code>. This Blog-User will federate all posts written on your Blog, regardless of the User who posted it. You can customize the Blog-User on the <a href="%3$s">Settings</a> page.',
 					'activitypub'
 				),
-				\esc_attr( \Activitypub\get_webfinger_resource( wp_get_current_user()->ID ) ),
-				\esc_url_raw( \get_author_posts_url( wp_get_current_user()->ID ) ),
+				\esc_attr( $blog_user->get_resource() ),
+				\esc_url_raw( $blog_user->get_url() ),
+				\esc_url_raw( \admin_url( '/options-general.php?page=activitypub&tab=settings' ) )
+			),
+			'default'
+		);
+		?>
+	</p>
+
+	<?php endif; ?>
+
+	<?php if ( ! \Activitypub\is_user_disabled( get_current_user_id() ) ) : ?>
+
+	<h3><?php \esc_html_e( 'Personal Account', 'activitypub' ); ?></h3>
+	<p>
+		<?php
+		$user = \Activitypub\Collection\Users::get_by_id( wp_get_current_user()->ID );
+		echo wp_kses(
+			\sprintf(
+				// translators:
+				\__(
+					'People can also follow you by using your Username <code>%1$s</code> or your Author-URL <code>%2$s</code>. Users who can not access this settings page will find their username on the <a href="%3$s">Edit Profile</a> page.',
+					'activitypub'
+				),
+				\esc_attr( $user->get_resource() ),
+				\esc_url_raw( $user->get_url() ),
 				\esc_url_raw( \admin_url( 'profile.php#activitypub' ) )
 			),
 			'default'
 		);
 		?>
 	</p>
+
+	<?php endif; ?>
+
+	<h3><?php \esc_html_e( 'Troubleshooting', 'activitypub' ); ?></h3>
 	<p>
 		<?php
 		echo wp_kses(
 			\sprintf(
 				// translators:
-				\__( 'If you have problems using this plugin, please check the <a href="%s">Site Health</a> to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).', 'activitypub' ),
+				\__(
+					'If you have problems using this plugin, please check the <a href="%s">Site Health</a> to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).',
+					'activitypub'
+				),
 				\esc_url_raw( admin_url( 'site-health.php' ) )
 			),
 			'default'

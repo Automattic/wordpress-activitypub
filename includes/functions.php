@@ -1,43 +1,27 @@
 <?php
 namespace Activitypub;
 
+use Activitypub\Http;
+use Activitypub\Activity\Activity;
+use Activitypub\Collection\Followers;
+
 /**
  * Returns the ActivityPub default JSON-context
  *
  * @return array the activitypub context
  */
 function get_context() {
-	$context = array(
-		'https://www.w3.org/ns/activitystreams',
-		'https://w3id.org/security/v1',
-		array(
-			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
-			'PropertyValue' => 'schema:PropertyValue',
-			'schema' => 'http://schema.org#',
-			'pt' => 'https://joinpeertube.org/ns#',
-			'toot' => 'http://joinmastodon.org/ns#',
-			'value' => 'schema:value',
-			'Hashtag' => 'as:Hashtag',
-			'featured' => array(
-				'@id' => 'toot:featured',
-				'@type' => '@id',
-			),
-			'featuredTags' => array(
-				'@id' => 'toot:featuredTags',
-				'@type' => '@id',
-			),
-		),
-	);
+	$context = Activity::CONTEXT;
 
 	return \apply_filters( 'activitypub_json_context', $context );
 }
 
 function safe_remote_post( $url, $body, $user_id ) {
-	return \Activitypub\Http::post( $url, $body, $user_id );
+	return Http::post( $url, $body, $user_id );
 }
 
 function safe_remote_get( $url ) {
-	return \Activitypub\Http::get( $url );
+	return Http::get( $url );
 }
 
 /**
@@ -76,9 +60,10 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		return $actor;
 	}
 
+	$transient_key = 'activitypub_' . $actor;
+
 	// only check the cache if needed.
 	if ( $cached ) {
-		$transient_key = 'activitypub_' . $actor;
 		$metadata = \get_transient( $transient_key );
 
 		if ( $metadata ) {
@@ -125,7 +110,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
  * @return array The followers.
  */
 function get_followers( $user_id ) {
-	return Collection\Followers::get_followers( $user_id );
+	return Followers::get_followers( $user_id );
 }
 
 /**
@@ -136,7 +121,7 @@ function get_followers( $user_id ) {
  * @return int The number of followers.
  */
 function count_followers( $user_id ) {
-	return Collection\Followers::count_followers( $user_id );
+	return Followers::count_followers( $user_id );
 }
 
 /**
@@ -185,21 +170,6 @@ function url_to_authorid( $url ) {
 	}
 
 	return 0;
-}
-
-/**
- * Return the custom Activity Pub description, if set, or default author description.
- *
- * @param int $user_id The user ID.
- *
- * @return string The author description.
- */
-function get_author_description( $user_id ) {
-	$description = get_user_meta( $user_id, 'activitypub_user_description', true );
-	if ( empty( $description ) ) {
-		$description = get_user_meta( $user_id, 'description', true );
-	}
-	return \wpautop( \wp_kses( $description, 'default' ) );
 }
 
 /**
@@ -271,7 +241,7 @@ function is_activitypub_request() {
 	 * ActivityPub requests are currently only made for
 	 * author archives, singular posts, and the homepage.
 	 */
-	if ( ! \is_author() && ! \is_singular() && ! \is_home() ) {
+	if ( ! \is_author() && ! \is_singular() && ! \is_home() && ! defined( '\REST_REQUEST' ) ) {
 		return false;
 	}
 
@@ -302,3 +272,83 @@ function is_activitypub_request() {
 
 	return false;
 }
+
+/**
+ * This function checks if a user is disabled for ActivityPub.
+ *
+ * @param int $user_id The User-ID.
+ *
+ * @return boolean True if the user is disabled, false otherwise.
+ */
+function is_user_disabled( $user_id ) {
+	$return = false;
+
+	switch ( $user_id ) {
+		// if the user is the application user, it's always enabled.
+		case \Activitypub\Collection\Users::APPLICATION_USER_ID:
+			$return = false;
+			break;
+		// if the user is the blog user, it's only enabled in single-user mode.
+		case \Activitypub\Collection\Users::BLOG_USER_ID:
+			if ( defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) ) {
+				$return = ACTIVITYPUB_DISABLE_BLOG_USER;
+				break;
+			}
+
+			$return = false;
+			break;
+		// if the user is any other user, it's enabled if it can publish posts.
+		default:
+			if ( ! \get_user_by( 'id', $user_id ) ) {
+				$return = true;
+				break;
+			}
+
+			if ( defined( 'ACTIVITYPUB_DISABLE_USER' ) ) {
+				$return = ACTIVITYPUB_DISABLE_USER;
+				break;
+			}
+
+			if ( ! \user_can( $user_id, 'publish_posts' ) ) {
+				$return = true;
+				break;
+			}
+
+			$return = false;
+			break;
+	}
+
+	return apply_filters( 'activitypub_is_user_disabled', $return, $user_id );
+}
+
+/**
+ * Check if the blog is in single-user mode.
+ *
+ * @return boolean True if the blog is in single-user mode, false otherwise.
+ */
+function is_single_user() {
+	$return = false;
+
+	if (
+		false === ACTIVITYPUB_DISABLE_BLOG_USER &&
+		true === ACTIVITYPUB_DISABLE_USER
+	) {
+		$return = true;
+	}
+
+	return apply_filters( 'activitypub_is_single_user', $return );
+}
+
+if ( ! function_exists( 'get_self_link' ) ) {
+	/**
+	 * Returns the link for the currently displayed feed.
+	 *
+	 * @return string Correct link for the atom:self element.
+	 */
+	function get_self_link() {
+		$host = wp_parse_url( home_url() );
+
+		return esc_url( apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . wp_unslash( $_SERVER['REQUEST_URI'] ) ) ) );
+	}
+}
+

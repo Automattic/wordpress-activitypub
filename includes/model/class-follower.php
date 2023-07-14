@@ -25,68 +25,28 @@ class Follower extends Actor {
 	protected $_id; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
-	 * The complete Remote-Profile of the Follower
-	 *
-	 * @var array
-	 */
-	protected $_shared_inbox; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
-
-	/**
-	 * The complete Remote-Profile of the Follower
-	 *
-	 * @var array
-	 */
-	protected $_actor; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
-
-	/**
-	 * The latest received error.
-	 *
-	 * This will only temporary and will saved to $this->errors
-	 *
-	 * @var string
-	 */
-	protected $_error; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
-
-	/**
-	 * A list of errors
-	 *
-	 * @var array
-	 */
-	protected $_errors; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
-
-	/**
-	 * Magic function to return the Actor-URL when the Object is used as a string
-	 *
-	 * @return string
-	 */
-	public function __toString() {
-		return $this->get_url();
-	}
-
-	/**
-	 * Set new Error
-	 *
-	 * @param mixed $error The latest HTTP-Error.
-	 *
-	 * @return void
-	 */
-	public function set_error( $error ) {
-		$this->_errors = array();
-		$this->_error  = $error;
-	}
-
-	/**
 	 * Get the errors.
 	 *
 	 * @return mixed
 	 */
 	public function get_errors() {
-		if ( $this->_errors ) {
-			return $this->_errors;
+		return get_post_meta( $this->_id, 'activitypub_errors' );
+	}
+
+	/**
+	 * Getter for URL attribute.
+	 *
+	 * Falls back to ID, if no URL is set. This is relevant for
+	 * Plattforms like Lemmy, where the ID is the URL.
+	 *
+	 * @return string The URL.
+	 */
+	public function get_url() {
+		if ( $this->url ) {
+			return $this->url;
 		}
 
-		$this->_errors = get_post_meta( $this->_id, 'errors' );
-		return $this->_errors;
+		return $this->id;
 	}
 
 	/**
@@ -95,7 +55,7 @@ class Follower extends Actor {
 	 * @return void
 	 */
 	public function reset_errors() {
-		delete_post_meta( $this->_id, 'errors' );
+		delete_post_meta( $this->_id, 'activitypub_errors' );
 	}
 
 	/**
@@ -104,7 +64,7 @@ class Follower extends Actor {
 	 * @return int The number of errors.
 	 */
 	public function count_errors() {
-		$errors = $this->get__errors();
+		$errors = $this->get_errors();
 
 		if ( is_array( $errors ) && ! empty( $errors ) ) {
 			return count( $errors );
@@ -113,21 +73,13 @@ class Follower extends Actor {
 		return 0;
 	}
 
-	public function get_url() {
-		if ( ! $this->url ) {
-			return $this->id;
-		}
-
-		return $this->url;
-	}
-
 	/**
 	 * Return the latest error message.
 	 *
 	 * @return string The error message.
 	 */
 	public function get_latest_error_message() {
-		$errors = $this->get__errors();
+		$errors = $this->get_errors();
 
 		if ( is_array( $errors ) && ! empty( $errors ) ) {
 			return reset( $errors );
@@ -151,15 +103,32 @@ class Follower extends Actor {
 	 * @return void
 	 */
 	public function save() {
+		if ( ! $this->get__id() ) {
+			global $wpdb;
+
+			$post_id = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT ID FROM $wpdb->posts WHERE guid=%s",
+					esc_sql( $this->get_id() )
+				)
+			);
+
+			if ( $post_id ) {
+				$post = get_post( $post_id );
+				$this->set__id( $post->ID );
+			}
+		}
+
 		$args = array(
-			'ID'            => $this->get__id(),
-			'guid'          => $this->get_id(),
-			'post_title'    => $this->get_name(),
-			'post_author'   => 0,
-			'post_type'     => Followers::POST_TYPE,
-			'post_content'  => $this->get_summary(),
-			'post_status'   => 'publish',
-			'meta_input'    => $this->get_post_meta_input(),
+			'ID'           => $this->get__id(),
+			'guid'         => esc_url_raw( $this->get_id() ),
+			'post_title'   => esc_html( $this->get_name() ),
+			'post_author'  => 0,
+			'post_type'    => Followers::POST_TYPE,
+			'post_name'    => esc_url_raw( $this->get_id() ),
+			'post_excerpt' => esc_html( $this->get_summary() ) ? $this->get_summary() : '',
+			'post_status'  => 'publish',
+			'meta_input'   => $this->get_post_meta_input(),
 		);
 
 		$post_id = wp_insert_post( $args );
@@ -172,15 +141,16 @@ class Follower extends Actor {
 	 * @return void
 	 */
 	public function upsert() {
-		if ( $this->_id ) {
-			$this->update();
-		} else {
-			$this->save();
-		}
+		$this->save();
 	}
 
 	/**
 	 * Delete the current Follower-Object.
+	 *
+	 * Beware that this os deleting a Follower for ALL users!!!
+	 *
+	 * To delete only the User connection (unfollow)
+	 * @see \Activitypub\Rest\Followers::remove_follower()
 	 *
 	 * @return void
 	 */
@@ -194,27 +164,9 @@ class Follower extends Actor {
 	 * @return void
 	 */
 	protected function get_post_meta_input() {
-		$attributes = array( 'inbox', '_shared_inbox', 'icon', 'preferred_username', '_actor', 'url' );
-
 		$meta_input = array();
-
-		foreach ( $attributes as $attribute ) {
-			if ( $this->get( $attribute ) ) {
-				$meta_input[ $attribute ] = $this->get( $attribute );
-			}
-		}
-
-		if ( $this->_error ) {
-			if ( is_string( $this->_error ) ) {
-				$_error = $this->_error;
-			} elseif ( is_wp_error( $this->_error ) ) {
-				$_error = $this->_error->get_error_message();
-			} else {
-				$_error = __( 'Unknown Error or misconfigured Error-Message', 'activitypub' );
-			}
-
-			$meta_input['_errors'] = $_error;
-		}
+		$meta_input['activitypub_inbox'] = $this->get_shared_inbox();
+		$meta_input['activitypub_actor_json'] = $this->to_json();
 
 		return $meta_input;
 	}
@@ -239,37 +191,18 @@ class Follower extends Actor {
 	}
 
 	/**
-	 * Converts an ActivityPub Array to an Follower Object.
+	 * Get the shared inbox, with a fallback to the inbox.
 	 *
-	 * @param array $array The ActivityPub Array.
-	 *
-	 * @return Activitypub\Model\Follower The Follower Object.
+	 * @return string|null The URL to the shared inbox, the inbox or null.
 	 */
-	public static function from_array( $array ) {
-		$object = parent::from_array( $array );
-		$object->set__actor( $array );
-
-		global $wpdb;
-
-		$post_id = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s",
-				esc_sql( $object->get_id() )
-			)
-		);
-
-		if ( $post_id ) {
-			$post = get_post( $post_id );
-			$object->set__id( $post->ID );
+	public function get_shared_inbox() {
+		if ( ! empty( $this->get_endpoints()['sharedInbox'] ) ) {
+			return $this->get_endpoints()['sharedInbox'];
+		} elseif ( ! empty( $this->get_inbox() ) ) {
+			return $this->get_inbox();
 		}
 
-		if ( ! empty( $object->get_endpoints()['sharedInbox'] ) ) {
-			$object->_shared_inbox = $object->get_endpoints()['sharedInbox'];
-		} elseif ( ! empty( $object->get_inbox() ) ) {
-			$object->_shared_inbox = $object->get_inbox();
-		}
-
-		return $object;
+		return null;
 	}
 
 	/**
@@ -279,16 +212,11 @@ class Follower extends Actor {
 	 *
 	 * @return array Activitypub\Model\Follower
 	 */
-	public static function from_custom_post_type( $post ) {
-		$object = new static();
-
+	public static function init_from_cpt( $post ) {
+		$actor_json = get_post_meta( $post->ID, 'activitypub_actor_json', true );
+		$object = self::init_from_json( $actor_json );
 		$object->set__id( $post->ID );
 		$object->set_id( $post->guid );
-		$object->set_name( $post->post_title );
-		$object->set_summary( $post->post_content );
-		$object->set_url( get_post_meta( $post->ID, 'url', true ) );
-		$object->set_icon( get_post_meta( $post->ID, 'icon', true ) );
-		$object->set_preferred_username( get_post_meta( $post->ID, 'preferred_username', true ) );
 		$object->set_published( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_published ) ) );
 		$object->set_updated( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_modified ) ) );
 
