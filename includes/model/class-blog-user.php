@@ -79,38 +79,13 @@ class Blog_User extends User {
 		// check if domain host has a subdomain
 		$host       = \wp_parse_url( \get_home_url(), \PHP_URL_HOST );
 		$host       = \preg_replace( '/^www\./i', '', $host );
-		$host_parts = \explode( '.', $host );
-
-		if ( \count( $host_parts ) <= 2 && strlen( $host ) <= 15 ) {
-			return $host;
-		}
-
-		// check blog title
-		$blog_title = \get_bloginfo( 'name' );
-		$blog_title = \sanitize_title( $blog_title );
-
-		if ( strlen( $blog_title ) <= 15 ) {
-			return $blog_title;
-		}
-
-		$default_identifier = array(
-			'feed',
-			'all',
-			'everyone',
-			'authors',
-			'follow',
-			'posts',
-		);
-
-		// get random item of $default_identifier
-		$default = $default_identifier[ \array_rand( $default_identifier ) ];
 
 		/**
 		 * Filter the default blog username.
 		 *
-		 * @param string $default The default username.
+		 * @param string $host The default username.
 		 */
-		return apply_filters( 'activitypub_default_blog_username', $default );
+		return apply_filters( 'activitypub_default_blog_username', $host );
 	}
 
 	/**
