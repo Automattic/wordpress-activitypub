@@ -1,11 +1,18 @@
 <?php
 namespace Activitypub;
 
+use function Activitypub\get_item;
+
 class Shortcodes {
 	/**
 	 * Class constructor, registering WordPress then Shortcodes
 	 */
 	public static function init() {
+		// do not load on admin pages
+		if ( is_admin() ) {
+			return;
+		}
+
 		foreach ( get_class_methods( self::class ) as $shortcode ) {
 			if ( 'init' !== $shortcode ) {
 				add_shortcode( 'ap_' . $shortcode, array( self::class, $shortcode ) );
@@ -23,13 +30,13 @@ class Shortcodes {
 	 * @return string The post tags as hashtags.
 	 */
 	public static function hashtags( $atts, $content, $tag ) {
-		$post_id = get_the_ID();
+		$post = get_item();
 
-		if ( ! $post_id ) {
+		if ( ! $post ) {
 			return '';
 		}
 
-		$tags = \get_the_tags( $post_id );
+		$tags = \get_the_tags( $post->ID );
 
 		if ( ! $tags ) {
 			return '';
@@ -58,13 +65,13 @@ class Shortcodes {
 	 * @return string The post title.
 	 */
 	public static function title( $atts, $content, $tag ) {
-		$post_id = get_the_ID();
+		$post = get_item();
 
-		if ( ! $post_id ) {
+		if ( ! $post ) {
 			return '';
 		}
 
-		return \wp_strip_all_tags( \get_the_title( $post_id ), true );
+		return \wp_strip_all_tags( \get_the_title( $post->ID ), true );
 
 	}
 
@@ -78,9 +85,9 @@ class Shortcodes {
 	 * @return string The post excerpt.
 	 */
 	public static function excerpt( $atts, $content, $tag ) {
-		$post = get_post();
+		$post = get_item();
 
-		if ( ! $post || \post_password_required( $post ) ) {
+		if ( ! $post ) {
 			return '';
 		}
 
@@ -184,9 +191,9 @@ class Shortcodes {
 		// prevent inception
 		remove_shortcode( 'ap_content' );
 
-		$post = get_post();
+		$post = get_item();
 
-		if ( ! $post || \post_password_required( $post ) ) {
+		if ( ! $post ) {
 			return '';
 		}
 
@@ -226,7 +233,7 @@ class Shortcodes {
 	 * @return string The post permalink.
 	 */
 	public static function permalink( $atts, $content, $tag ) {
-		$post = get_post();
+		$post = get_item();
 
 		if ( ! $post ) {
 			return '';
@@ -260,7 +267,7 @@ class Shortcodes {
 	 * @return string The post shortlink.
 	 */
 	public static function shortlink( $atts, $content, $tag ) {
-		$post = get_post();
+		$post = get_item();
 
 		if ( ! $post ) {
 			return '';
@@ -294,9 +301,9 @@ class Shortcodes {
 	 * @return string
 	 */
 	public static function image( $atts, $content, $tag ) {
-		$post_id = get_the_ID();
+		$post = get_item();
 
-		if ( ! $post_id ) {
+		if ( ! $post ) {
 			return '';
 		}
 
@@ -318,7 +325,7 @@ class Shortcodes {
 			$size = $atts['type'];
 		}
 
-		$image = \get_the_post_thumbnail_url( $post_id, $size );
+		$image = \get_the_post_thumbnail_url( $post->ID, $size );
 
 		if ( ! $image ) {
 			return '';
@@ -337,13 +344,13 @@ class Shortcodes {
 	 * @return string The post categories as hashtags.
 	 */
 	public static function hashcats( $atts, $content, $tag ) {
-		$post_id = get_the_ID();
+		$post = get_item();
 
-		if ( ! $post_id ) {
+		if ( ! $post ) {
 			return '';
 		}
 
-		$categories = \get_the_category( $post_id );
+		$categories = \get_the_category( $post->ID );
 
 		if ( ! $categories ) {
 			return '';
@@ -372,7 +379,7 @@ class Shortcodes {
 	 * @return string The author name.
 	 */
 	public static function author( $atts, $content, $tag ) {
-		$post = get_post();
+		$post = get_item();
 
 		if ( ! $post ) {
 			return '';
@@ -397,7 +404,7 @@ class Shortcodes {
 	 * @return string The author URL.
 	 */
 	public static function authorurl( $atts, $content, $tag ) {
-		$post = get_post();
+		$post = get_item();
 
 		if ( ! $post ) {
 			return '';
@@ -461,7 +468,7 @@ class Shortcodes {
 	 * @return string The post date.
 	 */
 	public static function date( $atts, $content, $tag ) {
-		$post = get_post();
+		$post = get_item();
 
 		if ( ! $post ) {
 			return '';
@@ -490,7 +497,7 @@ class Shortcodes {
 	 * @return string The post time.
 	 */
 	public static function time( $atts, $content, $tag ) {
-		$post = get_post();
+		$post = get_item();
 
 		if ( ! $post ) {
 			return '';
@@ -519,7 +526,7 @@ class Shortcodes {
 	 * @return string The post date/time.
 	 */
 	public static function datetime( $atts, $content, $tag ) {
-		$post = get_post();
+		$post = get_item();
 
 		if ( ! $post ) {
 			return '';

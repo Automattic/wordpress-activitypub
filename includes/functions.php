@@ -352,3 +352,32 @@ if ( ! function_exists( 'get_self_link' ) ) {
 	}
 }
 
+/**
+ * Get a WordPress item to federate.
+ *
+ * Checks if item (WP_Post) is "public", a supported post type
+ * and not password protected.
+ *
+ * @return null|WP_Post The WordPress item.
+ */
+function get_item() {
+	$post = \get_post();
+
+	if ( ! $post ) {
+		return null;
+	}
+
+	if ( ! \in_array( $post->post_type, \get_post_types_by_support( 'activitypub' ), true ) ) {
+		return null;
+	}
+
+	if ( 'publish' !== $post->post_status ) {
+		return null;
+	}
+
+	if ( \post_password_required( $post ) ) {
+		return null;
+	}
+
+	return $post;
+}
