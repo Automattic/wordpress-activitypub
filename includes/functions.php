@@ -367,15 +367,15 @@ function get_item() {
 		return null;
 	}
 
-	if ( ! \in_array( $post->post_type, \get_post_types_by_support( 'activitypub' ), true ) ) {
-		return null;
-	}
-
-	if ( 'publish' !== $post->post_status ) {
+	if ( 'publish' !== \get_post_status( $post ) ) {
 		return null;
 	}
 
 	if ( \post_password_required( $post ) ) {
+		return null;
+	}
+
+	if ( ! \in_array( \get_post_type( $post ), \get_post_types_by_support( 'activitypub' ), true ) ) {
 		return null;
 	}
 
