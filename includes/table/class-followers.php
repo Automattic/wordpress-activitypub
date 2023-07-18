@@ -119,8 +119,8 @@ class Followers extends WP_List_Table {
 		if ( ! isset( $_REQUEST['followers'] ) || ! isset( $_REQUEST['_apnonce'] ) ) {
 			return false;
 		}
-
-		if ( ! wp_verify_nonce( $_REQUEST['_apnonce'], 'activitypub-followers-list' ) ) {
+		$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_apnonce'] ) );
+		if ( ! wp_verify_nonce( $nonce, 'activitypub-followers-list' ) ) {
 			return false;
 		}
 
