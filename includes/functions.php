@@ -351,33 +351,3 @@ if ( ! function_exists( 'get_self_link' ) ) {
 		return esc_url( apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . wp_unslash( $_SERVER['REQUEST_URI'] ) ) ) );
 	}
 }
-
-/**
- * Get a WordPress item to federate.
- *
- * Checks if item (WP_Post) is "public", a supported post type
- * and not password protected.
- *
- * @return null|WP_Post The WordPress item.
- */
-function get_item() {
-	$post = \get_post();
-
-	if ( ! $post ) {
-		return null;
-	}
-
-	if ( 'publish' !== \get_post_status( $post ) ) {
-		return null;
-	}
-
-	if ( \post_password_required( $post ) ) {
-		return null;
-	}
-
-	if ( ! \in_array( \get_post_type( $post ), \get_post_types_by_support( 'activitypub' ), true ) ) {
-		return null;
-	}
-
-	return $post;
-}
