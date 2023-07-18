@@ -6,6 +6,11 @@ class Shortcodes {
 	 * Class constructor, registering WordPress then Shortcodes
 	 */
 	public static function init() {
+		// do not load on admin pages
+		if ( is_admin() ) {
+			return;
+		}
+
 		foreach ( get_class_methods( self::class ) as $shortcode ) {
 			if ( 'init' !== $shortcode ) {
 				add_shortcode( 'ap_' . $shortcode, array( self::class, $shortcode ) );
@@ -23,13 +28,13 @@ class Shortcodes {
 	 * @return string The post tags as hashtags.
 	 */
 	public static function hashtags( $atts, $content, $tag ) {
-		$post_id = get_the_ID();
+		$item = self::get_item();
 
-		if ( ! $post_id ) {
+		if ( ! $item ) {
 			return '';
 		}
 
-		$tags = \get_the_tags( $post_id );
+		$tags = \get_the_tags( $item->ID );
 
 		if ( ! $tags ) {
 			return '';
@@ -58,13 +63,13 @@ class Shortcodes {
 	 * @return string The post title.
 	 */
 	public static function title( $atts, $content, $tag ) {
-		$post_id = get_the_ID();
+		$item = self::get_item();
 
-		if ( ! $post_id ) {
+		if ( ! $item ) {
 			return '';
 		}
 
-		return \wp_strip_all_tags( \get_the_title( $post_id ), true );
+		return \wp_strip_all_tags( \get_the_title( $item->ID ), true );
 
 	}
 
@@ -78,9 +83,9 @@ class Shortcodes {
 	 * @return string The post excerpt.
 	 */
 	public static function excerpt( $atts, $content, $tag ) {
-		$post = get_post();
+		$item = self::get_item();
 
-		if ( ! $post || \post_password_required( $post ) ) {
+		if ( ! $item ) {
 			return '';
 		}
 
@@ -96,11 +101,11 @@ class Shortcodes {
 			$excerpt_length = ACTIVITYPUB_EXCERPT_LENGTH;
 		}
 
-		$excerpt = \get_post_field( 'post_excerpt', $post );
+		$excerpt = \get_post_field( 'post_excerpt', $item );
 
 		if ( '' === $excerpt ) {
 
-			$content = \get_post_field( 'post_content', $post );
+			$content = \get_post_field( 'post_content', $item );
 
 			// An empty string will make wp_trim_excerpt do stuff we do not want.
 			if ( '' !== $content ) {
@@ -181,14 +186,14 @@ class Shortcodes {
 	 * @return string The post content.
 	 */
 	public static function content( $atts, $content, $tag ) {
-		// prevent inception
-		remove_shortcode( 'ap_content' );
+		$item = self::get_item();
 
-		$post = get_post();
-
-		if ( ! $post || \post_password_required( $post ) ) {
+		if ( ! $item ) {
 			return '';
 		}
+
+		// prevent inception
+		remove_shortcode( 'ap_content' );
 
 		$atts = shortcode_atts(
 			array( 'apply_filters' => 'yes' ),
@@ -196,7 +201,7 @@ class Shortcodes {
 			$tag
 		);
 
-		$content = \get_post_field( 'post_content', $post );
+		$content = \get_post_field( 'post_content', $item );
 
 		if ( 'yes' === $atts['apply_filters'] ) {
 			$content = \apply_filters( 'the_content', $content );
@@ -226,9 +231,9 @@ class Shortcodes {
 	 * @return string The post permalink.
 	 */
 	public static function permalink( $atts, $content, $tag ) {
-		$post = get_post();
+		$item = self::get_item();
 
-		if ( ! $post ) {
+		if ( ! $item ) {
 			return '';
 		}
 
@@ -241,12 +246,12 @@ class Shortcodes {
 		);
 
 		if ( 'url' === $atts['type'] ) {
-			return \esc_url( \get_permalink( $post->ID ) );
+			return \esc_url( \get_permalink( $item->ID ) );
 		}
 
 		return \sprintf(
 			'<a href="%1$s">%1$s</a>',
-			\esc_url( \get_permalink( $post->ID ) )
+			\esc_url( \get_permalink( $item->ID ) )
 		);
 	}
 
@@ -260,9 +265,9 @@ class Shortcodes {
 	 * @return string The post shortlink.
 	 */
 	public static function shortlink( $atts, $content, $tag ) {
-		$post = get_post();
+		$item = self::get_item();
 
-		if ( ! $post ) {
+		if ( ! $item ) {
 			return '';
 		}
 
@@ -275,12 +280,12 @@ class Shortcodes {
 		);
 
 		if ( 'url' === $atts['type'] ) {
-			return \esc_url( \wp_get_shortlink( $post->ID ) );
+			return \esc_url( \wp_get_shortlink( $item->ID ) );
 		}
 
 		return \sprintf(
 			'<a href="%1$s">%1$s</a>',
-			\esc_url( \wp_get_shortlink( $post->ID ) )
+			\esc_url( \wp_get_shortlink( $item->ID ) )
 		);
 	}
 
@@ -294,9 +299,9 @@ class Shortcodes {
 	 * @return string
 	 */
 	public static function image( $atts, $content, $tag ) {
-		$post_id = get_the_ID();
+		$item = self::get_item();
 
-		if ( ! $post_id ) {
+		if ( ! $item ) {
 			return '';
 		}
 
@@ -318,7 +323,7 @@ class Shortcodes {
 			$size = $atts['type'];
 		}
 
-		$image = \get_the_post_thumbnail_url( $post_id, $size );
+		$image = \get_the_post_thumbnail_url( $item->ID, $size );
 
 		if ( ! $image ) {
 			return '';
@@ -337,13 +342,13 @@ class Shortcodes {
 	 * @return string The post categories as hashtags.
 	 */
 	public static function hashcats( $atts, $content, $tag ) {
-		$post_id = get_the_ID();
+		$item = self::get_item();
 
-		if ( ! $post_id ) {
+		if ( ! $item ) {
 			return '';
 		}
 
-		$categories = \get_the_category( $post_id );
+		$categories = \get_the_category( $item->ID );
 
 		if ( ! $categories ) {
 			return '';
@@ -372,13 +377,13 @@ class Shortcodes {
 	 * @return string The author name.
 	 */
 	public static function author( $atts, $content, $tag ) {
-		$post = get_post();
+		$item = self::get_item();
 
-		if ( ! $post ) {
+		if ( ! $item ) {
 			return '';
 		}
 
-		$name = \get_the_author_meta( 'display_name', $post->post_author );
+		$name = \get_the_author_meta( 'display_name', $item->post_author );
 
 		if ( ! $name ) {
 			return '';
@@ -397,13 +402,13 @@ class Shortcodes {
 	 * @return string The author URL.
 	 */
 	public static function authorurl( $atts, $content, $tag ) {
-		$post = get_post();
+		$item = self::get_item();
 
-		if ( ! $post ) {
+		if ( ! $item ) {
 			return '';
 		}
 
-		$url = \get_the_author_meta( 'user_url', $post->post_author );
+		$url = \get_the_author_meta( 'user_url', $item->post_author );
 
 		if ( ! $url ) {
 			return '';
@@ -461,13 +466,13 @@ class Shortcodes {
 	 * @return string The post date.
 	 */
 	public static function date( $atts, $content, $tag ) {
-		$post = get_post();
+		$item = self::get_item();
 
-		if ( ! $post ) {
+		if ( ! $item ) {
 			return '';
 		}
 
-		$datetime = \get_post_datetime( $post );
+		$datetime = \get_post_datetime( $item );
 		$dateformat = \get_option( 'date_format' );
 		$timeformat = \get_option( 'time_format' );
 
@@ -490,13 +495,13 @@ class Shortcodes {
 	 * @return string The post time.
 	 */
 	public static function time( $atts, $content, $tag ) {
-		$post = get_post();
+		$item = self::get_item();
 
-		if ( ! $post ) {
+		if ( ! $item ) {
 			return '';
 		}
 
-		$datetime = \get_post_datetime( $post );
+		$datetime = \get_post_datetime( $item );
 		$dateformat = \get_option( 'date_format' );
 		$timeformat = \get_option( 'time_format' );
 
@@ -519,13 +524,13 @@ class Shortcodes {
 	 * @return string The post date/time.
 	 */
 	public static function datetime( $atts, $content, $tag ) {
-		$post = get_post();
+		$item = self::get_item();
 
-		if ( ! $post ) {
+		if ( ! $item ) {
 			return '';
 		}
 
-		$datetime = \get_post_datetime( $post );
+		$datetime = \get_post_datetime( $item );
 		$dateformat = \get_option( 'date_format' );
 		$timeformat = \get_option( 'time_format' );
 
@@ -536,5 +541,35 @@ class Shortcodes {
 		}
 
 		return $date;
+	}
+
+	/**
+	 * Get a WordPress item to federate.
+	 *
+	 * Checks if item (WP_Post) is "public", a supported post type
+	 * and not password protected.
+	 *
+	 * @return null|WP_Post The WordPress item.
+	 */
+	protected static function get_item() {
+		$post = \get_post();
+
+		if ( ! $post ) {
+			return null;
+		}
+
+		if ( 'publish' !== \get_post_status( $post ) ) {
+			return null;
+		}
+
+		if ( \post_password_required( $post ) ) {
+			return null;
+		}
+
+		if ( ! \in_array( \get_post_type( $post ), \get_post_types_by_support( 'activitypub' ), true ) ) {
+			return null;
+		}
+
+		return $post;
 	}
 }
