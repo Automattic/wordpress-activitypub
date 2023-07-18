@@ -1,8 +1,6 @@
 <?php
 namespace Activitypub;
 
-use function Activitypub\get_item;
-
 class Shortcodes {
 	/**
 	 * Class constructor, registering WordPress then Shortcodes
@@ -30,7 +28,7 @@ class Shortcodes {
 	 * @return string The post tags as hashtags.
 	 */
 	public static function hashtags( $atts, $content, $tag ) {
-		$item = get_item();
+		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
@@ -65,7 +63,7 @@ class Shortcodes {
 	 * @return string The post title.
 	 */
 	public static function title( $atts, $content, $tag ) {
-		$item = get_item();
+		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
@@ -85,7 +83,7 @@ class Shortcodes {
 	 * @return string The post excerpt.
 	 */
 	public static function excerpt( $atts, $content, $tag ) {
-		$item = get_item();
+		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
@@ -188,7 +186,7 @@ class Shortcodes {
 	 * @return string The post content.
 	 */
 	public static function content( $atts, $content, $tag ) {
-		$item = get_item();
+		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
@@ -233,7 +231,7 @@ class Shortcodes {
 	 * @return string The post permalink.
 	 */
 	public static function permalink( $atts, $content, $tag ) {
-		$item = get_item();
+		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
@@ -267,7 +265,7 @@ class Shortcodes {
 	 * @return string The post shortlink.
 	 */
 	public static function shortlink( $atts, $content, $tag ) {
-		$item = get_item();
+		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
@@ -301,7 +299,7 @@ class Shortcodes {
 	 * @return string
 	 */
 	public static function image( $atts, $content, $tag ) {
-		$item = get_item();
+		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
@@ -344,7 +342,7 @@ class Shortcodes {
 	 * @return string The post categories as hashtags.
 	 */
 	public static function hashcats( $atts, $content, $tag ) {
-		$item = get_item();
+		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
@@ -379,7 +377,7 @@ class Shortcodes {
 	 * @return string The author name.
 	 */
 	public static function author( $atts, $content, $tag ) {
-		$item = get_item();
+		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
@@ -404,7 +402,7 @@ class Shortcodes {
 	 * @return string The author URL.
 	 */
 	public static function authorurl( $atts, $content, $tag ) {
-		$item = get_item();
+		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
@@ -468,7 +466,7 @@ class Shortcodes {
 	 * @return string The post date.
 	 */
 	public static function date( $atts, $content, $tag ) {
-		$item = get_item();
+		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
@@ -497,7 +495,7 @@ class Shortcodes {
 	 * @return string The post time.
 	 */
 	public static function time( $atts, $content, $tag ) {
-		$item = get_item();
+		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
@@ -526,7 +524,7 @@ class Shortcodes {
 	 * @return string The post date/time.
 	 */
 	public static function datetime( $atts, $content, $tag ) {
-		$item = get_item();
+		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
@@ -543,5 +541,35 @@ class Shortcodes {
 		}
 
 		return $date;
+	}
+
+	/**
+	 * Get a WordPress item to federate.
+	 *
+	 * Checks if item (WP_Post) is "public", a supported post type
+	 * and not password protected.
+	 *
+	 * @return null|WP_Post The WordPress item.
+	 */
+	protected static function get_item() {
+		$post = \get_post();
+
+		if ( ! $post ) {
+			return null;
+		}
+
+		if ( 'publish' !== \get_post_status( $post ) ) {
+			return null;
+		}
+
+		if ( \post_password_required( $post ) ) {
+			return null;
+		}
+
+		if ( ! \in_array( \get_post_type( $post ), \get_post_types_by_support( 'activitypub' ), true ) ) {
+			return null;
+		}
+
+		return $post;
 	}
 }
