@@ -205,13 +205,17 @@ class Admin {
 		if ( ! isset( $_REQUEST['_apnonce'] ) ) {
 			return false;
 		}
+		$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_apnonce'] ) );
 		if (
-			! wp_verify_nonce( $_REQUEST['_apnonce'], 'activitypub-user-description' ) ||
+			! wp_verify_nonce( $nonce, 'activitypub-user-description' ) ||
 			! current_user_can( 'edit_user', $user_id )
 		) {
 			return false;
 		}
-		update_user_meta( $user_id, 'activitypub_user_description', sanitize_text_field( $_POST['activitypub-user-description'] ) );
+		$description = ! empty( $_POST['activitypub-user-description'] ) ? sanitize_text_field( wp_unslash( $_POST['activitypub-user-description'] ) ) : false;
+		if ( $description ) {
+			update_user_meta( $user_id, 'activitypub_user_description', $description );
+		}
 	}
 
 	public static function enqueue_scripts( $hook_suffix ) {
