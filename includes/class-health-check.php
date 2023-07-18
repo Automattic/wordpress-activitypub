@@ -204,21 +204,32 @@ class Health_Check {
 
 		$url = \Activitypub\Webfinger::resolve( $account );
 		if ( \is_wp_error( $url ) ) {
+			$allowed = array( 'code' => array() );
+			$not_accessible = wp_kses(
+				// translators: %s: Author URL
+				\__(
+					'Your WebFinger endpoint <code>%s</code> is not accessible. Please check your WordPress setup or permalink structure.',
+					'activitypub'
+				),
+				$allowed
+			);
+			$invalid_response = wp_kses(
+				// translators: %s: Author URL
+				\__(
+					'Your WebFinger endpoint <code>%s</code> does not return valid JSON for <code>application/jrd+json</code>.',
+					'activitypub'
+				),
+				$allowed
+			);
+
 			$health_messages = array(
 				'webfinger_url_not_accessible' => \sprintf(
-					// translators: %s: Author URL
-					\__(
-						'<p>Your WebFinger endpoint <code>%s</code> is not accessible. Please check your WordPress setup or permalink structure.</p>',
-						'activitypub'
-					),
+					$not_accessible,
 					$url->get_error_data()
 				),
 				'webfinger_url_invalid_response' => \sprintf(
 					// translators: %s: Author URL
-					\__(
-						'Your WebFinger endpoint <code>%s</code> does not return valid JSON for <code>application/jrd+json</code>.',
-						'activitypub'
-					),
+					$invalid_response,
 					$url->get_error_data()
 				),
 			);
