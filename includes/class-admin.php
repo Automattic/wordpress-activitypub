@@ -202,10 +202,13 @@ class Admin {
 	}
 
 	public static function save_user_description( $user_id ) {
-		if ( isset( $_REQUEST['_apnonce'] ) && ! wp_verify_nonce( $_REQUEST['_apnonce'], 'activitypub-user-description' ) ) {
+		if ( ! isset( $_REQUEST['_apnonce'] ) ) {
 			return false;
 		}
-		if ( ! current_user_can( 'edit_user', $user_id ) ) {
+		if (
+			! wp_verify_nonce( $_REQUEST['_apnonce'], 'activitypub-user-description' ) ||
+			! current_user_can( 'edit_user', $user_id )
+		) {
 			return false;
 		}
 		update_user_meta( $user_id, 'activitypub_user_description', sanitize_text_field( $_POST['activitypub-user-description'] ) );

@@ -45,8 +45,12 @@ class Hashtag {
 	public static function the_content( $the_content ) {
 		$protected_tags = array();
 		$protect = function( $m ) use ( &$protected_tags ) {
-			$c = count( $protected_tags );
+			$c = \wp_rand( 100000, 999999 );
 			$protect = '!#!#PROTECT' . $c . '#!#!';
+			while ( isset( $protected_tags[ $protect ] ) ) {
+				$c = \wp_rand( 100000, 999999 );
+				$protect = '!#!#PROTECT' . $c . '#!#!';
+			}
 			$protected_tags[ $protect ] = $m[0];
 			return $protect;
 		};

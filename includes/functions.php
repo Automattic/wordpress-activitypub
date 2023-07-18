@@ -351,4 +351,3 @@ if ( ! function_exists( 'get_self_link' ) ) {
 		return esc_url( apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . wp_unslash( $_SERVER['REQUEST_URI'] ) ) ) );
 	}
 }
-

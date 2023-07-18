@@ -1,5 +1,5 @@
 === ActivityPub ===
-Contributors: pfefferle, mediaformat, akirk, mattwiebe, automattic
+Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nuriapena
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
 Tested up to: 6.2
