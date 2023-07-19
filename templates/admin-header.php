@@ -1,3 +1,6 @@
+<?php
+// phpcs:disable VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable
+?>
 <div class="activitypub-settings-header">
 	<div class="activitypub-settings-title-section">
 		<h1><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h1>
