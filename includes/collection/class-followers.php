@@ -299,7 +299,7 @@ class Followers {
 	 * @return array List of `Follower` objects.
 	 */
 	public static function get_followers( $user_id, $number = -1, $page = null, $args = array() ) {
-		$raw = self::get_followers_raw( $user_id, $number, $page, $args );
+		$raw = self::get_followers_with_count( $user_id, $number, $page, $args );
 		return $raw['followers'];
 	}
 
@@ -315,7 +315,7 @@ class Followers {
 	 *               followers List of `Follower` objects.
 	 *               total     Total number of followers.
 	 */
-	public static function get_followers_raw( $user_id, $number = -1, $page = null, $args = array() ) {
+	public static function get_followers_with_count( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,

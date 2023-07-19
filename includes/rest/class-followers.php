@@ -112,7 +112,7 @@ class Followers {
 		$per_page            = (int) $request->get_param( 'per_page' );
 		$page                = $request->get_param( 'page' );
 		$offset              = ( $page - 1 ) * $per_page;
-		$data                = Follower_Collection::get_followers_raw( $user_id, $per_page, $offset, array( 'order' => ucwords( $order ) ) );
+		$data                = Follower_Collection::get_followers_with_count( $user_id, $per_page, $offset, array( 'order' => ucwords( $order ) ) );
 		$data['total_pages'] = ceil( $data['total'] / (int) $per_page );
 		$data['followers']   = array_map(
 			function( $item ) {
