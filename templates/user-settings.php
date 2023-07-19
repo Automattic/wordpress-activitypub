@@ -1,4 +1,6 @@
-<?php $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
+<?php
+// phpcs:disable VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable
+$user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 <h2 id="activitypub"><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h2>
 
 <table class="form-table">

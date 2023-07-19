@@ -110,6 +110,7 @@ if ( \WP_DEBUG && file_exists( $debug_file ) && is_readable( $debug_file ) ) {
  * Add plugin settings link
  */
 function plugin_settings_link( $actions ) {
+	$settings_link = array();
 	$settings_link[] = \sprintf(
 		'<a href="%1s">%2s</a>',
 		\menu_page_url( 'activitypub', false ),

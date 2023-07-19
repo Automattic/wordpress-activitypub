@@ -256,7 +256,7 @@ function is_activitypub_request() {
 	 * is to send an Accept header.
 	 */
 	if ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
-		$accept = $_SERVER['HTTP_ACCEPT'];
+		$accept = sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
 
 		/*
 		 * $accept can be a single value, or a comma separated list of values.
@@ -347,7 +347,7 @@ if ( ! function_exists( 'get_self_link' ) ) {
 	 */
 	function get_self_link() {
 		$host = wp_parse_url( home_url() );
-
-		return esc_url( apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . wp_unslash( $_SERVER['REQUEST_URI'] ) ) ) );
+		$path = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		return esc_url( apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . $path ) ) );
 	}
 }

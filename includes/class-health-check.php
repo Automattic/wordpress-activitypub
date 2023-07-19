@@ -125,7 +125,7 @@ class Health_Check {
 				\sprintf(
 					// translators: %s: Author URL
 					\__(
-						'<p>Your author URL <code>%s</code> was replaced, this is often done by plugins.</p>',
+						'Your author URL <code>%s</code> was replaced, this is often done by plugins.',
 						'activitypub'
 					),
 					$author_url
@@ -148,7 +148,7 @@ class Health_Check {
 				\sprintf(
 					// translators: %s: Author URL
 					\__(
-						'<p>Your author URL <code>%s</code> is not accessible. Please check your WordPress setup or permalink structure. If the setup seems fine, maybe check if a plugin might restrict the access.</p>',
+						'Your author URL <code>%s</code> is not accessible. Please check your WordPress setup or permalink structure. If the setup seems fine, maybe check if a plugin might restrict the access.',
 						'activitypub'
 					),
 					$author_url
@@ -165,7 +165,7 @@ class Health_Check {
 				\sprintf(
 					// translators: %s: Author URL
 					\__(
-						'<p>Your author URL <code>%s</code> is redirecting to another page, this is often done by SEO plugins like "Yoast SEO".</p>',
+						'Your author URL <code>%s</code> is redirecting to another page, this is often done by SEO plugins like "Yoast SEO".',
 						'activitypub'
 					),
 					$author_url
@@ -182,7 +182,7 @@ class Health_Check {
 				\sprintf(
 					// translators: %s: Author URL
 					\__(
-						'<p>Your author URL <code>%s</code> does not return valid JSON for <code>application/activity+json</code>. Please check if your hosting supports alternate <code>Accept</code> headers.</p>',
+						'Your author URL <code>%s</code> does not return valid JSON for <code>application/activity+json</code>. Please check if your hosting supports alternate <code>Accept</code> headers.',
 						'activitypub'
 					),
 					$author_url
@@ -204,21 +204,32 @@ class Health_Check {
 
 		$url = \Activitypub\Webfinger::resolve( $account );
 		if ( \is_wp_error( $url ) ) {
+			$allowed = array( 'code' => array() );
+			$not_accessible = wp_kses(
+				// translators: %s: Author URL
+				\__(
+					'Your WebFinger endpoint <code>%s</code> is not accessible. Please check your WordPress setup or permalink structure.',
+					'activitypub'
+				),
+				$allowed
+			);
+			$invalid_response = wp_kses(
+				// translators: %s: Author URL
+				\__(
+					'Your WebFinger endpoint <code>%s</code> does not return valid JSON for <code>application/jrd+json</code>.',
+					'activitypub'
+				),
+				$allowed
+			);
+
 			$health_messages = array(
 				'webfinger_url_not_accessible' => \sprintf(
-					// translators: %s: Author URL
-					\__(
-						'<p>Your WebFinger endpoint <code>%s</code> is not accessible. Please check your WordPress setup or permalink structure.</p>',
-						'activitypub'
-					),
+					$not_accessible,
 					$url->get_error_data()
 				),
 				'webfinger_url_invalid_response' => \sprintf(
 					// translators: %s: Author URL
-					\__(
-						'<p>Your WebFinger endpoint <code>%s</code> does not return valid JSON for <code>application/jrd+json</code>.</p>',
-						'activitypub'
-					),
+					$invalid_response,
 					$url->get_error_data()
 				),
 			);
