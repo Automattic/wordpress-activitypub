@@ -107,22 +107,20 @@ class Followers {
 	}
 
 	private static function get_followers( $request ) {
-		$user_id = $request->get_param( 'user_id' );
-		$order = $request->get_param( 'order' );
-		$per_page = $request->get_param( 'per_page' );
-		$page = $request->get_param( 'page' );
-		$offset = ( $page - 1 ) * $per_page;
-		$query = Follower_Collection::get_followers_query( $user_id, $per_page, $offset, array( 'order' => ucwords( $order ) ) );
-
-		$followers = array();
-		foreach ( $query->get_posts() as $post ) {
-			$followers[] = Follower::from_custom_post_type( $post )->to_array();
-		}
-
-		$total = $query->found_posts;
-		$total_pages = ceil( $total / (int) $query->query_vars['posts_per_page'] );
-
-		return compact( 'followers', 'total', 'total_pages' );
+		$user_id             = $request->get_param( 'user_id' );
+		$order               = $request->get_param( 'order' );
+		$per_page            = (int) $request->get_param( 'per_page' );
+		$page                = $request->get_param( 'page' );
+		$offset              = ( $page - 1 ) * $per_page;
+		$data                = Follower_Collection::get_followers_raw( $user_id, $per_page, $offset, array( 'order' => ucwords( $order ) ) );
+		$data['total_pages'] = ceil( $data['total'] / (int) $per_page );
+		$data['followers']   = array_map(
+			function( $item ) {
+				return $item->to_array();
+			},
+			$data['followers']
+		);
+		return $data;
 	}
 
 	/**

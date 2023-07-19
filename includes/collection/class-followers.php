@@ -292,36 +292,30 @@ class Followers {
 	/**
 	 * Get the Followers of a given user
 	 *
-	 * @param int    $user_id The ID of the WordPress User
-	 * @param string $output  The output format, supported ARRAY_N, OBJECT and ACTIVITYPUB_OBJECT
-	 * @param int    $number  Limts the result
-	 * @param int    $offset  Offset
-	 *
-	 * @return array The Term list of Followers, the format depends on $output
+	 * @param int    $user_id The ID of the WordPress User.
+	 * @param int    $number  Maximum number of results to return.
+	 * @param int    $page    Page number.
+	 * @param array  $args    The WP_Query arguments.
+	 * @return array List of `Follower` objects.
 	 */
 	public static function get_followers( $user_id, $number = -1, $page = null, $args = array() ) {
-		$query = self::get_followers_query( $user_id, $number, $offset, $args );
-		$items = array();
-
-		foreach ( $query->get_posts() as $post ) {
-			$items[] = Follower::init_from_cpt( $post ); // phpcs:ignore
-		}
-
-		return $items;
+		$raw = self::get_followers_raw( $user_id, $number, $page, $args );
+		return $raw['followers'];
 	}
 
 	/**
-	 * Get the Followers of a given user, as WP_Query results.
-	 * Each post should be wrapped in a Follower object.
+	 * Get the Followers of a given user, along with a total count for pagination purposes.
 	 *
-	 * @param int    $user_id The ID of the WordPress User
-	 * @param int    $number  Limts the result
-	 * @param int    $offset  Offset
+	 * @param int    $user_id The ID of the WordPress User.
+	 * @param int    $number  Maximum number of results to return.
+	 * @param int    $page    Page number.
 	 * @param array  $args    The WP_Query arguments.
 	 *
-	 * @return WP_Query The WP_Query object
+	 * @return array
+	 *               followers List of `Follower` objects.
+	 *               total     Total number of followers.
 	 */
-	public static function get_followers_query( $user_id, $number = -1, $offset = null, $args = array() ) {
+	public static function get_followers_raw( $user_id, $number = -1, $page = null, $args = array() ) {
 		$defaults = array(
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,
@@ -337,7 +331,15 @@ class Followers {
 		);
 
 		$args = wp_parse_args( $args, $defaults );
-		return new WP_Query( $args );
+		$query = new WP_Query( $args );
+		$total = $query->found_posts;
+		$followers = array_map(
+			function( $post ) {
+				return Follower::init_from_cpt( $post );
+			},
+			$query->get_posts()
+		);
+		return compact( 'followers', 'total' );
 	}
 
 	/**
