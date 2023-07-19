@@ -13,7 +13,7 @@ function getPath( userId, per_page, order, page ) {
 		per_page,
 		order,
 		page,
-		context: 'view'
+		context: 'full'
 	};
 	return addQueryArgs( path, args );
 }
@@ -56,9 +56,9 @@ export function Followers( {
 		const path = getPath( userId, per_page, order, page );
 		apiFetch( { path } )
 			.then( ( data ) => {
-				setPages( data.total_pages );
-				setTotal( data.total );
-				setFollowers( data.followers );
+				setPages( Math.ceil( data.totalItems / per_page ) );
+				setTotal( data.totalItems );
+				setFollowers( data.orderedItems );
 			} )
 			.catch( ( error ) => console.error( error ) );
 	}, [ userId, per_page, order, page ] );
@@ -87,7 +87,15 @@ export function Followers( {
 	);
 }
 
-function Follower( { name, icon, url, preferredUsername } ) {
+const DEFAULT_FOLLOWER_ATTRIBUTES = {
+	name: '',
+	icon: {	url: '' },
+	url: '',
+	preferredUsername: ''
+};
+
+function Follower( args ) {
+	const { name, icon, url, preferredUsername } = { ...DEFAULT_FOLLOWER_ATTRIBUTES, ...args };
 	const handle = `@${ preferredUsername }`;
 	return (
 		<ExternalLink className="activitypub-link" href={ url } title={ handle } onClick={ event => event.preventDefault() }>

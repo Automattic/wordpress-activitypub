@@ -51,10 +51,6 @@ class Followers {
 	 * @return WP_REST_Response
 	 */
 	public static function get( $request ) {
-		$context = $request->get_param( 'context' );
-		if ( 'view' === $context ) {
-			return self::get_followers( $request );
-		}
 		$user_id = $request->get_param( 'user_id' );
 		$user    = User_Collection::get_by_various( $user_id );
 
@@ -62,13 +58,17 @@ class Followers {
 			return $user;
 		}
 
-		$page = $request->get_param( 'page', 1 );
+		$order    = $request->get_param( 'order' );
+		$per_page = (int) $request->get_param( 'per_page' );
+		$page     = (int) $request->get_param( 'page' );
+		$context  = $request->get_param( 'context' );
 
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
 		\do_action( 'activitypub_outbox_pre' );
 
+		$data = Follower_Collection::get_followers_with_count( $user_id, $per_page, $page, array( 'order' => ucwords( $order ) ) );
 		$json = new stdClass();
 
 		$json->{'@context'} = \Activitypub\get_context();
@@ -78,13 +78,13 @@ class Followers {
 		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 
-		$json->totalItems = Follower_Collection::count_followers( $user->get__id() ); // phpcs:ignore
+		$json->totalItems = $data['total']; // phpcs:ignore
 		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/followers', $user->get__id() ) ); // phpcs:ignore
 
 		$json->first = \add_query_arg( 'page', 1, $json->partOf ); // phpcs:ignore
-		$json->last  = \add_query_arg( 'page', \ceil ( $json->totalItems / 20 ), $json->partOf ); // phpcs:ignore
+		$json->last  = \add_query_arg( 'page', \ceil ( $json->totalItems / $per_page ), $json->partOf ); // phpcs:ignore
 
-		if ( $page && ( ( \ceil ( $json->totalItems / 20 ) ) > $page ) ) { // phpcs:ignore
+		if ( $page && ( ( \ceil ( $json->totalItems / $per_page ) ) > $page ) ) { // phpcs:ignore
 			$json->next  = \add_query_arg( 'page', $page + 1, $json->partOf ); // phpcs:ignore
 		}
 
@@ -94,33 +94,19 @@ class Followers {
 
 		// phpcs:ignore
 		$json->orderedItems = array_map(
-			function( $item ) {
+			function( $item ) use ( $context ) {
+				if ( 'full' === $context ) {
+					return $item->to_array();
+				}
 				return $item->get_url();
 			},
-			Follower_Collection::get_followers( $user->get__id(), 20, $page )
+			$data['followers']
 		);
 
 		$response = new WP_REST_Response( $json, 200 );
 		$response->header( 'Content-Type', 'application/activity+json' );
 
 		return $response;
-	}
-
-	private static function get_followers( $request ) {
-		$user_id             = $request->get_param( 'user_id' );
-		$order               = $request->get_param( 'order' );
-		$per_page            = (int) $request->get_param( 'per_page' );
-		$page                = $request->get_param( 'page' );
-		$offset              = ( $page - 1 ) * $per_page;
-		$data                = Follower_Collection::get_followers_with_count( $user_id, $per_page, $offset, array( 'order' => ucwords( $order ) ) );
-		$data['total_pages'] = ceil( $data['total'] / (int) $per_page );
-		$data['followers']   = array_map(
-			function( $item ) {
-				return $item->to_array();
-			},
-			$data['followers']
-		);
-		return $data;
 	}
 
 	/**
@@ -138,7 +124,7 @@ class Followers {
 
 		$params['per_page'] = array(
 			'type' => 'integer',
-			'default' => 10,
+			'default' => 20,
 		);
 
 		$params['order'] = array(
@@ -150,19 +136,12 @@ class Followers {
 		$params['user_id'] = array(
 			'required' => true,
 			'type' => 'string',
-			'validate_callback' => function( $param, $request, $key ) {
-				// despite being an integer, user_id is passed as string.
-				$param = (int) $param;
-				return 0 === $param || user_can( $param, 'publish_posts' );
-			},
 		);
 
 		$params['context'] = array(
 			'type' => 'string',
-			'default' => 'outbox',
-			'validate_callback' => function( $param, $request, $key ) {
-				return in_array( $param, array( 'outbox', 'view' ), true );
-			},
+			'default' => 'simple',
+			'enum' => array( 'simple', 'full' ),
 		);
 
 		return $params;

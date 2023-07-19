@@ -40,8 +40,6 @@ class Blocks {
 		$followee_user_id = self::get_user_id( $attrs['selectedUser'] );
 		$per_page = absint( $attrs['per_page'] );
 		$followers = Followers::get_followers( $followee_user_id, $per_page );
-		$follower_count = Followers::count_followers( $followee_user_id );
-		$is_followers_truncated = $follower_count > $per_page;
 		$title = $attrs['title'];
 		$wrapper_attributes = get_block_wrapper_attributes(
 			array(
