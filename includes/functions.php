@@ -214,6 +214,7 @@ function get_rest_url_by_path( $path = '' ) {
  *
  * @return string The converted string.
  */
+// phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.stringFound
 function camel_to_snake_case( $string ) {
 	return strtolower( preg_replace( '/(?<!^)[A-Z]/', '_$0', $string ) );
 }
@@ -225,6 +226,7 @@ function camel_to_snake_case( $string ) {
  *
  * @return string The converted string.
  */
+// phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.stringFound
 function snake_to_camel_case( $string ) {
 	return lcfirst( str_replace( '_', '', ucwords( $string, '_' ) ) );
 }
@@ -246,6 +248,7 @@ function is_activitypub_request() {
 	}
 
 	// One can trigger an ActivityPub request by adding ?activitypub to the URL.
+	// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.VariableRedeclaration
 	global $wp_query;
 	if ( isset( $wp_query->query_vars['activitypub'] ) ) {
 		return true;
