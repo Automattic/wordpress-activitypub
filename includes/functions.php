@@ -347,7 +347,10 @@ function is_user_type_disabled( $type ) {
 				break;
 			}
 
-			// @todo check user settings
+			if ( '1' !== \get_option( 'activitypub_enable_blog_user', '0' ) ) {
+				$return = true;
+				break;
+			}
 
 			$return = false;
 			break;
@@ -364,7 +367,10 @@ function is_user_type_disabled( $type ) {
 				break;
 			}
 
-			// @todo check user settings
+			if ( '1' !== \get_option( 'activitypub_enable_users', '1' ) ) {
+				$return = true;
+				break;
+			}
 
 			$return = false;
 			break;
