@@ -28,10 +28,10 @@
 
 	<p><?php \esc_html_e( 'Customize your ActivityPub settings to suit your needs.', 'activitypub' ); ?></p>
 
+	<hr />
+
 	<form method="post" action="options.php">
 		<?php \settings_fields( 'activitypub' ); ?>
-
-	<?php if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) : ?>
 
 		<h3 class="dashicons-before dashicons-admin-users"><?php \esc_html_e( 'Blog-User', 'activitypub' ); ?></h3>
 
@@ -59,8 +59,6 @@
 		<?php \do_settings_fields( 'activitypub', 'blog-user' ); ?>
 
 		<hr />
-
-	<?php endif; ?>
 
 		<h3 class="dashicons-before dashicons-groups"><?php \esc_html_e( 'Users', 'activitypub' ); ?></h3>
 
