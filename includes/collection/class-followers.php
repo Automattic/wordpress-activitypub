@@ -299,8 +299,8 @@ class Followers {
 	 * @return array List of `Follower` objects.
 	 */
 	public static function get_followers( $user_id, $number = -1, $page = null, $args = array() ) {
-		$raw = self::get_followers_with_count( $user_id, $number, $page, $args );
-		return $raw['followers'];
+		$data = self::get_followers_with_count( $user_id, $number, $page, $args );
+		return $data['followers'];
 	}
 
 	/**
