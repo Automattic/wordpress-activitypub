@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
 Tested up to: 6.2
-Stable tag: 0.17.0
+Stable tag: 1.0.0
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -114,8 +114,10 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
 
-= Next =
+= 1.0.0 =
 
+* Update: Improved linter (PHPCS)
+* Add: Simple caching
 * Add: Signature Verification: https://docs.joinmastodon.org/spec/security/ .
 * Update: Complete rewrite of the Follower-System based on Taxonomies.
 * Compatibility: add a new conditional, `\Activitypub\is_activitypub_request()`, to allow third-party plugins to detect ActivityPub requests.
