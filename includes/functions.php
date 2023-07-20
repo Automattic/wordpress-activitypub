@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub;
 
+use WP_Error;
 use Activitypub\Http;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
@@ -293,8 +294,8 @@ function is_user_disabled( $user_id ) {
 			break;
 		// if the user is the blog user, it's only enabled in single-user mode.
 		case \Activitypub\Collection\Users::BLOG_USER_ID:
-			if ( defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) ) {
-				$return = ACTIVITYPUB_DISABLE_BLOG_USER;
+			if ( is_user_type_disabled( 'blog' ) ) {
+				$return = true;
 				break;
 			}
 
@@ -307,8 +308,8 @@ function is_user_disabled( $user_id ) {
 				break;
 			}
 
-			if ( defined( 'ACTIVITYPUB_DISABLE_USER' ) ) {
-				$return = ACTIVITYPUB_DISABLE_USER;
+			if ( is_user_type_disabled( 'user' ) ) {
+				$return = true;
 				break;
 			}
 
@@ -325,6 +326,66 @@ function is_user_disabled( $user_id ) {
 }
 
 /**
+ * Checks if a User-Type is disabled for ActivityPub.
+ *
+ * This function is used to check if the 'blog' or 'user'
+ * type is disabled for ActivityPub.
+ *
+ * @param enum $type Can be 'blog' or 'user'.
+ *
+ * @return boolean True if the user type is disabled, false otherwise.
+ */
+function is_user_type_disabled( $type ) {
+	switch ( $type ) {
+		case 'blog':
+			if ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) ) {
+				if ( ACTIVITYPUB_SINGLE_USER_MODE ) {
+					$return = false;
+					break;
+				}
+			}
+
+			if ( \defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) ) {
+				$return = ACTIVITYPUB_DISABLE_BLOG_USER;
+				break;
+			}
+
+			if ( '1' !== \get_option( 'activitypub_enable_blog_user', '0' ) ) {
+				$return = true;
+				break;
+			}
+
+			$return = false;
+			break;
+		case 'user':
+			if ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) ) {
+				if ( ACTIVITYPUB_SINGLE_USER_MODE ) {
+					$return = true;
+					break;
+				}
+			}
+
+			if ( \defined( 'ACTIVITYPUB_DISABLE_USER' ) ) {
+				$return = ACTIVITYPUB_DISABLE_USER;
+				break;
+			}
+
+			if ( '1' !== \get_option( 'activitypub_enable_users', '1' ) ) {
+				$return = true;
+				break;
+			}
+
+			$return = false;
+			break;
+		default:
+			$return = new WP_Error( 'activitypub_wrong_user_type', __( 'Wrong user type', 'activitypub' ) );
+			break;
+	}
+
+	return apply_filters( 'activitypub_is_user_type_disabled', $return, $type );
+}
+
+/**
  * Check if the blog is in single-user mode.
  *
  * @return boolean True if the blog is in single-user mode, false otherwise.
@@ -332,14 +393,18 @@ function is_user_disabled( $user_id ) {
 function is_single_user() {
 	$return = false;
 
-	if (
-		false === ACTIVITYPUB_DISABLE_BLOG_USER &&
-		true === ACTIVITYPUB_DISABLE_USER
+	if ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) ) {
+		if ( ACTIVITYPUB_SINGLE_USER_MODE ) {
+			$return = true;
+		}
+	} elseif (
+		false === is_user_type_disabled( 'blog' ) &&
+		true === is_user_type_disabled( 'user' )
 	) {
 		$return = true;
 	}
 
-	return apply_filters( 'activitypub_is_single_user', $return );
+	return $return;
 }
 
 if ( ! function_exists( 'get_self_link' ) ) {

@@ -95,6 +95,8 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 	}
 
 	public function test_dispatch_announce() {
+		add_filter( 'activitypub_is_user_type_disabled', '__return_false' );
+
 		$followers = array( 'https://example.com/author/jon' );
 
 		foreach ( $followers as $follower ) {
@@ -131,11 +133,19 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 		$followers = array( 'https://example.com/author/jon' );
 
 		add_filter(
-			'activitypub_is_single_user',
-			function( $return ) {
-				return true;
-			}
+			'activitypub_is_user_type_disabled',
+			function( $value, $type ) {
+				if ( 'blog' === $type ) {
+					return false;
+				} else {
+					return true;
+				}
+			},
+			10,
+			2
 		);
+
+		$this->assertTrue( \Activitypub\is_single_user() );
 
 		foreach ( $followers as $follower ) {
 			\Activitypub\Collection\Followers::add_follower( \Activitypub\Collection\Users::BLOG_USER_ID, $follower );

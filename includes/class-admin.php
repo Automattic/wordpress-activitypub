@@ -13,9 +13,12 @@ class Admin {
 	public static function init() {
 		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
-		\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
 		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
+
+		if ( ! is_user_disabled( get_current_user_id() ) ) {
+			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
+		}
 	}
 
 	/**
@@ -74,10 +77,10 @@ class Admin {
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {
-		if ( ! current_user_can( 'publish_posts' ) ) {
-			return;
+		// user has to be able to publish posts
+		if ( ! is_user_disabled( get_current_user_id() ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-followers-list.php' );
 		}
-		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-followers-list.php' );
 	}
 
 	/**
@@ -145,7 +148,7 @@ class Admin {
 			array(
 				'type' => 'boolean',
 				'description' => \__( 'Add hashtags in the content as native tags and replace the #tag with the tag-link', 'activitypub' ),
-				'default' => 0,
+				'default' => '0',
 			)
 		);
 		\register_setting(
@@ -163,9 +166,9 @@ class Admin {
 			'activitypub_blog_user_identifier',
 			array(
 				'type'              => 'string',
-				'description'       => \esc_html__( 'The Identifier of th Blog-User', 'activitypub' ),
+				'description'       => \esc_html__( 'The Identifier of the Blog-User', 'activitypub' ),
 				'show_in_rest'      => true,
-				'default'           => 'feed',
+				'default'           => \Activitypub\Model\Blog_User::get_default_username(),
 				'sanitize_callback' => function( $value ) {
 					// hack to allow dots in the username
 					$parts     = explode( '.', $value );
@@ -177,6 +180,24 @@ class Admin {
 
 					return implode( '.', $sanitized );
 				},
+			)
+		);
+		\register_setting(
+			'activitypub',
+			'activitypub_enable_users',
+			array(
+				'type' => 'boolean',
+				'description' => \__( 'Every Author on this Blog (with the publish_posts capability) gets his own ActivityPub enabled Profile.', 'activitypub' ),
+				'default' => '1',
+			)
+		);
+		\register_setting(
+			'activitypub',
+			'activitypub_enable_blog_user',
+			array(
+				'type' => 'boolean',
+				'description' => \__( 'Your Blog becomes an ActivityPub compatible Profile.', 'activitypub' ),
+				'default' => '0',
 			)
 		);
 	}

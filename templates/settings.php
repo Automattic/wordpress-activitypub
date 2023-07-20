@@ -1,6 +1,6 @@
 <?php
 \load_template(
-	\dirname( __FILE__ ) . '/admin-header.php',
+	__DIR__ . '/admin-header.php',
 	true,
 	array(
 		'settings'  => 'active',
@@ -28,12 +28,12 @@
 
 	<p><?php \esc_html_e( 'Customize your ActivityPub settings to suit your needs.', 'activitypub' ); ?></p>
 
+	<hr />
+
 	<form method="post" action="options.php">
 		<?php \settings_fields( 'activitypub' ); ?>
 
-	<?php if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) : ?>
-
-		<h3><?php \esc_html_e( 'Blog-User', 'activitypub' ); ?></h3>
+		<h3 class="dashicons-before dashicons-admin-users"><?php \esc_html_e( 'Blog-User', 'activitypub' ); ?></h3>
 
 		<p><?php \esc_html_e( 'All settings for the Blog-User (Catch-All Account)', 'activitypub' ); ?></p>
 
@@ -58,9 +58,45 @@
 
 		<?php \do_settings_fields( 'activitypub', 'blog-user' ); ?>
 
-	<?php endif; ?>
+		<hr />
 
-		<h3><?php \esc_html_e( 'Activities', 'activitypub' ); ?></h3>
+		<h3 class="dashicons-before dashicons-groups"><?php \esc_html_e( 'Users', 'activitypub' ); ?></h3>
+
+		<p><?php \esc_html_e( 'All user related settings.', 'activitypub' ); ?></p>
+
+		<table class="form-table">
+			<tbody>
+				<tr>
+					<th scope="row">
+						<?php \esc_html_e( 'Enable/disable Users by Type', 'activitypub' ); ?>
+					</th>
+					<td>
+						<p>
+							<label>
+								<input type="checkbox" name="activitypub_enable_users" id="activitypub_enable_users" value="1" <?php echo \checked( '1', \get_option( 'activitypub_enable_users', '1' ) ); ?> />
+								<?php \esc_html_e( 'Enable Authors', 'activitypub' ); ?>
+							</label>
+						</p>
+						<p class="description">
+							<?php echo \wp_kses( \__( 'Every Author on this Blog (with the <code>publish_posts</code> capability) gets his own ActivityPub enabled Profile.', 'activitypub' ), array( 'code' => array() ) ); ?>
+						</p>
+						<p>
+							<label>
+								<input type="checkbox" name="activitypub_enable_blog_user" id="activitypub_enable_blog_user" value="1" <?php echo \checked( '1', \get_option( 'activitypub_enable_blog_user', '0' ) ); ?> />
+								<?php \esc_html_e( 'Enable Blog-User', 'activitypub' ); ?>
+							</label>
+						</p>
+						<p class="description">
+							<?php \esc_html_e( 'Your Blog becomes an ActivityPub compatible Profile.', 'activitypub' ); ?>
+						</p>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<?php \do_settings_fields( 'activitypub', 'user' ); ?>
+
+		<h3 class="dashicons-before dashicons-format-chat"><?php \esc_html_e( 'Activities', 'activitypub' ); ?></h3>
 
 		<p><?php \esc_html_e( 'All activity related settings.', 'activitypub' ); ?></p>
 
@@ -222,7 +258,7 @@
 
 		<?php \do_settings_fields( 'activitypub', 'activity' ); ?>
 
-		<h3><?php \esc_html_e( 'Server', 'activitypub' ); ?></h3>
+		<h3 class="dashicons-before dashicons-database"><?php \esc_html_e( 'Server', 'activitypub' ); ?></h3>
 
 		<p><?php \esc_html_e( 'Server related settings.', 'activitypub' ); ?></p>
 
