@@ -95,12 +95,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 	}
 
 	public function test_dispatch_announce() {
-		add_filter(
-			'activitypub_is_user_type_disabled',
-			function( $value ) {
-				return false;
-			}
-		);
+		add_filter( 'activitypub_is_user_type_disabled', '__return_false' );
 
 		$followers = array( 'https://example.com/author/jon' );
 
