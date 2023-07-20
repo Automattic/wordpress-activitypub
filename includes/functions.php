@@ -404,7 +404,7 @@ function is_single_user() {
 		$return = true;
 	}
 
-	return apply_filters( 'activitypub_is_single_user', $return );
+	return $return;
 }
 
 if ( ! function_exists( 'get_self_link' ) ) {
