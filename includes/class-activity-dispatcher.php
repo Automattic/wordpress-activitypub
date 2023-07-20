@@ -39,7 +39,7 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	public static function send_activity_or_announce( WP_Post $wp_post, $type ) {
-		if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
+		if ( is_user_type_disabled( 'blog' ) ) {
 			return;
 		}
 
