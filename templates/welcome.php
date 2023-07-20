@@ -17,7 +17,7 @@
 
 	<?php if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) : ?>
 
-	<h3><?php \esc_html_e( 'Blog Account', 'activitypub' ); ?></h3>
+	<h3 class="dashicons-before dashicons-admin-users"><?php \esc_html_e( 'Blog Account', 'activitypub' ); ?></h3>
 	<p>
 		<?php
 		$blog_user = new \Activitypub\Model\Blog_User();
@@ -41,7 +41,7 @@
 
 	<?php if ( ! \Activitypub\is_user_disabled( get_current_user_id() ) ) : ?>
 
-	<h3><?php \esc_html_e( 'Personal Account', 'activitypub' ); ?></h3>
+	<h3 class="dashicons-before dashicons-groups"><?php \esc_html_e( 'Personal Account', 'activitypub' ); ?></h3>
 	<p>
 		<?php
 		$user = \Activitypub\Collection\Users::get_by_id( wp_get_current_user()->ID );
@@ -63,7 +63,7 @@
 
 	<?php endif; ?>
 
-	<h3><?php \esc_html_e( 'Troubleshooting', 'activitypub' ); ?></h3>
+	<h3 class="dashicons-before dashicons-admin-tools"><?php \esc_html_e( 'Troubleshooting', 'activitypub' ); ?></h3>
 	<p>
 		<?php
 		echo wp_kses(
@@ -82,7 +82,7 @@
 	<?php if ( ACTIVITYPUB_SHOW_PLUGIN_RECOMMENDATIONS ) : ?>
 	<hr />
 
-	<h3><?php \esc_html_e( 'Recommended Plugins', 'activitypub' ); ?></h3>
+	<h3 class="dashicons-before dashicons-admin-plugins"><?php \esc_html_e( 'Recommended Plugins', 'activitypub' ); ?></h3>
 
 	<p><?php \esc_html_e( 'ActivityPub works as is and there is no need for you to install additional plugins, nevertheless there are some plugins that extends the functionality of ActivityPub.', 'activitypub' ); ?></p>
 
