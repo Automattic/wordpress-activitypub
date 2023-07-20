@@ -40,7 +40,7 @@
             "vendor/bin/phpunit"
         ],
         "lint": [
-            "vendor/bin/phpcs"
+            "vendor/bin/phpcs -n -q"
         ]
     }
 }

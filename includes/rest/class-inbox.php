@@ -237,7 +237,7 @@ class Inbox {
 			//'type' => 'enum',
 			//'enum' => array( 'Create' ),
 			//'sanitize_callback' => function( $param, $request, $key ) {
-			//	return \strtolower( $param );
+			//  return \strtolower( $param );
 			//},
 		);
 
@@ -282,7 +282,7 @@ class Inbox {
 			//'type' => 'enum',
 			//'enum' => array( 'Create' ),
 			//'sanitize_callback' => function( $param, $request, $key ) {
-			//	return \strtolower( $param );
+			//  return \strtolower( $param );
 			//},
 		);
 
