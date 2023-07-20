@@ -77,10 +77,10 @@ class Admin {
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {
-		if ( ! current_user_can( 'publish_posts' ) ) {
-			return;
+		// user has to be able to publish posts
+		if ( ! is_user_disabled( get_current_user_id() ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-followers-list.php' );
 		}
-		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-followers-list.php' );
 	}
 
 	/**
@@ -166,9 +166,9 @@ class Admin {
 			'activitypub_blog_user_identifier',
 			array(
 				'type'              => 'string',
-				'description'       => \esc_html__( 'The Identifier of th Blog-User', 'activitypub' ),
+				'description'       => \esc_html__( 'The Identifier of the Blog-User', 'activitypub' ),
 				'show_in_rest'      => true,
-				'default'           => 'feed',
+				'default'           => \Activitypub\Model\Blog_User::get_default_username(),
 				'sanitize_callback' => function( $value ) {
 					// hack to allow dots in the username
 					$parts     = explode( '.', $value );

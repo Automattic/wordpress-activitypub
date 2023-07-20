@@ -1,6 +1,6 @@
 <?php
 \load_template(
-	\dirname( __FILE__ ) . '/admin-header.php',
+	__DIR__ . '/admin-header.php',
 	true,
 	array(
 		'settings'  => 'active',
