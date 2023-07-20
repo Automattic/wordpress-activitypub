@@ -187,7 +187,7 @@ class Post {
 		// list post thumbnail first if this post has one
 		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
 			$image_ids[] = \get_post_thumbnail_id( $id );
-			$max_images--;
+			--$max_images;
 		}
 
 		if ( $max_images > 0 ) {

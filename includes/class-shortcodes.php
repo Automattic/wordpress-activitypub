@@ -70,7 +70,6 @@ class Shortcodes {
 		}
 
 		return \wp_strip_all_tags( \get_the_title( $item->ID ), true );
-
 	}
 
 	/**
