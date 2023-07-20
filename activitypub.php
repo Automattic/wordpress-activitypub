@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/pfefferle/wordpress-activitypub/
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 0.17.0
+ * Version: 1.0.0
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -65,7 +65,7 @@ function init() {
  */
 spl_autoload_register(
 	function ( $full_class ) {
-		$base_dir = \dirname( __FILE__ ) . '/includes/';
+		$base_dir = __DIR__ . '/includes/';
 		$base     = 'activitypub';
 
 		$class = strtolower( $full_class );
@@ -93,14 +93,14 @@ spl_autoload_register(
 	}
 );
 
-require_once \dirname( __FILE__ ) . '/includes/functions.php';
+require_once __DIR__ . '/includes/functions.php';
 
 // load NodeInfo endpoints only if blog is public
 if ( \get_option( 'blog_public', 1 ) ) {
 	Rest\NodeInfo::init();
 }
 
-$debug_file = \dirname( __FILE__ ) . '/includes/debug.php';
+$debug_file = __DIR__ . '/includes/debug.php';
 if ( \WP_DEBUG && file_exists( $debug_file ) && is_readable( $debug_file ) ) {
 	require_once $debug_file;
 	Debug::init();
@@ -151,7 +151,7 @@ function plugin_settings_link( $actions ) {
 add_action(
 	'bp_include',
 	function() {
-		require_once \dirname( __FILE__ ) . '/integration/class-buddypress.php';
+		require_once __DIR__ . '/integration/class-buddypress.php';
 		Integration\Buddypress::init();
 	},
 	0
