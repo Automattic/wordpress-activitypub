@@ -284,6 +284,13 @@ function is_activitypub_request() {
  * @return boolean True if the user is disabled, false otherwise.
  */
 function is_user_disabled( $user_id ) {
+	if ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) ) {
+		if ( ACTIVITYPUB_SINGLE_USER_MODE ) {
+			\defined( 'ACTIVITYPUB_DISABLE_USER' ) || \define( 'ACTIVITYPUB_DISABLE_USER', true );
+			\defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) || \define( 'ACTIVITYPUB_DISABLE_BLOG_USER', false );
+		}
+	}
+
 	$return = false;
 
 	switch ( $user_id ) {
