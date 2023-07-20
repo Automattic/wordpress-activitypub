@@ -1,7 +1,7 @@
 <?php
 namespace Activitypub;
 
-use Activitypub\Collection\Followers as Followers;
+use Activitypub\Collection\Followers;
 
 class Blocks {
 	public static function init() {
