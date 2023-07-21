@@ -1,7 +1,7 @@
 <?php
 namespace Activitypub;
 
-use Activitypub\Collection\Followers as Followers;
+use Activitypub\Collection\Followers;
 
 class Blocks {
 	public static function init() {
@@ -75,15 +75,13 @@ class Blocks {
 				%s
 			</a>';
 
-		$data = $follower->to_array();
-
 		return sprintf(
 			$template,
-			esc_url( $data['url'] ),
-			esc_attr( $data['name'] ),
-			esc_attr( $data['icon']['url'] ),
-			esc_html( $data['name'] ),
-			esc_html( $data['preferredUsername'] ),
+			esc_url( $follower->get_url() ),
+			esc_attr( $follower->get_name() ),
+			esc_attr( $follower->get_icon() ),
+			esc_html( $follower->get_name() ),
+			esc_html( $follower->get_preferred_username() ),
 			$external_svg
 		);
 	}
