@@ -1,6 +1,6 @@
 <?php
 \load_template(
-	\dirname( __FILE__ ) . '/admin-header.php',
+	__DIR__ . '/admin-header.php',
 	true,
 	array(
 		'settings'  => '',
@@ -10,82 +10,102 @@
 );
 ?>
 
-<div class="privacy-settings-body hide-if-no-js">
-	<h2><?php \esc_html_e( 'Welcome', 'activitypub' ); ?></h2>
+<div class="activitypub-settings activitypub-welcome-page hide-if-no-js">
+	<div class="box">
+		<h2><?php \esc_html_e( 'Welcome', 'activitypub' ); ?></h2>
 
-	<p><?php \esc_html_e( 'With ActivityPub your blog becomes part of a federated social network. This means you can share and talk to everyone using the ActivityPub protocol, including users of Friendica, Pleroma and Mastodon.', 'activitypub' ); ?></p>
+		<p><?php echo wp_kses( \__( 'With ActivityPub your blog becomes part of a federated social network. This means you can share and talk to everyone using the <strong>ActivityPub</strong> protocol, including users of <strong>Friendica</strong>, <strong>Pleroma</strong>, <strong>Pixelfed</strong> and <strong>Mastodon</strong>.', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
+	</div>
 
-	<?php if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) : ?>
-
-	<h3 class="dashicons-before dashicons-admin-users"><?php \esc_html_e( 'Blog Account', 'activitypub' ); ?></h3>
-	<p>
-		<?php
+	<?php
+	if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) :
 		$blog_user = new \Activitypub\Model\Blog_User();
-		echo wp_kses(
-			\sprintf(
-				// translators:
-				\__(
-					'People can follow your Blog by using the username <code>%1$s</code> or the URL <code>%2$s</code>. This Blog-User will federate all posts written on your Blog, regardless of the User who posted it. You can customize the Blog-User on the <a href="%3$s">Settings</a> page.',
-					'activitypub'
-				),
-				\esc_attr( $blog_user->get_resource() ),
-				\esc_url_raw( $blog_user->get_url() ),
-				\esc_url_raw( \admin_url( '/options-general.php?page=activitypub&tab=settings' ) )
-			),
-			'default'
-		);
 		?>
-	</p>
-
+	<div class="box">
+		<h3><?php \esc_html_e( 'Blog Account', 'activitypub' ); ?></h3>
+		<p>
+			<?php \esc_html_e( 'People can follow your Blog by using:', 'activitypub' ); ?>
+		</p>
+		<p>
+			<label for="activitypub-blog-username"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
+		</p>
+		<p>
+			<input type="text" class="regular-text" id="activitypub-blog-username" value="<?php echo \esc_attr( $blog_user->get_resource() ); ?>" />
+		</p>
+		<p>
+			<label for="activitypub-blog-url"><?php \esc_html_e( 'Profile-URL', 'activitypub' ); ?></label>
+		</p>
+		<p>
+			<input type="text" class="regular-text" id="activitypub-blog-url" value="<?php echo \esc_attr( $blog_user->get_url() ); ?>" />
+		</p>
+		<p>
+			<?php \esc_html_e( 'This Blog-User will federate all posts written on your Blog, regardless of the User who posted it.', 'activitypub' ); ?>
+		<p>
+		<p>
+			<a href="<?php echo \esc_url_raw( \admin_url( '/options-general.php?page=activitypub&tab=settings' ) ); ?>">
+				<?php \esc_html_e( 'Customize Blog-User on Settings page.', 'activitypub' ); ?>
+			</a>
+		</p>
+	</div>
 	<?php endif; ?>
 
-	<?php if ( ! \Activitypub\is_user_disabled( get_current_user_id() ) ) : ?>
-
-	<h3 class="dashicons-before dashicons-groups"><?php \esc_html_e( 'Personal Account', 'activitypub' ); ?></h3>
-	<p>
-		<?php
+	<?php
+	if ( ! \Activitypub\is_user_disabled( get_current_user_id() ) ) :
 		$user = \Activitypub\Collection\Users::get_by_id( wp_get_current_user()->ID );
-		echo wp_kses(
-			\sprintf(
-				// translators:
-				\__(
-					'People can also follow you by using your Username <code>%1$s</code> or your Author-URL <code>%2$s</code>. Users who can not access this settings page will find their username on the <a href="%3$s">Edit Profile</a> page.',
-					'activitypub'
-				),
-				\esc_attr( $user->get_resource() ),
-				\esc_url_raw( $user->get_url() ),
-				\esc_url_raw( \admin_url( 'profile.php#activitypub' ) )
-			),
-			'default'
-		);
 		?>
-	</p>
-
+	<div class="box">
+		<h3><?php \esc_html_e( 'Personal Account', 'activitypub' ); ?></h3>
+		<p>
+			<?php \esc_html_e( 'People can follow you by using your Username:', 'activitypub' ); ?>
+		</p>
+		<p>
+			<label for="activitypub-user-username"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
+		</p>
+		<p>
+			<input type="text" class="regular-text" id="activitypub-user-username" value="<?php echo \esc_attr( $user->get_resource() ); ?>" />
+		</p>
+		<p>
+			<label for="activitypub-user-url"><?php \esc_html_e( 'Profile-URL', 'activitypub' ); ?></label>
+		</p>
+		<p>
+			<input type="text" class="regular-text" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" />
+		</p>
+		<p>
+			<?php \esc_html_e( 'Users who can not access this settings page will find their username on the "Edit Profile" page.', 'activitypub' ); ?>
+		<p>
+		<p>
+			<a href="<?php echo \esc_url_raw( \admin_url( '/options-general.php?page=activitypub&tab=settings' ) ); ?>">
+			<?php \esc_html_e( 'Customize Username on "Edit Profile" page.', 'activitypub' ); ?>
+			</a>
+		</p>
+	</div>
 	<?php endif; ?>
 
-	<h3 class="dashicons-before dashicons-admin-tools"><?php \esc_html_e( 'Troubleshooting', 'activitypub' ); ?></h3>
-	<p>
-		<?php
-		echo wp_kses(
-			\sprintf(
-				// translators:
-				\__(
-					'If you have problems using this plugin, please check the <a href="%s">Site Health</a> to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).',
-					'activitypub'
+	<div class="box">
+		<h3><?php \esc_html_e( 'Troubleshooting', 'activitypub' ); ?></h3>
+		<p>
+			<?php
+			echo wp_kses(
+				\sprintf(
+					// translators:
+					\__(
+						'If you have problems using this plugin, please check the <a href="%s">Site Health</a> to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).',
+						'activitypub'
+					),
+					\esc_url_raw( admin_url( 'site-health.php' ) )
 				),
-				\esc_url_raw( admin_url( 'site-health.php' ) )
-			),
-			'default'
-		);
-		?>
-	</p>
+				'default'
+			);
+			?>
+		</p>
+	</div>
+
 	<?php if ( ACTIVITYPUB_SHOW_PLUGIN_RECOMMENDATIONS ) : ?>
-	<hr />
+	<div class="box plugin-recommendations">
+		<h3><?php \esc_html_e( 'Recommended Plugins', 'activitypub' ); ?></h3>
 
-	<h3 class="dashicons-before dashicons-admin-plugins"><?php \esc_html_e( 'Recommended Plugins', 'activitypub' ); ?></h3>
-
-	<p><?php \esc_html_e( 'ActivityPub works as is and there is no need for you to install additional plugins, nevertheless there are some plugins that extends the functionality of ActivityPub.', 'activitypub' ); ?></p>
-
+		<p><?php \esc_html_e( 'ActivityPub works as is and there is no need for you to install additional plugins, nevertheless there are some plugins that extends the functionality of ActivityPub.', 'activitypub' ); ?></p>
+	</div>
 	<div class="activitypub-settings-accordion">
 		<?php if ( ! \defined( 'FRIENDS_VERSION' ) ) : ?>
 		<h4 class="activitypub-settings-accordion-heading">

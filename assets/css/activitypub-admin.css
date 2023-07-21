@@ -1,4 +1,4 @@
-.activitypub-settings-body {
+.activitypub-settings {
 	max-width: 800px;
 	margin: 0 auto;
 }
@@ -151,12 +151,12 @@ summary {
 	background-color: #f6f7f7;
 }
 
-.activitypub-settings-body
+.activitypub-settings
 input.blog-user-identifier {
 	text-align: right;
 }
 
-.activitypub-settings-body
+.activitypub-settings
 .header-image {
 	width: 100%;
 	height: 80px;
@@ -168,11 +168,27 @@ input.blog-user-identifier {
 	background-size: cover;
 }
 
-.activitypub-settings-body
+.activitypub-settings
 .logo {
 	height: 80px;
 	width: 80px;
 	position: relative;
 	top: 40px;
 	left: 40px;
+}
+
+.settings_page_activitypub .box  {
+	border: 1px solid #c3c4c7;
+	background-color: #fff;
+	padding: 1em 1.5em;
+	margin-bottom: 1.5em;
+}
+
+.settings_page_activitypub .activitypub-welcome-page .box label {
+	font-weight: bold;
+}
+
+.settings_page_activitypub .plugin-recommendations {
+	border-bottom: none;
+	margin-bottom: 0;
 }
