@@ -74,7 +74,7 @@
 			<?php \esc_html_e( 'Users who can not access this settings page will find their username on the "Edit Profile" page.', 'activitypub' ); ?>
 		<p>
 		<p>
-			<a href="<?php echo \esc_url_raw( \admin_url( '/options-general.php?page=activitypub&tab=settings' ) ); ?>">
+			<a href="<?php echo \esc_url_raw( \admin_url( '/profile.php#activitypub' ) ); ?>">
 			<?php \esc_html_e( 'Customize Username on "Edit Profile" page.', 'activitypub' ); ?>
 			</a>
 		</p>
