@@ -75,11 +75,13 @@ class Blocks {
 				%s
 			</a>';
 
+		$icon = $follower->get_icon();
+		$avatar = $icon['url'] ?? 'https://0.gravatar.com/avatar/0c7e6a405862e402eb76a70f8a26fc732d07c32931e9fae9ab1582911d2e8a3b?s=96&d=mm';
 		return sprintf(
 			$template,
 			esc_url( $follower->get_url() ),
 			esc_attr( $follower->get_name() ),
-			esc_attr( $follower->get_icon() ),
+			esc_attr( $avatar ),
 			esc_html( $follower->get_name() ),
 			esc_html( $follower->get_preferred_username() ),
 			$external_svg
