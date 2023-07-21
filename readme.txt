@@ -116,10 +116,11 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 
 = 1.0.0 =
 
-* Update: Improved linter (PHPCS)
-* Add: Simple caching
+* Add: blog-wide Account (catchall, like `mydomain.com@mydomain.com`)
 * Add: Signature Verification: https://docs.joinmastodon.org/spec/security/ .
-* Update: Complete rewrite of the Follower-System based on Taxonomies.
+* Update: Complete rewrite of the Follower-System based on Custom Post Types.
+* Add: Simple caching
+* Update: Improved linter (PHPCS)
 * Compatibility: add a new conditional, `\Activitypub\is_activitypub_request()`, to allow third-party plugins to detect ActivityPub requests.
 * Compatibility: add hooks to allow modifying images returned in ActivityPub requests.
 * Compatibility: indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.2.
