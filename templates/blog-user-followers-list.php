@@ -1,6 +1,6 @@
 <?php
 \load_template(
-	\dirname( __FILE__ ) . '/admin-header.php',
+	__DIR__ . '/admin-header.php',
 	true,
 	array(
 		'settings' => '',
@@ -10,7 +10,7 @@
 );
 ?>
 
-<div class="wrap">
+<div class="wrap activitypub-followers-page">
 	<h1><?php \esc_html_e( 'Followers', 'activitypub' ); ?></h1>
 
 	<?php $table = new \Activitypub\Table\Followers(); ?>
