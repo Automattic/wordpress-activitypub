@@ -87,15 +87,4 @@ class Blocks {
 			$external_svg
 		);
 	}
-
-	// todo: move this into the Follower class?
-	private static function get_actor_nicename( $actor ) {
-		$actor_nicename = $actor;
-		if ( strpos( $actor, 'http' ) === 0 ) {
-			$parts = wp_parse_url( $actor );
-			$handle = preg_replace( '|^/@?|', '', $parts['path'] );
-			$actor_nicename = sprintf( '%s@%s', $handle, $parts['host'] );
-		}
-		return $actor_nicename;
-	}
 }

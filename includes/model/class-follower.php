@@ -222,4 +222,45 @@ class Follower extends Actor {
 
 		return $object;
 	}
+
+	/**
+	 * Return all stored data as array. Adds some default values that are routinely used and occasionally missing.
+	 *
+	 * @return array Follower data.
+	 */
+	public function to_array() {
+		$data = parent::to_array();
+		$shortname = $this->get_actor_shortname( $data['id'] );
+		$defaults = array(
+			'name' => $shortname,
+			'preferredUsername' => $shortname,
+			'icon' => array(
+				'type' => 'Image',
+				'mediaType' => 'image/jpeg',
+				'url'  => 'https://0.gravatar.com/avatar/0c7e6a405862e402eb76a70f8a26fc732d07c32931e9fae9ab1582911d2e8a3b?s=96&d=mm',
+			),
+		);
+		$merged_data = array_merge( $defaults, $data );
+		return apply_filters( 'activitypub_follower_data_array', $merged_data, $data, $defaults, $this );
+	}
+
+	/**
+	 * Infer a shortname from the actor ID. Used only for fallbacks, we will try to use what's supplied.
+	 * @param string $actor The actor ID.
+	 *
+	 * @return string The shortname.
+	 */
+	private function get_actor_shortname( $actor ) {
+		$actor_shortname = $actor;
+		if ( strpos( $actor, 'http' ) === 0 ) {
+			// expected: https://example.com/@user
+			$parts = wp_parse_url( $actor );
+			$actor_shortname = preg_replace( '|^/@?|', '', $parts['path'] );
+		} else {
+			// expected: @user@example.com
+			$parts = explode( '@', ltrim( $actor, '@' ) );
+			$actor_shortname = $parts[0];
+		}
+		return $actor_shortname;
+	}
 }

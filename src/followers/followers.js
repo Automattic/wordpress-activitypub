@@ -87,15 +87,7 @@ export function Followers( {
 	);
 }
 
-const DEFAULT_FOLLOWER_ATTRIBUTES = {
-	name: '',
-	icon: {	url: '' },
-	url: '',
-	preferredUsername: ''
-};
-
-function Follower( args ) {
-	const { name, icon, url, preferredUsername } = { ...DEFAULT_FOLLOWER_ATTRIBUTES, ...args };
+function Follower( { name, icon, url, preferredUsername } ) {
 	const handle = `@${ preferredUsername }`;
 	return (
 		<ExternalLink className="activitypub-link" href={ url } title={ handle } onClick={ event => event.preventDefault() }>
