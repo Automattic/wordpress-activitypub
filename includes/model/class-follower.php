@@ -289,17 +289,23 @@ class Follower extends Actor {
 		if ( strpos( $name, 'http' ) === 0 && strpos( $name, '@' ) !== false ) {
 			// expected: https://example.com/@user (default URL pattern)
 			$parts = \wp_parse_url( $name );
-			$name = preg_replace( '|^/@?|', '', $parts['path'] );
+			$name  = preg_replace( '|^/@?|', '', $parts['path'] );
 		} elseif ( strpos( $name, 'http' ) === 0 ) {
 			// expected: https://example.com/users/user (default ID pattern)
 			$parts = explode( '/', \wp_parse_url( $name, PHP_URL_PATH ) );
-			$name = array_pop( $parts );
-		} elseif ( is_email( $name ) || strpos( $name, 'acct' ) === 0 ) {
+			$name  = array_pop( $parts );
+		} elseif (
+			is_email( $name ) ||
+			strpos( $name, 'acct' ) === 0 ||
+			strpos( $name, '@' ) === 0
+		) {
 			// expected: user@example.com or acct:user@example (WebFinger)
-			$parts = explode( '@', ltrim( $name, '@' ) );
-			$name = $parts[0];
+			$name  = ltrim( $name, '@' );
+			$name  = ltrim( $name, 'acct:' );
+			$parts = explode( '@', $name );
+			$name  = $parts[0];
 		}
 
-		return sanitize_user( $name, true );
+		return $name;
 	}
 }
