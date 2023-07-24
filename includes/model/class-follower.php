@@ -286,23 +286,29 @@ class Follower extends Actor {
 			$name = $this->id;
 		}
 
-		if ( strpos( $name, 'http' ) === 0 && strpos( $name, '@' ) !== false ) {
-			// expected: https://example.com/@user (default URL pattern)
-			$parts = \wp_parse_url( $name );
-			$name  = preg_replace( '|^/@?|', '', $parts['path'] );
-		} elseif ( strpos( $name, 'http' ) === 0 ) {
-			// expected: https://example.com/users/user (default ID pattern)
-			$parts = explode( '/', \wp_parse_url( $name, PHP_URL_PATH ) );
-			$name  = array_pop( $parts );
+		if ( \filter_var( $name, FILTER_VALIDATE_URL ) ) {
+			$name = \rtrim( $name, '/' );
+			$path = \wp_parse_url( $name, PHP_URL_PATH );
+
+			if ( $path ) {
+				if ( \strpos( $name, '@' ) !== false ) {
+					// expected: https://example.com/@user (default URL pattern)
+					$name = \preg_replace( '|^/@?|', '', $path );
+				} else {
+					// expected: https://example.com/users/user (default ID pattern)
+					$parts = \explode( '/', $path );
+					$name  = \array_pop( $parts );
+				}
+			}
 		} elseif (
-			is_email( $name ) ||
-			strpos( $name, 'acct' ) === 0 ||
-			strpos( $name, '@' ) === 0
+			\is_email( $name ) ||
+			\strpos( $name, 'acct' ) === 0 ||
+			\strpos( $name, '@' ) === 0
 		) {
 			// expected: user@example.com or acct:user@example (WebFinger)
-			$name  = ltrim( $name, '@' );
-			$name  = ltrim( $name, 'acct:' );
-			$parts = explode( '@', $name );
+			$name  = \ltrim( $name, '@' );
+			$name  = \ltrim( $name, 'acct:' );
+			$parts = \explode( '@', $name );
 			$name  = $parts[0];
 		}
 
