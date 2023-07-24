@@ -300,6 +300,6 @@ class Follower extends Actor {
 			$name = $parts[0];
 		}
 
-		return $name;
+		return sanitize_user( $name, true );
 	}
 }
