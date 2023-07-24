@@ -493,7 +493,7 @@ class Base_Object {
 			return new WP_Error( 'invalid_key', 'Invalid key' );
 		}
 
-		return $this->$key;
+		return call_user_func( array( $this, 'get_' . $key ) );
 	}
 
 	/**
