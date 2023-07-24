@@ -448,9 +448,10 @@ class Base_Object {
 		$var = \strtolower( \substr( $method, 4 ) );
 
 		if ( \strncasecmp( $method, 'get', 3 ) === 0 ) {
-			if ( $this->has( $var ) ) {
-				return $this->get( $var );
+			if ( ! $this->has( $var ) ) {
+				return new WP_Error( 'invalid_key', 'Invalid key' );
 			}
+
 			return $this->$var;
 		}
 
