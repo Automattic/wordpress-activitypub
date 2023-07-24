@@ -172,6 +172,55 @@ class Follower extends Actor {
 	}
 
 	/**
+	 * Get the icon.
+	 *
+	 * Sets a fallback to better handle API and HTML outputs.
+	 *
+	 * @return array The icon.
+	 */
+	public function get_icon() {
+		if ( isset( $this->icon['url'] ) ) {
+			return $this->icon;
+		}
+
+		return array(
+			'type' => 'Image',
+			'mediaType' => 'image/jpeg',
+			'url'  => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mm.jpg',
+		);
+	}
+
+	/**
+	 * Get Name.
+	 *
+	 * Tries to extract a name from the URL or ID if not set.
+	 *
+	 * @return string The name.
+	 */
+	public function get_name() {
+		if ( isset( $this->name ) ) {
+			return $this->name;
+		}
+
+		return $this->extract_name_from_uri();
+	}
+
+	/**
+	 * The preferred Username.
+	 *
+	 * Tries to extract a name from the URL or ID if not set.
+	 *
+	 * @return string The preferred Username.
+	 */
+	public function get_preferred_username() {
+		if ( isset( $this->name ) ) {
+			return $this->name;
+		}
+
+		return $this->extract_name_from_uri();
+	}
+
+	/**
 	 * Get the Icon URL (Avatar)
 	 *
 	 * @return string The URL to the Avatar.
@@ -224,43 +273,33 @@ class Follower extends Actor {
 	}
 
 	/**
-	 * Return all stored data as array. Adds some default values that are routinely used and occasionally missing.
+	 * Infer a shortname from the Actor ID or URL. Used only for fallbacks,
+	 * we will try to use what's supplied.
 	 *
-	 * @return array Follower data.
+	 * @return string Hopefully the name of the Follower.
 	 */
-	public function to_array() {
-		$data = parent::to_array();
-		$shortname = $this->get_actor_shortname( $data['id'] );
-		$defaults = array(
-			'name' => $shortname,
-			'preferredUsername' => $shortname,
-			'icon' => array(
-				'type' => 'Image',
-				'mediaType' => 'image/jpeg',
-				'url'  => 'https://0.gravatar.com/avatar/0c7e6a405862e402eb76a70f8a26fc732d07c32931e9fae9ab1582911d2e8a3b?s=96&d=mm',
-			),
-		);
-		$merged_data = array_merge( $defaults, $data );
-		return apply_filters( 'activitypub_follower_data_array', $merged_data, $data, $defaults, $this );
-	}
-
-	/**
-	 * Infer a shortname from the actor ID. Used only for fallbacks, we will try to use what's supplied.
-	 * @param string $actor The actor ID.
-	 *
-	 * @return string The shortname.
-	 */
-	private function get_actor_shortname( $actor ) {
-		$actor_shortname = $actor;
-		if ( strpos( $actor, 'http' ) === 0 ) {
-			// expected: https://example.com/@user
-			$parts = wp_parse_url( $actor );
-			$actor_shortname = preg_replace( '|^/@?|', '', $parts['path'] );
+	protected function extract_name_from_uri() {
+		// prefer the URL, but fall back to the ID.
+		if ( $this->url ) {
+			$name = $this->url;
 		} else {
-			// expected: @user@example.com
-			$parts = explode( '@', ltrim( $actor, '@' ) );
-			$actor_shortname = $parts[0];
+			$name = $this->id;
 		}
-		return $actor_shortname;
+
+		if ( strpos( $name, 'http' ) === 0 && strpos( $name, '@' ) !== false ) {
+			// expected: https://example.com/@user (default URL pattern)
+			$parts = \wp_parse_url( $name );
+			$name = preg_replace( '|^/@?|', '', $parts['path'] );
+		} elseif ( strpos( $name, 'http' ) === 0 ) {
+			// expected: https://example.com/users/user (default ID pattern)
+			$parts = explode( '/', \wp_parse_url( $name, PHP_URL_PATH ) );
+			$name = array_pop( $parts );
+		} elseif ( is_email( $name ) || strpos( $name, 'acct' ) === 0 ) {
+			// expected: user@example.com or acct:user@example (WebFinger)
+			$parts = explode( '@', ltrim( $name, '@' ) );
+			$name = $parts[0];
+		}
+
+		return $name;
 	}
 }

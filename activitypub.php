@@ -35,6 +35,7 @@ function init() {
 	\define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
+	\define( 'ACTIVITYPUB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
 	Migration::init();
 	Activitypub::init();
