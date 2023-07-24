@@ -27,10 +27,10 @@
 			<?php \esc_html_e( 'People can follow your Blog by using:', 'activitypub' ); ?>
 		</p>
 		<p>
-			<label for="activitypub-blog-username"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
+			<label for="activitypub-blog-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
 		</p>
 		<p>
-			<input type="text" class="regular-text" id="activitypub-blog-username" value="<?php echo \esc_attr( $blog_user->get_resource() ); ?>" />
+			<input type="text" class="regular-text" id="activitypub-blog-identifier" value="<?php echo \esc_attr( $blog_user->get_resource() ); ?>" />
 		</p>
 		<p>
 			<label for="activitypub-blog-url"><?php \esc_html_e( 'Profile-URL', 'activitypub' ); ?></label>
@@ -59,10 +59,10 @@
 			<?php \esc_html_e( 'People can follow you by using your Username:', 'activitypub' ); ?>
 		</p>
 		<p>
-			<label for="activitypub-user-username"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
+			<label for="activitypub-user-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
 		</p>
 		<p>
-			<input type="text" class="regular-text" id="activitypub-user-username" value="<?php echo \esc_attr( $user->get_resource() ); ?>" />
+			<input type="text" class="regular-text" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_resource() ); ?>" />
 		</p>
 		<p>
 			<label for="activitypub-user-url"><?php \esc_html_e( 'Profile-URL', 'activitypub' ); ?></label>

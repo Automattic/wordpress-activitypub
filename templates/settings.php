@@ -11,7 +11,8 @@
 ?>
 
 <div class="activitypub-settings activitypub-settings-page hide-if-no-js">
-	<div class="notice notice-info">
+	<div class="box">
+		<h3><?php \esc_html_e( 'Troubleshooting', 'activitypub' ); ?></h3>
 		<p>
 			<?php
 			echo \wp_kses(
@@ -25,8 +26,6 @@
 			?>
 		</p>
 	</div>
-
-	<p><?php \esc_html_e( 'Customize your ActivityPub settings to suit your needs.', 'activitypub' ); ?></p>
 
 	<form method="post" action="options.php">
 		<?php \settings_fields( 'activitypub' ); ?>

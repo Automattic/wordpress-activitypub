@@ -188,6 +188,11 @@ input.blog-user-identifier {
 	font-weight: bold;
 }
 
+.settings_page_activitypub .activitypub-welcome-page input {
+	font-size: 20px;
+	width: 95%;
+}
+
 .settings_page_activitypub .plugin-recommendations {
 	border-bottom: none;
 	margin-bottom: 0;
