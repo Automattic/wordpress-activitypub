@@ -8,6 +8,7 @@
 namespace Activitypub\Activity;
 
 use WP_Error;
+use ReflectionClass;
 
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\snake_to_camel_case;
@@ -645,7 +646,7 @@ class Base_Object {
 			$array = array_merge( array( '@context' => $context ), $array );
 		}
 
-		$class = new \ReflectionClass( $this );
+		$class = new ReflectionClass( $this );
 		$class = strtolower( $class->getShortName() );
 
 		$array = \apply_filters( 'activitypub_activity_object_array', $array, $class, $this->id, $this );
