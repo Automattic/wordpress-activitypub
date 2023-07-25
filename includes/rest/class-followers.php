@@ -63,7 +63,7 @@ class Followers {
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
-		\do_action( 'activitypub_outbox_pre' );
+		\do_action( 'activitypub_rest_followers_pre' );
 
 		$json = new stdClass();
 

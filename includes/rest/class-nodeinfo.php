@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub\Rest;
 
+use WP_REST_Response;
+
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -69,6 +71,11 @@ class Nodeinfo {
 	 * @return WP_REST_Response
 	 */
 	public static function nodeinfo( $request ) {
+		/*
+		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		 */
+		\do_action( 'activitypub_rest_nodeinfo_pre' );
+
 		$nodeinfo = array();
 
 		$nodeinfo['version'] = '2.0';
@@ -108,7 +115,7 @@ class Nodeinfo {
 			'outbound' => array(),
 		);
 
-		return new \WP_REST_Response( $nodeinfo, 200 );
+		return new WP_REST_Response( $nodeinfo, 200 );
 	}
 
 	/**
@@ -119,6 +126,11 @@ class Nodeinfo {
 	 * @return WP_REST_Response
 	 */
 	public static function nodeinfo2( $request ) {
+		/*
+		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		 */
+		\do_action( 'activitypub_rest_nodeinfo2_pre' );
+
 		$nodeinfo = array();
 
 		$nodeinfo['version'] = '1.0';
@@ -160,7 +172,7 @@ class Nodeinfo {
 			'outbound' => array(),
 		);
 
-		return new \WP_REST_Response( $nodeinfo, 200 );
+		return new WP_REST_Response( $nodeinfo, 200 );
 	}
 
 	/**

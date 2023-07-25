@@ -52,6 +52,11 @@ class Webfinger {
 	 * @return WP_REST_Response The response object.
 	 */
 	public static function webfinger( $request ) {
+		/*
+		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		 */
+		\do_action( 'activitypub_rest_webfinger_pre' );
+
 		$resource = $request->get_param( 'resource' );
 		$response = self::get_profile( $resource );
 
