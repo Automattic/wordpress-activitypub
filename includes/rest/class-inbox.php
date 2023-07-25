@@ -90,7 +90,7 @@ class Inbox {
 		$json = new \stdClass();
 
 		$json->{'@context'} = get_context();
-		$json->id = \home_url( \add_query_arg( null, null ) );
+		$json->id = get_rest_url_by_path( sprintf( 'users/%d/inbox', $user->get__id() ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
 		$json->type = 'OrderedCollectionPage';
 		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/inbox', $user->get__id() ) ); // phpcs:ignore
