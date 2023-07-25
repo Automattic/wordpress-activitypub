@@ -66,7 +66,7 @@ class Users {
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
-		\do_action( 'activitypub_outbox_pre' );
+		\do_action( 'activitypub_rest_users_pre' );
 
 		$user->set_context(
 			Activity::CONTEXT
