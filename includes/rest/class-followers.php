@@ -69,7 +69,7 @@ class Followers {
 
 		$json->{'@context'} = \Activitypub\get_context();
 
-		$json->id = \home_url( \add_query_arg( null, null ) );
+		$json->id = get_rest_url_by_path( sprintf( 'users/%d/followers', $user->get__id() ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
 		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
