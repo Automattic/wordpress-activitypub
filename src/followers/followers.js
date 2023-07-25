@@ -41,14 +41,24 @@ export function Followers( {
 	const setPage = passedSetPage || setLocalPage;
 	const prevLabel = (
 		<>
-			<span class="wp-block-query-pagination-previous-arrow is-arrow-arrow" aria-hidden="true">←</span>
+			<span class="wp-block-query-pagination-previous-arrow is-arrow-arrow" aria-hidden="true">
+				{
+					/* translators: arrow for previous followers link */
+					__( '←', 'activitypub' )
+				}
+			</span>
 			{ __( 'Less', 'activitypub' ) }
 		</>
 	);
 	const nextLabel = (
 		<>
 			{ __( 'More', 'activitypub' ) }
-			<span class="wp-block-query-pagination-next-arrow is-arrow-arrow" aria-hidden="true">→</span>
+			<span class="wp-block-query-pagination-next-arrow is-arrow-arrow" aria-hidden="true">
+				{
+					/* translators: arrow for next followers link */
+					__( '→', 'activitypub' )
+				}
+			</span>
 		</>
 	);
 

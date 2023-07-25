@@ -19,7 +19,7 @@ export default function Edit( { attributes, setAttributes } ) {
 			return [];
 		}
 		const withBlogUser =[ {
-			label: 'Whole Site',
+			label: __( 'Whole Site', 'activitypub' ),
 			value: 'site'
 		} ];
 		return users.reduce( ( acc, user ) => {
@@ -42,7 +42,7 @@ export default function Edit( { attributes, setAttributes } ) {
 			<InspectorControls key="setting">
 				<PanelBody title={ __( 'Followers Options', 'activitypub' ) }>
 					<SelectControl
-						label="Select User"
+						label= { __( 'Select User', 'activitypub' ) }
 						value={ selectedUser }
 						options={ usersOptions }
 						onChange={ setAttributestAndResetPage( 'selectedUser' ) }
