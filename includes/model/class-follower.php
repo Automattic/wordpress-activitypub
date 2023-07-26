@@ -186,7 +186,7 @@ class Follower extends Actor {
 		return array(
 			'type' => 'Image',
 			'mediaType' => 'image/jpeg',
-			'url'  => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mm.jpg',
+			'url'  => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
 		);
 	}
 
