@@ -267,6 +267,16 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		$this->assertCount( 1, $meta );
 	}
 
+	/**
+	 * @dataProvider extract_name_from_uri_content_provider
+	 */
+	public function test_extract_name_from_uri( $uri, $name ) {
+		$follower = new \Activitypub\Model\Follower();
+
+		$follower->set_id( $uri );
+
+		$this->assertEquals( $name, $follower->get_name() );
+	}
 
 	public static function http_request_host_is_external( $in, $host ) {
 		if ( in_array( $host, array( 'example.com', 'example.org' ), true ) ) {
@@ -274,6 +284,7 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		}
 		return $in;
 	}
+
 	public static function http_request_args( $args, $url ) {
 		if ( in_array( wp_parse_url( $url, PHP_URL_HOST ), array( 'example.com', 'example.org' ), true ) ) {
 			$args['reject_unsafe_urls'] = false;
@@ -307,5 +318,20 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 			}
 		}
 		return $pre;
+	}
+
+	public function extract_name_from_uri_content_provider() {
+		return array(
+			array( 'https://example.com/@user', 'user' ),
+			array( 'https://example.com/@user/', 'user' ),
+			array( 'https://example.com/users/user', 'user' ),
+			array( 'https://example.com/users/user/', 'user' ),
+			array( 'https://example.com/@user?as=asasas', 'user' ),
+			array( 'https://example.com/@user#asass', 'user' ),
+			array( '@user@example.com', 'user' ),
+			array( 'acct:user@example.com', 'user' ),
+			array( 'user@example.com', 'user' ),
+			array( 'https://example.com', 'https://example.com' ),
+		);
 	}
 }

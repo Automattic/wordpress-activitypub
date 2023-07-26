@@ -172,6 +172,55 @@ class Follower extends Actor {
 	}
 
 	/**
+	 * Get the icon.
+	 *
+	 * Sets a fallback to better handle API and HTML outputs.
+	 *
+	 * @return array The icon.
+	 */
+	public function get_icon() {
+		if ( isset( $this->icon['url'] ) ) {
+			return $this->icon;
+		}
+
+		return array(
+			'type' => 'Image',
+			'mediaType' => 'image/jpeg',
+			'url'  => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+		);
+	}
+
+	/**
+	 * Get Name.
+	 *
+	 * Tries to extract a name from the URL or ID if not set.
+	 *
+	 * @return string The name.
+	 */
+	public function get_name() {
+		if ( isset( $this->name ) ) {
+			return $this->name;
+		}
+
+		return $this->extract_name_from_uri();
+	}
+
+	/**
+	 * The preferred Username.
+	 *
+	 * Tries to extract a name from the URL or ID if not set.
+	 *
+	 * @return string The preferred Username.
+	 */
+	public function get_preferred_username() {
+		if ( isset( $this->name ) ) {
+			return $this->name;
+		}
+
+		return $this->extract_name_from_uri();
+	}
+
+	/**
 	 * Get the Icon URL (Avatar)
 	 *
 	 * @return string The URL to the Avatar.
@@ -221,5 +270,48 @@ class Follower extends Actor {
 		$object->set_updated( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_modified ) ) );
 
 		return $object;
+	}
+
+	/**
+	 * Infer a shortname from the Actor ID or URL. Used only for fallbacks,
+	 * we will try to use what's supplied.
+	 *
+	 * @return string Hopefully the name of the Follower.
+	 */
+	protected function extract_name_from_uri() {
+		// prefer the URL, but fall back to the ID.
+		if ( $this->url ) {
+			$name = $this->url;
+		} else {
+			$name = $this->id;
+		}
+
+		if ( \filter_var( $name, FILTER_VALIDATE_URL ) ) {
+			$name = \rtrim( $name, '/' );
+			$path = \wp_parse_url( $name, PHP_URL_PATH );
+
+			if ( $path ) {
+				if ( \strpos( $name, '@' ) !== false ) {
+					// expected: https://example.com/@user (default URL pattern)
+					$name = \preg_replace( '|^/@?|', '', $path );
+				} else {
+					// expected: https://example.com/users/user (default ID pattern)
+					$parts = \explode( '/', $path );
+					$name  = \array_pop( $parts );
+				}
+			}
+		} elseif (
+			\is_email( $name ) ||
+			\strpos( $name, 'acct' ) === 0 ||
+			\strpos( $name, '@' ) === 0
+		) {
+			// expected: user@example.com or acct:user@example (WebFinger)
+			$name  = \ltrim( $name, '@' );
+			$name  = \ltrim( $name, 'acct:' );
+			$parts = \explode( '@', $name );
+			$name  = $parts[0];
+		}
+
+		return $name;
 	}
 }
