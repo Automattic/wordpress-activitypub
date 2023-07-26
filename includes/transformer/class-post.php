@@ -29,6 +29,13 @@ class Post {
 	protected $wp_post;
 
 	/**
+	 * Attachment images, used in the content.
+	 *
+	 * @var array
+	 */
+	protected $attachments = array();
+
+	/**
 	 * The Allowed Tags, used in the content.
 	 *
 	 * @var array
