@@ -6,6 +6,7 @@
   "title": "Fediverse Followers",
   "category": "widgets",
   "description": "Display your followers from the Fediverse on your website.",
+  "textdomain": "activitypub",
   "icon": "groups",
   "supports": {
     "html": false

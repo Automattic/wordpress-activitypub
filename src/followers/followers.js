@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
+import { createInterpolateElement } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { Pagination } from './pagination';
 import { ExternalLink } from '@wordpress/components';
@@ -39,27 +40,19 @@ export function Followers( {
 	const [ localPage, setLocalPage ] = usePage();
 	const page = passedPage || localPage;
 	const setPage = passedSetPage || setLocalPage;
-	const prevLabel = (
-		<>
-			<span class="wp-block-query-pagination-previous-arrow is-arrow-arrow" aria-hidden="true">
-				{
-					/* translators: arrow for previous followers link */
-					__( '←', 'activitypub' )
-				}
-			</span>
-			{ __( 'Less', 'activitypub' ) }
-		</>
+	const prevLabel = createInterpolateElement(
+		/* translators: arrow for previous followers link */
+		__( '<span>←</span> Less', 'activitypub' ),
+		{
+			span: <span class="wp-block-query-pagination-previous-arrow is-arrow-arrow" aria-hidden="true" />,
+		}
 	);
-	const nextLabel = (
-		<>
-			{ __( 'More', 'activitypub' ) }
-			<span class="wp-block-query-pagination-next-arrow is-arrow-arrow" aria-hidden="true">
-				{
-					/* translators: arrow for next followers link */
-					__( '→', 'activitypub' )
-				}
-			</span>
-		</>
+	const nextLabel = createInterpolateElement(
+		/* translators: arrow for next followers link */
+		__( 'More <span>→</span>', 'activitypub' ),
+		{
+			span: <span class="wp-block-query-pagination-next-arrow is-arrow-arrow" aria-hidden="true" />,
+		}
 	);
 
 	useEffect( () => {
