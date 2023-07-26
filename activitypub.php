@@ -64,12 +64,10 @@ function init() {
 spl_autoload_register(
 	function ( $full_class ) {
 		$base_dir = __DIR__ . '/includes/';
-		$base     = 'activitypub';
+		$base     = 'Activitypub\\';
 
-		$class = strtolower( $full_class );
-
-		if ( strncmp( $class, $base, strlen( $base ) ) === 0 ) {
-			$class = str_replace( 'activitypub\\', '', $class );
+		if ( strncmp( $full_class, $base, strlen( $base ) ) === 0 ) {
+			$class = strtolower( str_replace( $base, '', $full_class ) );
 
 			if ( false !== strpos( $class, '\\' ) ) {
 				$parts    = explode( '\\', $class );
