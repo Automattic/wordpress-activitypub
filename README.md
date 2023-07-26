@@ -2,7 +2,7 @@
 **Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [mattwiebe](https://profiles.wordpress.org/mattwiebe/), [akirk](https://profiles.wordpress.org/akirk/), [jeherve](https://profiles.wordpress.org/jeherve/), [nuriapena](https://profiles.wordpress.org/nuriapena/)  
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
-**Tested up to:** 6.2  
+**Tested up to:** 6.3  
 **Stable tag:** 1.0.0  
 **Requires PHP:** 5.6  
 **License:** MIT  
@@ -116,13 +116,15 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 
 ### 1.0.0 ###
 
-* Update: Improved linter (PHPCS)
-* Add: Simple caching
+* Add: blog-wide Account (catchall, like `mydomain.com@mydomain.com`)
 * Add: Signature Verification: https://docs.joinmastodon.org/spec/security/ .
-* Update: Complete rewrite of the Follower-System based on Taxonomies.
+* Update: Complete rewrite of the Follower-System based on Custom Post Types.
+* Add: Simple caching
+* Update: Improved linter (PHPCS)
 * Compatibility: add a new conditional, `\Activitypub\is_activitypub_request()`, to allow third-party plugins to detect ActivityPub requests.
 * Compatibility: add hooks to allow modifying images returned in ActivityPub requests.
-* Compatibility: indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.2.
+* Compatibility: indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.3.
+* Compatibility: avoid PHP notice on sites using PHP 8.2.
 
 ### 0.17.0 ###
 
