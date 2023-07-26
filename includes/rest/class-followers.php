@@ -58,13 +58,17 @@ class Followers {
 			return $user;
 		}
 
-		$page = $request->get_param( 'page', 1 );
+		$order    = $request->get_param( 'order' );
+		$per_page = (int) $request->get_param( 'per_page' );
+		$page     = (int) $request->get_param( 'page' );
+		$context  = $request->get_param( 'context' );
 
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
 		\do_action( 'activitypub_rest_followers_pre' );
 
+		$data = Follower_Collection::get_followers_with_count( $user_id, $per_page, $page, array( 'order' => ucwords( $order ) ) );
 		$json = new stdClass();
 
 		$json->{'@context'} = \Activitypub\get_context();
@@ -74,13 +78,13 @@ class Followers {
 		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 
-		$json->totalItems = Follower_Collection::count_followers( $user->get__id() ); // phpcs:ignore
+		$json->totalItems = $data['total']; // phpcs:ignore
 		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/followers', $user->get__id() ) ); // phpcs:ignore
 
 		$json->first = \add_query_arg( 'page', 1, $json->partOf ); // phpcs:ignore
-		$json->last  = \add_query_arg( 'page', \ceil ( $json->totalItems / 20 ), $json->partOf ); // phpcs:ignore
+		$json->last  = \add_query_arg( 'page', \ceil ( $json->totalItems / $per_page ), $json->partOf ); // phpcs:ignore
 
-		if ( $page && ( ( \ceil ( $json->totalItems / 20 ) ) > $page ) ) { // phpcs:ignore
+		if ( $page && ( ( \ceil ( $json->totalItems / $per_page ) ) > $page ) ) { // phpcs:ignore
 			$json->next  = \add_query_arg( 'page', $page + 1, $json->partOf ); // phpcs:ignore
 		}
 
@@ -90,10 +94,13 @@ class Followers {
 
 		// phpcs:ignore
 		$json->orderedItems = array_map(
-			function( $item ) {
+			function( $item ) use ( $context ) {
+				if ( 'full' === $context ) {
+					return $item->to_array();
+				}
 				return $item->get_url();
 			},
-			Follower_Collection::get_followers( $user->get__id(), 20, $page )
+			$data['followers']
 		);
 
 		$response = new WP_REST_Response( $json, 200 );
@@ -115,9 +122,26 @@ class Followers {
 			'default' => 1,
 		);
 
+		$params['per_page'] = array(
+			'type' => 'integer',
+			'default' => 20,
+		);
+
+		$params['order'] = array(
+			'type'    => 'string',
+			'default' => 'desc',
+			'enum'    => array( 'asc', 'desc' ),
+		);
+
 		$params['user_id'] = array(
 			'required' => true,
 			'type' => 'string',
+		);
+
+		$params['context'] = array(
+			'type' => 'string',
+			'default' => 'simple',
+			'enum' => array( 'simple', 'full' ),
 		);
 
 		return $params;

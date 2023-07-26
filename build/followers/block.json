@@ -1,0 +1,57 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "name": "activitypub/followers",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "title": "Fediverse Followers",
+  "category": "widgets",
+  "description": "Display your followers from the Fediverse on your website.",
+  "textdomain": "activitypub",
+  "icon": "groups",
+  "supports": {
+    "html": false
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "default": "Fediverse Followers"
+    },
+    "selectedUser": {
+      "type": "string",
+      "default": "site"
+    },
+    "per_page": {
+      "type": "number",
+      "default": 10
+    },
+    "order": {
+      "type": "string",
+      "default": "desc",
+      "enum": [
+        "asc",
+        "desc"
+      ]
+    }
+  },
+  "styles": [
+    {
+      "name": "default",
+      "label": "No Lines",
+      "isDefault": true
+    },
+    {
+      "name": "with-lines",
+      "label": "Lines"
+    },
+    {
+      "name": "compact",
+      "label": "Compact"
+    }
+  ],
+  "editorScript": "file:./index.js",
+  "viewScript": "file:./view.js",
+  "style": [
+    "file:./style-view.css",
+    "wp-block-query-pagination"
+  ]
+}
