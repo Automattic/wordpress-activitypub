@@ -246,8 +246,6 @@ class Post {
 			}
 		}
 
-		$this->attachments = $images;
-
 		return $images;
 	}
 
