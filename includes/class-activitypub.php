@@ -28,7 +28,7 @@ class Activitypub {
 		\add_action( 'wp_trash_post', array( self::class, 'trash_post' ), 1 );
 		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
 
-		\add_action( 'init', array( self::class, 'add_rewrite_rules' ) );
+		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
 
 		\add_action( 'after_setup_theme', array( self::class, 'theme_compat' ), 99 );
 	}

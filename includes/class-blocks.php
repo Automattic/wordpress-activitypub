@@ -5,7 +5,8 @@ use Activitypub\Collection\Followers;
 
 class Blocks {
 	public static function init() {
-		\add_action( 'init', array( self::class, 'register_blocks' ) );
+		// this is already being called on the init hook, so just add it.
+		self::register_blocks();
 		\add_action( 'wp_enqueue_scripts', array( self::class, 'add_data' ) );
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'add_data' ) );
 	}
