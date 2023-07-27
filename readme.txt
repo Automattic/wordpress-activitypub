@@ -126,6 +126,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Compatibility: Add hooks to allow modifying images returned in ActivityPub requests.
 * Compatibility: Indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.3.
 * Compatibility: Avoid PHP notice on sites using PHP 8.2.
+* Fixed: Load the plugin later in the WordPress code lifecycle to avoid errors in some requests.
 
 = 0.17.0 =
 

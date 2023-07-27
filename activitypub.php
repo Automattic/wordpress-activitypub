@@ -56,7 +56,7 @@ function init() {
 	Health_Check::init();
 	Scheduler::init();
 }
-\add_action( 'plugins_loaded', __NAMESPACE__ . '\init' );
+\add_action( 'init', __NAMESPACE__ . '\init' );
 
 /**
  * Class Autoloader
