@@ -87,11 +87,6 @@ class Migration {
 				}
 			}
 		}
-
-		// set the default username for the Blog User
-		if ( ! \get_option( 'activitypub_blog_user_identifier' ) ) {
-			\update_option( 'activitypub_blog_user_identifier', Blog_User::get_default_username() );
-		}
 	}
 
 	/**
