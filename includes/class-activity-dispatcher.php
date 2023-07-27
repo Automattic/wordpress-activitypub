@@ -23,9 +23,6 @@ class Activity_Dispatcher {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		// check if a migration is needed before sending new posts
-		Migration::maybe_migrate();
-
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity' ), 10, 2 );
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity_or_announce' ), 10, 2 );
 	}
@@ -39,6 +36,9 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	public static function send_activity_or_announce( WP_Post $wp_post, $type ) {
+		// check if a migration is needed before sending new posts
+		Migration::maybe_migrate();
+
 		if ( is_user_type_disabled( 'blog' ) ) {
 			return;
 		}
@@ -93,9 +93,6 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	public static function send_announce( WP_Post $wp_post, $type ) {
-		// check if a migration is needed before sending new posts
-		Migration::maybe_migrate();
-
 		if ( ! in_array( $type, array( 'Create', 'Update' ), true ) ) {
 			return;
 		}

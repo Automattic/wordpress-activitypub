@@ -39,6 +39,46 @@ class Migration {
 	}
 
 	/**
+	 * Locks the database migration process to prevent simultaneous migrations.
+	 *
+	 * @return void
+	 */
+	public static function lock() {
+		\update_option( 'activitypub_migration_lock', \time() );
+	}
+
+	/**
+	 * Unlocks the database migration process.
+	 *
+	 * @return void
+	 */
+	public static function unlock() {
+		\delete_option( 'activitypub_migration_lock' );
+	}
+
+	/**
+	 * Whether the database migration process is locked.
+	 *
+	 * @return boolean
+	 */
+	public static function is_locked() {
+		$lock = \get_option( 'activitypub_migration_lock' );
+
+		if ( ! $lock ) {
+			return false;
+		}
+
+		$lock = (int) $lock;
+
+		if ( $lock < \time() - 1800 ) {
+			self::unlock();
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
 	 * Whether the database structure is up to date.
 	 *
 	 * @return bool True if the database structure is up to date, false otherwise.
@@ -59,16 +99,24 @@ class Migration {
 			return;
 		}
 
+		if ( self::is_locked() ) {
+			return;
+		}
+
+		self::lock();
+
 		$version_from_db = self::get_version();
 
-		if ( version_compare( $version_from_db, '0.16.0', '<' ) ) {
+		if ( version_compare( $version_from_db, '0.17.0', '<' ) ) {
 			self::migrate_from_0_16();
 		}
-		if ( version_compare( $version_from_db, '0.17.0', '<' ) ) {
+		if ( version_compare( $version_from_db, '1.0.0', '<' ) ) {
 			self::migrate_from_0_17();
 		}
 
 		update_option( 'activitypub_db_version', self::get_target_version() );
+
+		self::unlock();
 	}
 
 	/**
