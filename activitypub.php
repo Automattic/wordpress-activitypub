@@ -67,7 +67,12 @@ spl_autoload_register(
 		$base     = 'Activitypub\\';
 
 		if ( strncmp( $full_class, $base, strlen( $base ) ) === 0 ) {
-			$class = strtolower( str_replace( $base, '', $full_class ) );
+			$maybe_uppercase = str_replace( $base, '', $full_class );
+			$class = strtolower( $maybe_uppercase );
+			// All classes should be capitalized. If this is instead looking for a lowercase method, we ignore that.
+			if ( $maybe_uppercase === $class ) {
+				return;
+			}
 
 			if ( false !== strpos( $class, '\\' ) ) {
 				$parts    = explode( '\\', $class );
