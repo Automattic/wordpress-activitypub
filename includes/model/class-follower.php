@@ -126,7 +126,7 @@ class Follower extends Actor {
 			'post_author'  => 0,
 			'post_type'    => Followers::POST_TYPE,
 			'post_name'    => esc_url_raw( $this->get_id() ),
-			'post_excerpt' => esc_html( $this->get_summary() ) ? $this->get_summary() : '',
+			'post_excerpt' => $this->get_summary() ? esc_html( $this->get_summary() ) : '',
 			'post_status'  => 'publish',
 			'meta_input'   => $this->get_post_meta_input(),
 		);
