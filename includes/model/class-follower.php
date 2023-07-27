@@ -211,7 +211,7 @@ class Follower extends Actor {
 	 * @return string The name.
 	 */
 	public function get_name() {
-		if ( isset( $this->name ) ) {
+		if ( $this->name ) {
 			return $this->name;
 		}
 
@@ -226,8 +226,8 @@ class Follower extends Actor {
 	 * @return string The preferred Username.
 	 */
 	public function get_preferred_username() {
-		if ( isset( $this->name ) ) {
-			return $this->name;
+		if ( $this->preferred_username ) {
+			return $this->preferred_username;
 		}
 
 		return $this->extract_name_from_uri();
