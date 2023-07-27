@@ -1,12 +1,12 @@
 # ActivityPub #
-**Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [mattwiebe](https://profiles.wordpress.org/mattwiebe/), [akirk](https://profiles.wordpress.org/akirk/), [jeherve](https://profiles.wordpress.org/jeherve/), [nuriapena](https://profiles.wordpress.org/nuriapena/)  
-**Tags:** OStatus, fediverse, activitypub, activitystream  
-**Requires at least:** 4.7  
-**Tested up to:** 6.3  
-**Stable tag:** 1.0.0  
-**Requires PHP:** 5.6  
-**License:** MIT  
-**License URI:** http://opensource.org/licenses/MIT  
+**Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [mattwiebe](https://profiles.wordpress.org/mattwiebe/), [akirk](https://profiles.wordpress.org/akirk/), [jeherve](https://profiles.wordpress.org/jeherve/), [nuriapena](https://profiles.wordpress.org/nuriapena/)
+**Tags:** OStatus, fediverse, activitypub, activitystream
+**Requires at least:** 4.7
+**Tested up to:** 6.3
+**Stable tag:** 1.0.0
+**Requires PHP:** 5.6
+**License:** MIT
+**License URI:** http://opensource.org/licenses/MIT
 
 The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
 
@@ -126,6 +126,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Compatibility: Add hooks to allow modifying images returned in ActivityPub requests.
 * Compatibility: Indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.3.
 * Compatibility: Avoid PHP notice on sites using PHP 8.2.
+* Fixed: Load the plugin later in the WordPress code lifecycle to avoid errors in some requests.
 
 ### 0.17.0 ###
 
