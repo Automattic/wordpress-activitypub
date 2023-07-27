@@ -40,7 +40,7 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 			'id' => 'https://user2.example.com',
 			'url' => 'https://user2.example.com',
 			'inbox' => 'https://user2.example.com/inbox',
-			'name'  => 'user2',
+			'name'  => 'úser2',
 			'preferredUsername'  => 'user2',
 		),
 	);
@@ -126,6 +126,7 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 
 		$follower2 = \Activitypub\Collection\Followers::get_follower( 2, 'https://user2.example.com' );
 		$this->assertEquals( 'https://user2.example.com', $follower2->get_url() );
+		$this->assertEquals( 'úser2', $follower2->get_name() );
 	}
 
 	public function test_delete_follower() {

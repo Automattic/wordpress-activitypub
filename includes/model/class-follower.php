@@ -34,6 +34,19 @@ class Follower extends Actor {
 	}
 
 	/**
+	 * Get the Summary.
+	 *
+	 * @return int The Summary.
+	 */
+	public function get_summary() {
+		if ( isset( $this->summary ) ) {
+			return $this->summary;
+		}
+
+		return '';
+	}
+
+	/**
 	 * Getter for URL attribute.
 	 *
 	 * Falls back to ID, if no URL is set. This is relevant for
@@ -122,11 +135,11 @@ class Follower extends Actor {
 		$args = array(
 			'ID'           => $this->get__id(),
 			'guid'         => esc_url_raw( $this->get_id() ),
-			'post_title'   => esc_html( $this->get_name() ),
+			'post_title'   => wp_strip_all_tags( sanitize_text_field( $this->get_name() ) ),
 			'post_author'  => 0,
 			'post_type'    => Followers::POST_TYPE,
 			'post_name'    => esc_url_raw( $this->get_id() ),
-			'post_excerpt' => $this->get_summary() ? esc_html( $this->get_summary() ) : '',
+			'post_excerpt' => sanitize_text_field( wp_kses( $this->get_summary(), 'user_description' ) ),
 			'post_status'  => 'publish',
 			'meta_input'   => $this->get_post_meta_input(),
 		);
@@ -266,6 +279,8 @@ class Follower extends Actor {
 		$object = self::init_from_json( $actor_json );
 		$object->set__id( $post->ID );
 		$object->set_id( $post->guid );
+		$object->set_name( $post->post_title );
+		$object->set_summary( $post->post_excerpt );
 		$object->set_published( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_published ) ) );
 		$object->set_updated( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_modified ) ) );
 
