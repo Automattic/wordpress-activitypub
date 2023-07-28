@@ -214,6 +214,8 @@ class Follower extends Actor {
 	public function get_name() {
 		if ( $this->name ) {
 			return $this->name;
+		} elseif ( $this->preferred_username ) {
+			return $this->preferred_username;
 		}
 
 		return $this->extract_name_from_uri();
