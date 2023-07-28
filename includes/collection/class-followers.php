@@ -286,7 +286,7 @@ class Followers {
 
 		$activity = $activity->to_json();
 
-		$response = Http::post( $inbox, $activity, $user_id );
+		Http::post( $inbox, $activity, $user_id );
 	}
 
 	/**
@@ -322,6 +322,7 @@ class Followers {
 			'paged'          => $page,
 			'orderby'        => 'ID',
 			'order'          => 'DESC',
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(
 				array(
 					'key'   => 'activitypub_user_id',
@@ -351,6 +352,7 @@ class Followers {
 	 */
 	public static function get_all_followers() {
 		$args = array(
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(),
 		);
 		return self::get_followers( null, null, null, $args );
@@ -368,6 +370,7 @@ class Followers {
 			array(
 				'post_type'  => self::POST_TYPE,
 				'fields'     => 'ids',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
 					array(
 						'key'   => 'activitypub_user_id',
@@ -400,6 +403,7 @@ class Followers {
 			array(
 				'post_type'  => self::POST_TYPE,
 				'fields'     => 'ids',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
 					array(
 						'key'     => 'activitypub_inbox',
@@ -420,6 +424,7 @@ class Followers {
 		}
 
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$results = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
@@ -482,6 +487,7 @@ class Followers {
 		$args = array(
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(
 				array(
 					'key'     => 'activitypub_errors',

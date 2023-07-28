@@ -133,7 +133,7 @@ class Scheduler {
 			if ( is_tombstone( $meta ) ) {
 				$follower->delete();
 			} elseif ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-				if ( 5 <= $follower->count_errors() ) {
+				if ( $follower->count_errors() >= 5 ) {
 					$follower->delete();
 				} else {
 					Followers::add_error( $follower->get__id(), $meta );
