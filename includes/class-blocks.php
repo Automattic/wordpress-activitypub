@@ -2,6 +2,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Followers;
+use Activitypub\is_user_type_disabled;
 
 class Blocks {
 	public static function init() {
@@ -15,6 +16,10 @@ class Blocks {
 		$handle = is_admin() ? 'activitypub-followers-editor-script' : 'activitypub-followers-view-script';
 		$data = array(
 			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
+			'enabled' => array(
+				'site' => ! is_user_type_disabled( 'blog' ),
+				'users' => ! is_user_type_disabled( 'user' ),
+			),
 		);
 		$js = sprintf( 'var _activityPubOptions = %s;', wp_json_encode( $data ) );
 		\wp_add_inline_script( $handle, $js, 'before' );
