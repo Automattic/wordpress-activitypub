@@ -1,4 +1,4 @@
-import { SelectControl, RangeControl, PanelBody } from '@wordpress/components';
+import { SelectControl, RangeControl, PanelBody, TextControl } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { useMemo, useState } from '@wordpress/element';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
@@ -41,6 +41,12 @@ export default function Edit( { attributes, setAttributes } ) {
 		<div { ...blockProps }>
 			<InspectorControls key="setting">
 				<PanelBody title={ __( 'Followers Options', 'activitypub' ) }>
+					<TextControl
+						label={ __( 'Title', 'activitypub' ) }
+						help={ __( 'Title to display above the list of followers. Blank for none.', 'activitypub' ) }
+						value={ title }
+						onChange={ value => setAttributes( { title: value } ) }
+					/>
 					<SelectControl
 						label= { __( 'Select User', 'activitypub' ) }
 						value={ selectedUser }
