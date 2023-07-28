@@ -449,7 +449,7 @@ class Followers {
 	 *
 	 * @return mixed The Term list of Followers, the format depends on $output.
 	 */
-	public static function get_outdated_followers( $number = 50, $older_than = 604800 ) {
+	public static function get_outdated_followers( $number = 50, $older_than = 86400 ) {
 		$args = array(
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,

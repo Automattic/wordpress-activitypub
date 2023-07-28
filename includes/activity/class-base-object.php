@@ -601,8 +601,10 @@ class Base_Object {
 	 */
 	public function from_array( $array ) {
 		foreach ( $array as $key => $value ) {
-			$key = camel_to_snake_case( $key );
-			$this->set( $key, $value );
+			if ( $value ) {
+				$key = camel_to_snake_case( $key );
+				$this->set( $key, $value );
+			}
 		}
 	}
 
