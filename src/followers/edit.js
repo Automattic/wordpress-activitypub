@@ -1,27 +1,22 @@
-import { SelectControl, RangeControl, PanelBody } from '@wordpress/components';
+import { SelectControl, RangeControl, PanelBody, TextControl } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { useMemo, useState } from '@wordpress/element';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { Followers } from './followers';
 
-export default function Edit( { attributes, setAttributes } ) {
-	const { order, per_page, selectedUser, className } = attributes;
-	const blockProps = useBlockProps();
-	const [ page, setPage ] = useState( 1 );
-	const orderOptions = [
-		{ label: __( 'New to old', 'activitypub' ), value: 'desc' },
-		{ label: __( 'Old to new', 'activitypub' ), value: 'asc' },
-	];
-	const users = useSelect( ( select ) => select( 'core' ).getUsers( { who: 'authors' } ) );
-	const usersOptions = useMemo( () => {
+const enabled = window._activityPubOptions?.enabled;
+
+function useUserOptions() {
+	const users = enabled?.users ? useSelect( ( select ) => select( 'core' ).getUsers( { who: 'authors' } ) ) : [];
+	return useMemo( () => {
 		if ( ! users ) {
 			return [];
 		}
-		const withBlogUser =[ {
+		const withBlogUser = enabled?.site ? [ {
 			label: __( 'Whole Site', 'activitypub' ),
 			value: 'site'
-		} ];
+		} ] : [];
 		return users.reduce( ( acc, user ) => {
 			acc.push({
 				label: user.name,
@@ -30,6 +25,17 @@ export default function Edit( { attributes, setAttributes } ) {
 			return acc;
 		}, withBlogUser );
 	}, [ users ] );
+}
+
+export default function Edit( { attributes, setAttributes } ) {
+	const { order, per_page, selectedUser, title } = attributes;
+	const blockProps = useBlockProps();
+	const [ page, setPage ] = useState( 1 );
+	const orderOptions = [
+		{ label: __( 'New to old', 'activitypub' ), value: 'desc' },
+		{ label: __( 'Old to new', 'activitypub' ), value: 'asc' },
+	];
+	const usersOptions = useUserOptions();
 	const setAttributestAndResetPage = ( key ) => {
 		return ( value ) => {
 			setPage( 1 );
@@ -41,6 +47,12 @@ export default function Edit( { attributes, setAttributes } ) {
 		<div { ...blockProps }>
 			<InspectorControls key="setting">
 				<PanelBody title={ __( 'Followers Options', 'activitypub' ) }>
+					<TextControl
+						label={ __( 'Title', 'activitypub' ) }
+						help={ __( 'Title to display above the list of followers. Blank for none.', 'activitypub' ) }
+						value={ title }
+						onChange={ value => setAttributes( { title: value } ) }
+					/>
 					<SelectControl
 						label= { __( 'Select User', 'activitypub' ) }
 						value={ selectedUser }
@@ -62,7 +74,7 @@ export default function Edit( { attributes, setAttributes } ) {
 					/>
 				</PanelBody>
 			</InspectorControls>
-			<Followers { ...attributes } page={ page } setPage={ setPage } />
+			<Followers { ...attributes } page={ page } setPage={ setPage } followLinks={ false } />
 		</div>
 	);
 }

@@ -31,7 +31,8 @@ export function Followers( {
 	title,
 	page: passedPage,
 	setPage: passedSetPage,
-	className = ''
+	className = '',
+	followLinks = true
 } ) {
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
 	const [ followers, setFollowers ] = useState( [] );
@@ -71,7 +72,7 @@ export function Followers( {
 				<ul>
 				{ followers && followers.map( ( follower ) => (
 					<li key={ follower.url }>
-						<Follower { ...follower } />
+						<Follower { ...follower } followLinks={ followLinks } />
 					</li>
 				) ) }
 				</ul>
@@ -90,10 +91,14 @@ export function Followers( {
 	);
 }
 
-function Follower( { name, icon, url, preferredUsername } ) {
+function Follower( { name, icon, url, preferredUsername, followLinks = true } ) {
 	const handle = `@${ preferredUsername }`;
+	const extraProps = {};
+	if ( ! followLinks ) {
+		extraProps.onClick = event => event.preventDefault();
+	}
 	return (
-		<ExternalLink className="activitypub-link" href={ url } title={ handle } onClick={ event => event.preventDefault() }>
+		<ExternalLink className="activitypub-link" href={ url } title={ handle } { ...extraProps }>
 			<img width="40" height="40" src={ icon.url } class="avatar activitypub-avatar" />
 			<span class="activitypub-actor">
 				<strong className="activitypub-name">{ name }</strong>
