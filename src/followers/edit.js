@@ -62,7 +62,7 @@ export default function Edit( { attributes, setAttributes } ) {
 					/>
 				</PanelBody>
 			</InspectorControls>
-			<Followers { ...attributes } page={ page } setPage={ setPage } />
+			<Followers { ...attributes } page={ page } setPage={ setPage } followLinks={ false } />
 		</div>
 	);
 }
