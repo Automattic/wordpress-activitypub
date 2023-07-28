@@ -119,6 +119,7 @@ class Follower extends Actor {
 		if ( ! $this->get__id() ) {
 			global $wpdb;
 
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 			$post_id = $wpdb->get_var(
 				$wpdb->prepare(
 					"SELECT ID FROM $wpdb->posts WHERE guid=%s",
