@@ -28,7 +28,7 @@ class Activitypub {
 		\add_action( 'wp_trash_post', array( self::class, 'trash_post' ), 1 );
 		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
 
-		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
+		self::add_rewrite_rules();
 
 		\add_action( 'after_setup_theme', array( self::class, 'theme_compat' ), 99 );
 	}
@@ -216,7 +216,7 @@ class Activitypub {
 			);
 		}
 
-		if ( ! \class_exists( 'Nodeinfo' ) && true === (bool) \get_option( 'blog_public', 1 ) ) {
+		if ( ! \class_exists( 'Nodeinfo_Endpoint' ) && true === (bool) \get_option( 'blog_public', 1 ) ) {
 			\add_rewrite_rule(
 				'^.well-known/nodeinfo',
 				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo/discovery',
