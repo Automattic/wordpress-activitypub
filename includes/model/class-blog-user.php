@@ -23,6 +23,13 @@ class Blog_User extends User {
 	 */
 	protected $type = 'Group';
 
+	/**
+	 * Is Account discoverable?
+	 *
+	 * @var boolean
+	 */
+	protected $discoverable = true;
+
 	public static function from_wp_user( $user_id ) {
 		if ( is_user_disabled( $user_id ) ) {
 			return new WP_Error(
@@ -77,8 +84,8 @@ class Blog_User extends User {
 	 */
 	public static function get_default_username() {
 		// check if domain host has a subdomain
-		$host       = \wp_parse_url( \get_home_url(), \PHP_URL_HOST );
-		$host       = \preg_replace( '/^www\./i', '', $host );
+		$host = \wp_parse_url( \get_home_url(), \PHP_URL_HOST );
+		$host = \preg_replace( '/^www\./i', '', $host );
 
 		/**
 		 * Filter the default blog username.
