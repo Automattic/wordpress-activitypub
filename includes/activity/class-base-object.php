@@ -627,7 +627,7 @@ class Base_Object {
 			}
 
 			// if value is empty, try to get it from a getter.
-			if ( ! isset( $value ) ) {
+			if ( ! $value ) {
 				$value = call_user_func( array( $this, 'get_' . $key ) );
 			}
 
@@ -636,7 +636,7 @@ class Base_Object {
 			}
 
 			// if value is still empty, ignore it for the array and continue.
-			if ( isset( $value ) ) {
+			if ( $value ) {
 				$array[ snake_to_camel_case( $key ) ] = $value;
 			}
 		}

@@ -216,7 +216,7 @@ class Activitypub {
 			);
 		}
 
-		if ( ! \class_exists( 'Nodeinfo' ) && true === (bool) \get_option( 'blog_public', 1 ) ) {
+		if ( ! \class_exists( 'Nodeinfo_Endpoint' ) && true === (bool) \get_option( 'blog_public', 1 ) ) {
 			\add_rewrite_rule(
 				'^.well-known/nodeinfo',
 				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo/discovery',

@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub;
 
+use Activitypub\Activitypub;
 use Activitypub\Model\Blog_User;
 use Activitypub\Collection\Followers;
 
@@ -135,6 +136,8 @@ class Migration {
 				}
 			}
 		}
+
+		Activitypub::flush_rewrite_rules();
 	}
 
 	/**
