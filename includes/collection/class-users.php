@@ -87,6 +87,7 @@ class Users {
 				'number'         => 1,
 				'hide_empty'     => true,
 				'fields'         => 'ID',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
 					'relation' => 'OR',
 					array(
