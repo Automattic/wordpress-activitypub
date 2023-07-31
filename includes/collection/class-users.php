@@ -72,12 +72,7 @@ class Users {
 			return self::get_by_id( self::BLOG_USER_ID );
 		}
 
-		$blog_id = get_option( 'activitypub_blog_user_identifier' );
-
-		if (
-			$blog_id === $username ||
-			preg_replace( '/[.-_+]/', '', $blog_id ) === $username
-		) {
+		if ( get_option( 'activitypub_blog_user_identifier' === $username ) ) {
 			return self::get_by_id( self::BLOG_USER_ID );
 		}
 
