@@ -72,7 +72,12 @@ class Users {
 			return self::get_by_id( self::BLOG_USER_ID );
 		}
 
-		if ( get_option( 'activitypub_blog_user_identifier' ) === $username ) {
+		$blog_id = get_option( 'activitypub_blog_user_identifier' );
+
+		if (
+			$blog_id === $username ||
+			preg_replace( '/[.-_+]/', '', $blog_id ) === $username
+		) {
 			return self::get_by_id( self::BLOG_USER_ID );
 		}
 
@@ -87,6 +92,7 @@ class Users {
 				'number'         => 1,
 				'hide_empty'     => true,
 				'fields'         => 'ID',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
 					'relation' => 'OR',
 					array(
