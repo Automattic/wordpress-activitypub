@@ -72,7 +72,7 @@ class Users {
 			return self::get_by_id( self::BLOG_USER_ID );
 		}
 
-		if ( get_option( 'activitypub_blog_user_identifier' === $username ) ) {
+		if ( get_option( 'activitypub_blog_user_identifier' ) === $username ) {
 			return self::get_by_id( self::BLOG_USER_ID );
 		}
 
