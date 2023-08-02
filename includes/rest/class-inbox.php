@@ -368,6 +368,8 @@ class Inbox {
 
 		// re-add flood control
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+
+		do_action( 'activitypub_handled_reaction', $object, $user_id, $state, $commentdata );
 	}
 
 	/**
@@ -423,6 +425,8 @@ class Inbox {
 
 		// re-add flood control
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+
+		do_action( 'activitypub_handled_create', $object, $user_id, $state, $commentdata );
 	}
 
 	/**
