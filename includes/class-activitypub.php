@@ -31,6 +31,8 @@ class Activitypub {
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
 
 		\add_action( 'after_setup_theme', array( self::class, 'theme_compat' ), 99 );
+
+		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 	}
 
 	/**
@@ -178,9 +180,9 @@ class Activitypub {
 	}
 
 	/**
-	 * Store permalink in meta, to send delete Activity
+	 * Store permalink in meta, to send delete Activity.
 	 *
-	 * @param string $post_id The Post ID
+	 * @param string $post_id The Post ID.
 	 *
 	 * @return void
 	 */
@@ -275,5 +277,31 @@ class Activitypub {
 			);
 			add_theme_support( 'custom-header', $custom_header_args );
 		}
+	}
+
+	/**
+	 * Display plugin upgrade notice to users
+	 *
+	 * @param array $data The plugin data
+	 *
+	 * @return void
+	 */
+	public static function plugin_update_message( $data ) {
+		if ( ! isset( $data['upgrade_notice'] ) ) {
+			return;
+		}
+
+		printf(
+			'<div class="update-message">%s</div>',
+			wp_kses(
+				wpautop( $data['upgrade_notice '] ),
+				array(
+					'p'      => array(),
+					'a'      => array( 'href', 'title' ),
+					'strong' => array(),
+					'em'     => array(),
+				)
+			)
+		);
 	}
 }
