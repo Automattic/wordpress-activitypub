@@ -388,6 +388,12 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 
 * initial
 
+== Upgrade Notice ==
+
+= 1.0.0 =
+
+For version 1.0.0 we have completely rebuilt the followers lists. There is a migration from the old format to the new, but it may take some time until the migration is complete. No data will be lost in the process, please give the migration some time.
+
 == Installation ==
 
 Follow the normal instructions for [installing WordPress plugins](https://wordpress.org/support/article/managing-plugins/).
