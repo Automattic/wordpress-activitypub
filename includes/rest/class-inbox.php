@@ -401,7 +401,7 @@ class Inbox {
 			'comment_author' => \esc_attr( $meta['name'] ),
 			'comment_author_url' => \esc_url_raw( $object['actor'] ),
 			'comment_content' => \wp_filter_kses( $object['object']['content'] ),
-			'comment_type' => '',
+			'comment_type' => 'comment',
 			'comment_author_email' => '',
 			'comment_parent' => 0,
 			'comment_meta' => array(
