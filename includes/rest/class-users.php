@@ -30,7 +30,7 @@ class Users {
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Users', 'get' ),
+					'callback'            => array( self::class, 'remote_follow_get' ),
 					'args'                => array(
 						'resource' => array(
 							'required'          => true,
@@ -50,12 +50,13 @@ class Users {
 	}
 
 	/**
+	 * Endpoint for remote follow UI/Block
 	 *
+	 * @param WP_REST_Request $request The request object.
 	 *
-	 * @param WP_REST_Request $request
-	 * @return void
+	 * @return void|string The URL to the remote follow page
 	 */
-	public static function get( WP_REST_Request $request ) {
+	public static function remote_follow_get( WP_REST_Request $request ) {
 		$resource = $request->get_param( 'resource' );
 		$action   = $request->get_param( 'action' );
 		$user_id  = $request->get_param( 'user_id' );
