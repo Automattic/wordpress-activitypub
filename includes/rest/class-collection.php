@@ -3,6 +3,7 @@ namespace Activitypub\Rest;
 
 use WP_REST_Server;
 use WP_REST_Response;
+use Activitypub\Transformer\Post;
 
 use function Activitypub\get_rest_url_by_path;
 
@@ -104,15 +105,36 @@ class Collection {
 	public static function featured_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 
+		$args = array(
+			'post__in'            => \get_option( 'sticky_posts' ),
+			'ignore_sticky_posts' => 1,
+		);
+
+		if ( $user_id > 0 ) {
+			$args['author'] = $user_id;
+		}
+
+		$posts = \get_posts( $args );
+
 		$response = array(
 			'@context' => 'https://www.w3.org/ns/activitystreams',
 			array(
-				'Hashtah' => 'as:Hastag',
+				'ostatus' => 'http://ostatus.org#',
+				'atomUri' => 'ostatus:atomUri',
+				'inReplyToAtomUri' => 'ostatus:inReplyToAtomUri',
+				'conversation' => 'ostatus:conversation',
+				'sensitive' => 'as:sensitive',
+				'toot' => 'http://joinmastodon.org/ns#',
+				'votersCount' => 'toot:votersCount',
 			),
 			'id'         => get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $user_id ) ),
-			'totalItems' => 0,
+			'totalItems' => count( $posts ),
 			'items'      => array(),
 		);
+
+		foreach ( $posts as $post ) {
+			$response['items'][] = Post::transform( $post )->to_object()->to_array();
+		}
 
 		return new WP_REST_Response( $response, 200 );
 	}
