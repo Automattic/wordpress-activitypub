@@ -419,3 +419,13 @@ if ( ! function_exists( 'get_self_link' ) ) {
 		return esc_url( apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . $path ) ) );
 	}
 }
+
+/**
+ * Returns the comment type for ActivityPub.
+ * Filterable with `activitypub_comment_type`.
+ *
+ * @return string The comment type. Defaults to `activitypub_in_reply_to`.
+ */
+function get_comment_type() {
+	return apply_filters( 'activitypub_comment_type', 'activitypub_in_reply_to' );
+}
