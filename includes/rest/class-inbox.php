@@ -11,7 +11,7 @@ use function Activitypub\get_context;
 use function Activitypub\url_to_authorid;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_remote_metadata_by_actor;
-use function Activitypub\get_comment_type;
+use function Activitypub\get_reply_comment_type;
 
 /**
  * ActivityPub Inbox REST-Class
@@ -404,7 +404,7 @@ class Inbox {
 			'comment_author' => \esc_attr( $meta['name'] ),
 			'comment_author_url' => \esc_url_raw( $object['actor'] ),
 			'comment_content' => \wp_filter_kses( $object['object']['content'] ),
-			'comment_type' => get_comment_type(),
+			'comment_type' => get_reply_comment_type(),
 			'comment_author_email' => '',
 			'comment_parent' => 0,
 			'comment_meta' => array(

@@ -3,6 +3,7 @@ namespace Activitypub;
 
 use Activitypub\Signature;
 use Activitypub\Collection\Users;
+use function Activitypub\get_reply_comment_type;
 
 /**
  * ActivityPub Class
@@ -128,24 +129,11 @@ class Activitypub {
 	public static function pre_get_avatar_data( $args, $id_or_email ) {
 		if (
 			! $id_or_email instanceof \WP_Comment ||
-			! isset( $id_or_email->comment_type ) ||
+			empty( $id_or_email->comment_type ) ||
+			! get_reply_comment_type( $id_or_email->comment_type ) ||
 			$id_or_email->user_id
 		) {
 			return $args;
-		}
-
-		$allowed_comment_types = \apply_filters( 'get_avatar_comment_types', array( 'comment' ) );
-		if (
-			! empty( $id_or_email->comment_type ) &&
-			! \in_array(
-				$id_or_email->comment_type,
-				(array) $allowed_comment_types,
-				true
-			)
-		) {
-			$args['url'] = false;
-			/** This filter is documented in wp-includes/link-template.php */
-			return \apply_filters( 'get_avatar_data', $args, $id_or_email );
 		}
 
 		// Check if comment has an avatar.

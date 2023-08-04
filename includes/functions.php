@@ -422,10 +422,10 @@ if ( ! function_exists( 'get_self_link' ) ) {
 
 /**
  * Returns the comment type for ActivityPub.
- * Filterable with `activitypub_comment_type`.
+ * Filterable with `activitypub_reply_comment_type`.
  *
- * @return string The comment type. Defaults to `activitypub_in_reply_to`.
+ * @return string The comment type. Defaults to `activitypub_reply`.
  */
-function get_comment_type() {
-	return apply_filters( 'activitypub_comment_type', 'activitypub_in_reply_to' );
+function get_reply_comment_type() {
+	return apply_filters( 'activitypub_reply_comment_type', 'activitypub_reply' );
 }
