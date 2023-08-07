@@ -185,4 +185,25 @@ class Users {
 	public static function normalize_host( $host ) {
 		return \str_replace( 'www.', '', $host );
 	}
+
+	/**
+	 * Get the User collection.
+	 *
+	 * @return array The User collection.
+	 */
+	public static function get_collection() {
+		$users = \get_users(
+			array(
+				'capability__in' => array( 'publish_posts' ),
+			)
+		);
+
+		$return = array();
+
+		foreach ( $users as $user ) {
+			$return[] = User::from_wp_user( $user->ID );
+		}
+
+		return $return;
+	}
 }

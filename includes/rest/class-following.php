@@ -18,6 +18,7 @@ class Following {
 	 */
 	public static function init() {
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		\add_filter( 'activitypub_rest_following', array( self::class, 'default_following' ), 10, 2 );
 	}
 
 	/**
@@ -100,5 +101,28 @@ class Following {
 		);
 
 		return $params;
+	}
+
+	/**
+	 * Add the Blog Authors to the following list of the Blog Actor
+	 * if Blog not in single mode.
+	 *
+	 * @param array $array The array of following urls.
+	 * @param User  $user  The user object.
+	 *
+	 * @return array The array of following urls.
+	 */
+	public static function default_following( $array, $user ) {
+		if ( 0 === $user->get__id() && ! is_single_mode() ) {
+			return $array;
+		}
+
+		$users = User_Collection::get_collection();
+
+		foreach ( $users as $user ) {
+			$array[] = $user->get_url();
+		}
+
+		return $array;
 	}
 }
