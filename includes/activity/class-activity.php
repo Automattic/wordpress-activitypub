@@ -68,7 +68,7 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-context
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
 	 *    | null
 	 */
@@ -82,7 +82,7 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-object-term
 	 *
 	 * @var string
-	 *    | Base_Objectr
+	 *    | Base_Object
 	 *    | Link
 	 *    | null
 	 */
@@ -97,7 +97,7 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-actor
 	 *
 	 * @var string
-	 *    | \ActivityPhp\Type\Extended\AbstractActor
+	 *    | Actor
 	 *    | array<Actor>
 	 *    | array<Link>
 	 *    | Link
@@ -116,8 +116,8 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-target
 	 *
 	 * @var string
-	 *    | ObjectType
-	 *    | array<ObjectType>
+	 *    | Base_Object
+	 *    | array<Base_Object>
 	 *    | Link
 	 *    | array<Link>
 	 */
@@ -132,7 +132,7 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-result
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
 	 *    | null
 	 */
@@ -149,7 +149,7 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-origin
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
 	 *    | null
 	 */
@@ -162,7 +162,7 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-instrument
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
 	 *    | null
 	 */
@@ -176,7 +176,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#object-without-create
 	 *
-	 * @param string|Base_Objectr|Link|null $object
+	 * @param string|Base_Object|Link|null $object
 	 *
 	 * @return void
 	 */

@@ -49,9 +49,9 @@ class Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-attachment
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
-	 *    | array<ObjectType>
+	 *    | array<Base_Object>
 	 *    | array<Link>
 	 *    | null
 	 */
@@ -65,9 +65,9 @@ class Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-attributedto
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
-	 *    | array<ObjectType>
+	 *    | array<Base_Object>
 	 *    | array<Link>
 	 *    | null
 	 */
@@ -80,9 +80,9 @@ class Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-audience
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
-	 *    | array<ObjectType>
+	 *    | array<Base_Object>
 	 *    | array<Link>
 	 *    | null
 	 */
@@ -115,7 +115,7 @@ class Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-context
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
 	 *    | null
 	 */
@@ -210,9 +210,9 @@ class Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-inreplyto
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
-	 *    | array<ObjectType>
+	 *    | array<Base_Object>
 	 *    | array<Link>
 	 *    | null
 	 */
@@ -225,9 +225,9 @@ class Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-location
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
-	 *    | array<ObjectType>
+	 *    | array<Base_Object>
 	 *    | array<Link>
 	 *    | null
 	 */
@@ -239,7 +239,7 @@ class Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-preview
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
 	 *    | null
 	 */
@@ -287,7 +287,7 @@ class Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-summary
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
 	 *    | null
 	 */
@@ -313,9 +313,9 @@ class Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-tag
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
-	 *    | array<ObjectType>
+	 *    | array<Base_Object>
 	 *    | array<Link>
 	 *    | null
 	 */
@@ -348,9 +348,9 @@ class Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-to
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
-	 *    | array<ObjectType>
+	 *    | array<Base_Object>
 	 *    | array<Link>
 	 *    | null
 	 */
@@ -363,9 +363,9 @@ class Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-bto
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
-	 *    | array<ObjectType>
+	 *    | array<Base_Object>
 	 *    | array<Link>
 	 *    | null
 	 */
@@ -378,9 +378,9 @@ class Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-cc
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
-	 *    | array<ObjectType>
+	 *    | array<Base_Object>
 	 *    | array<Link>
 	 *    | null
 	 */
@@ -393,9 +393,9 @@ class Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-bcc
 	 *
 	 * @var string
-	 *    | ObjectType
+	 *    | Base_Object
 	 *    | Link
-	 *    | array<ObjectType>
+	 *    | array<Base_Object>
 	 *    | array<Link>
 	 *    | null
 	 */
@@ -433,7 +433,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#source-property
 	 *
-	 * @var ObjectType
+	 * @var Base_Object
 	 */
 	protected $source;
 
