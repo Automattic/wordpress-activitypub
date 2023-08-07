@@ -86,7 +86,7 @@ class Server {
 				return $verified_request;
 			}
 		} elseif ( 'GET' === $request->get_method() ) { // GET-Requests are only signed in secure mode
-			if ( ACTIVITYPUB_SECURE_MODE ) {
+			if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
 				$verified_request = Signature::verify_http_signature( $request );
 				if ( \is_wp_error( $verified_request ) ) {
 					return $verified_request;
