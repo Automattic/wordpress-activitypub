@@ -3,6 +3,7 @@ namespace Activitypub\Rest;
 
 use Activitypub\Collection\Users as User_Collection;
 
+use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -113,7 +114,7 @@ class Following {
 	 * @return array The array of following urls.
 	 */
 	public static function default_following( $array, $user ) {
-		if ( 0 === $user->get__id() && ! is_single_mode() ) {
+		if ( 0 !== $user->get__id() || is_single_user() ) {
 			return $array;
 		}
 

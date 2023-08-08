@@ -74,6 +74,10 @@ class Collection {
 			)
 		);
 
+		if ( is_wp_error( $tags ) ) {
+			$tags = array();
+		}
+
 		$response = array(
 			'@context' => 'https://www.w3.org/ns/activitystreams',
 			array(
@@ -88,7 +92,7 @@ class Collection {
 			$response['items'][] = array(
 				'type' => 'Hashtag',
 				'href' => \get_tag_link( $tag ),
-				'name' => $tag->name,
+				'name' => \esc_html( $tag->name ),
 			);
 		}
 
