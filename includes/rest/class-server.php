@@ -72,9 +72,9 @@ class Server {
 
 		// check if it is an activitypub request and exclude webfinger and nodeinfo endpoints
 		if (
-			! str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ||
-			str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'webfinger' ) ||
-			str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'nodeinfo' )
+			! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ||
+			\str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'webfinger' ) ||
+			\str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'nodeinfo' )
 		) {
 			return $response;
 		}
