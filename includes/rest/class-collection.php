@@ -55,11 +55,11 @@ class Collection {
 	}
 
 	/**
-	 *
+	 * The Featured Tags endpoint
 	 *
 	 * @param WP_REST_Request $request The request object.
 	 *
-	 * @return void
+	 * @return WP_REST_Response The response object.
 	 */
 	public static function tags_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
@@ -96,11 +96,11 @@ class Collection {
 	}
 
 	/**
-	 *
+	 * Featured posts endpoint
 	 *
 	 * @param WP_REST_Request $request The request object.
 	 *
-	 * @return void
+	 * @return WP_REST_Response The response object.
 	 */
 	public static function featured_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
