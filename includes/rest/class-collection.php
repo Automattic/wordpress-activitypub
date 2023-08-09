@@ -5,6 +5,7 @@ use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Transformer\Post;
 
+use function Activitypub\esc_hashtag;
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -63,7 +64,7 @@ class Collection {
 	 */
 	public static function tags_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$number  = 5;
+		$number  = 4;
 
 		$tags = \get_terms(
 			array(
@@ -91,8 +92,8 @@ class Collection {
 		foreach ( $tags as $tag ) {
 			$response['items'][] = array(
 				'type' => 'Hashtag',
-				'href' => \get_tag_link( $tag ),
-				'name' => \esc_html( $tag->name ),
+				'href' => \esc_url( \get_tag_link( $tag ) ),
+				'name' => esc_hashtag( $tag->name ),
 			);
 		}
 

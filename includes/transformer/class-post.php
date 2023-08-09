@@ -6,6 +6,7 @@ use Activitypub\Collection\Users;
 use Activitypub\Model\Blog_User;
 use Activitypub\Activity\Base_Object;
 
+use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
 
@@ -379,8 +380,8 @@ class Post {
 			foreach ( $post_tags as $post_tag ) {
 				$tag = array(
 					'type' => 'Hashtag',
-					'href' => esc_url( \get_tag_link( $post_tag->term_id ) ),
-					'name' => '#' . \esc_attr( $post_tag->slug ),
+					'href' => \esc_url( \get_tag_link( $post_tag->term_id ) ),
+					'name' => esc_hashtag( $post_tag->name ),
 				);
 				$tags[] = $tag;
 			}
