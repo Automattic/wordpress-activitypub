@@ -3,6 +3,7 @@ namespace Activitypub\Rest;
 
 use Activitypub\Collection\Users as User_Collection;
 
+use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -18,6 +19,7 @@ class Following {
 	 */
 	public static function init() {
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		\add_filter( 'activitypub_rest_following', array( self::class, 'default_following' ), 10, 2 );
 	}
 
 	/**
@@ -68,8 +70,11 @@ class Following {
 		$json->type = 'OrderedCollectionPage';
 
 		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/following', $user->get__id() ) ); // phpcs:ignore
-		$json->totalItems = 0; // phpcs:ignore
-		$json->orderedItems = apply_filters( 'activitypub_following', array(), $user ); // phpcs:ignore
+
+		$items = apply_filters( 'activitypub_rest_following', array(), $user ); // phpcs:ignore
+
+		$json->totalItems = count( $items ); // phpcs:ignore
+		$json->orderedItems = $items; // phpcs:ignore
 
 		$json->first = $json->partOf; // phpcs:ignore
 
@@ -97,5 +102,28 @@ class Following {
 		);
 
 		return $params;
+	}
+
+	/**
+	 * Add the Blog Authors to the following list of the Blog Actor
+	 * if Blog not in single mode.
+	 *
+	 * @param array $array The array of following urls.
+	 * @param User  $user  The user object.
+	 *
+	 * @return array The array of following urls.
+	 */
+	public static function default_following( $array, $user ) {
+		if ( 0 !== $user->get__id() || is_single_user() ) {
+			return $array;
+		}
+
+		$users = User_Collection::get_collection();
+
+		foreach ( $users as $user ) {
+			$array[] = $user->get_url();
+		}
+
+		return $array;
 	}
 }
