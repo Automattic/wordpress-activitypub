@@ -83,7 +83,7 @@ class Collection {
 			'@context' => array(
 				'https://www.w3.org/ns/activitystreams',
 				array(
-					'Hastag' => 'as:Hastag',
+					'Hashtag' => 'as:Hashtag',
 				),
 			),
 			'id'         => get_rest_url_by_path( sprintf( 'users/%d/collections/tags', $user_id ) ),
