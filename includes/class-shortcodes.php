@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub;
 
+use function Activitypub\esc_hashtag;
+
 class Shortcodes {
 	/**
 	 * Class constructor, registering WordPress then Shortcodes
@@ -44,9 +46,9 @@ class Shortcodes {
 
 		foreach ( $tags as $tag ) {
 			$hash_tags[] = \sprintf(
-				'<a rel="tag" class="u-tag u-category" href="%s">#%s</a>',
+				'<a rel="tag" class="u-tag u-category" href="%s">%s</a>',
 				\esc_url( \get_tag_link( $tag ) ),
-				\wp_strip_all_tags( $tag->slug )
+				esc_hashtag( $tag->name )
 			);
 		}
 
@@ -357,9 +359,9 @@ class Shortcodes {
 
 		foreach ( $categories as $category ) {
 			$hash_tags[] = \sprintf(
-				'<a rel="tag" class="u-tag u-category" href="%s">#%s</a>',
+				'<a rel="tag" class="u-tag u-category" href="%s">%s</a>',
 				\esc_url( \get_category_link( $category ) ),
-				\wp_strip_all_tags( $category->slug )
+				esc_hashtag( $category->name )
 			);
 		}
 

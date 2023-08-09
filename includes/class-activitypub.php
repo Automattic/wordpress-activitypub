@@ -97,7 +97,7 @@ class Activitypub {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
-		if ( ACTIVITYPUB_SECURE_MODE ) {
+		if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
 				// fallback as template_loader can't return http headers

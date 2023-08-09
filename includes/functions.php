@@ -233,6 +233,43 @@ function snake_to_camel_case( $string ) {
 }
 
 /**
+ * Escapes a Tag, to be used as a hashtag.
+ *
+ * @param string $string The string to escape.
+ *
+ * @return string The escaped hastag.
+ */
+function esc_hashtag( $string ) {
+
+	$hashtag = \wp_specialchars_decode( $string, ENT_QUOTES );
+	// Remove all characters that are not letters, numbers, or underscores.
+	$hashtag = \preg_replace( '/emoji-regex(*SKIP)(?!)|[^\p{L}\p{Nd}_]+/u', '_', $hashtag );
+
+	// Capitalize every letter that is preceded by an underscore.
+	$hashtag = preg_replace_callback(
+		'/_(.)/',
+		function ( $matches ) {
+			return '' . strtoupper( $matches[1] );
+		},
+		$hashtag
+	);
+
+	// Add a hashtag to the beginning of the string.
+	$hashtag = ltrim( $hashtag, '#' );
+	$hashtag = '#' . $hashtag;
+
+	/**
+	 * Allow defining your own custom hashtag generation rules.
+	 *
+	 * @param string $hashtag The hashtag to be returned.
+	 * @param string $string  The original string.
+	 */
+	$hashtag = apply_filters( 'activitypub_esc_hashtag', $hashtag, $string );
+
+	return esc_html( $hashtag );
+}
+
+/**
  * Check if a request is for an ActivityPub request.
  *
  * @return bool False by default.

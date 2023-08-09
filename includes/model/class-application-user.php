@@ -98,4 +98,12 @@ class Application_User extends Blog_User {
 	public function get_attachment() {
 		return array();
 	}
+
+	public function get_featured_tags() {
+		return array();
+	}
+
+	public function get_featured() {
+		return array();
+	}
 }

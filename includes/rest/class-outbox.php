@@ -116,7 +116,7 @@ class Outbox {
 		}
 
 		// filter output
-		$json = \apply_filters( 'activitypub_outbox_array', $json );
+		$json = \apply_filters( 'activitypub_rest_outbox_array', $json );
 
 		/*
 		 * Action triggerd after the ActivityPub profile has been created and sent to the client

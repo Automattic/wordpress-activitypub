@@ -102,7 +102,7 @@ class Inbox {
 		$json->first = $json->partOf; // phpcs:ignore
 
 		// filter output
-		$json = \apply_filters( 'activitypub_inbox_array', $json );
+		$json = \apply_filters( 'activitypub_rest_inbox_array', $json );
 
 		/*
 		 * Action triggerd after the ActivityPub profile has been created and sent to the client
