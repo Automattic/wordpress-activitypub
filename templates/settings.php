@@ -188,13 +188,14 @@
 									</span>
 								</label>
 							</p>
+							<p><strong><?php \esc_html_e( 'Please note that the following "Activity-Object-Type" options may cause your texts to be displayed differently on each platform and/or parts may be completely ignored. Mastodon, for example, displays all content that is not of the "Note" type as links only.', 'activitypub' ); ?></strong></p>
 							<p>
 								<label for="activitypub_object_type_article">
 									<input type="radio" name="activitypub_object_type" id="activitypub_object_type_article" value="article" <?php echo \checked( 'article', \get_option( 'activitypub_object_type', 'note' ) ); ?> />
 									<?php \esc_html_e( 'Article', 'activitypub' ); ?>
 									-
 									<span class="description">
-										<?php \esc_html_e( 'The presentation of the "Article" might change on different platforms. Mastodon for example shows the "Article" type as a simple link.', 'activitypub' ); ?>
+										<?php \esc_html_e( 'The presentation of the "Article" might change on different platforms.', 'activitypub' ); ?>
 									</span>
 								</label>
 							</p>
