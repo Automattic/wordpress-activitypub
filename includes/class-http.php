@@ -52,7 +52,7 @@ class Http {
 		$response = \wp_safe_remote_post( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );
 
-		if ( $code <= 400 ) {
+		if ( $code >= 400 ) {
 			$response = new WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ) );
 		}
 
@@ -100,7 +100,7 @@ class Http {
 		$response = \wp_safe_remote_get( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );
 
-		if ( $code <= 400 ) {
+		if ( $code >= 400 ) {
 			$response = new WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ) );
 		}
 
