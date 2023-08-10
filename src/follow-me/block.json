@@ -1,0 +1,23 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"name": "activitypub/follow-me",
+	"apiVersion": 3,
+	"version": "1.0.0",
+	"title": "Follow me on the Fediverse",
+	"category": "widgets",
+	"description": "Display your Fediverse identifier so that visitors can follow you.",
+	"textdomain": "activitypub",
+	"icon": "groups",
+	"supports": {
+		"html": false
+	},
+	"attributes": {
+		"selectedUser": {
+			"type": "string",
+			"default": "site"
+		}
+	},
+	"editorScript": "file:./index.js",
+	"viewScript": "file:./view.js",
+	"style": "file:./style-index.css"
+}

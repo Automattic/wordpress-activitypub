@@ -32,6 +32,12 @@ class Blocks {
 				'render_callback' => array( self::class, 'render_follower_block' ),
 			)
 		);
+		\register_block_type_from_metadata(
+			ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me',
+			array(
+				'render_callback' => array( self::class, 'render_follow_me_block' ),
+			)
+		);
 	}
 
 	private static function get_user_id( $user_string ) {
@@ -40,6 +46,10 @@ class Blocks {
 		}
 		// any other non-numeric falls back to 0, including the `site` string used in the UI
 		return 0;
+	}
+
+	public static function render_follow_me_block( $attrs, $content, $block ) {
+		return '<div class="lol">lol!!!!</div>';
 	}
 
 	public static function render_follower_block( $attrs, $content, $block ) {

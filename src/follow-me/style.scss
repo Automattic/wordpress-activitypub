@@ -1,0 +1,23 @@
+.editor-styles-wrapper {
+	.activitypub-profile {
+		display: flex;
+		align-items: self-start;
+		border: 1px solid;
+		border-radius: 4px;
+		padding: 1rem;
+
+		.activitypub-profile__avatar {
+			height: 75px;
+			width: 75px;
+			margin-right: 1rem;
+		}
+		.activitypub-profile__name {
+			margin: 0;
+			line-height: 1;
+		}
+		.activitypub-profile__follow {
+			margin-left: auto;
+			align-self: center;
+		}
+	}
+}

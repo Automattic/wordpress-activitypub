@@ -21,7 +21,7 @@ class Blog_User extends User {
 	 *
 	 * @var string
 	 */
-	protected $type = 'Group';
+	protected $type = 'Foooob/';
 
 	/**
 	 * Is Account discoverable?
