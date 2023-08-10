@@ -1,3 +1,654 @@
-(()=>{var e,t={189:(e,t,a)=>{"use strict";const r=window.wp.element;function n(){return n=Object.assign?Object.assign.bind():function(e){for(var t=1;t<arguments.length;t++){var a=arguments[t];for(var r in a)Object.prototype.hasOwnProperty.call(a,r)&&(e[r]=a[r])}return e},n.apply(this,arguments)}const l=window.React,o=window.wp.apiFetch;var i=a.n(o);const c=window.wp.url,s=window.wp.i18n;var p=a(184),u=a.n(p);function m(e){let{active:t,children:a,page:n,pageClick:l,className:o}=e;const i=u()("wp-block activitypub-pager",o,{current:t});return(0,r.createElement)("a",{className:i,onClick:e=>{e.preventDefault(),!t&&l(n)}},a)}const v={outlined:"outlined",minimal:"minimal"};function b(e){let{compact:t,nextLabel:a,page:n,pageClick:l,perPage:o,prevLabel:i,total:c,variant:s=v.outlined}=e;const p=((e,t)=>{let a=[1,e-2,e-1,e,e+1,e+2,t];a.sort(((e,t)=>e-t)),a=a.filter(((e,a,r)=>e>=1&&e<=t&&r.lastIndexOf(e)===a));for(let e=a.length-2;e>=0;e--)a[e]===a[e+1]&&a.splice(e+1,1);return a})(n,Math.ceil(c/o)),b=u()("alignwide wp-block-query-pagination is-content-justification-space-between is-layout-flex wp-block-query-pagination-is-layout-flex",`is-${s}`,{"is-compact":t});return(0,r.createElement)("nav",{className:b},i&&(0,r.createElement)(m,{key:"prev",page:n-1,pageClick:l,active:1===n,"aria-label":i,className:"wp-block-query-pagination-previous block-editor-block-list__block"},i),!t&&(0,r.createElement)("div",{className:"block-editor-block-list__block wp-block wp-block-query-pagination-numbers"},p.map((e=>(0,r.createElement)(m,{key:e,page:e,pageClick:l,active:e===n,className:"page-numbers"},e)))),a&&(0,r.createElement)(m,{key:"next",page:n+1,pageClick:l,active:n===Math.ceil(c/o),"aria-label":a,className:"wp-block-query-pagination-next block-editor-block-list__block"},a))}const f=window.wp.components,{namespace:d}=window._activityPubOptions;function w(e){let{selectedUser:t,per_page:a,order:o,title:p,page:u,setPage:m,className:v="",followLinks:f=!0}=e;const w="site"===t?0:t,[y,k]=(0,l.useState)([]),[h,E]=(0,l.useState)(0),[O,x]=(0,l.useState)(0),[_,N]=function(){const[e,t]=(0,l.useState)(1);return[e,t]}(),j=u||_,S=m||N,C=(0,r.createInterpolateElement)(/* translators: arrow for previous followers link */
-(0,s.__)("<span>←</span> Less","activitypub"),{span:(0,r.createElement)("span",{class:"wp-block-query-pagination-previous-arrow is-arrow-arrow","aria-hidden":"true"})}),L=(0,r.createInterpolateElement)(/* translators: arrow for next followers link */
-(0,s.__)("More <span>→</span>","activitypub"),{span:(0,r.createElement)("span",{class:"wp-block-query-pagination-next-arrow is-arrow-arrow","aria-hidden":"true"})});return(0,l.useEffect)((()=>{const e=function(e,t,a,r){const n=`/${d}/users/${e}/followers`,l={per_page:t,order:a,page:r,context:"full"};return(0,c.addQueryArgs)(n,l)}(w,a,o,j);i()({path:e}).then((e=>{E(Math.ceil(e.totalItems/a)),x(e.totalItems),k(e.orderedItems)})).catch((e=>console.error(e)))}),[w,a,o,j]),(0,r.createElement)("div",{className:"activitypub-follower-block "+v},(0,r.createElement)("h3",null,p),(0,r.createElement)("ul",null,y&&y.map((e=>(0,r.createElement)("li",{key:e.url},(0,r.createElement)(g,n({},e,{followLinks:f})))))),h>1&&(0,r.createElement)(b,{page:j,perPage:a,total:O,pageClick:S,nextLabel:L,prevLabel:C,compact:"is-style-compact"===v}))}function g(e){let{name:t,icon:a,url:l,preferredUsername:o,followLinks:i=!0}=e;const c=`@${o}`,s={};return i||(s.onClick=e=>e.preventDefault()),(0,r.createElement)(f.ExternalLink,n({className:"activitypub-link",href:l,title:c},s),(0,r.createElement)("img",{width:"40",height:"40",src:a.url,class:"avatar activitypub-avatar"}),(0,r.createElement)("span",{class:"activitypub-actor"},(0,r.createElement)("strong",{className:"activitypub-name"},t),(0,r.createElement)("span",{class:"sep"},"/"),(0,r.createElement)("span",{class:"activitypub-handle"},c)))}const y=window.wp.domReady;a.n(y)()((()=>{[].forEach.call(document.querySelectorAll(".activitypub-follower-block"),(e=>{const t=JSON.parse(e.dataset.attrs);(0,r.render)((0,r.createElement)(w,t),e)}))}))},184:(e,t)=>{var a;!function(){"use strict";var r={}.hasOwnProperty;function n(){for(var e=[],t=0;t<arguments.length;t++){var a=arguments[t];if(a){var l=typeof a;if("string"===l||"number"===l)e.push(a);else if(Array.isArray(a)){if(a.length){var o=n.apply(null,a);o&&e.push(o)}}else if("object"===l){if(a.toString!==Object.prototype.toString&&!a.toString.toString().includes("[native code]")){e.push(a.toString());continue}for(var i in a)r.call(a,i)&&a[i]&&e.push(i)}}}return e.join(" ")}e.exports?(n.default=n,e.exports=n):void 0===(a=function(){return n}.apply(t,[]))||(e.exports=a)}()}},a={};function r(e){var n=a[e];if(void 0!==n)return n.exports;var l=a[e]={exports:{}};return t[e](l,l.exports,r),l.exports}r.m=t,e=[],r.O=(t,a,n,l)=>{if(!a){var o=1/0;for(p=0;p<e.length;p++){for(var[a,n,l]=e[p],i=!0,c=0;c<a.length;c++)(!1&l||o>=l)&&Object.keys(r.O).every((e=>r.O[e](a[c])))?a.splice(c--,1):(i=!1,l<o&&(o=l));if(i){e.splice(p--,1);var s=n();void 0!==s&&(t=s)}}return t}l=l||0;for(var p=e.length;p>0&&e[p-1][2]>l;p--)e[p]=e[p-1];e[p]=[a,n,l]},r.n=e=>{var t=e&&e.__esModule?()=>e.default:()=>e;return r.d(t,{a:t}),t},r.d=(e,t)=>{for(var a in t)r.o(t,a)&&!r.o(e,a)&&Object.defineProperty(e,a,{enumerable:!0,get:t[a]})},r.o=(e,t)=>Object.prototype.hasOwnProperty.call(e,t),(()=>{var e={638:0,962:0};r.O.j=t=>0===e[t];var t=(t,a)=>{var n,l,[o,i,c]=a,s=0;if(o.some((t=>0!==e[t]))){for(n in i)r.o(i,n)&&(r.m[n]=i[n]);if(c)var p=c(r)}for(t&&t(a);s<o.length;s++)l=o[s],r.o(e,l)&&e[l]&&e[l][0](),e[l]=0;return r.O(p)},a=globalThis.webpackChunkwordpress_activitypub=globalThis.webpackChunkwordpress_activitypub||[];a.forEach(t.bind(null,0)),a.push=t.bind(null,a.push.bind(a))})();var n=r.O(void 0,[962],(()=>r(189)));n=r.O(n)})();
+/******/ (() => { // webpackBootstrap
+/******/ 	var __webpack_modules__ = ({
+
+/***/ "./src/followers/followers.js":
+/*!************************************!*\
+  !*** ./src/followers/followers.js ***!
+  \************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Followers: () => (/* binding */ Followers)
+/* harmony export */ });
+/* harmony import */ var _babel_runtime_helpers_extends__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/helpers/extends */ "./node_modules/@babel/runtime/helpers/esm/extends.js");
+/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @wordpress/element */ "@wordpress/element");
+/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_wordpress_element__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! react */ "react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @wordpress/api-fetch */ "@wordpress/api-fetch");
+/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _wordpress_url__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @wordpress/url */ "@wordpress/url");
+/* harmony import */ var _wordpress_url__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_wordpress_url__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _wordpress_i18n__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @wordpress/i18n */ "@wordpress/i18n");
+/* harmony import */ var _wordpress_i18n__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _pagination__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./pagination */ "./src/followers/pagination.js");
+/* harmony import */ var _wordpress_components__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @wordpress/components */ "@wordpress/components");
+/* harmony import */ var _wordpress_components__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(_wordpress_components__WEBPACK_IMPORTED_MODULE_7__);
+
+
+
+
+
+
+
+
+
+const {
+  namespace
+} = window._activityPubOptions;
+function getPath(userId, per_page, order, page) {
+  const path = `/${namespace}/users/${userId}/followers`;
+  const args = {
+    per_page,
+    order,
+    page,
+    context: 'full'
+  };
+  return (0,_wordpress_url__WEBPACK_IMPORTED_MODULE_4__.addQueryArgs)(path, args);
+}
+function usePage() {
+  const [page, setPage] = (0,react__WEBPACK_IMPORTED_MODULE_2__.useState)(1);
+  return [page, setPage];
+}
+function Followers(_ref) {
+  let {
+    selectedUser,
+    per_page,
+    order,
+    title,
+    page: passedPage,
+    setPage: passedSetPage,
+    className = '',
+    followLinks = true
+  } = _ref;
+  const userId = selectedUser === 'site' ? 0 : selectedUser;
+  const [followers, setFollowers] = (0,react__WEBPACK_IMPORTED_MODULE_2__.useState)([]);
+  const [pages, setPages] = (0,react__WEBPACK_IMPORTED_MODULE_2__.useState)(0);
+  const [total, setTotal] = (0,react__WEBPACK_IMPORTED_MODULE_2__.useState)(0);
+  const [localPage, setLocalPage] = usePage();
+  const page = passedPage || localPage;
+  const setPage = passedSetPage || setLocalPage;
+  const prevLabel = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createInterpolateElement)( /* translators: arrow for previous followers link */
+  (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_5__.__)('<span>←</span> Less', 'activitypub'), {
+    span: (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createElement)("span", {
+      class: "wp-block-query-pagination-previous-arrow is-arrow-arrow",
+      "aria-hidden": "true"
+    })
+  });
+  const nextLabel = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createInterpolateElement)( /* translators: arrow for next followers link */
+  (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_5__.__)('More <span>→</span>', 'activitypub'), {
+    span: (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createElement)("span", {
+      class: "wp-block-query-pagination-next-arrow is-arrow-arrow",
+      "aria-hidden": "true"
+    })
+  });
+  (0,react__WEBPACK_IMPORTED_MODULE_2__.useEffect)(() => {
+    const path = getPath(userId, per_page, order, page);
+    _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_3___default()({
+      path
+    }).then(data => {
+      setPages(Math.ceil(data.totalItems / per_page));
+      setTotal(data.totalItems);
+      setFollowers(data.orderedItems);
+    }).catch(error => console.error(error));
+  }, [userId, per_page, order, page]);
+  return (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createElement)("div", {
+    className: "activitypub-follower-block " + className
+  }, (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createElement)("h3", null, title), (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createElement)("ul", null, followers && followers.map(follower => (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createElement)("li", {
+    key: follower.url
+  }, (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createElement)(Follower, (0,_babel_runtime_helpers_extends__WEBPACK_IMPORTED_MODULE_0__["default"])({}, follower, {
+    followLinks: followLinks
+  }))))), pages > 1 && (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createElement)(_pagination__WEBPACK_IMPORTED_MODULE_6__.Pagination, {
+    page: page,
+    perPage: per_page,
+    total: total,
+    pageClick: setPage,
+    nextLabel: nextLabel,
+    prevLabel: prevLabel,
+    compact: className === 'is-style-compact'
+  }));
+}
+function Follower(_ref2) {
+  let {
+    name,
+    icon,
+    url,
+    preferredUsername,
+    followLinks = true
+  } = _ref2;
+  const handle = `@${preferredUsername}`;
+  const extraProps = {};
+  if (!followLinks) {
+    extraProps.onClick = event => event.preventDefault();
+  }
+  return (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_7__.ExternalLink, (0,_babel_runtime_helpers_extends__WEBPACK_IMPORTED_MODULE_0__["default"])({
+    className: "activitypub-link",
+    href: url,
+    title: handle
+  }, extraProps), (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createElement)("img", {
+    width: "40",
+    height: "40",
+    src: icon.url,
+    class: "avatar activitypub-avatar"
+  }), (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createElement)("span", {
+    class: "activitypub-actor"
+  }, (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createElement)("strong", {
+    className: "activitypub-name"
+  }, name), (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createElement)("span", {
+    class: "sep"
+  }, "/"), (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.createElement)("span", {
+    class: "activitypub-handle"
+  }, handle)));
+}
+
+/***/ }),
+
+/***/ "./src/followers/pagination-page.js":
+/*!******************************************!*\
+  !*** ./src/followers/pagination-page.js ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   PaginationPage: () => (/* binding */ PaginationPage)
+/* harmony export */ });
+/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @wordpress/element */ "@wordpress/element");
+/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var classnames__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! classnames */ "./node_modules/classnames/index.js");
+/* harmony import */ var classnames__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(classnames__WEBPACK_IMPORTED_MODULE_1__);
+
+
+function PaginationPage(_ref) {
+  let {
+    active,
+    children,
+    page,
+    pageClick,
+    className
+  } = _ref;
+  const handleClick = event => {
+    event.preventDefault();
+    !active && pageClick(page);
+  };
+  const classes = classnames__WEBPACK_IMPORTED_MODULE_1___default()('wp-block activitypub-pager', className, {
+    'current': active
+  });
+  return (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_0__.createElement)("a", {
+    className: classes,
+    onClick: handleClick
+  }, children);
+}
+
+/***/ }),
+
+/***/ "./src/followers/pagination.js":
+/*!*************************************!*\
+  !*** ./src/followers/pagination.js ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Pagination: () => (/* binding */ Pagination)
+/* harmony export */ });
+/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @wordpress/element */ "@wordpress/element");
+/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var classnames__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! classnames */ "./node_modules/classnames/index.js");
+/* harmony import */ var classnames__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(classnames__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _pagination_page__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./pagination-page */ "./src/followers/pagination-page.js");
+
+// Adapted from: https://github.com/Automattic/wp-calypso/tree/trunk/client/components/pagination
+// Markup adapted to imitate the core query-pagination component so we can inherit those styles.
+
+
+const PaginationVariant = {
+  outlined: 'outlined',
+  minimal: 'minimal'
+};
+function Pagination(_ref) {
+  let {
+    compact,
+    nextLabel,
+    page,
+    pageClick,
+    perPage,
+    prevLabel,
+    total,
+    variant = PaginationVariant.outlined
+  } = _ref;
+  const getPageList = (page, pageCount) => {
+    let pageList = [1, page - 2, page - 1, page, page + 1, page + 2, pageCount];
+    pageList.sort((a, b) => a - b);
+
+    // Remove pages less than 1, or greater than total number of pages, and remove duplicates
+    pageList = pageList.filter((pageNumber, index, originalPageList) => {
+      return pageNumber >= 1 && pageNumber <= pageCount && originalPageList.lastIndexOf(pageNumber) === index;
+    });
+    for (let i = pageList.length - 2; i >= 0; i--) {
+      if (pageList[i] === pageList[i + 1]) {
+        pageList.splice(i + 1, 1);
+      }
+    }
+    return pageList;
+  };
+  const pageList = getPageList(page, Math.ceil(total / perPage));
+  const className = classnames__WEBPACK_IMPORTED_MODULE_1___default()('alignwide wp-block-query-pagination is-content-justification-space-between is-layout-flex wp-block-query-pagination-is-layout-flex', `is-${variant}`, {
+    'is-compact': compact
+  });
+  return (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_0__.createElement)("nav", {
+    className: className
+  }, prevLabel && (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_0__.createElement)(_pagination_page__WEBPACK_IMPORTED_MODULE_2__.PaginationPage, {
+    key: "prev",
+    page: page - 1,
+    pageClick: pageClick,
+    active: page === 1,
+    "aria-label": prevLabel,
+    className: "wp-block-query-pagination-previous block-editor-block-list__block"
+  }, prevLabel), !compact && (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "block-editor-block-list__block wp-block wp-block-query-pagination-numbers"
+  }, pageList.map(pageNumber => (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_0__.createElement)(_pagination_page__WEBPACK_IMPORTED_MODULE_2__.PaginationPage, {
+    key: pageNumber,
+    page: pageNumber,
+    pageClick: pageClick,
+    active: pageNumber === page,
+    className: "page-numbers"
+  }, pageNumber))), nextLabel && (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_0__.createElement)(_pagination_page__WEBPACK_IMPORTED_MODULE_2__.PaginationPage, {
+    key: "next",
+    page: page + 1,
+    pageClick: pageClick,
+    active: page === Math.ceil(total / perPage),
+    "aria-label": nextLabel,
+    className: "wp-block-query-pagination-next block-editor-block-list__block"
+  }, nextLabel));
+}
+
+/***/ }),
+
+/***/ "./src/followers/view.js":
+/*!*******************************!*\
+  !*** ./src/followers/view.js ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @wordpress/element */ "@wordpress/element");
+/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_wordpress_element__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _style_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./style.scss */ "./src/followers/style.scss");
+/* harmony import */ var _followers__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./followers */ "./src/followers/followers.js");
+/* harmony import */ var _wordpress_dom_ready__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @wordpress/dom-ready */ "@wordpress/dom-ready");
+/* harmony import */ var _wordpress_dom_ready__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_wordpress_dom_ready__WEBPACK_IMPORTED_MODULE_3__);
+
+
+
+
+
+_wordpress_dom_ready__WEBPACK_IMPORTED_MODULE_3___default()(() => {
+  // iterate over a nodelist
+  [].forEach.call(document.querySelectorAll('.activitypub-follower-block'), element => {
+    const attrs = JSON.parse(element.dataset.attrs);
+    (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_0__.render)((0,_wordpress_element__WEBPACK_IMPORTED_MODULE_0__.createElement)(_followers__WEBPACK_IMPORTED_MODULE_2__.Followers, attrs), element);
+  });
+});
+
+/***/ }),
+
+/***/ "./node_modules/classnames/index.js":
+/*!******************************************!*\
+  !*** ./node_modules/classnames/index.js ***!
+  \******************************************/
+/***/ ((module, exports) => {
+
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
+	Copyright (c) 2018 Jed Watson.
+	Licensed under the MIT License (MIT), see
+	http://jedwatson.github.io/classnames
+*/
+/* global define */
+
+(function () {
+	'use strict';
+
+	var hasOwn = {}.hasOwnProperty;
+	var nativeCodeString = '[native code]';
+
+	function classNames() {
+		var classes = [];
+
+		for (var i = 0; i < arguments.length; i++) {
+			var arg = arguments[i];
+			if (!arg) continue;
+
+			var argType = typeof arg;
+
+			if (argType === 'string' || argType === 'number') {
+				classes.push(arg);
+			} else if (Array.isArray(arg)) {
+				if (arg.length) {
+					var inner = classNames.apply(null, arg);
+					if (inner) {
+						classes.push(inner);
+					}
+				}
+			} else if (argType === 'object') {
+				if (arg.toString !== Object.prototype.toString && !arg.toString.toString().includes('[native code]')) {
+					classes.push(arg.toString());
+					continue;
+				}
+
+				for (var key in arg) {
+					if (hasOwn.call(arg, key) && arg[key]) {
+						classes.push(key);
+					}
+				}
+			}
+		}
+
+		return classes.join(' ');
+	}
+
+	if ( true && module.exports) {
+		classNames.default = classNames;
+		module.exports = classNames;
+	} else if (true) {
+		// register as 'classnames', consistent with npm package name
+		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_RESULT__ = (function () {
+			return classNames;
+		}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	} else {}
+}());
+
+
+/***/ }),
+
+/***/ "./src/followers/style.scss":
+/*!**********************************!*\
+  !*** ./src/followers/style.scss ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+// extracted by mini-css-extract-plugin
+
+
+/***/ }),
+
+/***/ "react":
+/*!************************!*\
+  !*** external "React" ***!
+  \************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = window["React"];
+
+/***/ }),
+
+/***/ "@wordpress/api-fetch":
+/*!**********************************!*\
+  !*** external ["wp","apiFetch"] ***!
+  \**********************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = window["wp"]["apiFetch"];
+
+/***/ }),
+
+/***/ "@wordpress/components":
+/*!************************************!*\
+  !*** external ["wp","components"] ***!
+  \************************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = window["wp"]["components"];
+
+/***/ }),
+
+/***/ "@wordpress/dom-ready":
+/*!**********************************!*\
+  !*** external ["wp","domReady"] ***!
+  \**********************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = window["wp"]["domReady"];
+
+/***/ }),
+
+/***/ "@wordpress/element":
+/*!*********************************!*\
+  !*** external ["wp","element"] ***!
+  \*********************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = window["wp"]["element"];
+
+/***/ }),
+
+/***/ "@wordpress/i18n":
+/*!******************************!*\
+  !*** external ["wp","i18n"] ***!
+  \******************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = window["wp"]["i18n"];
+
+/***/ }),
+
+/***/ "@wordpress/url":
+/*!*****************************!*\
+  !*** external ["wp","url"] ***!
+  \*****************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = window["wp"]["url"];
+
+/***/ }),
+
+/***/ "./node_modules/@babel/runtime/helpers/esm/extends.js":
+/*!************************************************************!*\
+  !*** ./node_modules/@babel/runtime/helpers/esm/extends.js ***!
+  \************************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ _extends)
+/* harmony export */ });
+function _extends() {
+  _extends = Object.assign ? Object.assign.bind() : function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i];
+      for (var key in source) {
+        if (Object.prototype.hasOwnProperty.call(source, key)) {
+          target[key] = source[key];
+        }
+      }
+    }
+    return target;
+  };
+  return _extends.apply(this, arguments);
+}
+
+/***/ })
+
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/******/ 	// expose the modules object (__webpack_modules__)
+/******/ 	__webpack_require__.m = __webpack_modules__;
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/chunk loaded */
+/******/ 	(() => {
+/******/ 		var deferred = [];
+/******/ 		__webpack_require__.O = (result, chunkIds, fn, priority) => {
+/******/ 			if(chunkIds) {
+/******/ 				priority = priority || 0;
+/******/ 				for(var i = deferred.length; i > 0 && deferred[i - 1][2] > priority; i--) deferred[i] = deferred[i - 1];
+/******/ 				deferred[i] = [chunkIds, fn, priority];
+/******/ 				return;
+/******/ 			}
+/******/ 			var notFulfilled = Infinity;
+/******/ 			for (var i = 0; i < deferred.length; i++) {
+/******/ 				var [chunkIds, fn, priority] = deferred[i];
+/******/ 				var fulfilled = true;
+/******/ 				for (var j = 0; j < chunkIds.length; j++) {
+/******/ 					if ((priority & 1 === 0 || notFulfilled >= priority) && Object.keys(__webpack_require__.O).every((key) => (__webpack_require__.O[key](chunkIds[j])))) {
+/******/ 						chunkIds.splice(j--, 1);
+/******/ 					} else {
+/******/ 						fulfilled = false;
+/******/ 						if(priority < notFulfilled) notFulfilled = priority;
+/******/ 					}
+/******/ 				}
+/******/ 				if(fulfilled) {
+/******/ 					deferred.splice(i--, 1)
+/******/ 					var r = fn();
+/******/ 					if (r !== undefined) result = r;
+/******/ 				}
+/******/ 			}
+/******/ 			return result;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/compat get default export */
+/******/ 	(() => {
+/******/ 		// getDefaultExport function for compatibility with non-harmony modules
+/******/ 		__webpack_require__.n = (module) => {
+/******/ 			var getter = module && module.__esModule ?
+/******/ 				() => (module['default']) :
+/******/ 				() => (module);
+/******/ 			__webpack_require__.d(getter, { a: getter });
+/******/ 			return getter;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/jsonp chunk loading */
+/******/ 	(() => {
+/******/ 		// no baseURI
+/******/ 		
+/******/ 		// object to store loaded and loading chunks
+/******/ 		// undefined = chunk not loaded, null = chunk preloaded/prefetched
+/******/ 		// [resolve, reject, Promise] = chunk loading, 0 = chunk loaded
+/******/ 		var installedChunks = {
+/******/ 			"followers/view": 0,
+/******/ 			"followers/style-view": 0
+/******/ 		};
+/******/ 		
+/******/ 		// no chunk on demand loading
+/******/ 		
+/******/ 		// no prefetching
+/******/ 		
+/******/ 		// no preloaded
+/******/ 		
+/******/ 		// no HMR
+/******/ 		
+/******/ 		// no HMR manifest
+/******/ 		
+/******/ 		__webpack_require__.O.j = (chunkId) => (installedChunks[chunkId] === 0);
+/******/ 		
+/******/ 		// install a JSONP callback for chunk loading
+/******/ 		var webpackJsonpCallback = (parentChunkLoadingFunction, data) => {
+/******/ 			var [chunkIds, moreModules, runtime] = data;
+/******/ 			// add "moreModules" to the modules object,
+/******/ 			// then flag all "chunkIds" as loaded and fire callback
+/******/ 			var moduleId, chunkId, i = 0;
+/******/ 			if(chunkIds.some((id) => (installedChunks[id] !== 0))) {
+/******/ 				for(moduleId in moreModules) {
+/******/ 					if(__webpack_require__.o(moreModules, moduleId)) {
+/******/ 						__webpack_require__.m[moduleId] = moreModules[moduleId];
+/******/ 					}
+/******/ 				}
+/******/ 				if(runtime) var result = runtime(__webpack_require__);
+/******/ 			}
+/******/ 			if(parentChunkLoadingFunction) parentChunkLoadingFunction(data);
+/******/ 			for(;i < chunkIds.length; i++) {
+/******/ 				chunkId = chunkIds[i];
+/******/ 				if(__webpack_require__.o(installedChunks, chunkId) && installedChunks[chunkId]) {
+/******/ 					installedChunks[chunkId][0]();
+/******/ 				}
+/******/ 				installedChunks[chunkId] = 0;
+/******/ 			}
+/******/ 			return __webpack_require__.O(result);
+/******/ 		}
+/******/ 		
+/******/ 		var chunkLoadingGlobal = globalThis["webpackChunkwordpress_activitypub"] = globalThis["webpackChunkwordpress_activitypub"] || [];
+/******/ 		chunkLoadingGlobal.forEach(webpackJsonpCallback.bind(null, 0));
+/******/ 		chunkLoadingGlobal.push = webpackJsonpCallback.bind(null, chunkLoadingGlobal.push.bind(chunkLoadingGlobal));
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module depends on other loaded chunks and execution need to be delayed
+/******/ 	var __webpack_exports__ = __webpack_require__.O(undefined, ["followers/style-view"], () => (__webpack_require__("./src/followers/view.js")))
+/******/ 	__webpack_exports__ = __webpack_require__.O(__webpack_exports__);
+/******/ 	
+/******/ })()
+;
+//# sourceMappingURL=view.js.map

@@ -34,7 +34,7 @@ function getNormalizedProfile( profile ) {
 	}
 	profile.handle = generateHandle( profile );
 	const data = { ...DEFAULT_PROFILE_DATA, ...profile };
-	data.avatar = data.icon.url;
+	data.avatar = data?.icon?.url;
 	return data;
 }
 
@@ -46,6 +46,27 @@ function generateHandle( profile ) {
 		return `${ first}@${ host }`;
 	} catch ( e ) {
 		return '@error@error';
+	}
+}
+
+function styleToVar( text ) {
+	// if it starts with a hash, leave it be
+	if ( text.match( /^#/ ) ) {
+		return text;
+	}
+	// var:preset|color|luminous-vivid-amber
+	// var(--wp--preset--color--luminous-vivid-amber)
+	// we will receive the top format, we need to output the bottom format
+	const [ , , color ] = text.split( '|' );
+	return `var(--wp--preset--color--${ color })`;
+}
+
+function styleToButtonStyle( style ) {
+	if ( ! style ) {
+		return {};
+	}
+	return {
+		backgroundColor: styleToVar( style.color.text )
 	}
 }
 
@@ -62,6 +83,8 @@ export default function Edit( { attributes, setAttributes } ) {
 
 	const blockProps = useBlockProps();
 	const usersOptions = useUserOptions();
+	const style = styleToButtonStyle( attributes?.style?.elements?.link );
+
 	return (
 		<div { ...blockProps }>
 			<InspectorControls key="setting">
@@ -74,13 +97,13 @@ export default function Edit( { attributes, setAttributes } ) {
 					/>
 				</PanelBody>
 			</InspectorControls>
-			<Profile { ...profile } />
+			<Profile { ...profile } style={ style } />
 		</div>
 	);
 }
 
 function Profile( profile ) {
-	const { handle, avatar, name } = profile;
+	const { handle, avatar, name, style } = profile;
 	return (
 		<div className="activitypub-profile">
 			<img className="activitypub-profile__avatar" src={ avatar } />
@@ -88,16 +111,16 @@ function Profile( profile ) {
 				<div className="activitpub-profile__name">{ name }</div>
 				<div className="activitypub-profile__handle">{ handle }</div>
 			</div>
-			<Follow profile={ profile } />
+			<Follow profile={ profile } style={ style } />
 		</div>
 	);
 }
 
-function Follow( { profile } ) {
+function Follow( { profile, style } ) {
 	const [ isOpen, setIsOpen ] = useState( false );
 	return (
 		<>
-			<Button className="activitypub-profile__follow" isPrimary onClick={ () => setIsOpen( true ) } >
+			<Button style={ style } className="activitypub-profile__follow" onClick={ () => setIsOpen( true ) } >
 				{ __( 'Follow', 'fediverse' ) }
 			</Button>
 			<ConfirmDialog

@@ -9,7 +9,22 @@
 	"textdomain": "activitypub",
 	"icon": "groups",
 	"supports": {
-		"html": false
+		"html": false,
+		"color": {
+			"gradients": true,
+			"link": true,
+			"__experimentalDefaultControls": {
+				"background": true,
+				"text": true,
+				"link": true
+			}
+		},
+		"__experimentalBorder": {
+			"radius": true,
+			"width": true,
+			"color": true,
+			"style": true
+		}
 	},
 	"attributes": {
 		"selectedUser": {
