@@ -47,7 +47,8 @@ class Users {
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
-					'callback'            => array( self::class, 'remote_follow' ),
+					'callback'            => array( self::class, 'remote_follow_get' ),
+
 					'args'                => array(
 						'resource' => array(
 							'required'          => true,
@@ -104,7 +105,14 @@ class Users {
 		return $response;
 	}
 
-	public static function remote_follow( WP_REST_Request $request ) {
+	/**
+	 * Endpoint for remote follow UI/Block
+	 *
+	 * @param WP_REST_Request $request The request object.
+	 *
+	 * @return void|string The URL to the remote follow page
+	 */
+	public static function remote_follow_get( WP_REST_Request $request ) {
 		$resource = $request->get_param( 'resource' );
 		$action   = $request->get_param( 'action' );
 		$user_id  = $request->get_param( 'user_id' );
