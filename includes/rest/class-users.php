@@ -3,7 +3,9 @@ namespace Activitypub\Rest;
 
 use WP_Error;
 use WP_REST_Server;
+use WP_REST_Request;
 use WP_REST_Response;
+use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
 
@@ -36,6 +38,25 @@ class Users {
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'get' ),
 					'args'                => self::request_parameters(),
+					'permission_callback' => '__return_true',
+				),
+			)
+		);
+
+		\register_rest_route(
+			ACTIVITYPUB_REST_NAMESPACE,
+			'/users/(?P<user_id>[\w\-\.]+)/remote-follow',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( self::class, 'remote_follow_get' ),
+
+					'args'                => array(
+						'resource' => array(
+							'required'          => true,
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+					),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -78,6 +99,33 @@ class Users {
 		$response->header( 'Content-Type', 'application/activity+json' );
 
 		return $response;
+	}
+
+
+	/**
+	 * Endpoint for remote follow UI/Block
+	 *
+	 * @param WP_REST_Request $request The request object.
+	 *
+	 * @return void|string The URL to the remote follow page
+	 */
+	public static function remote_follow_get( WP_REST_Request $request ) {
+		$resource = $request->get_param( 'resource' );
+		$user_id  = $request->get_param( 'user_id' );
+
+		$template = Webfinger::get_remote_follow_endpoint( $resource );
+
+		if ( is_wp_error( $template ) ) {
+			return $template;
+		}
+
+		$resource = Webfinger::get_user_resource( $user_id );
+		$url      = str_replace( '{uri}', $resource, $template );
+
+		return new WP_REST_Response(
+			array( 'url' => $url ),
+			200
+		);
 	}
 
 	/**
