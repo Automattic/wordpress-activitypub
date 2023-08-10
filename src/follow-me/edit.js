@@ -1,6 +1,11 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
-import { SelectControl, PanelBody, Button } from '@wordpress/components';
+import {
+	SelectControl,
+	PanelBody,
+	Button,
+	__experimentalConfirmDialog as ConfirmDialog
+} from '@wordpress/components';
 import { useUserOptions } from '../shared/use-user-options';
 import apiFetch from '@wordpress/api-fetch';
 import { useEffect, useState } from '@wordpress/element';
@@ -89,10 +94,22 @@ function Profile( profile ) {
 }
 
 function Follow( { profile } ) {
+	const [ isOpen, setIsOpen ] = useState( false );
 	return (
-		<Button className="activitypub-profile__follow" isPrimary onClick={ () => console.log( profile ) } >
-			{ __( 'Follow', 'fediverse' ) }
-		</Button>
+		<>
+			<Button className="activitypub-profile__follow" isPrimary onClick={ () => setIsOpen( true ) } >
+				{ __( 'Follow', 'fediverse' ) }
+			</Button>
+			<ConfirmDialog
+				className="activitypub-profile__confirm"
+				isOpen={ isOpen }
+				onConfirm={ () => setIsOpen( false ) }
+				onCancel={ () => setIsOpen( false ) }
+			>
+				Todo: put the follow layout in here.
+
+			</ConfirmDialog>
+		</>
 	);
 }
 
