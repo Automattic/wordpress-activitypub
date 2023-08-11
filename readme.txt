@@ -75,11 +75,10 @@ Implemented:
 * follow (accept follows)
 * share posts
 * receive comments/reactions
+* signature verification
 
 To implement:
 
-* signature verification
-* better WordPress integration
 * better configuration possibilities
 * threaded comments support
 
@@ -120,6 +119,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Add: Signature Verification: https://docs.joinmastodon.org/spec/security/ .
 * Add: a Followers Block.
 * Add: Simple caching
+* Add: Collection endpoints for Featured Tags and Featured Posts
 * Update: Complete rewrite of the Follower-System based on Custom Post Types.
 * Update: Improved linter (PHPCS)
 * Compatibility: Add a new conditional, `\Activitypub\is_activitypub_request()`, to allow third-party plugins to detect ActivityPub requests.
@@ -127,6 +127,8 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Compatibility: Indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.3.
 * Compatibility: Avoid PHP notice on sites using PHP 8.2.
 * Fixed: Load the plugin later in the WordPress code lifecycle to avoid errors in some requests.
+* Fixed: Updating posts
+* Fixed: Hashtag now support CamelCase and UTF-8
 
 = 0.17.0 =
 

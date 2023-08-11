@@ -265,11 +265,18 @@ class Followers {
 			return;
 		}
 
-		if ( isset( $object['user_id'] ) ) {
-			unset( $object['user_id'] );
-		}
-
-		unset( $object['@context'] );
+		// only send minimal data
+		$object = array_intersect_key(
+			$object,
+			array_flip(
+				array(
+					'id',
+					'type',
+					'actor',
+					'object',
+				)
+			)
+		);
 
 		$user = Users::get_by_id( $user_id );
 
@@ -282,7 +289,7 @@ class Followers {
 		$activity->set_object( $object );
 		$activity->set_actor( $user->get_id() );
 		$activity->set_to( $actor );
-		$activity->set_id( $user->get_id() . '#follow-' . \preg_replace( '~^https?://~', '', $actor ) );
+		$activity->set_id( $user->get_id() . '#follow-' . \preg_replace( '~^https?://~', '', $actor ) . '-' . \time() );
 
 		$activity = $activity->to_json();
 
