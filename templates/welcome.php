@@ -30,13 +30,13 @@
 			<label for="activitypub-blog-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
 		</p>
 		<p>
-			<input type="text" class="regular-text" id="activitypub-blog-identifier" value="<?php echo \esc_attr( $blog_user->get_resource() ); ?>" />
+			<input type="text" class="regular-text" id="activitypub-blog-identifier" value="<?php echo \esc_attr( $blog_user->get_resource() ); ?>" readonly />
 		</p>
 		<p>
 			<label for="activitypub-blog-url"><?php \esc_html_e( 'Profile-URL', 'activitypub' ); ?></label>
 		</p>
 		<p>
-			<input type="text" class="regular-text" id="activitypub-blog-url" value="<?php echo \esc_attr( $blog_user->get_url() ); ?>" />
+			<input type="text" class="regular-text" id="activitypub-blog-url" value="<?php echo \esc_attr( $blog_user->get_url() ); ?>" readonly />
 		</p>
 		<p>
 			<?php \esc_html_e( 'This Blog-User will federate all posts written on your Blog, regardless of the User who posted it.', 'activitypub' ); ?>
@@ -62,13 +62,13 @@
 			<label for="activitypub-user-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
 		</p>
 		<p>
-			<input type="text" class="regular-text" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_resource() ); ?>" />
+			<input type="text" class="regular-text" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_resource() ); ?>" readonly />
 		</p>
 		<p>
 			<label for="activitypub-user-url"><?php \esc_html_e( 'Profile-URL', 'activitypub' ); ?></label>
 		</p>
 		<p>
-			<input type="text" class="regular-text" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" />
+			<input type="text" class="regular-text" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly />
 		</p>
 		<p>
 			<?php \esc_html_e( 'Users who can not access this settings page will find their username on the "Edit Profile" page.', 'activitypub' ); ?>
