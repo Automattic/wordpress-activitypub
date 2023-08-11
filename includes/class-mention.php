@@ -59,8 +59,7 @@ class Mention {
 		);
 
 		$the_content = \preg_replace_callback( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', array( self::class, 'replace_with_links' ), $the_content );
-
-		$the_content = str_replace( array_reverse( array_keys( $protected_tags ) ), array_reverse( array_values( $protected_tags ) ), $the_content );
+		$the_content = \str_replace( array_reverse( array_keys( $protected_tags ) ), array_reverse( array_values( $protected_tags ) ), $the_content );
 
 		return $the_content;
 	}
@@ -74,6 +73,7 @@ class Mention {
 	 */
 	public static function replace_with_links( $result ) {
 		$metadata = get_remote_metadata_by_actor( $result[0] );
+
 		if ( ! is_wp_error( $metadata ) && ! empty( $metadata['url'] ) ) {
 			$username = ltrim( $result[0], '@' );
 			if ( ! empty( $metadata['name'] ) ) {
