@@ -150,7 +150,7 @@ class Webfinger {
 	public static function get_data( $identifier, $host ) {
 		$webfinger_url = 'https://' . $host . '/.well-known/webfinger?resource=' . rawurlencode( $identifier );
 
-		$response = wp_remote_get(
+		$response = wp_safe_remote_get(
 			$webfinger_url,
 			array(
 				'headers' => array( 'Accept' => 'application/jrd+json' ),

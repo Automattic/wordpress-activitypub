@@ -112,6 +112,11 @@ class Users {
 	public static function remote_follow_get( WP_REST_Request $request ) {
 		$resource = $request->get_param( 'resource' );
 		$user_id  = $request->get_param( 'user_id' );
+		$user     = User_Collection::get_by_various( $user_id );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
 
 		$template = Webfinger::get_remote_follow_endpoint( $resource );
 
@@ -119,7 +124,7 @@ class Users {
 			return $template;
 		}
 
-		$resource = Webfinger::get_user_resource( $user_id );
+		$resource = $user->get_resource();
 		$url      = str_replace( '{uri}', $resource, $template );
 
 		return new WP_REST_Response(
