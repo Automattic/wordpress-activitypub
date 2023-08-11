@@ -7,6 +7,7 @@ import {
 	__experimentalConfirmDialog as ConfirmDialog
 } from '@wordpress/components';
 import { useUserOptions } from '../shared/use-user-options';
+import { ButtonStyle, BODY_CLASS, getPopupStyles } from './button-style';
 import apiFetch from '@wordpress/api-fetch';
 import { useEffect, useState } from '@wordpress/element';
 const { namespace } = window._activityPubOptions;
@@ -40,33 +41,11 @@ function getNormalizedProfile( profile ) {
 
 function generateHandle( profile ) {
 	try {
-		const urlObject = new URL( profile.url );
-		const { host, pathname } = urlObject;
-		const first = pathname.replace( /^\//, '' );
-		return `${ first}@${ host }`;
+		const { host, pathname } = new URL( profile.url )
+		const first = profile.preferredUsername ?? pathname.replace( /^\//, '' );
+		return `${ first }@${ host }`;
 	} catch ( e ) {
 		return '@error@error';
-	}
-}
-
-function styleToVar( text ) {
-	// if it starts with a hash, leave it be
-	if ( text.match( /^#/ ) ) {
-		return text;
-	}
-	// var:preset|color|luminous-vivid-amber
-	// var(--wp--preset--color--luminous-vivid-amber)
-	// we will receive the top format, we need to output the bottom format
-	const [ , , color ] = text.split( '|' );
-	return `var(--wp--preset--color--${ color })`;
-}
-
-function styleToButtonStyle( style ) {
-	if ( ! style ) {
-		return {};
-	}
-	return {
-		backgroundColor: styleToVar( style.color.text )
 	}
 }
 
@@ -83,7 +62,7 @@ export default function Edit( { attributes, setAttributes } ) {
 
 	const blockProps = useBlockProps();
 	const usersOptions = useUserOptions();
-	const style = styleToButtonStyle( attributes?.style?.elements?.link );
+	const popupStyles = getPopupStyles( attributes.style );
 
 	return (
 		<div { ...blockProps }>
@@ -97,40 +76,47 @@ export default function Edit( { attributes, setAttributes } ) {
 					/>
 				</PanelBody>
 			</InspectorControls>
-			<Profile { ...profile } style={ style } />
+			<ButtonStyle id={ blockProps.id } style={ attributes.style } backgroundColor={ attributes.backgroundColor } />
+			<Profile profile={ profile } popupStyles={ popupStyles } />
 		</div>
 	);
 }
 
-function Profile( profile ) {
-	const { handle, avatar, name, style } = profile;
+function Profile( { profile, popupStyles } ) {
+	const { handle, avatar, name } = profile;
 	return (
 		<div className="activitypub-profile">
 			<img className="activitypub-profile__avatar" src={ avatar } />
 			<div className="activitypub-profile__content">
-				<div className="activitpub-profile__name">{ name }</div>
+				<div className="activitypub-profile__name">{ name }</div>
 				<div className="activitypub-profile__handle">{ handle }</div>
 			</div>
-			<Follow profile={ profile } style={ style } />
+			<Follow profile={ profile } popupStyles={ popupStyles } />
 		</div>
 	);
 }
 
-function Follow( { profile, style } ) {
+function Follow( { profile, popupStyles } ) {
 	const [ isOpen, setIsOpen ] = useState( false );
+	// a function that adds/removes the activitypub-follow-modal-active class to the body
+	function setModalIsOpen( value ) {
+		const method = value ? 'add' : 'remove';
+		document.body.classList[ method ]( BODY_CLASS );
+		setIsOpen( value );
+	}
 	return (
 		<>
-			<Button style={ style } className="activitypub-profile__follow" onClick={ () => setIsOpen( true ) } >
+			<Button className="activitypub-profile__follow" onClick={ () => setModalIsOpen( true ) } >
 				{ __( 'Follow', 'fediverse' ) }
 			</Button>
 			<ConfirmDialog
 				className="activitypub-profile__confirm"
 				isOpen={ isOpen }
-				onConfirm={ () => setIsOpen( false ) }
-				onCancel={ () => setIsOpen( false ) }
+				onConfirm={ () => setModalIsOpen( false ) }
+				onCancel={ () => setModalIsOpen( false ) }
 			>
-				Todo: put the follow layout in here.
-
+				<p>Howdy let's put some dialogs here</p>
+				<style>{ popupStyles }</style>
 			</ConfirmDialog>
 		</>
 	);
