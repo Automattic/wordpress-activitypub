@@ -305,8 +305,9 @@ function is_activitypub_request() {
 		 * and return true when the header includes at least one of the following:
 		 * - application/activity+json
 		 * - application/ld+json
+		 * - application/json
 		 */
-		if ( preg_match( '/(application\/(ld\+json|activity\+json))/', $accept ) ) {
+		if ( preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
 			return true;
 		}
 	}
