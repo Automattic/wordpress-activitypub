@@ -4,6 +4,7 @@ namespace Activitypub\Rest;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Transformer\Post;
+use Activitypub\Activity\Activity;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\get_rest_url_by_path;
@@ -80,13 +81,9 @@ class Collection {
 		}
 
 		$response = array(
-			'@context' => array(
-				'https://www.w3.org/ns/activitystreams',
-				array(
-					'Hashtag' => 'as:Hashtag',
-				),
-			),
+			'@context'   => Activity::CONTEXT,
 			'id'         => get_rest_url_by_path( sprintf( 'users/%d/collections/tags', $user_id ) ),
+			'type'       => 'Collection',
 			'totalItems' => count( $tags ),
 			'items'      => array(),
 		);
@@ -124,23 +121,15 @@ class Collection {
 		$posts = \get_posts( $args );
 
 		$response = array(
-			'@context' => 'https://www.w3.org/ns/activitystreams',
-			array(
-				'ostatus' => 'http://ostatus.org#',
-				'atomUri' => 'ostatus:atomUri',
-				'inReplyToAtomUri' => 'ostatus:inReplyToAtomUri',
-				'conversation' => 'ostatus:conversation',
-				'sensitive' => 'as:sensitive',
-				'toot' => 'http://joinmastodon.org/ns#',
-				'votersCount' => 'toot:votersCount',
-			),
-			'id'         => get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $user_id ) ),
-			'totalItems' => count( $posts ),
-			'items'      => array(),
+			'@context'     => Activity::CONTEXT,
+			'id'           => get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $user_id ) ),
+			'type'         => 'OrderedCollection',
+			'totalItems'   => count( $posts ),
+			'orderedItems' => array(),
 		);
 
 		foreach ( $posts as $post ) {
-			$response['items'][] = Post::transform( $post )->to_object()->to_array();
+			$response['orderedItems'][] = Post::transform( $post )->to_object()->to_array();
 		}
 
 		return new WP_REST_Response( $response, 200 );
