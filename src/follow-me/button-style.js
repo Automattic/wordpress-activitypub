@@ -14,7 +14,8 @@ function getBackgroundColor( color ) {
 function getLinkColor( text ) {
 	// if it starts with a hash, leave it be
 	if ( typeof text === 'string' && text.match( /^#/ ) ) {
-		return text;
+		// we don't handle the alpha channel if present.
+		return text.substring( 0, 7 );
 	}
 	// var:preset|color|luminous-vivid-amber
 	// var(--wp--preset--color--luminous-vivid-amber)
