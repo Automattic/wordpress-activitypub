@@ -108,7 +108,6 @@ function Dialog( { profile, userId } ) {
 				setButtonText( followText );
 			}, 200 );
 		} ).catch( ( e ) => {
-			console.error( e );
 			setButtonText( errorText );
 			setTimeout( () => setButtonText( followText ), 2000 );
 		} );
