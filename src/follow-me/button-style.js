@@ -33,8 +33,8 @@ function generateSelector( selector, prop, value = null, pseudo = '' ) {
 
 export const BODY_CLASS = 'activitypub-follow-modal-active';
 
-function getBlockStyles( id, style, backgroundColor ) {
-	const selector = `#${ id } .components-button`;
+function getBlockStyles( base, style, backgroundColor ) {
+	const selector = `${ base } .components-button`;
 	// we grab the background color if set as a good color for our button text
 	const buttonTextColor = getBackgroundColor( backgroundColor )
 		// bg might be in this form.
@@ -63,8 +63,8 @@ export function getPopupStyles( style ) {
 	+ generateSelector( secondary, 'color', buttonColor )
 }
 
-export function ButtonStyle( { id, style, backgroundColor } ) {
-	const css = getBlockStyles( id, style, backgroundColor );
+export function ButtonStyle( { selector, style, backgroundColor } ) {
+	const css = getBlockStyles( selector, style, backgroundColor );
 	return (
 		<style>{ css }</style>
 	);
