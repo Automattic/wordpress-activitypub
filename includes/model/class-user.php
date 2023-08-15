@@ -98,8 +98,22 @@ class User extends Actor {
 		return \esc_url( \get_author_posts_url( $this->_id ) );
 	}
 
+	/**
+	 * Returns the User-URL with @-Prefix for the username.
+	 *
+	 * @return string The User-URL with @-Prefix for the username.
+	 */
 	public function get_at_url() {
 		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_username() );
+	}
+
+	/**
+	 * Returns a user@domain type of identifier for the user.
+	 *
+	 * @return string The Webfinger-Identifier.
+	 */
+	public function get_webfinger_identifier() {
+		return sprintf( '%s@%s', $this->get_preferred_username(), wp_parse_url( home_url(), PHP_URL_HOST ) );
 	}
 
 	public function get_preferred_username() {
