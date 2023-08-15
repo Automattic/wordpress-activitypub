@@ -107,7 +107,7 @@ function Dialog( { profile, userId } ) {
 				window.open( url, '_blank' );
 				setButtonText( followText );
 			}, 200 );
-		} ).catch( ( e ) => {
+		} ).catch( () => {
 			setButtonText( errorText );
 			setTimeout( () => setButtonText( followText ), 2000 );
 		} );
