@@ -11,29 +11,18 @@ const { namespace } = window._activityPubOptions;
 
 const DEFAULT_PROFILE_DATA = {
 	avatar: '',
-	handle: '@well@hello.dolly',
+	resource: '@well@hello.dolly',
 	name: __( 'Hello Dolly Fan Account', 'activitypub' ),
 	url: '#',
 };
 
 function getNormalizedProfile( profile ) {
-if ( ! profile ) {
-	return DEFAULT_PROFILE_DATA;
-}
-profile.handle = generateHandle( profile );
-const data = { ...DEFAULT_PROFILE_DATA, ...profile };
-data.avatar = data?.icon?.url;
-return data;
-}
-
-function generateHandle( profile ) {
-	try {
-		const { host, pathname } = new URL( profile.url )
-		const first = profile.preferredUsername ?? pathname.replace( /^\//, '' );
-		return `${ first }@${ host }`;
-	} catch ( e ) {
-		return '@error@error';
+	if ( ! profile ) {
+		return DEFAULT_PROFILE_DATA;
 	}
+	const data = { ...DEFAULT_PROFILE_DATA, ...profile };
+	data.avatar = data?.icon?.url;
+	return data;
 }
 
 function fetchProfile( userId ) {
@@ -45,13 +34,13 @@ function fetchProfile( userId ) {
 }
 
 function Profile( { profile, popupStyles, userId } ) {
-	const { handle, avatar, name } = profile;
+	const { avatar, name, resource } = profile;
 	return (
 		<div className="activitypub-profile">
 			<img className="activitypub-profile__avatar" src={ avatar } />
 			<div className="activitypub-profile__content">
 				<div className="activitypub-profile__name">{ name }</div>
-				<div className="activitypub-profile__handle">{ handle }</div>
+				<div className="activitypub-profile__handle">{ resource }</div>
 			</div>
 			<Follow profile={ profile } popupStyles={ popupStyles } userId={ userId } />
 		</div>
