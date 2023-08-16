@@ -4,8 +4,11 @@ namespace Activitypub\Rest;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Transformer\Post;
+use Activitypub\Activity\Activity;
+use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\esc_hashtag;
+use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -64,7 +67,13 @@ class Collection {
 	 */
 	public static function tags_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$number  = 4;
+		$user    = User_Collection::get_by_various( $user_id );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		$number = 4;
 
 		$tags = \get_terms(
 			array(
@@ -80,13 +89,9 @@ class Collection {
 		}
 
 		$response = array(
-			'@context' => array(
-				'https://www.w3.org/ns/activitystreams',
-				array(
-					'Hashtag' => 'as:Hashtag',
-				),
-			),
-			'id'         => get_rest_url_by_path( sprintf( 'users/%d/collections/tags', $user_id ) ),
+			'@context'   => Activity::CONTEXT,
+			'id'         => get_rest_url_by_path( sprintf( 'users/%d/collections/tags', $user->get__id() ) ),
+			'type'       => 'Collection',
 			'totalItems' => count( $tags ),
 			'items'      => array(),
 		);
@@ -111,36 +116,43 @@ class Collection {
 	 */
 	public static function featured_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
+		$user    = User_Collection::get_by_various( $user_id );
 
-		$args = array(
-			'post__in'            => \get_option( 'sticky_posts' ),
-			'ignore_sticky_posts' => 1,
-		);
-
-		if ( $user_id > 0 ) {
-			$args['author'] = $user_id;
+		if ( is_wp_error( $user ) ) {
+			return $user;
 		}
 
-		$posts = \get_posts( $args );
+		$sticky_posts = \get_option( 'sticky_posts' );
+
+		if ( ! is_single_user() && User_Collection::BLOG_USER_ID === $user->get__id() ) {
+			$posts = array();
+		} elseif ( $sticky_posts ) {
+			$args = array(
+				'post__in'            => $sticky_posts,
+				'ignore_sticky_posts' => 1,
+				'orderby'             => 'date',
+				'order'               => 'DESC',
+			);
+
+			if ( $user->get__id() > 0 ) {
+				$args['author'] = $user->get__id();
+			}
+
+			$posts = \get_posts( $args );
+		} else {
+			$posts = array();
+		}
 
 		$response = array(
-			'@context' => 'https://www.w3.org/ns/activitystreams',
-			array(
-				'ostatus' => 'http://ostatus.org#',
-				'atomUri' => 'ostatus:atomUri',
-				'inReplyToAtomUri' => 'ostatus:inReplyToAtomUri',
-				'conversation' => 'ostatus:conversation',
-				'sensitive' => 'as:sensitive',
-				'toot' => 'http://joinmastodon.org/ns#',
-				'votersCount' => 'toot:votersCount',
-			),
-			'id'         => get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $user_id ) ),
-			'totalItems' => count( $posts ),
-			'items'      => array(),
+			'@context'     => Activity::CONTEXT,
+			'id'           => get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $user_id ) ),
+			'type'         => 'OrderedCollection',
+			'totalItems'   => count( $posts ),
+			'orderedItems' => array(),
 		);
 
 		foreach ( $posts as $post ) {
-			$response['items'][] = Post::transform( $post )->to_object()->to_array();
+			$response['orderedItems'][] = Post::transform( $post )->to_object()->to_array();
 		}
 
 		return new WP_REST_Response( $response, 200 );

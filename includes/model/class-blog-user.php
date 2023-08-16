@@ -78,6 +78,15 @@ class Blog_User extends User {
 	}
 
 	/**
+	 * Returns the User-URL with @-Prefix for the username.
+	 *
+	 * @return string The User-URL with @-Prefix for the username.
+	 */
+	public function get_at_url() {
+		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() );
+	}
+
+	/**
 	 * Generate a default Username.
 	 *
 	 * @return string The auto-generated Username.
