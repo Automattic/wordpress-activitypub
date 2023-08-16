@@ -107,15 +107,6 @@ class User extends Actor {
 		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_username() );
 	}
 
-	/**
-	 * Returns a user@domain type of identifier for the user.
-	 *
-	 * @return string The Webfinger-Identifier.
-	 */
-	public function get_webfinger_identifier() {
-		return sprintf( '%s@%s', $this->get_preferred_username(), wp_parse_url( home_url(), PHP_URL_HOST ) );
-	}
-
 	public function get_preferred_username() {
 		return \esc_attr( \get_the_author_meta( 'login', $this->_id ) );
 	}
@@ -298,6 +289,11 @@ class User extends Actor {
 		return $array;
 	}
 
+	/**
+	 * Returns a user@domain type of identifier for the user.
+	 *
+	 * @return string The Webfinger-Identifier.
+	 */
 	public function get_resource() {
 		return $this->get_preferred_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
 	}
