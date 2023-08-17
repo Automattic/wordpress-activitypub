@@ -125,16 +125,21 @@ class Blog_User extends User {
 	 * @return array|null The User-Icon.
 	 */
 	public function get_icon() {
-		$image = wp_get_attachment_image_src( get_theme_mod( 'custom_logo' ) );
-
-		if ( $image ) {
-			return array(
-				'type' => 'Image',
-				'url'  => esc_url( $image[0] ),
-			);
+		// try site icon first
+		$icon_id = get_option( 'site_icon' );
+		// try custom logo second
+		if ( ! $icon_id ) {
+			$icon_id = get_theme_mod( 'custom_logo' );
+		}
+		if ( ! $icon_id ) {
+			return null;
 		}
 
-		return null;
+		$image = wp_get_attachment_image_src( $icon_id, 'full' );
+		return array(
+			'type' => 'Image',
+			'url'  => esc_url( $image[0] ),
+		);
 	}
 
 	/**
