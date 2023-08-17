@@ -45,23 +45,11 @@ function getBlockStyles( base, style, backgroundColor ) {
 	return generateSelector( selector, 'color', buttonTextColor )
 	+ generateSelector( selector, 'background-color', buttonColor )
 	+ generateSelector( selector, 'background-color', buttonHoverColor, ':hover' )
+	+ generateSelector( selector, 'background-color', buttonHoverColor, ':focus' )
 }
 
 export function getPopupStyles( style, backgroundColor ) {
-	const base = `.apfmd__button-group .components-button`;
-	// we misuse the link color for the button background
-	const buttonColor = getLinkColor( style?.elements?.link?.color?.text );
-	// hover!
-	const buttonHoverColor = getLinkColor( style?.elements?.link?.[':hover']?.color?.text );
-	// we grab the background color if set as a good color for our button text
-	const buttonTextColor = getBackgroundColor( backgroundColor )
-		// bg might be in this form.
-		|| style?.color?.background;
-
-	return generateSelector( base, 'background-color', buttonColor )
-	+ generateSelector( base, 'background-color', buttonHoverColor, ':hover' )
-	+ generateSelector( base, 'background-color', buttonHoverColor, ':focus' )
-	+ generateSelector( base, 'color', buttonTextColor );
+	return getBlockStyles( '.apfmd__button-group', style, backgroundColor );
 }
 
 export function ButtonStyle( { selector, style, backgroundColor } ) {
