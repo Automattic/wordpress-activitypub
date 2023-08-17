@@ -22,8 +22,34 @@
 }
 
 .activitypub-follow-me__dialog {
-	h2, h3 {
+	max-width: 30em;
+	h4 {
 		line-height: 1;
 		margin: 0;
+	}
+	.apmfd__section {
+		margin-bottom: 2em;
+	}
+	.apfmd-description {
+		font-size: var( --wp--preset--font-size--normal, .75rem );
+		margin: 0.33em 0 1em;
+	}
+	.apfmd__button-group {
+		display: flex;
+		justify-content: flex-end;
+
+		svg {
+			margin-right: .5em;
+			height: 21px;
+			width: 21px;
+		}
+
+		input {
+			flex: 1;
+			padding: {
+				left: 1em;
+				right: 1em;
+			}
+		}
 	}
 }

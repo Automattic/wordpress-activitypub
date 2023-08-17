@@ -1,11 +1,11 @@
 
 import apiFetch from '@wordpress/api-fetch';
 import { useCallback, useEffect, useState } from '@wordpress/element';
-import { Button, __experimentalConfirmDialog as ConfirmDialog } from '@wordpress/components';
+import { Button, Modal } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 import { copy, check, Icon } from '@wordpress/icons';
 import { useCopyToClipboard } from '@wordpress/compose';
-import { ButtonStyle, BODY_CLASS, getPopupStyles } from './button-style';
+import { ButtonStyle, getPopupStyles } from './button-style';
 import './style.scss';
 const { namespace } = window._activityPubOptions;
 
@@ -49,40 +49,36 @@ function Profile( { profile, popupStyles, userId } ) {
 
 function Follow( { profile, popupStyles, userId } ) {
 	const [ isOpen, setIsOpen ] = useState( false );
-	// a function that adds/removes the activitypub-follow-modal-active class to the body
-	function setModalIsOpen( value ) {
-		const method = value ? 'add' : 'remove';
-		document.body.classList[ method ]( BODY_CLASS );
-		setIsOpen( value );
-	}
+	const title = sprintf( __( 'Follow %s', 'activitypub' ), profile?.name );
+
 	return (
 		<>
-			<Button className="activitypub-profile__follow" onClick={ () => setModalIsOpen( true ) } >
+			<Button className="activitypub-profile__follow" onClick={ () => setIsOpen( true ) } >
 				{ __( 'Follow', 'activitypub' ) }
 			</Button>
-			<ConfirmDialog
+			{ isOpen && (
+				<Modal
 				className="activitypub-profile__confirm"
-				isOpen={ isOpen }
-				onConfirm={ () => setModalIsOpen( false ) }
-				onCancel={ () => setModalIsOpen( false ) }
-			>
-				<Dialog profile={ profile } userId={ userId } />
-				<style>{ popupStyles }</style>
-			</ConfirmDialog>
+				onRequestClose={ () => setIsOpen( false ) }
+				title={ title }
+				>
+					<Dialog profile={ profile } userId={ userId } />
+					<style>{ popupStyles }</style>
+			</Modal>
+			) }
 		</>
 	);
 }
 
 function Dialog( { profile, userId } ) {
-	const { name, url } = profile;
-	const title = sprintf( __( 'Follow %s', 'activitypub' ), name );
+	const { resource } = profile;
 	const followText = __( 'Follow', 'activitypub' );
 	const loadingText = __( 'Loading...', 'activitypub' );
 	const openingText = __( 'Opening...', 'activitypub' );
 	const errorText = __( 'Error', 'activitypub' );
 	const [ buttonText, setButtonText ] = useState( followText );
 	const [ buttonIcon, setButtonIcon ] = useState( copy );
-	const ref = useCopyToClipboard( url, () => {
+	const ref = useCopyToClipboard( resource, () => {
 		setButtonIcon( check );
 		setTimeout( () => setButtonIcon( copy ), 1000 );
 	} );
@@ -104,27 +100,31 @@ function Dialog( { profile, userId } ) {
 
 	return (
 		<div className="activitypub-follow-me__dialog">
-			<h2>{ title }</h2>
-			<div>
-				<h3>{ __( 'Remote Follow', 'activitypub' ) }</h3>
-				<div>{
-					__( 'Copy and paste this URL into the search field of your favourite Fediverse app or server.', 'activitypub' )
-				}</div>
-				<div>
-					<input type="text" value={ profile.url } readOnly />
+			<div className="apmfd__section">
+				<h4>{ __( 'Remote Follow', 'activitypub' ) }</h4>
+				<div className="apfmd-description">
+					{ __( 'Copy and paste this URL into the search field of your favourite Fediverse app or server.', 'activitypub' ) }
+				</div>
+				<div className="apfmd__button-group">
+					<input type="text" value={ resource } readOnly />
 					<Button ref={ ref }>
 						<Icon icon={ buttonIcon } />
 						{ __( 'Copy', 'activitypub' ) }
 					</Button>
 				</div>
 			</div>
-			<div>
-				<h3>{ __( 'Different Server', 'activitypub' ) }</h3>
-				<div>{
-					__( 'Give us your Username/URL and we will start the process for you. (E.g. https://example.com/username or username@example.com)', 'activitypub' )
-				}</div>
-				<div>
-					<input type="text" value={ remoteProfile } onChange={ e => setRemoteProfile( e.target.value ) } />
+			<div className="apmfd__section">
+				<h4>{ __( 'Different Server', 'activitypub' ) }</h4>
+				<div className="apfmd-description">
+					{ __( 'Give us your Username/URL and we will start the process for you. (E.g. https://example.com/username or username@example.com)', 'activitypub' ) }
+				</div>
+				<div className="apfmd__button-group">
+					<input
+						type="text"
+						value={ remoteProfile }
+						onKeyDown={ ( event ) => { event?.code === 'Enter' && retrieveAndFollow() } }
+						onChange={ e => setRemoteProfile( e.target.value ) }
+					/>
 					<Button onClick={ retrieveAndFollow }>{ buttonText }</Button>
 				</div>
 			</div>
@@ -136,7 +136,7 @@ export default function FollowMe( { selectedUser, style, backgroundColor, id } )
 	const [ profile, setProfile ] = useState( getNormalizedProfile() );
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
 	const selector = id ? `#${ id }` : '.activitypub-follow-me-block-wrapper';
-	const popupStyles = getPopupStyles( style );
+	const popupStyles = getPopupStyles( style, backgroundColor );
 	function setProfileData( profile ) {
 		setProfile( getNormalizedProfile( profile ) );
 	}
