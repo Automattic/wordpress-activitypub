@@ -224,7 +224,7 @@ class Inbox {
 
 		$params['actor'] = array(
 			'required' => true,
-			'sanitize_callback' => function( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param, $request, $key ) {
 				if ( ! \is_string( $param ) ) {
 					$param = $param['id'];
 				}
@@ -269,7 +269,7 @@ class Inbox {
 		$params['actor'] = array(
 			'required' => true,
 			//'type' => array( 'object', 'string' ),
-			'sanitize_callback' => function( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param, $request, $key ) {
 				if ( ! \is_string( $param ) ) {
 					$param = $param['id'];
 				}
@@ -293,7 +293,7 @@ class Inbox {
 
 		$params['to'] = array(
 			'required' => false,
-			'sanitize_callback' => function( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param, $request, $key ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );
 				}
@@ -303,7 +303,7 @@ class Inbox {
 		);
 
 		$params['cc'] = array(
-			'sanitize_callback' => function( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param, $request, $key ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );
 				}
@@ -313,7 +313,7 @@ class Inbox {
 		);
 
 		$params['bcc'] = array(
-			'sanitize_callback' => function( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param, $request, $key ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );
 				}
@@ -365,7 +365,7 @@ class Inbox {
 		// No nonce possible for this submission route
 		\add_filter(
 			'akismet_comment_nonce',
-			function() {
+			function () {
 				return 'inactive';
 			}
 		);
@@ -430,7 +430,7 @@ class Inbox {
 		// No nonce possible for this submission route
 		\add_filter(
 			'akismet_comment_nonce',
-			function() {
+			function () {
 				return 'inactive';
 			}
 		);

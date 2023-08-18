@@ -78,7 +78,7 @@ class Followers {
 			array(
 				'type'              => 'string',
 				'single'            => false,
-				'sanitize_callback' => function( $value ) {
+				'sanitize_callback' => function ( $value ) {
 					if ( ! is_string( $value ) ) {
 						throw new Exception( 'Error message is no valid string' );
 					}
@@ -94,7 +94,7 @@ class Followers {
 			array(
 				'type'              => 'string',
 				'single'            => false,
-				'sanitize_callback' => function( $value ) {
+				'sanitize_callback' => function ( $value ) {
 					return esc_sql( $value );
 				},
 			)
@@ -106,7 +106,7 @@ class Followers {
 			array(
 				'type'              => 'string',
 				'single'            => true,
-				'sanitize_callback' => function( $value ) {
+				'sanitize_callback' => function ( $value ) {
 					return sanitize_text_field( $value );
 				},
 			)
@@ -342,7 +342,7 @@ class Followers {
 		$query = new WP_Query( $args );
 		$total = $query->found_posts;
 		$followers = array_map(
-			function( $post ) {
+			function ( $post ) {
 				return Follower::init_from_cpt( $post );
 			},
 			$query->get_posts()

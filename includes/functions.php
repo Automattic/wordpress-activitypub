@@ -78,7 +78,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		return $metadata;
 	}
 
-	$short_timeout = function() {
+	$short_timeout = function () {
 		return 3;
 	};
 	add_filter( 'activitypub_remote_get_timeout', $short_timeout );
