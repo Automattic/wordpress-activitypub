@@ -89,7 +89,7 @@ class Hashtag {
 
 		if ( $tag_object ) {
 			$link = \get_term_link( $tag_object, 'post_tag' );
-			return \sprintf( '<a rel="tag" class="u-tag u-category" href="%s">#%s</a>', $link, $tag );
+			return \sprintf( '<a rel="tag" class="hashtag u-tag u-category" href="%s">#%s</a>', $link, $tag );
 		}
 
 		return '#' . $tag;
