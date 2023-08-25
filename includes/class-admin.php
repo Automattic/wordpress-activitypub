@@ -169,7 +169,7 @@ class Admin {
 				'description'       => \esc_html__( 'The Identifier of the Blog-User', 'activitypub' ),
 				'show_in_rest'      => true,
 				'default'           => \Activitypub\Model\Blog_User::get_default_username(),
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => function( $value ) {
 					// hack to allow dots in the username
 					$parts     = explode( '.', $value );
 					$sanitized = array();

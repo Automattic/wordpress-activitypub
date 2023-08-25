@@ -152,7 +152,7 @@ function plugin_settings_link( $actions ) {
  */
 add_action(
 	'bp_include',
-	function () {
+	function() {
 		require_once __DIR__ . '/integration/class-buddypress.php';
 		Integration\Buddypress::init();
 	},

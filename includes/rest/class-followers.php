@@ -94,7 +94,7 @@ class Followers {
 
 		// phpcs:ignore
 		$json->orderedItems = array_map(
-			function ( $item ) use ( $context ) {
+			function( $item ) use ( $context ) {
 				if ( 'full' === $context ) {
 					return $item->to_array();
 				}
