@@ -1,6 +1,9 @@
 <?php
 namespace Activitypub;
 
+use Activitypub\Signature;
+use Activitypub\Collection\Users;
+
 /**
  * ActivityPub Class
  *
@@ -11,9 +14,9 @@ class Activitypub {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_filter( 'template_include', array( '\Activitypub\Activitypub', 'render_json_template' ), 99 );
-		\add_filter( 'query_vars', array( '\Activitypub\Activitypub', 'add_query_vars' ) );
-		\add_filter( 'pre_get_avatar_data', array( '\Activitypub\Activitypub', 'pre_get_avatar_data' ), 11, 2 );
+		\add_filter( 'template_include', array( self::class, 'render_json_template' ), 99 );
+		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
+		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
 
 		// Add support for ActivityPub to custom post types
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array();
@@ -22,9 +25,45 @@ class Activitypub {
 			\add_post_type_support( $post_type, 'activitypub' );
 		}
 
-		\add_action( 'transition_post_status', array( '\Activitypub\Activitypub', 'schedule_post_activity' ), 33, 3 );
-		\add_action( 'wp_trash_post', array( '\Activitypub\Activitypub', 'trash_post' ), 1 );
-		\add_action( 'untrash_post', array( '\Activitypub\Activitypub', 'untrash_post' ), 1 );
+		\add_action( 'wp_trash_post', array( self::class, 'trash_post' ), 1 );
+		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
+
+		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
+
+		\add_action( 'after_setup_theme', array( self::class, 'theme_compat' ), 99 );
+
+		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
+	}
+
+	/**
+	 * Activation Hook
+	 *
+	 * @return void
+	 */
+	public static function activate() {
+		self::flush_rewrite_rules();
+
+		Scheduler::register_schedules();
+	}
+
+	/**
+	 * Deactivation Hook
+	 *
+	 * @return void
+	 */
+	public static function deactivate() {
+		self::flush_rewrite_rules();
+
+		Scheduler::deregister_schedules();
+	}
+
+	/**
+	 * Uninstall Hook
+	 *
+	 * @return void
+	 */
+	public static function uninstall() {
+		Scheduler::deregister_schedules();
 	}
 
 	/**
@@ -35,12 +74,18 @@ class Activitypub {
 	 * @return string The new path to the JSON template.
 	 */
 	public static function render_json_template( $template ) {
-		if ( ! \is_author() && ! \is_singular() && ! \is_home() && ! \Activitypub\is_ap_comment() && ! \Activitypub\is_ap_replies() ) {
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
 			return $template;
 		}
 
+		if ( ! is_activitypub_request() ) {
+			return $template;
+		}
+
+		$json_template = false;
+
 		// check if user can publish posts
-		if ( \is_author() && ! user_can( \get_the_author_meta( 'ID' ), 'publish_posts' ) ) {
+		if ( \is_author() && is_wp_error( Users::get_by_id( \get_the_author_meta( 'ID' ) ) ) ) {
 			return $template;
 		}
 
@@ -56,38 +101,15 @@ class Activitypub {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
-		global $wp_query;
-
-		if ( isset( $wp_query->query_vars['activitypub'] ) ) {
-			return $json_template;
+		if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
+			$verification = Signature::verify_http_signature( $_SERVER );
+			if ( \is_wp_error( $verification ) ) {
+				// fallback as template_loader can't return http headers
+				return $template;
+			}
 		}
 
-		if ( ! isset( $_SERVER['HTTP_ACCEPT'] ) ) {
-			return $template;
-		}
-
-		$accept_header = $_SERVER['HTTP_ACCEPT'];
-
-		if (
-			\stristr( $accept_header, 'application/activity+json' ) ||
-			\stristr( $accept_header, 'application/ld+json' )
-		) {
-			return $json_template;
-		}
-
-		// Accept header as an array.
-		$accept = \explode( ',', \trim( $accept_header ) );
-
-		if (
-			\in_array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', $accept, true ) ||
-			\in_array( 'application/activity+json', $accept, true ) ||
-			\in_array( 'application/ld+json', $accept, true ) ||
-			\in_array( 'application/json', $accept, true )
-		) {
-			return $json_template;
-		}
-
-		return $template;
+		return $json_template;
 	}
 
 	/**
@@ -102,36 +124,6 @@ class Activitypub {
 		$vars[] = 'collection_page';
 
 		return $vars;
-	}
-
-	/**
-	 * Schedule Activities.
-	 *
-	 * @param string  $new_status New post status.
-	 * @param string  $old_status Old post status.
-	 * @param WP_Post $post       Post object.
-	 */
-	public static function schedule_post_activity( $new_status, $old_status, $post ) {
-		// Do not send activities if post is password protected.
-		if ( \post_password_required( $post ) ) {
-			return;
-		}
-
-		// Check if post-type supports ActivityPub.
-		$post_types = \get_post_types_by_support( 'activitypub' );
-		if ( ! \in_array( $post->post_type, $post_types, true ) ) {
-			return;
-		}
-
-		$activitypub_post = new \Activitypub\Model\Post( $post );
-
-		if ( 'publish' === $new_status && 'publish' !== $old_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_post_activity', array( $activitypub_post ) );
-		} elseif ( 'publish' === $new_status ) { //this triggers when restored post from trash, which may not be desired
-			\wp_schedule_single_event( \time(), 'activitypub_send_update_activity', array( $activitypub_post ) );
-		} elseif ( 'trash' === $new_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_delete_activity', array( $activitypub_post ) );
-		}
 	}
 
 	/**
@@ -151,8 +143,15 @@ class Activitypub {
 			return $args;
 		}
 
-		$allowed_comment_types = \apply_filters( 'get_avatar_comment_types', array( 'comment', 'activitypub' ) );
-		if ( ! empty( $id_or_email->comment_type ) && ! \in_array( $id_or_email->comment_type, (array) $allowed_comment_types, true ) ) {
+		$allowed_comment_types = \apply_filters( 'get_avatar_comment_types', array( 'comment' ) );
+		if (
+			! empty( $id_or_email->comment_type ) &&
+			! \in_array(
+				$id_or_email->comment_type,
+				(array) $allowed_comment_types,
+				true
+			)
+		) {
 			$args['url'] = false;
 			/** This filter is documented in wp-includes/link-template.php */
 			return \apply_filters( 'get_avatar_data', $args, $id_or_email );
@@ -190,14 +189,19 @@ class Activitypub {
 	}
 
 	/**
-	 * Store permalink in meta, to send delete Activity
+	 * Store permalink in meta, to send delete Activity.
 	 *
-	 * @param string $post_id The Post ID
+	 * @param string $post_id The Post ID.
 	 *
 	 * @return void
 	 */
 	public static function trash_post( $post_id ) {
-		\add_post_meta( $post_id, 'activitypub_canonical_url', \get_permalink( $post_id ), true );
+		\add_post_meta(
+			$post_id,
+			'activitypub_canonical_url',
+			\get_permalink( $post_id ),
+			true
+		);
 	}
 
 	/**
@@ -209,5 +213,105 @@ class Activitypub {
 	 */
 	public static function untrash_post( $post_id ) {
 		\delete_post_meta( $post_id, 'activitypub_canonical_url' );
+	}
+
+	/**
+	 * Add rewrite rules
+	 */
+	public static function add_rewrite_rules() {
+		if ( ! \class_exists( 'Webfinger' ) ) {
+			\add_rewrite_rule(
+				'^.well-known/webfinger',
+				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger',
+				'top'
+			);
+		}
+
+		if ( ! \class_exists( 'Nodeinfo_Endpoint' ) && true === (bool) \get_option( 'blog_public', 1 ) ) {
+			\add_rewrite_rule(
+				'^.well-known/nodeinfo',
+				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo/discovery',
+				'top'
+			);
+			\add_rewrite_rule(
+				'^.well-known/x-nodeinfo2',
+				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo2',
+				'top'
+			);
+		}
+
+		\add_rewrite_rule(
+			'^@([\w\-\.]+)',
+			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/users/$matches[1]',
+			'top'
+		);
+
+		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
+	}
+
+	/**
+	 * Flush rewrite rules;
+	 */
+	public static function flush_rewrite_rules() {
+		self::add_rewrite_rules();
+		\flush_rewrite_rules();
+	}
+
+	/**
+	 * Theme compatibility stuff
+	 *
+	 * @return void
+	 */
+	public static function theme_compat() {
+		$site_icon = get_theme_support( 'custom-logo' );
+
+		if ( ! $site_icon ) {
+			// custom logo support
+			add_theme_support(
+				'custom-logo',
+				array(
+					'height' => 80,
+					'width'  => 80,
+				)
+			);
+		}
+
+		$custom_header = get_theme_support( 'custom-header' );
+
+		if ( ! $custom_header ) {
+			// This theme supports a custom header
+			$custom_header_args = array(
+				'width'       => 1250,
+				'height'      => 600,
+				'header-text' => true,
+			);
+			add_theme_support( 'custom-header', $custom_header_args );
+		}
+	}
+
+	/**
+	 * Display plugin upgrade notice to users
+	 *
+	 * @param array $data The plugin data
+	 *
+	 * @return void
+	 */
+	public static function plugin_update_message( $data ) {
+		if ( ! isset( $data['upgrade_notice'] ) ) {
+			return;
+		}
+
+		printf(
+			'<div class="update-message">%s</div>',
+			wp_kses(
+				wpautop( $data['upgrade_notice '] ),
+				array(
+					'p'      => array(),
+					'a'      => array( 'href', 'title' ),
+					'strong' => array(),
+					'em'     => array(),
+				)
+			)
+		);
 	}
 }

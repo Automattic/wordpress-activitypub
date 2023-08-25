@@ -1,6 +1,10 @@
 <?php
 namespace Activitypub\Rest;
 
+use WP_Error;
+use WP_REST_Response;
+use Activitypub\Collection\Users as User_Collection;
+
 /**
  * ActivityPub WebFinger REST-Class
  *
@@ -10,26 +14,29 @@ namespace Activitypub\Rest;
  */
 class Webfinger {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( '\Activitypub\Rest\Webfinger', 'register_routes' ) );
-		\add_action( 'webfinger_user_data', array( '\Activitypub\Rest\Webfinger', 'add_webfinger_discovery' ), 10, 3 );
-		\add_action( 'webfinger_lookup', array( '\Activitypub\Rest\Webfinger', 'webfinger_lookup' ), 10, 3 );
-
+		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		\add_filter( 'webfinger_user_data', array( self::class, 'add_user_discovery' ), 10, 3 );
+		\add_filter( 'webfinger_data', array( self::class, 'add_pseudo_user_discovery' ), 99, 2 );
 	}
 
 	/**
-	 * Register routes
+	 * Register routes.
+	 *
+	 * @return void
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/webfinger',
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Webfinger', 'webfinger' ),
+					'callback'            => array( self::class, 'webfinger' ),
 					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),
@@ -38,53 +45,22 @@ class Webfinger {
 	}
 
 	/**
-	 * Render JRD file
+	 * WebFinger endpoint.
 	 *
-	 * @param  WP_REST_Request   $request
-	 * @return WP_REST_Response
+	 * @param WP_REST_Request $request The request object.
+	 *
+	 * @return WP_REST_Response The response object.
 	 */
 	public static function webfinger( $request ) {
+		/*
+		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		 */
+		\do_action( 'activitypub_rest_webfinger_pre' );
+
 		$resource = $request->get_param( 'resource' );
+		$response = self::get_profile( $resource );
 
-		if ( \strpos( $resource, '@' ) === false ) {
-			return new \WP_Error( 'activitypub_unsupported_resource', \__( 'Resource is invalid', 'activitypub' ), array( 'status' => 400 ) );
-		}
-
-		$resource = \str_replace( 'acct:', '', $resource );
-
-		$resource_identifier = \substr( $resource, 0, \strrpos( $resource, '@' ) );
-		$resource_host = \substr( \strrchr( $resource, '@' ), 1 );
-
-		if ( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) !== $resource_host ) {
-			return new \WP_Error( 'activitypub_wrong_host', \__( 'Resource host does not match blog host', 'activitypub' ), array( 'status' => 404 ) );
-		}
-
-		$user = \get_user_by( 'login', \esc_sql( $resource_identifier ) );
-
-		if ( ! $user || ! user_can( $user, 'publish_posts' ) ) {
-			return new \WP_Error( 'activitypub_user_not_found', \__( 'User not found', 'activitypub' ), array( 'status' => 404 ) );
-		}
-
-		$json = array(
-			'subject' => $resource,
-			'aliases' => array(
-				\get_author_posts_url( $user->ID ),
-			),
-			'links' => array(
-				array(
-					'rel'  => 'self',
-					'type' => 'application/activity+json',
-					'href' => \get_author_posts_url( $user->ID ),
-				),
-				array(
-					'rel'  => 'http://webfinger.net/rel/profile-page',
-					'type' => 'text/html',
-					'href' => \get_author_posts_url( $user->ID ),
-				),
-			),
-		);
-
-		return new \WP_REST_Response( $json, 200 );
+		return new WP_REST_Response( $response, 200 );
 	}
 
 	/**
@@ -110,47 +86,73 @@ class Webfinger {
 	 * @param array   $array    the jrd array
 	 * @param string  $resource the WebFinger resource
 	 * @param WP_User $user     the WordPress user
+	 *
+	 * @return array the jrd array
 	 */
-	public static function add_webfinger_discovery( $array, $resource, $user ) {
+	public static function add_user_discovery( $array, $resource, $user ) {
+		$user = User_Collection::get_by_id( $user->ID );
+
 		$array['links'][] = array(
 			'rel'  => 'self',
 			'type' => 'application/activity+json',
-			'href' => \get_author_posts_url( $user->ID ),
+			'href' => $user->get_url(),
 		);
 
 		return $array;
 	}
 
 	/**
-	 * WebFinger Lookup to find user uri
+	 * Add WebFinger discovery links
 	 *
+	 * @param array   $array    the jrd array
 	 * @param string  $resource the WebFinger resource
-	 * @return array  ['href', 'name']. ex: href=https://domain.tld/user/webfinger, name=webfinger@domain.tld
+	 * @param WP_User $user     the WordPress user
+	 *
+	 * @return array the jrd array
 	 */
-	public static function webfinger_lookup( $webfinger ) {
-		$activity_profile = null;
-		if ( \substr( $webfinger, 0, 1 ) === '@' ) {
-			$webfinger = substr( $webfinger, 1 );
-		}
-		$url_host = \explode( '@', $webfinger );
-		$webfinger_query = 'https://' . \end( $url_host ) . '/.well-known/webfinger?resource=acct%3A' . \rawurlencode( $webfinger );
-
-		$response = \wp_safe_remote_get( $webfinger_query );
-		if ( ! is_wp_error( $response ) ) {
-			$ap_link = json_decode( $response['body'] );
-			if ( isset( $ap_link->links ) ) {
-				foreach ( $ap_link->links as $link ) {
-					if ( ! property_exists( $link, 'type' ) ) {
-						continue;
-					}
-					if ( isset( $link->type ) && 'application/activity+json' === $link->type ) {
-						$activity_profile['href'] = $link->href;
-						$activity_profile['name'] = $webfinger;
-					}
-				}
-			}
+	public static function add_pseudo_user_discovery( $array, $resource ) {
+		if ( $array ) {
+			return $array;
 		}
 
-		return $activity_profile;
+		return self::get_profile( $resource );
+	}
+
+	/**
+	 * Get the WebFinger profile.
+	 *
+	 * @param string $resource the WebFinger resource.
+	 *
+	 * @return array the WebFinger profile.
+	 */
+	public static function get_profile( $resource ) {
+		$user = User_Collection::get_by_resource( $resource );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		$aliases = array(
+			$user->get_url(),
+		);
+
+		$profile = array(
+			'subject' => $resource,
+			'aliases' => array_values( array_unique( $aliases ) ),
+			'links'   => array(
+				array(
+					'rel'  => 'self',
+					'type' => 'application/activity+json',
+					'href' => $user->get_url(),
+				),
+				array(
+					'rel'  => 'http://webfinger.net/rel/profile-page',
+					'type' => 'text/html',
+					'href' => $user->get_url(),
+				),
+			),
+		);
+
+		return $profile;
 	}
 }

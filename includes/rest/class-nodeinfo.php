@@ -1,6 +1,10 @@
 <?php
 namespace Activitypub\Rest;
 
+use WP_REST_Response;
+
+use function Activitypub\get_rest_url_by_path;
+
 /**
  * ActivityPub NodeInfo REST-Class
  *
@@ -13,9 +17,9 @@ class Nodeinfo {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( '\Activitypub\Rest\Nodeinfo', 'register_routes' ) );
-		\add_filter( 'nodeinfo_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo_discovery' ), 10, 2 );
-		\add_filter( 'nodeinfo2_data', array( '\Activitypub\Rest\Nodeinfo', 'add_nodeinfo2_discovery' ), 10 );
+		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		\add_filter( 'nodeinfo_data', array( self::class, 'add_nodeinfo_discovery' ), 10, 2 );
+		\add_filter( 'nodeinfo2_data', array( self::class, 'add_nodeinfo2_discovery' ), 10 );
 	}
 
 	/**
@@ -23,36 +27,36 @@ class Nodeinfo {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/nodeinfo/discovery',
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Nodeinfo', 'discovery' ),
+					'callback'            => array( self::class, 'discovery' ),
 					'permission_callback' => '__return_true',
 				),
 			)
 		);
 
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/nodeinfo',
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Nodeinfo', 'nodeinfo' ),
+					'callback'            => array( self::class, 'nodeinfo' ),
 					'permission_callback' => '__return_true',
 				),
 			)
 		);
 
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/nodeinfo2',
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Nodeinfo', 'nodeinfo2' ),
+					'callback'            => array( self::class, 'nodeinfo2' ),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -67,6 +71,11 @@ class Nodeinfo {
 	 * @return WP_REST_Response
 	 */
 	public static function nodeinfo( $request ) {
+		/*
+		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		 */
+		\do_action( 'activitypub_rest_nodeinfo_pre' );
+
 		$nodeinfo = array();
 
 		$nodeinfo['version'] = '2.0';
@@ -75,13 +84,24 @@ class Nodeinfo {
 			'version' => \get_bloginfo( 'version' ),
 		);
 
-		$users = \count_users();
+		$users = \get_users(
+			array(
+				'capability__in' => array( 'publish_posts' ),
+			)
+		);
+
+		if ( is_array( $users ) ) {
+			$users = count( $users );
+		} else {
+			$users = 1;
+		}
+
 		$posts = \wp_count_posts();
 		$comments = \wp_count_comments();
 
 		$nodeinfo['usage'] = array(
 			'users' => array(
-				'total' => (int) $users['total_users'],
+				'total' => $users,
 			),
 			'localPosts' => (int) $posts->publish,
 			'localComments' => (int) $comments->approved,
@@ -95,7 +115,7 @@ class Nodeinfo {
 			'outbound' => array(),
 		);
 
-		return new \WP_REST_Response( $nodeinfo, 200 );
+		return new WP_REST_Response( $nodeinfo, 200 );
 	}
 
 	/**
@@ -106,6 +126,11 @@ class Nodeinfo {
 	 * @return WP_REST_Response
 	 */
 	public static function nodeinfo2( $request ) {
+		/*
+		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		 */
+		\do_action( 'activitypub_rest_nodeinfo2_pre' );
+
 		$nodeinfo = array();
 
 		$nodeinfo['version'] = '1.0';
@@ -147,7 +172,7 @@ class Nodeinfo {
 			'outbound' => array(),
 		);
 
-		return new \WP_REST_Response( $nodeinfo, 200 );
+		return new WP_REST_Response( $nodeinfo, 200 );
 	}
 
 	/**
@@ -162,7 +187,7 @@ class Nodeinfo {
 		$discovery['links'] = array(
 			array(
 				'rel' => 'http://nodeinfo.diaspora.software/ns/schema/2.0',
-				'href' => \get_rest_url( null, 'activitypub/1.0/nodeinfo' ),
+				'href' => get_rest_url_by_path( 'nodeinfo' ),
 			),
 		);
 

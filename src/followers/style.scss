@@ -1,0 +1,82 @@
+.activitypub-follower-block {
+	&.is-style-compact {
+		.activitypub-handle, .sep {
+			display: none;
+		}
+	}
+	&.is-style-with-lines {
+		ul li {
+			border-bottom: .5px solid;
+			padding-bottom: .5rem;
+			margin-bottom: .5rem;
+			&:last-child {
+				border-bottom: none;
+			}
+		}
+		.activitypub-name, .activitypub-handle {
+			text-decoration: none;
+			&:hover {
+				text-decoration: underline;
+			}
+		}
+	}
+	ul {
+		margin: 0 !important;
+		padding: 0 !important;
+	}
+	li {
+		display: flex;
+		margin-bottom: 1rem;
+	}
+	img {
+		border-radius: 50%;
+		width: 40px;
+		height: 40px;
+		margin-right: var( --wp--preset--spacing--20, .5rem );
+	}
+	.activitypub-link {
+		display: flex;
+		flex-flow: row nowrap;
+		align-items: center;
+		max-width: 100%;
+		color: inherit !important;
+		text-decoration: none !important; // overrides core styles for external links
+	}
+	.activitypub-name, .activitypub-handle {
+		text-decoration: underline;
+		text-decoration-thickness: .8px;
+		text-underline-position: under;
+
+		&:hover {
+			text-decoration: none;
+		}
+	}
+	.activitypub-name {
+		font-size: var( --wp--preset--font-size--normal, 16px );
+	}
+	.activitypub-actor {
+		font-size: var( --wp--preset--font-size--small, 13px );
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.sep {
+		padding: 0 .2rem;
+	}
+	.wp-block-query-pagination {
+		margin-top: 1.5rem;
+	}
+	.activitypub-pager {
+		cursor: default;
+		&.current {
+			opacity: .33;
+		}
+	}
+	.page-numbers {
+		padding: 0 .2rem;
+		&.current {
+			opacity: 1;
+			font-weight: bold;
+		}
+	}
+}

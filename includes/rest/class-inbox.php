@@ -1,6 +1,17 @@
 <?php
 namespace Activitypub\Rest;
 
+use WP_Error;
+use WP_REST_Server;
+use WP_REST_Response;
+use Activitypub\Activity\Activity;
+use Activitypub\Collection\Users as User_Collection;
+
+use function Activitypub\get_context;
+use function Activitypub\url_to_authorid;
+use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_remote_metadata_by_actor;
+
 /**
  * ActivityPub Inbox REST-Class
  *
@@ -13,15 +24,9 @@ class Inbox {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( '\Activitypub\Rest\Inbox', 'register_routes' ) );
-		\add_filter( 'rest_pre_serve_request', array( '\Activitypub\Rest\Inbox', 'serve_request' ), 11, 4 );
-		\add_action( 'activitypub_inbox_follow', array( '\Activitypub\Rest\Inbox', 'handle_follow' ), 10, 2 );
-		\add_action( 'activitypub_inbox_undo', array( '\Activitypub\Rest\Inbox', 'handle_unfollow' ), 10, 2 );
-		//\add_action( 'activitypub_inbox_like', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
-		//\add_action( 'activitypub_inbox_announce', array( '\Activitypub\Rest\Inbox', 'handle_reaction' ), 10, 2 );
-		\add_action( 'activitypub_inbox_create', array( '\Activitypub\Rest\Inbox', 'handle_create' ), 10, 2 );
-		\add_action( 'activitypub_inbox_update', array( '\Activitypub\Rest\Inbox', 'handle_update' ), 10, 2 );
-		\add_action( 'activitypub_inbox_delete', array( '\Activitypub\Rest\Inbox', 'handle_delete' ), 10, 2 );
+		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+
+		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_create' ), 10, 2 );
 	}
 
 	/**
@@ -29,12 +34,12 @@ class Inbox {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/inbox',
 			array(
 				array(
-					'methods'             => \WP_REST_Server::EDITABLE,
-					'callback'            => array( '\Activitypub\Rest\Inbox', 'shared_inbox_post' ),
+					'methods'             => WP_REST_Server::EDITABLE,
+					'callback'            => array( self::class, 'shared_inbox_post' ),
 					'args'                => self::shared_inbox_post_parameters(),
 					'permission_callback' => '__return_true',
 				),
@@ -42,52 +47,23 @@ class Inbox {
 		);
 
 		\register_rest_route(
-			'activitypub/1.0',
-			'/users/(?P<user_id>\d+)/inbox',
+			ACTIVITYPUB_REST_NAMESPACE,
+			'/users/(?P<user_id>[\w\-\.]+)/inbox',
 			array(
 				array(
-					'methods'             => \WP_REST_Server::EDITABLE,
-					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox_post' ),
+					'methods'             => WP_REST_Server::EDITABLE,
+					'callback'            => array( self::class, 'user_inbox_post' ),
 					'args'                => self::user_inbox_post_parameters(),
 					'permission_callback' => '__return_true',
 				),
 				array(
-					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( '\Activitypub\Rest\Inbox', 'user_inbox_get' ),
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( self::class, 'user_inbox_get' ),
 					'args'                => self::user_inbox_get_parameters(),
 					'permission_callback' => '__return_true',
 				),
 			)
 		);
-	}
-
-	/**
-	 * Hooks into the REST API request to verify the signature.
-	 *
-	 * @param bool                      $served  Whether the request has already been served.
-	 * @param WP_HTTP_ResponseInterface $result  Result to send to the client. Usually a WP_REST_Response.
-	 * @param WP_REST_Request           $request Request used to generate the response.
-	 * @param WP_REST_Server            $server  Server instance.
-	 *
-	 * @return true
-	 */
-	public static function serve_request( $served, $result, $request, $server ) {
-		if ( '/activitypub' !== \substr( $request->get_route(), 0, 12 ) ) {
-			return $served;
-		}
-
-		$signature = $request->get_header( 'signature' );
-
-		if ( ! $signature ) {
-			return $served;
-		}
-
-		$headers = $request->get_headers();
-
-		// verify signature
-		//\Activitypub\Signature::verify_signature( $headers, $key );
-
-		return $served;
 	}
 
 	/**
@@ -98,20 +74,26 @@ class Inbox {
 	 */
 	public static function user_inbox_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
+		$user    = User_Collection::get_by_various( $user_id );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
+
 		$page = $request->get_param( 'page', 0 );
 
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
-		\do_action( 'activitypub_inbox_pre' );
+		\do_action( 'activitypub_rest_inbox_pre' );
 
 		$json = new \stdClass();
 
-		$json->{'@context'} = \Activitypub\get_context();
-		$json->id = \home_url( \add_query_arg( null, null ) );
+		$json->{'@context'} = get_context();
+		$json->id = get_rest_url_by_path( sprintf( 'users/%d/inbox', $user->get__id() ) );
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
 		$json->type = 'OrderedCollectionPage';
-		$json->partOf = \get_rest_url( null, "/activitypub/1.0/users/$user_id/inbox" ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/inbox', $user->get__id() ) ); // phpcs:ignore
 
 		$json->totalItems = 0; // phpcs:ignore
 
@@ -120,14 +102,14 @@ class Inbox {
 		$json->first = $json->partOf; // phpcs:ignore
 
 		// filter output
-		$json = \apply_filters( 'activitypub_inbox_array', $json );
+		$json = \apply_filters( 'activitypub_rest_inbox_array', $json );
 
 		/*
 		 * Action triggerd after the ActivityPub profile has been created and sent to the client
 		 */
 		\do_action( 'activitypub_inbox_post' );
 
-		$response = new \WP_REST_Response( $json, 200 );
+		$response = new WP_REST_Response( $json, 200 );
 
 		$response->header( 'Content-Type', 'application/activity+json' );
 
@@ -143,15 +125,20 @@ class Inbox {
 	 */
 	public static function user_inbox_post( $request ) {
 		$user_id = $request->get_param( 'user_id' );
+		$user    = User_Collection::get_by_various( $user_id );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
 
 		$data = $request->get_params();
 		$type = $request->get_param( 'type' );
 		$type = \strtolower( $type );
 
-		\do_action( 'activitypub_inbox', $data, $user_id, $type );
-		\do_action( "activitypub_inbox_{$type}", $data, $user_id );
+		\do_action( 'activitypub_inbox', $data, $user->get__id(), $type );
+		\do_action( "activitypub_inbox_{$type}", $data, $user->get__id() );
 
-		return new \WP_REST_Response( array(), 202 );
+		return new WP_REST_Response( array(), 202 );
 	}
 
 	/**
@@ -167,7 +154,7 @@ class Inbox {
 		$users = self::extract_recipients( $data );
 
 		if ( ! $users ) {
-			return new \WP_Error(
+			return new WP_Error(
 				'rest_invalid_param',
 				\__( 'No recipients found', 'activitypub' ),
 				array(
@@ -190,7 +177,7 @@ class Inbox {
 			\do_action( "activitypub_inbox_{$type}", $data, $user->ID );
 		}
 
-		return new \WP_REST_Response( array(), 202 );
+		return new WP_REST_Response( array(), 202 );
 	}
 
 	/**
@@ -207,10 +194,7 @@ class Inbox {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'integer',
-			'validate_callback' => function( $param, $request, $key ) {
-				return user_can( $param, 'publish_posts' );
-			},
+			'type' => 'string',
 		);
 
 		return $params;
@@ -230,10 +214,7 @@ class Inbox {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'integer',
-			'validate_callback' => function( $param, $request, $key ) {
-				return user_can( $param, 'publish_posts' );
-			},
+			'type' => 'string',
 		);
 
 		$params['id'] = array(
@@ -256,7 +237,7 @@ class Inbox {
 			//'type' => 'enum',
 			//'enum' => array( 'Create' ),
 			//'sanitize_callback' => function( $param, $request, $key ) {
-			//	return \strtolower( $param );
+			//  return \strtolower( $param );
 			//},
 		);
 
@@ -301,7 +282,7 @@ class Inbox {
 			//'type' => 'enum',
 			//'enum' => array( 'Create' ),
 			//'sanitize_callback' => function( $param, $request, $key ) {
-			//	return \strtolower( $param );
+			//  return \strtolower( $param );
 			//},
 		);
 
@@ -345,50 +326,13 @@ class Inbox {
 	}
 
 	/**
-	 * Handles "Follow" requests
-	 *
-	 * @param  array $object  The activity-object
-	 * @param  int   $user_id The id of the local blog-user
-	 */
-	public static function handle_follow( $object, $user_id ) {
-		// save follower
-		\Activitypub\Peer\Followers::add_follower( $object['actor'], $user_id );
-
-		// get inbox
-		$inbox = \Activitypub\get_inbox_by_actor( $object['actor'] );
-
-		// send "Accept" activity
-		$activity = new \Activitypub\Model\Activity( 'Accept', \Activitypub\Model\Activity::TYPE_SIMPLE );
-		$activity->set_object( $object );
-		$activity->set_actor( \get_author_posts_url( $user_id ) );
-		$activity->set_to( $object['actor'] );
-		$activity->set_id( \get_author_posts_url( $user_id ) . '#follow-' . \preg_replace( '~^https?://~', '', $object['actor'] ) );
-
-		$activity = $activity->to_simple_json();
-
-		$response = \Activitypub\safe_remote_post( $inbox, $activity, $user_id );
-	}
-
-	/**
-	 * Handles "Unfollow" requests
-	 *
-	 * @param  array $object  The activity-object
-	 * @param  int   $user_id The id of the local blog-user
-	 */
-	public static function handle_unfollow( $object, $user_id ) {
-		if ( isset( $object['object'] ) && isset( $object['object']['type'] ) && 'Follow' === $object['object']['type'] ) {
-			\Activitypub\Peer\Followers::remove_follower( $object['actor'], $user_id );
-		}
-	}
-
-	/**
 	 * Handles "Reaction" requests
 	 *
 	 * @param  array $object  The activity-object
 	 * @param  int   $user_id The id of the local blog-user
 	 */
 	public static function handle_reaction( $object, $user_id ) {
-		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
+		$meta = get_remote_metadata_by_actor( $object['actor'] );
 
 		$comment_post_id = \url_to_postid( $object['object'] );
 
@@ -418,12 +362,22 @@ class Inbox {
 		// do not require email for AP entries
 		\add_filter( 'pre_option_require_name_email', '__return_false' );
 
+		// No nonce possible for this submission route
+		\add_filter(
+			'akismet_comment_nonce',
+			function() {
+				return 'inactive';
+			}
+		);
+
 		$state = \wp_new_comment( $commentdata, true );
 
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 		// re-add flood control
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+
+		do_action( 'activitypub_handled_reaction', $object, $user_id, $state, $commentdata );
 	}
 
 	/**
@@ -483,7 +437,7 @@ class Inbox {
 			'comment_author' => \esc_attr( $meta['name'] ),
 			'comment_author_url' => \esc_url_raw( $object['actor'] ),
 			'comment_content' => \wp_filter_kses( $object['object']['content'] ),
-			'comment_type' => '',
+			'comment_type' => 'comment',
 			'comment_author_email' => '',
 			'comment_parent' => $parent_comment ? $parent_comment->comment_ID : 0,
 			'comment_meta' => array(
@@ -514,12 +468,22 @@ class Inbox {
 		// do not require email for AP entries
 		\add_filter( 'pre_option_require_name_email', '__return_false' );
 
+		// No nonce possible for this submission route
+		\add_filter(
+			'akismet_comment_nonce',
+			function() {
+				return 'inactive';
+			}
+		);
+
 		$state = \wp_new_comment( $commentdata, true );
 
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 		// re-add flood control
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+
+		do_action( 'activitypub_handled_create', $object, $user_id, $state, $commentdata );
 	}
 
 	/**
@@ -651,7 +615,7 @@ class Inbox {
 		$users = array();
 
 		foreach ( $recipients as $recipient ) {
-			$user_id = \Activitypub\url_to_authorid( $recipient );
+			$user_id = url_to_authorid( $recipient );
 
 			$user = get_user_by( 'id', $user_id );
 

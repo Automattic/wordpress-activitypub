@@ -12,8 +12,8 @@ class Hashtag {
 	 */
 	public static function init() {
 		if ( '1' === \get_option( 'activitypub_use_hashtags', '1' ) ) {
-			\add_filter( 'wp_insert_post', array( '\Activitypub\Hashtag', 'insert_post' ), 10, 2 );
-			\add_filter( 'the_content', array( '\Activitypub\Hashtag', 'the_content' ), 10, 2 );
+			\add_filter( 'wp_insert_post', array( self::class, 'insert_post' ), 10, 2 );
+			\add_filter( 'the_content', array( self::class, 'the_content' ), 10, 2 );
 		}
 	}
 
@@ -45,8 +45,12 @@ class Hashtag {
 	public static function the_content( $the_content ) {
 		$protected_tags = array();
 		$protect = function( $m ) use ( &$protected_tags ) {
-			$c = count( $protected_tags );
+			$c = \wp_rand( 100000, 999999 );
 			$protect = '!#!#PROTECT' . $c . '#!#!';
+			while ( isset( $protected_tags[ $protect ] ) ) {
+				$c = \wp_rand( 100000, 999999 );
+				$protect = '!#!#PROTECT' . $c . '#!#!';
+			}
 			$protected_tags[ $protect ] = $m[0];
 			return $protect;
 		};
