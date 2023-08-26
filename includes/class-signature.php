@@ -156,7 +156,8 @@ class Signature {
 	public static function verify_http_signature( $request ) {
 		if ( is_object( $request ) ) { // REST Request object
 			// check if route starts with "index.php"
-			if ( str_starts_with( $request->get_route(), '/index.php' ) || ! rest_get_url_prefix() ) {
+			$index_prefix = '/index.php';
+			if ( \strncmp( $request->get_route(), $index_prefix, \strlen( $index_prefix ) ) === 0 || ! rest_get_url_prefix() ) {
 				$route = $request->get_route();
 			} else {
 				$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
@@ -332,7 +333,7 @@ class Signature {
 				$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
 				continue;
 			}
-			if ( str_contains( $header, '-' ) ) {
+			if ( \strpos( $header, '-' ) !== false ) {
 				$signed_data .= $header . ': ' . $headers[ str_replace( '-', '_', $header ) ][0] . "\n";
 				continue;
 			}

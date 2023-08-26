@@ -71,10 +71,13 @@ class Server {
 		$route = $request->get_route();
 
 		// check if it is an activitypub request and exclude webfinger and nodeinfo endpoints
+		$rest_path = '/' . ACTIVITYPUB_REST_NAMESPACE;
+		$webfinger_path = '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'webfinger';
+		$nodeinfo_path = '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'nodeinfo';
 		if (
-			! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ||
-			\str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'webfinger' ) ||
-			\str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'nodeinfo' )
+			\strncmp( $route, $rest_path, \strlen( $rest_path ) ) !== 0 ||
+			\strncmp( $route, $webfinger_path, \strlen( $webfinger_path ) ) === 0 ||
+			\strncmp( $route, $nodeinfo_path, \strlen( $nodeinfo_path ) ) === 0
 		) {
 			return $response;
 		}
