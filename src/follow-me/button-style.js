@@ -12,8 +12,11 @@ function getBackgroundColor( color ) {
 }
 
 function getLinkColor( text ) {
+	if ( typeof text !== 'string' ) {
+		return null;
+	}
 	// if it starts with a hash, leave it be
-	if ( typeof text === 'string' && text.match( /^#/ ) ) {
+	if ( text.match( /^#/ ) ) {
 		// we don't handle the alpha channel if present.
 		return text.substring( 0, 7 );
 	}
