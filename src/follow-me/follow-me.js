@@ -132,11 +132,11 @@ function Dialog( { profile, userId } ) {
 	);
 }
 
-export default function FollowMe( { selectedUser, style, backgroundColor, id } ) {
+export default function FollowMe( { selectedUser, style, backgroundColor, id, useId = false } ) {
 	const [ profile, setProfile ] = useState( getNormalizedProfile() );
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
-	const selector = id ? `#${ id }` : '.activitypub-follow-me-block-wrapper';
 	const popupStyles = getPopupStyles( style, backgroundColor );
+	const wrapperProps = useId ? { id } : {};
 	function setProfileData( profile ) {
 		setProfile( getNormalizedProfile( profile ) );
 	}
@@ -145,9 +145,9 @@ export default function FollowMe( { selectedUser, style, backgroundColor, id } )
 	}, [ userId ] );
 
 	return(
-		<>
-			<ButtonStyle selector={ selector } style={ style } backgroundColor={ backgroundColor } />
+		<div { ...wrapperProps }>
+			<ButtonStyle selector={ `#${ id }` } style={ style } backgroundColor={ backgroundColor } />
 			<Profile profile={ profile } userId={ userId } popupStyles={ popupStyles } />
-		</>
+		</div>
 	)
 }
