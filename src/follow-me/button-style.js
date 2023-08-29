@@ -34,6 +34,13 @@ function generateSelector( selector, prop, value = null, pseudo = '' ) {
 	return `${ selector }${ pseudo } { ${ prop }: ${ value }; }\n`;
 }
 
+function getStyles( selector, button, text, hover ) {
+	return generateSelector( selector, 'background-color', button )
+	+ generateSelector( selector, 'color', text )
+	+ generateSelector( selector, 'background-color', hover, ':hover' )
+	+ generateSelector( selector, 'background-color', hover, ':focus' );
+}
+
 function getBlockStyles( base, style, backgroundColor ) {
 	const selector = `${ base } .components-button`;
 	// we grab the background color if set as a good color for our button text
@@ -45,14 +52,19 @@ function getBlockStyles( base, style, backgroundColor ) {
 	// hover!
 	const buttonHoverColor = getLinkColor( style?.elements?.link?.[':hover']?.color?.text );
 
-	return generateSelector( selector, 'color', buttonTextColor )
-	+ generateSelector( selector, 'background-color', buttonColor )
-	+ generateSelector( selector, 'background-color', buttonHoverColor, ':hover' )
-	+ generateSelector( selector, 'background-color', buttonHoverColor, ':focus' )
+	return getStyles( selector, buttonColor, buttonTextColor, buttonHoverColor );
 }
 
-export function getPopupStyles( style, backgroundColor ) {
-	return getBlockStyles( '.apfmd__button-group', style, backgroundColor );
+export function getPopupStyles( style ) {
+	// we don't acept backgroundColor because the popup is always white (right?)
+	const buttonColor = getLinkColor( style?.elements?.link?.color?.text )
+		|| '#111';
+	const buttonTextColor = '#fff';
+	const buttonHoverColor = getLinkColor( style?.elements?.link?.[':hover']?.color?.text )
+		|| '#333';
+	const selector = '.apfmd__button-group .components-button';
+
+	return getStyles( selector, buttonColor, buttonTextColor, buttonHoverColor );
 }
 
 export function ButtonStyle( { selector, style, backgroundColor } ) {

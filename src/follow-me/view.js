@@ -2,9 +2,9 @@ import { render } from '@wordpress/element';
 import domReady from '@wordpress/dom-ready';
 import FollowMe from './follow-me';
 
-let _id = 1;
+let id = 1;
 function getUniqueId() {
-	return `activitypub-follow-me-block-${ _id++ }`;
+	return `activitypub-follow-me-block-${ id++ }`;
 }
 
 domReady( () => {

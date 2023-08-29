@@ -1,6 +1,6 @@
 
 import apiFetch from '@wordpress/api-fetch';
-import { useCallback, useEffect, useState } from '@wordpress/element';
+import { useCallback, useEffect, useState, createInterpolateElement } from '@wordpress/element';
 import { Button, Modal } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 import { copy, check, Icon } from '@wordpress/icons';
@@ -70,12 +70,28 @@ function Follow( { profile, popupStyles, userId } ) {
 	);
 }
 
+function isUrl( string ) {
+	try {
+		new URL( string );
+		return true;
+	} catch ( _ ) {
+		return false;
+	}
+}
+
+function isHandle( string ) {
+	// remove leading @, there should still be an @ in there
+	const parts = string.replace( /^@/, '' ).split( '@' );
+	return parts.length === 2 && isUrl( `https://${ parts[ 1 ] }` );
+}
+
 function Dialog( { profile, userId } ) {
 	const { resource } = profile;
 	const followText = __( 'Follow', 'activitypub' );
 	const loadingText = __( 'Loading...', 'activitypub' );
 	const openingText = __( 'Opening...', 'activitypub' );
 	const errorText = __( 'Error', 'activitypub' );
+	const invalidText = __( 'Invalid', 'activitypub' );
 	const [ buttonText, setButtonText ] = useState( followText );
 	const [ buttonIcon, setButtonIcon ] = useState( copy );
 	const ref = useCopyToClipboard( resource, () => {
@@ -84,6 +100,12 @@ function Dialog( { profile, userId } ) {
 	} );
 	const [ remoteProfile, setRemoteProfile ] = useState( '' );
 	const retrieveAndFollow = useCallback( () => {
+		let timeout;
+		if ( ! ( isUrl( remoteProfile ) || isHandle( remoteProfile ) ) ) {
+			setButtonText( invalidText );
+			timeout = setTimeout( () => setButtonText( followText ), 2000 );
+			return () => clearTimeout( timeout );
+		}
 		const path = `/${ namespace }/users/${userId}/remote-follow?resource=${ remoteProfile }`;
 		setButtonText( loadingText );
 		apiFetch( { path } ).then( ( { url } ) => {
@@ -101,9 +123,9 @@ function Dialog( { profile, userId } ) {
 	return (
 		<div className="activitypub-follow-me__dialog">
 			<div className="apmfd__section">
-				<h4>{ __( 'Remote Follow', 'activitypub' ) }</h4>
+				<h4>{ __( 'My Profile', 'activitypub' ) }</h4>
 				<div className="apfmd-description">
-					{ __( 'Copy and paste this URL into the search field of your favourite Fediverse app or server.', 'activitypub' ) }
+					{ __( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' ) }
 				</div>
 				<div className="apfmd__button-group">
 					<input type="text" value={ resource } readOnly />
@@ -114,9 +136,12 @@ function Dialog( { profile, userId } ) {
 				</div>
 			</div>
 			<div className="apmfd__section">
-				<h4>{ __( 'Different Server', 'activitypub' ) }</h4>
+				<h4>{ __( 'Your Profile', 'activitypub' ) }</h4>
 				<div className="apfmd-description">
-					{ __( 'Give us your Username/URL and we will start the process for you. (E.g. https://example.com/username or username@example.com)', 'activitypub' ) }
+					{ createInterpolateElement(
+						__( 'Or, if you know your own profile, we can start things that way! (eg <code>https://example.com/yourusername</code> or <code>yourusername@example.com</code>)', 'activitypub' ),
+						{ code: <code /> }
+					) }
 				</div>
 				<div className="apfmd__button-group">
 					<input
@@ -135,7 +160,7 @@ function Dialog( { profile, userId } ) {
 export default function FollowMe( { selectedUser, style, backgroundColor, id, useId = false } ) {
 	const [ profile, setProfile ] = useState( getNormalizedProfile() );
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
-	const popupStyles = getPopupStyles( style, backgroundColor );
+	const popupStyles = getPopupStyles( style );
 	const wrapperProps = useId ? { id } : {};
 	function setProfileData( profile ) {
 		setProfile( getNormalizedProfile( profile ) );
