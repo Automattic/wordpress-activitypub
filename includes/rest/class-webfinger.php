@@ -37,7 +37,7 @@ class Webfinger {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'webfinger' ),
-					'args'                => self::request_parameters(),
+					'args'                => self::request_args(),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -68,16 +68,16 @@ class Webfinger {
 	 *
 	 * @return array list of parameters
 	 */
-	public static function request_parameters() {
-		$params = array();
+	public static function request_args() {
+		$args = array();
 
-		$params['resource'] = array(
+		$args['resource'] = array(
 			'required' => true,
 			'type' => 'string',
 			'pattern' => '^acct:(.+)@(.+)$',
 		);
 
-		return $params;
+		return $args;
 	}
 
 	/**

@@ -4,6 +4,7 @@ namespace Activitypub\Rest;
 use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
+use Activitypub\Validator\Query;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
 
@@ -59,7 +60,7 @@ class Inbox {
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'user_inbox_get' ),
-					'args'                => self::user_inbox_get_parameters(),
+					'args'                => Query::get_default_args(),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -178,26 +179,6 @@ class Inbox {
 		}
 
 		return new WP_REST_Response( array(), 202 );
-	}
-
-	/**
-	 * The supported parameters
-	 *
-	 * @return array list of parameters
-	 */
-	public static function user_inbox_get_parameters() {
-		$params = array();
-
-		$params['page'] = array(
-			'type' => 'integer',
-		);
-
-		$params['user_id'] = array(
-			'required' => true,
-			'type' => 'string',
-		);
-
-		return $params;
 	}
 
 	/**

@@ -5,6 +5,7 @@ use stdClass;
 use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
+use Activitypub\Validator\Query;
 use Activitypub\Transformer\Post;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
@@ -38,7 +39,7 @@ class Outbox {
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'user_outbox_get' ),
-					'args'                => self::request_parameters(),
+					'args'                => Query::get_default_args(),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -128,26 +129,5 @@ class Outbox {
 		$response->header( 'Content-Type', 'application/activity+json' );
 
 		return $response;
-	}
-
-	/**
-	 * The supported parameters
-	 *
-	 * @return array list of parameters
-	 */
-	public static function request_parameters() {
-		$params = array();
-
-		$params['page'] = array(
-			'type' => 'integer',
-			'default' => 1,
-		);
-
-		$params['user_id'] = array(
-			'required' => true,
-			'type' => 'string',
-		);
-
-		return $params;
 	}
 }

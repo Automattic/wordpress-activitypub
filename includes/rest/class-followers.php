@@ -5,6 +5,7 @@ use WP_Error;
 use stdClass;
 use WP_REST_Server;
 use WP_REST_Response;
+use Activitypub\Validator\Query;
 use Activitypub\Collection\Users as User_Collection;
 use Activitypub\Collection\Followers as Follower_Collection;
 
@@ -36,7 +37,7 @@ class Followers {
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'get' ),
-					'args'                => self::request_parameters(),
+					'args'                => Query::get_default_args(),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -107,43 +108,5 @@ class Followers {
 		$response->header( 'Content-Type', 'application/activity+json' );
 
 		return $response;
-	}
-
-	/**
-	 * The supported parameters
-	 *
-	 * @return array list of parameters
-	 */
-	public static function request_parameters() {
-		$params = array();
-
-		$params['page'] = array(
-			'type' => 'integer',
-			'default' => 1,
-		);
-
-		$params['per_page'] = array(
-			'type' => 'integer',
-			'default' => 20,
-		);
-
-		$params['order'] = array(
-			'type'    => 'string',
-			'default' => 'desc',
-			'enum'    => array( 'asc', 'desc' ),
-		);
-
-		$params['user_id'] = array(
-			'required' => true,
-			'type' => 'string',
-		);
-
-		$params['context'] = array(
-			'type' => 'string',
-			'default' => 'simple',
-			'enum' => array( 'simple', 'full' ),
-		);
-
-		return $params;
 	}
 }
