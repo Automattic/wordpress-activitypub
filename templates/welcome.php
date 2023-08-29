@@ -14,7 +14,7 @@
 	<div class="box">
 		<h2><?php \esc_html_e( 'Welcome', 'activitypub' ); ?></h2>
 
-		<p><?php echo wp_kses( \__( 'With ActivityPub your blog becomes part of a federated social network. This means you can share and talk to everyone using the <strong>ActivityPub</strong> protocol, including users of <strong>Friendica</strong>, <strong>Pleroma</strong>, <strong>Pixelfed</strong> and <strong>Mastodon</strong>.', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
+		<p><?php echo wp_kses( \__( 'Enter the fediverse with <strong>ActivityPub</strong>, broadcasting your blog to a wider audience. Attract followers, deliver updates, and receive comments from a diverse user base on <strong>Mastodon</strong>, <strong>Friendica</strong>, <strong>Pleroma</strong>, <strong>Pixelfed</strong>, and all <strong>ActivityPub</strong>-compliant platforms.', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
 	</div>
 
 	<?php
@@ -22,9 +22,9 @@
 		$blog_user = new \Activitypub\Model\Blog_User();
 		?>
 	<div class="box">
-		<h3><?php \esc_html_e( 'Blog Account', 'activitypub' ); ?></h3>
+		<h3><?php \esc_html_e( 'Blog profile', 'activitypub' ); ?></h3>
 		<p>
-			<?php \esc_html_e( 'People can follow your Blog by using:', 'activitypub' ); ?>
+			<?php \esc_html_e( 'People can follow your blog by using:', 'activitypub' ); ?>
 		</p>
 		<p>
 			<label for="activitypub-blog-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
@@ -33,17 +33,17 @@
 			<input type="text" class="regular-text" id="activitypub-blog-identifier" value="<?php echo \esc_attr( $blog_user->get_resource() ); ?>" readonly />
 		</p>
 		<p>
-			<label for="activitypub-blog-url"><?php \esc_html_e( 'Profile-URL', 'activitypub' ); ?></label>
+			<label for="activitypub-blog-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label>
 		</p>
 		<p>
 			<input type="text" class="regular-text" id="activitypub-blog-url" value="<?php echo \esc_attr( $blog_user->get_url() ); ?>" readonly />
 		</p>
 		<p>
-			<?php \esc_html_e( 'This Blog-User will federate all posts written on your Blog, regardless of the User who posted it.', 'activitypub' ); ?>
+			<?php \esc_html_e( 'This blog profile will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
 		<p>
 		<p>
 			<a href="<?php echo \esc_url_raw( \admin_url( '/options-general.php?page=activitypub&tab=settings' ) ); ?>">
-				<?php \esc_html_e( 'Customize Blog-User on Settings page.', 'activitypub' ); ?>
+				<?php \esc_html_e( 'Customize the blog profile', 'activitypub' ); ?>
 			</a>
 		</p>
 	</div>
@@ -54,9 +54,9 @@
 		$user = \Activitypub\Collection\Users::get_by_id( wp_get_current_user()->ID );
 		?>
 	<div class="box">
-		<h3><?php \esc_html_e( 'Personal Account', 'activitypub' ); ?></h3>
+		<h3><?php \esc_html_e( 'Author profile', 'activitypub' ); ?></h3>
 		<p>
-			<?php \esc_html_e( 'People can follow you by using your Username:', 'activitypub' ); ?>
+			<?php \esc_html_e( 'People can follow you by using your author name:', 'activitypub' ); ?>
 		</p>
 		<p>
 			<label for="activitypub-user-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
@@ -65,17 +65,17 @@
 			<input type="text" class="regular-text" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_resource() ); ?>" readonly />
 		</p>
 		<p>
-			<label for="activitypub-user-url"><?php \esc_html_e( 'Profile-URL', 'activitypub' ); ?></label>
+			<label for="activitypub-user-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label>
 		</p>
 		<p>
 			<input type="text" class="regular-text" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly />
 		</p>
 		<p>
-			<?php \esc_html_e( 'Users who can not access this settings page will find their username on the "Edit Profile" page.', 'activitypub' ); ?>
+			<?php \esc_html_e( 'Authors who can not access this settings page will find their username on the "Edit Profile" page.', 'activitypub' ); ?>
 		<p>
 		<p>
 			<a href="<?php echo \esc_url_raw( \admin_url( '/profile.php#activitypub' ) ); ?>">
-			<?php \esc_html_e( 'Customize Username on "Edit Profile" page.', 'activitypub' ); ?>
+			<?php \esc_html_e( 'Customize username on "Edit Profile" page.', 'activitypub' ); ?>
 			</a>
 		</p>
 	</div>
@@ -87,9 +87,8 @@
 			<?php
 			echo wp_kses(
 				\sprintf(
-					// translators:
 					\__(
-						'If you have problems using this plugin, please check the <a href="%s">Site Health</a> to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).',
+						'If you have problems using this plugin, please check the <a href="%s">Site Health</a> page to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).',
 						'activitypub'
 					),
 					\esc_url_raw( admin_url( 'site-health.php' ) )
