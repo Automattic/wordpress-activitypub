@@ -37,6 +37,13 @@ class User extends Actor {
 	protected $featured;
 
 	/**
+	 * The Webfinger-style identifier.
+	 *
+	 * @var string
+	 */
+	protected $resource;
+
+	/**
 	 * The User-Type
 	 *
 	 * @var string
