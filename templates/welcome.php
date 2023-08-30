@@ -87,6 +87,7 @@
 			<?php
 			echo wp_kses(
 				\sprintf(
+					/* translators: the placeholder is the Site Health URL */
 					\__(
 						'If you have problems using this plugin, please check the <a href="%s">Site Health</a> page to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).',
 						'activitypub'
