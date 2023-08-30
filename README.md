@@ -108,17 +108,18 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 ### 1.0.0 ###
 
 * Add: blog-wide Account (catchall, like `example.com@example.com`)
-* Add: Signature Verification: https://docs.joinmastodon.org/spec/security/ .
-* Add: a Followers Block.
+* Add: a Follow Me block (help visitors to follow your Profile)
+* Add: Signature Verification: https://docs.joinmastodon.org/spec/security/
+* Add: a Followers Block (show off your Followers)
 * Add: Simple caching
 * Add: Collection endpoints for Featured Tags and Featured Posts
-* Update: Complete rewrite of the Follower-System based on Custom Post Types.
+* Update: Complete rewrite of the Follower-System based on Custom Post Types
 * Update: Improved linter (PHPCS)
-* Compatibility: Add a new conditional, `\Activitypub\is_activitypub_request()`, to allow third-party plugins to detect ActivityPub requests.
-* Compatibility: Add hooks to allow modifying images returned in ActivityPub requests.
-* Compatibility: Indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.3.
-* Compatibility: Avoid PHP notice on sites using PHP 8.2.
-* Fixed: Load the plugin later in the WordPress code lifecycle to avoid errors in some requests.
+* Compatibility: Add a new conditional, `\Activitypub\is_activitypub_request()`, to allow third-party plugins to detect ActivityPub requests
+* Compatibility: Add hooks to allow modifying images returned in ActivityPub requests
+* Compatibility: Indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.3
+* Compatibility: Avoid PHP notice on sites using PHP 8.2
+* Fixed: Load the plugin later in the WordPress code lifecycle to avoid errors in some requests
 * Fixed: Updating posts
 * Fixed: Hashtag now support CamelCase and UTF-8
 
