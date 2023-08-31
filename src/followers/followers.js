@@ -64,7 +64,7 @@ export function Followers( {
 				setTotal( data.totalItems );
 				setFollowers( data.orderedItems );
 			} )
-			.catch( ( error ) => console.error( error ) );
+			.catch( () => {} );
 	}, [ userId, per_page, order, page ] );
 	return (
 		<div className={ "activitypub-follower-block " + className }>

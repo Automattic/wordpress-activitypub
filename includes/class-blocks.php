@@ -13,7 +13,9 @@ class Blocks {
 	}
 
 	public static function add_data() {
-		$handle = is_admin() ? 'activitypub-followers-editor-script' : 'activitypub-followers-view-script';
+		$context = is_admin() ? 'editor' : 'view';
+		$followers_handle = 'activitypub-followers-' . $context . '-script';
+		$follow_me_handle = 'activitypub-follow-me-' . $context . '-script';
 		$data = array(
 			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
 			'enabled' => array(
@@ -22,7 +24,8 @@ class Blocks {
 			),
 		);
 		$js = sprintf( 'var _activityPubOptions = %s;', wp_json_encode( $data ) );
-		\wp_add_inline_script( $handle, $js, 'before' );
+		\wp_add_inline_script( $followers_handle, $js, 'before' );
+		\wp_add_inline_script( $follow_me_handle, $js, 'before' );
 	}
 
 	public static function register_blocks() {
@@ -30,6 +33,12 @@ class Blocks {
 			ACTIVITYPUB_PLUGIN_DIR . '/build/followers',
 			array(
 				'render_callback' => array( self::class, 'render_follower_block' ),
+			)
+		);
+		\register_block_type_from_metadata(
+			ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me',
+			array(
+				'render_callback' => array( self::class, 'render_follow_me_block' ),
 			)
 		);
 	}
@@ -42,7 +51,24 @@ class Blocks {
 		return 0;
 	}
 
-	public static function render_follower_block( $attrs, $content, $block ) {
+	/**
+	 * Render the follow me block.
+	 * @param array $attrs The block attributes.
+	 * @return string The HTML to render.
+	 */
+	public static function render_follow_me_block( $attrs ) {
+		$wrapper_attributes = get_block_wrapper_attributes(
+			array(
+				'aria-label' => __( 'Follow me on the Fediverse', 'activitypub' ),
+				'class'      => 'activitypub-follow-me-block-wrapper',
+				'data-attrs' => wp_json_encode( $attrs ),
+			)
+		);
+		// todo: render more than an empty div?
+		return '<div ' . $wrapper_attributes . '></div>';
+	}
+
+	public static function render_follower_block( $attrs ) {
 		$followee_user_id = self::get_user_id( $attrs['selectedUser'] );
 		$per_page = absint( $attrs['per_page'] );
 		$followers = Followers::get_followers( $followee_user_id, $per_page );
@@ -55,7 +81,7 @@ class Blocks {
 			)
 		);
 
-		$html = '<div class="activitypub-follower-block" ' . $wrapper_attributes . '>';
+		$html = '<div ' . $wrapper_attributes . '>';
 		if ( $title ) {
 			$html .= '<h3>' . $title . '</h3>';
 		}
