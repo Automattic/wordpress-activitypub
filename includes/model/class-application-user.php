@@ -23,6 +23,13 @@ class Application_User extends Blog_User {
 	protected $type = 'Application';
 
 	/**
+	 * If the User is discoverable.
+	 *
+	 * @var boolean
+	 */
+	protected $discoverable = false;
+
+	/**
 	 * Get the User-Url.
 	 *
 	 * @return string The User-Url.
@@ -35,7 +42,7 @@ class Application_User extends Blog_User {
 		return 'application';
 	}
 
-	public function get_username() {
+	public function get_preferred_username() {
 		return $this::get_name();
 	}
 

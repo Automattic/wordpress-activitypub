@@ -136,6 +136,11 @@ class Blog_User extends User {
 		}
 
 		$image = wp_get_attachment_image_src( $icon_id, 'full' );
+
+		if ( ! $image ) {
+			return array();
+		}
+
 		return array(
 			'type' => 'Image',
 			'url'  => esc_url( $image[0] ),
