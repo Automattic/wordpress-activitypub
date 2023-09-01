@@ -269,7 +269,7 @@ class Signature {
 	/**
 	 * Parses the Signature header
 	 *
-	 * @param array $signature The signature header.
+	 * @param string $signature The signature header.
 	 *
 	 * @return array signature parts
 	 */
@@ -306,7 +306,7 @@ class Signature {
 	/**
 	 * Gets the header data from the included pseudo headers
 	 *
-	 * @param array $signed_headers
+	 * @param array $signed_headers  The signed headers.
 	 * @param array $signature_block (pseudo-headers)
 	 * @param array $headers         (http headers)
 	 *
