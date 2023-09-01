@@ -122,23 +122,28 @@ class Blog_User extends User {
 	/**
 	 * Get the User-Icon.
 	 *
-	 * @return array|null The User-Icon.
+	 * @return array The User-Icon.
 	 */
 	public function get_icon() {
 		// try site icon first
 		$icon_id = get_option( 'site_icon' );
+
 		// try custom logo second
 		if ( ! $icon_id ) {
 			$icon_id = get_theme_mod( 'custom_logo' );
 		}
-		if ( ! $icon_id ) {
-			return null;
+
+		if ( $icon_id ) {
+			$icon = wp_get_attachment_image_src( $icon_id, 'full' );
+			$url = $icon[0];
+		} else {
+			// fallback to default icon
+			$url = plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
 		}
 
-		$image = wp_get_attachment_image_src( $icon_id, 'full' );
 		return array(
 			'type' => 'Image',
-			'url'  => esc_url( $image[0] ),
+			'url'  => esc_url( $url ),
 		);
 	}
 
