@@ -37,18 +37,25 @@ class User extends Actor {
 	protected $featured;
 
 	/**
-	 * The Webfinger-style identifier.
-	 *
-	 * @var string
-	 */
-	protected $resource;
-
-	/**
 	 * The User-Type
 	 *
 	 * @var string
 	 */
 	protected $type = 'Person';
+
+	/**
+	 * If the User is discoverable.
+	 *
+	 * @var boolean
+	 */
+	protected $discoverable = true;
+
+	/**
+	 * The WebFinger Resource.
+	 *
+	 * @var string<url>
+	 */
+	protected $resource;
 
 	public static function from_wp_user( $user_id ) {
 		if ( is_user_disabled( $user_id ) ) {

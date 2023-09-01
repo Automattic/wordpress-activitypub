@@ -171,6 +171,12 @@ class Inbox {
 		}
 
 		foreach ( $users as $user ) {
+			$user = User_Collection::get_by_various( $user );
+
+			if ( is_wp_error( $user ) ) {
+				continue;
+			}
+
 			$type = \strtolower( $type );
 
 			\do_action( 'activitypub_inbox', $data, $user->ID, $type );
