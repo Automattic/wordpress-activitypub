@@ -26,7 +26,7 @@ class Activity extends Base_Object {
 			'schema' => 'http://schema.org#',
 			'pt' => 'https://joinpeertube.org/ns#',
 			'toot' => 'http://joinmastodon.org/ns#',
-			'webfinger' => 'http://webfinger.net/#',
+			'webfinger' => 'https://webfinger.net/#',
 			'litepub' => 'http://litepub.social/ns#',
 			'value' => 'schema:value',
 			'Hashtag' => 'as:Hashtag',
