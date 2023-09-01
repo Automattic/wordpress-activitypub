@@ -114,7 +114,7 @@ class Shortcodes {
 
 				/** This filter is documented in wp-includes/post-template.php */
 				$excerpt = \apply_filters( 'the_content', $excerpt );
-				$excerpt = \str_replace( ']]>', ']]>', $excerpt );
+				$excerpt = \str_replace( ']]>', ']]&gt;', $excerpt );
 			}
 		}
 
