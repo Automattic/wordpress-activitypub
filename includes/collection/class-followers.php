@@ -160,7 +160,7 @@ class Followers {
 	 * @param int    $user_id The ID of the WordPress User
 	 * @param string $actor   The Actor URL
 	 *
-	 * @return array|WP_Error The Follower (WP_Term array) or an WP_Error
+	 * @return array|WP_Error The Follower (WP_Post array) or an WP_Error
 	 */
 	public static function add_follower( $user_id, $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
@@ -174,24 +174,26 @@ class Followers {
 		$follower = new Follower();
 
 		if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-			$follower->set_id( $actor );
-			$follower->set_url( $actor );
-			$error = $meta;
+			return new WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ) );
 		} else {
 			$follower->from_array( $meta );
 		}
 
-		$follower->upsert();
+		$id = $follower->upsert();
 
-		$meta = get_post_meta( $follower->get__id(), 'activitypub_user_id' );
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+
+		$meta = get_post_meta( $id, 'activitypub_user_id' );
 
 		if ( $error ) {
-			self::add_error( $follower->get__id(), $error );
+			self::add_error( $id, $error );
 		}
 
 		// phpcs:ignore WordPress.PHP.StrictInArray.MissingTrueStrict
 		if ( is_array( $meta ) && ! in_array( $user_id, $meta ) ) {
-			add_post_meta( $follower->get__id(), 'activitypub_user_id', $user_id );
+			add_post_meta( $id, 'activitypub_user_id', $user_id );
 			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 
