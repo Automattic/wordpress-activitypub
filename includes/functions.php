@@ -54,7 +54,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	}
 
 	if ( ! $actor ) {
-		return new WP_Error( 'activitypub_no_valid_actor_identifier', \__( 'The "actor" identifier is not valid', 'activitypub' ), $actor );;
+		return new WP_Error( 'activitypub_no_valid_actor_identifier', \__( 'The "actor" identifier is not valid', 'activitypub' ), $actor );
 	}
 
 	if ( is_wp_error( $actor ) ) {
