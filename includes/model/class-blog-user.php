@@ -133,17 +133,23 @@ class Blog_User extends User {
 			$icon_id = get_theme_mod( 'custom_logo' );
 		}
 
+		$icon_url = false;
+
 		if ( $icon_id ) {
 			$icon = wp_get_attachment_image_src( $icon_id, 'full' );
-			$url = $icon[0];
-		} else {
+			if ( $icon ) {
+				$icon_url = $icon[0];
+			}
+		}
+
+		if ( ! $icon_url ) {
 			// fallback to default icon
-			$url = plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
+			$icon_url = plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
 		}
 
 		return array(
 			'type' => 'Image',
-			'url'  => esc_url( $url ),
+			'url'  => esc_url( $icon_url ),
 		);
 	}
 
