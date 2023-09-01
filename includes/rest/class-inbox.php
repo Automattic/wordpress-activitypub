@@ -326,61 +326,6 @@ class Inbox {
 	}
 
 	/**
-	 * Handles "Reaction" requests
-	 *
-	 * @param  array $object  The activity-object
-	 * @param  int   $user_id The id of the local blog-user
-	 */
-	public static function handle_reaction( $object, $user_id ) {
-		$meta = get_remote_metadata_by_actor( $object['actor'] );
-
-		$comment_post_id = \url_to_postid( $object['object'] );
-
-		// save only replys and reactions
-		if ( ! $comment_post_id ) {
-			return false;
-		}
-
-		$commentdata = array(
-			'comment_post_ID' => $comment_post_id,
-			'comment_author' => \esc_attr( $meta['name'] ),
-			'comment_author_email' => '',
-			'comment_author_url' => \esc_url_raw( $object['actor'] ),
-			'comment_content' => \esc_url_raw( $object['actor'] ),
-			'comment_type' => \esc_attr( \strtolower( $object['type'] ) ),
-			'comment_parent' => 0,
-			'comment_meta' => array(
-				'source_url' => \esc_url_raw( $object['id'] ),
-				'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
-				'protocol' => 'activitypub',
-			),
-		);
-
-		// disable flood control
-		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
-
-		// do not require email for AP entries
-		\add_filter( 'pre_option_require_name_email', '__return_false' );
-
-		// No nonce possible for this submission route
-		\add_filter(
-			'akismet_comment_nonce',
-			function() {
-				return 'inactive';
-			}
-		);
-
-		$state = \wp_new_comment( $commentdata, true );
-
-		\remove_filter( 'pre_option_require_name_email', '__return_false' );
-
-		// re-add flood control
-		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
-
-		do_action( 'activitypub_handled_reaction', $object, $user_id, $state, $commentdata );
-	}
-
-	/**
 	 * Handles "Create" requests
 	 *
 	 * @param  array $object  The activity-object
