@@ -169,15 +169,14 @@ class Followers {
 			return $meta;
 		}
 
+		if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
+			return new WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ) );
+		}
+
 		$error = null;
 
 		$follower = new Follower();
-
-		if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-			return new WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ) );
-		} else {
-			$follower->from_array( $meta );
-		}
+		$follower->from_array( $meta );
 
 		$id = $follower->upsert();
 
