@@ -26,6 +26,7 @@ class Activity extends Base_Object {
 			'schema' => 'http://schema.org#',
 			'pt' => 'https://joinpeertube.org/ns#',
 			'toot' => 'http://joinmastodon.org/ns#',
+			'webfinger' => 'https://webfinger.net/#',
 			'litepub' => 'http://litepub.social/ns#',
 			'value' => 'schema:value',
 			'Hashtag' => 'as:Hashtag',
@@ -37,8 +38,13 @@ class Activity extends Base_Object {
 				'@id' => 'toot:featuredTags',
 				'@type' => '@id',
 			),
+			'alsoKnownAs' => array(
+				'@id' => 'as:alsoKnownAs',
+				'@type' => '@id',
+			),
 			'discoverable' => 'toot:discoverable',
 			'sensitive' => 'as:sensitive',
+			'resource' => 'webfinger:resource',
 		),
 	);
 

@@ -39,7 +39,7 @@ class Test_Activitypub_Signature_Verification extends WP_UnitTestCase {
 
 		// Start verification
 		// parse_signature_header, get_signed_data, get_public_key
-		$signature_block = Activitypub\Signature::parse_signature_header( $headers['signature'] );
+		$signature_block = Activitypub\Signature::parse_signature_header( $headers['signature'][0] );
 		$signed_headers = $signature_block['headers'];
 		$signed_data = Activitypub\Signature::get_signed_data( $signed_headers, $signature_block, $headers );
 
