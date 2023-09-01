@@ -46,6 +46,11 @@ class Server {
 	 */
 	public static function application_actor() {
 		$user = new Application_User();
+
+		$user->set_context(
+			\Activitypub\Activity\Activity::CONTEXT
+		);
+
 		$json = $user->to_array();
 
 		$response = new WP_REST_Response( $json, 200 );
@@ -79,13 +84,13 @@ class Server {
 			return $response;
 		}
 
-		// POST-Requests are always signed
-		if ( 'POST' === $request->get_method() ) {
+		// POST-Requets are always signed
+		if ( 'post' === \strtolower( $request->get_method() ) ) {
 			$verified_request = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_request ) ) {
 				return $verified_request;
 			}
-		} elseif ( 'GET' === $request->get_method() ) { // GET-Requests are only signed in secure mode
+		} elseif ( 'get' === \strtolower( $request->get_method() ) ) { // GET-Requests are only signed in secure mode
 			if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
 				$verified_request = Signature::verify_http_signature( $request );
 				if ( \is_wp_error( $verified_request ) ) {

@@ -23,6 +23,13 @@ class Application_User extends Blog_User {
 	protected $type = 'Application';
 
 	/**
+	 * If the User is discoverable.
+	 *
+	 * @var boolean
+	 */
+	protected $discoverable = false;
+
+	/**
 	 * Get the User-Url.
 	 *
 	 * @return string The User-Url.
@@ -35,7 +42,7 @@ class Application_User extends Blog_User {
 		return 'application';
 	}
 
-	public function get_username() {
+	public function get_preferred_username() {
 		return $this::get_name();
 	}
 
@@ -77,14 +84,6 @@ class Application_User extends Blog_User {
 			\update_option( 'activitypub_application_user_public_key', $key_pair['public_key'] );
 			\update_option( 'activitypub_application_user_private_key', $key_pair['private_key'] );
 		}
-	}
-
-	public function get_inbox() {
-		return null;
-	}
-
-	public function get_outbox() {
-		return null;
 	}
 
 	public function get_followers() {
