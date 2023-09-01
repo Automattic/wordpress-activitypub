@@ -131,7 +131,7 @@ class Inbox {
 			return $user;
 		}
 
-		$data = $request->get_params();
+		$data = $request->get_json_params();
 		$type = $request->get_param( 'type' );
 		$type = \strtolower( $type );
 
@@ -149,7 +149,7 @@ class Inbox {
 	 * @return WP_REST_Response
 	 */
 	public static function shared_inbox_post( $request ) {
-		$data = $request->get_params();
+		$data = $request->get_json_params();
 		$type = $request->get_param( 'type' );
 		$users = self::extract_recipients( $data );
 
