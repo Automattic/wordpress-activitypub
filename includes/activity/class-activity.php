@@ -38,6 +38,10 @@ class Activity extends Base_Object {
 				'@id' => 'toot:featuredTags',
 				'@type' => '@id',
 			),
+			'alsoKnownAs' => array(
+				'@id' => 'as:alsoKnownAs',
+				'@type' => '@id',
+			),
 			'discoverable' => 'toot:discoverable',
 			'sensitive' => 'as:sensitive',
 			'resource' => 'webfinger:resource',
