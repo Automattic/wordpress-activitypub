@@ -86,14 +86,6 @@ class Application_User extends Blog_User {
 		}
 	}
 
-	public function get_inbox() {
-		return null;
-	}
-
-	public function get_outbox() {
-		return null;
-	}
-
 	public function get_followers() {
 		return null;
 	}
