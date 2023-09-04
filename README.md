@@ -25,13 +25,13 @@ Once you follow Jane's `@jane@example.com` profile, any blog post she crafts on 
 The plugin works with the following tested federated platforms, but there may be more that it works with as well:
 
 * [Mastodon](https://joinmastodon.org/)
-* [Pleroma](https://pleroma.social/)
+* [Pleroma](https://pleroma.social/)/[Akkoma](https://akkoma.social/)
 * [friendica](https://friendi.ca/)
 * [Hubzilla](https://hubzilla.org/)
 * [Pixelfed](https://pixelfed.org/)
 * [Socialhome](https://socialhome.network/)
 * [Misskey](https://join.misskey.page/)
-* [Calckey](https://calckey.org/)
+* [Firefish](https://joinfirefish.org/) (rebrand of Calckey)
 
 Some things to note:
 
