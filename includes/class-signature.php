@@ -162,12 +162,10 @@ class Signature {
 				$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
 			}
 			$headers = $request->get_headers();
-			$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '';
 			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . $route;
 		} else {
 			$request = self::format_server_request( $request );
 			$headers = $request['headers']; // $_SERVER array
-			$actor = null;
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
@@ -176,9 +174,9 @@ class Signature {
 		}
 
 		if ( array_key_exists( 'signature', $headers ) ) {
-			$signature_block = self::parse_signature_header( $headers['signature'] );
+			$signature_block = self::parse_signature_header( $headers['signature'][0] );
 		} elseif ( array_key_exists( 'authorization', $headers ) ) {
-			$signature_block = self::parse_signature_header( $headers['authorization'] );
+			$signature_block = self::parse_signature_header( $headers['authorization'][0] );
 		}
 
 		if ( ! isset( $signature_block ) || ! $signature_block ) {
@@ -217,11 +215,8 @@ class Signature {
 			}
 		}
 
-		if ( $actor ) {
-			$public_key = self::get_remote_key( $actor );
-		} else {
-			$public_key = self::get_remote_key( $signature_block['keyId'] );
-		}
+		$public_key = self::get_remote_key( $signature_block['keyId'] );
+
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		}
@@ -242,7 +237,7 @@ class Signature {
 	 * @return string The public key.
 	 */
 	public static function get_remote_key( $key_id ) { // phpcs:ignore
-		$actor = get_remote_metadata_by_actor( strtok( strip_fragment_from_url( $key_id ), '?' ) ); // phpcs:ignore
+		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) ); // phpcs:ignore
 		if ( \is_wp_error( $actor ) ) {
 			return $actor;
 		}
@@ -274,32 +269,31 @@ class Signature {
 	/**
 	 * Parses the Signature header
 	 *
-	 * @param array $header The signature header.
+	 * @param string $signature The signature header.
 	 *
 	 * @return array signature parts
 	 */
-	public static function parse_signature_header( $header ) {
-		$parsed_header = array();
-		$matches       = array();
-		$h_string      = \implode( ',', (array) $header[0] );
+	public static function parse_signature_header( $signature ) {
+		$parsed_header  = array();
+		$matches        = array();
 
-		if ( \preg_match( '/keyId="(.*?)"/ism', $h_string, $matches ) ) {
-			$parsed_header['keyId'] = $matches[1];
+		if ( \preg_match( '/keyId="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['keyId'] = trim( $matches[1] );
 		}
-		if ( \preg_match( '/created=([0-9]*)/ism', $h_string, $matches ) ) {
-			$parsed_header['(created)'] = $matches[1];
+		if ( \preg_match( '/created=([0-9]*)/ism', $signature, $matches ) ) {
+			$parsed_header['(created)'] = trim( $matches[1] );
 		}
-		if ( \preg_match( '/expires=([0-9]*)/ism', $h_string, $matches ) ) {
-			$parsed_header['(expires)'] = $matches[1];
+		if ( \preg_match( '/expires=([0-9]*)/ism', $signature, $matches ) ) {
+			$parsed_header['(expires)'] = trim( $matches[1] );
 		}
-		if ( \preg_match( '/algorithm="(.*?)"/ism', $h_string, $matches ) ) {
-			$parsed_header['algorithm'] = $matches[1];
+		if ( \preg_match( '/algorithm="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['algorithm'] = trim( $matches[1] );
 		}
-		if ( \preg_match( '/headers="(.*?)"/ism', $h_string, $matches ) ) {
-			$parsed_header['headers'] = \explode( ' ', $matches[1] );
+		if ( \preg_match( '/headers="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['headers'] = \explode( ' ', trim( $matches[1] ) );
 		}
-		if ( \preg_match( '/signature="(.*?)"/ism', $h_string, $matches ) ) {
-			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', $matches[1] ) ); // phpcs:ignore
+		if ( \preg_match( '/signature="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', trim( $matches[1] ) ) ); // phpcs:ignore
 		}
 
 		if ( ( $parsed_header['signature'] ) && ( $parsed_header['algorithm'] ) && ( ! $parsed_header['headers'] ) ) {
@@ -312,7 +306,7 @@ class Signature {
 	/**
 	 * Gets the header data from the included pseudo headers
 	 *
-	 * @param array $signed_headers
+	 * @param array $signed_headers  The signed headers.
 	 * @param array $signature_block (pseudo-headers)
 	 * @param array $headers         (http headers)
 	 *

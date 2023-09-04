@@ -12,39 +12,39 @@ The ActivityPub protocol is a decentralized social networking protocol based upo
 
 ## Description ##
 
-This is BETA software, see the FAQ to see the current feature set or rather what is still planned.
+Enter the fediverse with **ActivityPub**, broadcasting your blog to a wider audience! Attract followers, deliver updates, and receive comments from a diverse user base of **ActivityPub**\-compliant platforms.
 
-The plugin implements the ActivityPub protocol for your blog, which means that your readers will be able to follow your blog posts on Mastodon and other federated platforms that support ActivityPub. In addition, replies to your posts on Mastodon and related platforms will automatically become comments on your blog post.
+With the ActivityPub plugin installed, your WordPress blog itself function as a federated profile, along with profiles for each author. For instance, if your website is `example.com`, then the blog-wide profile can be found at `@example.com@example.com`, and authors like Jane and Bob would have their individual profiles at `@jane@example.com` and `@bobz@example.com`, respectively.
+
+An example: I give you my Mastodon profile name: `@pfefferle@mastodon.social`. You search, see my profile, and hit follow. Now, any post I make appears in your Home feed. Similarly, with the ActivityPub plugin, you can find and follow Jane's profile at `@jane@example.com`.
+
+Once you follow Jane's `@jane@example.com` profile, any blog post she crafts on `example.com` will land in your Home feed. Simultaneously, by following the blog-wide profile `@example.com@example.com`, you'll receive updates from all authors.
+
+**Note**: if no one follows your author or blog instance, your posts remain unseen. The simplest method to verify the plugin's operation is by following your profile. If you possess a Mastodon profile, initiate by following your new one.
 
 The plugin works with the following tested federated platforms, but there may be more that it works with as well:
 
 * [Mastodon](https://joinmastodon.org/)
-* [Pleroma](https://pleroma.social/)
+* [Pleroma](https://pleroma.social/)/[Akkoma](https://akkoma.social/)
 * [friendica](https://friendi.ca/)
 * [Hubzilla](https://hubzilla.org/)
 * [Pixelfed](https://pixelfed.org/)
 * [Socialhome](https://socialhome.network/)
 * [Misskey](https://join.misskey.page/)
-* [Calckey](https://calckey.org/)
-
-Here’s what that means and what you can expect.
-
-Once the ActivityPub plugin is installed, each author’s page on your WordPress blog will become its own federated instance. In other words, if you have two authors, Jane and Bob, on your website, `example.com`, then your authors would have their own author pages at `example.com/author/jane` and `example.com/author/bob`. Each of those author pages would now be available to Mastodon users (and all other federated platform users) as a profile that can be followed. Let’s break that down further. Let’s say you have a friend on Mastodon who tells you to follow them and they give you their profile name `@janelivesheresomeofthetime@mastodon.social`. You search for her name, see her profile, and click the follow button, right? From then on, everything Jane posts on her profile shows up in your Home feed. Okay, similarly, now that Jane has installed the ActivityPub plugin on her `example.com` site, her friends can also follow her on Mastodon by searching for `@jane@example.com` and clicking the Follow button on that profile.
-
-From now on, every blog post Jane publishes on example.com will show up on your Home feed because you follow her `@jane@example.com` profile.
-Of course, if no one follows your author instance, then no one will ever see the posts - including you! So the easiest way to even know if the plugin is working is to follow your new profile yourself. If you already have a Mastodon profile, just follow your new one from there.
+* [Firefish](https://joinfirefish.org/) (rebrand of Calckey)
 
 Some things to note:
 
-1. Many single-author blogs have chosen to turn off or redirect their author profile pages, usually via an SEO plugin like Yoast or Rank Math. This is usually done to avoid duplicate content with your blog’s home page. If your author page has been deactivated in this way, then ActivityPub won’t work for you. Instead, you can turn your author profile page back on, and then use the option in your SEO plugin to noindex the author page. This will enable the page to be live and ActivityPub will now work, but the live page won’t cause any duplicate content issues with search engines.
-1. Once ActivityPub is installed, only new posts going forward will be available in the fediverse. Likewise, even if you’ve been using ActivityPub for a while, anyone who follows your site, will only see new posts you publish from that moment on. They will never see previously-published posts in their Home feed. This process is very similar to subscribing to a newsletter. If you subscribe to a newsletter, you will only receive future emails, but not the old archived ones. With ActivityPub, if someone follows your site, they will only receive new blog posts you publish from then on.
+1. The blog-wide profile is only compatible with sites with rewrite rules enabled. If your site does not have rewrite rules enabled, the author-specific profiles may still work.
+1. Many single-author blogs have chosen to turn off or redirect their author profile pages, usually via an SEO plugin like Yoast or Rank Math. This is usually done to avoid duplicate content with your blog’s home page. If your author page has been deactivated in this way, then ActivityPub author profiles won’t work for you. Instead, you can turn your author profile page back on, and then use the option in your SEO plugin to noindex the author page. This will duplicate content issues with search engines and will enable ActivityPub author profiles to work.
+1. Once ActivityPub is installed, *only new posts going forward* will be available in the fediverse. Likewise, even if you’ve been using ActivityPub for a while, anyone who follows your site, will only see new posts you publish from that moment on. They will never see previously-published posts in their Home feed. This process is very similar to subscribing to a newsletter. If you subscribe to a newsletter, you will only receive future emails, but not the old archived ones. With ActivityPub, if someone follows your site, they will only receive new blog posts you publish from then on.
 
 So what’s the process?
 
 1. Install the ActivityPub plugin.
 1. Go to the plugin’s settings page and adjust the settings to your liking. Click the Save button when ready.
-1. Make sure your blog’s author profile page is active.
-1. Go to Mastodon or any other federated platform, search for your author’s new federated profile, and follow it. Your new profile will be in the form of @yourauthorname@yourwebsite.com, so that is what you’ll search for.
+1. Make sure your blog’s author profile page is active if you are using author profiles.
+1. Go to Mastodon or any other federated platform, and search for your profile, and follow it. Your new profile will be in the form of either `@your_username@example.com` or `@example.com@example.com`, so that is what you’ll search for.
 1. On your blog, publish a new post.
 1. From Mastodon, check to see if the new post appears in your Home feed.
 
@@ -54,22 +54,14 @@ Please note that it may take up to 15 minutes or so for the new post to show up 
 
 ### tl;dr ###
 
-This plugin connects your WordPress blog to popular social platforms like Mastodon, making your posts more accessible to a wider audience. Once installed, your blog's author pages can be followed by users on these platforms, allowing them to receive your new posts in their feeds.
-
-Here's how it works:
-
-1. Install the plugin and adjust settings as needed.
-1. Ensure your blog's author profile page is active.
-1. On Mastodon or other supported platforms, search for and follow your author's new profile (e.g., `@yourauthorname@yourwebsite.com`).
-1. Publish a new post on your blog and check if it appears in your Mastodon feed.
-
-Please note that it may take up to 15 minutes for a new post to appear in your feed, as messages are sent on a delay to avoid overwhelming your followers. Be patient and give it some time.
+This plugin connects your WordPress blog to popular social platforms like Mastodon, making your posts more accessible to a wider audience. Once installed, your blog can be followed by users on these platforms, allowing them to receive your new posts in their feeds.
 
 ### What is the status of this plugin? ###
 
 Implemented:
 
-* profile pages (JSON representation)
+* blog profile pages (JSON representation)
+* author profile pages (JSON representation)
 * custom links
 * functional inbox/outbox
 * follow (accept follows)
@@ -79,8 +71,8 @@ Implemented:
 
 To implement:
 
-* better configuration possibilities
 * threaded comments support
+* replace shortcodes with blocks for layout
 
 ### What is "ActivityPub for WordPress" ###
 
@@ -115,18 +107,19 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 
 ### 1.0.0 ###
 
-* Add: blog-wide Account (catchall, like `mydomain.com@mydomain.com`)
-* Add: Signature Verification: https://docs.joinmastodon.org/spec/security/ .
-* Add: a Followers Block.
+* Add: blog-wide Account (catchall, like `example.com@example.com`)
+* Add: a Follow Me block (help visitors to follow your Profile)
+* Add: Signature Verification: https://docs.joinmastodon.org/spec/security/
+* Add: a Followers Block (show off your Followers)
 * Add: Simple caching
 * Add: Collection endpoints for Featured Tags and Featured Posts
-* Update: Complete rewrite of the Follower-System based on Custom Post Types.
+* Update: Complete rewrite of the Follower-System based on Custom Post Types
 * Update: Improved linter (PHPCS)
-* Compatibility: Add a new conditional, `\Activitypub\is_activitypub_request()`, to allow third-party plugins to detect ActivityPub requests.
-* Compatibility: Add hooks to allow modifying images returned in ActivityPub requests.
-* Compatibility: Indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.3.
-* Compatibility: Avoid PHP notice on sites using PHP 8.2.
-* Fixed: Load the plugin later in the WordPress code lifecycle to avoid errors in some requests.
+* Compatibility: Add a new conditional, `\Activitypub\is_activitypub_request()`, to allow third-party plugins to detect ActivityPub requests
+* Compatibility: Add hooks to allow modifying images returned in ActivityPub requests
+* Compatibility: Indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.3
+* Compatibility: Avoid PHP notice on sites using PHP 8.2
+* Fixed: Load the plugin later in the WordPress code lifecycle to avoid errors in some requests
 * Fixed: Updating posts
 * Fixed: Hashtag now support CamelCase and UTF-8
 

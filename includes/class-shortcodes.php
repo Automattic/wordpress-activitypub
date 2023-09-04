@@ -359,7 +359,7 @@ class Shortcodes {
 
 		foreach ( $categories as $category ) {
 			$hash_tags[] = \sprintf(
-				'<a rel="tag" class="u-tag u-category" href="%s">%s</a>',
+				'<a rel="tag" class="hashtag u-tag u-category" href="%s">%s</a>',
 				\esc_url( \get_category_link( $category ) ),
 				esc_hashtag( $category->name )
 			);
