@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub\Model;
 
+use WP_Error;
 use WP_Query;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Followers;
@@ -111,11 +112,39 @@ class Follower extends Actor {
 	}
 
 	/**
+	 * Validate the current Follower-Object.
+	 *
+	 * @return boolean True if the verification was successful.
+	 */
+	public function is_valid() {
+		// the minimum required attributes
+		$required_attributes = array(
+			'id',
+			'preferredUsername',
+			'inbox',
+			'publicKey',
+			'publicKeyPem',
+		);
+
+		foreach ( $required_attributes as $attribute ) {
+			if ( ! $this->get( $attribute ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
 	 * Save the current Follower-Object.
 	 *
-	 * @return void
+	 * @return int|WP_Error The Post-ID or an WP_Error.
 	 */
 	public function save() {
+		if ( ! $this->is_valid() ) {
+			return new WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ) );
+		}
+
 		if ( ! $this->get__id() ) {
 			global $wpdb;
 
@@ -147,15 +176,17 @@ class Follower extends Actor {
 
 		$post_id = wp_insert_post( $args );
 		$this->_id = $post_id;
+
+		return $post_id;
 	}
 
 	/**
 	 * Upsert the current Follower-Object.
 	 *
-	 * @return void
+	 * @return int|WP_Error The Post-ID or an WP_Error.
 	 */
 	public function upsert() {
-		$this->save();
+		return $this->save();
 	}
 
 	/**

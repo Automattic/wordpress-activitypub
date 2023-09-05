@@ -54,7 +54,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	}
 
 	if ( ! $actor ) {
-		return null;
+		return new WP_Error( 'activitypub_no_valid_actor_identifier', \__( 'The "actor" identifier is not valid', 'activitypub' ), $actor );
 	}
 
 	if ( is_wp_error( $actor ) ) {
@@ -73,7 +73,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	}
 
 	if ( ! \wp_http_validate_url( $actor ) ) {
-		$metadata = new \WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), $actor );
+		$metadata = new WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), $actor );
 		\set_transient( $transient_key, $metadata, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 		return $metadata;
 	}
@@ -95,7 +95,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	\set_transient( $transient_key, $metadata, WEEK_IN_SECONDS );
 
 	if ( ! $metadata ) {
-		$metadata = new \WP_Error( 'activitypub_invalid_json', \__( 'No valid JSON data', 'activitypub' ), $actor );
+		$metadata = new WP_Error( 'activitypub_invalid_json', \__( 'No valid JSON data', 'activitypub' ), $actor );
 		\set_transient( $transient_key, $metadata, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 		return $metadata;
 	}
