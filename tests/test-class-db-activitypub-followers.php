@@ -43,6 +43,11 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 			'name'  => 'úser2',
 			'preferredUsername'  => 'user2',
 		),
+		'error@example.com' => array(
+			'url' => 'https://error.example.com',
+			'name'  => 'error',
+			'preferredUsername'  => 'error',
+		),
 	);
 
 	public function set_up() {
@@ -95,6 +100,27 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 
 		$this->assertContains( $follower, $db_followers );
 		$this->assertContains( $follower2, $db_followers2 );
+	}
+
+	public function test_add_follower_error() {
+		$pre_http_request = new MockAction();
+		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
+
+		$follower = 'error@example.com';
+
+		$result = \Activitypub\Collection\Followers::add_follower( 1, $follower );
+
+		$this->assertTrue( is_wp_error( $result ) );
+
+		$follower2 = 'https://error.example.com';
+
+		$result = \Activitypub\Collection\Followers::add_follower( 1, $follower2 );
+
+		$this->assertTrue( is_wp_error( $result ) );
+
+		$db_followers = \Activitypub\Collection\Followers::get_followers( 1 );
+
+		$this->assertEmpty( $db_followers );
 	}
 
 	public function test_get_follower() {
