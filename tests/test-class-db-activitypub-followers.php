@@ -294,6 +294,30 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		$this->assertCount( 1, $meta );
 	}
 
+	public function test_migration() {
+		$pre_http_request = new MockAction();
+		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
+
+		$followers = array(
+			'https://example.com/author/jon',
+			'https://example.og/errors',
+			'https://example.org/author/doe',
+			'http://sally.example.org',
+			'https://error.example.com',
+			'https://example.net/error',
+		);
+
+		$user_id = 1;
+
+		add_user_meta( $user_id, 'activitypub_followers', $followers, true );
+
+		\Activitypub\Migration::maybe_migrate();
+
+		$db_followers = \Activitypub\Collection\Followers::get_followers( 1 );
+
+		$this->assertCount( 3, $db_followers );
+	}
+
 	/**
 	 * @dataProvider extract_name_from_uri_content_provider
 	 */
