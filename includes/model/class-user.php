@@ -159,51 +159,8 @@ class User extends Actor {
 		return array(
 			'id'       => $this->get_id() . '#main-key',
 			'owner'    => $this->get_id(),
-			'publicKeyPem' => $this->get__public_key(),
+			'publicKeyPem' => Signature::get_public_key_for( $this->get__id() ),
 		);
-	}
-
-	/**
-	 * @param int $this->get__id()
-	 *
-	 * @return mixed
-	 */
-	public function get__public_key() {
-		$key = \get_user_meta( $this->get__id(), 'magic_sig_public_key', true );
-
-		if ( $key ) {
-			return $key;
-		}
-
-		$this->generate_key_pair();
-
-		return \get_user_meta( $this->get__id(), 'magic_sig_public_key', true );
-	}
-
-	/**
-	 * @param int $this->get__id()
-	 *
-	 * @return mixed
-	 */
-	public function get__private_key() {
-		$key = \get_user_meta( $this->get__id(), 'magic_sig_private_key', true );
-
-		if ( $key ) {
-			return $key;
-		}
-
-		$this->generate_key_pair();
-
-		return \get_user_meta( $this->get__id(), 'magic_sig_private_key', true );
-	}
-
-	private function generate_key_pair() {
-		$key_pair = Signature::generate_key_pair();
-
-		if ( ! is_wp_error( $key_pair ) ) {
-			\update_user_meta( $this->get__id(), 'magic_sig_public_key', $key_pair['public_key'], true );
-			\update_user_meta( $this->get__id(), 'magic_sig_private_key', $key_pair['private_key'], true );
-		}
 	}
 
 	/**
