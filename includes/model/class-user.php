@@ -169,15 +169,17 @@ class User extends Actor {
 	 * @return mixed
 	 */
 	public function get__public_key() {
-		$key = \get_user_meta( $this->get__id(), 'magic_sig_public_key', true );
-
-		if ( $key ) {
-			return $key;
+		// back compat: if usermeta was already set, for a "real" user, use it
+		if ( $this->get_id() >= 1 ) {
+			$old_key = \get_user_meta( $this->get__id(), 'magic_sig_public_key', true );
+			if ( typeof( $old_key ) === 'string' ) {
+				return $old_key;
+			}
 		}
 
-		$this->generate_key_pair();
-
-		return \get_user_meta( $this->get__id(), 'magic_sig_public_key', true );
+		// new style keypair
+		$keypair = $this->get_keypair();
+		return $keypair['public_key'];
 	}
 
 	/**
@@ -186,24 +188,37 @@ class User extends Actor {
 	 * @return mixed
 	 */
 	public function get__private_key() {
-		$key = \get_user_meta( $this->get__id(), 'magic_sig_private_key', true );
-
-		if ( $key ) {
-			return $key;
+		// back compat: if usermeta was already set, for a "real" user, use it
+		if ( $this->get_id() >= 1 ) {
+			$old_key = \get_user_meta( $this->get__id(), 'magic_sig_private_key', true );
+			if ( typeof( $old_key ) === 'string' ) {
+				return $old_key;
+			}
 		}
 
-		$this->generate_key_pair();
+		// new style keypair
+		$keypair = $this->get_keypair();
+		return $keypair['private_key'];
+	}
 
-		return \get_user_meta( $this->get__id(), 'magic_sig_private_key', true );
+	private function get_keypair() {
+		$key_pair = \get_option( 'activitypub_keypair_for_' . $this->get__id() );
+
+		if ( ! $key_pair ) {
+			$key_pair = $this->generate_key_pair();
+		}
+
+		return $key_pair;
 	}
 
 	private function generate_key_pair() {
 		$key_pair = Signature::generate_key_pair();
 
 		if ( ! is_wp_error( $key_pair ) ) {
-			\update_user_meta( $this->get__id(), 'magic_sig_public_key', $key_pair['public_key'], true );
-			\update_user_meta( $this->get__id(), 'magic_sig_private_key', $key_pair['private_key'], true );
+			\update_option( 'activitypub_keypair_for_' . $this->get__id(), $key_pair );
 		}
+
+		return $key_pair;
 	}
 
 	/**

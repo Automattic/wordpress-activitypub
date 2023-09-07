@@ -188,17 +188,16 @@ class Blog_User extends User {
 	}
 
 	public function get__public_key() {
-		$key = \get_option( 'activitypub_blog_user_public_key' );
-
-		if ( $key ) {
-			return $key;
+		// back compat
+		if ( $this->get_id() === 0 ) {
+			$old_key = \get_option( 'activitypub_blog_user_public_key' );
+			if ( $old_key ) {
+				return $old_key;
+			}
 		}
 
-		$this->generate_key_pair();
-
-		$key = \get_option( 'activitypub_blog_user_public_key' );
-
-		return $key;
+		// new style
+		return parent::get__public_key();
 	}
 
 	/**
@@ -209,24 +208,16 @@ class Blog_User extends User {
 	 * @return mixed
 	 */
 	public function get__private_key() {
-		$key = \get_option( 'activitypub_blog_user_private_key' );
-
-		if ( $key ) {
-			return $key;
+		// back compat
+		if ( $this->get_id() === 0 ) {
+			$old_key = \get_option( 'activitypub_blog_user_private_key' );
+			if ( $old_key ) {
+				return $old_key;
+			}
 		}
 
-		$this->generate_key_pair();
-
-		return \get_option( 'activitypub_blog_user_private_key' );
-	}
-
-	private function generate_key_pair() {
-		$key_pair = Signature::generate_key_pair();
-
-		if ( ! is_wp_error( $key_pair ) ) {
-			\update_option( 'activitypub_blog_user_public_key', $key_pair['public_key'] );
-			\update_option( 'activitypub_blog_user_private_key', $key_pair['private_key'] );
-		}
+		// new style
+		return parent::get__private_key();
 	}
 
 	public function get_attachment() {
