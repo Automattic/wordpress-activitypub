@@ -58,7 +58,8 @@ class Signature {
 	 * @return array The key pair.
 	 */
 	public static function get_keypair_for( $user_id ) {
-		$key_pair = \get_option( 'activitypub_keypair_for_' . $user_id );
+		$option_key = self::get_signature_options_key_for( $user_id );
+		$key_pair = \get_option( $option_key );
 
 		if ( ! $key_pair ) {
 			$key_pair = self::generate_key_pair_for( $user_id );
@@ -75,10 +76,11 @@ class Signature {
 	 * @return array The key pair.
 	 */
 	protected static function generate_key_pair_for( $user_id ) {
+		$option_key = self::get_signature_options_key_for( $user_id );
 		$key_pair = self::check_legacy_key_pair_for( $user_id );
 
 		if ( $key_pair ) {
-			\add_option( 'activitypub_keypair_for_' . $user_id, $key_pair );
+			\add_option( $option_key, $key_pair );
 
 			return $key_pair;
 		}
@@ -113,9 +115,26 @@ class Signature {
 		);
 
 		// persist keys
-		\add_option( 'activitypub_keypair_for_' . $user_id, $key_pair );
+		\add_option( $option_key, $key_pair );
 
 		return $key_pair;
+	}
+
+	/**
+	 * Undocumented function
+	 *
+	 * @param [type] $user_id
+	 * @return void
+	 */
+	protected static function get_signature_options_key_for( $user_id ) {
+		$id = $user_id;
+
+		if ( $user_id > 0 ) {
+			$user = \get_userdata( $user_id );
+			$id = $user->user_login;
+		}
+
+		return 'activitypub_keypair_for_' . $id;
 	}
 
 	/**
