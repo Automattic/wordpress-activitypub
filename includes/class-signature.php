@@ -57,7 +57,7 @@ class Signature {
 	 *
 	 * @return array The key pair.
 	 */
-	private static function get_keypair_for( $user_id ) {
+	public static function get_keypair_for( $user_id ) {
 		$key_pair = \get_option( 'activitypub_keypair_for_' . $user_id );
 
 		if ( ! $key_pair ) {
@@ -126,18 +126,19 @@ class Signature {
 	 * @return array|bool The key pair or false.
 	 */
 	protected static function check_legacy_key_pair_for( $user_id ) {
-		if ( 0 === $user_id ) {
-			$public_key = \get_option( 'activitypub_blog_user_public_key' );
-			$private_key = \get_option( 'activitypub_blog_user_private_key' );
-		} elseif ( -1 === $user_id ) {
-			$public_key = \get_option( 'activitypub_application_user_public_key' );
-			$private_key = \get_option( 'activitypub_application_user_private_key' );
-		} elseif ( $user_id > 0 ) {
-			$public_key = \get_user_meta( $user_id, 'magic_sig_public_key', true );
-			$private_key = \get_user_meta( $user_id, 'magic_sig_private_key', true );
-		} else {
-			$public_key = null;
-			$private_key = null;
+		switch ( $user_id ) {
+			case 0:
+				$public_key = \get_option( 'activitypub_blog_user_public_key' );
+				$private_key = \get_option( 'activitypub_blog_user_private_key' );
+				break;
+			case -1:
+				$public_key = \get_option( 'activitypub_application_user_public_key' );
+				$private_key = \get_option( 'activitypub_application_user_private_key' );
+				break;
+			default:
+				$public_key = \get_user_meta( $user_id, 'magic_sig_public_key', true );
+				$private_key = \get_user_meta( $user_id, 'magic_sig_private_key', true );
+				break;
 		}
 
 		if ( ! empty( $public_key ) && is_string( $public_key ) && ! empty( $private_key ) && is_string( $private_key ) ) {
