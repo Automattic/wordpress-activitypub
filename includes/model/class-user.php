@@ -172,7 +172,7 @@ class User extends Actor {
 		// back compat: if usermeta was already set, for a "real" user, use it
 		if ( $this->get_id() >= 1 ) {
 			$old_key = \get_user_meta( $this->get__id(), 'magic_sig_public_key', true );
-			if ( typeof( $old_key ) === 'string' ) {
+			if ( is_string( $old_key ) ) {
 				return $old_key;
 			}
 		}
@@ -191,7 +191,7 @@ class User extends Actor {
 		// back compat: if usermeta was already set, for a "real" user, use it
 		if ( $this->get_id() >= 1 ) {
 			$old_key = \get_user_meta( $this->get__id(), 'magic_sig_private_key', true );
-			if ( typeof( $old_key ) === 'string' ) {
+			if ( is_string( $old_key ) ) {
 				return $old_key;
 			}
 		}
