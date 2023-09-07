@@ -189,7 +189,7 @@ class Blog_User extends User {
 
 	public function get__public_key() {
 		// back compat
-		if ( $this->get_id() === 0 ) {
+		if ( $this->get__id() === 0 ) {
 			$old_key = \get_option( 'activitypub_blog_user_public_key' );
 			if ( $old_key ) {
 				return $old_key;
@@ -209,7 +209,7 @@ class Blog_User extends User {
 	 */
 	public function get__private_key() {
 		// back compat
-		if ( $this->get_id() === 0 ) {
+		if ( $this->get__id() === 0 ) {
 			$old_key = \get_option( 'activitypub_blog_user_private_key' );
 			if ( $old_key ) {
 				return $old_key;
