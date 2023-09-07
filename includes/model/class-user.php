@@ -159,67 +159,8 @@ class User extends Actor {
 		return array(
 			'id'       => $this->get_id() . '#main-key',
 			'owner'    => $this->get_id(),
-			'publicKeyPem' => $this->get__public_key(),
+			'publicKeyPem' => Signature::get_public_key_for( $this->get__id() ),
 		);
-	}
-
-	/**
-	 * @param int $this->get__id()
-	 *
-	 * @return mixed
-	 */
-	public function get__public_key() {
-		// back compat: if usermeta was already set, for a "real" user, use it
-		if ( $this->get__id() >= 1 ) {
-			l( 'trying' );
-			$old_key = \get_user_meta( $this->get__id(), 'magic_sig_public_key', true );
-			if ( ! empty( $old_key ) && is_string( $old_key ) ) {
-				return $old_key;
-			}
-		}
-		l( 'new style' );
-		// new style keypair
-		$keypair = $this->get_keypair();
-		return $keypair['public_key'];
-	}
-
-	/**
-	 * @param int $this->get__id()
-	 *
-	 * @return mixed
-	 */
-	public function get__private_key() {
-		// back compat: if usermeta was already set, for a "real" user, use it
-		if ( $this->get__id() >= 1 ) {
-			$old_key = \get_user_meta( $this->get__id(), 'magic_sig_private_key', true );
-			if ( ! empty( $old_key ) && is_string( $old_key ) ) {
-				return $old_key;
-			}
-		}
-
-		// new style keypair
-		$keypair = $this->get_keypair();
-		return $keypair['private_key'];
-	}
-
-	private function get_keypair() {
-		$key_pair = \get_option( 'activitypub_keypair_for_' . $this->get__id() );
-
-		if ( ! $key_pair ) {
-			$key_pair = $this->generate_key_pair();
-		}
-
-		return $key_pair;
-	}
-
-	private function generate_key_pair() {
-		$key_pair = Signature::generate_key_pair();
-
-		if ( ! is_wp_error( $key_pair ) ) {
-			\update_option( 'activitypub_keypair_for_' . $this->get__id(), $key_pair );
-		}
-
-		return $key_pair;
 	}
 
 	/**

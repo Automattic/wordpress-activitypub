@@ -187,39 +187,6 @@ class Blog_User extends User {
 		return \gmdate( 'Y-m-d\TH:i:s\Z', $time );
 	}
 
-	public function get__public_key() {
-		// back compat
-		if ( $this->get__id() === 0 ) {
-			$old_key = \get_option( 'activitypub_blog_user_public_key' );
-			if ( $old_key ) {
-				return $old_key;
-			}
-		}
-
-		// new style
-		return parent::get__public_key();
-	}
-
-	/**
-	 * Get the User-Private-Key.
-	 *
-	 * @param int $user_id
-	 *
-	 * @return mixed
-	 */
-	public function get__private_key() {
-		// back compat
-		if ( $this->get__id() === 0 ) {
-			$old_key = \get_option( 'activitypub_blog_user_private_key' );
-			if ( $old_key ) {
-				return $old_key;
-			}
-		}
-
-		// new style
-		return parent::get__private_key();
-	}
-
 	public function get_attachment() {
 		return array();
 	}
