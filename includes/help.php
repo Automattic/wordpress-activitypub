@@ -10,7 +10,7 @@
 				'<dt><code>[ap_title]</code></dt>' .
 				'<dd>' . \wp_kses( __( 'The post\'s title.', 'activitypub' ), 'default' ) . '</dd>' .
 				'<dt><code>[ap_content apply_filters="yes"]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s content. With <code>apply_filters</code> you can decide if WordPress\' content filters (`the_content`) should be applied or not (default is <code>yes</code>). The values can be <code>yes</code> or <code>no</code>. <code>apply_filters</code> attribute is optional.', 'activitypub' ), 'default' ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The post\'s content. With <code>apply_filters</code> you can decide if filters should be applied or not (default is <code>yes</code>). The values can be <code>yes</code> or <code>no</code>. <code>apply_filters</code> attribute is optional.', 'activitypub' ), 'default' ) . '</dd>' .
 				'<dt><code>[ap_excerpt lenght="400"]</code></dt>' .
 				'<dd>' . \wp_kses( __( 'The post\'s excerpt (default 400 chars). <code>length</code> attribute is optional.', 'activitypub' ), 'default' ) . '</dd>' .
 				'<dt><code>[ap_permalink type="url"]</code></dt>' .
