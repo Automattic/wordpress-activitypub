@@ -113,6 +113,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Add: a Followers Block (show off your Followers)
 * Add: Simple caching
 * Add: Collection endpoints for Featured Tags and Featured Posts
+* Add: Better handling of Hashtags in mobile apps
 * Update: Complete rewrite of the Follower-System based on Custom Post Types
 * Update: Improved linter (PHPCS)
 * Compatibility: Add a new conditional, `\Activitypub\is_activitypub_request()`, to allow third-party plugins to detect ActivityPub requests
