@@ -121,17 +121,19 @@ class Signature {
 	}
 
 	/**
-	 * Undocumented function
+	 * Return the option key for a given user.
 	 *
-	 * @param [type] $user_id
-	 * @return void
+	 * @param int $user_id The WordPress User ID.
+	 *
+	 * @return string The option key.
 	 */
 	protected static function get_signature_options_key_for( $user_id ) {
 		$id = $user_id;
 
 		if ( $user_id > 0 ) {
 			$user = \get_userdata( $user_id );
-			$id = $user->user_login;
+			// sanatize username because it could include spaces and special chars
+			$id = sanitize_title( $user->user_login );
 		}
 
 		return 'activitypub_keypair_for_' . $id;
