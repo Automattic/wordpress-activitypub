@@ -63,7 +63,7 @@ class Webfinger {
 			$url,
 			array(
 				'headers' => array( 'Accept' => 'application/jrd+json' ),
-				'redirection' => 0,
+				'redirection' => 2,
 				'timeout' => 2,
 			)
 		);
