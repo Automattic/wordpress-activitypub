@@ -105,6 +105,10 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
 
+= Next =
+
+* Fixed: fix a typo in a hook name.
+
 = 1.0.0 =
 
 * Add: blog-wide Account (catchall, like `example.com@example.com`)
