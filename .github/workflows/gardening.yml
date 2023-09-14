@@ -46,5 +46,5 @@ jobs:
           tasks: 'addLabels,cleanLabels,assignIssues,flagOss,gatherSupportReferences,replyToCustomersReminder'
           add_labels: '[
               {"path": "src/followers", "label": "[Block] Followers"},
-              {"path": "src/follow-me", "label": "[Block] Follow Me"},
+              {"path": "src/follow-me", "label": "[Block] Follow Me"}
             ]'
