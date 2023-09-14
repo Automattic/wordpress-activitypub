@@ -108,6 +108,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 ### Next ###
 
 * Compatibility: avoid Fatal Errors when using ClassicPress.
+* Fixed: fix a typo in a hook name.
 
 ### 1.0.0 ###
 
