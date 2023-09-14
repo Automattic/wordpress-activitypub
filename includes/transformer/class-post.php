@@ -275,7 +275,7 @@ class Post {
 		 * @param int    $id         The attachment ID.
 		 * @param string $image_size The image size to retrieve. Set to 'full' by default.
 		 */
-		do_action( 'activitypub_get_image_pre', $id, $image_size );
+		do_action( 'activitypub_get_image_post', $id, $image_size );
 
 		return $thumbnail;
 	}
