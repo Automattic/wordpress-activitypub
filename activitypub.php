@@ -15,6 +15,8 @@
 
 namespace Activitypub;
 
+use function Activitypub\site_supports_blocks;
+
 \defined( 'ACTIVITYPUB_REST_NAMESPACE' ) || \define( 'ACTIVITYPUB_REST_NAMESPACE', 'activitypub/1.0' );
 
 /**
