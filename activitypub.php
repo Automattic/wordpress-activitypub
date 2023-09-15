@@ -15,6 +15,8 @@
 
 namespace Activitypub;
 
+use function Activitypub\site_supports_blocks;
+
 \defined( 'ACTIVITYPUB_REST_NAMESPACE' ) || \define( 'ACTIVITYPUB_REST_NAMESPACE', 'activitypub/1.0' );
 
 /**
@@ -52,10 +54,13 @@ function init() {
 	Admin::init();
 	Hashtag::init();
 	Shortcodes::init();
-	Blocks::init();
 	Mention::init();
 	Health_Check::init();
 	Scheduler::init();
+
+	if ( site_supports_blocks() ) {
+		Blocks::init();
+	}
 }
 \add_action( 'init', __NAMESPACE__ . '\init' );
 
