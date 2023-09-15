@@ -80,7 +80,7 @@ class Nodeinfo {
 
 		$nodeinfo['version'] = '2.0';
 		$nodeinfo['software'] = array(
-			'name' => 'wordpress',
+			'name' => 'WordPress',
 			'version' => \get_bloginfo( 'version' ),
 		);
 
