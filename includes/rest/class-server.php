@@ -19,7 +19,11 @@ class Server {
 	 */
 	public static function init() {
 		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
-		\add_filter( 'rest_request_before_callbacks', array( self::class, 'authorize_activitypub_requests' ), 10, 3 );
+
+		// please deactivate ACTIVITYPUB_SIGNATURE_VERIFICATION only for debugging purposes!
+		if ( ACTIVITYPUB_SIGNATURE_VERIFICATION ) {
+			\add_filter( 'rest_request_before_callbacks', array( self::class, 'authorize_activitypub_requests' ), 10, 3 );
+		}
 	}
 
 	/**
