@@ -52,10 +52,13 @@ function init() {
 	Admin::init();
 	Hashtag::init();
 	Shortcodes::init();
-	Blocks::init();
 	Mention::init();
 	Health_Check::init();
 	Scheduler::init();
+
+	if ( site_supports_blocks() ) {
+		Blocks::init();
+	}
 }
 \add_action( 'init', __NAMESPACE__ . '\init' );
 

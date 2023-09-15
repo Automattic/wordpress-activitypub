@@ -457,3 +457,22 @@ if ( ! function_exists( 'get_self_link' ) ) {
 		return esc_url( apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . $path ) ) );
 	}
 }
+
+/**
+ * Check if a site supports the block editor.
+ *
+ * @return boolean True if the site supports the block editor, false otherwise.
+ */
+function site_supports_blocks() {
+	if ( ! \function_exists( 'register_block_type_from_metadata' ) ) {
+		return false;
+	}
+
+	/**
+	 * Allow plugins to disable block editor support,
+	 * thus disabling blocks registered by the ActivityPub plugin.
+	 *
+	 * @param boolean $supports_blocks True if the site supports the block editor, false otherwise.
+	 */
+	return apply_filters( 'activitypub_site_supports_blocks', true );
+}

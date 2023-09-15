@@ -6,11 +6,6 @@ use Activitypub\is_user_type_disabled;
 
 class Blocks {
 	public static function init() {
-		// Short-circuit early if the site does not support blocks.
-		if ( ! \function_exists( 'register_block_type_from_metadata' ) ) {
-			return;
-		}
-
 		// this is already being called on the init hook, so just add it.
 		self::register_blocks();
 		\add_action( 'wp_enqueue_scripts', array( self::class, 'add_data' ) );
