@@ -188,7 +188,7 @@ class Collection {
 		}
 
 		if ( 'Group' !== $user->get_type() ) {
-			return new WP_Error( 'not_available_for_users', __( 'This endpoint is only available for Group-Actors', 'activitypub' ), array( 'status' => 403 ) );
+			return new WP_Error( 'not_available_for_users', __( 'This endpoint is only available for Group-Actors', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$response = array(
