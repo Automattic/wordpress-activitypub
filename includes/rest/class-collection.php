@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub\Rest;
 
+use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Transformer\Post;
@@ -51,6 +52,19 @@ class Collection {
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'featured_get' ),
+					'args'                => self::request_parameters(),
+					'permission_callback' => '__return_true',
+				),
+			)
+		);
+
+		\register_rest_route(
+			ACTIVITYPUB_REST_NAMESPACE,
+			'/users/(?P<user_id>[\w\-\.]+)/collections/moderators',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( self::class, 'moderators_get' ),
 					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),
@@ -153,6 +167,41 @@ class Collection {
 
 		foreach ( $posts as $post ) {
 			$response['orderedItems'][] = Post::transform( $post )->to_object()->to_array();
+		}
+
+		return new WP_REST_Response( $response, 200 );
+	}
+
+	/**
+	 * Moderators endpoint
+	 *
+	 * @param WP_REST_Request $request The request object.
+	 *
+	 * @return WP_REST_Response The response object.
+	 */
+	public static function moderators_get( $request ) {
+		$user_id = $request->get_param( 'user_id' );
+		$user    = User_Collection::get_by_various( $user_id );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		if ( 'Group' !== $user->get_type() ) {
+			return new WP_Error( 'not_available_for_users', __( 'This endpoint is only available for Group-Actors', 'activitypub' ), array( 'status' => 403 ) );
+		}
+
+		$response = array(
+			'@context'     => Activity::CONTEXT,
+			'id'           => get_rest_url_by_path( sprintf( 'users/%d/collections/moderators', $user_id ) ),
+			'type'         => 'OrderedCollection',
+			'orderedItems' => array(),
+		);
+
+		$users = User_Collection::get_collection();
+
+		foreach ( $users as $user ) {
+			$response['orderedItems'][] = $user->get_url();
 		}
 
 		return new WP_REST_Response( $response, 200 );

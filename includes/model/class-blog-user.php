@@ -7,6 +7,7 @@ use Activitypub\Collection\Users;
 
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
+use function Activitypub\get_rest_url_by_path;
 
 class Blog_User extends User {
 	/**
@@ -22,6 +23,15 @@ class Blog_User extends User {
 	 * @var string
 	 */
 	protected $type = 'Group';
+
+	/**
+	 * Restrict posting to mods
+	 *
+	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
+	 *
+	 * @var boolean
+	 */
+	protected $posting_restricted_to_mods = true;
 
 	/**
 	 * Is Account discoverable?
@@ -208,5 +218,9 @@ class Blog_User extends User {
 		} else {
 			return $this->type;
 		}
+	}
+
+	public function get_moderators() {
+		return get_rest_url_by_path( sprintf( 'users/%d/collections/moderators', $this->get__id() ) );
 	}
 }

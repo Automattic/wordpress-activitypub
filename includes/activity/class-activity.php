@@ -28,6 +28,7 @@ class Activity extends Base_Object {
 			'toot' => 'http://joinmastodon.org/ns#',
 			'webfinger' => 'https://webfinger.net/#',
 			'litepub' => 'http://litepub.social/ns#',
+			'lemmy' => 'https://join-lemmy.org/ns#',
 			'value' => 'schema:value',
 			'Hashtag' => 'as:Hashtag',
 			'featured' => array(
@@ -42,6 +43,11 @@ class Activity extends Base_Object {
 				'@id' => 'as:alsoKnownAs',
 				'@type' => '@id',
 			),
+			'moderators' => array(
+				'@id' => 'lemmy:moderators',
+				'@type' => '@id',
+			),
+			'postingRestrictedToMods' => 'lemmy:postingRestrictedToMods',
 			'discoverable' => 'toot:discoverable',
 			'sensitive' => 'as:sensitive',
 			'resource' => 'webfinger:resource',
