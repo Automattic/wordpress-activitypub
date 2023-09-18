@@ -180,6 +180,10 @@ class Collection {
 	 * @return WP_REST_Response The response object.
 	 */
 	public static function moderators_get( $request ) {
+		if ( is_single_user() ) {
+			return new WP_Error( 'not_available_for_users', __( 'This endpoint is only available if Author-Profiles are enabled', 'activitypub' ), array( 'status' => 404 ) );
+		}
+
 		$user_id = $request->get_param( 'user_id' );
 		$user    = User_Collection::get_by_various( $user_id );
 
