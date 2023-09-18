@@ -290,4 +290,8 @@ class User extends Actor {
 	public function get_canonical_url() {
 		return $this->get_url();
 	}
+
+	public function get_streams() {
+		return null;
+	}
 }

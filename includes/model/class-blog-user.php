@@ -213,7 +213,7 @@ class Blog_User extends User {
 	}
 
 	public function get_attachment() {
-		return array();
+		return null;
 	}
 
 	public function get_canonical_url() {
