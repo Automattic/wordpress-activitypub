@@ -361,7 +361,17 @@ class Followers {
 	public static function get_all_followers() {
 		$args = array(
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query' => array(),
+			'meta_query' => array(
+				'relation' => 'AND',
+				array(
+					'key'     => 'activitypub_inbox',
+					'compare' => 'EXISTS',
+				),
+				array(
+					'key'     => 'activitypub_actor_json',
+					'compare' => 'EXISTS',
+				),
+			),
 		);
 		return self::get_followers( null, null, null, $args );
 	}
@@ -380,9 +390,18 @@ class Followers {
 				'fields'     => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
+					'relation' => 'AND',
 					array(
 						'key'   => 'activitypub_user_id',
 						'value' => $user_id,
+					),
+					array(
+						'key'     => 'activitypub_inbox',
+						'compare' => 'EXISTS',
+					),
+					array(
+						'key'     => 'activitypub_actor_json',
+						'compare' => 'EXISTS',
 					),
 				),
 			)
@@ -497,9 +516,18 @@ class Followers {
 			'posts_per_page' => $number,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(
+				'relation' => 'OR',
 				array(
 					'key'     => 'activitypub_errors',
 					'compare' => 'EXISTS',
+				),
+				array(
+					'key'     => 'activitypub_inbox',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'     => 'activitypub_actor_json',
+					'compare' => 'NOT EXISTS',
 				),
 			),
 		);

@@ -450,7 +450,7 @@ class Base_Object {
 
 		if ( \strncasecmp( $method, 'get', 3 ) === 0 ) {
 			if ( ! $this->has( $var ) ) {
-				return new WP_Error( 'invalid_key', 'Invalid key' );
+				return new WP_Error( 'invalid_key', __( 'Invalid key', 'activitypub' ) );
 			}
 
 			return $this->$var;
@@ -562,6 +562,10 @@ class Base_Object {
 	public static function init_from_json( $json ) {
 		$array = \json_decode( $json, true );
 
+		if ( ! is_array( $array ) ) {
+			$array = array();
+		}
+
 		return self::init_from_array( $array );
 	}
 
@@ -573,6 +577,10 @@ class Base_Object {
 	 * @return \Activitypub\Activity\Base_Object An Object built from the JSON string.
 	 */
 	public static function init_from_array( $array ) {
+		if ( ! is_array( $array ) ) {
+			return new WP_Error( 'invalid_array', 'Invalid array' );
+		}
+
 		$object = new static();
 
 		foreach ( $array as $key => $value ) {
