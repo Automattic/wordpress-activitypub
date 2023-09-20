@@ -24,6 +24,12 @@
       "width": true,
       "color": true,
       "style": true
+    },
+    "typography": {
+      "fontSize": true,
+      "__experimentalDefaultControls": {
+        "fontSize": true
+      }
     }
   },
   "attributes": {
