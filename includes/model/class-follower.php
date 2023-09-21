@@ -142,7 +142,7 @@ class Follower extends Actor {
 	 */
 	public function save() {
 		if ( ! $this->is_valid() ) {
-			return new WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ) );
+			return new WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		if ( ! $this->get__id() ) {

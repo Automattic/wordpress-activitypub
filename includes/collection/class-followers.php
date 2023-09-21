@@ -170,7 +170,7 @@ class Followers {
 		}
 
 		if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-			return new WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ) );
+			return new WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		$error = null;
