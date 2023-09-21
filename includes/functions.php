@@ -54,7 +54,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	}
 
 	if ( ! $actor ) {
-		return new WP_Error( 'activitypub_no_valid_actor_identifier', \__( 'The "actor" identifier is not valid', 'activitypub' ), $actor );
+		return new WP_Error( 'activitypub_no_valid_actor_identifier', \__( 'The "actor" identifier is not valid', 'activitypub' ), array( 'status' => 404, 'actor' => $actor ) );
 	}
 
 	if ( is_wp_error( $actor ) ) {
@@ -73,7 +73,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	}
 
 	if ( ! \wp_http_validate_url( $actor ) ) {
-		$metadata = new WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), $actor );
+		$metadata = new WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), array( 'status' => 400, 'actor' => $actor ) );
 		\set_transient( $transient_key, $metadata, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 		return $metadata;
 	}
@@ -95,7 +95,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	\set_transient( $transient_key, $metadata, WEEK_IN_SECONDS );
 
 	if ( ! $metadata ) {
-		$metadata = new WP_Error( 'activitypub_invalid_json', \__( 'No valid JSON data', 'activitypub' ), $actor );
+		$metadata = new WP_Error( 'activitypub_invalid_json', \__( 'No valid JSON data', 'activitypub' ), array( 'status' => 400, 'actor' => $actor ) );
 		\set_transient( $transient_key, $metadata, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 		return $metadata;
 	}
@@ -416,7 +416,7 @@ function is_user_type_disabled( $type ) {
 			$return = false;
 			break;
 		default:
-			$return = new WP_Error( 'activitypub_wrong_user_type', __( 'Wrong user type', 'activitypub' ) );
+			$return = new WP_Error( 'activitypub_wrong_user_type', __( 'Wrong user type', 'activitypub' ), array( 'status' => 400 ) );
 			break;
 	}
 
@@ -475,4 +475,15 @@ function site_supports_blocks() {
 	 * @param boolean $supports_blocks True if the site supports the block editor, false otherwise.
 	 */
 	return apply_filters( 'activitypub_site_supports_blocks', true );
+}
+
+/**
+ * Check if data is valid JSON.
+ *
+ * @param string $data The data to check.
+ *
+ * @return boolean True if the data is JSON, false otherwise.
+ */
+function is_json( $data ) {
+	return \is_array( \json_decode( $data, true ) ) ? true : false;
 }

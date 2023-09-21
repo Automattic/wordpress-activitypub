@@ -107,9 +107,10 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 
 ### Next ###
 
-* Compatibility: allow deactivating blocks registered by the plugin.
-* Compatibility: avoid Fatal Errors when using ClassicPress.
-* Fixed: fix a typo in a hook name.
+* Compatibility: allow deactivating blocks registered by the plugin
+* Compatibility: avoid Fatal Errors when using ClassicPress
+* Fixed: fix a typo in a hook name
+* Fixed: a problem with signatures when running WordPress in a sub-path
 
 ### 1.0.0 ###
 
