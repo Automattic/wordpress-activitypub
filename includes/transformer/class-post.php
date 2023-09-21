@@ -427,7 +427,6 @@ class Post {
 		$content = \trim( $content );
 
 		$content = \apply_filters( 'activitypub_the_content', $content, $post );
-		$content = \html_entity_decode( $content, \ENT_QUOTES, 'UTF-8' );
 
 		return $content;
 	}
