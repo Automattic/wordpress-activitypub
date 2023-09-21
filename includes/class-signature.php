@@ -238,6 +238,15 @@ class Signature {
 			} else {
 				$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
 			}
+
+			// fix route for subdirectory installs
+			$path = wp_parse_url( get_home_url(), PHP_URL_PATH );
+			$path = trim( $path, '/' );
+
+			if ( $path ) {
+				$route = '/' . $path . $route;
+			}
+
 			$headers = $request->get_headers();
 			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . $route;
 		} else {
