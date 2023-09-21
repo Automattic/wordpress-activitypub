@@ -432,6 +432,7 @@ class Followers {
 				'fields'     => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
+					'relation' => 'AND',
 					array(
 						'key'     => 'activitypub_inbox',
 						'compare' => 'EXISTS',
@@ -439,6 +440,11 @@ class Followers {
 					array(
 						'key'   => 'activitypub_user_id',
 						'value' => $user_id,
+					),
+					array(
+						'key'     => 'activitypub_inbox',
+						'value'   => '',
+						'compare' => '!=',
 					),
 				),
 			)
@@ -482,7 +488,7 @@ class Followers {
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,
 			'orderby'        => 'modified',
-			'order'          => 'DESC',
+			'order'          => 'ASC',
 			'post_status'    => 'any', // 'any' includes 'trash
 			'date_query'     => array(
 				array(
@@ -510,7 +516,7 @@ class Followers {
 	 *
 	 * @return mixed The Term list of Followers, the format depends on $output.
 	 */
-	public static function get_faulty_followers( $number = 10 ) {
+	public static function get_faulty_followers( $number = 20 ) {
 		$args = array(
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,
@@ -528,6 +534,16 @@ class Followers {
 				array(
 					'key'     => 'activitypub_actor_json',
 					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'     => 'activitypub_inbox',
+					'value'   => '',
+					'compare' => '=',
+				),
+				array(
+					'key'     => 'activitypub_actor_json',
+					'value'   => '',
+					'compare' => '=',
 				),
 			),
 		);
