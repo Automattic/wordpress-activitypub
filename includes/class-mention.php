@@ -39,8 +39,9 @@ class Mention {
 			if ( preg_match( '#^<(/)?([a-z-]+)\b[^>]*>$#i', $chunk, $m ) ) {
 				$tag = strtolower( $m[2] );
 				if ( '/' === $m[1] ) {
-					// Closing tag, remove the tag from the stack.
+					// Closing tag.
 					$i = array_search( $tag, $tag_stack );
+					// We can only remove the tag from the stack if it is in the stack.
 					if ( false !== $i ) {
 						$tag_stack = array_slice( $tag_stack, 0, $i );
 					}
