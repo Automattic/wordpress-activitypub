@@ -476,3 +476,14 @@ function site_supports_blocks() {
 	 */
 	return apply_filters( 'activitypub_site_supports_blocks', true );
 }
+
+/**
+ * Check if data is valid JSON.
+ *
+ * @param string $data The data to check.
+ *
+ * @return boolean True if the data is JSON, false otherwise.
+ */
+function is_json( $data ) {
+	return \is_array( \json_decode( $data, true ) ) ? true : false;
+}

@@ -1,5 +1,5 @@
 import { SelectControl, RangeControl, PanelBody, TextControl } from '@wordpress/components';
-import { useState } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { Followers } from './followers';
@@ -20,6 +20,17 @@ export default function Edit( { attributes, setAttributes } ) {
 			setAttributes( { [ key ]: value } );
 		};
 	}
+
+	useEffect( () => {
+		// if there are no users yet, do nothing
+		if ( ! usersOptions.length ) {
+			return;
+		}
+		// ensure that the selected user is in the list of options, if not, select the first available user
+		if ( ! usersOptions.find( ( { value } ) => value === selectedUser ) ) {
+			setAttributes( { selectedUser: usersOptions[ 0 ].value } );
+		}
+	}, [ selectedUser, usersOptions ] );
 
 	return (
 		<div { ...blockProps }>
