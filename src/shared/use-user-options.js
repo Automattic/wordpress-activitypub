@@ -16,7 +16,7 @@ export function useUserOptions() {
 		return users.reduce( ( acc, user ) => {
 			acc.push({
 				label: user.name,
-				value: user.id
+				value: `${ user.id }` // casting to string because that's how the attribute is stored by Gutenberg
 			} );
 			return acc;
 		}, withBlogUser );
