@@ -54,6 +54,11 @@ class Hashtag {
 		$content_with_links = '';
 		$in_protected_tag = false;
 		foreach ( wp_html_split( $the_content ) as $chunk ) {
+			if ( preg_match( '#^<!--[\s\S]*-->$#i', $chunk, $m ) ) {
+				$content_with_links .= $chunk;
+				continue;
+			}
+
 			if ( preg_match( '#^<(/)?([a-z-]+)\b[^>]*>$#i', $chunk, $m ) ) {
 				$tag = strtolower( $m[2] );
 				if ( '/' === $m[1] ) {

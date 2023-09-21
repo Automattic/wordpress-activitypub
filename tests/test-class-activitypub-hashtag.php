@@ -43,6 +43,7 @@ ENDPRE;
 			array( '<div>hallo #object</div>', '<div>hallo <a rel="tag" class="hashtag u-tag u-category" href="%s">#object</a></div>' ),
 			array( '<div>#object</div>', '<div><a rel="tag" class="hashtag u-tag u-category" href="%s">#object</a></div>' ),
 			array( '<a>#object</a>', '<a>#object</a>' ),
+			array( '<!-- #object -->', '<!-- #object -->' ),
 			array( '<div style="color: #ccc;">object</a>', '<div style="color: #ccc;">object</a>' ),
 			array( $code, $code ),
 			array( $style, $style ),
