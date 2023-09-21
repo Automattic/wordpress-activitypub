@@ -57,24 +57,32 @@ class Hashtag {
 			if ( preg_match( '#^<(/)?([a-z-]+)\b[^>]*>$#i', $chunk, $m ) ) {
 				$tag = strtolower( $m[2] );
 				if ( '/' === $m[1] ) {
+					// Closing tag, remove the tag from the stack.
 					$i = array_search( $tag, $tag_stack );
 					if ( false !== $i ) {
 						$tag_stack = array_slice( $tag_stack, 0, $i );
 					}
 				} else {
+					// Opening tag, add it to the stack.
 					$tag_stack[] = $tag;
 				}
 
-				$in_protected_tag = count( array_intersect( $tag_stack, $protected_tags ) );
+				// If we're in a protected tag, the tag_stack contains at least one protected tag string.
+				// The protected tag state can only change when we encounter a start or end tag.
+				$in_protected_tag = array_intersect( $tag_stack, $protected_tags );
+
+				// Never inspect tags.
 				$content_with_links .= $chunk;
 				continue;
 			}
 
 			if ( $in_protected_tag ) {
+				// Don't inspect a chunk inside an inspected tag.
 				$content_with_links .= $chunk;
 				continue;
 			}
 
+			// Only reachable when there is no protected tag in the stack.
 			$content_with_links .= \preg_replace_callback( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', array( '\Activitypub\Hashtag', 'replace_with_links' ), $chunk );
 		}
 
