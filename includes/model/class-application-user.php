@@ -30,15 +30,6 @@ class Application_User extends Blog_User {
 	protected $discoverable = false;
 
 	/**
-	 * Restrict posting to mods
-	 *
-	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
-	 *
-	 * @var boolean
-	 */
-	protected $posting_restricted_to_mods = null;
-
-	/**
 	 * Get the User-Url.
 	 *
 	 * @return string The User-Url.

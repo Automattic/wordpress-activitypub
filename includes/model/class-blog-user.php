@@ -25,15 +25,6 @@ class Blog_User extends User {
 	protected $type = null;
 
 	/**
-	 * Restrict posting to mods
-	 *
-	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
-	 *
-	 * @var boolean
-	 */
-	protected $posting_restricted_to_mods = true;
-
-	/**
 	 * Is Account discoverable?
 	 *
 	 * @var boolean
@@ -226,5 +217,13 @@ class Blog_User extends User {
 		}
 
 		return get_rest_url_by_path( sprintf( 'users/%d/collections/moderators', $this->get__id() ) );
+	}
+
+	public function get_posting_restricted_to_mods() {
+		if ( 'Group' === $this->get_type() ) {
+			return true;
+		}
+
+		return null;
 	}
 }
