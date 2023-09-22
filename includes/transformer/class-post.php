@@ -513,7 +513,7 @@ class Post {
 		}
 
 		if ( 'content' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_content]\n\n[ap_hashtags]\n\n[ap_permalink type=\"html\"]";
+			return "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
 		}
 
 		return \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
