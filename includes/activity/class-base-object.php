@@ -644,7 +644,7 @@ class Base_Object {
 			}
 
 			// if value is still empty, ignore it for the array and continue.
-			if ( $value ) {
+			if ( isset( $value ) ) {
 				$array[ snake_to_camel_case( $key ) ] = $value;
 			}
 		}
