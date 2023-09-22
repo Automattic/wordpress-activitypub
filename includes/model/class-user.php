@@ -43,7 +43,7 @@ class User extends Actor {
 	 *
 	 * @var string
 	 */
-	protected $moderators = null;
+	protected $moderators;
 
 	/**
 	 * The User-Type
@@ -55,9 +55,18 @@ class User extends Actor {
 	/**
 	 * If the User is discoverable.
 	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
+	 *
 	 * @var boolean
 	 */
 	protected $discoverable = true;
+
+	/**
+	 * If the User is indexable.
+	 *
+	 * @var boolean
+	 */
+	protected $indexable;
 
 	/**
 	 * The WebFinger Resource.
@@ -293,5 +302,13 @@ class User extends Actor {
 
 	public function get_streams() {
 		return null;
+	}
+
+	public function get_indexable() {
+		if ( \get_option( 'blog_public', 1 ) ) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 }

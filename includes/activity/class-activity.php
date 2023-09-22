@@ -49,6 +49,7 @@ class Activity extends Base_Object {
 			),
 			'postingRestrictedToMods' => 'lemmy:postingRestrictedToMods',
 			'discoverable' => 'toot:discoverable',
+			'indexable' => 'toot:indexable',
 			'sensitive' => 'as:sensitive',
 			'resource' => 'webfinger:resource',
 		),

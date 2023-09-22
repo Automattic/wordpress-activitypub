@@ -60,12 +60,11 @@ class Collection {
 
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/collections/moderators',
+			'/collections/moderators',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'moderators_get' ),
-					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -180,24 +179,9 @@ class Collection {
 	 * @return WP_REST_Response The response object.
 	 */
 	public static function moderators_get( $request ) {
-		if ( is_single_user() ) {
-			return new WP_Error( 'not_available_for_users', __( 'This endpoint is only available if Author-Profiles are enabled', 'activitypub' ), array( 'status' => 404 ) );
-		}
-
-		$user_id = $request->get_param( 'user_id' );
-		$user    = User_Collection::get_by_various( $user_id );
-
-		if ( is_wp_error( $user ) ) {
-			return $user;
-		}
-
-		if ( 'Group' !== $user->get_type() ) {
-			return new WP_Error( 'not_available_for_users', __( 'This endpoint is only available for Group-Actors', 'activitypub' ), array( 'status' => 404 ) );
-		}
-
 		$response = array(
 			'@context'     => Activity::CONTEXT,
-			'id'           => get_rest_url_by_path( sprintf( 'users/%d/collections/moderators', $user_id ) ),
+			'id'           => get_rest_url_by_path( 'collections/moderators' ),
 			'type'         => 'OrderedCollection',
 			'orderedItems' => array(),
 		);

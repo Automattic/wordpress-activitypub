@@ -216,7 +216,7 @@ class Blog_User extends User {
 			return null;
 		}
 
-		return get_rest_url_by_path( sprintf( 'users/%d/collections/moderators', $this->get__id() ) );
+		return get_rest_url_by_path( 'collections/moderators' );
 	}
 
 	public function get_posting_restricted_to_mods() {
