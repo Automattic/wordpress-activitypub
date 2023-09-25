@@ -105,7 +105,13 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function update_followers() {
-		$followers = Followers::get_outdated_followers();
+		$number = 5;
+
+		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
+			$number = 50;
+		}
+
+		$followers = Followers::get_outdated_followers( $number );
 
 		foreach ( $followers as $follower ) {
 			$meta = get_remote_metadata_by_actor( $follower->get_url(), false );
@@ -125,7 +131,13 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function cleanup_followers() {
-		$followers = Followers::get_faulty_followers();
+		$number = 5;
+
+		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
+			$number = 50;
+		}
+
+		$followers = Followers::get_faulty_followers( $number );
 
 		foreach ( $followers as $follower ) {
 			$meta = get_remote_metadata_by_actor( $follower->get_url(), false );
