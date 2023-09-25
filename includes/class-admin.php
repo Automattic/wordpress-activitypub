@@ -1,6 +1,9 @@
 <?php
 namespace Activitypub;
 
+use WP_User_Query;
+use Activitypub\Model\Blog_User;
+
 /**
  * ActivityPub Admin Class
  *
@@ -168,7 +171,7 @@ class Admin {
 				'type'              => 'string',
 				'description'       => \esc_html__( 'The Identifier of the Blog-User', 'activitypub' ),
 				'show_in_rest'      => true,
-				'default'           => \Activitypub\Model\Blog_User::get_default_username(),
+				'default'           => Blog_User::get_default_username(),
 				'sanitize_callback' => function( $value ) {
 					// hack to allow dots in the username
 					$parts     = explode( '.', $value );
@@ -178,7 +181,31 @@ class Admin {
 						$sanitized[] = \sanitize_title( $part );
 					}
 
-					return implode( '.', $sanitized );
+					$sanatized = implode( '.', $sanitized );
+
+					// check for login or nicename.
+					$user = new WP_User_Query(
+						array(
+							'search'         => $sanatized,
+							'search_columns' => array( 'user_login', 'user_nicename' ),
+							'number'         => 1,
+							'hide_empty'     => true,
+							'fields'         => 'ID',
+						)
+					);
+
+					if ( $user->results ) {
+						add_settings_error(
+							'activitypub_blog_user_identifier',
+							'activitypub_blog_user_identifier',
+							\esc_html__( 'Please avoid using an existing author’s name as the blog profile ID. Fediverse platforms might use caching and this could break the functionality completely.', 'activitypub' ),
+							'error'
+						);
+
+						return Blog_User::get_default_username();
+					}
+
+					return $sanatized;
 				},
 			)
 		);
