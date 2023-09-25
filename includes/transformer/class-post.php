@@ -115,8 +115,8 @@ class Post {
 		$wp_post = $this->wp_post;
 		$object = new Base_Object();
 
-		$object->set_id( \esc_url( \get_permalink( $wp_post->ID ) ) );
-		$object->set_url( \esc_url( \get_permalink( $wp_post->ID ) ) );
+		$object->set_id( $this->get_id() );
+		$object->set_url( $this->get_url() );
 		$object->set_type( $this->get_object_type() );
 
 		$published = \strtotime( $wp_post->post_date_gmt );
@@ -149,6 +149,32 @@ class Post {
 		$object->set_tag( $this->get_tags() );
 
 		return $object;
+	}
+
+	/**
+	 * Returns the ID of the Post.
+	 *
+	 * @return string The Posts ID.
+	 */
+	public function get_id() {
+		return $this->get_url();
+	}
+
+	/**
+	 * Returns the URL of the Post.
+	 *
+	 * @return string The Posts URL.
+	 */
+	public function get_url() {
+		$post = $this->wp_post;
+
+		if ( 'trash' === get_post_status( $post ) ) {
+			$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
+		} else {
+			$permalink = \get_permalink( $post );
+		}
+
+		return \esc_url( $permalink );
 	}
 
 	/**
