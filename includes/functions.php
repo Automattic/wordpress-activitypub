@@ -429,20 +429,14 @@ function is_user_type_disabled( $type ) {
  * @return boolean True if the blog is in single-user mode, false otherwise.
  */
 function is_single_user() {
-	$return = false;
-
-	if ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) ) {
-		if ( ACTIVITYPUB_SINGLE_USER_MODE ) {
-			$return = true;
-		}
-	} elseif (
+	if (
 		false === is_user_type_disabled( 'blog' ) &&
 		true === is_user_type_disabled( 'user' )
 	) {
-		$return = true;
+		return true;
 	}
 
-	return $return;
+	return false;
 }
 
 if ( ! function_exists( 'get_self_link' ) ) {
