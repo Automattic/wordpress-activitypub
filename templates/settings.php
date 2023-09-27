@@ -55,6 +55,11 @@
 							<p class="description">
 								<?php \esc_html_e( 'This profile name will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
 							</p>
+							<p>
+								<strong>
+									<?php \esc_html_e( 'Please avoid using an existing author’s name as the blog profile ID. Fediverse platforms might use caching and this could break the functionality completely.', 'activitypub' ); ?>
+								</strong>
+							</p>
 						</td>
 					</tr>
 				</tbody>
