@@ -19,5 +19,9 @@ class Test_Activitypub_Post extends WP_UnitTestCase {
 		$activitypub_post = \Activitypub\Transformer\Post::transform( get_post( $post ) )->to_object();
 
 		$this->assertEquals( $permalink, $activitypub_post->get_id() );
+
+		$cached = \get_post_meta( $post, 'activitypub_canonical_url', true );
+
+		$this->assertEquals( $cached, $activitypub_post->get_id() );
 	}
 }
