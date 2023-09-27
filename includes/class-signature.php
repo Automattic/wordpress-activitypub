@@ -240,8 +240,11 @@ class Signature {
 			}
 
 			// fix route for subdirectory installs
-			$path = wp_parse_url( get_home_url(), PHP_URL_PATH );
-			$path = trim( $path, '/' );
+			$path = \wp_parse_url( \get_home_url(), PHP_URL_PATH );
+
+			if ( \is_string( $path ) ) {
+				$path = trim( $path, '/' );
+			}
 
 			if ( $path ) {
 				$route = '/' . $path . $route;
