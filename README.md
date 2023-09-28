@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
 **Tested up to:** 6.3  
-**Stable tag:** 1.0.0  
+**Stable tag:** 1.0.1  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -105,10 +105,17 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
 
-### Next ###
+### 1.0.1 ###
 
+* Update: improve image attachment detection using the block editor
+* Update: better error code handling for API responses
+* Update: use a tag stack instead of regex for protecting tags for Hashtags and @-Mentions
+* Compatibility: better signature support for subpath-installations
 * Compatibility: allow deactivating blocks registered by the plugin
 * Compatibility: avoid Fatal Errors when using ClassicPress
+* Compatibility: improve the Group-Actor to play nicely with existing implementations
+* Fixed: truncate long blog titles and handles for the "Follow me" block
+* Fixed: ensure that only a valid user can be selected for the "Follow me" block
 * Fixed: fix a typo in a hook name
 * Fixed: a problem with signatures when running WordPress in a sub-path
 

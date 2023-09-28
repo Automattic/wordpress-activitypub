@@ -55,14 +55,18 @@ class Application_User extends Blog_User {
 	}
 
 	public function get_attachment() {
-		return array();
+		return null;
 	}
 
 	public function get_featured_tags() {
-		return array();
+		return null;
 	}
 
 	public function get_featured() {
-		return array();
+		return null;
+	}
+
+	public function get_moderators() {
+		return null;
 	}
 }
