@@ -181,12 +181,12 @@ class Admin {
 						$sanitized[] = \sanitize_title( $part );
 					}
 
-					$sanatized = implode( '.', $sanitized );
+					$sanitized = implode( '.', $sanitized );
 
 					// check for login or nicename.
 					$user = new WP_User_Query(
 						array(
-							'search'         => $sanatized,
+							'search'         => $sanitized,
 							'search_columns' => array( 'user_login', 'user_nicename' ),
 							'number'         => 1,
 							'hide_empty'     => true,
@@ -198,14 +198,14 @@ class Admin {
 						add_settings_error(
 							'activitypub_blog_user_identifier',
 							'activitypub_blog_user_identifier',
-							\esc_html__( 'Please avoid using an existing author’s name as the blog profile ID. Fediverse platforms might use caching and this could break the functionality completely.', 'activitypub' ),
+							\esc_html__( 'You cannot use an existing author\'s name for the blog profile ID.', 'activitypub' ),
 							'error'
 						);
 
 						return Blog_User::get_default_username();
 					}
 
-					return $sanatized;
+					return $sanitized;
 				},
 			)
 		);
