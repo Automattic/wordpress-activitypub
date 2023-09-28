@@ -304,6 +304,10 @@ class User extends Actor {
 		return null;
 	}
 
+	public function get_tag() {
+		return array();
+	}
+
 	public function get_indexable() {
 		if ( \get_option( 'blog_public', 1 ) ) {
 			return true;
