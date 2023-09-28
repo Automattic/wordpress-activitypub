@@ -513,7 +513,6 @@ class Post {
 		$content = do_shortcode( $content );
 		wp_reset_postdata();
 
-		$content = \wp_kses( $content, $this->allowed_tags );
 		$content = \wpautop( $content );
 		$content = \preg_replace( '/[\n\r\t]/', '', $content );
 		$content = \trim( $content );
