@@ -219,6 +219,14 @@ class Blog_User extends User {
 		return get_rest_url_by_path( 'collections/moderators' );
 	}
 
+	public function get_attributed_to() {
+		if ( is_single_user() || 'Group' !== $this->get_type() ) {
+			return null;
+		}
+
+		return get_rest_url_by_path( 'collections/moderators' );
+	}
+
 	public function get_posting_restricted_to_mods() {
 		if ( 'Group' === $this->get_type() ) {
 			return true;
