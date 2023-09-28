@@ -67,7 +67,13 @@ class Blog_User extends User {
 	 * @return string The User-Name.
 	 */
 	public function get_name() {
-		return \esc_html( \get_bloginfo( 'name' ) );
+		return \wp_strip_all_tags(
+			\html_entity_decode(
+				\get_bloginfo( 'name' ),
+				\ENT_QUOTES,
+				'UTF-8'
+			)
+		);
 	}
 
 	/**
