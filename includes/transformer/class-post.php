@@ -31,58 +31,6 @@ class Post {
 	protected $wp_post;
 
 	/**
-	 * The Allowed Tags, used in the content.
-	 *
-	 * @var array
-	 */
-	protected $allowed_tags = array(
-		'a' => array(
-			'href' => array(),
-			'title' => array(),
-			'class' => array(),
-			'rel' => array(),
-		),
-		'br' => array(),
-		'p' => array(
-			'class' => array(),
-		),
-		'span' => array(
-			'class' => array(),
-		),
-		'div' => array(
-			'class' => array(),
-		),
-		'ul' => array(),
-		'ol' => array(
-			'reversed' => array(),
-			'start'    => array(),
-		),
-		'li' => array(
-			'value' => array(),
-		),
-		'strong' => array(
-			'class' => array(),
-		),
-		'b' => array(
-			'class' => array(),
-		),
-		'i' => array(
-			'class' => array(),
-		),
-		'em' => array(
-			'class' => array(),
-		),
-		'blockquote' => array(),
-		'cite' => array(),
-		'code' => array(
-			'class' => array(),
-		),
-		'pre' => array(
-			'class' => array(),
-		),
-	);
-
-	/**
 	 * Static function to Transform a WP_Post Object.
 	 *
 	 * This helps to chain the output of the Transformer.
