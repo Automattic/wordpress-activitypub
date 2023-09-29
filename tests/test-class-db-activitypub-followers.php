@@ -43,6 +43,11 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 			'name'  => 'úser2',
 			'preferredUsername'  => 'user2',
 		),
+		'error@example.com' => array(
+			'url' => 'https://error.example.com',
+			'name'  => 'error',
+			'preferredUsername'  => 'error',
+		),
 	);
 
 	public function set_up() {
@@ -95,6 +100,27 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 
 		$this->assertContains( $follower, $db_followers );
 		$this->assertContains( $follower2, $db_followers2 );
+	}
+
+	public function test_add_follower_error() {
+		$pre_http_request = new MockAction();
+		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
+
+		$follower = 'error@example.com';
+
+		$result = \Activitypub\Collection\Followers::add_follower( 1, $follower );
+
+		$this->assertTrue( is_wp_error( $result ) );
+
+		$follower2 = 'https://error.example.com';
+
+		$result = \Activitypub\Collection\Followers::add_follower( 1, $follower2 );
+
+		$this->assertTrue( is_wp_error( $result ) );
+
+		$db_followers = \Activitypub\Collection\Followers::get_followers( 1 );
+
+		$this->assertEmpty( $db_followers );
 	}
 
 	public function test_get_follower() {
@@ -266,6 +292,30 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		$meta     = get_post_meta( $follower->get__id(), 'activitypub_user_id' );
 
 		$this->assertCount( 1, $meta );
+	}
+
+	public function test_migration() {
+		$pre_http_request = new MockAction();
+		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
+
+		$followers = array(
+			'https://example.com/author/jon',
+			'https://example.og/errors',
+			'https://example.org/author/doe',
+			'http://sally.example.org',
+			'https://error.example.com',
+			'https://example.net/error',
+		);
+
+		$user_id = 1;
+
+		add_user_meta( $user_id, 'activitypub_followers', $followers, true );
+
+		\Activitypub\Migration::maybe_migrate();
+
+		$db_followers = \Activitypub\Collection\Followers::get_followers( 1 );
+
+		$this->assertCount( 3, $db_followers );
 	}
 
 	/**

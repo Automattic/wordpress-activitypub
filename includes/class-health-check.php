@@ -1,6 +1,12 @@
 <?php
 namespace Activitypub;
 
+use WP_Error;
+use Activitypub\Webfinger;
+
+use function Activitypub\get_plugin_version;
+use function Activitypub\get_webfinger_resource;
+
 /**
  * ActivityPub Health_Check Class
  *
@@ -27,6 +33,11 @@ class Health_Check {
 		$tests['direct']['activitypub_test_webfinger'] = array(
 			'label' => __( 'WebFinger Test', 'activitypub' ),
 			'test'  => array( self::class, 'test_webfinger' ),
+		);
+
+		$tests['direct']['activitypub_test_system_cron'] = array(
+			'label' => __( 'System Cron Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_system_cron' ),
 		);
 
 		return $tests;
@@ -65,6 +76,49 @@ class Health_Check {
 		$result['description']    = \sprintf(
 			'<p>%s</p>',
 			$check->get_error_message()
+		);
+
+		return $result;
+	}
+
+	/**
+	 * System Cron tests
+	 *
+	 * @return array
+	 */
+	public static function test_system_cron() {
+		$result = array(
+			'label'       => \__( 'System Task Scheduler configured', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\esc_html__( 'You seem to use the System Task Scheduler to process WP_Cron tasks.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_system_cron',
+		);
+
+		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
+			return $result;
+		}
+
+		$result['status']         = 'recommended';
+		$result['label']          = \__( 'System Task Scheduler not configured', 'activitypub' );
+		$result['badge']['color'] = 'orange';
+		$result['description']    = \sprintf(
+			'<p>%s</p>',
+			\__( 'Enhance your WordPress site’s performance and mitigate potential heavy loads caused by plugins like ActivityPub by setting up a system cron job to run WP Cron. This ensures scheduled tasks are executed consistently and reduces the reliance on website traffic for trigger events.', 'activitypub' )
+		);
+		$result['actions'] .= sprintf(
+			'<p><a href="%s" target="_blank" rel="noopener">%s<span class="screen-reader-text"> %s</span><span aria-hidden="true" class="dashicons dashicons-external"></span></a></p>',
+			__( 'https://developer.wordpress.org/plugins/cron/hooking-wp-cron-into-the-system-task-scheduler/', 'activitypub' ),
+			__( 'Learn how to hook the WP-Cron into the System Task Scheduler.', 'activitypub' ),
+			/* translators: Hidden accessibility text. */
+			__( '(opens in a new tab)', 'activitypub' )
 		);
 
 		return $result;
@@ -111,7 +165,7 @@ class Health_Check {
 	/**
 	 * Check if `author_posts_url` is accessible and that request returns correct JSON
 	 *
-	 * @return boolean|\WP_Error
+	 * @return boolean|WP_Error
 	 */
 	public static function is_author_url_accessible() {
 		$user = \wp_get_current_user();
@@ -120,7 +174,7 @@ class Health_Check {
 
 		// check for "author" in URL
 		if ( $author_url !== $reference_author_url ) {
-			return new \WP_Error(
+			return new WP_Error(
 				'author_url_not_accessible',
 				\sprintf(
 					// translators: %s: Author URL
@@ -143,7 +197,7 @@ class Health_Check {
 		);
 
 		if ( \is_wp_error( $response ) ) {
-			return new \WP_Error(
+			return new WP_Error(
 				'author_url_not_accessible',
 				\sprintf(
 					// translators: %s: Author URL
@@ -160,7 +214,7 @@ class Health_Check {
 
 		// check for redirects
 		if ( \in_array( $response_code, array( 301, 302, 307, 308 ), true ) ) {
-			return new \WP_Error(
+			return new WP_Error(
 				'author_url_not_accessible',
 				\sprintf(
 					// translators: %s: Author URL
@@ -177,7 +231,7 @@ class Health_Check {
 		$body = \wp_remote_retrieve_body( $response );
 
 		if ( ! \is_string( $body ) || ! \is_array( \json_decode( $body, true ) ) ) {
-			return new \WP_Error(
+			return new WP_Error(
 				'author_url_not_accessible',
 				\sprintf(
 					// translators: %s: Author URL
@@ -196,13 +250,13 @@ class Health_Check {
 	/**
 	 * Check if WebFinger endpoint is accessible and profile request returns correct JSON
 	 *
-	 * @return boolean|\WP_Error
+	 * @return boolean|WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
 		$user    = \wp_get_current_user();
-		$account = \Activitypub\get_webfinger_resource( $user->ID );
+		$account = get_webfinger_resource( $user->ID );
 
-		$url = \Activitypub\Webfinger::resolve( $account );
+		$url = Webfinger::resolve( $account );
 		if ( \is_wp_error( $url ) ) {
 			$allowed = array( 'code' => array() );
 			$not_accessible = wp_kses(
@@ -237,7 +291,7 @@ class Health_Check {
 			if ( isset( $health_messages[ $url->get_error_code() ] ) ) {
 				$message = $health_messages[ $url->get_error_code() ];
 			}
-			return new \WP_Error(
+			return new WP_Error(
 				$url->get_error_code(),
 				$message,
 				$url->get_error_data()
@@ -291,12 +345,17 @@ class Health_Check {
 			'fields' => array(
 				'webfinger' => array(
 					'label'   => __( 'WebFinger Resource', 'activitypub' ),
-					'value'   => \Activitypub\Webfinger::get_user_resource( wp_get_current_user()->ID ),
+					'value'   => Webfinger::get_user_resource( wp_get_current_user()->ID ),
 					'private' => true,
 				),
 				'author_url' => array(
 					'label'   => __( 'Author URL', 'activitypub' ),
 					'value'   => get_author_posts_url( wp_get_current_user()->ID ),
+					'private' => true,
+				),
+				'plugin_version' => array(
+					'label'   => __( 'Plugin Version', 'activitypub' ),
+					'value'   => get_plugin_version(),
 					'private' => true,
 				),
 			),

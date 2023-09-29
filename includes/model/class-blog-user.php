@@ -7,6 +7,7 @@ use Activitypub\Collection\Users;
 
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
+use function Activitypub\get_rest_url_by_path;
 
 class Blog_User extends User {
 	/**
@@ -21,7 +22,7 @@ class Blog_User extends User {
 	 *
 	 * @var string
 	 */
-	protected $type = 'Group';
+	protected $type = null;
 
 	/**
 	 * Is Account discoverable?
@@ -43,6 +44,21 @@ class Blog_User extends User {
 		$object->_id = $user_id;
 
 		return $object;
+	}
+
+	/**
+	 * Get the type of the object.
+	 *
+	 * If the Blog is in "single user" mode, return "Person" insted of "Group".
+	 *
+	 * @return string The type of the object.
+	 */
+	public function get_type() {
+		if ( is_single_user() ) {
+			return 'Person';
+		} else {
+			return 'Group';
+		}
 	}
 
 	/**
@@ -122,23 +138,34 @@ class Blog_User extends User {
 	/**
 	 * Get the User-Icon.
 	 *
-	 * @return array|null The User-Icon.
+	 * @return array The User-Icon.
 	 */
 	public function get_icon() {
 		// try site icon first
 		$icon_id = get_option( 'site_icon' );
+
 		// try custom logo second
 		if ( ! $icon_id ) {
 			$icon_id = get_theme_mod( 'custom_logo' );
 		}
-		if ( ! $icon_id ) {
-			return null;
+
+		$icon_url = false;
+
+		if ( $icon_id ) {
+			$icon = wp_get_attachment_image_src( $icon_id, 'full' );
+			if ( $icon ) {
+				$icon_url = $icon[0];
+			}
 		}
 
-		$image = wp_get_attachment_image_src( $icon_id, 'full' );
+		if ( ! $icon_url ) {
+			// fallback to default icon
+			$icon_url = plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
+		}
+
 		return array(
 			'type' => 'Image',
-			'url'  => esc_url( $image[0] ),
+			'url'  => esc_url( $icon_url ),
 		);
 	}
 
@@ -176,48 +203,6 @@ class Blog_User extends User {
 		return \gmdate( 'Y-m-d\TH:i:s\Z', $time );
 	}
 
-	public function get__public_key() {
-		$key = \get_option( 'activitypub_blog_user_public_key' );
-
-		if ( $key ) {
-			return $key;
-		}
-
-		$this->generate_key_pair();
-
-		$key = \get_option( 'activitypub_blog_user_public_key' );
-
-		return $key;
-	}
-
-	/**
-	 * Get the User-Private-Key.
-	 *
-	 * @param int $user_id
-	 *
-	 * @return mixed
-	 */
-	public function get__private_key() {
-		$key = \get_option( 'activitypub_blog_user_private_key' );
-
-		if ( $key ) {
-			return $key;
-		}
-
-		$this->generate_key_pair();
-
-		return \get_option( 'activitypub_blog_user_private_key' );
-	}
-
-	private function generate_key_pair() {
-		$key_pair = Signature::generate_key_pair();
-
-		if ( ! is_wp_error( $key_pair ) ) {
-			\update_option( 'activitypub_blog_user_public_key', $key_pair['public_key'] );
-			\update_option( 'activitypub_blog_user_private_key', $key_pair['private_key'] );
-		}
-	}
-
 	public function get_attachment() {
 		return array();
 	}
@@ -226,18 +211,27 @@ class Blog_User extends User {
 		return \home_url();
 	}
 
-	/**
-	 * Get the type of the object.
-	 *
-	 * If the Blog is in "single user" mode, return "Person" insted of "Group".
-	 *
-	 * @return string The type of the object.
-	 */
-	public function get_type() {
-		if ( is_single_user() ) {
-			return 'Person';
-		} else {
-			return $this->type;
+	public function get_moderators() {
+		if ( is_single_user() || 'Group' !== $this->get_type() ) {
+			return null;
 		}
+
+		return get_rest_url_by_path( 'collections/moderators' );
+	}
+
+	public function get_attributed_to() {
+		if ( is_single_user() || 'Group' !== $this->get_type() ) {
+			return null;
+		}
+
+		return get_rest_url_by_path( 'collections/moderators' );
+	}
+
+	public function get_posting_restricted_to_mods() {
+		if ( 'Group' === $this->get_type() ) {
+			return true;
+		}
+
+		return null;
 	}
 }

@@ -160,7 +160,7 @@ class Followers {
 	 * @param int    $user_id The ID of the WordPress User
 	 * @param string $actor   The Actor URL
 	 *
-	 * @return array|WP_Error The Follower (WP_Term array) or an WP_Error
+	 * @return array|WP_Error The Follower (WP_Post array) or an WP_Error
 	 */
 	public static function add_follower( $user_id, $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
@@ -169,29 +169,30 @@ class Followers {
 			return $meta;
 		}
 
+		if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
+			return new WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
+		}
+
 		$error = null;
 
 		$follower = new Follower();
+		$follower->from_array( $meta );
 
-		if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
-			$follower->set_id( $actor );
-			$follower->set_url( $actor );
-			$error = $meta;
-		} else {
-			$follower->from_array( $meta );
+		$id = $follower->upsert();
+
+		if ( is_wp_error( $id ) ) {
+			return $id;
 		}
 
-		$follower->upsert();
-
-		$meta = get_post_meta( $follower->get__id(), 'activitypub_user_id' );
+		$meta = get_post_meta( $id, 'activitypub_user_id' );
 
 		if ( $error ) {
-			self::add_error( $follower->get__id(), $error );
+			self::add_error( $id, $error );
 		}
 
 		// phpcs:ignore WordPress.PHP.StrictInArray.MissingTrueStrict
 		if ( is_array( $meta ) && ! in_array( $user_id, $meta ) ) {
-			add_post_meta( $follower->get__id(), 'activitypub_user_id', $user_id );
+			add_post_meta( $id, 'activitypub_user_id', $user_id );
 			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 
@@ -360,7 +361,17 @@ class Followers {
 	public static function get_all_followers() {
 		$args = array(
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query' => array(),
+			'meta_query' => array(
+				'relation' => 'AND',
+				array(
+					'key'     => 'activitypub_inbox',
+					'compare' => 'EXISTS',
+				),
+				array(
+					'key'     => 'activitypub_actor_json',
+					'compare' => 'EXISTS',
+				),
+			),
 		);
 		return self::get_followers( null, null, null, $args );
 	}
@@ -379,9 +390,18 @@ class Followers {
 				'fields'     => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
+					'relation' => 'AND',
 					array(
 						'key'   => 'activitypub_user_id',
 						'value' => $user_id,
+					),
+					array(
+						'key'     => 'activitypub_inbox',
+						'compare' => 'EXISTS',
+					),
+					array(
+						'key'     => 'activitypub_actor_json',
+						'compare' => 'EXISTS',
 					),
 				),
 			)
@@ -412,6 +432,7 @@ class Followers {
 				'fields'     => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
+					'relation' => 'AND',
 					array(
 						'key'     => 'activitypub_inbox',
 						'compare' => 'EXISTS',
@@ -419,6 +440,11 @@ class Followers {
 					array(
 						'key'   => 'activitypub_user_id',
 						'value' => $user_id,
+					),
+					array(
+						'key'     => 'activitypub_inbox',
+						'value'   => '',
+						'compare' => '!=',
 					),
 				),
 			)
@@ -462,7 +488,7 @@ class Followers {
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,
 			'orderby'        => 'modified',
-			'order'          => 'DESC',
+			'order'          => 'ASC',
 			'post_status'    => 'any', // 'any' includes 'trash
 			'date_query'     => array(
 				array(
@@ -490,15 +516,34 @@ class Followers {
 	 *
 	 * @return mixed The Term list of Followers, the format depends on $output.
 	 */
-	public static function get_faulty_followers( $number = 10 ) {
+	public static function get_faulty_followers( $number = 20 ) {
 		$args = array(
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $number,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(
+				'relation' => 'OR',
 				array(
 					'key'     => 'activitypub_errors',
 					'compare' => 'EXISTS',
+				),
+				array(
+					'key'     => 'activitypub_inbox',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'     => 'activitypub_actor_json',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'     => 'activitypub_inbox',
+					'value'   => '',
+					'compare' => '=',
+				),
+				array(
+					'key'     => 'activitypub_actor_json',
+					'value'   => '',
+					'compare' => '=',
 				),
 			),
 		);

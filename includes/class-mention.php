@@ -25,43 +25,56 @@ class Mention {
 	 * @return string the filtered post-content
 	 */
 	public static function the_content( $the_content ) {
-		$protected_tags = array();
-		$protect = function( $m ) use ( &$protected_tags ) {
-			$c = \wp_rand( 100000, 999999 );
-			$protect = '!#!#PROTECT' . $c . '#!#!';
-			while ( isset( $protected_tags[ $protect ] ) ) {
-				$c = \wp_rand( 100000, 999999 );
-				$protect = '!#!#PROTECT' . $c . '#!#!';
+		$tag_stack = array();
+		$protected_tags = array(
+			'pre',
+			'code',
+			'textarea',
+			'style',
+			'a',
+		);
+		$content_with_links = '';
+		$in_protected_tag = false;
+		foreach ( wp_html_split( $the_content ) as $chunk ) {
+			if ( preg_match( '#^<!--[\s\S]*-->$#i', $chunk, $m ) ) {
+				$content_with_links .= $chunk;
+				continue;
 			}
-			$protected_tags[ $protect ] = $m[0];
-			return $protect;
-		};
-		$the_content = preg_replace_callback(
-			'#<!\[CDATA\[.*?\]\]>#is',
-			$protect,
-			$the_content
-		);
-		$the_content = preg_replace_callback(
-			'#<(pre|code|textarea|style)\b[^>]*>.*?</\1[^>]*>#is',
-			$protect,
-			$the_content
-		);
-		$the_content = preg_replace_callback(
-			'#<a.*?href=[^>]+>.*?</a>#i',
-			$protect,
-			$the_content
-		);
 
-		$the_content = preg_replace_callback(
-			'#<img.*?[^>]+>#i',
-			$protect,
-			$the_content
-		);
+			if ( preg_match( '#^<(/)?([a-z-]+)\b[^>]*>$#i', $chunk, $m ) ) {
+				$tag = strtolower( $m[2] );
+				if ( '/' === $m[1] ) {
+					// Closing tag.
+					$i = array_search( $tag, $tag_stack );
+					// We can only remove the tag from the stack if it is in the stack.
+					if ( false !== $i ) {
+						$tag_stack = array_slice( $tag_stack, 0, $i );
+					}
+				} else {
+					// Opening tag, add it to the stack.
+					$tag_stack[] = $tag;
+				}
 
-		$the_content = \preg_replace_callback( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', array( self::class, 'replace_with_links' ), $the_content );
-		$the_content = \str_replace( array_reverse( array_keys( $protected_tags ) ), array_reverse( array_values( $protected_tags ) ), $the_content );
+				// If we're in a protected tag, the tag_stack contains at least one protected tag string.
+				// The protected tag state can only change when we encounter a start or end tag.
+				$in_protected_tag = array_intersect( $tag_stack, $protected_tags );
 
-		return $the_content;
+				// Never inspect tags.
+				$content_with_links .= $chunk;
+				continue;
+			}
+
+			if ( $in_protected_tag ) {
+				// Don't inspect a chunk inside an inspected tag.
+				$content_with_links .= $chunk;
+				continue;
+			}
+
+			// Only reachable when there is no protected tag in the stack.
+			$content_with_links .= \preg_replace_callback( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', array( self::class, 'replace_with_links' ), $chunk );
+		}
+
+		return $content_with_links;
 	}
 
 	/**
@@ -74,7 +87,7 @@ class Mention {
 	public static function replace_with_links( $result ) {
 		$metadata = get_remote_metadata_by_actor( $result[0] );
 
-		if ( ! is_wp_error( $metadata ) && ! empty( $metadata['url'] ) ) {
+		if ( ! empty( $metadata ) && ! is_wp_error( $metadata ) && ! empty( $metadata['url'] ) ) {
 			$username = ltrim( $result[0], '@' );
 			if ( ! empty( $metadata['name'] ) ) {
 				$username = $metadata['name'];

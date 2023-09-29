@@ -13,6 +13,7 @@
 	<rule ref="WordPress-Core">
 		<exclude name="Generic.Formatting.MultipleStatementAlignment.NotSameWarning" />
 		<exclude name="WordPress.Arrays.MultipleStatementAlignment.DoubleArrowNotAligned" />
+		<exclude name="Squiz.Functions.MultiLineFunctionDeclaration.SpaceAfterFunction" />
 	</rule>
 	<rule ref="WordPress.Files.FileName">
 		<properties>

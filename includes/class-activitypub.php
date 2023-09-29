@@ -17,6 +17,7 @@ class Activitypub {
 		\add_filter( 'template_include', array( self::class, 'render_json_template' ), 99 );
 		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
 		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
+		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
 
 		// Add support for ActivityPub to custom post types
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array();
@@ -186,6 +187,22 @@ class Activitypub {
 			$comment = \get_comment( $comment );
 		}
 		return \get_comment_meta( $comment->comment_ID, 'avatar_url', true );
+	}
+
+	/**
+	 * Link remote comments to source url.
+	 *
+	 * @param string $comment_link
+	 * @param object|WP_Comment $comment
+	 *
+	 * @return string $url
+	 */
+	public static function remote_comment_link( $comment_link, $comment ) {
+		$remote_comment_link = get_comment_meta( $comment->comment_ID, 'source_url', true );
+		if ( $remote_comment_link ) {
+			$comment_link = esc_url( $remote_comment_link );
+		}
+		return $comment_link;
 	}
 
 	/**

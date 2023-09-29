@@ -26,7 +26,9 @@ class Activity extends Base_Object {
 			'schema' => 'http://schema.org#',
 			'pt' => 'https://joinpeertube.org/ns#',
 			'toot' => 'http://joinmastodon.org/ns#',
+			'webfinger' => 'https://webfinger.net/#',
 			'litepub' => 'http://litepub.social/ns#',
+			'lemmy' => 'https://join-lemmy.org/ns#',
 			'value' => 'schema:value',
 			'Hashtag' => 'as:Hashtag',
 			'featured' => array(
@@ -37,8 +39,19 @@ class Activity extends Base_Object {
 				'@id' => 'toot:featuredTags',
 				'@type' => '@id',
 			),
+			'alsoKnownAs' => array(
+				'@id' => 'as:alsoKnownAs',
+				'@type' => '@id',
+			),
+			'moderators' => array(
+				'@id' => 'lemmy:moderators',
+				'@type' => '@id',
+			),
+			'postingRestrictedToMods' => 'lemmy:postingRestrictedToMods',
 			'discoverable' => 'toot:discoverable',
+			'indexable' => 'toot:indexable',
 			'sensitive' => 'as:sensitive',
+			'resource' => 'webfinger:resource',
 		),
 	);
 

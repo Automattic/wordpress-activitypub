@@ -26,7 +26,7 @@ class Webfinger {
 		}
 
 		$user = Users::get_by_id( $user_id );
-		if ( ! $user ) {
+		if ( ! $user || is_wp_error( $user ) ) {
 			return '';
 		}
 
@@ -63,7 +63,7 @@ class Webfinger {
 			$url,
 			array(
 				'headers' => array( 'Accept' => 'application/jrd+json' ),
-				'redirection' => 0,
+				'redirection' => 2,
 				'timeout' => 2,
 			)
 		);
@@ -198,6 +198,6 @@ class Webfinger {
 			}
 		}
 
-		return new WP_Error( 'webfinger_remote_follow_endpoint_invalid', null, $data );
+		return new WP_Error( 'webfinger_remote_follow_endpoint_invalid', $data, array( 'status' => 417 ) );
 	}
 }

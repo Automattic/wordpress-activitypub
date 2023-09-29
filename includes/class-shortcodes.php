@@ -46,7 +46,7 @@ class Shortcodes {
 
 		foreach ( $tags as $tag ) {
 			$hash_tags[] = \sprintf(
-				'<a rel="tag" class="u-tag u-category" href="%s">%s</a>',
+				'<a rel="tag" class="hashtag u-tag u-category" href="%s">%s</a>',
 				\esc_url( \get_tag_link( $tag ) ),
 				esc_hashtag( $tag->name )
 			);
@@ -114,7 +114,7 @@ class Shortcodes {
 
 				/** This filter is documented in wp-includes/post-template.php */
 				$excerpt = \apply_filters( 'the_content', $excerpt );
-				$excerpt = \str_replace( ']]>', ']]>', $excerpt );
+				$excerpt = \str_replace( ']]>', ']]&gt;', $excerpt );
 			}
 		}
 
@@ -359,7 +359,7 @@ class Shortcodes {
 
 		foreach ( $categories as $category ) {
 			$hash_tags[] = \sprintf(
-				'<a rel="tag" class="u-tag u-category" href="%s">%s</a>',
+				'<a rel="tag" class="hashtag u-tag u-category" href="%s">%s</a>',
 				\esc_url( \get_category_link( $category ) ),
 				esc_hashtag( $category->name )
 			);

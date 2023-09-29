@@ -11,60 +11,41 @@
 ?>
 
 <div class="activitypub-settings activitypub-settings-page hide-if-no-js">
-	<div class="box">
-		<h3><?php \esc_html_e( 'Troubleshooting', 'activitypub' ); ?></h3>
-		<p>
-			<?php
-			echo \wp_kses(
-				\sprintf(
-					// translators:
-					\__( 'If you have problems using this plugin, please check the <a href="%s">Site Health</a> to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).', 'activitypub' ),
-					\esc_url_raw( \admin_url( 'site-health.php' ) )
-				),
-				'default'
-			);
-			?>
-		</p>
-	</div>
-
 	<form method="post" action="options.php">
 		<?php \settings_fields( 'activitypub' ); ?>
 
 		<div class="box">
-			<h3><?php \esc_html_e( 'Users', 'activitypub' ); ?></h3>
-
-			<p><?php \esc_html_e( 'All user related settings.', 'activitypub' ); ?></p>
-
+			<h3><?php \esc_html_e( 'Profiles', 'activitypub' ); ?></h3>
 			<table class="form-table">
 				<tbody>
 					<tr>
 						<th scope="row">
-							<?php \esc_html_e( 'Enable/disable Users by Type', 'activitypub' ); ?>
+							<?php \esc_html_e( 'Enable profiles by type', 'activitypub' ); ?>
 						</th>
 						<td>
 							<p>
 								<label>
 									<input type="checkbox" name="activitypub_enable_users" id="activitypub_enable_users" value="1" <?php echo \checked( '1', \get_option( 'activitypub_enable_users', '1' ) ); ?> />
-									<?php \esc_html_e( 'Enable Authors', 'activitypub' ); ?>
+									<?php \esc_html_e( 'Enable authors', 'activitypub' ); ?>
 								</label>
 							</p>
 							<p class="description">
-								<?php echo \wp_kses( \__( 'Every Author on this Blog (with the <code>publish_posts</code> capability) gets his own ActivityPub enabled Profile.', 'activitypub' ), array( 'code' => array() ) ); ?>
+								<?php echo \wp_kses( \__( 'Every author on this blog (with the <code>publish_posts</code> capability) gets their own ActivityPub profile.', 'activitypub' ), array( 'code' => array() ) ); ?>
 							</p>
 							<p>
 								<label>
 									<input type="checkbox" name="activitypub_enable_blog_user" id="activitypub_enable_blog_user" value="1" <?php echo \checked( '1', \get_option( 'activitypub_enable_blog_user', '0' ) ); ?> />
-									<?php \esc_html_e( 'Enable Blog-User', 'activitypub' ); ?>
+									<?php \esc_html_e( 'Enable blog', 'activitypub' ); ?>
 								</label>
 							</p>
 							<p class="description">
-								<?php \esc_html_e( 'Your Blog becomes an ActivityPub compatible Profile.', 'activitypub' ); ?>
+								<?php \esc_html_e( 'Your blog becomes an ActivityPub profile.', 'activitypub' ); ?>
 							</p>
 						</td>
 					</tr>
 					<tr>
 						<th scope="row">
-							<?php \esc_html_e( 'Change Blog-User Identifier', 'activitypub' ); ?>
+							<?php \esc_html_e( 'Change blog profile ID', 'activitypub' ); ?>
 						</th>
 						<td>
 							<label for="activitypub_blog_user_identifier">
@@ -72,7 +53,12 @@
 								@<?php echo esc_html( \wp_parse_url( \home_url(), PHP_URL_HOST ) ); ?>
 							</label>
 							<p class="description">
-								<?php \esc_html_e( 'This Blog-User will federate all posts written on your Blog, regardless of the User who posted it.', 'activitypub' ); ?>
+								<?php \esc_html_e( 'This profile name will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
+							</p>
+							<p>
+								<strong>
+									<?php \esc_html_e( 'Please avoid using an existing author’s name as the blog profile ID. Fediverse platforms might use caching and this could break the functionality completely.', 'activitypub' ); ?>
+								</strong>
 							</p>
 						</td>
 					</tr>
@@ -84,14 +70,11 @@
 
 		<div class="box">
 			<h3><?php \esc_html_e( 'Activities', 'activitypub' ); ?></h3>
-
-			<p><?php \esc_html_e( 'All activity related settings.', 'activitypub' ); ?></p>
-
 			<table class="form-table">
 				<tbody>
 					<tr>
 						<th scope="row">
-							<?php \esc_html_e( 'Post-Content', 'activitypub' ); ?>
+							<?php \esc_html_e( 'Post content', 'activitypub' ); ?>
 						</th>
 						<td>
 							<p>
@@ -130,7 +113,7 @@
 									<?php \esc_html_e( 'Custom', 'activitypub' ); ?>
 									-
 									<span class="description">
-										<?php \esc_html_e( 'Use the text-area below, to customize your activities.', 'activitypub' ); ?>
+										<?php \esc_html_e( 'Use the text area below, to customize your activities.', 'activitypub' ); ?>
 									</span>
 								</label>
 							</p>
@@ -237,7 +220,7 @@
 						</th>
 						<td>
 							<p>
-								<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag-link. <strong>This feature is experimental! Please disable it, if you find any HTML or CSS errors.</strong>', 'activitypub' ), 'default' ); ?></label>
+								<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag link. <strong>This feature is experimental! Please disable it, if you find any HTML or CSS errors.</strong>', 'activitypub' ), 'default' ); ?></label>
 							</p>
 						</td>
 					</tr>
@@ -249,9 +232,6 @@
 
 		<div class="box">
 			<h3><?php \esc_html_e( 'Server', 'activitypub' ); ?></h3>
-
-			<p><?php \esc_html_e( 'Server related settings.', 'activitypub' ); ?></p>
-
 			<table class="form-table">
 				<tbody>
 					<tr>

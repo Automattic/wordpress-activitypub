@@ -4,7 +4,6 @@ namespace Activitypub;
 use WP_Error;
 use DateTime;
 use DateTimeZone;
-use Activitypub\Model\User;
 use Activitypub\Collection\Users;
 
 /**
@@ -23,22 +22,14 @@ class Signature {
 	 *
 	 * @return mixed The public key.
 	 */
-	public static function get_public_key( $user_id, $force = false ) {
+	public static function get_public_key_for( $user_id, $force = false ) {
 		if ( $force ) {
-			self::generate_key_pair( $user_id );
+			self::generate_key_pair_for( $user_id );
 		}
 
-		if ( User::APPLICATION_USER_ID === $user_id ) {
-			$key = \get_option( 'activitypub_magic_sig_public_key' );
-		} else {
-			$key = \get_user_meta( $user_id, 'magic_sig_public_key', true );
-		}
+		$key_pair = self::get_keypair_for( $user_id );
 
-		if ( ! $key ) {
-			return self::get_public_key( $user_id, true );
-		}
-
-		return $key;
+		return $key_pair['public_key'];
 	}
 
 	/**
@@ -49,22 +40,32 @@ class Signature {
 	 *
 	 * @return mixed The private key.
 	 */
-	public static function get_private_key( $user_id, $force = false ) {
+	public static function get_private_key_for( $user_id, $force = false ) {
 		if ( $force ) {
-			self::generate_key_pair( $user_id );
+			self::generate_key_pair_for( $user_id );
 		}
 
-		if ( User::APPLICATION_USER_ID === $user_id ) {
-			$key = \get_option( 'activitypub_magic_sig_private_key' );
-		} else {
-			$key = \get_user_meta( $user_id, 'magic_sig_private_key', true );
+		$key_pair = self::get_keypair_for( $user_id );
+
+		return $key_pair['private_key'];
+	}
+
+	/**
+	 * Return the key pair for a given user.
+	 *
+	 * @param int $user_id The WordPress User ID.
+	 *
+	 * @return array The key pair.
+	 */
+	public static function get_keypair_for( $user_id ) {
+		$option_key = self::get_signature_options_key_for( $user_id );
+		$key_pair = \get_option( $option_key );
+
+		if ( ! $key_pair ) {
+			$key_pair = self::generate_key_pair_for( $user_id );
 		}
 
-		if ( ! $key ) {
-			return self::get_private_key( $user_id, true );
-		}
-
-		return $key;
+		return $key_pair;
 	}
 
 	/**
@@ -72,9 +73,18 @@ class Signature {
 	 *
 	 * @param int $user_id The WordPress User ID.
 	 *
-	 * @return void
+	 * @return array The key pair.
 	 */
-	public static function generate_key_pair() {
+	protected static function generate_key_pair_for( $user_id ) {
+		$option_key = self::get_signature_options_key_for( $user_id );
+		$key_pair = self::check_legacy_key_pair_for( $user_id );
+
+		if ( $key_pair ) {
+			\add_option( $option_key, $key_pair );
+
+			return $key_pair;
+		}
+
 		$config = array(
 			'digest_alg' => 'sha512',
 			'private_key_bits' => 2048,
@@ -88,10 +98,78 @@ class Signature {
 
 		$detail = \openssl_pkey_get_details( $key );
 
-		return array(
+		// check if keys are valid
+		if (
+			empty( $priv_key ) || ! is_string( $priv_key ) ||
+			! isset( $detail['key'] ) || ! is_string( $detail['key'] )
+		) {
+			return array(
+				'private_key' => null,
+				'public_key'  => null,
+			);
+		}
+
+		$key_pair = array(
 			'private_key' => $priv_key,
 			'public_key'  => $detail['key'],
 		);
+
+		// persist keys
+		\add_option( $option_key, $key_pair );
+
+		return $key_pair;
+	}
+
+	/**
+	 * Return the option key for a given user.
+	 *
+	 * @param int $user_id The WordPress User ID.
+	 *
+	 * @return string The option key.
+	 */
+	protected static function get_signature_options_key_for( $user_id ) {
+		$id = $user_id;
+
+		if ( $user_id > 0 ) {
+			$user = \get_userdata( $user_id );
+			// sanatize username because it could include spaces and special chars
+			$id = sanitize_title( $user->user_login );
+		}
+
+		return 'activitypub_keypair_for_' . $id;
+	}
+
+	/**
+	 * Check if there is a legacy key pair
+	 *
+	 * @param int $user_id The WordPress User ID.
+	 *
+	 * @return array|bool The key pair or false.
+	 */
+	protected static function check_legacy_key_pair_for( $user_id ) {
+		switch ( $user_id ) {
+			case 0:
+				$public_key = \get_option( 'activitypub_blog_user_public_key' );
+				$private_key = \get_option( 'activitypub_blog_user_private_key' );
+				break;
+			case -1:
+				$public_key = \get_option( 'activitypub_application_user_public_key' );
+				$private_key = \get_option( 'activitypub_application_user_private_key' );
+				break;
+			default:
+				$public_key = \get_user_meta( $user_id, 'magic_sig_public_key', true );
+				$private_key = \get_user_meta( $user_id, 'magic_sig_private_key', true );
+				break;
+		}
+
+		if ( ! empty( $public_key ) && is_string( $public_key ) && ! empty( $private_key ) && is_string( $private_key ) ) {
+			return array(
+				'private_key' => $private_key,
+				'public_key'  => $public_key,
+			);
+		}
+
+		return false;
 	}
 
 	/**
@@ -107,7 +185,7 @@ class Signature {
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
 		$user = Users::get_by_id( $user_id );
-		$key  = $user->get__private_key();
+		$key  = self::get_private_key_for( $user->get__id() );
 
 		$url_parts = \wp_parse_url( $url );
 
@@ -136,7 +214,6 @@ class Signature {
 		\openssl_sign( $signed_string, $signature, $key, \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature ); // phpcs:ignore
 
-		$user   = Users::get_by_id( $user_id );
 		$key_id = $user->get_url() . '#main-key';
 
 		if ( ! empty( $digest ) ) {
@@ -161,28 +238,38 @@ class Signature {
 			} else {
 				$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
 			}
+
+			// fix route for subdirectory installs
+			$path = \wp_parse_url( \get_home_url(), PHP_URL_PATH );
+
+			if ( \is_string( $path ) ) {
+				$path = trim( $path, '/' );
+			}
+
+			if ( $path ) {
+				$route = '/' . $path . $route;
+			}
+
 			$headers = $request->get_headers();
-			$actor = isset( json_decode( $request->get_body() )->actor ) ? json_decode( $request->get_body() )->actor : '';
 			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . $route;
 		} else {
 			$request = self::format_server_request( $request );
 			$headers = $request['headers']; // $_SERVER array
-			$actor = null;
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
 		if ( ! isset( $headers['signature'] ) ) {
-			return new WP_Error( 'activitypub_signature', 'Request not signed', array( 'status' => 403 ) );
+			return new WP_Error( 'activitypub_signature', __( 'Request not signed', 'activitypub' ), array( 'status' => 403 ) );
 		}
 
 		if ( array_key_exists( 'signature', $headers ) ) {
-			$signature_block = self::parse_signature_header( $headers['signature'] );
+			$signature_block = self::parse_signature_header( $headers['signature'][0] );
 		} elseif ( array_key_exists( 'authorization', $headers ) ) {
-			$signature_block = self::parse_signature_header( $headers['authorization'] );
+			$signature_block = self::parse_signature_header( $headers['authorization'][0] );
 		}
 
 		if ( ! isset( $signature_block ) || ! $signature_block ) {
-			return new WP_Error( 'activitypub_signature', 'Incompatible request signature. keyId and signature are required', array( 'status' => 403 ) );
+			return new WP_Error( 'activitypub_signature', __( 'Incompatible request signature. keyId and signature are required', 'activitypub' ), array( 'status' => 403 ) );
 		}
 
 		$signed_headers = $signature_block['headers'];
@@ -192,12 +279,12 @@ class Signature {
 
 		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
 		if ( ! $signed_data ) {
-			return new WP_Error( 'activitypub_signature', 'Signed request date outside acceptable time window', array( 'status' => 403 ) );
+			return new WP_Error( 'activitypub_signature', __( 'Signed request date outside acceptable time window', 'activitypub' ), array( 'status' => 403 ) );
 		}
 
 		$algorithm = self::get_signature_algorithm( $signature_block );
 		if ( ! $algorithm ) {
-			return new WP_Error( 'activitypub_signature', 'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)', array( 'status' => 403 ) );
+			return new WP_Error( 'activitypub_signature', __( 'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)', 'activitypub' ), array( 'status' => 403 ) );
 		}
 
 		if ( \in_array( 'digest', $signed_headers, true ) && isset( $body ) ) {
@@ -213,15 +300,12 @@ class Signature {
 			}
 
 			if ( \base64_encode( \hash( $hashalg, $body, true ) ) !== $digest[1] ) { // phpcs:ignore
-				return new WP_Error( 'activitypub_signature', 'Invalid Digest header', array( 'status' => 403 ) );
+				return new WP_Error( 'activitypub_signature', __( 'Invalid Digest header', 'activitypub' ), array( 'status' => 403 ) );
 			}
 		}
 
-		if ( $actor ) {
-			$public_key = self::get_remote_key( $actor );
-		} else {
-			$public_key = self::get_remote_key( $signature_block['keyId'] );
-		}
+		$public_key = self::get_remote_key( $signature_block['keyId'] );
+
 		if ( \is_wp_error( $public_key ) ) {
 			return $public_key;
 		}
@@ -229,7 +313,7 @@ class Signature {
 		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
 
 		if ( ! $verified ) {
-			return new WP_Error( 'activitypub_signature', 'Invalid signature', array( 'status' => 403 ) );
+			return new WP_Error( 'activitypub_signature', __( 'Invalid signature', 'activitypub' ), array( 'status' => 403 ) );
 		}
 		return $verified;
 	}
@@ -239,17 +323,17 @@ class Signature {
 	 *
 	 * @param string $key_id The URL to the public key.
 	 *
-	 * @return string The public key.
+	 * @return WP_Error|string The public key.
 	 */
 	public static function get_remote_key( $key_id ) { // phpcs:ignore
-		$actor = get_remote_metadata_by_actor( strtok( strip_fragment_from_url( $key_id ), '?' ) ); // phpcs:ignore
+		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) ); // phpcs:ignore
 		if ( \is_wp_error( $actor ) ) {
 			return $actor;
 		}
 		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
 			return \rtrim( $actor['publicKey']['publicKeyPem'] ); // phpcs:ignore
 		}
-		return null;
+		return new WP_Error( 'activitypub_no_remote_key_found', __( 'No Public-Key found', 'activitypub' ), array( 'status' => 403 ) );
 	}
 
 	/**
@@ -274,32 +358,31 @@ class Signature {
 	/**
 	 * Parses the Signature header
 	 *
-	 * @param array $header The signature header.
+	 * @param string $signature The signature header.
 	 *
 	 * @return array signature parts
 	 */
-	public static function parse_signature_header( $header ) {
-		$parsed_header = array();
-		$matches       = array();
-		$h_string      = \implode( ',', (array) $header[0] );
+	public static function parse_signature_header( $signature ) {
+		$parsed_header  = array();
+		$matches        = array();
 
-		if ( \preg_match( '/keyId="(.*?)"/ism', $h_string, $matches ) ) {
-			$parsed_header['keyId'] = $matches[1];
+		if ( \preg_match( '/keyId="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['keyId'] = trim( $matches[1] );
 		}
-		if ( \preg_match( '/created=([0-9]*)/ism', $h_string, $matches ) ) {
-			$parsed_header['(created)'] = $matches[1];
+		if ( \preg_match( '/created=([0-9]*)/ism', $signature, $matches ) ) {
+			$parsed_header['(created)'] = trim( $matches[1] );
 		}
-		if ( \preg_match( '/expires=([0-9]*)/ism', $h_string, $matches ) ) {
-			$parsed_header['(expires)'] = $matches[1];
+		if ( \preg_match( '/expires=([0-9]*)/ism', $signature, $matches ) ) {
+			$parsed_header['(expires)'] = trim( $matches[1] );
 		}
-		if ( \preg_match( '/algorithm="(.*?)"/ism', $h_string, $matches ) ) {
-			$parsed_header['algorithm'] = $matches[1];
+		if ( \preg_match( '/algorithm="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['algorithm'] = trim( $matches[1] );
 		}
-		if ( \preg_match( '/headers="(.*?)"/ism', $h_string, $matches ) ) {
-			$parsed_header['headers'] = \explode( ' ', $matches[1] );
+		if ( \preg_match( '/headers="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['headers'] = \explode( ' ', trim( $matches[1] ) );
 		}
-		if ( \preg_match( '/signature="(.*?)"/ism', $h_string, $matches ) ) {
-			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', $matches[1] ) ); // phpcs:ignore
+		if ( \preg_match( '/signature="(.*?)"/ism', $signature, $matches ) ) {
+			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', trim( $matches[1] ) ) ); // phpcs:ignore
 		}
 
 		if ( ( $parsed_header['signature'] ) && ( $parsed_header['algorithm'] ) && ( ! $parsed_header['headers'] ) ) {
@@ -312,7 +395,7 @@ class Signature {
 	/**
 	 * Gets the header data from the included pseudo headers
 	 *
-	 * @param array $signed_headers
+	 * @param array $signed_headers  The signed headers.
 	 * @param array $signature_block (pseudo-headers)
 	 * @param array $headers         (http headers)
 	 *

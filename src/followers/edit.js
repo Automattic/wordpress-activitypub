@@ -1,31 +1,9 @@
 import { SelectControl, RangeControl, PanelBody, TextControl } from '@wordpress/components';
-import { useSelect } from '@wordpress/data';
-import { useMemo, useState } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { Followers } from './followers';
-
-const enabled = window._activityPubOptions?.enabled;
-
-function useUserOptions() {
-	const users = enabled?.users ? useSelect( ( select ) => select( 'core' ).getUsers( { who: 'authors' } ) ) : [];
-	return useMemo( () => {
-		if ( ! users ) {
-			return [];
-		}
-		const withBlogUser = enabled?.site ? [ {
-			label: __( 'Whole Site', 'activitypub' ),
-			value: 'site'
-		} ] : [];
-		return users.reduce( ( acc, user ) => {
-			acc.push({
-				label: user.name,
-				value: user.id
-			} );
-			return acc;
-		}, withBlogUser );
-	}, [ users ] );
-}
+import { useUserOptions } from '../shared/use-user-options';
 
 export default function Edit( { attributes, setAttributes } ) {
 	const { order, per_page, selectedUser, title } = attributes;
@@ -42,6 +20,17 @@ export default function Edit( { attributes, setAttributes } ) {
 			setAttributes( { [ key ]: value } );
 		};
 	}
+
+	useEffect( () => {
+		// if there are no users yet, do nothing
+		if ( ! usersOptions.length ) {
+			return;
+		}
+		// ensure that the selected user is in the list of options, if not, select the first available user
+		if ( ! usersOptions.find( ( { value } ) => value === selectedUser ) ) {
+			setAttributes( { selectedUser: usersOptions[ 0 ].value } );
+		}
+	}, [ selectedUser, usersOptions ] );
 
 	return (
 		<div { ...blockProps }>

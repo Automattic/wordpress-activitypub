@@ -37,11 +37,52 @@ class User extends Actor {
 	protected $featured;
 
 	/**
+	 * Moderators endpoint.
+	 *
+	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
+	 *
+	 * @var string
+	 */
+	protected $moderators;
+
+	/**
 	 * The User-Type
 	 *
 	 * @var string
 	 */
 	protected $type = 'Person';
+
+	/**
+	 * If the User is discoverable.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
+	 *
+	 * @var boolean
+	 */
+	protected $discoverable = true;
+
+	/**
+	 * If the User is indexable.
+	 *
+	 * @var boolean
+	 */
+	protected $indexable;
+
+	/**
+	 * The WebFinger Resource.
+	 *
+	 * @var string<url>
+	 */
+	protected $resource;
+
+	/**
+	 * Restrict posting to mods
+	 *
+	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
+	 *
+	 * @var boolean
+	 */
+	protected $posting_restricted_to_mods = null;
 
 	public static function from_wp_user( $user_id ) {
 		if ( is_user_disabled( $user_id ) ) {
@@ -145,51 +186,8 @@ class User extends Actor {
 		return array(
 			'id'       => $this->get_id() . '#main-key',
 			'owner'    => $this->get_id(),
-			'publicKeyPem' => $this->get__public_key(),
+			'publicKeyPem' => Signature::get_public_key_for( $this->get__id() ),
 		);
-	}
-
-	/**
-	 * @param int $this->get__id()
-	 *
-	 * @return mixed
-	 */
-	public function get__public_key() {
-		$key = \get_user_meta( $this->get__id(), 'magic_sig_public_key', true );
-
-		if ( $key ) {
-			return $key;
-		}
-
-		$this->generate_key_pair();
-
-		return \get_user_meta( $this->get__id(), 'magic_sig_public_key', true );
-	}
-
-	/**
-	 * @param int $this->get__id()
-	 *
-	 * @return mixed
-	 */
-	public function get__private_key() {
-		$key = \get_user_meta( $this->get__id(), 'magic_sig_private_key', true );
-
-		if ( $key ) {
-			return $key;
-		}
-
-		$this->generate_key_pair();
-
-		return \get_user_meta( $this->get__id(), 'magic_sig_private_key', true );
-	}
-
-	private function generate_key_pair() {
-		$key_pair = Signature::generate_key_pair();
-
-		if ( ! is_wp_error( $key_pair ) ) {
-			\update_user_meta( $this->get__id(), 'magic_sig_public_key', $key_pair['public_key'], true );
-			\update_user_meta( $this->get__id(), 'magic_sig_private_key', $key_pair['private_key'], true );
-		}
 	}
 
 	/**
@@ -300,5 +298,21 @@ class User extends Actor {
 
 	public function get_canonical_url() {
 		return $this->get_url();
+	}
+
+	public function get_streams() {
+		return null;
+	}
+
+	public function get_tag() {
+		return array();
+	}
+
+	public function get_indexable() {
+		if ( \get_option( 'blog_public', 1 ) ) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 }

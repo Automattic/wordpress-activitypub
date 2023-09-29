@@ -11,7 +11,8 @@
   },
   "scripts": {
     "dev": "wp-scripts start",
-    "build": "wp-scripts build"
+    "build": "wp-scripts build",
+    "readme": "grunt wp_readme_to_markdown"
   },
   "license": "MIT",
   "bugs": {
