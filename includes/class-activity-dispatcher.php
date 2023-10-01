@@ -129,10 +129,10 @@ class Activity_Dispatcher {
 	/**
 	 * Send Activities to followers and mentioned users.
 	 *
-	 * @param WP_Comment $wp_comment The ActivityPub Comment.
+	 * @param $wp_comment The ActivityPub Comment.
 	 * @param string  $type    The Activity-Type.
 	 */
-	public static function send_comment_activity( WP_Comment $wp_comment, $type ) {
+	public static function send_comment_activity( $wp_comment, $type ) {
 
 		$object = Comment::transform( $wp_comment )->to_object();
 
