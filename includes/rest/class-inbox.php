@@ -339,7 +339,7 @@ class Inbox {
 	 * @return array Comment data suitable for creating a comment.
 	 */
 	public static function convert_object_to_comment_data( $object, $user_id ) {
-
+		$object['user_id'] = $user_id;
 		if ( ! isset( $object['object']['inReplyTo'] ) ) {
 			return;
 		}
@@ -404,7 +404,7 @@ class Inbox {
 	 * @param  int   $user_id The id of the local blog-user
 	 */
 	public static function handle_create( $object, $user_id ) {
-		$commentdata = self::convert_object_to_comment_data( $object );
+		$commentdata = self::convert_object_to_comment_data( $object, $user_id );
 		if ( ! $commentdata ) {
 			return false;
 		}
