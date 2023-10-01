@@ -290,9 +290,12 @@ class Admin {
 	}
 
 	public static function enqueue_scripts( $hook_suffix ) {
-		if ( false !== strpos( $hook_suffix, 'activitypub' ) || ( 'edit-comments.php' === $hook_suffix ) || ( 'index.php' === $hook_suffix ) ) {
+		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
 			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), '1.0.0' );
 			wp_enqueue_script( 'activitypub-admin-styles', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), '1.0.0', false );
+		}
+		if ( ( 'edit-comments.php' === $hook_suffix ) || ( 'index.php' === $hook_suffix ) ) {
+			wp_enqueue_script( 'activitypub-reply', plugins_url( 'assets/js/activitypub-reply.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), '1.0.0', false );
 		}
 	}
 }
