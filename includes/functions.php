@@ -230,7 +230,7 @@ function url_to_postid( $in_replyto_url ) {
 				'type' => $post_types,
 				'meta_query' => array(
 					array(
-						'key' => '_activitypub_permalink_compat',
+						'key' => 'activitypub_canonical_url',
 						'value' => $in_replyto_url,
 					),
 				),
