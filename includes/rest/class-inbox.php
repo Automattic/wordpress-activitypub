@@ -352,11 +352,6 @@ class Inbox {
 
 		$meta = \Activitypub\get_remote_metadata_by_actor( $object['actor'] );
 
-		// Objects must have IDs
-		if ( ! isset( $object['object']['id'] ) ) {
-			\error_log( 'Comment provided without ID' );
-			return;
-		}
 		$id = $object['object']['id'];
 
 		// Only handle replies
