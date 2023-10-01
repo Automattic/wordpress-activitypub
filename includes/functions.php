@@ -299,6 +299,63 @@ function url_to_commentid( $in_replyto_url ) {
 }
 
 /**
+ * get_parent_uri (in reply to)
+ * takes a comment and returns
+ * @param WP_Comment activitypub object id URI
+ * @return int comment_id
+ */
+function get_in_reply_to( $comment ) {
+
+	$parent_comment = \get_comment( $comment->comment_parent );
+	if ( $parent_comment ) {
+		//is parent remote?
+		$in_reply_to = get_source_id( $parent_comment );
+		if ( ! $in_reply_to ) {
+			//local
+			$in_reply_to = set_ap_comment_id( $comment );
+		}
+	} else {
+		$pretty_permalink = \get_post_meta( $comment->comment_post_ID, 'activitypub_canonical_url', true );
+		if ( $pretty_permalink ) {
+			$in_reply_to = $pretty_permalink;
+		} else {
+			$in_reply_to = \get_permalink( $comment->comment_post_ID );
+		}
+	}
+	return $in_reply_to;
+}
+
+/**
+ * Checks a comment ID for a source_id, or source_url
+ */
+function get_source_id( $comment ) {
+
+	if ( $comment->user_id !== 0 ) {
+
+		$source_id = \get_comment_meta( $comment->ID, 'source_id', true );
+		if ( ! $source_id ) {
+			$source_url = \get_comment_meta( $comment->ID, 'source_url', true );
+			if ( ! $source_url ) {
+				return null;
+			}
+			$response = safe_remote_get( $source_url );
+			$body = \wp_remote_retrieve_body( $response );
+			$remote_status = \json_decode( $body, true );
+			if ( is_wp_error( $remote_status )
+				|| ! isset( $remote_status['@context'] )
+				|| ! isset( $remote_status['object']['id'] ) ) {
+
+				// the original post may have been deleted, before we started processing deletes.
+				return null;
+			}
+			$source_id = $remote_status['object']['id'];
+		}
+		return $source_id;
+	}
+	return null;
+}
+
+/**
  * Verify if url is a wp_ap_comment,
  * Or if it is a previously received remote comment
  * @return int comment_id
