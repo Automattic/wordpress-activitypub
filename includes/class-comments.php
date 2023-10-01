@@ -4,7 +4,7 @@ namespace Activitypub;
 /**
  * Comments Class
  *
- * @author Django
+ * @author Django Doucet
  */
 class Comments {
 	/**
@@ -12,21 +12,20 @@ class Comments {
 	 */
 	public static function init() {
 
-		\add_filter( 'preprocess_comment', array( '\Activitypub\Comments', 'preprocess_comment' ) );
-		\add_filter( 'comment_excerpt', array( '\Activitypub\Comments', 'comment_excerpt' ), 10, 3 );
-		\add_filter( 'comment_text', array( '\Activitypub\Comments', 'comment_content_filter' ), 10, 3 );
-		\add_filter( 'comment_post', array( '\Activitypub\Comments', 'postprocess_comment' ), 10, 3 );
-		\add_action( 'edit_comment', array( '\Activitypub\Comments', 'edit_comment' ), 20, 2 ); //schedule_admin_comment_activity
-		\add_action( 'transition_comment_status', array( '\Activitypub\Comments', 'schedule_comment_activity' ), 20, 3 );
+		\add_filter( 'preprocess_comment', array( self::class, 'preprocess_comment' ) );
+		\add_filter( 'comment_excerpt', array( self::class, 'comment_excerpt' ), 10, 3 );
+		\add_filter( 'comment_text', array( self::class, 'comment_content_filter' ), 10, 3 );
+		\add_filter( 'comment_post', array( self::class, 'postprocess_comment' ), 10, 3 );
+		\add_action( 'edit_comment', array( self::class, 'edit_comment' ), 20, 2 ); //schedule_admin_comment_activity
+		\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 20, 3 );
 	}
 
 	/**
-	 * preprocess_comment()
 	 * preprocess local comments for federated replies
 	 */
 	public static function preprocess_comment( $commentdata ) {
 		// only process replies from authorized local actors, for ap enabled post types
-		if ( ! isset( $commentdata['user_id'] ) ) {
+		if ( 0 === $commentdata['user_id'] ) {
 			return $commentdata;
 		}
 		$user = \get_userdata( $commentdata['user_id'] );
@@ -98,7 +97,8 @@ class Comments {
 			\in_array( 'administrator', $user->roles )
 		) {
 			// Only for Admins
-			\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $comment_id ) );
+			$wp_comment = \get_comment( $comment_id );
+			\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $wp_comment, 'Create' ) );
 		}
 	}
 
@@ -108,16 +108,17 @@ class Comments {
 	 * Fires immediately after a comment is updated in the database.
 	 * Fires immediately before comment status transition hooks are fired. (useful only for admin)
 	 */
-	public static function edit_comment( $comment_id, $data ) {
+	public static function edit_comment( $comment_id, $commentdata ) {
 		update_comment_meta( $comment_id, 'ap_last_modified', \wp_date( 'Y-m-d H:i:s' ) );
-		$user = \get_userdata( $data['user_id'] );
+		$user = \get_userdata( $commentdata['user_id'] );
 		if ( \in_array( 'administrator', $user->roles ) ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_update_comment_activity', array( $comment_id ) );
+			$wp_comment = \get_comment( $comment_id );
+			\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $wp_comment, 'Update' ) );
 		}
 	}
 
 	/**
-	 * Schedule Activities
+	 * Schedule Comment Activities
 	 *
 	 * transition_comment_status()
 	 * @param int $comment
@@ -129,25 +130,13 @@ class Comments {
 
 			$ap_object = unserialize( \get_comment_meta( $activitypub_comment->comment_ID, 'ap_object', true ) );
 			if ( empty( $ap_object ) ) {
-				\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $activitypub_comment->comment_ID ) );
-			} else {
-				$local_user = \get_author_posts_url( $ap_object['user_id'] );
-				if ( ! is_null( $local_user ) ) {
-					if ( in_array( $local_user, $ap_object['to'] )
-						|| in_array( $local_user, $ap_object['cc'] )
-						|| in_array( $local_user, $ap_object['audience'] )
-						|| in_array( $local_user, $ap_object['tag'] )
-						) {
-						//if inReplyTo, object, target and/or tag are (local-wp) objects
-						\wp_schedule_single_event( \time(), 'activitypub_inbox_forward_activity', array( $activitypub_comment->comment_ID ) );
-					}
-				}
+				\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $activitypub_comment, 'Create' ) );
 			}
 		} elseif ( 'trash' === $new_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_delete_comment_activity', array( $activitypub_comment ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $activitypub_comment, 'Delete' ) );
 		} elseif ( $old_status === $new_status ) {
 			//TODO Test with non-admin user
-			\wp_schedule_single_event( \time(), 'activitypub_send_update_comment_activity', array( $activitypub_comment->comment_ID ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $activitypub_comment, 'Update' ) );
 		}
 	}
 
