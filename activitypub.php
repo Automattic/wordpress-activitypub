@@ -8,9 +8,11 @@
  * Author URI: https://automattic.com/
  * License: MIT
  * License URI: http://opensource.org/licenses/MIT
+ * Requires at least: 5.9
  * Requires PHP: 5.6
  * Text Domain: activitypub
  * Domain Path: /languages
+ *
  */
 
 namespace Activitypub;
