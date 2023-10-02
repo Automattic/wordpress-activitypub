@@ -458,6 +458,10 @@ if ( ! function_exists( 'get_self_link' ) ) {
  * @return boolean True if the site supports the block editor, false otherwise.
  */
 function site_supports_blocks() {
+	if ( \version_compare( \get_bloginfo( 'version' ), '5.9', '>=' ) ) {
+		return false;
+	}
+
 	if ( ! \function_exists( 'register_block_type_from_metadata' ) ) {
 		return false;
 	}
