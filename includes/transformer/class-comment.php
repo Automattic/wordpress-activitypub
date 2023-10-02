@@ -75,7 +75,7 @@ class Comment {
 
 		$updated = \get_comment_meta( $wp_comment->comment_ID, 'ap_last_modified', true );
 		if ( $updated > $published ) {
-			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', $updated ) );
+			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $updated ) ) );
 		}
 
 		$object->set_attributed_to( $this->get_attributed_to() );
