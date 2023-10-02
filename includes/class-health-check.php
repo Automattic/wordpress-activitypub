@@ -5,6 +5,7 @@ use WP_Error;
 use Activitypub\Webfinger;
 
 use function Activitypub\get_plugin_version;
+use function Activitypub\is_user_type_disabled;
 use function Activitypub\get_webfinger_resource;
 
 /**
@@ -25,10 +26,12 @@ class Health_Check {
 	}
 
 	public static function add_tests( $tests ) {
-		$tests['direct']['activitypub_test_author_url'] = array(
-			'label' => \__( 'Author URL test', 'activitypub' ),
-			'test'  => array( self::class, 'test_author_url' ),
-		);
+		if ( ! is_user_type_disabled( 'user' ) ) {
+			$tests['direct']['activitypub_test_author_url'] = array(
+				'label' => \__( 'Author URL test', 'activitypub' ),
+				'test'  => array( self::class, 'test_author_url' ),
+			);
+		}
 
 		$tests['direct']['activitypub_test_webfinger'] = array(
 			'label' => __( 'WebFinger Test', 'activitypub' ),
