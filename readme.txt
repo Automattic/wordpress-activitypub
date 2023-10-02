@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
 Tested up to: 6.3
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -104,6 +104,18 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 == Changelog ==
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
+
+= 1.0.2 =
+
+* Updated: improved hashtag visibility in default template
+* Updated: reduced number of followers to be checked/updated via Cron, when System Cron is not set up
+* Updated: check if username of Blog-User collides with an Authors name
+* Compatibility: improved Group meta informations
+* Fixed: detection of single user mode
+* Fixed: remote delete
+* Fixed: styles in Follow-Me block
+* Fixed: various encoding and formatting issues
+* Fixed: (health) check Author URLs only if Authors are enabled
 
 = 1.0.1 =
 
