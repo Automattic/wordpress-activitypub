@@ -19,7 +19,6 @@ jQuery( function( $ ) {
     if ( $('body').hasClass('logged-in') && $('body').hasClass('single') ) {
         //Insert @mentions into comment content on reply
         $( '.comment-reply-link' ).on( 'click', function( event ) {
-			console.log( 'comment-reply-link', $(this) )
             var recipients = $(this).attr('data-recipients') ? $(this).attr('data-recipients') + ' ' : '';
 			console.log( 'recipients', recipients )
             setTimeout(function() {
@@ -28,5 +27,9 @@ jQuery( function( $ ) {
                 }
             }, 100);
         })
+		//Clear @mentions from content on cancel
+        $('#cancel-comment-reply-link').on('click', function(){
+			$('#respond #comment').val('');
+        });
     }
 } );

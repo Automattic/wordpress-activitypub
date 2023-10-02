@@ -16,6 +16,7 @@ class Comments {
 		\add_filter( 'comment_excerpt', array( self::class, 'comment_excerpt' ), 10, 3 );
 		\add_filter( 'comment_text', array( self::class, 'comment_content_filter' ), 10, 3 );
 		\add_filter( 'comment_post', array( self::class, 'postprocess_comment' ), 10, 3 );
+		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 4 );
 		\add_action( 'edit_comment', array( self::class, 'edit_comment' ), 20, 2 ); //schedule_admin_comment_activity
 		\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 20, 3 );
 	}
@@ -100,6 +101,22 @@ class Comments {
 			$wp_comment = \get_comment( $comment_id );
 			\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $wp_comment, 'Create' ) );
 		}
+	}
+
+	/**
+	 * Add reply recipients to comment_reply_link
+	 *
+	 * https://developer.wordpress.org/reference/hooks/comment_reply_link/
+	 * @param string $comment_reply_link
+	 * @param array $args
+	 * @param WP_Comment $comment
+	 * @param WP_Post $post
+	 * @return $comment_reply_link
+	 */
+	public static function comment_reply_link( $comment_reply_link, $args, $comment, $post ) {
+		$recipients = \Activitypub\reply_recipients( $comment->comment_ID );
+		$comment_reply_link = str_replace( "class='comment-reply-link'", "class='comment-reply-link' data-recipients='${recipients}'", $comment_reply_link );
+		return $comment_reply_link;
 	}
 
 	/**
