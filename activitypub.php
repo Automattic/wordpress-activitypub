@@ -17,12 +17,13 @@ namespace Activitypub;
 
 use function Activitypub\site_supports_blocks;
 
-\defined( 'ACTIVITYPUB_REST_NAMESPACE' ) || \define( 'ACTIVITYPUB_REST_NAMESPACE', 'activitypub/1.0' );
+require_once __DIR__ . '/includes/functions.php';
 
 /**
- * Initialize plugin
+ * Initialize the plugin constants.
  */
-function init() {
+function define_constants() {
+	\defined( 'ACTIVITYPUB_REST_NAMESPACE' ) || \define( 'ACTIVITYPUB_REST_NAMESPACE', 'activitypub/1.0' );
 	\defined( 'ACTIVITYPUB_EXCERPT_LENGTH' ) || \define( 'ACTIVITYPUB_EXCERPT_LENGTH', 400 );
 	\defined( 'ACTIVITYPUB_SHOW_PLUGIN_RECOMMENDATIONS' ) || \define( 'ACTIVITYPUB_SHOW_PLUGIN_RECOMMENDATIONS', true );
 	\defined( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS' ) || \define( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS', 3 );
@@ -35,13 +36,12 @@ function init() {
 	\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
 	\define( 'ACTIVITYPUB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+}
 
-	Migration::init();
-	Activitypub::init();
-	Activity_Dispatcher::init();
-	Collection\Followers::init();
-
-	// Configure the REST API route
+/**
+ * Initialize REST routes.
+ */
+function rest_init() {
 	Rest\Users::init();
 	Rest\Outbox::init();
 	Rest\Inbox::init();
@@ -50,19 +50,45 @@ function init() {
 	Rest\Webfinger::init();
 	Rest\Server::init();
 	Rest\Collection::init();
+}
 
-	Admin::init();
-	Hashtag::init();
-	Shortcodes::init();
-	Mention::init();
-	Health_Check::init();
-	Scheduler::init();
+/**
+ * Initialize plugin.
+ */
+function plugin_init() {
+	define_constants();
+
+	add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ) );
+	add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
+	add_action( 'init', array( __NAMESPACE__ . '\Activity_Dispatcher', 'init' ) );
+	add_action( 'init', array( __NAMESPACE__ . '\Collection\Followers', 'init' ) );
+
+	// Configure the REST API routes
+	add_action( 'init', __NAMESPACE__ . '\rest_init' );
+
+	add_action( 'init', array( __NAMESPACE__ . '\Admin', 'init' ) );
+	add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
+	add_action( 'init', array( __NAMESPACE__ . '\Shortcodes', 'init' ) );
+	add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
+	add_action( 'init', array( __NAMESPACE__ . '\Health_Check', 'init' ) );
+	add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
 
 	if ( site_supports_blocks() ) {
-		Blocks::init();
+		add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
+	}
+
+	// load NodeInfo endpoints only if blog is public
+	if ( \get_option( 'blog_public', 1 ) ) {
+		Rest\NodeInfo::init();
+	}
+
+	$debug_file = __DIR__ . '/includes/debug.php';
+	if ( \WP_DEBUG && file_exists( $debug_file ) && is_readable( $debug_file ) ) {
+		require_once $debug_file;
+		Debug::init();
 	}
 }
-\add_action( 'init', __NAMESPACE__ . '\init' );
+add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
 
 /**
  * Class Autoloader
@@ -99,19 +125,6 @@ spl_autoload_register(
 		}
 	}
 );
-
-require_once __DIR__ . '/includes/functions.php';
-
-// load NodeInfo endpoints only if blog is public
-if ( \get_option( 'blog_public', 1 ) ) {
-	Rest\NodeInfo::init();
-}
-
-$debug_file = __DIR__ . '/includes/debug.php';
-if ( \WP_DEBUG && file_exists( $debug_file ) && is_readable( $debug_file ) ) {
-	require_once $debug_file;
-	Debug::init();
-}
 
 /**
  * Add plugin settings link
