@@ -3,8 +3,10 @@ namespace Activitypub;
 
 use WP_Error;
 use Activitypub\Webfinger;
+use Activitypub\Collection\Users;
 
 use function Activitypub\get_plugin_version;
+use function Activitypub\is_user_type_disabled;
 use function Activitypub\get_webfinger_resource;
 
 /**
@@ -25,10 +27,12 @@ class Health_Check {
 	}
 
 	public static function add_tests( $tests ) {
-		$tests['direct']['activitypub_test_author_url'] = array(
-			'label' => \__( 'Author URL test', 'activitypub' ),
-			'test'  => array( self::class, 'test_author_url' ),
-		);
+		if ( ! is_user_type_disabled( 'user' ) ) {
+			$tests['direct']['activitypub_test_author_url'] = array(
+				'label' => \__( 'Author URL test', 'activitypub' ),
+				'test'  => array( self::class, 'test_author_url' ),
+			);
+		}
 
 		$tests['direct']['activitypub_test_webfinger'] = array(
 			'label' => __( 'WebFinger Test', 'activitypub' ),
@@ -253,8 +257,15 @@ class Health_Check {
 	 * @return boolean|WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
-		$user    = \wp_get_current_user();
-		$account = get_webfinger_resource( $user->ID );
+		$user = \wp_get_current_user();
+
+		if ( ! is_user_type_disabled( 'blog' ) ) {
+			$account = get_webfinger_resource( $user->ID );
+		} elseif ( ! is_user_type_disabled( 'user' ) ) {
+			$account = get_webfinger_resource( Users::BLOG_USER_ID );
+		} else {
+			$account = '';
+		}
 
 		$url = Webfinger::resolve( $account );
 		if ( \is_wp_error( $url ) ) {
