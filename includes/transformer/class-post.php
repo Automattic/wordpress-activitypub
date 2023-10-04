@@ -452,6 +452,15 @@ class Post {
 	protected function get_content() {
 		global $post;
 
+		/**
+		 * Provides an action hook so plugins can add their own hooks/filters before AP content is generated.
+		 *
+		 * Example: if a plugin adds a filter to `the_content` to add a button to the end of posts, it can also remove that filter here.
+		 *
+		 * @param WP_Post $post The post object.
+		 */
+		do_action( 'activitypub_before_get_content', $post );
+
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$post    = $this->wp_post;
 		$content = $this->get_post_content_template();
