@@ -18,7 +18,8 @@ class Following {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		self::register_routes();
+
 		\add_filter( 'activitypub_rest_following', array( self::class, 'default_following' ), 10, 2 );
 	}
 

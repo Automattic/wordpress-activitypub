@@ -18,7 +18,8 @@ class Server {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		self::register_routes();
+
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'authorize_activitypub_requests' ), 10, 3 );
 	}
 

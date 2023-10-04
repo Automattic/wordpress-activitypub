@@ -56,6 +56,7 @@ function rest_init() {
 		Rest\NodeInfo::init();
 	}
 }
+\add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
 
 /**
  * Initialize plugin.
@@ -73,9 +74,6 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Health_Check', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
-
-	// Configure the REST API routes
-	\add_action( 'init', __NAMESPACE__ . '\rest_init' );
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );

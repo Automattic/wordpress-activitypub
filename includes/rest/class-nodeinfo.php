@@ -17,7 +17,8 @@ class Nodeinfo {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		self::register_routes();
+
 		\add_filter( 'nodeinfo_data', array( self::class, 'add_nodeinfo_discovery' ), 10, 2 );
 		\add_filter( 'nodeinfo2_data', array( self::class, 'add_nodeinfo2_discovery' ), 10 );
 	}
