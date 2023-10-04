@@ -63,23 +63,22 @@ function rest_init() {
 function plugin_init() {
 	define_constants();
 
-	add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ) );
-	add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
-	add_action( 'init', array( __NAMESPACE__ . '\Activity_Dispatcher', 'init' ) );
-	add_action( 'init', array( __NAMESPACE__ . '\Collection\Followers', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Activity_Dispatcher', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Collection\Followers', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Admin', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Shortcodes', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Health_Check', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
 
 	// Configure the REST API routes
-	add_action( 'init', __NAMESPACE__ . '\rest_init' );
-
-	add_action( 'init', array( __NAMESPACE__ . '\Admin', 'init' ) );
-	add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
-	add_action( 'init', array( __NAMESPACE__ . '\Shortcodes', 'init' ) );
-	add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
-	add_action( 'init', array( __NAMESPACE__ . '\Health_Check', 'init' ) );
-	add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
+	\add_action( 'init', __NAMESPACE__ . '\rest_init' );
 
 	if ( site_supports_blocks() ) {
-		add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
+		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
 	}
 
 	$debug_file = __DIR__ . '/includes/debug.php';
@@ -88,12 +87,12 @@ function plugin_init() {
 		Debug::init();
 	}
 }
-add_action( 'init', __NAMESPACE__ . '\plugin_init' );
+\add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
 
 /**
  * Class Autoloader
  */
-spl_autoload_register(
+\spl_autoload_register(
 	function ( $full_class ) {
 		$base_dir = __DIR__ . '/includes/';
 		$base     = 'Activitypub\\';
