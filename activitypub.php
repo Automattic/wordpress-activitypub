@@ -50,6 +50,11 @@ function rest_init() {
 	Rest\Webfinger::init();
 	Rest\Server::init();
 	Rest\Collection::init();
+
+	// load NodeInfo endpoints only if blog is public
+	if ( \get_option( 'blog_public', 1 ) ) {
+		Rest\NodeInfo::init();
+	}
 }
 
 /**
@@ -77,18 +82,13 @@ function plugin_init() {
 		add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
 	}
 
-	// load NodeInfo endpoints only if blog is public
-	if ( \get_option( 'blog_public', 1 ) ) {
-		Rest\NodeInfo::init();
-	}
-
 	$debug_file = __DIR__ . '/includes/debug.php';
 	if ( \WP_DEBUG && file_exists( $debug_file ) && is_readable( $debug_file ) ) {
 		require_once $debug_file;
 		Debug::init();
 	}
 }
-add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
+add_action( 'init', __NAMESPACE__ . '\plugin_init' );
 
 /**
  * Class Autoloader
