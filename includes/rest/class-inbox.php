@@ -24,7 +24,7 @@ class Inbox {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		self::register_routes();
 
 		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_create' ), 10, 2 );
 	}
