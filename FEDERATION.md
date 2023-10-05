@@ -6,7 +6,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 
 - [ActivityPub](https://www.w3.org/TR/activitypub/) (Server-to-Server)
 - [WebFinger](https://webfinger.net/)
-- [Http Signatures](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures)
+- [HTTP Signatures](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures)
 - [NodeInfo](https://nodeinfo.diaspora.software/)
 
 ## Supported FEPs
