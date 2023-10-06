@@ -452,7 +452,7 @@ class Inbox {
 			$commentdata['comment_content'] = \wp_filter_kses( $object['object']['content'] );
 			$commentdata['comment_meta']['avatar_url'] = \esc_url_raw( $meta['icon']['url'] );
 			$commentdata['comment_meta']['ap_published'] = \wp_date( 'Y-m-d H:i:s', strtotime( $object['object']['published'] ) );
-			$commentdata['comment_meta']['ap_last_modified'] = $object['object']['updated'];
+			$commentdata['comment_meta']['activitypub_last_modified'] = $object['object']['updated'];
 			$commentdata['comment_meta']['ap_object'] = \serialize( $object );
 
 			// disable flood control

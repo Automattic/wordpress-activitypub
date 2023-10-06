@@ -14,7 +14,6 @@ class Mention {
 	 */
 	public static function init() {
 		\add_filter( 'the_content', array( self::class, 'the_content' ), 99, 2 );
-		\add_filter( 'activitypub_extract_mentions', array( self::class, 'extract_mentions' ), 99, 2 );
 	}
 
 	/**
@@ -145,24 +144,5 @@ class Mention {
 		}
 
 		return new WP_Error( 'activitypub_no_inbox', \__( 'No "Inbox" found', 'activitypub' ), $metadata );
-	}
-
-	/**
-	 * Extract the mentions from the post_content.
-	 *
-	 * @param array  $mentions The already found mentions.
-	 * @param string $post_content The post content.
-	 *
-	 * @return mixed The discovered mentions.
-	 */
-	public static function extract_mentions( $mentions, $post_content ) {
-		\preg_match_all( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i', $post_content, $matches );
-		foreach ( $matches[0] as $match ) {
-			$link = Webfinger::resolve( $match );
-			if ( ! is_wp_error( $link ) ) {
-				$mentions[ $match ] = $link;
-			}
-		}
-		return $mentions;
 	}
 }

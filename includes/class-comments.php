@@ -69,7 +69,7 @@ class Comments {
 		$protocol = \get_comment_meta( $comment->comment_ID, 'protocol', true );
 		// TODO Test if this is returned by Model/Comment
 		if ( 'activitypub' === $protocol ) {
-			$updated = \get_comment_meta( $comment->comment_ID, 'ap_last_modified', true );
+			$updated = \get_comment_meta( $comment->comment_ID, 'activitypub_last_modified', true );
 			if ( $updated ) {
 				$format = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
 				$formatted_datetime = \date_i18n( $format, \strtotime( $updated ) );
@@ -125,7 +125,7 @@ class Comments {
 	 * Fires immediately before comment status transition hooks are fired. (useful only for admin)
 	 */
 	public static function edit_comment( $comment_id, $commentdata ) {
-		update_comment_meta( $comment_id, 'ap_last_modified', \wp_date( 'Y-m-d H:i:s' ) );
+		update_comment_meta( $comment_id, 'activitypub_last_modified', \wp_date( 'Y-m-d H:i:s' ) );
 		$user = \get_userdata( $commentdata['user_id'] );
 		if ( \in_array( 'administrator', $user->roles ) ) {
 			$wp_comment = \get_comment( $comment_id );

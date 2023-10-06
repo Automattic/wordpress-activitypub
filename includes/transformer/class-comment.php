@@ -65,13 +65,12 @@ class Comment {
 
 		$object->set_id( $this->get_id() );
 		$object->set_url( \get_comment_link( $comment->ID ) );
-		$object->set_context( \get_permalink( $comment->comment_post_ID ) );
 		$object->set_type( 'Note' );
 
 		$published = \strtotime( $comment->comment_date_gmt );
 		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', $published ) );
 
-		$updated = \get_comment_meta( $comment->comment_ID, 'ap_last_modified', true );
+		$updated = \get_comment_meta( $comment->comment_ID, 'activitypub_last_modified', true );
 		if ( $updated > $published ) {
 			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $updated ) ) );
 		}
@@ -92,8 +91,7 @@ class Comment {
 				get_rest_url_by_path( $path ),
 			)
 		);
-		$object->set_cc( $this->get_cc() );
-		$object->set_tag( $this->get_tags() );
+
 		return $object;
 	}
 
@@ -114,68 +112,6 @@ class Comment {
 	}
 
 	/**
-	 * Returns a list of Mentions, used in the Comment.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#Mention
-	 *
-	 * @return array The list of Mentions.
-	 */
-	protected function get_cc() {
-		$cc = array();
-
-		$mentions = $this->get_mentions();
-		if ( $mentions ) {
-			foreach ( $mentions as $mention => $url ) {
-				$cc[] = $url;
-			}
-		}
-
-		return $cc;
-	}
-
-	/**
-	 * Returns a list of Tags, used in the Comment.
-	 *
-	 * This includes Hash-Tags and Mentions.
-	 *
-	 * @return array The list of Tags.
-	 */
-	protected function get_tags() {
-		// TODO Delete Or Modify
-		$tags = array();
-
-		$comment_tags = $this->get_hashtags();
-		if ( $comment_tags ) {
-			foreach ( $comment_tags as $comment_tag ) {
-				$tag_link = \get_tag_link( $comment_tag );
-				if ( ! $tag_link ) {
-					continue;
-				}
-				$tag = array(
-					'type' => 'Hashtag',
-					'href' => \esc_url( $tag_link ),
-					'name' => esc_hashtag( $comment_tag ),
-				);
-				$tags[] = $tag;
-			}
-		}
-
-		$mentions = $this->get_mentions();
-		if ( $mentions ) {
-			foreach ( $mentions as $mention => $url ) {
-				$tag = array(
-					'type' => 'Mention',
-					'href' => \esc_url( $url ),
-					'name' => \esc_html( $mention ),
-				);
-				$tags[] = $tag;
-			}
-		}
-
-		return $tags;
-	}
-
-	/**
 	 * Returns the content for the ActivityPub Item.
 	 *
 	 * The content will be generated based on the user settings.
@@ -185,48 +121,13 @@ class Comment {
 	protected function get_content() {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$comment = $this->wp_comment;
-		$content    = $comment->comment_content;
+		$content = $comment->comment_content;
 
-		$content    = \wpautop( $content );
-		$content    = \preg_replace( '/[\n\r\t]/', '', $content );
-		$content    = \trim( $content );
+		$content = \wpautop( $content );
+		$content = \preg_replace( '/[\n\r\t]/', '', $content );
+		$content = \trim( $content );
 
-		$content    = \apply_filters( 'the_content', $content, $comment );
-		$content    = \html_entity_decode( $content, \ENT_QUOTES, 'UTF-8' );
 		return $content;
-	}
-
-	/**
-	 * Helper function to get the @-Mentions from the comment content.
-	 *
-	 * @return array The list of @-Mentions.
-	 */
-	protected function get_mentions() {
-		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_comment->comment_content, $this->wp_comment );
-	}
-
-	/**
-	 * Helper function to get the #HashTags from the comment content.
-	 *
-	 * @return array The list of @-Mentions.
-	 */
-	protected function get_hashtags() {
-		$content = $this->get_content();
-
-		$tags = [];
-		//TODO fix hashtag
-		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $content, $match ) ) {
-			$tags = \implode( ', ', $match[1] );
-		}
-
-		$hashtags = [];
-		preg_match_all( "/(#\w+)/u", $content, $matches );
-		if ( $matches ) {
-			$hashtags = array_count_values( $matches[0] );
-			$hashtags = array_keys( $hashtags );
-		}
-
-		return $hashtags;
 	}
 
 	/**
@@ -284,29 +185,28 @@ class Comment {
 	 * Checks a comment ID for a source_id, or source_url
 	 */
 	protected function get_source_id( $comment ) {
-
-		if ( $comment->user_id !== 0 ) {
-
-			$source_id = \get_comment_meta( $comment->ID, 'source_id', true );
-			if ( ! $source_id ) {
-				$source_url = \get_comment_meta( $comment->ID, 'source_url', true );
-				if ( ! $source_url ) {
-					return null;
-				}
-				$response = safe_remote_get( $source_url );
-				$body = \wp_remote_retrieve_body( $response );
-				$remote_status = \json_decode( $body, true );
-				if ( is_wp_error( $remote_status )
-					|| ! isset( $remote_status['@context'] )
-					|| ! isset( $remote_status['object']['id'] ) ) {
-
-					// the original post may have been deleted, before we started processing deletes.
-					return null;
-				}
-				$source_id = $remote_status['object']['id'];
-			}
-			return $source_id;
+		if ( ! $comment->user_id ) {
+			return null;
 		}
-		return null;
+
+		$source_id = \get_comment_meta( $comment->ID, 'source_id', true );
+
+		if ( ! $source_id ) {
+			$source_url = \get_comment_meta( $comment->ID, 'source_url', true );
+			if ( ! $source_url ) {
+				return null;
+			}
+			$response = \safe_remote_get( $source_url );
+			$body = \wp_remote_retrieve_body( $response );
+			$remote_status = \json_decode( $body, true );
+			if ( \is_wp_error( $remote_status )
+				|| ! isset( $remote_status['@context'] )
+				|| ! isset( $remote_status['object']['id'] ) ) {
+					// the original post may have been deleted, before we started processing deletes.
+				return null;
+			}
+			$source_id = $remote_status['object']['id'];
+		}
+		return $source_id;
 	}
 }
