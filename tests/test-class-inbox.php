@@ -3,7 +3,7 @@ class Test_Inbox extends WP_UnitTestCase {
 	public $post_permalink;
 	public $user_url;
 
-	public function setUp() {
+	public function set_up() {
 		$authordata = \get_userdata( 1 );
 		$this->user_url = $authordata->user_url;
 
