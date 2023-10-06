@@ -40,7 +40,7 @@ class Test_Inbox extends WP_UnitTestCase {
 				'content' => 'example',
 			),
 		);
-		$converted = $inbox->convert_object_to_comment_data( $object );
+		$converted = $inbox->convert_object_to_comment_data( $object, 1 );
 
 		$this->assertGreaterThan( 1, $converted['comment_post_ID'] );
 		$this->assertEquals( $converted['comment_author'], 'Example User' );
@@ -62,7 +62,7 @@ class Test_Inbox extends WP_UnitTestCase {
 			'to' => array( 'https://example.com/profile/test' ),
 			'cc' => array(),
 		);
-		$converted = $inbox->convert_object_to_comment_data( $object );
+		$converted = $inbox->convert_object_to_comment_data( $object, 1 );
 		$this->assertFalse( $converted );
 	}
 }
