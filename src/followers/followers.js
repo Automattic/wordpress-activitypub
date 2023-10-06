@@ -32,7 +32,8 @@ export function Followers( {
 	page: passedPage,
 	setPage: passedSetPage,
 	className = '',
-	followLinks = true
+	followLinks = true,
+	followerData = false
 } ) {
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
 	const [ followers, setFollowers ] = useState( [] );
@@ -56,16 +57,22 @@ export function Followers( {
 		}
 	);
 
+	const setData = ( followers, total ) => {
+		setFollowers( followers );
+		setTotal( total );
+		setPages( Math.ceil( total / per_page ) );
+	}
+
 	useEffect( () => {
+		if ( followerData && page === 1 ) {
+			return setData( followerData.followers, followerData.total );
+		}
+
 		const path = getPath( userId, per_page, order, page );
 		apiFetch( { path } )
-			.then( ( data ) => {
-				setPages( Math.ceil( data.totalItems / per_page ) );
-				setTotal( data.totalItems );
-				setFollowers( data.orderedItems );
-			} )
+			.then( ( data ) => setData( data.orderedItems, data.totalItems ) )
 			.catch( () => {} );
-	}, [ userId, per_page, order, page ] );
+	}, [ userId, per_page, order, page, followerData ] );
 	return (
 		<div className={ "activitypub-follower-block " + className }>
 			<h3>{ title }</h3>
