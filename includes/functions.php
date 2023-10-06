@@ -358,9 +358,10 @@ function get_source_id( $comment ) {
 /**
  * Verify if url is a wp_ap_comment,
  * Or if it is a previously received remote comment
+ *
  * @return int comment_id
  */
-function is_ap_comment() {
+function is_comment() {
 	$comment_id = get_query_var( 'replytocom', null );
 	if ( ! is_null( $comment_id ) ) {
 		$comment = \get_comment( $comment_id );
@@ -376,7 +377,7 @@ function is_ap_comment() {
  * Verify if url has a replies query,
  * @return bool
  */
-function is_ap_replies() {
+function is_replies() {
 	$replies = get_query_var( 'replies' );
 	if ( $replies ) {
 		return $replies;

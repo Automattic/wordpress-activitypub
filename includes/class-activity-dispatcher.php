@@ -33,12 +33,12 @@ class Activity_Dispatcher {
 	/**
 	 * Send Activities to followers and mentioned users or `Announce` (boost) a blog post.
 	 *
-	 * @param WP_Post $wp_post The ActivityPub Post.
-	 * @param string  $type    The Activity-Type.
+	 * @param mixed  $wp_object The ActivityPub Post.
+	 * @param string $type      The Activity-Type.
 	 *
 	 * @return void
 	 */
-	public static function send_activity_or_announce( WP_Post $wp_post, $type ) {
+	public static function send_activity_or_announce( $wp_object, $type ) {
 		// check if a migration is needed before sending new posts
 		Migration::maybe_migrate();
 
@@ -46,35 +46,35 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$wp_post->post_author = Users::BLOG_USER_ID;
+		$wp_object->post_author = Users::BLOG_USER_ID;
 
 		if ( is_single_user() ) {
-			self::send_activity( $wp_post, $type );
+			self::send_activity( $wp_object, $type );
 		} else {
-			self::send_announce( $wp_post, $type );
+			self::send_announce( $wp_object, $type );
 		}
 	}
 
 	/**
 	 * Send Activities to followers and mentioned users.
 	 *
-	 * @param WP_Post $wp_post The ActivityPub Post.
-	 * @param string  $type    The Activity-Type.
+	 * @param mixed  $wp_object The ActivityPub Post.
+	 * @param string $type      The Activity-Type.
 	 *
 	 * @return void
 	 */
-	public static function send_activity( WP_Post $wp_post, $type ) {
-		if ( is_user_disabled( $wp_post->post_author ) ) {
+	public static function send_activity( $wp_object, $type ) {
+		if ( is_user_disabled( $wp_object->post_author ) ) {
 			return;
 		}
 
-		$object = Post::transform( $wp_post )->to_object();
+		$object = Factory::get_transformer( $wp_object )->to_object();
 
 		$activity = new Activity();
 		$activity->set_type( $type );
 		$activity->set_object( $object );
 
-		$follower_inboxes  = Followers::get_inboxes( $wp_post->post_author );
+		$follower_inboxes  = Followers::get_inboxes( $wp_object->post_author );
 		$mentioned_inboxes = Mention::get_inboxes( $activity->get_cc() );
 
 		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
@@ -83,19 +83,19 @@ class Activity_Dispatcher {
 		$json = $activity->to_json();
 
 		foreach ( $inboxes as $inbox ) {
-			safe_remote_post( $inbox, $json, $wp_post->post_author );
+			safe_remote_post( $inbox, $json, $wp_object->post_author );
 		}
 	}
 
 	/**
 	 * Send Announces to followers and mentioned users.
 	 *
-	 * @param WP_Post $wp_post The ActivityPub Post.
-	 * @param string  $type    The Activity-Type.
+	 * @param mixed  $wp_object The ActivityPub Post.
+	 * @param string $type      The Activity-Type.
 	 *
 	 * @return void
 	 */
-	public static function send_announce( WP_Post $wp_post, $type ) {
+	public static function send_announce( $wp_object, $type ) {
 		if ( ! in_array( $type, array( 'Create', 'Update' ), true ) ) {
 			return;
 		}
@@ -104,7 +104,7 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$object = Post::transform( $wp_post )->to_object();
+		$object = Factory::get_transformer( $wp_object )->to_object();
 
 		$activity = new Activity();
 		$activity->set_type( 'Announce' );
@@ -113,7 +113,7 @@ class Activity_Dispatcher {
 		// send only the id
 		$activity->set_object( $object->get_id() );
 
-		$follower_inboxes  = Followers::get_inboxes( $wp_post->post_author );
+		$follower_inboxes  = Followers::get_inboxes( $wp_object->post_author );
 		$mentioned_inboxes = Mention::get_inboxes( $activity->get_cc() );
 
 		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
@@ -122,34 +122,7 @@ class Activity_Dispatcher {
 		$json = $activity->to_json();
 
 		foreach ( $inboxes as $inbox ) {
-			safe_remote_post( $inbox, $json, $wp_post->post_author );
-		}
-	}
-
-	/**
-	 * Send Activities to followers and mentioned users.
-	 *
-	 * @param $wp_comment The ActivityPub Comment.
-	 * @param string  $type    The Activity-Type.
-	 */
-	public static function send_comment_activity( $wp_comment, $type ) {
-
-		$object = Comment::transform( $wp_comment )->to_object();
-
-		$activity = new Activity();
-		$activity->set_type( $type );
-		$activity->set_object( $object );
-
-		$follower_inboxes  = Followers::get_inboxes( $wp_comment->user_id );
-		$mentioned_inboxes = Mention::get_inboxes( $activity->get_cc() );
-
-		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
-		$inboxes = array_unique( $inboxes );
-
-		$json = $activity->to_json();
-
-		foreach ( $inboxes as $inbox ) {
-			safe_remote_post( $inbox, $json, $wp_comment->user_id );
+			safe_remote_post( $inbox, $json, $wp_object->post_author );
 		}
 	}
 }

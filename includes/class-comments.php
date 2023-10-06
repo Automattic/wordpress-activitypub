@@ -18,7 +18,6 @@ class Comments {
 		\add_filter( 'comment_post', array( self::class, 'postprocess_comment' ), 10, 3 );
 		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 4 );
 		\add_action( 'edit_comment', array( self::class, 'edit_comment' ), 20, 2 ); //schedule_admin_comment_activity
-		\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 20, 3 );
 	}
 
 	/**
@@ -133,28 +132,4 @@ class Comments {
 			\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $wp_comment, 'Update' ) );
 		}
 	}
-
-	/**
-	 * Schedule Comment Activities
-	 *
-	 * transition_comment_status()
-	 * @param int $comment
-	 */
-	public static function schedule_comment_activity( $new_status, $old_status, $activitypub_comment ) {
-		if ( 'approved' === $new_status && 'approved' !== $old_status ) {
-			//should only federate replies from local actors
-			//should only federate replies to federated actors
-
-			$ap_object = unserialize( \get_comment_meta( $activitypub_comment->comment_ID, 'ap_object', true ) );
-			if ( empty( $ap_object ) ) {
-				\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $activitypub_comment, 'Create' ) );
-			}
-		} elseif ( 'trash' === $new_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $activitypub_comment, 'Delete' ) );
-		} elseif ( $old_status === $new_status ) {
-			//TODO Test with non-admin user
-			\wp_schedule_single_event( \time(), 'activitypub_send_comment_activity', array( $activitypub_comment, 'Update' ) );
-		}
-	}
-
 }

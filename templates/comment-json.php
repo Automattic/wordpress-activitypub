@@ -1,8 +1,8 @@
 <?php
 $comment = \get_comment( \get_query_var( 'replytocom' ) ); // phpcs:ignore
 
-$activitypub_comment = new \Activitypub\Model\Comment( $comment );
-$json = \array_merge( array( '@context' => \Activitypub\get_context() ), $activitypub_comment->to_array() );
+$object = new \Activitypub\Transformer\Comment( $comment );
+$json = \array_merge( array( '@context' => \Activitypub\get_context() ), $object->to_object()->to_array() );
 
 // filter output
 $json = \apply_filters( 'activitypub_json_comment_array', $json );

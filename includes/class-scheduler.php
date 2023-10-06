@@ -17,6 +17,7 @@ class Scheduler {
 	 */
 	public static function init() {
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
+		\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 33, 3 );
 
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
@@ -97,6 +98,30 @@ class Scheduler {
 			),
 			array( $post )
 		);
+	}
+
+	/**
+	 * Schedule Comment Activities
+	 *
+	 * transition_comment_status()
+	 *
+	 * @param int $comment
+	 */
+	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
+		$comment = get_comment( $comment );
+
+		if ( ! $comment->user_id ) {
+			// Registered comment author
+			return;
+		}
+
+		if ( 'approved' === $new_status && 'approved' !== $old_status ) {
+			\wp_schedule_single_event( \time(), 'activitypub_send_activity', array( $comment, 'Create' ) );
+		} elseif ( 'trash' === $new_status ) {
+			\wp_schedule_single_event( \time(), 'activitypub_send_activity', array( $comment, 'Delete' ) );
+		} elseif ( $old_status === $new_status ) {
+			\wp_schedule_single_event( \time(), 'activitypub_send_activity', array( $comment, 'Update' ) );
+		}
 	}
 
 	/**

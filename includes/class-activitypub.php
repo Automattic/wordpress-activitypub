@@ -4,6 +4,9 @@ namespace Activitypub;
 use Activitypub\Signature;
 use Activitypub\Collection\Users;
 
+use function Activitypub\is_comment;
+use function Activitypub\is_replies;
+
 /**
  * ActivityPub Class
  *
@@ -92,9 +95,9 @@ class Activitypub {
 
 		if ( \is_author() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/author-json.php';
-		} elseif ( \Activitypub\is_ap_replies() ) {
+		} elseif ( is_replies() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/replies-json.php';
-		} elseif ( \Activitypub\is_ap_comment() ) {
+		} elseif ( is_comment() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
