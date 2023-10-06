@@ -341,7 +341,7 @@ class Inbox {
 	public static function convert_object_to_comment_data( $object, $user_id ) {
 		$object['user_id'] = $user_id;
 		if ( ! isset( $object['object']['inReplyTo'] ) ) {
-			return;
+			return false;
 		}
 
 		// check if Activity is public or not
@@ -356,13 +356,13 @@ class Inbox {
 
 		// Only handle replies
 		if ( ! isset( $object['object']['inReplyTo'] ) ) {
-			return;
+			return false;
 		}
 		$in_reply_to = $object['object']['inReplyTo'];
 
 		// Comment already exists
 		if ( \Activitypub\object_id_to_comment( $id ) ) {
-			return;
+			return false;
 		}
 
 		$parent_comment = \Activitypub\object_id_to_comment( $in_reply_to );
@@ -376,7 +376,7 @@ class Inbox {
 			$comment_post_id = $parent_comment->comment_post_ID;
 		}
 		if ( ! $comment_post_id ) {
-			return;
+			return false;
 		}
 
 		return array(

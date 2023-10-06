@@ -28,7 +28,6 @@ class Test_Inbox extends WP_UnitTestCase {
 	}
 
 	public function test_convert_object_to_comment_data_basic() {
-		$inbox = new \Activitypub\Rest\Inbox();
 		$object = array(
 			'actor' => $this->user_url,
 			'to' => [ $this->user_url ],
@@ -40,13 +39,13 @@ class Test_Inbox extends WP_UnitTestCase {
 				'content' => 'example',
 			),
 		);
-		$converted = $inbox->convert_object_to_comment_data( $object, 1 );
+		$converted = \Activitypub\Rest\Inbox::convert_object_to_comment_data( $object, 1 );
 
 		$this->assertGreaterThan( 1, $converted['comment_post_ID'] );
 		$this->assertEquals( $converted['comment_author'], 'Example User' );
 		$this->assertEquals( $converted['comment_author_url'], 'http://example.org' );
 		$this->assertEquals( $converted['comment_content'], 'example' );
-		$this->assertEquals( $converted['comment_type'], '' );
+		$this->assertEquals( $converted['comment_type'], 'comment' );
 		$this->assertEquals( $converted['comment_author_email'], '' );
 		$this->assertEquals( $converted['comment_parent'], 0 );
 		$this->assertArrayHasKey( 'comment_meta', $converted );
@@ -57,12 +56,11 @@ class Test_Inbox extends WP_UnitTestCase {
 	}
 
 	public function test_convert_object_to_comment_data_non_public_rejected() {
-		$inbox = new \Activitypub\Rest\Inbox();
 		$object = array(
 			'to' => array( 'https://example.com/profile/test' ),
 			'cc' => array(),
 		);
-		$converted = $inbox->convert_object_to_comment_data( $object, 1 );
+		$converted = \Activitypub\Rest\Inbox::convert_object_to_comment_data( $object, 1 );
 		$this->assertFalse( $converted );
 	}
 }
