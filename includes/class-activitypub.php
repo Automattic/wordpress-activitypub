@@ -91,11 +91,11 @@ class Activitypub {
 		}
 
 		if ( \is_author() ) {
-			$json_template = \dirname( __FILE__ ) . '/../templates/author-json.php';
+			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/author-json.php';
 		} elseif ( \Activitypub\is_ap_replies() ) {
-			$json_template = \dirname( __FILE__ ) . '/../templates/replies-json.php';
+			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/replies-json.php';
 		} elseif ( \Activitypub\is_ap_comment() ) {
-			$json_template = \dirname( __FILE__ ) . '/../templates/comment-json.php';
+			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
 		} elseif ( \is_home() ) {
