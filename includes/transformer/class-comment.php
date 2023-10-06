@@ -144,7 +144,7 @@ class Comment {
 		// TODO Delete Or Modify
 		$tags = array();
 
-		$comment_tags = self::get_hashtags();
+		$comment_tags = $this->get_hashtags();
 		if ( $comment_tags ) {
 			foreach ( $comment_tags as $comment_tag ) {
 				$tag_link = \get_tag_link( $comment_tag );
