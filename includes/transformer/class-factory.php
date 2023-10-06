@@ -7,7 +7,7 @@ use Activitypub\Transformer\Comment;
 /**
  * Transformer Factory
  */
-class Factor {
+class Factory {
 	public static function get_transformer( $object ) {
 		switch ( get_class( $object ) ) {
 			case 'WP_Post':
