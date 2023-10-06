@@ -6,6 +6,7 @@ use WP_Comment;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Transformer\Factory;
 use Activitypub\Transformer\Post;
 use Activitypub\Transformer\Comment;
 
