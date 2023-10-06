@@ -10,8 +10,6 @@ use Activitypub\Hashtag;
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\set_ap_comment_id;
-use function Activitypub\get_in_reply_to;
 
 /**
  * WordPress Comment Transformer
@@ -62,18 +60,18 @@ class Comment {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
-		$wp_comment = $this->wp_comment;
+		$comment = $this->wp_comment;
 		$object = new Base_Object();
 
-		$object->set_id( set_ap_comment_id( $wp_comment ) );
-		$object->set_url( \get_comment_link( $wp_comment->ID ) );
-		$object->set_context( \get_permalink( $wp_comment->comment_post_ID ) );
+		$object->set_id( $this->get_id() );
+		$object->set_url( \get_comment_link( $comment->ID ) );
+		$object->set_context( \get_permalink( $comment->comment_post_ID ) );
 		$object->set_type( 'Note' );
 
-		$published = \strtotime( $wp_comment->comment_date_gmt );
+		$published = \strtotime( $comment->comment_date_gmt );
 		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', $published ) );
 
-		$updated = \get_comment_meta( $wp_comment->comment_ID, 'ap_last_modified', true );
+		$updated = \get_comment_meta( $comment->comment_ID, 'ap_last_modified', true );
 		if ( $updated > $published ) {
 			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $updated ) ) );
 		}
@@ -86,7 +84,7 @@ class Comment {
 				\strstr( \get_locale(), '_', true ) => $this->get_content(),
 			)
 		);
-		$path = sprintf( 'users/%d/followers', intval( $wp_comment->comment_author ) );
+		$path = sprintf( 'users/%d/followers', intval( $comment->comment_author ) );
 
 		$object->set_to(
 			array(
@@ -186,14 +184,14 @@ class Comment {
 	 */
 	protected function get_content() {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		$wp_comment = $this->wp_comment;
-		$content    = $wp_comment->comment_content;
+		$comment = $this->wp_comment;
+		$content    = $comment->comment_content;
 
 		$content    = \wpautop( $content );
 		$content    = \preg_replace( '/[\n\r\t]/', '', $content );
 		$content    = \trim( $content );
 
-		$content    = \apply_filters( 'the_content', $content, $wp_comment );
+		$content    = \apply_filters( 'the_content', $content, $comment );
 		$content    = \html_entity_decode( $content, \ENT_QUOTES, 'UTF-8' );
 		return $content;
 	}
@@ -213,35 +211,102 @@ class Comment {
 	 * @return array The list of @-Mentions.
 	 */
 	protected function get_hashtags() {
-		$wp_comment = $this->wp_comment;
-		$content    = $this->get_content();
+		$content = $this->get_content();
 
 		$tags = [];
 		//TODO fix hashtag
 		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $content, $match ) ) {
 			$tags = \implode( ', ', $match[1] );
 		}
-		\error_log( "get_hashtags: tags: " . \print_r( $tags, true ) );
-		$hashtags = [];
-		preg_match_all("/(#\w+)/u", $content, $matches);
-		if ($matches) {
-			$hashtagsArray = array_count_values($matches[0]);
-			$hashtags = array_keys($hashtagsArray);
-		}
-		\error_log( "get_hashtags: hashtags: " . \print_r( $hashtags, true ) );
-		return $hashtags;
 
+		$hashtags = [];
+		preg_match_all( "/(#\w+)/u", $content, $matches );
+		if ( $matches ) {
+			$hashtags = array_count_values( $matches[0] );
+			$hashtags = array_keys( $hashtags );
+		}
+
+		return $hashtags;
 	}
 
 	/**
-	 * Helper function to get the InReplyTo parent Comment URI.
-	 *
-	 * @return array The in_reply_to URI.
+	 * get_parent_uri (in reply to)
+	 * takes a comment and returns
+	 * @param WP_Comment activitypub object id URI
+	 * @return int comment_id
 	 */
 	protected function get_in_reply_to() {
-		$wp_comment = $this->wp_comment;
-		$in_reply_to = get_in_reply_to( $wp_comment );
-		error_log( 'get_in_reply_to: ' . print_r( $in_reply_to, true ) );
+		$comment = $this->wp_comment;
+
+		$parent_comment = \get_comment( $comment->comment_parent );
+		if ( $parent_comment ) {
+			//is parent remote?
+			$in_reply_to = $this->get_source_id( $parent_comment );
+			if ( ! $in_reply_to ) {
+				//local
+				$in_reply_to = $this->get_id( $comment );
+			}
+		} else {
+			$pretty_permalink = \get_post_meta( $comment->comment_post_ID, 'activitypub_canonical_url', true );
+			if ( $pretty_permalink ) {
+				$in_reply_to = $pretty_permalink;
+			} else {
+				$in_reply_to = \get_permalink( $comment->comment_post_ID );
+			}
+		}
 		return $in_reply_to;
+	}
+
+	/**
+	 * @param $comment or $comment_id
+	 * @return ActivityPub URI of comment
+	 *
+	 * AP Object ID must be unique
+	 *
+	 * https://www.w3.org/TR/activitypub/#obj-id
+	 * https://github.com/tootsuite/mastodon/issues/13879
+	 */
+	protected function get_id() {
+		$comment = $this->wp_comment;
+
+		$comment = \get_comment( $comment );
+		$ap_comment_id = \add_query_arg(
+			array(
+				'p' => $comment->comment_post_ID,
+				'replytocom' => $comment->comment_ID,
+			),
+			\trailingslashit( site_url() )
+		);
+		return $ap_comment_id;
+	}
+
+	/**
+	 * Checks a comment ID for a source_id, or source_url
+	 */
+	protected function get_source_id( $comment ) {
+
+		if ( $comment->user_id !== 0 ) {
+
+			$source_id = \get_comment_meta( $comment->ID, 'source_id', true );
+			if ( ! $source_id ) {
+				$source_url = \get_comment_meta( $comment->ID, 'source_url', true );
+				if ( ! $source_url ) {
+					return null;
+				}
+				$response = safe_remote_get( $source_url );
+				$body = \wp_remote_retrieve_body( $response );
+				$remote_status = \json_decode( $body, true );
+				if ( is_wp_error( $remote_status )
+					|| ! isset( $remote_status['@context'] )
+					|| ! isset( $remote_status['object']['id'] ) ) {
+
+					// the original post may have been deleted, before we started processing deletes.
+					return null;
+				}
+				$source_id = $remote_status['object']['id'];
+			}
+			return $source_id;
+		}
+		return null;
 	}
 }
