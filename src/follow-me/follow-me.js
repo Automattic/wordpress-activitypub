@@ -157,7 +157,7 @@ function Dialog( { profile, userId } ) {
 	);
 }
 
-export default function FollowMe( { selectedUser, style, backgroundColor, id, useId = false } ) {
+export default function FollowMe( { selectedUser, style, backgroundColor, id, useId = false, profileData = false } ) {
 	const [ profile, setProfile ] = useState( getNormalizedProfile() );
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
 	const popupStyles = getPopupStyles( style );
@@ -166,8 +166,11 @@ export default function FollowMe( { selectedUser, style, backgroundColor, id, us
 		setProfile( getNormalizedProfile( profile ) );
 	}
 	useEffect( () => {
+		if ( profileData ) {
+			return setProfileData( profileData );
+		}
 		fetchProfile( userId ).then( setProfileData );
-	}, [ userId ] );
+	}, [ userId, profileData ] );
 
 	return(
 		<div { ...wrapperProps }>
