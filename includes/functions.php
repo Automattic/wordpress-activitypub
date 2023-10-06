@@ -413,7 +413,6 @@ function get_audience( $object ) {
 		if ( in_array( $author_post_url, $object['to'] ) ) {
 			return 'private';
 		}
-
 	}
 }
 
