@@ -362,7 +362,7 @@ class Inbox {
 			'comment_post_ID' => $comment_post_id,
 			'comment_author' => \esc_attr( $meta['name'] ),
 			'comment_author_url' => \esc_url_raw( $object['actor'] ),
-			'comment_content' => addslashes( \wp_kses( $object['object']['content'] ), 'pre_comment_content' ),
+			'comment_content' => addslashes( \wp_kses( $object['object']['content'], 'pre_comment_content' ) ),
 			'comment_type' => 'comment',
 			'comment_author_email' => '',
 			'comment_parent' => 0,
