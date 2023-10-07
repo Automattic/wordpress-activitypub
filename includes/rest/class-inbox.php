@@ -27,7 +27,6 @@ class Inbox {
 		self::register_routes();
 
 		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_create' ), 10, 2 );
-		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
 	}
 
 	/**
@@ -387,8 +386,11 @@ class Inbox {
 			}
 		);
 
+		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
+
 		$state = \wp_new_comment( $commentdata, true );
 
+		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ) );
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 		// re-add flood control
