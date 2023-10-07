@@ -53,6 +53,16 @@ class Blocks {
 	}
 
 	/**
+	 * Filter an array by a list of keys.
+	 * @param array $array The array to filter.
+	 * @param array $keys The keys to keep.
+	 * @return array The filtered array.
+	 */
+	protected static function filter_array_by_keys( $array, $keys ) {
+		return array_intersect_key( $array, array_flip( $keys ) );
+	}
+
+	/**
 	 * Render the follow me block.
 	 * @param array $attrs The block attributes.
 	 * @return string The HTML to render.
@@ -61,11 +71,9 @@ class Blocks {
 		$user_id = self::get_user_id( $attrs['selectedUser'] );
 		$user = User_Collection::get_by_id( $user_id );
 		if ( ! is_wp_error( $user ) ) {
-			$user_array = $user->to_array();
-			$attrs['profileData'] = array(
-				'icon'     => $user_array['icon'],
-				'name'     => $user_array['name'],
-				'resource' => $user_array['resource'],
+			$attrs['profileData'] = self::filter_array_by_keys(
+				$user->to_array(),
+				array( 'icon', 'name', 'resource' )
 			);
 		}
 		$wrapper_attributes = get_block_wrapper_attributes(
@@ -87,12 +95,9 @@ class Blocks {
 		$attrs['followerData']['total'] = $follower_data['total'];
 		$attrs['followerData']['followers'] = array_map(
 			function( $follower ) {
-				$follower_array = $follower->to_array();
-				return array(
-					'name'              => $follower_array['name'],
-					'icon'              => $follower_array['icon'],
-					'url'               => $follower_array['url'],
-					'preferredUsername' => $follower_array['preferredUsername'],
+				return self::filter_array_by_keys(
+					$follower->to_array(),
+					array( 'icon', 'name', 'preferredUsername', 'url' )
 				);
 			},
 			$follower_data['followers']
