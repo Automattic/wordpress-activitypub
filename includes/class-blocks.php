@@ -2,6 +2,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Users as User_Collection;
 use Activitypub\is_user_type_disabled;
 
 class Blocks {
@@ -52,11 +53,29 @@ class Blocks {
 	}
 
 	/**
+	 * Filter an array by a list of keys.
+	 * @param array $array The array to filter.
+	 * @param array $keys The keys to keep.
+	 * @return array The filtered array.
+	 */
+	protected static function filter_array_by_keys( $array, $keys ) {
+		return array_intersect_key( $array, array_flip( $keys ) );
+	}
+
+	/**
 	 * Render the follow me block.
 	 * @param array $attrs The block attributes.
 	 * @return string The HTML to render.
 	 */
 	public static function render_follow_me_block( $attrs ) {
+		$user_id = self::get_user_id( $attrs['selectedUser'] );
+		$user = User_Collection::get_by_id( $user_id );
+		if ( ! is_wp_error( $user ) ) {
+			$attrs['profileData'] = self::filter_array_by_keys(
+				$user->to_array(),
+				array( 'icon', 'name', 'resource' )
+			);
+		}
 		$wrapper_attributes = get_block_wrapper_attributes(
 			array(
 				'aria-label' => __( 'Follow me on the Fediverse', 'activitypub' ),
@@ -71,8 +90,18 @@ class Blocks {
 	public static function render_follower_block( $attrs ) {
 		$followee_user_id = self::get_user_id( $attrs['selectedUser'] );
 		$per_page = absint( $attrs['per_page'] );
-		$followers = Followers::get_followers( $followee_user_id, $per_page );
-		$title = $attrs['title'];
+		$follower_data = Followers::get_followers_with_count( $followee_user_id, $per_page );
+
+		$attrs['followerData']['total'] = $follower_data['total'];
+		$attrs['followerData']['followers'] = array_map(
+			function( $follower ) {
+				return self::filter_array_by_keys(
+					$follower->to_array(),
+					array( 'icon', 'name', 'preferredUsername', 'url' )
+				);
+			},
+			$follower_data['followers']
+		);
 		$wrapper_attributes = get_block_wrapper_attributes(
 			array(
 				'aria-label' => __( 'Fediverse Followers', 'activitypub' ),
@@ -82,11 +111,11 @@ class Blocks {
 		);
 
 		$html = '<div ' . $wrapper_attributes . '>';
-		if ( $title ) {
-			$html .= '<h3>' . $title . '</h3>';
+		if ( $attrs['title'] ) {
+			$html .= '<h3>' . esc_html( $attrs['title'] ) . '</h3>';
 		}
 		$html .= '<ul>';
-		foreach ( $followers as $follower ) {
+		foreach ( $follower_data['followers'] as $follower ) {
 			$html .= '<li>' . self::render_follower( $follower ) . '</li>';
 		}
 		// We are only pagination on the JS side. Could be revisited but we gotta ship!
