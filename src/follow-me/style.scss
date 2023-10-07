@@ -37,6 +37,17 @@
 	}
 }
 
+.activitypub-profile__confirm {
+	// @todo: play more nicely with dark background themes. the dialog is hardcoded to white bg.
+	color: #333;
+	.components-modal__header-heading {
+		color: #333;
+		// resets against potential theme weirdness
+		letter-spacing: inherit;
+		word-spacing: inherit;
+	}
+}
+
 .activitypub-follow-me__dialog {
 	max-width: 30em;
 	h4 {
