@@ -40,7 +40,7 @@ function Profile( { profile, popupStyles, userId } ) {
 			<img className="activitypub-profile__avatar" src={ avatar } />
 			<div className="activitypub-profile__content">
 				<div className="activitypub-profile__name">{ name }</div>
-				<div className="activitypub-profile__handle">{ resource }</div>
+				<div className="activitypub-profile__handle" title={ resource }>{ resource }</div>
 			</div>
 			<Follow profile={ profile } popupStyles={ popupStyles } userId={ userId } />
 		</div>

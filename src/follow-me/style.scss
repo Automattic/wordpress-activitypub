@@ -1,8 +1,13 @@
+.activitypub-follow-me-block-wrapper {
+	width: 100%;
+}
+
 .editor-styles-wrapper, .activitypub-follow-me-block-wrapper {
 	.activitypub-profile {
 		display: flex;
-		align-items: self-start;
-		padding: 1rem;
+		align-items: center;
+		// @todo only add side padding if there's bg color, border, etc. Otherwise: full width.
+		padding: 1rem .5rem;
 
 		.activitypub-profile__avatar {
 			height: 75px;
@@ -30,6 +35,18 @@
 			background-color: var(--wp--preset--color--black);
 			color: var(--wp--preset--color--white);
 		}
+	}
+}
+
+.activitypub-profile__confirm.components-modal__frame {
+	// @todo: play more nicely with dark background themes. the dialog is hardcoded to white bg in core, we go #eee here.
+	color: #333;
+	background-color: #f7f7f7;
+	.components-modal__header-heading, h4 {
+		color: #333;
+		// resets against potential theme weirdness
+		letter-spacing: inherit;
+		word-spacing: inherit;
 	}
 }
 
