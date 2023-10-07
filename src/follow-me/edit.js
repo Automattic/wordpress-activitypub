@@ -6,7 +6,9 @@ import FollowMe from './follow-me';
 import { useEffect } from '@wordpress/element';
 
 export default function Edit( { attributes, setAttributes } ) {
-	const blockProps = useBlockProps();
+	const blockProps = useBlockProps( {
+		className: 'activitypub-follow-me-block-wrapper',
+	} );
 	const usersOptions = useUserOptions();
 	const { selectedUser } = attributes;
 

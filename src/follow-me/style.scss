@@ -1,13 +1,20 @@
 .activitypub-follow-me-block-wrapper {
 	width: 100%;
-}
 
-.editor-styles-wrapper, .activitypub-follow-me-block-wrapper {
+	// extra side padding for border/background colors
+	&.has-border-color, &.has-background {
+		.activitypub-profile {
+			padding-left: 1rem;
+			padding-right: 1rem;
+		}
+	}
+
 	.activitypub-profile {
+
 		display: flex;
 		align-items: center;
-		// @todo only add side padding if there's bg color, border, etc. Otherwise: full width.
-		padding: 1rem .5rem;
+		// right/left padding overridden above for border/background colors
+		padding: 1rem 0;
 
 		.activitypub-profile__avatar {
 			height: 75px;
