@@ -1,8 +1,20 @@
-.editor-styles-wrapper, .activitypub-follow-me-block-wrapper {
+.activitypub-follow-me-block-wrapper {
+	width: 100%;
+
+	// extra side padding for border/background colors
+	&.has-border-color, &.has-background {
+		.activitypub-profile {
+			padding-left: 1rem;
+			padding-right: 1rem;
+		}
+	}
+
 	.activitypub-profile {
+
 		display: flex;
-		align-items: self-start;
-		padding: 1rem;
+		align-items: center;
+		// right/left padding overridden above for border/background colors
+		padding: 1rem 0;
 
 		.activitypub-profile__avatar {
 			height: 75px;
@@ -10,17 +22,38 @@
 			margin-right: 1rem;
 			border-radius: 50%;
 		}
-		.activitypub-profile__name {
+		.activitypub-profile__content {
+			flex: 1;
+			min-width: 0;
+		}
+		.activitypub-profile__name, .activitypub-profile__handle {
 			margin: 0;
-			line-height: 1;
-			font-size: var( --wp--preset--font-size--large );
+			line-height: 1.2;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		.activitypub-profile__name {
+			font-size: 1.25em;
 		}
 		.activitypub-profile__follow {
-			margin-left: auto;
+			margin-left: 1rem;
 			align-self: center;
 			background-color: var(--wp--preset--color--black);
 			color: var(--wp--preset--color--white);
 		}
+	}
+}
+
+.activitypub-profile__confirm.components-modal__frame {
+	// @todo: play more nicely with dark background themes. the dialog is hardcoded to white bg in core, we go #eee here.
+	color: #333;
+	background-color: #f7f7f7;
+	.components-modal__header-heading, h4 {
+		color: #333;
+		// resets against potential theme weirdness
+		letter-spacing: inherit;
+		word-spacing: inherit;
 	}
 }
 

@@ -7,6 +7,7 @@ use Activitypub\Collection\Users;
 
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
+use function Activitypub\get_rest_url_by_path;
 
 class Blog_User extends User {
 	/**
@@ -21,7 +22,7 @@ class Blog_User extends User {
 	 *
 	 * @var string
 	 */
-	protected $type = 'Group';
+	protected $type = null;
 
 	/**
 	 * Is Account discoverable?
@@ -46,12 +47,33 @@ class Blog_User extends User {
 	}
 
 	/**
+	 * Get the type of the object.
+	 *
+	 * If the Blog is in "single user" mode, return "Person" insted of "Group".
+	 *
+	 * @return string The type of the object.
+	 */
+	public function get_type() {
+		if ( is_single_user() ) {
+			return 'Person';
+		} else {
+			return 'Group';
+		}
+	}
+
+	/**
 	 * Get the User-Name.
 	 *
 	 * @return string The User-Name.
 	 */
 	public function get_name() {
-		return \esc_html( \get_bloginfo( 'name' ) );
+		return \wp_strip_all_tags(
+			\html_entity_decode(
+				\get_bloginfo( 'name' ),
+				\ENT_QUOTES,
+				'UTF-8'
+			)
+		);
 	}
 
 	/**
@@ -195,18 +217,27 @@ class Blog_User extends User {
 		return \home_url();
 	}
 
-	/**
-	 * Get the type of the object.
-	 *
-	 * If the Blog is in "single user" mode, return "Person" insted of "Group".
-	 *
-	 * @return string The type of the object.
-	 */
-	public function get_type() {
-		if ( is_single_user() ) {
-			return 'Person';
-		} else {
-			return $this->type;
+	public function get_moderators() {
+		if ( is_single_user() || 'Group' !== $this->get_type() ) {
+			return null;
 		}
+
+		return get_rest_url_by_path( 'collections/moderators' );
+	}
+
+	public function get_attributed_to() {
+		if ( is_single_user() || 'Group' !== $this->get_type() ) {
+			return null;
+		}
+
+		return get_rest_url_by_path( 'collections/moderators' );
+	}
+
+	public function get_posting_restricted_to_mods() {
+		if ( 'Group' === $this->get_type() ) {
+			return true;
+		}
+
+		return null;
 	}
 }

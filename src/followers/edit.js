@@ -1,5 +1,5 @@
 import { SelectControl, RangeControl, PanelBody, TextControl } from '@wordpress/components';
-import { useState } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { Followers } from './followers';
@@ -21,6 +21,17 @@ export default function Edit( { attributes, setAttributes } ) {
 		};
 	}
 
+	useEffect( () => {
+		// if there are no users yet, do nothing
+		if ( ! usersOptions.length ) {
+			return;
+		}
+		// ensure that the selected user is in the list of options, if not, select the first available user
+		if ( ! usersOptions.find( ( { value } ) => value === selectedUser ) ) {
+			setAttributes( { selectedUser: usersOptions[ 0 ].value } );
+		}
+	}, [ selectedUser, usersOptions ] );
+
 	return (
 		<div { ...blockProps }>
 			<InspectorControls key="setting">
@@ -31,12 +42,14 @@ export default function Edit( { attributes, setAttributes } ) {
 						value={ title }
 						onChange={ value => setAttributes( { title: value } ) }
 					/>
-					<SelectControl
-						label= { __( 'Select User', 'activitypub' ) }
-						value={ selectedUser }
-						options={ usersOptions }
-						onChange={ setAttributestAndResetPage( 'selectedUser' ) }
-					/>
+					{ usersOptions.length > 1 && (
+						<SelectControl
+							label= { __( 'Select User', 'activitypub' ) }
+							value={ selectedUser }
+							options={ usersOptions }
+							onChange={ setAttributestAndResetPage( 'selectedUser' ) }
+						/>
+					) }
 					<SelectControl
 						label={ __( 'Sort', 'activitypub' ) }
 						value={ order }

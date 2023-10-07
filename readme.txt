@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
 Tested up to: 6.3
-Stable tag: 1.0.0
+Stable tag: 1.0.2
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -36,7 +36,7 @@ The plugin works with the following tested federated platforms, but there may be
 Some things to note:
 
 1. The blog-wide profile is only compatible with sites with rewrite rules enabled. If your site does not have rewrite rules enabled, the author-specific profiles may still work.
-1. Many single-author blogs have chosen to turn off or redirect their author profile pages, usually via an SEO plugin like Yoast or Rank Math. This is usually done to avoid duplicate content with your blog’s home page. If your author page has been deactivated in this way, then ActivityPub author profiles won’t work for you. Instead, you can turn your author profile page back on, and then use the option in your SEO plugin to noindex the author page. This will duplicate content issues with search engines and will enable ActivityPub author profiles to work.
+1. Many single-author blogs have chosen to turn off or redirect their author profile pages, usually via an SEO plugin like Yoast or Rank Math. This is usually done to avoid duplicate content with your blog’s home page. If your author page has been deactivated in this way, then ActivityPub author profiles won’t work for you. Instead, you can turn your author profile page back on, and then use the option in your SEO plugin to noindex the author page. This will still resolve duplicate content issues with search engines and will enable ActivityPub author profiles to work.
 1. Once ActivityPub is installed, *only new posts going forward* will be available in the fediverse. Likewise, even if you’ve been using ActivityPub for a while, anyone who follows your site, will only see new posts you publish from that moment on. They will never see previously-published posts in their Home feed. This process is very similar to subscribing to a newsletter. If you subscribe to a newsletter, you will only receive future emails, but not the old archived ones. With ActivityPub, if someone follows your site, they will only receive new blog posts you publish from then on.
 
 So what’s the process?
@@ -105,11 +105,31 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
 
-= Next =
+= 1.0.2 =
 
-* Compatibility: allow deactivating blocks registered by the plugin.
-* Compatibility: avoid Fatal Errors when using ClassicPress.
-* Fixed: fix a typo in a hook name.
+* Updated: improved hashtag visibility in default template
+* Updated: reduced number of followers to be checked/updated via Cron, when System Cron is not set up
+* Updated: check if username of Blog-User collides with an Authors name
+* Compatibility: improved Group meta informations
+* Fixed: detection of single user mode
+* Fixed: remote delete
+* Fixed: styles in Follow-Me block
+* Fixed: various encoding and formatting issues
+* Fixed: (health) check Author URLs only if Authors are enabled
+
+= 1.0.1 =
+
+* Update: improve image attachment detection using the block editor
+* Update: better error code handling for API responses
+* Update: use a tag stack instead of regex for protecting tags for Hashtags and @-Mentions
+* Compatibility: better signature support for subpath-installations
+* Compatibility: allow deactivating blocks registered by the plugin
+* Compatibility: avoid Fatal Errors when using ClassicPress
+* Compatibility: improve the Group-Actor to play nicely with existing implementations
+* Fixed: truncate long blog titles and handles for the "Follow me" block
+* Fixed: ensure that only a valid user can be selected for the "Follow me" block
+* Fixed: fix a typo in a hook name
+* Fixed: a problem with signatures when running WordPress in a sub-path
 
 = 1.0.0 =
 

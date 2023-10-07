@@ -9,6 +9,7 @@ use Activitypub\Activity\Base_Object;
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\site_supports_blocks;
 
 /**
  * WordPress Post Transformer
@@ -28,58 +29,6 @@ class Post {
 	 * @var WP_Post
 	 */
 	protected $wp_post;
-
-	/**
-	 * The Allowed Tags, used in the content.
-	 *
-	 * @var array
-	 */
-	protected $allowed_tags = array(
-		'a' => array(
-			'href' => array(),
-			'title' => array(),
-			'class' => array(),
-			'rel' => array(),
-		),
-		'br' => array(),
-		'p' => array(
-			'class' => array(),
-		),
-		'span' => array(
-			'class' => array(),
-		),
-		'div' => array(
-			'class' => array(),
-		),
-		'ul' => array(),
-		'ol' => array(
-			'reversed' => array(),
-			'start'    => array(),
-		),
-		'li' => array(
-			'value' => array(),
-		),
-		'strong' => array(
-			'class' => array(),
-		),
-		'b' => array(
-			'class' => array(),
-		),
-		'i' => array(
-			'class' => array(),
-		),
-		'em' => array(
-			'class' => array(),
-		),
-		'blockquote' => array(),
-		'cite' => array(),
-		'code' => array(
-			'class' => array(),
-		),
-		'pre' => array(
-			'class' => array(),
-		),
-	);
 
 	/**
 	 * Static function to Transform a WP_Post Object.
@@ -114,8 +63,8 @@ class Post {
 		$wp_post = $this->wp_post;
 		$object = new Base_Object();
 
-		$object->set_id( \esc_url( \get_permalink( $wp_post->ID ) ) );
-		$object->set_url( \esc_url( \get_permalink( $wp_post->ID ) ) );
+		$object->set_id( $this->get_id() );
+		$object->set_url( $this->get_url() );
 		$object->set_type( $this->get_object_type() );
 
 		$published = \strtotime( $wp_post->post_date_gmt );
@@ -151,6 +100,32 @@ class Post {
 	}
 
 	/**
+	 * Returns the ID of the Post.
+	 *
+	 * @return string The Posts ID.
+	 */
+	public function get_id() {
+		return $this->get_url();
+	}
+
+	/**
+	 * Returns the URL of the Post.
+	 *
+	 * @return string The Posts URL.
+	 */
+	public function get_url() {
+		$post = $this->wp_post;
+
+		if ( 'trash' === get_post_status( $post ) ) {
+			$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
+		} else {
+			$permalink = \get_permalink( $post );
+		}
+
+		return \esc_url( $permalink );
+	}
+
+	/**
 	 * Returns the User-URL of the Author of the Post.
 	 *
 	 * If `single_user` mode is enabled, the URL of the Blog-User is returned.
@@ -164,6 +139,66 @@ class Post {
 		}
 
 		return Users::get_by_id( $this->wp_post->post_author )->get_url();
+	}
+
+	/**
+	 * Returns the Image Attachments for this Post, parsed from blocks.
+	 * @param int $max_images The maximum number of images to return.
+	 * @param array $image_ids The image IDs to append new IDs to.
+	 *
+	 * @return array The image IDs.
+	 */
+	protected function get_block_image_ids( $max_images, $image_ids = [] ) {
+		$blocks = \parse_blocks( $this->wp_post->post_content );
+		return self::get_image_ids_from_blocks( $blocks, $image_ids, $max_images );
+	}
+
+	/**
+	 * Recursively get image IDs from blocks.
+	 * @param array $blocks The blocks to search for image IDs
+	 * @param array $image_ids The image IDs to append new IDs to
+	 * @param int $max_images The maximum number of images to return.
+	 *
+	 * @return array The image IDs.
+	 */
+	protected static function get_image_ids_from_blocks( $blocks, $image_ids, $max_images ) {
+		foreach ( $blocks as $block ) {
+			// recurse into inner blocks
+			if ( ! empty( $block['innerBlocks'] ) ) {
+				$image_ids = self::get_image_ids_from_blocks( $block['innerBlocks'], $image_ids, $max_images );
+			}
+
+			switch ( $block['blockName'] ) {
+				case 'core/image':
+				case 'core/cover':
+					if ( ! empty( $block['attrs']['id'] ) ) {
+						$image_ids[] = $block['attrs']['id'];
+					}
+					break;
+				case 'jetpack/slideshow':
+				case 'jetpack/tiled-gallery':
+					if ( ! empty( $block['attrs']['ids'] ) ) {
+						$image_ids = array_merge( $image_ids, $block['attrs']['ids'] );
+					}
+					break;
+				case 'jetpack/image-compare':
+					if ( ! empty( $block['attrs']['beforeImageId'] ) ) {
+						$image_ids[] = $block['attrs']['beforeImageId'];
+					}
+					if ( ! empty( $block['attrs']['afterImageId'] ) ) {
+						$image_ids[] = $block['attrs']['afterImageId'];
+					}
+					break;
+			}
+
+			// we could be at or over max, stop unneeded work
+			if ( count( $image_ids ) >= $max_images ) {
+				break;
+			}
+		}
+
+		// still need to slice it because one gallery could knock us over the limit
+		return \array_slice( $image_ids, 0, $max_images );
 	}
 
 	/**
@@ -192,21 +227,26 @@ class Post {
 		}
 
 		if ( $max_images > 0 ) {
-			// then list any image attachments
-			$query = new \WP_Query(
-				array(
-					'post_parent' => $id,
-					'post_status' => 'inherit',
-					'post_type' => 'attachment',
-					'post_mime_type' => 'image',
-					'order' => 'ASC',
-					'orderby' => 'menu_order ID',
-					'posts_per_page' => $max_images,
-				)
-			);
-			foreach ( $query->get_posts() as $attachment ) {
-				if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
-					$image_ids[] = $attachment->ID;
+			// first try to get images that are actually in the post content
+			if ( site_supports_blocks() && \has_blocks( $this->wp_post->post_content ) ) {
+				$image_ids = $this->get_block_image_ids( $max_images, $image_ids );
+			} else {
+				// fallback to images attached to the post
+				$query = new \WP_Query(
+					array(
+						'post_parent' => $id,
+						'post_status' => 'inherit',
+						'post_type' => 'attachment',
+						'post_mime_type' => 'image',
+						'order' => 'ASC',
+						'orderby' => 'menu_order ID',
+						'posts_per_page' => $max_images,
+					)
+				);
+				foreach ( $query->get_posts() as $attachment ) {
+					if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
+						$image_ids[] = $attachment->ID;
+					}
 				}
 			}
 		}
@@ -412,6 +452,15 @@ class Post {
 	protected function get_content() {
 		global $post;
 
+		/**
+		 * Provides an action hook so plugins can add their own hooks/filters before AP content is generated.
+		 *
+		 * Example: if a plugin adds a filter to `the_content` to add a button to the end of posts, it can also remove that filter here.
+		 *
+		 * @param WP_Post $post The post object.
+		 */
+		do_action( 'activitypub_before_get_content', $post );
+
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$post    = $this->wp_post;
 		$content = $this->get_post_content_template();
@@ -421,13 +470,11 @@ class Post {
 		$content = do_shortcode( $content );
 		wp_reset_postdata();
 
-		$content = \wp_kses( $content, $this->allowed_tags );
 		$content = \wpautop( $content );
 		$content = \preg_replace( '/[\n\r\t]/', '', $content );
 		$content = \trim( $content );
 
 		$content = \apply_filters( 'activitypub_the_content', $content, $post );
-		$content = \html_entity_decode( $content, \ENT_QUOTES, 'UTF-8' );
 
 		return $content;
 	}
@@ -447,7 +494,7 @@ class Post {
 		}
 
 		if ( 'content' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_content]\n\n[ap_hashtags]\n\n[ap_permalink type=\"html\"]";
+			return "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
 		}
 
 		return \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );

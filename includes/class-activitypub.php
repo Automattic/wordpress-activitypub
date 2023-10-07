@@ -227,6 +227,12 @@ class Activitypub {
 	 * Add rewrite rules
 	 */
 	public static function add_rewrite_rules() {
+		// If another system needs to take precedence over the ActivityPub rewrite rules,
+		// they can define their own and will manually call the appropriate functions as required.
+		if ( ACTIVITYPUB_DISABLE_REWRITES ) {
+			return;
+		}
+
 		if ( ! \class_exists( 'Webfinger' ) ) {
 			\add_rewrite_rule(
 				'^.well-known/webfinger',

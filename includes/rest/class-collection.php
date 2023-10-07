@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub\Rest;
 
+use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Transformer\Post;
@@ -24,7 +25,7 @@ class Collection {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		self::register_routes();
 	}
 
 	/**
@@ -52,6 +53,18 @@ class Collection {
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'featured_get' ),
 					'args'                => self::request_parameters(),
+					'permission_callback' => '__return_true',
+				),
+			)
+		);
+
+		\register_rest_route(
+			ACTIVITYPUB_REST_NAMESPACE,
+			'/collections/moderators',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( self::class, 'moderators_get' ),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -153,6 +166,30 @@ class Collection {
 
 		foreach ( $posts as $post ) {
 			$response['orderedItems'][] = Post::transform( $post )->to_object()->to_array();
+		}
+
+		return new WP_REST_Response( $response, 200 );
+	}
+
+	/**
+	 * Moderators endpoint
+	 *
+	 * @param WP_REST_Request $request The request object.
+	 *
+	 * @return WP_REST_Response The response object.
+	 */
+	public static function moderators_get( $request ) {
+		$response = array(
+			'@context'     => Activity::CONTEXT,
+			'id'           => get_rest_url_by_path( 'collections/moderators' ),
+			'type'         => 'OrderedCollection',
+			'orderedItems' => array(),
+		);
+
+		$users = User_Collection::get_collection();
+
+		foreach ( $users as $user ) {
+			$response['orderedItems'][] = $user->get_url();
 		}
 
 		return new WP_REST_Response( $response, 200 );

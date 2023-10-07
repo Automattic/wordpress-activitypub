@@ -19,7 +19,8 @@ class Webfinger {
 	 * @return void
 	 */
 	public static function init() {
-		\add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		self::register_routes();
+
 		\add_filter( 'webfinger_user_data', array( self::class, 'add_user_discovery' ), 10, 3 );
 		\add_filter( 'webfinger_data', array( self::class, 'add_pseudo_user_discovery' ), 99, 2 );
 	}
