@@ -23,16 +23,18 @@ export default function Edit( { attributes, setAttributes } ) {
 
 	return (
 		<div { ...blockProps }>
-			<InspectorControls key="setting">
-				<PanelBody title={ __( 'Followers Options', 'activitypub' ) }>
-					<SelectControl
-						label= { __( 'Select User', 'activitypub' ) }
-						value={ attributes.selectedUser }
-						options={ usersOptions }
-						onChange={ ( value ) => setAttributes( { selectedUser: value } ) }
-					/>
-				</PanelBody>
-			</InspectorControls>
+			{ usersOptions.length > 1 && (
+				<InspectorControls key="setting">
+					<PanelBody title={ __( 'Followers Options', 'activitypub' ) }>
+						<SelectControl
+							label= { __( 'Select User', 'activitypub' ) }
+							value={ attributes.selectedUser }
+							options={ usersOptions }
+							onChange={ ( value ) => setAttributes( { selectedUser: value } ) }
+						/>
+					</PanelBody>
+				</InspectorControls>
+			) }
 			<FollowMe { ...attributes } id={ blockProps.id } />
 		</div>
 	);

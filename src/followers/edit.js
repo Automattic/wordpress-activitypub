@@ -42,12 +42,14 @@ export default function Edit( { attributes, setAttributes } ) {
 						value={ title }
 						onChange={ value => setAttributes( { title: value } ) }
 					/>
-					<SelectControl
-						label= { __( 'Select User', 'activitypub' ) }
-						value={ selectedUser }
-						options={ usersOptions }
-						onChange={ setAttributestAndResetPage( 'selectedUser' ) }
-					/>
+					{ usersOptions.length > 1 && (
+						<SelectControl
+							label= { __( 'Select User', 'activitypub' ) }
+							value={ selectedUser }
+							options={ usersOptions }
+							onChange={ setAttributestAndResetPage( 'selectedUser' ) }
+						/>
+					) }
 					<SelectControl
 						label={ __( 'Sort', 'activitypub' ) }
 						value={ order }
