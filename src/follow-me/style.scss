@@ -6,7 +6,8 @@
 	.activitypub-profile {
 		display: flex;
 		align-items: center;
-		padding: 1rem 0;
+		// @todo only add side padding if there's bg color, border, etc. Otherwise: full width.
+		padding: 1rem .5rem;
 
 		.activitypub-profile__avatar {
 			height: 75px;
