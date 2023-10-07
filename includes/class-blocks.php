@@ -61,7 +61,12 @@ class Blocks {
 		$user_id = self::get_user_id( $attrs['selectedUser'] );
 		$user = User_Collection::get_by_id( $user_id );
 		if ( ! is_wp_error( $user ) ) {
-			$attrs['profileData'] = $user->to_array();
+			$user_array = $user->to_array();
+			$attrs['profileData'] = array(
+				'icon'     => $user_array['icon'],
+				'name'     => $user_array['name'],
+				'resource' => $user_array['resource'],
+			);
 		}
 		$wrapper_attributes = get_block_wrapper_attributes(
 			array(
@@ -82,7 +87,13 @@ class Blocks {
 		$attrs['followerData']['total'] = $follower_data['total'];
 		$attrs['followerData']['followers'] = array_map(
 			function( $follower ) {
-				return $follower->to_array();
+				$follower_array = $follower->to_array();
+				return array(
+					'name'              => $follower_array['name'],
+					'icon'              => $follower_array['icon'],
+					'url'               => $follower_array['url'],
+					'preferredUsername' => $follower_array['preferredUsername'],
+				);
 			},
 			$follower_data['followers']
 		);
