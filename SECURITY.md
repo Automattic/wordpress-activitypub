@@ -4,7 +4,7 @@ Full details of the Automattic Security Policy can be found on [automattic.com](
 
 ## Supported Versions
 
-Generally, only the latest version of Jetpack has continued support. If a critical vulnerability is found in the current version of Jetpack, we may opt to backport any patches to previous versions.
+Generally, only the latest version of the ActivityPub plugin has continued support. If a critical vulnerability is found in the current version of the ActivityPub plugin, we may opt to backport any patches to previous versions.
 
 ## Reporting a Vulnerability
 
@@ -15,7 +15,7 @@ Generally, only the latest version of Jetpack has continued support. If a critic
 Our most critical targets are:
 
 * ActivityPub plugin (all within this repo)
-* wordpress.com -- the shared management site for both Jetpack and WordPress.com sites.
+* wordpress.com -- hosted ActivityPub offering on WordPress.com.
 
 For more targets, see the `In Scope` section on [HackerOne](https://hackerone.com/automattic).
 
