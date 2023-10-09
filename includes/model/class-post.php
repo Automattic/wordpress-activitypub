@@ -111,57 +111,6 @@ class Post {
 		return $this->object->get_tag();
 	}
 
-	public function get_replies() {
-		if ( $this->replies ) {
-			return $this->replies;
-		}
-
-		$replies = null;
-		if ( $this->post->comment_count > 0 ) {
-			$args = array(
-				'post_id' => $this->post->ID,
-				'hierarchical' => false,
-				'status'       => 'approve',
-			);
-			$comments = \get_comments( $args );
-			$items = array();
-
-			foreach ( $comments as $comment ) {
-				// include self replies
-				if ( $this->post->post_author === $comment->user_id ) {
-					$comment_url = \add_query_arg( //
-						array(
-							'p' => $this->post->ID,
-							'replytocom' => $comment->comment_ID,
-						),
-						trailingslashit( site_url() )
-					);
-					$items[] = $comment_url;
-				} else {
-					$ap_object = \unserialize( \get_comment_meta( $comment->comment_ID, 'ap_object', true ) );
-					$comment_url = \get_comment_meta( $comment->comment_ID, 'source_url', true );
-					if ( ! empty( $comment_url ) ) {
-						$items[] = \get_comment_meta( $comment->comment_ID, 'source_url', true );
-					}
-				}
-			}
-
-			$replies = (object) array(
-				'type'  => 'Collection',
-				'id'    => \add_query_arg( array( 'replies' => '' ), $this->id ),
-				'first' => (object) array(
-					'type'  => 'CollectionPage',
-					'partOf' => \add_query_arg( array( 'replies' => '' ), $this->id ),
-					'items' => $items,
-				),
-			);
-		}
-
-		$this->replies = $replies;
-
-		return $replies;
-	}
-
 	/**
 	 * Returns the as2 object-type for a given post
 	 *
@@ -178,17 +127,5 @@ class Post {
 	 */
 	public function get_content() {
 		return $this->object->get_content();
-	}
-
-	/**
-	 * Get deleted datetime
-	 */
-	public function get_deleted() {
-		$post = $this->post;
-		$deleted = null;
-		if ( 'trash' === $post->post_status ) {
-			$this->deleted = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
-		}
-		return $deleted;
 	}
 }

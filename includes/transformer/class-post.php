@@ -508,4 +508,64 @@ class Post {
 	protected function get_mentions() {
 		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_post->post_content, $this->wp_post );
 	}
+
+	/**
+	 * Get deleted datetime
+	 */
+	public function get_deleted() {
+		$post = $this->wp_post;
+		$deleted = null;
+		if ( 'trash' === $post->post_status ) {
+			$this->deleted = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
+		}
+		return $deleted;
+	}
+
+	public function get_replies() {
+		$replies = null;
+
+		$post = $this->wp_post;
+
+		if ( $post->comment_count > 0 ) {
+			$args = array(
+				'post_id' => $post->ID,
+				'hierarchical' => false,
+				'status'       => 'approve',
+			);
+			$comments = \get_comments( $args );
+			$items = array();
+
+			foreach ( $comments as $comment ) {
+				// include self replies
+				if ( $post->post_author === $comment->user_id ) {
+					$comment_url = \add_query_arg( //
+						array(
+							'p' => $post->ID,
+							'replytocom' => $comment->comment_ID,
+						),
+						trailingslashit( site_url() )
+					);
+					$items[] = $comment_url;
+				} else {
+					$ap_object = \unserialize( \get_comment_meta( $comment->comment_ID, 'ap_object', true ) );
+					$comment_url = \get_comment_meta( $comment->comment_ID, 'source_url', true );
+					if ( ! empty( $comment_url ) ) {
+						$items[] = \get_comment_meta( $comment->comment_ID, 'source_url', true );
+					}
+				}
+			}
+
+			$replies = (object) array(
+				'type'  => 'Collection',
+				'id'    => \add_query_arg( array( 'replies' => '' ), $this->get_id() ),
+				'first' => (object) array(
+					'type'  => 'CollectionPage',
+					'partOf' => \add_query_arg( array( 'replies' => '' ), $this->get_id() ),
+					'items' => $items,
+				),
+			);
+		}
+
+		return $replies;
+	}
 }
