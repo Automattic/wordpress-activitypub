@@ -17,6 +17,7 @@ namespace Activitypub;
 
 use function Activitypub\site_supports_blocks;
 
+require_once __DIR__ . '/includes/compat.php';
 require_once __DIR__ . '/includes/functions.php';
 
 /**

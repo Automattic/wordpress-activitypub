@@ -439,19 +439,6 @@ function is_single_user() {
 	return false;
 }
 
-if ( ! function_exists( 'get_self_link' ) ) {
-	/**
-	 * Returns the link for the currently displayed feed.
-	 *
-	 * @return string Correct link for the atom:self element.
-	 */
-	function get_self_link() {
-		$host = wp_parse_url( home_url() );
-		$path = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
-		return esc_url( apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . $path ) ) );
-	}
-}
-
 /**
  * Check if a site supports the block editor.
  *
