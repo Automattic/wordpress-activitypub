@@ -14,6 +14,7 @@ $followers_template = _n( 'Your author profile currently has %s follower.', 'You
 		<input type="hidden" name="page" value="activitypub-followers-list" />
 		<?php
 		$table->prepare_items();
+		$table->search_box( 'Search', 'search' );
 		$table->display();
 		?>
 		<?php wp_nonce_field( 'activitypub-followers-list', '_apnonce' ); ?>

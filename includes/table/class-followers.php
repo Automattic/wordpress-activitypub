@@ -30,19 +30,24 @@ class Followers extends WP_List_Table {
 
 	public function get_columns() {
 		return array(
-			'cb'           => '<input type="checkbox" />',
-			'avatar'       => \__( 'Avatar', 'activitypub' ),
-			'name'         => \__( 'Name', 'activitypub' ),
-			'username'     => \__( 'Username', 'activitypub' ),
-			'url'          => \__( 'URL', 'activitypub' ),
-			'updated'      => \__( 'Last updated', 'activitypub' ),
-			//'errors'       => \__( 'Errors', 'activitypub' ),
-			//'latest-error' => \__( 'Latest Error Message', 'activitypub' ),
+			'cb'         => '<input type="checkbox" />',
+			'avatar'     => \__( 'Avatar', 'activitypub' ),
+			'post_title' => \__( 'Name', 'activitypub' ),
+			'username'   => \__( 'Username', 'activitypub' ),
+			'url'        => \__( 'URL', 'activitypub' ),
+			'published'  => \__( 'Followed', 'activitypub' ),
+			'modified'   => \__( 'Last updated', 'activitypub' ),
 		);
 	}
 
 	public function get_sortable_columns() {
-		return array();
+		$sortable_columns = array(
+			'post_title' => array( 'post_title', true ),
+			'modified'   => array( 'modified', false ),
+			'published'  => array( 'published', false ),
+		);
+
+		return $sortable_columns;
 	}
 
 	public function prepare_items() {
@@ -55,8 +60,29 @@ class Followers extends WP_List_Table {
 		$page_num = $this->get_pagenum();
 		$per_page = 20;
 
-		$followers = FollowerCollection::get_followers( $this->user_id, $per_page, $page_num );
-		$counter   = FollowerCollection::count_followers( $this->user_id );
+		$args = array();
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['orderby'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$args['orderby'] = sanitize_text_field( wp_unslash( $_GET['orderby'] ) );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['order'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$args['order'] = sanitize_text_field( wp_unslash( $_GET['order'] ) );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['s'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+		}
+
+		$followers_with_count = FollowerCollection::get_followers_with_count( $this->user_id, $per_page, $page_num, $args );
+		$followers            = $followers_with_count['followers'];
+		$counter              = $followers_with_count['total'];
 
 		$this->items = array();
 		$this->set_pagination_args(
@@ -69,14 +95,13 @@ class Followers extends WP_List_Table {
 
 		foreach ( $followers as $follower ) {
 			$item = array(
-				'icon'         => esc_attr( $follower->get_icon_url() ),
-				'name'         => esc_attr( $follower->get_name() ),
-				'username'     => esc_attr( $follower->get_preferred_username() ),
-				'url'          => esc_attr( $follower->get_url() ),
-				'identifier'   => esc_attr( $follower->get_id() ),
-				'updated'      => esc_attr( $follower->get_updated() ),
-				'errors'       => $follower->count_errors(),
-				'latest-error' => $follower->get_latest_error_message(),
+				'icon'       => esc_attr( $follower->get_icon_url() ),
+				'post_title' => esc_attr( $follower->get_name() ),
+				'username'   => esc_attr( $follower->get_preferred_username() ),
+				'url'        => esc_attr( $follower->get_url() ),
+				'identifier' => esc_attr( $follower->get_id() ),
+				'published'  => esc_attr( $follower->get_published() ),
+				'modified'   => esc_attr( $follower->get_updated() ),
 			);
 
 			$this->items[] = $item;

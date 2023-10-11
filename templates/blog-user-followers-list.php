@@ -21,6 +21,7 @@ $followers_template = _n( 'Your blog profile currently has %s follower.', 'Your 
 		<input type="hidden" name="tab" value="followers" />
 		<?php
 		$table->prepare_items();
+		$table->search_box( 'Search', 'search' );
 		$table->display();
 		?>
 		<?php wp_nonce_field( 'activitypub-followers-list', '_apnonce' ); ?>
