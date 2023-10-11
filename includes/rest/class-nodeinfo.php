@@ -18,9 +18,6 @@ class Nodeinfo {
 	 */
 	public static function init() {
 		self::register_routes();
-
-		\add_filter( 'nodeinfo_data', array( self::class, 'add_nodeinfo_discovery' ), 10, 2 );
-		\add_filter( 'nodeinfo2_data', array( self::class, 'add_nodeinfo2_discovery' ), 10 );
 	}
 
 	/**
@@ -193,37 +190,5 @@ class Nodeinfo {
 		);
 
 		return new \WP_REST_Response( $discovery, 200 );
-	}
-
-	/**
-	 * Extend NodeInfo data
-	 *
-	 * @param array  $nodeinfo NodeInfo data
-	 * @param string           The NodeInfo Version
-	 *
-	 * @return array           The extended array
-	 */
-	public static function add_nodeinfo_discovery( $nodeinfo, $version ) {
-		if ( '2.0' === $version ) {
-			$nodeinfo['protocols'][] = 'activitypub';
-		} else {
-			$nodeinfo['protocols']['inbound'][]  = 'activitypub';
-			$nodeinfo['protocols']['outbound'][] = 'activitypub';
-		}
-
-		return $nodeinfo;
-	}
-
-	/**
-	 * Extend NodeInfo2 data
-	 *
-	 * @param  array $nodeinfo NodeInfo2 data
-	 *
-	 * @return array           The extended array
-	 */
-	public static function add_nodeinfo2_discovery( $nodeinfo ) {
-		$nodeinfo['protocols'][] = 'activitypub';
-
-		return $nodeinfo;
 	}
 }

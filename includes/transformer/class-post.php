@@ -229,7 +229,8 @@ class Post {
 		if ( $max_images > 0 ) {
 			// first try to get images that are actually in the post content
 			if ( site_supports_blocks() && \has_blocks( $this->wp_post->post_content ) ) {
-				$image_ids = $this->get_block_image_ids( $max_images, $image_ids );
+				$block_image_ids = $this->get_block_image_ids( $max_images, $image_ids );
+				$image_ids = \array_merge( $image_ids, $block_image_ids );
 			} else {
 				// fallback to images attached to the post
 				$query = new \WP_Query(
