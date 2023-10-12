@@ -2,6 +2,7 @@
 namespace Activitypub;
 
 use WP_Error;
+use Activitypub\Webfinger;
 
 /**
  * ActivityPub Mention Class
