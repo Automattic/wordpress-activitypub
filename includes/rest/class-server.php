@@ -86,7 +86,7 @@ class Server {
 		}
 
 		// POST-Requets are always signed
-		if ( 'post' === \strtolower( $request->get_method() ) ) {
+		if ( 'get' !== \strtolower( $request->get_method() ) ) {
 			$verified_request = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_request ) ) {
 				return $verified_request;

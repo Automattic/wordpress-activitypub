@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub\Integration;
 
+use Activitypub\Rest\Webfinger as Webfinger_Rest;
 use Activitypub\Collection\Users as User_Collection;
 
 /**
@@ -52,6 +53,6 @@ class Webfinger {
 			return $array;
 		}
 
-		return self::get_profile( $resource );
+		return Webfinger_Rest::get_profile( $resource );
 	}
 }

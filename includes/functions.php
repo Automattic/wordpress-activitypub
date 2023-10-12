@@ -472,3 +472,12 @@ function site_supports_blocks() {
 function is_json( $data ) {
 	return \is_array( \json_decode( $data, true ) ) ? true : false;
 }
+
+/**
+ * Check if a blog is public based on the `blog_public` option
+ *
+ * @return bollean True if public, false if not
+ */
+function is_blog_public() {
+	return (bool) apply_filters( 'activitypub_is_blog_public', \get_option( 'blog_public', 1 ) );
+}
