@@ -79,7 +79,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	}
 
 	$short_timeout = function() {
-		return 3;
+		return 10;
 	};
 	add_filter( 'activitypub_remote_get_timeout', $short_timeout );
 	$response = Http::get( $actor );
