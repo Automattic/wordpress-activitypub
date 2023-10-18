@@ -5,23 +5,17 @@ use function Activitypub\esc_hashtag;
 
 class Shortcodes {
 	/**
-	 * Register the shortcodes
+	 * Class constructor, registering WordPress then Shortcodes
 	 */
-	public static function register() {
+	public static function init() {
+		// do not load on admin pages
+		if ( is_admin() ) {
+			return;
+		}
+
 		foreach ( get_class_methods( self::class ) as $shortcode ) {
 			if ( 'init' !== $shortcode ) {
 				add_shortcode( 'ap_' . $shortcode, array( self::class, $shortcode ) );
-			}
-		}
-	}
-
-	/**
-	 * Unregister the shortcodes
-	 */
-	public static function unregister() {
-		foreach ( get_class_methods( self::class ) as $shortcode ) {
-			if ( 'init' !== $shortcode ) {
-				remove_shortcode( 'ap_' . $shortcode );
 			}
 		}
 	}

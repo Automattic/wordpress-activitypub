@@ -69,6 +69,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Collection\Followers', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Admin', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Shortcodes', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Health_Check', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
