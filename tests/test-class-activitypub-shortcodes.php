@@ -1,5 +1,16 @@
 <?php
+use Activitypub\Shortcodes;
+
 class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
+
+	public static function setUpBeforeClass() {
+		Shortcodes::register();
+	}
+
+	public static function tearDownAfterClass() {
+		Shortcodes::unregister();
+	}
+
 	public function test_content() {
 		global $post;
 
