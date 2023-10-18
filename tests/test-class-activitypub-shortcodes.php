@@ -3,11 +3,11 @@ use Activitypub\Shortcodes;
 
 class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 
-	public static function setUpBeforeClass() {
+	public function setUp() {
 		Shortcodes::register();
 	}
 
-	public static function tearDownAfterClass() {
+	public function tearDown() {
 		Shortcodes::unregister();
 	}
 
