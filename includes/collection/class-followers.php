@@ -294,6 +294,18 @@ class Followers {
 
 		$activity = $activity->to_json();
 
+		// schedule Accept Activity so that we can get sure it will be sent...
+		\wp_schedule_single_event(
+			\strtotime( '+60 seconds' ),
+			'activitypub_send_accept_activity',
+			array(
+				$inbox,
+				$activity,
+				$user_id,
+			)
+		);
+
+		// ...and send it directly
 		Http::post( $inbox, $activity, $user_id );
 	}
 

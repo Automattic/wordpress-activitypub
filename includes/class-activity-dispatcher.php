@@ -2,6 +2,7 @@
 namespace Activitypub;
 
 use WP_Post;
+use Activitypub\Http;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
@@ -25,6 +26,8 @@ class Activity_Dispatcher {
 	public static function init() {
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity' ), 10, 2 );
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity_or_announce' ), 10, 2 );
+
+		\add_action( 'activitypub_send_accept_activity', array( self::class, 'send_accept_activity' ), 10, 3 );
 	}
 
 	/**
@@ -121,5 +124,18 @@ class Activity_Dispatcher {
 		foreach ( $inboxes as $inbox ) {
 			safe_remote_post( $inbox, $json, $wp_post->post_author );
 		}
+	}
+
+	/**
+	 * Send Accept Activities.
+	 *
+	 * @param string $inbox    The inbox url.
+	 * @param array  $activity The Activity Array
+	 * @param int    $user_id  The user id.
+	 *
+	 * @return void
+	 */
+	public static function send_accept_activity( $inbox, $activity, $user_id ) {
+		Http::post( $inbox, $activity, $user_id );
 	}
 }
