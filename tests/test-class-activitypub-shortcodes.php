@@ -3,15 +3,8 @@ use Activitypub\Shortcodes;
 
 class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 
-	public function setUp() {
-		Shortcodes::register();
-	}
-
-	public function tearDown() {
-		Shortcodes::unregister();
-	}
-
 	public function test_content() {
+		Shortcodes::register();
 		global $post;
 
 		$post_id = -99; // negative ID, to avoid clash with a valid post
@@ -37,9 +30,11 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 		wp_reset_postdata();
 
 		$this->assertEquals( '<p>hallo</p>', $content );
+		Shortcodes::unregister();
 	}
 
 	public function test_password_protected_content() {
+		Shortcodes::register();
 		global $post;
 
 		$post_id = -98; // negative ID, to avoid clash with a valid post
@@ -65,5 +60,6 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 		wp_reset_postdata();
 
 		$this->assertEquals( '', $content );
+		Shortcodes::unregister();
 	}
 }
