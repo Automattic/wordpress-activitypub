@@ -296,7 +296,7 @@ class Followers {
 
 		// schedule Accept Activity so that we can get sure it will be sent...
 		\wp_schedule_single_event(
-			\strtotime( '+60 seconds' ),
+			\strtotime( '+10 seconds' ),
 			'activitypub_send_accept_activity',
 			array(
 				$inbox,
