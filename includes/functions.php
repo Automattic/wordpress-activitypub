@@ -87,7 +87,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	$metadata = \json_decode( $metadata, true );
 
 	if ( ! $metadata ) {
-		$metadata = new WP_Error( 'activitypub_invalid_json', \__('No valid JSON data', 'activitypub' ), array( 'status' => 400, 'actor' => $actor ) );
+		$metadata = new WP_Error( 'activitypub_invalid_json', \__( 'No valid JSON data', 'activitypub' ), array( 'status' => 400, 'actor' => $actor ) );
 		return $metadata;
 	}
 
