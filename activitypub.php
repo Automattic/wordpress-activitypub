@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/pfefferle/wordpress-activitypub/
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 1.0.5
+ * Version: 1.0.7
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -15,6 +15,7 @@
 
 namespace Activitypub;
 
+use function Activitypub\is_blog_public;
 use function Activitypub\site_supports_blocks;
 
 require_once __DIR__ . '/includes/compat.php';
@@ -52,7 +53,7 @@ function rest_init() {
 	Rest\Collection::init();
 
 	// load NodeInfo endpoints only if blog is public
-	if ( \get_option( 'blog_public', 1 ) ) {
+	if ( is_blog_public() ) {
 		Rest\NodeInfo::init();
 	}
 }

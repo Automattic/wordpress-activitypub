@@ -79,7 +79,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	}
 
 	$short_timeout = function() {
-		return 3;
+		return 10;
 	};
 	add_filter( 'activitypub_remote_get_timeout', $short_timeout );
 	$response = Http::get( $actor );
@@ -714,4 +714,13 @@ function site_supports_blocks() {
  */
 function is_json( $data ) {
 	return \is_array( \json_decode( $data, true ) ) ? true : false;
+}
+
+/**
+ * Check if a blog is public based on the `blog_public` option
+ *
+ * @return bollean True if public, false if not
+ */
+function is_blog_public() {
+	return (bool) apply_filters( 'activitypub_is_blog_public', \get_option( 'blog_public', 1 ) );
 }
