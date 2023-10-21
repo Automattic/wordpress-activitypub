@@ -74,6 +74,10 @@ class Server {
 	 * @return mixed|WP_Error The response, error, or modified response.
 	 */
 	public static function authorize_activitypub_requests( $response, $handler, $request ) {
+		if ( 'HEAD' === $request->get_method() ) {
+			return $response;
+		}
+
 		$route = $request->get_route();
 
 		// check if it is an activitypub request and exclude webfinger and nodeinfo endpoints
