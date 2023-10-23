@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
 Tested up to: 6.3
-Stable tag: 1.0.7
+Stable tag: 1.0.8
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -104,6 +104,15 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 == Changelog ==
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
+
+= 1.0.8 =
+
+* Fixed: blocking of HEAD requests
+* Fixed: PHP fatal error
+* Fixed: several typos
+* Improved: loading of shortcodes
+* Updated: caching of followers
+* Updated: Application-User is no longer "indexable"
 
 = 1.0.7 =
 

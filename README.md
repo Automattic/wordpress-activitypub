@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
 **Tested up to:** 6.3  
-**Stable tag:** 1.0.7  
+**Stable tag:** 1.0.8  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -104,6 +104,15 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 ## Changelog ##
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
+
+### 1.0.8 ###
+
+* Fixed: blocking of HEAD requests
+* Fixed: PHP fatal error
+* Fixed: several typos
+* Improved: loading of shortcodes
+* Updated: caching of followers
+* Updated: Application-User is no longer "indexable"
 
 ### 1.0.7 ###
 
@@ -210,7 +219,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Use shortcodes instead of custom templates, to setup the Activity Post-Content ([#250](https://github.com/pfefferle/wordpress-activitypub/pull/250)) props [@toolstack](https://github.com/toolstack)
 * Remove custom REST Server, because the needed changes are now merged into Core.
 * Fix hashtags ([#261](https://github.com/pfefferle/wordpress-activitypub/pull/261)) props [@akirk](https://github.com/akirk)
-* Change priorities, to maybe fix the hashtag issue
+* Change priorites, to maybe fix the hashtag issue
 
 ### 0.15.0 ###
 
