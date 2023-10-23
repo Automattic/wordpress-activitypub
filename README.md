@@ -110,6 +110,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Fixed: blocking of HEAD requests
 * Fixed: PHP fatal error
 * Fixed: several typos
+* Fixed: error codes
 * Improved: loading of shortcodes
 * Updated: caching of followers
 * Updated: Application-User is no longer "indexable"
