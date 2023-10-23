@@ -259,7 +259,7 @@ class Signature {
 		}
 
 		if ( ! isset( $headers['signature'] ) ) {
-			return new WP_Error( 'activitypub_signature', __( 'Request not signed', 'activitypub' ), array( 'status' => 403 ) );
+			return new WP_Error( 'activitypub_signature', __( 'Request not signed', 'activitypub' ), array( 'status' => 401 ) );
 		}
 
 		if ( array_key_exists( 'signature', $headers ) ) {
@@ -269,7 +269,7 @@ class Signature {
 		}
 
 		if ( ! isset( $signature_block ) || ! $signature_block ) {
-			return new WP_Error( 'activitypub_signature', __( 'Incompatible request signature. keyId and signature are required', 'activitypub' ), array( 'status' => 403 ) );
+			return new WP_Error( 'activitypub_signature', __( 'Incompatible request signature. keyId and signature are required', 'activitypub' ), array( 'status' => 401 ) );
 		}
 
 		$signed_headers = $signature_block['headers'];
@@ -279,12 +279,12 @@ class Signature {
 
 		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
 		if ( ! $signed_data ) {
-			return new WP_Error( 'activitypub_signature', __( 'Signed request date outside acceptable time window', 'activitypub' ), array( 'status' => 403 ) );
+			return new WP_Error( 'activitypub_signature', __( 'Signed request date outside acceptable time window', 'activitypub' ), array( 'status' => 401 ) );
 		}
 
 		$algorithm = self::get_signature_algorithm( $signature_block );
 		if ( ! $algorithm ) {
-			return new WP_Error( 'activitypub_signature', __( 'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)', 'activitypub' ), array( 'status' => 403 ) );
+			return new WP_Error( 'activitypub_signature', __( 'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)', 'activitypub' ), array( 'status' => 401 ) );
 		}
 
 		if ( \in_array( 'digest', $signed_headers, true ) && isset( $body ) ) {
@@ -300,7 +300,7 @@ class Signature {
 			}
 
 			if ( \base64_encode( \hash( $hashalg, $body, true ) ) !== $digest[1] ) { // phpcs:ignore
-				return new WP_Error( 'activitypub_signature', __( 'Invalid Digest header', 'activitypub' ), array( 'status' => 403 ) );
+				return new WP_Error( 'activitypub_signature', __( 'Invalid Digest header', 'activitypub' ), array( 'status' => 401 ) );
 			}
 		}
 
@@ -313,7 +313,7 @@ class Signature {
 		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
 
 		if ( ! $verified ) {
-			return new WP_Error( 'activitypub_signature', __( 'Invalid signature', 'activitypub' ), array( 'status' => 403 ) );
+			return new WP_Error( 'activitypub_signature', __( 'Invalid signature', 'activitypub' ), array( 'status' => 401 ) );
 		}
 		return $verified;
 	}
@@ -333,7 +333,7 @@ class Signature {
 		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
 			return \rtrim( $actor['publicKey']['publicKeyPem'] ); // phpcs:ignore
 		}
-		return new WP_Error( 'activitypub_no_remote_key_found', __( 'No Public-Key found', 'activitypub' ), array( 'status' => 403 ) );
+		return new WP_Error( 'activitypub_no_remote_key_found', __( 'No Public-Key found', 'activitypub' ), array( 'status' => 401 ) );
 	}
 
 	/**
