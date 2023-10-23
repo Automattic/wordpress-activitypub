@@ -103,10 +103,10 @@ class Followers {
 			$data['followers']
 		);
 
-		$response = new WP_REST_Response( $json, 200 );
-		$response->header( 'Content-Type', 'application/activity+json' );
+		$rest_response = new WP_REST_Response( $json, 200 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
 
-		return $response;
+		return $rest_response;
 	}
 
 	/**

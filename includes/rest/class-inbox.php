@@ -109,11 +109,10 @@ class Inbox {
 		 */
 		\do_action( 'activitypub_inbox_post' );
 
-		$response = new WP_REST_Response( $json, 200 );
+		$rest_response = new WP_REST_Response( $json, 200 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
 
-		$response->header( 'Content-Type', 'application/activity+json' );
-
-		return $response;
+		return $rest_response;
 	}
 
 	/**
@@ -138,7 +137,10 @@ class Inbox {
 		\do_action( 'activitypub_inbox', $data, $user->get__id(), $type );
 		\do_action( "activitypub_inbox_{$type}", $data, $user->get__id() );
 
-		return new WP_REST_Response( array(), 202 );
+		$rest_response = new WP_REST_Response( array(), 202 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+
+		return $rest_response;
 	}
 
 	/**
@@ -183,7 +185,10 @@ class Inbox {
 			\do_action( "activitypub_inbox_{$type}", $data, $user->ID );
 		}
 
-		return new WP_REST_Response( array(), 202 );
+		$rest_response = new WP_REST_Response( array(), 202 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+
+		return $rest_response;
 	}
 
 	/**

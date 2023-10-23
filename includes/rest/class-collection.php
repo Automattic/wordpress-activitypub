@@ -117,7 +117,10 @@ class Collection {
 			);
 		}
 
-		return new WP_REST_Response( $response, 200 );
+		$rest_response = new WP_REST_Response( $response, 200 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+
+		return $rest_response;
 	}
 
 	/**
@@ -168,7 +171,10 @@ class Collection {
 			$response['orderedItems'][] = Post::transform( $post )->to_object()->to_array();
 		}
 
-		return new WP_REST_Response( $response, 200 );
+		$rest_response = new WP_REST_Response( $response, 200 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+
+		return $rest_response;
 	}
 
 	/**
@@ -192,7 +198,10 @@ class Collection {
 			$response['orderedItems'][] = $user->get_url();
 		}
 
-		return new WP_REST_Response( $response, 200 );
+		$rest_response = new WP_REST_Response( $response, 200 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+
+		return $rest_response;
 	}
 
 	/**
