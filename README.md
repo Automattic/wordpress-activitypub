@@ -210,7 +210,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Use shortcodes instead of custom templates, to setup the Activity Post-Content ([#250](https://github.com/pfefferle/wordpress-activitypub/pull/250)) props [@toolstack](https://github.com/toolstack)
 * Remove custom REST Server, because the needed changes are now merged into Core.
 * Fix hashtags ([#261](https://github.com/pfefferle/wordpress-activitypub/pull/261)) props [@akirk](https://github.com/akirk)
-* Change priorites, to maybe fix the hashtag issue
+* Change priorities, to maybe fix the hashtag issue
 
 ### 0.15.0 ###
 
