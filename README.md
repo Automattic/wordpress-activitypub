@@ -115,6 +115,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Updated: caching of followers
 * Updated: Application-User is no longer "indexable"
 * Updated: more consistent usage of the `application/activity+json` Content-Type
+* Removed: featured tags endpoint
 
 ### 1.0.7 ###
 
