@@ -416,7 +416,7 @@ class Inbox {
 				$recipient_items = array_merge( $recipient_items, $recipient );
 			}
 
-			if ( array_key_exists( $i, $data['object'] ) ) {
+			if ( is_array( $data['object'] ) && array_key_exists( $i, $data['object'] ) ) {
 				if ( is_array( $data['object'][ $i ] ) ) {
 					$recipient = $data['object'][ $i ];
 				} else {
