@@ -160,7 +160,7 @@ class Inbox {
 				'rest_invalid_param',
 				\__( 'No recipients found', 'activitypub' ),
 				array(
-					'status' => 404,
+					'status' => 400,
 					'params' => array(
 						'to' => \__( 'Please check/validate "to" field', 'activitypub' ),
 						'bto' => \__( 'Please check/validate "bto" field', 'activitypub' ),
