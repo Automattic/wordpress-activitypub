@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub\Rest;
 
+use WP_REST_Response;
 use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\is_single_user;
