@@ -4,6 +4,7 @@ namespace Activitypub;
 use WP_Error;
 use DateTime;
 use DateTimeZone;
+use WP_REST_Request;
 use Activitypub\Collection\Users;
 
 /**
@@ -226,7 +227,7 @@ class Signature {
 	/**
 	 * Verifies the http signatures
 	 *
-	 * @param WP_REQUEST|array $request The request object or $_SERVER array.
+	 * @param WP_REST_Request|array $request The request object or $_SERVER array.
 	 *
 	 * @return mixed A boolean or WP_Error.
 	 */
@@ -323,17 +324,25 @@ class Signature {
 	 *
 	 * @param string $key_id The URL to the public key.
 	 *
-	 * @return WP_Error|string The public key.
+	 * @return WP_Error|string The public key or WP_Error.
 	 */
 	public static function get_remote_key( $key_id ) { // phpcs:ignore
 		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) ); // phpcs:ignore
 		if ( \is_wp_error( $actor ) ) {
-			return new WP_Error( 'activitypub_no_remote_profile_found', __( 'No Profile found or Profile not accessible', 'activitypub' ), array( 'status' => 401 ) );
+			return new WP_Error(
+				'activitypub_no_remote_profile_found',
+				__( 'No Profile found or Profile not accessible', 'activitypub' ),
+				array( 'status' => 401 )
+			);
 		}
 		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
 			return \rtrim( $actor['publicKey']['publicKeyPem'] ); // phpcs:ignore
 		}
-		return new WP_Error( 'activitypub_no_remote_key_found', __( 'No Public-Key found', 'activitypub' ), array( 'status' => 401 ) );
+		return new WP_Error(
+			'activitypub_no_remote_key_found',
+			__( 'No Public-Key found', 'activitypub' ),
+			array( 'status' => 401 )
+		);
 	}
 
 	/**

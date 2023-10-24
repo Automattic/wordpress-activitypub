@@ -42,7 +42,7 @@ function get_webfinger_resource( $user_id ) {
  * @param string $actor  The Actor URL.
  * @param bool   $cached If the result should be cached.
  *
- * @return array The Actor profile as array
+ * @return array|WP_Error The Actor profile as array or WP_Error on failure.
  */
 function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	$pre = apply_filters( 'pre_get_remote_metadata_by_actor', false, $actor );
