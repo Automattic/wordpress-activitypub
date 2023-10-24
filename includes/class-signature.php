@@ -328,7 +328,7 @@ class Signature {
 	public static function get_remote_key( $key_id ) { // phpcs:ignore
 		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) ); // phpcs:ignore
 		if ( \is_wp_error( $actor ) ) {
-			return $actor;
+			return new WP_Error( 'activitypub_no_remote_profile_found', __( 'No Profile found or Profile not accessible', 'activitypub' ), array( 'status' => 401 ) );
 		}
 		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
 			return \rtrim( $actor['publicKey']['publicKeyPem'] ); // phpcs:ignore
