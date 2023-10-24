@@ -105,7 +105,7 @@ class Collection {
 			'@context'   => Activity::CONTEXT,
 			'id'         => get_rest_url_by_path( sprintf( 'users/%d/collections/tags', $user->get__id() ) ),
 			'type'       => 'Collection',
-			'totalItems' => count( $tags ),
+			'totalItems' => is_countable( $tags ) ? count( $tags ) : 0,
 			'items'      => array(),
 		);
 
@@ -163,7 +163,7 @@ class Collection {
 			'@context'     => Activity::CONTEXT,
 			'id'           => get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $user_id ) ),
 			'type'         => 'OrderedCollection',
-			'totalItems'   => count( $posts ),
+			'totalItems'   => is_countable( $posts ) ? count( $posts ) : 0,
 			'orderedItems' => array(),
 		);
 

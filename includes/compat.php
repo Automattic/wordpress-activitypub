@@ -35,3 +35,15 @@ if ( ! function_exists( 'get_self_link' ) ) {
 		return esc_url( apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . $path ) ) );
 	}
 }
+
+if ( ! function_exists( 'is_countable' ) ) {
+	/**
+	 * Polyfill for `is_countable()` function added in PHP 7.3.
+	 *
+	 * @param mixed $value The value to check.
+	 * @return bool True if `$value` is countable, otherwise false.
+	 */
+	function is_countable( $value ) {
+			return is_array( $value ) || $value instanceof Countable;
+	}
+}
