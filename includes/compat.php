@@ -44,6 +44,6 @@ if ( ! function_exists( 'is_countable' ) ) {
 	 * @return bool True if `$value` is countable, otherwise false.
 	 */
 	function is_countable( $value ) {
-			return is_array( $value ) || $value instanceof Countable;
+			return is_array( $value ) || $value instanceof \Countable;
 	}
 }
