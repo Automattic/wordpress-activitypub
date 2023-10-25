@@ -143,15 +143,96 @@ class Post {
 	}
 
 	/**
-	 * Returns the Image Attachments for this Post, parsed from blocks.
-	 * @param int $max_images The maximum number of images to return.
-	 * @param array $image_ids The image IDs to append new IDs to.
+	 * Generates all Media Attachments for a Post.
 	 *
-	 * @return array The image IDs.
+	 * @return array The Attachments.
 	 */
-	protected function get_block_image_ids( $max_images, $image_ids = [] ) {
-		$blocks = \parse_blocks( $this->wp_post->post_content );
-		return self::get_image_ids_from_blocks( $blocks, $image_ids, $max_images );
+	protected function get_attachments() {
+		$max_images = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
+
+		if ( site_supports_blocks() && \has_blocks( $this->wp_post->post_content ) ) {
+			return $this->get_block_attachments( $max_images );
+		}
+
+		return $this->get_classic_editor_images( $max_images );
+	}
+
+	/**
+	 * Get media attachments from blocks. They will be formatted as ActivityPub attachments, not as WP attachments.
+	 *
+	 * @param int $max_images The maximum number of attachments to return.
+	 *
+	 * @return array The attachments.
+	 */
+	protected function get_block_attachments( $max_images ) {
+		// max images can't be negative or zero
+		if ( $max_images <= 0 ) {
+			return array();
+		}
+
+		$id = $this->wp_post->ID;
+
+		$image_ids = array();
+
+		// list post thumbnail first if this post has one
+		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
+			$image_ids[] = \get_post_thumbnail_id( $id );
+		}
+
+		if ( $max_images > 0 ) {
+			$blocks = \parse_blocks( $this->wp_post->post_content );
+			$image_ids = self::get_media_ids_from_blocks( $blocks, $image_ids, $max_images );
+		}
+		$image_ids = \array_unique( $image_ids );
+
+		return array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $image_ids );
+	}
+
+	/**
+	 * Get image attachments from the classic editor.
+	 * Note that audio/video attachments are only supported in the block editor.
+	 *
+	 * @param int $max_images The maximum number of images to return.
+	 *
+	 * @return array The attachments.
+	 */
+	protected function get_classic_editor_images( $max_images ) {
+		// max images can't be negative or zero
+		if ( $max_images <= 0 ) {
+			return array();
+		}
+
+		$id = $this->wp_post->ID;
+
+		$image_ids = array();
+
+		// list post thumbnail first if this post has one
+		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
+			$image_ids[] = \get_post_thumbnail_id( $id );
+			--$max_images;
+		}
+
+		if ( $max_images > 0 ) {
+			$query = new \WP_Query(
+				array(
+					'post_parent' => $id,
+					'post_status' => 'inherit',
+					'post_type' => 'attachment',
+					'post_mime_type' => 'image',
+					'order' => 'ASC',
+					'orderby' => 'menu_order ID',
+					'posts_per_page' => $max_images,
+				)
+			);
+			foreach ( $query->get_posts() as $attachment ) {
+				if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
+					$image_ids[] = $attachment->ID;
+				}
+			}
+		}
+		$image_ids = \array_unique( $image_ids );
+
+		return array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $image_ids );
 	}
 
 	/**
@@ -162,16 +243,20 @@ class Post {
 	 *
 	 * @return array The image IDs.
 	 */
-	protected static function get_image_ids_from_blocks( $blocks, $image_ids, $max_images ) {
+	protected static function get_media_ids_from_blocks( $blocks, $image_ids, $max_images ) {
+
 		foreach ( $blocks as $block ) {
 			// recurse into inner blocks
 			if ( ! empty( $block['innerBlocks'] ) ) {
-				$image_ids = self::get_image_ids_from_blocks( $block['innerBlocks'], $image_ids, $max_images );
+				$image_ids = self::get_media_ids_from_blocks( $block['innerBlocks'], $image_ids, $max_images );
 			}
 
 			switch ( $block['blockName'] ) {
 				case 'core/image':
 				case 'core/cover':
+				case 'core/audio':
+				case 'core/video':
+				case 'videopress/video':
 					if ( ! empty( $block['attrs']['id'] ) ) {
 						$image_ids[] = $block['attrs']['id'];
 					}
@@ -191,105 +276,76 @@ class Post {
 					}
 					break;
 			}
-
-			// we could be at or over max, stop unneeded work
-			if ( count( $image_ids ) >= $max_images ) {
-				break;
-			}
 		}
 
 		// still need to slice it because one gallery could knock us over the limit
-		return \array_slice( $image_ids, 0, $max_images );
+		return array_slice( $image_ids, 0, $max_images );
 	}
 
 	/**
-	 * Generates all Image Attachments for a Post.
+	 * Converts a WordPress Attachment to an ActivityPub Attachment.
 	 *
-	 * @return array The Image Attachments.
+	 * @param int $id The Attachment ID.
+	 *
+	 * @return array The ActivityPub Attachment.
 	 */
-	protected function get_attachments() {
-		$max_images = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
+	public static function wp_attachment_to_activity_attachment( $id ) {
+		$attachment = array();
+		$mime_type = \get_post_mime_type( $id );
+		$mime_type_parts = \explode( '/', $mime_type );
+		// switching on image/audio/video
+		switch ( $mime_type_parts[0] ) {
+			case 'image':
+				$image_size = 'full';
 
-		$images = array();
-
-		// max images can't be negative or zero
-		if ( $max_images <= 0 ) {
-			return $images;
-		}
-
-		$id = $this->wp_post->ID;
-
-		$image_ids = array();
-
-		// list post thumbnail first if this post has one
-		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
-			$image_ids[] = \get_post_thumbnail_id( $id );
-			--$max_images;
-		}
-
-		if ( $max_images > 0 ) {
-			// first try to get images that are actually in the post content
-			if ( site_supports_blocks() && \has_blocks( $this->wp_post->post_content ) ) {
-				$block_image_ids = $this->get_block_image_ids( $max_images, $image_ids );
-				$image_ids = \array_merge( $image_ids, $block_image_ids );
-			} else {
-				// fallback to images attached to the post
-				$query = new \WP_Query(
-					array(
-						'post_parent' => $id,
-						'post_status' => 'inherit',
-						'post_type' => 'attachment',
-						'post_mime_type' => 'image',
-						'order' => 'ASC',
-						'orderby' => 'menu_order ID',
-						'posts_per_page' => $max_images,
-					)
+				/**
+				 * Filter the image URL returned for each post.
+				 *
+				 * @param array|false $thumbnail The image URL, or false if no image is available.
+				 * @param int         $id        The attachment ID.
+				 * @param string      $image_size The image size to retrieve. Set to 'full' by default.
+				 */
+				$thumbnail = apply_filters(
+					'activitypub_get_image',
+					self::get_image( $id, $image_size ),
+					$id,
+					$image_size
 				);
-				foreach ( $query->get_posts() as $attachment ) {
-					if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
-						$image_ids[] = $attachment->ID;
+
+				if ( $thumbnail ) {
+					$alt   = \get_post_meta( $id, '_wp_attachment_image_alt', true );
+					$image = array(
+						'type'      => 'Image',
+						'url'       => $thumbnail[0],
+						'mediaType' => $mime_type,
+					);
+
+					if ( $alt ) {
+						$image['name'] = $alt;
 					}
 				}
-			}
-		}
+				$attachment = $image;
+				break;
 
-		$image_ids = \array_unique( $image_ids );
-
-		// get URLs for each image
-		foreach ( $image_ids as $id ) {
-			$image_size = 'full';
-
-			/**
-			 * Filter the image URL returned for each post.
-			 *
-			 * @param array|false $thumbnail The image URL, or false if no image is available.
-			 * @param int         $id        The attachment ID.
-			 * @param string      $image_size The image size to retrieve. Set to 'full' by default.
-			 */
-			$thumbnail = apply_filters(
-				'activitypub_get_image',
-				$this->get_image( $id, $image_size ),
-				$id,
-				$image_size
-			);
-
-			if ( $thumbnail ) {
-				$mimetype = \get_post_mime_type( $id );
-				$alt      = \get_post_meta( $id, '_wp_attachment_image_alt', true );
-				$image    = array(
-					'type'      => 'Image',
-					'url'       => $thumbnail[0],
-					'mediaType' => $mimetype,
+			case 'audio':
+			case 'video':
+				$attachment = array(
+					'type'      => 'Document',
+					'mediaType' => $mime_type,
+					'url'       => \wp_get_attachment_url( $id ),
+					'name'      => \get_the_title( $id ),
 				);
-
-				if ( $alt ) {
-					$image['name'] = $alt;
+				$meta = wp_get_attachment_metadata( $id );
+				// height and width for videos
+				if ( isset( $meta['width'] ) && isset( $meta['height'] ) ) {
+					$attachment['width'] = $meta['width'];
+					$attachment['height'] = $meta['height'];
 				}
-				$images[] = $image;
-			}
+				// @todo: add `icon` support for audio/video attachments. Maybe use post thumbnail?
+				break;
 		}
 
-		return $images;
+		return \apply_filters( 'activitypub_attachment', $attachment, $id );
 	}
 
 	/**
@@ -300,7 +356,7 @@ class Post {
 	 *
 	 * @return array|false Array of image data, or boolean false if no image is available.
 	 */
-	protected function get_image( $id, $image_size = 'full' ) {
+	protected static function get_image( $id, $image_size = 'full' ) {
 		/**
 		 * Hook into the image retrieval process. Before image retrieval.
 		 *
@@ -309,7 +365,7 @@ class Post {
 		 */
 		do_action( 'activitypub_get_image_pre', $id, $image_size );
 
-		$thumbnail = \wp_get_attachment_image_src( $id, $image_size );
+		$image = \wp_get_attachment_image_src( $id, $image_size );
 
 		/**
 		 * Hook into the image retrieval process. After image retrieval.
@@ -319,7 +375,7 @@ class Post {
 		 */
 		do_action( 'activitypub_get_image_post', $id, $image_size );
 
-		return $thumbnail;
+		return $image;
 	}
 
 	/**
