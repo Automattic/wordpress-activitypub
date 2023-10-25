@@ -335,6 +335,8 @@ class Post {
 			return \ucfirst( \get_option( 'activitypub_object_type', 'note' ) );
 		}
 
+		// Default to Article.
+		$object_type = 'Article';
 		$post_type = \get_post_type( $this->wp_post );
 		switch ( $post_type ) {
 			case 'post':

@@ -88,7 +88,7 @@ class Nodeinfo {
 			)
 		);
 
-		if ( is_array( $users ) ) {
+		if ( is_countable( $users ) ) {
 			$users = count( $users );
 		} else {
 			$users = 1;
@@ -145,7 +145,7 @@ class Nodeinfo {
 			)
 		);
 
-		if ( is_array( $users ) ) {
+		if ( is_countable( $users ) ) {
 			$users = count( $users );
 		} else {
 			$users = 1;
