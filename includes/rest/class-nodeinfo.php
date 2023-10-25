@@ -131,18 +131,6 @@ class Nodeinfo {
 			'version' => \get_bloginfo( 'version' ),
 		);
 
-		$users = \get_users(
-			array(
-				'capability__in' => array( 'publish_posts' ),
-			)
-		);
-
-		if ( is_array( $users ) ) {
-			$users = count( $users );
-		} else {
-			$users = 1;
-		}
-
 		$posts = \wp_count_posts();
 		$comments = \wp_count_comments();
 

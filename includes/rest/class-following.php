@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub\Rest;
 
+use WP_REST_Response;
 use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\is_single_user;
@@ -74,7 +75,7 @@ class Following {
 
 		$items = apply_filters( 'activitypub_rest_following', array(), $user ); // phpcs:ignore
 
-		$json->totalItems = count( $items ); // phpcs:ignore
+		$json->totalItems = is_countable( $items ) ? count( $items ) : 0; // phpcs:ignore
 		$json->orderedItems = $items; // phpcs:ignore
 
 		$json->first = $json->partOf; // phpcs:ignore
