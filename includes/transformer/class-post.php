@@ -148,44 +148,46 @@ class Post {
 	 * @return array The Attachments.
 	 */
 	protected function get_attachments() {
-		$max_images = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
+		// Once upon a time we only supported images, but we now support audio/video as well.
+		// We maintain the image-centric naming for backwards compatibility.
+		$max_media = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
 
 		if ( site_supports_blocks() && \has_blocks( $this->wp_post->post_content ) ) {
-			return $this->get_block_attachments( $max_images );
+			return $this->get_block_attachments( $max_media );
 		}
 
-		return $this->get_classic_editor_images( $max_images );
+		return $this->get_classic_editor_images( $max_media );
 	}
 
 	/**
 	 * Get media attachments from blocks. They will be formatted as ActivityPub attachments, not as WP attachments.
 	 *
-	 * @param int $max_images The maximum number of attachments to return.
+	 * @param int $max_media The maximum number of attachments to return.
 	 *
 	 * @return array The attachments.
 	 */
-	protected function get_block_attachments( $max_images ) {
-		// max images can't be negative or zero
-		if ( $max_images <= 0 ) {
+	protected function get_block_attachments( $max_media ) {
+		// max media can't be negative or zero
+		if ( $max_media <= 0 ) {
 			return array();
 		}
 
 		$id = $this->wp_post->ID;
 
-		$image_ids = array();
+		$media_ids = array();
 
 		// list post thumbnail first if this post has one
 		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
-			$image_ids[] = \get_post_thumbnail_id( $id );
+			$media_ids[] = \get_post_thumbnail_id( $id );
 		}
 
-		if ( $max_images > 0 ) {
+		if ( $max_media > 0 ) {
 			$blocks = \parse_blocks( $this->wp_post->post_content );
-			$image_ids = self::get_media_ids_from_blocks( $blocks, $image_ids, $max_images );
+			$media_ids = self::get_media_ids_from_blocks( $blocks, $media_ids, $max_media );
 		}
-		$image_ids = \array_unique( $image_ids );
+		$media_ids = \array_unique( $media_ids );
 
-		return array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $image_ids );
+		return array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media_ids );
 	}
 
 	/**
@@ -236,19 +238,19 @@ class Post {
 	}
 
 	/**
-	 * Recursively get image IDs from blocks.
-	 * @param array $blocks The blocks to search for image IDs
-	 * @param array $image_ids The image IDs to append new IDs to
-	 * @param int $max_images The maximum number of images to return.
+	 * Recursively get media IDs from blocks.
+	 * @param array $blocks The blocks to search for media IDs
+	 * @param array $media_ids The media IDs to append new IDs to
+	 * @param int $max_media The maximum number of media to return.
 	 *
 	 * @return array The image IDs.
 	 */
-	protected static function get_media_ids_from_blocks( $blocks, $image_ids, $max_images ) {
+	protected static function get_media_ids_from_blocks( $blocks, $media_ids, $max_media ) {
 
 		foreach ( $blocks as $block ) {
 			// recurse into inner blocks
 			if ( ! empty( $block['innerBlocks'] ) ) {
-				$image_ids = self::get_media_ids_from_blocks( $block['innerBlocks'], $image_ids, $max_images );
+				$media_ids = self::get_media_ids_from_blocks( $block['innerBlocks'], $media_ids, $max_media );
 			}
 
 			switch ( $block['blockName'] ) {
@@ -258,28 +260,33 @@ class Post {
 				case 'core/video':
 				case 'videopress/video':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$image_ids[] = $block['attrs']['id'];
+						$media_ids[] = $block['attrs']['id'];
 					}
 					break;
 				case 'jetpack/slideshow':
 				case 'jetpack/tiled-gallery':
 					if ( ! empty( $block['attrs']['ids'] ) ) {
-						$image_ids = array_merge( $image_ids, $block['attrs']['ids'] );
+						$media_ids = array_merge( $media_ids, $block['attrs']['ids'] );
 					}
 					break;
 				case 'jetpack/image-compare':
 					if ( ! empty( $block['attrs']['beforeImageId'] ) ) {
-						$image_ids[] = $block['attrs']['beforeImageId'];
+						$media_ids[] = $block['attrs']['beforeImageId'];
 					}
 					if ( ! empty( $block['attrs']['afterImageId'] ) ) {
-						$image_ids[] = $block['attrs']['afterImageId'];
+						$media_ids[] = $block['attrs']['afterImageId'];
 					}
 					break;
+			}
+
+			// stop doing unneeded work
+			if ( count( $media_ids ) >= $max_media ) {
+				break;
 			}
 		}
 
 		// still need to slice it because one gallery could knock us over the limit
-		return array_slice( $image_ids, 0, $max_images );
+		return array_slice( $media_ids, 0, $max_media );
 	}
 
 	/**
