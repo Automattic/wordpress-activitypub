@@ -9,76 +9,26 @@ namespace Activitypub\Peer;
 class Followers {
 
 	public static function get_followers( $author_id ) {
-		$followers = \get_user_option( 'activitypub_followers', $author_id );
+		_deprecated_function( __METHOD__, '1.0.0', '\Activitypub\Collection\Followers::get_followers' );
 
-		if ( ! $followers ) {
-			return array();
-		}
-
-		foreach ( $followers as $key => $follower ) {
-			if (
-				\is_array( $follower ) &&
-				isset( $follower['type'] ) &&
-				'Person' === $follower['type'] &&
-				isset( $follower['id'] ) &&
-				false !== \filter_var( $follower['id'], \FILTER_VALIDATE_URL )
-			) {
-				$followers[ $key ] = $follower['id'];
-			}
-		}
-
-		return $followers;
+		return \Activitypub\Collection\Followers::get_followers( $author_id );
 	}
 
 	public static function count_followers( $author_id ) {
-		$followers = self::get_followers( $author_id );
+		_deprecated_function( __METHOD__, '1.0.0', '\Activitypub\Collection\Followers::count_followers' );
 
-		return \count( $followers );
+		return \Activitypub\Collection\Followers::count_followers( $author_id );
 	}
 
 	public static function add_follower( $actor, $author_id ) {
-		$followers = \get_user_option( 'activitypub_followers', $author_id );
+		_deprecated_function( __METHOD__, '1.0.0', '\Activitypub\Collection\Followers::add_follower' );
 
-		if ( ! \is_string( $actor ) ) {
-			if (
-				\is_array( $actor ) &&
-				isset( $actor['type'] ) &&
-				'Person' === $actor['type'] &&
-				isset( $actor['id'] ) &&
-				false !== \filter_var( $actor['id'], \FILTER_VALIDATE_URL )
-			) {
-				$actor = $actor['id'];
-			}
-
-			return new \WP_Error(
-				'invalid_actor_object',
-				\__( 'Unknown Actor schema', 'activitypub' ),
-				array(
-					'status' => 404,
-				)
-			);
-		}
-
-		if ( ! \is_array( $followers ) ) {
-			$followers = array( $actor );
-		} else {
-			$followers[] = $actor;
-		}
-
-		$followers = \array_unique( $followers );
-
-		\update_user_meta( $author_id, 'activitypub_followers', $followers );
+		return \Activitypub\Collection\Followers::add_follower( $author_id, $actor );
 	}
 
 	public static function remove_follower( $actor, $author_id ) {
-		$followers = \get_user_option( 'activitypub_followers', $author_id );
+		_deprecated_function( __METHOD__, '1.0.0', '\Activitypub\Collection\Followers::remove_follower' );
 
-		foreach ( $followers as $key => $value ) {
-			if ( $value === $actor ) {
-				unset( $followers[ $key ] );
-			}
-		}
-
-		\update_user_meta( $author_id, 'activitypub_followers', $followers );
+		return \Activitypub\Collection\Followers::remove_follower( $author_id, $actor );
 	}
 }

@@ -11,10 +11,14 @@ class Admin {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'admin_menu', array( '\Activitypub\Admin', 'admin_menu' ) );
-		\add_action( 'admin_init', array( '\Activitypub\Admin', 'register_settings' ) );
-		\add_action( 'show_user_profile', array( '\Activitypub\Admin', 'add_fediverse_profile' ) );
-		\add_action( 'admin_enqueue_scripts', array( '\Activitypub\Admin', 'enqueue_scripts' ) );
+		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
+		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
+		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
+		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
+
+		if ( ! is_user_disabled( get_current_user_id() ) ) {
+			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
+		}
 	}
 
 	/**
@@ -26,14 +30,17 @@ class Admin {
 			'ActivityPub',
 			'manage_options',
 			'activitypub',
-			array( '\Activitypub\Admin', 'settings_page' )
+			array( self::class, 'settings_page' )
 		);
 
-		\add_action( 'load-' . $settings_page, array( '\Activitypub\Admin', 'add_settings_help_tab' ) );
+		\add_action( 'load-' . $settings_page, array( self::class, 'add_settings_help_tab' ) );
 
-		$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers (Fediverse)', 'activitypub' ), 'read', 'activitypub-followers-list', array( '\Activitypub\Admin', 'followers_list_page' ) );
+		// user has to be able to publish posts
+		if ( ! is_user_disabled( get_current_user_id() ) ) {
+			$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
 
-		\add_action( 'load-' . $followers_list_page, array( '\Activitypub\Admin', 'add_followers_list_help_tab' ) );
+			\add_action( 'load-' . $followers_list_page, array( self::class, 'add_followers_list_help_tab' ) );
+		}
 	}
 
 	/**
@@ -50,9 +57,10 @@ class Admin {
 
 		switch ( $tab ) {
 			case 'settings':
-				\Activitypub\Model\Post::upgrade_post_content_template();
-
-				\load_template( \dirname( __FILE__ ) . '/../templates/settings.php' );
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php' );
+				break;
+			case 'followers':
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-user-followers-list.php' );
 				break;
 			case 'welcome':
 			default:
@@ -60,7 +68,7 @@ class Admin {
 				add_thickbox();
 				wp_enqueue_script( 'updates' );
 
-				\load_template( \dirname( __FILE__ ) . '/../templates/welcome.php' );
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/welcome.php' );
 				break;
 		}
 	}
@@ -69,7 +77,10 @@ class Admin {
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {
-		\load_template( \dirname( __FILE__ ) . '/../templates/followers-list.php' );
+		// user has to be able to publish posts
+		if ( ! is_user_disabled( get_current_user_id() ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-followers-list.php' );
+		}
 	}
 
 	/**
@@ -84,7 +95,11 @@ class Admin {
 				'description' => \__( 'Use title and link, summary, full or custom content', 'activitypub' ),
 				'show_in_rest' => array(
 					'schema' => array(
-						'enum' => array( 'title', 'excerpt', 'content' ),
+						'enum' => array(
+							'title',
+							'excerpt',
+							'content',
+						),
 					),
 				),
 				'default' => 'content',
@@ -117,7 +132,11 @@ class Admin {
 				'description' => \__( 'The Activity-Object-Type', 'activitypub' ),
 				'show_in_rest' => array(
 					'schema' => array(
-						'enum' => array( 'note', 'article', 'wordpress-post-format' ),
+						'enum' => array(
+							'note',
+							'article',
+							'wordpress-post-format',
+						),
 					),
 				),
 				'default' => 'note',
@@ -129,7 +148,7 @@ class Admin {
 			array(
 				'type' => 'boolean',
 				'description' => \__( 'Add hashtags in the content as native tags and replace the #tag with the tag-link', 'activitypub' ),
-				'default' => 0,
+				'default' => '0',
 			)
 		);
 		\register_setting(
@@ -142,21 +161,82 @@ class Admin {
 				'default'      => array( 'post', 'pages' ),
 			)
 		);
+		\register_setting(
+			'activitypub',
+			'activitypub_blog_user_identifier',
+			array(
+				'type'              => 'string',
+				'description'       => \esc_html__( 'The Identifier of the Blog-User', 'activitypub' ),
+				'show_in_rest'      => true,
+				'default'           => \Activitypub\Model\Blog_User::get_default_username(),
+				'sanitize_callback' => function( $value ) {
+					// hack to allow dots in the username
+					$parts     = explode( '.', $value );
+					$sanitized = array();
+
+					foreach ( $parts as $part ) {
+						$sanitized[] = \sanitize_title( $part );
+					}
+
+					return implode( '.', $sanitized );
+				},
+			)
+		);
+		\register_setting(
+			'activitypub',
+			'activitypub_enable_users',
+			array(
+				'type' => 'boolean',
+				'description' => \__( 'Every Author on this Blog (with the publish_posts capability) gets his own ActivityPub enabled Profile.', 'activitypub' ),
+				'default' => '1',
+			)
+		);
+		\register_setting(
+			'activitypub',
+			'activitypub_enable_blog_user',
+			array(
+				'type' => 'boolean',
+				'description' => \__( 'Your Blog becomes an ActivityPub compatible Profile.', 'activitypub' ),
+				'default' => '0',
+			)
+		);
 	}
 
 	public static function add_settings_help_tab() {
-		require_once \dirname( __FILE__ ) . '/help.php';
+		require_once ACTIVITYPUB_PLUGIN_DIR . 'includes/help.php';
 	}
 
 	public static function add_followers_list_help_tab() {
 		// todo
 	}
 
-	public static function add_fediverse_profile( $user ) {
-		?>
-		<h2 id="activitypub"><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h2>
-		<?php
-		\Activitypub\get_identifier_settings( $user->ID );
+	public static function add_profile( $user ) {
+		$description = get_user_meta( $user->ID, 'activitypub_user_description', true );
+
+		\load_template(
+			ACTIVITYPUB_PLUGIN_DIR . 'templates/user-settings.php',
+			true,
+			array(
+				'description' => $description,
+			)
+		);
+	}
+
+	public static function save_user_description( $user_id ) {
+		if ( ! isset( $_REQUEST['_apnonce'] ) ) {
+			return false;
+		}
+		$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_apnonce'] ) );
+		if (
+			! wp_verify_nonce( $nonce, 'activitypub-user-description' ) ||
+			! current_user_can( 'edit_user', $user_id )
+		) {
+			return false;
+		}
+		$description = ! empty( $_POST['activitypub-user-description'] ) ? sanitize_text_field( wp_unslash( $_POST['activitypub-user-description'] ) ) : false;
+		if ( $description ) {
+			update_user_meta( $user_id, 'activitypub_user_description', $description );
+		}
 	}
 
 	public static function enqueue_scripts( $hook_suffix ) {

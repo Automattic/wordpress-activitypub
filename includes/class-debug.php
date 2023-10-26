@@ -1,6 +1,9 @@
 <?php
 namespace Activitypub;
 
+use WP_DEBUG;
+use WP_DEBUG_LOG;
+
 /**
  * ActivityPub Debug Class
  *
@@ -12,7 +15,7 @@ class Debug {
 	 */
 	public static function init() {
 		if ( WP_DEBUG && WP_DEBUG_LOG ) {
-			\add_action( 'activitypub_safe_remote_post_response', array( '\Activitypub\Debug', 'log_remote_post_responses' ), 10, 4 );
+			\add_action( 'activitypub_safe_remote_post_response', array( self::class, 'log_remote_post_responses' ), 10, 4 );
 		}
 	}
 

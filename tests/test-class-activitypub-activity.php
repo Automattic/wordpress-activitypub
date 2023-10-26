@@ -17,15 +17,29 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 			10
 		);
 
-		$activitypub_post = new \Activitypub\Model\Post( $post );
+		$activitypub_post = \Activitypub\Transformer\Post::transform( get_post( $post ) )->to_object();
 
-		$activitypub_activity = new \Activitypub\Model\Activity( 'Create', \Activitypub\Model\Activity::TYPE_FULL );
-		$activitypub_activity->from_post( $activitypub_post );
+		$activitypub_activity = new \Activitypub\Activity\Activity();
+		$activitypub_activity->set_type( 'Create' );
+		$activitypub_activity->set_object( $activitypub_post );
 
-		$this->assertContains( \get_rest_url( null, '/activitypub/1.0/users/1/followers' ), $activitypub_activity->get_cc() );
+		$this->assertContains( \Activitypub\get_rest_url_by_path( 'users/1/followers' ), $activitypub_activity->get_to() );
 		$this->assertContains( 'https://example.com/alex', $activitypub_activity->get_cc() );
 
 		remove_all_filters( 'activitypub_extract_mentions' );
 		\wp_trash_post( $post );
+	}
+
+	public function test_object_transformation() {
+		$test_array = array(
+			'id'      => 'https://example.com/post/123',
+			'type'    => 'Note',
+			'content' => 'Hello world!',
+		);
+
+		$object = \Activitypub\Activity\Base_Object::init_from_array( $test_array );
+
+		$this->assertEquals( 'Hello world!', $object->get_content() );
+		$this->assertEquals( $test_array, $object->to_array() );
 	}
 }

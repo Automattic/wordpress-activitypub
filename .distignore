@@ -36,3 +36,4 @@ phpunit.xml.dist
 tests
 node_modules
 vendor
+src

@@ -14,7 +14,7 @@ class Ostatus {
 	 */
 	public static function register_routes() {
 		\register_rest_route(
-			'activitypub/1.0',
+			ACTIVITYPUB_REST_NAMESPACE,
 			'/ostatus/remote-follow',
 			array(
 				array(
