@@ -479,40 +479,24 @@ function is_blog_public() {
 /**
  * Get active users based on a given duration
  *
- * @param string $duration The duration to check
+ * @param int $duration The duration to check in month(s)
  *
  * @return int The number of active users
  */
-function get_active_users( $duration = '1 month ago' ) {
-	// get all distinct authors that have published a post in the last 30 days
-	$posts = get_posts(
-		array(
-			'post_type'      => 'post',
-			'post_status'    => 'publish',
-			'orderby'        => 'post_count',
-			'order'          => 'DESC',
-			'posts_per_page' => 4,
-			'date_query'     => array(
-				array(
-					'after' => $duration,
-				),
-			),
-		)
-	);
+function get_active_users( $duration = 1 ) {
+	global $wpdb;
 
-	if ( ! $posts ) {
-		return 0;
+	$duration = intval( $duration );
+
+	$count = wp_cache_get( 'monthly_active_users_' . $duration, 'activitypub' );
+
+	if ( ! $count ) {
+		$query = "SELECT COUNT(DISTINCT post_author) FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND post_date <= DATE_SUB(NOW(), INTERVAL %d MONTH)";
+		$query = $wpdb->prepare( $query, $duration );
+		$count = $wpdb->get_var( $query ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+
+		wp_cache_set( 'monthly_active_users_' . $duration, $count, 'activitypub', DAY_IN_SECONDS );
 	}
-
-	// get all distinct ID from $posts
-	$count = count(
-		array_unique(
-			wp_list_pluck(
-				$posts,
-				'post_author'
-			)
-		)
-	);
 
 	// if 0 authors where active
 	if ( 0 === $count ) {

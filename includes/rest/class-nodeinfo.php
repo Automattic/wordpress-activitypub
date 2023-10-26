@@ -137,8 +137,8 @@ class Nodeinfo {
 		$nodeinfo['usage'] = array(
 			'users' => array(
 				'total'          => get_total_users(),
-				'activeMonth'    => get_active_users( '1 month ago' ),
-				'activeHalfyear' => get_active_users( '6 month ago' ),
+				'activeMonth'    => get_active_users( 1 ),
+				'activeHalfyear' => get_active_users( 6 ),
 			),
 			'localPosts' => (int) $posts->publish,
 			'localComments' => (int) $comments->approved,
