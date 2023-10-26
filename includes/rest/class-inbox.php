@@ -332,43 +332,6 @@ class Inbox {
 	}
 
 	/**
-	 * Handles "Follow" requests
-	 *
-	 * @param  array $object  The activity-object
-	 * @param  int   $user_id The id of the local blog-user
-	 */
-	public static function handle_follow( $object, $user_id ) {
-		// save follower
-		\Activitypub\Peer\Followers::add_follower( $object['actor'], $user_id );
-
-		// get inbox
-		$inbox = \Activitypub\get_inbox_by_actor( $object['actor'] );
-
-		// send "Accept" activity
-		$activity = new \Activitypub\Model\Activity( 'Accept', \Activitypub\Model\Activity::TYPE_SIMPLE );
-		$activity->set_object( $object );
-		$activity->set_actor( \get_author_posts_url( $user_id ) );
-		$activity->set_to( $object['actor'] );
-		$activity->set_id( \get_author_posts_url( $user_id ) . '#follow-' . \preg_replace( '~^https?://~', '', $object['actor'] ) );
-
-		$activity = $activity->to_simple_json();
-
-		$response = \Activitypub\safe_remote_post( $inbox, $activity, $user_id );
-	}
-
-	/**
-	 * Handles "Unfollow" requests
-	 *
-	 * @param  array $object  The activity-object
-	 * @param  int   $user_id The id of the local blog-user
-	 */
-	public static function handle_unfollow( $object, $user_id ) {
-		if ( isset( $object['object'] ) && isset( $object['object']['type'] ) && 'Follow' === $object['object']['type'] ) {
-			\Activitypub\Peer\Followers::remove_follower( $object['actor'], $user_id );
-		}
-	}
-
-	/**
 	 * Handles "Reaction" requests
 	 *
 	 * @param  array $object  The activity-object
