@@ -28,7 +28,6 @@ class Activity_Dispatcher {
 	public static function init() {
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity' ), 10, 2 );
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity_or_announce' ), 10, 2 );
-		\add_action( 'activitypub_send_comment_activity', array( self::class, 'send_comment_activity' ), 10, 2 );
 	}
 
 	/**
