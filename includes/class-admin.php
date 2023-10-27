@@ -287,6 +287,17 @@ class Admin {
 			$summary,
 			\__( 'Reply', 'activitypub' )
 		);
+		$remote_comment_link = get_comment_meta( $comment->comment_ID, 'source_url', true );
+		if ( $remote_comment_link ) {
+			$comment_link = esc_url( $remote_comment_link );
+			$source_link = '<a href="%s" target="_blank" rel="no-referr" aria-label="%s">%s</a>';
+			$actions['source'] = \sprintf(
+				$source_link,
+				$comment_link,
+				\esc_attr__( 'View this comment on remote server', 'activitypub' ),
+				\__( 'View source', 'activitypub' )
+			);
+		}
 		return $actions;
 	}
 
