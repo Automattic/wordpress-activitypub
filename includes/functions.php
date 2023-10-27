@@ -342,13 +342,15 @@ function reply_recipients( $object_id, $post = null ) {
 		$recipients[] = \ActivityPub\url_to_webfinger( $ap_object['actor'] ); // Reply to Object actor!
 
 		if ( ! empty( $ap_object['object']['tag'] ) ) { // Reply to other tagged users.
-			$author_post_url = \get_author_posts_url( $ap_object['user_id'] );// ignore self tag.
-			foreach ( $ap_object['object']['tag'] as $tag ) { // Other tagged users
-				if ( $author_post_url === $tag['href'] ) {
-					continue;
-				}
-				if ( in_array( 'Mention', $tag ) ) {
-					$recipients[] = $tag['name'];
+			if ( isset( $ap_object['user_id'] ) ) {
+				$author_post_url = \get_author_posts_url( $ap_object['user_id'] );// ignore self tag.
+				foreach ( $ap_object['object']['tag'] as $tag ) { // Other tagged users
+					if ( $author_post_url === $tag['href'] ) {
+						continue;
+					}
+					if ( in_array( 'Mention', $tag ) ) {
+						$recipients[] = $tag['name'];
+					}
 				}
 			}
 		}
