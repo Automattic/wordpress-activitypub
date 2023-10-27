@@ -5,6 +5,7 @@ use WP_Post;
 use Activitypub\Collection\Users;
 use Activitypub\Model\Blog_User;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Shortcodes;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -334,6 +335,8 @@ class Post {
 			return \ucfirst( \get_option( 'activitypub_object_type', 'note' ) );
 		}
 
+		// Default to Article.
+		$object_type = 'Article';
 		$post_type = \get_post_type( $this->wp_post );
 		switch ( $post_type ) {
 			case 'post':
@@ -466,6 +469,8 @@ class Post {
 		$post    = $this->wp_post;
 		$content = $this->get_post_content_template();
 
+		// Register our shortcodes just in time.
+		Shortcodes::register();
 		// Fill in the shortcodes.
 		setup_postdata( $post );
 		$content = do_shortcode( $content );
@@ -476,6 +481,9 @@ class Post {
 		$content = \trim( $content );
 
 		$content = \apply_filters( 'activitypub_the_content', $content, $post );
+
+		// Don't need these any more, should never appear in a post.
+		Shortcodes::unregister();
 
 		return $content;
 	}

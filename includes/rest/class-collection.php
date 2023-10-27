@@ -105,7 +105,7 @@ class Collection {
 			'@context'   => Activity::CONTEXT,
 			'id'         => get_rest_url_by_path( sprintf( 'users/%d/collections/tags', $user->get__id() ) ),
 			'type'       => 'Collection',
-			'totalItems' => count( $tags ),
+			'totalItems' => is_countable( $tags ) ? count( $tags ) : 0,
 			'items'      => array(),
 		);
 
@@ -117,7 +117,10 @@ class Collection {
 			);
 		}
 
-		return new WP_REST_Response( $response, 200 );
+		$rest_response = new WP_REST_Response( $response, 200 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+
+		return $rest_response;
 	}
 
 	/**
@@ -160,7 +163,7 @@ class Collection {
 			'@context'     => Activity::CONTEXT,
 			'id'           => get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $user_id ) ),
 			'type'         => 'OrderedCollection',
-			'totalItems'   => count( $posts ),
+			'totalItems'   => is_countable( $posts ) ? count( $posts ) : 0,
 			'orderedItems' => array(),
 		);
 
@@ -168,7 +171,10 @@ class Collection {
 			$response['orderedItems'][] = Post::transform( $post )->to_object()->to_array();
 		}
 
-		return new WP_REST_Response( $response, 200 );
+		$rest_response = new WP_REST_Response( $response, 200 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+
+		return $rest_response;
 	}
 
 	/**
@@ -192,7 +198,10 @@ class Collection {
 			$response['orderedItems'][] = $user->get_url();
 		}
 
-		return new WP_REST_Response( $response, 200 );
+		$rest_response = new WP_REST_Response( $response, 200 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+
+		return $rest_response;
 	}
 
 	/**
