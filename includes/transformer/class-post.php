@@ -187,7 +187,7 @@ class Post {
 		}
 		$media_ids = \array_unique( $media_ids );
 
-		return array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media_ids );
+		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media_ids ) );
 	}
 
 	/**
@@ -234,7 +234,7 @@ class Post {
 		}
 		$image_ids = \array_unique( $image_ids );
 
-		return array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $image_ids );
+		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $image_ids ) );
 	}
 
 	/**
@@ -330,8 +330,8 @@ class Post {
 					if ( $alt ) {
 						$image['name'] = $alt;
 					}
+					$attachment = $image;
 				}
-				$attachment = $image;
 				break;
 
 			case 'audio':
