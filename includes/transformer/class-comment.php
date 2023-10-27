@@ -188,7 +188,7 @@ class Comment {
 	 * Checks a comment ID for a source_id, or source_url
 	 */
 	protected function get_source_id( $comment ) {
-		if (  $comment->user_id ) {
+		if ( $comment->user_id ) {
 			return null;
 		}
 
@@ -276,5 +276,4 @@ class Comment {
 	protected function get_mentions() {
 		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_comment->comment_content, $this->wp_comment );
 	}
-
 }
