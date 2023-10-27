@@ -105,6 +105,12 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
 
+### 1.1.0 ###
+
+* Improved: audio and video attachments are now supported!
+* Improved: better error messages if remote profile is not accessible
+* Improved: PHP 8.1 compatibility
+
 ### 1.0.10 ###
 
 * Improved: better error messages if remote profile is not accessible
