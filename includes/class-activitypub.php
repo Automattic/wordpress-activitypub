@@ -201,9 +201,11 @@ class Activitypub {
 	 * @return string $url
 	 */
 	public static function remote_comment_link( $comment_link, $comment ) {
-		$remote_comment_link = get_comment_meta( $comment->comment_ID, 'source_url', true );
-		if ( $remote_comment_link ) {
-			$comment_link = esc_url( $remote_comment_link );
+		if ( ! is_admin() ) {
+			$remote_comment_link = get_comment_meta( $comment->comment_ID, 'source_url', true );
+			if ( $remote_comment_link ) {
+				$comment_link = esc_url( $remote_comment_link );
+			}
 		}
 		return $comment_link;
 	}
