@@ -63,8 +63,9 @@ class Comment {
 		$comment = $this->wp_comment;
 		$object = new Base_Object();
 
-		$object->set_id( $this->get_id() );
+		$object->set_id( $this->get_id( $comment ) );
 		$object->set_url( \get_comment_link( $comment->ID ) );
+		$object->set_context( $this->get_context() );
 		$object->set_type( 'Note' );
 
 		$published = \strtotime( $comment->comment_date_gmt );
@@ -91,6 +92,8 @@ class Comment {
 				get_rest_url_by_path( $path ),
 			)
 		);
+		$object->set_cc( $this->get_cc() );
+		$object->set_tag( $this->get_tags() );
 
 		return $object;
 	}
@@ -126,6 +129,7 @@ class Comment {
 		$content = \wpautop( $content );
 		$content = \preg_replace( '/[\n\r\t]/', '', $content );
 		$content = \trim( $content );
+		$content = \apply_filters( 'the_content', $content, $comment );
 
 		return $content;
 	}
@@ -145,7 +149,7 @@ class Comment {
 			$in_reply_to = $this->get_source_id( $parent_comment );
 			if ( ! $in_reply_to ) {
 				//local
-				$in_reply_to = $this->get_id( $comment );
+				$in_reply_to = $this->get_id( $parent_comment );
 			}
 		} else {
 			$pretty_permalink = \get_post_meta( $comment->comment_post_ID, 'activitypub_canonical_url', true );
@@ -167,8 +171,7 @@ class Comment {
 	 * https://www.w3.org/TR/activitypub/#obj-id
 	 * https://github.com/tootsuite/mastodon/issues/13879
 	 */
-	protected function get_id() {
-		$comment = $this->wp_comment;
+	protected function get_id( $comment ) {
 
 		$comment = \get_comment( $comment );
 		$ap_comment_id = \add_query_arg(
@@ -185,14 +188,13 @@ class Comment {
 	 * Checks a comment ID for a source_id, or source_url
 	 */
 	protected function get_source_id( $comment ) {
-		if ( ! $comment->user_id ) {
+		if (  $comment->user_id ) {
 			return null;
 		}
 
-		$source_id = \get_comment_meta( $comment->ID, 'source_id', true );
-
+		$source_id = \get_comment_meta( $comment->comment_ID, 'source_id', true );
 		if ( ! $source_id ) {
-			$source_url = \get_comment_meta( $comment->ID, 'source_url', true );
+			$source_url = \get_comment_meta( $comment->comment_ID, 'source_url', true );
 			if ( ! $source_url ) {
 				return null;
 			}
@@ -209,4 +211,70 @@ class Comment {
 		}
 		return $source_id;
 	}
+
+	protected function get_context() {
+		$comment = $this->wp_comment;
+		$pretty_permalink = \get_post_meta( $comment->comment_post_ID, 'activitypub_canonical_url', true );
+		if ( $pretty_permalink ) {
+			$context = $pretty_permalink;
+		} else {
+			$context = \get_permalink( $comment->comment_post_ID );
+		}
+		return $context;
+	}
+
+	/**
+	 * Returns a list of Mentions, used in the Comment.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#Mention
+	 *
+	 * @return array The list of Mentions.
+	 */
+	protected function get_cc() {
+		$cc = array();
+
+		$mentions = $this->get_mentions();
+		if ( $mentions ) {
+			foreach ( $mentions as $mention => $url ) {
+				$cc[] = $url;
+			}
+		}
+
+		return $cc;
+	}
+
+	/**
+	 * Returns a list of Tags, used in the Comment.
+	 *
+	 * This includes Hash-Tags and Mentions.
+	 *
+	 * @return array The list of Tags.
+	 */
+	protected function get_tags() {
+		$tags = array();
+
+		$mentions = $this->get_mentions();
+		if ( $mentions ) {
+			foreach ( $mentions as $mention => $url ) {
+				$tag = array(
+					'type' => 'Mention',
+					'href' => \esc_url( $url ),
+					'name' => \esc_html( $mention ),
+				);
+				$tags[] = $tag;
+			}
+		}
+
+		return $tags;
+	}
+
+	/**
+	 * Helper function to get the @-Mentions from the comment content.
+	 *
+	 * @return array The list of @-Mentions.
+	 */
+	protected function get_mentions() {
+		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_comment->comment_content, $this->wp_comment );
+	}
+
 }
