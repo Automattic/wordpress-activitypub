@@ -240,7 +240,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 
 ### 0.15.0 ###
 
-* Enable ActivityPub only for users that can `publish_posts`
+* Enable ActivityPub only for users who can `publish_posts`
 * Persist only public Activities
 * Fix remote-delete
 
