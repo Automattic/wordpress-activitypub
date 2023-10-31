@@ -224,7 +224,7 @@ class Scheduler {
 	 * Send a profile update to all followers. Gets hooked into all relevant options/meta etc.
 	 * @param int $user_id  The user ID to update (Could be 0 for Blog-User).
 	 */
-	public function schedule_profile_update( $user_id ) {
+	public static function schedule_profile_update( $user_id ) {
 		\wp_schedule_single_event(
 			\time(),
 			'activitypub_send_update_profile_activity',
