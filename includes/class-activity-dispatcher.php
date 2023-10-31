@@ -25,6 +25,7 @@ class Activity_Dispatcher {
 	public static function init() {
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity' ), 10, 2 );
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity_or_announce' ), 10, 2 );
+		\add_action( 'activitypub_send_update_profile_activity', array( self::class, 'send_profile_update' ), 10, 1 );
 	}
 
 	/**
@@ -71,17 +72,7 @@ class Activity_Dispatcher {
 		$activity->set_type( $type );
 		$activity->set_object( $object );
 
-		$follower_inboxes  = Followers::get_inboxes( $wp_post->post_author );
-		$mentioned_inboxes = Mention::get_inboxes( $activity->get_cc() );
-
-		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
-		$inboxes = array_unique( $inboxes );
-
-		$json = $activity->to_json();
-
-		foreach ( $inboxes as $inbox ) {
-			safe_remote_post( $inbox, $json, $wp_post->post_author );
-		}
+		self::send_activity_to_inboxes( $activity, $wp_post->post_author );
 	}
 
 	/**
@@ -110,7 +101,45 @@ class Activity_Dispatcher {
 		// send only the id
 		$activity->set_object( $object->get_id() );
 
-		$follower_inboxes  = Followers::get_inboxes( $wp_post->post_author );
+		self::send_activity_to_inboxes( $activity, $wp_post->post_author );
+	}
+
+	/**
+	 * Send a "Update" Activity when a user updates their profile.
+	 *
+	 * @param int $user_id The user ID to send an update for.
+	 *
+	 */
+	public static function send_profile_update( $user_id ) {
+		$user = Users::get_by_various( $user_id );
+
+		// bail if that's not a good user
+		if ( is_wp_error( $user ) ) {
+			return;
+		}
+
+		// build the update
+		$activity = new Activity();
+		$activity->set_id( $user->get_url() . '#update' );
+		$activity->set_type( 'Update' );
+		$activity->set_actor( $user->get_url() );
+		$activity->set_object( $user->get_url() );
+		$activity->set_to( 'https://www.w3.org/ns/activitystreams#Public' );
+
+		// send the update
+		self::send_activity_to_inboxes( $activity, $user_id );
+	}
+
+	/**
+	 * Send an Activity to all followers and mentioned users.
+	 *
+	 * @param Activity $activity The ActivityPub Activity.
+	 * @param int      $user_id  The user ID.
+	 *
+	 * @return void
+	 */
+	private static function send_activity_to_inboxes( $activity, $user_id ) {
+		$follower_inboxes  = Followers::get_inboxes( $user_id );
 		$mentioned_inboxes = Mention::get_inboxes( $activity->get_cc() );
 
 		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
@@ -119,7 +148,7 @@ class Activity_Dispatcher {
 		$json = $activity->to_json();
 
 		foreach ( $inboxes as $inbox ) {
-			safe_remote_post( $inbox, $json, $wp_post->post_author );
+			safe_remote_post( $inbox, $json, $user_id );
 		}
 	}
 }
