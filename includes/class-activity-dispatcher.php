@@ -140,10 +140,19 @@ class Activity_Dispatcher {
 	 */
 	private static function send_activity_to_inboxes( $activity, $user_id ) {
 		$follower_inboxes  = Followers::get_inboxes( $user_id );
-		$mentioned_inboxes = Mention::get_inboxes( $activity->get_cc() );
+
+		$mentioned_inboxes = array();
+		$cc = $activity->get_cc();
+		if ( $cc ) {
+			$mentioned_inboxes = Mention::get_inboxes( $cc );
+		}
 
 		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
 		$inboxes = array_unique( $inboxes );
+
+		if ( empty( $inboxes ) ) {
+			return;
+		}
 
 		$json = $activity->to_json();
 
