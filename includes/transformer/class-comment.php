@@ -63,7 +63,7 @@ class Comment {
 		$comment = $this->wp_comment;
 		$object = new Base_Object();
 
-		$object->set_id( $this->get_id( $comment ) );
+		$object->set_id( $this->generate_id( $comment ) );
 		$object->set_url( \get_comment_link( $comment->ID ) );
 		$object->set_type( 'Note' );
 
@@ -148,7 +148,7 @@ class Comment {
 			$in_reply_to = $this->get_source_id( $parent_comment );
 			if ( ! $in_reply_to ) {
 				//local
-				$in_reply_to = $this->get_id( $parent_comment );
+				$in_reply_to = $this->generate_id( $parent_comment );
 			}
 		} else {
 			$pretty_permalink = \get_post_meta( $comment->comment_post_ID, 'activitypub_canonical_url', true );
@@ -170,7 +170,7 @@ class Comment {
 	 * https://www.w3.org/TR/activitypub/#obj-id
 	 * https://github.com/tootsuite/mastodon/issues/13879
 	 */
-	protected function get_id( $comment ) {
+	protected function generate_id( $comment ) {
 
 		$comment = \get_comment( $comment );
 		$ap_comment_id = \add_query_arg(
