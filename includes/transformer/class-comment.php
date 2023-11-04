@@ -65,7 +65,6 @@ class Comment {
 
 		$object->set_id( $this->get_id( $comment ) );
 		$object->set_url( \get_comment_link( $comment->ID ) );
-		$object->set_context( $this->get_context() );
 		$object->set_type( 'Note' );
 
 		$published = \strtotime( $comment->comment_date_gmt );
