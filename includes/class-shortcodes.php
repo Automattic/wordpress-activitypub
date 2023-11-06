@@ -390,7 +390,8 @@ class Shortcodes {
 			return '';
 		}
 
-		$name = \get_the_author_meta( 'display_name', $item->post_author );
+		$author_id = \get_post_field( 'post_author', $item->ID );
+		$name = \get_the_author_meta( 'display_name', $author_id );
 
 		if ( ! $name ) {
 			return '';
@@ -415,7 +416,8 @@ class Shortcodes {
 			return '';
 		}
 
-		$url = \get_the_author_meta( 'user_url', $item->post_author );
+		$author_id = \get_post_field( 'post_author', $item->ID );
+		$url = \get_the_author_meta( 'user_url', $author_id );
 
 		if ( ! $url ) {
 			return '';
