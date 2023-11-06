@@ -80,7 +80,7 @@ class Comment {
 		$object->set_content( $this->get_content() );
 		$object->set_content_map(
 			array(
-				\strstr( \get_locale(), '_', true ) => $this->get_content(),
+				$this->get_locale() => $this->get_content(),
 			)
 		);
 		$path = sprintf( 'users/%d/followers', intval( $comment->comment_author ) );
@@ -274,5 +274,26 @@ class Comment {
 	 */
 	protected function get_mentions() {
 		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_comment->comment_content, $this->wp_comment );
+	}
+
+	/**
+	 * Returns the locale of the post.
+	 *
+	 * @return string The locale of the post.
+	 */
+	public function get_locale() {
+		$comment_id = $this->wp_comment->ID;
+		$lang       = \strtolower( \strtok( \get_locale(), '_-' ) );
+
+		/**
+		 * Filter the locale of the comment.
+		 *
+		 * @param string  $lang    The locale of the comment.
+		 * @param int     $comment_id The comment ID.
+		 * @param WP_Post $post    The comment object.
+		 *
+		 * @return string The filtered locale of the comment.
+		 */
+		return apply_filters( 'activitypub_comment_locale', $lang, $comment_id, $this->wp_comment );
 	}
 }
