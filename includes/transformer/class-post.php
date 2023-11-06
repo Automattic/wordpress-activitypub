@@ -626,10 +626,10 @@ class Post {
 				}
 			}
 
-			$replies = (object) array(
+			$replies = array(
 				'type'  => 'Collection',
 				'id'    => \add_query_arg( array( 'replies' => '' ), $this->get_id() ),
-				'first' => (object) array(
+				'first' => array(
 					'type'  => 'CollectionPage',
 					'partOf' => \add_query_arg( array( 'replies' => '' ), $this->get_id() ),
 					'items' => $items,
