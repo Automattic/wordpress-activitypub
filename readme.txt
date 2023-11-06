@@ -111,6 +111,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Improved: better error messages if remote profile is not accessible
 * Improved: PHP 8.1 compatibility
 * Fixed: don't try to parse mentions or hashtags for very large (>1MB) posts to prevent timeouts
+* Improved: more reliable [ap_author], props @uk3
 
 = 1.0.10 =
 
