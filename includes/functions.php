@@ -484,18 +484,18 @@ function is_blog_public() {
  * @return int The number of active users
  */
 function get_active_users( $duration = 1 ) {
-	global $wpdb;
 
 	$duration = intval( $duration );
+	$transient_key = sprintf( 'monthly_active_users_%d', $duration );
+	$count = get_transient( $transient_key );
 
-	$count = wp_cache_get( 'monthly_active_users_' . $duration, 'activitypub' );
-
-	if ( ! $count ) {
-		$query = "SELECT COUNT(DISTINCT post_author) FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND post_date <= DATE_SUB(NOW(), INTERVAL %d MONTH)";
+	if ( false === $count ) {
+		global $wpdb;
+		$query = "SELECT COUNT( DISTINCT post_author ) FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND post_date <= DATE_SUB( NOW(), INTERVAL %d MONTH )";
 		$query = $wpdb->prepare( $query, $duration );
 		$count = $wpdb->get_var( $query ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 
-		wp_cache_set( 'monthly_active_users_' . $duration, $count, 'activitypub', DAY_IN_SECONDS );
+		set_transient( $transient_key, $count, DAY_IN_SECONDS );
 	}
 
 	// if 0 authors where active
