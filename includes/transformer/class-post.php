@@ -619,7 +619,6 @@ class Post {
 					);
 					$items[] = $comment_url;
 				} else {
-					$ap_object = \unserialize( \get_comment_meta( $comment->comment_ID, 'ap_object', true ) );
 					$comment_url = \get_comment_meta( $comment->comment_ID, 'source_url', true );
 					if ( ! empty( $comment_url ) ) {
 						$items[] = \get_comment_meta( $comment->comment_ID, 'source_url', true );
