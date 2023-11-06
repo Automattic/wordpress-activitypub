@@ -364,18 +364,6 @@ function reply_recipients( $object_id, $post = null ) {
 }
 
 /**
- * Add summary to reply
- */
-function get_summary( $comment_id ) {
-	$ap_object = \unserialize( \get_comment_meta( $comment_id, 'ap_object', true ) );
-	if ( ! empty( $ap_object ) ) {
-		if ( ! empty( $ap_object['object']['summary'] ) ) {
-			return \esc_attr( $ap_object['object']['summary'] );
-		}
-	}
-}
-
-/**
  * @param string $user_url
  * @return string $webfinger
  */

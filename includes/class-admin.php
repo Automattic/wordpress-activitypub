@@ -268,52 +268,10 @@ class Admin {
 		}
 	}
 
-	/**
-	 * hook comment_row_actions
-	 * Reply to ActivityPub Comments from the edit-comments.php screen
-	 */
-	public static function reply_comments_actions( $actions, $comment ) {
-		$recipients = \Activitypub\reply_recipients( $comment->comment_ID );
-		$summary = \Activitypub\get_summary( $comment->comment_ID );
-		$reply_button = '<button type="button" data-comment-id="%d" data-post-id="%d" data-action="%s" class="%s button-link" aria-expanded="false" aria-label="%s" data-recipients="%s" data-summary="%s">%s</button>';
-		$actions['reply'] = \sprintf(
-			$reply_button,
-			$comment->comment_ID,
-			$comment->comment_post_ID,
-			'replyto',
-			'vim-r comment-inline',
-			\esc_attr__( 'Reply to this comment', 'activitypub' ),
-			$recipients,
-			$summary,
-			\__( 'Reply', 'activitypub' )
-		);
-		$remote_comment_link = get_comment_meta( $comment->comment_ID, 'source_url', true );
-		if ( $remote_comment_link ) {
-			$comment_link = esc_url( $remote_comment_link );
-			$source_link = '<a href="%s" target="_blank" rel="no-referr" aria-label="%s">%s</a>';
-			$actions['source'] = \sprintf(
-				$source_link,
-				$comment_link,
-				\esc_attr__( 'View this comment on remote server', 'activitypub' ),
-				\__( 'View source', 'activitypub' )
-			);
-		}
-		return $actions;
-	}
-
 	public static function enqueue_scripts( $hook_suffix ) {
 		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
 			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), '1.0.0' );
 			wp_enqueue_script( 'activitypub-admin-styles', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), '1.0.0', false );
-		}
-		if ( ( 'edit-comments.php' === $hook_suffix ) || ( 'index.php' === $hook_suffix ) ) {
-			wp_enqueue_script( 'activitypub-reply', plugins_url( 'assets/js/activitypub-reply.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), '1.0.0', false );
-		}
-	}
-
-	public static function comment_enqueue_scripts() {
-		if ( is_singular() ) {
-			wp_enqueue_script( 'activitypub-reply', plugins_url( 'assets/js/activitypub-reply.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), '1.0.0', false );
 		}
 	}
 }
