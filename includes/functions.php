@@ -310,18 +310,6 @@ function is_comment() {
 }
 
 /**
- * Verify if url has a replies query,
- * @return bool
- */
-function is_replies() {
-	$replies = get_query_var( 'replies' );
-	if ( $replies ) {
-		return $replies;
-	}
-	return null;
-}
-
-/**
  * Get recipients to insert/tag in reply tag from received AP object meta
  * @param string $object_id a comment_id to search
  * @param boolean $post defaults to searching a comment_id
