@@ -105,7 +105,9 @@ class Scheduler {
 	 *
 	 * transition_comment_status()
 	 *
-	 * @param int $comment
+	 * @param string     $new_status New comment status.
+	 * @param string     $old_status Old comment status.
+	 * @param WP_Comment $comment    Comment object.
 	 */
 	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
 		$comment = get_comment( $comment );
