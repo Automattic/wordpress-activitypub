@@ -323,29 +323,6 @@ function url_to_webfinger( $user_url ) {
 }
 
 /**
- * Determine AP audience of incoming object
- * @param string $object
- * @return string audience
- */
-function get_audience( $object ) {
-	if ( in_array( AS_PUBLIC, $object['to'] ) ) {
-		return 'public';
-	}
-	if ( in_array( AS_PUBLIC, $object['cc'] ) ) {
-		return 'unlisted';
-	}
-	if ( ! in_array( AS_PUBLIC, $object['to'] ) && ! in_array( AS_PUBLIC, $object['cc'] ) ) {
-		$author_post_url = get_author_posts_url( $object['user_id'] );
-		if ( in_array( $author_post_url, $object['cc'] ) ) {
-			return 'followers_only';
-		}
-		if ( in_array( $author_post_url, $object['to'] ) ) {
-			return 'private';
-		}
-	}
-}
-
-/**
  * Check for Tombstone Objects
  *
  * @see https://www.w3.org/TR/activitypub/#delete-activity-outbox
