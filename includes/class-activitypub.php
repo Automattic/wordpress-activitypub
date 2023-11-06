@@ -120,10 +120,6 @@ class Activitypub {
 		$vars[] = 'activitypub';
 		$vars[] = 'replytocom';
 
-		//Collections review
-		$vars[] = 'replies';
-		$vars[] = 'collection_page';
-
 		return $vars;
 	}
 
