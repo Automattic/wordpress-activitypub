@@ -17,7 +17,7 @@ class Scheduler {
 	 */
 	public static function init() {
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
-		\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 33, 3 );
+		\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 20, 3 );
 
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
@@ -116,10 +116,14 @@ class Scheduler {
 		}
 
 		if ( 'approved' === $new_status && 'approved' !== $old_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_activity', array( $comment, 'Create' ) );
+			// Only federate replies from local actors
+			$activity_object = unserialize( \get_comment_meta( $comment->comment_ID, 'ap_object', true ) );
+			if ( empty( $activity_object ) ) {
+				\wp_schedule_single_event( \time(), 'activitypub_send_activity', array( $comment, 'Create' ) );
+			}
 		} elseif ( 'trash' === $new_status ) {
 			\wp_schedule_single_event( \time(), 'activitypub_send_activity', array( $comment, 'Delete' ) );
-		} elseif ( $old_status === $new_status ) {
+		} elseif ( 'update' === $new_status ) {
 			\wp_schedule_single_event( \time(), 'activitypub_send_activity', array( $comment, 'Update' ) );
 		}
 	}
