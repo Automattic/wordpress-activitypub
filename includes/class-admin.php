@@ -18,8 +18,6 @@ class Admin {
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
 		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
-		\add_action( 'wp_enqueue_scripts', array( self::class, 'comment_enqueue_scripts' ) );
-		\add_filter( 'comment_row_actions', array( self::class, 'reply_comments_actions' ), 10, 2 );
 
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
