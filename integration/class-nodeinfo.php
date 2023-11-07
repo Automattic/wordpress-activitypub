@@ -1,6 +1,9 @@
 <?php
 namespace Activitypub\Integration;
 
+use function Activitypub\get_total_users;
+use function Activitypub\get_active_users;
+
 /**
  * Compatibility with the NodeInfo plugin
  *
@@ -31,6 +34,12 @@ class Nodeinfo {
 			$nodeinfo['protocols']['outbound'][] = 'activitypub';
 		}
 
+		$nodeinfo['usage']['users'] = array(
+			'total'          => get_total_users(),
+			'activeMonth'    => get_active_users( '1 month ago' ),
+			'activeHalfyear' => get_active_users( '6 month ago' ),
+		);
+
 		return $nodeinfo;
 	}
 
@@ -43,6 +52,12 @@ class Nodeinfo {
 	 */
 	public static function add_nodeinfo2_discovery( $nodeinfo ) {
 		$nodeinfo['protocols'][] = 'activitypub';
+
+		$nodeinfo['usage']['users'] = array(
+			'total'          => get_total_users(),
+			'activeMonth'    => get_active_users( '1 month ago' ),
+			'activeHalfyear' => get_active_users( '6 month ago' ),
+		);
 
 		return $nodeinfo;
 	}

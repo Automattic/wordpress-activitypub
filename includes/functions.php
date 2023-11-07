@@ -5,6 +5,7 @@ use WP_Error;
 use Activitypub\Http;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Users;
 
 /**
  * Returns the ActivityPub default JSON-context
@@ -473,4 +474,76 @@ function is_json( $data ) {
  */
 function is_blog_public() {
 	return (bool) apply_filters( 'activitypub_is_blog_public', \get_option( 'blog_public', 1 ) );
+}
+
+/**
+ * Get active users based on a given duration
+ *
+ * @param int $duration The duration to check in month(s)
+ *
+ * @return int The number of active users
+ */
+function get_active_users( $duration = 1 ) {
+
+	$duration = intval( $duration );
+	$transient_key = sprintf( 'monthly_active_users_%d', $duration );
+	$count = get_transient( $transient_key );
+
+	if ( false === $count ) {
+		global $wpdb;
+		$query = "SELECT COUNT( DISTINCT post_author ) FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND post_date <= DATE_SUB( NOW(), INTERVAL %d MONTH )";
+		$query = $wpdb->prepare( $query, $duration );
+		$count = $wpdb->get_var( $query ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+
+		set_transient( $transient_key, $count, DAY_IN_SECONDS );
+	}
+
+	// if 0 authors where active
+	if ( 0 === $count ) {
+		return 0;
+	}
+
+	// if single user mode
+	if ( is_single_user() ) {
+		return 1;
+	}
+
+	// if blog user is disabled
+	if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
+		return $count;
+	}
+
+	// also count blog user
+	return $count + 1;
+}
+
+/**
+ * Get the total number of users
+ *
+ * @return int The total number of users
+ */
+function get_total_users() {
+	// if single user mode
+	if ( is_single_user() ) {
+		return 1;
+	}
+
+	$users = \get_users(
+		array(
+			'capability__in' => array( 'publish_posts' ),
+		)
+	);
+
+	if ( is_array( $users ) ) {
+		$users = count( $users );
+	} else {
+		$users = 1;
+	}
+
+	// if blog user is disabled
+	if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
+		return $users;
+	}
+
+	return $users + 1;
 }
