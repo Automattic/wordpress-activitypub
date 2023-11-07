@@ -2,7 +2,9 @@
 namespace Activitypub;
 
 use WP_Error;
+use WP_Comment_Query;
 use Activitypub\Http;
+use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
 
@@ -174,9 +176,9 @@ function url_to_authorid( $url ) {
  * @return WP_Comment, or undef if no comment could be found.
  */
 function object_id_to_comment( $id ) {
-	$comment_query = new \WP_Comment_Query(
+	$comment_query = new WP_Comment_Query(
 		array(
-			'meta_key' => 'source_id',
+			'meta_key'   => 'source_id',
 			'meta_value' => $id,
 		)
 	);
@@ -184,7 +186,6 @@ function object_id_to_comment( $id ) {
 		return;
 	}
 	if ( count( $comment_query->comments ) > 1 ) {
-		\error_log( "More than one comment under {$id}" );
 		return;
 	}
 	return $comment_query->comments[0];
@@ -278,7 +279,7 @@ function url_to_commentid( $in_replyto_url ) {
 				),
 			),
 		);
-		$comments_query = new \WP_Comment_Query();
+		$comments_query = new WP_Comment_Query();
 		$comments = $comments_query->query( $comment_args );
 		$found_comment_ids = array();
 		if ( $comments ) {
