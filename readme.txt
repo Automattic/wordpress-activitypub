@@ -2,7 +2,7 @@
 Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nuriapena, cavalierlife
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
-Tested up to: 6.3
+Tested up to: 6.4
 Stable tag: 1.1.0
 Requires PHP: 5.6
 License: MIT
