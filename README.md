@@ -113,6 +113,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Fixed: don't try to parse mentions or hashtags for very large (>1MB) posts to prevent timeouts
 * Fixed: better handling of ISO-639-1 locale codes
 * Improved: more reliable [ap_author], props @uk3
+* Improved: NodeInfo statistics
 
 ### 1.0.10 ###
 
