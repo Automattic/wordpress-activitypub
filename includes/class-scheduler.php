@@ -5,6 +5,7 @@ namespace Activitypub;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Post;
+use Activitypub\Activity\Activity;
 
 use function Activitypub\is_user_type_disabled;
 
@@ -39,6 +40,8 @@ class Scheduler {
 		if ( ! is_user_type_disabled( 'user' ) ) {
 			\add_action( 'updated_user_meta', array( self::class, 'user_update' ), 10, 3 );
 			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
+
+			\add_action( 'delete_user', array( self::class, 'schedule_profile_delete' ), 10, 3 );
 		}
 	}
 
@@ -230,5 +233,25 @@ class Scheduler {
 			'activitypub_send_update_profile_activity',
 			array( $user_id )
 		);
+	}
+
+	/**
+	 * Send an Actor Delete activity.
+	 * @param int $user_id  The user ID to Delete.
+	 */
+	public static function schedule_profile_delete( $user_id ) {
+		$user = get_userdata( $user_id );
+		if ( $user->has_cap( 'publish_posts' ) ) {
+			$author_url = \get_author_posts_url( $user->ID );
+
+			$activity = new Activity();
+			$activity->set_id( $author_url . '#delete' );
+			$activity->set_type( 'Delete' );
+			$activity->set_actor( $author_url );
+			$activity->set_object( $author_url );
+			$activity->set_to( [ 'https://www.w3.org/ns/activitystreams#Public' ] );
+
+			\wp_schedule_single_event( \time(), 'activitypub_send_server_activity', array( $activity ) );
+		}
 	}
 }
