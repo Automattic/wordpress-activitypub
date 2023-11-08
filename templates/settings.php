@@ -138,7 +138,7 @@
 					</tr>
 					<tr>
 						<th scope="row">
-							<?php \esc_html_e( 'Number of images', 'activitypub' ); ?>
+							<?php \esc_html_e( 'Media attachments', 'activitypub' ); ?>
 						</th>
 						<td>
 							<input value="<?php echo esc_attr( \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ); ?>" name="activitypub_max_image_attachments" id="activitypub_max_image_attachments" type="number" min="0" />
@@ -147,12 +147,19 @@
 								echo \wp_kses(
 									\sprintf(
 										// translators:
-										\__( 'The number of images to attach to posts. Default: <code>%s</code>', 'activitypub' ),
+										\__( 'The number of media (images, audio, video) to attach to posts. Default: <code>%s</code>', 'activitypub' ),
 										\esc_html( ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS )
 									),
 									'default'
 								);
 								?>
+							</p>
+							<p class="description">
+								<em>
+									<?php
+										esc_html_e( 'Note: audio and video attachments are only supported from Block Editor.', 'activitypub' );
+									?>
+								</em>
 							</p>
 						</td>
 					</tr>
