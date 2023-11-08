@@ -26,6 +26,7 @@ class Activity_Dispatcher {
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity' ), 10, 2 );
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity_or_announce' ), 10, 2 );
 		\add_action( 'activitypub_send_update_profile_activity', array( self::class, 'send_profile_update' ), 10, 1 );
+		\add_action( 'activitypub_send_server_activity', array( self::class, 'send_server_activity' ), 10, 1 );
 	}
 
 	/**
@@ -158,6 +159,21 @@ class Activity_Dispatcher {
 
 		foreach ( $inboxes as $inbox ) {
 			safe_remote_post( $inbox, $json, $user_id );
+		}
+	}
+
+	/**
+	 * Send an Activity to all known (shared_)inboxes.
+	 *
+	 * @param Activity $activity The ActivityPub Activity.
+	 *
+	 * @return void
+	 */
+	private static function send_server_activity( $activity ) {
+		$json = $activity->to_json();
+		$inboxes = Server::known_inboxes();
+		foreach ( $inboxes as $inbox ) {
+			safe_remote_post( $inbox, $json, -1 );
 		}
 	}
 }
