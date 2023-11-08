@@ -2,14 +2,10 @@
 namespace Activitypub\Collection;
 
 use WP_Error;
-use Exception;
 use WP_Query;
 use Activitypub\Http;
 use Activitypub\Webfinger;
 use Activitypub\Model\Follower;
-use Activitypub\Collection\Users;
-use Activitypub\Activity\Activity;
-use Activitypub\Activity\Base_Object;
 
 use function Activitypub\is_tombstone;
 use function Activitypub\get_remote_metadata_by_actor;
@@ -23,136 +19,6 @@ use function Activitypub\get_remote_metadata_by_actor;
 class Followers {
 	const POST_TYPE = 'ap_follower';
 	const CACHE_KEY_INBOXES = 'follower_inboxes_%s';
-
-	/**
-	 * Register WordPress hooks/actions and register Taxonomy
-	 *
-	 * @return void
-	 */
-	public static function init() {
-		// register "followers" post_type
-		self::register_post_type();
-
-		\add_action( 'activitypub_inbox_follow', array( self::class, 'handle_follow_request' ), 10, 2 );
-		\add_action( 'activitypub_inbox_undo', array( self::class, 'handle_undo_request' ), 10, 2 );
-
-		\add_action( 'activitypub_followers_post_follow', array( self::class, 'send_follow_response' ), 10, 4 );
-	}
-
-	/**
-	 * Register the "Followers" Taxonomy
-	 *
-	 * @return void
-	 */
-	private static function register_post_type() {
-		register_post_type(
-			self::POST_TYPE,
-			array(
-				'labels'           => array(
-					'name'          => _x( 'Followers', 'post_type plural name', 'activitypub' ),
-					'singular_name' => _x( 'Follower', 'post_type single name', 'activitypub' ),
-				),
-				'public'           => false,
-				'hierarchical'     => false,
-				'rewrite'          => false,
-				'query_var'        => false,
-				'delete_with_user' => false,
-				'can_export'       => true,
-				'supports'         => array(),
-			)
-		);
-
-		register_post_meta(
-			self::POST_TYPE,
-			'activitypub_inbox',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'sanitize_callback' => array( self::class, 'sanitize_url' ),
-			)
-		);
-
-		register_post_meta(
-			self::POST_TYPE,
-			'activitypub_errors',
-			array(
-				'type'              => 'string',
-				'single'            => false,
-				'sanitize_callback' => function( $value ) {
-					if ( ! is_string( $value ) ) {
-						throw new Exception( 'Error message is no valid string' );
-					}
-
-					return esc_sql( $value );
-				},
-			)
-		);
-
-		register_post_meta(
-			self::POST_TYPE,
-			'activitypub_user_id',
-			array(
-				'type'              => 'string',
-				'single'            => false,
-				'sanitize_callback' => function( $value ) {
-					return esc_sql( $value );
-				},
-			)
-		);
-
-		register_post_meta(
-			self::POST_TYPE,
-			'activitypub_actor_json',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'sanitize_callback' => function( $value ) {
-					return sanitize_text_field( $value );
-				},
-			)
-		);
-
-		do_action( 'activitypub_after_register_post_type' );
-	}
-
-	public static function sanitize_url( $value ) {
-		if ( filter_var( $value, FILTER_VALIDATE_URL ) === false ) {
-			return null;
-		}
-
-		return esc_url_raw( $value );
-	}
-
-	/**
-	 * Handle the "Follow" Request
-	 *
-	 * @param array $object    The JSON "Follow" Activity
-	 * @param int   $user_id The ID of the ID of the WordPress User
-	 *
-	 * @return void
-	 */
-	public static function handle_follow_request( $object, $user_id ) {
-		// save follower
-		$follower = self::add_follower( $user_id, $object['actor'] );
-
-		do_action( 'activitypub_followers_post_follow', $object['actor'], $object, $user_id, $follower );
-	}
-
-	/**
-	 * Handle "Unfollow" requests
-	 *
-	 * @param array $object  The JSON "Undo" Activity
-	 * @param int   $user_id The ID of the ID of the WordPress User
-	 */
-	public static function handle_undo_request( $object, $user_id ) {
-		if (
-			isset( $object['object'] ) &&
-			isset( $object['object']['type'] ) &&
-			'Follow' === $object['object']['type']
-		) {
-			self::remove_follower( $user_id, $object['actor'] );
-		}
-	}
 
 	/**
 	 * Add new Follower
@@ -241,54 +107,6 @@ class Followers {
 		}
 
 		return null;
-	}
-
-	/**
-	 * Send Accept response
-	 *
-	 * @param string                     $actor    The Actor URL
-	 * @param array                      $object   The Activity object
-	 * @param int                        $user_id  The ID of the WordPress User
-	 * @param Activitypub\Model\Follower $follower The Follower object
-	 *
-	 * @return void
-	 */
-	public static function send_follow_response( $actor, $object, $user_id, $follower ) {
-		if ( is_wp_error( $follower ) ) {
-			// it is not even possible to send a "Reject" because
-			// we can not get the Remote-Inbox
-			return;
-		}
-
-		// only send minimal data
-		$object = array_intersect_key(
-			$object,
-			array_flip(
-				array(
-					'id',
-					'type',
-					'actor',
-					'object',
-				)
-			)
-		);
-
-		$user = Users::get_by_id( $user_id );
-
-		// get inbox
-		$inbox = $follower->get_shared_inbox();
-
-		// send "Accept" activity
-		$activity = new Activity();
-		$activity->set_type( 'Accept' );
-		$activity->set_object( $object );
-		$activity->set_actor( $user->get_id() );
-		$activity->set_to( $actor );
-		$activity->set_id( $user->get_id() . '#follow-' . \preg_replace( '~^https?://~', '', $actor ) . '-' . \time() );
-
-		$activity = $activity->to_json();
-
-		Http::post( $inbox, $activity, $user_id );
 	}
 
 	/**

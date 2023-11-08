@@ -474,3 +474,78 @@ function is_json( $data ) {
 function is_blog_public() {
 	return (bool) apply_filters( 'activitypub_is_blog_public', \get_option( 'blog_public', 1 ) );
 }
+
+/**
+ * Sanitize a URL
+ *
+ * @param string $value The URL to sanitize
+ *
+ * @return string|null The sanitized URL or null if invalid
+ */
+function sanitize_url( $value ) {
+	if ( filter_var( $value, FILTER_VALIDATE_URL ) === false ) {
+		return null;
+	}
+
+	return esc_url_raw( $value );
+}
+
+/**
+ * Extract recipient URLs from Activity object
+ *
+ * @param array $data
+ *
+ * @return array The list of user URLs
+ */
+function extract_recipients_from_activity( $data ) {
+	$recipient_items = array();
+
+	foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
+		if ( array_key_exists( $i, $data ) ) {
+			if ( is_array( $data[ $i ] ) ) {
+				$recipient = $data[ $i ];
+			} else {
+				$recipient = array( $data[ $i ] );
+			}
+			$recipient_items = array_merge( $recipient_items, $recipient );
+		}
+
+		if ( is_array( $data['object'] ) && array_key_exists( $i, $data['object'] ) ) {
+			if ( is_array( $data['object'][ $i ] ) ) {
+				$recipient = $data['object'][ $i ];
+			} else {
+				$recipient = array( $data['object'][ $i ] );
+			}
+			$recipient_items = array_merge( $recipient_items, $recipient );
+		}
+	}
+
+	$recipients = array();
+
+	// flatten array
+	foreach ( $recipient_items as $recipient ) {
+		if ( is_array( $recipient ) ) {
+			// check if recipient is an object
+			if ( array_key_exists( 'id', $recipient ) ) {
+				$recipients[] = $recipient['id'];
+			}
+		} else {
+			$recipients[] = $recipient;
+		}
+	}
+
+	return array_unique( $recipients );
+}
+
+/**
+ * Check if passed Activity is Public
+ *
+ * @param array $data The Activity object as array
+ *
+ * @return boolean True if public, false if not
+ */
+function is_activity_public( $data ) {
+	$recipients = extract_recipients_from_activity( $data );
+
+	return in_array( 'https://www.w3.org/ns/activitystreams#Public', $recipients, true );
+}

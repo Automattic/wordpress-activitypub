@@ -194,6 +194,12 @@ class Activity extends Base_Object {
 	 * @return void
 	 */
 	public function set_object( $object ) {
+		// convert array to object
+		if ( is_array( $object ) ) {
+			$object = Base_Object::init_from_array( $object );
+		}
+
+		// set object
 		$this->set( 'object', $object );
 
 		if ( ! is_object( $object ) ) {

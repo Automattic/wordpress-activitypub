@@ -11,6 +11,7 @@ use function Activitypub\get_context;
 use function Activitypub\url_to_authorid;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_remote_metadata_by_actor;
+use function Activitypub\extract_recipients_from_activity;
 
 /**
  * ActivityPub Inbox REST-Class
@@ -130,12 +131,13 @@ class Inbox {
 			return $user;
 		}
 
-		$data = $request->get_json_params();
-		$type = $request->get_param( 'type' );
-		$type = \strtolower( $type );
+		$data     = $request->get_json_params();
+		$activity = Activity::init_from_array( $data );
+		$type     = $request->get_param( 'type' );
+		$type     = \strtolower( $type );
 
-		\do_action( 'activitypub_inbox', $data, $user->get__id(), $type );
-		\do_action( "activitypub_inbox_{$type}", $data, $user->get__id() );
+		\do_action( 'activitypub_inbox', $data, $user->get__id(), $type, $activity );
+		\do_action( "activitypub_inbox_{$type}", $data, $user->get__id(), $activity );
 
 		$rest_response = new WP_REST_Response( array(), 202 );
 		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
@@ -151,9 +153,10 @@ class Inbox {
 	 * @return WP_REST_Response
 	 */
 	public static function shared_inbox_post( $request ) {
-		$data = $request->get_json_params();
-		$type = $request->get_param( 'type' );
-		$users = self::extract_recipients( $data );
+		$data     = $request->get_json_params();
+		$activity = Activity::init_from_array( $data );
+		$type     = $request->get_param( 'type' );
+		$users    = self::get_recipients( $data );
 
 		if ( ! $users ) {
 			return new WP_Error(
@@ -181,8 +184,8 @@ class Inbox {
 
 			$type = \strtolower( $type );
 
-			\do_action( 'activitypub_inbox', $data, $user->ID, $type );
-			\do_action( "activitypub_inbox_{$type}", $data, $user->ID );
+			\do_action( 'activitypub_inbox', $data, $user->ID, $type, $activity );
+			\do_action( "activitypub_inbox_{$type}", $data, $user->ID, $activity );
 		}
 
 		$rest_response = new WP_REST_Response( array(), 202 );
@@ -337,118 +340,6 @@ class Inbox {
 	}
 
 	/**
-	 * Handles "Create" requests
-	 *
-	 * @param  array $object  The activity-object
-	 * @param  int   $user_id The id of the local blog-user
-	 */
-	public static function handle_create( $object, $user_id ) {
-		$meta = get_remote_metadata_by_actor( $object['actor'] );
-
-		if ( ! isset( $object['object']['inReplyTo'] ) ) {
-			return;
-		}
-
-		// check if Activity is public or not
-		if ( ! self::is_activity_public( $object ) ) {
-			// @todo maybe send email
-			return;
-		}
-
-		$comment_post_id = \url_to_postid( $object['object']['inReplyTo'] );
-
-		// save only replys and reactions
-		if ( ! $comment_post_id ) {
-			return false;
-		}
-
-		$commentdata = array(
-			'comment_post_ID' => $comment_post_id,
-			'comment_author' => \esc_attr( $meta['name'] ),
-			'comment_author_url' => \esc_url_raw( $object['actor'] ),
-			'comment_content' => \wp_filter_kses( $object['object']['content'] ),
-			'comment_type' => 'comment',
-			'comment_author_email' => '',
-			'comment_parent' => 0,
-			'comment_meta' => array(
-				'source_url' => \esc_url_raw( $object['object']['url'] ),
-				'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
-				'protocol' => 'activitypub',
-			),
-		);
-
-		// disable flood control
-		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
-
-		// do not require email for AP entries
-		\add_filter( 'pre_option_require_name_email', '__return_false' );
-
-		// No nonce possible for this submission route
-		\add_filter(
-			'akismet_comment_nonce',
-			function() {
-				return 'inactive';
-			}
-		);
-
-		$state = \wp_new_comment( $commentdata, true );
-
-		\remove_filter( 'pre_option_require_name_email', '__return_false' );
-
-		// re-add flood control
-		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
-
-		do_action( 'activitypub_handled_create', $object, $user_id, $state, $commentdata );
-	}
-
-	/**
-	 * Extract recipient URLs from Activity object
-	 *
-	 * @param  array $data
-	 *
-	 * @return array The list of user URLs
-	 */
-	public static function extract_recipients( $data ) {
-		$recipient_items = array();
-
-		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
-			if ( array_key_exists( $i, $data ) ) {
-				if ( is_array( $data[ $i ] ) ) {
-					$recipient = $data[ $i ];
-				} else {
-					$recipient = array( $data[ $i ] );
-				}
-				$recipient_items = array_merge( $recipient_items, $recipient );
-			}
-
-			if ( is_array( $data['object'] ) && array_key_exists( $i, $data['object'] ) ) {
-				if ( is_array( $data['object'][ $i ] ) ) {
-					$recipient = $data['object'][ $i ];
-				} else {
-					$recipient = array( $data['object'][ $i ] );
-				}
-				$recipient_items = array_merge( $recipient_items, $recipient );
-			}
-		}
-
-		$recipients = array();
-
-		// flatten array
-		foreach ( $recipient_items as $recipient ) {
-			if ( is_array( $recipient ) ) {
-				// check if recipient is an object
-				if ( array_key_exists( 'id', $recipient ) ) {
-					$recipients[] = $recipient['id'];
-				}
-			} else {
-				$recipients[] = $recipient;
-			}
-		}
-
-		return array_unique( $recipients );
-	}
-
-	/**
 	 * Get local user recipients
 	 *
 	 * @param  array $data
@@ -456,7 +347,7 @@ class Inbox {
 	 * @return array The list of local users
 	 */
 	public static function get_recipients( $data ) {
-		$recipients = self::extract_recipients( $data );
+		$recipients = extract_recipients_from_activity( $data );
 		$users = array();
 
 		foreach ( $recipients as $recipient ) {
@@ -470,17 +361,5 @@ class Inbox {
 		}
 
 		return $users;
-	}
-
-	/**
-	 * Check if passed Activity is Public
-	 *
-	 * @param array $data
-	 * @return boolean
-	 */
-	public static function is_activity_public( $data ) {
-		$recipients = self::extract_recipients( $data );
-
-		return in_array( 'https://www.w3.org/ns/activitystreams#Public', $recipients, true );
 	}
 }
