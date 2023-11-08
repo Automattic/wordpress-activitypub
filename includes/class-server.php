@@ -9,10 +9,12 @@ namespace Activitypub;
  */
 class Server {
 
-	private static function known_inboxes () {
-		$authors = get_users( array(
-			'capability' => 'publish_posts'
-		) );
+	private static function known_inboxes() {
+		$authors = get_users(
+			array(
+				'capability' => 'publish_posts',
+			)
+		);
 		$follower_inboxes_all = [];
 		foreach ( $authors as $user ) {
 			$follower_inboxes = Followers::get_inboxes( $user->ID );
@@ -20,5 +22,4 @@ class Server {
 		}
 		return array_unique( array_filter( $follower_inboxes_all ) );
 	}
-
 }

@@ -140,7 +140,7 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	private static function send_activity_to_inboxes( $activity, $user_id ) {
-		$follower_inboxes  = Followers::get_inboxes( $user_id );
+		$follower_inboxes = Followers::get_inboxes( $user_id );
 
 		$mentioned_inboxes = array();
 		$cc = $activity->get_cc();
