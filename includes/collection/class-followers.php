@@ -173,8 +173,6 @@ class Followers {
 			return new WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
-		$error = null;
-
 		$follower = new Follower();
 		$follower->from_array( $meta );
 
@@ -184,14 +182,10 @@ class Followers {
 			return $id;
 		}
 
-		$meta = get_post_meta( $id, 'activitypub_user_id' );
-
-		if ( $error ) {
-			self::add_error( $id, $error );
-		}
+		$post_meta = get_post_meta( $id, 'activitypub_user_id' );
 
 		// phpcs:ignore WordPress.PHP.StrictInArray.MissingTrueStrict
-		if ( is_array( $meta ) && ! in_array( $user_id, $meta ) ) {
+		if ( is_array( $post_meta ) && ! in_array( $user_id, $post_meta ) ) {
 			add_post_meta( $id, 'activitypub_user_id', $user_id );
 			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}

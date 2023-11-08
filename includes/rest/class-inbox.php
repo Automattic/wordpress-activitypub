@@ -109,11 +109,10 @@ class Inbox {
 		 */
 		\do_action( 'activitypub_inbox_post' );
 
-		$response = new WP_REST_Response( $json, 200 );
+		$rest_response = new WP_REST_Response( $json, 200 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
 
-		$response->header( 'Content-Type', 'application/activity+json' );
-
-		return $response;
+		return $rest_response;
 	}
 
 	/**
@@ -138,7 +137,10 @@ class Inbox {
 		\do_action( 'activitypub_inbox', $data, $user->get__id(), $type );
 		\do_action( "activitypub_inbox_{$type}", $data, $user->get__id() );
 
-		return new WP_REST_Response( array(), 202 );
+		$rest_response = new WP_REST_Response( array(), 202 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+
+		return $rest_response;
 	}
 
 	/**
@@ -158,7 +160,7 @@ class Inbox {
 				'rest_invalid_param',
 				\__( 'No recipients found', 'activitypub' ),
 				array(
-					'status' => 404,
+					'status' => 400,
 					'params' => array(
 						'to' => \__( 'Please check/validate "to" field', 'activitypub' ),
 						'bto' => \__( 'Please check/validate "bto" field', 'activitypub' ),
@@ -183,7 +185,10 @@ class Inbox {
 			\do_action( "activitypub_inbox_{$type}", $data, $user->ID );
 		}
 
-		return new WP_REST_Response( array(), 202 );
+		$rest_response = new WP_REST_Response( array(), 202 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+
+		return $rest_response;
 	}
 
 	/**
@@ -416,7 +421,7 @@ class Inbox {
 				$recipient_items = array_merge( $recipient_items, $recipient );
 			}
 
-			if ( array_key_exists( $i, $data['object'] ) ) {
+			if ( is_array( $data['object'] ) && array_key_exists( $i, $data['object'] ) ) {
 				if ( is_array( $data['object'][ $i ] ) ) {
 					$recipient = $data['object'][ $i ];
 				} else {

@@ -2,8 +2,8 @@
 Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nuriapena, cavalierlife
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
-Tested up to: 6.3
-Stable tag: 1.0.7
+Tested up to: 6.4
+Stable tag: 1.1.0
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -104,6 +104,36 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 == Changelog ==
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
+
+= 1.1.0 =
+
+* Improved: audio and video attachments are now supported!
+* Improved: better error messages if remote profile is not accessible
+* Improved: PHP 8.1 compatibility
+* Fixed: don't try to parse mentions or hashtags for very large (>1MB) posts to prevent timeouts
+* Fixed: better handling of ISO-639-1 locale codes
+* Improved: more reliable [ap_author], props @uk3
+* Improved: NodeInfo statistics
+
+= 1.0.10 =
+
+* Improved: better error messages if remote profile is not accessible
+
+= 1.0.9 =
+
+* Fixed: broken following endpoint
+
+= 1.0.8 =
+
+* Fixed: blocking of HEAD requests
+* Fixed: PHP fatal error
+* Fixed: several typos
+* Fixed: error codes
+* Improved: loading of shortcodes
+* Updated: caching of followers
+* Updated: Application-User is no longer "indexable"
+* Updated: more consistent usage of the `application/activity+json` Content-Type
+* Removed: featured tags endpoint
 
 = 1.0.7 =
 

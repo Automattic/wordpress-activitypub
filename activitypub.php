@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/pfefferle/wordpress-activitypub/
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 1.0.7
+ * Version: 1.1.0
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -69,7 +69,6 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Collection\Followers', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Admin', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Shortcodes', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Health_Check', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
