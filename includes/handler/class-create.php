@@ -50,6 +50,7 @@ class Create {
 			'comment_author_email' => '',
 			'comment_parent' => 0,
 			'comment_meta' => array(
+				'source_id' => \esc_url_raw( $activity['object']['id'] ),
 				'source_url' => \esc_url_raw( $activity['object']['url'] ),
 				'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
 				'protocol' => 'activitypub',
