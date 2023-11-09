@@ -20,10 +20,7 @@ class Server {
 	public static function init() {
 		self::register_routes();
 
-		// please deactivate ACTIVITYPUB_SIGNATURE_VERIFICATION only for debugging purposes!
-		if ( ACTIVITYPUB_SIGNATURE_VERIFICATION ) {
-			\add_filter( 'rest_request_before_callbacks', array( self::class, 'authorize_activitypub_requests' ), 10, 3 );
-		}
+		\add_filter( 'rest_request_before_callbacks', array( self::class, 'authorize_activitypub_requests' ), 10, 3 );
 	}
 
 	/**
@@ -85,6 +82,23 @@ class Server {
 			\str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'webfinger' ) ||
 			\str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'nodeinfo' )
 		) {
+			return $response;
+		}
+
+		/**
+		 * Filter to skip signature verification
+		 *
+		 * Skip signature verification for debugging purposes or to reduce load for
+		 * certain Activity-Types, like "Delete".
+		 *
+		 * @param bool            $skip    Whether to skip signature verification.
+		 * @param WP_REST_Request $request The request used to generate the response.
+		 *
+		 * @return bool Whether to skip signature verification.
+		 */
+		$skip = \apply_filters( 'activitypub_skip_signature_verification', false, $request );
+
+		if ( $skip ) {
 			return $response;
 		}
 
