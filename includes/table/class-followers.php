@@ -75,9 +75,12 @@ class Followers extends WP_List_Table {
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( isset( $_GET['s'] ) ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+		if ( isset( $_GET['s'] ) && isset( $_REQUEST['_wpnonce'] ) ) {
+			$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
+			if ( wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+			}
 		}
 
 		$followers_with_count = FollowerCollection::get_followers_with_count( $this->user_id, $per_page, $page_num, $args );
