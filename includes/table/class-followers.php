@@ -141,11 +141,11 @@ class Followers extends WP_List_Table {
 	}
 
 	public function process_action() {
-		if ( ! isset( $_REQUEST['followers'] ) || ! isset( $_REQUEST['_apnonce'] ) ) {
+		if ( ! isset( $_REQUEST['followers'] ) || ! isset( $_REQUEST['_wpnonce'] ) ) {
 			return false;
 		}
-		$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_apnonce'] ) );
-		if ( ! wp_verify_nonce( $nonce, 'activitypub-followers-list' ) ) {
+		$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
+		if ( ! wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
 			return false;
 		}
 
