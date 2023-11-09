@@ -5,17 +5,23 @@ use function Activitypub\esc_hashtag;
 
 class Shortcodes {
 	/**
-	 * Class constructor, registering WordPress then Shortcodes
+	 * Register the shortcodes
 	 */
-	public static function init() {
-		// do not load on admin pages
-		if ( is_admin() ) {
-			return;
-		}
-
+	public static function register() {
 		foreach ( get_class_methods( self::class ) as $shortcode ) {
 			if ( 'init' !== $shortcode ) {
 				add_shortcode( 'ap_' . $shortcode, array( self::class, $shortcode ) );
+			}
+		}
+	}
+
+	/**
+	 * Unregister the shortcodes
+	 */
+	public static function unregister() {
+		foreach ( get_class_methods( self::class ) as $shortcode ) {
+			if ( 'init' !== $shortcode ) {
+				remove_shortcode( 'ap_' . $shortcode );
 			}
 		}
 	}
@@ -384,7 +390,8 @@ class Shortcodes {
 			return '';
 		}
 
-		$name = \get_the_author_meta( 'display_name', $item->post_author );
+		$author_id = \get_post_field( 'post_author', $item->ID );
+		$name = \get_the_author_meta( 'display_name', $author_id );
 
 		if ( ! $name ) {
 			return '';
@@ -409,7 +416,8 @@ class Shortcodes {
 			return '';
 		}
 
-		$url = \get_the_author_meta( 'user_url', $item->post_author );
+		$author_id = \get_post_field( 'post_author', $item->ID );
+		$url = \get_the_author_meta( 'user_url', $author_id );
 
 		if ( ! $url ) {
 			return '';

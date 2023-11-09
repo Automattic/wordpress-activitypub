@@ -2,6 +2,7 @@
 namespace Activitypub;
 
 use WP_Error;
+use Activitypub\Webfinger;
 
 /**
  * ActivityPub Mention Class
@@ -25,6 +26,10 @@ class Mention {
 	 * @return string the filtered post-content
 	 */
 	public static function the_content( $the_content ) {
+		// small protection against execution timeouts: limit to 1 MB
+		if ( mb_strlen( $the_content ) > MB_IN_BYTES ) {
+			return $the_content;
+		}
 		$tag_stack = array();
 		$protected_tags = array(
 			'pre',

@@ -1,7 +1,15 @@
 <?php
 namespace Activitypub\Integration;
 
+/**
+ * Compatibility with the BuddyPress plugin
+ *
+ * @see https://buddypress.org/
+ */
 class Buddypress {
+	/**
+	 * Initialize the class, registering WordPress hooks
+	 */
 	public static function init() {
 		\add_filter( 'activitypub_json_author_array', array( self::class, 'add_user_metadata' ), 11, 2 );
 	}

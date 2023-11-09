@@ -5,6 +5,7 @@ use WP_Error;
 use Activitypub\Http;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Users;
 
 /**
  * Returns the ActivityPub default JSON-context
@@ -42,7 +43,7 @@ function get_webfinger_resource( $user_id ) {
  * @param string $actor  The Actor URL.
  * @param bool   $cached If the result should be cached.
  *
- * @return array The Actor profile as array
+ * @return array|WP_Error The Actor profile as array or WP_Error on failure.
  */
 function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	$pre = apply_filters( 'pre_get_remote_metadata_by_actor', false, $actor );
@@ -74,31 +75,24 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 
 	if ( ! \wp_http_validate_url( $actor ) ) {
 		$metadata = new WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), array( 'status' => 400, 'actor' => $actor ) );
-		\set_transient( $transient_key, $metadata, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 		return $metadata;
 	}
 
-	$short_timeout = function() {
-		return 3;
-	};
-	add_filter( 'activitypub_remote_get_timeout', $short_timeout );
 	$response = Http::get( $actor );
-	remove_filter( 'activitypub_remote_get_timeout', $short_timeout );
+
 	if ( \is_wp_error( $response ) ) {
-		\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 		return $response;
 	}
 
 	$metadata = \wp_remote_retrieve_body( $response );
 	$metadata = \json_decode( $metadata, true );
 
-	\set_transient( $transient_key, $metadata, WEEK_IN_SECONDS );
-
 	if ( ! $metadata ) {
 		$metadata = new WP_Error( 'activitypub_invalid_json', \__( 'No valid JSON data', 'activitypub' ), array( 'status' => 400, 'actor' => $actor ) );
-		\set_transient( $transient_key, $metadata, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
 		return $metadata;
 	}
+
+	\set_transient( $transient_key, $metadata, WEEK_IN_SECONDS );
 
 	return $metadata;
 }
@@ -439,19 +433,6 @@ function is_single_user() {
 	return false;
 }
 
-if ( ! function_exists( 'get_self_link' ) ) {
-	/**
-	 * Returns the link for the currently displayed feed.
-	 *
-	 * @return string Correct link for the atom:self element.
-	 */
-	function get_self_link() {
-		$host = wp_parse_url( home_url() );
-		$path = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
-		return esc_url( apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . $path ) ) );
-	}
-}
-
 /**
  * Check if a site supports the block editor.
  *
@@ -484,4 +465,85 @@ function site_supports_blocks() {
  */
 function is_json( $data ) {
 	return \is_array( \json_decode( $data, true ) ) ? true : false;
+}
+
+/**
+ * Check if a blog is public based on the `blog_public` option
+ *
+ * @return bollean True if public, false if not
+ */
+function is_blog_public() {
+	return (bool) apply_filters( 'activitypub_is_blog_public', \get_option( 'blog_public', 1 ) );
+}
+
+/**
+ * Get active users based on a given duration
+ *
+ * @param int $duration The duration to check in month(s)
+ *
+ * @return int The number of active users
+ */
+function get_active_users( $duration = 1 ) {
+
+	$duration = intval( $duration );
+	$transient_key = sprintf( 'monthly_active_users_%d', $duration );
+	$count = get_transient( $transient_key );
+
+	if ( false === $count ) {
+		global $wpdb;
+		$query = "SELECT COUNT( DISTINCT post_author ) FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND post_date <= DATE_SUB( NOW(), INTERVAL %d MONTH )";
+		$query = $wpdb->prepare( $query, $duration );
+		$count = $wpdb->get_var( $query ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+
+		set_transient( $transient_key, $count, DAY_IN_SECONDS );
+	}
+
+	// if 0 authors where active
+	if ( 0 === $count ) {
+		return 0;
+	}
+
+	// if single user mode
+	if ( is_single_user() ) {
+		return 1;
+	}
+
+	// if blog user is disabled
+	if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
+		return $count;
+	}
+
+	// also count blog user
+	return $count + 1;
+}
+
+/**
+ * Get the total number of users
+ *
+ * @return int The total number of users
+ */
+function get_total_users() {
+	// if single user mode
+	if ( is_single_user() ) {
+		return 1;
+	}
+
+	$users = \get_users(
+		array(
+			'capability__in' => array( 'publish_posts' ),
+		)
+	);
+
+	if ( is_array( $users ) ) {
+		$users = count( $users );
+	} else {
+		$users = 1;
+	}
+
+	// if blog user is disabled
+	if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
+		return $users;
+	}
+
+	return $users + 1;
 }
