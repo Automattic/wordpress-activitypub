@@ -90,19 +90,19 @@ class Server {
 		}
 
 		/**
-		 * Filter to skip signature verification
+		 * Filter to defer signature verification
 		 *
 		 * Skip signature verification for debugging purposes or to reduce load for
 		 * certain Activity-Types, like "Delete".
 		 *
-		 * @param bool            $skip    Whether to skip signature verification.
+		 * @param bool            $defer   Whether to defer signature verification.
 		 * @param WP_REST_Request $request The request used to generate the response.
 		 *
-		 * @return bool Whether to skip signature verification.
+		 * @return bool Whether to defer signature verification.
 		 */
-		$skip = \apply_filters( 'activitypub_skip_signature_verification', false, $request );
+		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request );
 
-		if ( $skip ) {
+		if ( $defer ) {
 			return $response;
 		}
 
