@@ -21,7 +21,11 @@ class Delete {
 	 * @param int   $user_id  The ID of the user performing the delete activity.
 	 */
 	public function handle_delete( $activity, $user_id ) {
-		if ( ! isset( $activity['object'] ) || ! is_array( $activity['object'] ) ) {
+		if (
+			! isset( $activity['object'] ) ||
+			! is_array( $activity['object'] ) ||
+			! isset( $activity['object']['id'] )
+		) {
 			return;
 		}
 
@@ -33,7 +37,10 @@ class Delete {
 			case 'Organization':
 			case 'Service':
 			case 'Application':
-				Followers::remove_follower( $activity['object']['id'], $user_id );
+				$follower = Followers::get_follower( $user_id, $activity['actor'] );
+				if ( $follower ) {
+					$follower->delete();
+				}
 
 				break;
 			case 'Tombstone':

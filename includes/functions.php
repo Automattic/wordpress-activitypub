@@ -2,6 +2,7 @@
 namespace Activitypub;
 
 use WP_Error;
+use WP_Comment_Query;
 use Activitypub\Http;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
@@ -621,4 +622,30 @@ function get_total_users() {
 	}
 
 	return $users + 1;
+}
+
+/**
+ * Examine a comment ID and look up an existing comment it represents.
+ *
+ * @param string $id ActivityPub object ID (usually a URL) to check.
+ *
+ * @return int|boolean Comment ID, or false on failure.
+ */
+function object_id_to_comment( $id ) {
+	$comment_query = new WP_Comment_Query(
+		array(
+			'meta_key'   => 'source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			'meta_value' => $id,         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+		)
+	);
+
+	if ( ! $comment_query->comments ) {
+		return false;
+	}
+
+	if ( count( $comment_query->comments ) > 1 ) {
+		return false;
+	}
+
+	return $comment_query->comments[0];
 }

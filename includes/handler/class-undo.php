@@ -23,6 +23,7 @@ class Undo {
 	public static function handle_undo( $activity, $user_id ) {
 		if (
 			isset( $activity['object'] ) &&
+			isset( $activity['actor'] ) &&
 			isset( $activity['object']['type'] ) &&
 			'Follow' === $activity['object']['type']
 		) {
