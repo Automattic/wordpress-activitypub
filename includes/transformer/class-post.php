@@ -82,7 +82,7 @@ class Post {
 		$object->set_content( $this->get_content() );
 		$object->set_content_map(
 			array(
-				\strstr( \get_locale(), '_', true ) => $this->get_content(),
+				$this->get_locale() => $this->get_content(),
 			)
 		);
 		$path = sprintf( 'users/%d/followers', intval( $wp_post->post_author ) );
@@ -579,5 +579,26 @@ class Post {
 	 */
 	protected function get_mentions() {
 		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_post->post_content, $this->wp_post );
+	}
+
+	/**
+	 * Returns the locale of the post.
+	 *
+	 * @return string The locale of the post.
+	 */
+	public function get_locale() {
+		$post_id = $this->wp_post->ID;
+		$lang    = \strtolower( \strtok( \get_locale(), '_-' ) );
+
+		/**
+		 * Filter the locale of the post.
+		 *
+		 * @param string  $lang    The locale of the post.
+		 * @param int     $post_id The post ID.
+		 * @param WP_Post $post    The post object.
+		 *
+		 * @return string The filtered locale of the post.
+		 */
+		return apply_filters( 'activitypub_post_locale', $lang, $post_id, $this->wp_post );
 	}
 }

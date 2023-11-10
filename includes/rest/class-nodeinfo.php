@@ -3,6 +3,8 @@ namespace Activitypub\Rest;
 
 use WP_REST_Response;
 
+use function Activitypub\get_total_users;
+use function Activitypub\get_active_users;
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -82,24 +84,14 @@ class Nodeinfo {
 			'version' => \get_bloginfo( 'version' ),
 		);
 
-		$users = \get_users(
-			array(
-				'capability__in' => array( 'publish_posts' ),
-			)
-		);
-
-		if ( is_countable( $users ) ) {
-			$users = count( $users );
-		} else {
-			$users = 1;
-		}
-
 		$posts = \wp_count_posts();
 		$comments = \wp_count_comments();
 
 		$nodeinfo['usage'] = array(
 			'users' => array(
-				'total' => $users,
+				'total'          => get_total_users(),
+				'activeMonth'    => get_active_users( '1 month ago' ),
+				'activeHalfyear' => get_active_users( '6 month ago' ),
 			),
 			'localPosts' => (int) $posts->publish,
 			'localComments' => (int) $comments->approved,
@@ -139,24 +131,14 @@ class Nodeinfo {
 			'version' => \get_bloginfo( 'version' ),
 		);
 
-		$users = \get_users(
-			array(
-				'capability__in' => array( 'publish_posts' ),
-			)
-		);
-
-		if ( is_countable( $users ) ) {
-			$users = count( $users );
-		} else {
-			$users = 1;
-		}
-
 		$posts = \wp_count_posts();
 		$comments = \wp_count_comments();
 
 		$nodeinfo['usage'] = array(
 			'users' => array(
-				'total' => (int) $users,
+				'total'          => get_total_users(),
+				'activeMonth'    => get_active_users( 1 ),
+				'activeHalfyear' => get_active_users( 6 ),
 			),
 			'localPosts' => (int) $posts->publish,
 			'localComments' => (int) $comments->approved,
