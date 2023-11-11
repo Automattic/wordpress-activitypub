@@ -89,6 +89,23 @@ class Server {
 			return $response;
 		}
 
+		/**
+		 * Filter to defer signature verification
+		 *
+		 * Skip signature verification for debugging purposes or to reduce load for
+		 * certain Activity-Types, like "Delete".
+		 *
+		 * @param bool            $defer   Whether to defer signature verification.
+		 * @param WP_REST_Request $request The request used to generate the response.
+		 *
+		 * @return bool Whether to defer signature verification.
+		 */
+		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request );
+
+		if ( $defer ) {
+			return $response;
+		}
+
 		// POST-Requets are always signed
 		if ( 'GET' !== $request->get_method() ) {
 			$verified_request = Signature::verify_http_signature( $request );
