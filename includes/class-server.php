@@ -14,7 +14,7 @@ use function Activitypub\is_user_disabled;
  */
 class Server {
 
-	private static function known_inboxes() {
+	public static function known_inboxes() {
 		$authors = get_users(
 			array(
 				'capability' => 'publish_posts',
