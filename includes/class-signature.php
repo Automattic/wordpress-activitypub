@@ -186,7 +186,11 @@ class Signature {
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
 		$user = Users::get_by_id( $user_id );
-		$key  = self::get_private_key_for( $user->get__id() );
+		if ( ! is_wp_error( $user ) ) {
+			$key = self::get_private_key_for( $user->get__id() );
+		} else {
+			$key = get_option( 'activitypub_temp_sig_' . $user_id, true );
+		}
 
 		$url_parts = \wp_parse_url( $url );
 
