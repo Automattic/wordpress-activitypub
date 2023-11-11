@@ -6,6 +6,7 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Post;
+use Activitypub\Server;
 
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
@@ -26,7 +27,7 @@ class Activity_Dispatcher {
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity' ), 10, 2 );
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity_or_announce' ), 10, 2 );
 		\add_action( 'activitypub_send_update_profile_activity', array( self::class, 'send_profile_update' ), 10, 1 );
-		\add_action( 'activitypub_send_server_activity', array( self::class, 'send_server_activity' ), 10, 1 );
+		\add_action( 'activitypub_send_server_activity', array( self::class, 'send_server_activity' ), 10, 2 );
 	}
 
 	/**
@@ -169,11 +170,11 @@ class Activity_Dispatcher {
 	 *
 	 * @return void
 	 */
-	private static function send_server_activity( $activity ) {
+	public static function send_server_activity( $activity, $user_id = Users::APPLICATION_USER_ID ) {
 		$json = $activity->to_json();
 		$inboxes = Server::known_inboxes();
 		foreach ( $inboxes as $inbox ) {
-			safe_remote_post( $inbox, $json, -1 );
+			safe_remote_post( $inbox, $json, $user_id );
 		}
 	}
 }
