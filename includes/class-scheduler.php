@@ -7,6 +7,7 @@ use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Post;
 use Activitypub\Activity\Activity;
 
+use function Activitypub\get_private_key_for;
 use function Activitypub\is_user_type_disabled;
 
 /**
@@ -42,6 +43,7 @@ class Scheduler {
 			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
 
 			\add_action( 'delete_user', array( self::class, 'schedule_profile_delete' ), 10, 3 );
+			\add_action( 'deleted_user', array( self::class, 'schedule_user_delete' ), 10, 3 );
 		}
 	}
 
@@ -242,6 +244,9 @@ class Scheduler {
 	public static function schedule_profile_delete( $user_id ) {
 		$user = get_userdata( $user_id );
 		if ( $user->has_cap( 'publish_posts' ) ) {
+			$temp_private_key = get_private_key_for( $user->ID );
+			add_option( 'activitypub_temp_sig_' . $user->ID, $temp_private_key );
+
 			$author_url = \get_author_posts_url( $user->ID );
 
 			$activity = new Activity();
@@ -251,7 +256,19 @@ class Scheduler {
 			$activity->set_object( $author_url );
 			$activity->set_to( [ 'https://www.w3.org/ns/activitystreams#Public' ] );
 
-			\wp_schedule_single_event( \time(), 'activitypub_send_server_activity', array( $activity ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_server_activity', array( $activity, $user_id ) );
+		}
+	}
+
+	/**
+	 * Delete actor related options.
+	 * @param int $user_id  The deleted user ID.
+	 */
+	public static function schedule_user_delete( $user_id ) {
+		$user = get_userdata( $user_id );
+		error_log( 'schedule_user_delete: ' . print_r( $user, true ) );
+		if ( $user->has_cap( 'publish_posts' ) ) {
+			delete_option( 'activitypub_temp_sig_' . $user_id );
 		}
 	}
 }
