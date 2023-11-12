@@ -73,6 +73,7 @@
 	.apfmd__button-group {
 		display: flex;
 		justify-content: flex-end;
+		align-items: flex-end;
 
 		svg {
 			margin-right: .5em;
@@ -82,10 +83,11 @@
 
 		input {
 			flex: 1;
-			padding: {
-				left: 1em;
-				right: 1em;
-			}
+			padding: 6px 12px;
+			background-color: var( --wp--preset--color--white );
+			color: var( --wp--preset--color--black );
+			border: 1px solid var( --wp--preset--color--black );
 		}
+
 	}
 }

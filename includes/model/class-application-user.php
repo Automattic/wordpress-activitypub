@@ -58,15 +58,15 @@ class Application_User extends Blog_User {
 		return null;
 	}
 
-	public function get_featured_tags() {
-		return null;
-	}
-
 	public function get_featured() {
 		return null;
 	}
 
 	public function get_moderators() {
 		return null;
+	}
+
+	public function get_indexable() {
+		return false;
 	}
 }

@@ -2,6 +2,7 @@
 namespace Activitypub\Rest;
 
 use stdClass;
+use WP_Error;
 use WP_REST_Response;
 use Activitypub\Signature;
 use Activitypub\Model\Application_User;
@@ -54,11 +55,10 @@ class Server {
 
 		$json = $user->to_array();
 
-		$response = new WP_REST_Response( $json, 200 );
+		$rest_response = new WP_REST_Response( $json, 200 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
 
-		$response->header( 'Content-Type', 'application/activity+json' );
-
-		return $response;
+		return $rest_response;
 	}
 
 	/**
@@ -74,6 +74,10 @@ class Server {
 	 * @return mixed|WP_Error The response, error, or modified response.
 	 */
 	public static function authorize_activitypub_requests( $response, $handler, $request ) {
+		if ( 'HEAD' === $request->get_method() ) {
+			return $response;
+		}
+
 		$route = $request->get_route();
 
 		// check if it is an activitypub request and exclude webfinger and nodeinfo endpoints
@@ -85,17 +89,34 @@ class Server {
 			return $response;
 		}
 
+		/**
+		 * Filter to defer signature verification
+		 *
+		 * Skip signature verification for debugging purposes or to reduce load for
+		 * certain Activity-Types, like "Delete".
+		 *
+		 * @param bool            $defer   Whether to defer signature verification.
+		 * @param WP_REST_Request $request The request used to generate the response.
+		 *
+		 * @return bool Whether to defer signature verification.
+		 */
+		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request );
+
+		if ( $defer ) {
+			return $response;
+		}
+
 		// POST-Requets are always signed
-		if ( 'post' === \strtolower( $request->get_method() ) ) {
+		if ( 'GET' !== $request->get_method() ) {
 			$verified_request = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_request ) ) {
-				return $verified_request;
+				return new WP_Error( 'activitypub_signature_verification', $verified_request->get_error_message(), array( 'status' => 401 ) );
 			}
-		} elseif ( 'get' === \strtolower( $request->get_method() ) ) { // GET-Requests are only signed in secure mode
+		} elseif ( 'GET' === $request->get_method() ) { // GET-Requests are only signed in secure mode
 			if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
 				$verified_request = Signature::verify_http_signature( $request );
 				if ( \is_wp_error( $verified_request ) ) {
-					return $verified_request;
+					return new WP_Error( 'activitypub_signature_verification', $verified_request->get_error_message(), array( 'status' => 401 ) );
 				}
 			}
 		}

@@ -19,15 +19,6 @@ class User extends Actor {
 	protected $_id; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
-	 * The Featured-Tags.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#featuredTags
-	 *
-	 * @var string
-	 */
-	protected $featured_tags;
-
-	/**
 	 * The Featured-Posts.
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#featured
@@ -233,15 +224,6 @@ class User extends Actor {
 	 */
 	public function get_featured() {
 		return get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $this->get__id() ) );
-	}
-
-	/**
-	 * Returns the Featured-Tags-API-Endpoint.
-	 *
-	 * @return string The Featured-Tags-Endpoint.
-	 */
-	public function get_featured_tags() {
-		return get_rest_url_by_path( sprintf( 'users/%d/collections/tags', $this->get__id() ) );
 	}
 
 	/**

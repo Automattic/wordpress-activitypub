@@ -5,6 +5,7 @@ use WP_Post;
 use Activitypub\Collection\Users;
 use Activitypub\Model\Blog_User;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Shortcodes;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -81,7 +82,7 @@ class Post {
 		$object->set_content( $this->get_content() );
 		$object->set_content_map(
 			array(
-				\strstr( \get_locale(), '_', true ) => $this->get_content(),
+				$this->get_locale() => $this->get_content(),
 			)
 		);
 		$path = sprintf( 'users/%d/followers', intval( $wp_post->post_author ) );
@@ -142,78 +143,65 @@ class Post {
 	}
 
 	/**
-	 * Returns the Image Attachments for this Post, parsed from blocks.
-	 * @param int $max_images The maximum number of images to return.
-	 * @param array $image_ids The image IDs to append new IDs to.
+	 * Generates all Media Attachments for a Post.
 	 *
-	 * @return array The image IDs.
-	 */
-	protected function get_block_image_ids( $max_images, $image_ids = [] ) {
-		$blocks = \parse_blocks( $this->wp_post->post_content );
-		return self::get_image_ids_from_blocks( $blocks, $image_ids, $max_images );
-	}
-
-	/**
-	 * Recursively get image IDs from blocks.
-	 * @param array $blocks The blocks to search for image IDs
-	 * @param array $image_ids The image IDs to append new IDs to
-	 * @param int $max_images The maximum number of images to return.
-	 *
-	 * @return array The image IDs.
-	 */
-	protected static function get_image_ids_from_blocks( $blocks, $image_ids, $max_images ) {
-		foreach ( $blocks as $block ) {
-			// recurse into inner blocks
-			if ( ! empty( $block['innerBlocks'] ) ) {
-				$image_ids = self::get_image_ids_from_blocks( $block['innerBlocks'], $image_ids, $max_images );
-			}
-
-			switch ( $block['blockName'] ) {
-				case 'core/image':
-				case 'core/cover':
-					if ( ! empty( $block['attrs']['id'] ) ) {
-						$image_ids[] = $block['attrs']['id'];
-					}
-					break;
-				case 'jetpack/slideshow':
-				case 'jetpack/tiled-gallery':
-					if ( ! empty( $block['attrs']['ids'] ) ) {
-						$image_ids = array_merge( $image_ids, $block['attrs']['ids'] );
-					}
-					break;
-				case 'jetpack/image-compare':
-					if ( ! empty( $block['attrs']['beforeImageId'] ) ) {
-						$image_ids[] = $block['attrs']['beforeImageId'];
-					}
-					if ( ! empty( $block['attrs']['afterImageId'] ) ) {
-						$image_ids[] = $block['attrs']['afterImageId'];
-					}
-					break;
-			}
-
-			// we could be at or over max, stop unneeded work
-			if ( count( $image_ids ) >= $max_images ) {
-				break;
-			}
-		}
-
-		// still need to slice it because one gallery could knock us over the limit
-		return \array_slice( $image_ids, 0, $max_images );
-	}
-
-	/**
-	 * Generates all Image Attachments for a Post.
-	 *
-	 * @return array The Image Attachments.
+	 * @return array The Attachments.
 	 */
 	protected function get_attachments() {
-		$max_images = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
+		// Once upon a time we only supported images, but we now support audio/video as well.
+		// We maintain the image-centric naming for backwards compatibility.
+		$max_media = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
 
-		$images = array();
+		if ( site_supports_blocks() && \has_blocks( $this->wp_post->post_content ) ) {
+			return $this->get_block_attachments( $max_media );
+		}
 
+		return $this->get_classic_editor_images( $max_media );
+	}
+
+	/**
+	 * Get media attachments from blocks. They will be formatted as ActivityPub attachments, not as WP attachments.
+	 *
+	 * @param int $max_media The maximum number of attachments to return.
+	 *
+	 * @return array The attachments.
+	 */
+	protected function get_block_attachments( $max_media ) {
+		// max media can't be negative or zero
+		if ( $max_media <= 0 ) {
+			return array();
+		}
+
+		$id = $this->wp_post->ID;
+
+		$media_ids = array();
+
+		// list post thumbnail first if this post has one
+		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
+			$media_ids[] = \get_post_thumbnail_id( $id );
+		}
+
+		if ( $max_media > 0 ) {
+			$blocks = \parse_blocks( $this->wp_post->post_content );
+			$media_ids = self::get_media_ids_from_blocks( $blocks, $media_ids, $max_media );
+		}
+		$media_ids = \array_unique( $media_ids );
+
+		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media_ids ) );
+	}
+
+	/**
+	 * Get image attachments from the classic editor.
+	 * Note that audio/video attachments are only supported in the block editor.
+	 *
+	 * @param int $max_images The maximum number of images to return.
+	 *
+	 * @return array The attachments.
+	 */
+	protected function get_classic_editor_images( $max_images ) {
 		// max images can't be negative or zero
 		if ( $max_images <= 0 ) {
-			return $images;
+			return array();
 		}
 
 		$id = $this->wp_post->ID;
@@ -227,67 +215,144 @@ class Post {
 		}
 
 		if ( $max_images > 0 ) {
-			// first try to get images that are actually in the post content
-			if ( site_supports_blocks() && \has_blocks( $this->wp_post->post_content ) ) {
-				$image_ids = $this->get_block_image_ids( $max_images, $image_ids );
-			} else {
-				// fallback to images attached to the post
-				$query = new \WP_Query(
-					array(
-						'post_parent' => $id,
-						'post_status' => 'inherit',
-						'post_type' => 'attachment',
-						'post_mime_type' => 'image',
-						'order' => 'ASC',
-						'orderby' => 'menu_order ID',
-						'posts_per_page' => $max_images,
-					)
-				);
-				foreach ( $query->get_posts() as $attachment ) {
-					if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
-						$image_ids[] = $attachment->ID;
-					}
+			$query = new \WP_Query(
+				array(
+					'post_parent' => $id,
+					'post_status' => 'inherit',
+					'post_type' => 'attachment',
+					'post_mime_type' => 'image',
+					'order' => 'ASC',
+					'orderby' => 'menu_order ID',
+					'posts_per_page' => $max_images,
+				)
+			);
+			foreach ( $query->get_posts() as $attachment ) {
+				if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
+					$image_ids[] = $attachment->ID;
 				}
 			}
 		}
-
 		$image_ids = \array_unique( $image_ids );
 
-		// get URLs for each image
-		foreach ( $image_ids as $id ) {
-			$image_size = 'full';
+		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $image_ids ) );
+	}
 
-			/**
-			 * Filter the image URL returned for each post.
-			 *
-			 * @param array|false $thumbnail The image URL, or false if no image is available.
-			 * @param int         $id        The attachment ID.
-			 * @param string      $image_size The image size to retrieve. Set to 'full' by default.
-			 */
-			$thumbnail = apply_filters(
-				'activitypub_get_image',
-				$this->get_image( $id, $image_size ),
-				$id,
-				$image_size
-			);
+	/**
+	 * Recursively get media IDs from blocks.
+	 * @param array $blocks The blocks to search for media IDs
+	 * @param array $media_ids The media IDs to append new IDs to
+	 * @param int $max_media The maximum number of media to return.
+	 *
+	 * @return array The image IDs.
+	 */
+	protected static function get_media_ids_from_blocks( $blocks, $media_ids, $max_media ) {
 
-			if ( $thumbnail ) {
-				$mimetype = \get_post_mime_type( $id );
-				$alt      = \get_post_meta( $id, '_wp_attachment_image_alt', true );
-				$image    = array(
-					'type'      => 'Image',
-					'url'       => $thumbnail[0],
-					'mediaType' => $mimetype,
-				);
+		foreach ( $blocks as $block ) {
+			// recurse into inner blocks
+			if ( ! empty( $block['innerBlocks'] ) ) {
+				$media_ids = self::get_media_ids_from_blocks( $block['innerBlocks'], $media_ids, $max_media );
+			}
 
-				if ( $alt ) {
-					$image['name'] = $alt;
-				}
-				$images[] = $image;
+			switch ( $block['blockName'] ) {
+				case 'core/image':
+				case 'core/cover':
+				case 'core/audio':
+				case 'core/video':
+				case 'videopress/video':
+					if ( ! empty( $block['attrs']['id'] ) ) {
+						$media_ids[] = $block['attrs']['id'];
+					}
+					break;
+				case 'jetpack/slideshow':
+				case 'jetpack/tiled-gallery':
+					if ( ! empty( $block['attrs']['ids'] ) ) {
+						$media_ids = array_merge( $media_ids, $block['attrs']['ids'] );
+					}
+					break;
+				case 'jetpack/image-compare':
+					if ( ! empty( $block['attrs']['beforeImageId'] ) ) {
+						$media_ids[] = $block['attrs']['beforeImageId'];
+					}
+					if ( ! empty( $block['attrs']['afterImageId'] ) ) {
+						$media_ids[] = $block['attrs']['afterImageId'];
+					}
+					break;
+			}
+
+			// stop doing unneeded work
+			if ( count( $media_ids ) >= $max_media ) {
+				break;
 			}
 		}
 
-		return $images;
+		// still need to slice it because one gallery could knock us over the limit
+		return array_slice( $media_ids, 0, $max_media );
+	}
+
+	/**
+	 * Converts a WordPress Attachment to an ActivityPub Attachment.
+	 *
+	 * @param int $id The Attachment ID.
+	 *
+	 * @return array The ActivityPub Attachment.
+	 */
+	public static function wp_attachment_to_activity_attachment( $id ) {
+		$attachment = array();
+		$mime_type = \get_post_mime_type( $id );
+		$mime_type_parts = \explode( '/', $mime_type );
+		// switching on image/audio/video
+		switch ( $mime_type_parts[0] ) {
+			case 'image':
+				$image_size = 'full';
+
+				/**
+				 * Filter the image URL returned for each post.
+				 *
+				 * @param array|false $thumbnail The image URL, or false if no image is available.
+				 * @param int         $id        The attachment ID.
+				 * @param string      $image_size The image size to retrieve. Set to 'full' by default.
+				 */
+				$thumbnail = apply_filters(
+					'activitypub_get_image',
+					self::get_image( $id, $image_size ),
+					$id,
+					$image_size
+				);
+
+				if ( $thumbnail ) {
+					$alt   = \get_post_meta( $id, '_wp_attachment_image_alt', true );
+					$image = array(
+						'type'      => 'Image',
+						'url'       => $thumbnail[0],
+						'mediaType' => $mime_type,
+					);
+
+					if ( $alt ) {
+						$image['name'] = $alt;
+					}
+					$attachment = $image;
+				}
+				break;
+
+			case 'audio':
+			case 'video':
+				$attachment = array(
+					'type'      => 'Document',
+					'mediaType' => $mime_type,
+					'url'       => \wp_get_attachment_url( $id ),
+					'name'      => \get_the_title( $id ),
+				);
+				$meta = wp_get_attachment_metadata( $id );
+				// height and width for videos
+				if ( isset( $meta['width'] ) && isset( $meta['height'] ) ) {
+					$attachment['width'] = $meta['width'];
+					$attachment['height'] = $meta['height'];
+				}
+				// @todo: add `icon` support for audio/video attachments. Maybe use post thumbnail?
+				break;
+		}
+
+		return \apply_filters( 'activitypub_attachment', $attachment, $id );
 	}
 
 	/**
@@ -298,7 +363,7 @@ class Post {
 	 *
 	 * @return array|false Array of image data, or boolean false if no image is available.
 	 */
-	protected function get_image( $id, $image_size = 'full' ) {
+	protected static function get_image( $id, $image_size = 'full' ) {
 		/**
 		 * Hook into the image retrieval process. Before image retrieval.
 		 *
@@ -307,7 +372,7 @@ class Post {
 		 */
 		do_action( 'activitypub_get_image_pre', $id, $image_size );
 
-		$thumbnail = \wp_get_attachment_image_src( $id, $image_size );
+		$image = \wp_get_attachment_image_src( $id, $image_size );
 
 		/**
 		 * Hook into the image retrieval process. After image retrieval.
@@ -317,7 +382,7 @@ class Post {
 		 */
 		do_action( 'activitypub_get_image_post', $id, $image_size );
 
-		return $thumbnail;
+		return $image;
 	}
 
 	/**
@@ -333,6 +398,8 @@ class Post {
 			return \ucfirst( \get_option( 'activitypub_object_type', 'note' ) );
 		}
 
+		// Default to Article.
+		$object_type = 'Article';
 		$post_type = \get_post_type( $this->wp_post );
 		switch ( $post_type ) {
 			case 'post':
@@ -465,6 +532,8 @@ class Post {
 		$post    = $this->wp_post;
 		$content = $this->get_post_content_template();
 
+		// Register our shortcodes just in time.
+		Shortcodes::register();
 		// Fill in the shortcodes.
 		setup_postdata( $post );
 		$content = do_shortcode( $content );
@@ -475,6 +544,9 @@ class Post {
 		$content = \trim( $content );
 
 		$content = \apply_filters( 'activitypub_the_content', $content, $post );
+
+		// Don't need these any more, should never appear in a post.
+		Shortcodes::unregister();
 
 		return $content;
 	}
@@ -507,5 +579,26 @@ class Post {
 	 */
 	protected function get_mentions() {
 		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_post->post_content, $this->wp_post );
+	}
+
+	/**
+	 * Returns the locale of the post.
+	 *
+	 * @return string The locale of the post.
+	 */
+	public function get_locale() {
+		$post_id = $this->wp_post->ID;
+		$lang    = \strtolower( \strtok( \get_locale(), '_-' ) );
+
+		/**
+		 * Filter the locale of the post.
+		 *
+		 * @param string  $lang    The locale of the post.
+		 * @param int     $post_id The post ID.
+		 * @param WP_Post $post    The post object.
+		 *
+		 * @return string The filtered locale of the post.
+		 */
+		return apply_filters( 'activitypub_post_locale', $lang, $post_id, $this->wp_post );
 	}
 }
