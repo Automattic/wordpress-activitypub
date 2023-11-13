@@ -366,7 +366,7 @@ class Inbox {
 			'comment_post_ID' => $comment_post_id,
 			'comment_author' => \esc_attr( $meta['name'] ),
 			'comment_author_url' => \esc_url_raw( $object['actor'] ),
-			'comment_content' => \wp_filter_kses( $object['object']['content'] ),
+			'comment_content' => addslashes( \wp_kses( $object['object']['content'], 'pre_comment_content' ) ),
 			'comment_type' => 'comment',
 			'comment_author_email' => '',
 			'comment_parent' => 0,
@@ -391,8 +391,11 @@ class Inbox {
 			}
 		);
 
+		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
+
 		$state = \wp_new_comment( $commentdata, true );
 
+		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ) );
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 		// re-add flood control
@@ -482,5 +485,30 @@ class Inbox {
 		$recipients = self::extract_recipients( $data );
 
 		return in_array( 'https://www.w3.org/ns/activitystreams#Public', $recipients, true );
+	}
+
+	/**
+	 * Adds line breaks to the list of allowed comment tags.
+	 *
+	 * @param  array  $allowedtags Allowed HTML tags.
+	 * @param  string $context     Context.
+	 * @return array               Filtered tag list.
+	 */
+	public static function allowed_comment_html( $allowedtags, $context = '' ) {
+		if ( 'pre_comment_content' !== $context ) {
+			// Do nothing.
+			return $allowedtags;
+		}
+
+		// Add `p` and `br` to the list of allowed tags.
+		if ( ! array_key_exists( 'br', $allowedtags ) ) {
+			$allowedtags['br'] = array();
+		}
+
+		if ( ! array_key_exists( 'p', $allowedtags ) ) {
+			$allowedtags['p'] = array();
+		}
+
+		return $allowedtags;
 	}
 }
