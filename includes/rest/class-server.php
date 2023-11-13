@@ -119,6 +119,7 @@ class Server {
 			if ( \is_wp_error( $verified_request ) ) {
 				$error_code = $verified_request->get_error_code();
 				if ( Application::is_actor_delete_request( $request ) && '404' === $error_code ) {
+					// if actor key is cached this error will not occur, the following should be dealt with in an activity-type-handler
 					$actor = Application::is_known_commenter( $request );
 					if ( wp_http_validate_url( $actor ) ) {
 						\wp_schedule_single_event(
