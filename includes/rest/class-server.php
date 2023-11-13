@@ -117,6 +117,18 @@ class Server {
 
 			$verified_request = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_request ) ) {
+				$error_code = $verified_request->get_error_code();
+				if ( Application::is_actor_delete_request( $request ) && '404' === $error_code ) {
+					$actor = Application::is_known_actor( $request );
+					if ( wp_http_validate_url( $actor ) ) {
+						\wp_schedule_single_event(
+							\time(),
+							'activitypub_delete_remote_actor_comments',
+							array( $actor )
+						);
+						return $response;
+					}
+				}
 				return new WP_Error( 'activitypub_signature_verification', $verified_request->get_error_message(), array( 'status' => 401 ) );
 			}
 		} elseif ( 'GET' === $request->get_method() ) { // GET-Requests are only signed in secure mode
