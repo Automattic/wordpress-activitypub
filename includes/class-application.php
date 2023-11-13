@@ -71,12 +71,4 @@ class Application {
 		}
 		return false;
 	}
-
-	public static function delete_remote_actor_comments( $actor ) {
-		\wp_schedule_single_event(
-			\time(),
-			'activitypub_delete_remote_actor_comments',
-			array( $actor )
-		);
-	}
 }
