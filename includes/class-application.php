@@ -8,11 +8,11 @@ use Activitypub\Collection\Users;
 use function Activitypub\is_user_disabled;
 
 /**
- * ActivityPub Server Class
+ * ActivityPub Application Class
  *
  * @author Django Doucet
  */
-class Server {
+class Application {
 
 	public static function known_inboxes() {
 		$authors = get_users(

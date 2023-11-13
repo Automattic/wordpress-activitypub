@@ -6,7 +6,7 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Post;
-use Activitypub\Server;
+use Activitypub\Application;
 
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
@@ -172,7 +172,7 @@ class Activity_Dispatcher {
 	 */
 	public static function send_server_activity( $activity, $user_id = Users::APPLICATION_USER_ID ) {
 		$json = $activity->to_json();
-		$inboxes = Server::known_inboxes();
+		$inboxes = Application::known_inboxes();
 		foreach ( $inboxes as $inbox ) {
 			safe_remote_post( $inbox, $json, $user_id );
 		}
