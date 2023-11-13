@@ -12,6 +12,7 @@ class Delete {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 2 );
+		//
 	}
 
 	/**
@@ -41,6 +42,8 @@ class Delete {
 				if ( $follower ) {
 					$follower->delete();
 				}
+
+				// delete all activities from this user.
 
 				break;
 			case 'Tombstone':
