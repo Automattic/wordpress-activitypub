@@ -28,6 +28,9 @@ class Scheduler {
 
 		\add_action( 'admin_init', array( self::class, 'schedule_migration' ) );
 
+		\add_action( 'activitypub_delete_remote_actor_comments', array( self::class, 'schedule_delete_remote_actor_comments' ), 10, 3 );
+		\add_action( 'activitypub_delete_remote_actor_comment', array( self::class, 'schedule_delete_comments' ), 10, 1 );
+
 		// profile updates for blog options
 		if ( ! is_user_type_disabled( 'blog' ) ) {
 			\add_action( 'update_option_site_icon', array( self::class, 'blog_user_update' ) );
@@ -42,8 +45,8 @@ class Scheduler {
 			\add_action( 'updated_user_meta', array( self::class, 'user_update' ), 10, 3 );
 			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
 
-			\add_action( 'delete_user', array( self::class, 'schedule_profile_delete' ), 10, 3 );
-			\add_action( 'deleted_user', array( self::class, 'schedule_user_delete' ), 10, 3 );
+			\add_action( 'delete_user', array( self::class, 'schedule_user_delete' ), 10, 3 );
+			\add_action( 'deleted_user', array( self::class, 'schedule_user_deleted' ), 10, 3 );
 		}
 	}
 
@@ -241,7 +244,7 @@ class Scheduler {
 	 * Send an Actor Delete activity.
 	 * @param int $user_id  The user ID to Delete.
 	 */
-	public static function schedule_profile_delete( $user_id ) {
+	public static function schedule_user_delete( $user_id ) {
 		$user = get_userdata( $user_id );
 		if ( $user->has_cap( 'publish_posts' ) ) {
 			$temp_private_key = get_private_key_for( $user->ID );
@@ -256,7 +259,11 @@ class Scheduler {
 			$activity->set_object( $author_url );
 			$activity->set_to( [ 'https://www.w3.org/ns/activitystreams#Public' ] );
 
-			\wp_schedule_single_event( \time(), 'activitypub_send_server_activity', array( $activity, $user_id ) );
+			\wp_schedule_single_event(
+				\time(),
+				'activitypub_send_server_activity',
+				array( $activity, $user_id )
+			);
 		}
 	}
 
@@ -264,11 +271,45 @@ class Scheduler {
 	 * Delete actor related options.
 	 * @param int $user_id  The deleted user ID.
 	 */
-	public static function schedule_user_delete( $user_id ) {
+	public static function schedule_user_deleted( $user_id ) {
 		$user = get_userdata( $user_id );
 		error_log( 'schedule_user_delete: ' . print_r( $user, true ) );
 		if ( $user->has_cap( 'publish_posts' ) ) {
 			delete_option( 'activitypub_temp_sig_' . $user_id );
 		}
+	}
+
+	/**
+	 * Delete actor related comments.
+	 * @param string $comment_author_url  The deleted actor ID.
+	 */
+	public static function schedule_delete_remote_actor_comments( $actor ) {
+		$args = array(
+			'user_id' => 0,
+			'author_url' => $actor,
+			'meta_query' => array(
+				array(
+					'key'   => 'protocol',
+					'value' => 'activitypub',
+					'compare' => '='
+				),
+			)
+		);
+		$remote_comments_query = new WP_Comment_Query( $args );
+		foreach ( $remote_comments_query->comments as $comment ) {
+			\wp_schedule_single_event(
+				\time(),
+				'activitypub_delete_remote_actor_comment',
+				array( $comment->comment_ID )
+			);
+		}
+	}
+
+	/**
+	 * Delete comments.
+	 * @param string $comment_id  The ID of the comment to delete.
+	 */
+	public static function schedule_delete_comments( $comment_id ) {
+		wp_delete_comment( $comment_id );
 	}
 }
