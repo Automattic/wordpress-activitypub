@@ -108,6 +108,13 @@ class Server {
 
 		// POST-Requets are always signed
 		if ( 'GET' !== $request->get_method() ) {
+
+			if ( Application::is_actor_delete_request( $request ) ) {
+				if ( ! Application::is_known_actor( $request ) ) {
+					return $response;
+				}
+			}
+
 			$verified_request = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_request ) ) {
 				return new WP_Error( 'activitypub_signature_verification', $verified_request->get_error_message(), array( 'status' => 401 ) );
