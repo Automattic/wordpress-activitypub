@@ -34,7 +34,7 @@ class Application {
 		return array_unique( array_filter( $follower_inboxes_all ) );
 	}
 
-	public static function known_users() {
+	public static function known_commenters() {
 		// at this point we just need known_commenters
 		// this could get expensive though, eventually it would make sense
 		// to schedule an add comment_author_url on Follow to a known_users site option
@@ -49,11 +49,11 @@ class Application {
 			)
 		);
 		$comment_query = new WP_Comment_Query( $args );
-		$known_users_all = [];
+		$known_commenters_all = [];
 		foreach ( $comment_query->comments as $user ) {
-			$known_users_all[] = $user->comment_author_url;
+			$known_commenters_all[] = $user->comment_author_url;
 		}
-		return array_unique( array_filter( $known_users_all ) );
+		return array_unique( array_filter( $known_commenters_all ) );
 	}
 
 	public static function is_actor_delete_request( $request ) {
@@ -64,9 +64,9 @@ class Application {
 		return false;
 	}
 
-	public static function is_known_actor( $request ) {
+	public static function is_known_commenter( $request ) {
 		$json = $request->get_params( 'JSON' );
-		if ( in_array( $json['actor'], self::known_users() ) ) {
+		if ( in_array( $json['actor'], self::known_commenters() ) ) {
 			return $json['actor'];
 		}
 		return false;
