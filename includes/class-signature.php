@@ -336,7 +336,7 @@ class Signature {
 			return new WP_Error(
 				'activitypub_no_remote_profile_found',
 				__( 'No Profile found or Profile not accessible', 'activitypub' ),
-				array( 'status' => 401 )
+				array( 'status' => 404 )
 			);
 		}
 		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
@@ -345,7 +345,7 @@ class Signature {
 		return new WP_Error(
 			'activitypub_no_remote_key_found',
 			__( 'No Public-Key found', 'activitypub' ),
-			array( 'status' => 401 )
+			array( 'status' => 404 )
 		);
 	}
 
