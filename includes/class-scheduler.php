@@ -291,9 +291,9 @@ class Scheduler {
 				array(
 					'key'   => 'protocol',
 					'value' => 'activitypub',
-					'compare' => '='
+					'compare' => '=',
 				),
-			)
+			),
 		);
 		$remote_comments_query = new WP_Comment_Query( $args );
 		foreach ( $remote_comments_query->comments as $comment ) {

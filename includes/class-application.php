@@ -44,9 +44,9 @@ class Application {
 				array(
 					'key'   => 'protocol',
 					'value' => 'activitypub',
-					'compare' => '='
+					'compare' => '=',
 				),
-			)
+			),
 		);
 		$comment_query = new WP_Comment_Query( $args );
 		$known_commenters_all = [];
