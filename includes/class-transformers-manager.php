@@ -45,14 +45,14 @@ class Transformers_Manager {
 	private $transformers = null;
 
 	/**
-	 * Module instance.
+	 * Transformer_Manager instance.
 	 *
 	 * Holds the transformer instance.
 	 *
 	 * @since version_number_transformer_management_placeholder
 	 * @access protected
 	 *
-	 * @var Module
+	 * @var Transformer_Manager
 	 */
 	protected static $_instances = [];
 
@@ -66,7 +66,7 @@ class Transformers_Manager {
 	 * @access public
 	 * @static
 	 *
-	 * @return Module An instance of the class.
+	 * @return Transformer_Manager An instance of the class.
 	 */
 	public static function instance() {
 		$class_name = static::class_name();
