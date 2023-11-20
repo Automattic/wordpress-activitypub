@@ -168,7 +168,7 @@ class Collection {
 		);
 
 		foreach ( $posts as $post ) {
-			$response['orderedItems'][] = Transformers_Manager::get_transformer( $post )->transform( $post )->to_object()->to_array();
+			$response['orderedItems'][] = Transformers_Manager::instance()->get_transformer( $post )->set_wp_post( $wp_post )->to_object()->to_array();
 		}
 
 		$rest_response = new WP_REST_Response( $response, 200 );
