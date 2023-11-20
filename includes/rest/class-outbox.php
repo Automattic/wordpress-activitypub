@@ -5,7 +5,7 @@ use stdClass;
 use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
-use Activitypub\Transformer\Post;
+use Activitypub\Transformers_Manager;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
 
@@ -59,7 +59,7 @@ class Outbox {
 			return $user;
 		}
 
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
+		$post_types = array_keys( \get_option( 'activitypub_transformer_mapping', array( 'post' => 'activitypub/default', 'page' => 'activitypub/default') ) );
 
 		$page = $request->get_param( 'page', 1 );
 
@@ -105,7 +105,9 @@ class Outbox {
 			);
 
 			foreach ( $posts as $post ) {
-				$post = Post::transform( $post )->to_object();
+				$transformer = Transformers_Manager::get_transformer( $wp_post );
+				$transformer->transform( $wp_post );
+				$post = $transformer->to_object();
 				$activity = new Activity();
 				$activity->set_type( 'Create' );
 				$activity->set_context( null );

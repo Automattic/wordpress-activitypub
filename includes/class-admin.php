@@ -3,6 +3,7 @@ namespace Activitypub;
 
 use WP_User_Query;
 use Activitypub\Model\Blog_User;
+use Activitypub\Base\Transformer_Base;
 
 /**
  * ActivityPub Admin Class
@@ -22,6 +23,10 @@ class Admin {
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
 		}
+
+		add_filter( 'activitypub/transformers/is_transformer_enabled', function( $should_register, Transformer_Base $widget_instance ) {
+			return ! Options::is_transformer_disabled( $transformer_instance->get_name() );
+		}, 10, 2 );
 	}
 
 	/**
@@ -154,14 +159,48 @@ class Admin {
 				'default' => '0',
 			)
 		);
-		\register_setting(
+
+		/**
+		 * Flexible activation of post_types together with mapping ActivityPub transformers.
+		 * 
+		 * If a post-type is not mapped to any ActivtiyPub transformer it means it is not activated 
+		 * for ActivityPub federation.
+		 *
+		 * @since version_number_transformer_management_placeholder
+		 */
+		register_setting(
 			'activitypub',
-			'activitypub_support_post_types',
+			'activitypub_transformer_mapping',
 			array(
-				'type'         => 'string',
-				'description'  => \esc_html__( 'Enable ActivityPub support for post types', 'activitypub' ),
-				'show_in_rest' => true,
-				'default'      => array( 'post', 'pages' ),
+				'type'         => 'array',
+				'default'      => array(
+					'post' => 'note',
+				),
+				'show_in_rest' => array(
+					'schema' => array(
+						'type'  => 'array',
+						'items' => array(
+							'type' => 'string',
+						),
+					),
+				),
+				'sanitize_callback' => function ( $value ) {
+					// Check if $value is an array
+					if (!is_array($value)) {
+						return array();
+					}
+					$value_keys = array_keys( $value );
+
+					$all_public_post_types = \get_post_types( array( 'public' => true ), 'names' );
+
+					// Unset the keys that are missing in $keysToCheck
+					foreach ( array_diff( $value_keys, $all_public_post_types ) as $missing_key ) {
+						unset($value[$missing_key]);
+					}
+					// var_dump($value);
+					return $value;
+
+				}
 			)
 		);
 		\register_setting(

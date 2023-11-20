@@ -1,7 +1,7 @@
 <?php
 namespace Activitypub\Model;
 
-use Activitypub\Transformer\Post as Post_Transformer;
+use Activitypub\Transformer_Post as Post_Transformer;
 
 /**
  * ActivityPub Post Class
@@ -31,10 +31,10 @@ class Post {
 	 */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 	public function __construct( $post, $post_author = null ) {
-		_deprecated_function( __CLASS__, '1.0.0', '\Activitypub\Transformer\Post' );
+		_deprecated_function( __CLASS__, '1.0.0', '\Activitypub\Transformer_Post' );
 
 		$this->post   = $post;
-		$this->object = Post_Transformer::transform( $post )->to_object();
+		$this->object = Post_Transformer->set_wp_post( $post )->to_object();
 	}
 
 	/**

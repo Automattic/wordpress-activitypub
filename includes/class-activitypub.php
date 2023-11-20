@@ -20,9 +20,9 @@ class Activitypub {
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
 
 		// Add support for ActivityPub to custom post types
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array();
+		$transformer_mapping = \get_option( 'activitypub_transformer_mapping', array( 'post' => 'activitypub/default', 'page' => 'activitypub/default' ) ) ? \get_option( 'activitypub_transformer_mapping', array( 'post' => 'activitypub/default', 'page' => 'activitypub/default' ) ) : array();
 
-		foreach ( $post_types as $post_type ) {
+		foreach ( array_keys( $transformer_mapping ) as $post_type ) {
 			\add_post_type_support( $post_type, 'activitypub' );
 		}
 

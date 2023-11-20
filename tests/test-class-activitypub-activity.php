@@ -16,8 +16,9 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 			},
 			10
 		);
-
-		$activitypub_post = \Activitypub\Transformer\Post::transform( get_post( $post ) )->to_object();
+		
+		$wp_post = get_post( $post );
+		$activitypub_post = \Activitypub\Transformers_Manager::get_transforemr( $wp_post )->transform( $wp_post )->to_object();
 
 		$activitypub_activity = new \Activitypub\Activity\Activity();
 		$activitypub_activity->set_type( 'Create' );

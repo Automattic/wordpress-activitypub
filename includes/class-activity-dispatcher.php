@@ -5,7 +5,7 @@ use WP_Post;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
-use Activitypub\Transformer\Post;
+use Activitypub\Transformers_Manager;
 
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
@@ -65,7 +65,9 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$object = Post::transform( $wp_post )->to_object();
+		$transformer = Transformers_Manager::get_transformer( $wp_post );
+		$transformer->transform( $wp_post );
+		$transformer->to_object();
 
 		$activity = new Activity();
 		$activity->set_type( $type );
@@ -101,7 +103,9 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$object = Post::transform( $wp_post )->to_object();
+		$transformer = Transformers_Manager::get_transformer( $wp_post );
+		$transformer->transform( $wp_post );
+		$transformer->to_object();
 
 		$activity = new Activity();
 		$activity->set_type( 'Announce' );

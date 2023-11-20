@@ -4,7 +4,7 @@ namespace Activitypub\Rest;
 use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
-use Activitypub\Transformer\Post;
+use Activitypub\Transformers_Manager;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
 
@@ -168,7 +168,7 @@ class Collection {
 		);
 
 		foreach ( $posts as $post ) {
-			$response['orderedItems'][] = Post::transform( $post )->to_object()->to_array();
+			$response['orderedItems'][] = Transformers_Manager::get_transformer( $post )->transform( $post )->to_object()->to_array();
 		}
 
 		$rest_response = new WP_REST_Response( $response, 200 );

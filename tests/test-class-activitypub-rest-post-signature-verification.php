@@ -10,7 +10,7 @@ class Test_Activitypub_Signature_Verification extends WP_UnitTestCase {
 			)
 		);
 		$remote_actor = \get_author_posts_url( 2 );
-		$activitypub_post = \Activitypub\Transformer\Post::transform( get_post( $post ) )->to_object();
+		$activitypub_post = \Activitypub\Transformers_Manager::get_transformer( get_post( $post ) )->transform( get_post( $post ) )->to_object();
 		$activitypub_activity = new Activitypub\Activity\Activity( 'Create' );
 		$activitypub_activity->set_type( 'Create' );
 		$activitypub_activity->set_object( $activitypub_post );
@@ -82,7 +82,7 @@ class Test_Activitypub_Signature_Verification extends WP_UnitTestCase {
 		);
 		$remote_actor = \get_author_posts_url( 2 );
 		$remote_actor_inbox = Activitypub\get_rest_url_by_path( '/inbox' );
-		$activitypub_post = \Activitypub\Transformer\Post::transform( \get_post( $post ) )->to_object();
+		$activitypub_post = \Activitypub\Transformers_Manager::get_transformer( get_post( $post ) )->transform( get_post( $post ) )->to_object();
 		$activitypub_activity = new Activitypub\Activity\Activity();
 		$activitypub_activity->set_type( 'Create' );
 		$activitypub_activity->set_object( $activitypub_post );

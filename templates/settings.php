@@ -202,26 +202,6 @@
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><?php \esc_html_e( 'Supported post types', 'activitypub' ); ?></th>
-						<td>
-							<fieldset>
-								<?php \esc_html_e( 'Enable ActivityPub support for the following post types:', 'activitypub' ); ?>
-
-								<?php $post_types = \get_post_types( array( 'public' => true ), 'objects' ); ?>
-								<?php $support_post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array(); ?>
-								<ul>
-								<?php // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited ?>
-								<?php foreach ( $post_types as $post_type ) { ?>
-									<li>
-										<input type="checkbox" id="activitypub_support_post_type_<?php echo \esc_attr( $post_type->name ); ?>" name="activitypub_support_post_types[]" value="<?php echo \esc_attr( $post_type->name ); ?>" <?php echo \checked( \in_array( $post_type->name, $support_post_types, true ) ); ?> />
-										<label for="activitypub_support_post_type_<?php echo \esc_attr( $post_type->name ); ?>"><?php echo \esc_html( $post_type->label ); ?></label>
-									</li>
-								<?php } ?>
-								</ul>
-							</fieldset>
-						</td>
-					</tr>
-					<tr>
 						<th scope="row">
 							<?php \esc_html_e( 'Hashtags (beta)', 'activitypub' ); ?>
 						</th>
@@ -236,6 +216,93 @@
 
 			<?php \do_settings_fields( 'activitypub', 'activity' ); ?>
 		</div>
+		
+		<!-- OUR FORK HERE -->
+		<div class="box">
+		<h3><?php \esc_html_e( 'Enable ActivityPub support for post type', 'activitypub' ); ?></h3>
+
+		<table class="form-table">
+				<tbody>
+					<tr>
+						<th scope="row">
+							<?php \esc_html_e( 'Mapping', 'activitypub' ); ?>
+						</th>
+						<td>
+						<?php \esc_html_e( 'Enable ActivityPub support for a certain post type by selecting one of the available ActivityPub transformers.', 'activitypub' ); ?>
+
+				<?php $all_public_post_types = \get_post_types( array( 'public' => true ), 'objects' );
+				$transformer_mapping =  \get_option( 'activitypub_transformer_mapping', array( 'default' => 'note' ) );
+
+				$all_public_post_type_names = array_map(function ($object) {
+					return $object->name;
+				}, $all_public_post_types);
+
+				$transformer_manager = \Activitypub\Transformers_Manager::instance();
+				$transformers = $transformer_manager->get_transformers();
+
+				?>
+
+				
+				<script>
+					// TODO Probably we should use checkboxes and not select and make this less buggy and insert the js at the right place.
+					document.addEventListener('DOMContentLoaded', function () {
+						var radioGroups = {};
+
+						var radioButtons = document.querySelectorAll('input[type="radio"]');
+						
+						radioButtons.forEach(function (radioButton) {
+							radioButton.addEventListener('click', function () {
+								var name = this.name;
+
+								if (!radioGroups[name]) {
+									radioGroups[name] = this;
+								} else {
+									radioGroups[name].checked = false;
+									radioGroups[name] = this;
+								}
+							});
+						});
+					});
+				</script>
+
+				<table>
+					<thead>
+					<tr>
+						<th></th>
+						<?php
+						// Generate column headers based on transformer objects
+						foreach ($transformers as $transformer) {
+							echo '<th>' . htmlspecialchars($transformer->get_label()) . '</th>';
+						}
+						?>
+					</tr>
+					</thead>
+					<tbody>
+					<?php
+					// Generate rows based on post types and transformers
+					foreach ($all_public_post_types as $post_type) {
+						echo '<tr>';
+						echo '<td><strong>' . htmlspecialchars($post_type->label) . '</strong></td>';
+						// Generate radio inputs for each transformer, considering support for the post type
+						foreach ($transformers as $transformer) {
+							$disabled_attribute = $transformer->supports_post_type( $post_type->name ) ? '' : ' disabled';
+							$is_selected = ( is_array( $transformer_mapping ) && isset( $transformer_mapping[ $post_type->name ] ) && $transformer_mapping[ $post_type->name ] === $transformer->get_name() ) ? ' checked ' : '';	
+							echo '<td><input type="radio" name="activitypub_transformer_mapping[' . $post_type->name . ']" value="' . $transformer->get_name() . '"' . $is_selected . $disabled_attribute . '></td>';
+						}
+
+						echo '</tr>';
+					}
+					?>
+					</tbody>
+				</table>
+
+			
+				</td>
+			</tr>
+				</tbody>
+				</table>
+		</div>
+		<!-- OUR FORK ENDS HERE -->
 
 		<div class="box">
 			<h3><?php \esc_html_e( 'Server', 'activitypub' ); ?></h3>
