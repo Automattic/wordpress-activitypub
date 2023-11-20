@@ -108,4 +108,22 @@ class Http {
 
 		return $response;
 	}
+
+	/**
+	 * Check for URL for Tombstone.
+	 *
+	 * @param string $url The URL to check.
+	 *
+	 * @return bool True if the URL is a tombstone.
+	 */
+	public static function is_tombstone( $url ) {
+		$response = \wp_safe_remote_get( $url );
+		$code     = \wp_remote_retrieve_response_code( $response );
+
+		if ( in_array( (int) $code, array( 404, 410 ), true ) ) {
+			return true;
+		}
+
+		return false;
+	}
 }
