@@ -106,7 +106,6 @@ class Outbox {
 
 			foreach ( $posts as $post ) {
 				$transformer = \Activitypub\Transformers_Manager::instance()->get_transformer( $post );
-				$transformer->set_wp_post( $wp_post );
 				$post = $transformer->to_object();
 				$activity = new Activity();
 				$activity->set_type( 'Create' );

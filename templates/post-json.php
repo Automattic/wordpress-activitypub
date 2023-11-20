@@ -3,7 +3,6 @@
 $post = \get_post();
 
 $transformer = \Activitypub\Transformers_Manager::instance()->get_transformer( $post );
-$transformer->set_wp_post( $post );
 
 $json = \array_merge( array( '@context' => \Activitypub\get_context() ), $transformer->to_object()->to_array() );
 

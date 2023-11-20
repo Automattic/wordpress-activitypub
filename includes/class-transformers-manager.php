@@ -27,6 +27,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 
 class Transformers_Manager {
+	const DEFAULT_TRANSFORMER_MAPPING = array(
+		'post' => 'activitypub/default',
+		'page' => 'activitypub/default'
+	);
+
 	/**
 	 * Transformers.
 	 *
@@ -259,6 +264,8 @@ class Transformers_Manager {
 
 	/**
 	 * Get the mapped ActivityPub transformer.
+	 * 
+	 * Returns a new instance of the needed WordPress to ActivityPub transformer.
 	 *
 	 * @since version_number_transformer_management_placeholder
 	 * @access public
@@ -271,9 +278,11 @@ class Transformers_Manager {
 		switch ( get_class( $object ) ) {
 			case 'WP_Post':
 				$post_type = get_post_type( $object );
-				$transformer_mapping = \get_option( 'activitypub_transformer_mapping', array( 'post' => 'activitypub/default', 'page' => 'activitypub/default' ) ) ? \get_option( 'activitypub_transformer_mapping', array( 'post' => 'activitypub/default', 'page' => 'activitypub/default' ) ) : array();
+				$transformer_mapping = \get_option( 'activitypub_transformer_mapping', DEFAULT_TRANSFORMER_MAPPING );
 				$transformer_name = $transformer_mapping[ $post_type ];
-				return new ( $this->get_transformers( $transformer_name ) );
+				$transformer_instance = new ( $this->get_transformers( $transformer_name ) );
+				$transformer_instance->set_wp_post( $object );
+				return $transformer_instance;
 			case 'WP_Comment':
 				return new Comment( $object );
 			default:

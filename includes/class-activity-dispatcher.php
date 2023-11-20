@@ -66,8 +66,7 @@ class Activity_Dispatcher {
 		}
 
 		$transformer = \Activitypub\Transformers_Manager::instance()->get_transformer( $wp_post );
-		$transformer->set_wp_post( $wp_post );
-		$transformer->to_object();
+		$object = $transformer->to_object();
 
 		$activity = new Activity();
 		$activity->set_type( $type );
@@ -104,8 +103,7 @@ class Activity_Dispatcher {
 		}
 
 		$transformer = \Activitypub\Transformers_Manager::instance()->get_transformer( $wp_post );
-		$transformer->set_wp_post( $wp_post );
-		$transformer->to_object();
+		$object = $transformer->to_object();
 
 		$activity = new Activity();
 		$activity->set_type( 'Announce' );
