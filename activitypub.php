@@ -33,11 +33,14 @@ require_once __DIR__ . '/includes/functions.php';
 \defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<strong>[ap_title]</strong>\n\n[ap_content]\n\n[ap_hashtags]\n\n[ap_shortlink]" );
 \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) || \define( 'ACTIVITYPUB_AUTHORIZED_FETCH', false );
 \defined( 'ACTIVITYPUB_DISABLE_REWRITES' ) || \define( 'ACTIVITYPUB_DISABLE_REWRITES', false );
+\defined( 'ACTIVITYPUB_DEFAULT_TRANSFORMER' ) || \define( 'ACTIVITYPUB_DEFAULT_TRANSFORMER', 'activitypub/defualt' );
+
 
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+
 
 /**
  * Initialize REST routes.

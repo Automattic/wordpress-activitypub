@@ -4,6 +4,7 @@ namespace Activitypub;
 use Activitypub\Activitypub;
 use Activitypub\Model\Blog_User;
 use Activitypub\Collection\Followers;
+use Activitypub\Admin;
 
 /**
  * ActivityPub Migration Class
@@ -114,10 +115,28 @@ class Migration {
 		if ( version_compare( $version_from_db, '1.0.0', '<' ) ) {
 			self::migrate_from_0_17();
 		}
+		if ( version_compare( $version_from_db, 'version_number_transformer_management_placeholder', '<' ) ) {
+			self::migrate_from_version_number_transformer_management_placeholder();
+		}
 
 		update_option( 'activitypub_db_version', self::get_target_version() );
 
 		self::unlock();
+	}
+
+	/**
+	 * Updates the supported post type settings to the mapped transformer setting.
+	 * TODO: Test this
+	 * @return void
+	 */
+	private static function migrate_from_version_number_transformer_management_placeholder() {
+		$supported_post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
+		Admin::register_settings();
+		$transformer_mapping = array();
+		foreach ( $supported_post_types as $supported_post_type ) {
+			$transformer_mapping[ $supported_post_type ] = ACTIVITYPUB_DEFAULT_TRANSFORMER;
+		}
+		update_option( 'activitypub_transformer_mapping', $transformer_mapping );
 	}
 
 	/**

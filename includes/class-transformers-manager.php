@@ -28,8 +28,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Transformers_Manager {
 	const DEFAULT_TRANSFORMER_MAPPING = array(
-		'post' => 'activitypub/default',
-		'page' => 'activitypub/default'
+		'post' => ACTIVITYPUB_DEFAULT_TRANSFORMER,
+		'page' => ACTIVITYPUB_DEFAULT_TRANSFORMER,
 	);
 
 	/**
