@@ -123,7 +123,6 @@ class Inbox {
 	 * @return WP_REST_Response
 	 */
 	public static function user_inbox_post( $request ) {
-		var_dump( $request->get_params() );
 		$user_id = $request->get_param( 'user_id' );
 		$user    = User_Collection::get_by_various( $user_id );
 
