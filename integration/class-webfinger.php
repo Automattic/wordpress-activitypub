@@ -30,6 +30,10 @@ class Webfinger {
 	public static function add_user_discovery( $array, $resource, $user ) {
 		$user = User_Collection::get_by_id( $user->ID );
 
+		if ( ! $user || is_wp_error( $user ) ) {
+			return $array;
+		}
+
 		$array['links'][] = array(
 			'rel'  => 'self',
 			'type' => 'application/activity+json',
