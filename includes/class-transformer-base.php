@@ -247,7 +247,6 @@ abstract class Transformer_Base {
 			$blocks = \parse_blocks( $this->wp_post->post_content );
 			$media_ids = self::get_media_ids_from_blocks( $blocks, $media_ids, $max_media );
 		}
-		$media_ids = \array_unique( $media_ids );
 
 		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media_ids ) );
 	}
@@ -340,6 +339,9 @@ abstract class Transformer_Base {
 					}
 					break;
 			}
+
+			// depupe
+			$media_ids = \array_unique( $media_ids );
 
 			// stop doing unneeded work
 			if ( count( $media_ids ) >= $max_media ) {
