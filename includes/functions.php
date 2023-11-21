@@ -649,3 +649,42 @@ function object_id_to_comment( $id ) {
 
 	return $comment_query->comments[0];
 }
+
+/**
+ * Verify if URL is a local comment,
+ * Or if it is a previously received remote comment
+ * (For threading comments locally)
+ *
+ * @param string $url The URL to check.
+ *
+ * @return int comment_ID or null if not found
+ */
+function url_to_commentid( $url ) {
+	if ( ! $url || ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
+		return null;
+	}
+
+	$args = array(
+		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		'meta_query' => array(
+			'relation' => 'OR',
+			array(
+				'key' => 'source_url',
+				'value' => $url,
+			),
+			array(
+				'key' => 'source_id',
+				'value' => $url,
+			),
+		),
+	);
+
+	$query = new \WP_Comment_Query();
+	$comments = $query->query( $args );
+
+	if ( $comments && is_array( $comments ) ) {
+		return $comments[0]->comment_ID;
+	}
+
+	return null;
+}

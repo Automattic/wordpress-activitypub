@@ -2,8 +2,9 @@
 namespace Activitypub\Handler;
 
 use WP_Error;
-use WP_REST_Request;
-use WP_REST_Response;
+
+use function Activitypub\url_to_commentid;
+use function Activitypub\get_remote_metadata_by_actor;
 
 /**
  * Handle Update requests.
@@ -13,33 +14,54 @@ class Update {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_update', array( self::class, 'handle_update' ), 10 );
+		\add_action( 'activitypub_inbox_update', array( self::class, 'handle_update' ) );
 	}
 
 	/**
 	 * Handle "Update" requests
 	 *
-	 * @param array $activity The JSON "Undo" Activity
+	 * @param array $activity The JSON "Update" Activity
 	 */
 	public static function handle_update( $activity ) {
-		// Get the post object.
-		$post = null;
-
-		// Check if the post exists.
-		if ( ! $post ) {
-			return new WP_Error( 'activitypub_post_not_found', __( 'Post not found.', 'activitypub' ), array( 'status' => 404 ) );
+		if (
+			! isset( $activity['object'] ) ||
+			! isset( $activity['object']['id'] )
+		) {
+			return new WP_Error(
+				'activitypub_no_valid_object',
+				__( 'No object id found.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
 		}
 
-		// Check if the user has permission to edit the post.
-		if ( ! \current_user_can( 'edit_post', $post->ID ) ) {
-			return new WP_Error( 'activitypub_permission_denied', __( 'You do not have permission to edit this post.', 'activitypub' ), array( 'status' => 403 ) );
+		$meta = get_remote_metadata_by_actor( $activity['actor'] );
+
+		//Determine comment_ID
+		$object_comment_id = url_to_commentid( \esc_url_raw( $activity['object']['id'] ) );
+
+		if ( ! $object_comment_id ) {
+			return;
 		}
 
-		// Update the post content.
-		$post_data = array(
-			'ID'           => $post->ID,
-			'post_content' => $activity['object']['content'],
-		);
-		wp_update_post( $post_data );
+		//found a local comment id
+		$commentdata = \get_comment( $object_comment_id, ARRAY_A );
+		$commentdata['comment_author'] = \esc_attr( $meta['name'] ? $meta['name'] : $meta['preferredUsername'] );
+		$commentdata['comment_content'] = \wp_filter_kses( $activity['object']['content'] );
+		$commentdata['comment_meta']['avatar_url'] = \esc_url_raw( $meta['icon']['url'] );
+		$commentdata['comment_meta']['activitypub_published'] = \wp_date( 'Y-m-d H:i:s', strtotime( $activity['object']['published'] ) );
+		$commentdata['comment_meta']['activitypub_last_modified'] = \wp_date( 'Y-m-d H:i:s', strtotime( $activity['object']['updated'] ) );
+
+		// disable flood control
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+		// do not require email for AP entries
+		\add_filter( 'pre_option_require_name_email', '__return_false' );
+
+		$state = \wp_update_comment( $commentdata, true );
+
+		\remove_filter( 'pre_option_require_name_email', '__return_false' );
+
+		// re-add flood control
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 	}
 }
