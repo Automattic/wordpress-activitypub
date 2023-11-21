@@ -123,6 +123,7 @@ class Inbox {
 	 * @return WP_REST_Response
 	 */
 	public static function user_inbox_post( $request ) {
+		var_dump( $request->get_params() );
 		$user_id = $request->get_param( 'user_id' );
 		$user    = User_Collection::get_by_various( $user_id );
 
@@ -236,8 +237,12 @@ class Inbox {
 		$params['actor'] = array(
 			'required' => true,
 			'sanitize_callback' => function( $param, $request, $key ) {
-				if ( ! \is_string( $param ) ) {
-					$param = $param['id'];
+				if ( \is_array( $param ) ) {
+					if ( isset( $param['id'] ) ) {
+						$param = $param['id'];
+					} else {
+						$param = $param['url'];
+					}
 				}
 				return \esc_url_raw( $param );
 			},
