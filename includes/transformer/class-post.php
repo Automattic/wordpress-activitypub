@@ -1,12 +1,12 @@
 <?php
-namespace Activitypub;
+namespace Activitypub\Transformer;
 
 use WP_Post;
 use Activitypub\Collection\Users;
 use Activitypub\Model\Blog_User;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Shortcodes;
-use Activitypub\Transformer_Base;
+use Activitypub\Transformer\Base;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -18,12 +18,10 @@ use function Activitypub\site_supports_blocks;
  * The Post Transformer is responsible for transforming a WP_Post object into different othe
  * Object-Types.
  *
- *
  * Currently supported are:
- *
  * - Activitypub\Activity\Base_Object
  */
-class Transformer_Post extends Transformer_Base {
+class Post extends Base {
 	/**
 	 * Getter function for the name of the transformer.
 	 *
@@ -57,7 +55,7 @@ class Transformer_Post extends Transformer_Base {
 
 		// Default to Article.
 		$object_type = 'Article';
-		$post_type = \get_post_type( $this->wp_post );
+		$post_type   = \get_post_type( $this->wp_post );
 		switch ( $post_type ) {
 			case 'post':
 				$post_format = \get_post_format( $this->wp_post );
@@ -87,7 +85,7 @@ class Transformer_Post extends Transformer_Base {
 				$object_type = 'Page';
 				break;
 			case 'attachment':
-				$mime_type = \get_post_mime_type();
+				$mime_type  = \get_post_mime_type();
 				$media_type = \preg_replace( '/(\/[a-zA-Z]+)/i', '', $mime_type );
 				switch ( $media_type ) {
 					case 'audio':
@@ -129,5 +127,4 @@ class Transformer_Post extends Transformer_Base {
 
 		return \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
 	}
-
 }

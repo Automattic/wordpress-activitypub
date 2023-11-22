@@ -4,15 +4,13 @@
  *
  * @link https://github.com/landrok/activitypub
  */
-
-namespace Activitypub;
+namespace Activitypub\Transformer;
 
 use WP_Post;
 use Activitypub\Collection\Users;
 use Activitypub\Model\Blog_User;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Shortcodes;
-use Activitypub\Transformer_Base;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -22,7 +20,7 @@ use function Activitypub\site_supports_blocks;
 /**
  * Base class to implement WordPress to ActivityPub transformers.
  */
-abstract class Transformer_Base {
+abstract class Base {
 	/**
 	 * The WP_Post object.
 	 *
@@ -35,40 +33,38 @@ abstract class Transformer_Base {
 	 *
 	 * This helps to chain the output of the Transformer.
 	 *
-	 * @param WP_Post $wp_post The WP_Post object
-	 *
+	 * @param WP_Post $wp_post The WP_Post object.
 	 * @return void
 	 */
 	public function set_wp_post( WP_Post $wp_post ) {
 		if ( $this->supports_post_type( get_post_type( $wp_post ) ) ) {
 			$this->wp_post = $wp_post;
 		} else {
-			//TODO Error, this should not happen.
-		}	
+			// TODO Error, this should not happen.
+		}
 	}
 
-    /**
+	/**
 	 * Get the supported WP post_types that the transformer can use as an input.
 	 *
-     * By default all post types are supported.
+	 * By default all post types are supported.
 	 * You may very likely wish to override this function.
-     * 
+	 *
 	 * @since version_number_transformer_management_placeholder
-     * @return string[] An array containing all the supported post types.
+	 * @return string[] An array containing all the supported post types.
 	 */
-    public function get_supported_post_types() {
-        return \get_post_types( array( 'public' => true ), 'names' );
-    }
+	public function get_supported_post_types() {
+		return \get_post_types( array( 'public' => true ), 'names' );
+	}
 
-    /**
+	/**
 	 * Get the name of the plugin that registered the transformer.
-     * 
-     * @see Forked from the WordPress elementor plugin.
-     * 
+	 *
+	 * @see Forked from the WordPress elementor plugin.
 	 * @since version_number_transformer_management_placeholder
-     * @return string Plugin name
+	 * @return string Plugin name
 	 */
-    private function get_plugin_name_from_transformer_instance( $transformer ) {
+	private function get_plugin_name_from_transformer_instance( $transformer ) {
 		$class_reflection = new \ReflectionClass( $transformer );
 
 		$plugin_basename = plugin_basename( $class_reflection->getFileName() );
@@ -76,39 +72,36 @@ abstract class Transformer_Base {
 		$plugin_directory = strtok( $plugin_basename, '/' );
 
 		$plugins_data = get_plugins( '/' . $plugin_directory );
-		$plugin_data = array_shift( $plugins_data );
+		$plugin_data  = array_shift( $plugins_data );
 
 		return $plugin_data['Name'] ?? esc_html__( 'Unknown', 'activitypub' );
 	}
 
-    /**
+	/**
 	 * Return whether the transformer supports a post type.
 	 *
 	 * @since version_number_transformer_management_placeholder
-     * 
-     * @return string post_type Post type name.
+	 * @return string post_type Post type name.
 	 */
-    final public function supports_post_type( $post_type ) {
+	final public function supports_post_type( $post_type ) {
 		return in_array( $post_type, $this->get_supported_post_types() );
 	}
 
-    /**
+	/**
 	 * Get the name used for registering the transformer with the ActivityPub plugin.
 	 *
 	 * @since version_number_transformer_management_placeholder
-     * 
-     * @return string name
+	 * @return string name
 	 */
-    abstract public function get_name();
+	abstract public function get_name();
 
-    /**
+	/**
 	 * Get the display name for the ActivityPub transformer.
 	 *
 	 * @since version_number_transformer_management_placeholder
-     * 
-     * @return string display name
+	 * @return string display name
 	 */
-    abstract public function get_label();
+	abstract public function get_label();
 
 	/**
 	 * Returns the ActivityStreams 2.0 Object-Type for a Post.
@@ -118,7 +111,7 @@ abstract class Transformer_Base {
 	 * @return string The Object-Type.
 	 */
 	abstract protected function get_object_type();
-	
+
 	/**
 	 * Returns the content for the ActivityPub Item.
 	 *
@@ -162,7 +155,7 @@ abstract class Transformer_Base {
 	}
 
 
-		/**
+	/**
 	 * Returns the ID of the Post.
 	 *
 	 * @return string The Posts ID.
@@ -244,7 +237,7 @@ abstract class Transformer_Base {
 		}
 
 		if ( $max_media > 0 ) {
-			$blocks = \parse_blocks( $this->wp_post->post_content );
+			$blocks    = \parse_blocks( $this->wp_post->post_content );
 			$media_ids = self::get_media_ids_from_blocks( $blocks, $media_ids, $max_media );
 		}
 
@@ -278,12 +271,12 @@ abstract class Transformer_Base {
 		if ( $max_images > 0 ) {
 			$query = new \WP_Query(
 				array(
-					'post_parent' => $id,
-					'post_status' => 'inherit',
-					'post_type' => 'attachment',
+					'post_parent'    => $id,
+					'post_status'    => 'inherit',
+					'post_type'      => 'attachment',
 					'post_mime_type' => 'image',
-					'order' => 'ASC',
-					'orderby' => 'menu_order ID',
+					'order'          => 'ASC',
+					'orderby'        => 'menu_order ID',
 					'posts_per_page' => $max_images,
 				)
 			);
@@ -300,9 +293,10 @@ abstract class Transformer_Base {
 
 	/**
 	 * Recursively get media IDs from blocks.
+	 *
 	 * @param array $blocks The blocks to search for media IDs
 	 * @param array $media_ids The media IDs to append new IDs to
-	 * @param int $max_media The maximum number of media to return.
+	 * @param int   $max_media The maximum number of media to return.
 	 *
 	 * @return array The image IDs.
 	 */
@@ -361,8 +355,8 @@ abstract class Transformer_Base {
 	 * @return array The ActivityPub Attachment.
 	 */
 	public static function wp_attachment_to_activity_attachment( $id ) {
-		$attachment = array();
-		$mime_type = \get_post_mime_type( $id );
+		$attachment      = array();
+		$mime_type       = \get_post_mime_type( $id );
 		$mime_type_parts = \explode( '/', $mime_type );
 		// switching on image/audio/video
 		switch ( $mime_type_parts[0] ) {
@@ -406,10 +400,10 @@ abstract class Transformer_Base {
 					'url'       => \wp_get_attachment_url( $id ),
 					'name'      => \get_the_title( $id ),
 				);
-				$meta = wp_get_attachment_metadata( $id );
+				$meta       = wp_get_attachment_metadata( $id );
 				// height and width for videos
 				if ( isset( $meta['width'] ) && isset( $meta['height'] ) ) {
-					$attachment['width'] = $meta['width'];
+					$attachment['width']  = $meta['width'];
 					$attachment['height'] = $meta['height'];
 				}
 				// @todo: add `icon` support for audio/video attachments. Maybe use post thumbnail?
@@ -460,12 +454,12 @@ abstract class Transformer_Base {
 	}
 
 		/**
-	 * Returns a list of Mentions, used in the Post.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#Mention
-	 *
-	 * @return array The list of Mentions.
-	 */
+		 * Returns a list of Mentions, used in the Post.
+		 *
+		 * @see https://docs.joinmastodon.org/spec/activitypub/#Mention
+		 *
+		 * @return array The list of Mentions.
+		 */
 	protected function get_cc() {
 		$cc = array();
 
@@ -492,7 +486,7 @@ abstract class Transformer_Base {
 		$post_tags = \get_the_tags( $this->wp_post->ID );
 		if ( $post_tags ) {
 			foreach ( $post_tags as $post_tag ) {
-				$tag = array(
+				$tag    = array(
 					'type' => 'Hashtag',
 					'href' => \esc_url( \get_tag_link( $post_tag->term_id ) ),
 					'name' => esc_hashtag( $post_tag->name ),
@@ -504,7 +498,7 @@ abstract class Transformer_Base {
 		$mentions = $this->get_mentions();
 		if ( $mentions ) {
 			foreach ( $mentions as $mention => $url ) {
-				$tag = array(
+				$tag    = array(
 					'type' => 'Mention',
 					'href' => \esc_url( $url ),
 					'name' => \esc_html( $mention ),
@@ -540,9 +534,9 @@ abstract class Transformer_Base {
 
 	/**
 	 * Gets the contentMap
-	 * 
+	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-contentmap
-	 * 
+	 *
 	 * @return array the contenmap
 	 */
 	protected function get_content_map() {
@@ -560,7 +554,7 @@ abstract class Transformer_Base {
 	 */
 	public function to_object() {
 		$wp_post = $this->wp_post;
-		$object = new Base_Object();
+		$object  = new Base_Object();
 
 		$object->set_id( $this->get_id() );
 		$object->set_url( $this->get_url() );
@@ -593,5 +587,4 @@ abstract class Transformer_Base {
 
 		return $object;
 	}
-
 }

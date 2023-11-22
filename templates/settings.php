@@ -216,7 +216,7 @@
 
 			<?php \do_settings_fields( 'activitypub', 'activity' ); ?>
 		</div>
-		
+
 		<!-- OUR FORK HERE -->
 		<div class="box">
 		<h3><?php \esc_html_e( 'Enable ActivityPub support for post type', 'activitypub' ); ?></h3>
@@ -237,19 +237,19 @@
 					return $object->name;
 				}, $all_public_post_types);
 
-				$transformer_manager = \Activitypub\Transformers_Manager::instance();
+				$transformer_manager = \Activitypub\Transformer\Transformers_Manager::instance();
 				$transformers = $transformer_manager->get_transformers();
 
 				?>
 
-				
+
 				<script>
 					// TODO Probably we should use checkboxes and not select and make this less buggy and insert the js at the right place.
 					document.addEventListener('DOMContentLoaded', function () {
 						var radioGroups = {};
 
 						var radioButtons = document.querySelectorAll('input[type="radio"]');
-						
+
 						radioButtons.forEach(function (radioButton) {
 							radioButton.addEventListener('click', function () {
 								var name = this.name;
@@ -286,7 +286,7 @@
 						// Generate radio inputs for each transformer, considering support for the post type
 						foreach ($transformers as $transformer) {
 							$disabled_attribute = $transformer->supports_post_type( $post_type->name ) ? '' : ' disabled';
-							$is_selected = ( is_array( $transformer_mapping ) && isset( $transformer_mapping[ $post_type->name ] ) && $transformer_mapping[ $post_type->name ] === $transformer->get_name() ) ? ' checked ' : '';	
+							$is_selected = ( is_array( $transformer_mapping ) && isset( $transformer_mapping[ $post_type->name ] ) && $transformer_mapping[ $post_type->name ] === $transformer->get_name() ) ? ' checked ' : '';
 							echo '<td><input type="radio" name="activitypub_transformer_mapping[' . $post_type->name . ']" value="' . $transformer->get_name() . '"' . $is_selected . $disabled_attribute . '></td>';
 						}
 
@@ -296,7 +296,7 @@
 					</tbody>
 				</table>
 
-			
+
 				</td>
 			</tr>
 				</tbody>
