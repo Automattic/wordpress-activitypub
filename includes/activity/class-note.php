@@ -19,5 +19,5 @@ use Activitypub\Activity\Base_Object;
  * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-note
  */
 class Note extends Base_Object {
-    protected $type = 'Note';
+	protected $type = 'Note';
 }
