@@ -233,7 +233,7 @@ class Transformers_Manager {
 		 *
 		 * @param Transformers_Manager $this The widgets manager.
 		 */
-		do_action( 'activitypub/transformers/register', $this );
+		do_action( 'activitypub_transformers_register', $this );
 	}
 
 
