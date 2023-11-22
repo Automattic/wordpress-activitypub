@@ -3,7 +3,7 @@ namespace Activitypub;
 
 use WP_User_Query;
 use Activitypub\Model\Blog_User;
-use Activitypub\Base\Transformer_Base;
+use Activitypub\Base\Transformer\Base as Transformer_Base;
 
 /**
  * ActivityPub Admin Class
@@ -24,7 +24,8 @@ class Admin {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
 		}
 
-		add_filter( 'activitypub/transformers/is_transformer_enabled', function( $should_register, Transformer_Base $widget_instance ) {
+		add_filter(
+			'activitypub/transformers/is_transformer_enabled', function( $should_register, Transformer_Base $widget_instance ) {
 			return ! Options::is_transformer_disabled( $transformer_instance->get_name() );
 		}, 10, 2 );
 	}
@@ -162,8 +163,8 @@ class Admin {
 
 		/**
 		 * Flexible activation of post_types together with mapping ActivityPub transformers.
-		 * 
-		 * If a post-type is not mapped to any ActivtiyPub transformer it means it is not activated 
+		 *
+		 * If a post-type is not mapped to any ActivtiyPub transformer it means it is not activated
 		 * for ActivityPub federation.
 		 *
 		 * @since version_number_transformer_management_placeholder

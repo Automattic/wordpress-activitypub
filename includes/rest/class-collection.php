@@ -4,7 +4,7 @@ namespace Activitypub\Rest;
 use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
-use Activitypub\Transformers_Manager;
+use Activitypub\Transformer\Transformers_Manager;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
 

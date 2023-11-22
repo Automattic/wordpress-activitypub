@@ -3,9 +3,10 @@
  * Inspired by the way elementor handles addons.
  *
  * @link https://github.com/elementor/elementor/
+ * @package Activitypub
  */
 
-namespace Activitypub;
+namespace Activitypub\Transformer;
 
 use WP_Post;
 use WP_Comment;
@@ -25,7 +26,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since version_number_transformer_management_placeholder
  */
-
 class Transformers_Manager {
 	const DEFAULT_TRANSFORMER_MAPPING = array(
 		'post' => ACTIVITYPUB_DEFAULT_TRANSFORMER,
@@ -40,7 +40,7 @@ class Transformers_Manager {
 	 * @since version_number_transformer_management_placeholder
 	 * @access private
 	 *
-	 * @var \ActivityPub\Transformer_Base[]
+	 * @var \ActivityPub\Transformer\Base[]
 	 */
 	private $transformers = null;
 
@@ -98,7 +98,7 @@ class Transformers_Manager {
 	 *
 	 * @since version_number_transformer_management_placeholder
 	 * @access public
-	*/
+	 */
 	public function __construct() {
 		$this->require_files();
 	}
@@ -110,9 +110,9 @@ class Transformers_Manager {
 	 *
 	 * @since version_number_transformer_management_placeholder
 	 * @access private
-	*/
+	 */
 	private function require_files() {
-		require ACTIVITYPUB_PLUGIN_DIR . 'includes/class-transformer-base.php';
+		require ACTIVITYPUB_PLUGIN_DIR . 'includes/transformer/class-base.php';
 	}
 
 	/**
@@ -133,13 +133,13 @@ class Transformers_Manager {
 	 * @since version_number_transformer_management_placeholder
 	 * @access public
 	 *
-	 * @param \ActivityPub\Transformer_Base $transformer_instance ActivityPub Transformer.
+	 * @param \ActivityPub\Transformer\Base $transformer_instance ActivityPub Transformer.
 	 *
 	 * @return bool True if the ActivityPub transformer was registered.
 	 */
-	public function register( Transformer_Base $transformer_instance) {
+	public function register( \ActivityPub\Transformer\Base $transformer_instance) {
 
-		if ( ! $transformer_instance instanceof Transformer_Base ) {
+		if ( ! $transformer_instance instanceof \ActivityPub\Transformer\Base ) {
 			_doing_it_wrong(
 				__METHOD__,
 				__( 'ActivityPub transformer instance must be a of \ActivityPub\Transformer_Base class.' ),
@@ -147,7 +147,7 @@ class Transformers_Manager {
 			);
 			return false;
 		}
-		
+
 		$transformer_name = $transformer_instance->get_name();
 		if ( preg_match( '/[A-Z]+/', $transformer_name ) ) {
 			_doing_it_wrong(
@@ -176,7 +176,7 @@ class Transformers_Manager {
 				'version_number_transformer_management_placeholder'
 			);
 			return false;
-		}	
+		}
 
 		/**
 		 * Should the ActivityPub transformer be registered.
@@ -184,7 +184,7 @@ class Transformers_Manager {
 		 * @since version_number_transformer_management_placeholder
 		 *
 		 * @param bool $should_register Should the ActivityPub transformer be registered. Default is `true`.
-		 * @param \ActivityPub\Transformer_Base $transformer_instance Widget instance.
+		 * @param \ActivityPub\Transformer\Base $transformer_instance Widget instance.
 		 */
 		// TODO: does not implementing this slow down the website? -> compare with gutenberg block registration.
 		// $should_register = apply_filters( 'activitypub/transformers/is_transformer_enabled', true, $transformer_instance );
@@ -206,7 +206,7 @@ class Transformers_Manager {
 	 *
 	 * @since version_number_transformer_management_placeholder
 	 * @access private
-	*/
+	 */
 	private function init_transformers() {
 		$builtin_transformers = [
 			'post'
@@ -219,7 +219,7 @@ class Transformers_Manager {
 
 			$class_name = ucfirst( $transformer_name );
 
-			$class_name = '\Activitypub\Transformer_' . $class_name;
+			$class_name = '\Activitypub\Transformer\\' . $class_name;
 
 			$this->register( new $class_name() );
 		}
@@ -248,7 +248,7 @@ class Transformers_Manager {
 	 *
 	 * @param string $transformers Optional. Transformer name. Default is null.
 	 *
-	 * @return Transformer_Base|Transformer_Base[]|null Registered transformers.
+	 * @return Base|Base[]|null Registered transformers.
 	*/
 	public function get_transformers( $transformer_name = null ) {
 		if ( is_null( $this->transformers ) ) {
@@ -264,7 +264,7 @@ class Transformers_Manager {
 
 	/**
 	 * Get the mapped ActivityPub transformer.
-	 * 
+	 *
 	 * Returns a new instance of the needed WordPress to ActivityPub transformer.
 	 *
 	 * @since version_number_transformer_management_placeholder
@@ -272,7 +272,7 @@ class Transformers_Manager {
 	 *
      * @param WP_Post|WP_Comment $wp_post The WordPress Post/Comment.
 	 *
-	 * @return Transformer_Base|null Registered transformers.
+	 * @return \ActivityPub\Transformer\Base|null Registered transformers.
 	*/
 	public function get_transformer( $object ) {
 		switch ( get_class( $object ) ) {
@@ -289,5 +289,5 @@ class Transformers_Manager {
 				return apply_filters( 'activitypub_transformer', null, $object, get_class( $object ) );
 		}
 	}
-}	
+}
 

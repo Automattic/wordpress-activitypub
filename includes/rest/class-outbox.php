@@ -5,7 +5,7 @@ use stdClass;
 use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
-use Activitypub\Transformers_Manager;
+use Activitypub\Transformer\Transformers_Manager;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
 
@@ -105,7 +105,7 @@ class Outbox {
 			);
 
 			foreach ( $posts as $post ) {
-				$transformer = \Activitypub\Transformers_Manager::instance()->get_transformer( $post );
+				$transformer = \Activitypub\Transformer\Transformers_Manager::instance()->get_transformer( $post );
 				$post = $transformer->to_object();
 				$activity = new Activity();
 				$activity->set_type( 'Create' );
