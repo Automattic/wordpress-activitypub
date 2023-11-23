@@ -283,14 +283,7 @@ function is_activitypub_request() {
 	if ( \is_singular() ) {
 		$queried_object = \get_queried_object();
 		$post_type      = \get_post_type( $queried_object );
-		$post_types     = \get_post_types_by_support( 'activitypub' );
-
-		if (
-			false === $post_type ||
-			! \in_array( $post_type, $post_types, true )
-		) {
-			return false;
-		}
+		return ! empty( $post_type ) && \post_type_supports( $post_type, 'activitypub' );
 	}
 
 	// One can trigger an ActivityPub request by adding ?activitypub to the URL.
