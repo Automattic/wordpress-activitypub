@@ -109,4 +109,22 @@ class Test_Activitypub_Interactions extends WP_UnitTestCase {
 		$comment = \Activitypub\object_id_to_comment( $id );
 		$this->assertInstanceOf( WP_Comment::class, $comment );
 	}
+
+	public function test_get_interaction_by_id() {
+		$id = 'https://example.com/test_get_interaction_by_id';
+		$url = 'https://example.com/test_get_interaction_by_url';
+		$object = $this->create_test_object( $id );
+		$object['object']['url'] = $url;
+
+		Activitypub\Collection\Interactions::add_comment( $object );
+		$comment = \Activitypub\object_id_to_comment( $id );
+		$interactions = Activitypub\Collection\Interactions::get_interaction_by_id( $id );
+		$this->assertIsArray( $interactions );
+		$this->assertEquals( $comment->comment_ID, $interactions[0]->comment_ID );
+
+		$comment = \Activitypub\object_id_to_comment( $id );
+		$interactions = Activitypub\Collection\Interactions::get_interaction_by_id( $url );
+		$this->assertIsArray( $interactions );
+		$this->assertEquals( $comment->comment_ID, $interactions[0]->comment_ID );
+	}
 }

@@ -80,16 +80,17 @@ class Followers {
 	}
 
 	/**
-	 * Get a Follower
+	 * Get a Follower.
 	 *
 	 * @param int    $user_id The ID of the WordPress User
 	 * @param string $actor   The Actor URL
 	 *
-	 * @return \Activitypub\Model\Follower The Follower object
+	 * @return \Activitypub\Model\Follower|null The Follower object or null
 	 */
 	public static function get_follower( $user_id, $actor ) {
 		global $wpdb;
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = 'activitypub_user_id' AND pm.meta_value = %d AND p.guid = %s",
@@ -98,6 +99,32 @@ class Followers {
 					esc_sql( $user_id ),
 					esc_sql( $actor ),
 				)
+			)
+		);
+
+		if ( $post_id ) {
+			$post = get_post( $post_id );
+			return Follower::init_from_cpt( $post );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Get a Follower by Actor indepenent from the User.
+	 *
+	 * @param string $actor The Actor URL.
+	 *
+	 * @return \Activitypub\Model\Follower|null The Follower object or null
+	 */
+	public static function get_follower_by_actor( $actor ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s",
+				esc_sql( $actor )
 			)
 		);
 

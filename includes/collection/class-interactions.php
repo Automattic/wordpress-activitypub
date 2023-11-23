@@ -2,6 +2,7 @@
 namespace Activitypub\Collection;
 
 use WP_Error;
+use WP_Comment_Query;
 
 use function Activitypub\object_id_to_comment;
 use function Activitypub\get_remote_metadata_by_actor;
@@ -104,6 +105,40 @@ class Interactions {
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
 		return $comment;
+	}
+
+	/**
+	 * Get interaction(s) for a given URL/ID.
+	 *
+	 * @param strin $url The URL/ID to get interactions for.
+	 *
+	 * @return array The interactions as WP_Comment objects.
+	 */
+	public static function get_interaction_by_id( $url ) {
+		$args = array(
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query' => array(
+				'relation' => 'AND',
+				array(
+					'key'   => 'protocol',
+					'value' => 'activitypub',
+				),
+				array(
+					'relation' => 'OR',
+					array(
+						'key'   => 'source_url',
+						'value' => $url,
+					),
+					array(
+						'key'   => 'source_id',
+						'value' => $url,
+					),
+				),
+			),
+		);
+
+		$query = new WP_Comment_Query( $args );
+		return $query->comments;
 	}
 
 	/**

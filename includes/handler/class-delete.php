@@ -52,7 +52,7 @@ class Delete {
 			case 'Video':
 			case 'Event':
 			case 'Document':
-				self::maybe_delete_reaction( $user_id, $activity );
+				self::maybe_delete_reaction( $activity );
 				break;
 			// Minimal Activity
 			// @see https://www.w3.org/TR/activitystreams-core/#example-1
@@ -64,9 +64,10 @@ class Delete {
 
 				// check if Object is an Actor.
 				if ( $activity['actor'] === $activity['object'] ) {
-					self::maybe_delete_follower( $user_id, $activity );
+					self::maybe_delete_follower( $activity );
+					// self::maybe_delete_reactions( $activity );
 				} else { // assume a reaction otherwise.
-					self::maybe_delete_reaction( $user_id, $activity );
+					self::maybe_delete_reaction( $activity );
 				}
 				// maybe handle Delete Activity for other Object Types.
 				break;
@@ -76,20 +77,37 @@ class Delete {
 	/**
 	 * Delete a Follower if Actor-URL is a Tombstone.
 	 *
-	 * @param int   $user_id  The ID of the user receiving the delete activity.
 	 * @param array $activity The delete activity.
 	 */
-	public static function maybe_delete_follower( $user_id, $activity ) {
-		$follower = Followers::get_follower( $user_id, $activity['actor'] );
-
-		// if no matching follower, nothing to do.
-		if ( ! $follower ) {
-			return;
-		}
+	public static function maybe_delete_follower( $activity ) {
+		$follower = Followers::get_follower_by_actor( $activity['actor'] );
 
 		// verify if Actor is deleted.
-		if ( Http::is_tombstone( $activity['actor'] ) ) {
+		if ( $follower && Http::is_tombstone( $activity['actor'] ) ) {
 			$follower->delete();
+		}
+	}
+
+	/**
+	 * Delete a Reaction if URL is a Tombstone.
+	 *
+	 * @param array $activity The delete activity.
+	 *
+	 * @return void
+	 */
+	public static function maybe_delete_reaction( $activity ) {
+		if ( is_array( $activity['object'] ) ) {
+			$id = $activity['object']['id'];
+		} else {
+			$id = $activity['object'];
+		}
+
+		$comments = Interactions::get_interaction_by_id( $id );
+
+		if ( $comments && Http::is_tombstone( $id ) ) {
+			foreach ( $comments as $comment ) {
+				wp_delete_comment( $comment->comment_ID, true );
+			}
 		}
 	}
 
