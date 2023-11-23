@@ -69,7 +69,7 @@ class Test_Activitypub_Interactions extends WP_UnitTestCase {
 		$object = $this->create_test_object();
 		unset( $object['object']['inReplyTo'] );
 		$converted = Activitypub\Collection\Interactions::add_comment( $object );
-		$this->assertEquals( $converted->get_error_code(), 'activitypub_no_reply' );
+		$this->assertFalse( $converted );
 	}
 
 	public function test_convert_object_to_comment_already_exists_rejected() {
@@ -99,7 +99,7 @@ class Test_Activitypub_Interactions extends WP_UnitTestCase {
 		$object = $this->create_test_object();
 		$object['object']['inReplyTo'] = 'https://example.com/not_found';
 		$converted = Activitypub\Collection\Interactions::add_comment( $object );
-		$this->assertEquals( $converted->get_error_code(), 'activitypub_no_reply' );
+		$this->assertFalse( $converted );
 	}
 
 	public function test_handle_create_basic2() {

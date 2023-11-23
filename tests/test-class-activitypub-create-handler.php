@@ -51,20 +51,20 @@ class Test_Activitypub_Create_Handler extends WP_UnitTestCase {
 		$object = $this->create_test_object();
 		unset( $object['object'] );
 		$converted = Activitypub\Handler\Create::handle_create( $object, $this->user_id );
-		$this->assertEquals( $converted->get_error_code(), 'activitypub_no_valid_object' );
+		$this->assertNull( $converted );
 	}
 
 	public function test_handle_create_non_public_rejected() {
 		$object = $this->create_test_object();
 		$object['cc'] = [];
 		$converted = Activitypub\Handler\Create::handle_create( $object, $this->user_id );
-		$this->assertEquals( $converted->get_error_code(), 'activitypub_activity_not_public' );
+		$this->assertNull( $converted );
 	}
 
 	public function test_handle_create_no_id_rejected() {
 		$object = $this->create_test_object();
 		unset( $object['object']['id'] );
 		$converted = Activitypub\Handler\Create::handle_create( $object, $this->user_id );
-		$this->assertEquals( $converted->get_error_code(), 'activitypub_no_valid_object' );
+		$this->assertNull( $converted );
 	}
 }
