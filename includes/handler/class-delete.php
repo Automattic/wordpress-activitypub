@@ -87,7 +87,7 @@ class Delete {
 			return;
 		}
 
-		// verify id Actor is deleted.
+		// verify if Actor is deleted.
 		if ( Http::is_tombstone( $activity['actor'] ) ) {
 			$follower->delete();
 		}
