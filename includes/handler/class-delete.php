@@ -26,13 +26,6 @@ class Delete {
 	 * @param int   $user_id  The ID of the user performing the delete activity.
 	 */
 	public static function handle_delete( $activity, $user_id ) {
-		if (
-			! isset( $activity['object'] ) ||
-			! isset( $activity['actor'] )
-		) {
-			return;
-		}
-
 		$object_type = isset( $activity['object']['type'] ) ? $activity['object']['type'] : '';
 
 		switch ( $object_type ) {
