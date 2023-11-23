@@ -17,6 +17,8 @@ class Delete {
 		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 2 );
 		// defer signature verification for `Delete` requests.
 		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
+		// side effect
+		\add_action( 'activitypub_delete_actor_comments', array( self::class, 'scheduled_delete_comments' ), 10, 1 );
 	}
 
 	/**
@@ -65,6 +67,7 @@ class Delete {
 				// check if Object is an Actor.
 				if ( $activity['actor'] === $activity['object'] ) {
 					self::maybe_delete_follower( $activity );
+					self::maybe_delete_commenter( $activity );
 				} else { // assume a reaction otherwise.
 					self::maybe_delete_reaction( $activity );
 				}
@@ -84,8 +87,52 @@ class Delete {
 		// verify if Actor is deleted.
 		if ( $follower && Http::is_tombstone( $activity['actor'] ) ) {
 			$follower->delete();
+		}
+	}
 
-			// @todo delete all interactions by this user.
+	/**
+	 * Delete Comments if Actor-URL is a Tombstone.
+	 *
+	 * @param array $activity The delete activity.
+	 */
+	public static function maybe_delete_commenter( $activity ) {
+		$comments = self::get_comments_by_actor( $activity['actor'] );
+
+		// verify if Actor is deleted.
+		if ( $comments && Http::is_tombstone( $activity['actor'] ) ) {
+			\wp_schedule_single_event(
+				\time(),
+				'activitypub_delete_actor_comments',
+				array( $comments )
+			);
+		}
+	}
+
+	public static function get_comments_by_actor( $activity ) {
+		$args = array(
+			'user_id' => 0,
+			'meta_query' => array(
+				array(
+					'key'   => 'protocol',
+					'value' => 'activitypub',
+					'compare' => '='
+				),
+			),
+			'author_url' => $activity['actor'],
+		);
+		$comment_query = new WP_Comment_Query( $args );
+		return $comment_query->comments;
+	}
+
+	/**
+	 * Delete comments.
+	 * @param array comments  The comments to delete.
+	 */
+	public static function scheduled_delete_comments( $comments ) {
+		if ( is_array( $comments ) ) {
+			foreach ( $comments as $comment ) {
+				wp_delete_comment( $comment->comment_ID );
+			}
 		}
 	}
 
