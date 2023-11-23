@@ -2,8 +2,8 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Http;
-use Activitypub\Collection\Users;
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 
 /**

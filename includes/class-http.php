@@ -20,7 +20,7 @@ class Http {
 	 * @return array|WP_Error The POST Response or an WP_ERROR
 	 */
 	public static function post( $url, $body, $user_id ) {
-		do_action( 'activitypub_pre_http_post', $url, $body, $user_id );
+		\do_action( 'activitypub_pre_http_post', $url, $body, $user_id );
 
 		$date = \gmdate( 'D, d M Y H:i:s T' );
 		$digest = Signature::generate_digest( $body );
@@ -70,7 +70,7 @@ class Http {
 	 * @return array|WP_Error The GET Response or an WP_ERROR
 	 */
 	public static function get( $url ) {
-		do_action( 'activitypub_pre_http_get', $url );
+		\do_action( 'activitypub_pre_http_get', $url );
 
 		$date = \gmdate( 'D, d M Y H:i:s T' );
 		$signature = Signature::generate_signature( Users::APPLICATION_USER_ID, 'get', $url, $date );
@@ -117,6 +117,8 @@ class Http {
 	 * @return bool True if the URL is a tombstone.
 	 */
 	public static function is_tombstone( $url ) {
+		\do_action( 'activitypub_pre_http_is_tombstone', $url );
+
 		$response = \wp_safe_remote_get( $url );
 		$code     = \wp_remote_retrieve_response_code( $response );
 

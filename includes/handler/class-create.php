@@ -25,28 +25,20 @@ class Create {
 	 * @param int                  $user_id The id of the local blog-user
 	 * @param Activitypub\Activity $object  The activity object
 	 *
-	 * @return void|WP_Error WP_Error on failure
+	 * @return void
 	 */
 	public static function handle_create( $array, $user_id, $object = null ) {
 		if (
 			! isset( $array['object'] ) ||
 			! isset( $array['object']['id'] )
 		) {
-			return new WP_Error(
-				'activitypub_no_valid_object',
-				__( 'No object id found.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
+			return;
 		}
 
 		// check if Activity is public or not
 		if ( ! is_activity_public( $array ) ) {
 			// @todo maybe send email
-			return new WP_Error(
-				'activitypub_activity_not_public',
-				__( 'Activity is not public.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
+			return;
 		}
 
 		$check_dupe = object_id_to_comment( $array['object']['id'] );
@@ -54,18 +46,14 @@ class Create {
 		// if comment exists, call update action
 		if ( $check_dupe ) {
 			\do_action( 'activitypub_inbox_update', $array, $user_id, $object );
-			return new WP_Error(
-				'activitypub_comment_exists',
-				__( 'Comment already exists, initiated Update process.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
+			return;
 		}
 
-		$reaction = Interactions::add_comment( $array );
-		$state    = null;
+		$state    = Interactions::add_comment( $array );
+		$reaction = null;
 
-		if ( $reaction ) {
-			$state = $reaction['comment_ID'];
+		if ( $state && ! \is_wp_error( $reaction ) ) {
+			$reaction = \get_comment( $state );
 		}
 
 		\do_action( 'activitypub_handled_create', $array, $user_id, $state, $reaction );

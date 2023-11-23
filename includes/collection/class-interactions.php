@@ -4,6 +4,7 @@ namespace Activitypub\Collection;
 use WP_Error;
 use WP_Comment_Query;
 
+use function Activitypub\url_to_commentid;
 use function Activitypub\object_id_to_comment;
 use function Activitypub\get_remote_metadata_by_actor;
 
@@ -23,19 +24,11 @@ class Interactions {
 			! isset( $activity['object'] ) ||
 			! isset( $activity['object']['id'] )
 		) {
-			return new WP_Error(
-				'activitypub_no_valid_object',
-				__( 'No object id found.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
+			return false;
 		}
 
 		if ( ! isset( $activity['object']['inReplyTo'] ) ) {
-			return new WP_Error(
-				'activitypub_no_reply',
-				__( 'Object is no reply.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
+			return false;
 		}
 
 		$in_reply_to     = \esc_url_raw( $activity['object']['inReplyTo'] );
@@ -49,21 +42,13 @@ class Interactions {
 
 		// not a reply to a post or comment
 		if ( ! $comment_post_id ) {
-			return new WP_Error(
-				'activitypub_no_reply',
-				__( 'Object is no reply.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
+			return false;
 		}
 
 		$meta = get_remote_metadata_by_actor( $activity['actor'] );
 
 		if ( ! $meta || \is_wp_error( $meta ) ) {
-			return new WP_Error(
-				'activitypub_invalid_follower',
-				__( 'Invalid Follower', 'activitypub' ),
-				array( 'status' => 400 )
-			);
+			return false;
 		}
 
 		$commentdata = array(
@@ -97,6 +82,54 @@ class Interactions {
 		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
 
 		$comment = \wp_new_comment( $commentdata, true );
+
+		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10 );
+		\remove_filter( 'pre_option_require_name_email', '__return_false' );
+
+		// re-add flood control
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+
+		return $comment;
+	}
+
+	/**
+	 * Update a comment
+	 *
+	 * @param array $activity The activity-object
+	 *
+	 * @return array|false The commentdata or false on failure
+	 */
+	public static function update_comment( $activity ) {
+		$meta = get_remote_metadata_by_actor( $activity['actor'] );
+
+		//Determine comment_ID
+		$object_comment_id = url_to_commentid( \esc_url_raw( $activity['object']['id'] ) );
+
+		if ( ! $object_comment_id ) {
+			return false;
+		}
+
+		//found a local comment id
+		$commentdata = \get_comment( $object_comment_id, ARRAY_A );
+		$commentdata['comment_author'] = \esc_attr( $meta['name'] ? $meta['name'] : $meta['preferredUsername'] );
+		$commentdata['comment_content'] = \wp_filter_kses( $activity['object']['content'] );
+		$commentdata['comment_meta']['avatar_url'] = \esc_url_raw( $meta['icon']['url'] );
+
+		// disable flood control
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+		// do not require email for AP entries
+		\add_filter( 'pre_option_require_name_email', '__return_false' );
+		// No nonce possible for this submission route
+		\add_filter(
+			'akismet_comment_nonce',
+			function() {
+				return 'inactive';
+			}
+		);
+		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
+
+		$comment = \wp_update_comment( $commentdata, true );
 
 		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10 );
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
