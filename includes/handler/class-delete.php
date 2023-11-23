@@ -115,7 +115,7 @@ class Delete {
 				array(
 					'key'   => 'protocol',
 					'value' => 'activitypub',
-					'compare' => '='
+					'compare' => '=',
 				),
 			),
 			'author_url' => $activity['actor'],
