@@ -5,6 +5,7 @@ use WP_Error;
 use WP_REST_Request;
 use Activitypub\Http;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Interactions;
 
 /**
  * Handles Delete requests.
@@ -96,7 +97,7 @@ class Delete {
 	 * @param array $activity The delete activity.
 	 */
 	public static function maybe_delete_commenter( $activity ) {
-		$comments = self::get_comments_by_actor( $activity['actor'] );
+		$comments = Interactions::get_comments_by_actor( $activity['actor'] );
 
 		// verify if Actor is deleted.
 		if ( $comments && Http::is_tombstone( $activity['actor'] ) ) {
@@ -108,25 +109,10 @@ class Delete {
 		}
 	}
 
-	public static function get_comments_by_actor( $activity ) {
-		$args = array(
-			'user_id' => 0,
-			'meta_query' => array(
-				array(
-					'key'   => 'protocol',
-					'value' => 'activitypub',
-					'compare' => '=',
-				),
-			),
-			'author_url' => $activity['actor'],
-		);
-		$comment_query = new WP_Comment_Query( $args );
-		return $comment_query->comments;
-	}
-
 	/**
-	 * Delete comments.
-	 * @param array comments  The comments to delete.
+	 * Delete comments from an Actor.
+	 *
+	 * @param array $comments The comments to delete.
 	 */
 	public static function scheduled_delete_comments( $comments ) {
 		if ( is_array( $comments ) ) {

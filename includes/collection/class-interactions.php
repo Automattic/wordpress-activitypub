@@ -175,6 +175,29 @@ class Interactions {
 	}
 
 	/**
+	 * Get interaction(s) for a given actor.
+	 *
+	 * @param array $activity The activity array.
+	 *
+	 * @return array The interactions as WP_Comment objects.
+	 */
+	public static function get_interaction_by_actor( $activity ) {
+		$args = array(
+			'author_url' => $activity['actor'],
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query' => array(
+				array(
+					'key'   => 'protocol',
+					'value' => 'activitypub',
+					'compare' => '=',
+				),
+			),
+		);
+		$comment_query = new WP_Comment_Query( $args );
+		return $comment_query->comments;
+	}
+
+	/**
 	 * Adds line breaks to the list of allowed comment tags.
 	 *
 	 * @param  array  $allowedtags Allowed HTML tags.
