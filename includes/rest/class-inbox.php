@@ -239,8 +239,12 @@ class Inbox {
 		$params['actor'] = array(
 			'required' => true,
 			'sanitize_callback' => function( $param, $request, $key ) {
-				if ( ! \is_string( $param ) ) {
-					$param = $param['id'];
+				if ( \is_array( $param ) ) {
+					if ( isset( $param['id'] ) ) {
+						$param = $param['id'];
+					} else {
+						$param = $param['url'];
+					}
 				}
 				return \esc_url_raw( $param );
 			},

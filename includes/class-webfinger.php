@@ -41,9 +41,14 @@ class Webfinger {
 	 * @return string|WP_Error The URL or WP_Error
 	 */
 	public static function resolve( $resource ) {
+		if ( ! $resource ) {
+			return null;
+		}
+
 		if ( ! preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $resource, $m ) ) {
 			return null;
 		}
+
 		$transient_key = 'activitypub_resolve_' . ltrim( $resource, '@' );
 
 		$link = \get_transient( $transient_key );
