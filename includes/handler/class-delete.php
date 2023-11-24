@@ -19,7 +19,7 @@ class Delete {
 		// defer signature verification for `Delete` requests.
 		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
 		// side effect
-		\add_action( 'activitypub_delete_actor_comments', array( self::class, 'scheduled_delete_comments' ), 10, 1 );
+		\add_action( 'activitypub_delete_actor_interactions', array( self::class, 'delete_interactions' ), 10, 1 );
 	}
 
 	/**
@@ -55,7 +55,7 @@ class Delete {
 			case 'Video':
 			case 'Event':
 			case 'Document':
-				self::maybe_delete_reaction( $activity );
+				self::maybe_delete_interaction( $activity );
 				break;
 			// Minimal Activity
 			// @see https://www.w3.org/TR/activitystreams-core/#example-1
@@ -68,9 +68,9 @@ class Delete {
 				// check if Object is an Actor.
 				if ( $activity['actor'] === $activity['object'] ) {
 					self::maybe_delete_follower( $activity );
-					self::maybe_delete_commenter( $activity );
-				} else { // assume a reaction otherwise.
-					self::maybe_delete_reaction( $activity );
+					self::maybe_delete_interactions( $activity );
+				} else { // assume a interaction otherwise.
+					self::maybe_delete_interaction( $activity );
 				}
 				// maybe handle Delete Activity for other Object Types.
 				break;
@@ -92,19 +92,17 @@ class Delete {
 	}
 
 	/**
-	 * Delete Comments if Actor-URL is a Tombstone.
+	 * Delete Reactions if Actor-URL is a Tombstone.
 	 *
 	 * @param array $activity The delete activity.
 	 */
-	public static function maybe_delete_commenter( $activity ) {
-		$comments = Interactions::get_comments_by_actor( $activity['actor'] );
-
+	public static function maybe_delete_interactions( $activity ) {
 		// verify if Actor is deleted.
-		if ( $comments && Http::is_tombstone( $activity['actor'] ) ) {
+		if ( Http::is_tombstone( $activity['actor'] ) ) {
 			\wp_schedule_single_event(
 				\time(),
-				'activitypub_delete_actor_comments',
-				array( $comments )
+				'activitypub_delete_actor_interactions',
+				array( $activity['actor'] )
 			);
 		}
 	}
@@ -114,7 +112,9 @@ class Delete {
 	 *
 	 * @param array $comments The comments to delete.
 	 */
-	public static function scheduled_delete_comments( $comments ) {
+	public static function delete_interactions( $actor ) {
+		$comments = Interactions::get_interactions_by_actor( $actor );
+
 		if ( is_array( $comments ) ) {
 			foreach ( $comments as $comment ) {
 				wp_delete_comment( $comment->comment_ID );
@@ -129,7 +129,7 @@ class Delete {
 	 *
 	 * @return void
 	 */
-	public static function maybe_delete_reaction( $activity ) {
+	public static function maybe_delete_interaction( $activity ) {
 		if ( is_array( $activity['object'] ) ) {
 			$id = $activity['object']['id'];
 		} else {

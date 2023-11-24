@@ -177,13 +177,20 @@ class Interactions {
 	/**
 	 * Get interaction(s) for a given actor.
 	 *
-	 * @param array $activity The activity array.
+	 * @param string $actor The Actor-URL.
 	 *
 	 * @return array The interactions as WP_Comment objects.
 	 */
-	public static function get_interaction_by_actor( $activity ) {
+	public static function get_interactions_by_actor( $actor ) {
+		$meta = get_remote_metadata_by_actor( $actor );
+
+		// get URL, because $actor seems to be the ID
+		if ( $meta && ! is_wp_error( $meta ) && isset( $meta['url'] ) ) {
+			$actor = $meta['url'];
+		}
+
 		$args = array(
-			'author_url' => $activity['actor'],
+			'author_url' => $actor,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
 				array(
