@@ -65,7 +65,7 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$transformer = \Activitypub\Transformer\Transformers_Manager::instance()->get_transformer( $wp_post );
+		$transformer = Transformers_Manager::instance()->get_transformer( $wp_post );
 		$object = $transformer->to_object();
 
 		$activity = new Activity();
@@ -102,7 +102,7 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$transformer = \Activitypub\Transformer\Transformers_Manager::instance()->get_transformer( $wp_post );
+		$transformer = Transformers_Manager::instance()->get_transformer( $wp_post );
 		$object = $transformer->to_object();
 
 		$activity = new Activity();
