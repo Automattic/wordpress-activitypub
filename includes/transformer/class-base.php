@@ -93,7 +93,7 @@ abstract class Base {
 	 * @return string post_type Post type name.
 	 */
 	final public function supports_post_type( $post_type ) {
-		return in_array( $post_type, $this->get_supported_post_types() );
+		return in_array( $post_type, $this->get_supported_post_types(), true );
 	}
 
 	/**
@@ -163,6 +163,26 @@ abstract class Base {
 		return $content;
 	}
 
+	/**
+	 * Gets the template to use to generate the content of the activitypub item.
+	 *
+	 * @return string The Template.
+	 */
+	protected function get_post_content_template() {
+		if ( 'excerpt' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
+			return "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
+		}
+
+		if ( 'title' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
+			return "[ap_title]\n\n[ap_permalink type=\"html\"]";
+		}
+
+		if ( 'content' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
+			return "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
+		}
+
+		return \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+	}
 
 	/**
 	 * Returns the ID of the Post.
