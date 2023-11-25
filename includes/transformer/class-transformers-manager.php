@@ -137,11 +137,7 @@ class Transformers_Manager {
 	 *
 	 * @return bool True if the ActivityPub transformer was registered.
 	 */
-<<<<<<< HEAD
-	public function register( \ActivityPub\Transformer\Base $transformer_instance) {
-=======
 	public function register( \ActivityPub\Transformer\Base $transformer_instance ) {
->>>>>>> ed1b6b7e77ed12f77fb1a9b4bf9f959509b55bf9
 
 		if ( ! $transformer_instance instanceof \ActivityPub\Transformer\Base ) {
 			_doing_it_wrong(
