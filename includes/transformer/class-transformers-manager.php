@@ -284,7 +284,8 @@ class Transformers_Manager {
 				$post_type = get_post_type( $object );
 				$transformer_mapping = \get_option( 'activitypub_transformer_mapping', self::DEFAULT_TRANSFORMER_MAPPING );
 				$transformer_name = $transformer_mapping[ $post_type ];
-				$transformer_instance = new ( $this->get_transformers( $transformer_name ) );
+				$transformer_class = $this->get_transformers( $transformer_name );
+				$transformer_instance = new $transformer_class();
 				$transformer_instance->set_wp_post( $object );
 				return $transformer_instance;
 			case 'WP_Comment':
