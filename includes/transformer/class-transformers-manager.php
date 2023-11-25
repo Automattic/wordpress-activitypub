@@ -236,7 +236,6 @@ class Transformers_Manager {
 		do_action( 'activitypub_transformers_register', $this );
 	}
 
-
 	/**
 	 * Get available ActivityPub transformers.
 	 *
@@ -246,10 +245,10 @@ class Transformers_Manager {
 	 * @since version_number_transformer_management_placeholder
 	 * @access public
 	 *
-	 * @param string $transformers Optional. Transformer name. Default is null.
+	 * @param string $transformer_name Optional. Transformer name. Default is null.
 	 *
 	 * @return Base|Base[]|null Registered transformers.
-	*/
+	 */
 	public function get_transformers( $transformer_name = null ) {
 		if ( is_null( $this->transformers ) ) {
 			$this->init_transformers();
@@ -270,17 +269,18 @@ class Transformers_Manager {
 	 * @since version_number_transformer_management_placeholder
 	 * @access public
 	 *
-	 * @param WP_Post|WP_Comment $wp_post The WordPress Post/Comment.
+	 * @param WP_Post|WP_Comment $object The WordPress Post/Comment.
 	 *
 	 * @return \ActivityPub\Transformer\Base|null Registered transformers.
-	*/
+	 */
 	public function get_transformer( $object ) {
 		switch ( get_class( $object ) ) {
 			case 'WP_Post':
 				$post_type = get_post_type( $object );
 				$transformer_mapping = \get_option( 'activitypub_transformer_mapping', self::DEFAULT_TRANSFORMER_MAPPING );
 				$transformer_name = $transformer_mapping[ $post_type ];
-				$transformer_instance = new ( $this->get_transformers( $transformer_name ) );
+				$transformer_class = $this->get_transformers( $transformer_name );
+				$transformer_instance = new $transformer_class();
 				$transformer_instance->set_wp_post( $object );
 				return $transformer_instance;
 			case 'WP_Comment':
