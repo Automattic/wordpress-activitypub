@@ -106,6 +106,4 @@ class Post extends Base {
 
 		return $object_type;
 	}
-
-
 }
