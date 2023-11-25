@@ -37,15 +37,20 @@ abstract class Base {
 	 * @return void
 	 */
 	public function set_wp_post( WP_Post $wp_post ) {
-		if ( $this->supports_post_type( get_post_type( $wp_post ) ) ) {
-			$this->wp_post = $wp_post;
-		} else {
-			// TODO Error, this should not happen.
+		$post_type = get_post_type( $wp_post );
+		if ( ! $this->supports_post_type( $post_type ) ) {
+			_doing_it_wrong(
+				__METHOD__,
+				/* translators: %s: Block name. */
+				sprintf( 'The Transformer "%s" does not support the post type "%s".', esc_html( $this->get_label() ), esc_html( $post_type ) ),
+				'version_number_transformer_management_placeholder'
+			);
 		}
+		$this->wp_post = $wp_post;
 	}
 
 	/**
-	 * Get the supported WP post_types that the transformer can use as an input.
+	 * Get the supported WP post types that the transformer can use as an input.
 	 *
 	 * By default all post types are supported.
 	 * You may very likely wish to override this function.
@@ -74,7 +79,11 @@ abstract class Base {
 		$plugins_data = get_plugins( '/' . $plugin_directory );
 		$plugin_data  = array_shift( $plugins_data );
 
-		return $plugin_data['Name'] ?? esc_html__( 'Unknown', 'activitypub' );
+		if ( isset( $plugin_data['Name'] ) ) {
+			return $plugin_data['Name'];
+		} else {
+			return esc_html__( 'Unknown', 'activitypub' );
+		}
 	}
 
 	/**

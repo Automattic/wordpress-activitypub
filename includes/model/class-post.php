@@ -1,7 +1,7 @@
 <?php
 namespace Activitypub\Model;
 
-use Activitypub\Transformer\Post;
+use Activitypub\Transformer\Post as Transformer_Post;
 
 /**
  * ActivityPub Post Class
@@ -34,7 +34,7 @@ class Post {
 		_deprecated_function( __CLASS__, '1.0.0', '\Activitypub\Transformer\Post' );
 
 		$this->post   = $post;
-		$this->object = Post_Transformer->set_wp_post( $post )->to_object();
+		$this->object = Transformer_Post->set_wp_post( $post )->to_object();
 	}
 
 	/**

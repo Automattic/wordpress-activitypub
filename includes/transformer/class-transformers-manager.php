@@ -91,7 +91,7 @@ class Transformers_Manager {
 		return get_called_class();
 	}
 
-    /**
+	/**
 	 * Transformers manager constructor.
 	 *
 	 * Initializing ActivityPub transformers manager.
@@ -137,12 +137,16 @@ class Transformers_Manager {
 	 *
 	 * @return bool True if the ActivityPub transformer was registered.
 	 */
+<<<<<<< HEAD
 	public function register( \ActivityPub\Transformer\Base $transformer_instance) {
+=======
+	public function register( \ActivityPub\Transformer\Base $transformer_instance ) {
+>>>>>>> ed1b6b7e77ed12f77fb1a9b4bf9f959509b55bf9
 
 		if ( ! $transformer_instance instanceof \ActivityPub\Transformer\Base ) {
 			_doing_it_wrong(
 				__METHOD__,
-				__( 'ActivityPub transformer instance must be a of \ActivityPub\Transformer_Base class.' ),
+				\esc_html__( 'ActivityPub transformer instance must be a of \ActivityPub\Transformer_Base class.' ),
 				'version_number_transformer_management_placeholder'
 			);
 			return false;
@@ -152,7 +156,7 @@ class Transformers_Manager {
 		if ( preg_match( '/[A-Z]+/', $transformer_name ) ) {
 			_doing_it_wrong(
 				__METHOD__,
-				__( 'ActivityPub transformer names must not contain uppercase characters.' ),
+				\esc_html__( 'ActivityPub transformer names must not contain uppercase characters.' ),
 				'version_number_transformer_management_placeholder'
 			);
 			return false;
@@ -162,7 +166,7 @@ class Transformers_Manager {
 		if ( ! preg_match( $name_matcher, $transformer_name ) ) {
 			_doing_it_wrong(
 				__METHOD__,
-				__( 'ActivityPub transformer names must contain a namespace prefix. Example: my-plugin/my-custom-transformer' ),
+				\esc_html__( 'ActivityPub transformer names must contain a namespace prefix. Example: my-plugin/my-custom-transformer' ),
 				'version_number_transformer_management_placeholder'
 			);
 			return false;
@@ -172,7 +176,7 @@ class Transformers_Manager {
 			_doing_it_wrong(
 				__METHOD__,
 				/* translators: %s: Block name. */
-				sprintf( __( 'ActivityPub transformer with name "%s" is already registered.' ), $transformer_name ),
+				sprintf( 'ActivityPub transformer with name "%s" is already registered.', esc_html( $transformer_name ) ),
 				'version_number_transformer_management_placeholder'
 			);
 			return false;
@@ -190,7 +194,7 @@ class Transformers_Manager {
 		// $should_register = apply_filters( 'activitypub/transformers/is_transformer_enabled', true, $transformer_instance );
 
 		// if ( ! $should_register ) {
-		// 	return false;
+		//  return false;
 		// }
 
 		$this->transformers[ $transformer_name ] = $transformer_instance;
@@ -209,7 +213,7 @@ class Transformers_Manager {
 	 */
 	private function init_transformers() {
 		$builtin_transformers = [
-			'post'
+			'post',
 		];
 
 		$this->transformers = [];
@@ -233,7 +237,7 @@ class Transformers_Manager {
 		 *
 		 * @param Transformers_Manager $this The widgets manager.
 		 */
-		do_action( 'activitypub/transformers/register', $this );
+		do_action( 'activitypub_transformers_register', $this );
 	}
 
 
@@ -270,7 +274,7 @@ class Transformers_Manager {
 	 * @since version_number_transformer_management_placeholder
 	 * @access public
 	 *
-     * @param WP_Post|WP_Comment $wp_post The WordPress Post/Comment.
+	 * @param WP_Post|WP_Comment $wp_post The WordPress Post/Comment.
 	 *
 	 * @return \ActivityPub\Transformer\Base|null Registered transformers.
 	*/
@@ -290,4 +294,3 @@ class Transformers_Manager {
 		}
 	}
 }
-

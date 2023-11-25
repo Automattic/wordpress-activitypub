@@ -19,5 +19,5 @@ use Activitypub\Activity\Base_Object;
  * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-event
  */
 class Note extends Base_Object {
-    protected $type = 'Event';
+	protected $type = 'Event';
 }

@@ -59,7 +59,7 @@ class Outbox {
 			return $user;
 		}
 
-		$post_types = array_keys( \get_option( 'activitypub_transformer_mapping', array( 'post' => 'activitypub/default', 'page' => 'activitypub/default') ) );
+		$post_types = array_keys( \get_option( 'activitypub_transformer_mapping', array( 'post' => 'activitypub/default', 'page' => 'activitypub/default' ) ) );
 
 		$page = $request->get_param( 'page', 1 );
 

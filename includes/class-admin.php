@@ -25,9 +25,13 @@ class Admin {
 		}
 
 		add_filter(
-			'activitypub/transformers/is_transformer_enabled', function( $should_register, Transformer_Base $widget_instance ) {
-			return ! Options::is_transformer_disabled( $transformer_instance->get_name() );
-		}, 10, 2 );
+			'activitypub/transformers/is_transformer_enabled',
+			function( $should_register, Transformer_Base $transformer_instance ) {
+				return ! Options::is_transformer_disabled( $transformer_instance->get_name() );
+			},
+			10,
+			2
+		);
 	}
 
 	/**
@@ -187,7 +191,7 @@ class Admin {
 				),
 				'sanitize_callback' => function ( $value ) {
 					// Check if $value is an array
-					if (!is_array($value)) {
+					if ( ! is_array( $value ) ) {
 						return array();
 					}
 					$value_keys = array_keys( $value );
@@ -196,12 +200,11 @@ class Admin {
 
 					// Unset the keys that are missing in $keysToCheck
 					foreach ( array_diff( $value_keys, $all_public_post_types ) as $missing_key ) {
-						unset($value[$missing_key]);
+						unset( $value[ $missing_key ] );
 					}
 					// var_dump($value);
 					return $value;
-
-				}
+				},
 			)
 		);
 		\register_setting(
