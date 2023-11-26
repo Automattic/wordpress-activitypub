@@ -12,7 +12,7 @@
 				'<dt><code>[ap_content apply_filters="yes"]</code></dt>' .
 				'<dd>' . \wp_kses( __( 'The post\'s content. With <code>apply_filters</code> you can decide if filters (<code>apply_filters( \'the_content\', $content )</code>) should be applied or not (default is <code>yes</code>). The values can be <code>yes</code> or <code>no</code>. <code>apply_filters</code> attribute is optional.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_excerpt length="400"]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s excerpt (default 400 chars). <code>length</code> attribute is optional.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
+				'<dd>' . \wp_kses( __( 'The post\'s excerpt (uses <code>the_excerpt</code> if that is set). If no excerpt is provided, will truncate at <code>length</code> (optional, default = 400).', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_permalink type="url"]</code></dt>' .
 				'<dd>' . \wp_kses( __( 'The post\'s permalink. <code>type</code> can be either: <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). <code>type</code> attribute is optional.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_shortlink type="url"]</code></dt>' .

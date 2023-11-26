@@ -93,7 +93,7 @@
 									<?php \esc_html_e( 'Excerpt', 'activitypub' ); ?>
 									-
 									<span class="description">
-										<?php \esc_html_e( 'A content summary, shortened to 400 characters and without markup.', 'activitypub' ); ?>
+										<?php \esc_html_e( 'A content summary without markup (truncated if no excerpt is provided).', 'activitypub' ); ?>
 									</span>
 								</label>
 							</p>
@@ -125,7 +125,7 @@
 										<ul>
 											<li><code>[ap_title]</code> - <?php \esc_html_e( 'The post\'s title.', 'activitypub' ); ?></li>
 											<li><code>[ap_content]</code> - <?php \esc_html_e( 'The post\'s content.', 'activitypub' ); ?></li>
-											<li><code>[ap_excerpt]</code> - <?php \esc_html_e( 'The post\'s excerpt (default 400 chars).', 'activitypub' ); ?></li>
+											<li><code>[ap_excerpt]</code> - <?php \esc_html_e( 'The post\'s excerpt (may be truncated).', 'activitypub' ); ?></li>
 											<li><code>[ap_permalink]</code> - <?php \esc_html_e( 'The post\'s permalink.', 'activitypub' ); ?></li>
 											<li><code>[ap_shortlink]</code> - <?php echo \wp_kses( \__( 'The post\'s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>.', 'activitypub' ), 'default' ); ?></li>
 											<li><code>[ap_hashtags]</code> - <?php \esc_html_e( 'The post\'s tags as hashtags.', 'activitypub' ); ?></li>
