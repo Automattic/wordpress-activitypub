@@ -22,10 +22,9 @@ class Update {
 	 *
 	 * @param array                $array   The activity-object
 	 * @param int                  $user_id The id of the local blog-user
-	 * @param Activitypub\Activity $object  The activity object
 	 */
-	public static function handle_update( $activity, $user_id ) {
-		$object_type = isset( $activity['object']['type'] ) ? $activity['object']['type'] : '';
+	public static function handle_update( $array, $user_id ) {
+		$object_type = isset( $array['object']['type'] ) ? $array['object']['type'] : '';
 
 		switch ( $object_type ) {
 			// Actor Types
@@ -35,7 +34,7 @@ class Update {
 			case 'Organization':
 			case 'Service':
 			case 'Application':
-				self::update_actor( $activity );
+				self::update_actor( $array );
 				break;
 			// Object and Link Types
 			// @see https://www.w3.org/TR/activitystreams-vocabulary/#object-types
@@ -46,7 +45,7 @@ class Update {
 			case 'Video':
 			case 'Event':
 			case 'Document':
-				self::update_interaction( $activity, $user_id );
+				self::update_interaction( $array, $user_id );
 				break;
 			// Minimal Activity
 			// @see https://www.w3.org/TR/activitystreams-core/#example-1
@@ -82,14 +81,9 @@ class Update {
 	 * @return void
 	 */
 	public static function update_actor( $activity ) {
-		if ( isset( $activity['actor'] ) ) {
-			$actor = $activity['actor'];
+		// update cache
+		get_remote_metadata_by_actor( $activity['actor'], false );
 
-			if ( is_array( $activity['actor'] ) ) {
-				$actor = $activity['actor']['id'];
-			}
-
-			get_remote_metadata_by_actor( $actor, false );
-		}
+		// @todo maybe also update all interactions
 	}
 }
