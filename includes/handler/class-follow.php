@@ -14,7 +14,7 @@ class Follow {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_follow', array( self::class, 'handle_follow_request' ), 10, 2 );
+		\add_action( 'activitypub_inbox_follow', array( self::class, 'handle_follow' ), 10, 2 );
 		\add_action( 'activitypub_followers_post_follow', array( self::class, 'send_follow_response' ), 10, 4 );
 	}
 
@@ -24,7 +24,7 @@ class Follow {
 	 * @param array $activity The activity object
 	 * @param int   $user_id  The user ID
 	 */
-	public function handle_follow( $activity, $user_id ) {
+	public static function handle_follow( $activity, $user_id ) {
 		// save follower
 		$follower = Followers::add_follower( $user_id, $activity['actor'] );
 
