@@ -55,14 +55,14 @@ class Interactions {
 			'comment_post_ID' => $comment_post_id,
 			'comment_author' => \esc_attr( $meta['name'] ),
 			'comment_author_url' => \esc_url_raw( $meta['url'] ),
-			'comment_content' => addslashes( \wp_kses( $activity['object']['content'], 'pre_comment_content' ) ),
+			'comment_content' => \addslashes( \wp_kses( $activity['object']['content'], 'pre_comment_content' ) ),
 			'comment_type' => 'comment',
 			'comment_author_email' => '',
 			'comment_parent' => $parent_comment ? $parent_comment->comment_ID : 0,
 			'comment_meta' => array(
 				'source_id'  => \esc_url_raw( $activity['object']['id'] ),
 				'source_url' => \esc_url_raw( $activity['object']['url'] ),
-				'avatar_url' => \esc_url_raw( $meta['icon']['url'] ),
+				'avatar_url' => \isset( $meta['icon']['url'] ) ? \esc_url_raw( $meta['icon']['url'] ) : '',
 				'protocol'   => 'activitypub',
 			),
 		);
@@ -112,8 +112,8 @@ class Interactions {
 		//found a local comment id
 		$commentdata = \get_comment( $object_comment_id, ARRAY_A );
 		$commentdata['comment_author'] = \esc_attr( $meta['name'] ? $meta['name'] : $meta['preferredUsername'] );
-		$commentdata['comment_content'] = \wp_filter_kses( $activity['object']['content'] );
-		$commentdata['comment_meta']['avatar_url'] = \esc_url_raw( $meta['icon']['url'] );
+		$commentdata['comment_content'] = \addslashes( \wp_kses( $activity['object']['content'], 'pre_comment_content' ) );
+		$commentdata['comment_meta']['avatar_url'] = \isset( $meta['icon']['url'] ) ? \esc_url_raw( $meta['icon']['url'] ) : '';
 
 		// disable flood control
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
