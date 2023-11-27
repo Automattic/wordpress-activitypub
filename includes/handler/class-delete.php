@@ -41,11 +41,6 @@ class Delete {
 			case 'Application':
 				self::maybe_delete_follower( $user_id, $activity );
 				break;
-			// Tombstone Type
-			// @see: https://www.w3.org/TR/activitystreams-vocabulary/#dfn-tombstone
-			case 'Tombstone':
-				// Handle tombstone.
-				break;
 			// Object and Link Types
 			// @see https://www.w3.org/TR/activitystreams-vocabulary/#object-types
 			case 'Note':
@@ -55,6 +50,11 @@ class Delete {
 			case 'Video':
 			case 'Event':
 			case 'Document':
+				self::maybe_delete_interaction( $activity );
+				break;
+			// Tombstone Type
+			// @see: https://www.w3.org/TR/activitystreams-vocabulary/#dfn-tombstone
+			case 'Tombstone':
 				self::maybe_delete_interaction( $activity );
 				break;
 			// Minimal Activity
@@ -156,7 +156,7 @@ class Delete {
 	public static function defer_signature_verification( $defer, $request ) {
 		$json = $request->get_json_params();
 
-		if ( 'Delete' === $json['type'] ) {
+		if ( isset( $json['type'] ) && 'Delete' === $json['type'] ) {
 			return true;
 		}
 
