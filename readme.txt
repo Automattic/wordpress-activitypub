@@ -107,7 +107,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 
 = 1.2.1 =
 
-* Improved: alt text for avatar in Follow Me block
+* Improved: alt text for avatars in Follow Me/Followers blocks
 
 = 1.2.0 =
 
