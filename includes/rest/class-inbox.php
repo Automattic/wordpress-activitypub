@@ -26,8 +26,6 @@ class Inbox {
 	 */
 	public static function init() {
 		self::register_routes();
-
-		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_create' ), 10, 2 );
 	}
 
 	/**
