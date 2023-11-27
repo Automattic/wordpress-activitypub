@@ -105,6 +105,10 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
 
+= 1.2.1 =
+
+* Improved: alt text for avatars in Follow Me/Followers blocks
+
 = 1.2.0 =
 
 * Add: Search and order followerer lists
