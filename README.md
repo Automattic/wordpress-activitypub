@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 4.7  
 **Tested up to:** 6.4  
-**Stable tag:** 1.1.0  
+**Stable tag:** 1.2.0  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -104,6 +104,15 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 ## Changelog ##
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
+
+### 1.2.0 ###
+
+* Add: Search and order followerer lists
+* Add: Have a filter to defer signature verification
+* Improved: "Follow Me" styles for dark themes
+* Improved: Allow `p` and `br` tags only for AP comments
+* Fixed: Deduplicate attachments earlier to prevent incorrect max_media
+
 
 ### 1.1.0 ###
 

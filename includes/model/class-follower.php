@@ -315,7 +315,7 @@ class Follower extends Actor {
 		$object->set_id( $post->guid );
 		$object->set_name( $post->post_title );
 		$object->set_summary( $post->post_excerpt );
-		$object->set_published( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_published ) ) );
+		$object->set_published( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_date ) ) );
 		$object->set_updated( gmdate( 'Y-m-d H:i:s', strtotime( $post->post_modified ) ) );
 
 		return $object;
