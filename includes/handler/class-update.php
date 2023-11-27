@@ -2,6 +2,7 @@
 namespace Activitypub\Handler;
 
 use WP_Error;
+use Activitypub\Collection\Interactions;
 
 /**
  * Handle Update requests.
