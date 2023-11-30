@@ -105,9 +105,11 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
 
-= 1.2.1 =
+= 1.3.0 =
 
+* Added: Threaded-Comments support
 * Improved: alt text for avatars in Follow Me/Followers blocks
+* Improved: `Delete`, `Update` and `Follow` Activities
 
 = 1.2.0 =
 
