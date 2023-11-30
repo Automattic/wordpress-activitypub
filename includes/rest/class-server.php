@@ -110,14 +110,20 @@ class Server {
 		if ( 'GET' !== $request->get_method() ) {
 			$verified_request = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_request ) ) {
-				return new WP_Error( 'activitypub_signature_verification', $verified_request->get_error_message(), array( 'status' => 401 ) );
+				return new WP_Error(
+					'activitypub_signature_verification',
+					$verified_request->get_error_message(),
+					array( 'status' => 401 )
+				);
 			}
-		} elseif ( 'GET' === $request->get_method() ) { // GET-Requests are only signed in secure mode
-			if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
-				$verified_request = Signature::verify_http_signature( $request );
-				if ( \is_wp_error( $verified_request ) ) {
-					return new WP_Error( 'activitypub_signature_verification', $verified_request->get_error_message(), array( 'status' => 401 ) );
-				}
+		} elseif ( 'GET' === $request->get_method() && ACTIVITYPUB_AUTHORIZED_FETCH ) { // GET-Requests are only signed in secure mode
+			$verified_request = Signature::verify_http_signature( $request );
+			if ( \is_wp_error( $verified_request ) ) {
+				return new WP_Error(
+					'activitypub_signature_verification',
+					$verified_request->get_error_message(),
+					array( 'status' => 401 )
+				);
 			}
 		}
 

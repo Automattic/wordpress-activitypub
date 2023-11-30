@@ -585,7 +585,7 @@ class Base_Object {
 
 		foreach ( $array as $key => $value ) {
 			$key = camel_to_snake_case( $key );
-			$object->set( $key, $value );
+			call_user_func( array( $object, 'set_' . $key ), $value );
 		}
 
 		return $object;
@@ -611,7 +611,7 @@ class Base_Object {
 		foreach ( $array as $key => $value ) {
 			if ( $value ) {
 				$key = camel_to_snake_case( $key );
-				$this->set( $key, $value );
+				call_user_func( array( $this, 'set_' . $key ), $value );
 			}
 		}
 	}
