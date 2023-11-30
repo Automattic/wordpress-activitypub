@@ -37,7 +37,7 @@ function Profile( { profile, popupStyles, userId } ) {
 	const { avatar, name, resource } = profile;
 	return (
 		<div className="activitypub-profile">
-			<img className="activitypub-profile__avatar" src={ avatar } />
+			<img className="activitypub-profile__avatar" src={ avatar } alt={ name } />
 			<div className="activitypub-profile__content">
 				<div className="activitypub-profile__name">{ name }</div>
 				<div className="activitypub-profile__handle" title={ resource }>{ resource }</div>

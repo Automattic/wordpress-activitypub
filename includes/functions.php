@@ -2,6 +2,7 @@
 namespace Activitypub;
 
 use WP_Error;
+use WP_Comment_Query;
 use Activitypub\Http;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
@@ -487,6 +488,81 @@ function is_blog_public() {
 }
 
 /**
+ * Sanitize a URL
+ *
+ * @param string $value The URL to sanitize
+ *
+ * @return string|null The sanitized URL or null if invalid
+ */
+function sanitize_url( $value ) {
+	if ( filter_var( $value, FILTER_VALIDATE_URL ) === false ) {
+		return null;
+	}
+
+	return esc_url_raw( $value );
+}
+
+/**
+ * Extract recipient URLs from Activity object
+ *
+ * @param array $data
+ *
+ * @return array The list of user URLs
+ */
+function extract_recipients_from_activity( $data ) {
+	$recipient_items = array();
+
+	foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
+		if ( array_key_exists( $i, $data ) ) {
+			if ( is_array( $data[ $i ] ) ) {
+				$recipient = $data[ $i ];
+			} else {
+				$recipient = array( $data[ $i ] );
+			}
+			$recipient_items = array_merge( $recipient_items, $recipient );
+		}
+
+		if ( is_array( $data['object'] ) && array_key_exists( $i, $data['object'] ) ) {
+			if ( is_array( $data['object'][ $i ] ) ) {
+				$recipient = $data['object'][ $i ];
+			} else {
+				$recipient = array( $data['object'][ $i ] );
+			}
+			$recipient_items = array_merge( $recipient_items, $recipient );
+		}
+	}
+
+	$recipients = array();
+
+	// flatten array
+	foreach ( $recipient_items as $recipient ) {
+		if ( is_array( $recipient ) ) {
+			// check if recipient is an object
+			if ( array_key_exists( 'id', $recipient ) ) {
+				$recipients[] = $recipient['id'];
+			}
+		} else {
+			$recipients[] = $recipient;
+		}
+	}
+
+	return array_unique( $recipients );
+}
+
+/**
+ * Check if passed Activity is Public
+ *
+ * @param array $data The Activity object as array
+ *
+ * @return boolean True if public, false if not
+ */
+function is_activity_public( $data ) {
+	$recipients = extract_recipients_from_activity( $data );
+
+	return in_array( 'https://www.w3.org/ns/activitystreams#Public', $recipients, true );
+}
+
+/**
  * Get active users based on a given duration
  *
  * @param int $duration The duration to check in month(s)
@@ -556,4 +632,69 @@ function get_total_users() {
 	}
 
 	return $users + 1;
+}
+
+/**
+ * Examine a comment ID and look up an existing comment it represents.
+ *
+ * @param string $id ActivityPub object ID (usually a URL) to check.
+ *
+ * @return int|boolean Comment ID, or false on failure.
+ */
+function object_id_to_comment( $id ) {
+	$comment_query = new WP_Comment_Query(
+		array(
+			'meta_key'   => 'source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			'meta_value' => $id,         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+		)
+	);
+
+	if ( ! $comment_query->comments ) {
+		return false;
+	}
+
+	if ( count( $comment_query->comments ) > 1 ) {
+		return false;
+	}
+
+	return $comment_query->comments[0];
+}
+
+/**
+ * Verify if URL is a local comment,
+ * Or if it is a previously received remote comment
+ * (For threading comments locally)
+ *
+ * @param string $url The URL to check.
+ *
+ * @return int comment_ID or null if not found
+ */
+function url_to_commentid( $url ) {
+	if ( ! $url || ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
+		return null;
+	}
+
+	$args = array(
+		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		'meta_query' => array(
+			'relation' => 'OR',
+			array(
+				'key' => 'source_url',
+				'value' => $url,
+			),
+			array(
+				'key' => 'source_id',
+				'value' => $url,
+			),
+		),
+	);
+
+	$query = new \WP_Comment_Query();
+	$comments = $query->query( $args );
+
+	if ( $comments && is_array( $comments ) ) {
+		return $comments[0]->comment_ID;
+	}
+
+	return null;
 }

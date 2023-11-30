@@ -1,5 +1,5 @@
 <?php
-class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
+class Test_Activitypub_Followers extends WP_UnitTestCase {
 	public static $users = array(
 		'username@example.org' => array(
 			'id' => 'https://example.org/users/username',

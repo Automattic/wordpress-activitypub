@@ -5,7 +5,7 @@ class Test_Activitypub_Rest_Inbox extends WP_UnitTestCase {
 	 */
 	public function test_is_activity_public( $data, $check ) {
 
-		$this->assertEquals( $check, Activitypub\Rest\Inbox::is_activity_public( $data ) );
+		$this->assertEquals( $check, Activitypub\is_activity_public( $data ) );
 	}
 
 	public function the_data_provider() {
