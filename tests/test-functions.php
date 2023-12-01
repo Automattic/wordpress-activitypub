@@ -87,6 +87,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 
 	public function object_to_uri_provider() {
 		return array(
+			array( null, null ),
 			array( 'https://example.com', 'https://example.com' ),
 			array( array( 'https://example.com' ), 'https://example.com' ),
 			array(
