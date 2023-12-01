@@ -68,7 +68,7 @@ if ( ! function_exists( 'array_is_list' ) ) {
 		$next_key = -1;
 
 		foreach ( $array as $k => $v ) {
-			if ( $k !== ++ $next_key ) {
+			if ( ++$next_key !== $k ) {
 				return false;
 			}
 		}
