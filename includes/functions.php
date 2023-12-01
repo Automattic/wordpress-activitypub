@@ -708,7 +708,7 @@ function url_to_commentid( $url ) {
  */
 function object_to_uri( $object ) {
 	// check if it is already simple
-	if ( is_string( $object ) ) {
+	if ( ! $object || is_string( $object ) ) {
 		return $object;
 	}
 
