@@ -698,3 +698,40 @@ function url_to_commentid( $url ) {
 
 	return null;
 }
+
+/**
+ * Get the URI of an ActivityPub object
+ *
+ * @param array $object The ActivityPub object
+ *
+ * @return string The URI of the ActivityPub object
+ */
+function object_to_uri( $object ) {
+	// check if it is already simple
+	if ( is_string( $object ) ) {
+		return $object;
+	}
+
+	// check if it is a list, then take first item
+	// this plugin does not support collections
+	if ( array_is_list( $object ) ) {
+		$object = $object[0];
+	}
+
+	// check if it is simplified now
+	if ( is_string( $object ) ) {
+		return $object;
+	}
+
+	// return part of Object that makes most sense
+	switch ( $object['type'] ) {
+		case 'Link':
+			$object = $object['href'];
+			break;
+		default:
+			$object = $object['id'];
+			break;
+	}
+
+	return $object;
+}

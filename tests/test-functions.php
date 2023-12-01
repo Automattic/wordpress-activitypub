@@ -77,4 +77,72 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		$query_result = \Activitypub\object_id_to_comment( $duplicate_comment_source_id );
 		$this->assertFalse( $query_result );
 	}
+
+	/**
+	 * @dataProvider object_to_uri_provider
+	 */
+	public function test_object_to_uri( $input, $output ) {
+		$this->assertEquals( $output, \Activitypub\object_to_uri( $input ) );
+	}
+
+	public function object_to_uri_provider() {
+		return array(
+			array( 'https://example.com', 'https://example.com' ),
+			array( array( 'https://example.com' ), 'https://example.com' ),
+			array(
+				array(
+					'https://example.com',
+					'https://example.org',
+				),
+				'https://example.com',
+			),
+			array(
+				array(
+					'type' => 'Link',
+					'href' => 'https://example.com',
+				),
+				'https://example.com',
+			),
+			array(
+				array(
+					array(
+						'type' => 'Link',
+						'href' => 'https://example.com',
+					),
+					array(
+						'type' => 'Link',
+						'href' => 'https://example.org',
+					),
+				),
+				'https://example.com',
+			),
+			array(
+				array(
+					'type' => 'Actor',
+					'id' => 'https://example.com',
+				),
+				'https://example.com',
+			),
+			array(
+				array(
+					array(
+						'type' => 'Actor',
+						'id' => 'https://example.com',
+					),
+					array(
+						'type' => 'Actor',
+						'id' => 'https://example.org',
+					),
+				),
+				'https://example.com',
+			),
+			array(
+				array(
+					'type' => 'Activity',
+					'id' => 'https://example.com',
+				),
+				'https://example.com',
+			),
+		);
+	}
 }
