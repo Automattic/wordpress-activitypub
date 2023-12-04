@@ -199,6 +199,7 @@ class Followers {
 	 */
 	public static function get_all_followers() {
 		$args = array(
+			'nopaging'   => true,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
 				'relation' => 'AND',
