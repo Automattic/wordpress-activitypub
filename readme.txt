@@ -111,6 +111,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Improved: alt text for avatars in Follow Me/Followers blocks
 * Improved: `Delete`, `Update` and `Follow` Activities
 * Improved: better/more effective handling of `Delete` Activities
+* Fixed: removed default limit of WP_Query to send updates to all Inboxes and not only to the first 10
 
 = 1.2.0 =
 
