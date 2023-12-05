@@ -47,6 +47,21 @@ class Test_Activitypub_Interactions extends WP_UnitTestCase {
 		);
 	}
 
+	public function create_test_rich_object( $id = 'https://example.com/123' ) {
+		return array(
+			'actor' => $this->user_url,
+			'id' => 'https://example.com/id/' . microtime( true ),
+			'to' => [ $this->user_url ],
+			'cc' => [ 'https://www.w3.org/ns/activitystreams#Public' ],
+			'object' => array(
+				'id'        => $id,
+				'url'       => 'https://example.com/example',
+				'inReplyTo' => $this->post_permalink,
+				'content'   => 'Hello<br />example<p>example</p><img src="https://example.com/image.jpg" />',
+			),
+		);
+	}
+
 	public function test_handle_create_basic() {
 		$comment_id = Activitypub\Collection\Interactions::add_comment( $this->create_test_object() );
 		$comment   = get_comment( $comment_id, ARRAY_A );
@@ -63,6 +78,13 @@ class Test_Activitypub_Interactions extends WP_UnitTestCase {
 		$this->assertEquals( 'https://example.com/example', get_comment_meta( $comment_id, 'source_url', true ) );
 		$this->assertEquals( 'https://example.com/icon', get_comment_meta( $comment_id, 'avatar_url', true ) );
 		$this->assertEquals( 'activitypub', get_comment_meta( $comment_id, 'protocol', true ) );
+	}
+
+	public function test_handle_create_rich() {
+		$comment_id = Activitypub\Collection\Interactions::add_comment( $this->create_test_rich_object() );
+		$comment   = get_comment( $comment_id, ARRAY_A );
+
+		$this->assertEquals( 'Hello<br />example<p>example</p>', $comment['comment_content'] );
 	}
 
 	public function test_convert_object_to_comment_not_reply_rejected() {

@@ -82,11 +82,9 @@ class Interactions {
 				return 'inactive';
 			}
 		);
-		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
 
 		$comment = \wp_new_comment( $commentdata, true );
 
-		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10 );
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 		// re-add flood control
@@ -132,11 +130,9 @@ class Interactions {
 				return 'inactive';
 			}
 		);
-		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
 
 		$comment = \wp_update_comment( $commentdata, true );
 
-		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10 );
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
 		// re-add flood control
@@ -207,30 +203,5 @@ class Interactions {
 		);
 		$comment_query = new WP_Comment_Query( $args );
 		return $comment_query->comments;
-	}
-
-	/**
-	 * Adds line breaks to the list of allowed comment tags.
-	 *
-	 * @param  array  $allowedtags Allowed HTML tags.
-	 * @param  string $context     Context.
-	 * @return array               Filtered tag list.
-	 */
-	public static function allowed_comment_html( $allowedtags, $context = '' ) {
-		if ( 'pre_comment_content' !== $context ) {
-			// Do nothing.
-			return $allowedtags;
-		}
-
-		// Add `p` and `br` to the list of allowed tags.
-		if ( ! array_key_exists( 'br', $allowedtags ) ) {
-			$allowedtags['br'] = array();
-		}
-
-		if ( ! array_key_exists( 'p', $allowedtags ) ) {
-			$allowedtags['p'] = array();
-		}
-
-		return $allowedtags;
 	}
 }
