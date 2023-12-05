@@ -39,8 +39,6 @@ class Activitypub {
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 
-		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 15, 2 );
-
 		// register several post_types
 		self::register_post_types();
 	}
@@ -335,32 +333,6 @@ class Activitypub {
 				)
 			)
 		);
-	}
-
-	/**
-	 * Adds line breaks to the list of allowed comment tags.
-	 *
-	 * @param  array  $allowed_tags Allowed HTML tags.
-	 * @param  string $context      Context.
-	 *
-	 * @return array Filtered tag list.
-	 */
-	public static function allowed_comment_html( $allowed_tags, $context = '' ) {
-		if ( 'pre_comment_content' !== $context ) {
-			// Do nothing.
-			return $allowed_tags;
-		}
-
-		// Add `p` and `br` to the list of allowed tags.
-		if ( ! array_key_exists( 'br', $allowed_tags ) ) {
-			$allowed_tags['br'] = array();
-		}
-
-		if ( ! array_key_exists( 'p', $allowed_tags ) ) {
-			$allowed_tags['p'] = array();
-		}
-
-		return $allowed_tags;
 	}
 
 	/**

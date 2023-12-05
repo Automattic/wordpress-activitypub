@@ -55,7 +55,7 @@ class Interactions {
 			'comment_post_ID' => $comment_post_id,
 			'comment_author' => \esc_attr( $meta['name'] ),
 			'comment_author_url' => \esc_url_raw( $meta['url'] ),
-			'comment_content' => \addslashes( \wp_kses( $activity['object']['content'], 'pre_comment_content' ) ),
+			'comment_content' => \addslashes( $activity['object']['content'] ),
 			'comment_type' => 'comment',
 			'comment_author_email' => '',
 			'comment_parent' => $parent_comment ? $parent_comment->comment_ID : 0,
@@ -72,7 +72,6 @@ class Interactions {
 
 		// disable flood control
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
-
 		// do not require email for AP entries
 		\add_filter( 'pre_option_require_name_email', '__return_false' );
 		// No nonce possible for this submission route
@@ -82,11 +81,12 @@ class Interactions {
 				return 'inactive';
 			}
 		);
+		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
 
 		$comment = \wp_new_comment( $commentdata, true );
 
+		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10 );
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
-
 		// re-add flood control
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
@@ -113,14 +113,13 @@ class Interactions {
 		//found a local comment id
 		$commentdata = \get_comment( $object_comment_id, ARRAY_A );
 		$commentdata['comment_author'] = \esc_attr( $meta['name'] ? $meta['name'] : $meta['preferredUsername'] );
-		$commentdata['comment_content'] = \addslashes( \wp_kses( $activity['object']['content'], 'pre_comment_content' ) );
+		$commentdata['comment_content'] = \addslashes( $activity['object']['content'] );
 		if ( isset( $meta['icon']['url'] ) ) {
 			$commentdata['comment_meta']['avatar_url'] = \esc_url_raw( $meta['icon']['url'] );
 		}
 
 		// disable flood control
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
-
 		// do not require email for AP entries
 		\add_filter( 'pre_option_require_name_email', '__return_false' );
 		// No nonce possible for this submission route
@@ -130,11 +129,12 @@ class Interactions {
 				return 'inactive';
 			}
 		);
+		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
 
 		$comment = \wp_update_comment( $commentdata, true );
 
+		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10 );
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
-
 		// re-add flood control
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
@@ -203,5 +203,31 @@ class Interactions {
 		);
 		$comment_query = new WP_Comment_Query( $args );
 		return $comment_query->comments;
+	}
+
+	/**
+	 * Adds line breaks to the list of allowed comment tags.
+	 *
+	 * @param  array  $allowed_tags Allowed HTML tags.
+	 * @param  string $context      Context.
+	 *
+	 * @return array Filtered tag list.
+	 */
+	public static function allowed_comment_html( $allowed_tags, $context = '' ) {
+		if ( 'pre_comment_content' !== $context ) {
+			// Do nothing.
+			return $allowed_tags;
+		}
+
+		// Add `p` and `br` to the list of allowed tags.
+		if ( ! array_key_exists( 'br', $allowed_tags ) ) {
+			$allowed_tags['br'] = array();
+		}
+
+		if ( ! array_key_exists( 'p', $allowed_tags ) ) {
+			$allowed_tags['p'] = array();
+		}
+
+		return $allowed_tags;
 	}
 }
