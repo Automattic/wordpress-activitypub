@@ -199,6 +199,7 @@ class Followers {
 	 */
 	public static function get_all_followers() {
 		$args = array(
+			'nopaging'   => true,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
 				'relation' => 'AND',
@@ -267,6 +268,7 @@ class Followers {
 		// get all Followers of a ID of the WordPress User
 		$posts = new WP_Query(
 			array(
+				'nopaging'   => true,
 				'post_type'  => self::POST_TYPE,
 				'fields'     => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query

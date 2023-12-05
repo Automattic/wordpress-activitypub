@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
 Tested up to: 6.4
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -111,6 +111,8 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Improved: alt text for avatars in Follow Me/Followers blocks
 * Improved: `Delete`, `Update` and `Follow` Activities
 * Improved: better/more effective handling of `Delete` Activities
+* Improved: allow `<p />` and `<br />` for Comments
+* Fixed: removed default limit of WP_Query to send updates to all Inboxes and not only to the first 10
 
 = 1.2.0 =
 
