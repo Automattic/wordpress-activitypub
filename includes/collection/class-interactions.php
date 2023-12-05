@@ -150,6 +150,7 @@ class Interactions {
 	 */
 	public static function get_interaction_by_id( $url ) {
 		$args = array(
+			'nopaging'   => true,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
 				'relation' => 'AND',
@@ -191,6 +192,7 @@ class Interactions {
 		}
 
 		$args = array(
+			'nopaging'   => true,
 			'author_url' => $actor,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
