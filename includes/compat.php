@@ -47,3 +47,32 @@ if ( ! function_exists( 'is_countable' ) ) {
 		return is_array( $value ) || $value instanceof \Countable;
 	}
 }
+
+/**
+ * Polyfill for `array_is_list()` function added in PHP 7.3.
+ *
+ * @param array $array The array to check.
+ *
+ * @return bool True if `$array` is a list, otherwise false.
+ */
+if ( ! function_exists( 'array_is_list' ) ) {
+	function array_is_list( $array ) {
+		if ( ! is_array( $array ) ) {
+			return false;
+		}
+
+		if ( array_values( $array ) === $array ) {
+			return true;
+		}
+
+		$next_key = -1;
+
+		foreach ( $array as $k => $v ) {
+			if ( ++$next_key !== $k ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+}
