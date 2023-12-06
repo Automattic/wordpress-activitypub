@@ -96,7 +96,7 @@ class Blocks {
 
 		$attrs['followerData']['total'] = $follower_data['total'];
 		$attrs['followerData']['followers'] = array_map(
-			function( $follower ) {
+			function ( $follower ) {
 				return self::filter_array_by_keys(
 					$follower->to_array(),
 					array( 'icon', 'name', 'preferredUsername', 'url' )
