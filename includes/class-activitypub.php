@@ -374,7 +374,7 @@ class Activitypub {
 			array(
 				'type'              => 'string',
 				'single'            => false,
-				'sanitize_callback' => function( $value ) {
+				'sanitize_callback' => function ( $value ) {
 					if ( ! is_string( $value ) ) {
 						throw new Exception( 'Error message is no valid string' );
 					}
@@ -390,7 +390,7 @@ class Activitypub {
 			array(
 				'type'              => 'string',
 				'single'            => false,
-				'sanitize_callback' => function( $value ) {
+				'sanitize_callback' => function ( $value ) {
 					return esc_sql( $value );
 				},
 			)
@@ -402,7 +402,7 @@ class Activitypub {
 			array(
 				'type'              => 'string',
 				'single'            => true,
-				'sanitize_callback' => function( $value ) {
+				'sanitize_callback' => function ( $value ) {
 					return sanitize_text_field( $value );
 				},
 			)

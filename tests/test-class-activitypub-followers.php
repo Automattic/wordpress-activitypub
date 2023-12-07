@@ -76,7 +76,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		$this->assertEquals( 3, \count( $db_followers ) );
 
 		$db_followers = array_map(
-			function( $item ) {
+			function ( $item ) {
 				return $item->get_url();
 			},
 			$db_followers

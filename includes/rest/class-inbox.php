@@ -237,7 +237,7 @@ class Inbox {
 
 		$params['actor'] = array(
 			'required' => true,
-			'sanitize_callback' => function( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param, $request, $key ) {
 				return object_to_uri( $param );
 			},
 		);
@@ -246,7 +246,7 @@ class Inbox {
 			'required' => true,
 			//'type' => 'enum',
 			//'enum' => array( 'Create' ),
-			//'sanitize_callback' => function( $param, $request, $key ) {
+			//'sanitize_callback' => function ( $param, $request, $key ) {
 			//  return \strtolower( $param );
 			//},
 		);
@@ -279,7 +279,7 @@ class Inbox {
 		$params['actor'] = array(
 			'required' => true,
 			//'type' => array( 'object', 'string' ),
-			'sanitize_callback' => function( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param, $request, $key ) {
 				return object_to_uri( $param );
 			},
 		);
@@ -288,7 +288,7 @@ class Inbox {
 			'required' => true,
 			//'type' => 'enum',
 			//'enum' => array( 'Create' ),
-			//'sanitize_callback' => function( $param, $request, $key ) {
+			//'sanitize_callback' => function ( $param, $request, $key ) {
 			//  return \strtolower( $param );
 			//},
 		);
@@ -300,7 +300,7 @@ class Inbox {
 
 		$params['to'] = array(
 			'required' => false,
-			'sanitize_callback' => function( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param, $request, $key ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );
 				}
@@ -310,7 +310,7 @@ class Inbox {
 		);
 
 		$params['cc'] = array(
-			'sanitize_callback' => function( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param, $request, $key ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );
 				}
@@ -320,7 +320,7 @@ class Inbox {
 		);
 
 		$params['bcc'] = array(
-			'sanitize_callback' => function( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param, $request, $key ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );
 				}
