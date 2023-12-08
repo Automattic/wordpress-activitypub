@@ -7,6 +7,7 @@ use Activitypub\Model\User;
 use Activitypub\Model\Blog_User;
 use Activitypub\Model\Application_User;
 
+use function Activitypub\url_to_authorid;
 use function Activitypub\is_user_disabled;
 
 class Users {
@@ -103,6 +104,8 @@ class Users {
 			return self::get_by_id( $user->results[0] );
 		}
 
+		$username = str_replace( array( '*', '%' ), '', $username );
+
 		// check for login or nicename.
 		$user = new WP_User_Query(
 			array(
@@ -133,29 +136,80 @@ class Users {
 	 * @return \Acitvitypub\Model\User The User.
 	 */
 	public static function get_by_resource( $resource ) {
-		if ( \strpos( $resource, '@' ) === false ) {
-			return new WP_Error(
-				'activitypub_unsupported_resource',
-				\__( 'Resource is invalid', 'activitypub' ),
-				array( 'status' => 400 )
-			);
+		$scheme = 'acct';
+		$match = array();
+		// try to extract the scheme and the host
+		if ( preg_match( '/^([a-zA-Z^:]+):(.*)$/i', $resource, $match ) ) {
+			// extract the scheme
+			$scheme = esc_attr( $match[1] );
 		}
 
-		$resource = \str_replace( 'acct:', '', $resource );
+		switch ( $scheme ) {
+			// check for http(s) URIs
+			case 'http':
+			case 'https':
+				$url_parts = wp_parse_url( $resource );
 
-		$resource_identifier = \substr( $resource, 0, \strrpos( $resource, '@' ) );
-		$resource_host = self::normalize_host( \substr( \strrchr( $resource, '@' ), 1 ) );
-		$blog_host = self::normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
+				// check for http(s)://blog.example.com/@username
+				if (
+					isset( $url_parts['path'] ) &&
+					str_starts_with( $url_parts['path'], '/@' )
+				) {
+					$resource_identifier = str_replace( '/@', '', $url_parts['path'] );
+					$resource_identifier = untrailingslashit( $resource_identifier );
 
-		if ( $blog_host !== $resource_host ) {
-			return new WP_Error(
-				'activitypub_wrong_host',
-				\__( 'Resource host does not match blog host', 'activitypub' ),
-				array( 'status' => 404 )
-			);
+					return self::get_by_username( $resource_identifier );
+				}
+
+				// check for http(s)://blog.example.com/author/username
+				$user_id = url_to_authorid( $resource );
+
+				if ( $user_id ) {
+					return self::get_by_id( $user_id );
+				}
+
+				// check for http(s)://blog.example.com/
+				if (
+					self::normalize_url( site_url() ) === self::normalize_url( $resource ) ||
+					self::normalize_url( home_url() ) === self::normalize_url( $resource )
+				) {
+					return self::get_by_id( self::BLOG_USER_ID );
+				}
+
+				return new WP_Error(
+					'activitypub_no_user_found',
+					\__( 'User not found', 'activitypub' ),
+					array( 'status' => 404 )
+				);
+			// check for acct URIs
+			case 'acct':
+				$resource = \str_replace( 'acct:', '', $resource );
+
+				$identifier = \substr( $resource, 0, \strrpos( $resource, '@' ) );
+				$host = self::normalize_host( \substr( \strrchr( $resource, '@' ), 1 ) );
+				$blog_host = self::normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
+
+				if ( $blog_host !== $host ) {
+					return new WP_Error(
+						'activitypub_wrong_host',
+						\__( 'Resource host does not match blog host', 'activitypub' ),
+						array( 'status' => 404 )
+					);
+				}
+
+				// prepare wildcards https://github.com/mastodon/mastodon/issues/22213
+				if ( in_array( $identifier, array( '_', '*', '' ), true ) ) {
+					return self::get_by_id( self::BLOG_USER_ID );
+				}
+
+				return self::get_by_username( $identifier );
+			default:
+				return new WP_Error(
+					'activitypub_wrong_scheme',
+					\__( 'Wrong scheme', 'activitypub' ),
+					array( 'status' => 404 )
+				);
 		}
-
-		return self::get_by_username( $resource_identifier );
 	}
 
 	/**
@@ -168,7 +222,12 @@ class Users {
 	public static function get_by_various( $id ) {
 		if ( is_numeric( $id ) ) {
 			return self::get_by_id( $id );
-		} elseif ( filter_var( $id, FILTER_VALIDATE_URL ) ) {
+		} elseif (
+			// is URL
+			filter_var( $id, FILTER_VALIDATE_URL ) ||
+			// is acct
+			str_starts_with( $id, 'acct:' )
+		) {
 			return self::get_by_resource( $id );
 		} else {
 			return self::get_by_username( $id );
@@ -176,7 +235,7 @@ class Users {
 	}
 
 	/**
-	 * Normalize the host.
+	 * Normalize a host.
 	 *
 	 * @param string $host The host.
 	 *
@@ -184,6 +243,22 @@ class Users {
 	 */
 	public static function normalize_host( $host ) {
 		return \str_replace( 'www.', '', $host );
+	}
+
+	/**
+	 * Normalize a URL.
+	 *
+	 * @param string $url The URL.
+	 *
+	 * @return string The normalized URL.
+	 */
+	public static function normalize_url( $url ) {
+		$url = \untrailingslashit( $url );
+		$url = \str_replace( 'https://', '', $url );
+		$url = \str_replace( 'http://', '', $url );
+		$url = \str_replace( 'www.', '', $url );
+
+		return $url;
 	}
 
 	/**
