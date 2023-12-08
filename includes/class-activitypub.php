@@ -420,7 +420,7 @@ class Activitypub {
 					'name'          => _x( 'Outbox', 'post_type plural name', 'activitypub' ),
 					'singular_name' => _x( 'Outbox Item', 'post_type single name', 'activitypub' ),
 				),
-				'public'           => true,
+				'public'           => false,
 				'hierarchical'     => false,
 				'rewrite'          => false,
 				'query_var'        => false,
