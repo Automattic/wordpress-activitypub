@@ -183,11 +183,10 @@ class Users {
 				);
 			// check for acct URIs
 			case 'acct':
-				$resource = \str_replace( 'acct:', '', $resource );
-
+				$resource   = \str_replace( 'acct:', '', $resource );
 				$identifier = \substr( $resource, 0, \strrpos( $resource, '@' ) );
-				$host = self::normalize_host( \substr( \strrchr( $resource, '@' ), 1 ) );
-				$blog_host = self::normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
+				$host       = self::normalize_host( \substr( \strrchr( $resource, '@' ), 1 ) );
+				$blog_host  = self::normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
 
 				if ( $blog_host !== $host ) {
 					return new WP_Error(
