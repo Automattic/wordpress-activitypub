@@ -2,10 +2,11 @@
 namespace Activitypub\Transformer;
 
 use WP_Post;
-use Activitypub\Collection\Users;
-use Activitypub\Model\Blog_User;
-use Activitypub\Activity\Base_Object;
 use Activitypub\Shortcodes;
+use Activitypub\Model\Blog_User;
+use Activitypub\Transformer\Base;
+use Activitypub\Collection\Users;
+use Activitypub\Activity\Base_Object;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -22,37 +23,7 @@ use function Activitypub\site_supports_blocks;
  *
  * - Activitypub\Activity\Base_Object
  */
-class Post {
-
-	/**
-	 * The WP_Post object.
-	 *
-	 * @var WP_Post
-	 */
-	protected $wp_post;
-
-	/**
-	 * Static function to Transform a WP_Post Object.
-	 *
-	 * This helps to chain the output of the Transformer.
-	 *
-	 * @param WP_Post $wp_post The WP_Post object
-	 *
-	 * @return void
-	 */
-	public static function transform( WP_Post $wp_post ) {
-		return new static( $wp_post );
-	}
-
-	/**
-	 *
-	 *
-	 * @param WP_Post $wp_post
-	 */
-	public function __construct( WP_Post $wp_post ) {
-		$this->wp_post = $wp_post;
-	}
-
+class Post extends Base {
 	/**
 	 * Transforms the WP_Post object to an ActivityPub Object
 	 *
@@ -61,7 +32,7 @@ class Post {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
-		$wp_post = $this->wp_post;
+		$wp_post = $this->object;
 		$object = new Base_Object();
 
 		$object->set_id( $this->get_id() );
@@ -115,7 +86,7 @@ class Post {
 	 * @return string The Posts URL.
 	 */
 	public function get_url() {
-		$post = $this->wp_post;
+		$post = $this->object;
 
 		if ( 'trash' === get_post_status( $post ) ) {
 			$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
@@ -139,7 +110,7 @@ class Post {
 			return $user->get_url();
 		}
 
-		return Users::get_by_id( $this->wp_post->post_author )->get_url();
+		return Users::get_by_id( $this->object->post_author )->get_url();
 	}
 
 	/**
@@ -152,7 +123,7 @@ class Post {
 		// We maintain the image-centric naming for backwards compatibility.
 		$max_media = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
 
-		if ( site_supports_blocks() && \has_blocks( $this->wp_post->post_content ) ) {
+		if ( site_supports_blocks() && \has_blocks( $this->object->post_content ) ) {
 			return $this->get_block_attachments( $max_media );
 		}
 
@@ -172,7 +143,7 @@ class Post {
 			return array();
 		}
 
-		$id = $this->wp_post->ID;
+		$id = $this->object->ID;
 
 		$media_ids = array();
 
@@ -182,7 +153,7 @@ class Post {
 		}
 
 		if ( $max_media > 0 ) {
-			$blocks = \parse_blocks( $this->wp_post->post_content );
+			$blocks = \parse_blocks( $this->object->post_content );
 			$media_ids = self::get_media_ids_from_blocks( $blocks, $media_ids, $max_media );
 		}
 
@@ -203,7 +174,7 @@ class Post {
 			return array();
 		}
 
-		$id = $this->wp_post->ID;
+		$id = $this->object->ID;
 
 		$image_ids = array();
 
@@ -402,10 +373,10 @@ class Post {
 
 		// Default to Article.
 		$object_type = 'Article';
-		$post_type = \get_post_type( $this->wp_post );
+		$post_type = \get_post_type( $this->object );
 		switch ( $post_type ) {
 			case 'post':
-				$post_format = \get_post_format( $this->wp_post );
+				$post_format = \get_post_format( $this->object );
 				switch ( $post_format ) {
 					case 'aside':
 					case 'status':
@@ -484,7 +455,7 @@ class Post {
 	protected function get_tags() {
 		$tags = array();
 
-		$post_tags = \get_the_tags( $this->wp_post->ID );
+		$post_tags = \get_the_tags( $this->object->ID );
 		if ( $post_tags ) {
 			foreach ( $post_tags as $post_tag ) {
 				$tag = array(
@@ -531,7 +502,7 @@ class Post {
 		do_action( 'activitypub_before_get_content', $post );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		$post    = $this->wp_post;
+		$post    = $this->object;
 		$content = $this->get_post_content_template();
 
 		// Register our shortcodes just in time.
@@ -580,7 +551,7 @@ class Post {
 	 * @return array The list of @-Mentions.
 	 */
 	protected function get_mentions() {
-		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_post->post_content, $this->wp_post );
+		return apply_filters( 'activitypub_extract_mentions', array(), $this->object->post_content, $this->object );
 	}
 
 	/**
@@ -589,7 +560,7 @@ class Post {
 	 * @return string The locale of the post.
 	 */
 	public function get_locale() {
-		$post_id = $this->wp_post->ID;
+		$post_id = $this->object->ID;
 		$lang    = \strtolower( \strtok( \get_locale(), '_-' ) );
 
 		/**
@@ -601,6 +572,6 @@ class Post {
 		 *
 		 * @return string The filtered locale of the post.
 		 */
-		return apply_filters( 'activitypub_post_locale', $lang, $post_id, $this->wp_post );
+		return apply_filters( 'activitypub_post_locale', $lang, $post_id, $this->object );
 	}
 }

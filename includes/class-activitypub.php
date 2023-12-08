@@ -4,6 +4,7 @@ namespace Activitypub;
 use Exception;
 use Activitypub\Signature;
 use Activitypub\Collection\Users;
+use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 
 use function Activitypub\sanitize_url;
@@ -336,11 +337,12 @@ class Activitypub {
 	}
 
 	/**
-	 * Register the "Followers" Taxonomy
+	 * Register Custom Post Types
 	 *
 	 * @return void
 	 */
 	private static function register_post_types() {
+		// register Followers Post-Type
 		register_post_type(
 			Followers::POST_TYPE,
 			array(
@@ -409,5 +411,23 @@ class Activitypub {
 		);
 
 		do_action( 'activitypub_after_register_post_type' );
+
+		// register Outbox Post-Type
+		register_post_type(
+			Outbox::POST_TYPE,
+			array(
+				'labels'           => array(
+					'name'          => _x( 'Outbox', 'post_type plural name', 'activitypub' ),
+					'singular_name' => _x( 'Outbox Item', 'post_type single name', 'activitypub' ),
+				),
+				'public'           => true,
+				'hierarchical'     => false,
+				'rewrite'          => false,
+				'query_var'        => false,
+				'delete_with_user' => false,
+				'can_export'       => true,
+				'supports'         => array(),
+			)
+		);
 	}
 }
