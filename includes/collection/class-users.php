@@ -155,10 +155,10 @@ class Users {
 					isset( $url_parts['path'] ) &&
 					str_starts_with( $url_parts['path'], '/@' )
 				) {
-					$resource_identifier = str_replace( '/@', '', $url_parts['path'] );
-					$resource_identifier = untrailingslashit( $resource_identifier );
+					$identifier = str_replace( '/@', '', $url_parts['path'] );
+					$identifier = untrailingslashit( $identifier );
 
-					return self::get_by_username( $resource_identifier );
+					return self::get_by_username( $identifier );
 				}
 
 				// check for http(s)://blog.example.com/author/username
