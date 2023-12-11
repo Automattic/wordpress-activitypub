@@ -33,7 +33,7 @@ abstract class Base {
 	 *
 	 * @param stdClass $object
 	 */
-	public function __construct( $object ) {
+	private function __construct( $object ) {
 		$this->object = $object;
 	}
 

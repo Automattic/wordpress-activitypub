@@ -2,8 +2,8 @@
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 $post = \get_post();
 
-$object = new \Activitypub\Transformer\Post( $post );
-$json = \array_merge( array( '@context' => \Activitypub\get_context() ), $object->to_object()->to_array() );
+$object = \Activitypub\Transformer\Post::transform( $post )->to_object();
+$json = \array_merge( array( '@context' => \Activitypub\get_context() ), $object->to_array() );
 
 // filter output
 $json = \apply_filters( 'activitypub_json_post_array', $json );
