@@ -23,6 +23,7 @@
 		?>
 	<div class="box">
 		<h3><?php \esc_html_e( 'Blog profile', 'activitypub' ); ?></h3>
+		<div id="blog-profile-editor"></div>
 		<p>
 			<?php \esc_html_e( 'People can follow your blog by using:', 'activitypub' ); ?>
 		</p>
