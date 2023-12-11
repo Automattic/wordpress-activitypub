@@ -45,11 +45,11 @@ abstract class Base {
 	abstract public function to_object();
 
 	/**
-	 * Transform the WordPress Object into an ActivityPub Activity.
+	 * Transform the ActivityPub Object into an Activity.
 	 *
 	 * @param string $type The type of Activity to transform to.
 	 *
 	 * @return Activitypub\Activity\Activity
 	 */
-	//abstract public function to_activity( $type );
+	abstract public function to_activity( $type );
 }
