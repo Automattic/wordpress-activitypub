@@ -5,6 +5,8 @@ use WP_List_Table;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers as FollowerCollection;
 
+use function Activitypub\object_to_uri;
+
 if ( ! \class_exists( '\WP_List_Table' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 }
@@ -101,7 +103,7 @@ class Followers extends WP_List_Table {
 				'icon'       => esc_attr( $follower->get_icon_url() ),
 				'post_title' => esc_attr( $follower->get_name() ),
 				'username'   => esc_attr( $follower->get_preferred_username() ),
-				'url'        => esc_attr( $follower->get_url() ),
+				'url'        => esc_attr( object_to_uri( $follower->get_url() ) ),
 				'identifier' => esc_attr( $follower->get_id() ),
 				'published'  => esc_attr( $follower->get_published() ),
 				'modified'   => esc_attr( $follower->get_updated() ),

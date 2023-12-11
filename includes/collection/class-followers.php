@@ -182,7 +182,7 @@ class Followers {
 		$query = new WP_Query( $args );
 		$total = $query->found_posts;
 		$followers = array_map(
-			function( $post ) {
+			function ( $post ) {
 				return Follower::init_from_cpt( $post );
 			},
 			$query->get_posts()

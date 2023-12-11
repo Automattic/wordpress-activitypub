@@ -53,10 +53,12 @@ class Webfinger {
 	 * @return array the jrd array
 	 */
 	public static function add_pseudo_user_discovery( $array, $resource ) {
-		if ( $array ) {
+		$user = Webfinger_Rest::get_profile( $resource );
+
+		if ( ! $user || is_wp_error( $user ) ) {
 			return $array;
 		}
 
-		return Webfinger_Rest::get_profile( $resource );
+		return $user;
 	}
 }
