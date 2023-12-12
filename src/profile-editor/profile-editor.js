@@ -37,7 +37,6 @@ export default function ProfileEditor() {
 	const userId = 0;
 	const { profile, isLoading, error, updateProfile, saveProfile, resetProfile } = useProfile( userId );
 	const { avatar, header, name, handle, summary } = profile;
-	window.profile = profile;
 
 	return (
 		<div>
