@@ -565,7 +565,7 @@ class Post extends Base {
 				break;
 		}
 
-		return apply_filters( 'activitypub_object_content_template', $template, $this->wp_post );
+		return apply_filters( 'activitypub_object_content_template', $template, $this->object );
 	}
 
 	/**
