@@ -105,6 +105,12 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
 
+= 2.0.0 =
+
+* Removed: Deprecated Classes
+* Fixed: Normalize attributes that can have mixed value types
+* Added: URL support for WebFinger
+
 = 1.3.0 =
 
 * Added: Threaded-Comments support
