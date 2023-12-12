@@ -110,6 +110,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Removed: Deprecated Classes
 * Fixed: Normalize attributes that can have mixed value types
 * Added: URL support for WebFinger
+* Added: Make Post-Template filterable
 
 = 1.3.0 =
 
