@@ -1,37 +1,11 @@
-
-import apiFetch from '@wordpress/api-fetch';
-import { useCallback, useEffect, useState, createInterpolateElement } from '@wordpress/element';
+import { useCallback, useState, createInterpolateElement } from '@wordpress/element';
 import { Button, Modal } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 import { copy, check, Icon } from '@wordpress/icons';
 import { useCopyToClipboard } from '@wordpress/compose';
 import { ButtonStyle, getPopupStyles } from './button-style';
+import useProfile from "../shared/use-profile";
 import './style.scss';
-const { namespace } = window._activityPubOptions;
-
-const DEFAULT_PROFILE_DATA = {
-	avatar: '',
-	webfinger: '@well@hello.dolly',
-	name: __( 'Hello Dolly Fan Account', 'activitypub' ),
-	url: '#',
-};
-
-function getNormalizedProfile( profile ) {
-	if ( ! profile ) {
-		return DEFAULT_PROFILE_DATA;
-	}
-	const data = { ...DEFAULT_PROFILE_DATA, ...profile };
-	data.avatar = data?.icon?.url;
-	return data;
-}
-
-function fetchProfile( userId ) {
-	const fetchOptions = {
-		headers: { Accept: 'application/activity+json' },
-		path: `/${ namespace }/users/${ userId }`,
-	};
-	return apiFetch( fetchOptions );
-}
 
 function Profile( { profile, popupStyles, userId } ) {
 	const { avatar, name, webfinger } = profile;
@@ -158,19 +132,10 @@ function Dialog( { profile, userId } ) {
 }
 
 export default function FollowMe( { selectedUser, style, backgroundColor, id, useId = false, profileData = false } ) {
-	const [ profile, setProfile ] = useState( getNormalizedProfile() );
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
+	const { profile } = useProfile( userId );
 	const popupStyles = getPopupStyles( style );
 	const wrapperProps = useId ? { id } : {};
-	function setProfileData( profile ) {
-		setProfile( getNormalizedProfile( profile ) );
-	}
-	useEffect( () => {
-		if ( profileData ) {
-			return setProfileData( profileData );
-		}
-		fetchProfile( userId ).then( setProfileData );
-	}, [ userId, profileData ] );
 
 	return(
 		<div { ...wrapperProps }>
