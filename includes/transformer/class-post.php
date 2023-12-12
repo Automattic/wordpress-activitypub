@@ -559,19 +559,24 @@ class Post {
 	 * @return string The Template.
 	 */
 	protected function get_post_content_template() {
-		if ( 'excerpt' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
+		$type = \get_option( 'activitypub_post_content_type', 'content' );
+
+		switch ( $type ) {
+			case 'excerpt':
+				$template = "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
+				break;
+			case 'title':
+				$template = "[ap_title]\n\n[ap_permalink type=\"html\"]";
+				break;
+			case 'content':
+				$template = "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
+				break;
+			default:
+				$template = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+				break;
 		}
 
-		if ( 'title' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_title]\n\n[ap_permalink type=\"html\"]";
-		}
-
-		if ( 'content' === \get_option( 'activitypub_post_content_type', 'content' ) ) {
-			return "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
-		}
-
-		return \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+		return apply_filters( 'activitypub_object_content_template', $template, $this->wp_post );
 	}
 
 	/**
