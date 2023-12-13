@@ -68,10 +68,10 @@ Implemented:
 * share posts
 * receive comments/reactions
 * signature verification
+* threaded comments support
 
 To implement:
 
-* threaded comments support
 * replace shortcodes with blocks for layout
 
 ### What is "ActivityPub for WordPress" ###
