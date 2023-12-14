@@ -170,29 +170,6 @@ function url_to_authorid( $url ) {
 }
 
 /**
- * Examine a comment ID and look up an existing comment it represents.
- *
- * @param string $id ActivityPub object ID (usually a URL) to check.
- *
- * @return WP_Comment, or undef if no comment could be found.
- */
-function object_id_to_comment( $id ) {
-	$comment_query = new WP_Comment_Query(
-		array(
-			'meta_key'   => 'source_id',
-			'meta_value' => $id,
-		)
-	);
-	if ( ! $comment_query->comments ) {
-		return;
-	}
-	if ( count( $comment_query->comments ) > 1 ) {
-		return;
-	}
-	return $comment_query->comments[0];
-}
-
-/**
  * Examine an activity object and find the post that the specified URL field refers to.
  *
  * @param string $field_name The name of the URL field in the object to query.
@@ -247,68 +224,24 @@ function url_to_postid( $in_replyto_url ) {
 }
 
 /**
- * Verify if in_replyto_url is a local comment,
- * Or if it is a previously received remote comment
- * (For threading comments locally)
- *
- * @param string activitypub object id URI
- * @return int comment_id
- */
-function url_to_commentid( $in_replyto_url ) {
-	if ( empty( $in_replyto_url ) ) {
-		return null;
-	}
-
-	//rewrite for activitypub object id simplification
-	$url_maybe_id = \wp_parse_url( $in_replyto_url );
-	if ( site_url() === $url_maybe_id['scheme'] . '://' . $url_maybe_id['host'] && ! empty( $url_maybe_id['query'] ) ) {
-		//is local post or comment
-		\parse_str( $url_maybe_id['query'], $reply_query );
-		if ( isset( $reply_query['replytocom'] ) ) {
-			//is local comment
-			return $reply_query['replytocom'];
-		}
-	} else {
-		//is remote url
-		//verify if in_replyto_url corresponds to a previously received comment
-		$comment_args = array(
-			'type' => 'activitypub',
-			'meta_query' => array(
-				array(
-					'key' => 'source_url', // $object['object']['id']
-					'value' => $in_replyto_url,
-				),
-			),
-		);
-		$comments_query = new WP_Comment_Query();
-		$comments = $comments_query->query( $comment_args );
-		$found_comment_ids = array();
-		if ( $comments ) {
-			foreach ( $comments as $comment ) {
-				$found_comment_ids[] = $comment->comment_ID;
-			}
-			return $found_comment_ids[0];
-		}
-	}
-	return null;
-}
-
-/**
  * Verify if url is a wp_ap_comment,
  * Or if it is a previously received remote comment
  *
  * @return int comment_id
  */
 function is_comment() {
-	$comment_id = get_query_var( 'replytocom', null );
+	$comment_id = get_query_var( 'c', null );
+
 	if ( ! is_null( $comment_id ) ) {
 		$comment = \get_comment( $comment_id );
+
 		// Only return local origin comments
-		if ( $comment->user_id ) {
+		if ( $comment && $comment->user_id ) {
 			return $comment_id;
 		}
 	}
-	return null;
+
+	return false;
 }
 
 /**
