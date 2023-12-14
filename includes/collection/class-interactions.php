@@ -70,7 +70,7 @@ class Interactions {
 			$commentdata['comment_meta']['avatar_url'] = \esc_url_raw( $meta['icon']['url'] );
 		}
 
-		if ( isset( $activity['object']['source_url'] ) ) {
+		if ( isset( $activity['object']['url'] ) ) {
 			$commentdata['comment_meta']['source_url'] = \esc_url_raw( $activity['object']['url'] );
 		}
 
@@ -108,7 +108,8 @@ class Interactions {
 		$meta = get_remote_metadata_by_actor( $activity['actor'] );
 
 		//Determine comment_ID
-		$commentdata = object_id_to_comment( \esc_url_raw( $activity['object']['id'] ) );
+		$comment     = object_id_to_comment( \esc_url_raw( $activity['object']['id'] ) );
+		$commentdata = \get_comment( $comment, ARRAY_A );
 
 		if ( ! $commentdata ) {
 			return false;
