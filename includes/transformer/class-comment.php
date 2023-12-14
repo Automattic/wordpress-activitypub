@@ -2,10 +2,12 @@
 namespace Activitypub\Transformer;
 
 use WP_Comment;
-use Activitypub\Collection\Users;
-use Activitypub\Model\Blog_User;
-use Activitypub\Activity\Base_Object;
 use Activitypub\Hashtag;
+use Activitypub\Model\Blog_User;
+use Activitypub\Collection\Users;
+use Activitypub\Transformer\Base;
+use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -21,35 +23,23 @@ use function Activitypub\get_rest_url_by_path;
  *
  * - Activitypub\Activity\Base_Object
  */
-class Comment {
-
+class Comment extends Base {
 	/**
-	 * The WP_Comment object.
+	 * Returns the User-ID of the WordPress Comment.
 	 *
-	 * @var WP_Comment
+	 * @return int The User-ID of the WordPress Comment
 	 */
-	protected $wp_comment;
-
-	/**
-	 * Static function to Transform a WP_Comment Object.
-	 *
-	 * This helps to chain the output of the Transformer.
-	 *
-	 * @param WP_Comment $wp_comment The WP_Comment object
-	 *
-	 * @return void
-	 */
-	public static function transform( WP_Comment $wp_comment ) {
-		return new static( $wp_comment );
+	public function get_wp_user_id() {
+		return $this->object->user_id;
 	}
 
 	/**
+	 * Change the User-ID of the WordPress Comment.
 	 *
-	 *
-	 * @param WP_Comment $wp_comment
+	 * @return int The User-ID of the WordPress Comment
 	 */
-	public function __construct( WP_Comment $wp_comment ) {
-		$this->wp_comment = $wp_comment;
+	public function change_wp_user_id( $user_id ) {
+		$this->object->user_id = $user_id;
 	}
 
 	/**
@@ -60,10 +50,10 @@ class Comment {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
-		$comment = $this->wp_comment;
+		$comment = $this->object;
 		$object = new Base_Object();
 
-		$object->set_id( $this->generate_id( $comment ) );
+		$object->set_id( $this->get_id() );
 		$object->set_url( \get_comment_link( $comment->ID ) );
 		$object->set_type( 'Note' );
 
@@ -98,6 +88,23 @@ class Comment {
 	}
 
 	/**
+	 * Transforms the ActivityPub Object to an Activity
+	 *
+	 * @param string $type The Activity-Type.
+	 *
+	 * @return \Activitypub\Activity\Activity The Activity.
+	 */
+	public function to_activity( $type ) {
+		$object = $this->to_object();
+
+		$activity = new Activity();
+		$activity->set_type( $type );
+		$activity->set_object( $object );
+
+		return $activity;
+	}
+
+	/**
 	 * Returns the User-URL of the Author of the Post.
 	 *
 	 * If `single_user` mode is enabled, the URL of the Blog-User is returned.
@@ -110,7 +117,7 @@ class Comment {
 			return $user->get_url();
 		}
 
-		return Users::get_by_id( $this->wp_comment->user_id )->get_url();
+		return Users::get_by_id( $this->object->user_id )->get_url();
 	}
 
 	/**
@@ -122,7 +129,7 @@ class Comment {
 	 */
 	protected function get_content() {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		$comment = $this->wp_comment;
+		$comment = $this->object;
 		$content = $comment->comment_content;
 
 		$content = \wpautop( $content );
@@ -134,92 +141,61 @@ class Comment {
 	}
 
 	/**
-	 * get_parent_uri (in reply to)
-	 * takes a comment and returns
-	 * @param WP_Comment activitypub object id URI
-	 * @return int comment_id
+	 * Returns the in-reply-to for the ActivityPub Item.
+	 *
+	 * @return int The URL of the in-reply-to.
 	 */
 	protected function get_in_reply_to() {
-		$comment = $this->wp_comment;
+		$comment = $this->object;
 
 		$parent_comment = \get_comment( $comment->comment_parent );
+
 		if ( $parent_comment ) {
-			//is parent remote?
-			$in_reply_to = $this->get_source_id( $parent_comment );
-			if ( ! $in_reply_to ) {
-				//local
+			$comment_meta = \get_comment_meta( $parent_comment->comment_ID );
+
+			if ( ! empty( $comment_meta['source_url'] ) ) {
+				$in_reply_to = $comment_meta['source_url'][0];
+			} elseif ( ! empty( $comment_meta['source_id'] ) ) {
+				$in_reply_to = $comment_meta['source_id'][0];
+			} else {
 				$in_reply_to = $this->generate_id( $parent_comment );
 			}
 		} else {
-			$pretty_permalink = \get_post_meta( $comment->comment_post_ID, 'activitypub_canonical_url', true );
-			if ( $pretty_permalink ) {
-				$in_reply_to = $pretty_permalink;
-			} else {
-				$in_reply_to = \get_permalink( $comment->comment_post_ID );
-			}
+			$in_reply_to = \get_permalink( $comment->comment_post_ID );
 		}
+
 		return $in_reply_to;
 	}
 
 	/**
-	 * @param $comment or $comment_id
-	 * @return ActivityPub URI of comment
+	 * Returns the ID of the ActivityPub Object.
 	 *
-	 * AP Object ID must be unique
+	 * @see https://www.w3.org/TR/activitypub/#obj-id
+	 * @see https://github.com/tootsuite/mastodon/issues/13879
 	 *
-	 * https://www.w3.org/TR/activitypub/#obj-id
-	 * https://github.com/tootsuite/mastodon/issues/13879
+	 * @return string ActivityPub URI for comment
 	 */
-	protected function generate_id( $comment ) {
-
-		$comment = \get_comment( $comment );
-		$ap_comment_id = \add_query_arg(
-			array(
-				'p' => $comment->comment_post_ID,
-				'replytocom' => $comment->comment_ID,
-			),
-			\trailingslashit( site_url() )
-		);
-		return $ap_comment_id;
+	protected function get_id() {
+		$comment = $this->object;
+		return $this->generate_id( $comment );
 	}
 
 	/**
-	 * Checks a comment ID for a source_id, or source_url
+	 * Generates an ActivityPub URI for a comment
+	 *
+	 * @param WP_Comment|int $comment A comment object or comment ID
+	 *
+	 * @return string ActivityPub URI for comment
 	 */
-	protected function get_source_id( $comment ) {
-		if ( $comment->user_id ) {
-			return null;
-		}
+	protected function generate_id( $comment ) {
+		$comment = get_comment( $comment );
 
-		$source_id = \get_comment_meta( $comment->comment_ID, 'source_id', true );
-		if ( ! $source_id ) {
-			$source_url = \get_comment_meta( $comment->comment_ID, 'source_url', true );
-			if ( ! $source_url ) {
-				return null;
-			}
-			$response = \safe_remote_get( $source_url );
-			$body = \wp_remote_retrieve_body( $response );
-			$remote_status = \json_decode( $body, true );
-			if ( \is_wp_error( $remote_status )
-				|| ! isset( $remote_status['@context'] )
-				|| ! isset( $remote_status['object']['id'] ) ) {
-					// the original post may have been deleted, before we started processing deletes.
-				return null;
-			}
-			$source_id = $remote_status['object']['id'];
-		}
-		return $source_id;
-	}
-
-	protected function get_context() {
-		$comment = $this->wp_comment;
-		$pretty_permalink = \get_post_meta( $comment->comment_post_ID, 'activitypub_canonical_url', true );
-		if ( $pretty_permalink ) {
-			$context = $pretty_permalink;
-		} else {
-			$context = \get_permalink( $comment->comment_post_ID );
-		}
-		return $context;
+		return \add_query_arg(
+			array(
+				'c' => $comment->comment_ID,
+			),
+			\trailingslashit( site_url() )
+		);
 	}
 
 	/**
@@ -252,6 +228,22 @@ class Comment {
 	protected function get_tags() {
 		$tags = array();
 
+		$comment_tags = $this->get_hashtags();
+		if ( $comment_tags ) {
+			foreach ( $comment_tags as $comment_tag ) {
+				$tag_link = \get_tag_link( $comment_tag );
+				if ( ! $tag_link ) {
+					continue;
+				}
+				$tag = array(
+					'type' => 'Hashtag',
+					'href' => \esc_url( $tag_link ),
+					'name' => esc_hashtag( $comment_tag ),
+				);
+				$tags[] = $tag;
+			}
+		}
+
 		$mentions = $this->get_mentions();
 		if ( $mentions ) {
 			foreach ( $mentions as $mention => $url ) {
@@ -268,12 +260,38 @@ class Comment {
 	}
 
 	/**
+	 * Helper function to get the #HashTags from the comment content.
+	 *
+	 * @return array The list of @-Mentions.
+	 */
+	protected function get_hashtags() {
+		$content = $this->get_content();
+
+		$tags = array();
+		//TODO fix hashtag
+		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $content, $match ) ) {
+			$tags = \implode( ', ', $match[1] );
+		}
+
+		$hashtags = array();
+
+		preg_match_all( '/(#\w+)/u', $content, $matches );
+
+		if ( $matches ) {
+			$hashtags = array_count_values( $matches[0] );
+			$hashtags = array_keys( $hashtags );
+		}
+
+		return $hashtags;
+	}
+
+	/**
 	 * Helper function to get the @-Mentions from the comment content.
 	 *
 	 * @return array The list of @-Mentions.
 	 */
 	protected function get_mentions() {
-		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_comment->comment_content, $this->wp_comment );
+		return apply_filters( 'activitypub_extract_mentions', array(), $this->object->comment_content, $this->object );
 	}
 
 	/**
@@ -282,7 +300,7 @@ class Comment {
 	 * @return string The locale of the post.
 	 */
 	public function get_locale() {
-		$comment_id = $this->wp_comment->ID;
+		$comment_id = $this->object->ID;
 		$lang       = \strtolower( \strtok( \get_locale(), '_-' ) );
 
 		/**
@@ -294,6 +312,6 @@ class Comment {
 		 *
 		 * @return string The filtered locale of the comment.
 		 */
-		return apply_filters( 'activitypub_comment_locale', $lang, $comment_id, $this->wp_comment );
+		return apply_filters( 'activitypub_comment_locale', $lang, $comment_id, $this->object );
 	}
 }
