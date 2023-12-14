@@ -2,8 +2,8 @@
 Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nuriapena, cavalierlife
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 4.7
-Tested up to: 6.3
-Stable tag: 1.0.10
+Tested up to: 6.4
+Stable tag: 1.3.0
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -68,10 +68,10 @@ Implemented:
 * share posts
 * receive comments/reactions
 * signature verification
+* threaded comments support
 
 To implement:
 
-* threaded comments support
 * replace shortcodes with blocks for layout
 
 = What is "ActivityPub for WordPress" =
@@ -105,11 +105,41 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
 
+= 2.0.0 =
+
+* Removed: Deprecated Classes
+* Fixed: Normalize attributes that can have mixed value types
+* Added: URL support for WebFinger
+* Added: Make Post-Template filterable
+* Addes: CSS class for ActivityPub comments to allow custom designs
+
+= 1.3.0 =
+
+* Added: Threaded-Comments support
+* Improved: alt text for avatars in Follow Me/Followers blocks
+* Improved: `Delete`, `Update` and `Follow` Activities
+* Improved: better/more effective handling of `Delete` Activities
+* Improved: allow `<p />` and `<br />` for Comments
+* Fixed: removed default limit of WP_Query to send updates to all Inboxes and not only to the first 10
+
+= 1.2.0 =
+
+* Add: Search and order followerer lists
+* Add: Have a filter to defer signature verification
+* Improved: "Follow Me" styles for dark themes
+* Improved: Allow `p` and `br` tags only for AP comments
+* Fixed: Deduplicate attachments earlier to prevent incorrect max_media
+
+
 = 1.1.0 =
 
 * Improved: audio and video attachments are now supported!
 * Improved: better error messages if remote profile is not accessible
 * Improved: PHP 8.1 compatibility
+* Fixed: don't try to parse mentions or hashtags for very large (>1MB) posts to prevent timeouts
+* Fixed: better handling of ISO-639-1 locale codes
+* Improved: more reliable [ap_author], props @uk3
+* Improved: NodeInfo statistics
 
 = 1.0.10 =
 

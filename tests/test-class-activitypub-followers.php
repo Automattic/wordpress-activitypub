@@ -1,5 +1,5 @@
 <?php
-class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
+class Test_Activitypub_Followers extends WP_UnitTestCase {
 	public static $users = array(
 		'username@example.org' => array(
 			'id' => 'https://example.org/users/username',
@@ -76,7 +76,7 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		$this->assertEquals( 3, \count( $db_followers ) );
 
 		$db_followers = array_map(
-			function( $item ) {
+			function ( $item ) {
 				return $item->get_url();
 			},
 			$db_followers
@@ -327,6 +327,82 @@ class Test_Db_Activitypub_Followers extends WP_UnitTestCase {
 		$follower->set_id( $uri );
 
 		$this->assertEquals( $name, $follower->get_name() );
+	}
+
+	public function test_get_inboxes() {
+		for ( $i = 0; $i < 30; $i++ ) {
+			$meta = array(
+				'id' => 'https://example.org/users/' . $i,
+				'url' => 'https://example.org/users/' . $i,
+				'inbox' => 'https://example.org/users/' . $i . '/inbox',
+				'name'  => 'user' . $i,
+				'preferredUsername'  => 'user' . $i,
+				'publicKey' => 'https://example.org/users/' . $i . '#main-key',
+				'publicKeyPem' => $i,
+			);
+
+			$follower = new \Activitypub\Model\Follower();
+			$follower->from_array( $meta );
+
+			$id = $follower->upsert();
+
+			add_post_meta( $id, 'activitypub_user_id', 1 );
+		}
+
+		$inboxes = \Activitypub\Collection\Followers::get_inboxes( 1 );
+
+		$this->assertCount( 30, $inboxes );
+
+		wp_cache_delete( sprintf( \Activitypub\Collection\Followers::CACHE_KEY_INBOXES, 1 ), 'activitypub' );
+
+		for ( $j = 0; $j < 5; $j++ ) {
+			$k = $j + 100;
+			$meta = array(
+				'id' => 'https://example.org/users/' . $k,
+				'url' => 'https://example.org/users/' . $k,
+				'inbox' => 'https://example.org/users/' . $j . '/inbox',
+				'name'  => 'user' . $k,
+				'preferredUsername'  => 'user' . $k,
+				'publicKey' => 'https://example.org/users/' . $k . '#main-key',
+				'publicKeyPem' => $k,
+			);
+
+			$follower = new \Activitypub\Model\Follower();
+			$follower->from_array( $meta );
+
+			$id = $follower->upsert();
+
+			add_post_meta( $id, 'activitypub_user_id', 1 );
+		}
+
+		$inboxes2 = \Activitypub\Collection\Followers::get_inboxes( 1 );
+
+		$this->assertCount( 30, $inboxes2 );
+	}
+
+	public function test_get_all_followers() {
+		for ( $i = 0; $i < 30; $i++ ) {
+			$meta = array(
+				'id' => 'https://example.org/users/' . $i,
+				'url' => 'https://example.org/users/' . $i,
+				'inbox' => 'https://example.org/users/' . $i . '/inbox',
+				'name'  => 'user' . $i,
+				'preferredUsername'  => 'user' . $i,
+				'publicKey' => 'https://example.org/users/' . $i . '#main-key',
+				'publicKeyPem' => $i,
+			);
+
+			$follower = new \Activitypub\Model\Follower();
+			$follower->from_array( $meta );
+
+			$id = $follower->upsert();
+
+			add_post_meta( $id, 'activitypub_user_id', 1 );
+		}
+
+		$followers = \Activitypub\Collection\Followers::get_all_followers();
+
+		$this->assertCount( 30, $followers );
 	}
 
 	public static function http_request_host_is_external( $in, $host ) {

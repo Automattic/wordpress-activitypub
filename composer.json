@@ -15,7 +15,8 @@
         "yoast/phpunit-polyfills": "^2.0",
         "dealerdirect/phpcodesniffer-composer-installer": "^1.0.0",
         "sirbrillig/phpcs-variable-analysis": "^2.11",
-        "phpcsstandards/phpcsextra": "^1.1.0"
+        "phpcsstandards/phpcsextra": "^1.1.0",
+        "dms/phpunit-arraysubset-asserts": "^0.5.0"
     },
     "config": {
         "allow-plugins": true

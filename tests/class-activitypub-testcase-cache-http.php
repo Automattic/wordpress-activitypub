@@ -12,7 +12,7 @@ class ActivityPub_TestCase_Cache_HTTP extends \WP_UnitTestCase {
 
 		add_filter(
 			'rest_url',
-			function() {
+			function () {
 				return get_option( 'home' ) . '/wp-json/';
 			}
 		);

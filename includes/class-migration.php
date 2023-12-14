@@ -114,6 +114,9 @@ class Migration {
 		if ( version_compare( $version_from_db, '1.0.0', '<' ) ) {
 			self::migrate_from_0_17();
 		}
+		if ( version_compare( $version_from_db, '1.3.0', '<' ) ) {
+			self::migrate_from_1_2_0();
+		}
 
 		update_option( 'activitypub_db_version', self::get_target_version() );
 
@@ -174,6 +177,24 @@ class Migration {
 		// Store the new template if required.
 		if ( $content !== $old_content || $need_update ) {
 			\update_option( 'activitypub_custom_post_content', $content );
+		}
+	}
+
+	/**
+	 * Clear the cache after updating to 1.3.0
+	 *
+	 * @return void
+	 */
+	private static function migrate_from_1_2_0() {
+		$user_ids = get_users(
+			array(
+				'fields'         => 'ID',
+				'capability__in' => array( 'publish_posts' ),
+			)
+		);
+
+		foreach ( $user_ids as $user_id ) {
+			wp_cache_delete( sprintf( Followers::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 	}
 }

@@ -1,8 +1,12 @@
 <?php
 namespace Activitypub;
 
+use Exception;
 use Activitypub\Signature;
 use Activitypub\Collection\Users;
+use Activitypub\Collection\Followers;
+
+use function Activitypub\sanitize_url;
 
 use function Activitypub\is_comment;
 
@@ -36,6 +40,11 @@ class Activitypub {
 		\add_action( 'after_setup_theme', array( self::class, 'theme_compat' ), 99 );
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
+
+		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
+
+		// register several post_types
+		self::register_post_types();
 	}
 
 	/**
@@ -56,7 +65,6 @@ class Activitypub {
 	 */
 	public static function deactivate() {
 		self::flush_rewrite_rules();
-
 		Scheduler::deregister_schedules();
 	}
 
@@ -334,5 +342,99 @@ class Activitypub {
 				)
 			)
 		);
+	}
+
+	/**
+	 * Register the "Followers" Taxonomy
+	 *
+	 * @return void
+	 */
+	private static function register_post_types() {
+		register_post_type(
+			Followers::POST_TYPE,
+			array(
+				'labels'           => array(
+					'name'          => _x( 'Followers', 'post_type plural name', 'activitypub' ),
+					'singular_name' => _x( 'Follower', 'post_type single name', 'activitypub' ),
+				),
+				'public'           => false,
+				'hierarchical'     => false,
+				'rewrite'          => false,
+				'query_var'        => false,
+				'delete_with_user' => false,
+				'can_export'       => true,
+				'supports'         => array(),
+			)
+		);
+
+		register_post_meta(
+			Followers::POST_TYPE,
+			'activitypub_inbox',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		register_post_meta(
+			Followers::POST_TYPE,
+			'activitypub_errors',
+			array(
+				'type'              => 'string',
+				'single'            => false,
+				'sanitize_callback' => function ( $value ) {
+					if ( ! is_string( $value ) ) {
+						throw new Exception( 'Error message is no valid string' );
+					}
+
+					return esc_sql( $value );
+				},
+			)
+		);
+
+		register_post_meta(
+			Followers::POST_TYPE,
+			'activitypub_user_id',
+			array(
+				'type'              => 'string',
+				'single'            => false,
+				'sanitize_callback' => function ( $value ) {
+					return esc_sql( $value );
+				},
+			)
+		);
+
+		register_post_meta(
+			Followers::POST_TYPE,
+			'activitypub_actor_json',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'sanitize_callback' => function ( $value ) {
+					return sanitize_text_field( $value );
+				},
+			)
+		);
+
+		do_action( 'activitypub_after_register_post_type' );
+	}
+
+	/**
+	 * Filters the CSS classes to add an ActivityPub class.
+	 *
+	 * @param string[] $classes    An array of comment classes.
+	 * @param string[] $css_class  An array of additional classes added to the list.
+	 * @param string   $comment_id The comment ID as a numeric string.
+	 *
+	 * @return string[] An array of classes.
+	 */
+	public static function comment_class( $classes, $css_class, $comment_id ) {
+		// check if ActivityPub comment
+		if ( 'activitypub' === get_comment_meta( $comment_id, 'protocol', true ) ) {
+			$classes[] = 'activitypub-comment';
+		}
+
+		return $classes;
 	}
 }

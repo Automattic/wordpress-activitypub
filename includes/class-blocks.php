@@ -3,7 +3,9 @@ namespace Activitypub;
 
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Users as User_Collection;
-use Activitypub\is_user_type_disabled;
+
+use function Activitypub\object_to_uri;
+use function Activitypub\is_user_type_disabled;
 
 class Blocks {
 	public static function init() {
@@ -94,7 +96,7 @@ class Blocks {
 
 		$attrs['followerData']['total'] = $follower_data['total'];
 		$attrs['followerData']['followers'] = array_map(
-			function( $follower ) {
+			function ( $follower ) {
 				return self::filter_array_by_keys(
 					$follower->to_array(),
 					array( 'icon', 'name', 'preferredUsername', 'url' )
@@ -140,7 +142,7 @@ class Blocks {
 
 		return sprintf(
 			$template,
-			esc_url( $data['url'] ),
+			esc_url( object_to_uri( $data['url'] ) ),
 			esc_attr( $data['name'] ),
 			esc_attr( $data['icon']['url'] ),
 			esc_html( $data['name'] ),
