@@ -12,8 +12,8 @@ class Hashtag {
 	 */
 	public static function init() {
 		if ( '1' === \get_option( 'activitypub_use_hashtags', '1' ) ) {
-			\add_filter( 'wp_insert_post', array( self::class, 'insert_post' ), 10, 2 );
-			\add_filter( 'the_content', array( self::class, 'the_content' ), 10, 2 );
+			\add_action( 'wp_insert_post', array( self::class, 'insert_post' ), 10, 2 );
+			\add_filter( 'the_content', array( self::class, 'the_content' ), 10, 1 );
 		}
 	}
 
