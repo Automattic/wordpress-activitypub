@@ -112,22 +112,43 @@ class Scheduler {
 	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
 		$comment = get_comment( $comment );
 
+		// Federate only approved comments.
 		if ( ! $comment->user_id ) {
-			// Registered comment author
 			return;
 		}
 
-		if ( 'approved' === $new_status && 'approved' !== $old_status ) {
-			// Only federate replies from local actors
-			$activity_object = unserialize( \get_comment_meta( $comment->comment_ID, 'ap_object', true ) );
-			if ( empty( $activity_object ) ) {
-				\wp_schedule_single_event( \time(), 'activitypub_send_activity', array( $comment, 'Create' ) );
-			}
-		} elseif ( 'trash' === $new_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_activity', array( $comment, 'Delete' ) );
-		} elseif ( 'update' === $new_status ) {
-			\wp_schedule_single_event( \time(), 'activitypub_send_activity', array( $comment, 'Update' ) );
+		if (
+			'approved' === $new_status &&
+			'approved' !== $old_status
+		) {
+			$type = 'Create';
+		} elseif ( 'approved' === $new_status ) {
+			$type = 'Update';
+		} elseif (
+			'trash' === $new_status ||
+			'spam' === $new_status
+		) {
+			$type = 'Delete';
 		}
+
+		if ( ! $type ) {
+			return;
+		}
+
+		\wp_schedule_single_event(
+			\time(),
+			'activitypub_send_activity',
+			array( $comment, $type )
+		);
+
+		\wp_schedule_single_event(
+			\time(),
+			sprintf(
+				'activitypub_send_%s_activity',
+				\strtolower( $type )
+			),
+			array( $comment )
+		);
 	}
 
 	/**
