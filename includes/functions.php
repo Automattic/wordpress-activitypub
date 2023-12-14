@@ -713,16 +713,33 @@ function url_to_commentid( $url ) {
 		return null;
 	}
 
+	// check for local comment
+	if ( \wp_parse_url( \site_url(), \PHP_URL_HOST ) === \wp_parse_url( $url, \PHP_URL_HOST ) ) {
+		$query = \wp_parse_url( $url, PHP_URL_QUERY );
+
+		if ( $query ) {
+			parse_str( $query, $params );
+
+			if ( ! empty( $params['c'] ) ) {
+				$comment = \get_comment( $params['c'] );
+
+				if ( $comment ) {
+					return $comment->comment_ID;
+				}
+			}
+		}
+	}
+
 	$args = array(
 		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 		'meta_query' => array(
 			'relation' => 'OR',
 			array(
-				'key' => 'source_url',
+				'key'   => 'source_url',
 				'value' => $url,
 			),
 			array(
-				'key' => 'source_id',
+				'key'   => 'source_id',
 				'value' => $url,
 			),
 		),
