@@ -235,16 +235,18 @@ class Activitypub {
 	 * @return string $url
 	 */
 	public static function remote_comment_link( $comment_link, $comment ) {
-		if ( ! $comment ) {
+		if ( ! $comment || is_admin() ) {
 			return $comment_link;
 		}
 
-		if ( ! is_admin() ) {
-			$remote_comment_link = get_comment_meta( $comment->comment_ID, 'source_url', true );
-			if ( $remote_comment_link ) {
-				$comment_link = esc_url( $remote_comment_link );
-			}
+		$comment_meta = \get_comment_meta( $comment->comment_ID );
+
+		if ( ! empty( $comment_meta['source_url'][0] ) ) {
+			return $comment_meta['source_url'][0];
+		} elseif ( ! empty( $comment_meta['source_id'][0] ) ) {
+			return $comment_meta['source_id'][0];
 		}
+
 		return $comment_link;
 	}
 
