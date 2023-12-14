@@ -228,22 +228,6 @@ class Comment extends Base {
 	protected function get_tags() {
 		$tags = array();
 
-		$comment_tags = $this->get_hashtags();
-		if ( $comment_tags ) {
-			foreach ( $comment_tags as $comment_tag ) {
-				$tag_link = \get_tag_link( $comment_tag );
-				if ( ! $tag_link ) {
-					continue;
-				}
-				$tag = array(
-					'type' => 'Hashtag',
-					'href' => \esc_url( $tag_link ),
-					'name' => esc_hashtag( $comment_tag ),
-				);
-				$tags[] = $tag;
-			}
-		}
-
 		$mentions = $this->get_mentions();
 		if ( $mentions ) {
 			foreach ( $mentions as $mention => $url ) {
@@ -257,32 +241,6 @@ class Comment extends Base {
 		}
 
 		return $tags;
-	}
-
-	/**
-	 * Helper function to get the #HashTags from the comment content.
-	 *
-	 * @return array The list of @-Mentions.
-	 */
-	protected function get_hashtags() {
-		$content = $this->get_content();
-
-		$tags = array();
-		//TODO fix hashtag
-		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $content, $match ) ) {
-			$tags = \implode( ', ', $match[1] );
-		}
-
-		$hashtags = array();
-
-		preg_match_all( '/(#\w+)/u', $content, $matches );
-
-		if ( $matches ) {
-			$hashtags = array_count_values( $matches[0] );
-			$hashtags = array_keys( $hashtags );
-		}
-
-		return $hashtags;
 	}
 
 	/**
