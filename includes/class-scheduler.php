@@ -17,7 +17,20 @@ class Scheduler {
 	 */
 	public static function init() {
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
+
 		\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 20, 3 );
+		\add_action(
+			'edit_comment',
+			function ( $comment_id ) {
+				self::schedule_comment_activity( 'approved', 'approved', $comment_id );
+			}
+		);
+		\add_action(
+			'wp_insert_comment',
+			function ( $comment_id ) {
+				self::schedule_comment_activity( 'approved', '', $comment_id );
+			}
+		);
 
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
