@@ -153,10 +153,10 @@ class Comment extends Base {
 		if ( $parent_comment ) {
 			$comment_meta = \get_comment_meta( $parent_comment->comment_ID );
 
-			if ( ! empty( $comment_meta['source_url'] ) ) {
-				$in_reply_to = $comment_meta['source_url'][0];
-			} elseif ( ! empty( $comment_meta['source_id'] ) ) {
+			if ( ! empty( $comment_meta['source_id'][0] ) ) {
 				$in_reply_to = $comment_meta['source_id'][0];
+			} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
+				$in_reply_to = $comment_meta['source_url'][0];
 			} else {
 				$in_reply_to = $this->generate_id( $parent_comment );
 			}
