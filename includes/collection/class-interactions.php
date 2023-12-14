@@ -62,13 +62,16 @@ class Interactions {
 			'comment_parent' => $parent_comment_id ? $parent_comment_id : 0,
 			'comment_meta' => array(
 				'source_id'  => \esc_url_raw( $activity['object']['id'] ),
-				'source_url' => \esc_url_raw( $activity['object']['url'] ),
 				'protocol'   => 'activitypub',
 			),
 		);
 
 		if ( isset( $meta['icon']['url'] ) ) {
 			$commentdata['comment_meta']['avatar_url'] = \esc_url_raw( $meta['icon']['url'] );
+		}
+
+		if ( isset( $activity['object']['source_url'] ) ) {
+			$commentdata['comment_meta']['source_url'] = \esc_url_raw( $activity['object']['url'] );
 		}
 
 		// disable flood control
