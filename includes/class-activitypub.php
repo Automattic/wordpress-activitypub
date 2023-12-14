@@ -9,6 +9,7 @@ use Activitypub\Collection\Followers;
 use function Activitypub\sanitize_url;
 
 use function Activitypub\is_comment;
+use function Activitypub\is_activitypub_request;
 
 /**
  * ActivityPub Class
@@ -21,6 +22,7 @@ class Activitypub {
 	 */
 	public static function init() {
 		\add_filter( 'template_include', array( self::class, 'render_json_template' ), 99 );
+		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
 		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
 		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
@@ -122,11 +124,42 @@ class Activitypub {
 	}
 
 	/**
+	 * Custom redirects for ActivityPub requests.
+	 *
+	 * @return void
+	 */
+	public static function template_redirect() {
+		$comment_id = get_query_var( 'c', null );
+
+		// check if it seems to be a comment
+		if ( ! $comment_id ) {
+			return;
+		}
+
+		$comment = get_comment( $comment_id );
+
+		// load a 404 page if `c` is set but not valid
+		if ( ! $comment ) {
+			global $wp_query;
+			$wp_query->set_404();
+			return;
+		}
+
+		// stop if it's not an ActivityPub comment
+		if ( is_activitypub_request() && $comment->user_id ) {
+			return;
+		}
+
+		wp_safe_redirect( get_comment_link( $comment ) );
+	}
+
+	/**
 	 * Add the 'activitypub' query variable so WordPress won't mangle it.
 	 */
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
-		$vars[] = 'replytocom';
+		$vars[] = 'c';
+		$vars[] = 'p';
 
 		return $vars;
 	}
@@ -202,6 +235,10 @@ class Activitypub {
 	 * @return string $url
 	 */
 	public static function remote_comment_link( $comment_link, $comment ) {
+		if ( ! $comment ) {
+			return $comment_link;
+		}
+
 		if ( ! is_admin() ) {
 			$remote_comment_link = get_comment_meta( $comment->comment_ID, 'source_url', true );
 			if ( $remote_comment_link ) {
