@@ -187,43 +187,6 @@ function object_to_post_id_by_field_name( $object, $field_name ) {
 }
 
 /**
- * Verify if in_replyto_url is a local Post,
- * (For backwards compatibility)
- *
- * @param string activitypub object id URI
- * @return int post_id
- */
-function url_to_postid( $in_replyto_url ) {
-	if ( ! empty( $in_replyto_url ) ) {
-		$tentative_postid = \url_to_postid( $in_replyto_url );
-		if ( is_null( $tentative_postid ) ) {
-			$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
-			$query_args = array(
-				'type' => $post_types,
-				'meta_query' => array(
-					array(
-						'key' => 'activitypub_canonical_url',
-						'value' => $in_replyto_url,
-					),
-				),
-			);
-			$posts_query = new \WP_Query();
-			$posts = $posts_query->query( $query_args );
-			$found_post_ids = array();
-			if ( $posts ) {
-				foreach ( $posts as $post ) {
-					$found_post_ids[] = $post->comment_ID;
-				}
-				return $found_post_ids[0];
-			}
-		} else {
-			return $tentative_postid;
-		}
-	}
-	return null;
-}
-
-/**
  * Verify if url is a wp_ap_comment,
  * Or if it is a previously received remote comment
  *
@@ -242,19 +205,6 @@ function is_comment() {
 	}
 
 	return false;
-}
-
-/**
- * @param string $user_url
- * @return string $webfinger
- */
-function url_to_webfinger( $user_url ) {
-	$user_url = \untrailingslashit( $user_url );
-	$user_url_array = \explode( '/', $user_url );
-	$user_name = \end( $user_url_array );
-	$url_host = \wp_parse_url( $user_url, PHP_URL_HOST );
-	$webfinger = '@' . $user_name . '@' . $url_host;
-	return $webfinger;
 }
 
 /**
