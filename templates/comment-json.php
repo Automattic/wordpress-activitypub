@@ -1,5 +1,5 @@
 <?php
-$comment = \get_comment( \get_query_var( 'replytocom' ) ); // phpcs:ignore
+$comment = \get_comment( \get_query_var( 'c', null ) ); // phpcs:ignore
 
 $object = new \Activitypub\Transformer\Comment( $comment );
 $json = \array_merge( array( '@context' => \Activitypub\get_context() ), $object->to_object()->to_array() );
