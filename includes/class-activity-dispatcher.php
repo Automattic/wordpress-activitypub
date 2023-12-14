@@ -46,10 +46,8 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$wp_object->post_author = Users::BLOG_USER_ID;
-
 		if ( is_single_user() ) {
-			self::send_activity( $wp_object, $type );
+			self::send_activity( $wp_object, $type, Users::BLOG_USER_ID );
 		} else {
 			self::send_announce( $wp_object, $type );
 		}
@@ -63,18 +61,22 @@ class Activity_Dispatcher {
 	 *
 	 * @return void
 	 */
-	public static function send_activity( $wp_object, $type ) {
-		if ( is_user_disabled( $wp_object->post_author ) ) {
+	public static function send_activity( $wp_object, $type, $user_id = null ) {
+		$transformer = Factory::get_transformer( $wp_object );
+
+		if ( null !== $user_id ) {
+			$transformer->change_wp_user_id( $user_id );
+		}
+
+		$user_id = $transformer->get_wp_user_id();
+
+		if ( is_user_disabled( $user_id ) ) {
 			return;
 		}
 
-		$object = Factory::get_transformer( $wp_object )->to_object();
+		$activity = $transformer->to_activity( 'Create' );
 
-		$activity = new Activity();
-		$activity->set_type( $type );
-		$activity->set_object( $object );
-
-		$follower_inboxes  = Followers::get_inboxes( $wp_object->post_author );
+		$follower_inboxes  = Followers::get_inboxes( $user_id );
 		$mentioned_inboxes = Mention::get_inboxes( $activity->get_cc() );
 
 		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
@@ -83,7 +85,7 @@ class Activity_Dispatcher {
 		$json = $activity->to_json();
 
 		foreach ( $inboxes as $inbox ) {
-			safe_remote_post( $inbox, $json, $wp_object->post_author );
+			safe_remote_post( $inbox, $json, $user_id );
 		}
 	}
 
@@ -104,7 +106,11 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$object = Factory::get_transformer( $wp_object )->to_object();
+		$transformer = Factory::get_transformer( $wp_object );
+		$transformer->change_wp_user_id( Users::BLOG_USER_ID );
+
+		$user_id = $transformer->get_wp_user_id();
+		$object  = $transformer->to_object();
 
 		$activity = new Activity();
 		$activity->set_type( 'Announce' );
@@ -113,7 +119,7 @@ class Activity_Dispatcher {
 		// send only the id
 		$activity->set_object( $object->get_id() );
 
-		$follower_inboxes  = Followers::get_inboxes( $wp_object->post_author );
+		$follower_inboxes  = Followers::get_inboxes( $user_id );
 		$mentioned_inboxes = Mention::get_inboxes( $activity->get_cc() );
 
 		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
@@ -122,7 +128,7 @@ class Activity_Dispatcher {
 		$json = $activity->to_json();
 
 		foreach ( $inboxes as $inbox ) {
-			safe_remote_post( $inbox, $json, $wp_object->post_author );
+			safe_remote_post( $inbox, $json, $user_id );
 		}
 	}
 }
