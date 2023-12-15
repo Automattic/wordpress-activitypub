@@ -109,15 +109,8 @@ class Activity_Dispatcher {
 		$transformer = Factory::get_transformer( $wp_object );
 		$transformer->change_wp_user_id( Users::BLOG_USER_ID );
 
-		$user_id = $transformer->get_wp_user_id();
-		$object  = $transformer->to_object();
-
-		$activity = new Activity();
-		$activity->set_type( 'Announce' );
-		// to pre-fill attributes like "published" and "id"
-		$activity->set_object( $object );
-		// send only the id
-		$activity->set_object( $object->get_id() );
+		$user_id  = $transformer->get_wp_user_id();
+		$activity = $transformer->to_activity( 'Announce' );
 
 		$follower_inboxes  = Followers::get_inboxes( $user_id );
 		$mentioned_inboxes = Mention::get_inboxes( $activity->get_cc() );
