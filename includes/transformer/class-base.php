@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub\Transformer;
 
+use Activitypub\Activity\Activity;
+
 /**
  * WordPress Base Transformer
  *
@@ -45,13 +47,21 @@ abstract class Base {
 	abstract public function to_object();
 
 	/**
-	 * Transform the ActivityPub Object into an Activity.
+	 * Transforms the ActivityPub Object to an Activity
 	 *
-	 * @param string $type The type of Activity to transform to.
+	 * @param string $type The Activity-Type.
 	 *
-	 * @return Activitypub\Activity\Activity
+	 * @return \Activitypub\Activity\Activity The Activity.
 	 */
-	abstract public function to_activity( $type );
+	public function to_activity( $type ) {
+		$object = $this->to_object();
+
+		$activity = new Activity();
+		$activity->set_type( $type );
+		$activity->set_object( $object );
+
+		return $activity;
+	}
 
 	/**
 	 * Returns the ID of the WordPress Object.

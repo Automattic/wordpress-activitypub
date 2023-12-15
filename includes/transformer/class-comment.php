@@ -6,7 +6,6 @@ use Activitypub\Hashtag;
 use Activitypub\Model\Blog_User;
 use Activitypub\Collection\Users;
 use Activitypub\Transformer\Base;
-use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 
 use function Activitypub\esc_hashtag;
@@ -85,23 +84,6 @@ class Comment extends Base {
 		$object->set_tag( $this->get_tags() );
 
 		return $object;
-	}
-
-	/**
-	 * Transforms the ActivityPub Object to an Activity
-	 *
-	 * @param string $type The Activity-Type.
-	 *
-	 * @return \Activitypub\Activity\Activity The Activity.
-	 */
-	public function to_activity( $type ) {
-		$object = $this->to_object();
-
-		$activity = new Activity();
-		$activity->set_type( $type );
-		$activity->set_object( $object );
-
-		return $activity;
 	}
 
 	/**
