@@ -2,6 +2,7 @@
 namespace Activitypub\Transformer;
 
 use WP_Comment;
+use WP_Comment_Query;
 use Activitypub\Hashtag;
 use Activitypub\Model\Blog_User;
 use Activitypub\Collection\Users;
@@ -196,6 +197,30 @@ class Comment extends Base {
 				$cc[] = $url;
 			}
 		}
+
+		$comment_query = new WP_Comment_Query(
+			array(
+				'post_id'    => $this->object->comment_post_ID,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query' => array(
+					array(
+						'key'     => 'source_id',
+						'compare' => 'EXISTS',
+					),
+				),
+			)
+		);
+
+		if ( $comment_query->comments ) {
+			foreach ( $comment_query->comments as $comment ) {
+				if ( empty( $comment->comment_author_url ) ) {
+					continue;
+				}
+				$cc[] = $comment->comment_author_url;
+			}
+		}
+
+		$cc = \array_unique( $cc );
 
 		return $cc;
 	}
