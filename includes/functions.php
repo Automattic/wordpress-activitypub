@@ -170,23 +170,6 @@ function url_to_authorid( $url ) {
 }
 
 /**
- * Examine an activity object and find the post that the specified URL field refers to.
- *
- * @param string $field_name The name of the URL field in the object to query.
- *
- * @return int Post ID, or null on failure.
- */
-function object_to_post_id_by_field_name( $object, $field_name ) {
-	if ( ! isset( $object['object'][ $field_name ] ) ) {
-		return;
-	}
-	$result = \url_to_postid( $object['object'][ $field_name ] );
-	if ( $result > 0 ) {
-		return $result;
-	}
-}
-
-/**
  * Verify if url is a wp_ap_comment,
  * Or if it is a previously received remote comment
  *
