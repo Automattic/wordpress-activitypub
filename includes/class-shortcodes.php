@@ -127,8 +127,7 @@ class Shortcodes {
 		// Strip out any remaining tags.
 		$excerpt = \wp_strip_all_tags( $excerpt );
 
-		/** This filter is documented in wp-includes/formatting.php */
-		$excerpt_more = \apply_filters( 'excerpt_more', ' [...]' );
+		$excerpt_more = \apply_filters( 'activitypub_excerpt_more', ' [&hellip;]' );
 		$excerpt_more_len = strlen( $excerpt_more );
 
 		// We now have a excerpt, but we need to check it's length, it may be longer than we want for two reasons:
