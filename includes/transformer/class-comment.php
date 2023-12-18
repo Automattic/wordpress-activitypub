@@ -4,6 +4,7 @@ namespace Activitypub\Transformer;
 use WP_Comment;
 use WP_Comment_Query;
 use Activitypub\Hashtag;
+use Activitypub\Webfinger;
 use Activitypub\Model\Blog_User;
 use Activitypub\Collection\Users;
 use Activitypub\Transformer\Base;
@@ -216,7 +217,7 @@ class Comment extends Base {
 				if ( empty( $comment->comment_author_url ) ) {
 					continue;
 				}
-				$cc[] = $comment->comment_author_url;
+				$cc[] = \esc_url( $comment->comment_author_url );
 			}
 		}
 
@@ -247,7 +248,7 @@ class Comment extends Base {
 			}
 		}
 
-		return $tags;
+		return \array_unique( $tags, SORT_REGULAR );
 	}
 
 	/**

@@ -43,7 +43,7 @@ class Webfinger {
 	public static function resolve( $uri ) {
 		$data = self::get_data( $uri );
 
-		if ( is_wp_error( $data ) ) {
+		if ( \is_wp_error( $data ) ) {
 			return $data;
 		}
 
@@ -66,7 +66,7 @@ class Webfinger {
 	 *
 	 * @return string|WP_Error Error or acct URI
 	 */
-	public function uri_to_acct( $uri ) {
+	public static function uri_to_acct( $uri ) {
 		$data = self::get_data( $uri );
 
 		if ( is_wp_error( $data ) ) {
@@ -78,7 +78,7 @@ class Webfinger {
 			isset( $data['subject'] ) &&
 			\str_starts_with( $data['subject'], 'acct:' )
 		) {
-			$data['subject'];
+			return $data['subject'];
 		}
 
 		// search for an acct URI in the aliases
@@ -155,7 +155,7 @@ class Webfinger {
 			return $identifier_and_host;
 		}
 
-		$transient_key = 'activitypub_webfinger_' . ltrim( $uri, '@' );
+		$transient_key = self::generate_cache_key( $uri );
 
 		list( $identifier, $host ) = $identifier_and_host;
 
@@ -182,7 +182,6 @@ class Webfinger {
 		}
 
 		$body = wp_remote_retrieve_body( $response );
-
 		$data = json_decode( $body, true );
 
 		\set_transient( $transient_key, $data, WEEK_IN_SECONDS );
@@ -221,5 +220,22 @@ class Webfinger {
 			__( 'No valid Remote-Follow endpoint found.', 'activitypub' ),
 			$data
 		);
+	}
+
+	/**
+	 * Generate a cache key for a given URI
+	 *
+	 * @param string $uri A WebFinger Resource URI
+	 *
+	 * @return string The cache key
+	 */
+	public static function generate_cache_key( $uri ) {
+		$uri = ltrim( $uri, '@' );
+
+		if ( filter_var( $uri, FILTER_VALIDATE_EMAIL ) ) {
+			$uri = 'acct:' . $uri;
+		}
+
+		return 'webfinger_' . md5( $uri );
 	}
 }
