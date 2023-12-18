@@ -463,7 +463,7 @@ class Post extends Base {
 	 *
 	 * @return array The list of Tags.
 	 */
-	protected function get_tags() {
+	protected function get_tag() {
 		$tags = array();
 
 		$post_tags = \get_the_tags( $this->object->ID );

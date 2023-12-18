@@ -56,7 +56,7 @@ abstract class Base {
 			if ( method_exists( $this, $getter ) ) {
 				$value = call_user_func( array( $this, $getter ) );
 
-				if ( ! empty( $value ) ) {
+				if ( isset( $value ) ) {
 					$setter = 'set_' . $var;
 
 					call_user_func( array( $object, $setter ), $value );
