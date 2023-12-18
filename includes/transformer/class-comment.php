@@ -52,9 +52,8 @@ class Comment extends Base {
 	 */
 	public function to_object() {
 		$comment = $this->object;
-		$object = new Base_Object();
+		$object = parent::to_object();
 
-		$object->set_id( $this->get_id() );
 		$object->set_url( \get_comment_link( $comment->ID ) );
 		$object->set_type( 'Note' );
 
@@ -66,9 +65,6 @@ class Comment extends Base {
 			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $updated ) ) );
 		}
 
-		$object->set_attributed_to( $this->get_attributed_to() );
-		$object->set_in_reply_to( $this->get_in_reply_to() );
-		$object->set_content( $this->get_content() );
 		$object->set_content_map(
 			array(
 				$this->get_locale() => $this->get_content(),
@@ -82,8 +78,6 @@ class Comment extends Base {
 				get_rest_url_by_path( $path ),
 			)
 		);
-		$object->set_cc( $this->get_cc() );
-		$object->set_tag( $this->get_tags() );
 
 		return $object;
 	}

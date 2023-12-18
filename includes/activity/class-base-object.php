@@ -675,4 +675,13 @@ class Base_Object {
 
 		return \wp_json_encode( $array, \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
 	}
+
+	/**
+	 * Returns the keys of the object vars.
+	 *
+	 * @return array The keys of the object vars.
+	 */
+	public function get_object_var_keys() {
+		return \array_keys( \get_object_vars( $this ) );
+	}
 }

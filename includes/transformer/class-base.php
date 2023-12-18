@@ -2,6 +2,7 @@
 namespace Activitypub\Transformer;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
 
 /**
  * WordPress Base Transformer
@@ -44,7 +45,27 @@ abstract class Base {
 	 *
 	 * @return Activitypub\Activity\Base_Object
 	 */
-	abstract public function to_object();
+	public function to_object() {
+		$object = new Base_Object();
+
+		$vars = $object->get_object_var_keys();
+
+		foreach ( $vars as $var ) {
+			$getter = 'get_' . $var;
+
+			if ( method_exists( $this, $getter ) ) {
+				$value = call_user_func( array( $this, $getter ) );
+
+				if ( ! empty( $value ) ) {
+					$setter = 'set_' . $var;
+
+					call_user_func( array( $object, $setter ), $value );
+				}
+			}
+		}
+
+		return $object;
+	}
 
 	/**
 	 * Transforms the ActivityPub Object to an Activity
