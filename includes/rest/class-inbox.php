@@ -8,6 +8,7 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\get_context;
+use function Activitypub\object_to_uri;
 use function Activitypub\url_to_authorid;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_remote_metadata_by_actor;
@@ -236,15 +237,8 @@ class Inbox {
 
 		$params['actor'] = array(
 			'required' => true,
-			'sanitize_callback' => function( $param, $request, $key ) {
-				if ( \is_array( $param ) ) {
-					if ( isset( $param['id'] ) ) {
-						$param = $param['id'];
-					} else {
-						$param = $param['url'];
-					}
-				}
-				return \esc_url_raw( $param );
+			'sanitize_callback' => function ( $param, $request, $key ) {
+				return object_to_uri( $param );
 			},
 		);
 
@@ -252,7 +246,7 @@ class Inbox {
 			'required' => true,
 			//'type' => 'enum',
 			//'enum' => array( 'Create' ),
-			//'sanitize_callback' => function( $param, $request, $key ) {
+			//'sanitize_callback' => function ( $param, $request, $key ) {
 			//  return \strtolower( $param );
 			//},
 		);
@@ -285,11 +279,8 @@ class Inbox {
 		$params['actor'] = array(
 			'required' => true,
 			//'type' => array( 'object', 'string' ),
-			'sanitize_callback' => function( $param, $request, $key ) {
-				if ( ! \is_string( $param ) ) {
-					$param = $param['id'];
-				}
-				return \esc_url_raw( $param );
+			'sanitize_callback' => function ( $param, $request, $key ) {
+				return object_to_uri( $param );
 			},
 		);
 
@@ -297,7 +288,7 @@ class Inbox {
 			'required' => true,
 			//'type' => 'enum',
 			//'enum' => array( 'Create' ),
-			//'sanitize_callback' => function( $param, $request, $key ) {
+			//'sanitize_callback' => function ( $param, $request, $key ) {
 			//  return \strtolower( $param );
 			//},
 		);
@@ -309,7 +300,7 @@ class Inbox {
 
 		$params['to'] = array(
 			'required' => false,
-			'sanitize_callback' => function( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param, $request, $key ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );
 				}
@@ -319,7 +310,7 @@ class Inbox {
 		);
 
 		$params['cc'] = array(
-			'sanitize_callback' => function( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param, $request, $key ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );
 				}
@@ -329,7 +320,7 @@ class Inbox {
 		);
 
 		$params['bcc'] = array(
-			'sanitize_callback' => function( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param, $request, $key ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );
 				}

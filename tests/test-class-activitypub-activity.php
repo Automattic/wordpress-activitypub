@@ -12,7 +12,7 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 
 		add_filter(
 			'activitypub_extract_mentions',
-			function( $mentions ) {
+			function ( $mentions ) {
 				$mentions['@alex'] = 'https://example.com/alex';
 				return $mentions;
 			},

@@ -296,7 +296,8 @@ class Signature {
 			if ( is_array( $headers['digest'] ) ) {
 				$headers['digest'] = $headers['digest'][0];
 			}
-			$digest = explode( '=', $headers['digest'], 2 );
+			$hashalg = 'sha256';
+			$digest  = explode( '=', $headers['digest'], 2 );
 			if ( 'SHA-256' === $digest[0] ) {
 				$hashalg = 'sha256';
 			}

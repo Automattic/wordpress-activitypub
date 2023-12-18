@@ -70,7 +70,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 
 		add_filter(
 			'activitypub_extract_mentions',
-			function( $mentions ) {
+			function ( $mentions ) {
 				$mentions[] = 'https://example.com/alex';
 				return $mentions;
 			},
@@ -134,7 +134,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 
 		add_filter(
 			'activitypub_is_user_type_disabled',
-			function( $value, $type ) {
+			function ( $value, $type ) {
 				if ( 'blog' === $type ) {
 					return false;
 				} else {
