@@ -255,19 +255,6 @@ class Base_Object {
 	protected $published;
 
 	/**
-	 * A Collection containing objects considered to be responses to
-	 * this object.
-	 *
-	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-replies
-	 *
-	 * @var string
-	 *    | Collection
-	 *    | Link
-	 *    | null
-	 */
-	protected $replies;
-
-	/**
 	 * The date and time describing the actual or expected starting time
 	 * of the object.
 	 * When used with an Activity object, for instance, the startTime
@@ -436,6 +423,19 @@ class Base_Object {
 	 * @var ObjectType
 	 */
 	protected $source;
+
+	/**
+	 * A Collection containing objects considered to be responses to
+	 * this object.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-replies
+	 *
+	 * @var string
+	 *    | Collection
+	 *    | Link
+	 *    | null
+	 */
+	protected $replies;
 
 	/**
 	 * Magic function to implement getter and setter

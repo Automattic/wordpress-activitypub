@@ -16,8 +16,28 @@ class Scheduler {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
+		// Post transitions
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
+		\add_action(
+			'edit_attachment',
+			function ( $post_id ) {
+				self::schedule_post_activity( 'publish', 'publish', $post_id );
+			}
+		);
+		\add_action(
+			'add_attachment',
+			function ( $post_id ) {
+				self::schedule_post_activity( 'publish', '', $post_id );
+			}
+		);
+		\add_action(
+			'delete_attachment',
+			function ( $post_id ) {
+				self::schedule_post_activity( 'trash', '', $post_id );
+			}
+		);
 
+		// Comment transitions
 		\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 20, 3 );
 		\add_action(
 			'edit_comment',
@@ -32,9 +52,11 @@ class Scheduler {
 			}
 		);
 
+		// Follower Cleanups
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
 
+		// Migration
 		\add_action( 'admin_init', array( self::class, 'schedule_migration' ) );
 	}
 
@@ -72,6 +94,8 @@ class Scheduler {
 	 * @param WP_Post $post       Post object.
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
+		$post = get_post( $post );
+
 		// Do not send activities if post is password protected.
 		if ( \post_password_required( $post ) ) {
 			return;

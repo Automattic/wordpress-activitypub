@@ -3,6 +3,7 @@ namespace Activitypub\Transformer;
 
 use Activitypub\Transformer\Post;
 use Activitypub\Transformer\Comment;
+use Activitypub\Transformer\Attachment;
 
 /**
  * Transformer Factory
@@ -47,6 +48,9 @@ class Factory {
 		// use default transformer
 		switch ( get_class( $object ) ) {
 			case 'WP_Post':
+				if ( 'attachment' === $object->post_type ) {
+					return new Attachment( $object );
+				}
 				return new Post( $object );
 			case 'WP_Comment':
 				return new Comment( $object );
