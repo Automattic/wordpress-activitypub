@@ -52,9 +52,9 @@ class Comment extends Base {
 	 */
 	public function to_object() {
 		$comment = $this->object;
-		$object = parent::to_object();
+		$object  = parent::to_object();
 
-		$object->set_url( \get_comment_link( $comment->ID ) );
+		$object->set_url( \get_comment_link( $comment->comment_ID ) );
 		$object->set_type( 'Note' );
 
 		$published = \strtotime( $comment->comment_date_gmt );
