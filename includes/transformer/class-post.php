@@ -571,56 +571,6 @@ class Post extends Base {
 	}
 
 	/**
-	 * Returns the replies to the Post.
-	 *
-	 * @return array The replies.
-	 */
-	protected function get_replies() {
-		$replies = array();
-		$post    = $this->object;
-
-		if ( $post->comment_count > 0 ) {
-			$args     = array(
-				'post_id'      => $post->ID,
-				'hierarchical' => false,
-				'status'       => 'approve',
-			);
-			$comments = \get_comments( $args );
-			$items    = array();
-
-			foreach ( $comments as $comment ) {
-				// include self replies
-				if ( $post->post_author === $comment->user_id ) {
-					$comment_url = \add_query_arg( //
-						array(
-							'c' => $comment->comment_ID,
-						),
-						trailingslashit( site_url() )
-					);
-					$items[] = $comment_url;
-				} else {
-					$comment_url = \get_comment_meta( $comment->comment_ID, 'source_url', true );
-					if ( ! empty( $comment_url ) ) {
-						$items[] = \get_comment_meta( $comment->comment_ID, 'source_url', true );
-					}
-				}
-			}
-
-			$replies = array(
-				'type'  => 'Collection',
-				'id'    => \add_query_arg( array( 'replies' => '' ), $this->get_id() ),
-				'first' => array(
-					'type'  => 'CollectionPage',
-					'partOf' => \add_query_arg( array( 'replies' => '' ), $this->get_id() ),
-					'items' => $items,
-				),
-			);
-		}
-
-		return $replies;
-	}
-
-	/**
 	 * Returns the locale of the post.
 	 *
 	 * @return string The locale of the post.
