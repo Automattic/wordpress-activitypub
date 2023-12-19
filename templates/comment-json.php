@@ -1,7 +1,7 @@
 <?php
 $comment = \get_comment( \get_query_var( 'c', null ) ); // phpcs:ignore
 
-$object = new \Activitypub\Transformer\Comment( $comment );
+$object = \Activitypub\Transformer\Factory::get_transformer( $comment );
 $json = \array_merge( array( '@context' => \Activitypub\get_context() ), $object->to_object()->to_array() );
 
 // filter output

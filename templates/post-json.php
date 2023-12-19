@@ -2,7 +2,7 @@
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 $post = \get_post();
 
-$object = new \Activitypub\Transformer\Post( $post );
+$object = \Activitypub\Transformer\Factory::get_transformer( $post );
 $json = \array_merge( array( '@context' => \Activitypub\get_context() ), $object->to_object()->to_array() );
 
 // filter output
