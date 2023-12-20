@@ -21,8 +21,8 @@ class Admin {
 		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 
-		Admin::$admin_notices = Admin::get_admin_notices();
-		if ( !empty( Admin::$admin_notices ) ) {
+		self::$admin_notices = self::get_admin_notices();
+		if ( ! empty( self::$admin_notices ) ) {
 			\add_action( 'admin_notices', array( self::class, 'show_admin_notices' ) );
 		}
 
@@ -71,7 +71,7 @@ class Admin {
 	 * Display admin menu notices about configuration problems or conflicts
 	 */
 	public static function show_admin_notices() {
-		foreach ( Admin::$admin_notices as $admin_notice ) {
+		foreach ( self::$admin_notices as $admin_notice ) {
 			?>
 
 			<div class="notice notice-error">
