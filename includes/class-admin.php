@@ -10,6 +10,8 @@ use Activitypub\Model\Blog_User;
  * @author Matthias Pfefferle
  */
 class Admin {
+	private static $admin_notices = array();
+
 	/**
 	 * Initialize the class, registering WordPress hooks
 	 */
@@ -18,6 +20,11 @@ class Admin {
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
 		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
+
+		Admin::$admin_notices = Admin::get_admin_notices();
+		if ( !empty( Admin::$admin_notices ) ) {
+			\add_action( 'admin_notices', array( self::class, 'show_admin_notices' ) );
+		}
 
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
@@ -43,6 +50,35 @@ class Admin {
 			$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
 
 			\add_action( 'load-' . $followers_list_page, array( self::class, 'add_followers_list_help_tab' ) );
+		}
+	}
+
+	/**
+	 * Collect admin menu notices about configuration problems or conflicts
+	 */
+	public static function get_admin_notices() {
+		$admin_notices = array();
+
+		$permalink_structure = \get_option( 'permalink_structure' );
+		if ( empty( $permalink_structure ) ) {
+			array_push( $admin_notices, 'You are using the ActivityPub plugin without setting a permalink structure.  This will prevent ActivityPub from working.  Please set a permalink structure.' );
+		}
+
+		return $admin_notices;
+	}
+
+	/**
+	 * Display admin menu notices about configuration problems or conflicts
+	 */
+	public static function show_admin_notices() {
+		foreach ( Admin::$admin_notices as $admin_notice ) {
+			?>
+
+			<div class="notice notice-error">
+				<p><?php echo wp_kses( $admin_notice, 'data' ); ?></p>
+			</div>
+
+			<?php
 		}
 	}
 
