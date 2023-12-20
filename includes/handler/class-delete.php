@@ -39,7 +39,7 @@ class Delete {
 			case 'Organization':
 			case 'Service':
 			case 'Application':
-				self::maybe_delete_follower( $user_id, $activity );
+				self::maybe_delete_follower( $activity );
 				break;
 			// Object and Link Types
 			// @see https://www.w3.org/TR/activitystreams-vocabulary/#object-types

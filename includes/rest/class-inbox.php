@@ -94,11 +94,8 @@ class Inbox {
 		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
 		$json->type = 'OrderedCollectionPage';
 		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/inbox', $user->get__id() ) ); // phpcs:ignore
-
 		$json->totalItems = 0; // phpcs:ignore
-
 		$json->orderedItems = array(); // phpcs:ignore
-
 		$json->first = $json->partOf; // phpcs:ignore
 
 		// filter output
@@ -155,37 +152,10 @@ class Inbox {
 		$data     = $request->get_json_params();
 		$activity = Activity::init_from_array( $data );
 		$type     = $request->get_param( 'type' );
-		$users    = self::get_recipients( $data );
+		$type     = \strtolower( $type );
 
-		if ( ! $users ) {
-			return new WP_Error(
-				'rest_invalid_param',
-				\__( 'No recipients found', 'activitypub' ),
-				array(
-					'status' => 400,
-					'params' => array(
-						'to' => \__( 'Please check/validate "to" field', 'activitypub' ),
-						'bto' => \__( 'Please check/validate "bto" field', 'activitypub' ),
-						'cc' => \__( 'Please check/validate "cc" field', 'activitypub' ),
-						'bcc' => \__( 'Please check/validate "bcc" field', 'activitypub' ),
-						'audience' => \__( 'Please check/validate "audience" field', 'activitypub' ),
-					),
-				)
-			);
-		}
-
-		foreach ( $users as $user ) {
-			$user = User_Collection::get_by_various( $user );
-
-			if ( is_wp_error( $user ) ) {
-				continue;
-			}
-
-			$type = \strtolower( $type );
-
-			\do_action( 'activitypub_inbox', $data, $user->ID, $type, $activity );
-			\do_action( "activitypub_inbox_{$type}", $data, $user->ID, $activity );
-		}
+		\do_action( 'activitypub_inbox', $data, null, $type, $activity );
+		\do_action( "activitypub_inbox_{$type}", $data, null, $activity );
 
 		$rest_response = new WP_REST_Response( array(), 202 );
 		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );

@@ -25,6 +25,11 @@ class Follow {
 	 * @param int   $user_id  The user ID
 	 */
 	public static function handle_follow( $activity, $user_id ) {
+		if ( ! $user_id ) {
+			$user    = Users::get_by_resource( $activity['object'] );
+			$user_id = $user->get__id();
+		}
+
 		// save follower
 		$follower = Followers::add_follower( $user_id, $activity['actor'] );
 

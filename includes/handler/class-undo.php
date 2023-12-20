@@ -21,6 +21,7 @@ class Undo {
 	 * @param int   $user_id  The ID of the ID of the WordPress User
 	 */
 	public static function handle_undo( $activity, $user_id ) {
+		// @todo get ID from activity
 		if (
 			isset( $activity['object']['type'] ) &&
 			'Follow' === $activity['object']['type']
