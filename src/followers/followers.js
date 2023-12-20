@@ -106,7 +106,13 @@ function Follower( { name, icon, url, preferredUsername, followLinks = true } ) 
 	}
 	return (
 		<ExternalLink className="activitypub-link" href={ url } title={ handle } { ...extraProps }>
-			<img width="40" height="40" src={ icon.url } class="avatar activitypub-avatar" />
+			<img
+				width="40"
+				height="40"
+				src={ icon.url }
+				class="avatar activitypub-avatar"
+				alt={ name }
+			/>
 			<span class="activitypub-actor">
 				<strong className="activitypub-name">{ name }</strong>
 				<span class="sep">/</span>

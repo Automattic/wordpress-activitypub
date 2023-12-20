@@ -127,8 +127,7 @@ class Shortcodes {
 		// Strip out any remaining tags.
 		$excerpt = \wp_strip_all_tags( $excerpt );
 
-		/** This filter is documented in wp-includes/formatting.php */
-		$excerpt_more = \apply_filters( 'excerpt_more', ' [...]' );
+		$excerpt_more = \apply_filters( 'activitypub_excerpt_more', ' [&hellip;]' );
 		$excerpt_more_len = strlen( $excerpt_more );
 
 		// We now have a excerpt, but we need to check it's length, it may be longer than we want for two reasons:
@@ -390,7 +389,8 @@ class Shortcodes {
 			return '';
 		}
 
-		$name = \get_the_author_meta( 'display_name', $item->post_author );
+		$author_id = \get_post_field( 'post_author', $item->ID );
+		$name = \get_the_author_meta( 'display_name', $author_id );
 
 		if ( ! $name ) {
 			return '';
@@ -415,7 +415,8 @@ class Shortcodes {
 			return '';
 		}
 
-		$url = \get_the_author_meta( 'user_url', $item->post_author );
+		$author_id = \get_post_field( 'post_author', $item->ID );
+		$url = \get_the_author_meta( 'user_url', $author_id );
 
 		if ( ! $url ) {
 			return '';

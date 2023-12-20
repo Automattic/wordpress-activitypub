@@ -39,11 +39,6 @@ class Health_Check {
 			'test'  => array( self::class, 'test_webfinger' ),
 		);
 
-		$tests['direct']['activitypub_test_system_cron'] = array(
-			'label' => __( 'System Cron Test', 'activitypub' ),
-			'test'  => array( self::class, 'test_system_cron' ),
-		);
-
 		return $tests;
 	}
 

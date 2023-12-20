@@ -55,7 +55,7 @@ class Test_Activitypub_Signature_Verification extends WP_UnitTestCase {
 	public function test_rest_activity_signature() {
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
-			function( $json, $actor ) {
+			function ( $json, $actor ) {
 				$user = Activitypub\Collection\Users::get_by_id( 1 );
 				$public_key = Activitypub\Signature::get_public_key_for( $user->get__id() );
 				// return ActivityPub Profile with signature

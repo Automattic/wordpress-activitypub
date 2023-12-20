@@ -2,9 +2,11 @@
 namespace Activitypub;
 
 use WP_Error;
+use WP_Comment_Query;
 use Activitypub\Http;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Users;
 
 /**
  * Returns the ActivityPub default JSON-context
@@ -278,6 +280,16 @@ function is_activitypub_request() {
 		return false;
 	}
 
+	// Check if the current post type supports ActivityPub.
+	if ( \is_singular() ) {
+		$queried_object = \get_queried_object();
+		$post_type      = \get_post_type( $queried_object );
+
+		if ( ! \post_type_supports( $post_type, 'activitypub' ) ) {
+			return false;
+		}
+	}
+
 	// One can trigger an ActivityPub request by adding ?activitypub to the URL.
 	// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.VariableRedeclaration
 	global $wp_query;
@@ -473,4 +485,253 @@ function is_json( $data ) {
  */
 function is_blog_public() {
 	return (bool) apply_filters( 'activitypub_is_blog_public', \get_option( 'blog_public', 1 ) );
+}
+
+/**
+ * Sanitize a URL
+ *
+ * @param string $value The URL to sanitize
+ *
+ * @return string|null The sanitized URL or null if invalid
+ */
+function sanitize_url( $value ) {
+	if ( filter_var( $value, FILTER_VALIDATE_URL ) === false ) {
+		return null;
+	}
+
+	return esc_url_raw( $value );
+}
+
+/**
+ * Extract recipient URLs from Activity object
+ *
+ * @param array $data
+ *
+ * @return array The list of user URLs
+ */
+function extract_recipients_from_activity( $data ) {
+	$recipient_items = array();
+
+	foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
+		if ( array_key_exists( $i, $data ) ) {
+			if ( is_array( $data[ $i ] ) ) {
+				$recipient = $data[ $i ];
+			} else {
+				$recipient = array( $data[ $i ] );
+			}
+			$recipient_items = array_merge( $recipient_items, $recipient );
+		}
+
+		if ( is_array( $data['object'] ) && array_key_exists( $i, $data['object'] ) ) {
+			if ( is_array( $data['object'][ $i ] ) ) {
+				$recipient = $data['object'][ $i ];
+			} else {
+				$recipient = array( $data['object'][ $i ] );
+			}
+			$recipient_items = array_merge( $recipient_items, $recipient );
+		}
+	}
+
+	$recipients = array();
+
+	// flatten array
+	foreach ( $recipient_items as $recipient ) {
+		if ( is_array( $recipient ) ) {
+			// check if recipient is an object
+			if ( array_key_exists( 'id', $recipient ) ) {
+				$recipients[] = $recipient['id'];
+			}
+		} else {
+			$recipients[] = $recipient;
+		}
+	}
+
+	return array_unique( $recipients );
+}
+
+/**
+ * Check if passed Activity is Public
+ *
+ * @param array $data The Activity object as array
+ *
+ * @return boolean True if public, false if not
+ */
+function is_activity_public( $data ) {
+	$recipients = extract_recipients_from_activity( $data );
+
+	return in_array( 'https://www.w3.org/ns/activitystreams#Public', $recipients, true );
+}
+
+/**
+ * Get active users based on a given duration
+ *
+ * @param int $duration The duration to check in month(s)
+ *
+ * @return int The number of active users
+ */
+function get_active_users( $duration = 1 ) {
+
+	$duration = intval( $duration );
+	$transient_key = sprintf( 'monthly_active_users_%d', $duration );
+	$count = get_transient( $transient_key );
+
+	if ( false === $count ) {
+		global $wpdb;
+		$query = "SELECT COUNT( DISTINCT post_author ) FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND post_date <= DATE_SUB( NOW(), INTERVAL %d MONTH )";
+		$query = $wpdb->prepare( $query, $duration );
+		$count = $wpdb->get_var( $query ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+
+		set_transient( $transient_key, $count, DAY_IN_SECONDS );
+	}
+
+	// if 0 authors where active
+	if ( 0 === $count ) {
+		return 0;
+	}
+
+	// if single user mode
+	if ( is_single_user() ) {
+		return 1;
+	}
+
+	// if blog user is disabled
+	if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
+		return $count;
+	}
+
+	// also count blog user
+	return $count + 1;
+}
+
+/**
+ * Get the total number of users
+ *
+ * @return int The total number of users
+ */
+function get_total_users() {
+	// if single user mode
+	if ( is_single_user() ) {
+		return 1;
+	}
+
+	$users = \get_users(
+		array(
+			'capability__in' => array( 'publish_posts' ),
+		)
+	);
+
+	if ( is_array( $users ) ) {
+		$users = count( $users );
+	} else {
+		$users = 1;
+	}
+
+	// if blog user is disabled
+	if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
+		return $users;
+	}
+
+	return $users + 1;
+}
+
+/**
+ * Examine a comment ID and look up an existing comment it represents.
+ *
+ * @param string $id ActivityPub object ID (usually a URL) to check.
+ *
+ * @return int|boolean Comment ID, or false on failure.
+ */
+function object_id_to_comment( $id ) {
+	$comment_query = new WP_Comment_Query(
+		array(
+			'meta_key'   => 'source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			'meta_value' => $id,         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+		)
+	);
+
+	if ( ! $comment_query->comments ) {
+		return false;
+	}
+
+	if ( count( $comment_query->comments ) > 1 ) {
+		return false;
+	}
+
+	return $comment_query->comments[0];
+}
+
+/**
+ * Verify if URL is a local comment,
+ * Or if it is a previously received remote comment
+ * (For threading comments locally)
+ *
+ * @param string $url The URL to check.
+ *
+ * @return int comment_ID or null if not found
+ */
+function url_to_commentid( $url ) {
+	if ( ! $url || ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
+		return null;
+	}
+
+	$args = array(
+		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		'meta_query' => array(
+			'relation' => 'OR',
+			array(
+				'key' => 'source_url',
+				'value' => $url,
+			),
+			array(
+				'key' => 'source_id',
+				'value' => $url,
+			),
+		),
+	);
+
+	$query = new \WP_Comment_Query();
+	$comments = $query->query( $args );
+
+	if ( $comments && is_array( $comments ) ) {
+		return $comments[0]->comment_ID;
+	}
+
+	return null;
+}
+
+/**
+ * Get the URI of an ActivityPub object
+ *
+ * @param array $object The ActivityPub object
+ *
+ * @return string The URI of the ActivityPub object
+ */
+function object_to_uri( $object ) {
+	// check if it is already simple
+	if ( ! $object || is_string( $object ) ) {
+		return $object;
+	}
+
+	// check if it is a list, then take first item
+	// this plugin does not support collections
+	if ( array_is_list( $object ) ) {
+		$object = $object[0];
+	}
+
+	// check if it is simplified now
+	if ( is_string( $object ) ) {
+		return $object;
+	}
+
+	// return part of Object that makes most sense
+	switch ( $object['type'] ) {
+		case 'Link':
+			$object = $object['href'];
+			break;
+		default:
+			$object = $object['id'];
+			break;
+	}
+
+	return $object;
 }

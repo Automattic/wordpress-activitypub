@@ -72,7 +72,7 @@ class Webfinger {
 		$params['resource'] = array(
 			'required' => true,
 			'type' => 'string',
-			'pattern' => '^acct:(.+)@(.+)$',
+			'pattern' => '^(acct:)|^(https?://)(.+)$',
 		);
 
 		return $params;
@@ -112,6 +112,12 @@ class Webfinger {
 				),
 			),
 		);
+
+		if ( 'Group' === $user->get_type() ) {
+			$profile['links'][0]['properties'] = array(
+				'https://www.w3.org/ns/activitystreams#type' => 'Group',
+			);
+		}
 
 		return $profile;
 	}
