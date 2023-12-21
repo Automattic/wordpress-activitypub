@@ -38,6 +38,15 @@ class Application_User extends Blog_User {
 		return get_rest_url_by_path( 'application' );
 	}
 
+	/**
+	 * Returns the User-URL with @-Prefix for the username.
+	 *
+	 * @return string The User-URL with @-Prefix for the username.
+	 */
+	public function get_alternate_url() {
+		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() );
+	}
+
 	public function get_name() {
 		return 'application';
 	}
@@ -68,5 +77,9 @@ class Application_User extends Blog_User {
 
 	public function get_indexable() {
 		return false;
+	}
+
+	public function get_type() {
+		return $this->type;
 	}
 }
