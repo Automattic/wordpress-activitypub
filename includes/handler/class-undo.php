@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub\Handler;
 
+use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 
 /**
@@ -13,9 +14,7 @@ class Undo {
 	public static function init() {
 		\add_action(
 			'activitypub_inbox_undo',
-			array( self::class, 'handle_undo' ),
-			10,
-			2
+			array( self::class, 'handle_undo' )
 		);
 	}
 
@@ -25,20 +24,15 @@ class Undo {
 	 * @param array $activity The JSON "Undo" Activity
 	 * @param int   $user_id  The ID of the ID of the WordPress User
 	 */
-	public static function handle_undo( $activity, $user_id ) {
+	public static function handle_undo( $activity ) {
 		if (
 			isset( $activity['object']['type'] ) &&
-			'Follow' === $activity['object']['type']
+			'Follow' === $activity['object']['type'] &&
+			isset( $activity['object']['object'] ) &&
+			filter_var( $activity['object']['object'], FILTER_VALIDATE_URL )
 		) {
-			// If user ID is not set, try to get it from the activity
-			if (
-				! $user_id &&
-				isset( $activity['object']['object'] ) &&
-				filter_var( $activity['object']['object'], FILTER_VALIDATE_URL )
-			) {
-				$user    = Users::get_by_resource( $activity['object']['object'] );
-				$user_id = $user->get__id();
-			}
+			$user    = Users::get_by_resource( $activity['object']['object'] );
+			$user_id = $user->get__id();
 
 			if ( ! $user_id ) {
 				// If we can not find a user,

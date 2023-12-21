@@ -16,9 +16,7 @@ class Follow {
 	public static function init() {
 		\add_action(
 			'activitypub_inbox_follow',
-			array( self::class, 'handle_follow' ),
-			10,
-			2
+			array( self::class, 'handle_follow' )
 		);
 
 		\add_action(
@@ -35,11 +33,9 @@ class Follow {
 	 * @param array $activity The activity object
 	 * @param int   $user_id  The user ID
 	 */
-	public static function handle_follow( $activity, $user_id ) {
-		if ( ! $user_id ) {
-			$user    = Users::get_by_resource( $activity['object'] );
-			$user_id = $user->get__id();
-		}
+	public static function handle_follow( $activity ) {
+		$user    = Users::get_by_resource( $activity['object'] );
+		$user_id = $user->get__id();
 
 		if ( ! $user_id ) {
 			// If we can not find a user,

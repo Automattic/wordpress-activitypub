@@ -226,6 +226,18 @@ class User extends Actor {
 		return get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $this->get__id() ) );
 	}
 
+	public function get_endpoints() {
+		$endpoints = null;
+
+		if ( ACTIVITYPUB_SHARED_INBOX_FEATURE ) {
+			$endpoints = array(
+				'sharedInbox' => get_rest_url_by_path( 'inbox' ),
+			);
+		}
+
+		return $endpoints;
+	}
+
 	/**
 	 * Extend the User-Output with Attachments.
 	 *

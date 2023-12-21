@@ -31,9 +31,7 @@ class Delete {
 		// side effect
 		\add_action(
 			'activitypub_delete_actor_interactions',
-			array( self::class, 'delete_interactions' ),
-			10,
-			1
+			array( self::class, 'delete_interactions' )
 		);
 	}
 
