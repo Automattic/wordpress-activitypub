@@ -112,6 +112,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Added: URL support for WebFinger
 * Added: Make Post-Template filterable
 * Added: CSS class for ActivityPub comments to allow custom designs
+* Added: FEP-2677: Identifying the Application Actor
 * Improved: WebFinger endpoints
 
 = 1.3.0 =
