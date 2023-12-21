@@ -94,10 +94,13 @@ class Webfinger {
 
 		$aliases = array(
 			$user->get_url(),
+			$user->get_alternate_url(),
 		);
 
+		$aliases = array_unique( $aliases );
+
 		$profile = array(
-			'subject' => $resource,
+			'subject' => sprintf( 'acct:%s', $user->get_resource() ),
 			'aliases' => array_values( array_unique( $aliases ) ),
 			'links'   => array(
 				array(
