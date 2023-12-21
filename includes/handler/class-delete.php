@@ -15,11 +15,26 @@ class Delete {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 2 );
+		\add_action(
+			'activitypub_inbox_delete',
+			array( self::class, 'handle_delete' )
+		);
+
 		// defer signature verification for `Delete` requests.
-		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
+		\add_filter(
+			'activitypub_defer_signature_verification',
+			array( self::class, 'defer_signature_verification' ),
+			10,
+			2
+		);
+
 		// side effect
-		\add_action( 'activitypub_delete_actor_interactions', array( self::class, 'delete_interactions' ), 10, 1 );
+		\add_action(
+			'activitypub_delete_actor_interactions',
+			array( self::class, 'delete_interactions' ),
+			10,
+			1
+		);
 	}
 
 	/**
@@ -28,7 +43,7 @@ class Delete {
 	 * @param array $activity The delete activity.
 	 * @param int   $user_id  The ID of the user performing the delete activity.
 	 */
-	public static function handle_delete( $activity, $user_id ) {
+	public static function handle_delete( $activity ) {
 		$object_type = isset( $activity['object']['type'] ) ? $activity['object']['type'] : '';
 
 		switch ( $object_type ) {

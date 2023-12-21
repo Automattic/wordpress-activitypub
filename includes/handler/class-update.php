@@ -14,7 +14,12 @@ class Update {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_update', array( self::class, 'handle_update' ), 10, 2 );
+		\add_action(
+			'activitypub_inbox_update',
+			array( self::class, 'handle_update' ),
+			10,
+			2
+		);
 	}
 
 	/**
