@@ -100,12 +100,12 @@ class Blog_User extends User {
 	}
 
 	/**
-	 * Returns the User-URL with @-Prefix for the username.
+	 * Get blog's homepage URL.
 	 *
-	 * @return string The User-URL with @-Prefix for the username.
+	 * @return string The User-Url.
 	 */
-	public function get_at_url() {
-		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() );
+	public function get_alternate_url() {
+		return \esc_url( \trailingslashit( get_home_url() ) );
 	}
 
 	/**

@@ -3,6 +3,7 @@ namespace Activitypub\Integration;
 
 use function Activitypub\get_total_users;
 use function Activitypub\get_active_users;
+use function Activitypub\get_rest_url_by_path;
 
 /**
  * Compatibility with the NodeInfo plugin
@@ -14,8 +15,10 @@ class Nodeinfo {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_filter( 'nodeinfo_data', array( self::class, 'add_nodeinfo_discovery' ), 10, 2 );
-		\add_filter( 'nodeinfo2_data', array( self::class, 'add_nodeinfo2_discovery' ), 10 );
+		\add_filter( 'nodeinfo_data', array( self::class, 'add_nodeinfo_data' ), 10, 2 );
+		\add_filter( 'nodeinfo2_data', array( self::class, 'add_nodeinfo2_data' ), 10 );
+
+		\add_filter( 'wellknown_nodeinfo_data', array( self::class, 'add_wellknown_nodeinfo_data' ), 10, 2 );
 	}
 
 	/**
@@ -26,7 +29,7 @@ class Nodeinfo {
 	 *
 	 * @return array The extended array
 	 */
-	public static function add_nodeinfo_discovery( $nodeinfo, $version ) {
+	public static function nodeinfo_data( $nodeinfo, $version ) {
 		if ( $version >= '2.0' ) {
 			$nodeinfo['protocols'][] = 'activitypub';
 		} else {
@@ -50,7 +53,7 @@ class Nodeinfo {
 	 *
 	 * @return array The extended array
 	 */
-	public static function add_nodeinfo2_discovery( $nodeinfo ) {
+	public static function nodeinfo2_data( $nodeinfo ) {
 		$nodeinfo['protocols'][] = 'activitypub';
 
 		$nodeinfo['usage']['users'] = array(
@@ -60,5 +63,21 @@ class Nodeinfo {
 		);
 
 		return $nodeinfo;
+	}
+
+	/**
+	 * Extend the well-known nodeinfo data
+	 *
+	 * @param array $data The well-known nodeinfo data
+	 *
+	 * @return array The extended array
+	 */
+	public static function add_wellknown_nodeinfo_data( $data ) {
+		$data['links'][] = array(
+			'rel' => 'https://www.w3.org/ns/activitystreams#Application',
+			'href' => get_rest_url_by_path( 'application' ),
+		);
+
+		return $data;
 	}
 }
