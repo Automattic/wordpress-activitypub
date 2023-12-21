@@ -106,8 +106,8 @@ class Nodeinfo {
 		);
 
 		$nodeinfo['metadata'] = array(
-			'nodeName' =>  \get_bloginfo( 'name' ),
-			'nodeDescription' =>  \get_bloginfo( 'description' ),
+			'nodeName' => \get_bloginfo( 'name' ),
+			'nodeDescription' => \get_bloginfo( 'description' ),
 			'nodeIcon' => \get_site_icon_url(),
 		);
 
