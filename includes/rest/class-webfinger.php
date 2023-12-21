@@ -94,10 +94,13 @@ class Webfinger {
 
 		$aliases = array(
 			$user->get_url(),
+			$user->get_alternate_url(),
 		);
 
+		$aliases = array_unique( $aliases );
+
 		$profile = array(
-			'subject' => $resource,
+			'subject' => sprintf( 'acct:%s', $user->get_resource() ),
 			'aliases' => array_values( array_unique( $aliases ) ),
 			'links'   => array(
 				array(
@@ -113,9 +116,9 @@ class Webfinger {
 			),
 		);
 
-		if ( 'Group' === $user->get_type() ) {
+		if ( 'Person' !== $user->get_type() ) {
 			$profile['links'][0]['properties'] = array(
-				'https://www.w3.org/ns/activitystreams#type' => 'Group',
+				'https://www.w3.org/ns/activitystreams#type' => $user->get_type(),
 			);
 		}
 

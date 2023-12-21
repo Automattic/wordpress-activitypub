@@ -169,6 +169,10 @@ class Nodeinfo {
 				'rel' => 'http://nodeinfo.diaspora.software/ns/schema/2.0',
 				'href' => get_rest_url_by_path( 'nodeinfo' ),
 			),
+			array(
+				'rel' => 'https://www.w3.org/ns/activitystreams#Application',
+				'href' => get_rest_url_by_path( 'application' ),
+			),
 		);
 
 		return new \WP_REST_Response( $discovery, 200 );

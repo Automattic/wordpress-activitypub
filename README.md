@@ -111,7 +111,9 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Fixed: Normalize attributes that can have mixed value types
 * Added: URL support for WebFinger
 * Added: Make Post-Template filterable
-* Addes: CSS class for ActivityPub comments to allow custom designs
+* Added: CSS class for ActivityPub comments to allow custom designs
+* Added: FEP-2677: Identifying the Application Actor
+* Improved: WebFinger endpoints
 
 ### 1.3.0 ###
 
