@@ -5,6 +5,10 @@ namespace Activitypub;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Post;
+use Activitypub\Activity\Activity;
+
+use function Activitypub\get_private_key_for;
+use function Activitypub\is_user_type_disabled;
 
 /**
  * ActivityPub Scheduler Class
@@ -12,6 +16,7 @@ use Activitypub\Transformer\Post;
  * @author Matthias Pfefferle
  */
 class Scheduler {
+
 	/**
 	 * Initialize the class, registering WordPress hooks
 	 */
@@ -22,6 +27,24 @@ class Scheduler {
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
 
 		\add_action( 'admin_init', array( self::class, 'schedule_migration' ) );
+
+		// profile updates for blog options
+		if ( ! is_user_type_disabled( 'blog' ) ) {
+			\add_action( 'update_option_site_icon', array( self::class, 'blog_user_update' ) );
+			\add_action( 'update_option_blogdescription', array( self::class, 'blog_user_update' ) );
+			\add_action( 'update_option_blogname', array( self::class, 'blog_user_update' ) );
+			\add_filter( 'pre_set_theme_mod_custom_logo', array( self::class, 'blog_user_update' ) );
+			\add_filter( 'pre_set_theme_mod_header_image', array( self::class, 'blog_user_update' ) );
+		}
+
+		// profile updates for user options
+		if ( ! is_user_type_disabled( 'user' ) ) {
+			\add_action( 'updated_user_meta', array( self::class, 'user_update' ), 10, 3 );
+			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
+
+			\add_action( 'delete_user', array( self::class, 'schedule_profile_delete' ), 10, 3 );
+			\add_action( 'deleted_user', array( self::class, 'schedule_user_delete' ), 10, 3 );
+		}
 	}
 
 	/**
@@ -164,6 +187,88 @@ class Scheduler {
 	public static function schedule_migration() {
 		if ( ! \wp_next_scheduled( 'activitypub_schedule_migration' ) && ! Migration::is_latest_version() ) {
 			\wp_schedule_single_event( \time(), 'activitypub_schedule_migration' );
+		}
+	}
+
+	/**
+	 * Send a profile update when relevant user meta is updated.
+	 *
+	 * @param  int    $meta_id Meta ID being updated.
+	 * @param  int    $user_id User ID being updated.
+	 * @param  string $meta_key Meta key being updated.
+	 * @return void
+	 */
+	public static function user_update( $meta_id, $user_id, $meta_key ) {
+		// don't bother if the user can't publish
+		if ( ! \user_can( $user_id, 'publish_posts' ) ) {
+			return;
+		}
+		// the user meta fields that affect a profile.
+		$fields = array(
+			'activitypub_user_description',
+			'description',
+			'user_url',
+			'display_name',
+		);
+		if ( in_array( $meta_key, $fields, true ) ) {
+			self::schedule_profile_update( $user_id );
+		}
+	}
+
+	/**
+	 * Theme mods only have a dynamic filter so we fudge it like this.
+	 * @param  mixed $value
+	 * @return mixed
+	 */
+	public static function blog_user_update( $value = null ) {
+		self::schedule_profile_update( 0 );
+		return $value;
+	}
+
+	/**
+	 * Send a profile update to all followers. Gets hooked into all relevant options/meta etc.
+	 * @param int $user_id  The user ID to update (Could be 0 for Blog-User).
+	 */
+	public static function schedule_profile_update( $user_id ) {
+		\wp_schedule_single_event(
+			\time(),
+			'activitypub_send_update_profile_activity',
+			array( $user_id )
+		);
+	}
+
+	/**
+	 * Send an Actor Delete activity.
+	 * @param int $user_id  The user ID to Delete.
+	 */
+	public static function schedule_profile_delete( $user_id ) {
+		$user = get_userdata( $user_id );
+		if ( $user->has_cap( 'publish_posts' ) ) {
+			$temp_private_key = get_private_key_for( $user->ID );
+			add_option( 'activitypub_temp_sig_' . $user->ID, $temp_private_key );
+
+			$author_url = \get_author_posts_url( $user->ID );
+
+			$activity = new Activity();
+			$activity->set_id( $author_url . '#delete' );
+			$activity->set_type( 'Delete' );
+			$activity->set_actor( $author_url );
+			$activity->set_object( $author_url );
+			$activity->set_to( [ 'https://www.w3.org/ns/activitystreams#Public' ] );
+
+			\wp_schedule_single_event( \time(), 'activitypub_send_server_activity', array( $activity, $user_id ) );
+		}
+	}
+
+	/**
+	 * Delete actor related options.
+	 * @param int $user_id  The deleted user ID.
+	 */
+	public static function schedule_user_delete( $user_id ) {
+		$user = get_userdata( $user_id );
+		error_log( 'schedule_user_delete: ' . print_r( $user, true ) );
+		if ( $user->has_cap( 'publish_posts' ) ) {
+			delete_option( 'activitypub_temp_sig_' . $user_id );
 		}
 	}
 }
