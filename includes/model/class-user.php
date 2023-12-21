@@ -135,8 +135,8 @@ class User extends Actor {
 	 *
 	 * @return string The User-URL with @-Prefix for the username.
 	 */
-	public function get_at_url() {
-		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_username() );
+	public function get_alternate_url() {
+		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() );
 	}
 
 	public function get_preferred_username() {

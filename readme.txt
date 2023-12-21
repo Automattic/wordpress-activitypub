@@ -68,10 +68,10 @@ Implemented:
 * share posts
 * receive comments/reactions
 * signature verification
+* threaded comments support
 
 To implement:
 
-* threaded comments support
 * replace shortcodes with blocks for layout
 
 = What is "ActivityPub for WordPress" =
@@ -104,6 +104,16 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 == Changelog ==
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
+
+= 2.0.0 =
+
+* Removed: Deprecated Classes
+* Fixed: Normalize attributes that can have mixed value types
+* Added: URL support for WebFinger
+* Added: Make Post-Template filterable
+* Added: CSS class for ActivityPub comments to allow custom designs
+* Added: FEP-2677: Identifying the Application Actor
+* Improved: WebFinger endpoints
 
 = 1.3.0 =
 

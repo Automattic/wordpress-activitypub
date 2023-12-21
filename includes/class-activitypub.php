@@ -39,6 +39,8 @@ class Activitypub {
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 
+		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
+
 		// register several post_types
 		self::register_post_types();
 	}
@@ -409,5 +411,23 @@ class Activitypub {
 		);
 
 		do_action( 'activitypub_after_register_post_type' );
+	}
+
+	/**
+	 * Filters the CSS classes to add an ActivityPub class.
+	 *
+	 * @param string[] $classes    An array of comment classes.
+	 * @param string[] $css_class  An array of additional classes added to the list.
+	 * @param string   $comment_id The comment ID as a numeric string.
+	 *
+	 * @return string[] An array of classes.
+	 */
+	public static function comment_class( $classes, $css_class, $comment_id ) {
+		// check if ActivityPub comment
+		if ( 'activitypub' === get_comment_meta( $comment_id, 'protocol', true ) ) {
+			$classes[] = 'activitypub-comment';
+		}
+
+		return $classes;
 	}
 }
