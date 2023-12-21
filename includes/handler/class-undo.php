@@ -31,14 +31,15 @@ class Undo {
 			isset( $activity['object']['object'] ) &&
 			filter_var( $activity['object']['object'], FILTER_VALIDATE_URL )
 		) {
-			$user    = Users::get_by_resource( $activity['object']['object'] );
-			$user_id = $user->get__id();
+			$user = Users::get_by_resource( $activity['object']['object'] );
 
-			if ( ! $user_id ) {
+			if ( ! $user || is_wp_error( $user ) ) {
 				// If we can not find a user,
-				// we can not initiate an undo follow process
+				// we can not initiate a follow process
 				return;
 			}
+
+			$user_id = $user->get__id();
 
 			Followers::remove_follower( $user_id, $activity['actor'] );
 		}
