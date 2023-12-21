@@ -29,7 +29,7 @@ class Nodeinfo {
 	 *
 	 * @return array The extended array
 	 */
-	public static function nodeinfo_data( $nodeinfo, $version ) {
+	public static function add_nodeinfo_data( $nodeinfo, $version ) {
 		if ( $version >= '2.0' ) {
 			$nodeinfo['protocols'][] = 'activitypub';
 		} else {
@@ -53,7 +53,7 @@ class Nodeinfo {
 	 *
 	 * @return array The extended array
 	 */
-	public static function nodeinfo2_data( $nodeinfo ) {
+	public static function add_nodeinfo2_data( $nodeinfo ) {
 		$nodeinfo['protocols'][] = 'activitypub';
 
 		$nodeinfo['usage']['users'] = array(
