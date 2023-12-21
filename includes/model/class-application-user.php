@@ -78,4 +78,8 @@ class Application_User extends Blog_User {
 	public function get_indexable() {
 		return false;
 	}
+
+	public function get_type() {
+		return $this->type;
+	}
 }

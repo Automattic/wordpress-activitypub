@@ -116,9 +116,9 @@ class Webfinger {
 			),
 		);
 
-		if ( 'Group' === $user->get_type() ) {
+		if ( 'Person' !== $user->get_type() ) {
 			$profile['links'][0]['properties'] = array(
-				'https://www.w3.org/ns/activitystreams#type' => 'Group',
+				'https://www.w3.org/ns/activitystreams#type' => $user->get_type(),
 			);
 		}
 
