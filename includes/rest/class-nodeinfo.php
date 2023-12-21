@@ -105,6 +105,12 @@ class Nodeinfo {
 			'outbound' => array(),
 		);
 
+		$nodeinfo['metadata'] = array(
+			'nodeName' => \get_bloginfo( 'name' ),
+			'nodeDescription' => \get_bloginfo( 'description' ),
+			'nodeIcon' => \get_site_icon_url(),
+		);
+
 		return new WP_REST_Response( $nodeinfo, 200 );
 	}
 
