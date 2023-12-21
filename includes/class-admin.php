@@ -20,11 +20,7 @@ class Admin {
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
 		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
-
-		self::$admin_notices = self::get_admin_notices();
-		if ( ! empty( self::$admin_notices ) ) {
-			\add_action( 'admin_notices', array( self::class, 'show_admin_notices' ) );
-		}
+		\add_action( 'admin_notices', array( self::class, 'admin_notices' ) );
 
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
@@ -54,32 +50,27 @@ class Admin {
 	}
 
 	/**
-	 * Collect admin menu notices about configuration problems or conflicts
+	 * Display admin menu notices about configuration problems or conflicts
 	 */
-	public static function get_admin_notices() {
-		$admin_notices = array();
-
+	public static function admin_notices() {
 		$permalink_structure = \get_option( 'permalink_structure' );
 		if ( empty( $permalink_structure ) ) {
-			array_push( $admin_notices, 'You are using the ActivityPub plugin without setting a permalink structure.  This will prevent ActivityPub from working.  Please set a permalink structure.' );
+			$admin_notice = \__( 'You are using the ActivityPub plugin without setting a permalink structure.  This will prevent ActivityPub from working.  Please set a permalink structure.', 'activitypub' );
+			self::show_admin_notice( $admin_notice, 'error' );
 		}
-
-		return $admin_notices;
 	}
 
 	/**
-	 * Display admin menu notices about configuration problems or conflicts
+	 * Display one admin menu notice about configuration problems or conflicts
 	 */
-	public static function show_admin_notices() {
-		foreach ( self::$admin_notices as $admin_notice ) {
-			?>
+	private static function show_admin_notice( $admin_notice, $level ) {
+		?>
 
-			<div class="notice notice-error">
-				<p><?php echo wp_kses( $admin_notice, 'data' ); ?></p>
-			</div>
+		<div class="notice notice-<?php echo wp_kses( $level, 'data' ); ?>">
+			<p><?php echo wp_kses( $admin_notice, 'data' ); ?></p>
+		</div>
 
-			<?php
-		}
+		<?php
 	}
 
 	/**

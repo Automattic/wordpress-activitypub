@@ -32,22 +32,18 @@ class Blocks {
 	}
 
 	public static function register_blocks() {
-		if ( ! \WP_Block_Type_Registry::get_instance()->is_registered( 'activitypub/followers' ) ) {
-			\register_block_type_from_metadata(
-				ACTIVITYPUB_PLUGIN_DIR . '/build/followers',
-				array(
-					'render_callback' => array( self::class, 'render_follower_block' ),
-				)
-			);
-		}
-		if ( ! \WP_Block_Type_Registry::get_instance()->is_registered( 'activitypub/follow-me' ) ) {
-			\register_block_type_from_metadata(
-				ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me',
-				array(
-					'render_callback' => array( self::class, 'render_follow_me_block' ),
-				)
-			);
-		}
+		\register_block_type_from_metadata(
+			ACTIVITYPUB_PLUGIN_DIR . '/build/followers',
+			array(
+				'render_callback' => array( self::class, 'render_follower_block' ),
+			)
+		);
+		\register_block_type_from_metadata(
+			ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me',
+			array(
+				'render_callback' => array( self::class, 'render_follow_me_block' ),
+			)
+		);
 	}
 
 	private static function get_user_id( $user_string ) {
