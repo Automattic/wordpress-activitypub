@@ -50,23 +50,30 @@ class Admin {
 	}
 
 	/**
-	 * Display admin menu notices about configuration problems or conflicts
+	 * Display admin menu notices about configuration problems or conflicts.
+	 *
+	 * @return void
 	 */
 	public static function admin_notices() {
 		$permalink_structure = \get_option( 'permalink_structure' );
 		if ( empty( $permalink_structure ) ) {
-			$admin_notice = \__( 'You are using the ActivityPub plugin without setting a permalink structure.  This will prevent ActivityPub from working.  Please set a permalink structure.', 'activitypub' );
+			$admin_notice = \__( 'You are using the ActivityPub plugin without setting a permalink structure. This will prevent ActivityPub from working.  Please set a permalink structure.', 'activitypub' );
 			self::show_admin_notice( $admin_notice, 'error' );
 		}
 	}
 
 	/**
-	 * Display one admin menu notice about configuration problems or conflicts
+	 * Display one admin menu notice about configuration problems or conflicts.
+	 *
+	 * @param string $admin_notice The notice to display.
+	 * @param string $level The level of the notice (error, warning, success, info).
+	 *
+	 * @return void
 	 */
 	private static function show_admin_notice( $admin_notice, $level ) {
 		?>
 
-		<div class="notice notice-<?php echo wp_kses( $level, 'data' ); ?>">
+		<div class="notice notice-<?php echo esc_attr( $level ); ?>">
 			<p><?php echo wp_kses( $admin_notice, 'data' ); ?></p>
 		</div>
 
