@@ -2,34 +2,16 @@
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 $post = \get_post();
 
-$object = \Activitypub\Transformer\Post::transform( $post )->to_object();
-$json = \array_merge( array( '@context' => \Activitypub\get_context() ), $object->to_array() );
-
-// filter output
-$json = \apply_filters( 'activitypub_json_post_array', $json );
+$post_object = \Activitypub\Transformer\Factory::get_transformer( $post )->to_object();
+$post_object->set_context( \Activitypub\get_context() );
 
 /*
  * Action triggerd prior to the ActivityPub profile being created and sent to the client
  */
 \do_action( 'activitypub_json_post_pre' );
 
-$options = 0;
-// JSON_PRETTY_PRINT added in PHP 5.4
-if ( \get_query_var( 'pretty' ) ) {
-	$options |= \JSON_PRETTY_PRINT; // phpcs:ignore
-}
-
-$options |= \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT;
-
-/*
- * Options to be passed to json_encode()
- *
- * @param int $options The current options flags
- */
-$options = \apply_filters( 'activitypub_json_post_options', $options );
-
 \header( 'Content-Type: application/activity+json' );
-echo \wp_json_encode( $json, $options );
+echo $post_object->to_json(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 /*
  * Action triggerd after the ActivityPub profile has been created and sent to the client

@@ -17,7 +17,7 @@ use function Activitypub\site_supports_blocks;
 /**
  * WordPress Post Transformer
  *
- * The Post Transformer is responsible for transforming a WP_Post object into different othe
+ * The Post Transformer is responsible for transforming a WP_Post object into different other
  * Object-Types.
  *
  * Currently supported are:
@@ -26,6 +26,26 @@ use function Activitypub\site_supports_blocks;
  */
 class Post extends Base {
 	/**
+	 * Returns the ID of the WordPress Post.
+	 *
+	 * @return int The ID of the WordPress Post
+	 */
+	public function get_wp_user_id() {
+		return $this->object->post_author;
+	}
+
+	/**
+	 * Change the User-ID of the WordPress Post.
+	 *
+	 * @return int The User-ID of the WordPress Post
+	 */
+	public function change_wp_user_id( $user_id ) {
+		$this->object->post_author = $user_id;
+
+		return $this;
+	}
+
+	/**
 	 * Transforms the WP_Post object to an ActivityPub Object
 	 *
 	 * @see \Activitypub\Activity\Base_Object
@@ -33,31 +53,25 @@ class Post extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
-		$wp_post = $this->object;
-		$object = new Base_Object();
+		$post = $this->object;
+		$object = parent::to_object();
 
-		$object->set_id( $this->get_id() );
-		$object->set_url( $this->get_url() );
-		$object->set_type( $this->get_object_type() );
-
-		$published = \strtotime( $wp_post->post_date_gmt );
+		$published = \strtotime( $post->post_date_gmt );
 
 		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', $published ) );
 
-		$updated = \strtotime( $wp_post->post_modified_gmt );
+		$updated = \strtotime( $post->post_modified_gmt );
 
 		if ( $updated > $published ) {
 			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', $updated ) );
 		}
 
-		$object->set_attributed_to( $this->get_attributed_to() );
-		$object->set_content( $this->get_content() );
 		$object->set_content_map(
 			array(
 				$this->get_locale() => $this->get_content(),
 			)
 		);
-		$path = sprintf( 'users/%d/followers', intval( $wp_post->post_author ) );
+		$path = sprintf( 'users/%d/followers', intval( $post->post_author ) );
 
 		$object->set_to(
 			array(
@@ -65,9 +79,6 @@ class Post extends Base {
 				get_rest_url_by_path( $path ),
 			)
 		);
-		$object->set_cc( $this->get_cc() );
-		$object->set_attachment( $this->get_attachments() );
-		$object->set_tag( $this->get_tags() );
 
 		return $object;
 	}
@@ -136,7 +147,7 @@ class Post extends Base {
 	 *
 	 * @return array The Attachments.
 	 */
-	protected function get_attachments() {
+	protected function get_attachment() {
 		// Once upon a time we only supported images, but we now support audio/video as well.
 		// We maintain the image-centric naming for backwards compatibility.
 		$max_media = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
@@ -305,7 +316,7 @@ class Post extends Base {
 				 */
 				$thumbnail = apply_filters(
 					'activitypub_get_image',
-					self::get_image( $id, $image_size ),
+					self::get_wordpress_attachment( $id, $image_size ),
 					$id,
 					$image_size
 				);
@@ -354,7 +365,7 @@ class Post extends Base {
 	 *
 	 * @return array|false Array of image data, or boolean false if no image is available.
 	 */
-	protected static function get_image( $id, $image_size = 'full' ) {
+	protected static function get_wordpress_attachment( $id, $image_size = 'full' ) {
 		/**
 		 * Hook into the image retrieval process. Before image retrieval.
 		 *
@@ -384,7 +395,7 @@ class Post extends Base {
 	 *
 	 * @return string The Object-Type.
 	 */
-	protected function get_object_type() {
+	protected function get_type() {
 		if ( 'wordpress-post-format' !== \get_option( 'activitypub_object_type', 'note' ) ) {
 			return \ucfirst( \get_option( 'activitypub_object_type', 'note' ) );
 		}
@@ -470,7 +481,7 @@ class Post extends Base {
 	 *
 	 * @return array The list of Tags.
 	 */
-	protected function get_tags() {
+	protected function get_tag() {
 		$tags = array();
 
 		$post_tags = \get_the_tags( $this->object->ID );

@@ -1,6 +1,9 @@
 <?php
 namespace Activitypub\Transformer;
 
+use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
+
 /**
  * WordPress Base Transformer
  *
@@ -33,7 +36,7 @@ abstract class Base {
 	 *
 	 * @param stdClass $object
 	 */
-	private function __construct( $object ) {
+	public function __construct( $object ) {
 		$this->object = $object;
 	}
 
@@ -42,14 +45,61 @@ abstract class Base {
 	 *
 	 * @return Activitypub\Activity\Base_Object
 	 */
-	abstract public function to_object();
+	public function to_object() {
+		$object = new Base_Object();
+
+		$vars = $object->get_object_var_keys();
+
+		foreach ( $vars as $var ) {
+			$getter = 'get_' . $var;
+
+			if ( method_exists( $this, $getter ) ) {
+				$value = call_user_func( array( $this, $getter ) );
+
+				if ( isset( $value ) ) {
+					$setter = 'set_' . $var;
+
+					call_user_func( array( $object, $setter ), $value );
+				}
+			}
+		}
+
+		return $object;
+	}
 
 	/**
-	 * Transform the ActivityPub Object into an Activity.
+	 * Transforms the ActivityPub Object to an Activity
 	 *
-	 * @param string $type The type of Activity to transform to.
+	 * @param string $type The Activity-Type.
 	 *
-	 * @return Activitypub\Activity\Activity
+	 * @return \Activitypub\Activity\Activity The Activity.
 	 */
-	abstract public function to_activity( $type );
+	public function to_activity( $type ) {
+		$object = $this->to_object();
+
+		$activity = new Activity();
+		$activity->set_type( $type );
+		$activity->set_object( $object );
+
+		// Use simple Object (only ID-URI) for Like and Announce
+		if ( in_array( $type, array( 'Like', 'Announce' ), true ) ) {
+			$activity->set_object( $object->get_id() );
+		}
+
+		return $activity;
+	}
+
+	/**
+	 * Returns the ID of the WordPress Object.
+	 *
+	 * @return int The ID of the WordPress Object
+	 */
+	abstract public function get_wp_user_id();
+
+	/**
+	 * Change the User-ID of the WordPress Post.
+	 *
+	 * @return int The User-ID of the WordPress Post
+	 */
+	abstract public function change_wp_user_id( $user_id );
 }
