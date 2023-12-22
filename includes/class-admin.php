@@ -10,8 +10,6 @@ use Activitypub\Model\Blog_User;
  * @author Matthias Pfefferle
  */
 class Admin {
-	private static $admin_notices = array();
-
 	/**
 	 * Initialize the class, registering WordPress hooks
 	 */
