@@ -75,7 +75,7 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$activity = $transformer->to_activity( 'Create' );
+		$activity = $transformer->to_activity( $type );
 
 		self::send_activity_to_inboxes( $activity, $user_id );
 	}
