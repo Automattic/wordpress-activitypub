@@ -671,9 +671,17 @@ class Base_Object {
 	 * @return string The JSON string.
 	 */
 	public function to_json() {
-		$array = $this->to_array();
+		$array   = $this->to_array();
+		$options = \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT;
 
-		return \wp_json_encode( $array, \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
+		/*
+		* Options to be passed to json_encode()
+		*
+		* @param int $options The current options flags
+		*/
+		$options = \apply_filters( 'activitypub_json_encode_options', $options );
+
+		return \wp_json_encode( $array, $options );
 	}
 
 	/**
