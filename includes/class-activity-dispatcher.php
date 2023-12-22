@@ -111,6 +111,7 @@ class Activity_Dispatcher {
 	 *
 	 * @param int $user_id The user ID to send an update for.
 	 *
+	 * @return void
 	 */
 	public static function send_profile_update( $user_id ) {
 		$user = Users::get_by_various( $user_id );
@@ -129,7 +130,7 @@ class Activity_Dispatcher {
 		$activity->set_to( 'https://www.w3.org/ns/activitystreams#Public' );
 
 		// send the update
-		self::send_activity_to_inboxes( $activity, $user->get__id() );
+		self::send_activity_to_inboxes( $activity, $user_id );
 	}
 
 	/**
@@ -141,7 +142,7 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	private static function send_activity_to_inboxes( $activity, $user_id ) {
-		$follower_inboxes  = Followers::get_inboxes( $user_id );
+		$follower_inboxes = Followers::get_inboxes( $user_id );
 
 		$mentioned_inboxes = array();
 		$cc = $activity->get_cc();
