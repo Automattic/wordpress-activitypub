@@ -15,7 +15,7 @@ class Webfinger {
 	/**
 	 * Returns a users WebFinger "resource"
 	 *
-	 * @param int $user_id
+	 * @param int $user_id The WordPress user id
 	 *
 	 * @return string The user-resource
 	 */
@@ -36,68 +36,65 @@ class Webfinger {
 	/**
 	 * Resolve a WebFinger resource
 	 *
-	 * @param string $resource The WebFinger resource
+	 * @param string $uri The WebFinger Resource
 	 *
 	 * @return string|WP_Error The URL or WP_Error
 	 */
-	public static function resolve( $resource ) {
-		if ( ! $resource ) {
-			return null;
+	public static function resolve( $uri ) {
+		$data = self::get_data( $uri );
+
+		if ( \is_wp_error( $data ) ) {
+			return $data;
 		}
 
-		if ( ! preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $resource, $m ) ) {
-			return null;
-		}
-
-		$transient_key = 'activitypub_resolve_' . ltrim( $resource, '@' );
-
-		$link = \get_transient( $transient_key );
-		if ( $link ) {
-			return $link;
-		}
-
-		$url = \add_query_arg( 'resource', 'acct:' . ltrim( $resource, '@' ), 'https://' . $m[2] . '/.well-known/webfinger' );
-		if ( ! \wp_http_validate_url( $url ) ) {
-			$response = new WP_Error( 'invalid_webfinger_url', null, $url );
-			\set_transient( $transient_key, $response, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
-			return $response;
-		}
-
-		// try to access author URL
-		$response = \wp_remote_get(
-			$url,
-			array(
-				'headers' => array( 'Accept' => 'application/jrd+json' ),
-				'redirection' => 2,
-				'timeout' => 2,
-			)
-		);
-
-		if ( \is_wp_error( $response ) ) {
-			$link = new WP_Error( 'webfinger_url_not_accessible', null, $url );
-			\set_transient( $transient_key, $link, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
-			return $link;
-		}
-
-		$body = \wp_remote_retrieve_body( $response );
-		$body = \json_decode( $body, true );
-
-		if ( empty( $body['links'] ) ) {
-			$link = new WP_Error( 'webfinger_url_invalid_response', null, $url );
-			\set_transient( $transient_key, $link, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
-			return $link;
-		}
-
-		foreach ( $body['links'] as $link ) {
-			if ( 'self' === $link['rel'] && 'application/activity+json' === $link['type'] ) {
-				\set_transient( $transient_key, $link['href'], WEEK_IN_SECONDS );
+		foreach ( $data['links'] as $link ) {
+			if (
+				'self' === $link['rel'] &&
+				'application/activity+json' === $link['type']
+			) {
 				return $link['href'];
 			}
 		}
 
-		$link = new WP_Error( 'webfinger_url_no_activitypub', null, $body );
-		\set_transient( $transient_key, $link, HOUR_IN_SECONDS ); // Cache the error for a shorter period.
-		return $link;
+		return new WP_Error( 'webfinger_url_no_activitypub', null, $data );
+	}
+
+	/**
+	 * Transform a URI to an acct <identifier>@<host>
+	 *
+	 * @param string $uri The URI (acct:, mailto:, http:, https:)
+	 *
+	 * @return string|WP_Error Error or acct URI
+	 */
+	public static function uri_to_acct( $uri ) {
+		$data = self::get_data( $uri );
+
+		if ( is_wp_error( $data ) ) {
+			return $data;
+		}
+
+		// check if subject is an acct URI
+		if (
+			isset( $data['subject'] ) &&
+			\str_starts_with( $data['subject'], 'acct:' )
+		) {
+			return $data['subject'];
+		}
+
+		// search for an acct URI in the aliases
+		if ( isset( $data['aliases'] ) ) {
+			foreach ( $data['aliases'] as $alias ) {
+				if ( \str_starts_with( $alias, 'acct:' ) ) {
+					return $alias;
+				}
+			}
+		}
+
+		return new WP_Error(
+			'webfinger_url_no_acct',
+			__( 'No acct URI found.', 'activitypub' ),
+			$data
+		);
 	}
 
 	/**
@@ -137,7 +134,7 @@ class Webfinger {
 		}
 
 		if ( empty( $host ) ) {
-			return new WP_Error( 'invalid_identifier', __( 'Invalid Identifier', 'activitypub' ) );
+			return new WP_Error( 'webfinger_invalid_identifier', __( 'Invalid Identifier', 'activitypub' ) );
 		}
 
 		return array( $identifier, $host );
@@ -146,55 +143,70 @@ class Webfinger {
 	/**
 	 * Get the WebFinger data for a given URI
 	 *
-	 * @param string $identifier The Identifier: <identifier>@<host>
-	 * @param string $host       The Host: <identifier>@<host>
+	 * @param string $uri The Identifier: <identifier>@<host> or URI
 	 *
 	 * @return WP_Error|array Error reaction or array with
 	 *                        identifier and host as values
 	 */
-	public static function get_data( $identifier, $host ) {
-		$webfinger_url = 'https://' . $host . '/.well-known/webfinger?resource=' . rawurlencode( $identifier );
-
-		$response = wp_safe_remote_get(
-			$webfinger_url,
-			array(
-				'headers' => array( 'Accept' => 'application/jrd+json' ),
-				'redirection' => 0,
-				'timeout' => 2,
-			)
-		);
-
-		if ( is_wp_error( $response ) ) {
-			return new WP_Error( 'webfinger_url_not_accessible', null, $webfinger_url );
-		}
-
-		$body = wp_remote_retrieve_body( $response );
-
-		return json_decode( $body, true );
-	}
-
-	/**
-	 * Undocumented function
-	 *
-	 * @return void
-	 */
-	public static function get_remote_follow_endpoint( $uri ) {
+	public static function get_data( $uri ) {
 		$identifier_and_host = self::get_identifier_and_host( $uri );
 
 		if ( is_wp_error( $identifier_and_host ) ) {
 			return $identifier_and_host;
 		}
 
+		$transient_key = self::generate_cache_key( $uri );
+
 		list( $identifier, $host ) = $identifier_and_host;
 
-		$data = self::get_data( $identifier, $host );
+		$data = \get_transient( $transient_key );
+		if ( $data ) {
+			return $data;
+		}
+
+		$webfinger_url = 'https://' . $host . '/.well-known/webfinger?resource=' . rawurlencode( $identifier );
+
+		$response = wp_safe_remote_get(
+			$webfinger_url,
+			array(
+				'headers' => array( 'Accept' => 'application/jrd+json' ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return new WP_Error(
+				'webfinger_url_not_accessible',
+				__( 'The WebFinger Resource is not accessible.', 'activitypub' ),
+				$webfinger_url
+			);
+		}
+
+		$body = wp_remote_retrieve_body( $response );
+		$data = json_decode( $body, true );
+
+		\set_transient( $transient_key, $data, WEEK_IN_SECONDS );
+
+		return $data;
+	}
+
+	/**
+	 * Get the Remote-Follow endpoint for a given URI
+	 *
+	 * @return string|WP_Error Error or the Remote-Follow endpoint URI.
+	 */
+	public static function get_remote_follow_endpoint( $uri ) {
+		$data = self::get_data( $uri );
 
 		if ( is_wp_error( $data ) ) {
 			return $data;
 		}
 
 		if ( empty( $data['links'] ) ) {
-			return new WP_Error( 'webfinger_url_invalid_response', null, $data );
+			return new WP_Error(
+				'webfinger_missing_links',
+				__( 'No valid Link elements found.', 'activitypub' ),
+				$data
+			);
 		}
 
 		foreach ( $data['links'] as $link ) {
@@ -203,6 +215,27 @@ class Webfinger {
 			}
 		}
 
-		return new WP_Error( 'webfinger_remote_follow_endpoint_invalid', $data, array( 'status' => 417 ) );
+		return new WP_Error(
+			'webfinger_missing_remote_follow_endpoint',
+			__( 'No valid Remote-Follow endpoint found.', 'activitypub' ),
+			$data
+		);
+	}
+
+	/**
+	 * Generate a cache key for a given URI
+	 *
+	 * @param string $uri A WebFinger Resource URI
+	 *
+	 * @return string The cache key
+	 */
+	public static function generate_cache_key( $uri ) {
+		$uri = ltrim( $uri, '@' );
+
+		if ( filter_var( $uri, FILTER_VALIDATE_EMAIL ) ) {
+			$uri = 'acct:' . $uri;
+		}
+
+		return 'webfinger_' . md5( $uri );
 	}
 }

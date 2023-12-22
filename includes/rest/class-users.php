@@ -50,14 +50,13 @@ class Users {
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'remote_follow_get' ),
-
+					'permission_callback' => '__return_true',
 					'args'                => array(
 						'resource' => array(
 							'required'          => true,
 							'sanitize_callback' => 'sanitize_text_field',
 						),
 					),
-					'permission_callback' => '__return_true',
 				),
 			)
 		);

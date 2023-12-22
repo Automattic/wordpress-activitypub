@@ -2,10 +2,13 @@
 namespace Activitypub;
 
 use WP_Post;
+use WP_Comment;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Transformer\Factory;
 use Activitypub\Transformer\Post;
+use Activitypub\Transformer\Comment;
 
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
@@ -31,12 +34,12 @@ class Activity_Dispatcher {
 	/**
 	 * Send Activities to followers and mentioned users or `Announce` (boost) a blog post.
 	 *
-	 * @param WP_Post $wp_post The ActivityPub Post.
-	 * @param string  $type    The Activity-Type.
+	 * @param mixed  $wp_object The ActivityPub Post.
+	 * @param string $type      The Activity-Type.
 	 *
 	 * @return void
 	 */
-	public static function send_activity_or_announce( WP_Post $wp_post, $type ) {
+	public static function send_activity_or_announce( $wp_object, $type ) {
 		// check if a migration is needed before sending new posts
 		Migration::maybe_migrate();
 
@@ -44,46 +47,48 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$wp_post->post_author = Users::BLOG_USER_ID;
-
 		if ( is_single_user() ) {
-			self::send_activity( $wp_post, $type );
+			self::send_activity( $wp_object, $type, Users::BLOG_USER_ID );
 		} else {
-			self::send_announce( $wp_post, $type );
+			self::send_announce( $wp_object, $type );
 		}
 	}
 
 	/**
 	 * Send Activities to followers and mentioned users.
 	 *
-	 * @param WP_Post $wp_post The ActivityPub Post.
-	 * @param string  $type    The Activity-Type.
+	 * @param mixed  $wp_object The ActivityPub Post.
+	 * @param string $type      The Activity-Type.
 	 *
 	 * @return void
 	 */
-	public static function send_activity( WP_Post $wp_post, $type ) {
-		if ( is_user_disabled( $wp_post->post_author ) ) {
+	public static function send_activity( $wp_object, $type, $user_id = null ) {
+		$transformer = Factory::get_transformer( $wp_object );
+
+		if ( null !== $user_id ) {
+			$transformer->change_wp_user_id( $user_id );
+		}
+
+		$user_id = $transformer->get_wp_user_id();
+
+		if ( is_user_disabled( $user_id ) ) {
 			return;
 		}
 
-		$object = Post::transform( $wp_post )->to_object();
+		$activity = $transformer->to_activity( 'Create' );
 
-		$activity = new Activity();
-		$activity->set_type( $type );
-		$activity->set_object( $object );
-
-		self::send_activity_to_inboxes( $activity, $wp_post->post_author );
+		self::send_activity_to_inboxes( $activity, $user_id );
 	}
 
 	/**
 	 * Send Announces to followers and mentioned users.
 	 *
-	 * @param WP_Post $wp_post The ActivityPub Post.
-	 * @param string  $type    The Activity-Type.
+	 * @param mixed  $wp_object The ActivityPub Post.
+	 * @param string $type      The Activity-Type.
 	 *
 	 * @return void
 	 */
-	public static function send_announce( WP_Post $wp_post, $type ) {
+	public static function send_announce( $wp_object, $type ) {
 		if ( ! in_array( $type, array( 'Create', 'Update' ), true ) ) {
 			return;
 		}
@@ -92,16 +97,13 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$object = Post::transform( $wp_post )->to_object();
+		$transformer = Factory::get_transformer( $wp_object );
+		$transformer->change_wp_user_id( Users::BLOG_USER_ID );
 
-		$activity = new Activity();
-		$activity->set_type( 'Announce' );
-		// to pre-fill attributes like "published" and "id"
-		$activity->set_object( $object );
-		// send only the id
-		$activity->set_object( $object->get_id() );
+		$user_id  = $transformer->get_wp_user_id();
+		$activity = $transformer->to_activity( 'Announce' );
 
-		self::send_activity_to_inboxes( $activity, $wp_post->post_author );
+		self::send_activity_to_inboxes( $activity, $user_id );
 	}
 
 	/**
@@ -127,7 +129,7 @@ class Activity_Dispatcher {
 		$activity->set_to( 'https://www.w3.org/ns/activitystreams#Public' );
 
 		// send the update
-		self::send_activity_to_inboxes( $activity, $user_id );
+		self::send_activity_to_inboxes( $activity, $user->get__id() );
 	}
 
 	/**

@@ -31,12 +31,13 @@ class Interactions {
 			return false;
 		}
 
-		$in_reply_to     = \esc_url_raw( $activity['object']['inReplyTo'] );
-		$comment_post_id = \url_to_postid( $in_reply_to );
-		$parent_comment  = object_id_to_comment( $in_reply_to );
+		$in_reply_to        = \esc_url_raw( $activity['object']['inReplyTo'] );
+		$comment_post_id    = \url_to_postid( $in_reply_to );
+		$parent_comment_id  = url_to_commentid( $in_reply_to );
 
 		// save only replys and reactions
-		if ( ! $comment_post_id && $parent_comment ) {
+		if ( ! $comment_post_id && $parent_comment_id ) {
+			$parent_comment  = get_comment( $parent_comment_id );
 			$comment_post_id = $parent_comment->comment_post_ID;
 		}
 
@@ -58,16 +59,19 @@ class Interactions {
 			'comment_content' => \addslashes( $activity['object']['content'] ),
 			'comment_type' => 'comment',
 			'comment_author_email' => '',
-			'comment_parent' => $parent_comment ? $parent_comment->comment_ID : 0,
+			'comment_parent' => $parent_comment_id ? $parent_comment_id : 0,
 			'comment_meta' => array(
 				'source_id'  => \esc_url_raw( $activity['object']['id'] ),
-				'source_url' => \esc_url_raw( $activity['object']['url'] ),
 				'protocol'   => 'activitypub',
 			),
 		);
 
 		if ( isset( $meta['icon']['url'] ) ) {
 			$commentdata['comment_meta']['avatar_url'] = \esc_url_raw( $meta['icon']['url'] );
+		}
+
+		if ( isset( $activity['object']['url'] ) ) {
+			$commentdata['comment_meta']['source_url'] = \esc_url_raw( $activity['object']['url'] );
 		}
 
 		// disable flood control
@@ -104,14 +108,14 @@ class Interactions {
 		$meta = get_remote_metadata_by_actor( $activity['actor'] );
 
 		//Determine comment_ID
-		$object_comment_id = url_to_commentid( \esc_url_raw( $activity['object']['id'] ) );
+		$comment     = object_id_to_comment( \esc_url_raw( $activity['object']['id'] ) );
+		$commentdata = \get_comment( $comment, ARRAY_A );
 
-		if ( ! $object_comment_id ) {
+		if ( ! $commentdata ) {
 			return false;
 		}
 
 		//found a local comment id
-		$commentdata = \get_comment( $object_comment_id, ARRAY_A );
 		$commentdata['comment_author'] = \esc_attr( $meta['name'] ? $meta['name'] : $meta['preferredUsername'] );
 		$commentdata['comment_content'] = \addslashes( $activity['object']['content'] );
 		if ( isset( $meta['icon']['url'] ) ) {
