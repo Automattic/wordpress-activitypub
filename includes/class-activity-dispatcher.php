@@ -74,7 +74,7 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$activity = $transformer->to_activity( 'Create' );
+		$activity = $transformer->to_activity( $type );
 
 		$follower_inboxes  = Followers::get_inboxes( $user_id );
 		$mentioned_inboxes = Mention::get_inboxes( $activity->get_cc() );
