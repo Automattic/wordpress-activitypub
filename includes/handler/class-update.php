@@ -14,7 +14,10 @@ class Update {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_update', array( self::class, 'handle_update' ), 10, 2 );
+		\add_action(
+			'activitypub_inbox_update',
+			array( self::class, 'handle_update' )
+		);
 	}
 
 	/**
@@ -23,7 +26,7 @@ class Update {
 	 * @param array                $array   The activity-object
 	 * @param int                  $user_id The id of the local blog-user
 	 */
-	public static function handle_update( $array, $user_id ) {
+	public static function handle_update( $array ) {
 		$object_type = isset( $array['object']['type'] ) ? $array['object']['type'] : '';
 
 		switch ( $object_type ) {
@@ -45,7 +48,7 @@ class Update {
 			case 'Video':
 			case 'Event':
 			case 'Document':
-				self::update_interaction( $array, $user_id );
+				self::update_interaction( $array );
 				break;
 			// Minimal Activity
 			// @see https://www.w3.org/TR/activitystreams-core/#example-1
@@ -62,7 +65,7 @@ class Update {
 	 *
 	 * @return void
 	 */
-	public static function update_interaction( $activity, $user_id ) {
+	public static function update_interaction( $activity ) {
 		$state    = Interactions::update_comment( $activity );
 		$reaction = null;
 
@@ -70,7 +73,7 @@ class Update {
 			$reaction = \get_comment( $state );
 		}
 
-		\do_action( 'activitypub_handled_update', $activity, $user_id, $state, $reaction );
+		\do_action( 'activitypub_handled_update', $activity, null, $state, $reaction );
 	}
 
 	/**
