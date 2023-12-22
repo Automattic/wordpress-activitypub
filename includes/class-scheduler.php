@@ -73,7 +73,8 @@ class Scheduler {
 
 		// profile updates for user options
 		if ( ! is_user_type_disabled( 'user' ) ) {
-			\add_action( 'updated_user_meta', array( self::class, 'user_update' ), 10, 3 );
+			\add_action( 'wp_update_user', array( self::class, 'user_update' ) );
+			\add_action( 'updated_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
 			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
 		}
 	}
@@ -280,9 +281,10 @@ class Scheduler {
 	 * @param  int    $meta_id Meta ID being updated.
 	 * @param  int    $user_id User ID being updated.
 	 * @param  string $meta_key Meta key being updated.
+	 *
 	 * @return void
 	 */
-	public static function user_update( $meta_id, $user_id, $meta_key ) {
+	public static function user_meta_update( $meta_id, $user_id, $meta_key ) {
 		// don't bother if the user can't publish
 		if ( ! \user_can( $user_id, 'publish_posts' ) ) {
 			return;
@@ -297,6 +299,22 @@ class Scheduler {
 		if ( in_array( $meta_key, $fields, true ) ) {
 			self::schedule_profile_update( $user_id );
 		}
+	}
+
+	/**
+	 * Send a profile update when a user is updated.
+	 *
+	 * @param  int $user_id User ID being updated.
+	 *
+	 * @return void
+	 */
+	public static function user_update( $user_id ) {
+		// don't bother if the user can't publish
+		if ( ! \user_can( $user_id, 'publish_posts' ) ) {
+			return;
+		}
+
+		self::schedule_profile_update( $user_id );
 	}
 
 	/**
