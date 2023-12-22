@@ -4,6 +4,7 @@ namespace Activitypub;
 use WP_Error;
 use WP_Comment_Query;
 use Activitypub\Http;
+use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Users;
@@ -166,6 +167,27 @@ function url_to_authorid( $url ) {
 	}
 
 	return 0;
+}
+
+/**
+ * Verify if url is a wp_ap_comment,
+ * Or if it is a previously received remote comment
+ *
+ * @return int comment_id
+ */
+function is_comment() {
+	$comment_id = get_query_var( 'c', null );
+
+	if ( ! is_null( $comment_id ) ) {
+		$comment = \get_comment( $comment_id );
+
+		// Only return local origin comments
+		if ( $comment && $comment->user_id ) {
+			return $comment_id;
+		}
+	}
+
+	return false;
 }
 
 /**
@@ -579,7 +601,7 @@ function get_active_users( $duration = 1 ) {
 		global $wpdb;
 		$query = "SELECT COUNT( DISTINCT post_author ) FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND post_date <= DATE_SUB( NOW(), INTERVAL %d MONTH )";
 		$query = $wpdb->prepare( $query, $duration );
-		$count = $wpdb->get_var( $query ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$count = $wpdb->get_var( $query ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
 		set_transient( $transient_key, $count, DAY_IN_SECONDS );
 	}
@@ -674,16 +696,33 @@ function url_to_commentid( $url ) {
 		return null;
 	}
 
+	// check for local comment
+	if ( \wp_parse_url( \site_url(), \PHP_URL_HOST ) === \wp_parse_url( $url, \PHP_URL_HOST ) ) {
+		$query = \wp_parse_url( $url, PHP_URL_QUERY );
+
+		if ( $query ) {
+			parse_str( $query, $params );
+
+			if ( ! empty( $params['c'] ) ) {
+				$comment = \get_comment( $params['c'] );
+
+				if ( $comment ) {
+					return $comment->comment_ID;
+				}
+			}
+		}
+	}
+
 	$args = array(
 		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 		'meta_query' => array(
 			'relation' => 'OR',
 			array(
-				'key' => 'source_url',
+				'key'   => 'source_url',
 				'value' => $url,
 			),
 			array(
-				'key' => 'source_id',
+				'key'   => 'source_id',
 				'value' => $url,
 			),
 		),

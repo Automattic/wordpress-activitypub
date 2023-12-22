@@ -18,6 +18,7 @@ class Admin {
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
 		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
+		\add_action( 'admin_notices', array( self::class, 'admin_notices' ) );
 
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
@@ -44,6 +45,37 @@ class Admin {
 
 			\add_action( 'load-' . $followers_list_page, array( self::class, 'add_followers_list_help_tab' ) );
 		}
+	}
+
+	/**
+	 * Display admin menu notices about configuration problems or conflicts.
+	 *
+	 * @return void
+	 */
+	public static function admin_notices() {
+		$permalink_structure = \get_option( 'permalink_structure' );
+		if ( empty( $permalink_structure ) ) {
+			$admin_notice = \__( 'You are using the ActivityPub plugin without setting a permalink structure. This will prevent ActivityPub from working.  Please set a permalink structure.', 'activitypub' );
+			self::show_admin_notice( $admin_notice, 'error' );
+		}
+	}
+
+	/**
+	 * Display one admin menu notice about configuration problems or conflicts.
+	 *
+	 * @param string $admin_notice The notice to display.
+	 * @param string $level The level of the notice (error, warning, success, info).
+	 *
+	 * @return void
+	 */
+	private static function show_admin_notice( $admin_notice, $level ) {
+		?>
+
+		<div class="notice notice-<?php echo esc_attr( $level ); ?>">
+			<p><?php echo wp_kses( $admin_notice, 'data' ); ?></p>
+		</div>
+
+		<?php
 	}
 
 	/**

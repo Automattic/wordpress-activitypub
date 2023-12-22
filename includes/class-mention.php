@@ -14,7 +14,8 @@ class Mention {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_filter( 'the_content', array( self::class, 'the_content' ), 99, 2 );
+		\add_filter( 'the_content', array( self::class, 'the_content' ), 99, 1 );
+		\add_filter( 'comment_text', array( self::class, 'the_content' ), 10, 1 );
 		\add_filter( 'activitypub_extract_mentions', array( self::class, 'extract_mentions' ), 99, 2 );
 	}
 
