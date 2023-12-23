@@ -10,6 +10,7 @@ use Activitypub\Transformer\Factory;
 use Activitypub\Transformer\Post;
 use Activitypub\Transformer\Comment;
 
+use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
 use function Activitypub\safe_remote_post;
@@ -49,8 +50,10 @@ class Activity_Dispatcher {
 
 		if ( is_single_user() ) {
 			self::send_activity( $wp_object, $type, Users::BLOG_USER_ID );
+			self::send_announce( $wp_object, $type, Users::APPLICATION_USER_ID );
 		} else {
-			self::send_announce( $wp_object, $type );
+			self::send_announce( $wp_object, $type, Users::BLOG_USER_ID );
+			self::send_announce( $wp_object, $type, Users::APPLICATION_USER_ID );
 		}
 	}
 
@@ -88,20 +91,35 @@ class Activity_Dispatcher {
 	 *
 	 * @return void
 	 */
-	public static function send_announce( $wp_object, $type ) {
+	public static function send_announce( $wp_object, $type, $user_id = null ) {
 		if ( ! in_array( $type, array( 'Create', 'Update' ), true ) ) {
 			return;
 		}
 
-		if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
+		$transformer = Factory::instance()->get_transformer( $wp_object );
+
+		if ( null !== $user_id && Users::APPLICATION_USER_ID !== $user_id ) {
+			$transformer->change_wp_user_id( $user_id );
+		}
+
+		if ( ! $user_id ) {
+			$user_id  = $transformer->get_wp_user_id();
+		}
+
+		if ( is_user_disabled( $user_id ) ) {
 			return;
 		}
 
-		$transformer = Factory::get_transformer( $wp_object );
-		$transformer->change_wp_user_id( Users::BLOG_USER_ID );
-
-		$user_id  = $transformer->get_wp_user_id();
 		$activity = $transformer->to_activity( 'Announce' );
+
+		// TODO: properly fix this for the instance-to-instance federation with Mobilizon.
+		// Error:
+		//      Failed to map identity from signature (payload actor mismatch)
+		//  	key_id=http://wp.lan/wp-json/activitypub/1.0/application, actor=http://wp.lan/@blog
+        // Of course, the announce must be sent as the Application actor because he also signed it!
+		if ( Users::APPLICATION_USER_ID === $user_id ) {
+			$activity->set_actor( get_rest_url_by_path( 'application' ) );
+		}
 
 		self::send_activity_to_inboxes( $activity, $user_id );
 	}

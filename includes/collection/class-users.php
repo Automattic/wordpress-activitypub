@@ -7,6 +7,7 @@ use Activitypub\Model\User;
 use Activitypub\Model\Blog_User;
 use Activitypub\Model\Application_User;
 
+use function Activitypub\get_rest_url_by_path;
 use function Activitypub\url_to_authorid;
 use function Activitypub\is_user_disabled;
 
@@ -174,6 +175,11 @@ class Users {
 					self::normalize_url( home_url() ) === self::normalize_url( $resource )
 				) {
 					return self::get_by_id( self::BLOG_USER_ID );
+				}
+
+				// check for application actor
+				if ( self::normalize_url( get_rest_url_by_path( 'application' ) ) === self::normalize_url( $resource ) ) {
+					return self::get_by_id( self::APPLICATION_USER_ID );
 				}
 
 				return new WP_Error(
