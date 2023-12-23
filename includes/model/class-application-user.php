@@ -30,6 +30,13 @@ class Application_User extends Blog_User {
 	protected $discoverable = false;
 
 	/**
+	 * The instance actor by default must manually approve all followers.
+	 * 
+	 * @var boolean
+	 */
+	protected $manually_approves_followers = true;
+
+	/**
 	 * Get the User-Url.
 	 *
 	 * @return string The User-Url.
@@ -52,7 +59,7 @@ class Application_User extends Blog_User {
 	}
 
 	public function get_preferred_username() {
-		return $this::get_name();
+		return $this->get_name();
 	}
 
 	public function get_followers() {
