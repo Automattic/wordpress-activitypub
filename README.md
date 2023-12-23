@@ -1,7 +1,7 @@
 # ActivityPub #
 **Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [mattwiebe](https://profiles.wordpress.org/mattwiebe/), [akirk](https://profiles.wordpress.org/akirk/), [jeherve](https://profiles.wordpress.org/jeherve/), [nuriapena](https://profiles.wordpress.org/nuriapena/), [cavalierlife](https://profiles.wordpress.org/cavalierlife/)  
 **Tags:** OStatus, fediverse, activitypub, activitystream  
-**Requires at least:** 4.7  
+**Requires at least:** 5.5  
 **Tested up to:** 6.4  
 **Stable tag:** 1.3.0  
 **Requires PHP:** 5.6  
