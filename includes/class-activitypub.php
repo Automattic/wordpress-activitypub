@@ -389,7 +389,7 @@ class Activitypub {
 	 * @return void
 	 */
 	private static function register_post_types() {
-		\register_post_type(
+		register_post_type(
 			Followers::POST_TYPE,
 			array(
 				'labels'           => array(
@@ -406,7 +406,7 @@ class Activitypub {
 			)
 		);
 
-		\register_post_meta(
+		register_post_meta(
 			Followers::POST_TYPE,
 			'activitypub_inbox',
 			array(
@@ -416,7 +416,7 @@ class Activitypub {
 			)
 		);
 
-		\register_post_meta(
+		register_post_meta(
 			Followers::POST_TYPE,
 			'activitypub_errors',
 			array(
@@ -432,7 +432,7 @@ class Activitypub {
 			)
 		);
 
-		\register_post_meta(
+		register_post_meta(
 			Followers::POST_TYPE,
 			'activitypub_user_id',
 			array(
@@ -444,7 +444,7 @@ class Activitypub {
 			)
 		);
 
-		\register_post_meta(
+		register_post_meta(
 			Followers::POST_TYPE,
 			'activitypub_actor_json',
 			array(
@@ -456,7 +456,7 @@ class Activitypub {
 			)
 		);
 
-		\do_action( 'activitypub_after_register_post_type' );
+		do_action( 'activitypub_after_register_post_type' );
 	}
 
 	/**
