@@ -173,6 +173,77 @@ class Post extends Base {
 
 	/**
 	 * Get image attachments from the classic editor.
+	 * This is imperfect as the contained images aren't necessarily the
+	 * same as the attachments.
+	 *
+	 * @param int $max_images The maximum number of images to return.
+	 *
+	 * @return array The attachment IDs.
+	 */
+	protected function get_classic_editor_image_attachments( $max_images ) {
+		// max images can't be negative or zero
+		if ( $max_images <= 0 ) {
+			return array();
+		}
+		$image_ids = array();
+		$query = new \WP_Query(
+			array(
+				'post_parent' => $id,
+				'post_status' => 'inherit',
+				'post_type' => 'attachment',
+				'post_mime_type' => 'image',
+				'order' => 'ASC',
+				'orderby' => 'menu_order ID',
+				'posts_per_page' => $max_images,
+			)
+		);
+		foreach ( $query->get_posts() as $attachment ) {
+			if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
+				$image_ids[] = $attachment->ID;
+			}
+		}
+		return $image_ids;
+	}
+
+	/**
+	 * Get image embeds from the classic editor by parsing HTML.
+	 *
+	 * @param int $max_images The maximum number of images to return.
+	 *
+	 * @return array The attachment IDs.
+	 */
+	protected function get_classic_editor_image_embeds( $max_images ) {
+		// max images can't be negative or zero
+		if ( $max_images <= 0 ) {
+			return array();
+		}
+		$image_ids = array();
+		$base = \wp_get_upload_dir()['baseurl'];
+		$content = \get_post_field( 'post_content', $this->object );
+		$tags = new \WP_HTML_Tag_Processor( $content );
+		while ( $tags->next_tag( 'img' ) && ( \count( $image_ids ) < $max_images ) ) {
+			$src = $tags->get_attribute( 'src' );
+			// If the img source is in our uploads dir, get the
+			// associated ID. Note: if there's a -500x500 or -scaled
+			// type suffix, we remove it, but we try the original
+			// first in case the original image is actually called
+			// that.
+			if ( $src !== null && \str_starts_with( $src, $base ) ) {
+				$img_id = \attachment_url_to_postid( $src );
+				if ( $img_id === 0 ) {
+					$src_repl = preg_replace( '/-(?:\d+x\d+|scaled)(\.[a-zA-Z]+)/', '$1', $src );
+					$img_id = \attachment_url_to_postid( $src_repl );
+				}
+				if ( $img_id !== 0 ) {
+					$image_ids[] = $img_id;
+				}
+			}
+		}
+		return $image_ids;
+	}
+
+	/**
+	 * Get post images from the classic editor.
 	 * Note that audio/video attachments are only supported in the block editor.
 	 *
 	 * @param int $max_images The maximum number of images to return.
@@ -192,28 +263,17 @@ class Post extends Base {
 		// list post thumbnail first if this post has one
 		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
 			$image_ids[] = \get_post_thumbnail_id( $id );
-			--$max_images;
 		}
 
-		if ( $max_images > 0 ) {
-			$query = new \WP_Query(
-				array(
-					'post_parent' => $id,
-					'post_status' => 'inherit',
-					'post_type' => 'attachment',
-					'post_mime_type' => 'image',
-					'order' => 'ASC',
-					'orderby' => 'menu_order ID',
-					'posts_per_page' => $max_images,
-				)
-			);
-			foreach ( $query->get_posts() as $attachment ) {
-				if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
-					$image_ids[] = $attachment->ID;
-				}
+		if ( \count( $image_ids ) < $max_images ) {
+			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
+				$image_ids = \array_merge ($image_ids, $this->get_classic_editor_image_embeds( $max_images ) );
+			} else {
+				$image_ids = \array_merge ($image_ids, $this->get_classic_editor_image_attachments( $max_images ) );
 			}
 		}
-		$image_ids = \array_unique( $image_ids );
+		// unique then slice as the thumbnail may duplicate another image
+		$image_ids = \array_slice ( \array_unique( $image_ids ), 0, $max_images );
 
 		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $image_ids ) );
 	}
