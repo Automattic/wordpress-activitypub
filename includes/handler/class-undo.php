@@ -2,7 +2,7 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Collection\Users;
-use Activitypub\Collection\Followers;
+use Activitypub\Model\Follow_Request;
 
 /**
  * Handle Undo requests
@@ -39,9 +39,8 @@ class Undo {
 				return;
 			}
 
-			$user_id = $user->get__id();
-
-			Followers::remove_follower( $user_id, $activity['actor'] );
+			$follow_request = Follow_Request::get_from_array( $activity['object'] );
+			$follow_request->delete();
 		}
 	}
 }

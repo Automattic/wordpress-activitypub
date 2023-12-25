@@ -5,6 +5,7 @@ use Activitypub\Http;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Model\Follow_Request;
 
 /**
  * Handle Follow requests
@@ -20,7 +21,7 @@ class Follow {
 		);
 
 		\add_action(
-			'activitypub_followers_post_follow',
+			'activitypub_send_follow_response',
 			array( self::class, 'send_follow_response' ),
 			10,
 			4
@@ -50,60 +51,42 @@ class Follow {
 			$activity['actor']
 		);
 
-		do_action(
-			'activitypub_followers_post_follow',
-			$activity['actor'],
-			$activity,
-			$user_id,
-			$follower
-		);
-	}
-
-	/**
-	 * Send Accept response
-	 *
-	 * @param string                     $actor    The Actor URL
-	 * @param array                      $object   The Activity object
-	 * @param int                        $user_id  The ID of the WordPress User
-	 * @param Activitypub\Model\Follower $follower The Follower object
-	 *
-	 * @return void
-	 */
-	public static function send_follow_response( $actor, $object, $user_id, $follower ) {
 		if ( \is_wp_error( $follower ) ) {
-			// it is not even possible to send a "Reject" because
+			// it is not even possible to send a "Reject" or "Accept" because
 			// we can not get the Remote-Inbox
 			return;
 		}
+		
+		// save follow request by this follower
+		$follow_request = Follow_Request::save( $follower, $user_id, $activity['id'] );
 
-		// only send minimal data
-		$object = array_intersect_key(
-			$object,
-			array_flip(
-				array(
-					'id',
-					'type',
-					'actor',
-					'object',
-				)
-			)
-		);
+		if ( ! $user->get_manually_approves_followers() ) {
+			$follow_request->accept();
+		}
+	
+	}
 
-		$user = Users::get_by_id( $user_id );
-
-		// get inbox
-		$inbox = $follower->get_shared_inbox();
-
-		// send "Accept" activity
+	/**
+	 * Send Follow response
+	 *
+	 * @param Activitypub\Model\User     $user     The Target Users ActivityPub object
+	 * @param Activitypub\Model\Follower $follower The Followers ActivityPub object
+	 * @param array|object               $object   The ActivityPub follow object
+	 * @param string                     $type     The reponse object type: 'Accept' or 'Reject'
+	 *
+	 * @return void
+	 */
+	public static function send_follow_response( $user, $follower, $object, $type ) {
+		// send activity
 		$activity = new Activity();
-		$activity->set_type( 'Accept' );
+		$activity->set_type( $type );
 		$activity->set_object( $object );
 		$activity->set_actor( $user->get_id() );
-		$activity->set_to( $actor );
-		$activity->set_id( $user->get_id() . '#follow-' . \preg_replace( '~^https?://~', '', $actor ) . '-' . \time() );
+		$activity->set_to( $follower->get_id() );
+		$activity->set_id( $user->get_id() . '#accept-' . \preg_replace( '~^https?://~', '', $follower->get_id() ) . '-' . \time() );
 
 		$activity = $activity->to_json();
 
-		Http::post( $inbox, $activity, $user_id );
+		Http::post( $follower->get_shared_inbox(), $activity, $user->get__id() );
 	}
 }

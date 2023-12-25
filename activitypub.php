@@ -179,6 +179,14 @@ add_action(
 	0
 );
 
+add_action(
+	'wp_ajax_activitypub_handle_follow_request',
+	function () {
+		$wp_list_table = new \Activitypub\Table\Follow_Requests();
+		$wp_list_table->ajax_response();
+	}
+);
+
 /**
  * `get_plugin_data` wrapper
  *

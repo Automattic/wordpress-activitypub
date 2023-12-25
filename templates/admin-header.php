@@ -15,13 +15,10 @@
 			<?php \esc_html_e( 'Settings', 'activitypub' ); ?>
 		</a>
 
-		<?php if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) : ?>
-
 		<a href="<?php echo \esc_url_raw( admin_url( 'options-general.php?page=activitypub&tab=followers' ) ); ?>" class="activitypub-settings-tab <?php echo \esc_attr( $args['followers'] ); ?>">
 			<?php \esc_html_e( 'Followers', 'activitypub' ); ?>
 		</a>
 
-		<?php endif; ?>
 	</nav>
 </div>
 <hr class="wp-header-end">

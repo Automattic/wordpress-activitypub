@@ -41,7 +41,7 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	public static function send_activity_or_announce( $wp_object, $type ) {
-		// check if a migration is needed before sending new posts
+		// check if a migration is needed before sending new post
 		Migration::maybe_migrate();
 
 		if ( is_user_type_disabled( 'blog' ) ) {
@@ -96,7 +96,7 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$transformer = Factory::instance()->get_transformer( $wp_object );
+		$transformer = Factory::get_transformer( $wp_object );
 
 		if ( null !== $user_id && Users::APPLICATION_USER_ID !== $user_id ) {
 			$transformer->change_wp_user_id( $user_id );

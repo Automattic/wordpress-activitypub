@@ -95,7 +95,7 @@ class Admin {
 				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php' );
 				break;
 			case 'followers':
-				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-user-followers-list.php' );
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/admin-followers-list.php' );
 				break;
 			case 'welcome':
 			default:
@@ -300,8 +300,8 @@ class Admin {
 
 	public static function enqueue_scripts( $hook_suffix ) {
 		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
-			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), '1.0.0' );
-			wp_enqueue_script( 'activitypub-admin-styles', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), '1.0.0', false );
+			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), '1.0.1' );
+			wp_enqueue_script( 'activitypub-admin-styles', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), '1.0.1', false );
 		}
 	}
 }

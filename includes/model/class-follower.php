@@ -19,7 +19,7 @@ use Activitypub\Collection\Followers;
  */
 class Follower extends Actor {
 	/**
-	 * The complete Remote-Profile of the Follower
+	 * The complete Remote-Profile of the Follower.
 	 *
 	 * @var array
 	 */
@@ -34,6 +34,13 @@ class Follower extends Actor {
 		return get_post_meta( $this->_id, 'activitypub_errors' );
 	}
 
+	/**
+	 * Getter function for the internal WordPress id.
+	 */
+	public function get__id() {
+		return $this->_id;
+	}
+																																											
 	/**
 	 * Get the Summary.
 	 *
@@ -304,9 +311,9 @@ class Follower extends Actor {
 	/**
 	 * Convert a Custom-Post-Type input to an Activitypub\Model\Follower.
 	 *
-	 * @return string The JSON string.
+	 * @param WP_Post The JSON string.
 	 *
-	 * @return array Activitypub\Model\Follower
+	 * @return \Activitypub\Model\Follower $object
 	 */
 	public static function init_from_cpt( $post ) {
 		$actor_json = get_post_meta( $post->ID, 'activitypub_actor_json', true );
