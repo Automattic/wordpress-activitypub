@@ -30,10 +30,10 @@ class Follow_Requests {
 	public static function get_follow_requests_for_user( $user_id, $per_page, $page_num, $args ) {
 		$order   = isset( $args['order'] ) && strtolower( $args['order'] ) === 'asc' ? 'ASC' : 'DESC';
 		$orderby = isset( $args['orderby'] ) ? sanitize_text_field( $args['orderby'] ) : 'published';
-		$search  =  isset( $args['s'] ) ? sanitize_text_field( $args['s'] ) : '';
+		$search  = isset( $args['s'] ) ? sanitize_text_field( $args['s'] ) : '';
 
 		$offset = (int) $per_page * ( (int) $page_num - 1 );
-		
+
 		global $wpdb;
 		$follow_requests = $wpdb->get_results(
 			$wpdb->prepare(
@@ -42,16 +42,18 @@ class Follow_Requests {
 				 LEFT JOIN {$wpdb->posts} AS follower ON follow_request.post_parent = follower.ID
 				 LEFT JOIN {$wpdb->postmeta} AS meta ON follow_request.ID = meta.post_id
 				 WHERE follow_request.post_type = 'ap_follow_request'
-				 AND (follower.post_title LIKE '%{$wpdb->esc_like( $search )}%' OR follower.guid LIKE '%{$wpdb->esc_like( $search )}%')
+				 AND (follower.post_title LIKE %s OR follower.guid LIKE %s)
 				 AND meta.meta_key = 'activitypub_user_id'
 				 AND meta.meta_value = %s
 				 ORDER BY %s %s
 				 LIMIT %d OFFSET %d",
+				'%' . $wpdb->esc_like( $search ) . '%',
+				'%' . $wpdb->esc_like( $search ) . '%',
 				$user_id,
 				$orderby,
 				$order,
 				$per_page,
-				$offset,
+				$offset
 			)
 		);
 		$current_total_items = $wpdb->get_var( 'SELECT FOUND_ROWS()' );

@@ -182,7 +182,7 @@ class Follow_Requests extends WP_List_Table {
 		global $_REQUEST;
 		$follow_action = isset( $_REQUEST['follow_action'] ) ? sanitize_title( wp_unslash( $_REQUEST['follow_action'] ) ) : null;
 		$follow_request_id = isset( $_REQUEST['follow_request'] ) ? (int) $_REQUEST['follow_request'] : null;
-		$wp_nonce   = isset( $_REQUEST['_wpnonce'] ) ? (string) $_REQUEST['_wpnonce'] : null;
+		$wp_nonce   = isset( $_REQUEST['_wpnonce'] ) ? sanitize_title( wp_unslash( $_REQUEST['_wpnonce'] ) ) : null;
 		if ( ! $follow_action || ! $follow_request_id || ! $wp_nonce ) {
 			return;
 		}
