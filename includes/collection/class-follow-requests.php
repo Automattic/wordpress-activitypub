@@ -20,15 +20,20 @@ class Follow_Requests {
 	/**
 	 * Get a follow request together with information from the follower.
 	 *
-	 * @param int $user_id      The ID of the WordPress User
-	 * @param int $follower_id  The follower ID
+	 * @param int $user_id   The ID of the WordPress User, which may be 0 for the blog and -1 for the application user
+	 * @param int $per_page  Number of items per page
+	 * @param int $page_num  The current page
+	 * @param int $args      May contain custom ordering or search terms.
 	 *
-	 * @return \Activitypub\Model\Follow|null The Follower object or null
+	 * @return array Containing an array of all follow requests and the total numbers.
 	 */
-	public static function get_follow_requests_for_user( $user_id, $per_page, $page, $args ) {
+	public static function get_follow_requests_for_user( $user_id, $per_page, $page_num, $args ) {
 		$order   = isset( $args['order'] ) && strtolower( $args['order'] ) === 'asc' ? 'ASC' : 'DESC';
 		$orderby = isset( $args['orderby'] ) ? sanitize_text_field( $args['orderby'] ) : 'published';
+		$search  =  isset( $args['s'] ) ? sanitize_text_field( $args['s'] ) : '';
 
+		$offset = (int) $per_page * ( (int) $page_num - 1 );
+		
 		global $wpdb;
 		$follow_requests = $wpdb->get_results(
 			$wpdb->prepare(
@@ -37,19 +42,34 @@ class Follow_Requests {
 				 LEFT JOIN {$wpdb->posts} AS follower ON follow_request.post_parent = follower.ID
 				 LEFT JOIN {$wpdb->postmeta} AS meta ON follow_request.ID = meta.post_id
 				 WHERE follow_request.post_type = 'ap_follow_request'
+				 AND (follower.post_title LIKE '%{$wpdb->esc_like( $search )}%' OR follower.guid LIKE '%{$wpdb->esc_like( $search )}%')
 				 AND meta.meta_key = 'activitypub_user_id'
 				 AND meta.meta_value = %s
 				 ORDER BY %s %s
 				 LIMIT %d OFFSET %d",
+				$user_id,
 				$orderby,
 				$order,
-				$user_id,
 				$per_page,
-				0
+				$offset,
 			)
 		);
-		$total_items = $wpdb->get_var( 'SELECT FOUND_ROWS()' );
+		$current_total_items = $wpdb->get_var( 'SELECT FOUND_ROWS()' );
 
-		return compact( 'follow_requests', 'total_items' );
+		// Second step: Get the total rows without the LIMIT
+		$total_items = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(follow_request.ID)
+				 FROM {$wpdb->posts} AS follow_request
+				 LEFT JOIN {$wpdb->posts} AS follower ON follow_request.post_parent = follower.ID
+				 LEFT JOIN {$wpdb->postmeta} AS meta ON follow_request.ID = meta.post_id
+				 WHERE follow_request.post_type = 'ap_follow_request'
+				 AND meta.meta_key = 'activitypub_user_id'
+				 AND meta.meta_value = %s",
+				$user_id
+			)
+		);
+
+		return compact( 'follow_requests', 'current_total_items', 'total_items' );
 	}
 }
