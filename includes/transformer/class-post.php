@@ -213,31 +213,41 @@ class Post extends Base {
 	 * @return array The attachment IDs.
 	 */
 	protected function get_classic_editor_image_embeds( $max_images ) {
+		// if someone calls that function directly, bail
+		if ( ! \class_exists( '\WP_HTML_Tag_Processor' ) ) {
+			return array();
+		}
+
 		// max images can't be negative or zero
 		if ( $max_images <= 0 ) {
 			return array();
 		}
+
 		$image_ids = array();
-		$base = \wp_get_upload_dir()['baseurl'];
-		$content = \get_post_field( 'post_content', $this->object );
-		$tags = new \WP_HTML_Tag_Processor( $content );
+		$base      = \wp_get_upload_dir()['baseurl'];
+		$content   = \get_post_field( 'post_content', $this->object );
+		$tags      = new \WP_HTML_Tag_Processor( $content );
+
 		// This linter warning is a false positive - we have to
 		// re-count each time here as we modify $image_ids.
 		// phpcs:ignore Squiz.PHP.DisallowSizeFunctionsInLoops.Found
 		while ( $tags->next_tag( 'img' ) && ( \count( $image_ids ) < $max_images ) ) {
 			$src = $tags->get_attribute( 'src' );
+
 			// If the img source is in our uploads dir, get the
 			// associated ID. Note: if there's a -500x500 or -scaled
 			// type suffix, we remove it, but we try the original
 			// first in case the original image is actually called
 			// that.
-			if ( $src !== null && \str_starts_with( $src, $base ) ) {
+			if ( null !== $src && \str_starts_with( $src, $base ) ) {
 				$img_id = \attachment_url_to_postid( $src );
-				if ( $img_id === 0 ) {
+
+				if ( 0 === $img_id ) {
 					$src_repl = preg_replace( '/-(?:\d+x\d+|scaled)(\.[a-zA-Z]+)/', '$1', $src );
 					$img_id = \attachment_url_to_postid( $src_repl );
 				}
-				if ( $img_id !== 0 ) {
+
+				if ( 0 !== $img_id ) {
 					if ( ! \in_array( $img_id, $image_ids, true ) ) {
 						$image_ids[] = $img_id;
 					}
