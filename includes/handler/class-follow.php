@@ -61,7 +61,7 @@ class Follow {
 		$follow_request = Follow_Request::save( $follower, $user_id, $activity['id'] );
 
 		if ( ! $user->get_manually_approves_followers() ) {
-			$follow_request->accept();
+			$follow_request->approve();
 		}
 	
 	}
