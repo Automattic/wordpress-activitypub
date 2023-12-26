@@ -235,7 +235,9 @@ class Post extends Base {
 					$img_id = \attachment_url_to_postid( $src_repl );
 				}
 				if ( $img_id !== 0 ) {
-					$image_ids[] = $img_id;
+					if ( ! \in_array( $img_id, $image_ids, true ) ) {
+						$image_ids[] = $img_id;
+					}
 				}
 			}
 		}
