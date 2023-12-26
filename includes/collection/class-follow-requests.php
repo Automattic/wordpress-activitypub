@@ -26,8 +26,8 @@ class Follow_Requests {
 	 * @return \Activitypub\Model\Follow|null The Follower object or null
 	 */
 	public static function get_follow_requests_for_user( $user_id, $per_page, $page, $args ) {
-		$order   = isset($args['order']) && strtolower($args['order']) === 'asc' ? 'ASC' : 'DESC';
-		$orderby = isset($args['orderby']) ? sanitize_text_field($args['orderby']) : 'published';
+		$order   = isset( $args['order'] ) && strtolower( $args['order'] ) === 'asc' ? 'ASC' : 'DESC';
+		$orderby = isset( $args['orderby'] ) ? sanitize_text_field( $args['orderby'] ) : 'published';
 
 		global $wpdb;
 		$follow_requests = $wpdb->get_results(
@@ -39,14 +39,16 @@ class Follow_Requests {
 				 WHERE follow_request.post_type = 'ap_follow_request'
 				 AND meta.meta_key = 'activitypub_user_id'
 				 AND meta.meta_value = %s
-				 ORDER BY {$orderby} {$order}
+				 ORDER BY %s %s
 				 LIMIT %d OFFSET %d",
+				$orderby,
+				$order,
 				$user_id,
 				$per_page,
 				0
 			)
 		);
-		$total_items = $wpdb->get_var("SELECT FOUND_ROWS()");
+		$total_items = $wpdb->get_var( 'SELECT FOUND_ROWS()' );
 
 		return compact( 'follow_requests', 'total_items' );
 	}

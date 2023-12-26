@@ -56,14 +56,13 @@ class Follow {
 			// we can not get the Remote-Inbox
 			return;
 		}
-		
+
 		// save follow request by this follower
 		$follow_request = Follow_Request::save( $follower, $user_id, $activity['id'] );
 
 		if ( ! $user->get_manually_approves_followers() ) {
 			$follow_request->approve();
 		}
-	
 	}
 
 	/**

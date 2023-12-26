@@ -24,7 +24,7 @@ class Follow_Request extends Base_Object {
 
 	/**
 	 * Stores theinternal  WordPress post id of the post of type ap_follow_request
-	 * 
+	 *
 	 * @var string
 	 */
 	protected $_id;
@@ -61,13 +61,13 @@ class Follow_Request extends Base_Object {
 	 */
 	public static function get_follow_request_id_by_uri( $uri ) {
 		global $wpdb;
-    	return $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM $wpdb->posts WHERE guid=%s", esc_sql( $uri ) ) );
+		return $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM $wpdb->posts WHERE guid=%s", esc_sql( $uri ) ) );
 	}
 
 
 	/**
 	 * Check if the follow request is valid which means it fits to the already stored data.
-	 * 
+	 *
 	 * @param Follow_Request $follow_request The follow request to be checked.
 	 * @return bool Whether the follow request is valid.
 	 */
@@ -79,11 +79,11 @@ class Follow_Request extends Base_Object {
 			return false;
 		}
 
-    	$id = self::get_follow_request_id_by_uri( $follow_request->get_id() );
+		$id = self::get_follow_request_id_by_uri( $follow_request->get_id() );
 		if ( ! $id || is_wp_error( $id ) ) {
 			return false;
 		}
-		if ( self::FOLLOW_REQUEST_POST_TYPE != get_post_type( $id) ) {
+		if ( self::FOLLOW_REQUEST_POST_TYPE != get_post_type( $id ) ) {
 			return false;
 		}
 
@@ -100,12 +100,12 @@ class Follow_Request extends Base_Object {
 	 * @return Follow_Request $follow_request
 	 */
 	public static function from_wp_id( $id ) {
-		if ( self::FOLLOW_REQUEST_POST_TYPE != get_post_type( $id ) ){
+		if ( self::FOLLOW_REQUEST_POST_TYPE != get_post_type( $id ) ) {
 			return;
 		}
 		$post = get_post( $id );
 
-		$follow_request = new static;
+		$follow_request = new static();
 		$follow_request->set_id( $post->guid );
 		$follow_request->set__id( $post->ID );
 		$follow_request->set_type( 'Follow' );
@@ -133,24 +133,23 @@ class Follow_Request extends Base_Object {
 			'post_status'  => 'pending',
 			'post_parent'  => $follower_id,
 			'meta_input'   => $meta_input,
-			'mime_type'    => 'text/plain'
+			'mime_type'    => 'text/plain',
 		);
 
 		$post_id = wp_insert_post( $args );
-
 
 		return self::from_wp_id( $post_id );
 	}
 
 	/**
 	 * Check if the user is allowed to handle this follow request.
-	 * 
+	 *
 	 * Usually needed for the ajax functions.
 	 * @return bool Whether the user is allowed.
 	 */
 	public function can_handle_follow_request() {
-		$target_actor = get_post_meta( $this->get__id(), 'activitypub_user_id');
-		if ( get_current_user_id() == $target_actor || current_user_can( 'manage_options' )) {
+		$target_actor = get_post_meta( $this->get__id(), 'activitypub_user_id' );
+		if ( get_current_user_id() == $target_actor || current_user_can( 'manage_options' ) ) {
 			return true;
 		}
 	}
@@ -159,7 +158,7 @@ class Follow_Request extends Base_Object {
 	 * Reject the follow request
 	 */
 	public function reject() {
-		wp_update_post( 
+		wp_update_post(
 			array(
 				'ID' => $this->get__id(),
 				'post_status' => 'rejected',
@@ -173,7 +172,7 @@ class Follow_Request extends Base_Object {
 	 * Approve the follow request
 	 */
 	public function approve() {
-		wp_update_post( 
+		wp_update_post(
 			array(
 				'ID' => $this->get__id(),
 				'post_status' => 'approved',
@@ -184,7 +183,7 @@ class Follow_Request extends Base_Object {
 
 	/**
 	 * Delete the follow request
-	 * 
+	 *
 	 * This should only be called after it has been rejected.
 	 */
 	public function delete() {
@@ -195,12 +194,12 @@ class Follow_Request extends Base_Object {
 	 * Prepere the sending of the follow request response and hand it over to the sending handler.
 	 */
 	public function send_response( $type ) {
-		$user_id = get_post_meta( $this->get__id(), 'activitypub_user_id')[0];
+		$user_id = get_post_meta( $this->get__id(), 'activitypub_user_id' )[0];
 		$user = Users::get_by_id( $user_id );
 
 		$follower_id = wp_get_post_parent_id( $this->get__id() );
 		$follower = Follower::init_from_cpt( get_post( $follower_id ) );
-		
+
 		$actor = $follower->get_id();
 
 		$object = array(
@@ -210,6 +209,6 @@ class Follow_Request extends Base_Object {
 			'object' => $user,
 		);
 
-		do_action( 'activitypub_send_follow_response', $user, $follower, $object, $type);
+		do_action( 'activitypub_send_follow_response', $user, $follower, $object, $type );
 	}
 }

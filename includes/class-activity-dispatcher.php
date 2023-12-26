@@ -103,7 +103,7 @@ class Activity_Dispatcher {
 		}
 
 		if ( ! $user_id ) {
-			$user_id  = $transformer->get_wp_user_id();
+			$user_id = $transformer->get_wp_user_id();
 		}
 
 		if ( is_user_disabled( $user_id ) ) {
@@ -115,8 +115,8 @@ class Activity_Dispatcher {
 		// TODO: properly fix this for the instance-to-instance federation with Mobilizon.
 		// Error:
 		//      Failed to map identity from signature (payload actor mismatch)
-		//  	key_id=http://wp.lan/wp-json/activitypub/1.0/application, actor=http://wp.lan/@blog
-        // Of course, the announce must be sent as the Application actor because he also signed it!
+		//      key_id=http://wp.lan/wp-json/activitypub/1.0/application, actor=http://wp.lan/@blog
+		// Of course, the announce must be sent as the Application actor because he also signed it!
 		if ( Users::APPLICATION_USER_ID === $user_id ) {
 			$activity->set_actor( get_rest_url_by_path( 'application' ) );
 		}

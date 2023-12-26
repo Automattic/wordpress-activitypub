@@ -253,7 +253,7 @@ class Followers {
 
 		return $query->found_posts;
 	}
-	
+
 	/**
 	 * Returns all Inboxes fo a Users Followers
 	 *
@@ -266,7 +266,7 @@ class Followers {
 		// $inboxes = wp_cache_get( $cache_key, 'activitypub' );
 
 		// if ( $inboxes ) {
-		// 	return $inboxes;
+		//  return $inboxes;
 		// }
 
 		// get all Followers of a ID of the WordPress User
@@ -318,7 +318,7 @@ class Followers {
 							'key'   => 'activitypub_user_id',
 							'value' => $user_id,
 						),
-					),					
+					),
 				)
 			);
 		}
@@ -335,7 +335,7 @@ class Followers {
 				$follower_ids
 			)
 		);
-	
+
 		$inboxes = array_filter( $results );
 		wp_cache_set( $cache_key, $inboxes, 'activitypub' );
 

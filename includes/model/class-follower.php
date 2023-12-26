@@ -40,7 +40,7 @@ class Follower extends Actor {
 	public function get__id() {
 		return $this->_id;
 	}
-																																											
+
 	/**
 	 * Get the Summary.
 	 *

@@ -51,7 +51,7 @@ class Follow_Requests extends WP_List_Table {
 
 	public function get_sortable_columns() {
 		$sortable_columns = array(
-			'status' => array( 'status', false),
+			'status' => array( 'status', false ),
 			'name' => array( 'name', true ),
 			'modified'   => array( 'modified', false ),
 			'published'  => array( 'published', false ),
@@ -179,21 +179,30 @@ class Follow_Requests extends WP_List_Table {
 	}
 
 	public function ajax_response() {
-		$follow_action = $_REQUEST['follow_action'];
-		$id = $_REQUEST['follow_request'];
-		wp_verify_nonce( $_REQUEST['_wpnonce'], "activitypub_{$follow_action}_follow_request" );
-		$follow_request = Follow_Request::from_wp_id( $id );
+		global $_REQUEST;
+		$follow_action = isset( $_REQUEST['follow_action'] ) ? sanitize_title( wp_unslash( $_REQUEST['follow_action'] ) ) : null;
+		$follow_request_id = isset( $_REQUEST['follow_request'] ) ? (int) $_REQUEST['follow_request'] : null;
+		$wp_nonce   = isset( $_REQUEST['_wpnonce'] ) ? (int) $_REQUEST['_wpnonce'] : null;
+		if ( ! $follow_action || ! $follow_request_id || ! $wp_nonce ) {
+			return;
+		}
+		wp_verify_nonce( $wp_nonce, "activitypub_{$follow_action}_follow_request" );
+		$follow_request = Follow_Request::from_wp_id( $follow_request_id );
+
 		if ( $follow_request->can_handle_follow_request() ) {
 			switch ( $follow_action ) {
 				case 'approve':
 					$follow_request->approve();
 					wp_die( 'approved' );
+					break;
 				case 'reject':
 					$follow_request->reject();
 					wp_die( 'rejected' );
+					break;
 				case 'delete':
 					$follow_request->delete();
 					wp_die( 'deleted' );
+					break;
 			}
 		}
 		return;
@@ -214,39 +223,53 @@ class Follow_Requests extends WP_List_Table {
 		} else {
 			$type = 'hidden';
 		}
+		switch ( $follow_action ) {
+			case 'approve':
+				$follow_action_text = __( 'Approve', 'activitypub' );
+				break;
+			case 'delete':
+				$follow_action_text = __( 'Delete', 'activitypub' );
+				break;
+			case 'reject':
+				$follow_action_text = __( 'Reject', 'activitypub' );
+				break;
+			default:
+				return;
+		}
+
 		printf(
 			'<input type="%s" class="button" value="%s" data-action="%s">',
 			esc_attr( $type ),
-			esc_attr__( ucfirst( $follow_action ), 'activitypub' ),
+			esc_attr( $follow_action_text ),
 			esc_url( $url )
 		);
 	}
 
-	public function column_action($item) {
+	public function column_action( $item ) {
 		$status = $item['status'];
 
-		printf('<div class="activitypub-settings-action-buttons">');
+		printf( '<div class="activitypub-settings-action-buttons">' );
 
 		// TODO this can be written smarter, but at least it is readable.
 		if ( 'pending' === $status ) {
-			self::display_follow_request_action_button( $item['id'], 'approve');
-			self::display_follow_request_action_button( $item['id'], 'reject');
-			self::display_follow_request_action_button( $item['id'], 'delete', false);
+			self::display_follow_request_action_button( $item['id'], 'approve' );
+			self::display_follow_request_action_button( $item['id'], 'reject' );
+			self::display_follow_request_action_button( $item['id'], 'delete', false );
 		}
 
 		if ( 'approved' === $status ) {
-			self::display_follow_request_action_button( $item['id'], 'approve', false);
-			self::display_follow_request_action_button( $item['id'], 'reject');
-			self::display_follow_request_action_button( $item['id'], 'delete', false);
+			self::display_follow_request_action_button( $item['id'], 'approve', false );
+			self::display_follow_request_action_button( $item['id'], 'reject' );
+			self::display_follow_request_action_button( $item['id'], 'delete', false );
 		}
 
 		if ( 'rejected' === $status ) {
-			self::display_follow_request_action_button( $item['id'], 'approve', false); // TODO: Clarify with Mobilizon
-			self::display_follow_request_action_button( $item['id'], 'reject', false);
-			self::display_follow_request_action_button( $item['id'], 'delete');
+			self::display_follow_request_action_button( $item['id'], 'approve', false ); // TODO: Clarify with Mobilizon
+			self::display_follow_request_action_button( $item['id'], 'reject', false );
+			self::display_follow_request_action_button( $item['id'], 'delete' );
 		}
 
-		printf('</div>');
+		printf( '</div>' );
 	}
 
 	public function process_action() {
