@@ -188,7 +188,7 @@ class Post extends Base {
 		$image_ids = array();
 		$query = new \WP_Query(
 			array(
-				'post_parent' => $id,
+				'post_parent' => $this->object->ID,
 				'post_status' => 'inherit',
 				'post_type' => 'attachment',
 				'post_mime_type' => 'image',
@@ -221,6 +221,9 @@ class Post extends Base {
 		$base = \wp_get_upload_dir()['baseurl'];
 		$content = \get_post_field( 'post_content', $this->object );
 		$tags = new \WP_HTML_Tag_Processor( $content );
+		// This linter warning is a false positive - we have to
+		// re-count each time here as we modify $image_ids.
+		// phpcs:ignore Squiz.PHP.DisallowSizeFunctionsInLoops.Found
 		while ( $tags->next_tag( 'img' ) && ( \count( $image_ids ) < $max_images ) ) {
 			$src = $tags->get_attribute( 'src' );
 			// If the img source is in our uploads dir, get the
@@ -269,13 +272,13 @@ class Post extends Base {
 
 		if ( \count( $image_ids ) < $max_images ) {
 			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-				$image_ids = \array_merge ($image_ids, $this->get_classic_editor_image_embeds( $max_images ) );
+				$image_ids = \array_merge( $image_ids, $this->get_classic_editor_image_embeds( $max_images ) );
 			} else {
-				$image_ids = \array_merge ($image_ids, $this->get_classic_editor_image_attachments( $max_images ) );
+				$image_ids = \array_merge( $image_ids, $this->get_classic_editor_image_attachments( $max_images ) );
 			}
 		}
 		// unique then slice as the thumbnail may duplicate another image
-		$image_ids = \array_slice ( \array_unique( $image_ids ), 0, $max_images );
+		$image_ids = \array_slice( \array_unique( $image_ids ), 0, $max_images );
 
 		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $image_ids ) );
 	}
