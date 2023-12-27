@@ -44,16 +44,16 @@ class Activity_Dispatcher {
 		// check if a migration is needed before sending new post
 		Migration::maybe_migrate();
 
+		self::send_announce( $wp_object, $type, Users::APPLICATION_USER_ID );
+
 		if ( is_user_type_disabled( 'blog' ) ) {
 			return;
 		}
 
 		if ( is_single_user() ) {
 			self::send_activity( $wp_object, $type, Users::BLOG_USER_ID );
-			self::send_announce( $wp_object, $type, Users::APPLICATION_USER_ID );
 		} else {
 			self::send_announce( $wp_object, $type, Users::BLOG_USER_ID );
-			self::send_announce( $wp_object, $type, Users::APPLICATION_USER_ID );
 		}
 	}
 
