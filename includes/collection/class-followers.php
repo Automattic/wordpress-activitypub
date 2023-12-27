@@ -52,7 +52,7 @@ class Followers {
 			return $follower_id;
 		}
 
-		return $follower;
+		return $follower_id;
 	}
 
 	/**

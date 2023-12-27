@@ -1,25 +1,18 @@
-version: '2'
+version: '3'
 services:
   test-db:
-    platform: linux/x86_64
-    image: mysql:5.7
+    image: mariadb:latest
     environment:
       MYSQL_DATABASE: activitypub-test
       MYSQL_ROOT_PASSWORD: activitypub-test
-    healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:3306"]
-        interval: 5s
-        timeout: 2s
-        retries: 5
+    expose:
+      - "3306"
 
   test-php:
     build:
       context: .
       dockerfile: Dockerfile
     depends_on:
-      test-db:
-        condition: service_healthy
-    links:
       - test-db
     volumes:
       - .:/app

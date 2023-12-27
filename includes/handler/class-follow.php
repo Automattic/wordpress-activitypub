@@ -47,7 +47,6 @@ class Follow {
 
 		// save follower
 		$follower_id = Followers::add_follower(
-			$user_id,
 			$activity['actor']
 		);
 
