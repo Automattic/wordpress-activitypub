@@ -194,7 +194,7 @@ class Follow_Request extends Base_Object {
 	 * Prepere the sending of the follow request response and hand it over to the sending handler.
 	 */
 	public function send_response( $type ) {
-		$user_id = get_post_meta( $this->get__id(), 'activitypub_user_id' )[0];
+		$user_id = get_post_meta( $this->get__id(), 'activitypub_user_id', true );
 		$user = Users::get_by_id( $user_id );
 
 		$follower_id = wp_get_post_parent_id( $this->get__id() );
