@@ -23,14 +23,15 @@ class Followers {
 	/**
 	 * Add new Follower.
 	 *
-	 * This does not add the follow relationship. It is added when the Accept respone is sent.
+	 * This does not add the follow relationship. 
+	 * 
+	 * The follow relationship can be added later with add_follow_relationship which is usually done when the Accept respone is sent.
 	 *
-	 * @param int    $user_id The ID of the WordPress User
 	 * @param string $actor   The Actor URL
 	 *
 	 * @return array|WP_Error The Follower (WP_Post array) or an WP_Error
 	 */
-	public static function add_follower( $user_id, $actor ) {
+	public static function add_follower( $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
 
 		if ( is_tombstone( $meta ) ) {
@@ -55,7 +56,7 @@ class Followers {
 	}
 
 	/**
-	 * Add the follow relationship.
+	 * Add follow relationship between follower actor identified by internal post id and target actor identified by WordPress user id.
 	 *
 	 * @param int|string $user_id     The internal id of the target WordPress user that gets followed.
 	 * @param int|string $follower_id The internal id of the follower actor.

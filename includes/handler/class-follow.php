@@ -46,19 +46,19 @@ class Follow {
 		$user_id = $user->get__id();
 
 		// save follower
-		$follower = Followers::add_follower(
+		$follower_id = Followers::add_follower(
 			$user_id,
 			$activity['actor']
 		);
 
-		if ( \is_wp_error( $follower ) ) {
+		if ( \is_wp_error( $follower_id ) ) {
 			// it is not even possible to send a "Reject" or "Accept" because
 			// we can not get the Remote-Inbox
 			return;
 		}
 
 		// save follow request by this follower
-		$follow_request = Follow_Request::save( $follower, $user_id, $activity['id'] );
+		$follow_request = Follow_Request::save( $follower_id, $user_id, $activity['id'] );
 
 		if ( ! $user->get_manually_approves_followers() ) {
 			$follow_request->approve();

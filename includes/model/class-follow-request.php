@@ -129,8 +129,7 @@ class Follow_Request extends Base_Object {
 	 *
 	 * @return Follow_Request|WP_Error The Follow_Request or an WP_Error.
 	 */
-	public static function save( $follower, $user_id, $activity_id ) {
-		$follower_id = $follower->get__id();
+	public static function save( $follower_id, $user_id, $activity_id ) {
 		$meta_input = array(
 			'activitypub_user_id' => $user_id,
 		);
