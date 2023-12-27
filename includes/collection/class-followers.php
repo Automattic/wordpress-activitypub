@@ -23,8 +23,8 @@ class Followers {
 	/**
 	 * Add new Follower.
 	 *
-	 * This does not add the follow relationship. 
-	 * 
+	 * This does not add the follow relationship.
+	 *
 	 * The follow relationship can be added later with add_follow_relationship which is usually done when the Accept respone is sent.
 	 *
 	 * @param string $actor   The Actor URL
