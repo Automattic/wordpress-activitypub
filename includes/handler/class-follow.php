@@ -75,17 +75,17 @@ class Follow {
 	 *
 	 * @return void
 	 */
-	public static function send_follow_response( $user, $follower, $object, $type ) {
+	public static function send_follow_response( $user, $inbox, $object, $type ) {
 		// send activity
 		$activity = new Activity();
 		$activity->set_type( $type );
 		$activity->set_object( $object );
 		$activity->set_actor( $user->get_id() );
-		$activity->set_to( $follower->get_id() );
-		$activity->set_id( $user->get_id() . '#accept-' . \preg_replace( '~^https?://~', '', $follower->get_id() ) . '-' . \time() );
+		$activity->set_to( $object['actor'] );
+		$activity->set_id( $user->get_id() . '#accept-' . \preg_replace( '~^https?://~', '', $object['actor'] ) . '-' . \time() );
 
 		$activity = $activity->to_json();
 
-		Http::post( $follower->get_shared_inbox(), $activity, $user->get__id() );
+		Http::post( $inbox, $activity, $user->get__id() );
 	}
 }

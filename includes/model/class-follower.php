@@ -170,15 +170,17 @@ class Follower extends Actor {
 		}
 
 		$args = array(
-			'ID'           => $this->get__id(),
-			'guid'         => esc_url_raw( $this->get_id() ),
-			'post_title'   => wp_strip_all_tags( sanitize_text_field( $this->get_name() ) ),
-			'post_author'  => 0,
-			'post_type'    => Followers::POST_TYPE,
-			'post_name'    => esc_url_raw( $this->get_id() ),
-			'post_excerpt' => sanitize_text_field( wp_kses( $this->get_summary(), 'user_description' ) ),
-			'post_status'  => 'publish',
-			'meta_input'   => $this->get_post_meta_input(),
+			'ID'                    => $this->get__id(),
+			'guid'                  => esc_url_raw( $this->get_id() ),
+			'post_title'            => wp_strip_all_tags( sanitize_text_field( $this->get_name() ) ),
+			'post_author'           => 0,
+			'post_type'             => Followers::POST_TYPE,
+			'post_name'             => esc_url_raw( $this->get_id() ),
+			'post_excerpt'          => sanitize_text_field( wp_kses( $this->get_summary(), 'user_description' ) ),
+			'post_status'           => 'publish',
+			'post_content'          => $this->to_json(),
+			'post_mime_type'        => 'application/json',
+			'post_content_filtered' => $this->get_shared_inbox(),
 		);
 
 		$post_id = wp_insert_post( $args );
@@ -202,7 +204,7 @@ class Follower extends Actor {
 	 * Beware that this os deleting a Follower for ALL users!!!
 	 *
 	 * To delete only the User connection (unfollow)
-	 * @see \Activitypub\Rest\Followers::remove_follower()
+	 * @see \Activitypub\Rest\Followers::remove_follow_relationship()
 	 *
 	 * @return void
 	 */
@@ -210,18 +212,20 @@ class Follower extends Actor {
 		wp_delete_post( $this->_id );
 	}
 
-	/**
-	 * Update the post meta.
-	 *
-	 * @return void
-	 */
-	protected function get_post_meta_input() {
-		$meta_input = array();
-		$meta_input['activitypub_inbox'] = $this->get_shared_inbox();
-		$meta_input['activitypub_actor_json'] = $this->to_json();
+	// /**
+	//  * Update the post meta.
+	//  *
+	//  * @return void
+	//  */
+	// protected function get_post_meta_input() {
+	//  $meta_input = array();
+	//  // TODO: migrations - moved to post_content
+	//  $meta_input['activitypub_inbox'] = $this->get_shared_inbox();
+	//  // TODO: migrations - moved to post_content_filtered
+	//  $meta_input['activitypub_actor_json'] = $this->to_json();
 
-		return $meta_input;
-	}
+	//  return $meta_input;
+	// }
 
 	/**
 	 * Get the icon.

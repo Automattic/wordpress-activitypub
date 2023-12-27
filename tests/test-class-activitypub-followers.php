@@ -185,7 +185,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		$follower2 = \Activitypub\Collection\Followers::get_follower( 2, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_url() );
 
-		\Activitypub\Collection\Followers::remove_follower( 1, 'https://example.com/author/jon' );
+		\Activitypub\Collection\Followers::remove_follow_relationship( 1, 'https://example.com/author/jon' );
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
 		$this->assertNull( $follower );

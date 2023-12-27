@@ -444,18 +444,6 @@ class Activitypub {
 			)
 		);
 
-		register_post_meta(
-			Followers::POST_TYPE,
-			'activitypub_actor_json',
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'sanitize_callback' => function ( $value ) {
-					return sanitize_text_field( $value );
-				},
-			)
-		);
-
 		do_action( 'activitypub_after_register_post_type' );
 	}
 

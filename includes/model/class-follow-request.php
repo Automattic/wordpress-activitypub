@@ -3,11 +3,11 @@ namespace Activitypub\Model;
 
 use WP_Error;
 
-use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Users;
 use Activitypub\Model\Follower;
-use Activitypub\Http;
+
 
 /**
  * ActivityPub Follow Class
@@ -21,6 +21,8 @@ use Activitypub\Http;
  */
 class Follow_Request extends Base_Object {
 	const FOLLOW_REQUEST_POST_TYPE = 'ap_follow_request';
+	const FOLLOW_REQUEST_STATUS_APPROVED = 'approved';
+	const FOLLOW_REQUEST_STATUS_REJECTED = 'rejected';
 
 	/**
 	 * Stores theinternal  WordPress post id of the post of type ap_follow_request
@@ -114,6 +116,13 @@ class Follow_Request extends Base_Object {
 	}
 
 	/**
+	 * Get the internal ID of the follower who issues the follow request.
+	 */
+	private function get_follower_id() {
+		return wp_get_post_parent_id( $this->get__id() );
+	}
+
+	/**
 	 * Save the current Follower-Object.
 	 *
 	 * @param Follower $follower
@@ -155,34 +164,62 @@ class Follow_Request extends Base_Object {
 	}
 
 	/**
-	 * Reject the follow request
+	 * Get the URL/URI of the Follower that issued the follow request.
+	 *
+	 * @return string The url/uri of the follower.
 	 */
-	public function reject() {
+	private function get_follower_actor() {
+		$follower_id = wp_get_post_parent_id( $this->get__id() );
+		$follower = Follower::init_from_cpt( get_post( $follower_id ) );
+		return $follower->get_id();
+	}
+
+	/**
+	 * Save the status of the follow request.
+	 *
+	 * @param string $status The new status of the follow request.
+	 */
+	private function save_follow_request_status( $status ) {
 		wp_update_post(
 			array(
 				'ID' => $this->get__id(),
-				'post_status' => 'rejected',
+				'post_status' => $status,
 			)
 		);
+	}
+
+	/**
+	 * Reject the follow request.
+	 */
+	public function reject() {
+		$user_id = get_post_meta( $this->get__id(), 'activitypub_user_id', true );
+		$actor   = $this->get_follower_actor();
+
+		Followers::remove_follow_relationship( $user_id, $actor );
+
+		$this->save_follow_request_status( self::FOLLOW_REQUEST_STATUS_REJECTED );
+
 		$this->send_response( 'Reject' );
+
 		$this->delete();
 	}
 
 	/**
-	 * Approve the follow request
+	 * Approve the follow request.
 	 */
 	public function approve() {
-		wp_update_post(
-			array(
-				'ID' => $this->get__id(),
-				'post_status' => 'approved',
-			)
-		);
+		$user_id     = get_post_meta( $this->get__id(), 'activitypub_user_id', true );
+		$follower_id = $this->get_follower_id();
+
+		Followers::add_follow_relationship( $user_id, $follower_id );
+
+		$this->save_follow_request_status( self::FOLLOW_REQUEST_STATUS_APPROVED );
+
 		$this->send_response( 'Accept' );
 	}
 
 	/**
-	 * Delete the follow request
+	 * Delete the follow request.
 	 *
 	 * This should only be called after it has been rejected.
 	 */
@@ -195,20 +232,19 @@ class Follow_Request extends Base_Object {
 	 */
 	public function send_response( $type ) {
 		$user_id = get_post_meta( $this->get__id(), 'activitypub_user_id', true );
-		$user = Users::get_by_id( $user_id );
+		$user    = Users::get_by_id( $user_id );
 
-		$follower_id = wp_get_post_parent_id( $this->get__id() );
-		$follower = Follower::init_from_cpt( get_post( $follower_id ) );
+		$follower_id = $this->get_follower_id();
 
-		$actor = $follower->get_id();
+		$follower_inbox = get_post_field( 'post_content_filtered', $follower_id );
 
-		$object = array(
+		// Reconstruct the follow_object.
+		$follow_object = array(
 			'id'    => $this->get_id(),
 			'type'  => $this->get_type(),
-			'actor' => $actor,
 			'object' => $user,
 		);
 
-		do_action( 'activitypub_send_follow_response', $user, $follower, $object, $type );
+		do_action( 'activitypub_send_follow_response', $user, $follower_inbox, $follow_object, $type );
 	}
 }

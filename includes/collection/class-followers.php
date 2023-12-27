@@ -21,7 +21,9 @@ class Followers {
 	const CACHE_KEY_INBOXES = 'follower_inboxes_%s';
 
 	/**
-	 * Add new Follower
+	 * Add new Follower.
+	 *
+	 * This does not add the follow relationship. It is added when the Accept respone is sent.
 	 *
 	 * @param int    $user_id The ID of the WordPress User
 	 * @param string $actor   The Actor URL
@@ -49,6 +51,16 @@ class Followers {
 			return $follower_id;
 		}
 
+		return $follower;
+	}
+
+	/**
+	 * Add the follow relationship.
+	 *
+	 * @param int|string $user_id     The internal id of the target WordPress user that gets followed.
+	 * @param int|string $follower_id The internal id of the follower actor.
+	 */
+	public static function add_follow_relationship( $user_id, $follower_id ) {
 		$post_meta = get_post_meta( $follower_id, 'activitypub_user_id' );
 
 		// phpcs:ignore WordPress.PHP.StrictInArray.MissingTrueStrict
@@ -59,8 +71,6 @@ class Followers {
 			// Reset the cached inboxes for the followed user
 			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
-
-		return $follower;
 	}
 
 	/**
@@ -71,7 +81,7 @@ class Followers {
 	 *
 	 * @return bool|WP_Error True on success, false or WP_Error on failure.
 	 */
-	public static function remove_follower( $user_id, $actor ) {
+	public static function remove_follow_relationship( $user_id, $actor ) {
 		wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 
 		$follower = self::get_follower( $user_id, $actor );
@@ -112,6 +122,18 @@ class Followers {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get a Follower by the internal ID.
+	 *
+	 * @param int $user_id The post ID of the WordPress Follower custom post type post.
+	 *
+	 * @return \Activitypub\Model\Follower|null The Follower object or null
+	 */
+	public static function get_follower_by_id( $follower_id ) {
+		$post = get_post( $follower_id );
+		return Follower::init_from_cpt( $post );
 	}
 
 	/**
@@ -181,7 +203,7 @@ class Followers {
 				),
 			),
 		);
-
+		// TODO: handle follower with empty post_content or inbox which is saved in post_content_filtered
 		$args = wp_parse_args( $args, $defaults );
 		$query = new WP_Query( $args );
 		$total = $query->found_posts;
@@ -204,18 +226,6 @@ class Followers {
 	public static function get_all_followers() {
 		$args = array(
 			'nopaging'   => true,
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query' => array(
-				'relation' => 'AND',
-				array(
-					'key'     => 'activitypub_inbox',
-					'compare' => 'EXISTS',
-				),
-				array(
-					'key'     => 'activitypub_actor_json',
-					'compare' => 'EXISTS',
-				),
-			),
 		);
 		return self::get_followers( null, null, null, $args );
 	}
@@ -239,18 +249,10 @@ class Followers {
 						'key'   => 'activitypub_user_id',
 						'value' => $user_id,
 					),
-					array(
-						'key'     => 'activitypub_inbox',
-						'compare' => 'EXISTS',
-					),
-					array(
-						'key'     => 'activitypub_actor_json',
-						'compare' => 'EXISTS',
-					),
 				),
 			)
 		);
-
+		// TODO: handle follower with empty post_content or inbox which is saved in post_content_filtered
 		return $query->found_posts;
 	}
 
@@ -263,6 +265,7 @@ class Followers {
 	 */
 	public static function get_inboxes( $user_id ) {
 		$cache_key = sprintf( self::CACHE_KEY_INBOXES, $user_id );
+		// TODO: enable caching of the inboxes: this is only for debugging purpose.
 		// $inboxes = wp_cache_get( $cache_key, 'activitypub' );
 
 		// if ( $inboxes ) {
@@ -279,17 +282,8 @@ class Followers {
 				'meta_query' => array(
 					'relation' => 'AND',
 					array(
-						'key'     => 'activitypub_inbox',
-						'compare' => 'EXISTS',
-					),
-					array(
 						'key'   => 'activitypub_user_id',
 						'value' => $user_id,
-					),
-					array(
-						'key'     => 'activitypub_inbox',
-						'value'   => '',
-						'compare' => '!=',
 					),
 				),
 			)
@@ -301,42 +295,16 @@ class Followers {
 			return array();
 		}
 
-		$user = Users::get_by_id( $user_id );
-
-		if ( $user->get_manually_approved_followers() ) {
-			$accepted_follow_requests_query = new WP_Query(
-				array(
-					'nopaging'        => true,
-					'post_type'       => 'ap_follow_request',
-					'fields'          => 'id=>parent',
-					'post_status'     => 'publish',
-					'post_parent__in' => $follower_ids,
-					// phpcs:ign ore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-					'meta_query' => array(
-						'relation' => 'AND',
-						array(
-							'key'   => 'activitypub_user_id',
-							'value' => $user_id,
-						),
-					),
-				)
-			);
-		}
-		$accepted_follow_requests = $accepted_follow_requests_query->get_posts();
-
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$results = $wpdb->get_col(
+		$inboxes = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
-				WHERE post_id IN (" . implode( ', ', array_fill( 0, count( $follower_ids ), '%d' ) ) . ")
-				AND meta_key = 'activitypub_inbox'
-				AND meta_value IS NOT NULL",
+				"SELECT DISTINCT post_content_filtered FROM {$wpdb->posts}
+				 WHERE ID IN (" . implode( ', ', array_fill( 0, count( $follower_ids ), '%d' ) ) . ')',
 				$follower_ids
 			)
 		);
 
-		$inboxes = array_filter( $results );
 		wp_cache_set( $cache_key, $inboxes, 'activitypub' );
 
 		return $inboxes;

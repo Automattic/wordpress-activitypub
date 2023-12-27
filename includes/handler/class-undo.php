@@ -23,6 +23,8 @@ class Undo {
 	 *
 	 * @param array $activity The JSON "Undo" Activity
 	 * @param int   $user_id  The ID of the ID of the WordPress User
+	 *
+	 * @return void
 	 */
 	public static function handle_undo( $activity ) {
 		if (
