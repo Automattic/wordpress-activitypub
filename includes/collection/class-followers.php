@@ -224,11 +224,11 @@ class Followers {
 	 *
 	 * @return array The Term list of Followers.
 	 */
-	public static function get_all_followers() {
+	public static function get_all_followers( $user_id ) {
 		$args = array(
 			'nopaging'   => true,
 		);
-		return self::get_followers( null, null, null, $args );
+		return self::get_followers( $user_id, null, null, $args );
 	}
 
 	/**

@@ -198,7 +198,7 @@ class Follow_Request extends Base_Object {
 
 		$this->save_follow_request_status( self::FOLLOW_REQUEST_STATUS_REJECTED );
 
-		$this->send_response( 'Reject' );
+		$this->send_response( 'Reject', $user_id );
 
 		$this->delete();
 	}
@@ -214,7 +214,7 @@ class Follow_Request extends Base_Object {
 
 		$this->save_follow_request_status( self::FOLLOW_REQUEST_STATUS_APPROVED );
 
-		$this->send_response( 'Accept' );
+		$this->send_response( 'Accept', $user_id, $follower_id );
 	}
 
 	/**
@@ -228,12 +228,21 @@ class Follow_Request extends Base_Object {
 
 	/**
 	 * Prepere the sending of the follow request response and hand it over to the sending handler.
+	 *
+	 * @param string      $type       The Activity type of the response: 'Accept', or 'Reject'.
+	 * @param int|string  $user_id    The user id of who gets followed.
+	 * @param int         $follwer_id The internal follower id.
 	 */
-	public function send_response( $type ) {
-		$user_id = get_post_meta( $this->get__id(), 'activitypub_user_id', true );
-		$user    = Users::get_by_id( $user_id );
+	public function send_response( $type, $user_id = null, $follower_id = null ) {
+		if ( ! $user_id ) {
+			$user_id = get_post_meta( $this->get__id(), 'activitypub_user_id', true );
+		}
 
-		$follower_id = $this->get_follower_id();
+		$user = Users::get_by_id( $user_id );
+
+		if ( ! $follower_id ) {
+			$follower_id = $this->get_follower_id();
+		}
 
 		$follower_inbox = get_post_field( 'post_content_filtered', $follower_id );
 
@@ -241,9 +250,8 @@ class Follow_Request extends Base_Object {
 		$follow_object = array(
 			'id'    => $this->get_id(),
 			'type'  => $this->get_type(),
-			'object' => $user,
 		);
 
-		do_action( 'activitypub_send_follow_response', $user, $follower_inbox, $follow_object, $type );
+		do_action( 'activitypub_send_follow_response', $user_id, $follower_inbox, $follow_object, $type );
 	}
 }

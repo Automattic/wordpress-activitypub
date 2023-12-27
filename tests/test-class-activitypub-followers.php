@@ -251,7 +251,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 
 		foreach ( $followers as $follower ) {
 			$follower_id = \Activitypub\Collection\Followers::add_follower( $follower );
-			\Activitypub\Collection\Followers::add_follow_relationship(1, $follower_id );
+			\Activitypub\Collection\Followers::add_follow_relationship( 1, $follower_id );
 		}
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'http://sally.example.org' );
@@ -288,8 +288,8 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		$follower2_id = \Activitypub\Collection\Followers::add_follower( $follower );
 		$follower3_id = \Activitypub\Collection\Followers::add_follower( $follower );
 
-		$this->assertEqual( $follower1_id, $follower2_id );
-		$this->assertEqual( $follower1_id, $follower3_id );
+		$this->assertEquals( $follower1_id, $follower2_id );
+		$this->assertEquals( $follower1_id, $follower3_id );
 		
 		\Activitypub\Collection\Followers::add_follow_relationship(1, $follower1_id );
 		\Activitypub\Collection\Followers::add_follow_relationship(1, $follower2_id );
@@ -408,10 +408,12 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 
 			$id = $follower->upsert();
 
+			echo $id . '\n';
+
 			add_post_meta( $id, 'activitypub_user_id', 1 );
 		}
 
-		$followers = \Activitypub\Collection\Followers::get_all_followers();
+		$followers = \Activitypub\Collection\Followers::get_all_followers( 1 );
 
 		$this->assertCount( 30, $followers );
 	}

@@ -67,24 +67,24 @@ class Follow {
 	/**
 	 * Send Follow response
 	 *
-	 * @param Activitypub\Model\User     $user     The Target Users ActivityPub object
-	 * @param Activitypub\Model\Follower $follower The Followers ActivityPub object
+	 * @param int|string                 $user_id  The target users internal user id
+	 * @param Activitypub\Model\Follower $follower The followers ActivityPub object
 	 * @param array|object               $object   The ActivityPub follow object
 	 * @param string                     $type     The reponse object type: 'Accept' or 'Reject'
 	 *
 	 * @return void
 	 */
-	public static function send_follow_response( $user, $inbox, $object, $type ) {
+	public static function send_follow_response( $user_id, $inbox, $object, $type ) {
 		// send activity
 		$activity = new Activity();
 		$activity->set_type( $type );
 		$activity->set_object( $object );
-		$activity->set_actor( $user->get_id() );
+		$activity->set_actor( $user_id );
 		$activity->set_to( $object['actor'] );
-		$activity->set_id( $user->get_id() . '#accept-' . \preg_replace( '~^https?://~', '', $object['actor'] ) . '-' . \time() );
+		$activity->set_id( $user_id . '#accept-' . \preg_replace( '~^https?://~', '', $object['actor'] ) . '-' . \time() );
 
 		$activity = $activity->to_json();
 
-		Http::post( $inbox, $activity, $user->get__id() );
+		Http::post( $inbox, $activity, $user_id );
 	}
 }
