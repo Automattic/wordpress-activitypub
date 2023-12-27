@@ -103,7 +103,7 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 ### What if you are running your blog in a subdirectory, but have a different [wp_siteurl](https://wordpress.org/documentation/article/giving-wordpress-its-own-directory/)? ###
 
-In that that case you don't need the redirect, because the index.php will take care of that.
+In that case you don't need the redirect, because the index.php will take care of that.
 
 ## Changelog ##
 
