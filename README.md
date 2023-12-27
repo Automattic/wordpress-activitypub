@@ -1,12 +1,12 @@
 # ActivityPub #
-**Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [mattwiebe](https://profiles.wordpress.org/mattwiebe/), [akirk](https://profiles.wordpress.org/akirk/), [jeherve](https://profiles.wordpress.org/jeherve/), [nuriapena](https://profiles.wordpress.org/nuriapena/), [cavalierlife](https://profiles.wordpress.org/cavalierlife/)  
-**Tags:** OStatus, fediverse, activitypub, activitystream  
-**Requires at least:** 5.5  
-**Tested up to:** 6.4  
-**Stable tag:** 1.3.0  
-**Requires PHP:** 5.6  
-**License:** MIT  
-**License URI:** http://opensource.org/licenses/MIT  
+**Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [mattwiebe](https://profiles.wordpress.org/mattwiebe/), [akirk](https://profiles.wordpress.org/akirk/), [jeherve](https://profiles.wordpress.org/jeherve/), [nuriapena](https://profiles.wordpress.org/nuriapena/), [cavalierlife](https://profiles.wordpress.org/cavalierlife/)
+**Tags:** OStatus, fediverse, activitypub, activitystream
+**Requires at least:** 5.5
+**Tested up to:** 6.4
+**Stable tag:** 1.3.0
+**Requires PHP:** 5.6
+**License:** MIT
+**License URI:** http://opensource.org/licenses/MIT
 
 The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
 
@@ -100,6 +100,10 @@ Add the following to the site.conf in sites-available:
 	}
 
 Where 'blog' is the path to the subdirectory at which your blog resides.
+
+### What if you are running your blog in a subdirectory, but have a different [wp_siteurl](https://wordpress.org/documentation/article/giving-wordpress-its-own-directory/)? ###
+
+In that that case you don't need the redirect, because the index.php will take care of that.
 
 ## Changelog ##
 
