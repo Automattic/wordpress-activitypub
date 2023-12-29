@@ -132,7 +132,7 @@ class Migration {
 		// migrate followers
 		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
 			$followers = get_user_meta( $user_id, 'activitypub_followers', true );
-			
+
 			if ( $followers ) {
 				foreach ( $followers as $actor ) {
 					$follower_id = Followers::add_follower( $actor );
