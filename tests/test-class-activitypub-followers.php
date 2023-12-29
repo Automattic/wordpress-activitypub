@@ -257,7 +257,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'http://sally.example.org' );
 
 		for ( $i = 1; $i <= 15; $i++ ) {
-			add_post_meta( $follower->get__id(), 'activitypub_errors', 'error ' . $i );
+			add_post_meta( $follower_id, 'activitypub_errors', 'error ' . $i );
 		}
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'http://sally.example.org' );
@@ -265,6 +265,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 
 		$followers = \Activitypub\Collection\Followers::get_faulty_followers();
 
+		$this->assertEquals( 15, $count );
 		$this->assertEquals( 1, count( $followers ) );
 		$this->assertEquals( 'http://sally.example.org', $followers[0] );
 
@@ -407,8 +408,6 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 			$follower->from_array( $meta );
 
 			$id = $follower->upsert();
-
-			echo $id . '\n';
 
 			add_post_meta( $id, 'activitypub_user_id', 1 );
 		}

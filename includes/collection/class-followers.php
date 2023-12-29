@@ -364,24 +364,6 @@ class Followers {
 					'key'     => 'activitypub_errors',
 					'compare' => 'EXISTS',
 				),
-				array(
-					'key'     => 'activitypub_inbox',
-					'compare' => 'NOT EXISTS',
-				),
-				array(
-					'key'     => 'activitypub_actor_json',
-					'compare' => 'NOT EXISTS',
-				),
-				array(
-					'key'     => 'activitypub_inbox',
-					'value'   => '',
-					'compare' => '=',
-				),
-				array(
-					'key'     => 'activitypub_actor_json',
-					'value'   => '',
-					'compare' => '=',
-				),
 			),
 		);
 
@@ -389,7 +371,9 @@ class Followers {
 		$items = array();
 
 		foreach ( $posts->get_posts() as $follower ) {
-			$items[] = Follower::init_from_cpt( $follower ); // phpcs:ignore
+			if ( ! $follower->filtered_post_content || ! $follower->post_content ) {
+				$items[] = Follower::init_from_cpt( $follower ); // phpcs:ignore
+			}
 		}
 
 		return $items;
