@@ -16,6 +16,35 @@ namespace Activitypub\Activity;
  * @see https://www.w3.org/TR/activitystreams-vocabulary/#actor-types
  */
 class Actor extends Base_Object {
+	// Reduced context for actors. TODO: still unused.
+	const CONTEXT = array(
+		'https://www.w3.org/ns/activitystreams',
+		'https://w3id.org/security/v1',
+		array(
+			'schema' => 'http://schema.org#',
+			'toot' => 'http://joinmastodon.org/ns#',
+			'webfinger' => 'https://webfinger.net/#',
+			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
+			'PropertyValue' => 'schema:PropertyValue',
+			'featured' => array(
+				'@id' => 'toot:featured',
+				'@type' => '@id',
+			),
+			'featuredTags' => array(
+				'@id' => 'toot:featuredTags',
+				'@type' => '@id',
+			),
+			'alsoKnownAs' => array(
+				'@id' => 'as:alsoKnownAs',
+				'@type' => '@id',
+			),
+			'discoverable' => 'toot:discoverable',
+			'indexable' => 'toot:indexable',
+			'sensitive' => 'as:sensitive',
+			'resource' => 'webfinger:resource',
+		),
+	);
+
 	/**
 	 * @var string
 	 */
@@ -132,6 +161,8 @@ class Actor extends Base_Object {
 	 * WordPress does only support 'false' at the moment.
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#as
+	 *
+	 * @context as:manuallyApprovesFollowers
 	 *
 	 * @var boolean
 	 */
