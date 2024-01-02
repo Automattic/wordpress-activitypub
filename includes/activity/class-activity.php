@@ -19,40 +19,6 @@ use Activitypub\Activity\Base_Object;
 class Activity extends Base_Object {
 	const CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
-		'https://w3id.org/security/v1',
-		array(
-			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
-			'PropertyValue' => 'schema:PropertyValue',
-			'schema' => 'http://schema.org#',
-			'pt' => 'https://joinpeertube.org/ns#',
-			'toot' => 'http://joinmastodon.org/ns#',
-			'webfinger' => 'https://webfinger.net/#',
-			'litepub' => 'http://litepub.social/ns#',
-			'lemmy' => 'https://join-lemmy.org/ns#',
-			'value' => 'schema:value',
-			'Hashtag' => 'as:Hashtag',
-			'featured' => array(
-				'@id' => 'toot:featured',
-				'@type' => '@id',
-			),
-			'featuredTags' => array(
-				'@id' => 'toot:featuredTags',
-				'@type' => '@id',
-			),
-			'alsoKnownAs' => array(
-				'@id' => 'as:alsoKnownAs',
-				'@type' => '@id',
-			),
-			'moderators' => array(
-				'@id' => 'lemmy:moderators',
-				'@type' => '@id',
-			),
-			'postingRestrictedToMods' => 'lemmy:postingRestrictedToMods',
-			'discoverable' => 'toot:discoverable',
-			'indexable' => 'toot:indexable',
-			'sensitive' => 'as:sensitive',
-			'resource' => 'webfinger:resource',
-		),
 	);
 
 	/**

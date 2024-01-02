@@ -24,8 +24,11 @@ class Actor extends Base_Object {
 			'schema' => 'http://schema.org#',
 			'toot' => 'http://joinmastodon.org/ns#',
 			'webfinger' => 'https://webfinger.net/#',
+			'lemmy' => 'https://join-lemmy.org/ns#',
 			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
 			'PropertyValue' => 'schema:PropertyValue',
+			'value' => 'schema:value',
+			'Hashtag' => 'as:Hashtag',
 			'featured' => array(
 				'@id' => 'toot:featured',
 				'@type' => '@id',
@@ -34,13 +37,13 @@ class Actor extends Base_Object {
 				'@id' => 'toot:featuredTags',
 				'@type' => '@id',
 			),
-			'alsoKnownAs' => array(
-				'@id' => 'as:alsoKnownAs',
+			'moderators' => array(
+				'@id' => 'lemmy:moderators',
 				'@type' => '@id',
 			),
+			'postingRestrictedToMods' => 'lemmy:postingRestrictedToMods',
 			'discoverable' => 'toot:discoverable',
 			'indexable' => 'toot:indexable',
-			'sensitive' => 'as:sensitive',
 			'resource' => 'webfinger:resource',
 		),
 	);

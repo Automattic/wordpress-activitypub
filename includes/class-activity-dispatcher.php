@@ -76,6 +76,7 @@ class Activity_Dispatcher {
 		}
 
 		$activity = $transformer->to_activity( $type );
+		$activity->set_actor( Users::get_by_id( $user_id )->get_url() );	
 
 		self::send_activity_to_inboxes( $activity, $user_id );
 	}
@@ -102,7 +103,7 @@ class Activity_Dispatcher {
 
 		$user_id  = $transformer->get_wp_user_id();
 		$activity = $transformer->to_activity( 'Announce' );
-
+		$activity->set_actor( Users::get_by_id( Users::BLOG_USER_ID )->get_url() );	
 		self::send_activity_to_inboxes( $activity, $user_id );
 	}
 

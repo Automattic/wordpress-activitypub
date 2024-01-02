@@ -23,6 +23,11 @@ class User extends Actor {
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#featured
 	 *
+	 * @context {
+	 *   "@id": "http://joinmastodon.org/ns#featured",
+	 *   "@type": "@id"
+	 * }
+	 *
 	 * @var string
 	 */
 	protected $featured;
@@ -36,17 +41,16 @@ class User extends Actor {
 	 */
 	protected $moderators;
 
-	/**
-	 * The User-Type
-	 *
-	 * @var string
-	 */
-	protected $type = 'Person';
+	public function get_type() {
+		return 'Person';
+	}
 
 	/**
 	 * If the User is discoverable.
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
+	 *
+	 * @context http://joinmastodon.org/ns#discoverable
 	 *
 	 * @var boolean
 	 */
@@ -54,6 +58,8 @@ class User extends Actor {
 
 	/**
 	 * If the User is indexable.
+	 *
+	 * @context http://joinmastodon.org/ns#indexable
 	 *
 	 * @var boolean
 	 */

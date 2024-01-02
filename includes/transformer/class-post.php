@@ -45,44 +45,6 @@ class Post extends Base {
 	}
 
 	/**
-	 * Transforms the WP_Post object to an ActivityPub Object
-	 *
-	 * @see \Activitypub\Activity\Base_Object
-	 *
-	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
-	 */
-	public function to_object() {
-		$post = $this->object;
-		$object = parent::to_object();
-
-		$published = \strtotime( $post->post_date_gmt );
-
-		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', $published ) );
-
-		$updated = \strtotime( $post->post_modified_gmt );
-
-		if ( $updated > $published ) {
-			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', $updated ) );
-		}
-
-		$object->set_content_map(
-			array(
-				$this->get_locale() => $this->get_content(),
-			)
-		);
-		$path = sprintf( 'users/%d/followers', intval( $post->post_author ) );
-
-		$object->set_to(
-			array(
-				'https://www.w3.org/ns/activitystreams#Public',
-				get_rest_url_by_path( $path ),
-			)
-		);
-
-		return $object;
-	}
-
-	/**
 	 * Returns the ID of the Post.
 	 *
 	 * @return string The Posts ID.
@@ -122,6 +84,49 @@ class Post extends Base {
 		}
 
 		return Users::get_by_id( $this->object->post_author )->get_url();
+	}
+
+	/**
+	 * Returns the published time of the post.
+	 */
+	public function get_published() {
+		$published = \strtotime( $this->object->post_date_gmt );
+		return \gmdate( 'Y-m-d\TH:i:s\Z', $published );
+	}
+
+	/**
+	 * Getter function for the time the update time.
+	 */
+	public function get_updated() {
+		$published = \strtotime( $this->object->post_date_gmt );
+		$updated = \strtotime( $this->object->post_modified_gmt );
+
+		if ( $updated > $published ) {
+			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
+		} else {
+			return null;
+		}
+	}
+
+	/**
+	 * Getter function for adding the content in a contentMap.
+	 */
+	public function get_content_map() {
+		return array(
+			$this->get_locale() => $this->get_content(),
+		);
+	}
+
+	/**
+	 * Get To.
+	 */
+	public function get_to() {
+		$path = sprintf( 'users/%d/followers', intval( $this->object->post_author ) );
+
+		return array(
+			'https://www.w3.org/ns/activitystreams#Public',
+			get_rest_url_by_path( $path ),
+		);
 	}
 
 	/**

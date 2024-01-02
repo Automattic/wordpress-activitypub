@@ -9,6 +9,7 @@ namespace Activitypub\Activity;
 
 use WP_Error;
 use ReflectionClass;
+use DateTime;
 
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\snake_to_camel_case;
@@ -26,6 +27,13 @@ use function Activitypub\snake_to_camel_case;
  * @see https://www.w3.org/TR/activitystreams-core/#object
  */
 class Base_Object {
+	const CONTEXT = array(
+		'https://www.w3.org/ns/activitystreams',
+		array(
+			'Hashtag' => 'as:Hashtag',
+		),
+	);
+
 	/**
 	 * The object's unique global identifier
 	 *
@@ -120,6 +128,13 @@ class Base_Object {
 	 *    | null
 	 */
 	protected $context;
+
+	/**
+	 * The JSON-LD context.
+	 *
+	 * @var string|array
+	 */
+	protected $_context;
 
 	/**
 	 * The content MAY be expressed using multiple language-tagged
@@ -457,12 +472,20 @@ class Base_Object {
 		}
 
 		if ( \strncasecmp( $method, 'set', 3 ) === 0 ) {
-			$this->set( $var, $params[0] );
+			return $this->set( $var, $params[0] );
 		}
 
 		if ( \strncasecmp( $method, 'add', 3 ) === 0 ) {
 			$this->add( $var, $params[0] );
 		}
+	}
+
+	/**
+	 * The ActivityPub object typicallly can define it's own JSON-LD context.
+	 * @todo
+	 */
+	public function __construct() {
+		$this->_context = $this::CONTEXT;
 	}
 
 	/**
@@ -524,7 +547,7 @@ class Base_Object {
 
 		$this->$key = $value;
 
-		return $this->$key;
+		return $this;
 	}
 
 	/**
@@ -628,6 +651,8 @@ class Base_Object {
 		$array = array();
 		$vars  = get_object_vars( $this );
 
+		$array['@context'] = array();
+
 		foreach ( $vars as $key => $value ) {
 			// ignotre all _prefixed keys.
 			if ( '_' === substr( $key, 0, 1 ) ) {
@@ -649,10 +674,10 @@ class Base_Object {
 			}
 		}
 
-		// replace 'context' key with '@context' and move it to the top.
-		if ( array_key_exists( 'context', $array ) ) {
-			$context = $array['context'];
-			unset( $array['context'] );
+		// replace '_context' key with '@context' and move it to the top.
+		if ( isset( $this->_context ) ) {
+			$context = array_unique( array_merge( $this->_context, $array['@context'] ), SORT_REGULAR );
+			unset( $array['@context'] );
 			$array = array_merge( array( '@context' => $context ), $array );
 		}
 
@@ -691,5 +716,14 @@ class Base_Object {
 	 */
 	public function get_object_var_keys() {
 		return \array_keys( \get_object_vars( $this ) );
+	}
+
+	/**
+	 * Returns the context of this object.
+	 *
+	 * @return array $context A shortened and clean JSON-LD context for the ActivityPub object.
+	 */
+	public static function get__context() {
+		return static::CONTEXT;
 	}
 }

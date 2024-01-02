@@ -42,7 +42,11 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 		$object = \Activitypub\Activity\Base_Object::init_from_array( $test_array );
 
 		$this->assertEquals( 'Hello world!', $object->get_content() );
-		$this->assertEquals( $test_array, $object->to_array() );
+
+		$new_array = $object->to_array();
+		// Ignore the added json-ld context for now.
+		unset( $new_array['@context'] );
+		$this->assertEquals( $test_array, $new_array );
 	}
 
 	public function test_activity_object() {

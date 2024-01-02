@@ -88,10 +88,6 @@ class Users {
 		 */
 		\do_action( 'activitypub_rest_users_pre' );
 
-		$user->set_context(
-			Activity::CONTEXT
-		);
-
 		$json = $user->to_array();
 
 		$rest_response = new WP_REST_Response( $json, 200 );
