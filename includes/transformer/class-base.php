@@ -97,7 +97,6 @@ abstract class Base {
 			$activity->set_object( $object->get_id() );
 		} else {
 			$activity->set_object( $object );
-			$activity->set__context( array_unique( array_merge( $object->get__context(), $activity->get__context() ), SORT_REGULAR ) );
 		}
 
 		return $activity;

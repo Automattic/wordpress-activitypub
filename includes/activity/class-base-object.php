@@ -702,7 +702,7 @@ class Base_Object {
 	 *
 	 * @return array $context A compacted JSON-LD context for the ActivityPub object.
 	 */
-	public static function get_json_ld_context() {
-		return static::CONTEXT;
+	public function get_json_ld_context() {
+		return $this::CONTEXT;
 	}
 }

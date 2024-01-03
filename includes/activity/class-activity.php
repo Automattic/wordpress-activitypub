@@ -34,7 +34,7 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-object-term
 	 *
 	 * @var string
-	 *    | Base_Objectr
+	 *    | Base_Object
 	 *    | Link
 	 *    | null
 	 */
@@ -163,6 +163,19 @@ class Activity extends Base_Object {
 
 		if ( $object->get_id() && ! $this->get_id() ) {
 			$this->set( 'id', $object->get_id() . '#activity' );
+		}
+	}
+
+	/**
+	 * The context of an Activity is usually just the context of the object it contains.
+	 *
+	 * @return array $context A compacted JSON-LD context.
+	 */
+	public function get_json_ld_context(){
+		if ( $this->object instanceof Base_Object ) {
+			return  $this->object::CONTEXT;
+		} else {
+			return self::CONTEXT;
 		}
 	}
 }
