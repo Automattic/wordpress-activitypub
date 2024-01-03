@@ -650,7 +650,7 @@ class Base_Object {
 			}
 
 			if ( is_object( $value ) ) {
-				$value = $value->to_array( $include_json_ld_context );
+				$value = $value->to_array( false );
 			}
 
 			// if value is still empty, ignore it for the array and continue.
