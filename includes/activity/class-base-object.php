@@ -130,13 +130,6 @@ class Base_Object {
 	protected $context;
 
 	/**
-	 * The JSON-LD context.
-	 *
-	 * @var string|array
-	 */
-	protected $_context;
-
-	/**
 	 * The content MAY be expressed using multiple language-tagged
 	 * values.
 	 *
@@ -481,14 +474,6 @@ class Base_Object {
 	}
 
 	/**
-	 * The ActivityPub object typicallly can define it's own JSON-LD context.
-	 * @todo
-	 */
-	public function __construct() {
-		$this->_context = $this::CONTEXT;
-	}
-
-	/**
 	 * Magic function, to transform the object to string.
 	 *
 	 * @return string The object id.
@@ -651,8 +636,6 @@ class Base_Object {
 		$array = array();
 		$vars  = get_object_vars( $this );
 
-		$array['@context'] = array();
-
 		foreach ( $vars as $key => $value ) {
 			// ignotre all _prefixed keys.
 			if ( '_' === substr( $key, 0, 1 ) ) {
@@ -674,12 +657,8 @@ class Base_Object {
 			}
 		}
 
-		// replace '_context' key with '@context' and move it to the top.
-		if ( isset( $this->_context ) ) {
-			$context = array_unique( array_merge( $this->_context, $array['@context'] ), SORT_REGULAR );
-			unset( $array['@context'] );
-			$array = array_merge( array( '@context' => $context ), $array );
-		}
+		// Get JsonLD context and move it to '@context' at the top.
+		$array = array_merge( array( '@context' => $this->get_json_ld_context() ), $array );
 
 		$class = new ReflectionClass( $this );
 		$class = strtolower( $class->getShortName() );
@@ -721,9 +700,9 @@ class Base_Object {
 	/**
 	 * Returns the context of this object.
 	 *
-	 * @return array $context A shortened and clean JSON-LD context for the ActivityPub object.
+	 * @return array $context A compacted JSON-LD context for the ActivityPub object.
 	 */
-	public static function get__context() {
+	public static function get_json_ld_context() {
 		return static::CONTEXT;
 	}
 }
