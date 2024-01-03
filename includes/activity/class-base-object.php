@@ -632,7 +632,7 @@ class Base_Object {
 	 *
 	 * @return array An array built from the Object.
 	 */
-	public function to_array() {
+	public function to_array( $include_json_ld_context = true ) {
 		$array = array();
 		$vars  = get_object_vars( $this );
 
@@ -657,8 +657,10 @@ class Base_Object {
 			}
 		}
 
-		// Get JsonLD context and move it to '@context' at the top.
-		$array = array_merge( array( '@context' => $this->get_json_ld_context() ), $array );
+		if ( $include_json_ld_context ) {
+			// Get JsonLD context and move it to '@context' at the top.
+			$array = array_merge( array( '@context' => $this->get_json_ld_context() ), $array );
+		}
 
 		$class = new ReflectionClass( $this );
 		$class = strtolower( $class->getShortName() );
