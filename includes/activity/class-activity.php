@@ -171,9 +171,9 @@ class Activity extends Base_Object {
 	 *
 	 * @return array $context A compacted JSON-LD context.
 	 */
-	public function get_json_ld_context(){
+	public function get_json_ld_context() {
 		if ( $this->object instanceof Base_Object ) {
-			return  $this->object::CONTEXT;
+			return $this->object::CONTEXT;
 		} else {
 			return self::CONTEXT;
 		}
