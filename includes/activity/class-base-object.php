@@ -629,6 +629,8 @@ class Base_Object {
 	 *
 	 * It tries to get the object attributes if they exist
 	 * and falls back to the getters. Empty values are ignored.
+	 * 
+	 * @param bool $include_json_ld_context
 	 *
 	 * @return array An array built from the Object.
 	 */
@@ -648,7 +650,7 @@ class Base_Object {
 			}
 
 			if ( is_object( $value ) ) {
-				$value = $value->to_array();
+				$value = $value->to_array( $include_json_ld_context );
 			}
 
 			// if value is still empty, ignore it for the array and continue.
