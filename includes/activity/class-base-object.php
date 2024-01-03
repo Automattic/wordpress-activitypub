@@ -629,7 +629,7 @@ class Base_Object {
 	 *
 	 * It tries to get the object attributes if they exist
 	 * and falls back to the getters. Empty values are ignored.
-	 * 
+	 *
 	 * @param bool $include_json_ld_context
 	 *
 	 * @return array An array built from the Object.
