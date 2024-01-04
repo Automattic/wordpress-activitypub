@@ -3,14 +3,11 @@ namespace Activitypub\Transformer;
 
 use WP_Comment;
 use WP_Comment_Query;
-use Activitypub\Hashtag;
-use Activitypub\Webfinger;
+
 use Activitypub\Model\Blog_User;
 use Activitypub\Collection\Users;
 use Activitypub\Transformer\Base;
-use Activitypub\Activity\Base_Object;
 
-use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
 
@@ -31,7 +28,7 @@ class Comment extends Base {
 	 * @return int The User-ID of the WordPress Comment
 	 */
 	public function get_wp_user_id() {
-		return $this->object->user_id;
+		return $this->wp_object->user_id;
 	}
 
 	/**
@@ -40,7 +37,7 @@ class Comment extends Base {
 	 * @return int The User-ID of the WordPress Comment
 	 */
 	public function change_wp_user_id( $user_id ) {
-		$this->object->user_id = $user_id;
+		$this->wp_object->user_id = $user_id;
 	}
 
 	/**
@@ -51,7 +48,7 @@ class Comment extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
-		$comment = $this->object;
+		$comment = $this->wp_object;
 		$object  = parent::to_object();
 
 		$object->set_url( \get_comment_link( $comment->comment_ID ) );
@@ -95,7 +92,7 @@ class Comment extends Base {
 			return $user->get_url();
 		}
 
-		return Users::get_by_id( $this->object->user_id )->get_url();
+		return Users::get_by_id( $this->wp_object->user_id )->get_url();
 	}
 
 	/**
@@ -107,7 +104,7 @@ class Comment extends Base {
 	 */
 	protected function get_content() {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		$comment = $this->object;
+		$comment = $this->wp_object;
 		$content = $comment->comment_content;
 
 		$content = \wpautop( $content );
@@ -124,7 +121,7 @@ class Comment extends Base {
 	 * @return int The URL of the in-reply-to.
 	 */
 	protected function get_in_reply_to() {
-		$comment = $this->object;
+		$comment = $this->wp_object;
 
 		$parent_comment = \get_comment( $comment->comment_parent );
 
@@ -154,7 +151,7 @@ class Comment extends Base {
 	 * @return string ActivityPub URI for comment
 	 */
 	protected function get_id() {
-		$comment = $this->object;
+		$comment = $this->wp_object;
 		return $this->generate_id( $comment );
 	}
 
@@ -195,7 +192,7 @@ class Comment extends Base {
 
 		$comment_query = new WP_Comment_Query(
 			array(
-				'post_id'    => $this->object->comment_post_ID,
+				'post_id'    => $this->wp_object->comment_post_ID,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
 					array(
@@ -251,7 +248,7 @@ class Comment extends Base {
 	 * @return array The list of @-Mentions.
 	 */
 	protected function get_mentions() {
-		return apply_filters( 'activitypub_extract_mentions', array(), $this->object->comment_content, $this->object );
+		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_object->comment_content, $this->wp_object );
 	}
 
 	/**
@@ -260,7 +257,7 @@ class Comment extends Base {
 	 * @return string The locale of the post.
 	 */
 	public function get_locale() {
-		$comment_id = $this->object->ID;
+		$comment_id = $this->wp_object->ID;
 		$lang       = \strtolower( \strtok( \get_locale(), '_-' ) );
 
 		/**
@@ -272,6 +269,6 @@ class Comment extends Base {
 		 *
 		 * @return string The filtered locale of the comment.
 		 */
-		return apply_filters( 'activitypub_comment_locale', $lang, $comment_id, $this->object );
+		return apply_filters( 'activitypub_comment_locale', $lang, $comment_id, $this->wp_object );
 	}
 }
