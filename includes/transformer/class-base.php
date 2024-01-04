@@ -19,7 +19,7 @@ abstract class Base {
 	 *
 	 * This is the source object of the transformer.
 	 *
-	 * @var WP_Post|WP_Comment
+	 * @var stdClass|WP_Post|WP_Comment
 	 */
 	protected $wp_object;
 
@@ -28,7 +28,7 @@ abstract class Base {
 	 *
 	 * This helps to chain the output of the Transformer.
 	 *
-	 * @param WP_Object|WP_Comment $object The WP_Post object
+	 * @param stdClass|WP_Post|WP_Comment $wp_object The WordPress object
 	 *
 	 * @return void
 	 */
@@ -39,7 +39,7 @@ abstract class Base {
 	/**
 	 * Base constructor.
 	 *
-	 * @param WP_Object|WP_Comment $wp_object
+	 * @param stdClass|WP_Post|WP_Comment $wp_object The WordPress object
 	 */
 	public function __construct( $wp_object ) {
 		$this->wp_object = $wp_object;
