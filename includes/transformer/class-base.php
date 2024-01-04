@@ -1,6 +1,9 @@
 <?php
 namespace Activitypub\Transformer;
 
+use WP_Post;
+use WP_Comment;
+
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 
@@ -12,18 +15,20 @@ use Activitypub\Activity\Base_Object;
  */
 abstract class Base {
 	/**
-	 * The WP_Post object.
+	 * The WP_Post or WP_Comment object.
 	 *
-	 * @var
+	 * This is the source object of the transformer.
+	 *
+	 * @var WP_Post|WP_Comment
 	 */
-	protected $object;
+	protected $wp_object;
 
 	/**
 	 * Static function to Transform a WordPress Object.
 	 *
 	 * This helps to chain the output of the Transformer.
 	 *
-	 * @param stdClass $object The WP_Post object
+	 * @param WP_Object|WP_Comment $object The WP_Post object
 	 *
 	 * @return void
 	 */
@@ -34,10 +39,10 @@ abstract class Base {
 	/**
 	 * Base constructor.
 	 *
-	 * @param stdClass $object
+	 * @param WP_Object|WP_Comment $wp_object
 	 */
-	public function __construct( $object ) {
-		$this->object = $object;
+	public function __construct( $wp_object ) {
+		$this->wp_object = $wp_object;
 	}
 
 	/**
@@ -46,9 +51,9 @@ abstract class Base {
 	 * @return Activitypub\Activity\Base_Object
 	 */
 	public function to_object() {
-		$object = new Base_Object();
+		$activitypub_object = new Base_Object();
 
-		$vars = $object->get_object_var_keys();
+		$vars = $activitypub_object->get_object_var_keys();
 
 		foreach ( $vars as $var ) {
 			$getter = 'get_' . $var;
@@ -59,12 +64,12 @@ abstract class Base {
 				if ( isset( $value ) ) {
 					$setter = 'set_' . $var;
 
-					call_user_func( array( $object, $setter ), $value );
+					call_user_func( array( $activitypub_object, $setter ), $value );
 				}
 			}
 		}
 
-		return $object;
+		return $activitypub_object;
 	}
 
 	/**
