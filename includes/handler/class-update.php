@@ -72,10 +72,8 @@ class Update {
 		if ( ! empty( $commentdata['comment_ID'] ) ) {
 			$state    = 1;
 			$reaction = \get_comment( $commentdata['comment_ID'] );
-		} elseif ( 'inactive' === $commentdata ) {
-			$state = $commentdata;
 		} else {
-			$state = 0;
+			$state = $commentdata;
 		}
 
 		\do_action( 'activitypub_handled_update', $activity, null, $state, $reaction );
