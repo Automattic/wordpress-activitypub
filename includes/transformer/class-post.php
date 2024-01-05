@@ -30,7 +30,7 @@ class Post extends Base {
 	 * @return int The ID of the WordPress Post
 	 */
 	public function get_wp_user_id() {
-		return $this->object->post_author;
+		return $this->wp_object->post_author;
 	}
 
 	/**
@@ -39,9 +39,47 @@ class Post extends Base {
 	 * @return int The User-ID of the WordPress Post
 	 */
 	public function change_wp_user_id( $user_id ) {
-		$this->object->post_author = $user_id;
+		$this->wp_object->post_author = $user_id;
 
 		return $this;
+	}
+
+	/**
+	 * Transforms the WP_Post object to an ActivityPub Object
+	 *
+	 * @see \Activitypub\Activity\Base_Object
+	 *
+	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
+	 */
+	public function to_object() {
+		$post = $this->wp_object;
+		$object = parent::to_object();
+
+		$published = \strtotime( $post->post_date_gmt );
+
+		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', $published ) );
+
+		$updated = \strtotime( $post->post_modified_gmt );
+
+		if ( $updated > $published ) {
+			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', $updated ) );
+		}
+
+		$object->set_content_map(
+			array(
+				$this->get_locale() => $this->get_content(),
+			)
+		);
+		$path = sprintf( 'users/%d/followers', intval( $post->post_author ) );
+
+		$object->set_to(
+			array(
+				'https://www.w3.org/ns/activitystreams#Public',
+				get_rest_url_by_path( $path ),
+			)
+		);
+
+		return $object;
 	}
 
 	/**
@@ -59,7 +97,7 @@ class Post extends Base {
 	 * @return string The Posts URL.
 	 */
 	public function get_url() {
-		$post = $this->object;
+		$post = $this->wp_object;
 
 		if ( 'trash' === get_post_status( $post ) ) {
 			$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
@@ -83,14 +121,14 @@ class Post extends Base {
 			return $user->get_url();
 		}
 
-		return Users::get_by_id( $this->object->post_author )->get_url();
+		return Users::get_by_id( $this->wp_object->post_author )->get_url();
 	}
 
 	/**
 	 * Returns the published time of the post.
 	 */
 	public function get_published() {
-		$published = \strtotime( $this->object->post_date_gmt );
+		$published = \strtotime( $this->wp_object->post_date_gmt );
 		return \gmdate( 'Y-m-d\TH:i:s\Z', $published );
 	}
 
@@ -98,8 +136,8 @@ class Post extends Base {
 	 * Getter function for the time the update time.
 	 */
 	public function get_updated() {
-		$published = \strtotime( $this->object->post_date_gmt );
-		$updated = \strtotime( $this->object->post_modified_gmt );
+		$published = \strtotime( $this->wp_object->post_date_gmt );
+		$updated = \strtotime( $this->wp_object->post_modified_gmt );
 
 		if ( $updated > $published ) {
 			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
@@ -121,7 +159,7 @@ class Post extends Base {
 	 * Get To.
 	 */
 	public function get_to() {
-		$path = sprintf( 'users/%d/followers', intval( $this->object->post_author ) );
+		$path = sprintf( 'users/%d/followers', intval( $this->wp_object->post_author ) );
 
 		return array(
 			'https://www.w3.org/ns/activitystreams#Public',
@@ -139,7 +177,7 @@ class Post extends Base {
 		// We maintain the image-centric naming for backwards compatibility.
 		$max_media = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
 
-		if ( site_supports_blocks() && \has_blocks( $this->object->post_content ) ) {
+		if ( site_supports_blocks() && \has_blocks( $this->wp_object->post_content ) ) {
 			return $this->get_block_attachments( $max_media );
 		}
 
@@ -159,7 +197,7 @@ class Post extends Base {
 			return array();
 		}
 
-		$id = $this->object->ID;
+		$id = $this->wp_object->ID;
 
 		$media_ids = array();
 
@@ -169,7 +207,7 @@ class Post extends Base {
 		}
 
 		if ( $max_media > 0 ) {
-			$blocks = \parse_blocks( $this->object->post_content );
+			$blocks = \parse_blocks( $this->wp_object->post_content );
 			$media_ids = self::get_media_ids_from_blocks( $blocks, $media_ids, $max_media );
 		}
 
@@ -193,7 +231,7 @@ class Post extends Base {
 		$image_ids = array();
 		$query = new \WP_Query(
 			array(
-				'post_parent' => $this->object->ID,
+				'post_parent' => $this->wp_object->ID,
 				'post_status' => 'inherit',
 				'post_type' => 'attachment',
 				'post_mime_type' => 'image',
@@ -230,7 +268,7 @@ class Post extends Base {
 
 		$image_ids = array();
 		$base      = \wp_get_upload_dir()['baseurl'];
-		$content   = \get_post_field( 'post_content', $this->object );
+		$content   = \get_post_field( 'post_content', $this->wp_object );
 		$tags      = new \WP_HTML_Tag_Processor( $content );
 
 		// This linter warning is a false positive - we have to
@@ -276,7 +314,7 @@ class Post extends Base {
 			return array();
 		}
 
-		$id = $this->object->ID;
+		$id = $this->wp_object->ID;
 
 		$image_ids = array();
 
@@ -464,10 +502,10 @@ class Post extends Base {
 
 		// Default to Article.
 		$object_type = 'Article';
-		$post_type = \get_post_type( $this->object );
+		$post_type = \get_post_type( $this->wp_object );
 		switch ( $post_type ) {
 			case 'post':
-				$post_format = \get_post_format( $this->object );
+				$post_format = \get_post_format( $this->wp_object );
 				switch ( $post_format ) {
 					case 'aside':
 					case 'status':
@@ -546,7 +584,7 @@ class Post extends Base {
 	protected function get_tag() {
 		$tags = array();
 
-		$post_tags = \get_the_tags( $this->object->ID );
+		$post_tags = \get_the_tags( $this->wp_object->ID );
 		if ( $post_tags ) {
 			foreach ( $post_tags as $post_tag ) {
 				$tag = array(
@@ -593,7 +631,7 @@ class Post extends Base {
 		do_action( 'activitypub_before_get_content', $post );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		$post    = $this->object;
+		$post    = $this->wp_object;
 		$content = $this->get_post_content_template();
 
 		// Register our shortcodes just in time.
@@ -638,7 +676,7 @@ class Post extends Base {
 				break;
 		}
 
-		return apply_filters( 'activitypub_object_content_template', $template, $this->object );
+		return apply_filters( 'activitypub_object_content_template', $template, $this->wp_object );
 	}
 
 	/**
@@ -647,7 +685,7 @@ class Post extends Base {
 	 * @return array The list of @-Mentions.
 	 */
 	protected function get_mentions() {
-		return apply_filters( 'activitypub_extract_mentions', array(), $this->object->post_content, $this->object );
+		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_object->post_content, $this->wp_object );
 	}
 
 	/**
@@ -656,7 +694,7 @@ class Post extends Base {
 	 * @return string The locale of the post.
 	 */
 	public function get_locale() {
-		$post_id = $this->object->ID;
+		$post_id = $this->wp_object->ID;
 		$lang    = \strtolower( \strtok( \get_locale(), '_-' ) );
 
 		/**
@@ -668,6 +706,6 @@ class Post extends Base {
 		 *
 		 * @return string The filtered locale of the post.
 		 */
-		return apply_filters( 'activitypub_post_locale', $lang, $post_id, $this->object );
+		return apply_filters( 'activitypub_post_locale', $lang, $post_id, $this->wp_object );
 	}
 }

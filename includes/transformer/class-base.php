@@ -1,6 +1,9 @@
 <?php
 namespace Activitypub\Transformer;
 
+use WP_Post;
+use WP_Comment;
+
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 
@@ -12,18 +15,20 @@ use Activitypub\Activity\Base_Object;
  */
 abstract class Base {
 	/**
-	 * The WP_Post object.
+	 * The WP_Post or WP_Comment object.
 	 *
-	 * @var
+	 * This is the source object of the transformer.
+	 *
+	 * @var WP_Post|WP_Comment
 	 */
-	protected $object;
+	protected $wp_object;
 
 	/**
 	 * Static function to Transform a WordPress Object.
 	 *
 	 * This helps to chain the output of the Transformer.
 	 *
-	 * @param stdClass $object The WP_Post object
+	 * @param WP_Post|WP_Comment $wp_object The WordPress object
 	 *
 	 * @return Base_Object
 	 */
@@ -34,10 +39,10 @@ abstract class Base {
 	/**
 	 * Base constructor.
 	 *
-	 * @param stdClass $object
+	 * @param WP_Post|WP_Comment $wp_object The WordPress object
 	 */
-	public function __construct( $object ) {
-		$this->object = $object;
+	public function __construct( $wp_object ) {
+		$this->wp_object = $wp_object;
 	}
 
 	/**
@@ -47,8 +52,8 @@ abstract class Base {
 	 *
 	 * @return Base_Object|object $object
 	 */
-	protected function transform_object_properties( $object ) {
-		$vars = $object->get_object_var_keys();
+	protected function transform_object_properties( $activitypub_object ) {
+		$vars = $activitypub_object->get_object_var_keys();
 
 		foreach ( $vars as $var ) {
 			$getter = 'get_' . $var;
@@ -59,11 +64,11 @@ abstract class Base {
 				if ( isset( $value ) ) {
 					$setter = 'set_' . $var;
 
-					call_user_func( array( $object, $setter ), $value );
+					call_user_func( array( $activitypub_object, $setter ), $value );
 				}
 			}
 		}
-		return $object;
+		return $activitypub_object;
 	}
 
 	/**
@@ -72,11 +77,11 @@ abstract class Base {
 	 * @return Activitypub\Activity\Base_Object
 	 */
 	public function to_object() {
-		$object = new Base_Object();
+		$activitypub_object = new Base_Object();
 
-		$object = $this->transform_object_properties( $object );
+		$activitypub_object = $this->transform_object_properties( $activitypub_object );
 
-		return $object;
+		return $activitypub_object;
 	}
 
 	/**
