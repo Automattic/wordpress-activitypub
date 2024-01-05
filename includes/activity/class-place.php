@@ -81,12 +81,12 @@ class Place extends Base_Object {
 	protected $address;
 
 	public function set_address( $address ) {
-		if ( is_string( $address ) || 'Activitypub\\Activity\\PostalAddress' === gettype( $address ) ) {
+		if ( is_string( $address ) || is_array( $address ) ) {
 			$this->address = $address;
 		} else {
 			_doing_it_wrong(
 				__METHOD__,
-				'The address must be either a string of a PostalAddress (Postal_Address).',
+				'The address must be either a string or an array like schema.org/PostalAddress.',
 				'<version_placeholder>'
 			);
 		}
