@@ -66,11 +66,16 @@ class Update {
 	 * @return void
 	 */
 	public static function update_interaction( $activity ) {
-		$state    = Interactions::update_comment( $activity );
-		$reaction = null;
+		$commentdata = Interactions::update_comment( $activity );
+		$reaction    = null;
 
-		if ( $state && ! \is_wp_error( $reaction ) ) {
-			$reaction = \get_comment( $state );
+		if ( ! empty( $commentdata['comment_ID'] ) ) {
+			$state    = 1;
+			$reaction = \get_comment( $commentdata['comment_ID'] );
+		} elseif ( 'inactive' === $commentdata ) {
+			$state = $commentdata;
+		} else {
+			$state = 0;
 		}
 
 		\do_action( 'activitypub_handled_update', $activity, null, $state, $reaction );

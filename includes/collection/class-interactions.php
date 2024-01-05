@@ -102,7 +102,7 @@ class Interactions {
 	 *
 	 * @param array $activity The activity-object
 	 *
-	 * @return array|false The commentdata or false on failure
+	 * @return array|string|false The commentdata or false on failure
 	 */
 	public static function update_comment( $activity ) {
 		$meta = get_remote_metadata_by_actor( $activity['actor'] );
@@ -135,14 +135,14 @@ class Interactions {
 		);
 		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
 
-		$comment = \wp_update_comment( $commentdata, true );
+		\wp_update_comment( $commentdata, true );
 
 		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10 );
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 		// re-add flood control
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
-		return $comment;
+		return $commentdata;
 	}
 
 	/**
