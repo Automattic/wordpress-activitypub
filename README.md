@@ -111,13 +111,14 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 
 ### 2.0.0 ###
 
+* Added: Bidirectional Comment Federation
 * Removed: Deprecated Classes
 * Fixed: Normalize attributes that can have mixed value types
 * Added: URL support for WebFinger
 * Added: Make Post-Template filterable
 * Added: CSS class for ActivityPub comments to allow custom designs
 * Added: FEP-2677: Identifying the Application Actor
-* Added: Basic Comment Federation
+* Added: FEP-2c59: Discovery of a Webfinger address from an ActivityPub actor
 * Added: Profile Update Activities
 * Improved: WebFinger endpoints
 
