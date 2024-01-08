@@ -54,7 +54,7 @@ class Interactions {
 
 		$commentdata = array(
 			'comment_post_ID' => $comment_post_id,
-			'comment_author' => \esc_attr( $meta['name'] ),
+			'comment_author' => isset( $meta['name'] ) ? \esc_attr( $meta['name'] ) : \esc_attr( $meta['preferredUsername'] ),
 			'comment_author_url' => \esc_url_raw( $meta['url'] ),
 			'comment_content' => \addslashes( $activity['object']['content'] ),
 			'comment_type' => 'comment',
