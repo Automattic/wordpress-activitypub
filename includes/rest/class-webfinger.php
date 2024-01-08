@@ -100,7 +100,7 @@ class Webfinger {
 		$aliases = array_unique( $aliases );
 
 		$profile = array(
-			'subject' => sprintf( 'acct:%s', $user->get_resource() ),
+			'subject' => sprintf( 'acct:%s', $user->get_webfinger() ),
 			'aliases' => array_values( array_unique( $aliases ) ),
 			'links'   => array(
 				array(

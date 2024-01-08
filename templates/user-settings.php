@@ -11,11 +11,11 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 			</th>
 			<td>
 				<p>
-					<code><?php echo \esc_html( $user->get_resource() ); ?></code> or
+					<code><?php echo \esc_html( $user->get_webfinger() ); ?></code> or
 					<code><?php echo \esc_url( $user->get_url() ); ?></code>
 				</p>
 				<?php // translators: the webfinger resource ?>
-				<p class="description"><?php \printf( \esc_html__( 'Follow "@%s" by searching for it on Mastodon, Friendica, etc.', 'activitypub' ), \esc_html( $user->get_resource() ) ); ?></p>
+				<p class="description"><?php \printf( \esc_html__( 'Follow "@%s" by searching for it on Mastodon, Friendica, etc.', 'activitypub' ), \esc_html( $user->get_webfinger() ) ); ?></p>
 			</td>
 		</tr>
 		<tr class="activitypub-user-description-wrap">
