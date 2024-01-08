@@ -75,7 +75,7 @@ class Blocks {
 		if ( ! is_wp_error( $user ) ) {
 			$attrs['profileData'] = self::filter_array_by_keys(
 				$user->to_array(),
-				array( 'icon', 'name', 'resource' )
+				array( 'icon', 'name', 'webfinger' )
 			);
 		}
 		$wrapper_attributes = get_block_wrapper_attributes(
