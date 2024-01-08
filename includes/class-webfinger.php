@@ -30,7 +30,7 @@ class Webfinger {
 			return '';
 		}
 
-		return $user->get_resource();
+		return $user->get_webfinger();
 	}
 
 	/**

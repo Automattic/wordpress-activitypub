@@ -20,13 +20,13 @@ class Activity extends Base_Object {
 	const CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
 		'https://w3id.org/security/v1',
+		'https://purl.archive.org/socialweb/webfinger',
 		array(
 			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
 			'PropertyValue' => 'schema:PropertyValue',
 			'schema' => 'http://schema.org#',
 			'pt' => 'https://joinpeertube.org/ns#',
 			'toot' => 'http://joinmastodon.org/ns#',
-			'webfinger' => 'https://webfinger.net/#',
 			'litepub' => 'http://litepub.social/ns#',
 			'lemmy' => 'https://join-lemmy.org/ns#',
 			'value' => 'schema:value',
@@ -51,7 +51,6 @@ class Activity extends Base_Object {
 			'discoverable' => 'toot:discoverable',
 			'indexable' => 'toot:indexable',
 			'sensitive' => 'as:sensitive',
-			'resource' => 'webfinger:resource',
 		),
 	);
 

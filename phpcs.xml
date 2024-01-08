@@ -3,6 +3,8 @@
 	<description>WordPress ActivityPub Standards</description>
 	<file>./activitypub.php</file>
 	<file>./includes/</file>
+	<file>./integration/</file>
+	<file>./build/</file>
 	<exclude-pattern>*\.(inc|css|js|svg)</exclude-pattern>
 	<exclude-pattern>*/vendor/*</exclude-pattern>
 	<exclude-pattern>*/node_modules/*</exclude-pattern>

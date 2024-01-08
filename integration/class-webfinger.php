@@ -34,7 +34,7 @@ class Webfinger {
 			return $array;
 		}
 
-		$array['subject'] = sprintf( 'acct:%s', $user->get_resource() );
+		$array['subject'] = sprintf( 'acct:%s', $user->get_webfinger() );
 
 		$array['aliases'][] = $user->get_url();
 		$array['aliases'][] = $user->get_alternate_url();
