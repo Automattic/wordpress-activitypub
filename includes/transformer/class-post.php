@@ -116,12 +116,19 @@ class Post extends Base {
 	 * @return string The User-URL.
 	 */
 	protected function get_attributed_to() {
+		$blog_user = new Blog_User();
+
 		if ( is_single_user() ) {
-			$user = new Blog_User();
+			return $blog_user->get_url();
+		}
+
+		$user = Users::get_by_id( $this->wp_object->post_author );
+
+		if ( $user && ! is_wp_error( $user ) ) {
 			return $user->get_url();
 		}
 
-		return Users::get_by_id( $this->wp_object->post_author )->get_url();
+		return $blog_user->get_url();
 	}
 
 	/**
