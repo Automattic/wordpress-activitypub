@@ -242,16 +242,27 @@ class Post extends Base {
 			$src = $tags->get_attribute( 'src' );
 
 			// If the img source is in our uploads dir, get the
-			// associated ID. Note: if there's a -500x500 or -scaled
+			// associated ID. Note: if there's a -500x500
 			// type suffix, we remove it, but we try the original
 			// first in case the original image is actually called
-			// that.
+			// that. Likewise, we try adding the -scaled suffix for
+			// the case that this is a small version of an image
+			// that was big enough to get scaled down on upload:
+			// https://make.wordpress.org/core/2019/10/09/introducing-handling-of-big-images-in-wordpress-5-3/
 			if ( null !== $src && \str_starts_with( $src, $base ) ) {
 				$img_id = \attachment_url_to_postid( $src );
 
 				if ( 0 === $img_id ) {
-					$src_repl = preg_replace( '/-(?:\d+x\d+|scaled)(\.[a-zA-Z]+)/', '$1', $src );
-					$img_id = \attachment_url_to_postid( $src_repl );
+					$count = 0;
+					$src = preg_replace( '/-(?:\d+x\d+)(\.[a-zA-Z]+)$/', '$1', $src, 1, $count );
+					if ( $count > 0 ) {
+						$img_id = \attachment_url_to_postid( $src );
+					}
+				}
+
+				if ( 0 === $img_id ) {
+					$src = preg_replace( '/(\.[a-zA-Z]+)$/', '-scaled$1', $src );
+					$img_id = \attachment_url_to_postid( $src );
 				}
 
 				if ( 0 !== $img_id ) {
