@@ -20,11 +20,6 @@ class Webfinger {
 	 * @return string The user-resource
 	 */
 	public static function get_user_resource( $user_id ) {
-		// use WebFinger plugin if installed
-		if ( \function_exists( '\get_webfinger_resource' ) ) {
-			return \get_webfinger_resource( $user_id, false );
-		}
-
 		$user = Users::get_by_id( $user_id );
 		if ( ! $user || is_wp_error( $user ) ) {
 			return '';

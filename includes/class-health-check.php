@@ -254,15 +254,19 @@ class Health_Check {
 	public static function is_webfinger_endpoint_accessible() {
 		$user = \wp_get_current_user();
 
+		$resource = '';
+
 		if ( ! is_user_type_disabled( 'blog' ) ) {
-			$account = get_webfinger_resource( $user->ID );
+			$user = Users::get_by_id( $user->ID );
 		} elseif ( ! is_user_type_disabled( 'user' ) ) {
-			$account = get_webfinger_resource( Users::BLOG_USER_ID );
-		} else {
-			$account = '';
+			$user = Users::get_by_id( Users::BLOG_USER_ID );
 		}
 
-		$url = Webfinger::resolve( $account );
+		if ( $user && ! is_wp_error( $user ) ) {
+			$resource = $user->get_webfinger();
+		}
+
+		$url = Webfinger::resolve( $resource );
 		if ( \is_wp_error( $url ) ) {
 			$allowed = array( 'code' => array() );
 			$not_accessible = wp_kses(
