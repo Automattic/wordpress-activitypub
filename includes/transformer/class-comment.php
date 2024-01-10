@@ -124,7 +124,7 @@ class Comment extends Base {
 		$comment = $this->wp_object;
 
 		$parent_comment = \get_comment( $comment->comment_parent );
-		$in_reply_to    = \get_permalink( $comment->comment_post_ID );
+		$in_reply_to    = null;
 
 		if ( $parent_comment ) {
 			$comment_meta = \get_comment_meta( $parent_comment->comment_ID );
@@ -136,6 +136,8 @@ class Comment extends Base {
 			} elseif ( ! empty( $parent_comment->user_id ) ) {
 				$in_reply_to = $this->generate_id( $parent_comment );
 			}
+		} else {
+			$in_reply_to = \get_permalink( $comment->comment_post_ID );
 		}
 
 		return $in_reply_to;
