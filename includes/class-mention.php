@@ -101,7 +101,14 @@ class Mention {
 			if ( ! empty( $metadata['preferredUsername'] ) ) {
 				$username = $metadata['preferredUsername'];
 			}
-			return \sprintf( '<a rel="mention" class="u-url mention" href="%s">@<span>%s</span></a>', esc_url( $metadata['url'] ), esc_html( $username ) );
+
+			$url = isset( $metadata['url'] ) ? $metadata['url'] : $metadata['url'];
+
+			if ( \is_array( $url ) ) {
+				$url = $url[0];
+			}
+
+			return \sprintf( '<a rel="mention" class="u-url mention" href="%s">@<span>%s</span></a>', esc_url( $url ), esc_html( $username ) );
 		}
 
 		return $result[0];
