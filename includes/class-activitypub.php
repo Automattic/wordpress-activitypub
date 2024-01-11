@@ -151,6 +151,7 @@ class Activitypub {
 		}
 
 		wp_safe_redirect( get_comment_link( $comment ) );
+		exit;
 	}
 
 	/**
