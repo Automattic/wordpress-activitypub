@@ -77,7 +77,7 @@ class Activity_Dispatcher {
 
 		$activity = $transformer->to_activity( $type );
 
-		self::send_activity_to_inboxes( $activity, $user_id );
+		self::send_activity_to_followers( $activity, $user_id, $wp_object );
 	}
 
 	/**
@@ -103,7 +103,7 @@ class Activity_Dispatcher {
 		$user_id  = $transformer->get_wp_user_id();
 		$activity = $transformer->to_activity( 'Announce' );
 
-		self::send_activity_to_inboxes( $activity, $user_id );
+		self::send_activity_to_followers( $activity, $user_id, $wp_object );
 	}
 
 	/**
@@ -130,18 +130,24 @@ class Activity_Dispatcher {
 		$activity->set_to( 'https://www.w3.org/ns/activitystreams#Public' );
 
 		// send the update
-		self::send_activity_to_inboxes( $activity, $user_id );
+		self::send_activity_to_followers( $activity, $user_id, $user );
 	}
 
 	/**
 	 * Send an Activity to all followers and mentioned users.
 	 *
-	 * @param Activity $activity The ActivityPub Activity.
-	 * @param int      $user_id  The user ID.
+	 * @param Activity                   $activity  The ActivityPub Activity.
+	 * @param int                        $user_id   The user ID.
+	 * @param WP_User|WP_Post|WP_Comment $wp_object The WordPress object.
 	 *
 	 * @return void
 	 */
-	private static function send_activity_to_inboxes( $activity, $user_id ) {
+	private static function send_activity_to_followers( $activity, $user_id, $wp_object ) {
+		// check if the Activity should be send to the followers
+		if ( ! apply_filters( 'activitypub_send_activity_to_followers', true, $activity, $user_id, $wp_object ) ) {
+			return;
+		}
+
 		$follower_inboxes = Followers::get_inboxes( $user_id );
 
 		$mentioned_inboxes = array();
