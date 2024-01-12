@@ -252,19 +252,8 @@ class Health_Check {
 	 * @return boolean|WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
-		$user = \wp_get_current_user();
-
-		$resource = '';
-
-		if ( ! is_user_type_disabled( 'blog' ) ) {
-			$user = Users::get_by_id( $user->ID );
-		} elseif ( ! is_user_type_disabled( 'user' ) ) {
-			$user = Users::get_by_id( Users::BLOG_USER_ID );
-		}
-
-		if ( $user && ! is_wp_error( $user ) ) {
-			$resource = $user->get_webfinger();
-		}
+		$user = Users::get_by_id( Users::APPLICATION_USER_ID );
+		$resource = $user->get_webfinger();
 
 		$url = Webfinger::resolve( $resource );
 		if ( \is_wp_error( $url ) ) {
