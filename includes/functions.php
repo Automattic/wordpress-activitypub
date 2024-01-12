@@ -733,10 +733,23 @@ function should_comment_be_federated( $comment ) {
 }
 
 /**
+ * Check if a comment is federatable.
+ *
+ * We consider a comment federatable if it is authored by a user that is not disabled for federation
+ * or if it was received via ActivityPub.
+ *
+ * @param mixed $comment Comment object or ID.
+ *
+ * @return boolean True if the comment is federatable, false otherwise.
+ */
+function is_comment_federatable( $comment ) {
+	return Comment::is_federatable( $comment );
+}
+
+/**
  * Check if a comment is federated.
  *
- * We consider a comment federated if it is authored by a user that is not disabled for federation
- * or if it was received via ActivityPub.
+ * We consider a comment federated if comment was received via ActivityPub.
  *
  * @param mixed $comment Comment object or ID.
  *

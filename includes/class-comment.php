@@ -33,7 +33,7 @@ class Comment {
 	 * @return string The filtered HTML markup for the comment reply link.
 	 */
 	public static function comment_reply_link( $link, $args, $comment ) {
-		if ( ! self::is_federated( $comment ) ) {
+		if ( ! self::is_federatable( $comment ) ) {
 			return $link;
 		}
 
@@ -53,16 +53,16 @@ class Comment {
 	}
 
 	/**
-	 * Check if a comment is federated.
+	 * Check if a comment is federatable.
 	 *
-	 * We consider a comment federated if it is authored by a user that is not disabled for federation
+	 * We consider a comment federatable if it is authored by a user that is not disabled for federation
 	 * or if it was received via ActivityPub.
 	 *
 	 * @param mixed $comment Comment object or ID.
 	 *
-	 * @return boolean True if the comment is federated, false otherwise.
+	 * @return boolean True if the comment is federatable, false otherwise.
 	 */
-	public static function is_federated( $comment ) {
+	public static function is_federatable( $comment ) {
 		$comment = get_comment( $comment );
 
 		if ( ! $comment ) {
@@ -84,6 +84,31 @@ class Comment {
 		$is_user_disabled = is_user_disabled( $user_id );
 
 		return ! $is_user_disabled;
+	}
+
+	/**
+	 * Check if a comment is federated.
+	 *
+	 * We consider a comment federated if comment was received via ActivityPub.
+	 *
+	 * @param mixed $comment Comment object or ID.
+	 *
+	 * @return boolean True if the comment is federated, false otherwise.
+	 */
+	public static function is_federated( $comment ) {
+		$comment = get_comment( $comment );
+
+		if ( ! $comment ) {
+			return false;
+		}
+
+		$protocol = \get_comment_meta( $comment->comment_ID, 'protocol', true );
+
+		if ( 'activitypub' === $protocol ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -122,7 +147,7 @@ class Comment {
 		// check if parent comment is federated
 		$parent_comment = get_comment( $comment->comment_parent );
 
-		return self::is_federated( $parent_comment );
+		return self::is_federatable( $parent_comment );
 	}
 
 	/**
