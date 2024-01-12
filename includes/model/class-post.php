@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub\Model;
 
+use Activitypub\Collection\Users;
 use Activitypub\Transformer\Post as Post_Transformer;
 
 /**
@@ -61,7 +62,7 @@ class Post {
 	 * @return string The URL of the Actor.
 	 */
 	public function get_actor() {
-		$user = User_Factory::get_by_id( $this->get_user_id() );
+		$user = Users::get_by_id( $this->get_user_id() );
 
 		return $user->get_url();
 	}
