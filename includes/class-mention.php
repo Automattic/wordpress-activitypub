@@ -102,7 +102,7 @@ class Mention {
 				$username = $metadata['preferredUsername'];
 			}
 
-			$url = isset( $metadata['url'] ) ? $metadata['url'] : $metadata['url'];
+			$url = isset( $metadata['url'] ) ? $metadata['url'] : $metadata['id'];
 
 			if ( \is_array( $url ) ) {
 				$url = $url[0];
