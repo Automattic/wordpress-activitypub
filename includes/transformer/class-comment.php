@@ -123,8 +123,12 @@ class Comment extends Base {
 	protected function get_in_reply_to() {
 		$comment = $this->wp_object;
 
-		$parent_comment = \get_comment( $comment->comment_parent );
+		$parent_comment = null;
 		$in_reply_to    = null;
+
+		if ( $comment->comment_parent ) {
+			$parent_comment = \get_comment( $comment->comment_parent );
+		}
 
 		if ( $parent_comment ) {
 			$comment_meta = \get_comment_meta( $parent_comment->comment_ID );
