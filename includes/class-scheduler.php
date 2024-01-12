@@ -2,11 +2,12 @@
 
 namespace Activitypub;
 
+use Activitypub\Transformer\Post;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
-use Activitypub\Transformer\Post;
 
 use function Activitypub\is_user_type_disabled;
+use function Activitypub\should_comment_be_federated;
 
 /**
  * ActivityPub Scheduler Class
@@ -167,6 +168,11 @@ class Scheduler {
 	 */
 	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
 		$comment = get_comment( $comment );
+
+		// check if comment should be federated or not
+		if ( ! should_comment_be_federated( $comment ) ) {
+			return;
+		}
 
 		// Federate only approved comments.
 		if ( ! $comment->user_id ) {

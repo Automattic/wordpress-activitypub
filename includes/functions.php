@@ -2,8 +2,8 @@
 namespace Activitypub;
 
 use WP_Error;
-use WP_Comment_Query;
 use Activitypub\Http;
+use Activitypub\Comment;
 use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
@@ -664,22 +664,7 @@ function get_total_users() {
  * @return int|boolean Comment ID, or false on failure.
  */
 function object_id_to_comment( $id ) {
-	$comment_query = new WP_Comment_Query(
-		array(
-			'meta_key'   => 'source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-			'meta_value' => $id,         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-		)
-	);
-
-	if ( ! $comment_query->comments ) {
-		return false;
-	}
-
-	if ( count( $comment_query->comments ) > 1 ) {
-		return false;
-	}
-
-	return $comment_query->comments[0];
+	return Comment::object_id_to_comment( $id );
 }
 
 /**
@@ -692,50 +677,7 @@ function object_id_to_comment( $id ) {
  * @return int comment_ID or null if not found
  */
 function url_to_commentid( $url ) {
-	if ( ! $url || ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
-		return null;
-	}
-
-	// check for local comment
-	if ( \wp_parse_url( \site_url(), \PHP_URL_HOST ) === \wp_parse_url( $url, \PHP_URL_HOST ) ) {
-		$query = \wp_parse_url( $url, PHP_URL_QUERY );
-
-		if ( $query ) {
-			parse_str( $query, $params );
-
-			if ( ! empty( $params['c'] ) ) {
-				$comment = \get_comment( $params['c'] );
-
-				if ( $comment ) {
-					return $comment->comment_ID;
-				}
-			}
-		}
-	}
-
-	$args = array(
-		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-		'meta_query' => array(
-			'relation' => 'OR',
-			array(
-				'key'   => 'source_url',
-				'value' => $url,
-			),
-			array(
-				'key'   => 'source_id',
-				'value' => $url,
-			),
-		),
-	);
-
-	$query = new \WP_Comment_Query();
-	$comments = $query->query( $args );
-
-	if ( $comments && is_array( $comments ) ) {
-		return $comments[0]->comment_ID;
-	}
-
-	return null;
+	return Comment::url_to_commentid( $url );
 }
 
 /**
@@ -773,4 +715,33 @@ function object_to_uri( $object ) {
 	}
 
 	return $object;
+}
+
+/**
+ * Check if a comment should be federated.
+ *
+ * We consider a comment should be federated if it is authored by a user that is
+ * not disabled for federation and if it is a reply directly to the post or to a
+ * federated comment.
+ *
+ * @param mixed $comment Comment object or ID.
+ *
+ * @return boolean True if the comment should be federated, false otherwise.
+ */
+function should_comment_be_federated( $comment ) {
+	return Comment::should_be_federated( $comment );
+}
+
+/**
+ * Check if a comment is federated.
+ *
+ * We consider a comment federated if it is authored by a user that is not disabled for federation
+ * or if it was received via ActivityPub.
+ *
+ * @param mixed $comment Comment object or ID.
+ *
+ * @return boolean True if the comment is federated, false otherwise.
+ */
+function is_comment_federated( $comment ) {
+	return Comment::is_federated( $comment );
 }
