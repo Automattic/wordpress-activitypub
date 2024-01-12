@@ -180,6 +180,7 @@ class Scheduler {
 			$type = 'Create';
 		} elseif ( 'approved' === $new_status ) {
 			$type = 'Update';
+			\update_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', time(), true );
 		} elseif (
 			'trash' === $new_status ||
 			'spam' === $new_status
