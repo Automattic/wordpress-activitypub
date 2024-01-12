@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 5.5  
 **Tested up to:** 6.4  
-**Stable tag:** 2.0.0  
+**Stable tag:** 2.0.1  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -108,6 +108,13 @@ In that case you don't need the redirect, because the index.php will take care o
 ## Changelog ##
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
+
+### 2.0.1 ###
+
+* Fixed: Comment `Update` Federation
+* Workaround: Re-Added Post Model Class because of some weird caching issues
+* Fixed: WebFinger check
+* Fixed: Classic editor image finding for large images
 
 ### 2.0.0 ###
 
