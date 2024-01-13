@@ -58,7 +58,7 @@ class Event extends Base_Object {
 	/**
 	 * Mobilizon compatible values for joinModeTypes.
 	 */
-	const JOIN_MODE_TYPES = array( 'free', 'restricted', 'external' ); // amd 'invite', but not used by mobilizon atm
+	const JOIN_MODE_TYPES = array( 'free', 'restricted', 'external' ); // and 'invite', but not used by mobilizon atm
 
 	/**
 	 * Allowed values for ical VEVENT STATUS.
