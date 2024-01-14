@@ -15,7 +15,7 @@ use Activitypub\Collection\Users;
  * @return array the activitypub context
  */
 function get_context() {
-	$context = Activity::CONTEXT;
+	$context = Activity::JSON_LD_CONTEXT;
 
 	return \apply_filters( 'activitypub_json_context', $context );
 }

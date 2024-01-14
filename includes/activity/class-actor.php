@@ -17,7 +17,7 @@ namespace Activitypub\Activity;
  */
 class Actor extends Base_Object {
 	// Reduced context for actors. TODO: still unused.
-	const CONTEXT = array(
+	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
 		'https://w3id.org/security/v1',
 		array(

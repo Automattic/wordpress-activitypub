@@ -102,7 +102,7 @@ class Collection {
 		}
 
 		$response = array(
-			'@context'   => Activity::CONTEXT,
+			'@context'   => Activity::JSON_LD_CONTEXT,
 			'id'         => get_rest_url_by_path( sprintf( 'users/%d/collections/tags', $user->get__id() ) ),
 			'type'       => 'Collection',
 			'totalItems' => is_countable( $tags ) ? count( $tags ) : 0,
@@ -160,7 +160,7 @@ class Collection {
 		}
 
 		$response = array(
-			'@context'     => Activity::CONTEXT,
+			'@context'     => Activity::JSON_LD_CONTEXT,
 			'id'           => get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $user_id ) ),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => is_countable( $posts ) ? count( $posts ) : 0,
@@ -186,7 +186,7 @@ class Collection {
 	 */
 	public static function moderators_get( $request ) {
 		$response = array(
-			'@context'     => Activity::CONTEXT,
+			'@context'     => Activity::JSON_LD_CONTEXT,
 			'id'           => get_rest_url_by_path( 'collections/moderators' ),
 			'type'         => 'OrderedCollection',
 			'orderedItems' => array(),

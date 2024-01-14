@@ -6,7 +6,7 @@
  * @license AGPL-3.0-or-later
  */
 
-namespace Activitypub\Activity;
+namespace Activitypub\Activity\Object;
 
 use Activitypub\Activity\Base_Object;
 
@@ -19,7 +19,7 @@ use Activitypub\Activity\Base_Object;
  */
 class Event extends Base_Object {
 	// Human friendly minimal context for full Mobilizon compatible ActivityPub events.
-	const CONTEXT = array(
+	const JSON_LD_CONTEXT = array(
 		'https://schema.org/',                   // The base context is schema.org, cause it is used a lot.
 		'https://www.w3.org/ns/activitystreams', // The ActivityStreams context overrides everyting also defined in schema.org.
 		array(                                   // The keys here override/extend the context even more.
@@ -52,6 +52,7 @@ class Event extends Base_Object {
 
 	/**
 	 * Mobilizon compatible values for repliesModertaionOption.
+	 * @var array
 	 */
 	const REPLIES_MODERATION_OPTION_TYPES = array( 'allow_all', 'closed' );
 
@@ -62,13 +63,17 @@ class Event extends Base_Object {
 
 	/**
 	 * Allowed values for ical VEVENT STATUS.
+	 * @var array
 	 */
 	const ICAL_EVENT_STATUS_TYPES = array( 'TENTATIVE', 'CONFIRMED', 'CANCELLED' );
 
 	/**
-	 * Mobilizon compatible values for category.
+	 * Default event categories.
+	 * 
+	 * These values currently reflect the default set as proposed by Mobilizon to maximize interoperability.
+	 * @var array
 	 */
-	const MOBILIZON_EVENT_CATEGORIES = array(
+	const DEFAULT_EVENT_CATEGORIES = array(
 		'ARTS',
 		'BOOK_CLUBS',
 		'BUSINESS',
@@ -310,7 +315,7 @@ class Event extends Base_Object {
 	 */
 	public function set_category( $category, $mobilizon_compatibilty = true ) {
 		if ( $mobilizon_compatibilty ) {
-			$this->category = in_array( $category, self::MOBILIZON_EVENT_CATEGORIES ) ? $category : 'MEETING';
+			$this->category = in_array( $category, self::DEFAULT_EVENT_CATEGORIES ) ? $category : 'MEETING';
 		} else {
 			$this->category = $category;
 		}

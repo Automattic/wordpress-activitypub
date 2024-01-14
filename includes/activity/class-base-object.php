@@ -27,7 +27,7 @@ use function Activitypub\snake_to_camel_case;
  * @see https://www.w3.org/TR/activitystreams-core/#object
  */
 class Base_Object {
-	const CONTEXT = array(
+	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
 		array(
 			'Hashtag' => 'as:Hashtag',
@@ -702,11 +702,11 @@ class Base_Object {
 	}
 
 	/**
-	 * Returns the context of this object.
+	 * Returns the JSON-LD context of this object.
 	 *
 	 * @return array $context A compacted JSON-LD context for the ActivityPub object.
 	 */
 	public function get_json_ld_context() {
-		return $this::CONTEXT;
+		return $this::JSON_LD_CONTEXT;
 	}
 }
