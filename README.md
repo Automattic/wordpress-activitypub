@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 5.5  
 **Tested up to:** 6.4  
-**Stable tag:** 1.3.0  
+**Stable tag:** 2.0.1  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -109,15 +109,23 @@ In that case you don't need the redirect, because the index.php will take care o
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
 
+### 2.0.1 ###
+
+* Fixed: Comment `Update` Federation
+* Workaround: Re-Added Post Model Class because of some weird caching issues
+* Fixed: WebFinger check
+* Fixed: Classic editor image finding for large images
+
 ### 2.0.0 ###
 
+* Added: Bidirectional Comment Federation
 * Removed: Deprecated Classes
 * Fixed: Normalize attributes that can have mixed value types
 * Added: URL support for WebFinger
 * Added: Make Post-Template filterable
 * Added: CSS class for ActivityPub comments to allow custom designs
 * Added: FEP-2677: Identifying the Application Actor
-* Added: Basic Comment Federation
+* Added: FEP-2c59: Discovery of a Webfinger address from an ActivityPub actor
 * Added: Profile Update Activities
 * Improved: WebFinger endpoints
 

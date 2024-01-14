@@ -57,9 +57,9 @@ class Comment extends Base {
 		$published = \strtotime( $comment->comment_date_gmt );
 		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', $published ) );
 
-		$updated = \get_comment_meta( $comment->comment_ID, 'activitypub_last_modified', true );
+		$updated = \get_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', true );
 		if ( $updated > $published ) {
-			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $updated ) ) );
+			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', $updated ) );
 		}
 
 		$object->set_content_map(

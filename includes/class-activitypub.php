@@ -7,7 +7,6 @@ use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 
 use function Activitypub\sanitize_url;
-
 use function Activitypub\is_comment;
 use function Activitypub\is_activitypub_request;
 
@@ -56,7 +55,6 @@ class Activitypub {
 	 */
 	public static function activate() {
 		self::flush_rewrite_rules();
-
 		Scheduler::register_schedules();
 	}
 
@@ -151,6 +149,7 @@ class Activitypub {
 		}
 
 		wp_safe_redirect( get_comment_link( $comment ) );
+		exit;
 	}
 
 	/**

@@ -70,7 +70,7 @@ class User extends Actor {
 	 *
 	 * @var string<url>
 	 */
-	protected $resource;
+	protected $webfinger;
 
 	/**
 	 * Restrict posting to mods
@@ -292,8 +292,12 @@ class User extends Actor {
 	 *
 	 * @return string The Webfinger-Identifier.
 	 */
-	public function get_resource() {
+	public function get_webfinger() {
 		return $this->get_preferred_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+	}
+
+	public function get_resource() {
+		return $this->get_webfinger();
 	}
 
 	public function get_canonical_url() {

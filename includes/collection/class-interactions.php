@@ -54,7 +54,7 @@ class Interactions {
 
 		$commentdata = array(
 			'comment_post_ID' => $comment_post_id,
-			'comment_author' => \esc_attr( $meta['name'] ),
+			'comment_author' => isset( $meta['name'] ) ? \esc_attr( $meta['name'] ) : \esc_attr( $meta['preferredUsername'] ),
 			'comment_author_url' => \esc_url_raw( $meta['url'] ),
 			'comment_content' => \addslashes( $activity['object']['content'] ),
 			'comment_type' => 'comment',
@@ -102,7 +102,7 @@ class Interactions {
 	 *
 	 * @param array $activity The activity-object
 	 *
-	 * @return array|false The commentdata or false on failure
+	 * @return array|string|int|\WP_Error|false The commentdata or false on failure
 	 */
 	public static function update_comment( $activity ) {
 		$meta = get_remote_metadata_by_actor( $activity['actor'] );
@@ -135,14 +135,18 @@ class Interactions {
 		);
 		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
 
-		$comment = \wp_update_comment( $commentdata, true );
+		$state = \wp_update_comment( $commentdata, true );
 
 		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10 );
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 		// re-add flood control
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
-		return $comment;
+		if ( 1 === $state ) {
+			return $commentdata;
+		} else {
+			return $state; // Either `false` or a `WP_Error` instance or `0` or `1`!
+		}
 	}
 
 	/**

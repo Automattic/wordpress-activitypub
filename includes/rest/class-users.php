@@ -119,7 +119,7 @@ class Users {
 			return $template;
 		}
 
-		$resource = $user->get_resource();
+		$resource = $user->get_webfinger();
 		$url      = str_replace( '{uri}', $resource, $template );
 
 		return new WP_REST_Response(

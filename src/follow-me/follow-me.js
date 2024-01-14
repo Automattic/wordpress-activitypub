@@ -11,7 +11,7 @@ const { namespace } = window._activityPubOptions;
 
 const DEFAULT_PROFILE_DATA = {
 	avatar: '',
-	resource: '@well@hello.dolly',
+	webfinger: '@well@hello.dolly',
 	name: __( 'Hello Dolly Fan Account', 'activitypub' ),
 	url: '#',
 };
@@ -34,13 +34,13 @@ function fetchProfile( userId ) {
 }
 
 function Profile( { profile, popupStyles, userId } ) {
-	const { avatar, name, resource } = profile;
+	const { avatar, name, webfinger } = profile;
 	return (
 		<div className="activitypub-profile">
 			<img className="activitypub-profile__avatar" src={ avatar } alt={ name } />
 			<div className="activitypub-profile__content">
 				<div className="activitypub-profile__name">{ name }</div>
-				<div className="activitypub-profile__handle" title={ resource }>{ resource }</div>
+				<div className="activitypub-profile__handle" title={ webfinger }>{ webfinger }</div>
 			</div>
 			<Follow profile={ profile } popupStyles={ popupStyles } userId={ userId } />
 		</div>
@@ -86,7 +86,7 @@ function isHandle( string ) {
 }
 
 function Dialog( { profile, userId } ) {
-	const { resource } = profile;
+	const { webfinger } = profile;
 	const followText = __( 'Follow', 'activitypub' );
 	const loadingText = __( 'Loading...', 'activitypub' );
 	const openingText = __( 'Opening...', 'activitypub' );
@@ -94,7 +94,7 @@ function Dialog( { profile, userId } ) {
 	const invalidText = __( 'Invalid', 'activitypub' );
 	const [ buttonText, setButtonText ] = useState( followText );
 	const [ buttonIcon, setButtonIcon ] = useState( copy );
-	const ref = useCopyToClipboard( resource, () => {
+	const ref = useCopyToClipboard( webfinger, () => {
 		setButtonIcon( check );
 		setTimeout( () => setButtonIcon( copy ), 1000 );
 	} );
@@ -128,7 +128,7 @@ function Dialog( { profile, userId } ) {
 					{ __( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' ) }
 				</div>
 				<div className="apfmd__button-group">
-					<input type="text" value={ resource } readOnly />
+					<input type="text" value={ webfinger } readOnly />
 					<Button ref={ ref }>
 						<Icon icon={ buttonIcon } />
 						{ __( 'Copy', 'activitypub' ) }
