@@ -6,7 +6,7 @@
  * @license AGPL-3.0-or-later
  */
 
-namespace Activitypub\Activity\Object;
+namespace Activitypub\Activity\Objects;
 
 use Activitypub\Activity\Base_Object;
 
@@ -69,7 +69,7 @@ class Event extends Base_Object {
 
 	/**
 	 * Default event categories.
-	 * 
+	 *
 	 * These values currently reflect the default set as proposed by Mobilizon to maximize interoperability.
 	 * @var array
 	 */

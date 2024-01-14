@@ -7,7 +7,7 @@
  * @license AGPL-3.0-or-later
  */
 
-namespace Activitypub\Activity\Object;
+namespace Activitypub\Activity\Objects;
 
 use Activitypub\Activity\Base_Object;
 
