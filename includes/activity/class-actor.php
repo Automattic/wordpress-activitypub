@@ -20,6 +20,7 @@ class Actor extends Base_Object {
 	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
 		'https://w3id.org/security/v1',
+		'https://purl.archive.org/socialweb/webfinger',
 		array(
 			'schema' => 'http://schema.org#',
 			'toot' => 'http://joinmastodon.org/ns#',

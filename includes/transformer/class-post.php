@@ -132,49 +132,6 @@ class Post extends Base {
 	}
 
 	/**
-	 * Returns the published time of the post.
-	 */
-	public function get_published() {
-		$published = \strtotime( $this->wp_object->post_date_gmt );
-		return \gmdate( 'Y-m-d\TH:i:s\Z', $published );
-	}
-
-	/**
-	 * Getter function for the time the update time.
-	 */
-	public function get_updated() {
-		$published = \strtotime( $this->wp_object->post_date_gmt );
-		$updated = \strtotime( $this->wp_object->post_modified_gmt );
-
-		if ( $updated > $published ) {
-			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
-		} else {
-			return null;
-		}
-	}
-
-	/**
-	 * Getter function for adding the content in a contentMap.
-	 */
-	public function get_content_map() {
-		return array(
-			$this->get_locale() => $this->get_content(),
-		);
-	}
-
-	/**
-	 * Get To.
-	 */
-	public function get_to() {
-		$path = sprintf( 'users/%d/followers', intval( $this->wp_object->post_author ) );
-
-		return array(
-			'https://www.w3.org/ns/activitystreams#Public',
-			get_rest_url_by_path( $path ),
-		);
-	}
-
-	/**
 	 * Generates all Media Attachments for a Post.
 	 *
 	 * @return array The Attachments.
