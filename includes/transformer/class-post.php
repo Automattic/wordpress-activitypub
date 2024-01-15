@@ -502,7 +502,7 @@ class Post extends Base {
 
 		// Default to Article.
 		$object_type = 'Article';
-		$post_format = 'Article';
+		$post_format = 'standard';
 
 		if ( \get_theme_support( 'post-formats' ) ) {
 			$post_format = \get_post_format( $this->wp_object );
