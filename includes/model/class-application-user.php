@@ -50,7 +50,7 @@ class Application_User extends Blog_User {
 	}
 
 	public function get_preferred_username() {
-		return self::get_name();
+		return $this->get_name();
 	}
 
 	public function get_followers() {
