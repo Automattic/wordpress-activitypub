@@ -164,14 +164,14 @@ class Post extends Base {
 		$id = $this->wp_object->ID;
 
 		$media_ids = array(
-			'images' => array(),
-			'audios' => array(),
-			'videos' => array(),
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
 		);
 
 		// list post thumbnail first if this post has one
 		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
-			$media_ids['images'][] = \get_post_thumbnail_id( $id );
+			$media_ids['image'][] = \get_post_thumbnail_id( $id );
 		}
 
 		if ( $max_media > 0 ) {
