@@ -163,17 +163,24 @@ class Post extends Base {
 
 		$id = $this->wp_object->ID;
 
-		$media_ids = array();
+		$media_ids = array(
+			'images' => array(),
+			'audios' => array(),
+			'videos' => array(),
+		);
 
 		// list post thumbnail first if this post has one
 		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
-			$media_ids[] = \get_post_thumbnail_id( $id );
+			$media_ids['images'][] = \get_post_thumbnail_id( $id );
 		}
 
 		if ( $max_media > 0 ) {
 			$blocks = \parse_blocks( $this->wp_object->post_content );
-			$media_ids = self::get_media_ids_from_blocks( $blocks, $media_ids, $max_media );
+			$media_ids = self::get_media_ids_from_blocks( $blocks, $media_ids );
 		}
+
+		$media_ids = self::filter_media_ids_by_object_type( $media_ids, $this->get_type() );
+		$media_ids = array_slice( $media_ids, 0, $max_media );
 
 		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media_ids ) );
 	}
@@ -319,51 +326,69 @@ class Post extends Base {
 	 *
 	 * @return array The image IDs.
 	 */
-	protected static function get_media_ids_from_blocks( $blocks, $media_ids, $max_media ) {
+	protected static function get_media_ids_from_blocks( $blocks, $media_ids ) {
 
 		foreach ( $blocks as $block ) {
 			// recurse into inner blocks
 			if ( ! empty( $block['innerBlocks'] ) ) {
-				$media_ids = self::get_media_ids_from_blocks( $block['innerBlocks'], $media_ids, $max_media );
+				$media_ids = self::get_media_ids_from_blocks( $block['innerBlocks'], $media_ids );
 			}
 
 			switch ( $block['blockName'] ) {
 				case 'core/image':
 				case 'core/cover':
+					if ( ! empty( $block['attrs']['id'] ) ) {
+						$media_ids['image'][] = $block['attrs']['id'];
+					}
+					break;
 				case 'core/audio':
+					if ( ! empty( $block['attrs']['id'] ) ) {
+						$media_ids['audio'][] = $block['attrs']['id'];
+					}
+					break;
 				case 'core/video':
 				case 'videopress/video':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$media_ids[] = $block['attrs']['id'];
+						$media_ids['video'][] = $block['attrs']['id'];
 					}
 					break;
 				case 'jetpack/slideshow':
 				case 'jetpack/tiled-gallery':
 					if ( ! empty( $block['attrs']['ids'] ) ) {
-						$media_ids = array_merge( $media_ids, $block['attrs']['ids'] );
+						$media_ids['image'] = array_merge( $media_ids['image'], $block['attrs']['ids'] );
 					}
 					break;
 				case 'jetpack/image-compare':
 					if ( ! empty( $block['attrs']['beforeImageId'] ) ) {
-						$media_ids[] = $block['attrs']['beforeImageId'];
+						$media_ids['image'][] = $block['attrs']['beforeImageId'];
 					}
 					if ( ! empty( $block['attrs']['afterImageId'] ) ) {
-						$media_ids[] = $block['attrs']['afterImageId'];
+						$media_ids['image'][] = $block['attrs']['afterImageId'];
 					}
 					break;
-			}
-
-			// depupe
-			$media_ids = \array_unique( $media_ids );
-
-			// stop doing unneeded work
-			if ( count( $media_ids ) >= $max_media ) {
-				break;
 			}
 		}
 
 		// still need to slice it because one gallery could knock us over the limit
-		return array_slice( $media_ids, 0, $max_media );
+		return $media_ids;
+	}
+
+	/**
+	 * Filter media IDs by object type.
+	 *
+	 * @param array $media_ids The media IDs grouped by type.
+	 * @param array $type      The object type.
+	 *
+	 * @return array The filtered media IDs.
+	 */
+	protected static function filter_media_ids_by_object_type( $media_ids, $type ) {
+		$type = \apply_filters( 'filter_media_ids_by_object_type', \strtolower( $type ) );
+
+		if ( ! empty( $media_ids[ $type ] ) ) {
+			return array_unique( $media_ids[ $type ] );
+		}
+
+		return array_unique( array_merge( array(), ...array_values( $media_ids ) ) );
 	}
 
 	/**
@@ -595,7 +620,7 @@ class Post extends Base {
 	 * @return string|null The summary or null if the object type is `note`.
 	 */
 	protected function get_summary() {
-		if ( 'note' === \get_option( 'activitypub_object_type', 'note' ) ) {
+		if ( 'Note' === $this->get_type() ) {
 			return null;
 		}
 
@@ -611,7 +636,7 @@ class Post extends Base {
 	 * @return string|null The title or null if the object type is `note`.
 	 */
 	protected function get_name() {
-		if ( 'note' === \get_option( 'activitypub_object_type', 'note' ) ) {
+		if ( 'Note' === $this->get_type() ) {
 			return null;
 		}
 
@@ -674,10 +699,6 @@ class Post extends Base {
 	protected function get_post_content_template() {
 		$type = \get_option( 'activitypub_post_content_type', 'content' );
 
-		if ( 'note' !== \get_option( 'activitypub_object_type', 'note' ) ) {
-			return apply_filters( 'activitypub_object_content_template', '[ap_content]', $this->wp_object );
-		}
-
 		switch ( $type ) {
 			case 'excerpt':
 				$template = "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
@@ -691,6 +712,10 @@ class Post extends Base {
 			default:
 				$template = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
 				break;
+		}
+
+		if ( 'Note' !== $this->get_type() ) {
+			$template = \get_option( 'activitypub_custom_post_content', '[ap_content]' );
 		}
 
 		return apply_filters( 'activitypub_object_content_template', $template, $this->wp_object );
