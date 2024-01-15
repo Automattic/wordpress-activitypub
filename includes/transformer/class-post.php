@@ -715,7 +715,7 @@ class Post extends Base {
 		}
 
 		if ( 'Note' !== $this->get_type() ) {
-			$template = \get_option( 'activitypub_custom_post_content', '[ap_content]' );
+			$template = '[ap_content]';
 		}
 
 		return apply_filters( 'activitypub_object_content_template', $template, $this->wp_object );
