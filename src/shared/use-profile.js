@@ -51,7 +51,7 @@ export default function useProfile( userId ) {
 		setIsDirty( false );
 	}
 
-	function saveProfile() {
+	async function saveProfile() {
 		const fetchOptions = {
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/activity+json' },

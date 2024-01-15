@@ -1,0 +1,14 @@
+.activitypub-profile-editor {
+
+	img {
+		max-width: 100%;
+	}
+
+	.activitypub-profile-editor__avatar {
+		width: 96px;
+		height: 96px;
+		margin: -48px auto 12px;
+		outline: 1px solid #eee;
+		border: 1px solid #222;
+	}
+}

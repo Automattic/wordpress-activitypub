@@ -1,4 +1,7 @@
+import { Card, TextControl, Button } from "@wordpress/components";
+import { useState } from "@wordpress/element";
 import useProfile from "../shared/use-profile";
+import './style.scss';
 
 function Avatar( { url } ) {
 	return (
@@ -16,12 +19,14 @@ function Header( { url } ) {
 	);
 }
 
-function Name( { name, handle } ) {
+function Name( { name, setName } ) {
 	return (
-		<div className="activitypub-profile-editor__name">
-			{ name && <h1>{ name }</h1> }
-			{ handle && <h2>{ handle }</h2> }
-		</div>
+		<TextControl className="activitypub-profile-editor__name"
+			value={ name }
+			onChange={ setName }
+		/>
+
+
 	);
 }
 
@@ -37,13 +42,36 @@ export default function ProfileEditor() {
 	const userId = 0;
 	const { profile, isLoading, error, updateProfile, saveProfile, resetProfile } = useProfile( userId );
 	const { avatar, header, name, handle, summary } = profile;
+	const [ isEditing, setIsEditing ] = useState( false );
+
+	function update( field ) {
+		return ( value ) => updateProfile( field, value );
+	}
+
+	function cancel() {
+		setIsEditing( false );
+		resetProfile();
+	}
 
 	return (
-		<div>
+		<Card className="activitypub-profile-editor">
+			<div className="activitypub-profile-editor__actions">
+			{ ! isEditing
+				&& (
+					<Button isPrimary onClick={ () => setIsEditing( true ) }>Edit</Button>
+				) || (
+				<>
+					<Button isPrimary onClick={ saveProfile }>Save</Button>
+					<Button onClick={ cancel }>Cancel</Button>
+				</>
+			 )
+			}
+			</div>
+
 			<Header url={ header } />
 			<Avatar url={ avatar } />
-			<Name name={ name } handle={ handle } />
+			<Name name={ name } handle={ handle } setName={ update( 'name' ) } />
 			<Description description={ summary } />
-		</div>
+		</Card>
 	);
 }
