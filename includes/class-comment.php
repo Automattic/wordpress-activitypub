@@ -58,6 +58,8 @@ class Comment {
 	 * We consider a comment federatable if it is authored by a user that is not disabled for federation
 	 * or if it was received via ActivityPub.
 	 *
+	 * Use this function to check if it is possible to federate a comment or if it is already federated.
+	 *
 	 * @param mixed $comment Comment object or ID.
 	 *
 	 * @return boolean True if the comment is federatable, false otherwise.
@@ -91,6 +93,8 @@ class Comment {
 	 *
 	 * We consider a comment federated if comment was received via ActivityPub.
 	 *
+	 * Use this function to check if it is comment that was received via ActivityPub.
+	 *
 	 * @param mixed $comment Comment object or ID.
 	 *
 	 * @return boolean True if the comment is federated, false otherwise.
@@ -117,6 +121,8 @@ class Comment {
 	 * We consider a comment should be federated if it is authored by a user that is
 	 * not disabled for federation and if it is a reply directly to the post or to a
 	 * federated comment.
+	 *
+	 * Use this function to check if a comment should be federated.
 	 *
 	 * @param mixed $comment Comment object or ID.
 	 *
