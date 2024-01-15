@@ -587,6 +587,44 @@ class Post extends Base {
 	}
 
 	/**
+	 * Returns the summary for the ActivityPub Item.
+	 *
+	 * The summary will be generated based on the user settings and only if the
+	 * object type is not set to `note`.
+	 *
+	 * @return string|null The summary or null if the object type is `note`.
+	 */
+	protected function get_summary() {
+		if ( 'note' === \get_option( 'activitypub_object_type', 'note' ) ) {
+			return null;
+		}
+
+		return \get_the_excerpt( $this->wp_object->ID );
+	}
+
+	/**
+	 * Returns the title for the ActivityPub Item.
+	 *
+	 * The title will be generated based on the user settings and only if the
+	 * object type is not set to `note`.
+	 *
+	 * @return string|null The title or null if the object type is `note`.
+	 */
+	protected function get_name() {
+		if ( 'note' === \get_option( 'activitypub_object_type', 'note' ) ) {
+			return null;
+		}
+
+		$title = \get_the_title( $this->wp_object->ID );
+
+		if ( $title ) {
+			return $title;
+		}
+
+		return null;
+	}
+
+	/**
 	 * Returns the content for the ActivityPub Item.
 	 *
 	 * The content will be generated based on the user settings.
@@ -635,6 +673,10 @@ class Post extends Base {
 	 */
 	protected function get_post_content_template() {
 		$type = \get_option( 'activitypub_post_content_type', 'content' );
+
+		if ( 'note' !== \get_option( 'activitypub_object_type', 'note' ) ) {
+			return apply_filters( 'activitypub_object_content_template', '[ap_content]', $this->wp_object );
+		}
 
 		switch ( $type ) {
 			case 'excerpt':
