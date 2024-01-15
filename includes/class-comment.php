@@ -33,7 +33,7 @@ class Comment {
 	 * @return string The filtered HTML markup for the comment reply link.
 	 */
 	public static function comment_reply_link( $link, $args, $comment ) {
-		if ( ! self::is_federatable( $comment ) ) {
+		if ( ! self::is_federated( $comment ) ) {
 			return $link;
 		}
 
@@ -58,22 +58,24 @@ class Comment {
 	 * We consider a comment federatable if it is authored by a user that is not disabled for federation
 	 * or if it was received via ActivityPub.
 	 *
-	 * Use this function to check if it is possible to federate a comment or if it is already federated.
+	 * Use this function to check if it is possible to federate a comment or parent comment or if it is
+	 * already federated.
+	 *
+	 * Please consider that this function does not check the parent comment, so if you want to check if
+	 * a comment is a reply to a federated comment, you should use should_be_federated().
 	 *
 	 * @param mixed $comment Comment object or ID.
 	 *
 	 * @return boolean True if the comment is federatable, false otherwise.
 	 */
 	public static function is_federatable( $comment ) {
-		$comment = get_comment( $comment );
+		$comment = \get_comment( $comment );
 
 		if ( ! $comment ) {
 			return false;
 		}
 
-		$protocol = \get_comment_meta( $comment->comment_ID, 'protocol', true );
-
-		if ( 'activitypub' === $protocol ) {
+		if ( self::is_federated( $comment ) ) {
 			return true;
 		}
 
@@ -100,7 +102,7 @@ class Comment {
 	 * @return boolean True if the comment is federated, false otherwise.
 	 */
 	public static function is_federated( $comment ) {
-		$comment = get_comment( $comment );
+		$comment = \get_comment( $comment );
 
 		if ( ! $comment ) {
 			return false;
@@ -129,8 +131,12 @@ class Comment {
 	 * @return boolean True if the comment should be federated, false otherwise.
 	 */
 	public static function should_be_federated( $comment ) {
-		$comment = get_comment( $comment );
+		// we should not federate federated comments
+		if ( self::is_federated( $comment ) ) {
+			return false;
+		}
 
+		$comment = \get_comment( $comment );
 		$user_id = $comment->user_id;
 
 		// comments without user can't be federated
@@ -151,7 +157,7 @@ class Comment {
 		}
 
 		// check if parent comment is federated
-		$parent_comment = get_comment( $comment->comment_parent );
+		$parent_comment = \get_comment( $comment->comment_parent );
 
 		return self::is_federatable( $parent_comment );
 	}
