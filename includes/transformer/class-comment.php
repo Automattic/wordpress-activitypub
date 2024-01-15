@@ -51,7 +51,7 @@ class Comment extends Base {
 		$comment = $this->wp_object;
 		$object  = parent::to_object();
 
-		$object->set_url( \get_comment_link( $comment->comment_ID ) );
+		$object->set_url( $this->get_id() );
 		$object->set_type( 'Note' );
 
 		$published = \strtotime( $comment->comment_date_gmt );
