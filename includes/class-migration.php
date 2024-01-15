@@ -214,5 +214,10 @@ class Migration {
 		wp_unschedule_hook( 'activitypub_send_post_activity' );
 		wp_unschedule_hook( 'activitypub_send_update_activity' );
 		wp_unschedule_hook( 'activitypub_send_delete_activity' );
+
+		$object_type = \get_option( 'activitypub_object_type', 'wordpress-post-format' );
+		if ( 'article' === $object_type ) {
+			\update_option( 'activitypub_object_type', 'note' );
+		}
 	}
 }

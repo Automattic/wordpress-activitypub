@@ -496,8 +496,8 @@ class Post extends Base {
 	 * @return string The Object-Type.
 	 */
 	protected function get_type() {
-		if ( 'wordpress-post-format' !== \get_option( 'activitypub_object_type', 'note' ) ) {
-			return \ucfirst( \get_option( 'activitypub_object_type', 'note' ) );
+		if ( 'wordpress-post-format' !== \get_option( 'activitypub_object_type', 'wordpress-post-format' ) ) {
+			return \ucfirst( \get_option( 'activitypub_object_type', 'wordpress-post-format' ) );
 		}
 
 		// Default to Article.
