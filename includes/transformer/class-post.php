@@ -709,7 +709,7 @@ class Post extends Base {
 				$template = "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
 				break;
 			case 'title':
-				$template = "[ap_title]\n\n[ap_permalink type=\"html\"]";
+				$template = "<h2>[ap_title]</h2>\n\n[ap_permalink type=\"html\"]";
 				break;
 			case 'content':
 				$template = "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
