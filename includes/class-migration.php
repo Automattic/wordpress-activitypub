@@ -117,6 +117,9 @@ class Migration {
 		if ( version_compare( $version_from_db, '1.3.0', '<' ) ) {
 			self::migrate_from_1_2_0();
 		}
+		if ( version_compare( $version_from_db, '2.1.0', '<' ) ) {
+			self::migrate_from_2_0_0();
+		}
 
 		update_option( 'activitypub_db_version', self::get_target_version() );
 
@@ -196,5 +199,20 @@ class Migration {
 		foreach ( $user_ids as $user_id ) {
 			wp_cache_delete( sprintf( Followers::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
+	}
+
+	/**
+	 * Unschedule Hooks after updating to 2.0.0
+	 *
+	 * @return void
+	 */
+	private static function migrate_from_2_0_0() {
+		wp_clear_scheduled_hook( 'activitypub_send_post_activity' );
+		wp_clear_scheduled_hook( 'activitypub_send_update_activity' );
+		wp_clear_scheduled_hook( 'activitypub_send_delete_activity' );
+
+		wp_unschedule_hook( 'activitypub_send_post_activity' );
+		wp_unschedule_hook( 'activitypub_send_update_activity' );
+		wp_unschedule_hook( 'activitypub_send_delete_activity' );
 	}
 }
