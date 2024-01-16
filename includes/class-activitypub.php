@@ -37,8 +37,7 @@ class Activitypub {
 		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
 
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
-
-		\add_action( 'after_setup_theme', array( self::class, 'theme_compat' ), 99 );
+		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 
@@ -353,6 +352,23 @@ class Activitypub {
 				'header-text' => true,
 			);
 			add_theme_support( 'custom-header', $custom_header_args );
+		}
+
+		// We assume that you want to use Post-Formats when enabling the setting
+		if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', 'wordpress-post-format' ) ) {
+			if ( ! get_theme_support( 'post-formats' ) ) {
+				// Add support for the Aside, Gallery Post Formats...
+				add_theme_support(
+					'post-formats',
+					array(
+						'gallery',
+						'status',
+						'image',
+						'video',
+						'audio',
+					)
+				);
+			}
 		}
 	}
 
