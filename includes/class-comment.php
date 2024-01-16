@@ -37,16 +37,17 @@ class Comment {
 			return $link;
 		}
 
-		$current_user = get_current_user_id();
+		$current_user      = get_current_user_id();
+		$custom_reply_link = apply_filters( 'activitypub_comment_reply_link', '' );
 
 		if ( ! $current_user ) {
-			return '';
+			return $custom_reply_link;
 		}
 
 		$is_user_disabled = is_user_disabled( $current_user );
 
 		if ( $is_user_disabled ) {
-			return '';
+			return $custom_reply_link;
 		}
 
 		return $link;
