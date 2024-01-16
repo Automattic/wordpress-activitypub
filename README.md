@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 5.5  
 **Tested up to:** 6.4  
-**Stable tag:** 2.0.1  
+**Stable tag:** 2.0.2  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -108,6 +108,11 @@ In that case you don't need the redirect, because the index.php will take care o
 ## Changelog ##
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
+
+### 2.0.2 ###
+
+* Fixed: Some Federated Comment improvements
+* Fixed: Remove old/abandoned Crons
 
 ### 2.0.1 ###
 
