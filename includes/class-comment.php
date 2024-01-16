@@ -17,7 +17,9 @@ class Comment {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
+		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
+		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
+		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
 	}
 
 	/**
@@ -242,5 +244,47 @@ class Comment {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Filters the CSS classes to add an ActivityPub class.
+	 *
+	 * @param string[] $classes    An array of comment classes.
+	 * @param string[] $css_class  An array of additional classes added to the list.
+	 * @param string   $comment_id The comment ID as a numeric string.
+	 *
+	 * @return string[] An array of classes.
+	 */
+	public static function comment_class( $classes, $css_class, $comment_id ) {
+		// check if ActivityPub comment
+		if ( 'activitypub' === get_comment_meta( $comment_id, 'protocol', true ) ) {
+			$classes[] = 'activitypub-comment';
+		}
+
+		return $classes;
+	}
+
+	/**
+	 * Link remote comments to source url.
+	 *
+	 * @param string $comment_link
+	 * @param object|WP_Comment $comment
+	 *
+	 * @return string $url
+	 */
+	public static function remote_comment_link( $comment_link, $comment ) {
+		if ( ! $comment || is_admin() ) {
+			return $comment_link;
+		}
+
+		$comment_meta = \get_comment_meta( $comment->comment_ID );
+
+		if ( ! empty( $comment_meta['source_url'][0] ) ) {
+			return $comment_meta['source_url'][0];
+		} elseif ( ! empty( $comment_meta['source_id'][0] ) ) {
+			return $comment_meta['source_id'][0];
+		}
+
+		return $comment_link;
 	}
 }

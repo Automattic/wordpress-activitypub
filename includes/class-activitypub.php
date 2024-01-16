@@ -25,7 +25,6 @@ class Activitypub {
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
 		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
 		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
-		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
 
 		// Add support for ActivityPub to custom post types
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array();
@@ -42,8 +41,6 @@ class Activitypub {
 		\add_action( 'after_setup_theme', array( self::class, 'theme_compat' ), 99 );
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
-
-		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
 
 		// register several post_types
 		self::register_post_types();
@@ -224,30 +221,6 @@ class Activitypub {
 			$comment = \get_comment( $comment );
 		}
 		return \get_comment_meta( $comment->comment_ID, 'avatar_url', true );
-	}
-
-	/**
-	 * Link remote comments to source url.
-	 *
-	 * @param string $comment_link
-	 * @param object|WP_Comment $comment
-	 *
-	 * @return string $url
-	 */
-	public static function remote_comment_link( $comment_link, $comment ) {
-		if ( ! $comment || is_admin() ) {
-			return $comment_link;
-		}
-
-		$comment_meta = \get_comment_meta( $comment->comment_ID );
-
-		if ( ! empty( $comment_meta['source_url'][0] ) ) {
-			return $comment_meta['source_url'][0];
-		} elseif ( ! empty( $comment_meta['source_id'][0] ) ) {
-			return $comment_meta['source_id'][0];
-		}
-
-		return $comment_link;
 	}
 
 	/**
@@ -457,23 +430,5 @@ class Activitypub {
 		);
 
 		\do_action( 'activitypub_after_register_post_type' );
-	}
-
-	/**
-	 * Filters the CSS classes to add an ActivityPub class.
-	 *
-	 * @param string[] $classes    An array of comment classes.
-	 * @param string[] $css_class  An array of additional classes added to the list.
-	 * @param string   $comment_id The comment ID as a numeric string.
-	 *
-	 * @return string[] An array of classes.
-	 */
-	public static function comment_class( $classes, $css_class, $comment_id ) {
-		// check if ActivityPub comment
-		if ( 'activitypub' === get_comment_meta( $comment_id, 'protocol', true ) ) {
-			$classes[] = 'activitypub-comment';
-		}
-
-		return $classes;
 	}
 }
