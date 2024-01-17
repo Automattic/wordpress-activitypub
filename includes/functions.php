@@ -758,3 +758,21 @@ function is_comment_federatable( $comment ) {
 function is_comment_federated( $comment ) {
 	return Comment::is_federated( $comment );
 }
+
+/**
+ * Mark a WordPress object as federated.
+ *
+ * @param WP_Comment|WP_Post|mixed $wp_object
+ * @return void
+ */
+function mark_wp_object_as_federated( $wp_object ) {
+	$meta_key = 'activitypub_federated';
+
+	if ( $wp_object instanceof \WP_Post ) {
+		\update_post_meta( $wp_object->ID, $meta_key, true );
+	} elseif ( $wp_object instanceof \WP_Comment ) {
+		\update_comment_meta( $wp_object->comment_ID, $meta_key, true );
+	} else {
+		\apply_filters( 'activitypub_mark_wp_object_as_federated', $wp_object );
+	}
+}
