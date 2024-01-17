@@ -95,6 +95,8 @@ abstract class Base {
 
 		$activity = new Activity();
 		$activity->set_type( $type );
+
+		// Pre-fill the Activity with data (for example cc and to).
 		$activity->set_object( $object );
 
 		// Use simple Object (only ID-URI) for Like and Announce
