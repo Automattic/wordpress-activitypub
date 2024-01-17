@@ -237,7 +237,7 @@ class Event extends Base_Object {
 	 * @param string $timezone The timezone string to be set, e.g. 'Europe/Berlin'.
 	 */
 	public function set_timezone( $timezone ) {
-		if ( in_array( $timezone, timezone_identifiers_list() ) ) {
+		if ( in_array( $timezone, timezone_identifiers_list(), true ) ) {
 			$this->timezone = $timezone;
 		} else {
 			$this->timezone = wp_timezone_string();
@@ -252,7 +252,7 @@ class Event extends Base_Object {
 	 * @param string $type
 	 */
 	public function set_replies_moderation_option( $type ) {
-		if ( in_array( $type, self::REPLIES_MODERATION_OPTION_TYPES ) ) {
+		if ( in_array( $type, self::REPLIES_MODERATION_OPTION_TYPES, true ) ) {
 			$this->replies_moderation_option = $type;
 			$this->comments_enabled = ( 'allow_all' === $type ) ? true : false;
 		} else {
@@ -292,7 +292,7 @@ class Event extends Base_Object {
 	 * @param string $status
 	 */
 	public function set_status( $status ) {
-		if ( in_array( $status, self::ICAL_EVENT_STATUS_TYPES ) ) {
+		if ( in_array( $status, self::ICAL_EVENT_STATUS_TYPES, true ) ) {
 			$this->status = $status;
 		} else {
 			_doing_it_wrong(
@@ -315,7 +315,7 @@ class Event extends Base_Object {
 	 */
 	public function set_category( $category, $mobilizon_compatibilty = true ) {
 		if ( $mobilizon_compatibilty ) {
-			$this->category = in_array( $category, self::DEFAULT_EVENT_CATEGORIES ) ? $category : 'MEETING';
+			$this->category = in_array( $category, self::DEFAULT_EVENT_CATEGORIES, true ) ? $category : 'MEETING';
 		} else {
 			$this->category = $category;
 		}
