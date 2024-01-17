@@ -630,7 +630,7 @@ class Base_Object {
 	 * It tries to get the object attributes if they exist
 	 * and falls back to the getters. Empty values are ignored.
 	 *
-	 * @param bool $include_json_ld_context
+	 * @param bool $include_json_ld_context Whether to include the JSON-LD context. Default true.
 	 *
 	 * @return array An array built from the Object.
 	 */
@@ -676,10 +676,12 @@ class Base_Object {
 	/**
 	 * Convert Object to JSON.
 	 *
+	 * @param bool $include_json_ld_context Whether to include the JSON-LD context. Default true.
+	 *
 	 * @return string The JSON string.
 	 */
-	public function to_json() {
-		$array   = $this->to_array();
+	public function to_json( $include_json_ld_context = true ) {
+		$array   = $this->to_array( $include_json_ld_context );
 		$options = \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT;
 
 		/*
