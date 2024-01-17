@@ -78,7 +78,6 @@ abstract class Base {
 	 */
 	public function to_object() {
 		$activitypub_object = new Base_Object();
-
 		$activitypub_object = $this->transform_object_properties( $activitypub_object );
 
 		return $activitypub_object;
