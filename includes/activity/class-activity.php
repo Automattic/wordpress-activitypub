@@ -17,74 +17,14 @@ use Activitypub\Activity\Base_Object;
  * @see https://www.w3.org/TR/activitystreams-core/#intransitiveactivities
  */
 class Activity extends Base_Object {
-	const CONTEXT = array(
+	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
-		'https://w3id.org/security/v1',
-		'https://purl.archive.org/socialweb/webfinger',
-		array(
-			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
-			'PropertyValue' => 'schema:PropertyValue',
-			'schema' => 'http://schema.org#',
-			'pt' => 'https://joinpeertube.org/ns#',
-			'toot' => 'http://joinmastodon.org/ns#',
-			'litepub' => 'http://litepub.social/ns#',
-			'lemmy' => 'https://join-lemmy.org/ns#',
-			'value' => 'schema:value',
-			'Hashtag' => 'as:Hashtag',
-			'featured' => array(
-				'@id' => 'toot:featured',
-				'@type' => '@id',
-			),
-			'featuredTags' => array(
-				'@id' => 'toot:featuredTags',
-				'@type' => '@id',
-			),
-			'alsoKnownAs' => array(
-				'@id' => 'as:alsoKnownAs',
-				'@type' => '@id',
-			),
-			'moderators' => array(
-				'@id' => 'lemmy:moderators',
-				'@type' => '@id',
-			),
-			'postingRestrictedToMods' => 'lemmy:postingRestrictedToMods',
-			'discoverable' => 'toot:discoverable',
-			'indexable' => 'toot:indexable',
-			'sensitive' => 'as:sensitive',
-		),
 	);
-
-	/**
-	 * The object's unique global identifier
-	 *
-	 * @see https://www.w3.org/TR/activitypub/#obj-id
-	 *
-	 * @var string
-	 */
-	protected $id;
 
 	/**
 	 * @var string
 	 */
 	protected $type = 'Activity';
-
-	/**
-	 * The context within which the object exists or an activity was
-	 * performed.
-	 * The notion of "context" used is intentionally vague.
-	 * The intended function is to serve as a means of grouping objects
-	 * and activities that share a common originating context or
-	 * purpose. An example could be all activities relating to a common
-	 * project or event.
-	 *
-	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-context
-	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | null
-	 */
-	protected $context = self::CONTEXT;
 
 	/**
 	 * Describes the direct object of the activity.
@@ -94,7 +34,7 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-object-term
 	 *
 	 * @var string
-	 *    | Base_Objectr
+	 *    | Base_Object
 	 *    | Link
 	 *    | null
 	 */
@@ -223,6 +163,20 @@ class Activity extends Base_Object {
 
 		if ( $object->get_id() && ! $this->get_id() ) {
 			$this->set( 'id', $object->get_id() . '#activity' );
+		}
+	}
+
+	/**
+	 * The context of an Activity is usually just the context of the object it contains.
+	 *
+	 * @return array $context A compacted JSON-LD context.
+	 */
+	public function get_json_ld_context() {
+		if ( $this->object instanceof Base_Object ) {
+			// Without php 5.6 support this could be just: 'return  $this->object::JSON_LD_CONTEXT;'
+			return call_user_func( array( get_class( $this->object ), 'CONTEXT' ) );
+		} else {
+			return self::JSON_LD_CONTEXT;
 		}
 	}
 }

@@ -3,7 +3,6 @@
 $post = \get_post();
 
 $post_object = \Activitypub\Transformer\Factory::get_transformer( $post )->to_object();
-$post_object->set_context( \Activitypub\get_context() );
 
 /*
  * Action triggerd prior to the ActivityPub profile being created and sent to the client
