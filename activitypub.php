@@ -115,7 +115,7 @@ function plugin_init() {
 			if ( false !== strpos( $class, '\\' ) ) {
 				$parts    = explode( '\\', $class );
 				$class    = array_pop( $parts );
-				$sub_dir  = implode( '/', $parts );
+				$sub_dir  = strtr( implode( '/', $parts ), '_', '-' );
 				$base_dir = $base_dir . $sub_dir . '/';
 			}
 

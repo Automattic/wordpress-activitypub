@@ -98,6 +98,11 @@ class Activitypub {
 			return $template;
 		}
 
+		// check if blog-user is enabled
+		if ( \is_home() && is_wp_error( Users::get_by_id( Users::BLOG_USER_ID ) ) ) {
+			return $template;
+		}
+
 		if ( \is_author() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/author-json.php';
 		} elseif ( is_comment() ) {

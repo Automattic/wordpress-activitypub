@@ -30,7 +30,7 @@ abstract class Base {
 	 *
 	 * @param WP_Post|WP_Comment $wp_object The WordPress object
 	 *
-	 * @return void
+	 * @return Base_Object
 	 */
 	public static function transform( $object ) {
 		return new static( $object );
@@ -46,13 +46,13 @@ abstract class Base {
 	}
 
 	/**
-	 * Transform the WordPress Object into an ActivityPub Object.
+	 * Transform all properties with available get(ter) functions.
 	 *
-	 * @return Activitypub\Activity\Base_Object
+	 * @param Base_Object|object $object
+	 *
+	 * @return Base_Object|object $object
 	 */
-	public function to_object() {
-		$activitypub_object = new Base_Object();
-
+	protected function transform_object_properties( $activitypub_object ) {
 		$vars = $activitypub_object->get_object_var_keys();
 
 		foreach ( $vars as $var ) {
@@ -68,6 +68,17 @@ abstract class Base {
 				}
 			}
 		}
+		return $activitypub_object;
+	}
+
+	/**
+	 * Transform the WordPress Object into an ActivityPub Object.
+	 *
+	 * @return Activitypub\Activity\Base_Object
+	 */
+	public function to_object() {
+		$activitypub_object = new Base_Object();
+		$activitypub_object = $this->transform_object_properties( $activitypub_object );
 
 		return $activitypub_object;
 	}
@@ -84,6 +95,8 @@ abstract class Base {
 
 		$activity = new Activity();
 		$activity->set_type( $type );
+
+		// Pre-fill the Activity with data (for example cc and to).
 		$activity->set_object( $object );
 
 		// Use simple Object (only ID-URI) for Like and Announce
