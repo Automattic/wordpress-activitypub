@@ -108,10 +108,8 @@ class Outbox {
 				$post = Post::transform( $post )->to_object();
 				$activity = new Activity();
 				$activity->set_type( 'Create' );
-				$activity->set_context( null );
 				$activity->set_object( $post );
-
-				$json->orderedItems[] = $activity->to_array(); // phpcs:ignore
+				$json->orderedItems[] = $activity->to_array( false ); // phpcs:ignore
 			}
 		}
 

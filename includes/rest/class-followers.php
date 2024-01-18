@@ -96,7 +96,7 @@ class Followers {
 		$json->orderedItems = array_map(
 			function ( $item ) use ( $context ) {
 				if ( 'full' === $context ) {
-					return $item->to_array();
+					return $item->to_array( false );
 				}
 				return $item->get_url();
 			},

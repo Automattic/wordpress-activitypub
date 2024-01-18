@@ -5,7 +5,8 @@ use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Transformer\Post;
-use Activitypub\Activity\Activity;
+use Activitypub\Activity\Actor;
+use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\esc_hashtag;
@@ -102,7 +103,7 @@ class Collection {
 		}
 
 		$response = array(
-			'@context'   => Activity::CONTEXT,
+			'@context'   => Base_Object::JSON_LD_CONTEXT,
 			'id'         => get_rest_url_by_path( sprintf( 'users/%d/collections/tags', $user->get__id() ) ),
 			'type'       => 'Collection',
 			'totalItems' => is_countable( $tags ) ? count( $tags ) : 0,
@@ -160,7 +161,7 @@ class Collection {
 		}
 
 		$response = array(
-			'@context'     => Activity::CONTEXT,
+			'@context'     => Base_Object::JSON_LD_CONTEXT,
 			'id'           => get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $user_id ) ),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => is_countable( $posts ) ? count( $posts ) : 0,
@@ -168,7 +169,7 @@ class Collection {
 		);
 
 		foreach ( $posts as $post ) {
-			$response['orderedItems'][] = Post::transform( $post )->to_object()->to_array();
+			$response['orderedItems'][] = Post::transform( $post )->to_object()->to_array( false );
 		}
 
 		$rest_response = new WP_REST_Response( $response, 200 );
@@ -186,7 +187,7 @@ class Collection {
 	 */
 	public static function moderators_get( $request ) {
 		$response = array(
-			'@context'     => Activity::CONTEXT,
+			'@context'     => Actor::JSON_LD_CONTEXT,
 			'id'           => get_rest_url_by_path( 'collections/moderators' ),
 			'type'         => 'OrderedCollection',
 			'orderedItems' => array(),
