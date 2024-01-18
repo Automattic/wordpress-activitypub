@@ -4,7 +4,6 @@
  * Activity Streams Event object type
  *
  * @package activity-event-transformers
- * @license AGPL-3.0-or-later
  */
 
 namespace Activitypub\Activity\Extended_Object;
