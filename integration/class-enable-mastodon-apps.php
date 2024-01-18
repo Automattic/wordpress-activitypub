@@ -1,7 +1,7 @@
 <?php
 namespace Activitypub\Integration;
 
-use Activitypub\Webfinger;
+use Activitypub\Webfinger as Webfinger_Util;
 use Activitypub\Collection\Followers;
 
 class Enable_Mastodon_Apps {
@@ -25,7 +25,7 @@ class Enable_Mastodon_Apps {
 		$activitypub_followers = Followers::get_followers( $user_id, 40 );
 		$mastodon_followers    = array_map(
 			function ( $item ) {
-				$acct = Webfinger::uri_to_acct( $item->get_id() );
+				$acct = Webfinger_Util::uri_to_acct( $item->get_id() );
 
 				if ( $acct && ! is_wp_error( $acct ) ) {
 					$acct = \str_replace( 'acct:', '', $acct );
