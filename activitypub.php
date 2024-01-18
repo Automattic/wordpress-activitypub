@@ -89,6 +89,9 @@ function plugin_init() {
 
 	require_once __DIR__ . '/integration/class-nodeinfo.php';
 	Integration\Nodeinfo::init();
+
+	require_once __DIR__ . '/integration/class-enable-mastodon-apps.php';
+	Integration\Enable_Mastodon_Apps::init();
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
 
