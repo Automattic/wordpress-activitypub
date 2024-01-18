@@ -179,7 +179,7 @@ class Post extends Base {
 			$media_ids = self::get_media_ids_from_blocks( $blocks, $media_ids );
 		}
 
-		$media_ids = self::filter_media_ids_by_object_type( $media_ids, $this->get_type() );
+		$media_ids = self::filter_media_ids_by_object_type( $media_ids, get_post_format( $this->wp_object ) );
 		$media_ids = array_slice( $media_ids, 0, $max_media );
 
 		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media_ids ) );
@@ -516,17 +516,11 @@ class Post extends Base {
 					case 'status':
 					case 'quote':
 					case 'note':
-						$object_type = 'Note';
-						break;
 					case 'gallery':
 					case 'image':
-						$object_type = 'Image';
-						break;
 					case 'video':
-						$object_type = 'Video';
-						break;
 					case 'audio':
-						$object_type = 'Audio';
+						$object_type = 'Note';
 						break;
 					default:
 						$object_type = 'Article';
@@ -537,19 +531,7 @@ class Post extends Base {
 				$object_type = 'Page';
 				break;
 			case 'attachment':
-				$mime_type = \get_post_mime_type();
-				$media_type = \preg_replace( '/(\/[a-zA-Z]+)/i', '', $mime_type );
-				switch ( $media_type ) {
-					case 'audio':
-						$object_type = 'Audio';
-						break;
-					case 'video':
-						$object_type = 'Video';
-						break;
-					case 'image':
-						$object_type = 'Image';
-						break;
-				}
+				$object_type = 'Note';
 				break;
 			default:
 				$object_type = 'Article';
