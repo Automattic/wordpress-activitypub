@@ -287,6 +287,25 @@ class Follower extends Actor {
 	}
 
 	/**
+	 * Get the Icon URL (Avatar)
+	 *
+	 * @return string The URL to the Avatar.
+	 */
+	public function get_image_url() {
+		$image = $this->get_image();
+
+		if ( ! $image ) {
+			return '';
+		}
+
+		if ( is_array( $image ) ) {
+			return $image['url'];
+		}
+
+		return $image;
+	}
+
+	/**
 	 * Get the shared inbox, with a fallback to the inbox.
 	 *
 	 * @return string|null The URL to the shared inbox, the inbox or null.

@@ -49,10 +49,6 @@ class Server {
 	public static function application_actor() {
 		$user = new Application_User();
 
-		$user->set_context(
-			\Activitypub\Activity\Activity::CONTEXT
-		);
-
 		$json = $user->to_array();
 
 		$rest_response = new WP_REST_Response( $json, 200 );
