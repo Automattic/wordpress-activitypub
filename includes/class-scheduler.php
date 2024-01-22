@@ -169,13 +169,13 @@ class Scheduler {
 	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
 		$comment = get_comment( $comment );
 
-		// check if comment should be federated or not
-		if ( ! should_comment_be_federated( $comment ) ) {
+		// federate only comments that are written by a registered user.
+		if ( ! $comment->user_id ) {
 			return;
 		}
 
-		// Federate only approved comments.
-		if ( ! $comment->user_id ) {
+		// check if comment should be federated or not
+		if ( ! should_comment_be_federated( $comment ) ) {
 			return;
 		}
 
