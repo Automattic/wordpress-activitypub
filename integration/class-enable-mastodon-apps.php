@@ -2,7 +2,7 @@
 namespace Activitypub\Integration;
 
 use Activitypub\Webfinger as Webfinger_Util;
-use Activitypub\Webfinger as Webfinger;
+use Activitypub\Webfinger;
 use Activitypub\Collection\Followers;
 
 class Enable_Mastodon_Apps {
@@ -75,7 +75,7 @@ class Enable_Mastodon_Apps {
 	}
 
 	public static function api_account_external( $user_data, $user_id ) {
-		if ( ! preg_match( '/^'. ACTIVITYPUB_USERNAME_REGEXP . '$/', $user_id ) ) {
+		if ( ! preg_match( '/^' . ACTIVITYPUB_USERNAME_REGEXP . '$/', $user_id ) ) {
 			return $user_data;
 		}
 
