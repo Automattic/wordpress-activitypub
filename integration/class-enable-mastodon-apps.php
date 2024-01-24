@@ -78,12 +78,15 @@ class Enable_Mastodon_Apps {
 			return $user_data;
 		}
 
-		$uri = \ActivityPub\Webfinger::resolve( $user_id );
+		$uri = \Activitypub\Webfinger::resolve( $user_id );
 		if ( ! $uri ) {
 			return $user_data;
 		}
 		$acct = Webfinger_Util::uri_to_acct( $uri );
-		$data = \ActivityPub\get_remote_metadata_by_actor( $uri );
+		$data = \Activitypub\get_remote_metadata_by_actor( $uri );
+		if ( ! $data ) {
+			return $user_data;
+		}
 
 		$account = new \Enable_Mastodon_Apps\Entity\Account();
 
@@ -92,6 +95,16 @@ class Enable_Mastodon_Apps {
 		$account->acct           = $acct;
 		$account->display_name   = $data['name'];
 		$account->url            = $uri;
+		$account->note           = $data['summary'];
+		if ( isset( $data['icon']['type'] ) &&  isset( $data['icon']['url'] ) && 'Image' === $data['icon']['type']) {
+		$account->avatar         = $data['icon']['url'];
+		$account->avatar_static  = $data['icon']['url'];
+		}
+		if ( isset( $data['image'] ) ) {
+			$account->header         = $data['image'];
+			$account->header_static  = $data['image'];
+		}
+		$account->created_at    = new \DateTime( $data['published'] );
 
 		return $account;
 	}
