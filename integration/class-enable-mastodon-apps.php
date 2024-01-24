@@ -2,7 +2,6 @@
 namespace Activitypub\Integration;
 
 use Activitypub\Webfinger as Webfinger_Util;
-use Activitypub\Webfinger;
 use Activitypub\Collection\Followers;
 
 class Enable_Mastodon_Apps {
@@ -79,7 +78,7 @@ class Enable_Mastodon_Apps {
 			return $user_data;
 		}
 
-		$uri = Webfinger::resolve( $user_id );
+		$uri = \ActivityPub\Webfinger::resolve( $user_id );
 		if ( ! $uri ) {
 			return $user_data;
 		}
