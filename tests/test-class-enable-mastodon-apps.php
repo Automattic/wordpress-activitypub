@@ -17,7 +17,7 @@ class Test_Enable_Mastodon_Apps extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'acct', $account );
 		$this->assertArrayHasKey( 'display_name', $account );
 		$this->assertArrayHasKey( 'url', $account );
-		$this->assertEquals('https://alex.kirk.at/author/alex/', $account['url']);
-		$this->assertEquals('Alex Kirk', $account['display_name']);
+		$this->assertEquals( 'https://alex.kirk.at/author/alex/', $account['url'] );
+		$this->assertEquals( 'Alex Kirk', $account['display_name'] );
 	}
 }
