@@ -33,6 +33,8 @@ require_once __DIR__ . '/includes/functions.php';
 \defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<strong>[ap_title]</strong>\n\n[ap_content]\n\n[ap_hashtags]\n\n[ap_shortlink]" );
 \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) || \define( 'ACTIVITYPUB_AUTHORIZED_FETCH', false );
 \defined( 'ACTIVITYPUB_DISABLE_REWRITES' ) || \define( 'ACTIVITYPUB_DISABLE_REWRITES', false );
+\defined( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS' ) || \define( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS', false );
+\defined( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS' ) || \define( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS', false );
 \defined( 'ACTIVITYPUB_SHARED_INBOX_FEATURE' ) || \define( 'ACTIVITYPUB_SHARED_INBOX_FEATURE', false );
 
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
