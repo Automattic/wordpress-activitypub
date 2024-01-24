@@ -110,11 +110,11 @@ class Enable_Mastodon_Apps {
 			return $user_data;
 		}
 
-        if ( $user_data instanceOf \Enable_Mastodon_Apps\Entity\Account ) {
-         		$account = $user_data;
-        } else {
-        		$account = new Account();
-        }
+		if ( $user_data instanceof \Enable_Mastodon_Apps\Entity\Account ) {
+				$account = $user_data;
+		} else {
+				$account = new Account();
+		}
 
 		$account->id             = strval( $user_id );
 		$account->username       = $acct;
