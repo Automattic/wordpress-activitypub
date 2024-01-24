@@ -163,15 +163,17 @@ class Follower extends Actor {
 		}
 
 		$args = array(
-			'ID'           => $this->get__id(),
-			'guid'         => esc_url_raw( $this->get_id() ),
-			'post_title'   => wp_strip_all_tags( sanitize_text_field( $this->get_name() ) ),
-			'post_author'  => 0,
-			'post_type'    => Followers::POST_TYPE,
-			'post_name'    => esc_url_raw( $this->get_id() ),
-			'post_excerpt' => sanitize_text_field( wp_kses( $this->get_summary(), 'user_description' ) ),
-			'post_status'  => 'publish',
-			'meta_input'   => $this->get_post_meta_input(),
+			'ID'            => $this->get__id(),
+			'guid'          => esc_url_raw( $this->get_id() ),
+			'post_title'    => wp_strip_all_tags( sanitize_text_field( $this->get_name() ) ),
+			'post_author'   => 0,
+			'post_type'     => Followers::POST_TYPE,
+			'post_name'     => esc_url_raw( $this->get_id() ),
+			'post_excerpt'  => sanitize_text_field( wp_kses( $this->get_summary(), 'user_description' ) ),
+			'post_status'   => 'publish',
+			'meta_input'    => $this->get_post_meta_input(),
+			'post_date'     => get_date_from_gmt( $this->get_published() ), // Or something.
+			'post_date_gmt' => $this->get_published(),
 		);
 
 		$post_id = wp_insert_post( $args );
