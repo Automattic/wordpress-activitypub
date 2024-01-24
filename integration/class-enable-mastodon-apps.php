@@ -1,8 +1,12 @@
 <?php
 namespace Activitypub\Integration;
 
+use DateTime;
 use Activitypub\Webfinger as Webfinger_Util;
 use Activitypub\Collection\Followers;
+use Enable_Mastodon_Apps\Entity\Account;
+
+use function Activitypub\get_remote_metadata_by_actor;
 
 class Enable_Mastodon_Apps {
 	/**
@@ -78,17 +82,20 @@ class Enable_Mastodon_Apps {
 			return $user_data;
 		}
 
-		$uri = \Activitypub\Webfinger::resolve( $user_id );
+		$uri = Webfinger_Util::resolve( $user_id );
+
 		if ( ! $uri ) {
 			return $user_data;
 		}
+
 		$acct = Webfinger_Util::uri_to_acct( $uri );
-		$data = \Activitypub\get_remote_metadata_by_actor( $uri );
+		$data = get_remote_metadata_by_actor( $uri );
+
 		if ( ! $data ) {
 			return $user_data;
 		}
 
-		$account = new \Enable_Mastodon_Apps\Entity\Account();
+		$account = new Account();
 
 		$account->id             = strval( $user_id );
 		$account->username       = $acct;
@@ -96,15 +103,18 @@ class Enable_Mastodon_Apps {
 		$account->display_name   = $data['name'];
 		$account->url            = $uri;
 		$account->note           = $data['summary'];
+
 		if ( isset( $data['icon']['type'] ) && isset( $data['icon']['url'] ) && 'Image' === $data['icon']['type'] ) {
 			$account->avatar         = $data['icon']['url'];
 			$account->avatar_static  = $data['icon']['url'];
 		}
+
 		if ( isset( $data['image'] ) ) {
 			$account->header         = $data['image'];
 			$account->header_static  = $data['image'];
 		}
-		$account->created_at = new \DateTime( $data['published'] );
+
+		$account->created_at = new DateTime( $data['published'] );
 
 		return $account;
 	}
