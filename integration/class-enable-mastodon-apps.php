@@ -8,6 +8,13 @@ use Enable_Mastodon_Apps\Entity\Account;
 
 use function Activitypub\get_remote_metadata_by_actor;
 
+/**
+ * Class Enable_Mastodon_Apps
+ *
+ * This class is used to enable Mastodon Apps to work with ActivityPub
+ *
+ * @see https://github.com/akirk/enable-mastodon-apps
+ */
 class Enable_Mastodon_Apps {
 	/**
 	 * Initialize the class, registering WordPress hooks
@@ -77,6 +84,14 @@ class Enable_Mastodon_Apps {
 		return $followers;
 	}
 
+	/**
+	 * Resolve external accounts for Mastodon API
+	 *
+	 * @param Enable_Mastodon_Apps\Entity\Account $user_data The user data
+	 * @param string                              $user_id   The user id
+	 *
+	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
+	 */
 	public static function api_account_external( $user_data, $user_id ) {
 		if ( ! preg_match( '/^' . ACTIVITYPUB_USERNAME_REGEXP . '$/', $user_id ) ) {
 			return $user_data;
