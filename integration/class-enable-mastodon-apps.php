@@ -2,6 +2,7 @@
 namespace Activitypub\Integration;
 
 use Activitypub\Webfinger as Webfinger_Util;
+use Activitypub\Webfinger as Webfinger;
 use Activitypub\Collection\Followers;
 
 class Enable_Mastodon_Apps {
@@ -10,6 +11,7 @@ class Enable_Mastodon_Apps {
 	 */
 	public static function init() {
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
+		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 10, 2 );
 	}
 
 	/**
@@ -70,5 +72,28 @@ class Enable_Mastodon_Apps {
 		$followers = array_merge( $mastodon_followers, $followers );
 
 		return $followers;
+	}
+
+	public static function api_account_external( $user_data, $user_id ) {
+		if ( ! preg_match( '/^'. ACTIVITYPUB_USERNAME_REGEXP . '$/', $user_id ) ) {
+			return $user_data;
+		}
+
+		$uri = Webfinger::resolve( $user_id );
+		if ( ! $uri ) {
+			return $user_data;
+		}
+		$acct = Webfinger_Util::uri_to_acct( $uri );
+		$data = \ActivityPub\get_remote_metadata_by_actor( $uri );
+
+		$account = new \Enable_Mastodon_Apps\Entity\Account();
+
+		$account->id             = strval( $user_id );
+		$account->username       = $acct;
+		$account->acct           = $acct;
+		$account->display_name   = $data['name'];
+		$account->url            = $uri;
+
+		return $account;
 	}
 }

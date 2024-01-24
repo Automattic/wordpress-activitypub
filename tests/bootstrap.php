@@ -19,7 +19,13 @@ require_once $_tests_dir . '/includes/functions.php';
  */
 function _manually_load_plugin() {
 	require \dirname( __DIR__ ) . '/activitypub.php';
+	$enable_mastodon_apps_plugin = dirname( dirname( __DIR__ ) ) . '/enable-mastodon-apps/enable-mastodon-apps.php'; // phpcs:ignore
+	if ( file_exists( $enable_mastodon_apps_plugin ) ) {
+		require $enable_mastodon_apps_plugin;
+	}
 }
+tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
+
 \tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
 // Start up the WP testing environment.
