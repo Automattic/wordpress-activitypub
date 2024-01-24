@@ -96,15 +96,15 @@ class Enable_Mastodon_Apps {
 		$account->display_name   = $data['name'];
 		$account->url            = $uri;
 		$account->note           = $data['summary'];
-		if ( isset( $data['icon']['type'] ) &&  isset( $data['icon']['url'] ) && 'Image' === $data['icon']['type']) {
-		$account->avatar         = $data['icon']['url'];
-		$account->avatar_static  = $data['icon']['url'];
+		if ( isset( $data['icon']['type'] ) && isset( $data['icon']['url'] ) && 'Image' === $data['icon']['type'] ) {
+			$account->avatar         = $data['icon']['url'];
+			$account->avatar_static  = $data['icon']['url'];
 		}
 		if ( isset( $data['image'] ) ) {
 			$account->header         = $data['image'];
 			$account->header_static  = $data['image'];
 		}
-		$account->created_at    = new \DateTime( $data['published'] );
+		$account->created_at = new \DateTime( $data['published'] );
 
 		return $account;
 	}
