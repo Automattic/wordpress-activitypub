@@ -11,7 +11,7 @@ class Test_Enable_Mastodon_Apps extends WP_UnitTestCase {
 	public function test_api_account_external() {
 		$account = apply_filters( 'mastodon_api_account', array(), 'alex@kirk.at' );
 		$this->assertNotEmpty( $account );
-		$account = $account->to_array();
+		$account = $account->jsonSerialize();
 		$this->assertArrayHasKey( 'id', $account );
 		$this->assertArrayHasKey( 'username', $account );
 		$this->assertArrayHasKey( 'acct', $account );

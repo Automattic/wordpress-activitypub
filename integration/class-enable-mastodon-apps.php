@@ -110,7 +110,7 @@ class Enable_Mastodon_Apps {
 			return $user_data;
 		}
 
-		if ( $user_data instanceof \Enable_Mastodon_Apps\Entity\Account ) {
+		if ( $user_data instanceof Account ) {
 				$account = $user_data;
 		} else {
 				$account = new Account();
