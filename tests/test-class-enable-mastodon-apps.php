@@ -53,6 +53,7 @@ class Test_Enable_Mastodon_Apps extends WP_UnitTestCase {
 
 	public function set_up() {
 		parent::set_up();
+
 		if ( ! class_exists( '\Enable_Mastodon_Apps\Entity\Entity' ) ) {
 			self::markTestSkipped( 'The Enable_Mastodon_Apps plugin is not active.' );
 		}
@@ -92,20 +93,6 @@ class Test_Enable_Mastodon_Apps extends WP_UnitTestCase {
 
 		$account = apply_filters( 'mastodon_api_account', $account, 1 );
 		$this->assertEquals( 3, $account->followers_count );
-	}
-
-	public static function http_request_host_is_external( $in, $host ) {
-		if ( in_array( $host, array( 'example.com', 'example.org' ), true ) ) {
-			return true;
-		}
-		return $in;
-	}
-
-	public static function http_request_args( $args, $url ) {
-		if ( in_array( wp_parse_url( $url, PHP_URL_HOST ), array( 'example.com', 'example.org' ), true ) ) {
-			$args['reject_unsafe_urls'] = false;
-		}
-		return $args;
 	}
 
 	public static function pre_http_request( $preempt, $request, $url ) {
