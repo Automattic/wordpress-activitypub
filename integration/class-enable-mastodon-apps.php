@@ -1,15 +1,27 @@
 <?php
 namespace Activitypub\Integration;
 
+use DateTime;
 use Activitypub\Webfinger as Webfinger_Util;
 use Activitypub\Collection\Followers;
+use Enable_Mastodon_Apps\Entity\Account;
 
+use function Activitypub\get_remote_metadata_by_actor;
+
+/**
+ * Class Enable_Mastodon_Apps
+ *
+ * This class is used to enable Mastodon Apps to work with ActivityPub
+ *
+ * @see https://github.com/akirk/enable-mastodon-apps
+ */
 class Enable_Mastodon_Apps {
 	/**
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
+		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 10, 2 );
 	}
 
 	/**
@@ -70,5 +82,59 @@ class Enable_Mastodon_Apps {
 		$followers = array_merge( $mastodon_followers, $followers );
 
 		return $followers;
+	}
+
+	/**
+	 * Resolve external accounts for Mastodon API
+	 *
+	 * @param Enable_Mastodon_Apps\Entity\Account $user_data The user data
+	 * @param string                              $user_id   The user id
+	 *
+	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
+	 */
+	public static function api_account_external( $user_data, $user_id ) {
+		if ( ! preg_match( '/^' . ACTIVITYPUB_USERNAME_REGEXP . '$/', $user_id ) ) {
+			return $user_data;
+		}
+
+		$uri = Webfinger_Util::resolve( $user_id );
+
+		if ( ! $uri ) {
+			return $user_data;
+		}
+
+		$acct = Webfinger_Util::uri_to_acct( $uri );
+		$data = get_remote_metadata_by_actor( $uri );
+
+		if ( ! $data ) {
+			return $user_data;
+		}
+
+		if ( $user_data instanceof Account ) {
+				$account = $user_data;
+		} else {
+				$account = new Account();
+		}
+
+		$account->id             = strval( $user_id );
+		$account->username       = $acct;
+		$account->acct           = $acct;
+		$account->display_name   = $data['name'];
+		$account->url            = $uri;
+		$account->note           = $data['summary'];
+
+		if ( isset( $data['icon']['type'] ) && isset( $data['icon']['url'] ) && 'Image' === $data['icon']['type'] ) {
+			$account->avatar         = $data['icon']['url'];
+			$account->avatar_static  = $data['icon']['url'];
+		}
+
+		if ( isset( $data['image'] ) ) {
+			$account->header         = $data['image'];
+			$account->header_static  = $data['image'];
+		}
+
+		$account->created_at = new DateTime( $data['published'] );
+
+		return $account;
 	}
 }
