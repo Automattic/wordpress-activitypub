@@ -118,7 +118,6 @@ class Enable_Mastodon_Apps {
 		}
 
 		$acct = Webfinger_Util::uri_to_acct( $uri );
-
 		$data = get_remote_metadata_by_actor( $uri );
 
 		if ( ! $data || is_wp_error( $data ) ) {

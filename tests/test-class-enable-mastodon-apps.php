@@ -83,9 +83,6 @@ class Test_Enable_Mastodon_Apps extends WP_UnitTestCase {
 	public function test_api_account_followers_internal() {
 		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
 
-		$pre_http_request = new MockAction();
-		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
-
 		foreach ( $followers as $follower ) {
 			$response = \Activitypub\Collection\Followers::add_follower( 1, $follower );
 		}
