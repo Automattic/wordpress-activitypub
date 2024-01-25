@@ -162,19 +162,27 @@ class Follower extends Actor {
 			}
 		}
 
+		$post_id = $this->get__id();
+
 		$args = array(
-			'ID'            => $this->get__id(),
-			'guid'          => esc_url_raw( $this->get_id() ),
-			'post_title'    => wp_strip_all_tags( sanitize_text_field( $this->get_name() ) ),
-			'post_author'   => 0,
-			'post_type'     => Followers::POST_TYPE,
-			'post_name'     => esc_url_raw( $this->get_id() ),
-			'post_excerpt'  => sanitize_text_field( wp_kses( $this->get_summary(), 'user_description' ) ),
-			'post_status'   => 'publish',
-			'meta_input'    => $this->get_post_meta_input(),
-			'post_date'     => get_date_from_gmt( $this->get_published() ), // Or something.
-			'post_date_gmt' => $this->get_published(),
+			'ID'           => $post_id,
+			'guid'         => esc_url_raw( $this->get_id() ),
+			'post_title'   => wp_strip_all_tags( sanitize_text_field( $this->get_name() ) ),
+			'post_author'  => 0,
+			'post_type'    => Followers::POST_TYPE,
+			'post_name'    => esc_url_raw( $this->get_id() ),
+			'post_excerpt' => sanitize_text_field( wp_kses( $this->get_summary(), 'user_description' ) ),
+			'post_status'  => 'publish',
+			'meta_input'   => $this->get_post_meta_input(),
 		);
+
+		if ( ! empty( $post_id ) ) {
+			// If this is an update, prevent the "followed" date from being
+			// overwritten by the current date.
+			$post                  = get_post( $this->get__id() );
+			$args['post_date']     = $post->post_date;
+			$args['post_date_gmt'] = $post->post_date_gmt;
+		}
 
 		$post_id = wp_insert_post( $args );
 		$this->_id = $post_id;
