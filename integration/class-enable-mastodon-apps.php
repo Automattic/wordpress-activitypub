@@ -21,6 +21,7 @@ class Enable_Mastodon_Apps {
 	 */
 	public static function init() {
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
+		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_add_followers' ), 20, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 10, 2 );
 	}
 
@@ -84,6 +85,19 @@ class Enable_Mastodon_Apps {
 		return $followers;
 	}
 
+	public static function api_account_add_followers( $account, $user_id ) {
+		if ( ! $account instanceof Account ) {
+			return $account;
+		}
+
+		if ( ! get_user_by( 'ID', $user_id ) ) {
+			return $account;
+		}
+
+		$account->followers_count = Followers::count_followers( $user_id );
+		return $account;
+	}
+
 	/**
 	 * Resolve external accounts for Mastodon API
 	 *
@@ -104,9 +118,10 @@ class Enable_Mastodon_Apps {
 		}
 
 		$acct = Webfinger_Util::uri_to_acct( $uri );
+
 		$data = get_remote_metadata_by_actor( $uri );
 
-		if ( ! $data ) {
+		if ( ! $data || is_wp_error( $data ) ) {
 			return $user_data;
 		}
 
@@ -121,7 +136,9 @@ class Enable_Mastodon_Apps {
 		$account->acct           = $acct;
 		$account->display_name   = $data['name'];
 		$account->url            = $uri;
-		$account->note           = $data['summary'];
+		if ( ! empty( $data['summary'] ) ) {
+			$account->note       = $data['summary'];
+		}
 
 		if ( isset( $data['icon']['type'] ) && isset( $data['icon']['url'] ) && 'Image' === $data['icon']['type'] ) {
 			$account->avatar         = $data['icon']['url'];
