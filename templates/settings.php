@@ -208,13 +208,18 @@
 								<?php \esc_html_e( 'Enable ActivityPub support for the following post types:', 'activitypub' ); ?>
 
 								<?php $post_types = \get_post_types( array( 'public' => true ), 'objects' ); ?>
-								<?php $support_post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array(); ?>
+								<?php $support_post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post' ) ) : array(); ?>
 								<ul>
 								<?php // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited ?>
 								<?php foreach ( $post_types as $post_type ) { ?>
 									<li>
 										<input type="checkbox" id="activitypub_support_post_type_<?php echo \esc_attr( $post_type->name ); ?>" name="activitypub_support_post_types[]" value="<?php echo \esc_attr( $post_type->name ); ?>" <?php echo \checked( \in_array( $post_type->name, $support_post_types, true ) ); ?> />
 										<label for="activitypub_support_post_type_<?php echo \esc_attr( $post_type->name ); ?>"><?php echo \esc_html( $post_type->label ); ?></label>
+										<?php if ( ! empty( $post_type->description ) ) { ?>
+										<span class="description">
+											- <?php echo esc_html( $post_type->description ); ?>
+										</span>
+										<?php } ?>
 									</li>
 								<?php } ?>
 								</ul>
