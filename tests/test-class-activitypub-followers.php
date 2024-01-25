@@ -378,20 +378,6 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		$this->assertCount( 30, $followers );
 	}
 
-	public static function http_request_host_is_external( $in, $host ) {
-		if ( in_array( $host, array( 'example.com', 'example.org' ), true ) ) {
-			return true;
-		}
-		return $in;
-	}
-
-	public static function http_request_args( $args, $url ) {
-		if ( in_array( wp_parse_url( $url, PHP_URL_HOST ), array( 'example.com', 'example.org' ), true ) ) {
-			$args['reject_unsafe_urls'] = false;
-		}
-		return $args;
-	}
-
 	public static function pre_get_remote_metadata_by_actor( $pre, $actor ) {
 		if ( isset( self::$users[ $actor ] ) ) {
 			return self::$users[ $actor ];
