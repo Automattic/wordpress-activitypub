@@ -179,7 +179,7 @@ class Follower extends Actor {
 		if ( ! empty( $post_id ) ) {
 			// If this is an update, prevent the "followed" date from being
 			// overwritten by the current date.
-			$post                  = get_post( $this->get__id() );
+			$post                  = get_post( $post_id );
 			$args['post_date']     = $post->post_date;
 			$args['post_date_gmt'] = $post->post_date_gmt;
 		}
