@@ -68,7 +68,8 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		foreach ( $followers as $follower ) {
-			$response = \Activitypub\Collection\Followers::add_follower( 1, $follower );
+			$follower_id = \Activitypub\Collection\Followers::add_follower( $follower );
+			$response = \Activitypub\Collection\Followers::add_follow_relationship( 1, $follower_id );
 		}
 
 		$db_followers = \Activitypub\Collection\Followers::get_followers( 1 );
@@ -91,9 +92,11 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 
 		$follower = 'https://12345.example.com';
 		$follower2 = 'https://user2.example.com';
-		\Activitypub\Collection\Followers::add_follower( 1, $follower );
-		\Activitypub\Collection\Followers::add_follower( 2, $follower );
-		\Activitypub\Collection\Followers::add_follower( 2, $follower2 );
+		$follwer_id = \Activitypub\Collection\Followers::add_follower( $follower );
+		$follower2_id = \Activitypub\Collection\Followers::add_follower( $follower2 );
+
+		\Activitypub\Collection\Followers::add_follow_relationship( 1, $follwer_id );
+		\Activitypub\Collection\Followers::add_follow_relationship( 2, $follower2_id );
 
 		$db_followers = \Activitypub\Collection\Followers::get_followers( 1 );
 		$db_followers2 = \Activitypub\Collection\Followers::get_followers( 2 );
@@ -108,13 +111,13 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 
 		$follower = 'error@example.com';
 
-		$result = \Activitypub\Collection\Followers::add_follower( 1, $follower );
+		$result = \Activitypub\Collection\Followers::add_follower( $follower );
 
 		$this->assertTrue( is_wp_error( $result ) );
 
 		$follower2 = 'https://error.example.com';
 
-		$result = \Activitypub\Collection\Followers::add_follower( 1, $follower2 );
+		$result = \Activitypub\Collection\Followers::add_follower( $follower2 );
 
 		$this->assertTrue( is_wp_error( $result ) );
 
@@ -131,11 +134,13 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		foreach ( $followers as $follower ) {
-			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+			$follower_id = \Activitypub\Collection\Followers::add_follower( $follower );
+			\Activitypub\Collection\Followers::add_follow_relationship( 1, $follower_id );
 		}
 
 		foreach ( $followers2 as $follower ) {
-			\Activitypub\Collection\Followers::add_follower( 2, $follower );
+			$follower_id = \Activitypub\Collection\Followers::add_follower( $follower );
+			\Activitypub\Collection\Followers::add_follow_relationship( 2, $follower_id );
 		}
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
@@ -155,7 +160,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		$this->assertEquals( 'úser2', $follower2->get_name() );
 	}
 
-	public function test_delete_follower() {
+	public function test_delete_follow_relatioship() {
 		$followers = array(
 			'https://example.com/author/jon',
 			'https://example.org/author/doe',
@@ -166,14 +171,14 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		foreach ( $followers as $follower ) {
-			\Activitypub\Collection\Followers::add_follower( 1, $follower );
-			\Activitypub\Collection\Followers::add_follower( 1, $follower );
-			\Activitypub\Collection\Followers::add_follower( 1, $follower );
-			\Activitypub\Collection\Followers::add_follower( 2, $follower );
+			$follower_id = \Activitypub\Collection\Followers::add_follower( $follower );
+			\Activitypub\Collection\Followers::add_follow_relationship( 1, $follower_id );
+			\Activitypub\Collection\Followers::add_follow_relationship( 2, $follower_id );
 		}
 
 		foreach ( $followers2 as $follower2 ) {
-			\Activitypub\Collection\Followers::add_follower( 2, $follower2 );
+			$follower_id = \Activitypub\Collection\Followers::add_follower( $follower2 );
+			\Activitypub\Collection\Followers::add_follow_relationship( 2, $follower_id );
 		}
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
@@ -185,7 +190,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		$follower2 = \Activitypub\Collection\Followers::get_follower( 2, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_url() );
 
-		\Activitypub\Collection\Followers::remove_follower( 1, 'https://example.com/author/jon' );
+		\Activitypub\Collection\Followers::remove_follow_relationship( 1, 'https://example.com/author/jon' );
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
 		$this->assertNull( $follower );
@@ -204,7 +209,8 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		foreach ( $followers as $follower ) {
-			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+			$follower_id = \Activitypub\Collection\Followers::add_follower( $follower );
+			\Activitypub\Collection\Followers::add_follow_relationship(1, $follower_id );
 		}
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
@@ -244,13 +250,14 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		foreach ( $followers as $follower ) {
-			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+			$follower_id = \Activitypub\Collection\Followers::add_follower( $follower );
+			\Activitypub\Collection\Followers::add_follow_relationship( 1, $follower_id );
 		}
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'http://sally.example.org' );
 
 		for ( $i = 1; $i <= 15; $i++ ) {
-			add_post_meta( $follower->get__id(), 'activitypub_errors', 'error ' . $i );
+			add_post_meta( $follower_id, 'activitypub_errors', 'error ' . $i );
 		}
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'http://sally.example.org' );
@@ -258,6 +265,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 
 		$followers = \Activitypub\Collection\Followers::get_faulty_followers();
 
+		$this->assertEquals( 15, $count );
 		$this->assertEquals( 1, count( $followers ) );
 		$this->assertEquals( 'http://sally.example.org', $followers[0] );
 
@@ -277,12 +285,16 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 
 		$follower = 'https://12345.example.com';
 
-		\Activitypub\Collection\Followers::add_follower( 1, $follower );
-		\Activitypub\Collection\Followers::add_follower( 1, $follower );
-		\Activitypub\Collection\Followers::add_follower( 1, $follower );
-		\Activitypub\Collection\Followers::add_follower( 1, $follower );
-		\Activitypub\Collection\Followers::add_follower( 1, $follower );
-		\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		$follower1_id = \Activitypub\Collection\Followers::add_follower( $follower );
+		$follower2_id = \Activitypub\Collection\Followers::add_follower( $follower );
+		$follower3_id = \Activitypub\Collection\Followers::add_follower( $follower );
+
+		$this->assertEquals( $follower1_id, $follower2_id );
+		$this->assertEquals( $follower1_id, $follower3_id );
+		
+		\Activitypub\Collection\Followers::add_follow_relationship(1, $follower1_id );
+		\Activitypub\Collection\Followers::add_follow_relationship(1, $follower2_id );
+		\Activitypub\Collection\Followers::add_follow_relationship(1, $follower3_id );
 
 		$db_followers = \Activitypub\Collection\Followers::get_followers( 1 );
 
@@ -400,7 +412,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 			add_post_meta( $id, 'activitypub_user_id', 1 );
 		}
 
-		$followers = \Activitypub\Collection\Followers::get_all_followers();
+		$followers = \Activitypub\Collection\Followers::get_all_followers( 1 );
 
 		$this->assertCount( 30, $followers );
 	}

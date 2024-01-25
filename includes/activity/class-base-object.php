@@ -563,7 +563,7 @@ class Base_Object {
 	/**
 	 * Convert JSON input to an array.
 	 *
-	 * @return string The JSON string.
+	 * @param string The JSON string.
 	 *
 	 * @return \Activitypub\Activity\Base_Object An Object built from the JSON string.
 	 */
@@ -580,7 +580,7 @@ class Base_Object {
 	/**
 	 * Convert JSON input to an array.
 	 *
-	 * @return string The object array.
+	 * @param string The object array.
 	 *
 	 * @return \Activitypub\Activity\Base_Object An Object built from the JSON string.
 	 */

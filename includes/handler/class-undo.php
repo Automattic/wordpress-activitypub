@@ -2,7 +2,7 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Collection\Users;
-use Activitypub\Collection\Followers;
+use Activitypub\Model\Follow_Request;
 
 /**
  * Handle Undo requests
@@ -23,6 +23,8 @@ class Undo {
 	 *
 	 * @param array $activity The JSON "Undo" Activity
 	 * @param int   $user_id  The ID of the ID of the WordPress User
+	 *
+	 * @return void
 	 */
 	public static function handle_undo( $activity ) {
 		if (
@@ -39,9 +41,8 @@ class Undo {
 				return;
 			}
 
-			$user_id = $user->get__id();
-
-			Followers::remove_follower( $user_id, $activity['actor'] );
+			$follow_request = Follow_Request::get_from_array( $activity['object'] );
+			$follow_request->delete();
 		}
 	}
 }

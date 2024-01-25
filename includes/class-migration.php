@@ -138,7 +138,8 @@ class Migration {
 
 			if ( $followers ) {
 				foreach ( $followers as $actor ) {
-					Followers::add_follower( $user_id, $actor );
+					$follower_id = Followers::add_follower( $actor );
+					Followers::add_follow_relationship( $user_id, $follower_id );
 				}
 			}
 		}

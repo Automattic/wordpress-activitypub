@@ -197,3 +197,36 @@ input.blog-user-identifier {
 	border-bottom: none;
 	margin-bottom: 0;
 }
+
+.activitypub-settings-label {
+	display: inline-block;
+	padding: .25em .4em;
+	font-size: 85%;
+	font-weight: 700;
+	line-height: 1.25;
+	text-align: center;
+	white-space: nowrap;
+	vertical-align: baseline;
+	border-radius: .25rem;
+}
+
+.activitypub-settings-label-success {
+	color: #fff;
+ 	background-color: #28a745;
+}
+
+.activitypub-settings-label-warning {
+	color: #212529;
+	background-color: #ffc107;
+}
+
+.activitypub-settings-label-danger {
+	color: #fff;
+	background-color: #dc3545;
+}
+
+.activitypub-settings-action-buttons {
+	display: flex;
+    gap: 5px;
+    flex-wrap: nowrap;
+}

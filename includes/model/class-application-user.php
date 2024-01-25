@@ -28,6 +28,13 @@ class Application_User extends Blog_User {
 	}
 
 	/**
+	 * The instance actor by default must manually approve all followers.
+	 *
+	 * @var boolean
+	 */
+	protected $manually_approves_followers = true;
+
+	/**
 	 * Get the User-Url.
 	 *
 	 * @return string The User-Url.
