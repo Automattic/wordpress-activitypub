@@ -88,6 +88,7 @@ class Test_Enable_Mastodon_Apps extends WP_UnitTestCase {
 		}
 
 		$account = new \Enable_Mastodon_Apps\Entity\Account();
+		$this->assertEquals( 0, $account->followers_count );
 
 		$account = apply_filters( 'mastodon_api_account', $account, 1 );
 		$this->assertEquals( 3, $account->followers_count );
