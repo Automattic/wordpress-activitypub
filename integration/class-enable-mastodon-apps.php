@@ -3,6 +3,7 @@ namespace Activitypub\Integration;
 
 use DateTime;
 use Activitypub\Webfinger as Webfinger_Util;
+use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 use Enable_Mastodon_Apps\Entity\Account;
 
@@ -90,7 +91,9 @@ class Enable_Mastodon_Apps {
 			return $account;
 		}
 
-		if ( ! get_user_by( 'ID', $user_id ) ) {
+		$user = Users::get_by_id( $user_id );
+
+		if ( ! $user || is_wp_error( $user ) ) {
 			return $account;
 		}
 
