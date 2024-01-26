@@ -766,12 +766,12 @@ function is_comment_federated( $comment ) {
  * @return void
  */
 function mark_wp_object_as_federated( $wp_object ) {
-	$meta_key = 'activitypub_federated';
+	$meta_key = 'activitypub_status';
 
 	if ( $wp_object instanceof \WP_Post ) {
-		\update_post_meta( $wp_object->ID, $meta_key, true );
+		\update_post_meta( $wp_object->ID, $meta_key, 'federated' );
 	} elseif ( $wp_object instanceof \WP_Comment ) {
-		\update_comment_meta( $wp_object->comment_ID, $meta_key, true );
+		\update_comment_meta( $wp_object->comment_ID, $meta_key, 'federated' );
 	} else {
 		\apply_filters( 'activitypub_mark_wp_object_as_federated', $wp_object );
 	}
