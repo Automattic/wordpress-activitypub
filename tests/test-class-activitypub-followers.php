@@ -64,9 +64,6 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 	public function test_get_followers() {
 		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
 
-		$pre_http_request = new MockAction();
-		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
-
 		foreach ( $followers as $follower ) {
 			$response = \Activitypub\Collection\Followers::add_follower( 1, $follower );
 		}
@@ -86,9 +83,6 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 	}
 
 	public function test_add_follower() {
-		$pre_http_request = new MockAction();
-		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
-
 		$follower = 'https://12345.example.com';
 		$follower2 = 'https://user2.example.com';
 		\Activitypub\Collection\Followers::add_follower( 1, $follower );
@@ -103,9 +97,6 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 	}
 
 	public function test_add_follower_error() {
-		$pre_http_request = new MockAction();
-		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
-
 		$follower = 'error@example.com';
 
 		$result = \Activitypub\Collection\Followers::add_follower( 1, $follower );
@@ -126,9 +117,6 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 	public function test_get_follower() {
 		$followers = array( 'https://example.com/author/jon' );
 		$followers2 = array( 'https://user2.example.com' );
-
-		$pre_http_request = new MockAction();
-		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		foreach ( $followers as $follower ) {
 			\Activitypub\Collection\Followers::add_follower( 1, $follower );
@@ -161,9 +149,6 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 			'https://example.org/author/doe',
 		);
 		$followers2 = array( 'https://user2.example.com' );
-
-		$pre_http_request = new MockAction();
-		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		foreach ( $followers as $follower ) {
 			\Activitypub\Collection\Followers::add_follower( 1, $follower );
@@ -199,9 +184,6 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 
 	public function test_get_outdated_followers() {
 		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
-
-		$pre_http_request = new MockAction();
-		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		foreach ( $followers as $follower ) {
 			\Activitypub\Collection\Followers::add_follower( 1, $follower );
@@ -240,9 +222,6 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 	public function test_get_faulty_followers() {
 		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
 
-		$pre_http_request = new MockAction();
-		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
-
 		foreach ( $followers as $follower ) {
 			\Activitypub\Collection\Followers::add_follower( 1, $follower );
 		}
@@ -272,9 +251,6 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 	}
 
 	public function test_add_duplicate_follower() {
-		$pre_http_request = new MockAction();
-		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
-
 		$follower = 'https://12345.example.com';
 
 		\Activitypub\Collection\Followers::add_follower( 1, $follower );
@@ -295,9 +271,6 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 	}
 
 	public function test_migration() {
-		$pre_http_request = new MockAction();
-		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
-
 		$followers = array(
 			'https://example.com/author/jon',
 			'https://example.og/errors',
@@ -403,36 +376,6 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		$followers = \Activitypub\Collection\Followers::get_all_followers();
 
 		$this->assertCount( 30, $followers );
-	}
-
-	public static function http_request_host_is_external( $in, $host ) {
-		if ( in_array( $host, array( 'example.com', 'example.org' ), true ) ) {
-			return true;
-		}
-		return $in;
-	}
-
-	public static function http_request_args( $args, $url ) {
-		if ( in_array( wp_parse_url( $url, PHP_URL_HOST ), array( 'example.com', 'example.org' ), true ) ) {
-			$args['reject_unsafe_urls'] = false;
-		}
-		return $args;
-	}
-
-	public static function pre_http_request( $preempt, $request, $url ) {
-		return array(
-			'headers'  => array(
-				'content-type' => 'text/json',
-			),
-			'body'     => '',
-			'response' => array(
-				'code' => 202,
-			),
-		);
-	}
-
-	public static function http_response( $response, $args, $url ) {
-		return $response;
 	}
 
 	public static function pre_get_remote_metadata_by_actor( $pre, $actor ) {
