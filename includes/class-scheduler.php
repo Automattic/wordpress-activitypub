@@ -220,6 +220,7 @@ class Scheduler {
 			$number = 50;
 		}
 
+		$number    = apply_filters( 'activitypub_update_followers_number', $number );
 		$followers = Followers::get_outdated_followers( $number );
 
 		foreach ( $followers as $follower ) {
@@ -246,6 +247,7 @@ class Scheduler {
 			$number = 50;
 		}
 
+		$number    = apply_filters( 'activitypub_update_followers_number', $number );
 		$followers = Followers::get_faulty_followers( $number );
 
 		foreach ( $followers as $follower ) {
