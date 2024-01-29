@@ -105,7 +105,7 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 In that case you don't need the redirect, because the index.php will take care of that.
 
-= Where can I manage my followers? =
+= Where can you manage your followers? =
 
 If you have activated the blog user, you will find the list of his followers in the settings under `/wp-admin/options-general.php?page=activitypub&tab=followers`.
 
