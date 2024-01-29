@@ -105,6 +105,14 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 In that case you don't need the redirect, because the index.php will take care of that.
 
+= Where can I manage my followers? =
+
+If you have activated the blog user, you will find the list of his followers in the settings under `/wp-admin/options-general.php?page=activitypub&tab=followers`.
+
+The followers of a user can be found in the menu under "Users" -> "Followers" or under `wp-admin/users.php?page=activitypub-followers-list`.
+
+For reasons of data protection, it is not possible to see the followers of other users.
+
 == Changelog ==
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
