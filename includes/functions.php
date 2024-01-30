@@ -795,7 +795,7 @@ function get_post_type_description( $post_type ) {
 			$description = '';
 			break;
 		case 'attachment':
-			$description = ' - ' . __( 'The attachments you uploaded to a post. They can be images, videos, documents, or anything else you can think of.', 'activitypub' );
+			$description = ' - ' . __( 'The attachments that you have uploaded to a post (images, videos, documents or other files).', 'activitypub' );
 			break;
 		default:
 			if ( ! empty( $post_type->description ) ) {
