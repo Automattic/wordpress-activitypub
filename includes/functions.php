@@ -790,3 +790,34 @@ function mark_wp_object_as_federated( $wp_object ) {
 		\apply_filters( 'activitypub_mark_wp_object_as_federated', $wp_object );
 	}
 }
+
+/**
+ * Get the description of a post type.
+ *
+ * Set some default descriptions for the default post types.
+ *
+ * @param WP_Post_Type $post_type The post type object.
+ *
+ * @return string The description of the post type.
+ */
+function get_post_type_description( $post_type ) {
+	$description = '';
+
+	switch ( $post_type->name ) {
+		case 'post':
+			$description = '';
+			break;
+		case 'page':
+			$description = '';
+			break;
+		case 'attachment':
+			$description = ' - ' . __( 'The attachments that you have uploaded to a post (images, videos, documents or other files).', 'activitypub' );
+			break;
+		default:
+			if ( ! empty( $post_type->description ) ) {
+				$description = ' - ' . $post_type->description;
+			}
+	}
+
+	return apply_filters( 'activitypub_post_type_description', $description, $post_type->name, $post_type );
+}

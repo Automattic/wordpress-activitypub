@@ -199,7 +199,7 @@ class Admin {
 				'type'         => 'string',
 				'description'  => \esc_html__( 'Enable ActivityPub support for post types', 'activitypub' ),
 				'show_in_rest' => true,
-				'default'      => array( 'post', 'pages' ),
+				'default'      => array( 'post' ),
 			)
 		);
 		\register_setting(

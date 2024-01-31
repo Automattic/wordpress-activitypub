@@ -42,6 +42,14 @@ class Webfinger {
 			return $data;
 		}
 
+		if ( ! is_array( $data ) || empty( $data['links'] ) ) {
+			return new WP_Error(
+				'webfinger_missing_links',
+				__( 'No valid Link elements found.', 'activitypub' ),
+				$data
+			);
+		}
+
 		foreach ( $data['links'] as $link ) {
 			if (
 				'self' === $link['rel'] &&
@@ -51,7 +59,11 @@ class Webfinger {
 			}
 		}
 
-		return new WP_Error( 'webfinger_url_no_activitypub', null, $data );
+		return new WP_Error(
+			'webfinger_url_no_activitypub',
+			__( 'The Site supports WebFinger but not ActivityPub', 'activitypub' ),
+			$data
+		);
 	}
 
 	/**

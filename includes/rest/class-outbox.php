@@ -59,7 +59,7 @@ class Outbox {
 			return $user;
 		}
 
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
 
 		$page = $request->get_param( 'page', 1 );
 

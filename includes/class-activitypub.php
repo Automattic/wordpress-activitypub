@@ -27,7 +27,7 @@ class Activitypub {
 		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
 
 		// Add support for ActivityPub to custom post types
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array();
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post' ) ) : array();
 
 		foreach ( $post_types as $post_type ) {
 			\add_post_type_support( $post_type, 'activitypub' );

@@ -18,8 +18,8 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 		$post->post_status = 'publish';
 		$post->comment_status = 'closed';
 		$post->ping_status = 'closed';
-		$post->post_name = 'fake-page-' . rand( 1, 99999 ); // append random number to avoid clash
-		$post->post_type = 'page';
+		$post->post_name = 'fake-post-' . rand( 1, 99999 ); // append random number to avoid clash
+		$post->post_type = 'post';
 		$post->filter = 'raw'; // important!
 
 		$content = '[ap_content]';
@@ -47,8 +47,8 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 		$post->post_content = '<script>test</script>hallo<script type="javascript">{"asdf": "qwerty"}</script><style></style>';
 		$post->comment_status = 'closed';
 		$post->ping_status = 'closed';
-		$post->post_name = 'fake-page-' . rand( 1, 99999 ); // append random number to avoid clash
-		$post->post_type = 'page';
+		$post->post_name = 'fake-post-' . rand( 1, 99999 ); // append random number to avoid clash
+		$post->post_type = 'post';
 		$post->filter = 'raw'; // important!
 		$post->post_password = 'abc';
 
@@ -78,8 +78,8 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 		$post->post_status = 'publish';
 		$post->comment_status = 'closed';
 		$post->ping_status = 'closed';
-		$post->post_name = 'fake-page-' . rand( 1, 99999 ); // append random number to avoid clash
-		$post->post_type = 'page';
+		$post->post_name = 'fake-post-' . rand( 1, 99999 ); // append random number to avoid clash
+		$post->post_type = 'post';
 		$post->filter = 'raw'; // important!
 
 		$content = '[ap_excerpt length="25"]';
