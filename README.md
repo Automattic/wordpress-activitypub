@@ -1,12 +1,12 @@
 # ActivityPub #
-**Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [mattwiebe](https://profiles.wordpress.org/mattwiebe/), [akirk](https://profiles.wordpress.org/akirk/), [jeherve](https://profiles.wordpress.org/jeherve/), [nuriapena](https://profiles.wordpress.org/nuriapena/), [cavalierlife](https://profiles.wordpress.org/cavalierlife/)
-**Tags:** OStatus, fediverse, activitypub, activitystream
-**Requires at least:** 5.5
-**Tested up to:** 6.4
-**Stable tag:** 2.0.2
-**Requires PHP:** 5.6
-**License:** MIT
-**License URI:** http://opensource.org/licenses/MIT
+**Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [mattwiebe](https://profiles.wordpress.org/mattwiebe/), [akirk](https://profiles.wordpress.org/akirk/), [jeherve](https://profiles.wordpress.org/jeherve/), [nuriapena](https://profiles.wordpress.org/nuriapena/), [cavalierlife](https://profiles.wordpress.org/cavalierlife/)  
+**Tags:** OStatus, fediverse, activitypub, activitystream  
+**Requires at least:** 5.5  
+**Tested up to:** 6.4  
+**Stable tag:** 2.0.2  
+**Requires PHP:** 5.6  
+**License:** MIT  
+**License URI:** http://opensource.org/licenses/MIT  
 
 The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
 
@@ -107,7 +107,7 @@ In that case you don't need the redirect, because the index.php will take care o
 
 ### Constants ###
 
-The plugin uses PHP Constants to enable, disable or change the default behaviour. Please use them with caution and only if you know what you are doing.
+The plugin uses PHP Constants to enable, disable or change its default behaviour. Please use them with caution and only if you know what you are doing.
 
 * `ACTIVITYPUB_REST_NAMESPACE` - Change the default Namespace of the REST endpoint. Default: `activitypub/1.0`.
 * `ACTIVITYPUB_EXCERPT_LENGTH` - Change the length of the Excerpt. Default: `400`.
