@@ -6,8 +6,10 @@ use Activitypub\Transformer\Post;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 
+use function Activitypub\was_comment_sent;
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\should_comment_be_federated;
+use function Activitypub\get_remote_metadata_by_actor;
 
 /**
  * ActivityPub Scheduler Class
@@ -176,11 +178,6 @@ class Scheduler {
 			return;
 		}
 
-		// check if comment should be federated or not
-		if ( ! should_comment_be_federated( $comment ) ) {
-			return;
-		}
-
 		if (
 			'approved' === $new_status &&
 			'approved' !== $old_status
@@ -197,6 +194,17 @@ class Scheduler {
 		}
 
 		if ( ! $type ) {
+			return;
+		}
+
+		// check if activity type is "Create" and if comment should be federated or not
+		if ( 'Create' === $type && ! should_comment_be_federated( $comment ) ) {
+			return;
+		}
+
+		// check if comment was already sent, otherwise there is no need to
+		// send an update or delete activity
+		if ( ! was_comment_sent( $comment ) ) {
 			return;
 		}
 
