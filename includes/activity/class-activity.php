@@ -173,10 +173,13 @@ class Activity extends Base_Object {
 	 */
 	public function get_json_ld_context() {
 		if ( $this->object instanceof Base_Object ) {
-			// Without php 5.6 support this could be just: 'return  $this->object::JSON_LD_CONTEXT;'
-			return call_user_func( array( get_class( $this->object ), 'CONTEXT' ) );
-		} else {
-			return self::JSON_LD_CONTEXT;
+			$class = get_class( $this->object );
+			if ( $class && $class::JSON_LD_CONTEXT ) {
+				// Without php 5.6 support this could be just: 'return  $this->object::JSON_LD_CONTEXT;'
+				return $class::JSON_LD_CONTEXT;
+			}
 		}
+
+		return static::JSON_LD_CONTEXT;
 	}
 }
