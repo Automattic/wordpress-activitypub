@@ -4,6 +4,8 @@ namespace Activitypub;
 use WP_User_Query;
 use Activitypub\Model\Blog_User;
 
+use function Activitypub\is_user_disabled;
+use function Activitypub\was_comment_received;
 use function Activitypub\is_comment_federatable;
 
 /**
@@ -325,7 +327,7 @@ class Admin {
 					return $allcaps;
 				}
 
-				if ( is_comment_federated( $arg[2] ) ) {
+				if ( was_comment_received( $arg[2] ) ) {
 					return false;
 				}
 
@@ -337,7 +339,7 @@ class Admin {
 	}
 
 	public static function comment_row_actions( $actions, $comment ) {
-		if ( is_comment_federated( $comment ) ) {
+		if ( was_comment_received( $comment ) ) {
 			unset( $actions['edit'] );
 			unset( $actions['reply'] );
 			unset( $actions['quickedit'] );

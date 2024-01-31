@@ -733,17 +733,16 @@ function should_comment_be_federated( $comment ) {
 }
 
 /**
- * Check if a comment is federatable.
+ * Check if a comment was federated.
  *
- * We consider a comment federatable if it is authored by a user that is not disabled for federation
- * or if it was received via ActivityPub.
+ * This function checks if a comment was federated via ActivityPub.
  *
  * @param mixed $comment Comment object or ID.
  *
- * @return boolean True if the comment is federatable, false otherwise.
+ * @return boolean True if the comment was federated, false otherwise.
  */
-function is_comment_federatable( $comment ) {
-	return Comment::is_federatable( $comment );
+function was_comment_sent( $comment ) {
+	return Comment::was_sent( $comment );
 }
 
 /**
@@ -751,12 +750,27 @@ function is_comment_federatable( $comment ) {
  *
  * We consider a comment federated if comment was received via ActivityPub.
  *
+ * Use this function to check if it is comment that was received via ActivityPub.
+ *
  * @param mixed $comment Comment object or ID.
  *
  * @return boolean True if the comment is federated, false otherwise.
  */
-function is_comment_federated( $comment ) {
-	return Comment::is_federated( $comment );
+function was_comment_received( $comment ) {
+	return Comment::was_received( $comment );
+}
+
+/**
+ * Check if a comment is local only.
+ *
+ * This function checks if a comment is local only and was not sent or received via ActivityPub.
+ *
+ * @param mixed $comment Comment object or ID.
+ *
+ * @return boolean True if the comment is local only, false otherwise.
+ */
+function is_local_comment( $comment ) {
+	return Comment::is_local( $comment );
 }
 
 /**

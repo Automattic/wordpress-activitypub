@@ -35,62 +35,42 @@ class Comment {
 	 * @return string The filtered HTML markup for the comment reply link.
 	 */
 	public static function comment_reply_link( $link, $args, $comment ) {
-		if ( ! self::is_federated( $comment ) ) {
+		if ( self::are_comments_allowed( $comment ) ) {
 			return $link;
 		}
 
-		$current_user      = get_current_user_id();
-		$custom_reply_link = apply_filters( 'activitypub_comment_reply_link', '' );
+		return apply_filters( 'activitypub_comment_reply_link', '' );
+	}
+
+	/**
+	 * Check if it is allowed to comment to a comment.
+	 *
+	 * Checks if the comment is local only or if the user can comment federated comments.
+	 *
+	 * @param mixed $comment Comment object or ID.
+	 *
+	 * @return boolean True if the user can comment, false otherwise.
+	 */
+	public static function are_comments_allowed( $comment ) {
+		$comment = \get_comment( $comment );
+
+		if ( self::is_local( $comment ) ) {
+			return true;
+		}
+
+		$current_user = get_current_user_id();
 
 		if ( ! $current_user ) {
-			return $custom_reply_link;
+			return false;
 		}
 
 		$is_user_disabled = is_user_disabled( $current_user );
 
 		if ( $is_user_disabled ) {
-			return $custom_reply_link;
-		}
-
-		return $link;
-	}
-
-	/**
-	 * Check if a comment is federatable.
-	 *
-	 * We consider a comment federatable if it is authored by a user that is not disabled for federation
-	 * or if it was received via ActivityPub.
-	 *
-	 * Use this function to check if it is possible to federate a comment or parent comment or if it is
-	 * already federated.
-	 *
-	 * Please consider that this function does not check the parent comment, so if you want to check if
-	 * a comment is a reply to a federated comment, you should use should_be_federated().
-	 *
-	 * @param mixed $comment Comment object or ID.
-	 *
-	 * @return boolean True if the comment is federatable, false otherwise.
-	 */
-	public static function is_federatable( $comment ) {
-		$comment = \get_comment( $comment );
-
-		if ( ! $comment ) {
 			return false;
 		}
 
-		if ( self::is_federated( $comment ) ) {
-			return true;
-		}
-
-		$user_id = $comment->user_id;
-
-		if ( ! $user_id ) {
-			return false;
-		}
-
-		$is_user_disabled = is_user_disabled( $user_id );
-
-		return ! $is_user_disabled;
+		return true;
 	}
 
 	/**
@@ -104,7 +84,7 @@ class Comment {
 	 *
 	 * @return boolean True if the comment is federated, false otherwise.
 	 */
-	public static function is_federated( $comment ) {
+	public static function was_received( $comment ) {
 		$comment = \get_comment( $comment );
 
 		if ( ! $comment ) {
@@ -118,6 +98,48 @@ class Comment {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Check if a comment was federated.
+	 *
+	 * This function checks if a comment was federated via ActivityPub.
+	 *
+	 * @param mixed $comment Comment object or ID.
+	 *
+	 * @return boolean True if the comment was federated, false otherwise.
+	 */
+	public static function was_sent( $comment ) {
+		$comment = \get_comment( $comment );
+
+		if ( ! $comment ) {
+			return false;
+		}
+
+		$status = \get_comment_meta( $comment->comment_ID, 'activitypub_status', true );
+
+		if ( 'federated' === $status ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Check if a comment is local only.
+	 *
+	 * This function checks if a comment is local only and was not sent or received via ActivityPub.
+	 *
+	 * @param mixed $comment Comment object or ID.
+	 *
+	 * @return boolean True if the comment is local only, false otherwise.
+	 */
+	public static function is_local( $comment ) {
+		if ( self::was_sent( $comment ) || self::was_received( $comment ) ) {
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -135,7 +157,7 @@ class Comment {
 	 */
 	public static function should_be_federated( $comment ) {
 		// we should not federate federated comments
-		if ( self::is_federated( $comment ) ) {
+		if ( self::was_received( $comment ) ) {
 			return false;
 		}
 
@@ -162,7 +184,7 @@ class Comment {
 		// check if parent comment is federated
 		$parent_comment = \get_comment( $comment->comment_parent );
 
-		return self::is_federatable( $parent_comment );
+		return ! self::is_local( $parent_comment );
 	}
 
 	/**

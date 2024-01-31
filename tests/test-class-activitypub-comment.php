@@ -7,8 +7,8 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 		$comment_id = wp_insert_comment( $comment );
 		$comment = get_comment( $comment_id );
 
-		$this->assertEquals( $expected['is_federatable'], \Activitypub\Comment::is_federatable( $comment ) );
-		$this->assertEquals( $expected['is_federated'], \Activitypub\Comment::is_federated( $comment ) );
+		$this->assertEquals( $expected['was_sent'], \Activitypub\Comment::was_sent( $comment ) );
+		$this->assertEquals( $expected['was_received'], \Activitypub\Comment::was_received( $comment ) );
 		$this->assertEquals( $expected['should_be_federated'], \Activitypub\Comment::should_be_federated( $comment ) );
 	}
 
@@ -16,13 +16,13 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 	 * @dataProvider ability_to_federate_threaded_comment
 	 */
 	public function test_check_ability_to_federate_threaded_comment( $parent_comment, $comment, $expected ) {
-		$comment_id = wp_insert_comment( $parent_comment );
-		$comment['comment_parent'] = $comment_id;
+		$parent_comment_id = wp_insert_comment( $parent_comment );
+		$comment['comment_parent'] = $parent_comment_id;
 		$comment_id = wp_insert_comment( $comment );
 		$comment = get_comment( $comment_id );
 
-		$this->assertEquals( $expected['is_federatable'], \Activitypub\Comment::is_federatable( $comment ) );
-		$this->assertEquals( $expected['is_federated'], \Activitypub\Comment::is_federated( $comment ) );
+		$this->assertEquals( $expected['was_sent'], \Activitypub\Comment::was_sent( $parent_comment_id ) );
+		$this->assertEquals( $expected['was_received'], \Activitypub\Comment::was_received( $parent_comment_id ) );
 		$this->assertEquals( $expected['should_be_federated'], \Activitypub\Comment::should_be_federated( $comment ) );
 	}
 
@@ -39,8 +39,8 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 					),
 				),
 				'expected' => array(
-					'is_federatable' => true,
-					'is_federated' => true,
+					'was_sent' => false,
+					'was_received' => true,
 					'should_be_federated' => false,
 				),
 			),
@@ -53,8 +53,8 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 					'comment_author_email' => '',
 				),
 				'expected' => array(
-					'is_federatable' => true,
-					'is_federated' => false,
+					'was_sent' => false,
+					'was_received' => false,
 					'should_be_federated' => true,
 				),
 			),
@@ -66,8 +66,8 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 					'comment_author_email' => '',
 				),
 				'expected' => array(
-					'is_federatable' => false,
-					'is_federated' => false,
+					'was_sent' => false,
+					'was_received' => false,
 					'should_be_federated' => false,
 				),
 			),
@@ -96,8 +96,8 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 					),
 				),
 				'expected' => array(
-					'is_federatable' => true,
-					'is_federated' => true,
+					'was_sent' => false,
+					'was_received' => true,
 					'should_be_federated' => false,
 				),
 			),
@@ -119,8 +119,8 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 					'comment_author_email' => '',
 				),
 				'expected' => array(
-					'is_federatable' => true,
-					'is_federated' => false,
+					'was_sent' => false,
+					'was_received' => true,
 					'should_be_federated' => true,
 				),
 			),
@@ -131,6 +131,9 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 					'comment_content' => 'This is a comment.',
 					'comment_author_url' => 'https://example.com',
 					'comment_author_email' => '',
+					'comment_meta' => array(
+						'activitypub_status' => 'federated',
+					),
 				),
 				'comment' => array(
 					'user_id' => 1,
@@ -140,8 +143,8 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 					'comment_author_email' => '',
 				),
 				'expected' => array(
-					'is_federatable' => true,
-					'is_federated' => false,
+					'was_sent' => true,
+					'was_received' => false,
 					'should_be_federated' => true,
 				),
 			),
@@ -159,8 +162,8 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 					'comment_author_email' => '',
 				),
 				'expected' => array(
-					'is_federatable' => false,
-					'is_federated' => false,
+					'was_sent' => false,
+					'was_received' => false,
 					'should_be_federated' => false,
 				),
 			),
@@ -179,8 +182,8 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 					'comment_author_email' => '',
 				),
 				'expected' => array(
-					'is_federatable' => true,
-					'is_federated' => false,
+					'was_sent' => false,
+					'was_received' => false,
 					'should_be_federated' => false,
 				),
 			),
@@ -200,8 +203,8 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 					'comment_author_email' => '',
 				),
 				'expected' => array(
-					'is_federatable' => false,
-					'is_federated' => false,
+					'was_sent' => false,
+					'was_received' => false,
 					'should_be_federated' => false,
 				),
 			),
