@@ -6,8 +6,9 @@ use Activitypub\Signature;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 
-use function Activitypub\sanitize_url;
 use function Activitypub\is_comment;
+use function Activitypub\sanitize_url;
+use function Activitypub\is_local_comment;
 use function Activitypub\is_activitypub_request;
 use function Activitypub\should_comment_be_federated;
 
@@ -147,7 +148,7 @@ class Activitypub {
 		}
 
 		// stop if it's not an ActivityPub comment
-		if ( is_activitypub_request() && should_comment_be_federated( $comment ) ) {
+		if ( is_activitypub_request() && ! is_local_comment( $comment ) ) {
 			return;
 		}
 
