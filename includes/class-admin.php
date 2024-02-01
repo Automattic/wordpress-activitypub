@@ -4,6 +4,10 @@ namespace Activitypub;
 use WP_User_Query;
 use Activitypub\Model\Blog_User;
 
+use function Activitypub\is_user_disabled;
+use function Activitypub\was_comment_received;
+use function Activitypub\is_comment_federatable;
+
 /**
  * ActivityPub Admin Class
  *
@@ -16,9 +20,11 @@ class Admin {
 	public static function init() {
 		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
+		\add_action( 'load-comment.php', array( self::class, 'edit_comment' ) );
 		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'admin_notices', array( self::class, 'admin_notices' ) );
+		\add_filter( 'comment_row_actions', array( self::class, 'comment_row_actions' ), 10, 2 );
 
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
@@ -303,5 +309,42 @@ class Admin {
 			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), '1.0.0' );
 			wp_enqueue_script( 'activitypub-admin-styles', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), '1.0.0', false );
 		}
+	}
+
+	/**
+	 * Hook into the edit_comment functionality
+	 *
+	 * * Disable the edit_comment capability for federated comments.
+	 *
+	 * @return void
+	 */
+	public static function edit_comment() {
+		// Disable the edit_comment capability for federated comments.
+		\add_filter(
+			'user_has_cap',
+			function ( $allcaps, $caps, $arg ) {
+				if ( 'edit_comment' !== $arg[0] ) {
+					return $allcaps;
+				}
+
+				if ( was_comment_received( $arg[2] ) ) {
+					return false;
+				}
+
+				return $allcaps;
+			},
+			1,
+			3
+		);
+	}
+
+	public static function comment_row_actions( $actions, $comment ) {
+		if ( was_comment_received( $comment ) ) {
+			unset( $actions['edit'] );
+			unset( $actions['reply'] );
+			unset( $actions['quickedit'] );
+		}
+
+		return $actions;
 	}
 }

@@ -33,6 +33,10 @@ class Create {
 	 * @return void
 	 */
 	public static function handle_create( $array, $user_id, $object = null ) {
+		if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
+			return;
+		}
+
 		if (
 			! isset( $array['object'] ) ||
 			! isset( $array['object']['id'] )
