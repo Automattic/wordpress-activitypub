@@ -312,6 +312,12 @@ function is_activitypub_request() {
 		}
 	}
 
+	// Check if header already sent.
+	if ( ! \headers_sent() ) {
+		// Send Vary header for Accept header.
+		\header( 'Vary: Accept' );
+	}
+
 	// One can trigger an ActivityPub request by adding ?activitypub to the URL.
 	// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.VariableRedeclaration
 	global $wp_query;
