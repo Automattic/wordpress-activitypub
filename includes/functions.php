@@ -313,7 +313,7 @@ function is_activitypub_request() {
 	}
 
 	// Check if header already sent.
-	if ( ! \headers_sent() ) {
+	if ( ! \headers_sent() && ACTIVITYPUB_SEND_VARY_HEADER ) {
 		// Send Vary header for Accept header.
 		\header( 'Vary: Accept' );
 	}
