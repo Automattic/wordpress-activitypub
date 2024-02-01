@@ -139,13 +139,19 @@ class Post extends Base {
 	protected function get_attachment() {
 		// Once upon a time we only supported images, but we now support audio/video as well.
 		// We maintain the image-centric naming for backwards compatibility.
-		$max_media = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
+		$max_media = \intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
 
 		if ( site_supports_blocks() && \has_blocks( $this->wp_object->post_content ) ) {
-			return $this->get_block_attachments( $max_media );
+			$media = $this->get_block_attachments( $max_media );
+		} else {
+			$media = $this->get_classic_editor_images( $max_media );
 		}
 
-		return $this->get_classic_editor_images( $max_media );
+		$unique_ids = \array_unique( \array_column( $media, 'id' ) );
+		$media      = \array_intersect_key( $media, $unique_ids );
+		$media      = \array_slice( $media, 0, $max_media );
+
+		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media ) );
 	}
 
 	/**
@@ -163,7 +169,7 @@ class Post extends Base {
 
 		$id = $this->wp_object->ID;
 
-		$media_ids = array(
+		$media = array(
 			'image' => array(),
 			'audio' => array(),
 			'video' => array(),
@@ -171,18 +177,15 @@ class Post extends Base {
 
 		// list post thumbnail first if this post has one
 		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
-			$media_ids['image'][] = \get_post_thumbnail_id( $id );
+			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
 		}
 
 		if ( $max_media > 0 ) {
 			$blocks = \parse_blocks( $this->wp_object->post_content );
-			$media_ids = self::get_media_ids_from_blocks( $blocks, $media_ids );
+			$media = self::get_media_from_blocks( $blocks, $media );
 		}
 
-		$media_ids = self::filter_media_ids_by_object_type( $media_ids, get_post_format( $this->wp_object ) );
-		$media_ids = array_slice( $media_ids, 0, $max_media );
-
-		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media_ids ) );
+		return self::filter_media_by_object_type( $media, \get_post_format( $this->wp_object ) );
 	}
 
 	/**
@@ -199,7 +202,7 @@ class Post extends Base {
 		if ( $max_images <= 0 ) {
 			return array();
 		}
-		$image_ids = array();
+		$images = array();
 		$query = new \WP_Query(
 			array(
 				'post_parent' => $this->wp_object->ID,
@@ -212,11 +215,12 @@ class Post extends Base {
 			)
 		);
 		foreach ( $query->get_posts() as $attachment ) {
-			if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
-				$image_ids[] = $attachment->ID;
+			if ( ! \in_array( $attachment->ID, $images, true ) ) {
+				$images[] = array( 'id' => $attachment->ID );
 			}
 		}
-		return $image_ids;
+
+		return $images;
 	}
 
 	/**
@@ -224,7 +228,7 @@ class Post extends Base {
 	 *
 	 * @param int $max_images The maximum number of images to return.
 	 *
-	 * @return array The attachment IDs.
+	 * @return array The attachments.
 	 */
 	protected function get_classic_editor_image_embeds( $max_images ) {
 		// if someone calls that function directly, bail
@@ -237,15 +241,15 @@ class Post extends Base {
 			return array();
 		}
 
-		$image_ids = array();
-		$base      = \wp_get_upload_dir()['baseurl'];
-		$content   = \get_post_field( 'post_content', $this->wp_object );
-		$tags      = new \WP_HTML_Tag_Processor( $content );
+		$images  = array();
+		$base    = \wp_get_upload_dir()['baseurl'];
+		$content = \get_post_field( 'post_content', $this->wp_object );
+		$tags    = new \WP_HTML_Tag_Processor( $content );
 
 		// This linter warning is a false positive - we have to
-		// re-count each time here as we modify $image_ids.
+		// re-count each time here as we modify $images.
 		// phpcs:ignore Squiz.PHP.DisallowSizeFunctionsInLoops.Found
-		while ( $tags->next_tag( 'img' ) && ( \count( $image_ids ) < $max_images ) ) {
+		while ( $tags->next_tag( 'img' ) && ( \count( $images ) < $max_images ) ) {
 			$src = $tags->get_attribute( 'src' );
 
 			// If the img source is in our uploads dir, get the
@@ -273,13 +277,15 @@ class Post extends Base {
 				}
 
 				if ( 0 !== $img_id ) {
-					if ( ! \in_array( $img_id, $image_ids, true ) ) {
-						$image_ids[] = $img_id;
-					}
+					$images[] = array(
+						'id'  => $img_id,
+						'alt' => $tags->get_attribute( 'alt' ),
+					);
 				}
 			}
 		}
-		return $image_ids;
+
+		return $images;
 	}
 
 	/**
@@ -298,109 +304,125 @@ class Post extends Base {
 
 		$id = $this->wp_object->ID;
 
-		$image_ids = array();
+		$images = array();
 
 		// list post thumbnail first if this post has one
 		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
-			$image_ids[] = \get_post_thumbnail_id( $id );
+			$images[] = \get_post_thumbnail_id( $id );
 		}
 
-		if ( \count( $image_ids ) < $max_images ) {
+		if ( \count( $images ) < $max_images ) {
 			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-				$image_ids = \array_merge( $image_ids, $this->get_classic_editor_image_embeds( $max_images ) );
+				$images = \array_merge( $images, $this->get_classic_editor_image_embeds( $max_images ) );
 			} else {
-				$image_ids = \array_merge( $image_ids, $this->get_classic_editor_image_attachments( $max_images ) );
+				$images = \array_merge( $images, $this->get_classic_editor_image_attachments( $max_images ) );
 			}
 		}
-		// unique then slice as the thumbnail may duplicate another image
-		$image_ids = \array_slice( \array_unique( $image_ids ), 0, $max_images );
 
-		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $image_ids ) );
+		return $images;
 	}
 
 	/**
 	 * Recursively get media IDs from blocks.
 	 * @param array $blocks The blocks to search for media IDs
-	 * @param array $media_ids The media IDs to append new IDs to
+	 * @param array $media The media IDs to append new IDs to
 	 * @param int $max_media The maximum number of media to return.
 	 *
 	 * @return array The image IDs.
 	 */
-	protected static function get_media_ids_from_blocks( $blocks, $media_ids ) {
+	protected static function get_media_from_blocks( $blocks, $media ) {
 
 		foreach ( $blocks as $block ) {
 			// recurse into inner blocks
 			if ( ! empty( $block['innerBlocks'] ) ) {
-				$media_ids = self::get_media_ids_from_blocks( $block['innerBlocks'], $media_ids );
+				$media = self::get_media_from_blocks( $block['innerBlocks'], $media );
 			}
 
 			switch ( $block['blockName'] ) {
 				case 'core/image':
 				case 'core/cover':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$media_ids['image'][] = $block['attrs']['id'];
+						$alt   = '';
+						$check = preg_match( '/<img.*?alt=[\"\'](.*?)[\"\'].*>/i', $block['innerHTML'], $match );
+
+						if ( $check ) {
+							$alt = $match[1];
+						}
+
+						$media['image'][] = array(
+							'id'  => $block['attrs']['id'],
+							'alt' => $alt,
+						);
 					}
 					break;
 				case 'core/audio':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$media_ids['audio'][] = $block['attrs']['id'];
+						$media['audio'][] = array( 'id' => $block['attrs']['id'] );
 					}
 					break;
 				case 'core/video':
 				case 'videopress/video':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$media_ids['video'][] = $block['attrs']['id'];
+						$media['video'][] = array( 'id' => $block['attrs']['id'] );
 					}
 					break;
 				case 'jetpack/slideshow':
 				case 'jetpack/tiled-gallery':
 					if ( ! empty( $block['attrs']['ids'] ) ) {
-						$media_ids['image'] = array_merge( $media_ids['image'], $block['attrs']['ids'] );
+						$media['image'] = array_merge(
+							$media['image'],
+							array_map(
+								function ( $id ) {
+									return array( 'id' => $id );
+								},
+								$block['attrs']['ids']
+							)
+						);
 					}
 					break;
 				case 'jetpack/image-compare':
 					if ( ! empty( $block['attrs']['beforeImageId'] ) ) {
-						$media_ids['image'][] = $block['attrs']['beforeImageId'];
+						$media['image'][] = array( 'id' => $block['attrs']['beforeImageId'] );
 					}
 					if ( ! empty( $block['attrs']['afterImageId'] ) ) {
-						$media_ids['image'][] = $block['attrs']['afterImageId'];
+						$media['image'][] = array( 'id' => $block['attrs']['afterImageId'] );
 					}
 					break;
 			}
 		}
 
-		// still need to slice it because one gallery could knock us over the limit
-		return $media_ids;
+		return $media;
 	}
 
 	/**
 	 * Filter media IDs by object type.
 	 *
-	 * @param array $media_ids The media IDs grouped by type.
-	 * @param array $type      The object type.
+	 * @param array $media The media array grouped by type.
+	 * @param array $type  The object type.
 	 *
 	 * @return array The filtered media IDs.
 	 */
-	protected static function filter_media_ids_by_object_type( $media_ids, $type ) {
-		$type = \apply_filters( 'filter_media_ids_by_object_type', \strtolower( $type ) );
+	protected static function filter_media_by_object_type( $media, $type ) {
+		$type = \apply_filters( 'filter_media_by_object_type', \strtolower( $type ) );
 
-		if ( ! empty( $media_ids[ $type ] ) ) {
-			return array_unique( $media_ids[ $type ] );
+		if ( ! empty( $media[ $type ] ) ) {
+			return $media[ $type ];
 		}
 
-		return array_unique( array_merge( array(), ...array_values( $media_ids ) ) );
+		return array_merge( array(), ...array_values( $media ) );
 	}
 
 	/**
 	 * Converts a WordPress Attachment to an ActivityPub Attachment.
 	 *
-	 * @param int $id The Attachment ID.
+	 * @param array $media The Attachment array.
 	 *
 	 * @return array The ActivityPub Attachment.
 	 */
-	public static function wp_attachment_to_activity_attachment( $id ) {
-		$attachment = array();
-		$mime_type = \get_post_mime_type( $id );
+	public static function wp_attachment_to_activity_attachment( $media ) {
+		$id              = $media['id'];
+		$attachment      = array();
+		$mime_type       = \get_post_mime_type( $id );
 		$mime_type_parts = \explode( '/', $mime_type );
 		// switching on image/audio/video
 		switch ( $mime_type_parts[0] ) {
@@ -422,16 +444,21 @@ class Post extends Base {
 				);
 
 				if ( $thumbnail ) {
-					$alt   = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 					$image = array(
 						'type'      => 'Image',
-						'url'       => $thumbnail[0],
-						'mediaType' => $mime_type,
+						'url'       => \esc_url( $thumbnail[0] ),
+						'mediaType' => \esc_attr( $mime_type ),
 					);
 
-					if ( $alt ) {
-						$image['name'] = $alt;
+					if ( ! empty( $media['alt'] ) ) {
+						$image['name'] = \esc_attr( $media['alt'] );
+					} else {
+						$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
+						if ( $alt ) {
+							$image['name'] = \esc_attr( $alt );
+						}
 					}
+
 					$attachment = $image;
 				}
 				break;
@@ -440,15 +467,15 @@ class Post extends Base {
 			case 'video':
 				$attachment = array(
 					'type'      => 'Document',
-					'mediaType' => $mime_type,
-					'url'       => \wp_get_attachment_url( $id ),
-					'name'      => \get_the_title( $id ),
+					'mediaType' => \esc_attr( $mime_type ),
+					'url'       => \esc_url( \wp_get_attachment_url( $id ) ),
+					'name'      => \esc_attr( \get_the_title( $id ) ),
 				);
 				$meta = wp_get_attachment_metadata( $id );
 				// height and width for videos
 				if ( isset( $meta['width'] ) && isset( $meta['height'] ) ) {
-					$attachment['width'] = $meta['width'];
-					$attachment['height'] = $meta['height'];
+					$attachment['width'] = \esc_attr( $meta['width'] );
+					$attachment['height'] = \esc_attr( $meta['height'] );
 				}
 				// @todo: add `icon` support for audio/video attachments. Maybe use post thumbnail?
 				break;
