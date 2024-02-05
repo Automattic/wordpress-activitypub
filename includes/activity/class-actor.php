@@ -42,6 +42,14 @@ class Actor extends Base_Object {
 				'@id' => 'lemmy:moderators',
 				'@type' => '@id',
 			),
+			'alsoKnownAs' => array(
+				'@id' => 'as:alsoKnownAs',
+				'@type' => '@id',
+			),
+			'movedTo' => array(
+				'@id' => 'as:movedTo',
+				'@type' => '@id',
+			),
 			'postingRestrictedToMods' => 'lemmy:postingRestrictedToMods',
 			'discoverable' => 'toot:discoverable',
 			'indexable' => 'toot:indexable',
