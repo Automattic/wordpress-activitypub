@@ -197,14 +197,8 @@ class Scheduler {
 			return;
 		}
 
-		// check if activity type is "Create" and if comment should be federated or not
-		if ( 'Create' === $type && ! should_comment_be_federated( $comment ) ) {
-			return;
-		}
-
-		// check if comment was already sent, otherwise there is no need to
-		// send an update or delete activity
-		if ( ! was_comment_sent( $comment ) ) {
+		// check if comment should be federated or not
+		if ( ! should_comment_be_federated( $comment ) ) {
 			return;
 		}
 
