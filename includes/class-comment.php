@@ -118,7 +118,7 @@ class Comment {
 
 		$status = \get_comment_meta( $comment->comment_ID, 'activitypub_status', true );
 
-		if ( 'federated' === $status ) {
+		if ( $status ) {
 			return true;
 		}
 

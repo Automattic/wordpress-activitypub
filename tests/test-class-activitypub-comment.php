@@ -53,7 +53,7 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 					'comment_author_email' => '',
 				),
 				'expected' => array(
-					'was_sent' => false,
+					'was_sent' => true,
 					'was_received' => false,
 					'should_be_federated' => true,
 				),
@@ -203,7 +203,7 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 					'comment_author_email' => '',
 				),
 				'expected' => array(
-					'was_sent' => false,
+					'was_sent' => true,
 					'was_received' => false,
 					'should_be_federated' => false,
 				),

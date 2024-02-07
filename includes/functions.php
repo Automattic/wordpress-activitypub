@@ -779,13 +779,13 @@ function is_local_comment( $comment ) {
  * @param WP_Comment|WP_Post|mixed $wp_object
  * @return void
  */
-function mark_wp_object_as_federated( $wp_object ) {
+function set_wp_object_state( $wp_object, $state ) {
 	$meta_key = 'activitypub_status';
 
 	if ( $wp_object instanceof \WP_Post ) {
-		\update_post_meta( $wp_object->ID, $meta_key, 'federated' );
+		\update_post_meta( $wp_object->ID, $meta_key, $state );
 	} elseif ( $wp_object instanceof \WP_Comment ) {
-		\update_comment_meta( $wp_object->comment_ID, $meta_key, 'federated' );
+		\update_comment_meta( $wp_object->comment_ID, $meta_key, $state );
 	} else {
 		\apply_filters( 'activitypub_mark_wp_object_as_federated', $wp_object );
 	}

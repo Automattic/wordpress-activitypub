@@ -13,7 +13,7 @@ use Activitypub\Transformer\Comment;
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
 use function Activitypub\safe_remote_post;
-use function Activitypub\mark_wp_object_as_federated;
+use function Activitypub\set_wp_object_state;
 
 /**
  * ActivityPub Activity_Dispatcher Class
@@ -170,6 +170,6 @@ class Activity_Dispatcher {
 			safe_remote_post( $inbox, $json, $user_id );
 		}
 
-		mark_wp_object_as_federated( $wp_object );
+		set_wp_object_state( $wp_object, 'federated' );
 	}
 }

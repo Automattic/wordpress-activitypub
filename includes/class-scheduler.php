@@ -202,6 +202,8 @@ class Scheduler {
 			return;
 		}
 
+		set_wp_object_state( $comment, 'federate' );
+
 		\wp_schedule_single_event(
 			\time(),
 			'activitypub_send_activity',
