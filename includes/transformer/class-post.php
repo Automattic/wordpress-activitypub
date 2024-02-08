@@ -736,7 +736,9 @@ class Post extends Base {
 				break;
 		}
 
-		if ( 'Note' !== $this->get_type() ) {
+		$post_format_setting = \get_option( 'activitypub_object_type', 'wordpress-post-format' );
+
+		if ( 'wordpress-post-format' !== $post_format_setting ) {
 			$template = '[ap_content]';
 		}
 
