@@ -523,8 +523,16 @@ class Post extends Base {
 	 * @return string The Object-Type.
 	 */
 	protected function get_type() {
-		if ( 'wordpress-post-format' !== \get_option( 'activitypub_object_type', 'wordpress-post-format' ) ) {
-			return \ucfirst( \get_option( 'activitypub_object_type', 'wordpress-post-format' ) );
+		$post_format_setting = \get_option( 'activitypub_object_type', 'wordpress-post-format' );
+
+		if ( 'wordpress-post-format' !== $post_format_setting ) {
+			return \ucfirst( $post_format_setting );
+		}
+
+		$has_title = post_type_supports( $this->wp_object->post_type, 'title' );
+
+		if ( ! $has_title ) {
+			return 'Note';
 		}
 
 		// Default to Article.
