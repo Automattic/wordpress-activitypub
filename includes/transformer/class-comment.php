@@ -51,7 +51,7 @@ class Comment extends Base {
 		$comment = $this->wp_object;
 		$object  = parent::to_object();
 
-		$object->set_url( \get_comment_link( $comment->comment_ID ) );
+		$object->set_url( $this->get_id() );
 		$object->set_type( 'Note' );
 
 		$published = \strtotime( $comment->comment_date_gmt );
@@ -110,7 +110,7 @@ class Comment extends Base {
 		$content = \wpautop( $content );
 		$content = \preg_replace( '/[\n\r\t]/', '', $content );
 		$content = \trim( $content );
-		$content = \apply_filters( 'the_content', $content, $comment );
+		$content = \apply_filters( 'activitypub_the_content', $content, $comment );
 
 		return $content;
 	}
@@ -123,7 +123,12 @@ class Comment extends Base {
 	protected function get_in_reply_to() {
 		$comment = $this->wp_object;
 
-		$parent_comment = \get_comment( $comment->comment_parent );
+		$parent_comment = null;
+		$in_reply_to    = null;
+
+		if ( $comment->comment_parent ) {
+			$parent_comment = \get_comment( $comment->comment_parent );
+		}
 
 		if ( $parent_comment ) {
 			$comment_meta = \get_comment_meta( $parent_comment->comment_ID );
@@ -132,7 +137,7 @@ class Comment extends Base {
 				$in_reply_to = $comment_meta['source_id'][0];
 			} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
 				$in_reply_to = $comment_meta['source_url'][0];
-			} else {
+			} elseif ( ! empty( $parent_comment->user_id ) ) {
 				$in_reply_to = $this->generate_id( $parent_comment );
 			}
 		} else {
@@ -165,6 +170,13 @@ class Comment extends Base {
 	protected function generate_id( $comment ) {
 		$comment = get_comment( $comment );
 
+		// show external comment ID if it exists
+		$source_id = get_comment_meta( $comment->comment_ID, 'source_id', true );
+		if ( ! empty( $source_id ) ) {
+			return $source_id;
+		}
+
+		// generate URI based on comment ID
 		return \add_query_arg(
 			array(
 				'c' => $comment->comment_ID,

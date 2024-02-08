@@ -2,11 +2,14 @@
 
 namespace Activitypub;
 
+use Activitypub\Transformer\Post;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
-use Activitypub\Transformer\Post;
 
+use function Activitypub\was_comment_sent;
 use function Activitypub\is_user_type_disabled;
+use function Activitypub\should_comment_be_federated;
+use function Activitypub\get_remote_metadata_by_actor;
 
 /**
  * ActivityPub Scheduler Class
@@ -40,20 +43,22 @@ class Scheduler {
 			}
 		);
 
-		// Comment transitions
-		\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 20, 3 );
-		\add_action(
-			'edit_comment',
-			function ( $comment_id ) {
-				self::schedule_comment_activity( 'approved', 'approved', $comment_id );
-			}
-		);
-		\add_action(
-			'wp_insert_comment',
-			function ( $comment_id ) {
-				self::schedule_comment_activity( 'approved', '', $comment_id );
-			}
-		);
+		if ( ! ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS ) {
+			// Comment transitions
+			\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 20, 3 );
+			\add_action(
+				'edit_comment',
+				function ( $comment_id ) {
+					self::schedule_comment_activity( 'approved', 'approved', $comment_id );
+				}
+			);
+			\add_action(
+				'wp_insert_comment',
+				function ( $comment_id ) {
+					self::schedule_comment_activity( 'approved', '', $comment_id );
+				}
+			);
+		}
 
 		// Follower Cleanups
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
@@ -168,7 +173,7 @@ class Scheduler {
 	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
 		$comment = get_comment( $comment );
 
-		// Federate only approved comments.
+		// federate only comments that are written by a registered user.
 		if ( ! $comment->user_id ) {
 			return;
 		}
@@ -191,6 +196,13 @@ class Scheduler {
 		if ( ! $type ) {
 			return;
 		}
+
+		// check if comment should be federated or not
+		if ( ! should_comment_be_federated( $comment ) ) {
+			return;
+		}
+
+		set_wp_object_state( $comment, 'federate' );
 
 		\wp_schedule_single_event(
 			\time(),
@@ -220,6 +232,7 @@ class Scheduler {
 			$number = 50;
 		}
 
+		$number    = apply_filters( 'activitypub_update_followers_number', $number );
 		$followers = Followers::get_outdated_followers( $number );
 
 		foreach ( $followers as $follower ) {
@@ -246,6 +259,7 @@ class Scheduler {
 			$number = 50;
 		}
 
+		$number    = apply_filters( 'activitypub_update_followers_number', $number );
 		$followers = Followers::get_faulty_followers( $number );
 
 		foreach ( $followers as $follower ) {
