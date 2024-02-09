@@ -193,7 +193,7 @@ class Scheduler {
 			$type = 'Delete';
 		}
 
-		if ( ! $type ) {
+		if ( empty( $type ) ) {
 			return;
 		}
 
