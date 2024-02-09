@@ -54,7 +54,7 @@ class Comment {
 	public static function are_comments_allowed( $comment ) {
 		$comment = \get_comment( $comment );
 
-		if ( self::is_local( $comment ) ) {
+		if ( ! self::was_received( $comment ) ) {
 			return true;
 		}
 
