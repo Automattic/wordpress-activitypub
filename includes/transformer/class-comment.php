@@ -4,6 +4,7 @@ namespace Activitypub\Transformer;
 use WP_Comment;
 use WP_Comment_Query;
 
+use Activitypub\Comment as Comment_Utils;
 use Activitypub\Model\Blog_User;
 use Activitypub\Collection\Users;
 use Activitypub\Transformer\Base;
@@ -138,7 +139,7 @@ class Comment extends Base {
 			} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
 				$in_reply_to = $comment_meta['source_url'][0];
 			} elseif ( ! empty( $parent_comment->user_id ) ) {
-				$in_reply_to = $this->generate_id( $parent_comment );
+				$in_reply_to = Comment_Utils::generate_id( $parent_comment );
 			}
 		} else {
 			$in_reply_to = \get_permalink( $comment->comment_post_ID );
@@ -157,32 +158,7 @@ class Comment extends Base {
 	 */
 	protected function get_id() {
 		$comment = $this->wp_object;
-		return $this->generate_id( $comment );
-	}
-
-	/**
-	 * Generates an ActivityPub URI for a comment
-	 *
-	 * @param WP_Comment|int $comment A comment object or comment ID
-	 *
-	 * @return string ActivityPub URI for comment
-	 */
-	protected function generate_id( $comment ) {
-		$comment = get_comment( $comment );
-
-		// show external comment ID if it exists
-		$source_id = get_comment_meta( $comment->comment_ID, 'source_id', true );
-		if ( ! empty( $source_id ) ) {
-			return $source_id;
-		}
-
-		// generate URI based on comment ID
-		return \add_query_arg(
-			array(
-				'c' => $comment->comment_ID,
-			),
-			\trailingslashit( site_url() )
-		);
+		return Comment_Utils::generate_id( $comment );
 	}
 
 	/**
