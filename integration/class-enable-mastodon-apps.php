@@ -5,6 +5,7 @@ use DateTime;
 use Activitypub\Webfinger as Webfinger_Util;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Integration\Nodeinfo;
 use Enable_Mastodon_Apps\Entity\Account;
 
 use function Activitypub\get_remote_metadata_by_actor;
@@ -86,6 +87,14 @@ class Enable_Mastodon_Apps {
 		return $followers;
 	}
 
+	/**
+	 * Add followers count to Mastodon API
+	 *
+	 * @param Enable_Mastodon_Apps\Entity\Account $account The account
+	 * @param int                                 $user_id The user id
+	 *
+	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
+	 */
 	public static function api_account_add_followers( $account, $user_id ) {
 		if ( ! $account instanceof Account ) {
 			return $account;
@@ -139,17 +148,21 @@ class Enable_Mastodon_Apps {
 		$account->display_name   = $data['name'];
 		$account->url            = $uri;
 		if ( ! empty( $data['summary'] ) ) {
-			$account->note       = $data['summary'];
+			$account->note = $data['summary'];
 		}
 
-		if ( isset( $data['icon']['type'] ) && isset( $data['icon']['url'] ) && 'Image' === $data['icon']['type'] ) {
-			$account->avatar         = $data['icon']['url'];
-			$account->avatar_static  = $data['icon']['url'];
+		if (
+			isset( $data['icon']['type'] ) &&
+			isset( $data['icon']['url'] ) &&
+			'Image' === $data['icon']['type']
+		) {
+			$account->avatar        = $data['icon']['url'];
+			$account->avatar_static = $data['icon']['url'];
 		}
 
 		if ( isset( $data['image'] ) ) {
-			$account->header         = $data['image'];
-			$account->header_static  = $data['image'];
+			$account->header        = $data['image'];
+			$account->header_static = $data['image'];
 		}
 
 		$account->created_at = new DateTime( $data['published'] );
