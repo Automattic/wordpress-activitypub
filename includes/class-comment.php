@@ -39,7 +39,7 @@ class Comment {
 			return $link;
 		}
 
-		return apply_filters( 'activitypub_comment_reply_link', '' );
+		return apply_filters( 'activitypub_comment_reply_link', 'Reply on the Fediverse' );
 	}
 
 	/**
