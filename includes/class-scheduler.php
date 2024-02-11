@@ -141,7 +141,7 @@ class Scheduler {
 			$type = 'Delete';
 		}
 
-		if ( ! $type ) {
+		if ( empty( $type ) ) {
 			return;
 		}
 
@@ -177,6 +177,8 @@ class Scheduler {
 		if ( ! $comment->user_id ) {
 			return;
 		}
+
+		$type = false;
 
 		if (
 			'approved' === $new_status &&
