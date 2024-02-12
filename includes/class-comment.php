@@ -54,7 +54,7 @@ class Comment {
 	public static function are_comments_allowed( $comment ) {
 		$comment = \get_comment( $comment );
 
-		if ( self::is_local( $comment ) ) {
+		if ( ! self::was_received( $comment ) ) {
 			return true;
 		}
 
@@ -118,7 +118,7 @@ class Comment {
 
 		$status = \get_comment_meta( $comment->comment_ID, 'activitypub_status', true );
 
-		if ( 'federated' === $status ) {
+		if ( $status ) {
 			return true;
 		}
 
@@ -308,5 +308,31 @@ class Comment {
 		}
 
 		return $comment_link;
+	}
+
+
+	/**
+	 * Generates an ActivityPub URI for a comment
+	 *
+	 * @param WP_Comment|int $comment A comment object or comment ID
+	 *
+	 * @return string ActivityPub URI for comment
+	 */
+	public static function generate_id( $comment ) {
+		$comment = get_comment( $comment );
+
+		// show external comment ID if it exists
+		$source_id = get_comment_meta( $comment->comment_ID, 'source_id', true );
+		if ( ! empty( $source_id ) ) {
+			return $source_id;
+		}
+
+		// generate URI based on comment ID
+		return \add_query_arg(
+			array(
+				'c' => $comment->comment_ID,
+			),
+			\trailingslashit( site_url() )
+		);
 	}
 }

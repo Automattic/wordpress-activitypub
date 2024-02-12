@@ -141,7 +141,7 @@ class Scheduler {
 			$type = 'Delete';
 		}
 
-		if ( ! $type ) {
+		if ( empty( $type ) ) {
 			return;
 		}
 
@@ -178,6 +178,8 @@ class Scheduler {
 			return;
 		}
 
+		$type = false;
+
 		if (
 			'approved' === $new_status &&
 			'approved' !== $old_status
@@ -193,20 +195,16 @@ class Scheduler {
 			$type = 'Delete';
 		}
 
-		if ( ! $type ) {
+		if ( empty( $type ) ) {
 			return;
 		}
 
-		// check if activity type is "Create" and if comment should be federated or not
-		if ( 'Create' === $type && ! should_comment_be_federated( $comment ) ) {
+		// check if comment should be federated or not
+		if ( ! should_comment_be_federated( $comment ) ) {
 			return;
 		}
 
-		// check if comment was already sent, otherwise there is no need to
-		// send an update or delete activity
-		if ( ! was_comment_sent( $comment ) ) {
-			return;
-		}
+		set_wp_object_state( $comment, 'federate' );
 
 		\wp_schedule_single_event(
 			\time(),
