@@ -247,22 +247,11 @@ class Comment extends Base {
 
 		if ( $comment_query->comments ) {
 			foreach ( $comment_query->comments as $comment ) {
-				$id           = null;
-				$comment_meta = \get_comment_meta( $comment->comment_ID );
-
-				if ( ! empty( $comment_meta['source_id'][0] ) ) {
-					$id = \esc_url( $comment_meta['source_id'][0] );
-				} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
-					$id = \esc_url( $comment_meta['source_url'][0] );
-				} elseif ( ! empty( $comment->comment_author_url ) ) {
-					$id = $comment->comment_author_url;
-				}
-
-				if ( $id ) {
-					$acct = Webfinger::uri_to_acct( $id );
+				if ( ! empty( $comment->comment_author_url ) ) {
+					$acct = Webfinger::uri_to_acct( $comment->comment_author_url );
 					if ( $acct && ! is_wp_error( $acct ) ) {
 						$acct = str_replace( 'acct:', '@', $acct );
-						$mentions[ $acct ] = $id;
+						$mentions[ $acct ] = $comment->comment_author_url;
 					}
 				}
 			}
