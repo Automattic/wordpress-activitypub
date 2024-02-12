@@ -121,7 +121,7 @@ The plugin uses PHP Constants to enable, disable or change its default behaviour
 * `ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS` - Block incoming replies/comments/likes. Default: `false`.
 * `ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS` - Disable outgoing replies/comments/likes. Default: `false`.
 * `ACTIVITYPUB_SHARED_INBOX_FEATURE` - Enable the shared inbox. Default: `false`.
-* `ACTIVITYPUB_SEND_VARY_HEADER` - Disable to not send the `Vary: Accept` header. Default: `true`.
+* `ACTIVITYPUB_SEND_VARY_HEADER` - Enable to send the `Vary: Accept` header. Default: `false`.
 
 = Where can you manage your followers? =
 
@@ -141,7 +141,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Fixed: Remove old/abandoned Crons
 * Added: Various endpoints for the "Enable Mastodon Apps" plugin
 * Added: Event Objects
-* Improved: Post-Type support
+* Added: Vary-Header support behind feature flag
 
 = 2.0.1 =
 
