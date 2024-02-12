@@ -141,6 +141,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Fixed: Remove old/abandoned Crons
 * Added: Various endpoints for the "Enable Mastodon Apps" plugin
 * Added: Event Objects
+* Added: Send notification to all Repliers if a new Comment is added
 * Added: Vary-Header support behind feature flag
 
 = 2.0.1 =
