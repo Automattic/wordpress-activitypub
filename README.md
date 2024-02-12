@@ -140,7 +140,7 @@ Project maintained on GitHub at [automattic/wordpress-activitypub](https://githu
 * Fixed: Remove old/abandoned Crons
 * Added: Various endpoints for the "Enable Mastodon Apps" plugin
 * Added: Event Objects
-* Improved: Post-Type support
+* Added: Send notification to all Repliers if a new Comment was added
 
 ### 2.0.1 ###
 
