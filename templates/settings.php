@@ -99,12 +99,13 @@
 							</p>
 						</td>
 					</tr>
-					<tr>
+					<?php // phpcs:ignore Squiz.ControlStructures.ControlSignature.NewlineAfterOpenBrace ?>
+					<tr <?php if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', 'wordpress-post-format' ) ) { echo 'style="display: none"'; } ?>>
 						<th scope="row">
 							<?php \esc_html_e( 'Post content', 'activitypub' ); ?>
 						</th>
 						<td>
-							<p><strong><?php \esc_html_e( 'These settings only apply if you use the "Note" or "Article" Object-Type setting above.', 'activitypub' ); ?></strong></p>
+							<p><strong><?php \esc_html_e( 'These settings only apply if you use the "Note" Object-Type setting above.', 'activitypub' ); ?></strong></p>
 							<p>
 								<label for="activitypub_post_content_type_title_link">
 									<input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_title_link" value="title" <?php echo \checked( 'title', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> />
