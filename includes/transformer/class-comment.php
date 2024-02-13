@@ -109,7 +109,7 @@ class Comment extends Base {
 		$comment = $this->wp_object;
 		$content = $comment->comment_content;
 
-		$content = \wpautop( $content );
+		$content = \apply_filters( 'comment_text', $content, $comment, array() );
 		$content = \preg_replace( '/[\n\r\t]/', '', $content );
 		$content = \trim( $content );
 		$content = \apply_filters( 'activitypub_the_content', $content, $comment );
