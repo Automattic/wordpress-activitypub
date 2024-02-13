@@ -4,6 +4,7 @@ namespace Activitypub\Transformer;
 use WP_Comment;
 use WP_Comment_Query;
 
+use Activitypub\Webfinger;
 use Activitypub\Comment as Comment_Utils;
 use Activitypub\Model\Blog_User;
 use Activitypub\Collection\Users;
@@ -178,31 +179,7 @@ class Comment extends Base {
 			}
 		}
 
-		$comment_query = new WP_Comment_Query(
-			array(
-				'post_id'    => $this->wp_object->comment_post_ID,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query' => array(
-					array(
-						'key'     => 'source_id',
-						'compare' => 'EXISTS',
-					),
-				),
-			)
-		);
-
-		if ( $comment_query->comments ) {
-			foreach ( $comment_query->comments as $comment ) {
-				if ( empty( $comment->comment_author_url ) ) {
-					continue;
-				}
-				$cc[] = \esc_url( $comment->comment_author_url );
-			}
-		}
-
-		$cc = \array_unique( $cc );
-
-		return $cc;
+		return array_unique( $cc );
 	}
 
 	/**
@@ -236,7 +213,51 @@ class Comment extends Base {
 	 * @return array The list of @-Mentions.
 	 */
 	protected function get_mentions() {
+		\add_filter( 'activitypub_extract_mentions', array( $this, 'extract_reply_context' ) );
+
 		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_object->comment_content, $this->wp_object );
+	}
+
+	/**
+	 * Collect all other Users that participated in this comment-thread
+	 * to send them a notification about the new reply.
+	 *
+	 * @param array $mentions The already mentioned ActivityPub users
+	 *
+	 * @return array The list of all Repliers.
+	 */
+	public function extract_reply_context( $mentions ) {
+		// Check if `$this->wp_object` is a WP_Comment
+		if ( 'WP_Comment' !== get_class( $this->wp_object ) ) {
+			return $mentions;
+		}
+
+		$comment_query = new WP_Comment_Query(
+			array(
+				'post_id'    => $this->wp_object->comment_post_ID,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query' => array(
+					array(
+						'key'   => 'protocol',
+						'value' => 'activitypub',
+					),
+				),
+			)
+		);
+
+		if ( $comment_query->comments ) {
+			foreach ( $comment_query->comments as $comment ) {
+				if ( ! empty( $comment->comment_author_url ) ) {
+					$acct = Webfinger::uri_to_acct( $comment->comment_author_url );
+					if ( $acct && ! is_wp_error( $acct ) ) {
+						$acct = str_replace( 'acct:', '@', $acct );
+						$mentions[ $acct ] = $comment->comment_author_url;
+					}
+				}
+			}
+		}
+
+		return $mentions;
 	}
 
 	/**
