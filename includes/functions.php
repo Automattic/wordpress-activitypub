@@ -2,8 +2,8 @@
 namespace Activitypub;
 
 use WP_Error;
-use WP_Comment_Query;
 use Activitypub\Http;
+use Activitypub\Comment;
 use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
@@ -15,7 +15,7 @@ use Activitypub\Collection\Users;
  * @return array the activitypub context
  */
 function get_context() {
-	$context = Activity::CONTEXT;
+	$context = Activity::JSON_LD_CONTEXT;
 
 	return \apply_filters( 'activitypub_json_context', $context );
 }
@@ -310,6 +310,12 @@ function is_activitypub_request() {
 		if ( ! \post_type_supports( $post_type, 'activitypub' ) ) {
 			return false;
 		}
+	}
+
+	// Check if header already sent.
+	if ( ! \headers_sent() && ACTIVITYPUB_SEND_VARY_HEADER ) {
+		// Send Vary header for Accept header.
+		\header( 'Vary: Accept' );
 	}
 
 	// One can trigger an ActivityPub request by adding ?activitypub to the URL.
@@ -664,22 +670,7 @@ function get_total_users() {
  * @return int|boolean Comment ID, or false on failure.
  */
 function object_id_to_comment( $id ) {
-	$comment_query = new WP_Comment_Query(
-		array(
-			'meta_key'   => 'source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-			'meta_value' => $id,         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-		)
-	);
-
-	if ( ! $comment_query->comments ) {
-		return false;
-	}
-
-	if ( count( $comment_query->comments ) > 1 ) {
-		return false;
-	}
-
-	return $comment_query->comments[0];
+	return Comment::object_id_to_comment( $id );
 }
 
 /**
@@ -692,50 +683,7 @@ function object_id_to_comment( $id ) {
  * @return int comment_ID or null if not found
  */
 function url_to_commentid( $url ) {
-	if ( ! $url || ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
-		return null;
-	}
-
-	// check for local comment
-	if ( \wp_parse_url( \site_url(), \PHP_URL_HOST ) === \wp_parse_url( $url, \PHP_URL_HOST ) ) {
-		$query = \wp_parse_url( $url, PHP_URL_QUERY );
-
-		if ( $query ) {
-			parse_str( $query, $params );
-
-			if ( ! empty( $params['c'] ) ) {
-				$comment = \get_comment( $params['c'] );
-
-				if ( $comment ) {
-					return $comment->comment_ID;
-				}
-			}
-		}
-	}
-
-	$args = array(
-		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-		'meta_query' => array(
-			'relation' => 'OR',
-			array(
-				'key'   => 'source_url',
-				'value' => $url,
-			),
-			array(
-				'key'   => 'source_id',
-				'value' => $url,
-			),
-		),
-	);
-
-	$query = new \WP_Comment_Query();
-	$comments = $query->query( $args );
-
-	if ( $comments && is_array( $comments ) ) {
-		return $comments[0]->comment_ID;
-	}
-
-	return null;
+	return Comment::url_to_commentid( $url );
 }
 
 /**
@@ -773,4 +721,109 @@ function object_to_uri( $object ) {
 	}
 
 	return $object;
+}
+
+/**
+ * Check if a comment should be federated.
+ *
+ * We consider a comment should be federated if it is authored by a user that is
+ * not disabled for federation and if it is a reply directly to the post or to a
+ * federated comment.
+ *
+ * @param mixed $comment Comment object or ID.
+ *
+ * @return boolean True if the comment should be federated, false otherwise.
+ */
+function should_comment_be_federated( $comment ) {
+	return Comment::should_be_federated( $comment );
+}
+
+/**
+ * Check if a comment was federated.
+ *
+ * This function checks if a comment was federated via ActivityPub.
+ *
+ * @param mixed $comment Comment object or ID.
+ *
+ * @return boolean True if the comment was federated, false otherwise.
+ */
+function was_comment_sent( $comment ) {
+	return Comment::was_sent( $comment );
+}
+
+/**
+ * Check if a comment is federated.
+ *
+ * We consider a comment federated if comment was received via ActivityPub.
+ *
+ * Use this function to check if it is comment that was received via ActivityPub.
+ *
+ * @param mixed $comment Comment object or ID.
+ *
+ * @return boolean True if the comment is federated, false otherwise.
+ */
+function was_comment_received( $comment ) {
+	return Comment::was_received( $comment );
+}
+
+/**
+ * Check if a comment is local only.
+ *
+ * This function checks if a comment is local only and was not sent or received via ActivityPub.
+ *
+ * @param mixed $comment Comment object or ID.
+ *
+ * @return boolean True if the comment is local only, false otherwise.
+ */
+function is_local_comment( $comment ) {
+	return Comment::is_local( $comment );
+}
+
+/**
+ * Mark a WordPress object as federated.
+ *
+ * @param WP_Comment|WP_Post|mixed $wp_object
+ * @return void
+ */
+function set_wp_object_state( $wp_object, $state ) {
+	$meta_key = 'activitypub_status';
+
+	if ( $wp_object instanceof \WP_Post ) {
+		\update_post_meta( $wp_object->ID, $meta_key, $state );
+	} elseif ( $wp_object instanceof \WP_Comment ) {
+		\update_comment_meta( $wp_object->comment_ID, $meta_key, $state );
+	} else {
+		\apply_filters( 'activitypub_mark_wp_object_as_federated', $wp_object );
+	}
+}
+
+/**
+ * Get the description of a post type.
+ *
+ * Set some default descriptions for the default post types.
+ *
+ * @param WP_Post_Type $post_type The post type object.
+ *
+ * @return string The description of the post type.
+ */
+function get_post_type_description( $post_type ) {
+	$description = '';
+
+	switch ( $post_type->name ) {
+		case 'post':
+			$description = '';
+			break;
+		case 'page':
+			$description = '';
+			break;
+		case 'attachment':
+			$description = ' - ' . __( 'The attachments that you have uploaded to a post (images, videos, documents or other files).', 'activitypub' );
+			break;
+		default:
+			if ( ! empty( $post_type->description ) ) {
+				$description = ' - ' . $post_type->description;
+			}
+	}
+
+	return apply_filters( 'activitypub_post_type_description', $description, $post_type->name, $post_type );
 }

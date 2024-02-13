@@ -59,7 +59,7 @@ class Outbox {
 			return $user;
 		}
 
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
 
 		$page = $request->get_param( 'page', 1 );
 
@@ -108,10 +108,8 @@ class Outbox {
 				$post = Post::transform( $post )->to_object();
 				$activity = new Activity();
 				$activity->set_type( 'Create' );
-				$activity->set_context( null );
 				$activity->set_object( $post );
-
-				$json->orderedItems[] = $activity->to_array(); // phpcs:ignore
+				$json->orderedItems[] = $activity->to_array( false ); // phpcs:ignore
 			}
 		}
 

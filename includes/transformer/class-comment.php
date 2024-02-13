@@ -4,6 +4,8 @@ namespace Activitypub\Transformer;
 use WP_Comment;
 use WP_Comment_Query;
 
+use Activitypub\Webfinger;
+use Activitypub\Comment as Comment_Utils;
 use Activitypub\Model\Blog_User;
 use Activitypub\Collection\Users;
 use Activitypub\Transformer\Base;
@@ -51,7 +53,7 @@ class Comment extends Base {
 		$comment = $this->wp_object;
 		$object  = parent::to_object();
 
-		$object->set_url( \get_comment_link( $comment->comment_ID ) );
+		$object->set_url( $this->get_id() );
 		$object->set_type( 'Note' );
 
 		$published = \strtotime( $comment->comment_date_gmt );
@@ -107,10 +109,10 @@ class Comment extends Base {
 		$comment = $this->wp_object;
 		$content = $comment->comment_content;
 
-		$content = \wpautop( $content );
+		$content = \apply_filters( 'comment_text', $content, $comment, array() );
 		$content = \preg_replace( '/[\n\r\t]/', '', $content );
 		$content = \trim( $content );
-		$content = \apply_filters( 'the_content', $content, $comment );
+		$content = \apply_filters( 'activitypub_the_content', $content, $comment );
 
 		return $content;
 	}
@@ -123,7 +125,12 @@ class Comment extends Base {
 	protected function get_in_reply_to() {
 		$comment = $this->wp_object;
 
-		$parent_comment = \get_comment( $comment->comment_parent );
+		$parent_comment = null;
+		$in_reply_to    = null;
+
+		if ( $comment->comment_parent ) {
+			$parent_comment = \get_comment( $comment->comment_parent );
+		}
 
 		if ( $parent_comment ) {
 			$comment_meta = \get_comment_meta( $parent_comment->comment_ID );
@@ -132,8 +139,8 @@ class Comment extends Base {
 				$in_reply_to = $comment_meta['source_id'][0];
 			} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
 				$in_reply_to = $comment_meta['source_url'][0];
-			} else {
-				$in_reply_to = $this->generate_id( $parent_comment );
+			} elseif ( ! empty( $parent_comment->user_id ) ) {
+				$in_reply_to = Comment_Utils::generate_id( $parent_comment );
 			}
 		} else {
 			$in_reply_to = \get_permalink( $comment->comment_post_ID );
@@ -152,25 +159,7 @@ class Comment extends Base {
 	 */
 	protected function get_id() {
 		$comment = $this->wp_object;
-		return $this->generate_id( $comment );
-	}
-
-	/**
-	 * Generates an ActivityPub URI for a comment
-	 *
-	 * @param WP_Comment|int $comment A comment object or comment ID
-	 *
-	 * @return string ActivityPub URI for comment
-	 */
-	protected function generate_id( $comment ) {
-		$comment = get_comment( $comment );
-
-		return \add_query_arg(
-			array(
-				'c' => $comment->comment_ID,
-			),
-			\trailingslashit( site_url() )
-		);
+		return Comment_Utils::generate_id( $comment );
 	}
 
 	/**
@@ -190,31 +179,7 @@ class Comment extends Base {
 			}
 		}
 
-		$comment_query = new WP_Comment_Query(
-			array(
-				'post_id'    => $this->wp_object->comment_post_ID,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query' => array(
-					array(
-						'key'     => 'source_id',
-						'compare' => 'EXISTS',
-					),
-				),
-			)
-		);
-
-		if ( $comment_query->comments ) {
-			foreach ( $comment_query->comments as $comment ) {
-				if ( empty( $comment->comment_author_url ) ) {
-					continue;
-				}
-				$cc[] = \esc_url( $comment->comment_author_url );
-			}
-		}
-
-		$cc = \array_unique( $cc );
-
-		return $cc;
+		return array_unique( $cc );
 	}
 
 	/**
@@ -248,7 +213,51 @@ class Comment extends Base {
 	 * @return array The list of @-Mentions.
 	 */
 	protected function get_mentions() {
+		\add_filter( 'activitypub_extract_mentions', array( $this, 'extract_reply_context' ) );
+
 		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_object->comment_content, $this->wp_object );
+	}
+
+	/**
+	 * Collect all other Users that participated in this comment-thread
+	 * to send them a notification about the new reply.
+	 *
+	 * @param array $mentions The already mentioned ActivityPub users
+	 *
+	 * @return array The list of all Repliers.
+	 */
+	public function extract_reply_context( $mentions ) {
+		// Check if `$this->wp_object` is a WP_Comment
+		if ( 'WP_Comment' !== get_class( $this->wp_object ) ) {
+			return $mentions;
+		}
+
+		$comment_query = new WP_Comment_Query(
+			array(
+				'post_id'    => $this->wp_object->comment_post_ID,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query' => array(
+					array(
+						'key'   => 'protocol',
+						'value' => 'activitypub',
+					),
+				),
+			)
+		);
+
+		if ( $comment_query->comments ) {
+			foreach ( $comment_query->comments as $comment ) {
+				if ( ! empty( $comment->comment_author_url ) ) {
+					$acct = Webfinger::uri_to_acct( $comment->comment_author_url );
+					if ( $acct && ! is_wp_error( $acct ) ) {
+						$acct = str_replace( 'acct:', '@', $acct );
+						$mentions[ $acct ] = $comment->comment_author_url;
+					}
+				}
+			}
+		}
+
+		return $mentions;
 	}
 
 	/**

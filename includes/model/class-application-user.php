@@ -15,19 +15,17 @@ class Application_User extends Blog_User {
 	 */
 	protected $_id = Users::APPLICATION_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
-	/**
-	 * The User-Type
-	 *
-	 * @var string
-	 */
-	protected $type = 'Application';
+	public function get_type() {
+		return 'Application';
+	}
 
-	/**
-	 * If the User is discoverable.
-	 *
-	 * @var boolean
-	 */
-	protected $discoverable = false;
+	public function get_discoverable() {
+		return false;
+	}
+
+	public function get_manually_approves_followers() {
+		return true;
+	}
 
 	/**
 	 * Get the User-Url.
@@ -52,7 +50,7 @@ class Application_User extends Blog_User {
 	}
 
 	public function get_preferred_username() {
-		return $this::get_name();
+		return $this->get_name();
 	}
 
 	public function get_followers() {
@@ -77,9 +75,5 @@ class Application_User extends Blog_User {
 
 	public function get_indexable() {
 		return false;
-	}
-
-	public function get_type() {
-		return $this->type;
 	}
 }

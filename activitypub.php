@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/pfefferle/wordpress-activitypub/
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 2.0.1
+ * Version: 2.1.1
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -33,7 +33,10 @@ require_once __DIR__ . '/includes/functions.php';
 \defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<strong>[ap_title]</strong>\n\n[ap_content]\n\n[ap_hashtags]\n\n[ap_shortlink]" );
 \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) || \define( 'ACTIVITYPUB_AUTHORIZED_FETCH', false );
 \defined( 'ACTIVITYPUB_DISABLE_REWRITES' ) || \define( 'ACTIVITYPUB_DISABLE_REWRITES', false );
+\defined( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS' ) || \define( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS', false );
+\defined( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS' ) || \define( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS', false );
 \defined( 'ACTIVITYPUB_SHARED_INBOX_FEATURE' ) || \define( 'ACTIVITYPUB_SHARED_INBOX_FEATURE', false );
+\defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) || \define( 'ACTIVITYPUB_SEND_VARY_HEADER', false );
 
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -74,6 +77,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Health_Check', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Profile_Editor', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
@@ -90,6 +94,9 @@ function plugin_init() {
 
 	require_once __DIR__ . '/integration/class-nodeinfo.php';
 	Integration\Nodeinfo::init();
+
+	require_once __DIR__ . '/integration/class-enable-mastodon-apps.php';
+	Integration\Enable_Mastodon_Apps::init();
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
 
@@ -112,7 +119,7 @@ function plugin_init() {
 			if ( false !== strpos( $class, '\\' ) ) {
 				$parts    = explode( '\\', $class );
 				$class    = array_pop( $parts );
-				$sub_dir  = implode( '/', $parts );
+				$sub_dir  = strtr( implode( '/', $parts ), '_', '-' );
 				$base_dir = $base_dir . $sub_dir . '/';
 			}
 

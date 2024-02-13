@@ -14,11 +14,12 @@ class Debug {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		if ( WP_DEBUG && WP_DEBUG_LOG ) {
+		if ( WP_DEBUG_LOG ) {
 			\add_action( 'activitypub_safe_remote_post_response', array( self::class, 'log_remote_post_responses' ), 10, 4 );
 		}
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 	public static function log_remote_post_responses( $response, $url, $body, $user_id ) {
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log, WordPress.PHP.DevelopmentFunctions.error_log_print_r
 		\error_log( "Request to: {$url} with response: " . \print_r( $response, true ) );

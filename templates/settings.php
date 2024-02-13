@@ -118,7 +118,7 @@
 								</label>
 							</p>
 							<p>
-								<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo wp_kses( ACTIVITYPUB_CUSTOM_POST_CONTENT, 'post' ); ?>"><?php echo wp_kses( \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ), 'post' ); ?></textarea>
+								<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo wp_kses( ACTIVITYPUB_CUSTOM_POST_CONTENT, 'post' ); ?>"><?php echo esc_textarea( wp_kses( \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ), 'post' ) ); ?></textarea>
 								<details>
 									<summary><?php esc_html_e( 'See a list of ActivityPub Template Tags.', 'activitypub' ); ?></summary>
 									<div class="description">
@@ -205,16 +205,19 @@
 						<th scope="row"><?php \esc_html_e( 'Supported post types', 'activitypub' ); ?></th>
 						<td>
 							<fieldset>
-								<?php \esc_html_e( 'Enable ActivityPub support for the following post types:', 'activitypub' ); ?>
+								<?php \esc_html_e( 'Automatically publish items of the selected post types to the fediverse:', 'activitypub' ); ?>
 
 								<?php $post_types = \get_post_types( array( 'public' => true ), 'objects' ); ?>
-								<?php $support_post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array(); ?>
+								<?php $support_post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post' ) ) : array(); ?>
 								<ul>
 								<?php // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited ?>
 								<?php foreach ( $post_types as $post_type ) { ?>
 									<li>
 										<input type="checkbox" id="activitypub_support_post_type_<?php echo \esc_attr( $post_type->name ); ?>" name="activitypub_support_post_types[]" value="<?php echo \esc_attr( $post_type->name ); ?>" <?php echo \checked( \in_array( $post_type->name, $support_post_types, true ) ); ?> />
 										<label for="activitypub_support_post_type_<?php echo \esc_attr( $post_type->name ); ?>"><?php echo \esc_html( $post_type->label ); ?></label>
+										<span class="description">
+											<?php echo \esc_html( \Activitypub\get_post_type_description( $post_type ) ); ?>
+										</span>
 									</li>
 								<?php } ?>
 								</ul>

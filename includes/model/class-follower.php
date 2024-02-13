@@ -162,8 +162,10 @@ class Follower extends Actor {
 			}
 		}
 
+		$post_id = $this->get__id();
+
 		$args = array(
-			'ID'           => $this->get__id(),
+			'ID'           => $post_id,
 			'guid'         => esc_url_raw( $this->get_id() ),
 			'post_title'   => wp_strip_all_tags( sanitize_text_field( $this->get_name() ) ),
 			'post_author'  => 0,
@@ -173,6 +175,14 @@ class Follower extends Actor {
 			'post_status'  => 'publish',
 			'meta_input'   => $this->get_post_meta_input(),
 		);
+
+		if ( ! empty( $post_id ) ) {
+			// If this is an update, prevent the "followed" date from being
+			// overwritten by the current date.
+			$post                  = get_post( $post_id );
+			$args['post_date']     = $post->post_date;
+			$args['post_date_gmt'] = $post->post_date_gmt;
+		}
 
 		$post_id = wp_insert_post( $args );
 		$this->_id = $post_id;
@@ -284,6 +294,25 @@ class Follower extends Actor {
 		}
 
 		return $icon;
+	}
+
+	/**
+	 * Get the Icon URL (Avatar)
+	 *
+	 * @return string The URL to the Avatar.
+	 */
+	public function get_image_url() {
+		$image = $this->get_image();
+
+		if ( ! $image ) {
+			return '';
+		}
+
+		if ( is_array( $image ) ) {
+			return $image['url'];
+		}
+
+		return $image;
 	}
 
 	/**

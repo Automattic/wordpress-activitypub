@@ -11,7 +11,6 @@ use function Activitypub\get_context;
 use function Activitypub\object_to_uri;
 use function Activitypub\url_to_authorid;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\extract_recipients_from_activity;
 
 /**
