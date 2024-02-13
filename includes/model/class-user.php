@@ -67,6 +67,11 @@ class User extends Actor {
 	protected $webfinger;
 
 	/**
+	 * Media IDs for the user's avatar and header image.
+	 */
+	protected $media_ids;
+
+	/**
 	 * Restrict posting to mods
 	 *
 	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
@@ -108,6 +113,10 @@ class User extends Actor {
 		return \esc_attr( \get_the_author_meta( 'display_name', $this->_id ) );
 	}
 
+	public function set_name( $name ) {
+		\update_user_meta( $this->_id, 'display_name', $name );
+	}
+
 	/**
 	 * Get the User-Description.
 	 *
@@ -119,6 +128,10 @@ class User extends Actor {
 			$description = get_user_meta( $this->_id, 'description', true );
 		}
 		return \wpautop( \wp_kses( $description, 'default' ) );
+	}
+
+	public function set_summary( $summary ) {
+		\update_user_meta( $this->_id, 'activitypub_user_description', $summary );
 	}
 
 	/**
@@ -144,6 +157,15 @@ class User extends Actor {
 	}
 
 	public function get_icon() {
+		$option_name = 'activitypub_user_icon_' . $this->_id;
+		$icon = \get_option( $option_name );
+		if ( $icon ) {
+			return array(
+				'type' => 'Image',
+				'url'  => $icon,
+			);
+		}
+
 		$icon = \esc_url(
 			\get_avatar_url(
 				$this->_id,
@@ -157,7 +179,22 @@ class User extends Actor {
 		);
 	}
 
+	public function set_icon( $icon ) {
+
+		$option_name = 'activitypub_user_icon_' . $this->_id;
+		return \update_option( $option_name, $icon );
+	}
+
 	public function get_image() {
+		$option_name = 'activitypub_user_image_' . $this->_id;
+		$image = \get_option( $option_name );
+		if ( $image ) {
+			return array(
+				'type' => 'Image',
+				'url'  => $image,
+			);
+		}
+
 		if ( \has_header_image() ) {
 			$image = \esc_url( \get_header_image() );
 			return array(
@@ -167,6 +204,11 @@ class User extends Actor {
 		}
 
 		return null;
+	}
+
+	public function set_image( $header ) {
+		$option_name = 'activitypub_user_image_' . $this->_id;
+		\update_option( $option_name, $header );
 	}
 
 	public function get_published() {

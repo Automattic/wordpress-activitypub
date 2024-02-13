@@ -32,37 +32,45 @@ export default function useProfile( userId ) {
 	const [ profile, setProfileState ] = useState( getNormalizedProfile() );
 	const [ isLoading, setIsLoading ] = useState( false );
 	const [ error, setError ] = useState( null );
-	const [ cleanProfile, setCleanProfile ] = useState( profile );
-	const [ isDirty, setIsDirty ] = useState( false );
+	const [ dirtyProfile, setDirtyProfile ] = useState( {} );
+	const mergedProfile = { ...profile, ...dirtyProfile };
+	const isDirty = !! Object.keys( dirtyProfile ).length;
 
-	function setProfile ( profile ) {
-		profile = getNormalizedProfile( profile );
-		setProfileState( profile );
+	function setProfile( data ) {
+		data = getNormalizedProfile( data );
+		setProfileState( data );
+		resetProfile();
 	}
 
-	function updateProfile( field, value ) {
-		profile[ field ] = value;
-		setIsDirty( true );
-		setProfile( { ...profile } );
+	function updateProfile( field, value, ...args ) {
+		const data = { ...dirtyProfile }
+		data[ field ] = value;
+		// we are only accepting an extra ID argument for the avatar
+		if ( args.length && field === 'avatar' ) {
+			data[ 'avatarId' ] = args[ 0 ];
+		}
+
+		setDirtyProfile( data );
 	}
 
 	function resetProfile() {
-		setProfile( cleanProfile );
-		setIsDirty( false );
+		setDirtyProfile( {} );
 	}
 
 	async function saveProfile() {
+		setIsLoading( true );
 		const fetchOptions = {
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/activity+json' },
 			path: `/${ namespace }/users/${ userId }`,
-			data: JSON.stringify( profile ),
+			data: dirtyProfile,
 		};
 		return apiFetch( fetchOptions )
 			.then( ( profileResponse ) => {
-				setCleanProfile( getNormalizedProfile( profileResponse ) );
-				resetProfile();
-			} );
+				setProfile( profileResponse );
+			} )
+			.catch( setError )
+			.finally( () => setIsLoading( false ) );
 	}
 
 	useEffect( () => {
@@ -76,5 +84,5 @@ export default function useProfile( userId ) {
 			.finally( () => setIsLoading( false ) );
 	}, [ userId ] );
 
-	return { profile, isLoading, error, updateProfile, saveProfile, resetProfile, isDirty };
+	return { profile: mergedProfile, isLoading, error, updateProfile, saveProfile, resetProfile, isDirty };
 }

@@ -24,6 +24,33 @@ class Users {
 	 */
 	public static function init() {
 		self::register_routes();
+		add_filter( 'activitypub_defer_signature_verification', array( self::class, 'no_signature_here' ), 10, 2 );
+	}
+
+	/**
+	 * We require signatures requests from external actors, but this route is used in wp-admin
+	 * to update the user's profile.
+	 *
+	 * @param bool $defer
+	 * @param WP_REST_Request $request
+	 * @return bool
+	 */
+	public static function no_signature_here( $defer, $request ) {
+		if ( 'PUT' !== $request->get_method() || ! $request->has_param( 'user_id' ) ) {
+			return $defer;
+		}
+
+		$expected_route = sprintf(
+			'/%s/users/%d',
+			ACTIVITYPUB_REST_NAMESPACE,
+			$request->get_param( 'user_id' )
+		);
+
+		if ( $request->get_route() === $expected_route ) {
+			return true;
+		}
+
+		return $defer;
 	}
 
 	/**
@@ -39,6 +66,12 @@ class Users {
 					'callback'            => array( self::class, 'get' ),
 					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
+				),
+				array(
+					'methods'             => WP_REST_Server::EDITABLE,
+					'callback'            => array( self::class, 'update' ),
+					'args'                => self::update_request_parameters(),
+					'permission_callback' => array( self::class, 'user_can_update' ),
 				),
 			)
 		);
@@ -62,6 +95,49 @@ class Users {
 		);
 	}
 
+	public static function user_can_update() {
+		return current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * Handle POST request
+	 *
+	 * @param  WP_REST_Request   $request
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function update( $request ) {
+		$user_id = $request->get_param( 'user_id' );
+		$user    = User_Collection::get_by_various( $user_id );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		$header = $request->get_param( 'header' );
+		l( 'wutthatheade', $header, $request->get_params() );
+		if ( ! empty( $header ) ) {
+			$user->set_image( $header );
+		}
+
+		$avatar = $request->get_param( 'avatar' );
+		if ( ! empty( $avatar ) ) {
+			$user->set_icon( $avatar );
+		}
+
+		$name = $request->get_param( 'name' );
+		if ( ! empty( $name ) ) {
+			$user->set_name( $name );
+		}
+
+		$description = $request->get_param( 'description' );
+		if ( ! empty( $description ) ) {
+			$user->set_summary( $description );
+		}
+
+		return self::get_user( $user );
+	}
+
 	/**
 	 * Handle GET request
 	 *
@@ -83,21 +159,30 @@ class Users {
 			exit;
 		}
 
+		return self::get_user( $user );
+	}
+
+	/**
+	 * Convert a user to a WP_REST_Response
+	 *
+	 * @param  User $user
+	 *
+	 * @return WP_REST_Response
+	 */
+	private static function get_user( $user ) {
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
 		\do_action( 'activitypub_rest_users_pre' );
 
-		$user->set_context(
-			Activity::CONTEXT
-		);
+		$user->set_context( Activity::CONTEXT );
 
 		$json = $user->to_array();
 
-		$rest_response = new WP_REST_Response( $json, 200 );
-		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+		$response = new WP_REST_Response( $json, 200 );
+		$response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
 
-		return $rest_response;
+		return $response;
 	}
 
 
@@ -150,5 +235,31 @@ class Users {
 		);
 
 		return $params;
+	}
+
+	/**
+	 * The supported parameters
+	 *
+	 * @return array list of parameters
+	 */
+	public static function update_request_parameters() {
+		return array(
+			'user_id' => array(
+				'required' => true,
+				'type'     => 'string',
+			),
+			'avatar' => array(
+				'type' => 'string',
+			),
+			'header' => array(
+				'type' => 'string',
+			),
+			'name' => array(
+				'type' => 'string',
+			),
+			'description' => array(
+				'type' => 'string',
+			),
+		);
 	}
 }

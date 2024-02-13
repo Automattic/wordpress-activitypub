@@ -1,5 +1,12 @@
 .activitypub-profile-editor {
 
+	max-width: 100%;
+	box-shadow: 1px 1px 30px black, 0 0 10px red !important;
+
+	> div {
+		max-width: 100%;
+	}
+
 	img {
 		max-width: 100%;
 	}
@@ -10,5 +17,25 @@
 		margin: -48px auto 12px;
 		outline: 1px solid #eee;
 		border: 1px solid #222;
+		position: relative;
+	}
+
+	.activitypub-profile-editor__header {
+		position: relative;
+	}
+
+	.activitypub-hover-button {
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		opacity: 0;
+		transition: opacity 0.3s;
+		background-color: rgba( 200, 200, 200, 0.85 );
+
+		&:hover, &:focus {
+			opacity: 1;
+		}
 	}
 }

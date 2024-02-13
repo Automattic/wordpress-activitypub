@@ -13,7 +13,7 @@ class Profile_Editor {
 
 		\wp_register_script(
 			'activitypub-profile-editor',
-			ACTIVITYPUB_PLUGIN_URL . '/build/profile-editor/index.js',
+			ACTIVITYPUB_PLUGIN_URL . 'build/profile-editor/index.js',
 			$asset_data['dependencies'],
 			$asset_data['version'],
 			true
@@ -21,7 +21,7 @@ class Profile_Editor {
 
 		\wp_register_style(
 			'activitypub-profile-editor',
-			ACTIVITYPUB_PLUGIN_URL . '/build/profile-editor/style-index.css',
+			ACTIVITYPUB_PLUGIN_URL . 'build/profile-editor/style-index.css',
 			array(),
 			$asset_data['version']
 		);
@@ -39,5 +39,6 @@ class Profile_Editor {
 		// @todo this is just for testing, scope it better elsewhere
 		\wp_enqueue_script( 'activitypub-profile-editor' );
 		\wp_enqueue_style( 'activitypub-profile-editor' );
+		\wp_enqueue_media();
 	}
 }
