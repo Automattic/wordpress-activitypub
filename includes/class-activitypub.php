@@ -335,7 +335,7 @@ class Activitypub {
 		}
 
 		// We assume that you want to use Post-Formats when enabling the setting
-		if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', 'wordpress-post-format' ) ) {
+		if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ) {
 			if ( ! get_theme_support( 'post-formats' ) ) {
 				// Add support for the Aside, Gallery Post Formats...
 				add_theme_support(

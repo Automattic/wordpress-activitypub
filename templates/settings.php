@@ -79,7 +79,7 @@
 						<td>
 							<p>
 								<label>
-									<input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="wordpress-post-format" <?php echo \checked( 'wordpress-post-format', \get_option( 'activitypub_object_type', 'wordpress-post-format' ) ); ?> />
+									<input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="wordpress-post-format" <?php echo \checked( 'wordpress-post-format', \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ); ?> />
 									<?php \esc_html_e( 'WordPress Post-Format (default)', 'activitypub' ); ?>
 									-
 									<span class="description">
@@ -89,7 +89,7 @@
 							</p>
 							<p>
 								<label for="activitypub_object_type_note">
-									<input type="radio" name="activitypub_object_type" id="activitypub_object_type_note" value="note" <?php echo \checked( 'note', \get_option( 'activitypub_object_type', 'wordpress-post-format' ) ); ?> />
+									<input type="radio" name="activitypub_object_type" id="activitypub_object_type_note" value="note" <?php echo \checked( 'note', \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ); ?> />
 									<?php \esc_html_e( 'Note', 'activitypub' ); ?>
 									-
 									<span class="description">
@@ -100,7 +100,7 @@
 						</td>
 					</tr>
 					<?php // phpcs:ignore Squiz.ControlStructures.ControlSignature.NewlineAfterOpenBrace ?>
-					<tr <?php if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', 'wordpress-post-format' ) ) { echo 'style="display: none"'; } ?>>
+					<tr <?php if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ) { echo 'style="display: none"'; } ?>>
 						<th scope="row">
 							<?php \esc_html_e( 'Post content', 'activitypub' ); ?>
 						</th>

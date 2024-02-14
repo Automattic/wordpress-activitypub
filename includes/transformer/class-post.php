@@ -523,7 +523,7 @@ class Post extends Base {
 	 * @return string The Object-Type.
 	 */
 	protected function get_type() {
-		$post_format_setting = \get_option( 'activitypub_object_type', 'wordpress-post-format' );
+		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 
 		if ( 'wordpress-post-format' !== $post_format_setting ) {
 			return \ucfirst( $post_format_setting );
@@ -736,7 +736,7 @@ class Post extends Base {
 				break;
 		}
 
-		$post_format_setting = \get_option( 'activitypub_object_type', 'wordpress-post-format' );
+		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 
 		if ( 'wordpress-post-format' !== $post_format_setting ) {
 			$template = '[ap_content]';
