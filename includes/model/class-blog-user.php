@@ -170,6 +170,24 @@ class Blog_User extends User {
 		);
 	}
 
+	public function set_icon_id( $icon_id ) {
+		// first make sure it exists
+		$attachment = get_post( $icon_id );
+		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
+			return false;
+		}
+
+		update_option( 'site_icon', $icon_id );
+	}
+
+	public function set_name( $name ) {
+		\update_option( 'blogname', $name );
+	}
+
+	public function set_summary( $summary ) {
+		\update_option( 'blogdescription', $summary );
+	}
+
 	/**
 	 * Get the User-Header-Image.
 	 *

@@ -114,25 +114,28 @@ class Users {
 			return $user;
 		}
 
-		$header = $request->get_param( 'header' );
-		l( 'wutthatheade', $header, $request->get_params() );
-		if ( ! empty( $header ) ) {
-			$user->set_image( $header );
+		$params = $request->get_params();
+		l( 'wutthatheade', $params );
+		if ( ! empty( $params['header'] ) ) {
+			$user->set_image( $params['header'] );
 		}
 
-		$avatar = $request->get_param( 'avatar' );
-		if ( ! empty( $avatar ) ) {
-			$user->set_icon( $avatar );
+		if ( ! empty( $params['avatar'] ) ) {
+			// check for empty avatar and that $user has set_icon_id method
+			if ( ! empty( $params['avatarId'] ) && method_exists( $user, 'set_icon_id' ) ) {
+				l( 'try icon id', $params['avatarId'] );
+				$user->set_icon_id( $params['avatarId'] );
+			} else {
+				$user->set_icon( $params['avatar'] );
+			}
 		}
 
-		$name = $request->get_param( 'name' );
-		if ( ! empty( $name ) ) {
-			$user->set_name( $name );
+		if ( ! empty( $params['name'] ) ) {
+			$user->set_name( $params['name'] );
 		}
 
-		$description = $request->get_param( 'description' );
-		if ( ! empty( $description ) ) {
-			$user->set_summary( $description );
+		if ( ! empty( $params['summary'] ) ) {
+			$user->set_summary( $params['summary'] );
 		}
 
 		return self::get_user( $user );
@@ -175,7 +178,7 @@ class Users {
 		 */
 		\do_action( 'activitypub_rest_users_pre' );
 
-		$user->set_context( Activity::CONTEXT );
+		$user->set_context( Activity::JSON_LD_CONTEXT );
 
 		$json = $user->to_array();
 
@@ -250,15 +253,23 @@ class Users {
 			),
 			'avatar' => array(
 				'type' => 'string',
+				'sanitize_callback' => 'esc_url_raw',
+			),
+			'avatarId' => array(
+				'type' => 'number',
+				'sanitize_callback' => 'absint',
 			),
 			'header' => array(
 				'type' => 'string',
+				'sanitize_callback' => 'esc_url_raw',
 			),
 			'name' => array(
 				'type' => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
 			),
-			'description' => array(
+			'summary' => array(
 				'type' => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
 			),
 		);
 	}

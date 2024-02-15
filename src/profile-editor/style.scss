@@ -2,6 +2,7 @@
 
 	max-width: 100%;
 	box-shadow: 1px 1px 30px black, 0 0 10px red !important;
+	position: relative;
 
 	> div {
 		max-width: 100%;
@@ -9,6 +10,24 @@
 
 	img {
 		max-width: 100%;
+	}
+
+	.activitypub-profile-editor__actions {
+		position: absolute;
+		height: 32px;
+		top: -32px;
+		right: 0;
+
+		button {
+			background-color: red;
+			&.is-primary {
+				background-color: green;
+			}
+		}
+	}
+
+	.activitypub-profile-editor__text-wrap {
+		padding: 1em 2em 2em;
 	}
 
 	.activitypub-profile-editor__avatar {
@@ -36,6 +55,28 @@
 
 		&:hover, &:focus {
 			opacity: 1;
+		}
+	}
+
+	.not-editing input[type="text"] {
+		border-color: transparent;
+		background-color: transparent;
+	}
+
+	.activitypub-profile-editor__description input[type="text"] {
+		font-size: 13px;
+	}
+	.activitypub-profile-editor__name input[type="text"] {
+		font-size: 18px;
+	}
+
+	// override the plugin page styles
+	.settings_page_activitypub .activitypub-welcome-page & {
+		.activitypub-profile-editor__description input[type="text"] {
+			font-size: 13px;
+		}
+		.activitypub-profile-editor__name input[type="text"] {
+			font-size: 18px;
 		}
 	}
 }
