@@ -1,8 +1,8 @@
-import { Card, TextControl, Button } from "@wordpress/components";
+import { Card, TextControl, Button, Modal } from "@wordpress/components";
 import { cancelCircleFilled, check, Icon } from '@wordpress/icons';
 import { __ } from "@wordpress/i18n";
 import { MediaUpload } from '@wordpress/media-utils';
-import { useState, useRef } from "@wordpress/element";
+import { useState, useRef, useEffect } from "@wordpress/element";
 import useProfile from "../shared/use-profile";
 import './style.scss';
 
@@ -106,6 +106,21 @@ export default function ProfileEditor() {
 	function updateFor( name ) {
 		return ( value, ...args ) => updateProfile( name, value, ...args );
 	}
+
+	useEffect(() => {
+		const handleBeforeUnload = (event) => {
+			if ( isDirty ) {
+				event.preventDefault();
+				event.returnValue = '';
+			}
+		};
+
+		window.addEventListener( 'beforeunload', handleBeforeUnload );
+
+		return () => {
+				window.removeEventListener( 'beforeunload', handleBeforeUnload );
+		};
+}, [ isDirty ] );
 
 	if ( error ) {
 		return (

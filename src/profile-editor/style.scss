@@ -20,8 +20,15 @@
 
 		button {
 			background-color: red;
+			border: 0 none;
+			border-radius: 4px 0 0 0;
+			height: 100%;
 			&.is-primary {
 				background-color: green;
+				border-radius: 0 4px 0 0;
+			}
+			svg {
+				fill: white;
 			}
 		}
 	}
