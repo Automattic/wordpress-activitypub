@@ -120,6 +120,11 @@ class Scheduler {
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
 		$post = get_post( $post );
 
+		// Do not send if the post has already been scheduled.
+		if ( \get_post_meta( $post->ID, '_activitypub_lock', true ) ) {
+			return;
+		}
+
 		// Do not send activities if post is password protected.
 		if ( \post_password_required( $post ) ) {
 			return;
@@ -144,6 +149,9 @@ class Scheduler {
 		if ( empty( $type ) ) {
 			return;
 		}
+
+		// Post locking: prevent multiple cron jobs for a given post.
+		\add_post_meta( $post->ID, '_activitypub_lock', true );
 
 		\wp_schedule_single_event(
 			\time(),

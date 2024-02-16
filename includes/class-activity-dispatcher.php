@@ -64,6 +64,11 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	public static function send_activity( $wp_object, $type, $user_id = null ) {
+		// Post locking: meta was added, now can be removed to allow future updates.
+		if ( is_a( $wp_object, 'WP_Post' ) ) {
+			delete_post_meta( $wp_object->ID, '_activitypub_lock' );
+		}
+
 		$transformer = Factory::get_transformer( $wp_object );
 
 		if ( null !== $user_id ) {
