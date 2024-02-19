@@ -53,7 +53,10 @@ class Webfinger {
 		foreach ( $data['links'] as $link ) {
 			if (
 				'self' === $link['rel'] &&
-				'application/activity+json' === $link['type']
+				(
+					'application/activity+json' === $link['type'] ||
+					'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' === $link['type']
+				)
 			) {
 				return $link['href'];
 			}

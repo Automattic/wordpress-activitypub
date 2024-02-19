@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.4
-Stable tag: 2.1.0
+Stable tag: 2.1.1
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -121,6 +121,7 @@ The plugin uses PHP Constants to enable, disable or change its default behaviour
 * `ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS` - Block incoming replies/comments/likes. Default: `false`.
 * `ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS` - Disable outgoing replies/comments/likes. Default: `false`.
 * `ACTIVITYPUB_SHARED_INBOX_FEATURE` - Enable the shared inbox. Default: `false`.
+* `ACTIVITYPUB_SEND_VARY_HEADER` - Enable to send the `Vary: Accept` header. Default: `false`.
 
 = Where can you manage your followers? =
 
@@ -134,13 +135,19 @@ For reasons of data protection, it is not possible to see the followers of other
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
 
+= 2.1.1 =
+
+* Added: Add `@` prefix to Follow-Block
+* Added: Apply `comment_text` filter to Activity
+
 = 2.1.0 =
 
 * Fixed: Some Federated Comment improvements
 * Fixed: Remove old/abandoned Crons
 * Added: Various endpoints for the "Enable Mastodon Apps" plugin
 * Added: Event Objects
-* Improved: Post-Type support
+* Added: Send notification to all Repliers if a new Comment is added
+* Added: Vary-Header support behind feature flag
 
 = 2.0.1 =
 
