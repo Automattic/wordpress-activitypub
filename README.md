@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 5.5  
 **Tested up to:** 6.4  
-**Stable tag:** 2.1.0  
+**Stable tag:** 2.1.1  
 **Requires PHP:** 5.6  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -134,6 +134,11 @@ For reasons of data protection, it is not possible to see the followers of other
 ## Changelog ##
 
 Project maintained on GitHub at [automattic/wordpress-activitypub](https://github.com/automattic/wordpress-activitypub).
+
+### 2.1.1 ###
+
+* Added: Add `@` prefix to Follow-Block
+* Added: Apply `comment_text` filter to Activity
 
 ### 2.1.0 ###
 
