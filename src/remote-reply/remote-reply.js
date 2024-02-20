@@ -4,7 +4,7 @@ import { Button, Modal } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { copy, check, Icon } from '@wordpress/icons';
 import { useCopyToClipboard } from '@wordpress/compose';
-//import './../follow-me/style.scss';
+import './style.scss';
 const { namespace } = window._activityPubOptions;
 
 function isUrl( string ) {
@@ -58,13 +58,13 @@ function Dialog( { selectedComment, commentId } ) {
 	}, [ remoteProfile ] );
 
 	return (
-		<div className="activitypub-follow-me__dialog">
-			<div className="apmfd__section">
-				<h4>{ __( 'The Comment URL', 'activitypub' ) }</h4>
-				<div className="apfmd-description">
-					{ __( 'Copy and paste the Comment URL into the search field of your favorite fediverse app or server to reply to this Comment.', 'activitypub' ) }
+		<div className="activitypub__dialog">
+			<div className="activitypub-dialog__section">
+				<h4>{ __( 'The Comment-URL', 'activitypub' ) }</h4>
+				<div className="activitypub-dialog__description">
+					{ __( 'Copy and paste the Comment-URL into the search field of your favorite fediverse app or server to reply to this Comment.', 'activitypub' ) }
 				</div>
-				<div className="apfmd__button-group">
+				<div className="activitypub-dialog__button-group">
 					<input type="text" value={ selectedComment } readOnly />
 					<Button ref={ ref }>
 						<Icon icon={ buttonIcon } />
@@ -72,15 +72,15 @@ function Dialog( { selectedComment, commentId } ) {
 					</Button>
 				</div>
 			</div>
-			<div className="apmfd__section">
+			<div className="activitypub-dialog__section">
 				<h4>{ __( 'Your Profile', 'activitypub' ) }</h4>
-				<div className="apfmd-description">
+				<div className="activitypub-dialog__description">
 					{ createInterpolateElement(
 						__( 'Or, if you know your own profile, we can start things that way! (eg <code>https://example.com/yourusername</code> or <code>yourusername@example.com</code>)', 'activitypub' ),
 						{ code: <code /> }
 					) }
 				</div>
-				<div className="apfmd__button-group">
+				<div className="activitypub-dialog__button-group">
 					<input
 						type="text"
 						value={ remoteProfile }

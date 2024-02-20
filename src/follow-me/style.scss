@@ -57,37 +57,4 @@
 	}
 }
 
-.activitypub-follow-me__dialog {
-	max-width: 30em;
-	h4 {
-		line-height: 1;
-		margin: 0;
-	}
-	.apmfd__section {
-		margin-bottom: 2em;
-	}
-	.apfmd-description {
-		font-size: var( --wp--preset--font-size--normal, .75rem );
-		margin: 0.33em 0 1em;
-	}
-	.apfmd__button-group {
-		display: flex;
-		justify-content: flex-end;
-		align-items: flex-end;
-
-		svg {
-			margin-right: .5em;
-			height: 21px;
-			width: 21px;
-		}
-
-		input {
-			flex: 1;
-			padding: 6px 12px;
-			background-color: var( --wp--preset--color--white );
-			color: var( --wp--preset--color--black );
-			border: 1px solid var( --wp--preset--color--black );
-		}
-
-	}
-}
+@import "./../shared/lightbox.scss";
