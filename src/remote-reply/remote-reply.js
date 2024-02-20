@@ -105,11 +105,11 @@ export default function RemoteReply( { selectedComment, commentId } ) {
 			</a>
 			{ isOpen && (
 				<Modal
-					className="activitypub-remote-reply__modal"
+					className="activitypub-remote-reply__modal activitypub__modal"
 					onRequestClose={ () => setIsOpen( false ) }
 					title={ title }
 					>
-						<Dialog selectedComment={ selectedComment } commentId={ commentId } />
+					<Dialog selectedComment={ selectedComment } commentId={ commentId } />
 				</Modal>
 			) }
 		</>

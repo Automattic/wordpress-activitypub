@@ -58,7 +58,7 @@ function Follow( { profile, popupStyles, userId } ) {
 			</Button>
 			{ isOpen && (
 				<Modal
-				className="activitypub-profile__confirm"
+				className="activitypub-profile__confirm activitypub__modal"
 				onRequestClose={ () => setIsOpen( false ) }
 				title={ title }
 				>

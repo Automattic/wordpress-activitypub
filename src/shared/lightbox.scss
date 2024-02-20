@@ -1,3 +1,19 @@
+.activitypub__modal.components-modal__frame {
+	// @todo: play more nicely with dark background themes. the dialog is hardcoded to white bg in core, we go #eee here.
+	color: #333;
+	background-color: #f7f7f7;
+	.components-modal__header-heading, h4 {
+		color: #333;
+		// resets against potential theme weirdness
+		letter-spacing: inherit;
+		word-spacing: inherit;
+	}
+
+	.components-modal__header .components-button:hover {
+		color: var( --wp--preset--color--white );
+	}
+}
+
 .activitypub__dialog {
 	max-width: 40em;
 	h4 {
