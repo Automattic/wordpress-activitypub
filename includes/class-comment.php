@@ -351,14 +351,16 @@ class Comment {
 	 * Enqueue scripts for remote comments
 	 */
 	public static function enqueue_scripts() {
-		$handle = 'activitypub-remote-reply-script';
-		$data   = array(
+		$handle     = 'activitypub-remote-reply-script';
+		$data       = array(
 			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
 		);
-		$js     = sprintf( 'var _activityPubOptions = %s;', wp_json_encode( $data ) );
-		$assets = require_once ACTIVITYPUB_PLUGIN_DIR . 'build/remote-reply/index.asset.php';
+		$js         = sprintf( 'var _activityPubOptions = %s;', wp_json_encode( $data ) );
+		$asset_file = ACTIVITYPUB_PLUGIN_DIR . 'build/remote-reply/index.asset.php';
 
-		if ( file_exists( $assets ) ) {
+		if ( \file_exists( $asset_file ) ) {
+			$assets = require_once $asset_file;
+
 			\wp_enqueue_script(
 				$handle,
 				\plugins_url( 'build/remote-reply/index.js', __DIR__ ),
