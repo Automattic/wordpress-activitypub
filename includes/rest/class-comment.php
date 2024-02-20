@@ -6,7 +6,7 @@ use WP_REST_Server;
 use WP_REST_Request;
 use WP_REST_Response;
 use Activitypub\Comment as Comment_Utils;
-use Activitypub\Webfinger;
+use Activitypub\Webfinger as Webfinger_Utils;
 
 /**
  * ActivityPub Followers REST-Class
@@ -69,7 +69,7 @@ class Comment {
 			return new WP_Error( 'activitypub_local_only_comment', __( 'Comment is local only', 'activitypub' ), array( 'status' => 403 ) );
 		}
 
-		$template = Webfinger::get_remote_follow_endpoint( $resource );
+		$template = Webfinger_Utils::get_remote_follow_endpoint( $resource );
 
 		if ( is_wp_error( $template ) ) {
 			return $template;
