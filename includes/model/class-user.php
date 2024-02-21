@@ -73,6 +73,11 @@ class User extends Actor {
 	protected $webfinger;
 
 	/**
+	 * Media IDs for the user's avatar and header image.
+	 */
+	protected $media_ids;
+
+	/**
 	 * Restrict posting to mods
 	 *
 	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
@@ -115,6 +120,17 @@ class User extends Actor {
 	}
 
 	/**
+	 * Set the User-Name.
+	 *
+	 * @param string $name The User-Name.
+	 * @return bool        True if the User-Name was updated, false otherwise.
+	 */
+	public function set_name( $name ) {
+		$userdata = [ 'ID' => $this->_id, 'display_name' => $name ];
+		return \wp_update_user( $userdata );
+	}
+
+	/**
 	 * Get the User-Description.
 	 *
 	 * @return string The User-Description.
@@ -125,6 +141,16 @@ class User extends Actor {
 			$description = get_user_meta( $this->_id, 'description', true );
 		}
 		return \wpautop( \wp_kses( $description, 'default' ) );
+	}
+
+	/**
+	 * Set the User-Description.
+	 *
+	 * @param string $summary The User-Description.
+	 * @return bool           True if the User-Description was updated, false otherwise.
+	 */
+	public function set_summary( $summary ) {
+		return \update_user_meta( $this->_id, 'description', $summary );
 	}
 
 	/**
@@ -150,6 +176,15 @@ class User extends Actor {
 	}
 
 	public function get_icon() {
+		$option_name = 'activitypub_user_icon_' . $this->_id;
+		$icon = \get_option( $option_name );
+		if ( $icon ) {
+			return array(
+				'type' => 'Image',
+				'url'  => $icon,
+			);
+		}
+
 		$icon = \esc_url(
 			\get_avatar_url(
 				$this->_id,
@@ -163,7 +198,33 @@ class User extends Actor {
 		);
 	}
 
+	/**
+	 * Set the User-Icon.
+	 *
+	 * @param string $icon The User-Icon URL.
+	 * @return bool        True if the User-Icon was updated, false otherwise.
+	 */
+	public function set_icon( $icon ) {
+
+		$option_name = 'activitypub_user_icon_' . $this->_id;
+		return \update_option( $option_name, $icon );
+	}
+
+	/**
+	 * Get the User-Image (Header).
+	 *
+	 * @return array The User-Image.
+	 */
 	public function get_image() {
+		$option_name = 'activitypub_user_image_' . $this->_id;
+		$image = \get_option( $option_name );
+		if ( $image ) {
+			return array(
+				'type' => 'Image',
+				'url'  => $image,
+			);
+		}
+
 		if ( \has_header_image() ) {
 			$image = \esc_url( \get_header_image() );
 			return array(
@@ -173,6 +234,17 @@ class User extends Actor {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Set the User-Image (Header).
+	 *
+	 * @param string $header The User-Image URL.
+	 * @return bool          True if the User-Image was updated, false otherwise.
+	 */
+	public function set_image( $header ) {
+		$option_name = 'activitypub_user_image_' . $this->_id;
+		return \update_option( $option_name, $header );
 	}
 
 	public function get_published() {

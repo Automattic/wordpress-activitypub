@@ -1,0 +1,15 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"name": "activitypub/profile-editor",
+	"apiVersion": 3,
+	"version": "1.0.0",
+	"title": "Fediverse Profile Editor",
+	"category": "widgets",
+	"description": "NOT ACTUALLY A BLOCK. APPEASING THE BUILD SYSTEM.",
+	"textdomain": "activitypub",
+	"icon": "groups",
+	"supports": {
+		"html": false
+	},
+	"editorScript": "file:./index.js"
+}

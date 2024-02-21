@@ -76,6 +76,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Health_Check', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Profile_Editor', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 
 	if ( site_supports_blocks() ) {
