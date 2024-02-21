@@ -119,8 +119,15 @@ class User extends Actor {
 		return \esc_attr( \get_the_author_meta( 'display_name', $this->_id ) );
 	}
 
+	/**
+	 * Set the User-Name.
+	 *
+	 * @param string $name The User-Name.
+	 * @return bool        True if the User-Name was updated, false otherwise.
+	 */
 	public function set_name( $name ) {
-		\update_user_meta( $this->_id, 'display_name', $name );
+		$userdata = [ 'ID' => $this->_id, 'display_name' => $name ];
+		return \wp_update_user( $userdata );
 	}
 
 	/**
@@ -136,8 +143,14 @@ class User extends Actor {
 		return \wpautop( \wp_kses( $description, 'default' ) );
 	}
 
+	/**
+	 * Set the User-Description.
+	 *
+	 * @param string $summary The User-Description.
+	 * @return bool           True if the User-Description was updated, false otherwise.
+	 */
 	public function set_summary( $summary ) {
-		\update_user_meta( $this->_id, 'activitypub_user_description', $summary );
+		return \update_user_meta( $this->_id, 'description', $summary );
 	}
 
 	/**
@@ -185,12 +198,23 @@ class User extends Actor {
 		);
 	}
 
+	/**
+	 * Set the User-Icon.
+	 *
+	 * @param string $icon The User-Icon URL.
+	 * @return bool        True if the User-Icon was updated, false otherwise.
+	 */
 	public function set_icon( $icon ) {
 
 		$option_name = 'activitypub_user_icon_' . $this->_id;
 		return \update_option( $option_name, $icon );
 	}
 
+	/**
+	 * Get the User-Image (Header).
+	 *
+	 * @return array The User-Image.
+	 */
 	public function get_image() {
 		$option_name = 'activitypub_user_image_' . $this->_id;
 		$image = \get_option( $option_name );
@@ -212,9 +236,15 @@ class User extends Actor {
 		return null;
 	}
 
+	/**
+	 * Set the User-Image (Header).
+	 *
+	 * @param string $header The User-Image URL.
+	 * @return bool          True if the User-Image was updated, false otherwise.
+	 */
 	public function set_image( $header ) {
 		$option_name = 'activitypub_user_image_' . $this->_id;
-		\update_option( $option_name, $header );
+		return \update_option( $option_name, $header );
 	}
 
 	public function get_published() {

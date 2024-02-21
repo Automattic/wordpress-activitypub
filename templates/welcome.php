@@ -23,7 +23,7 @@
 		?>
 	<div class="box">
 		<h3><?php \esc_html_e( 'Blog profile', 'activitypub' ); ?></h3>
-		<div id="blog-profile-editor"></div>
+		<div class="activitypub-profile-editor" data-id="0"></div>
 		<p>
 			<?php \esc_html_e( 'People can follow your blog by using:', 'activitypub' ); ?>
 		</p>
@@ -56,6 +56,7 @@
 		?>
 	<div class="box">
 		<h3><?php \esc_html_e( 'Author profile', 'activitypub' ); ?></h3>
+		<div class="activitypub-profile-editor" data-id="<?php echo esc_attr( get_current_user_id() ); ?>"></div>
 		<p>
 			<?php \esc_html_e( 'People can follow you by using your author name:', 'activitypub' ); ?>
 		</p>

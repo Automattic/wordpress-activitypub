@@ -16,7 +16,7 @@ function stripTags( html ) {
 	return html.replace( HTMLRegExp, '' );
 }
 
-function TextField( { update, value, className } ) {
+function TextField( { update, value, className, placeholder = '' } ) {
 	const [ isEditing, setIsEditing ] = useState( false );
 	const classes = ! isEditing ? `${ className } not-editing` : className;
 
@@ -24,9 +24,10 @@ function TextField( { update, value, className } ) {
 		<div className={ classes }>
 			<TextControl
 				value={ value }
+				placeholder={ placeholder }
 				onChange={ update }
 				onBlur={ () => setIsEditing( false ) }
-				onFocus={ () => setIsEditing( true) }
+				onFocus={ () => setIsEditing( true ) }
 			/>
 		</div>
 	);
@@ -69,8 +70,6 @@ function Avatar( { url, update } ) {
 
 // Mastodon says: "This image will be downscaled to 1500x500"
 function Header( { url, update } ) {
-
-	// use ImageField
 	return (
 		<ImageField
 			className="activitypub-profile-editor__header"
@@ -83,7 +82,6 @@ function Header( { url, update } ) {
 }
 
 function Name( { name, update } ) {
-	// use TextField
 	return (
 		<TextField className="activitypub-profile-editor__name" value={ name } update={ update } />
 	);
@@ -91,24 +89,28 @@ function Name( { name, update } ) {
 
 function Description( { description, update } ) {
 	const strippedDescription = stripTags( description );
-	const desriptionWithFallback = strippedDescription || __( 'No description provided.', 'activitypub' );
+	const placeholder = __( 'Optional: provide a description for this profile', 'activitypub' );
 
 	return (
-		<TextField className="activitypub-profile-editor__description" value={ desriptionWithFallback } update={ update } />
+		<TextField
+			className="activitypub-profile-editor__description"
+			value={ strippedDescription }
+			update={ update }
+			placeholder={ placeholder }
+		/>
 	);
 }
 
-export default function ProfileEditor() {
-	const userId = 0;
-	const { profile, isDirty, isLoading, error, updateProfile, saveProfile, resetProfile } = useProfile( userId );
+export default function ProfileEditor( { id } ) {
+	const { profile, isDirty, isLoading, error, updateProfile, saveProfile, resetProfile } = useProfile( id );
 	const { avatar, header, name, handle, summary } = profile;
 
 	function updateFor( name ) {
 		return ( value, ...args ) => updateProfile( name, value, ...args );
 	}
 
-	useEffect(() => {
-		const handleBeforeUnload = (event) => {
+	useEffect( () => {
+		const handleBeforeUnload = ( event ) => {
 			if ( isDirty ) {
 				event.preventDefault();
 				event.returnValue = '';
@@ -117,9 +119,7 @@ export default function ProfileEditor() {
 
 		window.addEventListener( 'beforeunload', handleBeforeUnload );
 
-		return () => {
-				window.removeEventListener( 'beforeunload', handleBeforeUnload );
-		};
+		return () => window.removeEventListener( 'beforeunload', handleBeforeUnload );
 }, [ isDirty ] );
 
 	if ( error ) {

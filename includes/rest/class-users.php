@@ -115,7 +115,7 @@ class Users {
 		}
 
 		$params = $request->get_params();
-		l( 'wutthatheade', $params );
+
 		if ( ! empty( $params['header'] ) ) {
 			$user->set_image( $params['header'] );
 		}
@@ -123,7 +123,6 @@ class Users {
 		if ( ! empty( $params['avatar'] ) ) {
 			// check for empty avatar and that $user has set_icon_id method
 			if ( ! empty( $params['avatarId'] ) && method_exists( $user, 'set_icon_id' ) ) {
-				l( 'try icon id', $params['avatarId'] );
 				$user->set_icon_id( $params['avatarId'] );
 			} else {
 				$user->set_icon( $params['avatar'] );
