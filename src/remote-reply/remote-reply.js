@@ -100,9 +100,9 @@ export default function RemoteReply( { selectedComment, commentId } ) {
 
 	return(
 		<>
-			<a href="javascript:;" className="comment-reply-link activitypub-remote-reply__button" onClick={ () => setIsOpen( true ) } >
+			<Button isLink className="comment-reply-link activitypub-remote-reply__button" onClick={ () => setIsOpen( true ) } >
 				{ __( 'Reply on the Fediverse', 'activitypub' ) }
-			</a>
+			</Button>
 			{ isOpen && (
 				<Modal
 					className="activitypub-remote-reply__modal activitypub__modal"

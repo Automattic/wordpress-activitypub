@@ -351,6 +351,9 @@ class Comment {
 	 * Enqueue scripts for remote comments
 	 */
 	public static function enqueue_scripts() {
+		if ( ! is_singular() ) {
+			return;
+		}
 		$handle     = 'activitypub-remote-reply-script';
 		$data       = array(
 			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
@@ -365,9 +368,10 @@ class Comment {
 				$handle,
 				\plugins_url( 'build/remote-reply/index.js', __DIR__ ),
 				$assets['dependencies'],
-				'1.0',
+				$assets['version'],
 				true
 			);
+			\wp_enqueue_style( 'wp-components' );
 			\wp_add_inline_script( $handle, $js, 'before' );
 		}
 	}
