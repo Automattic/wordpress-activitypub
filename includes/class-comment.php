@@ -354,7 +354,7 @@ class Comment {
 		if ( ! is_singular() ) {
 			return;
 		}
-		$handle     = 'activitypub-remote-reply-script';
+		$handle     = 'activitypub-remote-reply';
 		$data       = array(
 			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
 		);
@@ -371,8 +371,14 @@ class Comment {
 				$assets['version'],
 				true
 			);
-			\wp_enqueue_style( 'wp-components' );
 			\wp_add_inline_script( $handle, $js, 'before' );
+
+			\wp_enqueue_style(
+				$handle,
+				\plugins_url( 'build/remote-reply/style-index.css', __DIR__ ),
+				[ 'wp-components' ],
+				$assets['version']
+			);
 		}
 	}
 }
