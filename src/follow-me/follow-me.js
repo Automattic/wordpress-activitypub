@@ -58,7 +58,7 @@ function Follow( { profile, popupStyles, userId } ) {
 			</Button>
 			{ isOpen && (
 				<Modal
-				className="activitypub-profile__confirm"
+				className="activitypub-profile__confirm activitypub__modal"
 				onRequestClose={ () => setIsOpen( false ) }
 				title={ title }
 				>
@@ -121,13 +121,13 @@ function Dialog( { profile, userId } ) {
 	}, [ remoteProfile ] );
 
 	return (
-		<div className="activitypub-follow-me__dialog">
-			<div className="apmfd__section">
+		<div className="activitypub__dialog">
+			<div className="activitypub-dialog__section">
 				<h4>{ __( 'My Profile', 'activitypub' ) }</h4>
-				<div className="apfmd-description">
+				<div className="activitypub-dialog-description">
 					{ __( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' ) }
 				</div>
-				<div className="apfmd__button-group">
+				<div className="activitypub-dialog__button-group">
 					<input type="text" value={ webfinger } readOnly />
 					<Button ref={ ref }>
 						<Icon icon={ buttonIcon } />
@@ -135,15 +135,15 @@ function Dialog( { profile, userId } ) {
 					</Button>
 				</div>
 			</div>
-			<div className="apmfd__section">
+			<div className="activitypub-dialog__section">
 				<h4>{ __( 'Your Profile', 'activitypub' ) }</h4>
-				<div className="apfmd-description">
+				<div className="activitypub-dialog__description">
 					{ createInterpolateElement(
 						__( 'Or, if you know your own profile, we can start things that way! (eg <code>https://example.com/yourusername</code> or <code>yourusername@example.com</code>)', 'activitypub' ),
 						{ code: <code /> }
 					) }
 				</div>
-				<div className="apfmd__button-group">
+				<div className="activitypub-dialog__button-group">
 					<input
 						type="text"
 						value={ remoteProfile }

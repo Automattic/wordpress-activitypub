@@ -20,6 +20,7 @@ class Comment {
 		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
+		\add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 	}
 
 	/**
@@ -39,7 +40,17 @@ class Comment {
 			return $link;
 		}
 
-		return apply_filters( 'activitypub_comment_reply_link', '' );
+		$attrs = array(
+			'selectedComment' => self::generate_id( $comment ),
+			'commentId' => $comment->comment_ID,
+		);
+
+		$div = sprintf(
+			'<div class="activitypub-remote-reply" data-attrs="%s"></div>',
+			esc_attr( wp_json_encode( $attrs ) )
+		);
+
+		return apply_filters( 'activitypub_comment_reply_link', $div );
 	}
 
 	/**
@@ -334,5 +345,40 @@ class Comment {
 			),
 			\trailingslashit( site_url() )
 		);
+	}
+
+	/**
+	 * Enqueue scripts for remote comments
+	 */
+	public static function enqueue_scripts() {
+		if ( ! is_singular() ) {
+			return;
+		}
+		$handle     = 'activitypub-remote-reply';
+		$data       = array(
+			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
+		);
+		$js         = sprintf( 'var _activityPubOptions = %s;', wp_json_encode( $data ) );
+		$asset_file = ACTIVITYPUB_PLUGIN_DIR . 'build/remote-reply/index.asset.php';
+
+		if ( \file_exists( $asset_file ) ) {
+			$assets = require_once $asset_file;
+
+			\wp_enqueue_script(
+				$handle,
+				\plugins_url( 'build/remote-reply/index.js', __DIR__ ),
+				$assets['dependencies'],
+				$assets['version'],
+				true
+			);
+			\wp_add_inline_script( $handle, $js, 'before' );
+
+			\wp_enqueue_style(
+				$handle,
+				\plugins_url( 'build/remote-reply/style-index.css', __DIR__ ),
+				[ 'wp-components' ],
+				$assets['version']
+			);
+		}
 	}
 }
