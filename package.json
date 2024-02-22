@@ -21,7 +21,7 @@
   "homepage": "https://github.com/pfefferle/wordpress-activitypub#readme",
   "devDependencies": {
     "@wordpress/blocks": "^12.11.0",
-    "@wordpress/components": "^26.0.0",
+    "@wordpress/components": "^27.0.0",
     "@wordpress/data": "^9.4.0",
     "@wordpress/dom-ready": "^3.36.0",
     "@wordpress/element": "^5.11.0",
