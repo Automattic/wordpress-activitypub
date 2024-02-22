@@ -46,4 +46,16 @@ class Attachment extends Post {
 
 		return $attachment;
 	}
+
+	/**
+	 * Returns the ActivityStreams 2.0 Object-Type for a Post based on the
+	 * settings and the Post-Type.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#activity-types
+	 *
+	 * @return string The Object-Type.
+	 */
+	protected function get_type() {
+		return 'Note';
+	}
 }

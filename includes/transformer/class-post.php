@@ -565,9 +565,6 @@ class Post extends Base {
 			case 'page':
 				$object_type = 'Page';
 				break;
-			case 'attachment':
-				$object_type = 'Note';
-				break;
 			default:
 				$object_type = 'Article';
 				break;
