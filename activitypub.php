@@ -54,6 +54,7 @@ function rest_init() {
 	Rest\Followers::init();
 	Rest\Following::init();
 	Rest\Webfinger::init();
+	Rest\Comment::init();
 	Rest\Server::init();
 	Rest\Collection::init();
 

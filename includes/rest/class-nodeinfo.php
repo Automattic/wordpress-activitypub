@@ -129,7 +129,7 @@ class Nodeinfo {
 
 		$nodeinfo = array();
 
-		$nodeinfo['version'] = '1.0';
+		$nodeinfo['version'] = '2.0';
 		$nodeinfo['server'] = array(
 			'baseUrl' => \home_url( '/' ),
 			'name' => \get_bloginfo( 'name' ),
