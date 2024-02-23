@@ -145,20 +145,13 @@ class Scheduler {
 			return;
 		}
 
-		\wp_schedule_single_event(
-			\time(),
-			'activitypub_send_activity',
-			array( $post, $type )
-		);
+		$hook = 'activitypub_send_post';
+		$args = array( $post->ID, $type );
 
-		\wp_schedule_single_event(
-			\time(),
-			sprintf(
-				'activitypub_send_%s_activity',
-				\strtolower( $type )
-			),
-			array( $post )
-		);
+		if ( false === wp_next_scheduled( $hook, $args ) ) {
+			set_wp_object_state( $post, 'federate' );
+			\wp_schedule_single_event( \time(), $hook, $args );
+		}
 	}
 
 	/**
@@ -204,22 +197,13 @@ class Scheduler {
 			return;
 		}
 
-		set_wp_object_state( $comment, 'federate' );
+		$hook = 'activitypub_send_comment';
+		$args = array( $comment->comment_ID, $type );
 
-		\wp_schedule_single_event(
-			\time(),
-			'activitypub_send_activity',
-			array( $comment, $type )
-		);
-
-		\wp_schedule_single_event(
-			\time(),
-			sprintf(
-				'activitypub_send_%s_activity',
-				\strtolower( $type )
-			),
-			array( $comment )
-		);
+		if ( false === wp_next_scheduled( $hook, $args ) ) {
+			set_wp_object_state( $comment, 'federate' );
+			\wp_schedule_single_event( \time(), $hook, $args );
+		}
 	}
 
 	/**
