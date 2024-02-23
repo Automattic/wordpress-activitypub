@@ -20,6 +20,7 @@ class Comment {
 		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
+		\add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 	}
 
 	/**
@@ -39,7 +40,17 @@ class Comment {
 			return $link;
 		}
 
-		return apply_filters( 'activitypub_comment_reply_link', '' );
+		$attrs = array(
+			'selectedComment' => self::generate_id( $comment ),
+			'commentId' => $comment->comment_ID,
+		);
+
+		$div = sprintf(
+			'<div class="activitypub-remote-reply" data-attrs="%s"></div>',
+			esc_attr( wp_json_encode( $attrs ) )
+		);
+
+		return apply_filters( 'activitypub_comment_reply_link', $div );
 	}
 
 	/**
@@ -54,7 +65,7 @@ class Comment {
 	public static function are_comments_allowed( $comment ) {
 		$comment = \get_comment( $comment );
 
-		if ( self::is_local( $comment ) ) {
+		if ( ! self::was_received( $comment ) ) {
 			return true;
 		}
 
@@ -118,7 +129,7 @@ class Comment {
 
 		$status = \get_comment_meta( $comment->comment_ID, 'activitypub_status', true );
 
-		if ( 'federated' === $status ) {
+		if ( $status ) {
 			return true;
 		}
 
@@ -308,5 +319,66 @@ class Comment {
 		}
 
 		return $comment_link;
+	}
+
+
+	/**
+	 * Generates an ActivityPub URI for a comment
+	 *
+	 * @param WP_Comment|int $comment A comment object or comment ID
+	 *
+	 * @return string ActivityPub URI for comment
+	 */
+	public static function generate_id( $comment ) {
+		$comment = get_comment( $comment );
+
+		// show external comment ID if it exists
+		$source_id = get_comment_meta( $comment->comment_ID, 'source_id', true );
+		if ( ! empty( $source_id ) ) {
+			return $source_id;
+		}
+
+		// generate URI based on comment ID
+		return \add_query_arg(
+			array(
+				'c' => $comment->comment_ID,
+			),
+			\trailingslashit( site_url() )
+		);
+	}
+
+	/**
+	 * Enqueue scripts for remote comments
+	 */
+	public static function enqueue_scripts() {
+		if ( ! is_singular() ) {
+			return;
+		}
+		$handle     = 'activitypub-remote-reply';
+		$data       = array(
+			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
+		);
+		$js         = sprintf( 'var _activityPubOptions = %s;', wp_json_encode( $data ) );
+		$asset_file = ACTIVITYPUB_PLUGIN_DIR . 'build/remote-reply/index.asset.php';
+
+		if ( \file_exists( $asset_file ) ) {
+			$assets = require_once $asset_file;
+
+			\wp_enqueue_script(
+				$handle,
+				\plugins_url( 'build/remote-reply/index.js', __DIR__ ),
+				$assets['dependencies'],
+				$assets['version'],
+				true
+			);
+			\wp_add_inline_script( $handle, $js, 'before' );
+
+			\wp_enqueue_style(
+				$handle,
+				\plugins_url( 'build/remote-reply/style-index.css', __DIR__ ),
+				[ 'wp-components' ],
+				$assets['version']
+			);
+		}
 	}
 }

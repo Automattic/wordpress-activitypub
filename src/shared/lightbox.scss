@@ -1,0 +1,58 @@
+.activitypub__modal.components-modal__frame {
+	// @todo: play more nicely with dark background themes. the dialog is hardcoded to white bg in core, we go #eee here.
+	color: #333;
+	background-color: #f7f7f7;
+	.components-modal__header-heading, h4 {
+		color: #333;
+		// resets against potential theme weirdness
+		letter-spacing: inherit;
+		word-spacing: inherit;
+	}
+
+	.components-modal__header .components-button:hover {
+		color: var( --wp--preset--color--white );
+	}
+}
+
+.activitypub__dialog {
+	max-width: 40em;
+	h4 {
+		line-height: 1;
+		margin: 0;
+	}
+	.activitypub-dialog__section {
+		margin-bottom: 2em;
+	}
+	.activitypub-dialog__description {
+		font-size: var( --wp--preset--font-size--normal, .75rem );
+		margin: 0.33em 0 1em;
+	}
+	.activitypub-dialog__button-group {
+		display: flex;
+		justify-content: flex-end;
+		align-items: flex-end;
+
+		svg {
+			margin-right: .5em;
+			height: 21px;
+			width: 21px;
+		}
+
+		input {
+			flex: 1;
+			padding: 6px 12px;
+			background-color: var( --wp--preset--color--white );
+			color: var( --wp--preset--color--black );
+			border: 1px solid var( --wp--preset--color--black );
+			border-radius: inherit 0;
+		}
+
+		button {
+			margin-left: 0;
+			align-self: center;
+			text-decoration: none;
+			background-color: var(--wp--preset--color--black);
+			color: var(--wp--preset--color--white);
+		}
+	}
+}

@@ -81,7 +81,6 @@ class Delete {
 				// check if Object is an Actor.
 				if ( $activity['actor'] === $activity['object'] ) {
 					self::maybe_delete_follower( $activity );
-					self::maybe_delete_interactions( $activity );
 				} else { // assume a interaction otherwise.
 					self::maybe_delete_interaction( $activity );
 				}
@@ -101,6 +100,7 @@ class Delete {
 		// verify if Actor is deleted.
 		if ( $follower && Http::is_tombstone( $activity['actor'] ) ) {
 			$follower->delete();
+			self::maybe_delete_interactions( $activity );
 		}
 	}
 

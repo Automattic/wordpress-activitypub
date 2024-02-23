@@ -141,7 +141,7 @@ class Scheduler {
 			$type = 'Delete';
 		}
 
-		if ( ! $type ) {
+		if ( empty( $type ) ) {
 			return;
 		}
 
@@ -178,6 +178,8 @@ class Scheduler {
 			return;
 		}
 
+		$type = false;
+
 		if (
 			'approved' === $new_status &&
 			'approved' !== $old_status
@@ -193,7 +195,7 @@ class Scheduler {
 			$type = 'Delete';
 		}
 
-		if ( ! $type ) {
+		if ( empty( $type ) ) {
 			return;
 		}
 
@@ -201,6 +203,8 @@ class Scheduler {
 		if ( ! should_comment_be_federated( $comment ) ) {
 			return;
 		}
+
+		set_wp_object_state( $comment, 'federate' );
 
 		\wp_schedule_single_event(
 			\time(),
