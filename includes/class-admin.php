@@ -175,7 +175,6 @@ class Admin {
 					'schema' => array(
 						'enum' => array(
 							'note',
-							'article',
 							'wordpress-post-format',
 						),
 					),

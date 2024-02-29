@@ -74,9 +74,39 @@
 				<tbody>
 					<tr>
 						<th scope="row">
+							<?php \esc_html_e( 'Activity-Object-Type', 'activitypub' ); ?>
+						</th>
+						<td>
+							<p>
+								<label for="activitypub_object_type_note">
+									<input type="radio" name="activitypub_object_type" id="activitypub_object_type_note" value="note" <?php echo \checked( 'note', \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ); ?> />
+									<?php \esc_html_e( 'Note (default)', 'activitypub' ); ?>
+									-
+									<span class="description">
+										<?php \esc_html_e( 'Should work with most platforms.', 'activitypub' ); ?>
+									</span>
+								</label>
+							</p>
+							<p>
+								<label>
+									<input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="wordpress-post-format" <?php echo \checked( 'wordpress-post-format', \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ); ?> />
+									<?php \esc_html_e( 'WordPress Post-Format', 'activitypub' ); ?>
+									-
+									<span class="description">
+										<?php \esc_html_e( 'Maps the WordPress Post-Format to the ActivityPub Object Type.', 'activitypub' ); ?>
+									</span>
+								</label>
+							</p>
+
+						</td>
+					</tr>
+					<?php // phpcs:ignore Squiz.ControlStructures.ControlSignature.NewlineAfterOpenBrace ?>
+					<tr <?php if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ) { echo 'style="display: none"'; } ?>>
+						<th scope="row">
 							<?php \esc_html_e( 'Post content', 'activitypub' ); ?>
 						</th>
 						<td>
+							<p><strong><?php \esc_html_e( 'These settings only apply if you use the "Note" Object-Type setting above.', 'activitypub' ); ?></strong></p>
 							<p>
 								<label for="activitypub_post_content_type_title_link">
 									<input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_title_link" value="title" <?php echo \checked( 'title', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> />
@@ -160,44 +190,6 @@
 										esc_html_e( 'Note: audio and video attachments are only supported from Block Editor.', 'activitypub' );
 									?>
 								</em>
-							</p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row">
-							<?php \esc_html_e( 'Activity-Object-Type', 'activitypub' ); ?>
-						</th>
-						<td>
-							<p>
-								<label for="activitypub_object_type_note">
-									<input type="radio" name="activitypub_object_type" id="activitypub_object_type_note" value="note" <?php echo \checked( 'note', \get_option( 'activitypub_object_type', 'note' ) ); ?> />
-									<?php \esc_html_e( 'Note (default)', 'activitypub' ); ?>
-									-
-									<span class="description">
-										<?php \esc_html_e( 'Should work with most platforms.', 'activitypub' ); ?>
-									</span>
-								</label>
-							</p>
-							<p><strong><?php \esc_html_e( 'Please note that the following "Activity-Object-Type" options may cause your texts to be displayed differently on each platform and/or parts may be completely ignored. Mastodon, for example, displays all content that is not of the "Note" type as links only.', 'activitypub' ); ?></strong></p>
-							<p>
-								<label for="activitypub_object_type_article">
-									<input type="radio" name="activitypub_object_type" id="activitypub_object_type_article" value="article" <?php echo \checked( 'article', \get_option( 'activitypub_object_type', 'note' ) ); ?> />
-									<?php \esc_html_e( 'Article', 'activitypub' ); ?>
-									-
-									<span class="description">
-										<?php \esc_html_e( 'The presentation of the "Article" might change on different platforms.', 'activitypub' ); ?>
-									</span>
-								</label>
-							</p>
-							<p>
-								<label>
-									<input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="wordpress-post-format" <?php echo \checked( 'wordpress-post-format', \get_option( 'activitypub_object_type', 'note' ) ); ?> />
-									<?php \esc_html_e( 'WordPress Post-Format', 'activitypub' ); ?>
-									-
-									<span class="description">
-										<?php \esc_html_e( 'Maps the WordPress Post-Format to the ActivityPub Object Type.', 'activitypub' ); ?>
-									</span>
-								</label>
 							</p>
 						</td>
 					</tr>
