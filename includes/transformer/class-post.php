@@ -735,7 +735,7 @@ class Post extends Base {
 
 		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 
-		if ( 'wordpress-post-format' !== $post_format_setting ) {
+		if ( 'wordpress-post-format' === $post_format_setting ) {
 			$template = '[ap_content]';
 		}
 
