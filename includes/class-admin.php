@@ -340,7 +340,6 @@ class Admin {
 	public static function comment_row_actions( $actions, $comment ) {
 		if ( was_comment_received( $comment ) ) {
 			unset( $actions['edit'] );
-			unset( $actions['reply'] );
 			unset( $actions['quickedit'] );
 		}
 

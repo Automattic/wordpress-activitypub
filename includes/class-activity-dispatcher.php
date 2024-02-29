@@ -27,6 +27,9 @@ class Activity_Dispatcher {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		\add_action( 'activitypub_send_post', array( self::class, 'send_post' ), 10, 2 );
+		\add_action( 'activitypub_send_comment', array( self::class, 'send_comment' ), 10, 2 );
+
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity' ), 10, 2 );
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity_or_announce' ), 10, 2 );
 		\add_action( 'activitypub_send_update_profile_activity', array( self::class, 'send_profile_update' ), 10, 1 );
@@ -171,5 +174,55 @@ class Activity_Dispatcher {
 		}
 
 		set_wp_object_state( $wp_object, 'federated' );
+	}
+
+	/**
+	 * Send a "Create" or "Update" Activity for a WordPress Post.
+	 *
+	 * @param int    $id   The WordPress Post ID.
+	 * @param string $type The Activity-Type.
+	 *
+	 * @return void
+	 */
+	public static function send_post( $id, $type ) {
+		$post = get_post( $id );
+
+		if ( ! $post ) {
+			return;
+		}
+
+		do_action( 'activitypub_send_activity', $post, $type );
+		do_action(
+			sprintf(
+				'activitypub_send_%s_activity',
+				\strtolower( $type )
+			),
+			$post
+		);
+	}
+
+	/**
+	 * Send a "Create" or "Update" Activity for a WordPress Comment.
+	 *
+	 * @param int    $id   The WordPress Comment ID.
+	 * @param string $type The Activity-Type.
+	 *
+	 * @return void
+	 */
+	public static function send_comment( $id, $type ) {
+		$comment = get_comment( $id );
+
+		if ( ! $comment ) {
+			return;
+		}
+
+		do_action( 'activitypub_send_activity', $comment, $type );
+		do_action(
+			sprintf(
+				'activitypub_send_%s_activity',
+				\strtolower( $type )
+			),
+			$comment
+		);
 	}
 }
