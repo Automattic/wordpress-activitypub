@@ -643,7 +643,13 @@ class Post extends Base {
 			return null;
 		}
 
-		return \get_the_excerpt( $this->wp_object->ID );
+		return \wp_strip_all_tags(
+			\html_entity_decode(
+				\get_the_excerpt(
+					$this->wp_object->ID
+				)
+			)
+		);
 	}
 
 	/**
@@ -662,7 +668,11 @@ class Post extends Base {
 		$title = \get_the_title( $this->wp_object->ID );
 
 		if ( $title ) {
-			return $title;
+			return \wp_strip_all_tags(
+				\html_entity_decode(
+					$title
+				)
+			);
 		}
 
 		return null;
