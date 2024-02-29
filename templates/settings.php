@@ -78,25 +78,26 @@
 						</th>
 						<td>
 							<p>
-								<label>
-									<input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="wordpress-post-format" <?php echo \checked( 'wordpress-post-format', \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ); ?> />
-									<?php \esc_html_e( 'WordPress Post-Format (default)', 'activitypub' ); ?>
-									-
-									<span class="description">
-										<?php \esc_html_e( 'Maps the WordPress Post-Format to the ActivityPub Object Type.', 'activitypub' ); ?>
-									</span>
-								</label>
-							</p>
-							<p>
 								<label for="activitypub_object_type_note">
 									<input type="radio" name="activitypub_object_type" id="activitypub_object_type_note" value="note" <?php echo \checked( 'note', \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ); ?> />
-									<?php \esc_html_e( 'Note', 'activitypub' ); ?>
+									<?php \esc_html_e( 'Note (default)', 'activitypub' ); ?>
 									-
 									<span class="description">
 										<?php \esc_html_e( 'Should work with most platforms.', 'activitypub' ); ?>
 									</span>
 								</label>
 							</p>
+							<p>
+								<label>
+									<input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="wordpress-post-format" <?php echo \checked( 'wordpress-post-format', \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ); ?> />
+									<?php \esc_html_e( 'WordPress Post-Format', 'activitypub' ); ?>
+									-
+									<span class="description">
+										<?php \esc_html_e( 'Maps the WordPress Post-Format to the ActivityPub Object Type.', 'activitypub' ); ?>
+									</span>
+								</label>
+							</p>
+
 						</td>
 					</tr>
 					<?php // phpcs:ignore Squiz.ControlStructures.ControlSignature.NewlineAfterOpenBrace ?>
