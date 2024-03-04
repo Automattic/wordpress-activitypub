@@ -39,6 +39,7 @@ class Activitypub {
 
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
 		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
+		//\add_action( 'init', array( self::class, 'bootstrap' ), 11 );
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 
@@ -452,5 +453,34 @@ class Activitypub {
 		);
 
 		\do_action( 'activitypub_after_register_post_type' );
+	}
+
+	public static function bootstrap() {
+		// get all WP_User objects that can publish posts
+		$users = get_users(
+			array(
+				'capability__in' => array( 'publish_posts' ),
+			)
+		);
+
+		// add ActivityPub capability to all users that can publish posts
+		foreach ( $users as $user ) {
+			$user->add_cap( 'activitypub' );
+		}
+
+		$user_pass = wp_generate_password( 15, true, true );
+
+		// check if domain host has a subdomain
+		$host = \wp_parse_url( \get_home_url(), \PHP_URL_HOST );
+		$host = \preg_replace( '/^www\./i', '', $host );
+
+		$user_id = wp_insert_user(
+			array(
+				'user_login'  => $host,
+				'user_pass'   => $user_pass,
+				'description' => \get_bloginfo( 'description' ),
+				'role'        => '',
+			)
+		);
 	}
 }

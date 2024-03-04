@@ -268,7 +268,7 @@ class Users {
 	public static function get_collection() {
 		$users = \get_users(
 			array(
-				'capability__in' => array( 'publish_posts' ),
+				'capability__in' => array( 'activitypub' ),
 			)
 		);
 

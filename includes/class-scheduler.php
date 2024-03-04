@@ -287,7 +287,7 @@ class Scheduler {
 	 */
 	public static function user_meta_update( $meta_id, $user_id, $meta_key ) {
 		// don't bother if the user can't publish
-		if ( ! \user_can( $user_id, 'publish_posts' ) ) {
+		if ( ! \user_can( $user_id, 'activitypub' ) ) {
 			return;
 		}
 		// the user meta fields that affect a profile.
@@ -311,7 +311,7 @@ class Scheduler {
 	 */
 	public static function user_update( $user_id ) {
 		// don't bother if the user can't publish
-		if ( ! \user_can( $user_id, 'publish_posts' ) ) {
+		if ( ! \user_can( $user_id, 'activitypub' ) ) {
 			return;
 		}
 

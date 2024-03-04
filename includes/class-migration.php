@@ -108,6 +108,12 @@ class Migration {
 
 		$version_from_db = self::get_version();
 
+		// initial install
+		if ( ! $version_from_db ) {
+			// bootstrap settings
+			update_option( 'activitypub_db_version', self::get_target_version() );
+		}
+
 		if ( version_compare( $version_from_db, '0.17.0', '<' ) ) {
 			self::migrate_from_0_16();
 		}
