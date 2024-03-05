@@ -64,9 +64,6 @@ class Scheduler {
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
 
-		// Migration
-		\add_action( 'admin_init', array( self::class, 'schedule_migration' ) );
-
 		// profile updates for blog options
 		if ( ! is_user_type_disabled( 'blog' ) ) {
 			\add_action( 'update_option_site_icon', array( self::class, 'blog_user_update' ) );
