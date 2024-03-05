@@ -25,7 +25,6 @@ class Admin {
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'admin_notices', array( self::class, 'admin_notices' ) );
 		\add_filter( 'comment_row_actions', array( self::class, 'comment_row_actions' ), 10, 2 );
-		\add_filter( 'users_list_table_query_args', array( self::class, 'modify_user_query' ) );
 
 		\add_filter( 'manage_users_columns', array( self::class, 'manage_users_columns' ), 10, 1 );
 		\add_filter( 'manage_users_custom_column', array( self::class, 'manage_users_custom_column' ), 10, 3 );
@@ -350,12 +349,6 @@ class Admin {
 		}
 
 		return $actions;
-	}
-
-	public static function modify_user_query( $args ) {
-		$args['exclude'] = array( 5 );
-
-		return $args;
 	}
 
 	/**
