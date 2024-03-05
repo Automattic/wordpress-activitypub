@@ -233,11 +233,6 @@ class Migration {
 	 * @return void
 	 */
 	private static function migrate_from_2_1_0() {
-		// delete old meta to store followers
-		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
-			delete_user_meta( $user_id, 'activitypub_followers' );
-		}
-
 		// add the ActivityPub capability to all users that can publish posts
 		self::add_activitypub_capability();
 	}
