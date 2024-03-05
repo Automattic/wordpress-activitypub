@@ -12,13 +12,6 @@ use Activitypub\Collection\Followers;
  */
 class Migration {
 	/**
-	 * Initialize the class, registering WordPress hooks
-	 */
-	public static function init() {
-		\add_action( 'activitypub_schedule_migration', array( self::class, 'maybe_migrate' ) );
-	}
-
-	/**
 	 * Get the target version.
 	 *
 	 * This is the version that the database structure will be updated to.
@@ -107,6 +100,12 @@ class Migration {
 		self::lock();
 
 		$version_from_db = self::get_version();
+
+		// check for inital migration
+		if ( ! $version_from_db ) {
+			self::set_defaults();
+			$version_from_db = self::get_target_version();
+		}
 
 		if ( version_compare( $version_from_db, '0.17.0', '<' ) ) {
 			self::migrate_from_0_16();
@@ -218,6 +217,27 @@ class Migration {
 		$object_type = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 		if ( 'article' === $object_type ) {
 			\update_option( 'activitypub_object_type', 'wordpress-post-format' );
+		}
+	}
+
+	/**
+	 * Set the defaults needed for the plugin to work
+	 *
+	 * * Add the ActivityPub capability to all users that can publish posts
+	 *
+	 * @return void
+	 */
+	public static function add_default_settings() {
+		// get all WP_User objects that can publish posts
+		$users = get_users(
+			array(
+				'capability__in' => array( 'publish_posts' ),
+			)
+		);
+
+		// add ActivityPub capability to all users that can publish posts
+		foreach ( $users as $user ) {
+			$user->add_cap( 'activitypub' );
 		}
 	}
 }

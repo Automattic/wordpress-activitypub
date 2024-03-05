@@ -266,17 +266,6 @@ class Scheduler {
 	}
 
 	/**
-	 * Schedule migration if DB-Version is not up to date.
-	 *
-	 * @return void
-	 */
-	public static function schedule_migration() {
-		if ( ! \wp_next_scheduled( 'activitypub_schedule_migration' ) && ! Migration::is_latest_version() ) {
-			\wp_schedule_single_event( \time(), 'activitypub_schedule_migration' );
-		}
-	}
-
-	/**
 	 * Send a profile update when relevant user meta is updated.
 	 *
 	 * @param  int    $meta_id Meta ID being updated.

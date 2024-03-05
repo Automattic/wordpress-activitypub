@@ -386,7 +386,7 @@ class Admin {
 			return $output;
 		}
 
-		if ( user_can( $user_id, 'activitypub' ) ) {
+		if ( \user_can( $user_id, 'activitypub' ) ) {
 			return '&#x2713;';
 		} else {
 			return '&#x2717;';

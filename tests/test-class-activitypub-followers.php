@@ -271,6 +271,8 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 	}
 
 	public function test_migration() {
+		update_option( 'activitypub_db_version', '0.0.1' );
+
 		$followers = array(
 			'https://example.com/author/jon',
 			'https://example.og/errors',
