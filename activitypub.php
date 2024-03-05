@@ -97,11 +97,17 @@ function plugin_init() {
 
 	require_once __DIR__ . '/integration/class-enable-mastodon-apps.php';
 	Integration\Enable_Mastodon_Apps::init();
-
-	// run migration
-	Migration::maybe_migrate();
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
+
+\add_action(
+	'init',
+	function() {
+		// run migration
+		Migration::maybe_migrate();
+	}
+);
+
 
 /**
  * Class Autoloader

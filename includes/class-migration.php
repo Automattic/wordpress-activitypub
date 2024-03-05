@@ -29,7 +29,7 @@ class Migration {
 	 * @return string The current version.
 	 */
 	public static function get_version() {
-		return get_option( 'activitypub_db_version', self::get_target_version() );
+		return get_option( 'activitypub_db_version', 0 );
 	}
 
 	/**
@@ -89,6 +89,7 @@ class Migration {
 	 * Updates the database structure if necessary.
 	 */
 	public static function maybe_migrate() {
+		self::unlock();
 		if ( self::is_latest_version() ) {
 			return;
 		}
@@ -103,7 +104,7 @@ class Migration {
 
 		// check for inital migration
 		if ( ! $version_from_db ) {
-			self::set_defaults();
+			self::add_default_settings();
 			$version_from_db = self::get_target_version();
 		}
 
@@ -118,6 +119,9 @@ class Migration {
 		}
 		if ( version_compare( $version_from_db, '2.1.0', '<' ) ) {
 			self::migrate_from_2_0_0();
+		}
+		if ( version_compare( $version_from_db, '2.2.0', '<' ) ) {
+			self::add_default_settings();
 		}
 
 		update_option( 'activitypub_db_version', self::get_target_version() );
@@ -188,7 +192,7 @@ class Migration {
 	 * @return void
 	 */
 	private static function migrate_from_1_2_0() {
-		$user_ids = get_users(
+		$user_ids = \get_users(
 			array(
 				'fields'         => 'ID',
 				'capability__in' => array( 'publish_posts' ),
@@ -229,7 +233,7 @@ class Migration {
 	 */
 	public static function add_default_settings() {
 		// get all WP_User objects that can publish posts
-		$users = get_users(
+		$users = \get_users(
 			array(
 				'capability__in' => array( 'publish_posts' ),
 			)
