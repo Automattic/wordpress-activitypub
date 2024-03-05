@@ -203,14 +203,16 @@ class Activitypub {
 		$avatar = self::get_avatar_url( $id_or_email->comment_ID );
 
 		if ( $avatar ) {
-			if ( ! isset( $args['class'] ) || ! \is_array( $args['class'] ) ) {
-				$args['class'] = array( 'u-photo' );
-			} else {
-				$args['class'][] = 'u-photo';
-				$args['class']   = \array_unique( $args['class'] );
+			if ( empty( $args['class'] ) ) {
+				$args['class'] = array();
+			} elseif ( \is_string( $args['class'] ) ) {
+				$args['class'] = \explode( ' ', $args['class'] );
 			}
+
 			$args['url']     = $avatar;
 			$args['class'][] = 'avatar-activitypub';
+			$args['class'][] = 'u-photo';
+			$args['class']   = \array_unique( $args['class'] );
 		}
 
 		return $args;
