@@ -130,26 +130,6 @@ class Migration {
 	}
 
 	/**
-	 * Updates the DB-schema of the followers-list
-	 *
-	 * @return void
-	 */
-	private static function migrate_from_0_17() {
-		// migrate followers
-		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
-			$followers = get_user_meta( $user_id, 'activitypub_followers', true );
-
-			if ( $followers ) {
-				foreach ( $followers as $actor ) {
-					Followers::add_follower( $user_id, $actor );
-				}
-			}
-		}
-
-		Activitypub::flush_rewrite_rules();
-	}
-
-	/**
 	 * Updates the custom template to use shortcodes instead of the deprecated templates.
 	 *
 	 * @return void
@@ -184,6 +164,26 @@ class Migration {
 		if ( $content !== $old_content || $need_update ) {
 			\update_option( 'activitypub_custom_post_content', $content );
 		}
+	}
+
+	/**
+	 * Updates the DB-schema of the followers-list
+	 *
+	 * @return void
+	 */
+	private static function migrate_from_0_17() {
+		// migrate followers
+		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
+			$followers = get_user_meta( $user_id, 'activitypub_followers', true );
+
+			if ( $followers ) {
+				foreach ( $followers as $actor ) {
+					Followers::add_follower( $user_id, $actor );
+				}
+			}
+		}
+
+		Activitypub::flush_rewrite_rules();
 	}
 
 	/**
