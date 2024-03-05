@@ -69,7 +69,6 @@ function rest_init() {
  * Initialize plugin.
  */
 function plugin_init() {
-	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Activity_Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
