@@ -39,7 +39,6 @@ class Activitypub {
 
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
 		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
-		//\add_action( 'init', array( self::class, 'bootstrap' ), 11 );
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 
