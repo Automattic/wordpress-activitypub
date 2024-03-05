@@ -111,9 +111,11 @@ class Migration {
 		if ( version_compare( $version_from_db, '0.17.0', '<' ) ) {
 			self::migrate_from_0_16();
 		}
-		if ( version_compare( $version_from_db, '1.0.0', '<' ) ) {
-			self::migrate_from_0_17();
-		}
+
+		// version_compare( $version_from_db, '1.0.0', '<' )
+		// should be triggered by hand, because it could take a while
+		// self::migrate_from_0_17();
+
 		if ( version_compare( $version_from_db, '1.3.0', '<' ) ) {
 			self::migrate_from_1_2_0();
 		}
