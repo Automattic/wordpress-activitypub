@@ -21,6 +21,8 @@ use function Activitypub\site_supports_blocks;
 require_once __DIR__ . '/includes/compat.php';
 require_once __DIR__ . '/includes/functions.php';
 
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '2.2.0' );
+
 /**
  * Initialize the plugin constants.
  */
@@ -226,6 +228,10 @@ function get_plugin_meta( $default_headers = array() ) {
  * Plugin Version Number used for caching.
  */
 function get_plugin_version() {
+	if ( \defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
+		return ACTIVITYPUB_PLUGIN_VERSION;
+	}
+
 	$meta = get_plugin_meta( array( 'Version' => 'Version' ) );
 
 	return $meta['Version'];
