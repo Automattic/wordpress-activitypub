@@ -15,7 +15,7 @@ class Migration {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'activitypub_migrate_from_0_17', array( self::class, 'migrate_from_0_17' ) );
+		\add_action( 'activitypub_migrate', array( self::class, 'async_migration' ) );
 
 		self::maybe_migrate();
 	}
@@ -116,17 +116,13 @@ class Migration {
 			$version_from_db = self::get_target_version();
 		}
 
+		// schedule the async migration
+		if ( ! \wp_next_scheduled( 'activitypub_migrate' ) ) {
+			\wp_schedule_single_event( \time(), 'activitypub_migrate', $version_from_db );
+		}
 		if ( version_compare( $version_from_db, '0.17.0', '<' ) ) {
 			self::migrate_from_0_16();
 		}
-
-		if ( version_compare( $version_from_db, '1.0.0', '<' ) ) {
-			// schedule the migration because it could take a while
-			if ( ! \wp_next_scheduled( 'activitypub_migrate_from_0_17' ) ) {
-				\wp_schedule_single_event( \time() + 10000, 'activitypub_migrate_from_0_17' );
-			}
-		}
-
 		if ( version_compare( $version_from_db, '1.3.0', '<' ) ) {
 			self::migrate_from_1_2_0();
 		}
@@ -140,6 +136,17 @@ class Migration {
 		update_option( 'activitypub_db_version', self::get_target_version() );
 
 		self::unlock();
+	}
+
+	/**
+	 * Asynchronously migrates the database structure.
+	 *
+	 * @param string $version_from_db The version from which to migrate.
+	 */
+	public static function async_migration( $version_from_db ) {
+		if ( version_compare( $version_from_db, '1.0.0', '<' ) ) {
+			self::migrate_from_0_17();
+		}
 	}
 
 	/**
