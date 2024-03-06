@@ -12,6 +12,15 @@ use Activitypub\Collection\Followers;
  */
 class Migration {
 	/**
+	 * Initialize the class, registering WordPress hooks
+	 */
+	public static function init() {
+		\add_action( 'activitypub_migrate_from_0_17', array( self::class, 'migrate_from_0_17' ) );
+
+		self::maybe_migrate();
+	}
+
+	/**
 	 * Get the target version.
 	 *
 	 * This is the version that the database structure will be updated to.
@@ -89,7 +98,6 @@ class Migration {
 	 * Updates the database structure if necessary.
 	 */
 	public static function maybe_migrate() {
-		self::unlock();
 		if ( self::is_latest_version() ) {
 			return;
 		}
@@ -112,9 +120,12 @@ class Migration {
 			self::migrate_from_0_16();
 		}
 
-		// version_compare( $version_from_db, '1.0.0', '<' )
-		// should be triggered by hand, because it could take a while
-		// self::migrate_from_0_17();
+		if ( version_compare( $version_from_db, '1.0.0', '<' ) ) {
+			// schedule the migration because it could take a while
+			if ( ! \wp_next_scheduled( 'activitypub_migrate_from_0_17' ) ) {
+				\wp_schedule_single_event( \time() + 10000, 'activitypub_migrate_from_0_17' );
+			}
+		}
 
 		if ( version_compare( $version_from_db, '1.3.0', '<' ) ) {
 			self::migrate_from_1_2_0();
@@ -173,7 +184,7 @@ class Migration {
 	 *
 	 * @return void
 	 */
-	private static function migrate_from_0_17() {
+	public static function migrate_from_0_17() {
 		// migrate followers
 		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
 			$followers = get_user_meta( $user_id, 'activitypub_followers', true );

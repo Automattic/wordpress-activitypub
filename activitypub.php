@@ -71,6 +71,7 @@ function rest_init() {
  * Initialize plugin.
  */
 function plugin_init() {
+	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Activity_Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
@@ -101,14 +102,6 @@ function plugin_init() {
 	Integration\Enable_Mastodon_Apps::init();
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
-
-\add_action(
-	'init',
-	function() {
-		// run migration
-		Migration::maybe_migrate();
-	}
-);
 
 
 /**

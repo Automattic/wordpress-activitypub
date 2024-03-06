@@ -286,7 +286,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 
 		add_user_meta( $user_id, 'activitypub_followers', $followers, true );
 
-		\Activitypub\Migration::maybe_migrate();
+		\Activitypub\Migration::migrate_from_0_17();
 
 		$db_followers = \Activitypub\Collection\Followers::get_followers( 1 );
 
