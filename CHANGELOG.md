@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.2.0]
+## [2.2.0] - 2024-02-27
 
 ### Added
 
@@ -16,14 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Prevent scheduler overload
 
-## [2.1.1]
+## [2.1.1] - 2024-02-13
 
 ### Added
 
 * Add `@` prefix to Follow-Block
 * Apply `comment_text` filter to Activity
 
-## [2.1.0]
+## [2.1.0] - 2024-02-12
 
 ### Added
 
@@ -37,8 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Some Federated Comment improvements
 * Remove old/abandoned Crons
 
-
-## [2.0.1]
+## [2.0.1] - 2024-01-12
 
 ### Fixed
 
@@ -50,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Re-Added Post Model Class because of some weird caching issues
 
-## [2.0.0]
+## [2.0.0] - 2024-01-09
 
 ### Added
 
@@ -74,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Normalize attributes that can have mixed value types
 
-## [1.3.0]
+## [1.3.0] 2023-12-05
 
 ### Added
 
@@ -91,7 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * removed default limit of WP_Query to send updates to all Inboxes and not only to the first 10
 
-## [1.2.0]
+## [1.2.0] - 2023-11-18
 
 ### Added
 
@@ -107,7 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Deduplicate attachments earlier to prevent incorrect max_media
 
-## [1.1.0]
+## [1.1.0] - 2023-11-08
 
 ### Changed
 
@@ -701,7 +700,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [2.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/2.1.1...2.2.0
 [2.1.1]: https://github.com/Automattic/wordpress-activitypub/compare/2.1.0...2.1.1
-
+[2.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/2.0.1...2.1.0
+[2.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/2.0.0...2.0.1
+[2.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/1.3.0...2.0.0
+[1.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/1.2.0...1.3.0
+[1.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/1.1.0...1.2.0
+[1.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/1.0.10...1.1.0
+[1.0.10]: https://github.com/Automattic/wordpress-activitypub/compare/1.0.9...1.0.10
+[1.0.9]: https://github.com/Automattic/wordpress-activitypub/compare/1.0.8...1.0.9
+[1.0.8]: https://github.com/Automattic/wordpress-activitypub/compare/1.0.7...1.0.8
+[1.0.7]: https://github.com/Automattic/wordpress-activitypub/compare/1.0.6...1.0.7
+[1.0.6]: https://github.com/Automattic/wordpress-activitypub/compare/1.0.5...1.0.6
+[1.0.5]: https://github.com/Automattic/wordpress-activitypub/compare/1.0.4...1.0.5
+[1.0.4]: https://github.com/Automattic/wordpress-activitypub/compare/1.0.3...1.0.4
+[1.0.3]: https://github.com/Automattic/wordpress-activitypub/compare/1.0.2...1.0.3
+[1.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/1.0.1...1.0.2
+[1.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/1.0.0...1.0.1
+[1.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.17.0...1.0.0
+[0.17.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.16.5...0.17.0
+[0.16.5]: https://github.com/Automattic/wordpress-activitypub/compare/0.16.4...0.16.5
+[0.16.4]: https://github.com/Automattic/wordpress-activitypub/compare/0.16.3...0.16.4
+[0.16.3]: https://github.com/Automattic/wordpress-activitypub/compare/0.16.2...0.16.3
+[0.16.2]: https://github.com/Automattic/wordpress-activitypub/compare/0.16.1...0.16.2
+[0.16.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.16.0...0.16.1
+[0.16.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.15.0...0.16.0
+[0.15.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.14.3...0.15.0
+[0.14.3]: https://github.com/Automattic/wordpress-activitypub/compare/0.14.2...0.14.3
+[0.14.2]: https://github.com/Automattic/wordpress-activitypub/compare/0.14.1...0.14.2
+[0.14.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.14.0...0.14.1
+[0.14.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.13.4...0.14.0
+[0.13.4]: https://github.com/Automattic/wordpress-activitypub/compare/0.13.3...0.13.4
+[0.13.3]: https://github.com/Automattic/wordpress-activitypub/compare/0.13.2...0.13.3
+[0.13.2]: https://github.com/Automattic/wordpress-activitypub/compare/0.13.1...0.13.2
+[0.13.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.13.0...0.13.1
+[0.13.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.12.0...0.13.0
+[0.12.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.11.2...0.12.0
+[0.11.2]: https://github.com/Automattic/wordpress-activitypub/compare/0.11.1...0.11.2
+[0.11.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.11.0...0.11.1
+[0.11.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.10.1...0.11.0
+[0.10.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.10.0...0.10.1
+[0.10.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.9.1...0.10.0
+[0.9.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.9.0...0.9.1
+[0.9.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.8.3...0.9.0
+[0.8.3]: https://github.com/Automattic/wordpress-activitypub/compare/0.8.2...0.8.3
+[0.8.2]: https://github.com/Automattic/wordpress-activitypub/compare/0.8.1...0.8.2
+[0.8.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.8.0...0.8.1
+[0.8.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.7.4...0.8.0
+[0.7.4]: https://github.com/Automattic/wordpress-activitypub/compare/0.7.3...0.7.4
+[0.7.3]: https://github.com/Automattic/wordpress-activitypub/compare/0.7.2...0.7.3
+[0.7.2]: https://github.com/Automattic/wordpress-activitypub/compare/0.7.1...0.7.2
+[0.7.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.7.0...0.7.1
+[0.7.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.6.0...0.7.0
+[0.6.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.5.1...0.6.0
+[0.5.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.5.0...0.5.1
+[0.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.4.4...0.5.0
+[0.4.4]: https://github.com/Automattic/wordpress-activitypub/compare/0.4.3...0.4.4
+[0.4.3]: https://github.com/Automattic/wordpress-activitypub/compare/0.4.2...0.4.3
+[0.4.2]: https://github.com/Automattic/wordpress-activitypub/compare/0.4.1...0.4.2
+[0.4.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.3.2...0.4.0
 [0.3.2]: https://github.com/Automattic/wordpress-activitypub/compare/0.3.1...0.3.2
 [0.3.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.3.0...0.3.1
@@ -711,4 +767,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.0.2...0.1.0
 [0.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/0.0.1...0.0.2
-[0.0.1]: https://github.com/Automattic/wordpress-activitypub/releases/tag/0.0.1
+[0.0.1]: https://github.com/Automattic/wordpress-activitypub/releases
