@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub\Transformer;
 
+use WP_Error;
+use Activitypub\Transformer\Base;
 use Activitypub\Transformer\Post;
 use Activitypub\Transformer\Comment;
 use Activitypub\Transformer\Attachment;
@@ -10,6 +12,12 @@ use Activitypub\Transformer\Attachment;
  */
 class Factory {
 	public static function get_transformer( $object ) {
+		if ( ! \is_object( $object ) ) {
+			return new WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
+		}
+
+		$class = \get_class( $object );
+
 		/**
 		 * Filter the transformer for a given object.
 		 *
@@ -39,14 +47,21 @@ class Factory {
 		 *
 		 * @return mixed The transformer to use.
 		 */
-		$transformer = apply_filters( 'activitypub_transformer', null, $object, get_class( $object ) );
+		$transformer = \apply_filters( 'activitypub_transformer', null, $object, $class );
 
 		if ( $transformer ) {
+			if (
+				! \is_object( $transformer ) ||
+				! $transformer instanceof Base
+			) {
+				return new WP_Error( 'invalid_transformer', __( 'Invalid transformer', 'activitypub' ) );
+			}
+
 			return $transformer;
 		}
 
 		// use default transformer
-		switch ( get_class( $object ) ) {
+		switch ( $class ) {
 			case 'WP_Post':
 				if ( 'attachment' === $object->post_type ) {
 					return new Attachment( $object );
