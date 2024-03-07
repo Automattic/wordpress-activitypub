@@ -402,74 +402,117 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.12.0]
 
+### Changed
+
 * use "pre_option_require_name_email" filter instead of "check_comment_flood". props [@akirk](https://github.com/akirk)
 * save only comments/replies
 * check for an explicit "undo -> follow" action. see https://wordpress.org/support/topic/qs-after-latest/
 
 ## [0.11.2]
 
+### Fixed
+
 * fix inconsistent `%tags%` placeholder
 
 ## [0.11.1]
+
+### Fixed
 
 * fix follow/unfollow actions
 
 ## [0.11.0]
 
+### Added
+
 * add support for customizable post-content
 * first try of a delete activity
+
+### Changed
+
 * do not require email for AP entries. props [@akirk](https://github.com/akirk)
+
+### Fixed
+
 * fix [timezones](https://github.com/pfefferle/wordpress-activitypub/issues/63) bug. props [@mediaformat](https://github.com/mediaformat)
 * fix [digest header](https://github.com/pfefferle/wordpress-activitypub/issues/104) bug. props [@mediaformat](https://github.com/mediaformat)
 
 
 ## [0.10.1]
 
+### Fixed
+
 * fix inbox activities, like follow
 * fix debug
 
 ## [0.10.0]
 
+### Added
+
 * add image alt text to the ActivityStreams attachment property in a format that Mastodon can read. props [@BenLubar](https://github.com/BenLubar)
 * use the "summary" property for a title as Mastodon does. props [@BenLubar](https://github.com/BenLubar)
-* support authorized fetch to avoid having comments from "Anonymous". props [@BenLubar](https://github.com/BenLubar)
 * add new post type: "title and link only". props [@bgcarlisle](https://github.com/bgcarlisle)
 
+### Changed
+
+* support authorized fetch to avoid having comments from "Anonymous". props [@BenLubar](https://github.com/BenLubar)
+
 ## [0.9.1]
+
+### Removed
 
 * disable shared inbox
 * disable delete activity
 
 ## [0.9.0]
 
+### Changed
+
 * some code refactorings
+
+### Fixed
+
 * fix #73
 
 ## [0.8.3]
+
+### Fixed
 
 * fixed accept header bug
 
 ## [0.8.2]
 
-* add all required accept header
-* better/simpler accept-header handling
-* add debugging mechanism
-* Add setting to enable AP for different (public) Post-Types
+### Added
+
+* all required accept header
+* debugging mechanism
+* setting to enable AP for different (public) Post-Types
+
+### Changed
+
 * explicit use of global functions
+* better/simpler accept-header handling
 
 ## [0.8.1]
+
+### Fixed
 
 * fixed PHP warnings
 
 ## [0.8.0]
 
+### Changed
+
 * Moved followers list to user-menu
 
 ## [0.7.4]
 
+### Added
+
 * added admin_email to metadata, to be able to "Manage your instance" on https://fediverse.network/manage/
 
 ## [0.7.3]
+
+### Changed
 
 * refactorings
 * fixed PHP warnings
@@ -477,79 +520,139 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.2]
 
+### Fixed
+
 * fixed JSON representation of posts https://merveilles.town/@xuv/101907542498716956
 
 ## [0.7.1]
+
+### Fixed
 
 * fixed inbox problems with pleroma
 
 ## [0.7.0]
 
-* finally fixed pleroma compatibility
+### Added
+
 * added "following" endpoint
+
+### Changed
+
 * simplified "followers" endpoint
+
+### Fixed
+
+* finally fixed pleroma compatibility
 * fixed default value problem
 
 ## [0.6.0]
 
+### Added
+
 * add tags as hashtags to the end of each activity
-* fixed pleroma following issue
+
+### Changed
+
 * followers-list improvements
 
+### Fixed
+
+* fixed pleroma following issue
+
 ## [0.5.1]
+
+### Fixed
 
 * fixed name-collision that caused an infinite loop
 
 ## [0.5.0]
 
+### Changed
+
 * complete refactoring
+
+### Fixed
+
 * fixed bug #30: Password-protected posts are federated
 * only send Activites when ActivityPub is enabled for this post-type
 
 ## [0.4.4]
 
+### Changed
+
 * show avatars
 
 ## [0.4.3]
+
+### Fixed
 
 * finally fixed backlink in excerpt/summary posts
 
 ## [0.4.2]
 
+### Fixed
+
 * fixed backlink in excerpt/summary posts (thanks @depone)
 
 ## [0.4.1]
+
+### Fixed
 
 * finally fixed contact list
 
 ## [0.4.0]
 
+### Added
+
 * added settings to enable/disable hashtag support
+
+### Fixed
+
 * fixed follower list
+
+### Changed
+
 * send activities only for new posts, otherwise send updates
 
 ## [0.3.2]
 
+### Added
+
 * added "followers" endpoint
+
+### Changed
+
 * change activity content from blog 'excerpt' to blog 'content'
 
 ## [0.3.1]
+
+### Changed
 
 * better json encoding
 
 ## [0.3.0]
 
+### Adeed
+
 * basic hashtag support
-* temporarily deactivated likes and boosts
 * added support for actor objects
+
+### Removed
+
+* temporarily deactivated likes and boosts
+
+### Fixed
+
 * fixed encoding issue
 
 ## [0.2.1]
 
+### Changed
+
 * customizable backlink (permalink or shorturl)
 * show profile-identifiers also on profile settings
 
-## [0.2.0]
+## [0.2.0] - 2019-01-04
 
 ### Added
 
@@ -559,7 +662,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * html and duplicate new-lines
 
-## [0.1.1]
+## [0.1.1] - 2018-12-30
 
 ### Added
 
@@ -569,7 +672,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * "excerpt" in AS JSON
 
-## [0.1.0]
+## [0.1.0] - 2018-12-20
 
 ### Added
 
@@ -579,7 +682,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * send new posts to your followers
 * receive comments from your followers
 
-## [0.0.2]
+## [0.0.2] - 2018-11-06
 
 ### Added
 
@@ -590,12 +693,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * refactoring
 * nicer profile views
 
-## [0.0.1]
+## [0.0.1] - 2018-09-24
 
 ### Added
 
 * initial
 
+[2.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/2.1.1...2.2.0
+[2.1.1]: https://github.com/Automattic/wordpress-activitypub/compare/2.1.0...2.1.1
+
+[0.3.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.3.0...0.3.1
+[0.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.2.1...0.3.0
 [0.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/0.1.1...0.2.0
 [0.1.1]: https://github.com/Automattic/wordpress-activitypub/compare/0.1.0...0.1.1
