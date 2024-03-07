@@ -133,7 +133,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-See Changelog on [GitHub](https://github.com/automattic/wordpress-activitypub).
+See Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/master/CHANGELOG.md).
 
 == Upgrade Notice ==
 
