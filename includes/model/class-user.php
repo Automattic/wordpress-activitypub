@@ -159,7 +159,7 @@ class User extends Actor {
 
 		return array(
 			'type' => 'Image',
-			'url'  => $icon,
+			'url'  => $icon . '#time=' . date('Ydm', time()),
 		);
 	}
 
