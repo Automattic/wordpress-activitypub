@@ -361,7 +361,7 @@ class Admin {
 	 * @return array The columns extended by the activitypub.
 	 */
 	public static function manage_users_columns( $columns ) {
-		$columns['activitypub'] = __( 'ActivityPub Support', 'activitypub' );
+		$columns['activitypub'] = __( 'ActivityPub', 'activitypub' );
 		return $columns;
 	}
 
