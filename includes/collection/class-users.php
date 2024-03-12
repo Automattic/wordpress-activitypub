@@ -3,9 +3,7 @@ namespace Activitypub\Collection;
 
 use WP_Error;
 use WP_User_Query;
-use Activitypub\Model\User;
-use Activitypub\Model\Blog_User;
-use Activitypub\Model\Application_User;
+use Activitypub\Transformer\User;
 
 use function Activitypub\url_to_authorid;
 use function Activitypub\is_user_disabled;
@@ -45,12 +43,32 @@ class Users {
 			);
 		}
 
+		$user = null;
+
 		if ( self::BLOG_USER_ID === $user_id ) {
-			return Blog_User::from_wp_user( $user_id );
+			$args = array(
+				'role'    => 'activitypub_blog',
+				'orderby' => 'user_nicename',
+				'order'   => 'ASC',
+			);
+
+			$users = get_users( $args );
+			$user  = current( $users );
 		} elseif ( self::APPLICATION_USER_ID === $user_id ) {
-			return Application_User::from_wp_user( $user_id );
+			$args = array(
+				'role'    => 'activitypub_application',
+				'orderby' => 'user_nicename',
+				'order'   => 'ASC',
+			);
+
+			$users = get_users( $args );
+			$user  = current( $users );
 		} elseif ( $user_id > 0 ) {
-			return User::from_wp_user( $user_id );
+			$user = get_user_by( 'id', $user_id );
+		}
+
+		if ( $user ) {
+			return User::transform( $user )->to_actor();
 		}
 
 		return new WP_Error(
@@ -69,10 +87,6 @@ class Users {
 	 */
 	public static function get_by_username( $username ) {
 		// check for blog user.
-		if ( Blog_User::get_default_username() === $username ) {
-			return self::get_by_id( self::BLOG_USER_ID );
-		}
-
 		if ( get_option( 'activitypub_blog_user_identifier' ) === $username ) {
 			return self::get_by_id( self::BLOG_USER_ID );
 		}

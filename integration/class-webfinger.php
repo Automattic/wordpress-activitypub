@@ -36,12 +36,22 @@ class Webfinger {
 
 		$array['subject'] = sprintf( 'acct:%s', $user->get_webfinger() );
 
+		$array['aliases'][] = $user->get_id();
 		$array['aliases'][] = $user->get_url();
-		$array['aliases'][] = $user->get_alternate_url();
+		$array['aliases']   = array_unique( $array['aliases'] );
 
 		$array['links'][] = array(
-			'rel'  => 'self',
-			'type' => 'application/activity+json',
+			'rel'        => 'self',
+			'type'       => 'application/activity+json',
+			'href'       => $user->get_url(),
+			'properties' => array(
+				'https://www.w3.org/ns/activitystreams#type' => $user->get_type(),
+			),
+		);
+
+		$array['links'][] = array(
+			'rel'  => 'http://webfinger.net/rel/profile-page',
+			'type' => 'text/html',
 			'href' => $user->get_url(),
 		);
 

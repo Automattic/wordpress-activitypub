@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub;
 
+use Activitypub\Setup;
 use Activitypub\Activitypub;
 use Activitypub\Model\Blog_User;
 use Activitypub\Collection\Followers;
@@ -112,7 +113,8 @@ class Migration {
 
 		// check for inital migration
 		if ( ! $version_from_db ) {
-			self::add_default_settings();
+			Setup::init();
+			\do_action( 'activitypub_initialize_plugin' );
 			$version_from_db = self::get_target_version();
 		}
 
@@ -251,54 +253,6 @@ class Migration {
 	 * @return void
 	 */
 	private static function migrate_from_2_1_0() {
-		// add the ActivityPub capability to all users that can publish posts
-		self::add_activitypub_capability();
-	}
-
-	/**
-	 * Set the defaults needed for the plugin to work
-	 *
-	 * * Add the ActivityPub capability to all users that can publish posts
-	 *
-	 * @return void
-	 */
-	public static function add_default_settings() {
-		self::add_activitypub_capability();
-	}
-
-	/**
-	 * Add the ActivityPub capability to all users that can publish posts
-	 *
-	 * @return void
-	 */
-	private static function add_activitypub_capability() {
-		// get all WP_User objects that can publish posts
-		$users = \get_users(
-			array(
-				'capability__in' => array( 'publish_posts' ),
-			)
-		);
-
-		// add ActivityPub capability to all users that can publish posts
-		foreach ( $users as $user ) {
-			$user->add_cap( 'activitypub' );
-		}
-	}
-
-	public static function generate_blog_user() {
-		$user_pass = wp_generate_password( 15, true, true );
-
-		// check if domain host has a subdomain
-		$host = \wp_parse_url( \get_home_url(), \PHP_URL_HOST );
-		$host = \preg_replace( '/^www\./i', '', $host );
-
-		$user_id = wp_insert_user(
-			array(
-				'user_login'  => $host,
-				'user_pass'   => $user_pass,
-				'description' => \get_bloginfo( 'description' ),
-				'role'        => '',
-			)
-		);
+		Setup::init();
 	}
 }
