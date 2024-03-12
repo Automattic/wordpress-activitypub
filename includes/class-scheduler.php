@@ -64,9 +64,6 @@ class Scheduler {
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
 
-		// Migration
-		\add_action( 'admin_init', array( self::class, 'schedule_migration' ) );
-
 		// profile updates for blog options
 		if ( ! is_user_type_disabled( 'blog' ) ) {
 			\add_action( 'update_option_site_icon', array( self::class, 'blog_user_update' ) );
@@ -266,17 +263,6 @@ class Scheduler {
 	}
 
 	/**
-	 * Schedule migration if DB-Version is not up to date.
-	 *
-	 * @return void
-	 */
-	public static function schedule_migration() {
-		if ( ! \wp_next_scheduled( 'activitypub_schedule_migration' ) && ! Migration::is_latest_version() ) {
-			\wp_schedule_single_event( \time(), 'activitypub_schedule_migration' );
-		}
-	}
-
-	/**
 	 * Send a profile update when relevant user meta is updated.
 	 *
 	 * @param  int    $meta_id Meta ID being updated.
@@ -287,7 +273,7 @@ class Scheduler {
 	 */
 	public static function user_meta_update( $meta_id, $user_id, $meta_key ) {
 		// don't bother if the user can't publish
-		if ( ! \user_can( $user_id, 'publish_posts' ) ) {
+		if ( ! \user_can( $user_id, 'activitypub' ) ) {
 			return;
 		}
 		// the user meta fields that affect a profile.
@@ -311,7 +297,7 @@ class Scheduler {
 	 */
 	public static function user_update( $user_id ) {
 		// don't bother if the user can't publish
-		if ( ! \user_can( $user_id, 'publish_posts' ) ) {
+		if ( ! \user_can( $user_id, 'activitypub' ) ) {
 			return;
 		}
 

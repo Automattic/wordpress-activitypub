@@ -40,6 +40,8 @@ class Activitypub {
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
 		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
 
+		\add_action( 'user_register', array( self::class, 'user_register' ) );
+
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 
 		// register several post_types
@@ -201,14 +203,16 @@ class Activitypub {
 		$avatar = self::get_avatar_url( $id_or_email->comment_ID );
 
 		if ( $avatar ) {
-			if ( ! isset( $args['class'] ) || ! \is_array( $args['class'] ) ) {
-				$args['class'] = array( 'u-photo' );
-			} else {
-				$args['class'][] = 'u-photo';
-				$args['class']   = \array_unique( $args['class'] );
+			if ( empty( $args['class'] ) ) {
+				$args['class'] = array();
+			} elseif ( \is_string( $args['class'] ) ) {
+				$args['class'] = \explode( ' ', $args['class'] );
 			}
+
 			$args['url']     = $avatar;
 			$args['class'][] = 'avatar-activitypub';
+			$args['class'][] = 'u-photo';
+			$args['class']   = \array_unique( $args['class'] );
 		}
 
 		return $args;
@@ -454,6 +458,19 @@ class Activitypub {
 		\do_action( 'activitypub_after_register_post_type' );
 	}
 
+  /**
+	 * Add the 'activitypub' query variable so WordPress won't mangle it.
+	 *
+	 * @param int   $user_id  User ID.
+	 * @param array $userdata The raw array of data passed to wp_insert_user().
+	 */
+	public static function user_register( $user_id ) {
+		if ( \user_can( $user_id, 'publish_posts' ) ) {
+			$user = \get_user_by( 'id', $user_id );
+			$user->add_cap( 'activitypub' );
+		}
+	}
+
 	public static function generate_blog_user() {
 		$user_pass = wp_generate_password( 15, true, true );
 
@@ -469,5 +486,5 @@ class Activitypub {
 				'role'        => '',
 			)
 		);
-	}
+  }
 }

@@ -271,6 +271,8 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 	}
 
 	public function test_migration() {
+		update_option( 'activitypub_db_version', '0.0.1' );
+
 		$followers = array(
 			'https://example.com/author/jon',
 			'https://example.og/errors',
@@ -285,6 +287,12 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		add_user_meta( $user_id, 'activitypub_followers', $followers, true );
 
 		\Activitypub\Migration::maybe_migrate();
+
+		$schedule = \wp_next_scheduled( 'activitypub_migrate', '0.0.1' );
+
+		$this->assertNotFalse( $schedule );
+
+		do_action( 'activitypub_migrate', '0.0.1' );
 
 		$db_followers = \Activitypub\Collection\Followers::get_followers( 1 );
 

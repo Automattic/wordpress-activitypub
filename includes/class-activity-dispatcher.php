@@ -44,9 +44,6 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	public static function send_activity_or_announce( $wp_object, $type ) {
-		// check if a migration is needed before sending new posts
-		Migration::maybe_migrate();
-
 		if ( is_user_type_disabled( 'blog' ) ) {
 			return;
 		}

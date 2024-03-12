@@ -384,7 +384,7 @@ function is_user_disabled( $user_id ) {
 				break;
 			}
 
-			if ( ! \user_can( $user_id, 'publish_posts' ) ) {
+			if ( ! \user_can( $user_id, 'activitypub' ) ) {
 				$return = true;
 				break;
 			}
@@ -644,7 +644,7 @@ function get_total_users() {
 
 	$users = \get_users(
 		array(
-			'capability__in' => array( 'publish_posts' ),
+			'capability__in' => array( 'activitypub' ),
 		)
 	);
 
