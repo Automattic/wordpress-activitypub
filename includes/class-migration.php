@@ -284,4 +284,21 @@ class Migration {
 			$user->add_cap( 'activitypub' );
 		}
 	}
+
+	public static function generate_blog_user() {
+		$user_pass = wp_generate_password( 15, true, true );
+
+		// check if domain host has a subdomain
+		$host = \wp_parse_url( \get_home_url(), \PHP_URL_HOST );
+		$host = \preg_replace( '/^www\./i', '', $host );
+
+		$user_id = wp_insert_user(
+			array(
+				'user_login'  => $host,
+				'user_pass'   => $user_pass,
+				'description' => \get_bloginfo( 'description' ),
+				'role'        => '',
+			)
+		);
+	}
 }
