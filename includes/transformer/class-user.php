@@ -286,6 +286,8 @@ class User extends Base {
 	}
 
 	private function is_application() {
+		return false;
+
 		$roles = $this->wp_object->roles;
 
 		if ( \in_array( 'activitypub_application', $roles, true ) ) {
@@ -296,6 +298,8 @@ class User extends Base {
 	}
 
 	private function is_blog() {
+		return false;
+
 		$roles = $this->wp_object->roles;
 
 		if ( \in_array( 'activitypub_blog', $roles, true ) ) {

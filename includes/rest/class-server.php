@@ -5,7 +5,7 @@ use stdClass;
 use WP_Error;
 use WP_REST_Response;
 use Activitypub\Signature;
-use Activitypub\Model\Application_User;
+use Activitypub\Activity\Actor;
 
 /**
  * ActivityPub Server REST-Class

@@ -3,7 +3,7 @@ namespace Activitypub;
 
 use Activitypub\Setup;
 use Activitypub\Activitypub;
-use Activitypub\Model\Blog_User;
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Followers;
 
 /**

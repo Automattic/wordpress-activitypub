@@ -186,7 +186,7 @@ class Signature {
 	 */
 	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
 		$user = Users::get_by_id( $user_id );
-		$key  = self::get_private_key_for( $user->get__id() );
+		$key  = self::get_private_key_for( $user_id );
 
 		$url_parts = \wp_parse_url( $url );
 

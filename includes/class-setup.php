@@ -52,11 +52,11 @@ class Setup {
 
 		wp_insert_user(
 			array(
-				'user_login'  => $host,
-				'user_pass'   => $user_pass,
+				'user_login'   => $host,
+				'user_pass'    => $user_pass,
 				'display_name' => 'The ActivityPub Blog User',
-				'description' => \get_bloginfo( 'description' ),
-				'role'        => 'activitypub_blog',
+				'description'  => \get_bloginfo( 'description' ),
+				'role'         => 'activitypub_blog',
 			)
 		);
 	}

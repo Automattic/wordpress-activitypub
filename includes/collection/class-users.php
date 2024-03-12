@@ -46,23 +46,9 @@ class Users {
 		$user = null;
 
 		if ( self::BLOG_USER_ID === $user_id ) {
-			$args = array(
-				'role'    => 'activitypub_blog',
-				'orderby' => 'user_nicename',
-				'order'   => 'ASC',
-			);
-
-			$users = get_users( $args );
-			$user  = current( $users );
+			$user = self::get_blog();
 		} elseif ( self::APPLICATION_USER_ID === $user_id ) {
-			$args = array(
-				'role'    => 'activitypub_application',
-				'orderby' => 'user_nicename',
-				'order'   => 'ASC',
-			);
-
-			$users = get_users( $args );
-			$user  = current( $users );
+			$user = self::get_application();
 		} elseif ( $user_id > 0 ) {
 			$user = get_user_by( 'id', $user_id );
 		}
@@ -289,9 +275,41 @@ class Users {
 		$return = array();
 
 		foreach ( $users as $user ) {
-			$return[] = User::from_wp_user( $user->ID );
+			$return[] = User::transform( $user )->to_actor();
 		}
 
 		return $return;
+	}
+
+	public static function get_blog() {
+		$users = get_users(
+			array(
+				'role'    => 'activitypub_blog',
+				'orderby' => 'user_nicename',
+				'order'   => 'ASC',
+			)
+		);
+
+		if ( ! empty( $users ) ) {
+			return current( $users );
+		}
+
+		return null;
+	}
+
+	public static function get_application() {
+		$users = get_users(
+			array(
+				'role'    => 'activitypub_application',
+				'orderby' => 'user_nicename',
+				'order'   => 'ASC',
+			)
+		);
+
+		if ( ! empty( $users ) ) {
+			return current( $users );
+		}
+
+		return null;
 	}
 }
