@@ -66,7 +66,7 @@ class Admin {
 	public static function admin_notices() {
 		$permalink_structure = \get_option( 'permalink_structure' );
 		if ( empty( $permalink_structure ) ) {
-			$admin_notice = \__( 'You are using the ActivityPub plugin without setting a permalink structure. This will prevent ActivityPub from working.  Please set a permalink structure.', 'activitypub' );
+			$admin_notice = \__( 'You are using the ActivityPub plugin with a permalink structure of "plain". This will prevent ActivityPub from working.  Please go to "Settings" / "Permalinks" and choose a permalink structure other than "plain".', 'activitypub' );
 			self::show_admin_notice( $admin_notice, 'error' );
 		}
 	}
