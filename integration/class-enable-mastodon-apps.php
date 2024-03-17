@@ -48,36 +48,35 @@ class Enable_Mastodon_Apps {
 					$acct = $item->get_url();
 				}
 
-				$activitypub_follower = array(
-					'id' => \strval( $item->get__id() ),
-					'username' => $item->get_preferred_username(),
-					'acct' => $acct,
-					'display_name' => $item->get_name(),
-					'url' => $item->get_url(),
-					'uri' => $item->get_id(),
-					'avatar' => $item->get_icon_url(),
-					'avatar_static' => $item->get_icon_url(),
-					'created_at' => gmdate( DATE_W3C, strtotime( $item->get_published() ) ),
-					'last_status_at' => gmdate( DATE_W3C, strtotime( $item->get_published() ) ),
-					'note' => $item->get_summary(),
-					'header' => $item->get_image_url(),
-					'header_static' => $item->get_image_url(),
-					'followers_count' => 0,
-					'following_count' => 0,
-					'statuses_count' => 0,
-					'bot' => false,
-					'locked' => false,
-					'group' => false,
-					'discoversable' => false,
-					'indexable' => false,
-					'hide_collections' => false,
-					'noindex' => false,
-					'fields' => array(),
-					'emojis' => array(),
-					'roles' => array(),
-				);
+				$account = new Account();
+				$account->id = \strval( $item->get__id() );
+				$account->username = $item->get_preferred_username();
+				$account->acct = $acct;
+				$account->display_name = $item->get_name();
+				$account->url = $item->get_url();
+				$account->uri = $item->get_id();
+				$account->avatar = $item->get_icon_url();
+				$account->avatar_static = $item->get_icon_url();
+				$account->created_at = new DateTime( $item->get_published() );
+				$account->last_status_at = new DateTime( $item->get_published() );
+				$account->note = $item->get_summary();
+				$account->header = $item->get_image_url();
+				$account->header_static = $item->get_image_url();
+				$account->followers_count = 0;
+				$account->following_count = 0;
+				$account->statuses_count = 0;
+				$account->bot = false;
+				$account->locked = false;
+				$account->group = false;
+				$account->discoversable = false;
+				$account->indexable = false;
+				$account->hide_collections = false;
+				$account->noindex = false;
+				$account->fields = array();
+				$account->emojis = array();
+				$account->roles = array();
 
-				return $activitypub_follower;
+				return $account;
 			},
 			$activitypub_followers
 		);
