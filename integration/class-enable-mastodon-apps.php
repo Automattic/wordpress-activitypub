@@ -23,7 +23,7 @@ class Enable_Mastodon_Apps {
 	 */
 	public static function init() {
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
-		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_add_followers' ), 20, 2 );
+		\add_filter( 'mastodon_api_account', array( self::class, 'api_account' ), 20, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 10, 2 );
 	}
 
@@ -94,7 +94,7 @@ class Enable_Mastodon_Apps {
 	 *
 	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
 	 */
-	public static function api_account_add_followers( $account, $user_id ) {
+	public static function api_account( $account, $user_id ) {
 		if ( ! $account instanceof Account ) {
 			return $account;
 		}
@@ -105,6 +105,23 @@ class Enable_Mastodon_Apps {
 			return $account;
 		}
 
+		$header = $user->get_image();
+		if ( $header ) {
+			$account->header = $header['url'];
+			$account->header_static = $header['url'];
+		}
+
+		foreach ( $user->get_attachment() as $attachment ) {
+			if ( 'PropertyValue' === $attachment['type'] ) {
+				$account->fields[] = array(
+					'name' => $attachment['name'],
+					'value' => $attachment['value'],
+				);
+			}
+		}
+
+		$account->acct = $user->get_webfinger();
+		$account->note = $user->get_summary();
 		$account->followers_count = Followers::count_followers( $user_id );
 		return $account;
 	}
