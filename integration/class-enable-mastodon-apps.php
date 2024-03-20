@@ -25,7 +25,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account' ), 20, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 10, 2 );
-		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 20, 2 );
+		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 40, 2 );
 	}
 
 	/**
