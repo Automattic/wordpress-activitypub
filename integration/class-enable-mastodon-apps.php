@@ -197,7 +197,7 @@ class Enable_Mastodon_Apps {
 		if ( ! $q ) {
 			return $search_data;
 		}
-		$q = esc_attr( $q );
+		$q = sanitize_text_field( wp_unslash( $q ) );
 
 		$followers = Followers::get_followers( $user_id, 40, null, array( 's' => $q ) );
 		if ( ! $followers ) {
@@ -228,8 +228,9 @@ class Enable_Mastodon_Apps {
 			$account->header = $follower->get_image_url();
 			$account->header_static = $follower->get_image_url();
 
-
 			$search_data['accounts'][] = $account;
 		}
+
+		return $search_data;
 	}
 }
