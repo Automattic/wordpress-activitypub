@@ -25,6 +25,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account' ), 20, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 10, 2 );
+		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 20, 2 );
 	}
 
 	/**
@@ -184,5 +185,51 @@ class Enable_Mastodon_Apps {
 		$account->created_at = new DateTime( $data['published'] );
 
 		return $account;
+	}
+
+	public static function api_search( $search_data, $request ) {
+		$user_id = \get_current_user_id();
+		if ( ! $user_id ) {
+			return $search_data;
+		}
+
+		$q = $request->get_param( 'q' );
+		if ( ! $q ) {
+			return $search_data;
+		}
+		$q = esc_attr( $q );
+
+		$followers = Followers::get_followers( $user_id, 40, null, array( 's' => $q ) );
+		if ( ! $followers ) {
+			return $search_data;
+		}
+
+		foreach ( $followers as $follower ) {
+			$acct = Webfinger_Util::uri_to_acct( $follower->get_id() );
+
+			if ( $acct && ! is_wp_error( $acct ) ) {
+				$acct = \str_replace( 'acct:', '', $acct );
+			} else {
+				$acct = $follower->get_url();
+			}
+
+			$account = new Account();
+			$account->id = \strval( $follower->get__id() );
+			$account->username = $follower->get_preferred_username();
+			$account->acct = $acct;
+			$account->display_name = $follower->get_name();
+			$account->url = $follower->get_url();
+			$account->uri = $follower->get_id();
+			$account->avatar = $follower->get_icon_url();
+			$account->avatar_static = $follower->get_icon_url();
+			$account->created_at = new DateTime( $follower->get_published() );
+			$account->last_status_at = new DateTime( $follower->get_published() );
+			$account->note = $follower->get_summary();
+			$account->header = $follower->get_image_url();
+			$account->header_static = $follower->get_image_url();
+
+
+			$search_data['accounts'][] = $account;
+		}
 	}
 }
