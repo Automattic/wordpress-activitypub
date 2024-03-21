@@ -30,6 +30,10 @@ class Comment extends Base {
 	 * @return int The User-ID of the WordPress Comment
 	 */
 	public function get_wp_user_id() {
+		if ( is_single_user() && \user_can( $this->wp_object->user_id, 'publish_posts' ) ) {
+			// Single user sites are federated with the Blog User.
+			return Users::BLOG_USER_ID;
+		}
 		return $this->wp_object->user_id;
 	}
 
@@ -174,7 +178,7 @@ class Comment extends Base {
 
 		$mentions = $this->get_mentions();
 		if ( $mentions ) {
-			foreach ( $mentions as $mention => $url ) {
+			foreach ( $mentions as $url ) {
 				$cc[] = $url;
 			}
 		}
