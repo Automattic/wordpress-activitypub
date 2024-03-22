@@ -24,7 +24,10 @@ class Admin {
 		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'admin_notices', array( self::class, 'admin_notices' ) );
+
 		\add_filter( 'comment_row_actions', array( self::class, 'comment_row_actions' ), 10, 2 );
+		\add_filter( 'manage_edit-comments_columns', array( static::class, 'manage_comment_columns' ) );
+		\add_filter( 'manage_comments_custom_column', array( static::class, 'manage_comments_custom_column' ), 9, 2 );
 
 		\add_filter( 'manage_users_columns', array( self::class, 'manage_users_columns' ), 10, 1 );
 		\add_filter( 'manage_users_custom_column', array( self::class, 'manage_users_custom_column' ), 10, 3 );
@@ -363,6 +366,38 @@ class Admin {
 	public static function manage_users_columns( $columns ) {
 		$columns['activitypub'] = __( 'ActivityPub', 'activitypub' );
 		return $columns;
+	}
+
+	/**
+	 * Add "comment-type" and "protocol" as column in WP-Admin
+	 *
+	 * @param array $columns the list of column names
+	 */
+	public static function manage_comment_columns( $columns ) {
+		$columns['comment_type'] = esc_attr__( 'Comment-Type', 'activitypub' );
+		$columns['comment_protocol'] = esc_attr__( 'Protocol', 'activitypub' );
+
+		return $columns;
+	}
+
+	/**
+	 * Add "comment-type" and "protocol" as column in WP-Admin
+	 *
+	 * @param array $column the column to implement
+	 * @param int $comment_id the comment id
+	 */
+	public static function manage_comments_custom_column( $column, $comment_id ) {
+		if ( 'comment_type' === $column ) {
+			echo esc_attr( ucfirst( get_comment_type( $comment_id ) ) );
+		} elseif ( 'comment_protocol' === $column ) {
+			$protocol = get_comment_meta( $comment_id, 'protocol', true );
+
+			if ( $protocol ) {
+				echo esc_attr( ucfirst( str_replace( 'activitypub', 'ActivityPub', $protocol ) ) );
+			} else {
+				esc_attr_e( 'Local', 'activitypub' );
+			}
+		}
 	}
 
 	/**
