@@ -383,11 +383,11 @@ class Admin {
 	/**
 	 * Add "comment-type" and "protocol" as column in WP-Admin
 	 *
-	 * @param array $column the column to implement
-	 * @param int $comment_id the comment id
+	 * @param array $column     The column to implement
+	 * @param int   $comment_id The comment id
 	 */
 	public static function manage_comments_custom_column( $column, $comment_id ) {
-		if ( 'comment_type' === $column ) {
+		if ( 'comment_type' === $column && ! is_defined( 'WEBMENTION_PLUGIN_DIR' ) ) {
 			echo esc_attr( ucfirst( get_comment_type( $comment_id ) ) );
 		} elseif ( 'comment_protocol' === $column ) {
 			$protocol = get_comment_meta( $comment_id, 'protocol', true );
