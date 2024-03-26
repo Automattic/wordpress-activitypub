@@ -87,8 +87,8 @@ class Comment {
 			return false;
 		}
 
-		if ( is_single_user() && \user_can( $current_user, 'publish_posts' ) ) {
-			// On a single user site, comments by users with `publish_posts` will be federated as the blog user
+		if ( is_single_user() && \user_can( $current_user, 'activitypub' ) ) {
+			// On a single user site, comments by users with the `activitypub` capability will be federated as the blog user
 			$current_user = Users::BLOG_USER_ID;
 		}
 
@@ -197,8 +197,8 @@ class Comment {
 			return false;
 		}
 
-		if ( is_single_user() && \user_can( $user_id, 'publish_posts' ) ) {
-			// On a single user site, comments by users with `publish_posts` will be federated as the blog user
+		if ( is_single_user() && \user_can( $user_id, 'activitypub' ) ) {
+			// On a single user site, comments by users with the `activitypub` capability will be federated as the blog user
 			$user_id = Users::BLOG_USER_ID;
 		}
 
