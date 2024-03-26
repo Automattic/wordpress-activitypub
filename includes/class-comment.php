@@ -75,7 +75,7 @@ class Comment {
 	 * to the original author.
 	 *
 	 * @param string $link The HTML markup for the comment reply link.
-	 * @param array  $args An array of arguments overriding the defaults.
+	 * @param array  $args The args provided by the `comment_reply_link` filter.
 	 *
 	 * @return string The modified HTML markup for the comment reply link.
 	 */
