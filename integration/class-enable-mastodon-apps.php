@@ -23,8 +23,9 @@ class Enable_Mastodon_Apps {
 	 */
 	public static function init() {
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
-		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_add_followers' ), 20, 2 );
+		\add_filter( 'mastodon_api_account', array( self::class, 'api_account' ), 20, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 10, 2 );
+		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 40, 2 );
 	}
 
 	/**
@@ -48,36 +49,35 @@ class Enable_Mastodon_Apps {
 					$acct = $item->get_url();
 				}
 
-				$activitypub_follower = array(
-					'id' => \strval( $item->get__id() ),
-					'username' => $item->get_preferred_username(),
-					'acct' => $acct,
-					'display_name' => $item->get_name(),
-					'url' => $item->get_url(),
-					'uri' => $item->get_id(),
-					'avatar' => $item->get_icon_url(),
-					'avatar_static' => $item->get_icon_url(),
-					'created_at' => gmdate( DATE_W3C, strtotime( $item->get_published() ) ),
-					'last_status_at' => gmdate( DATE_W3C, strtotime( $item->get_published() ) ),
-					'note' => $item->get_summary(),
-					'header' => $item->get_image_url(),
-					'header_static' => $item->get_image_url(),
-					'followers_count' => 0,
-					'following_count' => 0,
-					'statuses_count' => 0,
-					'bot' => false,
-					'locked' => false,
-					'group' => false,
-					'discoversable' => false,
-					'indexable' => false,
-					'hide_collections' => false,
-					'noindex' => false,
-					'fields' => array(),
-					'emojis' => array(),
-					'roles' => array(),
-				);
+				$account = new Account();
+				$account->id = \strval( $item->get__id() );
+				$account->username = $item->get_preferred_username();
+				$account->acct = $acct;
+				$account->display_name = $item->get_name();
+				$account->url = $item->get_url();
+				$account->uri = $item->get_id();
+				$account->avatar = $item->get_icon_url();
+				$account->avatar_static = $item->get_icon_url();
+				$account->created_at = new DateTime( $item->get_published() );
+				$account->last_status_at = new DateTime( $item->get_published() );
+				$account->note = $item->get_summary();
+				$account->header = $item->get_image_url();
+				$account->header_static = $item->get_image_url();
+				$account->followers_count = 0;
+				$account->following_count = 0;
+				$account->statuses_count = 0;
+				$account->bot = false;
+				$account->locked = false;
+				$account->group = false;
+				$account->discoversable = false;
+				$account->indexable = false;
+				$account->hide_collections = false;
+				$account->noindex = false;
+				$account->fields = array();
+				$account->emojis = array();
+				$account->roles = array();
 
-				return $activitypub_follower;
+				return $account;
 			},
 			$activitypub_followers
 		);
@@ -95,7 +95,7 @@ class Enable_Mastodon_Apps {
 	 *
 	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
 	 */
-	public static function api_account_add_followers( $account, $user_id ) {
+	public static function api_account( $account, $user_id ) {
 		if ( ! $account instanceof Account ) {
 			return $account;
 		}
@@ -106,6 +106,23 @@ class Enable_Mastodon_Apps {
 			return $account;
 		}
 
+		$header = $user->get_image();
+		if ( $header ) {
+			$account->header = $header['url'];
+			$account->header_static = $header['url'];
+		}
+
+		foreach ( $user->get_attachment() as $attachment ) {
+			if ( 'PropertyValue' === $attachment['type'] ) {
+				$account->fields[] = array(
+					'name' => $attachment['name'],
+					'value' => $attachment['value'],
+				);
+			}
+		}
+
+		$account->acct = $user->get_webfinger();
+		$account->note = $user->get_summary();
 		$account->followers_count = Followers::count_followers( $user_id );
 		return $account;
 	}
@@ -168,5 +185,52 @@ class Enable_Mastodon_Apps {
 		$account->created_at = new DateTime( $data['published'] );
 
 		return $account;
+	}
+
+	public static function api_search( $search_data, $request ) {
+		$user_id = \get_current_user_id();
+		if ( ! $user_id ) {
+			return $search_data;
+		}
+
+		$q = $request->get_param( 'q' );
+		if ( ! $q ) {
+			return $search_data;
+		}
+		$q = sanitize_text_field( wp_unslash( $q ) );
+
+		$followers = Followers::get_followers( $user_id, 40, null, array( 's' => $q ) );
+		if ( ! $followers ) {
+			return $search_data;
+		}
+
+		foreach ( $followers as $follower ) {
+			$acct = Webfinger_Util::uri_to_acct( $follower->get_id() );
+
+			if ( $acct && ! is_wp_error( $acct ) ) {
+				$acct = \str_replace( 'acct:', '', $acct );
+			} else {
+				$acct = $follower->get_url();
+			}
+
+			$account = new Account();
+			$account->id = \strval( $follower->get__id() );
+			$account->username = $follower->get_preferred_username();
+			$account->acct = $acct;
+			$account->display_name = $follower->get_name();
+			$account->url = $follower->get_url();
+			$account->uri = $follower->get_id();
+			$account->avatar = $follower->get_icon_url();
+			$account->avatar_static = $follower->get_icon_url();
+			$account->created_at = new DateTime( $follower->get_published() );
+			$account->last_status_at = new DateTime( $follower->get_published() );
+			$account->note = $follower->get_summary();
+			$account->header = $follower->get_image_url();
+			$account->header_static = $follower->get_image_url();
+
+			$search_data['accounts'][] = $account;
+		}
+
+		return $search_data;
 	}
 }

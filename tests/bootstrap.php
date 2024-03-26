@@ -29,3 +29,5 @@ function _manually_load_plugin() {
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
 require __DIR__ . '/class-activitypub-testcase-cache-http.php';
+
+\Activitypub\Migration::add_default_settings();

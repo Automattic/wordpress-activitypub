@@ -40,6 +40,8 @@ class Activitypub {
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
 		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
 
+		\add_action( 'user_register', array( self::class, 'user_register' ) );
+
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 
 		// register several post_types
@@ -454,5 +456,18 @@ class Activitypub {
 		);
 
 		\do_action( 'activitypub_after_register_post_type' );
+	}
+
+	/**
+	 * Add the 'activitypub' query variable so WordPress won't mangle it.
+	 *
+	 * @param int   $user_id  User ID.
+	 * @param array $userdata The raw array of data passed to wp_insert_user().
+	 */
+	public static function user_register( $user_id ) {
+		if ( \user_can( $user_id, 'publish_posts' ) ) {
+			$user = \get_user_by( 'id', $user_id );
+			$user->add_cap( 'activitypub' );
+		}
 	}
 }
