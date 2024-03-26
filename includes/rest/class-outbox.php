@@ -78,8 +78,15 @@ class Outbox {
 		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
 
-		$count_posts = \count_user_posts( $user_id, $post_types, true );
-		$json->totalItems = \intval( $count_posts ); // phpcs:ignore
+		if ( $user_id > 0 ) {
+			$count_posts = \count_user_posts( $user_id, $post_types, true );
+			$json->totalItems = \intval( $count_posts ); // phpcs:ignore
+		} else {
+			foreach ( $post_types as $post_type ) {
+				$count_posts = \wp_count_posts( $post_type );
+				$json->totalItems += \intval( $count_posts->publish ); // phpcs:ignore
+			}
+		}
 
 		$json->first = \add_query_arg( 'page', 1, $json->partOf ); // phpcs:ignore
 		$json->last  = \add_query_arg( 'page', \ceil ( $json->totalItems / 10 ), $json->partOf ); // phpcs:ignore
