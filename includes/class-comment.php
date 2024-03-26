@@ -84,7 +84,7 @@ class Comment {
 		$replace_with = sprintf(
 			' title="%s">%s<',
 			esc_attr__( 'This comment was received from the fediverse and your reply will be sent to the original author', 'activitypub' ),
-			__( 'Reply with federation', 'activitypub' )
+			esc_html__( 'Reply with federation', 'activitypub' )
 		);
 		return str_replace( $str_to_replace, $replace_with, $link );
 	}
