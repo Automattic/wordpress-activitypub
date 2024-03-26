@@ -47,6 +47,11 @@ class Comment {
 	 */
 	public static function comment_reply_link( $link, $args, $comment ) {
 		if ( self::are_comments_allowed( $comment ) ) {
+			$user_id = get_current_user_id();
+			if ( $user_id && self::was_received( $comment ) && \user_can( $user_id, 'activitypub' ) ) {
+				return self::create_fediverse_reply_link( $link, $args );
+			}
+
 			return $link;
 		}
 
@@ -63,6 +68,27 @@ class Comment {
 		);
 
 		return apply_filters( 'activitypub_comment_reply_link', $div );
+	}
+
+	/**
+	 * Create a link to reply to a federated comment.
+	 * This function adds a title attribute to the reply link to inform the user
+	 * that the comment was received from the fediverse and the reply will be sent
+	 * to the original author.
+	 *
+	 * @param string $link The HTML markup for the comment reply link.
+	 * @param array  $args The args provided by the `comment_reply_link` filter.
+	 *
+	 * @return string The modified HTML markup for the comment reply link.
+	 */
+	private static function create_fediverse_reply_link( $link, $args ) {
+		$str_to_replace = sprintf( '>%s<', $args['reply_text'] );
+		$replace_with = sprintf(
+			' title="%s">%s<',
+			esc_attr__( 'This comment was received from the fediverse and your reply will be sent to the original author', 'activitypub' ),
+			esc_html__( 'Reply with federation', 'activitypub' )
+		);
+		return str_replace( $str_to_replace, $replace_with, $link );
 	}
 
 	/**
