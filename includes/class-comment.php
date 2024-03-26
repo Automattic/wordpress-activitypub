@@ -46,7 +46,7 @@ class Comment {
 	public static function comment_reply_link( $link, $args, $comment ) {
 		if ( self::are_comments_allowed( $comment ) ) {
 			$user_id = get_current_user_id();
-			if ( $user_id && self::was_received( $comment ) && \user_can( $user_id, 'publish_posts' ) ) {
+			if ( $user_id && self::was_received( $comment ) && \user_can( $user_id, 'activitypub' ) ) {
 				return self::create_fediverse_reply_link( $link, $args );
 			}
 
