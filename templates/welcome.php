@@ -19,7 +19,7 @@
 
 	<?php
 	if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) :
-		$blog_user = new \Activitypub\Model\Blog_User();
+		$blog_user = new \Activitypub\Activity\Actor();
 		?>
 	<div class="box">
 		<h3><?php \esc_html_e( 'Blog profile', 'activitypub' ); ?></h3>

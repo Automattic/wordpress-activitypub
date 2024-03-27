@@ -4,6 +4,7 @@ namespace Activitypub\Transformer;
 use WP_Post;
 use WP_Comment;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 
@@ -81,6 +82,18 @@ abstract class Base {
 		$activitypub_object = $this->transform_object_properties( $activitypub_object );
 
 		return $activitypub_object;
+	}
+
+	/**
+	 * Transform the WordPress Object into an ActivityPub Actor.
+	 *
+	 * @return Activitypub\Activity\Actor
+	 */
+	public function to_actor() {
+		$activitypub_actor = new Actor();
+		$activitypub_actor = $this->transform_object_properties( $activitypub_actor );
+
+		return $activitypub_actor;
 	}
 
 	/**

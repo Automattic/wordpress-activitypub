@@ -71,7 +71,6 @@ function rest_init() {
  * Initialize plugin.
  */
 function plugin_init() {
-	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Activity_Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
@@ -103,6 +102,9 @@ function plugin_init() {
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
 
+\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ) );
+\add_action( 'activate_blog', array( __NAMESPACE__ . '\Setup', 'init' ) );
+\add_action( 'wp_initialize_site', array( __NAMESPACE__ . '\Setup', 'init' ) );
 
 /**
  * Class Autoloader

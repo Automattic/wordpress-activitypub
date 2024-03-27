@@ -93,20 +93,24 @@ class Webfinger {
 		}
 
 		$aliases = array(
+			$user->get_webfinger(),
+			$user->get_id(),
 			$user->get_url(),
-			$user->get_alternate_url(),
 		);
 
 		$aliases = array_unique( $aliases );
 
 		$profile = array(
 			'subject' => sprintf( 'acct:%s', $user->get_webfinger() ),
-			'aliases' => array_values( array_unique( $aliases ) ),
+			'aliases' => array_values( $aliases ),
 			'links'   => array(
 				array(
 					'rel'  => 'self',
 					'type' => 'application/activity+json',
 					'href' => $user->get_url(),
+					'properties' => array(
+						'https://www.w3.org/ns/activitystreams#type' => $user->get_type(),
+					),
 				),
 				array(
 					'rel'  => 'http://webfinger.net/rel/profile-page',
@@ -115,12 +119,6 @@ class Webfinger {
 				),
 			),
 		);
-
-		if ( 'Person' !== $user->get_type() ) {
-			$profile['links'][0]['properties'] = array(
-				'https://www.w3.org/ns/activitystreams#type' => $user->get_type(),
-			);
-		}
 
 		return $profile;
 	}
