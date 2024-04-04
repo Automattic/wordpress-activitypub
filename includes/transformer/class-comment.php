@@ -30,10 +30,6 @@ class Comment extends Base {
 	 * @return int The User-ID of the WordPress Comment
 	 */
 	public function get_wp_user_id() {
-		if ( is_single_user() && \user_can( $this->wp_object->user_id, 'activitypub' ) ) {
-			// Single user sites are federated with the Blog User.
-			return Users::BLOG_USER_ID;
-		}
 		return $this->wp_object->user_id;
 	}
 
