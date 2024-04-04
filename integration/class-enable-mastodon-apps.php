@@ -7,6 +7,8 @@ use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 use Activitypub\Integration\Nodeinfo;
 use Enable_Mastodon_Apps\Entity\Account;
+use Enable_Mastodon_Apps\Entity\Status;
+use Enable_Mastodon_Apps\Entity\Media_Attachment;
 
 use function Activitypub\get_remote_metadata_by_actor;
 
@@ -23,9 +25,11 @@ class Enable_Mastodon_Apps {
 	 */
 	public static function init() {
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
-		\add_filter( 'mastodon_api_account', array( self::class, 'api_account' ), 20, 2 );
+		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_add_followers' ), 20, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 10, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 40, 2 );
+		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ), 10, 2 );
+		\add_filter( 'mastodon_api_statuses', array( self::class, 'api_statuses_external' ), 10, 2 );
 	}
 
 	/**
@@ -95,7 +99,7 @@ class Enable_Mastodon_Apps {
 	 *
 	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
 	 */
-	public static function api_account( $account, $user_id ) {
+	public static function api_account_add_followers( $account, $user_id ) {
 		if ( ! $account instanceof Account ) {
 			return $account;
 		}
@@ -146,20 +150,28 @@ class Enable_Mastodon_Apps {
 			return $user_data;
 		}
 
-		$acct = Webfinger_Util::uri_to_acct( $uri );
+		$account = self::get_account_for_actor( $uri );
+		if ( $account ) {
+			return $account;
+		}
+
+		return $user_data;
+	}
+
+	private static function get_account_for_actor( $uri ) {
 		$data = get_remote_metadata_by_actor( $uri );
 
 		if ( ! $data || is_wp_error( $data ) ) {
-			return $user_data;
+			return null;
+		}
+		$account = new Account();
+
+		$acct = Webfinger_Util::uri_to_acct( $uri );
+		if ( str_starts_with( $acct, 'acct:' ) ) {
+			$acct = substr( $acct, 5 );
 		}
 
-		if ( $user_data instanceof Account ) {
-				$account = $user_data;
-		} else {
-				$account = new Account();
-		}
-
-		$account->id             = strval( $user_id );
+		$account->id             = $acct;
 		$account->username       = $acct;
 		$account->acct           = $acct;
 		$account->display_name   = $data['name'];
@@ -178,14 +190,15 @@ class Enable_Mastodon_Apps {
 		}
 
 		if ( isset( $data['image'] ) ) {
-			$account->header        = $data['image'];
-			$account->header_static = $data['image'];
+			$account->header        = $data['image']['url'];
+			$account->header_static = $data['image']['url'];
 		}
 
 		$account->created_at = new DateTime( $data['published'] );
 
 		return $account;
 	}
+
 
 	public static function api_search( $search_data, $request ) {
 		$user_id = \get_current_user_id();
@@ -232,5 +245,86 @@ class Enable_Mastodon_Apps {
 		}
 
 		return $search_data;
+	}
+
+	public function api_get_posts_query_args( $args, $request ) {
+		if ( isset( $args['author'] ) && is_string( $args['author'] ) ) {
+			$uri = Webfinger_Util::resolve( $args['author'] );
+			if ( $uri && ! is_wp_error( $uri ) ) {
+				$args['activitypub'] = $uri;
+				unset( $args['author'] );
+			}
+		}
+
+		return $args;
+	}
+
+	public static function api_statuses_external( $statuses, $args ) {
+		if ( ! isset( $args['activitypub'] ) ) {
+			return $statuses;
+		}
+
+		$data = get_remote_metadata_by_actor( $args['activitypub'] );
+
+		if ( ! $data || is_wp_error( $data ) || ! isset( $data['outbox'] ) ) {
+			return $statuses;
+		}
+
+		$outbox = get_remote_metadata_by_actor( $data['outbox'] );
+
+		if ( ! $outbox || is_wp_error( $outbox ) || ! isset( $outbox['first'] ) ) {
+			return $statuses;
+		}
+		$account = self::get_account_for_actor( $args['activitypub'] );
+		if ( ! $account ) {
+			return $statuses;
+		}
+
+		$posts = get_remote_metadata_by_actor( $outbox['first'] );
+
+		$activitypub_statuses = array_map(
+			function ( $item ) use ( $account ) {
+				$object = $item['object'];
+				if ( ! isset( $object['type'] ) || 'Note' !== $object['type'] ) {
+					return null;
+				}
+
+				$status = new Status();
+				$status->id         = \Enable_Mastodon_Apps\Mastodon_API::remap_url( $object['id'] );
+				$status->created_at = new DateTime( $object['published'] );
+				$status->content    = $object['content'];
+				$status->account    = $account;
+				$status->in_reply_to_id = $object['inReplyTo'] ?? null;
+				$status->visibility = $object['visibility'] ?? 'public';
+				$status->uri        = $object['url'];
+				$status->media_attachments = array_map(
+					function ( $attachment ) {
+						$media_attachment = new Media_Attachment();
+						$media_attachment->id = \Enable_Mastodon_Apps\Mastodon_API::remap_url( $attachment['url'], $attachment );
+						$media_attachment->type = strtok( $attachment['mediaType'], '/' );
+
+						$media_attachment->url = $attachment['url'];
+						$media_attachment->preview_url = $attachment['url'];
+						$media_attachment->description = $attachment['name'];
+						$media_attachment->blurhash = $attachment['blurhash'];
+						$media_attachment->meta = array(
+							'original' => array(
+								'width'  => $attachment['width'],
+								'height' => $attachment['height'],
+								'size'   => $attachment['width'] . 'x' . $attachment['height'],
+								'aspect' => $attachment['width'] / $attachment['height'],
+							),
+						);
+						return $media_attachment;
+					},
+					$object['attachment'] ?? array()
+				);
+
+				return $status;
+			},
+			$posts['orderedItems']
+		);
+
+		return $activitypub_statuses;
 	}
 }
