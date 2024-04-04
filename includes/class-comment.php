@@ -113,7 +113,7 @@ class Comment {
 			return false;
 		}
 
-		if ( is_single_user() && \user_can( $current_user, 'activitypub' ) ) {
+		if ( is_single_user() && \user_can( $current_user, 'publish_posts' ) ) {
 			// On a single user site, comments by users with the `activitypub` capability will be federated as the blog user
 			$current_user = Users::BLOG_USER_ID;
 		}
