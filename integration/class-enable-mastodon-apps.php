@@ -294,31 +294,37 @@ class Enable_Mastodon_Apps {
 				$status->created_at = new DateTime( $object['published'] );
 				$status->content    = $object['content'];
 				$status->account    = $account;
-				$status->in_reply_to_id = $object['inReplyTo'] ?? null;
-				$status->visibility = $object['visibility'] ?? 'public';
+				if ( ! empty( $object['inReplyTo'] ) ) {
+					$status->in_reply_to_id = $object['inReplyTo'];
+				}
+				if ( ! empty( $object['visibility'] ) ) {
+					$status->visibility = $object['visibility'];
+				}
 				$status->uri        = $object['url'];
-				$status->media_attachments = array_map(
-					function ( $attachment ) {
-						$media_attachment = new Media_Attachment();
-						$media_attachment->id = \Enable_Mastodon_Apps\Mastodon_API::remap_url( $attachment['url'], $attachment );
-						$media_attachment->type = strtok( $attachment['mediaType'], '/' );
+				if ( ! empty( $object['attachment'] ) ) {
+					$status->media_attachments = array_map(
+						function ( $attachment ) {
+							$media_attachment = new Media_Attachment();
+							$media_attachment->id = \Enable_Mastodon_Apps\Mastodon_API::remap_url( $attachment['url'], $attachment );
+							$media_attachment->type = strtok( $attachment['mediaType'], '/' );
 
-						$media_attachment->url = $attachment['url'];
-						$media_attachment->preview_url = $attachment['url'];
-						$media_attachment->description = $attachment['name'];
-						$media_attachment->blurhash = $attachment['blurhash'];
-						$media_attachment->meta = array(
-							'original' => array(
-								'width'  => $attachment['width'],
-								'height' => $attachment['height'],
-								'size'   => $attachment['width'] . 'x' . $attachment['height'],
-								'aspect' => $attachment['width'] / $attachment['height'],
-							),
-						);
-						return $media_attachment;
-					},
-					$object['attachment'] ?? array()
-				);
+							$media_attachment->url = $attachment['url'];
+							$media_attachment->preview_url = $attachment['url'];
+							$media_attachment->description = $attachment['name'];
+							$media_attachment->blurhash = $attachment['blurhash'];
+							$media_attachment->meta = array(
+								'original' => array(
+									'width'  => $attachment['width'],
+									'height' => $attachment['height'],
+									'size'   => $attachment['width'] . 'x' . $attachment['height'],
+									'aspect' => $attachment['width'] / $attachment['height'],
+								),
+							);
+							return $media_attachment;
+						},
+						$object['attachment']
+					);
+				}
 
 				return $status;
 			},
