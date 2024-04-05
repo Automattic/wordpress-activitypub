@@ -648,8 +648,9 @@ class Post extends Base {
 		$content = \wp_strip_all_tags( $content );
 		$content = \trim( $content );
 		$content = \preg_replace( '/\R+/m', "\n\n", $content );
+		$content = \preg_replace( '/[\r\t]/', '', $content );
 
-		$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '...' );
+		$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[...]' );
 		$length       = 500;
 		$length       = $length - strlen( $excerpt_more );
 
@@ -659,7 +660,7 @@ class Post extends Base {
 			$content = $content[0];
 		}
 
-		return $content . $excerpt_more;
+		return $content . ' ' . $excerpt_more;
 	}
 
 	/**
