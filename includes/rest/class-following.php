@@ -6,6 +6,7 @@ use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_masked_wp_version;
 
 /**
  * ActivityPub Following REST-Class
@@ -67,7 +68,7 @@ class Following {
 		$json->{'@context'} = \Activitypub\get_context();
 
 		$json->id = get_rest_url_by_path( sprintf( 'users/%d/following', $user->get__id() ) );
-		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
+		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
 		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 
