@@ -130,7 +130,7 @@ class Migration {
 			self::migrate_from_2_0_0();
 		}
 		if ( version_compare( $version_from_db, '2.3.0', '<' ) ) {
-			self::migrate_from_2_1_0();
+			self::migrate_from_2_2_0();
 		}
 
 		update_option( 'activitypub_db_version', self::get_target_version() );
@@ -250,7 +250,7 @@ class Migration {
 	 *
 	 * @return void
 	 */
-	private static function migrate_from_2_1_0() {
+	private static function migrate_from_2_2_0() {
 		// add the ActivityPub capability to all users that can publish posts
 		self::add_activitypub_capability();
 	}
