@@ -174,7 +174,7 @@ class Comment extends Base {
 
 		$mentions = $this->get_mentions();
 		if ( $mentions ) {
-			foreach ( $mentions as $mention => $url ) {
+			foreach ( $mentions as $url ) {
 				$cc[] = $url;
 			}
 		}

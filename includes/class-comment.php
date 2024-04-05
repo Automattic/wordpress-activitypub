@@ -2,9 +2,11 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Users;
 use WP_Comment_Query;
 
 use function Activitypub\is_user_disabled;
+use function Activitypub\is_single_user;
 
 /**
  * ActivityPub Comment Class
@@ -111,6 +113,11 @@ class Comment {
 			return false;
 		}
 
+		if ( is_single_user() && \user_can( $current_user, 'publish_posts' ) ) {
+			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user
+			$current_user = Users::BLOG_USER_ID;
+		}
+
 		$is_user_disabled = is_user_disabled( $current_user );
 
 		if ( $is_user_disabled ) {
@@ -214,6 +221,11 @@ class Comment {
 		// comments without user can't be federated
 		if ( ! $user_id ) {
 			return false;
+		}
+
+		if ( is_single_user() && \user_can( $user_id, 'publish_posts' ) ) {
+			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user
+			$user_id = Users::BLOG_USER_ID;
 		}
 
 		$is_user_disabled = is_user_disabled( $user_id );
