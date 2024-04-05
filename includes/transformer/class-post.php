@@ -643,13 +643,23 @@ class Post extends Base {
 			return null;
 		}
 
-		return \wp_strip_all_tags(
-			\html_entity_decode(
-				\get_the_excerpt(
-					$this->wp_object->ID
-				)
-			)
-		);
+		$content = \get_post_field( 'post_content', $this->wp_object->ID );
+		$content = \html_entity_decode( $content );
+		$content = \wp_strip_all_tags( $content );
+		$content = \trim( $content );
+		$content = \preg_replace( '/\R+/m', "\n\n", $content );
+
+		$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '...' );
+		$length       = 500;
+		$length       = $length - strlen( $excerpt_more );
+
+		if ( \strlen( $content ) > $length ) {
+			$content = \wordwrap( $content, $length, '</activitypub-summary>' );
+			$content = \explode( '</activitypub-summary>', $content, 2 );
+			$content = $content[0];
+		}
+
+		return $content . $excerpt_more;
 	}
 
 	/**
