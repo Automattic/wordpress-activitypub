@@ -133,7 +133,13 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-See Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/master/CHANGELOG.md).
+= 2.2.0 =
+
+* Added: Remote-Reply lightbox
+* Added: Support application/ld+json mime-type with AP profile in WebFinger
+* Fixed: Prevent scheduler overload
+
+See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/master/CHANGELOG.md).
 
 == Upgrade Notice ==
 
