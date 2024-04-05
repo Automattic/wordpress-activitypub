@@ -4,6 +4,8 @@ namespace Activitypub;
 use WP_Error;
 use Activitypub\Collection\Users;
 
+use function Activitypub\get_masked_wp_version;
+
 /**
  * ActivityPub HTTP Class
  *
@@ -26,7 +28,7 @@ class Http {
 		$digest = Signature::generate_digest( $body );
 		$signature = Signature::generate_signature( $user_id, 'post', $url, $date, $digest );
 
-		$wp_version = \get_bloginfo( 'version' );
+		$wp_version = get_masked_wp_version();
 
 		/**
 		 * Filter the HTTP headers user agent.
@@ -75,7 +77,7 @@ class Http {
 		$date = \gmdate( 'D, d M Y H:i:s T' );
 		$signature = Signature::generate_signature( Users::APPLICATION_USER_ID, 'get', $url, $date );
 
-		$wp_version = \get_bloginfo( 'version' );
+		$wp_version = get_masked_wp_version();
 
 		/**
 		 * Filter the HTTP headers user agent.

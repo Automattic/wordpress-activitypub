@@ -11,6 +11,7 @@ use function Activitypub\get_context;
 use function Activitypub\object_to_uri;
 use function Activitypub\url_to_authorid;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_masked_wp_version;
 use function Activitypub\extract_recipients_from_activity;
 
 /**
@@ -90,7 +91,7 @@ class Inbox {
 
 		$json->{'@context'} = get_context();
 		$json->id = get_rest_url_by_path( sprintf( 'users/%d/inbox', $user->get__id() ) );
-		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
+		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
 		$json->type = 'OrderedCollectionPage';
 		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/inbox', $user->get__id() ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
