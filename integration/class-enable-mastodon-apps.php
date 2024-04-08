@@ -6,6 +6,7 @@ use Activitypub\Webfinger as Webfinger_Util;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 use Activitypub\Integration\Nodeinfo;
+use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Status;
 use Enable_Mastodon_Apps\Entity\Media_Attachment;
@@ -28,7 +29,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_add_followers' ), 20, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 10, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 40, 2 );
-		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ), 10, 2 );
+		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ) );
 		\add_filter( 'mastodon_api_statuses', array( self::class, 'api_statuses_external' ), 10, 2 );
 	}
 
@@ -176,6 +177,7 @@ class Enable_Mastodon_Apps {
 		$account->acct           = $acct;
 		$account->display_name   = $data['name'];
 		$account->url            = $uri;
+
 		if ( ! empty( $data['summary'] ) ) {
 			$account->note = $data['summary'];
 		}
@@ -247,7 +249,7 @@ class Enable_Mastodon_Apps {
 		return $search_data;
 	}
 
-	public function api_get_posts_query_args( $args, $request ) {
+	public function api_get_posts_query_args( $args ) {
 		if ( isset( $args['author'] ) && is_string( $args['author'] ) ) {
 			$uri = Webfinger_Util::resolve( $args['author'] );
 			if ( $uri && ! is_wp_error( $uri ) ) {
@@ -275,6 +277,7 @@ class Enable_Mastodon_Apps {
 		if ( ! $outbox || is_wp_error( $outbox ) || ! isset( $outbox['first'] ) ) {
 			return $statuses;
 		}
+
 		$account = self::get_account_for_actor( $args['activitypub'] );
 		if ( ! $account ) {
 			return $statuses;
@@ -290,22 +293,26 @@ class Enable_Mastodon_Apps {
 				}
 
 				$status = new Status();
-				$status->id         = \Enable_Mastodon_Apps\Mastodon_API::remap_url( $object['id'] );
+				$status->id         = Mastodon_API::remap_url( $object['id'] );
 				$status->created_at = new DateTime( $object['published'] );
 				$status->content    = $object['content'];
 				$status->account    = $account;
+
 				if ( ! empty( $object['inReplyTo'] ) ) {
 					$status->in_reply_to_id = $object['inReplyTo'];
 				}
+
 				if ( ! empty( $object['visibility'] ) ) {
 					$status->visibility = $object['visibility'];
 				}
-				$status->uri        = $object['url'];
+
+				$status->uri = $object['url'];
+
 				if ( ! empty( $object['attachment'] ) ) {
 					$status->media_attachments = array_map(
 						function ( $attachment ) {
 							$media_attachment = new Media_Attachment();
-							$media_attachment->id = \Enable_Mastodon_Apps\Mastodon_API::remap_url( $attachment['url'], $attachment );
+							$media_attachment->id = Mastodon_API::remap_url( $attachment['url'], $attachment );
 							$media_attachment->type = strtok( $attachment['mediaType'], '/' );
 
 							$media_attachment->url = $attachment['url'];
