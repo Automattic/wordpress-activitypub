@@ -16,14 +16,6 @@ use function Activitypub\is_single_user;
  */
 class Comment {
 	/**
-	 * Enqueue reply assets only if the reply feature is needed
-	 * for the current request.
-	 *
-	 * @var bool
-	 */
-	private static $remote_reply_assets_needed = false;
-
-	/**
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
@@ -54,8 +46,6 @@ class Comment {
 
 			return $link;
 		}
-
-		self::$remote_reply_assets_needed = true; // Request script and styles for remote reply feature.
 
 		$attrs = array(
 			'selectedComment' => self::generate_id( $comment ),
@@ -399,13 +389,6 @@ class Comment {
 	 * Enqueue scripts for remote comments
 	 */
 	public static function enqueue_scripts() {
-		$assets_needed = \apply_filters(
-			'activitypub_remote_reply_assets_needed',
-			self::$remote_reply_assets_needed
-		);
-		if ( ! $assets_needed ) {
-			return;
-		}
 		$handle     = 'activitypub-remote-reply';
 		$data       = array(
 			'namespace' => ACTIVITYPUB_REST_NAMESPACE,

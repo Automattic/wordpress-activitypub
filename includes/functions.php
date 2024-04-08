@@ -827,3 +827,19 @@ function get_post_type_description( $post_type ) {
 
 	return apply_filters( 'activitypub_post_type_description', $description, $post_type->name, $post_type );
 }
+
+/**
+ * Get the masked WordPress version to only show the major and minor version.
+ *
+ * @return string The masked version.
+ */
+function get_masked_wp_version() {
+	// only show the major and minor version
+	$version = get_bloginfo( 'version' );
+	// strip the RC or beta part
+	$version = preg_replace( '/-.*$/', '', $version );
+	$version = explode( '.', $version );
+	$version = array_slice( $version, 0, 2 );
+
+	return implode( '.', $version );
+}
