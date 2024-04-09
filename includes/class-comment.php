@@ -368,12 +368,14 @@ class Comment {
 	 * @return string ActivityPub URI for comment
 	 */
 	public static function generate_id( $comment ) {
-		$comment = get_comment( $comment );
+		$comment      = \get_comment( $comment );
+		$comment_meta = \get_comment_meta( $comment->comment_ID );
 
 		// show external comment ID if it exists
-		$source_id = get_comment_meta( $comment->comment_ID, 'source_id', true );
-		if ( ! empty( $source_id ) ) {
-			return $source_id;
+		if ( ! empty( $comment_meta['source_id'][0] ) ) {
+			return $comment_meta['source_id'][0];
+		} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
+			return $comment_meta['source_url'][0];
 		}
 
 		// generate URI based on comment ID
