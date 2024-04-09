@@ -73,8 +73,14 @@ function DialogFollow( { profile, userId } ) {
 	const { webfinger } = profile;
 	const actionText = __( 'Follow', 'activitypub' );
 	const resourceUrl = `/${ namespace }/users/${userId}/remote-follow?resource=`;
+	const copyDescription = __( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' );
 
-	return <Dialog handle={ webfinger } actionText={ actionText } resourceUrl={ resourceUrl } />;
+	return <Dialog
+		actionText={ actionText }
+		copyDescription={ copyDescription }
+		handle={ webfinger }
+		resourceUrl={ resourceUrl }
+	/>;
 }
 
 export default function FollowMe( { selectedUser, style, backgroundColor, id, useId = false, profileData = false } ) {

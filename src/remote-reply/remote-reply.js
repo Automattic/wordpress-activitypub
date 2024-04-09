@@ -9,8 +9,14 @@ const { namespace } = window._activityPubOptions;
 function DialogReply( { selectedComment, commentId } ) {
 	const actionText = __( 'Reply', 'activitypub' );
 	const resourceUrl = `/${ namespace }/comments/${commentId}/remote-reply?resource=`;
+	const copyDescription = __( 'Copy and paste the Comment URL into the search field of your favorite fediverse app or server.', 'activitypub' );
 
-	return <Dialog handle={ selectedComment } actionText={ actionText } resourceUrl={ resourceUrl } />;
+	return <Dialog
+		actionText={ actionText }
+		copyDescription={ copyDescription }
+		handle={ selectedComment }
+		resourceUrl={ resourceUrl }
+	/>;
 }
 
 export default function RemoteReply( { selectedComment, commentId } ) {

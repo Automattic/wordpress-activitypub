@@ -20,7 +20,7 @@ function isHandle( string ) {
 	return parts.length === 2 && isUrl( `https://${ parts[ 1 ] }` );
 }
 
-export function Dialog( { handle, actionText, resourceUrl } ) {
+export function Dialog( { actionText, copyDescription, handle, resourceUrl } ) {
 	const loadingText = __( 'Loading...', 'activitypub' );
 	const openingText = __( 'Opening...', 'activitypub' );
 	const errorText = __( 'Error', 'activitypub' );
@@ -59,7 +59,7 @@ export function Dialog( { handle, actionText, resourceUrl } ) {
 			<div className="activitypub-dialog__section">
 				<h4>{ __( 'My Profile', 'activitypub' ) }</h4>
 				<div className="activitypub-dialog-description">
-					{ __( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' ) }
+					{ copyDescription }
 				</div>
 				<div className="activitypub-dialog__button-group">
 					<input type="text" value={ handle } readOnly />
