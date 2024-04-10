@@ -104,7 +104,7 @@ class Outbox {
 			$posts = \get_posts(
 				array(
 					'posts_per_page' => 10,
-					'author'         => $user_id,
+					'author'         => $user_id > 0 ? $user_id : null,
 					'paged'          => $page,
 					'post_type'      => $post_types,
 				)
