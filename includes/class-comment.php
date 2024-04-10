@@ -388,9 +388,58 @@ class Comment {
 	}
 
 	/**
+	 * Check if a post has remote comments
+	 *
+	 * @param int $post_id The post ID.
+	 *
+	 * @return bool True if the post has remote comments, false otherwise.
+	 */
+	private static function post_has_remote_comments( $post_id ) {
+		$comments = \get_comments(
+			array(
+				'post_id' => $post_id,
+				'meta_query' => array(
+					'relation' => 'AND',
+					array(
+						'key'     => 'protocol',
+						'value'   => 'activitypub',
+						'compare' => '=',
+					),
+					array(
+						'key'     => 'source_id',
+						'compare' => 'EXISTS',
+					),
+				),
+			)
+		);
+
+		return ! empty( $comments );
+	}
+
+	/**
 	 * Enqueue scripts for remote comments
 	 */
 	public static function enqueue_scripts() {
+		if ( ! \is_singular() || \is_user_logged_in() ) {
+			// only on single pages, only for logged out users
+			return;
+		}
+
+		if ( ! \post_type_supports( \get_post_type(), 'activitypub' ) ) {
+			// post type does not support ActivityPub
+			return;
+		}
+
+		if ( ! \comments_open() || ! \get_comments_number() ) {
+			// no comments, no need to load the script
+			return;
+		}
+
+		if ( ! self::post_has_remote_comments( \get_the_ID() ) ) {
+			// no remote comments, no need to load the script
+			return;
+		}
+
 		$handle     = 'activitypub-remote-reply';
 		$data       = array(
 			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
