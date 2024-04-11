@@ -143,7 +143,7 @@ class Scheduler {
 		}
 
 		// check if the Post should be scheduled for sending
-		if ( ! apply_filters( 'activitypub_schedule_send_post', true, $post, $type ) ) {
+		if ( ! apply_filters( 'activitypub_schedule_post_activity', true, $post, $type ) ) {
 			return;
 		}
 
@@ -199,8 +199,8 @@ class Scheduler {
 			return;
 		}
 
-		// check if the Post should be scheduled for sending
-		if ( ! apply_filters( 'activitypub_schedule_send_comment', true, $comment, $type ) ) {
+		// check if the Comment should be scheduled for sending
+		if ( ! apply_filters( 'activitypub_schedule_comment_activity', true, $comment, $type ) ) {
 			return;
 		}
 
