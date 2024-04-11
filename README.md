@@ -150,6 +150,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Changed: Mask WordPress version number
 * Changed: Improve remote reply handling
 * Changed: Remote Reply: limit enqueue to when needed
+* Changed: Abstract shared Dialog code
 
 
 ### 2.2.0 ###
