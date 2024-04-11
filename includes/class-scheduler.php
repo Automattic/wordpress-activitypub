@@ -142,6 +142,11 @@ class Scheduler {
 			return;
 		}
 
+		// check if the Post should be scheduled for sending
+		if ( ! apply_filters( 'activitypub_schedule_send_post', true, $post, $type ) ) {
+			return;
+		}
+
 		$hook = 'activitypub_send_post';
 		$args = array( $post->ID, $type );
 
@@ -191,6 +196,11 @@ class Scheduler {
 
 		// check if comment should be federated or not
 		if ( ! should_comment_be_federated( $comment ) ) {
+			return;
+		}
+
+		// check if the Post should be scheduled for sending
+		if ( ! apply_filters( 'activitypub_schedule_send_comment', true, $comment, $type ) ) {
 			return;
 		}
 
