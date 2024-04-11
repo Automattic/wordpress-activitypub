@@ -2,8 +2,8 @@
 Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nuriapena, cavalierlife
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
-Tested up to: 6.4
-Stable tag: 2.2.0
+Tested up to: 6.5
+Stable tag: 2.3.0
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -132,6 +132,25 @@ The followers of a user can be found in the menu under "Users" -> "Followers" or
 For reasons of data protection, it is not possible to see the followers of other users.
 
 == Changelog ==
+
+= 2.3.0 =
+
+* Added: Mark links as "unhandled-link" and "status-link", for a better UX in the Mastodon App
+* Added: Enable-Mastodon-Apps: Provide followers
+* Added: Enable-Mastodon-Apps: Extend account with ActivityPub data
+* Added: Enable-Mastodon-Apps: Search in followers
+* Added: Add `alt` support for images (for Block and Classic-Editor)
+* Fixed: Counter for system users outbox
+* Fixed: Don't set a default actor type in the actor class
+* Fixed: Outbox collection for blog and application user
+* Changed: A better default content handling based on the Object Type
+* Changed: Improve User management
+* Changed: Federated replies: Improved UX for "your reply will federate"
+* Changed: Comment reply federation: support `is_single_user` sites
+* Changed: Mask WordPress version number
+* Changed: Improve remote reply handling
+* Changed: Remote Reply: limit enqueue to when needed
+
 
 = 2.2.0 =
 

@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2024-04-XX
+
+### Added
+
+* Mark links as "unhandled-link" and "status-link", for a better UX in the Mastodon App
+* Enable-Mastodon-Apps: Provide followers
+* Enable-Mastodon-Apps: Extend account with ActivityPub data
+* Enable-Mastodon-Apps: Search in followers
+* Add `alt` support for images (for Block and Classic-Editor)
+
+## Fixed
+
+* Counter for system users outbox
+* Don't set a default actor type in the actor class
+* Outbox collection for blog and application user
+
+## Changed
+
+* A better default content handling based on the Object Type
+* Improve User management
+* Federated replies: Improved UX for "your reply will federate"
+* Comment reply federation: support `is_single_user` sites
+* Mask WordPress version number
+* Improve remote reply handling
+* Remote Reply: limit enqueue to when needed
+
 ## [2.2.0] - 2024-02-27
 
 ### Added
