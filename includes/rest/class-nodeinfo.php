@@ -6,6 +6,7 @@ use WP_REST_Response;
 use function Activitypub\get_total_users;
 use function Activitypub\get_active_users;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_masked_wp_version;
 
 /**
  * ActivityPub NodeInfo REST-Class
@@ -81,7 +82,7 @@ class Nodeinfo {
 		$nodeinfo['version'] = '2.0';
 		$nodeinfo['software'] = array(
 			'name' => 'wordpress',
-			'version' => \get_bloginfo( 'version' ),
+			'version' => get_masked_wp_version(),
 		);
 
 		$posts = \wp_count_posts();
@@ -134,7 +135,7 @@ class Nodeinfo {
 			'baseUrl' => \home_url( '/' ),
 			'name' => \get_bloginfo( 'name' ),
 			'software' => 'wordpress',
-			'version' => \get_bloginfo( 'version' ),
+			'version' => get_masked_wp_version(),
 		);
 
 		$posts = \wp_count_posts();

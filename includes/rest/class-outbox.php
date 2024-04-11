@@ -11,6 +11,7 @@ use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\get_context;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_masked_wp_version;
 
 /**
  * ActivityPub Outbox REST-Class
@@ -72,7 +73,7 @@ class Outbox {
 
 		$json->{'@context'} = get_context();
 		$json->id = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) );
-		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
+		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
 		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) ); // phpcs:ignore
@@ -103,7 +104,7 @@ class Outbox {
 			$posts = \get_posts(
 				array(
 					'posts_per_page' => 10,
-					'author'         => $user_id,
+					'author'         => $user_id > 0 ? $user_id : null,
 					'paged'          => $page,
 					'post_type'      => $post_types,
 				)
