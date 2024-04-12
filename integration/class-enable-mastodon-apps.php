@@ -3,6 +3,7 @@ namespace Activitypub\Integration;
 
 use DateTime;
 use Activitypub\Webfinger as Webfinger_Util;
+use Activitypub\Http;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 use Activitypub\Integration\Nodeinfo;
@@ -273,7 +274,7 @@ class Enable_Mastodon_Apps {
 			return $statuses;
 		}
 
-		$response = \Activitypub\Http::get( $data['outbox'], true );
+		$response = Http::get( $data['outbox'], true );
 		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
 			return $statuses;
 		}
@@ -288,7 +289,7 @@ class Enable_Mastodon_Apps {
 			return $statuses;
 		}
 
-		$response = \Activitypub\Http::get( $outbox['first'], true );
+		$response = Http::get( $outbox['first'], true );
 		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
 			return $statuses;
 		}
