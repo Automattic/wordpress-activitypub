@@ -123,7 +123,7 @@ class Http {
 		if ( $cached ) {
 			$cache_duration = $cached;
 			if ( ! is_int( $cache_duration ) ) {
-				$cached = HOUR_IN_SECONDS;
+				$cache_duration = HOUR_IN_SECONDS;
 			}
 			\set_transient( $transient_key, $response, $cache_duration );
 		}
