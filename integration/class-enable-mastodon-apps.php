@@ -328,7 +328,9 @@ class Enable_Mastodon_Apps {
 							$media_attachment->url = $attachment['url'];
 							$media_attachment->preview_url = $attachment['url'];
 							$media_attachment->description = $attachment['name'];
-							$media_attachment->blurhash = $attachment['blurhash'];
+							if ( isset( $attachment['blurhash'] ) ) {
+								$media_attachment->blurhash = $attachment['blurhash'];
+							}
 							$media_attachment->meta = array(
 								'original' => array(
 									'width'  => $attachment['width'],
