@@ -321,16 +321,24 @@ class Enable_Mastodon_Apps {
 				if ( ! empty( $object['attachment'] ) ) {
 					$status->media_attachments = array_map(
 						function ( $attachment ) {
+							$default_attachment = array(
+								'url' => null,
+								'mediaType' => null,
+								'name' => null,
+								'width' => 0,
+								'height' => 0,
+								'blurhash' => null,
+							);
+
+							$attachment = array_merge( $default_attachment, $attachment );
+
 							$media_attachment = new Media_Attachment();
 							$media_attachment->id = Mastodon_API::remap_url( $attachment['url'], $attachment );
 							$media_attachment->type = strtok( $attachment['mediaType'], '/' );
-
 							$media_attachment->url = $attachment['url'];
 							$media_attachment->preview_url = $attachment['url'];
 							$media_attachment->description = $attachment['name'];
-							if ( isset( $attachment['blurhash'] ) ) {
-								$media_attachment->blurhash = $attachment['blurhash'];
-							}
+							$media_attachment->blurhash = $attachment['blurhash'];
 							$media_attachment->meta = array(
 								'original' => array(
 									'width'  => $attachment['width'],
