@@ -141,7 +141,8 @@ class Enable_Mastodon_Apps {
 	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
 	 */
 	public static function api_account_external( $user_data, $user_id ) {
-		if ( ! preg_match( '/^' . ACTIVITYPUB_USERNAME_REGEXP . '$/', $user_id ) ) {
+		if ( $user_data ) {
+			// Only augment.
 			return $user_data;
 		}
 
@@ -272,8 +273,12 @@ class Enable_Mastodon_Apps {
 			return $statuses;
 		}
 
-		$outbox = get_remote_metadata_by_actor( $data['outbox'] );
+		$response = \Activitypub\Http::get( $data['outbox'], true );
+		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
+			return $statuses;
+		}
 
+		$outbox = json_decode( wp_remote_retrieve_body( $response ), true );
 		if ( ! $outbox || is_wp_error( $outbox ) || ! isset( $outbox['first'] ) ) {
 			return $statuses;
 		}
@@ -283,7 +288,11 @@ class Enable_Mastodon_Apps {
 			return $statuses;
 		}
 
-		$posts = get_remote_metadata_by_actor( $outbox['first'] );
+		$response = \Activitypub\Http::get( $outbox['first'], true );
+		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
+			return $statuses;
+		}
+		$posts = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		$activitypub_statuses = array_map(
 			function ( $item ) use ( $account ) {
