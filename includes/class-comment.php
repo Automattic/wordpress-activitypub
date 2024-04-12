@@ -368,12 +368,14 @@ class Comment {
 	 * @return string ActivityPub URI for comment
 	 */
 	public static function generate_id( $comment ) {
-		$comment = get_comment( $comment );
+		$comment      = \get_comment( $comment );
+		$comment_meta = \get_comment_meta( $comment->comment_ID );
 
 		// show external comment ID if it exists
-		$source_id = get_comment_meta( $comment->comment_ID, 'source_id', true );
-		if ( ! empty( $source_id ) ) {
-			return $source_id;
+		if ( ! empty( $comment_meta['source_id'][0] ) ) {
+			return $comment_meta['source_id'][0];
+		} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
+			return $comment_meta['source_url'][0];
 		}
 
 		// generate URI based on comment ID
@@ -386,9 +388,58 @@ class Comment {
 	}
 
 	/**
+	 * Check if a post has remote comments
+	 *
+	 * @param int $post_id The post ID.
+	 *
+	 * @return bool True if the post has remote comments, false otherwise.
+	 */
+	private static function post_has_remote_comments( $post_id ) {
+		$comments = \get_comments(
+			array(
+				'post_id' => $post_id,
+				'meta_query' => array(
+					'relation' => 'AND',
+					array(
+						'key'     => 'protocol',
+						'value'   => 'activitypub',
+						'compare' => '=',
+					),
+					array(
+						'key'     => 'source_id',
+						'compare' => 'EXISTS',
+					),
+				),
+			)
+		);
+
+		return ! empty( $comments );
+	}
+
+	/**
 	 * Enqueue scripts for remote comments
 	 */
 	public static function enqueue_scripts() {
+		if ( ! \is_singular() || \is_user_logged_in() ) {
+			// only on single pages, only for logged out users
+			return;
+		}
+
+		if ( ! \post_type_supports( \get_post_type(), 'activitypub' ) ) {
+			// post type does not support ActivityPub
+			return;
+		}
+
+		if ( ! \comments_open() || ! \get_comments_number() ) {
+			// no comments, no need to load the script
+			return;
+		}
+
+		if ( ! self::post_has_remote_comments( \get_the_ID() ) ) {
+			// no remote comments, no need to load the script
+			return;
+		}
+
 		$handle     = 'activitypub-remote-reply';
 		$data       = array(
 			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
