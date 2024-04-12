@@ -66,8 +66,8 @@ class Http {
 	/**
 	 * Send a GET Request with the needed HTTP Headers
 	 *
-	 * @param string $url     The URL endpoint
-	 * @param bool|int   $cached If the result should be cached, or its duration. Default: 1hr.
+	 * @param string   $url    The URL endpoint
+	 * @param bool|int $cached If the result should be cached, or its duration. Default: 1hr.
 	 *
 	 * @return array|WP_Error The GET Response or an WP_ERROR
 	 */
