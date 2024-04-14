@@ -102,7 +102,7 @@ class Enable_Mastodon_Apps {
 	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
 	 */
 	public static function api_account_add_followers( $account, $user_id ) {
-		if ( ! $account instanceof Account ) {
+		if ( ! $account instanceof Account || ! is_numeric( $user_id ) ) {
 			return $account;
 		}
 
@@ -127,8 +127,9 @@ class Enable_Mastodon_Apps {
 			}
 		}
 
-		$account->acct = $user->get_webfinger();
+		$account->acct = $user->get_preferred_username();
 		$account->note = $user->get_summary();
+
 		$account->followers_count = Followers::count_followers( $user_id );
 		return $account;
 	}
@@ -142,14 +143,15 @@ class Enable_Mastodon_Apps {
 	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
 	 */
 	public static function api_account_external( $user_data, $user_id ) {
-		if ( $user_data ) {
+		if ( $user_data || is_numeric( $user_id ) ) {
 			// Only augment.
 			return $user_data;
 		}
 
 		$uri = Webfinger_Util::resolve( $user_id );
 
-		if ( ! $uri ) {
+		if ( ! $uri || is_wp_error( $uri ) ) {
+			var_dump( compact( 'user_id', 'uri' ) );
 			return $user_data;
 		}
 
@@ -162,6 +164,9 @@ class Enable_Mastodon_Apps {
 	}
 
 	private static function get_account_for_actor( $uri ) {
+		if ( ! is_string( $uri ) ) {
+			return null;
+		}
 		$data = get_remote_metadata_by_actor( $uri );
 
 		if ( ! $data || is_wp_error( $data ) ) {
