@@ -151,7 +151,6 @@ class Enable_Mastodon_Apps {
 		$uri = Webfinger_Util::resolve( $user_id );
 
 		if ( ! $uri || is_wp_error( $uri ) ) {
-			var_dump( compact( 'user_id', 'uri' ) );
 			return $user_data;
 		}
 
@@ -207,7 +206,6 @@ class Enable_Mastodon_Apps {
 
 		return $account;
 	}
-
 
 	public static function api_search( $search_data, $request ) {
 		$user_id = \get_current_user_id();
