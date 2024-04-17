@@ -9,7 +9,7 @@ import { ExternalLink } from '@wordpress/components';
 const { namespace } = window._activityPubOptions;
 
 function getPath( userId, per_page, order, page ) {
-	const path = `/${ namespace }/users/${ userId }/followers`;
+	const path = `/${ namespace }/actors/${ userId }/followers`;
 	const args = {
 		per_page,
 		order,
