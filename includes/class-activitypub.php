@@ -321,7 +321,7 @@ class Activitypub {
 
 		\add_rewrite_rule(
 			'^@([\w\-\.]+)',
-			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/users/$matches[1]',
+			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/$matches[1]',
 			'top'
 		);
 

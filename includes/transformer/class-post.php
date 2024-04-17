@@ -70,7 +70,7 @@ class Post extends Base {
 				$this->get_locale() => $this->get_content(),
 			)
 		);
-		$path = sprintf( 'users/%d/followers', intval( $post->post_author ) );
+		$path = sprintf( 'actors/%d/followers', intval( $post->post_author ) );
 
 		$object->set_to(
 			array(

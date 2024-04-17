@@ -50,7 +50,7 @@ require_once __DIR__ . '/includes/functions.php';
  * Initialize REST routes.
  */
 function rest_init() {
-	Rest\Users::init();
+	Rest\Actors::init();
 	Rest\Outbox::init();
 	Rest\Inbox::init();
 	Rest\Followers::init();
