@@ -116,6 +116,12 @@ class Activitypub {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
+		/*
+		 * Check if the request is authorized.
+		 *
+		 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
+		 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
+		 */
 		if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {

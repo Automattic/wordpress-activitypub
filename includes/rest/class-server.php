@@ -62,6 +62,9 @@ class Server {
 	 *
 	 * @see WP_REST_Request
 	 *
+	 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
+	 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
+	 *
 	 * @param WP_REST_Response|WP_HTTP_Response|WP_Error|mixed $response Result to send to the client.
 	 *                                                                   Usually a WP_REST_Response or WP_Error.
 	 * @param array                                            $handler  Route handler used for the request.
@@ -80,7 +83,8 @@ class Server {
 		if (
 			! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ||
 			\str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'webfinger' ) ||
-			\str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'nodeinfo' )
+			\str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'nodeinfo' ) ||
+			\str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'application' )
 		) {
 			return $response;
 		}

@@ -42,7 +42,7 @@ class Application_User extends Blog_User {
 	 * @return string The User-URL with @-Prefix for the username.
 	 */
 	public function get_alternate_url() {
-		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() );
+		return $this->get_url();
 	}
 
 	public function get_name() {
