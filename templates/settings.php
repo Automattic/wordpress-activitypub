@@ -30,7 +30,10 @@
 								</label>
 							</p>
 							<p class="description">
-								<?php echo \wp_kses( \__( 'Every author on this blog (with the <code>publish_posts</code> capability) gets their own ActivityPub profile.', 'activitypub' ), array( 'code' => array() ) ); ?>
+								<?php echo \wp_kses( \__( 'Every author on this blog (with the <code>activitypub</code> capability) gets their own ActivityPub profile.', 'activitypub' ), array( 'code' => array() ) ); ?>
+								<?php // translators: %s is a URL. ?>
+								<strong><?php echo \wp_kses( sprintf( \__( 'You can add/remove the capability in the <a href="%s">user settings.</a>', 'activitypub' ), admin_url( '/users.php' ) ), array( 'a' => array( 'href' => array() ) ) ); ?></strong>
+								<?php echo \wp_kses( \__( 'Select all the users you want to update, choose the method from the drop-down list and click on the "Apply" button.', 'activitypub' ), array( 'code' => array() ) ); ?>
 							</p>
 							<p>
 								<label>
