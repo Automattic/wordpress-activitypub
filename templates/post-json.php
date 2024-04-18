@@ -4,6 +4,10 @@ $post = \get_post();
 
 $post_object = \Activitypub\Transformer\Factory::get_transformer( $post )->to_object();
 
+if ( \is_wp_error( $post_object ) ) {
+	return;
+}
+
 /*
  * Action triggerd prior to the ActivityPub profile being created and sent to the client
  */
