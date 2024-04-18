@@ -5,6 +5,7 @@ use Exception;
 use Activitypub\Signature;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Transformer\Factory;
 
 use function Activitypub\is_comment;
 use function Activitypub\sanitize_url;
@@ -108,12 +109,18 @@ class Activitypub {
 		if ( \is_author() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/author-json.php';
 		} elseif ( is_comment() ) {
+			$comment     = \get_comment( \get_query_var( 'c', null ) );
+			$transformer = Factory::get_transformer( $comment );
+
+			if ( \is_wp_error( $transformer ) ) {
+				return;
+			}
+
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() ) {
 			global $post;
 
-			// So... this gets done in the template, too, but then it's too late.
-			$transformer = \Activitypub\Transformer\Factory::get_transformer( $post );
+			$transformer = Factory::get_transformer( $post );
 			if ( \is_wp_error( $transformer ) ) {
 				return $template;
 			}
