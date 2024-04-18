@@ -5,6 +5,7 @@ use WP_Error;
 use WP_User_Query;
 use Activitypub\Model\User;
 use Activitypub\Model\Blog_User;
+use Activitypub\Model\Application;
 
 use function Activitypub\url_to_authorid;
 use function Activitypub\is_user_disabled;
