@@ -183,4 +183,18 @@ class Application extends Actor {
 			'publicKeyPem' => Signature::get_public_key_for( Users::APPLICATION_USER_ID ),
 		);
 	}
+
+	/**
+	 * Get the User-Description.
+	 *
+	 * @return string The User-Description.
+	 */
+	public function get_summary() {
+		return \wpautop(
+			\wp_kses(
+				\get_bloginfo( 'description' ),
+				'default'
+			)
+		);
+	}
 }
