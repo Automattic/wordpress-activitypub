@@ -11,7 +11,11 @@ use Activitypub\Transformer\Attachment;
  * Transformer Factory
  */
 class Factory {
-	public static function get_transformer( $object ) {
+	/**
+	 * @param  mixed $object                      The object to transform
+	 * @return \Activitypub\Transformer|\WP_Error The transformer to use, or an error.
+	 */
+	public static function get_transformer( $object ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
 		if ( ! \is_object( $object ) ) {
 			return new WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
 		}
