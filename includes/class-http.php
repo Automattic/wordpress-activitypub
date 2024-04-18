@@ -66,13 +66,25 @@ class Http {
 	/**
 	 * Send a GET Request with the needed HTTP Headers
 	 *
-	 * @param string $url     The URL endpoint
-	 * @param int    $user_id The WordPress User-ID
+	 * @param string   $url    The URL endpoint
+	 * @param bool|int $cached If the result should be cached, or its duration. Default: 1hr.
 	 *
 	 * @return array|WP_Error The GET Response or an WP_ERROR
 	 */
-	public static function get( $url ) {
+	public static function get( $url, $cached = false ) {
 		\do_action( 'activitypub_pre_http_get', $url );
+
+		if ( $cached ) {
+			$transient_key = self::generate_cache_key( $url );
+
+			$response = \get_transient( $transient_key );
+
+			if ( $response ) {
+				\do_action( 'activitypub_safe_remote_get_response', $response, $url );
+
+				return $response;
+			}
+		}
 
 		$date = \gmdate( 'D, d M Y H:i:s T' );
 		$signature = Signature::generate_signature( Users::APPLICATION_USER_ID, 'get', $url, $date );
@@ -108,6 +120,14 @@ class Http {
 
 		\do_action( 'activitypub_safe_remote_get_response', $response, $url );
 
+		if ( $cached ) {
+			$cache_duration = $cached;
+			if ( ! is_int( $cache_duration ) ) {
+				$cache_duration = HOUR_IN_SECONDS;
+			}
+			\set_transient( $transient_key, $response, $cache_duration );
+		}
+
 		return $response;
 	}
 
@@ -129,5 +149,9 @@ class Http {
 		}
 
 		return false;
+	}
+
+	public static function generate_cache_key( $url ) {
+		return 'activitypub_http_' . \md5( $url );
 	}
 }
