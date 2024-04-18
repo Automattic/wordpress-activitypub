@@ -110,6 +110,14 @@ class Activitypub {
 		} elseif ( is_comment() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() ) {
+			global $post;
+
+			// So... this gets done in the template, too, but then it's too late.
+			$transformer = \Activitypub\Transformer\Factory::get_transformer( $post );
+			if ( \is_wp_error( $transformer ) ) {
+				return $template;
+			}
+
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
 		} elseif ( \is_home() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
