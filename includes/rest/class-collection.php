@@ -169,7 +169,13 @@ class Collection {
 		);
 
 		foreach ( $posts as $post ) {
-			$response['orderedItems'][] = Post::transform( $post )->to_object()->to_array( false );
+			$post = Post::transform( $post );
+
+			if ( \is_wp_error( $post ) ) {
+				continue;
+			}
+
+			$response['orderedItems'][] = $post->to_object()->to_array( false );
 		}
 
 		$rest_response = new WP_REST_Response( $response, 200 );

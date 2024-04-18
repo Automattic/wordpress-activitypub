@@ -111,7 +111,13 @@ class Outbox {
 			);
 
 			foreach ( $posts as $post ) {
-				$post = Post::transform( $post )->to_object();
+				$post = Post::transform( $post );
+
+				if ( \is_wp_error( $post ) ) {
+					continue;
+				}
+
+				$post     = $post->to_object();
 				$activity = new Activity();
 				$activity->set_type( 'Create' );
 				$activity->set_object( $post );
