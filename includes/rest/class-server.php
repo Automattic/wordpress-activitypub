@@ -5,7 +5,7 @@ use stdClass;
 use WP_Error;
 use WP_REST_Response;
 use Activitypub\Signature;
-use Activitypub\Model\Application_User;
+use Activitypub\Model\Application;
 
 /**
  * ActivityPub Server REST-Class
@@ -47,7 +47,7 @@ class Server {
 	 * @return WP_REST_Response The JSON profile of the Application Actor.
 	 */
 	public static function application_actor() {
-		$user = new Application_User();
+		$user = new Application();
 
 		$json = $user->to_array();
 
