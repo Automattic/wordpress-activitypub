@@ -34,8 +34,12 @@ class Post {
 	public function __construct( $post, $post_author = null ) {
 		_deprecated_function( __CLASS__, '1.0.0', '\Activitypub\Transformer\Post' );
 
-		$this->post   = $post;
-		$this->object = Post_Transformer::transform( $post )->to_object();
+		$transformer = Post_Transformer::transform( $post );
+
+		if ( ! \is_wp_error( $transformer ) ) {
+			$this->post   = $post;
+			$this->object = $transformer->to_object();
+		}
 	}
 
 	/**

@@ -45,9 +45,9 @@ class Factory {
 		 *     return $transformer;
 		 * }, 10, 3 );
 		 *
-		 * @param Activitypub\Transformer\Base $transformer  The transformer to use.
-		 * @param mixed                        $object       The object to transform.
-		 * @param string                       $object_class The class of the object to transform.
+		 * @param Base   $transformer  The transformer to use.
+		 * @param mixed  $object       The object to transform.
+		 * @param string $object_class The class of the object to transform.
 		 *
 		 * @return mixed The transformer to use.
 		 */

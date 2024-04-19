@@ -31,7 +31,7 @@ abstract class Base {
 	 *
 	 * @param WP_Post|WP_Comment $wp_object The WordPress object
 	 *
-	 * @return Base_Object
+	 * @return Base
 	 */
 	public static function transform( $object ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
 		if ( ! \is_object( $object ) ) {
@@ -43,29 +43,9 @@ abstract class Base {
 		/**
 		 * Filter the transformer for a given object.
 		 *
-		 * Add your own transformer based on the object class or the object type.
-		 *
-		 * Example usage:
-		 *
-		 * // Filter be object class
-		 * add_filter( 'activitypub_transformer', function( $transformer, $object, $object_class ) {
-		 *     if ( $object_class === 'WP_Post' ) {
-		 *         return new My_Post_Transformer( $object );
-		 *     }
-		 *     return $transformer;
-		 * }, 10, 3 );
-		 *
-		 * // Filter be object type
-		 * add_filter( 'activitypub_transformer', function( $transformer, $object, $object_class ) {
-		 *     if ( $object->post_type === 'event' ) {
-		 *         return new My_Event_Transformer( $object );
-		 *     }
-		 *     return $transformer;
-		 * }, 10, 3 );
-		 *
-		 * @param Activitypub\Transformer\Base $transformer  The transformer to use.
-		 * @param mixed                        $object       The object to transform.
-		 * @param string                       $object_class The class of the object to transform.
+		 * @param Base   $transformer  The transformer to use.
+		 * @param mixed  $object       The object to transform.
+		 * @param string $object_class The class of the object to transform.
 		 *
 		 * @return mixed The transformer to use.
 		 */
@@ -73,7 +53,7 @@ abstract class Base {
 		if ( $transformer ) {
 			if (
 				! \is_object( $transformer ) ||
-				! $transformer instanceof Base
+				! $transformer instanceof static
 			) {
 				return new WP_Error( 'invalid_transformer', __( 'Invalid transformer', 'activitypub' ) );
 			}
@@ -81,6 +61,7 @@ abstract class Base {
 			return $transformer;
 		}
 
+		// Default transformer.
 		return new static( $object );
 	}
 
