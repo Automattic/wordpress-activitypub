@@ -397,8 +397,8 @@ class Post extends Base {
 	/**
 	 * Filter media IDs by object type.
 	 *
-	 * @param array $media The media array grouped by type.
-	 * @param array $type  The object type.
+	 * @param array  $media The media array grouped by type.
+	 * @param string $type  The object type.
 	 *
 	 * @return array The filtered media IDs.
 	 */
