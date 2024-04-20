@@ -6,7 +6,6 @@ use Activitypub\Shortcodes;
 use Activitypub\Model\Blog_User;
 use Activitypub\Transformer\Base;
 use Activitypub\Collection\Users;
-use Activitypub\Activity\Base_Object;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
