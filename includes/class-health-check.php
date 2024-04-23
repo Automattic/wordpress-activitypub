@@ -27,7 +27,7 @@ class Health_Check {
 	}
 
 	public static function add_tests( $tests ) {
-		if ( ! is_user_type_disabled( 'user' ) ) {
+		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			$tests['direct']['activitypub_test_author_url'] = array(
 				'label' => \__( 'Author URL test', 'activitypub' ),
 				'test'  => array( self::class, 'test_author_url' ),

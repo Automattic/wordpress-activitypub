@@ -253,6 +253,11 @@ class Scheduler {
 			} elseif ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
 				if ( $follower->count_errors() >= 5 ) {
 					$follower->delete();
+					\wp_schedule_single_event(
+						\time(),
+						'activitypub_delete_actor_interactions',
+						array( $follower->get_id() )
+					);
 				} else {
 					Followers::add_error( $follower->get__id(), $meta );
 				}

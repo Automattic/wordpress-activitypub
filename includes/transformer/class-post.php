@@ -343,10 +343,10 @@ class Post extends Base {
 				case 'core/cover':
 					if ( ! empty( $block['attrs']['id'] ) ) {
 						$alt   = '';
-						$check = preg_match( '/<img.*?alt=[\"\'](.*?)[\"\'].*>/i', $block['innerHTML'], $match );
+						$check = preg_match( '/<img.*?alt\s*=\s*([\"\'])(.*?)\1.*>/i', $block['innerHTML'], $match );
 
 						if ( $check ) {
-							$alt = $match[1];
+							$alt = $match[2];
 						}
 
 						$media['image'][] = array(
@@ -432,8 +432,8 @@ class Post extends Base {
 				/**
 				 * Filter the image URL returned for each post.
 				 *
-				 * @param array|false $thumbnail The image URL, or false if no image is available.
-				 * @param int         $id        The attachment ID.
+				 * @param array|false $thumbnail  The image URL, or false if no image is available.
+				 * @param int         $id         The attachment ID.
 				 * @param string      $image_size The image size to retrieve. Set to 'full' by default.
 				 */
 				$thumbnail = apply_filters(
@@ -451,11 +451,11 @@ class Post extends Base {
 					);
 
 					if ( ! empty( $media['alt'] ) ) {
-						$image['name'] = \esc_attr( $media['alt'] );
+						$image['name'] = \wp_strip_all_tags( \html_entity_decode( $media['alt'] ) );
 					} else {
 						$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 						if ( $alt ) {
-							$image['name'] = \esc_attr( $alt );
+							$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt ) );
 						}
 					}
 

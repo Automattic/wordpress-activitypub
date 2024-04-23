@@ -52,6 +52,17 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	if ( $pre ) {
 		return $pre;
 	}
+
+	if ( is_array( $actor ) ) {
+		if ( array_key_exists( 'id', $actor ) ) {
+			$actor = $actor['id'];
+		} elseif ( array_key_exists( 'url', $actor ) ) {
+			$actor = $actor['url'];
+		} else {
+			return new WP_Error( 'activitypub_no_valid_actor_identifier', \__( 'The "actor" identifier is not valid', 'activitypub' ), array( 'status' => 404, 'actor' => $actor ) );
+		}
+	}
+
 	if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $actor ) ) {
 		$actor = Webfinger::resolve( $actor );
 	}
