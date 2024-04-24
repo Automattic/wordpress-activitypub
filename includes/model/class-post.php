@@ -32,7 +32,7 @@ class Post {
 	 */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 	public function __construct( $post, $post_author = null ) {
-		_deprecated_function( __CLASS__, '1.0.0', '\Activitypub\Transformer\Factory::get_transformer()' );
+		_deprecated_function( __METHOD__, '1.0.0', '\Activitypub\Transformer\Factory::get_transformer' );
 
 		$transformer = Factory::get_transformer( $post );
 
