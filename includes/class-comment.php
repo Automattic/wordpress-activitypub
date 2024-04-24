@@ -379,12 +379,7 @@ class Comment {
 		}
 
 		// generate URI based on comment ID
-		return \add_query_arg(
-			array(
-				'c' => $comment->comment_ID,
-			),
-			\trailingslashit( site_url() )
-		);
+		return \add_query_arg( 'c', $comment->comment_ID, \home_url() );
 	}
 
 	/**
