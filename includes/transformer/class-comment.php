@@ -219,6 +219,28 @@ class Comment extends Base {
 	}
 
 	/**
+	 * Gets the ancestors of the comment, but only the ones that are ActivityPub comments.
+	 *
+	 * @return array The list of ancestors.
+	 */
+	protected function get_comment_ancestors() {
+		$ancestors = [ $this->wp_object ];
+
+		while ( $ancestors[0]->comment_parent > 0 ) {
+			$parent_comment = \get_comment( $ancestors[0]->comment_parent );
+			// prepend to array to keep the while loop going until we reach the top
+			array_unshift( $ancestors, $parent_comment );
+		}
+
+		$ancestors = array_filter( $ancestors, function( $comment ) {
+			return get_comment_meta( $comment->comment_ID, 'protocol', true ) === 'activitypub';
+		} );
+
+		return $ancestors;
+
+	}
+
+	/**
 	 * Collect all other Users that participated in this comment-thread
 	 * to send them a notification about the new reply.
 	 *
@@ -232,27 +254,17 @@ class Comment extends Base {
 			return $mentions;
 		}
 
-		$comment_query = new WP_Comment_Query(
-			array(
-				'post_id'    => $this->wp_object->comment_post_ID,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query' => array(
-					array(
-						'key'   => 'protocol',
-						'value' => 'activitypub',
-					),
-				),
-			)
-		);
+		$ancestors = $this->get_comment_ancestors();
+		if ( ! $ancestors ) {
+			return $mentions;
+		}
 
-		if ( $comment_query->comments ) {
-			foreach ( $comment_query->comments as $comment ) {
-				if ( ! empty( $comment->comment_author_url ) ) {
-					$acct = Webfinger::uri_to_acct( $comment->comment_author_url );
-					if ( $acct && ! is_wp_error( $acct ) ) {
-						$acct = str_replace( 'acct:', '@', $acct );
-						$mentions[ $acct ] = $comment->comment_author_url;
-					}
+		foreach ( $ancestors as $comment ) {
+			if ( ! empty( $comment->comment_author_url ) ) {
+				$acct = Webfinger::uri_to_acct( $comment->comment_author_url );
+				if ( $acct && ! is_wp_error( $acct ) ) {
+					$acct = str_replace( 'acct:', '@', $acct );
+					$mentions[ $acct ] = $comment->comment_author_url;
 				}
 			}
 		}
