@@ -276,7 +276,7 @@ class Comment {
 		}
 
 		// check for local comment
-		if ( \wp_parse_url( \site_url(), \PHP_URL_HOST ) === \wp_parse_url( $url, \PHP_URL_HOST ) ) {
+		if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) === \wp_parse_url( $url, \PHP_URL_HOST ) ) {
 			$query = \wp_parse_url( $url, \PHP_URL_QUERY );
 
 			if ( $query ) {
@@ -379,12 +379,7 @@ class Comment {
 		}
 
 		// generate URI based on comment ID
-		return \add_query_arg(
-			array(
-				'c' => $comment->comment_ID,
-			),
-			\trailingslashit( site_url() )
-		);
+		return \add_query_arg( 'c', $comment->comment_ID, \home_url() );
 	}
 
 	/**
