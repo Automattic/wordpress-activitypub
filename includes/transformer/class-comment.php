@@ -232,14 +232,13 @@ class Comment extends Base {
 			array_unshift( $ancestors, $parent_comment );
 		}
 
-		$ancestors = array_filter(
+		// Now that we have the full tree of ancestors, only return the ones received from the fediverse
+		return array_filter(
 			$ancestors,
 			function( $comment ) {
 				return get_comment_meta( $comment->comment_ID, 'protocol', true ) === 'activitypub';
 			}
 		);
-
-		return $ancestors;
 	}
 
 	/**
