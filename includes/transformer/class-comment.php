@@ -232,12 +232,14 @@ class Comment extends Base {
 			array_unshift( $ancestors, $parent_comment );
 		}
 
-		$ancestors = array_filter( $ancestors, function( $comment ) {
-			return get_comment_meta( $comment->comment_ID, 'protocol', true ) === 'activitypub';
-		} );
+		$ancestors = array_filter(
+			$ancestors,
+			function( $comment ) {
+				return get_comment_meta( $comment->comment_ID, 'protocol', true ) === 'activitypub';
+			}
+		);
 
 		return $ancestors;
-
 	}
 
 	/**
