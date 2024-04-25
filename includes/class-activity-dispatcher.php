@@ -98,6 +98,11 @@ class Activity_Dispatcher {
 			return;
 		}
 
+		// do not announce replies
+		if ( $wp_object instanceof WP_Comment ) {
+			return;
+		}
+
 		$transformer = Factory::get_transformer( $wp_object );
 		$transformer->change_wp_user_id( Users::BLOG_USER_ID );
 
