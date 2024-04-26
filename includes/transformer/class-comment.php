@@ -224,19 +224,30 @@ class Comment extends Base {
 	 * @return array The list of ancestors.
 	 */
 	protected function get_comment_ancestors() {
-		$ancestors = [ $this->wp_object ];
+		$ancestors = [];
+		$parent_id = (int) $this->wp_object->comment_parent;
+		$max_iters = 20;
+		$iters     = 0;
 
-		while ( $ancestors[0]->comment_parent > 0 ) {
-			$parent_comment = \get_comment( $ancestors[0]->comment_parent );
-			// prepend to array to keep the while loop going until we reach the top
-			array_unshift( $ancestors, $parent_comment );
+		while ( $parent_id > 0 ) {
+			++$iters;
+			if ( $iters > $max_iters ) {
+				break;
+			}
+			$parent_comment = \get_comment( $parent_id );
+			if ( ! $parent_comment ) {
+				break;
+			}
+
+			$ancestors[] = $parent_comment;
+			$parent_id   = (int) $parent_comment->comment_parent;
 		}
 
 		// Now that we have the full tree of ancestors, only return the ones received from the fediverse
 		return array_filter(
 			$ancestors,
 			function( $comment ) {
-				return get_comment_meta( $comment->comment_ID, 'protocol', true ) === 'activitypub';
+				return \get_comment_meta( $comment->comment_ID, 'protocol', true ) === 'activitypub';
 			}
 		);
 	}
