@@ -7,6 +7,7 @@ use Activitypub\Model\User;
 use Activitypub\Model\Blog_User;
 use Activitypub\Model\Application_User;
 
+use function Activitypub\object_to_uri;
 use function Activitypub\url_to_authorid;
 use function Activitypub\is_user_disabled;
 
@@ -136,6 +137,8 @@ class Users {
 	 * @return \Acitvitypub\Model\User The User.
 	 */
 	public static function get_by_resource( $resource ) {
+		$resource = object_to_uri( $resource );
+
 		$scheme = 'acct';
 		$match = array();
 		// try to extract the scheme and the host
