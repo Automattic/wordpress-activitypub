@@ -4,6 +4,7 @@ namespace Activitypub\Collection;
 use WP_Error;
 use WP_Comment_Query;
 
+use function Activitypub\object_to_uri;
 use function Activitypub\url_to_commentid;
 use function Activitypub\object_id_to_comment;
 use function Activitypub\get_remote_metadata_by_actor;
@@ -46,7 +47,8 @@ class Interactions {
 			return false;
 		}
 
-		$meta = get_remote_metadata_by_actor( $activity['actor'] );
+		$actor = object_to_uri( $activity['actor'] );
+		$meta  = get_remote_metadata_by_actor( $actor );
 
 		if ( ! $meta || \is_wp_error( $meta ) ) {
 			return false;
