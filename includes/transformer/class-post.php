@@ -536,7 +536,7 @@ class Post extends Base {
 		}
 
 		// Default to Article.
-		$object_type = 'Article';
+		$object_type = 'Note';
 		$post_format = 'standard';
 
 		if ( \get_theme_support( 'post-formats' ) ) {
@@ -547,18 +547,12 @@ class Post extends Base {
 		switch ( $post_type ) {
 			case 'post':
 				switch ( $post_format ) {
-					case 'aside':
-					case 'status':
-					case 'quote':
-					case 'note':
-					case 'gallery':
-					case 'image':
-					case 'video':
-					case 'audio':
-						$object_type = 'Note';
+					case 'standard':
+					case '':
+						$object_type = 'Article';
 						break;
 					default:
-						$object_type = 'Article';
+						$object_type = 'Note';
 						break;
 				}
 				break;
@@ -566,7 +560,7 @@ class Post extends Base {
 				$object_type = 'Page';
 				break;
 			default:
-				$object_type = 'Article';
+				$object_type = 'Note';
 				break;
 		}
 
