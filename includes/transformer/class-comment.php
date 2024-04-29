@@ -12,6 +12,7 @@ use Activitypub\Transformer\Base;
 
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_comment_ancestors;
 
 /**
  * WordPress Comment Transformer
@@ -224,24 +225,7 @@ class Comment extends Base {
 	 * @return array The list of ancestors.
 	 */
 	protected function get_comment_ancestors() {
-		$ancestors = [];
-		$parent_id = (int) $this->wp_object->comment_parent;
-		$max_iters = 20;
-		$iters     = 0;
-
-		while ( $parent_id > 0 ) {
-			++$iters;
-			if ( $iters > $max_iters ) {
-				break;
-			}
-			$parent_comment = \get_comment( $parent_id );
-			if ( ! $parent_comment ) {
-				break;
-			}
-
-			$ancestors[] = $parent_comment;
-			$parent_id   = (int) $parent_comment->comment_parent;
-		}
+		$ancestors = get_comment_ancestors( $this->wp_object );
 
 		// Now that we have the full tree of ancestors, only return the ones received from the fediverse
 		return array_filter(

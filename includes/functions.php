@@ -854,3 +854,42 @@ function get_masked_wp_version() {
 
 	return implode( '.', $version );
 }
+
+/**
+ * Retrieves the IDs of the ancestors of a comment.
+ *
+ * Adaption of `get_post_ancestors` from WordPress core.
+ *
+ * @see https://developer.wordpress.org/reference/functions/get_post_ancestors/
+ *
+ * @param int|WP_Comment $comment Comment ID or comment object.
+ *
+ * @return WP_Comment[] Array of ancestor Comments or empty array if there are none.
+ */
+function get_comment_ancestors( $comment ) {
+	$comment = get_comment( $comment );
+
+	// phpcs:ignore Universal.Operators.StrictComparisons.LooseEqual
+	if ( ! $comment || empty( $comment->comment_parent ) || $comment->comment_parent == $comment->comment_ID ) {
+		return array();
+	}
+
+	$ancestors = array();
+
+	$id          = $comment->comment_parent;
+	$ancestors[] = $comment;
+
+	// phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
+	while ( $ancestor = \get_comment( $id ) ) {
+		// Loop detection: If the ancestor has been seen before, break.
+		// phpcs:ignore Universal.Operators.StrictComparisons.LooseEqual
+		if ( empty( $ancestor->comment_parent ) || ( $ancestor->comment_parent == $comment->comment_ID ) || in_array( $ancestor->comment_parent, $ancestors, true ) ) {
+			break;
+		}
+
+		$id          = $ancestor->comment_parent;
+		$ancestors[] = $comment;
+	}
+
+	return $ancestors;
+}
