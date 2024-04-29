@@ -32,6 +32,8 @@ class Test_Activitypub_Users_Collection extends WP_UnitTestCase {
 			array( 'http://example.org/@blog', 'Activitypub\Model\Blog_User' ),
 			array( 'https://example.org/@blog', 'Activitypub\Model\Blog_User' ),
 			array( 'http://example.org/@blog/', 'Activitypub\Model\Blog_User' ),
+			array( 'http://example.org/blog/@blog', 'Activitypub\Model\Blog_User' ),
+			array( 'http://example.org/blog/@blog/', 'Activitypub\Model\Blog_User' ),
 			array( 'http://example.org/', 'Activitypub\Model\Blog_User' ),
 			array( 'http://example.org', 'Activitypub\Model\Blog_User' ),
 			array( 'https://example.org/', 'Activitypub\Model\Blog_User' ),
