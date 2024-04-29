@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.5
-Stable tag: 2.3.0
+Stable tag: 2.3.1
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -133,6 +133,17 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= 2.3.1 =
+
+* Added: Enable Mastodon Apps: Add remote outbox fetching
+* Added: Help texts
+* Fixed: Compatibility issues with Discourse
+* Fixed: Do not announce replies
+* Fixed: Also delete interactions with deleted person
+* Fixed: Check Author-URL only if user is enabled for ActivityPub
+* Fixed: Generate comment IDs for federation from home_url
+* Removed: Beta label from the #Hashtag settings
+
 = 2.3.0 =
 
 * Added: Mark links as "unhandled-link" and "status-link", for a better UX in the Mastodon App
@@ -151,13 +162,6 @@ For reasons of data protection, it is not possible to see the followers of other
 * Changed: Improve remote reply handling
 * Changed: Remote Reply: limit enqueue to when needed
 * Changed: Abstract shared Dialog code
-
-
-= 2.2.0 =
-
-* Added: Remote-Reply lightbox
-* Added: Support `application/ld+json` mime-type with AP profile in WebFinger
-* Fixed: Prevent scheduler overload
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/master/CHANGELOG.md).
 

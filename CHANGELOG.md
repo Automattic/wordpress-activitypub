@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1] - 2024-04-29
+
+### Added
+
+* Enable Mastodon Apps: Add remote outbox fetching
+* Help texts
+
+### Fixed
+
+* Compatibility issues with Discourse
+* Do not announce replies
+* Also delete interactions with deleted person
+* Check Author-URL only if user is enabled for ActivityPub
+* Generate comment IDs for federation from home_url
+
+### Removed
+
+* Beta label from the #Hashtag settings
+
 ## [2.3.0] - 2024-04-16
 
 ### Added
@@ -725,6 +744,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
+[2.3.1]: https://github.com/Automattic/wordpress-activitypub/compare/2.3.0...2.3.1
 [2.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/2.2.0...2.3.0
 [2.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/2.1.1...2.2.0
 [2.1.1]: https://github.com/Automattic/wordpress-activitypub/compare/2.1.0...2.1.1
