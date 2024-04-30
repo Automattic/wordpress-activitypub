@@ -22,6 +22,7 @@ class Handler {
 	 * Register handlers.
 	 */
 	public static function register_handlers() {
+		Announce::init();
 		Create::init();
 		Delete::init();
 		Follow::init();
