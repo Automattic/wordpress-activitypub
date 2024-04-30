@@ -864,7 +864,7 @@ function get_masked_wp_version() {
  *
  * @param int|WP_Comment $comment Comment ID or comment object.
  *
- * @return WP_Comment[] Array of ancestor Comments or empty array if there are none.
+ * @return WP_Comment[] Array of ancestor comments or empty array if there are none.
  */
 function get_comment_ancestors( $comment ) {
 	$comment = get_comment( $comment );
@@ -876,19 +876,19 @@ function get_comment_ancestors( $comment ) {
 
 	$ancestors = array();
 
-	$id          = $comment->comment_parent;
-	$ancestors[] = $comment;
+	$ancestor    = \get_comment( $comment->comment_parent );
+	$ancestors[] = $ancestor;
 
 	// phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
-	while ( $ancestor = \get_comment( $id ) ) {
+	while ( $ancestor ) {
 		// Loop detection: If the ancestor has been seen before, break.
 		// phpcs:ignore Universal.Operators.StrictComparisons.LooseEqual
 		if ( empty( $ancestor->comment_parent ) || ( $ancestor->comment_parent == $comment->comment_ID ) || in_array( $ancestor->comment_parent, $ancestors, true ) ) {
 			break;
 		}
 
-		$id          = $ancestor->comment_parent;
-		$ancestors[] = $comment;
+		$ancestor    = \get_comment( $comment->comment_parent );
+		$ancestors[] = $ancestor;
 	}
 
 	return $ancestors;
