@@ -45,7 +45,7 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 
 		$parent_comment_id = wp_insert_comment(
 			array(
-				'comment_type' => 'comment',
+				'comment_type' => 'parent comment',
 				'comment_content' => 'This is a comment.',
 				'comment_author_url' => 'https://example.com',
 				'comment_author_email' => '',
