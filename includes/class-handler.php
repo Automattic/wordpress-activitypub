@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub;
 
+use Activitypub\Handler\Announce;
 use Activitypub\Handler\Create;
 use Activitypub\Handler\Delete;
 use Activitypub\Handler\Follow;

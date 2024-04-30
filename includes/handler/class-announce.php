@@ -22,9 +22,9 @@ class Announce {
 	/**
 	 * Handles "Announce" requests
 	 *
-	 * @param array                $array   The activity-object
-	 * @param int                  $user_id The id of the local blog-user
-	 * @param Activitypub\Activity $object  The activity object
+	 * @param array                $array    The activity-object
+	 * @param int                  $user_id  The id of the local blog-user
+	 * @param Activitypub\Activity $activity The activity object
 	 *
 	 * @return void
 	 */
