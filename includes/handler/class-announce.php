@@ -3,6 +3,8 @@ namespace Activitypub\Handler;
 
 use Activitypub\Http;
 
+use function Activitypub\is_activity_public;
+
 /**
  * Handle Create requests
  */
