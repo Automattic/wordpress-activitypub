@@ -28,7 +28,7 @@ class Enable_Mastodon_Apps {
 	public static function init() {
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_add_followers' ), 20, 2 );
-		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 10, 2 );
+		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 15, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 40, 2 );
 		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ) );
 		\add_filter( 'mastodon_api_statuses', array( self::class, 'api_statuses_external' ), 10, 2 );
@@ -143,7 +143,7 @@ class Enable_Mastodon_Apps {
 	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
 	 */
 	public static function api_account_external( $user_data, $user_id ) {
-		if ( $user_data || is_numeric( $user_id ) ) {
+		if ( $user_data || ( is_numeric( $user_id ) && $user_id ) ) {
 			// Only augment.
 			return $user_data;
 		}
@@ -254,7 +254,7 @@ class Enable_Mastodon_Apps {
 		return $search_data;
 	}
 
-	public function api_get_posts_query_args( $args ) {
+	public static function api_get_posts_query_args( $args ) {
 		if ( isset( $args['author'] ) && is_string( $args['author'] ) ) {
 			$uri = Webfinger_Util::resolve( $args['author'] );
 			if ( $uri && ! is_wp_error( $uri ) ) {
