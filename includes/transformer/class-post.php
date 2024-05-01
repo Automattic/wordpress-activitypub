@@ -704,6 +704,7 @@ class Post extends Base {
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$post    = $this->wp_object;
+		add_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ), 10, 2 );
 		$content = $this->get_post_content_template();
 
 		// Register our shortcodes just in time.
