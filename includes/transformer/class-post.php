@@ -786,4 +786,21 @@ class Post extends Base {
 		 */
 		return apply_filters( 'activitypub_post_locale', $lang, $post_id, $this->wp_object );
 	}
+
+	/**
+	 * Transform Embed blocks to simple url.
+	 *
+	 * Remote servers will simply drop iframe elements, rendering incomplete content.
+	 *
+	 * @see https://www.w3.org/TR/activitypub/#security-sanitizing-content
+	 * @see https://www.w3.org/wiki/ActivityPub/Primer/HTML
+	 *
+	 * @param string $block_content The block content (html)
+	 * @param object $block The block object
+	 *
+	 * @return string The plain url
+	 */
+	public static function revert_embed_links( $block_content, $block ) {
+		return '<p><a href="' . esc_url( $block['attrs']['url'] ) .'">' . $block['attrs']['url'] .'</a></p>';
+	}
 }
