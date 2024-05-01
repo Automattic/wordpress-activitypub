@@ -788,7 +788,7 @@ class Post extends Base {
 	}
 
 	/**
-	 * Transform Embed blocks to simple url.
+	 * Transform Embed blocks to block level link.
 	 *
 	 * Remote servers will simply drop iframe elements, rendering incomplete content.
 	 *
@@ -798,9 +798,9 @@ class Post extends Base {
 	 * @param string $block_content The block content (html)
 	 * @param object $block The block object
 	 *
-	 * @return string The plain url
+	 * @return string A block level link
 	 */
 	public static function revert_embed_links( $block_content, $block ) {
-		return '<p><a href="' . esc_url( $block['attrs']['url'] ) .'">' . $block['attrs']['url'] .'</a></p>';
+		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
 	}
 }
