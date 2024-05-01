@@ -107,9 +107,9 @@ class Server {
 		}
 
 		if (
-			// POST-Requets are always signed
+			// POST-Requests are always signed
 			'GET' !== $request->get_method() ||
-			// GET-Requests are only signed in secure mode
+			// GET-Requests only require a signature in secure mode
 			( 'GET' === $request->get_method() && ACTIVITYPUB_AUTHORIZED_FETCH )
 		) {
 			$verified_request = Signature::verify_http_signature( $request );
