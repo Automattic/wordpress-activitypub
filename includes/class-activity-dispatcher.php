@@ -102,6 +102,11 @@ class Activity_Dispatcher {
 			return;
 		}
 
+		// do not announce replies
+		if ( $wp_object instanceof WP_Comment ) {
+			return;
+		}
+
 		$transformer = Factory::get_transformer( $wp_object );
 
 		if ( \is_wp_error( $transformer ) ) {

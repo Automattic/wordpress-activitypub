@@ -4,6 +4,8 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 
+use function Activitypub\object_to_uri;
+
 /**
  * Handle Undo requests
  */
@@ -28,10 +30,10 @@ class Undo {
 		if (
 			isset( $activity['object']['type'] ) &&
 			'Follow' === $activity['object']['type'] &&
-			isset( $activity['object']['object'] ) &&
-			filter_var( $activity['object']['object'], FILTER_VALIDATE_URL )
+			isset( $activity['object']['object'] )
 		) {
-			$user = Users::get_by_resource( $activity['object']['object'] );
+			$user_id = object_to_uri( $activity['object']['object'] );
+			$user = Users::get_by_resource( $user_id );
 
 			if ( ! $user || is_wp_error( $user ) ) {
 				// If we can not find a user,
@@ -40,8 +42,9 @@ class Undo {
 			}
 
 			$user_id = $user->get__id();
+			$actor   = object_to_uri( $activity['actor'] );
 
-			Followers::remove_follower( $user_id, $activity['actor'] );
+			Followers::remove_follower( $user_id, $actor );
 		}
 	}
 }

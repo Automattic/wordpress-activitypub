@@ -535,7 +535,7 @@ class Post extends Base {
 		}
 
 		// Default to Article.
-		$object_type = 'Article';
+		$object_type = 'Note';
 		$post_format = 'standard';
 
 		if ( \get_theme_support( 'post-formats' ) ) {
@@ -546,18 +546,12 @@ class Post extends Base {
 		switch ( $post_type ) {
 			case 'post':
 				switch ( $post_format ) {
-					case 'aside':
-					case 'status':
-					case 'quote':
-					case 'note':
-					case 'gallery':
-					case 'image':
-					case 'video':
-					case 'audio':
-						$object_type = 'Note';
+					case 'standard':
+					case '':
+						$object_type = 'Article';
 						break;
 					default:
-						$object_type = 'Article';
+						$object_type = 'Note';
 						break;
 				}
 				break;
@@ -565,7 +559,7 @@ class Post extends Base {
 				$object_type = 'Page';
 				break;
 			default:
-				$object_type = 'Article';
+				$object_type = 'Note';
 				break;
 		}
 
@@ -707,6 +701,8 @@ class Post extends Base {
 		 */
 		do_action( 'activitypub_before_get_content', $post );
 
+		add_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ), 10, 2 );
+
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$post    = $this->wp_object;
 		$content = $this->get_post_content_template();
@@ -790,5 +786,22 @@ class Post extends Base {
 		 * @return string The filtered locale of the post.
 		 */
 		return apply_filters( 'activitypub_post_locale', $lang, $post_id, $this->wp_object );
+	}
+
+	/**
+	 * Transform Embed blocks to block level link.
+	 *
+	 * Remote servers will simply drop iframe elements, rendering incomplete content.
+	 *
+	 * @see https://www.w3.org/TR/activitypub/#security-sanitizing-content
+	 * @see https://www.w3.org/wiki/ActivityPub/Primer/HTML
+	 *
+	 * @param string $block_content The block content (html)
+	 * @param object $block The block object
+	 *
+	 * @return string A block level link
+	 */
+	public static function revert_embed_links( $block_content, $block ) {
+		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
 	}
 }
