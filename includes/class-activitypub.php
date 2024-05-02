@@ -107,7 +107,6 @@ class Activitypub {
 
 		if ( \is_author() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/author-json.php';
-			$template      = ACTIVITYPUB_PLUGIN_DIR . '/templates/author-json.php';
 		} elseif ( is_comment() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() ) {
@@ -126,26 +125,6 @@ class Activitypub {
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
 				header( 'HTTP/1.1 401 Unauthorized' );
-
-				add_filter(
-					'activitypub_activity_object_array',
-					function ( $activity ) {
-						$activity = array_intersect_key(
-							$activity,
-							array_flip(
-								array(
-									'@context',
-									'id',
-									'type',
-									'preferredUsername',
-									'publicKey',
-								)
-							)
-						);
-
-						return $activity;
-					}
-				);
 
 				// fallback as template_loader can't return http headers
 				return $template;
