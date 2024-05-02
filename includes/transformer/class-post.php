@@ -3,7 +3,7 @@ namespace Activitypub\Transformer;
 
 use WP_Post;
 use Activitypub\Shortcodes;
-use Activitypub\Model\Blog_User;
+use Activitypub\Model\Blog;
 use Activitypub\Transformer\Base;
 use Activitypub\Collection\Users;
 use Activitypub\Activity\Base_Object;
@@ -116,7 +116,7 @@ class Post extends Base {
 	 * @return string The User-URL.
 	 */
 	protected function get_attributed_to() {
-		$blog_user = new Blog_User();
+		$blog_user = new Blog();
 
 		if ( is_single_user() ) {
 			return $blog_user->get_url();
@@ -585,6 +585,16 @@ class Post extends Base {
 		}
 
 		return $cc;
+	}
+
+
+	public function get_audience() {
+		if ( is_single_user() ) {
+			return null;
+		} else {
+			$blog = new Blog();
+			return array( $blog->get_id() );
+		}
 	}
 
 	/**

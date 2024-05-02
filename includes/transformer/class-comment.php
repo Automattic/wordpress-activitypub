@@ -6,7 +6,7 @@ use WP_Comment_Query;
 
 use Activitypub\Webfinger;
 use Activitypub\Comment as Comment_Utils;
-use Activitypub\Model\Blog_User;
+use Activitypub\Model\Blog;
 use Activitypub\Collection\Users;
 use Activitypub\Transformer\Base;
 
@@ -90,7 +90,7 @@ class Comment extends Base {
 	 */
 	protected function get_attributed_to() {
 		if ( is_single_user() ) {
-			$user = new Blog_User();
+			$user = new Blog();
 			return $user->get_url();
 		}
 

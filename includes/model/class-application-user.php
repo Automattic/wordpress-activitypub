@@ -7,7 +7,7 @@ use Activitypub\Collection\Users;
 
 use function Activitypub\get_rest_url_by_path;
 
-class Application_User extends Blog_User {
+class Application_User extends Blog {
 	/**
 	 * The User-ID
 	 *
