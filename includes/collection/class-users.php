@@ -71,11 +71,11 @@ class Users {
 	public static function get_by_username( $username ) {
 		// check for blog user.
 		if ( Blog::get_default_username() === $username ) {
-			return self::get_by_id( self::BLOG_USER_ID );
+			return new Blog();
 		}
 
 		if ( get_option( 'activitypub_blog_user_identifier' ) === $username ) {
-			return self::get_by_id( self::BLOG_USER_ID );
+			return new Blog();
 		}
 
 		// check for application user.
