@@ -12,6 +12,7 @@ use Activitypub\Transformer\Base;
 
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_comment_ancestors;
 
 /**
  * WordPress Comment Transformer
@@ -224,30 +225,13 @@ class Comment extends Base {
 	 * @return array The list of ancestors.
 	 */
 	protected function get_comment_ancestors() {
-		$ancestors = [];
-		$parent_id = (int) $this->wp_object->comment_parent;
-		$max_iters = 20;
-		$iters     = 0;
-
-		while ( $parent_id > 0 ) {
-			++$iters;
-			if ( $iters > $max_iters ) {
-				break;
-			}
-			$parent_comment = \get_comment( $parent_id );
-			if ( ! $parent_comment ) {
-				break;
-			}
-
-			$ancestors[] = $parent_comment;
-			$parent_id   = (int) $parent_comment->comment_parent;
-		}
+		$ancestors = get_comment_ancestors( $this->wp_object );
 
 		// Now that we have the full tree of ancestors, only return the ones received from the fediverse
 		return array_filter(
 			$ancestors,
-			function( $comment ) {
-				return \get_comment_meta( $comment->comment_ID, 'protocol', true ) === 'activitypub';
+			function( $comment_id ) {
+				return \get_comment_meta( $comment_id, 'protocol', true ) === 'activitypub';
 			}
 		);
 	}
@@ -271,8 +255,9 @@ class Comment extends Base {
 			return $mentions;
 		}
 
-		foreach ( $ancestors as $comment ) {
-			if ( ! empty( $comment->comment_author_url ) ) {
+		foreach ( $ancestors as $comment_id ) {
+			$comment = \get_comment( $comment_id );
+			if ( $comment && ! empty( $comment->comment_author_url ) ) {
 				$acct = Webfinger::uri_to_acct( $comment->comment_author_url );
 				if ( $acct && ! is_wp_error( $acct ) ) {
 					$acct = str_replace( 'acct:', '@', $acct );
