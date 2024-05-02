@@ -1,13 +1,8 @@
 <?php
 $comment = \get_comment( \get_query_var( 'c', null ) ); // phpcs:ignore
 
-$transformer = \Activitypub\Transformer\Factory::get_transformer( $comment );
-
-if ( \is_wp_error( $transformer ) ) {
-	return;
-}
-
-$json = \array_merge( array( '@context' => \Activitypub\get_context() ), $transformer->to_object()->to_array() );
+$object = \Activitypub\Transformer\Factory::get_transformer( $comment );
+$json   = \array_merge( array( '@context' => \Activitypub\get_context() ), $object->to_object()->to_array() );
 
 // filter output
 $json = \apply_filters( 'activitypub_json_comment_array', $json );
