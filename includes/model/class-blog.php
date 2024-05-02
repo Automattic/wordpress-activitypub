@@ -87,21 +87,6 @@ class Blog extends Actor {
 		return true;
 	}
 
-	public static function from_wp_user( $user_id ) {
-		if ( is_user_disabled( $user_id ) ) {
-			return new WP_Error(
-				'activitypub_user_not_found',
-				\__( 'User not found', 'activitypub' ),
-				array( 'status' => 404 )
-			);
-		}
-
-		$object = new static();
-		$object->_id = $user_id;
-
-		return $object;
-	}
-
 	/**
 	 * Get the User-ID.
 	 *

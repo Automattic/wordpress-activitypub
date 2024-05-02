@@ -47,7 +47,7 @@ class Users {
 		}
 
 		if ( self::BLOG_USER_ID === $user_id ) {
-			return Blog::from_wp_user( $user_id );
+			return new Blog();
 		} elseif ( self::APPLICATION_USER_ID === $user_id ) {
 			return Application_User::from_wp_user( $user_id );
 		} elseif ( $user_id > 0 ) {
