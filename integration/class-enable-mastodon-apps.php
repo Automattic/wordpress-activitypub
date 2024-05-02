@@ -343,13 +343,8 @@ class Enable_Mastodon_Apps {
 			return $statuses;
 		}
 
-		$response = Http::get( $data['outbox'], true );
-		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
-			return $statuses;
-		}
-
-		$outbox = json_decode( wp_remote_retrieve_body( $response ), true );
-		if ( ! $outbox || is_wp_error( $outbox ) || ! isset( $outbox['first'] ) ) {
+		$outbox = Http::get_remote_object( $data['outbox'], true );
+		if ( is_wp_error( $outbox ) || ! isset( $outbox['first'] ) ) {
 			return $statuses;
 		}
 
@@ -358,11 +353,10 @@ class Enable_Mastodon_Apps {
 			return $statuses;
 		}
 
-		$response = Http::get( $outbox['first'], true );
-		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
+		$posts = Http::get_remote_object( $outbox['first'], true );
+		if ( is_wp_error( $posts ) ) {
 			return $statuses;
 		}
-		$posts = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		$activitypub_statuses = array_map(
 			function ( $item ) use ( $account ) {
@@ -375,24 +369,14 @@ class Enable_Mastodon_Apps {
 	}
 
 	public static function api_get_replies( $context, $post_id, $url ) {
-		$response = Http::get( $url, true );
-		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
-			return $context;
-		}
-
-		$meta = json_decode( wp_remote_retrieve_body( $response ), true );
-		if ( ! $meta || is_wp_error( $meta ) || ! isset( $meta['replies']['first']['next'] ) ) {
+		$meta = Http::get_remote_object( $url, true );
+		if ( is_wp_error( $meta ) || ! isset( $meta['replies']['first']['next'] ) ) {
 			return $context;
 		}
 
 		$replies_url = $meta['replies']['first']['next'];
-		$response = Http::get( $replies_url, true );
-		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
-			return $context;
-		}
-
-		$replies = json_decode( wp_remote_retrieve_body( $response ), true );
-		if ( ! $replies || is_wp_error( $replies ) || ! isset( $replies['items'] ) ) {
+		$replies = Http::get_remote_object( $replies_url, true );
+		if ( is_wp_error( $replies ) || ! isset( $replies['items'] ) ) {
 			return $context;
 		}
 
