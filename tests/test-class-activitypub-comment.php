@@ -59,9 +59,7 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 
 		wp_update_comment( $comment_array );
 
-		$parent_comment = get_comment( $parent_comment_id );
-
-		$this->assertEquals( array( $parent_comment ), \Activitypub\get_comment_ancestors( $comment_id ) );
+		$this->assertEquals( array( $parent_comment_id ), \Activitypub\get_comment_ancestors( $comment_id ) );
 	}
 
 	public function ability_to_federate_comment() {
