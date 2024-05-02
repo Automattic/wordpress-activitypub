@@ -34,34 +34,6 @@ abstract class Base {
 	 * @return Base
 	 */
 	public static function transform( $object ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
-		if ( ! \is_object( $object ) ) {
-			return new WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
-		}
-
-		$class = \get_class( $object );
-
-		/**
-		 * Filter the transformer for a given object.
-		 *
-		 * @param Base   $transformer  The transformer to use.
-		 * @param mixed  $object       The object to transform.
-		 * @param string $object_class The class of the object to transform.
-		 *
-		 * @return mixed The transformer to use.
-		 */
-		$transformer = \apply_filters( 'activitypub_transformer', null, $object, $class );
-		if ( $transformer ) {
-			if (
-				! \is_object( $transformer ) ||
-				! $transformer instanceof static
-			) {
-				return new WP_Error( 'invalid_transformer', __( 'Invalid transformer', 'activitypub' ) );
-			}
-
-			return $transformer;
-		}
-
-		// Default transformer.
 		return new static( $object );
 	}
 
