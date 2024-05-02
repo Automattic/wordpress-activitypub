@@ -8,6 +8,7 @@ use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Users;
+use Activitypub\Transformer\Base;
 
 /**
  * Returns the ActivityPub default JSON-context
@@ -858,8 +859,8 @@ function get_masked_wp_version() {
 /**
  * Sets, or returns, the current transformer.
  *
- * @param  null|\Activitypub\Transformer $value Transformer to set.
- * @return null|\Activitypub\Transformer        Current transformer.
+ * @param  Base|null $value Transformer to set.
+ * @return Base|null       Current transformer.
  */
 function current_transformer( $value = null ) {
 	static $transformer = null; // Default value.
