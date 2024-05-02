@@ -249,7 +249,7 @@ class Post extends Base {
 		// This linter warning is a false positive - we have to
 		// re-count each time here as we modify $images.
 		// phpcs:ignore Squiz.PHP.DisallowSizeFunctionsInLoops.Found
-		while ( $tags->next_tag( 'img' ) && ( \count( $images ) < $max_images ) ) {
+		while ( $tags->next_tag( 'img' ) && ( \count( $images ) <= $max_images ) ) {
 			$src = $tags->get_attribute( 'src' );
 
 			// If the img source is in our uploads dir, get the
@@ -311,7 +311,7 @@ class Post extends Base {
 			$images[] = \get_post_thumbnail_id( $id );
 		}
 
-		if ( \count( $images ) < $max_images ) {
+		if ( \count( $images ) <= $max_images ) {
 			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
 				$images = \array_merge( $images, $this->get_classic_editor_image_embeds( $max_images ) );
 			} else {
