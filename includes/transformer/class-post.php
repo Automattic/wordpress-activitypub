@@ -427,14 +427,14 @@ class Post extends Base {
 		// switching on image/audio/video
 		switch ( $mime_type_parts[0] ) {
 			case 'image':
-				$image_size = 'full';
+				$image_size = 'large';
 
 				/**
 				 * Filter the image URL returned for each post.
 				 *
 				 * @param array|false $thumbnail  The image URL, or false if no image is available.
 				 * @param int         $id         The attachment ID.
-				 * @param string      $image_size The image size to retrieve. Set to 'full' by default.
+				 * @param string      $image_size The image size to retrieve. Set to 'large' by default.
 				 */
 				$thumbnail = apply_filters(
 					'activitypub_get_image',
@@ -488,16 +488,16 @@ class Post extends Base {
 	 * Return details about an image attachment.
 	 *
 	 * @param int    $id         The attachment ID.
-	 * @param string $image_size The image size to retrieve. Set to 'full' by default.
+	 * @param string $image_size The image size to retrieve. Set to 'large' by default.
 	 *
 	 * @return array|false Array of image data, or boolean false if no image is available.
 	 */
-	protected static function get_wordpress_attachment( $id, $image_size = 'full' ) {
+	protected static function get_wordpress_attachment( $id, $image_size = 'large' ) {
 		/**
 		 * Hook into the image retrieval process. Before image retrieval.
 		 *
 		 * @param int    $id         The attachment ID.
-		 * @param string $image_size The image size to retrieve. Set to 'full' by default.
+		 * @param string $image_size The image size to retrieve. Set to 'large' by default.
 		 */
 		do_action( 'activitypub_get_image_pre', $id, $image_size );
 
@@ -507,7 +507,7 @@ class Post extends Base {
 		 * Hook into the image retrieval process. After image retrieval.
 		 *
 		 * @param int    $id         The attachment ID.
-		 * @param string $image_size The image size to retrieve. Set to 'full' by default.
+		 * @param string $image_size The image size to retrieve. Set to 'large' by default.
 		 */
 		do_action( 'activitypub_get_image_post', $id, $image_size );
 
