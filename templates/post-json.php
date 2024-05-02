@@ -2,7 +2,7 @@
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 $post = \get_post();
 
-$post_object = \Activitypub\Transformer\Factory::get_transformer( $post )->to_object();
+$post_object = \Activitypub\current_transformer()->to_object();
 
 /*
  * Action triggerd prior to the ActivityPub profile being created and sent to the client

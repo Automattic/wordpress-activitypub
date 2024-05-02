@@ -854,3 +854,19 @@ function get_masked_wp_version() {
 
 	return implode( '.', $version );
 }
+
+/**
+ * Sets, or returns, the current transformer.
+ *
+ * @param  null|\Activitypub\Transformer $value Transformer to set.
+ * @return null|\Activitypub\Transformer        Current transformer.
+ */
+function current_transformer( $value = null ) {
+	static $transformer = null; // Default value.
+
+	if ( null !== $value ) {
+		$transformer = $value;
+	}
+
+	return $transformer;
+}

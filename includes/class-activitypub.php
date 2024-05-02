@@ -116,6 +116,7 @@ class Activitypub {
 				return;
 			}
 
+			current_transformer( $transformer );
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() ) {
 			global $post;
@@ -125,6 +126,7 @@ class Activitypub {
 				return $template;
 			}
 
+			current_transformer( $transformer );
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
 		} elseif ( \is_home() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
