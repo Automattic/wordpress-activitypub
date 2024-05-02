@@ -144,24 +144,31 @@ class Users {
 		// try to extract the scheme and the host
 		if ( preg_match( '/^([a-zA-Z^:]+):(.*)$/i', $resource, $match ) ) {
 			// extract the scheme
-			$scheme = esc_attr( $match[1] );
+			$scheme = \esc_attr( $match[1] );
 		}
 
 		switch ( $scheme ) {
 			// check for http(s) URIs
 			case 'http':
 			case 'https':
-				$url_parts = wp_parse_url( $resource );
+				$resource_path = \wp_parse_url( $resource, PHP_URL_PATH );
 
-				// check for http(s)://blog.example.com/@username
-				if (
-					isset( $url_parts['path'] ) &&
-					str_starts_with( $url_parts['path'], '/@' )
-				) {
-					$identifier = str_replace( '/@', '', $url_parts['path'] );
-					$identifier = untrailingslashit( $identifier );
+				if ( $resource_path ) {
+					$blog_path = \wp_parse_url( \home_url(), PHP_URL_PATH );
 
-					return self::get_by_username( $identifier );
+					if ( $blog_path ) {
+						$resource_path = \str_replace( $blog_path, '', $resource_path );
+					}
+
+					$resource_path = \trim( $resource_path, '/' );
+
+					// check for http(s)://blog.example.com/@username
+					if ( str_starts_with( $resource_path, '@' ) ) {
+						$identifier = \str_replace( '@', '', $resource_path );
+						$identifier = \trim( $identifier, '/' );
+
+						return self::get_by_username( $identifier );
+					}
 				}
 
 				// check for http(s)://blog.example.com/author/username
