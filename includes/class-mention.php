@@ -4,6 +4,8 @@ namespace Activitypub;
 use WP_Error;
 use Activitypub\Webfinger;
 
+use function Activitypub\object_to_uri;
+
 /**
  * ActivityPub Mention Class
  *
@@ -102,7 +104,7 @@ class Mention {
 				$username = $metadata['preferredUsername'];
 			}
 
-			$url = isset( $metadata['url'] ) ? $metadata['url'] : $metadata['id'];
+			$url = isset( $metadata['url'] ) ? object_to_uri( $metadata['url'] ) : object_to_uri( $metadata['id'] );
 
 			if ( \is_array( $url ) ) {
 				$url = $url[0];
