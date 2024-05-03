@@ -141,10 +141,30 @@ class Post extends Base {
 		// We maintain the image-centric naming for backwards compatibility.
 		$max_media = \intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
 
+		$media = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+		$id    = $this->wp_object->ID;
+
+		// list post thumbnail first if this post has one
+		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
+			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
+		}
+
+		$enclosure = \get_post_meta( $id, 'enclosure', true );
+		if ( $enclosure && is_string( $enclosure ) ) {
+			$enclosure_id = attachment_url_to_postid( $enclosure );
+			if ( $enclosure_id ) {
+				$media['audio'][] = array( 'id' => $enclosure_id );
+			}
+		}
+
 		if ( site_supports_blocks() && \has_blocks( $this->wp_object->post_content ) ) {
-			$media = $this->get_block_attachments( $max_media );
+			$media = $this->get_block_attachments( $media, $max_media );
 		} else {
-			$media = $this->get_classic_editor_images( $max_media );
+			$media = $this->get_classic_editor_images( $media, $max_media );
 		}
 
 		$unique_ids = \array_unique( \array_column( $media, 'id' ) );
@@ -157,27 +177,15 @@ class Post extends Base {
 	/**
 	 * Get media attachments from blocks. They will be formatted as ActivityPub attachments, not as WP attachments.
 	 *
-	 * @param int $max_media The maximum number of attachments to return.
+	 * @param array $media     The media array grouped by type.
+	 * @param int   $max_media The maximum number of attachments to return.
 	 *
 	 * @return array The attachments.
 	 */
-	protected function get_block_attachments( $max_media ) {
+	protected function get_block_attachments( $media, $max_media ) {
 		// max media can't be negative or zero
 		if ( $max_media <= 0 ) {
 			return array();
-		}
-
-		$id = $this->wp_object->ID;
-
-		$media = array(
-			'image' => array(),
-			'audio' => array(),
-			'video' => array(),
-		);
-
-		// list post thumbnail first if this post has one
-		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
-			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
 		}
 
 		if ( $max_media > 0 ) {
@@ -185,7 +193,7 @@ class Post extends Base {
 			$media = self::get_media_from_blocks( $blocks, $media );
 		}
 
-		return self::filter_media_by_object_type( $media, \get_post_format( $this->wp_object ) );
+		return self::filter_media_by_object_type( $media, \get_post_format( $this->wp_object ), $this->wp_object );
 	}
 
 	/**
@@ -292,34 +300,26 @@ class Post extends Base {
 	 * Get post images from the classic editor.
 	 * Note that audio/video attachments are only supported in the block editor.
 	 *
-	 * @param int $max_images The maximum number of images to return.
+	 * @param array $media      The media array grouped by type.
+	 * @param int   $max_images The maximum number of images to return.
 	 *
 	 * @return array The attachments.
 	 */
-	protected function get_classic_editor_images( $max_images ) {
+	protected function get_classic_editor_images( $media, $max_images ) {
 		// max images can't be negative or zero
 		if ( $max_images <= 0 ) {
 			return array();
 		}
 
-		$id = $this->wp_object->ID;
-
-		$images = array();
-
-		// list post thumbnail first if this post has one
-		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
-			$images[] = \get_post_thumbnail_id( $id );
-		}
-
-		if ( \count( $images ) <= $max_images ) {
+		if ( \count( $media['image'] ) <= $max_images ) {
 			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-				$images = \array_merge( $images, $this->get_classic_editor_image_embeds( $max_images ) );
+				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_embeds( $max_images ) );
 			} else {
-				$images = \array_merge( $images, $this->get_classic_editor_image_attachments( $max_images ) );
+				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_attachments( $max_images ) );
 			}
 		}
 
-		return $images;
+		return $media['image'];
 	}
 
 	/**
@@ -402,8 +402,8 @@ class Post extends Base {
 	 *
 	 * @return array The filtered media IDs.
 	 */
-	protected static function filter_media_by_object_type( $media, $type ) {
-		$type = \apply_filters( 'filter_media_by_object_type', \strtolower( $type ) );
+	protected static function filter_media_by_object_type( $media, $type, $wp_object ) {
+		$type = \apply_filters( 'filter_media_by_object_type', \strtolower( $type ), $wp_object );
 
 		if ( ! empty( $media[ $type ] ) ) {
 			return $media[ $type ];
