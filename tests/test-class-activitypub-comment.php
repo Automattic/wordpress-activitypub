@@ -26,6 +26,42 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 		$this->assertEquals( $expected['should_be_federated'], \Activitypub\Comment::should_be_federated( $comment ) );
 	}
 
+	public function test_get_comment_ancestors() {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_type' => 'comment',
+				'comment_content' => 'This is a comment.',
+				'comment_author_url' => 'https://example.com',
+				'comment_author_email' => '',
+				'comment_meta' => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		$this->assertEquals( array(), \Activitypub\get_comment_ancestors( $comment_id ) );
+
+		$comment_array = get_comment( $comment_id, ARRAY_A );
+
+		$parent_comment_id = wp_insert_comment(
+			array(
+				'comment_type' => 'parent comment',
+				'comment_content' => 'This is a comment.',
+				'comment_author_url' => 'https://example.com',
+				'comment_author_email' => '',
+				'comment_meta' => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		$comment_array['comment_parent'] = $parent_comment_id;
+
+		wp_update_comment( $comment_array );
+
+		$this->assertEquals( array( $parent_comment_id ), \Activitypub\get_comment_ancestors( $comment_id ) );
+	}
+
 	public function ability_to_federate_comment() {
 		return array(
 			array(
