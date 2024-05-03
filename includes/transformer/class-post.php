@@ -142,24 +142,24 @@ class Post extends Base {
 		$max_media = \intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
 
 		$media = array(
-			'image' => array(),
 			'audio' => array(),
 			'video' => array(),
+			'image' => array(),
 		);
 		$id    = $this->wp_object->ID;
 
-		// add audio/video enclosures
+		// list post thumbnail first if this post has one
+		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
+			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
+		}
+
+		// list audio/video enclosures if this post has them
 		$enclosure = \get_post_meta( $id, 'enclosure', true );
 		if ( $enclosure && is_string( $enclosure ) ) {
 			$enclosure_id = attachment_url_to_postid( $enclosure );
 			if ( $enclosure_id ) {
 				$media['audio'][] = array( 'id' => $enclosure_id );
 			}
-		}
-
-		// list post thumbnail first if this post has one
-		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
-			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
 		}
 
 		if ( site_supports_blocks() && \has_blocks( $this->wp_object->post_content ) ) {
