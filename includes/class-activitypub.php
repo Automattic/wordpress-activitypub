@@ -115,9 +115,17 @@ class Activitypub {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
+		/*
+		 * Check if the request is authorized.
+		 *
+		 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
+		 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
+		 */
 		if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
+				header( 'HTTP/1.1 401 Unauthorized' );
+
 				// fallback as template_loader can't return http headers
 				return $template;
 			}
@@ -292,7 +300,7 @@ class Activitypub {
 
 		\add_rewrite_rule(
 			'^@([\w\-\.]+)',
-			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/users/$matches[1]',
+			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/$matches[1]',
 			'top'
 		);
 

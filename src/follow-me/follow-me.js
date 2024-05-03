@@ -27,7 +27,7 @@ function getNormalizedProfile( profile ) {
 function fetchProfile( userId ) {
 	const fetchOptions = {
 		headers: { Accept: 'application/activity+json' },
-		path: `/${ namespace }/users/${ userId }`,
+		path: `/${ namespace }/actors/${ userId }`,
 	};
 	return apiFetch( fetchOptions );
 }
@@ -72,7 +72,7 @@ function Follow( { profile, popupStyles, userId } ) {
 function DialogFollow( { profile, userId } ) {
 	const { webfinger } = profile;
 	const actionText = __( 'Follow', 'activitypub' );
-	const resourceUrl = `/${ namespace }/users/${userId}/remote-follow?resource=`;
+	const resourceUrl = `/${ namespace }/actors/${userId}/remote-follow?resource=`;
 	const copyDescription = __( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' );
 
 	return <Dialog

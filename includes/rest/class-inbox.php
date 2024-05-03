@@ -48,7 +48,7 @@ class Inbox {
 
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/inbox',
+			'/(users|actors)/(?P<user_id>[\w\-\.]+)/inbox',
 			array(
 				array(
 					'methods'             => WP_REST_Server::CREATABLE,
@@ -90,10 +90,10 @@ class Inbox {
 		$json = new \stdClass();
 
 		$json->{'@context'} = get_context();
-		$json->id = get_rest_url_by_path( sprintf( 'users/%d/inbox', $user->get__id() ) );
+		$json->id = get_rest_url_by_path( sprintf( 'actors/%d/inbox', $user->get__id() ) );
 		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
 		$json->type = 'OrderedCollectionPage';
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/inbox', $user->get__id() ) ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'actors/%d/inbox', $user->get__id() ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
 		$json->orderedItems = array(); // phpcs:ignore
 		$json->first = $json->partOf; // phpcs:ignore
