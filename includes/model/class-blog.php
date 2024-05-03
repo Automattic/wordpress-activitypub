@@ -301,7 +301,7 @@ class Blog extends Actor {
 	 * @return string The Inbox-Endpoint.
 	 */
 	public function get_inbox() {
-		return get_rest_url_by_path( sprintf( 'users/%d/inbox', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/inbox', $this->get__id() ) );
 	}
 
 	/**
@@ -310,7 +310,7 @@ class Blog extends Actor {
 	 * @return string The Outbox-Endpoint.
 	 */
 	public function get_outbox() {
-		return get_rest_url_by_path( sprintf( 'users/%d/outbox', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/outbox', $this->get__id() ) );
 	}
 
 	/**
@@ -319,7 +319,7 @@ class Blog extends Actor {
 	 * @return string The Followers-Endpoint.
 	 */
 	public function get_followers() {
-		return get_rest_url_by_path( sprintf( 'users/%d/followers', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->get__id() ) );
 	}
 
 	/**
@@ -328,7 +328,7 @@ class Blog extends Actor {
 	 * @return string The Following-Endpoint.
 	 */
 	public function get_following() {
-		return get_rest_url_by_path( sprintf( 'users/%d/following', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/following', $this->get__id() ) );
 	}
 
 	public function get_endpoints() {
@@ -358,7 +358,7 @@ class Blog extends Actor {
 	 * @return string The Featured-Endpoint.
 	 */
 	public function get_featured() {
-		return get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $this->get__id() ) );
 	}
 
 	public function get_indexable() {
