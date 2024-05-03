@@ -593,7 +593,7 @@ class Post extends Base {
 			return null;
 		} else {
 			$blog = new Blog();
-			return array( $blog->get_id() );
+			return $blog->get_id();
 		}
 	}
 
