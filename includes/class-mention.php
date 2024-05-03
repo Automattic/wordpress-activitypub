@@ -4,6 +4,8 @@ namespace Activitypub;
 use WP_Error;
 use Activitypub\Webfinger;
 
+use function Activitypub\object_to_uri;
+
 /**
  * ActivityPub Mention Class
  *
@@ -93,7 +95,11 @@ class Mention {
 	public static function replace_with_links( $result ) {
 		$metadata = get_remote_metadata_by_actor( $result[0] );
 
-		if ( ! empty( $metadata ) && ! is_wp_error( $metadata ) && ! empty( $metadata['url'] ) ) {
+		if (
+			! empty( $metadata ) &&
+			! is_wp_error( $metadata ) &&
+			( ! empty( $metadata['id'] ) || ! empty( $metadata['url'] ) )
+		) {
 			$username = ltrim( $result[0], '@' );
 			if ( ! empty( $metadata['name'] ) ) {
 				$username = $metadata['name'];
@@ -102,11 +108,7 @@ class Mention {
 				$username = $metadata['preferredUsername'];
 			}
 
-			$url = isset( $metadata['url'] ) ? $metadata['url'] : $metadata['id'];
-
-			if ( \is_array( $url ) ) {
-				$url = $url[0];
-			}
+			$url = isset( $metadata['url'] ) ? object_to_uri( $metadata['url'] ) : object_to_uri( $metadata['id'] );
 
 			return \sprintf( '<a rel="mention" class="u-url mention" href="%s">@<span>%s</span></a>', esc_url( $url ), esc_html( $username ) );
 		}

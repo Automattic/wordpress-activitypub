@@ -69,7 +69,7 @@ class Post extends Base {
 				$this->get_locale() => $this->get_content(),
 			)
 		);
-		$path = sprintf( 'users/%d/followers', intval( $post->post_author ) );
+		$path = sprintf( 'actors/%d/followers', intval( $post->post_author ) );
 
 		$object->set_to(
 			array(
@@ -248,7 +248,7 @@ class Post extends Base {
 		// This linter warning is a false positive - we have to
 		// re-count each time here as we modify $images.
 		// phpcs:ignore Squiz.PHP.DisallowSizeFunctionsInLoops.Found
-		while ( $tags->next_tag( 'img' ) && ( \count( $images ) < $max_images ) ) {
+		while ( $tags->next_tag( 'img' ) && ( \count( $images ) <= $max_images ) ) {
 			$src = $tags->get_attribute( 'src' );
 
 			// If the img source is in our uploads dir, get the
@@ -310,7 +310,7 @@ class Post extends Base {
 			$images[] = \get_post_thumbnail_id( $id );
 		}
 
-		if ( \count( $images ) < $max_images ) {
+		if ( \count( $images ) <= $max_images ) {
 			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
 				$images = \array_merge( $images, $this->get_classic_editor_image_embeds( $max_images ) );
 			} else {
@@ -426,14 +426,14 @@ class Post extends Base {
 		// switching on image/audio/video
 		switch ( $mime_type_parts[0] ) {
 			case 'image':
-				$image_size = 'full';
+				$image_size = 'large';
 
 				/**
 				 * Filter the image URL returned for each post.
 				 *
 				 * @param array|false $thumbnail  The image URL, or false if no image is available.
 				 * @param int         $id         The attachment ID.
-				 * @param string      $image_size The image size to retrieve. Set to 'full' by default.
+				 * @param string      $image_size The image size to retrieve. Set to 'large' by default.
 				 */
 				$thumbnail = apply_filters(
 					'activitypub_get_image',
@@ -487,16 +487,16 @@ class Post extends Base {
 	 * Return details about an image attachment.
 	 *
 	 * @param int    $id         The attachment ID.
-	 * @param string $image_size The image size to retrieve. Set to 'full' by default.
+	 * @param string $image_size The image size to retrieve. Set to 'large' by default.
 	 *
 	 * @return array|false Array of image data, or boolean false if no image is available.
 	 */
-	protected static function get_wordpress_attachment( $id, $image_size = 'full' ) {
+	protected static function get_wordpress_attachment( $id, $image_size = 'large' ) {
 		/**
 		 * Hook into the image retrieval process. Before image retrieval.
 		 *
 		 * @param int    $id         The attachment ID.
-		 * @param string $image_size The image size to retrieve. Set to 'full' by default.
+		 * @param string $image_size The image size to retrieve. Set to 'large' by default.
 		 */
 		do_action( 'activitypub_get_image_pre', $id, $image_size );
 
@@ -506,7 +506,7 @@ class Post extends Base {
 		 * Hook into the image retrieval process. After image retrieval.
 		 *
 		 * @param int    $id         The attachment ID.
-		 * @param string $image_size The image size to retrieve. Set to 'full' by default.
+		 * @param string $image_size The image size to retrieve. Set to 'large' by default.
 		 */
 		do_action( 'activitypub_get_image_post', $id, $image_size );
 

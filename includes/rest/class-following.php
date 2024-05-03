@@ -31,7 +31,7 @@ class Following {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/following',
+			'/(users|actors)/(?P<user_id>[\w\-\.]+)/following',
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
@@ -67,12 +67,12 @@ class Following {
 
 		$json->{'@context'} = \Activitypub\get_context();
 
-		$json->id = get_rest_url_by_path( sprintf( 'users/%d/following', $user->get__id() ) );
+		$json->id = get_rest_url_by_path( sprintf( 'actors/%d/following', $user->get__id() ) );
 		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
 		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/following', $user->get__id() ) ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'actors/%d/following', $user->get__id() ) ); // phpcs:ignore
 
 		$items = apply_filters( 'activitypub_rest_following', array(), $user ); // phpcs:ignore
 

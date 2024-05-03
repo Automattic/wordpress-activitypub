@@ -34,7 +34,7 @@ class Outbox {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/outbox',
+			'/(users|actors)/(?P<user_id>[\w\-\.]+)/outbox',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -72,11 +72,11 @@ class Outbox {
 		$json = new stdClass();
 
 		$json->{'@context'} = get_context();
-		$json->id = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) );
+		$json->id = get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) );
 		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
 		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
 
 		if ( $user_id > 0 ) {
