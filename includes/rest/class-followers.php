@@ -32,7 +32,7 @@ class Followers {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/followers',
+			'/(users|actors)/(?P<user_id>[\w\-\.]+)/followers',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -74,13 +74,13 @@ class Followers {
 
 		$json->{'@context'} = \Activitypub\get_context();
 
-		$json->id = get_rest_url_by_path( sprintf( 'users/%d/followers', $user->get__id() ) );
+		$json->id = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user->get__id() ) );
 		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
 		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 
 		$json->totalItems = $data['total']; // phpcs:ignore
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/followers', $user->get__id() ) ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user->get__id() ) ); // phpcs:ignore
 
 		$json->first = \add_query_arg( 'page', 1, $json->partOf ); // phpcs:ignore
 		$json->last  = \add_query_arg( 'page', \ceil ( $json->totalItems / $per_page ), $json->partOf ); // phpcs:ignore

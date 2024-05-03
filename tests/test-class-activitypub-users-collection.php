@@ -40,7 +40,7 @@ class Test_Activitypub_Users_Collection extends WP_UnitTestCase {
 			array( 'acct:_@example.org', 'Activitypub\Model\Blog' ),
 			array( 'acct:aksd@example.org', 'WP_Error' ),
 			array( 'admin@example.org', 'Activitypub\Model\User' ),
-			array( 'acct:application@example.org', 'Activitypub\Model\Application_User' ),
+			array( 'acct:application@example.org', 'Activitypub\Model\Application' ),
 			array( 'http://example.org/@admin', 'Activitypub\Model\User' ),
 			array( 'http://example.org/@blog', 'Activitypub\Model\Blog' ),
 			array( 'https://example.org/@blog', 'Activitypub\Model\Blog' ),
