@@ -32,6 +32,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 40, 2 );
 		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ) );
 		\add_filter( 'mastodon_api_statuses', array( self::class, 'api_statuses_external' ), 10, 2 );
+		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 23 );
 	}
 
 	/**
@@ -266,6 +267,71 @@ class Enable_Mastodon_Apps {
 		return $args;
 	}
 
+	private static function activity_to_status( $item, $account ) {
+		if ( isset( $item['object'] ) ) {
+			$object = $item['object'];
+		} else {
+			$object = $item;
+		}
+
+		if ( ! isset( $object['type'] ) || 'Note' !== $object['type'] ) {
+			return null;
+		}
+
+		$status = new Status();
+		$status->id         = Mastodon_API::remap_url( $object['id'] );
+		$status->created_at = new DateTime( $object['published'] );
+		$status->content    = $object['content'];
+		$status->account    = $account;
+
+		if ( ! empty( $object['inReplyTo'] ) ) {
+			$status->in_reply_to_id = $object['inReplyTo'];
+		}
+
+		if ( ! empty( $object['visibility'] ) ) {
+			$status->visibility = $object['visibility'];
+		}
+
+				$status->uri = $object['url'];
+
+		if ( ! empty( $object['attachment'] ) ) {
+			$status->media_attachments = array_map(
+				function ( $attachment ) {
+					$default_attachment = array(
+						'url' => null,
+						'mediaType' => null,
+						'name' => null,
+						'width' => 0,
+						'height' => 0,
+						'blurhash' => null,
+					);
+
+					$attachment = array_merge( $default_attachment, $attachment );
+
+					$media_attachment = new Media_Attachment();
+					$media_attachment->id = Mastodon_API::remap_url( $attachment['url'], $attachment );
+					$media_attachment->type = strtok( $attachment['mediaType'], '/' );
+					$media_attachment->url = $attachment['url'];
+					$media_attachment->preview_url = $attachment['url'];
+					$media_attachment->description = $attachment['name'];
+					$media_attachment->blurhash = $attachment['blurhash'];
+					$media_attachment->meta = array(
+						'original' => array(
+							'width'  => $attachment['width'],
+							'height' => $attachment['height'],
+							'size'   => $attachment['width'] . 'x' . $attachment['height'],
+							'aspect' => $attachment['width'] / $attachment['height'],
+						),
+					);
+					return $media_attachment;
+				},
+				$object['attachment']
+			);
+		}
+
+		return $status;
+	}
+
 	public static function api_statuses_external( $statuses, $args ) {
 		if ( ! isset( $args['activitypub'] ) ) {
 			return $statuses;
@@ -277,13 +343,8 @@ class Enable_Mastodon_Apps {
 			return $statuses;
 		}
 
-		$response = Http::get( $data['outbox'], true );
-		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
-			return $statuses;
-		}
-
-		$outbox = json_decode( wp_remote_retrieve_body( $response ), true );
-		if ( ! $outbox || is_wp_error( $outbox ) || ! isset( $outbox['first'] ) ) {
+		$outbox = Http::get_remote_object( $data['outbox'], true );
+		if ( is_wp_error( $outbox ) || ! isset( $outbox['first'] ) ) {
 			return $statuses;
 		}
 
@@ -292,75 +353,50 @@ class Enable_Mastodon_Apps {
 			return $statuses;
 		}
 
-		$response = Http::get( $outbox['first'], true );
-		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
+		$posts = Http::get_remote_object( $outbox['first'], true );
+		if ( is_wp_error( $posts ) ) {
 			return $statuses;
 		}
-		$posts = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		$activitypub_statuses = array_map(
 			function ( $item ) use ( $account ) {
-				$object = $item['object'];
-				if ( ! isset( $object['type'] ) || 'Note' !== $object['type'] ) {
-					return null;
-				}
-
-				$status = new Status();
-				$status->id         = Mastodon_API::remap_url( $object['id'] );
-				$status->created_at = new DateTime( $object['published'] );
-				$status->content    = $object['content'];
-				$status->account    = $account;
-
-				if ( ! empty( $object['inReplyTo'] ) ) {
-					$status->in_reply_to_id = $object['inReplyTo'];
-				}
-
-				if ( ! empty( $object['visibility'] ) ) {
-					$status->visibility = $object['visibility'];
-				}
-
-				$status->uri = $object['url'];
-
-				if ( ! empty( $object['attachment'] ) ) {
-					$status->media_attachments = array_map(
-						function ( $attachment ) {
-							$default_attachment = array(
-								'url' => null,
-								'mediaType' => null,
-								'name' => null,
-								'width' => 0,
-								'height' => 0,
-								'blurhash' => null,
-							);
-
-							$attachment = array_merge( $default_attachment, $attachment );
-
-							$media_attachment = new Media_Attachment();
-							$media_attachment->id = Mastodon_API::remap_url( $attachment['url'], $attachment );
-							$media_attachment->type = strtok( $attachment['mediaType'], '/' );
-							$media_attachment->url = $attachment['url'];
-							$media_attachment->preview_url = $attachment['url'];
-							$media_attachment->description = $attachment['name'];
-							$media_attachment->blurhash = $attachment['blurhash'];
-							$media_attachment->meta = array(
-								'original' => array(
-									'width'  => $attachment['width'],
-									'height' => $attachment['height'],
-									'size'   => $attachment['width'] . 'x' . $attachment['height'],
-									'aspect' => $attachment['width'] / $attachment['height'],
-								),
-							);
-							return $media_attachment;
-						},
-						$object['attachment']
-					);
-				}
-
-				return $status;
+				return self::activity_to_status( $item, $account );
 			},
 			$posts['orderedItems']
 		);
 
 		return $activitypub_statuses;
+	}
+
+	public static function api_get_replies( $context, $post_id, $url ) {
+		$meta = Http::get_remote_object( $url, true );
+		if ( is_wp_error( $meta ) || ! isset( $meta['replies']['first']['next'] ) ) {
+			return $context;
+		}
+
+		$replies_url = $meta['replies']['first']['next'];
+		$replies = Http::get_remote_object( $replies_url, true );
+		if ( is_wp_error( $replies ) || ! isset( $replies['items'] ) ) {
+			return $context;
+		}
+
+		foreach ( $replies['items'] as $url ) {
+			$response = Http::get( $url, true );
+			if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
+				continue;
+			}
+			$status = json_decode( wp_remote_retrieve_body( $response ), true );
+			if ( ! $status || is_wp_error( $status ) ) {
+				continue;
+			}
+
+			$account = self::get_account_for_actor( $status['attributedTo'] );
+			$status = self::activity_to_status( $status, $account );
+			if ( $status ) {
+				$context['descendants'][ $status->id ] = $status;
+			}
+		}
+
+		return $context;
 	}
 }
