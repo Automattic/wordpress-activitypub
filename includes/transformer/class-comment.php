@@ -12,6 +12,7 @@ use Activitypub\Transformer\Base;
 
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_comment_ancestors;
 
 /**
  * WordPress Comment Transformer
@@ -219,6 +220,23 @@ class Comment extends Base {
 	}
 
 	/**
+	 * Gets the ancestors of the comment, but only the ones that are ActivityPub comments.
+	 *
+	 * @return array The list of ancestors.
+	 */
+	protected function get_comment_ancestors() {
+		$ancestors = get_comment_ancestors( $this->wp_object );
+
+		// Now that we have the full tree of ancestors, only return the ones received from the fediverse
+		return array_filter(
+			$ancestors,
+			function( $comment_id ) {
+				return \get_comment_meta( $comment_id, 'protocol', true ) === 'activitypub';
+			}
+		);
+	}
+
+	/**
 	 * Collect all other Users that participated in this comment-thread
 	 * to send them a notification about the new reply.
 	 *
@@ -232,27 +250,18 @@ class Comment extends Base {
 			return $mentions;
 		}
 
-		$comment_query = new WP_Comment_Query(
-			array(
-				'post_id'    => $this->wp_object->comment_post_ID,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query' => array(
-					array(
-						'key'   => 'protocol',
-						'value' => 'activitypub',
-					),
-				),
-			)
-		);
+		$ancestors = $this->get_comment_ancestors();
+		if ( ! $ancestors ) {
+			return $mentions;
+		}
 
-		if ( $comment_query->comments ) {
-			foreach ( $comment_query->comments as $comment ) {
-				if ( ! empty( $comment->comment_author_url ) ) {
-					$acct = Webfinger::uri_to_acct( $comment->comment_author_url );
-					if ( $acct && ! is_wp_error( $acct ) ) {
-						$acct = str_replace( 'acct:', '@', $acct );
-						$mentions[ $acct ] = $comment->comment_author_url;
-					}
+		foreach ( $ancestors as $comment_id ) {
+			$comment = \get_comment( $comment_id );
+			if ( $comment && ! empty( $comment->comment_author_url ) ) {
+				$acct = Webfinger::uri_to_acct( $comment->comment_author_url );
+				if ( $acct && ! is_wp_error( $acct ) ) {
+					$acct = str_replace( 'acct:', '@', $acct );
+					$mentions[ $acct ] = $comment->comment_author_url;
 				}
 			}
 		}
