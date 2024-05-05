@@ -363,6 +363,7 @@ class Enable_Mastodon_Apps {
 			);
 		}
 
+		// Ensure numerical ids.
 		return apply_filters( 'mastodon_api_status', $status, 0, array() );
 	}
 
