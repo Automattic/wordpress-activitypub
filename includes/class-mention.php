@@ -4,6 +4,8 @@ namespace Activitypub;
 use WP_Error;
 use Activitypub\Webfinger;
 
+use function Activitypub\object_to_uri;
+
 /**
  * ActivityPub Mention Class
  *
@@ -14,7 +16,8 @@ class Mention {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_filter( 'the_content', array( self::class, 'the_content' ), 99, 2 );
+		\add_filter( 'the_content', array( self::class, 'the_content' ), 99, 1 );
+		\add_filter( 'comment_text', array( self::class, 'the_content' ), 10, 1 );
 		\add_filter( 'activitypub_extract_mentions', array( self::class, 'extract_mentions' ), 99, 2 );
 	}
 
@@ -92,7 +95,11 @@ class Mention {
 	public static function replace_with_links( $result ) {
 		$metadata = get_remote_metadata_by_actor( $result[0] );
 
-		if ( ! empty( $metadata ) && ! is_wp_error( $metadata ) && ! empty( $metadata['url'] ) ) {
+		if (
+			! empty( $metadata ) &&
+			! is_wp_error( $metadata ) &&
+			( ! empty( $metadata['id'] ) || ! empty( $metadata['url'] ) )
+		) {
 			$username = ltrim( $result[0], '@' );
 			if ( ! empty( $metadata['name'] ) ) {
 				$username = $metadata['name'];
@@ -100,7 +107,10 @@ class Mention {
 			if ( ! empty( $metadata['preferredUsername'] ) ) {
 				$username = $metadata['preferredUsername'];
 			}
-			return \sprintf( '<a rel="mention" class="u-url mention" href="%s">@<span>%s</span></a>', esc_url( $metadata['url'] ), esc_html( $username ) );
+
+			$url = isset( $metadata['url'] ) ? object_to_uri( $metadata['url'] ) : object_to_uri( $metadata['id'] );
+
+			return \sprintf( '<a rel="mention" class="u-url mention" href="%s">@<span>%s</span></a>', esc_url( $url ), esc_html( $username ) );
 		}
 
 		return $result[0];

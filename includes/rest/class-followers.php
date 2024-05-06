@@ -9,6 +9,7 @@ use Activitypub\Collection\Users as User_Collection;
 use Activitypub\Collection\Followers as Follower_Collection;
 
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_masked_wp_version;
 
 /**
  * ActivityPub Followers REST-Class
@@ -31,7 +32,7 @@ class Followers {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/followers',
+			'/(users|actors)/(?P<user_id>[\w\-\.]+)/followers',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -73,13 +74,13 @@ class Followers {
 
 		$json->{'@context'} = \Activitypub\get_context();
 
-		$json->id = get_rest_url_by_path( sprintf( 'users/%d/followers', $user->get__id() ) );
-		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
+		$json->id = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user->get__id() ) );
+		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
 		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
 
 		$json->totalItems = $data['total']; // phpcs:ignore
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/followers', $user->get__id() ) ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user->get__id() ) ); // phpcs:ignore
 
 		$json->first = \add_query_arg( 'page', 1, $json->partOf ); // phpcs:ignore
 		$json->last  = \add_query_arg( 'page', \ceil ( $json->totalItems / $per_page ), $json->partOf ); // phpcs:ignore
@@ -96,7 +97,7 @@ class Followers {
 		$json->orderedItems = array_map(
 			function ( $item ) use ( $context ) {
 				if ( 'full' === $context ) {
-					return $item->to_array();
+					return $item->to_array( false );
 				}
 				return $item->get_url();
 			},

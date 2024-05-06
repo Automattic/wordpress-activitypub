@@ -11,6 +11,7 @@ use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\get_context;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_masked_wp_version;
 
 /**
  * ActivityPub Outbox REST-Class
@@ -33,7 +34,7 @@ class Outbox {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/outbox',
+			'/(users|actors)/(?P<user_id>[\w\-\.]+)/outbox',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -59,7 +60,7 @@ class Outbox {
 			return $user;
 		}
 
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) );
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
 
 		$page = $request->get_param( 'page', 1 );
 
@@ -71,16 +72,21 @@ class Outbox {
 		$json = new stdClass();
 
 		$json->{'@context'} = get_context();
-		$json->id = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) );
-		$json->generator = 'http://wordpress.org/?v=' . \get_bloginfo_rss( 'version' );
+		$json->id = get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) );
+		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
 		$json->actor = $user->get_id();
 		$json->type = 'OrderedCollectionPage';
-		$json->partOf = get_rest_url_by_path( sprintf( 'users/%d/outbox', $user_id ) ); // phpcs:ignore
+		$json->partOf = get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
 
-		foreach ( $post_types as $post_type ) {
-			$count_posts = \wp_count_posts( $post_type );
-			$json->totalItems += \intval( $count_posts->publish ); // phpcs:ignore
+		if ( $user_id > 0 ) {
+			$count_posts = \count_user_posts( $user_id, $post_types, true );
+			$json->totalItems = \intval( $count_posts ); // phpcs:ignore
+		} else {
+			foreach ( $post_types as $post_type ) {
+				$count_posts = \wp_count_posts( $post_type );
+				$json->totalItems += \intval( $count_posts->publish ); // phpcs:ignore
+			}
 		}
 
 		$json->first = \add_query_arg( 'page', 1, $json->partOf ); // phpcs:ignore
@@ -98,7 +104,7 @@ class Outbox {
 			$posts = \get_posts(
 				array(
 					'posts_per_page' => 10,
-					'author'         => $user_id,
+					'author'         => $user_id > 0 ? $user_id : null,
 					'paged'          => $page,
 					'post_type'      => $post_types,
 				)
@@ -108,10 +114,8 @@ class Outbox {
 				$post = Post::transform( $post )->to_object();
 				$activity = new Activity();
 				$activity->set_type( 'Create' );
-				$activity->set_context( null );
 				$activity->set_object( $post );
-
-				$json->orderedItems[] = $activity->to_array(); // phpcs:ignore
+				$json->orderedItems[] = $activity->to_array( false ); // phpcs:ignore
 			}
 		}
 

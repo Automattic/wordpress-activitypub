@@ -12,13 +12,13 @@ use Activitypub\Collection\Users as User_Collection;
 use function Activitypub\is_activitypub_request;
 
 /**
- * ActivityPub Followers REST-Class
+ * ActivityPub Actors REST-Class
  *
  * @author Matthias Pfefferle
  *
  * @see https://www.w3.org/TR/activitypub/#followers
  */
-class Users {
+class Actors {
 	/**
 	 * Initialize the class, registering WordPress hooks
 	 */
@@ -32,7 +32,7 @@ class Users {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)',
+			'/(users|actors)/(?P<user_id>[\w\-\.]+)',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -45,19 +45,18 @@ class Users {
 
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/remote-follow',
+			'/(users|actors)/(?P<user_id>[\w\-\.]+)/remote-follow',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'remote_follow_get' ),
-
+					'permission_callback' => '__return_true',
 					'args'                => array(
 						'resource' => array(
 							'required'          => true,
 							'sanitize_callback' => 'sanitize_text_field',
 						),
 					),
-					'permission_callback' => '__return_true',
 				),
 			)
 		);
@@ -88,10 +87,6 @@ class Users {
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
 		\do_action( 'activitypub_rest_users_pre' );
-
-		$user->set_context(
-			Activity::CONTEXT
-		);
 
 		$json = $user->to_array();
 
@@ -124,7 +119,7 @@ class Users {
 			return $template;
 		}
 
-		$resource = $user->get_resource();
+		$resource = $user->get_webfinger();
 		$url      = str_replace( '{uri}', $resource, $template );
 
 		return new WP_REST_Response(

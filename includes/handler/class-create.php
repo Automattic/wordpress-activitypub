@@ -15,7 +15,12 @@ class Create {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_create', array( self::class, 'handle_create' ), 10, 3 );
+		\add_action(
+			'activitypub_inbox_create',
+			array( self::class, 'handle_create' ),
+			10,
+			3
+		);
 	}
 
 	/**
@@ -28,6 +33,10 @@ class Create {
 	 * @return void
 	 */
 	public static function handle_create( $array, $user_id, $object = null ) {
+		if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
+			return;
+		}
+
 		if (
 			! isset( $array['object'] ) ||
 			! isset( $array['object']['id'] )

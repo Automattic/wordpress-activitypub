@@ -6,6 +6,7 @@
 .travis.yml
 .codeclimate.yml
 .data
+.distignore
 .svnignore
 .wordpress-org
 .php_cs
@@ -14,6 +15,7 @@ LINGUAS
 Makefile
 README.md
 readme.md
+CHANGELOG.md
 CODE_OF_CONDUCT.md
 FEDERATION.md
 SECURITY.md

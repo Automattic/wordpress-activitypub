@@ -5,7 +5,8 @@ use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Transformer\Post;
-use Activitypub\Activity\Activity;
+use Activitypub\Activity\Actor;
+use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\esc_hashtag;
@@ -34,7 +35,7 @@ class Collection {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/collections/tags',
+			'/(users|actors)/(?P<user_id>[\w\-\.]+)/collections/tags',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -47,7 +48,7 @@ class Collection {
 
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/collections/featured',
+			'/(users|actors)/(?P<user_id>[\w\-\.]+)/collections/featured',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -102,8 +103,8 @@ class Collection {
 		}
 
 		$response = array(
-			'@context'   => Activity::CONTEXT,
-			'id'         => get_rest_url_by_path( sprintf( 'users/%d/collections/tags', $user->get__id() ) ),
+			'@context'   => Base_Object::JSON_LD_CONTEXT,
+			'id'         => get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $user->get__id() ) ),
 			'type'       => 'Collection',
 			'totalItems' => is_countable( $tags ) ? count( $tags ) : 0,
 			'items'      => array(),
@@ -160,15 +161,15 @@ class Collection {
 		}
 
 		$response = array(
-			'@context'     => Activity::CONTEXT,
-			'id'           => get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $user_id ) ),
+			'@context'     => Base_Object::JSON_LD_CONTEXT,
+			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $user_id ) ),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => is_countable( $posts ) ? count( $posts ) : 0,
 			'orderedItems' => array(),
 		);
 
 		foreach ( $posts as $post ) {
-			$response['orderedItems'][] = Post::transform( $post )->to_object()->to_array();
+			$response['orderedItems'][] = Post::transform( $post )->to_object()->to_array( false );
 		}
 
 		$rest_response = new WP_REST_Response( $response, 200 );
@@ -186,7 +187,7 @@ class Collection {
 	 */
 	public static function moderators_get( $request ) {
 		$response = array(
-			'@context'     => Activity::CONTEXT,
+			'@context'     => Actor::JSON_LD_CONTEXT,
 			'id'           => get_rest_url_by_path( 'collections/moderators' ),
 			'type'         => 'OrderedCollection',
 			'orderedItems' => array(),

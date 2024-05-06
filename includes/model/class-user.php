@@ -23,6 +23,11 @@ class User extends Actor {
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#featured
 	 *
+	 * @context {
+	 *   "@id": "http://joinmastodon.org/ns#featured",
+	 *   "@type": "@id"
+	 * }
+	 *
 	 * @var string
 	 */
 	protected $featured;
@@ -36,17 +41,16 @@ class User extends Actor {
 	 */
 	protected $moderators;
 
-	/**
-	 * The User-Type
-	 *
-	 * @var string
-	 */
-	protected $type = 'Person';
+	public function get_type() {
+		return 'Person';
+	}
 
 	/**
 	 * If the User is discoverable.
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
+	 *
+	 * @context http://joinmastodon.org/ns#discoverable
 	 *
 	 * @var boolean
 	 */
@@ -54,6 +58,8 @@ class User extends Actor {
 
 	/**
 	 * If the User is indexable.
+	 *
+	 * @context http://joinmastodon.org/ns#indexable
 	 *
 	 * @var boolean
 	 */
@@ -64,7 +70,7 @@ class User extends Actor {
 	 *
 	 * @var string<url>
 	 */
-	protected $resource;
+	protected $webfinger;
 
 	/**
 	 * Restrict posting to mods
@@ -135,8 +141,8 @@ class User extends Actor {
 	 *
 	 * @return string The User-URL with @-Prefix for the username.
 	 */
-	public function get_at_url() {
-		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_username() );
+	public function get_alternate_url() {
+		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() );
 	}
 
 	public function get_preferred_username() {
@@ -187,7 +193,7 @@ class User extends Actor {
 	 * @return string The Inbox-Endpoint.
 	 */
 	public function get_inbox() {
-		return get_rest_url_by_path( sprintf( 'users/%d/inbox', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/inbox', $this->get__id() ) );
 	}
 
 	/**
@@ -196,7 +202,7 @@ class User extends Actor {
 	 * @return string The Outbox-Endpoint.
 	 */
 	public function get_outbox() {
-		return get_rest_url_by_path( sprintf( 'users/%d/outbox', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/outbox', $this->get__id() ) );
 	}
 
 	/**
@@ -205,7 +211,7 @@ class User extends Actor {
 	 * @return string The Followers-Endpoint.
 	 */
 	public function get_followers() {
-		return get_rest_url_by_path( sprintf( 'users/%d/followers', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->get__id() ) );
 	}
 
 	/**
@@ -214,7 +220,7 @@ class User extends Actor {
 	 * @return string The Following-Endpoint.
 	 */
 	public function get_following() {
-		return get_rest_url_by_path( sprintf( 'users/%d/following', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/following', $this->get__id() ) );
 	}
 
 	/**
@@ -223,7 +229,19 @@ class User extends Actor {
 	 * @return string The Featured-Endpoint.
 	 */
 	public function get_featured() {
-		return get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $this->get__id() ) );
+	}
+
+	public function get_endpoints() {
+		$endpoints = null;
+
+		if ( ACTIVITYPUB_SHARED_INBOX_FEATURE ) {
+			$endpoints = array(
+				'sharedInbox' => get_rest_url_by_path( 'inbox' ),
+			);
+		}
+
+		return $endpoints;
 	}
 
 	/**
@@ -274,8 +292,12 @@ class User extends Actor {
 	 *
 	 * @return string The Webfinger-Identifier.
 	 */
-	public function get_resource() {
+	public function get_webfinger() {
 		return $this->get_preferred_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+	}
+
+	public function get_resource() {
+		return $this->get_webfinger();
 	}
 
 	public function get_canonical_url() {

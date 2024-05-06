@@ -12,8 +12,8 @@ class Hashtag {
 	 */
 	public static function init() {
 		if ( '1' === \get_option( 'activitypub_use_hashtags', '1' ) ) {
-			\add_filter( 'wp_insert_post', array( self::class, 'insert_post' ), 10, 2 );
-			\add_filter( 'the_content', array( self::class, 'the_content' ), 10, 2 );
+			\add_action( 'wp_insert_post', array( self::class, 'insert_post' ), 10, 2 );
+			\add_filter( 'the_content', array( self::class, 'the_content' ), 10, 1 );
 		}
 	}
 
@@ -67,7 +67,7 @@ class Hashtag {
 				$tag = strtolower( $m[2] );
 				if ( '/' === $m[1] ) {
 					// Closing tag.
-					$i = array_search( $tag, $tag_stack );
+					$i = array_search( $tag, $tag_stack, true );
 					// We can only remove the tag from the stack if it is in the stack.
 					if ( false !== $i ) {
 						$tag_stack = array_slice( $tag_stack, 0, $i );

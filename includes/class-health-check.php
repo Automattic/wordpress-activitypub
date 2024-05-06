@@ -27,7 +27,7 @@ class Health_Check {
 	}
 
 	public static function add_tests( $tests ) {
-		if ( ! is_user_type_disabled( 'user' ) ) {
+		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			$tests['direct']['activitypub_test_author_url'] = array(
 				'label' => \__( 'Author URL test', 'activitypub' ),
 				'test'  => array( self::class, 'test_author_url' ),
@@ -252,17 +252,10 @@ class Health_Check {
 	 * @return boolean|WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
-		$user = \wp_get_current_user();
+		$user = Users::get_by_id( Users::APPLICATION_USER_ID );
+		$resource = $user->get_webfinger();
 
-		if ( ! is_user_type_disabled( 'blog' ) ) {
-			$account = get_webfinger_resource( $user->ID );
-		} elseif ( ! is_user_type_disabled( 'user' ) ) {
-			$account = get_webfinger_resource( Users::BLOG_USER_ID );
-		} else {
-			$account = '';
-		}
-
-		$url = Webfinger::resolve( $account );
+		$url = Webfinger::resolve( $resource );
 		if ( \is_wp_error( $url ) ) {
 			$allowed = array( 'code' => array() );
 			$not_accessible = wp_kses(

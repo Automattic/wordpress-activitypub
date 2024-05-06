@@ -5,8 +5,9 @@ use WP_Error;
 use WP_User_Query;
 use Activitypub\Model\User;
 use Activitypub\Model\Blog_User;
-use Activitypub\Model\Application_User;
+use Activitypub\Model\Application;
 
+use function Activitypub\object_to_uri;
 use function Activitypub\url_to_authorid;
 use function Activitypub\is_user_disabled;
 
@@ -48,7 +49,7 @@ class Users {
 		if ( self::BLOG_USER_ID === $user_id ) {
 			return Blog_User::from_wp_user( $user_id );
 		} elseif ( self::APPLICATION_USER_ID === $user_id ) {
-			return Application_User::from_wp_user( $user_id );
+			return new Application();
 		} elseif ( $user_id > 0 ) {
 			return User::from_wp_user( $user_id );
 		}
@@ -136,29 +137,38 @@ class Users {
 	 * @return \Acitvitypub\Model\User The User.
 	 */
 	public static function get_by_resource( $resource ) {
+		$resource = object_to_uri( $resource );
+
 		$scheme = 'acct';
 		$match = array();
 		// try to extract the scheme and the host
 		if ( preg_match( '/^([a-zA-Z^:]+):(.*)$/i', $resource, $match ) ) {
 			// extract the scheme
-			$scheme = esc_attr( $match[1] );
+			$scheme = \esc_attr( $match[1] );
 		}
 
 		switch ( $scheme ) {
 			// check for http(s) URIs
 			case 'http':
 			case 'https':
-				$url_parts = wp_parse_url( $resource );
+				$resource_path = \wp_parse_url( $resource, PHP_URL_PATH );
 
-				// check for http(s)://blog.example.com/@username
-				if (
-					isset( $url_parts['path'] ) &&
-					str_starts_with( $url_parts['path'], '/@' )
-				) {
-					$identifier = str_replace( '/@', '', $url_parts['path'] );
-					$identifier = untrailingslashit( $identifier );
+				if ( $resource_path ) {
+					$blog_path = \wp_parse_url( \home_url(), PHP_URL_PATH );
 
-					return self::get_by_username( $identifier );
+					if ( $blog_path ) {
+						$resource_path = \str_replace( $blog_path, '', $resource_path );
+					}
+
+					$resource_path = \trim( $resource_path, '/' );
+
+					// check for http(s)://blog.example.com/@username
+					if ( str_starts_with( $resource_path, '@' ) ) {
+						$identifier = \str_replace( '@', '', $resource_path );
+						$identifier = \trim( $identifier, '/' );
+
+						return self::get_by_username( $identifier );
+					}
 				}
 
 				// check for http(s)://blog.example.com/author/username
@@ -268,7 +278,7 @@ class Users {
 	public static function get_collection() {
 		$users = \get_users(
 			array(
-				'capability__in' => array( 'publish_posts' ),
+				'capability__in' => array( 'activitypub' ),
 			)
 		);
 

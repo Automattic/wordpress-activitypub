@@ -2,7 +2,8 @@
 namespace Activitypub\Model;
 
 use WP_Query;
-use Activitypub\Signature;
+use WP_Error;
+
 use Activitypub\Collection\Users;
 
 use function Activitypub\is_single_user;
@@ -17,19 +18,13 @@ class Blog_User extends User {
 	 */
 	protected $_id = Users::BLOG_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
-	/**
-	 * The User-Type
-	 *
-	 * @var string
-	 */
-	protected $type = null;
+	public function get_manually_approves_followers() {
+		return false;
+	}
 
-	/**
-	 * Is Account discoverable?
-	 *
-	 * @var boolean
-	 */
-	protected $discoverable = true;
+	public function get_discoverable() {
+		return true;
+	}
 
 	public static function from_wp_user( $user_id ) {
 		if ( is_user_disabled( $user_id ) ) {
@@ -100,12 +95,12 @@ class Blog_User extends User {
 	}
 
 	/**
-	 * Returns the User-URL with @-Prefix for the username.
+	 * Get blog's homepage URL.
 	 *
-	 * @return string The User-URL with @-Prefix for the username.
+	 * @return string The User-Url.
 	 */
-	public function get_at_url() {
-		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() );
+	public function get_alternate_url() {
+		return \esc_url( \trailingslashit( get_home_url() ) );
 	}
 
 	/**

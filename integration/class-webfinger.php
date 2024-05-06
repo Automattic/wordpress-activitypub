@@ -14,8 +14,8 @@ class Webfinger {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_filter( 'webfinger_user_data', array( self::class, 'add_user_discovery' ), 10, 3 );
-		\add_filter( 'webfinger_data', array( self::class, 'add_pseudo_user_discovery' ), 99, 2 );
+		\add_filter( 'webfinger_user_data', array( self::class, 'add_user_discovery' ), 1, 3 );
+		\add_filter( 'webfinger_data', array( self::class, 'add_pseudo_user_discovery' ), 1, 2 );
 	}
 
 	/**
@@ -33,6 +33,11 @@ class Webfinger {
 		if ( ! $user || is_wp_error( $user ) ) {
 			return $array;
 		}
+
+		$array['subject'] = sprintf( 'acct:%s', $user->get_webfinger() );
+
+		$array['aliases'][] = $user->get_url();
+		$array['aliases'][] = $user->get_alternate_url();
 
 		$array['links'][] = array(
 			'rel'  => 'self',

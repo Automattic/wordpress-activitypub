@@ -9,6 +9,7 @@ namespace Activitypub\Activity;
 
 use WP_Error;
 use ReflectionClass;
+use DateTime;
 
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\snake_to_camel_case;
@@ -26,6 +27,13 @@ use function Activitypub\snake_to_camel_case;
  * @see https://www.w3.org/TR/activitystreams-core/#object
  */
 class Base_Object {
+	const JSON_LD_CONTEXT = array(
+		'https://www.w3.org/ns/activitystreams',
+		array(
+			'Hashtag' => 'as:Hashtag',
+		),
+	);
+
 	/**
 	 * The object's unique global identifier
 	 *
@@ -255,19 +263,6 @@ class Base_Object {
 	protected $published;
 
 	/**
-	 * A Collection containing objects considered to be responses to
-	 * this object.
-	 *
-	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-replies
-	 *
-	 * @var string
-	 *    | Collection
-	 *    | Link
-	 *    | null
-	 */
-	protected $replies;
-
-	/**
 	 * The date and time describing the actual or expected starting time
 	 * of the object.
 	 * When used with an Activity object, for instance, the startTime
@@ -438,6 +433,19 @@ class Base_Object {
 	protected $source;
 
 	/**
+	 * A Collection containing objects considered to be responses to
+	 * this object.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-replies
+	 *
+	 * @var string
+	 *    | Collection
+	 *    | Link
+	 *    | null
+	 */
+	protected $replies;
+
+	/**
 	 * Magic function to implement getter and setter
 	 *
 	 * @param string $method The method name.
@@ -457,7 +465,7 @@ class Base_Object {
 		}
 
 		if ( \strncasecmp( $method, 'set', 3 ) === 0 ) {
-			$this->set( $var, $params[0] );
+			return $this->set( $var, $params[0] );
 		}
 
 		if ( \strncasecmp( $method, 'add', 3 ) === 0 ) {
@@ -524,7 +532,7 @@ class Base_Object {
 
 		$this->$key = $value;
 
-		return $this->$key;
+		return $this;
 	}
 
 	/**
@@ -622,9 +630,11 @@ class Base_Object {
 	 * It tries to get the object attributes if they exist
 	 * and falls back to the getters. Empty values are ignored.
 	 *
+	 * @param bool $include_json_ld_context Whether to include the JSON-LD context. Default true.
+	 *
 	 * @return array An array built from the Object.
 	 */
-	public function to_array() {
+	public function to_array( $include_json_ld_context = true ) {
 		$array = array();
 		$vars  = get_object_vars( $this );
 
@@ -640,7 +650,7 @@ class Base_Object {
 			}
 
 			if ( is_object( $value ) ) {
-				$value = $value->to_array();
+				$value = $value->to_array( false );
 			}
 
 			// if value is still empty, ignore it for the array and continue.
@@ -649,11 +659,9 @@ class Base_Object {
 			}
 		}
 
-		// replace 'context' key with '@context' and move it to the top.
-		if ( array_key_exists( 'context', $array ) ) {
-			$context = $array['context'];
-			unset( $array['context'] );
-			$array = array_merge( array( '@context' => $context ), $array );
+		if ( $include_json_ld_context ) {
+			// Get JsonLD context and move it to '@context' at the top.
+			$array = array_merge( array( '@context' => $this->get_json_ld_context() ), $array );
 		}
 
 		$class = new ReflectionClass( $this );
@@ -668,11 +676,39 @@ class Base_Object {
 	/**
 	 * Convert Object to JSON.
 	 *
+	 * @param bool $include_json_ld_context Whether to include the JSON-LD context. Default true.
+	 *
 	 * @return string The JSON string.
 	 */
-	public function to_json() {
-		$array = $this->to_array();
+	public function to_json( $include_json_ld_context = true ) {
+		$array   = $this->to_array( $include_json_ld_context );
+		$options = \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT;
 
-		return \wp_json_encode( $array, \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT );
+		/*
+		* Options to be passed to json_encode()
+		*
+		* @param int $options The current options flags
+		*/
+		$options = \apply_filters( 'activitypub_json_encode_options', $options );
+
+		return \wp_json_encode( $array, $options );
+	}
+
+	/**
+	 * Returns the keys of the object vars.
+	 *
+	 * @return array The keys of the object vars.
+	 */
+	public function get_object_var_keys() {
+		return \array_keys( \get_object_vars( $this ) );
+	}
+
+	/**
+	 * Returns the JSON-LD context of this object.
+	 *
+	 * @return array $context A compacted JSON-LD context for the ActivityPub object.
+	 */
+	public function get_json_ld_context() {
+		return static::JSON_LD_CONTEXT;
 	}
 }

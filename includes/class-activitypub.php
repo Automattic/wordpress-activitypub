@@ -6,7 +6,11 @@ use Activitypub\Signature;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 
+use function Activitypub\is_comment;
 use function Activitypub\sanitize_url;
+use function Activitypub\is_local_comment;
+use function Activitypub\is_activitypub_request;
+use function Activitypub\should_comment_be_federated;
 
 /**
  * ActivityPub Class
@@ -19,12 +23,12 @@ class Activitypub {
 	 */
 	public static function init() {
 		\add_filter( 'template_include', array( self::class, 'render_json_template' ), 99 );
+		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
 		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
 		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
-		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
 
 		// Add support for ActivityPub to custom post types
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array();
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post' ) ) : array();
 
 		foreach ( $post_types as $post_type ) {
 			\add_post_type_support( $post_type, 'activitypub' );
@@ -34,12 +38,11 @@ class Activitypub {
 		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
 
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
+		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
 
-		\add_action( 'after_setup_theme', array( self::class, 'theme_compat' ), 99 );
+		\add_action( 'user_register', array( self::class, 'user_register' ) );
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
-
-		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
 
 		// register several post_types
 		self::register_post_types();
@@ -52,7 +55,6 @@ class Activitypub {
 	 */
 	public static function activate() {
 		self::flush_rewrite_rules();
-
 		Scheduler::register_schedules();
 	}
 
@@ -98,17 +100,32 @@ class Activitypub {
 			return $template;
 		}
 
+		// check if blog-user is enabled
+		if ( \is_home() && is_wp_error( Users::get_by_id( Users::BLOG_USER_ID ) ) ) {
+			return $template;
+		}
+
 		if ( \is_author() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/author-json.php';
+		} elseif ( is_comment() ) {
+			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
 		} elseif ( \is_home() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
+		/*
+		 * Check if the request is authorized.
+		 *
+		 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
+		 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
+		 */
 		if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
+				header( 'HTTP/1.1 401 Unauthorized' );
+
 				// fallback as template_loader can't return http headers
 				return $template;
 			}
@@ -118,10 +135,43 @@ class Activitypub {
 	}
 
 	/**
+	 * Custom redirects for ActivityPub requests.
+	 *
+	 * @return void
+	 */
+	public static function template_redirect() {
+		$comment_id = get_query_var( 'c', null );
+
+		// check if it seems to be a comment
+		if ( ! $comment_id ) {
+			return;
+		}
+
+		$comment = get_comment( $comment_id );
+
+		// load a 404 page if `c` is set but not valid
+		if ( ! $comment ) {
+			global $wp_query;
+			$wp_query->set_404();
+			return;
+		}
+
+		// stop if it's not an ActivityPub comment
+		if ( is_activitypub_request() && ! is_local_comment( $comment ) ) {
+			return;
+		}
+
+		wp_safe_redirect( get_comment_link( $comment ) );
+		exit;
+	}
+
+	/**
 	 * Add the 'activitypub' query variable so WordPress won't mangle it.
 	 */
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
+		$vars[] = 'c';
+		$vars[] = 'p';
 
 		return $vars;
 	}
@@ -161,14 +211,16 @@ class Activitypub {
 		$avatar = self::get_avatar_url( $id_or_email->comment_ID );
 
 		if ( $avatar ) {
-			if ( ! isset( $args['class'] ) || ! \is_array( $args['class'] ) ) {
-				$args['class'] = array( 'u-photo' );
-			} else {
-				$args['class'][] = 'u-photo';
-				$args['class']   = \array_unique( $args['class'] );
+			if ( empty( $args['class'] ) ) {
+				$args['class'] = array();
+			} elseif ( \is_string( $args['class'] ) ) {
+				$args['class'] = \explode( ' ', $args['class'] );
 			}
+
 			$args['url']     = $avatar;
 			$args['class'][] = 'avatar-activitypub';
+			$args['class'][] = 'u-photo';
+			$args['class']   = \array_unique( $args['class'] );
 		}
 
 		return $args;
@@ -186,22 +238,6 @@ class Activitypub {
 			$comment = \get_comment( $comment );
 		}
 		return \get_comment_meta( $comment->comment_ID, 'avatar_url', true );
-	}
-
-	/**
-	 * Link remote comments to source url.
-	 *
-	 * @param string $comment_link
-	 * @param object|WP_Comment $comment
-	 *
-	 * @return string $url
-	 */
-	public static function remote_comment_link( $comment_link, $comment ) {
-		$remote_comment_link = get_comment_meta( $comment->comment_ID, 'source_url', true );
-		if ( $remote_comment_link ) {
-			$comment_link = esc_url( $remote_comment_link );
-		}
-		return $comment_link;
 	}
 
 	/**
@@ -264,7 +300,7 @@ class Activitypub {
 
 		\add_rewrite_rule(
 			'^@([\w\-\.]+)',
-			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/users/$matches[1]',
+			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/$matches[1]',
 			'top'
 		);
 
@@ -309,6 +345,23 @@ class Activitypub {
 			);
 			add_theme_support( 'custom-header', $custom_header_args );
 		}
+
+		// We assume that you want to use Post-Formats when enabling the setting
+		if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ) {
+			if ( ! get_theme_support( 'post-formats' ) ) {
+				// Add support for the Aside, Gallery Post Formats...
+				add_theme_support(
+					'post-formats',
+					array(
+						'gallery',
+						'status',
+						'image',
+						'video',
+						'audio',
+					)
+				);
+			}
+		}
 	}
 
 	/**
@@ -343,7 +396,7 @@ class Activitypub {
 	 * @return void
 	 */
 	private static function register_post_types() {
-		register_post_type(
+		\register_post_type(
 			Followers::POST_TYPE,
 			array(
 				'labels'           => array(
@@ -360,7 +413,7 @@ class Activitypub {
 			)
 		);
 
-		register_post_meta(
+		\register_post_meta(
 			Followers::POST_TYPE,
 			'activitypub_inbox',
 			array(
@@ -370,7 +423,7 @@ class Activitypub {
 			)
 		);
 
-		register_post_meta(
+		\register_post_meta(
 			Followers::POST_TYPE,
 			'activitypub_errors',
 			array(
@@ -386,7 +439,7 @@ class Activitypub {
 			)
 		);
 
-		register_post_meta(
+		\register_post_meta(
 			Followers::POST_TYPE,
 			'activitypub_user_id',
 			array(
@@ -398,7 +451,7 @@ class Activitypub {
 			)
 		);
 
-		register_post_meta(
+		\register_post_meta(
 			Followers::POST_TYPE,
 			'activitypub_actor_json',
 			array(
@@ -410,24 +463,19 @@ class Activitypub {
 			)
 		);
 
-		do_action( 'activitypub_after_register_post_type' );
+		\do_action( 'activitypub_after_register_post_type' );
 	}
 
 	/**
-	 * Filters the CSS classes to add an ActivityPub class.
+	 * Add the 'activitypub' query variable so WordPress won't mangle it.
 	 *
-	 * @param string[] $classes    An array of comment classes.
-	 * @param string[] $css_class  An array of additional classes added to the list.
-	 * @param string   $comment_id The comment ID as a numeric string.
-	 *
-	 * @return string[] An array of classes.
+	 * @param int   $user_id  User ID.
+	 * @param array $userdata The raw array of data passed to wp_insert_user().
 	 */
-	public static function comment_class( $classes, $css_class, $comment_id ) {
-		// check if ActivityPub comment
-		if ( 'activitypub' === get_comment_meta( $comment_id, 'protocol', true ) ) {
-			$classes[] = 'activitypub-comment';
+	public static function user_register( $user_id ) {
+		if ( \user_can( $user_id, 'publish_posts' ) ) {
+			$user = \get_user_by( 'id', $user_id );
+			$user->add_cap( 'activitypub' );
 		}
-
-		return $classes;
 	}
 }

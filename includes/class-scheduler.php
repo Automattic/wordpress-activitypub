@@ -2,6 +2,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Transformer\Post;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Post;
@@ -9,6 +10,10 @@ use Activitypub\Activity\Activity;
 
 use function Activitypub\get_private_key_for;
 use function Activitypub\is_user_type_disabled;
+use function Activitypub\was_comment_sent;
+use function Activitypub\is_user_type_disabled;
+use function Activitypub\should_comment_be_federated;
+use function Activitypub\get_remote_metadata_by_actor;
 
 /**
  * ActivityPub Scheduler Class
@@ -21,12 +26,49 @@ class Scheduler {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
+		// Post transitions
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
+		\add_action(
+			'edit_attachment',
+			function ( $post_id ) {
+				self::schedule_post_activity( 'publish', 'publish', $post_id );
+			}
+		);
+		\add_action(
+			'add_attachment',
+			function ( $post_id ) {
+				self::schedule_post_activity( 'publish', '', $post_id );
+			}
+		);
+		\add_action(
+			'delete_attachment',
+			function ( $post_id ) {
+				self::schedule_post_activity( 'trash', '', $post_id );
+			}
+		);
 
+		if ( ! ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS ) {
+			// Comment transitions
+			\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 20, 3 );
+			\add_action(
+				'edit_comment',
+				function ( $comment_id ) {
+					self::schedule_comment_activity( 'approved', 'approved', $comment_id );
+				}
+			);
+			\add_action(
+				'wp_insert_comment',
+				function ( $comment_id ) {
+					self::schedule_comment_activity( 'approved', '', $comment_id );
+				}
+			);
+		}
+
+		// Follower Cleanups
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
-
 		\add_action( 'admin_init', array( self::class, 'schedule_migration' ) );
+
 
 		// profile updates for blog options
 		if ( ! is_user_type_disabled( 'blog' ) ) {
@@ -39,11 +81,11 @@ class Scheduler {
 
 		// profile updates for user options
 		if ( ! is_user_type_disabled( 'user' ) ) {
-			\add_action( 'updated_user_meta', array( self::class, 'user_update' ), 10, 3 );
-			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
-
-			\add_action( 'delete_user', array( self::class, 'schedule_profile_delete' ), 10, 3 );
+      \add_action( 'delete_user', array( self::class, 'schedule_profile_delete' ), 10, 3 );
 			\add_action( 'deleted_user', array( self::class, 'schedule_user_delete' ), 10, 3 );
+			\add_action( 'wp_update_user', array( self::class, 'user_update' ) );
+			\add_action( 'updated_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
+			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
 		}
 	}
 
@@ -81,6 +123,8 @@ class Scheduler {
 	 * @param WP_Post $post       Post object.
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
+		$post = get_post( $post );
+
 		// Do not send activities if post is password protected.
 		if ( \post_password_required( $post ) ) {
 			return;
@@ -102,24 +146,69 @@ class Scheduler {
 			$type = 'Delete';
 		}
 
-		if ( ! $type ) {
+		if ( empty( $type ) ) {
 			return;
 		}
 
-		\wp_schedule_single_event(
-			\time(),
-			'activitypub_send_activity',
-			array( $post, $type )
-		);
+		$hook = 'activitypub_send_post';
+		$args = array( $post->ID, $type );
 
-		\wp_schedule_single_event(
-			\time(),
-			sprintf(
-				'activitypub_send_%s_activity',
-				\strtolower( $type )
-			),
-			array( $post )
-		);
+		if ( false === wp_next_scheduled( $hook, $args ) ) {
+			set_wp_object_state( $post, 'federate' );
+			\wp_schedule_single_event( \time(), $hook, $args );
+		}
+	}
+
+	/**
+	 * Schedule Comment Activities
+	 *
+	 * transition_comment_status()
+	 *
+	 * @param string     $new_status New comment status.
+	 * @param string     $old_status Old comment status.
+	 * @param WP_Comment $comment    Comment object.
+	 */
+	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
+		$comment = get_comment( $comment );
+
+		// federate only comments that are written by a registered user.
+		if ( ! $comment->user_id ) {
+			return;
+		}
+
+		$type = false;
+
+		if (
+			'approved' === $new_status &&
+			'approved' !== $old_status
+		) {
+			$type = 'Create';
+		} elseif ( 'approved' === $new_status ) {
+			$type = 'Update';
+			\update_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', time(), true );
+		} elseif (
+			'trash' === $new_status ||
+			'spam' === $new_status
+		) {
+			$type = 'Delete';
+		}
+
+		if ( empty( $type ) ) {
+			return;
+		}
+
+		// check if comment should be federated or not
+		if ( ! should_comment_be_federated( $comment ) ) {
+			return;
+		}
+
+		$hook = 'activitypub_send_comment';
+		$args = array( $comment->comment_ID, $type );
+
+		if ( false === wp_next_scheduled( $hook, $args ) ) {
+			set_wp_object_state( $comment, 'federate' );
+			\wp_schedule_single_event( \time(), $hook, $args );
+		}
 	}
 
 	/**
@@ -134,6 +223,7 @@ class Scheduler {
 			$number = 50;
 		}
 
+		$number    = apply_filters( 'activitypub_update_followers_number', $number );
 		$followers = Followers::get_outdated_followers( $number );
 
 		foreach ( $followers as $follower ) {
@@ -160,6 +250,7 @@ class Scheduler {
 			$number = 50;
 		}
 
+		$number    = apply_filters( 'activitypub_update_followers_number', $number );
 		$followers = Followers::get_faulty_followers( $number );
 
 		foreach ( $followers as $follower ) {
@@ -170,6 +261,11 @@ class Scheduler {
 			} elseif ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
 				if ( $follower->count_errors() >= 5 ) {
 					$follower->delete();
+					\wp_schedule_single_event(
+						\time(),
+						'activitypub_delete_actor_interactions',
+						array( $follower->get_id() )
+					);
 				} else {
 					Followers::add_error( $follower->get__id(), $meta );
 				}
@@ -180,14 +276,67 @@ class Scheduler {
 	}
 
 	/**
-	 * Schedule migration if DB-Version is not up to date.
+	 * Send a profile update when relevant user meta is updated.
+	 *
+	 * @param  int    $meta_id Meta ID being updated.
+	 * @param  int    $user_id User ID being updated.
+	 * @param  string $meta_key Meta key being updated.
 	 *
 	 * @return void
 	 */
-	public static function schedule_migration() {
-		if ( ! \wp_next_scheduled( 'activitypub_schedule_migration' ) && ! Migration::is_latest_version() ) {
-			\wp_schedule_single_event( \time(), 'activitypub_schedule_migration' );
+	public static function user_meta_update( $meta_id, $user_id, $meta_key ) {
+		// don't bother if the user can't publish
+		if ( ! \user_can( $user_id, 'activitypub' ) ) {
+			return;
 		}
+		// the user meta fields that affect a profile.
+		$fields = array(
+			'activitypub_user_description',
+			'description',
+			'user_url',
+			'display_name',
+		);
+		if ( in_array( $meta_key, $fields, true ) ) {
+			self::schedule_profile_update( $user_id );
+		}
+	}
+
+	/**
+	 * Send a profile update when a user is updated.
+	 *
+	 * @param  int $user_id User ID being updated.
+	 *
+	 * @return void
+	 */
+	public static function user_update( $user_id ) {
+		// don't bother if the user can't publish
+		if ( ! \user_can( $user_id, 'activitypub' ) ) {
+			return;
+		}
+
+		self::schedule_profile_update( $user_id );
+	}
+
+	/**
+	 * Theme mods only have a dynamic filter so we fudge it like this.
+	 * @param  mixed $value
+	 * @return mixed
+	 */
+	public static function blog_user_update( $value = null ) {
+		self::schedule_profile_update( 0 );
+		return $value;
+	}
+
+	/**
+	 * Send a profile update to all followers. Gets hooked into all relevant options/meta etc.
+	 * @param int $user_id  The user ID to update (Could be 0 for Blog-User).
+	 */
+	public static function schedule_profile_update( $user_id ) {
+		\wp_schedule_single_event(
+			\time(),
+			'activitypub_send_update_profile_activity',
+			array( $user_id )
+		);
 	}
 
 	/**
