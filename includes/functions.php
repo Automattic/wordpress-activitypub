@@ -854,3 +854,37 @@ function get_masked_wp_version() {
 
 	return implode( '.', $version );
 }
+
+/**
+ * Get the enclosures of a post.
+ *
+ * @param int $post_id The post ID.
+ *
+ * @return array The enclosures.
+ */
+function get_enclosures( $post_id ) {
+	$enclosures = get_post_meta( $post_id, 'enclosure' );
+
+	if ( ! $enclosures ) {
+		return array();
+	}
+
+	$enclosures = array_map(
+		function ( $enclosure ) {
+			$attributes = explode( "\n", $enclosure );
+
+			if ( ! isset( $attributes[0] ) || ! \wp_http_validate_url( $attributes[0] ) ) {
+				return false;
+			}
+
+			return array(
+				'url' => $attributes[0],
+				'length' => isset( $attributes[1] ) ? trim( $attributes[1] ) : null,
+				'media_type' => isset( $attributes[2] ) ? trim( $attributes[2] ) : null,
+			);
+		},
+		$enclosures
+	);
+
+	return array_filter( $enclosures );
+}
