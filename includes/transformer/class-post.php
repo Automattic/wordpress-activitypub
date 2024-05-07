@@ -189,10 +189,8 @@ class Post extends Base {
 			return array();
 		}
 
-		if ( $max_media > 0 ) {
-			$blocks = \parse_blocks( $this->wp_object->post_content );
-			$media = self::get_media_from_blocks( $blocks, $media );
-		}
+		$blocks = \parse_blocks( $this->wp_object->post_content );
+		$media = self::get_media_from_blocks( $blocks, $media );
 
 		return self::filter_media_by_object_type( $media, \get_post_format( $this->wp_object ), $this->wp_object );
 	}
@@ -211,8 +209,9 @@ class Post extends Base {
 		if ( $max_images <= 0 ) {
 			return array();
 		}
+
 		$images = array();
-		$query = new \WP_Query(
+		$query  = new \WP_Query(
 			array(
 				'post_parent' => $this->wp_object->ID,
 				'post_status' => 'inherit',
@@ -223,6 +222,7 @@ class Post extends Base {
 				'posts_per_page' => $max_images,
 			)
 		);
+
 		foreach ( $query->get_posts() as $attachment ) {
 			if ( ! \in_array( $attachment->ID, $images, true ) ) {
 				$images[] = array( 'id' => $attachment->ID );
