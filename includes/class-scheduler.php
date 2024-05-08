@@ -343,8 +343,6 @@ class Scheduler {
 	public static function schedule_actor_delete( $user_id ) {
 		$user = get_userdata( $user_id );
 		if ( $user->has_cap( 'activitypub' ) ) {
-			$temp_private_key = get_private_key_for( $user->ID );
-			add_option( 'activitypub_temp_sig_' . $user->ID, $temp_private_key );
 
 			$author_url = \get_author_posts_url( $user->ID );
 
