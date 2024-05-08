@@ -355,7 +355,7 @@ class Scheduler {
 			$activity->set_object( $author_url );
 			$activity->set_to( [ 'https://www.w3.org/ns/activitystreams#Public' ] );
 
-			\wp_schedule_single_event( \time(), 'activitypub_send_server_activity', array( $activity, $user_id ) );
+			\wp_schedule_single_event( \time(), 'activitypub_send_actor_delete_activity', array( $activity, $user_id ) );
 		}
 	}
 
