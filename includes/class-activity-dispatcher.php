@@ -7,7 +7,6 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Factory;
-use Activitypub\Application;
 use Activitypub\Transformer\Comment;
 
 use function Activitypub\is_single_user;
@@ -186,7 +185,7 @@ class Activity_Dispatcher {
 	 */
 	public static function send_actor_delete_activity( $activity, $user_id = Users::APPLICATION_USER_ID ) {
 		$json = $activity->to_json();
-		$inboxes = Application::known_inboxes();
+		$inboxes = Followers::get_all_followers();
 		foreach ( $inboxes as $inbox ) {
 			safe_remote_post( $inbox, $json, $user_id );
 		}
