@@ -10,6 +10,7 @@ use Activitypub\Activity\Base_Object;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
+use function Activitypub\get_enclosures;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\site_supports_blocks;
 
@@ -153,14 +154,7 @@ class Post extends Base {
 			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
 		}
 
-		// list audio/video enclosures if this post has them
-		$enclosure = \get_post_meta( $id, 'enclosure', true );
-		if ( $enclosure && is_string( $enclosure ) ) {
-			$enclosure_id = attachment_url_to_postid( $enclosure );
-			if ( $enclosure_id ) {
-				$media['audio'][] = array( 'id' => $enclosure_id );
-			}
-		}
+		$media = $this->get_enclosures( $media );
 
 		if ( site_supports_blocks() && \has_blocks( $this->wp_object->post_content ) ) {
 			$media = $this->get_block_attachments( $media, $max_media );
@@ -168,6 +162,7 @@ class Post extends Base {
 			$media = $this->get_classic_editor_images( $media, $max_media );
 		}
 
+		$media      = self::filter_media_by_object_type( $media, \get_post_format( $this->wp_object ), $this->wp_object );
 		$unique_ids = \array_unique( \array_column( $media, 'id' ) );
 		$media      = \array_intersect_key( $media, $unique_ids );
 		$media      = \array_slice( $media, 0, $max_media );
@@ -192,7 +187,7 @@ class Post extends Base {
 		$blocks = \parse_blocks( $this->wp_object->post_content );
 		$media = self::get_media_from_blocks( $blocks, $media );
 
-		return self::filter_media_by_object_type( $media, \get_post_format( $this->wp_object ), $this->wp_object );
+		return $media;
 	}
 
 	/**
@@ -320,7 +315,49 @@ class Post extends Base {
 			}
 		}
 
-		return $media['image'];
+		return $media;
+	}
+
+	/**
+	 * Get enclosures for a post.
+	 *
+	 * @param array $media The media array grouped by type.
+	 *
+	 * @return array The media array extended with enclosures.
+	 */
+	public function get_enclosures( $media ) {
+		$enclosures = get_enclosures( $this->wp_object->ID );
+
+		if ( ! $enclosures ) {
+			return $media;
+		}
+
+		foreach ( $enclosures as $enclosure ) {
+			// check if URL is an attachment
+			$attachment_id = \attachment_url_to_postid( $enclosure['url'] );
+			if ( $attachment_id ) {
+				$enclosure['id'] = $attachment_id;
+				$enclosure['url'] = \wp_get_attachment_url( $attachment_id );
+				$enclosure['mediaType'] = \get_post_mime_type( $attachment_id );
+			}
+
+			$mime_type       = $enclosure['mediaType'];
+			$mime_type_parts = \explode( '/', $mime_type );
+
+			switch ( $mime_type_parts[0] ) {
+				case 'image':
+					$media['image'][] = $enclosure;
+					break;
+				case 'audio':
+					$media['audio'][] = $enclosure;
+					break;
+				case 'video':
+					$media['video'][] = $enclosure;
+					break;
+			}
+		}
+
+		return $media;
 	}
 
 	/**
@@ -332,7 +369,6 @@ class Post extends Base {
 	 * @return array The image IDs.
 	 */
 	protected static function get_media_from_blocks( $blocks, $media ) {
-
 		foreach ( $blocks as $block ) {
 			// recurse into inner blocks
 			if ( ! empty( $block['innerBlocks'] ) ) {
@@ -410,7 +446,7 @@ class Post extends Base {
 			return $media[ $type ];
 		}
 
-		return array_merge( array(), ...array_values( $media ) );
+		return array_filter( array_merge( array(), ...array_values( $media ) ) );
 	}
 
 	/**
@@ -421,6 +457,10 @@ class Post extends Base {
 	 * @return array The ActivityPub Attachment.
 	 */
 	public static function wp_attachment_to_activity_attachment( $media ) {
+		if ( ! isset( $media['id'] ) ) {
+			return $media;
+		}
+
 		$id              = $media['id'];
 		$attachment      = array();
 		$mime_type       = \get_post_mime_type( $id );
