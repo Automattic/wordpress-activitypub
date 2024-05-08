@@ -99,12 +99,16 @@ class Activity_Dispatcher {
 		}
 
 		$transformer = Factory::get_transformer( $wp_object );
-		$transformer->change_wp_user_id( Users::BLOG_USER_ID );
+		$user_id     = Users::BLOG_USER_ID;
+		$activity    = $transformer->to_activity( $type );
+		$user        = Users::get_by_id( Users::BLOG_USER_ID );
 
-		$user_id  = $transformer->get_wp_user_id();
-		$activity = $transformer->to_activity( 'Announce' );
+		$announce = new Activity();
+		$announce->set_type( 'Announce' );
+		$announce->set_object( $activity );
+		$announce->set_actor( $user->get_id() );
 
-		self::send_activity_to_followers( $activity, $user_id, $wp_object );
+		self::send_activity_to_followers( $announce, $user_id, $wp_object );
 	}
 
 	/**
