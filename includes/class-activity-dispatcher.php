@@ -33,7 +33,7 @@ class Activity_Dispatcher {
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity' ), 10, 2 );
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity_or_announce' ), 10, 2 );
 		\add_action( 'activitypub_send_update_profile_activity', array( self::class, 'send_profile_update' ), 10, 1 );
-		\add_action( 'activitypub_send_server_activity', array( self::class, 'send_server_activity' ), 10, 2 );
+		\add_action( 'activitypub_send_actor_delete_activity', array( self::class, 'send_actor_delete_activity' ), 10, 2 );
 	}
 
 	/**
@@ -184,7 +184,7 @@ class Activity_Dispatcher {
 	 *
 	 * @return void
 	 */
-	public static function send_server_activity( $activity, $user_id = Users::APPLICATION_USER_ID ) {
+	public static function send_actor_delete_activity( $activity, $user_id = Users::APPLICATION_USER_ID ) {
 		$json = $activity->to_json();
 		$inboxes = Application::known_inboxes();
 		foreach ( $inboxes as $inbox ) {
