@@ -365,7 +365,7 @@ class Scheduler {
 	 */
 	public static function schedule_user_delete( $user_id ) {
 		$user = get_userdata( $user_id );
-		if ( $user->has_cap( 'publish_posts' ) ) {
+		if ( $user->has_cap( 'activitypub' ) ) {
 			delete_option( 'activitypub_temp_sig_' . $user_id );
 		}
 	}
