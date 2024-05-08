@@ -7,7 +7,7 @@ use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 use Activitypub\Activity\Activity;
 
-use function Activitypub\get_private_key_for;
+use function Activitypub\get_signature_options_key_for;
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\was_comment_sent;
 use function Activitypub\should_comment_be_federated;
@@ -364,7 +364,8 @@ class Scheduler {
 	public static function schedule_user_delete( $user_id ) {
 		$user = get_userdata( $user_id );
 		if ( $user->has_cap( 'activitypub' ) ) {
-			delete_option( 'activitypub_temp_sig_' . $user_id );
+			$option_key = get_signature_options_key_for( $user_id );
+			delete_option( $option_key );
 		}
 	}
 }
