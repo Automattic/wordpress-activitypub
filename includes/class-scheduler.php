@@ -78,7 +78,7 @@ class Scheduler {
 
 		// profile updates for user options
 		if ( ! is_user_type_disabled( 'user' ) ) {
-			\add_action( 'delete_user', array( self::class, 'schedule_profile_delete' ), 10, 3 );
+			\add_action( 'delete_user', array( self::class, 'schedule_actor_delete' ), 10, 3 );
 			\add_action( 'deleted_user', array( self::class, 'schedule_user_delete' ), 10, 3 );
 			\add_action( 'wp_update_user', array( self::class, 'user_update' ) );
 			\add_action( 'updated_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
@@ -340,7 +340,7 @@ class Scheduler {
 	 * Send an Actor Delete activity.
 	 * @param int $user_id  The user ID to Delete.
 	 */
-	public static function schedule_profile_delete( $user_id ) {
+	public static function schedule_actor_delete( $user_id ) {
 		$user = get_userdata( $user_id );
 		if ( $user->has_cap( 'publish_posts' ) ) {
 			$temp_private_key = get_private_key_for( $user->ID );
