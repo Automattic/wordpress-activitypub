@@ -140,7 +140,12 @@ class Post extends Base {
 	protected function get_attachment() {
 		// Once upon a time we only supported images, but we now support audio/video as well.
 		// We maintain the image-centric naming for backwards compatibility.
-		$max_media = \intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
+		$max_media = \intval(
+			\apply_filters(
+				'activitypub_max_image_attachments',
+				\get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS )
+			)
+		);
 
 		$media = array(
 			'audio' => array(),
