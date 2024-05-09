@@ -65,7 +65,6 @@ class Scheduler {
 		// Follower Cleanups
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
-		\add_action( 'admin_init', array( self::class, 'schedule_migration' ) );
 
 		// profile updates for blog options
 		if ( ! is_user_type_disabled( 'blog' ) ) {
@@ -79,7 +78,6 @@ class Scheduler {
 		// profile updates for user options
 		if ( ! is_user_type_disabled( 'user' ) ) {
 			\add_action( 'delete_user', array( self::class, 'schedule_actor_delete' ), 10, 3 );
-			\add_action( 'deleted_user', array( self::class, 'schedule_user_delete' ), 10, 3 );
 			\add_action( 'wp_update_user', array( self::class, 'user_update' ) );
 			\add_action( 'updated_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
 			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
@@ -360,15 +358,4 @@ class Scheduler {
 		}
 	}
 
-	/**
-	 * Delete actor related options.
-	 * @param int $user_id  The deleted user ID.
-	 */
-	public static function schedule_user_delete( $user_id ) {
-		$user = get_userdata( $user_id );
-		if ( $user->has_cap( 'activitypub' ) ) {
-			$option_key = get_signature_options_key_for( $user_id );
-			delete_option( $option_key );
-		}
-	}
 }
