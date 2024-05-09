@@ -185,7 +185,12 @@ class Activity_Dispatcher {
 	 */
 	public static function send_actor_delete_activity( $activity, $user_id = Users::APPLICATION_USER_ID ) {
 		$json = $activity->to_json();
-		$inboxes = Followers::get_all_followers();
+		$followers = Followers::get_all_followers();
+		$known_inboxes = [];
+		foreach ( $followers as $follower ) {
+			$known_inboxes[] = $follower->get_shared_inbox();
+		}
+		$inboxes = array_unique( $known_inboxes );
 		foreach ( $inboxes as $inbox ) {
 			safe_remote_post( $inbox, $json, $user_id );
 		}
