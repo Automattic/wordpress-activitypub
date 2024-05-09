@@ -7,7 +7,7 @@ use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 use Activitypub\Activity\Activity;
 
-use function Activitypub\get_signature_options_key_for;
+use function Activitypub\get_private_key_for;
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\was_comment_sent;
 use function Activitypub\should_comment_be_federated;
@@ -343,8 +343,11 @@ class Scheduler {
 	public static function schedule_actor_delete( $user_id ) {
 		$user = get_userdata( $user_id );
 		if ( $user->has_cap( 'activitypub' ) ) {
-
 			$author_url = \get_author_posts_url( $user->ID );
+			add_option( 'activitypub_temp_sig_' . $user_id, array(
+				'key_id' => $author_url . '#main-key',
+				'private_key' => Signature::get_private_key_for( $user_id ),
+			) );
 
 			$activity = new Activity();
 			$activity->set_id( $author_url . '#delete' );
