@@ -188,8 +188,11 @@ class Signature {
 		$user = Users::get_by_id( $user_id );
 		if ( ! is_wp_error( $user ) ) {
 			$key = self::get_private_key_for( $user->get__id() );
+			$key_id = $user->get_url() . '#main-key';
 		} else {
-			$key = get_option( 'activitypub_temp_sig_' . $user_id, true );
+			$temp_sig_options = get_option( 'activitypub_temp_sig_' . $user_id );
+			$key = $temp_sig_options['private_key'];
+			$key_id = $temp_sig_options['key_id'];
 		}
 
 		$url_parts = \wp_parse_url( $url );
@@ -218,8 +221,6 @@ class Signature {
 		$signature = null;
 		\openssl_sign( $signed_string, $signature, $key, \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature ); // phpcs:ignore
-
-		$key_id = $user->get_url() . '#main-key';
 
 		if ( ! empty( $digest ) ) {
 			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="%s"', $key_id, $signature );
