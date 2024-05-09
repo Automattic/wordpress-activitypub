@@ -342,10 +342,13 @@ class Scheduler {
 		$user = get_userdata( $user_id );
 		if ( $user->has_cap( 'activitypub' ) ) {
 			$author_url = \get_author_posts_url( $user->ID );
-			add_option( 'activitypub_temp_sig_' . $user_id, array(
-				'key_id' => $author_url . '#main-key',
-				'private_key' => Signature::get_private_key_for( $user_id ),
-			) );
+			add_option(
+				'activitypub_temp_sig_' . $user_id,
+				array(
+					'key_id' => $author_url . '#main-key',
+					'private_key' => Signature::get_private_key_for( $user_id ),
+				)
+			);
 
 			$activity = new Activity();
 			$activity->set_id( $author_url . '#delete' );
