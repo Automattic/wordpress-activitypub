@@ -360,5 +360,4 @@ class Scheduler {
 			\wp_schedule_single_event( \time(), 'activitypub_send_actor_delete_activity', array( $activity, $user_id ) );
 		}
 	}
-
 }
