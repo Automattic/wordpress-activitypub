@@ -104,11 +104,11 @@ class Enable_Mastodon_Apps {
 	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
 	 */
 	public static function api_account_add_followers( $account, $user_id ) {
-		if ( ! $account instanceof Account || ! is_numeric( $user_id ) ) {
+		if ( ! $account instanceof Account ) {
 			return $account;
 		}
 
-		$user = Users::get_by_id( $user_id );
+		$user = Users::get_by_various( $user_id );
 
 		if ( ! $user || is_wp_error( $user ) ) {
 			return $account;
