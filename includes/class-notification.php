@@ -19,5 +19,4 @@ class Notification {
 	public function send() {
 		do_action( 'activitypub_notification', $this );
 	}
-
 }
