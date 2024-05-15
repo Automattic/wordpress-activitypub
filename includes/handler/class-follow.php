@@ -57,6 +57,15 @@ class Follow {
 			$user_id,
 			$follower
 		);
+
+		// send notification
+		$notification = new Notification(
+			'follow',
+			$activity['actor'],
+			$activity,
+			$user_id
+		);
+		$notification->send();
 	}
 
 	/**
