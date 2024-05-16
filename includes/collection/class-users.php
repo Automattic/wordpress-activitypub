@@ -4,7 +4,7 @@ namespace Activitypub\Collection;
 use WP_Error;
 use WP_User_Query;
 use Activitypub\Model\User;
-use Activitypub\Model\Blog_User;
+use Activitypub\Model\Blog;
 use Activitypub\Model\Application;
 
 use function Activitypub\object_to_uri;
@@ -47,7 +47,7 @@ class Users {
 		}
 
 		if ( self::BLOG_USER_ID === $user_id ) {
-			return Blog_User::from_wp_user( $user_id );
+			return new Blog();
 		} elseif ( self::APPLICATION_USER_ID === $user_id ) {
 			return new Application();
 		} elseif ( $user_id > 0 ) {
@@ -70,12 +70,12 @@ class Users {
 	 */
 	public static function get_by_username( $username ) {
 		// check for blog user.
-		if ( Blog_User::get_default_username() === $username ) {
-			return self::get_by_id( self::BLOG_USER_ID );
+		if ( Blog::get_default_username() === $username ) {
+			return new Blog();
 		}
 
 		if ( get_option( 'activitypub_blog_user_identifier' ) === $username ) {
-			return self::get_by_id( self::BLOG_USER_ID );
+			return new Blog();
 		}
 
 		// check for application user.

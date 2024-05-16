@@ -52,7 +52,7 @@
 						</th>
 						<td>
 							<label for="activitypub_blog_user_identifier">
-								<input class="blog-user-identifier" name="activitypub_blog_user_identifier" id="activitypub_blog_user_identifier" type="text" value="<?php echo esc_attr( \get_option( 'activitypub_blog_user_identifier', \Activitypub\Model\Blog_User::get_default_username() ) ); ?>" />
+								<input class="blog-user-identifier" name="activitypub_blog_user_identifier" id="activitypub_blog_user_identifier" type="text" value="<?php echo esc_attr( \get_option( 'activitypub_blog_user_identifier', \Activitypub\Model\Blog::get_default_username() ) ); ?>" />
 								@<?php echo esc_html( \wp_parse_url( \home_url(), PHP_URL_HOST ) ); ?>
 							</label>
 							<p class="description">
