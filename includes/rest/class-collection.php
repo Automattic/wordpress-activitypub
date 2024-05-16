@@ -1,13 +1,12 @@
 <?php
 namespace Activitypub\Rest;
 
-use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
-use Activitypub\Transformer\Post;
 use Activitypub\Activity\Actor;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Transformer\Factory;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -169,7 +168,13 @@ class Collection {
 		);
 
 		foreach ( $posts as $post ) {
-			$response['orderedItems'][] = Post::transform( $post )->to_object()->to_array( false );
+			$transformer = Factory::get_transformer( $post );
+
+			if ( \is_wp_error( $transformer ) ) {
+				continue;
+			}
+
+			$response['orderedItems'][] = $transformer->to_object()->to_array( false );
 		}
 
 		$rest_response = new WP_REST_Response( $response, 200 );

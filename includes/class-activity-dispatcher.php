@@ -64,7 +64,11 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	public static function send_activity( $wp_object, $type, $user_id = null ) {
-		$transformer = Factory::get_transformer( $wp_object );
+		$transformer = Factory::get_transformer( $wp_object ); // Could potentially return a `\WP_Error` instance.
+
+		if ( \is_wp_error( $transformer ) ) {
+			return;
+		}
 
 		if ( null !== $user_id ) {
 			$transformer->change_wp_user_id( $user_id );
@@ -99,9 +103,14 @@ class Activity_Dispatcher {
 		}
 
 		$transformer = Factory::get_transformer( $wp_object );
-		$user_id     = Users::BLOG_USER_ID;
-		$activity    = $transformer->to_activity( $type );
-		$user        = Users::get_by_id( Users::BLOG_USER_ID );
+    
+    if ( \is_wp_error( $transformer ) ) {
+			return;
+		}
+        
+		$user_id  = Users::BLOG_USER_ID;
+		$activity = $transformer->to_activity( $type );
+		$user     = Users::get_by_id( Users::BLOG_USER_ID );
 
 		$announce = new Activity();
 		$announce->set_type( 'Announce' );
