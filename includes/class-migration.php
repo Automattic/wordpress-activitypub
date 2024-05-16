@@ -2,7 +2,7 @@
 namespace Activitypub;
 
 use Activitypub\Activitypub;
-use Activitypub\Model\Blog_User;
+use Activitypub\Model\Blog;
 use Activitypub\Collection\Followers;
 
 /**

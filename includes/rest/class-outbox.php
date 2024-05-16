@@ -5,9 +5,9 @@ use stdClass;
 use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
-use Activitypub\Transformer\Post;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Transformer\Factory;
 
 use function Activitypub\get_context;
 use function Activitypub\get_rest_url_by_path;
@@ -111,7 +111,13 @@ class Outbox {
 			);
 
 			foreach ( $posts as $post ) {
-				$post = Post::transform( $post )->to_object();
+				$transformer = Factory::get_transformer( $post );
+
+				if ( \is_wp_error( $transformer ) ) {
+					continue;
+				}
+
+				$post     = $transformer->to_object();
 				$activity = new Activity();
 				$activity->set_type( 'Create' );
 				$activity->set_object( $post );

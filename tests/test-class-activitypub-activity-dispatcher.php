@@ -120,7 +120,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 
 		$this->assertSame( 1, $pre_http_request->get_call_count() );
 
-		$user = new \Activitypub\Model\Blog_User();
+		$user = new \Activitypub\Model\Blog();
 
 		$json = json_decode( $first_call_args[1]['body'] );
 		$this->assertEquals( 'Announce', $json->type );
@@ -168,7 +168,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 
 		$this->assertSame( 1, $pre_http_request->get_call_count() );
 
-		$user = new \Activitypub\Model\Blog_User();
+		$user = new \Activitypub\Model\Blog();
 
 		$json = json_decode( $first_call_args[1]['body'] );
 		$this->assertEquals( 'Create', $json->type );
