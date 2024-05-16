@@ -104,11 +104,11 @@ class Enable_Mastodon_Apps {
 	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
 	 */
 	public static function api_account_add_followers( $account, $user_id ) {
-		if ( ! $account instanceof Account || ! is_numeric( $user_id ) ) {
+		if ( ! $account instanceof Account ) {
 			return $account;
 		}
 
-		$user = Users::get_by_id( $user_id );
+		$user = Users::get_by_various( $user_id );
 
 		if ( ! $user || is_wp_error( $user ) ) {
 			return $account;
@@ -387,20 +387,46 @@ class Enable_Mastodon_Apps {
 		if ( ! $account ) {
 			return $statuses;
 		}
+		$limit = 10;
+		if ( isset( $args['posts_per_page'] ) ) {
+			$limit = $args['posts_per_page'];
+		}
+		if ( $limit > 40 ) {
+			$limit = 40;
+		}
+		$activitypub_statuses = array();
+		$url = $outbox['first'];
+		$tries = 0;
+		while ( $url ) {
+			if ( ++$tries > 3 ) {
+				break;
+			}
 
-		$posts = Http::get_remote_object( $outbox['first'], true );
-		if ( is_wp_error( $posts ) ) {
-			return $statuses;
+			$posts = Http::get_remote_object( $url, true );
+			if ( is_wp_error( $posts ) ) {
+				return $statuses;
+			}
+
+			$new_statuses = array_map(
+				function ( $item ) use ( $account, $args ) {
+					if ( $args['exclude_replies'] ) {
+						if ( isset( $item['object']['inReplyTo'] ) && $item['object']['inReplyTo'] ) {
+							return null;
+						}
+					}
+					return self::activity_to_status( $item, $account );
+				},
+				$posts['orderedItems']
+			);
+			$activitypub_statuses = array_merge( $activitypub_statuses, array_filter( $new_statuses ) );
+			$url = $posts['next'];
+
+			if ( count( $activitypub_statuses ) >= $limit ) {
+				break;
+			}
 		}
 
-		$activitypub_statuses = array_map(
-			function ( $item ) use ( $account ) {
-				return self::activity_to_status( $item, $account );
-			},
-			$posts['orderedItems']
-		);
-
-		return $activitypub_statuses;
+		return array_slice( $activitypub_statuses, 0, $limit );
 	}
 
 	public static function api_get_replies( $context, $post_id, $url ) {
