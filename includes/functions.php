@@ -857,22 +857,6 @@ function get_masked_wp_version() {
 }
 
 /**
- * Sets, or returns, the current transformer.
- *
- * @param  Base|null $value Transformer to set.
- * @return Base|null       Current transformer.
- */
-function current_transformer( $value = null ) {
-	static $transformer = null; // Default value.
-
-	if ( null !== $value ) {
-		$transformer = $value;
-	}
-
-	return $transformer;
-}
-
-/**
  * Retrieves the IDs of the ancestors of a comment.
  *
  * Adaption of `get_post_ancestors` from WordPress core.

@@ -109,24 +109,8 @@ class Activitypub {
 		if ( \is_author() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/author-json.php';
 		} elseif ( is_comment() ) {
-			$comment     = \get_comment( \get_query_var( 'c', null ) );
-			$transformer = Factory::get_transformer( $comment );
-
-			if ( \is_wp_error( $transformer ) ) {
-				return;
-			}
-
-			current_transformer( $transformer );
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() ) {
-			global $post;
-
-			$transformer = Factory::get_transformer( $post );
-			if ( \is_wp_error( $transformer ) ) {
-				return $template;
-			}
-
-			current_transformer( $transformer );
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
 		} elseif ( \is_home() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
