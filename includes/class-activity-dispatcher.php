@@ -64,7 +64,11 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	public static function send_activity( $wp_object, $type, $user_id = null ) {
-		$transformer = Factory::get_transformer( $wp_object );
+		$transformer = Factory::get_transformer( $wp_object ); // Could potentially return a `\WP_Error` instance.
+
+		if ( \is_wp_error( $transformer ) ) {
+			return;
+		}
 
 		if ( null !== $user_id ) {
 			$transformer->change_wp_user_id( $user_id );
@@ -104,6 +108,11 @@ class Activity_Dispatcher {
 		}
 
 		$transformer = Factory::get_transformer( $wp_object );
+
+		if ( \is_wp_error( $transformer ) ) {
+			return;
+		}
+
 		$transformer->change_wp_user_id( Users::BLOG_USER_ID );
 
 		$user_id  = $transformer->get_wp_user_id();
