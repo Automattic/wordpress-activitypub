@@ -103,11 +103,11 @@ class Activity_Dispatcher {
 		}
 
 		$transformer = Factory::get_transformer( $wp_object );
-    
-    if ( \is_wp_error( $transformer ) ) {
+
+		if ( \is_wp_error( $transformer ) ) {
 			return;
 		}
-        
+
 		$user_id  = Users::BLOG_USER_ID;
 		$activity = $transformer->to_activity( $type );
 		$user     = Users::get_by_id( Users::BLOG_USER_ID );
