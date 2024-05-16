@@ -910,18 +910,20 @@ function get_comment_ancestors( $comment ) {
 
 	$ancestors = array();
 
-	$id          = $comment->comment_parent;
+	$id          = (int) $comment->comment_parent;
 	$ancestors[] = $id;
 
 	// phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
-	while ( $ancestor = \get_comment( $id ) ) {
+	while ( $id > 0 ) {
+		$ancestor = \get_comment( $id );
+		$parent_id = (int) $ancestor->comment_parent;
+
 		// Loop detection: If the ancestor has been seen before, break.
-		// phpcs:ignore Universal.Operators.StrictComparisons.LooseEqual
-		if ( empty( $ancestor->comment_parent ) || ( $ancestor->comment_parent == $comment->comment_ID ) || in_array( $ancestor->comment_parent, $ancestors, true ) ) {
+		if ( empty( $parent_id ) || ( $parent_id === (int) $comment->comment_ID ) || in_array( $parent_id, $ancestors, true ) ) {
 			break;
 		}
 
-		$id          = $comment->comment_parent;
+		$id          = $parent_id;
 		$ancestors[] = $id;
 	}
 
