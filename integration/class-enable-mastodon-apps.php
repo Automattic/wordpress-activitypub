@@ -30,6 +30,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_add_followers' ), 20, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 15, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 40, 2 );
+		\add_filter( 'mastodon_api_search', array( self::class, 'api_search_by_url' ), 40, 2 );
 		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ) );
 		\add_filter( 'mastodon_api_statuses', array( self::class, 'api_statuses_external' ), 10, 2 );
 		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 23 );
@@ -103,11 +104,11 @@ class Enable_Mastodon_Apps {
 	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
 	 */
 	public static function api_account_add_followers( $account, $user_id ) {
-		if ( ! $account instanceof Account || ! is_numeric( $user_id ) ) {
+		if ( ! $account instanceof Account ) {
 			return $account;
 		}
 
-		$user = Users::get_by_id( $user_id );
+		$user = Users::get_by_various( $user_id );
 
 		if ( ! $user || is_wp_error( $user ) ) {
 			return $account;
@@ -202,10 +203,36 @@ class Enable_Mastodon_Apps {
 			$account->header        = $data['image']['url'];
 			$account->header_static = $data['image']['url'];
 		}
-
+		if ( ! isset( $data['published'] ) ) {
+			$data['published'] = 'now';
+		}
 		$account->created_at = new DateTime( $data['published'] );
 
 		return $account;
+	}
+
+	public static function api_search_by_url( $search_data, $request ) {
+		$p = \wp_parse_url( $request->get_param( 'q' ) );
+		if ( ! $p || ! isset( $p['host'] ) ) {
+			return $search_data;
+		}
+
+		$object = Http::get_remote_object( $request->get_param( 'q' ), true );
+		if ( is_wp_error( $object ) || ! isset( $object['attributedTo'] ) ) {
+			return $search_data;
+		}
+
+		$account = self::get_account_for_actor( $object['attributedTo'] );
+		if ( ! $account ) {
+			return $search_data;
+		}
+
+		$status = self::activity_to_status( $object, $account );
+		if ( $status ) {
+			$search_data['statuses'][] = $status;
+		}
+
+		return $search_data;
 	}
 
 	public static function api_search( $search_data, $request ) {
@@ -291,8 +318,12 @@ class Enable_Mastodon_Apps {
 		if ( ! empty( $object['visibility'] ) ) {
 			$status->visibility = $object['visibility'];
 		}
-
-				$status->uri = $object['url'];
+		if ( ! empty( $object['url'] ) ) {
+			$status->url = $object['url'];
+			$status->uri = $object['url'];
+		} else {
+			$status->uri = $object['id'];
+		}
 
 		if ( ! empty( $object['attachment'] ) ) {
 			$status->media_attachments = array_map(
@@ -314,22 +345,26 @@ class Enable_Mastodon_Apps {
 					$media_attachment->url = $attachment['url'];
 					$media_attachment->preview_url = $attachment['url'];
 					$media_attachment->description = $attachment['name'];
-					$media_attachment->blurhash = $attachment['blurhash'];
-					$media_attachment->meta = array(
-						'original' => array(
-							'width'  => $attachment['width'],
-							'height' => $attachment['height'],
-							'size'   => $attachment['width'] . 'x' . $attachment['height'],
-							'aspect' => $attachment['width'] / $attachment['height'],
-						),
-					);
+					if ( $attachment['blurhash'] ) {
+						$media_attachment->blurhash = $attachment['blurhash'];
+					}
+					if ( $attachment['width'] > 0 && $attachment['height'] > 0 ) {
+						$media_attachment->meta = array(
+							'original' => array(
+								'width'  => $attachment['width'],
+								'height' => $attachment['height'],
+								'size'   => $attachment['width'] . 'x' . $attachment['height'],
+								'aspect' => $attachment['width'] / $attachment['height'],
+							),
+						);}
 					return $media_attachment;
 				},
 				$object['attachment']
 			);
 		}
 
-		return $status;
+		// Ensure numerical ids.
+		return apply_filters( 'mastodon_api_status', $status, 0, array() );
 	}
 
 	public static function api_statuses_external( $statuses, $args ) {
@@ -352,20 +387,46 @@ class Enable_Mastodon_Apps {
 		if ( ! $account ) {
 			return $statuses;
 		}
+		$limit = 10;
+		if ( isset( $args['posts_per_page'] ) ) {
+			$limit = $args['posts_per_page'];
+		}
+		if ( $limit > 40 ) {
+			$limit = 40;
+		}
+		$activitypub_statuses = array();
+		$url = $outbox['first'];
+		$tries = 0;
+		while ( $url ) {
+			if ( ++$tries > 3 ) {
+				break;
+			}
 
-		$posts = Http::get_remote_object( $outbox['first'], true );
-		if ( is_wp_error( $posts ) ) {
-			return $statuses;
+			$posts = Http::get_remote_object( $url, true );
+			if ( is_wp_error( $posts ) ) {
+				return $statuses;
+			}
+
+			$new_statuses = array_map(
+				function ( $item ) use ( $account, $args ) {
+					if ( $args['exclude_replies'] ) {
+						if ( isset( $item['object']['inReplyTo'] ) && $item['object']['inReplyTo'] ) {
+							return null;
+						}
+					}
+					return self::activity_to_status( $item, $account );
+				},
+				$posts['orderedItems']
+			);
+			$activitypub_statuses = array_merge( $activitypub_statuses, array_filter( $new_statuses ) );
+			$url = $posts['next'];
+
+			if ( count( $activitypub_statuses ) >= $limit ) {
+				break;
+			}
 		}
 
-		$activitypub_statuses = array_map(
-			function ( $item ) use ( $account ) {
-				return self::activity_to_status( $item, $account );
-			},
-			$posts['orderedItems']
-		);
-
-		return $activitypub_statuses;
+		return array_slice( $activitypub_statuses, 0, $limit );
 	}
 
 	public static function api_get_replies( $context, $post_id, $url ) {
