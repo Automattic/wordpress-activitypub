@@ -8,7 +8,6 @@ use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Users;
-use Activitypub\Transformer\Base;
 
 /**
  * Returns the ActivityPub default JSON-context

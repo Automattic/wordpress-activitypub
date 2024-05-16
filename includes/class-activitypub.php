@@ -5,7 +5,6 @@ use Exception;
 use Activitypub\Signature;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
-use Activitypub\Transformer\Factory;
 
 use function Activitypub\is_comment;
 use function Activitypub\sanitize_url;
