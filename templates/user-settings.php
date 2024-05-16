@@ -28,5 +28,17 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 			</td>
 			<?php wp_nonce_field( 'activitypub-user-description', '_apnonce' ); ?>
 		</tr>
+		<tr scope="row">
+			<th>
+				<label><?php \esc_html_e( 'Extra fields', 'activitypub' ); ?></label>
+			</th>
+			<td>
+				<p class="description"><?php \esc_html_e( 'Your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?></p>
+				<?php foreach ( $user->get_attachment() as $attachment ) { ?>
+
+				<?php } ?>
+				<p><a href="<?php echo esc_url( admin_url( '/post-new.php?post_type=ap_extrafield' ) ); ?>" class="button"><?php esc_html_e( 'Add new', 'activitypub' ); ?></a></p>
+			</td>
+		</tr>
 	</tbody>
 </table>

@@ -250,9 +250,33 @@ class User extends Actor {
 	 * @return array The extended User-Output.
 	 */
 	public function get_attachment() {
-		$array = array();
+		$extra_fields = new WP_Query(
+			array(
+				'post_type'      => 'ap_extrafield',
+				'posts_per_page' => -1,
+				'author'         => $this->get__id(),
+			)
+		);
 
-		$array[] = array(
+		if ( $extra_fields->have_posts() ) {
+			$attachments = array();
+			foreach ( $extra_fields->posts as $post ) {
+				$attachments[] = array(
+					'type' => 'PropertyValue',
+					'name' => \get_the_title( $post ),
+					'value' => \html_entity_decode(
+						\get_the_content( null, false, $post ),
+						\ENT_QUOTES,
+						'UTF-8'
+					),
+				);
+			}
+			return $attachments;
+		}
+
+		$extra_fields = array();
+
+		$extra_fields[] = array(
 			'type' => 'PropertyValue',
 			'name' => \__( 'Blog', 'activitypub' ),
 			'value' => \html_entity_decode(
@@ -262,7 +286,7 @@ class User extends Actor {
 			),
 		);
 
-		$array[] = array(
+		$extra_fields[] = array(
 			'type' => 'PropertyValue',
 			'name' => \__( 'Profile', 'activitypub' ),
 			'value' => \html_entity_decode(
@@ -273,7 +297,7 @@ class User extends Actor {
 		);
 
 		if ( \get_the_author_meta( 'user_url', $this->get__id() ) ) {
-			$array[] = array(
+			$extra_fields[] = array(
 				'type' => 'PropertyValue',
 				'name' => \__( 'Website', 'activitypub' ),
 				'value' => \html_entity_decode(
@@ -284,7 +308,7 @@ class User extends Actor {
 			);
 		}
 
-		return $array;
+		return $extra_fields;
 	}
 
 	/**

@@ -44,6 +44,8 @@ class Activitypub {
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 
+		\add_action( 'pre_get_posts', array( self::class, 'filter_get_posts_query' ) );
+
 		// register several post_types
 		self::register_post_types();
 	}
@@ -463,6 +465,35 @@ class Activitypub {
 			)
 		);
 
+		\register_post_type(
+			'ap_extrafield',
+			array(
+				'labels'           => array(
+					'name'          => _x( 'Extra fields', 'post_type plural name', 'activitypub' ),
+					'singular_name' => _x( 'Extra field', 'post_type single name', 'activitypub' ),
+					'add_new'       => __( 'Add new', 'activitypub' ),
+					'add_new_item'  => __( 'Add new extra field', 'activitypub' ),
+					'new_item'      => __( 'New extra field', 'activitypub' ),
+					'edit_item'     => __( 'Edit extra field', 'activitypub' ),
+					'view_item'     => __( 'View extra field', 'activitypub' ),
+					'all_items'     => __( 'All extra fields', 'activitypub' ),
+				),
+				'public'              => false,
+				'hierarchical'        => false,
+				'query_var'           => false,
+				'has_archive'         => false,
+				'publicly_queryable'  => false,
+				'show_in_menu'        => false,
+				'delete_with_user'    => true,
+				'can_export'          => true,
+				'exclude_from_search' => true,
+				'show_in_rest'        => true,
+				'map_meta_cap'        => true,
+				'show_ui'             => true,
+				'supports'            => array( 'title', 'editor', 'author' ),
+			)
+		);
+
 		\do_action( 'activitypub_after_register_post_type' );
 	}
 
@@ -476,6 +507,19 @@ class Activitypub {
 		if ( \user_can( $user_id, 'publish_posts' ) ) {
 			$user = \get_user_by( 'id', $user_id );
 			$user->add_cap( 'activitypub' );
+		}
+	}
+
+	/**
+	 * Filter the query to only show the current author's extra fields
+	 *
+	 * @param WP_Query $query The WP_Query instance (passed by reference).
+	 *
+	 * @return void
+	 */
+	public static function filter_get_posts_query( $query ) {
+		if ( $query->get( 'post_type' ) === 'ap_extrafield' ) {
+			$query->set( 'author', get_current_user_id() );
 		}
 	}
 }
