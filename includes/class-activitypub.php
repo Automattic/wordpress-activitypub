@@ -501,6 +501,7 @@ class Activitypub {
 	 * Add the 'activitypub' query variable so WordPress won't mangle it.
 	 *
 	 * @param int   $user_id  User ID.
+	 *
 	 * @param array $userdata The raw array of data passed to wp_insert_user().
 	 */
 	public static function user_register( $user_id ) {
