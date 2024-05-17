@@ -2,6 +2,7 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Http;
+use Activitypub\Notification;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
@@ -57,6 +58,15 @@ class Follow {
 			$user_id,
 			$follower
 		);
+
+		// send notification
+		$notification = new Notification(
+			'follow',
+			$activity['actor'],
+			$activity,
+			$user_id
+		);
+		$notification->send();
 	}
 
 	/**
