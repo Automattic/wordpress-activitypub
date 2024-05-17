@@ -34,8 +34,23 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 			</th>
 			<td>
 				<p class="description"><?php \esc_html_e( 'Your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?></p>
-				<?php foreach ( $user->get_attachment() as $attachment ) { ?>
+				<?php
+					$extra_fields = new WP_Query(
+						array(
+							'post_type'      => 'ap_extrafield',
+							'posts_per_page' => -1,
+							'status'         => 'publish',
+							'author'         => get_current_user_id(),
+						)
+					);
 
+					foreach ( $extra_fields->posts as $extra_field ) {
+						?>
+				<p>
+					<input class="regular-text" type="text" size="5" value="<?php echo \esc_html( $extra_field->post_title ); ?>" disabled />
+					<input class="regular-text" type="text" value="<?php echo \wp_kses_post( \get_the_excerpt( $extra_field ) ); ?>" disabled />
+					<a href="<?php echo \esc_url( \get_edit_post_link( $extra_field->ID ) ); ?>"><?php \esc_html_e( 'Edit', 'activitypub' ); ?></a>
+				</p>
 				<?php } ?>
 				<p><a href="<?php echo esc_url( admin_url( '/post-new.php?post_type=ap_extrafield' ) ); ?>" class="button"><?php esc_html_e( 'Add new', 'activitypub' ); ?></a></p>
 			</td>

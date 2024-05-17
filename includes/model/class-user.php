@@ -254,6 +254,7 @@ class User extends Actor {
 			array(
 				'post_type'      => 'ap_extrafield',
 				'posts_per_page' => -1,
+				'status'         => 'publish',
 				'author'         => $this->get__id(),
 			)
 		);
@@ -261,11 +262,21 @@ class User extends Actor {
 		if ( $extra_fields->have_posts() ) {
 			$attachments = array();
 			foreach ( $extra_fields->posts as $post ) {
+				$content = \get_the_content( null, false, $post );
+				$content = \make_clickable( $content );
+				$content = \do_blocks( $content );
+				$content = \wptexturize( $content );
+				$content = \wp_filter_content_tags( $content );
+				// replace script and style elements
+				$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
+				$content = \strip_shortcodes( $content );
+				$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+
 				$attachments[] = array(
 					'type' => 'PropertyValue',
 					'name' => \get_the_title( $post ),
 					'value' => \html_entity_decode(
-						\get_the_content( null, false, $post ),
+						$content,
 						\ENT_QUOTES,
 						'UTF-8'
 					),
