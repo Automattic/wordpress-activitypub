@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub\Transformer;
 
+use WP_Error;
 use WP_Post;
 use WP_Comment;
 
@@ -30,9 +31,9 @@ abstract class Base {
 	 *
 	 * @param WP_Post|WP_Comment $wp_object The WordPress object
 	 *
-	 * @return Base_Object
+	 * @return Base
 	 */
-	public static function transform( $object ) {
+	public static function transform( $object ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
 		return new static( $object );
 	}
 

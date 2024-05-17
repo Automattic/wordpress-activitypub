@@ -2,7 +2,7 @@
 namespace Activitypub;
 
 use WP_User_Query;
-use Activitypub\Model\Blog_User;
+use Activitypub\Model\Blog;
 
 use function Activitypub\is_user_disabled;
 use function Activitypub\was_comment_received;
@@ -217,7 +217,7 @@ class Admin {
 				'type'              => 'string',
 				'description'       => \esc_html__( 'The Identifier of the Blog-User', 'activitypub' ),
 				'show_in_rest'      => true,
-				'default'           => Blog_User::get_default_username(),
+				'default'           => Blog::get_default_username(),
 				'sanitize_callback' => function ( $value ) {
 					// hack to allow dots in the username
 					$parts     = explode( '.', $value );
@@ -248,7 +248,7 @@ class Admin {
 							'error'
 						);
 
-						return Blog_User::get_default_username();
+						return Blog::get_default_username();
 					}
 
 					return $sanitized;
