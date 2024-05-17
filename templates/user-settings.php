@@ -52,7 +52,10 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 					<a href="<?php echo \esc_url( \get_edit_post_link( $extra_field->ID ) ); ?>"><?php \esc_html_e( 'Edit', 'activitypub' ); ?></a>
 				</p>
 				<?php } ?>
-				<p><a href="<?php echo esc_url( admin_url( '/post-new.php?post_type=ap_extrafield' ) ); ?>" class="button"><?php esc_html_e( 'Add new', 'activitypub' ); ?></a></p>
+				<p>
+					<a href="<?php echo esc_url( admin_url( '/post-new.php?post_type=ap_extrafield' ) ); ?>" class="button"><?php esc_html_e( 'Add new', 'activitypub' ); ?></a>
+					<a href="<?php echo esc_url( admin_url( '/edit.php?post_type=ap_extrafield' ) ); ?>"><?php esc_html_e( 'Manage all', 'activitypub' ); ?></a>
+				</p>
 			</td>
 		</tr>
 	</tbody>
