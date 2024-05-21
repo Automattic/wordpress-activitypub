@@ -132,7 +132,7 @@ class Enable_Mastodon_Apps {
 		$account->acct = $user->get_preferred_username();
 		$account->note = $user->get_summary();
 
-		$account->followers_count = Followers::count_followers( $user_id );
+		$account->followers_count = Followers::count_followers( $user->get__id() );
 		return $account;
 	}
 
