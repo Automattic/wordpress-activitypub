@@ -306,7 +306,7 @@ class Enable_Mastodon_Apps {
 		}
 
 		$status = new Status();
-		$status->id         = Mastodon_API::remap_url( $object['id'] );
+		$status->id         = $object['id'];
 		$status->created_at = new DateTime( $object['published'] );
 		$status->content    = $object['content'];
 		$status->account    = $account;
@@ -340,7 +340,7 @@ class Enable_Mastodon_Apps {
 					$attachment = array_merge( $default_attachment, $attachment );
 
 					$media_attachment = new Media_Attachment();
-					$media_attachment->id = Mastodon_API::remap_url( $attachment['url'], $attachment );
+					$media_attachment->id = $attachment['url'];
 					$media_attachment->type = strtok( $attachment['mediaType'], '/' );
 					$media_attachment->url = $attachment['url'];
 					$media_attachment->preview_url = $attachment['url'];
@@ -363,8 +363,7 @@ class Enable_Mastodon_Apps {
 			);
 		}
 
-		// Ensure numerical ids.
-		return apply_filters( 'mastodon_api_status', $status, 0, array() );
+		return $status;
 	}
 
 	public static function api_statuses_external( $statuses, $args ) {
