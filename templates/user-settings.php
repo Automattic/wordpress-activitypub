@@ -37,10 +37,10 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 				<?php
 					$extra_fields = new WP_Query(
 						array(
-							'post_type'      => 'ap_extrafield',
-							'posts_per_page' => -1,
-							'status'         => 'publish',
-							'author'         => get_current_user_id(),
+							'post_type' => 'ap_extrafield',
+							'nopaging'  => true,
+							'status'    => 'publish',
+							'author'    => get_current_user_id(),
 						)
 					);
 
