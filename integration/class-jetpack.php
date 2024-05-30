@@ -4,21 +4,18 @@ namespace Activitypub\Integration;
 class Jetpack {
 
 	public static function init() {
-		\add_action( 'activitypub_notification', [ self::class, 'send' ] );
+		\add_filter( 'jetpack_sync_post_meta_whitelist', [ __CLASS__, 'add_sync_meta' ] );
 	}
 
-	public static function send( $notification ) {
-		\Automattic\Jetpack\Connection\Client::wpcom_json_api_request_as_user(
-			sprintf( '/sites/%d/activitypub/notify', \Jetpack_Options::get_option( 'id' ) ),
-			'2',
-			[ 'method' => 'POST' ],
-			[
-				'actor'  => $notification->actor,
-				'object' => $notification->object,
-				'target' => $notification->target,
-				'type'   => $notification->type,
-			],
-			'wpcom'
-		);
+	public static function add_sync_meta( $whitelist ) {
+		if ( ! is_array( $whitelist ) ) {
+			return $whitelist;
+		}
+		$activitypub_meta_keys = [
+			'activitypub_user_id',
+			'activitypub_inbox',
+			'activitypub_actor_json',
+		];
+		return \array_merge( $whitelist, $activitypub_meta_keys );
 	}
 }
