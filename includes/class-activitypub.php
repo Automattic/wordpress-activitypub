@@ -44,8 +44,6 @@ class Activitypub {
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 
-		\add_action( 'pre_get_posts', array( self::class, 'filter_get_posts_query' ) );
-
 		// register several post_types
 		self::register_post_types();
 	}
@@ -498,7 +496,7 @@ class Activitypub {
 	}
 
 	/**
-	 * Add the 'activitypub' query variable so WordPress won't mangle it.
+	 * Add the 'activitypub' capability to users who can publish posts.
 	 *
 	 * @param int   $user_id  User ID.
 	 *
@@ -508,19 +506,6 @@ class Activitypub {
 		if ( \user_can( $user_id, 'publish_posts' ) ) {
 			$user = \get_user_by( 'id', $user_id );
 			$user->add_cap( 'activitypub' );
-		}
-	}
-
-	/**
-	 * Filter the query to only show the current author's extra fields
-	 *
-	 * @param WP_Query $query The WP_Query instance (passed by reference).
-	 *
-	 * @return void
-	 */
-	public static function filter_get_posts_query( $query ) {
-		if ( $query->get( 'post_type' ) === 'ap_extrafield' ) {
-			$query->set( 'author', get_current_user_id() );
 		}
 	}
 }
