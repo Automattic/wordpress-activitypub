@@ -488,7 +488,7 @@ class Activitypub {
 				'show_in_rest'        => true,
 				'map_meta_cap'        => true,
 				'show_ui'             => true,
-				'supports'            => array( 'title', 'editor', 'author' ),
+				'supports'            => array( 'title', 'editor' ),
 			)
 		);
 
