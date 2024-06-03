@@ -41,7 +41,6 @@ class Admin {
 		}
 
 		\add_filter( 'dashboard_glance_items', array( self::class, 'dashboard_glance_items' ) );
-		\add_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 3 );
 	}
 
 	/**
@@ -487,6 +486,8 @@ class Admin {
 	 * @return array The extended glance items.
 	 */
 	public static function dashboard_glance_items( $items ) {
+		\add_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 3 );
+
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			$items['activitypub'] = sprintf(
 				'<a class="activitypub-followers" href="%s" title="%s">%s %s</a>',
@@ -506,6 +507,8 @@ class Admin {
 				__( 'Followers (Blog)', 'activitypub' )
 			);
 		}
+
+		\remove_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 3 );
 
 		return $items;
 	}
