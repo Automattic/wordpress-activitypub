@@ -41,6 +41,7 @@ class Admin {
 		}
 
 		\add_filter( 'dashboard_glance_items', array( self::class, 'dashboard_glance_items' ) );
+		\add_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 3 );
 	}
 
 	/**
@@ -491,7 +492,7 @@ class Admin {
 				'<a class="activitypub-followers" href="%s" title="%s">%s %s</a>',
 				admin_url( 'users.php?page=activitypub-followers-list' ),
 				esc_attr__( 'Your followers', 'activitypub' ),
-				count_followers( get_current_user_id() ),
+				\number_format_i18n( count_followers( get_current_user_id() ) ),
 				__( 'Followers', 'activitypub' )
 			);
 		}
@@ -501,7 +502,7 @@ class Admin {
 				'<a class="activitypub-followers" href="%s" title="%s">%s %s</a>',
 				admin_url( 'options-general.php?page=activitypub&tab=followers' ),
 				esc_attr__( 'The Blog\'s followers', 'activitypub' ),
-				count_followers( Users::BLOG_USER_ID ),
+				\number_format_i18n( count_followers( Users::BLOG_USER_ID ) ),
 				__( 'Followers (Blog)', 'activitypub' )
 			);
 		}

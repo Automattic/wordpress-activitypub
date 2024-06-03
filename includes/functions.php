@@ -895,3 +895,41 @@ function get_comment_ancestors( $comment ) {
 
 	return $ancestors;
 }
+
+/**
+ * Change the display of large numbers on the site.
+ *
+ * @author Jeremy Herve
+ *
+ * @see https://wordpress.org/support/topic/abbreviate-numbers-with-k/
+ *
+ * @param string $formatted Converted number in string format.
+ * @param float  $number    The number to convert based on locale.
+ * @param int    $decimals  Precision of the number of decimal places.
+ *
+ * @return string Converted number in string format.
+ */
+function custom_large_numbers( $formatted, $number, $decimals ) {
+	global $wp_locale;
+
+	$decimals      = 0;
+	$thousands_sep = ',';
+
+	if ( isset( $wp_locale ) ) {
+		$decimals      = (int) $wp_locale->number_format['decimal_point'];
+		$thousands_sep = $wp_locale->number_format['thousands_sep'];
+	}
+
+	if ( $number < 1000 ) { // any number less than a Thousand.
+		return number_format( $number, $decimals, $thousands_sep );
+	} elseif ( $number < 1000000 ) { // any number less than a million
+		return number_format( $number / 1000, $decimals, $thousands_sep ) . 'K';
+	} elseif ( $number < 1000000000 ) { // any number less than a billion
+		return number_format( $number / 1000000, $decimals, $thousands_sep ) . 'M';
+	} else { // at least a billion
+		return number_format( $number / 1000000000, $decimals, $thousands_sep ) . 'B';
+	}
+
+	// Default fallback. We should not get here.
+	return $formatted;
+}
