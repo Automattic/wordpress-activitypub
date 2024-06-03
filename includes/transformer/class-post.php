@@ -9,6 +9,7 @@ use Activitypub\Collection\Users;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
+use function Activitypub\get_enclosures;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\site_supports_blocks;
 
@@ -138,14 +139,34 @@ class Post extends Base {
 	protected function get_attachment() {
 		// Once upon a time we only supported images, but we now support audio/video as well.
 		// We maintain the image-centric naming for backwards compatibility.
-		$max_media = \intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
+		$max_media = \intval(
+			\apply_filters(
+				'activitypub_max_image_attachments',
+				\get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS )
+			)
+		);
 
-		if ( site_supports_blocks() && \has_blocks( $this->wp_object->post_content ) ) {
-			$media = $this->get_block_attachments( $max_media );
-		} else {
-			$media = $this->get_classic_editor_images( $max_media );
+		$media = array(
+			'audio' => array(),
+			'video' => array(),
+			'image' => array(),
+		);
+		$id    = $this->wp_object->ID;
+
+		// list post thumbnail first if this post has one
+		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
+			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
 		}
 
+		$media = $this->get_enclosures( $media );
+
+		if ( site_supports_blocks() && \has_blocks( $this->wp_object->post_content ) ) {
+			$media = $this->get_block_attachments( $media, $max_media );
+		} else {
+			$media = $this->get_classic_editor_images( $media, $max_media );
+		}
+
+		$media      = self::filter_media_by_object_type( $media, \get_post_format( $this->wp_object ), $this->wp_object );
 		$unique_ids = \array_unique( \array_column( $media, 'id' ) );
 		$media      = \array_intersect_key( $media, $unique_ids );
 		$media      = \array_slice( $media, 0, $max_media );
@@ -156,35 +177,21 @@ class Post extends Base {
 	/**
 	 * Get media attachments from blocks. They will be formatted as ActivityPub attachments, not as WP attachments.
 	 *
-	 * @param int $max_media The maximum number of attachments to return.
+	 * @param array $media     The media array grouped by type.
+	 * @param int   $max_media The maximum number of attachments to return.
 	 *
 	 * @return array The attachments.
 	 */
-	protected function get_block_attachments( $max_media ) {
+	protected function get_block_attachments( $media, $max_media ) {
 		// max media can't be negative or zero
 		if ( $max_media <= 0 ) {
 			return array();
 		}
 
-		$id = $this->wp_object->ID;
+		$blocks = \parse_blocks( $this->wp_object->post_content );
+		$media = self::get_media_from_blocks( $blocks, $media );
 
-		$media = array(
-			'image' => array(),
-			'audio' => array(),
-			'video' => array(),
-		);
-
-		// list post thumbnail first if this post has one
-		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
-			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
-		}
-
-		if ( $max_media > 0 ) {
-			$blocks = \parse_blocks( $this->wp_object->post_content );
-			$media = self::get_media_from_blocks( $blocks, $media );
-		}
-
-		return self::filter_media_by_object_type( $media, \get_post_format( $this->wp_object ) );
+		return $media;
 	}
 
 	/**
@@ -201,8 +208,9 @@ class Post extends Base {
 		if ( $max_images <= 0 ) {
 			return array();
 		}
+
 		$images = array();
-		$query = new \WP_Query(
+		$query  = new \WP_Query(
 			array(
 				'post_parent' => $this->wp_object->ID,
 				'post_status' => 'inherit',
@@ -213,6 +221,7 @@ class Post extends Base {
 				'posts_per_page' => $max_images,
 			)
 		);
+
 		foreach ( $query->get_posts() as $attachment ) {
 			if ( ! \in_array( $attachment->ID, $images, true ) ) {
 				$images[] = array( 'id' => $attachment->ID );
@@ -291,34 +300,68 @@ class Post extends Base {
 	 * Get post images from the classic editor.
 	 * Note that audio/video attachments are only supported in the block editor.
 	 *
-	 * @param int $max_images The maximum number of images to return.
+	 * @param array $media      The media array grouped by type.
+	 * @param int   $max_images The maximum number of images to return.
 	 *
 	 * @return array The attachments.
 	 */
-	protected function get_classic_editor_images( $max_images ) {
+	protected function get_classic_editor_images( $media, $max_images ) {
 		// max images can't be negative or zero
 		if ( $max_images <= 0 ) {
 			return array();
 		}
 
-		$id = $this->wp_object->ID;
-
-		$images = array();
-
-		// list post thumbnail first if this post has one
-		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
-			$images[] = \get_post_thumbnail_id( $id );
-		}
-
-		if ( \count( $images ) <= $max_images ) {
+		if ( \count( $media['image'] ) <= $max_images ) {
 			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-				$images = \array_merge( $images, $this->get_classic_editor_image_embeds( $max_images ) );
+				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_embeds( $max_images ) );
 			} else {
-				$images = \array_merge( $images, $this->get_classic_editor_image_attachments( $max_images ) );
+				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_attachments( $max_images ) );
 			}
 		}
 
-		return $images;
+		return $media;
+	}
+
+	/**
+	 * Get enclosures for a post.
+	 *
+	 * @param array $media The media array grouped by type.
+	 *
+	 * @return array The media array extended with enclosures.
+	 */
+	public function get_enclosures( $media ) {
+		$enclosures = get_enclosures( $this->wp_object->ID );
+
+		if ( ! $enclosures ) {
+			return $media;
+		}
+
+		foreach ( $enclosures as $enclosure ) {
+			// check if URL is an attachment
+			$attachment_id = \attachment_url_to_postid( $enclosure['url'] );
+			if ( $attachment_id ) {
+				$enclosure['id'] = $attachment_id;
+				$enclosure['url'] = \wp_get_attachment_url( $attachment_id );
+				$enclosure['mediaType'] = \get_post_mime_type( $attachment_id );
+			}
+
+			$mime_type       = $enclosure['mediaType'];
+			$mime_type_parts = \explode( '/', $mime_type );
+
+			switch ( $mime_type_parts[0] ) {
+				case 'image':
+					$media['image'][] = $enclosure;
+					break;
+				case 'audio':
+					$media['audio'][] = $enclosure;
+					break;
+				case 'video':
+					$media['video'][] = $enclosure;
+					break;
+			}
+		}
+
+		return $media;
 	}
 
 	/**
@@ -330,7 +373,6 @@ class Post extends Base {
 	 * @return array The image IDs.
 	 */
 	protected static function get_media_from_blocks( $blocks, $media ) {
-
 		foreach ( $blocks as $block ) {
 			// recurse into inner blocks
 			if ( ! empty( $block['innerBlocks'] ) ) {
@@ -401,14 +443,14 @@ class Post extends Base {
 	 *
 	 * @return array The filtered media IDs.
 	 */
-	protected static function filter_media_by_object_type( $media, $type ) {
-		$type = \apply_filters( 'filter_media_by_object_type', \strtolower( $type ) );
+	protected static function filter_media_by_object_type( $media, $type, $wp_object ) {
+		$type = \apply_filters( 'filter_media_by_object_type', \strtolower( $type ), $wp_object );
 
 		if ( ! empty( $media[ $type ] ) ) {
 			return $media[ $type ];
 		}
 
-		return array_merge( array(), ...array_values( $media ) );
+		return array_filter( array_merge( array(), ...array_values( $media ) ) );
 	}
 
 	/**
@@ -419,6 +461,10 @@ class Post extends Base {
 	 * @return array The ActivityPub Attachment.
 	 */
 	public static function wp_attachment_to_activity_attachment( $media ) {
+		if ( ! isset( $media['id'] ) ) {
+			return $media;
+		}
+
 		$id              = $media['id'];
 		$attachment      = array();
 		$mime_type       = \get_post_mime_type( $id );
