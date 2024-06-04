@@ -229,18 +229,26 @@ class Users {
 	 * @return \Acitvitypub\Model\User The User.
 	 */
 	public static function get_by_various( $id ) {
+		$user = null;
+
 		if ( is_numeric( $id ) ) {
-			return self::get_by_id( $id );
+			$user = self::get_by_id( $id );
 		} elseif (
 			// is URL
 			filter_var( $id, FILTER_VALIDATE_URL ) ||
 			// is acct
-			str_starts_with( $id, 'acct:' )
+			str_starts_with( $id, 'acct:' ) ||
+			// is email
+			filter_var( $id, FILTER_VALIDATE_EMAIL )
 		) {
-			return self::get_by_resource( $id );
-		} else {
-			return self::get_by_username( $id );
+			$user = self::get_by_resource( $id );
 		}
+
+		if ( $user && ! is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		return self::get_by_username( $id );
 	}
 
 	/**
