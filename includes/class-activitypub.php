@@ -9,6 +9,7 @@ use Activitypub\Collection\Followers;
 use function Activitypub\is_comment;
 use function Activitypub\sanitize_url;
 use function Activitypub\is_local_comment;
+use function Activitypub\is_user_type_disabled;
 use function Activitypub\is_activitypub_request;
 use function Activitypub\should_comment_be_federated;
 
@@ -95,23 +96,13 @@ class Activitypub {
 
 		$json_template = false;
 
-		// check if user can publish posts
-		if ( \is_author() && is_wp_error( Users::get_by_id( \get_the_author_meta( 'ID' ) ) ) ) {
-			return $template;
-		}
-
-		// check if blog-user is enabled
-		if ( \is_home() && is_wp_error( Users::get_by_id( Users::BLOG_USER_ID ) ) ) {
-			return $template;
-		}
-
-		if ( \is_author() ) {
+		if ( \is_author() && ! is_user_disabled( \get_the_author_meta( 'ID' ) ) ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/author-json.php';
 		} elseif ( is_comment() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
-		} elseif ( \is_home() ) {
+		} elseif ( \is_home() && ! is_user_type_disabled( 'blog' ) ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
@@ -121,7 +112,7 @@ class Activitypub {
 		 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
 		 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
 		 */
-		if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
+		if ( $json_template && ACTIVITYPUB_AUTHORIZED_FETCH ) {
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
 				header( 'HTTP/1.1 401 Unauthorized' );
@@ -131,7 +122,11 @@ class Activitypub {
 			}
 		}
 
-		return $json_template;
+		if ( $json_template ) {
+			return $json_template;
+		}
+
+		return $template;
 	}
 
 	/**
