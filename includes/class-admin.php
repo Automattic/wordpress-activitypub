@@ -322,7 +322,7 @@ class Admin {
 		}
 
 		if ( 'index.php' === $hook_suffix ) {
-			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), '1.0.0' );
+			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), get_plugin_version() );
 		}
 	}
 
