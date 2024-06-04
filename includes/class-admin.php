@@ -491,7 +491,7 @@ class Admin {
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			$items['activitypub'] = sprintf(
 				'<a class="activitypub-followers" href="%s" title="%s">%s %s</a>',
-				admin_url( 'users.php?page=activitypub-followers-list' ),
+				esc_url( admin_url( 'users.php?page=activitypub-followers-list' ) ),
 				esc_attr__( 'Your followers', 'activitypub' ),
 				\number_format_i18n( count_followers( get_current_user_id() ) ),
 				__( 'Followers', 'activitypub' )
