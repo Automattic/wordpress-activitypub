@@ -317,8 +317,8 @@ class Admin {
 
 	public static function enqueue_scripts( $hook_suffix ) {
 		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
-			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), '1.0.0' );
-			wp_enqueue_script( 'activitypub-admin-script', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), '1.0.0', false );
+			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), get_plugin_version() );
+			wp_enqueue_script( 'activitypub-admin-script', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), get_plugin_version(), false );
 		}
 
 		if ( 'index.php' === $hook_suffix ) {
