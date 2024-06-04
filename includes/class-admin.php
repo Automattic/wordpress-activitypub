@@ -489,22 +489,40 @@ class Admin {
 		\add_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 3 );
 
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
-			$items['activitypub'] = sprintf(
-				'<a class="activitypub-followers" href="%1$s" title="%2$s">%3$s %4$s</a>',
-				esc_url( admin_url( 'users.php?page=activitypub-followers-list' ) ),
-				esc_attr__( 'Your followers', 'activitypub' ),
-				\number_format_i18n( count_followers( get_current_user_id() ) ),
-				__( 'Followers', 'activitypub' )
+			$follower_count = sprintf(
+				// translators: %s: number of followers
+				_n(
+					'%s Follower',
+					'%s Followers',
+					count_followers( \get_current_user_id() ),
+					'activitypub'
+				),
+				\number_format_i18n( count_followers( \get_current_user_id() ) )
+			);
+			$items['activitypub-followers-user'] = sprintf(
+				'<a class="activitypub-followers" href="%1$s" title="%2$s">%3$s</a>',
+				\esc_url( \admin_url( 'users.php?page=activitypub-followers-list' ) ),
+				\esc_attr__( 'Your followers', 'activitypub' ),
+				\esc_html( $follower_count )
 			);
 		}
 
 		if ( ! is_user_type_disabled( 'blog' ) && current_user_can( 'manage_options' ) ) {
-			$items['activitypub-comments'] = sprintf(
-				'<a class="activitypub-followers" href="%s" title="%s">%s %s</a>',
-				admin_url( 'options-general.php?page=activitypub&tab=followers' ),
-				esc_attr__( 'The Blog\'s followers', 'activitypub' ),
-				\number_format_i18n( count_followers( Users::BLOG_USER_ID ) ),
-				__( 'Followers (Blog)', 'activitypub' )
+			$follower_count = sprintf(
+				// translators: %s: number of followers
+				_n(
+					'%s Follower (Blog)',
+					'%s Followers (Blog)',
+					count_followers( Users::BLOG_USER_ID ),
+					'activitypub'
+				),
+				\number_format_i18n( count_followers( Users::BLOG_USER_ID ) )
+			);
+			$items['activitypub-followers-blog'] = sprintf(
+				'<a class="activitypub-followers" href="%1$s" title="%2$s">%3$s</a>',
+				\esc_url( \admin_url( 'options-general.php?page=activitypub&tab=followers' ) ),
+				\esc_attr__( 'The Blog\'s followers', 'activitypub' ),
+				\esc_html( $follower_count )
 			);
 		}
 
