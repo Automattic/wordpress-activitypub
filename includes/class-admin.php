@@ -3,7 +3,9 @@ namespace Activitypub;
 
 use WP_User_Query;
 use Activitypub\Model\Blog;
+use Activitypub\Collection\Users;
 
+use function Activitypub\count_followers;
 use function Activitypub\is_user_disabled;
 use function Activitypub\was_comment_received;
 use function Activitypub\is_comment_federatable;
@@ -39,6 +41,8 @@ class Admin {
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
 		}
+
+		\add_filter( 'dashboard_glance_items', array( self::class, 'dashboard_glance_items' ) );
 	}
 
 	/**
@@ -315,8 +319,12 @@ class Admin {
 
 	public static function enqueue_scripts( $hook_suffix ) {
 		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
-			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), '1.0.0' );
-			wp_enqueue_script( 'activitypub-admin-styles', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), '1.0.0', false );
+			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), get_plugin_version() );
+			wp_enqueue_script( 'activitypub-admin-script', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), get_plugin_version(), false );
+		}
+
+		if ( 'index.php' === $hook_suffix ) {
+			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), get_plugin_version() );
 		}
 	}
 
@@ -529,5 +537,58 @@ class Admin {
 		}
 
 		return $sendback;
+	}
+
+	/**
+	 * Add ActivityPub infos to the dashboard glance items
+	 *
+	 * @param array $items The existing glance items.
+	 *
+	 * @return array The extended glance items.
+	 */
+	public static function dashboard_glance_items( $items ) {
+		\add_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 3 );
+
+		if ( ! is_user_disabled( get_current_user_id() ) ) {
+			$follower_count = sprintf(
+				// translators: %s: number of followers
+				_n(
+					'%s Follower',
+					'%s Followers',
+					count_followers( \get_current_user_id() ),
+					'activitypub'
+				),
+				\number_format_i18n( count_followers( \get_current_user_id() ) )
+			);
+			$items['activitypub-followers-user'] = sprintf(
+				'<a class="activitypub-followers" href="%1$s" title="%2$s">%3$s</a>',
+				\esc_url( \admin_url( 'users.php?page=activitypub-followers-list' ) ),
+				\esc_attr__( 'Your followers', 'activitypub' ),
+				\esc_html( $follower_count )
+			);
+		}
+
+		if ( ! is_user_type_disabled( 'blog' ) && current_user_can( 'manage_options' ) ) {
+			$follower_count = sprintf(
+				// translators: %s: number of followers
+				_n(
+					'%s Follower (Blog)',
+					'%s Followers (Blog)',
+					count_followers( Users::BLOG_USER_ID ),
+					'activitypub'
+				),
+				\number_format_i18n( count_followers( Users::BLOG_USER_ID ) )
+			);
+			$items['activitypub-followers-blog'] = sprintf(
+				'<a class="activitypub-followers" href="%1$s" title="%2$s">%3$s</a>',
+				\esc_url( \admin_url( 'options-general.php?page=activitypub&tab=followers' ) ),
+				\esc_attr__( 'The Blog\'s followers', 'activitypub' ),
+				\esc_html( $follower_count )
+			);
+		}
+
+		\remove_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 3 );
+
+		return $items;
 	}
 }
