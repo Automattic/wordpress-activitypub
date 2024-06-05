@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.5
-Stable tag: 2.3.1
+Stable tag: 2.4.0
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -132,6 +132,32 @@ The followers of a user can be found in the menu under "Users" -> "Followers" or
 For reasons of data protection, it is not possible to see the followers of other users.
 
 == Changelog ==
+
+= 2.4.0 =
+
+* Added: A core/embed block filter to transform iframes to links
+* Added: Basic support of incoming `Announce`s
+* Added: Improve attachment handling
+* Added: Notifications: Introduce general class and use it for new follows
+* Added: Always fall back to `get_by_username` if one of the above fail
+* Added: Notification support for Jetpack
+* Added: EMA: Support for fetching external statuses without replies
+* Added: EMA: Remote context
+* Added: EMA: Allow searching for URLs
+* Added: EMA: Ensuring numeric ids is now done in EMA directly
+* Added: Podcast support
+* Added: Follower count to "At a Glance" dashboard widget
+* Improved: Use `Note` as default Object-Type, instead of `Article`
+* Improved: Improve `AUTHORIZED_FETCH`
+* Improved: Only send Mentions to comments in the direct hierarchy
+* Improved: Improve transformer
+* Improved: Improve Lemmy compatibility
+* Improved: Updated JS dependencies
+* Fixed: EMA: Add missing static keyword and try to lookup if the id is 0
+* Fixed: Blog-wide account when WordPress is in subdirectory
+* Fixed: Funkwhale URLs
+* Fixed: Prevent infinite loops in `get_comment_ancestors`
+* Fixed: Better Content-Negotiation handling
 
 = 2.3.1 =
 

@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2024-06-05
+
+### Added
+
+* A core/embed block filter to transform iframes to links
+* Basic support of incoming `Announce`s
+* Improve attachment handling
+* Notifications: Introduce general class and use it for new follows
+* Always fall back to `get_by_username` if one of the above fail
+* Notification support for Jetpack
+* EMA: Support for fetching external statuses without replies
+* EMA: Remote context
+* EMA: Allow searching for URLs
+* EMA: Ensuring numeric ids is now done in EMA directly
+* Podcast support
+* Follower count to "At a Glance" dashboard widget
+
+### Changed
+
+* Use `Note` as default Object-Type, instead of `Article`
+* Improve `AUTHORIZED_FETCH`
+* Only send Mentions to comments in the direct hierarchy
+* Improve transformer
+* Improve Lemmy compatibility
+* Updated JS dependencies
+
+### Fixed
+
+* EMA: Add missing static keyword and try to lookup if the id is 0
+* Blog-wide account when WordPress is in subdirectory
+* Funkwhale URLs
+* Prevent infinite loops in `get_comment_ancestors`
+* Better Content-Negotiation handling
+
 ## [2.3.1] - 2024-04-29
 
 ### Added
@@ -744,6 +778,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
+[2.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/2.3.1...2.4.0
 [2.3.1]: https://github.com/Automattic/wordpress-activitypub/compare/2.3.0...2.3.1
 [2.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/2.2.0...2.3.0
 [2.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/2.1.1...2.2.0
