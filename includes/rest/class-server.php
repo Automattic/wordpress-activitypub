@@ -52,7 +52,7 @@ class Server {
 		$json = $user->to_array();
 
 		$rest_response = new WP_REST_Response( $json, 200 );
-		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . \strtolower( \get_option( 'blog_charset' ) ) );
 
 		return $rest_response;
 	}
