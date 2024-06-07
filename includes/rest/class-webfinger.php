@@ -58,7 +58,10 @@ class Webfinger {
 		$resource = $request->get_param( 'resource' );
 		$response = self::get_profile( $resource );
 
-		return new WP_REST_Response( $response, 200 );
+		$response = new WP_REST_Response( $response, 200 );
+		$response->header( 'Access-Control-Allow-Origin', '*' );
+
+		return $response;
 	}
 
 	/**
