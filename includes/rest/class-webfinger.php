@@ -60,6 +60,7 @@ class Webfinger {
 
 		$response = new WP_REST_Response( $response, 200 );
 		$response->header( 'Access-Control-Allow-Origin', '*' );
+		$response->header( 'Content-Type', 'application/jrd+json; charset=' . get_option( 'blog_charset' ) );
 
 		return $response;
 	}
