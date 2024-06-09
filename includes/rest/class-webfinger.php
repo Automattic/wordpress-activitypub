@@ -55,10 +55,28 @@ class Webfinger {
 		 */
 		\do_action( 'activitypub_rest_webfinger_pre' );
 
+		$code = 200;
+
 		$resource = $request->get_param( 'resource' );
 		$response = self::get_profile( $resource );
 
-		return new WP_REST_Response( $response, 200 );
+		if ( \is_wp_error( $response ) ) {
+			$code       = 400;
+			$error_data = $response->get_error_data();
+
+			if ( isset( $error_data['status'] ) ) {
+				$code = $error_data['status'];
+			}
+		}
+
+		return new WP_REST_Response(
+			$response,
+			$code,
+			array(
+				'Access-Control-Allow-Origin' => '*',
+				'Content-Type' => 'application/jrd+json; charset=' . get_option( 'blog_charset' ),
+			)
+		);
 	}
 
 	/**
@@ -88,7 +106,7 @@ class Webfinger {
 	public static function get_profile( $resource ) {
 		$user = User_Collection::get_by_resource( $resource );
 
-		if ( is_wp_error( $user ) ) {
+		if ( \is_wp_error( $user ) ) {
 			return $user;
 		}
 
