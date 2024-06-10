@@ -94,7 +94,7 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	public static function send_announce( $wp_object, $type ) {
-		if ( ! in_array( $type, array( 'Create', 'Update' ), true ) ) {
+		if ( ! in_array( $type, array( 'Create', 'Update', 'Delete' ), true ) ) {
 			return;
 		}
 
