@@ -150,6 +150,12 @@ class Enable_Mastodon_Apps {
 			return $user_data;
 		}
 
+		$user = Users::get_by_various( $user_id );
+
+		if ( $user && ! is_wp_error( $user ) ) {
+			return $user_data;
+		}
+
 		$uri = Webfinger_Util::resolve( $user_id );
 
 		if ( ! $uri || is_wp_error( $uri ) ) {
