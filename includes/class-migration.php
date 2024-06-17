@@ -2,7 +2,7 @@
 namespace Activitypub;
 
 use Activitypub\Activitypub;
-use Activitypub\Model\Blog_User;
+use Activitypub\Model\Blog;
 use Activitypub\Collection\Followers;
 
 /**
@@ -15,7 +15,9 @@ class Migration {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_action( 'activitypub_schedule_migration', array( self::class, 'maybe_migrate' ) );
+		\add_action( 'activitypub_migrate', array( self::class, 'async_migration' ) );
+
+		self::maybe_migrate();
 	}
 
 	/**
@@ -108,17 +110,27 @@ class Migration {
 
 		$version_from_db = self::get_version();
 
+		// check for inital migration
+		if ( ! $version_from_db ) {
+			self::add_default_settings();
+			$version_from_db = self::get_target_version();
+		}
+
+		// schedule the async migration
+		if ( ! \wp_next_scheduled( 'activitypub_migrate', $version_from_db ) ) {
+			\wp_schedule_single_event( \time(), 'activitypub_migrate', $version_from_db );
+		}
 		if ( version_compare( $version_from_db, '0.17.0', '<' ) ) {
 			self::migrate_from_0_16();
-		}
-		if ( version_compare( $version_from_db, '1.0.0', '<' ) ) {
-			self::migrate_from_0_17();
 		}
 		if ( version_compare( $version_from_db, '1.3.0', '<' ) ) {
 			self::migrate_from_1_2_0();
 		}
-		if ( version_compare( $version_from_db, '2.0.2', '<' ) ) {
+		if ( version_compare( $version_from_db, '2.1.0', '<' ) ) {
 			self::migrate_from_2_0_0();
+		}
+		if ( version_compare( $version_from_db, '2.3.0', '<' ) ) {
+			self::migrate_from_2_2_0();
 		}
 
 		update_option( 'activitypub_db_version', self::get_target_version() );
@@ -127,23 +139,14 @@ class Migration {
 	}
 
 	/**
-	 * Updates the DB-schema of the followers-list
+	 * Asynchronously migrates the database structure.
 	 *
-	 * @return void
+	 * @param string $version_from_db The version from which to migrate.
 	 */
-	private static function migrate_from_0_17() {
-		// migrate followers
-		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
-			$followers = get_user_meta( $user_id, 'activitypub_followers', true );
-
-			if ( $followers ) {
-				foreach ( $followers as $actor ) {
-					Followers::add_follower( $user_id, $actor );
-				}
-			}
+	public static function async_migration( $version_from_db ) {
+		if ( version_compare( $version_from_db, '1.0.0', '<' ) ) {
+			self::migrate_from_0_17();
 		}
-
-		Activitypub::flush_rewrite_rules();
 	}
 
 	/**
@@ -184,12 +187,32 @@ class Migration {
 	}
 
 	/**
+	 * Updates the DB-schema of the followers-list
+	 *
+	 * @return void
+	 */
+	public static function migrate_from_0_17() {
+		// migrate followers
+		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
+			$followers = get_user_meta( $user_id, 'activitypub_followers', true );
+
+			if ( $followers ) {
+				foreach ( $followers as $actor ) {
+					Followers::add_follower( $user_id, $actor );
+				}
+			}
+		}
+
+		Activitypub::flush_rewrite_rules();
+	}
+
+	/**
 	 * Clear the cache after updating to 1.3.0
 	 *
 	 * @return void
 	 */
 	private static function migrate_from_1_2_0() {
-		$user_ids = get_users(
+		$user_ids = \get_users(
 			array(
 				'fields'         => 'ID',
 				'capability__in' => array( 'publish_posts' ),
@@ -214,5 +237,51 @@ class Migration {
 		wp_unschedule_hook( 'activitypub_send_post_activity' );
 		wp_unschedule_hook( 'activitypub_send_update_activity' );
 		wp_unschedule_hook( 'activitypub_send_delete_activity' );
+
+		$object_type = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
+		if ( 'article' === $object_type ) {
+			\update_option( 'activitypub_object_type', 'wordpress-post-format' );
+		}
+	}
+
+	/**
+	 * Add the ActivityPub capability to all users that can publish posts
+	 * Delete old meta to store followers
+	 *
+	 * @return void
+	 */
+	private static function migrate_from_2_2_0() {
+		// add the ActivityPub capability to all users that can publish posts
+		self::add_activitypub_capability();
+	}
+
+	/**
+	 * Set the defaults needed for the plugin to work
+	 *
+	 * * Add the ActivityPub capability to all users that can publish posts
+	 *
+	 * @return void
+	 */
+	public static function add_default_settings() {
+		self::add_activitypub_capability();
+	}
+
+	/**
+	 * Add the ActivityPub capability to all users that can publish posts
+	 *
+	 * @return void
+	 */
+	private static function add_activitypub_capability() {
+		// get all WP_User objects that can publish posts
+		$users = \get_users(
+			array(
+				'capability__in' => array( 'publish_posts' ),
+			)
+		);
+
+		// add ActivityPub capability to all users that can publish posts
+		foreach ( $users as $user ) {
+			$user->add_cap( 'activitypub' );
+		}
 	}
 }

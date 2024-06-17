@@ -4,12 +4,15 @@ namespace Activitypub\Transformer;
 use WP_Comment;
 use WP_Comment_Query;
 
-use Activitypub\Model\Blog_User;
+use Activitypub\Webfinger;
+use Activitypub\Comment as Comment_Utils;
+use Activitypub\Model\Blog;
 use Activitypub\Collection\Users;
 use Activitypub\Transformer\Base;
 
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_comment_ancestors;
 
 /**
  * WordPress Comment Transformer
@@ -67,7 +70,7 @@ class Comment extends Base {
 				$this->get_locale() => $this->get_content(),
 			)
 		);
-		$path = sprintf( 'users/%d/followers', intval( $comment->comment_author ) );
+		$path = sprintf( 'actors/%d/followers', intval( $comment->comment_author ) );
 
 		$object->set_to(
 			array(
@@ -88,7 +91,7 @@ class Comment extends Base {
 	 */
 	protected function get_attributed_to() {
 		if ( is_single_user() ) {
-			$user = new Blog_User();
+			$user = new Blog();
 			return $user->get_url();
 		}
 
@@ -107,7 +110,7 @@ class Comment extends Base {
 		$comment = $this->wp_object;
 		$content = $comment->comment_content;
 
-		$content = \wpautop( $content );
+		$content = \apply_filters( 'comment_text', $content, $comment, array() );
 		$content = \preg_replace( '/[\n\r\t]/', '', $content );
 		$content = \trim( $content );
 		$content = \apply_filters( 'activitypub_the_content', $content, $comment );
@@ -138,7 +141,7 @@ class Comment extends Base {
 			} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
 				$in_reply_to = $comment_meta['source_url'][0];
 			} elseif ( ! empty( $parent_comment->user_id ) ) {
-				$in_reply_to = $this->generate_id( $parent_comment );
+				$in_reply_to = Comment_Utils::generate_id( $parent_comment );
 			}
 		} else {
 			$in_reply_to = \get_permalink( $comment->comment_post_ID );
@@ -157,32 +160,7 @@ class Comment extends Base {
 	 */
 	protected function get_id() {
 		$comment = $this->wp_object;
-		return $this->generate_id( $comment );
-	}
-
-	/**
-	 * Generates an ActivityPub URI for a comment
-	 *
-	 * @param WP_Comment|int $comment A comment object or comment ID
-	 *
-	 * @return string ActivityPub URI for comment
-	 */
-	protected function generate_id( $comment ) {
-		$comment = get_comment( $comment );
-
-		// show external comment ID if it exists
-		$source_id = get_comment_meta( $comment->comment_ID, 'source_id', true );
-		if ( ! empty( $source_id ) ) {
-			return $source_id;
-		}
-
-		// generate URI based on comment ID
-		return \add_query_arg(
-			array(
-				'c' => $comment->comment_ID,
-			),
-			\trailingslashit( site_url() )
-		);
+		return Comment_Utils::generate_id( $comment );
 	}
 
 	/**
@@ -197,36 +175,12 @@ class Comment extends Base {
 
 		$mentions = $this->get_mentions();
 		if ( $mentions ) {
-			foreach ( $mentions as $mention => $url ) {
+			foreach ( $mentions as $url ) {
 				$cc[] = $url;
 			}
 		}
 
-		$comment_query = new WP_Comment_Query(
-			array(
-				'post_id'    => $this->wp_object->comment_post_ID,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query' => array(
-					array(
-						'key'     => 'source_id',
-						'compare' => 'EXISTS',
-					),
-				),
-			)
-		);
-
-		if ( $comment_query->comments ) {
-			foreach ( $comment_query->comments as $comment ) {
-				if ( empty( $comment->comment_author_url ) ) {
-					continue;
-				}
-				$cc[] = \esc_url( $comment->comment_author_url );
-			}
-		}
-
-		$cc = \array_unique( $cc );
-
-		return $cc;
+		return array_unique( $cc );
 	}
 
 	/**
@@ -260,7 +214,59 @@ class Comment extends Base {
 	 * @return array The list of @-Mentions.
 	 */
 	protected function get_mentions() {
+		\add_filter( 'activitypub_extract_mentions', array( $this, 'extract_reply_context' ) );
+
 		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_object->comment_content, $this->wp_object );
+	}
+
+	/**
+	 * Gets the ancestors of the comment, but only the ones that are ActivityPub comments.
+	 *
+	 * @return array The list of ancestors.
+	 */
+	protected function get_comment_ancestors() {
+		$ancestors = get_comment_ancestors( $this->wp_object );
+
+		// Now that we have the full tree of ancestors, only return the ones received from the fediverse
+		return array_filter(
+			$ancestors,
+			function ( $comment_id ) {
+				return \get_comment_meta( $comment_id, 'protocol', true ) === 'activitypub';
+			}
+		);
+	}
+
+	/**
+	 * Collect all other Users that participated in this comment-thread
+	 * to send them a notification about the new reply.
+	 *
+	 * @param array $mentions The already mentioned ActivityPub users
+	 *
+	 * @return array The list of all Repliers.
+	 */
+	public function extract_reply_context( $mentions ) {
+		// Check if `$this->wp_object` is a WP_Comment
+		if ( 'WP_Comment' !== get_class( $this->wp_object ) ) {
+			return $mentions;
+		}
+
+		$ancestors = $this->get_comment_ancestors();
+		if ( ! $ancestors ) {
+			return $mentions;
+		}
+
+		foreach ( $ancestors as $comment_id ) {
+			$comment = \get_comment( $comment_id );
+			if ( $comment && ! empty( $comment->comment_author_url ) ) {
+				$acct = Webfinger::uri_to_acct( $comment->comment_author_url );
+				if ( $acct && ! is_wp_error( $acct ) ) {
+					$acct = str_replace( 'acct:', '@', $acct );
+					$mentions[ $acct ] = $comment->comment_author_url;
+				}
+			}
+		}
+
+		return $mentions;
 	}
 
 	/**

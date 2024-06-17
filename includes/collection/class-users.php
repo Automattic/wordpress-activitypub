@@ -4,9 +4,10 @@ namespace Activitypub\Collection;
 use WP_Error;
 use WP_User_Query;
 use Activitypub\Model\User;
-use Activitypub\Model\Blog_User;
-use Activitypub\Model\Application_User;
+use Activitypub\Model\Blog;
+use Activitypub\Model\Application;
 
+use function Activitypub\object_to_uri;
 use function Activitypub\url_to_authorid;
 use function Activitypub\is_user_disabled;
 
@@ -46,9 +47,9 @@ class Users {
 		}
 
 		if ( self::BLOG_USER_ID === $user_id ) {
-			return Blog_User::from_wp_user( $user_id );
+			return new Blog();
 		} elseif ( self::APPLICATION_USER_ID === $user_id ) {
-			return Application_User::from_wp_user( $user_id );
+			return new Application();
 		} elseif ( $user_id > 0 ) {
 			return User::from_wp_user( $user_id );
 		}
@@ -69,12 +70,12 @@ class Users {
 	 */
 	public static function get_by_username( $username ) {
 		// check for blog user.
-		if ( Blog_User::get_default_username() === $username ) {
-			return self::get_by_id( self::BLOG_USER_ID );
+		if ( Blog::get_default_username() === $username ) {
+			return new Blog();
 		}
 
 		if ( get_option( 'activitypub_blog_user_identifier' ) === $username ) {
-			return self::get_by_id( self::BLOG_USER_ID );
+			return new Blog();
 		}
 
 		// check for application user.
@@ -85,6 +86,7 @@ class Users {
 		// check for 'activitypub_username' meta
 		$user = new WP_User_Query(
 			array(
+				'count_total'    => false,
 				'number'         => 1,
 				'hide_empty'     => true,
 				'fields'         => 'ID',
@@ -109,6 +111,7 @@ class Users {
 		// check for login or nicename.
 		$user = new WP_User_Query(
 			array(
+				'count_total'    => false,
 				'search'         => $username,
 				'search_columns' => array( 'user_login', 'user_nicename' ),
 				'number'         => 1,
@@ -136,29 +139,38 @@ class Users {
 	 * @return \Acitvitypub\Model\User The User.
 	 */
 	public static function get_by_resource( $resource ) {
+		$resource = object_to_uri( $resource );
+
 		$scheme = 'acct';
 		$match = array();
 		// try to extract the scheme and the host
 		if ( preg_match( '/^([a-zA-Z^:]+):(.*)$/i', $resource, $match ) ) {
 			// extract the scheme
-			$scheme = esc_attr( $match[1] );
+			$scheme = \esc_attr( $match[1] );
 		}
 
 		switch ( $scheme ) {
 			// check for http(s) URIs
 			case 'http':
 			case 'https':
-				$url_parts = wp_parse_url( $resource );
+				$resource_path = \wp_parse_url( $resource, PHP_URL_PATH );
 
-				// check for http(s)://blog.example.com/@username
-				if (
-					isset( $url_parts['path'] ) &&
-					str_starts_with( $url_parts['path'], '/@' )
-				) {
-					$identifier = str_replace( '/@', '', $url_parts['path'] );
-					$identifier = untrailingslashit( $identifier );
+				if ( $resource_path ) {
+					$blog_path = \wp_parse_url( \home_url(), PHP_URL_PATH );
 
-					return self::get_by_username( $identifier );
+					if ( $blog_path ) {
+						$resource_path = \str_replace( $blog_path, '', $resource_path );
+					}
+
+					$resource_path = \trim( $resource_path, '/' );
+
+					// check for http(s)://blog.example.com/@username
+					if ( str_starts_with( $resource_path, '@' ) ) {
+						$identifier = \str_replace( '@', '', $resource_path );
+						$identifier = \trim( $identifier, '/' );
+
+						return self::get_by_username( $identifier );
+					}
 				}
 
 				// check for http(s)://blog.example.com/author/username
@@ -219,18 +231,26 @@ class Users {
 	 * @return \Acitvitypub\Model\User The User.
 	 */
 	public static function get_by_various( $id ) {
+		$user = null;
+
 		if ( is_numeric( $id ) ) {
-			return self::get_by_id( $id );
+			$user = self::get_by_id( $id );
 		} elseif (
 			// is URL
 			filter_var( $id, FILTER_VALIDATE_URL ) ||
 			// is acct
-			str_starts_with( $id, 'acct:' )
+			str_starts_with( $id, 'acct:' ) ||
+			// is email
+			filter_var( $id, FILTER_VALIDATE_EMAIL )
 		) {
-			return self::get_by_resource( $id );
-		} else {
-			return self::get_by_username( $id );
+			$user = self::get_by_resource( $id );
 		}
+
+		if ( $user && ! is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		return self::get_by_username( $id );
 	}
 
 	/**
@@ -268,7 +288,7 @@ class Users {
 	public static function get_collection() {
 		$users = \get_users(
 			array(
-				'capability__in' => array( 'publish_posts' ),
+				'capability__in' => array( 'activitypub' ),
 			)
 		);
 

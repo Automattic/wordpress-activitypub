@@ -9,6 +9,7 @@ use Activitypub\Collection\Followers;
 use function Activitypub\is_comment;
 use function Activitypub\sanitize_url;
 use function Activitypub\is_local_comment;
+use function Activitypub\is_user_type_disabled;
 use function Activitypub\is_activitypub_request;
 use function Activitypub\should_comment_be_federated;
 
@@ -38,8 +39,9 @@ class Activitypub {
 		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
 
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
+		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
 
-		\add_action( 'after_setup_theme', array( self::class, 'theme_compat' ), 99 );
+		\add_action( 'user_register', array( self::class, 'user_register' ) );
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 
@@ -94,35 +96,37 @@ class Activitypub {
 
 		$json_template = false;
 
-		// check if user can publish posts
-		if ( \is_author() && is_wp_error( Users::get_by_id( \get_the_author_meta( 'ID' ) ) ) ) {
-			return $template;
-		}
-
-		// check if blog-user is enabled
-		if ( \is_home() && is_wp_error( Users::get_by_id( Users::BLOG_USER_ID ) ) ) {
-			return $template;
-		}
-
-		if ( \is_author() ) {
+		if ( \is_author() && ! is_user_disabled( \get_the_author_meta( 'ID' ) ) ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/author-json.php';
 		} elseif ( is_comment() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
-		} elseif ( \is_home() ) {
+		} elseif ( \is_home() && ! is_user_type_disabled( 'blog' ) ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
-		if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
+		/*
+		 * Check if the request is authorized.
+		 *
+		 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
+		 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
+		 */
+		if ( $json_template && ACTIVITYPUB_AUTHORIZED_FETCH ) {
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
+				header( 'HTTP/1.1 401 Unauthorized' );
+
 				// fallback as template_loader can't return http headers
 				return $template;
 			}
 		}
 
-		return $json_template;
+		if ( $json_template ) {
+			return $json_template;
+		}
+
+		return $template;
 	}
 
 	/**
@@ -202,14 +206,16 @@ class Activitypub {
 		$avatar = self::get_avatar_url( $id_or_email->comment_ID );
 
 		if ( $avatar ) {
-			if ( ! isset( $args['class'] ) || ! \is_array( $args['class'] ) ) {
-				$args['class'] = array( 'u-photo' );
-			} else {
-				$args['class'][] = 'u-photo';
-				$args['class']   = \array_unique( $args['class'] );
+			if ( empty( $args['class'] ) ) {
+				$args['class'] = array();
+			} elseif ( \is_string( $args['class'] ) ) {
+				$args['class'] = \explode( ' ', $args['class'] );
 			}
+
 			$args['url']     = $avatar;
 			$args['class'][] = 'avatar-activitypub';
+			$args['class'][] = 'u-photo';
+			$args['class']   = \array_unique( $args['class'] );
 		}
 
 		return $args;
@@ -289,7 +295,7 @@ class Activitypub {
 
 		\add_rewrite_rule(
 			'^@([\w\-\.]+)',
-			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/users/$matches[1]',
+			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/$matches[1]',
 			'top'
 		);
 
@@ -333,6 +339,23 @@ class Activitypub {
 				'header-text' => true,
 			);
 			add_theme_support( 'custom-header', $custom_header_args );
+		}
+
+		// We assume that you want to use Post-Formats when enabling the setting
+		if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ) {
+			if ( ! get_theme_support( 'post-formats' ) ) {
+				// Add support for the Aside, Gallery Post Formats...
+				add_theme_support(
+					'post-formats',
+					array(
+						'gallery',
+						'status',
+						'image',
+						'video',
+						'audio',
+					)
+				);
+			}
 		}
 	}
 
@@ -436,5 +459,18 @@ class Activitypub {
 		);
 
 		\do_action( 'activitypub_after_register_post_type' );
+	}
+
+	/**
+	 * Add the 'activitypub' query variable so WordPress won't mangle it.
+	 *
+	 * @param int   $user_id  User ID.
+	 * @param array $userdata The raw array of data passed to wp_insert_user().
+	 */
+	public static function user_register( $user_id ) {
+		if ( \user_can( $user_id, 'publish_posts' ) ) {
+			$user = \get_user_by( 'id', $user_id );
+			$user->add_cap( 'activitypub' );
+		}
 	}
 }

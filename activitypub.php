@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/pfefferle/wordpress-activitypub/
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 2.1.0
+ * Version: 2.4.0
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -21,6 +21,8 @@ use function Activitypub\site_supports_blocks;
 require_once __DIR__ . '/includes/compat.php';
 require_once __DIR__ . '/includes/functions.php';
 
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '2.4.0' );
+
 /**
  * Initialize the plugin constants.
  */
@@ -30,12 +32,14 @@ require_once __DIR__ . '/includes/functions.php';
 \defined( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS' ) || \define( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS', 3 );
 \defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))' );
 \defined( 'ACTIVITYPUB_USERNAME_REGEXP' ) || \define( 'ACTIVITYPUB_USERNAME_REGEXP', '(?:([A-Za-z0-9\._-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))' );
-\defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<strong>[ap_title]</strong>\n\n[ap_content]\n\n[ap_hashtags]\n\n[ap_shortlink]" );
+\defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<h2>[ap_title]</h2>\n\n[ap_content]\n\n[ap_hashtags]\n\n[ap_shortlink]" );
 \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) || \define( 'ACTIVITYPUB_AUTHORIZED_FETCH', false );
 \defined( 'ACTIVITYPUB_DISABLE_REWRITES' ) || \define( 'ACTIVITYPUB_DISABLE_REWRITES', false );
 \defined( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS' ) || \define( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS', false );
 \defined( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS' ) || \define( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS', false );
 \defined( 'ACTIVITYPUB_SHARED_INBOX_FEATURE' ) || \define( 'ACTIVITYPUB_SHARED_INBOX_FEATURE', false );
+\defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) || \define( 'ACTIVITYPUB_SEND_VARY_HEADER', false );
+\defined( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE' ) || \define( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE', 'note' );
 
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -46,12 +50,13 @@ require_once __DIR__ . '/includes/functions.php';
  * Initialize REST routes.
  */
 function rest_init() {
-	Rest\Users::init();
+	Rest\Actors::init();
 	Rest\Outbox::init();
 	Rest\Inbox::init();
 	Rest\Followers::init();
 	Rest\Following::init();
 	Rest\Webfinger::init();
+	Rest\Comment::init();
 	Rest\Server::init();
 	Rest\Collection::init();
 
@@ -96,8 +101,14 @@ function plugin_init() {
 
 	require_once __DIR__ . '/integration/class-enable-mastodon-apps.php';
 	Integration\Enable_Mastodon_Apps::init();
+
+	if ( \defined( 'JETPACK__VERSION' ) && ! \defined( 'IS_WPCOM' ) ) {
+		require_once __DIR__ . '/integration/class-jetpack.php';
+		Integration\Jetpack::init();
+	}
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
+
 
 /**
  * Class Autoloader
@@ -216,6 +227,10 @@ function get_plugin_meta( $default_headers = array() ) {
  * Plugin Version Number used for caching.
  */
 function get_plugin_version() {
+	if ( \defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
+		return ACTIVITYPUB_PLUGIN_VERSION;
+	}
+
 	$meta = get_plugin_meta( array( 'Version' => 'Version' ) );
 
 	return $meta['Version'];

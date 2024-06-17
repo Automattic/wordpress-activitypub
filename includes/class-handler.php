@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub;
 
+use Activitypub\Handler\Announce;
 use Activitypub\Handler\Create;
 use Activitypub\Handler\Delete;
 use Activitypub\Handler\Follow;
@@ -22,6 +23,7 @@ class Handler {
 	 * Register handlers.
 	 */
 	public static function register_handlers() {
+		Announce::init();
 		Create::init();
 		Delete::init();
 		Follow::init();

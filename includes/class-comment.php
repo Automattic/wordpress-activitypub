@@ -2,9 +2,11 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Users;
 use WP_Comment_Query;
 
 use function Activitypub\is_user_disabled;
+use function Activitypub\is_single_user;
 
 /**
  * ActivityPub Comment Class
@@ -20,6 +22,7 @@ class Comment {
 		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
+		\add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 	}
 
 	/**
@@ -36,10 +39,46 @@ class Comment {
 	 */
 	public static function comment_reply_link( $link, $args, $comment ) {
 		if ( self::are_comments_allowed( $comment ) ) {
+			$user_id = get_current_user_id();
+			if ( $user_id && self::was_received( $comment ) && \user_can( $user_id, 'activitypub' ) ) {
+				return self::create_fediverse_reply_link( $link, $args );
+			}
+
 			return $link;
 		}
 
-		return apply_filters( 'activitypub_comment_reply_link', '' );
+		$attrs = array(
+			'selectedComment' => self::generate_id( $comment ),
+			'commentId' => $comment->comment_ID,
+		);
+
+		$div = sprintf(
+			'<div class="activitypub-remote-reply" data-attrs="%s"></div>',
+			esc_attr( wp_json_encode( $attrs ) )
+		);
+
+		return apply_filters( 'activitypub_comment_reply_link', $div );
+	}
+
+	/**
+	 * Create a link to reply to a federated comment.
+	 * This function adds a title attribute to the reply link to inform the user
+	 * that the comment was received from the fediverse and the reply will be sent
+	 * to the original author.
+	 *
+	 * @param string $link The HTML markup for the comment reply link.
+	 * @param array  $args The args provided by the `comment_reply_link` filter.
+	 *
+	 * @return string The modified HTML markup for the comment reply link.
+	 */
+	private static function create_fediverse_reply_link( $link, $args ) {
+		$str_to_replace = sprintf( '>%s<', $args['reply_text'] );
+		$replace_with = sprintf(
+			' title="%s">%s<',
+			esc_attr__( 'This comment was received from the fediverse and your reply will be sent to the original author', 'activitypub' ),
+			esc_html__( 'Reply with federation', 'activitypub' )
+		);
+		return str_replace( $str_to_replace, $replace_with, $link );
 	}
 
 	/**
@@ -54,7 +93,7 @@ class Comment {
 	public static function are_comments_allowed( $comment ) {
 		$comment = \get_comment( $comment );
 
-		if ( self::is_local( $comment ) ) {
+		if ( ! self::was_received( $comment ) ) {
 			return true;
 		}
 
@@ -62,6 +101,11 @@ class Comment {
 
 		if ( ! $current_user ) {
 			return false;
+		}
+
+		if ( is_single_user() && \user_can( $current_user, 'publish_posts' ) ) {
+			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user
+			$current_user = Users::BLOG_USER_ID;
 		}
 
 		$is_user_disabled = is_user_disabled( $current_user );
@@ -118,7 +162,7 @@ class Comment {
 
 		$status = \get_comment_meta( $comment->comment_ID, 'activitypub_status', true );
 
-		if ( 'federated' === $status ) {
+		if ( $status ) {
 			return true;
 		}
 
@@ -167,6 +211,11 @@ class Comment {
 		// comments without user can't be federated
 		if ( ! $user_id ) {
 			return false;
+		}
+
+		if ( is_single_user() && \user_can( $user_id, 'publish_posts' ) ) {
+			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user
+			$user_id = Users::BLOG_USER_ID;
 		}
 
 		$is_user_disabled = is_user_disabled( $user_id );
@@ -227,7 +276,7 @@ class Comment {
 		}
 
 		// check for local comment
-		if ( \wp_parse_url( \site_url(), \PHP_URL_HOST ) === \wp_parse_url( $url, \PHP_URL_HOST ) ) {
+		if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) === \wp_parse_url( $url, \PHP_URL_HOST ) ) {
 			$query = \wp_parse_url( $url, \PHP_URL_QUERY );
 
 			if ( $query ) {
@@ -308,5 +357,109 @@ class Comment {
 		}
 
 		return $comment_link;
+	}
+
+
+	/**
+	 * Generates an ActivityPub URI for a comment
+	 *
+	 * @param WP_Comment|int $comment A comment object or comment ID
+	 *
+	 * @return string ActivityPub URI for comment
+	 */
+	public static function generate_id( $comment ) {
+		$comment      = \get_comment( $comment );
+		$comment_meta = \get_comment_meta( $comment->comment_ID );
+
+		// show external comment ID if it exists
+		if ( ! empty( $comment_meta['source_id'][0] ) ) {
+			return $comment_meta['source_id'][0];
+		} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
+			return $comment_meta['source_url'][0];
+		}
+
+		// generate URI based on comment ID
+		return \add_query_arg( 'c', $comment->comment_ID, \trailingslashit( \home_url() ) );
+	}
+
+	/**
+	 * Check if a post has remote comments
+	 *
+	 * @param int $post_id The post ID.
+	 *
+	 * @return bool True if the post has remote comments, false otherwise.
+	 */
+	private static function post_has_remote_comments( $post_id ) {
+		$comments = \get_comments(
+			array(
+				'post_id' => $post_id,
+				'meta_query' => array(
+					'relation' => 'AND',
+					array(
+						'key'     => 'protocol',
+						'value'   => 'activitypub',
+						'compare' => '=',
+					),
+					array(
+						'key'     => 'source_id',
+						'compare' => 'EXISTS',
+					),
+				),
+			)
+		);
+
+		return ! empty( $comments );
+	}
+
+	/**
+	 * Enqueue scripts for remote comments
+	 */
+	public static function enqueue_scripts() {
+		if ( ! \is_singular() || \is_user_logged_in() ) {
+			// only on single pages, only for logged out users
+			return;
+		}
+
+		if ( ! \post_type_supports( \get_post_type(), 'activitypub' ) ) {
+			// post type does not support ActivityPub
+			return;
+		}
+
+		if ( ! \comments_open() || ! \get_comments_number() ) {
+			// no comments, no need to load the script
+			return;
+		}
+
+		if ( ! self::post_has_remote_comments( \get_the_ID() ) ) {
+			// no remote comments, no need to load the script
+			return;
+		}
+
+		$handle     = 'activitypub-remote-reply';
+		$data       = array(
+			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
+		);
+		$js         = sprintf( 'var _activityPubOptions = %s;', wp_json_encode( $data ) );
+		$asset_file = ACTIVITYPUB_PLUGIN_DIR . 'build/remote-reply/index.asset.php';
+
+		if ( \file_exists( $asset_file ) ) {
+			$assets = require_once $asset_file;
+
+			\wp_enqueue_script(
+				$handle,
+				\plugins_url( 'build/remote-reply/index.js', __DIR__ ),
+				$assets['dependencies'],
+				$assets['version'],
+				true
+			);
+			\wp_add_inline_script( $handle, $js, 'before' );
+
+			\wp_enqueue_style(
+				$handle,
+				\plugins_url( 'build/remote-reply/style-index.css', __DIR__ ),
+				[ 'wp-components' ],
+				$assets['version']
+			);
+		}
 	}
 }

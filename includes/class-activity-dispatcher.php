@@ -13,7 +13,7 @@ use Activitypub\Transformer\Comment;
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
 use function Activitypub\safe_remote_post;
-use function Activitypub\mark_wp_object_as_federated;
+use function Activitypub\set_wp_object_state;
 
 /**
  * ActivityPub Activity_Dispatcher Class
@@ -27,6 +27,9 @@ class Activity_Dispatcher {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		\add_action( 'activitypub_send_post', array( self::class, 'send_post' ), 10, 2 );
+		\add_action( 'activitypub_send_comment', array( self::class, 'send_comment' ), 10, 2 );
+
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity' ), 10, 2 );
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity_or_announce' ), 10, 2 );
 		\add_action( 'activitypub_send_update_profile_activity', array( self::class, 'send_profile_update' ), 10, 1 );
@@ -41,9 +44,6 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	public static function send_activity_or_announce( $wp_object, $type ) {
-		// check if a migration is needed before sending new posts
-		Migration::maybe_migrate();
-
 		if ( is_user_type_disabled( 'blog' ) ) {
 			return;
 		}
@@ -64,7 +64,11 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	public static function send_activity( $wp_object, $type, $user_id = null ) {
-		$transformer = Factory::get_transformer( $wp_object );
+		$transformer = Factory::get_transformer( $wp_object ); // Could potentially return a `\WP_Error` instance.
+
+		if ( \is_wp_error( $transformer ) ) {
+			return;
+		}
 
 		if ( null !== $user_id ) {
 			$transformer->change_wp_user_id( $user_id );
@@ -90,7 +94,7 @@ class Activity_Dispatcher {
 	 * @return void
 	 */
 	public static function send_announce( $wp_object, $type ) {
-		if ( ! in_array( $type, array( 'Create', 'Update' ), true ) ) {
+		if ( ! in_array( $type, array( 'Create', 'Update', 'Delete' ), true ) ) {
 			return;
 		}
 
@@ -99,12 +103,21 @@ class Activity_Dispatcher {
 		}
 
 		$transformer = Factory::get_transformer( $wp_object );
-		$transformer->change_wp_user_id( Users::BLOG_USER_ID );
 
-		$user_id  = $transformer->get_wp_user_id();
-		$activity = $transformer->to_activity( 'Announce' );
+		if ( \is_wp_error( $transformer ) ) {
+			return;
+		}
 
-		self::send_activity_to_followers( $activity, $user_id, $wp_object );
+		$user_id  = Users::BLOG_USER_ID;
+		$activity = $transformer->to_activity( $type );
+		$user     = Users::get_by_id( Users::BLOG_USER_ID );
+
+		$announce = new Activity();
+		$announce->set_type( 'Announce' );
+		$announce->set_object( $activity );
+		$announce->set_actor( $user->get_id() );
+
+		self::send_activity_to_followers( $announce, $user_id, $wp_object );
 	}
 
 	/**
@@ -170,6 +183,56 @@ class Activity_Dispatcher {
 			safe_remote_post( $inbox, $json, $user_id );
 		}
 
-		mark_wp_object_as_federated( $wp_object );
+		set_wp_object_state( $wp_object, 'federated' );
+	}
+
+	/**
+	 * Send a "Create" or "Update" Activity for a WordPress Post.
+	 *
+	 * @param int    $id   The WordPress Post ID.
+	 * @param string $type The Activity-Type.
+	 *
+	 * @return void
+	 */
+	public static function send_post( $id, $type ) {
+		$post = get_post( $id );
+
+		if ( ! $post ) {
+			return;
+		}
+
+		do_action( 'activitypub_send_activity', $post, $type );
+		do_action(
+			sprintf(
+				'activitypub_send_%s_activity',
+				\strtolower( $type )
+			),
+			$post
+		);
+	}
+
+	/**
+	 * Send a "Create" or "Update" Activity for a WordPress Comment.
+	 *
+	 * @param int    $id   The WordPress Comment ID.
+	 * @param string $type The Activity-Type.
+	 *
+	 * @return void
+	 */
+	public static function send_comment( $id, $type ) {
+		$comment = get_comment( $id );
+
+		if ( ! $comment ) {
+			return;
+		}
+
+		do_action( 'activitypub_send_activity', $comment, $type );
+		do_action(
+			sprintf(
+				'activitypub_send_%s_activity',
+				\strtolower( $type )
+			),
+			$comment
+		);
 	}
 }
