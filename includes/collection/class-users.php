@@ -80,7 +80,7 @@ class Users {
 
 		// check for application user.
 		if ( 'application' === $username ) {
-			return self::get_by_id( self::APPLICATION_USER_ID );
+			return new Application();
 		}
 
 		// check for 'activitypub_username' meta
