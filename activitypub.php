@@ -101,6 +101,9 @@ function plugin_init() {
 	require_once __DIR__ . '/integration/class-enable-mastodon-apps.php';
 	Integration\Enable_Mastodon_Apps::init();
 
+	require_once __DIR__ . '/integration/class-opengraph.php';
+	Integration\Opengraph::init();
+
 	if ( \defined( 'JETPACK__VERSION' ) && ! \defined( 'IS_WPCOM' ) ) {
 		require_once __DIR__ . '/integration/class-jetpack.php';
 		Integration\Jetpack::init();
