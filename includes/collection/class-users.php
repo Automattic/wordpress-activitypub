@@ -86,6 +86,7 @@ class Users {
 		// check for 'activitypub_username' meta
 		$user = new WP_User_Query(
 			array(
+				'count_total'    => false,
 				'number'         => 1,
 				'hide_empty'     => true,
 				'fields'         => 'ID',
@@ -110,6 +111,7 @@ class Users {
 		// check for login or nicename.
 		$user = new WP_User_Query(
 			array(
+				'count_total'    => false,
 				'search'         => $username,
 				'search_columns' => array( 'user_login', 'user_nicename' ),
 				'number'         => 1,
