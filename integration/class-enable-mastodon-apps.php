@@ -6,6 +6,7 @@ use Activitypub\Webfinger as Webfinger_Util;
 use Activitypub\Http;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Model\Blog;
 use Activitypub\Integration\Nodeinfo;
 use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Entity\Account;
@@ -13,6 +14,8 @@ use Enable_Mastodon_Apps\Entity\Status;
 use Enable_Mastodon_Apps\Entity\Media_Attachment;
 
 use function Activitypub\get_remote_metadata_by_actor;
+use function Activitypub\is_user_type_disabled;
+use function Activitypub\is_user_disabled;
 
 /**
  * Class Enable_Mastodon_Apps
@@ -34,6 +37,72 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ) );
 		\add_filter( 'mastodon_api_statuses', array( self::class, 'api_statuses_external' ), 10, 2 );
 		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 23 );
+		\add_action( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
+	}
+
+	private static function get_user( $user_id ) {
+		if (
+			is_user_type_disabled( 'user' ) &&
+			! is_user_type_disabled( 'blog' ) &&
+			// check if the blog user is permissible for this user
+			user_can( $user_id, 'activitypub' )
+		) {
+			return new Blog();
+		}
+
+		return Users::get_by_various( $user_id );
+	}
+
+	/**
+	 * Update credentials for Mastodon API
+	 *
+	 * @param array $credentials The credentials
+	 * @param int   $user_id     The user id
+	 *
+	 * @return array The filtered credentials
+	 */
+	public static function api_update_credentials( $user, $data ) {
+		$user = self::get_user( $user->ID );
+
+		if ( ! $user || is_wp_error( $user ) ) {
+			return;
+		}
+
+		if ( isset( $data['avatar'] ) ) {
+			$icon_id = (int) $data['avatar'];
+			$attachment = \get_post( $icon_id );
+			if ( $attachment && 'attachment' === $attachment->post_type ) {
+				l( 'set_icon' );
+				$user->set_icon( $icon_id );
+			}
+		}
+
+		if ( isset( $data['header'] ) ) {
+			$header_id = (int) $data['header'];
+			$attachment = \get_post( $header_id );
+			if ( $attachment && 'attachment' === $attachment->post_type ) {
+				l( 'set_header_image' );
+				$user->set_header_image( $header_id );
+			}
+		}
+
+		if ( isset( $data['display_name'] ) ) {
+			$name = sanitize_text_field( $data['display_name'] );
+			if ( $name ) {
+				l( 'set_name' );
+				$user->set_name( $name );
+			}
+		}
+
+		if ( isset( $data['note'] ) ) {
+			$note = sanitize_text_field( $data['note'] );
+			if ( $note ) {
+				l( 'set_summary' );
+				$user->set_summary( $note );
+			}
+		}
+
+		// @todo set fields_attributes to extra fields once PR #762 merges
 	}
 
 	/**

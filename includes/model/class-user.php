@@ -98,6 +98,17 @@ class User extends Actor {
 	}
 
 	/**
+	 * Set the User-Name.
+	 *
+	 * @param string $name The User-Name.
+	 * @return bool       True if the User-Name was updated, false otherwise.
+	 */
+	public function set_name( $name ) {
+		$userdata = [ 'ID' => $this->_id, 'display_name' => $name ];
+		return \wp_update_user( $userdata );
+	}
+
+	/**
 	 * Get the User-Description.
 	 *
 	 * @return string The User-Description.
@@ -108,6 +119,16 @@ class User extends Actor {
 			$description = get_user_meta( $this->_id, 'description', true );
 		}
 		return \wpautop( \wp_kses( $description, 'default' ) );
+	}
+
+	/**
+	 * Set the User-Description.
+	 *
+	 * @param string $summary The User-Description.
+	 * @return bool           True if the User-Description was updated, false otherwise.
+	 */
+	public function set_summary( $summary ) {
+		return \update_user_meta( $this->_id, 'description', $summary );
 	}
 
 	/**
@@ -133,6 +154,15 @@ class User extends Actor {
 	}
 
 	public function get_icon() {
+		$option_name = 'activitypub_user_icon_' . $this->_id;
+		$icon = \get_option( $option_name );
+		if ( $icon ) {
+			return array(
+				'type' => 'Image',
+				'url'  => $icon,
+			);
+		}
+
 		$icon = \esc_url(
 			\get_avatar_url(
 				$this->_id,
@@ -146,7 +176,30 @@ class User extends Actor {
 		);
 	}
 
+	public function set_icon( $icon ) {
+		$maybe_id = (int) $icon;
+		if ( $maybe_id ) {
+			$image = wp_get_attachment_image( $maybe_id, 'full' );
+			if ( ! $image ) {
+				return false;
+			}
+			$icon = wp_get_attachment_url( $maybe_id );
+		}
+
+		$option_name = 'activitypub_user_icon_' . $this->_id;
+		return \update_option( $option_name, $icon );
+	}
+
 	public function get_image() {
+		$option_name = 'activitypub_user_image_' . $this->_id;
+		$image = \get_option( $option_name );
+		if ( $image ) {
+			return array(
+				'type' => 'Image',
+				'url'  => $image,
+			);
+		}
+
 		if ( \has_header_image() ) {
 			$image = \esc_url( \get_header_image() );
 			return array(
@@ -156,6 +209,20 @@ class User extends Actor {
 		}
 
 		return null;
+	}
+
+	public function set_header_image( $image ) {
+		$maybe_id = (int) $image;
+		if ( $maybe_id ) {
+			$image = wp_get_attachment_image( $maybe_id, 'full' );
+			if ( ! $image ) {
+				return false;
+			}
+			$image = wp_get_attachment_url( $maybe_id );
+		}
+
+		$option_name = 'activitypub_user_image_' . $this->_id;
+		return \update_option( $option_name, $image );
 	}
 
 	public function get_published() {
