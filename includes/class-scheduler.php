@@ -64,9 +64,6 @@ class Scheduler {
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
 
-		// Migration
-		\add_action( 'admin_init', array( self::class, 'schedule_migration' ) );
-
 		// profile updates for blog options
 		if ( ! is_user_type_disabled( 'blog' ) ) {
 			\add_action( 'update_option_site_icon', array( self::class, 'blog_user_update' ) );
@@ -145,20 +142,13 @@ class Scheduler {
 			return;
 		}
 
-		\wp_schedule_single_event(
-			\time(),
-			'activitypub_send_activity',
-			array( $post, $type )
-		);
+		$hook = 'activitypub_send_post';
+		$args = array( $post->ID, $type );
 
-		\wp_schedule_single_event(
-			\time(),
-			sprintf(
-				'activitypub_send_%s_activity',
-				\strtolower( $type )
-			),
-			array( $post )
-		);
+		if ( false === wp_next_scheduled( $hook, $args ) ) {
+			set_wp_object_state( $post, 'federate' );
+			\wp_schedule_single_event( \time(), $hook, $args );
+		}
 	}
 
 	/**
@@ -204,22 +194,13 @@ class Scheduler {
 			return;
 		}
 
-		set_wp_object_state( $comment, 'federate' );
+		$hook = 'activitypub_send_comment';
+		$args = array( $comment->comment_ID, $type );
 
-		\wp_schedule_single_event(
-			\time(),
-			'activitypub_send_activity',
-			array( $comment, $type )
-		);
-
-		\wp_schedule_single_event(
-			\time(),
-			sprintf(
-				'activitypub_send_%s_activity',
-				\strtolower( $type )
-			),
-			array( $comment )
-		);
+		if ( false === wp_next_scheduled( $hook, $args ) ) {
+			set_wp_object_state( $comment, 'federate' );
+			\wp_schedule_single_event( \time(), $hook, $args );
+		}
 	}
 
 	/**
@@ -272,23 +253,17 @@ class Scheduler {
 			} elseif ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
 				if ( $follower->count_errors() >= 5 ) {
 					$follower->delete();
+					\wp_schedule_single_event(
+						\time(),
+						'activitypub_delete_actor_interactions',
+						array( $follower->get_id() )
+					);
 				} else {
 					Followers::add_error( $follower->get__id(), $meta );
 				}
 			} else {
 				$follower->reset_errors();
 			}
-		}
-	}
-
-	/**
-	 * Schedule migration if DB-Version is not up to date.
-	 *
-	 * @return void
-	 */
-	public static function schedule_migration() {
-		if ( ! \wp_next_scheduled( 'activitypub_schedule_migration' ) && ! Migration::is_latest_version() ) {
-			\wp_schedule_single_event( \time(), 'activitypub_schedule_migration' );
 		}
 	}
 
@@ -303,7 +278,7 @@ class Scheduler {
 	 */
 	public static function user_meta_update( $meta_id, $user_id, $meta_key ) {
 		// don't bother if the user can't publish
-		if ( ! \user_can( $user_id, 'publish_posts' ) ) {
+		if ( ! \user_can( $user_id, 'activitypub' ) ) {
 			return;
 		}
 		// the user meta fields that affect a profile.
@@ -327,7 +302,7 @@ class Scheduler {
 	 */
 	public static function user_update( $user_id ) {
 		// don't bother if the user can't publish
-		if ( ! \user_can( $user_id, 'publish_posts' ) ) {
+		if ( ! \user_can( $user_id, 'activitypub' ) ) {
 			return;
 		}
 

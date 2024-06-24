@@ -271,7 +271,7 @@ class Shortcodes {
 		}
 
 		return \sprintf(
-			'<a href="%1$s">%1$s</a>',
+			'<a href="%1$s" class="status-link unhandled-link">%1$s</a>',
 			\esc_url( \get_permalink( $item->ID ) )
 		);
 	}
@@ -305,7 +305,7 @@ class Shortcodes {
 		}
 
 		return \sprintf(
-			'<a href="%1$s">%1$s</a>',
+			'<a href="%1$s" class="status-link unhandled-link">%1$s</a>',
 			\esc_url( \wp_get_shortlink( $item->ID ) )
 		);
 	}

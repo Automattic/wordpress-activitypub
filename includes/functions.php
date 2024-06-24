@@ -52,6 +52,17 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	if ( $pre ) {
 		return $pre;
 	}
+
+	if ( is_array( $actor ) ) {
+		if ( array_key_exists( 'id', $actor ) ) {
+			$actor = $actor['id'];
+		} elseif ( array_key_exists( 'url', $actor ) ) {
+			$actor = $actor['url'];
+		} else {
+			return new WP_Error( 'activitypub_no_valid_actor_identifier', \__( 'The "actor" identifier is not valid', 'activitypub' ), array( 'status' => 404, 'actor' => $actor ) );
+		}
+	}
+
 	if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $actor ) ) {
 		$actor = Webfinger::resolve( $actor );
 	}
@@ -134,7 +145,7 @@ function url_to_authorid( $url ) {
 	global $wp_rewrite;
 
 	// check if url hase the same host
-	if ( \wp_parse_url( \site_url(), \PHP_URL_HOST ) !== \wp_parse_url( $url, \PHP_URL_HOST ) ) {
+	if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== \wp_parse_url( $url, \PHP_URL_HOST ) ) {
 		return 0;
 	}
 
@@ -384,7 +395,7 @@ function is_user_disabled( $user_id ) {
 				break;
 			}
 
-			if ( ! \user_can( $user_id, 'publish_posts' ) ) {
+			if ( ! \user_can( $user_id, 'activitypub' ) ) {
 				$return = true;
 				break;
 			}
@@ -644,7 +655,7 @@ function get_total_users() {
 
 	$users = \get_users(
 		array(
-			'capability__in' => array( 'publish_posts' ),
+			'capability__in' => array( 'activitypub' ),
 		)
 	);
 
@@ -826,4 +837,135 @@ function get_post_type_description( $post_type ) {
 	}
 
 	return apply_filters( 'activitypub_post_type_description', $description, $post_type->name, $post_type );
+}
+
+/**
+ * Get the masked WordPress version to only show the major and minor version.
+ *
+ * @return string The masked version.
+ */
+function get_masked_wp_version() {
+	// only show the major and minor version
+	$version = get_bloginfo( 'version' );
+	// strip the RC or beta part
+	$version = preg_replace( '/-.*$/', '', $version );
+	$version = explode( '.', $version );
+	$version = array_slice( $version, 0, 2 );
+
+	return implode( '.', $version );
+}
+
+/**
+ * Get the enclosures of a post.
+ *
+ * @param int $post_id The post ID.
+ *
+ * @return array The enclosures.
+ */
+function get_enclosures( $post_id ) {
+	$enclosures = get_post_meta( $post_id, 'enclosure' );
+
+	if ( ! $enclosures ) {
+		return array();
+	}
+
+	$enclosures = array_map(
+		function ( $enclosure ) {
+			$attributes = explode( "\n", $enclosure );
+
+			if ( ! isset( $attributes[0] ) || ! \wp_http_validate_url( $attributes[0] ) ) {
+				return false;
+			}
+
+			return array(
+				'url' => $attributes[0],
+				'length' => isset( $attributes[1] ) ? trim( $attributes[1] ) : null,
+				'mediaType' => isset( $attributes[2] ) ? trim( $attributes[2] ) : null,
+			);
+		},
+		$enclosures
+	);
+
+	return array_filter( $enclosures );
+}
+
+/**
+ * Retrieves the IDs of the ancestors of a comment.
+ *
+ * Adaption of `get_post_ancestors` from WordPress core.
+ *
+ * @see https://developer.wordpress.org/reference/functions/get_post_ancestors/
+ *
+ * @param int|WP_Comment $comment Comment ID or comment object.
+ *
+ * @return WP_Comment[] Array of ancestor comments or empty array if there are none.
+ */
+function get_comment_ancestors( $comment ) {
+	$comment = \get_comment( $comment );
+
+	// phpcs:ignore Universal.Operators.StrictComparisons.LooseEqual
+	if ( ! $comment || empty( $comment->comment_parent ) || $comment->comment_parent == $comment->comment_ID ) {
+		return array();
+	}
+
+	$ancestors = array();
+
+	$id          = (int) $comment->comment_parent;
+	$ancestors[] = $id;
+
+	// phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
+	while ( $id > 0 ) {
+		$ancestor = \get_comment( $id );
+		$parent_id = (int) $ancestor->comment_parent;
+
+		// Loop detection: If the ancestor has been seen before, break.
+		if ( empty( $parent_id ) || ( $parent_id === (int) $comment->comment_ID ) || in_array( $parent_id, $ancestors, true ) ) {
+			break;
+		}
+
+		$id          = $parent_id;
+		$ancestors[] = $id;
+	}
+
+	return $ancestors;
+}
+
+/**
+ * Change the display of large numbers on the site.
+ *
+ * @author Jeremy Herve
+ *
+ * @see https://wordpress.org/support/topic/abbreviate-numbers-with-k/
+ *
+ * @param string $formatted Converted number in string format.
+ * @param float  $number    The number to convert based on locale.
+ * @param int    $decimals  Precision of the number of decimal places.
+ *
+ * @return string Converted number in string format.
+ */
+function custom_large_numbers( $formatted, $number, $decimals ) {
+	global $wp_locale;
+
+	$decimals      = 0;
+	$decimal_point = '.';
+	$thousands_sep = ',';
+
+	if ( isset( $wp_locale ) ) {
+		$decimals      = (int) $wp_locale->number_format['decimal_point'];
+		$decimal_point = $wp_locale->number_format['decimal_point'];
+		$thousands_sep = $wp_locale->number_format['thousands_sep'];
+	}
+
+	if ( $number < 1000 ) { // any number less than a Thousand.
+		return \number_format( $number, $decimals, $decimal_point, $thousands_sep );
+	} elseif ( $number < 1000000 ) { // any number less than a million
+		return \number_format( $number / 1000, $decimals, $decimal_point, $thousands_sep ) . 'K';
+	} elseif ( $number < 1000000000 ) { // any number less than a billion
+		return \number_format( $number / 1000000, $decimals, $decimal_point, $thousands_sep ) . 'M';
+	} else { // at least a billion
+		return \number_format( $number / 1000000000, $decimals, $decimal_point, $thousands_sep ) . 'B';
+	}
+
+	// Default fallback. We should not get here.
+	return $formatted;
 }

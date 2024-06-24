@@ -4,8 +4,9 @@ namespace Activitypub\Model;
 use WP_Query;
 use WP_Error;
 use Activitypub\Signature;
-use Activitypub\Collection\Users;
+use Activitypub\Model\Blog;
 use Activitypub\Activity\Actor;
+use Activitypub\Collection\Users;
 
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
@@ -31,19 +32,6 @@ class User extends Actor {
 	 * @var string
 	 */
 	protected $featured;
-
-	/**
-	 * Moderators endpoint.
-	 *
-	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
-	 *
-	 * @var string
-	 */
-	protected $moderators;
-
-	public function get_type() {
-		return 'Person';
-	}
 
 	/**
 	 * If the User is discoverable.
@@ -72,14 +60,9 @@ class User extends Actor {
 	 */
 	protected $webfinger;
 
-	/**
-	 * Restrict posting to mods
-	 *
-	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
-	 *
-	 * @var boolean
-	 */
-	protected $posting_restricted_to_mods = null;
+	public function get_type() {
+		return 'Person';
+	}
 
 	public static function from_wp_user( $user_id ) {
 		if ( is_user_disabled( $user_id ) ) {
@@ -193,7 +176,7 @@ class User extends Actor {
 	 * @return string The Inbox-Endpoint.
 	 */
 	public function get_inbox() {
-		return get_rest_url_by_path( sprintf( 'users/%d/inbox', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/inbox', $this->get__id() ) );
 	}
 
 	/**
@@ -202,7 +185,7 @@ class User extends Actor {
 	 * @return string The Outbox-Endpoint.
 	 */
 	public function get_outbox() {
-		return get_rest_url_by_path( sprintf( 'users/%d/outbox', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/outbox', $this->get__id() ) );
 	}
 
 	/**
@@ -211,7 +194,7 @@ class User extends Actor {
 	 * @return string The Followers-Endpoint.
 	 */
 	public function get_followers() {
-		return get_rest_url_by_path( sprintf( 'users/%d/followers', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->get__id() ) );
 	}
 
 	/**
@@ -220,7 +203,7 @@ class User extends Actor {
 	 * @return string The Following-Endpoint.
 	 */
 	public function get_following() {
-		return get_rest_url_by_path( sprintf( 'users/%d/following', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/following', $this->get__id() ) );
 	}
 
 	/**
@@ -229,7 +212,7 @@ class User extends Actor {
 	 * @return string The Featured-Endpoint.
 	 */
 	public function get_featured() {
-		return get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $this->get__id() ) );
 	}
 
 	public function get_endpoints() {
@@ -294,10 +277,6 @@ class User extends Actor {
 	 */
 	public function get_webfinger() {
 		return $this->get_preferred_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
-	}
-
-	public function get_resource() {
-		return $this->get_webfinger();
 	}
 
 	public function get_canonical_url() {

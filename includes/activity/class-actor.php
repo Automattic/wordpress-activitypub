@@ -52,7 +52,7 @@ class Actor extends Base_Object {
 	/**
 	 * @var string
 	 */
-	protected $type = 'Person';
+	protected $type;
 
 	/**
 	 * A reference to an ActivityStreams OrderedCollection comprised of

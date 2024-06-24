@@ -30,7 +30,10 @@
 								</label>
 							</p>
 							<p class="description">
-								<?php echo \wp_kses( \__( 'Every author on this blog (with the <code>publish_posts</code> capability) gets their own ActivityPub profile.', 'activitypub' ), array( 'code' => array() ) ); ?>
+								<?php echo \wp_kses( \__( 'Every author on this blog (with the <code>activitypub</code> capability) gets their own ActivityPub profile.', 'activitypub' ), array( 'code' => array() ) ); ?>
+								<?php // translators: %s is a URL. ?>
+								<strong><?php echo \wp_kses( sprintf( \__( 'You can add/remove the capability in the <a href="%s">user settings.</a>', 'activitypub' ), admin_url( '/users.php' ) ), array( 'a' => array( 'href' => array() ) ) ); ?></strong>
+								<?php echo \wp_kses( \__( 'Select all the users you want to update, choose the method from the drop-down list and click on the "Apply" button.', 'activitypub' ), array( 'code' => array() ) ); ?>
 							</p>
 							<p>
 								<label>
@@ -49,7 +52,7 @@
 						</th>
 						<td>
 							<label for="activitypub_blog_user_identifier">
-								<input class="blog-user-identifier" name="activitypub_blog_user_identifier" id="activitypub_blog_user_identifier" type="text" value="<?php echo esc_attr( \get_option( 'activitypub_blog_user_identifier', \Activitypub\Model\Blog_User::get_default_username() ) ); ?>" />
+								<input class="blog-user-identifier" name="activitypub_blog_user_identifier" id="activitypub_blog_user_identifier" type="text" value="<?php echo esc_attr( \get_option( 'activitypub_blog_user_identifier', \Activitypub\Model\Blog::get_default_username() ) ); ?>" />
 								@<?php echo esc_html( \wp_parse_url( \home_url(), PHP_URL_HOST ) ); ?>
 							</label>
 							<p class="description">
@@ -74,9 +77,39 @@
 				<tbody>
 					<tr>
 						<th scope="row">
+							<?php \esc_html_e( 'Activity-Object-Type', 'activitypub' ); ?>
+						</th>
+						<td>
+							<p>
+								<label for="activitypub_object_type_note">
+									<input type="radio" name="activitypub_object_type" id="activitypub_object_type_note" value="note" <?php echo \checked( 'note', \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ); ?> />
+									<?php \esc_html_e( 'Note (default)', 'activitypub' ); ?>
+									-
+									<span class="description">
+										<?php \esc_html_e( 'Should work with most platforms.', 'activitypub' ); ?>
+									</span>
+								</label>
+							</p>
+							<p>
+								<label>
+									<input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="wordpress-post-format" <?php echo \checked( 'wordpress-post-format', \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ); ?> />
+									<?php \esc_html_e( 'WordPress Post-Format', 'activitypub' ); ?>
+									-
+									<span class="description">
+										<?php \esc_html_e( 'Maps the WordPress Post-Format to the ActivityPub Object Type.', 'activitypub' ); ?>
+									</span>
+								</label>
+							</p>
+
+						</td>
+					</tr>
+					<?php // phpcs:ignore Squiz.ControlStructures.ControlSignature.NewlineAfterOpenBrace ?>
+					<tr <?php if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ) { echo 'style="display: none"'; } ?>>
+						<th scope="row">
 							<?php \esc_html_e( 'Post content', 'activitypub' ); ?>
 						</th>
 						<td>
+							<p><strong><?php \esc_html_e( 'These settings only apply if you use the "Note" Object-Type setting above.', 'activitypub' ); ?></strong></p>
 							<p>
 								<label for="activitypub_post_content_type_title_link">
 									<input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_title_link" value="title" <?php echo \checked( 'title', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> />
@@ -164,44 +197,6 @@
 						</td>
 					</tr>
 					<tr>
-						<th scope="row">
-							<?php \esc_html_e( 'Activity-Object-Type', 'activitypub' ); ?>
-						</th>
-						<td>
-							<p>
-								<label for="activitypub_object_type_note">
-									<input type="radio" name="activitypub_object_type" id="activitypub_object_type_note" value="note" <?php echo \checked( 'note', \get_option( 'activitypub_object_type', 'note' ) ); ?> />
-									<?php \esc_html_e( 'Note (default)', 'activitypub' ); ?>
-									-
-									<span class="description">
-										<?php \esc_html_e( 'Should work with most platforms.', 'activitypub' ); ?>
-									</span>
-								</label>
-							</p>
-							<p><strong><?php \esc_html_e( 'Please note that the following "Activity-Object-Type" options may cause your texts to be displayed differently on each platform and/or parts may be completely ignored. Mastodon, for example, displays all content that is not of the "Note" type as links only.', 'activitypub' ); ?></strong></p>
-							<p>
-								<label for="activitypub_object_type_article">
-									<input type="radio" name="activitypub_object_type" id="activitypub_object_type_article" value="article" <?php echo \checked( 'article', \get_option( 'activitypub_object_type', 'note' ) ); ?> />
-									<?php \esc_html_e( 'Article', 'activitypub' ); ?>
-									-
-									<span class="description">
-										<?php \esc_html_e( 'The presentation of the "Article" might change on different platforms.', 'activitypub' ); ?>
-									</span>
-								</label>
-							</p>
-							<p>
-								<label>
-									<input type="radio" name="activitypub_object_type" id="activitypub_object_type" value="wordpress-post-format" <?php echo \checked( 'wordpress-post-format', \get_option( 'activitypub_object_type', 'note' ) ); ?> />
-									<?php \esc_html_e( 'WordPress Post-Format', 'activitypub' ); ?>
-									-
-									<span class="description">
-										<?php \esc_html_e( 'Maps the WordPress Post-Format to the ActivityPub Object Type.', 'activitypub' ); ?>
-									</span>
-								</label>
-							</p>
-						</td>
-					</tr>
-					<tr>
 						<th scope="row"><?php \esc_html_e( 'Supported post types', 'activitypub' ); ?></th>
 						<td>
 							<fieldset>
@@ -226,11 +221,11 @@
 					</tr>
 					<tr>
 						<th scope="row">
-							<?php \esc_html_e( 'Hashtags (beta)', 'activitypub' ); ?>
+							<?php \esc_html_e( 'Hashtags', 'activitypub' ); ?>
 						</th>
 						<td>
 							<p>
-								<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag link. <strong>This feature is experimental! Please disable it, if you find any HTML or CSS errors.</strong>', 'activitypub' ), 'default' ); ?></label>
+								<label><input type="checkbox" name="activitypub_use_hashtags" id="activitypub_use_hashtags" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_hashtags', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag link.', 'activitypub' ), 'default' ); ?></label>
 							</p>
 						</td>
 					</tr>

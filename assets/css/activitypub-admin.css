@@ -197,3 +197,8 @@ input.blog-user-identifier {
 	border-bottom: none;
 	margin-bottom: 0;
 }
+
+#dashboard_right_now li a.activitypub-followers::before {
+	content: "\f307";
+	font-family: dashicons;
+}

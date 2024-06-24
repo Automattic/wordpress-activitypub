@@ -40,5 +40,5 @@
 	},
 	"editorScript": "file:./index.js",
 	"viewScript": "file:./view.js",
-	"style": ["file:./style-index.css", "wp-components"]
+	"style": ["file:./style-view.css", "wp-components"]
 }

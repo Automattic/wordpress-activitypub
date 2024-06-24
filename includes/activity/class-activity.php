@@ -162,7 +162,13 @@ class Activity extends Base_Object {
 		}
 
 		if ( $object->get_id() && ! $this->get_id() ) {
-			$this->set( 'id', $object->get_id() . '#activity' );
+			$id = strtok( $object->get_id(), '#' );
+			if ( $object->get_updated() ) {
+				$updated = $object->get_updated();
+			} else {
+				$updated = $object->get_published();
+			}
+			$this->set( 'id', $id . '#activity-' . strtolower( $this->get_type() ) . '-' . $updated );
 		}
 	}
 

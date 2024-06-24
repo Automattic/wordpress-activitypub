@@ -2,9 +2,11 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Users;
 use WP_Comment_Query;
 
 use function Activitypub\is_user_disabled;
+use function Activitypub\is_single_user;
 
 /**
  * ActivityPub Comment Class
@@ -37,6 +39,11 @@ class Comment {
 	 */
 	public static function comment_reply_link( $link, $args, $comment ) {
 		if ( self::are_comments_allowed( $comment ) ) {
+			$user_id = get_current_user_id();
+			if ( $user_id && self::was_received( $comment ) && \user_can( $user_id, 'activitypub' ) ) {
+				return self::create_fediverse_reply_link( $link, $args );
+			}
+
 			return $link;
 		}
 
@@ -51,6 +58,27 @@ class Comment {
 		);
 
 		return apply_filters( 'activitypub_comment_reply_link', $div );
+	}
+
+	/**
+	 * Create a link to reply to a federated comment.
+	 * This function adds a title attribute to the reply link to inform the user
+	 * that the comment was received from the fediverse and the reply will be sent
+	 * to the original author.
+	 *
+	 * @param string $link The HTML markup for the comment reply link.
+	 * @param array  $args The args provided by the `comment_reply_link` filter.
+	 *
+	 * @return string The modified HTML markup for the comment reply link.
+	 */
+	private static function create_fediverse_reply_link( $link, $args ) {
+		$str_to_replace = sprintf( '>%s<', $args['reply_text'] );
+		$replace_with = sprintf(
+			' title="%s">%s<',
+			esc_attr__( 'This comment was received from the fediverse and your reply will be sent to the original author', 'activitypub' ),
+			esc_html__( 'Reply with federation', 'activitypub' )
+		);
+		return str_replace( $str_to_replace, $replace_with, $link );
 	}
 
 	/**
@@ -73,6 +101,11 @@ class Comment {
 
 		if ( ! $current_user ) {
 			return false;
+		}
+
+		if ( is_single_user() && \user_can( $current_user, 'publish_posts' ) ) {
+			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user
+			$current_user = Users::BLOG_USER_ID;
 		}
 
 		$is_user_disabled = is_user_disabled( $current_user );
@@ -180,6 +213,11 @@ class Comment {
 			return false;
 		}
 
+		if ( is_single_user() && \user_can( $user_id, 'publish_posts' ) ) {
+			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user
+			$user_id = Users::BLOG_USER_ID;
+		}
+
 		$is_user_disabled = is_user_disabled( $user_id );
 
 		// user is disabled for federation
@@ -238,7 +276,7 @@ class Comment {
 		}
 
 		// check for local comment
-		if ( \wp_parse_url( \site_url(), \PHP_URL_HOST ) === \wp_parse_url( $url, \PHP_URL_HOST ) ) {
+		if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) === \wp_parse_url( $url, \PHP_URL_HOST ) ) {
 			$query = \wp_parse_url( $url, \PHP_URL_QUERY );
 
 			if ( $query ) {
@@ -330,30 +368,73 @@ class Comment {
 	 * @return string ActivityPub URI for comment
 	 */
 	public static function generate_id( $comment ) {
-		$comment = get_comment( $comment );
+		$comment      = \get_comment( $comment );
+		$comment_meta = \get_comment_meta( $comment->comment_ID );
 
 		// show external comment ID if it exists
-		$source_id = get_comment_meta( $comment->comment_ID, 'source_id', true );
-		if ( ! empty( $source_id ) ) {
-			return $source_id;
+		if ( ! empty( $comment_meta['source_id'][0] ) ) {
+			return $comment_meta['source_id'][0];
+		} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
+			return $comment_meta['source_url'][0];
 		}
 
 		// generate URI based on comment ID
-		return \add_query_arg(
+		return \add_query_arg( 'c', $comment->comment_ID, \trailingslashit( \home_url() ) );
+	}
+
+	/**
+	 * Check if a post has remote comments
+	 *
+	 * @param int $post_id The post ID.
+	 *
+	 * @return bool True if the post has remote comments, false otherwise.
+	 */
+	private static function post_has_remote_comments( $post_id ) {
+		$comments = \get_comments(
 			array(
-				'c' => $comment->comment_ID,
-			),
-			\trailingslashit( site_url() )
+				'post_id' => $post_id,
+				'meta_query' => array(
+					'relation' => 'AND',
+					array(
+						'key'     => 'protocol',
+						'value'   => 'activitypub',
+						'compare' => '=',
+					),
+					array(
+						'key'     => 'source_id',
+						'compare' => 'EXISTS',
+					),
+				),
+			)
 		);
+
+		return ! empty( $comments );
 	}
 
 	/**
 	 * Enqueue scripts for remote comments
 	 */
 	public static function enqueue_scripts() {
-		if ( ! is_singular() ) {
+		if ( ! \is_singular() || \is_user_logged_in() ) {
+			// only on single pages, only for logged out users
 			return;
 		}
+
+		if ( ! \post_type_supports( \get_post_type(), 'activitypub' ) ) {
+			// post type does not support ActivityPub
+			return;
+		}
+
+		if ( ! \comments_open() || ! \get_comments_number() ) {
+			// no comments, no need to load the script
+			return;
+		}
+
+		if ( ! self::post_has_remote_comments( \get_the_ID() ) ) {
+			// no remote comments, no need to load the script
+			return;
+		}
+
 		$handle     = 'activitypub-remote-reply';
 		$data       = array(
 			'namespace' => ACTIVITYPUB_REST_NAMESPACE,

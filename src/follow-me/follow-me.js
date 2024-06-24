@@ -1,11 +1,10 @@
 
 import apiFetch from '@wordpress/api-fetch';
-import { useCallback, useEffect, useState, createInterpolateElement } from '@wordpress/element';
+import { useEffect, useState } from '@wordpress/element';
 import { Button, Modal } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
-import { copy, check, Icon } from '@wordpress/icons';
-import { useCopyToClipboard } from '@wordpress/compose';
 import { ButtonStyle, getPopupStyles } from './button-style';
+import { Dialog } from '../shared/dialog';
 import './style.scss';
 const { namespace } = window._activityPubOptions;
 
@@ -28,7 +27,7 @@ function getNormalizedProfile( profile ) {
 function fetchProfile( userId ) {
 	const fetchOptions = {
 		headers: { Accept: 'application/activity+json' },
-		path: `/${ namespace }/users/${ userId }`,
+		path: `/${ namespace }/actors/${ userId }`,
 	};
 	return apiFetch( fetchOptions );
 }
@@ -62,7 +61,7 @@ function Follow( { profile, popupStyles, userId } ) {
 				onRequestClose={ () => setIsOpen( false ) }
 				title={ title }
 				>
-					<Dialog profile={ profile } userId={ userId } />
+					<DialogFollow profile={ profile } userId={ userId } />
 					<style>{ popupStyles }</style>
 			</Modal>
 			) }
@@ -70,91 +69,18 @@ function Follow( { profile, popupStyles, userId } ) {
 	);
 }
 
-function isUrl( string ) {
-	try {
-		new URL( string );
-		return true;
-	} catch ( _ ) {
-		return false;
-	}
-}
-
-function isHandle( string ) {
-	// remove leading @, there should still be an @ in there
-	const parts = string.replace( /^@/, '' ).split( '@' );
-	return parts.length === 2 && isUrl( `https://${ parts[ 1 ] }` );
-}
-
-function Dialog( { profile, userId } ) {
+function DialogFollow( { profile, userId } ) {
 	const { webfinger } = profile;
-	const followText = __( 'Follow', 'activitypub' );
-	const loadingText = __( 'Loading...', 'activitypub' );
-	const openingText = __( 'Opening...', 'activitypub' );
-	const errorText = __( 'Error', 'activitypub' );
-	const invalidText = __( 'Invalid', 'activitypub' );
-	const [ buttonText, setButtonText ] = useState( followText );
-	const [ buttonIcon, setButtonIcon ] = useState( copy );
-	const ref = useCopyToClipboard( webfinger, () => {
-		setButtonIcon( check );
-		setTimeout( () => setButtonIcon( copy ), 1000 );
-	} );
-	const [ remoteProfile, setRemoteProfile ] = useState( '' );
-	const retrieveAndFollow = useCallback( () => {
-		let timeout;
-		if ( ! ( isUrl( remoteProfile ) || isHandle( remoteProfile ) ) ) {
-			setButtonText( invalidText );
-			timeout = setTimeout( () => setButtonText( followText ), 2000 );
-			return () => clearTimeout( timeout );
-		}
-		const path = `/${ namespace }/users/${userId}/remote-follow?resource=${ remoteProfile }`;
-		setButtonText( loadingText );
-		apiFetch( { path } ).then( ( { url } ) => {
-			setButtonText( openingText );
-			setTimeout( () => {
-				window.open( url, '_blank' );
-				setButtonText( followText );
-			}, 200 );
-		} ).catch( () => {
-			setButtonText( errorText );
-			setTimeout( () => setButtonText( followText ), 2000 );
-		} );
-	}, [ remoteProfile ] );
+	const actionText = __( 'Follow', 'activitypub' );
+	const resourceUrl = `/${ namespace }/actors/${userId}/remote-follow?resource=`;
+	const copyDescription = __( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' );
 
-	return (
-		<div className="activitypub__dialog">
-			<div className="activitypub-dialog__section">
-				<h4>{ __( 'My Profile', 'activitypub' ) }</h4>
-				<div className="activitypub-dialog-description">
-					{ __( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' ) }
-				</div>
-				<div className="activitypub-dialog__button-group">
-					<input type="text" value={ webfinger } readOnly />
-					<Button ref={ ref }>
-						<Icon icon={ buttonIcon } />
-						{ __( 'Copy', 'activitypub' ) }
-					</Button>
-				</div>
-			</div>
-			<div className="activitypub-dialog__section">
-				<h4>{ __( 'Your Profile', 'activitypub' ) }</h4>
-				<div className="activitypub-dialog__description">
-					{ createInterpolateElement(
-						__( 'Or, if you know your own profile, we can start things that way! (eg <code>https://example.com/yourusername</code> or <code>yourusername@example.com</code>)', 'activitypub' ),
-						{ code: <code /> }
-					) }
-				</div>
-				<div className="activitypub-dialog__button-group">
-					<input
-						type="text"
-						value={ remoteProfile }
-						onKeyDown={ ( event ) => { event?.code === 'Enter' && retrieveAndFollow() } }
-						onChange={ e => setRemoteProfile( e.target.value ) }
-					/>
-					<Button onClick={ retrieveAndFollow }>{ buttonText }</Button>
-				</div>
-			</div>
-		</div>
-	);
+	return <Dialog
+		actionText={ actionText }
+		copyDescription={ copyDescription }
+		handle={ webfinger }
+		resourceUrl={ resourceUrl }
+	/>;
 }
 
 export default function FollowMe( { selectedUser, style, backgroundColor, id, useId = false, profileData = false } ) {
