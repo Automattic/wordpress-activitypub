@@ -132,7 +132,7 @@ class Blog extends Actor {
 	 * @param string $name The new User-Name.
 	 * @return bool True on success, false on failure.
 	 */
-	public function set_name( $name ) {
+	public function save_name( $name ) {
 		return \update_option( 'blogname', $name );
 	}
 
@@ -156,7 +156,7 @@ class Blog extends Actor {
 	 * @param string $summary The new User-Description.
 	 * @return bool True on success, false on failure.
 	 */
-	public function set_summary( $summary ) {
+	public function save_summary( $summary ) {
 		return \update_option( 'blogdescription', $summary );
 	}
 
@@ -252,7 +252,7 @@ class Blog extends Actor {
 	 * @param int $attachment_id The attachment ID.
 	 * @return bool True on success, false on failure.
 	 */
-	public function set_icon( $attachment_id ) {
+	public function save_icon( $attachment_id ) {
 		return update_option( 'site_icon', $attachment_id );
 	}
 
@@ -272,7 +272,7 @@ class Blog extends Actor {
 		return null;
 	}
 
-	public function set_header_image( $attachment_id ) {
+	public function save_header_image( $attachment_id ) {
 		$attachment = \wp_get_attachment_image_src( $attachment_id, 'full' );
 		if ( $attachment ) {
 			\set_theme_mod( 'header_image', $attachment[0] );

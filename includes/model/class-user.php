@@ -103,7 +103,7 @@ class User extends Actor {
 	 * @param string $name The User-Name.
 	 * @return bool       True if the User-Name was updated, false otherwise.
 	 */
-	public function set_name( $name ) {
+	public function save_name( $name ) {
 		$userdata = [ 'ID' => $this->_id, 'display_name' => $name ];
 		return \wp_update_user( $userdata );
 	}
@@ -127,7 +127,7 @@ class User extends Actor {
 	 * @param string $summary The User-Description.
 	 * @return bool           True if the User-Description was updated, false otherwise.
 	 */
-	public function set_summary( $summary ) {
+	public function save_summary( $summary ) {
 		return \update_user_meta( $this->_id, 'description', $summary );
 	}
 
@@ -176,7 +176,7 @@ class User extends Actor {
 		);
 	}
 
-	public function set_icon( $icon ) {
+	public function save_icon( $icon ) {
 		$maybe_id = (int) $icon;
 		if ( $maybe_id ) {
 			$image = wp_get_attachment_image( $maybe_id, 'full' );
@@ -211,7 +211,7 @@ class User extends Actor {
 		return null;
 	}
 
-	public function set_header_image( $image ) {
+	public function save_header_image( $image ) {
 		$maybe_id = (int) $image;
 		if ( $maybe_id ) {
 			$image = wp_get_attachment_image( $maybe_id, 'full' );
