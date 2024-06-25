@@ -115,7 +115,6 @@ class Scheduler {
 	 * @param WP_Post $post       Post object.
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
-		error_log( 'schedule_post_activity -- old: ' . $old_status . ' | new: ' . $new_status);
 		$post = get_post( $post );
 
 		// Do not send activities if post is password protected.
