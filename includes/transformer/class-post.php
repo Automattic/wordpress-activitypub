@@ -140,6 +140,11 @@ class Post extends Base {
 	 * @return array The Attachments.
 	 */
 	protected function get_attachment() {
+		// Remove attachments from drafts.
+		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+			return array();
+		}
+
 		// Once upon a time we only supported images, but we now support audio/video as well.
 		// We maintain the image-centric naming for backwards compatibility.
 		$max_media = \intval(
@@ -695,6 +700,11 @@ class Post extends Base {
 			return null;
 		}
 
+		// Remove Teaser from drafts.
+		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+			return \__( '(This post is being modified)', 'activitypub' );
+		}
+
 		$content = \get_post_field( 'post_content', $this->wp_object->ID );
 		$content = \html_entity_decode( $content );
 		$content = \wp_strip_all_tags( $content );
@@ -749,6 +759,11 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
+		// Remove Content from drafts.
+		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+			return \__( '(This post is being modified)', 'activitypub' );
+		}
+
 		global $post;
 
 		/**
