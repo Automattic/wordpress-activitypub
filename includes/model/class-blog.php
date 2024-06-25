@@ -279,6 +279,15 @@ class Blog extends Actor {
 		}
 	}
 
+	/**
+	 * Extend the User-Output with Attachments.
+	 *
+	 * @return array The extended User-Output.
+	 */
+	public function get_attachment() {
+		return [];
+	}
+
 	public function get_published() {
 		$first_post = new WP_Query(
 			array(

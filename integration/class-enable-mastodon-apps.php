@@ -29,9 +29,11 @@ class Enable_Mastodon_Apps {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
+		\add_filter( 'mastodon_api_mapback_user_id', array( self::class, 'maybe_map_user_to_blog' ) );
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_add_followers' ), 20, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 15, 2 );
+		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_internal' ), 9, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 40, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search_by_url' ), 40, 2 );
 		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ) );
@@ -40,17 +42,24 @@ class Enable_Mastodon_Apps {
 		\add_action( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
 	}
 
-	private static function get_user( $user_id ) {
+	/**
+	 * Map user to blog if user is disabled
+	 *
+	 * @param int $user_id The user id
+	 *
+	 * @return int The user id
+	 */
+	public static function maybe_map_user_to_blog( $user_id ) {
 		if (
 			is_user_type_disabled( 'user' ) &&
 			! is_user_type_disabled( 'blog' ) &&
 			// check if the blog user is permissible for this user
 			user_can( $user_id, 'activitypub' )
 		) {
-			return new Blog();
+			return Users::BLOG_USER_ID;
 		}
 
-		return Users::get_by_various( $user_id );
+		return $user_id;
 	}
 
 	/**
@@ -61,9 +70,8 @@ class Enable_Mastodon_Apps {
 	 *
 	 * @return array The filtered credentials
 	 */
-	public static function api_update_credentials( $user, $data ) {
-		$user = self::get_user( $user->ID );
-
+	public static function api_update_credentials( $user_id, $data ) {
+		$user = Users::get_by_various( $user_id );
 		if ( ! $user || is_wp_error( $user ) ) {
 			return;
 		}
@@ -72,7 +80,6 @@ class Enable_Mastodon_Apps {
 			$icon_id = (int) $data['avatar'];
 			$attachment = \get_post( $icon_id );
 			if ( $attachment && 'attachment' === $attachment->post_type ) {
-				l( 'set_icon' );
 				$user->set_icon( $icon_id );
 			}
 		}
@@ -81,7 +88,6 @@ class Enable_Mastodon_Apps {
 			$header_id = (int) $data['header'];
 			$attachment = \get_post( $header_id );
 			if ( $attachment && 'attachment' === $attachment->post_type ) {
-				l( 'set_header_image' );
 				$user->set_header_image( $header_id );
 			}
 		}
@@ -89,7 +95,6 @@ class Enable_Mastodon_Apps {
 		if ( isset( $data['display_name'] ) ) {
 			$name = sanitize_text_field( $data['display_name'] );
 			if ( $name ) {
-				l( 'set_name' );
 				$user->set_name( $name );
 			}
 		}
@@ -97,7 +102,6 @@ class Enable_Mastodon_Apps {
 		if ( isset( $data['note'] ) ) {
 			$note = sanitize_text_field( $data['note'] );
 			if ( $note ) {
-				l( 'set_summary' );
 				$user->set_summary( $note );
 			}
 		}
@@ -237,6 +241,48 @@ class Enable_Mastodon_Apps {
 		}
 
 		return $user_data;
+	}
+
+	public static function api_account_internal( $user_data, $user_id ) {
+		$user = Users::get_by_id( $user_id );
+
+		if ( ! $user || is_wp_error( $user ) ) {
+			return $user_data;
+		}
+
+		// convert user to account.
+		$account = new Account();
+		$account->id = strval( $user_id );
+		$account->username = $user->get_preferred_username();
+		$account->acct = $account->username;
+		$account->display_name = $user->get_name();
+		$account->note = $user->get_summary();
+		$account->url = $user->get_url();
+
+		$icon = $user->get_icon();
+		$account->avatar = $icon['url'];
+		$account->avatar_static = $account->avatar;
+
+		$header = $user->get_header_image();
+		if ( $header ) {
+			$account->header = $header['url'];
+			$account->header_static = $account->header;
+		}
+
+		$account->created_at = new DateTime( $user->get_published() );
+
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
+		$query_args = array(
+			'post_type' => $post_types,
+			'posts_per_page' => 1,
+		);
+		if ( $user_id > 0 ) {
+			$query_args['author'] = $user_id;
+		}
+		$posts = \get_posts( $query_args );
+		$account->last_status_at = ! empty( $posts ) ? new DateTime( $posts[0]->post_date_gmt ) : $account->created_at;
+
+		return $account;
 	}
 
 	private static function get_account_for_actor( $uri ) {
