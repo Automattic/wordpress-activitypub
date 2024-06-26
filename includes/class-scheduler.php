@@ -336,28 +336,21 @@ class Scheduler {
 
 	/**
 	 * Send an Actor Delete activity.
-	 * @param int $user_id  The user ID to Delete.
+	 *
+	 * @param int      $id       ID of the user to delete.
+	 * @param int|null $reassign ID of the user to reassign posts and links to.
+	 *                           Default null, for no reassignment.
+	 * @param WP_User  $user     WP_User object of the user to delete.
 	 */
-	public static function schedule_actor_delete( $user_id ) {
-		$user = get_userdata( $user_id );
-		if ( $user->has_cap( 'activitypub' ) ) {
-			$author_url = \get_author_posts_url( $user->ID );
-			add_option(
-				'activitypub_temp_sig_' . $user_id,
-				array(
-					'key_id' => $author_url . '#main-key',
-					'private_key' => Signature::get_private_key_for( $user_id ),
-				)
-			);
+	public static function schedule_actor_delete( $user_id, $reassign, $deleted_user ) {
+		$caps = $deleted_user->allcaps;
 
-			$activity = new Activity();
-			$activity->set_id( $author_url . '#delete' );
-			$activity->set_type( 'Delete' );
-			$activity->set_actor( $author_url );
-			$activity->set_object( $author_url );
-			$activity->set_to( [ 'https://www.w3.org/ns/activitystreams#Public' ] );
-
-			\wp_schedule_single_event( \time(), 'activitypub_send_actor_delete_activity', array( $activity, $user_id ) );
+		// Check if 'activitypub' capability is set.
+		if ( isset( $caps['activitypub'] ) ) {
+			// Do not send activities if user is not allowed to publish.
+			unset( $deleted_user->data->user_pass );
+			unset( $deleted_user->allcaps );
+			\wp_schedule_single_event( \time(), 'activitypub_send_actor_delete_activity', array( $deleted_user ) );
 		}
 	}
 }

@@ -187,20 +187,25 @@ class Activity_Dispatcher {
 	/**
 	 * Send an Activity to all known (shared_)inboxes.
 	 *
-	 * @param Activity $activity The ActivityPub Activity.
+	 * @param WP_User $user The deleted WordPress User.
 	 *
 	 * @return void
 	 */
-	public static function send_actor_delete_activity( $activity, $user_id = Users::APPLICATION_USER_ID ) {
-		$json = $activity->to_json();
-		$followers = Followers::get_all_followers();
-		$known_inboxes = [];
-		foreach ( $followers as $follower ) {
-			$known_inboxes[] = $follower->get_shared_inbox();
-		}
-		$inboxes = array_unique( $known_inboxes );
+	public static function send_actor_delete_activity( $user ) {
+		$url = \get_author_posts_url( null, $user->user_nicename );
+
+		$activity = new Activity();
+		$activity->set_id( $url . '#delete' );
+		$activity->set_type( 'Delete' );
+		$activity->set_actor( $url );
+		$activity->set_object( $url );
+		$activity->set_to( 'https://www.w3.org/ns/activitystreams#Public' );
+
+		$json    = $activity->to_json();
+		$inboxes = Followers::get_inboxes( Followers::ALL );
+
 		foreach ( $inboxes as $inbox ) {
-			safe_remote_post( $inbox, $json, $user_id );
+			safe_remote_post( $inbox, $json, $user );
 		}
 	}
 

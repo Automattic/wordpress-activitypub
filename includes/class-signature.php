@@ -36,17 +36,17 @@ class Signature {
 	/**
 	 * Return the private key for a given user.
 	 *
-	 * @param int  $user_id The WordPress User ID.
-	 * @param bool $force   Force the generation of a new key pair.
+	 * @param WP_User|int $user  The WordPress User ID.
+	 * @param bool        $force Force the generation of a new key pair.
 	 *
 	 * @return mixed The private key.
 	 */
-	public static function get_private_key_for( $user_id, $force = false ) {
+	public static function get_private_key_for( $user, $force = false ) {
 		if ( $force ) {
-			self::generate_key_pair_for( $user_id );
+			self::generate_key_pair_for( $user );
 		}
 
-		$key_pair = self::get_keypair_for( $user_id );
+		$key_pair = self::get_keypair_for( $user );
 
 		return $key_pair['private_key'];
 	}
@@ -54,16 +54,16 @@ class Signature {
 	/**
 	 * Return the key pair for a given user.
 	 *
-	 * @param int $user_id The WordPress User ID.
+	 * @param WP_User|int $user The WordPress User ID.
 	 *
 	 * @return array The key pair.
 	 */
-	public static function get_keypair_for( $user_id ) {
-		$option_key = self::get_signature_options_key_for( $user_id );
+	public static function get_keypair_for( $user ) {
+		$option_key = self::get_signature_options_key_for( $user );
 		$key_pair = \get_option( $option_key );
 
 		if ( ! $key_pair ) {
-			$key_pair = self::generate_key_pair_for( $user_id );
+			$key_pair = self::generate_key_pair_for( $user );
 		}
 
 		return $key_pair;
@@ -72,19 +72,13 @@ class Signature {
 	/**
 	 * Generates the pair keys
 	 *
-	 * @param int $user_id The WordPress User ID.
+	 * @param WP_User|int $user The WordPress User ID.
 	 *
 	 * @return array The key pair.
 	 */
-	protected static function generate_key_pair_for( $user_id ) {
-		$option_key = self::get_signature_options_key_for( $user_id );
-		$key_pair = self::check_legacy_key_pair_for( $user_id );
-
-		if ( $key_pair ) {
-			\add_option( $option_key, $key_pair );
-
-			return $key_pair;
-		}
+	protected static function generate_key_pair_for( $user ) {
+		$option_key = self::get_signature_options_key_for( $user );
+		$key_pair = self::check_legacy_key_pair_for( $user );
 
 		$config = array(
 			'digest_alg' => 'sha512',
@@ -124,76 +118,35 @@ class Signature {
 	/**
 	 * Return the option key for a given user.
 	 *
-	 * @param int $user_id The WordPress User ID.
+	 * @param WP_User|int $user The WordPress User ID.
 	 *
 	 * @return string The option key.
 	 */
-	protected static function get_signature_options_key_for( $user_id ) {
-		$id = $user_id;
-
-		if ( $user_id > 0 ) {
-			$user = \get_userdata( $user_id );
-			// sanatize username because it could include spaces and special chars
-			$id = sanitize_title( $user->user_login );
+	protected static function get_signature_options_key_for( $user ) {
+		if ( ! 'WP_User' instanceof $user ) {
+			$user = \get_userdata( $user );
 		}
+
+		// sanatize username because it could include spaces and special chars
+		$id = sanitize_title( $user->user_login );
 
 		return 'activitypub_keypair_for_' . $id;
 	}
 
 	/**
-	 * Check if there is a legacy key pair
-	 *
-	 * @param int $user_id The WordPress User ID.
-	 *
-	 * @return array|bool The key pair or false.
-	 */
-	protected static function check_legacy_key_pair_for( $user_id ) {
-		switch ( $user_id ) {
-			case 0:
-				$public_key = \get_option( 'activitypub_blog_user_public_key' );
-				$private_key = \get_option( 'activitypub_blog_user_private_key' );
-				break;
-			case -1:
-				$public_key = \get_option( 'activitypub_application_user_public_key' );
-				$private_key = \get_option( 'activitypub_application_user_private_key' );
-				break;
-			default:
-				$public_key = \get_user_meta( $user_id, 'magic_sig_public_key', true );
-				$private_key = \get_user_meta( $user_id, 'magic_sig_private_key', true );
-				break;
-		}
-
-		if ( ! empty( $public_key ) && is_string( $public_key ) && ! empty( $private_key ) && is_string( $private_key ) ) {
-			return array(
-				'private_key' => $private_key,
-				'public_key'  => $public_key,
-			);
-		}
-
-		return false;
-	}
-
-	/**
 	 * Generates the Signature for a HTTP Request
 	 *
-	 * @param int    $user_id     The WordPress User ID.
-	 * @param string $http_method The HTTP method.
-	 * @param string $url         The URL to send the request to.
-	 * @param string $date        The date the request is sent.
-	 * @param string $digest      The digest of the request body.
+	 * @param int|WP_User $user        The WordPress User or ID.
+	 * @param string      $http_method The HTTP method.
+	 * @param string      $url         The URL to send the request to.
+	 * @param string      $date        The date the request is sent.
+	 * @param string      $digest      The digest of the request body.
 	 *
 	 * @return string The signature.
 	 */
-	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
-		$user = Users::get_by_id( $user_id );
-		if ( ! is_wp_error( $user ) ) {
-			$key = self::get_private_key_for( $user->get__id() );
-			$key_id = $user->get_url() . '#main-key';
-		} else {
-			$temp_sig_options = get_option( 'activitypub_temp_sig_' . $user_id );
-			$key = $temp_sig_options['private_key'];
-			$key_id = $temp_sig_options['key_id'];
-		}
+	public static function generate_signature( $user, $http_method, $url, $date, $digest = null ) {
+		$key = self::get_private_key_for( $user );
+		$key_id = $user->get_url() . '#main-key';
 
 		$url_parts = \wp_parse_url( $url );
 
