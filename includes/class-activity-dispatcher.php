@@ -182,6 +182,8 @@ class Activity_Dispatcher {
 		foreach ( $inboxes as $inbox ) {
 			safe_remote_post( $inbox, $json, $user_id );
 		}
+
+		set_wp_object_state( $wp_object, 'federated' );
 	}
 
 	/**
