@@ -78,9 +78,7 @@ class Signature {
 	 */
 	protected static function generate_key_pair_for( $user ) {
 		$option_key = self::get_signature_options_key_for( $user );
-		$key_pair = self::check_legacy_key_pair_for( $user );
-
-		$config = array(
+		$config     = array(
 			'digest_alg' => 'sha512',
 			'private_key_bits' => 2048,
 			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
