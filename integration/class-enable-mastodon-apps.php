@@ -70,8 +70,11 @@ class Enable_Mastodon_Apps {
 	 * @return array The filtered credentials
 	 */
 	public static function api_update_credentials( $user_id, $data ) {
+		if ( empty( $user_id ) ) {
+			return new WP_Error( 'activitypub_user_not_found', __( 'User not found', 'activitypub' ), array( 'status' => 404 ) );
+		}
 		$user_id = self::maybe_map_user_to_blog( $user_id );
-		$user = Users::get_by_various( $user_id );
+		$user    = Users::get_by_id( $user_id );
 		if ( ! $user || is_wp_error( $user ) ) {
 			return;
 		}
