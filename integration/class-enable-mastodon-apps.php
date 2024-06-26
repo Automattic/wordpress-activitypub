@@ -29,7 +29,6 @@ class Enable_Mastodon_Apps {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_filter( 'mastodon_api_mapback_user_id', array( self::class, 'maybe_map_user_to_blog' ) );
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_add_followers' ), 20, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 15, 2 );
@@ -71,6 +70,7 @@ class Enable_Mastodon_Apps {
 	 * @return array The filtered credentials
 	 */
 	public static function api_update_credentials( $user_id, $data ) {
+		$user_id = self::maybe_map_user_to_blog( $user_id );
 		$user = Users::get_by_various( $user_id );
 		if ( ! $user || is_wp_error( $user ) ) {
 			return;
@@ -119,6 +119,7 @@ class Enable_Mastodon_Apps {
 	 * @return array The filtered followers
 	 */
 	public static function api_account_followers( $followers, $user_id ) {
+		$user_id               = self::maybe_map_user_to_blog( $user_id );
 		$activitypub_followers = Followers::get_followers( $user_id, 40 );
 		$mastodon_followers    = array_map(
 			function ( $item ) {
@@ -240,7 +241,8 @@ class Enable_Mastodon_Apps {
 	}
 
 	public static function api_account_internal( $user_data, $user_id ) {
-		$user = Users::get_by_id( $user_id );
+		$user_id_to_use = self::maybe_map_user_to_blog( $user_id );
+		$user = Users::get_by_id( $user_id_to_use );
 
 		if ( ! $user || is_wp_error( $user ) ) {
 			return $user_data;
@@ -248,7 +250,8 @@ class Enable_Mastodon_Apps {
 
 		// convert user to account.
 		$account = new Account();
-		$account->id = strval( $user_id );
+		// even if we have a blog user, maintain the provided user_id so as not to confuse clients
+		$account->id = (int) $user_id;
 		$account->username = $user->get_preferred_username();
 		$account->acct = $account->username;
 		$account->display_name = $user->get_name();
