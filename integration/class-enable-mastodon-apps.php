@@ -259,6 +259,7 @@ class Enable_Mastodon_Apps {
 		$account->acct = $account->username;
 		$account->display_name = $user->get_name();
 		$account->note = $user->get_summary();
+		$account->source['note'] = wp_strip_all_tags( $account->note, true );
 		$account->url = $user->get_url();
 
 		$icon = $user->get_icon();
