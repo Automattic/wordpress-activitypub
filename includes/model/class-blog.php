@@ -197,8 +197,8 @@ class Blog extends Actor {
 	 * @return array The User-Icon.
 	 */
 	public function get_icon() {
-		// try site icon first
-		$icon_id = get_option( 'site_icon' );
+		// try site_logo, falling back to site_icon, first
+		$icon_id = get_option( 'site_logo', get_option( 'site_icon' ) );
 
 		// try custom logo second
 		if ( ! $icon_id ) {
@@ -397,7 +397,7 @@ class Blog extends Actor {
 				return \update_option( 'blogdescription', $value );
 			case 'icon':
 				// contents of save_icon, which this replaces
-				return \update_option( 'site_icon', $value );
+				return \update_option( 'site_logo', $value ) && \update_option( 'site_icon', $value );
 			case 'header':
 				// contents of save_header_image, which this replaces
 				$attachment = \wp_get_attachment_image_src( $value, 'full' );
