@@ -80,7 +80,7 @@ class Enable_Mastodon_Apps {
 			$icon_id = (int) $data['avatar'];
 			$attachment = \get_post( $icon_id );
 			if ( $attachment && 'attachment' === $attachment->post_type ) {
-				$user->save_icon( $icon_id );
+				$user->save( 'icon', $icon_id );
 			}
 		}
 
@@ -88,21 +88,21 @@ class Enable_Mastodon_Apps {
 			$header_id = (int) $data['header'];
 			$attachment = \get_post( $header_id );
 			if ( $attachment && 'attachment' === $attachment->post_type ) {
-				$user->save_header_image( $header_id );
+				$user->save( 'header', $header_id );
 			}
 		}
 
 		if ( isset( $data['display_name'] ) ) {
 			$name = sanitize_text_field( $data['display_name'] );
 			if ( $name ) {
-				$user->save_name( $name );
+				$user->save( 'name', $name );
 			}
 		}
 
 		if ( isset( $data['note'] ) ) {
 			$note = sanitize_text_field( $data['note'] );
 			if ( $note ) {
-				$user->save_summary( $note );
+				$user->save( 'summary', $note );
 			}
 		}
 

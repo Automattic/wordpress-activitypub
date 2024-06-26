@@ -98,17 +98,6 @@ class User extends Actor {
 	}
 
 	/**
-	 * Set the User-Name.
-	 *
-	 * @param string $name The User-Name.
-	 * @return bool       True if the User-Name was updated, false otherwise.
-	 */
-	public function save_name( $name ) {
-		$userdata = [ 'ID' => $this->_id, 'display_name' => $name ];
-		return \wp_update_user( $userdata );
-	}
-
-	/**
 	 * Get the User-Description.
 	 *
 	 * @return string The User-Description.
@@ -119,16 +108,6 @@ class User extends Actor {
 			$description = get_user_meta( $this->_id, 'description', true );
 		}
 		return \wpautop( \wp_kses( $description, 'default' ) );
-	}
-
-	/**
-	 * Set the User-Description.
-	 *
-	 * @param string $summary The User-Description.
-	 * @return bool           True if the User-Description was updated, false otherwise.
-	 */
-	public function save_summary( $summary ) {
-		return \update_user_meta( $this->_id, 'description', $summary );
 	}
 
 	/**
@@ -176,20 +155,6 @@ class User extends Actor {
 		);
 	}
 
-	public function save_icon( $icon ) {
-		$maybe_id = (int) $icon;
-		if ( $maybe_id ) {
-			$image = wp_get_attachment_image( $maybe_id, 'full' );
-			if ( ! $image ) {
-				return false;
-			}
-			$icon = wp_get_attachment_url( $maybe_id );
-		}
-
-		$option_name = 'activitypub_user_icon_' . $this->_id;
-		return \update_option( $option_name, $icon );
-	}
-
 	public function get_image() {
 		$option_name = 'activitypub_user_image_' . $this->_id;
 		$image = \get_option( $option_name );
@@ -209,20 +174,6 @@ class User extends Actor {
 		}
 
 		return null;
-	}
-
-	public function save_header_image( $image ) {
-		$maybe_id = (int) $image;
-		if ( $maybe_id ) {
-			$image = wp_get_attachment_image( $maybe_id, 'full' );
-			if ( ! $image ) {
-				return false;
-			}
-			$image = wp_get_attachment_url( $maybe_id );
-		}
-
-		$option_name = 'activitypub_user_image_' . $this->_id;
-		return \update_option( $option_name, $image );
 	}
 
 	public function get_published() {
@@ -363,6 +314,53 @@ class User extends Actor {
 			return true;
 		} else {
 			return false;
+		}
+	}
+
+	/**
+	 * Update User profile attributes
+	 *
+	 * @param string $key The attribute to update.
+	 * @param mixed $value The new value.
+	 *                     Possible values:
+	 *                   - name: The User-Name.
+	 *                   - summary: The User-Description.
+	 *                   - icon: The User-Icon.
+	 *                   - header: The User-Header-Image.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function save( $key, $value ) {
+		switch ( $key ) {
+			case 'name':
+				$userdata = [ 'ID' => $this->_id, 'display_name' => $value ];
+				return \wp_update_user( $userdata );
+			case 'summary':
+				return \update_user_meta( $this->_id, 'description', $value );
+			case 'icon':
+				$maybe_id = (int) $value;
+				if ( $maybe_id ) {
+					$image = \wp_get_attachment_image_src( $maybe_id, 'full' );
+					if ( ! $image ) {
+						return false;
+					}
+					$value = \wp_get_attachment_url( $maybe_id );
+				}
+				$option_name = 'activitypub_user_icon_' . $this->_id;
+				return \update_option( $option_name, $value );
+			case 'header':
+				$maybe_id = (int) $value;
+				if ( $maybe_id ) {
+					$image = wp_get_attachment_image( $maybe_id, 'full' );
+					if ( ! $image ) {
+						return false;
+					}
+					$image = wp_get_attachment_url( $maybe_id );
+				}
+
+				$option_name = 'activitypub_user_image_' . $this->_id;
+				return \update_option( $option_name, $image );
+			default:
+				return false;
 		}
 	}
 }

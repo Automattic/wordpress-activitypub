@@ -127,16 +127,6 @@ class Blog extends Actor {
 	}
 
 	/**
-	 * Set the User-Name.
-	 *
-	 * @param string $name The new User-Name.
-	 * @return bool True on success, false on failure.
-	 */
-	public function save_name( $name ) {
-		return \update_option( 'blogname', $name );
-	}
-
-	/**
 	 * Get the User-Description.
 	 *
 	 * @return string The User-Description.
@@ -148,16 +138,6 @@ class Blog extends Actor {
 				'default'
 			)
 		);
-	}
-
-	/**
-	 * Set the User-Description.
-	 *
-	 * @param string $summary The new User-Description.
-	 * @return bool True on success, false on failure.
-	 */
-	public function save_summary( $summary ) {
-		return \update_option( 'blogdescription', $summary );
 	}
 
 	/**
@@ -246,17 +226,6 @@ class Blog extends Actor {
 	}
 
 	/**
-	 * Set the User-Icon.
-	 * This function is used to set the site icon.
-	 *
-	 * @param int $attachment_id The attachment ID.
-	 * @return bool True on success, false on failure.
-	 */
-	public function save_icon( $attachment_id ) {
-		return update_option( 'site_icon', $attachment_id );
-	}
-
-	/**
 	 * Get the User-Header-Image.
 	 *
 	 * @return array|null The User-Header-Image.
@@ -270,13 +239,6 @@ class Blog extends Actor {
 		}
 
 		return null;
-	}
-
-	public function save_header_image( $attachment_id ) {
-		$attachment = \wp_get_attachment_image_src( $attachment_id, 'full' );
-		if ( $attachment ) {
-			\set_theme_mod( 'header_image', $attachment[0] );
-		}
 	}
 
 	/**
@@ -413,6 +375,38 @@ class Blog extends Actor {
 			return true;
 		} else {
 			return false;
+		}
+	}
+
+	/**
+	 * Update User profile attributes
+	 *
+	 * @param string $key The attribute to update.
+	 * @param mixed $value The new value. Possible values:
+	 *                     - name: The User-Name.
+	 *                     - summary: The User-Description.
+	 *                     - icon: The User-Icon.
+	 *                     - header: The User-Header-Image.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function save( $key, $value ) {
+		switch ( $key ) {
+			case 'name':
+				return \update_option( 'blogname', $value );
+			case 'summary':
+				return \update_option( 'blogdescription', $value );
+			case 'icon':
+				// contents of save_icon, which this replaces
+				return \update_option( 'site_icon', $value );
+			case 'header':
+				// contents of save_header_image, which this replaces
+				$attachment = \wp_get_attachment_image_src( $value, 'full' );
+				if ( $attachment ) {
+					return \set_theme_mod( 'header_image', $attachment[0] );
+				}
+				break;
+			default:
+				return false;
 		}
 	}
 }
