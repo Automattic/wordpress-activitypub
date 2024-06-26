@@ -121,7 +121,7 @@ class Signature {
 	 * @return string The option key.
 	 */
 	protected static function get_signature_options_key_for( $user ) {
-		if ( ! 'WP_User' instanceof $user ) {
+		if ( ! $user instanceof WP_User ) {
 			$user = \get_userdata( $user );
 		}
 
@@ -144,7 +144,7 @@ class Signature {
 	 */
 	public static function generate_signature( $user, $http_method, $url, $date, $digest = null ) {
 		$key = self::get_private_key_for( $user );
-		$key_id = $user->get_url() . '#main-key';
+		$key_id = '#main-key'; //$user->get_url() . '#main-key';
 
 		$url_parts = \wp_parse_url( $url );
 
