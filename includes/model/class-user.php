@@ -133,8 +133,7 @@ class User extends Actor {
 	}
 
 	public function get_icon() {
-		$option_name = 'activitypub_user_icon_' . $this->_id;
-		$icon = \get_option( $option_name );
+		$icon = \get_option( $this->user_option_name( 'icon' ) );
 		if ( $icon ) {
 			return array(
 				'type' => 'Image',
@@ -156,8 +155,7 @@ class User extends Actor {
 	}
 
 	public function get_image() {
-		$option_name = 'activitypub_user_image_' . $this->_id;
-		$image = \get_option( $option_name );
+		$image = \get_option( $this->user_option_name( 'image' ) );
 		if ( $image ) {
 			return array(
 				'type' => 'Image',
@@ -165,6 +163,7 @@ class User extends Actor {
 			);
 		}
 
+		// fallback to sitewide header image
 		if ( \has_header_image() ) {
 			$image = \esc_url( \get_header_image() );
 			return array(
@@ -318,6 +317,19 @@ class User extends Actor {
 	}
 
 	/**
+	 * Generates an option name for saving user-centric data.
+	 * User meta can be too heavy and lack site-specificity ina multi-site environment.
+	 * This function generates a unique option name for the user.
+	 *
+	 * @param string $key The key to generate the option name for.
+	 * @return string     The option name.
+	 */
+	private function user_option_name( $key ) {
+		$user = \get_user_by( 'ID', $this->_id );
+		return sprintf( 'activitypub_user_%s_%s', $key, $user->user_login );
+	}
+
+	/**
 	 * Update User profile attributes
 	 *
 	 * @param string $key The attribute to update.
@@ -338,6 +350,7 @@ class User extends Actor {
 				return \update_user_meta( $this->_id, 'description', $value );
 			case 'icon':
 				$maybe_id = (int) $value;
+				// we were passed an integer, which should be an attachment ID.
 				if ( $maybe_id ) {
 					$image = \wp_get_attachment_image_src( $maybe_id, 'full' );
 					if ( ! $image ) {
@@ -345,10 +358,10 @@ class User extends Actor {
 					}
 					$value = \wp_get_attachment_url( $maybe_id );
 				}
-				$option_name = 'activitypub_user_icon_' . $this->_id;
-				return \update_option( $option_name, $value );
+				return \update_option( $this->user_option_name( 'icon' ), $value );
 			case 'header':
 				$maybe_id = (int) $value;
+				// we were passed an integer, which should be an attachment ID.
 				if ( $maybe_id ) {
 					$image = wp_get_attachment_image( $maybe_id, 'full' );
 					if ( ! $image ) {
@@ -356,9 +369,7 @@ class User extends Actor {
 					}
 					$image = wp_get_attachment_url( $maybe_id );
 				}
-
-				$option_name = 'activitypub_user_image_' . $this->_id;
-				return \update_option( $option_name, $image );
+				return \update_option( $this->user_option_name( 'image' ), $image );
 			default:
 				return false;
 		}

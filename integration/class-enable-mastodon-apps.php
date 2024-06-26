@@ -62,28 +62,30 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
-	 * Update credentials for Mastodon API
+	 * Update profile data for Mastodon API.
 	 *
-	 * @param array $credentials The credentials
-	 * @param int   $user_id     The user id
-	 *
-	 * @return array The filtered credentials
+	 * @param array $data    The data to act on
+	 * @param int   $user_id The user id
+	 * @return array         The possibly-filtered data (data that's saved gets unset from the array)
 	 */
-	public static function api_update_credentials( $user_id, $data ) {
+	public static function api_update_credentials( $data, $user_id ) {
 		if ( empty( $user_id ) ) {
-			return new WP_Error( 'activitypub_user_not_found', __( 'User not found', 'activitypub' ), array( 'status' => 404 ) );
+			return $data;
 		}
 		$user_id = self::maybe_map_user_to_blog( $user_id );
 		$user    = Users::get_by_id( $user_id );
 		if ( ! $user || is_wp_error( $user ) ) {
-			return;
+			return $data;
 		}
+
+		$is_blog_user = Users::BLOG_USER_ID === $user_id;
 
 		if ( isset( $data['avatar'] ) ) {
 			$icon_id = (int) $data['avatar'];
 			$attachment = \get_post( $icon_id );
 			if ( $attachment && 'attachment' === $attachment->post_type ) {
 				$user->save( 'icon', $icon_id );
+				unset( $data['avatar'] );
 			}
 		}
 
@@ -92,24 +94,23 @@ class Enable_Mastodon_Apps {
 			$attachment = \get_post( $header_id );
 			if ( $attachment && 'attachment' === $attachment->post_type ) {
 				$user->save( 'header', $header_id );
+				unset( $data['header'] );
 			}
 		}
 
-		if ( isset( $data['display_name'] ) ) {
-			$name = sanitize_text_field( $data['display_name'] );
-			if ( $name ) {
-				$user->save( 'name', $name );
-			}
+		if ( $is_blog_user && isset( $data['display_name'] ) ) {
+			$user->save( 'name', $data['display_name'] );
+			unset( $data['display_name'] );
 		}
 
-		if ( isset( $data['note'] ) ) {
-			$note = sanitize_text_field( $data['note'] );
-			if ( $note ) {
-				$user->save( 'summary', $note );
-			}
+		if ( $is_blog_user && isset( $data['note'] ) ) {
+			$user->save( 'summary', $data['note'] );
+			unset( $data['note'] );
 		}
 
-		// @todo set fields_attributes to extra fields once PR #762 merges
+		// @todo set fields_attributes to extra fields once PR #762 merges.
+
+		return $data;
 	}
 
 	/**
