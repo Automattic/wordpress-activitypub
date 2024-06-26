@@ -18,17 +18,17 @@ class Signature {
 	/**
 	 * Return the public key for a given user.
 	 *
-	 * @param int  $user_id The WordPress User ID.
-	 * @param bool $force   Force the generation of a new key pair.
+	 * @param WP_User|int $user_id The WordPress User ID.
+	 * @param bool        $force   Force the generation of a new key pair.
 	 *
 	 * @return mixed The public key.
 	 */
-	public static function get_public_key_for( $user_id, $force = false ) {
+	public static function get_public_key_for( $user, $force = false ) {
 		if ( $force ) {
-			self::generate_key_pair_for( $user_id );
+			self::generate_key_pair_for( $user );
 		}
 
-		$key_pair = self::get_keypair_for( $user_id );
+		$key_pair = self::get_keypair_for( $user );
 
 		return $key_pair['public_key'];
 	}
@@ -218,7 +218,11 @@ class Signature {
 		}
 
 		if ( ! isset( $headers['signature'] ) ) {
-			return new WP_Error( 'activitypub_signature', __( 'Request not signed', 'activitypub' ), array( 'status' => 401 ) );
+			return new WP_Error(
+				'activitypub_signature',
+				__( 'Request not signed', 'activitypub' ),
+				array( 'status' => 401 )
+			);
 		}
 
 		if ( array_key_exists( 'signature', $headers ) ) {
@@ -228,7 +232,14 @@ class Signature {
 		}
 
 		if ( ! isset( $signature_block ) || ! $signature_block ) {
-			return new WP_Error( 'activitypub_signature', __( 'Incompatible request signature. keyId and signature are required', 'activitypub' ), array( 'status' => 401 ) );
+			return new WP_Error(
+				'activitypub_signature',
+				__(
+					'Incompatible request signature. keyId and signature are required',
+					'activitypub'
+				),
+				array( 'status' => 401 )
+			);
 		}
 
 		$signed_headers = $signature_block['headers'];
@@ -238,12 +249,26 @@ class Signature {
 
 		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
 		if ( ! $signed_data ) {
-			return new WP_Error( 'activitypub_signature', __( 'Signed request date outside acceptable time window', 'activitypub' ), array( 'status' => 401 ) );
+			return new WP_Error(
+				'activitypub_signature',
+				__(
+					'Signed request date outside acceptable time window',
+					'activitypub'
+				),
+				array( 'status' => 401 )
+			);
 		}
 
 		$algorithm = self::get_signature_algorithm( $signature_block );
 		if ( ! $algorithm ) {
-			return new WP_Error( 'activitypub_signature', __( 'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)', 'activitypub' ), array( 'status' => 401 ) );
+			return new WP_Error(
+				'activitypub_signature',
+				__(
+					'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)',
+					'activitypub'
+				),
+				array( 'status' => 401 )
+			);
 		}
 
 		if ( \in_array( 'digest', $signed_headers, true ) && isset( $body ) ) {
@@ -260,7 +285,14 @@ class Signature {
 			}
 
 			if ( \base64_encode( \hash( $hashalg, $body, true ) ) !== $digest[1] ) { // phpcs:ignore
-				return new WP_Error( 'activitypub_signature', __( 'Invalid Digest header', 'activitypub' ), array( 'status' => 401 ) );
+				return new WP_Error(
+					'activitypub_signature',
+					__(
+						'Invalid Digest header',
+						'activitypub'
+					),
+					array( 'status' => 401 )
+				);
 			}
 		}
 
@@ -273,7 +305,14 @@ class Signature {
 		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
 
 		if ( ! $verified ) {
-			return new WP_Error( 'activitypub_signature', __( 'Invalid signature', 'activitypub' ), array( 'status' => 401 ) );
+			return new WP_Error(
+				'activitypub_signature',
+				__(
+					'Invalid signature',
+					'activitypub'
+				),
+				array( 'status' => 401 )
+			);
 		}
 		return $verified;
 	}
@@ -315,7 +354,8 @@ class Signature {
 		if ( $signature_block['algorithm'] ) {
 			switch ( $signature_block['algorithm'] ) {
 				case 'rsa-sha-512':
-					return 'sha512'; //hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12
+					//hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12
+					return 'sha512';
 				default:
 					return 'sha256';
 			}

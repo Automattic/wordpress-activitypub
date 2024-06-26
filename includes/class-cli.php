@@ -131,6 +131,6 @@ class Cli extends WP_CLI_Command {
 	 * @return void
 	 */
 	public function user( $args, $assoc_args ) {
-
+		// @todo add code
 	}
 }
