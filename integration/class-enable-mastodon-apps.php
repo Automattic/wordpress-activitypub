@@ -136,7 +136,6 @@ class Enable_Mastodon_Apps {
 				$account->acct = $acct;
 				$account->display_name = $item->get_name();
 				$account->url = $item->get_url();
-				$account->uri = $item->get_id();
 				$account->avatar = $item->get_icon_url();
 				$account->avatar_static = $item->get_icon_url();
 				$account->created_at = new DateTime( $item->get_published() );
@@ -150,13 +149,10 @@ class Enable_Mastodon_Apps {
 				$account->bot = false;
 				$account->locked = false;
 				$account->group = false;
-				$account->discoversable = false;
-				$account->indexable = false;
-				$account->hide_collections = false;
+				$account->discoverable = false;
 				$account->noindex = false;
 				$account->fields = array();
 				$account->emojis = array();
-				$account->roles = array();
 
 				return $account;
 			},
