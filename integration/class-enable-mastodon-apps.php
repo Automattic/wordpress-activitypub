@@ -6,7 +6,6 @@ use Activitypub\Webfinger as Webfinger_Util;
 use Activitypub\Http;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
-use Activitypub\Model\Blog;
 use Activitypub\Integration\Nodeinfo;
 use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Entity\Account;
