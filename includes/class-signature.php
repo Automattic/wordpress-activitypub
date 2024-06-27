@@ -121,7 +121,9 @@ class Signature {
 	 * @return string The option key.
 	 */
 	protected static function get_signature_options_key_for( $user ) {
-		if ( $user instanceof WP_User || (int) $user > 0 ) {
+		if ( $user instanceof WP_User ) {
+			$user_login = $user->user_login;
+		} elseif ( (int) $user > 0 ) {
 			$user       = \get_userdata( $user );
 			$user_login = $user->user_login;
 		} else {
