@@ -121,12 +121,15 @@ class Signature {
 	 * @return string The option key.
 	 */
 	protected static function get_signature_options_key_for( $user ) {
-		if ( ! $user instanceof WP_User ) {
-			$user = \get_userdata( $user );
+		if ( $user instanceof WP_User || (int) $user > 0 ) {
+			$user       = \get_userdata( $user );
+			$user_login = $user->user_login;
+		} else {
+			$user_login = $user;
 		}
 
 		// sanatize username because it could include spaces and special chars
-		$id = sanitize_title( $user->user_login );
+		$id = sanitize_title( $user_login );
 
 		return 'activitypub_keypair_for_' . $id;
 	}
