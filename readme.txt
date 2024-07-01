@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.5
-Stable tag: 2.4.0
+Stable tag: 2.5.0
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -132,6 +132,18 @@ The followers of a user can be found in the menu under "Users" -> "Followers" or
 For reasons of data protection, it is not possible to see the followers of other users.
 
 == Changelog ==
+
+= 2.5.0 =
+
+* Added: WebFinger cors header
+* Added: WebFinger Content-Type
+* Added: The Fediverse creator of a post to OpenGraph
+* Improved: Try to lookup local users first for Enable Mastodon Apps
+* Improved: Send also Announces for deletes
+* Improved: Load time by adding `count_total=false` to `WP_User_Query`
+* Fixed: Several WebFinger issues
+* Fixed: Redirect issue for Application user
+* Fixed: Accessibilty issues with missing screen-reader-text on User overview page
 
 = 2.4.0 =
 
