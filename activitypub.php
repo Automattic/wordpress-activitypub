@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/pfefferle/wordpress-activitypub/
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 2.4.0
+ * Version: 2.5.0
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -21,7 +21,7 @@ use function Activitypub\site_supports_blocks;
 require_once __DIR__ . '/includes/compat.php';
 require_once __DIR__ . '/includes/functions.php';
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '2.4.0' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '2.5.0' );
 
 /**
  * Initialize the plugin constants.
@@ -100,6 +100,9 @@ function plugin_init() {
 
 	require_once __DIR__ . '/integration/class-enable-mastodon-apps.php';
 	Integration\Enable_Mastodon_Apps::init();
+
+	require_once __DIR__ . '/integration/class-opengraph.php';
+	Integration\Opengraph::init();
 
 	if ( \defined( 'JETPACK__VERSION' ) && ! \defined( 'IS_WPCOM' ) ) {
 		require_once __DIR__ . '/integration/class-jetpack.php';
