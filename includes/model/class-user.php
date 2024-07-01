@@ -133,6 +133,14 @@ class User extends Actor {
 	}
 
 	public function get_icon() {
+		$icon = \get_option( $this->user_option_name( 'icon' ) );
+		if ( $icon ) {
+			return array(
+				'type' => 'Image',
+				'url'  => $icon,
+			);
+		}
+
 		$icon = \esc_url(
 			\get_avatar_url(
 				$this->_id,
@@ -147,6 +155,15 @@ class User extends Actor {
 	}
 
 	public function get_image() {
+		$image = \get_option( $this->user_option_name( 'image' ) );
+		if ( $image ) {
+			return array(
+				'type' => 'Image',
+				'url'  => $image,
+			);
+		}
+
+		// fallback to sitewide header image
 		if ( \has_header_image() ) {
 			$image = \esc_url( \get_header_image() );
 			return array(
@@ -296,6 +313,65 @@ class User extends Actor {
 			return true;
 		} else {
 			return false;
+		}
+	}
+
+	/**
+	 * Generates an option name for saving user-centric data.
+	 * User meta can be too heavy and lack site-specificity ina multi-site environment.
+	 * This function generates a unique option name for the user.
+	 *
+	 * @param string $key The key to generate the option name for.
+	 * @return string     The option name.
+	 */
+	private function user_option_name( $key ) {
+		$user = \get_user_by( 'ID', $this->_id );
+		return sprintf( 'activitypub_user_%s_%s', $key, $user->user_login );
+	}
+
+	/**
+	 * Update User profile attributes
+	 *
+	 * @param string $key The attribute to update.
+	 * @param mixed $value The new value.
+	 *                     Possible values:
+	 *                   - name: The User-Name.
+	 *                   - summary: The User-Description.
+	 *                   - icon: The User-Icon.
+	 *                   - header: The User-Header-Image.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function save( $key, $value ) {
+		switch ( $key ) {
+			case 'name':
+				$userdata = [ 'ID' => $this->_id, 'display_name' => $value ];
+				return \wp_update_user( $userdata );
+			case 'summary':
+				return \update_user_meta( $this->_id, 'description', $value );
+			case 'icon':
+				$maybe_id = (int) $value;
+				// we were passed an integer, which should be an attachment ID.
+				if ( $maybe_id ) {
+					$image = \wp_get_attachment_image_src( $maybe_id, 'full' );
+					if ( ! $image ) {
+						return false;
+					}
+					$value = \wp_get_attachment_url( $maybe_id );
+				}
+				return \update_option( $this->user_option_name( 'icon' ), $value );
+			case 'header':
+				$maybe_id = (int) $value;
+				// we were passed an integer, which should be an attachment ID.
+				if ( $maybe_id ) {
+					$image = wp_get_attachment_image( $maybe_id, 'full' );
+					if ( ! $image ) {
+						return false;
+					}
+					$image = wp_get_attachment_url( $maybe_id );
+				}
+				return \update_option( $this->user_option_name( 'image' ), $image );
+			default:
+				return false;
 		}
 	}
 }

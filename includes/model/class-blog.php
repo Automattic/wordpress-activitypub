@@ -197,8 +197,8 @@ class Blog extends Actor {
 	 * @return array The User-Icon.
 	 */
 	public function get_icon() {
-		// try site icon first
-		$icon_id = get_option( 'site_icon' );
+		// try site_logo, falling back to site_icon, first
+		$icon_id = get_option( 'site_logo', get_option( 'site_icon' ) );
 
 		// try custom logo second
 		if ( ! $icon_id ) {
@@ -239,6 +239,15 @@ class Blog extends Actor {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Extend the User-Output with Attachments.
+	 *
+	 * @return array The extended User-Output.
+	 */
+	public function get_attachment() {
+		return [];
 	}
 
 	public function get_published() {
@@ -366,6 +375,38 @@ class Blog extends Actor {
 			return true;
 		} else {
 			return false;
+		}
+	}
+
+	/**
+	 * Update User profile attributes
+	 *
+	 * @param string $key The attribute to update.
+	 * @param mixed $value The new value. Possible values:
+	 *                     - name: The User-Name.
+	 *                     - summary: The User-Description.
+	 *                     - icon: The User-Icon.
+	 *                     - header: The User-Header-Image.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function save( $key, $value ) {
+		switch ( $key ) {
+			case 'name':
+				return \update_option( 'blogname', $value );
+			case 'summary':
+				return \update_option( 'blogdescription', $value );
+			case 'icon':
+				// contents of save_icon, which this replaces
+				return \update_option( 'site_logo', $value ) && \update_option( 'site_icon', $value );
+			case 'header':
+				// contents of save_header_image, which this replaces
+				$attachment = \wp_get_attachment_image_src( $value, 'full' );
+				if ( $attachment ) {
+					return \set_theme_mod( 'header_image', $attachment[0] );
+				}
+				break;
+			default:
+				return false;
 		}
 	}
 }

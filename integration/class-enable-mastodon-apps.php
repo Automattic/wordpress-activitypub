@@ -13,6 +13,8 @@ use Enable_Mastodon_Apps\Entity\Status;
 use Enable_Mastodon_Apps\Entity\Media_Attachment;
 
 use function Activitypub\get_remote_metadata_by_actor;
+use function Activitypub\is_user_type_disabled;
+use function Activitypub\is_user_disabled;
 
 /**
  * Class Enable_Mastodon_Apps
@@ -29,11 +31,85 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_add_followers' ), 20, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 15, 2 );
+		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_internal' ), 9, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 40, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search_by_url' ), 40, 2 );
 		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ) );
 		\add_filter( 'mastodon_api_statuses', array( self::class, 'api_statuses_external' ), 10, 2 );
 		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 23 );
+		\add_action( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
+	}
+
+	/**
+	 * Map user to blog if user is disabled
+	 *
+	 * @param int $user_id The user id
+	 *
+	 * @return int The user id
+	 */
+	public static function maybe_map_user_to_blog( $user_id ) {
+		if (
+			is_user_type_disabled( 'user' ) &&
+			! is_user_type_disabled( 'blog' ) &&
+			// check if the blog user is permissible for this user
+			user_can( $user_id, 'activitypub' )
+		) {
+			return Users::BLOG_USER_ID;
+		}
+
+		return $user_id;
+	}
+
+	/**
+	 * Update profile data for Mastodon API.
+	 *
+	 * @param array $data    The data to act on
+	 * @param int   $user_id The user id
+	 * @return array         The possibly-filtered data (data that's saved gets unset from the array)
+	 */
+	public static function api_update_credentials( $data, $user_id ) {
+		if ( empty( $user_id ) ) {
+			return $data;
+		}
+		$user_id = self::maybe_map_user_to_blog( $user_id );
+		$user    = Users::get_by_id( $user_id );
+		if ( ! $user || is_wp_error( $user ) ) {
+			return $data;
+		}
+
+		$is_blog_user = Users::BLOG_USER_ID === $user_id;
+
+		if ( isset( $data['avatar'] ) ) {
+			$icon_id = (int) $data['avatar'];
+			$attachment = \get_post( $icon_id );
+			if ( $attachment && 'attachment' === $attachment->post_type ) {
+				$user->save( 'icon', $icon_id );
+				unset( $data['avatar'] );
+			}
+		}
+
+		if ( isset( $data['header'] ) ) {
+			$header_id = (int) $data['header'];
+			$attachment = \get_post( $header_id );
+			if ( $attachment && 'attachment' === $attachment->post_type ) {
+				$user->save( 'header', $header_id );
+				unset( $data['header'] );
+			}
+		}
+
+		if ( $is_blog_user && isset( $data['display_name'] ) ) {
+			$user->save( 'name', $data['display_name'] );
+			unset( $data['display_name'] );
+		}
+
+		if ( $is_blog_user && isset( $data['note'] ) ) {
+			$user->save( 'summary', $data['note'] );
+			unset( $data['note'] );
+		}
+
+		// @todo set fields_attributes to extra fields once PR #762 merges.
+
+		return $data;
 	}
 
 	/**
@@ -46,6 +122,7 @@ class Enable_Mastodon_Apps {
 	 * @return array The filtered followers
 	 */
 	public static function api_account_followers( $followers, $user_id ) {
+		$user_id               = self::maybe_map_user_to_blog( $user_id );
 		$activitypub_followers = Followers::get_followers( $user_id, 40 );
 		$mastodon_followers    = array_map(
 			function ( $item ) {
@@ -63,7 +140,6 @@ class Enable_Mastodon_Apps {
 				$account->acct = $acct;
 				$account->display_name = $item->get_name();
 				$account->url = $item->get_url();
-				$account->uri = $item->get_id();
 				$account->avatar = $item->get_icon_url();
 				$account->avatar_static = $item->get_icon_url();
 				$account->created_at = new DateTime( $item->get_published() );
@@ -77,13 +153,10 @@ class Enable_Mastodon_Apps {
 				$account->bot = false;
 				$account->locked = false;
 				$account->group = false;
-				$account->discoversable = false;
-				$account->indexable = false;
-				$account->hide_collections = false;
+				$account->discoverable = false;
 				$account->noindex = false;
 				$account->fields = array();
 				$account->emojis = array();
-				$account->roles = array();
 
 				return $account;
 			},
@@ -168,6 +241,51 @@ class Enable_Mastodon_Apps {
 		}
 
 		return $user_data;
+	}
+
+	public static function api_account_internal( $user_data, $user_id ) {
+		$user_id_to_use = self::maybe_map_user_to_blog( $user_id );
+		$user = Users::get_by_id( $user_id_to_use );
+
+		if ( ! $user || is_wp_error( $user ) ) {
+			return $user_data;
+		}
+
+		// convert user to account.
+		$account = new Account();
+		// even if we have a blog user, maintain the provided user_id so as not to confuse clients
+		$account->id = (int) $user_id;
+		$account->username = $user->get_preferred_username();
+		$account->acct = $account->username;
+		$account->display_name = $user->get_name();
+		$account->note = $user->get_summary();
+		$account->source['note'] = wp_strip_all_tags( $account->note, true );
+		$account->url = $user->get_url();
+
+		$icon = $user->get_icon();
+		$account->avatar = $icon['url'];
+		$account->avatar_static = $account->avatar;
+
+		$header = $user->get_header_image();
+		if ( $header ) {
+			$account->header = $header['url'];
+			$account->header_static = $account->header;
+		}
+
+		$account->created_at = new DateTime( $user->get_published() );
+
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
+		$query_args = array(
+			'post_type' => $post_types,
+			'posts_per_page' => 1,
+		);
+		if ( $user_id > 0 ) {
+			$query_args['author'] = $user_id;
+		}
+		$posts = \get_posts( $query_args );
+		$account->last_status_at = ! empty( $posts ) ? new DateTime( $posts[0]->post_date_gmt ) : $account->created_at;
+
+		return $account;
 	}
 
 	private static function get_account_for_actor( $uri ) {
