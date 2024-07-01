@@ -1,7 +1,11 @@
 <?php
 namespace Activitypub\Integration;
 
+use Activitypub\Model\Blog;
 use Activitypub\Collection\Users;
+
+use function Activitypub\is_single_user;
+use function Activitypub\is_user_type_disabled;
 
 /**
  * Compatibility with the OpenGraph plugin
@@ -46,14 +50,30 @@ class Opengraph {
 			return $metadata;
 		}
 
+		// Always show Blog-User if the Blog is in single user mode
+		if ( is_single_user() ) {
+			$user = new Blog();
+
+			// add WebFinger resource
+			$metadata['fediverse:creator'] = $user->get_webfinger();
+
+			return $metadata;
+		}
+
 		if ( \is_author() ) {
+			// Use the Author of the Archive-Page
 			$user_id = \get_queried_object_id();
 		} elseif (
 			\is_singular() &&
 			\post_type_supports( get_post_type(), 'activitypub' )
 		) {
-			$user_id = \get_the_author_meta( 'ID' );
+			// Use the Author of the Post
+			$user_id = \get_post_field( 'post_author', \get_queried_object_id() );
+		} elseif ( ! is_user_type_disabled( 'blog' ) ) {
+			// Use the Blog-User for any other page, if the Blog-User is not disabled
+			$user_id = Users::BLOG_USER_ID;
 		} else {
+			// Do not add any metadata otherwise
 			return $metadata;
 		}
 
