@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.5
-Stable tag: 2.4.0
+Stable tag: 2.5.0
 Requires PHP: 5.6
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -37,7 +37,7 @@ Some things to note:
 
 1. The blog-wide profile is only compatible with sites with rewrite rules enabled. If your site does not have rewrite rules enabled, the author-specific profiles may still work.
 1. Many single-author blogs have chosen to turn off or redirect their author profile pages, usually via an SEO plugin like Yoast or Rank Math. This is usually done to avoid duplicate content with your blog’s home page. If your author page has been deactivated in this way, then ActivityPub author profiles won’t work for you. Instead, you can turn your author profile page back on, and then use the option in your SEO plugin to noindex the author page. This will still resolve duplicate content issues with search engines and will enable ActivityPub author profiles to work.
-1. Once ActivityPub is installed, *only new posts going forward* will be available in the fediverse. Likewise, even if you’ve been using ActivityPub for a while, anyone who follows your site, will only see new posts you publish from that moment on. They will never see previously-published posts in their Home feed. This process is very similar to subscribing to a newsletter. If you subscribe to a newsletter, you will only receive future emails, but not the old archived ones. With ActivityPub, if someone follows your site, they will only receive new blog posts you publish from then on.
+1. Once ActivityPub is installed, *only new posts going forward* will be available in the fediverse. Likewise, even if you’ve been using ActivityPub for a while, anyone who follows your site will only see new posts you publish from that moment on. They will never see previously-published posts in their Home feed. This process is very similar to subscribing to a newsletter. If you subscribe to a newsletter, you will only receive future emails, but not the old archived ones. With ActivityPub, if someone follows your site, they will only receive new blog posts you publish from then on.
 
 So what’s the process?
 
@@ -132,6 +132,18 @@ The followers of a user can be found in the menu under "Users" -> "Followers" or
 For reasons of data protection, it is not possible to see the followers of other users.
 
 == Changelog ==
+
+= 2.5.0 =
+
+* Added: WebFinger cors header
+* Added: WebFinger Content-Type
+* Added: The Fediverse creator of a post to OpenGraph
+* Improved: Try to lookup local users first for Enable Mastodon Apps
+* Improved: Send also Announces for deletes
+* Improved: Load time by adding `count_total=false` to `WP_User_Query`
+* Fixed: Several WebFinger issues
+* Fixed: Redirect issue for Application user
+* Fixed: Accessibilty issues with missing screen-reader-text on User overview page
 
 = 2.4.0 =
 
