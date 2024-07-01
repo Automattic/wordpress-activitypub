@@ -41,6 +41,11 @@ class Opengraph {
 	 * @return array the updated metadata.
 	 */
 	public static function add_opengraph_metadata( $metadata ) {
+		// Do not add the metadata if it already exists
+		if ( array_key_exists( 'fediverse:creator', $metadata ) ) {
+			return $metadata;
+		}
+
 		if ( \is_author() ) {
 			$user_id = \get_queried_object_id();
 		} elseif (
