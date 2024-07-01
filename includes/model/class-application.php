@@ -197,4 +197,8 @@ class Application extends Actor {
 			)
 		);
 	}
+
+	public function get_canonical_url() {
+		return \home_url();
+	}
 }
