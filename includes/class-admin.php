@@ -423,9 +423,9 @@ class Admin {
 		}
 
 		if ( \user_can( $user_id, 'activitypub' ) ) {
-			return '&#x2713;';
+			return '<span aria-hidden="true">&#x2713;</span><span class="screen-reader-text">' . esc_html__( 'ActivityPub enabled for this author', 'activitypub' ) . '</span>';
 		} else {
-			return '&#x2717;';
+			return '<span aria-hidden="true">&#x2717;</span><span class="screen-reader-text">' . esc_html__( 'ActivityPub disabled for this author', 'activitypub' ) . '</span>';
 		}
 	}
 
