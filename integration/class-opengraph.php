@@ -15,7 +15,7 @@ class Opengraph {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_filter( 'opengraph_prefixes', array( self::class, 'add_opengraph_prefixes' ) );
+		// \add_filter( 'opengraph_prefixes', array( self::class, 'add_opengraph_prefixes' ) );
 		\add_filter( 'opengraph_metadata', array( self::class, 'add_opengraph_metadata' ) );
 	}
 
