@@ -19,8 +19,11 @@ class Opengraph {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		// \add_filter( 'opengraph_prefixes', array( self::class, 'add_opengraph_prefixes' ) );
-		\add_filter( 'opengraph_metadata', array( self::class, 'add_opengraph_metadata' ) );
+		if ( ! function_exists( 'opengraph_metadata' ) ) {
+			\add_action( 'wp_head', array( self::class, 'add_meta_tags' ) );
+		}
+
+		\add_filter( 'opengraph_metadata', array( self::class, 'add_metadata' ) );
 	}
 
 	/**
@@ -30,7 +33,7 @@ class Opengraph {
 	 *
 	 * @return array the updated prefixes.
 	 */
-	public static function add_opengraph_prefixes( $prefixes ) {
+	public static function add_prefixes( $prefixes ) {
 		// @todo discuss namespace
 		$prefixes['fediverse'] = 'https://codeberg.org/fediverse/fep/src/branch/main/fep/XXXX/fep-XXXX.md';
 
@@ -44,7 +47,7 @@ class Opengraph {
 	 *
 	 * @return array the updated metadata.
 	 */
-	public static function add_opengraph_metadata( $metadata ) {
+	public static function add_metadata( $metadata ) {
 		// Do not add the metadata if it already exists
 		if ( array_key_exists( 'fediverse:creator', $metadata ) ) {
 			return $metadata;
@@ -87,5 +90,26 @@ class Opengraph {
 		$metadata['fediverse:creator'] = $user->get_webfinger();
 
 		return $metadata;
+	}
+
+	/**
+	 * Output Open Graph <meta> tags in the page header.
+	 */
+	public static function add_meta_tags() {
+		$metadata = apply_filters( 'opengraph_metadata', array() );
+		foreach ( $metadata as $key => $value ) {
+			if ( empty( $key ) || empty( $value ) ) {
+				continue;
+			}
+			$value = (array) $value;
+
+			foreach ( $value as $v ) {
+				printf(
+					'<meta property="%1$s" name="%1$s" content="%2$s" />' . PHP_EOL,
+					esc_attr( $key ),
+					esc_attr( $v )
+				);
+			}
+		}
 	}
 }
