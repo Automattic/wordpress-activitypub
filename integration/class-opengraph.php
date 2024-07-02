@@ -48,11 +48,6 @@ class Opengraph {
 	 * @return array the updated metadata.
 	 */
 	public static function add_metadata( $metadata ) {
-		// Do not add the metadata if it already exists
-		if ( array_key_exists( 'fediverse:creator', $metadata ) ) {
-			return $metadata;
-		}
-
 		// Always show Blog-User if the Blog is in single user mode
 		if ( is_single_user() ) {
 			$user = new Blog();
@@ -66,10 +61,7 @@ class Opengraph {
 		if ( \is_author() ) {
 			// Use the Author of the Archive-Page
 			$user_id = \get_queried_object_id();
-		} elseif (
-			\is_singular() &&
-			\post_type_supports( get_post_type(), 'activitypub' )
-		) {
+		} elseif ( \is_singular() ) {
 			// Use the Author of the Post
 			$user_id = \get_post_field( 'post_author', \get_queried_object_id() );
 		} elseif ( ! is_user_type_disabled( 'blog' ) ) {
