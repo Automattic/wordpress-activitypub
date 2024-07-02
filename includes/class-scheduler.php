@@ -130,9 +130,16 @@ class Scheduler {
 
 		$type = false;
 
-		if ( 'publish' === $new_status && 'publish' !== $old_status ) {
+		if (
+			'publish' === $new_status &&
+			'publish' !== $old_status
+		) {
 			$type = 'Create';
-		} elseif ( 'publish' === $new_status ) {
+		} elseif (
+			'publish' === $new_status ||
+			( 'draft' === $new_status &&
+			'draft' !== $old_status )
+		) {
 			$type = 'Update';
 		} elseif ( 'trash' === $new_status ) {
 			$type = 'Delete';
