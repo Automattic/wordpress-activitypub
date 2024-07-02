@@ -18,17 +18,17 @@ class Signature {
 	/**
 	 * Return the public key for a given user.
 	 *
-	 * @param int  $user_id The WordPress User ID.
-	 * @param bool $force   Force the generation of a new key pair.
+	 * @param WP_User|int $user_id The WordPress User ID.
+	 * @param bool        $force   Force the generation of a new key pair.
 	 *
 	 * @return mixed The public key.
 	 */
-	public static function get_public_key_for( $user_id, $force = false ) {
+	public static function get_public_key_for( $user, $force = false ) {
 		if ( $force ) {
-			self::generate_key_pair_for( $user_id );
+			self::generate_key_pair_for( $user );
 		}
 
-		$key_pair = self::get_keypair_for( $user_id );
+		$key_pair = self::get_keypair_for( $user );
 
 		return $key_pair['public_key'];
 	}
@@ -36,17 +36,17 @@ class Signature {
 	/**
 	 * Return the private key for a given user.
 	 *
-	 * @param int  $user_id The WordPress User ID.
-	 * @param bool $force   Force the generation of a new key pair.
+	 * @param WP_User|int $user  The WordPress User ID.
+	 * @param bool        $force Force the generation of a new key pair.
 	 *
 	 * @return mixed The private key.
 	 */
-	public static function get_private_key_for( $user_id, $force = false ) {
+	public static function get_private_key_for( $user, $force = false ) {
 		if ( $force ) {
-			self::generate_key_pair_for( $user_id );
+			self::generate_key_pair_for( $user );
 		}
 
-		$key_pair = self::get_keypair_for( $user_id );
+		$key_pair = self::get_keypair_for( $user );
 
 		return $key_pair['private_key'];
 	}
@@ -54,16 +54,16 @@ class Signature {
 	/**
 	 * Return the key pair for a given user.
 	 *
-	 * @param int $user_id The WordPress User ID.
+	 * @param WP_User|int $user The WordPress User ID.
 	 *
 	 * @return array The key pair.
 	 */
-	public static function get_keypair_for( $user_id ) {
-		$option_key = self::get_signature_options_key_for( $user_id );
+	public static function get_keypair_for( $user ) {
+		$option_key = self::get_signature_options_key_for( $user );
 		$key_pair = \get_option( $option_key );
 
 		if ( ! $key_pair ) {
-			$key_pair = self::generate_key_pair_for( $user_id );
+			$key_pair = self::generate_key_pair_for( $user );
 		}
 
 		return $key_pair;
@@ -72,21 +72,13 @@ class Signature {
 	/**
 	 * Generates the pair keys
 	 *
-	 * @param int $user_id The WordPress User ID.
+	 * @param WP_User|int $user The WordPress User ID.
 	 *
 	 * @return array The key pair.
 	 */
-	protected static function generate_key_pair_for( $user_id ) {
-		$option_key = self::get_signature_options_key_for( $user_id );
-		$key_pair = self::check_legacy_key_pair_for( $user_id );
-
-		if ( $key_pair ) {
-			\add_option( $option_key, $key_pair );
-
-			return $key_pair;
-		}
-
-		$config = array(
+	protected static function generate_key_pair_for( $user ) {
+		$option_key = self::get_signature_options_key_for( $user );
+		$config     = array(
 			'digest_alg' => 'sha512',
 			'private_key_bits' => 2048,
 			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
@@ -124,69 +116,40 @@ class Signature {
 	/**
 	 * Return the option key for a given user.
 	 *
-	 * @param int $user_id The WordPress User ID.
+	 * @param WP_User|int $user The WordPress User ID.
 	 *
 	 * @return string The option key.
 	 */
-	protected static function get_signature_options_key_for( $user_id ) {
-		$id = $user_id;
-
-		if ( $user_id > 0 ) {
-			$user = \get_userdata( $user_id );
-			// sanatize username because it could include spaces and special chars
-			$id = sanitize_title( $user->user_login );
+	protected static function get_signature_options_key_for( $user ) {
+		if ( $user instanceof WP_User ) {
+			$user_login = $user->user_login;
+		} elseif ( (int) $user > 0 ) {
+			$user       = \get_userdata( $user );
+			$user_login = $user->user_login;
+		} else {
+			$user_login = $user;
 		}
+
+		// sanatize username because it could include spaces and special chars
+		$id = sanitize_title( $user_login );
 
 		return 'activitypub_keypair_for_' . $id;
 	}
 
 	/**
-	 * Check if there is a legacy key pair
-	 *
-	 * @param int $user_id The WordPress User ID.
-	 *
-	 * @return array|bool The key pair or false.
-	 */
-	protected static function check_legacy_key_pair_for( $user_id ) {
-		switch ( $user_id ) {
-			case 0:
-				$public_key = \get_option( 'activitypub_blog_user_public_key' );
-				$private_key = \get_option( 'activitypub_blog_user_private_key' );
-				break;
-			case -1:
-				$public_key = \get_option( 'activitypub_application_user_public_key' );
-				$private_key = \get_option( 'activitypub_application_user_private_key' );
-				break;
-			default:
-				$public_key = \get_user_meta( $user_id, 'magic_sig_public_key', true );
-				$private_key = \get_user_meta( $user_id, 'magic_sig_private_key', true );
-				break;
-		}
-
-		if ( ! empty( $public_key ) && is_string( $public_key ) && ! empty( $private_key ) && is_string( $private_key ) ) {
-			return array(
-				'private_key' => $private_key,
-				'public_key'  => $public_key,
-			);
-		}
-
-		return false;
-	}
-
-	/**
 	 * Generates the Signature for a HTTP Request
 	 *
-	 * @param int    $user_id     The WordPress User ID.
-	 * @param string $http_method The HTTP method.
-	 * @param string $url         The URL to send the request to.
-	 * @param string $date        The date the request is sent.
-	 * @param string $digest      The digest of the request body.
+	 * @param int|WP_User $user        The WordPress User or ID.
+	 * @param string      $http_method The HTTP method.
+	 * @param string      $url         The URL to send the request to.
+	 * @param string      $date        The date the request is sent.
+	 * @param string      $digest      The digest of the request body.
 	 *
 	 * @return string The signature.
 	 */
-	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
-		$user = Users::get_by_id( $user_id );
-		$key  = self::get_private_key_for( $user->get__id() );
+	public static function generate_signature( $user, $http_method, $url, $date, $digest = null ) {
+		$key = self::get_private_key_for( $user );
+		$key_id = '#main-key'; //$user->get_url() . '#main-key';
 
 		$url_parts = \wp_parse_url( $url );
 
@@ -214,8 +177,6 @@ class Signature {
 		$signature = null;
 		\openssl_sign( $signed_string, $signature, $key, \OPENSSL_ALGO_SHA256 );
 		$signature = \base64_encode( $signature ); // phpcs:ignore
-
-		$key_id = $user->get_url() . '#main-key';
 
 		if ( ! empty( $digest ) ) {
 			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="%s"', $key_id, $signature );
@@ -260,7 +221,11 @@ class Signature {
 		}
 
 		if ( ! isset( $headers['signature'] ) ) {
-			return new WP_Error( 'activitypub_signature', __( 'Request not signed', 'activitypub' ), array( 'status' => 401 ) );
+			return new WP_Error(
+				'activitypub_signature',
+				__( 'Request not signed', 'activitypub' ),
+				array( 'status' => 401 )
+			);
 		}
 
 		if ( array_key_exists( 'signature', $headers ) ) {
@@ -270,7 +235,14 @@ class Signature {
 		}
 
 		if ( ! isset( $signature_block ) || ! $signature_block ) {
-			return new WP_Error( 'activitypub_signature', __( 'Incompatible request signature. keyId and signature are required', 'activitypub' ), array( 'status' => 401 ) );
+			return new WP_Error(
+				'activitypub_signature',
+				__(
+					'Incompatible request signature. keyId and signature are required',
+					'activitypub'
+				),
+				array( 'status' => 401 )
+			);
 		}
 
 		$signed_headers = $signature_block['headers'];
@@ -280,12 +252,26 @@ class Signature {
 
 		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
 		if ( ! $signed_data ) {
-			return new WP_Error( 'activitypub_signature', __( 'Signed request date outside acceptable time window', 'activitypub' ), array( 'status' => 401 ) );
+			return new WP_Error(
+				'activitypub_signature',
+				__(
+					'Signed request date outside acceptable time window',
+					'activitypub'
+				),
+				array( 'status' => 401 )
+			);
 		}
 
 		$algorithm = self::get_signature_algorithm( $signature_block );
 		if ( ! $algorithm ) {
-			return new WP_Error( 'activitypub_signature', __( 'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)', 'activitypub' ), array( 'status' => 401 ) );
+			return new WP_Error(
+				'activitypub_signature',
+				__(
+					'Unsupported signature algorithm (only rsa-sha256 and hs2019 are supported)',
+					'activitypub'
+				),
+				array( 'status' => 401 )
+			);
 		}
 
 		if ( \in_array( 'digest', $signed_headers, true ) && isset( $body ) ) {
@@ -302,7 +288,14 @@ class Signature {
 			}
 
 			if ( \base64_encode( \hash( $hashalg, $body, true ) ) !== $digest[1] ) { // phpcs:ignore
-				return new WP_Error( 'activitypub_signature', __( 'Invalid Digest header', 'activitypub' ), array( 'status' => 401 ) );
+				return new WP_Error(
+					'activitypub_signature',
+					__(
+						'Invalid Digest header',
+						'activitypub'
+					),
+					array( 'status' => 401 )
+				);
 			}
 		}
 
@@ -315,7 +308,14 @@ class Signature {
 		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
 
 		if ( ! $verified ) {
-			return new WP_Error( 'activitypub_signature', __( 'Invalid signature', 'activitypub' ), array( 'status' => 401 ) );
+			return new WP_Error(
+				'activitypub_signature',
+				__(
+					'Invalid signature',
+					'activitypub'
+				),
+				array( 'status' => 401 )
+			);
 		}
 		return $verified;
 	}
@@ -357,7 +357,8 @@ class Signature {
 		if ( $signature_block['algorithm'] ) {
 			switch ( $signature_block['algorithm'] ) {
 				case 'rsa-sha-512':
-					return 'sha512'; //hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12
+					//hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12
+					return 'sha512';
 				default:
 					return 'sha256';
 			}

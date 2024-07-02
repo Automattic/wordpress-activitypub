@@ -20,8 +20,8 @@ function get_context() {
 	return \apply_filters( 'activitypub_json_context', $context );
 }
 
-function safe_remote_post( $url, $body, $user_id ) {
-	return Http::post( $url, $body, $user_id );
+function safe_remote_post( $url, $body, $user ) {
+	return Http::post( $url, $body, $user );
 }
 
 function safe_remote_get( $url ) {

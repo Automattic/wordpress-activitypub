@@ -15,18 +15,18 @@ class Http {
 	/**
 	 * Send a POST Request with the needed HTTP Headers
 	 *
-	 * @param string $url     The URL endpoint
-	 * @param string $body    The Post Body
-	 * @param int    $user_id The WordPress User-ID
+	 * @param string      $url  The URL endpoint
+	 * @param string      $body The Post Body
+	 * @param WP_User|int $user The WordPress User or ID
 	 *
 	 * @return array|WP_Error The POST Response or an WP_ERROR
 	 */
-	public static function post( $url, $body, $user_id ) {
-		\do_action( 'activitypub_pre_http_post', $url, $body, $user_id );
+	public static function post( $url, $body, $user ) {
+		\do_action( 'activitypub_pre_http_post', $url, $body, $user );
 
 		$date = \gmdate( 'D, d M Y H:i:s T' );
 		$digest = Signature::generate_digest( $body );
-		$signature = Signature::generate_signature( $user_id, 'post', $url, $date, $digest );
+		$signature = Signature::generate_signature( $user, 'post', $url, $date, $digest );
 
 		$wp_version = get_masked_wp_version();
 
@@ -58,7 +58,7 @@ class Http {
 			$response = new WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
 		}
 
-		\do_action( 'activitypub_safe_remote_post_response', $response, $url, $body, $user_id );
+		\do_action( 'activitypub_safe_remote_post_response', $response, $url, $body, $user );
 
 		return $response;
 	}

@@ -7,7 +7,6 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Factory;
-use Activitypub\Transformer\Post;
 use Activitypub\Transformer\Comment;
 
 use function Activitypub\is_single_user;
@@ -33,6 +32,7 @@ class Activity_Dispatcher {
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity' ), 10, 2 );
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity_or_announce' ), 10, 2 );
 		\add_action( 'activitypub_send_update_profile_activity', array( self::class, 'send_profile_update' ), 10, 1 );
+		\add_action( 'activitypub_send_actor_delete_activity', array( self::class, 'send_actor_delete_activity' ), 10, 2 );
 	}
 
 	/**
@@ -184,6 +184,31 @@ class Activity_Dispatcher {
 		}
 
 		set_wp_object_state( $wp_object, 'federated' );
+	}
+
+	/**
+	 * Send an Activity to all known (shared_)inboxes.
+	 *
+	 * @param WP_User $user The deleted WordPress User.
+	 *
+	 * @return void
+	 */
+	public static function send_actor_delete_activity( $user ) {
+		$url = \get_author_posts_url( null, $user->user_nicename );
+
+		$activity = new Activity();
+		$activity->set_id( $url . '#delete' );
+		$activity->set_type( 'Delete' );
+		$activity->set_actor( $url );
+		$activity->set_object( $url );
+		$activity->set_to( 'https://www.w3.org/ns/activitystreams#Public' );
+
+		$json    = $activity->to_json();
+		$inboxes = Followers::get_inboxes( Followers::ALL );
+
+		foreach ( $inboxes as $inbox ) {
+			safe_remote_post( $inbox, $json, $user );
+		}
 	}
 
 	/**

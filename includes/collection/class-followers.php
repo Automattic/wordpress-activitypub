@@ -19,6 +19,7 @@ use function Activitypub\get_remote_metadata_by_actor;
 class Followers {
 	const POST_TYPE = 'ap_follower';
 	const CACHE_KEY_INBOXES = 'follower_inboxes_%s';
+	const ALL = 'all';
 
 	/**
 	 * Add new Follower
@@ -253,7 +254,7 @@ class Followers {
 	/**
 	 * Returns all Inboxes fo a Users Followers
 	 *
-	 * @param int $user_id The ID of the WordPress User
+	 * @param int|string $user_id The ID of the WordPress User or 'all' for all Inboxes
 	 *
 	 * @return array The list of Inboxes
 	 */
@@ -265,32 +266,35 @@ class Followers {
 			return $inboxes;
 		}
 
-		// get all Followers of a ID of the WordPress User
-		$posts = new WP_Query(
-			array(
-				'nopaging'   => true,
-				'post_type'  => self::POST_TYPE,
-				'fields'     => 'ids',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query' => array(
-					'relation' => 'AND',
-					array(
-						'key'     => 'activitypub_inbox',
-						'compare' => 'EXISTS',
-					),
-					array(
-						'key'   => 'activitypub_user_id',
-						'value' => $user_id,
-					),
-					array(
-						'key'     => 'activitypub_inbox',
-						'value'   => '',
-						'compare' => '!=',
-					),
+		$args = array(
+			'nopaging'   => true,
+			'post_type'  => self::POST_TYPE,
+			'fields'     => 'ids',
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query' => array(
+				'relation' => 'AND',
+				array(
+					'key'     => 'activitypub_inbox',
+					'compare' => 'EXISTS',
 				),
-			)
+				array(
+					'key'     => 'activitypub_inbox',
+					'value'   => '',
+					'compare' => '!=',
+				),
+			),
 		);
 
+		// Add User-ID to the query
+		if ( self::ALL !== $user_id ) {
+			$args['meta_query'][] = array(
+				'key'   => 'activitypub_user_id',
+				'value' => $user_id,
+			);
+		}
+
+		// get all Followers of a ID of the WordPress User
+		$posts = new WP_Query( $args );
 		$posts = $posts->get_posts();
 
 		if ( ! $posts ) {
