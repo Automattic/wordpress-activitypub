@@ -458,13 +458,43 @@ class Activitypub {
 			)
 		);
 
+		\register_post_type(
+			'ap_extrafield',
+			array(
+				'labels'           => array(
+					'name'          => _x( 'Extra fields', 'post_type plural name', 'activitypub' ),
+					'singular_name' => _x( 'Extra field', 'post_type single name', 'activitypub' ),
+					'add_new'       => __( 'Add new', 'activitypub' ),
+					'add_new_item'  => __( 'Add new extra field', 'activitypub' ),
+					'new_item'      => __( 'New extra field', 'activitypub' ),
+					'edit_item'     => __( 'Edit extra field', 'activitypub' ),
+					'view_item'     => __( 'View extra field', 'activitypub' ),
+					'all_items'     => __( 'All extra fields', 'activitypub' ),
+				),
+				'public'              => false,
+				'hierarchical'        => false,
+				'query_var'           => false,
+				'has_archive'         => false,
+				'publicly_queryable'  => false,
+				'show_in_menu'        => false,
+				'delete_with_user'    => true,
+				'can_export'          => true,
+				'exclude_from_search' => true,
+				'show_in_rest'        => true,
+				'map_meta_cap'        => true,
+				'show_ui'             => true,
+				'supports'            => array( 'title', 'editor' ),
+			)
+		);
+
 		\do_action( 'activitypub_after_register_post_type' );
 	}
 
 	/**
-	 * Add the 'activitypub' query variable so WordPress won't mangle it.
+	 * Add the 'activitypub' capability to users who can publish posts.
 	 *
 	 * @param int   $user_id  User ID.
+	 *
 	 * @param array $userdata The raw array of data passed to wp_insert_user().
 	 */
 	public static function user_register( $user_id ) {

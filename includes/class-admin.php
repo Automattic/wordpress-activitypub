@@ -23,6 +23,8 @@ class Admin {
 		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
 		\add_action( 'load-comment.php', array( self::class, 'edit_comment' ) );
+		\add_action( 'load-post.php', array( self::class, 'edit_post' ) );
+		\add_action( 'load-edit.php', array( self::class, 'list_posts' ) );
 		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'admin_notices', array( self::class, 'admin_notices' ) );
@@ -350,6 +352,65 @@ class Admin {
 			},
 			1,
 			3
+		);
+	}
+
+	public static function edit_post() {
+		// Disable the edit_post capability for federated posts.
+		\add_filter(
+			'user_has_cap',
+			function ( $allcaps, $caps, $arg ) {
+				if ( 'edit_post' !== $arg[0] ) {
+					return $allcaps;
+				}
+
+				$post = get_post( $arg[2] );
+
+				if ( 'ap_extrafield' !== $post->post_type ) {
+					return $allcaps;
+				}
+
+				if ( (int) get_current_user_id() !== (int) $post->post_author ) {
+					return false;
+				}
+
+				return $allcaps;
+			},
+			1,
+			3
+		);
+	}
+
+	/**
+	 * Add ActivityPub specific actions/filters to the post list view
+	 *
+	 * @return void
+	 */
+	public static function list_posts() {
+		// Show only the user's extra fields.
+		\add_action(
+			'pre_get_posts',
+			function ( $query ) {
+				if (
+					$query->get( 'post_type' ) === 'ap_extrafield'
+				) {
+					$query->set( 'author', get_current_user_id() );
+				}
+			}
+		);
+
+		// Remove all views for the extra fields.
+		$screen_id = get_current_screen()->id;
+
+		add_filter(
+			"views_{$screen_id}",
+			function ( $views ) {
+				if ( 'ap_extrafield' === get_post_type() ) {
+					return array();
+				}
+
+				return $views;
+			}
 		);
 	}
 
