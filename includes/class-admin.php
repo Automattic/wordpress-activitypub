@@ -64,6 +64,8 @@ class Admin {
 			$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
 
 			\add_action( 'load-' . $followers_list_page, array( self::class, 'add_followers_list_help_tab' ) );
+
+			\add_users_page( \__( 'Extra Fields', 'activitypub' ), \__( 'Extra Fields', 'activitypub' ), 'read', esc_url( admin_url( '/edit.php?post_type=ap_extrafield' ) ) );
 		}
 	}
 
@@ -77,6 +79,16 @@ class Admin {
 		if ( empty( $permalink_structure ) ) {
 			$admin_notice = \__( 'You are using the ActivityPub plugin with a permalink structure of "plain". This will prevent ActivityPub from working.  Please go to "Settings" / "Permalinks" and choose a permalink structure other than "plain".', 'activitypub' );
 			self::show_admin_notice( $admin_notice, 'error' );
+		}
+
+		$current_screen = get_current_screen();
+
+		if ( isset( $current_screen->id ) && 'edit-ap_extrafield' === $current_screen->id ) {
+			?>
+			<div class="notice" style="margin: 0; background: none; border: none; box-shadow: none; padding: 15px 0 0 0; font-size: 14px;">
+				<?php esc_html_e( 'Your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?>
+			</div>
+			<?php
 		}
 	}
 

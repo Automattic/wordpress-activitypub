@@ -3,6 +3,7 @@ namespace Activitypub\Model;
 
 use WP_Query;
 use WP_Error;
+use Activitypub\Migration;
 use Activitypub\Signature;
 use Activitypub\Model\Blog;
 use Activitypub\Activity\Actor;
@@ -242,8 +243,9 @@ class User extends Actor {
 			)
 		);
 
+		$attachments = array();
+
 		if ( $extra_fields->have_posts() ) {
-			$attachments = array();
 			foreach ( $extra_fields->posts as $post ) {
 				$content = \get_the_content( null, false, $post );
 				$content = \make_clickable( $content );
@@ -265,44 +267,9 @@ class User extends Actor {
 					),
 				);
 			}
-			return $attachments;
 		}
 
-		$extra_fields = array();
-
-		$extra_fields[] = array(
-			'type' => 'PropertyValue',
-			'name' => \__( 'Blog', 'activitypub' ),
-			'value' => \html_entity_decode(
-				'<a rel="me" title="' . \esc_attr( \home_url( '/' ) ) . '" target="_blank" href="' . \home_url( '/' ) . '">' . \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) . '</a>',
-				\ENT_QUOTES,
-				'UTF-8'
-			),
-		);
-
-		$extra_fields[] = array(
-			'type' => 'PropertyValue',
-			'name' => \__( 'Profile', 'activitypub' ),
-			'value' => \html_entity_decode(
-				'<a rel="me" title="' . \esc_attr( \get_author_posts_url( $this->get__id() ) ) . '" target="_blank" href="' . \get_author_posts_url( $this->get__id() ) . '">' . \wp_parse_url( \get_author_posts_url( $this->get__id() ), \PHP_URL_HOST ) . '</a>',
-				\ENT_QUOTES,
-				'UTF-8'
-			),
-		);
-
-		if ( \get_the_author_meta( 'user_url', $this->get__id() ) ) {
-			$extra_fields[] = array(
-				'type' => 'PropertyValue',
-				'name' => \__( 'Website', 'activitypub' ),
-				'value' => \html_entity_decode(
-					'<a rel="me" title="' . \esc_attr( \get_the_author_meta( 'user_url', $this->get__id() ) ) . '" target="_blank" href="' . \get_the_author_meta( 'user_url', $this->get__id() ) . '">' . \wp_parse_url( \get_the_author_meta( 'user_url', $this->get__id() ), \PHP_URL_HOST ) . '</a>',
-					\ENT_QUOTES,
-					'UTF-8'
-				),
-			);
-		}
-
-		return $extra_fields;
+		return $attachments;
 	}
 
 	/**
