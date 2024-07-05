@@ -86,7 +86,7 @@ class Admin {
 		if ( isset( $current_screen->id ) && 'edit-ap_extrafield' === $current_screen->id ) {
 			?>
 			<div class="notice" style="margin: 0; background: none; border: none; box-shadow: none; padding: 15px 0 0 0; font-size: 14px;">
-				<?php esc_html_e( 'Your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?>
+				<?php esc_html_e( 'These are extra fields that are used for your ActivityPub profile. You can use your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?>
 			</div>
 			<?php
 		}
