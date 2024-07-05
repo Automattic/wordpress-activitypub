@@ -236,10 +236,10 @@ class User extends Actor {
 	public function get_attachment() {
 		$extra_fields = new WP_Query(
 			array(
-				'post_type'      => 'ap_extrafield',
-				'posts_per_page' => -1,
-				'status'         => 'publish',
-				'author'         => $this->get__id(),
+				'post_type' => 'ap_extrafield',
+				'nopaging'  => true,
+				'status'    => 'publish',
+				'author'    => $this->get__id(),
 			)
 		);
 
