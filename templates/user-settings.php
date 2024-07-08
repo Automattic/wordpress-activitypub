@@ -51,14 +51,22 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 				<tr>
 					<td><?php echo \esc_html( $extra_field->post_title ); ?></td>
 					<td><?php echo \wp_kses_post( \get_the_excerpt( $extra_field ) ); ?></td>
-					<td><a href="<?php echo \esc_url( \get_edit_post_link( $extra_field->ID ) ); ?>" class="button"><?php \esc_html_e( 'Edit', 'activitypub' ); ?></a></td>
+					<td>
+						<a href="<?php echo \esc_url( \get_edit_post_link( $extra_field->ID ) ); ?>" class="button">
+							<?php \esc_html_e( 'Edit', 'activitypub' ); ?>
+						</a>
+					</td>
 				</tr>
 				<?php } ?>
 				</table>
 
 				<p>
-					<a href="<?php echo esc_url( admin_url( '/post-new.php?post_type=ap_extrafield' ) ); ?>" class="button"><?php esc_html_e( 'Add new', 'activitypub' ); ?></a>
-					<a href="<?php echo esc_url( admin_url( '/edit.php?post_type=ap_extrafield' ) ); ?>"><?php esc_html_e( 'Manage all', 'activitypub' ); ?></a>
+					<a href="<?php echo esc_url( admin_url( '/post-new.php?post_type=ap_extrafield' ) ); ?>" class="button">
+						<?php esc_html_e( 'Add new', 'activitypub' ); ?>
+					</a>
+					<a href="<?php echo esc_url( admin_url( '/edit.php?post_type=ap_extrafield' ) ); ?>">
+						<?php esc_html_e( 'Manage all', 'activitypub' ); ?>
+					</a>
 				</p>
 			</td>
 		</tr>

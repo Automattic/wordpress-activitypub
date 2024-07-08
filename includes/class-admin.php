@@ -31,10 +31,13 @@ class Admin {
 
 		\add_filter( 'comment_row_actions', array( self::class, 'comment_row_actions' ), 10, 2 );
 		\add_filter( 'manage_edit-comments_columns', array( static::class, 'manage_comment_columns' ) );
-		\add_filter( 'manage_comments_custom_column', array( static::class, 'manage_comments_custom_column' ), 9, 2 );
+		\add_action( 'manage_comments_custom_column', array( static::class, 'manage_comments_custom_column' ), 9, 2 );
+
+		\add_filter( 'manage_posts_columns', array( static::class, 'manage_post_columns' ), 10, 2 );
+		\add_action( 'manage_posts_custom_column', array( self::class, 'manage_posts_custom_column' ), 10, 2 );
 
 		\add_filter( 'manage_users_columns', array( self::class, 'manage_users_columns' ), 10, 1 );
-		\add_filter( 'manage_users_custom_column', array( self::class, 'manage_users_custom_column' ), 10, 3 );
+		\add_action( 'manage_users_custom_column', array( self::class, 'manage_users_custom_column' ), 10, 3 );
 		\add_filter( 'bulk_actions-users', array( self::class, 'user_bulk_options' ) );
 		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
 
@@ -453,8 +456,24 @@ class Admin {
 	 * @param array $columns the list of column names
 	 */
 	public static function manage_comment_columns( $columns ) {
-		$columns['comment_type'] = esc_attr__( 'Comment-Type', 'activitypub' );
+		$columns['comment_type']     = esc_attr__( 'Comment-Type', 'activitypub' );
 		$columns['comment_protocol'] = esc_attr__( 'Protocol', 'activitypub' );
+
+		return $columns;
+	}
+
+	/**
+	 * Add "post_content" as column for Extra-Fields in WP-Admin
+	 *
+	 * @param array  $columns   Tthe list of column names.
+	 * @param string $post_type The post type.
+	 */
+	public static function manage_post_columns( $columns, $post_type ) {
+		if ( 'ap_extrafield' === $post_type ) {
+			$after_key = 'title';
+			$index     = array_search( $after_key, array_keys( $columns ), true );
+			$columns   = array_slice( $columns, 0, $index + 1 ) + array( 'extra_field_content' => esc_attr__( 'Content', 'activitypub' ) ) + $columns;
+		}
 
 		return $columns;
 	}
@@ -497,6 +516,25 @@ class Admin {
 			return '<span aria-hidden="true">&#x2713;</span><span class="screen-reader-text">' . esc_html__( 'ActivityPub enabled for this author', 'activitypub' ) . '</span>';
 		} else {
 			return '<span aria-hidden="true">&#x2717;</span><span class="screen-reader-text">' . esc_html__( 'ActivityPub disabled for this author', 'activitypub' ) . '</span>';
+		}
+	}
+
+	/**
+	 * Add a column "extra_field_content" to the post list view
+	 *
+	 * @param string $column_name The column name.
+	 * @param int    $post_id     The post ID.
+	 *
+	 * @return void
+	 */
+	public static function manage_posts_custom_column( $column_name, $post_id ) {
+		$post = get_post( $post_id );
+
+		if ( 'extra_field_content' === $column_name ) {
+			$post = get_post( $post_id );
+			if ( 'ap_extrafield' === $post->post_type ) {
+				echo esc_attr( wp_strip_all_tags( $post->post_content ) );
+			}
 		}
 	}
 
