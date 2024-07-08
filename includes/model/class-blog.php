@@ -391,5 +391,7 @@ class Blog extends Actor {
 				'UTF-8'
 			),
 		);
+
+		return $array;
 	}
 }
