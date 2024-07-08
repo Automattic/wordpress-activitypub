@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub;
 
+use WP_Query;
 use WP_Error;
 use Activitypub\Http;
 use Activitypub\Comment;
@@ -988,4 +989,93 @@ function custom_large_numbers( $formatted, $number, $decimals ) {
 
 	// Default fallback. We should not get here.
 	return $formatted;
+}
+
+/**
+ * Normalize a URL.
+ *
+ * @param string $url The URL.
+ *
+ * @return string The normalized URL.
+ */
+function normalize_url( $url ) {
+	$url = \untrailingslashit( $url );
+	$url = \str_replace( 'https://', '', $url );
+	$url = \str_replace( 'http://', '', $url );
+	$url = \str_replace( 'www.', '', $url );
+
+	return $url;
+}
+
+/**
+ * Normalize a host.
+ *
+ * @param string $host The host.
+ *
+ * @return string The normalized host.
+ */
+function normalize_host( $host ) {
+	return \str_replace( 'www.', '', $host );
+}
+
+/**
+ * Get the Extra Fields of an Actor
+ *
+ * @param int $user_id The User-ID.
+ *
+ * @return array The extra fields.
+ */
+function get_actor_extra_fields( $user_id ) {
+	$extra_fields = new WP_Query(
+		array(
+			'post_type' => 'ap_extrafield',
+			'nopaging'  => true,
+			'status'    => 'publish',
+			'author'    => $user_id,
+		)
+	);
+
+	if ( $extra_fields->have_posts() ) {
+		return $extra_fields->posts;
+	}
+
+	$extra_fields     = array();
+	$already_migrated = \get_user_meta( $user_id, 'activitypub_default_extra_fields', true );
+
+	if ( $already_migrated ) {
+		return $extra_fields;
+	}
+
+	$defaults = array(
+		\__( 'Blog', 'activitypub' )     => \home_url( '/' ),
+		\__( 'Profile', 'activitypub' )  => \get_author_posts_url( $user_id ),
+		\__( 'Homepage', 'activitypub' ) => \get_the_author_meta( 'user_url', $user_id ),
+	);
+
+	foreach ( $defaults as $title => $url ) {
+		if ( ! $url ) {
+			continue;
+		}
+
+		$extra_field = array(
+			'post_type'      => 'ap_extrafield',
+			'post_title'     => $title,
+			'post_status'    => 'publish',
+			'post_author'    => $user_id,
+			'post_content'   => sprintf(
+				'<!-- wp:paragraph --><p><a rel="me" title="%s" target="_blank" href="%s">%s</a></p><!-- /wp:paragraph -->',
+				\esc_attr( $url ),
+				$url,
+				\wp_parse_url( $url, \PHP_URL_HOST )
+			),
+			'comment_status' => 'closed',
+		);
+
+		$extra_field_id  = wp_insert_post( $extra_field );
+		$extra_fields[]  = get_post( $extra_field_id );
+	}
+
+	\update_user_meta( $user_id, 'activitypub_default_extra_fields', true );
+
+	return $extra_fields;
 }

@@ -11,6 +11,7 @@ use Activitypub\Collection\Users;
 
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_actor_extra_fields;
 
 class User extends Actor {
 	/**
@@ -234,39 +235,30 @@ class User extends Actor {
 	 * @return array The extended User-Output.
 	 */
 	public function get_attachment() {
-		$extra_fields = new WP_Query(
-			array(
-				'post_type' => 'ap_extrafield',
-				'nopaging'  => true,
-				'status'    => 'publish',
-				'author'    => $this->get__id(),
-			)
-		);
+		$extra_fields = get_actor_extra_fields( \get_current_user_id() );
 
 		$attachments = array();
 
-		if ( $extra_fields->have_posts() ) {
-			foreach ( $extra_fields->posts as $post ) {
-				$content = \get_the_content( null, false, $post );
-				$content = \make_clickable( $content );
-				$content = \do_blocks( $content );
-				$content = \wptexturize( $content );
-				$content = \wp_filter_content_tags( $content );
-				// replace script and style elements
-				$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
-				$content = \strip_shortcodes( $content );
-				$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+		foreach ( $extra_fields as $post ) {
+			$content = \get_the_content( null, false, $post );
+			$content = \make_clickable( $content );
+			$content = \do_blocks( $content );
+			$content = \wptexturize( $content );
+			$content = \wp_filter_content_tags( $content );
+			// replace script and style elements
+			$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
+			$content = \strip_shortcodes( $content );
+			$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
 
-				$attachments[] = array(
-					'type' => 'PropertyValue',
-					'name' => \get_the_title( $post ),
-					'value' => \html_entity_decode(
-						$content,
-						\ENT_QUOTES,
-						'UTF-8'
-					),
-				);
-			}
+			$attachments[] = array(
+				'type' => 'PropertyValue',
+				'name' => \get_the_title( $post ),
+				'value' => \html_entity_decode(
+					$content,
+					\ENT_QUOTES,
+					'UTF-8'
+				),
+			);
 		}
 
 		return $attachments;

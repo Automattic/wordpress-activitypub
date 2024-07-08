@@ -37,17 +37,10 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 
 				<table class="widefat striped activitypub-extra-fields" role="presentation" style="margin: 15px 0;">
 				<?php
-					$extra_fields = new WP_Query(
-						array(
-							'post_type' => 'ap_extrafield',
-							'nopaging'  => true,
-							'status'    => 'publish',
-							'author'    => get_current_user_id(),
-						)
-					);
+				$extra_fields = \Activitypub\get_actor_extra_fields( \get_current_user_id() );
 
-					foreach ( $extra_fields->posts as $extra_field ) {
-						?>
+				foreach ( $extra_fields as $extra_field ) {
+					?>
 				<tr>
 					<td><?php echo \esc_html( $extra_field->post_title ); ?></td>
 					<td><?php echo \wp_kses_post( \get_the_excerpt( $extra_field ) ); ?></td>
