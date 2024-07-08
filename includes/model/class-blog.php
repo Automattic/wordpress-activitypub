@@ -368,4 +368,28 @@ class Blog extends Actor {
 			return false;
 		}
 	}
+
+	/**
+	 * Extend the User-Output with Attachments.
+	 *
+	 * @return array The extended User-Output.
+	 */
+	public function get_attachment() {
+		$array = array();
+
+		$array[] = array(
+			'type' => 'PropertyValue',
+			'name' => \__( 'Blog', 'activitypub' ),
+			'value' => \html_entity_decode(
+				sprintf(
+					'<a rel="me" title="%s" target="_blank" href="%s">%s</a>',
+					\esc_attr( \home_url( '/' ) ),
+					\home_url( '/' ),
+					\wp_parse_url( \home_url( '/' ), \PHP_URL_HOST )
+				),
+				\ENT_QUOTES,
+				'UTF-8'
+			),
+		);
+	}
 }
