@@ -54,10 +54,12 @@ class Interactions {
 			return false;
 		}
 
+		$url = object_to_uri( $meta['url'] );
+
 		$commentdata = array(
 			'comment_post_ID' => $comment_post_id,
 			'comment_author' => isset( $meta['name'] ) ? \esc_attr( $meta['name'] ) : \esc_attr( $meta['preferredUsername'] ),
-			'comment_author_url' => \esc_url_raw( $meta['url'] ),
+			'comment_author_url' => \esc_url_raw( $url ),
 			'comment_content' => \addslashes( $activity['object']['content'] ),
 			'comment_type' => 'comment',
 			'comment_author_email' => '',
@@ -73,7 +75,7 @@ class Interactions {
 		}
 
 		if ( isset( $activity['object']['url'] ) ) {
-			$commentdata['comment_meta']['source_url'] = \esc_url_raw( $activity['object']['url'] );
+			$commentdata['comment_meta']['source_url'] = \esc_url_raw( object_to_uri( $activity['object']['url'] ) );
 		}
 
 		// disable flood control
@@ -198,7 +200,7 @@ class Interactions {
 
 		// get URL, because $actor seems to be the ID
 		if ( $meta && ! is_wp_error( $meta ) && isset( $meta['url'] ) ) {
-			$actor = $meta['url'];
+			$actor = object_to_uri( $meta['url'] );
 		}
 
 		$args = array(
