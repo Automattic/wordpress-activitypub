@@ -403,9 +403,7 @@ class Admin {
 		\add_action(
 			'pre_get_posts',
 			function ( $query ) {
-				if (
-					$query->get( 'post_type' ) === 'ap_extrafield'
-				) {
+				if ( $query->get( 'post_type' ) === 'ap_extrafield' ) {
 					$query->set( 'author', get_current_user_id() );
 				}
 			}
