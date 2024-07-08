@@ -287,24 +287,24 @@ class Migration {
 
 	public static function generate_extra_fields( $user_id ) {
 		$blog = array(
-			'post_type' => 'ap_extrafield',
-			'post_title' => \__( 'Blog', 'activitypub' ),
-			'post_status' => 'publish',
-			'post_author' => $user_id,
+			'post_type'      => 'ap_extrafield',
+			'post_title'     => \__( 'Blog', 'activitypub' ),
+			'post_status'    => 'publish',
+			'post_author'    => $user_id,
 			// format to block editor format
-			'post_content' => '<!-- wp:paragraph --><p><a rel="me" title="' . \esc_attr( \home_url( '/' ) ) . '" target="_blank" href="' . \home_url( '/' ) . '">' . \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) . '</a></p><!-- /wp:paragraph -->',
+			'post_content'   => '<!-- wp:paragraph --><p><a rel="me" title="' . \esc_attr( \home_url( '/' ) ) . '" target="_blank" href="' . \home_url( '/' ) . '">' . \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) . '</a></p><!-- /wp:paragraph -->',
 			'comment_status' => 'closed',
 		);
 
 		wp_insert_post( $blog );
 
 		$profile = array(
-			'post_type' => 'ap_extrafield',
-			'post_title' => \__( 'Profile', 'activitypub' ),
-			'post_status' => 'publish',
-			'post_author' => $user_id,
+			'post_type'      => 'ap_extrafield',
+			'post_title'     => \__( 'Profile', 'activitypub' ),
+			'post_status'    => 'publish',
+			'post_author'    => $user_id,
 			// format to block editor format
-			'post_content' => '<!-- wp:paragraph --><p><a rel="me" title="' . \esc_attr( \get_author_posts_url( $user_id ) ) . '" target="_blank" href="' . \get_author_posts_url( $user_id ) . '">' . \wp_parse_url( \get_author_posts_url( $user_id ), \PHP_URL_HOST ) . '</a></p><!-- /wp:paragraph -->',
+			'post_content'   => '<!-- wp:paragraph --><p><a rel="me" title="' . \esc_attr( \get_author_posts_url( $user_id ) ) . '" target="_blank" href="' . \get_author_posts_url( $user_id ) . '">' . \wp_parse_url( \get_author_posts_url( $user_id ), \PHP_URL_HOST ) . '</a></p><!-- /wp:paragraph -->',
 			'comment_status' => 'closed',
 		);
 
@@ -312,12 +312,12 @@ class Migration {
 
 		if ( \get_the_author_meta( 'user_url', $user_id ) ) {
 			$homepage = array(
-				'post_type' => 'ap_extrafield',
-				'post_title' => \__( 'Homepage', 'activitypub' ),
-				'post_status' => 'publish',
-				'post_author' => $user_id,
+				'post_type'      => 'ap_extrafield',
+				'post_title'     => \__( 'Homepage', 'activitypub' ),
+				'post_status'    => 'publish',
+				'post_author'    => $user_id,
 				// format to block editor format
-				'post_content' => '<!-- wp:paragraph --><p><a rel="me" title="' . \esc_attr( \get_the_author_meta( 'user_url', $user_id ) ) . '" target="_blank" href="' . \get_the_author_meta( 'user_url', $user_id ) . '">' . \wp_parse_url( \get_the_author_meta( 'user_url', $user_id ), \PHP_URL_HOST ) . '</a></p><!-- /wp:paragraph -->',
+				'post_content'   => '<!-- wp:paragraph --><p><a rel="me" title="' . \esc_attr( \get_the_author_meta( 'user_url', $user_id ) ) . '" target="_blank" href="' . \get_the_author_meta( 'user_url', $user_id ) . '">' . \wp_parse_url( \get_the_author_meta( 'user_url', $user_id ), \PHP_URL_HOST ) . '</a></p><!-- /wp:paragraph -->',
 				'comment_status' => 'closed',
 			);
 
