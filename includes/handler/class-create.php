@@ -61,7 +61,7 @@ class Create {
 		$state    = Interactions::add_comment( $array );
 		$reaction = null;
 
-		if ( $state && ! \is_wp_error( $reaction ) ) {
+		if ( $state && ! \is_wp_error( $state ) ) {
 			$reaction = \get_comment( $state );
 		}
 
