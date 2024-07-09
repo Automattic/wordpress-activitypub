@@ -1039,6 +1039,17 @@ function get_actor_extra_fields( $user_id ) {
 		return $extra_fields->posts;
 	}
 
+	return add_default_actor_extra_fields( $user_id );
+}
+
+/**
+ * Add default extra fields to an actor.
+ *
+ * @param int $user_id The User-ID.
+ *
+ * @return array The extra fields.
+ */
+function add_default_actor_extra_fields( $user_id ) {
 	$extra_fields     = array();
 	$already_migrated = \get_user_meta( $user_id, 'activitypub_default_extra_fields', true );
 
@@ -1071,8 +1082,8 @@ function get_actor_extra_fields( $user_id ) {
 			'comment_status' => 'closed',
 		);
 
-		$extra_field_id  = wp_insert_post( $extra_field );
-		$extra_fields[]  = get_post( $extra_field_id );
+		$extra_field_id = wp_insert_post( $extra_field );
+		$extra_fields[] = get_post( $extra_field_id );
 	}
 
 	\update_user_meta( $user_id, 'activitypub_default_extra_fields', true );

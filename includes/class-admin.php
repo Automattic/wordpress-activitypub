@@ -9,6 +9,7 @@ use function Activitypub\count_followers;
 use function Activitypub\is_user_disabled;
 use function Activitypub\was_comment_received;
 use function Activitypub\is_comment_federatable;
+use function Activitypub\add_default_actor_extra_fields;
 
 /**
  * ActivityPub Admin Class
@@ -425,6 +426,11 @@ class Admin {
 				return $views;
 			}
 		);
+
+		// Set defaults for new extra fields.
+		if ( 'edit-ap_extrafield' === $screen_id ) {
+			add_default_actor_extra_fields( get_current_user_id() );
+		}
 	}
 
 	public static function comment_row_actions( $actions, $comment ) {
