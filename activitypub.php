@@ -244,7 +244,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		'activitypub',
 		'\Activitypub\Cli',
 		array(
-			'shortdesc' => __( 'Some ActivityPub related commands.', 'activitypub' ),
+			'shortdesc' => __( 'ActivityPub related commands: Meta-Infos and Self-Destruct.', 'activitypub' ),
 		)
 	);
 }
