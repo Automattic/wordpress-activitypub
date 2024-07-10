@@ -1,6 +1,9 @@
 <?php
 namespace Activitypub\Handler;
 
+use function Activitypub\get_remote_metadata_by_actor;
+use function Activitypub\object_to_uri;
+
 /**
  * Handle Like requests
  */
@@ -79,8 +82,8 @@ class Like {
 			return false;
 		}
 
-		$actor = \Activitypub\object_to_uri( $activity['actor'] );
-		$meta  = \Activitypub\get_remote_metadata_by_actor( $actor );
+		$actor = object_to_uri( $activity['actor'] );
+		$meta  = get_remote_metadata_by_actor( $actor );
 
 		if ( ! $meta || is_wp_error( $meta ) ) {
 			return false;
@@ -89,7 +92,7 @@ class Like {
 		$commentdata = array(
 			'comment_post_ID'      => $comment_post_id,
 			'comment_author'       => isset( $meta['name'] ) ? \esc_attr( $meta['name'] ) : \esc_attr( $meta['preferredUsername'] ),
-			'comment_author_url'   => esc_url_raw( \Activitypub\object_to_uri( $meta['url'] ) ),
+			'comment_author_url'   => esc_url_raw( object_to_uri( $meta['url'] ) ),
 			'comment_content'      => __( '&hellip; liked this!', 'activitypub' ), // Default content.
 			'comment_type'         => 'like',
 			'comment_author_email' => '',

@@ -3,6 +3,7 @@ namespace Activitypub\Handler;
 
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Comment;
 
 use function Activitypub\object_to_uri;
 
@@ -45,6 +46,28 @@ class Undo {
 			$actor   = object_to_uri( $activity['actor'] );
 
 			Followers::remove_follower( $user_id, $actor );
+		}
+
+		if (
+			isset( $activity['object']['type'] ) &&
+			'Like' === $activity['object']['type'] &&
+			isset( $activity['object']['id'] )
+		) {
+			if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
+				return;
+			}
+
+			$comment = Comment::object_id_to_comment( esc_url_raw( $activity['object']['id'] ) );
+
+			if ( empty( $comment ) ) {
+				return;
+			}
+
+			if ( 'like' === get_comment_type( $comment ) ) {
+				$state = wp_trash_comment( $comment );
+			}
+
+			do_action( 'activitypub_handled_undo', $activity, $user_id, isset( $state ) ? $state : null, null );
 		}
 	}
 }
