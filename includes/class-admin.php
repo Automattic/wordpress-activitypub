@@ -3,6 +3,7 @@ namespace Activitypub;
 
 use WP_User_Query;
 use Activitypub\Model\Blog;
+use Activitypub\Activitypub;
 use Activitypub\Collection\Users;
 
 use function Activitypub\count_followers;
@@ -429,7 +430,7 @@ class Admin {
 
 		// Set defaults for new extra fields.
 		if ( 'edit-ap_extrafield' === $screen_id ) {
-			add_default_actor_extra_fields( get_current_user_id() );
+			Activitypub::default_actor_extra_fields( array(), get_current_user_id() );
 		}
 	}
 
