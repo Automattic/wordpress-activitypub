@@ -794,6 +794,7 @@ function is_local_comment( $comment ) {
  * Mark a WordPress object as federated.
  *
  * @param WP_Comment|WP_Post|mixed $wp_object
+ *
  * @return void
  */
 function set_wp_object_state( $wp_object, $state ) {
@@ -805,6 +806,25 @@ function set_wp_object_state( $wp_object, $state ) {
 		\update_comment_meta( $wp_object->comment_ID, $meta_key, $state );
 	} else {
 		\apply_filters( 'activitypub_mark_wp_object_as_federated', $wp_object );
+	}
+}
+
+/**
+ * Get the federation state of a WordPress object.
+ *
+ * @param WP_Comment|WP_Post|mixed $wp_object
+ *
+ * @return string|false The state of the object or false if not found.
+ */
+function get_wp_object_state( $wp_object ) {
+	$meta_key = 'activitypub_status';
+
+	if ( $wp_object instanceof \WP_Post ) {
+		return \get_post_meta( $wp_object->ID, $meta_key, true );
+	} elseif ( $wp_object instanceof \WP_Comment ) {
+		return \get_comment_meta( $wp_object->comment_ID, $meta_key, true );
+	} else {
+		return \apply_filters( 'activitypub_get_wp_object_state', false, $wp_object );
 	}
 }
 

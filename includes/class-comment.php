@@ -241,7 +241,7 @@ class Comment {
 	 *
 	 * @param string $id ActivityPub object ID (usually a URL) to check.
 	 *
-	 * @return int|boolean Comment ID, or false on failure.
+	 * @return \WP_Comment|false Comment object, or false on failure.
 	 */
 	public static function object_id_to_comment( $id ) {
 		$comment_query = new WP_Comment_Query(

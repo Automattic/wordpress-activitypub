@@ -3,8 +3,8 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 5.5  
 **Tested up to:** 6.5  
-**Stable tag:** 2.4.0  
-**Requires PHP:** 5.6  
+**Stable tag:** 2.5.0  
+**Requires PHP:** 7.0  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
 
@@ -101,9 +101,9 @@ Add the following to the site.conf in sites-available:
 
 Where 'blog' is the path to the subdirectory at which your blog resides.
 
-### What if you are running your blog in a subdirectory, but have a different [wp_siteurl](https://wordpress.org/documentation/article/giving-wordpress-its-own-directory/)? ###
+### What if you are running your blog in a subdirectory? ###
 
-In that case you don't need the redirect, because the index.php will take care of that.
+If you are running your blog in a subdirectory, but have a different [wp_siteurl](https://wordpress.org/documentation/article/giving-wordpress-its-own-directory/), you don't need the redirect, because the index.php will take care of that.
 
 ### Constants ###
 
@@ -132,6 +132,18 @@ The followers of a user can be found in the menu under "Users" -> "Followers" or
 For reasons of data protection, it is not possible to see the followers of other users.
 
 ## Changelog ##
+
+### 2.5.0 ###
+
+* Added: WebFinger cors header
+* Added: WebFinger Content-Type
+* Added: The Fediverse creator of a post to OpenGraph
+* Improved: Try to lookup local users first for Enable Mastodon Apps
+* Improved: Send also Announces for deletes
+* Improved: Load time by adding `count_total=false` to `WP_User_Query`
+* Fixed: Several WebFinger issues
+* Fixed: Redirect issue for Application user
+* Fixed: Accessibilty issues with missing screen-reader-text on User overview page
 
 ### 2.4.0 ###
 
