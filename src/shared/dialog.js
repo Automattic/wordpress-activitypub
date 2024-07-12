@@ -1,7 +1,7 @@
 import apiFetch from '@wordpress/api-fetch';
 import { useCallback, useState, createInterpolateElement } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import { copy, check, Icon } from '@wordpress/icons';
+import { people, copy, check, Icon } from '@wordpress/icons';
 import { useCopyToClipboard } from '@wordpress/compose';
 import { Button, CheckboxControl } from '@wordpress/components';
 import { useRemoteUser } from './use-remote-user';
@@ -91,7 +91,10 @@ export function Dialog( { actionText, copyDescription, handle, resourceUrl, myPr
 						onKeyDown={ ( event ) => { event?.code === 'Enter' && retrieveAndFollow() } }
 						onChange={ e => setRemoteProfile( e.target.value ) }
 					/>
-					<Button onClick={ retrieveAndFollow }>{ buttonText }</Button>
+					<Button onClick={ retrieveAndFollow }>
+						<Icon icon={ people } />
+						{ buttonText }
+					</Button>
 				</div>
 				<div className="activitypub-dialog__remember">
 					<CheckboxControl

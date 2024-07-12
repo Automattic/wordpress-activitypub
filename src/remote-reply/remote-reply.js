@@ -37,7 +37,6 @@ function RemoteUser( { profileURL, template, commentURL, deleteRemoteUser } ) {
 			<Button
 				className="activitypub-remote-profile-delete"
 				onClick={ deleteRemoteUser }
-				isDestructive
 				title={ __( 'Delete Remote Profile', 'activitypub' ) }
 			>
 				<Icon icon={ cancelCircleFilled } size={ 18 } />
