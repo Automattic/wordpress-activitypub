@@ -11,7 +11,7 @@ export function PaginationPage( { active, children, page, pageClick, className }
 	} );
 
 	return (
-		<a className={ classes }onClick={ handleClick }>
+		<a className={ classes } onClick={ handleClick }>
 			{ children }
 		</a>
 	);
