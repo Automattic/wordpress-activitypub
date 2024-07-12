@@ -123,7 +123,7 @@ class Actors {
 		$url      = str_replace( '{uri}', $resource, $template );
 
 		return new WP_REST_Response(
-			array( 'url' => $url ),
+			array( 'url' => $url, 'template' => $template ),
 			200
 		);
 	}

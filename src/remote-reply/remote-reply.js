@@ -1,7 +1,9 @@
 import { useState } from '@wordpress/element';
 import { Button, Modal } from '@wordpress/components';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
+import { Icon, cancelCircleFilled } from '@wordpress/icons';
 import { Dialog } from '../shared/dialog';
+import { useRemoteUser } from '../shared/use-remote-user';
 import './style.scss';
 const { namespace } = window._activityPubOptions;
 
@@ -16,18 +18,51 @@ function DialogReply( { selectedComment, commentId } ) {
 		copyDescription={ copyDescription }
 		handle={ selectedComment }
 		resourceUrl={ resourceUrl }
+		myProfile={ __( 'Original Comment URL', 'activitypub' ) }
 	/>;
+}
+
+function RemoteUser( { profileURL, template, commentURL, deleteRemoteUser } ) {
+	const opener = () => {
+		const url = template.replace( '{uri}', commentURL );
+		window.open( url, '_blank' );
+	}
+
+	return (
+		<>
+			<Button variant="link" className="comment-reply-link activitypub-remote-reply__button" onClick={ opener } >
+				{ sprintf( __( 'Reply as %s', 'activitypub' ), profileURL )}
+			</Button>
+
+			<Button
+				className="activitypub-remote-profile-delete"
+				onClick={ deleteRemoteUser }
+				isDestructive
+				title={ __( 'Delete Remote Profile', 'activitypub' ) }
+			>
+				<Icon icon={ cancelCircleFilled } size={ 18 } />
+			</Button>
+		</>
+	);
+
 }
 
 export default function RemoteReply( { selectedComment, commentId } ) {
 	const [ isOpen, setIsOpen ] = useState( false );
 	const title = __( 'Remote Reply', 'activitypub' );
+	const { profileURL, template, deleteRemoteUser } = useRemoteUser();
+	const hasProfile = profileURL && template;
 
 	return(
 		<>
-			<Button isLink className="comment-reply-link activitypub-remote-reply__button" onClick={ () => setIsOpen( true ) } >
-				{ __( 'Reply on the Fediverse', 'activitypub' ) }
-			</Button>
+			{ hasProfile ? (
+				<RemoteUser profileURL={ profileURL } template={ template } commentURL={ selectedComment } deleteRemoteUser={ deleteRemoteUser } />
+			) : (
+				<Button variant="link" className="comment-reply-link activitypub-remote-reply__button" onClick={ () => setIsOpen( true ) } >
+					{ __( 'Reply on the Fediverse', 'activitypub' ) }
+				</Button>
+			) }
+
 			{ isOpen && (
 				<Modal
 					className="activitypub-remote-reply__modal activitypub__modal"
