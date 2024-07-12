@@ -19,6 +19,7 @@ function DialogReply( { selectedComment, commentId } ) {
 		handle={ selectedComment }
 		resourceUrl={ resourceUrl }
 		myProfile={ __( 'Original Comment URL', 'activitypub' ) }
+		rememberProfile={true}
 	/>;
 }
 

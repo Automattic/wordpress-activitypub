@@ -21,7 +21,7 @@ function isHandle( string ) {
 	return parts.length === 2 && isUrl( `https://${ parts[ 1 ] }` );
 }
 
-export function Dialog( { actionText, copyDescription, handle, resourceUrl, myProfile = false } ) {
+export function Dialog( { actionText, copyDescription, handle, resourceUrl, myProfile = false, rememberProfile = false } ) {
 	const loadingText = __( 'Loading...', 'activitypub' );
 	const openingText = __( 'Opening...', 'activitypub' );
 	const errorText = __( 'Error', 'activitypub' );
@@ -96,6 +96,7 @@ export function Dialog( { actionText, copyDescription, handle, resourceUrl, myPr
 						{ buttonText }
 					</Button>
 				</div>
+				{ rememberProfile &&
 				<div className="activitypub-dialog__remember">
 					<CheckboxControl
 						checked={ shouldSaveProfile }
@@ -103,6 +104,7 @@ export function Dialog( { actionText, copyDescription, handle, resourceUrl, myPr
 						onChange={ () => { setShouldSaveProfile( ! shouldSaveProfile ) } }
 					/>
 				</div>
+				}
 			</div>
 		</div>
 	);
