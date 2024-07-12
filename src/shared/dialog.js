@@ -65,7 +65,7 @@ export function Dialog( { actionText, copyDescription, handle, resourceUrl, myPr
 		<div className="activitypub__dialog">
 			<div className="activitypub-dialog__section">
 				<h4>{ myProfileHeader }</h4>
-				<div className="activitypub-dialog-description">
+				<div className="activitypub-dialog__description">
 					{ copyDescription }
 				</div>
 				<div className="activitypub-dialog__button-group">
