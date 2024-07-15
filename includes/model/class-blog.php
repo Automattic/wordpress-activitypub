@@ -230,7 +230,7 @@ class Blog extends Actor {
 	 *
 	 * @return array|null The User-Header-Image.
 	 */
-	public function get_header_image() {
+	public function get_image() {
 		if ( \has_header_image() ) {
 			return array(
 				'type' => 'Image',
