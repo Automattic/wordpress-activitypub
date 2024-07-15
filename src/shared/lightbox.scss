@@ -23,6 +23,9 @@
 	.activitypub-dialog__section {
 		margin-bottom: 2em;
 	}
+	.activitypub-dialog__remember {
+		margin-top: 1em;
+	}
 	.activitypub-dialog__description {
 		font-size: var( --wp--preset--font-size--normal, .75rem );
 		margin: 0.33em 0 1em;
@@ -40,19 +43,27 @@
 
 		input {
 			flex: 1;
-			padding: 6px 12px;
+			padding: 15px 23px 15px 23px;
 			background-color: var( --wp--preset--color--white );
 			color: var( --wp--preset--color--black );
 			border: 1px solid var( --wp--preset--color--black );
-			border-radius: inherit 0;
+			border-radius: 50px 0 0 50px;
+			font-size: 16px;
+			border-width: 1px;
+			height: inherit;
 		}
 
 		button {
 			margin-left: 0;
+			padding: 15px 23px 15px 23px;
 			align-self: center;
 			text-decoration: none;
-			background-color: var(--wp--preset--color--black);
-			color: var(--wp--preset--color--white);
+			background-color: var( --wp--preset--color--black );
+			color: var( --wp--preset--color--white );
+			border-radius: 0 50px 50px 0;
+			font-size: 16px;
+			border-width: 1px;
+			height: inherit;
 		}
 	}
 }

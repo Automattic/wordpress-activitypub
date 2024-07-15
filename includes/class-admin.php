@@ -3,12 +3,14 @@ namespace Activitypub;
 
 use WP_User_Query;
 use Activitypub\Model\Blog;
+use Activitypub\Activitypub;
 use Activitypub\Collection\Users;
 
 use function Activitypub\count_followers;
 use function Activitypub\is_user_disabled;
 use function Activitypub\was_comment_received;
 use function Activitypub\is_comment_federatable;
+use function Activitypub\add_default_actor_extra_fields;
 
 /**
  * ActivityPub Admin Class
@@ -23,16 +25,21 @@ class Admin {
 		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
 		\add_action( 'load-comment.php', array( self::class, 'edit_comment' ) );
+		\add_action( 'load-post.php', array( self::class, 'edit_post' ) );
+		\add_action( 'load-edit.php', array( self::class, 'list_posts' ) );
 		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'admin_notices', array( self::class, 'admin_notices' ) );
 
 		\add_filter( 'comment_row_actions', array( self::class, 'comment_row_actions' ), 10, 2 );
 		\add_filter( 'manage_edit-comments_columns', array( static::class, 'manage_comment_columns' ) );
-		\add_filter( 'manage_comments_custom_column', array( static::class, 'manage_comments_custom_column' ), 9, 2 );
+		\add_action( 'manage_comments_custom_column', array( static::class, 'manage_comments_custom_column' ), 9, 2 );
+
+		\add_filter( 'manage_posts_columns', array( static::class, 'manage_post_columns' ), 10, 2 );
+		\add_action( 'manage_posts_custom_column', array( self::class, 'manage_posts_custom_column' ), 10, 2 );
 
 		\add_filter( 'manage_users_columns', array( self::class, 'manage_users_columns' ), 10, 1 );
-		\add_filter( 'manage_users_custom_column', array( self::class, 'manage_users_custom_column' ), 10, 3 );
+		\add_action( 'manage_users_custom_column', array( self::class, 'manage_users_custom_column' ), 10, 3 );
 		\add_filter( 'bulk_actions-users', array( self::class, 'user_bulk_options' ) );
 		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
 
@@ -62,6 +69,8 @@ class Admin {
 			$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
 
 			\add_action( 'load-' . $followers_list_page, array( self::class, 'add_followers_list_help_tab' ) );
+
+			\add_users_page( \__( 'Extra Fields', 'activitypub' ), \__( 'Extra Fields', 'activitypub' ), 'read', esc_url( admin_url( '/edit.php?post_type=ap_extrafield' ) ) );
 		}
 	}
 
@@ -75,6 +84,16 @@ class Admin {
 		if ( empty( $permalink_structure ) ) {
 			$admin_notice = \__( 'You are using the ActivityPub plugin with a permalink structure of "plain". This will prevent ActivityPub from working.  Please go to "Settings" / "Permalinks" and choose a permalink structure other than "plain".', 'activitypub' );
 			self::show_admin_notice( $admin_notice, 'error' );
+		}
+
+		$current_screen = get_current_screen();
+
+		if ( isset( $current_screen->id ) && 'edit-ap_extrafield' === $current_screen->id ) {
+			?>
+			<div class="notice" style="margin: 0; background: none; border: none; box-shadow: none; padding: 15px 0 0 0; font-size: 14px;">
+				<?php esc_html_e( 'These are extra fields that are used for your ActivityPub profile. You can use your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?>
+			</div>
+			<?php
 		}
 	}
 
@@ -353,6 +372,68 @@ class Admin {
 		);
 	}
 
+	public static function edit_post() {
+		// Disable the edit_post capability for federated posts.
+		\add_filter(
+			'user_has_cap',
+			function ( $allcaps, $caps, $arg ) {
+				if ( 'edit_post' !== $arg[0] ) {
+					return $allcaps;
+				}
+
+				$post = get_post( $arg[2] );
+
+				if ( 'ap_extrafield' !== $post->post_type ) {
+					return $allcaps;
+				}
+
+				if ( (int) get_current_user_id() !== (int) $post->post_author ) {
+					return false;
+				}
+
+				return $allcaps;
+			},
+			1,
+			3
+		);
+	}
+
+	/**
+	 * Add ActivityPub specific actions/filters to the post list view
+	 *
+	 * @return void
+	 */
+	public static function list_posts() {
+		// Show only the user's extra fields.
+		\add_action(
+			'pre_get_posts',
+			function ( $query ) {
+				if ( $query->get( 'post_type' ) === 'ap_extrafield' ) {
+					$query->set( 'author', get_current_user_id() );
+				}
+			}
+		);
+
+		// Remove all views for the extra fields.
+		$screen_id = get_current_screen()->id;
+
+		add_filter(
+			"views_{$screen_id}",
+			function ( $views ) {
+				if ( 'ap_extrafield' === get_post_type() ) {
+					return array();
+				}
+
+				return $views;
+			}
+		);
+
+		// Set defaults for new extra fields.
+		if ( 'edit-ap_extrafield' === $screen_id ) {
+			Activitypub::default_actor_extra_fields( array(), get_current_user_id() );
+		}
+	}
+
 	public static function comment_row_actions( $actions, $comment ) {
 		if ( was_comment_received( $comment ) ) {
 			unset( $actions['edit'] );
@@ -382,8 +463,24 @@ class Admin {
 	 * @param array $columns the list of column names
 	 */
 	public static function manage_comment_columns( $columns ) {
-		$columns['comment_type'] = esc_attr__( 'Comment-Type', 'activitypub' );
+		$columns['comment_type']     = esc_attr__( 'Comment-Type', 'activitypub' );
 		$columns['comment_protocol'] = esc_attr__( 'Protocol', 'activitypub' );
+
+		return $columns;
+	}
+
+	/**
+	 * Add "post_content" as column for Extra-Fields in WP-Admin
+	 *
+	 * @param array  $columns   Tthe list of column names.
+	 * @param string $post_type The post type.
+	 */
+	public static function manage_post_columns( $columns, $post_type ) {
+		if ( 'ap_extrafield' === $post_type ) {
+			$after_key = 'title';
+			$index     = array_search( $after_key, array_keys( $columns ), true );
+			$columns   = array_slice( $columns, 0, $index + 1 ) + array( 'extra_field_content' => esc_attr__( 'Content', 'activitypub' ) ) + $columns;
+		}
 
 		return $columns;
 	}
@@ -426,6 +523,25 @@ class Admin {
 			return '<span aria-hidden="true">&#x2713;</span><span class="screen-reader-text">' . esc_html__( 'ActivityPub enabled for this author', 'activitypub' ) . '</span>';
 		} else {
 			return '<span aria-hidden="true">&#x2717;</span><span class="screen-reader-text">' . esc_html__( 'ActivityPub disabled for this author', 'activitypub' ) . '</span>';
+		}
+	}
+
+	/**
+	 * Add a column "extra_field_content" to the post list view
+	 *
+	 * @param string $column_name The column name.
+	 * @param int    $post_id     The post ID.
+	 *
+	 * @return void
+	 */
+	public static function manage_posts_custom_column( $column_name, $post_id ) {
+		$post = get_post( $post_id );
+
+		if ( 'extra_field_content' === $column_name ) {
+			$post = get_post( $post_id );
+			if ( 'ap_extrafield' === $post->post_type ) {
+				echo esc_attr( wp_strip_all_tags( $post->post_content ) );
+			}
 		}
 	}
 

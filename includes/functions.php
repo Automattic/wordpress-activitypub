@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub;
 
+use WP_Query;
 use WP_Error;
 use Activitypub\Http;
 use Activitypub\Comment;
@@ -988,4 +989,57 @@ function custom_large_numbers( $formatted, $number, $decimals ) {
 
 	// Default fallback. We should not get here.
 	return $formatted;
+}
+
+/**
+ * Normalize a URL.
+ *
+ * @param string $url The URL.
+ *
+ * @return string The normalized URL.
+ */
+function normalize_url( $url ) {
+	$url = \untrailingslashit( $url );
+	$url = \str_replace( 'https://', '', $url );
+	$url = \str_replace( 'http://', '', $url );
+	$url = \str_replace( 'www.', '', $url );
+
+	return $url;
+}
+
+/**
+ * Normalize a host.
+ *
+ * @param string $host The host.
+ *
+ * @return string The normalized host.
+ */
+function normalize_host( $host ) {
+	return \str_replace( 'www.', '', $host );
+}
+
+/**
+ * Get the Extra Fields of an Actor
+ *
+ * @param int $user_id The User-ID.
+ *
+ * @return array The extra fields.
+ */
+function get_actor_extra_fields( $user_id ) {
+	$extra_fields = new WP_Query(
+		array(
+			'post_type' => 'ap_extrafield',
+			'nopaging'  => true,
+			'status'    => 'publish',
+			'author'    => $user_id,
+		)
+	);
+
+	if ( $extra_fields->have_posts() ) {
+		$extra_fields = $extra_fields->posts;
+	} else {
+		$extra_fields = array();
+	}
+
+	return apply_filters( 'activitypub_get_actor_extra_fields', $extra_fields, $user_id );
 }
