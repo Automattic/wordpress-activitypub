@@ -28,5 +28,40 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 			</td>
 			<?php wp_nonce_field( 'activitypub-user-description', '_apnonce' ); ?>
 		</tr>
+		<tr scope="row">
+			<th>
+				<label><?php \esc_html_e( 'Extra fields', 'activitypub' ); ?></label>
+			</th>
+			<td>
+				<p class="description"><?php \esc_html_e( 'Your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?></p>
+
+				<table class="widefat striped activitypub-extra-fields" role="presentation" style="margin: 15px 0;">
+				<?php
+				$extra_fields = \Activitypub\get_actor_extra_fields( \get_current_user_id() );
+
+				foreach ( $extra_fields as $extra_field ) {
+					?>
+				<tr>
+					<td><?php echo \esc_html( $extra_field->post_title ); ?></td>
+					<td><?php echo \wp_kses_post( \get_the_excerpt( $extra_field ) ); ?></td>
+					<td>
+						<a href="<?php echo \esc_url( \get_edit_post_link( $extra_field->ID ) ); ?>" class="button">
+							<?php \esc_html_e( 'Edit', 'activitypub' ); ?>
+						</a>
+					</td>
+				</tr>
+				<?php } ?>
+				</table>
+
+				<p>
+					<a href="<?php echo esc_url( admin_url( '/post-new.php?post_type=ap_extrafield' ) ); ?>" class="button">
+						<?php esc_html_e( 'Add new', 'activitypub' ); ?>
+					</a>
+					<a href="<?php echo esc_url( admin_url( '/edit.php?post_type=ap_extrafield' ) ); ?>">
+						<?php esc_html_e( 'Manage all', 'activitypub' ); ?>
+					</a>
+				</p>
+			</td>
+		</tr>
 	</tbody>
 </table>
