@@ -368,4 +368,33 @@ class Blog extends Actor {
 			return false;
 		}
 	}
+
+	/**
+	 * Get the User-Hashtags.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#Hashtag
+	 *
+	 * @return array The User-Hashtags.
+	 */
+	public function get_tag() {
+		$hashtags = array();
+
+		$args = array(
+			'orderby' => 'count',
+			'order'   => 'DESC',
+			'number'  => 5,
+		);
+
+		$tags = get_tags( $args );
+
+		foreach ( $tags as $tag ) {
+			$hashtags[] = array(
+				'type' => 'Hashtag',
+				'href' => \get_tag_link( $tag->term_id ),
+				'name' => sprintf( '#%s', $tag->name ),
+			);
+		}
+
+		return $hashtags;
+	}
 }
