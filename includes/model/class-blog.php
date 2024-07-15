@@ -384,12 +384,20 @@ class Blog extends Actor {
 				sprintf(
 					'<a rel="me" title="%s" target="_blank" href="%s">%s</a>',
 					\esc_attr( \home_url( '/' ) ),
-					\home_url( '/' ),
+					\esc_url( \home_url( '/' ) ),
 					\wp_parse_url( \home_url( '/' ), \PHP_URL_HOST )
 				),
 				\ENT_QUOTES,
 				'UTF-8'
 			),
+		);
+
+		// Add support for FEP-fb2a, for more information see FEDERATION.md
+		$array[] = array(
+			'type' => 'Link',
+			'name' => \__( 'Blog', 'activitypub' ),
+			'href' => \esc_url( \home_url( '/' ) ),
+			'rel'  => array( 'me' ),
 		);
 
 		return $array;

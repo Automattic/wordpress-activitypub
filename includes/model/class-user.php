@@ -259,6 +259,47 @@ class User extends Actor {
 					'UTF-8'
 				),
 			);
+
+			$link_added = false;
+
+			// Add support for FEP-fb2a, for more information see FEDERATION.md
+			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
+				$tags = new \WP_HTML_Tag_Processor( $content );
+				$tags->next_tag();
+
+				if ( 'P' === $tags->get_tag() ) {
+					$tags->next_tag();
+				}
+
+				if ( 'A' === $tags->get_tag() ) {
+					$tags->set_bookmark( 'link' );
+					if ( ! $tags->next_tag() ) {
+						$tags->seek( 'link' );
+						$attachment = array(
+							'type' => 'Link',
+							'name' => \get_the_title( $post ),
+							'href' => \esc_url( $tags->get_attribute( 'href' ) ),
+							'rel'  => explode( ' ', $tags->get_attribute( 'rel' ) ),
+						);
+
+						$link_added = true;
+					}
+				}
+			}
+
+			if ( ! $link_added ) {
+				$attachment = array(
+					'type'    => 'Note',
+					'name'    => \get_the_title( $post ),
+					'content' => \html_entity_decode(
+						$content,
+						\ENT_QUOTES,
+						'UTF-8'
+					),
+				);
+			}
+
+			$attachments[] = $attachment;
 		}
 
 		return $attachments;
