@@ -19,23 +19,23 @@ function deleteStore() {
 }
 
 export function useRemoteUser() {
-  const [ remoteUser, setRemoteUserInternal ] = useState( getStore() );
+	const [ remoteUser, setRemoteUserInternal ] = useState( getStore() );
 
 	const setRemoteUser = useCallback( ( data ) => {
-    setStore( data );
-    setRemoteUserInternal( data );
-  }, [] );
+		setStore( data );
+		setRemoteUserInternal( data );
+	}, [] );
 
-  const deleteRemoteUser = useCallback( () => {
-    deleteStore();
-    setRemoteUserInternal( {} );
-  }, [] );
+	const deleteRemoteUser = useCallback( () => {
+		deleteStore();
+		setRemoteUserInternal( {} );
+	}, [] );
 
-  return {
-    template: remoteUser?.template || false,
-    profileURL: remoteUser?.profileURL || false,
-    setRemoteUser,
-    deleteRemoteUser
-  };
+	return {
+		template: remoteUser?.template || false,
+		profileURL: remoteUser?.profileURL || false,
+		setRemoteUser,
+		deleteRemoteUser
+	};
 }
 
