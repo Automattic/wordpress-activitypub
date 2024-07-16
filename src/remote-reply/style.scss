@@ -1,1 +1,13 @@
 @import "./../shared/lightbox.scss";
+.activitypub-remote-profile-delete {
+	padding: 0 5px;
+	color: inherit;
+	align-self: center;
+	flex: 1;
+	height: inherit;
+	font-size: inherit;
+}
+
+.activitypub-remote-reply {
+	display: flex;
+}

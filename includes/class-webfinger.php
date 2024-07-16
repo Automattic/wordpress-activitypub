@@ -126,6 +126,17 @@ class Webfinger {
 	 *                        identifier and host as values
 	 */
 	public static function get_identifier_and_host( $url ) {
+		if ( ! $url ) {
+			return new WP_Error(
+				'webfinger_invalid_identifier',
+				__( 'Invalid Identifier', 'activitypub' ),
+				array(
+					'status' => 400,
+					'data'   => $url,
+				)
+			);
+		}
+
 		// remove leading @
 		$url = ltrim( $url, '@' );
 
@@ -190,7 +201,7 @@ class Webfinger {
 			return $data;
 		}
 
-		$webfinger_url = 'https://' . $host . '/.well-known/webfinger?resource=' . rawurlencode( $identifier );
+		$webfinger_url = sprintf( 'https://%s/.well-known/webfinger?resource=%s', $host, rawurlencode( $identifier ) );
 
 		$response = wp_safe_remote_get(
 			$webfinger_url,
