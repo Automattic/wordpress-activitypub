@@ -396,9 +396,9 @@ class Blog extends Actor {
 		}
 
 		return $hashtags;
-  }
-  
-  /**
+	}
+
+	/**
 	 * Extend the User-Output with Attachments.
 	 *
 	 * @return array The extended User-Output.
