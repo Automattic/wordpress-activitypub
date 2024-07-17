@@ -133,6 +133,17 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= 2.6.0 =
+
+* Added: Support for FEP-fb2a
+* Added: CRUD support for Extra Fields
+* Improved: Remote-Follow UI and UX
+* Improved: Open Graph `fediverse:creator` implementation
+* Fixed: Compatibility issues with fed.brid.gy
+* Fixed: Remote-Reply endpoint
+* Fixed: WebFinger Error Codes (thanks to the FediTest project)
+* Fixed: Fatal Error when wp_schedule_single_event third argument is being passed as a string
+
 = 2.5.0 =
 
 * Added: WebFinger cors header
