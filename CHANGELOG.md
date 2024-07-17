@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compatibility issues with fed.brid.gy
 * Remote-Reply endpoint
 * WebFinger Error Codes (thanks to the FediTest project)
-* Fatal Error when wp_schedule_single_event third argument is being passed as a string
+* Fatal Error when `wp_schedule_single_event` third argument is being passed as a string
 
 ## [2.5.0] - 2024-07-01
 
