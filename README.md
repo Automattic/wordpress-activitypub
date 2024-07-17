@@ -171,36 +171,6 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Prevent infinite loops in `get_comment_ancestors`
 * Fixed: Better Content-Negotiation handling
 
-### 2.3.1 ###
-
-* Added: Enable Mastodon Apps: Add remote outbox fetching
-* Added: Help texts
-* Fixed: Compatibility issues with Discourse
-* Fixed: Do not announce replies
-* Fixed: Also delete interactions with deleted person
-* Fixed: Check Author-URL only if user is enabled for ActivityPub
-* Fixed: Generate comment IDs for federation from home_url
-* Removed: Beta label from the #Hashtag settings
-
-### 2.3.0 ###
-
-* Added: Mark links as "unhandled-link" and "status-link", for a better UX in the Mastodon App
-* Added: Enable-Mastodon-Apps: Provide followers
-* Added: Enable-Mastodon-Apps: Extend account with ActivityPub data
-* Added: Enable-Mastodon-Apps: Search in followers
-* Added: Add `alt` support for images (for Block and Classic-Editor)
-* Fixed: Counter for system users outbox
-* Fixed: Don't set a default actor type in the actor class
-* Fixed: Outbox collection for blog and application user
-* Changed: A better default content handling based on the Object Type
-* Changed: Improve User management
-* Changed: Federated replies: Improved UX for "your reply will federate"
-* Changed: Comment reply federation: support `is_single_user` sites
-* Changed: Mask WordPress version number
-* Changed: Improve remote reply handling
-* Changed: Remote Reply: limit enqueue to when needed
-* Changed: Abstract shared Dialog code
-
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/master/CHANGELOG.md).
 
 ## Upgrade Notice ##

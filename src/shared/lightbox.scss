@@ -51,6 +51,8 @@
 			font-size: 16px;
 			border-width: 1px;
 			height: inherit;
+			line-height: 1;
+			margin-right: 0;
 		}
 
 		button {
@@ -64,6 +66,11 @@
 			font-size: 16px;
 			border-width: 1px;
 			height: inherit;
+			line-height: 1;
+
+			&:hover {
+				border: inherit;
+			}
 		}
 	}
 }
