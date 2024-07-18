@@ -245,7 +245,7 @@
 						</th>
 						<td>
 							<p>
-								<label><input type="checkbox" name="activitypub_use_opengraph" id="activitypub_use_opengraph" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_opengraph', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Automatically add <code>&lt;meta name="fediverse:creator" /&gt;</code> tags for Authors and the Blog-User. You can read more about the feature on the <a href="https://blog.joinmastodon.org/2024/07/highlighting-journalism-on-mastodon/">Mastodon Blog</a>.', 'activitypub' ), 'default' ); ?></label>
+								<label><input type="checkbox" name="activitypub_use_opengraph" id="activitypub_use_opengraph" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_opengraph', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Automatically add <code>&lt;meta name="fediverse:creator" /&gt;</code> tags for Authors and the Blog-User. You can read more about the feature on the <a href="https://blog.joinmastodon.org/2024/07/highlighting-journalism-on-mastodon/" target="_blank">Mastodon Blog</a>.', 'activitypub' ), 'post' ); ?></label>
 							</p>
 						</td>
 					</tr>
