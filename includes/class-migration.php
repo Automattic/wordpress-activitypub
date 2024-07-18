@@ -118,7 +118,7 @@ class Migration {
 
 		// schedule the async migration
 		if ( ! \wp_next_scheduled( 'activitypub_migrate', $version_from_db ) ) {
-			\wp_schedule_single_event( \time(), 'activitypub_migrate', $version_from_db );
+			\wp_schedule_single_event( \time(), 'activitypub_migrate', array( $version_from_db ) );
 		}
 		if ( version_compare( $version_from_db, '0.17.0', '<' ) ) {
 			self::migrate_from_0_16();

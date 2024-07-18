@@ -2,8 +2,8 @@
 Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nuriapena, cavalierlife
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
-Tested up to: 6.5
-Stable tag: 2.5.0
+Tested up to: 6.6
+Stable tag: 2.6.1
 Requires PHP: 7.0
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -133,6 +133,21 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= 2.6.1 =
+
+* Fixed: Extra Fields will generate wrong entries
+
+= 2.6.0 =
+
+* Added: Support for FEP-fb2a
+* Added: CRUD support for Extra Fields
+* Improved: Remote-Follow UI and UX
+* Improved: Open Graph `fediverse:creator` implementation
+* Fixed: Compatibility issues with fed.brid.gy
+* Fixed: Remote-Reply endpoint
+* Fixed: WebFinger Error Codes (thanks to the FediTest project)
+* Fixed: Fatal Error when wp_schedule_single_event third argument is being passed as a string
+
 = 2.5.0 =
 
 * Added: WebFinger cors header
@@ -170,36 +185,6 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Funkwhale URLs
 * Fixed: Prevent infinite loops in `get_comment_ancestors`
 * Fixed: Better Content-Negotiation handling
-
-= 2.3.1 =
-
-* Added: Enable Mastodon Apps: Add remote outbox fetching
-* Added: Help texts
-* Fixed: Compatibility issues with Discourse
-* Fixed: Do not announce replies
-* Fixed: Also delete interactions with deleted person
-* Fixed: Check Author-URL only if user is enabled for ActivityPub
-* Fixed: Generate comment IDs for federation from home_url
-* Removed: Beta label from the #Hashtag settings
-
-= 2.3.0 =
-
-* Added: Mark links as "unhandled-link" and "status-link", for a better UX in the Mastodon App
-* Added: Enable-Mastodon-Apps: Provide followers
-* Added: Enable-Mastodon-Apps: Extend account with ActivityPub data
-* Added: Enable-Mastodon-Apps: Search in followers
-* Added: Add `alt` support for images (for Block and Classic-Editor)
-* Fixed: Counter for system users outbox
-* Fixed: Don't set a default actor type in the actor class
-* Fixed: Outbox collection for blog and application user
-* Changed: A better default content handling based on the Object Type
-* Changed: Improve User management
-* Changed: Federated replies: Improved UX for "your reply will federate"
-* Changed: Comment reply federation: support `is_single_user` sites
-* Changed: Mask WordPress version number
-* Changed: Improve remote reply handling
-* Changed: Remote Reply: limit enqueue to when needed
-* Changed: Abstract shared Dialog code
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/master/CHANGELOG.md).
 
