@@ -129,6 +129,9 @@ class Admin {
 
 		switch ( $tab ) {
 			case 'settings':
+				wp_enqueue_media();
+				wp_enqueue_script( 'activitypub-header-image' );
+
 				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php' );
 				break;
 			case 'followers':
@@ -295,6 +298,15 @@ class Admin {
 				'default' => '0',
 			)
 		);
+		\register_setting(
+			'activitypub',
+			'activitypub_header_image',
+			array(
+				'type' => 'integer',
+				'description' => \__( 'The Attachment-ID of the Sites Header-Image', 'activitypub' ),
+				'default' => null,
+			)
+		);
 	}
 
 	public static function add_settings_help_tab() {
@@ -335,6 +347,8 @@ class Admin {
 	}
 
 	public static function enqueue_scripts( $hook_suffix ) {
+		wp_register_script( 'activitypub-header-image', plugins_url( 'assets/js/activitypub-header-image.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), get_plugin_version(), false );
+
 		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
 			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), get_plugin_version() );
 			wp_enqueue_script( 'activitypub-admin-script', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), get_plugin_version(), false );
