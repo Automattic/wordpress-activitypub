@@ -224,6 +224,15 @@ class Admin {
 		);
 		\register_setting(
 			'activitypub',
+			'activitypub_use_opengraph',
+			array(
+				'type' => 'boolean',
+				'description' => \__( 'Automatically add "fediverse:creator" OpenGraph tags for Authors and the Blog-User.', 'activitypub' ),
+				'default' => '1',
+			)
+		);
+		\register_setting(
+			'activitypub',
 			'activitypub_support_post_types',
 			array(
 				'type'         => 'string',
