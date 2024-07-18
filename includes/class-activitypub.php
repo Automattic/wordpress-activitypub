@@ -515,7 +515,7 @@ class Activitypub {
 	 * @return array The extra fields.
 	 */
 	public static function default_actor_extra_fields( $extra_fields, $user_id ) {
-		if ( $extra_fields ) {
+		if ( $extra_fields || ! $user_id ) {
 			return $extra_fields;
 		}
 

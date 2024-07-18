@@ -235,7 +235,7 @@ class User extends Actor {
 	 * @return array The extended User-Output.
 	 */
 	public function get_attachment() {
-		$extra_fields = get_actor_extra_fields( \get_current_user_id() );
+		$extra_fields = get_actor_extra_fields( $this->_id );
 
 		$attachments = array();
 
