@@ -19,7 +19,9 @@ jobs:
         include:
           - wp-version: latest
           - wp-version: '6.5'
-            php-versions: ['7.0', '7.1']
+            php-versions: '7.0'
+          - wp-version: '6.5'
+            php-versions: '7.1'
     steps:
       - name: Checkout
         uses: actions/checkout@v2
