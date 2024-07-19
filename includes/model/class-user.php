@@ -149,11 +149,20 @@ class User extends Actor {
 	}
 
 	public function get_image() {
-		if ( \has_header_image() ) {
-			$image = \esc_url( \get_header_image() );
+		$header_image = get_user_option( 'activitypub_header_image', $this->_id );
+
+		if ( $header_image ) {
+			$image_url = \wp_get_attachment_url( $header_image );
+		}
+
+		if ( ! $image_url && \has_header_image() ) {
+			$image_url = \get_header_image();
+		}
+
+		if ( $image_url ) {
 			return array(
 				'type' => 'Image',
-				'url'  => $image,
+				'url'  => esc_url( $image_url ),
 			);
 		}
 
