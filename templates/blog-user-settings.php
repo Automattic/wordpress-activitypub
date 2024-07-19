@@ -27,7 +27,7 @@
 							<?php if ( \has_site_icon() ) : ?>
 							<p><img src="<?php echo esc_url( get_site_icon_url( '50' ) ); ?>" /></p>
 							<?php endif; ?>
-							<p>
+							<p class="description">
 								<?php
 								echo \wp_kses(
 									\sprintf(
@@ -91,7 +91,7 @@
 					</tr>
 					<tr>
 						<th scope="row">
-							<?php \esc_html_e( 'Change blog profile ID', 'activitypub' ); ?>
+							<?php \esc_html_e( 'Change profile ID', 'activitypub' ); ?>
 						</th>
 						<td>
 							<label for="activitypub_blog_user_identifier">
@@ -105,6 +105,25 @@
 								<strong>
 									<?php \esc_html_e( 'Please avoid using an existing author’s name as the blog profile ID. Fediverse platforms might use caching and this could break the functionality completely.', 'activitypub' ); ?>
 								</strong>
+							</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row">
+							<?php \esc_html_e( 'Change Description', 'activitypub' ); ?>
+						</th>
+						<td>
+							<label for="activitypub_blog_user_description">
+								<textarea
+									class="blog-user-description large-text"
+									rows="5"
+									name="activitypub_blog_user_description"
+									id="activitypub_blog_user_description"
+									placeholder="<?php echo esc_attr( \get_bloginfo( 'description' ) ); ?>"
+								><?php echo \esc_html( \get_option( 'activitypub_blog_user_description' ) ); ?></textarea>
+							</label>
+							<p class="description">
+								<?php \esc_html_e( 'By default the ActivityPub plugin uses the WordPress tagline as a description for the blog profile.', 'activitypub' ); ?>
 							</p>
 						</td>
 					</tr>

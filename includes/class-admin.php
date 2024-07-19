@@ -266,7 +266,17 @@ class Admin {
 			)
 		);
 
-
+		// Blog-User Settings
+		\register_setting(
+			'activitypub_blog_user',
+			'activitypub_blog_user_description',
+			array(
+				'type' => 'string',
+				'description' => \esc_html__( 'The Description of the Blog-User', 'activitypub' ),
+				'show_in_rest' => true,
+				'default' => '',
+			)
+		);
 		\register_setting(
 			'activitypub_blog_user',
 			'activitypub_blog_user_identifier',
