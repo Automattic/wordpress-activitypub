@@ -27,7 +27,7 @@ class Admin {
 		\add_action( 'load-comment.php', array( self::class, 'edit_comment' ) );
 		\add_action( 'load-post.php', array( self::class, 'edit_post' ) );
 		\add_action( 'load-edit.php', array( self::class, 'list_posts' ) );
-		\add_action( 'personal_options_update', array( self::class, 'save_user_description' ) );
+		\add_action( 'personal_options_update', array( self::class, 'save_user_settings' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'admin_notices', array( self::class, 'admin_notices' ) );
 
@@ -62,15 +62,35 @@ class Admin {
 			array( self::class, 'settings_page' )
 		);
 
-		\add_action( 'load-' . $settings_page, array( self::class, 'add_settings_help_tab' ) );
+		\add_action(
+			'load-' . $settings_page,
+			array( self::class, 'add_settings_help_tab' )
+		);
 
 		// user has to be able to publish posts
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
-			$followers_list_page = \add_users_page( \__( 'Followers', 'activitypub' ), \__( 'Followers', 'activitypub' ), 'read', 'activitypub-followers-list', array( self::class, 'followers_list_page' ) );
+			$followers_list_page = \add_users_page(
+				\__( 'Followers', 'activitypub' ),
+				\__( 'Followers', 'activitypub' ),
+				'read',
+				'activitypub-followers-list',
+				array(
+					self::class,
+					'followers_list_page',
+				)
+			);
 
-			\add_action( 'load-' . $followers_list_page, array( self::class, 'add_followers_list_help_tab' ) );
+			\add_action(
+				'load-' . $followers_list_page,
+				array( self::class, 'add_followers_list_help_tab' )
+			);
 
-			\add_users_page( \__( 'Extra Fields', 'activitypub' ), \__( 'Extra Fields', 'activitypub' ), 'read', esc_url( admin_url( '/edit.php?post_type=ap_extrafield' ) ) );
+			\add_users_page(
+				\__( 'Extra Fields', 'activitypub' ),
+				\__( 'Extra Fields', 'activitypub' ),
+				'read',
+				\esc_url( \admin_url( '/edit.php?post_type=ap_extrafield' ) )
+			);
 		}
 	}
 
@@ -344,6 +364,9 @@ class Admin {
 	public static function add_profile( $user ) {
 		$description = get_user_meta( $user->ID, 'activitypub_user_description', true );
 
+		wp_enqueue_media();
+		wp_enqueue_script( 'activitypub-header-image' );
+
 		\load_template(
 			ACTIVITYPUB_PLUGIN_DIR . 'templates/user-settings.php',
 			true,
@@ -353,33 +376,85 @@ class Admin {
 		);
 	}
 
-	public static function save_user_description( $user_id ) {
+	/**
+	 * Save the user settings
+	 *
+	 * Habdles the saving of the ActivityPub settings.
+	 *
+	 * @param int $user_id The user ID.
+	 *
+	 * @return void
+	 */
+	public static function save_user_settings( $user_id ) {
 		if ( ! isset( $_REQUEST['_apnonce'] ) ) {
 			return false;
 		}
 		$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_apnonce'] ) );
 		if (
-			! wp_verify_nonce( $nonce, 'activitypub-user-description' ) ||
+			! wp_verify_nonce( $nonce, 'activitypub-user-settings' ) ||
 			! current_user_can( 'edit_user', $user_id )
 		) {
 			return false;
 		}
-		$description = ! empty( $_POST['activitypub-user-description'] ) ? sanitize_text_field( wp_unslash( $_POST['activitypub-user-description'] ) ) : false;
+		$description = ! empty( $_POST['activitypub_user_description'] ) ? sanitize_text_field( wp_unslash( $_POST['activitypub_user_description'] ) ) : false;
 		if ( $description ) {
 			update_user_meta( $user_id, 'activitypub_user_description', $description );
+		} else {
+			delete_user_meta( $user_id, 'activitypub_user_description' );
+		}
+
+		$header_image = ! empty( $_POST['activitypub_header_image'] ) ? sanitize_text_field( wp_unslash( $_POST['activitypub_header_image'] ) ) : false;
+		if ( $header_image && \wp_attachment_is_image( $header_image ) ) {
+			\update_user_option( $user_id, 'activitypub_header_image', $header_image );
+		} else {
+			\delete_user_option( $user_id, 'activitypub_header_image' );
 		}
 	}
 
 	public static function enqueue_scripts( $hook_suffix ) {
-		wp_register_script( 'activitypub-header-image', plugins_url( 'assets/js/activitypub-header-image.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), get_plugin_version(), false );
+		wp_register_script(
+			'activitypub-header-image',
+			plugins_url(
+				'assets/js/activitypub-header-image.js',
+				ACTIVITYPUB_PLUGIN_FILE
+			),
+			array( 'jquery' ),
+			get_plugin_version(),
+			false
+		);
 
 		if ( false !== strpos( $hook_suffix, 'activitypub' ) ) {
-			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), get_plugin_version() );
-			wp_enqueue_script( 'activitypub-admin-script', plugins_url( 'assets/js/activitypub-admin.js', ACTIVITYPUB_PLUGIN_FILE ), array( 'jquery' ), get_plugin_version(), false );
+			wp_enqueue_style(
+				'activitypub-admin-styles',
+				plugins_url(
+					'assets/css/activitypub-admin.css',
+					ACTIVITYPUB_PLUGIN_FILE
+				),
+				array(),
+				get_plugin_version()
+			);
+			wp_enqueue_script(
+				'activitypub-admin-script',
+				plugins_url(
+					'assets/js/activitypub-admin.js',
+					ACTIVITYPUB_PLUGIN_FILE
+				),
+				array( 'jquery' ),
+				get_plugin_version(),
+				false
+			);
 		}
 
 		if ( 'index.php' === $hook_suffix ) {
-			wp_enqueue_style( 'activitypub-admin-styles', plugins_url( 'assets/css/activitypub-admin.css', ACTIVITYPUB_PLUGIN_FILE ), array(), get_plugin_version() );
+			wp_enqueue_style(
+				'activitypub-admin-styles',
+				plugins_url(
+					'assets/css/activitypub-admin.css',
+					ACTIVITYPUB_PLUGIN_FILE
+				),
+				array(),
+				get_plugin_version()
+			);
 		}
 	}
 
