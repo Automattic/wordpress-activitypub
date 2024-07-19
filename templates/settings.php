@@ -313,15 +313,25 @@
 		</div>
 
 		<div class="box">
-			<h3><?php \esc_html_e( 'Server', 'activitypub' ); ?></h3>
+			<h3><?php \esc_html_e( 'General', 'activitypub' ); ?></h3>
 			<table class="form-table">
 				<tbody>
+					<tr>
+						<th scope="row">
+							<?php \esc_html_e( 'OpenGraph', 'activitypub' ); ?>
+						</th>
+						<td>
+							<p>
+								<label><input type="checkbox" name="activitypub_use_opengraph" id="activitypub_use_opengraph" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_opengraph', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Automatically add <code>&lt;meta name="fediverse:creator" /&gt;</code> tags for Authors and the Blog-User. You can read more about the feature on the <a href="https://blog.joinmastodon.org/2024/07/highlighting-journalism-on-mastodon/" target="_blank">Mastodon Blog</a>.', 'activitypub' ), 'post' ); ?></label>
+							</p>
+						</td>
+					</tr>
 					<tr>
 						<th scope="row">
 							<?php \esc_html_e( 'Blocklist', 'activitypub' ); ?>
 						</th>
 						<td>
-							<p class="description">
+							<p>
 								<?php
 								echo \wp_kses(
 									\sprintf(
@@ -337,7 +347,7 @@
 					</tr>
 				</tbody>
 			</table>
-
+			<?php \do_settings_fields( 'activitypub', 'general' ); ?>
 			<?php \do_settings_fields( 'activitypub', 'server' ); ?>
 		</div>
 		<?php \do_settings_sections( 'activitypub' ); ?>
