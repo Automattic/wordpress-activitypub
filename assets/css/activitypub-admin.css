@@ -34,10 +34,10 @@
 
 .activitypub-settings-tabs-wrapper {
 	display: -ms-inline-grid;
-	-ms-grid-columns: auto auto auto;
+	-ms-grid-columns: auto auto auto auto;
 	vertical-align: top;
 	display: inline-grid;
-	grid-template-columns: auto auto auto;
+	grid-template-columns: auto auto auto auto;
 }
 
 .activitypub-settings-tab.active {
