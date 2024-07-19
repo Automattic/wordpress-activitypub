@@ -3,9 +3,10 @@
 	__DIR__ . '/admin-header.php',
 	true,
 	array(
-		'settings' => '',
-		'welcome' => '',
-		'followers' => 'active',
+		'settings'     => '',
+		'welcome'      => '',
+		'followers'    => 'active',
+		'blog-profile' => '',
 	)
 );
 $table = new \Activitypub\Table\Followers();

@@ -129,10 +129,13 @@ class Admin {
 
 		switch ( $tab ) {
 			case 'settings':
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php' );
+				break;
+			case 'blog-profile':
 				wp_enqueue_media();
 				wp_enqueue_script( 'activitypub-header-image' );
 
-				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php' );
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-user-settings.php' );
 				break;
 			case 'followers':
 				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-user-followers-list.php' );
@@ -246,6 +249,26 @@ class Admin {
 		);
 		\register_setting(
 			'activitypub',
+			'activitypub_enable_users',
+			array(
+				'type' => 'boolean',
+				'description' => \__( 'Every Author on this Blog (with the publish_posts capability) gets his own ActivityPub enabled Profile.', 'activitypub' ),
+				'default' => '1',
+			)
+		);
+		\register_setting(
+			'activitypub',
+			'activitypub_enable_blog_user',
+			array(
+				'type' => 'boolean',
+				'description' => \__( 'Your Blog becomes an ActivityPub compatible Profile.', 'activitypub' ),
+				'default' => '0',
+			)
+		);
+
+
+		\register_setting(
+			'activitypub_blog_user',
 			'activitypub_blog_user_identifier',
 			array(
 				'type'              => 'string',
@@ -290,25 +313,7 @@ class Admin {
 			)
 		);
 		\register_setting(
-			'activitypub',
-			'activitypub_enable_users',
-			array(
-				'type' => 'boolean',
-				'description' => \__( 'Every Author on this Blog (with the publish_posts capability) gets his own ActivityPub enabled Profile.', 'activitypub' ),
-				'default' => '1',
-			)
-		);
-		\register_setting(
-			'activitypub',
-			'activitypub_enable_blog_user',
-			array(
-				'type' => 'boolean',
-				'description' => \__( 'Your Blog becomes an ActivityPub compatible Profile.', 'activitypub' ),
-				'default' => '0',
-			)
-		);
-		\register_setting(
-			'activitypub',
+			'activitypub_blog_user',
 			'activitypub_header_image',
 			array(
 				'type' => 'integer',
