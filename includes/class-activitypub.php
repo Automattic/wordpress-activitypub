@@ -318,31 +318,6 @@ class Activitypub {
 	 * @return void
 	 */
 	public static function theme_compat() {
-		$site_icon = get_theme_support( 'custom-logo' );
-
-		if ( ! $site_icon ) {
-			// custom logo support
-			add_theme_support(
-				'custom-logo',
-				array(
-					'height' => 80,
-					'width'  => 80,
-				)
-			);
-		}
-
-		$custom_header = get_theme_support( 'custom-header' );
-
-		if ( ! $custom_header ) {
-			// This theme supports a custom header
-			$custom_header_args = array(
-				'width'       => 1250,
-				'height'      => 600,
-				'header-text' => true,
-			);
-			add_theme_support( 'custom-header', $custom_header_args );
-		}
-
 		// We assume that you want to use Post-Formats when enabling the setting
 		if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ) {
 			if ( ! get_theme_support( 'post-formats' ) ) {

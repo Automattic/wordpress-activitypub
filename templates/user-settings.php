@@ -3,6 +3,10 @@
 $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 <h2 id="activitypub"><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h2>
 
+<p><?php esc_html_e( 'Define what others can see on your public Fediverse profile and next to your posts. With a profile picture and a fully completed profile, you are more likely to gain interactions and followers.', 'activitypub' ); ?></p>
+
+<p><?php esc_html_e( 'The ActivityPub plugin tries to take as much information as possible from your profile settings. However, the following settings are not supported by WordPress or should be adjusted independently of the WordPress settings.', 'activitypub' ); ?></p>
+
 <table class="form-table">
 	<tbody>
 		<tr>
@@ -20,17 +24,66 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 		</tr>
 		<tr class="activitypub-user-description-wrap">
 			<th>
-				<label for="activitypub-user-description"><?php \esc_html_e( 'Biography', 'activitypub' ); ?></label>
+				<label for="activitypub_user_description"><?php \esc_html_e( 'Biography', 'activitypub' ); ?></label>
 			</th>
 			<td>
-				<textarea name="activitypub-user-description" id="activitypub-user-description" rows="5" cols="30" placeholder="<?php echo \esc_html( get_user_meta( \get_current_user_id(), 'description', true ) ); ?>"><?php echo \esc_html( $args['description'] ); ?></textarea>
+				<textarea name="activitypub_user_description" id="activitypub_user_description" rows="5" cols="30" placeholder="<?php echo \esc_html( get_user_meta( \get_current_user_id(), 'description', true ) ); ?>"><?php echo \esc_html( $args['description'] ); ?></textarea>
 				<p class="description"><?php \esc_html_e( 'If you wish to use different biographical info for the fediverse, enter your alternate bio here.', 'activitypub' ); ?></p>
 			</td>
-			<?php wp_nonce_field( 'activitypub-user-description', '_apnonce' ); ?>
 		</tr>
 		<tr scope="row">
 			<th>
-				<label><?php \esc_html_e( 'Extra fields', 'activitypub' ); ?></label>
+				<label><?php \esc_html_e( 'Header Image', 'activitypub' ); ?></label>
+			</th>
+			<td>
+				<?php
+				$classes_for_upload_button = 'button upload-button button-add-media button-add-header-image';
+				$classes_for_update_button = 'button';
+				$classes_for_wrapper       = '';
+
+				$header_image = \get_user_option( 'activitypub_header_image', \get_current_user_id() );
+
+				if ( (int) $header_image ) {
+					$classes_for_wrapper         .= ' has-header-image';
+					$classes_for_button           = $classes_for_update_button;
+					$classes_for_button_on_change = $classes_for_upload_button;
+				} else {
+					$classes_for_wrapper         .= ' hidden';
+					$classes_for_button           = $classes_for_upload_button;
+					$classes_for_button_on_change = $classes_for_update_button;
+				}
+				?>
+				<div id="activitypub-header-image-preview-wrapper" class='<?php echo esc_attr( $classes_for_wrapper ); ?>'>
+					<img id='activitypub-header-image-preview' src='<?php echo \esc_url( \wp_get_attachment_url( $header_image ) ); ?>' style="max-width: 100%;" />
+				</div>
+				<button
+					type="button"
+					id="activitypub-choose-from-library-button"
+					type="button"
+					class="<?php echo \esc_attr( $classes_for_button ); ?>"
+					data-alt-classes="<?php echo \esc_attr( $classes_for_button_on_change ); ?>"
+					data-choose-text="<?php \esc_attr_e( 'Choose a Header Image', 'activitypub' ); ?>"
+					data-update-text="<?php \esc_attr_e( 'Change Header Icon', 'activitypub' ); ?>"
+					data-update="<?php \esc_attr_e( 'Set as Header Image', 'activitypub' ); ?>"
+					data-state="<?php echo \esc_attr( (int) $header_image ); ?>">
+					<?php if ( (int) $header_image ) : ?>
+						<?php \esc_html_e( 'Change Header Image', 'activitypub' ); ?>
+					<?php else : ?>
+						<?php \esc_html_e( 'Choose a Header Image', 'activitypub' ); ?>
+					<?php endif; ?>
+				</button>
+				<button
+					id="activitypub-remove-header-image"
+					type="button"
+					<?php echo (int) $header_image ? 'class="button button-secondary reset"' : 'class="button button-secondary reset hidden"'; ?>>
+					<?php esc_html_e( 'Remove Header Image', 'activitypub' ); ?>
+				</button>
+				<input type='hidden' name='activitypub_header_image' id='activitypub_header_image' value='<?php echo esc_attr( $header_image ); ?>'>
+			</td>
+		</tr>
+		<tr scope="row">
+			<th>
+				<label><?php \esc_html_e( 'Extra Fields', 'activitypub' ); ?></label>
 			</th>
 			<td>
 				<p class="description"><?php \esc_html_e( 'Your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?></p>
@@ -65,3 +118,5 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 		</tr>
 	</tbody>
 </table>
+
+<?php wp_nonce_field( 'activitypub-user-settings', '_apnonce' ); ?>
