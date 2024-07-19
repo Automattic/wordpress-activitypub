@@ -132,9 +132,15 @@ class Blog extends Actor {
 	 * @return string The User-Description.
 	 */
 	public function get_summary() {
+		$summary = \get_option( 'activitypub_blog_user_description', null );
+
+		if ( ! $summary ) {
+			$summary = \get_bloginfo( 'description' );
+		}
+
 		return \wpautop(
 			\wp_kses(
-				\get_bloginfo( 'description' ),
+				$summary,
 				'default'
 			)
 		);
@@ -231,10 +237,20 @@ class Blog extends Actor {
 	 * @return array|null The User-Header-Image.
 	 */
 	public function get_image() {
-		if ( \has_header_image() ) {
+		$header_image = get_option( 'activitypub_header_image' );
+
+		if ( $header_image ) {
+			$image_url = \wp_get_attachment_url( $header_image );
+		}
+
+		if ( ! $image_url && \has_header_image() ) {
+			$image_url = \get_header_image();
+		}
+
+		if ( $image_url ) {
 			return array(
 				'type' => 'Image',
-				'url'  => esc_url( \get_header_image() ),
+				'url'  => esc_url( $image_url ),
 			);
 		}
 

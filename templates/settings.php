@@ -3,9 +3,10 @@
 	__DIR__ . '/admin-header.php',
 	true,
 	array(
-		'settings'  => 'active',
-		'welcome'   => '',
-		'followers' => '',
+		'settings'     => 'active',
+		'welcome'      => '',
+		'followers'    => '',
+		'blog-profile' => '',
 	)
 );
 ?>
@@ -26,7 +27,7 @@
 							<p>
 								<label>
 									<input type="checkbox" name="activitypub_enable_users" id="activitypub_enable_users" value="1" <?php echo \checked( '1', \get_option( 'activitypub_enable_users', '1' ) ); ?> />
-									<?php \esc_html_e( 'Enable authors', 'activitypub' ); ?>
+									<?php \esc_html_e( 'Enable Author-Profiles', 'activitypub' ); ?>
 								</label>
 							</p>
 							<p class="description">
@@ -38,30 +39,11 @@
 							<p>
 								<label>
 									<input type="checkbox" name="activitypub_enable_blog_user" id="activitypub_enable_blog_user" value="1" <?php echo \checked( '1', \get_option( 'activitypub_enable_blog_user', '0' ) ); ?> />
-									<?php \esc_html_e( 'Enable blog', 'activitypub' ); ?>
+									<?php \esc_html_e( 'Enable Blog-Profile', 'activitypub' ); ?>
 								</label>
 							</p>
 							<p class="description">
 								<?php \esc_html_e( 'Your blog becomes an ActivityPub profile.', 'activitypub' ); ?>
-							</p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row">
-							<?php \esc_html_e( 'Change blog profile ID', 'activitypub' ); ?>
-						</th>
-						<td>
-							<label for="activitypub_blog_user_identifier">
-								<input class="blog-user-identifier" name="activitypub_blog_user_identifier" id="activitypub_blog_user_identifier" type="text" value="<?php echo esc_attr( \get_option( 'activitypub_blog_user_identifier', \Activitypub\Model\Blog::get_default_username() ) ); ?>" />
-								@<?php echo esc_html( \wp_parse_url( \home_url(), PHP_URL_HOST ) ); ?>
-							</label>
-							<p class="description">
-								<?php \esc_html_e( 'This profile name will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
-							</p>
-							<p>
-								<strong>
-									<?php \esc_html_e( 'Please avoid using an existing author’s name as the blog profile ID. Fediverse platforms might use caching and this could break the functionality completely.', 'activitypub' ); ?>
-								</strong>
 							</p>
 						</td>
 					</tr>
