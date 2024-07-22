@@ -4,7 +4,7 @@ class Test_Activitypub_Users_Collection extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		add_option( 'activitypub_blog_user_identifier', 'blog' );
+		add_option( 'activitypub_blog_identifier', 'blog' );
 		add_user_meta( 1, 'activitypub_user_identifier', 'admin' );
 	}
 	/**

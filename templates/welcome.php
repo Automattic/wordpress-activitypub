@@ -43,7 +43,7 @@
 			<?php \esc_html_e( 'This blog profile will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
 		<p>
 		<p>
-			<a href="<?php echo \esc_url_raw( \admin_url( '/options-general.php?page=activitypub&tab=settings' ) ); ?>">
+			<a href="<?php echo \esc_url_raw( \admin_url( '/options-general.php?page=activitypub&tab=blog-profile	' ) ); ?>">
 				<?php \esc_html_e( 'Customize the blog profile', 'activitypub' ); ?>
 			</a>
 		</p>
