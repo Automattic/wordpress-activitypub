@@ -21,7 +21,7 @@ use function Activitypub\site_supports_blocks;
 require_once __DIR__ . '/includes/compat.php';
 require_once __DIR__ . '/includes/functions.php';
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '2.6.1' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '2.7.0' );
 
 /**
  * Initialize the plugin constants.

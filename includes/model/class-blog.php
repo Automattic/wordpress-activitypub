@@ -132,7 +132,7 @@ class Blog extends Actor {
 	 * @return string The User-Description.
 	 */
 	public function get_summary() {
-		$summary = \get_option( 'activitypub_blog_user_description', null );
+		$summary = \get_option( 'activitypub_blog_description', null );
 
 		if ( ! $summary ) {
 			$summary = \get_bloginfo( 'description' );
@@ -188,7 +188,7 @@ class Blog extends Actor {
 	 * @return string The User-Name.
 	 */
 	public function get_preferred_username() {
-		$username = \get_option( 'activitypub_blog_user_identifier' );
+		$username = \get_option( 'activitypub_blog_identifier' );
 
 		if ( $username ) {
 			return $username;
