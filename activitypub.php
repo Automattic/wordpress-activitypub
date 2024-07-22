@@ -15,6 +15,8 @@
 
 namespace Activitypub;
 
+use WP_CLI;
+
 use function Activitypub\is_blog_public;
 use function Activitypub\site_supports_blocks;
 
@@ -81,6 +83,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Health_Check', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Http_Gone', 'init' ) );
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
@@ -238,4 +241,15 @@ function get_plugin_version() {
 	$meta = get_plugin_meta( array( 'Version' => 'Version' ) );
 
 	return $meta['Version'];
+}
+
+// Check for CLI env, to add the CLI commands
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+	WP_CLI::add_command(
+		'activitypub',
+		'\Activitypub\Cli',
+		array(
+			'shortdesc' => __( 'ActivityPub related commands: Meta-Infos and Self-Destruct.', 'activitypub' ),
+		)
+	);
 }

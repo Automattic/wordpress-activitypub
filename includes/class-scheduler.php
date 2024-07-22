@@ -5,9 +5,11 @@ namespace Activitypub;
 use Activitypub\Transformer\Post;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Activity\Activity;
 
-use function Activitypub\was_comment_sent;
+use function Activitypub\get_private_key_for;
 use function Activitypub\is_user_type_disabled;
+use function Activitypub\was_comment_sent;
 use function Activitypub\should_comment_be_federated;
 use function Activitypub\get_remote_metadata_by_actor;
 
@@ -75,6 +77,7 @@ class Scheduler {
 
 		// profile updates for user options
 		if ( ! is_user_type_disabled( 'user' ) ) {
+			\add_action( 'delete_user', array( self::class, 'schedule_actor_delete' ), 10, 3 );
 			\add_action( 'wp_update_user', array( self::class, 'user_update' ) );
 			\add_action( 'updated_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
 			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
@@ -345,5 +348,25 @@ class Scheduler {
 			'activitypub_send_update_profile_activity',
 			array( $user_id )
 		);
+	}
+
+	/**
+	 * Send an Actor Delete activity.
+	 *
+	 * @param int      $id       ID of the user to delete.
+	 * @param int|null $reassign ID of the user to reassign posts and links to.
+	 *                           Default null, for no reassignment.
+	 * @param WP_User  $user     WP_User object of the user to delete.
+	 */
+	public static function schedule_actor_delete( $user_id, $reassign, $deleted_user ) {
+		$caps = $deleted_user->allcaps;
+
+		// Check if 'activitypub' capability is set.
+		if ( isset( $caps['activitypub'] ) ) {
+			// Do not send activities if user is not allowed to publish.
+			unset( $deleted_user->data->user_pass );
+			unset( $deleted_user->allcaps );
+			\wp_schedule_single_event( \time(), 'activitypub_send_actor_delete_activity', array( $deleted_user ) );
+		}
 	}
 }
