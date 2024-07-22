@@ -76,7 +76,7 @@ class Users {
 			return new Blog();
 		}
 
-		if ( get_option( 'activitypub_blog_user_identifier' ) === $username ) {
+		if ( get_option( 'activitypub_blog_identifier' ) === $username ) {
 			return new Blog();
 		}
 

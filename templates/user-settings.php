@@ -22,12 +22,12 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 				<p class="description"><?php \printf( \esc_html__( 'Follow "@%s" by searching for it on Mastodon, Friendica, etc.', 'activitypub' ), \esc_html( $user->get_webfinger() ) ); ?></p>
 			</td>
 		</tr>
-		<tr class="activitypub-user-description-wrap">
+		<tr class="activitypub-description-wrap">
 			<th>
-				<label for="activitypub_user_description"><?php \esc_html_e( 'Biography', 'activitypub' ); ?></label>
+				<label for="activitypub_description"><?php \esc_html_e( 'Biography', 'activitypub' ); ?></label>
 			</th>
 			<td>
-				<textarea name="activitypub_user_description" id="activitypub_user_description" rows="5" cols="30" placeholder="<?php echo \esc_html( get_user_meta( \get_current_user_id(), 'description', true ) ); ?>"><?php echo \esc_html( $args['description'] ); ?></textarea>
+				<textarea name="activitypub_description" id="activitypub_description" rows="5" cols="30" placeholder="<?php echo \esc_html( get_user_meta( \get_current_user_id(), 'description', true ) ); ?>"><?php echo \esc_html( $args['description'] ); ?></textarea>
 				<p class="description"><?php \esc_html_e( 'If you wish to use different biographical info for the fediverse, enter your alternate bio here.', 'activitypub' ); ?></p>
 			</td>
 		</tr>
