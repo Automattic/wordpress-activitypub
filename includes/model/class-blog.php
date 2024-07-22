@@ -8,6 +8,7 @@ use Activitypub\Signature;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Users;
 
+use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
@@ -407,7 +408,7 @@ class Blog extends Actor {
 			$hashtags[] = array(
 				'type' => 'Hashtag',
 				'href' => \get_tag_link( $tag->term_id ),
-				'name' => sprintf( '#%s', $tag->name ),
+				'name' => esc_hashtag( $tag->name ),
 			);
 		}
 
