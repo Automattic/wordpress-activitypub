@@ -759,6 +759,8 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
+		add_filter( 'activitypub_reply_block_template', '__return_empty_string' );
+
 		// Remove Content from drafts.
 		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
@@ -860,6 +862,26 @@ class Post extends Base {
 		 * @return string The filtered locale of the post.
 		 */
 		return apply_filters( 'activitypub_post_locale', $lang, $post_id, $this->wp_object );
+	}
+
+	/**
+	 * Returns the in-reply-to URL of the post.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-inreplyto
+	 *
+	 * @return string|null The in-reply-to URL of the post.
+	 */
+	public function get_in_reply_to() {
+		$blocks = \parse_blocks( $this->wp_object->post_content );
+
+		foreach ( $blocks as $block ) {
+			if ( 'activitypub/reply' === $block['blockName'] ) {
+				// We only support one reply block per post for now.
+				return $block['attrs']['url'];
+			}
+		}
+
+		return null;
 	}
 
 	/**

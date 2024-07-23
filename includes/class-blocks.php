@@ -44,6 +44,12 @@ class Blocks {
 				'render_callback' => array( self::class, 'render_follow_me_block' ),
 			)
 		);
+		\register_block_type_from_metadata(
+			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
+			array(
+				'render_callback' => array( self::class, 'render_reply_block' ),
+			)
+		);
 	}
 
 	private static function get_user_id( $user_string ) {
@@ -129,6 +135,23 @@ class Blocks {
 		// We are only pagination on the JS side. Could be revisited but we gotta ship!
 		$html .= '</ul></div>';
 		return $html;
+	}
+
+	/**
+	 * Render the reply block.
+	 *
+	 * @param array $attrs The block attributes.
+	 *
+	 * @return void
+	 */
+	public static function render_reply_block( $attrs ) {
+		$template = apply_filters( 'activitypub_reply_block_template', '<p>&#8620;<a title="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%1$s</a></p>' );
+
+		return sprintf(
+			$template,
+			esc_url( $attrs['url'] ),
+			esc_attr__( 'This post is a response to the referenced content.', 'activitypub' )
+		);
 	}
 
 	public static function render_follower( $follower ) {
