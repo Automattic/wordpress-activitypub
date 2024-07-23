@@ -3,7 +3,6 @@ import { useBlockProps, store as blockEditorStore } from '@wordpress/block-edito
 import { TextControl } from '@wordpress/components';
 import { useState } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
-import './edit.scss';
 
 export default function Edit( { attributes: attr, setAttributes, clientId } ) {
 	const [ className, setClassName ] = useState( '' );
