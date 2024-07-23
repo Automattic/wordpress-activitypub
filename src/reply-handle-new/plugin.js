@@ -17,7 +17,11 @@ const HandleInReplyTo = () => {
 			// prepend an activitypub/reply block to the editor
 			// it appears to need a slight delay
 			setTimeout( () => {
-				dispatch( blockEditorStore ).insertBlock( createBlock( 'activitypub/reply', { url: inReplyTo } ) );
+				const block = createBlock( 'activitypub/reply', { url: inReplyTo } );
+				const store = dispatch( blockEditorStore );
+				store.insertBlock( block );
+				// add a new block after it so the user can just type
+				store.insertAfterBlock( block.clientId );
 			}, 200 );
 		}
 

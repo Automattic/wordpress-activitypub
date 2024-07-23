@@ -4,7 +4,7 @@ import { TextControl } from '@wordpress/components';
 import { useState } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 
-export default function Edit( { attributes: attr, setAttributes, clientId } ) {
+export default function Edit( { attributes: attr, setAttributes, clientId, isSelected } ) {
 	const [ className, setClassName ] = useState( '' );
 	const { insertAfterBlock, removeBlock } = useDispatch( blockEditorStore );
 	const defaultHelpText = __( 'For example: Paste a URL from a Mastodon post or note into the field above to leave a comment.', 'activitypub' );
@@ -45,7 +45,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId } ) {
 				type='url'
 				placeholder='https://example.org/path'
 				className={ className }
-				help={ helpText }
+				help={ isSelected ? helpText : '' }
 			/>
 		</div>
 	);
