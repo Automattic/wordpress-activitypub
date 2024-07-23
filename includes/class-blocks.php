@@ -13,6 +13,20 @@ class Blocks {
 		self::register_blocks();
 		\add_action( 'wp_enqueue_scripts', array( self::class, 'add_data' ) );
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'add_data' ) );
+		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
+	}
+
+	/**
+	 * Enqueue the reply handle script if the inReplyTo GET param is set.
+	 */
+	public static function handle_in_reply_to_get_param() {
+		if ( ! isset( $_GET['inReplyTo'] ) ) {
+			return;
+		}
+
+		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/reply-handle-new/plugin.asset.php';
+		$plugin_url = plugins_url( 'build/reply-handle-new/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
+		wp_enqueue_script( 'activitypub-handle-new', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
 	}
 
 	public static function add_data() {
