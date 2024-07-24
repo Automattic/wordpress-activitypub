@@ -19,10 +19,7 @@
 
 		<p>
 			<?php
-			$bookmarklet_url = sprintf(
-				'javascript:(()=>{window.open(\'%s\'+encodeURIComponent(window.location.href));})();',
-				\admin_url( 'post-new.php?inReplyTo=' )
-			);
+			$bookmarklet_url = \Activitypub\get_reply_intent_uri();
 
 			/* translators: %s is the domain of this site */
 			$reply_from_template = __( 'Reply from %s', 'activitypub' );

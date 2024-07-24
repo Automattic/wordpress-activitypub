@@ -47,6 +47,8 @@ class Activitypub {
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( self::class, 'default_actor_extra_fields' ), 10, 2 );
 
+		\add_action( 'tool_box', array( self::class, 'tool_box' ) );
+
 		// register several post_types
 		self::register_post_types();
 	}
@@ -364,6 +366,17 @@ class Activitypub {
 	public static function flush_rewrite_rules() {
 		self::add_rewrite_rules();
 		\flush_rewrite_rules();
+	}
+
+	/**
+	 * Adds metabox on wp-admin/tools.php
+	 *
+	 * @return void
+	 */
+	public static function tool_box() {
+		if ( \current_user_can( 'edit_posts' ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
+		}
 	}
 
 	/**
