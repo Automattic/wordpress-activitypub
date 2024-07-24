@@ -118,7 +118,7 @@ class Migration {
 
 		// schedule the async migration
 		if ( ! \wp_next_scheduled( 'activitypub_migrate', $version_from_db ) ) {
-			\wp_schedule_single_event( \time(), 'activitypub_migrate', $version_from_db );
+			\wp_schedule_single_event( \time(), 'activitypub_migrate', array( $version_from_db ) );
 		}
 		if ( version_compare( $version_from_db, '0.17.0', '<' ) ) {
 			self::migrate_from_0_16();
@@ -131,6 +131,9 @@ class Migration {
 		}
 		if ( version_compare( $version_from_db, '2.3.0', '<' ) ) {
 			self::migrate_from_2_2_0();
+		}
+		if ( version_compare( $version_from_db, '2.7.0', '<' ) ) {
+			self::migrate_from_2_6_0();
 		}
 
 		update_option( 'activitypub_db_version', self::get_target_version() );
@@ -256,6 +259,20 @@ class Migration {
 	}
 
 	/**
+	 * Rename DB fields
+	 *
+	 * @return void
+	 */
+	private static function migrate_from_2_6_0() {
+		wp_cache_flush();
+
+		self::update_usermeta_key( 'activitypub_user_description', 'activitypub_description' );
+
+		self::update_options_key( 'activitypub_blog_user_description', 'activitypub_blog_description' );
+		self::update_options_key( 'activitypub_blog_user_identifier', 'activitypub_blog_identifier' );
+	}
+
+	/**
 	 * Set the defaults needed for the plugin to work
 	 *
 	 * * Add the ActivityPub capability to all users that can publish posts
@@ -283,5 +300,41 @@ class Migration {
 		foreach ( $users as $user ) {
 			$user->add_cap( 'activitypub' );
 		}
+	}
+
+	/**
+	 * Rename meta keys.
+	 *
+	 * @param string $old The old commentmeta key
+	 * @param string $new The new commentmeta key
+	 */
+	private static function update_usermeta_key( $old, $new ) { // phpcs:ignore
+		global $wpdb;
+
+		$wpdb->update( // phpcs:ignore
+			$wpdb->usermeta,
+			array( 'meta_key' => $new ), // phpcs:ignore
+			array( 'meta_key' => $old ), // phpcs:ignore
+			array( '%s' ),
+			array( '%s' )
+		);
+	}
+
+	/**
+	 * Rename option keys.
+	 *
+	 * @param string $old The old option key
+	 * @param string $new The new option key
+	 */
+	   private static function update_options_key( $old, $new ) { // phpcs:ignore
+		global $wpdb;
+
+		$wpdb->update( // phpcs:ignore
+			$wpdb->options,
+			array( 'option_name' => $new ), // phpcs:ignore
+			array( 'option_name' => $old ), // phpcs:ignore
+			array( '%s' ),
+			array( '%s' )
+		);
 	}
 }

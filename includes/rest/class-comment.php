@@ -29,7 +29,7 @@ class Comment {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/(users|actors)/(?P<comment_id>\d+)/remote-reply',
+			'/comments/(?P<comment_id>\d+)/remote-reply',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -88,7 +88,7 @@ class Comment {
 		$url = str_replace( '{uri}', $resource, $template );
 
 		return new WP_REST_Response(
-			array( 'url' => $url ),
+			array( 'url' => $url, 'template' => $template ),
 			200
 		);
 	}

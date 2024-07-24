@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub;
 
+use WP_Query;
 use WP_Error;
 use Activitypub\Http;
 use Activitypub\Comment;
@@ -794,6 +795,7 @@ function is_local_comment( $comment ) {
  * Mark a WordPress object as federated.
  *
  * @param WP_Comment|WP_Post|mixed $wp_object
+ *
  * @return void
  */
 function set_wp_object_state( $wp_object, $state ) {
@@ -805,6 +807,25 @@ function set_wp_object_state( $wp_object, $state ) {
 		\update_comment_meta( $wp_object->comment_ID, $meta_key, $state );
 	} else {
 		\apply_filters( 'activitypub_mark_wp_object_as_federated', $wp_object );
+	}
+}
+
+/**
+ * Get the federation state of a WordPress object.
+ *
+ * @param WP_Comment|WP_Post|mixed $wp_object
+ *
+ * @return string|false The state of the object or false if not found.
+ */
+function get_wp_object_state( $wp_object ) {
+	$meta_key = 'activitypub_status';
+
+	if ( $wp_object instanceof \WP_Post ) {
+		return \get_post_meta( $wp_object->ID, $meta_key, true );
+	} elseif ( $wp_object instanceof \WP_Comment ) {
+		return \get_comment_meta( $wp_object->comment_ID, $meta_key, true );
+	} else {
+		return \apply_filters( 'activitypub_get_wp_object_state', false, $wp_object );
 	}
 }
 
@@ -968,4 +989,69 @@ function custom_large_numbers( $formatted, $number, $decimals ) {
 
 	// Default fallback. We should not get here.
 	return $formatted;
+}
+
+/**
+ * Normalize a URL.
+ *
+ * @param string $url The URL.
+ *
+ * @return string The normalized URL.
+ */
+function normalize_url( $url ) {
+	$url = \untrailingslashit( $url );
+	$url = \str_replace( 'https://', '', $url );
+	$url = \str_replace( 'http://', '', $url );
+	$url = \str_replace( 'www.', '', $url );
+
+	return $url;
+}
+
+/**
+ * Normalize a host.
+ *
+ * @param string $host The host.
+ *
+ * @return string The normalized host.
+ */
+function normalize_host( $host ) {
+	return \str_replace( 'www.', '', $host );
+}
+
+/**
+ * Get the Extra Fields of an Actor
+ *
+ * @param int $user_id The User-ID.
+ *
+ * @return array The extra fields.
+ */
+function get_actor_extra_fields( $user_id ) {
+	$extra_fields = new WP_Query(
+		array(
+			'post_type' => 'ap_extrafield',
+			'nopaging'  => true,
+			'status'    => 'publish',
+			'author'    => $user_id,
+		)
+	);
+
+	if ( $extra_fields->have_posts() ) {
+		$extra_fields = $extra_fields->posts;
+	} else {
+		$extra_fields = array();
+	}
+
+	return apply_filters( 'activitypub_get_actor_extra_fields', $extra_fields, $user_id );
+}
+
+/**
+ * Get the reply intent URI.
+ *
+ * @return string The reply intent URI.
+ */
+function get_reply_intent_uri() {
+	return sprintf(
+		'javascript:(()=>{window.open(\'%s\'+encodeURIComponent(window.location.href));})();',
+		esc_url( \admin_url( 'post-new.php?in_reply_to=' ) )
+	);
 }

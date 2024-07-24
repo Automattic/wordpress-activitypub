@@ -2,9 +2,9 @@
 Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nuriapena, cavalierlife
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
-Tested up to: 6.5
-Stable tag: 2.4.0
-Requires PHP: 5.6
+Tested up to: 6.6
+Stable tag: 2.6.1
+Requires PHP: 7.0
 License: MIT
 License URI: http://opensource.org/licenses/MIT
 
@@ -37,7 +37,7 @@ Some things to note:
 
 1. The blog-wide profile is only compatible with sites with rewrite rules enabled. If your site does not have rewrite rules enabled, the author-specific profiles may still work.
 1. Many single-author blogs have chosen to turn off or redirect their author profile pages, usually via an SEO plugin like Yoast or Rank Math. This is usually done to avoid duplicate content with your blog’s home page. If your author page has been deactivated in this way, then ActivityPub author profiles won’t work for you. Instead, you can turn your author profile page back on, and then use the option in your SEO plugin to noindex the author page. This will still resolve duplicate content issues with search engines and will enable ActivityPub author profiles to work.
-1. Once ActivityPub is installed, *only new posts going forward* will be available in the fediverse. Likewise, even if you’ve been using ActivityPub for a while, anyone who follows your site, will only see new posts you publish from that moment on. They will never see previously-published posts in their Home feed. This process is very similar to subscribing to a newsletter. If you subscribe to a newsletter, you will only receive future emails, but not the old archived ones. With ActivityPub, if someone follows your site, they will only receive new blog posts you publish from then on.
+1. Once ActivityPub is installed, *only new posts going forward* will be available in the fediverse. Likewise, even if you’ve been using ActivityPub for a while, anyone who follows your site will only see new posts you publish from that moment on. They will never see previously-published posts in their Home feed. This process is very similar to subscribing to a newsletter. If you subscribe to a newsletter, you will only receive future emails, but not the old archived ones. With ActivityPub, if someone follows your site, they will only receive new blog posts you publish from then on.
 
 So what’s the process?
 
@@ -101,9 +101,9 @@ Add the following to the site.conf in sites-available:
 
 Where 'blog' is the path to the subdirectory at which your blog resides.
 
-= What if you are running your blog in a subdirectory, but have a different [wp_siteurl](https://wordpress.org/documentation/article/giving-wordpress-its-own-directory/)? =
+= What if you are running your blog in a subdirectory? =
 
-In that case you don't need the redirect, because the index.php will take care of that.
+If you are running your blog in a subdirectory, but have a different [wp_siteurl](https://wordpress.org/documentation/article/giving-wordpress-its-own-directory/), you don't need the redirect, because the index.php will take care of that.
 
 = Constants =
 
@@ -133,6 +133,33 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= 2.6.1 =
+
+* Fixed: Extra Fields will generate wrong entries
+
+= 2.6.0 =
+
+* Added: Support for FEP-fb2a
+* Added: CRUD support for Extra Fields
+* Improved: Remote-Follow UI and UX
+* Improved: Open Graph `fediverse:creator` implementation
+* Fixed: Compatibility issues with fed.brid.gy
+* Fixed: Remote-Reply endpoint
+* Fixed: WebFinger Error Codes (thanks to the FediTest project)
+* Fixed: Fatal Error when wp_schedule_single_event third argument is being passed as a string
+
+= 2.5.0 =
+
+* Added: WebFinger cors header
+* Added: WebFinger Content-Type
+* Added: The Fediverse creator of a post to OpenGraph
+* Improved: Try to lookup local users first for Enable Mastodon Apps
+* Improved: Send also Announces for deletes
+* Improved: Load time by adding `count_total=false` to `WP_User_Query`
+* Fixed: Several WebFinger issues
+* Fixed: Redirect issue for Application user
+* Fixed: Accessibilty issues with missing screen-reader-text on User overview page
+
 = 2.4.0 =
 
 * Added: A core/embed block filter to transform iframes to links
@@ -158,36 +185,6 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Funkwhale URLs
 * Fixed: Prevent infinite loops in `get_comment_ancestors`
 * Fixed: Better Content-Negotiation handling
-
-= 2.3.1 =
-
-* Added: Enable Mastodon Apps: Add remote outbox fetching
-* Added: Help texts
-* Fixed: Compatibility issues with Discourse
-* Fixed: Do not announce replies
-* Fixed: Also delete interactions with deleted person
-* Fixed: Check Author-URL only if user is enabled for ActivityPub
-* Fixed: Generate comment IDs for federation from home_url
-* Removed: Beta label from the #Hashtag settings
-
-= 2.3.0 =
-
-* Added: Mark links as "unhandled-link" and "status-link", for a better UX in the Mastodon App
-* Added: Enable-Mastodon-Apps: Provide followers
-* Added: Enable-Mastodon-Apps: Extend account with ActivityPub data
-* Added: Enable-Mastodon-Apps: Search in followers
-* Added: Add `alt` support for images (for Block and Classic-Editor)
-* Fixed: Counter for system users outbox
-* Fixed: Don't set a default actor type in the actor class
-* Fixed: Outbox collection for blog and application user
-* Changed: A better default content handling based on the Object Type
-* Changed: Improve User management
-* Changed: Federated replies: Improved UX for "your reply will federate"
-* Changed: Comment reply federation: support `is_single_user` sites
-* Changed: Mask WordPress version number
-* Changed: Improve remote reply handling
-* Changed: Remote Reply: limit enqueue to when needed
-* Changed: Abstract shared Dialog code
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/master/CHANGELOG.md).
 

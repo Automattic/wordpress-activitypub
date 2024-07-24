@@ -99,8 +99,11 @@ class Post extends Base {
 	public function get_url() {
 		$post = $this->wp_object;
 
-		if ( 'trash' === get_post_status( $post ) ) {
+		if ( 'trash' === \get_post_status( $post ) ) {
 			$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
+		} elseif ( 'draft' === \get_post_status( $post ) && \get_sample_permalink( $post->ID ) ) {
+			$sample    = \get_sample_permalink( $post->ID );
+			$permalink = \str_replace( array( '%pagename%', '%postname%' ), $sample[1], $sample[0] );
 		} else {
 			$permalink = \get_permalink( $post );
 		}
@@ -137,6 +140,11 @@ class Post extends Base {
 	 * @return array The Attachments.
 	 */
 	protected function get_attachment() {
+		// Remove attachments from drafts.
+		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+			return array();
+		}
+
 		// Once upon a time we only supported images, but we now support audio/video as well.
 		// We maintain the image-centric naming for backwards compatibility.
 		$max_media = \intval(
@@ -692,6 +700,11 @@ class Post extends Base {
 			return null;
 		}
 
+		// Remove Teaser from drafts.
+		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+			return \__( '(This post is being modified)', 'activitypub' );
+		}
+
 		$content = \get_post_field( 'post_content', $this->wp_object->ID );
 		$content = \html_entity_decode( $content );
 		$content = \wp_strip_all_tags( $content );
@@ -746,6 +759,13 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
+		add_filter( 'activitypub_reply_block', '__return_empty_string' );
+
+		// Remove Content from drafts.
+		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+			return \__( '(This post is being modified)', 'activitypub' );
+		}
+
 		global $post;
 
 		/**
@@ -842,6 +862,26 @@ class Post extends Base {
 		 * @return string The filtered locale of the post.
 		 */
 		return apply_filters( 'activitypub_post_locale', $lang, $post_id, $this->wp_object );
+	}
+
+	/**
+	 * Returns the in-reply-to URL of the post.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-inreplyto
+	 *
+	 * @return string|null The in-reply-to URL of the post.
+	 */
+	public function get_in_reply_to() {
+		$blocks = \parse_blocks( $this->wp_object->post_content );
+
+		foreach ( $blocks as $block ) {
+			if ( 'activitypub/reply' === $block['blockName'] ) {
+				// We only support one reply block per post for now.
+				return $block['attrs']['url'];
+			}
+		}
+
+		return null;
 	}
 
 	/**

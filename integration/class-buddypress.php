@@ -32,7 +32,12 @@ class Buddypress {
 			'type' => 'PropertyValue',
 			'name' => \__( 'Profile', 'activitypub' ),
 			'value' => \html_entity_decode(
-				'<a rel="me" title="' . \esc_attr( bp_core_get_user_domain( $author_id ) ) . '" target="_blank" href="' . \bp_core_get_user_domain( $author_id ) . '">' . \wp_parse_url( \bp_core_get_user_domain( $author_id ), \PHP_URL_HOST ) . '</a>',
+				sprintf(
+					'<a rel="me" title="%s" target="_blank" href="%s">%s</a>',
+					\esc_attr( bp_core_get_user_domain( $author_id ) ),
+					\bp_core_get_user_domain( $author_id ),
+					\wp_parse_url( \bp_core_get_user_domain( $author_id ), \PHP_URL_HOST )
+				),
 				\ENT_QUOTES,
 				'UTF-8'
 			),
@@ -51,7 +56,12 @@ class Buddypress {
 							'type' => 'PropertyValue',
 							'name' => $blog->blogname,
 							'value' => \html_entity_decode(
-								'<a rel="me" title="' . \esc_attr( $blog->siteurl ) . '" target="_blank" href="' . $blog->siteurl . '">' . \wp_parse_url( $blog->siteurl, \PHP_URL_HOST ) . '</a>',
+								sprintf(
+									'<a rel="me" title="%s" target="_blank" href="%s">%s</a>',
+									\esc_attr( $blog->siteurl ),
+									$blog->siteurl,
+									\wp_parse_url( $blog->siteurl, \PHP_URL_HOST )
+								),
 								\ENT_QUOTES,
 								'UTF-8'
 							),

@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.1] - 2024-07-18
+
+### Fixed
+
+* Extra Fields will generate wrong entries
+
+## [2.6.0] - 2024-07-17
+
+### Added
+
+* Support for FEP-fb2a
+* CRUD support for Extra Fields
+
+### Improved
+
+* Remote-Follow UI and UX
+* Open Graph `fediverse:creator` implementation
+
+### Fixed
+
+* Compatibility issues with fed.brid.gy
+* Remote-Reply endpoint
+* WebFinger Error Codes (thanks to the FediTest project)
+* Fatal Error when `wp_schedule_single_event` third argument is being passed as a string
+
+## [2.5.0] - 2024-07-01
+
+### Added
+
+* WebFinger cors header
+* WebFinger Content-Type
+* The Fediverse creator of a post to OpenGraph
+
+### Changed
+
+* Try to lookup local users first for Enable Mastodon Apps
+* Send also Announces for deletes
+* Load time by adding `count_total=false` to `WP_User_Query`
+
+### Fixed
+
+* Several WebFinger issues
+* Redirect issue for Application user
+* Accessibilty issues with missing screen-reader-text on User overview page
+
+
 ## [2.4.0] - 2024-06-05
 
 ### Added
@@ -778,6 +824,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
+[2.6.1]: https://github.com/Automattic/wordpress-activitypub/compare/2.6.0...2.6.1
+[2.6.0]: https://github.com/Automattic/wordpress-activitypub/compare/2.5.0...2.6.0
+[2.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/2.4.0...2.5.0
 [2.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/2.3.1...2.4.0
 [2.3.1]: https://github.com/Automattic/wordpress-activitypub/compare/2.3.0...2.3.1
 [2.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/2.2.0...2.3.0
