@@ -16,6 +16,27 @@
 		<h2><?php \esc_html_e( 'Welcome', 'activitypub' ); ?></h2>
 
 		<p><?php echo wp_kses( \__( 'Enter the fediverse with <strong>ActivityPub</strong>, broadcasting your blog to a wider audience. Attract followers, deliver updates, and receive comments from a diverse user base on <strong>Mastodon</strong>, <strong>Friendica</strong>, <strong>Pleroma</strong>, <strong>Pixelfed</strong>, and all <strong>ActivityPub</strong>-compliant platforms.', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
+
+		<p>
+			<?php
+			$bookmarklet_url = \Activitypub\get_reply_intent_uri();
+
+			/* translators: %s is the domain of this site */
+			$reply_from_template = __( 'Reply from %s', 'activitypub' );
+			$button = sprintf(
+				'<a href="%s" class="button">%s</a>',
+				esc_attr( $bookmarklet_url ), // need to escape quotes for the bookmarklet
+				sprintf( $reply_from_template, \wp_parse_url( \home_url(), PHP_URL_HOST ) )
+			);
+			/* translators: %s is where the button HTML will be rendered. */
+			$button_and_explanation_template = \__(
+				'%s Save this bookmarklet to reply to posts on other sites from your own blog! When visiting a post on another site, click the bookmarklet to start a reply.',
+				'activitypub'
+			);
+
+			printf( $button_and_explanation_template, $button ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			?>
+		</p>
 	</div>
 
 	<?php

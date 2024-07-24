@@ -3,13 +3,15 @@ namespace Activitypub;
 
 use WP_Post;
 use WP_Comment;
-use Activitypub\Activity\Activity;
+use Activitypub\Http;
 use Activitypub\Collection\Users;
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Factory;
 use Activitypub\Transformer\Post;
 use Activitypub\Transformer\Comment;
 
+use function Activitypub\object_to_uri;
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
 use function Activitypub\safe_remote_post;
@@ -33,6 +35,11 @@ class Activity_Dispatcher {
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity' ), 10, 2 );
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity_or_announce' ), 10, 2 );
 		\add_action( 'activitypub_send_update_profile_activity', array( self::class, 'send_profile_update' ), 10, 1 );
+
+		// Default filters to add Inboxes to sent to
+		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_follower' ), 10, 2 );
+		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
+		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
 	}
 
 	/**
@@ -162,15 +169,7 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$follower_inboxes = Followers::get_inboxes( $user_id );
-
-		$mentioned_inboxes = array();
-		$cc = $activity->get_cc();
-		if ( $cc ) {
-			$mentioned_inboxes = Mention::get_inboxes( $cc );
-		}
-
-		$inboxes = array_merge( $follower_inboxes, $mentioned_inboxes );
+		$inboxes = apply_filters( 'activitypub_send_to_inboxes', array(), $user_id, $activity );
 		$inboxes = array_unique( $inboxes );
 
 		if ( empty( $inboxes ) ) {
@@ -234,5 +233,83 @@ class Activity_Dispatcher {
 			),
 			$comment
 		);
+	}
+
+	/**
+	 * Default filter to add Inboxes of Followers
+	 *
+	 * @param array $inboxes  The list of Inboxes
+	 * @param int   $user_id  The WordPress User-ID
+	 *
+	 * @return array The filtered Inboxes
+	 */
+	public static function add_inboxes_of_follower( $inboxes, $user_id ) {
+		$follower_inboxes = Followers::get_inboxes( $user_id );
+
+		return array_merge( $inboxes, $follower_inboxes );
+	}
+
+	/**
+	 * Default filter to add Inboxes of Mentioned Actors
+	 *
+	 * @param array $inboxes  The list of Inboxes
+	 * @param int   $user_id  The WordPress User-ID
+	 * @param array $activity The ActivityPub Activity
+	 *
+	 * @return array The filtered Inboxes
+	 */
+	public static function add_inboxes_by_mentioned_actors( $inboxes, $user_id, $activity ) {
+		$cc = $activity->get_cc();
+		if ( $cc ) {
+			$mentioned_inboxes = Mention::get_inboxes( $cc );
+
+			return array_merge( $inboxes, $mentioned_inboxes );
+		}
+
+		return $inboxes;
+	}
+
+	/**
+	 * Default filter to add Inboxes of Posts that are set as `in-reply-to`
+	 *
+	 * @param array $inboxes  The list of Inboxes
+	 * @param int   $user_id  The WordPress User-ID
+	 * @param array $activity The ActivityPub Activity
+	 *
+	 * @return array The filtered Inboxes
+	 */
+	public static function add_inboxes_of_replied_urls( $inboxes, $user_id, $activity ) {
+		$in_reply_to = $activity->get_in_reply_to();
+
+		if ( ! $in_reply_to ) {
+			return $inboxes;
+		}
+
+		if ( ! is_array( $in_reply_to ) ) {
+			$in_reply_to = array( $in_reply_to );
+		}
+
+		foreach ( $in_reply_to as $url ) {
+			$object = Http::get_remote_object( $url );
+
+			if ( ! $object || empty( $object['attributedTo'] ) ) {
+				continue;
+			}
+
+			$actor = object_to_uri( $object['attributedTo'] );
+			$actor = Http::get_remote_object( $actor );
+
+			if ( ! $actor ) {
+				continue;
+			}
+
+			if ( ! empty( $actor['endpoints']['sharedInbox'] ) ) {
+				$inboxes[] = $actor['endpoints']['sharedInbox'];
+			} elseif ( ! empty( $actor['inbox'] ) ) {
+				$inboxes[] = $actor['inbox'];
+			}
+		}
+
+		return $inboxes;
 	}
 }

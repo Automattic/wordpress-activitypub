@@ -1043,3 +1043,15 @@ function get_actor_extra_fields( $user_id ) {
 
 	return apply_filters( 'activitypub_get_actor_extra_fields', $extra_fields, $user_id );
 }
+
+/**
+ * Get the reply intent URI.
+ *
+ * @return string The reply intent URI.
+ */
+function get_reply_intent_uri() {
+	return sprintf(
+		'javascript:(()=>{window.open(\'%s\'+encodeURIComponent(window.location.href));})();',
+		esc_url( \admin_url( 'post-new.php?in_reply_to=' ) )
+	);
+}
