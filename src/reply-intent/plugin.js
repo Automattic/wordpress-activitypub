@@ -4,15 +4,15 @@ import { dispatch } from '@wordpress/data';
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import { useEffect, useState } from '@wordpress/element';
 
-const HandleInReplyTo = () => {
+const HandleReplyIntent = () => {
 	const [ didHandle, setDidHandle ] = useState( false );
 	useEffect( () => {
 		if ( didHandle ) {
 			return;
 		}
-		// Get the GET['inReplyTo'] value from the URL
+		// Get the GET['in_reply_to'] value from the URL
 		const urlParams = new URLSearchParams( window.location.search );
-		const inReplyTo = urlParams.get( 'inReplyTo' );
+		const inReplyTo = urlParams.get( 'in_reply_to' );
 		if ( inReplyTo ) {
 			// prepend an activitypub/reply block to the editor
 			// it appears to need a slight delay
@@ -31,4 +31,4 @@ const HandleInReplyTo = () => {
 	return null;
 };
 
-registerPlugin( 'reply-handle-new', { render: HandleInReplyTo } );
+registerPlugin( 'activitypub/reply-intent', { render: HandleReplyIntent } );

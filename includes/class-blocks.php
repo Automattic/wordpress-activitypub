@@ -17,16 +17,17 @@ class Blocks {
 	}
 
 	/**
-	 * Enqueue the reply handle script if the inReplyTo GET param is set.
+	 * Enqueue the reply handle script if the in_reply_to GET param is set.
 	 */
 	public static function handle_in_reply_to_get_param() {
-		if ( ! isset( $_GET['inReplyTo'] ) ) {
+		// only load the script if the in_reply_to GET param is set, action happens there, not here.
+		if ( ! isset( $_GET['in_reply_to'] ) ) {
 			return;
 		}
 
-		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/reply-handle-new/plugin.asset.php';
-		$plugin_url = plugins_url( 'build/reply-handle-new/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
-		wp_enqueue_script( 'activitypub-handle-new', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/reply-intent/plugin.asset.php';
+		$plugin_url = plugins_url( 'build/reply-intent/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
+		wp_enqueue_script( 'activitypub-reply-intent', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
 	}
 
 	public static function add_data() {

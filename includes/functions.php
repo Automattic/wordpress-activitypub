@@ -1052,6 +1052,6 @@ function get_actor_extra_fields( $user_id ) {
 function get_reply_intent_uri() {
 	return sprintf(
 		'javascript:(()=>{window.open(\'%s\'+encodeURIComponent(window.location.href));})();',
-		esc_url( \admin_url( 'post-new.php?inReplyTo=' ) )
+		esc_url( \admin_url( 'post-new.php?in_reply_to=' ) )
 	);
 }
