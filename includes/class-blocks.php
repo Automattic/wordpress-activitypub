@@ -159,12 +159,16 @@ class Blocks {
 	 * @return void
 	 */
 	public static function render_reply_block( $attrs ) {
-		$template = apply_filters( 'activitypub_reply_block_template', '<p>&#8620;<a title="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%1$s</a></p>' );
-
-		return sprintf(
-			$template,
-			esc_url( $attrs['url'] ),
-			esc_attr__( 'This post is a response to the referenced content.', 'activitypub' )
+		return apply_filters(
+			'activitypub_reply_block',
+			sprintf(
+				'<p><a title="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
+				esc_url( $attrs['url'] ),
+				esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
+				// translators: %s is the URL of the post being replied to.
+				sprintf( __( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', $attrs['url'] ) )
+			),
+			$attrs
 		);
 	}
 

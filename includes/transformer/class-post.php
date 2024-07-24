@@ -759,7 +759,7 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		add_filter( 'activitypub_reply_block_template', '__return_empty_string' );
+		add_filter( 'activitypub_reply_block', '__return_empty_string' );
 
 		// Remove Content from drafts.
 		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
