@@ -77,8 +77,11 @@ class Actors {
 			return $user;
 		}
 
+		$link_header = sprintf( '<%1$s>; rel="alternate"; type="application/activity+json"', $user->get_id() );
+
 		// redirect to canonical URL if it is not an ActivityPub request
 		if ( ! is_activitypub_request() ) {
+			header( 'Link: ' . $link_header );
 			header( 'Location: ' . $user->get_canonical_url(), true, 301 );
 			exit;
 		}
@@ -92,6 +95,7 @@ class Actors {
 
 		$rest_response = new WP_REST_Response( $json, 200 );
 		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+		$rest_response->header( 'Link', $link_header );
 
 		return $rest_response;
 	}

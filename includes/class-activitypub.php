@@ -132,11 +132,65 @@ class Activitypub {
 	}
 
 	/**
+	 * Add the 'self' link to the header.
+	 *
+	 * @see
+	 *
+	 * @return void
+	 */
+	public static function add_headers() {
+		// phpcs:ignore
+		$request_uri = $_SERVER['REQUEST_URI'];
+
+		if ( ! $request_uri ) {
+			return;
+		}
+
+		// only add self link to author pages...
+		if ( is_author() ) {
+			if ( is_user_disabled( get_queried_object_id() ) ) {
+				return;
+			}
+		} elseif ( is_singular() ) { // or posts/pages/custom-post-types...
+			if ( ! \post_type_supports( \get_post_type(), 'activitypub' ) ) {
+				return;
+			}
+		} else { // otherwise return
+			return;
+		}
+
+		// add self link to html and http header
+		$host      = wp_parse_url( home_url() );
+		$self_link = esc_url(
+			apply_filters(
+				'self_link',
+				set_url_scheme(
+					// phpcs:ignore
+					'http://' . $host['host'] . wp_unslash( $request_uri )
+				)
+			)
+		);
+
+		if ( ! headers_sent() ) {
+			header( 'Link: <' . $self_link . '>; rel="alternate"; type="application/activity+json"' );
+		}
+
+		add_action(
+			'wp_head',
+			function () use ( $self_link ) {
+				echo PHP_EOL . '<link rel="alternate" type="application/activity+json" href="' . esc_url( $self_link ) . '" />' . PHP_EOL;
+			}
+		);
+	}
+
+	/**
 	 * Custom redirects for ActivityPub requests.
 	 *
 	 * @return void
 	 */
 	public static function template_redirect() {
+		self::add_headers();
+
 		$comment_id = get_query_var( 'c', null );
 
 		// check if it seems to be a comment

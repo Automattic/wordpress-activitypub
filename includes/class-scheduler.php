@@ -296,6 +296,7 @@ class Scheduler {
 		// the user meta fields that affect a profile.
 		$fields = array(
 			'activitypub_user_description',
+			'activitypub_header_image',
 			'description',
 			'user_url',
 			'display_name',
