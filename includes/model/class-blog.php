@@ -118,9 +118,16 @@ class Blog extends Actor {
 	 * @return string The User-Name.
 	 */
 	public function get_name() {
+		$activitypub_blog_name = \get_option( 'activitypub_blog_name', null );
+
+		if ( ! $activitypub_blog_name ) {
+			$activitypub_blog_name = \get_bloginfo( 'name' );
+		}
+
+
 		return \wp_strip_all_tags(
 			\html_entity_decode(
-				\get_bloginfo( 'name' ),
+				$activitypub_blog_name,
 				\ENT_QUOTES,
 				'UTF-8'
 			)

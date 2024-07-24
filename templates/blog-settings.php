@@ -127,6 +127,23 @@
 							</p>
 						</td>
 					</tr>
+					<tr>
+						<th scope="row">
+							<?php \esc_html_e( 'Change blog name', 'activitypub' ); ?>
+						</th>
+						<td>
+							<label for="activitypub_blog_name">
+								<input
+									name="activitypub_blog_name"
+									id="activitypub_blog_name"
+									type="text" value="<?php echo esc_html( \get_option( 'activitypub_blog_name', get_bloginfo( 'name' ) ) ) ?>">
+							</label>
+							<p class="description">
+								<?php \esc_html_e( 'By default the ActivityPub plugin uses the WordPress site name as a value for the blog name.', 'activitypub' ); ?>
+							</p>
+						</td>
+					</tr>
+
 				</tbody>
 			</table>
 		</div>

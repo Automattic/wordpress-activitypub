@@ -299,6 +299,16 @@ class Admin {
 		);
 		\register_setting(
 			'activitypub_blog',
+			'activitypub_blog_name',
+			array(
+				'type' => 'string',
+				'description' => \esc_html__( 'The Description of the Blog-User', 'activitypub' ),
+				'show_in_rest' => true,
+				'default' => '',
+			)
+		);
+		\register_setting(
+			'activitypub_blog',
 			'activitypub_blog_identifier',
 			array(
 				'type'              => 'string',
