@@ -99,11 +99,11 @@ class Post extends Base {
 	public function get_url() {
 		$post = $this->wp_object;
 
-		if ( 'trash' === get_post_status( $post ) ) {
+		if ( 'trash' === \get_post_status( $post ) ) {
 			$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
-		} elseif ( 'draft' === get_post_status( $post ) && get_sample_permalink( $post->ID ) ) {
-			$sample    = get_sample_permalink( $post->ID );
-			$permalink = str_replace( array( '%pagename%', '%postname%' ), $sample[1], $sample[0] );
+		} elseif ( 'draft' === \get_post_status( $post ) && \get_sample_permalink( $post->ID ) ) {
+			$sample    = \get_sample_permalink( $post->ID );
+			$permalink = \str_replace( array( '%pagename%', '%postname%' ), $sample[1], $sample[0] );
 		} else {
 			$permalink = \get_permalink( $post );
 		}
