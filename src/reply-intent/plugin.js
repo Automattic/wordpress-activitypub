@@ -31,4 +31,4 @@ const HandleReplyIntent = () => {
 	return null;
 };
 
-registerPlugin( 'activitypub/reply-intent', { render: HandleReplyIntent } );
+registerPlugin( 'activitypub-reply-intent', { render: HandleReplyIntent } );
