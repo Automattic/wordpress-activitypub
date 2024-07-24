@@ -56,7 +56,7 @@
 		</thead>
 		<tbody>
 			<tr>
-				<td>inReplyTo</td>
+				<td>in_reply_to</td>
 				<td><?php esc_html_e( 'The URL of the content you want to reply to.', 'activitypub' ); ?></td>
 			</tr>
 		</tbody>
