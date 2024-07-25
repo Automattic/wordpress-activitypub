@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "activitypub/reply",
+  "version": "0.1.0",
+  "title": "Federated Reply",
+  "category": "widgets",
+  "icon": "commentReplyLink",
+  "description": "Respond to posts, notes, videos, and other content on the fediverse.  Ensure the URL originates from a federated social network like Mastodon, as other URLs might not function as expected.",
+  "supports": {
+    "html": false
+  },
+  "textdomain": "activitypub",
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./edit.css",
+  "attributes": {
+    "url": {
+      "type": "string"
+    }
+  }
+}
