@@ -279,12 +279,12 @@ class Health_Check {
 			$health_messages = array(
 				'webfinger_url_not_accessible' => \sprintf(
 					$not_accessible,
-					next( $url->get_error_data() )
+					$url->get_error_data()['data']
 				),
 				'webfinger_url_invalid_response' => \sprintf(
 					// translators: %s: Author URL
 					$invalid_response,
-					next( $url->get_error_data() )
+					$url->get_error_data()['data']
 				),
 			);
 			$message = null;
