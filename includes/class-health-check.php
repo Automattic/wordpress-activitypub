@@ -258,6 +258,7 @@ class Health_Check {
 		$url = Webfinger::resolve( $resource );
 		if ( \is_wp_error( $url ) ) {
 			$allowed = array( 'code' => array() );
+
 			$not_accessible = wp_kses(
 				// translators: %s: Author URL
 				\__(
@@ -278,12 +279,12 @@ class Health_Check {
 			$health_messages = array(
 				'webfinger_url_not_accessible' => \sprintf(
 					$not_accessible,
-					$url->get_error_data()
+					next( $url->get_error_data() )
 				),
 				'webfinger_url_invalid_response' => \sprintf(
 					// translators: %s: Author URL
 					$invalid_response,
-					$url->get_error_data()
+					next( $url->get_error_data() )
 				),
 			);
 			$message = null;
