@@ -101,7 +101,7 @@ class Activitypub {
 		$json_template = false;
 
 		if ( \is_author() && ! is_user_disabled( \get_the_author_meta( 'ID' ) ) ) {
-			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/author-json.php';
+			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/user-json.php';
 		} elseif ( is_comment() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() ) {

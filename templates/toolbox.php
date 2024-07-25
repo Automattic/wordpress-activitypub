@@ -1,4 +1,4 @@
-<div class="card activitypub">
+<div class="card activitypub" id="activitypub">
 	<h2><?php esc_html_e( 'Fediverse Bookmarklet', 'activitypub' ); ?></h2>
 	<p>
 		<?php esc_html_e( 'This lightweight bookmarklet makes it simple to reply to content on any webpage that supports ActicityPub, enhancing your interaction on the fediverse.', 'activitypub' ); ?>
