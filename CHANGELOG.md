@@ -9,15 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* "Reply Context" support, you can now reply to posts on the Fediverse through a WordPress post.
-* Bookmarklet to automatically pre-fill the "Reply Context" block.
-* "Header Image" support and ability to edit other profile information for Authors and the Blog-User.
-* ActivityPub link HTML/HTTP-Header support.
-* Tag support for Actors (only auto-generated for now).
+* "Reply Context" support, you can now reply to posts on the Fediverse through a WordPress post
+* Bookmarklet to automatically pre-fill the "Reply Context" block
+* "Header Image" support and ability to edit other profile information for Authors and the Blog-User
+* ActivityPub link HTML/HTTP-Header support
+* Tag support for Actors (only auto-generated for now)
 
 ### Improved
 
 * Add setting to enable/disable the `fediverse:creator` OGP tag.
+
+## Removed
+
+* Deprecated `class-post.php` model
 
 ## [2.6.1] - 2024-07-18
 

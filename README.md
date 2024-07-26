@@ -141,6 +141,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: ActivityPub link HTML/HTTP-Header support
 * Added: Tag support for Actors (only auto generated for now)
 * Improved: Add setting to enable/disable the `fediverse:creator` OGP tag
+* Removed: Deprecated `class-post.php` model
 
 ### 2.6.1 ###
 
