@@ -135,7 +135,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = 3.0.0 =
 
-* Added: "Reply Context" suppot, you can now reply to posts on the Fediverse through a WordPress post
+* Added: "Reply Context" support, you can now reply to posts on the Fediverse through a WordPress post
 * Added: Bookmarklet to automatically pre-fill the "Reply Context" block
 * Added: "Header Image" support and ability to edit other profile informations for Authors and the Blog-User
 * Added: ActivityPub link HTML/HTTP-Header support
