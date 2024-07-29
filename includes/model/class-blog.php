@@ -431,7 +431,7 @@ class Blog extends Actor {
 		$args = array(
 			'orderby' => 'count',
 			'order'   => 'DESC',
-			'number'  => 5,
+			'number'  => 10,
 		);
 
 		$tags = get_tags( $args );

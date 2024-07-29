@@ -9,7 +9,7 @@ namespace Activitypub;
  *
  * @return array Array or string of HTTP request arguments.
  */
-function allow_localhost( $r, $url ) {
+function allow_localhost( $r, $url ) { // phpcs:ignore
 	$r['reject_unsafe_urls'] = false;
 
 	return $r;

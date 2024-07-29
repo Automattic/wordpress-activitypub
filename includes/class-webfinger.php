@@ -201,7 +201,11 @@ class Webfinger {
 			return $data;
 		}
 
-		$webfinger_url = sprintf( 'https://%s/.well-known/webfinger?resource=%s', $host, rawurlencode( $identifier ) );
+		$webfinger_url = sprintf(
+			'https://%s/.well-known/webfinger?resource=%s',
+			$host,
+			rawurlencode( $identifier )
+		);
 
 		$response = wp_safe_remote_get(
 			$webfinger_url,
