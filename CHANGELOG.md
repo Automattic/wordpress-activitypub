@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Add setting to enable/disable the `fediverse:creator` OGP tag.
 
-## Removed
+### Removed
 
 * Deprecated `class-post.php` model
 
