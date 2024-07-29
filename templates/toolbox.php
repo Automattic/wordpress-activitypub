@@ -1,13 +1,13 @@
-<div class="card activitypub">
+<div class="card activitypub" id="activitypub">
 	<h2><?php esc_html_e( 'Fediverse Bookmarklet', 'activitypub' ); ?></h2>
 	<p>
-		<?php esc_html_e( 'This lightweight bookmarklet makes it simple to reply to content on any webpage that supports ActicityPub, enhancing your interaction on the fediverse.', 'activitypub' ); ?>
+		<?php esc_html_e( 'This lightweight bookmarklet makes it simple to reply to content on any webpage that supports ActivityPub, enhancing your interaction on the fediverse.', 'activitypub' ); ?>
 	</p>
 	<form>
 		<h3><?php esc_html_e( 'Install Bookmarklet', 'activitypub' ); ?></h3>
 		<p><?php esc_html_e( 'Drag and drop this button to your browser’s bookmark bar or save this bookmarklet to reply to posts on other websites from your blog! When visiting a post on another site, click the bookmarklet to start a reply.', 'activitypub' ); ?></p>
 		<p class="activitypub-bookmarklet-wrapper">
-			<a class="activitypub-bookmarklet button" onclick="return false;" href="<?php echo esc_html( \Activitypub\get_reply_intent_uri() ); ?>">
+			<a class="activitypub-bookmarklet button" onclick="return false;" href="<?php echo esc_html( \Activitypub\get_reply_intent_uri() ); ?>" style="cursor: grab;">
 				<?php // translators: The host (domain) of the Blog ?>
 				<?php printf( esc_html__( 'Reply from %s', 'activitypub' ), esc_attr( \wp_parse_url( \home_url(), PHP_URL_HOST ) ) ); ?>
 			</a>
@@ -19,7 +19,7 @@
 			<p>
 				<textarea id="activitypub-bookmarklet-code" class="large-text activitypub-code" rows="5" readonly="readonly" aria-labelledby="activitypub-code-desc"><?php echo esc_html( \Activitypub\get_reply_intent_uri() ); ?></textarea>
 			</p>
-			<p><span class="dashicons dashicons-clipboard"></span> <a href="javascript:;" class="copy-activitypub-bookmarklet-code"><?php esc_html_e( 'Copy to clipboard', 'activitypub' ); ?></a></p>
+			<p><span class="dashicons dashicons-clipboard"></span> <a href="javascript:;" class="copy-activitypub-bookmarklet-code" style="cursor: copy;"><?php esc_html_e( 'Copy to clipboard', 'activitypub' ); ?></a></p>
 		</div>
 		<script>
 		jQuery( document ).ready( function( $ ) {
