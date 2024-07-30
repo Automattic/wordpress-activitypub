@@ -105,7 +105,7 @@ class User extends Actor {
 	 * @return string The User-Description.
 	 */
 	public function get_summary() {
-		$description = get_user_meta( $this->_id, 'activitypub_user_description', true );
+		$description = get_user_option( 'activitypub_description', $this->_id );
 		if ( empty( $description ) ) {
 			$description = get_user_meta( $this->_id, 'description', true );
 		}
