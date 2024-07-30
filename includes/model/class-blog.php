@@ -419,11 +419,12 @@ class Blog extends Actor {
 		}
 	}
 
-	 * Get the User-Hashtags.
+	/**
+	 * Get the User - Hashtags .
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#Hashtag
 	 *
-	 * @return array The User-Hashtags.
+	 * @return array The User - Hashtags .
 	 */
 	public function get_tag() {
 		$hashtags = array();
