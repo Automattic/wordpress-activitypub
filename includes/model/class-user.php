@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub\Model;
 
+use Activitypub\Hashtag;
+use Activitypub\Mention;
 use WP_Query;
 use WP_Error;
 use Activitypub\Migration;
@@ -10,6 +12,7 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Extra_Fields;
 
+use function Activitypub\add_links_to_text;
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
 
@@ -109,7 +112,12 @@ class User extends Actor {
 		if ( empty( $description ) ) {
 			$description = get_user_meta( $this->_id, 'description', true );
 		}
-		return \wpautop( \wp_kses( $description, 'default' ) );
+
+		$description = \wpautop( \wp_kses( $description, 'default' ) );
+		$description = \preg_replace( '#(\A|[^=\]\'"a-zA-Z0-9])(http[s]?://)(.+?)(/[^()<>\s]+)#i', '\\1<a href="\\2\\3\\4" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">\\2</span>\\3<span class="invisible">\\4</span></a>', $description );
+		$description = \preg_replace_callback( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', array( \Activitypub\Hashtag::class, 'replace_with_links' ), $description );
+		$description = \preg_replace_callback( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', array( \Activitypub\Mention::class, 'replace_with_links' ), $description );
+		return $description;
 	}
 
 	/**
