@@ -396,7 +396,7 @@ class Admin {
 		) {
 			return false;
 		}
-		$description = ! empty( $_POST['activitypub_description'] ) ? sanitize_text_field( wp_unslash( $_POST['activitypub_description'] ) ) : false;
+		$description = ! empty( $_POST['activitypub_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['activitypub_description'] ) ) : false;
 		if ( $description ) {
 			\update_user_option( $user_id, 'activitypub_description', $description );
 		} else {
