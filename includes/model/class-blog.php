@@ -139,12 +139,11 @@ class Blog extends Actor {
 			$summary = \get_bloginfo( 'description' );
 		}
 
-		return \wpautop(
-			\wp_kses(
-				$summary,
-				'default'
-			)
-		);
+		$summary = \wpautop( \wp_kses( $summary, 'default' ) );
+		$summary = \preg_replace( '#(\A|[^=\]\'"a-zA-Z0-9])(http[s]?://)(.+?)(/[^()<>\s]+)#i', '\\1<a href="\\2\\3\\4" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">\\2</span>\\3<span class="invisible">\\4</span></a>', $summary );
+		$summary = \preg_replace_callback( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', array( \Activitypub\Hashtag::class, 'replace_with_links' ), $summary );
+		$summary = \preg_replace_callback( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', array( \Activitypub\Mention::class, 'replace_with_links' ), $summary );
+		return $summary;
 	}
 
 	/**
