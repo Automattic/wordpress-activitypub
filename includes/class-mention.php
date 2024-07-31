@@ -19,12 +19,12 @@ class Mention {
 		\add_filter( 'the_content', array( self::class, 'the_content' ), 99, 1 );
 		\add_filter( 'comment_text', array( self::class, 'the_content' ), 10, 1 );
 		\add_filter( 'activitypub_extract_mentions', array( self::class, 'extract_mentions' ), 99, 2 );
-		\add_filter( 'activitypub_activity_object_array', function ( array $user_object_array )  {
-			if ( ! empty( $user_object_array['summary'] ) ) {
-				$user_object_array['summary'] = \preg_replace( '#(\A|[^=\]\'"a-zA-Z0-9])(http[s]?://)(.+?)(/[^()<>\s]+)#i', '\\1<a href="\\2\\3\\4" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">\\2</span>\\3\\4<span class="invisible"></span></a>', $user_object_array['summary'] );
-				$user_object_array['summary'] = self::the_content( $user_object_array['summary'] );
+		\add_filter( 'activitypub_activity_object_array', function ( array $object_array )  {
+			if ( ! empty( $object_array['summary'] ) ) {
+				$object_array['summary'] = \preg_replace( '#(\A|[^=\]\'"a-zA-Z0-9])(http[s]?://)(.+?)(/[^()<>\s]+)#i', '\\1<a href="\\2\\3\\4" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">\\2</span>\\3\\4<span class="invisible"></span></a>', $object_array['summary'] );
+				$object_array['summary'] = self::the_content( $object_array['summary'] );
 			}
-			return $user_object_array;
+			return $object_array;
 		}, 99, 1 );
 	}
 
