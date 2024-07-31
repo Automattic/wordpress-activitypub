@@ -14,6 +14,12 @@ class Hashtag {
 		if ( '1' === \get_option( 'activitypub_use_hashtags', '1' ) ) {
 			\add_action( 'wp_insert_post', array( self::class, 'insert_post' ), 10, 2 );
 			\add_filter( 'the_content', array( self::class, 'the_content' ), 10, 1 );
+			\add_filter( 'activitypub_activity_object_array', function ( array $user_object_array ) {
+				if ( ! empty( $user_object_array['summary'] ) ) {
+					$user_object_array['summary'] = self::the_content( $user_object_array['summary'] );
+				}
+				return $user_object_array;
+			}, 99, 1 );
 		}
 	}
 
