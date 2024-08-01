@@ -46,8 +46,6 @@ class Activitypub {
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 
-		\add_filter( 'activitypub_get_actor_extra_fields', array( self::class, 'default_actor_extra_fields' ), 10, 2 );
-
 		\add_action( 'tool_box', array( self::class, 'tool_box' ) );
 
 		// register several post_types
@@ -503,8 +501,6 @@ class Activitypub {
 			)
 		);
 
-		Extra_Fields::register_post_types();
-
 		\do_action( 'activitypub_after_register_post_type' );
 	}
 
@@ -520,58 +516,5 @@ class Activitypub {
 			$user = \get_user_by( 'id', $user_id );
 			$user->add_cap( 'activitypub' );
 		}
-	}
-
-	/**
-	 * Add default extra fields to an actor.
-	 *
-	 * @param array $extra_fields The extra fields.
-	 * @param int   $user_id      The User-ID.
-	 *
-	 * @return array The extra fields.
-	 */
-	public static function default_actor_extra_fields( $extra_fields, $user_id ) {
-		if ( $extra_fields || ! $user_id ) { // @todo allow 0 as user_id
-			return $extra_fields;
-		}
-
-		$already_migrated = \get_user_meta( $user_id, 'activitypub_default_extra_fields', true );
-
-		if ( $already_migrated ) {
-			return $extra_fields;
-		}
-
-		$defaults = array(
-			\__( 'Blog', 'activitypub' )     => \home_url( '/' ),
-			\__( 'Profile', 'activitypub' )  => \get_author_posts_url( $user_id ),
-			\__( 'Homepage', 'activitypub' ) => \get_the_author_meta( 'user_url', $user_id ),
-		);
-
-		foreach ( $defaults as $title => $url ) {
-			if ( ! $url ) {
-				continue;
-			}
-
-			$extra_field = array(
-				'post_type'      => 'ap_extrafield',
-				'post_title'     => $title,
-				'post_status'    => 'publish',
-				'post_author'    => $user_id,
-				'post_content'   => sprintf(
-					'<!-- wp:paragraph --><p><a rel="me" title="%s" target="_blank" href="%s">%s</a></p><!-- /wp:paragraph -->',
-					\esc_attr( $url ),
-					$url,
-					\wp_parse_url( $url, \PHP_URL_HOST )
-				),
-				'comment_status' => 'closed',
-			);
-
-			$extra_field_id = wp_insert_post( $extra_field );
-			$extra_fields[] = get_post( $extra_field_id );
-		}
-
-		\update_user_meta( $user_id, 'activitypub_default_extra_fields', true );
-
-		return $extra_fields;
 	}
 }

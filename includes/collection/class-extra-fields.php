@@ -11,6 +11,11 @@ class Extra_Fields {
 
 	const BLOG_POST_TYPE = 'ap_extrafield_blog';
 
+	public static function init() {
+		self::register_post_types();
+		\add_filter( 'activitypub_get_actor_extra_fields', array( self::class, 'default_actor_extra_fields' ), 10, 2 );
+	}
+
 	/**
 	 * Register the post types for extra fields.
 	 */
@@ -54,7 +59,7 @@ class Extra_Fields {
 	 * @return WP_Post[] The extra fields.
 	 */
 	public static function get_actor_fields( $user_id ) {
-		$is_blog = Users::BLOG_USER_ID === $user_id;
+		$is_blog = self::is_blog( $user_id );
 		$post_type = $is_blog ? self::BLOG_POST_TYPE : self::USER_POST_TYPE;
 		$args = array(
 			'post_type' => $post_type,
@@ -141,5 +146,81 @@ class Extra_Fields {
 
 	public static function is_post_type( $post_type ) {
 		return \in_array( $post_type, array( self::USER_POST_TYPE, self::BLOG_POST_TYPE ), true );
+	}
+
+	/**
+	 * Add default extra fields to an actor.
+	 *
+	 * @param array $extra_fields The extra fields.
+	 * @param int   $user_id      The User-ID.
+	 *
+	 * @return array The extra fields.
+	 */
+	public static function default_actor_extra_fields( $extra_fields, $user_id ) {
+		// We'll only take action when there are none yet.
+		if ( ! empty( $extra_fields ) ) {
+			return $extra_fields;
+		}
+
+		$is_blog = self::is_blog( $user_id );
+		$already_migrated = $is_blog
+			? \get_option( 'activitypub_default_extra_fields' )
+			: \get_user_meta( $user_id, 'activitypub_default_extra_fields', true );
+
+		if ( $already_migrated ) {
+			return $extra_fields;
+		}
+
+		$defaults = array(
+			\__( 'Blog', 'activitypub' ) => \home_url( '/' ),
+		);
+
+		if ( ! $is_blog ) {
+			$author_url = \get_the_author_meta( 'user_url', $user_id );
+			$author_posts_url = \get_author_posts_url( $user_id );
+
+			$defaults[ \__( 'Profile', 'activitypub' ) ] = $author_posts_url;
+			if ( $author_url !== $author_posts_url ) {
+				$defaults[ \__( 'Homepage', 'activitypub' ) ] = $author_url;
+			}
+		}
+
+		foreach ( $defaults as $title => $url ) {
+			if ( ! $url ) {
+				continue;
+			}
+
+			$extra_field = array(
+				'post_type'      => 'ap_extrafield',
+				'post_title'     => $title,
+				'post_status'    => 'publish',
+				'post_author'    => $user_id,
+				'post_content'   => sprintf(
+					'<!-- wp:paragraph --><p><a rel="me" title="%s" target="_blank" href="%s">%s</a></p><!-- /wp:paragraph -->',
+					\esc_attr( $url ),
+					$url,
+					\wp_parse_url( $url, \PHP_URL_HOST )
+				),
+				'comment_status' => 'closed',
+			);
+
+			$extra_field_id = wp_insert_post( $extra_field );
+			$extra_fields[] = get_post( $extra_field_id );
+		}
+
+		$is_blog
+			? \update_option( 'activitypub_default_extra_fields', true )
+			: \update_user_meta( $user_id, 'activitypub_default_extra_fields', true );
+
+		return $extra_fields;
+	}
+
+	/**
+	 * Checks if the user is the blog user.
+	 * @param int $user_id The user ID.
+	 * @return bool True if the user is the blog user, otherwise false.
+	 */
+	private static function is_blog( $user_id ) {
+		return Users::BLOG_USER_ID === $user_id;
 	}
 }
