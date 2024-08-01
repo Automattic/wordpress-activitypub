@@ -122,6 +122,11 @@ class Scheduler {
 			return;
 		}
 
+		if ( 'ap_extrafield_blog' === $post->post_type ) {
+			self::schedule_profile_update( 0 );
+			return;
+		}
+
 		// Do not send activities if post is password protected.
 		if ( \post_password_required( $post ) ) {
 			return;

@@ -5,6 +5,7 @@ use WP_User_Query;
 use Activitypub\Model\Blog;
 use Activitypub\Activitypub;
 use Activitypub\Collection\Users;
+use Activitypub\Collection\Extra_Fields;
 
 use function Activitypub\count_followers;
 use function Activitypub\is_user_disabled;
@@ -108,7 +109,7 @@ class Admin {
 
 		$current_screen = get_current_screen();
 
-		if ( isset( $current_screen->id ) && 'edit-ap_extrafield' === $current_screen->id ) {
+		if ( 'edit' === $current_screen->base && Extra_Fields::is_post_type( $current_screen->post_type ) ) {
 			?>
 			<div class="notice" style="margin: 0; background: none; border: none; box-shadow: none; padding: 15px 0 0 0; font-size: 14px;">
 				<?php esc_html_e( 'These are extra fields that are used for your ActivityPub profile. You can use your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?>
@@ -496,7 +497,7 @@ class Admin {
 
 				$post = get_post( $arg[2] );
 
-				if ( 'ap_extrafield' !== $post->post_type ) {
+				if ( Extra_Fields::is_post_type( $post->post_type ) ) {
 					return $allcaps;
 				}
 

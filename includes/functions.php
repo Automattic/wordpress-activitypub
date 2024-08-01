@@ -9,6 +9,7 @@ use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Users;
+use Activitypub\Collection\Extra_Fields;
 
 /**
  * Returns the ActivityPub default JSON-context
@@ -1046,22 +1047,7 @@ function normalize_host( $host ) {
  * @return array The extra fields.
  */
 function get_actor_extra_fields( $user_id ) {
-	$extra_fields = new WP_Query(
-		array(
-			'post_type' => 'ap_extrafield',
-			'nopaging'  => true,
-			'status'    => 'publish',
-			'author'    => $user_id,
-		)
-	);
-
-	if ( $extra_fields->have_posts() ) {
-		$extra_fields = $extra_fields->posts;
-	} else {
-		$extra_fields = array();
-	}
-
-	return apply_filters( 'activitypub_get_actor_extra_fields', $extra_fields, $user_id );
+	return Extra_Fields::get_actor_fields( $user_id );
 }
 
 /**

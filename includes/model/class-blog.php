@@ -422,6 +422,9 @@ class Blog extends Actor {
 	 * @return array The extended User-Output.
 	 */
 	public function get_attachment() {
+		$extra_fields = get_actor_extra_fields( $this->_id );
+		return Extra_Fields::fields_to_attachments( $extra_fields );
+		// @todo: refactor these to be in the migration thing.
 		$array = array();
 
 		$array[] = array(

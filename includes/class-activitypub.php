@@ -5,6 +5,7 @@ use Exception;
 use Activitypub\Signature;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Extra_Fields;
 
 use function Activitypub\is_comment;
 use function Activitypub\sanitize_url;
@@ -502,34 +503,7 @@ class Activitypub {
 			)
 		);
 
-		\register_post_type(
-			'ap_extrafield',
-			array(
-				'labels'           => array(
-					'name'          => _x( 'Extra fields', 'post_type plural name', 'activitypub' ),
-					'singular_name' => _x( 'Extra field', 'post_type single name', 'activitypub' ),
-					'add_new'       => __( 'Add new', 'activitypub' ),
-					'add_new_item'  => __( 'Add new extra field', 'activitypub' ),
-					'new_item'      => __( 'New extra field', 'activitypub' ),
-					'edit_item'     => __( 'Edit extra field', 'activitypub' ),
-					'view_item'     => __( 'View extra field', 'activitypub' ),
-					'all_items'     => __( 'All extra fields', 'activitypub' ),
-				),
-				'public'              => false,
-				'hierarchical'        => false,
-				'query_var'           => false,
-				'has_archive'         => false,
-				'publicly_queryable'  => false,
-				'show_in_menu'        => false,
-				'delete_with_user'    => true,
-				'can_export'          => true,
-				'exclude_from_search' => true,
-				'show_in_rest'        => true,
-				'map_meta_cap'        => true,
-				'show_ui'             => true,
-				'supports'            => array( 'title', 'editor' ),
-			)
-		);
+		Extra_Fields::register_post_types();
 
 		\do_action( 'activitypub_after_register_post_type' );
 	}
@@ -557,7 +531,7 @@ class Activitypub {
 	 * @return array The extra fields.
 	 */
 	public static function default_actor_extra_fields( $extra_fields, $user_id ) {
-		if ( $extra_fields || ! $user_id ) {
+		if ( $extra_fields || ! $user_id ) { // @todo allow 0 as user_id
 			return $extra_fields;
 		}
 
