@@ -185,13 +185,15 @@ class Extra_Fields {
 			}
 		}
 
+		$post_type = $is_blog ? self::BLOG_POST_TYPE : self::USER_POST_TYPE;
+
 		foreach ( $defaults as $title => $url ) {
 			if ( ! $url ) {
 				continue;
 			}
 
 			$extra_field = array(
-				'post_type'      => 'ap_extrafield',
+				'post_type'      => $post_type,
 				'post_title'     => $title,
 				'post_status'    => 'publish',
 				'post_author'    => $user_id,
