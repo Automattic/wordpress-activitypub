@@ -7,11 +7,13 @@ use WP_Error;
 use Activitypub\Signature;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Users;
+use Activitypub\Collection\Extra_Fields;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_actor_extra_fields;
 
 class Blog extends Actor {
 	/**
@@ -424,32 +426,5 @@ class Blog extends Actor {
 	public function get_attachment() {
 		$extra_fields = get_actor_extra_fields( $this->_id );
 		return Extra_Fields::fields_to_attachments( $extra_fields );
-		// @todo: refactor these to be in the migration thing.
-		$array = array();
-
-		$array[] = array(
-			'type' => 'PropertyValue',
-			'name' => \__( 'Blog', 'activitypub' ),
-			'value' => \html_entity_decode(
-				sprintf(
-					'<a rel="me" title="%s" target="_blank" href="%s">%s</a>',
-					\esc_attr( \home_url( '/' ) ),
-					\esc_url( \home_url( '/' ) ),
-					\wp_parse_url( \home_url( '/' ), \PHP_URL_HOST )
-				),
-				\ENT_QUOTES,
-				'UTF-8'
-			),
-		);
-
-		// Add support for FEP-fb2a, for more information see FEDERATION.md
-		$array[] = array(
-			'type' => 'Link',
-			'name' => \__( 'Blog', 'activitypub' ),
-			'href' => \esc_url( \home_url( '/' ) ),
-			'rel'  => array( 'me' ),
-		);
-
-		return $array;
 	}
 }
