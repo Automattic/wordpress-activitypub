@@ -1052,6 +1052,8 @@ function get_actor_extra_fields( $user_id ) {
 			'nopaging'  => true,
 			'status'    => 'publish',
 			'author'    => $user_id,
+			'orderby'   => 'menu_order',
+			'order'     => 'ASC',
 		)
 	);
 
