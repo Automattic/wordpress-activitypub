@@ -44,7 +44,7 @@ class Extra_Fields {
 			'show_in_rest'        => true,
 			'map_meta_cap'        => true,
 			'show_ui'             => true,
-			'supports'            => array( 'title', 'editor' ),
+			'supports'            => array( 'title', 'editor', 'page-attributes' ),
 		);
 
 		\register_post_type( self::USER_POST_TYPE, $args );
@@ -64,6 +64,8 @@ class Extra_Fields {
 		$args = array(
 			'post_type' => $post_type,
 			'nopaging'  => true,
+			'orderby'   => 'menu_order',
+			'order'     => 'ASC',
 		);
 		if ( ! $is_blog ) {
 			$args['author'] = $user_id;
@@ -185,7 +187,8 @@ class Extra_Fields {
 			}
 		}
 
-		$post_type = $is_blog ? self::BLOG_POST_TYPE : self::USER_POST_TYPE;
+		$post_type  = $is_blog ? self::BLOG_POST_TYPE : self::USER_POST_TYPE;
+		$menu_order = 10;
 
 		foreach ( $defaults as $title => $url ) {
 			if ( ! $url ) {
@@ -204,8 +207,10 @@ class Extra_Fields {
 					\wp_parse_url( $url, \PHP_URL_HOST )
 				),
 				'comment_status' => 'closed',
+				'menu_order'     => $menu_order,
 			);
 
+			$menu_order += 10;
 			$extra_field_id = wp_insert_post( $extra_field );
 			$extra_fields[] = get_post( $extra_field_id );
 		}
