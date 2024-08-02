@@ -179,7 +179,27 @@ class Post extends Base {
 		$media      = \array_intersect_key( $media, $unique_ids );
 		$media      = \array_slice( $media, 0, $max_media );
 
-		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media ) );
+		/**
+		 * Filter the attachment IDs for a post.
+		 *
+		 * @param array   $media           The media array grouped by type.
+		 * @param WP_Post $this->wp_object The post object.
+		 *
+		 * @return array The filtered attachment IDs.
+		 */
+		$media = \apply_filters( 'activitypub_attachment_ids', $media, $this->wp_object );
+
+		$attchments = \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media ) );
+
+		/**
+		 * Filter the attachments for a post.
+		 *
+		 * @param array   $attchments      The attachments.
+		 * @param WP_Post $this->wp_object The post object.
+		 *
+		 * @return array The filtered attachments.
+		 */
+		return \apply_filters( 'activitypub_attachments', $attchments, $this->wp_object );
 	}
 
 	/**
