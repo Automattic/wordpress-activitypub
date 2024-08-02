@@ -527,7 +527,7 @@ class Activitypub {
 				'show_in_rest'        => true,
 				'map_meta_cap'        => true,
 				'show_ui'             => true,
-				'supports'            => array( 'title', 'editor' ),
+				'supports'            => array( 'title', 'editor', 'page-attributes' ),
 			)
 		);
 
@@ -573,6 +573,7 @@ class Activitypub {
 			\__( 'Homepage', 'activitypub' ) => \get_the_author_meta( 'user_url', $user_id ),
 		);
 
+		$menu_order = 10;
 		foreach ( $defaults as $title => $url ) {
 			if ( ! $url ) {
 				continue;
@@ -590,8 +591,10 @@ class Activitypub {
 					\wp_parse_url( $url, \PHP_URL_HOST )
 				),
 				'comment_status' => 'closed',
+				'menu_order'     => $menu_order,
 			);
 
+			$menu_order += 10;
 			$extra_field_id = wp_insert_post( $extra_field );
 			$extra_fields[] = get_post( $extra_field_id );
 		}
