@@ -9,10 +9,10 @@ class Seriously_Simple_Podcasting {
 
 	public static function add_attachments( $attachments, $post ) {
 		$attachment = array(
-			'type'      => \esc_attr( \get_post_meta( $post->ID, 'episode_type', true ) ),
-			'url'       => \esc_url( \get_post_meta( $post->ID, 'audio_file', true ) ),
-			'name'      => \esc_attr( \get_the_title( $post->ID ) ),
-			'thumbnail' => \esc_url( \get_post_meta( $post->ID, 'cover_image', true ) ),
+			'type' => \esc_attr( \get_post_meta( $post->ID, 'episode_type', true ) ),
+			'url'  => \esc_url( \get_post_meta( $post->ID, 'audio_file', true ) ),
+			'name' => \esc_attr( \get_the_title( $post->ID ) ),
+			'icon' => \esc_url( \get_post_meta( $post->ID, 'cover_image', true ) ),
 		);
 
 		array_filter( $attachment );
