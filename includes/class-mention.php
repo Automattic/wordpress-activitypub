@@ -23,7 +23,7 @@ class Mention {
 			'activitypub_activity_object_array',
 			function ( array $object_array ) {
 				if ( ! empty( $object_array['summary'] ) ) {
-					$object_array['summary'] = \preg_replace( '#(\A|[^=\]\'"a-zA-Z0-9])(http[s]?://)(.+?)(/[^()<>\s]+)#i', '\\1<a href="\\2\\3\\4" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">\\2</span>\\3\\4<span class="invisible"></span></a>', $object_array['summary'] );
+					$object_array['summary'] = \preg_replace_callback( '/(http|https):\/\/([-a-zA-Z0-9@:;\/%_;\+.~#?&=]*)/i', 'Activitypub\replace_urls_with_html', $object_array['summary'] );
 					$object_array['summary'] = self::the_content( $object_array['summary'] );
 				}
 				return $object_array;

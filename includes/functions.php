@@ -1077,3 +1077,48 @@ function get_reply_intent_uri() {
 		esc_url( \admin_url( 'post-new.php?in_reply_to=' ) )
 	);
 }
+
+/**
+ * A callback for preg_replace to build HTML links form a URL
+ *
+ * @param array $result the preg_match results
+ *
+ * @return string the final string
+ */
+function replace_urls_with_html( $result ) {
+
+	$parsed_url = \wp_parse_url( $result[0] );
+
+	$invisible_prefix = $parsed_url['scheme'] . '://';
+	if ( ! empty( $parsed_url['user'] ) ) {
+		$invisible_prefix .= $parsed_url['user'];
+	}
+	if ( ! empty( $parsed_url['pass'] ) ) {
+		$invisible_prefix .= ':' . $parsed_url['pass'];
+	}
+	if ( ! empty( $parsed_url['user'] ) ) {
+		$invisible_prefix .= '@';
+	}
+
+	$text_url = $parsed_url['host'];
+	if ( ! empty( $parsed_url['port'] ) ) {
+		$text_url .= ':' . $parsed_url['port'];
+	}
+	if ( ! empty( $parsed_url['path'] ) ) {
+		$text_url .= $parsed_url['path'];
+	}
+	if ( ! empty( $parsed_url['query'] ) ) {
+		$text_url .= '?' . $parsed_url['query'];
+	}
+	if ( ! empty( $parsed_url['fragment'] ) ) {
+		$text_url .= '#' . $parsed_url['fragment'];
+	}
+
+	$display = substr( $text_url, 0, 30 );
+	$invisible_suffix = substr( $text_url, 30 );
+	if ( ! empty( $invisible_suffix ) ) {
+		$display .= '...';
+	}
+
+	return '<a href="' . $result[0] . '" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">' . $invisible_prefix . '</span>' . $display . '<span class="invisible">' . $invisible_suffix . '</span></a>';
+}
