@@ -405,15 +405,9 @@ class Blog extends Actor {
 			case 'summary':
 				return \update_option( 'blogdescription', $value );
 			case 'icon':
-				// contents of save_icon, which this replaces
 				return \update_option( 'site_logo', $value ) && \update_option( 'site_icon', $value );
 			case 'header':
-				// contents of save_header_image, which this replaces
-				$attachment = \wp_get_attachment_image_src( $value, 'full' );
-				if ( $attachment ) {
-					return \set_theme_mod( 'header_image', $attachment[0] );
-				}
-				break;
+				return \update_option( 'activitypub_header_image', $value );
 			default:
 				return false;
 		}

@@ -266,7 +266,7 @@ class Enable_Mastodon_Apps {
 		$account->avatar = $icon['url'];
 		$account->avatar_static = $account->avatar;
 
-		$header = $user->get_header_image();
+		$header = $user->get_image();
 		if ( $header ) {
 			$account->header = $header['url'];
 			$account->header_static = $account->header;

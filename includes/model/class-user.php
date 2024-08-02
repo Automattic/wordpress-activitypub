@@ -135,7 +135,7 @@ class User extends Actor {
 	}
 
 	public function get_icon() {
-		$icon = \get_option( $this->user_option_name( 'icon' ) );
+		$icon = get_user_option( 'activitypub_icon', $this->_id );
 		if ( $icon ) {
 			return array(
 				'type' => 'Image',
@@ -158,20 +158,15 @@ class User extends Actor {
 
 	public function get_image() {
 		$header_image = get_user_option( 'activitypub_header_image', $this->_id );
-		$image_url    = null;
+
+		if ( ! $header_image && \has_header_image() ) {
+			$header_image = \get_header_image();
+		}
 
 		if ( $header_image ) {
-			$image_url = \wp_get_attachment_url( $header_image );
-		}
-
-		if ( ! $image_url && \has_header_image() ) {
-			$image_url = \get_header_image();
-		}
-
-		if ( $image_url ) {
 			return array(
 				'type' => 'Image',
-				'url'  => esc_url( $image_url ),
+				'url'  => esc_url( $header_image ),
 			);
 		}
 
@@ -353,19 +348,6 @@ class User extends Actor {
 	}
 
 	/**
-	 * Generates an option name for saving user-centric data.
-	 * User meta can be too heavy and lack site-specificity ina multi-site environment.
-	 * This function generates a unique option name for the user.
-	 *
-	 * @param string $key The key to generate the option name for.
-	 * @return string     The option name.
-	 */
-	private function user_option_name( $key ) {
-		$user = \get_user_by( 'ID', $this->_id );
-		return sprintf( 'activitypub_user_%s_%s', $key, $user->user_login );
-	}
-
-	/**
 	 * Update User profile attributes
 	 *
 	 * @param string $key The attribute to update.
@@ -394,7 +376,7 @@ class User extends Actor {
 					}
 					$value = \wp_get_attachment_url( $maybe_id );
 				}
-				return \update_option( $this->user_option_name( 'icon' ), $value );
+				return update_user_option( $this->_id, 'activitypub_icon', $value );
 			case 'header':
 				$maybe_id = (int) $value;
 				// we were passed an integer, which should be an attachment ID.
@@ -403,9 +385,9 @@ class User extends Actor {
 					if ( ! $image ) {
 						return false;
 					}
-					$image = wp_get_attachment_url( $maybe_id );
+					$value = wp_get_attachment_url( $maybe_id );
 				}
-				return \update_option( $this->user_option_name( 'image' ), $image );
+				return update_user_option( $this->_id, 'activitypub_header_image', $value );
 			default:
 				return false;
 		}
