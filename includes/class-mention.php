@@ -28,7 +28,7 @@ class Mention {
 				}
 				return $object_array;
 			},
-			99,
+			90,
 			1
 		);
 	}

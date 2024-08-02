@@ -1087,7 +1087,10 @@ function get_reply_intent_uri() {
  */
 function replace_urls_with_html( $result ) {
 
-	$parsed_url = \wp_parse_url( $result[0] );
+	$parsed_url = \wp_parse_url( html_entity_decode( $result[0] ) );
+	if ( ! $parsed_url ) {
+		return $result[0];
+	}
 
 	$invisible_prefix = $parsed_url['scheme'] . '://';
 	if ( ! empty( $parsed_url['user'] ) ) {
@@ -1114,10 +1117,11 @@ function replace_urls_with_html( $result ) {
 		$text_url .= '#' . $parsed_url['fragment'];
 	}
 
-	$display = substr( $text_url, 0, 30 );
-	$invisible_suffix = substr( $text_url, 30 );
+	$invisible_prefix = \esc_html( $invisible_prefix );
+	$display = \esc_html( \substr( $text_url, 0, 30 ) );
+	$invisible_suffix = \esc_html( \substr( $text_url, 30 ) );
 	if ( ! empty( $invisible_suffix ) ) {
-		$display .= '...';
+		$display .= '&hellip;';
 	}
 
 	return '<a href="' . $result[0] . '" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">' . $invisible_prefix . '</span>' . $display . '<span class="invisible">' . $invisible_suffix . '</span></a>';
