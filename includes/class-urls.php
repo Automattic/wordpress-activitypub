@@ -4,7 +4,7 @@ namespace Activitypub;
 /**
  * ActivityPub Summery Links Class
  */
-class Summary_Links {
+class Urls {
 
 	/**
 	 * Initialize the class, registering WordPress hooks
