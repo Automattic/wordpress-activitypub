@@ -19,18 +19,6 @@ class Mention {
 		\add_filter( 'the_content', array( self::class, 'the_content' ), 99, 1 );
 		\add_filter( 'comment_text', array( self::class, 'the_content' ), 10, 1 );
 		\add_filter( 'activitypub_extract_mentions', array( self::class, 'extract_mentions' ), 99, 2 );
-		\add_filter(
-			'activitypub_activity_object_array',
-			function ( array $object_array ) {
-				if ( ! empty( $object_array['summary'] ) ) {
-					$object_array['summary'] = \preg_replace_callback( '/(http|https):\/\/([-a-zA-Z0-9@:;\/%_;\+.~#?&=]*)/i', 'Activitypub\replace_urls_with_html', $object_array['summary'] );
-					$object_array['summary'] = self::the_content( $object_array['summary'] );
-				}
-				return $object_array;
-			},
-			90,
-			1
-		);
 	}
 
 	/**
