@@ -23,8 +23,21 @@ function plugin_init() {
 	}
 
 	if ( \defined( 'SSP_VERSION' ) ) {
-		require_once __DIR__ . '/class-seriously-simple-podcasting.php';
-		Seriously_Simple_Podcasting::init();
+		add_filter(
+			'activitypub_transformer',
+			function( $transformer, $object, $object_class ) {
+				if (
+					'WP_Post' === $object_class&&
+					\get_post_meta( $object->ID, 'audio_file', true )
+				) {
+					require_once __DIR__ . '/class-seriously-simple-podcasting.php';
+					return new Seriously_Simple_Podcasting( $object );
+				}
+				return $transformer;
+			},
+			10,
+			3
+		);
 	}
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );

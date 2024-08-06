@@ -2,15 +2,19 @@
 
 namespace Activitypub\Integration;
 
-class Seriously_Simple_Podcasting {
-	public static function init() {
-		add_filter( 'activitypub_attachments', array( self::class, 'add_attachments' ), 10, 2 );
-	}
+use Activitypub\Transformer\Post;
 
-	public static function add_attachments( $attachments, $post ) {
-		if ( ! \get_post_meta( $post->ID, 'audio_file', true ) ) {
-			return $attachments;
-		}
+class Seriously_Simple_Podcasting extends Post {
+	/**
+	 * Gets the attachment for a podcast episode.
+	 *
+	 * This method is overridden to add the audio file as an attachment.
+	 *
+	 * @return array The attachments array.
+	 */
+	public function get_attachment() {
+		$post        = $this->wp_object;
+		$attachments = parent::get_attachment();
 
 		$attachment = array(
 			'type' => \esc_attr( \get_post_meta( $post->ID, 'episode_type', true ) ),
@@ -23,5 +27,16 @@ class Seriously_Simple_Podcasting {
 		array_unshift( $attachments, $attachment );
 
 		return $attachments;
+	}
+
+	/**
+	 * Gets the object type for a podcast episode.
+	 *
+	 * Always returns 'Note' for the best possible compatibility with ActivityPub.
+	 *
+	 * @return string The object type.
+	 */
+	public function get_type() {
+		return 'Note';
 	}
 }
