@@ -1,4 +1,7 @@
 <?php
+/**
+ * Load the ActivityPub integrations.
+ */
 
 namespace Activitypub\Integration;
 
@@ -27,7 +30,7 @@ function plugin_init() {
 			'activitypub_transformer',
 			function( $transformer, $object, $object_class ) {
 				if (
-					'WP_Post' === $object_class&&
+					'WP_Post' === $object_class &&
 					\get_post_meta( $object->ID, 'audio_file', true )
 				) {
 					require_once __DIR__ . '/class-seriously-simple-podcasting.php';
