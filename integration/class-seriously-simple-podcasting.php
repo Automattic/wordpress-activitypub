@@ -1,9 +1,16 @@
 <?php
-
 namespace Activitypub\Integration;
 
 use Activitypub\Transformer\Post;
 
+/**
+ * Compatibility with the Seriously Simple Podcasting plugin.
+ *
+ * This is a transformer for the Seriously Simple Podcasting plugin,
+ * that extends the default transformer for WordPress posts.
+ *
+ * @see https://wordpress.org/plugins/seriously-simple-podcasting/
+ */
 class Seriously_Simple_Podcasting extends Post {
 	/**
 	 * Gets the attachment for a podcast episode.
