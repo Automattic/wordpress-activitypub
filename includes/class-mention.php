@@ -19,6 +19,25 @@ class Mention {
 		\add_filter( 'the_content', array( self::class, 'the_content' ), 99, 1 );
 		\add_filter( 'comment_text', array( self::class, 'the_content' ), 10, 1 );
 		\add_filter( 'activitypub_extract_mentions', array( self::class, 'extract_mentions' ), 99, 2 );
+		\add_filter( 'activitypub_activity_object_array', [ __CLASS__, 'filter_activity_object' ], 99 );
+	}
+
+	/**
+	 * Filter only the activity object and replace summery it with URLs
+	 * add tag to user
+	 *
+	 * @param $object_array array of activity
+	 *
+	 * @return array the activity object array
+	 */
+	public static function filter_activity_object( $object_array ) {
+		if ( empty( $object_array['summary'] ) ) {
+			return $object_array;
+		}
+
+		$object_array['summary'] = self::the_content( $object_array['summary'] );
+
+		return $object_array;
 	}
 
 	/**
