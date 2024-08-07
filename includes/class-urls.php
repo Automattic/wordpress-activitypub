@@ -50,12 +50,19 @@ class Urls {
 	 * @return string the final string
 	 */
 	public static function replace_with_links( $result ) {
+		if ( 'www.' === substr( $result[0], 0, 4 ) ) {
+			$result[0] = 'https://' . $result[0];
+		}
 		$parsed_url = \wp_parse_url( html_entity_decode( $result[0] ) );
 		if ( ! $parsed_url ) {
 			return $result[0];
 		}
 
-		$invisible_prefix = $parsed_url['scheme'] . '://';
+		if ( empty( $parsed_url['scheme'] ) ) {
+			$invisible_prefix = 'https://';
+		} else {
+			$invisible_prefix = $parsed_url['scheme'] . '://';
+		}
 		if ( ! empty( $parsed_url['user'] ) ) {
 			$invisible_prefix .= $parsed_url['user'];
 		}
