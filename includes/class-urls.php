@@ -99,9 +99,15 @@ class Urls {
 			$display_class .= 'ellipsis';
 		}
 
+		$rel = 'nofollow noopener noreferrer';
+		if ( \apply_filters( 'activitypub_urls_rel_me', false ) ) {
+			$rel .= ' me';
+		}
+
 		return \sprintf(
-			'<a href="%s" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">%s</span><span class="%s">%s</span><span class="invisible">%s</span></a>',
+			'<a href="%s" target="_blank" rel="%s" translate="no"><span class="invisible">%s</span><span class="%s">%s</span><span class="invisible">%s</span></a>',
 			esc_url( $result[0] ),
+			$rel,
 			esc_html( $invisible_prefix ),
 			$display_class,
 			esc_html( $display ),
