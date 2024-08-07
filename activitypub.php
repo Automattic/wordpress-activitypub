@@ -82,7 +82,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Health_Check', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
-	\add_action( 'init', array( Urls::class, 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Urls', 'init' ) );
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
