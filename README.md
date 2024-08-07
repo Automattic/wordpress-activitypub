@@ -134,6 +134,16 @@ For reasons of data protection, it is not possible to see the followers of other
 
 ## Changelog ##
 
+### 3.1.0 ###
+
+* Added: `menu_order` to `ap_extrafield` so that user can decide in with order they will be displayed
+* Added: Line brakes to user biography
+* Added: Blueprint
+* Fixed: Changed missing `activitypub_user_description` to `activitypub_description`
+* Fixed: Undefined `get_sample_permalink`
+* Fixed: Only send Update for previously-published posts
+* Improved: Simplified WebFinger code
+
 ### 3.0.0 ###
 
 * Added: "Reply Context" support, you can now reply to posts on the Fediverse through a WordPress post
