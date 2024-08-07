@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub;
 
+use function Activitypub\content_replace_links_by_regex;
+
 /**
  * ActivityPub Summery Links Class
  */
@@ -42,7 +44,6 @@ class Urls {
 	 * @return string the filtered post-content
 	 */
 	public static function the_content( $the_content ) {
-
 		return content_replace_links_by_regex( $the_content, '/' . ACTIVITYPUB_URLS_REGEXP . '/i', [ __CLASS__, 'replace_with_links' ] );
 	}
 
@@ -83,13 +84,19 @@ class Urls {
 			$text_url .= '#' . $parsed_url['fragment'];
 		}
 
-		$invisible_prefix = \esc_html( $invisible_prefix );
-		$display = \esc_html( \substr( $text_url, 0, 30 ) );
-		$invisible_suffix = \esc_html( \substr( $text_url, 30 ) );
-		if ( ! empty( $invisible_suffix ) ) {
+		$display = \substr( $text_url, 0, 30 );
+		$invisible_suffix = \substr( $text_url, 30 );
+
+		if ( $invisible_suffix ) {
 			$display .= '&hellip;';
 		}
 
-		return '<a href="' . $result[0] . '" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">' . $invisible_prefix . '</span>' . $display . '<span class="invisible">' . $invisible_suffix . '</span></a>';
+		return \sprintf(
+			'<a href="%s" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">%s</span>%s<span class="invisible">%s</span></a>',
+			esc_url( $result[0] ),
+			esc_html( $invisible_prefix ),
+			esc_html( $display ),
+			esc_html( $invisible_suffix )
+		);
 	}
 }
