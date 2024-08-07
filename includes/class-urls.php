@@ -12,26 +12,22 @@ class Urls {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_filter( 'activitypub_activity_object_array', [ __CLASS__, 'filter_summary' ], 99 );
+		\add_filter( 'activitypub_activity_object_array', [ __CLASS__, 'filter_activity_object' ], 99 );
 	}
 
 	/**
-	 * Filter only the summery and replace it with URLs
+	 * Filter only the activity object and replace summery it with URLs
 	 *
 	 * @param $object_array array of activity
 	 *
 	 * @return array the activity object array
 	 */
-	public static function filter_summary( $object_array ) {
+	public static function filter_activity_object( $object_array ) {
 		if ( empty( $object_array['summary'] ) ) {
 			return $object_array;
 		}
 
 		$object_array['summary'] = self::the_content( $object_array['summary'] );
-		$object_array['summary'] = Mention::the_content( $object_array['summary'] );
-		if ( '1' === \get_option( 'activitypub_use_hashtags', '1' ) ) {
-			$object_array['summary'] = Hashtag::the_content( $object_array['summary'] );
-		}
 
 		return $object_array;
 	}

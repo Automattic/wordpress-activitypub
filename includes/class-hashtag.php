@@ -14,7 +14,42 @@ class Hashtag {
 		if ( '1' === \get_option( 'activitypub_use_hashtags', '1' ) ) {
 			\add_action( 'wp_insert_post', array( self::class, 'insert_post' ), 10, 2 );
 			\add_filter( 'the_content', array( self::class, 'the_content' ), 10, 1 );
+			\add_filter( 'activitypub_activity_object_array', [ __CLASS__, 'filter_activity_object' ], 99 );
 		}
+	}
+
+	/**
+	 * Filter only the activity object and replace summery it with URLs
+	 *
+	 * @param $object_array array of activity
+	 *
+	 * @return array the activity object array
+	 */
+	public static function filter_activity_object( $object_array ) {
+		if ( empty( $object_array['summary'] ) ) {
+			return $object_array;
+		}
+
+		\preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/', $object_array['summary'], $matches );
+		foreach ( $matches[0] as $match_id => $match ) {
+			$tag_object = \get_term_by( 'name', $matches[1][ $match_id ], 'post_tag' );
+			if ( ! $tag_object ) {
+				$tag_object = \get_term_by( 'name', $matches[1][ $match_id ], 'category' );
+			}
+
+			if ( $tag_object ) {
+				$link                  = \get_term_link( $tag_object, 'post_tag' );
+				$object_array['tag'][] = [
+					'type' => 'Hashtag',
+					'href' => $link,
+					'name' => $match,
+				];
+			}
+		}
+
+		$object_array['summary'] = self::the_content( $object_array['summary'] );
+
+		return $object_array;
 	}
 
 	/**
