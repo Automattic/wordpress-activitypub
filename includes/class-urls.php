@@ -74,6 +74,10 @@ class Urls {
 		}
 
 		$text_url = $parsed_url['host'];
+		if ( 'www.' === substr( $text_url, 0, 4 ) ) {
+			$text_url = substr( $text_url, 4 );
+			$invisible_prefix .= 'www.';
+		}
 		if ( ! empty( $parsed_url['port'] ) ) {
 			$text_url .= ':' . $parsed_url['port'];
 		}
@@ -90,14 +94,16 @@ class Urls {
 		$display = \substr( $text_url, 0, 30 );
 		$invisible_suffix = \substr( $text_url, 30 );
 
+		$display_class = '';
 		if ( $invisible_suffix ) {
-			$display .= '&hellip;';
+			$display_class .= 'ellipsis';
 		}
 
 		return \sprintf(
-			'<a href="%s" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">%s</span>%s<span class="invisible">%s</span></a>',
+			'<a href="%s" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">%s</span><span class="%s">%s</span><span class="invisible">%s</span></a>',
 			esc_url( $result[0] ),
 			esc_html( $invisible_prefix ),
+			$display_class,
 			esc_html( $display ),
 			esc_html( $invisible_suffix )
 		);
