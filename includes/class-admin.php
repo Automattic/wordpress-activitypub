@@ -107,8 +107,10 @@ class Admin {
 		}
 
 		$current_screen = get_current_screen();
-
-		if ( 'edit' === $current_screen->base && $current_screen->post_type && Extra_Fields::is_extra_fields_post_type( $current_screen->post_type ) ) {
+		if ( ! $current_screen ) {
+			return;
+		}
+		if ( 'edit' === $current_screen->base && Extra_Fields::is_extra_fields_post_type( $current_screen->post_type ) ) {
 			?>
 			<div class="notice" style="margin: 0; background: none; border: none; box-shadow: none; padding: 15px 0 0 0; font-size: 14px;">
 				<?php esc_html_e( 'These are extra fields that are used for your ActivityPub profile. You can use your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?>
