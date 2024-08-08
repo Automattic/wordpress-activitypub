@@ -146,7 +146,14 @@ class Extra_Fields {
 		return $attachments;
 	}
 
-	public static function is_post_type( $post_type ) {
+	/**
+	 * Check if a post type is an extra fields post type.
+	 *
+	 * @param string $post_type The post type.
+	 *
+	 * @return bool True if the post type is an extra fields post type, otherwise false.
+	 */
+	public static function is_extra_fields_post_type( $post_type ) {
 		return \in_array( $post_type, array( self::USER_POST_TYPE, self::BLOG_POST_TYPE ), true );
 	}
 

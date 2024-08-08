@@ -11,7 +11,6 @@ use function Activitypub\count_followers;
 use function Activitypub\is_user_disabled;
 use function Activitypub\was_comment_received;
 use function Activitypub\is_comment_federatable;
-use function Activitypub\add_default_actor_extra_fields;
 
 /**
  * ActivityPub Admin Class
@@ -109,7 +108,7 @@ class Admin {
 
 		$current_screen = get_current_screen();
 
-		if ( 'edit' === $current_screen->base && Extra_Fields::is_post_type( $current_screen->post_type ) ) {
+		if ( 'edit' === $current_screen->base && $current_screen->post_type && Extra_Fields::is_extra_fields_post_type( $current_screen->post_type ) ) {
 			?>
 			<div class="notice" style="margin: 0; background: none; border: none; box-shadow: none; padding: 15px 0 0 0; font-size: 14px;">
 				<?php esc_html_e( 'These are extra fields that are used for your ActivityPub profile. You can use your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?>
@@ -497,7 +496,7 @@ class Admin {
 
 				$post = get_post( $arg[2] );
 
-				if ( Extra_Fields::is_post_type( $post->post_type ) ) {
+				if ( Extra_Fields::is_extra_fields_post_type( $post->post_type ) ) {
 					return $allcaps;
 				}
 
@@ -534,7 +533,7 @@ class Admin {
 		add_filter(
 			"views_{$screen_id}",
 			function ( $views ) {
-				if ( Extra_Fields::is_post_type( get_current_screen()->post_type ) ) {
+				if ( Extra_Fields::is_extra_fields_post_type( get_current_screen()->post_type ) ) {
 					return array();
 				}
 
@@ -585,7 +584,7 @@ class Admin {
 	 * @param string $post_type The post type.
 	 */
 	public static function manage_post_columns( $columns, $post_type ) {
-		if ( Extra_Fields::is_post_type( $post_type ) ) {
+		if ( Extra_Fields::is_extra_fields_post_type( $post_type ) ) {
 			$after_key = 'title';
 			$index     = array_search( $after_key, array_keys( $columns ), true );
 			$columns   = array_slice( $columns, 0, $index + 1 ) + array( 'extra_field_content' => esc_attr__( 'Content', 'activitypub' ) ) + $columns;
@@ -648,7 +647,7 @@ class Admin {
 
 		if ( 'extra_field_content' === $column_name ) {
 			$post = get_post( $post_id );
-			if ( Extra_Fields::is_post_type( $post->post_type ) ) {
+			if ( Extra_Fields::is_extra_fields_post_type( $post->post_type ) ) {
 				echo esc_attr( wp_strip_all_tags( $post->post_content ) );
 			}
 		}
