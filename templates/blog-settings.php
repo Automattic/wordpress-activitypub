@@ -136,7 +136,7 @@
 
 							<table class="widefat striped activitypub-extra-fields" role="presentation" style="margin: 15px 0;">
 							<?php
-							$extra_fields = \Activitypub\get_actor_extra_fields( \Activitypub\Collection\Users::BLOG_USER_ID );
+							$extra_fields = \Activitypub\Collection\get_actor_fields( \Activitypub\Collection\Users::BLOG_USER_ID );
 
 							if ( empty( $extra_fields ) ) {
 								?>

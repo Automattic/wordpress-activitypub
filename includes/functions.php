@@ -1040,17 +1040,6 @@ function normalize_host( $host ) {
 }
 
 /**
- * Get the Extra Fields of an Actor
- *
- * @param int $user_id The User-ID.
- *
- * @return array The extra fields.
- */
-function get_actor_extra_fields( $user_id ) {
-	return Extra_Fields::get_actor_fields( $user_id );
-}
-
-/**
  * Get the reply intent URI.
  *
  * @return string The reply intent URI.

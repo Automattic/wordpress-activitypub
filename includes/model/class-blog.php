@@ -13,7 +13,6 @@ use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\get_actor_extra_fields;
 
 class Blog extends Actor {
 	/**
@@ -424,7 +423,7 @@ class Blog extends Actor {
 	 * @return array The extended User-Output.
 	 */
 	public function get_attachment() {
-		$extra_fields = get_actor_extra_fields( $this->_id );
+		$extra_fields = Extra_Fields::get_actor_fields( $this->_id );
 		return Extra_Fields::fields_to_attachments( $extra_fields );
 	}
 }
