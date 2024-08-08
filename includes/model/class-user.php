@@ -275,15 +275,11 @@ class User extends Actor {
 			// Add support for FEP-fb2a, for more information see FEDERATION.md
 			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
 				$tags = new \WP_HTML_Tag_Processor( $content );
-				$tags->next_tag();
-
-				if ( 'P' === $tags->get_tag() ) {
-					$tags->next_tag();
-				}
+				$tags->next_tag( 'A' );
 
 				if ( 'A' === $tags->get_tag() ) {
 					$tags->set_bookmark( 'link' );
-					if ( ! $tags->next_tag() ) {
+					if ( ! $tags->next_tag( 'A' ) ) {
 						$tags->seek( 'link' );
 						$attachment = array(
 							'type' => 'Link',
