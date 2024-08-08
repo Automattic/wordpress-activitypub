@@ -187,155 +187,27 @@ class Post extends Base {
 		$media      = \array_intersect_key( $media, $unique_ids );
 		$media      = \array_slice( $media, 0, $max_media );
 
-		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media ) );
-	}
+		/**
+		 * Filter the attachment IDs for a post.
+		 *
+		 * @param array   $media           The media array grouped by type.
+		 * @param WP_Post $this->wp_object The post object.
+		 *
+		 * @return array The filtered attachment IDs.
+		 */
+		$media = \apply_filters( 'activitypub_attachment_ids', $media, $this->wp_object );
 
-	/**
-	 * Get media attachments from blocks. They will be formatted as ActivityPub attachments, not as WP attachments.
-	 *
-	 * @param array $media     The media array grouped by type.
-	 * @param int   $max_media The maximum number of attachments to return.
-	 *
-	 * @return array The attachments.
-	 */
-	protected function get_block_attachments( $media, $max_media ) {
-		// max media can't be negative or zero
-		if ( $max_media <= 0 ) {
-			return array();
-		}
+		$attchments = \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media ) );
 
-		$blocks = \parse_blocks( $this->wp_object->post_content );
-		$media = self::get_media_from_blocks( $blocks, $media );
-
-		return $media;
-	}
-
-	/**
-	 * Get image attachments from the classic editor.
-	 * This is imperfect as the contained images aren't necessarily the
-	 * same as the attachments.
-	 *
-	 * @param int $max_images The maximum number of images to return.
-	 *
-	 * @return array The attachment IDs.
-	 */
-	protected function get_classic_editor_image_attachments( $max_images ) {
-		// max images can't be negative or zero
-		if ( $max_images <= 0 ) {
-			return array();
-		}
-
-		$images = array();
-		$query  = new \WP_Query(
-			array(
-				'post_parent' => $this->wp_object->ID,
-				'post_status' => 'inherit',
-				'post_type' => 'attachment',
-				'post_mime_type' => 'image',
-				'order' => 'ASC',
-				'orderby' => 'menu_order ID',
-				'posts_per_page' => $max_images,
-			)
-		);
-
-		foreach ( $query->get_posts() as $attachment ) {
-			if ( ! \in_array( $attachment->ID, $images, true ) ) {
-				$images[] = array( 'id' => $attachment->ID );
-			}
-		}
-
-		return $images;
-	}
-
-	/**
-	 * Get image embeds from the classic editor by parsing HTML.
-	 *
-	 * @param int $max_images The maximum number of images to return.
-	 *
-	 * @return array The attachments.
-	 */
-	protected function get_classic_editor_image_embeds( $max_images ) {
-		// if someone calls that function directly, bail
-		if ( ! \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-			return array();
-		}
-
-		// max images can't be negative or zero
-		if ( $max_images <= 0 ) {
-			return array();
-		}
-
-		$images  = array();
-		$base    = \wp_get_upload_dir()['baseurl'];
-		$content = \get_post_field( 'post_content', $this->wp_object );
-		$tags    = new \WP_HTML_Tag_Processor( $content );
-
-		// This linter warning is a false positive - we have to
-		// re-count each time here as we modify $images.
-		// phpcs:ignore Squiz.PHP.DisallowSizeFunctionsInLoops.Found
-		while ( $tags->next_tag( 'img' ) && ( \count( $images ) <= $max_images ) ) {
-			$src = $tags->get_attribute( 'src' );
-
-			// If the img source is in our uploads dir, get the
-			// associated ID. Note: if there's a -500x500
-			// type suffix, we remove it, but we try the original
-			// first in case the original image is actually called
-			// that. Likewise, we try adding the -scaled suffix for
-			// the case that this is a small version of an image
-			// that was big enough to get scaled down on upload:
-			// https://make.wordpress.org/core/2019/10/09/introducing-handling-of-big-images-in-wordpress-5-3/
-			if ( null !== $src && \str_starts_with( $src, $base ) ) {
-				$img_id = \attachment_url_to_postid( $src );
-
-				if ( 0 === $img_id ) {
-					$count = 0;
-					$src = preg_replace( '/-(?:\d+x\d+)(\.[a-zA-Z]+)$/', '$1', $src, 1, $count );
-					if ( $count > 0 ) {
-						$img_id = \attachment_url_to_postid( $src );
-					}
-				}
-
-				if ( 0 === $img_id ) {
-					$src = preg_replace( '/(\.[a-zA-Z]+)$/', '-scaled$1', $src );
-					$img_id = \attachment_url_to_postid( $src );
-				}
-
-				if ( 0 !== $img_id ) {
-					$images[] = array(
-						'id'  => $img_id,
-						'alt' => $tags->get_attribute( 'alt' ),
-					);
-				}
-			}
-		}
-
-		return $images;
-	}
-
-	/**
-	 * Get post images from the classic editor.
-	 * Note that audio/video attachments are only supported in the block editor.
-	 *
-	 * @param array $media      The media array grouped by type.
-	 * @param int   $max_images The maximum number of images to return.
-	 *
-	 * @return array The attachments.
-	 */
-	protected function get_classic_editor_images( $media, $max_images ) {
-		// max images can't be negative or zero
-		if ( $max_images <= 0 ) {
-			return array();
-		}
-
-		if ( \count( $media['image'] ) <= $max_images ) {
-			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_embeds( $max_images ) );
-			} else {
-				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_attachments( $max_images ) );
-			}
-		}
-
-		return $media;
+		/**
+		 * Filter the attachments for a post.
+		 *
+		 * @param array   $attchments      The attachments.
+		 * @param WP_Post $this->wp_object The post object.
+		 *
+		 * @return array The filtered attachments.
+		 */
+		return \apply_filters( 'activitypub_attachments', $attchments, $this->wp_object );
 	}
 
 	/**
@@ -356,8 +228,8 @@ class Post extends Base {
 			// check if URL is an attachment
 			$attachment_id = \attachment_url_to_postid( $enclosure['url'] );
 			if ( $attachment_id ) {
-				$enclosure['id'] = $attachment_id;
-				$enclosure['url'] = \wp_get_attachment_url( $attachment_id );
+				$enclosure['id']        = $attachment_id;
+				$enclosure['url']       = \wp_get_attachment_url( $attachment_id );
 				$enclosure['mediaType'] = \get_post_mime_type( $attachment_id );
 			}
 
@@ -376,6 +248,26 @@ class Post extends Base {
 					break;
 			}
 		}
+
+		return $media;
+	}
+
+	/**
+	 * Get media attachments from blocks. They will be formatted as ActivityPub attachments, not as WP attachments.
+	 *
+	 * @param array $media     The media array grouped by type.
+	 * @param int   $max_media The maximum number of attachments to return.
+	 *
+	 * @return array The attachments.
+	 */
+	protected function get_block_attachments( $media, $max_media ) {
+		// max media can't be negative or zero
+		if ( $max_media <= 0 ) {
+			return array();
+		}
+
+		$blocks = \parse_blocks( $this->wp_object->post_content );
+		$media = self::get_media_from_blocks( $blocks, $media );
 
 		return $media;
 	}
@@ -452,6 +344,134 @@ class Post extends Base {
 	}
 
 	/**
+	 * Get post images from the classic editor.
+	 * Note that audio/video attachments are only supported in the block editor.
+	 *
+	 * @param array $media      The media array grouped by type.
+	 * @param int   $max_images The maximum number of images to return.
+	 *
+	 * @return array The attachments.
+	 */
+	protected function get_classic_editor_images( $media, $max_images ) {
+		// max images can't be negative or zero
+		if ( $max_images <= 0 ) {
+			return array();
+		}
+
+		if ( \count( $media['image'] ) <= $max_images ) {
+			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
+				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_embeds( $max_images ) );
+			} else {
+				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_attachments( $max_images ) );
+			}
+		}
+
+		return $media;
+	}
+
+	/**
+	 * Get image embeds from the classic editor by parsing HTML.
+	 *
+	 * @param int $max_images The maximum number of images to return.
+	 *
+	 * @return array The attachments.
+	 */
+	protected function get_classic_editor_image_embeds( $max_images ) {
+		// if someone calls that function directly, bail
+		if ( ! \class_exists( '\WP_HTML_Tag_Processor' ) ) {
+			return array();
+		}
+
+		// max images can't be negative or zero
+		if ( $max_images <= 0 ) {
+			return array();
+		}
+
+		$images  = array();
+		$base    = \wp_get_upload_dir()['baseurl'];
+		$content = \get_post_field( 'post_content', $this->wp_object );
+		$tags    = new \WP_HTML_Tag_Processor( $content );
+
+		// This linter warning is a false positive - we have to
+		// re-count each time here as we modify $images.
+		// phpcs:ignore Squiz.PHP.DisallowSizeFunctionsInLoops.Found
+		while ( $tags->next_tag( 'img' ) && ( \count( $images ) <= $max_images ) ) {
+			$src = $tags->get_attribute( 'src' );
+
+			// If the img source is in our uploads dir, get the
+			// associated ID. Note: if there's a -500x500
+			// type suffix, we remove it, but we try the original
+			// first in case the original image is actually called
+			// that. Likewise, we try adding the -scaled suffix for
+			// the case that this is a small version of an image
+			// that was big enough to get scaled down on upload:
+			// https://make.wordpress.org/core/2019/10/09/introducing-handling-of-big-images-in-wordpress-5-3/
+			if ( null !== $src && \str_starts_with( $src, $base ) ) {
+				$img_id = \attachment_url_to_postid( $src );
+
+				if ( 0 === $img_id ) {
+					$count = 0;
+					$src = preg_replace( '/-(?:\d+x\d+)(\.[a-zA-Z]+)$/', '$1', $src, 1, $count );
+					if ( $count > 0 ) {
+						$img_id = \attachment_url_to_postid( $src );
+					}
+				}
+
+				if ( 0 === $img_id ) {
+					$src = preg_replace( '/(\.[a-zA-Z]+)$/', '-scaled$1', $src );
+					$img_id = \attachment_url_to_postid( $src );
+				}
+
+				if ( 0 !== $img_id ) {
+					$images[] = array(
+						'id'  => $img_id,
+						'alt' => $tags->get_attribute( 'alt' ),
+					);
+				}
+			}
+		}
+
+		return $images;
+	}
+
+	/**
+	 * Get image attachments from the classic editor.
+	 * This is imperfect as the contained images aren't necessarily the
+	 * same as the attachments.
+	 *
+	 * @param int $max_images The maximum number of images to return.
+	 *
+	 * @return array The attachment IDs.
+	 */
+	protected function get_classic_editor_image_attachments( $max_images ) {
+		// max images can't be negative or zero
+		if ( $max_images <= 0 ) {
+			return array();
+		}
+
+		$images = array();
+		$query  = new \WP_Query(
+			array(
+				'post_parent' => $this->wp_object->ID,
+				'post_status' => 'inherit',
+				'post_type' => 'attachment',
+				'post_mime_type' => 'image',
+				'order' => 'ASC',
+				'orderby' => 'menu_order ID',
+				'posts_per_page' => $max_images,
+			)
+		);
+
+		foreach ( $query->get_posts() as $attachment ) {
+			if ( ! \in_array( $attachment->ID, $images, true ) ) {
+				$images[] = array( 'id' => $attachment->ID );
+			}
+		}
+
+		return $images;
+	}
+
+	/**
 	 * Filter media IDs by object type.
 	 *
 	 * @param array  $media The media array grouped by type.
@@ -466,7 +486,7 @@ class Post extends Base {
 			return $media[ $type ];
 		}
 
-		return array_filter( array_merge( array(), ...array_values( $media ) ) );
+		return array_filter( array_merge( ...array_values( $media ) ) );
 	}
 
 	/**
