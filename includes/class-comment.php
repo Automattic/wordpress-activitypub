@@ -528,7 +528,7 @@ class Comment {
 
 
 	/**
-	 * Register the comment types used by the Webmention plugin
+	 * Register the comment types used by the ActivityPub plugin
 	 *
 	 * @return void
 	 */

@@ -1012,7 +1012,7 @@ function custom_large_numbers( $formatted, $number, $decimals ) {
 }
 
 /**
- * Registers a Webmention comment type.
+ * Registers a ActivityPub comment type.
  *
  *
  * @param string $comment_type Key for comment type.
@@ -1033,13 +1033,13 @@ function register_comment_type( $comment_type, $args = array() ) {
 	$activitypub_comment_types[ $comment_type ] = $args;
 
 	/**
-	 * Fires after a Webmention comment type is registered.
+	 * Fires after a ActivityPub comment type is registered.
 	 *
 	 *
-	 * @param string                   $comment_type        Comment type.
-	 * @param \Webmention\Comment_Type $comment_type_object Arguments used to register the comment type.
+	 * @param string $comment_type Comment type.
+	 * @param array  $args         Arguments used to register the comment type.
 	 */
-	do_action( 'activitypub_registered_comment_type', $comment_type );
+	do_action( 'activitypub_registered_comment_type', $comment_type, $args );
 
 	return $args;
 }
