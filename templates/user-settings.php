@@ -90,7 +90,7 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 
 				<table class="widefat striped activitypub-extra-fields" role="presentation" style="margin: 15px 0;">
 				<?php
-				$extra_fields = \Activitypub\Collection\get_actor_fields( \get_current_user_id() );
+				$extra_fields = \Activitypub\Collection\Extra_Fields::get_actor_fields( \get_current_user_id() );
 
 				foreach ( $extra_fields as $extra_field ) {
 					?>
