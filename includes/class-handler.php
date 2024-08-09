@@ -27,10 +27,13 @@ class Handler {
 		Announce::init();
 		Create::init();
 		Delete::init();
-		Like::init();
 		Follow::init();
 		Undo::init();
 		Update::init();
+
+		if ( ! ACTIVITYPUB_DISABLE_REACTIONS ) {
+			Like::init();
+		}
 
 		do_action( 'activitypub_register_handlers' );
 	}
