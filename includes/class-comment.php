@@ -466,7 +466,7 @@ class Comment {
 		}
 	}
 
-		/**
+	/**
 	 * Return the registered custom comment types.
 	 *
 	 * @return array The registered custom comment types
@@ -499,6 +499,13 @@ class Comment {
 		return array_values( wp_list_pluck( self::get_comment_types(), 'type' ) );
 	}
 
+	/**
+	 * Get a comment type
+	 *
+	 * @param string $type The comment type
+	 *
+	 * @return array The comment type
+	 */
 	public static function get_comment_type( $type ) {
 		$type  = strtolower( $type );
 		$type  = sanitize_key( $type );
@@ -513,6 +520,14 @@ class Comment {
 		return apply_filters( "activitypub_comment_type_{$type}", $type_array );
 	}
 
+	/**
+	 * Get a comment type attribute
+	 *
+	 * @param string $type The comment type
+	 * @param string $attr The attribute to get
+	 *
+	 * @return mixed The value of the attribute
+	 */
 	public static function get_comment_type_attr( $type, $attr ) {
 		$type_array = self::get_comment_type( $type );
 
