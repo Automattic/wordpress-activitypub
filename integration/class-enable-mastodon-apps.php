@@ -71,19 +71,18 @@ class Enable_Mastodon_Apps {
 		if ( empty( $user_id ) ) {
 			return $data;
 		}
+
 		$user_id = self::maybe_map_user_to_blog( $user_id );
 		$user    = Users::get_by_id( $user_id );
 		if ( ! $user || is_wp_error( $user ) ) {
 			return $data;
 		}
 
-		$is_blog_user = Users::BLOG_USER_ID === $user_id;
-
 		if ( isset( $data['avatar'] ) ) {
 			$icon_id = (int) $data['avatar'];
 			$attachment = \get_post( $icon_id );
 			if ( $attachment && 'attachment' === $attachment->post_type ) {
-				$user->save( 'icon', $icon_id );
+				$user->update_icon( $icon_id );
 				unset( $data['avatar'] );
 			}
 		}
@@ -92,18 +91,18 @@ class Enable_Mastodon_Apps {
 			$header_id = (int) $data['header'];
 			$attachment = \get_post( $header_id );
 			if ( $attachment && 'attachment' === $attachment->post_type ) {
-				$user->save( 'header', $header_id );
+				$user->update_header( $header_id );
 				unset( $data['header'] );
 			}
 		}
 
-		if ( $is_blog_user && isset( $data['display_name'] ) ) {
-			$user->save( 'name', $data['display_name'] );
+		if ( isset( $data['display_name'] ) ) {
+			$user->update_name( $data['display_name'] );
 			unset( $data['display_name'] );
 		}
 
-		if ( $is_blog_user && isset( $data['note'] ) ) {
-			$user->save( 'summary', $data['note'] );
+		if ( isset( $data['note'] ) ) {
+			$user->update_summary( $data['note'] );
 			unset( $data['note'] );
 		}
 

@@ -135,11 +135,11 @@ class User extends Actor {
 	}
 
 	public function get_icon() {
-		$icon = get_user_option( 'activitypub_icon', $this->_id );
-		if ( $icon ) {
+		$icon = \get_user_option( 'activitypub_icon', $this->_id );
+		if ( wp_attachment_is_image( $icon ) ) {
 			return array(
 				'type' => 'Image',
-				'url'  => $icon,
+				'url'  => esc_url( wp_get_attachment_url( $icon ) ),
 			);
 		}
 
@@ -158,15 +158,20 @@ class User extends Actor {
 
 	public function get_image() {
 		$header_image = get_user_option( 'activitypub_header_image', $this->_id );
+		$image_url    = null;
 
 		if ( ! $header_image && \has_header_image() ) {
-			$header_image = \get_header_image();
+			$image_url = \get_header_image();
 		}
 
 		if ( $header_image ) {
+			$image_url = \wp_get_attachment_url( $header_image );
+		}
+
+		if ( $image_url ) {
 			return array(
 				'type' => 'Image',
-				'url'  => esc_url( $header_image ),
+				'url'  => esc_url( $image_url ),
 			);
 		}
 
@@ -281,49 +286,51 @@ class User extends Actor {
 		}
 	}
 
+
 	/**
-	 * Update User profile attributes
+	 * Update the User-Name.
 	 *
-	 * @param string $key The attribute to update.
 	 * @param mixed $value The new value.
-	 *                     Possible values:
-	 *                   - name: The User-Name.
-	 *                   - summary: The User-Description.
-	 *                   - icon: The User-Icon.
-	 *                   - header: The User-Header-Image.
 	 * @return bool True if the attribute was updated, false otherwise.
 	 */
-	public function save( $key, $value ) {
-		switch ( $key ) {
-			case 'name':
-				$userdata = [ 'ID' => $this->_id, 'display_name' => $value ];
-				return \wp_update_user( $userdata );
-			case 'summary':
-				return \update_user_meta( $this->_id, 'description', $value );
-			case 'icon':
-				$maybe_id = (int) $value;
-				// we were passed an integer, which should be an attachment ID.
-				if ( $maybe_id ) {
-					$image = \wp_get_attachment_image_src( $maybe_id, 'full' );
-					if ( ! $image ) {
-						return false;
-					}
-					$value = \wp_get_attachment_url( $maybe_id );
-				}
-				return update_user_option( $this->_id, 'activitypub_icon', $value );
-			case 'header':
-				$maybe_id = (int) $value;
-				// we were passed an integer, which should be an attachment ID.
-				if ( $maybe_id ) {
-					$image = wp_get_attachment_image( $maybe_id, 'full' );
-					if ( ! $image ) {
-						return false;
-					}
-					$value = wp_get_attachment_url( $maybe_id );
-				}
-				return update_user_option( $this->_id, 'activitypub_header_image', $value );
-			default:
-				return false;
+	public function update_name( $value ) {
+		$userdata = [ 'ID' => $this->_id, 'display_name' => $value ];
+		return \wp_update_user( $userdata );
+	}
+
+	/**
+	 * Update the User-Description.
+	 *
+	 * @param mixed $value The new value.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function update_summary( $value ) {
+		return \update_user_option( $this->_id, 'activitypub_description', $value );
+	}
+
+	/**
+	 * Update the User-Icon.
+	 *
+	 * @param mixed $value The new value. Should be an attachment ID.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function update_icon( $value ) {
+		if ( ! wp_attachment_is_image( $value ) ) {
+			return false;
 		}
+		return update_user_option( $this->_id, 'activitypub_icon', $value );
+	}
+
+	/**
+	 * Update the User-Header-Image.
+	 *
+	 * @param mixed $value The new value. Should be an attachment ID.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function update_header( $value ) {
+		if ( ! wp_attachment_is_image( $value ) ) {
+			return false;
+		}
+		return \update_user_option( $this->_id, 'activitypub_header_image', $value );
 	}
 }

@@ -389,29 +389,49 @@ class Blog extends Actor {
 	}
 
 	/**
-	 * Update User profile attributes
+	 * Update the User-Name.
 	 *
-	 * @param string $key The attribute to update.
-	 * @param mixed $value The new value. Possible values:
-	 *                     - name: The User-Name.
-	 *                     - summary: The User-Description.
-	 *                     - icon: The User-Icon.
-	 *                     - header: The User-Header-Image.
+	 * @param mixed $value The new value.
 	 * @return bool True if the attribute was updated, false otherwise.
 	 */
-	public function save( $key, $value ) {
-		switch ( $key ) {
-			case 'name':
-				return \update_option( 'blogname', $value );
-			case 'summary':
-				return \update_option( 'blogdescription', $value );
-			case 'icon':
-				return \update_option( 'site_logo', $value ) && \update_option( 'site_icon', $value );
-			case 'header':
-				return \update_option( 'activitypub_header_image', $value );
-			default:
-				return false;
+	public function update_name( $value ) {
+		return \update_option( 'blogname', $value );
+	}
+
+	/**
+	* Update the User-Description.
+	*
+	* @param mixed $value The new value.
+	* @return bool True if the attribute was updated, false otherwise.
+	*/
+	public function update_summary( $value ) {
+		return \update_option( 'blogdescription', $value );
+	}
+
+	/**
+	* Update the User-Icon.
+	*
+	* @param mixed $value The new value.
+	* @return bool True if the attribute was updated, false otherwise.
+	*/
+	public function update_icon( $value ) {
+		if ( ! wp_attachment_is_image( $value ) ) {
+			return false;
 		}
+		return \update_option( 'site_logo', $value ) && \update_option( 'site_icon', $value );
+	}
+
+	/**
+	* Update the User-Header-Image.
+	*
+	* @param mixed $value The new value.
+	* @return bool True if the attribute was updated, false otherwise.
+	*/
+	public function update_header( $value ) {
+		if ( ! wp_attachment_is_image( $value ) ) {
+			return false;
+		}
+		return \update_option( 'activitypub_header_image', $value );
 	}
 
 	/**
