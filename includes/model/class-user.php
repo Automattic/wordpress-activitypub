@@ -135,6 +135,14 @@ class User extends Actor {
 	}
 
 	public function get_icon() {
+		$icon = get_user_option( 'activitypub_icon', $this->_id );
+		if ( $icon ) {
+			return array(
+				'type' => 'Image',
+				'url'  => $icon,
+			);
+		}
+
 		$icon = \esc_url(
 			\get_avatar_url(
 				$this->_id,
@@ -150,20 +158,15 @@ class User extends Actor {
 
 	public function get_image() {
 		$header_image = get_user_option( 'activitypub_header_image', $this->_id );
-		$image_url    = null;
+
+		if ( ! $header_image && \has_header_image() ) {
+			$header_image = \get_header_image();
+		}
 
 		if ( $header_image ) {
-			$image_url = \wp_get_attachment_url( $header_image );
-		}
-
-		if ( ! $image_url && \has_header_image() ) {
-			$image_url = \get_header_image();
-		}
-
-		if ( $image_url ) {
 			return array(
 				'type' => 'Image',
-				'url'  => esc_url( $image_url ),
+				'url'  => esc_url( $header_image ),
 			);
 		}
 
@@ -275,6 +278,52 @@ class User extends Actor {
 			return true;
 		} else {
 			return false;
+		}
+	}
+
+	/**
+	 * Update User profile attributes
+	 *
+	 * @param string $key The attribute to update.
+	 * @param mixed $value The new value.
+	 *                     Possible values:
+	 *                   - name: The User-Name.
+	 *                   - summary: The User-Description.
+	 *                   - icon: The User-Icon.
+	 *                   - header: The User-Header-Image.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function save( $key, $value ) {
+		switch ( $key ) {
+			case 'name':
+				$userdata = [ 'ID' => $this->_id, 'display_name' => $value ];
+				return \wp_update_user( $userdata );
+			case 'summary':
+				return \update_user_meta( $this->_id, 'description', $value );
+			case 'icon':
+				$maybe_id = (int) $value;
+				// we were passed an integer, which should be an attachment ID.
+				if ( $maybe_id ) {
+					$image = \wp_get_attachment_image_src( $maybe_id, 'full' );
+					if ( ! $image ) {
+						return false;
+					}
+					$value = \wp_get_attachment_url( $maybe_id );
+				}
+				return update_user_option( $this->_id, 'activitypub_icon', $value );
+			case 'header':
+				$maybe_id = (int) $value;
+				// we were passed an integer, which should be an attachment ID.
+				if ( $maybe_id ) {
+					$image = wp_get_attachment_image( $maybe_id, 'full' );
+					if ( ! $image ) {
+						return false;
+					}
+					$value = wp_get_attachment_url( $maybe_id );
+				}
+				return update_user_option( $this->_id, 'activitypub_header_image', $value );
+			default:
+				return false;
 		}
 	}
 }

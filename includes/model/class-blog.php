@@ -205,8 +205,8 @@ class Blog extends Actor {
 	 * @return array The User-Icon.
 	 */
 	public function get_icon() {
-		// try site icon first
-		$icon_id = get_option( 'site_icon' );
+		// try site_logo, falling back to site_icon, first
+		$icon_id = get_option( 'site_logo', get_option( 'site_icon' ) );
 
 		// try custom logo second
 		if ( ! $icon_id ) {
@@ -389,11 +389,37 @@ class Blog extends Actor {
 	}
 
 	/**
-	 * Get the User-Hashtags.
+	 * Update User profile attributes
+	 *
+	 * @param string $key The attribute to update.
+	 * @param mixed $value The new value. Possible values:
+	 *                     - name: The User-Name.
+	 *                     - summary: The User-Description.
+	 *                     - icon: The User-Icon.
+	 *                     - header: The User-Header-Image.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function save( $key, $value ) {
+		switch ( $key ) {
+			case 'name':
+				return \update_option( 'blogname', $value );
+			case 'summary':
+				return \update_option( 'blogdescription', $value );
+			case 'icon':
+				return \update_option( 'site_logo', $value ) && \update_option( 'site_icon', $value );
+			case 'header':
+				return \update_option( 'activitypub_header_image', $value );
+			default:
+				return false;
+		}
+	}
+
+	/**
+	 * Get the User - Hashtags .
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#Hashtag
 	 *
-	 * @return array The User-Hashtags.
+	 * @return array The User - Hashtags .
 	 */
 	public function get_tag() {
 		$hashtags = array();
