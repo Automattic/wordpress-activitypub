@@ -8,6 +8,7 @@ use Activitypub\Signature;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Users;
 
+use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
@@ -132,7 +133,7 @@ class Blog extends Actor {
 	 * @return string The User-Description.
 	 */
 	public function get_summary() {
-		$summary = \get_option( 'activitypub_blog_user_description', null );
+		$summary = \get_option( 'activitypub_blog_description', null );
 
 		if ( ! $summary ) {
 			$summary = \get_bloginfo( 'description' );
@@ -188,7 +189,7 @@ class Blog extends Actor {
 	 * @return string The User-Name.
 	 */
 	public function get_preferred_username() {
-		$username = \get_option( 'activitypub_blog_user_identifier' );
+		$username = \get_option( 'activitypub_blog_identifier' );
 
 		if ( $username ) {
 			return $username;
@@ -238,6 +239,7 @@ class Blog extends Actor {
 	 */
 	public function get_image() {
 		$header_image = get_option( 'activitypub_header_image' );
+		$image_url    = null;
 
 		if ( $header_image ) {
 			$image_url = \wp_get_attachment_url( $header_image );
@@ -383,6 +385,35 @@ class Blog extends Actor {
 		} else {
 			return false;
 		}
+	}
+
+	/**
+	 * Get the User-Hashtags.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#Hashtag
+	 *
+	 * @return array The User-Hashtags.
+	 */
+	public function get_tag() {
+		$hashtags = array();
+
+		$args = array(
+			'orderby' => 'count',
+			'order'   => 'DESC',
+			'number'  => 10,
+		);
+
+		$tags = get_tags( $args );
+
+		foreach ( $tags as $tag ) {
+			$hashtags[] = array(
+				'type' => 'Hashtag',
+				'href' => \get_tag_link( $tag->term_id ),
+				'name' => esc_hashtag( $tag->name ),
+			);
+		}
+
+		return $hashtags;
 	}
 
 	/**

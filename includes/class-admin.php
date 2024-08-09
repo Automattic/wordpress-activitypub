@@ -155,10 +155,10 @@ class Admin {
 				wp_enqueue_media();
 				wp_enqueue_script( 'activitypub-header-image' );
 
-				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-user-settings.php' );
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-settings.php' );
 				break;
 			case 'followers':
-				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-user-followers-list.php' );
+				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-followers-list.php' );
 				break;
 			case 'welcome':
 			default:
@@ -288,8 +288,8 @@ class Admin {
 
 		// Blog-User Settings
 		\register_setting(
-			'activitypub_blog_user',
-			'activitypub_blog_user_description',
+			'activitypub_blog',
+			'activitypub_blog_description',
 			array(
 				'type' => 'string',
 				'description' => \esc_html__( 'The Description of the Blog-User', 'activitypub' ),
@@ -298,8 +298,8 @@ class Admin {
 			)
 		);
 		\register_setting(
-			'activitypub_blog_user',
-			'activitypub_blog_user_identifier',
+			'activitypub_blog',
+			'activitypub_blog_identifier',
 			array(
 				'type'              => 'string',
 				'description'       => \esc_html__( 'The Identifier of the Blog-User', 'activitypub' ),
@@ -329,8 +329,8 @@ class Admin {
 
 					if ( $user->results ) {
 						add_settings_error(
-							'activitypub_blog_user_identifier',
-							'activitypub_blog_user_identifier',
+							'activitypub_blog_identifier',
+							'activitypub_blog_identifier',
 							\esc_html__( 'You cannot use an existing author\'s name for the blog profile ID.', 'activitypub' ),
 							'error'
 						);
@@ -343,7 +343,7 @@ class Admin {
 			)
 		);
 		\register_setting(
-			'activitypub_blog_user',
+			'activitypub_blog',
 			'activitypub_header_image',
 			array(
 				'type' => 'integer',
@@ -362,7 +362,7 @@ class Admin {
 	}
 
 	public static function add_profile( $user ) {
-		$description = get_user_meta( $user->ID, 'activitypub_user_description', true );
+		$description = \get_user_option( 'activitypub_description', $user->ID );
 
 		wp_enqueue_media();
 		wp_enqueue_script( 'activitypub-header-image' );
@@ -396,11 +396,11 @@ class Admin {
 		) {
 			return false;
 		}
-		$description = ! empty( $_POST['activitypub_user_description'] ) ? sanitize_text_field( wp_unslash( $_POST['activitypub_user_description'] ) ) : false;
+		$description = ! empty( $_POST['activitypub_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['activitypub_description'] ) ) : false;
 		if ( $description ) {
-			update_user_meta( $user_id, 'activitypub_user_description', $description );
+			\update_user_option( $user_id, 'activitypub_description', $description );
 		} else {
-			delete_user_meta( $user_id, 'activitypub_user_description' );
+			\delete_user_option( $user_id, 'activitypub_description' );
 		}
 
 		$header_image = ! empty( $_POST['activitypub_header_image'] ) ? sanitize_text_field( wp_unslash( $_POST['activitypub_header_image'] ) ) : false;

@@ -1,0 +1,12 @@
+{
+  "name": "reply-handler",
+  "title": "Reply Handler: not a block, but block.json is very useful.",
+  "category": "widgets",
+  "icon": "admin-comments",
+  "keywords": [
+    "reply",
+    "handler",
+    "comments"
+  ],
+  "editorScript": "file:./plugin.js"
+}

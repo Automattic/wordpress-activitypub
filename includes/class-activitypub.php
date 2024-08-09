@@ -47,6 +47,8 @@ class Activitypub {
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( self::class, 'default_actor_extra_fields' ), 10, 2 );
 
+		\add_action( 'tool_box', array( self::class, 'tool_box' ) );
+
 		// register several post_types
 		self::register_post_types();
 	}
@@ -99,7 +101,7 @@ class Activitypub {
 		$json_template = false;
 
 		if ( \is_author() && ! is_user_disabled( \get_the_author_meta( 'ID' ) ) ) {
-			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/author-json.php';
+			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/user-json.php';
 		} elseif ( is_comment() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() ) {
@@ -132,11 +134,65 @@ class Activitypub {
 	}
 
 	/**
+	 * Add the 'self' link to the header.
+	 *
+	 * @see
+	 *
+	 * @return void
+	 */
+	public static function add_headers() {
+		// phpcs:ignore
+		$request_uri = $_SERVER['REQUEST_URI'];
+
+		if ( ! $request_uri ) {
+			return;
+		}
+
+		// only add self link to author pages...
+		if ( is_author() ) {
+			if ( is_user_disabled( get_queried_object_id() ) ) {
+				return;
+			}
+		} elseif ( is_singular() ) { // or posts/pages/custom-post-types...
+			if ( ! \post_type_supports( \get_post_type(), 'activitypub' ) ) {
+				return;
+			}
+		} else { // otherwise return
+			return;
+		}
+
+		// add self link to html and http header
+		$host      = wp_parse_url( home_url() );
+		$self_link = esc_url(
+			apply_filters(
+				'self_link',
+				set_url_scheme(
+					// phpcs:ignore
+					'http://' . $host['host'] . wp_unslash( $request_uri )
+				)
+			)
+		);
+
+		if ( ! headers_sent() ) {
+			header( 'Link: <' . $self_link . '>; rel="alternate"; type="application/activity+json"' );
+		}
+
+		add_action(
+			'wp_head',
+			function () use ( $self_link ) {
+				echo PHP_EOL . '<link rel="alternate" type="application/activity+json" href="' . esc_url( $self_link ) . '" />' . PHP_EOL;
+			}
+		);
+	}
+
+	/**
 	 * Custom redirects for ActivityPub requests.
 	 *
 	 * @return void
 	 */
 	public static function template_redirect() {
+		self::add_headers();
+
 		$comment_id = get_query_var( 'c', null );
 
 		// check if it seems to be a comment
@@ -313,6 +369,17 @@ class Activitypub {
 	}
 
 	/**
+	 * Adds metabox on wp-admin/tools.php
+	 *
+	 * @return void
+	 */
+	public static function tool_box() {
+		if ( \current_user_can( 'edit_posts' ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
+		}
+	}
+
+	/**
 	 * Theme compatibility stuff
 	 *
 	 * @return void
@@ -460,7 +527,7 @@ class Activitypub {
 				'show_in_rest'        => true,
 				'map_meta_cap'        => true,
 				'show_ui'             => true,
-				'supports'            => array( 'title', 'editor' ),
+				'supports'            => array( 'title', 'editor', 'page-attributes' ),
 			)
 		);
 
@@ -506,6 +573,7 @@ class Activitypub {
 			\__( 'Homepage', 'activitypub' ) => \get_the_author_meta( 'user_url', $user_id ),
 		);
 
+		$menu_order = 10;
 		foreach ( $defaults as $title => $url ) {
 			if ( ! $url ) {
 				continue;
@@ -523,8 +591,10 @@ class Activitypub {
 					\wp_parse_url( $url, \PHP_URL_HOST )
 				),
 				'comment_status' => 'closed',
+				'menu_order'     => $menu_order,
 			);
 
+			$menu_order += 10;
 			$extra_field_id = wp_insert_post( $extra_field );
 			$extra_fields[] = get_post( $extra_field_id );
 		}

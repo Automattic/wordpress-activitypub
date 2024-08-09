@@ -142,8 +142,9 @@ class Scheduler {
 			$type = 'Create';
 		} elseif (
 			'publish' === $new_status ||
+			// We want to send updates for posts that are published and then moved to draft.
 			( 'draft' === $new_status &&
-			'draft' !== $old_status )
+			'publish' === $old_status )
 		) {
 			$type = 'Update';
 		} elseif ( 'trash' === $new_status ) {
@@ -295,7 +296,8 @@ class Scheduler {
 		}
 		// the user meta fields that affect a profile.
 		$fields = array(
-			'activitypub_user_description',
+			'activitypub_description',
+			'activitypub_header_image',
 			'description',
 			'user_url',
 			'display_name',

@@ -13,7 +13,7 @@
 
 <div class="activitypub-settings activitypub-settings-page hide-if-no-js">
 	<form method="post" action="options.php">
-		<?php \settings_fields( 'activitypub_blog_user' ); ?>
+		<?php \settings_fields( 'activitypub_blog' ); ?>
 
 		<div class="box">
 			<h3><?php \esc_html_e( 'Blog-Profile', 'activitypub' ); ?></h3>
@@ -94,8 +94,8 @@
 							<?php \esc_html_e( 'Change profile ID', 'activitypub' ); ?>
 						</th>
 						<td>
-							<label for="activitypub_blog_user_identifier">
-								<input class="blog-user-identifier" name="activitypub_blog_user_identifier" id="activitypub_blog_user_identifier" type="text" value="<?php echo esc_attr( \get_option( 'activitypub_blog_user_identifier', \Activitypub\Model\Blog::get_default_username() ) ); ?>" />
+							<label for="activitypub_blog_identifier">
+								<input class="blog-user-identifier" name="activitypub_blog_identifier" id="activitypub_blog_identifier" type="text" value="<?php echo esc_attr( \get_option( 'activitypub_blog_identifier', \Activitypub\Model\Blog::get_default_username() ) ); ?>" />
 								@<?php echo esc_html( \wp_parse_url( \home_url(), PHP_URL_HOST ) ); ?>
 							</label>
 							<p class="description">
@@ -113,14 +113,14 @@
 							<?php \esc_html_e( 'Change Description', 'activitypub' ); ?>
 						</th>
 						<td>
-							<label for="activitypub_blog_user_description">
+							<label for="activitypub_blog_description">
 								<textarea
 									class="blog-user-description large-text"
 									rows="5"
-									name="activitypub_blog_user_description"
-									id="activitypub_blog_user_description"
+									name="activitypub_blog_description"
+									id="activitypub_blog_description"
 									placeholder="<?php echo esc_attr( \get_bloginfo( 'description' ) ); ?>"
-								><?php echo \esc_html( \get_option( 'activitypub_blog_user_description' ) ); ?></textarea>
+								><?php echo \esc_html( \get_option( 'activitypub_blog_description' ) ); ?></textarea>
 							</label>
 							<p class="description">
 								<?php \esc_html_e( 'By default the ActivityPub plugin uses the WordPress tagline as a description for the blog profile.', 'activitypub' ); ?>

@@ -393,6 +393,7 @@ class Comment {
 		$comments = \get_comments(
 			array(
 				'post_id' => $post_id,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
 					'relation' => 'AND',
 					array(
