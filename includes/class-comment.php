@@ -19,6 +19,8 @@ class Comment {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
+		self::register_comment_types();
+
 		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
@@ -462,5 +464,116 @@ class Comment {
 				$assets['version']
 			);
 		}
+	}
+
+	/**
+	 * Return the registered custom comment types.
+	 *
+	 * @return array The registered custom comment types
+	 */
+	public static function get_comment_types() {
+		global $activitypub_comment_types;
+
+		return $activitypub_comment_types;
+	}
+
+	/**
+	 * Is this a registered comment type
+	 *
+	 * @param string $slug The name of the type
+	 * @return boolean True if registered.
+	 */
+	public static function is_registered_comment_type( $slug ) {
+		$slug = strtolower( $slug );
+		$slug = sanitize_key( $slug );
+
+		return in_array( $slug, array_keys( self::get_comment_types() ), true );
+	}
+
+	/**
+	 * Return the registered custom comment types names.
+	 *
+	 * @return array The registered custom comment type names
+	 */
+	public static function get_comment_type_names() {
+		return array_values( wp_list_pluck( self::get_comment_types(), 'type' ) );
+	}
+
+	/**
+	 * Get a comment type
+	 *
+	 * @param string $type The comment type
+	 *
+	 * @return array The comment type
+	 */
+	public static function get_comment_type( $type ) {
+		$type  = strtolower( $type );
+		$type  = sanitize_key( $type );
+		$types = self::get_comment_types();
+
+		if ( in_array( $type, array_keys( $types ), true ) ) {
+			$type_array = $types[ $type ];
+		} else {
+			$type_array = array();
+		}
+
+		return apply_filters( "activitypub_comment_type_{$type}", $type_array );
+	}
+
+	/**
+	 * Get a comment type attribute
+	 *
+	 * @param string $type The comment type
+	 * @param string $attr The attribute to get
+	 *
+	 * @return mixed The value of the attribute
+	 */
+	public static function get_comment_type_attr( $type, $attr ) {
+		$type_array = self::get_comment_type( $type );
+
+		if ( $type_array && isset( $type_array[ $attr ] ) ) {
+			$value = $type_array[ $attr ];
+		} else {
+			$value = '';
+		}
+
+		return apply_filters( "activitypub_comment_type_{$attr}", $value, $type );
+	}
+
+
+
+	/**
+	 * Register the comment types used by the ActivityPub plugin
+	 *
+	 * @return void
+	 */
+	public static function register_comment_types() {
+		register_comment_type(
+			'announce',
+			array(
+				'label'       => __( 'Reposts', 'activitypub' ),
+				'singular'    => __( 'Repost', 'activitypub' ),
+				'description' => __( 'A repost on the indieweb is a post that is purely a 100% re-publication of another (typically someone else\'s) post.', 'activitypub' ),
+				'icon'        => '♻️',
+				'class'       => 'p-repost',
+				'type'        => 'repost',
+				// translators: %1$s username, %2$s opject format (post, audio, ...), %3$s URL, %4$s domain
+				'excerpt'     => __( '&hellip; reposted this!', 'activitypub' ),
+			)
+		);
+
+		register_comment_type(
+			'like',
+			array(
+				'label'       => __( 'Likes', 'activitypub' ),
+				'singular'    => __( 'Like', 'activitypub' ),
+				'description' => __( 'A like is a popular webaction button and in some cases post type on various silos such as Facebook and Instagram.', 'activitypub' ),
+				'icon'        => '👍',
+				'class'       => 'p-like',
+				'type'        => 'like',
+				// translators: %1$s username, %2$s opject format (post, audio, ...), %3$s URL, %4$s domain
+				'excerpt'     => __( '&hellip; liked this!', 'activitypub' ),
+			)
+		);
 	}
 }
