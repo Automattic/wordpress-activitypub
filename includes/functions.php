@@ -1010,3 +1010,103 @@ function custom_large_numbers( $formatted, $number, $decimals ) {
 	// Default fallback. We should not get here.
 	return $formatted;
 }
+
+/**
+ * Registers a Webmention comment type.
+ *
+ *
+ * @param string $comment_type Key for comment type.
+ * @param array  $args         Arguments.
+ *
+ * @return array The registered Activitypub comment type.
+ */
+function register_comment_type( $comment_type, $args = array() ) {
+	global $activitypub_comment_types;
+
+	if ( ! is_array( $activitypub_comment_types ) ) {
+		$activitypub_comment_types = array();
+	}
+
+	// Sanitize comment type name.
+	$comment_type = sanitize_key( $comment_type );
+
+	$activitypub_comment_types[ $comment_type ] = $args;
+
+	/**
+	 * Fires after a Webmention comment type is registered.
+	 *
+	 *
+	 * @param string                   $comment_type        Comment type.
+	 * @param \Webmention\Comment_Type $comment_type_object Arguments used to register the comment type.
+	 */
+	do_action( 'activitypub_registered_comment_type', $comment_type );
+
+	return $args;
+}
+
+/**
+ * Normalize a URL.
+ *
+ * @param string $url The URL.
+ *
+ * @return string The normalized URL.
+ */
+function normalize_url( $url ) {
+	$url = \untrailingslashit( $url );
+	$url = \str_replace( 'https://', '', $url );
+	$url = \str_replace( 'http://', '', $url );
+	$url = \str_replace( 'www.', '', $url );
+
+	return $url;
+}
+
+/**
+ * Normalize a host.
+ *
+ * @param string $host The host.
+ *
+ * @return string The normalized host.
+ */
+function normalize_host( $host ) {
+	return \str_replace( 'www.', '', $host );
+}
+
+/**
+ * Get the Extra Fields of an Actor
+ *
+ * @param int $user_id The User-ID.
+ *
+ * @return array The extra fields.
+ */
+function get_actor_extra_fields( $user_id ) {
+	$extra_fields = new WP_Query(
+		array(
+			'post_type' => 'ap_extrafield',
+			'nopaging'  => true,
+			'status'    => 'publish',
+			'author'    => $user_id,
+			'orderby'   => 'menu_order',
+			'order'     => 'ASC',
+		)
+	);
+
+	if ( $extra_fields->have_posts() ) {
+		$extra_fields = $extra_fields->posts;
+	} else {
+		$extra_fields = array();
+	}
+
+	return apply_filters( 'activitypub_get_actor_extra_fields', $extra_fields, $user_id );
+}
+
+/**
+ * Get the reply intent URI.
+ *
+ * @return string The reply intent URI.
+ */
+function get_reply_intent_uri() {
+	return sprintf(
+		'javascript:(()=>{window.open(\'%s\'+encodeURIComponent(window.location.href));})();',
+		esc_url( \admin_url( 'post-new.php?in_reply_to=' ) )
+	);
+}
