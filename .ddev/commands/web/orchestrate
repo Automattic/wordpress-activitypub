@@ -1,0 +1,41 @@
+#!/bin/bash
+## Description: Set up the development environment
+## Usage: orchestrate
+## Example: "ddev orchestrate"
+
+mkdir -p "${DDEV_DOCROOT}"
+pushd "${DDEV_DOCROOT}"
+PLUGIN_FOLDER="${DDEV_DOCROOT}/wp-content/plugins/${PLUGIN_NAME:-$DDEV_PROJECT}"
+VALID_ARGS=$(getopt -o fp: --long force,plugin: -- "$@")
+if [[ $? -ne 0 ]]; then
+    exit 1;
+fi
+
+eval set -- "$VALID_ARGS"
+while [ : ]; do
+  case "$1" in
+    -f | --force)
+        echo "Removing WordPress installation"
+        shift
+        export RECREATE_ENV=1;
+        popd
+        find "${DDEV_DOCROOT}" -mindepth 1 ! -regex "^${PLUGIN_FOLDER}\(/.*\)?" -delete
+        pushd "${DDEV_DOCROOT}"
+        ;;
+    -p | --plugin)
+        echo "Processing 'delta' option. Input argument is '$2'"
+        shift 2
+        ;;
+    --) shift;
+        break
+        ;;
+  esac
+done
+
+# Execute all fragments from orchestrate.d
+if [ -d "${0}.d" ]; then
+    for FN in ${0}.d/*.sh ; do
+      echo $FN
+        source "${FN}"
+    done
+fi

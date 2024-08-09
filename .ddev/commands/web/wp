@@ -1,0 +1,7 @@
+#!/bin/bash
+## Description: Run WordPress CLI inside the web container. DDEV core only provides this for the "wordpress" project type for some reason
+## Usage: wp [flags] [args]
+## Example: "ddev wp core version" or "ddev wp plugin install user-switching --activate"
+## ProjectTypes: php
+
+wp "$@" --path=.ddev/wordpress
