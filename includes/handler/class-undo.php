@@ -29,10 +29,16 @@ class Undo {
 	 */
 	public static function handle_undo( $activity ) {
 		if (
-			isset( $activity['object']['type'] ) &&
-			'Follow' === $activity['object']['type'] &&
-			isset( $activity['object']['object'] )
+			! isset( $activity['object']['type'] ) ||
+			! isset( $activity['object']['object'] )
 		) {
+			return;
+		}
+
+		$type = $activity['object']['type'];
+
+		// Handle "Unfollow" requests
+		if ( 'Follow' === $type ) {
 			$user_id = object_to_uri( $activity['object']['object'] );
 			$user = Users::get_by_resource( $user_id );
 
@@ -48,24 +54,20 @@ class Undo {
 			Followers::remove_follower( $user_id, $actor );
 		}
 
-		if (
-			isset( $activity['object']['type'] ) &&
-			'Like' === $activity['object']['type'] &&
-			isset( $activity['object']['id'] )
-		) {
+		// Handle "Undo" requests for "Like" and "Create" activities
+		if ( in_array( $type, array( 'Like', 'Create', 'Announce' ), true ) ) {
 			if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
 				return;
 			}
 
-			$comment = Comment::object_id_to_comment( esc_url_raw( $activity['object']['id'] ) );
+			$object_id = object_to_uri( $activity['object'] );
+			$comment   = Comment::object_id_to_comment( esc_url_raw( $object_id ) );
 
 			if ( empty( $comment ) ) {
 				return;
 			}
 
-			if ( 'like' === get_comment_type( $comment ) ) {
-				$state = wp_trash_comment( $comment );
-			}
+			$state = wp_trash_comment( $comment );
 
 			do_action( 'activitypub_handled_undo', $activity, $user_id, isset( $state ) ? $state : null, null );
 		}

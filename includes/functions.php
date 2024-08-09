@@ -989,3 +989,36 @@ function custom_large_numbers( $formatted, $number, $decimals ) {
 	// Default fallback. We should not get here.
 	return $formatted;
 }
+
+/**
+ * Registers a Webmention comment type.
+ *
+ *
+ * @param string $comment_type Key for comment type.
+ * @param array  $args         Arguments.
+ *
+ * @return array The registered Activitypub comment type.
+ */
+function register_comment_type( $comment_type, $args = array() ) {
+	global $activitypub_comment_types;
+
+	if ( ! is_array( $activitypub_comment_types ) ) {
+		$activitypub_comment_types = array();
+	}
+
+	// Sanitize comment type name.
+	$comment_type = sanitize_key( $comment_type );
+
+	$activitypub_comment_types[ $comment_type ] = $args;
+
+	/**
+	 * Fires after a Webmention comment type is registered.
+	 *
+	 *
+	 * @param string                   $comment_type        Comment type.
+	 * @param \Webmention\Comment_Type $comment_type_object Arguments used to register the comment type.
+	 */
+	do_action( 'activitypub_registered_comment_type', $comment_type );
+
+	return $args;
+}
