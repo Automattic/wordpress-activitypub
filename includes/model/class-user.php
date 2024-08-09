@@ -3,6 +3,7 @@ namespace Activitypub\Model;
 
 use WP_Query;
 use WP_Error;
+use Activitypub\Migration;
 use Activitypub\Signature;
 use Activitypub\Model\Blog;
 use Activitypub\Activity\Actor;
@@ -10,6 +11,7 @@ use Activitypub\Collection\Users;
 
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_actor_extra_fields;
 
 class User extends Actor {
 	/**
@@ -103,7 +105,7 @@ class User extends Actor {
 	 * @return string The User-Description.
 	 */
 	public function get_summary() {
-		$description = get_user_meta( $this->_id, 'activitypub_user_description', true );
+		$description = get_user_option( 'activitypub_description', $this->_id );
 		if ( empty( $description ) ) {
 			$description = get_user_meta( $this->_id, 'description', true );
 		}
@@ -147,11 +149,21 @@ class User extends Actor {
 	}
 
 	public function get_image() {
-		if ( \has_header_image() ) {
-			$image = \esc_url( \get_header_image() );
+		$header_image = get_user_option( 'activitypub_header_image', $this->_id );
+		$image_url    = null;
+
+		if ( $header_image ) {
+			$image_url = \wp_get_attachment_url( $header_image );
+		}
+
+		if ( ! $image_url && \has_header_image() ) {
+			$image_url = \get_header_image();
+		}
+
+		if ( $image_url ) {
 			return array(
 				'type' => 'Image',
-				'url'  => $image,
+				'url'  => esc_url( $image_url ),
 			);
 		}
 
@@ -233,41 +245,74 @@ class User extends Actor {
 	 * @return array The extended User-Output.
 	 */
 	public function get_attachment() {
-		$array = array();
+		$extra_fields = get_actor_extra_fields( $this->_id );
 
-		$array[] = array(
-			'type' => 'PropertyValue',
-			'name' => \__( 'Blog', 'activitypub' ),
-			'value' => \html_entity_decode(
-				'<a rel="me" title="' . \esc_attr( \home_url( '/' ) ) . '" target="_blank" href="' . \home_url( '/' ) . '">' . \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) . '</a>',
-				\ENT_QUOTES,
-				'UTF-8'
-			),
-		);
+		$attachments = array();
 
-		$array[] = array(
-			'type' => 'PropertyValue',
-			'name' => \__( 'Profile', 'activitypub' ),
-			'value' => \html_entity_decode(
-				'<a rel="me" title="' . \esc_attr( \get_author_posts_url( $this->get__id() ) ) . '" target="_blank" href="' . \get_author_posts_url( $this->get__id() ) . '">' . \wp_parse_url( \get_author_posts_url( $this->get__id() ), \PHP_URL_HOST ) . '</a>',
-				\ENT_QUOTES,
-				'UTF-8'
-			),
-		);
+		foreach ( $extra_fields as $post ) {
+			$content = \get_the_content( null, false, $post );
+			$content = \make_clickable( $content );
+			$content = \do_blocks( $content );
+			$content = \wptexturize( $content );
+			$content = \wp_filter_content_tags( $content );
+			// replace script and style elements
+			$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
+			$content = \strip_shortcodes( $content );
+			$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
 
-		if ( \get_the_author_meta( 'user_url', $this->get__id() ) ) {
-			$array[] = array(
+			$attachments[] = array(
 				'type' => 'PropertyValue',
-				'name' => \__( 'Website', 'activitypub' ),
+				'name' => \get_the_title( $post ),
 				'value' => \html_entity_decode(
-					'<a rel="me" title="' . \esc_attr( \get_the_author_meta( 'user_url', $this->get__id() ) ) . '" target="_blank" href="' . \get_the_author_meta( 'user_url', $this->get__id() ) . '">' . \wp_parse_url( \get_the_author_meta( 'user_url', $this->get__id() ), \PHP_URL_HOST ) . '</a>',
+					$content,
 					\ENT_QUOTES,
 					'UTF-8'
 				),
 			);
+
+			$link_added = false;
+
+			// Add support for FEP-fb2a, for more information see FEDERATION.md
+			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
+				$tags = new \WP_HTML_Tag_Processor( $content );
+				$tags->next_tag();
+
+				if ( 'P' === $tags->get_tag() ) {
+					$tags->next_tag();
+				}
+
+				if ( 'A' === $tags->get_tag() ) {
+					$tags->set_bookmark( 'link' );
+					if ( ! $tags->next_tag() ) {
+						$tags->seek( 'link' );
+						$attachment = array(
+							'type' => 'Link',
+							'name' => \get_the_title( $post ),
+							'href' => \esc_url( $tags->get_attribute( 'href' ) ),
+							'rel'  => explode( ' ', $tags->get_attribute( 'rel' ) ),
+						);
+
+						$link_added = true;
+					}
+				}
+			}
+
+			if ( ! $link_added ) {
+				$attachment = array(
+					'type'    => 'Note',
+					'name'    => \get_the_title( $post ),
+					'content' => \html_entity_decode(
+						$content,
+						\ENT_QUOTES,
+						'UTF-8'
+					),
+				);
+			}
+
+			$attachments[] = $attachment;
 		}
 
-		return $array;
+		return $attachments;
 	}
 
 	/**

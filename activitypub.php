@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/pfefferle/wordpress-activitypub/
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 2.5.0
+ * Version: 3.1.0
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -21,7 +21,7 @@ use function Activitypub\site_supports_blocks;
 require_once __DIR__ . '/includes/compat.php';
 require_once __DIR__ . '/includes/functions.php';
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '2.5.0' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '3.0.0' );
 
 /**
  * Initialize the plugin constants.
@@ -90,23 +90,6 @@ function plugin_init() {
 	if ( \WP_DEBUG && file_exists( $debug_file ) && is_readable( $debug_file ) ) {
 		require_once $debug_file;
 		Debug::init();
-	}
-
-	require_once __DIR__ . '/integration/class-webfinger.php';
-	Integration\Webfinger::init();
-
-	require_once __DIR__ . '/integration/class-nodeinfo.php';
-	Integration\Nodeinfo::init();
-
-	require_once __DIR__ . '/integration/class-enable-mastodon-apps.php';
-	Integration\Enable_Mastodon_Apps::init();
-
-	require_once __DIR__ . '/integration/class-opengraph.php';
-	Integration\Opengraph::init();
-
-	if ( \defined( 'JETPACK__VERSION' ) && ! \defined( 'IS_WPCOM' ) ) {
-		require_once __DIR__ . '/integration/class-jetpack.php';
-		Integration\Jetpack::init();
 	}
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
@@ -187,17 +170,8 @@ function plugin_settings_link( $actions ) {
 	)
 );
 
-/**
- * Only load code that needs BuddyPress to run once BP is loaded and initialized.
- */
-add_action(
-	'bp_include',
-	function () {
-		require_once __DIR__ . '/integration/class-buddypress.php';
-		Integration\Buddypress::init();
-	},
-	0
-);
+// Load integrations
+require_once __DIR__ . '/integration/load.php';
 
 /**
  * `get_plugin_data` wrapper

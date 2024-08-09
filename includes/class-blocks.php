@@ -13,6 +13,21 @@ class Blocks {
 		self::register_blocks();
 		\add_action( 'wp_enqueue_scripts', array( self::class, 'add_data' ) );
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'add_data' ) );
+		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
+	}
+
+	/**
+	 * Enqueue the reply handle script if the in_reply_to GET param is set.
+	 */
+	public static function handle_in_reply_to_get_param() {
+		// only load the script if the in_reply_to GET param is set, action happens there, not here.
+		if ( ! isset( $_GET['in_reply_to'] ) ) {
+			return;
+		}
+
+		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/reply-intent/plugin.asset.php';
+		$plugin_url = plugins_url( 'build/reply-intent/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
+		wp_enqueue_script( 'activitypub-reply-intent', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
 	}
 
 	public static function add_data() {
@@ -42,6 +57,12 @@ class Blocks {
 			ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me',
 			array(
 				'render_callback' => array( self::class, 'render_follow_me_block' ),
+			)
+		);
+		\register_block_type_from_metadata(
+			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
+			array(
+				'render_callback' => array( self::class, 'render_reply_block' ),
 			)
 		);
 	}
@@ -129,6 +150,27 @@ class Blocks {
 		// We are only pagination on the JS side. Could be revisited but we gotta ship!
 		$html .= '</ul></div>';
 		return $html;
+	}
+
+	/**
+	 * Render the reply block.
+	 *
+	 * @param array $attrs The block attributes.
+	 *
+	 * @return void
+	 */
+	public static function render_reply_block( $attrs ) {
+		return apply_filters(
+			'activitypub_reply_block',
+			sprintf(
+				'<p><a title="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
+				esc_url( $attrs['url'] ),
+				esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
+				// translators: %s is the URL of the post being replied to.
+				sprintf( __( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', $attrs['url'] ) )
+			),
+			$attrs
+		);
 	}
 
 	public static function render_follower( $follower ) {

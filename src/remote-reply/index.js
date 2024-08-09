@@ -11,6 +11,6 @@ domReady( () => {
 	// iterate over a nodelist
 	[].forEach.call( document.querySelectorAll( '.activitypub-remote-reply' ), ( element ) => {
 		const attrs = JSON.parse( element.dataset.attrs );
-		createRoot( element).render( <RemoteReply { ...attrs } id={ getUniqueId() } useId={ true } /> );
+		createRoot( element ).render( <RemoteReply { ...attrs } id={ getUniqueId() } useId={ true } /> );
 	} );
 } );

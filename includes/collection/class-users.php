@@ -8,6 +8,8 @@ use Activitypub\Model\Blog;
 use Activitypub\Model\Application;
 
 use function Activitypub\object_to_uri;
+use function Activitypub\normalize_url;
+use function Activitypub\normalize_host;
 use function Activitypub\url_to_authorid;
 use function Activitypub\is_user_disabled;
 
@@ -74,7 +76,7 @@ class Users {
 			return new Blog();
 		}
 
-		if ( get_option( 'activitypub_blog_user_identifier' ) === $username ) {
+		if ( get_option( 'activitypub_blog_identifier' ) === $username ) {
 			return new Blog();
 		}
 
@@ -182,8 +184,8 @@ class Users {
 
 				// check for http(s)://blog.example.com/
 				if (
-					self::normalize_url( site_url() ) === self::normalize_url( $resource ) ||
-					self::normalize_url( home_url() ) === self::normalize_url( $resource )
+					normalize_url( site_url() ) === normalize_url( $resource ) ||
+					normalize_url( home_url() ) === normalize_url( $resource )
 				) {
 					return self::get_by_id( self::BLOG_USER_ID );
 				}
@@ -197,8 +199,8 @@ class Users {
 			case 'acct':
 				$resource   = \str_replace( 'acct:', '', $resource );
 				$identifier = \substr( $resource, 0, \strrpos( $resource, '@' ) );
-				$host       = self::normalize_host( \substr( \strrchr( $resource, '@' ), 1 ) );
-				$blog_host  = self::normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
+				$host       = normalize_host( \substr( \strrchr( $resource, '@' ), 1 ) );
+				$blog_host  = normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
 
 				if ( $blog_host !== $host ) {
 					return new WP_Error(
@@ -251,33 +253,6 @@ class Users {
 		}
 
 		return self::get_by_username( $id );
-	}
-
-	/**
-	 * Normalize a host.
-	 *
-	 * @param string $host The host.
-	 *
-	 * @return string The normalized host.
-	 */
-	public static function normalize_host( $host ) {
-		return \str_replace( 'www.', '', $host );
-	}
-
-	/**
-	 * Normalize a URL.
-	 *
-	 * @param string $url The URL.
-	 *
-	 * @return string The normalized URL.
-	 */
-	public static function normalize_url( $url ) {
-		$url = \untrailingslashit( $url );
-		$url = \str_replace( 'https://', '', $url );
-		$url = \str_replace( 'http://', '', $url );
-		$url = \str_replace( 'www.', '', $url );
-
-		return $url;
 	}
 
 	/**

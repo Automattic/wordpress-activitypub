@@ -117,6 +117,11 @@ class Scheduler {
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
 		$post = get_post( $post );
 
+		if ( 'ap_extrafield' === $post->post_type ) {
+			self::schedule_profile_update( $post->post_author );
+			return;
+		}
+
 		// Do not send activities if post is password protected.
 		if ( \post_password_required( $post ) ) {
 			return;
@@ -137,8 +142,9 @@ class Scheduler {
 			$type = 'Create';
 		} elseif (
 			'publish' === $new_status ||
+			// We want to send updates for posts that are published and then moved to draft.
 			( 'draft' === $new_status &&
-			'draft' !== $old_status )
+			'publish' === $old_status )
 		) {
 			$type = 'Update';
 		} elseif ( 'trash' === $new_status ) {
@@ -290,7 +296,8 @@ class Scheduler {
 		}
 		// the user meta fields that affect a profile.
 		$fields = array(
-			'activitypub_user_description',
+			'activitypub_description',
+			'activitypub_header_image',
 			'description',
 			'user_url',
 			'display_name',
@@ -318,7 +325,9 @@ class Scheduler {
 
 	/**
 	 * Theme mods only have a dynamic filter so we fudge it like this.
-	 * @param  mixed $value
+	 *
+	 * @param mixed $value
+	 *
 	 * @return mixed
 	 */
 	public static function blog_user_update( $value = null ) {
@@ -328,6 +337,7 @@ class Scheduler {
 
 	/**
 	 * Send a profile update to all followers. Gets hooked into all relevant options/meta etc.
+	 *
 	 * @param int $user_id  The user ID to update (Could be 0 for Blog-User).
 	 */
 	public static function schedule_profile_update( $user_id ) {

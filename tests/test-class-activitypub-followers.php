@@ -288,7 +288,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 
 		\Activitypub\Migration::maybe_migrate();
 
-		$schedule = \wp_next_scheduled( 'activitypub_migrate', '0.0.1' );
+		$schedule = \wp_next_scheduled( 'activitypub_migrate', array( '0.0.1' ) );
 
 		$this->assertNotFalse( $schedule );
 

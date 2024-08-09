@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub;
 
+use WP_Query;
 use WP_Error;
 use Activitypub\Http;
 use Activitypub\Comment;
@@ -59,7 +60,11 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		} elseif ( array_key_exists( 'url', $actor ) ) {
 			$actor = $actor['url'];
 		} else {
-			return new WP_Error( 'activitypub_no_valid_actor_identifier', \__( 'The "actor" identifier is not valid', 'activitypub' ), array( 'status' => 404, 'actor' => $actor ) );
+			return new WP_Error(
+				'activitypub_no_valid_actor_identifier',
+				\__( 'The "actor" identifier is not valid', 'activitypub' ),
+				array( 'status' => 404, 'actor' => $actor )
+			);
 		}
 	}
 
@@ -68,7 +73,11 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	}
 
 	if ( ! $actor ) {
-		return new WP_Error( 'activitypub_no_valid_actor_identifier', \__( 'The "actor" identifier is not valid', 'activitypub' ), array( 'status' => 404, 'actor' => $actor ) );
+		return new WP_Error(
+			'activitypub_no_valid_actor_identifier',
+			\__( 'The "actor" identifier is not valid', 'activitypub' ),
+			array( 'status' => 404, 'actor' => $actor )
+		);
 	}
 
 	if ( is_wp_error( $actor ) ) {
@@ -87,7 +96,11 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	}
 
 	if ( ! \wp_http_validate_url( $actor ) ) {
-		$metadata = new WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), array( 'status' => 400, 'actor' => $actor ) );
+		$metadata = new WP_Error(
+			'activitypub_no_valid_actor_url',
+			\__( 'The "actor" is no valid URL', 'activitypub' ),
+			array( 'status' => 400, 'actor' => $actor )
+		);
 		return $metadata;
 	}
 
@@ -101,7 +114,11 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	$metadata = \json_decode( $metadata, true );
 
 	if ( ! $metadata ) {
-		$metadata = new WP_Error( 'activitypub_invalid_json', \__( 'No valid JSON data', 'activitypub' ), array( 'status' => 400, 'actor' => $actor ) );
+		$metadata = new WP_Error(
+			'activitypub_invalid_json',
+			\__( 'No valid JSON data', 'activitypub' ),
+			array( 'status' => 400, 'actor' => $actor )
+		);
 		return $metadata;
 	}
 
@@ -460,7 +477,11 @@ function is_user_type_disabled( $type ) {
 			$return = false;
 			break;
 		default:
-			$return = new WP_Error( 'activitypub_wrong_user_type', __( 'Wrong user type', 'activitypub' ), array( 'status' => 400 ) );
+			$return = new WP_Error(
+				'activitypub_wrong_user_type',
+				__( 'Wrong user type', 'activitypub' ),
+				array( 'status' => 400 )
+			);
 			break;
 	}
 
@@ -704,7 +725,7 @@ function url_to_commentid( $url ) {
  *
  * @return string The URI of the ActivityPub object
  */
-function object_to_uri( $object ) {
+function object_to_uri( $object ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
 	// check if it is already simple
 	if ( ! $object || is_string( $object ) ) {
 		return $object;
@@ -988,37 +1009,4 @@ function custom_large_numbers( $formatted, $number, $decimals ) {
 
 	// Default fallback. We should not get here.
 	return $formatted;
-}
-
-/**
- * Registers a Webmention comment type.
- *
- *
- * @param string $comment_type Key for comment type.
- * @param array  $args         Arguments.
- *
- * @return array The registered Activitypub comment type.
- */
-function register_comment_type( $comment_type, $args = array() ) {
-	global $activitypub_comment_types;
-
-	if ( ! is_array( $activitypub_comment_types ) ) {
-		$activitypub_comment_types = array();
-	}
-
-	// Sanitize comment type name.
-	$comment_type = sanitize_key( $comment_type );
-
-	$activitypub_comment_types[ $comment_type ] = $args;
-
-	/**
-	 * Fires after a Webmention comment type is registered.
-	 *
-	 *
-	 * @param string                   $comment_type        Comment type.
-	 * @param \Webmention\Comment_Type $comment_type_object Arguments used to register the comment type.
-	 */
-	do_action( 'activitypub_registered_comment_type', $comment_type );
-
-	return $args;
 }
