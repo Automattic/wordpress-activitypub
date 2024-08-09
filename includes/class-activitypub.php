@@ -48,6 +48,8 @@ class Activitypub {
 
 		\add_action( 'tool_box', array( self::class, 'tool_box' ) );
 
+		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
+
 		// register several post_types
 		self::register_post_types();
 	}
@@ -500,6 +502,36 @@ class Activitypub {
 				},
 			)
 		);
+
+		// Both User and Blog Extra Fields types have the same args.
+		$args = array(
+			'labels'           => array(
+				'name'          => _x( 'Extra fields', 'post_type plural name', 'activitypub' ),
+				'singular_name' => _x( 'Extra field', 'post_type single name', 'activitypub' ),
+				'add_new'       => __( 'Add new', 'activitypub' ),
+				'add_new_item'  => __( 'Add new extra field', 'activitypub' ),
+				'new_item'      => __( 'New extra field', 'activitypub' ),
+				'edit_item'     => __( 'Edit extra field', 'activitypub' ),
+				'view_item'     => __( 'View extra field', 'activitypub' ),
+				'all_items'     => __( 'All extra fields', 'activitypub' ),
+			),
+			'public'              => false,
+			'hierarchical'        => false,
+			'query_var'           => false,
+			'has_archive'         => false,
+			'publicly_queryable'  => false,
+			'show_in_menu'        => false,
+			'delete_with_user'    => true,
+			'can_export'          => true,
+			'exclude_from_search' => true,
+			'show_in_rest'        => true,
+			'map_meta_cap'        => true,
+			'show_ui'             => true,
+			'supports'            => array( 'title', 'editor', 'page-attributes' ),
+		);
+
+		\register_post_type( Extra_Fields::USER_POST_TYPE, $args );
+		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $args );
 
 		\do_action( 'activitypub_after_register_post_type' );
 	}

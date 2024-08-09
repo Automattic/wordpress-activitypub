@@ -2,54 +2,13 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Collection\Users;
 use WP_Query;
+use Activitypub\Collection\Users;
 
 class Extra_Fields {
 
 	const USER_POST_TYPE = 'ap_extrafield';
-
 	const BLOG_POST_TYPE = 'ap_extrafield_blog';
-
-	public static function init() {
-		self::register_post_types();
-		\add_filter( 'activitypub_get_actor_extra_fields', array( self::class, 'default_actor_extra_fields' ), 10, 2 );
-	}
-
-	/**
-	 * Register the post types for extra fields.
-	 */
-	public static function register_post_types() {
-		// Both User and Blog Extra Fields types have the same args.
-		$args = array(
-			'labels'           => array(
-				'name'          => _x( 'Extra fields', 'post_type plural name', 'activitypub' ),
-				'singular_name' => _x( 'Extra field', 'post_type single name', 'activitypub' ),
-				'add_new'       => __( 'Add new', 'activitypub' ),
-				'add_new_item'  => __( 'Add new extra field', 'activitypub' ),
-				'new_item'      => __( 'New extra field', 'activitypub' ),
-				'edit_item'     => __( 'Edit extra field', 'activitypub' ),
-				'view_item'     => __( 'View extra field', 'activitypub' ),
-				'all_items'     => __( 'All extra fields', 'activitypub' ),
-			),
-			'public'              => false,
-			'hierarchical'        => false,
-			'query_var'           => false,
-			'has_archive'         => false,
-			'publicly_queryable'  => false,
-			'show_in_menu'        => false,
-			'delete_with_user'    => true,
-			'can_export'          => true,
-			'exclude_from_search' => true,
-			'show_in_rest'        => true,
-			'map_meta_cap'        => true,
-			'show_ui'             => true,
-			'supports'            => array( 'title', 'editor', 'page-attributes' ),
-		);
-
-		\register_post_type( self::USER_POST_TYPE, $args );
-		\register_post_type( self::BLOG_POST_TYPE, $args );
-	}
 
 	/**
 	 * Get the extra fields for a user.
