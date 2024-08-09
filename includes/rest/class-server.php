@@ -21,7 +21,8 @@ class Server {
 	public static function init() {
 		self::register_routes();
 
-		\add_filter( 'rest_request_before_callbacks', array( self::class, 'authorize_activitypub_requests' ), 10, 3 );
+		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_activitypub_requests' ), 9, 3 );
+		//\add_filter( 'rest_request_before_callbacks', array( self::class, 'authorize_activitypub_requests' ), 10, 3 );
 	}
 
 	/**
@@ -77,6 +78,10 @@ class Server {
 			return $response;
 		}
 
+		if ( \is_wp_error( $response ) ) {
+			return $response;
+		}
+
 		$route = $request->get_route();
 
 		// check if it is an activitypub request and exclude webfinger and nodeinfo endpoints
@@ -120,6 +125,44 @@ class Server {
 					array( 'status' => 401 )
 				);
 			}
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Callback function to validate incoming ActivityPub requests
+	 *
+	 * @param WP_REST_Response|WP_HTTP_Response|WP_Error|mixed $response Result to send to the client.
+	 *                                                                   Usually a WP_REST_Response or WP_Error.
+	 * @param array                                            $handler  Route handler used for the request.
+	 * @param WP_REST_Request                                  $request  Request used to generate the response.
+	 *
+	 * @return mixed|WP_Error The response, error, or modified response.
+	 */
+	public static function validate_activitypub_requests( $response, $handler, $request ) {
+		if ( \is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$params = $request->get_json_params();
+
+		// Type is required for ActivityPub requests, so it fail later in the process
+		if ( ! isset( $params['type'] ) ) {
+			return $response;
+		}
+
+		if (
+			ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS &&
+			in_array( $params['type'], array( 'Create', 'Like', 'Announce' ), true )
+		) {
+			return new WP_Error(
+				'activitypub_server_does_not_accept_incoming_interactions',
+				\__( 'This server does not accept incoming interactions.', 'activitypub' ),
+				// We have to use a 2XX status code here, because otherwise the response will be
+				// treated as an error and Mastodon might block this WordPress instance.
+				array( 'status' => 202 )
+			);
 		}
 
 		return $response;
