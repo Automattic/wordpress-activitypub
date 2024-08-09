@@ -567,6 +567,8 @@ class Activitypub {
 			return $extra_fields;
 		}
 
+		\add_filter( 'activitypub_urls_rel_me', '__return_true' );
+
 		$defaults = array(
 			\__( 'Blog', 'activitypub' )     => \home_url( '/' ),
 			\__( 'Profile', 'activitypub' )  => \get_author_posts_url( $user_id ),
@@ -585,10 +587,8 @@ class Activitypub {
 				'post_status'    => 'publish',
 				'post_author'    => $user_id,
 				'post_content'   => sprintf(
-					'<!-- wp:paragraph --><p><a rel="me" title="%s" target="_blank" href="%s">%s</a></p><!-- /wp:paragraph -->',
-					\esc_attr( $url ),
-					$url,
-					\wp_parse_url( $url, \PHP_URL_HOST )
+					'<!-- wp:paragraph --><p>%s</p><!-- /wp:paragraph -->',
+					Urls::the_content( $url )
 				),
 				'comment_status' => 'closed',
 				'menu_order'     => $menu_order,
@@ -600,6 +600,7 @@ class Activitypub {
 		}
 
 		\update_user_meta( $user_id, 'activitypub_default_extra_fields', true );
+		\remove_filter( 'activitypub_urls_rel_me', '__return_true' );
 
 		return $extra_fields;
 	}
