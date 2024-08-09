@@ -8,10 +8,10 @@ use Activitypub\Signature;
 use Activitypub\Model\Blog;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Users;
+use Activitypub\Collection\Extra_Fields;
 
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\get_actor_extra_fields;
 
 class User extends Actor {
 	/**
@@ -248,74 +248,8 @@ class User extends Actor {
 	 * @return array The extended User-Output.
 	 */
 	public function get_attachment() {
-		$extra_fields = get_actor_extra_fields( $this->_id );
-
-		$attachments = array();
-
-		foreach ( $extra_fields as $post ) {
-			$content = \get_the_content( null, false, $post );
-			$content = \make_clickable( $content );
-			$content = \do_blocks( $content );
-			$content = \wptexturize( $content );
-			$content = \wp_filter_content_tags( $content );
-			// replace script and style elements
-			$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
-			$content = \strip_shortcodes( $content );
-			$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
-
-			$attachments[] = array(
-				'type' => 'PropertyValue',
-				'name' => \get_the_title( $post ),
-				'value' => \html_entity_decode(
-					$content,
-					\ENT_QUOTES,
-					'UTF-8'
-				),
-			);
-
-			$link_added = false;
-
-			// Add support for FEP-fb2a, for more information see FEDERATION.md
-			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-				$tags = new \WP_HTML_Tag_Processor( $content );
-				$tags->next_tag();
-
-				if ( 'P' === $tags->get_tag() ) {
-					$tags->next_tag();
-				}
-
-				if ( 'A' === $tags->get_tag() ) {
-					$tags->set_bookmark( 'link' );
-					if ( ! $tags->next_tag() ) {
-						$tags->seek( 'link' );
-						$attachment = array(
-							'type' => 'Link',
-							'name' => \get_the_title( $post ),
-							'href' => \esc_url( $tags->get_attribute( 'href' ) ),
-							'rel'  => explode( ' ', $tags->get_attribute( 'rel' ) ),
-						);
-
-						$link_added = true;
-					}
-				}
-			}
-
-			if ( ! $link_added ) {
-				$attachment = array(
-					'type'    => 'Note',
-					'name'    => \get_the_title( $post ),
-					'content' => \html_entity_decode(
-						$content,
-						\ENT_QUOTES,
-						'UTF-8'
-					),
-				);
-			}
-
-			$attachments[] = $attachment;
-		}
-
-		return $attachments;
+		$extra_fields = Extra_Fields::get_actor_fields( $this->_id );
+		return Extra_Fields::fields_to_attachments( $extra_fields );
 	}
 
 	/**

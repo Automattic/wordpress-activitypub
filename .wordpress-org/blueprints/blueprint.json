@@ -1,0 +1,43 @@
+{
+  "landingPage": "/wp-admin/options-general.php?page=activitypub",
+  "steps": [
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "permalink_structure": "/%postname%/"
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginZipFile": {
+        "resource": "wordpress.org/plugins",
+        "slug": "activitypub"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "login",
+      "username": "admin",
+      "password": "password"
+    },
+    {
+      "step": "mkdir",
+      "path": "wordpress/wp-content/mu-plugins"
+    },
+    {
+      "step": "writeFile",
+      "path": "wordpress/wp-content/mu-plugins/show-admin-notice-2.php",
+      "data": "<?php\nadd_action(\n'admin_notices',\nfunction() {\n$dismissed = get_user_option( 'dismissed_expose_blueprint_notice-2', get_current_user_id() );\nif ( $dismissed ) {\nreturn;\n}\necho '<div class=\"notice notice-info is-dismissible\" id=\"custom-admin-notice-2\"><p>' . esc_html( 'Welcome and have fun 👋' ) . '</p></div>';\n}\n);\nadd_action('wp_ajax_dismiss_custom-admin-notice-2', function() {\ncheck_ajax_referer('custom-admin-notice-2', 'nonce');\n$user_id = get_current_user_id();\nif ( $user_id ) {\nupdate_user_option($user_id, 'dismissed_expose_blueprint_notice-2', 1, false);\nwp_send_json_success();\n} else {\nwp_send_json_error('User not found');\n}\n} );\nadd_action('admin_footer', function() {\n?>\n<script type=\"text/javascript\">\njQuery(document).ready( function($) {\nvar ajaxurl = '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>';\nvar nonce = '<?php echo esc_html( wp_create_nonce( 'custom-admin-notice-2' ) ); ?>';\n$( '#custom-admin-notice-2' ).on( 'click', '.notice-dismiss', function() {\n$.ajax({\nurl: ajaxurl,\ntype: 'POST',\ndata: {\naction: 'dismiss_custom-admin-notice-2',\nnonce: nonce\n}\n});\n});\n});\n</script>\n<?php\n} );"
+    },
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "blogname": "ActivityPub Demo",
+        "blogdescription": "Democratize Publishing in the Fediverse",
+        "activitypub_enable_blog_user": "1"
+      }
+    }
+  ]
+}
