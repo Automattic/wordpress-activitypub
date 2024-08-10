@@ -1,0 +1,8 @@
+#!/bin/bash
+## Description: Run tests
+## Usage: runtests
+## Example: "ddev runtests"
+
+composer install
+bin/install-wp-tests.sh db db db db latest true
+vendor/bin/phpunit

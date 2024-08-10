@@ -15,6 +15,7 @@ nfs_mount_enabled: false
 mutagen_enabled: false
 use_dns_when_possible: true
 composer_version: '2'
+webimage_extra_packages: [subversion]
 hooks:
     pre-start:
         - exec-host: 'mkdir -p .ddev/wordpress/wp-content/plugins/${DDEV_PROJECT}'
