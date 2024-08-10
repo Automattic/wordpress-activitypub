@@ -1,12 +1,12 @@
 # ActivityPub #
-**Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [mattwiebe](https://profiles.wordpress.org/mattwiebe/), [akirk](https://profiles.wordpress.org/akirk/), [jeherve](https://profiles.wordpress.org/jeherve/), [nuriapena](https://profiles.wordpress.org/nuriapena/), [cavalierlife](https://profiles.wordpress.org/cavalierlife/)  
-**Tags:** OStatus, fediverse, activitypub, activitystream  
-**Requires at least:** 5.5  
-**Tested up to:** 6.6  
-**Stable tag:** 3.1.0  
-**Requires PHP:** 7.0  
-**License:** MIT  
-**License URI:** http://opensource.org/licenses/MIT  
+**Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [mattwiebe](https://profiles.wordpress.org/mattwiebe/), [akirk](https://profiles.wordpress.org/akirk/), [jeherve](https://profiles.wordpress.org/jeherve/), [nuriapena](https://profiles.wordpress.org/nuriapena/), [cavalierlife](https://profiles.wordpress.org/cavalierlife/)
+**Tags:** OStatus, fediverse, activitypub, activitystream
+**Requires at least:** 5.5
+**Tested up to:** 6.6
+**Stable tag:** 3.1.0
+**Requires PHP:** 7.0
+**License:** MIT
+**License URI:** http://opensource.org/licenses/MIT
 
 The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
 
@@ -115,6 +115,7 @@ The plugin uses PHP Constants to enable, disable or change its default behaviour
 * `ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS` - Change the number of attachments, that should be federated. Default: `3`.
 * `ACTIVITYPUB_HASHTAGS_REGEXP` - Change the default regex to detect hashtext in a text. Default: `(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))`.
 * `ACTIVITYPUB_USERNAME_REGEXP` - Change the default regex to detect @-replies in a text. Default: `(?:([A-Za-z0-9\._-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))`.
+* `ACTIVITYPUB_URLS_REGEXP` - Change the default regex to detect urls in a text. Default: `(http|https):\/\/([-a-zA-Z0-9@:;\/%_;\+.~#?&=]*)`.
 * `ACTIVITYPUB_CUSTOM_POST_CONTENT` - Change the default template for Activities. Default: `<strong>[ap_title]</strong>\n\n[ap_content]\n\n[ap_hashtags]\n\n[ap_shortlink]`.
 * `ACTIVITYPUB_AUTHORIZED_FETCH` - Enable AUTHORIZED_FETCH. Default: `false`.
 * `ACTIVITYPUB_DISABLE_REWRITES` - Disable auto generation of `mod_rewrite` rules. Default: `false`.

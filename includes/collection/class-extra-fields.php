@@ -2,6 +2,7 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Urls;
 use WP_Query;
 use Activitypub\Collection\Users;
 
@@ -15,7 +16,7 @@ class Extra_Fields {
 	 *
 	 * @param int $user_id The user ID.
 	 *
-	 * @return WP_Post[] The extra fields.
+	 * @return \WP_Post[] The extra fields.
 	 */
 	public static function get_actor_fields( $user_id ) {
 		$is_blog = self::is_blog( $user_id );
@@ -65,15 +66,11 @@ class Extra_Fields {
 			// Add support for FEP-fb2a, for more information see FEDERATION.md
 			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
 				$tags = new \WP_HTML_Tag_Processor( $content );
-				$tags->next_tag();
-
-				if ( 'P' === $tags->get_tag() ) {
-					$tags->next_tag();
-				}
+				$tags->next_tag( 'A' );
 
 				if ( 'A' === $tags->get_tag() ) {
 					$tags->set_bookmark( 'link' );
-					if ( ! $tags->next_tag() ) {
+					if ( ! $tags->next_tag( 'A' ) ) {
 						$tags->seek( 'link' );
 						$attachment = array(
 							'type' => 'Link',
@@ -139,6 +136,8 @@ class Extra_Fields {
 			return $extra_fields;
 		}
 
+		\add_filter( 'activitypub_urls_rel_me', '__return_true' );
+
 		$defaults = array(
 			\__( 'Blog', 'activitypub' ) => \home_url( '/' ),
 		);
@@ -167,10 +166,8 @@ class Extra_Fields {
 				'post_status'    => 'publish',
 				'post_author'    => $user_id,
 				'post_content'   => sprintf(
-					'<!-- wp:paragraph --><p><a rel="me" title="%s" target="_blank" href="%s">%s</a></p><!-- /wp:paragraph -->',
-					\esc_attr( $url ),
-					$url,
-					\wp_parse_url( $url, \PHP_URL_HOST )
+					'<!-- wp:paragraph --><p>%s</p><!-- /wp:paragraph -->',
+					Urls::the_content( $url )
 				),
 				'comment_status' => 'closed',
 				'menu_order'     => $menu_order,
@@ -184,6 +181,7 @@ class Extra_Fields {
 		$is_blog
 			? \update_option( 'activitypub_default_extra_fields', true )
 			: \update_user_meta( $user_id, 'activitypub_default_extra_fields', true );
+		\remove_filter( 'activitypub_urls_rel_me', '__return_true' );
 
 		return $extra_fields;
 	}
