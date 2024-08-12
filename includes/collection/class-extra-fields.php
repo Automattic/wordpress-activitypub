@@ -36,20 +36,25 @@ class Extra_Fields {
 		return apply_filters( 'activitypub_get_actor_extra_fields', $fields, $user_id );
 	}
 
+	private static function get_formatted_content( $post ) {
+		$content = \get_the_content( null, false, $post );
+		$content = \make_clickable( $content );
+		$content = \do_blocks( $content );
+		$content = \wptexturize( $content );
+		$content = \wp_filter_content_tags( $content );
+		// replace script and style elements
+		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
+		$content = \strip_shortcodes( $content );
+		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+
+		return $content;
+	}
+
 	public static function fields_to_attachments( $fields ) {
 		$attachments = array();
 
 		foreach ( $fields as $post ) {
-			$content = \get_the_content( null, false, $post );
-			$content = \make_clickable( $content );
-			$content = \do_blocks( $content );
-			$content = \wptexturize( $content );
-			$content = \wp_filter_content_tags( $content );
-			// replace script and style elements
-			$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
-			$content = \strip_shortcodes( $content );
-			$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
-
+			$content = self::get_formatted_content( $post );
 			$attachments[] = array(
 				'type' => 'PropertyValue',
 				'name' => \get_the_title( $post ),
@@ -166,11 +171,13 @@ class Extra_Fields {
 				'post_title'     => $title,
 				'post_status'    => 'publish',
 				'post_author'    => $user_id,
-				'post_content'   => sprintf(
-					'<!-- wp:paragraph --><p><a rel="me" title="%s" target="_blank" href="%s">%s</a></p><!-- /wp:paragraph -->',
-					\esc_attr( $url ),
-					$url,
-					\wp_parse_url( $url, \PHP_URL_HOST )
+				'post_content'   => self::make_paragraph_block(
+					sprintf(
+						'<a rel="me" title="%s" target="_blank" href="%s">%s</a>',
+						\esc_attr( $url ),
+						$url,
+						\wp_parse_url( $url, \PHP_URL_HOST )
+					)
 				),
 				'comment_status' => 'closed',
 				'menu_order'     => $menu_order,
@@ -186,6 +193,53 @@ class Extra_Fields {
 			: \update_user_meta( $user_id, 'activitypub_default_extra_fields', true );
 
 		return $extra_fields;
+	}
+
+	public static function get_extra_fields_for_mastodon_api( $user_id ) {
+		$ret    = array();
+		$fields = self::get_actor_fields( $user_id );
+
+		foreach ( $fields as $field ) {
+			$ret[] = array(
+				'name'   => $field->post_title,
+				'value'  => self::get_formatted_content( $field ),
+			);
+		}
+
+		return $ret;
+	}
+
+	private static function make_paragraph_block( $content ) {
+		return '<!-- wp:paragraph --><p>' . $content . '</p><!-- /wp:paragraph -->';
+	}
+
+	public static function set_extra_fields_from_mastodon_api( $user_id, $fields ) {
+		// The Mastodon API submits a simple hash, every field.
+		// We can reasonably assume a similar order.
+		$fields = self::get_extra_fields_for_mastodon_api( $user_id );
+		$ids    = wp_list_pluck( self::get_actor_fields( $user_id ), 'ID' );
+		$is_blog = self::is_blog( $user_id );
+		$post_type = $is_blog ? self::BLOG_POST_TYPE : self::USER_POST_TYPE;
+
+		foreach ( $fields as $i => $field ) {
+			$post_id  = $ids[ $i ] ?? null;
+			$has_post = $post_id && \get_post( $post_id );
+			$args     = array(
+				'post_title'   => $field['name'],
+				'post_content' => self::make_paragraph_block( $field['value'] ),
+			);
+
+			if ( $has_post ) {
+				$args['ID'] = $ids[ $i ];
+				\wp_update_post( $args );
+			} else {
+				$args['post_type'] = $post_type;
+				if ( ! $is_blog ) {
+					$args['post_author'] = $user_id;
+				}
+				\wp_insert_post( $args );
+			}
+		}
 	}
 
 	/**

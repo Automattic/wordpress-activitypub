@@ -6,6 +6,7 @@ use Activitypub\Webfinger as Webfinger_Util;
 use Activitypub\Http;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Extra_Fields;
 use Activitypub\Integration\Nodeinfo;
 use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Entity\Account;
@@ -29,7 +30,6 @@ class Enable_Mastodon_Apps {
 	 */
 	public static function init() {
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
-		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_add_followers' ), 20, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 15, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_internal' ), 9, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 40, 2 );
@@ -78,35 +78,29 @@ class Enable_Mastodon_Apps {
 			return $data;
 		}
 
-		if ( isset( $data['avatar'] ) ) {
-			$icon_id = (int) $data['avatar'];
-			$attachment = \get_post( $icon_id );
-			if ( $attachment && 'attachment' === $attachment->post_type ) {
-				$user->update_icon( $icon_id );
-				unset( $data['avatar'] );
-			}
+		// User::update_icon and other update_* methods check data validity, so we don't need to do it here.
+		if ( isset( $data['avatar'] ) && $user->update_icon( $data['avatar'] ) ) {
+			// unset the avatar so it doesn't get saved again by other plugins.
+			// Ditto for all other fields below.
+			unset( $data['avatar'] );
 		}
 
-		if ( isset( $data['header'] ) ) {
-			$header_id = (int) $data['header'];
-			$attachment = \get_post( $header_id );
-			if ( $attachment && 'attachment' === $attachment->post_type ) {
-				$user->update_header( $header_id );
-				unset( $data['header'] );
-			}
+		if ( isset( $data['header'] ) && $user->update_header( $data['header'] ) ) {
+			unset( $data['header'] );
 		}
 
-		if ( isset( $data['display_name'] ) ) {
-			$user->update_name( $data['display_name'] );
+		if ( isset( $data['display_name'] ) && $user->update_name( $data['display_name'] ) ) {
 			unset( $data['display_name'] );
 		}
 
-		if ( isset( $data['note'] ) ) {
-			$user->update_summary( $data['note'] );
+		if ( isset( $data['note'] ) && $user->update_summary( $data['note'] ) ) {
 			unset( $data['note'] );
 		}
 
-		// @todo set fields_attributes to extra fields once PR #762 merges.
+		if ( isset( $data['fields_attributes'] ) ) {
+			Extra_Fields::set_extra_fields_from_mastodon_api( $user_id, $data['fields_attributes'] );
+			unset( $data['fields_attributes'] );
+		}
 
 		return $data;
 	}
@@ -165,47 +159,6 @@ class Enable_Mastodon_Apps {
 		$followers = array_merge( $mastodon_followers, $followers );
 
 		return $followers;
-	}
-
-	/**
-	 * Add followers count to Mastodon API
-	 *
-	 * @param Enable_Mastodon_Apps\Entity\Account $account The account
-	 * @param int                                 $user_id The user id
-	 *
-	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
-	 */
-	public static function api_account_add_followers( $account, $user_id ) {
-		if ( ! $account instanceof Account ) {
-			return $account;
-		}
-
-		$user = Users::get_by_various( $user_id );
-
-		if ( ! $user || is_wp_error( $user ) ) {
-			return $account;
-		}
-
-		$header = $user->get_image();
-		if ( $header ) {
-			$account->header = $header['url'];
-			$account->header_static = $header['url'];
-		}
-
-		foreach ( $user->get_attachment() as $attachment ) {
-			if ( 'PropertyValue' === $attachment['type'] ) {
-				$account->fields[] = array(
-					'name' => $attachment['name'],
-					'value' => $attachment['value'],
-				);
-			}
-		}
-
-		$account->acct = $user->get_preferred_username();
-		$account->note = $user->get_summary();
-
-		$account->followers_count = Followers::count_followers( $user->get__id() );
-		return $account;
 	}
 
 	/**
@@ -283,6 +236,18 @@ class Enable_Mastodon_Apps {
 		}
 		$posts = \get_posts( $query_args );
 		$account->last_status_at = ! empty( $posts ) ? new DateTime( $posts[0]->post_date_gmt ) : $account->created_at;
+
+		$account->fields = Extra_Fields::get_extra_fields_for_mastodon_api( $user_id_to_use );
+		// Now do it in source['fields'] with stripped tags
+		$account->source['fields'] = \array_map(
+			function ( $field ) {
+				$field['value'] = \wp_strip_all_tags( $field['value'], true );
+				return $field;
+			},
+			$account->fields
+		);
+
+		$account->followers_count = Followers::count_followers( $user->get__id() );
 
 		return $account;
 	}

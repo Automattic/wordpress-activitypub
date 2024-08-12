@@ -132,7 +132,15 @@
 							<label><?php \esc_html_e( 'Extra Fields', 'activitypub' ); ?></label>
 						</th>
 						<td>
-							<p class="description"><?php \esc_html_e( 'Your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?></p>
+							<p class="description">
+								<?php
+									\esc_html_e( 'Your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' );
+									echo '<br />';
+									echo '<em>';
+									\esc_html_e( 'Note that Mastodon clients will only show four fields.', 'activitypub' );
+									echo '</em>';
+								?>
+							</p>
 
 							<table class="widefat striped activitypub-extra-fields" role="presentation" style="margin: 15px 0;">
 							<?php
