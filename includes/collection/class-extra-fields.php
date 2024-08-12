@@ -233,6 +233,7 @@ class Extra_Fields {
 				\wp_update_post( $args );
 			} else {
 				$args['post_type'] = $post_type;
+				$args['post_status'] = 'publish';
 				if ( ! $is_blog ) {
 					$args['post_author'] = $user_id;
 				}
