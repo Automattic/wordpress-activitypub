@@ -1,12 +1,12 @@
 # ActivityPub #
-**Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [mattwiebe](https://profiles.wordpress.org/mattwiebe/), [akirk](https://profiles.wordpress.org/akirk/), [jeherve](https://profiles.wordpress.org/jeherve/), [nuriapena](https://profiles.wordpress.org/nuriapena/), [cavalierlife](https://profiles.wordpress.org/cavalierlife/)
-**Tags:** OStatus, fediverse, activitypub, activitystream
-**Requires at least:** 5.5
-**Tested up to:** 6.6
-**Stable tag:** 3.1.0
-**Requires PHP:** 7.0
-**License:** MIT
-**License URI:** http://opensource.org/licenses/MIT
+**Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [mattwiebe](https://profiles.wordpress.org/mattwiebe/), [akirk](https://profiles.wordpress.org/akirk/), [jeherve](https://profiles.wordpress.org/jeherve/), [nuriapena](https://profiles.wordpress.org/nuriapena/), [cavalierlife](https://profiles.wordpress.org/cavalierlife/)  
+**Tags:** OStatus, fediverse, activitypub, activitystream  
+**Requires at least:** 5.5  
+**Tested up to:** 6.6  
+**Stable tag:** 3.1.0  
+**Requires PHP:** 7.0  
+**License:** MIT  
+**License URI:** http://opensource.org/licenses/MIT  
 
 The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
 
