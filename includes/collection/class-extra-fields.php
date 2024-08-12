@@ -215,8 +215,7 @@ class Extra_Fields {
 
 	public static function set_extra_fields_from_mastodon_api( $user_id, $fields ) {
 		// The Mastodon API submits a simple hash, every field.
-		// We can reasonably assume a similar order.
-		$fields = self::get_extra_fields_for_mastodon_api( $user_id );
+		// We can reasonably assume a similar order for our operations below.
 		$ids    = wp_list_pluck( self::get_actor_fields( $user_id ), 'ID' );
 		$is_blog = self::is_blog( $user_id );
 		$post_type = $is_blog ? self::BLOG_POST_TYPE : self::USER_POST_TYPE;
@@ -238,6 +237,14 @@ class Extra_Fields {
 					$args['post_author'] = $user_id;
 				}
 				\wp_insert_post( $args );
+			}
+		}
+
+		// Delete any remaining fields.
+		if ( \count( $fields ) < \count( $ids ) ) {
+			$to_delete = \array_slice( $ids, \count( $fields ) );
+			foreach ( $to_delete as $id ) {
+				\wp_delete_post( $id, true );
 			}
 		}
 	}
