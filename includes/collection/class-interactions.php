@@ -307,13 +307,13 @@ class Interactions {
 		}
 
 		if ( isset( $activity['object']['content'] ) ) {
-			$comment_content = $activity['object']['content'];
+			$comment_content = \addslashes( $activity['object']['content'] );
 		}
 
 		$commentdata = array(
 			'comment_author' => \esc_attr( $comment_author ),
 			'comment_author_url' => \esc_url_raw( $url ),
-			'comment_content' => \addslashes( $comment_content ),
+			'comment_content' => $comment_content,
 			'comment_type' => 'comment',
 			'comment_author_email' => '',
 			'comment_meta' => array(
