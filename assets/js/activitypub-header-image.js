@@ -14,7 +14,43 @@
 		$headerImagePreview = $( '#activitypub-header-image-preview' ),
 		$hiddenDataField = $( '#activitypub_header_image' ),
 		$removeButton = $( '#activitypub-remove-header-image' ),
-		frame;
+		frame,
+		ImageCropperNoCustomizer;
+
+	/**
+	 * We register our own handler because the Core one invokes the Customizer, which fails the request unnecessarily
+	 * for users who don't have the 'customize' capability.
+	 * See https://github.com/Automattic/wordpress-activitypub/issues/846
+	 */
+	ImageCropperNoCustomizer = wp.media.controller.CustomizeImageCropper.extend( {
+		doCrop: function( attachment ) {
+			var cropDetails = attachment.get( 'cropDetails' ),
+				control = this.get( 'control' ),
+				ratio = cropDetails.width / cropDetails.height;
+
+			// Use crop measurements when flexible in both directions.
+			if ( control.params.flex_width && control.params.flex_height ) {
+				cropDetails.dst_width  = cropDetails.width;
+				cropDetails.dst_height = cropDetails.height;
+
+			// Constrain flexible side based on image ratio and size of the fixed side.
+			} else {
+				cropDetails.dst_width  = control.params.flex_width  ? control.params.height * ratio : control.params.width;
+				cropDetails.dst_height = control.params.flex_height ? control.params.width  / ratio : control.params.height;
+			}
+
+
+			return wp.ajax.post( 'crop-image', {
+				// where wp_customize: 'on' would be in Core, for no good reason I understand.
+				nonce: attachment.get( 'nonces' ).edit,
+				id: attachment.get( 'id' ),
+				context: control.id,
+				cropDetails: cropDetails
+			} );
+		}
+	} );
+
+
 
 	/**
 	 * Calculate image selection options based on the attachment dimensions.
@@ -91,7 +127,7 @@
 					suggestedWidth: $el.data( 'size' ),
 					suggestedHeight: $el.data( 'size' ),
 				} ),
-				new wp.media.controller.CustomizeImageCropper( {
+				new ImageCropperNoCustomizer( {
 					control: {
 						params: {
 							width: $el.data( 'size' ),
