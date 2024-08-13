@@ -743,8 +743,13 @@ function object_to_uri( $object ) { // phpcs:ignore Universal.NamingConventions.
 		return $object;
 	}
 
+	$type = 'Object';
+	if ( isset( $object['type'] ) ) {
+		$type = $object['type'];
+	}
+
 	// return part of Object that makes most sense
-	switch ( $object['type'] ) {
+	switch ( $type ) {
 		case 'Link':
 			$object = $object['href'];
 			break;
