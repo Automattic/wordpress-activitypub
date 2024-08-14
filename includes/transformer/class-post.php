@@ -733,24 +733,35 @@ class Post extends Base {
 			return \__( '(This post is being modified)', 'activitypub' );
 		}
 
-		$content = \get_post_field( 'post_content', $this->wp_object->ID );
+		$content       = \get_post_field( 'post_content', $this->wp_object->ID );
+		$content_parts = \get_extended( $content );
+
+		$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[...]' );
+		$length       = 500;
+		$length       = $length - strlen( $excerpt_more );
+
+		// Check for the <!--more--> tag.
+		if (
+			! empty( $content_parts['extended'] ) &&
+			! empty( $content_parts['main'] )
+		) {
+			$content = $content_parts['main'] . ' ' . $excerpt_more;
+			$length  = null;
+		}
+
 		$content = \html_entity_decode( $content );
 		$content = \wp_strip_all_tags( $content );
 		$content = \trim( $content );
 		$content = \preg_replace( '/\R+/m', "\n\n", $content );
 		$content = \preg_replace( '/[\r\t]/', '', $content );
 
-		$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[...]' );
-		$length       = 500;
-		$length       = $length - strlen( $excerpt_more );
-
-		if ( \strlen( $content ) > $length ) {
+		if ( $length && \strlen( $content ) > $length ) {
 			$content = \wordwrap( $content, $length, '</activitypub-summary>' );
 			$content = \explode( '</activitypub-summary>', $content, 2 );
-			$content = $content[0];
+			$content = $content[0] . ' ' . $excerpt_more;
 		}
 
-		return $content . ' ' . $excerpt_more;
+		return $content;
 	}
 
 	/**
