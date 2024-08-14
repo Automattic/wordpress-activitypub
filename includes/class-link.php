@@ -44,7 +44,9 @@ class Link {
 	}
 
 	/**
-	 * A callback for preg_replace to build the term links
+	 * A callback for preg_replace to build the links
+	 *
+	 * Link shortening https://docs.joinmastodon.org/api/guidelines/#links
 	 *
 	 * @param array $result the preg_match results
 	 * @return string the final string
