@@ -72,13 +72,14 @@ class Extra_Fields {
 			$link_added = false;
 
 			// Add support for FEP-fb2a, for more information see FEDERATION.md
-			$link_content = \strip_tags( $content, '<a>' );
+			$link_content = \trim( \strip_tags( $content, '<a>' ) );
 			if (
 				\stripos( $link_content, '<a' ) === 0 &&
+				\stripos( $link_content, '<a', 3 ) === false &&
 				\stripos( $link_content, '</a>', \strlen( $link_content ) - 4 ) !== false &&
 				\class_exists( '\WP_HTML_Tag_Processor' )
 			) {
-				$tags = new \WP_HTML_Tag_Processor( $content );
+				$tags = new \WP_HTML_Tag_Processor( $link_content );
 				$tags->next_tag( 'A' );
 
 				if ( 'A' === $tags->get_tag() ) {
