@@ -99,10 +99,7 @@ class Link {
 			$display_class .= 'ellipsis';
 		}
 
-		$rel = 'nofollow noopener noreferrer';
-		if ( \apply_filters( 'activitypub_urls_rel_me', false ) ) {
-			$rel .= ' me';
-		}
+		$rel = apply_filters( 'activitypub_link_rel', 'nofollow noopener noreferrer' );
 
 		return \sprintf(
 			'<a href="%s" target="_blank" rel="%s" translate="no"><span class="invisible">%s</span><span class="%s">%s</span><span class="invisible">%s</span></a>',

@@ -39,7 +39,14 @@ class Extra_Fields {
 
 	public static function fields_to_attachments( $fields ) {
 		$attachments = array();
-		\add_filter( 'activitypub_urls_rel_me', '__return_true' );
+		\add_filter(
+			'activitypub_link_rel',
+			function( $rel ) {
+				$rel .= ' me';
+
+				return $rel;
+			}
+		);
 
 		foreach ( $fields as $post ) {
 			$content = \get_the_content( null, false, $post );
@@ -99,7 +106,6 @@ class Extra_Fields {
 
 			$attachments[] = $attachment;
 		}
-		\remove_filter( 'activitypub_urls_rel_me', '__return_true' );
 
 		return $attachments;
 	}
@@ -138,7 +144,14 @@ class Extra_Fields {
 			return $extra_fields;
 		}
 
-		\add_filter( 'activitypub_urls_rel_me', '__return_true' );
+		\add_filter(
+			'activitypub_link_rel',
+			function( $rel ) {
+				$rel .= ' me';
+
+				return $rel;
+			}
+		);
 
 		$defaults = array(
 			\__( 'Blog', 'activitypub' ) => \home_url( '/' ),
@@ -183,7 +196,6 @@ class Extra_Fields {
 		$is_blog
 			? \update_option( 'activitypub_default_extra_fields', true )
 			: \update_user_meta( $user_id, 'activitypub_default_extra_fields', true );
-		\remove_filter( 'activitypub_urls_rel_me', '__return_true' );
 
 		return $extra_fields;
 	}
