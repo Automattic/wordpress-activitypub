@@ -18,6 +18,7 @@
 		<p><?php echo wp_kses( \__( 'Enter the fediverse with <strong>ActivityPub</strong>, broadcasting your blog to a wider audience. Attract followers, deliver updates, and receive comments from a diverse user base on <strong>Mastodon</strong>, <strong>Friendica</strong>, <strong>Pleroma</strong>, <strong>Pixelfed</strong>, and all <strong>ActivityPub</strong>-compliant platforms.', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
 	</div>
 
+	<?php if ( \Activitypub\site_supports_blocks() ) : ?>
 	<div class="box">
 		<h3><?php \esc_html_e( 'Bookmarklet', 'activitypub' ); ?></h3>
 
@@ -44,8 +45,9 @@
 			?>
 		</p>
 	</div>
+		<?php
+	endif;
 
-	<?php
 	if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) :
 		$blog_user = new \Activitypub\Model\Blog();
 		?>

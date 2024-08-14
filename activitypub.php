@@ -125,7 +125,9 @@ function plugin_init() {
 				require_once $file;
 			} else {
 				// translators: %s is the class name
-				\wp_die( sprintf( esc_html__( 'Required class not found or not readable: %s', 'activitypub' ), esc_html( $full_class ) ) );
+				$message = sprintf( esc_html__( 'Required class not found or not readable: %s', 'activitypub' ), esc_html( $full_class ) );
+				Debug::write_log( $message );
+				\wp_die( $message ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			}
 		}
 	}
