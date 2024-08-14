@@ -4,7 +4,7 @@ namespace Activitypub\Integration;
 class Jetpack {
 
 	public static function init() {
-		\add_filter( 'jetpack_sync_post_meta_whitelist', [ __CLASS__, 'add_sync_meta' ] );
+		\add_filter( 'jetpack_sync_post_meta_whitelist', array( self::class, 'add_sync_meta' ) );
 	}
 
 	public static function add_sync_meta( $whitelist ) {
