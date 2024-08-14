@@ -70,23 +70,26 @@ class Extra_Fields {
 			);
 
 			$link_added = false;
-			$link_content = strip_tags( $content, '<a>' );
-			if ( stripos( $link_content, '<a' ) === 0 && stripos( $link_content, '</a>', strlen( $link_content ) - 4 ) !== false ) {
-				// Add support for FEP-fb2a, for more information see FEDERATION.md
-				if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-					$tags = new \WP_HTML_Tag_Processor( $content );
-					$tags->next_tag( 'A' );
 
-					if ( 'A' === $tags->get_tag() ) {
-						$attachment = array(
-							'type' => 'Link',
-							'name' => \get_the_title( $post ),
-							'href' => \esc_url( $tags->get_attribute( 'href' ) ),
-							'rel' => explode( ' ', $tags->get_attribute( 'rel' ) ),
-						);
+			// Add support for FEP-fb2a, for more information see FEDERATION.md
+			$link_content = \strip_tags( $content, '<a>' );
+			if (
+				\stripos( $link_content, '<a' ) === 0 &&
+				\stripos( $link_content, '</a>', \strlen( $link_content ) - 4 ) !== false &&
+				\class_exists( '\WP_HTML_Tag_Processor' )
+			) {
+				$tags = new \WP_HTML_Tag_Processor( $content );
+				$tags->next_tag( 'A' );
 
-						$link_added = true;
-					}
+				if ( 'A' === $tags->get_tag() ) {
+					$attachment = array(
+						'type' => 'Link',
+						'name' => \get_the_title( $post ),
+						'href' => \esc_url( $tags->get_attribute( 'href' ) ),
+						'rel' => explode( ' ', $tags->get_attribute( 'rel' ) ),
+					);
+
+					$link_added = true;
 				}
 			}
 
