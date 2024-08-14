@@ -21,13 +21,6 @@ class Interactions {
 	 * @return array|false The commentdata or false on failure
 	 */
 	public static function add_comment( $activity ) {
-		if (
-			! isset( $activity['object'] ) ||
-			! isset( $activity['object']['id'] )
-		) {
-			return false;
-		}
-
 		if ( ! isset( $activity['object']['inReplyTo'] ) ) {
 			return false;
 		}
