@@ -39,10 +39,11 @@ class Extra_Fields {
 
 	public static function fields_to_attachments( $fields ) {
 		$attachments = array();
+		\add_filter( 'activitypub_urls_rel_me', '__return_true' );
 
 		foreach ( $fields as $post ) {
 			$content = \get_the_content( null, false, $post );
-			$content = \make_clickable( $content );
+			$content = Link::the_content( $content, true );
 			$content = \do_blocks( $content );
 			$content = \wptexturize( $content );
 			$content = \wp_filter_content_tags( $content );
@@ -98,6 +99,7 @@ class Extra_Fields {
 
 			$attachments[] = $attachment;
 		}
+		\remove_filter( 'activitypub_urls_rel_me', '__return_true' );
 
 		return $attachments;
 	}
