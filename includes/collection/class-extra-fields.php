@@ -77,18 +77,14 @@ class Extra_Fields {
 				$tags->next_tag( 'A' );
 
 				if ( 'A' === $tags->get_tag() ) {
-					$tags->set_bookmark( 'link' );
-					if ( ! $tags->next_tag( 'A' ) ) {
-						$tags->seek( 'link' );
-						$attachment = array(
-							'type' => 'Link',
-							'name' => \get_the_title( $post ),
-							'href' => \esc_url( $tags->get_attribute( 'href' ) ),
-							'rel'  => explode( ' ', $tags->get_attribute( 'rel' ) ),
-						);
+					$attachment = array(
+						'type' => 'Link',
+						'name' => \get_the_title( $post ),
+						'href' => \esc_url( $tags->get_attribute( 'href' ) ),
+						'rel'  => explode( ' ', $tags->get_attribute( 'rel' ) ),
+					);
 
-						$link_added = true;
-					}
+					$link_added = true;
 				}
 			}
 
