@@ -2,7 +2,7 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Urls;
+use Activitypub\Link;
 use WP_Query;
 use Activitypub\Collection\Users;
 
@@ -167,7 +167,7 @@ class Extra_Fields {
 				'post_author'    => $user_id,
 				'post_content'   => sprintf(
 					'<!-- wp:paragraph --><p>%s</p><!-- /wp:paragraph -->',
-					Urls::the_content( $url )
+					Link::the_content( $url )
 				),
 				'comment_status' => 'closed',
 				'menu_order'     => $menu_order,

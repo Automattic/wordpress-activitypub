@@ -1,10 +1,10 @@
 <?php
-class Test_Activitypub_Urls extends WP_UnitTestCase {
+class Test_Activitypub_Link extends WP_UnitTestCase {
 	/**
 	 * @dataProvider the_content_provider
 	 */
 	public function test_the_content( $content, $content_with_hashtag ) {
-		$content = \Activitypub\Urls::the_content( $content );
+		$content = \Activitypub\Link::the_content( $content );
 
 		$this->assertEquals( $content_with_hashtag, $content );
 	}

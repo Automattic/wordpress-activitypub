@@ -4,13 +4,13 @@ namespace Activitypub;
 /**
  * ActivityPub Summery Links Class
  */
-class Urls {
+class Link {
 
 	/**
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		\add_filter( 'activitypub_activity_object_array', [ __CLASS__, 'filter_activity_object' ], 99 );
+		\add_filter( 'activitypub_activity_object_array', array( self::class, 'filter_activity_object' ), 99 );
 	}
 
 	/**
@@ -38,7 +38,7 @@ class Urls {
 	 * @return string the filtered post-content
 	 */
 	public static function the_content( $the_content ) {
-		return content_replace_links_by_regex( $the_content, '/' . ACTIVITYPUB_URLS_REGEXP . '/i', [ __CLASS__, 'replace_with_links' ] );
+		return content_replace_links_by_regex( $the_content, '/' . ACTIVITYPUB_URL_REGEXP . '/i', [ __CLASS__, 'replace_with_links' ] );
 	}
 
 	/**
