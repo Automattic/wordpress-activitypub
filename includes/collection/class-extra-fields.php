@@ -2,6 +2,7 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Link;
 use WP_Query;
 use Activitypub\Collection\Users;
 
@@ -15,7 +16,7 @@ class Extra_Fields {
 	 *
 	 * @param int $user_id The user ID.
 	 *
-	 * @return WP_Post[] The extra fields.
+	 * @return \WP_Post[] The extra fields.
 	 */
 	public static function get_actor_fields( $user_id ) {
 		$is_blog = self::is_blog( $user_id );
@@ -38,7 +39,7 @@ class Extra_Fields {
 
 	private static function get_formatted_content( $post ) {
 		$content = \get_the_content( null, false, $post );
-		$content = \make_clickable( $content );
+		$content = Link::the_content( $content, true );
 		$content = \do_blocks( $content );
 		$content = \wptexturize( $content );
 		$content = \wp_filter_content_tags( $content );
@@ -52,6 +53,14 @@ class Extra_Fields {
 
 	public static function fields_to_attachments( $fields ) {
 		$attachments = array();
+		\add_filter(
+			'activitypub_link_rel',
+			function( $rel ) {
+				$rel .= ' me';
+
+				return $rel;
+			}
+		);
 
 		foreach ( $fields as $post ) {
 			$content = self::get_formatted_content( $post );
@@ -68,27 +77,25 @@ class Extra_Fields {
 			$link_added = false;
 
 			// Add support for FEP-fb2a, for more information see FEDERATION.md
-			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-				$tags = new \WP_HTML_Tag_Processor( $content );
-				$tags->next_tag();
-
-				if ( 'P' === $tags->get_tag() ) {
-					$tags->next_tag();
-				}
+			$link_content = \trim( \strip_tags( $content, '<a>' ) );
+			if (
+				\stripos( $link_content, '<a' ) === 0 &&
+				\stripos( $link_content, '<a', 3 ) === false &&
+				\stripos( $link_content, '</a>', \strlen( $link_content ) - 4 ) !== false &&
+				\class_exists( '\WP_HTML_Tag_Processor' )
+			) {
+				$tags = new \WP_HTML_Tag_Processor( $link_content );
+				$tags->next_tag( 'A' );
 
 				if ( 'A' === $tags->get_tag() ) {
-					$tags->set_bookmark( 'link' );
-					if ( ! $tags->next_tag() ) {
-						$tags->seek( 'link' );
-						$attachment = array(
-							'type' => 'Link',
-							'name' => \get_the_title( $post ),
-							'href' => \esc_url( $tags->get_attribute( 'href' ) ),
-							'rel'  => explode( ' ', $tags->get_attribute( 'rel' ) ),
-						);
+					$attachment = array(
+						'type' => 'Link',
+						'name' => \get_the_title( $post ),
+						'href' => \esc_url( $tags->get_attribute( 'href' ) ),
+						'rel' => explode( ' ', $tags->get_attribute( 'rel' ) ),
+					);
 
-						$link_added = true;
-					}
+					$link_added = true;
 				}
 			}
 
@@ -144,6 +151,15 @@ class Extra_Fields {
 			return $extra_fields;
 		}
 
+		\add_filter(
+			'activitypub_link_rel',
+			function( $rel ) {
+				$rel .= ' me';
+
+				return $rel;
+			}
+		);
+
 		$defaults = array(
 			\__( 'Blog', 'activitypub' ) => \home_url( '/' ),
 		);
@@ -171,14 +187,7 @@ class Extra_Fields {
 				'post_title'     => $title,
 				'post_status'    => 'publish',
 				'post_author'    => $user_id,
-				'post_content'   => self::make_paragraph_block(
-					sprintf(
-						'<a rel="me" title="%s" target="_blank" href="%s">%s</a>',
-						\esc_attr( $url ),
-						$url,
-						\wp_parse_url( $url, \PHP_URL_HOST )
-					)
-				),
+				'post_content'   => self::make_paragraph_block( Link::the_content( $url ) ),
 				'comment_status' => 'closed',
 				'menu_order'     => $menu_order,
 			);

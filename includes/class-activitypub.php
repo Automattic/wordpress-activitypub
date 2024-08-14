@@ -10,6 +10,7 @@ use Activitypub\Collection\Extra_Fields;
 use function Activitypub\is_comment;
 use function Activitypub\sanitize_url;
 use function Activitypub\is_local_comment;
+use function Activitypub\site_supports_blocks;
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\is_activitypub_request;
 use function Activitypub\should_comment_be_federated;
@@ -46,7 +47,9 @@ class Activitypub {
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 
-		\add_action( 'tool_box', array( self::class, 'tool_box' ) );
+		if ( site_supports_blocks() ) {
+			\add_action( 'tool_box', array( self::class, 'tool_box' ) );
+		}
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
