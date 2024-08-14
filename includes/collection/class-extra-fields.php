@@ -6,6 +6,8 @@ use Activitypub\Link;
 use WP_Query;
 use Activitypub\Collection\Users;
 
+use function Activitypub\site_supports_blocks;
+
 class Extra_Fields {
 
 	const USER_POST_TYPE = 'ap_extrafield';
@@ -219,14 +221,17 @@ class Extra_Fields {
 	}
 
 	private static function make_paragraph_block( $content ) {
+		if ( ! site_supports_blocks() ) {
+			return $content;
+		}
 		return '<!-- wp:paragraph --><p>' . $content . '</p><!-- /wp:paragraph -->';
 	}
 
 	public static function set_extra_fields_from_mastodon_api( $user_id, $fields ) {
 		// The Mastodon API submits a simple hash, every field.
 		// We can reasonably assume a similar order for our operations below.
-		$ids    = wp_list_pluck( self::get_actor_fields( $user_id ), 'ID' );
-		$is_blog = self::is_blog( $user_id );
+		$ids       = wp_list_pluck( self::get_actor_fields( $user_id ), 'ID' );
+		$is_blog   = self::is_blog( $user_id );
 		$post_type = $is_blog ? self::BLOG_POST_TYPE : self::USER_POST_TYPE;
 
 		foreach ( $fields as $i => $field ) {
@@ -241,7 +246,7 @@ class Extra_Fields {
 				$args['ID'] = $ids[ $i ];
 				\wp_update_post( $args );
 			} else {
-				$args['post_type'] = $post_type;
+				$args['post_type']   = $post_type;
 				$args['post_status'] = 'publish';
 				if ( ! $is_blog ) {
 					$args['post_author'] = $user_id;
