@@ -20,7 +20,7 @@ class Mention {
 		\add_filter( 'the_content', array( self::class, 'the_content' ), 99, 1 );
 		\add_filter( 'comment_text', array( self::class, 'the_content' ), 10, 1 );
 		\add_filter( 'activitypub_extract_mentions', array( self::class, 'extract_mentions' ), 99, 2 );
-		\add_filter( 'activitypub_activity_object_array', [ __CLASS__, 'filter_activity_object' ], 99 );
+		\add_filter( 'activitypub_activity_object_array', array( self::class, 'filter_activity_object' ), 99 );
 	}
 
 	/**
