@@ -1,7 +1,7 @@
 <?php
 namespace Activitypub;
 
-use function Activitypub\content_replace_links_by_regex;
+use function Activitypub\enrich_content_data;
 
 /**
  * ActivityPub Hashtag Class
@@ -81,7 +81,7 @@ class Hashtag {
 	 */
 	public static function the_content( $the_content ) {
 
-		return content_replace_links_by_regex( $the_content, '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', array( self::class, 'replace_with_links' ) );
+		return enrich_content_data( $the_content, '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', array( self::class, 'replace_with_links' ) );
 	}
 
 	/**

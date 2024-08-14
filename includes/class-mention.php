@@ -5,7 +5,7 @@ use WP_Error;
 use Activitypub\Webfinger;
 
 use function Activitypub\object_to_uri;
-use function Activitypub\content_replace_links_by_regex;
+use function Activitypub\enrich_content_data;
 
 /**
  * ActivityPub Mention Class
@@ -50,7 +50,7 @@ class Mention {
 	 */
 	public static function the_content( $the_content ) {
 
-		return content_replace_links_by_regex( $the_content, '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', array( self::class, 'replace_with_links' ) );
+		return enrich_content_data( $the_content, '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', array( self::class, 'replace_with_links' ) );
 	}
 
 	/**

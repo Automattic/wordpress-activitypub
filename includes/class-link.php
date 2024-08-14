@@ -1,7 +1,7 @@
 <?php
 namespace Activitypub;
 
-use function Activitypub\content_replace_links_by_regex;
+use function Activitypub\enrich_content_data;
 
 /**
  * ActivityPub Summery Links Class
@@ -40,7 +40,7 @@ class Link {
 	 * @return string the filtered post-content
 	 */
 	public static function the_content( $the_content ) {
-		return content_replace_links_by_regex( $the_content, '/' . ACTIVITYPUB_URL_REGEXP . '/i', array( self::class, 'replace_with_links' ) );
+		return enrich_content_data( $the_content, '/' . ACTIVITYPUB_URL_REGEXP . '/i', array( self::class, 'replace_with_links' ) );
 	}
 
 	/**

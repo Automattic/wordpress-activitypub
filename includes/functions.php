@@ -1052,15 +1052,15 @@ function get_reply_intent_uri() {
 }
 
 /**
- * Replace content with links by Regex callback and not affect protected tags
+ * Replace content with links, mentions or hashtags by Regex callback and not affect protected tags.
  *
- * @param $content string the content that should be changed
- * @param $regex string the regex to use
- * @param $regex_callback callable callback for regex
+ * @param $content        string   The content that should be changed
+ * @param $regex          string   The regex to use
+ * @param $regex_callback callable Callback for replacement logic
  *
- * @return string
+ * @return string The content with links, mentions, hashtags, etc.
  */
-function content_replace_links_by_regex( $content, $regex, $regex_callback ) {
+function enrich_content_data( $content, $regex, $regex_callback ) {
 	// small protection against execution timeouts: limit to 1 MB
 	if ( mb_strlen( $content ) > MB_IN_BYTES ) {
 		return $content;
