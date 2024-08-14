@@ -80,7 +80,6 @@ class Hashtag {
 	 * @return string the filtered post-content
 	 */
 	public static function the_content( $the_content ) {
-
 		return enrich_content_data( $the_content, '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', array( self::class, 'replace_with_links' ) );
 	}
 
