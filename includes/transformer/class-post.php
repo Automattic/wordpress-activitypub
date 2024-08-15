@@ -834,6 +834,9 @@ class Post extends Base {
 				break;
 			default:
 				$template = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+				if ( ! $template ) {
+					$template = ACTIVITYPUB_CUSTOM_POST_CONTENT;
+				}
 				break;
 		}
 
