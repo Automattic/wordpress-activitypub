@@ -27,6 +27,10 @@ class The_Events_Calendar extends Post {
 
 	public function to_object() {
 		$event = $this->wp_object;
+		$event_tickets = null;
+		if ( ! empty( $event->tickets ) ) {
+			$event_tickets = $event->tickets;
+		}
 		//print_r( $event );
 		$object = new Event();
 		$object = $this->transform_object_properties( $object );
@@ -55,8 +59,27 @@ class The_Events_Calendar extends Post {
 		$object->set_category( 'MEETING' );
 
 		//free, restricted, external
-		$object->set_join_mode( 'restricted' );
-		//$object->set_external_participation_url('' );
+		$object->set_join_mode( 'free' );
+		if ( $event_tickets ) {
+			$object->set_join_mode( 'restricted' );
+			$object->set_external_participation_url( $event_tickets['link']->anchor );
+		}
+
+		if ( ! empty( $event->venues ) && ! empty( $event->venues[0] ) ) {
+			$event_venue = $event->venues[0];
+			$address = [
+				'addressCountry' => $event_venue->country,
+				'addressLocality' => $event_venue->city,
+				'addressRegion' => $event_venue->province,
+				'postalCode' => $event_venue->zip,
+				'streetAddress' => $event_venue->address,
+			];
+			$object->set_location(
+				$event_venue->permalink,
+				$event_venue->post_name,
+				$address
+			);
+		}
 
 		$object->set_anonymous_participation_enabled( false );
 		$object->set_in_language( 'de' );
@@ -67,12 +90,11 @@ class The_Events_Calendar extends Post {
 		) {
 			$object->set_is_online( true );
 		}
-		if ( function_exists( 'tribe_get_event_capacity' ) ) {
+		if ( $event_tickets && function_exists( '\tribe_get_event_capacity' ) ) {
 			$object->set_maximum_attendee_capacity( \tribe_get_event_capacity( $event ) );
 			$object->set_participant_count( count( \tribe_tickets_get_attendees( $event->ID ) ) );
-			$object->set_remaining_attendee_capacity( 0 );
+			$object->set_remaining_attendee_capacity( \tribe_events_count_available_tickets( $event ) );
 		}
-
 
 		$published = \strtotime( $event->post_date_gmt );
 		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', $published ) );

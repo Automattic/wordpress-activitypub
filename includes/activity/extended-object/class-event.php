@@ -24,6 +24,7 @@ class Event extends Base_Object {
 		array(                                   // The keys here override/extend the context even more.
 			'pt'                            => 'https://joinpeertube.org/ns#',
 			'mz'                            => 'https://joinmobilizon.org/ns#',
+			'sc'                            => 'http://schema.org#',
 			'status'                        => 'http://www.w3.org/2002/12/cal/ical#status',
 			'commentsEnabled'               => 'pt:commentsEnabled',
 			'isOnline'                      => 'mz:isOnline',
@@ -46,6 +47,16 @@ class Event extends Base_Object {
 				'@id'   => 'mz:contacts',
 				'@type' => '@id',
 			),
+			'PostalAddress'                 => 'sc:PostalAddress',
+			'address'                       => array(
+				'@id'   => 'sc:address',
+				'@type' => 'sc:PostalAddress',
+			),
+			'addressCountry'                => 'sc:addressCountry',
+			'addressLocality'               => 'sc:addressLocality',
+			'addressRegion'                 => 'sc:addressRegion',
+			'postalCode'                    => 'sc:postalCode',
+			'streetAddress'                 => 'sc:streetAddress',
 		),
 	);
 
@@ -227,6 +238,46 @@ class Event extends Base_Object {
 	 * @var int
 	 */
 	protected $remaining_attendee_capacity;
+
+	/**
+	 * @context https://schema.org/PostalAddress
+	 * @see https://docs.joinmobilizon.org/contribute/activity_pub/#location
+	 * @var array[
+	 * 'address' => [
+	 *      'addressCountry' => 'France',
+	 *      'addressLocality' => 'Lyon',
+	 *      'addressRegion' => 'Auvergne-Rhône-Alpes',
+	 *      'postalCode' => '69007',
+	 *      'streetAddress' => '10 Rue Jangot',
+	 *      'type' => 'PostalAddress'
+	 * ],
+	 * 'latitude' => 4.8425657,
+	 * 'longitude' => 45.7517141,
+	 * 'id' => 'http://mobilizon2.com/address/bdf7fb53-7177-46f3-8fb3-93c25a802522',
+	 * 'name' => '10 Rue Jangot',
+	 * 'type' => 'Place'
+	 * ]
+	 */
+	protected $location;
+
+	/**
+	 * Setter for location
+	 *
+	 * @return $this
+	 */
+	public function set_location( $id, $name, array $address = [], $latitude = 0, $longitude = 0 ) {
+		$this->location = array(
+			'id' => $id,
+			'name' => $name,
+			'latitude' => $latitude,
+			'longitude' => $longitude,
+			'address' => $address,
+		);
+		$this->location['address']['type'] = 'PostalAddress';
+		$this->location['type'] = 'Place';
+
+		return $this;
+	}
 
 	/**
 	 * Setter for the timezone.
