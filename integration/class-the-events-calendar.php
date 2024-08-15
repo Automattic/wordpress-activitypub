@@ -2,7 +2,7 @@
 namespace Activitypub\Integration;
 
 use Activitypub\Activity\Extended_Object\Event;
-use Activitypub\Transformer\Base;
+use Activitypub\Activity\Extended_Object\Place;
 use Activitypub\Transformer\Post;
 use function Activitypub\get_rest_url_by_path;
 
@@ -19,25 +19,30 @@ class The_Events_Calendar extends Post {
 	/**
 	 * Base constructor.
 	 *
-	 * @param WP_Post|WP_Comment $wp_object The WordPress object
+	 * @param \WP_Post $wp_object The WordPress object
 	 */
 	public function __construct( $wp_object ) {
 		$this->wp_object = \tribe_get_event( $wp_object );
 	}
 
+	/**
+	 * Transforms the WP_Post event object to an ActivityPub Object
+	 *
+	 * @see \Activitypub\Activity\Base_Object
+	 *
+	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
+	 */
 	public function to_object() {
 		$event = $this->wp_object;
 		$event_tickets = null;
 		if ( ! empty( $event->tickets ) ) {
 			$event_tickets = $event->tickets;
 		}
-		//print_r( $event );
+
 		$object = new Event();
 		$object = $this->transform_object_properties( $object );
 
 		$object->set_type( 'Event' );
-		$object->set_name( $event->post_title );
-
 		$object->set_timezone( $event->timezone );
 
 		$end_date = \strtotime( $event->end_date );
@@ -57,8 +62,7 @@ class The_Events_Calendar extends Post {
 		}
 
 		$object->set_category( 'MEETING' );
-
-		//free, restricted, external
+		$object->set_in_language( $this->get_locale() );
 		$object->set_join_mode( 'free' );
 		if ( $event_tickets ) {
 			$object->set_join_mode( 'restricted' );
@@ -73,16 +77,15 @@ class The_Events_Calendar extends Post {
 				'addressRegion' => $event_venue->province,
 				'postalCode' => $event_venue->zip,
 				'streetAddress' => $event_venue->address,
+				'type' => 'PostalAddress',
 			];
-			$object->set_location(
-				$event_venue->permalink,
-				$event_venue->post_name,
-				$address
-			);
+			$location = new Place();
+			$location->set_address( $address );
+			$location->set_id( $event_venue->permalink );
+			$location->set_name( $event_venue->post_name );
+			$object->set_location( $location );
 		}
 
-		$object->set_anonymous_participation_enabled( false );
-		$object->set_in_language( 'de' );
 		$object->set_is_online( false );
 		if ( class_exists( 'Tribe\Events\Virtual\Event_Meta' ) &&
 			$event->virtual_event_type &&
@@ -90,7 +93,9 @@ class The_Events_Calendar extends Post {
 		) {
 			$object->set_is_online( true );
 		}
+
 		if ( $event_tickets && function_exists( '\tribe_get_event_capacity' ) ) {
+			$object->set_anonymous_participation_enabled( false );
 			$object->set_maximum_attendee_capacity( \tribe_get_event_capacity( $event ) );
 			$object->set_participant_count( count( \tribe_tickets_get_attendees( $event->ID ) ) );
 			$object->set_remaining_attendee_capacity( \tribe_events_count_available_tickets( $event ) );
@@ -119,5 +124,16 @@ class The_Events_Calendar extends Post {
 		);
 
 		return $object;
+	}
+
+	/**
+	 * Returns the ActivityStreams 2.0 Object-Type Event
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#activity-types
+	 *
+	 * @return string The Object-Type.
+	 */
+	public function get_type() {
+		return 'Event';
 	}
 }
