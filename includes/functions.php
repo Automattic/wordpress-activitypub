@@ -1117,6 +1117,22 @@ function enrich_content_data( $content, $regex, $regex_callback ) {
 	return $content_with_links;
 }
 
+/**
+ * Generate a summary of a post.
+ *
+ * This function generates a summary of a post by extracting:
+ *
+ * 1. The post excerpt if it exists.
+ * 2. The first part of the post content if it contains the <!--more--> tag.
+ * 3. An excerpt of the post content if it is longer than the specified length.
+ *
+ * @param int|WP_Post $post   The post ID or post object.
+ * @param integer     $length The maximum length of the summary.
+ *                            Default is 500. It will ne ignored if the post excerpt
+ *                            and the content above the <!--more--> tag.
+ *
+ * @return string The generated post summary.
+ */
 function generate_post_summary( $post, $length = 500 ) {
 	$post = get_post( $post );
 
