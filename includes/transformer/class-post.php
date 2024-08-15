@@ -733,6 +733,12 @@ class Post extends Base {
 			return \__( '(This post is being modified)', 'activitypub' );
 		}
 
+		$content = \get_post_field( 'post_excerpt', $this->wp_object->ID );
+
+		if ( $content ) {
+			return $content;
+		}
+
 		$content       = \get_post_field( 'post_content', $this->wp_object->ID );
 		$content_parts = \get_extended( $content );
 
