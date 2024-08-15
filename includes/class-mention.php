@@ -18,7 +18,7 @@ class Mention {
 	 */
 	public static function init() {
 		\add_filter( 'the_content', array( self::class, 'the_content' ), 99, 1 );
-		\add_filter( 'the_excerpt', array( self::class, 'the_content' ), 10, 1 );
+		\add_filter( 'the_excerpt', array( self::class, 'the_content' ), 99, 1 );
 		\add_filter( 'comment_text', array( self::class, 'the_content' ), 10, 1 );
 		\add_filter( 'activitypub_extract_mentions', array( self::class, 'extract_mentions' ), 99, 2 );
 		\add_filter( 'activitypub_activity_object_array', array( self::class, 'filter_activity_object' ), 99 );
@@ -33,11 +33,13 @@ class Mention {
 	 * @return array the activity object array
 	 */
 	public static function filter_activity_object( $object_array ) {
-		if ( empty( $object_array['summary'] ) ) {
-			return $object_array;
+		if ( ! empty( $object_array['summary'] ) ) {
+			$object_array['summary'] = self::the_content( $object_array['summary'] );
 		}
 
-		$object_array['summary'] = self::the_content( $object_array['summary'] );
+		if ( ! empty( $object_array['content'] ) ) {
+			$object_array['content'] = self::the_content( $object_array['content'] );
+		}
 
 		return $object_array;
 	}
@@ -146,6 +148,6 @@ class Mention {
 				$mentions[ $match ] = $link;
 			}
 		}
-		return $mentions;
+		return \array_unique( $mentions );
 	}
 }

@@ -29,28 +29,13 @@ class Hashtag {
 	 * @return array the activity object array
 	 */
 	public static function filter_activity_object( $object_array ) {
-		if ( empty( $object_array['summary'] ) ) {
-			return $object_array;
+		if ( ! empty( $object_array['summary'] ) ) {
+			$object_array['summary'] = self::the_content( $object_array['summary'] );
 		}
 
-		\preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/', $object_array['summary'], $matches );
-		foreach ( $matches[0] as $match_id => $match ) {
-			$tag_object = \get_term_by( 'name', $matches[1][ $match_id ], 'post_tag' );
-			if ( ! $tag_object ) {
-				$tag_object = \get_term_by( 'name', $matches[1][ $match_id ], 'category' );
-			}
-
-			if ( $tag_object ) {
-				$link                  = \get_term_link( $tag_object, 'post_tag' );
-				$object_array['tag'][] = [
-					'type' => 'Hashtag',
-					'href' => $link,
-					'name' => $match,
-				];
-			}
+		if ( ! empty( $object_array['content'] ) ) {
+			$object_array['content'] = self::the_content( $object_array['content'] );
 		}
-
-		$object_array['summary'] = self::the_content( $object_array['summary'] );
 
 		return $object_array;
 	}
@@ -65,6 +50,12 @@ class Hashtag {
 	 */
 	public static function insert_post( $id, $post ) {
 		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $post->post_content, $match ) ) {
+			$tags = \implode( ', ', $match[1] );
+
+			\wp_add_post_tags( $post->post_parent, $tags );
+		}
+
+		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $post->post_excerpt, $match ) ) {
 			$tags = \implode( ', ', $match[1] );
 
 			\wp_add_post_tags( $post->post_parent, $tags );

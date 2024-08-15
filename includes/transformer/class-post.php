@@ -833,10 +833,8 @@ class Post extends Base {
 				$template = "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
 				break;
 			default:
-				$template = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
-				if ( ! $template ) {
-					$template = ACTIVITYPUB_CUSTOM_POST_CONTENT;
-				}
+				// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+				$template = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ) ?: ACTIVITYPUB_CUSTOM_POST_CONTENT;
 				break;
 		}
 
@@ -855,7 +853,12 @@ class Post extends Base {
 	 * @return array The list of @-Mentions.
 	 */
 	protected function get_mentions() {
-		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_object->post_content, $this->wp_object );
+		return apply_filters(
+			'activitypub_extract_mentions',
+			array(),
+			$this->wp_object->post_content . ' ' . $this->wp_object->post_excerpt,
+			$this->wp_object
+		);
 	}
 
 	/**

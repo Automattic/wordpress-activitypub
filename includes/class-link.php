@@ -23,11 +23,13 @@ class Link {
 	 * @return array the activity object array
 	 */
 	public static function filter_activity_object( $object_array ) {
-		if ( empty( $object_array['summary'] ) ) {
-			return $object_array;
+		if ( ! empty( $object_array['summary'] ) ) {
+			$object_array['summary'] = self::the_content( $object_array['summary'] );
 		}
 
-		$object_array['summary'] = self::the_content( $object_array['summary'] );
+		if ( ! empty( $object_array['content'] ) ) {
+			$object_array['content'] = self::the_content( $object_array['content'] );
+		}
 
 		return $object_array;
 	}

@@ -1138,7 +1138,6 @@ function generate_post_summary( $post, $length = 500 ) {
 
 	// Check for the <!--more--> tag.
 	if (
-		$content_parts &&
 		! empty( $content_parts['extended'] ) &&
 		! empty( $content_parts['main'] )
 	) {
