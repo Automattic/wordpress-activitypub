@@ -1143,7 +1143,7 @@ function generate_post_summary( $post, $length = 500 ) {
 	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
 
 	if ( $content ) {
-		return $content;
+		return \apply_filters( 'the_excerpt', $content );
 	}
 
 	$content       = \sanitize_post_field( 'post_content', $post->post_content, $post->ID );
@@ -1173,5 +1173,5 @@ function generate_post_summary( $post, $length = 500 ) {
 		$content = $content[0] . ' ' . $excerpt_more;
 	}
 
-	return $content;
+	return \apply_filters( 'the_excerpt', $content );
 }

@@ -109,7 +109,9 @@ class Shortcodes {
 			$excerpt_length = ACTIVITYPUB_EXCERPT_LENGTH;
 		}
 
-		return generate_post_summary( $item, $excerpt_length );
+		$excerpt = generate_post_summary( $item, $excerpt_length );
+
+		return \apply_filters( 'the_excerpt', $excerpt );
 	}
 
 	/**

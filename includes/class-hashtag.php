@@ -16,7 +16,6 @@ class Hashtag {
 		if ( '1' === \get_option( 'activitypub_use_hashtags', '1' ) ) {
 			\add_action( 'wp_insert_post', array( self::class, 'insert_post' ), 10, 2 );
 			\add_filter( 'the_content', array( self::class, 'the_content' ), 10, 1 );
-			\add_filter( 'the_excerpt', array( self::class, 'the_content' ), 10, 1 );
 			\add_filter( 'activitypub_activity_object_array', array( self::class, 'filter_activity_object' ), 99 );
 		}
 	}
@@ -49,17 +48,19 @@ class Hashtag {
 	 * @return
 	 */
 	public static function insert_post( $id, $post ) {
-		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $post->post_content, $match ) ) {
-			$tags = \implode( ', ', $match[1] );
+		$tags = array();
 
-			\wp_add_post_tags( $post->post_parent, $tags );
+		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $post->post_content, $match ) ) {
+			$tags = array_merge( $tags, $match[1] );
 		}
 
 		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $post->post_excerpt, $match ) ) {
-			$tags = \implode( ', ', $match[1] );
-
-			\wp_add_post_tags( $post->post_parent, $tags );
+			$tags = array_merge( $tags, $match[1] );
 		}
+
+		$tags = \implode( ', ', $tags );
+
+		\wp_add_post_tags( $post->ID, $tags );
 
 		return $id;
 	}
