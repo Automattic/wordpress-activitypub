@@ -12,6 +12,7 @@ class Link {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
+		\add_filter( 'activitypub_extra_field_content', array( self::class, 'the_content' ), 10, 1 );
 		\add_filter( 'activitypub_activity_object_array', array( self::class, 'filter_activity_object' ), 99 );
 	}
 
