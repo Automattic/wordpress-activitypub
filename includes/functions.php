@@ -1124,20 +1124,21 @@ function generate_post_summary( $post, $length = 500 ) {
 		return '';
 	}
 
-	$content = \get_post_field( 'post_excerpt', $post->ID );
+	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
 
 	if ( $content ) {
 		return $content;
 	}
 
-	$content       = \get_post_field( 'post_content', $post->ID );
+	$content       = \sanitize_post_field( 'post_content', $post->post_content, $post->ID );
 	$content_parts = \get_extended( $content );
 
-	$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[...]' );
+	$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[&hellip;]' );
 	$length       = $length - strlen( $excerpt_more );
 
 	// Check for the <!--more--> tag.
 	if (
+		$content_parts &&
 		! empty( $content_parts['extended'] ) &&
 		! empty( $content_parts['main'] )
 	) {
