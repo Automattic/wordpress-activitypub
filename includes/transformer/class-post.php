@@ -10,6 +10,7 @@ use Activitypub\Collection\Users;
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\get_enclosures;
+use function Activitypub\generate_post_summary;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\site_supports_blocks;
 
@@ -733,41 +734,7 @@ class Post extends Base {
 			return \__( '(This post is being modified)', 'activitypub' );
 		}
 
-		$content = \get_post_field( 'post_excerpt', $this->wp_object->ID );
-
-		if ( $content ) {
-			return $content;
-		}
-
-		$content       = \get_post_field( 'post_content', $this->wp_object->ID );
-		$content_parts = \get_extended( $content );
-
-		$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[...]' );
-		$length       = 500;
-		$length       = $length - strlen( $excerpt_more );
-
-		// Check for the <!--more--> tag.
-		if (
-			! empty( $content_parts['extended'] ) &&
-			! empty( $content_parts['main'] )
-		) {
-			$content = $content_parts['main'] . ' ' . $excerpt_more;
-			$length  = null;
-		}
-
-		$content = \html_entity_decode( $content );
-		$content = \wp_strip_all_tags( $content );
-		$content = \trim( $content );
-		$content = \preg_replace( '/\R+/m', "\n\n", $content );
-		$content = \preg_replace( '/[\r\t]/', '', $content );
-
-		if ( $length && \strlen( $content ) > $length ) {
-			$content = \wordwrap( $content, $length, '</activitypub-summary>' );
-			$content = \explode( '</activitypub-summary>', $content, 2 );
-			$content = $content[0] . ' ' . $excerpt_more;
-		}
-
-		return $content;
+		return generate_post_summary( $this->wp_object );
 	}
 
 	/**

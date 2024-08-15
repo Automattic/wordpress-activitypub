@@ -1116,3 +1116,46 @@ function enrich_content_data( $content, $regex, $regex_callback ) {
 
 	return $content_with_links;
 }
+
+function generate_post_summary( $post, $length = 500 ) {
+	$post = get_post( $post );
+
+	if ( ! $post ) {
+		return '';
+	}
+
+	$content = \get_post_field( 'post_excerpt', $post->ID );
+
+	if ( $content ) {
+		return $content;
+	}
+
+	$content       = \get_post_field( 'post_content', $post->ID );
+	$content_parts = \get_extended( $content );
+
+	$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[...]' );
+	$length       = $length - strlen( $excerpt_more );
+
+	// Check for the <!--more--> tag.
+	if (
+		! empty( $content_parts['extended'] ) &&
+		! empty( $content_parts['main'] )
+	) {
+		$content = $content_parts['main'] . ' ' . $excerpt_more;
+		$length  = null;
+	}
+
+	$content = \html_entity_decode( $content );
+	$content = \wp_strip_all_tags( $content );
+	$content = \trim( $content );
+	$content = \preg_replace( '/\R+/m', "\n\n", $content );
+	$content = \preg_replace( '/[\r\t]/', '', $content );
+
+	if ( $length && \strlen( $content ) > $length ) {
+		$content = \wordwrap( $content, $length, '</activitypub-summary>' );
+		$content = \explode( '</activitypub-summary>', $content, 2 );
+		$content = $content[0] . ' ' . $excerpt_more;
+	}
+
+	return $content;
+}
