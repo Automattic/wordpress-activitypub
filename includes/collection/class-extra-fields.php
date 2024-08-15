@@ -42,7 +42,9 @@ class Extra_Fields {
 	private static function get_formatted_content( $post ) {
 		$content = \get_the_content( null, false, $post );
 		$content = Link::the_content( $content, true );
-		$content = \do_blocks( $content );
+		if ( site_supports_blocks() ) {
+			$content = \do_blocks( $content );
+		}
 		$content = \wptexturize( $content );
 		$content = \wp_filter_content_tags( $content );
 		// replace script and style elements
