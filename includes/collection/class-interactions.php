@@ -115,10 +115,10 @@ class Interactions {
 		$comment_type    = Comment::get_comment_type( $type );
 		$comment_content = $comment_type['excerpt'];
 
-		$commentdata['comment_post_ID'] = $comment_post_id;
-		$commentdata['comment_content'] = esc_html( $comment_content );
-		$commentdata['comment_type']    = $comment_type['type'];
-		$commentdata['comment_parent']  = $parent_comment_id ? $parent_comment_id : 0;
+		$commentdata['comment_post_ID']           = $comment_post_id;
+		$commentdata['comment_content']           = \esc_html( $comment_content );
+		$commentdata['comment_type']              = \esc_attr( $comment_type['type'] );
+		$commentdata['comment_meta']['source_id'] = \esc_url_raw( $activity['id'] );
 
 		return self::persist( $commentdata, self::INSERT );
 	}
