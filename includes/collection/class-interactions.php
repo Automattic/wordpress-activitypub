@@ -3,6 +3,7 @@ namespace Activitypub\Collection;
 
 use WP_Error;
 use WP_Comment_Query;
+use Activitypub\Comment;
 
 use function Activitypub\object_to_uri;
 use function Activitypub\url_to_commentid;
@@ -13,6 +14,9 @@ use function Activitypub\get_remote_metadata_by_actor;
  * ActivityPub Interactions Collection
  */
 class Interactions {
+	const INSERT = 'insert';
+	const UPDATE = 'update';
+
 	/**
 	 * Add a comment to a post
 	 *
@@ -21,13 +25,15 @@ class Interactions {
 	 * @return array|false The commentdata or false on failure
 	 */
 	public static function add_comment( $activity ) {
-		if ( ! isset( $activity['object']['inReplyTo'] ) ) {
+		$commentdata = self::activity_to_comment( $activity );
+
+		if ( ! $commentdata || ! isset( $activity['object']['inReplyTo'] ) ) {
 			return false;
 		}
 
-		$in_reply_to        = \esc_url_raw( $activity['object']['inReplyTo'] );
-		$comment_post_id    = \url_to_postid( $in_reply_to );
-		$parent_comment_id  = url_to_commentid( $in_reply_to );
+		$in_reply_to       = \esc_url_raw( $activity['object']['inReplyTo'] );
+		$comment_post_id   = \url_to_postid( $in_reply_to );
+		$parent_comment_id = url_to_commentid( $in_reply_to );
 
 		// save only replys and reactions
 		if ( ! $comment_post_id && $parent_comment_id ) {
@@ -40,58 +46,10 @@ class Interactions {
 			return false;
 		}
 
-		$actor = object_to_uri( $activity['actor'] );
-		$meta  = get_remote_metadata_by_actor( $actor );
+		$commentdata['comment_post_ID'] = $comment_post_id;
+		$commentdata['comment_parent']  = $parent_comment_id ? $parent_comment_id : 0;
 
-		if ( ! $meta || \is_wp_error( $meta ) ) {
-			return false;
-		}
-
-		$url = object_to_uri( $meta['url'] );
-
-		$commentdata = array(
-			'comment_post_ID' => $comment_post_id,
-			'comment_author' => isset( $meta['name'] ) ? \esc_attr( $meta['name'] ) : \esc_attr( $meta['preferredUsername'] ),
-			'comment_author_url' => \esc_url_raw( $url ),
-			'comment_content' => \addslashes( $activity['object']['content'] ),
-			'comment_type' => 'comment',
-			'comment_author_email' => '',
-			'comment_parent' => $parent_comment_id ? $parent_comment_id : 0,
-			'comment_meta' => array(
-				'source_id'  => \esc_url_raw( $activity['object']['id'] ),
-				'protocol'   => 'activitypub',
-			),
-		);
-
-		if ( isset( $meta['icon']['url'] ) ) {
-			$commentdata['comment_meta']['avatar_url'] = \esc_url_raw( $meta['icon']['url'] );
-		}
-
-		if ( isset( $activity['object']['url'] ) ) {
-			$commentdata['comment_meta']['source_url'] = \esc_url_raw( object_to_uri( $activity['object']['url'] ) );
-		}
-
-		// disable flood control
-		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
-		// do not require email for AP entries
-		\add_filter( 'pre_option_require_name_email', '__return_false' );
-		// No nonce possible for this submission route
-		\add_filter(
-			'akismet_comment_nonce',
-			function () {
-				return 'inactive';
-			}
-		);
-		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
-
-		$comment = \wp_new_comment( $commentdata, true );
-
-		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10 );
-		\remove_filter( 'pre_option_require_name_email', '__return_false' );
-		// re-add flood control
-		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
-
-		return $comment;
+		return self::persist( $commentdata, self::INSERT );
 	}
 
 	/**
@@ -115,35 +73,54 @@ class Interactions {
 		//found a local comment id
 		$commentdata['comment_author'] = \esc_attr( $meta['name'] ? $meta['name'] : $meta['preferredUsername'] );
 		$commentdata['comment_content'] = \addslashes( $activity['object']['content'] );
-		if ( isset( $meta['icon']['url'] ) ) {
-			$commentdata['comment_meta']['avatar_url'] = \esc_url_raw( $meta['icon']['url'] );
+
+		return self::persist( $commentdata, self::UPDATE );
+	}
+
+	/**
+	 * Adds an incoming Like, Announce, ... as a comment to a post.
+	 *
+	 * @param array  $activity Activity array.
+	 *
+	 * @return array|false      Comment data or `false` on failure.
+	 */
+	public static function add_reaction( $activity ) {
+		$commentdata = self::activity_to_comment( $activity );
+
+		if ( ! $commentdata ) {
+			return false;
 		}
 
-		// disable flood control
-		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
-		// do not require email for AP entries
-		\add_filter( 'pre_option_require_name_email', '__return_false' );
-		// No nonce possible for this submission route
-		\add_filter(
-			'akismet_comment_nonce',
-			function () {
-				return 'inactive';
-			}
-		);
-		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
+		$url               = object_to_uri( $activity['object'] );
+		$comment_post_id   = url_to_postid( $url );
+		$parent_comment_id = url_to_commentid( $url );
 
-		$state = \wp_update_comment( $commentdata, true );
-
-		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10 );
-		\remove_filter( 'pre_option_require_name_email', '__return_false' );
-		// re-add flood control
-		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
-
-		if ( 1 === $state ) {
-			return $commentdata;
-		} else {
-			return $state; // Either `false` or a `WP_Error` instance or `0` or `1`!
+		if ( ! $comment_post_id && $parent_comment_id ) {
+			$parent_comment  = get_comment( $parent_comment_id );
+			$comment_post_id = $parent_comment->comment_post_ID;
 		}
+
+		if ( ! $comment_post_id ) {
+			// Not a reply to a post or comment.
+			return false;
+		}
+
+		$type = $activity['type'];
+
+		if ( ! Comment::is_registered_comment_type( $type ) ) {
+			// Not a valid comment type.
+			return false;
+		}
+
+		$comment_type    = Comment::get_comment_type( $type );
+		$comment_content = $comment_type['excerpt'];
+
+		$commentdata['comment_post_ID'] = $comment_post_id;
+		$commentdata['comment_content'] = esc_html( $comment_content );
+		$commentdata['comment_type']    = $comment_type['type'];
+		$commentdata['comment_parent']  = $parent_comment_id ? $parent_comment_id : 0;
+
+		return self::persist( $commentdata, self::INSERT );
 	}
 
 	/**
@@ -236,5 +213,104 @@ class Interactions {
 		}
 
 		return $allowed_tags;
+	}
+
+	/**
+	 * Convert an Activity to a WP_Comment
+	 *
+	 * @param array $activity The Activity array
+	 *
+	 * @return array|false The commentdata or false on failure
+	 */
+	public static function activity_to_comment( $activity ) {
+		$comment_content = null;
+		$actor           = object_to_uri( $activity['actor'] );
+		$actor           = get_remote_metadata_by_actor( $actor );
+
+		// check Actor-Meta
+		if ( ! $actor || is_wp_error( $actor ) ) {
+			return false;
+		}
+
+		// check Actor-Name
+		if ( isset( $actor['name'] ) ) {
+			$comment_author = $actor['name'];
+		} elseif ( isset( $actor['preferredUsername'] ) ) {
+			$comment_author = $actor['preferredUsername'];
+		} else {
+			return false;
+		}
+
+		$url = object_to_uri( $actor['url'] );
+
+		if ( ! $url ) {
+			object_to_uri( $actor['id'] );
+		}
+
+		if ( isset( $activity['object']['content'] ) ) {
+			$comment_content = \addslashes( $activity['object']['content'] );
+		}
+
+		$commentdata = array(
+			'comment_author' => \esc_attr( $comment_author ),
+			'comment_author_url' => \esc_url_raw( $url ),
+			'comment_content' => $comment_content,
+			'comment_type' => 'comment',
+			'comment_author_email' => '',
+			'comment_meta' => array(
+				'source_id'  => \esc_url_raw( object_to_uri( $activity['object'] ) ),
+				'protocol'   => 'activitypub',
+			),
+		);
+
+		if ( isset( $actor['icon']['url'] ) ) {
+			$commentdata['comment_meta']['avatar_url'] = \esc_url_raw( $actor['icon']['url'] );
+		}
+
+		if ( isset( $activity['object']['url'] ) ) {
+			$commentdata['comment_meta']['source_url'] = \esc_url_raw( object_to_uri( $activity['object']['url'] ) );
+		}
+
+		return $commentdata;
+	}
+
+	/**
+	 * Persist a comment
+	 *
+	 * @param array  $commentdata The commentdata array
+	 * @param string $action      Either 'insert' or 'update'
+	 *
+	 * @return array|string|int|\WP_Error|false The commentdata or false on failure
+	 */
+	public static function persist( $commentdata, $action = self::INSERT ) {
+		// disable flood control
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+		// do not require email for AP entries
+		\add_filter( 'pre_option_require_name_email', '__return_false' );
+		// No nonce possible for this submission route
+		\add_filter(
+			'akismet_comment_nonce',
+			function () {
+				return 'inactive';
+			}
+		);
+		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
+
+		if ( self::INSERT === $action ) {
+			$state = \wp_new_comment( $commentdata, true );
+		} else {
+			$state = \wp_update_comment( $commentdata, true );
+		}
+
+		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10 );
+		\remove_filter( 'pre_option_require_name_email', '__return_false' );
+		// re-add flood control
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+
+		if ( 1 === $state ) {
+			return $commentdata;
+		} else {
+			return $state; // Either `WP_Comment`, `false` or a `WP_Error` instance or `0` or `1`!
+		}
 	}
 }
