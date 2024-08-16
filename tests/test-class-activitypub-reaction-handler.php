@@ -1,11 +1,12 @@
 <?php
-class Test_Activitypub_Create_Handler extends WP_UnitTestCase {
+class Test_Activitypub_Reaction_Handler extends WP_UnitTestCase {
 	public $user_id;
 	public $user_url;
 	public $post_id;
 	public $post_permalink;
 
 	public function set_up() {
+		parent::set_up();
 		$this->user_id = 1;
 		$authordata = \get_userdata( $this->user_id );
 		$this->user_url = $authordata->user_url;
@@ -37,39 +38,46 @@ class Test_Activitypub_Create_Handler extends WP_UnitTestCase {
 		);
 	}
 
-	public function create_test_object( $id = 'https://example.com/123' ) {
+	public function create_test_object() {
 		return array(
 			'actor' => $this->user_url,
+			'type' => 'Like',
 			'id' => 'https://example.com/id/' . microtime( true ),
 			'to' => [ $this->user_url ],
 			'cc' => [ 'https://www.w3.org/ns/activitystreams#Public' ],
-			'object' => array(
-				'id'        => $id,
-				'url'       => 'https://example.com/example',
-				'inReplyTo' => $this->post_permalink,
-				'content'   => 'example',
-			),
+			'object' => $this->post_permalink,
 		);
 	}
 
-	public function test_handle_create_object_unset_rejected() {
+	public function test_handle_like() {
 		$object = $this->create_test_object();
-		unset( $object['object'] );
-		$converted = Activitypub\Handler\Create::handle_create( $object, $this->user_id );
-		$this->assertNull( $converted );
+		Activitypub\Handler\Like::handle_like( $object, $this->user_id );
+
+		$args = array(
+			'type'    => 'like',
+			'post_id' => $this->post_id,
+		);
+
+		$query = new \WP_Comment_Query( $args );
+		$result = $query->comments;
+
+		$this->assertInstanceOf( 'WP_Comment', $result[0] );
 	}
 
-	public function test_handle_create_non_public_rejected() {
+	public function test_handle_announce() {
 		$object = $this->create_test_object();
-		$object['cc'] = [];
-		$converted = Activitypub\Handler\Create::handle_create( $object, $this->user_id );
-		$this->assertNull( $converted );
-	}
+		$object['type'] = 'Announce';
 
-	public function test_handle_create_no_id_rejected() {
-		$object = $this->create_test_object();
-		unset( $object['object']['id'] );
-		$converted = Activitypub\Handler\Create::handle_create( $object, $this->user_id );
-		$this->assertNull( $converted );
+		Activitypub\Handler\Announce::handle_announce( $object, $this->user_id );
+
+		$args = array(
+			'type'    => 'repost',
+			'post_id' => $this->post_id,
+		);
+
+		$query = new \WP_Comment_Query( $args );
+		$result = $query->comments;
+
+		$this->assertInstanceOf( 'WP_Comment', $result[0] );
 	}
 }

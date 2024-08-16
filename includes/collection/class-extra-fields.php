@@ -37,6 +37,13 @@ class Extra_Fields {
 		return apply_filters( 'activitypub_get_actor_extra_fields', $fields, $user_id );
 	}
 
+	/**
+	 * Transforms the Extra Fields (Cutom Post Types) to ActivityPub Actor-Attachments.
+	 *
+	 * @param \WP_Post[] $fields The extra fields.
+	 *
+	 * @return array ActivityPub attachments.
+	 */
 	public static function fields_to_attachments( $fields ) {
 		$attachments = array();
 		\add_filter(
@@ -50,7 +57,6 @@ class Extra_Fields {
 
 		foreach ( $fields as $post ) {
 			$content = \get_the_content( null, false, $post );
-			$content = Link::the_content( $content, true );
 			$content = \do_blocks( $content );
 			$content = \wptexturize( $content );
 			$content = \wp_filter_content_tags( $content );
@@ -58,6 +64,7 @@ class Extra_Fields {
 			$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
 			$content = \strip_shortcodes( $content );
 			$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+			$content = \apply_filters( 'activitypub_extra_field_content', $content, $post );
 
 			$attachments[] = array(
 				'type' => 'PropertyValue',
