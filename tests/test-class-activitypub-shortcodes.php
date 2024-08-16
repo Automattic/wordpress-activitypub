@@ -89,7 +89,7 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 		$content = do_shortcode( $content );
 		wp_reset_postdata();
 
-		$this->assertEquals( "<p>Lorem ipsum [&hellip;]</p>\n", $content );
+		$this->assertEquals( "<p>Lorem ipsum dolor […]</p>\n", $content );
 		Shortcodes::unregister();
 	}
 }
