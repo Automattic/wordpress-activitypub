@@ -96,6 +96,12 @@ function plugin_init() {
 	 * @see https://wordpress.org/plugins/the-events-calendar/
 	 */
 	if ( \defined( 'TRIBE_EVENTS_FILE' ) ) {
+		add_action(
+			'init',
+			function() {
+				\add_post_type_support( 'tribe_events', 'activitypub' );
+			}
+		);
 		add_filter(
 			'activitypub_transformer',
 			// phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
