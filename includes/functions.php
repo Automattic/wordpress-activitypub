@@ -1149,7 +1149,7 @@ function generate_post_summary( $post, $length = 500 ) {
 	$content       = \sanitize_post_field( 'post_content', $post->post_content, $post->ID );
 	$content_parts = \get_extended( $content );
 
-	$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[&hellip;]' );
+	$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[…]' );
 	$length       = $length - strlen( $excerpt_more );
 
 	// Check for the <!--more--> tag.
