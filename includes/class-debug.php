@@ -26,12 +26,7 @@ class Debug {
 	}
 
 	public static function write_log( $log ) {
-		if ( \is_array( $log ) || \is_object( $log ) ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log, WordPress.PHP.DevelopmentFunctions.error_log_print_r
-			\error_log( \print_r( $log, true ) );
-		} else {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			\error_log( $log );
-		}
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log, WordPress.PHP.DevelopmentFunctions.error_log_print_r
+		\error_log( \print_r( $log, true ) );
 	}
 }
