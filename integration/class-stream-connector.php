@@ -22,7 +22,7 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 * @var array
 	 */
 	public $actions = array(
-		'activitypub_notification',
+		'activitypub_notification_follow',
 	);
 
 	/**
@@ -53,13 +53,13 @@ class Stream_Connector extends \WP_Stream\Connector {
 	}
 
 	/**
-	 * Callback for activitypub_notification
+	 * Callback for activitypub_notification_follow
 	 *
 	 * @param \Activitypub\Notification $notification The notification object
 	 *
 	 * @return void
 	 */
-	public function callback_activitypub_notification( $notification ) {
+	public function callback_activitypub_notification_follow( $notification ) {
 		$this->log(
 			sprintf(
 				// translators: %s is a URL
