@@ -25,6 +25,8 @@ class Comment {
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
 		\add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
+
+		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 	}
 
 	/**
@@ -575,5 +577,19 @@ class Comment {
 				'excerpt'     => __( '&hellip; liked this!', 'activitypub' ),
 			)
 		);
+	}
+
+	/**
+	 * Show avatars on Activities if set
+	 *
+	 * @param array $types list of avatar enabled comment types
+	 *
+	 * @return array show avatars on Activities
+	 */
+	public static function get_avatar_comment_types( $types ) {
+		$comment_types = self::get_comment_type_names();
+		$types         = array_merge( $types, $comment_types );
+
+		return array_unique( $types );
 	}
 }
