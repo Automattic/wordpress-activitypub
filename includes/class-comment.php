@@ -25,6 +25,7 @@ class Comment {
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
 		\add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
+		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
 
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 	}
@@ -591,5 +592,35 @@ class Comment {
 		$types         = array_merge( $types, $comment_types );
 
 		return array_unique( $types );
+	}
+
+	/**
+	 * Excludes likes and reposts from comment queries.
+	 *
+	 * @author Jan Boddez
+	 *
+	 * @see https://github.com/janboddez/indieblocks/blob/a2d59de358031056a649ee47a1332ce9e39d4ce2/includes/functions.php#L423-L432
+	 *
+	 * @param  WP_Comment_Query $query Comment count.
+	 */
+	public static function comment_query( $query ) {
+		if ( ! $query instanceof WP_Comment_Query ) {
+			return;
+		}
+
+		if ( is_admin() || ! is_singular() ) {
+			return;
+		}
+
+		if ( ! empty( $query->query_vars['type__in'] ) ) {
+			return;
+		}
+
+		if ( isset( $query->query_vars['count'] ) && true === $query->query_vars['count'] ) {
+			return;
+		}
+
+		// Exclude likes and reposts by the Webmention plugin.
+		$query->query_vars['type__not_in'] = self::get_comment_type_names();
 	}
 }
