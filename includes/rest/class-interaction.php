@@ -39,9 +39,9 @@ class Interaction {
 	/**
 	 * Handle GET request
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param WP_REST_Request $request The request object.
 	 *
-	 * @return WP_REST_Response
+	 * @return wp_die|WP_REST_Response Redirect to the editor or die
 	 */
 	public static function get( $request ) {
 		$uri    = $request->get_param( 'uri' );
