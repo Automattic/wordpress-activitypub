@@ -191,10 +191,6 @@ class Inbox {
 	public static function user_inbox_post_parameters() {
 		$params = array();
 
-		$params['page'] = array(
-			'type' => 'integer',
-		);
-
 		$params['user_id'] = array(
 			'required' => true,
 			'type' => 'string',
