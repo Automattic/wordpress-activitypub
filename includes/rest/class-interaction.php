@@ -26,8 +26,9 @@ class Interaction {
 					'permission_callback' => '__return_true',
 					'args'                => array(
 						'uri' => array(
-							'type'        => 'string',
-							'required'    => true,
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => 'esc_url',
 						),
 					),
 				),
@@ -43,9 +44,7 @@ class Interaction {
 	 * @return WP_REST_Response
 	 */
 	public static function get( $request ) {
-		$uri = $request->get_param( 'uri' );
-		$uri = \esc_url( $uri );
-
+		$uri    = $request->get_param( 'uri' );
 		$object = Http::get_remote_object( $uri );
 
 		if (
