@@ -141,7 +141,16 @@ class Server {
 	 * @return mixed|WP_Error The response, error, or modified response.
 	 */
 	public static function validate_activitypub_requests( $response, $handler, $request ) {
-		if ( \is_wp_error( $response ) ) {
+		if ( 'HEAD' === $request->get_method() ) {
+			return $response;
+		}
+
+		$route = $request->get_route();
+
+		if (
+			\is_wp_error( $response ) ||
+			! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE )
+		) {
 			return $response;
 		}
 
