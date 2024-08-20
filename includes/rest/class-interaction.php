@@ -70,27 +70,32 @@ class Interaction {
 			case 'Service':
 			case 'Application':
 			case 'Organization':
-				\do_action( 'activitypub_interactions_follow', $uri, $object );
-				// check if hook is implemented
-				if ( ! has_action( 'activitypub_interactions_follow' ) ) {
-					\wp_die(
-						esc_html__(
-							'You can\'t follow Fediverse Users yet.',
-							'activitypub'
-						),
-						400
-					);
-				}
+				$redirect_url = null;
+				$redirect_url = \apply_filters( 'activitypub_interactions_follow_url', $redirect_url, $uri, $object );
 				break;
 			default:
-				\do_action( 'activitypub_interactions_reply', $uri, $object );
-				return new WP_REST_Response(
-					null,
-					302,
-					array(
-						'Location' => \esc_url( \admin_url( 'post-new.php?in_reply_to=' . $uri ) ),
-					)
-				);
+				$redirect_url = \admin_url( 'post-new.php?in_reply_to=' . $uri );
+				$redirect_url = \apply_filters( 'activitypub_interactions_reply_url', $redirect_url, $uri, $object );
+
 		}
+
+		// check if hook is implemented
+		if ( ! $redirect_url ) {
+			\wp_die(
+				esc_html__(
+					'This Interaction type is not supported yet!',
+					'activitypub'
+				),
+				400
+			);
+		}
+
+		return new WP_REST_Response(
+			null,
+			302,
+			array(
+				'Location' => \esc_url( $redirect_url ),
+			)
+		);
 	}
 }
