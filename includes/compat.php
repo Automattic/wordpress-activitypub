@@ -56,6 +56,7 @@ if ( ! function_exists( 'is_countable' ) ) {
  * @return bool True if `$array` is a list, otherwise false.
  */
 if ( ! function_exists( 'array_is_list' ) ) {
+	// phpcs:disable Universal.NamingConventions.NoReservedKeywordParameterNames.arrayFound
 	function array_is_list( $array ) {
 		if ( ! is_array( $array ) ) {
 			return false;

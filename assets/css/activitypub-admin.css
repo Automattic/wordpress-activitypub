@@ -202,3 +202,13 @@ input.blog-user-identifier {
 	content: "\f307";
 	font-family: dashicons;
 }
+
+.repost .dashboard-comment-wrap,
+.like .dashboard-comment-wrap {
+	padding-inline-start: 63px;
+}
+
+.repost .dashboard-comment-wrap .comment-author,
+.like .dashboard-comment-wrap .comment-author {
+	margin-block: 0;
+}
