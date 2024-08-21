@@ -127,23 +127,50 @@
 							</p>
 						</td>
 					</tr>
-					<tr>
-						<th scope="row">
-							<?php \esc_html_e( 'Change blog name', 'activitypub' ); ?>
+					<tr scope="row">
+						<th>
+							<label><?php \esc_html_e( 'Extra Fields', 'activitypub' ); ?></label>
 						</th>
 						<td>
-							<label for="activitypub_blog_name">
-								<input
-									name="activitypub_blog_name"
-									id="activitypub_blog_name"
-									type="text" value="<?php echo esc_html( \get_option( 'activitypub_blog_name', get_bloginfo( 'name' ) ) ) ?>">
-							</label>
-							<p class="description">
-								<?php \esc_html_e( 'By default the ActivityPub plugin uses the WordPress site name as a value for the blog name.', 'activitypub' ); ?>
+							<p class="description"><?php \esc_html_e( 'Your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?></p>
+
+							<table class="widefat striped activitypub-extra-fields" role="presentation" style="margin: 15px 0;">
+							<?php
+							$extra_fields = \Activitypub\Collection\Extra_Fields::get_actor_fields( \Activitypub\Collection\Users::BLOG_USER_ID );
+
+							if ( empty( $extra_fields ) ) {
+								?>
+							<tr>
+								<td colspan="3">
+									<?php \esc_html_e( 'No extra fields found.', 'activitypub' ); ?>
+								</td>
+							</tr>
+								<?php
+							}
+							foreach ( $extra_fields as $extra_field ) {
+								?>
+							<tr>
+								<td><?php echo \esc_html( $extra_field->post_title ); ?></td>
+								<td><?php echo \wp_kses_post( \get_the_excerpt( $extra_field ) ); ?></td>
+								<td>
+									<a href="<?php echo \esc_url( \get_edit_post_link( $extra_field->ID ) ); ?>" class="button">
+										<?php \esc_html_e( 'Edit', 'activitypub' ); ?>
+									</a>
+								</td>
+							</tr>
+							<?php } ?>
+							</table>
+
+							<p>
+								<a href="<?php echo esc_url( admin_url( '/post-new.php?post_type=ap_extrafield_blog' ) ); ?>" class="button">
+									<?php esc_html_e( 'Add new', 'activitypub' ); ?>
+								</a>
+								<a href="<?php echo esc_url( admin_url( '/edit.php?post_type=ap_extrafield_blog' ) ); ?>">
+									<?php esc_html_e( 'Manage all', 'activitypub' ); ?>
+								</a>
 							</p>
 						</td>
 					</tr>
-
 				</tbody>
 			</table>
 		</div>

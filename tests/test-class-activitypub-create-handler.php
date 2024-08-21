@@ -18,7 +18,12 @@ class Test_Activitypub_Create_Handler extends WP_UnitTestCase {
 		);
 		$this->post_permalink = \get_permalink( $this->post_id );
 
-		\add_filter( 'pre_get_remote_metadata_by_actor', array( '\Test_Activitypub_Create_Handler', 'get_remote_metadata_by_actor' ), 0, 2 );
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'get_remote_metadata_by_actor' ), 0, 2 );
+	}
+
+	public function tear_down() {
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'get_remote_metadata_by_actor' ) );
+		parent::tear_down();
 	}
 
 	public static function get_remote_metadata_by_actor( $value, $actor ) {

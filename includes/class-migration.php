@@ -132,7 +132,7 @@ class Migration {
 		if ( version_compare( $version_from_db, '2.3.0', '<' ) ) {
 			self::migrate_from_2_2_0();
 		}
-		if ( version_compare( $version_from_db, '2.7.0', '<' ) ) {
+		if ( version_compare( $version_from_db, '3.0.0', '<' ) ) {
 			self::migrate_from_2_6_0();
 		}
 

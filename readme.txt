@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.6
-Stable tag: 2.6.1
+Stable tag: 3.1.0
 Requires PHP: 7.0
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -115,6 +115,7 @@ The plugin uses PHP Constants to enable, disable or change its default behaviour
 * `ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS` - Change the number of attachments, that should be federated. Default: `3`.
 * `ACTIVITYPUB_HASHTAGS_REGEXP` - Change the default regex to detect hashtext in a text. Default: `(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))`.
 * `ACTIVITYPUB_USERNAME_REGEXP` - Change the default regex to detect @-replies in a text. Default: `(?:([A-Za-z0-9\._-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))`.
+* `ACTIVITYPUB_URL_REGEXP` - Change the default regex to detect urls in a text. Default: `(www.|http:|https:)+[^\s]+[\w\/]`.
 * `ACTIVITYPUB_CUSTOM_POST_CONTENT` - Change the default template for Activities. Default: `<strong>[ap_title]</strong>\n\n[ap_content]\n\n[ap_hashtags]\n\n[ap_shortlink]`.
 * `ACTIVITYPUB_AUTHORIZED_FETCH` - Enable AUTHORIZED_FETCH. Default: `false`.
 * `ACTIVITYPUB_DISABLE_REWRITES` - Disable auto generation of `mod_rewrite` rules. Default: `false`.
@@ -132,6 +133,26 @@ The followers of a user can be found in the menu under "Users" -> "Followers" or
 For reasons of data protection, it is not possible to see the followers of other users.
 
 == Changelog ==
+
+= 3.1.0 =
+
+* Added: `menu_order` to `ap_extrafield` so that user can decide in with order they will be displayed
+* Added: Line brakes to user biography
+* Added: Blueprint
+* Fixed: Changed missing `activitypub_user_description` to `activitypub_description`
+* Fixed: Undefined `get_sample_permalink`
+* Fixed: Only send Update for previously-published posts
+* Improved: Simplified WebFinger code
+
+= 3.0.0 =
+
+* Added: "Reply Context" support, you can now reply to posts on the Fediverse through a WordPress post
+* Added: Bookmarklet to automatically pre-fill the "Reply Context" block
+* Added: "Header Image" support and ability to edit other profile informations for Authors and the Blog-User
+* Added: ActivityPub link HTML/HTTP-Header support
+* Added: Tag support for Actors (only auto generated for now)
+* Improved: Add setting to enable/disable the `fediverse:creator` OGP tag
+* Removed: Deprecated `class-post.php` model
 
 = 2.6.1 =
 
@@ -159,32 +180,6 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Several WebFinger issues
 * Fixed: Redirect issue for Application user
 * Fixed: Accessibilty issues with missing screen-reader-text on User overview page
-
-= 2.4.0 =
-
-* Added: A core/embed block filter to transform iframes to links
-* Added: Basic support of incoming `Announce`s
-* Added: Improve attachment handling
-* Added: Notifications: Introduce general class and use it for new follows
-* Added: Always fall back to `get_by_username` if one of the above fail
-* Added: Notification support for Jetpack
-* Added: EMA: Support for fetching external statuses without replies
-* Added: EMA: Remote context
-* Added: EMA: Allow searching for URLs
-* Added: EMA: Ensuring numeric ids is now done in EMA directly
-* Added: Podcast support
-* Added: Follower count to "At a Glance" dashboard widget
-* Improved: Use `Note` as default Object-Type, instead of `Article`
-* Improved: Improve `AUTHORIZED_FETCH`
-* Improved: Only send Mentions to comments in the direct hierarchy
-* Improved: Improve transformer
-* Improved: Improve Lemmy compatibility
-* Improved: Updated JS dependencies
-* Fixed: EMA: Add missing static keyword and try to lookup if the id is 0
-* Fixed: Blog-wide account when WordPress is in subdirectory
-* Fixed: Funkwhale URLs
-* Fixed: Prevent infinite loops in `get_comment_ancestors`
-* Fixed: Better Content-Negotiation handling
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/master/CHANGELOG.md).
 

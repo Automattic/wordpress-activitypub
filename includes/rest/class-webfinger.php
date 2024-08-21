@@ -3,7 +3,6 @@ namespace Activitypub\Rest;
 
 use WP_Error;
 use WP_REST_Response;
-use Activitypub\Collection\Users as User_Collection;
 
 /**
  * ActivityPub WebFinger REST-Class
@@ -103,43 +102,7 @@ class Webfinger {
 	 *
 	 * @return array the WebFinger profile.
 	 */
-	public static function get_profile( $resource ) {
-		$user = User_Collection::get_by_resource( $resource );
-
-		if ( \is_wp_error( $user ) ) {
-			return $user;
-		}
-
-		$aliases = array(
-			$user->get_url(),
-			$user->get_alternate_url(),
-		);
-
-		$aliases = array_unique( $aliases );
-
-		$profile = array(
-			'subject' => sprintf( 'acct:%s', $user->get_webfinger() ),
-			'aliases' => array_values( array_unique( $aliases ) ),
-			'links'   => array(
-				array(
-					'rel'  => 'self',
-					'type' => 'application/activity+json',
-					'href' => $user->get_url(),
-				),
-				array(
-					'rel'  => 'http://webfinger.net/rel/profile-page',
-					'type' => 'text/html',
-					'href' => $user->get_url(),
-				),
-			),
-		);
-
-		if ( 'Person' !== $user->get_type() ) {
-			$profile['links'][0]['properties'] = array(
-				'https://www.w3.org/ns/activitystreams#type' => $user->get_type(),
-			);
-		}
-
-		return $profile;
+	public static function get_profile( $resource ) { // phpcs:ignore
+		return apply_filters( 'webfinger_data', array(), $resource );
 	}
 }

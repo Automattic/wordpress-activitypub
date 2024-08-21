@@ -9,6 +9,7 @@ use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Users;
+use Activitypub\Collection\Extra_Fields;
 
 /**
  * Returns the ActivityPub default JSON-context
@@ -60,7 +61,11 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		} elseif ( array_key_exists( 'url', $actor ) ) {
 			$actor = $actor['url'];
 		} else {
-			return new WP_Error( 'activitypub_no_valid_actor_identifier', \__( 'The "actor" identifier is not valid', 'activitypub' ), array( 'status' => 404, 'actor' => $actor ) );
+			return new WP_Error(
+				'activitypub_no_valid_actor_identifier',
+				\__( 'The "actor" identifier is not valid', 'activitypub' ),
+				array( 'status' => 404, 'actor' => $actor )
+			);
 		}
 	}
 
@@ -69,7 +74,11 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	}
 
 	if ( ! $actor ) {
-		return new WP_Error( 'activitypub_no_valid_actor_identifier', \__( 'The "actor" identifier is not valid', 'activitypub' ), array( 'status' => 404, 'actor' => $actor ) );
+		return new WP_Error(
+			'activitypub_no_valid_actor_identifier',
+			\__( 'The "actor" identifier is not valid', 'activitypub' ),
+			array( 'status' => 404, 'actor' => $actor )
+		);
 	}
 
 	if ( is_wp_error( $actor ) ) {
@@ -88,7 +97,11 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	}
 
 	if ( ! \wp_http_validate_url( $actor ) ) {
-		$metadata = new WP_Error( 'activitypub_no_valid_actor_url', \__( 'The "actor" is no valid URL', 'activitypub' ), array( 'status' => 400, 'actor' => $actor ) );
+		$metadata = new WP_Error(
+			'activitypub_no_valid_actor_url',
+			\__( 'The "actor" is no valid URL', 'activitypub' ),
+			array( 'status' => 400, 'actor' => $actor )
+		);
 		return $metadata;
 	}
 
@@ -102,7 +115,11 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 	$metadata = \json_decode( $metadata, true );
 
 	if ( ! $metadata ) {
-		$metadata = new WP_Error( 'activitypub_invalid_json', \__( 'No valid JSON data', 'activitypub' ), array( 'status' => 400, 'actor' => $actor ) );
+		$metadata = new WP_Error(
+			'activitypub_invalid_json',
+			\__( 'No valid JSON data', 'activitypub' ),
+			array( 'status' => 400, 'actor' => $actor )
+		);
 		return $metadata;
 	}
 
@@ -461,7 +478,11 @@ function is_user_type_disabled( $type ) {
 			$return = false;
 			break;
 		default:
-			$return = new WP_Error( 'activitypub_wrong_user_type', __( 'Wrong user type', 'activitypub' ), array( 'status' => 400 ) );
+			$return = new WP_Error(
+				'activitypub_wrong_user_type',
+				__( 'Wrong user type', 'activitypub' ),
+				array( 'status' => 400 )
+			);
 			break;
 	}
 
@@ -705,7 +726,7 @@ function url_to_commentid( $url ) {
  *
  * @return string The URI of the ActivityPub object
  */
-function object_to_uri( $object ) {
+function object_to_uri( $object ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
 	// check if it is already simple
 	if ( ! $object || is_string( $object ) ) {
 		return $object;
@@ -722,8 +743,13 @@ function object_to_uri( $object ) {
 		return $object;
 	}
 
+	$type = 'Object';
+	if ( isset( $object['type'] ) ) {
+		$type = $object['type'];
+	}
+
 	// return part of Object that makes most sense
-	switch ( $object['type'] ) {
+	switch ( $type ) {
 		case 'Link':
 			$object = $object['href'];
 			break;
@@ -992,6 +1018,39 @@ function custom_large_numbers( $formatted, $number, $decimals ) {
 }
 
 /**
+ * Registers a ActivityPub comment type.
+ *
+ *
+ * @param string $comment_type Key for comment type.
+ * @param array  $args         Arguments.
+ *
+ * @return array The registered Activitypub comment type.
+ */
+function register_comment_type( $comment_type, $args = array() ) {
+	global $activitypub_comment_types;
+
+	if ( ! is_array( $activitypub_comment_types ) ) {
+		$activitypub_comment_types = array();
+	}
+
+	// Sanitize comment type name.
+	$comment_type = sanitize_key( $comment_type );
+
+	$activitypub_comment_types[ $comment_type ] = $args;
+
+	/**
+	 * Fires after a ActivityPub comment type is registered.
+	 *
+	 *
+	 * @param string $comment_type Comment type.
+	 * @param array  $args         Arguments used to register the comment type.
+	 */
+	do_action( 'activitypub_registered_comment_type', $comment_type, $args );
+
+	return $args;
+}
+
+/**
  * Normalize a URL.
  *
  * @param string $url The URL.
@@ -1019,27 +1078,138 @@ function normalize_host( $host ) {
 }
 
 /**
- * Get the Extra Fields of an Actor
+ * Get the reply intent URI.
  *
- * @param int $user_id The User-ID.
- *
- * @return array The extra fields.
+ * @return string The reply intent URI.
  */
-function get_actor_extra_fields( $user_id ) {
-	$extra_fields = new WP_Query(
-		array(
-			'post_type' => 'ap_extrafield',
-			'nopaging'  => true,
-			'status'    => 'publish',
-			'author'    => $user_id,
-		)
+function get_reply_intent_uri() {
+	return sprintf(
+		'javascript:(()=>{window.open(\'%s\'+encodeURIComponent(window.location.href));})();',
+		esc_url( \admin_url( 'post-new.php?in_reply_to=' ) )
 	);
+}
 
-	if ( $extra_fields->have_posts() ) {
-		$extra_fields = $extra_fields->posts;
-	} else {
-		$extra_fields = array();
+/**
+ * Replace content with links, mentions or hashtags by Regex callback and not affect protected tags.
+ *
+ * @param $content        string   The content that should be changed
+ * @param $regex          string   The regex to use
+ * @param $regex_callback callable Callback for replacement logic
+ *
+ * @return string The content with links, mentions, hashtags, etc.
+ */
+function enrich_content_data( $content, $regex, $regex_callback ) {
+	// small protection against execution timeouts: limit to 1 MB
+	if ( mb_strlen( $content ) > MB_IN_BYTES ) {
+		return $content;
+	}
+	$tag_stack = array();
+	$protected_tags = array(
+		'pre',
+		'code',
+		'textarea',
+		'style',
+		'a',
+	);
+	$content_with_links = '';
+	$in_protected_tag = false;
+	foreach ( wp_html_split( $content ) as $chunk ) {
+		if ( preg_match( '#^<!--[\s\S]*-->$#i', $chunk, $m ) ) {
+			$content_with_links .= $chunk;
+			continue;
+		}
+
+		if ( preg_match( '#^<(/)?([a-z-]+)\b[^>]*>$#i', $chunk, $m ) ) {
+			$tag = strtolower( $m[2] );
+			if ( '/' === $m[1] ) {
+				// Closing tag.
+				$i = array_search( $tag, $tag_stack, true );
+				// We can only remove the tag from the stack if it is in the stack.
+				if ( false !== $i ) {
+					$tag_stack = array_slice( $tag_stack, 0, $i );
+				}
+			} else {
+				// Opening tag, add it to the stack.
+				$tag_stack[] = $tag;
+			}
+
+			// If we're in a protected tag, the tag_stack contains at least one protected tag string.
+			// The protected tag state can only change when we encounter a start or end tag.
+			$in_protected_tag = array_intersect( $tag_stack, $protected_tags );
+
+			// Never inspect tags.
+			$content_with_links .= $chunk;
+			continue;
+		}
+
+		if ( $in_protected_tag ) {
+			// Don't inspect a chunk inside an inspected tag.
+			$content_with_links .= $chunk;
+			continue;
+		}
+
+		// Only reachable when there is no protected tag in the stack.
+		$content_with_links .= \preg_replace_callback( $regex, $regex_callback, $chunk );
 	}
 
-	return apply_filters( 'activitypub_get_actor_extra_fields', $extra_fields, $user_id );
+	return $content_with_links;
+}
+
+/**
+ * Generate a summary of a post.
+ *
+ * This function generates a summary of a post by extracting:
+ *
+ * 1. The post excerpt if it exists.
+ * 2. The first part of the post content if it contains the <!--more--> tag.
+ * 3. An excerpt of the post content if it is longer than the specified length.
+ *
+ * @param int|WP_Post $post   The post ID or post object.
+ * @param integer     $length The maximum length of the summary.
+ *                            Default is 500. It will ne ignored if the post excerpt
+ *                            and the content above the <!--more--> tag.
+ *
+ * @return string The generated post summary.
+ */
+function generate_post_summary( $post, $length = 500 ) {
+	$post = get_post( $post );
+
+	if ( ! $post ) {
+		return '';
+	}
+
+	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
+
+	if ( $content ) {
+		return \apply_filters( 'the_excerpt', $content );
+	}
+
+	$content       = \sanitize_post_field( 'post_content', $post->post_content, $post->ID );
+	$content_parts = \get_extended( $content );
+
+	$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[…]' );
+	$length       = $length - strlen( $excerpt_more );
+
+	// Check for the <!--more--> tag.
+	if (
+		! empty( $content_parts['extended'] ) &&
+		! empty( $content_parts['main'] )
+	) {
+		$content = $content_parts['main'] . ' ' . $excerpt_more;
+		$length  = null;
+	}
+
+	$content = \html_entity_decode( $content );
+	$content = \wp_strip_all_tags( $content );
+	$content = \trim( $content );
+	$content = \preg_replace( '/\R+/m', "\n\n", $content );
+	$content = \preg_replace( '/[\r\t]/', '', $content );
+
+	if ( $length && \strlen( $content ) > $length ) {
+		$content = \wordwrap( $content, $length, '</activitypub-summary>' );
+		$content = \explode( '</activitypub-summary>', $content, 2 );
+		$content = $content[0] . ' ' . $excerpt_more;
+	}
+
+	return \apply_filters( 'the_excerpt', $content );
 }
