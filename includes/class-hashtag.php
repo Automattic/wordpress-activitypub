@@ -1,6 +1,8 @@
 <?php
 namespace Activitypub;
 
+use function Activitypub\enrich_content_data;
+
 /**
  * ActivityPub Hashtag Class
  *
@@ -14,7 +16,27 @@ class Hashtag {
 		if ( '1' === \get_option( 'activitypub_use_hashtags', '1' ) ) {
 			\add_action( 'wp_insert_post', array( self::class, 'insert_post' ), 10, 2 );
 			\add_filter( 'the_content', array( self::class, 'the_content' ), 10, 1 );
+			\add_filter( 'activitypub_activity_object_array', array( self::class, 'filter_activity_object' ), 99 );
 		}
+	}
+
+	/**
+	 * Filter only the activity object and replace summery it with URLs
+	 *
+	 * @param $object_array array of activity
+	 *
+	 * @return array the activity object array
+	 */
+	public static function filter_activity_object( $object_array ) {
+		if ( ! empty( $object_array['summary'] ) ) {
+			$object_array['summary'] = self::the_content( $object_array['summary'] );
+		}
+
+		if ( ! empty( $object_array['content'] ) ) {
+			$object_array['content'] = self::the_content( $object_array['content'] );
+		}
+
+		return $object_array;
 	}
 
 	/**
@@ -26,11 +48,19 @@ class Hashtag {
 	 * @return
 	 */
 	public static function insert_post( $id, $post ) {
-		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $post->post_content, $match ) ) {
-			$tags = \implode( ', ', $match[1] );
+		$tags = array();
 
-			\wp_add_post_tags( $post->post_parent, $tags );
+		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $post->post_content, $match ) ) {
+			$tags = array_merge( $tags, $match[1] );
 		}
+
+		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $post->post_excerpt, $match ) ) {
+			$tags = array_merge( $tags, $match[1] );
+		}
+
+		$tags = \implode( ', ', $tags );
+
+		\wp_add_post_tags( $post->ID, $tags );
 
 		return $id;
 	}
@@ -43,60 +73,7 @@ class Hashtag {
 	 * @return string the filtered post-content
 	 */
 	public static function the_content( $the_content ) {
-		// small protection against execution timeouts: limit to 1 MB
-		if ( mb_strlen( $the_content ) > MB_IN_BYTES ) {
-			return $the_content;
-		}
-		$tag_stack = array();
-		$protected_tags = array(
-			'pre',
-			'code',
-			'textarea',
-			'style',
-			'a',
-		);
-		$content_with_links = '';
-		$in_protected_tag = false;
-		foreach ( wp_html_split( $the_content ) as $chunk ) {
-			if ( preg_match( '#^<!--[\s\S]*-->$#i', $chunk, $m ) ) {
-				$content_with_links .= $chunk;
-				continue;
-			}
-
-			if ( preg_match( '#^<(/)?([a-z-]+)\b[^>]*>$#i', $chunk, $m ) ) {
-				$tag = strtolower( $m[2] );
-				if ( '/' === $m[1] ) {
-					// Closing tag.
-					$i = array_search( $tag, $tag_stack, true );
-					// We can only remove the tag from the stack if it is in the stack.
-					if ( false !== $i ) {
-						$tag_stack = array_slice( $tag_stack, 0, $i );
-					}
-				} else {
-					// Opening tag, add it to the stack.
-					$tag_stack[] = $tag;
-				}
-
-				// If we're in a protected tag, the tag_stack contains at least one protected tag string.
-				// The protected tag state can only change when we encounter a start or end tag.
-				$in_protected_tag = array_intersect( $tag_stack, $protected_tags );
-
-				// Never inspect tags.
-				$content_with_links .= $chunk;
-				continue;
-			}
-
-			if ( $in_protected_tag ) {
-				// Don't inspect a chunk inside an inspected tag.
-				$content_with_links .= $chunk;
-				continue;
-			}
-
-			// Only reachable when there is no protected tag in the stack.
-			$content_with_links .= \preg_replace_callback( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', array( '\Activitypub\Hashtag', 'replace_with_links' ), $chunk );
-		}
-
-		return $content_with_links;
+		return enrich_content_data( $the_content, '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', array( self::class, 'replace_with_links' ) );
 	}
 
 	/**
@@ -108,6 +85,9 @@ class Hashtag {
 	public static function replace_with_links( $result ) {
 		$tag = $result[1];
 		$tag_object = \get_term_by( 'name', $tag, 'post_tag' );
+		if ( ! $tag_object ) {
+			$tag_object = \get_term_by( 'name', $tag, 'category' );
+		}
 
 		if ( $tag_object ) {
 			$link = \get_term_link( $tag_object, 'post_tag' );

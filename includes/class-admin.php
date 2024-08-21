@@ -5,12 +5,12 @@ use WP_User_Query;
 use Activitypub\Model\Blog;
 use Activitypub\Activitypub;
 use Activitypub\Collection\Users;
+use Activitypub\Collection\Extra_Fields;
 
 use function Activitypub\count_followers;
 use function Activitypub\is_user_disabled;
 use function Activitypub\was_comment_received;
 use function Activitypub\is_comment_federatable;
-use function Activitypub\add_default_actor_extra_fields;
 
 /**
  * ActivityPub Admin Class
@@ -107,8 +107,10 @@ class Admin {
 		}
 
 		$current_screen = get_current_screen();
-
-		if ( isset( $current_screen->id ) && 'edit-ap_extrafield' === $current_screen->id ) {
+		if ( ! $current_screen ) {
+			return;
+		}
+		if ( 'edit' === $current_screen->base && Extra_Fields::is_extra_fields_post_type( $current_screen->post_type ) ) {
 			?>
 			<div class="notice" style="margin: 0; background: none; border: none; box-shadow: none; padding: 15px 0 0 0; font-size: 14px;">
 				<?php esc_html_e( 'These are extra fields that are used for your ActivityPub profile. You can use your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?>
@@ -396,7 +398,7 @@ class Admin {
 		) {
 			return false;
 		}
-		$description = ! empty( $_POST['activitypub_description'] ) ? sanitize_text_field( wp_unslash( $_POST['activitypub_description'] ) ) : false;
+		$description = ! empty( $_POST['activitypub_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['activitypub_description'] ) ) : false;
 		if ( $description ) {
 			\update_user_option( $user_id, 'activitypub_description', $description );
 		} else {
@@ -496,7 +498,7 @@ class Admin {
 
 				$post = get_post( $arg[2] );
 
-				if ( 'ap_extrafield' !== $post->post_type ) {
+				if ( Extra_Fields::is_extra_fields_post_type( $post->post_type ) ) {
 					return $allcaps;
 				}
 
@@ -533,18 +535,13 @@ class Admin {
 		add_filter(
 			"views_{$screen_id}",
 			function ( $views ) {
-				if ( 'ap_extrafield' === get_post_type() ) {
+				if ( Extra_Fields::is_extra_fields_post_type( get_current_screen()->post_type ) ) {
 					return array();
 				}
 
 				return $views;
 			}
 		);
-
-		// Set defaults for new extra fields.
-		if ( 'edit-ap_extrafield' === $screen_id ) {
-			Activitypub::default_actor_extra_fields( array(), get_current_user_id() );
-		}
 	}
 
 	public static function comment_row_actions( $actions, $comment ) {
@@ -589,7 +586,7 @@ class Admin {
 	 * @param string $post_type The post type.
 	 */
 	public static function manage_post_columns( $columns, $post_type ) {
-		if ( 'ap_extrafield' === $post_type ) {
+		if ( Extra_Fields::is_extra_fields_post_type( $post_type ) ) {
 			$after_key = 'title';
 			$index     = array_search( $after_key, array_keys( $columns ), true );
 			$columns   = array_slice( $columns, 0, $index + 1 ) + array( 'extra_field_content' => esc_attr__( 'Content', 'activitypub' ) ) + $columns;
@@ -652,7 +649,7 @@ class Admin {
 
 		if ( 'extra_field_content' === $column_name ) {
 			$post = get_post( $post_id );
-			if ( 'ap_extrafield' === $post->post_type ) {
+			if ( Extra_Fields::is_extra_fields_post_type( $post->post_type ) ) {
 				echo esc_attr( wp_strip_all_tags( $post->post_content ) );
 			}
 		}

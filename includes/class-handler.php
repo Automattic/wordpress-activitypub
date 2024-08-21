@@ -5,6 +5,7 @@ use Activitypub\Handler\Announce;
 use Activitypub\Handler\Create;
 use Activitypub\Handler\Delete;
 use Activitypub\Handler\Follow;
+use Activitypub\Handler\Like;
 use Activitypub\Handler\Undo;
 use Activitypub\Handler\Update;
 
@@ -29,6 +30,10 @@ class Handler {
 		Follow::init();
 		Undo::init();
 		Update::init();
+
+		if ( ! ACTIVITYPUB_DISABLE_REACTIONS ) {
+			Like::init();
+		}
 
 		do_action( 'activitypub_register_handlers' );
 	}
