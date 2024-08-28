@@ -11,8 +11,11 @@ use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\get_enclosures;
 use function Activitypub\generate_post_summary;
+
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_user_type_disabled;
 use function Activitypub\site_supports_blocks;
+
 
 /**
  * WordPress Post Transformer
@@ -71,16 +74,32 @@ class Post extends Base {
 				$this->get_locale() => $this->get_content(),
 			)
 		);
-		$path = sprintf( 'actors/%d/followers', intval( $post->post_author ) );
 
 		$object->set_to(
-			array(
-				'https://www.w3.org/ns/activitystreams#Public',
-				get_rest_url_by_path( $path ),
+			array_merge(
+				array( 'https://www.w3.org/ns/activitystreams#Public' ),
+				$this->get_followers_for_the_to_attribute(),
 			)
 		);
 
 		return $object;
+	}
+
+	protected static function print_followers_url_for_user( $user_id ) {
+		return get_rest_url_by_path( sprintf( 'actors/%d/followers', intval( $user_id ) ) );
+	}
+
+	protected function get_followers_for_the_to_attribute() {
+		$to = array();
+
+		if ( ! is_user_type_disabled( 'blog' ) ) {
+			$to[] = self::print_followers_url_for_user( Users::BLOG_USER_ID );
+		}
+
+		if ( ! is_user_type_disabled( 'user' ) ) {
+			$to[] = self::print_followers_url_for_user( $this->wp_object->post_author );
+		}
+		return $to;
 	}
 
 	/**
