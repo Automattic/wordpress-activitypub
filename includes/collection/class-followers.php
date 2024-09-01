@@ -111,7 +111,7 @@ class Followers {
 	}
 
 	/**
-	 * Get a Follower by Actor indepenent from the User.
+	 * Get a Follower by Actor independent from the User.
 	 *
 	 * @param string $actor The Actor URL.
 	 *
