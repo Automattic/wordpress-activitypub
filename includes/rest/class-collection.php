@@ -97,12 +97,12 @@ class Collection {
 	public static function replies_get( $request ) {
 		$type = $request->get_param( 'type' );
 
+		// Get the WordPress object of that "owns" the requested replies.
 		if ( 'post' === $type ) {
-			$wp_object = get_post( $request->get_param( 'id' ) ) ;
+			$wp_object = get_post( $request->get_param( 'id' ) );
 		} elseif ( 'comment' === $type ) {
-			$wp_object =  get_comment( $request->get_param( 'id' ) );
+			$wp_object = get_comment( $request->get_param( 'id' ) );
 		}
-
 
 		if ( ! isset( $wp_object ) || is_wp_error( $wp_object ) ) {
 			return new WP_Error(
@@ -119,7 +119,7 @@ class Collection {
 
 		$page = intval( $request->get_param( 'page' ) );
 
-		// If the request paremeter page is present get the CollectionPage otherwiese the replies collection.
+		// If the request parameter page is present get the CollectionPage otherwise the replies collection.
 		if ( isset( $page ) ) {
 			$response = Replies::get_collection_page( $wp_object, $page );
 		} else {
