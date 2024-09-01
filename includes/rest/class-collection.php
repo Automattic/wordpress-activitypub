@@ -6,7 +6,10 @@ use WP_REST_Response;
 use Activitypub\Activity\Actor;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Collection\Replies as Replies_Collection;
+
 use Activitypub\Transformer\Factory;
+use WP_Error;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -69,6 +72,64 @@ class Collection {
 				),
 			)
 		);
+
+		\register_rest_route(
+			ACTIVITYPUB_REST_NAMESPACE,
+			'/(?P<type>[\w\-\.]+)s/(?P<id>[\w\-\.]+)/replies',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( self::class, 'replies_get' ),
+					'args'                => self::request_parameters_for_replies(),
+					'permission_callback' => '__return_true',
+				),
+			)
+		);
+	}
+
+	/**
+	 * The endpoint for replies collections
+	 *
+	 * @param WP_REST_Request $request The request object.
+	 *
+	 * @return WP_REST_Response The response object.
+	 */
+	public static function replies_get( $request ) {
+		$type = $request->get_param( 'type' );
+
+		if ( 'post' === $type ) {
+			$wp_object = get_post( $request->get_param( 'id' ) ) ;
+		} elseif ( 'comment' === $type ) {
+			$wp_object =  get_comment( $request->get_param( 'id' ) );
+		}
+
+
+		if ( ! isset( $wp_object ) || is_wp_error( $wp_object ) ) {
+			return new WP_Error(
+				'activitypub_replies_collection_does_not_exist',
+				\sprintf(
+					// translators: %s: The type (post, comment, etc.) for which no replies collection exists.
+					\__(
+						'No reply collection exists for the type %s.'
+					),
+					$type
+				)
+			);
+		}
+
+		$page = $request->get_param( 'page' );
+		if ( isset( $page ) ) {
+			$response = Replies_Collection::get_collection_page( $wp_object, $page );
+		} else {
+			$response = Replies_Collection::get_replies( $wp_object );
+
+		}
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return new WP_REST_Response( $response, 200 );
 	}
 
 	/**
@@ -219,6 +280,27 @@ class Collection {
 		$params = array();
 
 		$params['user_id'] = array(
+			'required' => true,
+			'type' => 'string',
+		);
+
+		return $params;
+	}
+
+	/**
+	 * The supported parameters
+	 *
+	 * @return array list of parameters
+	 */
+	public static function request_parameters_for_replies() {
+		$params = array();
+
+		$params['type'] = array(
+			'required' => true,
+			'type' => 'string',
+		);
+
+		$params['id'] = array(
 			'required' => true,
 			'type' => 'string',
 		);

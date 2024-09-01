@@ -91,6 +91,21 @@ class Activity extends Base_Object {
 	protected $result;
 
 	/**
+	 * Identifies a Collection containing objects considered to be responses
+	 * to this object.
+	 * WordPress has a strong core system of approving replies. We only include
+	 * approved replies here.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-replies
+	 *
+	 * @var array
+	 *    | ObjectType
+	 *    | Link
+	 *    | null
+	 */
+	protected $replies;
+
+	/**
 	 * An indirect object of the activity from which the
 	 * activity is directed.
 	 * The precise meaning of the origin is the object of the English
