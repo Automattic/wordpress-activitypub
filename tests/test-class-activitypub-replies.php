@@ -9,12 +9,13 @@ class Test_Activitypub_Replies extends WP_UnitTestCase {
 		);
 
 		$comment = array(
+			'user_id' => 1,
 			'comment_type' => 'comment',
 			'comment_content' => 'This is a comment.',
 			'comment_author_url' => 'https://example.com',
 			'comment_author_email' => '',
 			'comment_meta' => array(
-				'protocol' => 'activitypub',
+				'activitypub_status' => 'federated',
 			),
 			'comment_post_ID' => $post->ID,
 		);
