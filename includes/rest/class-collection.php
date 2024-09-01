@@ -6,7 +6,7 @@ use WP_REST_Response;
 use Activitypub\Activity\Actor;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Users as User_Collection;
-use Activitypub\Collection\Replies as Replies_Collection;
+use Activitypub\Collection\Replies;
 
 use Activitypub\Transformer\Factory;
 use WP_Error;
@@ -117,17 +117,24 @@ class Collection {
 			);
 		}
 
-		$page = $request->get_param( 'page' );
-		if ( isset( $page ) ) {
-			$response = Replies_Collection::get_collection_page( $wp_object, $page );
-		} else {
-			$response = Replies_Collection::get_replies( $wp_object );
+		$page = intval( $request->get_param( 'page' ) );
 
+		// If the request paremeter page is present get the CollectionPage otherwiese the replies collection.
+		if ( isset( $page ) ) {
+			$response = Replies::get_collection_page( $wp_object, $page );
+		} else {
+			$response = Replies::get_collection( $wp_object );
 		}
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
+
+		// Add ActivityPub Context.
+		$response = array_merge(
+			array( '@context'   => Base_Object::JSON_LD_CONTEXT ),
+			$response
+		);
 
 		return new WP_REST_Response( $response, 200 );
 	}

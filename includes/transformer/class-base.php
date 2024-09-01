@@ -6,7 +6,7 @@ use WP_Comment;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
-use Activitypub\Collection\Replies as Replies_Collection;
+use Activitypub\Collection\Replies;
 
 
 /**
@@ -115,7 +115,7 @@ abstract class Base {
 	 * Get the replies Collection.
 	 */
 	public function get_replies() {
-		$replies = Replies_Collection::get_replies( $this->wp_object, $this->get_id() );
+		$replies = Replies::get_collection( $this->wp_object, $this->get_id() );
 		return $replies;
 	}
 
