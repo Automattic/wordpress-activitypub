@@ -44,8 +44,9 @@ class Interaction {
 	 * @return wp_die|WP_REST_Response Redirect to the editor or die
 	 */
 	public static function get( $request ) {
-		$uri    = $request->get_param( 'uri' );
-		$object = Http::get_remote_object( $uri );
+		$uri          = $request->get_param( 'uri' );
+		$redirect_url = null;
+		$object       = Http::get_remote_object( $uri );
 
 		if (
 			\is_wp_error( $object ) ||
@@ -70,14 +71,15 @@ class Interaction {
 			case 'Service':
 			case 'Application':
 			case 'Organization':
-				$redirect_url = null;
 				$redirect_url = \apply_filters( 'activitypub_interactions_follow_url', $redirect_url, $uri, $object );
 				break;
 			default:
 				$redirect_url = \admin_url( 'post-new.php?in_reply_to=' . $uri );
 				$redirect_url = \apply_filters( 'activitypub_interactions_reply_url', $redirect_url, $uri, $object );
-
 		}
+
+		// generic Interaction hook
+		$redirect_url = \apply_filters( 'activitypub_interactions_url', $redirect_url, $uri, $object );
 
 		// check if hook is implemented
 		if ( ! $redirect_url ) {
