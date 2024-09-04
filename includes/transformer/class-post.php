@@ -29,6 +29,13 @@ use function Activitypub\site_supports_blocks;
  */
 class Post extends Base {
 	/**
+	 * The User as Actor Object.
+	 *
+	 * @var Activitypub\Activity\Actor
+	 */
+	private $actor_object = null;
+
+	/**
 	 * Returns the ID of the WordPress Post.
 	 *
 	 * @return int The ID of the WordPress Post
@@ -76,30 +83,42 @@ class Post extends Base {
 		);
 
 		$object->set_to(
-			array_merge(
-				array( 'https://www.w3.org/ns/activitystreams#Public' ),
-				$this->get_followers_for_the_to_attribute(),
+			array(
+				'https://www.w3.org/ns/activitystreams#Public',
+				$this->get_actor_object()->get_followers(),
 			)
 		);
 
 		return $object;
 	}
 
-	protected static function print_followers_url_for_user( $user_id ) {
-		return get_rest_url_by_path( sprintf( 'actors/%d/followers', intval( $user_id ) ) );
-	}
-
-	protected function get_followers_for_the_to_attribute() {
-		$to = array();
-
-		if ( ! is_user_type_disabled( 'blog' ) ) {
-			$to[] = self::print_followers_url_for_user( Users::BLOG_USER_ID );
+	/**
+	 * Returns the User-Object of the Author of the Post.
+	 *
+	 * If `single_user` mode is enabled, the Blog-User is returned.
+	 *
+	 * @return Activitypub\Activity\Actor The User-Object.
+	 */
+	protected function get_actor_object() {
+		if ( $this->actor_object ) {
+			return $this->actor_object;
 		}
 
-		if ( ! is_user_type_disabled( 'user' ) ) {
-			$to[] = self::print_followers_url_for_user( $this->wp_object->post_author );
+		$blog_user         = new Blog();
+		$this->actor_object = $blog_user;
+
+		if ( is_single_user() ) {
+			return $blog_user;
 		}
-		return $to;
+
+		$user = Users::get_by_id( $this->wp_object->post_author );
+
+		if ( $user && ! is_wp_error( $user ) ) {
+			$this->actor_object = $user;
+			return $user;
+		}
+
+		return $blog_user;
 	}
 
 	/**
@@ -147,19 +166,7 @@ class Post extends Base {
 	 * @return string The User-URL.
 	 */
 	protected function get_attributed_to() {
-		$blog_user = new Blog();
-
-		if ( is_single_user() ) {
-			return $blog_user->get_url();
-		}
-
-		$user = Users::get_by_id( $this->wp_object->post_author );
-
-		if ( $user && ! is_wp_error( $user ) ) {
-			return $user->get_url();
-		}
-
-		return $blog_user->get_url();
+		return $this->get_actor_object()->get_url();
 	}
 
 	/**
