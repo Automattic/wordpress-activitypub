@@ -91,6 +91,48 @@ function plugin_init() {
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
 
 /**
+ * Register the Stream Connector for ActivityPub.
+ *
+ * @param array $classes The Stream connectors.
+ *
+ * @return array The Stream connectors with the ActivityPub connector.
+ */
+function register_stream_connector( $classes ) {
+	require plugin_dir_path( __FILE__ ) . '/class-stream-connector.php';
+
+	$class_name = '\Activitypub\Integration\Stream_Connector';
+
+	if ( ! class_exists( $class_name ) ) {
+		return;
+	}
+
+	wp_stream_get_instance();
+	$class = new $class_name();
+
+	if ( ! method_exists( $class, 'is_dependency_satisfied' ) ) {
+		return;
+	}
+
+	if ( $class->is_dependency_satisfied() ) {
+		$classes[] = $class;
+	}
+
+	return $classes;
+}
+add_filter( 'wp_stream_connectors', __NAMESPACE__ . '\register_stream_connector' );
+
+// Excluded ActivityPub post types from the Stream.
+add_filter(
+	'wp_stream_posts_exclude_post_types',
+	function( $post_types ) {
+		$post_types[] = 'ap_follower';
+		$post_types[] = 'ap_extrafield';
+		$post_types[] = 'ap_extrafield_blog';
+		return $post_types;
+	}
+);
+
+/**
  * Load the BuddyPress integration.
  *
  * Only load code that needs BuddyPress to run once BP is loaded and initialized.
