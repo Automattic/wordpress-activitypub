@@ -53,6 +53,9 @@ class Notification {
 	 * Send the notification.
 	 */
 	public function send() {
+		$type = \strtolower( $this->type );
+
 		do_action( 'activitypub_notification', $this );
+		do_action( "activitypub_notification_{$type}", $this );
 	}
 }
