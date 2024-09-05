@@ -4,18 +4,16 @@ namespace Activitypub\Transformer;
 use WP_Post;
 use Activitypub\Shortcodes;
 use Activitypub\Model\Blog;
-use Activitypub\Transformer\Base;
 use Activitypub\Collection\Users;
+use Activitypub\Transformer\Base;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\get_enclosures;
-use function Activitypub\generate_post_summary;
-
+use function Activitypub\site_supports_blocks;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_user_type_disabled;
-use function Activitypub\site_supports_blocks;
-
+use function Activitypub\generate_post_summary;
 
 /**
  * WordPress Post Transformer
