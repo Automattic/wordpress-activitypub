@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.6
-Stable tag: 3.1.0
+Stable tag: 3.2.0
 Requires PHP: 7.0
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -134,6 +134,23 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= 3.2.0 =
+
+* Added: Support for Seriously Simple Podcasting
+* Added: Blog extra fields
+* Added: Support "read more" for Activity-Summary
+* Added: `Like` and `Announce` (Boost) handler
+* Added: Simple Remote-Reply endpoint
+* Added: "Stream" Plugin support
+* Added: New Fediverse symbol
+* Improved: Replace hashtags, urls and mentions in summary with links
+* Improved: Hide Bookmarklet if site does not support Blocks
+* Fixed: Link detection for extra fields when spaces after the link and fix when two links in the content
+* Fixed: `Undo` for `Likes` and `Announces`
+* Fixed: Show Avatars on `Likes` and `Announces`
+* Fixed: Remove proprietary WebFinger resource
+* Fixed: Wrong followers URL in "to" attribute of posts
+
 = 3.1.0 =
 
 * Added: `menu_order` to `ap_extrafield` so that user can decide in with order they will be displayed
@@ -168,18 +185,6 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Remote-Reply endpoint
 * Fixed: WebFinger Error Codes (thanks to the FediTest project)
 * Fixed: Fatal Error when wp_schedule_single_event third argument is being passed as a string
-
-= 2.5.0 =
-
-* Added: WebFinger cors header
-* Added: WebFinger Content-Type
-* Added: The Fediverse creator of a post to OpenGraph
-* Improved: Try to lookup local users first for Enable Mastodon Apps
-* Improved: Send also Announces for deletes
-* Improved: Load time by adding `count_total=false` to `WP_User_Query`
-* Fixed: Several WebFinger issues
-* Fixed: Redirect issue for Application user
-* Fixed: Accessibilty issues with missing screen-reader-text on User overview page
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/master/CHANGELOG.md).
 

@@ -5,7 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.1.0] - 2024-08-XX
+## [3.2.0] - 2024-09-09
+
+### Added
+
+* Support for Seriously Simple Podcasting
+* Blog extra fields
+* Support "read more" for Activity-Summary
+* `Like` and `Announce` (Boost) handler
+* Simple Remote-Reply endpoint
+* "Stream" Plugin support
+* New Fediverse symbol
+
+### Improved
+
+* Replace hashtags, URLs, and mentions in summary with links
+* Hide Bookmarklet if site does not support Blocks
+
+### Fixed
+
+* Link detection for extra fields when spaces after the link and fix when two links in the content
+* `Undo` for `Likes` and `Announces`
+* Show Avatars on `Likes` and `Announces`
+* Remove proprietary WebFinger resource
+* Wrong followers URL in "to" attribute of posts
+
+## [3.1.0] - 2024-08-07
 
 ### Added
 
@@ -860,6 +885,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
+[3.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/3.1.0...3.2.0
 [3.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/3.0.0...3.1.0
 [3.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/2.6.1...3.0.0
 [2.6.1]: https://github.com/Automattic/wordpress-activitypub/compare/2.6.0...2.6.1
