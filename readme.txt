@@ -105,6 +105,19 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 If you are running your blog in a subdirectory, but have a different [wp_siteurl](https://wordpress.org/documentation/article/giving-wordpress-its-own-directory/), you don't need the redirect, because the index.php will take care of that.
 
+= What if you are running your blog behind a reverse proxy with Apache? =
+
+If you are using a reverse proxy with Apache to run your host you may encounter
+that you are unable to have followers join the blog.  This will occur because
+the proxy system rewrites the host headers to be the internal DNS name of your
+server, which the plugin then uses to attempt to sign the replies.  The remote
+site attempting to follow your users is expecting the public DNS name on the 
+replies.  In these cases you will need to use the 'ProxyPreserveHost On' 
+directive to ensure the external host name is passed to your internal host.
+
+If you are using SSL between the proxy and internal host you may also need to
+'SSLProxyCheckPeerName off' if your internal host can not answer with the 
+correct SSL name.  This may present a security issue in some environments.
 = Constants =
 
 The plugin uses PHP Constants to enable, disable or change its default behaviour. Please use them with caution and only if you know what you are doing.
