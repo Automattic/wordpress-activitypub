@@ -498,7 +498,7 @@ class Admin {
 
 				$post = get_post( $arg[2] );
 
-				if ( Extra_Fields::is_extra_fields_post_type( $post->post_type ) ) {
+				if ( ! Extra_Fields::is_extra_field_post_type( $post->post_type ) ) {
 					return $allcaps;
 				}
 
