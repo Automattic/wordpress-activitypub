@@ -97,7 +97,7 @@ class Opengraph {
 
 			foreach ( $value as $v ) {
 				printf(
-					'<meta property="%1$s" name="%1$s" content="%2$s" />' . PHP_EOL,
+					'<meta name="%1$s" content="%2$s">' . PHP_EOL,
 					esc_attr( $key ),
 					esc_attr( $v )
 				);
