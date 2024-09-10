@@ -41,6 +41,11 @@ module.exports = function(grunt) {
           'README.md': 'readme.txt'
         },
       },
+      options: {
+        pre_convert: function( readme ) {
+          return readme.replace( /\*\*Note\*\*:/g, "> [!NOTE]\n>" );
+        }
+      }
     }
   });
 
