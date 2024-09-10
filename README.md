@@ -20,7 +20,8 @@ An example: I give you my Mastodon profile name: `@pfefferle@mastodon.social`. Y
 
 Once you follow Jane's `@jane@example.com` profile, any blog post she crafts on `example.com` will land in your Home feed. Simultaneously, by following the blog-wide profile `@example.com@example.com`, you'll receive updates from all authors.
 
-**Note**: if no one follows your author or blog instance, your posts remain unseen. The simplest method to verify the plugin's operation is by following your profile. If you possess a Mastodon profile, initiate by following your new one.
+> [!NOTE]
+> if no one follows your author or blog instance, your posts remain unseen. The simplest method to verify the plugin's operation is by following your profile. If you possess a Mastodon profile, initiate by following your new one.
 
 The plugin works with the following tested federated platforms, but there may be more that it works with as well:
 
