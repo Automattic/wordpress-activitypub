@@ -4,6 +4,8 @@ namespace Activitypub\Integration;
 use Activitypub\Rest\Webfinger as Webfinger_Rest;
 use Activitypub\Collection\Users as User_Collection;
 
+use function Activitypub\get_rest_url_by_path;
+
 /**
  * Compatibility with the WebFinger plugin
  *
@@ -45,6 +47,11 @@ class Webfinger {
 			'href' => $user->get_url(),
 		);
 
+		$array['links'][] = array(
+			'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+			'template' => get_rest_url_by_path( 'interactions?uri={uri}' ),
+		);
+
 		return $array;
 	}
 
@@ -84,6 +91,10 @@ class Webfinger {
 					'rel'  => 'http://webfinger.net/rel/profile-page',
 					'type' => 'text/html',
 					'href' => $user->get_url(),
+				),
+				array(
+					'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+					'template' => get_rest_url_by_path( 'interactions?uri={uri}' ),
 				),
 			),
 		);
