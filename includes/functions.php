@@ -657,11 +657,11 @@ function get_active_users( $duration = 1 ) {
 
 	// if blog user is disabled
 	if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
-		return $count;
+		return (int) $count;
 	}
 
 	// also count blog user
-	return $count + 1;
+	return (int) $count + 1;
 }
 
 /**
@@ -689,10 +689,10 @@ function get_total_users() {
 
 	// if blog user is disabled
 	if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
-		return $users;
+		return (int) $users;
 	}
 
-	return $users + 1;
+	return (int) $users + 1;
 }
 
 /**

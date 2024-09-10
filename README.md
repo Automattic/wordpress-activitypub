@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 5.5  
 **Tested up to:** 6.6  
-**Stable tag:** 3.1.0  
+**Stable tag:** 3.2.2  
 **Requires PHP:** 7.0  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -105,6 +105,12 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 If you are running your blog in a subdirectory, but have a different [wp_siteurl](https://wordpress.org/documentation/article/giving-wordpress-its-own-directory/), you don't need the redirect, because the index.php will take care of that.
 
+### What if you are running your blog behind a reverse proxy with Apache? ###
+
+If you are using a reverse proxy with Apache to run your host you may encounter that you are unable to have followers join the blog. This will occur because the proxy system rewrites the host headers to be the internal DNS name of your server, which the plugin then uses to attempt to sign the replies. The remote site attempting to follow your users is expecting the public DNS name on the replies. In these cases you will need to use the 'ProxyPreserveHost On' directive to ensure the external host name is passed to your internal host.
+
+If you are using SSL between the proxy and internal host you may also need to `SSLProxyCheckPeerName off` if your internal host can not answer with the correct SSL name. This may present a security issue in some environments.
+
 ### Constants ###
 
 The plugin uses PHP Constants to enable, disable or change its default behaviour. Please use them with caution and only if you know what you are doing.
@@ -133,6 +139,31 @@ The followers of a user can be found in the menu under "Users" -> "Followers" or
 For reasons of data protection, it is not possible to see the followers of other users.
 
 ## Changelog ##
+
+### 3.2.2 ###
+
+* Fixed: Extra-Fields check
+
+### 3.2.1 ###
+
+* Fixed: Use `Excerpt` for Podcast Episodes
+
+### 3.2.0 ###
+
+* Added: Support for Seriously Simple Podcasting
+* Added: Blog extra fields
+* Added: Support "read more" for Activity-Summary
+* Added: `Like` and `Announce` (Boost) handler
+* Added: Simple Remote-Reply endpoint
+* Added: "Stream" Plugin support
+* Added: New Fediverse symbol
+* Improved: Replace hashtags, urls and mentions in summary with links
+* Improved: Hide Bookmarklet if site does not support Blocks
+* Fixed: Link detection for extra fields when spaces after the link and fix when two links in the content
+* Fixed: `Undo` for `Likes` and `Announces`
+* Fixed: Show Avatars on `Likes` and `Announces`
+* Fixed: Remove proprietary WebFinger resource
+* Fixed: Wrong followers URL in "to" attribute of posts
 
 ### 3.1.0 ###
 
@@ -168,18 +199,6 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Remote-Reply endpoint
 * Fixed: WebFinger Error Codes (thanks to the FediTest project)
 * Fixed: Fatal Error when wp_schedule_single_event third argument is being passed as a string
-
-### 2.5.0 ###
-
-* Added: WebFinger cors header
-* Added: WebFinger Content-Type
-* Added: The Fediverse creator of a post to OpenGraph
-* Improved: Try to lookup local users first for Enable Mastodon Apps
-* Improved: Send also Announces for deletes
-* Improved: Load time by adding `count_total=false` to `WP_User_Query`
-* Fixed: Several WebFinger issues
-* Fixed: Redirect issue for Application user
-* Fixed: Accessibilty issues with missing screen-reader-text on User overview page
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/master/CHANGELOG.md).
 
