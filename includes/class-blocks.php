@@ -163,7 +163,7 @@ class Blocks {
 		return apply_filters(
 			'activitypub_reply_block',
 			sprintf(
-				'<p><a title="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
+				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
 				esc_url( $attrs['url'] ),
 				esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
 				// translators: %s is the URL of the post being replied to.
