@@ -70,8 +70,8 @@ class Admin {
 		// user has to be able to publish posts
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			$followers_list_page = \add_users_page(
-				\__( 'Followers', 'activitypub' ),
-				\__( 'Followers', 'activitypub' ),
+				\__( '⁂ Followers', 'activitypub' ),
+				\__( '⁂ Followers', 'activitypub' ),
 				'read',
 				'activitypub-followers-list',
 				array(
@@ -86,8 +86,8 @@ class Admin {
 			);
 
 			\add_users_page(
-				\__( 'Extra Fields', 'activitypub' ),
-				\__( 'Extra Fields', 'activitypub' ),
+				\__( '⁂ Extra Fields', 'activitypub' ),
+				\__( '⁂ Extra Fields', 'activitypub' ),
 				'read',
 				\esc_url( \admin_url( '/edit.php?post_type=ap_extrafield' ) )
 			);
@@ -498,7 +498,7 @@ class Admin {
 
 				$post = get_post( $arg[2] );
 
-				if ( Extra_Fields::is_extra_fields_post_type( $post->post_type ) ) {
+				if ( ! Extra_Fields::is_extra_field_post_type( $post->post_type ) ) {
 					return $allcaps;
 				}
 

@@ -131,6 +131,28 @@ class Extra_Fields {
 	}
 
 	/**
+	 * Check if a post type is the `ap_extrafield` post type.
+	 *
+	 * @param string $post_type The post type.
+	 *
+	 * @return bool True if the post type is `ap_extrafield`, otherwise false.
+	 */
+	public static function is_extra_field_post_type( $post_type ) {
+		return self::USER_POST_TYPE === $post_type;
+	}
+
+	/**
+	 * Check if a post type is the `ap_extrafield_blog` post type.
+	 *
+	 * @param string $post_type The post type.
+	 *
+	 * @return bool True if the post type is `ap_extrafield_blog`, otherwise false.
+	 */
+	public static function is_extra_field_blog_post_type( $post_type ) {
+		return self::BLOG_POST_TYPE === $post_type;
+	}
+
+	/**
 	 * Add default extra fields to an actor.
 	 *
 	 * @param array $extra_fields The extra fields.
