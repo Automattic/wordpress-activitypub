@@ -3,22 +3,34 @@ import { useSelect } from '@wordpress/data';
 import { useMemo } from '@wordpress/element';
 const enabled = window._activityPubOptions?.enabled;
 
-export function useUserOptions() {
+export function useUserOptions( { withInherit = false } ) {
 	const users = enabled?.users ? useSelect( ( select ) => select( 'core' ).getUsers( { who: 'authors' } ) ) : [];
 	return useMemo( () => {
 		if ( ! users ) {
 			return [];
 		}
-		const withBlogUser = enabled?.site ? [ {
-			label: __( 'Whole Site', 'activitypub' ),
-			value: 'site'
-		} ] : [];
+		const userKeywords = [];
+
+		if ( enabled?.site ) {
+			userKeywords.push( {
+				label: __( 'Site', 'activitypub' ),
+				value: 'site'
+			} );
+		}
+
+		if ( withInherit ) {
+			userKeywords.push( {
+				label: __( 'Dynamic User', 'activitypub' ),
+				value: 'inherit'
+			} );
+		}
+
 		return users.reduce( ( acc, user ) => {
 			acc.push({
 				label: user.name,
 				value: `${ user.id }` // casting to string because that's how the attribute is stored by Gutenberg
 			} );
 			return acc;
-		}, withBlogUser );
+		}, userKeywords );
 	}, [ users ] );
 }

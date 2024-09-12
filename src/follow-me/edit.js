@@ -1,16 +1,18 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
-import { SelectControl, PanelBody } from '@wordpress/components';
+import { SelectControl, PanelBody, Card, CardBody } from '@wordpress/components';
 import { useUserOptions } from '../shared/use-user-options';
 import FollowMe from './follow-me';
-import { useEffect } from '@wordpress/element';
+import { useEffect, createInterpolateElement } from '@wordpress/element';
+
 
 export default function Edit( { attributes, setAttributes } ) {
 	const blockProps = useBlockProps( {
 		className: 'activitypub-follow-me-block-wrapper',
 	} );
-	const usersOptions = useUserOptions();
+	const usersOptions = useUserOptions( { withInherit: true } );
 	const { selectedUser } = attributes;
+	const isInheritMode = selectedUser === 'inherit';
 
 	useEffect( () => {
 		// if there are no users yet, do nothing
@@ -37,7 +39,18 @@ export default function Edit( { attributes, setAttributes } ) {
 					</PanelBody>
 				</InspectorControls>
 			) }
-			<FollowMe { ...attributes } id={ blockProps.id } />
+			{ isInheritMode ? (
+				<Card>
+					<CardBody>
+						{ createInterpolateElement(
+							__( 'This <strong>Follow Me</strong> block will adapt to the page it is on, showing the user profile if on a user archive, or the post author on a single post. It will be <strong>empty</strong> on non-author pages.', 'activitypub' ),
+							{ strong: <strong /> }
+						) }
+					</CardBody>
+				</Card>
+			) : (
+				<FollowMe { ...attributes } id={ blockProps.id } />
+			) }
 		</div>
 	);
 }
