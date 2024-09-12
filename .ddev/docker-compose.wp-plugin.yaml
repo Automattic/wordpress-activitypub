@@ -1,0 +1,6 @@
+services:
+    web:
+        volumes:
+            - source: ../
+              target: /var/www/html/.ddev/wordpress/wp-content/plugins/activitypub
+              type: bind
