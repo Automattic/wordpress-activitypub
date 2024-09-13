@@ -4,14 +4,16 @@ namespace Activitypub\Transformer;
 use WP_Post;
 use Activitypub\Shortcodes;
 use Activitypub\Model\Blog;
-use Activitypub\Transformer\Base;
 use Activitypub\Collection\Users;
+use Activitypub\Transformer\Base;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\get_enclosures;
-use function Activitypub\get_rest_url_by_path;
 use function Activitypub\site_supports_blocks;
+use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_user_type_disabled;
+use function Activitypub\generate_post_summary;
 
 /**
  * WordPress Post Transformer
@@ -24,6 +26,13 @@ use function Activitypub\site_supports_blocks;
  * - Activitypub\Activity\Base_Object
  */
 class Post extends Base {
+	/**
+	 * The User as Actor Object.
+	 *
+	 * @var Activitypub\Activity\Actor
+	 */
+	private $actor_object = null;
+
 	/**
 	 * Returns the ID of the WordPress Post.
 	 *
@@ -70,16 +79,44 @@ class Post extends Base {
 				$this->get_locale() => $this->get_content(),
 			)
 		);
-		$path = sprintf( 'actors/%d/followers', intval( $post->post_author ) );
 
 		$object->set_to(
 			array(
 				'https://www.w3.org/ns/activitystreams#Public',
-				get_rest_url_by_path( $path ),
+				$this->get_actor_object()->get_followers(),
 			)
 		);
 
 		return $object;
+	}
+
+	/**
+	 * Returns the User-Object of the Author of the Post.
+	 *
+	 * If `single_user` mode is enabled, the Blog-User is returned.
+	 *
+	 * @return Activitypub\Activity\Actor The User-Object.
+	 */
+	protected function get_actor_object() {
+		if ( $this->actor_object ) {
+			return $this->actor_object;
+		}
+
+		$blog_user         = new Blog();
+		$this->actor_object = $blog_user;
+
+		if ( is_single_user() ) {
+			return $blog_user;
+		}
+
+		$user = Users::get_by_id( $this->wp_object->post_author );
+
+		if ( $user && ! is_wp_error( $user ) ) {
+			$this->actor_object = $user;
+			return $user;
+		}
+
+		return $blog_user;
 	}
 
 	/**
@@ -127,19 +164,7 @@ class Post extends Base {
 	 * @return string The User-URL.
 	 */
 	protected function get_attributed_to() {
-		$blog_user = new Blog();
-
-		if ( is_single_user() ) {
-			return $blog_user->get_url();
-		}
-
-		$user = Users::get_by_id( $this->wp_object->post_author );
-
-		if ( $user && ! is_wp_error( $user ) ) {
-			return $user->get_url();
-		}
-
-		return $blog_user->get_url();
+		return $this->get_actor_object()->get_url();
 	}
 
 	/**
@@ -617,7 +642,7 @@ class Post extends Base {
 		}
 
 		// Default to Article.
-		$object_type = 'Note';
+		$object_type = 'Article';
 		$post_format = 'standard';
 
 		if ( \get_theme_support( 'post-formats' ) ) {
@@ -641,7 +666,7 @@ class Post extends Base {
 				$object_type = 'Page';
 				break;
 			default:
-				$object_type = 'Note';
+				$object_type = 'Article';
 				break;
 		}
 
@@ -733,24 +758,7 @@ class Post extends Base {
 			return \__( '(This post is being modified)', 'activitypub' );
 		}
 
-		$content = \get_post_field( 'post_content', $this->wp_object->ID );
-		$content = \html_entity_decode( $content );
-		$content = \wp_strip_all_tags( $content );
-		$content = \trim( $content );
-		$content = \preg_replace( '/\R+/m', "\n\n", $content );
-		$content = \preg_replace( '/[\r\t]/', '', $content );
-
-		$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[...]' );
-		$length       = 500;
-		$length       = $length - strlen( $excerpt_more );
-
-		if ( \strlen( $content ) > $length ) {
-			$content = \wordwrap( $content, $length, '</activitypub-summary>' );
-			$content = \explode( '</activitypub-summary>', $content, 2 );
-			$content = $content[0];
-		}
-
-		return $content . ' ' . $excerpt_more;
+		return generate_post_summary( $this->wp_object );
 	}
 
 	/**
@@ -849,7 +857,8 @@ class Post extends Base {
 				$template = "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
 				break;
 			default:
-				$template = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+				// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+				$template = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ) ?: ACTIVITYPUB_CUSTOM_POST_CONTENT;
 				break;
 		}
 
@@ -868,7 +877,12 @@ class Post extends Base {
 	 * @return array The list of @-Mentions.
 	 */
 	protected function get_mentions() {
-		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_object->post_content, $this->wp_object );
+		return apply_filters(
+			'activitypub_extract_mentions',
+			array(),
+			$this->wp_object->post_content . ' ' . $this->wp_object->post_excerpt,
+			$this->wp_object
+		);
 	}
 
 	/**

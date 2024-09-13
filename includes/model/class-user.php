@@ -10,6 +10,7 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Extra_Fields;
 
+use function Activitypub\is_blog_public;
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
 
@@ -279,7 +280,7 @@ class User extends Actor {
 	}
 
 	public function get_indexable() {
-		if ( \get_option( 'blog_public', 1 ) ) {
+		if ( is_blog_public() ) {
 			return true;
 		} else {
 			return false;

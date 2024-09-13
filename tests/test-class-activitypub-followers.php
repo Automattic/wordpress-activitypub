@@ -52,12 +52,12 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 
 	public function set_up() {
 		parent::set_up();
-		add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ), 10, 2 );
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ), 10, 2 );
 		_delete_all_posts();
 	}
 
 	public function tear_down() {
-		remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ) );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ) );
 		parent::tear_down();
 	}
 

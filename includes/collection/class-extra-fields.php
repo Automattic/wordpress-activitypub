@@ -51,10 +51,18 @@ class Extra_Fields {
 		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
 		$content = \strip_shortcodes( $content );
 		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+		$content = \apply_filters( 'activitypub_extra_field_content', $content, $post );
 
 		return $content;
 	}
 
+	/**
+	 * Transforms the Extra Fields (Cutom Post Types) to ActivityPub Actor-Attachments.
+	 *
+	 * @param \WP_Post[] $fields The extra fields.
+	 *
+	 * @return array ActivityPub attachments.
+	 */
 	public static function fields_to_attachments( $fields ) {
 		$attachments = array();
 		\add_filter(
@@ -130,6 +138,28 @@ class Extra_Fields {
 	 */
 	public static function is_extra_fields_post_type( $post_type ) {
 		return \in_array( $post_type, array( self::USER_POST_TYPE, self::BLOG_POST_TYPE ), true );
+	}
+
+	/**
+	 * Check if a post type is the `ap_extrafield` post type.
+	 *
+	 * @param string $post_type The post type.
+	 *
+	 * @return bool True if the post type is `ap_extrafield`, otherwise false.
+	 */
+	public static function is_extra_field_post_type( $post_type ) {
+		return self::USER_POST_TYPE === $post_type;
+	}
+
+	/**
+	 * Check if a post type is the `ap_extrafield_blog` post type.
+	 *
+	 * @param string $post_type The post type.
+	 *
+	 * @return bool True if the post type is `ap_extrafield_blog`, otherwise false.
+	 */
+	public static function is_extra_field_blog_post_type( $post_type ) {
+		return self::BLOG_POST_TYPE === $post_type;
 	}
 
 	/**
