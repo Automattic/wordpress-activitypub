@@ -1,9 +1,10 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
-import { SelectControl, PanelBody, Card, CardBody } from '@wordpress/components';
+import { SelectControl, PanelBody } from '@wordpress/components';
 import { useUserOptions } from '../shared/use-user-options';
 import FollowMe from './follow-me';
-import { useEffect, createInterpolateElement } from '@wordpress/element';
+import { useEffect } from '@wordpress/element';
+import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
 
 
 export default function Edit( { attributes, setAttributes } ) {
@@ -40,14 +41,7 @@ export default function Edit( { attributes, setAttributes } ) {
 				</InspectorControls>
 			) }
 			{ isInheritMode ? (
-				<Card>
-					<CardBody>
-						{ createInterpolateElement(
-							__( 'This <strong>Follow Me</strong> block will adapt to the page it is on, showing the user profile if on a user archive, or the post author on a single post. It will be <strong>empty</strong> on non-author pages.', 'activitypub' ),
-							{ strong: <strong /> }
-						) }
-					</CardBody>
-				</Card>
+				<InheritModeBlockFallback name={ __( 'Follow Me', 'activitypub' ) } />
 			) : (
 				<FollowMe { ...attributes } id={ blockProps.id } />
 			) }

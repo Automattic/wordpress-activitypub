@@ -164,6 +164,10 @@ class Blocks {
 
 	public static function render_follower_block( $attrs ) {
 		$followee_user_id = self::get_user_id( $attrs['selectedUser'] );
+		if ( is_null( $followee_user_id ) ) {
+			return '<!-- Followers block: `inherit` mode does not display on this type of page -->';
+		}
+
 		$per_page = absint( $attrs['per_page'] );
 		$follower_data = Followers::get_followers_with_count( $followee_user_id, $per_page );
 

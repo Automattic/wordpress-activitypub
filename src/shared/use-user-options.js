@@ -18,7 +18,8 @@ export function useUserOptions( { withInherit = false } ) {
 			} );
 		}
 
-		if ( withInherit ) {
+		// Only show inherit option when explicitly asked for and users are enabled.
+		if ( withInherit && enabled?.users ) {
 			userKeywords.push( {
 				label: __( 'Dynamic User', 'activitypub' ),
 				value: 'inherit'

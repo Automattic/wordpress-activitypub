@@ -4,6 +4,7 @@ import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { Followers } from './followers';
 import { useUserOptions } from '../shared/use-user-options';
+import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
 
 export default function Edit( { attributes, setAttributes } ) {
 	const { order, per_page, selectedUser, title } = attributes;
@@ -65,7 +66,11 @@ export default function Edit( { attributes, setAttributes } ) {
 					/>
 				</PanelBody>
 			</InspectorControls>
-			<Followers { ...attributes } page={ page } setPage={ setPage } followLinks={ false } />
+			{ selectedUser === 'inherit' ? (
+				<InheritModeBlockFallback name={ __( 'Followers', 'activitypub' ) } />
+			) : (
+				<Followers { ...attributes } page={ page } setPage={ setPage } followLinks={ false } />
+			) }
 		</div>
 	);
 }
