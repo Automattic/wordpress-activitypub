@@ -642,7 +642,7 @@ class Post extends Base {
 		}
 
 		// Default to Article.
-		$object_type = 'Note';
+		$object_type = 'Article';
 		$post_format = 'standard';
 
 		if ( \get_theme_support( 'post-formats' ) ) {
@@ -666,7 +666,7 @@ class Post extends Base {
 				$object_type = 'Page';
 				break;
 			default:
-				$object_type = 'Note';
+				$object_type = 'Article';
 				break;
 		}
 
