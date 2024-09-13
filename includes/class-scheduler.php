@@ -117,6 +117,10 @@ class Scheduler {
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
 		$post = get_post( $post );
 
+		if ( ! $post ) {
+			return;
+		}
+
 		if ( 'ap_extrafield' === $post->post_type ) {
 			self::schedule_profile_update( $post->post_author );
 			return;
@@ -182,7 +186,7 @@ class Scheduler {
 		$comment = get_comment( $comment );
 
 		// federate only comments that are written by a registered user.
-		if ( ! $comment->user_id ) {
+		if ( ! $comment || ! $comment->user_id ) {
 			return;
 		}
 
