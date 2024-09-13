@@ -105,8 +105,8 @@ class Blocks {
 		}
 
 		// For a single post, use the post author's ID.
-		if ( is_singular() && is_a( $queried_object, 'WP_Post' ) ) {
-			return $queried_object->post_author;
+		if ( is_a( $queried_object, 'WP_Post' ) ) {
+			return get_the_author_meta( 'ID' );
 		}
 
 		// We won't properly account for some conditions, like tag archives.
