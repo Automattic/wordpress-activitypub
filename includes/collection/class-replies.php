@@ -147,10 +147,10 @@ class Replies {
 		}
 
 		// Get to total replies count.
-		$total_replies = get_comments( array_merge( $args, array( 'count' => true ) ) );
+		$total_replies = \get_comments( array_merge( $args, array( 'count' => true ) ) );
 
 		// Modify query args to retrieve paginated results.
-		$comments_per_page = get_option( 'comments_per_page' );
+		$comments_per_page = \get_option( 'comments_per_page' );
 
 		// Fetch internal and external comments for current page.
 		$comments = get_comments( self::add_pagination_args( $args, $page, $comments_per_page ) );

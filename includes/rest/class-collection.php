@@ -98,10 +98,14 @@ class Collection {
 		$type = $request->get_param( 'type' );
 
 		// Get the WordPress object of that "owns" the requested replies.
-		if ( 'post' === $type ) {
-			$wp_object = get_post( $request->get_param( 'id' ) );
-		} elseif ( 'comment' === $type ) {
-			$wp_object = get_comment( $request->get_param( 'id' ) );
+		switch ( $type ) {
+			case 'comment':
+				$wp_object = \get_comment( $request->get_param( 'id' ) );
+				break;
+			case 'post':
+			default:
+				$wp_object = \get_post( $request->get_param( 'id' ) );
+				break;
 		}
 
 		if ( ! isset( $wp_object ) || is_wp_error( $wp_object ) ) {
@@ -109,9 +113,7 @@ class Collection {
 				'activitypub_replies_collection_does_not_exist',
 				\sprintf(
 					// translators: %s: The type (post, comment, etc.) for which no replies collection exists.
-					\__(
-						'No reply collection exists for the type %s.'
-					),
+					\__( 'No reply collection exists for the type %s.', 'activitypub' ),
 					$type
 				)
 			);
@@ -132,7 +134,7 @@ class Collection {
 
 		// Add ActivityPub Context.
 		$response = array_merge(
-			array( '@context'   => Base_Object::JSON_LD_CONTEXT ),
+			array( '@context' => Base_Object::JSON_LD_CONTEXT ),
 			$response
 		);
 
@@ -288,7 +290,7 @@ class Collection {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
 		);
 
 		return $params;
@@ -304,13 +306,13 @@ class Collection {
 
 		$params['type'] = array(
 			'required' => true,
-			'type' => 'string',
-			'enum' => array( 'post', 'comment' ),
+			'type'     => 'string',
+			'enum'     => array( 'post', 'comment' ),
 		);
 
 		$params['id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
 		);
 
 		return $params;
