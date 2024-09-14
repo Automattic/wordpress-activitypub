@@ -27,6 +27,7 @@ class Activitypub {
 	public static function init() {
 		\add_filter( 'template_include', array( self::class, 'render_json_template' ), 99 );
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
+		\add_filter( 'redirect_canonical', array( self::class, 'redirect_canonical' ), 10, 2 );
 		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
 		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
 
@@ -187,6 +188,42 @@ class Activitypub {
 				echo PHP_EOL . '<link rel="alternate" type="application/activity+json" href="' . esc_url( $self_link ) . '" />' . PHP_EOL;
 			}
 		);
+	}
+
+	/**
+	 * Add support for `p` and `author` query vars.
+	 *
+	 * @param string $redirect_url  The URL to redirect to.
+	 * @param string $requested_url The requested URL.
+	 *
+	 * @return string $redirect_url
+	 */
+	public static function redirect_canonical( $redirect_url, $requested_url ) {
+		if ( ! is_activitypub_request() ) {
+			return $redirect_url;
+		}
+
+		$query = \wp_parse_url( $requested_url, PHP_URL_QUERY );
+
+		if ( ! $query ) {
+			return $redirect_url;
+		}
+
+		$parts = \wp_parse_args( $query );
+
+		if ( 1 !== count( $parts ) ) {
+			return $redirect_url;
+		}
+
+		if ( isset( $parts['p'] ) ) {
+			return null;
+		}
+
+		if ( isset( $parts['author'] ) ) {
+			return null;
+		}
+
+		return $requested_url;
 	}
 
 	/**
