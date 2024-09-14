@@ -305,6 +305,7 @@ class Collection {
 		$params['type'] = array(
 			'required' => true,
 			'type' => 'string',
+			'enum' => array( 'post', 'comment' ),
 		);
 
 		$params['id'] = array(
