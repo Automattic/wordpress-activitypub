@@ -5,7 +5,7 @@ import { createInterpolateElement } from '@wordpress/element';
 export function InheritModeBlockFallback( { name } ) {
 	const text = sprintf(
 		/* translators: %s: block name */
-		'This <strong>%s</strong> block will adapt to the page it is on, displaying the associated user on a user archive, or the post author on a single post. It will be <strong>empty</strong> on non-author pages.',
+		'This <strong>%s</strong> block will adapt to the page it is on, displaying the user profile associated with a post author (in a loop) or a user archive. It will be <strong>empty</strong> in other non-author contexts.',
 		name
 	);
 

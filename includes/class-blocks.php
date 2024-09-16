@@ -90,7 +90,13 @@ class Blocks {
 
 		// For a homepage/front page, if the Blog User is active, use it.
 		if ( ( is_front_page() || is_home() ) && ! is_user_type_disabled( 'blog' ) ) {
-			return 0;
+			return User_Collection::BLOG_USER_ID;
+		}
+
+		// If we're in a loop, use the post author
+		$author_id = get_the_author_meta( 'ID' );
+		if ( $author_id ) {
+			return $author_id;
 		}
 
 		// For other pages, the queried object will clue us in.
