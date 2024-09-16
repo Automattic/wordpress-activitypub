@@ -38,6 +38,10 @@
       "default": "site"
     }
   },
+  "usesContext": [
+    "postType",
+    "postId"
+  ],
   "editorScript": "file:./index.js",
   "viewScript": "file:./view.js",
   "style": [
