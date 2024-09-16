@@ -27,16 +27,16 @@ class Move {
 			return $actor;
 		}
 
-		$move_to_host = apply_filters( 'activitypub_move_actor_to_host', false, $id, $user );
+		$move_to = \get_user_option( 'activitypub_move_to', $user->get__id() );
 
-		if ( $move_to_host && is_string( $move_to_host ) ) {
-			$actor['movedTo'] = self::normalize_host( $move_to_host, $user->get_id() );
+		if ( $move_to ) {
+			$actor['movedTo'] = $move_to;
 		}
 
-		$move_from_host = apply_filters( 'activitypub_move_actor_from_host', false, $id, $user );
+		$also_known_as = \get_user_option( 'activitypub_also_known_as', $user->get__id() );
 
-		if ( $move_from_host && is_array( $move_from_host ) ) {
-			$actor['alsoKnownAs'] = self::normalize_hosts( $move_from_host, $user->get_id() );
+		if ( $also_known_as ) {
+			$actor['alsoKnownAs'] = (array) $also_known_as;
 		}
 
 		return $actor;
@@ -48,7 +48,6 @@ class Move {
 	 * @return void
 	 */
 	public static function add_settings() {
-
 	}
 
 	/**
