@@ -105,7 +105,7 @@ class Replies {
 	 *
 	 * @return string[] A list of the ActivityPub ID's.
 	 */
-	private static function get_activitypub_comment_ids( $comments ) {
+	private static function get_reply_ids( $comments ) {
 		$comment_ids = array();
 		// Only add external comments from the fediverse.
 		// Maybe use the Comment class more and the function is_local_comment etc.
@@ -157,7 +157,7 @@ class Replies {
 		$comments = get_comments( self::add_pagination_args( $args, $page, $comments_per_page ) );
 
 		// Get the ActivityPub ID's of the comments, without out local-only comments.
-		$comment_ids = self::get_activitypub_comment_ids( $comments );
+		$comment_ids = self::get_reply_ids( $comments );
 
 		// Build the associative CollectionPage array.
 		$collection_page = array(
