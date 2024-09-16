@@ -34,14 +34,6 @@ class Announce {
 	 * @return void
 	 */
 	public static function handle_announce( $array, $user_id, $activity = null ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.arrayFound
-		if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
-			return;
-		}
-
-		if ( ! isset( $array['object'] ) ) {
-			return;
-		}
-
 		// check if Activity is public or not
 		if ( ! is_activity_public( $array ) ) {
 			// @todo maybe send email
