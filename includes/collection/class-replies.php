@@ -113,11 +113,12 @@ class Replies {
 			if ( is_local_comment( $comment ) ) {
 				continue;
 			}
+
 			$comment_meta = \get_comment_meta( $comment->comment_ID );
-			if ( ! empty( $comment_meta['source_url'][0] ) ) {
-				$comment_ids[] = $comment_meta['source_url'][0];
-			} elseif ( ! empty( $comment_meta['source_id'][0] ) ) {
+			if ( ! empty( $comment_meta['source_id'][0] ) ) {
 				$comment_ids[] = $comment_meta['source_id'][0];
+			} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
+				$comment_ids[] = $comment_meta['source_url'][0];
 			}
 		}
 		return $comment_ids;
