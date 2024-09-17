@@ -35,7 +35,7 @@ function plugin_init() {
 	 *
 	 * @see https://wordpress.org/plugins/enable-mastodon-apps/
 	 */
-	if ( \defined( 'MASTODON_APPS_VERSION' ) ) {
+	if ( \defined( 'ENABLE_MASTODON_APPS_VERSION' ) ) {
 		require_once __DIR__ . '/class-enable-mastodon-apps.php';
 		Enable_Mastodon_Apps::init();
 	}
