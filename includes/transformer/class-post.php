@@ -125,6 +125,14 @@ class Post extends Base {
 	 * @return string The Posts ID.
 	 */
 	public function get_id() {
+		$last_legacy_id = (int) \get_option( 'activitypub_last_legacy_post', 0 );
+		$post_id        = $this->wp_object->ID;
+
+		if ( $post_id > $last_legacy_id ) {
+			// generate URI based on comment ID
+			return \add_query_arg( 'p', $post_id, \trailingslashit( \home_url() ) );
+		}
+
 		return $this->get_url();
 	}
 

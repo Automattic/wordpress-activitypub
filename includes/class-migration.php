@@ -136,6 +136,10 @@ class Migration {
 			self::migrate_from_2_6_0();
 		}
 
+		if ( version_compare( $version_from_db, '4.0.0', '<' ) ) {
+			self::migrate_from_3_x();
+		}
+
 		update_option( 'activitypub_db_version', self::get_target_version() );
 
 		self::unlock();
@@ -326,7 +330,7 @@ class Migration {
 	 * @param string $old The old option key
 	 * @param string $new The new option key
 	 */
-	   private static function update_options_key( $old, $new ) { // phpcs:ignore
+	private static function update_options_key( $old, $new ) { // phpcs:ignore
 		global $wpdb;
 
 		$wpdb->update( // phpcs:ignore
@@ -336,5 +340,32 @@ class Migration {
 			array( '%s' ),
 			array( '%s' )
 		);
+	}
+
+	/**
+	 * Migrate from 3.X
+	 *
+	 * * Get the ID of the latest blog post and save it to the options table
+	 *
+	 * @return void
+	 */
+	private static function migrate_from_3_x() {
+		$latest_post_id = 0;
+
+		// get the ID of the latest blog post and save it to the options table
+		$latest_post = get_posts(
+			array(
+				'numberposts' => 1,
+				'orderby'     => 'date',
+				'order'       => 'DESC',
+				'post_status' => 'publish',
+			)
+		);
+
+		if ( $latest_post ) {
+			$latest_post_id = $latest_post[0]->ID;
+		}
+
+		update_option( 'activitypub_last_legacy_post', $latest_post_id );
 	}
 }
