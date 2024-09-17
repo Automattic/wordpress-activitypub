@@ -39,7 +39,7 @@ class Extra_Fields {
 		return apply_filters( 'activitypub_get_actor_extra_fields', $fields, $user_id );
 	}
 
-	private static function get_formatted_content( $post ) {
+	public static function get_formatted_content( $post ) {
 		$content = \get_the_content( null, false, $post );
 		$content = Link::the_content( $content, true );
 		if ( site_supports_blocks() ) {
@@ -238,62 +238,11 @@ class Extra_Fields {
 		return $extra_fields;
 	}
 
-	public static function get_extra_fields_for_mastodon_api( $user_id ) {
-		$ret    = array();
-		$fields = self::get_actor_fields( $user_id );
-
-		foreach ( $fields as $field ) {
-			$ret[] = array(
-				'name'   => $field->post_title,
-				'value'  => self::get_formatted_content( $field ),
-			);
-		}
-
-		return $ret;
-	}
-
-	private static function make_paragraph_block( $content ) {
+	public static function make_paragraph_block( $content ) {
 		if ( ! site_supports_blocks() ) {
 			return $content;
 		}
 		return '<!-- wp:paragraph --><p>' . $content . '</p><!-- /wp:paragraph -->';
-	}
-
-	public static function set_extra_fields_from_mastodon_api( $user_id, $fields ) {
-		// The Mastodon API submits a simple hash, every field.
-		// We can reasonably assume a similar order for our operations below.
-		$ids       = wp_list_pluck( self::get_actor_fields( $user_id ), 'ID' );
-		$is_blog   = self::is_blog( $user_id );
-		$post_type = $is_blog ? self::BLOG_POST_TYPE : self::USER_POST_TYPE;
-
-		foreach ( $fields as $i => $field ) {
-			$post_id  = $ids[ $i ] ?? null;
-			$has_post = $post_id && \get_post( $post_id );
-			$args     = array(
-				'post_title'   => $field['name'],
-				'post_content' => self::make_paragraph_block( $field['value'] ),
-			);
-
-			if ( $has_post ) {
-				$args['ID'] = $ids[ $i ];
-				\wp_update_post( $args );
-			} else {
-				$args['post_type']   = $post_type;
-				$args['post_status'] = 'publish';
-				if ( ! $is_blog ) {
-					$args['post_author'] = $user_id;
-				}
-				\wp_insert_post( $args );
-			}
-		}
-
-		// Delete any remaining fields.
-		if ( \count( $fields ) < \count( $ids ) ) {
-			$to_delete = \array_slice( $ids, \count( $fields ) );
-			foreach ( $to_delete as $id ) {
-				\wp_delete_post( $id, true );
-			}
-		}
 	}
 
 	/**

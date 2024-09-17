@@ -98,13 +98,76 @@ class Enable_Mastodon_Apps {
 		}
 
 		if ( isset( $data['fields_attributes'] ) ) {
-			Extra_Fields::set_extra_fields_from_mastodon_api( $user_id, $data['fields_attributes'] );
+			self::set_extra_fields( $user_id, $data['fields_attributes'] );
 			unset( $data['fields_attributes'] );
 		}
 
 		return $data;
 	}
 
+	/**
+	 * Get extra fields for Mastodon API
+	 *
+	 * @param int $user_id The user id to act on.
+	 * @return array The extra fields.
+	 */
+	private static function get_extra_fields( $user_id ) {
+		$ret    = array();
+		$fields = Extra_Fields::get_actor_fields( $user_id );
+
+		foreach ( $fields as $field ) {
+			$ret[] = array(
+				'name'   => $field->post_title,
+				'value'  => Extra_Fields::get_formatted_content( $field ),
+			);
+		}
+
+		return $ret;
+	}
+
+	/**
+	 * Set extra fields for Mastodon API
+	 *
+	 * @param int   $user_id The user id to act on.
+	 * @param array $fields The fields to set. It is assumed to be the entire set of desired fields.
+	 * @return void
+	 */
+	private static function set_extra_fields( $user_id, $fields ) {
+		// The Mastodon API submits a simple hash for every field.
+		// We can reasonably assume a similar order for our operations below.
+		$ids       = wp_list_pluck( Extra_Fields::get_actor_fields( $user_id ), 'ID' );
+		$is_blog   = Users::BLOG_USER_ID === $user_id;
+		$post_type = $is_blog ? Extra_Fields::BLOG_POST_TYPE : Extra_Fields::USER_POST_TYPE;
+
+		foreach ( $fields as $i => $field ) {
+			$post_id  = $ids[ $i ] ?? null;
+			$has_post = $post_id && \get_post( $post_id );
+			$args     = array(
+				'post_title'   => $field['name'],
+				'post_content' => Extra_Fields::make_paragraph_block( $field['value'] ),
+			);
+
+			if ( $has_post ) {
+				$args['ID'] = $ids[ $i ];
+				\wp_update_post( $args );
+			} else {
+				$args['post_type']   = $post_type;
+				$args['post_status'] = 'publish';
+				if ( ! $is_blog ) {
+					$args['post_author'] = $user_id;
+				}
+				\wp_insert_post( $args );
+			}
+		}
+
+		// Delete any remaining fields.
+		if ( \count( $fields ) < \count( $ids ) ) {
+			$to_delete = \array_slice( $ids, \count( $fields ) );
+			foreach ( $to_delete as $id ) {
+				\wp_delete_post( $id, true );
+			}
+		}
+	}
 	/**
 	 * Add followers to Mastodon API
 	 *
@@ -237,7 +300,7 @@ class Enable_Mastodon_Apps {
 		$posts = \get_posts( $query_args );
 		$account->last_status_at = ! empty( $posts ) ? new DateTime( $posts[0]->post_date_gmt ) : $account->created_at;
 
-		$account->fields = Extra_Fields::get_extra_fields_for_mastodon_api( $user_id_to_use );
+		$account->fields = self::get_extra_fields( $user_id_to_use );
 		// Now do it in source['fields'] with stripped tags
 		$account->source['fields'] = \array_map(
 			function ( $field ) {
