@@ -209,17 +209,18 @@ class Activitypub {
 			return $redirect_url;
 		}
 
-		$parts = \wp_parse_args( $query );
+		$query_params = \wp_parse_args( $query );
+		unset( $query_params['activitypub'] );
 
-		if ( 1 !== count( $parts ) ) {
+		if ( 1 !== count( $query_params ) ) {
 			return $redirect_url;
 		}
 
-		if ( isset( $parts['p'] ) ) {
+		if ( isset( $query_params['p'] ) ) {
 			return null;
 		}
 
-		if ( isset( $parts['author'] ) ) {
+		if ( isset( $query_params['author'] ) ) {
 			return null;
 		}
 
