@@ -137,7 +137,7 @@ class Migration {
 		}
 
 		if ( version_compare( $version_from_db, '4.0.0', '<' ) ) {
-			self::migrate_from_3_x();
+			self::migrate_to_4_0_0();
 		}
 
 		update_option( 'activitypub_db_version', self::get_target_version() );
@@ -343,13 +343,13 @@ class Migration {
 	}
 
 	/**
-	 * Migrate from 3.X
+	 * Migrate to version 4.0.0
 	 *
 	 * * Get the ID of the latest blog post and save it to the options table
 	 *
 	 * @return void
 	 */
-	private static function migrate_from_3_x() {
+	private static function migrate_to_4_0_0() {
 		$latest_post_id = 0;
 
 		// get the ID of the latest blog post and save it to the options table
