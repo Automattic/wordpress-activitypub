@@ -173,6 +173,10 @@ class Blocks {
 		if ( is_null( $followee_user_id ) ) {
 			return '<!-- Followers block: `inherit` mode does not display on this type of page -->';
 		}
+		$user = User_Collection::get_by_id( $followee_user_id );
+		if ( is_wp_error( $user ) ) {
+			return '<!-- Followers block: `' . $followee_user_id . '` not an active ActivityPub user -->';
+		}
 
 		$per_page = absint( $attrs['per_page'] );
 		$follower_data = Followers::get_followers_with_count( $followee_user_id, $per_page );
