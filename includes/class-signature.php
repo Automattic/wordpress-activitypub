@@ -94,10 +94,12 @@ class Signature {
 
 		$key = \openssl_pkey_new( $config );
 		$priv_key = null;
+		$detail = array();
+		if ( $key ) {
+			\openssl_pkey_export( $key, $priv_key );
 
-		\openssl_pkey_export( $key, $priv_key );
-
-		$detail = \openssl_pkey_get_details( $key );
+			$detail = \openssl_pkey_get_details( $key );
+		}
 
 		// check if keys are valid
 		if (
