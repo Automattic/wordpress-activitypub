@@ -125,7 +125,7 @@ class Post extends Base {
 	 * @return string The Posts ID.
 	 */
 	public function get_id() {
-		$last_legacy_id = (int) \get_option( 'activitypub_last_legacy_post', 0 );
+		$last_legacy_id = (int) \get_option( 'activitypub_last_post_with_permalink_as_id', 0 );
 		$post_id        = $this->wp_object->ID;
 
 		if ( $post_id > $last_legacy_id ) {

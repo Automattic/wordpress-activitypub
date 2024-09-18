@@ -366,6 +366,6 @@ class Migration {
 			$latest_post_id = $latest_post[0]->ID;
 		}
 
-		update_option( 'activitypub_last_legacy_post', $latest_post_id );
+		update_option( 'activitypub_last_post_with_permalink_as_id', $latest_post_id );
 	}
 }
