@@ -39,7 +39,6 @@
 				cropDetails.dst_height = control.params.flex_height ? control.params.width  / ratio : control.params.height;
 			}
 
-
 			return wp.ajax.post( 'crop-image', {
 				// where wp_customize: 'on' would be in Core, for no good reason I understand.
 				nonce: attachment.get( 'nonces' ).edit,
@@ -109,6 +108,11 @@
 	 */
 	$chooseButton.on( 'click', function () {
 		var $el = $( this );
+		var userId = $el.data( 'userId' );
+		var mediaQuery = { type: 'image' };
+		if ( userId ) {
+			mediaQuery.author = userId;
+		}
 
 		// Create the media frame.
 		frame = wp.media( {
@@ -122,7 +126,7 @@
 			states: [
 				new wp.media.controller.Library( {
 					title: $el.data( 'choose-text' ),
-					library: wp.media.query( { type: 'image' } ),
+					library: wp.media.query( mediaQuery ),
 					date: false,
 					suggestedWidth: $el.data( 'size' ),
 					suggestedHeight: $el.data( 'size' ),
