@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.5] - 2024-09-17
+
+### Fixed
+
+* Enable Mastodon Apps check
+* Fediverse replies were not threaded properly
+
+## [3.2.4] - 2024-09-16
+
+### Improved
+
+* Inbox validation
+
+## [3.2.3] - 2024-09-15
+
+### Fixed
+
+* NodeInfo endpoint
+* (Temporarily) Remove HTML from `summary`, because it seems that Mastodon has issues with it
+
+### Improved
+
+* Accessibility for Reply-Context
+* Use `Article` Object-Type as default
+
 ## [3.2.2] - 2024-09-09
 
 ### Fixed
@@ -897,6 +922,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
+[3.2.5]: https://github.com/Automattic/wordpress-activitypub/compare/3.2.4...3.2.5
+[3.2.4]: https://github.com/Automattic/wordpress-activitypub/compare/3.2.3...3.2.4
+[3.2.3]: https://github.com/Automattic/wordpress-activitypub/compare/3.2.2...3.2.3
 [3.2.2]: https://github.com/Automattic/wordpress-activitypub/compare/3.2.1...3.2.2
 [3.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/3.2.0...3.2.1
 [3.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/3.1.0...3.2.0

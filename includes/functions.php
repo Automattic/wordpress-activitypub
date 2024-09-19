@@ -210,8 +210,7 @@ function is_comment() {
 	if ( ! is_null( $comment_id ) ) {
 		$comment = \get_comment( $comment_id );
 
-		// Only return local origin comments
-		if ( $comment && $comment->user_id ) {
+		if ( $comment ) {
 			return $comment_id;
 		}
 	}

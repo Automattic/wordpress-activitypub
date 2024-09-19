@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 5.5  
 **Tested up to:** 6.6  
-**Stable tag:** 3.2.2  
+**Stable tag:** 3.2.5  
 **Requires PHP:** 7.0  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -141,6 +141,22 @@ The followers of a user can be found in the menu under "Users" -> "Followers" or
 For reasons of data protection, it is not possible to see the followers of other users.
 
 ## Changelog ##
+
+### 3.2.5 ###
+
+* Fixed: Enable Mastodon Apps check
+* Fixed: Fediverse replies were not threaded properly
+
+### 3.2.4 ###
+
+* Improved: Inbox validation
+
+### 3.2.3 ###
+
+* Fixed: NodeInfo endpoint
+* Fixed: (Temporarily) Remove HTML from `summary`, because it seems that Mastodon has issues with it
+* Improved: Accessibility for Reply-Context
+* Improved: Use `Article` Object-Type as default
 
 ### 3.2.2 ###
 
