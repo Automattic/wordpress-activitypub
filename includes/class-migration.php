@@ -284,7 +284,7 @@ class Migration {
 	 * @return void
 	 */
 	public static function add_default_settings() {
-		\set_option( 'activitypub_immutable_actor_id', true );
+		\add_option( 'activitypub_immutable_actor_id', true );
 		self::add_activitypub_capability();
 	}
 
