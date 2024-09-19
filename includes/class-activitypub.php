@@ -5,10 +5,12 @@ use Exception;
 use Activitypub\Signature;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Extra_Fields;
 
 use function Activitypub\is_comment;
 use function Activitypub\sanitize_url;
 use function Activitypub\is_local_comment;
+use function Activitypub\site_supports_blocks;
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\is_activitypub_request;
 use function Activitypub\should_comment_be_federated;
@@ -45,9 +47,11 @@ class Activitypub {
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 
-		\add_filter( 'activitypub_get_actor_extra_fields', array( self::class, 'default_actor_extra_fields' ), 10, 2 );
+		if ( site_supports_blocks() ) {
+			\add_action( 'tool_box', array( self::class, 'tool_box' ) );
+		}
 
-		\add_action( 'tool_box', array( self::class, 'tool_box' ) );
+		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
 		// register several post_types
 		self::register_post_types();
@@ -502,34 +506,35 @@ class Activitypub {
 			)
 		);
 
-		\register_post_type(
-			'ap_extrafield',
-			array(
-				'labels'           => array(
-					'name'          => _x( 'Extra fields', 'post_type plural name', 'activitypub' ),
-					'singular_name' => _x( 'Extra field', 'post_type single name', 'activitypub' ),
-					'add_new'       => __( 'Add new', 'activitypub' ),
-					'add_new_item'  => __( 'Add new extra field', 'activitypub' ),
-					'new_item'      => __( 'New extra field', 'activitypub' ),
-					'edit_item'     => __( 'Edit extra field', 'activitypub' ),
-					'view_item'     => __( 'View extra field', 'activitypub' ),
-					'all_items'     => __( 'All extra fields', 'activitypub' ),
-				),
-				'public'              => false,
-				'hierarchical'        => false,
-				'query_var'           => false,
-				'has_archive'         => false,
-				'publicly_queryable'  => false,
-				'show_in_menu'        => false,
-				'delete_with_user'    => true,
-				'can_export'          => true,
-				'exclude_from_search' => true,
-				'show_in_rest'        => true,
-				'map_meta_cap'        => true,
-				'show_ui'             => true,
-				'supports'            => array( 'title', 'editor', 'page-attributes' ),
-			)
+		// Both User and Blog Extra Fields types have the same args.
+		$args = array(
+			'labels'           => array(
+				'name'          => _x( 'Extra fields', 'post_type plural name', 'activitypub' ),
+				'singular_name' => _x( 'Extra field', 'post_type single name', 'activitypub' ),
+				'add_new'       => __( 'Add new', 'activitypub' ),
+				'add_new_item'  => __( 'Add new extra field', 'activitypub' ),
+				'new_item'      => __( 'New extra field', 'activitypub' ),
+				'edit_item'     => __( 'Edit extra field', 'activitypub' ),
+				'view_item'     => __( 'View extra field', 'activitypub' ),
+				'all_items'     => __( 'All extra fields', 'activitypub' ),
+			),
+			'public'              => false,
+			'hierarchical'        => false,
+			'query_var'           => false,
+			'has_archive'         => false,
+			'publicly_queryable'  => false,
+			'show_in_menu'        => false,
+			'delete_with_user'    => true,
+			'can_export'          => true,
+			'exclude_from_search' => true,
+			'show_in_rest'        => true,
+			'map_meta_cap'        => true,
+			'show_ui'             => true,
+			'supports'            => array( 'title', 'editor', 'page-attributes' ),
 		);
+
+		\register_post_type( Extra_Fields::USER_POST_TYPE, $args );
+		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $args );
 
 		\do_action( 'activitypub_after_register_post_type' );
 	}
@@ -546,61 +551,5 @@ class Activitypub {
 			$user = \get_user_by( 'id', $user_id );
 			$user->add_cap( 'activitypub' );
 		}
-	}
-
-	/**
-	 * Add default extra fields to an actor.
-	 *
-	 * @param array $extra_fields The extra fields.
-	 * @param int   $user_id      The User-ID.
-	 *
-	 * @return array The extra fields.
-	 */
-	public static function default_actor_extra_fields( $extra_fields, $user_id ) {
-		if ( $extra_fields || ! $user_id ) {
-			return $extra_fields;
-		}
-
-		$already_migrated = \get_user_meta( $user_id, 'activitypub_default_extra_fields', true );
-
-		if ( $already_migrated ) {
-			return $extra_fields;
-		}
-
-		$defaults = array(
-			\__( 'Blog', 'activitypub' )     => \home_url( '/' ),
-			\__( 'Profile', 'activitypub' )  => \get_author_posts_url( $user_id ),
-			\__( 'Homepage', 'activitypub' ) => \get_the_author_meta( 'user_url', $user_id ),
-		);
-
-		$menu_order = 10;
-		foreach ( $defaults as $title => $url ) {
-			if ( ! $url ) {
-				continue;
-			}
-
-			$extra_field = array(
-				'post_type'      => 'ap_extrafield',
-				'post_title'     => $title,
-				'post_status'    => 'publish',
-				'post_author'    => $user_id,
-				'post_content'   => sprintf(
-					'<!-- wp:paragraph --><p><a rel="me" title="%s" target="_blank" href="%s">%s</a></p><!-- /wp:paragraph -->',
-					\esc_attr( $url ),
-					$url,
-					\wp_parse_url( $url, \PHP_URL_HOST )
-				),
-				'comment_status' => 'closed',
-				'menu_order'     => $menu_order,
-			);
-
-			$menu_order += 10;
-			$extra_field_id = wp_insert_post( $extra_field );
-			$extra_fields[] = get_post( $extra_field_id );
-		}
-
-		\update_user_meta( $user_id, 'activitypub_default_extra_fields', true );
-
-		return $extra_fields;
 	}
 }

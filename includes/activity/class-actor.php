@@ -24,7 +24,6 @@ class Actor extends Base_Object {
 		array(
 			'schema' => 'http://schema.org#',
 			'toot' => 'http://joinmastodon.org/ns#',
-			'webfinger' => 'https://webfinger.net/#',
 			'lemmy' => 'https://join-lemmy.org/ns#',
 			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
 			'PropertyValue' => 'schema:PropertyValue',
@@ -53,7 +52,6 @@ class Actor extends Base_Object {
 			'postingRestrictedToMods' => 'lemmy:postingRestrictedToMods',
 			'discoverable' => 'toot:discoverable',
 			'indexable' => 'toot:indexable',
-			'resource' => 'webfinger:resource',
 		),
 	);
 

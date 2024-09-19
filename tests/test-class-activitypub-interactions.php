@@ -109,13 +109,6 @@ class Test_Activitypub_Interactions extends WP_UnitTestCase {
 		$this->assertEquals( 'Helloexampleexample', $comment['comment_content'] );
 	}
 
-	public function test_convert_object_to_comment_not_reply_rejected() {
-		$object = $this->create_test_object();
-		unset( $object['object']['inReplyTo'] );
-		$converted = Activitypub\Collection\Interactions::add_comment( $object );
-		$this->assertFalse( $converted );
-	}
-
 	public function test_convert_object_to_comment_already_exists_rejected() {
 		$object = $this->create_test_object( 'https://example.com/test_convert_object_to_comment_already_exists_rejected' );
 		Activitypub\Collection\Interactions::add_comment( $object );

@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 5.5  
 **Tested up to:** 6.6  
-**Stable tag:** 3.1.0  
+**Stable tag:** 3.2.5  
 **Requires PHP:** 7.0  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -20,7 +20,8 @@ An example: I give you my Mastodon profile name: `@pfefferle@mastodon.social`. Y
 
 Once you follow Jane's `@jane@example.com` profile, any blog post she crafts on `example.com` will land in your Home feed. Simultaneously, by following the blog-wide profile `@example.com@example.com`, you'll receive updates from all authors.
 
-**Note**: if no one follows your author or blog instance, your posts remain unseen. The simplest method to verify the plugin's operation is by following your profile. If you possess a Mastodon profile, initiate by following your new one.
+> [!NOTE]
+> If no one follows your author or blog instance, your posts remain unseen. The simplest method to verify the plugin's operation is by following your profile. If you possess a Mastodon profile, initiate by following your new one.
 
 The plugin works with the following tested federated platforms, but there may be more that it works with as well:
 
@@ -48,7 +49,8 @@ So what’s the process?
 1. On your blog, publish a new post.
 1. From Mastodon, check to see if the new post appears in your Home feed.
 
-Please note that it may take up to 15 minutes or so for the new post to show up in your federated feed. This is because the messages are sent to the federated platforms using a delayed cron. This avoids breaking the publishing process for those cases where users might have lots of followers. So please don’t assume that just because you didn’t see it show up right away that something is broken. Give it some time. In most cases, it will show up within a few minutes, and you’ll know everything is working as expected.
+> [!NOTE]
+> It may take up to 15 minutes or so for the new post to show up in your federated feed. This is because the messages are sent to the federated platforms using a delayed cron. This avoids breaking the publishing process for those cases where users might have lots of followers. So please don’t assume that just because you didn’t see it show up right away that something is broken. Give it some time. In most cases, it will show up within a few minutes, and you’ll know everything is working as expected.
 
 ## Frequently Asked Questions ##
 
@@ -105,6 +107,12 @@ Where 'blog' is the path to the subdirectory at which your blog resides.
 
 If you are running your blog in a subdirectory, but have a different [wp_siteurl](https://wordpress.org/documentation/article/giving-wordpress-its-own-directory/), you don't need the redirect, because the index.php will take care of that.
 
+### What if you are running your blog behind a reverse proxy with Apache? ###
+
+If you are using a reverse proxy with Apache to run your host you may encounter that you are unable to have followers join the blog. This will occur because the proxy system rewrites the host headers to be the internal DNS name of your server, which the plugin then uses to attempt to sign the replies. The remote site attempting to follow your users is expecting the public DNS name on the replies. In these cases you will need to use the 'ProxyPreserveHost On' directive to ensure the external host name is passed to your internal host.
+
+If you are using SSL between the proxy and internal host you may also need to `SSLProxyCheckPeerName off` if your internal host can not answer with the correct SSL name. This may present a security issue in some environments.
+
 ### Constants ###
 
 The plugin uses PHP Constants to enable, disable or change its default behaviour. Please use them with caution and only if you know what you are doing.
@@ -115,6 +123,7 @@ The plugin uses PHP Constants to enable, disable or change its default behaviour
 * `ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS` - Change the number of attachments, that should be federated. Default: `3`.
 * `ACTIVITYPUB_HASHTAGS_REGEXP` - Change the default regex to detect hashtext in a text. Default: `(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))`.
 * `ACTIVITYPUB_USERNAME_REGEXP` - Change the default regex to detect @-replies in a text. Default: `(?:([A-Za-z0-9\._-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))`.
+* `ACTIVITYPUB_URL_REGEXP` - Change the default regex to detect urls in a text. Default: `(www.|http:|https:)+[^\s]+[\w\/]`.
 * `ACTIVITYPUB_CUSTOM_POST_CONTENT` - Change the default template for Activities. Default: `<strong>[ap_title]</strong>\n\n[ap_content]\n\n[ap_hashtags]\n\n[ap_shortlink]`.
 * `ACTIVITYPUB_AUTHORIZED_FETCH` - Enable AUTHORIZED_FETCH. Default: `false`.
 * `ACTIVITYPUB_DISABLE_REWRITES` - Disable auto generation of `mod_rewrite` rules. Default: `false`.
@@ -132,6 +141,47 @@ The followers of a user can be found in the menu under "Users" -> "Followers" or
 For reasons of data protection, it is not possible to see the followers of other users.
 
 ## Changelog ##
+
+### 3.2.5 ###
+
+* Fixed: Enable Mastodon Apps check
+* Fixed: Fediverse replies were not threaded properly
+
+### 3.2.4 ###
+
+* Improved: Inbox validation
+
+### 3.2.3 ###
+
+* Fixed: NodeInfo endpoint
+* Fixed: (Temporarily) Remove HTML from `summary`, because it seems that Mastodon has issues with it
+* Improved: Accessibility for Reply-Context
+* Improved: Use `Article` Object-Type as default
+
+### 3.2.2 ###
+
+* Fixed: Extra-Fields check
+
+### 3.2.1 ###
+
+* Fixed: Use `Excerpt` for Podcast Episodes
+
+### 3.2.0 ###
+
+* Added: Support for Seriously Simple Podcasting
+* Added: Blog extra fields
+* Added: Support "read more" for Activity-Summary
+* Added: `Like` and `Announce` (Boost) handler
+* Added: Simple Remote-Reply endpoint
+* Added: "Stream" Plugin support
+* Added: New Fediverse symbol
+* Improved: Replace hashtags, urls and mentions in summary with links
+* Improved: Hide Bookmarklet if site does not support Blocks
+* Fixed: Link detection for extra fields when spaces after the link and fix when two links in the content
+* Fixed: `Undo` for `Likes` and `Announces`
+* Fixed: Show Avatars on `Likes` and `Announces`
+* Fixed: Remove proprietary WebFinger resource
+* Fixed: Wrong followers URL in "to" attribute of posts
 
 ### 3.1.0 ###
 
@@ -167,18 +217,6 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Remote-Reply endpoint
 * Fixed: WebFinger Error Codes (thanks to the FediTest project)
 * Fixed: Fatal Error when wp_schedule_single_event third argument is being passed as a string
-
-### 2.5.0 ###
-
-* Added: WebFinger cors header
-* Added: WebFinger Content-Type
-* Added: The Fediverse creator of a post to OpenGraph
-* Improved: Try to lookup local users first for Enable Mastodon Apps
-* Improved: Send also Announces for deletes
-* Improved: Load time by adding `count_total=false` to `WP_User_Query`
-* Fixed: Several WebFinger issues
-* Fixed: Redirect issue for Application user
-* Fixed: Accessibilty issues with missing screen-reader-text on User overview page
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/master/CHANGELOG.md).
 

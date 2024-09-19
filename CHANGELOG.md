@@ -5,7 +5,69 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.1.0] - 2024-08-XX
+## [3.2.5] - 2024-09-17
+
+### Fixed
+
+* Enable Mastodon Apps check
+* Fediverse replies were not threaded properly
+
+## [3.2.4] - 2024-09-16
+
+### Improved
+
+* Inbox validation
+
+## [3.2.3] - 2024-09-15
+
+### Fixed
+
+* NodeInfo endpoint
+* (Temporarily) Remove HTML from `summary`, because it seems that Mastodon has issues with it
+
+### Improved
+
+* Accessibility for Reply-Context
+* Use `Article` Object-Type as default
+
+## [3.2.2] - 2024-09-09
+
+### Fixed
+
+* Fixed: Extra-Fields check
+
+## [3.2.1] - 2024-09-09
+
+### Fixed
+
+* Fixed: Use `Excerpt` for Podcast Episodes
+
+## [3.2.0] - 2024-09-09
+
+### Added
+
+* Support for Seriously Simple Podcasting
+* Blog extra fields
+* Support "read more" for Activity-Summary
+* `Like` and `Announce` (Boost) handler
+* Simple Remote-Reply endpoint
+* "Stream" Plugin support
+* New Fediverse symbol
+
+### Improved
+
+* Replace hashtags, URLs, and mentions in summary with links
+* Hide Bookmarklet if site does not support Blocks
+
+### Fixed
+
+* Link detection for extra fields when spaces after the link and fix when two links in the content
+* `Undo` for `Likes` and `Announces`
+* Show Avatars on `Likes` and `Announces`
+* Remove proprietary WebFinger resource
+* Wrong followers URL in "to" attribute of posts
+
+## [3.1.0] - 2024-08-07
 
 ### Added
 
@@ -860,6 +922,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
+[3.2.5]: https://github.com/Automattic/wordpress-activitypub/compare/3.2.4...3.2.5
+[3.2.4]: https://github.com/Automattic/wordpress-activitypub/compare/3.2.3...3.2.4
+[3.2.3]: https://github.com/Automattic/wordpress-activitypub/compare/3.2.2...3.2.3
+[3.2.2]: https://github.com/Automattic/wordpress-activitypub/compare/3.2.1...3.2.2
+[3.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/3.2.0...3.2.1
+[3.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/3.1.0...3.2.0
 [3.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/3.0.0...3.1.0
 [3.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/2.6.1...3.0.0
 [2.6.1]: https://github.com/Automattic/wordpress-activitypub/compare/2.6.0...2.6.1
