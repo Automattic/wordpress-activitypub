@@ -1215,3 +1215,13 @@ function generate_post_summary( $post, $length = 500 ) {
 	*/
 	return $content;
 }
+
+function use_immutable_actor_id() {
+	if ( \defined( 'ACTIVITYPUB_IMMUTABLE_ACTOR_ID' ) ) {
+		return ACTIVITYPUB_IMMUTABLE_ACTOR_ID;
+	}
+
+	$use_immutable_actor_id = (int) \get_option( 'activitypub_immutable_actor_id', false );
+
+	return (bool) $use_immutable_actor_id;
+}
