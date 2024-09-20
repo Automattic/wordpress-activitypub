@@ -135,10 +135,6 @@
 							<p class="description">
 								<?php
 									\esc_html_e( 'Your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' );
-									echo '<br />';
-									echo '<em>';
-									\esc_html_e( 'Note that Mastodon clients will only show four fields.', 'activitypub' );
-									echo '</em>';
 								?>
 							</p>
 

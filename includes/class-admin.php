@@ -115,8 +115,6 @@ class Admin {
 			<div class="notice" style="margin: 0; background: none; border: none; box-shadow: none; padding: 15px 0 0 0; font-size: 14px;">
 				<?php
 					esc_html_e( 'These are extra fields that are used for your ActivityPub profile. You can use your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' );
-					echo '<br />';
-					esc_html_e( 'Note that Mastodon clients will only show four fields.', 'activitypub' );
 				?>
 			</div>
 			<?php
