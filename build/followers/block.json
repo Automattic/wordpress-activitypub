@@ -33,6 +33,10 @@
       ]
     }
   },
+  "usesContext": [
+    "postType",
+    "postId"
+  ],
   "styles": [
     {
       "name": "default",
