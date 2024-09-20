@@ -67,12 +67,56 @@ class Blocks {
 		);
 	}
 
+	/**
+	 * Get the user ID from a user string.
+	 *
+	 * @param string $user_string The user string. Can be a user ID, 'site', or 'inherit'.
+	 * @return int|null The user ID, or null if the 'inherit' string is not supported in this context.
+	 */
 	private static function get_user_id( $user_string ) {
 		if ( is_numeric( $user_string ) ) {
 			return absint( $user_string );
 		}
-		// any other non-numeric falls back to 0, including the `site` string used in the UI
-		return 0;
+
+		// if the user string is 'site', return the Blog User ID.
+		if ( 'site' === $user_string ) {
+			return User_Collection::BLOG_USER_ID;
+		}
+
+		// The only other value should be 'inherit', which means to use the query context to determine the User.
+		if ( 'inherit' !== $user_string ) {
+			return null;
+		}
+
+		// For a homepage/front page, if the Blog User is active, use it.
+		if ( ( is_front_page() || is_home() ) && ! is_user_type_disabled( 'blog' ) ) {
+			return User_Collection::BLOG_USER_ID;
+		}
+
+		// If we're in a loop, use the post author
+		$author_id = get_the_author_meta( 'ID' );
+		if ( $author_id ) {
+			return $author_id;
+		}
+
+		// For other pages, the queried object will clue us in.
+		$queried_object = get_queried_object();
+		if ( ! $queried_object ) {
+			return null;
+		}
+
+		// If we're on a user archive page, use that user's ID.
+		if ( is_a( $queried_object, 'WP_User' ) ) {
+			return $queried_object->ID;
+		}
+
+		// For a single post, use the post author's ID.
+		if ( is_a( $queried_object, 'WP_Post' ) ) {
+			return get_the_author_meta( 'ID' );
+		}
+
+		// We won't properly account for some conditions, like tag archives.
+		return null;
 	}
 
 	/**
@@ -93,12 +137,20 @@ class Blocks {
 	public static function render_follow_me_block( $attrs ) {
 		$user_id = self::get_user_id( $attrs['selectedUser'] );
 		$user = User_Collection::get_by_id( $user_id );
-		if ( ! is_wp_error( $user ) ) {
-			$attrs['profileData'] = self::filter_array_by_keys(
-				$user->to_array(),
-				array( 'icon', 'name', 'webfinger' )
-			);
+		if ( is_wp_error( $user ) ) {
+			if ( 'inherit' === $attrs['selectedUser'] ) {
+				// If the user is 'inherit' and we couldn't determine the user, don't render anything.
+				return '<!-- Follow Me block: `inherit` mode does not display on this type of page -->';
+			} else {
+				// If the user is a specific ID and we couldn't find it, render an error message.
+				return '<!-- Follow Me block: user not found -->';
+			}
 		}
+
+		$attrs['profileData'] = self::filter_array_by_keys(
+			$user->to_array(),
+			array( 'icon', 'name', 'webfinger' )
+		);
 
 		// add `@` prefix if it's missing
 		if ( '@' !== substr( $attrs['profileData']['webfinger'], 0, 1 ) ) {
@@ -118,6 +170,14 @@ class Blocks {
 
 	public static function render_follower_block( $attrs ) {
 		$followee_user_id = self::get_user_id( $attrs['selectedUser'] );
+		if ( is_null( $followee_user_id ) ) {
+			return '<!-- Followers block: `inherit` mode does not display on this type of page -->';
+		}
+		$user = User_Collection::get_by_id( $followee_user_id );
+		if ( is_wp_error( $user ) ) {
+			return '<!-- Followers block: `' . $followee_user_id . '` not an active ActivityPub user -->';
+		}
+
 		$per_page = absint( $attrs['per_page'] );
 		$follower_data = Followers::get_followers_with_count( $followee_user_id, $per_page );
 

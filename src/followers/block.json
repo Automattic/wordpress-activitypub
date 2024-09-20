@@ -30,6 +30,7 @@
 			"enum": [ "asc", "desc" ]
 		}
 	},
+	"usesContext": [ "postType", "postId" ],
 	"styles": [
 		{ "name": "default", "label": "No Lines", "isDefault": true },
 		{ "name": "with-lines", "label": "Lines" },
