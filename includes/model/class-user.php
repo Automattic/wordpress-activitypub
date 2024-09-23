@@ -136,6 +136,14 @@ class User extends Actor {
 	}
 
 	public function get_icon() {
+		$icon = \get_user_option( 'activitypub_icon', $this->_id );
+		if ( wp_attachment_is_image( $icon ) ) {
+			return array(
+				'type' => 'Image',
+				'url'  => esc_url( wp_get_attachment_url( $icon ) ),
+			);
+		}
+
 		$icon = \esc_url(
 			\get_avatar_url(
 				$this->_id,
@@ -153,12 +161,12 @@ class User extends Actor {
 		$header_image = get_user_option( 'activitypub_header_image', $this->_id );
 		$image_url    = null;
 
-		if ( $header_image ) {
-			$image_url = \wp_get_attachment_url( $header_image );
+		if ( ! $header_image && \has_header_image() ) {
+			$image_url = \get_header_image();
 		}
 
-		if ( ! $image_url && \has_header_image() ) {
-			$image_url = \get_header_image();
+		if ( $header_image ) {
+			$image_url = \wp_get_attachment_url( $header_image );
 		}
 
 		if ( $image_url ) {
@@ -277,5 +285,53 @@ class User extends Actor {
 		} else {
 			return false;
 		}
+	}
+
+
+	/**
+	 * Update the User-Name.
+	 *
+	 * @param mixed $value The new value.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function update_name( $value ) {
+		$userdata = [ 'ID' => $this->_id, 'display_name' => $value ];
+		return \wp_update_user( $userdata );
+	}
+
+	/**
+	 * Update the User-Description.
+	 *
+	 * @param mixed $value The new value.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function update_summary( $value ) {
+		return \update_user_option( $this->_id, 'activitypub_description', $value );
+	}
+
+	/**
+	 * Update the User-Icon.
+	 *
+	 * @param mixed $value The new value. Should be an attachment ID.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function update_icon( $value ) {
+		if ( ! wp_attachment_is_image( $value ) ) {
+			return false;
+		}
+		return update_user_option( $this->_id, 'activitypub_icon', $value );
+	}
+
+	/**
+	 * Update the User-Header-Image.
+	 *
+	 * @param mixed $value The new value. Should be an attachment ID.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function update_header( $value ) {
+		if ( ! wp_attachment_is_image( $value ) ) {
+			return false;
+		}
+		return \update_user_option( $this->_id, 'activitypub_header_image', $value );
 	}
 }
