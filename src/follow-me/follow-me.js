@@ -33,7 +33,10 @@ function fetchProfile( userId ) {
 }
 
 function Profile( { profile, popupStyles, userId } ) {
-	const { avatar, name, webfinger } = profile;
+	const { avatar, name } = profile;
+	let { webfinger } = profile;
+	// check if webfinger starts with @ and add it if it doesn't
+	webfinger = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
 	return (
 		<div className="activitypub-profile">
 			<img className="activitypub-profile__avatar" src={ avatar } alt={ name } />
@@ -70,10 +73,12 @@ function Follow( { profile, popupStyles, userId } ) {
 }
 
 function DialogFollow( { profile, userId } ) {
-	const { webfinger } = profile;
+	let { webfinger } = profile;
 	const actionText = __( 'Follow', 'activitypub' );
 	const resourceUrl = `/${ namespace }/actors/${userId}/remote-follow?resource=`;
 	const copyDescription = __( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' );
+
+	webfinger = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
 
 	return <Dialog
 		actionText={ actionText }
