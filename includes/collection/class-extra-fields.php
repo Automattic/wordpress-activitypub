@@ -6,6 +6,8 @@ use Activitypub\Link;
 use WP_Query;
 use Activitypub\Collection\Users;
 
+use function Activitypub\site_supports_blocks;
+
 class Extra_Fields {
 
 	const USER_POST_TYPE = 'ap_extrafield';
@@ -37,6 +39,23 @@ class Extra_Fields {
 		return apply_filters( 'activitypub_get_actor_extra_fields', $fields, $user_id );
 	}
 
+	public static function get_formatted_content( $post ) {
+		$content = \get_the_content( null, false, $post );
+		$content = Link::the_content( $content, true );
+		if ( site_supports_blocks() ) {
+			$content = \do_blocks( $content );
+		}
+		$content = \wptexturize( $content );
+		$content = \wp_filter_content_tags( $content );
+		// replace script and style elements
+		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
+		$content = \strip_shortcodes( $content );
+		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+		$content = \apply_filters( 'activitypub_extra_field_content', $content, $post );
+
+		return $content;
+	}
+
 	/**
 	 * Transforms the Extra Fields (Cutom Post Types) to ActivityPub Actor-Attachments.
 	 *
@@ -56,16 +75,7 @@ class Extra_Fields {
 		);
 
 		foreach ( $fields as $post ) {
-			$content = \get_the_content( null, false, $post );
-			$content = \do_blocks( $content );
-			$content = \wptexturize( $content );
-			$content = \wp_filter_content_tags( $content );
-			// replace script and style elements
-			$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
-			$content = \strip_shortcodes( $content );
-			$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
-			$content = \apply_filters( 'activitypub_extra_field_content', $content, $post );
-
+			$content = self::get_formatted_content( $post );
 			$attachments[] = array(
 				'type' => 'PropertyValue',
 				'name' => \get_the_title( $post ),
@@ -211,10 +221,7 @@ class Extra_Fields {
 				'post_title'     => $title,
 				'post_status'    => 'publish',
 				'post_author'    => $user_id,
-				'post_content'   => sprintf(
-					'<!-- wp:paragraph --><p>%s</p><!-- /wp:paragraph -->',
-					Link::the_content( $url )
-				),
+				'post_content'   => self::make_paragraph_block( Link::the_content( $url ) ),
 				'comment_status' => 'closed',
 				'menu_order'     => $menu_order,
 			);
@@ -229,6 +236,13 @@ class Extra_Fields {
 			: \update_user_meta( $user_id, 'activitypub_default_extra_fields', true );
 
 		return $extra_fields;
+	}
+
+	public static function make_paragraph_block( $content ) {
+		if ( ! site_supports_blocks() ) {
+			return $content;
+		}
+		return '<!-- wp:paragraph --><p>' . $content . '</p><!-- /wp:paragraph -->';
 	}
 
 	/**
