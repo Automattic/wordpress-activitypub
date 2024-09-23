@@ -378,7 +378,7 @@ class Comment {
 			return $comment_link;
 		}
 
-		$public_comment_link = self::get_comment_link_from_meta( $comment->comment_ID, false);
+		$public_comment_link = self::get_comment_link_from_meta( $comment->comment_ID, false );
 
 		return $public_comment_link ?? $comment_link;
 	}
