@@ -5,6 +5,8 @@ use WP_Post;
 use WP_Comment;
 use WP_Error;
 
+use Activitypub\Comment;
+
 use function Activitypub\is_local_comment;
 use function Activitypub\get_rest_url_by_path;
 
@@ -114,11 +116,9 @@ class Replies {
 				continue;
 			}
 
-			$comment_meta = \get_comment_meta( $comment->comment_ID );
-			if ( ! empty( $comment_meta['source_id'][0] ) ) {
-				$comment_ids[] = $comment_meta['source_id'][0];
-			} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
-				$comment_ids[] = $comment_meta['source_url'][0];
+			$public_comment_id = Comment::get_comment_link_from_meta( $comment->comment_ID );
+			if ( $public_comment_id ) {
+				$comment_ids[] = $public_comment_id;
 			}
 		}
 		return $comment_ids;
