@@ -210,8 +210,8 @@ class Blog extends Actor {
 	 * @return array The User-Icon.
 	 */
 	public function get_icon() {
-		// try site icon first
-		$icon_id = get_option( 'site_icon' );
+		// try site_logo, falling back to site_icon, first
+		$icon_id = get_option( 'site_logo', get_option( 'site_icon' ) );
 
 		// try custom logo second
 		if ( ! $icon_id ) {
@@ -394,11 +394,57 @@ class Blog extends Actor {
 	}
 
 	/**
-	 * Get the User-Hashtags.
+	 * Update the User-Name.
+	 *
+	 * @param mixed $value The new value.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function update_name( $value ) {
+		return \update_option( 'blogname', $value );
+	}
+
+	/**
+	* Update the User-Description.
+	*
+	* @param mixed $value The new value.
+	* @return bool True if the attribute was updated, false otherwise.
+	*/
+	public function update_summary( $value ) {
+		return \update_option( 'blogdescription', $value );
+	}
+
+	/**
+	* Update the User-Icon.
+	*
+	* @param mixed $value The new value.
+	* @return bool True if the attribute was updated, false otherwise.
+	*/
+	public function update_icon( $value ) {
+		if ( ! wp_attachment_is_image( $value ) ) {
+			return false;
+		}
+		return \update_option( 'site_logo', $value ) && \update_option( 'site_icon', $value );
+	}
+
+	/**
+	* Update the User-Header-Image.
+	*
+	* @param mixed $value The new value.
+	* @return bool True if the attribute was updated, false otherwise.
+	*/
+	public function update_header( $value ) {
+		if ( ! wp_attachment_is_image( $value ) ) {
+			return false;
+		}
+		return \update_option( 'activitypub_header_image', $value );
+	}
+
+	/**
+	 * Get the User - Hashtags .
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#Hashtag
 	 *
-	 * @return array The User-Hashtags.
+	 * @return array The User - Hashtags .
 	 */
 	public function get_tag() {
 		$hashtags = array();

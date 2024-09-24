@@ -140,6 +140,13 @@ The followers of a user can be found in the menu under "Users" -> "Followers" or
 
 For reasons of data protection, it is not possible to see the followers of other users.
 
+## Screenshots ##
+
+1. The "Follow me"-Block in the Block-Editor
+2. The "Followers"-Block in the Block-Editor
+3. The "Federated Reply"-Block in the Block-Editor
+4. A "Federated Reply" in a Post
+
 ## Changelog ##
 
 ### 3.2.5 ###

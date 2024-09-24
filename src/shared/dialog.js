@@ -80,7 +80,7 @@ export function Dialog( { actionText, copyDescription, handle, resourceUrl, myPr
 				<h4>{ __( 'Your Profile', 'activitypub' ) }</h4>
 				<div className="activitypub-dialog__description">
 					{ createInterpolateElement(
-						__( 'Or, if you know your own profile, we can start things that way! (eg <code>yourusername@example.com</code>)', 'activitypub' ),
+						__( 'Or, if you know your own profile, we can start things that way! (eg <code>@yourusername@example.com</code>)', 'activitypub' ),
 						{ code: <code /> }
 					) }
 				</div>

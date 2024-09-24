@@ -6,6 +6,7 @@ use Activitypub\Webfinger as Webfinger_Util;
 use Activitypub\Http;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Extra_Fields;
 use Activitypub\Integration\Nodeinfo;
 use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Entity\Account;
@@ -13,6 +14,8 @@ use Enable_Mastodon_Apps\Entity\Status;
 use Enable_Mastodon_Apps\Entity\Media_Attachment;
 
 use function Activitypub\get_remote_metadata_by_actor;
+use function Activitypub\is_user_type_disabled;
+use function Activitypub\is_user_disabled;
 
 /**
  * Class Enable_Mastodon_Apps
@@ -27,15 +30,144 @@ class Enable_Mastodon_Apps {
 	 */
 	public static function init() {
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
-		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_add_followers' ), 20, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 15, 2 );
+		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_internal' ), 9, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search' ), 40, 2 );
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search_by_url' ), 40, 2 );
 		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ) );
 		\add_filter( 'mastodon_api_statuses', array( self::class, 'api_statuses_external' ), 10, 2 );
 		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 23 );
+		\add_action( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
 	}
 
+	/**
+	 * Map user to blog if user is disabled
+	 *
+	 * @param int $user_id The user id
+	 *
+	 * @return int The user id
+	 */
+	public static function maybe_map_user_to_blog( $user_id ) {
+		if (
+			is_user_type_disabled( 'user' ) &&
+			! is_user_type_disabled( 'blog' ) &&
+			// check if the blog user is permissible for this user
+			user_can( $user_id, 'activitypub' )
+		) {
+			return Users::BLOG_USER_ID;
+		}
+
+		return $user_id;
+	}
+
+	/**
+	 * Update profile data for Mastodon API.
+	 *
+	 * @param array $data    The data to act on
+	 * @param int   $user_id The user id
+	 * @return array         The possibly-filtered data (data that's saved gets unset from the array)
+	 */
+	public static function api_update_credentials( $data, $user_id ) {
+		if ( empty( $user_id ) ) {
+			return $data;
+		}
+
+		$user_id = self::maybe_map_user_to_blog( $user_id );
+		$user    = Users::get_by_id( $user_id );
+		if ( ! $user || is_wp_error( $user ) ) {
+			return $data;
+		}
+
+		// User::update_icon and other update_* methods check data validity, so we don't need to do it here.
+		if ( isset( $data['avatar'] ) && $user->update_icon( $data['avatar'] ) ) {
+			// unset the avatar so it doesn't get saved again by other plugins.
+			// Ditto for all other fields below.
+			unset( $data['avatar'] );
+		}
+
+		if ( isset( $data['header'] ) && $user->update_header( $data['header'] ) ) {
+			unset( $data['header'] );
+		}
+
+		if ( isset( $data['display_name'] ) && $user->update_name( $data['display_name'] ) ) {
+			unset( $data['display_name'] );
+		}
+
+		if ( isset( $data['note'] ) && $user->update_summary( $data['note'] ) ) {
+			unset( $data['note'] );
+		}
+
+		if ( isset( $data['fields_attributes'] ) ) {
+			self::set_extra_fields( $user_id, $data['fields_attributes'] );
+			unset( $data['fields_attributes'] );
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Get extra fields for Mastodon API
+	 *
+	 * @param int $user_id The user id to act on.
+	 * @return array The extra fields.
+	 */
+	private static function get_extra_fields( $user_id ) {
+		$ret    = array();
+		$fields = Extra_Fields::get_actor_fields( $user_id );
+
+		foreach ( $fields as $field ) {
+			$ret[] = array(
+				'name'   => $field->post_title,
+				'value'  => Extra_Fields::get_formatted_content( $field ),
+			);
+		}
+
+		return $ret;
+	}
+
+	/**
+	 * Set extra fields for Mastodon API
+	 *
+	 * @param int   $user_id The user id to act on.
+	 * @param array $fields The fields to set. It is assumed to be the entire set of desired fields.
+	 * @return void
+	 */
+	private static function set_extra_fields( $user_id, $fields ) {
+		// The Mastodon API submits a simple hash for every field.
+		// We can reasonably assume a similar order for our operations below.
+		$ids       = wp_list_pluck( Extra_Fields::get_actor_fields( $user_id ), 'ID' );
+		$is_blog   = Users::BLOG_USER_ID === $user_id;
+		$post_type = $is_blog ? Extra_Fields::BLOG_POST_TYPE : Extra_Fields::USER_POST_TYPE;
+
+		foreach ( $fields as $i => $field ) {
+			$post_id  = $ids[ $i ] ?? null;
+			$has_post = $post_id && \get_post( $post_id );
+			$args     = array(
+				'post_title'   => $field['name'],
+				'post_content' => Extra_Fields::make_paragraph_block( $field['value'] ),
+			);
+
+			if ( $has_post ) {
+				$args['ID'] = $ids[ $i ];
+				\wp_update_post( $args );
+			} else {
+				$args['post_type']   = $post_type;
+				$args['post_status'] = 'publish';
+				if ( ! $is_blog ) {
+					$args['post_author'] = $user_id;
+				}
+				\wp_insert_post( $args );
+			}
+		}
+
+		// Delete any remaining fields.
+		if ( \count( $fields ) < \count( $ids ) ) {
+			$to_delete = \array_slice( $ids, \count( $fields ) );
+			foreach ( $to_delete as $id ) {
+				\wp_delete_post( $id, true );
+			}
+		}
+	}
 	/**
 	 * Add followers to Mastodon API
 	 *
@@ -46,6 +178,7 @@ class Enable_Mastodon_Apps {
 	 * @return array The filtered followers
 	 */
 	public static function api_account_followers( $followers, $user_id ) {
+		$user_id               = self::maybe_map_user_to_blog( $user_id );
 		$activitypub_followers = Followers::get_followers( $user_id, 40 );
 		$mastodon_followers    = array_map(
 			function ( $item ) {
@@ -63,7 +196,6 @@ class Enable_Mastodon_Apps {
 				$account->acct = $acct;
 				$account->display_name = $item->get_name();
 				$account->url = $item->get_url();
-				$account->uri = $item->get_id();
 				$account->avatar = $item->get_icon_url();
 				$account->avatar_static = $item->get_icon_url();
 				$account->created_at = new DateTime( $item->get_published() );
@@ -77,13 +209,10 @@ class Enable_Mastodon_Apps {
 				$account->bot = false;
 				$account->locked = false;
 				$account->group = false;
-				$account->discoversable = false;
-				$account->indexable = false;
-				$account->hide_collections = false;
+				$account->discoverable = false;
 				$account->noindex = false;
 				$account->fields = array();
 				$account->emojis = array();
-				$account->roles = array();
 
 				return $account;
 			},
@@ -93,47 +222,6 @@ class Enable_Mastodon_Apps {
 		$followers = array_merge( $mastodon_followers, $followers );
 
 		return $followers;
-	}
-
-	/**
-	 * Add followers count to Mastodon API
-	 *
-	 * @param Enable_Mastodon_Apps\Entity\Account $account The account
-	 * @param int                                 $user_id The user id
-	 *
-	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
-	 */
-	public static function api_account_add_followers( $account, $user_id ) {
-		if ( ! $account instanceof Account ) {
-			return $account;
-		}
-
-		$user = Users::get_by_various( $user_id );
-
-		if ( ! $user || is_wp_error( $user ) ) {
-			return $account;
-		}
-
-		$header = $user->get_image();
-		if ( $header ) {
-			$account->header = $header['url'];
-			$account->header_static = $header['url'];
-		}
-
-		foreach ( $user->get_attachment() as $attachment ) {
-			if ( 'PropertyValue' === $attachment['type'] ) {
-				$account->fields[] = array(
-					'name' => $attachment['name'],
-					'value' => $attachment['value'],
-				);
-			}
-		}
-
-		$account->acct = $user->get_preferred_username();
-		$account->note = $user->get_summary();
-
-		$account->followers_count = Followers::count_followers( $user->get__id() );
-		return $account;
 	}
 
 	/**
@@ -168,6 +256,63 @@ class Enable_Mastodon_Apps {
 		}
 
 		return $user_data;
+	}
+
+	public static function api_account_internal( $user_data, $user_id ) {
+		$user_id_to_use = self::maybe_map_user_to_blog( $user_id );
+		$user = Users::get_by_id( $user_id_to_use );
+
+		if ( ! $user || is_wp_error( $user ) ) {
+			return $user_data;
+		}
+
+		// convert user to account.
+		$account = new Account();
+		// even if we have a blog user, maintain the provided user_id so as not to confuse clients
+		$account->id = (int) $user_id;
+		$account->username = $user->get_preferred_username();
+		$account->acct = $account->username;
+		$account->display_name = $user->get_name();
+		$account->note = $user->get_summary();
+		$account->source['note'] = wp_strip_all_tags( $account->note, true );
+		$account->url = $user->get_url();
+
+		$icon = $user->get_icon();
+		$account->avatar = $icon['url'];
+		$account->avatar_static = $account->avatar;
+
+		$header = $user->get_image();
+		if ( $header ) {
+			$account->header = $header['url'];
+			$account->header_static = $account->header;
+		}
+
+		$account->created_at = new DateTime( $user->get_published() );
+
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
+		$query_args = array(
+			'post_type' => $post_types,
+			'posts_per_page' => 1,
+		);
+		if ( $user_id > 0 ) {
+			$query_args['author'] = $user_id;
+		}
+		$posts = \get_posts( $query_args );
+		$account->last_status_at = ! empty( $posts ) ? new DateTime( $posts[0]->post_date_gmt ) : $account->created_at;
+
+		$account->fields = self::get_extra_fields( $user_id_to_use );
+		// Now do it in source['fields'] with stripped tags
+		$account->source['fields'] = \array_map(
+			function ( $field ) {
+				$field['value'] = \wp_strip_all_tags( $field['value'], true );
+				return $field;
+			},
+			$account->fields
+		);
+
+		$account->followers_count = Followers::count_followers( $user->get__id() );
+
+		return $account;
 	}
 
 	private static function get_account_for_actor( $uri ) {
