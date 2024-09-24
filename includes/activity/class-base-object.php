@@ -446,6 +446,17 @@ class Base_Object {
 	protected $replies;
 
 	/**
+	 * Used to mark an object as containing sensitive content.
+	 * Mastodon displays a content warning, requiring users to click
+	 * through to view the content.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#sensitive
+	 *
+	 * @var boolean
+	 */
+	protected $sensitive = false;
+
+	/**
 	 * Magic function to implement getter and setter
 	 *
 	 * @param string $method The method name.

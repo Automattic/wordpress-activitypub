@@ -1177,6 +1177,11 @@ function generate_post_summary( $post, $length = 500 ) {
 		return '';
 	}
 
+	$content_warning = get_content_warning( $post->ID );
+	if ( $content_warning ) {
+		return $content_warning;
+	}
+
 	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
 
 	if ( $content ) {
@@ -1214,4 +1219,25 @@ function generate_post_summary( $post, $length = 500 ) {
 	return \apply_filters( 'the_excerpt', $content );
 	*/
 	return $content;
+}
+
+/**
+ * Get the content warning of a post.
+ *
+ * @param int $post_id The post ID.
+ *
+ * @return string|false The content warning or false if not found.
+ */
+function get_content_warning( $post_id ) {
+	$post = get_post( $post_id );
+	if ( ! $post ) {
+		return false;
+	}
+
+	$warning = get_post_meta( $post->ID, 'activitypub_content_warning', true );
+	if ( empty( $warning ) ) {
+		return false;
+	}
+
+	return $warning;
 }
