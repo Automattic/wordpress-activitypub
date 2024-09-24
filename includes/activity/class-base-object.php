@@ -30,7 +30,8 @@ class Base_Object {
 	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
 		array(
-			'Hashtag' => 'as:Hashtag',
+			'Hashtag'   => 'as:Hashtag',
+			'sensitive' => 'as:sensitive',
 		),
 	);
 
