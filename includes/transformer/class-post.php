@@ -124,7 +124,7 @@ class Post extends Base {
 	 *
 	 * @return string The Posts ID.
 	 */
-	public function get_id() {
+	protected function get_id() {
 		return $this->get_url();
 	}
 

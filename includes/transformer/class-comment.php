@@ -134,13 +134,8 @@ class Comment extends Base {
 		}
 
 		if ( $parent_comment ) {
-			$comment_meta = \get_comment_meta( $parent_comment->comment_ID );
-
-			if ( ! empty( $comment_meta['source_id'][0] ) ) {
-				$in_reply_to = $comment_meta['source_id'][0];
-			} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
-				$in_reply_to = $comment_meta['source_url'][0];
-			} elseif ( ! empty( $parent_comment->user_id ) ) {
+			$in_reply_to = Comment_Utils::get_source_id( $parent_comment->comment_ID );
+			if ( ! $in_reply_to && ! empty( $parent_comment->user_id ) ) {
 				$in_reply_to = Comment_Utils::generate_id( $parent_comment );
 			}
 		} else {

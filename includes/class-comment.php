@@ -341,6 +341,46 @@ class Comment {
 	}
 
 	/**
+	 * Gets the public comment id via the WordPress comments meta.
+	 *
+	 * @param  int    $wp_comment_id The internal WordPress comment ID.
+	 * @param  bool   $fallback      Whether the code should fall back to `source_url` if `source_id` is not set.
+	 *
+	 * @return string|null           The ActivityPub id/url of the comment.
+	 */
+	public static function get_source_id( $wp_comment_id, $fallback = true ) {
+		$comment_meta = \get_comment_meta( $wp_comment_id );
+
+		if ( ! empty( $comment_meta['source_id'][0] ) ) {
+			return $comment_meta['source_id'][0];
+		} elseif ( ! empty( $comment_meta['source_url'][0] && $fallback ) ) {
+			return $comment_meta['source_url'][0];
+		}
+
+		return null;
+	}
+
+	/**
+	 * Gets the public comment url via the WordPress comments meta.
+	 *
+	 * @param  int    $wp_comment_id The internal WordPress comment ID.
+	 * @param  bool   $fallback      Whether the code should fall back to `source_id` if `source_url` is not set.
+	 *
+	 * @return string|null           The ActivityPub id/url of the comment.
+	 */
+	public static function get_source_url( $wp_comment_id, $fallback = true ) {
+		$comment_meta = \get_comment_meta( $wp_comment_id );
+
+		if ( ! empty( $comment_meta['source_url'][0] ) ) {
+			return $comment_meta['source_url'][0];
+		} elseif ( ! empty( $comment_meta['source_id'][0] && $fallback ) ) {
+			return $comment_meta['source_id'][0];
+		}
+
+		return null;
+	}
+
+	/**
 	 * Link remote comments to source url.
 	 *
 	 * @param string $comment_link
@@ -353,15 +393,9 @@ class Comment {
 			return $comment_link;
 		}
 
-		$comment_meta = \get_comment_meta( $comment->comment_ID );
+		$public_comment_link = self::get_source_url( $comment->comment_ID );
 
-		if ( ! empty( $comment_meta['source_url'][0] ) ) {
-			return $comment_meta['source_url'][0];
-		} elseif ( ! empty( $comment_meta['source_id'][0] ) ) {
-			return $comment_meta['source_id'][0];
-		}
-
-		return $comment_link;
+		return $public_comment_link ?? $comment_link;
 	}
 
 
@@ -373,14 +407,13 @@ class Comment {
 	 * @return string ActivityPub URI for comment
 	 */
 	public static function generate_id( $comment ) {
-		$comment      = \get_comment( $comment );
-		$comment_meta = \get_comment_meta( $comment->comment_ID );
+		$comment = \get_comment( $comment );
 
 		// show external comment ID if it exists
-		if ( ! empty( $comment_meta['source_id'][0] ) ) {
-			return $comment_meta['source_id'][0];
-		} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
-			return $comment_meta['source_url'][0];
+		$public_comment_link = self::get_source_id( $comment->comment_ID );
+
+		if ( $public_comment_link ) {
+			return $public_comment_link;
 		}
 
 		// generate URI based on comment ID

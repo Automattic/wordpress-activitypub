@@ -75,13 +75,9 @@ class Comment {
 			return $template;
 		}
 
-		$comment_meta = \get_comment_meta( $comment_id );
+		$resource = Comment_Utils::get_source_id( $comment_id );
 
-		if ( ! empty( $comment_meta['source_id'][0] ) ) {
-			$resource = $comment_meta['source_id'][0];
-		} elseif ( ! empty( $comment_meta['source_url'][0] ) ) {
-			$resource = $comment_meta['source_url'][0];
-		} else {
+		if ( ! $resource ) {
 			$resource = Comment_Utils::generate_id( $comment );
 		}
 
