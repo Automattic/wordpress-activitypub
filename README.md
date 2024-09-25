@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 5.5  
 **Tested up to:** 6.6  
-**Stable tag:** 3.2.5  
+**Stable tag:** 3.3.0  
 **Requires PHP:** 7.0  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -146,8 +146,19 @@ For reasons of data protection, it is not possible to see the followers of other
 2. The "Followers"-Block in the Block-Editor
 3. The "Federated Reply"-Block in the Block-Editor
 4. A "Federated Reply" in a Post
+5. A Blog-Profile on Mastodon
 
 ## Changelog ##
+
+### 3.3.0 ###
+
+* Added: Content warning support
+* Added: Replies collection
+* Added: Enable Mastodon Apps: support profile editing, blog user
+* Added: Follow Me/Followers: add inherit mode for dynamic templating
+* Fixed: Cropping Header Images for users without the 'customize' capability
+* Improved: OpenSSL handling
+* Improved: Added missing @ in Follow-Me block
 
 ### 3.2.5 ###
 

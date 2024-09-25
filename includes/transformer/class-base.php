@@ -1,12 +1,13 @@
 <?php
 namespace Activitypub\Transformer;
 
-use WP_Error;
 use WP_Post;
 use WP_Comment;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Collection\Replies;
+
 
 /**
  * WordPress Base Transformer
@@ -106,6 +107,16 @@ abstract class Base {
 		}
 
 		return $activity;
+	}
+
+	abstract protected function get_id();
+
+	/**
+	 * Get the replies Collection.
+	 */
+	public function get_replies() {
+		$replies = Replies::get_collection( $this->wp_object, $this->get_id() );
+		return $replies;
 	}
 
 	/**
