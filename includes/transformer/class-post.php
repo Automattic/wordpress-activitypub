@@ -14,6 +14,7 @@ use function Activitypub\site_supports_blocks;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\generate_post_summary;
+use function Activitypub\get_content_warning;
 
 /**
  * WordPress Post Transformer
@@ -86,6 +87,12 @@ class Post extends Base {
 				$this->get_actor_object()->get_followers(),
 			)
 		);
+
+		$content_warning = get_content_warning( $post );
+		if ( ! empty( $content_warning ) ) {
+			$object->set_sensitive( true );
+			$object->set_summary( $content_warning );
+		}
 
 		return $object;
 	}
