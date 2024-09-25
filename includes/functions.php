@@ -1177,11 +1177,6 @@ function generate_post_summary( $post, $length = 500 ) {
 		return '';
 	}
 
-	$content_warning = get_content_warning( $post->ID );
-	if ( $content_warning ) {
-		return $content_warning;
-	}
-
 	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
 
 	if ( $content ) {
