@@ -1216,6 +1216,11 @@ function generate_post_summary( $post, $length = 500 ) {
 	return $content;
 }
 
+/**
+ * Check if the immutable actor ID setting is enabled.
+ *
+ * @return bool true if the immutable actor ID setting is enabled, false otherwise.
+ */
 function use_immutable_actor_id() {
 	if ( \defined( 'ACTIVITYPUB_IMMUTABLE_ACTOR_ID' ) ) {
 		return ACTIVITYPUB_IMMUTABLE_ACTOR_ID;
