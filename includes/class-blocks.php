@@ -26,9 +26,10 @@ class Blocks {
 				$post_type,
 				'activitypub_content_warning',
 				array(
-					'show_in_rest' => true,
-					'single' => true,
-					'type' => 'string',
+					'show_in_rest'      => true,
+					'single'            => true,
+					'type'              => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
 				)
 			);
 		}
