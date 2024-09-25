@@ -368,5 +368,11 @@ class Migration {
 		}
 
 		update_option( 'activitypub_last_post_with_permalink_as_id', $latest_post_id );
+
+		$followers = Followers::get_all_followers();
+
+		if ( ! $followers ) {
+			\add_option( 'activitypub_immutable_actor_id', true );
+		}
 	}
 }
