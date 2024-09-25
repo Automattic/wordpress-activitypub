@@ -38,13 +38,15 @@ class Webfinger {
 
 		$array['subject'] = sprintf( 'acct:%s', $user->get_webfinger() );
 
+		$array['aliases'][] = $user->get_id();
 		$array['aliases'][] = $user->get_url();
 		$array['aliases'][] = $user->get_alternate_url();
+		$array['aliases']   = array_unique( $array['aliases'] );
 
 		$array['links'][] = array(
 			'rel'  => 'self',
 			'type' => 'application/activity+json',
-			'href' => $user->get_url(),
+			'href' => $user->get_id(),
 		);
 
 		$array['links'][] = array(
