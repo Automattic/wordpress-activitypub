@@ -30,7 +30,8 @@ class Base_Object {
 	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
 		array(
-			'Hashtag' => 'as:Hashtag',
+			'Hashtag'   => 'as:Hashtag',
+			'sensitive' => 'as:sensitive',
 		),
 	);
 
@@ -444,6 +445,17 @@ class Base_Object {
 	 *    | null
 	 */
 	protected $replies;
+
+	/**
+	 * Used to mark an object as containing sensitive content.
+	 * Mastodon displays a content warning, requiring users to click
+	 * through to view the content.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#sensitive
+	 *
+	 * @var boolean
+	 */
+	protected $sensitive = false;
 
 	/**
 	 * Magic function to implement getter and setter

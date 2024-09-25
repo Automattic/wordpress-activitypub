@@ -1225,3 +1225,24 @@ function use_immutable_actor_id() {
 
 	return (bool) $use_immutable_actor_id;
 }
+
+/**
+ * Get the content warning of a post.
+ *
+ * @param int $post_id The post ID.
+ *
+ * @return string|false The content warning or false if not found.
+ */
+function get_content_warning( $post_id ) {
+	$post = get_post( $post_id );
+	if ( ! $post ) {
+		return false;
+	}
+
+	$warning = get_post_meta( $post->ID, 'activitypub_content_warning', true );
+	if ( empty( $warning ) ) {
+		return false;
+	}
+
+	return $warning;
+}
