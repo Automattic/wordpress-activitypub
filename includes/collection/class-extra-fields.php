@@ -67,7 +67,7 @@ class Extra_Fields {
 		$attachments = array();
 		\add_filter(
 			'activitypub_link_rel',
-			function( $rel ) {
+			function ( $rel ) {
 				$rel .= ' me';
 
 				return $rel;
@@ -187,7 +187,7 @@ class Extra_Fields {
 
 		\add_filter(
 			'activitypub_link_rel',
-			function( $rel ) {
+			function ( $rel ) {
 				$rel .= ' me';
 
 				return $rel;
