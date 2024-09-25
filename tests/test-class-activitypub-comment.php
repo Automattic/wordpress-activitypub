@@ -1,5 +1,62 @@
 <?php
 class Test_Activitypub_Comment extends WP_UnitTestCase {
+	public function test_get_source_id_or_url() {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_type' => 'comment id',
+				'comment_content' => 'This is a comment id test',
+				'comment_author_url' => 'https://example.com',
+				'comment_author_email' => '',
+				'comment_meta' => array(
+					'protocol' => 'activitypub',
+					'source_id' => 'https://example.com/id',
+				),
+			)
+		);
+
+		$this->assertEquals( 'https://example.com/id', \Activitypub\Comment::get_source_url( $comment_id ) );
+		$this->assertEquals( 'https://example.com/id', \Activitypub\Comment::get_source_id( $comment_id ) );
+		$this->assertEquals( 'https://example.com/id', \Activitypub\Comment::get_source_id( $comment_id, false ) );
+		$this->assertEquals( null, \Activitypub\Comment::get_source_url( $comment_id, false ) );
+
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_type' => 'comment url',
+				'comment_content' => 'This is a comment url test',
+				'comment_author_url' => 'https://example.com',
+				'comment_author_email' => '',
+				'comment_meta' => array(
+					'protocol' => 'activitypub',
+					'source_url' => 'https://example.com/url',
+				),
+			)
+		);
+
+		$this->assertEquals( 'https://example.com/url', \Activitypub\Comment::get_source_id( $comment_id ) );
+		$this->assertEquals( 'https://example.com/url', \Activitypub\Comment::get_source_url( $comment_id ) );
+		$this->assertEquals( 'https://example.com/url', \Activitypub\Comment::get_source_url( $comment_id, false ) );
+		$this->assertEquals( null, \Activitypub\Comment::get_source_id( $comment_id, false ) );
+
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_type' => 'comment url and id',
+				'comment_content' => 'This is a comment url and id test',
+				'comment_author_url' => 'https://example.com',
+				'comment_author_email' => '',
+				'comment_meta' => array(
+					'protocol' => 'activitypub',
+					'source_url' => 'https://example.com/url',
+					'source_id' => 'https://example.com/id',
+				),
+			)
+		);
+
+		$this->assertEquals( 'https://example.com/id', \Activitypub\Comment::get_source_id( $comment_id ) );
+		$this->assertEquals( 'https://example.com/id', \Activitypub\Comment::get_source_id( $comment_id, false ) );
+		$this->assertEquals( 'https://example.com/url', \Activitypub\Comment::get_source_url( $comment_id ) );
+		$this->assertEquals( 'https://example.com/url', \Activitypub\Comment::get_source_url( $comment_id, false ) );
+	}
+
 	/**
 	 * @dataProvider ability_to_federate_comment
 	 */
