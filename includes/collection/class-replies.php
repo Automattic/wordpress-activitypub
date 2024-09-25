@@ -62,7 +62,7 @@ class Replies {
 	 *
 	 * @return string The rest URL of the replies collection.
 	 */
-	private static function get_replies_id( $wp_object ) {
+	private static function get_id( $wp_object ) {
 		if ( $wp_object instanceof WP_Post ) {
 			return get_rest_url_by_path( sprintf( 'posts/%d/replies', $wp_object->ID ) );
 		} elseif ( $wp_object instanceof WP_Comment ) {
@@ -81,7 +81,7 @@ class Replies {
 	 * @return array An associative array containing the replies collection without JSON-LD context.
 	 */
 	public static function get_collection( $wp_object ) {
-		$id = self::get_replies_id( $wp_object );
+		$id = self::get_id( $wp_object );
 
 		if ( ! $id ) {
 			return null;
@@ -116,7 +116,7 @@ class Replies {
 				continue;
 			}
 
-			$public_comment_id = Comment::get_comment_link_from_meta( $comment->comment_ID );
+			$public_comment_id = Comment::get_source_id( $comment->comment_ID );
 			if ( $public_comment_id ) {
 				$comment_ids[] = $public_comment_id;
 			}
@@ -140,7 +140,7 @@ class Replies {
 		$args = self::build_args( $wp_object );
 
 		// Retrieve the partOf if not already given.
-		$part_of = $part_of ?? self::get_replies_id( $wp_object );
+		$part_of = $part_of ?? self::get_id( $wp_object );
 
 		// If the collection page does not exist.
 		if ( is_wp_error( $args ) || is_wp_error( $part_of ) ) {

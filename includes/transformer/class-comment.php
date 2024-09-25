@@ -134,7 +134,7 @@ class Comment extends Base {
 		}
 
 		if ( $parent_comment ) {
-			$in_reply_to = Comment_Utils::get_comment_link_from_meta( $parent_comment->comment_ID );
+			$in_reply_to = Comment_Utils::get_source_id( $parent_comment->comment_ID );
 			if ( ! $in_reply_to && ! empty( $parent_comment->user_id ) ) {
 				$in_reply_to = Comment_Utils::generate_id( $parent_comment );
 			}
