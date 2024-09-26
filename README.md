@@ -216,7 +216,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Only send Update for previously-published posts
 * Improved: Simplified WebFinger code
 
-See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/master/CHANGELOG.md).
+See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).
 
 ## Upgrade Notice ##
 
