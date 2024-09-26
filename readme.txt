@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.6
-Stable tag: 3.3.0
+Stable tag: 3.3.1
 Requires PHP: 7.0
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -148,6 +148,11 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= 3.3.1 =
+
+* Fixed: PHP Warnings
+* Fixed: PHPCS issues
+
 = 3.3.0 =
 
 * Added: Content warning support
@@ -209,7 +214,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Only send Update for previously-published posts
 * Improved: Simplified WebFinger code
 
-See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/master/CHANGELOG.md).
+See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).
 
 == Upgrade Notice ==
 

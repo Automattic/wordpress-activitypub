@@ -353,7 +353,7 @@ class Comment {
 
 		if ( ! empty( $comment_meta['source_id'][0] ) ) {
 			return $comment_meta['source_id'][0];
-		} elseif ( ! empty( $comment_meta['source_url'][0] && $fallback ) ) {
+		} elseif ( ! empty( $comment_meta['source_url'][0] ) && $fallback ) {
 			return $comment_meta['source_url'][0];
 		}
 
@@ -373,7 +373,7 @@ class Comment {
 
 		if ( ! empty( $comment_meta['source_url'][0] ) ) {
 			return $comment_meta['source_url'][0];
-		} elseif ( ! empty( $comment_meta['source_id'][0] && $fallback ) ) {
+		} elseif ( ! empty( $comment_meta['source_id'][0] ) && $fallback ) {
 			return $comment_meta['source_id'][0];
 		}
 

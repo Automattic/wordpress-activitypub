@@ -75,7 +75,7 @@ function plugin_init() {
 		add_filter(
 			'activitypub_transformer',
 			// phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
-			function( $transformer, $object, $object_class ) {
+			function ( $transformer, $object, $object_class ) {
 				if (
 					'WP_Post' === $object_class &&
 					\get_post_meta( $object->ID, 'audio_file', true )
@@ -126,7 +126,7 @@ add_filter( 'wp_stream_connectors', __NAMESPACE__ . '\register_stream_connector'
 // Excluded ActivityPub post types from the Stream.
 add_filter(
 	'wp_stream_posts_exclude_post_types',
-	function( $post_types ) {
+	function ( $post_types ) {
 		$post_types[] = 'ap_follower';
 		$post_types[] = 'ap_extrafield';
 		$post_types[] = 'ap_extrafield_blog';
