@@ -207,7 +207,7 @@ class Blog extends Actor {
 	 */
 	public function get_icon() {
 		// try site_logo, falling back to site_icon, first
-		$icon_id = get_option( 'site_logo', get_option( 'site_icon' ) );
+		$icon_id = get_option( 'site_icon' );
 
 		// try custom logo second
 		if ( ! $icon_id ) {
@@ -419,7 +419,7 @@ class Blog extends Actor {
 		if ( ! wp_attachment_is_image( $value ) ) {
 			return false;
 		}
-		return \update_option( 'site_logo', $value ) && \update_option( 'site_icon', $value );
+		return \update_option( 'site_icon', $value );
 	}
 
 	/**
