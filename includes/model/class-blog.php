@@ -209,10 +209,6 @@ class Blog extends Actor {
 		// try site_logo, falling back to site_icon, first
 		$icon_id = get_option( 'site_icon' );
 
-		if ( ! $icon_id ) {
-			$icon_id = get_option( 'site_logo' );
-		}
-
 		// try custom logo second
 		if ( ! $icon_id ) {
 			$icon_id = get_theme_mod( 'custom_logo' );
