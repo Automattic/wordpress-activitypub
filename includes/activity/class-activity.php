@@ -17,75 +17,14 @@ use Activitypub\Activity\Base_Object;
  * @see https://www.w3.org/TR/activitystreams-core/#intransitiveactivities
  */
 class Activity extends Base_Object {
-	const CONTEXT = array(
+	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
-		'https://w3id.org/security/v1',
-		array(
-			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
-			'PropertyValue' => 'schema:PropertyValue',
-			'schema' => 'http://schema.org#',
-			'pt' => 'https://joinpeertube.org/ns#',
-			'toot' => 'http://joinmastodon.org/ns#',
-			'webfinger' => 'https://webfinger.net/#',
-			'litepub' => 'http://litepub.social/ns#',
-			'lemmy' => 'https://join-lemmy.org/ns#',
-			'value' => 'schema:value',
-			'Hashtag' => 'as:Hashtag',
-			'featured' => array(
-				'@id' => 'toot:featured',
-				'@type' => '@id',
-			),
-			'featuredTags' => array(
-				'@id' => 'toot:featuredTags',
-				'@type' => '@id',
-			),
-			'alsoKnownAs' => array(
-				'@id' => 'as:alsoKnownAs',
-				'@type' => '@id',
-			),
-			'moderators' => array(
-				'@id' => 'lemmy:moderators',
-				'@type' => '@id',
-			),
-			'postingRestrictedToMods' => 'lemmy:postingRestrictedToMods',
-			'discoverable' => 'toot:discoverable',
-			'indexable' => 'toot:indexable',
-			'sensitive' => 'as:sensitive',
-			'resource' => 'webfinger:resource',
-		),
 	);
-
-	/**
-	 * The object's unique global identifier
-	 *
-	 * @see https://www.w3.org/TR/activitypub/#obj-id
-	 *
-	 * @var string
-	 */
-	protected $id;
 
 	/**
 	 * @var string
 	 */
 	protected $type = 'Activity';
-
-	/**
-	 * The context within which the object exists or an activity was
-	 * performed.
-	 * The notion of "context" used is intentionally vague.
-	 * The intended function is to serve as a means of grouping objects
-	 * and activities that share a common originating context or
-	 * purpose. An example could be all activities relating to a common
-	 * project or event.
-	 *
-	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-context
-	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | null
-	 */
-	protected $context = self::CONTEXT;
 
 	/**
 	 * Describes the direct object of the activity.
@@ -95,7 +34,7 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-object-term
 	 *
 	 * @var string
-	 *    | Base_Objectr
+	 *    | Base_Object
 	 *    | Link
 	 *    | null
 	 */
@@ -150,6 +89,21 @@ class Activity extends Base_Object {
 	 *    | null
 	 */
 	protected $result;
+
+	/**
+	 * Identifies a Collection containing objects considered to be responses
+	 * to this object.
+	 * WordPress has a strong core system of approving replies. We only include
+	 * approved replies here.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-replies
+	 *
+	 * @var array
+	 *    | ObjectType
+	 *    | Link
+	 *    | null
+	 */
+	protected $replies;
 
 	/**
 	 * An indirect object of the activity from which the
@@ -222,8 +176,35 @@ class Activity extends Base_Object {
 			$this->set( 'actor', $object->get_attributed_to() );
 		}
 
-		if ( $object->get_id() && ! $this->get_id() ) {
-			$this->set( 'id', $object->get_id() . '#activity' );
+		if ( $object->get_in_reply_to() ) {
+			$this->set( 'in_reply_to', $object->get_in_reply_to() );
 		}
+
+		if ( $object->get_id() && ! $this->get_id() ) {
+			$id = strtok( $object->get_id(), '#' );
+			if ( $object->get_updated() ) {
+				$updated = $object->get_updated();
+			} else {
+				$updated = $object->get_published();
+			}
+			$this->set( 'id', $id . '#activity-' . strtolower( $this->get_type() ) . '-' . $updated );
+		}
+	}
+
+	/**
+	 * The context of an Activity is usually just the context of the object it contains.
+	 *
+	 * @return array $context A compacted JSON-LD context.
+	 */
+	public function get_json_ld_context() {
+		if ( $this->object instanceof Base_Object ) {
+			$class = get_class( $this->object );
+			if ( $class && $class::JSON_LD_CONTEXT ) {
+				// Without php 5.6 support this could be just: 'return  $this->object::JSON_LD_CONTEXT;'
+				return $class::JSON_LD_CONTEXT;
+			}
+		}
+
+		return static::JSON_LD_CONTEXT;
 	}
 }

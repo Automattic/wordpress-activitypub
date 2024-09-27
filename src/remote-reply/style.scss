@@ -1,0 +1,17 @@
+@import "./../shared/lightbox.scss";
+.activitypub-remote-profile-delete {
+	padding: 0 5px;
+	color: inherit;
+	align-self: center;
+	height: inherit;
+	font-size: inherit;
+
+	&:hover {
+		background: inherit;
+		border: inherit;
+	}
+}
+
+.activitypub-remote-reply {
+	display: flex;
+}

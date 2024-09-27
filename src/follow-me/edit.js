@@ -1,16 +1,39 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
+import { useSelect } from '@wordpress/data';
+import { store as coreStore } from '@wordpress/core-data';
 import { SelectControl, PanelBody } from '@wordpress/components';
 import { useUserOptions } from '../shared/use-user-options';
 import FollowMe from './follow-me';
 import { useEffect } from '@wordpress/element';
+import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
 
-export default function Edit( { attributes, setAttributes } ) {
+
+export default function Edit( {
+	attributes,
+	setAttributes,
+	context: { postType, postId },
+} ) {
 	const blockProps = useBlockProps( {
 		className: 'activitypub-follow-me-block-wrapper',
 	} );
-	const usersOptions = useUserOptions();
+	const usersOptions = useUserOptions( { withInherit: true } );
 	const { selectedUser } = attributes;
+	const isInheritMode = selectedUser === 'inherit';
+
+	const authorId = useSelect(
+		( select ) => {
+			const { getEditedEntityRecord } = select( coreStore );
+			const _authorId = getEditedEntityRecord(
+				'postType',
+				postType,
+				postId
+			)?.author;
+
+			return _authorId ?? null;
+		},
+		[ postType, postId ]
+	);
 
 	useEffect( () => {
 		// if there are no users yet, do nothing
@@ -37,7 +60,15 @@ export default function Edit( { attributes, setAttributes } ) {
 					</PanelBody>
 				</InspectorControls>
 			) }
-			<FollowMe { ...attributes } id={ blockProps.id } />
+			{ isInheritMode ?
+					authorId ? (
+						<FollowMe { ...attributes } id={ blockProps.id } selectedUser={ authorId } />
+					) : (
+						<InheritModeBlockFallback name={ __( 'Follow Me', 'activitypub' ) } />
+					)
+			 : (
+				<FollowMe { ...attributes } id={ blockProps.id } />
+			) }
 		</div>
 	);
 }

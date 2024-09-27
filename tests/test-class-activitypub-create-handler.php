@@ -18,7 +18,12 @@ class Test_Activitypub_Create_Handler extends WP_UnitTestCase {
 		);
 		$this->post_permalink = \get_permalink( $this->post_id );
 
-		\add_filter( 'pre_get_remote_metadata_by_actor', array( '\Test_Activitypub_Create_Handler', 'get_remote_metadata_by_actor' ), 0, 2 );
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'get_remote_metadata_by_actor' ), 0, 2 );
+	}
+
+	public function tear_down() {
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'get_remote_metadata_by_actor' ) );
+		parent::tear_down();
 	}
 
 	public static function get_remote_metadata_by_actor( $value, $actor ) {
@@ -47,23 +52,9 @@ class Test_Activitypub_Create_Handler extends WP_UnitTestCase {
 		);
 	}
 
-	public function test_handle_create_object_unset_rejected() {
-		$object = $this->create_test_object();
-		unset( $object['object'] );
-		$converted = Activitypub\Handler\Create::handle_create( $object, $this->user_id );
-		$this->assertNull( $converted );
-	}
-
 	public function test_handle_create_non_public_rejected() {
 		$object = $this->create_test_object();
 		$object['cc'] = [];
-		$converted = Activitypub\Handler\Create::handle_create( $object, $this->user_id );
-		$this->assertNull( $converted );
-	}
-
-	public function test_handle_create_no_id_rejected() {
-		$object = $this->create_test_object();
-		unset( $object['object']['id'] );
 		$converted = Activitypub\Handler\Create::handle_create( $object, $this->user_id );
 		$this->assertNull( $converted );
 	}

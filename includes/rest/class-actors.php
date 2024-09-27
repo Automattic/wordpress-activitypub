@@ -12,13 +12,13 @@ use Activitypub\Collection\Users as User_Collection;
 use function Activitypub\is_activitypub_request;
 
 /**
- * ActivityPub Followers REST-Class
+ * ActivityPub Actors REST-Class
  *
  * @author Matthias Pfefferle
  *
  * @see https://www.w3.org/TR/activitypub/#followers
  */
-class Users {
+class Actors {
 	/**
 	 * Initialize the class, registering WordPress hooks
 	 */
@@ -32,7 +32,7 @@ class Users {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)',
+			'/(users|actors)/(?P<user_id>[\w\-\.]+)',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -45,7 +45,7 @@ class Users {
 
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/remote-follow',
+			'/(users|actors)/(?P<user_id>[\w\-\.]+)/remote-follow',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -77,8 +77,11 @@ class Users {
 			return $user;
 		}
 
+		$link_header = sprintf( '<%1$s>; rel="alternate"; type="application/activity+json"', $user->get_id() );
+
 		// redirect to canonical URL if it is not an ActivityPub request
 		if ( ! is_activitypub_request() ) {
+			header( 'Link: ' . $link_header );
 			header( 'Location: ' . $user->get_canonical_url(), true, 301 );
 			exit;
 		}
@@ -88,14 +91,11 @@ class Users {
 		 */
 		\do_action( 'activitypub_rest_users_pre' );
 
-		$user->set_context(
-			Activity::CONTEXT
-		);
-
 		$json = $user->to_array();
 
 		$rest_response = new WP_REST_Response( $json, 200 );
 		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+		$rest_response->header( 'Link', $link_header );
 
 		return $rest_response;
 	}
@@ -123,11 +123,11 @@ class Users {
 			return $template;
 		}
 
-		$resource = $user->get_resource();
+		$resource = $user->get_webfinger();
 		$url      = str_replace( '{uri}', $resource, $template );
 
 		return new WP_REST_Response(
-			array( 'url' => $url ),
+			array( 'url' => $url, 'template' => $template ),
 			200
 		);
 	}

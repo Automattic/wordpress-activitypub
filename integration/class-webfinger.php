@@ -4,6 +4,8 @@ namespace Activitypub\Integration;
 use Activitypub\Rest\Webfinger as Webfinger_Rest;
 use Activitypub\Collection\Users as User_Collection;
 
+use function Activitypub\get_rest_url_by_path;
+
 /**
  * Compatibility with the WebFinger plugin
  *
@@ -34,7 +36,7 @@ class Webfinger {
 			return $array;
 		}
 
-		$array['subject'] = sprintf( 'acct:%s', $user->get_resource() );
+		$array['subject'] = sprintf( 'acct:%s', $user->get_webfinger() );
 
 		$array['aliases'][] = $user->get_url();
 		$array['aliases'][] = $user->get_alternate_url();
@@ -43,6 +45,11 @@ class Webfinger {
 			'rel'  => 'self',
 			'type' => 'application/activity+json',
 			'href' => $user->get_url(),
+		);
+
+		$array['links'][] = array(
+			'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+			'template' => get_rest_url_by_path( 'interactions?uri={uri}' ),
 		);
 
 		return $array;
@@ -58,12 +65,46 @@ class Webfinger {
 	 * @return array the jrd array
 	 */
 	public static function add_pseudo_user_discovery( $array, $resource ) {
-		$user = Webfinger_Rest::get_profile( $resource );
+		$user = User_Collection::get_by_resource( $resource );
 
-		if ( ! $user || is_wp_error( $user ) ) {
-			return $array;
+		if ( \is_wp_error( $user ) ) {
+			return $user;
 		}
 
-		return $user;
+		$aliases = array(
+			$user->get_url(),
+			$user->get_alternate_url(),
+		);
+
+		$aliases = array_unique( $aliases );
+
+		$profile = array(
+			'subject' => sprintf( 'acct:%s', $user->get_webfinger() ),
+			'aliases' => array_values( array_unique( $aliases ) ),
+			'links'   => array(
+				array(
+					'rel'  => 'self',
+					'type' => 'application/activity+json',
+					'href' => $user->get_url(),
+				),
+				array(
+					'rel'  => 'http://webfinger.net/rel/profile-page',
+					'type' => 'text/html',
+					'href' => $user->get_url(),
+				),
+				array(
+					'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+					'template' => get_rest_url_by_path( 'interactions?uri={uri}' ),
+				),
+			),
+		);
+
+		if ( 'Person' !== $user->get_type() ) {
+			$profile['links'][0]['properties'] = array(
+				'https://www.w3.org/ns/activitystreams#type' => $user->get_type(),
+			);
+		}
+
+		return $profile;
 	}
 }

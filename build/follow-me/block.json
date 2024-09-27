@@ -38,10 +38,14 @@
       "default": "site"
     }
   },
+  "usesContext": [
+    "postType",
+    "postId"
+  ],
   "editorScript": "file:./index.js",
   "viewScript": "file:./view.js",
   "style": [
-    "file:./style-index.css",
+    "file:./style-view.css",
     "wp-components"
   ]
 }

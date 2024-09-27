@@ -3,16 +3,20 @@ namespace Activitypub\Transformer;
 
 use WP_Post;
 use Activitypub\Shortcodes;
-use Activitypub\Model\Blog_User;
-use Activitypub\Transformer\Base;
+use Activitypub\Model\Blog;
 use Activitypub\Collection\Users;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Transformer\Base;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
-use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_enclosures;
 use function Activitypub\site_supports_blocks;
+use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_user_type_disabled;
+use function Activitypub\generate_post_summary;
+use function Activitypub\get_content_warning;
 
 /**
  * WordPress Post Transformer
@@ -26,12 +30,19 @@ use function Activitypub\site_supports_blocks;
  */
 class Post extends Base {
 	/**
+	 * The User as Actor Object.
+	 *
+	 * @var Activitypub\Activity\Actor
+	 */
+	private $actor_object = null;
+
+	/**
 	 * Returns the ID of the WordPress Post.
 	 *
 	 * @return int The ID of the WordPress Post
 	 */
 	public function get_wp_user_id() {
-		return $this->object->post_author;
+		return $this->wp_object->post_author;
 	}
 
 	/**
@@ -40,7 +51,7 @@ class Post extends Base {
 	 * @return int The User-ID of the WordPress Post
 	 */
 	public function change_wp_user_id( $user_id ) {
-		$this->object->post_author = $user_id;
+		$this->wp_object->post_author = $user_id;
 
 		return $this;
 	}
@@ -53,7 +64,7 @@ class Post extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
-		$post = $this->object;
+		$post = $this->wp_object;
 		$object = parent::to_object();
 
 		$published = \strtotime( $post->post_date_gmt );
@@ -71,14 +82,19 @@ class Post extends Base {
 				$this->get_locale() => $this->get_content(),
 			)
 		);
-		$path = sprintf( 'users/%d/followers', intval( $post->post_author ) );
 
 		$object->set_to(
 			array(
 				'https://www.w3.org/ns/activitystreams#Public',
-				get_rest_url_by_path( $path ),
+				$this->get_actor_object()->get_followers(),
 			)
 		);
+
+		$content_warning = get_content_warning( $post );
+		if ( ! empty( $content_warning ) ) {
+			$object->set_sensitive( true );
+			$object->set_summary( $content_warning );
+		}
 
 		return $object;
 	}
@@ -98,6 +114,35 @@ class Post extends Base {
 		$activity->set_object( $object );
 
 		return $activity;
+  }
+  
+  /**
+	 * Returns the User-Object of the Author of the Post.
+	 *
+	 * If `single_user` mode is enabled, the Blog-User is returned.
+	 *
+	 * @return Activitypub\Activity\Actor The User-Object.
+	 */
+	protected function get_actor_object() {
+		if ( $this->actor_object ) {
+			return $this->actor_object;
+		}
+
+		$blog_user         = new Blog();
+		$this->actor_object = $blog_user;
+
+		if ( is_single_user() ) {
+			return $blog_user;
+		}
+
+		$user = Users::get_by_id( $this->wp_object->post_author );
+
+		if ( $user && ! is_wp_error( $user ) ) {
+			$this->actor_object = $user;
+			return $user;
+		}
+
+		return $blog_user;
 	}
 
 	/**
@@ -105,7 +150,7 @@ class Post extends Base {
 	 *
 	 * @return string The Posts ID.
 	 */
-	public function get_id() {
+	protected function get_id() {
 		return $this->get_url();
 	}
 
@@ -115,12 +160,23 @@ class Post extends Base {
 	 * @return string The Posts URL.
 	 */
 	public function get_url() {
-		$post = $this->object;
+		$post = $this->wp_object;
 
-		if ( 'trash' === get_post_status( $post ) ) {
-			$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
-		} else {
-			$permalink = \get_permalink( $post );
+		switch ( \get_post_status( $post ) ) {
+			case 'trash':
+				$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
+				break;
+			case 'draft':
+				// get_sample_permalink is in wp-admin, not always loaded
+				if ( ! \function_exists( '\get_sample_permalink' ) ) {
+					require_once ABSPATH . 'wp-admin/includes/post.php';
+				}
+				$sample    = \get_sample_permalink( $post->ID );
+				$permalink = \str_replace( array( '%pagename%', '%postname%' ), $sample[1], $sample[0] );
+				break;
+			default:
+				$permalink = \get_permalink( $post );
+				break;
 		}
 
 		return \esc_url( $permalink );
@@ -134,12 +190,7 @@ class Post extends Base {
 	 * @return string The User-URL.
 	 */
 	protected function get_attributed_to() {
-		if ( is_single_user() ) {
-			$user = new Blog_User();
-			return $user->get_url();
-		}
-
-		return Users::get_by_id( $this->object->post_author )->get_url();
+		return $this->get_actor_object()->get_url();
 	}
 
 	/**
@@ -148,171 +199,374 @@ class Post extends Base {
 	 * @return array The Attachments.
 	 */
 	protected function get_attachment() {
-		// Once upon a time we only supported images, but we now support audio/video as well.
-		// We maintain the image-centric naming for backwards compatibility.
-		$max_media = intval( \apply_filters( 'activitypub_max_image_attachments', \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ) ) );
-
-		if ( site_supports_blocks() && \has_blocks( $this->object->post_content ) ) {
-			return $this->get_block_attachments( $max_media );
+		// Remove attachments from drafts.
+		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+			return array();
 		}
 
-		return $this->get_classic_editor_images( $max_media );
+		// Once upon a time we only supported images, but we now support audio/video as well.
+		// We maintain the image-centric naming for backwards compatibility.
+		$max_media = \intval(
+			\apply_filters(
+				'activitypub_max_image_attachments',
+				\get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS )
+			)
+		);
+
+		$media = array(
+			'audio' => array(),
+			'video' => array(),
+			'image' => array(),
+		);
+		$id    = $this->wp_object->ID;
+
+		// list post thumbnail first if this post has one
+		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
+			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
+		}
+
+		$media = $this->get_enclosures( $media );
+
+		if ( site_supports_blocks() && \has_blocks( $this->wp_object->post_content ) ) {
+			$media = $this->get_block_attachments( $media, $max_media );
+		} else {
+			$media = $this->get_classic_editor_images( $media, $max_media );
+		}
+
+		$media      = self::filter_media_by_object_type( $media, \get_post_format( $this->wp_object ), $this->wp_object );
+		$unique_ids = \array_unique( \array_column( $media, 'id' ) );
+		$media      = \array_intersect_key( $media, $unique_ids );
+		$media      = \array_slice( $media, 0, $max_media );
+
+		/**
+		 * Filter the attachment IDs for a post.
+		 *
+		 * @param array   $media           The media array grouped by type.
+		 * @param WP_Post $this->wp_object The post object.
+		 *
+		 * @return array The filtered attachment IDs.
+		 */
+		$media = \apply_filters( 'activitypub_attachment_ids', $media, $this->wp_object );
+
+		$attchments = \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media ) );
+
+		/**
+		 * Filter the attachments for a post.
+		 *
+		 * @param array   $attchments      The attachments.
+		 * @param WP_Post $this->wp_object The post object.
+		 *
+		 * @return array The filtered attachments.
+		 */
+		return \apply_filters( 'activitypub_attachments', $attchments, $this->wp_object );
+	}
+
+	/**
+	 * Get enclosures for a post.
+	 *
+	 * @param array $media The media array grouped by type.
+	 *
+	 * @return array The media array extended with enclosures.
+	 */
+	public function get_enclosures( $media ) {
+		$enclosures = get_enclosures( $this->wp_object->ID );
+
+		if ( ! $enclosures ) {
+			return $media;
+		}
+
+		foreach ( $enclosures as $enclosure ) {
+			// check if URL is an attachment
+			$attachment_id = \attachment_url_to_postid( $enclosure['url'] );
+			if ( $attachment_id ) {
+				$enclosure['id']        = $attachment_id;
+				$enclosure['url']       = \wp_get_attachment_url( $attachment_id );
+				$enclosure['mediaType'] = \get_post_mime_type( $attachment_id );
+			}
+
+			$mime_type       = $enclosure['mediaType'];
+			$mime_type_parts = \explode( '/', $mime_type );
+
+			switch ( $mime_type_parts[0] ) {
+				case 'image':
+					$media['image'][] = $enclosure;
+					break;
+				case 'audio':
+					$media['audio'][] = $enclosure;
+					break;
+				case 'video':
+					$media['video'][] = $enclosure;
+					break;
+			}
+		}
+
+		return $media;
 	}
 
 	/**
 	 * Get media attachments from blocks. They will be formatted as ActivityPub attachments, not as WP attachments.
 	 *
-	 * @param int $max_media The maximum number of attachments to return.
+	 * @param array $media     The media array grouped by type.
+	 * @param int   $max_media The maximum number of attachments to return.
 	 *
 	 * @return array The attachments.
 	 */
-	protected function get_block_attachments( $max_media ) {
+	protected function get_block_attachments( $media, $max_media ) {
 		// max media can't be negative or zero
 		if ( $max_media <= 0 ) {
 			return array();
 		}
 
-		$id = $this->object->ID;
+		$blocks = \parse_blocks( $this->wp_object->post_content );
+		$media = self::get_media_from_blocks( $blocks, $media );
 
-		$media_ids = array();
-
-		// list post thumbnail first if this post has one
-		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
-			$media_ids[] = \get_post_thumbnail_id( $id );
-		}
-
-		if ( $max_media > 0 ) {
-			$blocks = \parse_blocks( $this->object->post_content );
-			$media_ids = self::get_media_ids_from_blocks( $blocks, $media_ids, $max_media );
-		}
-
-		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media_ids ) );
-	}
-
-	/**
-	 * Get image attachments from the classic editor.
-	 * Note that audio/video attachments are only supported in the block editor.
-	 *
-	 * @param int $max_images The maximum number of images to return.
-	 *
-	 * @return array The attachments.
-	 */
-	protected function get_classic_editor_images( $max_images ) {
-		// max images can't be negative or zero
-		if ( $max_images <= 0 ) {
-			return array();
-		}
-
-		$id = $this->object->ID;
-
-		$image_ids = array();
-
-		// list post thumbnail first if this post has one
-		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
-			$image_ids[] = \get_post_thumbnail_id( $id );
-			--$max_images;
-		}
-
-		if ( $max_images > 0 ) {
-			$query = new \WP_Query(
-				array(
-					'post_parent' => $id,
-					'post_status' => 'inherit',
-					'post_type' => 'attachment',
-					'post_mime_type' => 'image',
-					'order' => 'ASC',
-					'orderby' => 'menu_order ID',
-					'posts_per_page' => $max_images,
-				)
-			);
-			foreach ( $query->get_posts() as $attachment ) {
-				if ( ! \in_array( $attachment->ID, $image_ids, true ) ) {
-					$image_ids[] = $attachment->ID;
-				}
-			}
-		}
-		$image_ids = \array_unique( $image_ids );
-
-		return \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $image_ids ) );
+		return $media;
 	}
 
 	/**
 	 * Recursively get media IDs from blocks.
 	 * @param array $blocks The blocks to search for media IDs
-	 * @param array $media_ids The media IDs to append new IDs to
+	 * @param array $media The media IDs to append new IDs to
 	 * @param int $max_media The maximum number of media to return.
 	 *
 	 * @return array The image IDs.
 	 */
-	protected static function get_media_ids_from_blocks( $blocks, $media_ids, $max_media ) {
-
+	protected static function get_media_from_blocks( $blocks, $media ) {
 		foreach ( $blocks as $block ) {
 			// recurse into inner blocks
 			if ( ! empty( $block['innerBlocks'] ) ) {
-				$media_ids = self::get_media_ids_from_blocks( $block['innerBlocks'], $media_ids, $max_media );
+				$media = self::get_media_from_blocks( $block['innerBlocks'], $media );
 			}
 
 			switch ( $block['blockName'] ) {
 				case 'core/image':
 				case 'core/cover':
+					if ( ! empty( $block['attrs']['id'] ) ) {
+						$alt   = '';
+						$check = preg_match( '/<img.*?alt\s*=\s*([\"\'])(.*?)\1.*>/i', $block['innerHTML'], $match );
+
+						if ( $check ) {
+							$alt = $match[2];
+						}
+
+						$media['image'][] = array(
+							'id'  => $block['attrs']['id'],
+							'alt' => $alt,
+						);
+					}
+					break;
 				case 'core/audio':
+					if ( ! empty( $block['attrs']['id'] ) ) {
+						$media['audio'][] = array( 'id' => $block['attrs']['id'] );
+					}
+					break;
 				case 'core/video':
 				case 'videopress/video':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$media_ids[] = $block['attrs']['id'];
+						$media['video'][] = array( 'id' => $block['attrs']['id'] );
 					}
 					break;
 				case 'jetpack/slideshow':
 				case 'jetpack/tiled-gallery':
 					if ( ! empty( $block['attrs']['ids'] ) ) {
-						$media_ids = array_merge( $media_ids, $block['attrs']['ids'] );
+						$media['image'] = array_merge(
+							$media['image'],
+							array_map(
+								function ( $id ) {
+									return array( 'id' => $id );
+								},
+								$block['attrs']['ids']
+							)
+						);
 					}
 					break;
 				case 'jetpack/image-compare':
 					if ( ! empty( $block['attrs']['beforeImageId'] ) ) {
-						$media_ids[] = $block['attrs']['beforeImageId'];
+						$media['image'][] = array( 'id' => $block['attrs']['beforeImageId'] );
 					}
 					if ( ! empty( $block['attrs']['afterImageId'] ) ) {
-						$media_ids[] = $block['attrs']['afterImageId'];
+						$media['image'][] = array( 'id' => $block['attrs']['afterImageId'] );
 					}
 					break;
 			}
+		}
 
-			// depupe
-			$media_ids = \array_unique( $media_ids );
+		return $media;
+	}
 
-			// stop doing unneeded work
-			if ( count( $media_ids ) >= $max_media ) {
-				break;
+	/**
+	 * Get post images from the classic editor.
+	 * Note that audio/video attachments are only supported in the block editor.
+	 *
+	 * @param array $media      The media array grouped by type.
+	 * @param int   $max_images The maximum number of images to return.
+	 *
+	 * @return array The attachments.
+	 */
+	protected function get_classic_editor_images( $media, $max_images ) {
+		// max images can't be negative or zero
+		if ( $max_images <= 0 ) {
+			return array();
+		}
+
+		if ( \count( $media['image'] ) <= $max_images ) {
+			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
+				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_embeds( $max_images ) );
+			} else {
+				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_attachments( $max_images ) );
 			}
 		}
 
-		// still need to slice it because one gallery could knock us over the limit
-		return array_slice( $media_ids, 0, $max_media );
+		return $media;
+	}
+
+	/**
+	 * Get image embeds from the classic editor by parsing HTML.
+	 *
+	 * @param int $max_images The maximum number of images to return.
+	 *
+	 * @return array The attachments.
+	 */
+	protected function get_classic_editor_image_embeds( $max_images ) {
+		// if someone calls that function directly, bail
+		if ( ! \class_exists( '\WP_HTML_Tag_Processor' ) ) {
+			return array();
+		}
+
+		// max images can't be negative or zero
+		if ( $max_images <= 0 ) {
+			return array();
+		}
+
+		$images  = array();
+		$base    = \wp_get_upload_dir()['baseurl'];
+		$content = \get_post_field( 'post_content', $this->wp_object );
+		$tags    = new \WP_HTML_Tag_Processor( $content );
+
+		// This linter warning is a false positive - we have to
+		// re-count each time here as we modify $images.
+		// phpcs:ignore Squiz.PHP.DisallowSizeFunctionsInLoops.Found
+		while ( $tags->next_tag( 'img' ) && ( \count( $images ) <= $max_images ) ) {
+			$src = $tags->get_attribute( 'src' );
+
+			// If the img source is in our uploads dir, get the
+			// associated ID. Note: if there's a -500x500
+			// type suffix, we remove it, but we try the original
+			// first in case the original image is actually called
+			// that. Likewise, we try adding the -scaled suffix for
+			// the case that this is a small version of an image
+			// that was big enough to get scaled down on upload:
+			// https://make.wordpress.org/core/2019/10/09/introducing-handling-of-big-images-in-wordpress-5-3/
+			if ( null !== $src && \str_starts_with( $src, $base ) ) {
+				$img_id = \attachment_url_to_postid( $src );
+
+				if ( 0 === $img_id ) {
+					$count = 0;
+					$src = preg_replace( '/-(?:\d+x\d+)(\.[a-zA-Z]+)$/', '$1', $src, 1, $count );
+					if ( $count > 0 ) {
+						$img_id = \attachment_url_to_postid( $src );
+					}
+				}
+
+				if ( 0 === $img_id ) {
+					$src = preg_replace( '/(\.[a-zA-Z]+)$/', '-scaled$1', $src );
+					$img_id = \attachment_url_to_postid( $src );
+				}
+
+				if ( 0 !== $img_id ) {
+					$images[] = array(
+						'id'  => $img_id,
+						'alt' => $tags->get_attribute( 'alt' ),
+					);
+				}
+			}
+		}
+
+		return $images;
+	}
+
+	/**
+	 * Get image attachments from the classic editor.
+	 * This is imperfect as the contained images aren't necessarily the
+	 * same as the attachments.
+	 *
+	 * @param int $max_images The maximum number of images to return.
+	 *
+	 * @return array The attachment IDs.
+	 */
+	protected function get_classic_editor_image_attachments( $max_images ) {
+		// max images can't be negative or zero
+		if ( $max_images <= 0 ) {
+			return array();
+		}
+
+		$images = array();
+		$query  = new \WP_Query(
+			array(
+				'post_parent' => $this->wp_object->ID,
+				'post_status' => 'inherit',
+				'post_type' => 'attachment',
+				'post_mime_type' => 'image',
+				'order' => 'ASC',
+				'orderby' => 'menu_order ID',
+				'posts_per_page' => $max_images,
+			)
+		);
+
+		foreach ( $query->get_posts() as $attachment ) {
+			if ( ! \in_array( $attachment->ID, $images, true ) ) {
+				$images[] = array( 'id' => $attachment->ID );
+			}
+		}
+
+		return $images;
+	}
+
+	/**
+	 * Filter media IDs by object type.
+	 *
+	 * @param array  $media The media array grouped by type.
+	 * @param string $type  The object type.
+	 *
+	 * @return array The filtered media IDs.
+	 */
+	protected static function filter_media_by_object_type( $media, $type, $wp_object ) {
+		$type = \apply_filters( 'filter_media_by_object_type', \strtolower( $type ), $wp_object );
+
+		if ( ! empty( $media[ $type ] ) ) {
+			return $media[ $type ];
+		}
+
+		return array_filter( array_merge( ...array_values( $media ) ) );
 	}
 
 	/**
 	 * Converts a WordPress Attachment to an ActivityPub Attachment.
 	 *
-	 * @param int $id The Attachment ID.
+	 * @param array $media The Attachment array.
 	 *
 	 * @return array The ActivityPub Attachment.
 	 */
-	public static function wp_attachment_to_activity_attachment( $id ) {
-		$attachment = array();
-		$mime_type = \get_post_mime_type( $id );
+	public static function wp_attachment_to_activity_attachment( $media ) {
+		if ( ! isset( $media['id'] ) ) {
+			return $media;
+		}
+
+		$id              = $media['id'];
+		$attachment      = array();
+		$mime_type       = \get_post_mime_type( $id );
 		$mime_type_parts = \explode( '/', $mime_type );
 		// switching on image/audio/video
 		switch ( $mime_type_parts[0] ) {
 			case 'image':
-				$image_size = 'full';
+				$image_size = 'large';
 
 				/**
 				 * Filter the image URL returned for each post.
 				 *
-				 * @param array|false $thumbnail The image URL, or false if no image is available.
-				 * @param int         $id        The attachment ID.
-				 * @param string      $image_size The image size to retrieve. Set to 'full' by default.
+				 * @param array|false $thumbnail  The image URL, or false if no image is available.
+				 * @param int         $id         The attachment ID.
+				 * @param string      $image_size The image size to retrieve. Set to 'large' by default.
 				 */
 				$thumbnail = apply_filters(
 					'activitypub_get_image',
@@ -322,16 +576,21 @@ class Post extends Base {
 				);
 
 				if ( $thumbnail ) {
-					$alt   = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 					$image = array(
 						'type'      => 'Image',
-						'url'       => $thumbnail[0],
-						'mediaType' => $mime_type,
+						'url'       => \esc_url( $thumbnail[0] ),
+						'mediaType' => \esc_attr( $mime_type ),
 					);
 
-					if ( $alt ) {
-						$image['name'] = $alt;
+					if ( ! empty( $media['alt'] ) ) {
+						$image['name'] = \wp_strip_all_tags( \html_entity_decode( $media['alt'] ) );
+					} else {
+						$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
+						if ( $alt ) {
+							$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt ) );
+						}
 					}
+
 					$attachment = $image;
 				}
 				break;
@@ -340,15 +599,15 @@ class Post extends Base {
 			case 'video':
 				$attachment = array(
 					'type'      => 'Document',
-					'mediaType' => $mime_type,
-					'url'       => \wp_get_attachment_url( $id ),
-					'name'      => \get_the_title( $id ),
+					'mediaType' => \esc_attr( $mime_type ),
+					'url'       => \esc_url( \wp_get_attachment_url( $id ) ),
+					'name'      => \esc_attr( \get_the_title( $id ) ),
 				);
 				$meta = wp_get_attachment_metadata( $id );
 				// height and width for videos
 				if ( isset( $meta['width'] ) && isset( $meta['height'] ) ) {
-					$attachment['width'] = $meta['width'];
-					$attachment['height'] = $meta['height'];
+					$attachment['width'] = \esc_attr( $meta['width'] );
+					$attachment['height'] = \esc_attr( $meta['height'] );
 				}
 				// @todo: add `icon` support for audio/video attachments. Maybe use post thumbnail?
 				break;
@@ -361,16 +620,16 @@ class Post extends Base {
 	 * Return details about an image attachment.
 	 *
 	 * @param int    $id         The attachment ID.
-	 * @param string $image_size The image size to retrieve. Set to 'full' by default.
+	 * @param string $image_size The image size to retrieve. Set to 'large' by default.
 	 *
 	 * @return array|false Array of image data, or boolean false if no image is available.
 	 */
-	protected static function get_wordpress_attachment( $id, $image_size = 'full' ) {
+	protected static function get_wordpress_attachment( $id, $image_size = 'large' ) {
 		/**
 		 * Hook into the image retrieval process. Before image retrieval.
 		 *
 		 * @param int    $id         The attachment ID.
-		 * @param string $image_size The image size to retrieve. Set to 'full' by default.
+		 * @param string $image_size The image size to retrieve. Set to 'large' by default.
 		 */
 		do_action( 'activitypub_get_image_pre', $id, $image_size );
 
@@ -380,7 +639,7 @@ class Post extends Base {
 		 * Hook into the image retrieval process. After image retrieval.
 		 *
 		 * @param int    $id         The attachment ID.
-		 * @param string $image_size The image size to retrieve. Set to 'full' by default.
+		 * @param string $image_size The image size to retrieve. Set to 'large' by default.
 		 */
 		do_action( 'activitypub_get_image_post', $id, $image_size );
 
@@ -396,55 +655,41 @@ class Post extends Base {
 	 * @return string The Object-Type.
 	 */
 	protected function get_type() {
-		if ( 'wordpress-post-format' !== \get_option( 'activitypub_object_type', 'note' ) ) {
-			return \ucfirst( \get_option( 'activitypub_object_type', 'note' ) );
+		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
+
+		if ( 'wordpress-post-format' !== $post_format_setting ) {
+			return \ucfirst( $post_format_setting );
+		}
+
+		$has_title = post_type_supports( $this->wp_object->post_type, 'title' );
+
+		if ( ! $has_title ) {
+			return 'Note';
 		}
 
 		// Default to Article.
 		$object_type = 'Article';
-		$post_type = \get_post_type( $this->object );
+		$post_format = 'standard';
+
+		if ( \get_theme_support( 'post-formats' ) ) {
+			$post_format = \get_post_format( $this->wp_object );
+		}
+
+		$post_type = \get_post_type( $this->wp_object );
 		switch ( $post_type ) {
 			case 'post':
-				$post_format = \get_post_format( $this->object );
 				switch ( $post_format ) {
-					case 'aside':
-					case 'status':
-					case 'quote':
-					case 'note':
-						$object_type = 'Note';
-						break;
-					case 'gallery':
-					case 'image':
-						$object_type = 'Image';
-						break;
-					case 'video':
-						$object_type = 'Video';
-						break;
-					case 'audio':
-						$object_type = 'Audio';
+					case 'standard':
+					case '':
+						$object_type = 'Article';
 						break;
 					default:
-						$object_type = 'Article';
+						$object_type = 'Note';
 						break;
 				}
 				break;
 			case 'page':
 				$object_type = 'Page';
-				break;
-			case 'attachment':
-				$mime_type = \get_post_mime_type();
-				$media_type = \preg_replace( '/(\/[a-zA-Z]+)/i', '', $mime_type );
-				switch ( $media_type ) {
-					case 'audio':
-						$object_type = 'Audio';
-						break;
-					case 'video':
-						$object_type = 'Video';
-						break;
-					case 'image':
-						$object_type = 'Image';
-						break;
-				}
 				break;
 			default:
 				$object_type = 'Article';
@@ -474,6 +719,16 @@ class Post extends Base {
 		return $cc;
 	}
 
+
+	public function get_audience() {
+		if ( is_single_user() ) {
+			return null;
+		} else {
+			$blog = new Blog();
+			return $blog->get_id();
+		}
+	}
+
 	/**
 	 * Returns a list of Tags, used in the Post.
 	 *
@@ -484,7 +739,7 @@ class Post extends Base {
 	protected function get_tag() {
 		$tags = array();
 
-		$post_tags = \get_the_tags( $this->object->ID );
+		$post_tags = \get_the_tags( $this->wp_object->ID );
 		if ( $post_tags ) {
 			foreach ( $post_tags as $post_tag ) {
 				$tag = array(
@@ -512,6 +767,53 @@ class Post extends Base {
 	}
 
 	/**
+	 * Returns the summary for the ActivityPub Item.
+	 *
+	 * The summary will be generated based on the user settings and only if the
+	 * object type is not set to `note`.
+	 *
+	 * @return string|null The summary or null if the object type is `note`.
+	 */
+	protected function get_summary() {
+		if ( 'Note' === $this->get_type() ) {
+			return null;
+		}
+
+		// Remove Teaser from drafts.
+		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+			return \__( '(This post is being modified)', 'activitypub' );
+		}
+
+		return generate_post_summary( $this->wp_object );
+	}
+
+	/**
+	 * Returns the title for the ActivityPub Item.
+	 *
+	 * The title will be generated based on the user settings and only if the
+	 * object type is not set to `note`.
+	 *
+	 * @return string|null The title or null if the object type is `note`.
+	 */
+	protected function get_name() {
+		if ( 'Note' === $this->get_type() ) {
+			return null;
+		}
+
+		$title = \get_the_title( $this->wp_object->ID );
+
+		if ( $title ) {
+			return \wp_strip_all_tags(
+				\html_entity_decode(
+					$title
+				)
+			);
+		}
+
+		return null;
+	}
+
+	/**
 	 * Returns the content for the ActivityPub Item.
 	 *
 	 * The content will be generated based on the user settings.
@@ -519,6 +821,13 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
+		add_filter( 'activitypub_reply_block', '__return_empty_string' );
+
+		// Remove Content from drafts.
+		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+			return \__( '(This post is being modified)', 'activitypub' );
+		}
+
 		global $post;
 
 		/**
@@ -530,8 +839,10 @@ class Post extends Base {
 		 */
 		do_action( 'activitypub_before_get_content', $post );
 
+		add_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ), 10, 2 );
+
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		$post    = $this->object;
+		$post    = $this->wp_object;
 		$content = $this->get_post_content_template();
 
 		// Register our shortcodes just in time.
@@ -566,17 +877,24 @@ class Post extends Base {
 				$template = "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
 				break;
 			case 'title':
-				$template = "[ap_title]\n\n[ap_permalink type=\"html\"]";
+				$template = "<h2>[ap_title]</h2>\n\n[ap_permalink type=\"html\"]";
 				break;
 			case 'content':
 				$template = "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
 				break;
 			default:
-				$template = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+				// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+				$template = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ) ?: ACTIVITYPUB_CUSTOM_POST_CONTENT;
 				break;
 		}
 
-		return apply_filters( 'activitypub_object_content_template', $template, $this->object );
+		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
+
+		if ( 'wordpress-post-format' === $post_format_setting ) {
+			$template = '[ap_content]';
+		}
+
+		return apply_filters( 'activitypub_object_content_template', $template, $this->wp_object );
 	}
 
 	/**
@@ -585,7 +903,12 @@ class Post extends Base {
 	 * @return array The list of @-Mentions.
 	 */
 	protected function get_mentions() {
-		return apply_filters( 'activitypub_extract_mentions', array(), $this->object->post_content, $this->object );
+		return apply_filters(
+			'activitypub_extract_mentions',
+			array(),
+			$this->wp_object->post_content . ' ' . $this->wp_object->post_excerpt,
+			$this->wp_object
+		);
 	}
 
 	/**
@@ -594,7 +917,7 @@ class Post extends Base {
 	 * @return string The locale of the post.
 	 */
 	public function get_locale() {
-		$post_id = $this->object->ID;
+		$post_id = $this->wp_object->ID;
 		$lang    = \strtolower( \strtok( \get_locale(), '_-' ) );
 
 		/**
@@ -606,6 +929,43 @@ class Post extends Base {
 		 *
 		 * @return string The filtered locale of the post.
 		 */
-		return apply_filters( 'activitypub_post_locale', $lang, $post_id, $this->object );
+		return apply_filters( 'activitypub_post_locale', $lang, $post_id, $this->wp_object );
+	}
+
+	/**
+	 * Returns the in-reply-to URL of the post.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-inreplyto
+	 *
+	 * @return string|null The in-reply-to URL of the post.
+	 */
+	public function get_in_reply_to() {
+		$blocks = \parse_blocks( $this->wp_object->post_content );
+
+		foreach ( $blocks as $block ) {
+			if ( 'activitypub/reply' === $block['blockName'] ) {
+				// We only support one reply block per post for now.
+				return $block['attrs']['url'];
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Transform Embed blocks to block level link.
+	 *
+	 * Remote servers will simply drop iframe elements, rendering incomplete content.
+	 *
+	 * @see https://www.w3.org/TR/activitypub/#security-sanitizing-content
+	 * @see https://www.w3.org/wiki/ActivityPub/Primer/HTML
+	 *
+	 * @param string $block_content The block content (html)
+	 * @param object $block The block object
+	 *
+	 * @return string A block level link
+	 */
+	public static function revert_embed_links( $block_content, $block ) {
+		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
 	}
 }

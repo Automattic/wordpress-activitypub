@@ -1,11 +1,18 @@
 import { SelectControl, RangeControl, PanelBody, TextControl } from '@wordpress/components';
 import { useState, useEffect } from '@wordpress/element';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
+import { useSelect } from '@wordpress/data';
+import { store as coreStore } from '@wordpress/core-data';
 import { __ } from '@wordpress/i18n';
 import { Followers } from './followers';
 import { useUserOptions } from '../shared/use-user-options';
+import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
 
-export default function Edit( { attributes, setAttributes } ) {
+export default function Edit( {
+	attributes,
+	setAttributes,
+	context: { postType, postId },
+} ) {
 	const { order, per_page, selectedUser, title } = attributes;
 	const blockProps = useBlockProps();
 	const [ page, setPage ] = useState( 1 );
@@ -13,13 +20,26 @@ export default function Edit( { attributes, setAttributes } ) {
 		{ label: __( 'New to old', 'activitypub' ), value: 'desc' },
 		{ label: __( 'Old to new', 'activitypub' ), value: 'asc' },
 	];
-	const usersOptions = useUserOptions();
+	const usersOptions = useUserOptions( { withInherit: true } );
 	const setAttributestAndResetPage = ( key ) => {
 		return ( value ) => {
 			setPage( 1 );
 			setAttributes( { [ key ]: value } );
 		};
 	}
+	const authorId = useSelect(
+		( select ) => {
+			const { getEditedEntityRecord } = select( coreStore );
+			const _authorId = getEditedEntityRecord(
+				'postType',
+				postType,
+				postId
+			)?.author;
+
+			return _authorId ?? null;
+		},
+		[ postType, postId ]
+	);
 
 	useEffect( () => {
 		// if there are no users yet, do nothing
@@ -65,7 +85,15 @@ export default function Edit( { attributes, setAttributes } ) {
 					/>
 				</PanelBody>
 			</InspectorControls>
-			<Followers { ...attributes } page={ page } setPage={ setPage } followLinks={ false } />
+			{ selectedUser === 'inherit' ?
+				authorId ? (
+					<Followers { ...attributes } page={ page } setPage={ setPage } followLinks={ false } selectedUser={ authorId } />
+				) : (
+					<InheritModeBlockFallback name={ __( 'Followers', 'activitypub' ) } />
+				)
+			: (
+				<Followers { ...attributes } page={ page } setPage={ setPage } followLinks={ false } />
+			) }
 		</div>
 	);
 }

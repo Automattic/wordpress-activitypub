@@ -25,7 +25,7 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 		$activitypub_activity->set_type( 'Create' );
 		$activitypub_activity->set_object( $activitypub_post );
 
-		$this->assertContains( \Activitypub\get_rest_url_by_path( 'users/1/followers' ), $activitypub_activity->get_to() );
+		$this->assertContains( \Activitypub\get_rest_url_by_path( 'actors/1/followers' ), $activitypub_activity->get_to() );
 		$this->assertContains( 'https://example.com/alex', $activitypub_activity->get_cc() );
 
 		remove_all_filters( 'activitypub_extract_mentions' );
@@ -34,15 +34,20 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 
 	public function test_object_transformation() {
 		$test_array = array(
-			'id'      => 'https://example.com/post/123',
-			'type'    => 'Note',
-			'content' => 'Hello world!',
+			'id'        => 'https://example.com/post/123',
+			'type'      => 'Note',
+			'content'   => 'Hello world!',
+			'sensitive' => false,
 		);
 
 		$object = \Activitypub\Activity\Base_Object::init_from_array( $test_array );
 
 		$this->assertEquals( 'Hello world!', $object->get_content() );
-		$this->assertEquals( $test_array, $object->to_array() );
+
+		$new_array = $object->to_array();
+		// Ignore the added json-ld context for now.
+		unset( $new_array['@context'] );
+		$this->assertEquals( $test_array, $new_array );
 	}
 
 	public function test_activity_object() {

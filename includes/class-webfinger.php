@@ -20,17 +20,12 @@ class Webfinger {
 	 * @return string The user-resource
 	 */
 	public static function get_user_resource( $user_id ) {
-		// use WebFinger plugin if installed
-		if ( \function_exists( '\get_webfinger_resource' ) ) {
-			return \get_webfinger_resource( $user_id, false );
-		}
-
 		$user = Users::get_by_id( $user_id );
 		if ( ! $user || is_wp_error( $user ) ) {
 			return '';
 		}
 
-		return $user->get_resource();
+		return $user->get_webfinger();
 	}
 
 	/**
@@ -47,16 +42,37 @@ class Webfinger {
 			return $data;
 		}
 
+		if ( ! is_array( $data ) || empty( $data['links'] ) ) {
+			return new WP_Error(
+				'webfinger_missing_links',
+				__( 'No valid Link elements found.', 'activitypub' ),
+				array(
+					'status' => 400,
+					'data'   => $data,
+				)
+			);
+		}
+
 		foreach ( $data['links'] as $link ) {
 			if (
 				'self' === $link['rel'] &&
-				'application/activity+json' === $link['type']
+				(
+					'application/activity+json' === $link['type'] ||
+					'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' === $link['type']
+				)
 			) {
 				return $link['href'];
 			}
 		}
 
-		return new WP_Error( 'webfinger_url_no_activitypub', null, $data );
+		return new WP_Error(
+			'webfinger_url_no_activitypub',
+			__( 'The Site supports WebFinger but not ActivityPub', 'activitypub' ),
+			array(
+				'status' => 400,
+				'data'   => $data,
+			)
+		);
 	}
 
 	/**
@@ -93,7 +109,10 @@ class Webfinger {
 		return new WP_Error(
 			'webfinger_url_no_acct',
 			__( 'No acct URI found.', 'activitypub' ),
-			$data
+			array(
+				'status' => 400,
+				'data'   => $data,
+			)
 		);
 	}
 
@@ -107,6 +126,17 @@ class Webfinger {
 	 *                        identifier and host as values
 	 */
 	public static function get_identifier_and_host( $url ) {
+		if ( ! $url ) {
+			return new WP_Error(
+				'webfinger_invalid_identifier',
+				__( 'Invalid Identifier', 'activitypub' ),
+				array(
+					'status' => 400,
+					'data'   => $url,
+				)
+			);
+		}
+
 		// remove leading @
 		$url = ltrim( $url, '@' );
 
@@ -134,7 +164,14 @@ class Webfinger {
 		}
 
 		if ( empty( $host ) ) {
-			return new WP_Error( 'webfinger_invalid_identifier', __( 'Invalid Identifier', 'activitypub' ) );
+			return new WP_Error(
+				'webfinger_invalid_identifier',
+				__( 'Invalid Identifier', 'activitypub' ),
+				array(
+					'status' => 400,
+					'data'   => $url,
+				)
+			);
 		}
 
 		return array( $identifier, $host );
@@ -164,7 +201,11 @@ class Webfinger {
 			return $data;
 		}
 
-		$webfinger_url = 'https://' . $host . '/.well-known/webfinger?resource=' . rawurlencode( $identifier );
+		$webfinger_url = sprintf(
+			'https://%s/.well-known/webfinger?resource=%s',
+			$host,
+			rawurlencode( $identifier )
+		);
 
 		$response = wp_safe_remote_get(
 			$webfinger_url,
@@ -177,7 +218,10 @@ class Webfinger {
 			return new WP_Error(
 				'webfinger_url_not_accessible',
 				__( 'The WebFinger Resource is not accessible.', 'activitypub' ),
-				$webfinger_url
+				array(
+					'status' => 400,
+					'data'   => $webfinger_url,
+				)
 			);
 		}
 
@@ -205,7 +249,10 @@ class Webfinger {
 			return new WP_Error(
 				'webfinger_missing_links',
 				__( 'No valid Link elements found.', 'activitypub' ),
-				$data
+				array(
+					'status' => 400,
+					'data'   => $data,
+				)
 			);
 		}
 
@@ -218,7 +265,10 @@ class Webfinger {
 		return new WP_Error(
 			'webfinger_missing_remote_follow_endpoint',
 			__( 'No valid Remote-Follow endpoint found.', 'activitypub' ),
-			$data
+			array(
+				'status' => 400,
+				'data'   => $data,
+			)
 		);
 	}
 

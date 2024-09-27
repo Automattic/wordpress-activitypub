@@ -94,10 +94,12 @@ class Signature {
 
 		$key = \openssl_pkey_new( $config );
 		$priv_key = null;
+		$detail = array();
+		if ( $key ) {
+			\openssl_pkey_export( $key, $priv_key );
 
-		\openssl_pkey_export( $key, $priv_key );
-
-		$detail = \openssl_pkey_get_details( $key );
+			$detail = \openssl_pkey_get_details( $key );
+		}
 
 		// check if keys are valid
 		if (
@@ -379,10 +381,10 @@ class Signature {
 		if ( \preg_match( '/keyId="(.*?)"/ism', $signature, $matches ) ) {
 			$parsed_header['keyId'] = trim( $matches[1] );
 		}
-		if ( \preg_match( '/created=([0-9]*)/ism', $signature, $matches ) ) {
+		if ( \preg_match( '/created=["|\']*([0-9]*)["|\']*/ism', $signature, $matches ) ) {
 			$parsed_header['(created)'] = trim( $matches[1] );
 		}
-		if ( \preg_match( '/expires=([0-9]*)/ism', $signature, $matches ) ) {
+		if ( \preg_match( '/expires=["|\']*([0-9]*)["|\']*/ism', $signature, $matches ) ) {
 			$parsed_header['(expires)'] = trim( $matches[1] );
 		}
 		if ( \preg_match( '/algorithm="(.*?)"/ism', $signature, $matches ) ) {
@@ -434,11 +436,21 @@ class Signature {
 					// created in future
 					return false;
 				}
+
+				if ( ! array_key_exists( '(created)', $headers ) ) {
+					$signed_data .= $header . ': ' . $signature_block['(created)'] . "\n";
+					continue;
+				}
 			}
 			if ( '(expires)' === $header ) {
 				if ( ! empty( $signature_block['(expires)'] ) && \intval( $signature_block['(expires)'] ) < \time() ) {
 					// expired in past
 					return false;
+				}
+
+				if ( ! array_key_exists( '(expires)', $headers ) ) {
+					$signed_data .= $header . ': ' . $signature_block['(expires)'] . "\n";
+					continue;
 				}
 			}
 			if ( 'date' === $header ) {

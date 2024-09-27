@@ -6,11 +6,15 @@ use Activitypub\Signature;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
-
-use function Activitypub\sanitize_url;
+use Activitypub\Collection\Extra_Fields;
 
 use function Activitypub\is_comment;
+use function Activitypub\sanitize_url;
+use function Activitypub\is_local_comment;
+use function Activitypub\site_supports_blocks;
+use function Activitypub\is_user_type_disabled;
 use function Activitypub\is_activitypub_request;
+use function Activitypub\should_comment_be_federated;
 
 /**
  * ActivityPub Class
@@ -26,10 +30,9 @@ class Activitypub {
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
 		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
 		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
-		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
 
 		// Add support for ActivityPub to custom post types
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post', 'page' ) ) : array();
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post' ) ) : array();
 
 		foreach ( $post_types as $post_type ) {
 			\add_post_type_support( $post_type, 'activitypub' );
@@ -39,12 +42,17 @@ class Activitypub {
 		\add_action( 'untrash_post', array( self::class, 'untrash_post' ), 1 );
 
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
+		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
 
-		\add_action( 'after_setup_theme', array( self::class, 'theme_compat' ), 99 );
+		\add_action( 'user_register', array( self::class, 'user_register' ) );
 
 		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
 
-		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
+		if ( site_supports_blocks() ) {
+			\add_action( 'tool_box', array( self::class, 'tool_box' ) );
+		}
+
+		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
 		// register several post_types
 		self::register_post_types();
@@ -57,7 +65,6 @@ class Activitypub {
 	 */
 	public static function activate() {
 		self::flush_rewrite_rules();
-
 		Scheduler::register_schedules();
 	}
 
@@ -98,30 +105,89 @@ class Activitypub {
 
 		$json_template = false;
 
-		// check if user can publish posts
-		if ( \is_author() && is_wp_error( Users::get_by_id( \get_the_author_meta( 'ID' ) ) ) ) {
-			return $template;
-		}
-
-		if ( \is_author() ) {
-			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/author-json.php';
+		if ( \is_author() && ! is_user_disabled( \get_the_author_meta( 'ID' ) ) ) {
+			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/user-json.php';
 		} elseif ( is_comment() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
-		} elseif ( \is_home() ) {
+		} elseif ( \is_home() && ! is_user_type_disabled( 'blog' ) ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
-		if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
+		/*
+		 * Check if the request is authorized.
+		 *
+		 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
+		 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
+		 */
+		if ( $json_template && ACTIVITYPUB_AUTHORIZED_FETCH ) {
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
+				header( 'HTTP/1.1 401 Unauthorized' );
+
 				// fallback as template_loader can't return http headers
 				return $template;
 			}
 		}
 
-		return $json_template;
+		if ( $json_template ) {
+			return $json_template;
+		}
+
+		return $template;
+	}
+
+	/**
+	 * Add the 'self' link to the header.
+	 *
+	 * @see
+	 *
+	 * @return void
+	 */
+	public static function add_headers() {
+		// phpcs:ignore
+		$request_uri = $_SERVER['REQUEST_URI'];
+
+		if ( ! $request_uri ) {
+			return;
+		}
+
+		// only add self link to author pages...
+		if ( is_author() ) {
+			if ( is_user_disabled( get_queried_object_id() ) ) {
+				return;
+			}
+		} elseif ( is_singular() ) { // or posts/pages/custom-post-types...
+			if ( ! \post_type_supports( \get_post_type(), 'activitypub' ) ) {
+				return;
+			}
+		} else { // otherwise return
+			return;
+		}
+
+		// add self link to html and http header
+		$host      = wp_parse_url( home_url() );
+		$self_link = esc_url(
+			apply_filters(
+				'self_link',
+				set_url_scheme(
+					// phpcs:ignore
+					'http://' . $host['host'] . wp_unslash( $request_uri )
+				)
+			)
+		);
+
+		if ( ! headers_sent() ) {
+			header( 'Link: <' . $self_link . '>; rel="alternate"; type="application/activity+json"' );
+		}
+
+		add_action(
+			'wp_head',
+			function () use ( $self_link ) {
+				echo PHP_EOL . '<link rel="alternate" type="application/activity+json" href="' . esc_url( $self_link ) . '" />' . PHP_EOL;
+			}
+		);
 	}
 
 	/**
@@ -130,6 +196,8 @@ class Activitypub {
 	 * @return void
 	 */
 	public static function template_redirect() {
+		self::add_headers();
+
 		$comment_id = get_query_var( 'c', null );
 
 		// check if it seems to be a comment
@@ -147,11 +215,12 @@ class Activitypub {
 		}
 
 		// stop if it's not an ActivityPub comment
-		if ( is_activitypub_request() && $comment->user_id ) {
+		if ( is_activitypub_request() && ! is_local_comment( $comment ) ) {
 			return;
 		}
 
 		wp_safe_redirect( get_comment_link( $comment ) );
+		exit;
 	}
 
 	/**
@@ -200,14 +269,16 @@ class Activitypub {
 		$avatar = self::get_avatar_url( $id_or_email->comment_ID );
 
 		if ( $avatar ) {
-			if ( ! isset( $args['class'] ) || ! \is_array( $args['class'] ) ) {
-				$args['class'] = array( 'u-photo' );
-			} else {
-				$args['class'][] = 'u-photo';
-				$args['class']   = \array_unique( $args['class'] );
+			if ( empty( $args['class'] ) ) {
+				$args['class'] = array();
+			} elseif ( \is_string( $args['class'] ) ) {
+				$args['class'] = \explode( ' ', $args['class'] );
 			}
+
 			$args['url']     = $avatar;
 			$args['class'][] = 'avatar-activitypub';
+			$args['class'][] = 'u-photo';
+			$args['class']   = \array_unique( $args['class'] );
 		}
 
 		return $args;
@@ -225,30 +296,6 @@ class Activitypub {
 			$comment = \get_comment( $comment );
 		}
 		return \get_comment_meta( $comment->comment_ID, 'avatar_url', true );
-	}
-
-	/**
-	 * Link remote comments to source url.
-	 *
-	 * @param string $comment_link
-	 * @param object|WP_Comment $comment
-	 *
-	 * @return string $url
-	 */
-	public static function remote_comment_link( $comment_link, $comment ) {
-		if ( ! $comment || is_admin() ) {
-			return $comment_link;
-		}
-
-		$comment_meta = \get_comment_meta( $comment->comment_ID );
-
-		if ( ! empty( $comment_meta['source_url'][0] ) ) {
-			return $comment_meta['source_url'][0];
-		} elseif ( ! empty( $comment_meta['source_id'][0] ) ) {
-			return $comment_meta['source_id'][0];
-		}
-
-		return $comment_link;
 	}
 
 	/**
@@ -311,7 +358,7 @@ class Activitypub {
 
 		\add_rewrite_rule(
 			'^@([\w\-\.]+)',
-			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/users/$matches[1]',
+			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/$matches[1]',
 			'top'
 		);
 
@@ -327,34 +374,37 @@ class Activitypub {
 	}
 
 	/**
+	 * Adds metabox on wp-admin/tools.php
+	 *
+	 * @return void
+	 */
+	public static function tool_box() {
+		if ( \current_user_can( 'edit_posts' ) ) {
+			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
+		}
+	}
+
+	/**
 	 * Theme compatibility stuff
 	 *
 	 * @return void
 	 */
 	public static function theme_compat() {
-		$site_icon = get_theme_support( 'custom-logo' );
-
-		if ( ! $site_icon ) {
-			// custom logo support
-			add_theme_support(
-				'custom-logo',
-				array(
-					'height' => 80,
-					'width'  => 80,
-				)
-			);
-		}
-
-		$custom_header = get_theme_support( 'custom-header' );
-
-		if ( ! $custom_header ) {
-			// This theme supports a custom header
-			$custom_header_args = array(
-				'width'       => 1250,
-				'height'      => 600,
-				'header-text' => true,
-			);
-			add_theme_support( 'custom-header', $custom_header_args );
+		// We assume that you want to use Post-Formats when enabling the setting
+		if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ) {
+			if ( ! get_theme_support( 'post-formats' ) ) {
+				// Add support for the Aside, Gallery Post Formats...
+				add_theme_support(
+					'post-formats',
+					array(
+						'gallery',
+						'status',
+						'image',
+						'video',
+						'audio',
+					)
+				);
+			}
 		}
 	}
 
@@ -390,8 +440,7 @@ class Activitypub {
 	 * @return void
 	 */
 	private static function register_post_types() {
-		// register Followers Post-Type
-		register_post_type(
+		\register_post_type(
 			Followers::POST_TYPE,
 			array(
 				'labels'           => array(
@@ -408,7 +457,7 @@ class Activitypub {
 			)
 		);
 
-		register_post_meta(
+		\register_post_meta(
 			Followers::POST_TYPE,
 			'activitypub_inbox',
 			array(
@@ -418,7 +467,7 @@ class Activitypub {
 			)
 		);
 
-		register_post_meta(
+		\register_post_meta(
 			Followers::POST_TYPE,
 			'activitypub_errors',
 			array(
@@ -434,7 +483,7 @@ class Activitypub {
 			)
 		);
 
-		register_post_meta(
+		\register_post_meta(
 			Followers::POST_TYPE,
 			'activitypub_user_id',
 			array(
@@ -446,7 +495,7 @@ class Activitypub {
 			)
 		);
 
-		register_post_meta(
+		\register_post_meta(
 			Followers::POST_TYPE,
 			'activitypub_actor_json',
 			array(
@@ -457,8 +506,6 @@ class Activitypub {
 				},
 			)
 		);
-
-		do_action( 'activitypub_after_register_post_type' );
 
 		// register Outbox Post-Type
 		register_post_type(
@@ -477,23 +524,51 @@ class Activitypub {
 				'supports'         => array(),
 			)
 		);
+
+		// Both User and Blog Extra Fields types have the same args.
+		$args = array(
+			'labels'           => array(
+				'name'          => _x( 'Extra fields', 'post_type plural name', 'activitypub' ),
+				'singular_name' => _x( 'Extra field', 'post_type single name', 'activitypub' ),
+				'add_new'       => __( 'Add new', 'activitypub' ),
+				'add_new_item'  => __( 'Add new extra field', 'activitypub' ),
+				'new_item'      => __( 'New extra field', 'activitypub' ),
+				'edit_item'     => __( 'Edit extra field', 'activitypub' ),
+				'view_item'     => __( 'View extra field', 'activitypub' ),
+				'all_items'     => __( 'All extra fields', 'activitypub' ),
+			),
+			'public'              => false,
+			'hierarchical'        => false,
+			'query_var'           => false,
+			'has_archive'         => false,
+			'publicly_queryable'  => false,
+			'show_in_menu'        => false,
+			'delete_with_user'    => true,
+			'can_export'          => true,
+			'exclude_from_search' => true,
+			'show_in_rest'        => true,
+			'map_meta_cap'        => true,
+			'show_ui'             => true,
+			'supports'            => array( 'title', 'editor', 'page-attributes' ),
+		);
+
+		\register_post_type( Extra_Fields::USER_POST_TYPE, $args );
+		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $args );
+
+		\do_action( 'activitypub_after_register_post_type' );
 	}
 
 	/**
-	 * Filters the CSS classes to add an ActivityPub class.
+	 * Add the 'activitypub' capability to users who can publish posts.
 	 *
-	 * @param string[] $classes    An array of comment classes.
-	 * @param string[] $css_class  An array of additional classes added to the list.
-	 * @param string   $comment_id The comment ID as a numeric string.
+	 * @param int   $user_id  User ID.
 	 *
-	 * @return string[] An array of classes.
+	 * @param array $userdata The raw array of data passed to wp_insert_user().
 	 */
-	public static function comment_class( $classes, $css_class, $comment_id ) {
-		// check if ActivityPub comment
-		if ( 'activitypub' === get_comment_meta( $comment_id, 'protocol', true ) ) {
-			$classes[] = 'activitypub-comment';
+	public static function user_register( $user_id ) {
+		if ( \user_can( $user_id, 'publish_posts' ) ) {
+			$user = \get_user_by( 'id', $user_id );
+			$user->add_cap( 'activitypub' );
 		}
-
-		return $classes;
 	}
 }

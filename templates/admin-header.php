@@ -17,6 +17,10 @@
 
 		<?php if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) : ?>
 
+		<a href="<?php echo \esc_url_raw( admin_url( 'options-general.php?page=activitypub&tab=blog-profile' ) ); ?>" class="activitypub-settings-tab <?php echo \esc_attr( $args['blog-profile'] ); ?>">
+			<?php \esc_html_e( 'Blog-Profile', 'activitypub' ); ?>
+		</a>
+
 		<a href="<?php echo \esc_url_raw( admin_url( 'options-general.php?page=activitypub&tab=followers' ) ); ?>" class="activitypub-settings-tab <?php echo \esc_attr( $args['followers'] ); ?>">
 			<?php \esc_html_e( 'Followers', 'activitypub' ); ?>
 		</a>

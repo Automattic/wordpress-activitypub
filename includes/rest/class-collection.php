@@ -1,12 +1,15 @@
 <?php
 namespace Activitypub\Rest;
 
-use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
-use Activitypub\Transformer\Post;
-use Activitypub\Activity\Activity;
+use Activitypub\Activity\Actor;
+use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Collection\Replies;
+
+use Activitypub\Transformer\Factory;
+use WP_Error;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -34,7 +37,7 @@ class Collection {
 	public static function register_routes() {
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/collections/tags',
+			'/(users|actors)/(?P<user_id>[\w\-\.]+)/collections/tags',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -47,7 +50,7 @@ class Collection {
 
 		\register_rest_route(
 			ACTIVITYPUB_REST_NAMESPACE,
-			'/users/(?P<user_id>[\w\-\.]+)/collections/featured',
+			'/(users|actors)/(?P<user_id>[\w\-\.]+)/collections/featured',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -69,6 +72,73 @@ class Collection {
 				),
 			)
 		);
+
+		\register_rest_route(
+			ACTIVITYPUB_REST_NAMESPACE,
+			'/(?P<type>[\w\-\.]+)s/(?P<id>[\w\-\.]+)/replies',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( self::class, 'replies_get' ),
+					'args'                => self::request_parameters_for_replies(),
+					'permission_callback' => '__return_true',
+				),
+			)
+		);
+	}
+
+	/**
+	 * The endpoint for replies collections
+	 *
+	 * @param WP_REST_Request $request The request object.
+	 *
+	 * @return WP_REST_Response The response object.
+	 */
+	public static function replies_get( $request ) {
+		$type = $request->get_param( 'type' );
+
+		// Get the WordPress object of that "owns" the requested replies.
+		switch ( $type ) {
+			case 'comment':
+				$wp_object = \get_comment( $request->get_param( 'id' ) );
+				break;
+			case 'post':
+			default:
+				$wp_object = \get_post( $request->get_param( 'id' ) );
+				break;
+		}
+
+		if ( ! isset( $wp_object ) || is_wp_error( $wp_object ) ) {
+			return new WP_Error(
+				'activitypub_replies_collection_does_not_exist',
+				\sprintf(
+					// translators: %s: The type (post, comment, etc.) for which no replies collection exists.
+					\__( 'No reply collection exists for the type %s.', 'activitypub' ),
+					$type
+				)
+			);
+		}
+
+		$page = intval( $request->get_param( 'page' ) );
+
+		// If the request parameter page is present get the CollectionPage otherwise the replies collection.
+		if ( isset( $page ) ) {
+			$response = Replies::get_collection_page( $wp_object, $page );
+		} else {
+			$response = Replies::get_collection( $wp_object );
+		}
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		// Add ActivityPub Context.
+		$response = array_merge(
+			array( '@context' => Base_Object::JSON_LD_CONTEXT ),
+			$response
+		);
+
+		return new WP_REST_Response( $response, 200 );
 	}
 
 	/**
@@ -102,8 +172,8 @@ class Collection {
 		}
 
 		$response = array(
-			'@context'   => Activity::CONTEXT,
-			'id'         => get_rest_url_by_path( sprintf( 'users/%d/collections/tags', $user->get__id() ) ),
+			'@context'   => Base_Object::JSON_LD_CONTEXT,
+			'id'         => get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $user->get__id() ) ),
 			'type'       => 'Collection',
 			'totalItems' => is_countable( $tags ) ? count( $tags ) : 0,
 			'items'      => array(),
@@ -160,15 +230,21 @@ class Collection {
 		}
 
 		$response = array(
-			'@context'     => Activity::CONTEXT,
-			'id'           => get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $user_id ) ),
+			'@context'     => Base_Object::JSON_LD_CONTEXT,
+			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $user_id ) ),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => is_countable( $posts ) ? count( $posts ) : 0,
 			'orderedItems' => array(),
 		);
 
 		foreach ( $posts as $post ) {
-			$response['orderedItems'][] = Post::transform( $post )->to_object()->to_array();
+			$transformer = Factory::get_transformer( $post );
+
+			if ( \is_wp_error( $transformer ) ) {
+				continue;
+			}
+
+			$response['orderedItems'][] = $transformer->to_object()->to_array( false );
 		}
 
 		$rest_response = new WP_REST_Response( $response, 200 );
@@ -186,7 +262,7 @@ class Collection {
 	 */
 	public static function moderators_get( $request ) {
 		$response = array(
-			'@context'     => Activity::CONTEXT,
+			'@context'     => Actor::JSON_LD_CONTEXT,
 			'id'           => get_rest_url_by_path( 'collections/moderators' ),
 			'type'         => 'OrderedCollection',
 			'orderedItems' => array(),
@@ -214,7 +290,29 @@ class Collection {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
+		);
+
+		return $params;
+	}
+
+	/**
+	 * The supported parameters
+	 *
+	 * @return array list of parameters
+	 */
+	public static function request_parameters_for_replies() {
+		$params = array();
+
+		$params['type'] = array(
+			'required' => true,
+			'type'     => 'string',
+			'enum'     => array( 'post', 'comment' ),
+		);
+
+		$params['id'] = array(
+			'required' => true,
+			'type'     => 'string',
 		);
 
 		return $params;

@@ -3,10 +3,14 @@ namespace Activitypub\Model;
 
 use WP_Query;
 use WP_Error;
+use Activitypub\Migration;
 use Activitypub\Signature;
-use Activitypub\Collection\Users;
+use Activitypub\Model\Blog;
 use Activitypub\Activity\Actor;
+use Activitypub\Collection\Users;
+use Activitypub\Collection\Extra_Fields;
 
+use function Activitypub\is_blog_public;
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
 
@@ -23,30 +27,21 @@ class User extends Actor {
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#featured
 	 *
+	 * @context {
+	 *   "@id": "http://joinmastodon.org/ns#featured",
+	 *   "@type": "@id"
+	 * }
+	 *
 	 * @var string
 	 */
 	protected $featured;
 
 	/**
-	 * Moderators endpoint.
-	 *
-	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
-	 *
-	 * @var string
-	 */
-	protected $moderators;
-
-	/**
-	 * The User-Type
-	 *
-	 * @var string
-	 */
-	protected $type = 'Person';
-
-	/**
 	 * If the User is discoverable.
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
+	 *
+	 * @context http://joinmastodon.org/ns#discoverable
 	 *
 	 * @var boolean
 	 */
@@ -54,6 +49,8 @@ class User extends Actor {
 
 	/**
 	 * If the User is indexable.
+	 *
+	 * @context http://joinmastodon.org/ns#indexable
 	 *
 	 * @var boolean
 	 */
@@ -64,16 +61,11 @@ class User extends Actor {
 	 *
 	 * @var string<url>
 	 */
-	protected $resource;
+	protected $webfinger;
 
-	/**
-	 * Restrict posting to mods
-	 *
-	 * @see https://join-lemmy.org/docs/contributors/05-federation.html
-	 *
-	 * @var boolean
-	 */
-	protected $posting_restricted_to_mods = null;
+	public function get_type() {
+		return 'Person';
+	}
 
 	public static function from_wp_user( $user_id ) {
 		if ( is_user_disabled( $user_id ) ) {
@@ -114,7 +106,7 @@ class User extends Actor {
 	 * @return string The User-Description.
 	 */
 	public function get_summary() {
-		$description = get_user_meta( $this->_id, 'activitypub_user_description', true );
+		$description = get_user_option( 'activitypub_description', $this->_id );
 		if ( empty( $description ) ) {
 			$description = get_user_meta( $this->_id, 'description', true );
 		}
@@ -144,6 +136,14 @@ class User extends Actor {
 	}
 
 	public function get_icon() {
+		$icon = \get_user_option( 'activitypub_icon', $this->_id );
+		if ( wp_attachment_is_image( $icon ) ) {
+			return array(
+				'type' => 'Image',
+				'url'  => esc_url( wp_get_attachment_url( $icon ) ),
+			);
+		}
+
 		$icon = \esc_url(
 			\get_avatar_url(
 				$this->_id,
@@ -158,11 +158,21 @@ class User extends Actor {
 	}
 
 	public function get_image() {
-		if ( \has_header_image() ) {
-			$image = \esc_url( \get_header_image() );
+		$header_image = get_user_option( 'activitypub_header_image', $this->_id );
+		$image_url    = null;
+
+		if ( ! $header_image && \has_header_image() ) {
+			$image_url = \get_header_image();
+		}
+
+		if ( $header_image ) {
+			$image_url = \wp_get_attachment_url( $header_image );
+		}
+
+		if ( $image_url ) {
 			return array(
 				'type' => 'Image',
-				'url'  => $image,
+				'url'  => esc_url( $image_url ),
 			);
 		}
 
@@ -187,7 +197,7 @@ class User extends Actor {
 	 * @return string The Inbox-Endpoint.
 	 */
 	public function get_inbox() {
-		return get_rest_url_by_path( sprintf( 'users/%d/inbox', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/inbox', $this->get__id() ) );
 	}
 
 	/**
@@ -196,7 +206,7 @@ class User extends Actor {
 	 * @return string The Outbox-Endpoint.
 	 */
 	public function get_outbox() {
-		return get_rest_url_by_path( sprintf( 'users/%d/outbox', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/outbox', $this->get__id() ) );
 	}
 
 	/**
@@ -205,7 +215,7 @@ class User extends Actor {
 	 * @return string The Followers-Endpoint.
 	 */
 	public function get_followers() {
-		return get_rest_url_by_path( sprintf( 'users/%d/followers', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->get__id() ) );
 	}
 
 	/**
@@ -214,7 +224,7 @@ class User extends Actor {
 	 * @return string The Following-Endpoint.
 	 */
 	public function get_following() {
-		return get_rest_url_by_path( sprintf( 'users/%d/following', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/following', $this->get__id() ) );
 	}
 
 	/**
@@ -223,7 +233,19 @@ class User extends Actor {
 	 * @return string The Featured-Endpoint.
 	 */
 	public function get_featured() {
-		return get_rest_url_by_path( sprintf( 'users/%d/collections/featured', $this->get__id() ) );
+		return get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $this->get__id() ) );
+	}
+
+	public function get_endpoints() {
+		$endpoints = null;
+
+		if ( ACTIVITYPUB_SHARED_INBOX_FEATURE ) {
+			$endpoints = array(
+				'sharedInbox' => get_rest_url_by_path( 'inbox' ),
+			);
+		}
+
+		return $endpoints;
 	}
 
 	/**
@@ -232,41 +254,8 @@ class User extends Actor {
 	 * @return array The extended User-Output.
 	 */
 	public function get_attachment() {
-		$array = array();
-
-		$array[] = array(
-			'type' => 'PropertyValue',
-			'name' => \__( 'Blog', 'activitypub' ),
-			'value' => \html_entity_decode(
-				'<a rel="me" title="' . \esc_attr( \home_url( '/' ) ) . '" target="_blank" href="' . \home_url( '/' ) . '">' . \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) . '</a>',
-				\ENT_QUOTES,
-				'UTF-8'
-			),
-		);
-
-		$array[] = array(
-			'type' => 'PropertyValue',
-			'name' => \__( 'Profile', 'activitypub' ),
-			'value' => \html_entity_decode(
-				'<a rel="me" title="' . \esc_attr( \get_author_posts_url( $this->get__id() ) ) . '" target="_blank" href="' . \get_author_posts_url( $this->get__id() ) . '">' . \wp_parse_url( \get_author_posts_url( $this->get__id() ), \PHP_URL_HOST ) . '</a>',
-				\ENT_QUOTES,
-				'UTF-8'
-			),
-		);
-
-		if ( \get_the_author_meta( 'user_url', $this->get__id() ) ) {
-			$array[] = array(
-				'type' => 'PropertyValue',
-				'name' => \__( 'Website', 'activitypub' ),
-				'value' => \html_entity_decode(
-					'<a rel="me" title="' . \esc_attr( \get_the_author_meta( 'user_url', $this->get__id() ) ) . '" target="_blank" href="' . \get_the_author_meta( 'user_url', $this->get__id() ) . '">' . \wp_parse_url( \get_the_author_meta( 'user_url', $this->get__id() ), \PHP_URL_HOST ) . '</a>',
-					\ENT_QUOTES,
-					'UTF-8'
-				),
-			);
-		}
-
-		return $array;
+		$extra_fields = Extra_Fields::get_actor_fields( $this->_id );
+		return Extra_Fields::fields_to_attachments( $extra_fields );
 	}
 
 	/**
@@ -274,7 +263,7 @@ class User extends Actor {
 	 *
 	 * @return string The Webfinger-Identifier.
 	 */
-	public function get_resource() {
+	public function get_webfinger() {
 		return $this->get_preferred_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
 	}
 
@@ -291,10 +280,58 @@ class User extends Actor {
 	}
 
 	public function get_indexable() {
-		if ( \get_option( 'blog_public', 1 ) ) {
+		if ( is_blog_public() ) {
 			return true;
 		} else {
 			return false;
 		}
+	}
+
+
+	/**
+	 * Update the User-Name.
+	 *
+	 * @param mixed $value The new value.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function update_name( $value ) {
+		$userdata = [ 'ID' => $this->_id, 'display_name' => $value ];
+		return \wp_update_user( $userdata );
+	}
+
+	/**
+	 * Update the User-Description.
+	 *
+	 * @param mixed $value The new value.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function update_summary( $value ) {
+		return \update_user_option( $this->_id, 'activitypub_description', $value );
+	}
+
+	/**
+	 * Update the User-Icon.
+	 *
+	 * @param mixed $value The new value. Should be an attachment ID.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function update_icon( $value ) {
+		if ( ! wp_attachment_is_image( $value ) ) {
+			return false;
+		}
+		return update_user_option( $this->_id, 'activitypub_icon', $value );
+	}
+
+	/**
+	 * Update the User-Header-Image.
+	 *
+	 * @param mixed $value The new value. Should be an attachment ID.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
+	public function update_header( $value ) {
+		if ( ! wp_attachment_is_image( $value ) ) {
+			return false;
+		}
+		return \update_user_option( $this->_id, 'activitypub_header_image', $value );
 	}
 }

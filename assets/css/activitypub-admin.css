@@ -34,10 +34,10 @@
 
 .activitypub-settings-tabs-wrapper {
 	display: -ms-inline-grid;
-	-ms-grid-columns: auto auto auto;
+	-ms-grid-columns: auto auto auto auto;
 	vertical-align: top;
 	display: inline-grid;
-	grid-template-columns: auto auto auto;
+	grid-template-columns: auto auto auto auto;
 }
 
 .activitypub-settings-tab.active {
@@ -196,4 +196,19 @@ input.blog-user-identifier {
 .settings_page_activitypub .plugin-recommendations {
 	border-bottom: none;
 	margin-bottom: 0;
+}
+
+#dashboard_right_now li a.activitypub-followers::before {
+	content: "\f307";
+	font-family: dashicons;
+}
+
+.repost .dashboard-comment-wrap,
+.like .dashboard-comment-wrap {
+	padding-inline-start: 63px;
+}
+
+.repost .dashboard-comment-wrap .comment-author,
+.like .dashboard-comment-wrap .comment-author {
+	margin-block: 0;
 }

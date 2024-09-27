@@ -9,7 +9,7 @@ import { ExternalLink } from '@wordpress/components';
 const { namespace } = window._activityPubOptions;
 
 function getPath( userId, per_page, order, page ) {
-	const path = `/${ namespace }/users/${ userId }/followers`;
+	const path = `/${ namespace }/actors/${ userId }/followers`;
 	const args = {
 		per_page,
 		order,
@@ -46,14 +46,14 @@ export function Followers( {
 		/* translators: arrow for previous followers link */
 		__( '<span>←</span> Less', 'activitypub' ),
 		{
-			span: <span class="wp-block-query-pagination-previous-arrow is-arrow-arrow" aria-hidden="true" />,
+			span: <span className="wp-block-query-pagination-previous-arrow is-arrow-arrow" aria-hidden="true" />,
 		}
 	);
 	const nextLabel = createInterpolateElement(
 		/* translators: arrow for next followers link */
 		__( 'More <span>→</span>', 'activitypub' ),
 		{
-			span: <span class="wp-block-query-pagination-next-arrow is-arrow-arrow" aria-hidden="true" />,
+			span: <span className="wp-block-query-pagination-next-arrow is-arrow-arrow" aria-hidden="true" />,
 		}
 	);
 
@@ -110,13 +110,13 @@ function Follower( { name, icon, url, preferredUsername, followLinks = true } ) 
 				width="40"
 				height="40"
 				src={ icon.url }
-				class="avatar activitypub-avatar"
+				className="avatar activitypub-avatar"
 				alt={ name }
 			/>
-			<span class="activitypub-actor">
+			<span className="activitypub-actor">
 				<strong className="activitypub-name">{ name }</strong>
-				<span class="sep">/</span>
-				<span class="activitypub-handle">{ handle }</span>
+				<span className="sep">/</span>
+				<span className="activitypub-handle">{ handle }</span>
 			</span>
 		</ExternalLink>
 	)

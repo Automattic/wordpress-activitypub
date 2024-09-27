@@ -3,11 +3,14 @@
 	<description>WordPress ActivityPub Standards</description>
 	<file>./activitypub.php</file>
 	<file>./includes/</file>
+	<file>./integration/</file>
+	<file>./build/</file>
 	<exclude-pattern>*\.(inc|css|js|svg)</exclude-pattern>
 	<exclude-pattern>*/vendor/*</exclude-pattern>
 	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*.asset.php</exclude-pattern>
 	<rule ref="PHPCompatibility"/>
-	<config name="testVersion" value="5.6-"/>
+	<config name="testVersion" value="7.0-"/>
 	<rule ref="PHPCompatibilityWP"/>
 	<config name="minimum_supported_wp_version" value="4.7"/>
 	<rule ref="WordPress-Core">
@@ -69,5 +72,12 @@
 	</rule>
 	<rule ref="WordPress.Arrays.ArrayDeclarationSpacing">
 		<exclude-pattern>**/*.asset.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.Capabilities">
+		<properties>
+			<property name="custom_capabilities" type="array">
+				<element value="activitypub" />
+			</property>
+		</properties>
 	</rule>
 </ruleset>
