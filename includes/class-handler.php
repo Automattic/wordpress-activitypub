@@ -17,7 +17,7 @@ class Handler {
 	 * Initialize the class, registering WordPress hooks
 	 */
 	public static function init() {
-		self::register_inbox_handlers();
+		self::register_handlers();
 
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
 	}
