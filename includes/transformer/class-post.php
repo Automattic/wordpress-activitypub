@@ -5,9 +5,8 @@ use WP_Post;
 use Activitypub\Shortcodes;
 use Activitypub\Model\Blog;
 use Activitypub\Collection\Users;
-use Activitypub\Activity\Activity;
-use Activitypub\Activity\Base_Object;
 use Activitypub\Transformer\Base;
+use Activitypub\Activity\Activity;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
