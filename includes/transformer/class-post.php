@@ -114,9 +114,9 @@ class Post extends Base {
 		$activity->set_object( $object );
 
 		return $activity;
-  }
-  
-  /**
+	}
+
+	/**
 	 * Returns the User-Object of the Author of the Post.
 	 *
 	 * If `single_user` mode is enabled, the Blog-User is returned.
