@@ -64,7 +64,10 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 			return new WP_Error(
 				'activitypub_no_valid_actor_identifier',
 				\__( 'The "actor" identifier is not valid', 'activitypub' ),
-				array( 'status' => 404, 'actor' => $actor )
+				array(
+					'status' => 404,
+					'actor'  => $actor,
+				)
 			);
 		}
 	}
@@ -77,7 +80,10 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		return new WP_Error(
 			'activitypub_no_valid_actor_identifier',
 			\__( 'The "actor" identifier is not valid', 'activitypub' ),
-			array( 'status' => 404, 'actor' => $actor )
+			array(
+				'status' => 404,
+				'actor'  => $actor,
+			)
 		);
 	}
 
@@ -100,7 +106,10 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		$metadata = new WP_Error(
 			'activitypub_no_valid_actor_url',
 			\__( 'The "actor" is no valid URL', 'activitypub' ),
-			array( 'status' => 400, 'actor' => $actor )
+			array(
+				'status' => 400,
+				'actor'  => $actor,
+			)
 		);
 		return $metadata;
 	}
@@ -118,7 +127,10 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		$metadata = new WP_Error(
 			'activitypub_invalid_json',
 			\__( 'No valid JSON data', 'activitypub' ),
-			array( 'status' => 400, 'actor' => $actor )
+			array(
+				'status' => 400,
+				'actor'  => $actor,
+			)
 		);
 		return $metadata;
 	}
@@ -185,7 +197,7 @@ function url_to_authorid( $url ) {
 
 	// generate rewrite rule for the author url
 	$author_rewrite = $wp_rewrite->get_author_permastruct();
-	$author_regexp = \str_replace( '%author%', '', $author_rewrite );
+	$author_regexp  = \str_replace( '%author%', '', $author_rewrite );
 
 	// match the rewrite rule with the passed url
 	if ( \preg_match( '/https?:\/\/(.+)' . \preg_quote( $author_regexp, '/' ) . '([^\/]+)/i', $url, $match ) ) {
@@ -248,7 +260,7 @@ function is_tombstone( $wp_error ) {
  */
 function get_rest_url_by_path( $path = '' ) {
 	// we'll handle the leading slash.
-	$path = ltrim( $path, '/' );
+	$path            = ltrim( $path, '/' );
 	$namespaced_path = sprintf( '/%s/%s', ACTIVITYPUB_REST_NAMESPACE, $path );
 	return \get_rest_url( null, $namespaced_path );
 }
@@ -631,9 +643,9 @@ function is_activity_public( $data ) {
  */
 function get_active_users( $duration = 1 ) {
 
-	$duration = intval( $duration );
+	$duration      = intval( $duration );
 	$transient_key = sprintf( 'monthly_active_users_%d', $duration );
-	$count = get_transient( $transient_key );
+	$count         = get_transient( $transient_key );
 
 	if ( false === $count ) {
 		global $wpdb;
@@ -924,8 +936,8 @@ function get_enclosures( $post_id ) {
 			}
 
 			return array(
-				'url' => $attributes[0],
-				'length' => isset( $attributes[1] ) ? trim( $attributes[1] ) : null,
+				'url'       => $attributes[0],
+				'length'    => isset( $attributes[1] ) ? trim( $attributes[1] ) : null,
 				'mediaType' => isset( $attributes[2] ) ? trim( $attributes[2] ) : null,
 			);
 		},
@@ -961,7 +973,7 @@ function get_comment_ancestors( $comment ) {
 
 	// phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
 	while ( $id > 0 ) {
-		$ancestor = \get_comment( $id );
+		$ancestor  = \get_comment( $id );
 		$parent_id = (int) $ancestor->comment_parent;
 
 		// Loop detection: If the ancestor has been seen before, break.
@@ -1019,7 +1031,6 @@ function custom_large_numbers( $formatted, $number, $decimals ) {
 /**
  * Registers a ActivityPub comment type.
  *
- *
  * @param string $comment_type Key for comment type.
  * @param array  $args         Arguments.
  *
@@ -1039,7 +1050,6 @@ function register_comment_type( $comment_type, $args = array() ) {
 
 	/**
 	 * Fires after a ActivityPub comment type is registered.
-	 *
 	 *
 	 * @param string $comment_type Comment type.
 	 * @param array  $args         Arguments used to register the comment type.
@@ -1102,8 +1112,8 @@ function enrich_content_data( $content, $regex, $regex_callback ) {
 	if ( mb_strlen( $content ) > MB_IN_BYTES ) {
 		return $content;
 	}
-	$tag_stack = array();
-	$protected_tags = array(
+	$tag_stack          = array();
+	$protected_tags     = array(
 		'pre',
 		'code',
 		'textarea',
@@ -1111,7 +1121,7 @@ function enrich_content_data( $content, $regex, $regex_callback ) {
 		'a',
 	);
 	$content_with_links = '';
-	$in_protected_tag = false;
+	$in_protected_tag   = false;
 	foreach ( wp_html_split( $content ) as $chunk ) {
 		if ( preg_match( '#^<!--[\s\S]*-->$#i', $chunk, $m ) ) {
 			$content_with_links .= $chunk;
@@ -1210,7 +1220,8 @@ function generate_post_summary( $post, $length = 500 ) {
 		$content = $content[0] . ' ' . $excerpt_more;
 	}
 
-	/* Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
+	/*
+	Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
 	return \apply_filters( 'the_excerpt', $content );
 	*/
 	return $content;

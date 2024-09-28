@@ -22,28 +22,28 @@ class Actor extends Base_Object {
 		'https://w3id.org/security/v1',
 		'https://purl.archive.org/socialweb/webfinger',
 		array(
-			'schema' => 'http://schema.org#',
-			'toot' => 'http://joinmastodon.org/ns#',
-			'lemmy' => 'https://join-lemmy.org/ns#',
+			'schema'                    => 'http://schema.org#',
+			'toot'                      => 'http://joinmastodon.org/ns#',
+			'lemmy'                     => 'https://join-lemmy.org/ns#',
 			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
-			'PropertyValue' => 'schema:PropertyValue',
-			'value' => 'schema:value',
-			'Hashtag' => 'as:Hashtag',
-			'featured' => array(
-				'@id' => 'toot:featured',
+			'PropertyValue'             => 'schema:PropertyValue',
+			'value'                     => 'schema:value',
+			'Hashtag'                   => 'as:Hashtag',
+			'featured'                  => array(
+				'@id'   => 'toot:featured',
 				'@type' => '@id',
 			),
-			'featuredTags' => array(
-				'@id' => 'toot:featuredTags',
+			'featuredTags'              => array(
+				'@id'   => 'toot:featuredTags',
 				'@type' => '@id',
 			),
-			'moderators' => array(
-				'@id' => 'lemmy:moderators',
+			'moderators'                => array(
+				'@id'   => 'lemmy:moderators',
 				'@type' => '@id',
 			),
-			'postingRestrictedToMods' => 'lemmy:postingRestrictedToMods',
-			'discoverable' => 'toot:discoverable',
-			'indexable' => 'toot:indexable',
+			'postingRestrictedToMods'   => 'lemmy:postingRestrictedToMods',
+			'discoverable'              => 'toot:discoverable',
+			'indexable'                 => 'toot:indexable',
 		),
 	);
 

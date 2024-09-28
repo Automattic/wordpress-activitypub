@@ -49,7 +49,7 @@ class Outbox {
 	/**
 	 * Renders the user-outbox
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param  WP_REST_Request $request
 	 * @return WP_REST_Response
 	 */
 	public static function user_outbox_get( $request ) {
@@ -72,19 +72,19 @@ class Outbox {
 		$json = new stdClass();
 
 		$json->{'@context'} = get_context();
-		$json->id = get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) );
-		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
-		$json->actor = $user->get_id();
-		$json->type = 'OrderedCollectionPage';
+		$json->id           = get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) );
+		$json->generator    = 'http://wordpress.org/?v=' . get_masked_wp_version();
+		$json->actor        = $user->get_id();
+		$json->type         = 'OrderedCollectionPage';
 		$json->partOf = get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
 
 		if ( $user_id > 0 ) {
-			$count_posts = \count_user_posts( $user_id, $post_types, true );
+			$count_posts      = \count_user_posts( $user_id, $post_types, true );
 			$json->totalItems = \intval( $count_posts ); // phpcs:ignore
 		} else {
 			foreach ( $post_types as $post_type ) {
-				$count_posts = \wp_count_posts( $post_type );
+				$count_posts       = \wp_count_posts( $post_type );
 				$json->totalItems += \intval( $count_posts->publish ); // phpcs:ignore
 			}
 		}
@@ -148,13 +148,13 @@ class Outbox {
 		$params = array();
 
 		$params['page'] = array(
-			'type' => 'integer',
+			'type'    => 'integer',
 			'default' => 1,
 		);
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
 		);
 
 		return $params;

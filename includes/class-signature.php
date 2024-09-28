@@ -60,7 +60,7 @@ class Signature {
 	 */
 	public static function get_keypair_for( $user_id ) {
 		$option_key = self::get_signature_options_key_for( $user_id );
-		$key_pair = \get_option( $option_key );
+		$key_pair   = \get_option( $option_key );
 
 		if ( ! $key_pair ) {
 			$key_pair = self::generate_key_pair_for( $user_id );
@@ -78,7 +78,7 @@ class Signature {
 	 */
 	protected static function generate_key_pair_for( $user_id ) {
 		$option_key = self::get_signature_options_key_for( $user_id );
-		$key_pair = self::check_legacy_key_pair_for( $user_id );
+		$key_pair   = self::check_legacy_key_pair_for( $user_id );
 
 		if ( $key_pair ) {
 			\add_option( $option_key, $key_pair );
@@ -87,14 +87,14 @@ class Signature {
 		}
 
 		$config = array(
-			'digest_alg' => 'sha512',
+			'digest_alg'       => 'sha512',
 			'private_key_bits' => 2048,
 			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
 		);
 
-		$key = \openssl_pkey_new( $config );
+		$key      = \openssl_pkey_new( $config );
 		$priv_key = null;
-		$detail = array();
+		$detail   = array();
 		if ( $key ) {
 			\openssl_pkey_export( $key, $priv_key );
 
@@ -152,15 +152,15 @@ class Signature {
 	protected static function check_legacy_key_pair_for( $user_id ) {
 		switch ( $user_id ) {
 			case 0:
-				$public_key = \get_option( 'activitypub_blog_user_public_key' );
+				$public_key  = \get_option( 'activitypub_blog_user_public_key' );
 				$private_key = \get_option( 'activitypub_blog_user_private_key' );
 				break;
 			case -1:
-				$public_key = \get_option( 'activitypub_application_user_public_key' );
+				$public_key  = \get_option( 'activitypub_application_user_public_key' );
 				$private_key = \get_option( 'activitypub_application_user_private_key' );
 				break;
 			default:
-				$public_key = \get_user_meta( $user_id, 'magic_sig_public_key', true );
+				$public_key  = \get_user_meta( $user_id, 'magic_sig_public_key', true );
 				$private_key = \get_user_meta( $user_id, 'magic_sig_private_key', true );
 				break;
 		}
@@ -253,11 +253,11 @@ class Signature {
 				$route = '/' . $path . $route;
 			}
 
-			$headers = $request->get_headers();
+			$headers                        = $request->get_headers();
 			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . $route;
 		} else {
-			$request = self::format_server_request( $request );
-			$headers = $request['headers']; // $_SERVER array
+			$request                        = self::format_server_request( $request );
+			$headers                        = $request['headers']; // $_SERVER array
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
@@ -359,7 +359,7 @@ class Signature {
 		if ( $signature_block['algorithm'] ) {
 			switch ( $signature_block['algorithm'] ) {
 				case 'rsa-sha-512':
-					return 'sha512'; //hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12
+					return 'sha512'; // hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12
 				default:
 					return 'sha256';
 			}
@@ -375,8 +375,8 @@ class Signature {
 	 * @return array signature parts
 	 */
 	public static function parse_signature_header( $signature ) {
-		$parsed_header  = array();
-		$matches        = array();
+		$parsed_header = array();
+		$matches       = array();
 
 		if ( \preg_match( '/keyId="(.*?)"/ism', $signature, $matches ) ) {
 			$parsed_header['keyId'] = trim( $matches[1] );
@@ -459,7 +459,7 @@ class Signature {
 				$d->setTimeZone( new DateTimeZone( 'UTC' ) );
 				$c = $d->format( 'U' );
 
-				$dplus = time() + ( 3 * HOUR_IN_SECONDS );
+				$dplus  = time() + ( 3 * HOUR_IN_SECONDS );
 				$dminus = time() - ( 3 * HOUR_IN_SECONDS );
 
 				if ( $c > $dplus || $c < $dminus ) {
@@ -499,7 +499,7 @@ class Signature {
 			if ( 'REQUEST_URI' === $req_param ) {
 				$request['headers']['route'][] = $param_val;
 			} else {
-				$header_key = str_replace(
+				$header_key                          = str_replace(
 					'http_',
 					'',
 					$req_param

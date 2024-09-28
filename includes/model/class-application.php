@@ -81,7 +81,7 @@ class Application extends Actor {
 		return $this->get_name();
 	}
 
-		/**
+	/**
 	 * Get the User-Icon.
 	 *
 	 * @return array The User-Icon.
@@ -178,8 +178,8 @@ class Application extends Actor {
 
 	public function get_public_key() {
 		return array(
-			'id'       => $this->get_id() . '#main-key',
-			'owner'    => $this->get_id(),
+			'id'           => $this->get_id() . '#main-key',
+			'owner'        => $this->get_id(),
 			'publicKeyPem' => Signature::get_public_key_for( Users::APPLICATION_USER_ID ),
 		);
 	}

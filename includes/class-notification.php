@@ -43,8 +43,8 @@ class Notification {
 	 * @param int    $target The WordPress User-Id.
 	 */
 	public function __construct( $type, $actor, $object, $target ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
-		$this->type = $type;
-		$this->actor = $actor;
+		$this->type   = $type;
+		$this->actor  = $actor;
 		$this->object = $object;
 		$this->target = $target;
 	}

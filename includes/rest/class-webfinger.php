@@ -73,7 +73,7 @@ class Webfinger {
 			$code,
 			array(
 				'Access-Control-Allow-Origin' => '*',
-				'Content-Type' => 'application/jrd+json; charset=' . get_option( 'blog_charset' ),
+				'Content-Type'                => 'application/jrd+json; charset=' . get_option( 'blog_charset' ),
 			)
 		);
 	}
@@ -88,8 +88,8 @@ class Webfinger {
 
 		$params['resource'] = array(
 			'required' => true,
-			'type' => 'string',
-			'pattern' => '^(acct:)|^(https?://)(.+)$',
+			'type'     => 'string',
+			'pattern'  => '^(acct:)|^(https?://)(.+)$',
 		);
 
 		return $params;

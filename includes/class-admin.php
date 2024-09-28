@@ -193,8 +193,8 @@ class Admin {
 			'activitypub',
 			'activitypub_post_content_type',
 			array(
-				'type' => 'string',
-				'description' => \__( 'Use title and link, summary, full or custom content', 'activitypub' ),
+				'type'         => 'string',
+				'description'  => \__( 'Use title and link, summary, full or custom content', 'activitypub' ),
 				'show_in_rest' => array(
 					'schema' => array(
 						'enum' => array(
@@ -204,34 +204,34 @@ class Admin {
 						),
 					),
 				),
-				'default' => 'content',
+				'default'      => 'content',
 			)
 		);
 		\register_setting(
 			'activitypub',
 			'activitypub_custom_post_content',
 			array(
-				'type' => 'string',
-				'description' => \__( 'Define your own custom post template', 'activitypub' ),
+				'type'         => 'string',
+				'description'  => \__( 'Define your own custom post template', 'activitypub' ),
 				'show_in_rest' => true,
-				'default' => ACTIVITYPUB_CUSTOM_POST_CONTENT,
+				'default'      => ACTIVITYPUB_CUSTOM_POST_CONTENT,
 			)
 		);
 		\register_setting(
 			'activitypub',
 			'activitypub_max_image_attachments',
 			array(
-				'type' => 'integer',
+				'type'        => 'integer',
 				'description' => \__( 'Number of images to attach to posts.', 'activitypub' ),
-				'default' => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
+				'default'     => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
 			)
 		);
 		\register_setting(
 			'activitypub',
 			'activitypub_object_type',
 			array(
-				'type' => 'string',
-				'description' => \__( 'The Activity-Object-Type', 'activitypub' ),
+				'type'         => 'string',
+				'description'  => \__( 'The Activity-Object-Type', 'activitypub' ),
 				'show_in_rest' => array(
 					'schema' => array(
 						'enum' => array(
@@ -240,25 +240,25 @@ class Admin {
 						),
 					),
 				),
-				'default' => 'note',
+				'default'      => 'note',
 			)
 		);
 		\register_setting(
 			'activitypub',
 			'activitypub_use_hashtags',
 			array(
-				'type' => 'boolean',
+				'type'        => 'boolean',
 				'description' => \__( 'Add hashtags in the content as native tags and replace the #tag with the tag-link', 'activitypub' ),
-				'default' => '0',
+				'default'     => '0',
 			)
 		);
 		\register_setting(
 			'activitypub',
 			'activitypub_use_opengraph',
 			array(
-				'type' => 'boolean',
+				'type'        => 'boolean',
 				'description' => \__( 'Automatically add "fediverse:creator" OpenGraph tags for Authors and the Blog-User.', 'activitypub' ),
-				'default' => '1',
+				'default'     => '1',
 			)
 		);
 		\register_setting(
@@ -275,18 +275,18 @@ class Admin {
 			'activitypub',
 			'activitypub_enable_users',
 			array(
-				'type' => 'boolean',
+				'type'        => 'boolean',
 				'description' => \__( 'Every Author on this Blog (with the publish_posts capability) gets his own ActivityPub enabled Profile.', 'activitypub' ),
-				'default' => '1',
+				'default'     => '1',
 			)
 		);
 		\register_setting(
 			'activitypub',
 			'activitypub_enable_blog_user',
 			array(
-				'type' => 'boolean',
+				'type'        => 'boolean',
 				'description' => \__( 'Your Blog becomes an ActivityPub compatible Profile.', 'activitypub' ),
-				'default' => '0',
+				'default'     => '0',
 			)
 		);
 
@@ -295,10 +295,10 @@ class Admin {
 			'activitypub_blog',
 			'activitypub_blog_description',
 			array(
-				'type' => 'string',
-				'description' => \esc_html__( 'The Description of the Blog-User', 'activitypub' ),
+				'type'         => 'string',
+				'description'  => \esc_html__( 'The Description of the Blog-User', 'activitypub' ),
 				'show_in_rest' => true,
-				'default' => '',
+				'default'      => '',
 			)
 		);
 		\register_setting(
@@ -350,9 +350,9 @@ class Admin {
 			'activitypub_blog',
 			'activitypub_header_image',
 			array(
-				'type' => 'integer',
+				'type'        => 'integer',
 				'description' => \__( 'The Attachment-ID of the Sites Header-Image', 'activitypub' ),
-				'default' => null,
+				'default'     => null,
 			)
 		);
 	}
@@ -665,7 +665,7 @@ class Admin {
 	 * @return array The extended bulk options.
 	 */
 	public static function user_bulk_options( $actions ) {
-		$actions['add_activitypub_cap'] = __( 'Enable for ActivityPub', 'activitypub' );
+		$actions['add_activitypub_cap']    = __( 'Enable for ActivityPub', 'activitypub' );
 		$actions['remove_activitypub_cap'] = __( 'Disable for ActivityPub', 'activitypub' );
 
 		return $actions;

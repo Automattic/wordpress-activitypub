@@ -51,6 +51,7 @@ class Event extends Base_Object {
 
 	/**
 	 * Mobilizon compatible values for repliesModertaionOption.
+	 *
 	 * @var array
 	 */
 	const REPLIES_MODERATION_OPTION_TYPES = array( 'allow_all', 'closed' );
@@ -62,6 +63,7 @@ class Event extends Base_Object {
 
 	/**
 	 * Allowed values for ical VEVENT STATUS.
+	 *
 	 * @var array
 	 */
 	const ICAL_EVENT_STATUS_TYPES = array( 'TENTATIVE', 'CONFIRMED', 'CANCELLED' );
@@ -70,6 +72,7 @@ class Event extends Base_Object {
 	 * Default event categories.
 	 *
 	 * These values currently reflect the default set as proposed by Mobilizon to maximize interoperability.
+	 *
 	 * @var array
 	 */
 	const DEFAULT_EVENT_CATEGORIES = array(
@@ -253,7 +256,7 @@ class Event extends Base_Object {
 	public function set_replies_moderation_option( $type ) {
 		if ( in_array( $type, self::REPLIES_MODERATION_OPTION_TYPES, true ) ) {
 			$this->replies_moderation_option = $type;
-			$this->comments_enabled = ( 'allow_all' === $type ) ? true : false;
+			$this->comments_enabled          = ( 'allow_all' === $type ) ? true : false;
 		} else {
 			_doing_it_wrong(
 				__METHOD__,
@@ -272,7 +275,7 @@ class Event extends Base_Object {
 	 */
 	public function set_comments_enabled( $comments_enabled ) {
 		if ( is_bool( $comments_enabled ) ) {
-			$this->comments_enabled = $comments_enabled;
+			$this->comments_enabled          = $comments_enabled;
 			$this->replies_moderation_option = $comments_enabled ? 'allow_all' : 'closed';
 		} else {
 			_doing_it_wrong(
@@ -332,7 +335,7 @@ class Event extends Base_Object {
 	public function set_external_participation_url( $url ) {
 		if ( preg_match( '/^https?:\/\/.*/i', $url ) ) {
 			$this->external_participation_url = $url;
-			$this->join_mode = 'external';
+			$this->join_mode                  = 'external';
 		}
 
 		return $this;

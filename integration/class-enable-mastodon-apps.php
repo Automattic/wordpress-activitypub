@@ -117,8 +117,8 @@ class Enable_Mastodon_Apps {
 
 		foreach ( $fields as $field ) {
 			$ret[] = array(
-				'name'   => $field->post_title,
-				'value'  => Extra_Fields::get_formatted_content( $field ),
+				'name'  => $field->post_title,
+				'value' => Extra_Fields::get_formatted_content( $field ),
 			);
 		}
 
@@ -190,29 +190,29 @@ class Enable_Mastodon_Apps {
 					$acct = $item->get_url();
 				}
 
-				$account = new Account();
-				$account->id = \strval( $item->get__id() );
-				$account->username = $item->get_preferred_username();
-				$account->acct = $acct;
-				$account->display_name = $item->get_name();
-				$account->url = $item->get_url();
-				$account->avatar = $item->get_icon_url();
-				$account->avatar_static = $item->get_icon_url();
-				$account->created_at = new DateTime( $item->get_published() );
-				$account->last_status_at = new DateTime( $item->get_published() );
-				$account->note = $item->get_summary();
-				$account->header = $item->get_image_url();
-				$account->header_static = $item->get_image_url();
+				$account                  = new Account();
+				$account->id              = \strval( $item->get__id() );
+				$account->username        = $item->get_preferred_username();
+				$account->acct            = $acct;
+				$account->display_name    = $item->get_name();
+				$account->url             = $item->get_url();
+				$account->avatar          = $item->get_icon_url();
+				$account->avatar_static   = $item->get_icon_url();
+				$account->created_at      = new DateTime( $item->get_published() );
+				$account->last_status_at  = new DateTime( $item->get_published() );
+				$account->note            = $item->get_summary();
+				$account->header          = $item->get_image_url();
+				$account->header_static   = $item->get_image_url();
 				$account->followers_count = 0;
 				$account->following_count = 0;
-				$account->statuses_count = 0;
-				$account->bot = false;
-				$account->locked = false;
-				$account->group = false;
-				$account->discoverable = false;
-				$account->noindex = false;
-				$account->fields = array();
-				$account->emojis = array();
+				$account->statuses_count  = 0;
+				$account->bot             = false;
+				$account->locked          = false;
+				$account->group           = false;
+				$account->discoverable    = false;
+				$account->noindex         = false;
+				$account->fields          = array();
+				$account->emojis          = array();
 
 				return $account;
 			},
@@ -260,7 +260,7 @@ class Enable_Mastodon_Apps {
 
 	public static function api_account_internal( $user_data, $user_id ) {
 		$user_id_to_use = self::maybe_map_user_to_blog( $user_id );
-		$user = Users::get_by_id( $user_id_to_use );
+		$user           = Users::get_by_id( $user_id_to_use );
 
 		if ( ! $user || is_wp_error( $user ) ) {
 			return $user_data;
@@ -269,21 +269,21 @@ class Enable_Mastodon_Apps {
 		// convert user to account.
 		$account = new Account();
 		// even if we have a blog user, maintain the provided user_id so as not to confuse clients
-		$account->id = (int) $user_id;
-		$account->username = $user->get_preferred_username();
-		$account->acct = $account->username;
-		$account->display_name = $user->get_name();
-		$account->note = $user->get_summary();
+		$account->id             = (int) $user_id;
+		$account->username       = $user->get_preferred_username();
+		$account->acct           = $account->username;
+		$account->display_name   = $user->get_name();
+		$account->note           = $user->get_summary();
 		$account->source['note'] = wp_strip_all_tags( $account->note, true );
-		$account->url = $user->get_url();
+		$account->url            = $user->get_url();
 
-		$icon = $user->get_icon();
-		$account->avatar = $icon['url'];
+		$icon                   = $user->get_icon();
+		$account->avatar        = $icon['url'];
 		$account->avatar_static = $account->avatar;
 
 		$header = $user->get_image();
 		if ( $header ) {
-			$account->header = $header['url'];
+			$account->header        = $header['url'];
 			$account->header_static = $account->header;
 		}
 
@@ -291,13 +291,13 @@ class Enable_Mastodon_Apps {
 
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
 		$query_args = array(
-			'post_type' => $post_types,
+			'post_type'      => $post_types,
 			'posts_per_page' => 1,
 		);
 		if ( $user_id > 0 ) {
 			$query_args['author'] = $user_id;
 		}
-		$posts = \get_posts( $query_args );
+		$posts                   = \get_posts( $query_args );
 		$account->last_status_at = ! empty( $posts ) ? new DateTime( $posts[0]->post_date_gmt ) : $account->created_at;
 
 		$account->fields = self::get_extra_fields( $user_id_to_use );
@@ -331,11 +331,11 @@ class Enable_Mastodon_Apps {
 			$acct = substr( $acct, 5 );
 		}
 
-		$account->id             = $acct;
-		$account->username       = $acct;
-		$account->acct           = $acct;
-		$account->display_name   = $data['name'];
-		$account->url            = $uri;
+		$account->id           = $acct;
+		$account->username     = $acct;
+		$account->acct         = $acct;
+		$account->display_name = $data['name'];
+		$account->url          = $uri;
 
 		if ( ! empty( $data['summary'] ) ) {
 			$account->note = $data['summary'];
@@ -412,20 +412,20 @@ class Enable_Mastodon_Apps {
 				$acct = $follower->get_url();
 			}
 
-			$account = new Account();
-			$account->id = \strval( $follower->get__id() );
-			$account->username = $follower->get_preferred_username();
-			$account->acct = $acct;
-			$account->display_name = $follower->get_name();
-			$account->url = $follower->get_url();
-			$account->uri = $follower->get_id();
-			$account->avatar = $follower->get_icon_url();
-			$account->avatar_static = $follower->get_icon_url();
-			$account->created_at = new DateTime( $follower->get_published() );
+			$account                 = new Account();
+			$account->id             = \strval( $follower->get__id() );
+			$account->username       = $follower->get_preferred_username();
+			$account->acct           = $acct;
+			$account->display_name   = $follower->get_name();
+			$account->url            = $follower->get_url();
+			$account->uri            = $follower->get_id();
+			$account->avatar         = $follower->get_icon_url();
+			$account->avatar_static  = $follower->get_icon_url();
+			$account->created_at     = new DateTime( $follower->get_published() );
 			$account->last_status_at = new DateTime( $follower->get_published() );
-			$account->note = $follower->get_summary();
-			$account->header = $follower->get_image_url();
-			$account->header_static = $follower->get_image_url();
+			$account->note           = $follower->get_summary();
+			$account->header         = $follower->get_image_url();
+			$account->header_static  = $follower->get_image_url();
 
 			$search_data['accounts'][] = $account;
 		}
@@ -456,7 +456,7 @@ class Enable_Mastodon_Apps {
 			return null;
 		}
 
-		$status = new Status();
+		$status             = new Status();
 		$status->id         = $object['id'];
 		$status->created_at = new DateTime( $object['published'] );
 		$status->content    = $object['content'];
@@ -480,20 +480,20 @@ class Enable_Mastodon_Apps {
 			$status->media_attachments = array_map(
 				function ( $attachment ) {
 					$default_attachment = array(
-						'url' => null,
+						'url'       => null,
 						'mediaType' => null,
-						'name' => null,
-						'width' => 0,
-						'height' => 0,
-						'blurhash' => null,
+						'name'      => null,
+						'width'     => 0,
+						'height'    => 0,
+						'blurhash'  => null,
 					);
 
 					$attachment = array_merge( $default_attachment, $attachment );
 
-					$media_attachment = new Media_Attachment();
-					$media_attachment->id = $attachment['url'];
-					$media_attachment->type = strtok( $attachment['mediaType'], '/' );
-					$media_attachment->url = $attachment['url'];
+					$media_attachment              = new Media_Attachment();
+					$media_attachment->id          = $attachment['url'];
+					$media_attachment->type        = strtok( $attachment['mediaType'], '/' );
+					$media_attachment->url         = $attachment['url'];
 					$media_attachment->preview_url = $attachment['url'];
 					$media_attachment->description = $attachment['name'];
 					if ( $attachment['blurhash'] ) {
@@ -545,8 +545,8 @@ class Enable_Mastodon_Apps {
 			$limit = 40;
 		}
 		$activitypub_statuses = array();
-		$url = $outbox['first'];
-		$tries = 0;
+		$url                  = $outbox['first'];
+		$tries                = 0;
 		while ( $url ) {
 			if ( ++$tries > 3 ) {
 				break;
@@ -557,7 +557,7 @@ class Enable_Mastodon_Apps {
 				return $statuses;
 			}
 
-			$new_statuses = array_map(
+			$new_statuses         = array_map(
 				function ( $item ) use ( $account, $args ) {
 					if ( $args['exclude_replies'] ) {
 						if ( isset( $item['object']['inReplyTo'] ) && $item['object']['inReplyTo'] ) {
@@ -569,7 +569,7 @@ class Enable_Mastodon_Apps {
 				$posts['orderedItems']
 			);
 			$activitypub_statuses = array_merge( $activitypub_statuses, array_filter( $new_statuses ) );
-			$url = $posts['next'];
+			$url                  = $posts['next'];
 
 			if ( count( $activitypub_statuses ) >= $limit ) {
 				break;
@@ -586,7 +586,7 @@ class Enable_Mastodon_Apps {
 		}
 
 		$replies_url = $meta['replies']['first']['next'];
-		$replies = Http::get_remote_object( $replies_url, true );
+		$replies     = Http::get_remote_object( $replies_url, true );
 		if ( is_wp_error( $replies ) || ! isset( $replies['items'] ) ) {
 			return $context;
 		}
@@ -602,7 +602,7 @@ class Enable_Mastodon_Apps {
 			}
 
 			$account = self::get_account_for_actor( $status['attributedTo'] );
-			$status = self::activity_to_status( $status, $account );
+			$status  = self::activity_to_status( $status, $account );
 			if ( $status ) {
 				$context['descendants'][ $status->id ] = $status;
 			}

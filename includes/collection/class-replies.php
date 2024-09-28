@@ -21,13 +21,13 @@ class Replies {
 	 */
 	private static function build_args( $wp_object ) {
 		$args = array(
-			'status' => 'approve',
+			'status'  => 'approve',
 			'orderby' => 'comment_date_gmt',
-			'order'  => 'ASC',
+			'order'   => 'ASC',
 		);
 
 		if ( $wp_object instanceof WP_Post ) {
-			$args['parent'] = 0; // TODO: maybe this is unnecessary.
+			$args['parent']  = 0; // TODO: maybe this is unnecessary.
 			$args['post_id'] = $wp_object->ID;
 		} elseif ( $wp_object instanceof WP_Comment ) {
 			$args['parent'] = $wp_object->comment_ID;
@@ -48,7 +48,7 @@ class Replies {
 	private static function add_pagination_args( $args, $page, $comments_per_page ) {
 		$args['number'] = $comments_per_page;
 
-		$offset = intval( $page ) * $comments_per_page;
+		$offset         = intval( $page ) * $comments_per_page;
 		$args['offset'] = $offset;
 
 		return $args;
@@ -76,7 +76,7 @@ class Replies {
 	 * Get the replies collection.
 	 *
 	 * @param WP_Post|WP_Comment $wp_object
-	 * @param int $page
+	 * @param int                $page
 	 *
 	 * @return array An associative array containing the replies collection without JSON-LD context.
 	 */
@@ -88,8 +88,8 @@ class Replies {
 		}
 
 		$replies = array(
-			'id'    => $id,
-			'type'  => 'Collection',
+			'id'   => $id,
+			'type' => 'Collection',
 		);
 
 		$replies['first'] = self::get_collection_page( $wp_object, 0, $replies['id'] );

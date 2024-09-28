@@ -508,7 +508,7 @@ class Activitypub {
 
 		// Both User and Blog Extra Fields types have the same args.
 		$args = array(
-			'labels'           => array(
+			'labels'              => array(
 				'name'          => _x( 'Extra fields', 'post_type plural name', 'activitypub' ),
 				'singular_name' => _x( 'Extra field', 'post_type single name', 'activitypub' ),
 				'add_new'       => __( 'Add new', 'activitypub' ),

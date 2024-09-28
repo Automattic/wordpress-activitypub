@@ -25,7 +25,7 @@ class Nodeinfo {
 	 * Extend NodeInfo data
 	 *
 	 * @param array  $nodeinfo NodeInfo data
-	 * @param string           The NodeInfo Version
+	 * @param string $version  The NodeInfo Version
 	 *
 	 * @return array The extended array
 	 */
@@ -74,7 +74,7 @@ class Nodeinfo {
 	 */
 	public static function add_wellknown_nodeinfo_data( $data ) {
 		$data['links'][] = array(
-			'rel' => 'https://www.w3.org/ns/activitystreams#Application',
+			'rel'  => 'https://www.w3.org/ns/activitystreams#Application',
 			'href' => get_rest_url_by_path( 'application' ),
 		);
 

@@ -69,7 +69,7 @@ class Inbox {
 	/**
 	 * Renders the user-inbox
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param  WP_REST_Request $request
 	 * @return WP_REST_Response
 	 */
 	public static function user_inbox_get( $request ) {
@@ -90,9 +90,9 @@ class Inbox {
 		$json = new \stdClass();
 
 		$json->{'@context'} = get_context();
-		$json->id = get_rest_url_by_path( sprintf( 'actors/%d/inbox', $user->get__id() ) );
-		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
-		$json->type = 'OrderedCollectionPage';
+		$json->id           = get_rest_url_by_path( sprintf( 'actors/%d/inbox', $user->get__id() ) );
+		$json->generator    = 'http://wordpress.org/?v=' . get_masked_wp_version();
+		$json->type         = 'OrderedCollectionPage';
 		$json->partOf = get_rest_url_by_path( sprintf( 'actors/%d/inbox', $user->get__id() ) ); // phpcs:ignore
 		$json->totalItems = 0; // phpcs:ignore
 		$json->orderedItems = array(); // phpcs:ignore
@@ -115,7 +115,7 @@ class Inbox {
 	/**
 	 * Handles user-inbox requests
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param  WP_REST_Request $request
 	 *
 	 * @return WP_REST_Response
 	 */
@@ -144,7 +144,7 @@ class Inbox {
 	/**
 	 * The shared inbox
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param  WP_REST_Request $request
 	 *
 	 * @return WP_REST_Response
 	 */
@@ -177,7 +177,7 @@ class Inbox {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
 		);
 
 		return $params;
@@ -193,16 +193,16 @@ class Inbox {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
 		);
 
 		$params['id'] = array(
-			'required' => true,
+			'required'          => true,
 			'sanitize_callback' => 'esc_url_raw',
 		);
 
 		$params['actor'] = array(
-			'required' => true,
+			'required'          => true,
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 			'sanitize_callback' => function ( $param, $request, $key ) {
 				return object_to_uri( $param );
@@ -214,7 +214,7 @@ class Inbox {
 		);
 
 		$params['object'] = array(
-			'required' => true,
+			'required'          => true,
 			'validate_callback' => function ( $param, $request, $key ) {
 				return apply_filters( 'activitypub_validate_object', true, $param, $request, $key );
 			},
@@ -232,7 +232,7 @@ class Inbox {
 		$params = self::user_inbox_post_parameters();
 
 		$params['to'] = array(
-			'required' => false,
+			'required'          => false,
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 			'sanitize_callback' => function ( $param, $request, $key ) {
 				if ( \is_string( $param ) ) {
@@ -277,7 +277,7 @@ class Inbox {
 	 */
 	public static function get_recipients( $data ) {
 		$recipients = extract_recipients_from_activity( $data );
-		$users = array();
+		$users      = array();
 
 		foreach ( $recipients as $recipient ) {
 			$user_id = url_to_authorid( $recipient );

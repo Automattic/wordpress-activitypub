@@ -112,7 +112,7 @@ class Health_Check {
 			'<p>%s</p>',
 			\__( 'Enhance your WordPress site’s performance and mitigate potential heavy loads caused by plugins like ActivityPub by setting up a system cron job to run WP Cron. This ensures scheduled tasks are executed consistently and reduces the reliance on website traffic for trigger events.', 'activitypub' )
 		);
-		$result['actions'] .= sprintf(
+		$result['actions']       .= sprintf(
 			'<p><a href="%s" target="_blank" rel="noopener">%s<span class="screen-reader-text"> %s</span><span aria-hidden="true" class="dashicons dashicons-external"></span></a></p>',
 			__( 'https://developer.wordpress.org/plugins/cron/hooking-wp-cron-into-the-system-task-scheduler/', 'activitypub' ),
 			__( 'Learn how to hook the WP-Cron into the System Task Scheduler.', 'activitypub' ),
@@ -167,8 +167,8 @@ class Health_Check {
 	 * @return boolean|WP_Error
 	 */
 	public static function is_author_url_accessible() {
-		$user = \wp_get_current_user();
-		$author_url = \get_author_posts_url( $user->ID );
+		$user                 = \wp_get_current_user();
+		$author_url           = \get_author_posts_url( $user->ID );
 		$reference_author_url = self::get_author_posts_url( $user->ID, $user->user_nicename );
 
 		// check for "author" in URL
@@ -190,7 +190,7 @@ class Health_Check {
 		$response = \wp_remote_get(
 			$author_url,
 			array(
-				'headers' => array( 'Accept' => 'application/activity+json' ),
+				'headers'     => array( 'Accept' => 'application/activity+json' ),
 				'redirection' => 0,
 			)
 		);
@@ -252,7 +252,7 @@ class Health_Check {
 	 * @return boolean|WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
-		$user = Users::get_by_id( Users::APPLICATION_USER_ID );
+		$user     = Users::get_by_id( Users::APPLICATION_USER_ID );
 		$resource = $user->get_webfinger();
 
 		$url = Webfinger::resolve( $resource );
@@ -277,7 +277,7 @@ class Health_Check {
 			);
 
 			$health_messages = array(
-				'webfinger_url_not_accessible' => \sprintf(
+				'webfinger_url_not_accessible'   => \sprintf(
 					$not_accessible,
 					$url->get_error_data()['data']
 				),
@@ -287,7 +287,7 @@ class Health_Check {
 					$url->get_error_data()['data']
 				),
 			);
-			$message = null;
+			$message         = null;
 			if ( isset( $health_messages[ $url->get_error_code() ] ) ) {
 				$message = $health_messages[ $url->get_error_code() ];
 			}
@@ -314,7 +314,7 @@ class Health_Check {
 	public static function get_author_posts_url( $author_id, $author_nicename = '' ) {
 		global $wp_rewrite;
 		$auth_id = (int) $author_id;
-		$link = $wp_rewrite->get_author_permastruct();
+		$link    = $wp_rewrite->get_author_permastruct();
 
 		if ( empty( $link ) ) {
 			$file = home_url( '/' );
@@ -343,12 +343,12 @@ class Health_Check {
 		$info['activitypub'] = array(
 			'label'  => __( 'ActivityPub', 'activitypub' ),
 			'fields' => array(
-				'webfinger' => array(
+				'webfinger'      => array(
 					'label'   => __( 'WebFinger Resource', 'activitypub' ),
 					'value'   => Webfinger::get_user_resource( wp_get_current_user()->ID ),
 					'private' => true,
 				),
-				'author_url' => array(
+				'author_url'     => array(
 					'label'   => __( 'Author URL', 'activitypub' ),
 					'value'   => get_author_posts_url( wp_get_current_user()->ID ),
 					'private' => true,

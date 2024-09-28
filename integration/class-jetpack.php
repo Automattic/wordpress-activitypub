@@ -11,11 +11,11 @@ class Jetpack {
 		if ( ! is_array( $whitelist ) ) {
 			return $whitelist;
 		}
-		$activitypub_meta_keys = [
+		$activitypub_meta_keys = array(
 			'activitypub_user_id',
 			'activitypub_inbox',
 			'activitypub_actor_json',
-		];
+		);
 		return \array_merge( $whitelist, $activitypub_meta_keys );
 	}
 }

@@ -88,12 +88,12 @@ class Users {
 		// check for 'activitypub_username' meta
 		$user = new WP_User_Query(
 			array(
-				'count_total'    => false,
-				'number'         => 1,
-				'hide_empty'     => true,
-				'fields'         => 'ID',
+				'count_total' => false,
+				'number'      => 1,
+				'hide_empty'  => true,
+				'fields'      => 'ID',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query' => array(
+				'meta_query'  => array(
 					'relation' => 'OR',
 					array(
 						'key'     => 'activitypub_user_identifier',
@@ -144,7 +144,7 @@ class Users {
 		$resource = object_to_uri( $resource );
 
 		$scheme = 'acct';
-		$match = array();
+		$match  = array();
 		// try to extract the scheme and the host
 		if ( preg_match( '/^([a-zA-Z^:]+):(.*)$/i', $resource, $match ) ) {
 			// extract the scheme
