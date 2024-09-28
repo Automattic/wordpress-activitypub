@@ -23,49 +23,48 @@ class Webfinger {
 	/**
 	 * Add WebFinger discovery links
 	 *
-	 * @param array   $array    the jrd array
-	 * @param string  $resource the WebFinger resource
-	 * @param WP_User $user     the WordPress user
+	 * @param array   $jrd    the jrd array
+	 * @param string  $entity the WebFinger resource
+	 * @param WP_User $user   the WordPress user
 	 *
 	 * @return array the jrd array
 	 */
-	public static function add_user_discovery( $array, $resource, $user ) {
+	public static function add_user_discovery( $jrd, $entity, $user ) {
 		$user = User_Collection::get_by_id( $user->ID );
 
 		if ( ! $user || is_wp_error( $user ) ) {
-			return $array;
+			return $jrd;
 		}
 
-		$array['subject'] = sprintf( 'acct:%s', $user->get_webfinger() );
+		$jrd['subject'] = sprintf( 'acct:%s', $user->get_webfinger() );
 
-		$array['aliases'][] = $user->get_url();
-		$array['aliases'][] = $user->get_alternate_url();
+		$jrd['aliases'][] = $user->get_url();
+		$jrd['aliases'][] = $user->get_alternate_url();
 
-		$array['links'][] = array(
+		$jrd['links'][] = array(
 			'rel'  => 'self',
 			'type' => 'application/activity+json',
 			'href' => $user->get_url(),
 		);
 
-		$array['links'][] = array(
+		$jrd['links'][] = array(
 			'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
 			'template' => get_rest_url_by_path( 'interactions?uri={uri}' ),
 		);
 
-		return $array;
+		return $jrd;
 	}
 
 	/**
 	 * Add WebFinger discovery links
 	 *
-	 * @param array   $array    the jrd array
-	 * @param string  $resource the WebFinger resource
-	 * @param WP_User $user     the WordPress user
+	 * @param array   $jrd the jrd array
+	 * @param string  $uri the WebFinger resource
 	 *
 	 * @return array the jrd array
 	 */
-	public static function add_pseudo_user_discovery( $array, $resource ) {
-		$user = User_Collection::get_by_resource( $resource );
+	public static function add_pseudo_user_discovery( $jrd, $uri ) {
+		$user = User_Collection::get_by_resource( $uri );
 
 		if ( \is_wp_error( $user ) ) {
 			return $user;

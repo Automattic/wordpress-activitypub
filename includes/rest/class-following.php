@@ -111,22 +111,22 @@ class Following {
 	 * Add the Blog Authors to the following list of the Blog Actor
 	 * if Blog not in single mode.
 	 *
-	 * @param array $array The array of following urls.
-	 * @param User  $user  The user object.
+	 * @param array                   $follow_list The array of following urls.
+	 * @param \Activitypub\Model\User $user        The user object.
 	 *
 	 * @return array The array of following urls.
 	 */
-	public static function default_following( $array, $user ) {
+	public static function default_following( $follow_list, $user ) {
 		if ( 0 !== $user->get__id() || is_single_user() ) {
-			return $array;
+			return $follow_list;
 		}
 
 		$users = User_Collection::get_collection();
 
 		foreach ( $users as $user ) {
-			$array[] = $user->get_url();
+			$follow_list[] = $user->get_url();
 		}
 
-		return $array;
+		return $follow_list;
 	}
 }
