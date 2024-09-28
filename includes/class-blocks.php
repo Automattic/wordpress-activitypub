@@ -52,6 +52,7 @@ class Blocks {
 	 */
 	public static function handle_in_reply_to_get_param() {
 		// only load the script if the in_reply_to GET param is set, action happens there, not here.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( ! isset( $_GET['in_reply_to'] ) ) {
 			return;
 		}
