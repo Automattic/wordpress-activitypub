@@ -24,7 +24,8 @@ class Link {
 	 * @return array the activity object array
 	 */
 	public static function filter_activity_object( $object_array ) {
-		/* Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
+		/*
+		Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
 		if ( ! empty( $object_array['summary'] ) ) {
 			$object_array['summary'] = self::the_content( $object_array['summary'] );
 		}
@@ -82,7 +83,7 @@ class Link {
 
 		$text_url = $parsed_url['host'];
 		if ( 'www.' === substr( $text_url, 0, 4 ) ) {
-			$text_url = substr( $text_url, 4 );
+			$text_url          = substr( $text_url, 4 );
 			$invisible_prefix .= 'www.';
 		}
 		if ( ! empty( $parsed_url['port'] ) ) {
@@ -98,7 +99,7 @@ class Link {
 			$text_url .= '#' . $parsed_url['fragment'];
 		}
 
-		$display = \substr( $text_url, 0, 30 );
+		$display          = \substr( $text_url, 0, 30 );
 		$invisible_suffix = \substr( $text_url, 30 );
 
 		$display_class = '';

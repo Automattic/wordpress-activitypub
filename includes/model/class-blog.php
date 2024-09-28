@@ -301,8 +301,8 @@ class Blog extends Actor {
 
 	public function get_public_key() {
 		return array(
-			'id'       => $this->get_id() . '#main-key',
-			'owner'    => $this->get_id(),
+			'id'           => $this->get_id() . '#main-key',
+			'owner'        => $this->get_id(),
 			'publicKeyPem' => Signature::get_public_key_for( $this->get__id() ),
 		);
 	}
@@ -400,21 +400,21 @@ class Blog extends Actor {
 	}
 
 	/**
-	* Update the User-Description.
-	*
-	* @param mixed $value The new value.
-	* @return bool True if the attribute was updated, false otherwise.
-	*/
+	 * Update the User-Description.
+	 *
+	 * @param mixed $value The new value.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
 	public function update_summary( $value ) {
 		return \update_option( 'blogdescription', $value );
 	}
 
 	/**
-	* Update the User-Icon.
-	*
-	* @param mixed $value The new value.
-	* @return bool True if the attribute was updated, false otherwise.
-	*/
+	 * Update the User-Icon.
+	 *
+	 * @param mixed $value The new value.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
 	public function update_icon( $value ) {
 		if ( ! wp_attachment_is_image( $value ) ) {
 			return false;
@@ -423,11 +423,11 @@ class Blog extends Actor {
 	}
 
 	/**
-	* Update the User-Header-Image.
-	*
-	* @param mixed $value The new value.
-	* @return bool True if the attribute was updated, false otherwise.
-	*/
+	 * Update the User-Header-Image.
+	 *
+	 * @param mixed $value The new value.
+	 * @return bool True if the attribute was updated, false otherwise.
+	 */
 	public function update_header( $value ) {
 		if ( ! wp_attachment_is_image( $value ) ) {
 			return false;

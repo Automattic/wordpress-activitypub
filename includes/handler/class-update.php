@@ -23,8 +23,8 @@ class Update {
 	/**
 	 * Handle "Update" requests
 	 *
-	 * @param array                $array   The activity-object
-	 * @param int                  $user_id The id of the local blog-user
+	 * @param array $array   The activity-object
+	 * @param int   $user_id The id of the local blog-user
 	 */
 	public static function handle_update( $array ) {
 		$object_type = isset( $array['object']['type'] ) ? $array['object']['type'] : '';

@@ -17,7 +17,7 @@ use function Activitypub\get_remote_metadata_by_actor;
  * @author Matthias Pfefferle
  */
 class Followers {
-	const POST_TYPE = 'ap_follower';
+	const POST_TYPE         = 'ap_follower';
 	const CACHE_KEY_INBOXES = 'follower_inboxes_%s';
 
 	/**
@@ -139,10 +139,10 @@ class Followers {
 	/**
 	 * Get the Followers of a given user
 	 *
-	 * @param int    $user_id The ID of the WordPress User.
-	 * @param int    $number  Maximum number of results to return.
-	 * @param int    $page    Page number.
-	 * @param array  $args    The WP_Query arguments.
+	 * @param int   $user_id The ID of the WordPress User.
+	 * @param int   $number  Maximum number of results to return.
+	 * @param int   $page    Page number.
+	 * @param array $args    The WP_Query arguments.
 	 * @return array List of `Follower` objects.
 	 */
 	public static function get_followers( $user_id, $number = -1, $page = null, $args = array() ) {
@@ -153,10 +153,10 @@ class Followers {
 	/**
 	 * Get the Followers of a given user, along with a total count for pagination purposes.
 	 *
-	 * @param int    $user_id The ID of the WordPress User.
-	 * @param int    $number  Maximum number of results to return.
-	 * @param int    $page    Page number.
-	 * @param array  $args    The WP_Query arguments.
+	 * @param int   $user_id The ID of the WordPress User.
+	 * @param int   $number  Maximum number of results to return.
+	 * @param int   $page    Page number.
+	 * @param array $args    The WP_Query arguments.
 	 *
 	 * @return array
 	 *               followers List of `Follower` objects.
@@ -178,9 +178,9 @@ class Followers {
 			),
 		);
 
-		$args = wp_parse_args( $args, $defaults );
-		$query = new WP_Query( $args );
-		$total = $query->found_posts;
+		$args      = wp_parse_args( $args, $defaults );
+		$query     = new WP_Query( $args );
+		$total     = $query->found_posts;
 		$followers = array_map(
 			function ( $post ) {
 				return Follower::init_from_cpt( $post );
@@ -259,7 +259,7 @@ class Followers {
 	 */
 	public static function get_inboxes( $user_id ) {
 		$cache_key = sprintf( self::CACHE_KEY_INBOXES, $user_id );
-		$inboxes = wp_cache_get( $cache_key, 'activitypub' );
+		$inboxes   = wp_cache_get( $cache_key, 'activitypub' );
 
 		if ( $inboxes ) {
 			return $inboxes;

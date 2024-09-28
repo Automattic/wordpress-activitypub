@@ -62,7 +62,7 @@ class Interactions {
 	public static function update_comment( $activity ) {
 		$meta = get_remote_metadata_by_actor( $activity['actor'] );
 
-		//Determine comment_ID
+		// Determine comment_ID
 		$comment     = object_id_to_comment( \esc_url_raw( $activity['object']['id'] ) );
 		$commentdata = \get_comment( $comment, ARRAY_A );
 
@@ -70,8 +70,8 @@ class Interactions {
 			return false;
 		}
 
-		//found a local comment id
-		$commentdata['comment_author'] = \esc_attr( $meta['name'] ? $meta['name'] : $meta['preferredUsername'] );
+		// found a local comment id
+		$commentdata['comment_author']  = \esc_attr( $meta['name'] ? $meta['name'] : $meta['preferredUsername'] );
 		$commentdata['comment_content'] = \addslashes( $activity['object']['content'] );
 
 		return self::persist( $commentdata, self::UPDATE );
@@ -80,7 +80,7 @@ class Interactions {
 	/**
 	 * Adds an incoming Like, Announce, ... as a comment to a post.
 	 *
-	 * @param array  $activity Activity array.
+	 * @param array $activity Activity array.
 	 *
 	 * @return array|false      Comment data or `false` on failure.
 	 */
@@ -173,14 +173,14 @@ class Interactions {
 			$actor = object_to_uri( $meta['url'] );
 		}
 
-		$args = array(
+		$args          = array(
 			'nopaging'   => true,
 			'author_url' => $actor,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
 				array(
-					'key'   => 'protocol',
-					'value' => 'activitypub',
+					'key'     => 'protocol',
+					'value'   => 'activitypub',
 					'compare' => '=',
 				),
 			),
@@ -252,14 +252,14 @@ class Interactions {
 		}
 
 		$commentdata = array(
-			'comment_author' => \esc_attr( $comment_author ),
-			'comment_author_url' => \esc_url_raw( $url ),
-			'comment_content' => $comment_content,
-			'comment_type' => 'comment',
+			'comment_author'       => \esc_attr( $comment_author ),
+			'comment_author_url'   => \esc_url_raw( $url ),
+			'comment_content'      => $comment_content,
+			'comment_type'         => 'comment',
 			'comment_author_email' => '',
-			'comment_meta' => array(
-				'source_id'  => \esc_url_raw( object_to_uri( $activity['object'] ) ),
-				'protocol'   => 'activitypub',
+			'comment_meta'         => array(
+				'source_id' => \esc_url_raw( object_to_uri( $activity['object'] ) ),
+				'protocol'  => 'activitypub',
 			),
 		);
 

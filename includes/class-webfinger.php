@@ -142,10 +142,10 @@ class Webfinger {
 
 		if ( ! preg_match( '/^([a-zA-Z+]+):/', $url, $match ) ) {
 			$identifier = 'acct:' . $url;
-			$scheme = 'acct';
+			$scheme     = 'acct';
 		} else {
 			$identifier = $url;
-			$scheme = $match[1];
+			$scheme     = $match[1];
 		}
 
 		$host = null;

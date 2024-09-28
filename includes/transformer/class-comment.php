@@ -191,7 +191,7 @@ class Comment extends Base {
 		$mentions = $this->get_mentions();
 		if ( $mentions ) {
 			foreach ( $mentions as $mention => $url ) {
-				$tag = array(
+				$tag    = array(
 					'type' => 'Mention',
 					'href' => \esc_url( $url ),
 					'name' => \esc_html( $mention ),
@@ -255,7 +255,7 @@ class Comment extends Base {
 			if ( $comment && ! empty( $comment->comment_author_url ) ) {
 				$acct = Webfinger::uri_to_acct( $comment->comment_author_url );
 				if ( $acct && ! is_wp_error( $acct ) ) {
-					$acct = str_replace( 'acct:', '@', $acct );
+					$acct              = str_replace( 'acct:', '@', $acct );
 					$mentions[ $acct ] = $comment->comment_author_url;
 				}
 			}

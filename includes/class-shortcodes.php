@@ -332,7 +332,7 @@ class Shortcodes {
 		}
 
 		$author_id = \get_post_field( 'post_author', $item->ID );
-		$name = \get_the_author_meta( 'display_name', $author_id );
+		$name      = \get_the_author_meta( 'display_name', $author_id );
 
 		if ( ! $name ) {
 			return '';
@@ -358,7 +358,7 @@ class Shortcodes {
 		}
 
 		$author_id = \get_post_field( 'post_author', $item->ID );
-		$url = \get_the_author_meta( 'user_url', $author_id );
+		$url       = \get_the_author_meta( 'user_url', $author_id );
 
 		if ( ! $url ) {
 			return '';
@@ -422,7 +422,7 @@ class Shortcodes {
 			return '';
 		}
 
-		$datetime = \get_post_datetime( $item );
+		$datetime   = \get_post_datetime( $item );
 		$dateformat = \get_option( 'date_format' );
 		$timeformat = \get_option( 'time_format' );
 
@@ -451,7 +451,7 @@ class Shortcodes {
 			return '';
 		}
 
-		$datetime = \get_post_datetime( $item );
+		$datetime   = \get_post_datetime( $item );
 		$dateformat = \get_option( 'date_format' );
 		$timeformat = \get_option( 'time_format' );
 
@@ -480,7 +480,7 @@ class Shortcodes {
 			return '';
 		}
 
-		$datetime = \get_post_datetime( $item );
+		$datetime   = \get_post_datetime( $item );
 		$dateformat = \get_option( 'date_format' );
 		$timeformat = \get_option( 'time_format' );
 

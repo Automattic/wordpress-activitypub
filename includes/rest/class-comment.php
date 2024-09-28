@@ -84,7 +84,10 @@ class Comment {
 		$url = str_replace( '{uri}', $resource, $template );
 
 		return new WP_REST_Response(
-			array( 'url' => $url, 'template' => $template ),
+			array(
+				'url'      => $url,
+				'template' => $template,
+			),
 			200
 		);
 	}
