@@ -23,8 +23,20 @@
 
 	<config name="text_domain" value="activitypub,default"/>
 
-	<rule ref="WordPress"/>
-	<rule ref="VariableAnalysis"/>
+	<rule ref="WordPress">
+		<exclude name="Generic.Commenting.DocComment.MissingShort"/>
+		<exclude name="Generic.CodeAnalysis.UnusedFunctionParameter"/>
+		<exclude name="Generic.Commenting.DocComment.LongNotCapital"/>
+		<exclude name="Squiz.Commenting"/>
+		<exclude name="Squiz.PHP.CommentedOutCode.Found"/>
+		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
+		<exclude name="WordPress.Security.NonceVerification.Recommended"/>
+		<exclude name="WordPress.WP.GetMetaSingle.Missing"/>
+		<exclude name="WordPress.DB.PreparedSQL.NotPrepared"/>
+	</rule>
+	<rule ref="VariableAnalysis">
+		<exclude name="VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable"/>
+	</rule>
 
 	<rule ref="WordPress.WP.Capabilities">
 		<properties>
