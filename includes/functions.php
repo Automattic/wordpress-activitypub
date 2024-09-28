@@ -921,7 +921,7 @@ function get_masked_wp_version() {
  * @return array The enclosures.
  */
 function get_enclosures( $post_id ) {
-	$enclosures = get_post_meta( $post_id, 'enclosure' );
+	$enclosures = get_post_meta( $post_id, 'enclosure', false );
 
 	if ( ! $enclosures ) {
 		return array();

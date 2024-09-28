@@ -31,7 +31,6 @@
 		<exclude name="Squiz.PHP.CommentedOutCode.Found"/>
 		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
 		<exclude name="WordPress.Security.NonceVerification.Recommended"/>
-		<exclude name="WordPress.WP.GetMetaSingle.Missing"/>
 		<exclude name="WordPress.DB.PreparedSQL.NotPrepared"/>
 	</rule>
 	<rule ref="VariableAnalysis">
