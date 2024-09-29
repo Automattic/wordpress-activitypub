@@ -22,6 +22,8 @@ class Activity extends Base_Object {
 	);
 
 	/**
+	 * The type of the object.
+	 *
 	 * @var string
 	 */
 	protected $type = 'Activity';

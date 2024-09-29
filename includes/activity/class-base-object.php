@@ -45,6 +45,8 @@ class Base_Object {
 	protected $id;
 
 	/**
+	 * The type of the object.
+	 *
 	 * @var string
 	 */
 	protected $type = 'Object';

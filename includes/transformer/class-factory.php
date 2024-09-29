@@ -12,7 +12,9 @@ use Activitypub\Transformer\Attachment;
  */
 class Factory {
 	/**
-	 * @param  mixed $object                      The object to transform
+	 * Get the transformer for a given object.
+	 *
+	 * @param  mixed $object The object to transform.
 	 * @return \Activitypub\Transformer|\WP_Error The transformer to use, or an error.
 	 */
 	public static function get_transformer( $object ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
