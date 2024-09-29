@@ -30,9 +30,7 @@
 		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
 		<exclude name="WordPress.WP.GetMetaSingle.Missing"/>
 	</rule>
-	<rule ref="VariableAnalysis">
-		<exclude name="VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable"/>
-	</rule>
+	<rule ref="VariableAnalysis"/>
 
 	<rule ref="WordPress.WP.Capabilities">
 		<properties>

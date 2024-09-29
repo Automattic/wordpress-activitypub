@@ -392,7 +392,6 @@ class Shortcodes {
 
 		$datetime   = \get_post_datetime( $item );
 		$dateformat = \get_option( 'date_format' );
-		$timeformat = \get_option( 'time_format' );
 
 		$date = $datetime->format( $dateformat );
 
@@ -416,7 +415,6 @@ class Shortcodes {
 		}
 
 		$datetime   = \get_post_datetime( $item );
-		$dateformat = \get_option( 'date_format' );
 		$timeformat = \get_option( 'time_format' );
 
 		$date = $datetime->format( $timeformat );
