@@ -145,49 +145,49 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#object-without-create
 	 *
-	 * @param array|string|Base_Object|Link|null $activity_object
+	 * @param array|string|Base_Object|Link|null $data Activity object.
 	 *
 	 * @return void
 	 */
-	public function set_object( $activity_object ) {
+	public function set_object( $data ) {
 		// convert array to object
-		if ( is_array( $activity_object ) ) {
-			$activity_object = self::init_from_array( $activity_object );
+		if ( is_array( $data ) ) {
+			$data = self::init_from_array( $data );
 		}
 
 		// set object
-		$this->set( 'object', $activity_object );
+		$this->set( 'object', $data );
 
-		if ( ! is_object( $activity_object ) ) {
+		if ( ! is_object( $data ) ) {
 			return;
 		}
 
 		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
-			$this->set( $i, $activity_object->get( $i ) );
+			$this->set( $i, $data->get( $i ) );
 		}
 
-		if ( $activity_object->get_published() && ! $this->get_published() ) {
-			$this->set( 'published', $activity_object->get_published() );
+		if ( $data->get_published() && ! $this->get_published() ) {
+			$this->set( 'published', $data->get_published() );
 		}
 
-		if ( $activity_object->get_updated() && ! $this->get_updated() ) {
-			$this->set( 'updated', $activity_object->get_updated() );
+		if ( $data->get_updated() && ! $this->get_updated() ) {
+			$this->set( 'updated', $data->get_updated() );
 		}
 
-		if ( $activity_object->get_attributed_to() && ! $this->get_actor() ) {
-			$this->set( 'actor', $activity_object->get_attributed_to() );
+		if ( $data->get_attributed_to() && ! $this->get_actor() ) {
+			$this->set( 'actor', $data->get_attributed_to() );
 		}
 
-		if ( $activity_object->get_in_reply_to() ) {
-			$this->set( 'in_reply_to', $activity_object->get_in_reply_to() );
+		if ( $data->get_in_reply_to() ) {
+			$this->set( 'in_reply_to', $data->get_in_reply_to() );
 		}
 
-		if ( $activity_object->get_id() && ! $this->get_id() ) {
-			$id = strtok( $activity_object->get_id(), '#' );
-			if ( $activity_object->get_updated() ) {
-				$updated = $activity_object->get_updated();
+		if ( $data->get_id() && ! $this->get_id() ) {
+			$id = strtok( $data->get_id(), '#' );
+			if ( $data->get_updated() ) {
+				$updated = $data->get_updated();
 			} else {
-				$updated = $activity_object->get_published();
+				$updated = $data->get_published();
 			}
 			$this->set( 'id', $id . '#activity-' . strtolower( $this->get_type() ) . '-' . $updated );
 		}
