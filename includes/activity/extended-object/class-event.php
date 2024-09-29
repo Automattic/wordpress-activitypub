@@ -118,6 +118,8 @@ class Event extends Base_Object {
 
 	/**
 	 * The Title of the event.
+	 *
+	 * @var string
 	 */
 	protected $name;
 
@@ -145,12 +147,16 @@ class Event extends Base_Object {
 	protected $comments_enabled;
 
 	/**
+	 * Timezone of the event.
+	 *
 	 * @context https://joinmobilizon.org/ns#timezone
 	 * @var string
 	 */
 	protected $timezone;
 
 	/**
+	 * Moderation option for replies.
+	 *
 	 * @context https://joinmobilizon.org/ns#repliesModerationOption
 	 * @see https://docs.joinmobilizon.org/contribute/activity_pub/#repliesmoderation
 	 * @var string
@@ -158,6 +164,8 @@ class Event extends Base_Object {
 	protected $replies_moderation_option;
 
 	/**
+	 * Whether anonymous participation is enabled.
+	 *
 	 * @context https://joinmobilizon.org/ns#anonymousParticipationEnabled
 	 * @see https://docs.joinmobilizon.org/contribute/activity_pub/#anonymousparticipationenabled
 	 * @var bool
@@ -165,24 +173,32 @@ class Event extends Base_Object {
 	protected $anonymous_participation_enabled;
 
 	/**
+	 * The event's category.
+	 *
 	 * @context https://schema.org/category
-	 * @var enum
+	 * @var string
 	 */
 	protected $category;
 
 	/**
+	 * Language of the event.
+	 *
 	 * @context https://schema.org/inLanguage
-	 * @var
+	 * @var string
 	 */
 	protected $in_language;
 
 	/**
+	 * Whether the event is online.
+	 *
 	 * @context https://joinmobilizon.org/ns#isOnline
 	 * @var bool
 	 */
 	protected $is_online;
 
 	/**
+	 * The event's status.
+	 *
 	 * @context https://www.w3.org/2002/12/cal/ical#status
 	 * @var enum
 	 */
@@ -199,25 +215,33 @@ class Event extends Base_Object {
 	protected $actor;
 
 	/**
+	 * The external participation URL.
+	 *
 	 * @context https://joinmobilizon.org/ns#externalParticipationUrl
 	 * @var string
 	 */
 	protected $external_participation_url;
 
 	/**
+	 * Indicator of how new members may be able to join.
+	 *
 	 * @context https://joinmobilizon.org/ns#joinMode
 	 * @see https://docs.joinmobilizon.org/contribute/activity_pub/#joinmode
-	 * @var
+	 * @var string
 	 */
 	protected $join_mode;
 
 	/**
+	 * The participant count of the event.
+	 *
 	 * @context https://joinmobilizon.org/ns#participantCount
 	 * @var int
 	 */
 	protected $participant_count;
 
 	/**
+	 * How many places there can be for an event.
+	 *
 	 * @context https://schema.org/maximumAttendeeCapacity
 	 * @see https://docs.joinmobilizon.org/contribute/activity_pub/#maximumattendeecapacity
 	 * @var int
@@ -225,6 +249,8 @@ class Event extends Base_Object {
 	protected $maximum_attendee_capacity;
 
 	/**
+	 * The number of attendee places for an event that remain unallocated.
+	 *
 	 * @context https://schema.org/remainingAttendeeCapacity
 	 * @see https://docs.joinmobilizon.org/contribute/activity_pub/#remainignattendeecapacity
 	 * @var int
