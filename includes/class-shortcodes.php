@@ -1,4 +1,12 @@
 <?php
+/**
+ * Shortcodes for ActivityPub.
+ *
+ * phpcs:disable Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
 use function Activitypub\esc_hashtag;
