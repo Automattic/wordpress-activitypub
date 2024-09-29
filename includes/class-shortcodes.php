@@ -73,13 +73,9 @@ class Shortcodes {
 	/**
 	 * Generates output for the 'ap_title' Shortcode
 	 *
-	 * @param array  $atts    The Shortcode attributes.
-	 * @param string $content The ActivityPub post-content.
-	 * @param string $tag     The tag/name of the Shortcode.
-	 *
 	 * @return string The post title.
 	 */
-	public static function title( $atts, $content, $tag ) {
+	public static function title() {
 		$item = self::get_item();
 
 		if ( ! $item ) {
