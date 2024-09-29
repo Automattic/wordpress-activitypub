@@ -145,7 +145,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#object-without-create
 	 *
-	 * @param array|string|Base_Objectr|Link|null $activity_object
+	 * @param array|string|Base_Object|Link|null $activity_object
 	 *
 	 * @return void
 	 */
