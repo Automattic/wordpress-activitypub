@@ -23,13 +23,13 @@ class Webfinger {
 	/**
 	 * Add WebFinger discovery links
 	 *
-	 * @param array   $jrd    the jrd array
-	 * @param string  $entity the WebFinger resource
-	 * @param WP_User $user   the WordPress user
+	 * @param array   $jrd  the jrd array
+	 * @param string  $uri  the WebFinger resource
+	 * @param WP_User $user the WordPress user
 	 *
 	 * @return array the jrd array
 	 */
-	public static function add_user_discovery( $jrd, $entity, $user ) {
+	public static function add_user_discovery( $jrd, $uri, $user ) {
 		$user = User_Collection::get_by_id( $user->ID );
 
 		if ( ! $user || is_wp_error( $user ) ) {
