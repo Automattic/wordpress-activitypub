@@ -25,7 +25,6 @@
 
 	<rule ref="WordPress">
 		<exclude name="Generic.CodeAnalysis.UnusedFunctionParameter"/>
-		<exclude name="Generic.Commenting.DocComment.LongNotCapital"/>
 		<exclude name="Squiz.Commenting"/>
 		<exclude name="Squiz.PHP.CommentedOutCode.Found"/>
 		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
