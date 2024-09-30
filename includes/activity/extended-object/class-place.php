@@ -63,19 +63,26 @@ class Place extends Base_Object {
 	protected $longitude;
 
 	/**
+	 * The radius from the given latitude and longitude for a Place.
+	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-radius
 	 * @var float
 	 */
 	protected $radius;
 
 	/**
+	 * Specifies the measurement units for the `radius` and `altitude` properties.
+	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-units
 	 * @var string
 	 */
 	protected $units;
 
 	/**
-	 * @var Postal_Address|string
+	 * The address of the place.
+	 *
+	 * @see https://schema.org/PostalAddress
+	 * @var array|string
 	 */
 	protected $address;
 

@@ -70,7 +70,7 @@ class Create {
 	 * @param bool             $valid   The validation state
 	 * @param string           $param   The object parameter
 	 * @param \WP_REST_Request $request The request object
-	 * @param array $array The activity-object
+	 * @param array            $array The activity-object
 	 *
 	 * @return bool The validation state: true if valid, false if not
 	 */

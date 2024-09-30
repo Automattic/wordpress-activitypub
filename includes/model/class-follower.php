@@ -184,7 +184,7 @@ class Follower extends Actor {
 			$args['post_date_gmt'] = $post->post_date_gmt;
 		}
 
-		$post_id = wp_insert_post( $args );
+		$post_id   = wp_insert_post( $args );
 		$this->_id = $post_id;
 
 		return $post_id;
@@ -205,6 +205,7 @@ class Follower extends Actor {
 	 * Beware that this os deleting a Follower for ALL users!!!
 	 *
 	 * To delete only the User connection (unfollow)
+	 *
 	 * @see \Activitypub\Rest\Followers::remove_follower()
 	 *
 	 * @return void
@@ -219,8 +220,8 @@ class Follower extends Actor {
 	 * @return void
 	 */
 	protected function get_post_meta_input() {
-		$meta_input = array();
-		$meta_input['activitypub_inbox'] = $this->get_shared_inbox();
+		$meta_input                           = array();
+		$meta_input['activitypub_inbox']      = $this->get_shared_inbox();
 		$meta_input['activitypub_actor_json'] = $this->to_json();
 
 		return $meta_input;
@@ -239,9 +240,9 @@ class Follower extends Actor {
 		}
 
 		return array(
-			'type' => 'Image',
+			'type'      => 'Image',
 			'mediaType' => 'image/jpeg',
-			'url'  => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+			'url'       => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
 		);
 	}
 
@@ -339,7 +340,7 @@ class Follower extends Actor {
 	 */
 	public static function init_from_cpt( $post ) {
 		$actor_json = get_post_meta( $post->ID, 'activitypub_actor_json', true );
-		$object = self::init_from_json( $actor_json );
+		$object     = self::init_from_json( $actor_json );
 		$object->set__id( $post->ID );
 		$object->set_id( $post->guid );
 		$object->set_name( $post->post_title );

@@ -28,7 +28,8 @@ class Hashtag {
 	 * @return array the activity object array
 	 */
 	public static function filter_activity_object( $object_array ) {
-		/* Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
+		/*
+		Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
 		if ( ! empty( $object_array['summary'] ) ) {
 			$object_array['summary'] = self::the_content( $object_array['summary'] );
 		}
@@ -85,7 +86,7 @@ class Hashtag {
 	 * @return string the final string
 	 */
 	public static function replace_with_links( $result ) {
-		$tag = $result[1];
+		$tag        = $result[1];
 		$tag_object = \get_term_by( 'name', $tag, 'post_tag' );
 		if ( ! $tag_object ) {
 			$tag_object = \get_term_by( 'name', $tag, 'category' );

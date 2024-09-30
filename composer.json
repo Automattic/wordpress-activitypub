@@ -41,7 +41,7 @@
             "vendor/bin/phpunit"
         ],
         "lint": [
-            "vendor/bin/phpcs -n -q"
+            "vendor/bin/phpcs"
         ],
         "lint:fix": [
             "vendor/bin/phpcbf"

@@ -67,7 +67,7 @@ class Nodeinfo {
 	/**
 	 * Render NodeInfo file
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param  WP_REST_Request $request
 	 *
 	 * @return WP_REST_Response
 	 */
@@ -79,37 +79,37 @@ class Nodeinfo {
 
 		$nodeinfo = array();
 
-		$nodeinfo['version'] = '2.0';
+		$nodeinfo['version']  = '2.0';
 		$nodeinfo['software'] = array(
-			'name' => 'wordpress',
+			'name'    => 'wordpress',
 			'version' => get_masked_wp_version(),
 		);
 
-		$posts = \wp_count_posts();
+		$posts    = \wp_count_posts();
 		$comments = \wp_count_comments();
 
 		$nodeinfo['usage'] = array(
-			'users' => array(
+			'users'         => array(
 				'total'          => get_total_users(),
 				'activeMonth'    => get_active_users( '1 month ago' ),
 				'activeHalfyear' => get_active_users( '6 month ago' ),
 			),
-			'localPosts' => (int) $posts->publish,
+			'localPosts'    => (int) $posts->publish,
 			'localComments' => (int) $comments->approved,
 		);
 
 		$nodeinfo['openRegistrations'] = false;
-		$nodeinfo['protocols'] = array( 'activitypub' );
+		$nodeinfo['protocols']         = array( 'activitypub' );
 
 		$nodeinfo['services'] = array(
-			'inbound' => array(),
+			'inbound'  => array(),
 			'outbound' => array(),
 		);
 
 		$nodeinfo['metadata'] = array(
-			'nodeName' => \get_bloginfo( 'name' ),
+			'nodeName'        => \get_bloginfo( 'name' ),
 			'nodeDescription' => \get_bloginfo( 'description' ),
-			'nodeIcon' => \get_site_icon_url(),
+			'nodeIcon'        => \get_site_icon_url(),
 		);
 
 		return new WP_REST_Response( $nodeinfo, 200 );
@@ -118,7 +118,7 @@ class Nodeinfo {
 	/**
 	 * Render NodeInfo file
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param  WP_REST_Request $request
 	 *
 	 * @return WP_REST_Response
 	 */
@@ -131,31 +131,31 @@ class Nodeinfo {
 		$nodeinfo = array();
 
 		$nodeinfo['version'] = '2.0';
-		$nodeinfo['server'] = array(
-			'baseUrl' => \home_url( '/' ),
-			'name' => \get_bloginfo( 'name' ),
+		$nodeinfo['server']  = array(
+			'baseUrl'  => \home_url( '/' ),
+			'name'     => \get_bloginfo( 'name' ),
 			'software' => 'wordpress',
-			'version' => get_masked_wp_version(),
+			'version'  => get_masked_wp_version(),
 		);
 
-		$posts = \wp_count_posts();
+		$posts    = \wp_count_posts();
 		$comments = \wp_count_comments();
 
 		$nodeinfo['usage'] = array(
-			'users' => array(
+			'users'         => array(
 				'total'          => get_total_users(),
 				'activeMonth'    => get_active_users( 1 ),
 				'activeHalfyear' => get_active_users( 6 ),
 			),
-			'localPosts' => (int) $posts->publish,
+			'localPosts'    => (int) $posts->publish,
 			'localComments' => (int) $comments->approved,
 		);
 
 		$nodeinfo['openRegistrations'] = false;
-		$nodeinfo['protocols'] = array( 'activitypub' );
+		$nodeinfo['protocols']         = array( 'activitypub' );
 
 		$nodeinfo['services'] = array(
-			'inbound' => array(),
+			'inbound'  => array(),
 			'outbound' => array(),
 		);
 
@@ -165,19 +165,19 @@ class Nodeinfo {
 	/**
 	 * Render NodeInfo discovery file
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param  WP_REST_Request $request
 	 *
 	 * @return WP_REST_Response
 	 */
 	public static function discovery( $request ) {
-		$discovery = array();
+		$discovery          = array();
 		$discovery['links'] = array(
 			array(
-				'rel' => 'http://nodeinfo.diaspora.software/ns/schema/2.0',
+				'rel'  => 'http://nodeinfo.diaspora.software/ns/schema/2.0',
 				'href' => get_rest_url_by_path( 'nodeinfo' ),
 			),
 			array(
-				'rel' => 'https://www.w3.org/ns/activitystreams#Application',
+				'rel'  => 'https://www.w3.org/ns/activitystreams#Application',
 				'href' => get_rest_url_by_path( 'application' ),
 			),
 		);

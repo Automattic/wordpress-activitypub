@@ -47,7 +47,7 @@ class Followers {
 	/**
 	 * Handle GET request
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param  WP_REST_Request $request
 	 *
 	 * @return WP_REST_Response
 	 */
@@ -74,10 +74,10 @@ class Followers {
 
 		$json->{'@context'} = \Activitypub\get_context();
 
-		$json->id = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user->get__id() ) );
+		$json->id        = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user->get__id() ) );
 		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
-		$json->actor = $user->get_id();
-		$json->type = 'OrderedCollectionPage';
+		$json->actor     = $user->get_id();
+		$json->type      = 'OrderedCollectionPage';
 
 		$json->totalItems = $data['total']; // phpcs:ignore
 		$json->partOf = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user->get__id() ) ); // phpcs:ignore
@@ -119,12 +119,12 @@ class Followers {
 		$params = array();
 
 		$params['page'] = array(
-			'type' => 'integer',
+			'type'    => 'integer',
 			'default' => 1,
 		);
 
 		$params['per_page'] = array(
-			'type' => 'integer',
+			'type'    => 'integer',
 			'default' => 20,
 		);
 
@@ -136,13 +136,13 @@ class Followers {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
 		);
 
 		$params['context'] = array(
-			'type' => 'string',
+			'type'    => 'string',
 			'default' => 'simple',
-			'enum' => array( 'simple', 'full' ),
+			'enum'    => array( 'simple', 'full' ),
 		);
 
 		return $params;

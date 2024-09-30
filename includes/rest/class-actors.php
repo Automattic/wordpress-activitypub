@@ -65,7 +65,7 @@ class Actors {
 	/**
 	 * Handle GET request
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param  WP_REST_Request $request
 	 *
 	 * @return WP_REST_Response
 	 */
@@ -127,7 +127,10 @@ class Actors {
 		$url      = str_replace( '{uri}', $resource, $template );
 
 		return new WP_REST_Response(
-			array( 'url' => $url, 'template' => $template ),
+			array(
+				'url'      => $url,
+				'template' => $template,
+			),
 			200
 		);
 	}

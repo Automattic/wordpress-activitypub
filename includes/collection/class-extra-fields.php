@@ -21,9 +21,9 @@ class Extra_Fields {
 	 * @return \WP_Post[] The extra fields.
 	 */
 	public static function get_actor_fields( $user_id ) {
-		$is_blog = self::is_blog( $user_id );
+		$is_blog   = self::is_blog( $user_id );
 		$post_type = $is_blog ? self::BLOG_POST_TYPE : self::USER_POST_TYPE;
-		$args = array(
+		$args      = array(
 			'post_type' => $post_type,
 			'nopaging'  => true,
 			'orderby'   => 'menu_order',
@@ -33,7 +33,7 @@ class Extra_Fields {
 			$args['author'] = $user_id;
 		}
 
-		$query = new \WP_Query( $args );
+		$query  = new \WP_Query( $args );
 		$fields = $query->posts ?? array();
 
 		return apply_filters( 'activitypub_get_actor_extra_fields', $fields, $user_id );
@@ -75,10 +75,10 @@ class Extra_Fields {
 		);
 
 		foreach ( $fields as $post ) {
-			$content = self::get_formatted_content( $post );
+			$content       = self::get_formatted_content( $post );
 			$attachments[] = array(
-				'type' => 'PropertyValue',
-				'name' => \get_the_title( $post ),
+				'type'  => 'PropertyValue',
+				'name'  => \get_the_title( $post ),
 				'value' => \html_entity_decode(
 					$content,
 					\ENT_QUOTES,
@@ -104,7 +104,7 @@ class Extra_Fields {
 						'type' => 'Link',
 						'name' => \get_the_title( $post ),
 						'href' => \esc_url( $tags->get_attribute( 'href' ) ),
-						'rel' => explode( ' ', $tags->get_attribute( 'rel' ) ),
+						'rel'  => explode( ' ', $tags->get_attribute( 'rel' ) ),
 					);
 
 					$link_added = true;
@@ -176,7 +176,7 @@ class Extra_Fields {
 			return $extra_fields;
 		}
 
-		$is_blog = self::is_blog( $user_id );
+		$is_blog          = self::is_blog( $user_id );
 		$already_migrated = $is_blog
 			? \get_option( 'activitypub_default_extra_fields' )
 			: \get_user_meta( $user_id, 'activitypub_default_extra_fields', true );
@@ -199,7 +199,7 @@ class Extra_Fields {
 		);
 
 		if ( ! $is_blog ) {
-			$author_url = \get_the_author_meta( 'user_url', $user_id );
+			$author_url       = \get_the_author_meta( 'user_url', $user_id );
 			$author_posts_url = \get_author_posts_url( $user_id );
 
 			$defaults[ \__( 'Profile', 'activitypub' ) ] = $author_posts_url;
@@ -226,7 +226,7 @@ class Extra_Fields {
 				'menu_order'     => $menu_order,
 			);
 
-			$menu_order += 10;
+			$menu_order    += 10;
 			$extra_field_id = wp_insert_post( $extra_field );
 			$extra_fields[] = get_post( $extra_field_id );
 		}
@@ -247,6 +247,7 @@ class Extra_Fields {
 
 	/**
 	 * Checks if the user is the blog user.
+	 *
 	 * @param int $user_id The user ID.
 	 * @return bool True if the user is the blog user, otherwise false.
 	 */

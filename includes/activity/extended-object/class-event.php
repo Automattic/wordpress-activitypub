@@ -51,6 +51,7 @@ class Event extends Base_Object {
 
 	/**
 	 * Mobilizon compatible values for repliesModertaionOption.
+	 *
 	 * @var array
 	 */
 	const REPLIES_MODERATION_OPTION_TYPES = array( 'allow_all', 'closed' );
@@ -62,6 +63,7 @@ class Event extends Base_Object {
 
 	/**
 	 * Allowed values for ical VEVENT STATUS.
+	 *
 	 * @var array
 	 */
 	const ICAL_EVENT_STATUS_TYPES = array( 'TENTATIVE', 'CONFIRMED', 'CANCELLED' );
@@ -70,6 +72,7 @@ class Event extends Base_Object {
 	 * Default event categories.
 	 *
 	 * These values currently reflect the default set as proposed by Mobilizon to maximize interoperability.
+	 *
 	 * @var array
 	 */
 	const DEFAULT_EVENT_CATEGORIES = array(
@@ -115,6 +118,8 @@ class Event extends Base_Object {
 
 	/**
 	 * The Title of the event.
+	 *
+	 * @var string
 	 */
 	protected $name;
 
@@ -142,12 +147,16 @@ class Event extends Base_Object {
 	protected $comments_enabled;
 
 	/**
+	 * Timezone of the event.
+	 *
 	 * @context https://joinmobilizon.org/ns#timezone
 	 * @var string
 	 */
 	protected $timezone;
 
 	/**
+	 * Moderation option for replies.
+	 *
 	 * @context https://joinmobilizon.org/ns#repliesModerationOption
 	 * @see https://docs.joinmobilizon.org/contribute/activity_pub/#repliesmoderation
 	 * @var string
@@ -155,6 +164,8 @@ class Event extends Base_Object {
 	protected $replies_moderation_option;
 
 	/**
+	 * Whether anonymous participation is enabled.
+	 *
 	 * @context https://joinmobilizon.org/ns#anonymousParticipationEnabled
 	 * @see https://docs.joinmobilizon.org/contribute/activity_pub/#anonymousparticipationenabled
 	 * @var bool
@@ -162,24 +173,32 @@ class Event extends Base_Object {
 	protected $anonymous_participation_enabled;
 
 	/**
+	 * The event's category.
+	 *
 	 * @context https://schema.org/category
-	 * @var enum
+	 * @var string
 	 */
 	protected $category;
 
 	/**
+	 * Language of the event.
+	 *
 	 * @context https://schema.org/inLanguage
-	 * @var
+	 * @var string
 	 */
 	protected $in_language;
 
 	/**
+	 * Whether the event is online.
+	 *
 	 * @context https://joinmobilizon.org/ns#isOnline
 	 * @var bool
 	 */
 	protected $is_online;
 
 	/**
+	 * The event's status.
+	 *
 	 * @context https://www.w3.org/2002/12/cal/ical#status
 	 * @var enum
 	 */
@@ -196,25 +215,33 @@ class Event extends Base_Object {
 	protected $actor;
 
 	/**
+	 * The external participation URL.
+	 *
 	 * @context https://joinmobilizon.org/ns#externalParticipationUrl
 	 * @var string
 	 */
 	protected $external_participation_url;
 
 	/**
+	 * Indicator of how new members may be able to join.
+	 *
 	 * @context https://joinmobilizon.org/ns#joinMode
 	 * @see https://docs.joinmobilizon.org/contribute/activity_pub/#joinmode
-	 * @var
+	 * @var string
 	 */
 	protected $join_mode;
 
 	/**
+	 * The participant count of the event.
+	 *
 	 * @context https://joinmobilizon.org/ns#participantCount
 	 * @var int
 	 */
 	protected $participant_count;
 
 	/**
+	 * How many places there can be for an event.
+	 *
 	 * @context https://schema.org/maximumAttendeeCapacity
 	 * @see https://docs.joinmobilizon.org/contribute/activity_pub/#maximumattendeecapacity
 	 * @var int
@@ -222,6 +249,8 @@ class Event extends Base_Object {
 	protected $maximum_attendee_capacity;
 
 	/**
+	 * The number of attendee places for an event that remain unallocated.
+	 *
 	 * @context https://schema.org/remainingAttendeeCapacity
 	 * @see https://docs.joinmobilizon.org/contribute/activity_pub/#remainignattendeecapacity
 	 * @var int
@@ -253,7 +282,7 @@ class Event extends Base_Object {
 	public function set_replies_moderation_option( $type ) {
 		if ( in_array( $type, self::REPLIES_MODERATION_OPTION_TYPES, true ) ) {
 			$this->replies_moderation_option = $type;
-			$this->comments_enabled = ( 'allow_all' === $type ) ? true : false;
+			$this->comments_enabled          = ( 'allow_all' === $type ) ? true : false;
 		} else {
 			_doing_it_wrong(
 				__METHOD__,
@@ -272,7 +301,7 @@ class Event extends Base_Object {
 	 */
 	public function set_comments_enabled( $comments_enabled ) {
 		if ( is_bool( $comments_enabled ) ) {
-			$this->comments_enabled = $comments_enabled;
+			$this->comments_enabled          = $comments_enabled;
 			$this->replies_moderation_option = $comments_enabled ? 'allow_all' : 'closed';
 		} else {
 			_doing_it_wrong(
@@ -332,7 +361,7 @@ class Event extends Base_Object {
 	public function set_external_participation_url( $url ) {
 		if ( preg_match( '/^https?:\/\/.*/i', $url ) ) {
 			$this->external_participation_url = $url;
-			$this->join_mode = 'external';
+			$this->join_mode                  = 'external';
 		}
 
 		return $this;

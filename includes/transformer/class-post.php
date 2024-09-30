@@ -62,7 +62,7 @@ class Post extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
-		$post = $this->wp_object;
+		$post   = $this->wp_object;
 		$object = parent::to_object();
 
 		$published = \strtotime( $post->post_date_gmt );
@@ -109,7 +109,7 @@ class Post extends Base {
 			return $this->actor_object;
 		}
 
-		$blog_user         = new Blog();
+		$blog_user          = new Blog();
 		$this->actor_object = $blog_user;
 
 		if ( is_single_user() ) {
@@ -311,16 +311,17 @@ class Post extends Base {
 		}
 
 		$blocks = \parse_blocks( $this->wp_object->post_content );
-		$media = self::get_media_from_blocks( $blocks, $media );
+		$media  = self::get_media_from_blocks( $blocks, $media );
 
 		return $media;
 	}
 
 	/**
 	 * Recursively get media IDs from blocks.
+	 *
 	 * @param array $blocks The blocks to search for media IDs
 	 * @param array $media The media IDs to append new IDs to
-	 * @param int $max_media The maximum number of media to return.
+	 * @param int   $max_media The maximum number of media to return.
 	 *
 	 * @return array The image IDs.
 	 */
@@ -455,14 +456,14 @@ class Post extends Base {
 
 				if ( 0 === $img_id ) {
 					$count = 0;
-					$src = preg_replace( '/-(?:\d+x\d+)(\.[a-zA-Z]+)$/', '$1', $src, 1, $count );
+					$src   = preg_replace( '/-(?:\d+x\d+)(\.[a-zA-Z]+)$/', '$1', $src, 1, $count );
 					if ( $count > 0 ) {
 						$img_id = \attachment_url_to_postid( $src );
 					}
 				}
 
 				if ( 0 === $img_id ) {
-					$src = preg_replace( '/(\.[a-zA-Z]+)$/', '-scaled$1', $src );
+					$src    = preg_replace( '/(\.[a-zA-Z]+)$/', '-scaled$1', $src );
 					$img_id = \attachment_url_to_postid( $src );
 				}
 
@@ -496,12 +497,12 @@ class Post extends Base {
 		$images = array();
 		$query  = new \WP_Query(
 			array(
-				'post_parent' => $this->wp_object->ID,
-				'post_status' => 'inherit',
-				'post_type' => 'attachment',
+				'post_parent'    => $this->wp_object->ID,
+				'post_status'    => 'inherit',
+				'post_type'      => 'attachment',
 				'post_mime_type' => 'image',
-				'order' => 'ASC',
-				'orderby' => 'menu_order ID',
+				'order'          => 'ASC',
+				'orderby'        => 'menu_order ID',
 				'posts_per_page' => $max_images,
 			)
 		);
@@ -596,10 +597,10 @@ class Post extends Base {
 					'url'       => \esc_url( \wp_get_attachment_url( $id ) ),
 					'name'      => \esc_attr( \get_the_title( $id ) ),
 				);
-				$meta = wp_get_attachment_metadata( $id );
+				$meta       = wp_get_attachment_metadata( $id );
 				// height and width for videos
 				if ( isset( $meta['width'] ) && isset( $meta['height'] ) ) {
-					$attachment['width'] = \esc_attr( $meta['width'] );
+					$attachment['width']  = \esc_attr( $meta['width'] );
 					$attachment['height'] = \esc_attr( $meta['height'] );
 				}
 				// @todo: add `icon` support for audio/video attachments. Maybe use post thumbnail?
@@ -735,7 +736,7 @@ class Post extends Base {
 		$post_tags = \get_the_tags( $this->wp_object->ID );
 		if ( $post_tags ) {
 			foreach ( $post_tags as $post_tag ) {
-				$tag = array(
+				$tag    = array(
 					'type' => 'Hashtag',
 					'href' => \esc_url( \get_tag_link( $post_tag->term_id ) ),
 					'name' => esc_hashtag( $post_tag->name ),
@@ -747,7 +748,7 @@ class Post extends Base {
 		$mentions = $this->get_mentions();
 		if ( $mentions ) {
 			foreach ( $mentions as $mention => $url ) {
-				$tag = array(
+				$tag    = array(
 					'type' => 'Mention',
 					'href' => \esc_url( $url ),
 					'name' => \esc_html( $mention ),

@@ -77,7 +77,7 @@ class User extends Actor {
 			);
 		}
 
-		$object = new static();
+		$object      = new static();
 		$object->_id = $user_id;
 
 		return $object;
@@ -190,8 +190,8 @@ class User extends Actor {
 
 	public function get_public_key() {
 		return array(
-			'id'       => $this->get_id() . '#main-key',
-			'owner'    => $this->get_id(),
+			'id'           => $this->get_id() . '#main-key',
+			'owner'        => $this->get_id(),
 			'publicKeyPem' => Signature::get_public_key_for( $this->get__id() ),
 		);
 	}
@@ -300,7 +300,10 @@ class User extends Actor {
 	 * @return bool True if the attribute was updated, false otherwise.
 	 */
 	public function update_name( $value ) {
-		$userdata = [ 'ID' => $this->_id, 'display_name' => $value ];
+		$userdata = array(
+			'ID'           => $this->_id,
+			'display_name' => $value,
+		);
 		return \wp_update_user( $userdata );
 	}
 

@@ -24,8 +24,8 @@ class Http {
 	public static function post( $url, $body, $user_id ) {
 		\do_action( 'activitypub_pre_http_post', $url, $body, $user_id );
 
-		$date = \gmdate( 'D, d M Y H:i:s T' );
-		$digest = Signature::generate_digest( $body );
+		$date      = \gmdate( 'D, d M Y H:i:s T' );
+		$digest    = Signature::generate_digest( $body );
 		$signature = Signature::generate_signature( $user_id, 'post', $url, $date, $digest );
 
 		$wp_version = get_masked_wp_version();
@@ -36,19 +36,19 @@ class Http {
 		 * @param string $user_agent The user agent string.
 		 */
 		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
-		$args = array(
-			'timeout' => 100,
+		$args       = array(
+			'timeout'             => 100,
 			'limit_response_size' => 1048576,
-			'redirection' => 3,
-			'user-agent' => "$user_agent; ActivityPub",
-			'headers' => array(
-				'Accept' => 'application/activity+json',
+			'redirection'         => 3,
+			'user-agent'          => "$user_agent; ActivityPub",
+			'headers'             => array(
+				'Accept'       => 'application/activity+json',
 				'Content-Type' => 'application/activity+json',
-				'Digest' => $digest,
-				'Signature' => $signature,
-				'Date' => $date,
+				'Digest'       => $digest,
+				'Signature'    => $signature,
+				'Date'         => $date,
 			),
-			'body' => $body,
+			'body'                => $body,
 		);
 
 		$response = \wp_safe_remote_post( $url, $args );
@@ -86,7 +86,7 @@ class Http {
 			}
 		}
 
-		$date = \gmdate( 'D, d M Y H:i:s T' );
+		$date      = \gmdate( 'D, d M Y H:i:s T' );
 		$signature = Signature::generate_signature( Users::APPLICATION_USER_ID, 'get', $url, $date );
 
 		$wp_version = get_masked_wp_version();
@@ -99,15 +99,15 @@ class Http {
 		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
 
 		$args = array(
-			'timeout' => apply_filters( 'activitypub_remote_get_timeout', 100 ),
+			'timeout'             => apply_filters( 'activitypub_remote_get_timeout', 100 ),
 			'limit_response_size' => 1048576,
-			'redirection' => 3,
-			'user-agent' => "$user_agent; ActivityPub",
-			'headers' => array(
-				'Accept' => 'application/activity+json',
+			'redirection'         => 3,
+			'user-agent'          => "$user_agent; ActivityPub",
+			'headers'             => array(
+				'Accept'       => 'application/activity+json',
 				'Content-Type' => 'application/activity+json',
-				'Signature' => $signature,
-				'Date' => $date,
+				'Signature'    => $signature,
+				'Date'         => $date,
 			),
 		);
 

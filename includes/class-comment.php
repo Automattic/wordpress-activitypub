@@ -54,7 +54,7 @@ class Comment {
 
 		$attrs = array(
 			'selectedComment' => self::generate_id( $comment ),
-			'commentId' => $comment->comment_ID,
+			'commentId'       => $comment->comment_ID,
 		);
 
 		$div = sprintf(
@@ -78,7 +78,7 @@ class Comment {
 	 */
 	private static function create_fediverse_reply_link( $link, $args ) {
 		$str_to_replace = sprintf( '>%s<', $args['reply_text'] );
-		$replace_with = sprintf(
+		$replace_with   = sprintf(
 			' title="%s">%s<',
 			esc_attr__( 'This comment was received from the fediverse and your reply will be sent to the original author', 'activitypub' ),
 			esc_html__( 'Reply with federation', 'activitypub' )
@@ -343,8 +343,8 @@ class Comment {
 	/**
 	 * Gets the public comment id via the WordPress comments meta.
 	 *
-	 * @param  int    $wp_comment_id The internal WordPress comment ID.
-	 * @param  bool   $fallback      Whether the code should fall back to `source_url` if `source_id` is not set.
+	 * @param  int  $wp_comment_id The internal WordPress comment ID.
+	 * @param  bool $fallback      Whether the code should fall back to `source_url` if `source_id` is not set.
 	 *
 	 * @return string|null           The ActivityPub id/url of the comment.
 	 */
@@ -363,8 +363,8 @@ class Comment {
 	/**
 	 * Gets the public comment url via the WordPress comments meta.
 	 *
-	 * @param  int    $wp_comment_id The internal WordPress comment ID.
-	 * @param  bool   $fallback      Whether the code should fall back to `source_id` if `source_url` is not set.
+	 * @param  int  $wp_comment_id The internal WordPress comment ID.
+	 * @param  bool $fallback      Whether the code should fall back to `source_id` if `source_url` is not set.
 	 *
 	 * @return string|null           The ActivityPub id/url of the comment.
 	 */
@@ -383,7 +383,7 @@ class Comment {
 	/**
 	 * Link remote comments to source url.
 	 *
-	 * @param string $comment_link
+	 * @param string            $comment_link
 	 * @param object|WP_Comment $comment
 	 *
 	 * @return string $url
@@ -430,7 +430,7 @@ class Comment {
 	private static function post_has_remote_comments( $post_id ) {
 		$comments = \get_comments(
 			array(
-				'post_id' => $post_id,
+				'post_id'    => $post_id,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query' => array(
 					'relation' => 'AND',
@@ -496,7 +496,7 @@ class Comment {
 			\wp_enqueue_style(
 				$handle,
 				\plugins_url( 'build/remote-reply/style-index.css', __DIR__ ),
-				[ 'wp-components' ],
+				array( 'wp-components' ),
 				$assets['version']
 			);
 		}
