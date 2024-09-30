@@ -292,7 +292,11 @@ class Activity_Dispatcher {
 		foreach ( $in_reply_to as $url ) {
 			$object = Http::get_remote_object( $url );
 
-			if ( ! $object || empty( $object['attributedTo'] ) ) {
+			if (
+				! $object ||
+				\is_wp_error( $object ) ||
+				empty( $object['attributedTo'] )
+			) {
 				continue;
 			}
 
