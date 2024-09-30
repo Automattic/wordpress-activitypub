@@ -310,28 +310,9 @@ class Admin {
 				'show_in_rest'      => true,
 				'default'           => Blog::get_default_username(),
 				'sanitize_callback' => function ( $value ) {
-					// hack to allow dots in the username
-					$parts     = explode( '.', $value );
-					$sanitized = array();
+					$sanatized = self::sanatize_identifier( $value );
 
-					foreach ( $parts as $part ) {
-						$sanitized[] = \sanitize_title( $part );
-					}
-
-					$sanitized = implode( '.', $sanitized );
-
-					// check for login or nicename.
-					$user = new WP_User_Query(
-						array(
-							'search'         => $sanitized,
-							'search_columns' => array( 'user_login', 'user_nicename' ),
-							'number'         => 1,
-							'hide_empty'     => true,
-							'fields'         => 'ID',
-						)
-					);
-
-					if ( $user->results ) {
+					if ( \is_wp_error( $sanatized ) ) {
 						add_settings_error(
 							'activitypub_blog_identifier',
 							'activitypub_blog_identifier',
@@ -412,6 +393,26 @@ class Admin {
 			\update_user_option( $user_id, 'activitypub_header_image', $header_image );
 		} else {
 			\delete_user_option( $user_id, 'activitypub_header_image' );
+		}
+
+		$identifier = ! empty( $_POST['activitypub_identifier'] ) ? sanitize_text_field( wp_unslash( $_POST['activitypub_identifier'] ) ) : false;
+		$identifier = self::sanatize_identifier( $identifier );
+
+		if ( ! \is_wp_error( $identifier ) ) {
+			\update_user_option( $user_id, 'activitypub_identifier', $identifier );
+		} else {
+			if ( \is_wp_error( $identifier ) ) {
+				// show error message on user settings page
+				add_action(
+					'user_profile_update_errors',
+					function ( $errors ) use ( $identifier ) {
+						$errors->add( 'activitypub_identifier', $identifier->get_error_message() );
+					},
+					10,
+					3
+				);
+			}
+			\delete_user_option( $user_id, 'activitypub_identifier' );
 		}
 	}
 
@@ -757,5 +758,48 @@ class Admin {
 		\remove_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 3 );
 
 		return $items;
+	}
+
+	/**
+	 * Sanatize the identifier
+	 *
+	 * @param string $id The identifier.
+	 *
+	 * @return false|string The sanatized identifier or false if it is already in use.
+	 */
+	private static function sanatize_identifier( $id ) {
+		if ( empty( $id ) ) {
+			return false;
+		}
+
+		// hack to allow dots in the username
+		$parts     = explode( '.', $id );
+		$sanitized = array();
+
+		foreach ( $parts as $part ) {
+			$sanitized[] = \sanitize_title( $part );
+		}
+
+		$sanitized = implode( '.', $sanitized );
+
+		// check for login or nicename.
+		$user = new WP_User_Query(
+			array(
+				'search'         => $sanitized,
+				'search_columns' => array( 'user_login', 'user_nicename' ),
+				'number'         => 1,
+				'hide_empty'     => true,
+				'fields'         => 'ID',
+			)
+		);
+
+		if ( $user->get_results() ) {
+			return new \WP_Error(
+				'identifier_exists',
+				\__( 'This identifier is already in use.', 'activitypub' )
+			);
+		}
+
+		return $sanitized;
 	}
 }

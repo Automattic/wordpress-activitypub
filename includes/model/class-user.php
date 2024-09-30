@@ -132,6 +132,11 @@ class User extends Actor {
 	}
 
 	public function get_preferred_username() {
+		$custom_user_identifier = get_user_option ( 'activitypub_identifier', $this->_id );
+		if ( $custom_user_identifier ) {
+			return \esc_attr( $custom_user_identifier );
+		}
+
 		return \esc_attr( \get_the_author_meta( 'login', $this->_id ) );
 	}
 

@@ -85,6 +85,8 @@ class Users {
 			return new Application();
 		}
 
+		global $wpdb;
+
 		// check for 'activitypub_username' meta
 		$user = new WP_User_Query(
 			array(
@@ -96,9 +98,14 @@ class Users {
 				'meta_query'  => array(
 					'relation' => 'OR',
 					array(
-						'key'     => 'activitypub_user_identifier',
+						'key'     => 'activitypub_identifier',
 						'value'   => $username,
-						'compare' => 'LIKE',
+						'compare' => '=',
+					),
+					array(
+						'key'     => $wpdb->prefix . 'activitypub_identifier',
+						'value'   => $username,
+						'compare' => '=',
 					),
 				),
 			)

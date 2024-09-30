@@ -307,6 +307,7 @@ class Scheduler {
 		$fields = array(
 			'activitypub_description',
 			'activitypub_header_image',
+			'activitypub_identifier',
 			'description',
 			'user_url',
 			'display_name',
