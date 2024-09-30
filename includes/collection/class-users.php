@@ -255,7 +255,7 @@ class Users {
 			$user = self::get_by_resource( $id );
 		}
 
-		if ( $user && ! is_wp_error( $user ) ) {
+		if ( $user && ! \is_wp_error( $user ) ) {
 			return $user;
 		}
 
