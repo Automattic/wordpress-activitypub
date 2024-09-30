@@ -31,7 +31,7 @@ class Follower extends Actor {
 	 * @return mixed
 	 */
 	public function get_errors() {
-		return get_post_meta( $this->_id, 'activitypub_errors' );
+		return get_post_meta( $this->_id, 'activitypub_errors', false );
 	}
 
 	/**

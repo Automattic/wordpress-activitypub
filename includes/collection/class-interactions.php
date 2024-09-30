@@ -310,7 +310,7 @@ class Interactions {
 		if ( 1 === $state ) {
 			return $commentdata;
 		} else {
-			return $state; // Either `WP_Comment`, `false` or a `WP_Error` instance or `0` or `1`!
+			return $state; // Either WP_Comment, false, a WP_Error, 0, or 1!
 		}
 	}
 }
