@@ -16,7 +16,7 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 			<td>
 				<p>
 					<label>
-						<input name="activitypub_identifier" type="text" value="<?php esc_attr_e( get_user_option( 'activitypub_identifier', \get_current_user_id() ) ); ?>" placeholder="<?php echo esc_attr( $user->get_preferred_username() ); ?>" style="text-align: right;" />@<?php echo esc_html( \wp_parse_url( \home_url(), PHP_URL_HOST ) ); ?>
+						<input name="activitypub_identifier" type="text" value="<?php echo \esc_attr( $args['identifier'] ); ?>" placeholder="<?php echo esc_attr( $user->get_preferred_username() ); ?>" style="text-align: right;" />@<?php echo esc_html( \wp_parse_url( \home_url(), PHP_URL_HOST ) ); ?>
 					</label>
 				</p>
 				<p class="description">

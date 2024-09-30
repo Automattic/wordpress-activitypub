@@ -348,6 +348,7 @@ class Admin {
 
 	public static function add_profile( $user ) {
 		$description = \get_user_option( 'activitypub_description', $user->ID );
+		$identifier  = \get_user_option( 'activitypub_identifier', $user->ID );
 
 		wp_enqueue_media();
 		wp_enqueue_script( 'activitypub-header-image' );
@@ -357,6 +358,7 @@ class Admin {
 			true,
 			array(
 				'description' => $description,
+				'identifier'  => $identifier,
 			)
 		);
 	}
