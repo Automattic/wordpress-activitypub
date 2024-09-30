@@ -48,7 +48,7 @@ class Followers {
 			return $id;
 		}
 
-		$post_meta = get_post_meta( $id, 'activitypub_user_id' );
+		$post_meta = get_post_meta( $id, 'activitypub_user_id', false );
 
 		// phpcs:ignore WordPress.PHP.StrictInArray.MissingTrueStrict
 		if ( is_array( $post_meta ) && ! in_array( $user_id, $post_meta ) ) {
