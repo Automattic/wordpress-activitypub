@@ -140,7 +140,7 @@ class Post extends Base {
 			'federated' !== $post_status &&
 			$post_id > $last_legacy_id
 		) {
-			// generate URI based on comment ID
+			// generate URI based on post ID
 			return \add_query_arg( 'p', $post_id, \trailingslashit( \home_url() ) );
 		}
 
