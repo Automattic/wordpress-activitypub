@@ -643,9 +643,16 @@ class Post extends Base {
 			return \ucfirst( $post_format_setting );
 		}
 
-		$has_title = post_type_supports( $this->wp_object->post_type, 'title' );
+		$has_title = \post_type_supports( $this->wp_object->post_type, 'title' );
+		$content   = \get_post_field( 'post_content', $this->wp_object->ID );
+		$content   = \wp_strip_all_tags( $content );
 
-		if ( ! $has_title ) {
+		// Check if the post has a title.
+		if (
+			! $has_title ||
+			! $this->wp_object->post_title ||
+			\strlen( $content ) <= ACTIVITYPUB_NOTE_LENGTH
+		) {
 			return 'Note';
 		}
 
