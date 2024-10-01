@@ -10,7 +10,6 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Extra_Fields;
 
-use function Activitypub\use_immutable_actor_id;
 use function Activitypub\is_blog_public;
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
@@ -89,11 +88,13 @@ class User extends Actor {
 	 * @return string The User-ID.
 	 */
 	public function get_id() {
-		if ( use_immutable_actor_id() ) {
-			return \add_query_arg( 'author', $this->_id, \trailingslashit( \home_url() ) );
+		$permalink = \get_user_option( 'activitypub_use_permalink_as_id', $this->_id );
+
+		if ( '1' === $permalink ) {
+			return $this->get_url();
 		}
 
-		return $this->get_url();
+		return \add_query_arg( 'author', $this->_id, \trailingslashit( \home_url() ) );
 	}
 
 	/**

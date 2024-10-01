@@ -284,7 +284,6 @@ class Migration {
 	 * @return void
 	 */
 	public static function add_default_settings() {
-		\add_option( 'activitypub_immutable_actor_id', true );
 		self::add_activitypub_capability();
 	}
 
@@ -369,10 +368,24 @@ class Migration {
 
 		update_option( 'activitypub_last_post_with_permalink_as_id', $latest_post_id );
 
-		$followers = Followers::get_all_followers();
+		$users = \get_users(
+			array(
+				'capability__in' => array( 'activitypub' ),
+			)
+		);
 
-		if ( ! $followers ) {
-			\add_option( 'activitypub_immutable_actor_id', true );
+		foreach ( $users as $user ) {
+			$followers = Followers::get_followers( $user->ID );
+
+			if ( $followers ) {
+				\update_user_option( $user->ID, 'activitypub_use_permalink_as_id', '1' );
+			}
+		}
+
+		$followers = Followers::get_followers( 0 );
+
+		if ( $followers ) {
+			\update_option( 'activitypub_use_permalink_as_id_for_blog', '1' );
 		}
 	}
 }
