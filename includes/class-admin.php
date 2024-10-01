@@ -289,6 +289,15 @@ class Admin {
 				'default'     => '0',
 			)
 		);
+		\register_setting(
+			'activitypub',
+			'activitypub_actor_mode',
+			array(
+				'type'        => 'integer',
+				'description' => \__( 'Choose what Actor-Mode you prefer.', 'activitypub' ),
+				'default'     => '1',
+			)
+		);
 
 		// Blog-User Settings
 		\register_setting(

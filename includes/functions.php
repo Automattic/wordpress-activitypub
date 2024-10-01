@@ -461,7 +461,7 @@ function is_user_type_disabled( $type ) {
 				break;
 			}
 
-			if ( '1' !== \get_option( 'activitypub_enable_blog_user', '0' ) ) {
+			if ( '1' === \get_option( 'activitypub_actor_mode', '1' ) ) {
 				$return = true;
 				break;
 			}
@@ -481,7 +481,7 @@ function is_user_type_disabled( $type ) {
 				break;
 			}
 
-			if ( '1' !== \get_option( 'activitypub_enable_users', '1' ) ) {
+			if ( '2' === \get_option( 'activitypub_actor_mode', '1' ) ) {
 				$return = true;
 				break;
 			}
@@ -506,10 +506,7 @@ function is_user_type_disabled( $type ) {
  * @return boolean True if the blog is in single-user mode, false otherwise.
  */
 function is_single_user() {
-	if (
-		false === is_user_type_disabled( 'blog' ) &&
-		true === is_user_type_disabled( 'user' )
-	) {
+	if ( '2' === get_option( 'activitypub_actor_mode', '1' ) ) {
 		return true;
 	}
 

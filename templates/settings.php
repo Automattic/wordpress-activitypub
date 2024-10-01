@@ -26,8 +26,8 @@
 						<td>
 							<p>
 								<label>
-									<input type="checkbox" name="activitypub_enable_users" id="activitypub_enable_users" value="1" <?php echo \checked( '1', \get_option( 'activitypub_enable_users', '1' ) ); ?> />
-									<?php \esc_html_e( 'Enable Author-Profiles', 'activitypub' ); ?>
+									<input type="radio" name="activitypub_actor_mode" id="activitypub_actor_mode" value="1" <?php echo \checked( '1', \get_option( 'activitypub_actor_mode', '1' ) ); ?> />
+									<strong><?php \esc_html_e( 'Only Author-Profiles', 'activitypub' ); ?></strong>
 								</label>
 							</p>
 							<p class="description">
@@ -38,12 +38,21 @@
 							</p>
 							<p>
 								<label>
-									<input type="checkbox" name="activitypub_enable_blog_user" id="activitypub_enable_blog_user" value="1" <?php echo \checked( '1', \get_option( 'activitypub_enable_blog_user', '0' ) ); ?> />
-									<?php \esc_html_e( 'Enable Blog-Profile', 'activitypub' ); ?>
+									<input type="radio" name="activitypub_actor_mode" id="activitypub_actor_mode" value="2" <?php echo \checked( '2', \get_option( 'activitypub_actor_mode', '1' ) ); ?> />
+									<strong><?php \esc_html_e( 'Only Blog-Profile', 'activitypub' ); ?></strong>
 								</label>
 							</p>
 							<p class="description">
-								<?php \esc_html_e( 'Your blog becomes an ActivityPub profile.', 'activitypub' ); ?>
+								<?php \esc_html_e( 'Your blog becomes an ActivityPub profile and every post will be published under this profile instead of the author profile.', 'activitypub' ); ?>
+							</p>
+							<p>
+								<label>
+									<input type="radio" name="activitypub_actor_mode" id="activitypub_actor_mode" value="3" <?php echo \checked( '3', \get_option( 'activitypub_actor_mode', '1' ) ); ?> />
+									<strong><?php \esc_html_e( 'Author- & Blog-Profile', 'activitypub' ); ?></strong>
+								</label>
+							</p>
+							<p class="description">
+								<?php \esc_html_e( 'A combination of both modes above. New post will be published under the author profile and boosted by the blog, so that it is possible to follow single authors and/or the whole blog.', 'activitypub' ); ?>
 							</p>
 						</td>
 					</tr>
