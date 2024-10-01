@@ -506,7 +506,10 @@ function is_user_type_disabled( $type ) {
  * @return boolean True if the blog is in single-user mode, false otherwise.
  */
 function is_single_user() {
-	if ( '2' === get_option( 'activitypub_actor_mode', '1' ) ) {
+	if (
+		false === is_user_type_disabled( 'blog' ) &&
+		true === is_user_type_disabled( 'user' )
+	) {
 		return true;
 	}
 
