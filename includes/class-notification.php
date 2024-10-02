@@ -2,60 +2,45 @@
 
 namespace Activitypub;
 
+use function Activitypub\get_remote_metadata_by_actor;
+
 /**
- * Notification class.
+ * ActivityPub Notification Class
  */
 class Notification {
 	/**
-	 * The type of the notification.
-	 *
-	 * @var string
+	 * Initialize the class, registering WordPress hooks
 	 */
-	public $type;
-
-	/**
-	 * The actor URL.
-	 *
-	 * @var string
-	 */
-	public $actor;
-
-	/**
-	 * The Activity object.
-	 *
-	 * @var array
-	 */
-	public $object;
-
-	/**
-	 * The WordPress User-Id.
-	 *
-	 * @var int
-	 */
-	public $target;
-
-	/**
-	 * Notification constructor.
-	 *
-	 * @param string $type   The type of the notification.
-	 * @param string $actor  The actor URL.
-	 * @param array  $object The Activity object.
-	 * @param int    $target The WordPress User-Id.
-	 */
-	public function __construct( $type, $actor, $object, $target ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
-		$this->type   = $type;
-		$this->actor  = $actor;
-		$this->object = $object;
-		$this->target = $target;
+	public static function init() {
+		\add_action(
+			'activitypub_notification_create',
+			array( self::class, 'mail' )
+		);
 	}
 
-	/**
-	 * Send the notification.
-	 */
-	public function send() {
-		$type = \strtolower( $this->type );
+	public static function mail( $notification ) {
+		$actor  = get_remote_metadata_by_actor( $notification->actor );
+		$object = $notification->object['object'];
+		$target = \get_user_by( 'id', $notification->target );
 
-		do_action( 'activitypub_notification', $this );
-		do_action( "activitypub_notification_{$type}", $this );
+		if ( ! $actor || \is_wp_error( $actor ) || ! $target ) {
+			return;
+		}
+
+		$subject = \sprintf(
+			/* translators: 1: actor name, 2: object name */
+			\__( 'A DM from %1$s', 'activitypub' ),
+			$actor['name'],
+		);
+
+		$message = \sprintf(
+			/* translators: 1: actor name, 2: object name, 3: object URL */
+			\__( "%1\$s: \n\n %2\$s \n\n %3\$s", 'activitypub' ),
+			$actor['name'],
+			$object['content'],
+			$object['url']
+		);
+
+		\wp_mail( $target->user_email, $subject, $message );
 	}
 }

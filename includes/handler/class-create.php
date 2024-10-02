@@ -2,6 +2,7 @@
 namespace Activitypub\Handler;
 
 use WP_Error;
+use Activitypub\Model\Notification;
 use Activitypub\Collection\Interactions;
 
 use function Activitypub\is_activity_public;
@@ -42,7 +43,15 @@ class Create {
 	public static function handle_create( $array, $user_id, $object = null ) {
 		// check if Activity is public or not
 		if ( ! is_activity_public( $array ) ) {
-			// @todo maybe send email
+			// send notification
+			$notification = new Notification(
+				'create',
+				$array['actor'],
+				$array,
+				$user_id
+			);
+			$notification->send();
+
 			return;
 		}
 
