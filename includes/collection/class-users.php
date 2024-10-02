@@ -103,7 +103,7 @@ class Users {
 						'compare' => '=',
 					),
 					array(
-						'key'     => $wpdb->prefix . 'activitypub_identifier',
+						'key'     => $wpdb->get_blog_prefix() . 'activitypub_identifier',
 						'value'   => $username,
 						'compare' => '=',
 					),

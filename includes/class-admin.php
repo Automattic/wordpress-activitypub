@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub;
 
+use WP_Error;
 use WP_User_Query;
 use Activitypub\Model\Blog;
 use Activitypub\Activitypub;
@@ -796,7 +797,40 @@ class Admin {
 		);
 
 		if ( $user->get_results() ) {
-			return new \WP_Error(
+			return new WP_Error(
+				'identifier_exists',
+				\__( 'This identifier is already in use.', 'activitypub' )
+			);
+		}
+
+		global $wpdb;
+
+		// check for 'activitypub_username' meta
+		$user = new WP_User_Query(
+			array(
+				'count_total' => false,
+				'number'      => 1,
+				'hide_empty'  => true,
+				'fields'      => 'ID',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					'relation' => 'OR',
+					array(
+						'key'     => 'activitypub_identifier',
+						'value'   => $username,
+						'compare' => '=',
+					),
+					array(
+						'key'     => $wpdb->get_blog_prefix() . 'activitypub_identifier',
+						'value'   => $username,
+						'compare' => '=',
+					),
+				),
+			)
+		);
+
+		if ( $user->results ) {
+			return new WP_Error(
 				'identifier_exists',
 				\__( 'This identifier is already in use.', 'activitypub' )
 			);
