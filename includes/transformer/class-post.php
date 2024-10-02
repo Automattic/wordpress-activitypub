@@ -65,33 +65,11 @@ class Post extends Base {
 		$post   = $this->wp_object;
 		$object = parent::to_object();
 
-		$published = \strtotime( $post->post_date_gmt );
-
-		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', $published ) );
-
-		$updated = \strtotime( $post->post_modified_gmt );
-
-		if ( $updated > $published ) {
-			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', $updated ) );
-		}
-
-		$object->set_content_map(
-			array(
-				$this->get_locale() => $this->get_content(),
-			)
-		);
-
-		$object->set_to(
-			array(
-				'https://www.w3.org/ns/activitystreams#Public',
-				$this->get_actor_object()->get_followers(),
-			)
-		);
-
 		$content_warning = get_content_warning( $post );
 		if ( ! empty( $content_warning ) ) {
 			$object->set_sensitive( true );
 			$object->set_summary( $content_warning );
+			$object->set_summary_map( null );
 		}
 
 		return $object;
@@ -939,6 +917,88 @@ class Post extends Base {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Returns the recipient of the post.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-to
+	 *
+	 * @return array The recipient URLs of the post.
+	 */
+	public function get_to() {
+		return array(
+			'https://www.w3.org/ns/activitystreams#Public',
+			$this->get_actor_object()->get_followers(),
+		);
+	}
+
+	/**
+	 * Returns the published date of the post.
+	 *
+	 * @return string The published date of the post.
+	 */
+	public function get_published() {
+		$published = \strtotime( $this->wp_object->post_date_gmt );
+
+		return \gmdate( 'Y-m-d\TH:i:s\Z', $published );
+	}
+
+	/**
+	 * Returns the updated date of the post.
+	 *
+	 * @return string|null The updated date of the post.
+	 */
+	public function get_updated() {
+		$published = \strtotime( $this->wp_object->post_date_gmt );
+		$updated   = \strtotime( $this->wp_object->post_modified_gmt );
+
+		if ( $updated > $published ) {
+			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Returns the content map for the post.
+	 *
+	 * @return array The content map for the post.
+	 */
+	public function get_content_map() {
+		return array(
+			$this->get_locale() => $this->get_content(),
+		);
+	}
+
+	/**
+	 * Returns the name map for the post.
+	 *
+	 * @return array The name map for the post.
+	 */
+	public function get_name_map() {
+		if ( ! $this->get_name() ) {
+			return null;
+		}
+
+		return array(
+			$this->get_locale() => $this->get_name(),
+		);
+	}
+
+	/**
+	 * Returns the summary map for the post.
+	 *
+	 * @return array The summary map for the post.
+	 */
+	public function get_summary_map() {
+		if ( ! $this->get_summary() ) {
+			return null;
+		}
+
+		return array(
+			$this->get_locale() => $this->get_summary(),
+		);
 	}
 
 	/**
