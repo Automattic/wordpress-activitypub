@@ -135,7 +135,7 @@ class Signature {
 
 		if ( $user_id > 0 ) {
 			$user = \get_userdata( $user_id );
-			// sanatize username because it could include spaces and special chars
+			// sanitize username because it could include spaces and special chars
 			$id = sanitize_title( $user->user_login );
 		}
 

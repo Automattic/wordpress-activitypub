@@ -311,9 +311,13 @@ class Admin {
 				'show_in_rest'      => true,
 				'default'           => Blog::get_default_username(),
 				'sanitize_callback' => function ( $value ) {
-					$sanatized = self::sanatize_identifier( $value );
+					$sanitized = self::sanitize_identifier( $value );
 
-					if ( \is_wp_error( $sanatized ) ) {
+					if ( ! $sanitized ) {
+						return Blog::get_default_username();
+					}
+
+					if ( \is_wp_error( $sanitized ) ) {
 						add_settings_error(
 							'activitypub_blog_identifier',
 							'activitypub_blog_identifier',
@@ -399,7 +403,7 @@ class Admin {
 		}
 
 		$identifier = ! empty( $_POST['activitypub_identifier'] ) ? sanitize_text_field( wp_unslash( $_POST['activitypub_identifier'] ) ) : false;
-		$identifier = self::sanatize_identifier( $identifier );
+		$identifier = self::sanitize_identifier( $identifier );
 
 		if ( ! \is_wp_error( $identifier ) ) {
 			\update_user_option( $user_id, 'activitypub_identifier', $identifier );
@@ -768,9 +772,9 @@ class Admin {
 	 *
 	 * @param string $id The identifier.
 	 *
-	 * @return false|string The sanatized identifier or false if it is already in use.
+	 * @return false|string The sanitized identifier or false if it is already in use.
 	 */
-	private static function sanatize_identifier( $id ) {
+	private static function sanitize_identifier( $id ) {
 		if ( empty( $id ) ) {
 			return false;
 		}
@@ -797,39 +801,6 @@ class Admin {
 		);
 
 		if ( $user->get_results() ) {
-			return new WP_Error(
-				'identifier_exists',
-				\__( 'This identifier is already in use.', 'activitypub' )
-			);
-		}
-
-		global $wpdb;
-
-		// check for 'activitypub_username' meta
-		$user = new WP_User_Query(
-			array(
-				'count_total' => false,
-				'number'      => 1,
-				'hide_empty'  => true,
-				'fields'      => 'ID',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query'  => array(
-					'relation' => 'OR',
-					array(
-						'key'     => 'activitypub_identifier',
-						'value'   => $username,
-						'compare' => '=',
-					),
-					array(
-						'key'     => $wpdb->get_blog_prefix() . 'activitypub_identifier',
-						'value'   => $username,
-						'compare' => '=',
-					),
-				),
-			)
-		);
-
-		if ( $user->results ) {
 			return new WP_Error(
 				'identifier_exists',
 				\__( 'This identifier is already in use.', 'activitypub' )
