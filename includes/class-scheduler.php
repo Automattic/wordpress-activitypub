@@ -303,15 +303,24 @@ class Scheduler {
 		if ( ! \user_can( $user_id, 'activitypub' ) ) {
 			return;
 		}
+
+		global $wpdb;
+
+		$prefix = $wpdb->get_blog_prefix();
+
 		// the user meta fields that affect a profile.
 		$fields = array(
 			'activitypub_description',
 			'activitypub_header_image',
 			'activitypub_identifier',
+			$prefix . 'activitypub_description',
+			$prefix . 'activitypub_header_image',
+			$prefix . 'activitypub_identifier',
 			'description',
 			'user_url',
 			'display_name',
 		);
+
 		if ( in_array( $meta_key, $fields, true ) ) {
 			self::schedule_profile_update( $user_id );
 		}
