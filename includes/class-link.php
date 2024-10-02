@@ -62,7 +62,7 @@ class Link {
 			$result[0] = 'https://' . $result[0];
 		}
 		$parsed_url = \wp_parse_url( html_entity_decode( $result[0] ) );
-		if ( ! $parsed_url ) {
+		if ( ! $parsed_url || empty( $parsed_url['host'] ) ) {
 			return $result[0];
 		}
 
