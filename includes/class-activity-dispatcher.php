@@ -144,7 +144,6 @@ class Activity_Dispatcher {
 
 		// build the update
 		$activity = new Activity();
-		$activity->set_id( $user->get_url() . '#update' );
 		$activity->set_type( 'Update' );
 		$activity->set_actor( $user->get_url() );
 		$activity->set_object( $user->get_url() );
@@ -292,7 +291,11 @@ class Activity_Dispatcher {
 		foreach ( $in_reply_to as $url ) {
 			$object = Http::get_remote_object( $url );
 
-			if ( ! $object || empty( $object['attributedTo'] ) ) {
+			if (
+				! $object ||
+				\is_wp_error( $object ) ||
+				empty( $object['attributedTo'] )
+			) {
 				continue;
 			}
 

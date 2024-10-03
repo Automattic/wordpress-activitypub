@@ -292,13 +292,13 @@ function snake_to_camel_case( $string ) {
 /**
  * Escapes a Tag, to be used as a hashtag.
  *
- * @param string $string The string to escape.
+ * @param string $input The string to escape.
  *
  * @return string The escaped hastag.
  */
-function esc_hashtag( $string ) {
+function esc_hashtag( $input ) {
 
-	$hashtag = \wp_specialchars_decode( $string, ENT_QUOTES );
+	$hashtag = \wp_specialchars_decode( $input, ENT_QUOTES );
 	// Remove all characters that are not letters, numbers, or underscores.
 	$hashtag = \preg_replace( '/emoji-regex(*SKIP)(?!)|[^\p{L}\p{Nd}_]+/u', '_', $hashtag );
 
@@ -306,7 +306,7 @@ function esc_hashtag( $string ) {
 	$hashtag = preg_replace_callback(
 		'/_(.)/',
 		function ( $matches ) {
-			return '' . strtoupper( $matches[1] );
+			return strtoupper( $matches[1] );
 		},
 		$hashtag
 	);
@@ -319,9 +319,9 @@ function esc_hashtag( $string ) {
 	 * Allow defining your own custom hashtag generation rules.
 	 *
 	 * @param string $hashtag The hashtag to be returned.
-	 * @param string $string  The original string.
+	 * @param string $input   The original string.
 	 */
-	$hashtag = apply_filters( 'activitypub_esc_hashtag', $hashtag, $string );
+	$hashtag = apply_filters( 'activitypub_esc_hashtag', $hashtag, $input );
 
 	return esc_html( $hashtag );
 }
@@ -926,7 +926,7 @@ function get_masked_wp_version() {
  * @return array The enclosures.
  */
 function get_enclosures( $post_id ) {
-	$enclosures = get_post_meta( $post_id, 'enclosure' );
+	$enclosures = get_post_meta( $post_id, 'enclosure', false );
 
 	if ( ! $enclosures ) {
 		return array();

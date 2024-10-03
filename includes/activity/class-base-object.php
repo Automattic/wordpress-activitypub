@@ -592,20 +592,20 @@ class Base_Object {
 	}
 
 	/**
-	 * Convert JSON input to an array.
+	 * Convert input array to a Base_Object.
 	 *
-	 * @return string The object array.
+	 * @param array $data The object array.
 	 *
-	 * @return \Activitypub\Activity\Base_Object An Object built from the JSON string.
+	 * @return Base_Object|WP_Error An Object built from the input array or WP_Error when it's not an array.
 	 */
-	public static function init_from_array( $array ) {
-		if ( ! is_array( $array ) ) {
+	public static function init_from_array( $data ) {
+		if ( ! is_array( $data ) ) {
 			return new WP_Error( 'invalid_array', __( 'Invalid array', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$object = new static();
 
-		foreach ( $array as $key => $value ) {
+		foreach ( $data as $key => $value ) {
 			$key = camel_to_snake_case( $key );
 			call_user_func( array( $object, 'set_' . $key ), $value );
 		}
@@ -627,10 +627,10 @@ class Base_Object {
 	/**
 	 * Convert JSON input to an array and pre-fill the object.
 	 *
-	 * @param array $array The array.
+	 * @param array $data The array.
 	 */
-	public function from_array( $array ) {
-		foreach ( $array as $key => $value ) {
+	public function from_array( $data ) {
+		foreach ( $data as $key => $value ) {
 			if ( $value ) {
 				$key = camel_to_snake_case( $key );
 				call_user_func( array( $this, 'set_' . $key ), $value );

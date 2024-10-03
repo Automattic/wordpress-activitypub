@@ -154,12 +154,12 @@ class Blocks {
 	/**
 	 * Filter an array by a list of keys.
 	 *
-	 * @param array $array The array to filter.
+	 * @param array $data The array to filter.
 	 * @param array $keys The keys to keep.
 	 * @return array The filtered array.
 	 */
-	protected static function filter_array_by_keys( $array, $keys ) {
-		return array_intersect_key( $array, array_flip( $keys ) );
+	protected static function filter_array_by_keys( $data, $keys ) {
+		return array_intersect_key( $data, array_flip( $keys ) );
 	}
 
 	/**

@@ -28,7 +28,7 @@ class Hashtag {
 	 * @return array the activity object array
 	 */
 	public static function filter_activity_object( $object_array ) {
-		/*
+		/* phpcs:ignore Squiz.PHP.CommentedOutCode.Found
 		Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
 		if ( ! empty( $object_array['summary'] ) ) {
 			$object_array['summary'] = self::the_content( $object_array['summary'] );
