@@ -176,7 +176,7 @@ class Scheduler {
 	/**
 	 * Schedule Comment Activities
 	 *
-	 * transition_comment_status()
+	 * @see transition_comment_status()
 	 *
 	 * @param string     $new_status New comment status.
 	 * @param string     $old_status Old comment status.
