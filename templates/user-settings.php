@@ -11,10 +11,15 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 	<tbody>
 		<tr>
 			<th scope="row">
-				<label><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label>
+				<label><?php \esc_html_e( 'Profile URI', 'activitypub' ); ?></label>
 			</th>
 			<td>
 				<p>
+					<label>
+						<input name="activitypub_identifier" type="text" value="<?php echo \esc_attr( $args['identifier'] ); ?>" placeholder="<?php echo esc_attr( $user->get_preferred_username() ); ?>" style="text-align: right;" />@<?php echo esc_html( \wp_parse_url( \home_url(), PHP_URL_HOST ) ); ?>
+					</label>
+				</p>
+				<p class="description">
 					<code><?php echo \esc_html( $user->get_webfinger() ); ?></code> or
 					<code><?php echo \esc_url( $user->get_url() ); ?></code>
 				</p>

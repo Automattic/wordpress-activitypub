@@ -1,6 +1,7 @@
 <?php
 namespace Activitypub;
 
+use WP_Error;
 use WP_User_Query;
 use Activitypub\Model\Blog;
 use Activitypub\Activitypub;
@@ -310,28 +311,13 @@ class Admin {
 				'show_in_rest'      => true,
 				'default'           => Blog::get_default_username(),
 				'sanitize_callback' => function ( $value ) {
-					// hack to allow dots in the username
-					$parts     = explode( '.', $value );
-					$sanitized = array();
+					$sanitized = self::sanitize_identifier( $value );
 
-					foreach ( $parts as $part ) {
-						$sanitized[] = \sanitize_title( $part );
+					if ( ! $sanitized ) {
+						return Blog::get_default_username();
 					}
 
-					$sanitized = implode( '.', $sanitized );
-
-					// check for login or nicename.
-					$user = new WP_User_Query(
-						array(
-							'search'         => $sanitized,
-							'search_columns' => array( 'user_login', 'user_nicename' ),
-							'number'         => 1,
-							'hide_empty'     => true,
-							'fields'         => 'ID',
-						)
-					);
-
-					if ( $user->results ) {
+					if ( \is_wp_error( $sanitized ) ) {
 						add_settings_error(
 							'activitypub_blog_identifier',
 							'activitypub_blog_identifier',
@@ -367,6 +353,7 @@ class Admin {
 
 	public static function add_profile( $user ) {
 		$description = \get_user_option( 'activitypub_description', $user->ID );
+		$identifier  = \get_user_option( 'activitypub_identifier', $user->ID );
 
 		wp_enqueue_media();
 		wp_enqueue_script( 'activitypub-header-image' );
@@ -376,6 +363,7 @@ class Admin {
 			true,
 			array(
 				'description' => $description,
+				'identifier'  => $identifier,
 			)
 		);
 	}
@@ -412,6 +400,26 @@ class Admin {
 			\update_user_option( $user_id, 'activitypub_header_image', $header_image );
 		} else {
 			\delete_user_option( $user_id, 'activitypub_header_image' );
+		}
+
+		$identifier = ! empty( $_POST['activitypub_identifier'] ) ? sanitize_text_field( wp_unslash( $_POST['activitypub_identifier'] ) ) : false;
+		$identifier = self::sanitize_identifier( $identifier );
+
+		if ( ! \is_wp_error( $identifier ) ) {
+			\update_user_option( $user_id, 'activitypub_identifier', $identifier );
+		} else {
+			if ( \is_wp_error( $identifier ) ) {
+				// show error message on user settings page
+				add_action(
+					'user_profile_update_errors',
+					function ( $errors ) use ( $identifier ) {
+						$errors->add( 'activitypub_identifier', $identifier->get_error_message() );
+					},
+					10,
+					3
+				);
+			}
+			\delete_user_option( $user_id, 'activitypub_identifier' );
 		}
 	}
 
@@ -757,5 +765,48 @@ class Admin {
 		\remove_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 3 );
 
 		return $items;
+	}
+
+	/**
+	 * Sanatize the identifier
+	 *
+	 * @param string $id The identifier.
+	 *
+	 * @return false|string The sanitized identifier or false if it is already in use.
+	 */
+	private static function sanitize_identifier( $id ) {
+		if ( empty( $id ) ) {
+			return false;
+		}
+
+		// hack to allow dots in the username
+		$parts     = explode( '.', $id );
+		$sanitized = array();
+
+		foreach ( $parts as $part ) {
+			$sanitized[] = \sanitize_title( $part );
+		}
+
+		$sanitized = implode( '.', $sanitized );
+
+		// check for login or nicename.
+		$user = new WP_User_Query(
+			array(
+				'search'         => $sanitized,
+				'search_columns' => array( 'user_login', 'user_nicename' ),
+				'number'         => 1,
+				'hide_empty'     => true,
+				'fields'         => 'ID',
+			)
+		);
+
+		if ( $user->get_results() ) {
+			return new WP_Error(
+				'identifier_exists',
+				\__( 'This identifier is already in use.', 'activitypub' )
+			);
+		}
+
+		return $sanitized;
 	}
 }

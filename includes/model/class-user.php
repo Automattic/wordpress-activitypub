@@ -106,9 +106,9 @@ class User extends Actor {
 	 * @return string The User-Description.
 	 */
 	public function get_summary() {
-		$description = get_user_option( 'activitypub_description', $this->_id );
+		$description = \get_user_option( 'activitypub_description', $this->_id );
 		if ( empty( $description ) ) {
-			$description = get_user_meta( $this->_id, 'description', true );
+			$description = \get_user_meta( $this->_id, 'description', true );
 		}
 		return \wpautop( \wp_kses( $description, 'default' ) );
 	}
@@ -132,6 +132,11 @@ class User extends Actor {
 	}
 
 	public function get_preferred_username() {
+		$custom_user_identifier = get_user_option( 'activitypub_identifier', $this->_id );
+		if ( $custom_user_identifier ) {
+			return \esc_attr( $custom_user_identifier );
+		}
+
 		return \esc_attr( \get_the_author_meta( 'login', $this->_id ) );
 	}
 

@@ -85,6 +85,8 @@ class Users {
 			return new Application();
 		}
 
+		global $wpdb;
+
 		// check for 'activitypub_username' meta
 		$user = new WP_User_Query(
 			array(
@@ -96,9 +98,14 @@ class Users {
 				'meta_query'  => array(
 					'relation' => 'OR',
 					array(
-						'key'     => 'activitypub_user_identifier',
+						'key'     => 'activitypub_identifier',
 						'value'   => $username,
-						'compare' => 'LIKE',
+						'compare' => '=',
+					),
+					array(
+						'key'     => $wpdb->get_blog_prefix() . 'activitypub_identifier',
+						'value'   => $username,
+						'compare' => '=',
 					),
 				),
 			)
@@ -248,7 +255,7 @@ class Users {
 			$user = self::get_by_resource( $id );
 		}
 
-		if ( $user && ! is_wp_error( $user ) ) {
+		if ( $user && ! \is_wp_error( $user ) ) {
 			return $user;
 		}
 
