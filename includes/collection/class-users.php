@@ -143,17 +143,17 @@ class Users {
 	/**
 	 * Get the User by resource.
 	 *
-	 * @param string $resource The User-Resource.
+	 * @param string $uri The User-Resource.
 	 *
 	 * @return \Acitvitypub\Model\User The User.
 	 */
-	public static function get_by_resource( $resource ) {
-		$resource = object_to_uri( $resource );
+	public static function get_by_resource( $uri ) {
+		$uri = object_to_uri( $uri );
 
 		$scheme = 'acct';
 		$match  = array();
 		// try to extract the scheme and the host
-		if ( preg_match( '/^([a-zA-Z^:]+):(.*)$/i', $resource, $match ) ) {
+		if ( preg_match( '/^([a-zA-Z^:]+):(.*)$/i', $uri, $match ) ) {
 			// extract the scheme
 			$scheme = \esc_attr( $match[1] );
 		}
@@ -162,7 +162,7 @@ class Users {
 			// check for http(s) URIs
 			case 'http':
 			case 'https':
-				$resource_path = \wp_parse_url( $resource, PHP_URL_PATH );
+				$resource_path = \wp_parse_url( $uri, PHP_URL_PATH );
 
 				if ( $resource_path ) {
 					$blog_path = \wp_parse_url( \home_url(), PHP_URL_PATH );
@@ -183,7 +183,7 @@ class Users {
 				}
 
 				// check for http(s)://blog.example.com/author/username
-				$user_id = url_to_authorid( $resource );
+				$user_id = url_to_authorid( $uri );
 
 				if ( $user_id ) {
 					return self::get_by_id( $user_id );
@@ -191,8 +191,8 @@ class Users {
 
 				// check for http(s)://blog.example.com/
 				if (
-					normalize_url( site_url() ) === normalize_url( $resource ) ||
-					normalize_url( home_url() ) === normalize_url( $resource )
+					normalize_url( site_url() ) === normalize_url( $uri ) ||
+					normalize_url( home_url() ) === normalize_url( $uri )
 				) {
 					return self::get_by_id( self::BLOG_USER_ID );
 				}
@@ -204,9 +204,9 @@ class Users {
 				);
 			// check for acct URIs
 			case 'acct':
-				$resource   = \str_replace( 'acct:', '', $resource );
-				$identifier = \substr( $resource, 0, \strrpos( $resource, '@' ) );
-				$host       = normalize_host( \substr( \strrchr( $resource, '@' ), 1 ) );
+				$uri        = \str_replace( 'acct:', '', $uri );
+				$identifier = \substr( $uri, 0, \strrpos( $uri, '@' ) );
+				$host       = normalize_host( \substr( \strrchr( $uri, '@' ), 1 ) );
 				$blog_host  = normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
 
 				if ( $blog_host !== $host ) {
@@ -235,7 +235,7 @@ class Users {
 	/**
 	 * Get the User by resource.
 	 *
-	 * @param string $resource The User-Resource.
+	 * @param string $id The User-Resource.
 	 *
 	 * @return \Acitvitypub\Model\User The User.
 	 */

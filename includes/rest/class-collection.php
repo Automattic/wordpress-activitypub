@@ -256,11 +256,9 @@ class Collection {
 	/**
 	 * Moderators endpoint
 	 *
-	 * @param WP_REST_Request $request The request object.
-	 *
 	 * @return WP_REST_Response The response object.
 	 */
-	public static function moderators_get( $request ) {
+	public static function moderators_get() {
 		$response = array(
 			'@context'     => Actor::JSON_LD_CONTEXT,
 			'id'           => get_rest_url_by_path( 'collections/moderators' ),

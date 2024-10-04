@@ -33,35 +33,35 @@ class Create {
 	/**
 	 * Handles "Create" requests
 	 *
-	 * @param array                $array   The activity-object
-	 * @param int                  $user_id The id of the local blog-user
-	 * @param Activitypub\Activity $object  The activity object
+	 * @param array                $activity        The activity-object
+	 * @param int                  $user_id         The id of the local blog-user
+	 * @param Activitypub\Activity $activity_object The activity object
 	 *
 	 * @return void
 	 */
-	public static function handle_create( $array, $user_id, $object = null ) {
+	public static function handle_create( $activity, $user_id, $activity_object = null ) {
 		// check if Activity is public or not
-		if ( ! is_activity_public( $array ) ) {
+		if ( ! is_activity_public( $activity ) ) {
 			// @todo maybe send email
 			return;
 		}
 
-		$check_dupe = object_id_to_comment( $array['object']['id'] );
+		$check_dupe = object_id_to_comment( $activity['object']['id'] );
 
 		// if comment exists, call update action
 		if ( $check_dupe ) {
-			\do_action( 'activitypub_inbox_update', $array, $user_id, $object );
+			\do_action( 'activitypub_inbox_update', $activity, $user_id, $activity_object );
 			return;
 		}
 
-		$state    = Interactions::add_comment( $array );
+		$state    = Interactions::add_comment( $activity );
 		$reaction = null;
 
 		if ( $state && ! \is_wp_error( $state ) ) {
 			$reaction = \get_comment( $state );
 		}
 
-		\do_action( 'activitypub_handled_create', $array, $user_id, $state, $reaction );
+		\do_action( 'activitypub_handled_create', $activity, $user_id, $state, $reaction );
 	}
 
 	/**
