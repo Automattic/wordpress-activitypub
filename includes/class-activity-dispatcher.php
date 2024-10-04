@@ -144,7 +144,6 @@ class Activity_Dispatcher {
 
 		// build the update
 		$activity = new Activity();
-		$activity->set_id( $user->get_url() . '#update' );
 		$activity->set_type( 'Update' );
 		$activity->set_actor( $user->get_url() );
 		$activity->set_object( $user->get_url() );
