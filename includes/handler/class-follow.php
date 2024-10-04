@@ -72,14 +72,14 @@ class Follow {
 	/**
 	 * Send Accept response
 	 *
-	 * @param string                     $actor    The Actor URL
-	 * @param array                      $object   The Activity object
-	 * @param int                        $user_id  The ID of the WordPress User
-	 * @param Activitypub\Model\Follower $follower The Follower object
+	 * @param string                     $actor           The Actor URL
+	 * @param array                      $activity_object The Activity object
+	 * @param int                        $user_id         The ID of the WordPress User
+	 * @param Activitypub\Model\Follower $follower        The Follower object
 	 *
 	 * @return void
 	 */
-	public static function send_follow_response( $actor, $object, $user_id, $follower ) {
+	public static function send_follow_response( $actor, $activity_object, $user_id, $follower ) {
 		if ( \is_wp_error( $follower ) ) {
 			// it is not even possible to send a "Reject" because
 			// we can not get the Remote-Inbox
@@ -87,8 +87,8 @@ class Follow {
 		}
 
 		// only send minimal data
-		$object = array_intersect_key(
-			$object,
+		$activity_object = array_intersect_key(
+			$activity_object,
 			array_flip(
 				array(
 					'id',
@@ -107,7 +107,7 @@ class Follow {
 		// send "Accept" activity
 		$activity = new Activity();
 		$activity->set_type( 'Accept' );
-		$activity->set_object( $object );
+		$activity->set_object( $activity_object );
 		$activity->set_actor( $user->get_id() );
 		$activity->set_to( $actor );
 		$activity->set_id( $user->get_id() . '#follow-' . \preg_replace( '~^https?://~', '', $actor ) . '-' . \time() );

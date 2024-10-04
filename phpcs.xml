@@ -26,7 +26,6 @@
 	<rule ref="WordPress">
 		<exclude name="Generic.CodeAnalysis.UnusedFunctionParameter"/>
 		<exclude name="Squiz.Commenting"/>
-		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
 	</rule>
 	<rule ref="VariableAnalysis">
 		<exclude name="VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable"/>
