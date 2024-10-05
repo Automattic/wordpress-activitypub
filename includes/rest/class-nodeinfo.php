@@ -67,11 +67,9 @@ class Nodeinfo {
 	/**
 	 * Render NodeInfo file
 	 *
-	 * @param  WP_REST_Request $request
-	 *
 	 * @return WP_REST_Response
 	 */
-	public static function nodeinfo( $request ) {
+	public static function nodeinfo() {
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
@@ -118,11 +116,9 @@ class Nodeinfo {
 	/**
 	 * Render NodeInfo file
 	 *
-	 * @param  WP_REST_Request $request
-	 *
 	 * @return WP_REST_Response
 	 */
-	public static function nodeinfo2( $request ) {
+	public static function nodeinfo2() {
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
@@ -165,11 +161,9 @@ class Nodeinfo {
 	/**
 	 * Render NodeInfo discovery file
 	 *
-	 * @param  WP_REST_Request $request
-	 *
 	 * @return WP_REST_Response
 	 */
-	public static function discovery( $request ) {
+	public static function discovery() {
 		$discovery          = array();
 		$discovery['links'] = array(
 			array(

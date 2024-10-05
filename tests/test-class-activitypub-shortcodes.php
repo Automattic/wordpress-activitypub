@@ -92,4 +92,30 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 		$this->assertEquals( "<p>Lorem ipsum dolor […]</p>\n", $content );
 		Shortcodes::unregister();
 	}
+
+	/**
+	 * Tests 'ap_title' shortcode.
+	 *
+	 * @covers Activitypub\Shortcodes::title
+	 */
+	public function test_title() {
+		Shortcodes::register();
+		global $post;
+
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_title' => 'Test title for shortcode',
+			)
+		);
+
+		$content = '[ap_title]';
+
+		// Fill in the shortcodes.
+		setup_postdata( $post );
+		$content = do_shortcode( $content );
+		wp_reset_postdata();
+		Shortcodes::unregister();
+
+		$this->assertEquals( 'Test title for shortcode', $content );
+	}
 }

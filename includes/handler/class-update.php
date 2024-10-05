@@ -23,11 +23,10 @@ class Update {
 	/**
 	 * Handle "Update" requests
 	 *
-	 * @param array $array   The activity-object
-	 * @param int   $user_id The id of the local blog-user
+	 * @param array $activity The activity-object
 	 */
-	public static function handle_update( $array ) {
-		$object_type = isset( $array['object']['type'] ) ? $array['object']['type'] : '';
+	public static function handle_update( $activity ) {
+		$object_type = isset( $activity['object']['type'] ) ? $activity['object']['type'] : '';
 
 		switch ( $object_type ) {
 			// Actor Types
@@ -37,7 +36,7 @@ class Update {
 			case 'Organization':
 			case 'Service':
 			case 'Application':
-				self::update_actor( $array );
+				self::update_actor( $activity );
 				break;
 			// Object and Link Types
 			// @see https://www.w3.org/TR/activitystreams-vocabulary/#object-types
@@ -48,7 +47,7 @@ class Update {
 			case 'Video':
 			case 'Event':
 			case 'Document':
-				self::update_interaction( $array );
+				self::update_interaction( $activity );
 				break;
 			// Minimal Activity
 			// @see https://www.w3.org/TR/activitystreams-core/#example-1

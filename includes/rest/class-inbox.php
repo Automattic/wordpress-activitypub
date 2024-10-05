@@ -80,8 +80,6 @@ class Inbox {
 			return $user;
 		}
 
-		$page = $request->get_param( 'page', 0 );
-
 		/*
 		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
 		 */
