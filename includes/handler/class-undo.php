@@ -1,4 +1,10 @@
 <?php
+/**
+ * Undo handler file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Handler;
 
 use Activitypub\Collection\Users;
@@ -8,11 +14,11 @@ use Activitypub\Comment;
 use function Activitypub\object_to_uri;
 
 /**
- * Handle Undo requests
+ * Handle Undo requests.
  */
 class Undo {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		\add_action(
@@ -22,10 +28,9 @@ class Undo {
 	}
 
 	/**
-	 * Handle "Unfollow" requests
+	 * Handle "Unfollow" requests.
 	 *
-	 * @param array $activity The JSON "Undo" Activity
-	 * @param int   $user_id  The ID of the ID of the WordPress User
+	 * @param array $activity The JSON "Undo" Activity.
 	 */
 	public static function handle_undo( $activity ) {
 		if (
@@ -37,14 +42,13 @@ class Undo {
 
 		$type = $activity['object']['type'];
 
-		// Handle "Unfollow" requests
+		// Handle "Unfollow" requests.
 		if ( 'Follow' === $type ) {
 			$user_id = object_to_uri( $activity['object']['object'] );
 			$user    = Users::get_by_resource( $user_id );
 
 			if ( ! $user || is_wp_error( $user ) ) {
-				// If we can not find a user,
-				// we can not initiate a follow process
+				// If we can not find a user, we can not initiate a follow process.
 				return;
 			}
 
@@ -54,7 +58,7 @@ class Undo {
 			Followers::remove_follower( $user_id, $actor );
 		}
 
-		// Handle "Undo" requests for "Like" and "Create" activities
+		// Handle "Undo" requests for "Like" and "Create" activities.
 		if ( in_array( $type, array( 'Like', 'Create', 'Announce' ), true ) ) {
 			if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
 				return;

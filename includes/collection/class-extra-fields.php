@@ -1,13 +1,19 @@
 <?php
+/**
+ * Extra Fields collection file.
+ *
+ * @package Activitypub
+ */
 
 namespace Activitypub\Collection;
 
 use Activitypub\Link;
-use WP_Query;
-use Activitypub\Collection\Users;
 
 use function Activitypub\site_supports_blocks;
 
+/**
+ * Extra Fields collection.
+ */
 class Extra_Fields {
 
 	const USER_POST_TYPE = 'ap_extrafield';
@@ -39,6 +45,13 @@ class Extra_Fields {
 		return apply_filters( 'activitypub_get_actor_extra_fields', $fields, $user_id );
 	}
 
+	/**
+	 * Get formatted content for an extra field.
+	 *
+	 * @param \WP_Post $post The post.
+	 *
+	 * @return string The formatted content.
+	 */
 	public static function get_formatted_content( $post ) {
 		$content = \get_the_content( null, false, $post );
 		$content = Link::the_content( $content, true );
@@ -47,17 +60,23 @@ class Extra_Fields {
 		}
 		$content = \wptexturize( $content );
 		$content = \wp_filter_content_tags( $content );
-		// replace script and style elements
+
+		// Replace script and style elements.
 		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
 		$content = \strip_shortcodes( $content );
 		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
-		$content = \apply_filters( 'activitypub_extra_field_content', $content, $post );
 
-		return $content;
+		/**
+		 * Filters the content of an extra field.
+		 *
+		 * @param string   $content The content.
+		 * @param \WP_Post $post    The post.
+		 */
+		return \apply_filters( 'activitypub_extra_field_content', $content, $post );
 	}
 
 	/**
-	 * Transforms the Extra Fields (Cutom Post Types) to ActivityPub Actor-Attachments.
+	 * Transforms the Extra Fields (Custom Post Types) to ActivityPub Actor-Attachments.
 	 *
 	 * @param \WP_Post[] $fields The extra fields.
 	 *
@@ -88,7 +107,7 @@ class Extra_Fields {
 
 			$link_added = false;
 
-			// Add support for FEP-fb2a, for more information see FEDERATION.md
+			// Add support for FEP-fb2a, for more information see FEDERATION.md.
 			$link_content = \trim( \strip_tags( $content, '<a>' ) );
 			if (
 				\stripos( $link_content, '<a' ) === 0 &&
@@ -238,6 +257,13 @@ class Extra_Fields {
 		return $extra_fields;
 	}
 
+	/**
+	 * Create a paragraph block.
+	 *
+	 * @param string $content The content.
+	 *
+	 * @return string The paragraph block.
+	 */
 	public static function make_paragraph_block( $content ) {
 		if ( ! site_supports_blocks() ) {
 			return $content;

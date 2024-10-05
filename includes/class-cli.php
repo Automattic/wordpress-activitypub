@@ -1,58 +1,61 @@
 <?php
+/**
+ * WP-CLI file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
 use WP_CLI;
 use WP_CLI_Command;
-use Activitypub\Scheduler;
-
-use function Activitypub\was_comment_received;
 
 /**
- * WP-CLI commands
+ * WP-CLI commands.
  *
  * @package Activitypub
  */
 class Cli extends WP_CLI_Command {
 	/**
-	 * Check the Plugins Meta-Informations
+	 * Check the Plugins Meta-Information.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [--Name]
-	 * The Plugin Name
+	 * The Plugin Name.
 	 *
 	 * [--PluginURI]
-	 * The Plugin URI
+	 * The Plugin URI.
 	 *
 	 * [--Version]
-	 * The Plugin Version
+	 * The Plugin Version.
 	 *
 	 * [--Description]
-	 * The Plugin Description
+	 * The Plugin Description.
 	 *
 	 * [--Author]
-	 * The Plugin Author
+	 * The Plugin Author.
 	 *
 	 * [--AuthorURI]
-	 * The Plugin Author URI
+	 * The Plugin Author URI.
 	 *
 	 * [--TextDomain]
-	 * The Plugin Text Domain
+	 * The Plugin Text Domain.
 	 *
 	 * [--DomainPath]
-	 * The Plugin Domain Path
+	 * The Plugin Domain Path.
 	 *
 	 * [--Network]
-	 * The Plugin Network
+	 * The Plugin Network.
 	 *
 	 * [--RequiresWP]
-	 * The Plugin Requires at least
+	 * The Plugin Requires at least.
 	 *
 	 * [--RequiresPHP]
-	 * The Plugin Requires PHP
+	 * The Plugin Requires PHP.
 	 *
 	 * [--UpdateURI]
-	 * The Plugin Update URI
+	 * The Plugin Update URI.
 	 *
 	 * See: https://developer.wordpress.org/reference/functions/get_plugin_data/#return
 	 *
@@ -120,12 +123,9 @@ class Cli extends WP_CLI_Command {
 	 *
 	 * @synopsis <action> <id>
 	 *
-	 * @param array|null $args       The arguments.
-	 * @param array|null $assoc_args The associative arguments.
-	 *
-	 * @return void
+	 * @param array|null $args The arguments.
 	 */
-	public function post( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+	public function post( $args ) {
 		$post = get_post( $args[1] );
 
 		if ( ! $post ) {
@@ -170,12 +170,9 @@ class Cli extends WP_CLI_Command {
 	 *
 	 * @synopsis <action> <id>
 	 *
-	 * @param array|null $args       The arguments.
-	 * @param array|null $assoc_args The associative arguments.
-	 *
-	 * @return void
+	 * @param array|null $args The arguments.
 	 */
-	public function comment( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+	public function comment( $args ) {
 		$comment = get_comment( $args[1] );
 
 		if ( ! $comment ) {

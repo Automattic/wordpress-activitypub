@@ -3,11 +3,13 @@
  * Inspired by the PHP ActivityPub Library by @Landrok
  *
  * @link https://github.com/landrok/activitypub
+ *
+ * @package Activitypub
  */
 
 namespace Activitypub\Activity;
 
-use Activitypub\Activity\Base_Object;
+use Activitypub\Link;
 
 /**
  * \Activitypub\Activity\Activity implements the common
@@ -150,12 +152,12 @@ class Activity extends Base_Object {
 	 * @return void
 	 */
 	public function set_object( $data ) {
-		// convert array to object
+		// Convert array to object.
 		if ( is_array( $data ) ) {
 			$data = self::init_from_array( $data );
 		}
 
-		// set object
+		// Set object.
 		$this->set( 'object', $data );
 
 		if ( ! is_object( $data ) ) {
@@ -202,7 +204,7 @@ class Activity extends Base_Object {
 		if ( $this->object instanceof Base_Object ) {
 			$class = get_class( $this->object );
 			if ( $class && $class::JSON_LD_CONTEXT ) {
-				// Without php 5.6 support this could be just: 'return  $this->object::JSON_LD_CONTEXT;'
+				// Without php 5.6 support this could be just: 'return  $this->object::JSON_LD_CONTEXT;'.
 				return $class::JSON_LD_CONTEXT;
 			}
 		}

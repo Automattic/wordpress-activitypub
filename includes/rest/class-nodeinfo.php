@@ -1,4 +1,10 @@
 <?php
+/**
+ * NodeInfo REST-Class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Rest;
 
 use WP_REST_Response;
@@ -9,7 +15,7 @@ use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_masked_wp_version;
 
 /**
- * ActivityPub NodeInfo REST-Class
+ * ActivityPub NodeInfo REST-Class.
  *
  * @author Matthias Pfefferle
  *
@@ -17,7 +23,7 @@ use function Activitypub\get_masked_wp_version;
  */
 class Nodeinfo {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		self::register_routes();
@@ -65,13 +71,13 @@ class Nodeinfo {
 	}
 
 	/**
-	 * Render NodeInfo file
+	 * Render NodeInfo file.
 	 *
-	 * @return WP_REST_Response
+	 * @return WP_REST_Response The JSON profile of the NodeInfo.
 	 */
 	public static function nodeinfo() {
-		/*
-		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		/**
+		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
 		 */
 		\do_action( 'activitypub_rest_nodeinfo_pre' );
 
@@ -114,13 +120,13 @@ class Nodeinfo {
 	}
 
 	/**
-	 * Render NodeInfo file
+	 * Render NodeInfo file.
 	 *
-	 * @return WP_REST_Response
+	 * @return WP_REST_Response The JSON profile of the NodeInfo.
 	 */
 	public static function nodeinfo2() {
-		/*
-		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		/**
+		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
 		 */
 		\do_action( 'activitypub_rest_nodeinfo2_pre' );
 
@@ -159,7 +165,7 @@ class Nodeinfo {
 	}
 
 	/**
-	 * Render NodeInfo discovery file
+	 * Render NodeInfo discovery file.
 	 *
 	 * @return WP_REST_Response
 	 */

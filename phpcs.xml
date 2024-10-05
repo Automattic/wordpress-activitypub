@@ -23,9 +23,7 @@
 
 	<config name="text_domain" value="activitypub,default"/>
 
-	<rule ref="WordPress">
-		<exclude name="Squiz.Commenting"/>
-	</rule>
+	<rule ref="WordPress"/>
 	<rule ref="VariableAnalysis"/>
 
 	<rule ref="WordPress.WP.Capabilities">

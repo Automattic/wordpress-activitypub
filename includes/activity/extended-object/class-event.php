@@ -19,8 +19,8 @@ use Activitypub\Activity\Base_Object;
 class Event extends Base_Object {
 	// Human friendly minimal context for full Mobilizon compatible ActivityPub events.
 	const JSON_LD_CONTEXT = array(
-		'https://schema.org/',                   // The base context is schema.org, cause it is used a lot.
-		'https://www.w3.org/ns/activitystreams', // The ActivityStreams context overrides everyting also defined in schema.org.
+		'https://schema.org/',                   // The base context is schema.org, because it is used a lot.
+		'https://www.w3.org/ns/activitystreams', // The ActivityStreams context overrides everything also defined in schema.org.
 		array(                                   // The keys here override/extend the context even more.
 			'pt'                            => 'https://joinpeertube.org/ns#',
 			'mz'                            => 'https://joinmobilizon.org/ns#',
@@ -59,7 +59,7 @@ class Event extends Base_Object {
 	/**
 	 * Mobilizon compatible values for joinModeTypes.
 	 */
-	const JOIN_MODE_TYPES = array( 'free', 'restricted', 'external' ); // and 'invite', but not used by mobilizon atm
+	const JOIN_MODE_TYPES = array( 'free', 'restricted', 'external' ); // and 'invite', but not used by mobilizon atm.
 
 	/**
 	 * Allowed values for ical VEVENT STATUS.
@@ -109,8 +109,7 @@ class Event extends Base_Object {
 	);
 
 	/**
-	 * Event is an implementation of one of the
-	 * Activity Streams
+	 * Event is an implementation of one of the Activity Streams.
 	 *
 	 * @var string
 	 */
@@ -124,7 +123,7 @@ class Event extends Base_Object {
 	protected $name;
 
 	/**
-	 * The events contacts
+	 * The events contacts.
 	 *
 	 * @context {
 	 *   '@id'   => 'mz:contacts',
@@ -200,7 +199,7 @@ class Event extends Base_Object {
 	 * The event's status.
 	 *
 	 * @context https://www.w3.org/2002/12/cal/ical#status
-	 * @var enum
+	 * @var string
 	 */
 	protected $status;
 
@@ -263,6 +262,7 @@ class Event extends Base_Object {
 	 * The passed timezone is only set when it is a valid one, otherwise the site's timezone is used.
 	 *
 	 * @param string $timezone The timezone string to be set, e.g. 'Europe/Berlin'.
+	 * @return Event
 	 */
 	public function set_timezone( $timezone ) {
 		if ( in_array( $timezone, timezone_identifiers_list(), true ) ) {
@@ -275,9 +275,10 @@ class Event extends Base_Object {
 	}
 
 	/**
-	 * Custom setter for repliesModerationOption which also directy sets commentsEnabled accordingly.
+	 * Custom setter for repliesModerationOption which also directly sets commentsEnabled accordingly.
 	 *
-	 * @param string $type
+	 * @param string $type The type of the replies moderation option.
+	 * @return Event
 	 */
 	public function set_replies_moderation_option( $type ) {
 		if ( in_array( $type, self::REPLIES_MODERATION_OPTION_TYPES, true ) ) {
@@ -297,7 +298,8 @@ class Event extends Base_Object {
 	/**
 	 * Custom setter for commentsEnabled which also directly sets repliesModerationOption accordingly.
 	 *
-	 * @param bool $comments_enabled
+	 * @param bool $comments_enabled Whether comments are enabled.
+	 * @return Event
 	 */
 	public function set_comments_enabled( $comments_enabled ) {
 		if ( is_bool( $comments_enabled ) ) {
@@ -317,7 +319,8 @@ class Event extends Base_Object {
 	/**
 	 * Custom setter for the ical status that checks whether the status is an ical event status.
 	 *
-	 * @param string $status
+	 * @param string $status The status of the event.
+	 * @return Event
 	 */
 	public function set_status( $status ) {
 		if ( in_array( $status, self::ICAL_EVENT_STATUS_TYPES, true ) ) {
@@ -338,8 +341,9 @@ class Event extends Base_Object {
 	 *
 	 * Falls back to Mobilizons default category.
 	 *
-	 * @param string $category
-	 * @param bool   $mobilizon_compatibilty Whether the category must be compatibly with Mobilizon.
+	 * @param string $category               The category of the event.
+	 * @param bool   $mobilizon_compatibilty Optional. Whether the category must be compatibly with Mobilizon. Default true.
+	 * @return Event
 	 */
 	public function set_category( $category, $mobilizon_compatibilty = true ) {
 		if ( $mobilizon_compatibilty ) {
@@ -356,7 +360,8 @@ class Event extends Base_Object {
 	 *
 	 * Automatically sets the joinMode to true if called.
 	 *
-	 * @param string $url
+	 * @param string $url The URL for external participation.
+	 * @return Event
 	 */
 	public function set_external_participation_url( $url ) {
 		if ( preg_match( '/^https?:\/\/.*/i', $url ) ) {
