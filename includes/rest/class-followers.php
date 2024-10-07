@@ -99,7 +99,7 @@ class Followers {
 				if ( 'full' === $context ) {
 					return $item->to_array( false );
 				}
-				return $item->get_url();
+				return $item->get_id();
 			},
 			$data['followers']
 		);

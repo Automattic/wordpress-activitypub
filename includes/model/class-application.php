@@ -70,7 +70,7 @@ class Application extends Actor {
 	 * @return string The User-URL with @-Prefix for the username.
 	 */
 	public function get_alternate_url() {
-		return $this->get_url();
+		return $this->get_id();
 	}
 
 	public function get_name() {

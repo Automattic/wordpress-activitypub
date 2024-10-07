@@ -269,7 +269,7 @@ class Collection {
 		$users = User_Collection::get_collection();
 
 		foreach ( $users as $user ) {
-			$response['orderedItems'][] = $user->get_url();
+			$response['orderedItems'][] = $user->get_id();
 		}
 
 		$rest_response = new WP_REST_Response( $response, 200 );

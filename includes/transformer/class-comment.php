@@ -92,10 +92,10 @@ class Comment extends Base {
 	protected function get_attributed_to() {
 		if ( is_single_user() ) {
 			$user = new Blog();
-			return $user->get_url();
+			return $user->get_id();
 		}
 
-		return Users::get_by_id( $this->wp_object->user_id )->get_url();
+		return Users::get_by_id( $this->wp_object->user_id )->get_id();
 	}
 
 	/**

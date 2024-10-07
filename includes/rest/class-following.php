@@ -124,7 +124,7 @@ class Following {
 		$users = User_Collection::get_collection();
 
 		foreach ( $users as $user ) {
-			$follow_list[] = $user->get_url();
+			$follow_list[] = $user->get_id();
 		}
 
 		return $follow_list;
