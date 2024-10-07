@@ -75,10 +75,10 @@ class Create {
 		/**
 		 * Fires after a Create activity has been handled.
 		 *
-		 * @param array                           $activity The activity-object.
-		 * @param int                             $user_id  The id of the local blog-user.
-		 * @param \WP_Comment|\WP_Error           $state    The comment object or WP_Error.
-		 * @param \WP_Comment|\WP_Error|null      $reaction The reaction object or WP_Error.
+		 * @param array                      $activity The activity-object.
+		 * @param int                        $user_id  The id of the local blog-user.
+		 * @param \WP_Comment|\WP_Error      $state    The comment object or WP_Error.
+		 * @param \WP_Comment|\WP_Error|null $reaction The reaction object or WP_Error.
 		 */
 		\do_action( 'activitypub_handled_create', $activity, $user_id, $state, $reaction );
 	}
