@@ -1,12 +1,18 @@
 <?php
+/**
+ * Shortcodes class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
-use function Activitypub\esc_hashtag;
-use function Activitypub\generate_post_summary;
-
+/**
+ * Shortcodes class.
+ */
 class Shortcodes {
 	/**
-	 * Register the shortcodes
+	 * Register the shortcodes.
 	 */
 	public static function register() {
 		foreach ( get_class_methods( self::class ) as $shortcode ) {
@@ -17,7 +23,7 @@ class Shortcodes {
 	}
 
 	/**
-	 * Unregister the shortcodes
+	 * Unregister the shortcodes.
 	 */
 	public static function unregister() {
 		foreach ( get_class_methods( self::class ) as $shortcode ) {
@@ -28,15 +34,11 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the 'ap_hashtags' shortcode
-	 *
-	 * @param array  $atts    The Shortcode attributes.
-	 * @param string $content The ActivityPub post-content.
-	 * @param string $tag     The tag/name of the Shortcode.
+	 * Generates output for the 'ap_hashtags' shortcode.
 	 *
 	 * @return string The post tags as hashtags.
 	 */
-	public static function hashtags( $atts, $content, $tag ) {
+	public static function hashtags() {
 		$item = self::get_item();
 
 		if ( ! $item ) {
@@ -111,7 +113,7 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the 'ap_content' Shortcode
+	 * Generates output for the 'ap_content' Shortcode.
 	 *
 	 * @param array  $atts    The Shortcode attributes.
 	 * @param string $content The ActivityPub post-content.
@@ -126,7 +128,7 @@ class Shortcodes {
 			return '';
 		}
 
-		// prevent inception
+		// Prevent inception.
 		remove_shortcode( 'ap_content' );
 
 		$atts = shortcode_atts(
@@ -138,7 +140,7 @@ class Shortcodes {
 		$content = '';
 
 		if ( 'attachment' === $item->post_type ) {
-			// get title of attachment with fallback to alt text.
+			// Get title of attachment with fallback to alt text.
 			$content = wp_get_attachment_caption( $item->ID );
 			if ( empty( $content ) ) {
 				$content = get_post_meta( $item->ID, '_wp_attachment_image_alt', true );
@@ -154,7 +156,7 @@ class Shortcodes {
 				$content = wp_filter_content_tags( $content );
 			}
 
-			// replace script and style elements
+			// Replace script and style elements.
 			$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
 			$content = strip_shortcodes( $content );
 			$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
@@ -166,7 +168,7 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the 'ap_permalink' Shortcode
+	 * Generates output for the 'ap_permalink' Shortcode.
 	 *
 	 * @param array  $atts    The Shortcode attributes.
 	 * @param string $content The ActivityPub post-content.
@@ -200,7 +202,7 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the 'ap_shortlink' Shortcode
+	 * Generates output for the 'ap_shortlink' Shortcode.
 	 *
 	 * @param array  $atts    The Shortcode attributes.
 	 * @param string $content The ActivityPub post-content.
@@ -234,7 +236,7 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the 'ap_image' Shortcode
+	 * Generates output for the 'ap_image' Shortcode.
 	 *
 	 * @param array  $atts    The Shortcode attributes.
 	 * @param string $content The ActivityPub post-content.
@@ -277,7 +279,7 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the 'ap_hashcats' Shortcode
+	 * Generates output for the 'ap_hashcats' Shortcode.
 	 *
 	 * @return string The post categories as hashtags.
 	 */
@@ -308,7 +310,7 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the 'ap_author' Shortcode
+	 * Generates output for the 'ap_author' Shortcode.
 	 *
 	 * @return string The author name.
 	 */
@@ -330,7 +332,7 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the 'ap_authorurl' Shortcode
+	 * Generates output for the 'ap_authorurl' Shortcode.
 	 *
 	 * @return string The author URL.
 	 */
@@ -352,7 +354,7 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the 'ap_blogurl' Shortcode
+	 * Generates output for the 'ap_blogurl' Shortcode.
 	 *
 	 * @return string The site URL.
 	 */
@@ -361,7 +363,7 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the 'ap_blogname' Shortcode
+	 * Generates output for the 'ap_blogname' Shortcode.
 	 *
 	 * @return string
 	 */
@@ -370,7 +372,7 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the 'ap_blogdesc' Shortcode
+	 * Generates output for the 'ap_blogdesc' Shortcode.
 	 *
 	 * @return string The site description.
 	 */
@@ -379,7 +381,7 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the 'ap_date' Shortcode
+	 * Generates output for the 'ap_date' Shortcode.
 	 *
 	 * @return string The post date.
 	 */
@@ -403,7 +405,7 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the 'ap_time' Shortcode
+	 * Generates output for the 'ap_time' Shortcode.
 	 *
 	 * @return string The post time.
 	 */
@@ -427,7 +429,7 @@ class Shortcodes {
 	}
 
 	/**
-	 * Generates output for the 'ap_datetime' Shortcode
+	 * Generates output for the 'ap_datetime' Shortcode.
 	 *
 	 * @return string The post date/time.
 	 */
@@ -457,7 +459,7 @@ class Shortcodes {
 	 * Checks if item (WP_Post) is "public", a supported post type
 	 * and not password protected.
 	 *
-	 * @return null|WP_Post The WordPress item.
+	 * @return null|\WP_Post The WordPress item.
 	 */
 	protected static function get_item() {
 		$post = \get_post();

@@ -1,25 +1,25 @@
 <?php
+/**
+ * Admin Class.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
 use WP_User_Query;
 use Activitypub\Model\Blog;
-use Activitypub\Activitypub;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Extra_Fields;
 
-use function Activitypub\count_followers;
-use function Activitypub\is_user_disabled;
-use function Activitypub\was_comment_received;
-use function Activitypub\is_comment_federatable;
-
 /**
- * ActivityPub Admin Class
+ * ActivityPub Admin Class.
  *
  * @author Matthias Pfefferle
  */
 class Admin {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks,
 	 */
 	public static function init() {
 		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
@@ -38,7 +38,7 @@ class Admin {
 		\add_filter( 'manage_posts_columns', array( static::class, 'manage_post_columns' ), 10, 2 );
 		\add_action( 'manage_posts_custom_column', array( self::class, 'manage_posts_custom_column' ), 10, 2 );
 
-		\add_filter( 'manage_users_columns', array( self::class, 'manage_users_columns' ), 10, 1 );
+		\add_filter( 'manage_users_columns', array( self::class, 'manage_users_columns' ) );
 		\add_action( 'manage_users_custom_column', array( self::class, 'manage_users_custom_column' ), 10, 3 );
 		\add_filter( 'bulk_actions-users', array( self::class, 'user_bulk_options' ) );
 		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
@@ -51,7 +51,7 @@ class Admin {
 	}
 
 	/**
-	 * Add admin menu entry
+	 * Add admin menu entry.
 	 */
 	public static function admin_menu() {
 		$settings_page = \add_options_page(
@@ -67,7 +67,7 @@ class Admin {
 			array( self::class, 'add_settings_help_tab' )
 		);
 
-		// user has to be able to publish posts
+		// User has to be able to publish posts.
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			$followers_list_page = \add_users_page(
 				\__( '⁂ Followers', 'activitypub' ),
@@ -96,8 +96,6 @@ class Admin {
 
 	/**
 	 * Display admin menu notices about configuration problems or conflicts.
-	 *
-	 * @return void
 	 */
 	public static function admin_notices() {
 		$permalink_structure = \get_option( 'permalink_structure' );
@@ -125,9 +123,7 @@ class Admin {
 	 * Display one admin menu notice about configuration problems or conflicts.
 	 *
 	 * @param string $admin_notice The notice to display.
-	 * @param string $level The level of the notice (error, warning, success, info).
-	 *
-	 * @return void
+	 * @param string $level        The level of the notice (error, warning, success, info).
 	 */
 	private static function show_admin_notice( $admin_notice, $level ) {
 		?>
@@ -140,7 +136,7 @@ class Admin {
 	}
 
 	/**
-	 * Load settings page
+	 * Load settings page.
 	 */
 	public static function settings_page() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -179,7 +175,7 @@ class Admin {
 	 * Load user settings page
 	 */
 	public static function followers_list_page() {
-		// user has to be able to publish posts
+		// User has to be able to publish posts.
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-followers-list.php' );
 		}
@@ -281,7 +277,7 @@ class Admin {
 			)
 		);
 
-		// Blog-User Settings
+		// Blog-User Settings.
 		\register_setting(
 			'activitypub_blog',
 			'activitypub_blog_description',
@@ -301,7 +297,7 @@ class Admin {
 				'show_in_rest'      => true,
 				'default'           => Blog::get_default_username(),
 				'sanitize_callback' => function ( $value ) {
-					// hack to allow dots in the username
+					// Hack to allow dots in the username.
 					$parts     = explode( '.', $value );
 					$sanitized = array();
 
@@ -311,7 +307,7 @@ class Admin {
 
 					$sanitized = implode( '.', $sanitized );
 
-					// check for login or nicename.
+					// Check for login or nicename.
 					$user = new WP_User_Query(
 						array(
 							'search'         => $sanitized,
@@ -348,14 +344,25 @@ class Admin {
 		);
 	}
 
+	/**
+	 * Adds the ActivityPub settings to the Help tab.
+	 */
 	public static function add_settings_help_tab() {
 		require_once ACTIVITYPUB_PLUGIN_DIR . 'includes/help.php';
 	}
 
+	/**
+	 * Adds the follower list to the Help tab.
+	 */
 	public static function add_followers_list_help_tab() {
-		// todo
+		// todo.
 	}
 
+	/**
+	 * Add the profile.
+	 *
+	 * @param \WP_User $user The user object.
+	 */
 	public static function add_profile( $user ) {
 		$description = \get_user_option( 'activitypub_description', $user->ID );
 
@@ -372,25 +379,25 @@ class Admin {
 	}
 
 	/**
-	 * Save the user settings
+	 * Save the user settings.
 	 *
-	 * Habdles the saving of the ActivityPub settings.
+	 * Handles the saving of the ActivityPub settings.
 	 *
 	 * @param int $user_id The user ID.
-	 *
-	 * @return void
 	 */
 	public static function save_user_settings( $user_id ) {
 		if ( ! isset( $_REQUEST['_apnonce'] ) ) {
-			return false;
+			return;
 		}
+
 		$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_apnonce'] ) );
 		if (
 			! wp_verify_nonce( $nonce, 'activitypub-user-settings' ) ||
 			! current_user_can( 'edit_user', $user_id )
 		) {
-			return false;
+			return;
 		}
+
 		$description = ! empty( $_POST['activitypub_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['activitypub_description'] ) ) : false;
 		if ( $description ) {
 			\update_user_option( $user_id, 'activitypub_description', $description );
@@ -406,6 +413,11 @@ class Admin {
 		}
 	}
 
+	/**
+	 * Enqueue the admin scripts and styles.
+	 *
+	 * @param string $hook_suffix The current page.
+	 */
 	public static function enqueue_scripts( $hook_suffix ) {
 		wp_register_script(
 			'activitypub-header-image',
@@ -454,11 +466,9 @@ class Admin {
 	}
 
 	/**
-	 * Hook into the edit_comment functionality
+	 * Hook into the edit_comment functionality.
 	 *
-	 * * Disable the edit_comment capability for federated comments.
-	 *
-	 * @return void
+	 * Disables the edit_comment capability for federated comments.
 	 */
 	public static function edit_comment() {
 		// Disable the edit_comment capability for federated comments.
@@ -480,6 +490,11 @@ class Admin {
 		);
 	}
 
+	/**
+	 * Hook into the edit_post functionality.
+	 *
+	 * Disables the edit_post capability for federated posts.
+	 */
 	public static function edit_post() {
 		// Disable the edit_post capability for federated posts.
 		\add_filter(
@@ -507,9 +522,7 @@ class Admin {
 	}
 
 	/**
-	 * Add ActivityPub specific actions/filters to the post list view
-	 *
-	 * @return void
+	 * Add ActivityPub specific actions/filters to the post list view.
 	 */
 	public static function list_posts() {
 		// Show only the user's extra fields.
@@ -537,6 +550,14 @@ class Admin {
 		);
 	}
 
+	/**
+	 * Comment row actions.
+	 *
+	 * @param array           $actions The existing actions.
+	 * @param int|\WP_Comment $comment The comment object or ID.
+	 *
+	 * @return array The modified actions.
+	 */
 	public static function comment_row_actions( $actions, $comment ) {
 		if ( was_comment_received( $comment ) ) {
 			unset( $actions['edit'] );
@@ -547,7 +568,7 @@ class Admin {
 	}
 
 	/**
-	 * Add a column "activitypub"
+	 * Add a column "activitypub".
 	 *
 	 * This column shows if the user has the capability to use ActivityPub.
 	 *
@@ -561,9 +582,11 @@ class Admin {
 	}
 
 	/**
-	 * Add "comment-type" and "protocol" as column in WP-Admin
+	 * Add "comment-type" and "protocol" as column in WP-Admin.
 	 *
-	 * @param array $columns the list of column names
+	 * @param array $columns The list of column names.
+	 *
+	 * @return array The extended list of column names.
 	 */
 	public static function manage_comment_columns( $columns ) {
 		$columns['comment_type']     = esc_attr__( 'Comment-Type', 'activitypub' );
@@ -573,10 +596,12 @@ class Admin {
 	}
 
 	/**
-	 * Add "post_content" as column for Extra-Fields in WP-Admin
+	 * Add "post_content" as column for Extra-Fields in WP-Admin.
 	 *
-	 * @param array  $columns   Tthe list of column names.
+	 * @param array  $columns   The list of column names.
 	 * @param string $post_type The post type.
+	 *
+	 * @return array The extended list of column names.
 	 */
 	public static function manage_post_columns( $columns, $post_type ) {
 		if ( Extra_Fields::is_extra_fields_post_type( $post_type ) ) {
@@ -589,10 +614,10 @@ class Admin {
 	}
 
 	/**
-	 * Add "comment-type" and "protocol" as column in WP-Admin
+	 * Add "comment-type" and "protocol" as column in WP-Admin.
 	 *
-	 * @param array $column     The column to implement
-	 * @param int   $comment_id The comment id
+	 * @param array $column     The column to implement.
+	 * @param int   $comment_id The comment id.
 	 */
 	public static function manage_comments_custom_column( $column, $comment_id ) {
 		if ( 'comment_type' === $column && ! defined( 'WEBMENTION_PLUGIN_DIR' ) ) {
@@ -630,7 +655,7 @@ class Admin {
 	}
 
 	/**
-	 * Add a column "extra_field_content" to the post list view
+	 * Add a column "extra_field_content" to the post list view.
 	 *
 	 * @param string $column_name The column name.
 	 * @param int    $post_id     The post ID.
@@ -638,8 +663,6 @@ class Admin {
 	 * @return void
 	 */
 	public static function manage_posts_custom_column( $column_name, $post_id ) {
-		$post = get_post( $post_id );
-
 		if ( 'extra_field_content' === $column_name ) {
 			$post = get_post( $post_id );
 			if ( Extra_Fields::is_extra_fields_post_type( $post->post_type ) ) {
@@ -649,7 +672,7 @@ class Admin {
 	}
 
 	/**
-	 * Add options to the Bulk dropdown on the users page
+	 * Add options to the Bulk dropdown on the users page.
 	 *
 	 * @param array $actions The existing bulk options.
 	 *
@@ -663,7 +686,7 @@ class Admin {
 	}
 
 	/**
-	 * Handle bulk activitypub requests
+	 * Handle bulk activitypub requests.
 	 *
 	 * * `add_activitypub_cap` - Add the activitypub capability to the selected users.
 	 * * `remove_activitypub_cap` - Remove the activitypub capability from the selected users.
@@ -698,7 +721,7 @@ class Admin {
 	}
 
 	/**
-	 * Add ActivityPub infos to the dashboard glance items
+	 * Add ActivityPub infos to the dashboard glance items.
 	 *
 	 * @param array $items The existing glance items.
 	 *
@@ -709,7 +732,7 @@ class Admin {
 
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			$follower_count = sprintf(
-				// translators: %s: number of followers
+				// translators: %s: number of followers.
 				_n(
 					'%s Follower',
 					'%s Followers',
@@ -728,7 +751,7 @@ class Admin {
 
 		if ( ! is_user_type_disabled( 'blog' ) && current_user_can( 'manage_options' ) ) {
 			$follower_count = sprintf(
-				// translators: %s: number of followers
+				// translators: %s: number of followers.
 				_n(
 					'%s Follower (Blog)',
 					'%s Followers (Blog)',
@@ -745,7 +768,7 @@ class Admin {
 			);
 		}
 
-		\remove_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 3 );
+		\remove_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers' );
 
 		return $items;
 	}

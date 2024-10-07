@@ -37,6 +37,8 @@ ENDPRE;
 			array( 'hello https://www.test.de test', 'hello <a href="https://www.test.de" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">https://www.</span><span class="">test.de</span><span class="invisible"></span></a> test' ),
 			array( 'hello www.test.de test', 'hello <a href="https://www.test.de" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">https://www.</span><span class="">test.de</span><span class="invisible"></span></a> test' ),
 			array( 'hello https://test:test@test.de test', 'hello <a href="https://test:test@test.de" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">https://test:test@</span><span class="">test.de</span><span class="invisible"></span></a> test' ),
+			array( 'wwwfoocom', 'wwwfoocom' ),
+			array( 'www.foo.com', '<a href="https://www.foo.com" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">https://www.</span><span class="">foo.com</span><span class="invisible"></span></a>' ),
 			array( $code, $code ),
 			array( $style, $style ),
 			array( $textarea, $textarea ),

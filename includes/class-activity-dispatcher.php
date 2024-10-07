@@ -1,24 +1,21 @@
 <?php
+/**
+ * ActivityPub Activity_Dispatcher Class.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
 use WP_Post;
 use WP_Comment;
-use Activitypub\Http;
 use Activitypub\Collection\Users;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Factory;
-use Activitypub\Transformer\Post;
-use Activitypub\Transformer\Comment;
-
-use function Activitypub\object_to_uri;
-use function Activitypub\is_single_user;
-use function Activitypub\is_user_disabled;
-use function Activitypub\safe_remote_post;
-use function Activitypub\set_wp_object_state;
 
 /**
- * ActivityPub Activity_Dispatcher Class
+ * ActivityPub Activity_Dispatcher Class.
  *
  * @author Matthias Pfefferle
  *
@@ -34,9 +31,9 @@ class Activity_Dispatcher {
 
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity' ), 10, 2 );
 		\add_action( 'activitypub_send_activity', array( self::class, 'send_activity_or_announce' ), 10, 2 );
-		\add_action( 'activitypub_send_update_profile_activity', array( self::class, 'send_profile_update' ), 10, 1 );
+		\add_action( 'activitypub_send_update_profile_activity', array( self::class, 'send_profile_update' ) );
 
-		// Default filters to add Inboxes to sent to
+		// Default filters to add Inboxes to sent to.
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_follower' ), 10, 2 );
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
@@ -47,8 +44,6 @@ class Activity_Dispatcher {
 	 *
 	 * @param mixed  $wp_object The ActivityPub Post.
 	 * @param string $type      The Activity-Type.
-	 *
-	 * @return void
 	 */
 	public static function send_activity_or_announce( $wp_object, $type ) {
 		if ( is_user_type_disabled( 'blog' ) ) {
@@ -67,8 +62,7 @@ class Activity_Dispatcher {
 	 *
 	 * @param mixed  $wp_object The ActivityPub Post.
 	 * @param string $type      The Activity-Type.
-	 *
-	 * @return void
+	 * @param int    $user_id   Optional. The WordPress User-ID.
 	 */
 	public static function send_activity( $wp_object, $type, $user_id = null ) {
 		$transformer = Factory::get_transformer( $wp_object ); // Could potentially return a `\WP_Error` instance.
@@ -97,8 +91,6 @@ class Activity_Dispatcher {
 	 *
 	 * @param mixed  $wp_object The ActivityPub Post.
 	 * @param string $type      The Activity-Type.
-	 *
-	 * @return void
 	 */
 	public static function send_announce( $wp_object, $type ) {
 		if ( ! in_array( $type, array( 'Create', 'Update', 'Delete' ), true ) ) {
@@ -131,43 +123,53 @@ class Activity_Dispatcher {
 	 * Send a "Update" Activity when a user updates their profile.
 	 *
 	 * @param int $user_id The user ID to send an update for.
-	 *
-	 * @return void
 	 */
 	public static function send_profile_update( $user_id ) {
 		$user = Users::get_by_various( $user_id );
 
-		// bail if that's not a good user
+		// Bail if that's not a good user.
 		if ( is_wp_error( $user ) ) {
 			return;
 		}
 
-		// build the update
+		// Build the update.
 		$activity = new Activity();
 		$activity->set_type( 'Update' );
 		$activity->set_actor( $user->get_url() );
 		$activity->set_object( $user->get_url() );
 		$activity->set_to( 'https://www.w3.org/ns/activitystreams#Public' );
 
-		// send the update
+		// Send the update.
 		self::send_activity_to_followers( $activity, $user_id, $user );
 	}
 
 	/**
 	 * Send an Activity to all followers and mentioned users.
 	 *
-	 * @param Activity                   $activity  The ActivityPub Activity.
-	 * @param int                        $user_id   The user ID.
-	 * @param WP_User|WP_Post|WP_Comment $wp_object The WordPress object.
-	 *
-	 * @return void
+	 * @param Activity                    $activity  The ActivityPub Activity.
+	 * @param int                         $user_id   The user ID.
+	 * @param \WP_User|WP_Post|WP_Comment $wp_object The WordPress object.
 	 */
 	private static function send_activity_to_followers( $activity, $user_id, $wp_object ) {
-		// check if the Activity should be send to the followers
+		/**
+		 * Filter to prevent sending an Activity to followers.
+		 *
+		 * @param bool                        $send_activity_to_followers Whether to send the Activity to followers.
+		 * @param Activity                    $activity                   The ActivityPub Activity.
+		 * @param int                         $user_id                    The user ID.
+		 * @param \WP_User|WP_Post|WP_Comment $wp_object                  The WordPress object.
+		 */
 		if ( ! apply_filters( 'activitypub_send_activity_to_followers', true, $activity, $user_id, $wp_object ) ) {
 			return;
 		}
 
+		/**
+		 * Filter to modify the Activity before sending it to followers.
+		 *
+		 * @param Activity                    $activity  The ActivityPub Activity.
+		 * @param int                         $user_id   The user ID.
+		 * @param \WP_User|WP_Post|WP_Comment $wp_object The WordPress object.
+		 */
 		$inboxes = apply_filters( 'activitypub_send_to_inboxes', array(), $user_id, $activity );
 		$inboxes = array_unique( $inboxes );
 
@@ -189,8 +191,6 @@ class Activity_Dispatcher {
 	 *
 	 * @param int    $id   The WordPress Post ID.
 	 * @param string $type The Activity-Type.
-	 *
-	 * @return void
 	 */
 	public static function send_post( $id, $type ) {
 		$post = get_post( $id );
@@ -199,14 +199,20 @@ class Activity_Dispatcher {
 			return;
 		}
 
+		/**
+		 * Action to send an Activity for a Post.
+		 *
+		 * @param WP_Post $post The WordPress Post.
+		 * @param string  $type The Activity-Type.
+		 */
 		do_action( 'activitypub_send_activity', $post, $type );
-		do_action(
-			sprintf(
-				'activitypub_send_%s_activity',
-				\strtolower( $type )
-			),
-			$post
-		);
+
+		/**
+		 * Action to send a specific Activity for a Post.
+		 *
+		 * @param WP_Post $post The WordPress Post.
+		 */
+		do_action( sprintf( 'activitypub_send_%s_activity', \strtolower( $type ) ), $post );
 	}
 
 	/**
@@ -214,8 +220,6 @@ class Activity_Dispatcher {
 	 *
 	 * @param int    $id   The WordPress Comment ID.
 	 * @param string $type The Activity-Type.
-	 *
-	 * @return void
 	 */
 	public static function send_comment( $id, $type ) {
 		$comment = get_comment( $id );
@@ -224,21 +228,27 @@ class Activity_Dispatcher {
 			return;
 		}
 
+		/**
+		 * Action to send an Activity for a Comment.
+		 *
+		 * @param WP_Comment $comment The WordPress Comment.
+		 * @param string     $type    The Activity-Type.
+		 */
 		do_action( 'activitypub_send_activity', $comment, $type );
-		do_action(
-			sprintf(
-				'activitypub_send_%s_activity',
-				\strtolower( $type )
-			),
-			$comment
-		);
+
+		/**
+		 * Action to send a specific Activity for a Comment.
+		 *
+		 * @param WP_Comment $comment The WordPress Comment.
+		 */
+		do_action( sprintf( 'activitypub_send_%s_activity', \strtolower( $type ) ), $comment );
 	}
 
 	/**
-	 * Default filter to add Inboxes of Followers
+	 * Default filter to add Inboxes of Followers.
 	 *
-	 * @param array $inboxes  The list of Inboxes
-	 * @param int   $user_id  The WordPress User-ID
+	 * @param array $inboxes The list of Inboxes.
+	 * @param int   $user_id The WordPress User-ID.
 	 *
 	 * @return array The filtered Inboxes
 	 */
@@ -251,11 +261,11 @@ class Activity_Dispatcher {
 	/**
 	 * Default filter to add Inboxes of Mentioned Actors
 	 *
-	 * @param array $inboxes  The list of Inboxes
-	 * @param int   $user_id  The WordPress User-ID
-	 * @param array $activity The ActivityPub Activity
+	 * @param array $inboxes  The list of Inboxes.
+	 * @param int   $user_id  The WordPress User-ID.
+	 * @param array $activity The ActivityPub Activity.
 	 *
-	 * @return array The filtered Inboxes
+	 * @return array The filtered Inboxes.
 	 */
 	public static function add_inboxes_by_mentioned_actors( $inboxes, $user_id, $activity ) {
 		$cc = $activity->get_cc();
@@ -271,9 +281,9 @@ class Activity_Dispatcher {
 	/**
 	 * Default filter to add Inboxes of Posts that are set as `in-reply-to`
 	 *
-	 * @param array $inboxes  The list of Inboxes
-	 * @param int   $user_id  The WordPress User-ID
-	 * @param array $activity The ActivityPub Activity
+	 * @param array $inboxes  The list of Inboxes.
+	 * @param int   $user_id  The WordPress User-ID.
+	 * @param array $activity The ActivityPub Activity.
 	 *
 	 * @return array The filtered Inboxes
 	 */

@@ -1,4 +1,10 @@
 <?php
+/**
+ * Signature class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
 use WP_Error;
@@ -8,7 +14,7 @@ use WP_REST_Request;
 use Activitypub\Collection\Users;
 
 /**
- * ActivityPub Signature Class
+ * ActivityPub Signature Class.
  *
  * @author Matthias Pfefferle
  * @author Django Doucet
@@ -19,7 +25,7 @@ class Signature {
 	 * Return the public key for a given user.
 	 *
 	 * @param int  $user_id The WordPress User ID.
-	 * @param bool $force   Force the generation of a new key pair.
+	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
 	 *
 	 * @return mixed The public key.
 	 */
@@ -37,7 +43,7 @@ class Signature {
 	 * Return the private key for a given user.
 	 *
 	 * @param int  $user_id The WordPress User ID.
-	 * @param bool $force   Force the generation of a new key pair.
+	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
 	 *
 	 * @return mixed The private key.
 	 */
@@ -101,7 +107,7 @@ class Signature {
 			$detail = \openssl_pkey_get_details( $key );
 		}
 
-		// check if keys are valid
+		// Check if keys are valid.
 		if (
 			empty( $priv_key ) || ! is_string( $priv_key ) ||
 			! isset( $detail['key'] ) || ! is_string( $detail['key'] )
@@ -117,7 +123,7 @@ class Signature {
 			'public_key'  => $detail['key'],
 		);
 
-		// persist keys
+		// Persist keys.
 		\add_option( $option_key, $key_pair );
 
 		return $key_pair;
@@ -135,7 +141,7 @@ class Signature {
 
 		if ( $user_id > 0 ) {
 			$user = \get_userdata( $user_id );
-			// sanatize username because it could include spaces and special chars
+			// Sanitize username because it could include spaces and special chars.
 			$id = sanitize_title( $user->user_login );
 		}
 
@@ -176,13 +182,13 @@ class Signature {
 	}
 
 	/**
-	 * Generates the Signature for a HTTP Request
+	 * Generates the Signature for an HTTP Request.
 	 *
 	 * @param int    $user_id     The WordPress User ID.
 	 * @param string $http_method The HTTP method.
 	 * @param string $url         The URL to send the request to.
 	 * @param string $date        The date the request is sent.
-	 * @param string $digest      The digest of the request body.
+	 * @param string $digest      Optional. The digest of the request body. Default null.
 	 *
 	 * @return string The signature.
 	 */
@@ -195,12 +201,12 @@ class Signature {
 		$host = $url_parts['host'];
 		$path = '/';
 
-		// add path
+		// Add path.
 		if ( ! empty( $url_parts['path'] ) ) {
 			$path = $url_parts['path'];
 		}
 
-		// add query
+		// Add query.
 		if ( ! empty( $url_parts['query'] ) ) {
 			$path .= '?' . $url_parts['query'];
 		}
@@ -231,18 +237,18 @@ class Signature {
 	 *
 	 * @param WP_REST_Request|array $request The request object or $_SERVER array.
 	 *
-	 * @return mixed A boolean or WP_Error.
+	 * @return bool|WP_Error A boolean or WP_Error.
 	 */
 	public static function verify_http_signature( $request ) {
-		if ( is_object( $request ) ) { // REST Request object
-			// check if route starts with "index.php"
+		if ( is_object( $request ) ) { // REST Request object.
+			// Check if route starts with "index.php".
 			if ( str_starts_with( $request->get_route(), '/index.php' ) || ! rest_get_url_prefix() ) {
 				$route = $request->get_route();
 			} else {
 				$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
 			}
 
-			// fix route for subdirectory installs
+			// Fix route for subdirectory installs.
 			$path = \wp_parse_url( \get_home_url(), PHP_URL_PATH );
 
 			if ( \is_string( $path ) ) {
@@ -323,14 +329,14 @@ class Signature {
 	}
 
 	/**
-	 * Get public key from key_id
+	 * Get public key from key_id.
 	 *
 	 * @param string $key_id The URL to the public key.
 	 *
 	 * @return WP_Error|string The public key or WP_Error.
 	 */
-	public static function get_remote_key( $key_id ) { // phpcs:ignore
-		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) ); // phpcs:ignore
+	public static function get_remote_key( $key_id ) {
+		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) );
 		if ( \is_wp_error( $actor ) ) {
 			return new WP_Error(
 				'activitypub_no_remote_profile_found',
@@ -349,9 +355,9 @@ class Signature {
 	}
 
 	/**
-	 * Gets the signature algorithm from the signature header
+	 * Gets the signature algorithm from the signature header.
 	 *
-	 * @param array $signature_block
+	 * @param array $signature_block The signature block.
 	 *
 	 * @return string The signature algorithm.
 	 */
@@ -359,7 +365,7 @@ class Signature {
 		if ( $signature_block['algorithm'] ) {
 			switch ( $signature_block['algorithm'] ) {
 				case 'rsa-sha-512':
-					return 'sha512'; // hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12
+					return 'sha512'; // hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12.
 				default:
 					return 'sha256';
 			}
@@ -368,11 +374,11 @@ class Signature {
 	}
 
 	/**
-	 * Parses the Signature header
+	 * Parses the Signature header.
 	 *
 	 * @param string $signature The signature header.
 	 *
-	 * @return array signature parts
+	 * @return array Signature parts.
 	 */
 	public static function parse_signature_header( $signature ) {
 		$parsed_header = array();
@@ -405,16 +411,17 @@ class Signature {
 	}
 
 	/**
-	 * Gets the header data from the included pseudo headers
+	 * Gets the header data from the included pseudo headers.
 	 *
 	 * @param array $signed_headers  The signed headers.
-	 * @param array $signature_block (pseudo-headers)
-	 * @param array $headers         (http headers)
+	 * @param array $signature_block The signature block.
+	 * @param array $headers         The HTTP headers.
 	 *
 	 * @return string signed headers for comparison
 	 */
 	public static function get_signed_data( $signed_headers, $signature_block, $headers ) {
 		$signed_data = '';
+
 		// This also verifies time-based values by returning false if any of these are out of range.
 		foreach ( $signed_headers as $header ) {
 			if ( 'host' === $header ) {
@@ -433,7 +440,7 @@ class Signature {
 			}
 			if ( '(created)' === $header ) {
 				if ( ! empty( $signature_block['(created)'] ) && \intval( $signature_block['(created)'] ) > \time() ) {
-					// created in future
+					// Created in the future.
 					return false;
 				}
 
@@ -444,7 +451,7 @@ class Signature {
 			}
 			if ( '(expires)' === $header ) {
 				if ( ! empty( $signature_block['(expires)'] ) && \intval( $signature_block['(expires)'] ) < \time() ) {
-					// expired in past
+					// Expired in the past.
 					return false;
 				}
 
@@ -454,7 +461,7 @@ class Signature {
 				}
 			}
 			if ( 'date' === $header ) {
-				// allow a bit of leeway for misconfigured clocks.
+				// Allow a bit of leeway for misconfigured clocks.
 				$d = new DateTime( $headers[ $header ][0] );
 				$d->setTimeZone( new DateTimeZone( 'UTC' ) );
 				$c = $d->format( 'U' );
@@ -463,7 +470,7 @@ class Signature {
 				$dminus = time() - ( 3 * HOUR_IN_SECONDS );
 
 				if ( $c > $dplus || $c < $dminus ) {
-					// time out of range
+					// Time out of range.
 					return false;
 				}
 			}
@@ -473,22 +480,22 @@ class Signature {
 	}
 
 	/**
-	 * Generates the digest for a HTTP Request
+	 * Generates the digest for an HTTP Request.
 	 *
 	 * @param string $body The body of the request.
 	 *
 	 * @return string The digest.
 	 */
 	public static function generate_digest( $body ) {
-		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore
+		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 		return "SHA-256=$digest";
 	}
 
 	/**
 	 * Formats the $_SERVER to resemble the WP_REST_REQUEST array,
-	 * for use with verify_http_signature()
+	 * for use with verify_http_signature().
 	 *
-	 * @param array $_SERVER The $_SERVER array.
+	 * @param array $server The $_SERVER array.
 	 *
 	 * @return array $request The formatted request array.
 	 */

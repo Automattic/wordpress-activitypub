@@ -1,4 +1,10 @@
 <?php
+/**
+ * Like handler file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Handler;
 
 use Activitypub\Comment;
@@ -7,11 +13,11 @@ use Activitypub\Collection\Interactions;
 use function Activitypub\object_to_uri;
 
 /**
- * Handle Like requests
+ * Handle Like requests.
  */
 class Like {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		\add_action(
@@ -23,11 +29,11 @@ class Like {
 	}
 
 	/**
-	 * Handles "Like" requests
+	 * Handles "Like" requests.
 	 *
-	 * @param array                 $array    The Activity array.
-	 * @param int                   $user_id  The ID of the local blog user.
-	 * @param \Activitypub\Activity $activity The Activity object.
+	 * @param array                          $array    The Activity array.
+	 * @param int                            $user_id  The ID of the local blog user.
+	 * @param \Activitypub\Activity\Activity $activity The Activity object.
 	 *
 	 * @return void
 	 */

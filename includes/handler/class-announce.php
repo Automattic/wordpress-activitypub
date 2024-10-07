@@ -1,4 +1,10 @@
 <?php
+/**
+ * Announce handler file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Handler;
 
 use Activitypub\Http;
@@ -9,11 +15,11 @@ use function Activitypub\object_to_uri;
 use function Activitypub\is_activity_public;
 
 /**
- * Handle Create requests
+ * Handle Create requests.
  */
 class Announce {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		\add_action(
@@ -25,16 +31,16 @@ class Announce {
 	}
 
 	/**
-	 * Handles "Announce" requests
+	 * Handles "Announce" requests.
 	 *
-	 * @param array                $array    The activity-object
-	 * @param int                  $user_id  The id of the local blog-user
-	 * @param Activitypub\Activity $activity The activity object
+	 * @param array                          $array    The activity-object.
+	 * @param int                            $user_id  The id of the local blog-user.
+	 * @param \Activitypub\Activity\Activity $activity The activity object.
 	 *
 	 * @return void
 	 */
 	public static function handle_announce( $array, $user_id, $activity = null ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.arrayFound
-		// check if Activity is public or not
+		// Check if Activity is public or not.
 		if ( ! is_activity_public( $array ) ) {
 			// @todo maybe send email
 			return;
@@ -65,11 +71,11 @@ class Announce {
 	}
 
 	/**
-	 * Try to save the Announce
+	 * Try to save the Announce.
 	 *
-	 * @param array                $array    The activity-object
-	 * @param int                  $user_id  The id of the local blog-user
-	 * @param Activitypub\Activity $activity The activity object
+	 * @param array                          $array    The activity-object.
+	 * @param int                            $user_id  The id of the local blog-user.
+	 * @param \Activitypub\Activity\Activity $activity The activity object.
 	 *
 	 * @return void
 	 */

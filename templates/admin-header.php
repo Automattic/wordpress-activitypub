@@ -1,5 +1,10 @@
 <?php
-// phpcs:disable VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable
+/**
+ * Admin header template.
+ *
+ * @package Activitypub
+ */
+
 ?>
 <div class="activitypub-settings-header">
 	<div class="activitypub-settings-title-section">

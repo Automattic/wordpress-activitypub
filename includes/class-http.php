@@ -1,10 +1,14 @@
 <?php
+/**
+ * ActivityPub HTTP Class.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
 use WP_Error;
 use Activitypub\Collection\Users;
-
-use function Activitypub\get_masked_wp_version;
 
 /**
  * ActivityPub HTTP Class
@@ -15,11 +19,11 @@ class Http {
 	/**
 	 * Send a POST Request with the needed HTTP Headers
 	 *
-	 * @param string $url     The URL endpoint
-	 * @param string $body    The Post Body
-	 * @param int    $user_id The WordPress User-ID
+	 * @param string $url     The URL endpoint.
+	 * @param string $body    The Post Body.
+	 * @param int    $user_id The WordPress User-ID.
 	 *
-	 * @return array|WP_Error The POST Response or an WP_ERROR
+	 * @return array|WP_Error The POST Response or an WP_Error.
 	 */
 	public static function post( $url, $body, $user_id ) {
 		\do_action( 'activitypub_pre_http_post', $url, $body, $user_id );
@@ -58,18 +62,26 @@ class Http {
 			$response = new WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
 		}
 
+		/**
+		 * Action to save the response of the remote POST request.
+		 *
+		 * @param array|WP_Error $response The response of the remote POST request.
+		 * @param string         $url      The URL endpoint.
+		 * @param string         $body     The Post Body.
+		 * @param int            $user_id  The WordPress User-ID.
+		 */
 		\do_action( 'activitypub_safe_remote_post_response', $response, $url, $body, $user_id );
 
 		return $response;
 	}
 
 	/**
-	 * Send a GET Request with the needed HTTP Headers
+	 * Send a GET Request with the needed HTTP Headers.
 	 *
-	 * @param string   $url    The URL endpoint
-	 * @param bool|int $cached If the result should be cached, or its duration. Default: 1hr.
+	 * @param string   $url    The URL endpoint.
+	 * @param bool|int $cached Optional. Whether the result should be cached, or its duration. Default false.
 	 *
-	 * @return array|WP_Error The GET Response or an WP_ERROR
+	 * @return array|WP_Error The GET Response or a WP_Error.
 	 */
 	public static function get( $url, $cached = false ) {
 		\do_action( 'activitypub_pre_http_get', $url );
@@ -80,6 +92,12 @@ class Http {
 			$response = \get_transient( $transient_key );
 
 			if ( $response ) {
+				/**
+				 * Action to save the response of the remote GET request.
+				 *
+				 * @param array|WP_Error $response The response of the remote GET request.
+				 * @param string         $url      The URL endpoint.
+				 */
 				\do_action( 'activitypub_safe_remote_get_response', $response, $url );
 
 				return $response;
@@ -118,6 +136,12 @@ class Http {
 			$response = new WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
 		}
 
+		/**
+		 * Action to save the response of the remote GET request.
+		 *
+		 * @param array|WP_Error $response The response of the remote GET request.
+		 * @param string         $url      The URL endpoint.
+		 */
 		\do_action( 'activitypub_safe_remote_get_response', $response, $url );
 
 		if ( $cached ) {
@@ -139,6 +163,11 @@ class Http {
 	 * @return bool True if the URL is a tombstone.
 	 */
 	public static function is_tombstone( $url ) {
+		/**
+		 * Action before checking if the URL is a tombstone.
+		 *
+		 * @param string $url The URL to check.
+		 */
 		\do_action( 'activitypub_pre_http_is_tombstone', $url );
 
 		$response = \wp_safe_remote_get( $url );
@@ -151,15 +180,22 @@ class Http {
 		return false;
 	}
 
+	/**
+	 * Generate a cache key for the URL.
+	 *
+	 * @param string $url The URL to generate the cache key for.
+	 *
+	 * @return string The cache key.
+	 */
 	public static function generate_cache_key( $url ) {
 		return 'activitypub_http_' . \md5( $url );
 	}
 
 	/**
-	 * Requests the Data from the Object-URL or Object-Array
+	 * Requests the Data from the Object-URL or Object-Array.
 	 *
 	 * @param array|string $url_or_object The Object or the Object URL.
-	 * @param bool         $cached        If the result should be cached.
+	 * @param bool         $cached        Optional. Whether the result should be cached. Default true.
 	 *
 	 * @return array|WP_Error The Object data as array or WP_Error on failure.
 	 */
@@ -204,7 +240,7 @@ class Http {
 
 		$transient_key = self::generate_cache_key( $url );
 
-		// only check the cache if needed.
+		// Only check the cache if needed.
 		if ( $cached ) {
 			$data = \get_transient( $transient_key );
 

@@ -1,28 +1,26 @@
 <?php
+/**
+ * Scheduler class file.
+ *
+ * @package Activitypub
+ */
 
 namespace Activitypub;
 
-use Activitypub\Transformer\Post;
-use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 
-use function Activitypub\was_comment_sent;
-use function Activitypub\is_user_type_disabled;
-use function Activitypub\should_comment_be_federated;
-use function Activitypub\get_remote_metadata_by_actor;
-
 /**
- * ActivityPub Scheduler Class
+ * Scheduler class.
  *
  * @author Matthias Pfefferle
  */
 class Scheduler {
 
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		// Post transitions
+		// Post transitions.
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
 		\add_action(
 			'edit_attachment',
@@ -44,7 +42,7 @@ class Scheduler {
 		);
 
 		if ( ! ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS ) {
-			// Comment transitions
+			// Comment transitions.
 			\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 20, 3 );
 			\add_action(
 				'edit_comment',
@@ -60,11 +58,11 @@ class Scheduler {
 			);
 		}
 
-		// Follower Cleanups
+		// Follower Cleanups.
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
 
-		// profile updates for blog options
+		// Profile updates for blog options.
 		if ( ! is_user_type_disabled( 'blog' ) ) {
 			\add_action( 'update_option_site_icon', array( self::class, 'blog_user_update' ) );
 			\add_action( 'update_option_blogdescription', array( self::class, 'blog_user_update' ) );
@@ -73,7 +71,7 @@ class Scheduler {
 			\add_filter( 'pre_set_theme_mod_header_image', array( self::class, 'blog_user_update' ) );
 		}
 
-		// profile updates for user options
+		// Profile updates for user options.
 		if ( ! is_user_type_disabled( 'user' ) ) {
 			\add_action( 'wp_update_user', array( self::class, 'user_update' ) );
 			\add_action( 'updated_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
@@ -83,8 +81,6 @@ class Scheduler {
 
 	/**
 	 * Schedule all ActivityPub schedules.
-	 *
-	 * @return void
 	 */
 	public static function register_schedules() {
 		if ( ! \wp_next_scheduled( 'activitypub_update_followers' ) ) {
@@ -97,7 +93,7 @@ class Scheduler {
 	}
 
 	/**
-	 * Unscedule all ActivityPub schedules.
+	 * Un-schedule all ActivityPub schedules.
 	 *
 	 * @return void
 	 */
@@ -110,9 +106,9 @@ class Scheduler {
 	/**
 	 * Schedule Activities.
 	 *
-	 * @param string  $new_status New post status.
-	 * @param string  $old_status Old post status.
-	 * @param WP_Post $post       Post object.
+	 * @param string   $new_status New post status.
+	 * @param string   $old_status Old post status.
+	 * @param \WP_Post $post       Post object.
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
 		$post = get_post( $post );
@@ -174,18 +170,18 @@ class Scheduler {
 	}
 
 	/**
-	 * Schedule Comment Activities
+	 * Schedule Comment Activities.
 	 *
 	 * @see transition_comment_status()
 	 *
-	 * @param string     $new_status New comment status.
-	 * @param string     $old_status Old comment status.
-	 * @param WP_Comment $comment    Comment object.
+	 * @param string      $new_status New comment status.
+	 * @param string      $old_status Old comment status.
+	 * @param \WP_Comment $comment    Comment object.
 	 */
 	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
 		$comment = get_comment( $comment );
 
-		// federate only comments that are written by a registered user.
+		// Federate only comments that are written by a registered user.
 		if ( ! $comment || ! $comment->user_id ) {
 			return;
 		}
@@ -211,7 +207,7 @@ class Scheduler {
 			return;
 		}
 
-		// check if comment should be federated or not
+		// Check if comment should be federated or not.
 		if ( ! should_comment_be_federated( $comment ) ) {
 			return;
 		}
@@ -226,9 +222,7 @@ class Scheduler {
 	}
 
 	/**
-	 * Update followers
-	 *
-	 * @return void
+	 * Update followers.
 	 */
 	public static function update_followers() {
 		$number = 5;
@@ -237,6 +231,11 @@ class Scheduler {
 			$number = 50;
 		}
 
+		/**
+		 * Filter the number of followers to update.
+		 *
+		 * @param int $number The number of followers to update.
+		 */
 		$number    = apply_filters( 'activitypub_update_followers_number', $number );
 		$followers = Followers::get_outdated_followers( $number );
 
@@ -253,9 +252,7 @@ class Scheduler {
 	}
 
 	/**
-	 * Cleanup followers
-	 *
-	 * @return void
+	 * Cleanup followers.
 	 */
 	public static function cleanup_followers() {
 		$number = 5;
@@ -264,6 +261,11 @@ class Scheduler {
 			$number = 50;
 		}
 
+		/**
+		 * Filter the number of followers to clean up.
+		 *
+		 * @param int $number The number of followers to clean up.
+		 */
 		$number    = apply_filters( 'activitypub_update_followers_number', $number );
 		$followers = Followers::get_faulty_followers( $number );
 
@@ -292,18 +294,17 @@ class Scheduler {
 	/**
 	 * Send a profile update when relevant user meta is updated.
 	 *
-	 * @param  int    $meta_id Meta ID being updated.
-	 * @param  int    $user_id User ID being updated.
+	 * @param  int    $meta_id  Meta ID being updated.
+	 * @param  int    $user_id  User ID being updated.
 	 * @param  string $meta_key Meta key being updated.
-	 *
-	 * @return void
 	 */
 	public static function user_meta_update( $meta_id, $user_id, $meta_key ) {
-		// don't bother if the user can't publish
+		// Don't bother if the user can't publish.
 		if ( ! \user_can( $user_id, 'activitypub' ) ) {
 			return;
 		}
-		// the user meta fields that affect a profile.
+
+		// The user meta fields that affect a profile.
 		$fields = array(
 			'activitypub_description',
 			'activitypub_header_image',
@@ -319,12 +320,10 @@ class Scheduler {
 	/**
 	 * Send a profile update when a user is updated.
 	 *
-	 * @param  int $user_id User ID being updated.
-	 *
-	 * @return void
+	 * @param int $user_id User ID being updated.
 	 */
 	public static function user_update( $user_id ) {
-		// don't bother if the user can't publish
+		// Don't bother if the user can't publish.
 		if ( ! \user_can( $user_id, 'activitypub' ) ) {
 			return;
 		}
@@ -335,7 +334,7 @@ class Scheduler {
 	/**
 	 * Theme mods only have a dynamic filter so we fudge it like this.
 	 *
-	 * @param mixed $value
+	 * @param mixed $value Optional. The value to be updated. Default null.
 	 *
 	 * @return mixed
 	 */
