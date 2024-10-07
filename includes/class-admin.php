@@ -594,6 +594,7 @@ class Admin {
 	 * Add "comment-type" and "protocol" as column in WP-Admin.
 	 *
 	 * @param array $columns The list of column names.
+	 *
 	 * @return array The extended list of column names.
 	 */
 	public static function manage_comment_columns( $columns ) {
@@ -608,6 +609,7 @@ class Admin {
 	 *
 	 * @param array  $columns   The list of column names.
 	 * @param string $post_type The post type.
+	 *
 	 * @return array The extended list of column names.
 	 */
 	public static function manage_post_columns( $columns, $post_type ) {

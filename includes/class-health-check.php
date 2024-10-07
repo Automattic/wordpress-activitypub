@@ -29,6 +29,7 @@ class Health_Check {
 	 * Add tests to the Site Health Check.
 	 *
 	 * @param array $tests The test array.
+	 *
 	 * @return array The filtered test array.
 	 */
 	public static function add_tests( $tests ) {

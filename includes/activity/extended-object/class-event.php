@@ -278,6 +278,7 @@ class Event extends Base_Object {
 	 * Custom setter for repliesModerationOption which also directly sets commentsEnabled accordingly.
 	 *
 	 * @param string $type The type of the replies moderation option.
+	 *
 	 * @return Event
 	 */
 	public function set_replies_moderation_option( $type ) {
@@ -299,6 +300,7 @@ class Event extends Base_Object {
 	 * Custom setter for commentsEnabled which also directly sets repliesModerationOption accordingly.
 	 *
 	 * @param bool $comments_enabled Whether comments are enabled.
+	 *
 	 * @return Event
 	 */
 	public function set_comments_enabled( $comments_enabled ) {
@@ -320,6 +322,7 @@ class Event extends Base_Object {
 	 * Custom setter for the ical status that checks whether the status is an ical event status.
 	 *
 	 * @param string $status The status of the event.
+	 *
 	 * @return Event
 	 */
 	public function set_status( $status ) {
@@ -343,6 +346,7 @@ class Event extends Base_Object {
 	 *
 	 * @param string $category               The category of the event.
 	 * @param bool   $mobilizon_compatibilty Optional. Whether the category must be compatibly with Mobilizon. Default true.
+	 *
 	 * @return Event
 	 */
 	public function set_category( $category, $mobilizon_compatibilty = true ) {
@@ -361,6 +365,7 @@ class Event extends Base_Object {
 	 * Automatically sets the joinMode to true if called.
 	 *
 	 * @param string $url The URL for external participation.
+	 *
 	 * @return Event
 	 */
 	public function set_external_participation_url( $url ) {
