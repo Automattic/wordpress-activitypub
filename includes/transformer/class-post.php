@@ -643,8 +643,7 @@ class Post extends Base {
 		}
 
 		$has_title = \post_type_supports( $this->wp_object->post_type, 'title' );
-		$content   = \get_post_field( 'post_content', $this->wp_object->ID );
-		$content   = \wp_strip_all_tags( $content );
+		$content   = \wp_strip_all_tags( $this->wp_object->post_content );
 
 		// Check if the post has a title.
 		if (
