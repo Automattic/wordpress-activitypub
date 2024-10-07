@@ -1,8 +1,14 @@
 <?php
+/**
+ * Stream Connector integration file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Integration;
 
 /**
- * Stream Connector for ActivityPub
+ * Stream Connector for ActivityPub.
  *
  * This class is a Stream Connector for the Stream plugin.
  *
@@ -10,14 +16,14 @@ namespace Activitypub\Integration;
  */
 class Stream_Connector extends \WP_Stream\Connector {
 	/**
-	 * Connector slug
+	 * Connector slug.
 	 *
 	 * @var string
 	 */
 	public $name = 'activitypub';
 
 	/**
-	 * Actions registered for this connector
+	 * Actions registered for this connector.
 	 *
 	 * @var array
 	 */
@@ -26,7 +32,7 @@ class Stream_Connector extends \WP_Stream\Connector {
 	);
 
 	/**
-	 * Return translated connector label
+	 * Return translated connector label.
 	 *
 	 * @return string
 	 */
@@ -35,7 +41,7 @@ class Stream_Connector extends \WP_Stream\Connector {
 	}
 
 	/**
-	 * Return translated context labels
+	 * Return translated context labels.
 	 *
 	 * @return array
 	 */
@@ -44,7 +50,7 @@ class Stream_Connector extends \WP_Stream\Connector {
 	}
 
 	/**
-	 * Return translated action labels
+	 * Return translated action labels.
 	 *
 	 * @return array
 	 */
@@ -53,16 +59,14 @@ class Stream_Connector extends \WP_Stream\Connector {
 	}
 
 	/**
-	 * Callback for activitypub_notification_follow
+	 * Callback for activitypub_notification_follow.
 	 *
-	 * @param \Activitypub\Notification $notification The notification object
-	 *
-	 * @return void
+	 * @param \Activitypub\Notification $notification The notification object.
 	 */
 	public function callback_activitypub_notification_follow( $notification ) {
 		$this->log(
 			sprintf(
-				// translators: %s is a URL
+				// translators: %s is a URL.
 				__( 'New Follower: %s', 'activitypub' ),
 				$notification->actor
 			),

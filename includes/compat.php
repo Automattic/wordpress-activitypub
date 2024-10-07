@@ -1,6 +1,8 @@
 <?php
 /**
  * ActivityPub implementation for WordPress/PHP functions either missing from older WordPress/PHP versions or not included by default.
+ *
+ * @package Activitypub
  */
 
 if ( ! function_exists( 'str_starts_with' ) ) {
@@ -32,6 +34,12 @@ if ( ! function_exists( 'get_self_link' ) ) {
 	function get_self_link() {
 		$host = wp_parse_url( home_url() );
 		$path = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+
+		/**
+		 * Filters the self link.
+		 *
+		 * @param string $link The self link.
+		 */
 		return esc_url( apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . $path ) ) );
 	}
 }
@@ -56,19 +64,28 @@ if ( ! function_exists( 'is_countable' ) ) {
  * @return bool True if `$array` is a list, otherwise false.
  */
 if ( ! function_exists( 'array_is_list' ) ) {
-	// phpcs:disable Universal.NamingConventions.NoReservedKeywordParameterNames.arrayFound
-	function array_is_list( $array ) {
-		if ( ! is_array( $array ) ) {
+	/**
+	 * Check if an array is a list.
+	 *
+	 * An array is considered a list if its keys are a range of numbers
+	 * starting from 0 and ending at count( $array ) - 1.
+	 *
+	 * @param array $input The array to check.
+	 *
+	 * @return bool True if `$input` is a list, otherwise false.
+	 */
+	function array_is_list( $input ) {
+		if ( ! is_array( $input ) ) {
 			return false;
 		}
 
-		if ( array_values( $array ) === $array ) {
+		if ( array_values( $input ) === $input ) {
 			return true;
 		}
 
 		$next_key = -1;
 
-		foreach ( $array as $k => $v ) {
+		foreach ( $input as $k => $v ) {
 			if ( ++$next_key !== $k ) {
 				return false;
 			}

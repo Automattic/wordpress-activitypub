@@ -1,4 +1,10 @@
 <?php
+/**
+ * Opengraph integration file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Integration;
 
 use Activitypub\Model\Blog;
@@ -8,7 +14,7 @@ use function Activitypub\is_single_user;
 use function Activitypub\is_user_type_disabled;
 
 /**
- * Compatibility with the OpenGraph plugin
+ * Compatibility with the OpenGraph plugin.
  *
  * @see https://wordpress.org/plugins/opengraph/
  * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/XXXX/fep-XXXX.md
@@ -16,7 +22,7 @@ use function Activitypub\is_user_type_disabled;
  */
 class Opengraph {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		if ( ! function_exists( 'opengraph_metadata' ) ) {
@@ -48,27 +54,27 @@ class Opengraph {
 	 * @return array the updated metadata.
 	 */
 	public static function add_metadata( $metadata ) {
-		// Always show Blog-User if the Blog is in single user mode
+		// Always show Blog-User if the Blog is in single user mode.
 		if ( is_single_user() ) {
 			$user = new Blog();
 
-			// add WebFinger resource
+			// Add WebFinger resource.
 			$metadata['fediverse:creator'] = $user->get_webfinger();
 
 			return $metadata;
 		}
 
 		if ( \is_author() ) {
-			// Use the Author of the Archive-Page
+			// Use the Author of the Archive-Page.
 			$user_id = \get_queried_object_id();
 		} elseif ( \is_singular() ) {
-			// Use the Author of the Post
+			// Use the Author of the Post.
 			$user_id = \get_post_field( 'post_author', \get_queried_object_id() );
 		} elseif ( ! is_user_type_disabled( 'blog' ) ) {
-			// Use the Blog-User for any other page, if the Blog-User is not disabled
+			// Use the Blog-User for any other page, if the Blog-User is not disabled.
 			$user_id = Users::BLOG_USER_ID;
 		} else {
-			// Do not add any metadata otherwise
+			// Do not add any metadata otherwise.
 			return $metadata;
 		}
 
@@ -78,7 +84,7 @@ class Opengraph {
 			return $metadata;
 		}
 
-		// add WebFinger resource
+		// Add WebFinger resource.
 		$metadata['fediverse:creator'] = $user->get_webfinger();
 
 		return $metadata;

@@ -1,19 +1,24 @@
 <?php
+/**
+ * User model file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Model;
 
-use WP_Query;
 use WP_Error;
-use Activitypub\Migration;
 use Activitypub\Signature;
-use Activitypub\Model\Blog;
 use Activitypub\Activity\Actor;
-use Activitypub\Collection\Users;
 use Activitypub\Collection\Extra_Fields;
 
 use function Activitypub\is_blog_public;
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
 
+/**
+ * User class.
+ */
 class User extends Actor {
 	/**
 	 * The local User-ID (WP_User).
@@ -37,7 +42,7 @@ class User extends Actor {
 	protected $featured;
 
 	/**
-	 * If the User is discoverable.
+	 * Whether the User is discoverable.
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
 	 *
@@ -48,7 +53,7 @@ class User extends Actor {
 	protected $discoverable = true;
 
 	/**
-	 * If the User is indexable.
+	 * Whether the User is indexable.
 	 *
 	 * @context http://joinmastodon.org/ns#indexable
 	 *
@@ -59,14 +64,26 @@ class User extends Actor {
 	/**
 	 * The WebFinger Resource.
 	 *
-	 * @var string<url>
+	 * @var string
 	 */
 	protected $webfinger;
 
+	/**
+	 * The type of the object.
+	 *
+	 * @return string The type of the object.
+	 */
 	public function get_type() {
 		return 'Person';
 	}
 
+	/**
+	 * Generate a User object from a WP_User.
+	 *
+	 * @param int $user_id The user ID.
+	 *
+	 * @return WP_Error|User The User object or WP_Error if user not found.
+	 */
 	public static function from_wp_user( $user_id ) {
 		if ( is_user_disabled( $user_id ) ) {
 			return new WP_Error(
@@ -83,9 +100,9 @@ class User extends Actor {
 	}
 
 	/**
-	 * Get the User-ID.
+	 * Get the user ID.
 	 *
-	 * @return string The User-ID.
+	 * @return string The user ID.
 	 */
 	public function get_id() {
 		$permalink = \get_user_option( 'activitypub_use_permalink_as_id', $this->_id );
@@ -98,18 +115,18 @@ class User extends Actor {
 	}
 
 	/**
-	 * Get the User-Name.
+	 * Get the Username.
 	 *
-	 * @return string The User-Name.
+	 * @return string The Username.
 	 */
 	public function get_name() {
 		return \esc_attr( \get_the_author_meta( 'display_name', $this->_id ) );
 	}
 
 	/**
-	 * Get the User-Description.
+	 * Get the User description.
 	 *
-	 * @return string The User-Description.
+	 * @return string The User description.
 	 */
 	public function get_summary() {
 		$description = get_user_option( 'activitypub_description', $this->_id );
@@ -120,27 +137,37 @@ class User extends Actor {
 	}
 
 	/**
-	 * Get the User-Url.
+	 * Get the User url.
 	 *
-	 * @return string The User-Url.
+	 * @return string The User url.
 	 */
 	public function get_url() {
 		return \esc_url( \get_author_posts_url( $this->_id ) );
 	}
 
 	/**
-	 * Returns the User-URL with @-Prefix for the username.
+	 * Returns the User URL with @-Prefix for the username.
 	 *
-	 * @return string The User-URL with @-Prefix for the username.
+	 * @return string The User URL with @-Prefix for the username.
 	 */
 	public function get_alternate_url() {
 		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() );
 	}
 
+	/**
+	 * Get the preferred username.
+	 *
+	 * @return string The preferred username.
+	 */
 	public function get_preferred_username() {
 		return \esc_attr( \get_the_author_meta( 'login', $this->_id ) );
 	}
 
+	/**
+	 * Get the User icon.
+	 *
+	 * @return array The User icon.
+	 */
 	public function get_icon() {
 		$icon = \get_user_option( 'activitypub_icon', $this->_id );
 		if ( wp_attachment_is_image( $icon ) ) {
@@ -163,6 +190,11 @@ class User extends Actor {
 		);
 	}
 
+	/**
+	 * Returns the header image.
+	 *
+	 * @return array|null The header image.
+	 */
 	public function get_image() {
 		$header_image = get_user_option( 'activitypub_header_image', $this->_id );
 		$image_url    = null;
@@ -185,10 +217,20 @@ class User extends Actor {
 		return null;
 	}
 
+	/**
+	 * Returns the date the user was created.
+	 *
+	 * @return false|string The date the user was created.
+	 */
 	public function get_published() {
 		return \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( \get_the_author_meta( 'registered', $this->_id ) ) );
 	}
 
+	/**
+	 * Returns the public key.
+	 *
+	 * @return array The public key.
+	 */
 	public function get_public_key() {
 		return array(
 			'id'           => $this->get_id() . '#main-key',
@@ -242,6 +284,11 @@ class User extends Actor {
 		return get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $this->get__id() ) );
 	}
 
+	/**
+	 * Returns the endpoints.
+	 *
+	 * @return array|null The endpoints.
+	 */
 	public function get_endpoints() {
 		$endpoints = null;
 
@@ -273,18 +320,38 @@ class User extends Actor {
 		return $this->get_preferred_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
 	}
 
+	/**
+	 * Returns the canonical URL.
+	 *
+	 * @return string The canonical URL.
+	 */
 	public function get_canonical_url() {
 		return $this->get_url();
 	}
 
+	/**
+	 * Returns the streams.
+	 *
+	 * @return null The streams.
+	 */
 	public function get_streams() {
 		return null;
 	}
 
+	/**
+	 * Returns the tag.
+	 *
+	 * @return array The tag.
+	 */
 	public function get_tag() {
 		return array();
 	}
 
+	/**
+	 * Returns the indexable state.
+	 *
+	 * @return bool Whether the user is indexable.
+	 */
 	public function get_indexable() {
 		if ( is_blog_public() ) {
 			return true;
@@ -293,12 +360,11 @@ class User extends Actor {
 		}
 	}
 
-
 	/**
-	 * Update the User-Name.
+	 * Update the username.
 	 *
-	 * @param mixed $value The new value.
-	 * @return bool True if the attribute was updated, false otherwise.
+	 * @param string $value The new value.
+	 * @return int|WP_Error The updated user ID or WP_Error on failure.
 	 */
 	public function update_name( $value ) {
 		$userdata = array(
@@ -309,9 +375,9 @@ class User extends Actor {
 	}
 
 	/**
-	 * Update the User-Description.
+	 * Update the User description.
 	 *
-	 * @param mixed $value The new value.
+	 * @param string $value The new value.
 	 * @return bool True if the attribute was updated, false otherwise.
 	 */
 	public function update_summary( $value ) {
@@ -319,9 +385,9 @@ class User extends Actor {
 	}
 
 	/**
-	 * Update the User-Icon.
+	 * Update the User icon.
 	 *
-	 * @param mixed $value The new value. Should be an attachment ID.
+	 * @param int $value The new value. Should be an attachment ID.
 	 * @return bool True if the attribute was updated, false otherwise.
 	 */
 	public function update_icon( $value ) {
@@ -334,7 +400,7 @@ class User extends Actor {
 	/**
 	 * Update the User-Header-Image.
 	 *
-	 * @param mixed $value The new value. Should be an attachment ID.
+	 * @param int $value The new value. Should be an attachment ID.
 	 * @return bool True if the attribute was updated, false otherwise.
 	 */
 	public function update_header( $value ) {

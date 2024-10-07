@@ -1,10 +1,15 @@
 <?php
 /**
  * Load the ActivityPub integrations.
+ *
+ * @package Activitypub
  */
 
 namespace Activitypub\Integration;
 
+/**
+ * Initialize the ActivityPub integrations.
+ */
 function plugin_init() {
 	/**
 	 * Adds WebFinger (plugin) support.

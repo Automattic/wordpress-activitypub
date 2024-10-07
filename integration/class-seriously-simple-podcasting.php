@@ -1,4 +1,10 @@
 <?php
+/**
+ * Seriously Simple Podcasting integration file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Integration;
 
 use Activitypub\Transformer\Post;
