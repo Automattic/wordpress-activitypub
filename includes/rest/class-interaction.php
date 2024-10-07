@@ -1,12 +1,21 @@
 <?php
+/**
+ * ActivityPub Interaction REST-Class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Rest;
 
 use WP_REST_Response;
 use Activitypub\Http;
 
+/**
+ * Interaction class.
+ */
 class Interaction {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		self::register_routes();
@@ -37,11 +46,11 @@ class Interaction {
 	}
 
 	/**
-	 * Handle GET request
+	 * Handle GET request.
 	 *
-	 * @param WP_REST_Request $request The request object.
+	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return wp_die|WP_REST_Response Redirect to the editor or die
+	 * @return WP_REST_Response Redirect to the editor or die.
 	 */
 	public static function get( $request ) {
 		$uri          = $request->get_param( 'uri' );
@@ -78,10 +87,16 @@ class Interaction {
 				$redirect_url = \apply_filters( 'activitypub_interactions_reply_url', $redirect_url, $uri, $object );
 		}
 
-		// generic Interaction hook
+		/**
+		 * Filter the redirect URL.
+		 *
+		 * @param string $redirect_url The URL to redirect to.
+		 * @param string $uri          The URI of the object.
+		 * @param array  $object       The object.
+		 */
 		$redirect_url = \apply_filters( 'activitypub_interactions_url', $redirect_url, $uri, $object );
 
-		// check if hook is implemented
+		// Check if hook is implemented.
 		if ( ! $redirect_url ) {
 			\wp_die(
 				esc_html__(

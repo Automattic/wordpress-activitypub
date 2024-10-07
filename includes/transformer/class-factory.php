@@ -1,11 +1,13 @@
 <?php
+/**
+ * Transformer Factory Class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Transformer;
 
 use WP_Error;
-use Activitypub\Transformer\Base;
-use Activitypub\Transformer\Post;
-use Activitypub\Transformer\Comment;
-use Activitypub\Transformer\Attachment;
 
 /**
  * Transformer Factory
@@ -15,7 +17,7 @@ class Factory {
 	 * Get the transformer for a given object.
 	 *
 	 * @param  mixed $object The object to transform.
-	 * @return \Activitypub\Transformer\Base|\WP_Error The transformer to use, or an error.
+	 * @return Base|WP_Error The transformer to use, or an error.
 	 */
 	public static function get_transformer( $object ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
 		if ( ! \is_object( $object ) ) {
@@ -66,7 +68,7 @@ class Factory {
 			return $transformer;
 		}
 
-		// use default transformer
+		// Use default transformer.
 		switch ( $class ) {
 			case 'WP_Post':
 				if ( 'attachment' === $object->post_type ) {

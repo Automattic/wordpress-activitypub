@@ -1,56 +1,58 @@
 <?php
+/**
+ * Hashtag Class.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
-use function Activitypub\enrich_content_data;
-
 /**
- * ActivityPub Hashtag Class
+ * ActivityPub Hashtag Class.
  *
  * @author Matthias Pfefferle
  */
 class Hashtag {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		if ( '1' === \get_option( 'activitypub_use_hashtags', '1' ) ) {
 			\add_action( 'wp_insert_post', array( self::class, 'insert_post' ), 10, 2 );
-			\add_filter( 'the_content', array( self::class, 'the_content' ), 10, 1 );
+			\add_filter( 'the_content', array( self::class, 'the_content' ) );
 			\add_filter( 'activitypub_activity_object_array', array( self::class, 'filter_activity_object' ), 99 );
 		}
 	}
 
 	/**
-	 * Filter only the activity object and replace summery it with URLs
+	 * Filter only the activity object and replace summery it with URLs.
 	 *
-	 * @param $object_array array of activity
+	 * @param array $activity The activity object array.
 	 *
-	 * @return array the activity object array
+	 * @return array The filtered activity object array.
 	 */
-	public static function filter_activity_object( $object_array ) {
+	public static function filter_activity_object( $activity ) {
 		/* phpcs:ignore Squiz.PHP.CommentedOutCode.Found
 		Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
-		if ( ! empty( $object_array['summary'] ) ) {
-			$object_array['summary'] = self::the_content( $object_array['summary'] );
+		if ( ! empty( $activity['summary'] ) ) {
+			$activity['summary'] = self::the_content( $activity['summary'] );
 		}
 		*/
 
-		if ( ! empty( $object_array['content'] ) ) {
-			$object_array['content'] = self::the_content( $object_array['content'] );
+		if ( ! empty( $activity['content'] ) ) {
+			$activity['content'] = self::the_content( $activity['content'] );
 		}
 
-		return $object_array;
+		return $activity;
 	}
 
 	/**
-	 * Filter to save #tags as real WordPress tags
+	 * Filter to save #tags as real WordPress tags.
 	 *
-	 * @param int     $id the rev-id
-	 * @param WP_Post $post the post
-	 *
-	 * @return
+	 * @param int      $post_id Post ID.
+	 * @param \WP_Post $post    Post object.
 	 */
-	public static function insert_post( $id, $post ) {
+	public static function insert_post( $post_id, $post ) {
 		$tags = array();
 
 		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $post->post_content, $match ) ) {
@@ -64,25 +66,23 @@ class Hashtag {
 		$tags = \implode( ', ', $tags );
 
 		\wp_add_post_tags( $post->ID, $tags );
-
-		return $id;
 	}
 
 	/**
-	 * Filter to replace the #tags in the content with links
+	 * Filter to replace the #tags in the content with links.
 	 *
-	 * @param string $the_content the post-content
+	 * @param string $the_content The post content.
 	 *
-	 * @return string the filtered post-content
+	 * @return string The filtered post content.
 	 */
 	public static function the_content( $the_content ) {
 		return enrich_content_data( $the_content, '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', array( self::class, 'replace_with_links' ) );
 	}
 
 	/**
-	 * A callback for preg_replace to build the term links
+	 * A callback for preg_replace to build the term links.
 	 *
-	 * @param array $result the preg_match results
+	 * @param array $result The preg_match results.
 	 * @return string the final string
 	 */
 	public static function replace_with_links( $result ) {
@@ -94,7 +94,7 @@ class Hashtag {
 
 		if ( $tag_object ) {
 			$link = \get_term_link( $tag_object, 'post_tag' );
-			return \sprintf( '<a rel="tag" class="hashtag u-tag u-category" href="%s">#%s</a>', $link, $tag );
+			return \sprintf( '<a rel="tag" class="hashtag u-tag u-category" href="%s">#%s</a>', esc_url( $link ), $tag );
 		}
 
 		return '#' . $tag;

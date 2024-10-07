@@ -1,4 +1,10 @@
 <?php
+/**
+ * Enable Mastodon Apps integration class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Integration;
 
 use DateTime;
@@ -7,7 +13,6 @@ use Activitypub\Http;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
-use Activitypub\Integration\Nodeinfo;
 use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Status;
@@ -15,18 +20,17 @@ use Enable_Mastodon_Apps\Entity\Media_Attachment;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_user_type_disabled;
-use function Activitypub\is_user_disabled;
 
 /**
- * Class Enable_Mastodon_Apps
+ * Class Enable_Mastodon_Apps.
  *
- * This class is used to enable Mastodon Apps to work with ActivityPub
+ * This class is used to enable Mastodon Apps to work with ActivityPub.
  *
  * @see https://github.com/akirk/enable-mastodon-apps
  */
 class Enable_Mastodon_Apps {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
@@ -41,17 +45,17 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
-	 * Map user to blog if user is disabled
+	 * Map user to blog if user is disabled.
 	 *
-	 * @param int $user_id The user id
+	 * @param int $user_id The user id.
 	 *
-	 * @return int The user id
+	 * @return int The user id.
 	 */
 	public static function maybe_map_user_to_blog( $user_id ) {
 		if (
 			is_user_type_disabled( 'user' ) &&
 			! is_user_type_disabled( 'blog' ) &&
-			// check if the blog user is permissible for this user
+			// Check if the blog user is permissible for this user.
 			user_can( $user_id, 'activitypub' )
 		) {
 			return Users::BLOG_USER_ID;
@@ -63,9 +67,9 @@ class Enable_Mastodon_Apps {
 	/**
 	 * Update profile data for Mastodon API.
 	 *
-	 * @param array $data    The data to act on
-	 * @param int   $user_id The user id
-	 * @return array         The possibly-filtered data (data that's saved gets unset from the array)
+	 * @param array $data    The data to act on.
+	 * @param int   $user_id The user id.
+	 * @return array         The possibly-filtered data (data that's saved gets unset from the array).
 	 */
 	public static function api_update_credentials( $data, $user_id ) {
 		if ( empty( $user_id ) ) {
@@ -80,7 +84,7 @@ class Enable_Mastodon_Apps {
 
 		// User::update_icon and other update_* methods check data validity, so we don't need to do it here.
 		if ( isset( $data['avatar'] ) && $user->update_icon( $data['avatar'] ) ) {
-			// unset the avatar so it doesn't get saved again by other plugins.
+			// Unset the avatar so it doesn't get saved again by other plugins.
 			// Ditto for all other fields below.
 			unset( $data['avatar'] );
 		}
@@ -106,7 +110,7 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
-	 * Get extra fields for Mastodon API
+	 * Get extra fields for Mastodon API.
 	 *
 	 * @param int $user_id The user id to act on.
 	 * @return array The extra fields.
@@ -126,11 +130,10 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
-	 * Set extra fields for Mastodon API
+	 * Set extra fields for Mastodon API.
 	 *
 	 * @param int   $user_id The user id to act on.
 	 * @param array $fields The fields to set. It is assumed to be the entire set of desired fields.
-	 * @return void
 	 */
 	private static function set_extra_fields( $user_id, $fields ) {
 		// The Mastodon API submits a simple hash for every field.
@@ -168,12 +171,12 @@ class Enable_Mastodon_Apps {
 			}
 		}
 	}
+
 	/**
-	 * Add followers to Mastodon API
+	 * Add followers to Mastodon API.
 	 *
-	 * @param array           $followers An array of followers
-	 * @param string          $user_id   The user id
-	 * @param WP_REST_Request $request   The request object
+	 * @param array  $followers An array of followers.
+	 * @param string $user_id   The user id.
 	 *
 	 * @return array The filtered followers
 	 */
@@ -219,18 +222,16 @@ class Enable_Mastodon_Apps {
 			$activitypub_followers
 		);
 
-		$followers = array_merge( $mastodon_followers, $followers );
-
-		return $followers;
+		return array_merge( $mastodon_followers, $followers );
 	}
 
 	/**
 	 * Resolve external accounts for Mastodon API
 	 *
-	 * @param Enable_Mastodon_Apps\Entity\Account $user_data The user data
-	 * @param string                              $user_id   The user id
+	 * @param Account $user_data The user data.
+	 * @param string  $user_id   The user id.
 	 *
-	 * @return Enable_Mastodon_Apps\Entity\Account The filtered Account
+	 * @return Account The filtered Account.
 	 */
 	public static function api_account_external( $user_data, $user_id ) {
 		if ( $user_data || ( is_numeric( $user_id ) && $user_id ) ) {
@@ -258,6 +259,14 @@ class Enable_Mastodon_Apps {
 		return $user_data;
 	}
 
+	/**
+	 * Resolve internal accounts for Mastodon API
+	 *
+	 * @param Account $user_data The user data.
+	 * @param string  $user_id   The user id.
+	 *
+	 * @return Account The filtered Account.
+	 */
 	public static function api_account_internal( $user_data, $user_id ) {
 		$user_id_to_use = self::maybe_map_user_to_blog( $user_id );
 		$user           = Users::get_by_id( $user_id_to_use );
@@ -266,9 +275,9 @@ class Enable_Mastodon_Apps {
 			return $user_data;
 		}
 
-		// convert user to account.
+		// Convert user to account.
 		$account = new Account();
-		// even if we have a blog user, maintain the provided user_id so as not to confuse clients
+		// Even if we have a blog user, maintain the provided user_id so as not to confuse clients.
 		$account->id             = (int) $user_id;
 		$account->username       = $user->get_preferred_username();
 		$account->acct           = $account->username;
@@ -301,7 +310,7 @@ class Enable_Mastodon_Apps {
 		$account->last_status_at = ! empty( $posts ) ? new DateTime( $posts[0]->post_date_gmt ) : $account->created_at;
 
 		$account->fields = self::get_extra_fields( $user_id_to_use );
-		// Now do it in source['fields'] with stripped tags
+		// Now do it in source['fields'] with stripped tags.
 		$account->source['fields'] = \array_map(
 			function ( $field ) {
 				$field['value'] = \wp_strip_all_tags( $field['value'], true );
@@ -315,6 +324,13 @@ class Enable_Mastodon_Apps {
 		return $account;
 	}
 
+	/**
+	 * Get account for actor.
+	 *
+	 * @param string $uri The URI.
+	 *
+	 * @return Account|null The account.
+	 */
 	private static function get_account_for_actor( $uri ) {
 		if ( ! is_string( $uri ) ) {
 			return null;
@@ -362,6 +378,14 @@ class Enable_Mastodon_Apps {
 		return $account;
 	}
 
+	/**
+	 * Search by URL for Mastodon API.
+	 *
+	 * @param array  $search_data The search data.
+	 * @param object $request     The request object.
+	 *
+	 * @return array The filtered search data.
+	 */
 	public static function api_search_by_url( $search_data, $request ) {
 		$p = \wp_parse_url( $request->get_param( 'q' ) );
 		if ( ! $p || ! isset( $p['host'] ) ) {
@@ -386,6 +410,14 @@ class Enable_Mastodon_Apps {
 		return $search_data;
 	}
 
+	/**
+	 * Search for Mastodon API.
+	 *
+	 * @param array  $search_data The search data.
+	 * @param object $request     The request object.
+	 *
+	 * @return array The filtered search data.
+	 */
 	public static function api_search( $search_data, $request ) {
 		$user_id = \get_current_user_id();
 		if ( ! $user_id ) {
@@ -433,6 +465,13 @@ class Enable_Mastodon_Apps {
 		return $search_data;
 	}
 
+	/**
+	 * Get posts query args for Mastodon API.
+	 *
+	 * @param array $args The query arguments.
+	 *
+	 * @return array The filtered args.
+	 */
 	public static function api_get_posts_query_args( $args ) {
 		if ( isset( $args['author'] ) && is_string( $args['author'] ) ) {
 			$uri = Webfinger_Util::resolve( $args['author'] );
@@ -445,6 +484,14 @@ class Enable_Mastodon_Apps {
 		return $args;
 	}
 
+	/**
+	 * Convert an activity to a status.
+	 *
+	 * @param array   $item    The activity.
+	 * @param Account $account The account.
+	 *
+	 * @return Status|null The status.
+	 */
 	private static function activity_to_status( $item, $account ) {
 		if ( isset( $item['object'] ) ) {
 			$object = $item['object'];
@@ -517,6 +564,14 @@ class Enable_Mastodon_Apps {
 		return $status;
 	}
 
+	/**
+	 * Get posts for Mastodon API.
+	 *
+	 * @param array $statuses The statuses.
+	 * @param array $args     The arguments.
+	 *
+	 * @return array The filtered statuses.
+	 */
 	public static function api_statuses_external( $statuses, $args ) {
 		if ( ! isset( $args['activitypub'] ) ) {
 			return $statuses;
@@ -579,6 +634,15 @@ class Enable_Mastodon_Apps {
 		return array_slice( $activitypub_statuses, 0, $limit );
 	}
 
+	/**
+	 * Get replies for Mastodon API.
+	 *
+	 * @param array  $context The context.
+	 * @param int    $post_id The post id.
+	 * @param string $url     The URL.
+	 *
+	 * @return array The filtered context.
+	 */
 	public static function api_get_replies( $context, $post_id, $url ) {
 		$meta = Http::get_remote_object( $url, true );
 		if ( is_wp_error( $meta ) || ! isset( $meta['replies']['first']['next'] ) ) {
