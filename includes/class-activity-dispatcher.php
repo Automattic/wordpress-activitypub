@@ -302,7 +302,7 @@ class Activity_Dispatcher {
 			$actor = object_to_uri( $object['attributedTo'] );
 			$actor = Http::get_remote_object( $actor );
 
-			if ( ! $actor ) {
+			if ( ! $actor || \is_wp_error( $actor ) ) {
 				continue;
 			}
 
