@@ -339,7 +339,7 @@ class Migration {
 	private static function migrate_to_4_0_0() {
 		$latest_post_id = 0;
 
-		// get the ID of the latest blog post and save it to the options table
+		// Get the ID of the latest blog post and save it to the options table.
 		$latest_post = get_posts(
 			array(
 				'numberposts' => 1,
