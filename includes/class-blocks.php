@@ -223,6 +223,7 @@ class Blocks {
 	 * Render the follower block.
 	 *
 	 * @param array $attrs The block attributes.
+	 *
 	 * @return string The HTML to render.
 	 */
 	public static function render_follower_block( $attrs ) {
@@ -281,7 +282,7 @@ class Blocks {
 		/**
 		 * Filter the reply block.
 		 *
-		 * @param string $html The HTML to render.
+		 * @param string $html  The HTML to render.
 		 * @param array  $attrs The block attributes.
 		 */
 		return apply_filters(

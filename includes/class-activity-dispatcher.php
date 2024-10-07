@@ -247,8 +247,8 @@ class Activity_Dispatcher {
 	/**
 	 * Default filter to add Inboxes of Followers.
 	 *
-	 * @param array $inboxes  The list of Inboxes.
-	 * @param int   $user_id  The WordPress User-ID.
+	 * @param array $inboxes The list of Inboxes.
+	 * @param int   $user_id The WordPress User-ID.
 	 *
 	 * @return array The filtered Inboxes
 	 */

@@ -211,6 +211,7 @@ class Activitypub {
 	 * Add the 'activitypub' query variable so WordPress won't mangle it.
 	 *
 	 * @param array $vars The query variables.
+	 *
 	 * @return array The query variables.
 	 */
 	public static function add_query_vars( $vars ) {

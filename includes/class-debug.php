@@ -40,9 +40,9 @@ class Debug {
 	/**
 	 * Log the inbox requests.
 	 *
-	 * @param array  $data     The Activity array.
-	 * @param int    $user_id  The ID of the local blog user.
-	 * @param string $type     The type of the request.
+	 * @param array  $data    The Activity array.
+	 * @param int    $user_id The ID of the local blog user.
+	 * @param string $type    The type of the request.
 	 */
 	public static function log_inbox( $data, $user_id, $type ) {
 		$type = strtolower( $type );

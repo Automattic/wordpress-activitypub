@@ -59,6 +59,7 @@ class Link {
 	 * Link shortening https://docs.joinmastodon.org/api/guidelines/#links
 	 *
 	 * @param array $result The preg_match results.
+	 *
 	 * @return string The final string.
 	 */
 	public static function replace_with_links( $result ) {

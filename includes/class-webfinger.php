@@ -241,6 +241,7 @@ class Webfinger {
 	 * Get the Remote-Follow endpoint for a given URI.
 	 *
 	 * @param string $uri The WebFinger Resource URI.
+	 *
 	 * @return string|WP_Error Error or the Remote-Follow endpoint URI.
 	 */
 	public static function get_remote_follow_endpoint( $uri ) {

@@ -684,9 +684,9 @@ class Base_Object {
 		/**
 		 * Filter the array of the ActivityPub object.
 		 *
-		 * @param array $array The array of the ActivityPub object.
-		 * @param string $class The class of the ActivityPub object.
-		 * @param int $id The ID of the ActivityPub object.
+		 * @param array       $array  The array of the ActivityPub object.
+		 * @param string      $class  The class of the ActivityPub object.
+		 * @param int         $id     The ID of the ActivityPub object.
 		 * @param Base_Object $object The ActivityPub object.
 		 *
 		 * @return array The filtered array of the ActivityPub object.
@@ -696,8 +696,8 @@ class Base_Object {
 		/**
 		 * Filter the array of the ActivityPub object by class.
 		 *
-		 * @param array $array The array of the ActivityPub object.
-		 * @param int $id The ID of the ActivityPub object.
+		 * @param array       $array  The array of the ActivityPub object.
+		 * @param int         $id     The ID of the ActivityPub object.
 		 * @param Base_Object $object The ActivityPub object.
 		 *
 		 * @return array The filtered array of the ActivityPub object.
