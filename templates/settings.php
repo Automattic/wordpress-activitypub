@@ -52,7 +52,7 @@
 								</label>
 							</p>
 							<p class="description">
-								<?php \esc_html_e( 'A combination of both modes above. New post will be published under the author profile and boosted by the blog, so that it is possible to follow single authors and/or the whole blog.', 'activitypub' ); ?>
+								<?php \esc_html_e( 'A combination of both modes above. New posts will be published under the author profile and boosted by the blog, so that it is possible to follow single authors and/or the whole blog.', 'activitypub' ); ?>
 							</p>
 						</td>
 					</tr>
