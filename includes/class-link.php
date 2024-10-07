@@ -1,61 +1,66 @@
 <?php
+/**
+ * Link class.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
-use function Activitypub\enrich_content_data;
-
 /**
- * ActivityPub Summery Links Class
+ * ActivityPub Summery Links Class.
  */
 class Link {
 
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_filter( 'activitypub_extra_field_content', array( self::class, 'the_content' ), 10, 1 );
+		\add_filter( 'activitypub_extra_field_content', array( self::class, 'the_content' ) );
 		\add_filter( 'activitypub_activity_object_array', array( self::class, 'filter_activity_object' ), 99 );
 	}
 
 	/**
-	 * Filter only the activity object and replace summery it with URLs
+	 * Filter only the activity object and replace the summary with URLs.
 	 *
-	 * @param $object_array array of activity
+	 * @param array $activity The activity object array.
 	 *
-	 * @return array the activity object array
+	 * @return array Rhe activity object array.
 	 */
-	public static function filter_activity_object( $object_array ) {
+	public static function filter_activity_object( $activity ) {
 		/* phpcs:ignore Squiz.PHP.CommentedOutCode.Found
 		Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
-		if ( ! empty( $object_array['summary'] ) ) {
-			$object_array['summary'] = self::the_content( $object_array['summary'] );
+		if ( ! empty( $activity['summary'] ) ) {
+			$activity['summary'] = self::the_content( $activity['summary'] );
 		}
 		*/
 
-		if ( ! empty( $object_array['content'] ) ) {
-			$object_array['content'] = self::the_content( $object_array['content'] );
+		if ( ! empty( $activity['content'] ) ) {
+			$activity['content'] = self::the_content( $activity['content'] );
 		}
 
-		return $object_array;
+		return $activity;
 	}
 
 	/**
 	 * Filter to replace the URLS in the content with links
 	 *
-	 * @param string $the_content the post-content
+	 * @param string $the_content The post content.
 	 *
-	 * @return string the filtered post-content
+	 * @return string the filtered post content.
 	 */
 	public static function the_content( $the_content ) {
 		return enrich_content_data( $the_content, '/' . ACTIVITYPUB_URL_REGEXP . '/i', array( self::class, 'replace_with_links' ) );
 	}
 
 	/**
-	 * A callback for preg_replace to build the links
+	 * A callback for preg_replace to build the links.
 	 *
 	 * Link shortening https://docs.joinmastodon.org/api/guidelines/#links
 	 *
-	 * @param array $result the preg_match results
-	 * @return string the final string
+	 * @param array $result The preg_match results.
+	 *
+	 * @return string The final string.
 	 */
 	public static function replace_with_links( $result ) {
 		if ( 'www.' === substr( $result[0], 0, 4 ) ) {

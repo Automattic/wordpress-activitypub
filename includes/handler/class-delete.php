@@ -1,7 +1,12 @@
 <?php
+/**
+ * Delete handler file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Handler;
 
-use WP_Error;
 use WP_REST_Request;
 use Activitypub\Http;
 use Activitypub\Collection\Followers;
@@ -12,7 +17,7 @@ use Activitypub\Collection\Interactions;
  */
 class Delete {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		\add_action(
@@ -20,7 +25,7 @@ class Delete {
 			array( self::class, 'handle_delete' )
 		);
 
-		// defer signature verification for `Delete` requests.
+		// Defer signature verification for `Delete` requests.
 		\add_filter(
 			'activitypub_defer_signature_verification',
 			array( self::class, 'defer_signature_verification' ),
@@ -28,7 +33,7 @@ class Delete {
 			2
 		);
 
-		// side effect
+		// Side effect.
 		\add_action(
 			'activitypub_delete_actor_interactions',
 			array( self::class, 'delete_interactions' )
@@ -39,14 +44,16 @@ class Delete {
 	 * Handles "Delete" requests.
 	 *
 	 * @param array $activity The delete activity.
-	 * @param int   $user_id  The ID of the user performing the delete activity.
 	 */
 	public static function handle_delete( $activity ) {
 		$object_type = isset( $activity['object']['type'] ) ? $activity['object']['type'] : '';
 
 		switch ( $object_type ) {
-			// Actor Types
-			// @see https://www.w3.org/TR/activitystreams-vocabulary/#actor-types
+			/*
+			 * Actor Types.
+			 *
+			 * @see https://www.w3.org/TR/activitystreams-vocabulary/#actor-types
+			 */
 			case 'Person':
 			case 'Group':
 			case 'Organization':
@@ -54,8 +61,12 @@ class Delete {
 			case 'Application':
 				self::maybe_delete_follower( $activity );
 				break;
-			// Object and Link Types
-			// @see https://www.w3.org/TR/activitystreams-vocabulary/#object-types
+
+			/*
+			 * Object and Link Types.
+			 *
+			 * @see https://www.w3.org/TR/activitystreams-vocabulary/#object-types
+			 */
 			case 'Note':
 			case 'Article':
 			case 'Image':
@@ -65,26 +76,34 @@ class Delete {
 			case 'Document':
 				self::maybe_delete_interaction( $activity );
 				break;
-			// Tombstone Type
-			// @see: https://www.w3.org/TR/activitystreams-vocabulary/#dfn-tombstone
+
+			/*
+			 * Tombstone Type.
+			 *
+			 * @see: https://www.w3.org/TR/activitystreams-vocabulary/#dfn-tombstone
+			 */
 			case 'Tombstone':
 				self::maybe_delete_interaction( $activity );
 				break;
-			// Minimal Activity
-			// @see https://www.w3.org/TR/activitystreams-core/#example-1
+
+			/*
+			 * Minimal Activity.
+			 *
+			 * @see https://www.w3.org/TR/activitystreams-core/#example-1
+			 */
 			default:
-				// ignore non Minimal Activities.
+				// Ignore non Minimal Activities.
 				if ( ! is_string( $activity['object'] ) ) {
 					return;
 				}
 
-				// check if Object is an Actor.
+				// Check if Object is an Actor.
 				if ( $activity['actor'] === $activity['object'] ) {
 					self::maybe_delete_follower( $activity );
-				} else { // assume a interaction otherwise.
+				} else { // Assume an interaction otherwise.
 					self::maybe_delete_interaction( $activity );
 				}
-				// maybe handle Delete Activity for other Object Types.
+				// Maybe handle Delete Activity for other Object Types.
 				break;
 		}
 	}
@@ -97,7 +116,7 @@ class Delete {
 	public static function maybe_delete_follower( $activity ) {
 		$follower = Followers::get_follower_by_actor( $activity['actor'] );
 
-		// verify if Actor is deleted.
+		// Verify that Actor is deleted.
 		if ( $follower && Http::is_tombstone( $activity['actor'] ) ) {
 			$follower->delete();
 			self::maybe_delete_interactions( $activity );
@@ -110,7 +129,7 @@ class Delete {
 	 * @param array $activity The delete activity.
 	 */
 	public static function maybe_delete_interactions( $activity ) {
-		// verify if Actor is deleted.
+		// Verify that Actor is deleted.
 		if ( Http::is_tombstone( $activity['actor'] ) ) {
 			\wp_schedule_single_event(
 				\time(),
@@ -123,7 +142,7 @@ class Delete {
 	/**
 	 * Delete comments from an Actor.
 	 *
-	 * @param array $comments The comments to delete.
+	 * @param array $actor The actor whose comments to delete.
 	 */
 	public static function delete_interactions( $actor ) {
 		$comments = Interactions::get_interactions_by_actor( $actor );
@@ -139,8 +158,6 @@ class Delete {
 	 * Delete a Reaction if URL is a Tombstone.
 	 *
 	 * @param array $activity The delete activity.
-	 *
-	 * @return void
 	 */
 	public static function maybe_delete_interaction( $activity ) {
 		if ( is_array( $activity['object'] ) ) {

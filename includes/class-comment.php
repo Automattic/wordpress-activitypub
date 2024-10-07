@@ -1,22 +1,24 @@
 <?php
+/**
+ * ActivityPub Comment Class
+ *
+ * @package Activitypub
+ */
 
 namespace Activitypub;
 
 use Activitypub\Collection\Users;
 use WP_Comment_Query;
 
-use function Activitypub\is_user_disabled;
-use function Activitypub\is_single_user;
-
 /**
- * ActivityPub Comment Class
+ * ActivityPub Comment Class.
  *
  * This class is a helper/utils class that provides a collection of static
  * methods that are used to handle comments.
  */
 class Comment {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		self::register_comment_types();
@@ -36,9 +38,9 @@ class Comment {
 	 * We don't want to show the comment reply link for federated comments
 	 * if the user is disabled for federation.
 	 *
-	 * @param string     $link    The HTML markup for the comment reply link.
-	 * @param array      $args    An array of arguments overriding the defaults.
-	 * @param WP_Comment $comment The object of the comment being replied.
+	 * @param string      $link    The HTML markup for the comment reply link.
+	 * @param array       $args    An array of arguments overriding the defaults.
+	 * @param \WP_Comment $comment The object of the comment being replied.
 	 *
 	 * @return string The filtered HTML markup for the comment reply link.
 	 */
@@ -67,6 +69,7 @@ class Comment {
 
 	/**
 	 * Create a link to reply to a federated comment.
+	 *
 	 * This function adds a title attribute to the reply link to inform the user
 	 * that the comment was received from the fediverse and the reply will be sent
 	 * to the original author.
@@ -109,7 +112,7 @@ class Comment {
 		}
 
 		if ( is_single_user() && \user_can( $current_user, 'publish_posts' ) ) {
-			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user
+			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user.
 			$current_user = Users::BLOG_USER_ID;
 		}
 
@@ -205,7 +208,7 @@ class Comment {
 	 * @return boolean True if the comment should be federated, false otherwise.
 	 */
 	public static function should_be_federated( $comment ) {
-		// we should not federate federated comments
+		// We should not federate federated comments.
 		if ( self::was_received( $comment ) ) {
 			return false;
 		}
@@ -213,29 +216,29 @@ class Comment {
 		$comment = \get_comment( $comment );
 		$user_id = $comment->user_id;
 
-		// comments without user can't be federated
+		// Comments without user can't be federated.
 		if ( ! $user_id ) {
 			return false;
 		}
 
 		if ( is_single_user() && \user_can( $user_id, 'publish_posts' ) ) {
-			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user
+			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user.
 			$user_id = Users::BLOG_USER_ID;
 		}
 
 		$is_user_disabled = is_user_disabled( $user_id );
 
-		// user is disabled for federation
+		// User is disabled for federation.
 		if ( $is_user_disabled ) {
 			return false;
 		}
 
-		// it is a comment to the post and can be federated
+		// It is a comment to the post and can be federated.
 		if ( empty( $comment->comment_parent ) ) {
 			return true;
 		}
 
-		// check if parent comment is federated
+		// Check if parent comment is federated.
 		$parent_comment = \get_comment( $comment->comment_parent );
 
 		return ! self::is_local( $parent_comment );
@@ -269,18 +272,18 @@ class Comment {
 
 	/**
 	 * Verify if URL is a local comment, or if it is a previously received
-	 * remote comment (For threading comments locally)
+	 * remote comment (For threading comments locally).
 	 *
 	 * @param string $url The URL to check.
 	 *
-	 * @return int comment_ID or null if not found
+	 * @return string|null Comment ID or null if not found.
 	 */
 	public static function url_to_commentid( $url ) {
 		if ( ! $url || ! filter_var( $url, \FILTER_VALIDATE_URL ) ) {
 			return null;
 		}
 
-		// check for local comment
+		// Check for local comment.
 		if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) === \wp_parse_url( $url, \PHP_URL_HOST ) ) {
 			$query = \wp_parse_url( $url, \PHP_URL_QUERY );
 
@@ -332,7 +335,7 @@ class Comment {
 	 * @return string[] An array of classes.
 	 */
 	public static function comment_class( $classes, $css_class, $comment_id ) {
-		// check if ActivityPub comment
+		// Check if ActivityPub comment.
 		if ( 'activitypub' === get_comment_meta( $comment_id, 'protocol', true ) ) {
 			$classes[] = 'activitypub-comment';
 		}
@@ -383,8 +386,8 @@ class Comment {
 	/**
 	 * Link remote comments to source url.
 	 *
-	 * @param string            $comment_link
-	 * @param object|WP_Comment $comment
+	 * @param string             $comment_link The comment link.
+	 * @param object|\WP_Comment $comment      The comment object.
 	 *
 	 * @return string $url
 	 */
@@ -402,21 +405,21 @@ class Comment {
 	/**
 	 * Generates an ActivityPub URI for a comment
 	 *
-	 * @param WP_Comment|int $comment A comment object or comment ID
+	 * @param \WP_Comment|int $comment A comment object or comment ID.
 	 *
 	 * @return string ActivityPub URI for comment
 	 */
 	public static function generate_id( $comment ) {
 		$comment = \get_comment( $comment );
 
-		// show external comment ID if it exists
+		// Show external comment ID if it exists.
 		$public_comment_link = self::get_source_id( $comment->comment_ID );
 
 		if ( $public_comment_link ) {
 			return $public_comment_link;
 		}
 
-		// generate URI based on comment ID
+		// Generate URI based on comment ID.
 		return \add_query_arg( 'c', $comment->comment_ID, \trailingslashit( \home_url() ) );
 	}
 
@@ -455,22 +458,22 @@ class Comment {
 	 */
 	public static function enqueue_scripts() {
 		if ( ! \is_singular() || \is_user_logged_in() ) {
-			// only on single pages, only for logged out users
+			// Only on single pages, only for logged-out users.
 			return;
 		}
 
 		if ( ! \post_type_supports( \get_post_type(), 'activitypub' ) ) {
-			// post type does not support ActivityPub
+			// Post type does not support ActivityPub.
 			return;
 		}
 
 		if ( ! \comments_open() || ! \get_comments_number() ) {
-			// no comments, no need to load the script
+			// No comments, no need to load the script.
 			return;
 		}
 
 		if ( ! self::post_has_remote_comments( \get_the_ID() ) ) {
-			// no remote comments, no need to load the script
+			// No remote comments, no need to load the script.
 			return;
 		}
 
@@ -514,9 +517,9 @@ class Comment {
 	}
 
 	/**
-	 * Is this a registered comment type
+	 * Is this a registered comment type.
 	 *
-	 * @param string $slug The name of the type
+	 * @param string $slug The name of the type.
 	 * @return boolean True if registered.
 	 */
 	public static function is_registered_comment_type( $slug ) {
@@ -529,18 +532,18 @@ class Comment {
 	/**
 	 * Return the registered custom comment types names.
 	 *
-	 * @return array The registered custom comment type names
+	 * @return array The registered custom comment type names.
 	 */
 	public static function get_comment_type_names() {
 		return array_values( wp_list_pluck( self::get_comment_types(), 'type' ) );
 	}
 
 	/**
-	 * Get a comment type
+	 * Get a comment type.
 	 *
-	 * @param string $type The comment type
+	 * @param string $type The comment type.
 	 *
-	 * @return array The comment type
+	 * @return array The comment type.
 	 */
 	public static function get_comment_type( $type ) {
 		$type  = strtolower( $type );
@@ -553,16 +556,21 @@ class Comment {
 			$type_array = array();
 		}
 
+		/**
+		 * Filter the comment type.
+		 *
+		 * @param array $type_array The comment type.
+		 */
 		return apply_filters( "activitypub_comment_type_{$type}", $type_array );
 	}
 
 	/**
-	 * Get a comment type attribute
+	 * Get a comment type attribute.
 	 *
-	 * @param string $type The comment type
-	 * @param string $attr The attribute to get
+	 * @param string $type The comment type.
+	 * @param string $attr The attribute to get.
 	 *
-	 * @return mixed The value of the attribute
+	 * @return mixed The value of the attribute.
 	 */
 	public static function get_comment_type_attr( $type, $attr ) {
 		$type_array = self::get_comment_type( $type );
@@ -573,15 +581,17 @@ class Comment {
 			$value = '';
 		}
 
+		/**
+		 * Filter the comment type attribute.
+		 *
+		 * @param mixed  $value The value of the attribute.
+		 * @param string $type  The comment type.
+		 */
 		return apply_filters( "activitypub_comment_type_{$attr}", $value, $type );
 	}
 
-
-
 	/**
-	 * Register the comment types used by the ActivityPub plugin
-	 *
-	 * @return void
+	 * Register the comment types used by the ActivityPub plugin.
 	 */
 	public static function register_comment_types() {
 		register_comment_type(
@@ -593,7 +603,7 @@ class Comment {
 				'icon'        => '♻️',
 				'class'       => 'p-repost',
 				'type'        => 'repost',
-				// translators: %1$s username, %2$s opject format (post, audio, ...), %3$s URL, %4$s domain
+				// translators: %1$s username, %2$s object format (post, audio, ...), %3$s URL, %4$s domain.
 				'excerpt'     => __( '&hellip; reposted this!', 'activitypub' ),
 			)
 		);
@@ -607,16 +617,16 @@ class Comment {
 				'icon'        => '👍',
 				'class'       => 'p-like',
 				'type'        => 'like',
-				// translators: %1$s username, %2$s opject format (post, audio, ...), %3$s URL, %4$s domain
+				// translators: %1$s username, %2$s object format (post, audio, ...), %3$s URL, %4$s domain.
 				'excerpt'     => __( '&hellip; liked this!', 'activitypub' ),
 			)
 		);
 	}
 
 	/**
-	 * Show avatars on Activities if set
+	 * Show avatars on Activities if set.
 	 *
-	 * @param array $types list of avatar enabled comment types
+	 * @param array $types List of avatar enabled comment types.
 	 *
 	 * @return array show avatars on Activities
 	 */
@@ -634,7 +644,7 @@ class Comment {
 	 *
 	 * @see https://github.com/janboddez/indieblocks/blob/a2d59de358031056a649ee47a1332ce9e39d4ce2/includes/functions.php#L423-L432
 	 *
-	 * @param  WP_Comment_Query $query Comment count.
+	 * @param WP_Comment_Query $query Comment count.
 	 */
 	public static function comment_query( $query ) {
 		if ( ! $query instanceof WP_Comment_Query ) {

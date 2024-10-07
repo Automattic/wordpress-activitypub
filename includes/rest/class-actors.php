@@ -1,18 +1,22 @@
 <?php
+/**
+ * ActivityPub Actors REST-Class
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Rest;
 
-use WP_Error;
 use WP_REST_Server;
 use WP_REST_Request;
 use WP_REST_Response;
 use Activitypub\Webfinger;
-use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\is_activitypub_request;
 
 /**
- * ActivityPub Actors REST-Class
+ * ActivityPub Actors REST-Class.
  *
  * @author Matthias Pfefferle
  *
@@ -20,14 +24,14 @@ use function Activitypub\is_activitypub_request;
  */
 class Actors {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		self::register_routes();
 	}
 
 	/**
-	 * Register routes
+	 * Register routes.
 	 */
 	public static function register_routes() {
 		\register_rest_route(
@@ -65,9 +69,9 @@ class Actors {
 	/**
 	 * Handle GET request
 	 *
-	 * @param  WP_REST_Request $request
+	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return WP_REST_Response
+	 * @return WP_REST_Response|\WP_Error The response object or WP_Error.
 	 */
 	public static function get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
@@ -79,15 +83,15 @@ class Actors {
 
 		$link_header = sprintf( '<%1$s>; rel="alternate"; type="application/activity+json"', $user->get_id() );
 
-		// redirect to canonical URL if it is not an ActivityPub request
+		// Redirect to canonical URL if it is not an ActivityPub request.
 		if ( ! is_activitypub_request() ) {
 			header( 'Link: ' . $link_header );
 			header( 'Location: ' . $user->get_canonical_url(), true, 301 );
 			exit;
 		}
 
-		/*
-		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		/**
+		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
 		 */
 		\do_action( 'activitypub_rest_users_pre' );
 
@@ -102,11 +106,11 @@ class Actors {
 
 
 	/**
-	 * Endpoint for remote follow UI/Block
+	 * Endpoint for remote follow UI/Block.
 	 *
 	 * @param WP_REST_Request $request The request object.
 	 *
-	 * @return void|string The URL to the remote follow page
+	 * @return WP_REST_Response|\WP_Error The response object or WP_Error.
 	 */
 	public static function remote_follow_get( WP_REST_Request $request ) {
 		$resource = $request->get_param( 'resource' );
@@ -136,9 +140,9 @@ class Actors {
 	}
 
 	/**
-	 * The supported parameters
+	 * The supported parameters.
 	 *
-	 * @return array list of parameters
+	 * @return array List of parameters,
 	 */
 	public static function request_parameters() {
 		$params = array();

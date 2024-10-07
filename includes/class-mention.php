@@ -1,20 +1,22 @@
 <?php
+/**
+ * Mention class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
 use WP_Error;
-use Activitypub\Webfinger;
-
-use function Activitypub\object_to_uri;
-use function Activitypub\enrich_content_data;
 
 /**
- * ActivityPub Mention Class
+ * ActivityPub Mention Class.
  *
  * @author Alex Kirk
  */
 class Mention {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		\add_filter( 'the_content', array( self::class, 'the_content' ), 99, 1 );
@@ -26,11 +28,11 @@ class Mention {
 
 	/**
 	 * Filter only the activity object and replace summery it with URLs
-	 * add tag to user
+	 * add tag to user.
 	 *
-	 * @param $object_array array of activity
+	 * @param array $object_array Array of activity.
 	 *
-	 * @return array the activity object array
+	 * @return array The activity object array.
 	 */
 	public static function filter_activity_object( $object_array ) {
 		if ( ! empty( $object_array['summary'] ) ) {
@@ -45,22 +47,22 @@ class Mention {
 	}
 
 	/**
-	 * Filter to replace the mentions in the content with links
+	 * Filter to replace the mentions in the content with links.
 	 *
-	 * @param string $the_content the post-content
+	 * @param string $the_content The post content.
 	 *
-	 * @return string the filtered post-content
+	 * @return string The filtered post-content.
 	 */
 	public static function the_content( $the_content ) {
 		return enrich_content_data( $the_content, '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/', array( self::class, 'replace_with_links' ) );
 	}
 
 	/**
-	 * A callback for preg_replace to build the user links
+	 * A callback for preg_replace to build the user links.
 	 *
-	 * @param array $result the preg_match results
+	 * @param array $result The preg_match results.
 	 *
-	 * @return string the final string
+	 * @return string The final string.
 	 */
 	public static function replace_with_links( $result ) {
 		$metadata = get_remote_metadata_by_actor( $result[0] );
@@ -87,11 +89,11 @@ class Mention {
 	}
 
 	/**
-	 * Get the Inboxes for the mentioned Actors
+	 * Get the Inboxes for the mentioned Actors.
 	 *
-	 * @param array $mentioned The list of Actors that were mentioned
+	 * @param array $mentioned The list of Actors that were mentioned.
 	 *
-	 * @return array The list of Inboxes
+	 * @return array The list of Inboxes.
 	 */
 	public static function get_inboxes( $mentioned ) {
 		$inboxes = array();
@@ -108,11 +110,11 @@ class Mention {
 	}
 
 	/**
-	 * Get the inbox from the Remote-Profile of a mentioned Actor
+	 * Get the inbox from the Remote-Profile of a mentioned Actor.
 	 *
-	 * @param string $actor The Actor-URL
+	 * @param string $actor The Actor URL.
 	 *
-	 * @return string The Inbox-URL
+	 * @return string|WP_Error The Inbox-URL or WP_Error if not found.
 	 */
 	public static function get_inbox_by_mentioned_actor( $actor ) {
 		$metadata = get_remote_metadata_by_actor( $actor );
@@ -121,7 +123,7 @@ class Mention {
 			return $metadata;
 		}
 
-		if ( isset( $metadata['endpoints'] ) && isset( $metadata['endpoints']['sharedInbox'] ) ) {
+		if ( isset( $metadata['endpoints']['sharedInbox'] ) ) {
 			return $metadata['endpoints']['sharedInbox'];
 		}
 
@@ -135,10 +137,10 @@ class Mention {
 	/**
 	 * Extract the mentions from the post_content.
 	 *
-	 * @param array  $mentions The already found mentions.
+	 * @param array  $mentions     The already found mentions.
 	 * @param string $post_content The post content.
 	 *
-	 * @return mixed The discovered mentions.
+	 * @return array The discovered mentions.
 	 */
 	public static function extract_mentions( $mentions, $post_content ) {
 		\preg_match_all( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i', $post_content, $matches );
