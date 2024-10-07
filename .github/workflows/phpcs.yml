@@ -28,4 +28,4 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
       - name: Detect coding standard violations
-        run: ./vendor/bin/phpcs -n -q
+        run: ./vendor/bin/phpcs
