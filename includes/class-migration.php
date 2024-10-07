@@ -7,7 +7,6 @@
 
 namespace Activitypub;
 
-use Activitypub\Activitypub;
 use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 
