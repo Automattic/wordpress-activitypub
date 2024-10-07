@@ -41,7 +41,7 @@ class Webfinger {
 		$jrd['aliases'][] = $user->get_id();
 		$jrd['aliases'][] = $user->get_url();
 		$jrd['aliases'][] = $user->get_alternate_url();
-		$jrd['aliases']   = array_unique( $array['aliases'] );
+		$jrd['aliases']   = array_unique( $jrd['aliases'] );
 
 		$jrd['links'][] = array(
 			'rel'  => 'self',
