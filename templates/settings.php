@@ -26,7 +26,7 @@
 						<td>
 							<p>
 								<label>
-									<input type="radio" name="activitypub_actor_mode" id="activitypub_actor_mode" value="1" <?php echo \checked( '1', \get_option( 'activitypub_actor_mode', '1' ) ); ?> />
+									<input type="radio" name="activitypub_actor_mode" id="activitypub_actor_mode" value="<?php echo ACTIVITYPUB_ACTOR_MODE; ?>" <?php echo \checked( ACTIVITYPUB_ACTOR_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ); ?> />
 									<strong><?php \esc_html_e( 'Author Profiles Only', 'activitypub' ); ?></strong>
 								</label>
 							</p>
@@ -38,7 +38,7 @@
 							</p>
 							<p>
 								<label>
-									<input type="radio" name="activitypub_actor_mode" id="activitypub_actor_mode" value="2" <?php echo \checked( '2', \get_option( 'activitypub_actor_mode', '1' ) ); ?> />
+									<input type="radio" name="activitypub_actor_mode" id="activitypub_actor_mode" value="<?php echo ACTIVITYPUB_BLOG_MODE; ?>" <?php echo \checked( ACTIVITYPUB_BLOG_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ); ?> />
 									<strong><?php \esc_html_e( 'Blog Profile Only', 'activitypub' ); ?></strong>
 								</label>
 							</p>
@@ -47,7 +47,7 @@
 							</p>
 							<p>
 								<label>
-									<input type="radio" name="activitypub_actor_mode" id="activitypub_actor_mode" value="3" <?php echo \checked( '3', \get_option( 'activitypub_actor_mode', '1' ) ); ?> />
+									<input type="radio" name="activitypub_actor_mode" id="activitypub_actor_mode" value="<?php echo ACTIVITYPUB_ACTOR_AND_BLOG_MODE; ?>" <?php echo \checked( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ); ?> />
 									<strong><?php \esc_html_e( 'Author and Blog Profiles', 'activitypub' ); ?></strong>
 								</label>
 							</p>

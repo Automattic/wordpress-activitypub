@@ -479,7 +479,7 @@ function is_user_type_disabled( $type ) {
 				break;
 			}
 
-			if ( '1' === \get_option( 'activitypub_actor_mode', '1' ) ) {
+			if ( ACTIVITYPUB_ACTOR_MODE === \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
 				$return = true;
 				break;
 			}
@@ -499,7 +499,7 @@ function is_user_type_disabled( $type ) {
 				break;
 			}
 
-			if ( '2' === \get_option( 'activitypub_actor_mode', '1' ) ) {
+			if ( ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
 				$return = true;
 				break;
 			}

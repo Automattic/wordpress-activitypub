@@ -273,17 +273,17 @@ class Migration {
 			'1' === $blog_profile &&
 			'1' === $author_profiles
 		) {
-			\update_option( 'activitypub_actor_mode', '3' );
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 		} elseif (
 			'1' === $blog_profile &&
 			'1' !== $author_profiles
 		) {
-			\update_option( 'activitypub_actor_mode', '2' );
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
 		} elseif (
 			'1' !== $blog_profile &&
 			'1' === $author_profiles
 		) {
-			\update_option( 'activitypub_actor_mode', '1' );
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 		}
 	}
 

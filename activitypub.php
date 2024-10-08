@@ -45,6 +45,10 @@ require_once __DIR__ . '/includes/functions.php';
 \defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) || \define( 'ACTIVITYPUB_SEND_VARY_HEADER', false );
 \defined( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE' ) || \define( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE', 'note' );
 
+\define( 'ACTIVITYPUB_ACTOR_MODE', '1' );
+\define( 'ACTIVITYPUB_BLOG_MODE', '2' );
+\define( 'ACTIVITYPUB_ACTOR_AND_BLOG_MODE', '3' );
+
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
