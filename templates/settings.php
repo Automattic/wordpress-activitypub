@@ -9,10 +9,7 @@
 	__DIR__ . '/admin-header.php',
 	true,
 	array(
-		'settings'     => 'active',
-		'welcome'      => '',
-		'followers'    => '',
-		'blog-profile' => '',
+		'settings' => 'active',
 	)
 );
 ?>
