@@ -43,7 +43,7 @@
 								</label>
 							</p>
 							<p class="description">
-								<?php \esc_html_e( 'Your blog becomes an ActivityPub profile and every post will be published under this profile instead of the author profile.', 'activitypub' ); ?>
+								<?php \esc_html_e( 'Your blog becomes a single ActivityPub profile and every post will be published under this profile instead of the individual author profiles.', 'activitypub' ); ?>
 							</p>
 							<p>
 								<label>
