@@ -1,4 +1,10 @@
 <?php
+/**
+ * ActivityPub Blog Followers List template.
+ *
+ * @package Activitypub
+ */
+
 \load_template(
 	__DIR__ . '/admin-header.php',
 	true,
@@ -9,7 +15,8 @@
 		'blog-profile' => '',
 	)
 );
-$table = new \Activitypub\Table\Followers();
+
+$table          = new \Activitypub\Table\Followers();
 $follower_count = $table->get_user_count();
 // translators: The follower count.
 $followers_template = _n( 'Your blog profile currently has %s follower.', 'Your blog profile currently has %s followers.', $follower_count, 'activitypub' );

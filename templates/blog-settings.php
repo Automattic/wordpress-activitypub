@@ -1,4 +1,10 @@
 <?php
+/**
+ * ActivityPub Blog Settings template.
+ *
+ * @package Activitypub
+ */
+
 \load_template(
 	__DIR__ . '/admin-header.php',
 	true,
@@ -33,7 +39,7 @@
 									\sprintf(
 										// translators: %s is a URL.
 										\__( 'The ActivityPub plugin uses the WordPress Site Icon as Avatar for the Blog-Profile, you can change the Site Icon in the "<a href="%s">General Settings</a>" of WordPress.', 'activitypub' ),
-										\esc_attr( \admin_url( 'options-general.php' ) )
+										\esc_url( \admin_url( 'options-general.php' ) )
 									),
 									'default'
 								);
@@ -51,15 +57,15 @@
 							$classes_for_update_button = 'button';
 							$classes_for_wrapper       = '';
 
-							if ( (int) get_option( 'activitypub_header_image', 0 ) ) {
+							if ( (int) get_option( 'activitypub_header_image', 0 ) ) :
 								$classes_for_wrapper         .= ' has-header-image';
 								$classes_for_button           = $classes_for_update_button;
 								$classes_for_button_on_change = $classes_for_upload_button;
-							} else {
+							else :
 								$classes_for_wrapper         .= ' hidden';
 								$classes_for_button           = $classes_for_upload_button;
 								$classes_for_button_on_change = $classes_for_update_button;
-							}
+							endif;
 							?>
 							<div id="activitypub-header-image-preview-wrapper" class='<?php echo esc_attr( $classes_for_wrapper ); ?>'>
 								<img id='activitypub-header-image-preview' src='<?php echo esc_url( wp_get_attachment_url( get_option( 'activitypub_header_image' ) ) ); ?>' style="max-width: 100%;" />
@@ -120,7 +126,7 @@
 									name="activitypub_blog_description"
 									id="activitypub_blog_description"
 									placeholder="<?php echo esc_attr( \get_bloginfo( 'description' ) ); ?>"
-								><?php echo \esc_html( \get_option( 'activitypub_blog_description' ) ); ?></textarea>
+								><?php echo \esc_textarea( \get_option( 'activitypub_blog_description' ) ); ?></textarea>
 							</label>
 							<p class="description">
 								<?php \esc_html_e( 'By default the ActivityPub plugin uses the WordPress tagline as a description for the blog profile.', 'activitypub' ); ?>
@@ -142,7 +148,7 @@
 							<?php
 							$extra_fields = \Activitypub\Collection\Extra_Fields::get_actor_fields( \Activitypub\Collection\Users::BLOG_USER_ID );
 
-							if ( empty( $extra_fields ) ) {
+							if ( empty( $extra_fields ) ) :
 								?>
 							<tr>
 								<td colspan="3">
@@ -150,8 +156,9 @@
 								</td>
 							</tr>
 								<?php
-							}
-							foreach ( $extra_fields as $extra_field ) {
+							endif;
+
+							foreach ( $extra_fields as $extra_field ) :
 								?>
 							<tr>
 								<td><?php echo \esc_html( $extra_field->post_title ); ?></td>
@@ -162,7 +169,7 @@
 									</a>
 								</td>
 							</tr>
-							<?php } ?>
+							<?php endforeach; ?>
 							</table>
 
 							<p>

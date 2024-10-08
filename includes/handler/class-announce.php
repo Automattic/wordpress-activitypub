@@ -33,27 +33,25 @@ class Announce {
 	/**
 	 * Handles "Announce" requests.
 	 *
-	 * @param array                          $array    The activity-object.
-	 * @param int                            $user_id  The id of the local blog-user.
-	 * @param \Activitypub\Activity\Activity $activity The activity object.
-	 *
-	 * @return void
+	 * @param array                          $announcement The activity-object.
+	 * @param int                            $user_id      The id of the local blog-user.
+	 * @param \Activitypub\Activity\Activity $activity     The activity object.
 	 */
-	public static function handle_announce( $array, $user_id, $activity = null ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.arrayFound
+	public static function handle_announce( $announcement, $user_id, $activity = null ) {
 		// Check if Activity is public or not.
-		if ( ! is_activity_public( $array ) ) {
+		if ( ! is_activity_public( $announcement ) ) {
 			// @todo maybe send email
 			return;
 		}
 
 		if ( ! ACTIVITYPUB_DISABLE_REACTIONS ) {
-			self::maybe_save_announce( $array, $user_id, $activity );
+			self::maybe_save_announce( $announcement, $user_id );
 		}
 
-		if ( is_string( $array['object'] ) ) {
-			$object = Http::get_remote_object( $array['object'] );
+		if ( is_string( $announcement['object'] ) ) {
+			$object = Http::get_remote_object( $announcement['object'] );
 		} else {
-			$object = $array['object'];
+			$object = $announcement['object'];
 		}
 
 		if ( ! $object || is_wp_error( $object ) ) {
@@ -66,21 +64,33 @@ class Announce {
 
 		$type = \strtolower( $object['type'] );
 
+		/**
+		 * Fires after an Announce has been received.
+		 *
+		 * @param array $object   The object.
+		 * @param int   $user_id  The id of the local blog-user.
+		 * @param array $activity The activity object.
+		 */
 		\do_action( 'activitypub_inbox', $object, $user_id, $type, $activity );
+
+		/**
+		 * Fires after an Announce of a specific type has been received.
+		 *
+		 * @param array $object   The object.
+		 * @param int   $user_id  The id of the local blog-user.
+		 * @param array $activity The activity object.
+		 */
 		\do_action( "activitypub_inbox_{$type}", $object, $user_id, $activity );
 	}
 
 	/**
 	 * Try to save the Announce.
 	 *
-	 * @param array                          $array    The activity-object.
-	 * @param int                            $user_id  The id of the local blog-user.
-	 * @param \Activitypub\Activity\Activity $activity The activity object.
-	 *
-	 * @return void
+	 * @param array $activity The activity-object.
+	 * @param int   $user_id  The id of the local blog-user.
 	 */
-	public static function maybe_save_announce( $array, $user_id, $activity ) { // phpcs:ignore
-		$url = object_to_uri( $array['object'] );
+	public static function maybe_save_announce( $activity, $user_id ) {
+		$url = object_to_uri( $activity['object'] );
 
 		if ( empty( $url ) ) {
 			return;
@@ -91,13 +101,21 @@ class Announce {
 			return;
 		}
 
-		$state    = Interactions::add_reaction( $array );
+		$state    = Interactions::add_reaction( $activity );
 		$reaction = null;
 
 		if ( $state && ! is_wp_error( $state ) ) {
 			$reaction = get_comment( $state );
 		}
 
-		do_action( 'activitypub_handled_announce', $array, $user_id, $state, $reaction );
+		/**
+		 * Fires after an Announce has been saved.
+		 *
+		 * @param array $activity The activity-object.
+		 * @param int   $user_id  The id of the local blog-user.
+		 * @param mixed $state    The state of the reaction.
+		 * @param mixed $reaction The reaction.
+		 */
+		do_action( 'activitypub_handled_announce', $activity, $user_id, $state, $reaction );
 	}
 }
