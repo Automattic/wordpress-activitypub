@@ -27,7 +27,7 @@ const EditorPlugin = () => {
 		alignItems: "center"
 	}
 
-	const labelWithIcon = ( icon, text ) => (
+	const labelWithIcon = ( text, icon ) => (
 		<Text style={labelStyling}>
 			<Icon icon={ icon } />
 			{text}
@@ -52,9 +52,9 @@ const EditorPlugin = () => {
 				help={ __( 'This adjusts the visibility of a post in the fediverse, but note that it won\'t affect how the post appears on the blog.', 'activitypub' ) }
 				selected={ meta.activitypub_content_visibility ? meta.activitypub_content_visibility : 'public' }
 				options={ [
-					{ label: labelWithIcon( globe, __( 'Public', 'activitypub' ) ), value: 'public' },
-					{ label: labelWithIcon( unseen, __( 'Quiet public', 'activitypub' ) ), value: 'followers' },
-					{ label: labelWithIcon( notAllowed, __( 'Do not federate', 'activitypub' ) ), value: 'no' },
+					{ label: labelWithIcon( __( 'Public', 'activitypub' ), globe ), value: 'public' },
+					{ label: labelWithIcon( __( 'Quiet public', 'activitypub' ), unseen ), value: 'followers' },
+					{ label: labelWithIcon( __( 'Do not federate', 'activitypub' ), notAllowed ), value: 'no' },
 				] }
 				onChange={ ( value ) => {
 					setMeta( { ...meta, activitypub_content_visibility: value } );
