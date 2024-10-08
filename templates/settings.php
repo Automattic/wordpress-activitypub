@@ -39,7 +39,7 @@
 							<p>
 								<label>
 									<input type="radio" name="activitypub_actor_mode" id="activitypub_actor_mode" value="2" <?php echo \checked( '2', \get_option( 'activitypub_actor_mode', '1' ) ); ?> />
-									<strong><?php \esc_html_e( 'Only Blog-Profile', 'activitypub' ); ?></strong>
+									<strong><?php \esc_html_e( 'Blog Profile Only', 'activitypub' ); ?></strong>
 								</label>
 							</p>
 							<p class="description">
