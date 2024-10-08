@@ -14,10 +14,6 @@ const EditorPlugin = () => {
 	);
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
 
-	const style = {
-		verticalAlign: 'middle',
-	};
-
 	const labelStyling = {
 		verticalAlign: "middle",
 		gap: "4px",
