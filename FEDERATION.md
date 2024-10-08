@@ -5,8 +5,8 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 ## Supported federation protocols and standards
 
 - [ActivityPub](https://www.w3.org/TR/activitypub/) (Server-to-Server)
-- [WebFinger](https://webfinger.net/)
-- [HTTP Signatures](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures)
+- [WebFinger](https://swicg.github.io/activitypub-http-signature/)
+- [HTTP Signatures](https://www.w3.org/community/reports/socialcg/CG-FINAL-apwf-20240608/)
 - [NodeInfo](https://nodeinfo.diaspora.software/)
 
 ## Supported FEPs
