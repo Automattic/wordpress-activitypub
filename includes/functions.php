@@ -401,6 +401,31 @@ function is_activitypub_request() {
 }
 
 /**
+ * Check if a post is disabled for ActivityPub.
+ *
+ * @param mixed $post The post object or ID.
+ *
+ * @return boolean True if the post is disabled, false otherwise.
+ */
+function is_post_disabled( $post ) {
+	$post       = \get_post( $post );
+	$return     = false;
+	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+
+	if ( 'no' === $visibility ) {
+		$return = true;
+	}
+
+	/*
+	 * Allow plugins to disable posts for ActivityPub.
+	 *
+	 * @param boolean  $return True if the post is disabled, false otherwise.
+	 * @param \WP_Post $post   The post object.
+	 */
+	return \apply_filters( 'activitypub_is_post_disabled', $return, $post );
+}
+
+/**
  * This function checks if a user is disabled for ActivityPub.
  *
  * @param int $user_id The user ID.

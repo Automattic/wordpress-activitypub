@@ -45,6 +45,16 @@ class Blocks {
 					'sanitize_callback' => 'sanitize_text_field',
 				)
 			);
+			\register_post_meta(
+				$post_type,
+				'activitypub_content_visibility',
+				array(
+					'show_in_rest'      => true,
+					'single'            => true,
+					'type'              => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+				)
+			);
 		}
 	}
 

@@ -77,6 +77,12 @@ class Post extends Base {
 			$object->set_summary_map( null );
 		}
 
+		// Change order if visibility is "Quiet public".
+		if ( 'followers' === \get_post_meta( $post->ID, 'activitypub_content_visibility', true ) ) {
+			$object->set_to( $this->get_cc() );
+			$object->set_cc( $this->get_to() );
+		}
+
 		return $object;
 	}
 
@@ -681,6 +687,19 @@ class Post extends Base {
 	}
 
 	/**
+	 * Returns the recipient of the post.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-to
+	 *
+	 * @return array The recipient URLs of the post.
+	 */
+	public function get_to() {
+		return array(
+			'https://www.w3.org/ns/activitystreams#Public',
+		);
+	}
+
+	/**
 	 * Returns a list of Mentions, used in the Post.
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#Mention
@@ -688,7 +707,9 @@ class Post extends Base {
 	 * @return array The list of Mentions.
 	 */
 	protected function get_cc() {
-		$cc = array();
+		$cc = array(
+			$this->get_actor_object()->get_followers(),
+		);
 
 		$mentions = $this->get_mentions();
 		if ( $mentions ) {
@@ -944,20 +965,6 @@ class Post extends Base {
 		}
 
 		return null;
-	}
-
-	/**
-	 * Returns the recipient of the post.
-	 *
-	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-to
-	 *
-	 * @return array The recipient URLs of the post.
-	 */
-	public function get_to() {
-		return array(
-			'https://www.w3.org/ns/activitystreams#Public',
-			$this->get_actor_object()->get_followers(),
-		);
 	}
 
 	/**
