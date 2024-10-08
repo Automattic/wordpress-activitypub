@@ -27,7 +27,7 @@
 							<p>
 								<label>
 									<input type="radio" name="activitypub_actor_mode" id="activitypub_actor_mode" value="1" <?php echo \checked( '1', \get_option( 'activitypub_actor_mode', '1' ) ); ?> />
-									<strong><?php \esc_html_e( 'Only Author-Profiles', 'activitypub' ); ?></strong>
+									<strong><?php \esc_html_e( 'Author Profiles Only', 'activitypub' ); ?></strong>
 								</label>
 							</p>
 							<p class="description">
