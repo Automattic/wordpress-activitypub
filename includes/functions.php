@@ -1332,3 +1332,24 @@ function get_content_warning( $post_id ) {
 
 	return $warning;
 }
+
+/**
+ * Check if a URL is from the same domain as the site.
+ *
+ * @param string $url The URL to check.
+ *
+ * @return boolean True if the URL is from the same domain, false otherwise.
+ */
+function is_same_domain( $url ) {
+	$remote = \wp_parse_url( $url, PHP_URL_HOST );
+
+	if ( ! $remote ) {
+		return false;
+	}
+
+	$remote = normalize_host( $remote );
+	$self   = \wp_parse_url( \home_url(), PHP_URL_HOST );
+	$self   = normalize_host( $self );
+
+	return $remote === $self;
+}
