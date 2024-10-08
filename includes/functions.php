@@ -412,7 +412,7 @@ function is_post_disabled( $post ) {
 	$return     = false;
 	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
-	if ( 'no' === $visibility ) {
+	if ( ACTIVITYPUB_POST_VISIBILITY_LOCAL === $visibility ) {
 		$return = true;
 	}
 

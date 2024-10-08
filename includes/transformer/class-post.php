@@ -78,7 +78,7 @@ class Post extends Base {
 		}
 
 		// Change order if visibility is "Quiet public".
-		if ( 'followers' === \get_post_meta( $post->ID, 'activitypub_content_visibility', true ) ) {
+		if ( ACTIVITYPUB_POST_VISIBILITY_QUIET_PUBLIC === \get_post_meta( $post->ID, 'activitypub_content_visibility', true ) ) {
 			$object->set_to( $this->get_cc() );
 			$object->set_cc( $this->get_to() );
 		}
