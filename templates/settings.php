@@ -1,12 +1,15 @@
 <?php
+/**
+ * ActivityPub settings template.
+ *
+ * @package Activitypub
+ */
+
 \load_template(
 	__DIR__ . '/admin-header.php',
 	true,
 	array(
-		'settings'     => 'active',
-		'welcome'      => '',
-		'followers'    => '',
-		'blog-profile' => '',
+		'settings' => 'active',
 	)
 );
 ?>
@@ -94,8 +97,7 @@
 
 						</td>
 					</tr>
-					<?php // phpcs:ignore Squiz.ControlStructures.ControlSignature.NewlineAfterOpenBrace ?>
-					<tr <?php if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ) { echo 'style="display: none"'; } ?>>
+					<tr <?php echo 'wordpress-post-format' === \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ? 'style="display: none"' : ''; ?>>
 						<th scope="row">
 							<?php \esc_html_e( 'Post content', 'activitypub' ); ?>
 						</th>
@@ -147,12 +149,12 @@
 									<summary><?php esc_html_e( 'See a list of ActivityPub Template Tags.', 'activitypub' ); ?></summary>
 									<div class="description">
 										<ul>
-											<li><code>[ap_title]</code> - <?php \esc_html_e( 'The post\'s title.', 'activitypub' ); ?></li>
-											<li><code>[ap_content]</code> - <?php \esc_html_e( 'The post\'s content.', 'activitypub' ); ?></li>
-											<li><code>[ap_excerpt]</code> - <?php \esc_html_e( 'The post\'s excerpt (may be truncated).', 'activitypub' ); ?></li>
-											<li><code>[ap_permalink]</code> - <?php \esc_html_e( 'The post\'s permalink.', 'activitypub' ); ?></li>
-											<li><code>[ap_shortlink]</code> - <?php echo \wp_kses( \__( 'The post\'s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>.', 'activitypub' ), 'default' ); ?></li>
-											<li><code>[ap_hashtags]</code> - <?php \esc_html_e( 'The post\'s tags as hashtags.', 'activitypub' ); ?></li>
+											<li><code>[ap_title]</code> - <?php \esc_html_e( 'The post&#8217;s title.', 'activitypub' ); ?></li>
+											<li><code>[ap_content]</code> - <?php \esc_html_e( 'The post&#8217;s content.', 'activitypub' ); ?></li>
+											<li><code>[ap_excerpt]</code> - <?php \esc_html_e( 'The post&#8217;s excerpt (may be truncated).', 'activitypub' ); ?></li>
+											<li><code>[ap_permalink]</code> - <?php \esc_html_e( 'The post&#8217;s permalink.', 'activitypub' ); ?></li>
+											<li><code>[ap_shortlink]</code> - <?php echo \wp_kses( \__( 'The pos&#8217;s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>.', 'activitypub' ), 'default' ); ?></li>
+											<li><code>[ap_hashtags]</code> - <?php \esc_html_e( 'The post&#8217;s tags as hashtags.', 'activitypub' ); ?></li>
 										</ul>
 										<p><?php \esc_html_e( 'You can find the full list with all possible attributes in the help section on the top-right of the screen.', 'activitypub' ); ?></p>
 									</div>
@@ -170,7 +172,7 @@
 								<?php
 								echo \wp_kses(
 									\sprintf(
-										// translators:
+										// translators: %s is a number.
 										\__( 'The number of media (images, audio, video) to attach to posts. Default: <code>%s</code>', 'activitypub' ),
 										\esc_html( ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS )
 									),
@@ -193,19 +195,21 @@
 							<fieldset>
 								<?php \esc_html_e( 'Automatically publish items of the selected post types to the fediverse:', 'activitypub' ); ?>
 
-								<?php $post_types = \get_post_types( array( 'public' => true ), 'objects' ); ?>
-								<?php $support_post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post' ) ) : array(); ?>
 								<ul>
-								<?php // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited ?>
-								<?php foreach ( $post_types as $post_type ) { ?>
+								<?php
+								$post_types           = \get_post_types( array( 'public' => true ), 'objects' );
+								$supported_post_types = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
+
+								foreach ( $post_types as $_post_type ) :
+									?>
 									<li>
-										<input type="checkbox" id="activitypub_support_post_type_<?php echo \esc_attr( $post_type->name ); ?>" name="activitypub_support_post_types[]" value="<?php echo \esc_attr( $post_type->name ); ?>" <?php echo \checked( \in_array( $post_type->name, $support_post_types, true ) ); ?> />
-										<label for="activitypub_support_post_type_<?php echo \esc_attr( $post_type->name ); ?>"><?php echo \esc_html( $post_type->label ); ?></label>
+										<input type="checkbox" id="activitypub_support_post_type_<?php echo \esc_attr( $_post_type->name ); ?>" name="activitypub_support_post_types[]" value="<?php echo \esc_attr( $_post_type->name ); ?>" <?php echo \checked( \in_array( $_post_type->name, $supported_post_types, true ) ); ?> />
+										<label for="activitypub_support_post_type_<?php echo \esc_attr( $_post_type->name ); ?>"><?php echo \esc_html( $_post_type->label ); ?></label>
 										<span class="description">
-											<?php echo \esc_html( \Activitypub\get_post_type_description( $post_type ) ); ?>
+											<?php echo \esc_html( \Activitypub\get_post_type_description( $_post_type ) ); ?>
 										</span>
 									</li>
-								<?php } ?>
+								<?php endforeach; ?>
 								</ul>
 							</fieldset>
 						</td>
@@ -251,7 +255,7 @@
 									\sprintf(
 										// translators: %s is a URL.
 										\__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ),
-										\esc_attr( \admin_url( 'options-discussion.php#disallowed_keys' ) )
+										\esc_url( \admin_url( 'options-discussion.php#disallowed_keys' ) )
 									),
 									'default'
 								);
