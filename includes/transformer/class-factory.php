@@ -17,6 +17,7 @@ class Factory {
 	 * Get the transformer for a given object.
 	 *
 	 * @param mixed $data The object to transform.
+	 *
 	 * @return Base|WP_Error The transformer to use, or an error.
 	 */
 	public static function get_transformer( $data ) {
