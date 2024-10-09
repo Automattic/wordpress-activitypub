@@ -276,6 +276,9 @@ class Inbox {
 	public static function shared_inbox_post_parameters() {
 		$params = self::user_inbox_post_parameters();
 
+		// A shared Inbox does not need a User-ID.
+		unset( $params['user_id'] );
+
 		$params['to'] = array(
 			'required'          => false,
 			'sanitize_callback' => function ( $param ) {
