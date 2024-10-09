@@ -95,6 +95,10 @@ class Create {
 	public static function validate_object( $valid, $param, $request ) {
 		$json_params = $request->get_json_params();
 
+		if ( empty( $json_params['type'] ) ) {
+			return false;
+		}
+
 		if (
 			'Create' !== $json_params['type'] ||
 			is_wp_error( $request )
@@ -108,6 +112,10 @@ class Create {
 			'inReplyTo',
 			'content',
 		);
+
+		if ( ! is_array( $object ) ) {
+			return false;
+		}
 
 		if ( array_intersect( $required, array_keys( $object ) ) !== $required ) {
 			return false;
