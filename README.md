@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 5.5  
 **Tested up to:** 6.6  
-**Stable tag:** 3.3.2  
+**Stable tag:** 3.3.3  
 **Requires PHP:** 7.0  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -149,6 +149,12 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 ## Changelog ##
+
+### 3.3.3 ###
+
+* Fixed: Sanitization callback
+* Improved: A lot of PHPCS cleanups
+* Improved: Prepare multi-lang support
 
 ### 3.3.2 ###
 
