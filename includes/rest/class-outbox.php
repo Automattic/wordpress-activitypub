@@ -102,7 +102,7 @@ class Outbox {
 			$json->next = \add_query_arg( 'page', $page + 1, $json->partOf );
 		}
 
-		if ( $page && ( $page > 1 ) ) { // phpcs:ignore
+		if ( $page && ( $page > 1 ) ) {
 			$json->prev = \add_query_arg( 'page', $page - 1, $json->partOf );
 		}
 		// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase

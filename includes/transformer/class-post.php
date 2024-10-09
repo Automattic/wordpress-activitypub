@@ -889,8 +889,8 @@ class Post extends Base {
 				$template = "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
 				break;
 			default:
-				// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-				$template = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ) ?: ACTIVITYPUB_CUSTOM_POST_CONTENT;
+				$content  = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+				$template = empty( $content ) ? ACTIVITYPUB_CUSTOM_POST_CONTENT : $content;
 				break;
 		}
 
