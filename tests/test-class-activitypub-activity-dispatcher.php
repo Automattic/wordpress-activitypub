@@ -124,7 +124,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 
 		$json = json_decode( $first_call_args[1]['body'] );
 		$this->assertEquals( 'Announce', $json->type );
-		$this->assertEquals( $user->get_url(), $json->actor );
+		$this->assertEquals( $user->get_id(), $json->actor );
 
 		remove_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10 );
 	}
@@ -172,8 +172,8 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 
 		$json = json_decode( $first_call_args[1]['body'] );
 		$this->assertEquals( 'Create', $json->type );
-		$this->assertEquals( $user->get_url(), $json->actor );
-		$this->assertEquals( $user->get_url(), $json->object->attributedTo );
+		$this->assertEquals( $user->get_id(), $json->actor );
+		$this->assertEquals( $user->get_id(), $json->object->attributedTo );
 
 		remove_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10 );
 	}
