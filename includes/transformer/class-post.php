@@ -117,12 +117,8 @@ class Post extends Base {
 	public function get_id() {
 		$last_legacy_id = (int) \get_option( 'activitypub_last_post_with_permalink_as_id', 0 );
 		$post_id        = $this->wp_object->ID;
-		$post_status    = \get_post_meta( $post_id, 'activitypub_status', true );
 
-		if (
-			'federated' !== $post_status &&
-			$post_id > $last_legacy_id
-		) {
+		if ( $post_id > $last_legacy_id ) {
 			// Generate URI based on post ID.
 			return \add_query_arg( 'p', $post_id, \trailingslashit( \home_url() ) );
 		}
