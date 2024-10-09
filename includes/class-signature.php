@@ -221,7 +221,7 @@ class Signature {
 
 		$signature = null;
 		\openssl_sign( $signed_string, $signature, $key, \OPENSSL_ALGO_SHA256 );
-		$signature = \base64_encode( $signature ); // phpcs:ignore
+		$signature = \base64_encode( $signature ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 
 		$key_id = $user->get_url() . '#main-key';
 
@@ -345,7 +345,7 @@ class Signature {
 			);
 		}
 		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
-			return \rtrim( $actor['publicKey']['publicKeyPem'] ); // phpcs:ignore
+			return \rtrim( $actor['publicKey']['publicKeyPem'] );
 		}
 		return new WP_Error(
 			'activitypub_no_remote_key_found',
@@ -400,7 +400,7 @@ class Signature {
 			$parsed_header['headers'] = \explode( ' ', trim( $matches[1] ) );
 		}
 		if ( \preg_match( '/signature="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', trim( $matches[1] ) ) ); // phpcs:ignore
+			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', trim( $matches[1] ) ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 		}
 
 		if ( ( $parsed_header['signature'] ) && ( $parsed_header['algorithm'] ) && ( ! $parsed_header['headers'] ) ) {

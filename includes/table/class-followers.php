@@ -92,26 +92,22 @@ class Followers extends WP_List_Table {
 
 		$args = array();
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['orderby'] ) ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$args['orderby'] = sanitize_text_field( wp_unslash( $_GET['orderby'] ) );
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['order'] ) ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$args['order'] = sanitize_text_field( wp_unslash( $_GET['order'] ) );
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['s'] ) && isset( $_REQUEST['_wpnonce'] ) ) {
 			$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
 			if ( wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
 			}
 		}
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		$followers_with_count = FollowerCollection::get_followers_with_count( $this->user_id, $per_page, $page_num, $args );
 		$followers            = $followers_with_count['followers'];
@@ -219,7 +215,7 @@ class Followers extends WP_List_Table {
 			return;
 		}
 
-		$followers = $_REQUEST['followers']; // phpcs:ignore
+		$followers = $_REQUEST['followers']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 
 		if ( $this->current_action() === 'delete' ) {
 			if ( ! is_array( $followers ) ) {
