@@ -22,7 +22,7 @@ use WP_CLI;
 require_once __DIR__ . '/includes/compat.php';
 require_once __DIR__ . '/includes/functions.php';
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '3.3.2' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '4.0.0' );
 
 /**
  * Initialize the plugin constants.
