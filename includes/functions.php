@@ -1012,8 +1012,7 @@ function get_enclosures( $post_id ) {
 function get_comment_ancestors( $comment ) {
 	$comment = \get_comment( $comment );
 
-	// phpcs:ignore Universal.Operators.StrictComparisons.LooseEqual
-	if ( ! $comment || empty( $comment->comment_parent ) || $comment->comment_parent == $comment->comment_ID ) {
+	if ( ! $comment || empty( $comment->comment_parent ) || (int) $comment->comment_parent === (int) $comment->comment_ID ) {
 		return array();
 	}
 
