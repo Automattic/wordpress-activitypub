@@ -13,7 +13,6 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\get_context;
-use function Activitypub\object_to_uri;
 use function Activitypub\url_to_authorid;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_masked_wp_version;
@@ -244,7 +243,7 @@ class Inbox {
 
 		$params['actor'] = array(
 			'required'          => true,
-			'sanitize_callback' => 'object_to_uri',
+			'sanitize_callback' => '\Activitypub\object_to_uri',
 		);
 
 		$params['type'] = array(
