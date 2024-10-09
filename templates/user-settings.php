@@ -1,5 +1,13 @@
 <?php
-// phpcs:disable VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable
+/**
+ * ActivityPub User Settings template.
+ *
+ * @package Activitypub
+ */
+
+/* @var array $args Template arguments. */
+$args = wp_parse_args( $args, array( 'description' => '' ) );
+
 $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 <h2 id="activitypub"><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h2>
 
@@ -18,7 +26,7 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 					<code><?php echo \esc_html( $user->get_webfinger() ); ?></code> or
 					<code><?php echo \esc_url( $user->get_url() ); ?></code>
 				</p>
-				<?php // translators: the webfinger resource ?>
+				<?php // translators: the webfinger resource. ?>
 				<p class="description"><?php \printf( \esc_html__( 'Follow "@%s" by searching for it on Mastodon, Friendica, etc.', 'activitypub' ), \esc_html( $user->get_webfinger() ) ); ?></p>
 			</td>
 		</tr>
@@ -27,7 +35,7 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 				<label for="activitypub_description"><?php \esc_html_e( 'Biography', 'activitypub' ); ?></label>
 			</th>
 			<td>
-				<textarea name="activitypub_description" id="activitypub_description" rows="5" cols="30" placeholder="<?php echo \esc_html( get_user_meta( \get_current_user_id(), 'description', true ) ); ?>"><?php echo \esc_html( $args['description'] ); ?></textarea>
+				<textarea name="activitypub_description" id="activitypub_description" rows="5" cols="30" placeholder="<?php echo \esc_attr( get_user_meta( \get_current_user_id(), 'description', true ) ); ?>"><?php echo \esc_html( $args['description'] ); ?></textarea>
 				<p class="description"><?php \esc_html_e( 'If you wish to use different biographical info for the fediverse, enter your alternate bio here.', 'activitypub' ); ?></p>
 			</td>
 		</tr>
@@ -43,18 +51,18 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 
 				$header_image = \get_user_option( 'activitypub_header_image', \get_current_user_id() );
 
-				if ( (int) $header_image ) {
+				if ( (int) $header_image ) :
 					$classes_for_wrapper         .= ' has-header-image';
 					$classes_for_button           = $classes_for_update_button;
 					$classes_for_button_on_change = $classes_for_upload_button;
-				} else {
+				else :
 					$classes_for_wrapper         .= ' hidden';
 					$classes_for_button           = $classes_for_upload_button;
 					$classes_for_button_on_change = $classes_for_update_button;
-				}
+				endif;
 				?>
 				<div id="activitypub-header-image-preview-wrapper" class='<?php echo esc_attr( $classes_for_wrapper ); ?>'>
-					<img id='activitypub-header-image-preview' src='<?php echo \esc_url( \wp_get_attachment_url( $header_image ) ); ?>' style="max-width: 100%;" />
+					<img id='activitypub-header-image-preview' src='<?php echo \esc_url( \wp_get_attachment_url( $header_image ) ); ?>' style="max-width: 100%;" alt="" />
 				</div>
 				<button
 					type="button"
@@ -67,9 +75,9 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 					data-update="<?php \esc_attr_e( 'Set as Header Image', 'activitypub' ); ?>"
 					<?php
 					// We only need to constrain the user_id for users who can't edit others' posts.
-					if ( ! \current_user_can( 'edit_others_posts' ) ) {
+					if ( ! \current_user_can( 'edit_others_posts' ) ) :
 						printf( 'data-user-id="%s"', esc_attr( \get_current_user_id() ) );
-					}
+					endif;
 					?>
 					data-state="<?php echo \esc_attr( (int) $header_image ); ?>">
 					<?php if ( (int) $header_image ) : ?>
@@ -102,7 +110,7 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 				<?php
 				$extra_fields = \Activitypub\Collection\Extra_Fields::get_actor_fields( \get_current_user_id() );
 
-				foreach ( $extra_fields as $extra_field ) {
+				foreach ( $extra_fields as $extra_field ) :
 					?>
 				<tr>
 					<td><?php echo \esc_html( $extra_field->post_title ); ?></td>
@@ -113,7 +121,7 @@ $user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
 						</a>
 					</td>
 				</tr>
-				<?php } ?>
+				<?php endforeach; ?>
 				</table>
 
 				<p>
