@@ -263,6 +263,31 @@ class Migration {
 	}
 
 	/**
+	 * Update actor-mode settings.
+	 */
+	private static function migrate_from_4_0_0() {
+		$blog_profile    = \get_option( 'activitypub_enable_blog_user', false );
+		$author_profiles = \get_option( 'activitypub_enable_users', false );
+
+		if (
+			'1' === $blog_profile &&
+			'1' === $author_profiles
+		) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		} elseif (
+			'1' === $blog_profile &&
+			'1' !== $author_profiles
+		) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		} elseif (
+			'1' !== $blog_profile &&
+			'1' === $author_profiles
+		) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		}
+	}
+
+	/**
 	 * Set the defaults needed for the plugin to work.
 	 *
 	 * Add the ActivityPub capability to all users that can publish posts.
