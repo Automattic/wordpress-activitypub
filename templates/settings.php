@@ -55,7 +55,7 @@
 								</label>
 							</p>
 							<p class="description">
-								<?php \esc_html_e( "This option combines the previous two modes. New posts will be published under the individual author's profile and will also be boosted by the blog profile, allowing to follow both specific authors or the entire blog.", 'activitypub' ); ?>
+								<?php \esc_html_e( "This combines both modes. Users can be followed individually, while following the blog will show boosts of individual user's posts.", 'activitypub' ); ?>
 							</p>
 						</td>
 					</tr>
