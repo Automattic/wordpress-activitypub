@@ -52,7 +52,19 @@ class Blocks {
 					'show_in_rest'      => true,
 					'single'            => true,
 					'type'              => 'string',
-					'sanitize_callback' => 'sanitize_text_field',
+					'sanitize_callback' => function ( $visibility ) {
+						$options = array(
+							ACTIVITYPUB_POST_VISIBILITY_PUBLIC,
+							ACTIVITYPUB_POST_VISIBILITY_QUIET_PUBLIC,
+							ACTIVITYPUB_POST_VISIBILITY_LOCAL,
+						);
+
+						if ( in_array( $visibility, $options, true ) ) {
+							return $visibility;
+						}
+
+						return ACTIVITYPUB_POST_VISIBILITY_PUBLIC;
+					},
 				)
 			);
 		}
