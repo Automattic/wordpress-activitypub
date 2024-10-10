@@ -409,20 +409,20 @@ function is_activitypub_request() {
  */
 function is_post_disabled( $post ) {
 	$post       = \get_post( $post );
-	$return     = false;
+	$disabled   = false;
 	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
 	if ( ACTIVITYPUB_POST_VISIBILITY_LOCAL === $visibility ) {
-		$return = true;
+		$disabled = true;
 	}
 
 	/*
 	 * Allow plugins to disable posts for ActivityPub.
 	 *
-	 * @param boolean  $return True if the post is disabled, false otherwise.
-	 * @param \WP_Post $post   The post object.
+	 * @param boolean  $disabled True if the post is disabled, false otherwise.
+	 * @param \WP_Post $post     The post object.
 	 */
-	return \apply_filters( 'activitypub_is_post_disabled', $return, $post );
+	return \apply_filters( 'activitypub_is_post_disabled', $disabled, $post );
 }
 
 /**
@@ -433,50 +433,50 @@ function is_post_disabled( $post ) {
  * @return boolean True if the user is disabled, false otherwise.
  */
 function is_user_disabled( $user_id ) {
-	$return = false;
+	$disabled = false;
 
 	switch ( $user_id ) {
 		// if the user is the application user, it's always enabled.
 		case \Activitypub\Collection\Users::APPLICATION_USER_ID:
-			$return = false;
+			$disabled = false;
 			break;
 		// if the user is the blog user, it's only enabled in single-user mode.
 		case \Activitypub\Collection\Users::BLOG_USER_ID:
 			if ( is_user_type_disabled( 'blog' ) ) {
-				$return = true;
+				$disabled = true;
 				break;
 			}
 
-			$return = false;
+			$disabled = false;
 			break;
 		// if the user is any other user, it's enabled if it can publish posts.
 		default:
 			if ( ! \get_user_by( 'id', $user_id ) ) {
-				$return = true;
+				$disabled = true;
 				break;
 			}
 
 			if ( is_user_type_disabled( 'user' ) ) {
-				$return = true;
+				$disabled = true;
 				break;
 			}
 
 			if ( ! \user_can( $user_id, 'activitypub' ) ) {
-				$return = true;
+				$disabled = true;
 				break;
 			}
 
-			$return = false;
+			$disabled = false;
 			break;
 	}
 
 	/**
 	 * Allow plugins to disable users for ActivityPub.
 	 *
-	 * @param boolean $return  True if the user is disabled, false otherwise.
-	 * @param int     $user_id The User-ID.
+	 * @param boolean $disabled True if the user is disabled, false otherwise.
+	 * @param int     $user_id  The User-ID.
 	 */
-	return apply_filters( 'activitypub_is_user_disabled', $return, $user_id );
+	return apply_filters( 'activitypub_is_user_disabled', $disabled, $user_id );
 }
 
 /**
@@ -494,45 +494,45 @@ function is_user_type_disabled( $type ) {
 		case 'blog':
 			if ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) ) {
 				if ( ACTIVITYPUB_SINGLE_USER_MODE ) {
-					$return = false;
+					$disabled = false;
 					break;
 				}
 			}
 
 			if ( \defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) ) {
-				$return = ACTIVITYPUB_DISABLE_BLOG_USER;
+				$disabled = ACTIVITYPUB_DISABLE_BLOG_USER;
 				break;
 			}
 
 			if ( '1' !== \get_option( 'activitypub_enable_blog_user', '0' ) ) {
-				$return = true;
+				$disabled = true;
 				break;
 			}
 
-			$return = false;
+			$disabled = false;
 			break;
 		case 'user':
 			if ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) ) {
 				if ( ACTIVITYPUB_SINGLE_USER_MODE ) {
-					$return = true;
+					$disabled = true;
 					break;
 				}
 			}
 
 			if ( \defined( 'ACTIVITYPUB_DISABLE_USER' ) ) {
-				$return = ACTIVITYPUB_DISABLE_USER;
+				$disabled = ACTIVITYPUB_DISABLE_USER;
 				break;
 			}
 
 			if ( '1' !== \get_option( 'activitypub_enable_users', '1' ) ) {
-				$return = true;
+				$disabled = true;
 				break;
 			}
 
-			$return = false;
+			$disabled = false;
 			break;
 		default:
-			$return = new WP_Error(
+			$disabled = new WP_Error(
 				'activitypub_wrong_user_type',
 				__( 'Wrong user type', 'activitypub' ),
 				array( 'status' => 400 )
@@ -543,10 +543,10 @@ function is_user_type_disabled( $type ) {
 	/**
 	 * Allow plugins to disable user types for ActivityPub.
 	 *
-	 * @param boolean $return True if the user type is disabled, false otherwise.
-	 * @param string  $type   The User-Type.
+	 * @param boolean $disabled True if the user type is disabled, false otherwise.
+	 * @param string  $type     The User-Type.
 	 */
-	return apply_filters( 'activitypub_is_user_type_disabled', $return, $type );
+	return apply_filters( 'activitypub_is_user_type_disabled', $disabled, $type );
 }
 
 /**
