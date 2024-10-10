@@ -98,7 +98,7 @@ class Activitypub {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/user-json.php';
 		} elseif ( is_comment() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
-		} elseif ( \is_singular() ) {
+		} elseif ( \is_singular() && ! is_post_disabled( \get_the_ID() ) ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
 		} elseif ( \is_home() && ! is_user_type_disabled( 'blog' ) ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';

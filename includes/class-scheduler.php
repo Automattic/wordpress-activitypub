@@ -113,7 +113,7 @@ class Scheduler {
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
 		$post = get_post( $post );
 
-		if ( ! $post ) {
+		if ( ! $post || is_post_disabled( $post ) ) {
 			return;
 		}
 
