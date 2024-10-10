@@ -218,7 +218,7 @@ class Collection {
 
 		if ( ! is_single_user() && User_Collection::BLOG_USER_ID === $user->get__id() ) {
 			$posts = array();
-		} elseif ( $sticky_posts ) {
+		} elseif ( is_array( $sticky_posts ) ) {
 			$args = array(
 				'post__in'            => $sticky_posts,
 				'ignore_sticky_posts' => 1,
