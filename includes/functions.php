@@ -1153,20 +1153,17 @@ function get_reply_intent_js() {
  * @return string The reply intent URI.
  */
 function get_reply_intent_url() {
-	$params = array(
-		'in_reply_to' => '',
-	);
-
 	/**
 	 * Filters the reply intent parameters.
 	 *
 	 * @param array $params The reply intent parameters.
 	 */
-	$params = \apply_filters( 'activitypub_reply_intent_params', $params );
+	$params = \apply_filters( 'activitypub_reply_intent_params', array() );
 
-	$query = \http_build_query( $params );
-	$path  = 'post-new.php?' . $query;
-	$url   = \admin_url( $path );
+	$params += array( 'in_reply_to' => '' );
+	$query   = \http_build_query( $params );
+	$path    = 'post-new.php?' . $query;
+	$url     = \admin_url( $path );
 
 	/**
 	 * Filters the reply intent URL.
@@ -1175,7 +1172,7 @@ function get_reply_intent_url() {
 	 */
 	$url = \apply_filters( 'activitypub_reply_intent_url', $url );
 
-	return esc_url( $url );
+	return esc_url_raw( $url );
 }
 
 /**
