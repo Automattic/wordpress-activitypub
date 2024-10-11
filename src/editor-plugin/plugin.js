@@ -49,7 +49,7 @@ const EditorPlugin = () => {
 				selected={ meta.activitypub_content_visibility ? meta.activitypub_content_visibility : 'public' }
 				options={ [
 					{ label: labelWithIcon( __( 'Public', 'activitypub' ), globe ), value: 'public' },
-					{ label: labelWithIcon( __( 'Quiet public', 'activitypub' ), unseen ), value: 'quiet_public' },
+					{ label: labelWithIcon( __( 'Quiet public', 'activitypub' ), people ), value: 'quiet_public' },
 					{ label: labelWithIcon( __( 'Do not federate', 'activitypub' ), notAllowed ), value: 'local' },
 				] }
 				onChange={ ( value ) => {
