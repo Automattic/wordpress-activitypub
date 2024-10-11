@@ -1,7 +1,7 @@
 import { PluginDocumentSettingPanel } from '@wordpress/editor';
 import { registerPlugin } from '@wordpress/plugins';
 import { TextControl, RadioControl, __experimentalText as Text } from '@wordpress/components';
-import { Icon, notAllowed, globe, unseen } from '@wordpress/icons';
+import { Icon, notAllowed, globe, people } from '@wordpress/icons';
 import { useSelect } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
 import { __ } from '@wordpress/i18n';
