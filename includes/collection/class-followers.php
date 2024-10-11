@@ -80,6 +80,15 @@ class Followers {
 			return false;
 		}
 
+		/**
+		 * Fires before a Follower is removed.
+		 *
+		 * @param \Activitypub\Model\Follower $follower The Follower object.
+		 * @param int                         $user_id  The ID of the WordPress User.
+		 * @param string                      $actor    The Actor URL.
+		 */
+		do_action( 'activitypub_followers_pre_remove_follower', $follower, $user_id, $actor );
+
 		return delete_post_meta( $follower->get__id(), 'activitypub_user_id', $user_id );
 	}
 
