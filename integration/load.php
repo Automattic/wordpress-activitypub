@@ -93,6 +93,38 @@ function plugin_init() {
 			3
 		);
 	}
+
+	/**
+	 * Adds Tribe The Events Calendar support.
+	 *
+	 * This class handles the compatibility with Tribe The Events Calendar.
+	 *
+	 * @see https://wordpress.org/plugins/the-events-calendar/
+	 */
+	if ( \defined( 'TRIBE_EVENTS_FILE' ) ) {
+		add_action(
+			'init',
+			function() {
+				\add_post_type_support( 'tribe_events', 'activitypub' );
+			}
+		);
+		add_filter(
+			'activitypub_transformer',
+			// phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
+			function( $transformer, $object, $object_class ) {
+				if (
+					'WP_Post' === $object_class &&
+					'tribe_events' === $object->post_type
+				) {
+					require_once __DIR__ . '/class-the-events-calendar.php';
+					return new The_Events_Calendar( $object );
+				}
+				return $transformer;
+			},
+			10,
+			3
+		);
+	}
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
 
