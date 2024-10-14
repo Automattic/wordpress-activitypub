@@ -1,31 +1,37 @@
 <?php
+/**
+ * Health_Check class.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
 use WP_Error;
-use Activitypub\Webfinger;
 use Activitypub\Collection\Users;
 
-use function Activitypub\get_plugin_version;
-use function Activitypub\is_user_type_disabled;
-use function Activitypub\get_webfinger_resource;
-
 /**
- * ActivityPub Health_Check Class
+ * ActivityPub Health_Check Class.
  *
  * @author Matthias Pfefferle
  */
 class Health_Check {
 
 	/**
-	 * Initialize health checks
-	 *
-	 * @return void
+	 * Initialize health checks.
 	 */
 	public static function init() {
 		\add_filter( 'site_status_tests', array( self::class, 'add_tests' ) );
 		\add_filter( 'debug_information', array( self::class, 'debug_information' ) );
 	}
 
+	/**
+	 * Add tests to the Site Health Check.
+	 *
+	 * @param array $tests The test array.
+	 *
+	 * @return array The filtered test array.
+	 */
 	public static function add_tests( $tests ) {
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			$tests['direct']['activitypub_test_author_url'] = array(
@@ -43,7 +49,7 @@ class Health_Check {
 	}
 
 	/**
-	 * Author URL tests
+	 * Author URL tests.
 	 *
 	 * @return array
 	 */
@@ -81,7 +87,7 @@ class Health_Check {
 	}
 
 	/**
-	 * System Cron tests
+	 * System Cron tests.
 	 *
 	 * @return array
 	 */
@@ -112,9 +118,9 @@ class Health_Check {
 			'<p>%s</p>',
 			\__( 'Enhance your WordPress site’s performance and mitigate potential heavy loads caused by plugins like ActivityPub by setting up a system cron job to run WP Cron. This ensures scheduled tasks are executed consistently and reduces the reliance on website traffic for trigger events.', 'activitypub' )
 		);
-		$result['actions'] .= sprintf(
+		$result['actions']       .= sprintf(
 			'<p><a href="%s" target="_blank" rel="noopener">%s<span class="screen-reader-text"> %s</span><span aria-hidden="true" class="dashicons dashicons-external"></span></a></p>',
-			__( 'https://developer.wordpress.org/plugins/cron/hooking-wp-cron-into-the-system-task-scheduler/', 'activitypub' ),
+			esc_url( __( 'https://developer.wordpress.org/plugins/cron/hooking-wp-cron-into-the-system-task-scheduler/', 'activitypub' ) ),
 			__( 'Learn how to hook the WP-Cron into the System Task Scheduler.', 'activitypub' ),
 			/* translators: Hidden accessibility text. */
 			__( '(opens in a new tab)', 'activitypub' )
@@ -124,7 +130,7 @@ class Health_Check {
 	}
 
 	/**
-	 * WebFinger tests
+	 * WebFinger tests.
 	 *
 	 * @return array
 	 */
@@ -162,21 +168,21 @@ class Health_Check {
 	}
 
 	/**
-	 * Check if `author_posts_url` is accessible and that request returns correct JSON
+	 * Check if `author_posts_url` is accessible and that request returns correct JSON.
 	 *
-	 * @return boolean|WP_Error
+	 * @return bool|WP_Error True if the author URL is accessible, WP_Error otherwise.
 	 */
 	public static function is_author_url_accessible() {
-		$user = \wp_get_current_user();
-		$author_url = \get_author_posts_url( $user->ID );
+		$user                 = \wp_get_current_user();
+		$author_url           = \get_author_posts_url( $user->ID );
 		$reference_author_url = self::get_author_posts_url( $user->ID, $user->user_nicename );
 
-		// check for "author" in URL
+		// Check for "author" in URL.
 		if ( $author_url !== $reference_author_url ) {
 			return new WP_Error(
 				'author_url_not_accessible',
 				\sprintf(
-					// translators: %s: Author URL
+					// translators: %s: Author URL.
 					\__(
 						'Your author URL <code>%s</code> was replaced, this is often done by plugins.',
 						'activitypub'
@@ -186,11 +192,11 @@ class Health_Check {
 			);
 		}
 
-		// try to access author URL
+		// Try to access author URL.
 		$response = \wp_remote_get(
 			$author_url,
 			array(
-				'headers' => array( 'Accept' => 'application/activity+json' ),
+				'headers'     => array( 'Accept' => 'application/activity+json' ),
 				'redirection' => 0,
 			)
 		);
@@ -199,7 +205,7 @@ class Health_Check {
 			return new WP_Error(
 				'author_url_not_accessible',
 				\sprintf(
-					// translators: %s: Author URL
+					// translators: %s: Author URL.
 					\__(
 						'Your author URL <code>%s</code> is not accessible. Please check your WordPress setup or permalink structure. If the setup seems fine, maybe check if a plugin might restrict the access.',
 						'activitypub'
@@ -211,12 +217,12 @@ class Health_Check {
 
 		$response_code = \wp_remote_retrieve_response_code( $response );
 
-		// check for redirects
+		// Check for redirects.
 		if ( \in_array( $response_code, array( 301, 302, 307, 308 ), true ) ) {
 			return new WP_Error(
 				'author_url_not_accessible',
 				\sprintf(
-					// translators: %s: Author URL
+					// translators: %s: Author URL.
 					\__(
 						'Your author URL <code>%s</code> is redirecting to another page, this is often done by SEO plugins like "Yoast SEO".',
 						'activitypub'
@@ -226,14 +232,14 @@ class Health_Check {
 			);
 		}
 
-		// check if response is JSON
+		// Check if response is JSON.
 		$body = \wp_remote_retrieve_body( $response );
 
 		if ( ! \is_string( $body ) || ! \is_array( \json_decode( $body, true ) ) ) {
 			return new WP_Error(
 				'author_url_not_accessible',
 				\sprintf(
-					// translators: %s: Author URL
+					// translators: %s: Author URL.
 					\__(
 						'Your author URL <code>%s</code> does not return valid JSON for <code>application/activity+json</code>. Please check if your hosting supports alternate <code>Accept</code> headers.',
 						'activitypub'
@@ -252,7 +258,7 @@ class Health_Check {
 	 * @return boolean|WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
-		$user = Users::get_by_id( Users::APPLICATION_USER_ID );
+		$user     = Users::get_by_id( Users::APPLICATION_USER_ID );
 		$resource = $user->get_webfinger();
 
 		$url = Webfinger::resolve( $resource );
@@ -260,7 +266,7 @@ class Health_Check {
 			$allowed = array( 'code' => array() );
 
 			$not_accessible = wp_kses(
-				// translators: %s: Author URL
+				// translators: %s: Author URL.
 				\__(
 					'Your WebFinger endpoint <code>%s</code> is not accessible. Please check your WordPress setup or permalink structure.',
 					'activitypub'
@@ -268,7 +274,7 @@ class Health_Check {
 				$allowed
 			);
 			$invalid_response = wp_kses(
-				// translators: %s: Author URL
+				// translators: %s: Author URL.
 				\__(
 					'Your WebFinger endpoint <code>%s</code> does not return valid JSON for <code>application/jrd+json</code>.',
 					'activitypub'
@@ -277,20 +283,21 @@ class Health_Check {
 			);
 
 			$health_messages = array(
-				'webfinger_url_not_accessible' => \sprintf(
+				'webfinger_url_not_accessible'   => \sprintf(
 					$not_accessible,
 					$url->get_error_data()['data']
 				),
 				'webfinger_url_invalid_response' => \sprintf(
-					// translators: %s: Author URL
+					// translators: %s: Author URL.
 					$invalid_response,
 					$url->get_error_data()['data']
 				),
 			);
-			$message = null;
+			$message         = null;
 			if ( isset( $health_messages[ $url->get_error_code() ] ) ) {
 				$message = $health_messages[ $url->get_error_code() ];
 			}
+
 			return new WP_Error(
 				$url->get_error_code(),
 				$message,
@@ -304,7 +311,7 @@ class Health_Check {
 	/**
 	 * Retrieve the URL to the author page for the user with the ID provided.
 	 *
-	 * @global WP_Rewrite $wp_rewrite WordPress rewrite component.
+	 * @global \WP_Rewrite $wp_rewrite WordPress rewrite component.
 	 *
 	 * @param int    $author_id       Author ID.
 	 * @param string $author_nicename Optional. The author's nicename (slug). Default empty.
@@ -313,8 +320,9 @@ class Health_Check {
 	 */
 	public static function get_author_posts_url( $author_id, $author_nicename = '' ) {
 		global $wp_rewrite;
+
 		$auth_id = (int) $author_id;
-		$link = $wp_rewrite->get_author_permastruct();
+		$link    = $wp_rewrite->get_author_permastruct();
 
 		if ( empty( $link ) ) {
 			$file = home_url( '/' );
@@ -343,12 +351,12 @@ class Health_Check {
 		$info['activitypub'] = array(
 			'label'  => __( 'ActivityPub', 'activitypub' ),
 			'fields' => array(
-				'webfinger' => array(
+				'webfinger'      => array(
 					'label'   => __( 'WebFinger Resource', 'activitypub' ),
 					'value'   => Webfinger::get_user_resource( wp_get_current_user()->ID ),
 					'private' => true,
 				),
-				'author_url' => array(
+				'author_url'     => array(
 					'label'   => __( 'Author URL', 'activitypub' ),
 					'value'   => get_author_posts_url( wp_get_current_user()->ID ),
 					'private' => true,

@@ -1,4 +1,10 @@
 <?php
+/**
+ * Application model file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Model;
 
 use WP_Query;
@@ -8,6 +14,9 @@ use Activitypub\Collection\Users;
 
 use function Activitypub\get_rest_url_by_path;
 
+/**
+ * Application class.
+ */
 class Application extends Actor {
 	/**
 	 * The User-ID
@@ -17,7 +26,7 @@ class Application extends Actor {
 	protected $_id = Users::APPLICATION_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
-	 * If the User is discoverable.
+	 * Whether the Application is discoverable.
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#discoverable
 	 *
@@ -28,7 +37,7 @@ class Application extends Actor {
 	protected $discoverable = false;
 
 	/**
-	 * If the User is indexable.
+	 * Whether the Application is indexable.
 	 *
 	 * @context http://joinmastodon.org/ns#indexable
 	 *
@@ -39,18 +48,33 @@ class Application extends Actor {
 	/**
 	 * The WebFinger Resource.
 	 *
-	 * @var string<url>
+	 * @var string
 	 */
 	protected $webfinger;
 
+	/**
+	 * Returns the type of the object.
+	 *
+	 * @return string The type of the object.
+	 */
 	public function get_type() {
 		return 'Application';
 	}
 
+	/**
+	 * Returns whether the Application manually approves followers.
+	 *
+	 * @return true Whether the Application manually approves followers.
+	 */
 	public function get_manually_approves_followers() {
 		return true;
 	}
 
+	/**
+	 * Returns the ID of the Application.
+	 *
+	 * @return string The ID of the Application.
+	 */
 	public function get_id() {
 		return get_rest_url_by_path( 'application' );
 	}
@@ -73,24 +97,34 @@ class Application extends Actor {
 		return $this->get_url();
 	}
 
+	/**
+	 * Get the Username.
+	 *
+	 * @return string The Username.
+	 */
 	public function get_name() {
 		return 'application';
 	}
 
+	/**
+	 * Get the preferred username.
+	 *
+	 * @return string The preferred username.
+	 */
 	public function get_preferred_username() {
 		return $this->get_name();
 	}
 
-		/**
+	/**
 	 * Get the User-Icon.
 	 *
 	 * @return array The User-Icon.
 	 */
 	public function get_icon() {
-		// try site icon first
+		// Try site icon first.
 		$icon_id = get_option( 'site_icon' );
 
-		// try custom logo second
+		// Try custom logo second.
 		if ( ! $icon_id ) {
 			$icon_id = get_theme_mod( 'custom_logo' );
 		}
@@ -105,7 +139,7 @@ class Application extends Actor {
 		}
 
 		if ( ! $icon_url ) {
-			// fallback to default icon
+			// Fallback to default icon.
 			$icon_url = plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
 		}
 
@@ -131,6 +165,11 @@ class Application extends Actor {
 		return null;
 	}
 
+	/**
+	 * Get the first published date.
+	 *
+	 * @return string The published date.
+	 */
 	public function get_published() {
 		$first_post = new WP_Query(
 			array(
@@ -176,18 +215,23 @@ class Application extends Actor {
 		return $this->get_preferred_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
 	}
 
+	/**
+	 * Returns the public key.
+	 *
+	 * @return array The public key.
+	 */
 	public function get_public_key() {
 		return array(
-			'id'       => $this->get_id() . '#main-key',
-			'owner'    => $this->get_id(),
+			'id'           => $this->get_id() . '#main-key',
+			'owner'        => $this->get_id(),
 			'publicKeyPem' => Signature::get_public_key_for( Users::APPLICATION_USER_ID ),
 		);
 	}
 
 	/**
-	 * Get the User-Description.
+	 * Get the User description.
 	 *
-	 * @return string The User-Description.
+	 * @return string The User description.
 	 */
 	public function get_summary() {
 		return \wpautop(
@@ -198,6 +242,11 @@ class Application extends Actor {
 		);
 	}
 
+	/**
+	 * Returns the canonical URL of the object.
+	 *
+	 * @return string|null The canonical URL of the object.
+	 */
 	public function get_canonical_url() {
 		return \home_url();
 	}

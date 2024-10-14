@@ -1,26 +1,31 @@
 <?php
+/**
+ * Transformer Factory Class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Transformer;
 
 use WP_Error;
-use Activitypub\Transformer\Base;
-use Activitypub\Transformer\Post;
-use Activitypub\Transformer\Comment;
-use Activitypub\Transformer\Attachment;
 
 /**
- * Transformer Factory
+ * Transformer Factory.
  */
 class Factory {
 	/**
-	 * @param  mixed $object                      The object to transform
-	 * @return \Activitypub\Transformer|\WP_Error The transformer to use, or an error.
+	 * Get the transformer for a given object.
+	 *
+	 * @param mixed $data The object to transform.
+	 *
+	 * @return Base|WP_Error The transformer to use, or an error.
 	 */
-	public static function get_transformer( $object ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
-		if ( ! \is_object( $object ) ) {
+	public static function get_transformer( $data ) {
+		if ( ! \is_object( $data ) ) {
 			return new WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
 		}
 
-		$class = \get_class( $object );
+		$class = \get_class( $data );
 
 		/**
 		 * Filter the transformer for a given object.
@@ -46,12 +51,12 @@ class Factory {
 		 * }, 10, 3 );
 		 *
 		 * @param Base   $transformer  The transformer to use.
-		 * @param mixed  $object       The object to transform.
+		 * @param mixed  $data         The object to transform.
 		 * @param string $object_class The class of the object to transform.
 		 *
 		 * @return mixed The transformer to use.
 		 */
-		$transformer = \apply_filters( 'activitypub_transformer', null, $object, $class );
+		$transformer = \apply_filters( 'activitypub_transformer', null, $data, $class );
 
 		if ( $transformer ) {
 			if (
@@ -64,15 +69,15 @@ class Factory {
 			return $transformer;
 		}
 
-		// use default transformer
+		// Use default transformer.
 		switch ( $class ) {
 			case 'WP_Post':
-				if ( 'attachment' === $object->post_type ) {
-					return new Attachment( $object );
+				if ( 'attachment' === $data->post_type ) {
+					return new Attachment( $data );
 				}
-				return new Post( $object );
+				return new Post( $data );
 			case 'WP_Comment':
-				return new Comment( $object );
+				return new Comment( $data );
 			default:
 				return null;
 		}

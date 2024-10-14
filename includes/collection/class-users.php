@@ -1,4 +1,10 @@
 <?php
+/**
+ * Users collection file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Collection;
 
 use WP_Error;
@@ -13,27 +19,30 @@ use function Activitypub\normalize_host;
 use function Activitypub\url_to_authorid;
 use function Activitypub\is_user_disabled;
 
+/**
+ * Users collection.
+ */
 class Users {
 	/**
-	 * The ID of the Blog User
+	 * The ID of the Blog User.
 	 *
 	 * @var int
 	 */
 	const BLOG_USER_ID = 0;
 
 	/**
-	 * The ID of the Application User
+	 * The ID of the Application User.
 	 *
 	 * @var int
 	 */
 	const APPLICATION_USER_ID = -1;
 
 	/**
-	 * Get the User by ID
+	 * Get the User by ID.
 	 *
 	 * @param int $user_id The User-ID.
 	 *
-	 * @return \Acitvitypub\Model\User The User.
+	 * @return User|Blog|Application|WP_Error The User or WP_Error if user not found.
 	 */
 	public static function get_by_id( $user_id ) {
 		if ( is_string( $user_id ) || is_numeric( $user_id ) ) {
@@ -68,10 +77,10 @@ class Users {
 	 *
 	 * @param string $username The User-Name.
 	 *
-	 * @return \Acitvitypub\Model\User The User.
+	 * @return User|Blog|Application|WP_Error The User or WP_Error if user not found.
 	 */
 	public static function get_by_username( $username ) {
-		// check for blog user.
+		// Check for blog user.
 		if ( Blog::get_default_username() === $username ) {
 			return new Blog();
 		}
@@ -80,20 +89,20 @@ class Users {
 			return new Blog();
 		}
 
-		// check for application user.
+		// Check for application user.
 		if ( 'application' === $username ) {
 			return new Application();
 		}
 
-		// check for 'activitypub_username' meta
+		// Check for 'activitypub_username' meta.
 		$user = new WP_User_Query(
 			array(
-				'count_total'    => false,
-				'number'         => 1,
-				'hide_empty'     => true,
-				'fields'         => 'ID',
+				'count_total' => false,
+				'number'      => 1,
+				'hide_empty'  => true,
+				'fields'      => 'ID',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query' => array(
+				'meta_query'  => array(
 					'relation' => 'OR',
 					array(
 						'key'     => 'activitypub_user_identifier',
@@ -110,7 +119,7 @@ class Users {
 
 		$username = str_replace( array( '*', '%' ), '', $username );
 
-		// check for login or nicename.
+		// Check for login or nicename.
 		$user = new WP_User_Query(
 			array(
 				'count_total'    => false,
@@ -136,26 +145,26 @@ class Users {
 	/**
 	 * Get the User by resource.
 	 *
-	 * @param string $resource The User-Resource.
+	 * @param string $uri The User-Resource.
 	 *
-	 * @return \Acitvitypub\Model\User The User.
+	 * @return User|WP_Error The User or WP_Error if user not found.
 	 */
-	public static function get_by_resource( $resource ) {
-		$resource = object_to_uri( $resource );
+	public static function get_by_resource( $uri ) {
+		$uri = object_to_uri( $uri );
 
 		$scheme = 'acct';
-		$match = array();
-		// try to extract the scheme and the host
-		if ( preg_match( '/^([a-zA-Z^:]+):(.*)$/i', $resource, $match ) ) {
-			// extract the scheme
+		$match  = array();
+		// Try to extract the scheme and the host.
+		if ( preg_match( '/^([a-zA-Z^:]+):(.*)$/i', $uri, $match ) ) {
+			// Extract the scheme.
 			$scheme = \esc_attr( $match[1] );
 		}
 
 		switch ( $scheme ) {
-			// check for http(s) URIs
+			// Check for http(s) URIs.
 			case 'http':
 			case 'https':
-				$resource_path = \wp_parse_url( $resource, PHP_URL_PATH );
+				$resource_path = \wp_parse_url( $uri, PHP_URL_PATH );
 
 				if ( $resource_path ) {
 					$blog_path = \wp_parse_url( \home_url(), PHP_URL_PATH );
@@ -166,7 +175,7 @@ class Users {
 
 					$resource_path = \trim( $resource_path, '/' );
 
-					// check for http(s)://blog.example.com/@username
+					// Check for http(s)://blog.example.com/@username.
 					if ( str_starts_with( $resource_path, '@' ) ) {
 						$identifier = \str_replace( '@', '', $resource_path );
 						$identifier = \trim( $identifier, '/' );
@@ -175,17 +184,17 @@ class Users {
 					}
 				}
 
-				// check for http(s)://blog.example.com/author/username
-				$user_id = url_to_authorid( $resource );
+				// Check for http(s)://blog.example.com/author/username.
+				$user_id = url_to_authorid( $uri );
 
 				if ( $user_id ) {
 					return self::get_by_id( $user_id );
 				}
 
-				// check for http(s)://blog.example.com/
+				// Check for http(s)://blog.example.com/.
 				if (
-					normalize_url( site_url() ) === normalize_url( $resource ) ||
-					normalize_url( home_url() ) === normalize_url( $resource )
+					normalize_url( site_url() ) === normalize_url( $uri ) ||
+					normalize_url( home_url() ) === normalize_url( $uri )
 				) {
 					return self::get_by_id( self::BLOG_USER_ID );
 				}
@@ -195,11 +204,11 @@ class Users {
 					\__( 'User not found', 'activitypub' ),
 					array( 'status' => 404 )
 				);
-			// check for acct URIs
+			// Check for acct URIs.
 			case 'acct':
-				$resource   = \str_replace( 'acct:', '', $resource );
-				$identifier = \substr( $resource, 0, \strrpos( $resource, '@' ) );
-				$host       = normalize_host( \substr( \strrchr( $resource, '@' ), 1 ) );
+				$uri        = \str_replace( 'acct:', '', $uri );
+				$identifier = \substr( $uri, 0, \strrpos( $uri, '@' ) );
+				$host       = normalize_host( \substr( \strrchr( $uri, '@' ), 1 ) );
 				$blog_host  = normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
 
 				if ( $blog_host !== $host ) {
@@ -210,7 +219,7 @@ class Users {
 					);
 				}
 
-				// prepare wildcards https://github.com/mastodon/mastodon/issues/22213
+				// Prepare wildcards https://github.com/mastodon/mastodon/issues/22213.
 				if ( in_array( $identifier, array( '_', '*', '' ), true ) ) {
 					return self::get_by_id( self::BLOG_USER_ID );
 				}
@@ -228,9 +237,9 @@ class Users {
 	/**
 	 * Get the User by resource.
 	 *
-	 * @param string $resource The User-Resource.
+	 * @param string $id The User-Resource.
 	 *
-	 * @return \Acitvitypub\Model\User The User.
+	 * @return User|Blog|Application|WP_Error The User or WP_Error if user not found.
 	 */
 	public static function get_by_various( $id ) {
 		$user = null;
@@ -238,11 +247,11 @@ class Users {
 		if ( is_numeric( $id ) ) {
 			$user = self::get_by_id( $id );
 		} elseif (
-			// is URL
+			// Is URL.
 			filter_var( $id, FILTER_VALIDATE_URL ) ||
-			// is acct
+			// Is acct.
 			str_starts_with( $id, 'acct:' ) ||
-			// is email
+			// Is email.
 			filter_var( $id, FILTER_VALIDATE_EMAIL )
 		) {
 			$user = self::get_by_resource( $id );

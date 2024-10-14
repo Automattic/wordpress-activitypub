@@ -1,7 +1,12 @@
 <?php
+/**
+ * Followers REST-Class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Rest;
 
-use WP_Error;
 use stdClass;
 use WP_REST_Server;
 use WP_REST_Response;
@@ -12,7 +17,7 @@ use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_masked_wp_version;
 
 /**
- * ActivityPub Followers REST-Class
+ * ActivityPub Followers REST-Class.
  *
  * @author Matthias Pfefferle
  *
@@ -20,14 +25,14 @@ use function Activitypub\get_masked_wp_version;
  */
 class Followers {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		self::register_routes();
 	}
 
 	/**
-	 * Register routes
+	 * Register routes.
 	 */
 	public static function register_routes() {
 		\register_rest_route(
@@ -47,9 +52,9 @@ class Followers {
 	/**
 	 * Handle GET request
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return WP_REST_Response
+	 * @return WP_REST_Response|\WP_Error The response object or WP_Error.
 	 */
 	public static function get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
@@ -64,36 +69,34 @@ class Followers {
 		$page     = (int) $request->get_param( 'page' );
 		$context  = $request->get_param( 'context' );
 
-		/*
-		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		/**
+		 * Action triggered prior to the ActivityPub profile being created and sent to the client
 		 */
 		\do_action( 'activitypub_rest_followers_pre' );
 
 		$data = Follower_Collection::get_followers_with_count( $user_id, $per_page, $page, array( 'order' => ucwords( $order ) ) );
 		$json = new stdClass();
 
+		// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 		$json->{'@context'} = \Activitypub\get_context();
+		$json->id           = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user->get__id() ) );
+		$json->generator    = 'http://wordpress.org/?v=' . get_masked_wp_version();
+		$json->actor        = $user->get_id();
+		$json->type         = 'OrderedCollectionPage';
+		$json->totalItems   = $data['total'];
+		$json->partOf       = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user->get__id() ) );
 
-		$json->id = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user->get__id() ) );
-		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
-		$json->actor = $user->get_id();
-		$json->type = 'OrderedCollectionPage';
+		$json->first = \add_query_arg( 'page', 1, $json->partOf );
+		$json->last  = \add_query_arg( 'page', \ceil( $json->totalItems / $per_page ), $json->partOf );
 
-		$json->totalItems = $data['total']; // phpcs:ignore
-		$json->partOf = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user->get__id() ) ); // phpcs:ignore
-
-		$json->first = \add_query_arg( 'page', 1, $json->partOf ); // phpcs:ignore
-		$json->last  = \add_query_arg( 'page', \ceil ( $json->totalItems / $per_page ), $json->partOf ); // phpcs:ignore
-
-		if ( $page && ( ( \ceil ( $json->totalItems / $per_page ) ) > $page ) ) { // phpcs:ignore
-			$json->next  = \add_query_arg( 'page', $page + 1, $json->partOf ); // phpcs:ignore
+		if ( $page && ( ( \ceil( $json->totalItems / $per_page ) ) > $page ) ) {
+			$json->next = \add_query_arg( 'page', $page + 1, $json->partOf );
 		}
 
-		if ( $page && ( $page > 1 ) ) { // phpcs:ignore
-			$json->prev  = \add_query_arg( 'page', $page - 1, $json->partOf ); // phpcs:ignore
+		if ( $page && ( $page > 1 ) ) {
+			$json->prev = \add_query_arg( 'page', $page - 1, $json->partOf );
 		}
 
-		// phpcs:ignore
 		$json->orderedItems = array_map(
 			function ( $item ) use ( $context ) {
 				if ( 'full' === $context ) {
@@ -103,6 +106,7 @@ class Followers {
 			},
 			$data['followers']
 		);
+		// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 
 		$rest_response = new WP_REST_Response( $json, 200 );
 		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
@@ -111,20 +115,20 @@ class Followers {
 	}
 
 	/**
-	 * The supported parameters
+	 * The supported parameters.
 	 *
-	 * @return array list of parameters
+	 * @return array List of parameters.
 	 */
 	public static function request_parameters() {
 		$params = array();
 
 		$params['page'] = array(
-			'type' => 'integer',
+			'type'    => 'integer',
 			'default' => 1,
 		);
 
 		$params['per_page'] = array(
-			'type' => 'integer',
+			'type'    => 'integer',
 			'default' => 20,
 		);
 
@@ -136,13 +140,13 @@ class Followers {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
 		);
 
 		$params['context'] = array(
-			'type' => 'string',
+			'type'    => 'string',
 			'default' => 'simple',
-			'enum' => array( 'simple', 'full' ),
+			'enum'    => array( 'simple', 'full' ),
 		);
 
 		return $params;

@@ -1,20 +1,21 @@
 <?php
+/**
+ * Functions file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
-use WP_Query;
 use WP_Error;
-use Activitypub\Http;
-use Activitypub\Comment;
-use Activitypub\Webfinger;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Users;
-use Activitypub\Collection\Extra_Fields;
 
 /**
- * Returns the ActivityPub default JSON-context
+ * Returns the ActivityPub default JSON-context.
  *
- * @return array the activitypub context
+ * @return array The activitypub context.
  */
 function get_context() {
 	$context = Activity::JSON_LD_CONTEXT;
@@ -22,30 +23,46 @@ function get_context() {
 	return \apply_filters( 'activitypub_json_context', $context );
 }
 
+/**
+ * Send a POST request to a remote server.
+ *
+ * @param string $url     The URL endpoint.
+ * @param string $body    The Post Body.
+ * @param int    $user_id The WordPress user ID.
+ *
+ * @return array|WP_Error The POST Response or an WP_Error.
+ */
 function safe_remote_post( $url, $body, $user_id ) {
 	return Http::post( $url, $body, $user_id );
 }
 
+/**
+ * Send a GET request to a remote server.
+ *
+ * @param string $url The URL endpoint.
+ *
+ * @return array|WP_Error The GET Response or an WP_Error.
+ */
 function safe_remote_get( $url ) {
 	return Http::get( $url );
 }
 
 /**
- * Returns a users WebFinger "resource"
+ * Returns a users WebFinger "resource".
  *
- * @param int $user_id The User-ID.
+ * @param int $user_id The user ID.
  *
- * @return string The User-Resource.
+ * @return string The User resource.
  */
 function get_webfinger_resource( $user_id ) {
 	return Webfinger::get_user_resource( $user_id );
 }
 
 /**
- * Requests the Meta-Data from the Actors profile
+ * Requests the Meta-Data from the Actors profile.
  *
  * @param string $actor  The Actor URL.
- * @param bool   $cached If the result should be cached.
+ * @param bool   $cached Optional. Whether the result should be cached. Default true.
  *
  * @return array|WP_Error The Actor profile as array or WP_Error on failure.
  */
@@ -64,7 +81,10 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 			return new WP_Error(
 				'activitypub_no_valid_actor_identifier',
 				\__( 'The "actor" identifier is not valid', 'activitypub' ),
-				array( 'status' => 404, 'actor' => $actor )
+				array(
+					'status' => 404,
+					'actor'  => $actor,
+				)
 			);
 		}
 	}
@@ -77,7 +97,10 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		return new WP_Error(
 			'activitypub_no_valid_actor_identifier',
 			\__( 'The "actor" identifier is not valid', 'activitypub' ),
-			array( 'status' => 404, 'actor' => $actor )
+			array(
+				'status' => 404,
+				'actor'  => $actor,
+			)
 		);
 	}
 
@@ -87,7 +110,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 
 	$transient_key = 'activitypub_' . $actor;
 
-	// only check the cache if needed.
+	// Only check the cache if needed.
 	if ( $cached ) {
 		$metadata = \get_transient( $transient_key );
 
@@ -100,7 +123,10 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		$metadata = new WP_Error(
 			'activitypub_no_valid_actor_url',
 			\__( 'The "actor" is no valid URL', 'activitypub' ),
-			array( 'status' => 400, 'actor' => $actor )
+			array(
+				'status' => 400,
+				'actor'  => $actor,
+			)
 		);
 		return $metadata;
 	}
@@ -118,7 +144,10 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		$metadata = new WP_Error(
 			'activitypub_invalid_json',
 			\__( 'No valid JSON data', 'activitypub' ),
-			array( 'status' => 400, 'actor' => $actor )
+			array(
+				'status' => 400,
+				'actor'  => $actor,
+			)
 		);
 		return $metadata;
 	}
@@ -131,7 +160,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 /**
  * Returns the followers of a given user.
  *
- * @param int $user_id The User-ID.
+ * @param int $user_id The user ID.
  *
  * @return array The followers.
  */
@@ -142,7 +171,7 @@ function get_followers( $user_id ) {
 /**
  * Count the number of followers for a given user.
  *
- * @param int $user_id The User-ID.
+ * @param int $user_id The user ID.
  *
  * @return int The number of followers.
  */
@@ -162,12 +191,12 @@ function count_followers( $user_id ) {
 function url_to_authorid( $url ) {
 	global $wp_rewrite;
 
-	// check if url hase the same host
+	// Check if url hase the same host.
 	if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== \wp_parse_url( $url, \PHP_URL_HOST ) ) {
 		return 0;
 	}
 
-	// first, check to see if there is a 'author=N' to match against
+	// First, check to see if there is a 'author=N' to match against.
 	if ( \preg_match( '/[?&]author=(\d+)/i', $url, $values ) ) {
 		$id = \absint( $values[1] );
 		if ( $id ) {
@@ -175,19 +204,19 @@ function url_to_authorid( $url ) {
 		}
 	}
 
-	// check to see if we are using rewrite rules
+	// Check to see if we are using rewrite rules.
 	$rewrite = $wp_rewrite->wp_rewrite_rules();
 
-	// not using rewrite rules, and 'author=N' method failed, so we're out of options
+	// Not using rewrite rules, and 'author=N' method failed, so we're out of options.
 	if ( empty( $rewrite ) ) {
 		return 0;
 	}
 
-	// generate rewrite rule for the author url
+	// Generate rewrite rule for the author url.
 	$author_rewrite = $wp_rewrite->get_author_permastruct();
-	$author_regexp = \str_replace( '%author%', '', $author_rewrite );
+	$author_regexp  = \str_replace( '%author%', '', $author_rewrite );
 
-	// match the rewrite rule with the passed url
+	// Match the rewrite rule with the passed url.
 	if ( \preg_match( '/https?:\/\/(.+)' . \preg_quote( $author_regexp, '/' ) . '([^\/]+)/i', $url, $match ) ) {
 		$user = \get_user_by( 'slug', $match[2] );
 		if ( $user ) {
@@ -199,10 +228,9 @@ function url_to_authorid( $url ) {
 }
 
 /**
- * Verify if url is a wp_ap_comment,
- * Or if it is a previously received remote comment
+ * Verify that url is a wp_ap_comment or a previously received remote comment.
  *
- * @return int comment_id
+ * @return int|bool Comment ID or false if not found.
  */
 function is_comment() {
 	$comment_id = get_query_var( 'c', null );
@@ -210,8 +238,7 @@ function is_comment() {
 	if ( ! is_null( $comment_id ) ) {
 		$comment = \get_comment( $comment_id );
 
-		// Only return local origin comments
-		if ( $comment && $comment->user_id ) {
+		if ( $comment ) {
 			return $comment_id;
 		}
 	}
@@ -220,13 +247,13 @@ function is_comment() {
 }
 
 /**
- * Check for Tombstone Objects
+ * Check for Tombstone Objects.
  *
  * @see https://www.w3.org/TR/activitypub/#delete-activity-outbox
  *
- * @param WP_Error $wp_error A WP_Error-Response of an HTTP-Request
+ * @param WP_Error $wp_error A WP_Error-Response of an HTTP-Request.
  *
- * @return boolean true if HTTP-Code is 410 or 404
+ * @return boolean True if HTTP-Code is 410 or 404.
  */
 function is_tombstone( $wp_error ) {
 	if ( ! is_wp_error( $wp_error ) ) {
@@ -243,13 +270,13 @@ function is_tombstone( $wp_error ) {
 /**
  * Get the REST URL relative to this plugin's namespace.
  *
- * @param string $path Optional. REST route path. Otherwise this plugin's namespaced root.
+ * @param string $path Optional. REST route path. Default ''.
  *
  * @return string REST URL relative to this plugin's namespace.
  */
 function get_rest_url_by_path( $path = '' ) {
-	// we'll handle the leading slash.
-	$path = ltrim( $path, '/' );
+	// We'll handle the leading slash.
+	$path            = ltrim( $path, '/' );
 	$namespaced_path = sprintf( '/%s/%s', ACTIVITYPUB_REST_NAMESPACE, $path );
 	return \get_rest_url( null, $namespaced_path );
 }
@@ -257,37 +284,35 @@ function get_rest_url_by_path( $path = '' ) {
 /**
  * Convert a string from camelCase to snake_case.
  *
- * @param string $string The string to convert.
+ * @param string $input The string to convert.
  *
  * @return string The converted string.
  */
-// phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.stringFound
-function camel_to_snake_case( $string ) {
-	return strtolower( preg_replace( '/(?<!^)[A-Z]/', '_$0', $string ) );
+function camel_to_snake_case( $input ) {
+	return strtolower( preg_replace( '/(?<!^)[A-Z]/', '_$0', $input ) );
 }
 
 /**
  * Convert a string from snake_case to camelCase.
  *
- * @param string $string The string to convert.
+ * @param string $input The string to convert.
  *
  * @return string The converted string.
  */
-// phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.stringFound
-function snake_to_camel_case( $string ) {
-	return lcfirst( str_replace( '_', '', ucwords( $string, '_' ) ) );
+function snake_to_camel_case( $input ) {
+	return lcfirst( str_replace( '_', '', ucwords( $input, '_' ) ) );
 }
 
 /**
  * Escapes a Tag, to be used as a hashtag.
  *
- * @param string $string The string to escape.
+ * @param string $input The string to escape.
  *
- * @return string The escaped hastag.
+ * @return string The escaped hashtag.
  */
-function esc_hashtag( $string ) {
+function esc_hashtag( $input ) {
 
-	$hashtag = \wp_specialchars_decode( $string, ENT_QUOTES );
+	$hashtag = \wp_specialchars_decode( $input, ENT_QUOTES );
 	// Remove all characters that are not letters, numbers, or underscores.
 	$hashtag = \preg_replace( '/emoji-regex(*SKIP)(?!)|[^\p{L}\p{Nd}_]+/u', '_', $hashtag );
 
@@ -295,7 +320,7 @@ function esc_hashtag( $string ) {
 	$hashtag = preg_replace_callback(
 		'/_(.)/',
 		function ( $matches ) {
-			return '' . strtoupper( $matches[1] );
+			return strtoupper( $matches[1] );
 		},
 		$hashtag
 	);
@@ -308,9 +333,9 @@ function esc_hashtag( $string ) {
 	 * Allow defining your own custom hashtag generation rules.
 	 *
 	 * @param string $hashtag The hashtag to be returned.
-	 * @param string $string  The original string.
+	 * @param string $input   The original string.
 	 */
-	$hashtag = apply_filters( 'activitypub_esc_hashtag', $hashtag, $string );
+	$hashtag = apply_filters( 'activitypub_esc_hashtag', $hashtag, $input );
 
 	return esc_html( $hashtag );
 }
@@ -348,8 +373,6 @@ function is_activitypub_request() {
 	}
 
 	// One can trigger an ActivityPub request by adding ?activitypub to the URL.
-	// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.VariableRedeclaration
-	global $wp_query;
 	if ( isset( $wp_query->query_vars['activitypub'] ) ) {
 		return true;
 	}
@@ -380,7 +403,7 @@ function is_activitypub_request() {
 /**
  * This function checks if a user is disabled for ActivityPub.
  *
- * @param int $user_id The User-ID.
+ * @param int $user_id The user ID.
  *
  * @return boolean True if the user is disabled, false otherwise.
  */
@@ -422,6 +445,12 @@ function is_user_disabled( $user_id ) {
 			break;
 	}
 
+	/**
+	 * Allow plugins to disable users for ActivityPub.
+	 *
+	 * @param boolean $return  True if the user is disabled, false otherwise.
+	 * @param int     $user_id The User-ID.
+	 */
 	return apply_filters( 'activitypub_is_user_disabled', $return, $user_id );
 }
 
@@ -431,7 +460,7 @@ function is_user_disabled( $user_id ) {
  * This function is used to check if the 'blog' or 'user'
  * type is disabled for ActivityPub.
  *
- * @param enum $type Can be 'blog' or 'user'.
+ * @param string $type User type. 'blog' or 'user'.
  *
  * @return boolean True if the user type is disabled, false otherwise.
  */
@@ -486,6 +515,12 @@ function is_user_type_disabled( $type ) {
 			break;
 	}
 
+	/**
+	 * Allow plugins to disable user types for ActivityPub.
+	 *
+	 * @param boolean $return True if the user type is disabled, false otherwise.
+	 * @param string  $type   The User-Type.
+	 */
 	return apply_filters( 'activitypub_is_user_type_disabled', $return, $type );
 }
 
@@ -540,20 +575,25 @@ function is_json( $data ) {
 }
 
 /**
- * Check if a blog is public based on the `blog_public` option
+ * Check whther a blog is public based on the `blog_public` option.
  *
- * @return bollean True if public, false if not
+ * @return bool True if public, false if not
  */
 function is_blog_public() {
+	/**
+	 * Filter whether the blog is public.
+	 *
+	 * @param bool $public Whether the blog is public.
+	 */
 	return (bool) apply_filters( 'activitypub_is_blog_public', \get_option( 'blog_public', 1 ) );
 }
 
 /**
- * Sanitize a URL
+ * Sanitize a URL.
  *
- * @param string $value The URL to sanitize
+ * @param string $value The URL to sanitize.
  *
- * @return string|null The sanitized URL or null if invalid
+ * @return string|null The sanitized URL or null if invalid.
  */
 function sanitize_url( $value ) {
 	if ( filter_var( $value, FILTER_VALIDATE_URL ) === false ) {
@@ -564,11 +604,11 @@ function sanitize_url( $value ) {
 }
 
 /**
- * Extract recipient URLs from Activity object
+ * Extract recipient URLs from Activity object.
  *
- * @param array $data
+ * @param array $data The Activity object as array.
  *
- * @return array The list of user URLs
+ * @return array The list of user URLs.
  */
 function extract_recipients_from_activity( $data ) {
 	$recipient_items = array();
@@ -595,10 +635,10 @@ function extract_recipients_from_activity( $data ) {
 
 	$recipients = array();
 
-	// flatten array
+	// Flatten array.
 	foreach ( $recipient_items as $recipient ) {
 		if ( is_array( $recipient ) ) {
-			// check if recipient is an object
+			// Check if recipient is an object.
 			if ( array_key_exists( 'id', $recipient ) ) {
 				$recipients[] = $recipient['id'];
 			}
@@ -611,11 +651,11 @@ function extract_recipients_from_activity( $data ) {
 }
 
 /**
- * Check if passed Activity is Public
+ * Check if passed Activity is Public.
  *
- * @param array $data The Activity object as array
+ * @param array $data The Activity object as array.
  *
- * @return boolean True if public, false if not
+ * @return boolean True if public, false if not.
  */
 function is_activity_public( $data ) {
 	$recipients = extract_recipients_from_activity( $data );
@@ -624,53 +664,58 @@ function is_activity_public( $data ) {
 }
 
 /**
- * Get active users based on a given duration
+ * Get active users based on a given duration.
  *
- * @param int $duration The duration to check in month(s)
+ * @param int $duration Optional. The duration to check in month(s). Default 1.
  *
- * @return int The number of active users
+ * @return int The number of active users.
  */
 function get_active_users( $duration = 1 ) {
 
-	$duration = intval( $duration );
+	$duration      = intval( $duration );
 	$transient_key = sprintf( 'monthly_active_users_%d', $duration );
-	$count = get_transient( $transient_key );
+	$count         = get_transient( $transient_key );
 
 	if ( false === $count ) {
 		global $wpdb;
-		$query = "SELECT COUNT( DISTINCT post_author ) FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND post_date <= DATE_SUB( NOW(), INTERVAL %d MONTH )";
-		$query = $wpdb->prepare( $query, $duration );
-		$count = $wpdb->get_var( $query ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$count = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT( DISTINCT post_author ) FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND post_date <= DATE_SUB( NOW(), INTERVAL %d MONTH )",
+				$duration
+			)
+		);
 
 		set_transient( $transient_key, $count, DAY_IN_SECONDS );
 	}
 
-	// if 0 authors where active
+	// If 0 authors where active.
 	if ( 0 === $count ) {
 		return 0;
 	}
 
-	// if single user mode
+	// If single user mode.
 	if ( is_single_user() ) {
 		return 1;
 	}
 
-	// if blog user is disabled
+	// If blog user is disabled.
 	if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
-		return $count;
+		return (int) $count;
 	}
 
-	// also count blog user
-	return $count + 1;
+	// Also count blog user.
+	return (int) $count + 1;
 }
 
 /**
- * Get the total number of users
+ * Get the total number of users.
  *
- * @return int The total number of users
+ * @return int The total number of users.
  */
 function get_total_users() {
-	// if single user mode
+	// If single user mode.
 	if ( is_single_user() ) {
 		return 1;
 	}
@@ -687,12 +732,12 @@ function get_total_users() {
 		$users = 1;
 	}
 
-	// if blog user is disabled
+	// If blog user is disabled.
 	if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
-		return $users;
+		return (int) $users;
 	}
 
-	return $users + 1;
+	return (int) $users + 1;
 }
 
 /**
@@ -700,65 +745,66 @@ function get_total_users() {
  *
  * @param string $id ActivityPub object ID (usually a URL) to check.
  *
- * @return int|boolean Comment ID, or false on failure.
+ * @return \WP_Comment|boolean Comment, or false on failure.
  */
 function object_id_to_comment( $id ) {
 	return Comment::object_id_to_comment( $id );
 }
 
 /**
- * Verify if URL is a local comment,
- * Or if it is a previously received remote comment
+ * Verify that URL is a local comment or a previously received remote comment.
  * (For threading comments locally)
  *
  * @param string $url The URL to check.
  *
- * @return int comment_ID or null if not found
+ * @return string|null Comment ID or null if not found
  */
 function url_to_commentid( $url ) {
 	return Comment::url_to_commentid( $url );
 }
 
 /**
- * Get the URI of an ActivityPub object
+ * Get the URI of an ActivityPub object.
  *
- * @param array $object The ActivityPub object
+ * @param array|string $data The ActivityPub object.
  *
  * @return string The URI of the ActivityPub object
  */
-function object_to_uri( $object ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
-	// check if it is already simple
-	if ( ! $object || is_string( $object ) ) {
-		return $object;
+function object_to_uri( $data ) {
+	// Check whether it is already simple.
+	if ( ! $data || is_string( $data ) ) {
+		return $data;
 	}
 
-	// check if it is a list, then take first item
-	// this plugin does not support collections
-	if ( array_is_list( $object ) ) {
-		$object = $object[0];
+	/*
+	 * Check if it is a list, then take first item.
+	 * This plugin does not support collections.
+	 */
+	if ( array_is_list( $data ) ) {
+		$data = $data[0];
 	}
 
-	// check if it is simplified now
-	if ( is_string( $object ) ) {
-		return $object;
+	// Check if it is simplified now.
+	if ( is_string( $data ) ) {
+		return $data;
 	}
 
 	$type = 'Object';
-	if ( isset( $object['type'] ) ) {
-		$type = $object['type'];
+	if ( isset( $data['type'] ) ) {
+		$type = $data['type'];
 	}
 
-	// return part of Object that makes most sense
+	// Return part of Object that makes most sense.
 	switch ( $type ) {
 		case 'Link':
-			$object = $object['href'];
+			$data = $data['href'];
 			break;
 		default:
-			$object = $object['id'];
+			$data = $data['id'];
 			break;
 	}
 
-	return $object;
+	return $data;
 }
 
 /**
@@ -820,9 +866,8 @@ function is_local_comment( $comment ) {
 /**
  * Mark a WordPress object as federated.
  *
- * @param WP_Comment|WP_Post|mixed $wp_object
- *
- * @return void
+ * @param \WP_Comment|\WP_Post $wp_object The WordPress object.
+ * @param string               $state     The state of the object.
  */
 function set_wp_object_state( $wp_object, $state ) {
 	$meta_key = 'activitypub_status';
@@ -832,6 +877,12 @@ function set_wp_object_state( $wp_object, $state ) {
 	} elseif ( $wp_object instanceof \WP_Comment ) {
 		\update_comment_meta( $wp_object->comment_ID, $meta_key, $state );
 	} else {
+		/**
+		 * Allow plugins to mark WordPress objects as federated.
+		 *
+		 * @param \WP_Comment|\WP_Post $wp_object The WordPress object.
+		 * @param string               $state     The state of the object.
+		 */
 		\apply_filters( 'activitypub_mark_wp_object_as_federated', $wp_object );
 	}
 }
@@ -839,7 +890,7 @@ function set_wp_object_state( $wp_object, $state ) {
 /**
  * Get the federation state of a WordPress object.
  *
- * @param WP_Comment|WP_Post|mixed $wp_object
+ * @param \WP_Comment|\WP_Post $wp_object The WordPress object.
  *
  * @return string|false The state of the object or false if not found.
  */
@@ -851,6 +902,11 @@ function get_wp_object_state( $wp_object ) {
 	} elseif ( $wp_object instanceof \WP_Comment ) {
 		return \get_comment_meta( $wp_object->comment_ID, $meta_key, true );
 	} else {
+		/**
+		 * Allow plugins to get the federation state of a WordPress object.
+		 *
+		 * @param \WP_Comment|\WP_Post $wp_object The WordPress object.
+		 */
 		return \apply_filters( 'activitypub_get_wp_object_state', false, $wp_object );
 	}
 }
@@ -860,7 +916,7 @@ function get_wp_object_state( $wp_object ) {
  *
  * Set some default descriptions for the default post types.
  *
- * @param WP_Post_Type $post_type The post type object.
+ * @param \WP_Post_Type $post_type The post type object.
  *
  * @return string The description of the post type.
  */
@@ -883,6 +939,12 @@ function get_post_type_description( $post_type ) {
 			}
 	}
 
+	/**
+	 * Allow plugins to get the description of a post type.
+	 *
+	 * @param string        $description The description of the post type.
+	 * @param \WP_Post_Type $post_type   The post type object.
+	 */
 	return apply_filters( 'activitypub_post_type_description', $description, $post_type->name, $post_type );
 }
 
@@ -892,9 +954,9 @@ function get_post_type_description( $post_type ) {
  * @return string The masked version.
  */
 function get_masked_wp_version() {
-	// only show the major and minor version
+	// Only show the major and minor version.
 	$version = get_bloginfo( 'version' );
-	// strip the RC or beta part
+	// Strip the RC or beta part.
 	$version = preg_replace( '/-.*$/', '', $version );
 	$version = explode( '.', $version );
 	$version = array_slice( $version, 0, 2 );
@@ -910,7 +972,7 @@ function get_masked_wp_version() {
  * @return array The enclosures.
  */
 function get_enclosures( $post_id ) {
-	$enclosures = get_post_meta( $post_id, 'enclosure' );
+	$enclosures = get_post_meta( $post_id, 'enclosure', false );
 
 	if ( ! $enclosures ) {
 		return array();
@@ -925,8 +987,8 @@ function get_enclosures( $post_id ) {
 			}
 
 			return array(
-				'url' => $attributes[0],
-				'length' => isset( $attributes[1] ) ? trim( $attributes[1] ) : null,
+				'url'       => $attributes[0],
+				'length'    => isset( $attributes[1] ) ? trim( $attributes[1] ) : null,
 				'mediaType' => isset( $attributes[2] ) ? trim( $attributes[2] ) : null,
 			);
 		},
@@ -943,15 +1005,14 @@ function get_enclosures( $post_id ) {
  *
  * @see https://developer.wordpress.org/reference/functions/get_post_ancestors/
  *
- * @param int|WP_Comment $comment Comment ID or comment object.
+ * @param int|\WP_Comment $comment Comment ID or comment object.
  *
- * @return WP_Comment[] Array of ancestor comments or empty array if there are none.
+ * @return \WP_Comment[] Array of ancestor comments or empty array if there are none.
  */
 function get_comment_ancestors( $comment ) {
 	$comment = \get_comment( $comment );
 
-	// phpcs:ignore Universal.Operators.StrictComparisons.LooseEqual
-	if ( ! $comment || empty( $comment->comment_parent ) || $comment->comment_parent == $comment->comment_ID ) {
+	if ( ! $comment || empty( $comment->comment_parent ) || (int) $comment->comment_parent === (int) $comment->comment_ID ) {
 		return array();
 	}
 
@@ -960,9 +1021,8 @@ function get_comment_ancestors( $comment ) {
 	$id          = (int) $comment->comment_parent;
 	$ancestors[] = $id;
 
-	// phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
 	while ( $id > 0 ) {
-		$ancestor = \get_comment( $id );
+		$ancestor  = \get_comment( $id );
 		$parent_id = (int) $ancestor->comment_parent;
 
 		// Loop detection: If the ancestor has been seen before, break.
@@ -1003,13 +1063,13 @@ function custom_large_numbers( $formatted, $number, $decimals ) {
 		$thousands_sep = $wp_locale->number_format['thousands_sep'];
 	}
 
-	if ( $number < 1000 ) { // any number less than a Thousand.
+	if ( $number < 1000 ) { // Any number less than a Thousand.
 		return \number_format( $number, $decimals, $decimal_point, $thousands_sep );
-	} elseif ( $number < 1000000 ) { // any number less than a million
+	} elseif ( $number < 1000000 ) { // Any number less than a million.
 		return \number_format( $number / 1000, $decimals, $decimal_point, $thousands_sep ) . 'K';
-	} elseif ( $number < 1000000000 ) { // any number less than a billion
+	} elseif ( $number < 1000000000 ) { // Any number less than a billion.
 		return \number_format( $number / 1000000, $decimals, $decimal_point, $thousands_sep ) . 'M';
-	} else { // at least a billion
+	} else { // At least a billion.
 		return \number_format( $number / 1000000000, $decimals, $decimal_point, $thousands_sep ) . 'B';
 	}
 
@@ -1020,9 +1080,8 @@ function custom_large_numbers( $formatted, $number, $decimals ) {
 /**
  * Registers a ActivityPub comment type.
  *
- *
  * @param string $comment_type Key for comment type.
- * @param array  $args         Arguments.
+ * @param array  $args         Optional. Array of arguments for registering a comment type. Default empty array.
  *
  * @return array The registered Activitypub comment type.
  */
@@ -1040,7 +1099,6 @@ function register_comment_type( $comment_type, $args = array() ) {
 
 	/**
 	 * Fires after a ActivityPub comment type is registered.
-	 *
 	 *
 	 * @param string $comment_type Comment type.
 	 * @param array  $args         Arguments used to register the comment type.
@@ -1092,19 +1150,19 @@ function get_reply_intent_uri() {
 /**
  * Replace content with links, mentions or hashtags by Regex callback and not affect protected tags.
  *
- * @param $content        string   The content that should be changed
- * @param $regex          string   The regex to use
- * @param $regex_callback callable Callback for replacement logic
+ * @param string   $content        The content that should be changed.
+ * @param string   $regex          The regex to use.
+ * @param callable $regex_callback Callback for replacement logic.
  *
  * @return string The content with links, mentions, hashtags, etc.
  */
 function enrich_content_data( $content, $regex, $regex_callback ) {
-	// small protection against execution timeouts: limit to 1 MB
+	// Small protection against execution timeouts: limit to 1 MB.
 	if ( mb_strlen( $content ) > MB_IN_BYTES ) {
 		return $content;
 	}
-	$tag_stack = array();
-	$protected_tags = array(
+	$tag_stack          = array();
+	$protected_tags     = array(
 		'pre',
 		'code',
 		'textarea',
@@ -1112,7 +1170,7 @@ function enrich_content_data( $content, $regex, $regex_callback ) {
 		'a',
 	);
 	$content_with_links = '';
-	$in_protected_tag = false;
+	$in_protected_tag   = false;
 	foreach ( wp_html_split( $content ) as $chunk ) {
 		if ( preg_match( '#^<!--[\s\S]*-->$#i', $chunk, $m ) ) {
 			$content_with_links .= $chunk;
@@ -1164,10 +1222,10 @@ function enrich_content_data( $content, $regex, $regex_callback ) {
  * 2. The first part of the post content if it contains the <!--more--> tag.
  * 3. An excerpt of the post content if it is longer than the specified length.
  *
- * @param int|WP_Post $post   The post ID or post object.
- * @param integer     $length The maximum length of the summary.
- *                            Default is 500. It will ne ignored if the post excerpt
- *                            and the content above the <!--more--> tag.
+ * @param int|\WP_Post $post   The post ID or post object.
+ * @param integer      $length The maximum length of the summary.
+ *                             Default is 500. It will be ignored if the post excerpt
+ *                             and the content above the <!--more--> tag.
  *
  * @return string The generated post summary.
  */
@@ -1181,12 +1239,22 @@ function generate_post_summary( $post, $length = 500 ) {
 	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
 
 	if ( $content ) {
+		/**
+		 * Filters the post excerpt.
+		 *
+		 * @param string $content The post excerpt.
+		 */
 		return \apply_filters( 'the_excerpt', $content );
 	}
 
 	$content       = \sanitize_post_field( 'post_content', $post->post_content, $post->ID );
 	$content_parts = \get_extended( $content );
 
+	/**
+	 * Filters the excerpt more value.
+	 *
+	 * @param string $excerpt_more The excerpt more.
+	 */
 	$excerpt_more = \apply_filters( 'activitypub_excerpt_more', '[…]' );
 	$length       = $length - strlen( $excerpt_more );
 
@@ -1211,5 +1279,30 @@ function generate_post_summary( $post, $length = 500 ) {
 		$content = $content[0] . ' ' . $excerpt_more;
 	}
 
+	/*
+	Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
 	return \apply_filters( 'the_excerpt', $content );
+	*/
+	return $content;
+}
+
+/**
+ * Get the content warning of a post.
+ *
+ * @param int|\WP_Post $post_id The post ID or post object.
+ *
+ * @return string|false The content warning or false if not found.
+ */
+function get_content_warning( $post_id ) {
+	$post = get_post( $post_id );
+	if ( ! $post ) {
+		return false;
+	}
+
+	$warning = get_post_meta( $post->ID, 'activitypub_content_warning', true );
+	if ( empty( $warning ) ) {
+		return false;
+	}
+
+	return $warning;
 }

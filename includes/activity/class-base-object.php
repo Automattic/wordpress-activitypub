@@ -3,6 +3,8 @@
  * Inspired by the PHP ActivityPub Library by @Landrok
  *
  * @link https://github.com/landrok/activitypub
+ *
+ * @package Activitypub
  */
 
 namespace Activitypub\Activity;
@@ -30,7 +32,8 @@ class Base_Object {
 	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
 		array(
-			'Hashtag' => 'as:Hashtag',
+			'Hashtag'   => 'as:Hashtag',
+			'sensitive' => 'as:sensitive',
 		),
 	);
 
@@ -44,6 +47,8 @@ class Base_Object {
 	protected $id;
 
 	/**
+	 * The type of the object.
+	 *
 	 * @var string
 	 */
 	protected $type = 'Object';
@@ -428,7 +433,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#source-property
 	 *
-	 * @var ObjectType
+	 * @var array
 	 */
 	protected $source;
 
@@ -446,12 +451,21 @@ class Base_Object {
 	protected $replies;
 
 	/**
-	 * Magic function to implement getter and setter
+	 * Used to mark an object as containing sensitive content.
+	 * Mastodon displays a content warning, requiring users to click
+	 * through to view the content.
+	 *
+	 * @see https://docs.joinmastodon.org/spec/activitypub/#sensitive
+	 *
+	 * @var boolean
+	 */
+	protected $sensitive = false;
+
+	/**
+	 * Magic function to implement getter and setter.
 	 *
 	 * @param string $method The method name.
 	 * @param string $params The method params.
-	 *
-	 * @return void
 	 */
 	public function __call( $method, $params ) {
 		$var = \strtolower( \substr( $method, 4 ) );
@@ -563,9 +577,9 @@ class Base_Object {
 	/**
 	 * Convert JSON input to an array.
 	 *
-	 * @return string The JSON string.
+	 * @param string $json The JSON string.
 	 *
-	 * @return \Activitypub\Activity\Base_Object An Object built from the JSON string.
+	 * @return Base_Object An Object built from the JSON string.
 	 */
 	public static function init_from_json( $json ) {
 		$array = \json_decode( $json, true );
@@ -578,20 +592,20 @@ class Base_Object {
 	}
 
 	/**
-	 * Convert JSON input to an array.
+	 * Convert input array to a Base_Object.
 	 *
-	 * @return string The object array.
+	 * @param array $data The object array.
 	 *
-	 * @return \Activitypub\Activity\Base_Object An Object built from the JSON string.
+	 * @return Base_Object|WP_Error An Object built from the input array or WP_Error when it's not an array.
 	 */
-	public static function init_from_array( $array ) {
-		if ( ! is_array( $array ) ) {
+	public static function init_from_array( $data ) {
+		if ( ! is_array( $data ) ) {
 			return new WP_Error( 'invalid_array', __( 'Invalid array', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$object = new static();
 
-		foreach ( $array as $key => $value ) {
+		foreach ( $data as $key => $value ) {
 			$key = camel_to_snake_case( $key );
 			call_user_func( array( $object, 'set_' . $key ), $value );
 		}
@@ -613,10 +627,10 @@ class Base_Object {
 	/**
 	 * Convert JSON input to an array and pre-fill the object.
 	 *
-	 * @param array $array The array.
+	 * @param array $data The array.
 	 */
-	public function from_array( $array ) {
-		foreach ( $array as $key => $value ) {
+	public function from_array( $data ) {
+		foreach ( $data as $key => $value ) {
 			if ( $value ) {
 				$key = camel_to_snake_case( $key );
 				call_user_func( array( $this, 'set_' . $key ), $value );
@@ -639,12 +653,12 @@ class Base_Object {
 		$vars  = get_object_vars( $this );
 
 		foreach ( $vars as $key => $value ) {
-			// ignotre all _prefixed keys.
+			// Ignore all _prefixed keys.
 			if ( '_' === substr( $key, 0, 1 ) ) {
 				continue;
 			}
 
-			// if value is empty, try to get it from a getter.
+			// If value is empty, try to get it from a getter.
 			if ( ! $value ) {
 				$value = call_user_func( array( $this, 'get_' . $key ) );
 			}
@@ -653,7 +667,7 @@ class Base_Object {
 				$value = $value->to_array( false );
 			}
 
-			// if value is still empty, ignore it for the array and continue.
+			// If value is still empty, ignore it for the array and continue.
 			if ( isset( $value ) ) {
 				$array[ snake_to_camel_case( $key ) ] = $value;
 			}
@@ -667,10 +681,28 @@ class Base_Object {
 		$class = new ReflectionClass( $this );
 		$class = strtolower( $class->getShortName() );
 
+		/**
+		 * Filter the array of the ActivityPub object.
+		 *
+		 * @param array       $array  The array of the ActivityPub object.
+		 * @param string      $class  The class of the ActivityPub object.
+		 * @param int         $id     The ID of the ActivityPub object.
+		 * @param Base_Object $object The ActivityPub object.
+		 *
+		 * @return array The filtered array of the ActivityPub object.
+		 */
 		$array = \apply_filters( 'activitypub_activity_object_array', $array, $class, $this->id, $this );
-		$array = \apply_filters( "activitypub_activity_{$class}_object_array", $array, $this->id, $this );
 
-		return $array;
+		/**
+		 * Filter the array of the ActivityPub object by class.
+		 *
+		 * @param array       $array  The array of the ActivityPub object.
+		 * @param int         $id     The ID of the ActivityPub object.
+		 * @param Base_Object $object The ActivityPub object.
+		 *
+		 * @return array The filtered array of the ActivityPub object.
+		 */
+		return \apply_filters( "activitypub_activity_{$class}_object_array", $array, $this->id, $this );
 	}
 
 	/**
@@ -684,11 +716,11 @@ class Base_Object {
 		$array   = $this->to_array( $include_json_ld_context );
 		$options = \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT;
 
-		/*
-		* Options to be passed to json_encode()
-		*
-		* @param int $options The current options flags
-		*/
+		/**
+		 * Options to be passed to json_encode()
+		 *
+		 * @param int $options The current options flags.
+		 */
 		$options = \apply_filters( 'activitypub_json_encode_options', $options );
 
 		return \wp_json_encode( $array, $options );

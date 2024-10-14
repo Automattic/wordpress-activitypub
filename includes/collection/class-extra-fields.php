@@ -1,11 +1,19 @@
 <?php
+/**
+ * Extra Fields collection file.
+ *
+ * @package Activitypub
+ */
 
 namespace Activitypub\Collection;
 
 use Activitypub\Link;
-use WP_Query;
-use Activitypub\Collection\Users;
 
+use function Activitypub\site_supports_blocks;
+
+/**
+ * Extra Fields collection.
+ */
 class Extra_Fields {
 
 	const USER_POST_TYPE = 'ap_extrafield';
@@ -19,9 +27,9 @@ class Extra_Fields {
 	 * @return \WP_Post[] The extra fields.
 	 */
 	public static function get_actor_fields( $user_id ) {
-		$is_blog = self::is_blog( $user_id );
+		$is_blog   = self::is_blog( $user_id );
 		$post_type = $is_blog ? self::BLOG_POST_TYPE : self::USER_POST_TYPE;
-		$args = array(
+		$args      = array(
 			'post_type' => $post_type,
 			'nopaging'  => true,
 			'orderby'   => 'menu_order',
@@ -31,14 +39,44 @@ class Extra_Fields {
 			$args['author'] = $user_id;
 		}
 
-		$query = new \WP_Query( $args );
+		$query  = new \WP_Query( $args );
 		$fields = $query->posts ?? array();
 
 		return apply_filters( 'activitypub_get_actor_extra_fields', $fields, $user_id );
 	}
 
 	/**
-	 * Transforms the Extra Fields (Cutom Post Types) to ActivityPub Actor-Attachments.
+	 * Get formatted content for an extra field.
+	 *
+	 * @param \WP_Post $post The post.
+	 *
+	 * @return string The formatted content.
+	 */
+	public static function get_formatted_content( $post ) {
+		$content = \get_the_content( null, false, $post );
+		$content = Link::the_content( $content, true );
+		if ( site_supports_blocks() ) {
+			$content = \do_blocks( $content );
+		}
+		$content = \wptexturize( $content );
+		$content = \wp_filter_content_tags( $content );
+
+		// Replace script and style elements.
+		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
+		$content = \strip_shortcodes( $content );
+		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+
+		/**
+		 * Filters the content of an extra field.
+		 *
+		 * @param string   $content The content.
+		 * @param \WP_Post $post    The post.
+		 */
+		return \apply_filters( 'activitypub_extra_field_content', $content, $post );
+	}
+
+	/**
+	 * Transforms the Extra Fields (Custom Post Types) to ActivityPub Actor-Attachments.
 	 *
 	 * @param \WP_Post[] $fields The extra fields.
 	 *
@@ -48,7 +86,7 @@ class Extra_Fields {
 		$attachments = array();
 		\add_filter(
 			'activitypub_link_rel',
-			function( $rel ) {
+			function ( $rel ) {
 				$rel .= ' me';
 
 				return $rel;
@@ -56,19 +94,10 @@ class Extra_Fields {
 		);
 
 		foreach ( $fields as $post ) {
-			$content = \get_the_content( null, false, $post );
-			$content = \do_blocks( $content );
-			$content = \wptexturize( $content );
-			$content = \wp_filter_content_tags( $content );
-			// replace script and style elements
-			$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
-			$content = \strip_shortcodes( $content );
-			$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
-			$content = \apply_filters( 'activitypub_extra_field_content', $content, $post );
-
+			$content       = self::get_formatted_content( $post );
 			$attachments[] = array(
-				'type' => 'PropertyValue',
-				'name' => \get_the_title( $post ),
+				'type'  => 'PropertyValue',
+				'name'  => \get_the_title( $post ),
 				'value' => \html_entity_decode(
 					$content,
 					\ENT_QUOTES,
@@ -78,7 +107,7 @@ class Extra_Fields {
 
 			$link_added = false;
 
-			// Add support for FEP-fb2a, for more information see FEDERATION.md
+			// Add support for FEP-fb2a, for more information see FEDERATION.md.
 			$link_content = \trim( \strip_tags( $content, '<a>' ) );
 			if (
 				\stripos( $link_content, '<a' ) === 0 &&
@@ -94,7 +123,7 @@ class Extra_Fields {
 						'type' => 'Link',
 						'name' => \get_the_title( $post ),
 						'href' => \esc_url( $tags->get_attribute( 'href' ) ),
-						'rel' => explode( ' ', $tags->get_attribute( 'rel' ) ),
+						'rel'  => explode( ' ', $tags->get_attribute( 'rel' ) ),
 					);
 
 					$link_added = true;
@@ -131,6 +160,28 @@ class Extra_Fields {
 	}
 
 	/**
+	 * Check if a post type is the `ap_extrafield` post type.
+	 *
+	 * @param string $post_type The post type.
+	 *
+	 * @return bool True if the post type is `ap_extrafield`, otherwise false.
+	 */
+	public static function is_extra_field_post_type( $post_type ) {
+		return self::USER_POST_TYPE === $post_type;
+	}
+
+	/**
+	 * Check if a post type is the `ap_extrafield_blog` post type.
+	 *
+	 * @param string $post_type The post type.
+	 *
+	 * @return bool True if the post type is `ap_extrafield_blog`, otherwise false.
+	 */
+	public static function is_extra_field_blog_post_type( $post_type ) {
+		return self::BLOG_POST_TYPE === $post_type;
+	}
+
+	/**
 	 * Add default extra fields to an actor.
 	 *
 	 * @param array $extra_fields The extra fields.
@@ -144,7 +195,7 @@ class Extra_Fields {
 			return $extra_fields;
 		}
 
-		$is_blog = self::is_blog( $user_id );
+		$is_blog          = self::is_blog( $user_id );
 		$already_migrated = $is_blog
 			? \get_option( 'activitypub_default_extra_fields' )
 			: \get_user_meta( $user_id, 'activitypub_default_extra_fields', true );
@@ -155,7 +206,7 @@ class Extra_Fields {
 
 		\add_filter(
 			'activitypub_link_rel',
-			function( $rel ) {
+			function ( $rel ) {
 				$rel .= ' me';
 
 				return $rel;
@@ -167,7 +218,7 @@ class Extra_Fields {
 		);
 
 		if ( ! $is_blog ) {
-			$author_url = \get_the_author_meta( 'user_url', $user_id );
+			$author_url       = \get_the_author_meta( 'user_url', $user_id );
 			$author_posts_url = \get_author_posts_url( $user_id );
 
 			$defaults[ \__( 'Profile', 'activitypub' ) ] = $author_posts_url;
@@ -189,15 +240,12 @@ class Extra_Fields {
 				'post_title'     => $title,
 				'post_status'    => 'publish',
 				'post_author'    => $user_id,
-				'post_content'   => sprintf(
-					'<!-- wp:paragraph --><p>%s</p><!-- /wp:paragraph -->',
-					Link::the_content( $url )
-				),
+				'post_content'   => self::make_paragraph_block( Link::the_content( $url ) ),
 				'comment_status' => 'closed',
 				'menu_order'     => $menu_order,
 			);
 
-			$menu_order += 10;
+			$menu_order    += 10;
 			$extra_field_id = wp_insert_post( $extra_field );
 			$extra_fields[] = get_post( $extra_field_id );
 		}
@@ -210,7 +258,22 @@ class Extra_Fields {
 	}
 
 	/**
+	 * Create a paragraph block.
+	 *
+	 * @param string $content The content.
+	 *
+	 * @return string The paragraph block.
+	 */
+	public static function make_paragraph_block( $content ) {
+		if ( ! site_supports_blocks() ) {
+			return $content;
+		}
+		return '<!-- wp:paragraph --><p>' . $content . '</p><!-- /wp:paragraph -->';
+	}
+
+	/**
 	 * Checks if the user is the blog user.
+	 *
 	 * @param int $user_id The user ID.
 	 * @return bool True if the user is the blog user, otherwise false.
 	 */

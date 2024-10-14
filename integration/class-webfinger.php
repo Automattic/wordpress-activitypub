@@ -1,8 +1,15 @@
 <?php
+/**
+ * WebFinger integration file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Integration;
 
-use Activitypub\Rest\Webfinger as Webfinger_Rest;
 use Activitypub\Collection\Users as User_Collection;
+
+use function Activitypub\get_rest_url_by_path;
 
 /**
  * Compatibility with the WebFinger plugin
@@ -11,7 +18,7 @@ use Activitypub\Collection\Users as User_Collection;
  */
 class Webfinger {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		\add_filter( 'webfinger_user_data', array( self::class, 'add_user_discovery' ), 1, 3 );
@@ -19,46 +26,50 @@ class Webfinger {
 	}
 
 	/**
-	 * Add WebFinger discovery links
+	 * Add WebFinger discovery links.
 	 *
-	 * @param array   $array    the jrd array
-	 * @param string  $resource the WebFinger resource
-	 * @param WP_User $user     the WordPress user
+	 * @param array    $jrd  The jrd array.
+	 * @param string   $uri  The WebFinger resource.
+	 * @param \WP_User $user The WordPress user.
 	 *
-	 * @return array the jrd array
+	 * @return array The jrd array.
 	 */
-	public static function add_user_discovery( $array, $resource, $user ) {
+	public static function add_user_discovery( $jrd, $uri, $user ) {
 		$user = User_Collection::get_by_id( $user->ID );
 
 		if ( ! $user || is_wp_error( $user ) ) {
-			return $array;
+			return $jrd;
 		}
 
-		$array['subject'] = sprintf( 'acct:%s', $user->get_webfinger() );
+		$jrd['subject'] = sprintf( 'acct:%s', $user->get_webfinger() );
 
-		$array['aliases'][] = $user->get_url();
-		$array['aliases'][] = $user->get_alternate_url();
+		$jrd['aliases'][] = $user->get_url();
+		$jrd['aliases'][] = $user->get_alternate_url();
 
-		$array['links'][] = array(
+		$jrd['links'][] = array(
 			'rel'  => 'self',
 			'type' => 'application/activity+json',
 			'href' => $user->get_url(),
 		);
 
-		return $array;
+		$jrd['links'][] = array(
+			'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+			'template' => get_rest_url_by_path( 'interactions?uri={uri}' ),
+		);
+
+		return $jrd;
 	}
 
 	/**
-	 * Add WebFinger discovery links
+	 * Add WebFinger discovery links.
 	 *
-	 * @param array   $array    the jrd array
-	 * @param string  $resource the WebFinger resource
-	 * @param WP_User $user     the WordPress user
+	 * @param array  $jrd The jrd array.
+	 * @param string $uri The WebFinger resource.
 	 *
-	 * @return array the jrd array
+	 * @return array|\WP_Error The jrd array or WP_Error.
 	 */
-	public static function add_pseudo_user_discovery( $array, $resource ) {
-		$user = User_Collection::get_by_resource( $resource );
+	public static function add_pseudo_user_discovery( $jrd, $uri ) {
+		$user = User_Collection::get_by_resource( $uri );
 
 		if ( \is_wp_error( $user ) ) {
 			return $user;
@@ -84,6 +95,10 @@ class Webfinger {
 					'rel'  => 'http://webfinger.net/rel/profile-page',
 					'type' => 'text/html',
 					'href' => $user->get_url(),
+				),
+				array(
+					'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+					'template' => get_rest_url_by_path( 'interactions?uri={uri}' ),
 				),
 			),
 		);

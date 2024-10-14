@@ -1,10 +1,14 @@
 <?php
+/**
+ * Attachment Transformer Class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Transformer;
 
-use Activitypub\Transformer\Post;
-
 /**
- * WordPress Attachment Transformer
+ * WordPress Attachment Transformer.
  *
  * The Attachment Transformer is responsible for transforming a WP_Post object into different other
  * Object-Types.
@@ -22,6 +26,7 @@ class Attachment extends Post {
 	protected function get_attachment() {
 		$mime_type  = get_post_mime_type( $this->wp_object->ID );
 		$media_type = preg_replace( '/(\/[a-zA-Z]+)/i', '', $mime_type );
+		$type       = '';
 
 		switch ( $media_type ) {
 			case 'audio':
