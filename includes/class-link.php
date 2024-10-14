@@ -29,11 +29,11 @@ class Link {
 	 */
 	public static function filter_activity_object( $activity ) {
 		/* phpcs:ignore Squiz.PHP.CommentedOutCode.Found
-		Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
-		if ( ! empty( $activity['summary'] ) ) {
+		Only changed it for Person and Group as long is not merged: https://github.com/mastodon/mastodon/pull/28629
+		*/
+		if ( ! empty( $activity['summary'] ) && in_array( $activity['type'], array( 'Person', 'Group' ), true ) ) {
 			$activity['summary'] = self::the_content( $activity['summary'] );
 		}
-		*/
 
 		if ( ! empty( $activity['content'] ) ) {
 			$activity['content'] = self::the_content( $activity['content'] );
