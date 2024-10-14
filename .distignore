@@ -6,6 +6,7 @@
 .travis.yml
 .codeclimate.yml
 .data
+.ddev
 .distignore
 .svnignore
 .wordpress-org
