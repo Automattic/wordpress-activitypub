@@ -139,38 +139,31 @@ class Activitypub {
 			return;
 		}
 
+		$id = false;
+
 		// Only add self link to author pages...
 		if ( is_author() ) {
-			if ( is_user_disabled( get_queried_object_id() ) ) {
-				return;
+			if ( ! is_user_disabled( get_queried_object_id() ) ) {
+				$id = get_user_id( get_queried_object_id() );
 			}
 		} elseif ( is_singular() ) { // or posts/pages/custom-post-types...
-			if ( ! \post_type_supports( \get_post_type(), 'activitypub' ) ) {
-				return;
+			if ( \post_type_supports( \get_post_type(), 'activitypub' ) ) {
+				$id = get_post_id( get_queried_object_id() );
 			}
-		} else { // otherwise return.
+		}
+
+		if ( ! $id ) {
 			return;
 		}
 
-		// Add self link to html and http header.
-		$host = wp_parse_url( home_url() );
-
-		/**
-		 * Filters the self link.
-		 *
-		 * @param string $self_link The self link.
-		 */
-		$self_link = apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . wp_unslash( $request_uri ) ) );
-		$self_link = esc_url( $self_link );
-
 		if ( ! headers_sent() ) {
-			header( 'Link: <' . $self_link . '>; rel="alternate"; type="application/activity+json"' );
+			header( 'Link: <' . esc_url( $id ) . '>; rel="alternate"; type="application/activity+json"' );
 		}
 
 		add_action(
 			'wp_head',
-			function () use ( $self_link ) {
-				echo PHP_EOL . '<link rel="alternate" type="application/activity+json" href="' . esc_url( $self_link ) . '" />' . PHP_EOL;
+			function () use ( $id ) {
+				echo PHP_EOL . '<link rel="alternate" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;
 			}
 		);
 	}
