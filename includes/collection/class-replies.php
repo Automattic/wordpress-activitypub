@@ -156,7 +156,11 @@ class Replies {
 		$total_replies = \get_comments( array_merge( $args, array( 'count' => true ) ) );
 
 		// Modify query args to retrieve paginated results.
-		$comments_per_page = \get_option( 'comments_per_page' );
+		$comments_per_page = (int) \get_option( 'comments_per_page' );
+		// If set to zero, we get errors below. You need at least one comment per page, here.
+		if ( ! $comments_per_page ) {
+			$comments_per_page = 1;
+		}
 
 		// Fetch internal and external comments for current page.
 		$comments = get_comments( self::add_pagination_args( $args, $page, $comments_per_page ) );
