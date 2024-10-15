@@ -1161,15 +1161,43 @@ function normalize_host( $host ) {
 }
 
 /**
+ * Get the reply intent URI as a JavaScript URI.
+ *
+ * @return string The reply intent URI.
+ */
+function get_reply_intent_js() {
+	return sprintf(
+		'javascript:(()=>{window.open(\'%s\'+encodeURIComponent(window.location.href));})();',
+		get_reply_intent_url()
+	);
+}
+
+/**
  * Get the reply intent URI.
  *
  * @return string The reply intent URI.
  */
-function get_reply_intent_uri() {
-	return sprintf(
-		'javascript:(()=>{window.open(\'%s\'+encodeURIComponent(window.location.href));})();',
-		esc_url( \admin_url( 'post-new.php?in_reply_to=' ) )
-	);
+function get_reply_intent_url() {
+	/**
+	 * Filters the reply intent parameters.
+	 *
+	 * @param array $params The reply intent parameters.
+	 */
+	$params = \apply_filters( 'activitypub_reply_intent_params', array() );
+
+	$params += array( 'in_reply_to' => '' );
+	$query   = \http_build_query( $params );
+	$path    = 'post-new.php?' . $query;
+	$url     = \admin_url( $path );
+
+	/**
+	 * Filters the reply intent URL.
+	 *
+	 * @param string $url The reply intent URL.
+	 */
+	$url = \apply_filters( 'activitypub_reply_intent_url', $url );
+
+	return esc_url_raw( $url );
 }
 
 /**

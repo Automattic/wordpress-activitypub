@@ -27,13 +27,13 @@
 
 		<p>
 			<?php
-			$bookmarklet_url = \Activitypub\get_reply_intent_uri();
+			$bookmarklet_js = \Activitypub\get_reply_intent_js();
 
 			/* translators: %s is the domain of this site */
 			$reply_from_template = __( 'Reply from %s', 'activitypub' );
 			$button              = sprintf(
 				'<a href="%s" class="button">%s</a>',
-				esc_url( $bookmarklet_url ), // Need to escape quotes for the bookmarklet.
+				esc_attr( $bookmarklet_js ), // Need to escape quotes for the bookmarklet.
 				sprintf( $reply_from_template, \wp_parse_url( \home_url(), PHP_URL_HOST ) )
 			);
 			/* translators: %s is where the button HTML will be rendered. */
