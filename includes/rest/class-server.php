@@ -8,6 +8,7 @@
 namespace Activitypub\Rest;
 
 use WP_Error;
+use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Signature;
 use Activitypub\Model\Application;
@@ -28,6 +29,7 @@ class Server {
 
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_activitypub_requests' ), 9, 3 );
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'authorize_activitypub_requests' ), 10, 3 );
+		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
 	}
 
 	/**
@@ -180,5 +182,33 @@ class Server {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Modify the parameter priority order for a REST API request.
+	 *
+	 * @param string[]        $order   Array of types to check, in order of priority.
+	 * @param WP_REST_Request $request The request object.
+	 *
+	 * @return string[] The modified order of types to check.
+	 */
+	public static function request_parameter_order( $order, $request ) {
+		$route = $request->get_route();
+
+		// Check if it is an activitypub request and exclude webfinger and nodeinfo endpoints.
+		if ( ! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ) {
+			return $order;
+		}
+
+		$type = $request->get_method();
+
+		if ( WP_REST_Server::CREATABLE !== $type ) {
+			return $order;
+		}
+
+		return array(
+			'POST',
+			'defaults',
+		);
 	}
 }
