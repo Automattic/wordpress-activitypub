@@ -163,13 +163,13 @@ class Activitypub {
 		$self_link = esc_url( $self_link );
 
 		if ( ! headers_sent() ) {
-			header( 'Link: <' . $self_link . '>; rel="alternate"; type="application/activity+json"' );
+			header( 'Link: <' . $self_link . '>; title="ActivityPub (JSON)" rel="alternate"; type="application/activity+json"' );
 		}
 
 		add_action(
 			'wp_head',
 			function () use ( $self_link ) {
-				echo PHP_EOL . '<link rel="alternate" type="application/activity+json" href="' . esc_url( $self_link ) . '" />' . PHP_EOL;
+				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $self_link ) . '" />' . PHP_EOL;
 			}
 		);
 	}
