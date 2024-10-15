@@ -23,6 +23,10 @@ jobs:
           - wp-version: '6.5'
             php-versions: '7.1'
     steps:
+      - name: Install svn
+        run: |
+          sudo apt-get update
+          sudo apt-get install subversion
       - name: Checkout
         uses: actions/checkout@v2
 
