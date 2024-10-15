@@ -157,13 +157,13 @@ class Activitypub {
 		}
 
 		if ( ! headers_sent() ) {
-			header( 'Link: <' . esc_url( $id ) . '>; rel="alternate"; type="application/activity+json"' );
+			header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)" rel="alternate"; type="application/activity+json"' );
 		}
 
 		add_action(
 			'wp_head',
 			function () use ( $id ) {
-				echo PHP_EOL . '<link rel="alternate" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;
+				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;
 			}
 		);
 	}
