@@ -16,7 +16,7 @@
 		<h3><?php esc_html_e( 'Install Bookmarklet', 'activitypub' ); ?></h3>
 		<p><?php esc_html_e( 'Drag and drop this button to your browser’s bookmark bar or save this bookmarklet to reply to posts on other websites from your blog! When visiting a post on another site, click the bookmarklet to start a reply.', 'activitypub' ); ?></p>
 		<p class="activitypub-bookmarklet-wrapper">
-			<a class="activitypub-bookmarklet button" onclick="return false;" href="<?php echo esc_url( \Activitypub\get_reply_intent_uri() ); ?>" style="cursor: grab;">
+			<a class="activitypub-bookmarklet button" onclick="return false;" href="<?php echo esc_attr( \Activitypub\get_reply_intent_js() ); ?>" style="cursor: grab;">
 				<?php // translators: The host (domain) of the Blog. ?>
 				<?php printf( esc_html__( 'Reply from %s', 'activitypub' ), esc_attr( \wp_parse_url( \home_url(), PHP_URL_HOST ) ) ); ?>
 			</a>
@@ -26,7 +26,7 @@
 				<?php esc_html_e( 'Or copy the following code and create a new bookmark. Paste the code into the new bookmark&#8217;s URL field.', 'activitypub' ); ?>
 			</p>
 			<p>
-				<textarea id="activitypub-bookmarklet-code" class="large-text activitypub-code" rows="5" readonly="readonly" aria-labelledby="activitypub-code-desc"><?php echo esc_textarea( \Activitypub\get_reply_intent_uri() ); ?></textarea>
+				<textarea id="activitypub-bookmarklet-code" class="large-text activitypub-code" rows="5" readonly="readonly" aria-labelledby="activitypub-code-desc"><?php echo esc_textarea( \Activitypub\get_reply_intent_js() ); ?></textarea>
 			</p>
 			<p><span class="dashicons dashicons-clipboard"></span> <a href="javascript:;" class="copy-activitypub-bookmarklet-code" style="cursor: copy;"><?php esc_html_e( 'Copy to clipboard', 'activitypub' ); ?></a></p>
 		</div>
@@ -67,6 +67,10 @@
 			<tr>
 				<td>in_reply_to</td>
 				<td><?php esc_html_e( 'The URL of the content you want to reply to.', 'activitypub' ); ?></td>
+			</tr>
+			<tr>
+				<td>post_type</td>
+				<td><?php esc_html_e( 'The Post-Type you want to use for replies.', 'activitypub' ); ?></td>
 			</tr>
 		</tbody>
 	</table>

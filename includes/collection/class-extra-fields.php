@@ -123,8 +123,13 @@ class Extra_Fields {
 						'type' => 'Link',
 						'name' => \get_the_title( $post ),
 						'href' => \esc_url( $tags->get_attribute( 'href' ) ),
-						'rel'  => explode( ' ', $tags->get_attribute( 'rel' ) ),
 					);
+
+					$rel = $tags->get_attribute( 'rel' );
+
+					if ( $rel && \is_string( $rel ) ) {
+						$attachment['rel'] = \explode( ' ', $rel );
+					}
 
 					$link_added = true;
 				}
