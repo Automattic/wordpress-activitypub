@@ -269,8 +269,20 @@ class Activity_Dispatcher {
 	 */
 	public static function add_inboxes_by_mentioned_actors( $inboxes, $user_id, $activity ) {
 		$cc = $activity->get_cc();
-		if ( $cc ) {
-			$mentioned_inboxes = Mention::get_inboxes( $cc );
+		$to = $activity->get_to();
+
+		$audience = array_merge( $cc, $to );
+
+		// Remove "public placeholder" and "same domain" from the audience.
+		$audience = array_filter(
+			$audience,
+			function ( $actor ) {
+				return 'https://www.w3.org/ns/activitystreams#Public' !== $actor && ! is_same_domain( $actor );
+			}
+		);
+
+		if ( $audience ) {
+			$mentioned_inboxes = Mention::get_inboxes( $audience );
 
 			return array_merge( $inboxes, $mentioned_inboxes );
 		}
