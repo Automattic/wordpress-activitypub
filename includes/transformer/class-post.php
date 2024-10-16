@@ -15,9 +15,10 @@ use Activitypub\Collection\Users;
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\get_enclosures;
+use function Activitypub\get_content_warning;
 use function Activitypub\site_supports_blocks;
 use function Activitypub\generate_post_summary;
-use function Activitypub\get_content_warning;
+use function Activitypub\get_content_visibility;
 
 /**
  * WordPress Post Transformer.
@@ -78,7 +79,7 @@ class Post extends Base {
 		}
 
 		// Change order if visibility is "Quiet public".
-		if ( ACTIVITYPUB_POST_VISIBILITY_QUIET_PUBLIC === \get_post_meta( $post->ID, 'activitypub_content_visibility', true ) ) {
+		if ( ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC === get_content_visibility( $post ) ) {
 			$object->set_to( $this->get_cc() );
 			$object->set_cc( $this->get_to() );
 		}

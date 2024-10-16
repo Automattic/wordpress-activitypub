@@ -47,9 +47,9 @@ require_once __DIR__ . '/includes/functions.php';
 \defined( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE' ) || \define( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE', 'note' );
 
 // Post visibility constants.
-\define( 'ACTIVITYPUB_POST_VISIBILITY_PUBLIC', 'public' );
-\define( 'ACTIVITYPUB_POST_VISIBILITY_QUIET_PUBLIC', 'quiet_public' );
-\define( 'ACTIVITYPUB_POST_VISIBILITY_LOCAL', 'local' );
+\define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC', '' );
+\define( 'ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC', 'quiet_public' );
+\define( 'ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL', 'local' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );

@@ -412,7 +412,7 @@ function is_post_disabled( $post ) {
 	$disabled   = false;
 	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
-	if ( ACTIVITYPUB_POST_VISIBILITY_LOCAL === $visibility ) {
+	if ( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ) {
 		$disabled = true;
 	}
 
@@ -1379,4 +1379,31 @@ function is_same_domain( $url ) {
 	$self   = normalize_host( $self );
 
 	return $remote === $self;
+}
+
+/**
+ * Get the visibility of a post.
+ *
+ * @param int $post_id The post ID.
+ *
+ * @return string|false The visibility of the post or false if not found.
+ */
+function get_content_visibility( $post_id ) {
+	$post = get_post( $post_id );
+	if ( ! $post ) {
+		return false;
+	}
+
+	$visibility  = get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+	$_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+	$options     = array(
+		ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
+		ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
+	);
+
+	if ( in_array( $visibility, $options, true ) ) {
+		$_visibility = $visibility;
+	}
+
+	return \apply_filter( 'activitypub_content_visibility', $_visibility, $post );
 }
