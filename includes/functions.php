@@ -1405,5 +1405,5 @@ function get_content_visibility( $post_id ) {
 		$_visibility = $visibility;
 	}
 
-	return \apply_filter( 'activitypub_content_visibility', $_visibility, $post );
+	return \apply_filters( 'activitypub_content_visibility', $_visibility, $post );
 }
