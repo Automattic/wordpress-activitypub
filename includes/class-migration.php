@@ -277,25 +277,7 @@ class Migration {
 	 * Update actor-mode settings.
 	 */
 	private static function migrate_to_4_0_0() {
-		$blog_profile    = \get_option( 'activitypub_enable_blog_user', false );
-		$author_profiles = \get_option( 'activitypub_enable_users', false );
-
-		if (
-			'1' === $blog_profile &&
-			'1' === $author_profiles
-		) {
-			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
-		} elseif (
-			'1' === $blog_profile &&
-			'1' !== $author_profiles
-		) {
-			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
-		} elseif (
-			'1' !== $blog_profile &&
-			'1' === $author_profiles
-		) {
-			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
-		}
+		self::migrate_actor_mode();
 	}
 
 	/**
@@ -358,5 +340,30 @@ class Migration {
 			array( '%s' ),
 			array( '%s' )
 		);
+	}
+
+	/**
+	 * Migrate the actor mode settings.
+	 */
+	public static function migrate_actor_mode() {
+		$blog_profile    = \get_option( 'activitypub_enable_blog_user', '0' );
+		$author_profiles = \get_option( 'activitypub_enable_users', '0' );
+
+		if (
+			'1' === $blog_profile &&
+			'1' === $author_profiles
+		) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		} elseif (
+			'1' === $blog_profile &&
+			'1' !== $author_profiles
+		) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		} elseif (
+			'1' !== $blog_profile &&
+			'1' === $author_profiles
+		) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		}
 	}
 }
