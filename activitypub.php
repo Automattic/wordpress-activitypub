@@ -51,6 +51,12 @@ require_once __DIR__ . '/includes/functions.php';
 \define( 'ACTIVITYPUB_BLOG_MODE', '2' );
 \define( 'ACTIVITYPUB_ACTOR_AND_BLOG_MODE', '3' );
 
+// Post visibility constants.
+\define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC', '' );
+\define( 'ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC', 'quiet_public' );
+\define( 'ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL', 'local' );
+
+// Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
