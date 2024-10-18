@@ -575,7 +575,10 @@ function site_supports_blocks() {
 		return false;
 	}
 
-	if ( ! \function_exists( 'register_block_type_from_metadata' ) ) {
+	if (
+		! \function_exists( 'register_block_type_from_metadata' ) ||
+		! \function_exists( 'do_blocks' )
+	) {
 		return false;
 	}
 
