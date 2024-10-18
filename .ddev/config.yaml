@@ -20,7 +20,7 @@ hooks:
     pre-start:
         - exec-host: 'mkdir -p .ddev/wordpress/wp-content/plugins/${DDEV_PROJECT}'
 web_environment:
-    - WP_VERSION=6.6.1
+    - WP_VERSION=6.6.2
     - WP_LOCALE=en_US
     - WP_TITLE=DDEV WordPress ActivityPub Plugin
     - ADMIN_USER=admin
