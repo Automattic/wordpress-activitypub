@@ -42,7 +42,34 @@ class Blocks {
 					'show_in_rest'      => true,
 					'single'            => true,
 					'type'              => 'string',
-					'sanitize_callback' => 'sanitize_text_field',
+					'sanitize_callback' => function ( $warning ) {
+						if ( $warning ) {
+							return \sanitize_text_field( $warning );
+						}
+
+						return null;
+					},
+				)
+			);
+			\register_post_meta(
+				$post_type,
+				'activitypub_content_visibility',
+				array(
+					'show_in_rest'      => true,
+					'single'            => true,
+					'type'              => 'string',
+					'sanitize_callback' => function ( $visibility ) {
+						$options = array(
+							ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
+							ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
+						);
+
+						if ( in_array( $visibility, $options, true ) ) {
+							return $visibility;
+						}
+
+						return null;
+					},
 				)
 			);
 		}
