@@ -163,7 +163,7 @@ class Activitypub {
 		$self_link = esc_url( $self_link );
 
 		if ( ! headers_sent() ) {
-			header( 'Link: <' . $self_link . '>; title="ActivityPub (JSON)" rel="alternate"; type="application/activity+json"' );
+			header( 'Link: <' . $self_link . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"' );
 		}
 
 		add_action(
