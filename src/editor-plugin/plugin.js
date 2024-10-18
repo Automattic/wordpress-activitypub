@@ -2,8 +2,9 @@ import { PluginDocumentSettingPanel, PluginPreviewMenuItem } from '@wordpress/ed
 import { registerPlugin } from '@wordpress/plugins';
 import { TextControl, RadioControl, __experimentalText as Text } from '@wordpress/components';
 import { Icon, notAllowed, globe, people } from '@wordpress/icons';
-import { useSelect } from '@wordpress/data';
+import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
+import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
 
 
@@ -62,7 +63,10 @@ const EditorPlugin = () => {
 }
 
 function onActivityPubPreview() {
-	// Handle preview action
+	const permalink = select( 'core/editor' ).getPermalink();
+	const previewUrl = addQueryArgs( permalink, { preview: 'true', activitypub: 'true' } );
+
+	window.open( previewUrl, '_blank' );
 }
 
 const EditorPreview = () => {
@@ -92,7 +96,5 @@ const EditorPreview = () => {
 	);
 };
 
-registerPlugin( 'activitypub-editor-plugin', {
-	render: EditorPlugin,
-	render: EditorPreview,
-} );
+registerPlugin( 'activitypub-editor-plugin', { render: EditorPlugin } );
+registerPlugin( 'activitypub-editor-preview', { render: EditorPreview } );
