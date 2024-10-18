@@ -15,6 +15,7 @@ use Activitypub\Collection\Extra_Fields;
 use function Activitypub\is_blog_public;
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_attribution_domains;
 
 /**
  * User class.
@@ -402,5 +403,9 @@ class User extends Actor {
 			return false;
 		}
 		return \update_user_option( $this->_id, 'activitypub_header_image', $value );
+	}
+
+	public function get_attribution_domains() {
+		return get_attribution_domains();
 	}
 }

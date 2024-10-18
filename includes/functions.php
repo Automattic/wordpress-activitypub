@@ -1378,8 +1378,7 @@ function is_same_domain( $url ) {
 	}
 
 	$remote = normalize_host( $remote );
-	$self   = \wp_parse_url( \home_url(), PHP_URL_HOST );
-	$self   = normalize_host( $self );
+	$self   = normalize_host( home_host() );
 
 	return $remote === $self;
 }
@@ -1409,4 +1408,35 @@ function get_content_visibility( $post_id ) {
 	}
 
 	return \apply_filters( 'activitypub_content_visibility', $_visibility, $post );
+}
+
+/**
+ * Retrieves the Host for the current site where the front end is accessible.
+ *
+ * @return string The host for the current site.
+ */
+function home_host() {
+	return \wp_parse_url( \home_url(), PHP_URL_HOST );
+}
+
+/**
+ * Returns the website hosts allowed to credit this blog.
+ *
+ * @return array|null The attribution domains or null if not found.
+ */
+function get_attribution_domains() {
+	if ( '1' !== \get_option( 'activitypub_use_opengraph', '1' ) ) {
+		return null;
+	}
+
+	$domains = \get_option( 'activitypub_attribution_domains', home_host() );
+	$domains = explode( PHP_EOL, $domains );
+	$domains = array_filter( array_map( 'trim', $domains ) );
+	$domains = array_filter( array_map( 'esc_attr', $domains ) );
+
+	if ( ! $domains ) {
+		$domains = null;
+	}
+
+	return $domains;
 }
