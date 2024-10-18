@@ -27,6 +27,6 @@ $object = $transformer->to_object();
 		</style>
 	</head>
 	<body>
-		<div class="status__content"><?php echo $object->get_content(); ?></div>
+		<div class="status__content"><?php echo wp_kses( $object->get_content(), ACTIVITYPUB_MASTODON_HTML_SANITIZER ); ?></div>
 	</body>
 </html>
