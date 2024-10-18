@@ -99,8 +99,8 @@ class Activitypub {
 		} elseif ( is_comment() ) {
 			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() && ! is_post_disabled( \get_the_ID() ) ) {
-			$activitypub_query = \get_query_var( 'activitypub' );
-			if ( 'preview' === $activitypub_query ) {
+			$preview = \get_query_var( 'preview' );
+			if ( $preview ) {
 				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php';
 			} else {
 				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
@@ -221,6 +221,7 @@ class Activitypub {
 	 */
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
+		$vars[] = 'preview';
 		$vars[] = 'c';
 		$vars[] = 'p';
 
