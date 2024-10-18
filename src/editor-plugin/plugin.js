@@ -64,7 +64,7 @@ const EditorPlugin = () => {
 
 function onActivityPubPreview() {
 	const permalink = select( 'core/editor' ).getPermalink();
-	const previewUrl = addQueryArgs( permalink, { preview: 'true', activitypub: 'true' } );
+	const previewUrl = addQueryArgs( permalink, { activitypub: 'preview' } );
 
 	window.open( previewUrl, '_blank' );
 }
@@ -82,6 +82,7 @@ const EditorPreview = () => {
 		{ width: 20, height: 20, viewBox: '0 0 20 20', textAnchor: 'middle', fontSize: '15' },
 		text,
 	);
+
 	return (
 		<>
 			{ PluginPreviewMenuItem ? (
