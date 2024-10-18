@@ -18,6 +18,7 @@ use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\is_blog_public;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_attribution_domains;
 
 /**
  * Blog class.
@@ -529,5 +530,14 @@ class Blog extends Actor {
 	public function get_attachment() {
 		$extra_fields = Extra_Fields::get_actor_fields( $this->_id );
 		return Extra_Fields::fields_to_attachments( $extra_fields );
+	}
+
+	/**
+	 * Returns the website hosts allowed to credit this blog.
+	 *
+	 * @return array|null The attribution domains or null if not found.
+	 */
+	public function get_attribution_domains() {
+		return get_attribution_domains();
 	}
 }
