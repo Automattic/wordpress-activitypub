@@ -1,4 +1,4 @@
-import { PluginDocumentSettingPanel } from '@wordpress/editor';
+import { PluginDocumentSettingPanel, PluginPreviewMenuItem } from '@wordpress/editor';
 import { registerPlugin } from '@wordpress/plugins';
 import { TextControl, RadioControl, __experimentalText as Text } from '@wordpress/components';
 import { Icon, notAllowed, globe, people } from '@wordpress/icons';
@@ -61,4 +61,38 @@ const EditorPlugin = () => {
 	);
 }
 
-registerPlugin( 'activitypub-editor-plugin', { render: EditorPlugin } );
+function onActivityPubPreview() {
+	// Handle preview action
+}
+
+const EditorPreview = () => {
+	const el = React.createElement;
+	const svg = wp.primitives.SVG;
+	const text = el(
+		'text',
+		{ x: 7.5, y: 15, fill: '#000' },
+		"⁂",
+	);
+	const fediverseIcon = el(
+		svg,
+		{ width: 20, height: 20, viewBox: '0 0 20 20', textAnchor: 'middle', fontSize: '15' },
+		text,
+	);
+	return (
+		<>
+			{ PluginPreviewMenuItem ? (
+				<PluginPreviewMenuItem
+					onClick={ () => onActivityPubPreview() }
+					icon={ fediverseIcon }
+				>
+					{ __( 'Fediverse preview', 'activitypub' ) }
+				</PluginPreviewMenuItem>
+			) : null }
+		</>
+	);
+};
+
+registerPlugin( 'activitypub-editor-plugin', {
+	render: EditorPlugin,
+	render: EditorPreview,
+} );
