@@ -532,6 +532,11 @@ class Blog extends Actor {
 		return Extra_Fields::fields_to_attachments( $extra_fields );
 	}
 
+	/**
+	 * Returns the website hosts allowed to credit this blog.
+	 *
+	 * @return array|null The attribution domains or null if not found.
+	 */
 	public function get_attribution_domains() {
 		return get_attribution_domains();
 	}
