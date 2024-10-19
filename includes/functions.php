@@ -1431,8 +1431,6 @@ function get_attribution_domains() {
 
 	$domains = \get_option( 'activitypub_attribution_domains', home_host() );
 	$domains = explode( PHP_EOL, $domains );
-	$domains = array_filter( array_map( 'trim', $domains ) );
-	$domains = array_filter( array_map( 'esc_attr', $domains ) );
 
 	if ( ! $domains ) {
 		$domains = null;
