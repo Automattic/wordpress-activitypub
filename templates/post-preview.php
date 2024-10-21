@@ -23,7 +23,6 @@ $object = $transformer->to_object();
 		<meta charset="utf-8">
 		<title><?php echo esc_html( $object->get_name() ); ?></title>
 		<style>
-			/* add font family of mastodon.social */
 			body {
 				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 				font-size: 1em;
@@ -31,7 +30,6 @@ $object = $transformer->to_object();
 				margin: 0;
 				padding: 0;
 			}
-			/* simple three column layout like on mastodon.social */
 			.columns {
 				display: flex;
 				flex-direction: row;
@@ -39,7 +37,6 @@ $object = $transformer->to_object();
 				margin: 0 auto;
 				max-width: 1200px;
 			}
-			/* design the form fileds like on mastodon.social */
 			.sidebar {
 				flex: 1;
 				padding: 1em;
@@ -88,7 +85,6 @@ $object = $transformer->to_object();
 				height: 48px;
 				background-color: #333;
 			}
-			/** design main area like on mastodon.social */
 			main {
 				flex: 1;
 				border: 1px solid #ccc;
@@ -130,10 +126,10 @@ $object = $transformer->to_object();
 			}
 			main .content {
 				margin: 1em 0;
-				font-size: 19px;
+				font-size: 1.2em;
 			}
 			main .content h2 {
-				font-size: 19px;
+				font-size: 1.2em;
 			}
 			main .attachments {
 				border-radius: 8px;
@@ -170,11 +166,10 @@ $object = $transformer->to_object();
 				text-decoration: underline;
 			}
 			main .column-header {
-				font-size: 1.1em;
+				font-size: 1.5em;
 				margin: 0;
 				padding: 5px 10px;
 				border-bottom: 1px solid #ccc;
-				height: 25px;
 				vertical-align: middle;
 			}
 		</style>
