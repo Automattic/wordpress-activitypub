@@ -47,9 +47,9 @@ require_once __DIR__ . '/includes/functions.php';
 \defined( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE' ) || \define( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE', 'note' );
 
 // Define Actor-Modes for the plugin.
-\define( 'ACTIVITYPUB_ACTOR_MODE', '1' );
-\define( 'ACTIVITYPUB_BLOG_MODE', '2' );
-\define( 'ACTIVITYPUB_ACTOR_AND_BLOG_MODE', '3' );
+\define( 'ACTIVITYPUB_ACTOR_MODE', 'actor' );
+\define( 'ACTIVITYPUB_BLOG_MODE', 'blog' );
+\define( 'ACTIVITYPUB_ACTOR_AND_BLOG_MODE', 'actor_blog' );
 
 // Post visibility constants.
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC', '' );
