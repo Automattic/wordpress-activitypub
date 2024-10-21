@@ -17,9 +17,8 @@ const EditorPlugin = () => {
 	const labelStyling = {
 		verticalAlign: "middle",
 		gap: "4px",
-		justifyContent:
-		"start", display:
-		"inline-flex",
+		justifyContent: "start",
+		display: "inline-flex",
 		alignItems: "center"
 	}
 
