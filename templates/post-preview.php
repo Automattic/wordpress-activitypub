@@ -220,9 +220,9 @@ $object = $transformer->to_object();
 						<?php endforeach; ?>
 					</div>
 					<div class="tags">
-						<?php foreach ( $object->get_tag() as $tag ) : ?>
-							<?php if ( 'Hashtag' === $tag['type'] ) : ?>
-								<a href="<?php echo esc_url( $tag['href'] ); ?>"><?php echo esc_html( $tag['name'] ); ?></a>
+						<?php foreach ( $object->get_tag() as $hashtag ) : ?>
+							<?php if ( 'Hashtag' === $hashtag['type'] ) : ?>
+								<a href="<?php echo esc_url( $hashtag['href'] ); ?>"><?php echo esc_html( $hashtag['name'] ); ?></a>
 							<?php endif; ?>
 						<?php endforeach; ?>
 					</div>
