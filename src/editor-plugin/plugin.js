@@ -1,9 +1,10 @@
-import { PluginDocumentSettingPanel } from '@wordpress/editor';
+import { PluginDocumentSettingPanel, PluginPreviewMenuItem } from '@wordpress/editor';
 import { registerPlugin } from '@wordpress/plugins';
 import { TextControl, RadioControl, __experimentalText as Text } from '@wordpress/components';
-import { Icon, notAllowed, globe, people } from '@wordpress/icons';
-import { useSelect } from '@wordpress/data';
+import { Icon, notAllowed, globe, people, post } from '@wordpress/icons';
+import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
+import { addQueryArgs } from '@wordpress/url';
 import { __ } from '@wordpress/i18n';
 
 
@@ -60,4 +61,43 @@ const EditorPlugin = () => {
 	);
 }
 
+function onActivityPubPreview() {
+	const previewLink = select( 'core/editor' ).getEditedPostPreviewLink();
+	const fediversePreviewLink = addQueryArgs( previewLink, { activitypub: 'true' } );
+
+	window.open( fediversePreviewLink, '_blank' );
+}
+
+const EditorPreview = () => {
+	const el = React.createElement;
+	const svg = wp.primitives.SVG;
+	const text = el(
+		'text',
+		{ x: 7.5, y: 15, fill: '#000' },
+		"⁂",
+	);
+	const fediverseIcon = el(
+		svg,
+		{ width: 20, height: 20, viewBox: '0 0 20 20', textAnchor: 'middle', fontSize: '15' },
+		text,
+	);
+	// check if post was saved
+	const post_status = useSelect( ( select ) => select( 'core/editor' ).getCurrentPost().status );
+
+	return (
+		<>
+			{ PluginPreviewMenuItem ? (
+				<PluginPreviewMenuItem
+					onClick={ () => onActivityPubPreview() }
+					icon={ fediverseIcon }
+					disabled={ post_status === 'auto-draft' }
+				>
+					{ __( 'Fediverse preview', 'activitypub' ) }
+				</PluginPreviewMenuItem>
+			) : null }
+		</>
+	);
+};
+
 registerPlugin( 'activitypub-editor-plugin', { render: EditorPlugin } );
+registerPlugin( 'activitypub-editor-preview', { render: EditorPreview } );

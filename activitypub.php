@@ -46,6 +46,37 @@ require_once __DIR__ . '/includes/functions.php';
 \defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) || \define( 'ACTIVITYPUB_SEND_VARY_HEADER', false );
 \defined( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE' ) || \define( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE', 'note' );
 
+/*
+ * Mastodon HTML sanitizer.
+ *
+ * @see https://docs.joinmastodon.org/spec/activitypub/#sanitization
+ */
+\define(
+	'ACTIVITYPUB_MASTODON_HTML_SANITIZER',
+	array(
+		'p'          => array(),
+		'span'       => array( 'class' ),
+		'br'         => array(),
+		'a'          => array( 'href', 'rel', 'class' ),
+		'del'        => array(),
+		'pre'        => array(),
+		'code'       => array(),
+		'em'         => array(),
+		'strong'     => array(),
+		'b'          => array(),
+		'i'          => array(),
+		'u'          => array(),
+		'ul'         => array(),
+		'ol'         => array( 'start', 'reversed' ),
+		'li'         => array( 'value' ),
+		'blockquote' => array(),
+		'h1'         => array(),
+		'h2'         => array(),
+		'h3'         => array(),
+		'h4'         => array(),
+	)
+);
+
 // Post visibility constants.
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC', '' );
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC', 'quiet_public' );
