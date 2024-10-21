@@ -43,6 +43,10 @@ class Actor extends Base_Object {
 				'@id'   => 'lemmy:moderators',
 				'@type' => '@id',
 			),
+			'attributionDomains'        => array(
+				'@id'   => 'toot:attributionDomains',
+				'@type' => '@id',
+			),
 			'postingRestrictedToMods'   => 'lemmy:postingRestrictedToMods',
 			'discoverable'              => 'toot:discoverable',
 			'indexable'                 => 'toot:indexable',
@@ -184,4 +188,14 @@ class Actor extends Base_Object {
 	 * @var boolean
 	 */
 	protected $sensitive = null;
+
+	/**
+	 * Domains allowed to use `fediverse:creator` for this actor in
+	 * published articles.
+	 *
+	 * @see https://blog.joinmastodon.org/2024/07/highlighting-journalism-on-mastodon/
+	 *
+	 * @var array
+	 */
+	protected $attribution_domains = null;
 }
