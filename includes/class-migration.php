@@ -87,7 +87,7 @@ class Migration {
 	 * @return bool True if the database structure is up to date, false otherwise.
 	 */
 	public static function is_latest_version() {
-		return (bool) version_compare(
+		return (bool) \version_compare(
 			self::get_version(),
 			self::get_target_version(),
 			'=='
@@ -120,23 +120,34 @@ class Migration {
 		if ( ! \wp_next_scheduled( 'activitypub_migrate', $version_from_db ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_migrate', array( $version_from_db ) );
 		}
-		if ( version_compare( $version_from_db, '0.17.0', '<' ) ) {
+		if ( \version_compare( $version_from_db, '0.17.0', '<' ) ) {
 			self::migrate_from_0_16();
 		}
-		if ( version_compare( $version_from_db, '1.3.0', '<' ) ) {
+		if ( \version_compare( $version_from_db, '1.3.0', '<' ) ) {
 			self::migrate_from_1_2_0();
 		}
-		if ( version_compare( $version_from_db, '2.1.0', '<' ) ) {
+		if ( \version_compare( $version_from_db, '2.1.0', '<' ) ) {
 			self::migrate_from_2_0_0();
 		}
-		if ( version_compare( $version_from_db, '2.3.0', '<' ) ) {
+		if ( \version_compare( $version_from_db, '2.3.0', '<' ) ) {
 			self::migrate_from_2_2_0();
 		}
-		if ( version_compare( $version_from_db, '3.0.0', '<' ) ) {
+		if ( \version_compare( $version_from_db, '3.0.0', '<' ) ) {
 			self::migrate_from_2_6_0();
 		}
+		if ( \version_compare( $version_from_db, '4.0.0', '<' ) ) {
+			self::migrate_to_4_0_0();
+		}
 
-		update_option( 'activitypub_db_version', self::get_target_version() );
+		/**
+		 * Fires when the system has to be migrated.
+		 *
+		 * @param string $version_from_db The version from which to migrate.
+		 * @param string $target_version  The target version to migrate to.
+		 */
+		\do_action( 'activitypub_migrate', $version_from_db, self::get_target_version() );
+
+		\update_option( 'activitypub_db_version', self::get_target_version() );
 
 		self::unlock();
 	}
@@ -147,7 +158,7 @@ class Migration {
 	 * @param string $version_from_db The version from which to migrate.
 	 */
 	public static function async_migration( $version_from_db ) {
-		if ( version_compare( $version_from_db, '1.0.0', '<' ) ) {
+		if ( \version_compare( $version_from_db, '1.0.0', '<' ) ) {
 			self::migrate_from_0_17();
 		}
 	}
@@ -263,6 +274,13 @@ class Migration {
 	}
 
 	/**
+	 * Update actor-mode settings.
+	 */
+	private static function migrate_to_4_0_0() {
+		self::migrate_actor_mode();
+	}
+
+	/**
 	 * Set the defaults needed for the plugin to work.
 	 *
 	 * Add the ActivityPub capability to all users that can publish posts.
@@ -322,5 +340,30 @@ class Migration {
 			array( '%s' ),
 			array( '%s' )
 		);
+	}
+
+	/**
+	 * Migrate the actor mode settings.
+	 */
+	public static function migrate_actor_mode() {
+		$blog_profile    = \get_option( 'activitypub_enable_blog_user', '0' );
+		$author_profiles = \get_option( 'activitypub_enable_users', '0' );
+
+		if (
+			'1' === $blog_profile &&
+			'1' === $author_profiles
+		) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		} elseif (
+			'1' === $blog_profile &&
+			'1' !== $author_profiles
+		) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		} elseif (
+			'1' !== $blog_profile &&
+			'1' === $author_profiles
+		) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		}
 	}
 }

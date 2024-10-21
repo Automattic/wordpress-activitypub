@@ -269,22 +269,14 @@ class Admin {
 		);
 		\register_setting(
 			'activitypub',
-			'activitypub_enable_users',
+			'activitypub_actor_mode',
 			array(
-				'type'        => 'boolean',
-				'description' => \__( 'Every Author on this Blog (with the publish_posts capability) gets his own ActivityPub enabled Profile.', 'activitypub' ),
+				'type'        => 'integer',
+				'description' => \__( 'Choose your preferred Actor-Mode.', 'activitypub' ),
 				'default'     => '1',
 			)
 		);
-		\register_setting(
-			'activitypub',
-			'activitypub_enable_blog_user',
-			array(
-				'type'        => 'boolean',
-				'description' => \__( 'Your Blog becomes an ActivityPub compatible Profile.', 'activitypub' ),
-				'default'     => '0',
-			)
-		);
+
 		\register_setting(
 			'activitypub',
 			'activitypub_attribution_domains',
