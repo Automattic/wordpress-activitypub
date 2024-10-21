@@ -132,6 +132,9 @@ $object = $transformer->to_object();
 				margin: 1em 0;
 				font-size: 19px;
 			}
+			main .content h2 {
+				font-size: 19px;
+			}
 			main .attachments {
 				border-radius: 8px;
 				box-sizing: border-box;
@@ -210,6 +213,9 @@ $object = $transformer->to_object();
 						</div>
 					</address>
 					<div class="content">
+						<?php if ( 'Article' === $object->get_type() && $object->get_name() ) : ?>
+							<h2><?php echo esc_html( $object->get_name() ); ?></h2>
+						<?php endif; ?>
 						<?php echo wp_kses( 'Article' === $object->get_type() ? $object->get_summary() : $object->get_content(), ACTIVITYPUB_MASTODON_HTML_SANITIZER ); ?>
 					</div>
 					<div class="attachments">
