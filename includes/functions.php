@@ -505,7 +505,7 @@ function is_user_type_disabled( $type ) {
 				break;
 			}
 
-			if ( '1' !== \get_option( 'activitypub_enable_blog_user', '0' ) ) {
+			if ( ACTIVITYPUB_ACTOR_MODE === \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
 				$disabled = true;
 				break;
 			}
@@ -525,7 +525,7 @@ function is_user_type_disabled( $type ) {
 				break;
 			}
 
-			if ( '1' !== \get_option( 'activitypub_enable_users', '1' ) ) {
+			if ( ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
 				$disabled = true;
 				break;
 			}
