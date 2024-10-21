@@ -277,6 +277,24 @@ class Admin {
 			)
 		);
 
+		\register_setting(
+			'activitypub',
+			'activitypub_attribution_domains',
+			array(
+				'type'              => 'string',
+				'description'       => \__( 'Websites allowed to credit you.', 'activitypub' ),
+				'default'           => home_host(),
+				'sanitize_callback' => function ( $value ) {
+					$value = explode( PHP_EOL, $value );
+					$value = array_filter( array_map( 'trim', $value ) );
+					$value = array_filter( array_map( 'esc_attr', $value ) );
+					$value = implode( PHP_EOL, $value );
+
+					return $value;
+				},
+			)
+		);
+
 		// Blog-User Settings.
 		\register_setting(
 			'activitypub_blog',
