@@ -231,7 +231,17 @@
 						</th>
 						<td>
 							<p>
-								<label><input type="checkbox" name="activitypub_use_opengraph" id="activitypub_use_opengraph" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_opengraph', '1' ) ); ?> /> <?php echo wp_kses( \__( 'Automatically add <code>&lt;meta name="fediverse:creator" /&gt;</code> tags for Authors and the Blog-User. You can read more about the feature on the <a href="https://blog.joinmastodon.org/2024/07/highlighting-journalism-on-mastodon/" target="_blank">Mastodon Blog</a>.', 'activitypub' ), 'post' ); ?></label>
+								<label>
+									<input type="checkbox" name="activitypub_use_opengraph" id="activitypub_use_opengraph" value="1" <?php echo \checked( '1', \get_option( 'activitypub_use_opengraph', '1' ) ); ?> />
+									<?php echo wp_kses( \__( 'Automatically add <code>&lt;meta name="fediverse:creator" /&gt;</code> tags for Authors and the Blog-User. You can read more about the feature on the <a href="https://blog.joinmastodon.org/2024/07/highlighting-journalism-on-mastodon/" target="_blank">Mastodon Blog</a>.', 'activitypub' ), 'post' ); ?>
+								</label>
+							</p>
+							<p>
+								<label for="activitypub_attribution_domains">
+									<?php esc_html_e( 'Websites allowed to credit you.', 'activitypub' ); ?>
+								</label>
+								<textarea id="activitypub_attribution_domains" name="activitypub_attribution_domains" class="large-text" cols="50" rows="5" placeholder="<?php echo \esc_textarea( \Activitypub\home_host() ); ?>"><?php echo esc_textarea( \get_option( 'activitypub_attribution_domains', \Activitypub\home_host() ) ); ?></textarea>
+								<?php esc_html_e( 'One per line. Protects from false attributions.', 'activitypub' ); ?>
 							</p>
 						</td>
 					</tr>
