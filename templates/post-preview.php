@@ -210,7 +210,7 @@ $object = $transformer->to_object();
 						</div>
 					</address>
 					<div class="content">
-						<?php echo wp_kses( $object->get_content(), ACTIVITYPUB_MASTODON_HTML_SANITIZER ); ?>
+						<?php echo wp_kses( 'Article' === $object->get_type() ? $object->get_summary() : $object->get_content(), ACTIVITYPUB_MASTODON_HTML_SANITIZER ); ?>
 					</div>
 					<div class="attachments">
 						<?php foreach ( $object->get_attachment() as $attachment ) : ?>
