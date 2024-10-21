@@ -269,20 +269,29 @@ class Admin {
 		);
 		\register_setting(
 			'activitypub',
-			'activitypub_enable_users',
+			'activitypub_actor_mode',
 			array(
-				'type'        => 'boolean',
-				'description' => \__( 'Every Author on this Blog (with the publish_posts capability) gets his own ActivityPub enabled Profile.', 'activitypub' ),
+				'type'        => 'integer',
+				'description' => \__( 'Choose your preferred Actor-Mode.', 'activitypub' ),
 				'default'     => '1',
 			)
 		);
+
 		\register_setting(
 			'activitypub',
-			'activitypub_enable_blog_user',
+			'activitypub_attribution_domains',
 			array(
-				'type'        => 'boolean',
-				'description' => \__( 'Your Blog becomes an ActivityPub compatible Profile.', 'activitypub' ),
-				'default'     => '0',
+				'type'              => 'string',
+				'description'       => \__( 'Websites allowed to credit you.', 'activitypub' ),
+				'default'           => home_host(),
+				'sanitize_callback' => function ( $value ) {
+					$value = explode( PHP_EOL, $value );
+					$value = array_filter( array_map( 'trim', $value ) );
+					$value = array_filter( array_map( 'esc_attr', $value ) );
+					$value = implode( PHP_EOL, $value );
+
+					return $value;
+				},
 			)
 		);
 

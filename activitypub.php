@@ -22,7 +22,7 @@ use WP_CLI;
 require_once __DIR__ . '/includes/compat.php';
 require_once __DIR__ . '/includes/functions.php';
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '3.3.3' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '4.0.0' );
 
 /**
  * Initialize the plugin constants.
@@ -76,6 +76,11 @@ require_once __DIR__ . '/includes/functions.php';
 		'h4'         => array(),
 	)
 );
+
+// Define Actor-Modes for the plugin.
+\define( 'ACTIVITYPUB_ACTOR_MODE', 'actor' );
+\define( 'ACTIVITYPUB_BLOG_MODE', 'blog' );
+\define( 'ACTIVITYPUB_ACTOR_AND_BLOG_MODE', 'actor_blog' );
 
 // Post visibility constants.
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC', '' );
