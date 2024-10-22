@@ -516,7 +516,7 @@ class Activitypub {
 			)
 		);
 
-		// register Outbox Post-Type
+		// Register Outbox Post-Type.
 		register_post_type(
 			Outbox::POST_TYPE,
 			array(

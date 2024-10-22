@@ -11,8 +11,8 @@ use WP_Post;
 use WP_Comment;
 
 use Activitypub\Activity\Activity;
-use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Replies;
+use Activitypub\Activity\Base_Object;
 
 /**
  * WordPress Base Transformer.
