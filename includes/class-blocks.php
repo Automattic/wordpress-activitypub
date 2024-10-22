@@ -146,6 +146,23 @@ class Blocks {
 				'render_callback' => array( self::class, 'render_reply_block' ),
 			)
 		);
+		\register_block_type_from_metadata(
+			ACTIVITYPUB_PLUGIN_DIR . '/build/likes',
+			array(
+				'render_callback' => array( self::class, 'render_post_likes_block' ),
+			)
+		);
+	}
+
+	/**
+	 * Render the post likes block.
+	 *
+	 * @param array $attrs The block attributes.
+	 *
+	 * @return string The HTML to render.
+	 */
+	public static function render_post_likes_block( $attrs ) {
+		return '<div>POST LIKES HERE</div>';
 	}
 
 	/**
