@@ -138,11 +138,6 @@ class Followers {
 			'enum'    => array( 'asc', 'desc' ),
 		);
 
-		$params['user_id'] = array(
-			'required' => true,
-			'type'     => 'string',
-		);
-
 		$params['context'] = array(
 			'type'    => 'string',
 			'default' => 'simple',

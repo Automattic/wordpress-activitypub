@@ -111,11 +111,6 @@ class Following {
 			'type' => 'integer',
 		);
 
-		$params['user_id'] = array(
-			'required' => true,
-			'type'     => 'string',
-		);
-
 		return $params;
 	}
 

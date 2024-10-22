@@ -151,11 +151,6 @@ class Actors {
 			'type' => 'string',
 		);
 
-		$params['user_id'] = array(
-			'required' => true,
-			'type'     => 'string',
-		);
-
 		return $params;
 	}
 }

@@ -292,11 +292,6 @@ class Collection {
 	public static function request_parameters() {
 		$params = array();
 
-		$params['user_id'] = array(
-			'required' => true,
-			'type'     => 'string',
-		);
-
 		return $params;
 	}
 
