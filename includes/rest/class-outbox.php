@@ -163,11 +163,6 @@ class Outbox {
 			'default' => 1,
 		);
 
-		$params['user_id'] = array(
-			'required' => true,
-			'type'     => 'string',
-		);
-
 		return $params;
 	}
 }
