@@ -1,5 +1,5 @@
 {
-  "$schema": "https://schemas.wp.org/trunk/block.json",
+	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"name": "activitypub/remote-reply",
 	"apiVersion": 3,
 	"version": "1.0.0",
@@ -7,5 +7,5 @@
 	"category": "widgets",
 	"description": "",
 	"textdomain": "activitypub",
-  "viewScript": "file:./index.js"
+	"viewScript": "file:./index.js"
 }

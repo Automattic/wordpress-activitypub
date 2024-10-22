@@ -149,7 +149,7 @@ class Delete {
 
 		if ( is_array( $comments ) ) {
 			foreach ( $comments as $comment ) {
-				wp_delete_comment( $comment->comment_ID );
+				wp_delete_comment( $comment->comment_ID, true );
 			}
 		}
 	}

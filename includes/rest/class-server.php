@@ -207,7 +207,7 @@ class Server {
 		}
 
 		return array(
-			'POST',
+			'JSON',
 			'defaults',
 		);
 	}
