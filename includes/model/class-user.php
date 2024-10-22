@@ -106,7 +106,13 @@ class User extends Actor {
 	 * @return string The user ID.
 	 */
 	public function get_id() {
-		return $this->get_url();
+		$permalink = \get_user_option( 'activitypub_use_permalink_as_id', $this->_id );
+
+		if ( '1' === $permalink ) {
+			return $this->get_url();
+		}
+
+		return \add_query_arg( 'author', $this->_id, \trailingslashit( \home_url() ) );
 	}
 
 	/**

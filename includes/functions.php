@@ -11,6 +11,7 @@ use WP_Error;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Users;
+use Activitypub\Transformer\Post;
 
 /**
  * Returns the ActivityPub default JSON-context.
@@ -1361,6 +1362,41 @@ function get_content_warning( $post_id ) {
 	}
 
 	return $warning;
+}
+
+/**
+ * Get the ActivityPub ID of a User by the WordPress User ID.
+ *
+ * @param int $id The WordPress User ID.
+ *
+ * @return string The ActivityPub ID (a URL) of the User.
+ */
+function get_user_id( $id ) {
+	$user = Users::get_by_id( $id );
+
+	if ( ! $user ) {
+		return false;
+	}
+
+	return $user->get_id();
+}
+
+/**
+ * Get the ActivityPub ID of a Post by the WordPress Post ID.
+ *
+ * @param int $id The WordPress Post ID.
+ *
+ * @return string The ActivityPub ID (a URL) of the Post.
+ */
+function get_post_id( $id ) {
+	$post = get_post( $id );
+
+	if ( ! $post ) {
+		return false;
+	}
+
+	$transformer = new Post( $post );
+	return $transformer->get_id();
 }
 
 /**

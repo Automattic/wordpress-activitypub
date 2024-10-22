@@ -114,7 +114,13 @@ class Blog extends Actor {
 	 * @return string The User ID.
 	 */
 	public function get_id() {
-		return $this->get_url();
+		$permalink = \get_option( 'activitypub_use_permalink_as_id_for_blog', false );
+
+		if ( $permalink ) {
+			return $this->get_url();
+		}
+
+		return \add_query_arg( 'author', $this->_id, \trailingslashit( \home_url() ) );
 	}
 
 	/**
