@@ -1,4 +1,10 @@
 <?php
+/**
+ * ActivityPub Class.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
 use Exception;
@@ -8,16 +14,8 @@ use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
 
-use function Activitypub\is_comment;
-use function Activitypub\sanitize_url;
-use function Activitypub\is_local_comment;
-use function Activitypub\site_supports_blocks;
-use function Activitypub\is_user_type_disabled;
-use function Activitypub\is_activitypub_request;
-use function Activitypub\should_comment_be_federated;
-
 /**
- * ActivityPub Class
+ * ActivityPub Class.
  *
  * @author Matthias Pfefferle
  */
@@ -28,10 +26,11 @@ class Activitypub {
 	public static function init() {
 		\add_filter( 'template_include', array( self::class, 'render_json_template' ), 99 );
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
+		\add_filter( 'redirect_canonical', array( self::class, 'redirect_canonical' ), 10, 2 );
 		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
 		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
 
-		// Add support for ActivityPub to custom post types
+		// Add support for ActivityPub to custom post types.
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post' ) ) : array();
 
 		foreach ( $post_types as $post_type ) {
@@ -54,14 +53,12 @@ class Activitypub {
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
-		// register several post_types
+		// Register several post_types.
 		self::register_post_types();
 	}
 
 	/**
-	 * Activation Hook
-	 *
-	 * @return void
+	 * Activation Hook.
 	 */
 	public static function activate() {
 		self::flush_rewrite_rules();
@@ -69,9 +66,7 @@ class Activitypub {
 	}
 
 	/**
-	 * Deactivation Hook
-	 *
-	 * @return void
+	 * Deactivation Hook.
 	 */
 	public static function deactivate() {
 		self::flush_rewrite_rules();
@@ -79,9 +74,7 @@ class Activitypub {
 	}
 
 	/**
-	 * Uninstall Hook
-	 *
-	 * @return void
+	 * Uninstall Hook.
 	 */
 	public static function uninstall() {
 		Scheduler::deregister_schedules();
@@ -109,7 +102,7 @@ class Activitypub {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/user-json.php';
 		} elseif ( is_comment() ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
-		} elseif ( \is_singular() ) {
+		} elseif ( \is_singular() && ! is_post_disabled( \get_the_ID() ) ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
 		} elseif ( \is_home() && ! is_user_type_disabled( 'blog' ) ) {
 			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
@@ -126,7 +119,7 @@ class Activitypub {
 			if ( \is_wp_error( $verification ) ) {
 				header( 'HTTP/1.1 401 Unauthorized' );
 
-				// fallback as template_loader can't return http headers
+				// Fallback as template_loader can't return http headers.
 				return $template;
 			}
 		}
@@ -140,54 +133,79 @@ class Activitypub {
 
 	/**
 	 * Add the 'self' link to the header.
-	 *
-	 * @see
-	 *
-	 * @return void
 	 */
 	public static function add_headers() {
-		// phpcs:ignore
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		$request_uri = $_SERVER['REQUEST_URI'];
 
 		if ( ! $request_uri ) {
 			return;
 		}
 
-		// only add self link to author pages...
+		$id = false;
+
+		// Only add self link to author pages...
 		if ( is_author() ) {
-			if ( is_user_disabled( get_queried_object_id() ) ) {
-				return;
+			if ( ! is_user_disabled( get_queried_object_id() ) ) {
+				$id = get_user_id( get_queried_object_id() );
 			}
 		} elseif ( is_singular() ) { // or posts/pages/custom-post-types...
-			if ( ! \post_type_supports( \get_post_type(), 'activitypub' ) ) {
-				return;
+			if ( \post_type_supports( \get_post_type(), 'activitypub' ) ) {
+				$id = get_post_id( get_queried_object_id() );
 			}
-		} else { // otherwise return
+		}
+
+		if ( ! $id ) {
 			return;
 		}
 
-		// add self link to html and http header
-		$host      = wp_parse_url( home_url() );
-		$self_link = esc_url(
-			apply_filters(
-				'self_link',
-				set_url_scheme(
-					// phpcs:ignore
-					'http://' . $host['host'] . wp_unslash( $request_uri )
-				)
-			)
-		);
-
 		if ( ! headers_sent() ) {
-			header( 'Link: <' . $self_link . '>; rel="alternate"; type="application/activity+json"' );
+			header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"' );
 		}
 
 		add_action(
 			'wp_head',
-			function () use ( $self_link ) {
-				echo PHP_EOL . '<link rel="alternate" type="application/activity+json" href="' . esc_url( $self_link ) . '" />' . PHP_EOL;
+			function () use ( $id ) {
+				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;
 			}
 		);
+	}
+
+	/**
+	 * Add support for `p` and `author` query vars.
+	 *
+	 * @param string $redirect_url  The URL to redirect to.
+	 * @param string $requested_url The requested URL.
+	 *
+	 * @return string $redirect_url
+	 */
+	public static function redirect_canonical( $redirect_url, $requested_url ) {
+		if ( ! is_activitypub_request() ) {
+			return $redirect_url;
+		}
+
+		$query = \wp_parse_url( $requested_url, PHP_URL_QUERY );
+
+		if ( ! $query ) {
+			return $redirect_url;
+		}
+
+		$query_params = \wp_parse_args( $query );
+		unset( $query_params['activitypub'] );
+
+		if ( 1 !== count( $query_params ) ) {
+			return $redirect_url;
+		}
+
+		if ( isset( $query_params['p'] ) ) {
+			return null;
+		}
+
+		if ( isset( $query_params['author'] ) ) {
+			return null;
+		}
+
+		return $requested_url;
 	}
 
 	/**
@@ -200,21 +218,21 @@ class Activitypub {
 
 		$comment_id = get_query_var( 'c', null );
 
-		// check if it seems to be a comment
+		// Check if it seems to be a comment.
 		if ( ! $comment_id ) {
 			return;
 		}
 
 		$comment = get_comment( $comment_id );
 
-		// load a 404 page if `c` is set but not valid
+		// Load a 404 page if `c` is set but not valid.
 		if ( ! $comment ) {
 			global $wp_query;
 			$wp_query->set_404();
 			return;
 		}
 
-		// stop if it's not an ActivityPub comment
+		// Stop if it's not an ActivityPub comment.
 		if ( is_activitypub_request() && ! is_local_comment( $comment ) ) {
 			return;
 		}
@@ -225,6 +243,10 @@ class Activitypub {
 
 	/**
 	 * Add the 'activitypub' query variable so WordPress won't mangle it.
+	 *
+	 * @param array $vars The query variables.
+	 *
+	 * @return array The query variables.
 	 */
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
@@ -287,9 +309,9 @@ class Activitypub {
 	/**
 	 * Function to retrieve Avatar URL if stored in meta.
 	 *
-	 * @param int|WP_Comment $comment
+	 * @param int|\WP_Comment $comment The comment ID or object.
 	 *
-	 * @return string $url
+	 * @return string The Avatar URL.
 	 */
 	public static function get_avatar_url( $comment ) {
 		if ( \is_numeric( $comment ) ) {
@@ -302,8 +324,6 @@ class Activitypub {
 	 * Store permalink in meta, to send delete Activity.
 	 *
 	 * @param string $post_id The Post ID.
-	 *
-	 * @return void
 	 */
 	public static function trash_post( $post_id ) {
 		\add_post_meta(
@@ -315,22 +335,22 @@ class Activitypub {
 	}
 
 	/**
-	 * Delete permalink from meta
+	 * Delete permalink from meta.
 	 *
-	 * @param string $post_id The Post ID
-	 *
-	 * @return void
+	 * @param string $post_id The Post ID.
 	 */
 	public static function untrash_post( $post_id ) {
 		\delete_post_meta( $post_id, 'activitypub_canonical_url' );
 	}
 
 	/**
-	 * Add rewrite rules
+	 * Add rewrite rules.
 	 */
 	public static function add_rewrite_rules() {
-		// If another system needs to take precedence over the ActivityPub rewrite rules,
-		// they can define their own and will manually call the appropriate functions as required.
+		/*
+		 * If another system needs to take precedence over the ActivityPub rewrite rules,
+		 * they can define their own and will manually call the appropriate functions as required.
+		 */
 		if ( ACTIVITYPUB_DISABLE_REWRITES ) {
 			return;
 		}
@@ -366,7 +386,7 @@ class Activitypub {
 	}
 
 	/**
-	 * Flush rewrite rules;
+	 * Flush rewrite rules.
 	 */
 	public static function flush_rewrite_rules() {
 		self::add_rewrite_rules();
@@ -374,9 +394,7 @@ class Activitypub {
 	}
 
 	/**
-	 * Adds metabox on wp-admin/tools.php
-	 *
-	 * @return void
+	 * Adds metabox on wp-admin/tools.php.
 	 */
 	public static function tool_box() {
 		if ( \current_user_can( 'edit_posts' ) ) {
@@ -385,12 +403,10 @@ class Activitypub {
 	}
 
 	/**
-	 * Theme compatibility stuff
-	 *
-	 * @return void
+	 * Theme compatibility stuff.
 	 */
 	public static function theme_compat() {
-		// We assume that you want to use Post-Formats when enabling the setting
+		// We assume that you want to use Post-Formats when enabling the setting.
 		if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ) {
 			if ( ! get_theme_support( 'post-formats' ) ) {
 				// Add support for the Aside, Gallery Post Formats...
@@ -409,11 +425,9 @@ class Activitypub {
 	}
 
 	/**
-	 * Display plugin upgrade notice to users
+	 * Display plugin upgrade notice to users.
 	 *
-	 * @param array $data The plugin data
-	 *
-	 * @return void
+	 * @param array $data The plugin data.
 	 */
 	public static function plugin_update_message( $data ) {
 		if ( ! isset( $data['upgrade_notice'] ) ) {
@@ -435,9 +449,7 @@ class Activitypub {
 	}
 
 	/**
-	 * Register Custom Post Types
-	 *
-	 * @return void
+	 * Register Custom Post Types.
 	 */
 	private static function register_post_types() {
 		\register_post_type(
@@ -527,7 +539,7 @@ class Activitypub {
 
 		// Both User and Blog Extra Fields types have the same args.
 		$args = array(
-			'labels'           => array(
+			'labels'              => array(
 				'name'          => _x( 'Extra fields', 'post_type plural name', 'activitypub' ),
 				'singular_name' => _x( 'Extra field', 'post_type single name', 'activitypub' ),
 				'add_new'       => __( 'Add new', 'activitypub' ),
@@ -561,9 +573,7 @@ class Activitypub {
 	/**
 	 * Add the 'activitypub' capability to users who can publish posts.
 	 *
-	 * @param int   $user_id  User ID.
-	 *
-	 * @param array $userdata The raw array of data passed to wp_insert_user().
+	 * @param int $user_id User ID.
 	 */
 	public static function user_register( $user_id ) {
 		if ( \user_can( $user_id, 'publish_posts' ) ) {

@@ -1,4 +1,10 @@
 <?php
+/**
+ * Followers Table-Class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Table;
 
 use WP_List_Table;
@@ -11,9 +17,20 @@ if ( ! \class_exists( '\WP_List_Table' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 }
 
+/**
+ * Followers Table-Class.
+ */
 class Followers extends WP_List_Table {
+	/**
+	 * User ID.
+	 *
+	 * @var int
+	 */
 	private $user_id;
 
+	/**
+	 * Constructor.
+	 */
 	public function __construct() {
 		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
 			$this->user_id = Users::BLOG_USER_ID;
@@ -30,6 +47,11 @@ class Followers extends WP_List_Table {
 		);
 	}
 
+	/**
+	 * Get columns.
+	 *
+	 * @return array
+	 */
 	public function get_columns() {
 		return array(
 			'cb'         => '<input type="checkbox" />',
@@ -42,16 +64,22 @@ class Followers extends WP_List_Table {
 		);
 	}
 
+	/**
+	 * Returns sortable columns.
+	 *
+	 * @return array
+	 */
 	public function get_sortable_columns() {
-		$sortable_columns = array(
+		return array(
 			'post_title' => array( 'post_title', true ),
 			'modified'   => array( 'modified', false ),
 			'published'  => array( 'published', false ),
 		);
-
-		return $sortable_columns;
 	}
 
+	/**
+	 * Prepare items.
+	 */
 	public function prepare_items() {
 		$columns = $this->get_columns();
 		$hidden  = array();
@@ -64,26 +92,22 @@ class Followers extends WP_List_Table {
 
 		$args = array();
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['orderby'] ) ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$args['orderby'] = sanitize_text_field( wp_unslash( $_GET['orderby'] ) );
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['order'] ) ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$args['order'] = sanitize_text_field( wp_unslash( $_GET['order'] ) );
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['s'] ) && isset( $_REQUEST['_wpnonce'] ) ) {
 			$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
 			if ( wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
 			}
 		}
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		$followers_with_count = FollowerCollection::get_followers_with_count( $this->user_id, $per_page, $page_num, $args );
 		$followers            = $followers_with_count['followers'];
@@ -113,12 +137,24 @@ class Followers extends WP_List_Table {
 		}
 	}
 
+	/**
+	 * Returns bulk actions.
+	 *
+	 * @return array
+	 */
 	public function get_bulk_actions() {
 		return array(
 			'delete' => __( 'Delete', 'activitypub' ),
 		);
 	}
 
+	/**
+	 * Column default.
+	 *
+	 * @param array  $item        Item.
+	 * @param string $column_name Column name.
+	 * @return string
+	 */
 	public function column_default( $item, $column_name ) {
 		if ( ! array_key_exists( $column_name, $item ) ) {
 			return __( 'None', 'activitypub' );
@@ -126,6 +162,12 @@ class Followers extends WP_List_Table {
 		return $item[ $column_name ];
 	}
 
+	/**
+	 * Column avatar.
+	 *
+	 * @param array $item Item.
+	 * @return string
+	 */
 	public function column_avatar( $item ) {
 		return sprintf(
 			'<img src="%s" width="25px;" />',
@@ -133,45 +175,63 @@ class Followers extends WP_List_Table {
 		);
 	}
 
+	/**
+	 * Column url.
+	 *
+	 * @param array $item Item.
+	 * @return string
+	 */
 	public function column_url( $item ) {
 		return sprintf(
 			'<a href="%s" target="_blank">%s</a>',
-			$item['url'],
+			esc_url( $item['url'] ),
 			$item['url']
 		);
 	}
 
+	/**
+	 * Column cb.
+	 *
+	 * @param array $item Item.
+	 * @return string
+	 */
 	public function column_cb( $item ) {
 		return sprintf( '<input type="checkbox" name="followers[]" value="%s" />', esc_attr( $item['identifier'] ) );
 	}
 
+	/**
+	 * Process action.
+	 */
 	public function process_action() {
 		if ( ! isset( $_REQUEST['followers'] ) || ! isset( $_REQUEST['_wpnonce'] ) ) {
-			return false;
+			return;
 		}
 		$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) );
 		if ( ! wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-			return false;
+			return;
 		}
 
 		if ( ! current_user_can( 'edit_user', $this->user_id ) ) {
-			return false;
+			return;
 		}
 
-		$followers = $_REQUEST['followers']; // phpcs:ignore
+		$followers = $_REQUEST['followers']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 
-		switch ( $this->current_action() ) {
-			case 'delete':
-				if ( ! is_array( $followers ) ) {
-					$followers = array( $followers );
-				}
-				foreach ( $followers as $follower ) {
-					FollowerCollection::remove_follower( $this->user_id, $follower );
-				}
-				break;
+		if ( $this->current_action() === 'delete' ) {
+			if ( ! is_array( $followers ) ) {
+				$followers = array( $followers );
+			}
+			foreach ( $followers as $follower ) {
+				FollowerCollection::remove_follower( $this->user_id, $follower );
+			}
 		}
 	}
 
+	/**
+	 * Returns user count.
+	 *
+	 * @return int
+	 */
 	public function get_user_count() {
 		return FollowerCollection::count_followers( $this->user_id );
 	}

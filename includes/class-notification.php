@@ -1,4 +1,9 @@
 <?php
+/**
+ * Notification file.
+ *
+ * @package Activitypub
+ */
 
 namespace Activitypub;
 
@@ -37,15 +42,15 @@ class Notification {
 	/**
 	 * Notification constructor.
 	 *
-	 * @param string $type   The type of the notification.
-	 * @param string $actor  The actor URL.
-	 * @param array  $object The Activity object.
-	 * @param int    $target The WordPress User-Id.
+	 * @param string $type     The type of the notification.
+	 * @param string $actor    The actor URL.
+	 * @param array  $activity The Activity object.
+	 * @param int    $target   The WordPress User-Id.
 	 */
-	public function __construct( $type, $actor, $object, $target ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
-		$this->type = $type;
-		$this->actor = $actor;
-		$this->object = $object;
+	public function __construct( $type, $actor, $activity, $target ) {
+		$this->type   = $type;
+		$this->actor  = $actor;
+		$this->object = $activity;
 		$this->target = $target;
 	}
 

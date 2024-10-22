@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/pfefferle/wordpress-activitypub/
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 3.3.1
+ * Version: 3.3.3
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -11,41 +11,52 @@
  * Requires PHP: 7.0
  * Text Domain: activitypub
  * Domain Path: /languages
+ *
+ * @package Activitypub
  */
 
 namespace Activitypub;
 
 use WP_CLI;
 
-use function Activitypub\is_blog_public;
-use function Activitypub\site_supports_blocks;
-
 require_once __DIR__ . '/includes/compat.php';
 require_once __DIR__ . '/includes/functions.php';
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '3.3.1' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '4.0.0' );
 
 /**
  * Initialize the plugin constants.
  */
 \defined( 'ACTIVITYPUB_REST_NAMESPACE' ) || \define( 'ACTIVITYPUB_REST_NAMESPACE', 'activitypub/1.0' );
 \defined( 'ACTIVITYPUB_EXCERPT_LENGTH' ) || \define( 'ACTIVITYPUB_EXCERPT_LENGTH', 400 );
+\defined( 'ACTIVITYPUB_NOTE_LENGTH' ) || \define( 'ACTIVITYPUB_NOTE_LENGTH', 400 );
 \defined( 'ACTIVITYPUB_SHOW_PLUGIN_RECOMMENDATIONS' ) || \define( 'ACTIVITYPUB_SHOW_PLUGIN_RECOMMENDATIONS', true );
 \defined( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS' ) || \define( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS', 3 );
 \defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || \define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))' );
 \defined( 'ACTIVITYPUB_USERNAME_REGEXP' ) || \define( 'ACTIVITYPUB_USERNAME_REGEXP', '(?:([A-Za-z0-9\._-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))' );
-\defined( 'ACTIVITYPUB_URL_REGEXP' ) || \define( 'ACTIVITYPUB_URL_REGEXP', '(www.|http:|https:)+[^\s]+[\w\/]' );
+\defined( 'ACTIVITYPUB_URL_REGEXP' ) || \define( 'ACTIVITYPUB_URL_REGEXP', '(https?:|www\.)\S+[\w\/]' );
 \defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "<h2>[ap_title]</h2>\n\n[ap_content]\n\n[ap_hashtags]\n\n[ap_shortlink]" );
 \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) || \define( 'ACTIVITYPUB_AUTHORIZED_FETCH', false );
 \defined( 'ACTIVITYPUB_DISABLE_REWRITES' ) || \define( 'ACTIVITYPUB_DISABLE_REWRITES', false );
 \defined( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS' ) || \define( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS', false );
-// Disable reactions like `Like` and `Announce` by default
+// Disable reactions like `Like` and `Announce` by default.
 \defined( 'ACTIVITYPUB_DISABLE_REACTIONS' ) || \define( 'ACTIVITYPUB_DISABLE_REACTIONS', true );
 \defined( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS' ) || \define( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS', false );
 \defined( 'ACTIVITYPUB_SHARED_INBOX_FEATURE' ) || \define( 'ACTIVITYPUB_SHARED_INBOX_FEATURE', false );
 \defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) || \define( 'ACTIVITYPUB_SEND_VARY_HEADER', false );
 \defined( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE' ) || \define( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE', 'note' );
 
+// Define Actor-Modes for the plugin.
+\define( 'ACTIVITYPUB_ACTOR_MODE', 'actor' );
+\define( 'ACTIVITYPUB_BLOG_MODE', 'blog' );
+\define( 'ACTIVITYPUB_ACTOR_AND_BLOG_MODE', 'actor_blog' );
+
+// Post visibility constants.
+\define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC', '' );
+\define( 'ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC', 'quiet_public' );
+\define( 'ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL', 'local' );
+
+// Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
@@ -66,7 +77,7 @@ function rest_init() {
 	Rest\Collection::init();
 	Rest\Interaction::init();
 
-	// load NodeInfo endpoints only if blog is public
+	// Load NodeInfo endpoints only if blog is public.
 	if ( is_blog_public() ) {
 		Rest\NodeInfo::init();
 	}
@@ -103,7 +114,7 @@ function plugin_init() {
 
 
 /**
- * Class Autoloader
+ * Class Autoloader.
  */
 \spl_autoload_register(
 	function ( $full_class ) {
@@ -112,7 +123,7 @@ function plugin_init() {
 
 		if ( strncmp( $full_class, $base, strlen( $base ) ) === 0 ) {
 			$maybe_uppercase = str_replace( $base, '', $full_class );
-			$class = strtolower( $maybe_uppercase );
+			$class           = strtolower( $maybe_uppercase );
 			// All classes should be capitalized. If this is instead looking for a lowercase method, we ignore that.
 			if ( $maybe_uppercase === $class ) {
 				return;
@@ -131,7 +142,7 @@ function plugin_init() {
 			if ( file_exists( $file ) && is_readable( $file ) ) {
 				require_once $file;
 			} else {
-				// translators: %s is the class name
+				// translators: %s is the class name.
 				$message = sprintf( esc_html__( 'Required class not found or not readable: %s', 'activitypub' ), esc_html( $full_class ) );
 				Debug::write_log( $message );
 				\wp_die( $message ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -141,10 +152,12 @@ function plugin_init() {
 );
 
 /**
- * Add plugin settings link
+ * Add plugin settings link.
+ *
+ * @param array $actions The current actions.
  */
 function plugin_settings_link( $actions ) {
-	$settings_link = array();
+	$settings_link   = array();
 	$settings_link[] = \sprintf(
 		'<a href="%1s">%2s</a>',
 		\menu_page_url( 'activitypub', false ),
@@ -179,13 +192,14 @@ function plugin_settings_link( $actions ) {
 	)
 );
 
-// Load integrations
+// Load integrations.
 require_once __DIR__ . '/integration/load.php';
 
 /**
- * `get_plugin_data` wrapper
+ * `get_plugin_data` wrapper.
  *
- * @return array The plugin metadata array
+ * @param array $default_headers Optional. The default plugin headers. Default empty array.
+ * @return array The plugin metadata array.
  */
 function get_plugin_meta( $default_headers = array() ) {
 	if ( ! $default_headers ) {
@@ -221,7 +235,7 @@ function get_plugin_version() {
 	return $meta['Version'];
 }
 
-// Check for CLI env, to add the CLI commands
+// Check for CLI env, to add the CLI commands.
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command(
 		'activitypub',

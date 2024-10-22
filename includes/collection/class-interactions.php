@@ -1,7 +1,12 @@
 <?php
+/**
+ * Interactions collection file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Collection;
 
-use WP_Error;
 use WP_Comment_Query;
 use Activitypub\Comment;
 
@@ -11,18 +16,18 @@ use function Activitypub\object_id_to_comment;
 use function Activitypub\get_remote_metadata_by_actor;
 
 /**
- * ActivityPub Interactions Collection
+ * ActivityPub Interactions Collection.
  */
 class Interactions {
 	const INSERT = 'insert';
 	const UPDATE = 'update';
 
 	/**
-	 * Add a comment to a post
+	 * Add a comment to a post.
 	 *
-	 * @param array $activity The activity-object
+	 * @param array $activity The activity-object.
 	 *
-	 * @return array|false The commentdata or false on failure
+	 * @return array|false The comment data or false on failure.
 	 */
 	public static function add_comment( $activity ) {
 		$commentdata = self::activity_to_comment( $activity );
@@ -35,13 +40,13 @@ class Interactions {
 		$comment_post_id   = \url_to_postid( $in_reply_to );
 		$parent_comment_id = url_to_commentid( $in_reply_to );
 
-		// save only replys and reactions
+		// Save only replies and reactions.
 		if ( ! $comment_post_id && $parent_comment_id ) {
 			$parent_comment  = get_comment( $parent_comment_id );
 			$comment_post_id = $parent_comment->comment_post_ID;
 		}
 
-		// not a reply to a post or comment
+		// Not a reply to a post or comment.
 		if ( ! $comment_post_id ) {
 			return false;
 		}
@@ -53,16 +58,16 @@ class Interactions {
 	}
 
 	/**
-	 * Update a comment
+	 * Update a comment.
 	 *
-	 * @param array $activity The activity-object
+	 * @param array $activity The activity object.
 	 *
-	 * @return array|string|int|\WP_Error|false The commentdata or false on failure
+	 * @return array|string|int|\WP_Error|false The comment data or false on failure.
 	 */
 	public static function update_comment( $activity ) {
 		$meta = get_remote_metadata_by_actor( $activity['actor'] );
 
-		//Determine comment_ID
+		// Determine comment_ID.
 		$comment     = object_id_to_comment( \esc_url_raw( $activity['object']['id'] ) );
 		$commentdata = \get_comment( $comment, ARRAY_A );
 
@@ -70,8 +75,8 @@ class Interactions {
 			return false;
 		}
 
-		//found a local comment id
-		$commentdata['comment_author'] = \esc_attr( $meta['name'] ? $meta['name'] : $meta['preferredUsername'] );
+		// Found a local comment id.
+		$commentdata['comment_author']  = \esc_attr( $meta['name'] ? $meta['name'] : $meta['preferredUsername'] );
 		$commentdata['comment_content'] = \addslashes( $activity['object']['content'] );
 
 		return self::persist( $commentdata, self::UPDATE );
@@ -80,7 +85,7 @@ class Interactions {
 	/**
 	 * Adds an incoming Like, Announce, ... as a comment to a post.
 	 *
-	 * @param array  $activity Activity array.
+	 * @param array $activity Activity array.
 	 *
 	 * @return array|false      Comment data or `false` on failure.
 	 */
@@ -126,7 +131,7 @@ class Interactions {
 	/**
 	 * Get interaction(s) for a given URL/ID.
 	 *
-	 * @param strin $url The URL/ID to get interactions for.
+	 * @param string $url The URL/ID to get interactions for.
 	 *
 	 * @return array The interactions as WP_Comment objects.
 	 */
@@ -168,19 +173,19 @@ class Interactions {
 	public static function get_interactions_by_actor( $actor ) {
 		$meta = get_remote_metadata_by_actor( $actor );
 
-		// get URL, because $actor seems to be the ID
+		// Get URL, because $actor seems to be the ID.
 		if ( $meta && ! is_wp_error( $meta ) && isset( $meta['url'] ) ) {
 			$actor = object_to_uri( $meta['url'] );
 		}
 
-		$args = array(
+		$args          = array(
 			'nopaging'   => true,
 			'author_url' => $actor,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
 				array(
-					'key'   => 'protocol',
-					'value' => 'activitypub',
+					'key'     => 'protocol',
+					'value'   => 'activitypub',
 					'compare' => '=',
 				),
 			),
@@ -193,7 +198,7 @@ class Interactions {
 	 * Adds line breaks to the list of allowed comment tags.
 	 *
 	 * @param  array  $allowed_tags Allowed HTML tags.
-	 * @param  string $context      Context.
+	 * @param  string $context      Optional. Context. Default empty.
 	 *
 	 * @return array Filtered tag list.
 	 */
@@ -218,21 +223,21 @@ class Interactions {
 	/**
 	 * Convert an Activity to a WP_Comment
 	 *
-	 * @param array $activity The Activity array
+	 * @param array $activity The Activity array.
 	 *
-	 * @return array|false The commentdata or false on failure
+	 * @return array|false The comment data or false on failure.
 	 */
 	public static function activity_to_comment( $activity ) {
 		$comment_content = null;
 		$actor           = object_to_uri( $activity['actor'] );
 		$actor           = get_remote_metadata_by_actor( $actor );
 
-		// check Actor-Meta
+		// Check Actor-Meta.
 		if ( ! $actor || is_wp_error( $actor ) ) {
 			return false;
 		}
 
-		// check Actor-Name
+		// Check Actor-Name.
 		if ( isset( $actor['name'] ) ) {
 			$comment_author = $actor['name'];
 		} elseif ( isset( $actor['preferredUsername'] ) ) {
@@ -252,14 +257,14 @@ class Interactions {
 		}
 
 		$commentdata = array(
-			'comment_author' => \esc_attr( $comment_author ),
-			'comment_author_url' => \esc_url_raw( $url ),
-			'comment_content' => $comment_content,
-			'comment_type' => 'comment',
+			'comment_author'       => \esc_attr( $comment_author ),
+			'comment_author_url'   => \esc_url_raw( $url ),
+			'comment_content'      => $comment_content,
+			'comment_type'         => 'comment',
 			'comment_author_email' => '',
-			'comment_meta' => array(
-				'source_id'  => \esc_url_raw( object_to_uri( $activity['object'] ) ),
-				'protocol'   => 'activitypub',
+			'comment_meta'         => array(
+				'source_id' => \esc_url_raw( object_to_uri( $activity['object'] ) ),
+				'protocol'  => 'activitypub',
 			),
 		);
 
@@ -275,19 +280,19 @@ class Interactions {
 	}
 
 	/**
-	 * Persist a comment
+	 * Persist a comment.
 	 *
-	 * @param array  $commentdata The commentdata array
-	 * @param string $action      Either 'insert' or 'update'
+	 * @param array  $commentdata The commentdata array.
+	 * @param string $action      Optional. Either 'insert' or 'update'. Default 'insert'.
 	 *
-	 * @return array|string|int|\WP_Error|false The commentdata or false on failure
+	 * @return array|string|int|\WP_Error|false The comment data or false on failure
 	 */
 	public static function persist( $commentdata, $action = self::INSERT ) {
-		// disable flood control
+		// Disable flood control.
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
-		// do not require email for AP entries
+		// Do not require email for AP entries.
 		\add_filter( 'pre_option_require_name_email', '__return_false' );
-		// No nonce possible for this submission route
+		// No nonce possible for this submission route.
 		\add_filter(
 			'akismet_comment_nonce',
 			function () {
@@ -304,13 +309,13 @@ class Interactions {
 
 		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10 );
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
-		// re-add flood control
+		// Restore flood control.
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
 		if ( 1 === $state ) {
 			return $commentdata;
 		} else {
-			return $state; // Either `WP_Comment`, `false` or a `WP_Error` instance or `0` or `1`!
+			return $state; // Either WP_Comment, false, a WP_Error, 0, or 1!
 		}
 	}
 }

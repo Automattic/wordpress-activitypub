@@ -1,21 +1,25 @@
 <?php
+/**
+ * Inbox REST-Class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Rest;
 
-use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Users as User_Collection;
 
 use function Activitypub\get_context;
-use function Activitypub\object_to_uri;
 use function Activitypub\url_to_authorid;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\extract_recipients_from_activity;
 
 /**
- * ActivityPub Inbox REST-Class
+ * ActivityPub Inbox REST-Class.
  *
  * @author Matthias Pfefferle
  *
@@ -23,14 +27,14 @@ use function Activitypub\extract_recipients_from_activity;
  */
 class Inbox {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		self::register_routes();
 	}
 
 	/**
-	 * Register routes
+	 * Register routes.
 	 */
 	public static function register_routes() {
 		\register_rest_route(
@@ -67,10 +71,10 @@ class Inbox {
 	}
 
 	/**
-	 * Renders the user-inbox
+	 * Renders the user-inbox.
 	 *
-	 * @param  WP_REST_Request   $request
-	 * @return WP_REST_Response
+	 * @param \WP_REST_Request $request The request object.
+	 * @return WP_REST_Response|\WP_Error The response object or WP_Error.
 	 */
 	public static function user_inbox_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
@@ -80,29 +84,33 @@ class Inbox {
 			return $user;
 		}
 
-		$page = $request->get_param( 'page', 0 );
-
-		/*
-		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		/**
+		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
 		 */
 		\do_action( 'activitypub_rest_inbox_pre' );
 
 		$json = new \stdClass();
 
+		// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 		$json->{'@context'} = get_context();
-		$json->id = get_rest_url_by_path( sprintf( 'actors/%d/inbox', $user->get__id() ) );
-		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
-		$json->type = 'OrderedCollectionPage';
-		$json->partOf = get_rest_url_by_path( sprintf( 'actors/%d/inbox', $user->get__id() ) ); // phpcs:ignore
-		$json->totalItems = 0; // phpcs:ignore
-		$json->orderedItems = array(); // phpcs:ignore
-		$json->first = $json->partOf; // phpcs:ignore
+		$json->id           = get_rest_url_by_path( sprintf( 'actors/%d/inbox', $user->get__id() ) );
+		$json->generator    = 'http://wordpress.org/?v=' . get_masked_wp_version();
+		$json->type         = 'OrderedCollectionPage';
+		$json->partOf       = get_rest_url_by_path( sprintf( 'actors/%d/inbox', $user->get__id() ) );
+		$json->totalItems   = 0;
+		$json->orderedItems = array();
+		$json->first        = $json->partOf;
+		// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 
-		// filter output
+		/**
+		 * Filter the ActivityPub inbox array.
+		 *
+		 * @param array $json The ActivityPub inbox array.
+		 */
 		$json = \apply_filters( 'activitypub_rest_inbox_array', $json );
 
-		/*
-		 * Action triggerd after the ActivityPub profile has been created and sent to the client
+		/**
+		 * Action triggered after the ActivityPub profile has been created and sent to the client.
 		 */
 		\do_action( 'activitypub_inbox_post' );
 
@@ -113,11 +121,11 @@ class Inbox {
 	}
 
 	/**
-	 * Handles user-inbox requests
+	 * Handles user-inbox requests.
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return WP_REST_Response
+	 * @return WP_REST_Response|\WP_Error The response object or WP_Error.
 	 */
 	public static function user_inbox_post( $request ) {
 		$user_id = $request->get_param( 'user_id' );
@@ -132,7 +140,23 @@ class Inbox {
 		$type     = $request->get_param( 'type' );
 		$type     = \strtolower( $type );
 
+		/**
+		 * ActivityPub inbox action.
+		 *
+		 * @param array    $data     The data array.
+		 * @param int|null $user_id  The user ID.
+		 * @param string   $type     The type of the activity.
+		 * @param Activity $activity The Activity object.
+		 */
 		\do_action( 'activitypub_inbox', $data, $user->get__id(), $type, $activity );
+
+		/**
+		 * ActivityPub inbox action for specific activity types.
+		 *
+		 * @param array    $data     The data array.
+		 * @param int|null $user_id  The user ID.
+		 * @param Activity $activity The Activity object.
+		 */
 		\do_action( "activitypub_inbox_{$type}", $data, $user->get__id(), $activity );
 
 		$rest_response = new WP_REST_Response( array(), 202 );
@@ -142,9 +166,9 @@ class Inbox {
 	}
 
 	/**
-	 * The shared inbox
+	 * The shared inbox.
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param \WP_REST_Request $request The request object.
 	 *
 	 * @return WP_REST_Response
 	 */
@@ -154,7 +178,23 @@ class Inbox {
 		$type     = $request->get_param( 'type' );
 		$type     = \strtolower( $type );
 
+		/**
+		 * ActivityPub inbox action.
+		 *
+		 * @param array    $data     The data array.
+		 * @param int|null $user_id  The user ID.
+		 * @param string   $type     The type of the activity.
+		 * @param Activity $activity The Activity object.
+		 */
 		\do_action( 'activitypub_inbox', $data, null, $type, $activity );
+
+		/**
+		 * ActivityPub inbox action for specific activity types.
+		 *
+		 * @param array    $data     The data array.
+		 * @param int|null $user_id  The user ID.
+		 * @param Activity $activity The Activity object.
+		 */
 		\do_action( "activitypub_inbox_{$type}", $data, null, $activity );
 
 		$rest_response = new WP_REST_Response( array(), 202 );
@@ -164,9 +204,9 @@ class Inbox {
 	}
 
 	/**
-	 * The supported parameters
+	 * The supported parameters.
 	 *
-	 * @return array list of parameters
+	 * @return array List of parameters.
 	 */
 	public static function user_inbox_get_parameters() {
 		$params = array();
@@ -177,36 +217,33 @@ class Inbox {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
 		);
 
 		return $params;
 	}
 
 	/**
-	 * The supported parameters
+	 * The supported parameters.
 	 *
-	 * @return array list of parameters
+	 * @return array List of parameters.
 	 */
 	public static function user_inbox_post_parameters() {
 		$params = array();
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
 		);
 
 		$params['id'] = array(
-			'required' => true,
+			'required'          => true,
 			'sanitize_callback' => 'esc_url_raw',
 		);
 
 		$params['actor'] = array(
-			'required' => true,
-			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-			'sanitize_callback' => function ( $param, $request, $key ) {
-				return object_to_uri( $param );
-			},
+			'required'          => true,
+			'sanitize_callback' => '\Activitypub\object_to_uri',
 		);
 
 		$params['type'] = array(
@@ -214,8 +251,16 @@ class Inbox {
 		);
 
 		$params['object'] = array(
-			'required' => true,
+			'required'          => true,
 			'validate_callback' => function ( $param, $request, $key ) {
+				/**
+				 * Filter the ActivityPub object validation.
+				 *
+				 * @param bool   $validate The validation result.
+				 * @param array  $param    The object data.
+				 * @param object $request  The request object.
+				 * @param string $key      The key.
+				 */
 				return apply_filters( 'activitypub_validate_object', true, $param, $request, $key );
 			},
 		);
@@ -224,17 +269,19 @@ class Inbox {
 	}
 
 	/**
-	 * The supported parameters
+	 * The supported parameters.
 	 *
-	 * @return array list of parameters
+	 * @return array List of parameters.
 	 */
 	public static function shared_inbox_post_parameters() {
 		$params = self::user_inbox_post_parameters();
 
+		// A shared Inbox does not need a User-ID.
+		unset( $params['user_id'] );
+
 		$params['to'] = array(
-			'required' => false,
-			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-			'sanitize_callback' => function ( $param, $request, $key ) {
+			'required'          => false,
+			'sanitize_callback' => function ( $param ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );
 				}
@@ -244,8 +291,7 @@ class Inbox {
 		);
 
 		$params['cc'] = array(
-			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-			'sanitize_callback' => function ( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );
 				}
@@ -255,8 +301,7 @@ class Inbox {
 		);
 
 		$params['bcc'] = array(
-			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-			'sanitize_callback' => function ( $param, $request, $key ) {
+			'sanitize_callback' => function ( $param ) {
 				if ( \is_string( $param ) ) {
 					$param = array( $param );
 				}
@@ -269,15 +314,15 @@ class Inbox {
 	}
 
 	/**
-	 * Get local user recipients
+	 * Get local user recipients.
 	 *
-	 * @param  array $data
+	 * @param array $data The data array.
 	 *
-	 * @return array The list of local users
+	 * @return array The list of local users.
 	 */
 	public static function get_recipients( $data ) {
 		$recipients = extract_recipients_from_activity( $data );
-		$users = array();
+		$users      = array();
 
 		foreach ( $recipients as $recipient ) {
 			$user_id = url_to_authorid( $recipient );

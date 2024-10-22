@@ -1,4 +1,10 @@
 <?php
+/**
+ * ActivityPub Following REST-Class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Rest;
 
 use WP_REST_Response;
@@ -9,7 +15,7 @@ use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_masked_wp_version;
 
 /**
- * ActivityPub Following REST-Class
+ * ActivityPub Following REST-Class.
  *
  * @author Matthias Pfefferle
  *
@@ -17,7 +23,7 @@ use function Activitypub\get_masked_wp_version;
  */
 class Following {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		self::register_routes();
@@ -46,9 +52,9 @@ class Following {
 	/**
 	 * Handle GET request
 	 *
-	 * @param  WP_REST_Request   $request
+	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return WP_REST_Response
+	 * @return WP_REST_Response|\WP_Error The response object or WP_Error.
 	 */
 	public static function get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
@@ -58,8 +64,8 @@ class Following {
 			return $user;
 		}
 
-		/*
-		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		/**
+		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
 		 */
 		\do_action( 'activitypub_rest_following_pre' );
 
@@ -67,19 +73,25 @@ class Following {
 
 		$json->{'@context'} = \Activitypub\get_context();
 
-		$json->id = get_rest_url_by_path( sprintf( 'actors/%d/following', $user->get__id() ) );
+		// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		$json->id        = get_rest_url_by_path( sprintf( 'actors/%d/following', $user->get__id() ) );
 		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
-		$json->actor = $user->get_id();
-		$json->type = 'OrderedCollectionPage';
+		$json->actor     = $user->get_id();
+		$json->type      = 'OrderedCollectionPage';
+		$json->partOf    = get_rest_url_by_path( sprintf( 'actors/%d/following', $user->get__id() ) );
 
-		$json->partOf = get_rest_url_by_path( sprintf( 'actors/%d/following', $user->get__id() ) ); // phpcs:ignore
+		/**
+		 * Filter the list of following urls.
+		 *
+		 * @param array                   $items The array of following urls.
+		 * @param \Activitypub\Model\User $user  The user object.
+		 */
+		$items = apply_filters( 'activitypub_rest_following', array(), $user );
 
-		$items = apply_filters( 'activitypub_rest_following', array(), $user ); // phpcs:ignore
-
-		$json->totalItems = is_countable( $items ) ? count( $items ) : 0; // phpcs:ignore
-		$json->orderedItems = $items; // phpcs:ignore
-
-		$json->first = $json->partOf; // phpcs:ignore
+		$json->totalItems   = is_countable( $items ) ? count( $items ) : 0;
+		$json->orderedItems = $items;
+		$json->first        = $json->partOf;
+		// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 
 		$rest_response = new WP_REST_Response( $json, 200 );
 		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
@@ -88,9 +100,9 @@ class Following {
 	}
 
 	/**
-	 * The supported parameters
+	 * The supported parameters.
 	 *
-	 * @return array list of parameters
+	 * @return array List of parameters.
 	 */
 	public static function request_parameters() {
 		$params = array();
@@ -101,7 +113,7 @@ class Following {
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
 		);
 
 		return $params;
@@ -111,22 +123,22 @@ class Following {
 	 * Add the Blog Authors to the following list of the Blog Actor
 	 * if Blog not in single mode.
 	 *
-	 * @param array $array The array of following urls.
-	 * @param User  $user  The user object.
+	 * @param array                   $follow_list The array of following urls.
+	 * @param \Activitypub\Model\User $user        The user object.
 	 *
 	 * @return array The array of following urls.
 	 */
-	public static function default_following( $array, $user ) {
+	public static function default_following( $follow_list, $user ) {
 		if ( 0 !== $user->get__id() || is_single_user() ) {
-			return $array;
+			return $follow_list;
 		}
 
 		$users = User_Collection::get_collection();
 
 		foreach ( $users as $user ) {
-			$array[] = $user->get_url();
+			$follow_list[] = $user->get_id();
 		}
 
-		return $array;
+		return $follow_list;
 	}
 }

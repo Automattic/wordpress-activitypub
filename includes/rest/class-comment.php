@@ -1,4 +1,10 @@
 <?php
+/**
+ * Comment REST-Class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Rest;
 
 use WP_Error;
@@ -9,7 +15,7 @@ use Activitypub\Comment as Comment_Utils;
 use Activitypub\Webfinger as Webfinger_Utils;
 
 /**
- * ActivityPub Followers REST-Class
+ * ActivityPub Followers REST-Class.
  *
  * @author Matthias Pfefferle
  *
@@ -17,14 +23,14 @@ use Activitypub\Webfinger as Webfinger_Utils;
  */
 class Comment {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		self::register_routes();
 	}
 
 	/**
-	 * Register routes
+	 * Register routes.
 	 */
 	public static function register_routes() {
 		\register_rest_route(
@@ -47,11 +53,11 @@ class Comment {
 	}
 
 	/**
-	 * Endpoint for remote follow UI/Block
+	 * Endpoint for remote follow UI/Block.
 	 *
 	 * @param WP_REST_Request $request The request object.
 	 *
-	 * @return void|string The URL to the remote follow page
+	 * @return array|string|WP_Error|WP_REST_Response The URL to the remote follow page or an error.
 	 */
 	public static function remote_reply_get( WP_REST_Request $request ) {
 		$resource   = $request->get_param( 'resource' );
@@ -84,7 +90,10 @@ class Comment {
 		$url = str_replace( '{uri}', $resource, $template );
 
 		return new WP_REST_Response(
-			array( 'url' => $url, 'template' => $template ),
+			array(
+				'url'      => $url,
+				'template' => $template,
+			),
 			200
 		);
 	}

@@ -1,11 +1,16 @@
 <?php
+/**
+ * WebFinger REST-Class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Rest;
 
-use WP_Error;
 use WP_REST_Response;
 
 /**
- * ActivityPub WebFinger REST-Class
+ * ActivityPub WebFinger REST-Class.
  *
  * @author Matthias Pfefferle
  *
@@ -14,8 +19,6 @@ use WP_REST_Response;
 class Webfinger {
 	/**
 	 * Initialize the class, registering WordPress hooks.
-	 *
-	 * @return void
 	 */
 	public static function init() {
 		self::register_routes();
@@ -23,8 +26,6 @@ class Webfinger {
 
 	/**
 	 * Register routes.
-	 *
-	 * @return void
 	 */
 	public static function register_routes() {
 		\register_rest_route(
@@ -44,13 +45,13 @@ class Webfinger {
 	/**
 	 * WebFinger endpoint.
 	 *
-	 * @param WP_REST_Request $request The request object.
+	 * @param \WP_REST_Request $request The request object.
 	 *
 	 * @return WP_REST_Response The response object.
 	 */
 	public static function webfinger( $request ) {
-		/*
-		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		/**
+		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
 		 */
 		\do_action( 'activitypub_rest_webfinger_pre' );
 
@@ -73,13 +74,13 @@ class Webfinger {
 			$code,
 			array(
 				'Access-Control-Allow-Origin' => '*',
-				'Content-Type' => 'application/jrd+json; charset=' . get_option( 'blog_charset' ),
+				'Content-Type'                => 'application/jrd+json; charset=' . get_option( 'blog_charset' ),
 			)
 		);
 	}
 
 	/**
-	 * The supported parameters
+	 * The supported parameters.
 	 *
 	 * @return array list of parameters
 	 */
@@ -88,8 +89,8 @@ class Webfinger {
 
 		$params['resource'] = array(
 			'required' => true,
-			'type' => 'string',
-			'pattern' => '^(acct:)|^(https?://)(.+)$',
+			'type'     => 'string',
+			'pattern'  => '^(acct:)|^(https?://)(.+)$',
 		);
 
 		return $params;
@@ -98,11 +99,17 @@ class Webfinger {
 	/**
 	 * Get the WebFinger profile.
 	 *
-	 * @param string $resource the WebFinger resource.
+	 * @param string $webfinger the WebFinger resource.
 	 *
-	 * @return array the WebFinger profile.
+	 * @return array|\WP_Error The WebFinger profile or WP_Error if not found.
 	 */
-	public static function get_profile( $resource ) { // phpcs:ignore
-		return apply_filters( 'webfinger_data', array(), $resource );
+	public static function get_profile( $webfinger ) {
+		/**
+		 * Filter the WebFinger data.
+		 *
+		 * @param array  $data      The WebFinger data.
+		 * @param string $webfinger The WebFinger resource.
+		 */
+		return apply_filters( 'webfinger_data', array(), $webfinger );
 	}
 }

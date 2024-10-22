@@ -1,21 +1,23 @@
 <?php
-namespace Activitypub\Transformer;
+/**
+ * WordPress Comment Transformer file.
+ *
+ * @package Activitypub
+ */
 
-use WP_Comment;
-use WP_Comment_Query;
+namespace Activitypub\Transformer;
 
 use Activitypub\Webfinger;
 use Activitypub\Comment as Comment_Utils;
 use Activitypub\Model\Blog;
 use Activitypub\Collection\Users;
-use Activitypub\Transformer\Base;
 
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_comment_ancestors;
 
 /**
- * WordPress Comment Transformer
+ * WordPress Comment Transformer.
  *
  * The Comment Transformer is responsible for transforming a WP_Comment object into different
  * Object-Types.
@@ -37,18 +39,18 @@ class Comment extends Base {
 	/**
 	 * Change the User-ID of the WordPress Comment.
 	 *
-	 * @return int The User-ID of the WordPress Comment
+	 * @param int $user_id The new user ID.
 	 */
 	public function change_wp_user_id( $user_id ) {
 		$this->wp_object->user_id = $user_id;
 	}
 
 	/**
-	 * Transforms the WP_Comment object to an ActivityPub Object
+	 * Transforms the WP_Comment object to an ActivityPub Object.
 	 *
 	 * @see \Activitypub\Activity\Base_Object
 	 *
-	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
+	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object.
 	 */
 	public function to_object() {
 		$comment = $this->wp_object;
@@ -92,10 +94,10 @@ class Comment extends Base {
 	protected function get_attributed_to() {
 		if ( is_single_user() ) {
 			$user = new Blog();
-			return $user->get_url();
+			return $user->get_id();
 		}
 
-		return Users::get_by_id( $this->wp_object->user_id )->get_url();
+		return Users::get_by_id( $this->wp_object->user_id )->get_id();
 	}
 
 	/**
@@ -106,28 +108,41 @@ class Comment extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$comment = $this->wp_object;
 		$content = $comment->comment_content;
 
+		/**
+		 * Filter the content of the comment.
+		 *
+		 * @param string      $content The content of the comment.
+		 * @param \WP_Comment $comment The comment object.
+		 * @param array       $args    The arguments.
+		 *
+		 * @return string The filtered content of the comment.
+		 */
 		$content = \apply_filters( 'comment_text', $content, $comment, array() );
 		$content = \preg_replace( '/[\n\r\t]/', '', $content );
 		$content = \trim( $content );
-		$content = \apply_filters( 'activitypub_the_content', $content, $comment );
 
-		return $content;
+		/**
+		 * Filter the content of the comment.
+		 *
+		 * @param string      $content The content of the comment.
+		 * @param \WP_Comment $comment The comment object.
+		 *
+		 * @return string The filtered content of the comment.
+		 */
+		return \apply_filters( 'activitypub_the_content', $content, $comment );
 	}
 
 	/**
 	 * Returns the in-reply-to for the ActivityPub Item.
 	 *
-	 * @return int The URL of the in-reply-to.
+	 * @return false|string|null The URL of the in-reply-to.
 	 */
 	protected function get_in_reply_to() {
-		$comment = $this->wp_object;
-
+		$comment        = $this->wp_object;
 		$parent_comment = null;
-		$in_reply_to    = null;
 
 		if ( $comment->comment_parent ) {
 			$parent_comment = \get_comment( $comment->comment_parent );
@@ -191,7 +206,7 @@ class Comment extends Base {
 		$mentions = $this->get_mentions();
 		if ( $mentions ) {
 			foreach ( $mentions as $mention => $url ) {
-				$tag = array(
+				$tag    = array(
 					'type' => 'Mention',
 					'href' => \esc_url( $url ),
 					'name' => \esc_html( $mention ),
@@ -211,6 +226,15 @@ class Comment extends Base {
 	protected function get_mentions() {
 		\add_filter( 'activitypub_extract_mentions', array( $this, 'extract_reply_context' ) );
 
+		/**
+		 * Filter the mentions in the comment.
+		 *
+		 * @param array       $mentions The list of mentions.
+		 * @param string      $content  The content of the comment.
+		 * @param \WP_Comment $comment  The comment object.
+		 *
+		 * @return array The filtered list of mentions.
+		 */
 		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_object->comment_content, $this->wp_object );
 	}
 
@@ -222,7 +246,7 @@ class Comment extends Base {
 	protected function get_comment_ancestors() {
 		$ancestors = get_comment_ancestors( $this->wp_object );
 
-		// Now that we have the full tree of ancestors, only return the ones received from the fediverse
+		// Now that we have the full tree of ancestors, only return the ones received from the fediverse.
 		return array_filter(
 			$ancestors,
 			function ( $comment_id ) {
@@ -235,12 +259,12 @@ class Comment extends Base {
 	 * Collect all other Users that participated in this comment-thread
 	 * to send them a notification about the new reply.
 	 *
-	 * @param array $mentions The already mentioned ActivityPub users
+	 * @param array $mentions The already mentioned ActivityPub users.
 	 *
 	 * @return array The list of all Repliers.
 	 */
 	public function extract_reply_context( $mentions ) {
-		// Check if `$this->wp_object` is a WP_Comment
+		// Check if `$this->wp_object` is a WP_Comment.
 		if ( 'WP_Comment' !== get_class( $this->wp_object ) ) {
 			return $mentions;
 		}
@@ -255,7 +279,7 @@ class Comment extends Base {
 			if ( $comment && ! empty( $comment->comment_author_url ) ) {
 				$acct = Webfinger::uri_to_acct( $comment->comment_author_url );
 				if ( $acct && ! is_wp_error( $acct ) ) {
-					$acct = str_replace( 'acct:', '@', $acct );
+					$acct              = str_replace( 'acct:', '@', $acct );
 					$mentions[ $acct ] = $comment->comment_author_url;
 				}
 			}
@@ -276,9 +300,9 @@ class Comment extends Base {
 		/**
 		 * Filter the locale of the comment.
 		 *
-		 * @param string  $lang    The locale of the comment.
-		 * @param int     $comment_id The comment ID.
-		 * @param WP_Post $post    The comment object.
+		 * @param string   $lang    The locale of the comment.
+		 * @param int      $comment_id The comment ID.
+		 * @param \WP_Post $post    The comment object.
 		 *
 		 * @return string The filtered locale of the comment.
 		 */

@@ -1,11 +1,17 @@
 <?php
+/**
+ * WebFinger class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
 use WP_Error;
 use Activitypub\Collection\Users;
 
 /**
- * ActivityPub WebFinger Class
+ * ActivityPub WebFinger Class.
  *
  * @author Matthias Pfefferle
  *
@@ -13,11 +19,11 @@ use Activitypub\Collection\Users;
  */
 class Webfinger {
 	/**
-	 * Returns a users WebFinger "resource"
+	 * Returns a users WebFinger "resource".
 	 *
-	 * @param int $user_id The WordPress user id
+	 * @param int $user_id The WordPress user id.
 	 *
-	 * @return string The user-resource
+	 * @return string The user-resource.
 	 */
 	public static function get_user_resource( $user_id ) {
 		$user = Users::get_by_id( $user_id );
@@ -29,11 +35,11 @@ class Webfinger {
 	}
 
 	/**
-	 * Resolve a WebFinger resource
+	 * Resolve a WebFinger resource.
 	 *
-	 * @param string $uri The WebFinger Resource
+	 * @param string $uri The WebFinger Resource.
 	 *
-	 * @return string|WP_Error The URL or WP_Error
+	 * @return string|WP_Error The URL or WP_Error.
 	 */
 	public static function resolve( $uri ) {
 		$data = self::get_data( $uri );
@@ -76,11 +82,11 @@ class Webfinger {
 	}
 
 	/**
-	 * Transform a URI to an acct <identifier>@<host>
+	 * Transform a URI to an acct <identifier>@<host>.
 	 *
-	 * @param string $uri The URI (acct:, mailto:, http:, https:)
+	 * @param string $uri The URI (acct:, mailto:, http:, https:).
 	 *
-	 * @return string|WP_Error Error or acct URI
+	 * @return string|WP_Error Error or acct URI.
 	 */
 	public static function uri_to_acct( $uri ) {
 		$data = self::get_data( $uri );
@@ -89,7 +95,7 @@ class Webfinger {
 			return $data;
 		}
 
-		// check if subject is an acct URI
+		// Check if subject is an acct URI.
 		if (
 			isset( $data['subject'] ) &&
 			\str_starts_with( $data['subject'], 'acct:' )
@@ -97,7 +103,7 @@ class Webfinger {
 			return $data['subject'];
 		}
 
-		// search for an acct URI in the aliases
+		// Search for an acct URI in the aliases.
 		if ( isset( $data['aliases'] ) ) {
 			foreach ( $data['aliases'] as $alias ) {
 				if ( \str_starts_with( $alias, 'acct:' ) ) {
@@ -120,10 +126,9 @@ class Webfinger {
 	 * Convert a URI string to an identifier and its host.
 	 * Automatically adds acct: if it's missing.
 	 *
-	 * @param string $url The URI (acct:, mailto:, http:, https:)
+	 * @param string $url The URI (acct:, mailto:, http:, https:).
 	 *
-	 * @return WP_Error|array Error reaction or array with
-	 *                        identifier and host as values
+	 * @return WP_Error|array Error reaction or array with identifier and host as values.
 	 */
 	public static function get_identifier_and_host( $url ) {
 		if ( ! $url ) {
@@ -137,15 +142,15 @@ class Webfinger {
 			);
 		}
 
-		// remove leading @
+		// Remove leading @.
 		$url = ltrim( $url, '@' );
 
 		if ( ! preg_match( '/^([a-zA-Z+]+):/', $url, $match ) ) {
 			$identifier = 'acct:' . $url;
-			$scheme = 'acct';
+			$scheme     = 'acct';
 		} else {
 			$identifier = $url;
-			$scheme = $match[1];
+			$scheme     = $match[1];
 		}
 
 		$host = null;
@@ -178,12 +183,11 @@ class Webfinger {
 	}
 
 	/**
-	 * Get the WebFinger data for a given URI
+	 * Get the WebFinger data for a given URI.
 	 *
-	 * @param string $uri The Identifier: <identifier>@<host> or URI
+	 * @param string $uri The Identifier: <identifier>@<host> or URI.
 	 *
-	 * @return WP_Error|array Error reaction or array with
-	 *                        identifier and host as values
+	 * @return WP_Error|array Error reaction or array with identifier and host as values.
 	 */
 	public static function get_data( $uri ) {
 		$identifier_and_host = self::get_identifier_and_host( $uri );
@@ -234,7 +238,9 @@ class Webfinger {
 	}
 
 	/**
-	 * Get the Remote-Follow endpoint for a given URI
+	 * Get the Remote-Follow endpoint for a given URI.
+	 *
+	 * @param string $uri The WebFinger Resource URI.
 	 *
 	 * @return string|WP_Error Error or the Remote-Follow endpoint URI.
 	 */
@@ -273,11 +279,11 @@ class Webfinger {
 	}
 
 	/**
-	 * Generate a cache key for a given URI
+	 * Generate a cache key for a given URI.
 	 *
-	 * @param string $uri A WebFinger Resource URI
+	 * @param string $uri A WebFinger Resource URI.
 	 *
-	 * @return string The cache key
+	 * @return string The cache key.
 	 */
 	public static function generate_cache_key( $uri ) {
 		$uri = ltrim( $uri, '@' );

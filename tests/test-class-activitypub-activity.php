@@ -25,7 +25,7 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 		$activitypub_activity->set_type( 'Create' );
 		$activitypub_activity->set_object( $activitypub_post );
 
-		$this->assertContains( \Activitypub\get_rest_url_by_path( 'actors/1/followers' ), $activitypub_activity->get_to() );
+		$this->assertContains( \Activitypub\get_rest_url_by_path( 'actors/1/followers' ), $activitypub_activity->get_cc() );
 		$this->assertContains( 'https://example.com/alex', $activitypub_activity->get_cc() );
 
 		remove_all_filters( 'activitypub_extract_mentions' );

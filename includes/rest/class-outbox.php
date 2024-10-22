@@ -1,8 +1,13 @@
 <?php
+/**
+ * Outbox REST-Class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Rest;
 
 use stdClass;
-use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Activity\Activity;
@@ -14,7 +19,7 @@ use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_masked_wp_version;
 
 /**
- * ActivityPub Outbox REST-Class
+ * ActivityPub Outbox REST-Class.
  *
  * @author Matthias Pfefferle
  *
@@ -22,7 +27,7 @@ use function Activitypub\get_masked_wp_version;
  */
 class Outbox {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		self::register_routes();
@@ -49,8 +54,8 @@ class Outbox {
 	/**
 	 * Renders the user-outbox
 	 *
-	 * @param  WP_REST_Request   $request
-	 * @return WP_REST_Response
+	 * @param \WP_REST_Request $request The request object.
+	 * @return WP_REST_Response|\WP_Error The response object or WP_Error.
 	 */
 	public static function user_outbox_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
@@ -64,41 +69,43 @@ class Outbox {
 
 		$page = $request->get_param( 'page', 1 );
 
-		/*
-		 * Action triggerd prior to the ActivityPub profile being created and sent to the client
+		/**
+		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
 		 */
 		\do_action( 'activitypub_rest_outbox_pre' );
 
 		$json = new stdClass();
 
+		// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 		$json->{'@context'} = get_context();
-		$json->id = get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) );
-		$json->generator = 'http://wordpress.org/?v=' . get_masked_wp_version();
-		$json->actor = $user->get_id();
-		$json->type = 'OrderedCollectionPage';
-		$json->partOf = get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) ); // phpcs:ignore
-		$json->totalItems = 0; // phpcs:ignore
+		$json->id           = get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) );
+		$json->generator    = 'http://wordpress.org/?v=' . get_masked_wp_version();
+		$json->actor        = $user->get_id();
+		$json->type         = 'OrderedCollectionPage';
+		$json->partOf       = get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) );
+		$json->totalItems   = 0;
 
 		if ( $user_id > 0 ) {
-			$count_posts = \count_user_posts( $user_id, $post_types, true );
-			$json->totalItems = \intval( $count_posts ); // phpcs:ignore
+			$count_posts      = \count_user_posts( $user_id, $post_types, true );
+			$json->totalItems = \intval( $count_posts );
 		} else {
 			foreach ( $post_types as $post_type ) {
-				$count_posts = \wp_count_posts( $post_type );
-				$json->totalItems += \intval( $count_posts->publish ); // phpcs:ignore
+				$count_posts       = \wp_count_posts( $post_type );
+				$json->totalItems += \intval( $count_posts->publish );
 			}
 		}
 
-		$json->first = \add_query_arg( 'page', 1, $json->partOf ); // phpcs:ignore
-		$json->last  = \add_query_arg( 'page', \ceil ( $json->totalItems / 10 ), $json->partOf ); // phpcs:ignore
+		$json->first = \add_query_arg( 'page', 1, $json->partOf );
+		$json->last  = \add_query_arg( 'page', \ceil( $json->totalItems / 10 ), $json->partOf );
 
-		if ( $page && ( ( \ceil ( $json->totalItems / 10 ) ) > $page ) ) { // phpcs:ignore
-			$json->next  = \add_query_arg( 'page', $page + 1, $json->partOf ); // phpcs:ignore
+		if ( $page && ( ( \ceil( $json->totalItems / 10 ) ) > $page ) ) {
+			$json->next = \add_query_arg( 'page', $page + 1, $json->partOf );
 		}
 
-		if ( $page && ( $page > 1 ) ) { // phpcs:ignore
-			$json->prev  = \add_query_arg( 'page', $page - 1, $json->partOf ); // phpcs:ignore
+		if ( $page && ( $page > 1 ) ) {
+			$json->prev = \add_query_arg( 'page', $page - 1, $json->partOf );
 		}
+		// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 
 		if ( $page ) {
 			$posts = \get_posts(
@@ -121,15 +128,19 @@ class Outbox {
 				$activity = new Activity();
 				$activity->set_type( 'Create' );
 				$activity->set_object( $post );
-				$json->orderedItems[] = $activity->to_array( false ); // phpcs:ignore
+				$json->orderedItems[] = $activity->to_array( false ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 			}
 		}
 
-		// filter output
+		/**
+		 * Filter the ActivityPub outbox array.
+		 *
+		 * @param array $json The ActivityPub outbox array.
+		 */
 		$json = \apply_filters( 'activitypub_rest_outbox_array', $json );
 
-		/*
-		 * Action triggerd after the ActivityPub profile has been created and sent to the client
+		/**
+		 * Action triggered after the ActivityPub profile has been created and sent to the client
 		 */
 		\do_action( 'activitypub_outbox_post' );
 
@@ -140,21 +151,21 @@ class Outbox {
 	}
 
 	/**
-	 * The supported parameters
+	 * The supported parameters.
 	 *
-	 * @return array list of parameters
+	 * @return array List of parameters.
 	 */
 	public static function request_parameters() {
 		$params = array();
 
 		$params['page'] = array(
-			'type' => 'integer',
+			'type'    => 'integer',
 			'default' => 1,
 		);
 
 		$params['user_id'] = array(
 			'required' => true,
-			'type' => 'string',
+			'type'     => 'string',
 		);
 
 		return $params;

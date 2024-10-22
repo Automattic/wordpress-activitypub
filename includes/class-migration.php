@@ -1,8 +1,13 @@
 <?php
+/**
+ * Migration class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
-use Activitypub\Activitypub;
-use Activitypub\Model\Blog;
+use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 
 /**
@@ -12,7 +17,7 @@ use Activitypub\Collection\Followers;
  */
 class Migration {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		\add_action( 'activitypub_migrate', array( self::class, 'async_migration' ) );
@@ -43,8 +48,6 @@ class Migration {
 
 	/**
 	 * Locks the database migration process to prevent simultaneous migrations.
-	 *
-	 * @return void
 	 */
 	public static function lock() {
 		\update_option( 'activitypub_migration_lock', \time() );
@@ -52,8 +55,6 @@ class Migration {
 
 	/**
 	 * Unlocks the database migration process.
-	 *
-	 * @return void
 	 */
 	public static function unlock() {
 		\delete_option( 'activitypub_migration_lock' );
@@ -87,7 +88,7 @@ class Migration {
 	 * @return bool True if the database structure is up to date, false otherwise.
 	 */
 	public static function is_latest_version() {
-		return (bool) version_compare(
+		return (bool) \version_compare(
 			self::get_version(),
 			self::get_target_version(),
 			'=='
@@ -110,33 +111,44 @@ class Migration {
 
 		$version_from_db = self::get_version();
 
-		// check for inital migration
+		// Check for inital migration.
 		if ( ! $version_from_db ) {
 			self::add_default_settings();
 			$version_from_db = self::get_target_version();
 		}
 
-		// schedule the async migration
+		// Schedule the async migration.
 		if ( ! \wp_next_scheduled( 'activitypub_migrate', $version_from_db ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_migrate', array( $version_from_db ) );
 		}
-		if ( version_compare( $version_from_db, '0.17.0', '<' ) ) {
+		if ( \version_compare( $version_from_db, '0.17.0', '<' ) ) {
 			self::migrate_from_0_16();
 		}
-		if ( version_compare( $version_from_db, '1.3.0', '<' ) ) {
+		if ( \version_compare( $version_from_db, '1.3.0', '<' ) ) {
 			self::migrate_from_1_2_0();
 		}
-		if ( version_compare( $version_from_db, '2.1.0', '<' ) ) {
+		if ( \version_compare( $version_from_db, '2.1.0', '<' ) ) {
 			self::migrate_from_2_0_0();
 		}
-		if ( version_compare( $version_from_db, '2.3.0', '<' ) ) {
+		if ( \version_compare( $version_from_db, '2.3.0', '<' ) ) {
 			self::migrate_from_2_2_0();
 		}
-		if ( version_compare( $version_from_db, '3.0.0', '<' ) ) {
+		if ( \version_compare( $version_from_db, '3.0.0', '<' ) ) {
 			self::migrate_from_2_6_0();
 		}
+		if ( \version_compare( $version_from_db, '4.0.0', '<' ) ) {
+			self::migrate_to_4_0_0();
+		}
 
-		update_option( 'activitypub_db_version', self::get_target_version() );
+		/**
+		 * Fires when the system has to be migrated.
+		 *
+		 * @param string $version_from_db The version from which to migrate.
+		 * @param string $target_version  The target version to migrate to.
+		 */
+		\do_action( 'activitypub_migrate', $version_from_db, self::get_target_version() );
+
+		\update_option( 'activitypub_db_version', self::get_target_version() );
 
 		self::unlock();
 	}
@@ -147,22 +159,22 @@ class Migration {
 	 * @param string $version_from_db The version from which to migrate.
 	 */
 	public static function async_migration( $version_from_db ) {
-		if ( version_compare( $version_from_db, '1.0.0', '<' ) ) {
+		if ( \version_compare( $version_from_db, '1.0.0', '<' ) ) {
 			self::migrate_from_0_17();
 		}
 	}
 
 	/**
 	 * Updates the custom template to use shortcodes instead of the deprecated templates.
-	 *
-	 * @return void
 	 */
 	private static function migrate_from_0_16() {
 		// Get the custom template.
 		$old_content = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
 
-		// If the old content exists but is a blank string, we're going to need a flag to updated it even
-		// after setting it to the default contents.
+		/*
+		 * If the old content exists but is a blank string, we're going to need a flag to updated it even
+		 * after setting it to the default contents.
+		 */
 		$need_update = false;
 
 		// If the old contents is blank, use the defaults.
@@ -190,12 +202,10 @@ class Migration {
 	}
 
 	/**
-	 * Updates the DB-schema of the followers-list
-	 *
-	 * @return void
+	 * Updates the DB-schema of the followers-list.
 	 */
 	public static function migrate_from_0_17() {
-		// migrate followers
+		// Migrate followers.
 		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
 			$followers = get_user_meta( $user_id, 'activitypub_followers', true );
 
@@ -210,9 +220,7 @@ class Migration {
 	}
 
 	/**
-	 * Clear the cache after updating to 1.3.0
-	 *
-	 * @return void
+	 * Clear the cache after updating to 1.3.0.
 	 */
 	private static function migrate_from_1_2_0() {
 		$user_ids = \get_users(
@@ -228,9 +236,7 @@ class Migration {
 	}
 
 	/**
-	 * Unschedule Hooks after updating to 2.0.0
-	 *
-	 * @return void
+	 * Unschedule Hooks after updating to 2.0.0.
 	 */
 	private static function migrate_from_2_0_0() {
 		wp_clear_scheduled_hook( 'activitypub_send_post_activity' );
@@ -249,19 +255,15 @@ class Migration {
 
 	/**
 	 * Add the ActivityPub capability to all users that can publish posts
-	 * Delete old meta to store followers
-	 *
-	 * @return void
+	 * Delete old meta to store followers.
 	 */
 	private static function migrate_from_2_2_0() {
-		// add the ActivityPub capability to all users that can publish posts
+		// Add the ActivityPub capability to all users that can publish posts.
 		self::add_activitypub_capability();
 	}
 
 	/**
-	 * Rename DB fields
-	 *
-	 * @return void
+	 * Rename DB fields.
 	 */
 	private static function migrate_from_2_6_0() {
 		wp_cache_flush();
@@ -273,30 +275,73 @@ class Migration {
 	}
 
 	/**
-	 * Set the defaults needed for the plugin to work
+	 * * Update actor-mode settings.
+	 * * Get the ID of the latest blog post and save it to the options table.
+	 */
+	private static function migrate_to_4_0_0() {
+		$latest_post_id = 0;
+
+		// Get the ID of the latest blog post and save it to the options table.
+		$latest_post = get_posts(
+			array(
+				'numberposts' => 1,
+				'orderby'     => 'date',
+				'order'       => 'DESC',
+				'post_type'   => 'any',
+				'post_status' => 'publish',
+			)
+		);
+
+		if ( $latest_post ) {
+			$latest_post_id = $latest_post[0]->ID;
+		}
+
+		\update_option( 'activitypub_last_post_with_permalink_as_id', $latest_post_id );
+
+		$users = \get_users(
+			array(
+				'capability__in' => array( 'activitypub' ),
+			)
+		);
+
+		foreach ( $users as $user ) {
+			$followers = Followers::get_followers( $user->ID );
+
+			if ( $followers ) {
+				\update_user_option( $user->ID, 'activitypub_use_permalink_as_id', '1' );
+			}
+		}
+
+		$followers = Followers::get_followers( Users::BLOG_USER_ID );
+
+		if ( $followers ) {
+			\update_option( 'activitypub_use_permalink_as_id_for_blog', '1' );
+		}
+
+		self::migrate_actor_mode();
+	}
+
+	/**
+	 * Set the defaults needed for the plugin to work.
 	 *
-	 * * Add the ActivityPub capability to all users that can publish posts
-	 *
-	 * @return void
+	 * Add the ActivityPub capability to all users that can publish posts.
 	 */
 	public static function add_default_settings() {
 		self::add_activitypub_capability();
 	}
 
 	/**
-	 * Add the ActivityPub capability to all users that can publish posts
-	 *
-	 * @return void
+	 * Add the ActivityPub capability to all users that can publish posts.
 	 */
 	private static function add_activitypub_capability() {
-		// get all WP_User objects that can publish posts
+		// Get all WP_User objects that can publish posts.
 		$users = \get_users(
 			array(
 				'capability__in' => array( 'publish_posts' ),
 			)
 		);
 
-		// add ActivityPub capability to all users that can publish posts
+		// Add ActivityPub capability to all users that can publish posts.
 		foreach ( $users as $user ) {
 			$user->add_cap( 'activitypub' );
 		}
@@ -305,16 +350,16 @@ class Migration {
 	/**
 	 * Rename meta keys.
 	 *
-	 * @param string $old The old commentmeta key
-	 * @param string $new The new commentmeta key
+	 * @param string $old_key The old comment meta key.
+	 * @param string $new_key The new comment meta key.
 	 */
-	private static function update_usermeta_key( $old, $new ) { // phpcs:ignore
+	private static function update_usermeta_key( $old_key, $new_key ) {
 		global $wpdb;
 
-		$wpdb->update( // phpcs:ignore
+		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->usermeta,
-			array( 'meta_key' => $new ), // phpcs:ignore
-			array( 'meta_key' => $old ), // phpcs:ignore
+			array( 'meta_key' => $new_key ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			array( 'meta_key' => $old_key ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 			array( '%s' ),
 			array( '%s' )
 		);
@@ -323,18 +368,43 @@ class Migration {
 	/**
 	 * Rename option keys.
 	 *
-	 * @param string $old The old option key
-	 * @param string $new The new option key
+	 * @param string $old_key The old option key.
+	 * @param string $new_key The new option key.
 	 */
-	   private static function update_options_key( $old, $new ) { // phpcs:ignore
+	private static function update_options_key( $old_key, $new_key ) {
 		global $wpdb;
 
-		$wpdb->update( // phpcs:ignore
+		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->options,
-			array( 'option_name' => $new ), // phpcs:ignore
-			array( 'option_name' => $old ), // phpcs:ignore
+			array( 'option_name' => $new_key ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			array( 'option_name' => $old_key ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 			array( '%s' ),
 			array( '%s' )
 		);
+	}
+
+	/**
+	 * Migrate the actor mode settings.
+	 */
+	public static function migrate_actor_mode() {
+		$blog_profile    = \get_option( 'activitypub_enable_blog_user', '0' );
+		$author_profiles = \get_option( 'activitypub_enable_users', '1' );
+
+		if (
+			'1' === $blog_profile &&
+			'1' === $author_profiles
+		) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		} elseif (
+			'1' === $blog_profile &&
+			'1' !== $author_profiles
+		) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		} elseif (
+			'1' !== $blog_profile &&
+			'1' === $author_profiles
+		) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		}
 	}
 }

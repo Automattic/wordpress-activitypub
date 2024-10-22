@@ -1,4 +1,10 @@
 <?php
+/**
+ * Replies collection file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Collection;
 
 use WP_Post;
@@ -17,17 +23,17 @@ class Replies {
 	/**
 	 * Build base arguments for fetching the comments of either a WordPress post or comment.
 	 *
-	 * @param WP_Post|WP_Comment $wp_object
+	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
 	 */
 	private static function build_args( $wp_object ) {
 		$args = array(
-			'status' => 'approve',
+			'status'  => 'approve',
 			'orderby' => 'comment_date_gmt',
-			'order'  => 'ASC',
+			'order'   => 'ASC',
 		);
 
 		if ( $wp_object instanceof WP_Post ) {
-			$args['parent'] = 0; // TODO: maybe this is unnecessary.
+			$args['parent']  = 0; // TODO: maybe this is unnecessary.
 			$args['post_id'] = $wp_object->ID;
 		} elseif ( $wp_object instanceof WP_Comment ) {
 			$args['parent'] = $wp_object->comment_ID;
@@ -48,7 +54,7 @@ class Replies {
 	private static function add_pagination_args( $args, $page, $comments_per_page ) {
 		$args['number'] = $comments_per_page;
 
-		$offset = intval( $page ) * $comments_per_page;
+		$offset         = intval( $page ) * $comments_per_page;
 		$args['offset'] = $offset;
 
 		return $args;
@@ -58,9 +64,9 @@ class Replies {
 	/**
 	 * Get the replies collections ID.
 	 *
-	 * @param WP_Post|WP_Comment $wp_object
+	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
 	 *
-	 * @return string The rest URL of the replies collection.
+	 * @return string|WP_Error The rest URL of the replies collection or WP_Error if the object is not a post or comment.
 	 */
 	private static function get_id( $wp_object ) {
 		if ( $wp_object instanceof WP_Post ) {
@@ -75,8 +81,7 @@ class Replies {
 	/**
 	 * Get the replies collection.
 	 *
-	 * @param WP_Post|WP_Comment $wp_object
-	 * @param int $page
+	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
 	 *
 	 * @return array An associative array containing the replies collection without JSON-LD context.
 	 */
@@ -88,8 +93,8 @@ class Replies {
 		}
 
 		$replies = array(
-			'id'    => $id,
-			'type'  => 'Collection',
+			'id'   => $id,
+			'type' => 'Collection',
 		);
 
 		$replies['first'] = self::get_collection_page( $wp_object, 0, $replies['id'] );
@@ -151,7 +156,11 @@ class Replies {
 		$total_replies = \get_comments( array_merge( $args, array( 'count' => true ) ) );
 
 		// Modify query args to retrieve paginated results.
-		$comments_per_page = \get_option( 'comments_per_page' );
+		$comments_per_page = (int) \get_option( 'comments_per_page' );
+		// If set to zero, we get errors below. You need at least one comment per page, here.
+		if ( ! $comments_per_page ) {
+			$comments_per_page = 1;
+		}
 
 		// Fetch internal and external comments for current page.
 		$comments = get_comments( self::add_pagination_args( $args, $page, $comments_per_page ) );

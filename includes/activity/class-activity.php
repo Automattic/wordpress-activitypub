@@ -3,11 +3,13 @@
  * Inspired by the PHP ActivityPub Library by @Landrok
  *
  * @link https://github.com/landrok/activitypub
+ *
+ * @package Activitypub
  */
 
 namespace Activitypub\Activity;
 
-use Activitypub\Activity\Base_Object;
+use Activitypub\Link;
 
 /**
  * \Activitypub\Activity\Activity implements the common
@@ -22,6 +24,8 @@ class Activity extends Base_Object {
 	);
 
 	/**
+	 * The type of the object.
+	 *
 	 * @var string
 	 */
 	protected $type = 'Activity';
@@ -143,49 +147,49 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#object-without-create
 	 *
-	 * @param string|Base_Objectr|Link|null $object
+	 * @param array|string|Base_Object|Link|null $data Activity object.
 	 *
 	 * @return void
 	 */
-	public function set_object( $object ) {
-		// convert array to object
-		if ( is_array( $object ) ) {
-			$object = self::init_from_array( $object );
+	public function set_object( $data ) {
+		// Convert array to object.
+		if ( is_array( $data ) ) {
+			$data = self::init_from_array( $data );
 		}
 
-		// set object
-		$this->set( 'object', $object );
+		// Set object.
+		$this->set( 'object', $data );
 
-		if ( ! is_object( $object ) ) {
+		if ( ! is_object( $data ) ) {
 			return;
 		}
 
 		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
-			$this->set( $i, $object->get( $i ) );
+			$this->set( $i, $data->get( $i ) );
 		}
 
-		if ( $object->get_published() && ! $this->get_published() ) {
-			$this->set( 'published', $object->get_published() );
+		if ( $data->get_published() && ! $this->get_published() ) {
+			$this->set( 'published', $data->get_published() );
 		}
 
-		if ( $object->get_updated() && ! $this->get_updated() ) {
-			$this->set( 'updated', $object->get_updated() );
+		if ( $data->get_updated() && ! $this->get_updated() ) {
+			$this->set( 'updated', $data->get_updated() );
 		}
 
-		if ( $object->get_attributed_to() && ! $this->get_actor() ) {
-			$this->set( 'actor', $object->get_attributed_to() );
+		if ( $data->get_attributed_to() && ! $this->get_actor() ) {
+			$this->set( 'actor', $data->get_attributed_to() );
 		}
 
-		if ( $object->get_in_reply_to() ) {
-			$this->set( 'in_reply_to', $object->get_in_reply_to() );
+		if ( $data->get_in_reply_to() ) {
+			$this->set( 'in_reply_to', $data->get_in_reply_to() );
 		}
 
-		if ( $object->get_id() && ! $this->get_id() ) {
-			$id = strtok( $object->get_id(), '#' );
-			if ( $object->get_updated() ) {
-				$updated = $object->get_updated();
+		if ( $data->get_id() && ! $this->get_id() ) {
+			$id = strtok( $data->get_id(), '#' );
+			if ( $data->get_updated() ) {
+				$updated = $data->get_updated();
 			} else {
-				$updated = $object->get_published();
+				$updated = $data->get_published();
 			}
 			$this->set( 'id', $id . '#activity-' . strtolower( $this->get_type() ) . '-' . $updated );
 		}
@@ -200,7 +204,7 @@ class Activity extends Base_Object {
 		if ( $this->object instanceof Base_Object ) {
 			$class = get_class( $this->object );
 			if ( $class && $class::JSON_LD_CONTEXT ) {
-				// Without php 5.6 support this could be just: 'return  $this->object::JSON_LD_CONTEXT;'
+				// Without php 5.6 support this could be just: 'return  $this->object::JSON_LD_CONTEXT;'.
 				return $class::JSON_LD_CONTEXT;
 			}
 		}
