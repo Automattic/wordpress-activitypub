@@ -287,6 +287,7 @@ class Migration {
 				'numberposts' => 1,
 				'orderby'     => 'date',
 				'order'       => 'DESC',
+				'post_type'   => '',
 				'post_status' => 'publish',
 			)
 		);
