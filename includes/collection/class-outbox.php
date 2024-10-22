@@ -1,4 +1,10 @@
 <?php
+/**
+ * Outbox collection file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Collection;
 
 /**
