@@ -25,6 +25,7 @@
     "@wordpress/data": "^10.0.0",
     "@wordpress/dom-ready": "^4.0.0",
     "@wordpress/element": "^6.0.0",
+    "@wordpress/icons": "^10.10.0",
     "@wordpress/scripts": "^27.0.0",
     "classnames": "^2.3.2",
     "grunt": "^1.1.0",
