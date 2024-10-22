@@ -7,5 +7,5 @@
 	"category": "widgets",
 	"description": "",
 	"textdomain": "activitypub",
-  "viewScript": "file:./index.js"
+	"viewScript": "file:./index.js"
 }
