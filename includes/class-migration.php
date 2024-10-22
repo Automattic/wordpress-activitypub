@@ -287,7 +287,7 @@ class Migration {
 				'numberposts' => 1,
 				'orderby'     => 'date',
 				'order'       => 'DESC',
-				'post_type'   => '',
+				'post_type'   => 'any',
 				'post_status' => 'publish',
 			)
 		);
@@ -296,7 +296,7 @@ class Migration {
 			$latest_post_id = $latest_post[0]->ID;
 		}
 
-		update_option( 'activitypub_last_post_with_permalink_as_id', $latest_post_id );
+		\update_option( 'activitypub_last_post_with_permalink_as_id', $latest_post_id );
 
 		$users = \get_users(
 			array(
