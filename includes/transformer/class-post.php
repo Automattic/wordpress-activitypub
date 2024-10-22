@@ -88,23 +88,6 @@ class Post extends Base {
 	}
 
 	/**
-	 * Transforms the ActivityPub Object to an Activity
-	 *
-	 * @param string $type The Activity-Type.
-	 *
-	 * @return \Activitypub\Activity\Activity The Activity.
-	 */
-	public function to_activity( $type ) {
-		$object = $this->to_object();
-
-		$activity = new Activity();
-		$activity->set_type( $type );
-		$activity->set_object( $object );
-
-		return $activity;
-	}
-
-	/**
 	 * Returns the User-Object of the Author of the Post.
 	 *
 	 * If `single_user` mode is enabled, the Blog-User is returned.
