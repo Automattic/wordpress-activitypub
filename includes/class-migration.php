@@ -387,7 +387,7 @@ class Migration {
 	 */
 	public static function migrate_actor_mode() {
 		$blog_profile    = \get_option( 'activitypub_enable_blog_user', '0' );
-		$author_profiles = \get_option( 'activitypub_enable_users', '0' );
+		$author_profiles = \get_option( 'activitypub_enable_users', '1' );
 
 		if (
 			'1' === $blog_profile &&
