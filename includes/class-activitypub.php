@@ -23,6 +23,7 @@ class Activitypub {
 	public static function init() {
 		\add_filter( 'template_include', array( self::class, 'render_activitypub_template' ), 99 );
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
+		\add_filter( 'redirect_canonical', array( self::class, 'redirect_canonical' ), 10, 2 );
 		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
 		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
 
@@ -143,40 +144,70 @@ class Activitypub {
 			return;
 		}
 
+		$id = false;
+
 		// Only add self link to author pages...
 		if ( is_author() ) {
-			if ( is_user_disabled( get_queried_object_id() ) ) {
-				return;
+			if ( ! is_user_disabled( get_queried_object_id() ) ) {
+				$id = get_user_id( get_queried_object_id() );
 			}
 		} elseif ( is_singular() ) { // or posts/pages/custom-post-types...
-			if ( ! \post_type_supports( \get_post_type(), 'activitypub' ) ) {
-				return;
+			if ( \post_type_supports( \get_post_type(), 'activitypub' ) ) {
+				$id = get_post_id( get_queried_object_id() );
 			}
-		} else { // otherwise return.
+		}
+
+		if ( ! $id ) {
 			return;
 		}
 
-		// Add self link to html and http header.
-		$host = wp_parse_url( home_url() );
-
-		/**
-		 * Filters the self link.
-		 *
-		 * @param string $self_link The self link.
-		 */
-		$self_link = apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . wp_unslash( $request_uri ) ) );
-		$self_link = esc_url( $self_link );
-
 		if ( ! headers_sent() ) {
-			header( 'Link: <' . $self_link . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"' );
+			header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"' );
 		}
 
 		add_action(
 			'wp_head',
-			function () use ( $self_link ) {
-				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $self_link ) . '" />' . PHP_EOL;
+			function () use ( $id ) {
+				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;
 			}
 		);
+	}
+
+	/**
+	 * Add support for `p` and `author` query vars.
+	 *
+	 * @param string $redirect_url  The URL to redirect to.
+	 * @param string $requested_url The requested URL.
+	 *
+	 * @return string $redirect_url
+	 */
+	public static function redirect_canonical( $redirect_url, $requested_url ) {
+		if ( ! is_activitypub_request() ) {
+			return $redirect_url;
+		}
+
+		$query = \wp_parse_url( $requested_url, PHP_URL_QUERY );
+
+		if ( ! $query ) {
+			return $redirect_url;
+		}
+
+		$query_params = \wp_parse_args( $query );
+		unset( $query_params['activitypub'] );
+
+		if ( 1 !== count( $query_params ) ) {
+			return $redirect_url;
+		}
+
+		if ( isset( $query_params['p'] ) ) {
+			return null;
+		}
+
+		if ( isset( $query_params['author'] ) ) {
+			return null;
+		}
+
+		return $requested_url;
 	}
 
 	/**

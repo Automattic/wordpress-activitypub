@@ -43,13 +43,15 @@ class Webfinger {
 
 		$jrd['subject'] = sprintf( 'acct:%s', $user->get_webfinger() );
 
+		$jrd['aliases'][] = $user->get_id();
 		$jrd['aliases'][] = $user->get_url();
 		$jrd['aliases'][] = $user->get_alternate_url();
+		$jrd['aliases']   = array_unique( $jrd['aliases'] );
 
 		$jrd['links'][] = array(
 			'rel'  => 'self',
 			'type' => 'application/activity+json',
-			'href' => $user->get_url(),
+			'href' => $user->get_id(),
 		);
 
 		$jrd['links'][] = array(
@@ -76,6 +78,7 @@ class Webfinger {
 		}
 
 		$aliases = array(
+			$user->get_id(),
 			$user->get_url(),
 			$user->get_alternate_url(),
 		);
@@ -89,12 +92,12 @@ class Webfinger {
 				array(
 					'rel'  => 'self',
 					'type' => 'application/activity+json',
-					'href' => $user->get_url(),
+					'href' => $user->get_id(),
 				),
 				array(
 					'rel'  => 'http://webfinger.net/rel/profile-page',
 					'type' => 'text/html',
-					'href' => $user->get_url(),
+					'href' => $user->get_id(),
 				),
 				array(
 					'rel'      => 'http://ostatus.org/schema/1.0/subscribe',

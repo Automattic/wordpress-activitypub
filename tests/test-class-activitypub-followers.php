@@ -74,7 +74,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 
 		$db_followers = array_map(
 			function ( $item ) {
-				return $item->get_url();
+				return $item->get_id();
 			},
 			$db_followers
 		);
@@ -127,7 +127,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		}
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower->get_url() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->get_id() );
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'http://sally.example.org' );
 		$this->assertNull( $follower );
@@ -136,10 +136,10 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		$this->assertNull( $follower );
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower->get_url() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->get_id() );
 
 		$follower2 = \Activitypub\Collection\Followers::get_follower( 2, 'https://user2.example.com' );
-		$this->assertEquals( 'https://user2.example.com', $follower2->get_url() );
+		$this->assertEquals( 'https://user2.example.com', $follower2->get_id() );
 		$this->assertEquals( 'úser2', $follower2->get_name() );
 	}
 
@@ -162,13 +162,13 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		}
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower->get_url() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower->get_id() );
 
 		$followers = \Activitypub\Collection\Followers::get_followers( 1 );
 		$this->assertEquals( 2, count( $followers ) );
 
 		$follower2 = \Activitypub\Collection\Followers::get_follower( 2, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_url() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_id() );
 
 		\Activitypub\Collection\Followers::remove_follower( 1, 'https://example.com/author/jon' );
 
@@ -176,7 +176,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		$this->assertNull( $follower );
 
 		$follower2 = \Activitypub\Collection\Followers::get_follower( 2, 'https://example.com/author/jon' );
-		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_url() );
+		$this->assertEquals( 'https://example.com/author/jon', $follower2->get_id() );
 
 		$followers = \Activitypub\Collection\Followers::get_followers( 1 );
 		$this->assertEquals( 1, count( $followers ) );

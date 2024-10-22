@@ -121,7 +121,15 @@ class Post extends Base {
 	 *
 	 * @return string The Posts ID.
 	 */
-	protected function get_id() {
+	public function get_id() {
+		$last_legacy_id = (int) \get_option( 'activitypub_last_post_with_permalink_as_id', 0 );
+		$post_id        = $this->wp_object->ID;
+
+		if ( $post_id > $last_legacy_id ) {
+			// Generate URI based on post ID.
+			return \add_query_arg( 'p', $post_id, \trailingslashit( \home_url() ) );
+		}
+
 		return $this->get_url();
 	}
 
@@ -161,7 +169,7 @@ class Post extends Base {
 	 * @return string The User-URL.
 	 */
 	protected function get_attributed_to() {
-		return $this->get_actor_object()->get_url();
+		return $this->get_actor_object()->get_id();
 	}
 
 	/**

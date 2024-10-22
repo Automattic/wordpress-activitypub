@@ -190,7 +190,7 @@ class Enable_Mastodon_Apps {
 				if ( $acct && ! is_wp_error( $acct ) ) {
 					$acct = \str_replace( 'acct:', '', $acct );
 				} else {
-					$acct = $item->get_url();
+					$acct = $item->get_id();
 				}
 
 				$account                  = new Account();

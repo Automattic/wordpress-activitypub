@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Users;
 use Activitypub\Collection\Followers;
 
 /**
@@ -274,9 +275,48 @@ class Migration {
 	}
 
 	/**
-	 * Update actor-mode settings.
+	 * * Update actor-mode settings.
+	 * * Get the ID of the latest blog post and save it to the options table.
 	 */
 	private static function migrate_to_4_0_0() {
+		$latest_post_id = 0;
+
+		// Get the ID of the latest blog post and save it to the options table.
+		$latest_post = get_posts(
+			array(
+				'numberposts' => 1,
+				'orderby'     => 'date',
+				'order'       => 'DESC',
+				'post_status' => 'publish',
+			)
+		);
+
+		if ( $latest_post ) {
+			$latest_post_id = $latest_post[0]->ID;
+		}
+
+		update_option( 'activitypub_last_post_with_permalink_as_id', $latest_post_id );
+
+		$users = \get_users(
+			array(
+				'capability__in' => array( 'activitypub' ),
+			)
+		);
+
+		foreach ( $users as $user ) {
+			$followers = Followers::get_followers( $user->ID );
+
+			if ( $followers ) {
+				\update_user_option( $user->ID, 'activitypub_use_permalink_as_id', '1' );
+			}
+		}
+
+		$followers = Followers::get_followers( Users::BLOG_USER_ID );
+
+		if ( $followers ) {
+			\update_option( 'activitypub_use_permalink_as_id_for_blog', '1' );
+		}
+
 		self::migrate_actor_mode();
 	}
 
@@ -347,7 +387,7 @@ class Migration {
 	 */
 	public static function migrate_actor_mode() {
 		$blog_profile    = \get_option( 'activitypub_enable_blog_user', '0' );
-		$author_profiles = \get_option( 'activitypub_enable_users', '0' );
+		$author_profiles = \get_option( 'activitypub_enable_users', '1' );
 
 		if (
 			'1' === $blog_profile &&
