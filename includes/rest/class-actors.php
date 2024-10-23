@@ -41,7 +41,6 @@ class Actors {
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'get' ),
-					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -137,20 +136,5 @@ class Actors {
 			),
 			200
 		);
-	}
-
-	/**
-	 * The supported parameters.
-	 *
-	 * @return array List of parameters,
-	 */
-	public static function request_parameters() {
-		$params = array();
-
-		$params['page'] = array(
-			'type' => 'string',
-		);
-
-		return $params;
 	}
 }
