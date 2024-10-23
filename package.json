@@ -12,7 +12,9 @@
   "scripts": {
     "dev": "wp-scripts start",
     "build": "wp-scripts build",
-    "readme": "grunt wp_readme_to_markdown"
+    "readme": "grunt wp_readme_to_markdown",
+	"env-start": "wp-env start && wp-env run cli wp rewrite structure '/%year%/%monthnum%/%postname%/'",
+	"env-stop": "wp-env stop"
   },
   "license": "MIT",
   "bugs": {
@@ -25,6 +27,7 @@
     "@wordpress/data": "^10.0.0",
     "@wordpress/dom-ready": "^4.0.0",
     "@wordpress/element": "^6.0.0",
+    "@wordpress/env": "^10.10.0",
     "@wordpress/icons": "^10.10.0",
     "@wordpress/scripts": "^27.0.0",
     "classnames": "^2.3.2",
