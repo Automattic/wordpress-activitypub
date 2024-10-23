@@ -88,9 +88,10 @@ class Webfinger {
 		$params = array();
 
 		$params['resource'] = array(
-			'required' => true,
-			'type'     => 'string',
-			'pattern'  => '^(acct:)|^(https?://)(.+)$',
+			'required'          => true,
+			'type'              => 'string',
+			'pattern'           => '^(acct:)|^(https?://)(.+)$',
+			'sanitize_callback' => 'sanitize_text_field',
 		);
 
 		return $params;

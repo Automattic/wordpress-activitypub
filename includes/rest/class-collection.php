@@ -298,8 +298,9 @@ class Collection {
 		);
 
 		$params['id'] = array(
-			'required' => true,
-			'type'     => 'string',
+			'required'          => true,
+			'type'              => 'string',
+			'sanitize_callback' => 'sanitize_text_field',
 		);
 
 		return $params;
