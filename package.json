@@ -13,8 +13,8 @@
     "dev": "wp-scripts start",
     "build": "wp-scripts build",
     "readme": "grunt wp_readme_to_markdown",
-	"env-start": "wp-env start && wp-env run cli wp rewrite structure '/%year%/%monthnum%/%postname%/'",
-	"env-stop": "wp-env stop"
+    "env-start": "wp-env start && wp-env run cli wp rewrite structure '/%year%/%monthnum%/%postname%/'",
+    "env-stop": "wp-env stop"
   },
   "license": "MIT",
   "bugs": {

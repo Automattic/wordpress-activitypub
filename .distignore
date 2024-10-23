@@ -10,6 +10,7 @@
 .svnignore
 .wordpress-org
 .php_cs
+.wp-env.json
 Gruntfile.js
 LINGUAS
 Makefile
