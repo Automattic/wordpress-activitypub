@@ -7,15 +7,14 @@
 
 namespace Activitypub\Rest;
 
+use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Activity\Actor;
+use Activitypub\Collection\Replies;
+use Activitypub\Transformer\Factory;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Users as User_Collection;
-use Activitypub\Collection\Replies;
-
-use Activitypub\Transformer\Factory;
-use WP_Error;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
