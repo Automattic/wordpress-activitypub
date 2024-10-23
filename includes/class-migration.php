@@ -285,7 +285,7 @@ class Migration {
 		$latest_post = get_posts(
 			array(
 				'numberposts' => 1,
-				'orderby'     => 'date',
+				'orderby'     => 'ID',
 				'order'       => 'DESC',
 				'post_type'   => 'any',
 				'post_status' => 'publish',
