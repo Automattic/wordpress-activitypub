@@ -200,14 +200,14 @@ class Server {
 			return $order;
 		}
 
-		$type = $request->get_method();
+		$method = $request->get_method();
 
-		if ( WP_REST_Server::CREATABLE !== $type ) {
+		if ( WP_REST_Server::CREATABLE !== $method ) {
 			return $order;
 		}
 
 		return array(
-			'POST',
+			'JSON',
 			'defaults',
 		);
 	}

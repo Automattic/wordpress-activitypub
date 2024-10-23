@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 5.5  
 **Tested up to:** 6.6  
-**Stable tag:** 3.3.3  
+**Stable tag:** 4.0.0  
 **Requires PHP:** 7.0  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -149,6 +149,22 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 ## Changelog ##
+
+### 4.0.0 ###
+
+Added: Fire an action before a follower is removed
+Added: Make Intent-URL filterable
+Added: `title` attribute to link headers for better readability
+Added: Post "visibility" feature
+Added: Attribution-Domains support
+Improved: Inbox validation
+Improved: WordPress-Post-Type - Detection
+Improved: Only validate POST params and do not fall back to GET params
+Improved: ID handling for a better compatibility with caching plugins
+Fixed: The "Shared Inbox" endpoint
+Fixed: Ensure that sticky_posts is an array
+Fixed: URLs and Hashtags in profiles were not converted
+Fixed: A lot of small improvements and fixes
 
 ### 3.3.3 ###
 

@@ -48,7 +48,6 @@ class Collection {
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'tags_get' ),
-					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -61,7 +60,6 @@ class Collection {
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'featured_get' ),
-					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -102,15 +100,16 @@ class Collection {
 	 */
 	public static function replies_get( $request ) {
 		$type = $request->get_param( 'type' );
+		$id   = (int) $request->get_param( 'id' );
 
 		// Get the WordPress object of that "owns" the requested replies.
 		switch ( $type ) {
 			case 'comment':
-				$wp_object = \get_comment( $request->get_param( 'id' ) );
+				$wp_object = \get_comment( $id );
 				break;
 			case 'post':
 			default:
-				$wp_object = \get_post( $request->get_param( 'id' ) );
+				$wp_object = \get_post( $id );
 				break;
 		}
 
@@ -125,7 +124,7 @@ class Collection {
 			);
 		}
 
-		$page = intval( $request->get_param( 'page' ) );
+		$page = (int) $request->get_param( 'page' );
 
 		// If the request parameter page is present get the CollectionPage otherwise the replies collection.
 		if ( isset( $page ) ) {
@@ -287,17 +286,6 @@ class Collection {
 	/**
 	 * The supported parameters.
 	 *
-	 * @return array List of parameters.
-	 */
-	public static function request_parameters() {
-		$params = array();
-
-		return $params;
-	}
-
-	/**
-	 * The supported parameters.
-	 *
 	 * @return array list of parameters.
 	 */
 	public static function request_parameters_for_replies() {
@@ -310,8 +298,9 @@ class Collection {
 		);
 
 		$params['id'] = array(
-			'required' => true,
-			'type'     => 'string',
+			'required'          => true,
+			'type'              => 'string',
+			'sanitize_callback' => 'sanitize_text_field',
 		);
 
 		return $params;

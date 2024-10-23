@@ -137,7 +137,7 @@ class Activity_Dispatcher {
 		$activity->set_type( 'Update' );
 		$activity->set_actor( $user->get_id() );
 		$activity->set_object( $user->get_id() );
-		$activity->set_to( 'https://www.w3.org/ns/activitystreams#Public' );
+		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
 
 		// Send the update.
 		self::send_activity_to_followers( $activity, $user_id, $user );
@@ -268,8 +268,8 @@ class Activity_Dispatcher {
 	 * @return array The filtered Inboxes.
 	 */
 	public static function add_inboxes_by_mentioned_actors( $inboxes, $user_id, $activity ) {
-		$cc = $activity->get_cc();
-		$to = $activity->get_to();
+		$cc = $activity->get_cc() ?? array();
+		$to = $activity->get_to() ?? array();
 
 		$audience = array_merge( $cc, $to );
 
