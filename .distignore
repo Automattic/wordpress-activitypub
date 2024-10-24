@@ -1,5 +1,6 @@
 .codeclimate.yml
 .data
+.ddev
 .distignore
 .DS_Store
 .editorconfig
