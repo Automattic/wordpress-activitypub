@@ -102,7 +102,6 @@ class Scheduler {
 		wp_unschedule_hook( 'activitypub_cleanup_followers' );
 	}
 
-
 	/**
 	 * Schedule Activities.
 	 *

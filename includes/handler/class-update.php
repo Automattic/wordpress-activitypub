@@ -26,7 +26,7 @@ class Update {
 	}
 
 	/**
-	 * Handle "Update" requests
+	 * Handle "Update" requests.
 	 *
 	 * @param array $activity The activity-object.
 	 */

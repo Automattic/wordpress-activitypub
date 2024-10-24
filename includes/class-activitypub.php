@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Exception;
+use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
 
@@ -446,7 +447,7 @@ class Activitypub {
 	}
 
 	/**
-	 * Register the "Followers" Taxonomy.
+	 * Register Custom Post Types.
 	 */
 	private static function register_post_types() {
 		\register_post_type(
@@ -513,6 +514,24 @@ class Activitypub {
 				'sanitize_callback' => function ( $value ) {
 					return sanitize_text_field( $value );
 				},
+			)
+		);
+
+		// Register Outbox Post-Type.
+		register_post_type(
+			Outbox::POST_TYPE,
+			array(
+				'labels'           => array(
+					'name'          => _x( 'Outbox', 'post_type plural name', 'activitypub' ),
+					'singular_name' => _x( 'Outbox Item', 'post_type single name', 'activitypub' ),
+				),
+				'public'           => false,
+				'hierarchical'     => false,
+				'rewrite'          => false,
+				'query_var'        => false,
+				'delete_with_user' => false,
+				'can_export'       => true,
+				'supports'         => array(),
 			)
 		);
 
