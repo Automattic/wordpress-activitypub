@@ -1,7 +1,7 @@
 import { PluginDocumentSettingPanel, PluginPreviewMenuItem } from '@wordpress/editor';
 import { registerPlugin } from '@wordpress/plugins';
 import { TextControl, RadioControl, __experimentalText as Text } from '@wordpress/components';
-import { Icon, notAllowed, globe, people, post } from '@wordpress/icons';
+import { Icon, notAllowed, globe, people, external } from '@wordpress/icons';
 import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
 import { addQueryArgs } from '@wordpress/url';
@@ -69,18 +69,6 @@ function onActivityPubPreview() {
 }
 
 const EditorPreview = () => {
-	const el = React.createElement;
-	const svg = wp.primitives.SVG;
-	const text = el(
-		'text',
-		{ x: 7.5, y: 15, fill: '#000' },
-		"⁂",
-	);
-	const fediverseIcon = el(
-		svg,
-		{ width: 20, height: 20, viewBox: '0 0 20 20', textAnchor: 'middle', fontSize: '15' },
-		text,
-	);
 	// check if post was saved
 	const post_status = useSelect( ( select ) => select( 'core/editor' ).getCurrentPost().status );
 
@@ -89,10 +77,10 @@ const EditorPreview = () => {
 			{ PluginPreviewMenuItem ? (
 				<PluginPreviewMenuItem
 					onClick={ () => onActivityPubPreview() }
-					icon={ fediverseIcon }
+					icon={ external }
 					disabled={ post_status === 'auto-draft' }
 				>
-					{ __( 'Fediverse preview', 'activitypub' ) }
+					{ __( '⁂ Fediverse preview', 'activitypub' ) }
 				</PluginPreviewMenuItem>
 			) : null }
 		</>
