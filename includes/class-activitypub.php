@@ -21,7 +21,7 @@ class Activitypub {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_filter( 'template_include', array( self::class, 'render_json_template' ), 99 );
+		\add_filter( 'template_include', array( self::class, 'render_activitypub_template' ), 99 );
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
 		\add_filter( 'redirect_canonical', array( self::class, 'redirect_canonical' ), 10, 2 );
 		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
@@ -84,7 +84,7 @@ class Activitypub {
 	 *
 	 * @return string The new path to the JSON template.
 	 */
-	public static function render_json_template( $template ) {
+	public static function render_activitypub_template( $template ) {
 		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
 			return $template;
 		}
@@ -93,16 +93,21 @@ class Activitypub {
 			return $template;
 		}
 
-		$json_template = false;
+		$activitypub_template = false;
 
 		if ( \is_author() && ! is_user_disabled( \get_the_author_meta( 'ID' ) ) ) {
-			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/user-json.php';
+			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/user-json.php';
 		} elseif ( is_comment() ) {
-			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
+			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() && ! is_post_disabled( \get_the_ID() ) ) {
-			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
+			$preview = \get_query_var( 'preview' );
+			if ( $preview ) {
+				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php';
+			} else {
+				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
+			}
 		} elseif ( \is_home() && ! is_user_type_disabled( 'blog' ) ) {
-			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
+			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
 		/*
@@ -111,7 +116,7 @@ class Activitypub {
 		 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
 		 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
 		 */
-		if ( $json_template && ACTIVITYPUB_AUTHORIZED_FETCH ) {
+		if ( $activitypub_template && ACTIVITYPUB_AUTHORIZED_FETCH ) {
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
 				header( 'HTTP/1.1 401 Unauthorized' );
@@ -121,8 +126,8 @@ class Activitypub {
 			}
 		}
 
-		if ( $json_template ) {
-			return $json_template;
+		if ( $activitypub_template ) {
+			return $activitypub_template;
 		}
 
 		return $template;
@@ -247,6 +252,7 @@ class Activitypub {
 	 */
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
+		$vars[] = 'preview';
 		$vars[] = 'c';
 		$vars[] = 'p';
 
