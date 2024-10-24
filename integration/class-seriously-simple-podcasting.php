@@ -32,7 +32,7 @@ class Seriously_Simple_Podcasting extends Post {
 		$attachments = parent::get_attachment();
 
 		$attachment = array(
-			'type' => \esc_attr( \get_post_meta( $post->ID, 'episode_type', true ) ),
+			'type' => \esc_attr( ucfirst( \get_post_meta( $post->ID, 'episode_type', true ) ) ),
 			'url'  => \esc_url( \get_post_meta( $post->ID, 'audio_file', true ) ),
 			'name' => \esc_attr( \get_the_title( $post->ID ) ),
 			'icon' => \esc_url( \get_post_meta( $post->ID, 'cover_image', true ) ),
