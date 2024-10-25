@@ -891,23 +891,8 @@ class Post extends Base {
 	 * @return string The Template.
 	 */
 	protected function get_post_content_template() {
-		$type = \get_option( 'activitypub_post_content_type', 'content' );
-
-		switch ( $type ) {
-			case 'excerpt':
-				$template = "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
-				break;
-			case 'title':
-				$template = "<h2>[ap_title]</h2>\n\n[ap_permalink type=\"html\"]";
-				break;
-			case 'content':
-				$template = "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
-				break;
-			default:
-				$content  = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
-				$template = empty( $content ) ? ACTIVITYPUB_CUSTOM_POST_CONTENT : $content;
-				break;
-		}
+		$content  = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+		$template = $content ?? ACTIVITYPUB_CUSTOM_POST_CONTENT;
 
 		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 
@@ -915,7 +900,7 @@ class Post extends Base {
 			$template = '';
 
 			if ( 'Note' === $this->get_type() ) {
-				$template .= "[ap_title before='<h2>' after='</h2>']\n\n";
+				$template .= "[ap_title type=\"html\"]\n\n";
 			}
 
 			$template .= '[ap_content]';

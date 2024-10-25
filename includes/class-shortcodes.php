@@ -83,22 +83,16 @@ class Shortcodes {
 		}
 
 		$atts = shortcode_atts(
-			array(
-				'before' => '',
-				'after'  => '',
-			),
+			array( 'type' => 'plain' ),
 			$atts,
 			$tag
 		);
 
-		$title = sprintf(
-			'%s%s%s',
-			$atts['before'],
-			$title,
-			$atts['after']
-		);
+		if ( 'html' !== $atts['type'] ) {
+			return $title;
+		}
 
-		return $title;
+		return sprintf( '<h2>%s</h2>', $title );
 	}
 
 	/**
@@ -213,7 +207,7 @@ class Shortcodes {
 			$tag
 		);
 
-		if ( 'url' === $atts['type'] ) {
+		if ( 'html' !== $atts['type'] ) {
 			return \esc_url( \get_permalink( $item->ID ) );
 		}
 
@@ -247,7 +241,7 @@ class Shortcodes {
 			$tag
 		);
 
-		if ( 'url' === $atts['type'] ) {
+		if ( 'html' !== $atts['type'] ) {
 			return \esc_url( \wp_get_shortlink( $item->ID ) );
 		}
 

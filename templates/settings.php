@@ -104,46 +104,6 @@
 						<td>
 							<p><strong><?php \esc_html_e( 'These settings only apply if you use the "Note" Object-Type setting above.', 'activitypub' ); ?></strong></p>
 							<p>
-								<label for="activitypub_post_content_type_title_link">
-									<input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_title_link" value="title" <?php echo \checked( 'title', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> />
-									<?php \esc_html_e( 'Title and link', 'activitypub' ); ?>
-									-
-									<span class="description">
-										<?php \esc_html_e( 'Only the title and a link.', 'activitypub' ); ?>
-									</span>
-								</label>
-							</p>
-							<p>
-								<label for="activitypub_post_content_type_excerpt">
-									<input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_excerpt" value="excerpt" <?php echo \checked( 'excerpt', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> />
-									<?php \esc_html_e( 'Excerpt', 'activitypub' ); ?>
-									-
-									<span class="description">
-										<?php \esc_html_e( 'A content summary without markup (truncated if no excerpt is provided).', 'activitypub' ); ?>
-									</span>
-								</label>
-							</p>
-							<p>
-								<label for="activitypub_post_content_type_content">
-									<input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_content" value="content" <?php echo \checked( 'content', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> />
-									<?php \esc_html_e( 'Content (default)', 'activitypub' ); ?>
-									-
-									<span class="description">
-										<?php \esc_html_e( 'The full content.', 'activitypub' ); ?>
-									</span>
-								</label>
-							</p>
-							<p>
-								<label for="activitypub_post_content_type_custom">
-									<input type="radio" name="activitypub_post_content_type" id="activitypub_post_content_type_custom" value="custom" <?php echo \checked( 'custom', \get_option( 'activitypub_post_content_type', 'content' ) ); ?> />
-									<?php \esc_html_e( 'Custom', 'activitypub' ); ?>
-									-
-									<span class="description">
-										<?php \esc_html_e( 'Use the text area below, to customize your activities.', 'activitypub' ); ?>
-									</span>
-								</label>
-							</p>
-							<p>
 								<textarea name="activitypub_custom_post_content" id="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo wp_kses( ACTIVITYPUB_CUSTOM_POST_CONTENT, 'post' ); ?>"><?php echo esc_textarea( wp_kses( \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ), 'post' ) ); ?></textarea>
 								<details>
 									<summary><?php esc_html_e( 'See a list of ActivityPub Template Tags.', 'activitypub' ); ?></summary>
