@@ -912,7 +912,16 @@ class Post extends Base {
 		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 
 		if ( 'wordpress-post-format' === $post_format_setting ) {
-			$template = '[ap_content]';
+			$template = '';
+
+			if (
+				'Note' === $this->get_type() &&
+				\get_the_title( $this->wp_object->ID )
+			) {
+				$template .= "<h2>[ap_title]</h2>\n\n";
+			}
+
+			$template .= '[ap_content]';
 		}
 
 		return apply_filters( 'activitypub_object_content_template', $template, $this->wp_object );
