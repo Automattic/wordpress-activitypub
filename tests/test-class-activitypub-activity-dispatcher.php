@@ -181,14 +181,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 	public function test_dispatch_fallback_activity() {
 		$followers = array( 'https://example.com/author/jon' );
 
-		add_filter(
-			'activitypub_is_user_type_disabled',
-			function ( $disabled, $type ) {
-				return false;
-			},
-			10,
-			2
-		);
+		add_filter( 'activitypub_is_user_type_disabled', '__return_false' );
 
 		add_filter(
 			'activitypub_is_user_disabled',
