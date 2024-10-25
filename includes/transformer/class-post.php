@@ -914,11 +914,8 @@ class Post extends Base {
 		if ( 'wordpress-post-format' === $post_format_setting ) {
 			$template = '';
 
-			if (
-				'Note' === $this->get_type() &&
-				\get_the_title( $this->wp_object->ID )
-			) {
-				$template .= "<h2>[ap_title]</h2>\n\n";
+			if ( 'Note' === $this->get_type() ) {
+				$template .= "[ap_title before='<h2>' after='</h2>']\n\n";
 			}
 
 			$template .= '[ap_content]';
