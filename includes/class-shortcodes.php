@@ -69,14 +69,36 @@ class Shortcodes {
 	 *
 	 * @return string The post title.
 	 */
-	public static function title() {
+	public static function title( $atts, $content, $tag ) {
 		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
 		}
 
-		return \wp_strip_all_tags( \get_the_title( $item->ID ), true );
+		$title = \wp_strip_all_tags( \get_the_title( $item->ID ), true );
+
+		if ( ! $title ) {
+			return '';
+		}
+
+		$atts = shortcode_atts(
+			array(
+				'before' => '',
+				'after'  => '',
+			),
+			$atts,
+			$tag
+		);
+
+		$title = sprintf(
+			'%s%s%s',
+			$atts['before'],
+			$title,
+			$atts['after']
+		);
+
+		return $title;
 	}
 
 	/**
