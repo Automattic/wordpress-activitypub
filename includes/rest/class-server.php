@@ -214,6 +214,8 @@ class Server {
 
 		return array(
 			'JSON',
+			'POST',
+			'URL',
 			'defaults',
 		);
 	}
