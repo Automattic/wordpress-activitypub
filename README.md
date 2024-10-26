@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 5.5  
 **Tested up to:** 6.6  
-**Stable tag:** 4.0.0  
+**Stable tag:** 4.0.1  
 **Requires PHP:** 7.0  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -151,6 +151,13 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 ## Changelog ##
+
+### 4.0.1 ###
+
+* Fixed: Missing URL-Param handling in REST API
+* Fixed: Seriously Simple Podcasting integration
+* Fixed: Multiple small fixes
+* Improved: Provide contextual fallback for dynamic blocks
 
 ### 4.0.0 ###
 

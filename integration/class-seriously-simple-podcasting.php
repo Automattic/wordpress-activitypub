@@ -30,11 +30,15 @@ class Seriously_Simple_Podcasting extends Post {
 	public function get_attachment() {
 		$post       = $this->wp_object;
 		$attachment = array(
-			'type' => \esc_attr( ucfirst( \get_post_meta( $post->ID, 'episode_type', true ) ) ),
+			'type' => \esc_attr( ucfirst( \get_post_meta( $post->ID, 'episode_type', true ) ?? 'Audio' ) ),
 			'url'  => \esc_url( \get_post_meta( $post->ID, 'audio_file', true ) ),
-			'name' => \esc_attr( \get_the_title( $post->ID ) ),
-			'icon' => \esc_url( \get_post_meta( $post->ID, 'cover_image', true ) ),
+			'name' => \esc_attr( \get_the_title( $post->ID ) ?? '' ),
 		);
+
+		$cover = \get_post_meta( $post->ID, 'cover_image', true );
+		if ( $cover ) {
+			$attachment['icon'] = \esc_url( $cover );
+		}
 
 		return array( $attachment );
 	}
