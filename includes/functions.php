@@ -409,7 +409,10 @@ function is_activitypub_request() {
  * @return boolean True if the post is disabled, false otherwise.
  */
 function is_post_disabled( $post ) {
-	$post       = \get_post( $post );
+	$post = \get_post( $post );
+
+	\clean_post_cache( $post );
+
 	$disabled   = false;
 	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
