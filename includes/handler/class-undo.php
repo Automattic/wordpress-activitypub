@@ -40,7 +40,9 @@ class Undo {
 			return;
 		}
 
-		$type = $activity['object']['type'];
+		$type    = $activity['object']['type'];
+		$state   = false;
+		$user_id = null;
 
 		// Handle "Unfollow" requests.
 		if ( 'Follow' === $type ) {
@@ -55,7 +57,7 @@ class Undo {
 			$user_id = $user->get__id();
 			$actor   = object_to_uri( $activity['actor'] );
 
-			Followers::remove_follower( $user_id, $actor );
+			$state = Followers::remove_follower( $user_id, $actor );
 		}
 
 		// Handle "Undo" requests for "Like" and "Create" activities.
@@ -72,8 +74,15 @@ class Undo {
 			}
 
 			$state = wp_trash_comment( $comment );
-
-			do_action( 'activitypub_handled_undo', $activity, $user_id, isset( $state ) ? $state : null, null );
 		}
+
+		/*
+		 * Fires after an "Undo" activity has been handled.
+		 *
+		 * @param array $activity The JSON "Undo" Activity.
+		 * @param int   $user_id  The ID of the user who initiated the "Undo" activity.
+		 * @param mixed $state    The state of the "Undo" activity.
+		 */
+		do_action( 'activitypub_handled_undo', $activity, $user_id, $state );
 	}
 }
