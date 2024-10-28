@@ -79,9 +79,9 @@ class Undo {
 		/*
 		 * Fires after an "Undo" activity has been handled.
 		 *
-		 * @param array $activity The JSON "Undo" Activity.
-		 * @param int   $user_id  The ID of the user who initiated the "Undo" activity.
-		 * @param mixed $state    The state of the "Undo" activity.
+		 * @param array    $activity The JSON "Undo" Activity.
+		 * @param int|null $user_id  The ID of the user who initiated the "Undo" activity otherwise null.
+		 * @param mixed    $state    The state of the "Undo" activity.
 		 */
 		do_action( 'activitypub_handled_undo', $activity, $user_id, $state );
 	}
