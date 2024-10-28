@@ -330,9 +330,9 @@ class Migration {
 	 * * Migrate the `activitypub_post_content_type` to only use `activitypub_custom_post_content`.
 	 */
 	public static function migrate_to_4_1_0() {
-		$type = \get_option( 'activitypub_post_content_type' );
+		$content_type = \get_option( 'activitypub_post_content_type' );
 
-		switch ( $type ) {
+		switch ( $content_type ) {
 			case 'excerpt':
 				$template = "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
 				break;
@@ -350,6 +350,11 @@ class Migration {
 		\update_option( 'activitypub_custom_post_content', $template );
 
 		\delete_option( 'activitypub_post_content_type' );
+
+		$object_type = \get_option( 'activitypub_object_type', false );
+		if ( ! $object_type ) {
+			\update_option( 'activitypub_object_type', 'note' );
+		}
 	}
 
 	/**
