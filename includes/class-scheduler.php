@@ -165,7 +165,7 @@ class Scheduler {
 
 		if ( false === wp_next_scheduled( $hook, $args ) ) {
 			set_wp_object_state( $post, 'federate' );
-			\wp_schedule_single_event( \time(), $hook, $args );
+			\wp_schedule_single_event( \time() + 10, $hook, $args );
 		}
 	}
 
@@ -350,7 +350,7 @@ class Scheduler {
 	 */
 	public static function schedule_profile_update( $user_id ) {
 		\wp_schedule_single_event(
-			\time(),
+			\time() + 10,
 			'activitypub_send_update_profile_activity',
 			array( $user_id )
 		);
