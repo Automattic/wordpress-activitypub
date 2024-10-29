@@ -78,7 +78,7 @@ class Undo {
 			$state = wp_trash_comment( $comment );
 		}
 
-		/*
+		/**
 		 * Fires after an "Undo" activity has been handled.
 		 *
 		 * @param array    $activity The JSON "Undo" Activity.
