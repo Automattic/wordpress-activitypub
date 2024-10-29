@@ -102,6 +102,7 @@ class Activitypub {
 		} elseif ( \is_singular() && ! is_post_disabled( \get_the_ID() ) ) {
 			$preview = \get_query_var( 'preview' );
 			if ( $preview ) {
+				\define( 'ACTIVITYPUB_PREVIEW', true );
 				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php';
 			} else {
 				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
