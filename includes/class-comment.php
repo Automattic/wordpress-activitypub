@@ -689,7 +689,7 @@ class Comment {
 			empty( $commentdata['meta']['protocol'] ) ||
 			'activitypub' !== $commentdata['meta']['protocol']
 		) {
-			return true;
+			return $approved;
 		}
 
 		global $wpdb;
