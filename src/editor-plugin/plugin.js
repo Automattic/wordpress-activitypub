@@ -41,6 +41,7 @@ const EditorPlugin = () => {
 					setMeta( { ...meta, activitypub_content_warning: value } );
 				} }
 				placeholder={ __( 'Optional content warning', 'activitypub' ) }
+				help={ __( 'Content warnings do not change the content on your site, only in the fediverse.', 'activitypub' ) }
 			/>
 			<RadioControl
 				label={ __( 'Visibility', 'activitypub' ) }
