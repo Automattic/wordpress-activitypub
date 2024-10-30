@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.6
-Stable tag: 4.0.1
+Stable tag: 4.0.2
 Requires PHP: 7.0
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -150,6 +150,11 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= 4.0.2 =
+
+* Fixed: Do not federate "Local" posts
+* Improved: Help-text for Content-Warning box
+
 = 4.0.1 =
 
 * Fixed: Missing URL-Param handling in REST API
@@ -199,57 +204,6 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Cropping Header Images for users without the 'customize' capability
 * Improved: OpenSSL handling
 * Improved: Added missing @ in Follow-Me block
-
-= 3.2.5 =
-
-* Fixed: Enable Mastodon Apps check
-* Fixed: Fediverse replies were not threaded properly
-
-= 3.2.4 =
-
-* Improved: Inbox validation
-
-= 3.2.3 =
-
-* Fixed: NodeInfo endpoint
-* Fixed: (Temporarily) Remove HTML from `summary`, because it seems that Mastodon has issues with it
-* Improved: Accessibility for Reply-Context
-* Improved: Use `Article` Object-Type as default
-
-= 3.2.2 =
-
-* Fixed: Extra-Fields check
-
-= 3.2.1 =
-
-* Fixed: Use `Excerpt` for Podcast Episodes
-
-= 3.2.0 =
-
-* Added: Support for Seriously Simple Podcasting
-* Added: Blog extra fields
-* Added: Support "read more" for Activity-Summary
-* Added: `Like` and `Announce` (Boost) handler
-* Added: Simple Remote-Reply endpoint
-* Added: "Stream" Plugin support
-* Added: New Fediverse symbol
-* Improved: Replace hashtags, urls and mentions in summary with links
-* Improved: Hide Bookmarklet if site does not support Blocks
-* Fixed: Link detection for extra fields when spaces after the link and fix when two links in the content
-* Fixed: `Undo` for `Likes` and `Announces`
-* Fixed: Show Avatars on `Likes` and `Announces`
-* Fixed: Remove proprietary WebFinger resource
-* Fixed: Wrong followers URL in "to" attribute of posts
-
-= 3.1.0 =
-
-* Added: `menu_order` to `ap_extrafield` so that user can decide in with order they will be displayed
-* Added: Line brakes to user biography
-* Added: Blueprint
-* Fixed: Changed missing `activitypub_user_description` to `activitypub_description`
-* Fixed: Undefined `get_sample_permalink`
-* Fixed: Only send Update for previously-published posts
-* Improved: Simplified WebFinger code
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).
 
