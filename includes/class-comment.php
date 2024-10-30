@@ -699,6 +699,10 @@ class Comment {
 		// phpcs:ignore
 		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s and comment_approved = '1' LIMIT 1", $author, $author_url ) );
 
-		return (int) $ok_to_comment;
+		if ( 1 === (int) $ok_to_comment ) {
+			return 1;
+		}
+
+		return $approved;
 	}
 }
