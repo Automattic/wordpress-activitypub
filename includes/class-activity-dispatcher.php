@@ -195,7 +195,7 @@ class Activity_Dispatcher {
 	public static function send_post( $id, $type ) {
 		$post = get_post( $id );
 
-		if ( ! $post ) {
+		if ( ! $post || is_post_disabled( $post ) ) {
 			return;
 		}
 
