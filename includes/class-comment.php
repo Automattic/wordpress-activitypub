@@ -677,7 +677,7 @@ class Comment {
 	 * @return boolean `true` if the comment is approved, `false` otherwise.
 	 */
 	public static function pre_comment_approved( $approved, $commentdata ) {
-		if ( $approved ) {
+		if ( $approved || \is_wp_error( $approved ) ) {
 			return $approved;
 		}
 
@@ -686,18 +686,18 @@ class Comment {
 		}
 
 		if (
-			empty( $commentdata['meta']['protocol'] ) ||
-			'activitypub' !== $commentdata['meta']['protocol']
+			empty( $commentdata['comment_meta']['protocol'] ) ||
+			'activitypub' !== $commentdata['comment_meta']['protocol']
 		) {
 			return $approved;
 		}
 
 		global $wpdb;
 
-		$author = $commentdata['comment_author'];
-		$url    = $commentdata['comment_author_url'];
+		$author     = $commentdata['comment_author'];
+		$author_url = $commentdata['comment_author_url'];
 		// phpcs:ignore
-		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s and comment_approved = '1' LIMIT 1", $author, $url ) );
+		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s and comment_approved = '1' LIMIT 1", $author, $author_url ) );
 
 		return (bool) $ok_to_comment;
 	}
