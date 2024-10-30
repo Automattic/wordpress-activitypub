@@ -78,10 +78,17 @@ class Post extends Base {
 			$object->set_summary_map( null );
 		}
 
-		// Change order if visibility is "Quiet public".
-		if ( ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC === get_content_visibility( $post ) ) {
-			$object->set_to( $this->get_cc() );
-			$object->set_cc( $this->get_to() );
+		$visibility = get_content_visibility( $post );
+
+		switch ( $visibility ) {
+			case ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC:
+				$object->set_to( $this->get_cc() );
+				$object->set_cc( $this->get_to() );
+				break;
+			case ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL:
+				$object->set_to( array() );
+				$object->set_cc( array() );
+				break;
 		}
 
 		return $object;
