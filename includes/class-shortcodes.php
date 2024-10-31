@@ -67,16 +67,36 @@ class Shortcodes {
 	/**
 	 * Generates output for the 'ap_title' Shortcode
 	 *
+	 * @param array  $atts    The Shortcode attributes.
+	 * @param string $content The ActivityPub post-content.
+	 * @param string $tag     The tag/name of the Shortcode.
+	 *
 	 * @return string The post title.
 	 */
-	public static function title() {
+	public static function title( $atts, $content, $tag ) {
 		$item = self::get_item();
 
 		if ( ! $item ) {
 			return '';
 		}
 
-		return \wp_strip_all_tags( \get_the_title( $item->ID ), true );
+		$title = \wp_strip_all_tags( \get_the_title( $item->ID ), true );
+
+		if ( ! $title ) {
+			return '';
+		}
+
+		$atts = shortcode_atts(
+			array( 'type' => 'plain' ),
+			$atts,
+			$tag
+		);
+
+		if ( 'html' !== $atts['type'] ) {
+			return $title;
+		}
+
+		return sprintf( '<h2>%s</h2>', $title );
 	}
 
 	/**
@@ -191,7 +211,7 @@ class Shortcodes {
 			$tag
 		);
 
-		if ( 'url' === $atts['type'] ) {
+		if ( 'html' !== $atts['type'] ) {
 			return \esc_url( \get_permalink( $item->ID ) );
 		}
 
@@ -225,7 +245,7 @@ class Shortcodes {
 			$tag
 		);
 
-		if ( 'url' === $atts['type'] ) {
+		if ( 'html' !== $atts['type'] ) {
 			return \esc_url( \wp_get_shortlink( $item->ID ) );
 		}
 

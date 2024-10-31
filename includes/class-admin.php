@@ -236,7 +236,7 @@ class Admin {
 						),
 					),
 				),
-				'default'      => 'note',
+				'default'      => ACTIVITYPUB_DEFAULT_OBJECT_TYPE,
 			)
 		);
 		\register_setting(
