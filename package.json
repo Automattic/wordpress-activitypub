@@ -22,7 +22,7 @@
   },
   "homepage": "https://github.com/automattic/wordpress-activitypub#readme",
   "devDependencies": {
-    "@wordpress/blocks": "^13.0.0",
+    "@wordpress/blocks": "^14.0.0",
     "@wordpress/components": "^28.0.0",
     "@wordpress/data": "^10.0.0",
     "@wordpress/dom-ready": "^4.0.0",
