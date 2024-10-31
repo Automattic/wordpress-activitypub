@@ -36,7 +36,8 @@ class Interactions {
 			return false;
 		}
 
-		$in_reply_to       = \esc_url_raw( $activity['object']['inReplyTo'] );
+		$in_reply_to       = object_to_uri( $activity['object']['inReplyTo'] );
+		$in_reply_to       = \esc_url_raw( $in_reply_to );
 		$comment_post_id   = \url_to_postid( $in_reply_to );
 		$parent_comment_id = url_to_commentid( $in_reply_to );
 
