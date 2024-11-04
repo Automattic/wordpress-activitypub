@@ -808,7 +808,7 @@ class Post extends Base {
 		}
 
 		// Remove Teaser from drafts.
-		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->wp_object ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
 		}
 
@@ -852,7 +852,7 @@ class Post extends Base {
 		add_filter( 'activitypub_reply_block', '__return_empty_string' );
 
 		// Remove Content from drafts.
-		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->wp_object ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
 		}
 
@@ -873,12 +873,17 @@ class Post extends Base {
 		$post    = $this->wp_object;
 		$content = $this->get_post_content_template();
 
+		// It seems that shortcodes are only applied to published posts.
+		if ( is_preview() ) {
+			$post->post_status = 'publish';
+		}
+
 		// Register our shortcodes just in time.
 		Shortcodes::register();
 		// Fill in the shortcodes.
-		setup_postdata( $post );
-		$content = do_shortcode( $content );
-		wp_reset_postdata();
+		\setup_postdata( $post );
+		$content = \do_shortcode( $content );
+		\wp_reset_postdata();
 
 		$content = \wpautop( $content );
 		$content = \preg_replace( '/[\n\r\t]/', '', $content );
@@ -898,28 +903,19 @@ class Post extends Base {
 	 * @return string The Template.
 	 */
 	protected function get_post_content_template() {
-		$type = \get_option( 'activitypub_post_content_type', 'content' );
-
-		switch ( $type ) {
-			case 'excerpt':
-				$template = "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
-				break;
-			case 'title':
-				$template = "<h2>[ap_title]</h2>\n\n[ap_permalink type=\"html\"]";
-				break;
-			case 'content':
-				$template = "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
-				break;
-			default:
-				$content  = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
-				$template = empty( $content ) ? ACTIVITYPUB_CUSTOM_POST_CONTENT : $content;
-				break;
-		}
+		$content  = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+		$template = $content ?? ACTIVITYPUB_CUSTOM_POST_CONTENT;
 
 		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 
 		if ( 'wordpress-post-format' === $post_format_setting ) {
-			$template = '[ap_content]';
+			$template = '';
+
+			if ( 'Note' === $this->get_type() ) {
+				$template .= "[ap_title type=\"html\"]\n\n";
+			}
+
+			$template .= '[ap_content]';
 		}
 
 		return apply_filters( 'activitypub_object_content_template', $template, $this->wp_object );
@@ -1072,5 +1068,14 @@ class Post extends Base {
 	 */
 	public static function revert_embed_links( $block_content, $block ) {
 		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
+	}
+
+	/**
+	 * Check if the post is a preview.
+	 *
+	 * @return boolean True if the post is a preview, false otherwise.
+	 */
+	private function is_preview() {
+		return defined( 'ACTIVITYPUB_PREVIEW' ) && ACTIVITYPUB_PREVIEW;
 	}
 }

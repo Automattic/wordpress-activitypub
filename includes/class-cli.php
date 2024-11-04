@@ -61,9 +61,9 @@ class Cli extends WP_CLI_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     $ wp webmention meta
+	 *     $ wp activitypub meta
 	 *
-	 *     $ wp webmention meta --Version
+	 *     $ wp activitypub meta --Version
 	 *     Version: 1.0.0
 	 *
 	 * @param array|null $args       The arguments.

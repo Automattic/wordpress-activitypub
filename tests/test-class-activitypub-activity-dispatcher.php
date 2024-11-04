@@ -178,6 +178,58 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 		remove_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10 );
 	}
 
+	public function test_dispatch_fallback_activity() {
+		$followers = array( 'https://example.com/author/jon' );
+
+		add_filter( 'activitypub_is_user_type_disabled', '__return_false' );
+
+		add_filter(
+			'activitypub_is_user_disabled',
+			function ( $disabled, $user_id ) {
+				if ( 1 === (int) $user_id ) {
+					return true;
+				}
+
+				return false;
+			},
+			10,
+			2
+		);
+
+		$this->assertFalse( \Activitypub\is_single_user() );
+
+		foreach ( $followers as $follower ) {
+			\Activitypub\Collection\Followers::add_follower( \Activitypub\Collection\Users::BLOG_USER_ID, $follower );
+			\Activitypub\Collection\Followers::add_follower( 1, $follower );
+		}
+
+		$post = \wp_insert_post(
+			array(
+				'post_author' => 1,
+				'post_content' => 'hello',
+			)
+		);
+
+		$pre_http_request = new MockAction();
+		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
+
+		\Activitypub\Activity_Dispatcher::send_activity( get_post( $post ), 'Create' );
+
+		$all_args = $pre_http_request->get_args();
+		$first_call_args = $all_args[0];
+
+		$this->assertSame( 1, $pre_http_request->get_call_count() );
+
+		$user = new \Activitypub\Model\Blog();
+
+		$json = json_decode( $first_call_args[1]['body'] );
+		$this->assertEquals( 'Create', $json->type );
+		$this->assertEquals( $user->get_id(), $json->actor );
+		$this->assertEquals( $user->get_id(), $json->object->attributedTo );
+
+		remove_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10 );
+	}
+
 	public function set_up() {
 		parent::set_up();
 		add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ), 10, 2 );

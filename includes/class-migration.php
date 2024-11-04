@@ -139,6 +139,9 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.0.0', '<' ) ) {
 			self::migrate_to_4_0_0();
 		}
+		if ( \version_compare( $version_from_db, '4.1.0', '<' ) ) {
+			self::migrate_to_4_1_0();
+		}
 
 		/**
 		 * Fires when the system has to be migrated.
@@ -319,6 +322,39 @@ class Migration {
 		}
 
 		self::migrate_actor_mode();
+	}
+
+	/**
+	 * Upate to 4.1.0
+	 *
+	 * * Migrate the `activitypub_post_content_type` to only use `activitypub_custom_post_content`.
+	 */
+	public static function migrate_to_4_1_0() {
+		$content_type = \get_option( 'activitypub_post_content_type' );
+
+		switch ( $content_type ) {
+			case 'excerpt':
+				$template = "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
+				break;
+			case 'title':
+				$template = "[ap_title type=\"html\"]\n\n[ap_permalink type=\"html\"]";
+				break;
+			case 'content':
+				$template = "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
+				break;
+			default:
+				$template = ACTIVITYPUB_CUSTOM_POST_CONTENT;
+				break;
+		}
+
+		\update_option( 'activitypub_custom_post_content', $template );
+
+		\delete_option( 'activitypub_post_content_type' );
+
+		$object_type = \get_option( 'activitypub_object_type', false );
+		if ( ! $object_type ) {
+			\update_option( 'activitypub_object_type', 'note' );
+		}
 	}
 
 	/**

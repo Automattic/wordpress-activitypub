@@ -664,7 +664,7 @@ class Comment {
 			return;
 		}
 
-		// Exclude likes and reposts by the Webmention plugin.
+		// Exclude likes and reposts by the ActivityPub plugin.
 		$query->query_vars['type__not_in'] = self::get_comment_type_names();
 	}
 
