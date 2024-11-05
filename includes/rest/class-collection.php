@@ -231,7 +231,6 @@ class Collection {
 					),
 					array(
 						'key'     => 'activitypub_content_visibility',
-						'value'   => 'public',
 						'compare' => 'NOT EXISTS',
 					),
 				),
