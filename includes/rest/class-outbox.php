@@ -114,6 +114,13 @@ class Outbox {
 					'author'         => $user_id > 0 ? $user_id : null,
 					'paged'          => $page,
 					'post_type'      => $post_types,
+					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					'meta_query'     => array(
+						array(
+							'key'     => 'activitypub_content_visibility',
+							'compare' => 'NOT EXISTS',
+						),
+					),
 				)
 			);
 
