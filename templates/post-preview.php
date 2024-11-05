@@ -14,8 +14,10 @@ if ( \is_wp_error( $transformer ) ) {
 		404
 	);
 }
-$user   = \Activitypub\Collection\Users::get_by_id( $post->post_author );
+
 $object = $transformer->to_object();
+$user   = $transformer->get_actor_object();
+
 ?>
 <DOCTYPE html>
 <html>

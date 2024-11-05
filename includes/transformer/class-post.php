@@ -101,7 +101,7 @@ class Post extends Base {
 	 *
 	 * @return \Activitypub\Activity\Actor The User-Object.
 	 */
-	protected function get_actor_object() {
+	public function get_actor_object() {
 		if ( $this->actor_object ) {
 			return $this->actor_object;
 		}

@@ -187,14 +187,14 @@ function count_followers( $user_id ) {
  *
  * @param string $url Permalink to check.
  *
- * @return int User ID, or 0 on failure.
+ * @return int|null User ID, or null on failure.
  */
 function url_to_authorid( $url ) {
 	global $wp_rewrite;
 
 	// Check if url hase the same host.
 	if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== \wp_parse_url( $url, \PHP_URL_HOST ) ) {
-		return 0;
+		return null;
 	}
 
 	// First, check to see if there is a 'author=N' to match against.
@@ -210,7 +210,7 @@ function url_to_authorid( $url ) {
 
 	// Not using rewrite rules, and 'author=N' method failed, so we're out of options.
 	if ( empty( $rewrite ) ) {
-		return 0;
+		return null;
 	}
 
 	// Generate rewrite rule for the author url.
@@ -225,7 +225,7 @@ function url_to_authorid( $url ) {
 		}
 	}
 
-	return 0;
+	return null;
 }
 
 /**

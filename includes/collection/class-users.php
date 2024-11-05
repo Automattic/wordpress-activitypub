@@ -187,14 +187,16 @@ class Users {
 				// Check for http(s)://blog.example.com/author/username.
 				$user_id = url_to_authorid( $uri );
 
-				if ( $user_id ) {
+				if ( \is_int( $user_id ) ) {
 					return self::get_by_id( $user_id );
 				}
 
 				// Check for http(s)://blog.example.com/.
+				$normalized_uri = normalize_url( $uri );
+
 				if (
-					normalize_url( site_url() ) === normalize_url( $uri ) ||
-					normalize_url( home_url() ) === normalize_url( $uri )
+					normalize_url( site_url() ) === $normalized_uri ||
+					normalize_url( home_url() ) === $normalized_uri
 				) {
 					return self::get_by_id( self::BLOG_USER_ID );
 				}
