@@ -217,11 +217,24 @@ class Collection {
 		if ( ! is_single_user() && User_Collection::BLOG_USER_ID === $user->get__id() ) {
 			$posts = array();
 		} elseif ( $sticky_posts && is_array( $sticky_posts ) ) {
+			// only show public posts.
 			$args = array(
 				'post__in'            => $sticky_posts,
 				'ignore_sticky_posts' => 1,
 				'orderby'             => 'date',
 				'order'               => 'DESC',
+				'meta_query'          => array(
+					'relation' => 'OR',
+					array(
+						'key'     => 'activitypub_content_visibility',
+						'compare' => 'IS NULL',
+					),
+					array(
+						'key'     => 'activitypub_content_visibility',
+						'value'   => 'public',
+						'compare' => 'NOT EXISTS',
+					),
+				),
 			);
 
 			if ( $user->get__id() > 0 ) {
