@@ -223,12 +223,8 @@ class Collection {
 				'ignore_sticky_posts' => 1,
 				'orderby'             => 'date',
 				'order'               => 'DESC',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'          => array(
-					'relation' => 'OR',
-					array(
-						'key'     => 'activitypub_content_visibility',
-						'compare' => 'IS NULL',
-					),
 					array(
 						'key'     => 'activitypub_content_visibility',
 						'compare' => 'NOT EXISTS',
