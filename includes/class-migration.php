@@ -355,6 +355,14 @@ class Migration {
 		if ( ! $object_type ) {
 			\update_option( 'activitypub_object_type', 'note' );
 		}
+
+		// Clean up empty visibility meta.
+		global $wpdb;
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"DELETE FROM $wpdb->postmeta
+			WHERE meta_key = 'activitypub_content_visibility'
+			AND (meta_value IS NULL OR meta_value = '')"
+		);
 	}
 
 	/**

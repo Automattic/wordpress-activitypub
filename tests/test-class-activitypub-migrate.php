@@ -56,6 +56,45 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	public function test_migrate_to_4_1_0() {
+		$post1 = \wp_insert_post(
+			array(
+				'post_author' => 1,
+				'post_content' => 'activitypub_content_visibility test',
+			)
+		);
+
+		$post2 = \wp_insert_post(
+			array(
+				'post_author' => 1,
+				'post_content' => 'activitypub_content_visibility test',
+			)
+		);
+
+		\update_post_meta( $post1, 'activitypub_content_visibility', '' );
+		\update_post_meta( $post1, 'activitypub_content_123', '456' );
+		\update_post_meta( $post2, 'activitypub_content_visibility', 'local' );
+		\update_post_meta( $post2, 'activitypub_content_123', '' );
+
+		$metas1 = \get_post_meta( $post1 );
+
+		$this->assertEquals(
+			array(
+				'activitypub_content_visibility' => array( '' ),
+				'activitypub_content_123' => array( '456' ),
+			),
+			$metas1
+		);
+
+		$metas2 = \get_post_meta( $post2 );
+
+		$this->assertEquals(
+			array(
+				'activitypub_content_visibility' => array( 'local' ),
+				'activitypub_content_123' => array( '' ),
+			),
+			$metas2
+		);
+
 		$template    = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
 		$object_type = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 
@@ -65,6 +104,25 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 		\update_option( 'activitypub_post_content_type', 'title' );
 
 		\Activitypub\Migration::migrate_to_4_1_0();
+
+		\clean_post_cache( $post1 );
+		$metas1 = \get_post_meta( $post1 );
+		$this->assertEquals(
+			array(
+				'activitypub_content_123' => array( '456' ),
+			),
+			$metas1
+		);
+
+		\clean_post_cache( $post2 );
+		$metas2 = \get_post_meta( $post2 );
+		$this->assertEquals(
+			array(
+				'activitypub_content_visibility' => array( 'local' ),
+				'activitypub_content_123' => array( '' ),
+			),
+			$metas2
+		);
 
 		$template     = \get_option( 'activitypub_custom_post_content' );
 		$content_type = \get_option( 'activitypub_post_content_type' );
