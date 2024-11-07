@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 4.1.0 - 2024-11-XX
+
+### Added
+
+* Add custom Preview for "Fediverse"
+* Support `comment_previously_approved` setting
+
+### Fixed
+
+* Hide sticky posts that are not public
+
+### Improved
+
+* `activity_handle_undo` action
+* Add title to content if post is a `Note`
+* Fallback to blog-user if user is disabled
+
 ## 4.0.2 - 2024-10-30
 
 ### Fixed
@@ -1015,6 +1032,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
+[4.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.0.2...4.1.0
 [4.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/4.0.1...4.0.2
 [4.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.0.0...4.0.1
 [4.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/3.3.3...4.0.0

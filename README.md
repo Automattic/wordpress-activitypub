@@ -3,7 +3,7 @@
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 5.5  
 **Tested up to:** 6.6  
-**Stable tag:** 4.0.2  
+**Stable tag:** 4.1.0  
 **Requires PHP:** 7.0  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -151,6 +151,15 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 ## Changelog ##
+
+### 4.1.0 ###
+
+* Added: Add custom Preview for "Fediverse"
+* Added: Support `comment_previously_approved` setting
+* Fixed: Hide sticky posts that are not public
+* Improved: `activity_handle_undo` action
+* Improved: Add title to content if post is a `Note`
+* Improved: Fallback to blog-user if user is disabled
 
 ### 4.0.2 ###
 
