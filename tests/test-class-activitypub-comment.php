@@ -119,6 +119,82 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 		$this->assertEquals( array( $parent_comment_id ), \Activitypub\get_comment_ancestors( $comment_id ) );
 	}
 
+	public function test_pre_comment_approved() {
+		// Disable flood control.
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+		$post_id = \wp_insert_post(
+			array(
+				'post_title' => 'Test Post',
+				'post_content' => 'This is a test post.',
+				'post_status' => 'publish',
+			)
+		);
+
+		$comment_id_to_approve = \wp_new_comment(
+			array(
+				'comment_post_ID'      => '',
+				'comment_type'         => 'comment',
+				'comment_content'      => 'This is a comment.',
+				'comment_author'       => 'Approved',
+				'comment_author_url'   => 'https://example.com/@approved',
+				'comment_post_ID'      => $post_id,
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		$comment_to_approve = \get_comment( $comment_id_to_approve );
+		$this->assertEquals( '0', $comment_to_approve->comment_approved );
+
+		\wp_set_comment_status( $comment_id_to_approve, 'approve' );
+		$comment_to_approve = \get_comment( $comment_id_to_approve );
+		$this->assertEquals( '1', $comment_to_approve->comment_approved );
+
+		$comment_id_autoapproved = \wp_new_comment(
+			array(
+				'comment_post_ID'      => '',
+				'comment_type'         => 'comment',
+				'comment_content'      => 'This is another comment.',
+				'comment_author'       => 'Approved',
+				'comment_author_url'   => 'https://example.com/@approved',
+				'comment_post_ID'      => $post_id,
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		$comment_autoapproved = \get_comment( $comment_id_autoapproved );
+		$this->assertEquals( '1', $comment_autoapproved->comment_approved );
+
+		\remove_filter( 'pre_comment_approved', array( 'Activitypub\Comment', 'pre_comment_approved' ), 10 );
+
+		$comment_id_unapproved = \wp_new_comment(
+			array(
+				'comment_post_ID'      => '',
+				'comment_type'         => 'comment',
+				'comment_content'      => 'This is final comment.',
+				'comment_author'       => 'Approved',
+				'comment_author_url'   => 'https://example.com/@approved',
+				'comment_post_ID'      => $post_id,
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		$comment_unapproved = \get_comment( $comment_id_unapproved );
+		$this->assertEquals( '0', $comment_unapproved->comment_approved );
+
+		// Restore flood control.
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
 	public function ability_to_federate_comment() {
 		return array(
 			array(
