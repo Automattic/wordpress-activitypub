@@ -180,6 +180,59 @@ class Post extends Base {
 	}
 
 	/**
+	 * Returns the featured image as `Image`.
+	 *
+	 * @return array|null The Image or null if no image is available.
+	 */
+	protected function get_image() {
+		$post_id = $this->wp_object->ID;
+
+		// List post thumbnail first if this post has one.
+		if (
+			! \function_exists( 'has_post_thumbnail' ) ||
+			! \has_post_thumbnail( $post_id )
+		) {
+			return null;
+		}
+
+		$id         = \get_post_thumbnail_id( $post_id );
+		$image_size = 'large';
+
+		/**
+		 * Filter the image URL returned for each post.
+		 *
+		 * @param array|false $thumbnail  The image URL, or false if no image is available.
+		 * @param int         $id         The attachment ID.
+		 * @param string      $image_size The image size to retrieve. Set to 'large' by default.
+		 */
+		$thumbnail = apply_filters(
+			'activitypub_get_image',
+			self::get_wordpress_attachment( $id, $image_size ),
+			$id,
+			$image_size
+		);
+
+		if ( ! $thumbnail ) {
+			return null;
+		}
+
+		$mime_type = \get_post_mime_type( $id );
+
+		$image = array(
+			'type'      => 'Image',
+			'url'       => \esc_url( $thumbnail[0] ),
+			'mediaType' => \esc_attr( $mime_type ),
+		);
+
+		$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
+		if ( $alt ) {
+			$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt ) );
+		}
+
+		return $image;
+	}
+
+	/**
 	 * Generates all Media Attachments for a Post.
 	 *
 	 * @return array The Attachments.
