@@ -1067,6 +1067,9 @@ class Post extends Base {
 	 * @return string A block level link
 	 */
 	public static function revert_embed_links( $block_content, $block ) {
+		if ( ! isset( $block['attrs']['url'] ) ) {
+			return $block_content;
+		}
 		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
 	}
 

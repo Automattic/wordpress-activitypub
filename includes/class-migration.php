@@ -342,6 +342,9 @@ class Migration {
 			case 'content':
 				$template = "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
 				break;
+			case 'custom':
+				$template = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+				break;
 			default:
 				$template = ACTIVITYPUB_CUSTOM_POST_CONTENT;
 				break;

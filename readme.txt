@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nur
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.6
-Stable tag: 4.1.0
+Stable tag: 4.1.1
 Requires PHP: 7.0
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -149,6 +149,11 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+= 4.1.1 =
+
+* Fixed: Only revert to URL if there is one
+* Fixed: Migration
 
 = 4.1.0 =
 

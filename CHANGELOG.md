@@ -5,7 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 4.1.0 - 2024-11-XX
+## Dev
+
+### Fixed
+
+* Do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts.
+
+## 4.1.1 - 2024-11-10
+
+### Fixed
+
+* Only revert to URL if there is one
+* Migration
+
+## 4.1.0 - 2024-11-08
 
 ### Added
 
@@ -1032,6 +1045,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
+[4.1.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.1.0...4.1.1
 [4.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.0.2...4.1.0
 [4.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/4.0.1...4.0.2
 [4.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.0.0...4.0.1
