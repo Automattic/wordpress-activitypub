@@ -363,7 +363,7 @@ class Health_Check {
 				),
 				'plugin_version' => array(
 					'label'   => __( 'Plugin Version', 'activitypub' ),
-					'value'   => get_plugin_version(),
+					'value'   => ACTIVITYPUB_PLUGIN_VERSION,
 					'private' => true,
 				),
 			),
