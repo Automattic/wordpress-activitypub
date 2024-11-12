@@ -421,7 +421,7 @@ class Enable_Mastodon_Apps {
 		$account->last_status_at = new DateTime( $comment->comment_date_gmt );
 		$account->note           = sprintf(
 			/* translators: %s: comment author name */
-			__( 'This is a classic comment by %s, not an ActivityPub comment.', 'activitypub' ),
+			__( 'This is a local comment by %s, not a fediverse comment. This profile cannot be followed.', 'activitypub' ),
 			$comment->comment_author
 		);
 
