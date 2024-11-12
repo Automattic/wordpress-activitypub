@@ -28,7 +28,7 @@ class Comment {
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
 		\add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
-
+		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 10, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 	}
 
@@ -665,5 +665,43 @@ class Comment {
 
 		// Exclude likes and reposts by the ActivityPub plugin.
 		$query->query_vars['type__not_in'] = self::get_comment_type_names();
+	}
+
+	/**
+	 * Filter the comment status before it is set.
+	 *
+	 * @param string $approved    The approved comment status.
+	 * @param array  $commentdata The comment data.
+	 *
+	 * @return boolean `true` if the comment is approved, `false` otherwise.
+	 */
+	public static function pre_comment_approved( $approved, $commentdata ) {
+		if ( $approved || \is_wp_error( $approved ) ) {
+			return $approved;
+		}
+
+		if ( '1' !== \get_option( 'comment_previously_approved' ) ) {
+			return $approved;
+		}
+
+		if (
+			empty( $commentdata['comment_meta']['protocol'] ) ||
+			'activitypub' !== $commentdata['comment_meta']['protocol']
+		) {
+			return $approved;
+		}
+
+		global $wpdb;
+
+		$author     = $commentdata['comment_author'];
+		$author_url = $commentdata['comment_author_url'];
+		// phpcs:ignore
+		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s and comment_approved = '1' LIMIT 1", $author, $author_url ) );
+
+		if ( 1 === (int) $ok_to_comment ) {
+			return 1;
+		}
+
+		return $approved;
 	}
 }

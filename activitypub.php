@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/pfefferle/wordpress-activitypub/
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 4.1.0
+ * Version: 4.1.1
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -22,7 +22,7 @@ use WP_CLI;
 require_once __DIR__ . '/includes/compat.php';
 require_once __DIR__ . '/includes/functions.php';
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '4.0.2' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '4.1.1' );
 
 /**
  * Initialize the plugin constants.
@@ -90,7 +90,7 @@ require_once __DIR__ . '/includes/functions.php';
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
-\define( 'ACTIVITYPUB_PLUGIN_FILE', plugin_dir_path( __FILE__ ) . '/' . basename( __FILE__ ) );
+\define( 'ACTIVITYPUB_PLUGIN_FILE', ACTIVITYPUB_PLUGIN_DIR . basename( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
 /**
@@ -197,7 +197,7 @@ function plugin_settings_link( $actions ) {
 
 	return \array_merge( $settings_link, $actions );
 }
-\add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), __NAMESPACE__ . '\plugin_settings_link' );
+\add_filter( 'plugin_action_links_' . ACTIVITYPUB_PLUGIN_BASENAME, __NAMESPACE__ . '\plugin_settings_link' );
 
 \register_activation_hook(
 	__FILE__,

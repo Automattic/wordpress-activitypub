@@ -50,6 +50,8 @@ class Activitypub {
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
+		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
+
 		// Register several post_types.
 		self::register_post_types();
 	}
@@ -565,6 +567,21 @@ class Activitypub {
 		if ( \user_can( $user_id, 'publish_posts' ) ) {
 			$user = \get_user_by( 'id', $user_id );
 			$user->add_cap( 'activitypub' );
+		}
+	}
+
+	/**
+	 * Delete `activitypub_content_visibility` when updated to an empty value.
+	 *
+	 * @param int    $meta_id    ID of updated metadata entry.
+	 * @param int    $object_id  Post ID.
+	 * @param string $meta_key   Metadata key.
+	 * @param mixed  $meta_value Metadata value. This will be a PHP-serialized string representation of the value
+	 *                           if the value is an array, an object, or itself a PHP-serialized string.
+	 */
+	public static function updated_postmeta( $meta_id, $object_id, $meta_key, $meta_value ) {
+		if ( 'activitypub_content_visibility' === $meta_key && empty( $meta_value ) ) {
+			\delete_post_meta( $object_id, 'activitypub_content_visibility' );
 		}
 	}
 }

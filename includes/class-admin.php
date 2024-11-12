@@ -72,7 +72,7 @@ class Admin {
 			$followers_list_page = \add_users_page(
 				\__( '⁂ Followers', 'activitypub' ),
 				\__( '⁂ Followers', 'activitypub' ),
-				'read',
+				'activitypub',
 				'activitypub-followers-list',
 				array(
 					self::class,
@@ -88,7 +88,7 @@ class Admin {
 			\add_users_page(
 				\__( '⁂ Extra Fields', 'activitypub' ),
 				\__( '⁂ Extra Fields', 'activitypub' ),
-				'read',
+				'activitypub',
 				\esc_url( \admin_url( '/edit.php?post_type=ap_extrafield' ) )
 			);
 		}

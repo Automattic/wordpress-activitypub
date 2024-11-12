@@ -342,6 +342,9 @@ class Migration {
 			case 'content':
 				$template = "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
 				break;
+			case 'custom':
+				$template = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+				break;
 			default:
 				$template = ACTIVITYPUB_CUSTOM_POST_CONTENT;
 				break;
@@ -355,6 +358,14 @@ class Migration {
 		if ( ! $object_type ) {
 			\update_option( 'activitypub_object_type', 'note' );
 		}
+
+		// Clean up empty visibility meta.
+		global $wpdb;
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"DELETE FROM $wpdb->postmeta
+			WHERE meta_key = 'activitypub_content_visibility'
+			AND (meta_value IS NULL OR meta_value = '')"
+		);
 	}
 
 	/**
