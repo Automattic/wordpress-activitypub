@@ -146,7 +146,7 @@ class Actors {
 	/**
 	 * Get the Actor by resource.
 	 *
-	 * @param string $uri The Actor-Resource.
+	 * @param string $uri The Actor resource.
 	 *
 	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
 	 */
