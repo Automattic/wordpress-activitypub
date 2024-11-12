@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 * Remove `meta` CLI command
+* Remove unneeded translation functions from CLI commands
 
 ## 4.1.1 - 2024-11-10
 
