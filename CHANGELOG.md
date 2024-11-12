@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts.
 
+### Removed
+
+* Remove `meta` CLI command
+
 ## 4.1.1 - 2024-11-10
 
 ### Fixed

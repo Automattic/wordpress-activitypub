@@ -229,10 +229,14 @@ require_once __DIR__ . '/integration/load.php';
 /**
  * `get_plugin_data` wrapper.
  *
+ * @deprecated 4.2.0 Use `get_plugin_data` instead.
+ *
  * @param array $default_headers Optional. The default plugin headers. Default empty array.
  * @return array The plugin metadata array.
  */
 function get_plugin_meta( $default_headers = array() ) {
+	_deprecated_function( __FUNCTION__, '4.2.0', 'get_plugin_data' );
+
 	if ( ! $default_headers ) {
 		$default_headers = array(
 			'Name'        => 'Plugin Name',
@@ -270,7 +274,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		'activitypub',
 		'\Activitypub\Cli',
 		array(
-			'shortdesc' => __( 'ActivityPub related commands: Meta-Infos, Delete and soon Self-Destruct.', 'activitypub' ),
+			'shortdesc' => 'ActivityPub related commands to manage plugin functionality and the federation of posts and comments.',
 		)
 	);
 }
