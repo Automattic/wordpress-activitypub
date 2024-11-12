@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Dev
 
+### Improved
+
+* Reuse constants once they're defined
+* "FEP-b2b8: Long-form Text" support
+
 ### Fixed
 
 * Do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts.
