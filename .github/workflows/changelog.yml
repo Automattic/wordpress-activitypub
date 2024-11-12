@@ -13,5 +13,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: dangoslen/changelog-enforcer@v3
-      - with:
+        with:
           versionPattern: '## \\[((v|V)?\\d*\\.\\d*\\.\\d*-?\\w*|unreleased|Unreleased|UNRELEASED|Dev)\\]'
