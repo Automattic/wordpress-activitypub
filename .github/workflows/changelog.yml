@@ -12,7 +12,15 @@ jobs:
   changelog:
     runs-on: ubuntu-latest
     steps:
+      # CHANGELOG.md
       - uses: dangoslen/changelog-enforcer@v3
         with:
           skipLabels: 'Skip Changelog'
           versionPattern: '## \\[((v|V)?\\d*\\.\\d*\\.\\d*-?\\w*|unreleased|Unreleased|UNRELEASED|Dev)\\]'
+
+      # readme.txt
+      - uses: dangoslen/changelog-enforcer@v3
+        with:
+          changeLogPath: 'readme.txt'
+          skipLabels: 'Skip Changelog'
+          versionPattern: '^=\\s*((v|V)?\\d+\\.\\d+\\.\\d+|Dev)\\s*='
