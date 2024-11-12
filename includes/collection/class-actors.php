@@ -240,7 +240,7 @@ class Actors {
 	/**
 	 * Get the Actor by resource.
 	 *
-	 * @param string $id The Actor-Resource.
+	 * @param string $id The Actor resource.
 	 *
 	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
 	 */
