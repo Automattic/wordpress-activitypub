@@ -76,7 +76,7 @@ class Actors {
 	/**
 	 * Get the Actor by username.
 	 *
-	 * @param string $username The Actor-Name.
+	 * @param string $username Name of the Actor.
 	 *
 	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
 	 */
