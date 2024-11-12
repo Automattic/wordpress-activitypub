@@ -57,12 +57,13 @@ class Users {
 			);
 		}
 
-		if ( self::BLOG_USER_ID === $user_id ) {
-			return new Blog();
-		} elseif ( self::APPLICATION_USER_ID === $user_id ) {
-			return new Application();
-		} elseif ( $user_id > 0 ) {
-			return User::from_wp_user( $user_id );
+		switch ( $user_id ) {
+			case self::BLOG_USER_ID:
+				return new Blog();
+			case self::APPLICATION_USER_ID:
+				return new Application();
+			default:
+				return User::from_wp_user( $user_id );
 		}
 
 		return new WP_Error(
