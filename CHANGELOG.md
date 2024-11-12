@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Dev
 
+### Added
+
+* GitHub action to enforce Changelog updates.
+
 ### Improved
 
 * Reuse constants once they're defined
