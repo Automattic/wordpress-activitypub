@@ -10,7 +10,7 @@ namespace Activitypub\Collection;
 /**
  * Users collection.
  *
- * @deprecated version 4.1.0
+ * @deprecated version 4.2.0
  */
 class Users extends Actors {
 	/**
@@ -21,7 +21,7 @@ class Users extends Actors {
 	 * @return User|Blog|Application|WP_Error The User or WP_Error if user not found.
 	 */
 	public static function get_by_id( $user_id ) {
-		_deprecated_function( __METHOD__, '4.1.0', 'Activitypub\Collection\Actors::get_by_id' );
+		_deprecated_function( __METHOD__, '4.2.0', 'Activitypub\Collection\Actors::get_by_id' );
 
 		return parent::get_by_id( $user_id );
 	}
@@ -34,7 +34,7 @@ class Users extends Actors {
 	 * @return User|Blog|Application|WP_Error The User or WP_Error if user not found.
 	 */
 	public static function get_by_username( $username ) {
-		_deprecated_function( __METHOD__, '4.1.0', 'Activitypub\Collection\Actors::get_by_username' );
+		_deprecated_function( __METHOD__, '4.2.0', 'Activitypub\Collection\Actors::get_by_username' );
 
 		return parent::get_by_username( $username );
 	}
@@ -47,7 +47,7 @@ class Users extends Actors {
 	 * @return User|WP_Error The User or WP_Error if user not found.
 	 */
 	public static function get_by_resource( $uri ) {
-		_deprecated_function( __METHOD__, '4.1.0', 'Activitypub\Collection\Actors::get_by_resource' );
+		_deprecated_function( __METHOD__, '4.2.0', 'Activitypub\Collection\Actors::get_by_resource' );
 
 		return parent::get_by_resource( $uri );
 	}
@@ -60,7 +60,7 @@ class Users extends Actors {
 	 * @return User|Blog|Application|WP_Error The User or WP_Error if user not found.
 	 */
 	public static function get_by_various( $id ) {
-		_deprecated_function( __METHOD__, '4.1.0', 'Activitypub\Collection\Actors::get_by_various' );
+		_deprecated_function( __METHOD__, '4.2.0', 'Activitypub\Collection\Actors::get_by_various' );
 
 		return parent::get_by_various( $id );
 	}
@@ -71,7 +71,7 @@ class Users extends Actors {
 	 * @return array The User collection.
 	 */
 	public static function get_collection() {
-		_deprecated_function( __METHOD__, '4.1.0', 'Activitypub\Collection\Actors::get_collection' );
+		_deprecated_function( __METHOD__, '4.2.0', 'Activitypub\Collection\Actors::get_collection' );
 
 		return parent::get_collection();
 	}
