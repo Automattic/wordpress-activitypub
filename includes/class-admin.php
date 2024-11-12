@@ -444,7 +444,7 @@ class Admin {
 				ACTIVITYPUB_PLUGIN_FILE
 			),
 			array( 'jquery' ),
-			get_plugin_version(),
+			ACTIVITYPUB_PLUGIN_VERSION,
 			false
 		);
 
@@ -456,7 +456,7 @@ class Admin {
 					ACTIVITYPUB_PLUGIN_FILE
 				),
 				array(),
-				get_plugin_version()
+				ACTIVITYPUB_PLUGIN_VERSION
 			);
 			wp_enqueue_script(
 				'activitypub-admin-script',
@@ -465,7 +465,7 @@ class Admin {
 					ACTIVITYPUB_PLUGIN_FILE
 				),
 				array( 'jquery' ),
-				get_plugin_version(),
+				ACTIVITYPUB_PLUGIN_VERSION,
 				false
 			);
 		}
@@ -478,7 +478,7 @@ class Admin {
 					ACTIVITYPUB_PLUGIN_FILE
 				),
 				array(),
-				get_plugin_version()
+				ACTIVITYPUB_PLUGIN_VERSION
 			);
 		}
 	}

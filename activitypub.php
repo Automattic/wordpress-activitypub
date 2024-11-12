@@ -255,15 +255,13 @@ function get_plugin_meta( $default_headers = array() ) {
 
 /**
  * Plugin Version Number used for caching.
+ *
+ * @deprecated 4.2.0 Use constant ACTIVITYPUB_PLUGIN_VERSION directly.
  */
 function get_plugin_version() {
-	if ( \defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ) {
-		return ACTIVITYPUB_PLUGIN_VERSION;
-	}
+	_deprecated_function( __FUNCTION__, '4.2.0', 'ACTIVITYPUB_PLUGIN_VERSION' );
 
-	$meta = get_plugin_meta( array( 'Version' => 'Version' ) );
-
-	return $meta['Version'];
+	return ACTIVITYPUB_PLUGIN_VERSION;
 }
 
 // Check for CLI env, to add the CLI commands.
