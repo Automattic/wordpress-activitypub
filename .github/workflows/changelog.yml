@@ -14,4 +14,5 @@ jobs:
     steps:
       - uses: dangoslen/changelog-enforcer@v3
         with:
+          skipLabels: 'Skip Changelog'
           versionPattern: '## \\[((v|V)?\\d*\\.\\d*\\.\\d*-?\\w*|unreleased|Unreleased|UNRELEASED|Dev)\\]'
