@@ -36,7 +36,7 @@ class Migration {
 	 * @return string The target version.
 	 */
 	public static function get_target_version() {
-		_deprecated_function( __FUNCTION__, '4.2.0', 'Use constant ACTIVITYPUB_PLUGIN_VERSION directly.' );
+		_deprecated_function( __FUNCTION__, '4.2.0', 'ACTIVITYPUB_PLUGIN_VERSION' );
 
 		return ACTIVITYPUB_PLUGIN_VERSION;
 	}

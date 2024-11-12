@@ -259,7 +259,7 @@ function get_plugin_meta( $default_headers = array() ) {
  * @deprecated 4.2.0 Use constant ACTIVITYPUB_PLUGIN_VERSION directly.
  */
 function get_plugin_version() {
-	_deprecated_function( __FUNCTION__, '4.2.0', 'Use constant ACTIVITYPUB_PLUGIN_VERSION directly.' );
+	_deprecated_function( __FUNCTION__, '4.2.0', 'ACTIVITYPUB_PLUGIN_VERSION' );
 
 	return ACTIVITYPUB_PLUGIN_VERSION;
 }
