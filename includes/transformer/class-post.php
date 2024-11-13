@@ -734,12 +734,11 @@ class Post extends Base {
 		$post_format = 'standard';
 
 		if ( \get_theme_support( 'post-formats' ) ) {
-			$post_format = \get_post_format( $this->wp_object );
+			$post_format = \get_post_format( $this->wp_object ) ?? 'standard';
 		}
 
 		$post_type = \get_post_type( $this->wp_object );
 		switch ( $post_type ) {
-
 			case 'page':
 				$object_type = 'Page';
 				break;
@@ -747,7 +746,6 @@ class Post extends Base {
 			default:
 				switch ( $post_format ) {
 					case 'standard':
-					case '':
 						$object_type = 'Article';
 						break;
 					default:
