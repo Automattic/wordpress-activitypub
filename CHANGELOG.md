@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Dev
 
+### Added
+
+* Unit tests for the `ActivityPub\Transformer\Post` class
+
 ### Improved
 
 * Reuse constants once they're defined

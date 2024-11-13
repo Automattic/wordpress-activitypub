@@ -152,6 +152,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Dev =
 
+* Added: Unit tests for the `ActivityPub\Transformer\Post` class
 * Improved: Reuse constants once they're defined
 * Improved: "FEP-b2b8: Long-form Text" support
 * Fixed: do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts.
