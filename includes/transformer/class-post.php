@@ -739,7 +739,12 @@ class Post extends Base {
 
 		$post_type = \get_post_type( $this->wp_object );
 		switch ( $post_type ) {
+
+			case 'page':
+				$object_type = 'Page';
+				break;
 			case 'post':
+			default:
 				switch ( $post_format ) {
 					case 'standard':
 					case '':
@@ -749,12 +754,6 @@ class Post extends Base {
 						$object_type = 'Note';
 						break;
 				}
-				break;
-			case 'page':
-				$object_type = 'Page';
-				break;
-			default:
-				$object_type = 'Article';
 				break;
 		}
 
