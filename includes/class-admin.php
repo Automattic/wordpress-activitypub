@@ -815,7 +815,7 @@ class Admin {
 		$actions['activitypub'] = sprintf(
 			'<a href="%s" target="_blank">%s</a>',
 			\esc_url( $preview_url ),
-			\esc_html__( '⁂ Preview', 'activitypub' )
+			\esc_html__( '⁂ Fediverse Preview', 'activitypub' )
 		);
 
 		return $actions;
