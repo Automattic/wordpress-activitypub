@@ -193,7 +193,7 @@ class Test_Transformer_Post extends WP_UnitTestCase {
 		$transformer = new Post( $post );
 		$type        = $this->reflection_method->invoke( $transformer );
 
-		$this->assertSame( 'Note', $type );
+		$this->assertSame( 'Article', $type );
 	}
 
 	/**
