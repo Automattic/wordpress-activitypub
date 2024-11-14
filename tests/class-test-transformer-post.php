@@ -229,4 +229,38 @@ class Test_Transformer_Post extends WP_UnitTestCase {
 		// Clean up.
 		unregister_post_type( 'no_title_type' );
 	}
+
+	/**
+	 * Test that the get_type method returns article for custom post type with post format support.
+	 *
+	 * @covers ::get_type
+	 */
+	public function test_get_type_respects_post_format_support() {
+
+		// Create custom post type without title support.
+		register_post_type(
+			'no_title_type',
+			array(
+				'public'   => true,
+				'supports' => array( 'editor', 'title', 'post-formats' ), // Needs to include 'title'.
+			)
+		);
+
+		$post_id = $this->factory->post->create(
+			array(
+				'post_title'   => 'Test Post',
+				'post_content' => str_repeat( 'Long content. ', 100 ),
+				'post_type'    => 'no_title_type',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$type        = $this->reflection_method->invoke( $transformer );
+
+		$this->assertSame( 'Article', $type );
+
+		// Clean up.
+		unregister_post_type( 'no_title_type' );
+	}
 }
