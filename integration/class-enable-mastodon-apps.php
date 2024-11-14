@@ -364,7 +364,7 @@ class Enable_Mastodon_Apps {
 		$post    = Factory::get_transformer( get_post( $post_id ) );
 		$data    = $post->to_object()->to_array();
 		$account = self::api_account_internal( null, get_post_field( 'post_author', $post_id ) );
-		return self::activity_to_status( $data, $account );
+		return self::activity_to_status( $data, $account, $post_id );
 	}
 
 	/**
@@ -639,10 +639,11 @@ class Enable_Mastodon_Apps {
 	 *
 	 * @param array   $item    The activity.
 	 * @param Account $account The account.
+	 * @param int     $post_id The post ID. Optional, but will be preferred in the Status.
 	 *
 	 * @return Status|null The status.
 	 */
-	private static function activity_to_status( $item, $account ) {
+	private static function activity_to_status( $item, $account, $post_id = null ) {
 		if ( isset( $item['object'] ) ) {
 			$object = $item['object'];
 		} else {
@@ -654,7 +655,7 @@ class Enable_Mastodon_Apps {
 		}
 
 		$status             = new Status();
-		$status->id         = $object['id'];
+		$status->id         = $post_id ?? $object['id'];
 		$status->created_at = new DateTime( $object['published'] );
 		$status->content    = $object['content'];
 		$status->account    = $account;
