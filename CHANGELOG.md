@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Reuse constants once they're defined
 * "FEP-b2b8: Long-form Text" support
+* Admin notice for plain permalink settings is more user-friendly and actionable
 
 ### Fixed
 

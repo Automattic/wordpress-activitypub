@@ -155,6 +155,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: Unit tests for the `ActivityPub\Transformer\Post` class
 * Improved: Reuse constants once they're defined
 * Improved: "FEP-b2b8: Long-form Text" support
+* Improved: Admin notice for plain permalink settings is more user-friendly and actionable
 * Fixed: Do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts.
 * Fixed: Proper margins for notices and font size for page title in settings screen.
 
