@@ -8,7 +8,7 @@
 namespace Activitypub;
 
 use WP_Error;
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 
 /**
  * ActivityPub WebFinger Class.
@@ -26,7 +26,7 @@ class Webfinger {
 	 * @return string The user-resource.
 	 */
 	public static function get_user_resource( $user_id ) {
-		$user = Users::get_by_id( $user_id );
+		$user = Actors::get_by_id( $user_id );
 		if ( ! $user || is_wp_error( $user ) ) {
 			return '';
 		}

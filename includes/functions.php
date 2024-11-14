@@ -10,7 +10,7 @@ namespace Activitypub;
 use WP_Error;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 use Activitypub\Transformer\Post;
 
 /**
@@ -438,11 +438,11 @@ function is_user_disabled( $user_id ) {
 
 	switch ( $user_id ) {
 		// if the user is the application user, it's always enabled.
-		case \Activitypub\Collection\Users::APPLICATION_USER_ID:
+		case \Activitypub\Collection\Actors::APPLICATION_USER_ID:
 			$disabled = false;
 			break;
 		// if the user is the blog user, it's only enabled in single-user mode.
-		case \Activitypub\Collection\Users::BLOG_USER_ID:
+		case \Activitypub\Collection\Actors::BLOG_USER_ID:
 			if ( is_user_type_disabled( 'blog' ) ) {
 				$disabled = true;
 				break;
@@ -730,7 +730,7 @@ function get_active_users( $duration = 1 ) {
 	}
 
 	// If blog user is disabled.
-	if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
+	if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
 		return (int) $count;
 	}
 
@@ -762,7 +762,7 @@ function get_total_users() {
 	}
 
 	// If blog user is disabled.
-	if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
+	if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
 		return (int) $users;
 	}
 
@@ -1372,7 +1372,7 @@ function get_content_warning( $post_id ) {
  * @return string The ActivityPub ID (a URL) of the User.
  */
 function get_user_id( $id ) {
-	$user = Users::get_by_id( $id );
+	$user = Actors::get_by_id( $id );
 
 	if ( ! $user ) {
 		return false;

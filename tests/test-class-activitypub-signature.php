@@ -2,7 +2,7 @@
 
 class Test_Activitypub_Signature extends WP_UnitTestCase {
 	public function test_signature_creation() {
-		$user = Activitypub\Collection\Users::get_by_id( 1 );
+		$user = Activitypub\Collection\Actors::get_by_id( 1 );
 
 		$key_pair = Activitypub\Signature::get_keypair_for( $user->get__id() );
 		$public_key = Activitypub\Signature::get_public_key_for( $user->get__id() );
@@ -15,7 +15,7 @@ class Test_Activitypub_Signature extends WP_UnitTestCase {
 
 	public function test_signature_legacy() {
 		// check user
-		$user = Activitypub\Collection\Users::get_by_id( 1 );
+		$user = Activitypub\Collection\Actors::get_by_id( 1 );
 
 		$public_key = 'public key ' . $user->get__id();
 		$private_key = 'private key ' . $user->get__id();
@@ -30,7 +30,7 @@ class Test_Activitypub_Signature extends WP_UnitTestCase {
 		$this->assertEquals( $key_pair['private_key'], $private_key );
 
 		// check application user
-		$user = Activitypub\Collection\Users::get_by_id( -1 );
+		$user = Activitypub\Collection\Actors::get_by_id( -1 );
 
 		$public_key = 'public key ' . $user->get__id();
 		$private_key = 'private key ' . $user->get__id();
@@ -46,7 +46,7 @@ class Test_Activitypub_Signature extends WP_UnitTestCase {
 
 		// check blog user
 		\define( 'ACTIVITYPUB_DISABLE_BLOG_USER', false );
-		$user = Activitypub\Collection\Users::get_by_id( 0 );
+		$user = Activitypub\Collection\Actors::get_by_id( 0 );
 
 		$public_key = 'public key ' . $user->get__id();
 		$private_key = 'private key ' . $user->get__id();
@@ -63,7 +63,7 @@ class Test_Activitypub_Signature extends WP_UnitTestCase {
 
 	public function test_signature_consistancy() {
 		// check user
-		$user = Activitypub\Collection\Users::get_by_id( 1 );
+		$user = Activitypub\Collection\Actors::get_by_id( 1 );
 
 		$public_key = 'public key ' . $user->get__id();
 		$private_key = 'private key ' . $user->get__id();
@@ -88,7 +88,7 @@ class Test_Activitypub_Signature extends WP_UnitTestCase {
 	}
 
 	public function test_signature_consistancy2() {
-		$user = Activitypub\Collection\Users::get_by_id( 1 );
+		$user = Activitypub\Collection\Actors::get_by_id( 1 );
 
 		$key_pair = Activitypub\Signature::get_keypair_for( $user->get__id() );
 		$public_key = Activitypub\Signature::get_public_key_for( $user->get__id() );

@@ -100,7 +100,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 		$followers = array( 'https://example.com/author/jon' );
 
 		foreach ( $followers as $follower ) {
-			\Activitypub\Collection\Followers::add_follower( \Activitypub\Collection\Users::BLOG_USER_ID, $follower );
+			\Activitypub\Collection\Followers::add_follower( \Activitypub\Collection\Actors::BLOG_USER_ID, $follower );
 		}
 
 		$post = \wp_insert_post(
@@ -148,7 +148,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 		$this->assertTrue( \Activitypub\is_single_user() );
 
 		foreach ( $followers as $follower ) {
-			\Activitypub\Collection\Followers::add_follower( \Activitypub\Collection\Users::BLOG_USER_ID, $follower );
+			\Activitypub\Collection\Followers::add_follower( \Activitypub\Collection\Actors::BLOG_USER_ID, $follower );
 		}
 
 		$post = \wp_insert_post(
@@ -199,7 +199,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 		$this->assertFalse( \Activitypub\is_single_user() );
 
 		foreach ( $followers as $follower ) {
-			\Activitypub\Collection\Followers::add_follower( \Activitypub\Collection\Users::BLOG_USER_ID, $follower );
+			\Activitypub\Collection\Followers::add_follower( \Activitypub\Collection\Actors::BLOG_USER_ID, $follower );
 			\Activitypub\Collection\Followers::add_follower( 1, $follower );
 		}
 

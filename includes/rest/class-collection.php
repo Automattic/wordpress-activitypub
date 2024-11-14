@@ -14,7 +14,7 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Replies;
 use Activitypub\Transformer\Factory;
 use Activitypub\Activity\Base_Object;
-use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Collection\Actors as User_Collection;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;

@@ -1,9 +1,10 @@
 <?php
-class Test_Activitypub_Users_Collection extends WP_UnitTestCase {
+class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
 
 	public function set_up() {
 		parent::set_up();
 
+		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 		add_option( 'activitypub_blog_identifier', 'blog' );
 		add_user_meta( 1, 'activitypub_user_identifier', 'admin' );
 	}
@@ -23,10 +24,33 @@ class Test_Activitypub_Users_Collection extends WP_UnitTestCase {
 			);
 		}
 
-		$user = Activitypub\Collection\Users::get_by_resource( $resource );
-
-		$this->assertInstanceOf( $expected, $user );
+		$actors = Activitypub\Collection\Actors::get_by_resource( $resource );
+		$this->assertInstanceOf( $expected, $actors );
 	}
+
+	/**
+	 * @dataProvider the_resource_provider
+	 *
+	 * @expectedDeprecated Activitypub\Collection\Users::get_by_resource
+	 */
+	public function test_deprecated_get_by_various( $resource, $expected ) {
+		$path = wp_parse_url( $resource, PHP_URL_PATH );
+
+		if ( str_starts_with( $path, '/blog/' ) ) {
+			add_filter(
+				'home_url',
+				// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.Found
+				function ( $url ) {
+					return 'http://example.org/blog/';
+				}
+			);
+		}
+
+		$users = Activitypub\Collection\Users::get_by_resource( $resource );
+		$this->assertInstanceOf( $expected, $users );
+	}
+
+
 
 	public function the_resource_provider() {
 		return array(

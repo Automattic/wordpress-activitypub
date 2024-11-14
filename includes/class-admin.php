@@ -9,7 +9,7 @@ namespace Activitypub;
 
 use WP_User_Query;
 use Activitypub\Model\Blog;
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 
 /**
@@ -773,10 +773,10 @@ class Admin {
 				_n(
 					'%s Follower (Blog)',
 					'%s Followers (Blog)',
-					count_followers( Users::BLOG_USER_ID ),
+					count_followers( Actors::BLOG_USER_ID ),
 					'activitypub'
 				),
-				\number_format_i18n( count_followers( Users::BLOG_USER_ID ) )
+				\number_format_i18n( count_followers( Actors::BLOG_USER_ID ) )
 			);
 			$items['activitypub-followers-blog'] = sprintf(
 				'<a class="activitypub-followers" href="%1$s" title="%2$s">%3$s</a>',

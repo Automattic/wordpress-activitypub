@@ -8,7 +8,7 @@
 namespace Activitypub\Rest;
 
 use WP_REST_Response;
-use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Collection\Actors as User_Collection;
 
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;

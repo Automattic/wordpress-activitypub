@@ -283,6 +283,6 @@ class Extra_Fields {
 	 * @return bool True if the user is the blog user, otherwise false.
 	 */
 	private static function is_blog( $user_id ) {
-		return Users::BLOG_USER_ID === $user_id;
+		return Actors::BLOG_USER_ID === $user_id;
 	}
 }

@@ -43,7 +43,7 @@ class Test_Activitypub_Signature_Verification extends WP_UnitTestCase {
 		$signed_headers = $signature_block['headers'];
 		$signed_data = Activitypub\Signature::get_signed_data( $signed_headers, $signature_block, $headers );
 
-		$user = Activitypub\Collection\Users::get_by_id( 1 );
+		$user = Activitypub\Collection\Actors::get_by_id( 1 );
 
 		$public_key = Activitypub\Signature::get_public_key_for( $user->get__id() );
 
@@ -56,7 +56,7 @@ class Test_Activitypub_Signature_Verification extends WP_UnitTestCase {
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
 			function ( $json, $actor ) {
-				$user = Activitypub\Collection\Users::get_by_id( 1 );
+				$user = Activitypub\Collection\Actors::get_by_id( 1 );
 				$public_key = Activitypub\Signature::get_public_key_for( $user->get__id() );
 				// return ActivityPub Profile with signature
 				return array(

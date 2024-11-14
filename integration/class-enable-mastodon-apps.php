@@ -10,7 +10,7 @@ namespace Activitypub\Integration;
 use DateTime;
 use Activitypub\Webfinger as Webfinger_Util;
 use Activitypub\Http;
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Transformer\Factory;
@@ -60,7 +60,7 @@ class Enable_Mastodon_Apps {
 			// Check if the blog user is permissible for this user.
 			user_can( $user_id, 'activitypub' )
 		) {
-			return Users::BLOG_USER_ID;
+			return Actors::BLOG_USER_ID;
 		}
 
 		return $user_id;
@@ -79,7 +79,7 @@ class Enable_Mastodon_Apps {
 		}
 
 		$user_id = self::maybe_map_user_to_blog( $user_id );
-		$user    = Users::get_by_id( $user_id );
+		$user    = Actors::get_by_id( $user_id );
 		if ( ! $user || is_wp_error( $user ) ) {
 			return $data;
 		}
@@ -141,7 +141,7 @@ class Enable_Mastodon_Apps {
 		// The Mastodon API submits a simple hash for every field.
 		// We can reasonably assume a similar order for our operations below.
 		$ids       = wp_list_pluck( Extra_Fields::get_actor_fields( $user_id ), 'ID' );
-		$is_blog   = Users::BLOG_USER_ID === $user_id;
+		$is_blog   = Actors::BLOG_USER_ID === $user_id;
 		$post_type = $is_blog ? Extra_Fields::BLOG_POST_TYPE : Extra_Fields::USER_POST_TYPE;
 
 		foreach ( $fields as $i => $field ) {
@@ -241,7 +241,7 @@ class Enable_Mastodon_Apps {
 			return $user_data;
 		}
 
-		$user = Users::get_by_various( $user_id );
+		$user = Actors::get_by_various( $user_id );
 
 		if ( $user && ! is_wp_error( $user ) ) {
 			return $user_data;
@@ -271,7 +271,7 @@ class Enable_Mastodon_Apps {
 	 */
 	public static function api_account_internal( $user_data, $user_id ) {
 		$user_id_to_use = self::maybe_map_user_to_blog( $user_id );
-		$user           = Users::get_by_id( $user_id_to_use );
+		$user           = Actors::get_by_id( $user_id_to_use );
 
 		if ( ! $user || is_wp_error( $user ) ) {
 			return $user_data;
