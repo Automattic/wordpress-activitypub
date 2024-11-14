@@ -729,30 +729,18 @@ class Post extends Base {
 			return 'Note';
 		}
 
-		// Default to Article.
-		$object_type = 'Article';
-		$post_format = 'standard';
+		// Default to Note.
+		$object_type = 'Note';
+		$post_type   = \get_post_type( $this->wp_object );
 
-		if ( \get_theme_support( 'post-formats' ) ) {
-			$post_format = \get_post_format( $this->wp_object ) ?? 'standard';
-		}
+		if ( 'page' === $post_type ) {
+			$object_type = 'Page';
+		} elseif ( 'post' === $post_type ) {
+			$post_format = \get_post_format( $this->wp_object );
 
-		$post_type = \get_post_type( $this->wp_object );
-		switch ( $post_type ) {
-			case 'page':
-				$object_type = 'Page';
-				break;
-			case 'post':
-			default:
-				switch ( $post_format ) {
-					case 'standard':
-						$object_type = 'Article';
-						break;
-					default:
-						$object_type = 'Note';
-						break;
-				}
-				break;
+			if ( false === $post_format ) {
+				$object_type = 'Article';
+			}
 		}
 
 		return $object_type;
