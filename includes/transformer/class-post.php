@@ -735,7 +735,7 @@ class Post extends Base {
 
 		if ( 'page' === $post_type ) {
 			$object_type = 'Page';
-		} elseif ( 'post' === $post_type ) {
+		} else {
 			$post_format = \get_post_format( $this->wp_object );
 
 			if ( ! $post_format ) {
