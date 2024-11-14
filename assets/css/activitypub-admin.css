@@ -5,6 +5,10 @@
 
 .settings_page_activitypub .notice {
 	max-width: 800px;
+	margin: 0 auto 30px;
+}
+
+.settings_page_activitypub .update-nag {
 	margin: 25px 20px 15px 22px;
 }
 
