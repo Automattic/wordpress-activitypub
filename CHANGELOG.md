@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Dev
 
+### Added
+
+* Unit tests for the `ActivityPub\Transformer\Post` class
+
 ### Improved
 
 * Reuse constants once they're defined
@@ -15,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts.
+* Proper margins for notices and font size for page title in settings screen
 
 ### Removed
 
