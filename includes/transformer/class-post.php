@@ -738,7 +738,7 @@ class Post extends Base {
 		} elseif ( 'post' === $post_type ) {
 			$post_format = \get_post_format( $this->wp_object );
 
-			if ( false === $post_format ) {
+			if ( ! $post_format ) {
 				$object_type = 'Article';
 			}
 		}
