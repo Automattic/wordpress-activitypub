@@ -179,7 +179,7 @@ class Test_Enable_Mastodon_Apps extends WP_UnitTestCase {
 	 * @param string         $url      The request URL.
 	 * @return array|WP_Error
 	 */
-	public static function http_response( $response, $args, $url ) {
+	public static function http_response( $response, $args, $url ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		return $response;
 	}
 

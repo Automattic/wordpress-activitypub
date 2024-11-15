@@ -291,7 +291,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		}
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'http://sally.example.org' );
-		$count    = $follower->count_errors();
+		$follower->count_errors();
 
 		$followers = \Activitypub\Collection\Followers::get_faulty_followers();
 
@@ -301,7 +301,7 @@ class Test_Activitypub_Followers extends WP_UnitTestCase {
 		$follower->reset_errors();
 
 		$follower = \Activitypub\Collection\Followers::get_follower( 1, 'http://sally.example.org' );
-		$count    = $follower->count_errors();
+		$follower->count_errors();
 
 		$followers = \Activitypub\Collection\Followers::get_faulty_followers();
 

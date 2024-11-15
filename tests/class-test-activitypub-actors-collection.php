@@ -29,11 +29,11 @@ class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
 	 * @dataProvider the_resource_provider
 	 * @covers ::get_by_various
 	 *
-	 * @param string $resource The resource.
+	 * @param string $item     The resource.
 	 * @param string $expected The expected class.
 	 */
-	public function test_get_by_various( $resource, $expected ) {
-		$path = wp_parse_url( $resource, PHP_URL_PATH );
+	public function test_get_by_various( $item, $expected ) {
+		$path = wp_parse_url( $item, PHP_URL_PATH );
 
 		if ( str_starts_with( $path, '/blog/' ) ) {
 			add_filter(
@@ -45,7 +45,7 @@ class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
 			);
 		}
 
-		$actors = Activitypub\Collection\Actors::get_by_resource( $resource );
+		$actors = Activitypub\Collection\Actors::get_by_resource( $item );
 		$this->assertInstanceOf( $expected, $actors );
 	}
 
@@ -56,11 +56,11 @@ class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
 	 * @covers ::get_by_resource
 	 * @expectedDeprecated Activitypub\Collection\Users::get_by_resource
 	 *
-	 * @param string $resource The resource.
+	 * @param string $item     The resource.
 	 * @param string $expected The expected class.
 	 */
-	public function test_deprecated_get_by_various( $resource, $expected ) {
-		$path = wp_parse_url( $resource, PHP_URL_PATH );
+	public function test_deprecated_get_by_various( $item, $expected ) {
+		$path = wp_parse_url( $item, PHP_URL_PATH );
 
 		if ( str_starts_with( $path, '/blog/' ) ) {
 			add_filter(
@@ -71,7 +71,7 @@ class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
 			);
 		}
 
-		$users = Activitypub\Collection\Users::get_by_resource( $resource );
+		$users = Activitypub\Collection\Users::get_by_resource( $item );
 		$this->assertInstanceOf( $expected, $users );
 	}
 

@@ -334,7 +334,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 	 * @param string $url The request URL.
 	 * @return array Array containing 'headers', 'body', 'response'.
 	 */
-	public static function pre_http_request( $preempt, $request, $url ) {
+	public static function pre_http_request( $preempt, $request, $url ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		return array(
 			'headers'  => array(
 				'content-type' => 'text/json',
@@ -354,7 +354,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 	 * @param string $url      Request URL.
 	 * @return array
 	 */
-	public static function http_response( $response, $args, $url ) {
+	public static function http_response( $response, $args, $url ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		return $response;
 	}
 }
