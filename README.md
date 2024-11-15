@@ -2,8 +2,8 @@
 **Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [mattwiebe](https://profiles.wordpress.org/mattwiebe/), [akirk](https://profiles.wordpress.org/akirk/), [jeherve](https://profiles.wordpress.org/jeherve/), [nuriapena](https://profiles.wordpress.org/nuriapena/), [cavalierlife](https://profiles.wordpress.org/cavalierlife/)  
 **Tags:** OStatus, fediverse, activitypub, activitystream  
 **Requires at least:** 5.5  
-**Tested up to:** 6.6  
-**Stable tag:** 4.1.1  
+**Tested up to:** 6.7  
+**Stable tag:** 4.2.0  
 **Requires PHP:** 7.0  
 **License:** MIT  
 **License URI:** http://opensource.org/licenses/MIT  
@@ -152,11 +152,16 @@ For reasons of data protection, it is not possible to see the followers of other
 
 ## Changelog ##
 
-### Dev ###
+### 4.2.0 ###
 
+* Added: Unit tests for the `ActivityPub\Transformer\Post` class
 * Improved: Reuse constants once they're defined
 * Improved: "FEP-b2b8: Long-form Text" support
-* Fixed: do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts.
+* Improved: Admin notice for plain permalink settings is more user-friendly and actionable
+* Improved: Post-Formats support
+* Fixed: Do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts.
+* Fixed: Proper margins for notices and font size for page title in settings screen.
+* Fixed: Ensure that `?author=0` resolves to blog user
 
 ### 4.1.1 ###
 
