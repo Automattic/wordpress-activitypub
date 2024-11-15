@@ -1,6 +1,20 @@
 <?php
+/**
+ * Test file for Activitypub User.
+ *
+ * @package Activitypub
+ */
+
+/**
+ * Test class for Activitypub User.
+ *
+ * @coversDefaultClass \Activitypub\User
+ */
 class Test_Activitypub_User extends WP_UnitTestCase {
 
+	/**
+	 * Test the activitypub capability.
+	 */
 	public function test_activitypub_cap() {
 		$userdata = array(
 			'user_email' => 'subscriber@example.com',

@@ -1,6 +1,20 @@
 <?php
+/**
+ * Test file for Activitypub Actors Collection.
+ *
+ * @package Activitypub
+ */
+
+/**
+ * Test class for Activitypub Actors Collection.
+ *
+ * @coversDefaultClass \Activitypub\Collection\Actors
+ */
 class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
 
+	/**
+	 * Set up the test.
+	 */
 	public function set_up() {
 		parent::set_up();
 
@@ -8,8 +22,15 @@ class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
 		add_option( 'activitypub_blog_identifier', 'blog' );
 		add_user_meta( 1, 'activitypub_user_identifier', 'admin' );
 	}
+
 	/**
+	 * Test get_by_various.
+	 *
 	 * @dataProvider the_resource_provider
+	 * @covers ::get_by_various
+	 *
+	 * @param string $resource The resource.
+	 * @param string $expected The expected class.
 	 */
 	public function test_get_by_various( $resource, $expected ) {
 		$path = wp_parse_url( $resource, PHP_URL_PATH );
@@ -29,9 +50,14 @@ class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @dataProvider the_resource_provider
+	 * Test deprecated get_by_various.
 	 *
+	 * @dataProvider the_resource_provider
+	 * @covers ::get_by_resource
 	 * @expectedDeprecated Activitypub\Collection\Users::get_by_resource
+	 *
+	 * @param string $resource The resource.
+	 * @param string $expected The expected class.
 	 */
 	public function test_deprecated_get_by_various( $resource, $expected ) {
 		$path = wp_parse_url( $resource, PHP_URL_PATH );
@@ -39,8 +65,7 @@ class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
 		if ( str_starts_with( $path, '/blog/' ) ) {
 			add_filter(
 				'home_url',
-				// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable, Generic.CodeAnalysis.UnusedFunctionParameter.Found
-				function ( $url ) {
+				function () {
 					return 'http://example.org/blog/';
 				}
 			);
@@ -50,8 +75,11 @@ class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
 		$this->assertInstanceOf( $expected, $users );
 	}
 
-
-
+	/**
+	 * Resource provider.
+	 *
+	 * @return array[]
+	 */
 	public function the_resource_provider() {
 		return array(
 			array( 'http://example.org/?author=1', 'Activitypub\Model\User' ),
