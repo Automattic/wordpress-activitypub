@@ -100,7 +100,11 @@ class Admin {
 	public static function admin_notices() {
 		$permalink_structure = \get_option( 'permalink_structure' );
 		if ( empty( $permalink_structure ) ) {
-			$admin_notice = \__( 'You are using the ActivityPub plugin with a permalink structure of "plain". This will prevent ActivityPub from working.  Please go to "Settings" / "Permalinks" and choose a permalink structure other than "plain".', 'activitypub' );
+			$admin_notice = sprintf(
+				/* translators: %s: Permalink settings URL. */
+				\__( 'ActivityPub needs SEO-friendly URLs to work properly. Please <a href="%s">update your permalink structure</a> to an option other than Plain.', 'activitypub' ),
+				esc_url( admin_url( 'options-permalink.php' ) )
+			);
 			self::show_admin_notice( $admin_notice, 'error' );
 		}
 
