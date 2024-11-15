@@ -1,9 +1,26 @@
 <?php
+/**
+ * Test file for Activitypub Post.
+ *
+ * @package Activitypub
+ */
+
+/**
+ * Test class for Activitypub Post.
+ *
+ * @coversDefaultClass \Activitypub\Transformer\Post
+ */
 class Test_Activitypub_Post extends WP_UnitTestCase {
-	public function test_to_array() {
+
+	/**
+	 * Test the to_array method.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_to_object() {
 		$post = \wp_insert_post(
 			array(
-				'post_author' => 1,
+				'post_author'  => 1,
 				'post_content' => 'test',
 			)
 		);
@@ -25,10 +42,15 @@ class Test_Activitypub_Post extends WP_UnitTestCase {
 		$this->assertEquals( $cached, $activitypub_post->get_id() );
 	}
 
+	/**
+	 * Test content visibility.
+	 *
+	 * @covers ::to_object
+	 */
 	public function test_content_visibility() {
 		$post_id = \wp_insert_post(
 			array(
-				'post_author' => 1,
+				'post_author'  => 1,
 				'post_content' => 'test content visibility',
 			)
 		);

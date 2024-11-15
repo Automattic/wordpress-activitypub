@@ -1,11 +1,26 @@
 <?php
+/**
+ * Test file for Activitypub Activity.
+ *
+ * @package Activitypub
+ */
+
 use DMS\PHPUnitExtensions\ArraySubset\Assert;
 
+/**
+ * Test class for Activitypub Activity.
+ *
+ * @coversDefaultClass \Activitypub\Activity\Activity
+ */
 class Test_Activitypub_Activity extends WP_UnitTestCase {
+
+	/**
+	 * Test activity mentions.
+	 */
 	public function test_activity_mentions() {
 		$post = \wp_insert_post(
 			array(
-				'post_author' => 1,
+				'post_author'  => 1,
 				'post_content' => '@alex hello',
 			)
 		);
@@ -15,8 +30,7 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 			function ( $mentions ) {
 				$mentions['@alex'] = 'https://example.com/alex';
 				return $mentions;
-			},
-			10
+			}
 		);
 
 		$activitypub_post = \Activitypub\Transformer\Post::transform( get_post( $post ) )->to_object();
@@ -32,6 +46,9 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 		\wp_trash_post( $post );
 	}
 
+	/**
+	 * Test object transformation.
+	 */
 	public function test_object_transformation() {
 		$test_array = array(
 			'id'        => 'https://example.com/post/123',
@@ -50,11 +67,14 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 		$this->assertEquals( $test_array, $new_array );
 	}
 
+	/**
+	 * Test activity object.
+	 */
 	public function test_activity_object() {
 		$test_array = array(
-			'id'      => 'https://example.com/post/123',
-			'type'    => 'Create',
-			'object'  => array(
+			'id'     => 'https://example.com/post/123',
+			'type'   => 'Create',
+			'object' => array(
 				'id'      => 'https://example.com/post/123/activity',
 				'type'    => 'Note',
 				'content' => 'Hello world!',
