@@ -277,7 +277,7 @@ class Admin {
 			array(
 				'type'        => 'integer',
 				'description' => \__( 'Choose your preferred Actor-Mode.', 'activitypub' ),
-				'default'     => '1',
+				'default'     => ACTIVITYPUB_ACTOR_MODE,
 			)
 		);
 
