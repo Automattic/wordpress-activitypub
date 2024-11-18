@@ -15,6 +15,7 @@ use Activitypub\Collection\Actors;
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\get_enclosures;
+use function Activitypub\get_upload_baseurl;
 use function Activitypub\get_content_warning;
 use function Activitypub\site_supports_blocks;
 use function Activitypub\generate_post_summary;
@@ -477,14 +478,22 @@ class Post extends Base {
 		}
 
 		$images  = array();
-		$base    = \wp_get_upload_dir()['baseurl'];
+		$base    = get_upload_baseurl();
 		$content = \get_post_field( 'post_content', $this->wp_object );
 		$tags    = new \WP_HTML_Tag_Processor( $content );
 
 		// This linter warning is a false positive - we have to re-count each time here as we modify $images.
 		// phpcs:ignore Squiz.PHP.DisallowSizeFunctionsInLoops.Found
 		while ( $tags->next_tag( 'img' ) && ( \count( $images ) <= $max_images ) ) {
-			$src = $tags->get_attribute( 'src' );
+			/**
+			 * Filter the image source URL.
+			 *
+			 * This can be used to modify the image source URL before it is used to
+			 * determine the attachment ID.
+			 *
+			 * @param string $src The image source URL.
+			 */
+			$src = \apply_filters( 'activitypub_image_src', $tags->get_attribute( 'src' ) );
 
 			/*
 			 * If the img source is in our uploads dir, get the
@@ -498,6 +507,12 @@ class Post extends Base {
 			 */
 			if ( null !== $src && \str_starts_with( $src, $base ) ) {
 				$img_id = \attachment_url_to_postid( $src );
+
+				if ( 0 === $img_id ) {
+					$count  = 0;
+					$src    = current( explode( '?', $src ) );
+					$img_id = \attachment_url_to_postid( $src );
+				}
 
 				if ( 0 === $img_id ) {
 					$count = 0;
