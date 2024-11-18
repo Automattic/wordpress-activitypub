@@ -168,7 +168,8 @@ class Test_Activitypub_Post extends WP_UnitTestCase {
 
 		// Save the data.
 		$id = wp_insert_attachment( $attachment, $upload['file'], $parent_id );
-		wp_update_attachment_metadata( $id, wp_generate_attachment_metadata( $id, $upload['file'] ) );
+		// phpcs:ignore
+		@wp_update_attachment_metadata( $id, @wp_generate_attachment_metadata( $id, $upload['file'] ) );
 
 		return $id;
 	}
