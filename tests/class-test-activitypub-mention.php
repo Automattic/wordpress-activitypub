@@ -1,14 +1,38 @@
 <?php
+/**
+ * Test file for Activitypub Mention.
+ *
+ * @package Activitypub
+ */
+
+/**
+ * Test class for Activitypub Mention.
+ *
+ * @coversDefaultClass \Activitypub\Mention
+ */
 class Test_Activitypub_Mention extends ActivityPub_TestCase_Cache_HTTP {
+
+	/**
+	 * Users.
+	 *
+	 * @var array
+	 */
 	public static $users = array(
 		'username@example.org' => array(
-			'id'  => 'https://example.org/users/username',
+			'id'   => 'https://example.org/users/username',
 			'url'  => 'https://example.org/users/username',
 			'name' => 'username',
 		),
 	);
+
 	/**
+	 * Test the content.
+	 *
 	 * @dataProvider the_content_provider
+	 * @covers ::the_content
+	 *
+	 * @param string $content The content.
+	 * @param string $content_with_mention The content with mention.
 	 */
 	public function test_the_content( $content, $content_with_mention ) {
 		add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ), 10, 2 );
@@ -18,9 +42,14 @@ class Test_Activitypub_Mention extends ActivityPub_TestCase_Cache_HTTP {
 		$this->assertEquals( $content_with_mention, $content );
 	}
 
+	/**
+	 * The content provider.
+	 *
+	 * @return array[] The content.
+	 */
 	public function the_content_provider() {
 		$code = 'hallo <code>@username@example.org</code> test';
-		$pre = <<<ENDPRE
+		$pre  = <<<ENDPRE
 <pre>
 Please don't mention @username@example.org
   here.
@@ -43,6 +72,13 @@ ENDPRE;
 		);
 	}
 
+	/**
+	 * Filter for get_remote_metadata_by_actor.
+	 *
+	 * @param string $pre The pre.
+	 * @param string $actor The actor.
+	 * @return array
+	 */
 	public static function pre_get_remote_metadata_by_actor( $pre, $actor ) {
 		$actor = ltrim( $actor, '@' );
 		if ( isset( self::$users[ $actor ] ) ) {

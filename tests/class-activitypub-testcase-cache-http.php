@@ -1,6 +1,24 @@
 <?php
+/**
+ * Test file for Activitypub Cache HTTP.
+ *
+ * @package Activitypub
+ */
+
+/**
+ * Test class for Activitypub Cache HTTP.
+ */
 class ActivityPub_TestCase_Cache_HTTP extends \WP_UnitTestCase {
+	/**
+	 * The REST server.
+	 *
+	 * @var \Spy_REST_Server
+	 */
 	public $server;
+
+	/**
+	 * Set up the test.
+	 */
 	public function set_up() {
 		parent::set_up();
 
@@ -21,20 +39,35 @@ class ActivityPub_TestCase_Cache_HTTP extends \WP_UnitTestCase {
 		add_filter( 'http_response', array( get_called_class(), 'http_response' ), 10, 3 );
 	}
 
+	/**
+	 * Tear down the test.
+	 */
 	public function tear_down() {
 		remove_filter( 'pre_http_request', array( get_called_class(), 'pre_http_request' ) );
 		remove_filter( 'http_response', array( get_called_class(), 'http_response' ) );
 		parent::tear_down();
 	}
 
-
+	/**
+	 * Filters the return value of an HTTP request.
+	 *
+	 * @param bool   $preempt Whether to preempt an HTTP request's return value.
+	 * @param array  $request {
+	 *      Array of HTTP request arguments.
+	 *
+	 *      @type string $method Request method.
+	 *      @type string $body   Request body.
+	 * }
+	 * @param string $url The request URL.
+	 * @return array|bool|WP_Error Array containing 'headers', 'body', 'response', 'cookies', 'filename'. A WP_Error instance. A boolean false value.
+	 */
 	public static function pre_http_request( $preempt, $request, $url ) {
-		$p = wp_parse_url( $url );
+		$p     = wp_parse_url( $url );
 		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.json';
 		if ( file_exists( $cache ) ) {
 			return apply_filters(
 				'fake_http_response',
-				json_decode( file_get_contents( $cache ), true ), // phpcs:ignore
+				json_decode( file_get_contents( $cache ), true ), // phpcs:ignore WordPress.WP.AlternativeFunctions
 				$p['scheme'] . '://' . $p['host'],
 				$url,
 				$request
@@ -65,6 +98,13 @@ class ActivityPub_TestCase_Cache_HTTP extends \WP_UnitTestCase {
 		// Restore the old url.
 		update_option( 'home', $home_url );
 
+		/**
+		 * Filters the return value of an HTTP request.
+		 *
+		 * @param array  $response Array containing 'headers', 'body', 'response'.
+		 * @param string $url      The request URL.
+		 * @param array  $request  Array of HTTP request arguments.
+		 */
 		return apply_filters(
 			'fake_http_response',
 			array(
@@ -82,12 +122,20 @@ class ActivityPub_TestCase_Cache_HTTP extends \WP_UnitTestCase {
 		);
 	}
 
+	/**
+	 * Filters the HTTP response.
+	 *
+	 * @param array  $response HTTP response.
+	 * @param array  $args     HTTP request arguments.
+	 * @param string $url      The request URL.
+	 * @return array HTTP response.
+	 */
 	public static function http_response( $response, $args, $url ) {
-		$p = wp_parse_url( $url );
+		$p     = wp_parse_url( $url );
 		$cache = __DIR__ . '/fixtures/' . sanitize_title( $p['host'] . '-' . $p['path'] ) . '.json';
 		if ( ! file_exists( $cache ) ) {
 			$headers = wp_remote_retrieve_headers( $response );
-			file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
+			file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions
 				$cache,
 				wp_json_encode(
 					array(

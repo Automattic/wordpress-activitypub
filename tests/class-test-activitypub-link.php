@@ -1,7 +1,24 @@
 <?php
+/**
+ * Test file for Activitypub Link.
+ *
+ * @package Activitypub
+ */
+
+/**
+ * Test class for Activitypub Link.
+ *
+ * @coversDefaultClass \Activitypub\Link
+ */
 class Test_Activitypub_Link extends WP_UnitTestCase {
 	/**
+	 * Test the content.
+	 *
 	 * @dataProvider the_content_provider
+	 * @covers ::the_content
+	 *
+	 * @param string $content The content.
+	 *  @param string $content_with_hashtag The content with hashtag.
 	 */
 	public function test_the_content( $content, $content_with_hashtag ) {
 		$content = \Activitypub\Link::the_content( $content );
@@ -9,23 +26,28 @@ class Test_Activitypub_Link extends WP_UnitTestCase {
 		$this->assertEquals( $content_with_hashtag, $content );
 	}
 
+	/**
+	 * The content provider.
+	 *
+	 * @return array[] The content.
+	 */
 	public function the_content_provider() {
-		$code = '<code>text with some https://test.de and <a> tag inside</code>';
-		$style = <<<ENDSTYLE
+		$code     = '<code>text with some https://test.de and <a> tag inside</code>';
+		$style    = <<<ENDSTYLE
 <style type="text/css">
 <![CDATA[
 color: #ccc;
 ]]>
 </style>
 ENDSTYLE;
-		$pre = <<<ENDPRE
+		$pre      = <<<ENDPRE
 <pre>
 Please don't https://test.de
   this.
 </pre>
 ENDPRE;
 		$textarea = '<textarea name="test" rows="20">color: #ccc</textarea>';
-		$a_href = '<a href="https://test.de">Text</a>';
+		$a_href   = '<a href="https://test.de">Text</a>';
 		return array(
 			array( 'https://wordpress.org/plugins/activitypub/', '<a href="https://wordpress.org/plugins/activitypub/" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">https://</span><span class="ellipsis">wordpress.org/plugins/activity</span><span class="invisible">pub/</span></a>' ),
 			array( 'http://wordpress.org/', '<a href="http://wordpress.org/" target="_blank" rel="nofollow noopener noreferrer" translate="no"><span class="invisible">http://</span><span class="">wordpress.org/</span><span class="invisible"></span></a>' ),
