@@ -510,20 +510,20 @@ class Post extends Base {
 
 				if ( 0 === $img_id ) {
 					$count  = 0;
-					$src    = current( explode( '?', $src ) );
+					$src    = \current( \explode( '?', $src ) );
 					$img_id = \attachment_url_to_postid( $src );
 				}
 
 				if ( 0 === $img_id ) {
 					$count = 0;
-					$src   = preg_replace( '/-(?:\d+x\d+)(\.[a-zA-Z]+)$/', '$1', $src, 1, $count );
+					$src   = \preg_replace( '/-(?:\d+x\d+)(\.[a-zA-Z]+)$/', '$1', $src, 1, $count );
 					if ( $count > 0 ) {
 						$img_id = \attachment_url_to_postid( $src );
 					}
 				}
 
 				if ( 0 === $img_id ) {
-					$src    = preg_replace( '/(\.[a-zA-Z]+)$/', '-scaled$1', $src );
+					$src    = \preg_replace( '/(\.[a-zA-Z]+)$/', '-scaled$1', $src );
 					$img_id = \attachment_url_to_postid( $src );
 				}
 
