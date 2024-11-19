@@ -510,7 +510,7 @@ class Post extends Base {
 
 				if ( 0 === $img_id ) {
 					$count  = 0;
-					$src    = \current( \explode( '?', $src ) );
+					$src    = \strtok( $src, '?' );
 					$img_id = \attachment_url_to_postid( $src );
 				}
 
