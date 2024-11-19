@@ -7,7 +7,7 @@
 
 namespace Activitypub\Integration;
 
-use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Collection\Actors as User_Collection;
 
 use function Activitypub\get_rest_url_by_path;
 

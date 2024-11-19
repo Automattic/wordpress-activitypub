@@ -11,7 +11,7 @@ use WP_Query;
 
 use Activitypub\Signature;
 use Activitypub\Activity\Actor;
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 
 use function Activitypub\esc_hashtag;
@@ -52,7 +52,7 @@ class Blog extends Actor {
 	 *
 	 * @var int
 	 */
-	protected $_id = Users::BLOG_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
+	protected $_id = Actors::BLOG_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
 	 * If the User is indexable.

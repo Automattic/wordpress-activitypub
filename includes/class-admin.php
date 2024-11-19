@@ -9,7 +9,7 @@ namespace Activitypub;
 
 use WP_User_Query;
 use Activitypub\Model\Blog;
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 
 /**
@@ -100,7 +100,11 @@ class Admin {
 	public static function admin_notices() {
 		$permalink_structure = \get_option( 'permalink_structure' );
 		if ( empty( $permalink_structure ) ) {
-			$admin_notice = \__( 'You are using the ActivityPub plugin with a permalink structure of "plain". This will prevent ActivityPub from working.  Please go to "Settings" / "Permalinks" and choose a permalink structure other than "plain".', 'activitypub' );
+			$admin_notice = sprintf(
+				/* translators: %s: Permalink settings URL. */
+				\__( 'ActivityPub needs SEO-friendly URLs to work properly. Please <a href="%s">update your permalink structure</a> to an option other than Plain.', 'activitypub' ),
+				esc_url( admin_url( 'options-permalink.php' ) )
+			);
 			self::show_admin_notice( $admin_notice, 'error' );
 		}
 
@@ -773,10 +777,10 @@ class Admin {
 				_n(
 					'%s Follower (Blog)',
 					'%s Followers (Blog)',
-					count_followers( Users::BLOG_USER_ID ),
+					count_followers( Actors::BLOG_USER_ID ),
 					'activitypub'
 				),
-				\number_format_i18n( count_followers( Users::BLOG_USER_ID ) )
+				\number_format_i18n( count_followers( Actors::BLOG_USER_ID ) )
 			);
 			$items['activitypub-followers-blog'] = sprintf(
 				'<a class="activitypub-followers" href="%1$s" title="%2$s">%3$s</a>',

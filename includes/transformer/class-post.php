@@ -10,7 +10,7 @@ namespace Activitypub\Transformer;
 use WP_Post;
 use Activitypub\Shortcodes;
 use Activitypub\Model\Blog;
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -113,7 +113,7 @@ class Post extends Base {
 			return $blog_user;
 		}
 
-		$user = Users::get_by_id( $this->wp_object->post_author );
+		$user = Actors::get_by_id( $this->wp_object->post_author );
 
 		if ( $user && ! is_wp_error( $user ) ) {
 			$this->actor_object = $user;
@@ -729,33 +729,14 @@ class Post extends Base {
 			return 'Note';
 		}
 
-		// Default to Article.
-		$object_type = 'Article';
-		$post_format = 'standard';
+		// Default to Note.
+		$object_type = 'Note';
+		$post_type   = \get_post_type( $this->wp_object );
 
-		if ( \get_theme_support( 'post-formats' ) ) {
-			$post_format = \get_post_format( $this->wp_object );
-		}
-
-		$post_type = \get_post_type( $this->wp_object );
-		switch ( $post_type ) {
-			case 'post':
-				switch ( $post_format ) {
-					case 'standard':
-					case '':
-						$object_type = 'Article';
-						break;
-					default:
-						$object_type = 'Note';
-						break;
-				}
-				break;
-			case 'page':
-				$object_type = 'Page';
-				break;
-			default:
-				$object_type = 'Article';
-				break;
+		if ( 'page' === $post_type ) {
+			$object_type = 'Page';
+		} elseif ( ! \get_post_format( $this->wp_object ) ) {
+			$object_type = 'Article';
 		}
 
 		return $object_type;
@@ -883,15 +864,15 @@ class Post extends Base {
 
 		$title = \get_the_title( $this->wp_object->ID );
 
-		if ( $title ) {
-			return \wp_strip_all_tags(
-				\html_entity_decode(
-					$title
-				)
-			);
+		if ( ! $title ) {
+			return null;
 		}
 
-		return null;
+		return \wp_strip_all_tags(
+			\html_entity_decode(
+				$title
+			)
+		);
 	}
 
 	/**

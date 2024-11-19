@@ -11,7 +11,7 @@ use stdClass;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Activity\Activity;
-use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Collection\Actors as User_Collection;
 use Activitypub\Transformer\Factory;
 
 use function Activitypub\get_context;

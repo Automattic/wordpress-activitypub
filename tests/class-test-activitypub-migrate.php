@@ -1,12 +1,31 @@
 <?php
+/**
+ * Test file for Activitypub Migrate.
+ *
+ * @package Activitypub
+ */
+
+/**
+ * Test class for Activitypub Migrate.
+ *
+ * @coversDefaultClass \Activitypub\Migration
+ */
 class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 
+	/**
+	 * Tear down the test.
+	 */
 	public function tear_down() {
 		\delete_option( 'activitypub_object_type' );
 		\delete_option( 'activitypub_custom_post_content' );
 		\delete_option( 'activitypub_post_content_type' );
 	}
 
+	/**
+	 * Test migrate actor mode.
+	 *
+	 * @covers ::migrate_actor_mode
+	 */
 	public function test_migrate_actor_mode() {
 		\delete_option( 'activitypub_actor_mode' );
 
@@ -55,17 +74,22 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 		$this->assertEquals( ACTIVITYPUB_ACTOR_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
 	}
 
+	/**
+	 * Test migrate to 4.1.0.
+	 *
+	 * @covers ::migrate_to_4_1_0
+	 */
 	public function test_migrate_to_4_1_0() {
 		$post1 = \wp_insert_post(
 			array(
-				'post_author' => 1,
+				'post_author'  => 1,
 				'post_content' => 'activitypub_content_visibility test',
 			)
 		);
 
 		$post2 = \wp_insert_post(
 			array(
-				'post_author' => 1,
+				'post_author'  => 1,
 				'post_content' => 'activitypub_content_visibility test',
 			)
 		);
@@ -80,7 +104,7 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 		$this->assertEquals(
 			array(
 				'activitypub_content_visibility' => array( '' ),
-				'activitypub_content_123' => array( '456' ),
+				'activitypub_content_123'        => array( '456' ),
 			),
 			$metas1
 		);
@@ -90,7 +114,7 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 		$this->assertEquals(
 			array(
 				'activitypub_content_visibility' => array( 'local' ),
-				'activitypub_content_123' => array( '' ),
+				'activitypub_content_123'        => array( '' ),
 			),
 			$metas2
 		);
@@ -119,7 +143,7 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 		$this->assertEquals(
 			array(
 				'activitypub_content_visibility' => array( 'local' ),
-				'activitypub_content_123' => array( '' ),
+				'activitypub_content_123'        => array( '' ),
 			),
 			$metas2
 		);
@@ -143,7 +167,7 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 		$this->assertEquals( "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]", $template );
 		$this->assertFalse( $content_type );
 
-		$custom = "[ap_title] [ap_content] [ap_hashcats] [ap_authorurl]";
+		$custom = '[ap_title] [ap_content] [ap_hashcats] [ap_authorurl]';
 
 		\update_option( 'activitypub_post_content_type', 'custom' );
 		\update_option( 'activitypub_custom_post_content', $custom );

@@ -5,7 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Dev
+## 4.2.0 - 2024-11-15
+
+### Added
+
+* Unit tests for the `ActivityPub\Transformer\Post` class
 
 ### Added
 
@@ -15,14 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Reuse constants once they're defined
 * "FEP-b2b8: Long-form Text" support
+* Admin notice for plain permalink settings is more user-friendly and actionable
+* Post-Formats support
 
 ### Fixed
 
 * Do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts.
+* Proper margins for notices and font size for page title in settings screen
+* Ensure that `?author=0` resolves to blog user
 
 ### Removed
 
 * Remove `meta` CLI command
+* Remove unneeded translation functions from CLI commands
 
 ## 4.1.1 - 2024-11-10
 
@@ -1058,6 +1067,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
+[4.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.1.1...4.2.0
 [4.1.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.1.0...4.1.1
 [4.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.0.2...4.1.0
 [4.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/4.0.1...4.0.2

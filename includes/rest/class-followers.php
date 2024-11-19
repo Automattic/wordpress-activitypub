@@ -10,7 +10,7 @@ namespace Activitypub\Rest;
 use stdClass;
 use WP_REST_Server;
 use WP_REST_Response;
-use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Collection\Actors as User_Collection;
 use Activitypub\Collection\Followers as Follower_Collection;
 
 use function Activitypub\get_rest_url_by_path;

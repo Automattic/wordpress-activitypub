@@ -30,7 +30,7 @@ class Cli extends WP_CLI_Command {
 	 * @return void
 	 */
 	public function self_destruct( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		WP_CLI::warning( __( 'Self-Destructing is not implemented yet.', 'activitypub' ) );
+		WP_CLI::warning( 'Self-Destructing is not implemented yet.' );
 	}
 
 	/**
@@ -55,28 +55,27 @@ class Cli extends WP_CLI_Command {
 	 *
 	 * @synopsis <action> <id>
 	 *
-	 * @param array|null $args The arguments.
+	 * @param array $args The arguments.
 	 */
 	public function post( $args ) {
 		$post = get_post( $args[1] );
 
 		if ( ! $post ) {
-			WP_CLI::error( __( 'Post not found.', 'activitypub' ) );
+			WP_CLI::error( 'Post not found.' );
 		}
 
 		switch ( $args[0] ) {
 			case 'delete':
-				// translators: %s is the ID of the post.
-				WP_CLI::confirm( sprintf( __( 'Do you really want to delete the (Custom) Post with the ID: %s', 'activitypub' ), $args[1] ) );
+				WP_CLI::confirm( 'Do you really want to delete the (Custom) Post with the ID: ' . $args[1] );
 				Scheduler::schedule_post_activity( 'trash', 'publish', $args[1] );
-				WP_CLI::success( __( '"Delete"-Activity is queued.', 'activitypub' ) );
+				WP_CLI::success( '"Delete" activity is queued.' );
 				break;
 			case 'update':
 				Scheduler::schedule_post_activity( 'publish', 'publish', $args[1] );
-				WP_CLI::success( __( '"Update"-Activity is queued.', 'activitypub' ) );
+				WP_CLI::success( '"Update" activity is queued.' );
 				break;
 			default:
-				WP_CLI::error( __( 'Unknown action.', 'activitypub' ) );
+				WP_CLI::error( 'Unknown action.' );
 		}
 	}
 
@@ -102,32 +101,31 @@ class Cli extends WP_CLI_Command {
 	 *
 	 * @synopsis <action> <id>
 	 *
-	 * @param array|null $args The arguments.
+	 * @param array $args The arguments.
 	 */
 	public function comment( $args ) {
 		$comment = get_comment( $args[1] );
 
 		if ( ! $comment ) {
-			WP_CLI::error( __( 'Comment not found.', 'activitypub' ) );
+			WP_CLI::error( 'Comment not found.' );
 		}
 
 		if ( was_comment_received( $comment ) ) {
-			WP_CLI::error( __( 'This comment was received via ActivityPub and cannot be deleted or updated.', 'activitypub' ) );
+			WP_CLI::error( 'This comment was received via ActivityPub and cannot be deleted or updated.' );
 		}
 
 		switch ( $args[0] ) {
 			case 'delete':
-				// translators: %s is the ID of the comment.
-				WP_CLI::confirm( sprintf( __( 'Do you really want to delete the Comment with the ID: %s', 'activitypub' ), $args[1] ) );
+				WP_CLI::confirm( 'Do you really want to delete the Comment with the ID: ' . $args[1] );
 				Scheduler::schedule_comment_activity( 'trash', 'approved', $args[1] );
-				WP_CLI::success( __( '"Delete"-Activity is queued.', 'activitypub' ) );
+				WP_CLI::success( '"Delete" activity is queued.' );
 				break;
 			case 'update':
 				Scheduler::schedule_comment_activity( 'approved', 'approved', $args[1] );
-				WP_CLI::success( __( '"Update"-Activity is queued.', 'activitypub' ) );
+				WP_CLI::success( '"Update" activity is queued.' );
 				break;
 			default:
-				WP_CLI::error( __( 'Unknown action.', 'activitypub' ) );
+				WP_CLI::error( 'Unknown action.' );
 		}
 	}
 }

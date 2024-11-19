@@ -9,7 +9,7 @@ namespace Activitypub;
 
 use WP_Post;
 use WP_Comment;
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Factory;
@@ -51,7 +51,7 @@ class Activity_Dispatcher {
 		}
 
 		if ( is_single_user() ) {
-			self::send_activity( $wp_object, $type, Users::BLOG_USER_ID );
+			self::send_activity( $wp_object, $type, Actors::BLOG_USER_ID );
 		} else {
 			self::send_announce( $wp_object, $type );
 		}
@@ -74,9 +74,9 @@ class Activity_Dispatcher {
 		// check if user is disabled and blog user is enabled.
 		if (
 			is_user_disabled( $transformer->get_wp_user_id() ) &&
-			! is_user_disabled( Users::BLOG_USER_ID )
+			! is_user_disabled( Actors::BLOG_USER_ID )
 		) {
-			$transformer->change_wp_user_id( Users::BLOG_USER_ID );
+			$transformer->change_wp_user_id( Actors::BLOG_USER_ID );
 		}
 
 		if ( null !== $user_id ) {
@@ -105,7 +105,7 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
+		if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
 			return;
 		}
 
@@ -115,9 +115,9 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$user_id  = Users::BLOG_USER_ID;
+		$user_id  = Actors::BLOG_USER_ID;
 		$activity = $transformer->to_activity( $type );
-		$user     = Users::get_by_id( Users::BLOG_USER_ID );
+		$user     = Actors::get_by_id( Actors::BLOG_USER_ID );
 
 		$announce = new Activity();
 		$announce->set_type( 'Announce' );
@@ -133,7 +133,7 @@ class Activity_Dispatcher {
 	 * @param int $user_id The user ID to send an update for.
 	 */
 	public static function send_profile_update( $user_id ) {
-		$user = Users::get_by_various( $user_id );
+		$user = Actors::get_by_various( $user_id );
 
 		// Bail if that's not a good user.
 		if ( is_wp_error( $user ) ) {

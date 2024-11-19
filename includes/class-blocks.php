@@ -8,7 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Followers;
-use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Collection\Actors as User_Collection;
 
 /**
  * Block class.

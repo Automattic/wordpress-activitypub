@@ -1,17 +1,39 @@
 <?php
-class Test_Activitypub_Users_Collection extends WP_UnitTestCase {
+/**
+ * Test file for Activitypub Actors Collection.
+ *
+ * @package Activitypub
+ */
 
+/**
+ * Test class for Activitypub Actors Collection.
+ *
+ * @coversDefaultClass \Activitypub\Collection\Actors
+ */
+class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
+
+	/**
+	 * Set up the test.
+	 */
 	public function set_up() {
 		parent::set_up();
 
+		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 		add_option( 'activitypub_blog_identifier', 'blog' );
 		add_user_meta( 1, 'activitypub_user_identifier', 'admin' );
 	}
+
 	/**
+	 * Test get_by_various.
+	 *
 	 * @dataProvider the_resource_provider
+	 * @covers ::get_by_various
+	 *
+	 * @param string $item     The resource.
+	 * @param string $expected The expected class.
 	 */
-	public function test_get_by_various( $resource, $expected ) {
-		$path = wp_parse_url( $resource, PHP_URL_PATH );
+	public function test_get_by_various( $item, $expected ) {
+		$path = wp_parse_url( $item, PHP_URL_PATH );
 
 		if ( str_starts_with( $path, '/blog/' ) ) {
 			add_filter(
@@ -23,11 +45,41 @@ class Test_Activitypub_Users_Collection extends WP_UnitTestCase {
 			);
 		}
 
-		$user = Activitypub\Collection\Users::get_by_resource( $resource );
-
-		$this->assertInstanceOf( $expected, $user );
+		$actors = Activitypub\Collection\Actors::get_by_resource( $item );
+		$this->assertInstanceOf( $expected, $actors );
 	}
 
+	/**
+	 * Test deprecated get_by_various.
+	 *
+	 * @dataProvider the_resource_provider
+	 * @covers ::get_by_resource
+	 * @expectedDeprecated Activitypub\Collection\Users::get_by_resource
+	 *
+	 * @param string $item     The resource.
+	 * @param string $expected The expected class.
+	 */
+	public function test_deprecated_get_by_various( $item, $expected ) {
+		$path = wp_parse_url( $item, PHP_URL_PATH );
+
+		if ( str_starts_with( $path, '/blog/' ) ) {
+			add_filter(
+				'home_url',
+				function () {
+					return 'http://example.org/blog/';
+				}
+			);
+		}
+
+		$users = Activitypub\Collection\Users::get_by_resource( $item );
+		$this->assertInstanceOf( $expected, $users );
+	}
+
+	/**
+	 * Resource provider.
+	 *
+	 * @return array[]
+	 */
 	public function the_resource_provider() {
 		return array(
 			array( 'http://example.org/?author=1', 'Activitypub\Model\User' ),

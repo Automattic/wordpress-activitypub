@@ -1,5 +1,20 @@
 <?php
+/**
+ * Test file for Activitypub integrations.
+ *
+ * @package Activitypub
+ */
+
+/**
+ * Test class for Activitypub integrations.
+ *
+ * @coversDefaultClass \Activitypub\Integrations
+ */
 class Test_Activitypub_Integrations extends WP_UnitTestCase {
+
+	/**
+	 * Set up the test.
+	 */
 	public function set_up() {
 		parent::set_up();
 
@@ -9,6 +24,9 @@ class Test_Activitypub_Integrations extends WP_UnitTestCase {
 		\add_filter( 'activitypub_attachments', array( get_called_class(), 'mock_attachments' ) );
 	}
 
+	/**
+	 * Test ssp.
+	 */
 	public function test_ssp() {
 		$post = \wp_insert_post(
 			array(
@@ -33,7 +51,7 @@ class Test_Activitypub_Integrations extends WP_UnitTestCase {
 		\update_post_meta( $post->ID, 'audio_file', 'https://example.com/audio.mp3' );
 		\update_post_meta( $post->ID, 'cover_image', 'https://example.com/cover.jpg' );
 
-		// clear post cache
+		// Clear post cache.
 		\clean_post_cache( $post->ID );
 
 		$transformer = \Activitypub\Transformer\Factory::get_transformer( $post );
@@ -46,6 +64,12 @@ class Test_Activitypub_Integrations extends WP_UnitTestCase {
 		}
 	}
 
+	/**
+	 * Mock attachments.
+	 *
+	 * @param array $attachments Attachments.
+	 * @return array
+	 */
 	public static function mock_attachments( $attachments ) {
 		$attachments[] = array(
 			'type' => 'Image',

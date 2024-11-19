@@ -7,7 +7,7 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 /**
@@ -319,7 +319,7 @@ class Migration {
 			}
 		}
 
-		$followers = Followers::get_followers( Users::BLOG_USER_ID );
+		$followers = Followers::get_followers( Actors::BLOG_USER_ID );
 
 		if ( $followers ) {
 			\update_option( 'activitypub_use_permalink_as_id_for_blog', '1' );

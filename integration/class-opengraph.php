@@ -8,7 +8,7 @@
 namespace Activitypub\Integration;
 
 use Activitypub\Model\Blog;
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 
 use function Activitypub\is_single_user;
 use function Activitypub\is_user_type_disabled;
@@ -72,13 +72,13 @@ class Opengraph {
 			$user_id = \get_post_field( 'post_author', \get_queried_object_id() );
 		} elseif ( ! is_user_type_disabled( 'blog' ) ) {
 			// Use the Blog-User for any other page, if the Blog-User is not disabled.
-			$user_id = Users::BLOG_USER_ID;
+			$user_id = Actors::BLOG_USER_ID;
 		} else {
 			// Do not add any metadata otherwise.
 			return $metadata;
 		}
 
-		$user = Users::get_by_id( $user_id );
+		$user = Actors::get_by_id( $user_id );
 
 		if ( ! $user || \is_wp_error( $user ) ) {
 			return $metadata;

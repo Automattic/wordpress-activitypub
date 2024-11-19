@@ -10,7 +10,7 @@ namespace Activitypub\Model;
 use WP_Query;
 use Activitypub\Signature;
 use Activitypub\Activity\Actor;
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 
 use function Activitypub\get_rest_url_by_path;
 
@@ -23,7 +23,7 @@ class Application extends Actor {
 	 *
 	 * @var int
 	 */
-	protected $_id = Users::APPLICATION_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
+	protected $_id = Actors::APPLICATION_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
 	 * Whether the Application is discoverable.
@@ -224,7 +224,7 @@ class Application extends Actor {
 		return array(
 			'id'           => $this->get_id() . '#main-key',
 			'owner'        => $this->get_id(),
-			'publicKeyPem' => Signature::get_public_key_for( Users::APPLICATION_USER_ID ),
+			'publicKeyPem' => Signature::get_public_key_for( Actors::APPLICATION_USER_ID ),
 		);
 	}
 

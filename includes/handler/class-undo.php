@@ -7,7 +7,7 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Comment;
 
@@ -49,7 +49,7 @@ class Undo {
 		// Handle "Unfollow" requests.
 		if ( 'Follow' === $type ) {
 			$id   = object_to_uri( $activity['object']['object'] );
-			$user = Users::get_by_resource( $id );
+			$user = Actors::get_by_resource( $id );
 
 			if ( ! $user || is_wp_error( $user ) ) {
 				// If we can not find a user, we can not initiate a follow process.

@@ -11,7 +11,7 @@ use WP_REST_Server;
 use WP_REST_Request;
 use WP_REST_Response;
 use Activitypub\Webfinger;
-use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Collection\Actors as User_Collection;
 
 use function Activitypub\is_activitypub_request;
 

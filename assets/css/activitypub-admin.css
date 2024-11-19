@@ -5,8 +5,11 @@
 
 .settings_page_activitypub .notice {
 	max-width: 800px;
-	margin: auto;
-	margin: 0px auto 30px;
+	margin: 0 auto 30px;
+}
+
+.settings_page_activitypub .update-nag {
+	margin: 25px 20px 15px 22px;
 }
 
 .settings_page_activitypub .wrap {
@@ -18,6 +21,15 @@
 	margin: 0 0 1rem;
 	background: #fff;
 	border-bottom: 1px solid #dcdcde;
+}
+
+.activitypub-settings-header h1 {
+	display: inline-block;
+	font-weight: 600;
+	margin: 0 0.8rem 1rem;
+	font-size: 23px;
+	padding: 9px 0 4px;
+	line-height: 1.3;
 }
 
 .activitypub-settings-title-section {
