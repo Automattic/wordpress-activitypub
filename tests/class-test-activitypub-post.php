@@ -74,4 +74,107 @@ class Test_Activitypub_Post extends WP_UnitTestCase {
 		$this->assertEquals( array(), $object->get_to() );
 		$this->assertEquals( array(), $object->get_cc() );
 	}
+
+	/**
+	 * Test different variations of Attachment parsing.
+	 */
+	public function test_block_attachments_with_fallback() {
+		$attachment_id  = $this->create_upload_object( __DIR__ . '/assets/test.jpg' );
+		$attachment_src = \wp_get_attachment_image_src( $attachment_id );
+
+		$post_id = \wp_insert_post(
+			array(
+				'post_author'  => 1,
+				'post_content' => sprintf(
+					'<!-- wp:image {"id": %1$d,"sizeSlug":"large"} --><figure class="wp-block-image"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->',
+					$attachment_id,
+					$attachment_src[0]
+				),
+				'post_status'  => 'publish',
+			)
+		);
+
+		$object = \Activitypub\Transformer\Post::transform( get_post( $post_id ) )->to_object();
+
+		$this->assertEquals(
+			array(
+				array(
+					'type'      => 'Image',
+					'url'       => $attachment_src[0],
+					'mediaType' => 'image/jpeg',
+				),
+			),
+			$object->get_attachment()
+		);
+
+		$post_id = \wp_insert_post(
+			array(
+				'post_author'  => 1,
+				'post_content' => sprintf(
+					'<p>this is a photo</p><p><img src="%2$s" alt="" class="wp-image-%1$d"/></p>',
+					$attachment_id,
+					$attachment_src[0]
+				),
+				'post_status'  => 'publish',
+			)
+		);
+
+		$object = \Activitypub\Transformer\Post::transform( get_post( $post_id ) )->to_object();
+
+		$this->assertEquals(
+			array(
+				array(
+					'type'      => 'Image',
+					'url'       => $attachment_src[0],
+					'mediaType' => 'image/jpeg',
+				),
+			),
+			$object->get_attachment()
+		);
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Saves an attachment.
+	 *
+	 * @param string $file      The file name to create attachment object for.
+	 * @param int    $parent_id ID of the post to attach the file to.
+	 *
+	 * @return int|WP_Error The attachment ID on success. The value 0 or WP_Error on failure.
+	 */
+	public function create_upload_object( $file, $parent_id = 0 ) {
+		$file_array = array(
+			'name'     => wp_basename( $file ),
+			'tmp_name' => $file,
+		);
+
+		$upload = wp_handle_sideload( $file_array, array( 'test_form' => false ) );
+
+		$type = '';
+		if ( ! empty( $upload['type'] ) ) {
+			$type = $upload['type'];
+		} else {
+			$mime = wp_check_filetype( $upload['file'] );
+			if ( $mime ) {
+				$type = $mime['type'];
+			}
+		}
+
+		$attachment = array(
+			'post_title'     => wp_basename( $upload['file'] ),
+			'post_content'   => '',
+			'post_type'      => 'attachment',
+			'post_parent'    => $parent_id,
+			'post_mime_type' => $type,
+			'guid'           => $upload['url'],
+		);
+
+		// Save the data.
+		$id = wp_insert_attachment( $attachment, $upload['file'], $parent_id );
+		// phpcs:ignore
+		@wp_update_attachment_metadata( $id, @wp_generate_attachment_metadata( $id, $upload['file'] ) );
+
+		return $id;
+	}
 }
