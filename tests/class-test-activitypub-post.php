@@ -144,8 +144,12 @@ class Test_Activitypub_Post extends WP_UnitTestCase {
 	 * @return int|WP_Error The attachment ID on success. The value 0 or WP_Error on failure.
 	 */
 	public function create_upload_object( $file, $parent_id = 0 ) {
-		$contents = file_get_contents( $file ); // phpcs:ignore
-		$upload   = wp_upload_bits( wp_basename( $file ), null, $contents );
+		$file_array = array(
+			'name'     => wp_basename( $file ),
+			'tmp_name' => $file,
+		);
+
+		$upload = wp_handle_sideload( $file_array, array( 'test_form' => false ) );
 
 		$type = '';
 		if ( ! empty( $upload['type'] ) ) {
