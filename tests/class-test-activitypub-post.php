@@ -144,6 +144,17 @@ class Test_Activitypub_Post extends WP_UnitTestCase {
 	 * @return int|WP_Error The attachment ID on success. The value 0 or WP_Error on failure.
 	 */
 	public function create_upload_object( $file, $parent_id = 0 ) {
+		if ( ! class_exists( 'WP_Filesystem_Direct' ) ) {
+			require ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php';
+			require ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php';
+		}
+
+		$dest = dirname( $file ) . DIRECTORY_SEPARATOR . 'test-temp.jpg';
+		$fs   = new \WP_Filesystem_Direct( array() );
+		$fs->copy( $file, $dest );
+
+		$file = $dest;
+
 		$file_array = array(
 			'name'     => wp_basename( $file ),
 			'tmp_name' => $file,
