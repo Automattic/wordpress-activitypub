@@ -86,4 +86,20 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 		$this->assertEquals( 'Hello world!', $activity->get_object()->get_content() );
 		Assert::assertArraySubset( $test_array, $activity->to_array() );
 	}
+
+	/**
+	 * Test activity object.
+	 */
+	public function test_activity_object_url() {
+		$id = 'https://example.com/author/123';
+
+		// Build the update.
+		$activity = new \Activitypub\Activity\Activity();
+		$activity->set_type( 'Update' );
+		$activity->set_actor( $id );
+		$activity->set_object( $id );
+		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+
+		$this->assertTrue( str_starts_with( $activity->get_id(), 'https://example.com/author/123#activity-update-' ) );
+	}
 }
