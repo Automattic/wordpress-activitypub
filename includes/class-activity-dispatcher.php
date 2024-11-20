@@ -143,6 +143,7 @@ class Activity_Dispatcher {
 		// Build the update.
 		$activity = new Activity();
 		$activity->set_type( 'Update' );
+		$activity->set_id( $user->get_id() . '#update-' . time() );
 		$activity->set_actor( $user->get_id() );
 		$activity->set_object( $user->get_id() );
 		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
