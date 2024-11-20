@@ -152,6 +152,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 ## Changelog ##
 
+### Dev ###
+
+* Improved: Outsource Constants to a separate file
+
 ### 4.2.1 ###
 
 * Added: Mastodon Apps status provider
