@@ -798,12 +798,14 @@ class Post extends Base {
 	 * @return string|null The audience.
 	 */
 	public function get_audience() {
-		if ( is_single_user() ) {
-			return null;
-		} else {
+		$actor_mode = \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE === $actor_mode ) {
 			$blog = new Blog();
 			return $blog->get_id();
 		}
+
+		return null;
 	}
 
 	/**
