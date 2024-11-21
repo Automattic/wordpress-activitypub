@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Dev - XXXX-XX-XX
 
+* add a `pre_activitypub_get_upload_baseurl` filter
+
 ### Improved
 
 * Outsource Constants to a separate file
