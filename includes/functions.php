@@ -1493,7 +1493,7 @@ function get_upload_baseurl() {
 	/**
 	 * Filters the upload base URL.
 	 *
-	 * @param string \wp_upload_dir()['baseurl'] The upload base URL.
+	 * @param string \wp_get_upload_dir()['baseurl'] The upload base URL.
 	 */
 	return apply_filters( 'activitypub_get_upload_baseurl', $upload_dir['baseurl'] );
 }
