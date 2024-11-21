@@ -68,9 +68,3 @@
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC', '' );
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC', 'quiet_public' );
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL', 'local' );
-
-// Plugin related constants.
-\define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
-\define( 'ACTIVITYPUB_PLUGIN_FILE', ACTIVITYPUB_PLUGIN_DIR . basename( __FILE__ ) );
-\define( 'ACTIVITYPUB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

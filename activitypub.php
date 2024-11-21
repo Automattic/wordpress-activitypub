@@ -21,6 +21,12 @@ use WP_CLI;
 
 \define( 'ACTIVITYPUB_PLUGIN_VERSION', '4.2.1' );
 
+// Plugin related constants.
+\define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+\define( 'ACTIVITYPUB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+\define( 'ACTIVITYPUB_PLUGIN_FILE', ACTIVITYPUB_PLUGIN_DIR . basename( __FILE__ ) );
+\define( 'ACTIVITYPUB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+
 require_once __DIR__ . '/includes/compat.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/constants.php';
