@@ -152,6 +152,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Dev =
 
+* Added: GitHub action to enforce Changelog updates.
 * Improved: Outsource Constants to a separate file
 
 = 4.2.1 =

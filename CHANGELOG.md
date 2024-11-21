@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Unit tests for the `ActivityPub\Transformer\Post` class
 
+### Added
+
+* GitHub action to enforce Changelog updates.
+
 ### Improved
 
 * Reuse constants once they're defined
