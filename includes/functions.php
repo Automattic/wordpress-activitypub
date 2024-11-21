@@ -1488,7 +1488,7 @@ function get_upload_baseurl() {
 		return $maybe_upload_dir;
 	}
 
-	$upload_dir = \wp_upload_dir();
+	$upload_dir = \wp_get_upload_dir();
 
 	/**
 	 * Filters the upload base URL.
