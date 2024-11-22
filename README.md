@@ -36,6 +36,8 @@ To clarify these expectations, we have adopted the code of conduct defined by th
 
 Need to report a security vulnerability? Go to https://automattic.com/security/ or directly to our security bug bounty site https://hackerone.com/automattic.
 
+You can find more information on reporting security vulnerabilities in our [SECURITY.md](./SECURITY.md) file.
+
 ## License
 
 The ActivityPub plugin is licensed under the [MIT license](./LICENSE).
