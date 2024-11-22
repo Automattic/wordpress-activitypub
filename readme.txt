@@ -58,24 +58,6 @@ So what’s the process?
 
 This plugin connects your WordPress blog to popular social platforms like Mastodon, making your posts more accessible to a wider audience. Once installed, your blog can be followed by users on these platforms, allowing them to receive your new posts in their feeds.
 
-= What is the status of this plugin? =
-
-Implemented:
-
-* blog profile pages (JSON representation)
-* author profile pages (JSON representation)
-* custom links
-* functional inbox/outbox
-* follow (accept follows)
-* share posts
-* receive comments/reactions
-* signature verification
-* threaded comments support
-
-To implement:
-
-* replace shortcodes with blocks for layout
-
 = What is "ActivityPub for WordPress" =
 
 *ActivityPub for WordPress* extends WordPress with some Fediverse features, but it does not compete with platforms like Friendica or Mastodon. If you want to run a **decentralized social network**, please use [Mastodon](https://joinmastodon.org/) or [GNU social](https://gnusocial.network/).
