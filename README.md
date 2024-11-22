@@ -26,6 +26,7 @@ If you need help, [check out the support forums on WordPress.org](https://wordpr
 Thank you for thinking about contributing to the ActivityPub plugin! If you're unsure of anything, feel free to submit an issue or pull request on any topic. The worst that can happen is that you'll be politely directed to the best location to ask your question or to change something in your pull request. There are a variety of options for how you can help:
 
 * Write and submit patches.
+* [Discuss new features and enhancements](https://github.com/Automattic/wordpress-activitypub/discussions).
 * If you found a bug, [file a report here](https://github.com/Automattic/wordpress-activitypub/issues/new?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen&template=bug_report.yml).
 * [Translate the ActivityPub plugin in your language](https://translate.wordpress.org/projects/wp-plugins/activitypub/).
 
