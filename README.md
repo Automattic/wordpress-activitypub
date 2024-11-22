@@ -2,6 +2,8 @@
 
 This is the [ActivityPub plugin](https://wordpress.org/plugins/activitypub/) repo.
 
+Enter the fediverse with **ActivityPub**, broadcasting your blog to a wider audience! Attract followers, deliver updates, and receive comments from a diverse user base of **ActivityPub**-compliant platforms.
+
 ## Demo
 
 You can test out the plugin (settings) with [WordPress Playground](https://wordpress.org/plugins/activitypub/?preview=1).
