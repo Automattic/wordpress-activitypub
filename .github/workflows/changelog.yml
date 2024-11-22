@@ -21,6 +21,6 @@ jobs:
       # readme.txt
       - uses: dangoslen/changelog-enforcer@v3
         with:
-          changeLogPath: 'readme.txt'
+          changeLogPath: 'README.md'
           skipLabels: 'Skip Changelog'
           versionPattern: '^=\\s*((v|V)?\\d+\\.\\d+\\.\\d+|Dev)\\s*='

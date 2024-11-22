@@ -1,16 +1,17 @@
-# ActivityPub #
-**Contributors:** [automattic](https://profiles.wordpress.org/automattic/), [pfefferle](https://profiles.wordpress.org/pfefferle/), [mediaformat](https://profiles.wordpress.org/mediaformat/), [mattwiebe](https://profiles.wordpress.org/mattwiebe/), [akirk](https://profiles.wordpress.org/akirk/), [jeherve](https://profiles.wordpress.org/jeherve/), [nuriapena](https://profiles.wordpress.org/nuriapena/), [cavalierlife](https://profiles.wordpress.org/cavalierlife/)  
-**Tags:** OStatus, fediverse, activitypub, activitystream  
-**Requires at least:** 5.5  
-**Tested up to:** 6.7  
-**Stable tag:** 4.2.1  
-**Requires PHP:** 7.0  
-**License:** MIT  
-**License URI:** http://opensource.org/licenses/MIT  
+# ActivityPub
+
+- Contributors: automattic, pfefferle, mattwiebe, mediaformat, akirk, jeherve, nuriapena, cavalierlife
+- Tags: OStatus, fediverse, activitypub, activitystream
+- Requires at least: 5.5
+- Tested up to: 6.7
+- Stable tag: 4.2.1
+- Requires PHP: 7.0
+- License: MIT
+- License URI: http://opensource.org/licenses/MIT
 
 The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
 
-## Description ##
+## Description
 
 Enter the fediverse with **ActivityPub**, broadcasting your blog to a wider audience! Attract followers, deliver updates, and receive comments from a diverse user base of **ActivityPub**\-compliant platforms.
 
@@ -54,13 +55,13 @@ So what’s the process?
 > [!NOTE]
 > It may take up to 15 minutes or so for the new post to show up in your federated feed. This is because the messages are sent to the federated platforms using a delayed cron. This avoids breaking the publishing process for those cases where users might have lots of followers. So please don’t assume that just because you didn’t see it show up right away that something is broken. Give it some time. In most cases, it will show up within a few minutes, and you’ll know everything is working as expected.
 
-## Frequently Asked Questions ##
+## Frequently Asked Questions
 
-### tl;dr ###
+### tl;dr
 
 This plugin connects your WordPress blog to popular social platforms like Mastodon, making your posts more accessible to a wider audience. Once installed, your blog can be followed by users on these platforms, allowing them to receive your new posts in their feeds.
 
-### What is the status of this plugin? ###
+### What is the status of this plugin?
 
 Implemented:
 
@@ -78,11 +79,11 @@ To implement:
 
 * replace shortcodes with blocks for layout
 
-### What is "ActivityPub for WordPress" ###
+### What is "ActivityPub for WordPress"
 
 *ActivityPub for WordPress* extends WordPress with some Fediverse features, but it does not compete with platforms like Friendica or Mastodon. If you want to run a **decentralized social network**, please use [Mastodon](https://joinmastodon.org/) or [GNU social](https://gnusocial.network/).
 
-### What if you are running your blog in a subdirectory? ###
+### What if you are running your blog in a subdirectory?
 
 In order for webfinger to work, it must be mapped to the root directory of the URL on which your blog resides.
 
@@ -105,17 +106,17 @@ Add the following to the site.conf in sites-available:
 
 Where 'blog' is the path to the subdirectory at which your blog resides.
 
-### What if you are running your blog in a subdirectory? ###
+### What if you are running your blog in a subdirectory?
 
 If you are running your blog in a subdirectory, but have a different [wp_siteurl](https://wordpress.org/documentation/article/giving-wordpress-its-own-directory/), you don't need the redirect, because the index.php will take care of that.
 
-### What if you are running your blog behind a reverse proxy with Apache? ###
+### What if you are running your blog behind a reverse proxy with Apache?
 
 If you are using a reverse proxy with Apache to run your host you may encounter that you are unable to have followers join the blog. This will occur because the proxy system rewrites the host headers to be the internal DNS name of your server, which the plugin then uses to attempt to sign the replies. The remote site attempting to follow your users is expecting the public DNS name on the replies. In these cases you will need to use the 'ProxyPreserveHost On' directive to ensure the external host name is passed to your internal host.
 
 If you are using SSL between the proxy and internal host you may also need to `SSLProxyCheckPeerName off` if your internal host can not answer with the correct SSL name. This may present a security issue in some environments.
 
-### Constants ###
+### Constants
 
 The plugin uses PHP Constants to enable, disable or change its default behaviour. Please use them with caution and only if you know what you are doing.
 
@@ -134,7 +135,7 @@ The plugin uses PHP Constants to enable, disable or change its default behaviour
 * `ACTIVITYPUB_SHARED_INBOX_FEATURE` - Enable the shared inbox. Default: `false`.
 * `ACTIVITYPUB_SEND_VARY_HEADER` - Enable to send the `Vary: Accept` header. Default: `false`.
 
-### Where can you manage your followers? ###
+### Where can you manage your followers?
 
 If you have activated the blog user, you will find the list of his followers in the settings under `/wp-admin/options-general.php?page=activitypub&tab=followers`.
 
@@ -142,7 +143,7 @@ The followers of a user can be found in the menu under "Users" -> "Followers" or
 
 For reasons of data protection, it is not possible to see the followers of other users.
 
-## Screenshots ##
+## Screenshots
 
 1. The "Follow me"-Block in the Block-Editor
 2. The "Followers"-Block in the Block-Editor
@@ -150,13 +151,13 @@ For reasons of data protection, it is not possible to see the followers of other
 4. A "Federated Reply" in a Post
 5. A Blog-Profile on Mastodon
 
-## Changelog ##
+## Changelog
 
-### Dev ###
+### Dev
 
 * Improved: Outsource Constants to a separate file
 
-### 4.2.1 ###
+### 4.2.1
 
 * Added: Mastodon Apps status provider
 * Improved: Image-Handling
@@ -164,7 +165,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Don't overwrite an existing `wp-tests-config.php`
 * Fixed: PHPCS for phpunit files
 
-### 4.2.0 ###
+### 4.2.0
 
 * Added: Unit tests for the `ActivityPub\Transformer\Post` class
 * Improved: Reuse constants once they're defined
@@ -175,12 +176,12 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Proper margins for notices and font size for page title in settings screen.
 * Fixed: Ensure that `?author=0` resolves to blog user
 
-### 4.1.1 ###
+### 4.1.1
 
 * Fixed: Only revert to URL if there is one
 * Fixed: Migration
 
-### 4.1.0 ###
+### 4.1.0
 
 * Added: Add custom Preview for "Fediverse"
 * Added: Support `comment_previously_approved` setting
@@ -189,19 +190,19 @@ For reasons of data protection, it is not possible to see the followers of other
 * Improved: Add title to content if post is a `Note`
 * Improved: Fallback to blog-user if user is disabled
 
-### 4.0.2 ###
+### 4.0.2
 
 * Fixed: Do not federate "Local" posts
 * Improved: Help-text for Content-Warning box
 
-### 4.0.1 ###
+### 4.0.1
 
 * Fixed: Missing URL-Param handling in REST API
 * Fixed: Seriously Simple Podcasting integration
 * Fixed: Multiple small fixes
 * Improved: Provide contextual fallback for dynamic blocks
 
-### 4.0.0 ###
+### 4.0.0
 
 * Added: Fire an action before a follower is removed
 * Added: Make Intent-URL filterable
@@ -219,17 +220,17 @@ For reasons of data protection, it is not possible to see the followers of other
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).
 
-## Upgrade Notice ##
+## Upgrade Notice
 
-### 1.0.0 ###
+### 1.0.0
 
 For version 1.0.0 we have completely rebuilt the followers lists. There is a migration from the old format to the new, but it may take some time until the migration is complete. No data will be lost in the process, please give the migration some time.
 
-## Installation ##
+## Installation
 
 Follow the normal instructions for [installing WordPress plugins](https://wordpress.org/support/article/managing-plugins/).
 
-### Automatic Plugin Installation ###
+### Automatic Plugin Installation
 
 To add a WordPress Plugin using the [built-in plugin installer](https://codex.wordpress.org/Administration_Screens#Add_New_Plugins):
 
@@ -241,7 +242,7 @@ To add a WordPress Plugin using the [built-in plugin installer](https://codex.wo
 1. The resulting installation screen will list the installation as successful or note any problems during the install.
 1. If successful, click **Activate Plugin** to activate it, or **Return to Plugin Installer** for further actions.
 
-### Manual Plugin Installation ###
+### Manual Plugin Installation
 
 There are a few cases when manually installing a WordPress Plugin is appropriate.
 
