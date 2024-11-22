@@ -156,6 +156,7 @@ For reasons of data protection, it is not possible to see the followers of other
 ### Dev
 
 * Improved: Outsource Constants to a separate file
+* Improved: Remove `readme.txt` and use `readme.md` instead
 
 ### 4.2.1
 

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improved
 
 * Outsource Constants to a separate file
+* Remove `readme.txt` and use `readme.md` instead
 
 ## 4.2.1 - 2024-11-20
 
