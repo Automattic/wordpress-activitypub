@@ -152,6 +152,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Dev =
 
+* Added: A `pre_activitypub_get_upload_baseurl` filter
 * Added: GitHub action to enforce Changelog updates.
 * Improved: Outsource Constants to a separate file
 

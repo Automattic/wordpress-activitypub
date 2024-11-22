@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* add a `pre_activitypub_get_upload_baseurl` filter
+* A `pre_activitypub_get_upload_baseurl` filter
+* GitHub action to enforce Changelog updates.
 
 ### Improved
 
