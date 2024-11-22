@@ -1,6 +1,6 @@
 # ActivityPub
 
-This is the [ActivityPub Plugin](https://wordpress.org/plugins/activitypub/) repo.
+This is the [ActivityPub plugin](https://wordpress.org/plugins/activitypub/) repo.
 
 ## Demo
 
@@ -17,15 +17,19 @@ WIP.
 
 ActivityPub is a protocol for federated social networks, enabling communication between different platforms. For details on what the plugin supports, refer to the [FEDERATION.md](.FEDERATION.md) file.
 
+## Support
+
+If you need help, [check out the support forums on WordPress.org](https://wordpress.org/support/plugin/activitypub/).
+
 ## Contribute
 
-Thank you for thinking about contributing to Jetpack! If you're unsure of anything, feel free to submit an issue or pull request on any topic. The worst that can happen is that you'll be politely directed to the best location to ask your question or to change something in your pull request. There are a variety of options for how you can help:
+Thank you for thinking about contributing to the ActivityPub plugin! If you're unsure of anything, feel free to submit an issue or pull request on any topic. The worst that can happen is that you'll be politely directed to the best location to ask your question or to change something in your pull request. There are a variety of options for how you can help:
 
 * Write and submit patches.
 * If you found a bug, [file a report here](https://github.com/Automattic/wordpress-activitypub/issues/new?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen&template=bug_report.yml).
-* [Translate ActivityPub in your language](https://translate.wordpress.org/projects/wp-plugins/activitypub/).
+* [Translate the ActivityPub plugin in your language](https://translate.wordpress.org/projects/wp-plugins/activitypub/).
 
-To clarify these expectations, Jetpack has adopted the code of conduct defined by the Contributor Covenant. It can be read in full here.
+To clarify these expectations, we have adopted the code of conduct defined by the Contributor Covenant. [It can be read in full here](./CODE_OF_CONDUCT.md).
 
 ## Security
 
@@ -33,7 +37,7 @@ Need to report a security vulnerability? Go to https://automattic.com/security/ 
 
 ## License
 
-Jetpack is licensed under the [MIT license](./LICENSE).
+The ActivityPub plugin is licensed under the [MIT license](./LICENSE).
 
 ## Join us!
 
