@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Dev - XXXX-XX-XX
 
-## 4.2.2 - 2024-11-21
-
 ### Added
 
 * add a `pre_activitypub_get_upload_baseurl` filter
