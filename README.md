@@ -2,6 +2,14 @@
 
 This is the [ActivityPub Plugin](https://wordpress.org/plugins/activitypub/) repo.
 
+## Documentation
+
+WIP.
+
+## Federation
+
+ActivityPub is a protocol for federated social networks, enabling communication between different platforms. For details on what the plugin supports, refer to the [FEDERATION.md](.FEDERATION.md) file.
+
 ## Contribute
 
 Thank you for thinking about contributing to Jetpack! If you're unsure of anything, feel free to submit an issue or pull request on any topic. The worst that can happen is that you'll be politely directed to the best location to ask your question or to change something in your pull request. There are a variety of options for how you can help:
