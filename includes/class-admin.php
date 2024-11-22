@@ -27,6 +27,8 @@ class Admin {
 		\add_action( 'load-comment.php', array( self::class, 'edit_comment' ) );
 		\add_action( 'load-post.php', array( self::class, 'edit_post' ) );
 		\add_action( 'load-edit.php', array( self::class, 'list_posts' ) );
+		\add_filter( 'page_row_actions', array( self::class, 'row_actions' ), 10, 2 );
+		\add_filter( 'post_row_actions', array( self::class, 'row_actions' ), 10, 2 );
 		\add_action( 'personal_options_update', array( self::class, 'save_user_settings' ) );
 		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'admin_notices', array( self::class, 'admin_notices' ) );
@@ -793,5 +795,36 @@ class Admin {
 		\remove_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers' );
 
 		return $items;
+	}
+
+	/**
+	 * Add a "⁂ Preview" link to the row actions.
+	 *
+	 * @param array    $actions The existing actions.
+	 * @param \WP_Post $post    The post object.
+	 *
+	 * @return array The modified actions.
+	 */
+	public static function row_actions( $actions, $post ) {
+		// check if the post is enabled for ActivityPub.
+		if (
+			! \post_type_supports( \get_post_type( $post ), 'activitypub' ) ||
+			! in_array( $post->post_status, array( 'pending', 'draft', 'future', 'publish' ), true ) ||
+			! \current_user_can( 'edit_post', $post->ID ) ||
+			ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === get_content_visibility( $post ) ||
+			site_supports_blocks()
+		) {
+			return $actions;
+		}
+
+		$preview_url = add_query_arg( 'activitypub', 'true', \get_preview_post_link( $post ) );
+
+		$actions['activitypub'] = sprintf(
+			'<a href="%s" target="_blank">%s</a>',
+			\esc_url( $preview_url ),
+			\esc_html__( '⁂ Fediverse Preview', 'activitypub' )
+		);
+
+		return $actions;
 	}
 }
