@@ -1,5 +1,5 @@
 === ActivityPub ===
-Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nuriapena, cavalierlife
+Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nuriapena, cavalierlife, andremenrath
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
@@ -139,6 +139,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: GitHub action to enforce Changelog updates.
 * Improved: Outsource Constants to a separate file
 * Improved: Better handling of `readme.txt` and `README.md`
+* Fixed: Fediverse preview showing `preferredUsername` instead of `name`.
 
 = 4.2.1 =
 
