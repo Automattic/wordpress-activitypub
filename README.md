@@ -2,6 +2,13 @@
 
 This is the [ActivityPub Plugin](https://wordpress.org/plugins/activitypub/) repo.
 
+## Demo
+
+You can test out the plugin (settings) with [WordPress Playground](https://wordpress.org/plugins/activitypub/?preview=1).
+
+> [!INFO]
+> [WordPress Playground](https://wordpress.org/playground/) is the platform that lets you run WordPress instantly on any device without a host. It’s your place to build, experiment, test, and grow.
+
 ## Documentation
 
 WIP.
