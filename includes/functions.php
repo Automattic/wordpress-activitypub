@@ -435,7 +435,7 @@ function is_user_disabled( $user_id ) {
 
 	switch ( $user_id ) {
 		// if the user is the application user, it's always enabled.
-		case \Activitypub\Collection\Actors::APPLICATION_USER_ID:
+		case \Activitypub\Collection\Actors::APPLICATION_ACTOR_ID:
 			$disabled = false;
 			break;
 		// if the user is the blog user, it's only enabled in single-user mode.

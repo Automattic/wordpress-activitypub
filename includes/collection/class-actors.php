@@ -41,9 +41,17 @@ class Actors {
 	/**
 	 * The ID of the Application Actor.
 	 *
+	 * @deprecated version 4.3.0
 	 * @var int
 	 */
 	const APPLICATION_USER_ID = -1;
+
+	/**
+	 * The ID of the Application Actor.
+	 *
+	 * @var int
+	 */
+	const APPLICATION_ACTOR_ID = -1;
 
 	/**
 	 * Get the Actor by ID.
@@ -68,7 +76,7 @@ class Actors {
 		switch ( $user_id ) {
 			case self::BLOG_ACTOR_ID:
 				return new Blog();
-			case self::APPLICATION_USER_ID:
+			case self::APPLICATION_ACTOR_ID:
 				return new Application();
 			default:
 				return User::from_wp_user( $user_id );
