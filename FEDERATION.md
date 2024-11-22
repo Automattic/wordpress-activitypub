@@ -39,4 +39,4 @@ More information on HTTP Signatures, as well as examples, can be found here: htt
 - Frequently Asked Questions: https://github.com/Automattic/wordpress-activitypub?tab=readme-ov-file#frequently-asked-questions
 - Installation Instructions: https://github.com/Automattic/wordpress-activitypub?tab=readme-ov-file#installation
 - Upgrade Notice: https://github.com/Automattic/wordpress-activitypub?tab=readme-ov-file#upgrade-notice
-- Changelog: https://github.com/Automattic/wordpress-activitypub?tab=readme-ov-file#changelog
+- Changelog: https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md
