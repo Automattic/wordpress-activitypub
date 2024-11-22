@@ -779,10 +779,10 @@ class Admin {
 				_n(
 					'%s Follower (Blog)',
 					'%s Followers (Blog)',
-					count_followers( Actors::BLOG_USER_ID ),
+					count_followers( Actors::BLOG_ACTOR_ID ),
 					'activitypub'
 				),
-				\number_format_i18n( count_followers( Actors::BLOG_USER_ID ) )
+				\number_format_i18n( count_followers( Actors::BLOG_ACTOR_ID ) )
 			);
 			$items['activitypub-followers-blog'] = sprintf(
 				'<a class="activitypub-followers" href="%1$s" title="%2$s">%3$s</a>',

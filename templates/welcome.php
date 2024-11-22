@@ -51,7 +51,7 @@
 		<?php
 	endif;
 
-	if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Actors::BLOG_USER_ID ) ) :
+	if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Actors::BLOG_ACTOR_ID ) ) :
 		$blog_user = new \Activitypub\Model\Blog();
 		?>
 	<div class="box">

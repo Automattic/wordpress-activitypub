@@ -52,7 +52,7 @@ class Blog extends Actor {
 	 *
 	 * @var int
 	 */
-	protected $_id = Actors::BLOG_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
+	protected $_id = Actors::BLOG_ACTOR_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
 	 * If the User is indexable.

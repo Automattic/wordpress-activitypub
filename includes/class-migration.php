@@ -278,7 +278,7 @@ class Migration {
 		self::update_usermeta_key( 'activitypub_user_description', 'activitypub_description' );
 
 		self::update_options_key( 'activitypub_blog_user_description', 'activitypub_blog_description' );
-		self::update_options_key( 'activitypub_blog_user_identifier', 'activitypub_blog_identifier' );
+		self::update_options_key( 'activitypub_BLOG_ACTOR_IDentifier', 'activitypub_blog_identifier' );
 	}
 
 	/**
@@ -319,7 +319,7 @@ class Migration {
 			}
 		}
 
-		$followers = Followers::get_followers( Actors::BLOG_USER_ID );
+		$followers = Followers::get_followers( Actors::BLOG_ACTOR_ID );
 
 		if ( $followers ) {
 			\update_option( 'activitypub_use_permalink_as_id_for_blog', '1' );

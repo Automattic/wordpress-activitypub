@@ -72,7 +72,7 @@ class Opengraph {
 			$user_id = \get_post_field( 'post_author', \get_queried_object_id() );
 		} elseif ( ! is_user_type_disabled( 'blog' ) ) {
 			// Use the Blog-User for any other page, if the Blog-User is not disabled.
-			$user_id = Actors::BLOG_USER_ID;
+			$user_id = Actors::BLOG_ACTOR_ID;
 		} else {
 			// Do not add any metadata otherwise.
 			return $metadata;
