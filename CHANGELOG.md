@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Outsource Constants to a separate file
 * Better handling of `readme.txt` and `README.md`
 
+### Fixed
+
+* Fixed: Fediverse preview showing `preferredUsername` instead of `name`.
+
 ## 4.2.1 - 2024-11-20
 
 ### Added
