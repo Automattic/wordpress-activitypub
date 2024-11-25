@@ -142,6 +142,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Improved: Better handling of `readme.txt` and `README.md`
 * Fixed: Fediverse preview showing `preferredUsername` instead of `name`
 * Fixed: Potential fatal error in Enable Mastodon Apps
+* Fixed: Broken escaping of Usernames in Actor-JSON
 
 = 4.2.1 =
 
