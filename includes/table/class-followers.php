@@ -55,8 +55,8 @@ class Followers extends WP_List_Table {
 	public function get_columns() {
 		return array(
 			'cb'         => '<input type="checkbox" />',
-			'avatar'     => \__( 'Avatar', 'activitypub' ),
 			'post_title' => \__( 'Name', 'activitypub' ),
+			'avatar'     => \__( 'Avatar', 'activitypub' ),
 			'username'   => \__( 'Username', 'activitypub' ),
 			'url'        => \__( 'URL', 'activitypub' ),
 			'published'  => \__( 'Followed', 'activitypub' ),
