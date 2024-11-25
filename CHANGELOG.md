@@ -22,7 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Fediverse preview showing `preferredUsername` instead of `name`
-* Fixed a potential fatal error in Enable Mastodon Apps
+* A potential fatal error in Enable Mastodon Apps
+* Show Followers name instead of avatar on mobile view
 
 ## 4.2.1 - 2024-11-20
 
