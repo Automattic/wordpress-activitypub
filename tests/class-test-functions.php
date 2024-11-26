@@ -135,6 +135,18 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
+	 * Test is_self_ping.
+	 *
+	 * @covers ::is_self_ping
+	 */
+	public function test_is_self_ping() {
+		$this->assertFalse( \Activitypub\is_self_ping( 'https://example.org' ) );
+		$this->assertFalse( \Activitypub\is_self_ping( 'https://example.com' ) );
+		$this->assertTrue( \Activitypub\is_self_ping( 'https://example.org/?c=123' ) );
+		$this->assertFalse( \Activitypub\is_self_ping( 'https://example.com/?c=123' ) );
+	}
+
+	/**
 	 * Data provider for test_object_to_uri.
 	 *
 	 * @return array[]

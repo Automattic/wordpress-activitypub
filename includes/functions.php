@@ -1497,3 +1497,30 @@ function get_upload_baseurl() {
 	 */
 	return apply_filters( 'activitypub_get_upload_baseurl', $upload_dir['baseurl'] );
 }
+
+/**
+ * Check if an ID is from the same domain as the site.
+ *
+ * @param string $id The ID URI to check.
+ *
+ * @return boolean True if the ID is a self-pint, false otherwise.
+ */
+function is_self_ping( $id ) {
+	$query_string = \wp_parse_url( $id, PHP_URL_QUERY );
+
+	if ( ! $query_string ) {
+		return false;
+	}
+
+	$query = array();
+	\parse_str( $query_string, $query );
+
+	if (
+		is_same_domain( $id ) &&
+		in_array( 'c', array_keys( $query ), true )
+	) {
+		return true;
+	}
+
+	return false;
+}
