@@ -1014,8 +1014,8 @@ function get_enclosures( $post_id ) {
 
 			return array(
 				'url'       => $attributes[0],
-				'length'    => isset( $attributes[1] ) ? trim( $attributes[1] ) : null,
-				'mediaType' => isset( $attributes[2] ) ? trim( $attributes[2] ) : 'application/octet-stream',
+				'length'    => $attributes[1] ?? null,
+				'mediaType' => $attributes[2] ?? 'application/octet-stream',
 			);
 		},
 		$enclosures
