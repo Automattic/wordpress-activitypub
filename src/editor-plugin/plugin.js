@@ -30,6 +30,11 @@ const EditorPlugin = () => {
 		</Text>
 	);
 
+	// Don't show when editing sync blocks.
+	if ( 'wp_block' === postType ) {
+		return null;
+	}
+
 	return (
 		<PluginDocumentSettingPanel
 			name="activitypub"
@@ -47,7 +52,7 @@ const EditorPlugin = () => {
 			<RadioControl
 				label={ __( 'Visibility', 'activitypub' ) }
 				help={ __( 'This adjusts the visibility of a post in the fediverse, but note that it won\'t affect how the post appears on the blog.', 'activitypub' ) }
-				selected={ meta.activitypub_content_visibility ? meta.activitypub_content_visibility : 'public' }
+				selected={ meta?.activitypub_content_visibility || 'public' }
 				options={ [
 					{ label: labelWithIcon( __( 'Public', 'activitypub' ), globe ), value: 'public' },
 					{ label: labelWithIcon( __( 'Quiet public', 'activitypub' ), people ), value: 'quiet_public' },

@@ -9,6 +9,7 @@ namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
 
+use function Activitypub\is_self_ping;
 use function Activitypub\is_activity_public;
 use function Activitypub\object_id_to_comment;
 
@@ -65,6 +66,11 @@ class Create {
 			return;
 		}
 
+		if ( is_self_ping( $activity['object']['id'] ) ) {
+			// @todo maybe send email.
+			return;
+		}
+
 		$state    = Interactions::add_comment( $activity );
 		$reaction = null;
 
@@ -106,16 +112,17 @@ class Create {
 			return $valid;
 		}
 
-		$object   = $json_params['object'];
+		$object = $json_params['object'];
+
+		if ( ! is_array( $object ) ) {
+			return false;
+		}
+
 		$required = array(
 			'id',
 			'inReplyTo',
 			'content',
 		);
-
-		if ( ! is_array( $object ) ) {
-			return false;
-		}
 
 		if ( array_intersect( $required, array_keys( $object ) ) !== $required ) {
 			return false;
