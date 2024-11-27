@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* Deprecate Actors::BLOG_USER_ID and Actors::APPLICATION_USER_ID
 * A `pre_activitypub_get_upload_baseurl` filter
 * Fediverse Preview on post-overview page
 * GitHub action to enforce Changelog updates
@@ -17,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improved
 
+* More User -> Actor renaming
 * Outsource Constants to a separate file
 * Better handling of `readme.txt` and `README.md`
 

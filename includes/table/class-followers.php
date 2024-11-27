@@ -33,7 +33,7 @@ class Followers extends WP_List_Table {
 	 */
 	public function __construct() {
 		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
-			$this->user_id = Actors::BLOG_ACTOR_ID;
+			$this->user_id = Actors::BLOG_USER_ID;
 		} else {
 			$this->user_id = \get_current_user_id();
 		}

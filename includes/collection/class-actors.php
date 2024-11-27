@@ -24,34 +24,18 @@ use function Activitypub\is_user_disabled;
  */
 class Actors {
 	/**
-	 * The ID of the Blog Actor.
+	 * The ID of the Blog User.
 	 *
-	 * @deprecated version 4.3.0
 	 * @var int
 	 */
 	const BLOG_USER_ID = 0;
 
 	/**
-	 * The ID of the Blog Actor.
+	 * The ID of the Application User.
 	 *
-	 * @var int
-	 */
-	const BLOG_ACTOR_ID = 0;
-
-	/**
-	 * The ID of the Application Actor.
-	 *
-	 * @deprecated version 4.3.0
 	 * @var int
 	 */
 	const APPLICATION_USER_ID = -1;
-
-	/**
-	 * The ID of the Application Actor.
-	 *
-	 * @var int
-	 */
-	const APPLICATION_ACTOR_ID = -1;
 
 	/**
 	 * Get the Actor by ID.
@@ -74,9 +58,9 @@ class Actors {
 		}
 
 		switch ( $user_id ) {
-			case self::BLOG_ACTOR_ID:
+			case self::BLOG_USER_ID:
 				return new Blog();
-			case self::APPLICATION_ACTOR_ID:
+			case self::APPLICATION_USER_ID:
 				return new Application();
 			default:
 				return User::from_wp_user( $user_id );
@@ -209,7 +193,7 @@ class Actors {
 					normalize_url( site_url() ) === $normalized_uri ||
 					normalize_url( home_url() ) === $normalized_uri
 				) {
-					return self::get_by_id( self::BLOG_ACTOR_ID );
+					return self::get_by_id( self::BLOG_USER_ID );
 				}
 
 				return new WP_Error(
@@ -234,7 +218,7 @@ class Actors {
 
 				// Prepare wildcards https://github.com/mastodon/mastodon/issues/22213.
 				if ( in_array( $identifier, array( '_', '*', '' ), true ) ) {
-					return self::get_by_id( self::BLOG_ACTOR_ID );
+					return self::get_by_id( self::BLOG_USER_ID );
 				}
 
 				return self::get_by_username( $identifier );

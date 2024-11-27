@@ -60,7 +60,7 @@ class Enable_Mastodon_Apps {
 			// Check if the blog user is permissible for this user.
 			user_can( $user_id, 'activitypub' )
 		) {
-			return Actors::BLOG_ACTOR_ID;
+			return Actors::BLOG_USER_ID;
 		}
 
 		return $user_id;
@@ -141,7 +141,7 @@ class Enable_Mastodon_Apps {
 		// The Mastodon API submits a simple hash for every field.
 		// We can reasonably assume a similar order for our operations below.
 		$ids       = wp_list_pluck( Extra_Fields::get_actor_fields( $user_id ), 'ID' );
-		$is_blog   = Actors::BLOG_ACTOR_ID === $user_id;
+		$is_blog   = Actors::BLOG_USER_ID === $user_id;
 		$post_type = $is_blog ? Extra_Fields::BLOG_POST_TYPE : Extra_Fields::USER_POST_TYPE;
 
 		foreach ( $fields as $i => $field ) {

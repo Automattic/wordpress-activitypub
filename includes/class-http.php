@@ -105,7 +105,7 @@ class Http {
 		}
 
 		$date      = \gmdate( 'D, d M Y H:i:s T' );
-		$signature = Signature::generate_signature( Actors::APPLICATION_ACTOR_ID, 'get', $url, $date );
+		$signature = Signature::generate_signature( Actors::APPLICATION_USER_ID, 'get', $url, $date );
 
 		$wp_version = get_masked_wp_version();
 

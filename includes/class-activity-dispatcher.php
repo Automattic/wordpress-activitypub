@@ -51,7 +51,7 @@ class Activity_Dispatcher {
 		}
 
 		if ( is_single_user() ) {
-			self::send_activity( $wp_object, $type, Actors::BLOG_ACTOR_ID );
+			self::send_activity( $wp_object, $type, Actors::BLOG_USER_ID );
 		} else {
 			self::send_announce( $wp_object, $type );
 		}
@@ -74,9 +74,9 @@ class Activity_Dispatcher {
 		// check if user is disabled and blog user is enabled.
 		if (
 			is_user_disabled( $transformer->get_wp_user_id() ) &&
-			! is_user_disabled( Actors::BLOG_ACTOR_ID )
+			! is_user_disabled( Actors::BLOG_USER_ID )
 		) {
-			$transformer->change_wp_user_id( Actors::BLOG_ACTOR_ID );
+			$transformer->change_wp_user_id( Actors::BLOG_USER_ID );
 		}
 
 		if ( null !== $user_id ) {
@@ -105,7 +105,7 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		if ( is_user_disabled( Actors::BLOG_ACTOR_ID ) ) {
+		if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
 			return;
 		}
 
@@ -115,9 +115,9 @@ class Activity_Dispatcher {
 			return;
 		}
 
-		$user_id  = Actors::BLOG_ACTOR_ID;
+		$user_id  = Actors::BLOG_USER_ID;
 		$activity = $transformer->to_activity( $type );
-		$user     = Actors::get_by_id( Actors::BLOG_ACTOR_ID );
+		$user     = Actors::get_by_id( Actors::BLOG_USER_ID );
 
 		$announce = new Activity();
 		$announce->set_type( 'Announce' );

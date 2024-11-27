@@ -161,7 +161,7 @@ class Blocks {
 
 		// If the user string is 'site', return the Blog User ID.
 		if ( 'site' === $user_string ) {
-			return Actors::BLOG_ACTOR_ID;
+			return Actors::BLOG_USER_ID;
 		}
 
 		// The only other value should be 'inherit', which means to use the query context to determine the User.
@@ -171,7 +171,7 @@ class Blocks {
 
 		// For a homepage/front page, if the Blog User is active, use it.
 		if ( ( is_front_page() || is_home() ) && ! is_user_type_disabled( 'blog' ) ) {
-			return Actors::BLOG_ACTOR_ID;
+			return Actors::BLOG_USER_ID;
 		}
 
 		// If we're in a loop, use the post author.

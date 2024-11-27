@@ -214,7 +214,7 @@ class Collection {
 
 		$sticky_posts = \get_option( 'sticky_posts' );
 
-		if ( ! is_single_user() && Actors::BLOG_ACTOR_ID === $user->get__id() ) {
+		if ( ! is_single_user() && Actors::BLOG_USER_ID === $user->get__id() ) {
 			$posts = array();
 		} elseif ( $sticky_posts && is_array( $sticky_posts ) ) {
 			// only show public posts.

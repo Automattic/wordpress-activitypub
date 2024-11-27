@@ -134,7 +134,6 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Dev =
 
-* Deprecate Actors::BLOG_USER_ID and Actors::APPLICATION_USER_ID
 * Added: A `pre_activitypub_get_upload_baseurl` filter
 * Added: Fediverse Preview on post-overview page
 * Added: GitHub action to enforce Changelog updates

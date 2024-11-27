@@ -435,11 +435,11 @@ function is_user_disabled( $user_id ) {
 
 	switch ( $user_id ) {
 		// if the user is the application user, it's always enabled.
-		case \Activitypub\Collection\Actors::APPLICATION_ACTOR_ID:
+		case \Activitypub\Collection\Actors::APPLICATION_USER_ID:
 			$disabled = false;
 			break;
 		// if the user is the blog user, it's only enabled in single-user mode.
-		case \Activitypub\Collection\Actors::BLOG_ACTOR_ID:
+		case \Activitypub\Collection\Actors::BLOG_USER_ID:
 			if ( is_user_type_disabled( 'blog' ) ) {
 				$disabled = true;
 				break;
@@ -727,7 +727,7 @@ function get_active_users( $duration = 1 ) {
 	}
 
 	// If blog user is disabled.
-	if ( is_user_disabled( Actors::BLOG_ACTOR_ID ) ) {
+	if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
 		return (int) $count;
 	}
 
@@ -759,7 +759,7 @@ function get_total_users() {
 	}
 
 	// If blog user is disabled.
-	if ( is_user_disabled( Actors::BLOG_ACTOR_ID ) ) {
+	if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
 		return (int) $users;
 	}
 
