@@ -33,7 +33,7 @@ class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
 	 * @param string $expected The expected class.
 	 */
 	public function test_get_by_various( $item, $expected ) {
-		$path = wp_parse_url( $item, PHP_URL_PATH );
+		$path = wp_parse_url( $item, PHP_URL_PATH ) ?? '';
 
 		if ( str_starts_with( $path, '/blog/' ) ) {
 			add_filter(
@@ -60,7 +60,7 @@ class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
 	 * @param string $expected The expected class.
 	 */
 	public function test_deprecated_get_by_various( $item, $expected ) {
-		$path = wp_parse_url( $item, PHP_URL_PATH );
+		$path = wp_parse_url( $item, PHP_URL_PATH ) ?? '';
 
 		if ( str_starts_with( $path, '/blog/' ) ) {
 			add_filter(

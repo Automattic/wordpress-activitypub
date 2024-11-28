@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* Fix editor error when switching to edit a synced Pattern
 * A `pre_activitypub_get_upload_baseurl` filter
 * Fediverse Preview on post-overview page
 * GitHub action to enforce Changelog updates
@@ -16,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improved
 
+* More User -> Actor renaming
 * Outsource Constants to a separate file
 * Better handling of `readme.txt` and `README.md`
 
@@ -24,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fediverse preview showing `preferredUsername` instead of `name`
 * Fixed a potential fatal error in Enable Mastodon Apps
 * Broken escaping of Usernames in Actor-JSON
+* Fixed missing attachement-type for enclosures
+* Prevention against self pings
 
 ## 4.2.1 - 2024-11-20
 

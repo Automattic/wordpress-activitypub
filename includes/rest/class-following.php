@@ -8,7 +8,7 @@
 namespace Activitypub\Rest;
 
 use WP_REST_Response;
-use Activitypub\Collection\Actors as User_Collection;
+use Activitypub\Collection\Actors;
 
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
@@ -58,7 +58,7 @@ class Following {
 	 */
 	public static function get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = User_Collection::get_by_various( $user_id );
+		$user    = Actors::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;
@@ -128,7 +128,7 @@ class Following {
 			return $follow_list;
 		}
 
-		$users = User_Collection::get_collection();
+		$users = Actors::get_collection();
 
 		foreach ( $users as $user ) {
 			$follow_list[] = $user->get_id();

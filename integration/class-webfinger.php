@@ -7,7 +7,7 @@
 
 namespace Activitypub\Integration;
 
-use Activitypub\Collection\Actors as User_Collection;
+use Activitypub\Collection\Actors;
 
 use function Activitypub\get_rest_url_by_path;
 
@@ -35,7 +35,7 @@ class Webfinger {
 	 * @return array The jrd array.
 	 */
 	public static function add_user_discovery( $jrd, $uri, $user ) {
-		$user = User_Collection::get_by_id( $user->ID );
+		$user = Actors::get_by_id( $user->ID );
 
 		if ( ! $user || is_wp_error( $user ) ) {
 			return $jrd;
@@ -72,7 +72,7 @@ class Webfinger {
 	 * @return array|\WP_Error The jrd array or WP_Error.
 	 */
 	public static function add_pseudo_user_discovery( $jrd, $uri ) {
-		$user = User_Collection::get_by_resource( $uri );
+		$user = Actors::get_by_resource( $uri );
 
 		if ( \is_wp_error( $user ) ) {
 			return $user;
