@@ -8,7 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Followers;
-use Activitypub\Collection\Actors as User_Collection;
+use Activitypub\Collection\Actors;
 
 /**
  * Block class.
@@ -161,7 +161,7 @@ class Blocks {
 
 		// If the user string is 'site', return the Blog User ID.
 		if ( 'site' === $user_string ) {
-			return User_Collection::BLOG_USER_ID;
+			return Actors::BLOG_USER_ID;
 		}
 
 		// The only other value should be 'inherit', which means to use the query context to determine the User.
@@ -171,7 +171,7 @@ class Blocks {
 
 		// For a homepage/front page, if the Blog User is active, use it.
 		if ( ( is_front_page() || is_home() ) && ! is_user_type_disabled( 'blog' ) ) {
-			return User_Collection::BLOG_USER_ID;
+			return Actors::BLOG_USER_ID;
 		}
 
 		// If we're in a loop, use the post author.
@@ -219,7 +219,7 @@ class Blocks {
 	 */
 	public static function render_follow_me_block( $attrs ) {
 		$user_id = self::get_user_id( $attrs['selectedUser'] );
-		$user    = User_Collection::get_by_id( $user_id );
+		$user    = Actors::get_by_id( $user_id );
 		if ( is_wp_error( $user ) ) {
 			if ( 'inherit' === $attrs['selectedUser'] ) {
 				// If the user is 'inherit' and we couldn't determine the user, don't render anything.
@@ -259,7 +259,7 @@ class Blocks {
 			return '<!-- Followers block: `inherit` mode does not display on this type of page -->';
 		}
 
-		$user = User_Collection::get_by_id( $followee_user_id );
+		$user = Actors::get_by_id( $followee_user_id );
 		if ( is_wp_error( $user ) ) {
 			return '<!-- Followers block: `' . $followee_user_id . '` not an active ActivityPub user -->';
 		}
