@@ -53,5 +53,5 @@ jobs:
               {"path": "src/editor-plugin", "label": "[Block] Post settings"},
               {"path": "src", "label": "[Focus] Editor"},
               {"path": "integration", "label": "[Focus] Compatibility"},
-               {"path": "includes/collection", "label": "[Feature] Collections"}
+              {"path": "includes/collection", "label": "[Feature] Collections"}
             ]'
