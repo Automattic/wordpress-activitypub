@@ -138,6 +138,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: Fediverse Preview on post-overview page
 * Added: GitHub action to enforce Changelog updates
 * Added: New contributors
+* Improved: Basic enclosure validation
 * Improved: More User -> Actor renaming
 * Improved: Outsource Constants to a separate file
 * Improved: Better handling of `readme.txt` and `README.md`

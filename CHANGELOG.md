@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improved
 
+* Basic enclosure validation
 * More User -> Actor renaming
 * Outsource Constants to a separate file
 * Better handling of `readme.txt` and `README.md`
