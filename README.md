@@ -17,7 +17,7 @@ WIP.
 
 ## Federation
 
-ActivityPub is a protocol for federated social networks, enabling communication between different platforms. For details on what the plugin supports, refer to the [FEDERATION.md](.FEDERATION.md) file.
+ActivityPub is a protocol for federated social networks, enabling communication between different platforms. For details on what the plugin supports, refer to the [FEDERATION.md](FEDERATION.md) file.
 
 ## Support
 

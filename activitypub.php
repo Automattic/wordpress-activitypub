@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: ActivityPub
- * Plugin URI: https://github.com/pfefferle/wordpress-activitypub/
+ * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 4.2.2
+ * Version: 4.3.0
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -19,7 +19,7 @@ namespace Activitypub;
 
 use WP_CLI;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '4.2.2' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '4.3.0' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );

@@ -43,8 +43,16 @@ jobs:
           slack_team_channel: ${{ secrets.SLACK_TEAM_CHANNEL }}
           slack_he_triage_channel: ${{ secrets.SLACK_HE_TRIAGE_CHANNEL }}
           slack_quality_channel: ${{ secrets.SLACK_QUALITY_CHANNEL }}
-          tasks: 'addLabels,cleanLabels,assignIssues,flagOss,gatherSupportReferences,replyToCustomersReminder'
+          tasks: 'addLabels,cleanLabels,assignIssues,flagOss,gatherSupportReferences,replyToCustomersReminder,triageIssues'
           add_labels: '[
               {"path": "src/followers", "label": "[Block] Followers"},
-              {"path": "src/follow-me", "label": "[Block] Follow Me"}
+              {"path": "src/follow-me", "label": "[Block] Follow Me"},
+              {"path": "src/remote-reply", "label": "[Block] Remote reply"},
+              {"path": "src/reply", "label": "[Block] Federated reply"},
+              {"path": "src/reply-intent", "label": "[Block] Federated reply"},
+              {"path": "src/editor-plugin", "label": "[Block] Post settings"},
+              {"path": "src", "label": "[Focus] Editor"},
+              {"path": "includes/class-blocks.php", "label": "[Focus] Editor"},
+              {"path": "integration", "label": "[Focus] Compatibility"},
+              {"path": "includes/collection", "label": "[Feature] Collections"}
             ]'

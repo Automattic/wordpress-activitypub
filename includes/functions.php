@@ -1006,6 +1006,11 @@ function get_enclosures( $post_id ) {
 
 	$enclosures = array_map(
 		function ( $enclosure ) {
+			// Check if the enclosure is a string.
+			if ( ! $enclosure || ! is_string( $enclosure ) ) {
+				return false;
+			}
+
 			$attributes = explode( "\n", $enclosure );
 
 			if ( ! isset( $attributes[0] ) || ! \wp_http_validate_url( $attributes[0] ) ) {
