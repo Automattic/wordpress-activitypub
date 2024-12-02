@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Dev
+
+### Added
+
+* Setting to enable/disable Authorized-Fetch
+
 ## [4.3.0] - 2024-12-02
 
 ### Added
@@ -14,7 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fediverse Preview on post-overview page
 * GitHub action to enforce Changelog updates
 * New contributors
-* Setting to enable/disable Authorized-Fetch
 
 ### Improved
 
