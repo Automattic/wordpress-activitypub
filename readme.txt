@@ -132,7 +132,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-= Dev =
+= Unreleased =
 
 * Added: Setting to enable/disable Authorized-Fetch
 
