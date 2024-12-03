@@ -132,6 +132,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Fixed: Prevent hex color codes in HTML attributes from being added as post tags.
+
 = 4.3.0 =
 
 * Added: A `pre_activitypub_get_upload_baseurl` filter
