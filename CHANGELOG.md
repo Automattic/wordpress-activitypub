@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Prevent hex color codes in HTML attributes from being added as post tags
+* Fixed a typo in the custom post content settings
 
 ## [4.3.0] - 2024-12-02
 

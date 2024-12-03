@@ -112,7 +112,7 @@
 											<li><code>[ap_content]</code> - <?php \esc_html_e( 'The post&#8217;s content.', 'activitypub' ); ?></li>
 											<li><code>[ap_excerpt]</code> - <?php \esc_html_e( 'The post&#8217;s excerpt (may be truncated).', 'activitypub' ); ?></li>
 											<li><code>[ap_permalink]</code> - <?php \esc_html_e( 'The post&#8217;s permalink.', 'activitypub' ); ?></li>
-											<li><code>[ap_shortlink]</code> - <?php echo \wp_kses( \__( 'The pos&#8217;s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>.', 'activitypub' ), 'default' ); ?></li>
+											<li><code>[ap_shortlink]</code> - <?php echo \wp_kses( \__( 'The post&#8217;s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>.', 'activitypub' ), 'default' ); ?></li>
 											<li><code>[ap_hashtags]</code> - <?php \esc_html_e( 'The post&#8217;s tags as hashtags.', 'activitypub' ); ?></li>
 										</ul>
 										<p><?php \esc_html_e( 'You can find the full list with all possible attributes in the help section on the top-right of the screen.', 'activitypub' ); ?></p>
