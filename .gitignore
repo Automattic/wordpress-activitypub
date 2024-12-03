@@ -7,3 +7,4 @@ composer.lock
 .php_cs.cache
 .vscode/settings.json
 .phpunit.result.cache
+_site
