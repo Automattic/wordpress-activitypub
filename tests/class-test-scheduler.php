@@ -3,24 +3,16 @@
  * Test Scheduler class.
  *
  * @package ActivityPub
- * @subpackage Tests
  */
 
 namespace Activitypub;
 
-use WP_UnitTestCase;
-
 /**
  * Test cases for the Scheduler class.
  *
- * @package ActivityPub
- * @subpackage Tests
- *
  * @coversDefaultClass \Activitypub\Scheduler
- * @group activitypub
- * @group scheduler
  */
-class Test_Scheduler extends WP_UnitTestCase {
+class Test_Scheduler extends \WP_UnitTestCase {
 	/**
 	 * Test post.
 	 *
