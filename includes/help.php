@@ -14,8 +14,8 @@
 			'<dl>' .
 				'<dt><code>[ap_title]</code></dt>' .
 				'<dd>' . \wp_kses( __( 'The post\'s title.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
-				'<dt><code>[ap_content apply_filters="yes"]</code></dt>' .
-				'<dd>' . \wp_kses( __( 'The post\'s content. With <code>apply_filters</code> you can decide if filters (<code>apply_filters( \'the_content\', $content )</code>) should be applied or not (default is <code>yes</code>). The values can be <code>yes</code> or <code>no</code>. <code>apply_filters</code> attribute is optional.', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
+				'<dt><code>[ap_content apply_filters="yes" more_tag="no"]</code></dt>' .
+				'<dd>' . \wp_kses( __( 'The post&#8217;s content. Optional attributes:<br><code>apply_filters</code>: Whether to apply WordPress content filters (default: yes).<br><code>more_tag</code>: Whether to show only the teaser (yes) or the full content (no, default).', 'activitypub' ), array( 'code' => array(), 'br' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_excerpt length="400"]</code></dt>' .
 				'<dd>' . \wp_kses( __( 'The post\'s excerpt (uses <code>the_excerpt</code> if that is set). If no excerpt is provided, will truncate at <code>length</code> (optional, default = 400).', 'activitypub' ), array( 'code' => array() ) ) . '</dd>' .
 				'<dt><code>[ap_permalink type="url"]</code></dt>' .
