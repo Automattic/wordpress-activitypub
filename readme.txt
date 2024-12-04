@@ -138,6 +138,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Changed: Increased probability of Outbox items being processed with the correct author.
 * Changed: Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
 * Changed: Updated terminology to be client-neutral in the Federated Reply block.
+* Changed: Refactored settings to use the WordPress Settings API
 * Fixed: Enforce 200 status header for valid ActivityPub requests.
 * Fixed: `object_id_to_comment` returns a commment now, even if there are more than one matching comment in the DB.
 * Fixed: Integration of content-visibility setup in the block editor.

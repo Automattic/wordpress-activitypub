@@ -182,6 +182,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added `media_type` support to Activity-Object-Transformers
 * Clarified settings page text around which users get Activitypub profiles
 * Add a filter to the REST API moderators list
+* Refactored settings to use the WordPress Settings API
 
 ### Fixed
 
