@@ -135,7 +135,12 @@ class Shortcodes {
 	/**
 	 * Generates output for the 'ap_content' Shortcode.
 	 *
-	 * @param array  $atts    The Shortcode attributes.
+	 * @param array  $atts {
+	 *      The Shortcode attributes.
+	 *
+	 *      @type string $apply_filters Whether to apply the `the_content` filter. Possible values are 'yes' or 'no'. Default 'yes'.
+	 *      @type string $more_tag      Whether to truncate the content after the more tag. Possible values are 'yes' or 'no'. Default 'no'.
+	 * }
 	 * @param string $content The ActivityPub post-content.
 	 * @param string $tag     The tag/name of the Shortcode.
 	 *
@@ -152,12 +157,13 @@ class Shortcodes {
 		remove_shortcode( 'ap_content' );
 
 		$atts = shortcode_atts(
-			array( 'apply_filters' => 'yes' ),
+			array( 
+				'apply_filters' => 'yes',
+				'more_tag'      => 'no',
+			),
 			$atts,
 			$tag
 		);
-
-		$content = '';
 
 		if ( 'attachment' === $item->post_type ) {
 			// Get title of attachment with fallback to alt text.
@@ -167,6 +173,11 @@ class Shortcodes {
 			}
 		} else {
 			$content = \get_post_field( 'post_content', $item );
+
+			if ( 'yes' === $atts['more_tag'] ) {
+				$parts   = \get_extended( $content );
+				$content = $parts['main'];
+			}
 
 			if ( 'yes' === $atts['apply_filters'] ) {
 				$content = \apply_filters( 'the_content', $content );

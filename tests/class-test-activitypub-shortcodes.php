@@ -16,6 +16,8 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 
 	/**
 	 * Test the content shortcode.
+	 *
+	 * @covers ::content
 	 */
 	public function test_content() {
 		Shortcodes::register();
@@ -49,6 +51,8 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 
 	/**
 	 * Test the content shortcode with password protected content.
+	 *
+	 * @covers ::content
 	 */
 	public function test_password_protected_content() {
 		Shortcodes::register();
@@ -82,6 +86,8 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 
 	/**
 	 * Test the excerpt shortcode.
+	 *
+	 * @covers ::excerpt
 	 */
 	public function test_excerpt() {
 		Shortcodes::register();
@@ -137,5 +143,52 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 		Shortcodes::unregister();
 
 		$this->assertEquals( 'Test title for shortcode', $content );
+	}
+
+	/**
+	 * Test the content shortcode with more tag.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_with_more_tag() {
+		Shortcodes::register();
+		global $post;
+
+		// Create a post with more tag.
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_title'   => 'Test Post with More',
+				'post_content' => 'This is the teaser content.<!--more-->This is the full content.',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+				'post_author'  => 1,
+			)
+		);
+
+		setup_postdata( $post );
+
+		// Test without more_tag attribute (should show full content).
+		$content = do_shortcode( '[ap_content apply_filters="no"]' );
+		$this->assertEquals(
+			'This is the teaser content.<!--more-->This is the full content.',
+			trim( $content )
+		);
+
+		// Test with more_tag attribute (should show only teaser).
+		$content = do_shortcode( '[ap_content more_tag="yes"]' );
+		$this->assertEquals(
+			'<p>This is the teaser content.</p>',
+			trim( $content )
+		);
+
+		// Test with more_tag=no and apply_filters=yes (should show full content with more tag replaced).
+		$content = do_shortcode( '[ap_content]' );
+		$this->assertEquals(
+			'<p>This is the teaser content.<!--more-->This is the full content.</p>',
+			trim( $content )
+		);
+
+		wp_reset_postdata();
+		Shortcodes::unregister();
 	}
 }

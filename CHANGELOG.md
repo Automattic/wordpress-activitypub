@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improved
 
 * Added screen reader text to the "Follow Me" block for improved accessibility
+* Added more tag support to content shortcode to control whether to show full post or teaser
 
 ### Fixed
 

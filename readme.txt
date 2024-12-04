@@ -135,6 +135,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: Screen reader text for the "Follow Me" block for improved accessibility
+* Added: More tag support to content shortcode to control whether to show full post or teaser
 * Fixed: Prevent hex color codes in HTML attributes from being added as post tags
 * Fixed: A typo in the custom post content settings
 
