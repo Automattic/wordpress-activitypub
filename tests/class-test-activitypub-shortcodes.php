@@ -188,6 +188,26 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 			trim( $content )
 		);
 
+		// Create a post without a more tag.
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_title'   => 'Test Post with More',
+				'post_content' => 'This is the full content without a more tag. Even if the attribute is set to "yes", the full content should be shown.',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+				'post_author'  => 1,
+			)
+		);
+
+		setup_postdata( $post );
+
+		// Test without more_tag attribute (should show full content).
+		$content = do_shortcode( '[ap_content apply_filters="yes"]' );
+		$this->assertEquals(
+			'<p>This is the full content without a more tag. Even if the attribute is set to &#8220;yes&#8221;, the full content should be shown.</p>',
+			trim( $content )
+		);
+
 		wp_reset_postdata();
 		Shortcodes::unregister();
 	}
