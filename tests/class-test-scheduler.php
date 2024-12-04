@@ -63,18 +63,28 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that moving a published post to trash schedules a delete activity.
+	 * Test that moving a published post to trash schedules a delete activity only if federated.
 	 *
 	 * @covers ::schedule_post_activity
 	 */
-	public function test_publish_to_trash_should_schedule_delete() {
+	public function test_publish_to_trash_should_schedule_delete_only_if_federated() {
 		wp_publish_post( $this->post->ID );
 		$this->post = get_post( $this->post->ID );
+
+		// Test without federation state.
+		Scheduler::schedule_post_activity( 'trash', 'publish', $this->post );
+		$this->assertFalse(
+			wp_next_scheduled( 'activitypub_send_post', array( $this->post->ID, 'Delete' ) ),
+			'Published to trash transition should not schedule delete activity when not federated'
+		);
+
+		// Test with federation state.
+		set_wp_object_state( $this->post, 'federated' );
 		Scheduler::schedule_post_activity( 'trash', 'publish', $this->post );
 
 		$this->assertNotFalse(
 			wp_next_scheduled( 'activitypub_send_post', array( $this->post->ID, 'Delete' ) ),
-			'Published to trash transition should schedule delete activity'
+			'Published to trash transition should schedule delete activity when federated'
 		);
 	}
 

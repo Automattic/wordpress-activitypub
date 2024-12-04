@@ -148,7 +148,7 @@ class Scheduler {
 				break;
 
 			case 'trash':
-				$type = ( 'publish' === $old_status ) ? 'Delete' : false;
+				$type = 'federated' === get_wp_object_state( $post ) ? 'Delete' : false;
 				break;
 
 			default:
