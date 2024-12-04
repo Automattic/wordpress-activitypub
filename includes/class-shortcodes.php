@@ -157,7 +157,7 @@ class Shortcodes {
 		remove_shortcode( 'ap_content' );
 
 		$atts = shortcode_atts(
-			array( 
+			array(
 				'apply_filters' => 'yes',
 				'more_tag'      => 'no',
 			),
