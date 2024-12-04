@@ -214,4 +214,4 @@ class Test_Scheduler extends WP_UnitTestCase {
 			'Password protected posts should not schedule federation activities'
 		);
 	}
-} 
+}
