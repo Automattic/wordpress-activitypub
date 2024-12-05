@@ -318,14 +318,16 @@ class Post extends Base {
 		foreach ( $enclosures as $enclosure ) {
 			// Check if URL is an attachment.
 			$attachment_id = \attachment_url_to_postid( $enclosure['url'] );
+
 			if ( $attachment_id ) {
 				$enclosure['id']        = $attachment_id;
 				$enclosure['url']       = \wp_get_attachment_url( $attachment_id );
 				$enclosure['mediaType'] = \get_post_mime_type( $attachment_id );
 			}
 
-			$mime_type       = $enclosure['mediaType'];
-			$mime_type_parts = \explode( '/', $mime_type );
+			$mime_type         = $enclosure['mediaType'];
+			$mime_type_parts   = \explode( '/', $mime_type );
+			$enclosure['type'] = \ucfirst( $mime_type_parts[0] );
 
 			switch ( $mime_type_parts[0] ) {
 				case 'image':

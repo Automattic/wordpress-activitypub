@@ -5,20 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Dev - XXXX-XX-XX
+## [Unreleased]
 
 ### Added
 
-* Fediverse Preview on post-overview page
-* GitHub action to enforce Changelog updates.
 * Outbox queue
 
 ### Improved
 
+* Added screen reader text to the "Follow Me" block for improved accessibility
+
+### Fixed
+
+* Prevent hex color codes in HTML attributes from being added as post tags
+* Fixed a typo in the custom post content settings
+
+## [4.3.0] - 2024-12-02
+
+### Added
+
+* Fix editor error when switching to edit a synced Pattern
+* A `pre_activitypub_get_upload_baseurl` filter
+* Fediverse Preview on post-overview page
+* GitHub action to enforce Changelog updates
+* New contributors
+
+### Improved
+
+* Basic enclosure validation
+* More User -> Actor renaming
 * Outsource Constants to a separate file
 * Better handling of `readme.txt` and `README.md`
 
-## 4.2.1 - 2024-11-20
+### Fixed
+
+* Fediverse preview showing `preferredUsername` instead of `name`
+* A potential fatal error in Enable Mastodon Apps
+* Show Followers name instead of avatar on mobile view
+* Fixed a potential fatal error in Enable Mastodon Apps
+* Broken escaping of Usernames in Actor-JSON
+* Fixed missing attachement-type for enclosures
+* Prevention against self pings
+
+## [4.2.1] - 2024-11-20
 
 ### Added
 
@@ -34,15 +63,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Don't overwrite an existing `wp-tests-config.php`
 * PHPCS for phpunit files
 
-## 4.2.0 - 2024-11-15
+## [4.2.0] - 2024-11-15
 
 ### Added
 
 * Unit tests for the `ActivityPub\Transformer\Post` class
-
-### Added
-
-* GitHub action to enforce Changelog updates.
 
 ### Improved
 
@@ -53,7 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-* Do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts.
+* Do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts
 * Proper margins for notices and font size for page title in settings screen
 * Ensure that `?author=0` resolves to blog user
 
@@ -62,14 +87,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Remove `meta` CLI command
 * Remove unneeded translation functions from CLI commands
 
-## 4.1.1 - 2024-11-10
+## [4.1.1] - 2024-11-10
 
 ### Fixed
 
 * Only revert to URL if there is one
 * Migration
 
-## 4.1.0 - 2024-11-08
+## [4.1.0] - 2024-11-08
 
 ### Added
 
@@ -86,7 +111,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Add title to content if post is a `Note`
 * Fallback to blog-user if user is disabled
 
-## 4.0.2 - 2024-10-30
+## [4.0.2] - 2024-10-30
 
 ### Fixed
 
@@ -1096,6 +1121,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
+[4.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.2.1...4.3.0
 [4.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.2.0...4.2.1
 [4.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.1.1...4.2.0
 [4.1.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.1.0...4.1.1

@@ -11,7 +11,7 @@ use WP_REST_Server;
 use WP_REST_Request;
 use WP_REST_Response;
 use Activitypub\Webfinger;
-use Activitypub\Collection\Actors as User_Collection;
+use Activitypub\Collection\Actors as Actor_Collection;
 
 use function Activitypub\is_activitypub_request;
 
@@ -74,7 +74,7 @@ class Actors {
 	 */
 	public static function get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = User_Collection::get_by_various( $user_id );
+		$user    = Actor_Collection::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;
@@ -114,7 +114,7 @@ class Actors {
 	public static function remote_follow_get( WP_REST_Request $request ) {
 		$resource = $request->get_param( 'resource' );
 		$user_id  = $request->get_param( 'user_id' );
-		$user     = User_Collection::get_by_various( $user_id );
+		$user     = Actor_Collection::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;

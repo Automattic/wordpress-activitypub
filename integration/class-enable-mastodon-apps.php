@@ -650,7 +650,7 @@ class Enable_Mastodon_Apps {
 			$object = $item;
 		}
 
-		if ( ! isset( $object['type'] ) || 'Note' !== $object['type'] ) {
+		if ( ! isset( $object['type'] ) || 'Note' !== $object['type'] || ! $account ) {
 			return null;
 		}
 

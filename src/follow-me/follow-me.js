@@ -54,7 +54,13 @@ function Follow( { profile, popupStyles, userId } ) {
 
 	return (
 		<>
-			<Button className="activitypub-profile__follow" onClick={ () => setIsOpen( true ) } >
+			<Button
+				className="activitypub-profile__follow"
+				onClick={ () => setIsOpen( true ) }
+				aria-haspopup="dialog"
+				aria-expanded={ isOpen }
+				aria-label={  __( 'Follow me on the Fediverse', 'activitypub' ) }
+			>
 				{ __( 'Follow', 'activitypub' ) }
 			</Button>
 			{ isOpen && (
@@ -62,6 +68,8 @@ function Follow( { profile, popupStyles, userId } ) {
 				className="activitypub-profile__confirm activitypub__modal"
 				onRequestClose={ () => setIsOpen( false ) }
 				title={ title }
+				aria-label={ title }
+				role="dialog"
 				>
 					<DialogFollow profile={ profile } userId={ userId } />
 					<style>{ popupStyles }</style>

@@ -1,9 +1,9 @@
 === ActivityPub ===
-Contributors: automattic, pfefferle, mediaformat, mattwiebe, akirk, jeherve, nuriapena, cavalierlife
+Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaformat, nuriapena, cavalierlife, andremenrath
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
-Stable tag: 4.2.1
+Stable tag: 4.3.0
 Requires PHP: 7.0
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -132,13 +132,30 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-= Dev =
+= Unreleased =
 
-* Added: Fediverse Preview on post-overview page
-* Added: GitHub action to enforce Changelog updates.
 * Added: Outbox queue
+* Improved: Screen reader text for the "Follow Me" block for improved accessibility
+* Fixed: Prevent hex color codes in HTML attributes from being added as post tags
+* Fixed: A typo in the custom post content settings
+
+= 4.3.0 =
+
+* Added: A `pre_activitypub_get_upload_baseurl` filter
+* Added: Fediverse Preview on post-overview page
+* Added: GitHub action to enforce Changelog updates
+* Added: New contributors
+* Improved: Basic enclosure validation
+* Improved: More User -> Actor renaming
 * Improved: Outsource Constants to a separate file
 * Improved: Better handling of `readme.txt` and `README.md`
+* Fixed: editor error when switching to edit a synced Pattern
+* Fixed: Fediverse preview showing `preferredUsername` instead of `name`
+* Fixed: Potential fatal error in Enable Mastodon Apps
+* Fixed: Broken escaping of Usernames in Actor-JSON
+* Fixed: Show Followers name instead of avatar on mobile view
+* Fixed: Missing attachement-type for enclosures
+* Fixed: Prevention against self pings
 
 = 4.2.1 =
 

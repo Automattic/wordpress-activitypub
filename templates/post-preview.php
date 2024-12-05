@@ -64,11 +64,11 @@ $user   = $transformer->get_actor_object();
 				margin-bottom: 1em;
 				font-style: normal;
 			}
-			main address .preferred-username,
+			main address .name,
 			main address .webfinger {
 				color: #000;
 			}
-			.preferred-username {
+			.name {
 				color: #ccc;
 				font-weight: bold;
 				display: block;
@@ -183,7 +183,7 @@ $user   = $transformer->get_actor_object();
 				<div>
 					<div class="fake-image"></div>
 					<div>
-						<div class="preferred-username">
+						<div class="name">
 							████ ██████
 						</div>
 						<div class="webfinger">
@@ -201,8 +201,8 @@ $user   = $transformer->get_actor_object();
 					<address>
 						<img src="<?php echo esc_url( $user->get_icon()['url'] ); ?>" alt="<?php echo esc_attr( $user->get_name() ); ?>" />
 						<div>
-							<div class="preferred-username">
-								<?php echo esc_html( $user->get_preferred_username() ); ?>
+							<div class="name">
+								<?php echo esc_html( $user->get_name() ); ?>
 							</div>
 							<div class="webfinger">
 								<?php echo esc_html( '@' . $user->get_webfinger() ); ?>
