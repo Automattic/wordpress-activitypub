@@ -134,7 +134,8 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
-* Added: Screen reader text for the "Follow Me" block for improved accessibility
+* Improved: Added screen reader text for the "Follow Me" block for improved accessibility
+* Improved: Added `media_type` support to Activity-Object-Transformers
 * Fixed: Prevent hex color codes in HTML attributes from being added as post tags
 * Fixed: A typo in the custom post content settings
 
