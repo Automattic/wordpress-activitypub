@@ -128,7 +128,7 @@ abstract class Base {
 	}
 
 	/**
-	 * Returns the default media type for ab Object.
+	 * Returns the default media type for an Object.
 	 *
 	 * @return string The media type.
 	 */
