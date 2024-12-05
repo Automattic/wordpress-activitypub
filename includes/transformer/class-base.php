@@ -120,9 +120,20 @@ abstract class Base {
 
 	/**
 	 * Get the replies Collection.
+	 *
+	 * @return array The replies collection.
 	 */
 	public function get_replies() {
 		return Replies::get_collection( $this->wp_object );
+	}
+
+	/**
+	 * Returns the default media type for an Object.
+	 *
+	 * @return string The media type.
+	 */
+	public function get_media_type() {
+		return 'text/html';
 	}
 
 	/**
