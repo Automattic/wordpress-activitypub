@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added screen reader text to the "Follow Me" block for improved accessibility
 * Added `media_type` support to Activity-Object-Transformers
+* Clarified settings page text around which users get Activitypub profiles
 
 ### Fixed
 
