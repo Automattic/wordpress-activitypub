@@ -135,6 +135,23 @@ class Settings_Fields {
 			'activitypub',
 			'activitypub_general'
 		);
+
+		if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
+			add_settings_section(
+				'activitypub_security',
+				__( 'Security', 'activitypub' ),
+				array( __CLASS__, 'render_security_section' ),
+				'activitypub'
+			);
+
+			add_settings_field(
+				'activitypub_authorized_fetch',
+				__( 'Authorized Fetch', 'activitypub' ),
+				array( __CLASS__, 'render_authorized_fetch_field' ),
+				'activitypub',
+				'activitypub_security'
+			);
+		}
 	}
 
 	/**
@@ -155,6 +172,13 @@ class Settings_Fields {
 	 * Render general section.
 	 */
 	public static function render_general_section() {
+		// Section description if needed.
+	}
+
+	/**
+	 * Render security section.
+	 */
+	public static function render_security_section() {
 		// Section description if needed.
 	}
 
@@ -369,6 +393,27 @@ class Settings_Fields {
 				'default'
 			);
 			?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render use hashtags field.
+	 */
+	public static function render_authorized_fetch_field() {
+		$value = get_option( 'activitypub_authorized_fetch', '1' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" name="activitypub_authorized_fetch" id="activitypub_authorized_fetch" value="1" <?php checked( '1', $value ); ?> />
+				<?php esc_html_e( 'Require HTTP signature authentication on ActivityPub representations of public posts and profiles.', 'activitypub' ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( '⚠ Secure mode has its limitations, which is why it is not enabled by default. It is not fully supported by all software in the fediverse, and some features may break, especially when interacting with Mastodon servers older than version 3.0. Additionally, since it requires authentication for public content, caching is not possible, leading to higher computational costs.', 'activitypub' ); ?>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( '⚠ Secure mode does not hide the HTML representations of public posts and profiles. While HTML is a less consistent format (that potentially changes often) compared to first-class ActivityPub representations or the REST API, it still poses a potential risk for content scraping.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}
