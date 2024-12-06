@@ -35,24 +35,6 @@ class Comment extends Base {
 	private $actor_object = null;
 
 	/**
-	 * Returns the User-ID of the WordPress Comment.
-	 *
-	 * @return int The User-ID of the WordPress Comment
-	 */
-	public function get_wp_user_id() {
-		return $this->item->user_id;
-	}
-
-	/**
-	 * Change the User-ID of the WordPress Comment.
-	 *
-	 * @param int $user_id The new user ID.
-	 */
-	public function change_wp_user_id( $user_id ) {
-		$this->item->user_id = $user_id;
-	}
-
-	/**
 	 * Transforms the WP_Comment object to an ActivityPub Object.
 	 *
 	 * @see \Activitypub\Activity\Base_Object

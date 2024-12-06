@@ -40,28 +40,6 @@ class Post extends Base {
 	private $actor_object = null;
 
 	/**
-	 * Returns the ID of the WordPress Post.
-	 *
-	 * @return int The ID of the WordPress Post
-	 */
-	public function get_wp_user_id() {
-		return $this->item->post_author;
-	}
-
-	/**
-	 * Change the User-ID of the WordPress Post.
-	 *
-	 * @param int $user_id The new user ID.
-	 *
-	 * @return Post The Post Object.
-	 */
-	public function change_wp_user_id( $user_id ) {
-		$this->item->post_author = $user_id;
-
-		return $this;
-	}
-
-	/**
 	 * Transforms the WP_Post object to an ActivityPub Object
 	 *
 	 * @see \Activitypub\Activity\Base_Object

@@ -129,18 +129,6 @@ abstract class Base {
 	abstract protected function get_id();
 
 	/**
-	 * Returns the ID of the WordPress Object.
-	 */
-	abstract public function get_wp_user_id();
-
-	/**
-	 * Change the User-ID of the WordPress Post.
-	 *
-	 * @param int $user_id The new user ID.
-	 */
-	abstract public function change_wp_user_id( $user_id );
-
-	/**
 	 * Returns a generic locale based on the Blog settings.
 	 *
 	 * @return string The locale of the blog.

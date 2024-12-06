@@ -22,7 +22,7 @@ class Outbox {
 	 *
 	 * @return mixed The added item or an error.
 	 */
-	public static function add( $activity_object, $activity_type = 'Create', $user_id ) { // phpcs:ignore
+	public static function add( $activity_object, $activity_type, $user_id ) { // phpcs:ignore
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
 			'post_title'   => $activity_object->get_id(),
