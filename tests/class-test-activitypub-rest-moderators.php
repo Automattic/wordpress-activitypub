@@ -84,7 +84,7 @@ class Test_Activitypub_Rest_Moderators extends WP_UnitTestCase {
 	 * Test moderators endpoint response structure.
 	 */
 	public function test_moderators_get() {
-		$request  = new WP_REST_Request( 'GET', '/activitypub/1.0/collections/moderators' );
+		new WP_REST_Request( 'GET', '/activitypub/1.0/collections/moderators' );
 		$response = Collection::moderators_get();
 
 		$this->assertEquals( 200, $response->get_status() );
@@ -92,7 +92,7 @@ class Test_Activitypub_Rest_Moderators extends WP_UnitTestCase {
 
 		$data = $response->get_data();
 
-		// Test response structure
+		// Test response structure.
 		$this->assertArrayHasKey( '@context', $data );
 		$this->assertEquals( Actor::JSON_LD_CONTEXT, $data['@context'] );
 		$this->assertArrayHasKey( 'id', $data );
@@ -101,11 +101,11 @@ class Test_Activitypub_Rest_Moderators extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'orderedItems', $data );
 		$this->assertIsArray( $data['orderedItems'] );
 
-		// Test that user with cap is in the list
+		// Test that user with cap is in the list.
 		$user_id = home_url( '?author=' . self::$user_with_cap->ID );
 		$this->assertContains( $user_id, $data['orderedItems'] );
 
-		// Test that user without cap is not in the list
+		// Test that user without cap is not in the list.
 		$user_id = home_url( '?author=' . self::$user_without_cap->ID );
 		$this->assertNotContains( $user_id, $data['orderedItems'] );
 	}
