@@ -5,12 +5,16 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests\Collection;
+
+use Activitypub\Collection\Replies;
+
 /**
  * Test class for Activitypub Replies.
  *
  * @coversDefaultClass \Activitypub\Collection\Replies
  */
-class Test_Activitypub_Replies extends WP_UnitTestCase {
+class Test_Replies extends \WP_UnitTestCase {
 
 	/**
 	 * Test the replies collection of a post.
@@ -43,12 +47,12 @@ class Test_Activitypub_Replies extends WP_UnitTestCase {
 		$comment_id = wp_insert_comment( $comment );
 
 		wp_set_comment_status( $comment_id, 'hold' );
-		$replies = Activitypub\Collection\Replies::get_collection( get_post( $post_id ) );
+		$replies = Replies::get_collection( get_post( $post_id ) );
 		$this->assertEquals( $replies['id'], sprintf( 'http://example.org/index.php?rest_route=/activitypub/1.0/posts/%d/replies', $post_id ) );
 		$this->assertCount( 0, $replies['first']['items'] );
 
 		wp_set_comment_status( $comment_id, 'approve' );
-		$replies = Activitypub\Collection\Replies::get_collection( get_post( $post_id ) );
+		$replies = Replies::get_collection( get_post( $post_id ) );
 		$this->assertCount( 1, $replies['first']['items'] );
 		$this->assertEquals( $replies['first']['items'][0], $source_id );
 	}

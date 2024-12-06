@@ -1,16 +1,20 @@
 <?php
 /**
- * Test file for Enable Mastodon Apps.
+ * Test file for Enable Mastodon Apps integration.
  *
- * @package Enable_Mastodon_Apps
+ * @package Activitypub
  */
 
+namespace Activitypub\Tests\Integration;
+
+use Activitypub\Integration\Enable_Mastodon_Apps;
+
 /**
- * Test class for Enable Mastodon Apps.
+ * Test class for Enable Mastodon Apps integration.
  *
- * @coversDefaultClass \Enable_Mastodon_Apps
+ * @coversDefaultClass \Activitypub\Integration\Enable_Mastodon_Apps
  */
-class Test_Enable_Mastodon_Apps extends WP_UnitTestCase {
+class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 
 	/**
 	 * Users.

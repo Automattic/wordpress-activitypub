@@ -5,12 +5,16 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests\Collection;
+
+use Activitypub\Collection\Actors;
+
 /**
  * Test class for Activitypub Actors Collection.
  *
  * @coversDefaultClass \Activitypub\Collection\Actors
  */
-class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
+class Test_Actors extends \WP_UnitTestCase {
 
 	/**
 	 * Set up the test.
@@ -45,7 +49,7 @@ class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
 			);
 		}
 
-		$actors = Activitypub\Collection\Actors::get_by_resource( $item );
+		$actors = Actors::get_by_resource( $item );
 		$this->assertInstanceOf( $expected, $actors );
 	}
 
@@ -71,7 +75,7 @@ class Test_Activitypub_Actors_Collection extends WP_UnitTestCase {
 			);
 		}
 
-		$users = Activitypub\Collection\Users::get_by_resource( $item );
+		$users = \Activitypub\Collection\Users::get_by_resource( $item );
 		$this->assertInstanceOf( $expected, $users );
 	}
 

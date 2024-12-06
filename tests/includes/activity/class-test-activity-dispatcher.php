@@ -5,12 +5,16 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests\Activity;
+
+use Activitypub\Tests\ActivityPub_TestCase_Cache_HTTP;
+
 /**
  * Test class for Activitypub Activity Dispatcher.
  *
  * @coversDefaultClass \Activitypub\Activity_Dispatcher
  */
-class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HTTP {
+class Test_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HTTP {
 
 	/**
 	 * Users.
@@ -70,7 +74,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 			)
 		);
 
-		$pre_http_request = new MockAction();
+		$pre_http_request = new \MockAction();
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		\Activitypub\Activity_Dispatcher::send_activity( get_post( $post ), 'Create' );
@@ -120,7 +124,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 			}
 		);
 
-		$pre_http_request = new MockAction();
+		$pre_http_request = new \MockAction();
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		\Activitypub\Activity_Dispatcher::send_activity( get_post( $post ), 'Create' );
@@ -158,7 +162,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 			)
 		);
 
-		$pre_http_request = new MockAction();
+		$pre_http_request = new \MockAction();
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		\Activitypub\Activity_Dispatcher::send_activity_or_announce( get_post( $post ), 'Create' );
@@ -211,7 +215,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 			)
 		);
 
-		$pre_http_request = new MockAction();
+		$pre_http_request = new \MockAction();
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		\Activitypub\Activity_Dispatcher::send_activity_or_announce( get_post( $post ), 'Create' );
@@ -268,7 +272,7 @@ class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HT
 			)
 		);
 
-		$pre_http_request = new MockAction();
+		$pre_http_request = new \MockAction();
 		add_filter( 'pre_http_request', array( $pre_http_request, 'filter' ), 10, 3 );
 
 		\Activitypub\Activity_Dispatcher::send_activity( get_post( $post ), 'Create' );

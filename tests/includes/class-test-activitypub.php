@@ -5,12 +5,16 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests;
+
+use Activitypub\Activitypub;
+
 /**
  * Test class for Activitypub.
  *
  * @coversDefaultClass \Activitypub\Activitypub
  */
-class Test_Activitypub extends WP_UnitTestCase {
+class Test_Activitypub extends \WP_UnitTestCase {
 
 	/**
 	 * Test post type support.

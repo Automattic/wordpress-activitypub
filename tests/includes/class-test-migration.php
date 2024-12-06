@@ -5,12 +5,16 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests;
+
+use Activitypub\Migration;
+
 /**
  * Test class for Activitypub Migrate.
  *
  * @coversDefaultClass \Activitypub\Migration
  */
-class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
+class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 
 	/**
 	 * Tear down the test.
@@ -29,7 +33,7 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 	public function test_migrate_actor_mode() {
 		\delete_option( 'activitypub_actor_mode' );
 
-		\Activitypub\Migration::migrate_actor_mode();
+		Migration::migrate_actor_mode();
 
 		$this->assertEquals( ACTIVITYPUB_ACTOR_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
 
@@ -37,7 +41,7 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 		\update_option( 'activitypub_enable_users', '1' );
 		\delete_option( 'activitypub_actor_mode' );
 
-		\Activitypub\Migration::migrate_actor_mode();
+		Migration::migrate_actor_mode();
 
 		$this->assertEquals( ACTIVITYPUB_ACTOR_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
 
@@ -45,7 +49,7 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 		\update_option( 'activitypub_enable_users', '1' );
 		\delete_option( 'activitypub_actor_mode' );
 
-		\Activitypub\Migration::migrate_actor_mode();
+		Migration::migrate_actor_mode();
 
 		$this->assertEquals( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
 
@@ -53,7 +57,7 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 		\update_option( 'activitypub_enable_users', '0' );
 		\delete_option( 'activitypub_actor_mode' );
 
-		\Activitypub\Migration::migrate_actor_mode();
+		Migration::migrate_actor_mode();
 
 		$this->assertEquals( ACTIVITYPUB_BLOG_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
 
@@ -61,7 +65,7 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 		\update_option( 'activitypub_enable_users', '0' );
 		\delete_option( 'activitypub_actor_mode' );
 
-		\Activitypub\Migration::migrate_actor_mode();
+		Migration::migrate_actor_mode();
 
 		$this->assertEquals( ACTIVITYPUB_ACTOR_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
 
@@ -69,7 +73,7 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 		\delete_option( 'activitypub_enable_users' );
 		\delete_option( 'activitypub_actor_mode' );
 
-		\Activitypub\Migration::migrate_actor_mode();
+		Migration::migrate_actor_mode();
 
 		$this->assertEquals( ACTIVITYPUB_ACTOR_MODE, \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) );
 	}
@@ -127,7 +131,7 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 
 		\update_option( 'activitypub_post_content_type', 'title' );
 
-		\Activitypub\Migration::migrate_to_4_1_0();
+		Migration::migrate_to_4_1_0();
 
 		\clean_post_cache( $post1 );
 		$metas1 = \get_post_meta( $post1 );
@@ -159,7 +163,7 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 		\update_option( 'activitypub_post_content_type', 'content' );
 		\update_option( 'activitypub_custom_post_content', '[ap_content]' );
 
-		\Activitypub\Migration::migrate_to_4_1_0();
+		Migration::migrate_to_4_1_0();
 
 		$template     = \get_option( 'activitypub_custom_post_content' );
 		$content_type = \get_option( 'activitypub_post_content_type' );
@@ -172,7 +176,7 @@ class Test_Activitypub_Migrate extends ActivityPub_TestCase_Cache_HTTP {
 		\update_option( 'activitypub_post_content_type', 'custom' );
 		\update_option( 'activitypub_custom_post_content', $custom );
 
-		\Activitypub\Migration::migrate_to_4_1_0();
+		Migration::migrate_to_4_1_0();
 
 		$template     = \get_option( 'activitypub_custom_post_content' );
 		$content_type = \get_option( 'activitypub_post_content_type' );

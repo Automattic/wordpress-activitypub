@@ -1,18 +1,21 @@
 <?php
 /**
- * Test file for Activitypub Activity.
+ * Test file for Activity.
  *
  * @package Activitypub
  */
 
+namespace Activitypub\Tests\Activity;
+
+use Activitypub\Activity\Activity;
 use DMS\PHPUnitExtensions\ArraySubset\Assert;
 
 /**
- * Test class for Activitypub Activity.
+ * Test class for Activity.
  *
  * @coversDefaultClass \Activitypub\Activity\Activity
  */
-class Test_Activitypub_Activity extends WP_UnitTestCase {
+class Test_Activity extends \WP_UnitTestCase {
 
 	/**
 	 * Test activity mentions.
@@ -35,7 +38,7 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 
 		$activitypub_post = \Activitypub\Transformer\Post::transform( get_post( $post ) )->to_object();
 
-		$activitypub_activity = new \Activitypub\Activity\Activity();
+		$activitypub_activity = new Activity();
 		$activitypub_activity->set_type( 'Create' );
 		$activitypub_activity->set_object( $activitypub_post );
 
@@ -81,7 +84,7 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 			),
 		);
 
-		$activity = \Activitypub\Activity\Activity::init_from_array( $test_array );
+		$activity = Activity::init_from_array( $test_array );
 
 		$this->assertEquals( 'Hello world!', $activity->get_object()->get_content() );
 		Assert::assertArraySubset( $test_array, $activity->to_array() );
@@ -94,7 +97,7 @@ class Test_Activitypub_Activity extends WP_UnitTestCase {
 		$id = 'https://example.com/author/123';
 
 		// Build the update.
-		$activity = new \Activitypub\Activity\Activity();
+		$activity = new Activity();
 		$activity->set_type( 'Update' );
 		$activity->set_actor( $id );
 		$activity->set_object( $id );

@@ -5,12 +5,16 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests;
+
+use Activitypub\Link;
+
 /**
  * Test class for Activitypub Link.
  *
  * @coversDefaultClass \Activitypub\Link
  */
-class Test_Activitypub_Link extends WP_UnitTestCase {
+class Test_Link extends \WP_UnitTestCase {
 	/**
 	 * Test the content.
 	 *

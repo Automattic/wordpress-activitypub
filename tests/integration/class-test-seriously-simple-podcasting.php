@@ -1,16 +1,20 @@
 <?php
 /**
- * Test file for Activitypub integrations.
+ * Test file for Seriously Simple Podcasting integration.
  *
  * @package Activitypub
  */
 
+namespace Activitypub\Tests\Integration;
+
+use Activitypub\Integration\Seriously_Simple_Podcasting;
+
 /**
- * Test class for Activitypub integrations.
+ * Test class for Seriously Simple Podcasting integration.
  *
- * @coversDefaultClass \Activitypub\Integrations
+ * @coversDefaultClass \Activitypub\Integration\Seriously_Simple_Podcasting
  */
-class Test_Activitypub_Integrations extends WP_UnitTestCase {
+class Test_Seriously_Simple_Podcasting extends \WP_UnitTestCase {
 
 	/**
 	 * Set up the test.

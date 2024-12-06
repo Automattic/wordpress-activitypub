@@ -5,12 +5,14 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests\Rest;
+
 /**
  * Test class for Activitypub Rest Inbox.
  *
  * @coversDefaultClass \Activitypub\Rest\Inbox
  */
-class Test_Activitypub_Rest_Inbox extends WP_UnitTestCase {
+class Test_Inbox extends \WP_UnitTestCase {
 
 	/**
 	 * Set up the test.
@@ -280,7 +282,7 @@ class Test_Activitypub_Rest_Inbox extends WP_UnitTestCase {
 	 * @param bool  $check The check.
 	 */
 	public function test_is_activity_public( $data, $check ) {
-		$this->assertEquals( $check, Activitypub\is_activity_public( $data ) );
+		$this->assertEquals( $check, \Activitypub\is_activity_public( $data ) );
 	}
 
 	/**

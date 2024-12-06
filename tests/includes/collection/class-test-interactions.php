@@ -5,12 +5,16 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests\Collection;
+
+use Activitypub\Collection\Interactions;
+
 /**
  * Test class for Activitypub Interactions.
  *
  * @coversDefaultClass \Activitypub\Collection\Interactions
  */
-class Test_Activitypub_Interactions extends WP_UnitTestCase {
+class Test_Interactions extends \WP_UnitTestCase {
 
 	/**
 	 * User ID.
@@ -56,7 +60,7 @@ class Test_Activitypub_Interactions extends WP_UnitTestCase {
 		);
 		$this->post_permalink = \get_permalink( $this->post_id );
 
-		\add_filter( 'pre_get_remote_metadata_by_actor', array( '\Test_Activitypub_Interactions', 'get_remote_metadata_by_actor' ), 0, 2 );
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( __CLASS__, 'get_remote_metadata_by_actor' ), 0, 2 );
 	}
 
 	/**
@@ -125,7 +129,7 @@ class Test_Activitypub_Interactions extends WP_UnitTestCase {
 	 * @covers ::add_comment
 	 */
 	public function test_handle_create_basic() {
-		$comment_id = Activitypub\Collection\Interactions::add_comment( $this->create_test_object() );
+		$comment_id = Interactions::add_comment( $this->create_test_object() );
 		$comment    = get_comment( $comment_id, ARRAY_A );
 
 		$this->assertIsArray( $comment );
@@ -148,7 +152,7 @@ class Test_Activitypub_Interactions extends WP_UnitTestCase {
 	 * @covers ::add_comment
 	 */
 	public function test_handle_create_rich() {
-		$comment_id = Activitypub\Collection\Interactions::add_comment( $this->create_test_rich_object() );
+		$comment_id = Interactions::add_comment( $this->create_test_rich_object() );
 		$comment    = get_comment( $comment_id, ARRAY_A );
 
 		$this->assertEquals( 'Hello<br />example<p>example</p>', $comment['comment_content'] );
@@ -186,8 +190,8 @@ class Test_Activitypub_Interactions extends WP_UnitTestCase {
 	 */
 	public function test_convert_object_to_comment_already_exists_rejected() {
 		$object = $this->create_test_object( 'https://example.com/test_convert_object_to_comment_already_exists_rejected' );
-		Activitypub\Collection\Interactions::add_comment( $object );
-		$converted = Activitypub\Collection\Interactions::add_comment( $object );
+		Interactions::add_comment( $object );
+		$converted = Interactions::add_comment( $object );
 		$this->assertEquals( $converted->get_error_code(), 'comment_duplicate' );
 	}
 
@@ -199,12 +203,12 @@ class Test_Activitypub_Interactions extends WP_UnitTestCase {
 	public function test_convert_object_to_comment_reply_to_comment() {
 		$id     = 'https://example.com/test_convert_object_to_comment_reply_to_comment';
 		$object = $this->create_test_object( $id );
-		Activitypub\Collection\Interactions::add_comment( $object );
+		Interactions::add_comment( $object );
 		$comment = \Activitypub\object_id_to_comment( $id );
 
 		$object['object']['inReplyTo'] = $id;
 		$object['object']['id']        = 'https://example.com/234';
-		$id                            = Activitypub\Collection\Interactions::add_comment( $object );
+		$id                            = Interactions::add_comment( $object );
 		$converted                     = get_comment( $id, ARRAY_A );
 
 		$this->assertIsArray( $converted );
@@ -220,7 +224,7 @@ class Test_Activitypub_Interactions extends WP_UnitTestCase {
 	public function test_convert_object_to_comment_reply_to_non_existent_comment_rejected() {
 		$object                        = $this->create_test_object();
 		$object['object']['inReplyTo'] = 'https://example.com/not_found';
-		$converted                     = Activitypub\Collection\Interactions::add_comment( $object );
+		$converted                     = Interactions::add_comment( $object );
 		$this->assertFalse( $converted );
 	}
 
@@ -232,9 +236,9 @@ class Test_Activitypub_Interactions extends WP_UnitTestCase {
 	public function test_handle_create_basic2() {
 		$id     = 'https://example.com/test_handle_create_basic';
 		$object = $this->create_test_object( $id );
-		Activitypub\Collection\Interactions::add_comment( $object );
+		Interactions::add_comment( $object );
 		$comment = \Activitypub\object_id_to_comment( $id );
-		$this->assertInstanceOf( WP_Comment::class, $comment );
+		$this->assertInstanceOf( \WP_Comment::class, $comment );
 	}
 
 	/**
@@ -248,14 +252,14 @@ class Test_Activitypub_Interactions extends WP_UnitTestCase {
 		$object                  = $this->create_test_object( $id );
 		$object['object']['url'] = $url;
 
-		Activitypub\Collection\Interactions::add_comment( $object );
+		Interactions::add_comment( $object );
 		$comment      = \Activitypub\object_id_to_comment( $id );
-		$interactions = Activitypub\Collection\Interactions::get_interaction_by_id( $id );
+		$interactions = Interactions::get_interaction_by_id( $id );
 		$this->assertIsArray( $interactions );
 		$this->assertEquals( $comment->comment_ID, $interactions[0]->comment_ID );
 
 		$comment      = \Activitypub\object_id_to_comment( $id );
-		$interactions = Activitypub\Collection\Interactions::get_interaction_by_id( $url );
+		$interactions = Interactions::get_interaction_by_id( $url );
 		$this->assertIsArray( $interactions );
 		$this->assertEquals( $comment->comment_ID, $interactions[0]->comment_ID );
 	}

@@ -1,16 +1,20 @@
 <?php
 /**
- * Test file for Activitypub Create Handler.
+ * Test file for Activitypub Like Handler.
  *
  * @package Activitypub
  */
 
+namespace Activitypub\Tests\Handler;
+
+use Activitypub\Handler\Like;
+
 /**
- * Test class for Activitypub Create Handler.
+ * Test class for Activitypub Like Handler.
  *
- * @coversDefaultClass \Activitypub\Handler\Create
+ * @coversDefaultClass \Activitypub\Handler\Like
  */
-class Test_Activitypub_Create_Handler extends WP_UnitTestCase {
+class Test_Like extends \WP_UnitTestCase {
 
 	/**
 	 * User ID.
@@ -44,6 +48,7 @@ class Test_Activitypub_Create_Handler extends WP_UnitTestCase {
 	 * Set up the test.
 	 */
 	public function set_up() {
+		parent::set_up();
 		$this->user_id  = 1;
 		$authordata     = \get_userdata( $this->user_id );
 		$this->user_url = $authordata->user_url;
@@ -70,9 +75,9 @@ class Test_Activitypub_Create_Handler extends WP_UnitTestCase {
 	/**
 	 * Get remote metadata by actor.
 	 *
-	 * @param string $value Value.
-	 * @param string $actor Actor.
-	 * @return array
+	 * @param string $value The value.
+	 * @param string $actor The actor.
+	 * @return array The metadata.
 	 */
 	public static function get_remote_metadata_by_actor( $value, $actor ) {
 		return array(
@@ -86,35 +91,38 @@ class Test_Activitypub_Create_Handler extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Create test object.
+	 * Create a test object.
 	 *
-	 * @param string $id Optional. The ID. Default is 'https://example.com/123'.
-	 * @return array
+	 * @return array The test object.
 	 */
-	public function create_test_object( $id = 'https://example.com/123' ) {
+	public function create_test_object() {
 		return array(
 			'actor'  => $this->user_url,
+			'type'   => 'Like',
 			'id'     => 'https://example.com/id/' . microtime( true ),
 			'to'     => array( $this->user_url ),
 			'cc'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-			'object' => array(
-				'id'        => $id,
-				'url'       => 'https://example.com/example',
-				'inReplyTo' => $this->post_permalink,
-				'content'   => 'example',
-			),
+			'object' => $this->post_permalink,
 		);
 	}
 
 	/**
-	 * Test handle create.
+	 * Test handle like.
 	 *
-	 * @covers ::handle_create
+	 * @covers ::handle_like
 	 */
-	public function test_handle_create_non_public_rejected() {
-		$object       = $this->create_test_object();
-		$object['cc'] = array();
-		$converted    = Activitypub\Handler\Create::handle_create( $object, $this->user_id );
-		$this->assertNull( $converted );
+	public function test_handle_like() {
+		$object = $this->create_test_object();
+		Like::handle_like( $object, $this->user_id );
+
+		$args = array(
+			'type'    => 'like',
+			'post_id' => $this->post_id,
+		);
+
+		$query  = new \WP_Comment_Query( $args );
+		$result = $query->comments;
+
+		$this->assertInstanceOf( 'WP_Comment', $result[0] );
 	}
 }

@@ -5,12 +5,16 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests;
+
+use Activitypub\Comment;
+
 /**
  * Test class for Activitypub Comment.
  *
  * @coversDefaultClass \Activitypub\Comment
  */
-class Test_Activitypub_Comment extends WP_UnitTestCase {
+class Test_Comment extends \WP_UnitTestCase {
 
 	/**
 	 * Test get source id or url.
@@ -31,10 +35,10 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assertEquals( 'https://example.com/id', \Activitypub\Comment::get_source_url( $comment_id ) );
-		$this->assertEquals( 'https://example.com/id', \Activitypub\Comment::get_source_id( $comment_id ) );
-		$this->assertEquals( 'https://example.com/id', \Activitypub\Comment::get_source_id( $comment_id, false ) );
-		$this->assertEquals( null, \Activitypub\Comment::get_source_url( $comment_id, false ) );
+		$this->assertEquals( 'https://example.com/id', Comment::get_source_url( $comment_id ) );
+		$this->assertEquals( 'https://example.com/id', Comment::get_source_id( $comment_id ) );
+		$this->assertEquals( 'https://example.com/id', Comment::get_source_id( $comment_id, false ) );
+		$this->assertEquals( null, Comment::get_source_url( $comment_id, false ) );
 
 		$comment_id = wp_insert_comment(
 			array(
@@ -49,10 +53,10 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assertEquals( 'https://example.com/url', \Activitypub\Comment::get_source_id( $comment_id ) );
-		$this->assertEquals( 'https://example.com/url', \Activitypub\Comment::get_source_url( $comment_id ) );
-		$this->assertEquals( 'https://example.com/url', \Activitypub\Comment::get_source_url( $comment_id, false ) );
-		$this->assertEquals( null, \Activitypub\Comment::get_source_id( $comment_id, false ) );
+		$this->assertEquals( 'https://example.com/url', Comment::get_source_id( $comment_id ) );
+		$this->assertEquals( 'https://example.com/url', Comment::get_source_url( $comment_id ) );
+		$this->assertEquals( 'https://example.com/url', Comment::get_source_url( $comment_id, false ) );
+		$this->assertEquals( null, Comment::get_source_id( $comment_id, false ) );
 
 		$comment_id = wp_insert_comment(
 			array(
@@ -68,10 +72,10 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assertEquals( 'https://example.com/id', \Activitypub\Comment::get_source_id( $comment_id ) );
-		$this->assertEquals( 'https://example.com/id', \Activitypub\Comment::get_source_id( $comment_id, false ) );
-		$this->assertEquals( 'https://example.com/url', \Activitypub\Comment::get_source_url( $comment_id ) );
-		$this->assertEquals( 'https://example.com/url', \Activitypub\Comment::get_source_url( $comment_id, false ) );
+		$this->assertEquals( 'https://example.com/id', Comment::get_source_id( $comment_id ) );
+		$this->assertEquals( 'https://example.com/id', Comment::get_source_id( $comment_id, false ) );
+		$this->assertEquals( 'https://example.com/url', Comment::get_source_url( $comment_id ) );
+		$this->assertEquals( 'https://example.com/url', Comment::get_source_url( $comment_id, false ) );
 	}
 
 	/**
@@ -86,9 +90,9 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 		$comment_id = wp_insert_comment( $comment );
 		$comment    = get_comment( $comment_id );
 
-		$this->assertEquals( $expected['was_sent'], \Activitypub\Comment::was_sent( $comment ) );
-		$this->assertEquals( $expected['was_received'], \Activitypub\Comment::was_received( $comment ) );
-		$this->assertEquals( $expected['should_be_federated'], \Activitypub\Comment::should_be_federated( $comment ) );
+		$this->assertEquals( $expected['was_sent'], Comment::was_sent( $comment ) );
+		$this->assertEquals( $expected['was_received'], Comment::was_received( $comment ) );
+		$this->assertEquals( $expected['should_be_federated'], Comment::should_be_federated( $comment ) );
 	}
 
 	/**
@@ -106,9 +110,9 @@ class Test_Activitypub_Comment extends WP_UnitTestCase {
 		$comment_id                = wp_insert_comment( $comment );
 		$comment                   = get_comment( $comment_id );
 
-		$this->assertEquals( $expected['was_sent'], \Activitypub\Comment::was_sent( $parent_comment_id ) );
-		$this->assertEquals( $expected['was_received'], \Activitypub\Comment::was_received( $parent_comment_id ) );
-		$this->assertEquals( $expected['should_be_federated'], \Activitypub\Comment::should_be_federated( $comment ) );
+		$this->assertEquals( $expected['was_sent'], Comment::was_sent( $parent_comment_id ) );
+		$this->assertEquals( $expected['was_received'], Comment::was_received( $parent_comment_id ) );
+		$this->assertEquals( $expected['should_be_federated'], Comment::should_be_federated( $comment ) );
 	}
 
 	/**

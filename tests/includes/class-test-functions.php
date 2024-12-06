@@ -5,16 +5,14 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests;
+
+use Activitypub\Tests\ActivityPub_TestCase_Cache_HTTP;
+
 /**
  * Test class for Functions.
  */
 class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
-	/**
-	 * User ID.
-	 *
-	 * @var int
-	 */
-	public $user_id;
 
 	/**
 	 * Post ID.
@@ -27,9 +25,11 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 * Set up the test.
 	 */
 	public function set_up() {
+		parent::set_up();
+
 		$this->post_id = \wp_insert_post(
 			array(
-				'post_author'  => $this->user_id,
+				'post_author'  => 1,
 				'post_content' => 'test',
 			)
 		);
@@ -74,7 +74,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			true
 		);
 		$query_result             = \Activitypub\object_id_to_comment( $single_comment_source_id );
-		$this->assertInstanceOf( WP_Comment::class, $query_result );
+		$this->assertInstanceOf( \WP_Comment::class, $query_result );
 		$this->assertEquals( $comment_id, $query_result->comment_ID );
 		$this->assertEquals( $content, $query_result->comment_content );
 	}
@@ -97,6 +97,9 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 */
 	public function test_object_id_to_comment_duplicate() {
 		$duplicate_comment_source_id = 'https://example.com/duplicate';
+
+		add_filter( 'duplicate_comment_id', '__return_zero', 99 );
+		add_filter( 'wp_is_comment_flood', '__return_false', 99 );
 		for ( $i = 0; $i < 2; ++$i ) {
 			\wp_new_comment(
 				array(
@@ -117,6 +120,9 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 				true
 			);
 		}
+		remove_filter( 'duplicate_comment_id', '__return_zero', 99 );
+		remove_filter( 'wp_is_comment_flood', '__return_false', 99 );
+
 		$query_result = \Activitypub\object_id_to_comment( $duplicate_comment_source_id );
 		$this->assertFalse( $query_result );
 	}

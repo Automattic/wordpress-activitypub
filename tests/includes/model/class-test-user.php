@@ -5,12 +5,16 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests\Model;
+
+use Activitypub\Model\User;
+
 /**
  * Test class for Activitypub User.
  *
- * @coversDefaultClass \Activitypub\User
+ * @coversDefaultClass \Activitypub\Model\User
  */
-class Test_Activitypub_User extends WP_UnitTestCase {
+class Test_User extends \WP_UnitTestCase {
 
 	/**
 	 * Test the activitypub capability.

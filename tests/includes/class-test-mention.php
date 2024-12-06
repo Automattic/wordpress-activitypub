@@ -5,12 +5,16 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests;
+
+use Activitypub\Mention;
+
 /**
  * Test class for Activitypub Mention.
  *
  * @coversDefaultClass \Activitypub\Mention
  */
-class Test_Activitypub_Mention extends ActivityPub_TestCase_Cache_HTTP {
+class Test_Mention extends \WP_UnitTestCase {
 
 	/**
 	 * Users.
@@ -36,7 +40,7 @@ class Test_Activitypub_Mention extends ActivityPub_TestCase_Cache_HTTP {
 	 */
 	public function test_the_content( $content, $content_with_mention ) {
 		add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ), 10, 2 );
-		$content = \Activitypub\Mention::the_content( $content );
+		$content = Mention::the_content( $content );
 		remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ) );
 
 		$this->assertEquals( $content_with_mention, $content );

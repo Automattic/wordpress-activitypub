@@ -5,12 +5,16 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests;
+
+use Activitypub\Hashtag;
+
 /**
  * Test class for Activitypub Hashtag.
  *
  * @coversDefaultClass \Activitypub\Hashtag
  */
-class Test_Activitypub_Hashtag extends WP_UnitTestCase {
+class Test_Hashtag extends \WP_UnitTestCase {
 	/**
 	 * Test the content.
 	 *

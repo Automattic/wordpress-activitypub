@@ -5,10 +5,12 @@
  * @package ActivityPub
  */
 
-namespace Activitypub;
+namespace Activitypub\Tests;
+
+use Activitypub\Scheduler;
 
 /**
- * Test cases for the Scheduler class.
+ * Test class for Scheduler.
  *
  * @coversDefaultClass \Activitypub\Scheduler
  */
@@ -79,7 +81,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		);
 
 		// Test with federation state.
-		set_wp_object_state( $this->post, 'federated' );
+		\Activitypub\set_wp_object_state( $this->post, 'federated' );
 		Scheduler::schedule_post_activity( 'trash', 'publish', $this->post );
 
 		$this->assertNotFalse(

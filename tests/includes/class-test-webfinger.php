@@ -5,12 +5,16 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests;
+
+use Activitypub\Webfinger;
+
 /**
  * Test class for Activitypub Webfinger.
  *
  * @coversDefaultClass \Activitypub\Webfinger
  */
-class Test_Activitypub_Webfinger extends WP_UnitTestCase {
+class Test_Webfinger extends \WP_UnitTestCase {
 	/**
 	 * Test the webfinger endpoint.
 	 *
@@ -21,7 +25,7 @@ class Test_Activitypub_Webfinger extends WP_UnitTestCase {
 	 * @param string $hash The expected hash.
 	 */
 	public function test_generate_cache_key( $uri, $hash ) {
-		$cache_key = Activitypub\Webfinger::generate_cache_key( $uri );
+		$cache_key = Webfinger::generate_cache_key( $uri );
 
 		$this->assertEquals( $cache_key, 'webfinger_' . $hash );
 	}

@@ -5,6 +5,8 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests;
+
 use Activitypub\Shortcodes;
 
 /**
@@ -12,17 +14,18 @@ use Activitypub\Shortcodes;
  *
  * @coversDefaultClass \Activitypub\Shortcodes
  */
-class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
+class Test_Shortcodes extends \WP_UnitTestCase {
 
 	/**
 	 * Test the content shortcode.
 	 */
 	public function test_content() {
+
 		Shortcodes::register();
 		global $post;
 
 		$post_id              = -99; // Negative ID, to avoid clash with a valid post.
-		$post                 = new stdClass();
+		$post                 = new \stdClass();
 		$post->ID             = $post_id;
 		$post->post_author    = 1;
 		$post->post_date      = current_time( 'mysql' );
@@ -55,7 +58,7 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 		global $post;
 
 		$post_id              = -98; // Negative ID, to avoid clash with a valid post.
-		$post                 = new stdClass();
+		$post                 = new \stdClass();
 		$post->ID             = $post_id;
 		$post->post_author    = 1;
 		$post->post_date      = current_time( 'mysql' );
@@ -88,7 +91,7 @@ class Test_Activitypub_Shortcodes extends WP_UnitTestCase {
 		global $post;
 
 		$post_id              = -97; // Negative ID, to avoid clash with a valid post.
-		$post                 = new stdClass();
+		$post                 = new \stdClass();
 		$post->ID             = $post_id;
 		$post->post_author    = 1;
 		$post->post_date      = current_time( 'mysql' );

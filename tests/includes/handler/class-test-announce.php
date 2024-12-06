@@ -1,16 +1,20 @@
 <?php
 /**
- * Test file for Activitypub Reaction Handler.
+ * Test file for Activitypub Announce Handler.
  *
  * @package Activitypub
  */
 
+namespace Activitypub\Tests\Handler;
+
+use Activitypub\Handler\Announce;
+
 /**
- * Test class for Activitypub Reaction Handler.
+ * Test class for Activitypub Announce Handler.
  *
- * @coversDefaultClass \Activitypub\Handler\Like
+ * @coversDefaultClass \Activitypub\Handler\Announce
  */
-class Test_Activitypub_Reaction_Handler extends WP_UnitTestCase {
+class Test_Announce extends \WP_UnitTestCase {
 
 	/**
 	 * User ID.
@@ -94,7 +98,7 @@ class Test_Activitypub_Reaction_Handler extends WP_UnitTestCase {
 	public function create_test_object() {
 		return array(
 			'actor'  => $this->user_url,
-			'type'   => 'Like',
+			'type'   => 'Announce',
 			'id'     => 'https://example.com/id/' . microtime( true ),
 			'to'     => array( $this->user_url ),
 			'cc'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
@@ -103,35 +107,14 @@ class Test_Activitypub_Reaction_Handler extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test handle like.
-	 *
-	 * @covers ::handle_like
-	 */
-	public function test_handle_like() {
-		$object = $this->create_test_object();
-		Activitypub\Handler\Like::handle_like( $object, $this->user_id );
-
-		$args = array(
-			'type'    => 'like',
-			'post_id' => $this->post_id,
-		);
-
-		$query  = new \WP_Comment_Query( $args );
-		$result = $query->comments;
-
-		$this->assertInstanceOf( 'WP_Comment', $result[0] );
-	}
-
-	/**
-	 * Test handle handle_announce.
+	 * Test handle announce.
 	 *
 	 * @covers ::handle_announce
 	 */
 	public function test_handle_announce() {
-		$object         = $this->create_test_object();
-		$object['type'] = 'Announce';
+		$object = $this->create_test_object();
 
-		Activitypub\Handler\Announce::handle_announce( $object, $this->user_id );
+		Announce::handle_announce( $object, $this->user_id );
 
 		$args = array(
 			'type'    => 'repost',
