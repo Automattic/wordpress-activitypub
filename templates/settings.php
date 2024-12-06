@@ -241,7 +241,7 @@
 			<h3><?php \esc_html_e( 'Security', 'activitypub' ); ?></h3>
 			<table class="form-table">
 				<tbody>
-					<?php if ( ! defined( ACTIVITYPUB_AUTHORIZED_FETCH ) ) : ?>
+					<?php if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) : ?>
 					<tr>
 						<th scope="row">
 							<?php \esc_html_e( 'Authorized-Fetch', 'activitypub' ); ?>
