@@ -141,11 +141,6 @@ abstract class Base {
 	}
 
 	/**
-	 * Get the ID of the WordPress Object.
-	 */
-	abstract protected function get_id();
-
-	/**
 	 * Returns a generic locale based on the Blog settings.
 	 *
 	 * @return string The locale of the blog.

@@ -21,15 +21,6 @@ class Activity_Object extends Base {
 	}
 
 	/**
-	 * Get the ID of the WordPress Object.
-	 *
-	 * @return string The ID of the WordPress Object.
-	 */
-	protected function get_id() {
-		return '';
-	}
-
-	/**
 	 * Helper function to get the @-Mentions from the post content.
 	 *
 	 * @return array The list of @-Mentions.
@@ -151,21 +142,5 @@ class Activity_Object extends Base {
 		}
 
 		return \array_unique( $tags, SORT_REGULAR );
-	}
-
-	/**
-	 * Returns the ID of the WordPress Object.
-	 */
-	public function get_wp_user_id() {
-		return '';
-	}
-
-	/**
-	 * Change the User-ID of the WordPress Post.
-	 *
-	 * @param int $user_id The new user ID.
-	 */
-	public function change_wp_user_id( $user_id ) {
-		// do nothing.
 	}
 }
