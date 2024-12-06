@@ -186,11 +186,11 @@ abstract class Base {
 		);
 	}
 
-  /**
+	/**
 	 * Get the replies Collection.
 	 *
 	 * @return array The replies collection.
-   */
+	 */
 	public function get_replies() {
 		return Replies::get_collection( $this->item );
 	}
