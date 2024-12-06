@@ -7,8 +7,6 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Tests\ActivityPub_TestCase_Cache_HTTP;
-
 /**
  * Test class for Functions.
  */

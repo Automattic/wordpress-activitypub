@@ -7,8 +7,6 @@
 
 namespace Activitypub\Tests\Integration;
 
-use Activitypub\Integration\Seriously_Simple_Podcasting;
-
 /**
  * Test class for Seriously Simple Podcasting integration.
  *

@@ -7,8 +7,6 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Admin;
-
 /**
  * Test class for Admin.
  *

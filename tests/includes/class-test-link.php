@@ -7,8 +7,6 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Link;
-
 /**
  * Test class for Activitypub Link.
  *

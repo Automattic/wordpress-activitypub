@@ -7,8 +7,6 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Hashtag;
-
 /**
  * Test class for Activitypub Hashtag.
  *
