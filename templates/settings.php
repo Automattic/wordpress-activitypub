@@ -249,7 +249,7 @@
 						<td>
 							<p>
 								<label>
-									<input type="checkbox" name="activitypub_authorized_fetch" id="activitypub_authorized_fetch" value="1" <?php echo \checked( '1', \get_option( 'activitypub_authorized_fetch', '0' ) ); ?> />
+									<input type="checkbox" name="activitypub_authorized_fetch" id="activitypub_authorized_fetch" value="1" <?php \checked( '1', \get_option( 'activitypub_authorized_fetch', '0' ) ); ?> />
 									<?php \esc_html_e( 'Require HTTP signature authentication on ActivityPub representations of public posts and profiles.', 'activitypub' ); ?>
 								</label>
 							</p>
