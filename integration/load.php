@@ -7,6 +7,8 @@
 
 namespace Activitypub\Integration;
 
+\Activitypub\Autoloader::register_path( __NAMESPACE__, __DIR__ );
+
 /**
  * Initialize the ActivityPub integrations.
  */
@@ -19,7 +21,6 @@ function plugin_init() {
 	 *
 	 * @see https://wordpress.org/plugins/webfinger/
 	 */
-	require_once __DIR__ . '/class-webfinger.php';
 	Webfinger::init();
 
 	/**
@@ -30,7 +31,6 @@ function plugin_init() {
 	 *
 	 * @see https://wordpress.org/plugins/nodeinfo/
 	 */
-	require_once __DIR__ . '/class-nodeinfo.php';
 	Nodeinfo::init();
 
 	/**
@@ -41,7 +41,6 @@ function plugin_init() {
 	 * @see https://wordpress.org/plugins/enable-mastodon-apps/
 	 */
 	if ( \defined( 'ENABLE_MASTODON_APPS_VERSION' ) ) {
-		require_once __DIR__ . '/class-enable-mastodon-apps.php';
 		Enable_Mastodon_Apps::init();
 	}
 
@@ -53,7 +52,6 @@ function plugin_init() {
 	 * @see https://wordpress.org/plugins/opengraph/
 	 */
 	if ( '1' === \get_option( 'activitypub_use_opengraph', '1' ) ) {
-		require_once __DIR__ . '/class-opengraph.php';
 		Opengraph::init();
 	}
 
@@ -65,7 +63,6 @@ function plugin_init() {
 	 * @see https://jetpack.com/
 	 */
 	if ( \defined( 'JETPACK__VERSION' ) && ! \defined( 'IS_WPCOM' ) ) {
-		require_once __DIR__ . '/class-jetpack.php';
 		Jetpack::init();
 	}
 
@@ -84,7 +81,6 @@ function plugin_init() {
 					'WP_Post' === $object_class &&
 					\get_post_meta( $data->ID, 'audio_file', true )
 				) {
-					require_once __DIR__ . '/class-seriously-simple-podcasting.php';
 					return new Seriously_Simple_Podcasting( $data );
 				}
 				return $transformer;
@@ -104,22 +100,9 @@ function plugin_init() {
  * @return array The Stream connectors with the ActivityPub connector.
  */
 function register_stream_connector( $classes ) {
-	require plugin_dir_path( __FILE__ ) . '/class-stream-connector.php';
+	$class = new Stream_Connector();
 
-	$class_name = '\Activitypub\Integration\Stream_Connector';
-
-	if ( ! class_exists( $class_name ) ) {
-		return;
-	}
-
-	wp_stream_get_instance();
-	$class = new $class_name();
-
-	if ( ! method_exists( $class, 'is_dependency_satisfied' ) ) {
-		return;
-	}
-
-	if ( $class->is_dependency_satisfied() ) {
+	if ( method_exists( $class, 'is_dependency_satisfied' ) && $class->is_dependency_satisfied() ) {
 		$classes[] = $class;
 	}
 
@@ -145,11 +128,4 @@ add_filter(
  *
  * @see https://buddypress.org/
  */
-add_action(
-	'bp_include',
-	function () {
-		require_once __DIR__ . '/class-buddypress.php';
-		Buddypress::init();
-	},
-	0
-);
+add_action( 'bp_include', array( __NAMESPACE__ . '\Buddypress', 'init' ), 0 );
