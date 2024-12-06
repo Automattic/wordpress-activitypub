@@ -65,12 +65,12 @@ abstract class Base {
 	/**
 	 * Transform all properties with available get(ter) functions.
 	 *
-	 * @param Base_Object $activitypub_object The ActivityPub Object.
+	 * @param Base_Object $activity_object The ActivityPub Object.
 	 *
 	 * @return Base_Object The transformed ActivityPub Object.
 	 */
-	protected function transform_object_properties( $activitypub_object ) {
-		$vars = $activitypub_object->get_object_var_keys();
+	protected function transform_object_properties( $activity_object ) {
+		$vars = $activity_object->get_object_var_keys();
 
 		foreach ( $vars as $var ) {
 			$getter = 'get_' . $var;
@@ -81,22 +81,39 @@ abstract class Base {
 				if ( isset( $value ) ) {
 					$setter = 'set_' . $var;
 
-					call_user_func( array( $activitypub_object, $setter ), $value );
+					/**
+					 * Filter the value before it is set to the Activity-Object `$activity_object`.
+					 *
+					 * @param mixed $value The value that should be set.
+					 * @param mixed $item  The Object.
+					 */
+					$value = apply_filters( 'activitypub_transform_' . $setter, $value, $this->item );
+
+					/**
+					 * Filter the value before it is set to the Activity-Object `$activity_object`.
+					 *
+					 * @param mixed  $value The value that should be set.
+					 * @param string $var   The variable name.
+					 * @param mixed  $item  The Object.
+					 */
+					$value = apply_filters( 'activitypub_transform_set', $value, $var, $this->item );
+
+					call_user_func( array( $activity_object, $setter ), $value );
 				}
 			}
 		}
-		return $activitypub_object;
+		return $activity_object;
 	}
 
 	/**
 	 * Transform the WordPress Object into an ActivityPub Object.
 	 *
-	 * @return Base_Object|object The ActivityPub Object.
+	 * @return Base_Object|object The Activity-Object.
 	 */
 	public function to_object() {
-		$activitypub_object = new Base_Object();
+		$activity_object = new Base_Object();
 
-		return $this->transform_object_properties( $activitypub_object );
+		return $this->transform_object_properties( $activity_object );
 	}
 
 	/**
