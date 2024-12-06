@@ -120,23 +120,6 @@ function plugin_init() {
 	}
 );
 
-/**
- * Add plugin settings link.
- *
- * @param array $actions The current actions.
- */
-function plugin_settings_link( $actions ) {
-	$settings_link   = array();
-	$settings_link[] = \sprintf(
-		'<a href="%1s">%2s</a>',
-		\menu_page_url( 'activitypub', false ),
-		\__( 'Settings', 'activitypub' )
-	);
-
-	return \array_merge( $settings_link, $actions );
-}
-\add_filter( 'plugin_action_links_' . ACTIVITYPUB_PLUGIN_BASENAME, __NAMESPACE__ . '\plugin_settings_link' );
-
 \register_activation_hook(
 	__FILE__,
 	array(
