@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Setting to enable/disable Authorized-Fetch
+
 ### Improved
 
 * Added screen reader text to the "Follow Me" block for improved accessibility

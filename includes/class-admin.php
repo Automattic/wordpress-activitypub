@@ -301,6 +301,16 @@ class Admin {
 			)
 		);
 
+		\register_setting(
+			'activitypub',
+			'activitypub_authorized_fetch',
+			array(
+				'type'        => 'boolean',
+				'description' => \__( 'Require HTTP signature authentication.', 'activitypub' ),
+				'default'     => false,
+			)
+		);
+
 		// Blog-User Settings.
 		\register_setting(
 			'activitypub_blog',
