@@ -14,11 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improved
 
 * Added screen reader text to the "Follow Me" block for improved accessibility
+* Added `media_type` support to Activity-Object-Transformers
+* Clarified settings page text around which users get Activitypub profiles
 
 ### Fixed
 
 * Prevent hex color codes in HTML attributes from being added as post tags
 * Fixed a typo in the custom post content settings
+* Prevent draft posts from being federated when bulk deleted
 
 ## [4.3.0] - 2024-12-02
 
@@ -1121,6 +1124,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/4.3.0...trunk
+<!-- Add new release below and update "Unreleased" link -->
 [4.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.2.1...4.3.0
 [4.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.2.0...4.2.1
 [4.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.1.1...4.2.0
