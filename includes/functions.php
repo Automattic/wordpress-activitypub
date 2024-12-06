@@ -9,9 +9,11 @@ namespace Activitypub;
 
 use WP_Error;
 use Activitypub\Activity\Activity;
-use Activitypub\Collection\Followers;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Post;
+use Activitypub\Transformer\Factory as Transformer_Factory;
 
 /**
  * Returns the ActivityPub default JSON-context.
@@ -1528,4 +1530,48 @@ function is_self_ping( $id ) {
 	}
 
 	return false;
+}
+
+/**
+ * Add an object to the outbox.
+ *
+ * @param mixed   $data    The object to add to the outbox.
+ * @param string  $type    The type of the Activity.
+ * @param integer $user_id The User-ID.
+ *
+ * @return boolean|int The ID of the outbox item or false on failure.
+ */
+function add_to_outbox( $data, $type = 'Create', $user_id = 0 ) {
+	$transformer = Transformer_Factory::get_transformer( $data );
+
+	if ( ! $transformer || is_wp_error( $transformer ) ) {
+		return false;
+	}
+
+	$activity = $transformer->to_object();
+
+	if ( ! $activity || is_wp_error( $activity ) ) {
+		return false;
+	}
+
+	set_wp_object_state( $data, 'federate' );
+
+	$id = Outbox::add( $activity, $type, $user_id );
+
+	if ( ! $id ) {
+		return false;
+	}
+
+	$hook = 'activitypub_process_outbox';
+	$args = array( $id );
+
+	if ( false === wp_next_scheduled( $hook, $args ) ) {
+		\wp_schedule_single_event(
+			\time() + 10,
+			$hook,
+			$args
+		);
+	}
+
+	return $id;
 }

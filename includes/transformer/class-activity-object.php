@@ -131,7 +131,7 @@ class Activity_Object extends Base {
 	 * @return array The list of Tags.
 	 */
 	protected function get_tag() {
-		$tags = $this->item->get_tags();
+		$tags = $this->item->get_tag();
 
 		if ( ! $tags ) {
 			$tags = array();
@@ -151,5 +151,21 @@ class Activity_Object extends Base {
 		}
 
 		return \array_unique( $tags, SORT_REGULAR );
+	}
+
+	/**
+	 * Returns the ID of the WordPress Object.
+	 */
+	public function get_wp_user_id() {
+		return '';
+	}
+
+	/**
+	 * Change the User-ID of the WordPress Post.
+	 *
+	 * @param int $user_id The new user ID.
+	 */
+	public function change_wp_user_id( $user_id ) {
+		// do nothing.
 	}
 }

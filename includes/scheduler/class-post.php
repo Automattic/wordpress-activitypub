@@ -7,8 +7,9 @@
 
 namespace Activitypub\Scheduler;
 
+use function Activitypub\add_to_outbox;
 use function Activitypub\is_post_disabled;
-use function Activitypub\set_wp_object_state;
+use function Activitypub\get_wp_object_state;
 
 /**
  * Post scheduler class.
@@ -96,12 +97,6 @@ class Post {
 			return;
 		}
 
-		$hook = 'activitypub_send_post';
-		$args = array( $post->ID, $type );
-
-		if ( false === wp_next_scheduled( $hook, $args ) ) {
-			set_wp_object_state( $post, 'federate' );
-			\wp_schedule_single_event( \time() + 10, $hook, $args );
-		}
+		add_to_outbox( $post, $type, $post->post_author );
 	}
 }

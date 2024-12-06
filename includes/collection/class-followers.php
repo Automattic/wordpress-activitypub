@@ -266,7 +266,7 @@ class Followers {
 	}
 
 	/**
-	 * Returns all Inboxes for a Users Followers.
+	 * Returns all Inboxes for a Actors Followers.
 	 *
 	 * @param int $user_id The ID of the WordPress User.
 	 *

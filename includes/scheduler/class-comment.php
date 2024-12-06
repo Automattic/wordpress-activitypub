@@ -7,6 +7,7 @@
 
 namespace Activitypub\Scheduler;
 
+use function Activitypub\add_to_outbox;
 use function Activitypub\set_wp_object_state;
 use function Activitypub\should_comment_be_federated;
 
@@ -81,12 +82,6 @@ class Comment {
 			return;
 		}
 
-		$hook = 'activitypub_send_comment';
-		$args = array( $comment->comment_ID, $type );
-
-		if ( false === wp_next_scheduled( $hook, $args ) ) {
-			set_wp_object_state( $comment, 'federate' );
-			\wp_schedule_single_event( \time() + 10, $hook, $args );
-		}
+		add_to_outbox( $comment, $type, $comment->user_id );
 	}
 }

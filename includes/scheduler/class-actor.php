@@ -7,6 +7,9 @@
 
 namespace Activitypub\Scheduler;
 
+use Activitypub\Collection\Actors;
+
+use function Activitypub\add_to_outbox;
 use function Activitypub\is_user_type_disabled;
 
 /**
@@ -92,10 +95,8 @@ class Actor {
 	 * @param int $user_id  The user ID to update (Could be 0 for Blog-User).
 	 */
 	public static function schedule_profile_update( $user_id ) {
-		\wp_schedule_single_event(
-			\time() + 10,
-			'activitypub_send_update_profile_activity',
-			array( $user_id )
-		);
+		$actor = Actors::get_by_id( $user_id );
+
+		add_to_outbox( $actor->get_id(), 'Update', $user_id );
 	}
 }

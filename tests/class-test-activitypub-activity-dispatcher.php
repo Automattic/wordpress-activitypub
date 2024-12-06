@@ -13,7 +13,7 @@
 class Test_Activitypub_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HTTP {
 
 	/**
-	 * Users.
+	 * Actors.
 	 *
 	 * @var array[] $users
 	 */

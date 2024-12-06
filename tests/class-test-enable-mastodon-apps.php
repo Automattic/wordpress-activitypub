@@ -13,7 +13,7 @@
 class Test_Enable_Mastodon_Apps extends WP_UnitTestCase {
 
 	/**
-	 * Users.
+	 * Actors.
 	 *
 	 * @var array[]
 	 */

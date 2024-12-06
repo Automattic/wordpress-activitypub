@@ -13,7 +13,7 @@
 class Test_Activitypub_Followers extends WP_UnitTestCase {
 
 	/**
-	 * Users.
+	 * Actors.
 	 *
 	 * @var array[]
 	 */

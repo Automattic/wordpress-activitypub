@@ -7,8 +7,6 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Transformer\Factory;
-
 /**
  * ActivityPub Outbox Collection
  */
@@ -18,24 +16,17 @@ class Outbox {
 	/**
 	 * Add an Item to the outbox.
 	 *
-	 * @param string|array|Base_Object|WP_Post|WP_Comment $item The item to add.
-	 * @param int                                         $user_id The user ID.
-	 * @param string                                      $activity_type The activity type.
+	 * @param \Activitypub\Activity\Base_Object $activity_object The Activity-Object  to add as JSON.
+	 * @param string                            $activity_type   The activity type.
+	 * @param int                               $user_id         The user ID.
 	 *
 	 * @return mixed The added item or an error.
 	 */
-	public static function add_item( $item, $user_id, $activity_type = 'Create' ) { // phpcs:ignore
-		$transformer = Factory::get_transformer( $item );
-		$object      = $transformer->transform();
-
-		if ( ! $object || is_wp_error( $object ) ) {
-			return $object;
-		}
-
+	public static function add( $activity_object, $activity_type = 'Create', $user_id ) { // phpcs:ignore
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
-			'post_title'   => $object->get_id(),
-			'post_content' => $object->to_json(),
+			'post_title'   => $activity_object->get_id(),
+			'post_content' => $activity_object->to_json(),
 			'post_author'  => $user_id,
 			'post_status'  => 'draft',
 		);
@@ -46,12 +37,16 @@ class Outbox {
 			\kses_remove_filters();
 		}
 
-		$result = \wp_insert_post( $outbox_item, true );
+		$id = \wp_insert_post( $outbox_item, true );
 
 		if ( $has_kses ) {
 			\kses_init_filters();
 		}
 
-		return $result;
+		if ( ! $id || \is_wp_error( $id ) ) {
+			return false;
+		}
+
+		return $id;
 	}
 }

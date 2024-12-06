@@ -186,7 +186,7 @@ class Comment extends Base {
 			return $blog_user;
 		}
 
-		$user = Users::get_by_id( $this->item->user_id );
+		$user = Actors::get_by_id( $this->item->user_id );
 
 		if ( $user && ! is_wp_error( $user ) ) {
 			$this->actor_object = $user;
