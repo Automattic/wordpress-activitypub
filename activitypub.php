@@ -27,12 +27,12 @@ use WP_CLI;
 \define( 'ACTIVITYPUB_PLUGIN_FILE', ACTIVITYPUB_PLUGIN_DIR . basename( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
+require_once __DIR__ . '/includes/class-autoloader.php';
 require_once __DIR__ . '/includes/compat.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/constants.php';
 require_once __DIR__ . '/integration/load.php';
 
-require_once __DIR__ . '/includes/class-autoloader.php';
 Autoloader::register_path( __NAMESPACE__, __DIR__ . '/includes' );
 
 /**
