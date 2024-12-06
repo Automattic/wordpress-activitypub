@@ -27,21 +27,21 @@ class Settings_Fields {
 			'activitypub_profiles',
 			__( 'Profiles', 'activitypub' ),
 			array( __CLASS__, 'render_profiles_section' ),
-			'activitypub'
+			'activitypub_settings'
 		);
 
 		add_settings_section(
 			'activitypub_activities',
 			__( 'Activities', 'activitypub' ),
 			array( __CLASS__, 'render_activities_section' ),
-			'activitypub'
+			'activitypub_settings'
 		);
 
 		add_settings_section(
 			'activitypub_general',
 			__( 'General', 'activitypub' ),
 			array( __CLASS__, 'render_general_section' ),
-			'activitypub'
+			'activitypub_settings'
 		);
 
 		// Add settings fields.
@@ -49,7 +49,7 @@ class Settings_Fields {
 			'activitypub_actor_mode',
 			__( 'Enable profiles by type', 'activitypub' ),
 			array( __CLASS__, 'render_actor_mode_field' ),
-			'activitypub',
+			'activitypub_settings',
 			'activitypub_profiles'
 		);
 
@@ -57,7 +57,7 @@ class Settings_Fields {
 			'activitypub_object_type',
 			__( 'Activity-Object-Type', 'activitypub' ),
 			array( __CLASS__, 'render_object_type_field' ),
-			'activitypub',
+			'activitypub_settings',
 			'activitypub_activities'
 		);
 
@@ -67,7 +67,7 @@ class Settings_Fields {
 				'activitypub_custom_post_content',
 				__( 'Post content', 'activitypub' ),
 				array( __CLASS__, 'render_custom_post_content_field' ),
-				'activitypub',
+				'activitypub_settings',
 				'activitypub_activities',
 				array(
 					'class'     => array( 'activitypub-custom-post-content' ),
@@ -80,7 +80,7 @@ class Settings_Fields {
 			'activitypub_max_image_attachments',
 			__( 'Media attachments', 'activitypub' ),
 			array( __CLASS__, 'render_max_image_attachments_field' ),
-			'activitypub',
+			'activitypub_settings',
 			'activitypub_activities',
 			array(
 				'label_for' => 'activitypub_max_image_attachments',
@@ -91,7 +91,7 @@ class Settings_Fields {
 			'activitypub_support_post_types',
 			__( 'Supported post types', 'activitypub' ),
 			array( __CLASS__, 'render_support_post_types_field' ),
-			'activitypub',
+			'activitypub_settings',
 			'activitypub_activities'
 		);
 
@@ -99,7 +99,7 @@ class Settings_Fields {
 			'activitypub_use_hashtags',
 			__( 'Hashtags', 'activitypub' ),
 			array( __CLASS__, 'render_use_hashtags_field' ),
-			'activitypub',
+			'activitypub_settings',
 			'activitypub_activities',
 			array(
 				'label_for' => 'activitypub_use_hashtags',
@@ -110,7 +110,7 @@ class Settings_Fields {
 			'activitypub_use_opengraph',
 			__( 'OpenGraph', 'activitypub' ),
 			array( __CLASS__, 'render_use_opengraph_field' ),
-			'activitypub',
+			'activitypub_settings',
 			'activitypub_general',
 			array(
 				'label_for' => 'activitypub_use_opengraph',
@@ -121,7 +121,7 @@ class Settings_Fields {
 			'activitypub_attribution_domains',
 			__( 'Attribution Domains', 'activitypub' ),
 			array( __CLASS__, 'render_attribution_domains_field' ),
-			'activitypub',
+			'activitypub_settings',
 			'activitypub_general',
 			array(
 				'label_for' => 'activitypub_attribution_domains',
@@ -132,7 +132,7 @@ class Settings_Fields {
 			'activitypub_blocklist',
 			__( 'Blocklist', 'activitypub' ),
 			array( __CLASS__, 'render_blocklist_field' ),
-			'activitypub',
+			'activitypub_settings',
 			'activitypub_general'
 		);
 
@@ -141,15 +141,18 @@ class Settings_Fields {
 				'activitypub_security',
 				__( 'Security', 'activitypub' ),
 				array( __CLASS__, 'render_security_section' ),
-				'activitypub'
+				'activitypub_settings'
 			);
 
 			add_settings_field(
 				'activitypub_authorized_fetch',
 				__( 'Authorized Fetch', 'activitypub' ),
 				array( __CLASS__, 'render_authorized_fetch_field' ),
-				'activitypub',
-				'activitypub_security'
+				'activitypub_settings',
+				'activitypub_security',
+				array(
+					'label_for' => 'activitypub_authorized_fetch    ',
+				)
 			);
 		}
 	}
