@@ -86,7 +86,7 @@ class Comment {
 
 		if ( false === wp_next_scheduled( $hook, $args ) ) {
 			set_wp_object_state( $comment, 'federate' );
-			\wp_schedule_single_event( \time(), $hook, $args );
+			\wp_schedule_single_event( \time() + 10, $hook, $args );
 		}
 	}
 }
