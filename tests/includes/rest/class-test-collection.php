@@ -5,22 +5,21 @@
  * @package ActivityPub
  */
 
-namespace Activitypub\Tests;
+namespace Activitypub\Tests\Rest;
 
-use WP_UnitTestCase;
-use WP_REST_Request;
-use WP_REST_Server;
-use Activitypub\Rest\Collection;
 use Activitypub\Activity\Actor;
+use Activitypub\Rest\Collection;
 
 /**
  * Test Moderators REST Endpoint.
+ *
+ * @coversDefaultClass \Activitypub\Rest\Collection
  */
-class Test_Activitypub_Rest_Moderators extends WP_UnitTestCase {
+class Test_Collection extends \WP_UnitTestCase {
 	/**
 	 * The REST Server.
 	 *
-	 * @var WP_REST_Server
+	 * @var \WP_REST_Server
 	 */
 	protected $server;
 
@@ -74,7 +73,7 @@ class Test_Activitypub_Rest_Moderators extends WP_UnitTestCase {
 
 		global $wp_rest_server;
 
-		$wp_rest_server = new WP_REST_Server();
+		$wp_rest_server = new \WP_REST_Server();
 		$this->server   = $wp_rest_server;
 
 		do_action( 'rest_api_init' );
@@ -84,7 +83,7 @@ class Test_Activitypub_Rest_Moderators extends WP_UnitTestCase {
 	 * Test moderators endpoint response structure.
 	 */
 	public function test_moderators_get() {
-		new WP_REST_Request( 'GET', '/activitypub/1.0/collections/moderators' );
+		new \WP_REST_Request( 'GET', '/activitypub/1.0/collections/moderators' );
 		$response = Collection::moderators_get();
 
 		$this->assertEquals( 200, $response->get_status() );
