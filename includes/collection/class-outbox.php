@@ -22,12 +22,13 @@ class Outbox {
 	 *
 	 * @return mixed The added item or an error.
 	 */
-	public static function add( $activity_object, $activity_type, $user_id ) { // phpcs:ignore
+	public static function add( $activity_object, $activity_type, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) { // phpcs:ignore
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
 			'post_title'   => $activity_object->get_id(),
 			'post_content' => $activity_object->to_json(),
-			'post_author'  => $user_id,
+			// ensure that user ID is always above 0.
+			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'draft',
 		);
 
