@@ -5,6 +5,8 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests;
+
 /**
  * Test class for Activitypub Cache HTTP.
  */
@@ -59,7 +61,7 @@ class ActivityPub_TestCase_Cache_HTTP extends \WP_UnitTestCase {
 	 *      @type string $body   Request body.
 	 * }
 	 * @param string $url The request URL.
-	 * @return array|bool|WP_Error Array containing 'headers', 'body', 'response', 'cookies', 'filename'. A WP_Error instance. A boolean false value.
+	 * @return array|bool|\WP_Error Array containing 'headers', 'body', 'response', 'cookies', 'filename'. A WP_Error instance. A boolean false value.
 	 */
 	public static function pre_http_request( $preempt, $request, $url ) {
 		$p     = wp_parse_url( $url );
