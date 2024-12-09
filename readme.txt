@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
-Stable tag: 4.3.0
+Stable tag: 4.4.0
 Requires PHP: 7.0
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -132,7 +132,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-= Unreleased =
+= 4.4.0 =
 
 * Added: Setting to enable/disable Authorized-Fetch
 * Improved: Added screen reader text for the "Follow Me" block for improved accessibility
