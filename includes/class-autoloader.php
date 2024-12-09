@@ -62,7 +62,7 @@ class Autoloader {
 	 * @param string $path   Path to the files to be loaded.
 	 */
 	public static function register_path( $prefix, $path ) {
-		$loader = new Autoloader( $prefix, $path );
+		$loader = new self( $prefix, $path );
 		spl_autoload_register( array( $loader, 'load' ) );
 	}
 
