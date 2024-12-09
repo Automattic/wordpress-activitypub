@@ -599,7 +599,7 @@ class Admin {
 			unset( $actions['edit'] );
 			unset( $actions['quickedit'] );
 		}
-		
+
 		if ( in_array( get_comment_type( $comment ), Comment::get_comment_type_names(), true ) ) {
 			unset( $actions['reply'] );
 		}
@@ -681,14 +681,8 @@ class Admin {
 	 * @return array The extended comment types.
 	 */
 	public static function comment_types_dropdown( $types ) {
-		global $activitypub_comment_types;
-
-		if ( ! is_array( $activitypub_comment_types ) ) {
-			return $types;
-		}
-
-		foreach ( $activitypub_comment_types as $type ) {
-			$types[ $type['type'] ] = esc_html( $type['label'] );
+		foreach ( Comment::get_comment_types() as $comment_type ) {
+			$types[ $comment_type['type'] ] = esc_html( $comment_type['label'] );
 		}
 
 		return $types;
