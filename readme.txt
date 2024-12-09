@@ -135,6 +135,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: Setting to enable/disable Authorized-Fetch
+* Added: `icon` support for `Audio` and `Video` attachments
 * Improved: Added screen reader text for the "Follow Me" block for improved accessibility
 * Improved: Added `media_type` support to Activity-Object-Transformers
 * Improved: Clarified settings page text around which users get Activitypub profiles

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Setting to enable/disable Authorized-Fetch
+* `icon` support for `Audio` and `Video` attachments
 
 ### Improved
 
