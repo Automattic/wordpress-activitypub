@@ -594,9 +594,19 @@ class Admin {
 	 * @return array The modified actions.
 	 */
 	public static function comment_row_actions( $actions, $comment ) {
+		global $activitypub_comment_types;
+
 		if ( was_comment_received( $comment ) ) {
 			unset( $actions['edit'] );
 			unset( $actions['quickedit'] );
+		}
+
+		$comment_type = get_comment_type( $comment );
+
+		foreach ( $activitypub_comment_types as $type ) {
+			if ( $type['type'] === $comment_type ) {
+				unset( $actions['reply'] );
+			}
 		}
 
 		return $actions;
