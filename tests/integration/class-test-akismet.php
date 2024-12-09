@@ -45,7 +45,7 @@ class Test_Akismet extends WP_UnitTestCase {
 	 * @covers ::comment_row_actions
 	 */
 	public function test_comment_row_actions() {
-		// Create a normal comment
+		// Create a normal comment.
 		$normal_comment_id = $this->factory->comment->create(
 			array(
 				'comment_post_ID' => self::$post_id,
@@ -53,7 +53,7 @@ class Test_Akismet extends WP_UnitTestCase {
 			)
 		);
 
-		// Create an ActivityPub comment
+		// Create an ActivityPub comment.
 		$ap_comment_id = $this->factory->comment->create(
 			array(
 				'comment_post_ID' => self::$post_id,
@@ -62,7 +62,7 @@ class Test_Akismet extends WP_UnitTestCase {
 		);
 		add_comment_meta( $ap_comment_id, 'protocol', 'activitypub' );
 
-		// Test actions for normal comment
+		// Test actions for normal comment.
 		$actions = array(
 			'approve' => 'Approve',
 			'spam'    => 'Spam',
@@ -72,13 +72,13 @@ class Test_Akismet extends WP_UnitTestCase {
 		$filtered_actions = Akismet::comment_row_actions( $actions, get_comment( $normal_comment_id ) );
 		$this->assertArrayHasKey( 'history', $filtered_actions, 'History action should remain for normal comments' );
 
-		// Test actions for ActivityPub comment
+		// Test actions for ActivityPub comment.
 		$filtered_actions = Akismet::comment_row_actions( $actions, get_comment( $ap_comment_id ) );
 		$this->assertArrayNotHasKey( 'history', $filtered_actions, 'History action should be removed for ActivityPub comments' );
 		$this->assertArrayHasKey( 'approve', $filtered_actions, 'Other actions should remain untouched' );
 		$this->assertArrayHasKey( 'spam', $filtered_actions, 'Other actions should remain untouched' );
 
-		// Clean up
+		// Clean up.
 		wp_delete_comment( $normal_comment_id, true );
 		wp_delete_comment( $ap_comment_id, true );
 	}
