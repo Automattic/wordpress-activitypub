@@ -822,6 +822,9 @@ function object_to_uri( $data ) {
 
 	// Return part of Object that makes most sense.
 	switch ( $type ) {
+		case 'Image':
+			$data = $data['url'];
+			break;
 		case 'Link':
 			$data = $data['href'];
 			break;

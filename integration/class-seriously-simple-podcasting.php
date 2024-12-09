@@ -9,6 +9,7 @@ namespace Activitypub\Integration;
 
 use Activitypub\Transformer\Post;
 
+use function Activitypub\object_to_uri;
 use function Activitypub\generate_post_summary;
 
 /**
@@ -35,9 +36,13 @@ class Seriously_Simple_Podcasting extends Post {
 			'name' => \esc_attr( \get_the_title( $post->ID ) ?? '' ),
 		);
 
-		$cover = \get_post_meta( $post->ID, 'cover_image', true );
-		if ( $cover ) {
-			$attachment['icon'] = \esc_url( $cover );
+		$icon = \get_post_meta( $post->ID, 'cover_image', true );
+		if ( ! $icon ) {
+			$icon = $this->get_icon();
+		}
+
+		if ( $icon ) {
+			$attachment['icon'] = \esc_url( object_to_uri( $icon ) );
 		}
 
 		return array( $attachment );
