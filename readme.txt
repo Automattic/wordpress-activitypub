@@ -180,48 +180,6 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Proper margins for notices and font size for page title in settings screen.
 * Fixed: Ensure that `?author=0` resolves to blog user
 
-= 4.1.1 =
-
-* Fixed: Only revert to URL if there is one
-* Fixed: Migration
-
-= 4.1.0 =
-
-* Added: Add custom Preview for "Fediverse"
-* Added: Support `comment_previously_approved` setting
-* Fixed: Hide sticky posts that are not public
-* Improved: `activity_handle_undo` action
-* Improved: Add title to content if post is a `Note`
-* Improved: Fallback to blog-user if user is disabled
-
-= 4.0.2 =
-
-* Fixed: Do not federate "Local" posts
-* Improved: Help-text for Content-Warning box
-
-= 4.0.1 =
-
-* Fixed: Missing URL-Param handling in REST API
-* Fixed: Seriously Simple Podcasting integration
-* Fixed: Multiple small fixes
-* Improved: Provide contextual fallback for dynamic blocks
-
-= 4.0.0 =
-
-* Added: Fire an action before a follower is removed
-* Added: Make Intent-URL filterable
-* Added: `title` attribute to link headers for better readability
-* Added: Post "visibility" feature
-* Added: Attribution-Domains support
-* Improved: Inbox validation
-* Improved: WordPress-Post-Type - Detection
-* Improved: Only validate POST params and do not fall back to GET params
-* Improved: ID handling for a better compatibility with caching plugins
-* Fixed: The "Shared Inbox" endpoint
-* Fixed: Ensure that sticky_posts is an array
-* Fixed: URLs and Hashtags in profiles were not converted
-* Fixed: A lot of small improvements and fixes
-
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).
 
 == Upgrade Notice ==
