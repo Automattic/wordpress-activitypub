@@ -102,6 +102,44 @@ function plugin_settings_link( $actions ) {
 }
 \add_filter( 'plugin_action_links_' . ACTIVITYPUB_PLUGIN_BASENAME, __NAMESPACE__ . '\plugin_settings_link' );
 
+/**
+ * Class Autoloader.
+ */
+\spl_autoload_register(
+	function ( $full_class ) {
+		$base_dir = __DIR__ . '/includes/';
+		$base     = 'Activitypub\\';
+
+		if ( strncmp( $full_class, $base, strlen( $base ) ) === 0 ) {
+			$maybe_uppercase = str_replace( $base, '', $full_class );
+			$class           = strtolower( $maybe_uppercase );
+			// All classes should be capitalized. If this is instead looking for a lowercase method, we ignore that.
+			if ( $maybe_uppercase === $class ) {
+				return;
+			}
+
+			if ( false !== strpos( $class, '\\' ) ) {
+				$parts    = explode( '\\', $class );
+				$class    = array_pop( $parts );
+				$sub_dir  = strtr( implode( '/', $parts ), '_', '-' );
+				$base_dir = $base_dir . $sub_dir . '/';
+			}
+
+			$filename = 'class-' . strtr( $class, '_', '-' );
+			$file     = $base_dir . $filename . '.php';
+
+			if ( file_exists( $file ) && is_readable( $file ) ) {
+				require_once $file;
+			} else {
+				// translators: %s is the class name.
+				$message = sprintf( esc_html__( 'Required class not found or not readable: %s', 'activitypub' ), esc_html( $full_class ) );
+				Debug::write_log( $message );
+				\wp_die( $message ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			}
+		}
+	}
+);
+
 \register_activation_hook(
 	__FILE__,
 	array(

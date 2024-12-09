@@ -50,6 +50,7 @@ class Admin {
 		}
 
 		\add_filter( 'dashboard_glance_items', array( self::class, 'dashboard_glance_items' ) );
+		\add_filter( 'plugin_action_links_' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'add_plugin_settings_link' ) );
 	}
 
 	/**
@@ -833,6 +834,21 @@ class Admin {
 			'<a href="%s" target="_blank">%s</a>',
 			\esc_url( $preview_url ),
 			\esc_html__( '⁂ Fediverse Preview', 'activitypub' )
+		);
+
+		return $actions;
+	}
+
+	/**
+	 * Add plugin settings link.
+	 *
+	 * @param array $actions The current actions.
+	 */
+	public static function add_plugin_settings_link( $actions ) {
+		$actions[] = \sprintf(
+			'<a href="%1s">%2s</a>',
+			\menu_page_url( 'activitypub', false ),
+			\__( 'Settings', 'activitypub' )
 		);
 
 		return $actions;
