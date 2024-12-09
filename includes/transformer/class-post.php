@@ -241,13 +241,9 @@ class Post extends Base {
 	 */
 	protected function get_icon() {
 		$post_id = $this->wp_object->ID;
-		$id      = null;
 
 		// List post thumbnail first if this post has one.
-		if (
-			\function_exists( 'has_post_thumbnail' ) &&
-			\has_post_thumbnail( $post_id )
-		) {
+		if ( \has_post_thumbnail( $post_id ) ) {
 			$id = \get_post_thumbnail_id( $post_id );
 		} else {
 			// Try site_logo, falling back to site_icon, first.
