@@ -104,9 +104,8 @@ class Mailer {
 	 * @param Notification $notification The notification object.
 	 */
 	public static function new_follower( $notification ) {
-		$actor  = get_remote_metadata_by_actor( $notification->actor );
-		$object = $notification->object['object'];
-		$user   = \get_user_by( 'id', $notification->target );
+		$actor = get_remote_metadata_by_actor( $notification->actor );
+		$user  = \get_user_by( 'id', $notification->target );
 
 		if ( ! $actor || \is_wp_error( $actor ) || ! $user ) {
 			return;

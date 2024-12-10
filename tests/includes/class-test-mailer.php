@@ -80,7 +80,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Test Post', $subject );
 		$this->assertStringContainsString( get_option( 'blogname' ), $subject );
 
-		// Test with non-ActivityPub comment
+		// Test with non-ActivityPub comment.
 		$regular_comment_id = wp_insert_comment(
 			array(
 				'comment_post_ID' => self::$post_id,
@@ -90,7 +90,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$subject = Mailer::comment_notification_subject( 'Default Subject', $regular_comment_id );
 		$this->assertEquals( 'Default Subject', $subject );
 
-		// Clean up
+		// Clean up.
 		wp_delete_comment( $comment_id, true );
 		wp_delete_comment( $regular_comment_id, true );
 	}
@@ -120,7 +120,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'https://example.com/author', $text );
 		$this->assertStringContainsString( '127.0.0.1', $text );
 
-		// Test with non-ActivityPub comment
+		// Test with non-ActivityPub comment.
 		$regular_comment_id = wp_insert_comment(
 			array(
 				'comment_post_ID' => self::$post_id,
@@ -130,7 +130,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$text = Mailer::comment_notification_text( 'Default Message', $regular_comment_id );
 		$this->assertEquals( 'Default Message', $text );
 
-		// Clean up
+		// Clean up.
 		wp_delete_comment( $comment_id, true );
 		wp_delete_comment( $regular_comment_id, true );
 	}
@@ -141,8 +141,6 @@ class Test_Mailer extends WP_UnitTestCase {
 	 * @covers ::new_follower
 	 */
 	public function test_new_follower() {
-		$user = get_user_by( 'id', self::$user_id );
-
 		$notification = new Notification(
 			'follow',
 			'https://example.com/author',
@@ -152,7 +150,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			self::$user_id
 		);
 
-		// Mock remote metadata
+		// Mock remote metadata.
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
 			function () {
@@ -163,7 +161,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			}
 		);
 
-		// Capture email
+		// Capture email.
 		add_filter(
 			'wp_mail',
 			function ( $args ) {
@@ -176,7 +174,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		Mailer::new_follower( $notification );
 
-		// Clean up
+		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 		remove_all_filters( 'wp_mail' );
 	}
