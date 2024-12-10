@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Actors;
 /**
  * Mailer Class
  */
@@ -105,22 +106,28 @@ class Mailer {
 	 */
 	public static function new_follower( $notification ) {
 		$actor = get_remote_metadata_by_actor( $notification->actor );
-		$user  = \get_user_by( 'id', $notification->target );
 
-		if ( ! $actor || \is_wp_error( $actor ) || ! $user ) {
+		if ( ! $actor || \is_wp_error( $actor ) ) {
 			return;
 		}
 
-		/* translators: %1$s: Blog name, %2$s: Follower name */
-		$subject = \sprintf( __( '[%1$s] Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] );
+		$email = \get_option( 'admin_email' );
+
+		if ( $notification->target > Actors::BLOG_USER_ID ) {
+			$user  = \get_user_by( 'id', $notification->target );
+			$email = $user->user_email;
+		}
 
 		/* translators: %1$s: Blog name, %2$s: Follower name */
-		$message = \sprintf( __( 'New follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] ) . "\r\n";
+		$subject = \sprintf( \__( '[%1$s] Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] );
+		/* translators: %1$s: Blog name, %2$s: Follower name */
+		$message = \sprintf( \__( 'New follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] ) . "\r\n";
 		/* translators: %s: Follower URL */
-		$message .= \sprintf( __( 'URL: %s', 'activitypub' ), $actor['url'] ) . "\r\n\r\n";
-		$message .= \sprintf( __( 'You can see all followers here:', 'activitypub' ) ) . "\r\n";
+		$message .= \sprintf( \__( 'URL: %s', 'activitypub' ), $actor['url'] ) . "\r\n\r\n";
+		$message .= \sprintf( \__( 'You can see all followers here:', 'activitypub' ) ) . "\r\n";
 		$message .= \esc_url( \admin_url( '/users.php?page=activitypub-followers-list' ) ) . "\r\n\r\n";
 
-		\wp_mail( $user->user_email, $subject, $message );
+		\wp_mail( $email, $subject, $message );
 	}
 }
+
