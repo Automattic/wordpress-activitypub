@@ -135,7 +135,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: Send "new follower" emails
-* Improved: Email templates for "likes" and "reposts"
+* Improved: Email templates for Likes and Reposts
 
 = 4.4.0 =
 
