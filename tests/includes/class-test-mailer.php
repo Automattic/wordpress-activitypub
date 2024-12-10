@@ -64,11 +64,14 @@ class Test_Mailer extends WP_UnitTestCase {
 	 *
 	 * @covers ::comment_notification_subject
 	 */
-	public function test_comment_notification_subject() {
+	public function test_comment_like_notification() {
 		$comment_id = wp_insert_comment(
 			array(
 				'comment_post_ID' => self::$post_id,
 				'comment_type'    => 'like',
+				'comment_author'  => 'Test Author',
+				'comment_author_url' => 'https://example.com/author',
+				'comment_author_IP'  => '127.0.0.1',
 			)
 		);
 
@@ -79,6 +82,14 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Like', $subject );
 		$this->assertStringContainsString( 'Test Post', $subject );
 		$this->assertStringContainsString( get_option( 'blogname' ), $subject );
+
+		$text = Mailer::comment_notification_text( 'Default Message', $comment_id );
+
+		$this->assertStringContainsString( 'Test Post', $text );
+		$this->assertStringContainsString( 'Test Author', $text );
+		$this->assertStringContainsString( 'Like', $text );
+		$this->assertStringContainsString( 'https://example.com/author', $text );
+		$this->assertStringContainsString( '127.0.0.1', $text );
 
 		// Test with non-ActivityPub comment.
 		$regular_comment_id = wp_insert_comment(
@@ -100,11 +111,11 @@ class Test_Mailer extends WP_UnitTestCase {
 	 *
 	 * @covers ::comment_notification_text
 	 */
-	public function test_comment_notification_text() {
+	public function test_comment_repost_notification() {
 		$comment_id = wp_insert_comment(
 			array(
 				'comment_post_ID'    => self::$post_id,
-				'comment_type'       => 'like',
+				'comment_type'       => 'repost',
 				'comment_author'     => 'Test Author',
 				'comment_author_url' => 'https://example.com/author',
 				'comment_author_IP'  => '127.0.0.1',
@@ -113,10 +124,18 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		update_comment_meta( $comment_id, 'protocol', 'activitypub' );
 
+		$subject = Mailer::comment_notification_subject( 'Default Subject', $comment_id );
+
+		$this->assertStringContainsString( 'Repost', $subject );
+		$this->assertStringContainsString( 'Test Post', $subject );
+		$this->assertStringContainsString( get_option( 'blogname' ), $subject );
+
+
 		$text = Mailer::comment_notification_text( 'Default Message', $comment_id );
 
 		$this->assertStringContainsString( 'Test Post', $text );
 		$this->assertStringContainsString( 'Test Author', $text );
+		$this->assertStringContainsString( 'Repost', $text );
 		$this->assertStringContainsString( 'https://example.com/author', $text );
 		$this->assertStringContainsString( '127.0.0.1', $text );
 
