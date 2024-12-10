@@ -132,6 +132,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Enable Likes and Reposts (Announces) by default
+
 = 4.4.0 =
 
 * Added: Setting to enable/disable Authorized-Fetch
