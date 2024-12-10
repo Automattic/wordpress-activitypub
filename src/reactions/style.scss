@@ -1,0 +1,38 @@
+.activitypub-reactions {
+	.reaction-group {
+		display: flex;
+		align-items: center;
+		margin: 0.5em 0;
+
+		span {
+			margin-right: 0.5em;
+		}
+	}
+
+	.reaction-facepile {
+		display: flex;
+		align-items: center;
+
+		a {
+			margin-right: -16px; // Half of avatar width for 50% overlap
+			transition: transform 0.2s ease;
+
+			&:hover {
+				z-index: 2;
+				transform: scale(1.1);
+			}
+
+			&:last-child {
+				margin-right: 0;
+			}
+		}
+
+		.reaction-avatar {
+			border-radius: 50%;
+			border: 2px solid #fff; // Helps separate overlapping avatars
+			width: 32px;
+			height: 32px;
+			display: block;
+		}
+	}
+}

@@ -1,14 +1,26 @@
 {
   "$schema": "https://schemas.wp.org/trunk/block.json",
-	"name": "activitypub/post-likes",
-	"apiVersion": 3,
+	"name": "activitypub/reactions",
+	"apiVersion": 2,
 	"version": "1.0.0",
-	"title": "Fediverse Likes",
+	"title": "Fediverse Reactions",
 	"category": "widgets",
-	"description": "Fediverse Likes",
+	"icon": "heart",
+	"description": "Display Fediverse likes and reposts",
+	"supports": {
+		"html": false
+	},
+	"attributes": {
+		"title": {
+			"type": "string",
+			"default": "Fediverse reactions"
+		},
+		"postId": {
+			"type": "number"
+		}
+	},
 	"textdomain": "activitypub",
-  "editorScript": "file:./index.js",
-	"blockHooks": {
-		"core/post-content": "lastChild"
-	}
+	"editorScript": "file:./index.js",
+	"style": "file:./style-index.css",
+	"viewScript": "file:./view.js"
 }

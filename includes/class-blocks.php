@@ -112,6 +112,7 @@ class Blocks {
 		$context          = is_admin() ? 'editor' : 'view';
 		$followers_handle = 'activitypub-followers-' . $context . '-script';
 		$follow_me_handle = 'activitypub-follow-me-' . $context . '-script';
+		$reactions_handle = 'activitypub-reactions-' . $context . '-script';
 		$data             = array(
 			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
 			'enabled'   => array(
@@ -122,6 +123,7 @@ class Blocks {
 		$js               = sprintf( 'var _activityPubOptions = %s;', wp_json_encode( $data ) );
 		\wp_add_inline_script( $followers_handle, $js, 'before' );
 		\wp_add_inline_script( $follow_me_handle, $js, 'before' );
+		\wp_add_inline_script( $reactions_handle, $js, 'before' );
 	}
 
 	/**
@@ -147,22 +149,36 @@ class Blocks {
 			)
 		);
 		\register_block_type_from_metadata(
-			ACTIVITYPUB_PLUGIN_DIR . '/build/likes',
+			ACTIVITYPUB_PLUGIN_DIR . '/build/reactions',
 			array(
-				'render_callback' => array( self::class, 'render_post_likes_block' ),
+				'render_callback' => array( self::class, 'render_post_reactions_block' ),
 			)
 		);
 	}
 
 	/**
-	 * Render the post likes block.
+	 * Render the post reactions block.
 	 *
 	 * @param array $attrs The block attributes.
 	 *
 	 * @return string The HTML to render.
 	 */
-	public static function render_post_likes_block( $attrs ) {
-		return '<div>POST LIKES HERE</div>';
+	public static function render_post_reactions_block( $attrs ) {
+		if ( ! isset( $attrs['postId'] ) ) {
+			$attrs['postId'] = get_the_ID();
+		}
+
+		$wrapper_attributes = get_block_wrapper_attributes(
+			array(
+				'class'      => 'activitypub-reactions-block',
+				'data-attrs' => wp_json_encode( $attrs ),
+			)
+		);
+
+		return sprintf(
+			'<div %s></div>',
+			$wrapper_attributes
+		);
 	}
 
 	/**

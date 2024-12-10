@@ -43,6 +43,24 @@ class Interaction {
 				),
 			)
 		);
+
+		\register_rest_route(
+			ACTIVITYPUB_REST_NAMESPACE,
+			'/reactions/(?P<id>\d+)',
+			array(
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'get_reactions' ),
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'id' => array(
+						'required'          => true,
+						'validate_callback' => function ( $val ) {
+							return is_numeric( $val );
+						},
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -113,6 +131,62 @@ class Interaction {
 			array(
 				'Location' => \esc_url( $redirect_url ),
 			)
+		);
+	}
+
+	/**
+	 * Get reactions (likes and reposts) for a post
+	 *
+	 * @param WP_REST_Request $request The request object.
+	 * @return WP_REST_Response|WP_Error Response object or WP_Error.
+	 */
+	public static function get_reactions( $request ) {
+		$post_id = $request->get_param( 'id' );
+		$post    = get_post( $post_id );
+		$likes   = array();
+		$reposts = array();
+
+		if ( ! $post ) {
+			return new \WP_Error(
+				'activitypub_post_not_found',
+				__( 'Post not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$reactions = get_comments(
+			array(
+				'post_id'  => $post_id,
+				'type__in' => array( 'like', 'repost' ),
+				'status'   => 'approve',
+			)
+		);
+
+		$format_reaction = function ( $comment ) {
+			return array(
+				'avatar' => get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
+				'url'    => $comment->comment_author_url,
+				'name'   => $comment->comment_author,
+			);
+		};
+
+		foreach ( $reactions as $reaction ) {
+			switch ( $reaction->comment_type ) {
+				case 'like':
+					$likes[] = $format_reaction( $reaction );
+					break;
+				case 'repost':
+					$reposts[] = $format_reaction( $reaction );
+					break;
+			}
+		}
+
+		return new WP_REST_Response(
+			array(
+				'likes'   => $likes,
+				'reposts' => $reposts,
+			),
+			200
 		);
 	}
 }
