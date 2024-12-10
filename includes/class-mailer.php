@@ -55,7 +55,7 @@ class Mailer {
 
 		$post = \get_post( $comment->comment_post_ID );
 
-		/* translators: %1$s: Blog name, %2$s: Post title */
+		/* translators: 1: Blog name, 2: Like or Repost, 3: Post title */
 		return \sprintf( \__( '[%1$s] %2$s: %3$s', 'activitypub' ), get_option( 'blogname' ), $singular, $post->post_title );
 	}
 
