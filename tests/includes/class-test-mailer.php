@@ -67,9 +67,9 @@ class Test_Mailer extends WP_UnitTestCase {
 	public function test_comment_like_notification() {
 		$comment_id = wp_insert_comment(
 			array(
-				'comment_post_ID' => self::$post_id,
-				'comment_type'    => 'like',
-				'comment_author'  => 'Test Author',
+				'comment_post_ID'    => self::$post_id,
+				'comment_type'       => 'like',
+				'comment_author'     => 'Test Author',
 				'comment_author_url' => 'https://example.com/author',
 				'comment_author_IP'  => '127.0.0.1',
 			)
@@ -129,7 +129,6 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Repost', $subject );
 		$this->assertStringContainsString( 'Test Post', $subject );
 		$this->assertStringContainsString( get_option( 'blogname' ), $subject );
-
 
 		$text = Mailer::comment_notification_text( 'Default Message', $comment_id );
 
