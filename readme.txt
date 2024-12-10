@@ -135,6 +135,8 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: `icon` support for `Audio` and `Video` attachments
+* Improved: Interactions moderation
+* Improved: Compatibility with Akismet
 
 = 4.4.0 =
 
