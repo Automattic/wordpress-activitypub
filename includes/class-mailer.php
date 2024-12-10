@@ -113,8 +113,13 @@ class Mailer {
 
 		$email = \get_option( 'admin_email' );
 
-		if ( $notification->target > Actors::BLOG_USER_ID ) {
-			$user  = \get_user_by( 'id', $notification->target );
+		if ( (int) $notification->target > Actors::BLOG_USER_ID ) {
+			$user = \get_user_by( 'id', $notification->target );
+
+			if ( ! $user ) {
+				return;
+			}
+
 			$email = $user->user_email;
 		}
 
