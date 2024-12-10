@@ -55,17 +55,14 @@ class Hashtag {
 	public static function insert_post( $post_id, $post ) {
 		$tags = array();
 
-		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $post->post_content, $match ) ) {
-			$tags = array_merge( $tags, $match[1] );
+		// Skip hashtags in HTML attributes, like hex colors.
+		$content = wp_strip_all_tags( $post->post_content . "\n" . $post->post_excerpt );
+
+		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $content, $match ) ) {
+			$tags = array_unique( $match[1] );
 		}
 
-		if ( \preg_match_all( '/' . ACTIVITYPUB_HASHTAGS_REGEXP . '/i', $post->post_excerpt, $match ) ) {
-			$tags = array_merge( $tags, $match[1] );
-		}
-
-		$tags = \implode( ', ', $tags );
-
-		\wp_add_post_tags( $post->ID, $tags );
+		\wp_add_post_tags( $post->ID, \implode( ', ', $tags ) );
 	}
 
 	/**

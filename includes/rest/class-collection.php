@@ -278,11 +278,19 @@ class Collection {
 			'orderedItems' => array(),
 		);
 
-		$users = Actors::get_collection();
+		$users  = Actors::get_collection();
+		$actors = array();
 
 		foreach ( $users as $user ) {
-			$response['orderedItems'][] = $user->get_id();
+			$actors[] = $user->get_id();
 		}
+
+		/**
+		 * Filter the list of moderators.
+		 *
+		 * @param array $actors The list of moderators.
+		 */
+		$response['orderedItems'] = apply_filters( 'activitypub_rest_moderators', $actors );
 
 		$rest_response = new WP_REST_Response( $response, 200 );
 		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );

@@ -138,24 +138,24 @@ class Scheduler {
 			return;
 		}
 
-		$type = false;
+		switch ( $new_status ) {
+			case 'publish':
+				$type = ( 'publish' === $old_status ) ? 'Update' : 'Create';
+				break;
 
-		if (
-			'publish' === $new_status &&
-			'publish' !== $old_status
-		) {
-			$type = 'Create';
-		} elseif (
-			'publish' === $new_status ||
-			// We want to send updates for posts that are published and then moved to draft.
-			( 'draft' === $new_status &&
-			'publish' === $old_status )
-		) {
-			$type = 'Update';
-		} elseif ( 'trash' === $new_status ) {
-			$type = 'Delete';
+			case 'draft':
+				$type = ( 'publish' === $old_status ) ? 'Update' : false;
+				break;
+
+			case 'trash':
+				$type = 'federated' === get_wp_object_state( $post ) ? 'Delete' : false;
+				break;
+
+			default:
+				$type = false;
 		}
 
+		// No activity to schedule.
 		if ( empty( $type ) ) {
 			return;
 		}

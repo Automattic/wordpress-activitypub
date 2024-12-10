@@ -237,7 +237,6 @@ class Blocks {
 
 		$wrapper_attributes = get_block_wrapper_attributes(
 			array(
-				'aria-label' => __( 'Follow me on the Fediverse', 'activitypub' ),
 				'class'      => 'activitypub-follow-me-block-wrapper',
 				'data-attrs' => wp_json_encode( $attrs ),
 			)
