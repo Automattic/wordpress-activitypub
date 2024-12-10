@@ -603,7 +603,6 @@ class Comment {
 				'icon'        => '♻️',
 				'class'       => 'p-repost',
 				'type'        => 'repost',
-				// translators: %1$s username, %2$s object format (post, audio, ...), %3$s URL, %4$s domain.
 				'excerpt'     => __( '&hellip; reposted this!', 'activitypub' ),
 			)
 		);
@@ -617,7 +616,6 @@ class Comment {
 				'icon'        => '👍',
 				'class'       => 'p-like',
 				'type'        => 'like',
-				// translators: %1$s username, %2$s object format (post, audio, ...), %3$s URL, %4$s domain.
 				'excerpt'     => __( '&hellip; liked this!', 'activitypub' ),
 			)
 		);
