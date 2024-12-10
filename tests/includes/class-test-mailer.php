@@ -1,0 +1,212 @@
+<?php
+/**
+ * Test Mailer Class.
+ *
+ * @package ActivityPub
+ */
+
+namespace Activitypub\Tests;
+
+use Activitypub\Mailer;
+use Activitypub\Notification;
+use WP_UnitTestCase;
+
+/**
+ * Test Mailer class.
+ *
+ * @coversDefaultClass \Activitypub\Mailer
+ */
+class Test_Mailer extends WP_UnitTestCase {
+	/**
+	 * A test post.
+	 *
+	 * @var int
+	 */
+	protected static $post_id;
+
+	/**
+	 * A test user.
+	 *
+	 * @var int
+	 */
+	protected static $user_id;
+
+	/**
+	 * Create fake data before tests run.
+	 *
+	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 */
+	public static function wpSetUpBeforeClass( $factory ) {
+		self::$user_id = $factory->user->create(
+			array(
+				'role' => 'author',
+			)
+		);
+
+		self::$post_id = $factory->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_title'  => 'Test Post',
+			)
+		);
+	}
+
+	/**
+	 * Clean up after tests.
+	 */
+	public static function wpTearDownAfterClass() {
+		wp_delete_post( self::$post_id, true );
+		wp_delete_user( self::$user_id );
+	}
+
+	/**
+	 * Test comment notification subject for ActivityPub comments.
+	 *
+	 * @covers ::comment_notification_subject
+	 */
+	public function test_comment_like_notification() {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_type'       => 'like',
+				'comment_author'     => 'Test Author',
+				'comment_author_url' => 'https://example.com/author',
+				'comment_author_IP'  => '127.0.0.1',
+			)
+		);
+
+		update_comment_meta( $comment_id, 'protocol', 'activitypub' );
+
+		$subject = Mailer::comment_notification_subject( 'Default Subject', $comment_id );
+
+		$this->assertStringContainsString( 'Like', $subject );
+		$this->assertStringContainsString( 'Test Post', $subject );
+		$this->assertStringContainsString( get_option( 'blogname' ), $subject );
+
+		$text = Mailer::comment_notification_text( 'Default Message', $comment_id );
+
+		$this->assertStringContainsString( 'Test Post', $text );
+		$this->assertStringContainsString( 'Test Author', $text );
+		$this->assertStringContainsString( 'Like', $text );
+		$this->assertStringContainsString( 'https://example.com/author', $text );
+		$this->assertStringContainsString( '127.0.0.1', $text );
+
+		// Test with non-ActivityPub comment.
+		$regular_comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID' => self::$post_id,
+			)
+		);
+
+		$subject = Mailer::comment_notification_subject( 'Default Subject', $regular_comment_id );
+		$this->assertEquals( 'Default Subject', $subject );
+
+		// Clean up.
+		wp_delete_comment( $comment_id, true );
+		wp_delete_comment( $regular_comment_id, true );
+	}
+
+	/**
+	 * Test comment notification text for ActivityPub comments.
+	 *
+	 * @covers ::comment_notification_text
+	 */
+	public function test_comment_repost_notification() {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_type'       => 'repost',
+				'comment_author'     => 'Test Author',
+				'comment_author_url' => 'https://example.com/author',
+				'comment_author_IP'  => '127.0.0.1',
+			)
+		);
+
+		update_comment_meta( $comment_id, 'protocol', 'activitypub' );
+
+		$subject = Mailer::comment_notification_subject( 'Default Subject', $comment_id );
+
+		$this->assertStringContainsString( 'Repost', $subject );
+		$this->assertStringContainsString( 'Test Post', $subject );
+		$this->assertStringContainsString( get_option( 'blogname' ), $subject );
+
+		$text = Mailer::comment_notification_text( 'Default Message', $comment_id );
+
+		$this->assertStringContainsString( 'Test Post', $text );
+		$this->assertStringContainsString( 'Test Author', $text );
+		$this->assertStringContainsString( 'Repost', $text );
+		$this->assertStringContainsString( 'https://example.com/author', $text );
+		$this->assertStringContainsString( '127.0.0.1', $text );
+
+		// Test with non-ActivityPub comment.
+		$regular_comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID' => self::$post_id,
+			)
+		);
+
+		$text = Mailer::comment_notification_text( 'Default Message', $regular_comment_id );
+		$this->assertEquals( 'Default Message', $text );
+
+		// Clean up.
+		wp_delete_comment( $comment_id, true );
+		wp_delete_comment( $regular_comment_id, true );
+	}
+
+	/**
+	 * Test new follower notification.
+	 *
+	 * @covers ::new_follower
+	 */
+	public function test_new_follower() {
+		$notification = new Notification(
+			'follow',
+			'https://example.com/author',
+			array(
+				'object' => 'https://example.com/follow/1',
+			),
+			self::$user_id
+		);
+
+		// Mock remote metadata.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name' => 'Test Follower',
+					'url'  => 'https://example.com/author',
+				);
+			}
+		);
+
+		// Capture email.
+		add_filter(
+			'wp_mail',
+			function ( $args ) {
+				$this->assertStringContainsString( 'Test Follower', $args['subject'] );
+				$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
+				$this->assertEquals( get_user_by( 'id', self::$user_id )->user_email, $args['to'] );
+				return $args;
+			}
+		);
+
+		Mailer::new_follower( $notification );
+
+		// Clean up.
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'wp_mail' );
+	}
+
+	/**
+	 * Test initialization of filters and actions.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init() {
+		Mailer::init();
+
+		$this->assertEquals( 10, has_filter( 'comment_notification_subject', array( Mailer::class, 'comment_notification_subject' ) ) );
+		$this->assertEquals( 10, has_filter( 'comment_notification_text', array( Mailer::class, 'comment_notification_text' ) ) );
+		$this->assertEquals( 10, has_action( 'activitypub_notification_follow', array( Mailer::class, 'new_follower' ) ) );
+	}
+}

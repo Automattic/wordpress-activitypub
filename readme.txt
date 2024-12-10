@@ -135,6 +135,8 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: `icon` support for `Audio` and `Video` attachments
+* Added: Send "new follower" emails
+* Improved: Email templates for Likes and Reposts
 * Improved: Interactions moderation
 * Improved: Compatibility with Akismet
 
