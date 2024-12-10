@@ -225,10 +225,10 @@ class Test_Mailer extends WP_UnitTestCase {
 			),
 		);
 
-		// Mock remote metadata
+		// Mock remote metadata.
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
-			function() {
+			function () {
 				return array(
 					'name' => 'Test Sender',
 					'url'  => 'https://example.com/author',
@@ -236,10 +236,10 @@ class Test_Mailer extends WP_UnitTestCase {
 			}
 		);
 
-		// Capture email
+		// Capture email.
 		add_filter(
 			'wp_mail',
-			function( $args ) use ( $user_id ) {
+			function ( $args ) use ( $user_id ) {
 				$this->assertStringContainsString( 'Direct Message', $args['subject'] );
 				$this->assertStringContainsString( 'Test Sender', $args['subject'] );
 				$this->assertStringContainsString( 'Test direct message', $args['message'] );
@@ -251,7 +251,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		Mailer::direct_message( $activity, $user_id );
 
-		// Test public activity (should not send email)
+		// Test public activity (should not send email).
 		$public_activity = array(
 			'actor'  => 'https://example.com/author',
 			'object' => array(
@@ -261,11 +261,11 @@ class Test_Mailer extends WP_UnitTestCase {
 			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 		);
 
-		// Reset email capture
+		// Reset email capture.
 		remove_all_filters( 'wp_mail' );
 		add_filter(
 			'wp_mail',
-			function( $args ) {
+			function ( $args ) {
 				$this->fail( 'Email should not be sent for public activity' );
 				return $args;
 			}
@@ -273,7 +273,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		Mailer::direct_message( $public_activity, $user_id );
 
-		// Clean up
+		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 		remove_all_filters( 'wp_mail' );
 		wp_delete_user( $user_id );
