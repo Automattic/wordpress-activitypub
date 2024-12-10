@@ -67,6 +67,17 @@ function plugin_init() {
 	}
 
 	/**
+	 * Adds Akismet support.
+	 *
+	 * This class handles the compatibility with the Akismet plugin.
+	 *
+	 * @see https://wordpress.org/plugins/akismet/
+	 */
+	if ( \defined( 'AKISMET_VERSION' ) ) {
+		Akismet::init();
+	}
+
+	/**
 	 * Adds Seriously Simple Podcasting support.
 	 *
 	 * This class handles the compatibility with Seriously Simple Podcasting.

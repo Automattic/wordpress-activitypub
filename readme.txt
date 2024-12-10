@@ -136,6 +136,8 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Added: Send "new follower" emails
 * Improved: Email templates for Likes and Reposts
+* Improved: Interactions moderation
+* Improved: Compatibility with Akismet
 
 = 4.4.0 =
 
