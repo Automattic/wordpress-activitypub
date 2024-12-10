@@ -131,7 +131,7 @@ class Mailer {
 		/* translators: 1: Blog name, 2: Follower name */
 		$message = \sprintf( \__( 'New Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] ) . "\r\n\r\n";
 		/* translators: %s: Follower URL */
-		$message .= \sprintf( \__( 'URL: %s', 'activitypub' ), $actor['url'] ) . "\r\n\r\n";
+		$message .= \sprintf( \__( 'URL: %s', 'activitypub' ), esc_url( $actor['url'] ) ) . "\r\n\r\n";
 		$message .= \sprintf( \__( 'You can see all followers here:', 'activitypub' ) ) . "\r\n";
 		$message .= \esc_url( \admin_url( '/users.php?page=activitypub-followers-list' ) ) . "\r\n\r\n";
 
