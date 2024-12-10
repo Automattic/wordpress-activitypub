@@ -56,7 +56,7 @@ class Mailer {
 		$post = \get_post( $comment->comment_post_ID );
 
 		/* translators: 1: Blog name, 2: Like or Repost, 3: Post title */
-		return \sprintf( \__( '[%1$s] %2$s: %3$s', 'activitypub' ), get_option( 'blogname' ), $singular, $post->post_title );
+		return \sprintf( \__( '[%1$s] %2$s: %3$s', 'activitypub' ), get_option( 'blogname' ), \esc_html( $singular ), \esc_html( $post->post_title ) );
 	}
 
 	/**
@@ -90,14 +90,14 @@ class Mailer {
 		$comment_author_domain = \gethostbyaddr( $comment->comment_author_IP );
 
 		/* translators: 1: Comment type, 2: Post title */
-		$notify_message = \sprintf( __( 'New %1$s on your post "%2$s"', 'activitypub' ), $comment_type['singular'], $post->post_title ) . "\r\n\r\n";
+		$notify_message = \sprintf( __( 'New %1$s on your post "%2$s"', 'activitypub' ), \esc_html( $comment_type['singular'] ), \esc_html( $post->post_title ) ) . "\r\n\r\n";
 		/* translators: 1: Website name, 2: Website IP address, 3: Website hostname. */
 		$notify_message .= \sprintf( __( 'From: %1$s (IP address: %2$s, %3$s)', 'activitypub' ), $comment->comment_author, $comment->comment_author_IP, $comment_author_domain ) . "\r\n";
 		/* translators: %s: Reaction author URL. */
-		$notify_message .= \sprintf( __( 'URL: %s', 'activitypub' ), $comment->comment_author_url ) . "\r\n\r\n";
+		$notify_message .= \sprintf( __( 'URL: %s', 'activitypub' ), \esc_url( $comment->comment_author_url ) ) . "\r\n\r\n";
 		/* translators: %s: Comment type label */
-		$notify_message .= \sprintf( __( 'You can see all %s on this post here:', 'activitypub' ), $comment_type['label'] ) . "\r\n";
-		$notify_message .= \get_permalink( $comment->comment_post_ID ) . '#' . $comment_type['type'] . "\r\n\r\n";
+		$notify_message .= \sprintf( __( 'You can see all %s on this post here:', 'activitypub' ), \esc_html( $comment_type['label'] ) ) . "\r\n";
+		$notify_message .= \get_permalink( $comment->comment_post_ID ) . '#' . \esc_attr( $comment_type['type'] ) . "\r\n\r\n";
 
 		return $notify_message;
 	}
@@ -127,11 +127,11 @@ class Mailer {
 		}
 
 		/* translators: 1: Blog name, 2: Follower name */
-		$subject = \sprintf( \__( '[%1$s] Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] );
+		$subject = \sprintf( \__( '[%1$s] Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), \esc_html( $actor['name'] ) );
 		/* translators: 1: Blog name, 2: Follower name */
-		$message = \sprintf( \__( 'New Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] ) . "\r\n\r\n";
+		$message = \sprintf( \__( 'New Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), \esc_html( $actor['name'] ) ) . "\r\n\r\n";
 		/* translators: %s: Follower URL */
-		$message .= \sprintf( \__( 'URL: %s', 'activitypub' ), esc_url( $actor['url'] ) ) . "\r\n\r\n";
+		$message .= \sprintf( \__( 'URL: %s', 'activitypub' ), \esc_url( $actor['url'] ) ) . "\r\n\r\n";
 		$message .= \sprintf( \__( 'You can see all followers here:', 'activitypub' ) ) . "\r\n";
 		$message .= \esc_url( \admin_url( '/users.php?page=activitypub-followers-list' ) ) . "\r\n\r\n";
 
@@ -172,13 +172,13 @@ class Mailer {
 		}
 
 		/* translators: 1: Blog name, 2 Actor name */
-		$subject = \sprintf( \__( '[%1$s] Direct Message from: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] );
+		$subject = \sprintf( \__( '[%1$s] Direct Message from: %2$s', 'activitypub' ), get_option( 'blogname' ), \esc_html( $actor['name'] ) );
 		/* translators: 1: Blog name, 2: Actor name */
 		$message = \sprintf( \__( 'New Direct Message: %2$s', 'activitypub' ), get_option( 'blogname' ), \wp_strip_all_tags( $activity['object']['content'], 'allowed_comment_html' ) ) . "\r\n\r\n";
 		/* translators: %s: Actor name */
-		$message .= \sprintf( __( 'From: %s', 'activitypub' ), $actor['name'] ) . "\r\n";
+		$message .= \sprintf( __( 'From: %s', 'activitypub' ), \esc_html( $actor['name'] ) ) . "\r\n";
 		/* translators: %s: Actor URL */
-		$message .= \sprintf( \__( 'URL: %s', 'activitypub' ), $actor['url'] ) . "\r\n\r\n";
+		$message .= \sprintf( \__( 'URL: %s', 'activitypub' ), \esc_url( $actor['url'] ) ) . "\r\n\r\n";
 
 		\wp_mail( $email, $subject, $message );
 	}
