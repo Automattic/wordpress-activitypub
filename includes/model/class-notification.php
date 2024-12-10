@@ -1,4 +1,9 @@
 <?php
+/**
+ * Notification class.
+ *
+ * @package Activitypub
+ */
 
 namespace Activitypub\Model;
 
@@ -44,10 +49,10 @@ class Notification {
 	 * @param array  $object The Activity object.
 	 * @param int    $target The WordPress User-Id.
 	 */
-	public function __construct( $type, $actor, $object, $target ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound
+	public function __construct( $type, $actor, $activity_object, $target ) {
 		$this->type   = $type;
 		$this->actor  = object_to_uri( $actor );
-		$this->object = $object;
+		$this->object = $activity_object;
 		$this->target = $target;
 	}
 
