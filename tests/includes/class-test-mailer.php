@@ -103,11 +103,11 @@ class Test_Mailer extends WP_UnitTestCase {
 	public function test_comment_notification_text() {
 		$comment_id = wp_insert_comment(
 			array(
-				'comment_post_ID'      => self::$post_id,
-				'comment_type'         => 'like',
-				'comment_author'       => 'Test Author',
-				'comment_author_url'   => 'https://example.com/author',
-				'comment_author_IP'    => '127.0.0.1',
+				'comment_post_ID'    => self::$post_id,
+				'comment_type'       => 'like',
+				'comment_author'     => 'Test Author',
+				'comment_author_url' => 'https://example.com/author',
+				'comment_author_IP'  => '127.0.0.1',
 			)
 		);
 
@@ -155,7 +155,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
-			function() {
+			function () {
 				return array(
 					'name' => 'Test Follower',
 					'url'  => 'https://example.com/author',
@@ -166,7 +166,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Capture email
 		add_filter(
 			'wp_mail',
-			function( $args ) {
+			function ( $args ) {
 				$this->assertStringContainsString( 'Test Follower', $args['subject'] );
 				$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
 				$this->assertEquals( get_user_by( 'id', self::$user_id )->user_email, $args['to'] );

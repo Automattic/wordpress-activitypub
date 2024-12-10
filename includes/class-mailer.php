@@ -93,7 +93,7 @@ class Mailer {
 		$notify_message .= \sprintf( __( 'URL: %s', 'activitypub' ), $comment->comment_author_url ) . "\r\n\r\n";
 		/* translators: %s: Comment type label */
 		$notify_message .= \sprintf( __( 'You can see all %s on this post here:', 'activitypub' ), $comment_type['label'] ) . "\r\n";
-		$notify_message .= \get_permalink( $comment->comment_post_ID ) . "#" . $comment_type['singular'] . "\r\n\r\n";
+		$notify_message .= \get_permalink( $comment->comment_post_ID ) . '#' . $comment_type['singular'] . "\r\n\r\n";
 
 		return $notify_message;
 	}
@@ -125,4 +125,3 @@ class Mailer {
 		\wp_mail( $user->user_email, $subject, $message );
 	}
 }
-

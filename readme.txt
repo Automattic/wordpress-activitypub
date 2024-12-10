@@ -132,6 +132,11 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Added: Send "new follower" emails
+* Improved: Email templates for "likes" and "reposts"
+
 = 4.4.0 =
 
 * Added: Setting to enable/disable Authorized-Fetch
