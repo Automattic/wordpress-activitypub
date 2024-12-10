@@ -135,4 +135,3 @@ class Mailer {
 		\wp_mail( $email, $subject, $message );
 	}
 }
-
