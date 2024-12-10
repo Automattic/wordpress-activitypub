@@ -57,7 +57,7 @@ class Mailer {
 		$post = \get_post( $comment->comment_post_ID );
 
 		/* translators: 1: Blog name, 2: Like or Repost, 3: Post title */
-		return \sprintf( \esc_html__( '[%1$s] %2$s: %3$s', 'activitypub' ), get_option( 'blogname' ), \esc_html( $singular ), \esc_html( $post->post_title ) );
+		return \sprintf( \esc_html__( '[%1$s] %2$s: %3$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \esc_html( $singular ), \esc_html( $post->post_title ) );
 	}
 
 	/**
@@ -177,7 +177,7 @@ class Mailer {
 		/* translators: 1: Blog name, 2: Actor name */
 		$message = \sprintf( \esc_html__( 'New Direct Message: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \wp_strip_all_tags( $activity['object']['content'] ) ) . "\r\n\r\n";
 		/* translators: Actor name */
-		$message .= \sprintf( esc_html__( 'From: %s', 'activitypub' ), \esc_html( $actor['name'] ) ) . "\r\n";
+		$message .= \sprintf( \esc_html__( 'From: %s', 'activitypub' ), \esc_html( $actor['name'] ) ) . "\r\n";
 		/* translators: Actor URL */
 		$message .= \sprintf( \esc_html__( 'URL: %s', 'activitypub' ), \esc_url( $actor['url'] ) ) . "\r\n\r\n";
 
