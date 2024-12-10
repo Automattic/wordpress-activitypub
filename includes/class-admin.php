@@ -36,6 +36,7 @@ class Admin {
 		\add_filter( 'comment_row_actions', array( self::class, 'comment_row_actions' ), 10, 2 );
 		\add_filter( 'manage_edit-comments_columns', array( static::class, 'manage_comment_columns' ) );
 		\add_action( 'manage_comments_custom_column', array( static::class, 'manage_comments_custom_column' ), 9, 2 );
+		\add_action( 'admin_comment_types_dropdown', array( static::class, 'comment_types_dropdown' ) );
 
 		\add_filter( 'manage_posts_columns', array( static::class, 'manage_post_columns' ), 10, 2 );
 		\add_action( 'manage_posts_custom_column', array( self::class, 'manage_posts_custom_column' ), 10, 2 );
@@ -599,6 +600,10 @@ class Admin {
 			unset( $actions['quickedit'] );
 		}
 
+		if ( in_array( get_comment_type( $comment ), Comment::get_comment_type_names(), true ) ) {
+			unset( $actions['reply'] );
+		}
+
 		return $actions;
 	}
 
@@ -666,6 +671,21 @@ class Admin {
 				esc_attr_e( 'Local', 'activitypub' );
 			}
 		}
+	}
+
+	/**
+	 * Add the new ActivityPub comment types to the comment types dropdown.
+	 *
+	 * @param array $types The existing comment types.
+	 *
+	 * @return array The extended comment types.
+	 */
+	public static function comment_types_dropdown( $types ) {
+		foreach ( Comment::get_comment_types() as $comment_type ) {
+			$types[ $comment_type['type'] ] = esc_html( $comment_type['label'] );
+		}
+
+		return $types;
 	}
 
 	/**
