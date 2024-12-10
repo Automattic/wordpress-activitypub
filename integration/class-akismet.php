@@ -7,6 +7,8 @@
 
 namespace Activitypub\Integration;
 
+use function Activitypub\was_comment_received;
+
 /**
  * Compatibility with the Akismet plugin.
  *
@@ -29,7 +31,7 @@ class Akismet {
 	 * @return array The modified actions.
 	 */
 	public static function comment_row_actions( $actions, $comment ) {
-		if ( 'activitypub' === \get_comment_meta( $comment->comment_ID, 'protocol', true ) ) {
+		if ( was_comment_received( $comment ) ) {
 			unset( $actions['history'] );
 		}
 
