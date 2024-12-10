@@ -2,10 +2,8 @@
 namespace Activitypub\Handler;
 
 use WP_Error;
-use Activitypub\Model\Notification;
 use Activitypub\Collection\Interactions;
 
-use function Activitypub\is_activity_public;
 use function Activitypub\get_remote_metadata_by_actor;
 
 /**
@@ -68,20 +66,6 @@ class Update {
 	 * @return void
 	 */
 	public static function update_interaction( $activity ) {
-		// check if Activity is public or not
-		if ( ! is_activity_public( $activity ) ) {
-			// send notification
-			$notification = new Notification(
-				'create',
-				$activity['actor'],
-				$activity,
-				$user_id
-			);
-			$notification->send();
-
-			return;
-		}
-
 		$commentdata = Interactions::update_comment( $activity );
 		$reaction    = null;
 
