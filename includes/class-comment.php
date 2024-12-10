@@ -539,7 +539,12 @@ class Comment {
 	}
 
 	/**
-	 * Get a comment type.
+	 * Get the custom comment type.
+	 *
+	 * Check if the type is registered, if not, check if it is a custom type.
+	 *
+	 * It looks for the array key in the registered types and returns the array.
+	 * If it is not found, it looks for the type in the custom types and returns the array.
 	 *
 	 * @param string $type The comment type.
 	 *
@@ -550,10 +555,18 @@ class Comment {
 		$type  = sanitize_key( $type );
 		$types = self::get_comment_types();
 
+		$type_array = array();
+
+		// Check array keys.
 		if ( in_array( $type, array_keys( $types ), true ) ) {
 			$type_array = $types[ $type ];
-		} else {
-			$type_array = array();
+		} else { // Fall back to type attribute.
+			foreach ( $types as $item ) {
+				if ( $type === $item['type'] ) {
+					$type_array = $item;
+					break;
+				}
+			}
 		}
 
 		/**
@@ -603,7 +616,6 @@ class Comment {
 				'icon'        => '♻️',
 				'class'       => 'p-repost',
 				'type'        => 'repost',
-				// translators: %1$s username, %2$s object format (post, audio, ...), %3$s URL, %4$s domain.
 				'excerpt'     => __( '&hellip; reposted this!', 'activitypub' ),
 			)
 		);
@@ -617,7 +629,6 @@ class Comment {
 				'icon'        => '👍',
 				'class'       => 'p-like',
 				'type'        => 'like',
-				// translators: %1$s username, %2$s object format (post, audio, ...), %3$s URL, %4$s domain.
 				'excerpt'     => __( '&hellip; liked this!', 'activitypub' ),
 			)
 		);
