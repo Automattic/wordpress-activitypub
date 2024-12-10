@@ -87,14 +87,14 @@ class Mailer {
 		$comment_author_domain = gethostbyaddr( $comment->comment_author_IP );
 
 		/* translators: %1$s: Comment type, %2$s: Post title */
-		$notify_message = \sprintf( __( 'New %1$s on your post "%2$s"', 'activitypub' ), $comment_type['singular'], $post->post_title ) . "\r\n";
+		$notify_message = \sprintf( __( 'New %1$s on your post "%2$s"', 'activitypub' ), $comment_type['singular'], $post->post_title ) . "\r\n\r\n";
 		/* translators: 1: Trackback/pingback website name, 2: Website IP address, 3: Website hostname. */
-		$notify_message .= \sprintf( __( 'Website: %1$s (IP address: %2$s, %3$s)', 'activitypub' ), $comment->comment_author, $comment->comment_author_IP, $comment_author_domain ) . "\r\n";
+		$notify_message .= \sprintf( __( 'From: %1$s (IP address: %2$s, %3$s)', 'activitypub' ), $comment->comment_author, $comment->comment_author_IP, $comment_author_domain ) . "\r\n";
 		/* translators: %s: Trackback/pingback/comment author URL. */
 		$notify_message .= \sprintf( __( 'URL: %s', 'activitypub' ), $comment->comment_author_url ) . "\r\n\r\n";
 		/* translators: %s: Comment type label */
 		$notify_message .= \sprintf( __( 'You can see all %s on this post here:', 'activitypub' ), $comment_type['label'] ) . "\r\n";
-		$notify_message .= \get_permalink( $comment->comment_post_ID ) . '#' . $comment_type['singular'] . "\r\n\r\n";
+		$notify_message .= \get_permalink( $comment->comment_post_ID ) . '#' . $comment_type['type'] . "\r\n\r\n";
 
 		return $notify_message;
 	}
@@ -126,7 +126,7 @@ class Mailer {
 		/* translators: %1$s: Blog name, %2$s: Follower name */
 		$subject = \sprintf( \__( '[%1$s] Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] );
 		/* translators: %1$s: Blog name, %2$s: Follower name */
-		$message = \sprintf( \__( 'New follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] ) . "\r\n";
+		$message = \sprintf( \__( 'New follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] ) . "\r\n\r\n";
 		/* translators: %s: Follower URL */
 		$message .= \sprintf( \__( 'URL: %s', 'activitypub' ), $actor['url'] ) . "\r\n\r\n";
 		$message .= \sprintf( \__( 'You can see all followers here:', 'activitypub' ) ) . "\r\n";
