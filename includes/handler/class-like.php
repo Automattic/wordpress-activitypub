@@ -1,4 +1,10 @@
 <?php
+/**
+ * Like handler file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Handler;
 
 use Activitypub\Comment;
@@ -7,11 +13,11 @@ use Activitypub\Collection\Interactions;
 use function Activitypub\object_to_uri;
 
 /**
- * Handle Like requests
+ * Handle Like requests.
  */
 class Like {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		\add_action(
@@ -23,20 +29,17 @@ class Like {
 	}
 
 	/**
-	 * Handles "Like" requests
+	 * Handles "Like" requests.
 	 *
-	 * @param array                 $array    The Activity array.
-	 * @param int                   $user_id  The ID of the local blog user.
-	 * @param \Activitypub\Activity $activity The Activity object.
-	 *
-	 * @return void
+	 * @param array $like    The Activity array.
+	 * @param int   $user_id The ID of the local blog user.
 	 */
-	public static function handle_like( $array, $user_id, $activity = null ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.arrayFound,VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable,Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+	public static function handle_like( $like, $user_id ) {
 		if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
 			return;
 		}
 
-		$url = object_to_uri( $array['object'] );
+		$url = object_to_uri( $like['object'] );
 
 		if ( empty( $url ) ) {
 			return;
@@ -47,13 +50,21 @@ class Like {
 			return;
 		}
 
-		$state    = Interactions::add_reaction( $array );
+		$state    = Interactions::add_reaction( $like );
 		$reaction = null;
 
 		if ( $state && ! is_wp_error( $state ) ) {
 			$reaction = get_comment( $state );
 		}
 
-		do_action( 'activitypub_handled_like', $array, $user_id, $state, $reaction );
+		/**
+		 * Fires after a Like has been handled.
+		 *
+		 * @param array $like     The Activity array.
+		 * @param int   $user_id  The ID of the local blog user.
+		 * @param mixed $state    The state of the reaction.
+		 * @param mixed $reaction The reaction object.
+		 */
+		do_action( 'activitypub_handled_like', $like, $user_id, $state, $reaction );
 	}
 }

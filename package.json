@@ -3,7 +3,7 @@
   "description": "The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pfefferle/wordpress-activitypub.git"
+    "url": "git+https://github.com/automattic/wordpress-activitypub.git"
   },
   "author": {
     "name": "Matthias Pfefferle",
@@ -12,24 +12,23 @@
   "scripts": {
     "dev": "wp-scripts start",
     "build": "wp-scripts build",
-    "readme": "grunt wp_readme_to_markdown"
+    "env-start": "wp-env start && wp-env run cli wp rewrite structure '/%year%/%monthnum%/%postname%/'",
+    "env-stop": "wp-env stop"
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pfefferle/wordpress-activitypub/issues"
+    "url": "https://github.com/automattic/wordpress-activitypub/issues"
   },
-  "homepage": "https://github.com/pfefferle/wordpress-activitypub#readme",
+  "homepage": "https://github.com/automattic/wordpress-activitypub#readme",
   "devDependencies": {
-    "@wordpress/blocks": "^13.0.0",
+    "@wordpress/blocks": "^14.0.0",
     "@wordpress/components": "^28.0.0",
     "@wordpress/data": "^10.0.0",
     "@wordpress/dom-ready": "^4.0.0",
     "@wordpress/element": "^6.0.0",
+    "@wordpress/env": "^10.10.0",
+    "@wordpress/icons": "^10.10.0",
     "@wordpress/scripts": "^27.0.0",
-    "classnames": "^2.3.2",
-    "grunt": "^1.1.0",
-    "grunt-checktextdomain": "^1.0.1",
-    "grunt-wp-i18n": "^1.0.3",
-    "grunt-wp-readme-to-markdown": "^2.0.1"
+    "classnames": "^2.3.2"
   }
 }

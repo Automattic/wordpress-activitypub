@@ -1,4 +1,9 @@
 <?php
+/**
+ * Notification file.
+ *
+ * @package Activitypub
+ */
 
 namespace Activitypub;
 

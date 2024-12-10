@@ -1,22 +1,27 @@
 <?php
+/**
+ * Collections REST-Class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Rest;
 
+use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Activity\Actor;
-use Activitypub\Activity\Base_Object;
-use Activitypub\Collection\Users as User_Collection;
 use Activitypub\Collection\Replies;
-
 use Activitypub\Transformer\Factory;
-use WP_Error;
+use Activitypub\Activity\Base_Object;
+use Activitypub\Collection\Actors;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
 
 /**
- * ActivityPub Collections REST-Class
+ * ActivityPub Collections REST-Class.
  *
  * @author Matthias Pfefferle
  *
@@ -25,14 +30,14 @@ use function Activitypub\get_rest_url_by_path;
  */
 class Collection {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		self::register_routes();
 	}
 
 	/**
-	 * Register routes
+	 * Register routes.
 	 */
 	public static function register_routes() {
 		\register_rest_route(
@@ -42,7 +47,6 @@ class Collection {
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'tags_get' ),
-					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -55,7 +59,6 @@ class Collection {
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'featured_get' ),
-					'args'                => self::request_parameters(),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -88,23 +91,24 @@ class Collection {
 	}
 
 	/**
-	 * The endpoint for replies collections
+	 * The endpoint for replies collections.
 	 *
-	 * @param WP_REST_Request $request The request object.
+	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return WP_REST_Response The response object.
+	 * @return WP_REST_Response|\WP_Error The response object or WP_Error.
 	 */
 	public static function replies_get( $request ) {
 		$type = $request->get_param( 'type' );
+		$id   = (int) $request->get_param( 'id' );
 
 		// Get the WordPress object of that "owns" the requested replies.
 		switch ( $type ) {
 			case 'comment':
-				$wp_object = \get_comment( $request->get_param( 'id' ) );
+				$wp_object = \get_comment( $id );
 				break;
 			case 'post':
 			default:
-				$wp_object = \get_post( $request->get_param( 'id' ) );
+				$wp_object = \get_post( $id );
 				break;
 		}
 
@@ -119,7 +123,7 @@ class Collection {
 			);
 		}
 
-		$page = intval( $request->get_param( 'page' ) );
+		$page = (int) $request->get_param( 'page' );
 
 		// If the request parameter page is present get the CollectionPage otherwise the replies collection.
 		if ( isset( $page ) ) {
@@ -144,13 +148,13 @@ class Collection {
 	/**
 	 * The Featured Tags endpoint
 	 *
-	 * @param WP_REST_Request $request The request object.
+	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return WP_REST_Response The response object.
+	 * @return WP_REST_Response|\WP_Error The response object or WP_Error.
 	 */
 	public static function tags_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = User_Collection::get_by_various( $user_id );
+		$user    = Actors::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;
@@ -196,13 +200,13 @@ class Collection {
 	/**
 	 * Featured posts endpoint
 	 *
-	 * @param WP_REST_Request $request The request object.
+	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return WP_REST_Response The response object.
+	 * @return WP_REST_Response|\WP_Error The response object or WP_Error.
 	 */
 	public static function featured_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = User_Collection::get_by_various( $user_id );
+		$user    = Actors::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;
@@ -210,14 +214,22 @@ class Collection {
 
 		$sticky_posts = \get_option( 'sticky_posts' );
 
-		if ( ! is_single_user() && User_Collection::BLOG_USER_ID === $user->get__id() ) {
+		if ( ! is_single_user() && Actors::BLOG_USER_ID === $user->get__id() ) {
 			$posts = array();
-		} elseif ( $sticky_posts ) {
+		} elseif ( $sticky_posts && is_array( $sticky_posts ) ) {
+			// only show public posts.
 			$args = array(
 				'post__in'            => $sticky_posts,
 				'ignore_sticky_posts' => 1,
 				'orderby'             => 'date',
 				'order'               => 'DESC',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'          => array(
+					array(
+						'key'     => 'activitypub_content_visibility',
+						'compare' => 'NOT EXISTS',
+					),
+				),
 			);
 
 			if ( $user->get__id() > 0 ) {
@@ -254,13 +266,11 @@ class Collection {
 	}
 
 	/**
-	 * Moderators endpoint
-	 *
-	 * @param WP_REST_Request $request The request object.
+	 * Moderators endpoint.
 	 *
 	 * @return WP_REST_Response The response object.
 	 */
-	public static function moderators_get( $request ) {
+	public static function moderators_get() {
 		$response = array(
 			'@context'     => Actor::JSON_LD_CONTEXT,
 			'id'           => get_rest_url_by_path( 'collections/moderators' ),
@@ -268,11 +278,19 @@ class Collection {
 			'orderedItems' => array(),
 		);
 
-		$users = User_Collection::get_collection();
+		$users  = Actors::get_collection();
+		$actors = array();
 
 		foreach ( $users as $user ) {
-			$response['orderedItems'][] = $user->get_url();
+			$actors[] = $user->get_id();
 		}
+
+		/**
+		 * Filter the list of moderators.
+		 *
+		 * @param array $actors The list of moderators.
+		 */
+		$response['orderedItems'] = apply_filters( 'activitypub_rest_moderators', $actors );
 
 		$rest_response = new WP_REST_Response( $response, 200 );
 		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
@@ -281,25 +299,9 @@ class Collection {
 	}
 
 	/**
-	 * The supported parameters
+	 * The supported parameters.
 	 *
-	 * @return array list of parameters
-	 */
-	public static function request_parameters() {
-		$params = array();
-
-		$params['user_id'] = array(
-			'required' => true,
-			'type'     => 'string',
-		);
-
-		return $params;
-	}
-
-	/**
-	 * The supported parameters
-	 *
-	 * @return array list of parameters
+	 * @return array list of parameters.
 	 */
 	public static function request_parameters_for_replies() {
 		$params = array();
@@ -311,8 +313,9 @@ class Collection {
 		);
 
 		$params['id'] = array(
-			'required' => true,
-			'type'     => 'string',
+			'required'          => true,
+			'type'              => 'string',
+			'sanitize_callback' => 'sanitize_text_field',
 		);
 
 		return $params;

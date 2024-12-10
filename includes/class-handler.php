@@ -1,4 +1,10 @@
 <?php
+/**
+ * Handler class.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub;
 
 use Activitypub\Handler\Announce;
@@ -14,7 +20,7 @@ use Activitypub\Handler\Update;
  */
 class Handler {
 	/**
-	 * Initialize the class, registering WordPress hooks
+	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		self::register_handlers();
@@ -35,6 +41,11 @@ class Handler {
 			Like::init();
 		}
 
+		/**
+		 * Register additional handlers.
+		 *
+		 * @since 1.3.0
+		 */
 		do_action( 'activitypub_register_handlers' );
 	}
 }

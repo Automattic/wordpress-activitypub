@@ -1,23 +1,28 @@
 <?php
+/**
+ * WordPress Post Transformer Class file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Transformer;
 
 use WP_Post;
 use Activitypub\Shortcodes;
 use Activitypub\Model\Blog;
-use Activitypub\Collection\Users;
-use Activitypub\Transformer\Base;
+use Activitypub\Collection\Actors;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
 use function Activitypub\get_enclosures;
-use function Activitypub\site_supports_blocks;
-use function Activitypub\get_rest_url_by_path;
-use function Activitypub\is_user_type_disabled;
-use function Activitypub\generate_post_summary;
+use function Activitypub\get_upload_baseurl;
 use function Activitypub\get_content_warning;
+use function Activitypub\site_supports_blocks;
+use function Activitypub\generate_post_summary;
+use function Activitypub\get_content_visibility;
 
 /**
- * WordPress Post Transformer
+ * WordPress Post Transformer.
  *
  * The Post Transformer is responsible for transforming a WP_Post object into different other
  * Object-Types.
@@ -30,7 +35,7 @@ class Post extends Base {
 	/**
 	 * The User as Actor Object.
 	 *
-	 * @var Activitypub\Activity\Actor
+	 * @var \Activitypub\Activity\Actor
 	 */
 	private $actor_object = null;
 
@@ -46,7 +51,9 @@ class Post extends Base {
 	/**
 	 * Change the User-ID of the WordPress Post.
 	 *
-	 * @return int The User-ID of the WordPress Post
+	 * @param int $user_id The new user ID.
+	 *
+	 * @return Post The Post Object.
 	 */
 	public function change_wp_user_id( $user_id ) {
 		$this->wp_object->post_author = $user_id;
@@ -65,33 +72,24 @@ class Post extends Base {
 		$post   = $this->wp_object;
 		$object = parent::to_object();
 
-		$published = \strtotime( $post->post_date_gmt );
-
-		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', $published ) );
-
-		$updated = \strtotime( $post->post_modified_gmt );
-
-		if ( $updated > $published ) {
-			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', $updated ) );
-		}
-
-		$object->set_content_map(
-			array(
-				$this->get_locale() => $this->get_content(),
-			)
-		);
-
-		$object->set_to(
-			array(
-				'https://www.w3.org/ns/activitystreams#Public',
-				$this->get_actor_object()->get_followers(),
-			)
-		);
-
 		$content_warning = get_content_warning( $post );
 		if ( ! empty( $content_warning ) ) {
 			$object->set_sensitive( true );
 			$object->set_summary( $content_warning );
+			$object->set_summary_map( null );
+		}
+
+		$visibility = get_content_visibility( $post );
+
+		switch ( $visibility ) {
+			case ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC:
+				$object->set_to( $this->get_cc() );
+				$object->set_cc( $this->get_to() );
+				break;
+			case ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL:
+				$object->set_to( array() );
+				$object->set_cc( array() );
+				break;
 		}
 
 		return $object;
@@ -102,9 +100,9 @@ class Post extends Base {
 	 *
 	 * If `single_user` mode is enabled, the Blog-User is returned.
 	 *
-	 * @return Activitypub\Activity\Actor The User-Object.
+	 * @return \Activitypub\Activity\Actor The User-Object.
 	 */
-	protected function get_actor_object() {
+	public function get_actor_object() {
 		if ( $this->actor_object ) {
 			return $this->actor_object;
 		}
@@ -116,7 +114,7 @@ class Post extends Base {
 			return $blog_user;
 		}
 
-		$user = Users::get_by_id( $this->wp_object->post_author );
+		$user = Actors::get_by_id( $this->wp_object->post_author );
 
 		if ( $user && ! is_wp_error( $user ) ) {
 			$this->actor_object = $user;
@@ -131,7 +129,15 @@ class Post extends Base {
 	 *
 	 * @return string The Posts ID.
 	 */
-	protected function get_id() {
+	public function get_id() {
+		$last_legacy_id = (int) \get_option( 'activitypub_last_post_with_permalink_as_id', 0 );
+		$post_id        = (int) $this->wp_object->ID;
+
+		if ( $post_id > $last_legacy_id ) {
+			// Generate URI based on post ID.
+			return \add_query_arg( 'p', $post_id, \trailingslashit( \home_url() ) );
+		}
+
 		return $this->get_url();
 	}
 
@@ -148,7 +154,7 @@ class Post extends Base {
 				$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
 				break;
 			case 'draft':
-				// get_sample_permalink is in wp-admin, not always loaded
+				// Get_sample_permalink is in wp-admin, not always loaded.
 				if ( ! \function_exists( '\get_sample_permalink' ) ) {
 					require_once ABSPATH . 'wp-admin/includes/post.php';
 				}
@@ -171,7 +177,60 @@ class Post extends Base {
 	 * @return string The User-URL.
 	 */
 	protected function get_attributed_to() {
-		return $this->get_actor_object()->get_url();
+		return $this->get_actor_object()->get_id();
+	}
+
+	/**
+	 * Returns the featured image as `Image`.
+	 *
+	 * @return array|null The Image or null if no image is available.
+	 */
+	protected function get_image() {
+		$post_id = $this->wp_object->ID;
+
+		// List post thumbnail first if this post has one.
+		if (
+			! \function_exists( 'has_post_thumbnail' ) ||
+			! \has_post_thumbnail( $post_id )
+		) {
+			return null;
+		}
+
+		$id         = \get_post_thumbnail_id( $post_id );
+		$image_size = 'large';
+
+		/**
+		 * Filter the image URL returned for each post.
+		 *
+		 * @param array|false $thumbnail  The image URL, or false if no image is available.
+		 * @param int         $id         The attachment ID.
+		 * @param string      $image_size The image size to retrieve. Set to 'large' by default.
+		 */
+		$thumbnail = apply_filters(
+			'activitypub_get_image',
+			self::get_wordpress_attachment( $id, $image_size ),
+			$id,
+			$image_size
+		);
+
+		if ( ! $thumbnail ) {
+			return null;
+		}
+
+		$mime_type = \get_post_mime_type( $id );
+
+		$image = array(
+			'type'      => 'Image',
+			'url'       => \esc_url( $thumbnail[0] ),
+			'mediaType' => \esc_attr( $mime_type ),
+		);
+
+		$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
+		if ( $alt ) {
+			$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt ) );
+		}
+
+		return $image;
 	}
 
 	/**
@@ -201,7 +260,7 @@ class Post extends Base {
 		);
 		$id    = $this->wp_object->ID;
 
-		// list post thumbnail first if this post has one
+		// List post thumbnail first if this post has one.
 		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
 			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
 		}
@@ -229,17 +288,17 @@ class Post extends Base {
 		 */
 		$media = \apply_filters( 'activitypub_attachment_ids', $media, $this->wp_object );
 
-		$attchments = \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media ) );
+		$attachments = \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media ) );
 
 		/**
 		 * Filter the attachments for a post.
 		 *
-		 * @param array   $attchments      The attachments.
+		 * @param array   $attachments     The attachments.
 		 * @param WP_Post $this->wp_object The post object.
 		 *
 		 * @return array The filtered attachments.
 		 */
-		return \apply_filters( 'activitypub_attachments', $attchments, $this->wp_object );
+		return \apply_filters( 'activitypub_attachments', $attachments, $this->wp_object );
 	}
 
 	/**
@@ -257,16 +316,18 @@ class Post extends Base {
 		}
 
 		foreach ( $enclosures as $enclosure ) {
-			// check if URL is an attachment
+			// Check if URL is an attachment.
 			$attachment_id = \attachment_url_to_postid( $enclosure['url'] );
+
 			if ( $attachment_id ) {
 				$enclosure['id']        = $attachment_id;
 				$enclosure['url']       = \wp_get_attachment_url( $attachment_id );
 				$enclosure['mediaType'] = \get_post_mime_type( $attachment_id );
 			}
 
-			$mime_type       = $enclosure['mediaType'];
-			$mime_type_parts = \explode( '/', $mime_type );
+			$mime_type         = $enclosure['mediaType'];
+			$mime_type_parts   = \explode( '/', $mime_type );
+			$enclosure['type'] = \ucfirst( $mime_type_parts[0] );
 
 			switch ( $mime_type_parts[0] ) {
 				case 'image':
@@ -293,29 +354,27 @@ class Post extends Base {
 	 * @return array The attachments.
 	 */
 	protected function get_block_attachments( $media, $max_media ) {
-		// max media can't be negative or zero
+		// Max media can't be negative or zero.
 		if ( $max_media <= 0 ) {
 			return array();
 		}
 
 		$blocks = \parse_blocks( $this->wp_object->post_content );
-		$media  = self::get_media_from_blocks( $blocks, $media );
 
-		return $media;
+		return self::get_media_from_blocks( $blocks, $media );
 	}
 
 	/**
 	 * Recursively get media IDs from blocks.
 	 *
-	 * @param array $blocks The blocks to search for media IDs
-	 * @param array $media The media IDs to append new IDs to
-	 * @param int   $max_media The maximum number of media to return.
+	 * @param array $blocks The blocks to search for media IDs.
+	 * @param array $media  The media IDs to append new IDs to.
 	 *
 	 * @return array The image IDs.
 	 */
 	protected static function get_media_from_blocks( $blocks, $media ) {
 		foreach ( $blocks as $block ) {
-			// recurse into inner blocks
+			// Recurse into inner blocks.
 			if ( ! empty( $block['innerBlocks'] ) ) {
 				$media = self::get_media_from_blocks( $block['innerBlocks'], $media );
 			}
@@ -386,7 +445,7 @@ class Post extends Base {
 	 * @return array The attachments.
 	 */
 	protected function get_classic_editor_images( $media, $max_images ) {
-		// max images can't be negative or zero
+		// Max images can't be negative or zero.
 		if ( $max_images <= 0 ) {
 			return array();
 		}
@@ -410,48 +469,63 @@ class Post extends Base {
 	 * @return array The attachments.
 	 */
 	protected function get_classic_editor_image_embeds( $max_images ) {
-		// if someone calls that function directly, bail
+		// If someone calls that function directly, bail.
 		if ( ! \class_exists( '\WP_HTML_Tag_Processor' ) ) {
 			return array();
 		}
 
-		// max images can't be negative or zero
+		// Max images can't be negative or zero.
 		if ( $max_images <= 0 ) {
 			return array();
 		}
 
 		$images  = array();
-		$base    = \wp_get_upload_dir()['baseurl'];
+		$base    = get_upload_baseurl();
 		$content = \get_post_field( 'post_content', $this->wp_object );
 		$tags    = new \WP_HTML_Tag_Processor( $content );
 
-		// This linter warning is a false positive - we have to
-		// re-count each time here as we modify $images.
+		// This linter warning is a false positive - we have to re-count each time here as we modify $images.
 		// phpcs:ignore Squiz.PHP.DisallowSizeFunctionsInLoops.Found
 		while ( $tags->next_tag( 'img' ) && ( \count( $images ) <= $max_images ) ) {
-			$src = $tags->get_attribute( 'src' );
+			/**
+			 * Filter the image source URL.
+			 *
+			 * This can be used to modify the image source URL before it is used to
+			 * determine the attachment ID.
+			 *
+			 * @param string $src The image source URL.
+			 */
+			$src = \apply_filters( 'activitypub_image_src', $tags->get_attribute( 'src' ) );
 
-			// If the img source is in our uploads dir, get the
-			// associated ID. Note: if there's a -500x500
-			// type suffix, we remove it, but we try the original
-			// first in case the original image is actually called
-			// that. Likewise, we try adding the -scaled suffix for
-			// the case that this is a small version of an image
-			// that was big enough to get scaled down on upload:
-			// https://make.wordpress.org/core/2019/10/09/introducing-handling-of-big-images-in-wordpress-5-3/
+			/*
+			 * If the img source is in our uploads dir, get the
+			 * associated ID. Note: if there's a -500x500
+			 * type suffix, we remove it, but we try the original
+			 * first in case the original image is actually called
+			 * that. Likewise, we try adding the -scaled suffix for
+			 * the case that this is a small version of an image
+			 * that was big enough to get scaled down on upload:
+			 * https://make.wordpress.org/core/2019/10/09/introducing-handling-of-big-images-in-wordpress-5-3/
+			 */
 			if ( null !== $src && \str_starts_with( $src, $base ) ) {
 				$img_id = \attachment_url_to_postid( $src );
 
 				if ( 0 === $img_id ) {
+					$count  = 0;
+					$src    = \strtok( $src, '?' );
+					$img_id = \attachment_url_to_postid( $src );
+				}
+
+				if ( 0 === $img_id ) {
 					$count = 0;
-					$src   = preg_replace( '/-(?:\d+x\d+)(\.[a-zA-Z]+)$/', '$1', $src, 1, $count );
+					$src   = \preg_replace( '/-(?:\d+x\d+)(\.[a-zA-Z]+)$/', '$1', $src, 1, $count );
 					if ( $count > 0 ) {
 						$img_id = \attachment_url_to_postid( $src );
 					}
 				}
 
 				if ( 0 === $img_id ) {
-					$src    = preg_replace( '/(\.[a-zA-Z]+)$/', '-scaled$1', $src );
+					$src    = \preg_replace( '/(\.[a-zA-Z]+)$/', '-scaled$1', $src );
 					$img_id = \attachment_url_to_postid( $src );
 				}
 
@@ -477,7 +551,7 @@ class Post extends Base {
 	 * @return array The attachment IDs.
 	 */
 	protected function get_classic_editor_image_attachments( $max_images ) {
-		// max images can't be negative or zero
+		// Max images can't be negative or zero.
 		if ( $max_images <= 0 ) {
 			return array();
 		}
@@ -507,12 +581,21 @@ class Post extends Base {
 	/**
 	 * Filter media IDs by object type.
 	 *
-	 * @param array  $media The media array grouped by type.
-	 * @param string $type  The object type.
+	 * @param array   $media     The media array grouped by type.
+	 * @param string  $type      The object type.
+	 * @param WP_Post $wp_object The post object.
 	 *
 	 * @return array The filtered media IDs.
 	 */
 	protected static function filter_media_by_object_type( $media, $type, $wp_object ) {
+		/**
+		 * Filter the object type for media attachments.
+		 *
+		 * @param string  $type      The object type.
+		 * @param WP_Post $wp_object The post object.
+		 *
+		 * @return string The filtered object type.
+		 */
 		$type = \apply_filters( 'filter_media_by_object_type', \strtolower( $type ), $wp_object );
 
 		if ( ! empty( $media[ $type ] ) ) {
@@ -538,7 +621,7 @@ class Post extends Base {
 		$attachment      = array();
 		$mime_type       = \get_post_mime_type( $id );
 		$mime_type_parts = \explode( '/', $mime_type );
-		// switching on image/audio/video
+		// Switching on image/audio/video.
 		switch ( $mime_type_parts[0] ) {
 			case 'image':
 				$image_size = 'large';
@@ -586,7 +669,7 @@ class Post extends Base {
 					'name'      => \esc_attr( \get_the_title( $id ) ),
 				);
 				$meta       = wp_get_attachment_metadata( $id );
-				// height and width for videos
+				// Height and width for videos.
 				if ( isset( $meta['width'] ) && isset( $meta['height'] ) ) {
 					$attachment['width']  = \esc_attr( $meta['width'] );
 					$attachment['height'] = \esc_attr( $meta['height'] );
@@ -595,6 +678,14 @@ class Post extends Base {
 				break;
 		}
 
+		/**
+		 * Filter the attachment for a post.
+		 *
+		 * @param array $attachment The attachment.
+		 * @param int   $id         The attachment ID.
+		 *
+		 * @return array The filtered attachment.
+		 */
 		return \apply_filters( 'activitypub_attachment', $attachment, $id );
 	}
 
@@ -643,42 +734,42 @@ class Post extends Base {
 			return \ucfirst( $post_format_setting );
 		}
 
-		$has_title = post_type_supports( $this->wp_object->post_type, 'title' );
+		$has_title = \post_type_supports( $this->wp_object->post_type, 'title' );
+		$content   = \wp_strip_all_tags( $this->wp_object->post_content );
 
-		if ( ! $has_title ) {
+		// Check if the post has a title.
+		if (
+			! $has_title ||
+			! $this->wp_object->post_title ||
+			\strlen( $content ) <= ACTIVITYPUB_NOTE_LENGTH
+		) {
 			return 'Note';
 		}
 
-		// Default to Article.
-		$object_type = 'Article';
-		$post_format = 'standard';
+		// Default to Note.
+		$object_type = 'Note';
+		$post_type   = \get_post_type( $this->wp_object );
 
-		if ( \get_theme_support( 'post-formats' ) ) {
-			$post_format = \get_post_format( $this->wp_object );
-		}
-
-		$post_type = \get_post_type( $this->wp_object );
-		switch ( $post_type ) {
-			case 'post':
-				switch ( $post_format ) {
-					case 'standard':
-					case '':
-						$object_type = 'Article';
-						break;
-					default:
-						$object_type = 'Note';
-						break;
-				}
-				break;
-			case 'page':
-				$object_type = 'Page';
-				break;
-			default:
-				$object_type = 'Article';
-				break;
+		if ( 'page' === $post_type ) {
+			$object_type = 'Page';
+		} elseif ( ! \get_post_format( $this->wp_object ) ) {
+			$object_type = 'Article';
 		}
 
 		return $object_type;
+	}
+
+	/**
+	 * Returns the recipient of the post.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-to
+	 *
+	 * @return array The recipient URLs of the post.
+	 */
+	public function get_to() {
+		return array(
+			'https://www.w3.org/ns/activitystreams#Public',
+		);
 	}
 
 	/**
@@ -689,7 +780,9 @@ class Post extends Base {
 	 * @return array The list of Mentions.
 	 */
 	protected function get_cc() {
-		$cc = array();
+		$cc = array(
+			$this->get_actor_object()->get_followers(),
+		);
 
 		$mentions = $this->get_mentions();
 		if ( $mentions ) {
@@ -701,14 +794,20 @@ class Post extends Base {
 		return $cc;
 	}
 
-
+	/**
+	 * Returns the Audience for the Post.
+	 *
+	 * @return string|null The audience.
+	 */
 	public function get_audience() {
-		if ( is_single_user() ) {
-			return null;
-		} else {
+		$actor_mode = \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE === $actor_mode ) {
 			$blog = new Blog();
 			return $blog->get_id();
 		}
+
+		return null;
 	}
 
 	/**
@@ -762,7 +861,7 @@ class Post extends Base {
 		}
 
 		// Remove Teaser from drafts.
-		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->wp_object ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
 		}
 
@@ -784,15 +883,15 @@ class Post extends Base {
 
 		$title = \get_the_title( $this->wp_object->ID );
 
-		if ( $title ) {
-			return \wp_strip_all_tags(
-				\html_entity_decode(
-					$title
-				)
-			);
+		if ( ! $title ) {
+			return null;
 		}
 
-		return null;
+		return \wp_strip_all_tags(
+			\html_entity_decode(
+				$title
+			)
+		);
 	}
 
 	/**
@@ -806,7 +905,7 @@ class Post extends Base {
 		add_filter( 'activitypub_reply_block', '__return_empty_string' );
 
 		// Remove Content from drafts.
-		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->wp_object ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
 		}
 
@@ -827,12 +926,17 @@ class Post extends Base {
 		$post    = $this->wp_object;
 		$content = $this->get_post_content_template();
 
+		// It seems that shortcodes are only applied to published posts.
+		if ( is_preview() ) {
+			$post->post_status = 'publish';
+		}
+
 		// Register our shortcodes just in time.
 		Shortcodes::register();
 		// Fill in the shortcodes.
-		setup_postdata( $post );
-		$content = do_shortcode( $content );
-		wp_reset_postdata();
+		\setup_postdata( $post );
+		$content = \do_shortcode( $content );
+		\wp_reset_postdata();
 
 		$content = \wpautop( $content );
 		$content = \preg_replace( '/[\n\r\t]/', '', $content );
@@ -840,7 +944,7 @@ class Post extends Base {
 
 		$content = \apply_filters( 'activitypub_the_content', $content, $post );
 
-		// Don't need these any more, should never appear in a post.
+		// Don't need these anymore, should never appear in a post.
 		Shortcodes::unregister();
 
 		return $content;
@@ -852,28 +956,19 @@ class Post extends Base {
 	 * @return string The Template.
 	 */
 	protected function get_post_content_template() {
-		$type = \get_option( 'activitypub_post_content_type', 'content' );
-
-		switch ( $type ) {
-			case 'excerpt':
-				$template = "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
-				break;
-			case 'title':
-				$template = "<h2>[ap_title]</h2>\n\n[ap_permalink type=\"html\"]";
-				break;
-			case 'content':
-				$template = "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
-				break;
-			default:
-				// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-				$template = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ) ?: ACTIVITYPUB_CUSTOM_POST_CONTENT;
-				break;
-		}
+		$content  = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+		$template = $content ?? ACTIVITYPUB_CUSTOM_POST_CONTENT;
 
 		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 
 		if ( 'wordpress-post-format' === $post_format_setting ) {
-			$template = '[ap_content]';
+			$template = '';
+
+			if ( 'Note' === $this->get_type() ) {
+				$template .= "[ap_title type=\"html\"]\n\n";
+			}
+
+			$template .= '[ap_content]';
 		}
 
 		return apply_filters( 'activitypub_object_content_template', $template, $this->wp_object );
@@ -885,6 +980,15 @@ class Post extends Base {
 	 * @return array The list of @-Mentions.
 	 */
 	protected function get_mentions() {
+		/**
+		 * Filter the mentions in the post content.
+		 *
+		 * @param array   $mentions The mentions.
+		 * @param string  $content  The post content.
+		 * @param WP_Post $post     The post object.
+		 *
+		 * @return array The filtered mentions.
+		 */
 		return apply_filters(
 			'activitypub_extract_mentions',
 			array(),
@@ -935,6 +1039,74 @@ class Post extends Base {
 	}
 
 	/**
+	 * Returns the published date of the post.
+	 *
+	 * @return string The published date of the post.
+	 */
+	public function get_published() {
+		$published = \strtotime( $this->wp_object->post_date_gmt );
+
+		return \gmdate( 'Y-m-d\TH:i:s\Z', $published );
+	}
+
+	/**
+	 * Returns the updated date of the post.
+	 *
+	 * @return string|null The updated date of the post.
+	 */
+	public function get_updated() {
+		$published = \strtotime( $this->wp_object->post_date_gmt );
+		$updated   = \strtotime( $this->wp_object->post_modified_gmt );
+
+		if ( $updated > $published ) {
+			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Returns the content map for the post.
+	 *
+	 * @return array The content map for the post.
+	 */
+	public function get_content_map() {
+		return array(
+			$this->get_locale() => $this->get_content(),
+		);
+	}
+
+	/**
+	 * Returns the name map for the post.
+	 *
+	 * @return array The name map for the post.
+	 */
+	public function get_name_map() {
+		if ( ! $this->get_name() ) {
+			return null;
+		}
+
+		return array(
+			$this->get_locale() => $this->get_name(),
+		);
+	}
+
+	/**
+	 * Returns the summary map for the post.
+	 *
+	 * @return array The summary map for the post.
+	 */
+	public function get_summary_map() {
+		if ( ! $this->get_summary() ) {
+			return null;
+		}
+
+		return array(
+			$this->get_locale() => $this->get_summary(),
+		);
+	}
+
+	/**
 	 * Transform Embed blocks to block level link.
 	 *
 	 * Remote servers will simply drop iframe elements, rendering incomplete content.
@@ -942,12 +1114,24 @@ class Post extends Base {
 	 * @see https://www.w3.org/TR/activitypub/#security-sanitizing-content
 	 * @see https://www.w3.org/wiki/ActivityPub/Primer/HTML
 	 *
-	 * @param string $block_content The block content (html)
-	 * @param object $block The block object
+	 * @param string $block_content The block content (html).
+	 * @param object $block         The block object.
 	 *
 	 * @return string A block level link
 	 */
 	public static function revert_embed_links( $block_content, $block ) {
+		if ( ! isset( $block['attrs']['url'] ) ) {
+			return $block_content;
+		}
 		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
+	}
+
+	/**
+	 * Check if the post is a preview.
+	 *
+	 * @return boolean True if the post is a preview, false otherwise.
+	 */
+	private function is_preview() {
+		return defined( 'ACTIVITYPUB_PREVIEW' ) && ACTIVITYPUB_PREVIEW;
 	}
 }

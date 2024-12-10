@@ -1,4 +1,10 @@
 <?php
+/**
+ * Seriously Simple Podcasting integration file.
+ *
+ * @package Activitypub
+ */
+
 namespace Activitypub\Integration;
 
 use Activitypub\Transformer\Post;
@@ -22,20 +28,19 @@ class Seriously_Simple_Podcasting extends Post {
 	 * @return array The attachments array.
 	 */
 	public function get_attachment() {
-		$post        = $this->wp_object;
-		$attachments = parent::get_attachment();
-
+		$post       = $this->wp_object;
 		$attachment = array(
-			'type' => \esc_attr( \get_post_meta( $post->ID, 'episode_type', true ) ),
+			'type' => \esc_attr( ucfirst( \get_post_meta( $post->ID, 'episode_type', true ) ?? 'Audio' ) ),
 			'url'  => \esc_url( \get_post_meta( $post->ID, 'audio_file', true ) ),
-			'name' => \esc_attr( \get_the_title( $post->ID ) ),
-			'icon' => \esc_url( \get_post_meta( $post->ID, 'cover_image', true ) ),
+			'name' => \esc_attr( \get_the_title( $post->ID ) ?? '' ),
 		);
 
-		$attachment = array_filter( $attachment );
-		array_unshift( $attachments, $attachment );
+		$cover = \get_post_meta( $post->ID, 'cover_image', true );
+		if ( $cover ) {
+			$attachment['icon'] = \esc_url( $cover );
+		}
 
-		return $attachments;
+		return array( $attachment );
 	}
 
 	/**

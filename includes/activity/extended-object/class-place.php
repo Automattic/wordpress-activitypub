@@ -86,6 +86,11 @@ class Place extends Base_Object {
 	 */
 	protected $address;
 
+	/**
+	 * Set the address of the place.
+	 *
+	 * @param array|string $address The address of the place.
+	 */
 	public function set_address( $address ) {
 		if ( is_string( $address ) || is_array( $address ) ) {
 			$this->address = $address;

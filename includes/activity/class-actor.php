@@ -3,6 +3,8 @@
  * Inspired by the PHP ActivityPub Library by @Landrok
  *
  * @link https://github.com/landrok/activitypub
+ *
+ * @package Activitypub
  */
 
 namespace Activitypub\Activity;
@@ -39,6 +41,10 @@ class Actor extends Base_Object {
 			),
 			'moderators'                => array(
 				'@id'   => 'lemmy:moderators',
+				'@type' => '@id',
+			),
+			'attributionDomains'        => array(
+				'@id'   => 'toot:attributionDomains',
 				'@type' => '@id',
 			),
 			'postingRestrictedToMods'   => 'lemmy:postingRestrictedToMods',
@@ -182,4 +188,14 @@ class Actor extends Base_Object {
 	 * @var boolean
 	 */
 	protected $sensitive = null;
+
+	/**
+	 * Domains allowed to use `fediverse:creator` for this actor in
+	 * published articles.
+	 *
+	 * @see https://blog.joinmastodon.org/2024/07/highlighting-journalism-on-mastodon/
+	 *
+	 * @var array
+	 */
+	protected $attribution_domains = null;
 }

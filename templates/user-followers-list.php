@@ -1,4 +1,9 @@
 <?php
+/**
+ * ActivityPub User Followers List template.
+ *
+ * @package Activitypub
+ */
 
 $follower_count = \Activitypub\Collection\Followers::count_followers( \get_current_user_id() );
 // translators: The follower count.
