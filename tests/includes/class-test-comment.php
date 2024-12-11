@@ -235,6 +235,37 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test pre_wp_update_comment_count_now.
+	 *
+	 * @covers ::pre_wp_update_comment_count_now
+	 */
+	public function test_pre_wp_update_comment_count_now() {
+		$post_id = self::factory()->post->create();
+
+		// Case 1: $new is null, no approved comments of non-ActivityPub types.
+		$this->assertSame( 0, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
+
+		// Case 2: $new is null, approved comments of non-ActivityPub types exist.
+		self::factory()->comment->create_post_comments( $post_id, 2, array( 'comment_approved' => '1' ) );
+		$this->assertSame( 2, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
+
+		// Case 3: $new is null, mix of ActivityPub and non-ActivityPub approved comments.
+		self::factory()->comment->create_post_comments(
+			$post_id,
+			3,
+			array(
+				'comment_approved' => '1',
+				'comment_type'     => 'like',
+			)
+		);
+		self::factory()->comment->create_post_comments( $post_id, 3, array( 'comment_approved' => '1' ) );
+		$this->assertSame( 5, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
+
+		// Case 4: $new is not null, should return $new unmodified.
+		$this->assertSame( 10, Comment::pre_wp_update_comment_count_now( 10, 0, $post_id ) );
+	}
+
+	/**
 	 * Data provider for test_check_ability_to_federate_comment.
 	 */
 	public function ability_to_federate_comment() {
