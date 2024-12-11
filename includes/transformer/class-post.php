@@ -13,6 +13,7 @@ use Activitypub\Model\Blog;
 use Activitypub\Collection\Actors;
 
 use function Activitypub\esc_hashtag;
+use function Activitypub\object_to_uri;
 use function Activitypub\is_single_user;
 use function Activitypub\get_enclosures;
 use function Activitypub\get_upload_baseurl;
@@ -208,7 +209,63 @@ class Post extends Base {
 		 */
 		$thumbnail = apply_filters(
 			'activitypub_get_image',
-			self::get_wordpress_attachment( $id, $image_size ),
+			$this->get_wordpress_attachment( $id, $image_size ),
+			$id,
+			$image_size
+		);
+
+		if ( ! $thumbnail ) {
+			return null;
+		}
+
+		$mime_type = \get_post_mime_type( $id );
+
+		$image = array(
+			'type'      => 'Image',
+			'url'       => \esc_url( $thumbnail[0] ),
+			'mediaType' => \esc_attr( $mime_type ),
+		);
+
+		$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
+		if ( $alt ) {
+			$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt ) );
+		}
+
+		return $image;
+	}
+
+	/**
+	 * Returns an Icon, based on the Featured Image with a fallback to the site-icon.
+	 *
+	 * @return array|null The Icon or null if no icon is available.
+	 */
+	protected function get_icon() {
+		$post_id = $this->wp_object->ID;
+
+		// List post thumbnail first if this post has one.
+		if ( \has_post_thumbnail( $post_id ) ) {
+			$id = \get_post_thumbnail_id( $post_id );
+		} else {
+			// Try site_logo, falling back to site_icon, first.
+			$id = get_option( 'site_icon' );
+		}
+
+		if ( ! $id ) {
+			return null;
+		}
+
+		$image_size = 'thumbnail';
+
+		/**
+		 * Filter the image URL returned for each post.
+		 *
+		 * @param array|false $thumbnail  The image URL, or false if no image is available.
+		 * @param int         $id         The attachment ID.
+		 * @param string      $image_size The image size to retrieve. Set to 'large' by default.
+		 */
+		$thumbnail = apply_filters(
+			'activitypub_get_image',
+			$this->get_wordpress_attachment( $id, $image_size ),
 			$id,
 			$image_size
 		);
@@ -273,7 +330,7 @@ class Post extends Base {
 			$media = $this->get_classic_editor_images( $media, $max_media );
 		}
 
-		$media      = self::filter_media_by_object_type( $media, \get_post_format( $this->wp_object ), $this->wp_object );
+		$media      = $this->filter_media_by_object_type( $media, \get_post_format( $this->wp_object ), $this->wp_object );
 		$unique_ids = \array_unique( \array_column( $media, 'id' ) );
 		$media      = \array_intersect_key( $media, $unique_ids );
 		$media      = \array_slice( $media, 0, $max_media );
@@ -288,7 +345,7 @@ class Post extends Base {
 		 */
 		$media = \apply_filters( 'activitypub_attachment_ids', $media, $this->wp_object );
 
-		$attachments = \array_filter( \array_map( array( self::class, 'wp_attachment_to_activity_attachment' ), $media ) );
+		$attachments = \array_filter( \array_map( array( $this, 'wp_attachment_to_activity_attachment' ), $media ) );
 
 		/**
 		 * Filter the attachments for a post.
@@ -361,7 +418,7 @@ class Post extends Base {
 
 		$blocks = \parse_blocks( $this->wp_object->post_content );
 
-		return self::get_media_from_blocks( $blocks, $media );
+		return $this->get_media_from_blocks( $blocks, $media );
 	}
 
 	/**
@@ -372,11 +429,11 @@ class Post extends Base {
 	 *
 	 * @return array The image IDs.
 	 */
-	protected static function get_media_from_blocks( $blocks, $media ) {
+	protected function get_media_from_blocks( $blocks, $media ) {
 		foreach ( $blocks as $block ) {
 			// Recurse into inner blocks.
 			if ( ! empty( $block['innerBlocks'] ) ) {
-				$media = self::get_media_from_blocks( $block['innerBlocks'], $media );
+				$media = $this->get_media_from_blocks( $block['innerBlocks'], $media );
 			}
 
 			switch ( $block['blockName'] ) {
@@ -587,7 +644,7 @@ class Post extends Base {
 	 *
 	 * @return array The filtered media IDs.
 	 */
-	protected static function filter_media_by_object_type( $media, $type, $wp_object ) {
+	protected function filter_media_by_object_type( $media, $type, $wp_object ) {
 		/**
 		 * Filter the object type for media attachments.
 		 *
@@ -612,7 +669,7 @@ class Post extends Base {
 	 *
 	 * @return array The ActivityPub Attachment.
 	 */
-	public static function wp_attachment_to_activity_attachment( $media ) {
+	public function wp_attachment_to_activity_attachment( $media ) {
 		if ( ! isset( $media['id'] ) ) {
 			return $media;
 		}
@@ -635,7 +692,7 @@ class Post extends Base {
 				 */
 				$thumbnail = apply_filters(
 					'activitypub_get_image',
-					self::get_wordpress_attachment( $id, $image_size ),
+					$this->get_wordpress_attachment( $id, $image_size ),
 					$id,
 					$image_size
 				);
@@ -674,7 +731,11 @@ class Post extends Base {
 					$attachment['width']  = \esc_attr( $meta['width'] );
 					$attachment['height'] = \esc_attr( $meta['height'] );
 				}
-				// @todo: add `icon` support for audio/video attachments. Maybe use post thumbnail?
+
+				if ( $this->get_icon() ) {
+					$attachment['icon'] = object_to_uri( $this->get_icon() );
+				}
+
 				break;
 		}
 
@@ -697,7 +758,7 @@ class Post extends Base {
 	 *
 	 * @return array|false Array of image data, or boolean false if no image is available.
 	 */
-	protected static function get_wordpress_attachment( $id, $image_size = 'large' ) {
+	protected function get_wordpress_attachment( $id, $image_size = 'large' ) {
 		/**
 		 * Hook into the image retrieval process. Before image retrieval.
 		 *
@@ -920,7 +981,7 @@ class Post extends Base {
 		 */
 		do_action( 'activitypub_before_get_content', $post );
 
-		add_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ), 10, 2 );
+		add_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ), 10, 2 );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$post    = $this->wp_object;
@@ -1119,7 +1180,7 @@ class Post extends Base {
 	 *
 	 * @return string A block level link
 	 */
-	public static function revert_embed_links( $block_content, $block ) {
+	public function revert_embed_links( $block_content, $block ) {
 		if ( ! isset( $block['attrs']['url'] ) ) {
 			return $block_content;
 		}

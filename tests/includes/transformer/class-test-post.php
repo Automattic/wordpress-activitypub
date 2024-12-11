@@ -438,4 +438,79 @@ class Test_Post extends \WP_UnitTestCase {
 
 		return $id;
 	}
+
+	/**
+	 * Test get_icon method.
+	 *
+	 * @covers ::get_icon
+	 */
+	public function test_get_icon() {
+		$post_id = $this->factory->post->create(
+			array(
+				'post_title'   => 'Test Post',
+				'post_content' => 'Test content',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		// Create test image.
+		$attachment_id = $this->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
+
+		// Set up reflection method.
+		$reflection = new ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_icon' );
+		$method->setAccessible( true );
+
+		// Test with featured image.
+		set_post_thumbnail( $post_id, $attachment_id );
+
+		$transformer = new Post( $post );
+		$icon        = $method->invoke( $transformer );
+
+		$this->assertIsArray( $icon );
+		$this->assertEquals( 'Image', $icon['type'] );
+		$this->assertArrayHasKey( 'url', $icon );
+		$this->assertArrayHasKey( 'mediaType', $icon );
+		$this->assertEquals( get_post_mime_type( $attachment_id ), $icon['mediaType'] );
+
+		// Test with site icon.
+		delete_post_thumbnail( $post_id );
+		update_option( 'site_icon', $attachment_id );
+
+		$icon = $method->invoke( $transformer );
+
+		$this->assertIsArray( $icon );
+		$this->assertEquals( 'Image', $icon['type'] );
+		$this->assertArrayHasKey( 'url', $icon );
+		$this->assertArrayHasKey( 'mediaType', $icon );
+		$this->assertEquals( get_post_mime_type( $attachment_id ), $icon['mediaType'] );
+
+		// Test with alt text.
+		$alt_text = 'Test Alt Text';
+		update_post_meta( $attachment_id, '_wp_attachment_image_alt', $alt_text );
+
+		$icon = $method->invoke( $transformer );
+
+		$this->assertIsArray( $icon );
+		$this->assertEquals( 'Image', $icon['type'] );
+		$this->assertArrayHasKey( 'name', $icon );
+		$this->assertEquals( $alt_text, $icon['name'] );
+
+		// Test without any images.
+		delete_post_thumbnail( $post_id );
+		delete_option( 'site_icon' );
+		delete_post_meta( $attachment_id, '_wp_attachment_image_alt' );
+
+		$icon = $method->invoke( $transformer );
+		$this->assertNull( $icon );
+
+		// Test with invalid image.
+		set_post_thumbnail( $post_id, 99999 );
+		$icon = $method->invoke( $transformer );
+		$this->assertNull( $icon );
+
+		// Cleanup.
+		wp_delete_post( $post_id, true );
+		wp_delete_attachment( $attachment_id, true );
+	}
 }
