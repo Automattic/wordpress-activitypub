@@ -516,10 +516,10 @@ class Comment {
 		$activity_type = \strtolower( $activity_type );
 		$activity_type = \sanitize_key( $activity_type );
 
-		$comment_types  = self::get_comment_types();
+		$comment_types = self::get_comment_types();
 
 		foreach ( $comment_types as $comment_type ) {
-			if ( in_array( $activity_type, $comment_type['activity_types'] ) ) {
+			if ( in_array( $activity_type, $comment_type['activity_types'], true ) ) {
 				return $comment_type;
 			}
 		}
