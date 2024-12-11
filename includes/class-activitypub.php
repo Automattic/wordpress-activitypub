@@ -534,15 +534,50 @@ class Activitypub {
 					'name'          => _x( 'Outbox', 'post_type plural name', 'activitypub' ),
 					'singular_name' => _x( 'Outbox Item', 'post_type single name', 'activitypub' ),
 				),
-				'public'           => false,
-				'hierarchical'     => false,
+				'capabilities'     => array(
+					'create_posts' => false,
+					//'edit_posts'   => false,
+					//'delete_posts' => false,
+				),
+				'map_meta_cap'     => true,
+				'public'           => true,
+				'hierarchical'     => true,
 				'rewrite'          => false,
 				'query_var'        => false,
-				'delete_with_user' => false,
+				'delete_with_user' => true,
 				'can_export'       => true,
 				'supports'         => array(),
+				'taxonomies'       => array( 'ap_actor', 'ap_activity_type' ),
 			)
 		);
+
+		\register_taxonomy(
+			'ap_actor',
+			Outbox::POST_TYPE,
+			array(
+				'labels'           => array(
+					'name'          => _x( 'Actor', 'post_type plural name', 'activitypub' ),
+					'singular_name' => _x( '', 'post_type single name', 'activitypub' ),
+				),
+				'hierarchical' => true,
+				'public'       => false,
+			)
+		);
+		\register_taxonomy_for_object_type( 'ap_actor', Outbox::POST_TYPE );
+
+		\register_taxonomy(
+			'ap_activity_type',
+			Outbox::POST_TYPE,
+			array(
+				'labels'           => array(
+					'name'          => _x( 'Activity Type', 'post_type plural name', 'activitypub' ),
+					'singular_name' => _x( '', 'post_type single name', 'activitypub' ),
+				),
+				'hierarchical' => true,
+				'public'       => false,
+			)
+		);
+		\register_taxonomy_for_object_type( 'ap_activity_type', Outbox::POST_TYPE );
 
 		// Both User and Blog Extra Fields types have the same args.
 		$args = array(
