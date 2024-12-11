@@ -557,7 +557,6 @@ class Comment {
 	 * Return the registered custom comment types names.
 	 *
 	 * @deprecated 4.5.0 Use `self::get_comment_type_slugs` instead.
-
 	 *
 	 * @return array The registered custom comment type names.
 	 */
