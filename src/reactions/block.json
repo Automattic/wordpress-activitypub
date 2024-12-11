@@ -14,9 +14,6 @@
 		"title": {
 			"type": "string",
 			"default": "Fediverse reactions"
-		},
-		"postId": {
-			"type": "number"
 		}
 	},
 	"textdomain": "activitypub",
