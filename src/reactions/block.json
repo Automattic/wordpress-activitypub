@@ -8,7 +8,15 @@
 	"icon": "heart",
 	"description": "Display Fediverse likes and reposts",
 	"supports": {
-		"html": false
+		"html": false,
+		"align": true,
+		"layout": {
+			"default": {
+				"type": "constrained",
+				"orientation": "vertical",
+				"justifyContent": "center"
+			}
+		}
 	},
 	"attributes": {
 		"title": {

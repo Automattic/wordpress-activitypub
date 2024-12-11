@@ -3,36 +3,83 @@
 		display: flex;
 		align-items: center;
 		margin: 0.5em 0;
-
-		span {
-			margin-right: 0.5em;
-		}
+		position: relative;
 	}
 
 	.reaction-facepile {
 		display: flex;
 		align-items: center;
+		overflow: hidden;
+		flex: 0 1 auto;
+		max-width: calc(100% - 100px); // Reserve space for label
+	}
 
-		a {
-			margin-right: -16px; // Half of avatar width for 50% overlap
-			transition: transform 0.2s ease;
+	.reaction-label {
+		margin-left: 0.75em;
+		white-space: nowrap;
+		cursor: pointer;
+		flex: 0 0 auto;
+		color: #2271b1;
 
-			&:hover {
-				z-index: 2;
-				transform: scale(1.1);
-			}
+		&:hover {
+			color: #135e96;
+		}
+	}
 
-			&:last-child {
-				margin-right: 0;
-			}
+	.reaction-avatar {
+		border-radius: 50%;
+		border: 2px solid #fff;
+		width: 32px;
+		height: 32px;
+		display: block;
+	}
+
+	.reaction-facepile a {
+		margin-right: -10.5px;
+		transition: transform 0.2s ease;
+		position: relative;
+		z-index: 1;
+
+		&:hover {
+			z-index: 2;
+			transform: scale(1.1);
 		}
 
-		.reaction-avatar {
-			border-radius: 50%;
-			border: 2px solid #fff; // Helps separate overlapping avatars
-			width: 32px;
-			height: 32px;
-			display: block;
+		&:last-child {
+			margin-right: 0;
+		}
+	}
+
+	.reaction-dropdown {
+		position: absolute;
+		top: 100%;
+		right: 0;
+		background: #fff;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		min-width: 200px;
+		margin-top: 0.5em;
+		z-index: 10;
+		max-height: 300px;
+		overflow-y: auto;
+
+		.reaction-item {
+			display: flex;
+			align-items: center;
+			padding: 0.5em;
+			text-decoration: none;
+			color: inherit;
+
+			&:hover {
+				background: #f0f0f0;
+			}
+
+			img {
+				width: 24px;
+				height: 24px;
+				margin-right: 0.5em;
+			}
 		}
 	}
 }
