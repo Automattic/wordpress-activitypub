@@ -506,6 +506,28 @@ class Comment {
 	}
 
 	/**
+	 * Get the comment type by activity type.
+	 *
+	 * @param string $activity_type The activity type.
+	 *
+	 * @return array|null The comment type.
+	 */
+	public static function get_comment_type_by_activity_type( $activity_type ) {
+		$activity_type = \strtolower( $activity_type );
+		$activity_type = \sanitize_key( $activity_type );
+
+		$comment_types  = self::get_comment_types();
+
+		foreach ( $comment_types as $comment_type ) {
+			if ( in_array( $activity_type, $comment_type['activity_types'] ) ) {
+				return $comment_type;
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Return the registered custom comment types.
 	 *
 	 * @return array The registered custom comment types
@@ -523,8 +545,8 @@ class Comment {
 	 * @return boolean True if registered.
 	 */
 	public static function is_registered_comment_type( $slug ) {
-		$slug = strtolower( $slug );
-		$slug = sanitize_key( $slug );
+		$slug = \strtolower( $slug );
+		$slug = \sanitize_key( $slug );
 
 		return in_array( $slug, array_keys( self::get_comment_types() ), true );
 	}
@@ -561,12 +583,7 @@ class Comment {
 		if ( in_array( $type, array_keys( $types ), true ) ) {
 			$type_array = $types[ $type ];
 		} else { // Fall back to type attribute.
-			foreach ( $types as $item ) {
-				if ( $type === $item['type'] ) {
-					$type_array = $item;
-					break;
-				}
-			}
+			$type_array = array();
 		}
 
 		/**
@@ -608,28 +625,30 @@ class Comment {
 	 */
 	public static function register_comment_types() {
 		register_comment_type(
-			'announce',
+			'repost',
 			array(
-				'label'       => __( 'Reposts', 'activitypub' ),
-				'singular'    => __( 'Repost', 'activitypub' ),
-				'description' => __( 'A repost on the indieweb is a post that is purely a 100% re-publication of another (typically someone else\'s) post.', 'activitypub' ),
-				'icon'        => '♻️',
-				'class'       => 'p-repost',
-				'type'        => 'repost',
-				'excerpt'     => __( '&hellip; reposted this!', 'activitypub' ),
+				'label'          => __( 'Reposts', 'activitypub' ),
+				'singular'       => __( 'Repost', 'activitypub' ),
+				'description'    => __( 'A repost on the indieweb is a post that is purely a 100% re-publication of another (typically someone else\'s) post.', 'activitypub' ),
+				'icon'           => '♻️',
+				'class'          => 'p-repost',
+				'type'           => 'repost',
+				'activity_types' => array( 'announce' ),
+				'excerpt'        => __( '&hellip; reposted this!', 'activitypub' ),
 			)
 		);
 
 		register_comment_type(
 			'like',
 			array(
-				'label'       => __( 'Likes', 'activitypub' ),
-				'singular'    => __( 'Like', 'activitypub' ),
-				'description' => __( 'A like is a popular webaction button and in some cases post type on various silos such as Facebook and Instagram.', 'activitypub' ),
-				'icon'        => '👍',
-				'class'       => 'p-like',
-				'type'        => 'like',
-				'excerpt'     => __( '&hellip; liked this!', 'activitypub' ),
+				'label'          => __( 'Likes', 'activitypub' ),
+				'singular'       => __( 'Like', 'activitypub' ),
+				'description'    => __( 'A like is a popular webaction button and in some cases post type on various silos such as Facebook and Instagram.', 'activitypub' ),
+				'icon'           => '👍',
+				'class'          => 'p-like',
+				'type'           => 'like',
+				'activity_types' => array( 'like' ),
+				'excerpt'        => __( '&hellip; liked this!', 'activitypub' ),
 			)
 		);
 	}
