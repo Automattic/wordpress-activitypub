@@ -237,6 +237,35 @@
 			<?php \do_settings_fields( 'activitypub', 'general' ); ?>
 			<?php \do_settings_fields( 'activitypub', 'server' ); ?>
 		</div>
+		<div class="box">
+			<h3><?php \esc_html_e( 'Security', 'activitypub' ); ?></h3>
+			<table class="form-table">
+				<tbody>
+					<?php if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) : ?>
+					<tr>
+						<th scope="row">
+							<?php \esc_html_e( 'Authorized-Fetch', 'activitypub' ); ?>
+						</th>
+						<td>
+							<p>
+								<label>
+									<input type="checkbox" name="activitypub_authorized_fetch" id="activitypub_authorized_fetch" value="1" <?php \checked( '1', \get_option( 'activitypub_authorized_fetch', '0' ) ); ?> />
+									<?php \esc_html_e( 'Require HTTP signature authentication on ActivityPub representations of public posts and profiles.', 'activitypub' ); ?>
+								</label>
+							</p>
+							<p class="description">
+								<?php \esc_html_e( '⚠ Secure mode has its limitations, which is why it is not enabled by default. It is not fully supported by all software in the fediverse, and some features may break, especially when interacting with Mastodon servers older than version 3.0. Additionally, since it requires authentication for public content, caching is not possible, leading to higher computational costs.', 'activitypub' ); ?>
+							</p>
+							<p class="description">
+								<?php \esc_html_e( '⚠ Secure mode does not hide the HTML representations of public posts and profiles. While HTML is a less consistant format (that potentially changes often) compared to first-class ActivityPub representations or the REST API, it still poses a potential risk for content scraping.', 'activitypub' ); ?>
+							</p>
+						</td>
+					</tr>
+					<?php endif; ?>
+				</tbody>
+			</table>
+			<?php \do_settings_fields( 'activitypub', 'security' ); ?>
+		</div>
 		<?php \do_settings_sections( 'activitypub' ); ?>
 
 		<?php \submit_button(); ?>

@@ -10,12 +10,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Outbox queue
+* `icon` support for `Audio` and `Video` attachments
+* Send "new follower" emails
+
+### Improved
+
+* Email templates for Likes and Reposts
+* Improve Interactions moderation
+* Compatibility with Akismet
+
+## [4.4.0] - 2024-12-09
+
+### Added
+
+* Setting to enable/disable Authorized-Fetch
 
 ### Improved
 
 * Added screen reader text to the "Follow Me" block for improved accessibility
 * Added `media_type` support to Activity-Object-Transformers
 * Clarified settings page text around which users get Activitypub profiles
+* Add a filter to the REST API moderators list
 
 ### Fixed
 
@@ -1124,8 +1139,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/4.3.0...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/4.4.0...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[4.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.3.0...4.4.0
 [4.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.2.1...4.3.0
 [4.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.2.0...4.2.1
 [4.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.1.1...4.2.0
