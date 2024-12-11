@@ -140,6 +140,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Improved: Email templates for Likes and Reposts
 * Improved: Interactions moderation
 * Improved: Compatibility with Akismet
+* Improved: Comment type mapping for `Like` and `Announce`
 
 = 4.4.0 =
 

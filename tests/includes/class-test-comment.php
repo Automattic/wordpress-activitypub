@@ -424,4 +424,44 @@ class Test_Comment extends \WP_UnitTestCase {
 			),
 		);
 	}
+
+	/**
+	 * Test get_comment_type_by_activity_type method.
+	 *
+	 * @covers ::get_comment_type_by_activity_type
+	 */
+	public function test_get_comment_type_by_activity_type() {
+		// Test Like activity type
+		$comment_type = Comment::get_comment_type_by_activity_type( 'Like' );
+		$this->assertIsArray( $comment_type );
+		$this->assertEquals( 'like', $comment_type['type'] );
+		$this->assertEquals( 'Like', $comment_type['singular'] );
+		$this->assertEquals( 'Likes', $comment_type['label'] );
+		$this->assertContains( 'like', $comment_type['activity_types'] );
+
+		// Test Announce activity type
+		$comment_type = Comment::get_comment_type_by_activity_type( 'Announce' );
+		$this->assertIsArray( $comment_type );
+		$this->assertEquals( 'repost', $comment_type['type'] );
+		$this->assertEquals( 'Repost', $comment_type['singular'] );
+		$this->assertEquals( 'Reposts', $comment_type['label'] );
+		$this->assertContains( 'announce', $comment_type['activity_types'] );
+
+		// Test case insensitivity
+		$comment_type = Comment::get_comment_type_by_activity_type( 'like' );
+		$this->assertIsArray( $comment_type );
+		$this->assertEquals( 'like', $comment_type['type'] );
+
+		$comment_type = Comment::get_comment_type_by_activity_type( 'ANNOUNCE' );
+		$this->assertIsArray( $comment_type );
+		$this->assertEquals( 'repost', $comment_type['type'] );
+
+		// Test invalid activity type
+		$comment_type = Comment::get_comment_type_by_activity_type( 'InvalidType' );
+		$this->assertNull( $comment_type );
+
+		// Test empty activity type
+		$comment_type = Comment::get_comment_type_by_activity_type( '' );
+		$this->assertNull( $comment_type );
+	}
 }
