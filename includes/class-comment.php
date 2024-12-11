@@ -548,7 +548,9 @@ class Comment {
 		$slug = \strtolower( $slug );
 		$slug = \sanitize_key( $slug );
 
-		return in_array( $slug, array_keys( self::get_comment_types() ), true );
+		$registered_comment_types = self::get_comment_types();
+
+		return isset( $registered_comment_types[ $slug ] );
 	}
 
 	/**
