@@ -115,7 +115,8 @@ class Mailer {
 			return;
 		}
 
-		$email = \get_option( 'admin_email' );
+		$email     = \get_option( 'admin_email' );
+		$admin_url = '/options-general.php?page=activitypub&tab=followers';
 
 		if ( $notification->target > Actors::BLOG_USER_ID ) {
 			$user = \get_user_by( 'id', $notification->target );
@@ -124,7 +125,8 @@ class Mailer {
 				return;
 			}
 
-			$email = $user->user_email;
+			$email     = $user->user_email;
+			$admin_url = '/users.php?page=activitypub-followers-list';
 		}
 
 		/* translators: 1: Blog name, 2: Follower name */
@@ -134,7 +136,7 @@ class Mailer {
 		/* translators: Follower URL */
 		$message .= \sprintf( \esc_html__( 'URL: %s', 'activitypub' ), \esc_url( $actor['url'] ) ) . "\r\n\r\n";
 		$message .= \esc_html__( 'You can see all followers here:', 'activitypub' ) . "\r\n";
-		$message .= \esc_url( \admin_url( '/users.php?page=activitypub-followers-list' ) ) . "\r\n\r\n";
+		$message .= \esc_url( \admin_url( $admin_url ) ) . "\r\n\r\n";
 
 		\wp_mail( $email, $subject, $message );
 	}
