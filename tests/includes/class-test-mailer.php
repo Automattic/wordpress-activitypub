@@ -209,4 +209,73 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( 10, has_filter( 'comment_notification_text', array( Mailer::class, 'comment_notification_text' ) ) );
 		$this->assertEquals( 10, has_action( 'activitypub_notification_follow', array( Mailer::class, 'new_follower' ) ) );
 	}
+
+	/**
+	 * Test direct message notification.
+	 *
+	 * @covers ::direct_message
+	 */
+	public function test_direct_message() {
+		$user_id = self::$user_id;
+
+		$activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'content' => 'Test direct message',
+			),
+		);
+
+		// Mock remote metadata.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name' => 'Test Sender',
+					'url'  => 'https://example.com/author',
+				);
+			}
+		);
+
+		// Capture email.
+		add_filter(
+			'wp_mail',
+			function ( $args ) use ( $user_id ) {
+				$this->assertStringContainsString( 'Direct Message', $args['subject'] );
+				$this->assertStringContainsString( 'Test Sender', $args['subject'] );
+				$this->assertStringContainsString( 'Test direct message', $args['message'] );
+				$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
+				$this->assertEquals( get_user_by( 'id', $user_id )->user_email, $args['to'] );
+				return $args;
+			}
+		);
+
+		Mailer::direct_message( $activity, $user_id );
+
+		// Test public activity (should not send email).
+		$public_activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'content'   => 'Test public message',
+				'inReplyTo' => 'https://example.com/post/1',
+			),
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		);
+
+		// Reset email capture.
+		remove_all_filters( 'wp_mail' );
+		add_filter(
+			'wp_mail',
+			function ( $args ) {
+				$this->fail( 'Email should not be sent for public activity' );
+				return $args;
+			}
+		);
+
+		Mailer::direct_message( $public_activity, $user_id );
+
+		// Clean up.
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'wp_mail' );
+		wp_delete_user( $user_id );
+	}
 }
