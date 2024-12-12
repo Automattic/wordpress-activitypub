@@ -163,15 +163,29 @@ class Interaction {
 				continue;
 			}
 
-			$reactions[ $type_object['collection'] ] = array_map(
-				function ( $comment ) {
-					return array(
-						'name'   => $comment->comment_author,
-						'url'    => $comment->comment_author_url,
-						'avatar' => \get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
-					);
-				},
-				$comments
+			$count = count( $comments );
+			$label = sprintf(
+				_n(
+					$type_object['count_single'],
+					$type_object['count_plural'],
+					$count,
+					'activitypub'
+				),
+				$count
+			);
+
+			$reactions[ $type_object['collection'] ] = array(
+				'label' => $label,
+				'items' => array_map(
+					function ( $comment ) {
+						return array(
+							'name'   => $comment->comment_author,
+							'url'    => $comment->comment_author_url,
+							'avatar' => \get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
+						);
+					},
+					$comments
+				),
 			);
 		}
 

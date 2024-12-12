@@ -650,6 +650,8 @@ class Comment {
 				'collection'     => 'reposts',
 				'activity_types' => array( 'announce' ),
 				'excerpt'        => __( '&hellip; reposted this!', 'activitypub' ),
+				'count_single'   => _x( '%d repost', 'number of reposts', 'activitypub' ),
+				'count_plural'   => _x( '%d reposts', 'number of reposts', 'activitypub' ),
 			)
 		);
 
@@ -665,6 +667,8 @@ class Comment {
 				'collection'     => 'likes',
 				'activity_types' => array( 'like' ),
 				'excerpt'        => __( '&hellip; liked this!', 'activitypub' ),
+				'count_single'   => _x( '%d like', 'number of likes', 'activitypub' ),
+				'count_plural'   => _x( '%d likes', 'number of likes', 'activitypub' ),
 			)
 		);
 	}

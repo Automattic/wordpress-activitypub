@@ -119,16 +119,15 @@ const ReactionList = ( { reactions, type } ) => (
  * A component that renders a reaction group with facepile and dropdown.
  *
  * @param {Object} props           Component props.
- * @param {Array}  props.reactions Array of reaction objects.
- * @param {string} props.type      Type of reaction (likes/reposts).
+ * @param {Array}  props.items     Array of reaction objects.
+ * @param {string} props.label     Label for the reaction group.
  * @return {JSX.Element}          The rendered component.
  */
-const ReactionGroup = ( { reactions, type } ) => {
+const ReactionGroup = ( { items, label } ) => {
 	const [ isOpen, setIsOpen ] = useState( false );
 	const [ buttonRef, setButtonRef ] = useState( null );
-	const [ visibleCount, setVisibleCount ] = useState( reactions.length );
+	const [ visibleCount, setVisibleCount ] = useState( items.length );
 	const containerRef = useRef( null );
-	const count = reactions.length;
 
 	// Constants for calculations
 	const AVATAR_WIDTH = 32; // Width of each avatar
@@ -156,7 +155,7 @@ const ReactionGroup = ( { reactions, type } ) => {
 			const maxAvatars = Math.max( 1, Math.floor( ( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH ) );
 			
 			// Ensure we don't show more than we have
-			setVisibleCount( Math.min( maxAvatars, reactions.length ) );
+			setVisibleCount( Math.min( maxAvatars, items.length ) );
 		};
 
 		// Initial calculation
@@ -169,43 +168,27 @@ const ReactionGroup = ( { reactions, type } ) => {
 		return () => {
 			resizeObserver.disconnect();
 		};
-	}, [ buttonRef, reactions.length ] );
+	}, [ buttonRef, items.length ] );
 
-	const visibleReactions = reactions.slice( 0, visibleCount );
-
-	const label = type === 'likes' 
-		? _nx(
-			'%d like',
-			'%d likes',
-			count,
-			'number of likes',
-			'activitypub'
-		)
-		: _nx(
-			'%d repost',
-			'%d reposts',
-			count,
-			'number of reposts',
-			'activitypub'
-		);
+	const visibleItems = items.slice( 0, visibleCount );
 
 	return (
 		<div className="reaction-group" ref={ containerRef }>
-			<FacepileRow reactions={ visibleReactions } />
+			<FacepileRow reactions={ visibleItems } />
 			<Button
 				ref={ setButtonRef }
 				className="reaction-label is-link"
 				onClick={ () => setIsOpen( ! isOpen ) }
 				aria-expanded={ isOpen }
 			>
-				{ sprintf( label, count ) }
+				{ label }
 			</Button>
 			{ isOpen && buttonRef && (
 				<Popover
 					anchor={ buttonRef }
 					onClose={ () => setIsOpen( false ) }
 				>
-					<ReactionList reactions={ reactions } type={ type } />
+					<ReactionList reactions={ items } />
 				</Popover>
 			) }
 		</div>
@@ -260,6 +243,11 @@ export function Reactions( {
 		return null;
 	}
 
+	// Return null if there are no reactions
+	if ( ! reactions || ! Object.values( reactions ).some( group => group.items?.length > 0 ) ) {
+		return null;
+	}
+
 	return (
 		<div className="activitypub-reactions">
 			{ isEditing ? (
@@ -275,19 +263,19 @@ export function Reactions( {
 				title && <h4>{ title }</h4>
 			) }
 
-			{ reactions?.likes?.length > 0 && (
-				<ReactionGroup
-					reactions={ reactions.likes }
-					type="likes"
-				/>
-			) }
+			{ Object.entries( reactions ).map( ( [ key, group ] ) => {
+				if ( ! group.items?.length ) {
+					return null;
+				}
 
-			{ reactions?.reposts?.length > 0 && (
-				<ReactionGroup
-					reactions={ reactions.reposts }
-					type="reposts"
-				/>
-			) }
+				return (
+					<ReactionGroup
+						key={ key }
+						items={ group.items }
+						label={ group.label }
+					/>
+				);
+			} ) }
 		</div>
 	);
 }
