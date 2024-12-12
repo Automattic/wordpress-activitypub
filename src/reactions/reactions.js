@@ -1,5 +1,8 @@
+/**
+ * WordPress dependencies
+ */
 import { RichText } from '@wordpress/block-editor';
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import { Popover, Button } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 import { __, _nx, sprintf } from '@wordpress/i18n';
@@ -19,27 +22,25 @@ const { namespace } = window._activityPubOptions;
  * @return {JSX.Element}           The rendered component.
  */
 const FacepileRow = ( { reactions } ) => (
-	<div className="reaction-facepile">
-		<ul className="reaction-avatars">
-			{ reactions.map( ( reaction, index ) => (
-				<li key={ index }>
-					<a
-						href={ reaction.url }
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						<img
-							src={ reaction.avatar }
-							alt={ reaction.name }
-							className="reaction-avatar"
-							width="32"
-							height="32"
-						/>
-					</a>
-				</li>
-			) ) }
-		</ul>
-	</div>
+	<ul className="reaction-avatars">
+		{ reactions.map( ( reaction, index ) => (
+			<li key={ index }>
+				<a
+					href={ reaction.url }
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					<img
+						src={ reaction.avatar }
+						alt={ reaction.name }
+						className="reaction-avatar"
+						width="32"
+						height="32"
+					/>
+				</a>
+			</li>
+		) ) }
+	</ul>
 );
 
 /**
@@ -84,6 +85,37 @@ const ReactionDropdown = ( { reactions, anchor, onClose } ) => (
 );
 
 /**
+ * A component that renders a dropdown list of reactions.
+ *
+ * @param {Object}   props           Component props.
+ * @param {Array}    props.reactions Array of reaction objects.
+ * @param {string}   props.type      Type of reaction (likes/reposts).
+ * @return {JSX.Element}            The rendered component.
+ */
+const ReactionList = ( { reactions, type } ) => (
+	<ul className="reaction-list">
+		{ reactions.map( ( reaction, index ) => (
+			<li key={ index }>
+				<a
+					href={ reaction.url }
+					className="reaction-item"
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					<img
+						src={ reaction.avatar }
+						alt={ reaction.name }
+						width="32"
+						height="32"
+					/>
+					<span>{ reaction.name }</span>
+				</a>
+			</li>
+		) ) }
+	</ul>
+);
+
+/**
  * A component that renders a reaction group with facepile and dropdown.
  *
  * @param {Object} props           Component props.
@@ -94,50 +126,87 @@ const ReactionDropdown = ( { reactions, anchor, onClose } ) => (
 const ReactionGroup = ( { reactions, type } ) => {
 	const [ isOpen, setIsOpen ] = useState( false );
 	const [ buttonRef, setButtonRef ] = useState( null );
+	const [ visibleCount, setVisibleCount ] = useState( reactions.length );
+	const containerRef = useRef( null );
 	const count = reactions.length;
 
-	const label = sprintf(
-		/* translators: %d: number of reactions */
-		_nx(
-			'%d Like',
-			'%d Likes',
+	// Constants for calculations
+	const AVATAR_WIDTH = 32; // Width of each avatar
+	const AVATAR_OVERLAP = 10; // How much each avatar overlaps
+	const EFFECTIVE_AVATAR_WIDTH = AVATAR_WIDTH - AVATAR_OVERLAP; // Width each additional avatar takes
+	const BUTTON_GAP = 12; // Gap between avatars and button (0.75em)
+	
+	useEffect( () => {
+		if ( ! containerRef.current ) {
+			return;
+		}
+
+		const calculateVisibleAvatars = () => {
+			const container = containerRef.current;
+			if ( ! container ) {
+				return;
+			}
+
+			const containerWidth = container.offsetWidth;
+			const labelWidth = buttonRef?.offsetWidth || 0;
+			const availableWidth = containerWidth - labelWidth - BUTTON_GAP;
+
+			// Calculate how many avatars can fit
+			// First avatar takes full width, rest take effective width
+			const maxAvatars = Math.max( 1, Math.floor( ( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH ) );
+			
+			// Ensure we don't show more than we have
+			setVisibleCount( Math.min( maxAvatars, reactions.length ) );
+		};
+
+		// Initial calculation
+		calculateVisibleAvatars();
+
+		// Setup resize observer
+		const resizeObserver = new ResizeObserver( calculateVisibleAvatars );
+		resizeObserver.observe( containerRef.current );
+
+		return () => {
+			resizeObserver.disconnect();
+		};
+	}, [ buttonRef, reactions.length ] );
+
+	const visibleReactions = reactions.slice( 0, visibleCount );
+
+	const label = type === 'likes' 
+		? _nx(
+			'%d like',
+			'%d likes',
 			count,
 			'number of likes',
 			'activitypub'
-		),
-		count
-	);
-
-	const repostLabel = sprintf(
-		/* translators: %d: number of reactions */
-		_nx(
-			'%d Repost',
-			'%d Reposts',
+		)
+		: _nx(
+			'%d repost',
+			'%d reposts',
 			count,
 			'number of reposts',
 			'activitypub'
-		),
-		count
-	);
+		);
 
 	return (
-		<div className="reaction-group">
-			<FacepileRow reactions={ reactions } />
+		<div className="reaction-group" ref={ containerRef }>
+			<FacepileRow reactions={ visibleReactions } />
 			<Button
 				ref={ setButtonRef }
-				variant="link"
-				className="reaction-label"
+				className="reaction-label is-link"
 				onClick={ () => setIsOpen( ! isOpen ) }
 				aria-expanded={ isOpen }
 			>
-				{ type === 'likes' ? label : repostLabel }
+				{ sprintf( label, count ) }
 			</Button>
 			{ isOpen && buttonRef && (
-				<ReactionDropdown
-					reactions={ reactions }
+				<Popover
 					anchor={ buttonRef }
 					onClose={ () => setIsOpen( false ) }
-				/>
+				>
+					<ReactionList reactions={ reactions } type={ type } />
+				</Popover>
 			) }
 		</div>
 	);
@@ -180,11 +249,11 @@ export function Reactions( {
 		apiFetch( {
 			path: `/${ namespace }/reactions/${ postId }`,
 		} )
-			.then( ( response ) => {
-				setReactions( response );
-				setLoading( false );
-			} )
-			.catch( () => setLoading( false ) );
+		.then( ( response ) => {
+			setReactions( response );
+			setLoading( false );
+		} )
+		.catch( () => setLoading( false ) );
 	}, [ postId, providedReactions ] );
 
 	if ( loading ) {

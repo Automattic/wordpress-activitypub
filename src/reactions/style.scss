@@ -4,6 +4,16 @@
 		align-items: center;
 		margin: 0.5em 0;
 		position: relative;
+		width: 100%;
+		gap: 0.75em;
+		justify-content: flex-start;
+
+		// When content overflows, switch to space-between
+		&:has(.reaction-avatars:not(:empty)) {
+			@media (max-width: 782px) {
+				justify-content: space-between;
+			}
+		}
 	}
 
 	.reaction-avatars {
@@ -12,27 +22,28 @@
 		margin: 0;
 		padding: 0;
 		list-style: none;
-		width: 100%;
+		flex: 0 1 auto;
+		min-width: 0;
 
 		li {
 			margin: 0;
 			padding: 0;
-			margin-right: -10.5px;
+			margin-right: -10px;
 
 			&:last-child {
 				margin-right: 0;
 			}
-		}
 
-		a {
-			display: block;
-			transition: transform 0.2s ease;
-			position: relative;
-			z-index: 1;
+			a {
+				display: block;
+				transition: transform 0.2s ease;
+				position: relative;
+				z-index: 1;
 
-			&:hover {
-				z-index: 2;
-				transform: scale( 1.33 );
+				&:hover {
+					z-index: 2;
+					transform: scale(1.5);
+				}
 			}
 		}
 	}
@@ -47,13 +58,12 @@
 	}
 
 	.reaction-label.components-button {
-		margin-left: 0.75em;
 		white-space: nowrap;
 		height: auto;
-		min-width: 0;
 		padding: 0;
 		text-decoration: none;
 		color: #2271b1;
+		flex: 0 0 auto;
 
 		&:hover {
 			color: #135e96;
@@ -87,7 +97,7 @@
 		align-items: center;
 		justify-content: flex-start;
 		gap: .5em;
-		padding: .25em .5em;
+		padding: .5em;
 		text-decoration: none;
 		font-size: var( --wp--preset--font-size--small, .75rem );
 		color: inherit;
@@ -97,8 +107,8 @@
 		}
 
 		img {
-			width: 32px;
-			height: 32px;
+			width: 24px;
+			height: 24px;
 			border-radius: 50%;
 			flex: none;
 		}

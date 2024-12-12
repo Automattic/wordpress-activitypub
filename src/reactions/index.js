@@ -1,7 +1,7 @@
 import { registerBlockType } from '@wordpress/blocks';
 
 import edit from './edit';
-import { name } from './block.json';
+import metadata from './block.json';
 import './style.scss';
 
-registerBlockType( name, { edit } );
+registerBlockType( metadata.name, { edit } );
