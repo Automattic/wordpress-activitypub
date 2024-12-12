@@ -214,10 +214,12 @@ class Cli extends WP_CLI_Command {
 
 			$comment_id = wp_insert_comment(
 				array(
-					'comment_content' => "{$comment_type} {$index}",
-					'comment_post_ID' => $assoc_args['post_id'],
-					'comment_type'    => $comment_type,
-					'comment_meta'    => array(
+					'comment_content'    => "{$comment_type} {$index}",
+					'comment_post_ID'    => $assoc_args['post_id'],
+					'comment_type'       => $comment_type,
+					'comment_author'     => 'Something Doe',
+					'comment_author_url' => "https://example.org/author/{$index}",
+					'comment_meta'       => array(
 						'protocol'   => 'activitypub',
 						'avatar_url' => "https://i.pravatar.cc/80?u={$index}",
 						'source_id'  => "https://example.org/canonical/{$index}",
