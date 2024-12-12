@@ -600,7 +600,7 @@ class Admin {
 			unset( $actions['quickedit'] );
 		}
 
-		if ( in_array( get_comment_type( $comment ), Comment::get_comment_type_names(), true ) ) {
+		if ( in_array( get_comment_type( $comment ), Comment::get_comment_type_slugs(), true ) ) {
 			unset( $actions['reply'] );
 		}
 
