@@ -541,36 +541,25 @@ class Comment {
 	/**
 	 * Is this a registered comment type.
 	 *
-	 * @param string $slug The name of the type.
+	 * @param string $name The name of the type.
+	 *
 	 * @return boolean True if registered.
 	 */
-	public static function is_registered_comment_type( $slug ) {
-		$slug = \strtolower( $slug );
-		$slug = \sanitize_key( $slug );
+	public static function is_registered_comment_type( $name ) {
+		$name = \strtolower( $name );
+		$name = \sanitize_key( $name );
 
 		$registered_comment_types = self::get_comment_types();
 
-		return isset( $registered_comment_types[ $slug ] );
+		return isset( $registered_comment_types[ $name ] );
 	}
 
 	/**
 	 * Return the registered custom comment types names.
 	 *
-	 * @deprecated 4.5.0 Use `self::get_comment_type_slugs` instead.
-	 *
 	 * @return array The registered custom comment type names.
 	 */
 	public static function get_comment_type_names() {
-		_deprecated_function( __METHOD__, '4.5.0', 'get_comment_type_slugs' );
-		return self::get_comment_type_slugs();
-	}
-
-	/**
-	 * Return the registered custom comment type slugs.
-	 *
-	 * @return array The registered custom comment type slugs.
-	 */
-	public static function get_comment_type_slugs() {
 		return array_keys( self::get_comment_types() );
 	}
 
@@ -675,7 +664,7 @@ class Comment {
 	 * @return array show avatars on Activities
 	 */
 	public static function get_avatar_comment_types( $types ) {
-		$comment_types = self::get_comment_type_slugs();
+		$comment_types = self::get_comment_type_names();
 		$types         = array_merge( $types, $comment_types );
 
 		return array_unique( $types );
@@ -708,7 +697,7 @@ class Comment {
 		}
 
 		// Exclude likes and reposts by the ActivityPub plugin.
-		$query->query_vars['type__not_in'] = self::get_comment_type_slugs();
+		$query->query_vars['type__not_in'] = self::get_comment_type_names();
 	}
 
 	/**
