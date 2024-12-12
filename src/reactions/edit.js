@@ -23,7 +23,6 @@ const generateDummyReaction = ( index ) => {
 		'#E67E22',
 	];
 	const letter = letters[ Math.floor( Math.random() * letters.length ) ];
-	// random color
 	const color = colors[ Math.floor( Math.random() * colors.length ) ];
 	
 	// Create a data URL for a colored circle with a letter.
@@ -40,7 +39,7 @@ const generateDummyReaction = ( index ) => {
 	
 	// Draw letter.
 	ctx.fillStyle = '#FFFFFF';
-	ctx.font = 'bold 32px sans-serif';
+	ctx.font = '32px sans-serif';
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
 	ctx.fillText( letter, 32, 32 );

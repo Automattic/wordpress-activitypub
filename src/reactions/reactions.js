@@ -1,7 +1,8 @@
 import { RichText } from '@wordpress/block-editor';
 import { useState, useEffect } from '@wordpress/element';
+import { Popover, Button } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
-import { __ } from '@wordpress/i18n';
+import { __, _nx, sprintf } from '@wordpress/i18n';
 
 /**
  * Extract the namespace from the global _activityPubOptions object.
@@ -19,60 +20,68 @@ const { namespace } = window._activityPubOptions;
  */
 const FacepileRow = ( { reactions } ) => (
 	<div className="reaction-facepile">
-		{ reactions.map( ( reaction, index ) => (
-			<a
-				key={ index }
-				href={ reaction.url }
-				target="_blank"
-				rel="noopener noreferrer"
-			>
-				<img
-					src={ reaction.avatar }
-					alt={ reaction.name }
-					className="reaction-avatar"
-					width="32"
-					height="32"
-				/>
-			</a>
-		) ) }
+		<ul className="reaction-avatars">
+			{ reactions.map( ( reaction, index ) => (
+				<li key={ index }>
+					<a
+						href={ reaction.url }
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						<img
+							src={ reaction.avatar }
+							alt={ reaction.name }
+							className="reaction-avatar"
+							width="32"
+							height="32"
+						/>
+					</a>
+				</li>
+			) ) }
+		</ul>
 	</div>
 );
 
 /**
  * A component that renders a dropdown list of reactions.
  *
- * @param {Object}  props           Component props.
- * @param {Array}   props.reactions Array of reaction objects.
- * @param {boolean} props.isOpen    Whether the dropdown is open.
- * @return {JSX.Element}           The rendered component.
+ * @param {Object}   props           Component props.
+ * @param {Array}    props.reactions Array of reaction objects.
+ * @param {Object}   props.anchor    Reference to anchor element.
+ * @param {Function} props.onClose   Callback when dropdown closes.
+ * @return {JSX.Element}            The rendered component.
  */
-const ReactionDropdown = ( { reactions, isOpen } ) => {
-	if ( ! isOpen ) {
-		return null;
-	}
-
-	return (
-		<div className="reaction-dropdown">
+const ReactionDropdown = ( { reactions, anchor, onClose } ) => (
+	<Popover
+		anchor={ anchor }
+		placement="bottom-end"
+		onClose={ onClose }
+		className="reaction-dropdown"
+		noArrow={ false }
+		offset={ 10 }
+	>
+		<ul className="reaction-list">
 			{ reactions.map( ( reaction, index ) => (
-				<a
-					key={ index }
-					href={ reaction.url }
-					className="reaction-item"
-					target="_blank"
-					rel="noopener noreferrer"
-				>
-					<img
-						src={ reaction.avatar }
-						alt={ reaction.name }
-						width="24"
-						height="24"
-					/>
-					<span>{ reaction.name }</span>
-				</a>
+				<li key={ index }>
+					<a
+						href={ reaction.url }
+						className="reaction-item"
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						<img
+							src={ reaction.avatar }
+							alt={ reaction.name }
+							width="32"
+							height="32"
+						/>
+						<span>{ reaction.name }</span>
+					</a>
+				</li>
 			) ) }
-		</div>
-	);
-};
+		</ul>
+	</Popover>
+);
 
 /**
  * A component that renders a reaction group with facepile and dropdown.
@@ -84,25 +93,52 @@ const ReactionDropdown = ( { reactions, isOpen } ) => {
  */
 const ReactionGroup = ( { reactions, type } ) => {
 	const [ isOpen, setIsOpen ] = useState( false );
+	const [ buttonRef, setButtonRef ] = useState( null );
 	const count = reactions.length;
-	const label = type === 'likes' ? 
-		__( '%d Like', '%d Likes', count, 'activitypub' ) :
-		__( '%d Repost', '%d Reposts', count, 'activitypub' );
+
+	const label = sprintf(
+		/* translators: %d: number of reactions */
+		_nx(
+			'%d Like',
+			'%d Likes',
+			count,
+			'number of likes',
+			'activitypub'
+		),
+		count
+	);
+
+	const repostLabel = sprintf(
+		/* translators: %d: number of reactions */
+		_nx(
+			'%d Repost',
+			'%d Reposts',
+			count,
+			'number of reposts',
+			'activitypub'
+		),
+		count
+	);
 
 	return (
 		<div className="reaction-group">
 			<FacepileRow reactions={ reactions } />
-			<button
+			<Button
+				ref={ setButtonRef }
+				variant="link"
 				className="reaction-label"
 				onClick={ () => setIsOpen( ! isOpen ) }
 				aria-expanded={ isOpen }
 			>
-				{ label }
-			</button>
-			<ReactionDropdown
-				reactions={ reactions }
-				isOpen={ isOpen }
-			/>
+				{ type === 'likes' ? label : repostLabel }
+			</Button>
+			{ isOpen && buttonRef && (
+				<ReactionDropdown
+					reactions={ reactions }
+					anchor={ buttonRef }
+					onClose={ () => setIsOpen( false ) }
+				/>
+			) }
 		</div>
 	);
 };

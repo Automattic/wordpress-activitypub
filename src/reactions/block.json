@@ -26,6 +26,6 @@
 	},
 	"textdomain": "activitypub",
 	"editorScript": "file:./index.js",
-	"style": "file:./style-index.css",
+	"style": [ "file:./style-index.css", "wp-components" ],
 	"viewScript": "file:./view.js"
 }
