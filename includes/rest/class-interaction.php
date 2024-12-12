@@ -53,10 +53,8 @@ class Interaction {
 				'permission_callback' => '__return_true',
 				'args'                => array(
 					'id' => array(
-						'required'          => true,
-						'validate_callback' => function ( $val ) {
-							return is_numeric( $val );
-						},
+						'required' => true,
+						'type'     => 'integer',
 					),
 				),
 			)
