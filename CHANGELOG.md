@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compatibility with Akismet
 * Comment type mapping for `Like` and `Announce`
 
+### Fixed
+
+* Empty `url` attributes in the Reply block no longer cause PHP warnings
+
 ## [4.4.0] - 2024-12-09
 
 ### Added
