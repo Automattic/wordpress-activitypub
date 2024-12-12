@@ -8,19 +8,27 @@
   "icon": "heart",
   "description": "Display Fediverse likes and reposts",
   "supports": {
-    "html": false
+    "html": false,
+    "align": true,
+    "layout": {
+      "default": {
+        "type": "constrained",
+        "orientation": "vertical",
+        "justifyContent": "center"
+      }
+    }
   },
   "attributes": {
     "title": {
       "type": "string",
       "default": "Fediverse reactions"
-    },
-    "postId": {
-      "type": "number"
     }
   },
   "textdomain": "activitypub",
   "editorScript": "file:./index.js",
-  "style": "file:./style-index.css",
+  "style": [
+    "file:./style-index.css",
+    "wp-components"
+  ],
   "viewScript": "file:./view.js"
 }
