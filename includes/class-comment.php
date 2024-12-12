@@ -30,6 +30,7 @@ class Comment {
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
 		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 10, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
+		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
 	}
 
 	/**
@@ -670,10 +671,6 @@ class Comment {
 			return;
 		}
 
-		if ( isset( $query->query_vars['count'] ) && true === $query->query_vars['count'] ) {
-			return;
-		}
-
 		// Exclude likes and reposts by the ActivityPub plugin.
 		$query->query_vars['type__not_in'] = self::get_comment_type_names();
 	}
@@ -714,5 +711,28 @@ class Comment {
 		}
 
 		return $approved;
+	}
+
+	/**
+	 * Filters the comment count to exclude ActivityPub comment types.
+	 *
+	 * @param int|null $new_count The new comment count. Default null.
+	 * @param int      $old_count The old comment count.
+	 * @param int      $post_id   Post ID.
+	 *
+	 * @return int|null The updated comment count, or null to use the default query.
+	 */
+	public static function pre_wp_update_comment_count_now( $new_count, $old_count, $post_id ) {
+		if ( null === $new_count ) {
+			global $wpdb;
+
+			$excluded_types = self::get_comment_type_names();
+
+			// phpcs:ignore WordPress.DB
+			$new_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->comments WHERE comment_post_ID = %d AND comment_approved = '1' AND comment_type NOT IN ('" . implode( "','", $excluded_types ) . "')", $post_id ) );
+
+		}
+
+		return $new_count;
 	}
 }
