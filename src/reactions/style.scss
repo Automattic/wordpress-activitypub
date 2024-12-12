@@ -1,4 +1,10 @@
 .activitypub-reactions {
+	h4 {
+		border-top: 1px solid;
+		display: inline-block;
+		padding-top: .5em;
+		border-top-color: var(--wp--preset--color--contrast-2);
+	}
 	.reaction-group {
 		display: flex;
 		align-items: center;

@@ -69,8 +69,8 @@ const generateDummyReactions = () => ( {
  * @param {Function} props.setAttributes Attribute update callback.
  * @return {JSX.Element}                 Component to render.
  */
-export default function Edit( { attributes, setAttributes } ) {
-	const blockProps = useBlockProps();
+export default function Edit( { attributes, setAttributes, __unstableLayoutClassNames } ) {
+	const blockProps = useBlockProps( { className: __unstableLayoutClassNames } );
 	const [ dummyReactions ] = useState( generateDummyReactions() );
 
 	return (

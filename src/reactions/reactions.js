@@ -268,6 +268,8 @@ export function Reactions( {
 					value={ title }
 					onChange={ setTitle }
 					placeholder={ __( 'Fediverse reactions', 'activitypub' ) }
+					disableLineBreaks={ true }
+					allowedFormats={ [] }
 				/>
 			) : (
 				title && <h4>{ title }</h4>
