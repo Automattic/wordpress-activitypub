@@ -134,6 +134,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Added: Reactions block to display likes and reposts
 * Added: `icon` support for `Audio` and `Video` attachments
 * Added: Send "new follower" emails
 * Added: Send "direct message" emails
