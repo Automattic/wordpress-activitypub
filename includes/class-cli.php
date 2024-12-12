@@ -167,6 +167,9 @@ class Cli extends WP_CLI_Command {
 	 *     # Generate comments for the given post.
 	 *     $ wp activitypub generate comments --format=ids --count=3 --post_id=123
 	 *     138 139 140
+	 *
+	 * @param array $args     The arguments.
+	 * @param array $assoc_args The associative arguments.
 	 */
 	public function generate( $args, $assoc_args ) {
 		switch ( $args[0] ) {
@@ -185,7 +188,7 @@ class Cli extends WP_CLI_Command {
 	 * @param array $assoc_args The associative arguments.
 	 */
 	private function generate_comments( $args, $assoc_args ) {
-		$defaults   = array(
+		$defaults = array(
 			'count'   => 100,
 			'post_id' => 0,
 		);
@@ -215,16 +218,16 @@ class Cli extends WP_CLI_Command {
 					'comment_post_ID' => $assoc_args['post_id'],
 					'comment_type'    => $comment_type,
 					'comment_meta'    => array(
-						'protocol'  => 'activitypub',
-						'avatar'    => "https://i.pravatar.cc/80?u={$index}",
-						'source_id' => "https://example.org/canonical/{$index}",
+						'protocol'   => 'activitypub',
+						'avatar_url' => "https://i.pravatar.cc/80?u={$index}",
+						'source_id'  => "https://example.org/canonical/{$index}",
 					),
 				)
 			);
 			if ( 'progress' === $format ) {
 				$notify->tick();
 			} elseif ( 'ids' === $format ) {
-				echo $comment_id;
+				echo esc_attr( $comment_id );
 				if ( $index < $limit - 1 ) {
 					echo ' ';
 				}
