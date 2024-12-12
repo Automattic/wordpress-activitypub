@@ -164,6 +164,7 @@ class Interaction {
 			}
 
 			$count = count( $comments );
+			// phpcs:disable WordPress.WP.I18n
 			$label = sprintf(
 				_n(
 					$type_object['count_single'],
@@ -173,6 +174,7 @@ class Interaction {
 				),
 				$count
 			);
+			// phpcs:enable WordPress.WP.I18n
 
 			$reactions[ $type_object['collection'] ] = array(
 				'label' => $label,
