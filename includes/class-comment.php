@@ -671,10 +671,6 @@ class Comment {
 			return;
 		}
 
-		if ( isset( $query->query_vars['count'] ) && true === $query->query_vars['count'] ) {
-			return;
-		}
-
 		// Exclude likes and reposts by the ActivityPub plugin.
 		$query->query_vars['type__not_in'] = self::get_comment_type_names();
 	}
