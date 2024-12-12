@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improved
 
+* Likes and Reposts enabled by default
 * Email templates for Likes and Reposts
 * Improve Interactions moderation
 * Compatibility with Akismet
