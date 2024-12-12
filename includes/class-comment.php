@@ -516,7 +516,6 @@ class Comment {
 	public static function get_comment_type_by_activity_type( $activity_type ) {
 		$activity_type = \strtolower( $activity_type );
 		$activity_type = \sanitize_key( $activity_type );
-
 		$comment_types = self::get_comment_types();
 
 		foreach ( $comment_types as $comment_type ) {
@@ -550,9 +549,9 @@ class Comment {
 		$slug = \strtolower( $slug );
 		$slug = \sanitize_key( $slug );
 
-		$registered_comment_types = self::get_comment_types();
+		$comment_types = self::get_comment_types();
 
-		return isset( $registered_comment_types[ $slug ] );
+		return isset( $comment_types[ $slug ] );
 	}
 
 	/**
@@ -590,17 +589,15 @@ class Comment {
 	 * @return array The comment type.
 	 */
 	public static function get_comment_type( $type ) {
-		$type  = strtolower( $type );
-		$type  = sanitize_key( $type );
-		$types = self::get_comment_types();
+		$type = strtolower( $type );
+		$type = sanitize_key( $type );
 
-		$type_array = array();
+		$comment_types = self::get_comment_types();
+		$type_array    = array();
 
 		// Check array keys.
-		if ( in_array( $type, array_keys( $types ), true ) ) {
-			$type_array = $types[ $type ];
-		} else { // Fall back to type attribute.
-			$type_array = array();
+		if ( in_array( $type, array_keys( $comment_types ), true ) ) {
+			$type_array = $comment_types[ $type ];
 		}
 
 		/**
