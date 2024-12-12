@@ -641,30 +641,30 @@ class Comment {
 		register_comment_type(
 			'repost',
 			array(
-				'label'       => __( 'Reposts', 'activitypub' ),
-				'singular'    => __( 'Repost', 'activitypub' ),
-				'description' => __( 'A repost on the indieweb is a post that is purely a 100% re-publication of another (typically someone else\'s) post.', 'activitypub' ),
-				'icon'        => '♻️',
-				'class'       => 'p-repost',
-				'type'        => 'repost',
-				'collection'  => 'reposts',
-        'activity_types' => array( 'announce' ),
-				'excerpt'     => __( '&hellip; reposted this!', 'activitypub' ),
+				'label'          => __( 'Reposts', 'activitypub' ),
+				'singular'       => __( 'Repost', 'activitypub' ),
+				'description'    => __( 'A repost on the indieweb is a post that is purely a 100% re-publication of another (typically someone else\'s) post.', 'activitypub' ),
+				'icon'           => '♻️',
+				'class'          => 'p-repost',
+				'type'           => 'repost',
+				'collection'     => 'reposts',
+				'activity_types' => array( 'announce' ),
+				'excerpt'        => __( '&hellip; reposted this!', 'activitypub' ),
 			)
 		);
 
 		register_comment_type(
 			'like',
 			array(
-				'label'       => __( 'Likes', 'activitypub' ),
-				'singular'    => __( 'Like', 'activitypub' ),
-				'description' => __( 'A like is a popular webaction button and in some cases post type on various silos such as Facebook and Instagram.', 'activitypub' ),
-				'icon'        => '👍',
-				'class'       => 'p-like',
-				'type'        => 'like',
-				'collection'  => 'likes',
-        'activity_types' => array( 'like' ),
-				'excerpt'     => __( '&hellip; liked this!', 'activitypub' ),
+				'label'          => __( 'Likes', 'activitypub' ),
+				'singular'       => __( 'Like', 'activitypub' ),
+				'description'    => __( 'A like is a popular webaction button and in some cases post type on various silos such as Facebook and Instagram.', 'activitypub' ),
+				'icon'           => '👍',
+				'class'          => 'p-like',
+				'type'           => 'like',
+				'collection'     => 'likes',
+				'activity_types' => array( 'like' ),
+				'excerpt'        => __( '&hellip; liked this!', 'activitypub' ),
 			)
 		);
 	}
