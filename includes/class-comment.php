@@ -542,26 +542,39 @@ class Comment {
 	/**
 	 * Is this a registered comment type.
 	 *
-	 * @param string $name The name of the type.
+	 * @param string $slug The slug of the type.
 	 *
 	 * @return boolean True if registered.
 	 */
-	public static function is_registered_comment_type( $name ) {
-		$name = \strtolower( $name );
-		$name = \sanitize_key( $name );
+	public static function is_registered_comment_type( $slug ) {
+		$slug = \strtolower( $slug );
+		$slug = \sanitize_key( $slug );
 
 		$registered_comment_types = self::get_comment_types();
 
-		return isset( $registered_comment_types[ $name ] );
+		return isset( $registered_comment_types[ $slug ] );
 	}
 
 	/**
-	 * Return the registered custom comment types names.
+	 * Return the registered custom comment type slugs.
 	 *
-	 * @return array The registered custom comment type names.
+	 * @return array The registered custom comment type slugs.
+	 */
+	public static function get_comment_type_slugs() {
+		return array_keys( self::get_comment_types() );
+	}
+
+	/**
+	 * Return the registered custom comment type slugs.
+	 *
+	 * @deprecated 4.5.0 Use get_comment_type_slugs instead.
+	 *
+	 * @return array The registered custom comment type slugs.
 	 */
 	public static function get_comment_type_names() {
-		return array_keys( self::get_comment_types() );
+		_deprecated_function( __METHOD__, '4.5.0', 'get_comment_type_slugs' );
+
+		return self::get_comment_type_slugs();
 	}
 
 	/**
@@ -665,7 +678,7 @@ class Comment {
 	 * @return array show avatars on Activities
 	 */
 	public static function get_avatar_comment_types( $types ) {
-		$comment_types = self::get_comment_type_names();
+		$comment_types = self::get_comment_type_slugs();
 		$types         = array_merge( $types, $comment_types );
 
 		return array_unique( $types );
@@ -694,7 +707,7 @@ class Comment {
 		}
 
 		// Exclude likes and reposts by the ActivityPub plugin.
-		$query->query_vars['type__not_in'] = self::get_comment_type_names();
+		$query->query_vars['type__not_in'] = self::get_comment_type_slugs();
 	}
 
 	/**
@@ -748,7 +761,7 @@ class Comment {
 		if ( null === $new_count ) {
 			global $wpdb;
 
-			$excluded_types = self::get_comment_type_names();
+			$excluded_types = self::get_comment_type_slugs();
 
 			// phpcs:ignore WordPress.DB
 			$new_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->comments WHERE comment_post_ID = %d AND comment_approved = '1' AND comment_type NOT IN ('" . implode( "','", $excluded_types ) . "')", $post_id ) );
