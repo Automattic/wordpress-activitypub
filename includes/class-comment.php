@@ -617,6 +617,7 @@ class Comment {
 				'icon'        => '♻️',
 				'class'       => 'p-repost',
 				'type'        => 'repost',
+				'collection'  => 'reposts',
 				'excerpt'     => __( '&hellip; reposted this!', 'activitypub' ),
 			)
 		);
@@ -630,6 +631,7 @@ class Comment {
 				'icon'        => '👍',
 				'class'       => 'p-like',
 				'type'        => 'like',
+				'collection'  => 'likes',
 				'excerpt'     => __( '&hellip; liked this!', 'activitypub' ),
 			)
 		);

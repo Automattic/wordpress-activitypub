@@ -7,6 +7,7 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Comment;
 use WP_REST_Response;
 use Activitypub\Http;
 
@@ -133,58 +134,47 @@ class Interaction {
 	}
 
 	/**
-	 * Get reactions (likes and reposts) for a post
+	 * Get reactions for a post.
 	 *
-	 * @param WP_REST_Request $request The request object.
-	 * @return WP_REST_Response|WP_Error Response object or WP_Error.
+	 * @param \WP_REST_Request $request The request.
+	 *
+	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public static function get_reactions( $request ) {
 		$post_id = $request->get_param( 'id' );
-		$post    = get_post( $post_id );
-		$likes   = array();
-		$reposts = array();
+		$post    = \get_post( $post_id );
 
 		if ( ! $post ) {
-			return new \WP_Error(
-				'activitypub_post_not_found',
-				__( 'Post not found', 'activitypub' ),
-				array( 'status' => 404 )
-			);
+			return new \WP_Error( 'post_not_found', 'Post not found', array( 'status' => 404 ) );
 		}
 
-		$reactions = get_comments(
-			array(
-				'post_id'  => $post_id,
-				'type__in' => array( 'like', 'repost' ),
-				'status'   => 'approve',
-			)
-		);
+		$reactions = array();
 
-		$format_reaction = function ( $comment ) {
-			return array(
-				'avatar' => get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
-				'url'    => $comment->comment_author_url,
-				'name'   => $comment->comment_author,
+		foreach ( Comment::get_comment_types() as $type_object ) {
+			$comments = \get_comments(
+				array(
+					'post_id' => $post_id,
+					'type'    => $type_object['type'],
+					'status'  => 'approve',
+				)
 			);
-		};
 
-		foreach ( $reactions as $reaction ) {
-			switch ( $reaction->comment_type ) {
-				case 'like':
-					$likes[] = $format_reaction( $reaction );
-					break;
-				case 'repost':
-					$reposts[] = $format_reaction( $reaction );
-					break;
+			if ( empty( $comments ) ) {
+				continue;
 			}
+
+			$reactions[ $type_object['collection'] ] = array_map(
+				function ( $comment ) {
+					return array(
+						'name'   => $comment->comment_author,
+						'url'    => $comment->comment_author_url,
+						'avatar' => \get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
+					);
+				},
+				$comments
+			);
 		}
 
-		return new WP_REST_Response(
-			array(
-				'likes'   => $likes,
-				'reposts' => $reposts,
-			),
-			200
-		);
+		return new \WP_REST_Response( $reactions );
 	}
 }
