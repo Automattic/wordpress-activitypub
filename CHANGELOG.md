@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Improve Interactions moderation
 * Compatibility with Akismet
 
+### Fixed
+
+* Empty `url` attributes in the Reply block no longer cause PHP warnings
+
 ## [4.4.0] - 2024-12-09
 
 ### Added
