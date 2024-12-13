@@ -35,7 +35,7 @@ class Server {
 	 * Add sever hooks.
 	 */
 	public static function add_hooks() {
-		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_activitypub_requests' ), 9, 3 );
+		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_requests' ), 9, 3 );
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
 	}
 
@@ -139,7 +139,7 @@ class Server {
 	 *
 	 * @return mixed|WP_Error The response, error, or modified response.
 	 */
-	public static function validate_activitypub_requests( $response, $handler, $request ) {
+	public static function validate_requests( $response, $handler, $request ) {
 		if ( 'HEAD' === $request->get_method() ) {
 			return $response;
 		}
