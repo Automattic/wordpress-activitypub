@@ -172,7 +172,7 @@ class Interaction {
 					$count,
 					'activitypub'
 				),
-				$count
+				number_format_i18n( $count )
 			);
 			// phpcs:enable WordPress.WP.I18n
 
