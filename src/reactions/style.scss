@@ -1,5 +1,5 @@
 .activitypub-reactions {
-	h4 {
+	h6 {
 		border-top: 1px solid;
 		display: inline-block;
 		padding-top: .5em;
@@ -49,20 +49,22 @@
 			width: 32px;
 			height: 32px;
 			border-radius: 50%;
-			border: 2px solid #fff;
-			box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+			border: 0.5px solid rgba(255, 255, 255, 0.8);
+			box-shadow: 
+				0 0 0 0.5px rgba(255, 255, 255, 0.8), // Crisp white border
+				0 1px 3px rgba(0, 0, 0, 0.2); // Soft drop shadow
 			transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);
 			will-change: transform;
 
 			&.wave-active {
-				transform: translateY(-16px);
+				transform: translateY(-16px) scale(1.2);
 
 				&.rotate-clockwise {
-					transform: translateY(-16px) rotate(360deg);
+					transform: translateY(-16px) scale(1.2) rotate(360deg);
 				}
 
 				&.rotate-counter {
-					transform: translateY(-16px) rotate(-360deg);
+					transform: translateY(-16px) scale(1.2) rotate(-360deg);
 				}
 			}
 

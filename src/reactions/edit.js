@@ -4,37 +4,61 @@ import { __ } from '@wordpress/i18n';
 import { Reactions } from './reactions';
 
 /**
+ * Generate a whimsical name using an adjective and noun combination.
+ *
+ * @return {string} A whimsical name.
+ */
+const generateWhimsicalName = () => {
+	const adjectives = [
+		'Bouncy', 'Cosmic', 'Dancing', 'Fluffy', 'Giggly',
+		'Hoppy', 'Jazzy', 'Magical', 'Nifty', 'Perky',
+		'Quirky', 'Sparkly', 'Twirly', 'Wiggly', 'Zippy',
+	];
+	const nouns = [
+		'Badger', 'Capybara', 'Dolphin', 'Echidna', 'Flamingo',
+		'Giraffe', 'Hedgehog', 'Iguana', 'Jellyfish', 'Koala',
+		'Lemur', 'Manatee', 'Narwhal', 'Octopus', 'Penguin',
+	];
+	
+	const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+	const noun = nouns[Math.floor(Math.random() * nouns.length)];
+	
+	return `${adjective} ${noun}`;
+};
+
+/**
  * Generate a dummy reaction with a random letter and color.
  *
  * @param {number} index Index for color selection.
  * @return {Object}      Reaction object.
  */
 const generateDummyReaction = ( index ) => {
-	const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 	const colors = [
-		'#FF6B6B',
-		'#4ECDC4',
-		'#45B7D1',
-		'#96CEB4',
-		'#FFEEAD',
-		'#D4A5A5',
-		'#9B59B6',
-		'#3498DB',
-		'#E67E22',
+		'#FF6B6B', // Coral
+		'#4ECDC4', // Turquoise
+		'#45B7D1', // Sky Blue
+		'#96CEB4', // Sage
+		'#FFEEAD', // Cream
+		'#D4A5A5', // Dusty Rose
+		'#9B59B6', // Purple
+		'#3498DB', // Blue
+		'#E67E22', // Orange
 	];
-	const letter = letters[ Math.floor( Math.random() * letters.length ) ];
-	const color = colors[ Math.floor( Math.random() * colors.length ) ];
+	
+	const name = generateWhimsicalName();
+	const color = colors[Math.floor(Math.random() * colors.length)];
+	const letter = name.charAt(0);
 	
 	// Create a data URL for a colored circle with a letter.
-	const canvas = document.createElement( 'canvas' );
+	const canvas = document.createElement('canvas');
 	canvas.width = 64;
 	canvas.height = 64;
-	const ctx = canvas.getContext( '2d' );
+	const ctx = canvas.getContext('2d');
 	
 	// Draw colored circle.
 	ctx.fillStyle = color;
 	ctx.beginPath();
-	ctx.arc( 32, 32, 32, 0, 2 * Math.PI );
+	ctx.arc(32, 32, 32, 0, 2 * Math.PI);
 	ctx.fill();
 	
 	// Draw letter.
@@ -42,10 +66,10 @@ const generateDummyReaction = ( index ) => {
 	ctx.font = '32px sans-serif';
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
-	ctx.fillText( letter, 32, 32 );
+	ctx.fillText(letter, 32, 32);
 	
 	return {
-		name: `User ${ index }`,
+		name,
 		url: '#',
 		avatar: canvas.toDataURL(),
 	};
@@ -57,8 +81,14 @@ const generateDummyReaction = ( index ) => {
  * @return {Object} Reactions data.
  */
 const generateDummyReactions = () => ( {
-	likes: Array.from( { length: 9 }, ( _, i ) => generateDummyReaction( i ) ),
-	reposts: Array.from( { length: 6 }, ( _, i ) => generateDummyReaction( i + 9 ) ),
+	likes: {
+		label: '9 likes',
+		items: Array.from( { length: 9 }, ( _, i ) => generateDummyReaction( i ) ),
+	},
+	reposts: {
+		label: '6 reposts',
+		items: Array.from( { length: 6 }, ( _, i ) => generateDummyReaction( i + 9 ) ),
+	},
 } );
 
 /**

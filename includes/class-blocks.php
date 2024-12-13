@@ -21,8 +21,8 @@ class Blocks {
 		// This is already being called on the init hook, so just add it.
 		self::register_blocks();
 
-		\add_action( 'wp_enqueue_scripts', array( self::class, 'add_data' ) );
-		\add_action( 'enqueue_block_editor_assets', array( self::class, 'add_data' ) );
+		\add_action( 'wp_enqueue_scripts', array( self::class, 'inject_activitypub_options' ) );
+		\add_action( 'admin_print_scripts', array( self::class, 'inject_activitypub_options' ) );
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
 		// Add editor plugin.
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor_assets' ) );
@@ -109,24 +109,21 @@ class Blocks {
 	}
 
 	/**
-	 * Add data to the block editor.
+	 * Output ActivityPub options as a script tag.
 	 */
-	public static function add_data() {
-		$context          = is_admin() ? 'editor' : 'view';
-		$followers_handle = 'activitypub-followers-' . $context . '-script';
-		$follow_me_handle = 'activitypub-follow-me-' . $context . '-script';
-		$reactions_handle = 'activitypub-reactions-' . $context . '-script';
-		$data             = array(
+	public static function inject_activitypub_options() {
+		$data = array(
 			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
 			'enabled'   => array(
 				'site'  => ! is_user_type_disabled( 'blog' ),
 				'users' => ! is_user_type_disabled( 'user' ),
 			),
 		);
-		$js               = sprintf( 'var _activityPubOptions = %s;', wp_json_encode( $data ) );
-		\wp_add_inline_script( $followers_handle, $js, 'before' );
-		\wp_add_inline_script( $follow_me_handle, $js, 'before' );
-		\wp_add_inline_script( $reactions_handle, $js, 'before' );
+
+		printf(
+			'<script>var _activityPubOptions = %s;</script>',
+			wp_json_encode( $data )
+		);
 	}
 
 	/**
