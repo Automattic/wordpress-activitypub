@@ -36,7 +36,7 @@ class Server {
 	 */
 	public static function add_hooks() {
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_activitypub_requests' ), 9, 3 );
-		\add_filter( 'rest_request_before_callbacks', array( self::class, 'authorize_activitypub_requests' ), 10, 3 );
+		//\add_filter( 'rest_request_before_callbacks', array( self::class, 'authorize_activitypub_requests' ), 10, 3 );
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
 	}
 
@@ -143,6 +143,55 @@ class Server {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Callback function to authorize each api requests
+	 *
+	 * @see WP_REST_Request
+	 *
+	 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
+	 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
+	 *
+	 * @param \WP_REST_Request $request  Request used to generate the response.
+	 *
+	 * @return bool Whether the request is authorized.
+	 */
+	public static function authorize_activitypub_permissions( $request ) {
+		if ( 'HEAD' === $request->get_method() ) {
+			return true;
+		}
+
+		/**
+		 * Filter to defer signature verification.
+		 *
+		 * Skip signature verification for debugging purposes or to reduce load for
+		 * certain Activity-Types, like "Delete".
+		 *
+		 * @param bool             $defer   Whether to defer signature verification.
+		 * @param \WP_REST_Request $request The request used to generate the response.
+		 *
+		 * @return bool Whether to defer signature verification.
+		 */
+		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request );
+
+		if ( $defer ) {
+			return true;
+		}
+
+		if (
+			// POST-Requests are always signed.
+			'GET' !== $request->get_method() ||
+			// GET-Requests only require a signature in secure mode.
+			( 'GET' === $request->get_method() && use_authorized_fetch() )
+		) {
+			$verified_request = Signature::verify_http_signature( $request );
+			if ( \is_wp_error( $verified_request ) ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/**
