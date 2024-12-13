@@ -138,6 +138,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: Send "new follower" emails
 * Added: Send "direct message" emails
 * Added: Account for custom comment types when calculating comment counts
+* Added: Plugin upgrade routine that automatically updates comment counts
 * Improved: Email templates for Likes and Reposts
 * Improved: Interactions moderation
 * Improved: Compatibility with Akismet
