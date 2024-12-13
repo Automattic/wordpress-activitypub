@@ -24,12 +24,11 @@
 
 	.reaction-avatars {
 		display: flex;
+		flex-direction: row;
 		align-items: center;
+		list-style: none;
 		margin: 0;
 		padding: 0;
-		list-style: none;
-		flex: 0 1 auto;
-		min-width: 0;
 
 		li {
 			margin: 0;
@@ -42,25 +41,36 @@
 
 			a {
 				display: block;
-				transition: transform 0.2s ease;
-				position: relative;
-				z-index: 1;
-
-				&:hover {
-					z-index: 2;
-					transform: scale(1.5);
-				}
+				text-decoration: none;
 			}
 		}
-	}
 
-	.reaction-avatar {
-		border-radius: 50%;
-		border: 1px solid #fff;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-		width: 32px;
-		height: 32px;
-		display: block;
+		.reaction-avatar {
+			width: 32px;
+			height: 32px;
+			border-radius: 50%;
+			border: 2px solid #fff;
+			box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+			transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+			will-change: transform;
+
+			&.wave-active {
+				transform: translateY(-16px);
+
+				&.rotate-clockwise {
+					transform: translateY(-16px) rotate(360deg);
+				}
+
+				&.rotate-counter {
+					transform: translateY(-16px) rotate(-360deg);
+				}
+			}
+
+			&:hover {
+				z-index: 1;
+				position: relative;
+			}
+		}
 	}
 
 	.reaction-label.components-button {
