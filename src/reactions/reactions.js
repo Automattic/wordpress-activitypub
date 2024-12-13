@@ -23,6 +23,7 @@ const { namespace } = window._activityPubOptions;
  */
 const FacepileRow = ( { reactions } ) => {
 	const [activeIndices, setActiveIndices] = useState(new Set());
+	const [rotationStates, setRotationStates] = useState(new Map());
 	const timeoutRefs = useRef([]);
 
 	const clearTimeouts = () => {
@@ -32,39 +33,64 @@ const FacepileRow = ( { reactions } ) => {
 
 	const startWave = (startIndex, isEntering) => {
 		clearTimeouts();
-		const newIndices = new Set();
 		const delay = 150; // 150ms between each avatar
 		const totalAvatars = reactions.length;
 
-		// Spread the wave to the right
-		for (let i = startIndex; i < totalAvatars; i++) {
-			const timeout = setTimeout(() => {
-				setActiveIndices(current => {
-					const updated = new Set(current);
-					if (isEntering) {
-						updated.add(i);
-					} else {
-						updated.delete(i);
-					}
-					return updated;
-				});
-			}, (i - startIndex) * delay);
-			timeoutRefs.current.push(timeout);
+		if (isEntering) {
+			setRotationStates(current => {
+				const updated = new Map(current);
+				updated.set(startIndex, 'clockwise');
+				return updated;
+			});
 		}
 
-		// Spread the wave to the left
-		for (let i = startIndex - 1; i >= 0; i--) {
-			const timeout = setTimeout(() => {
-				setActiveIndices(current => {
-					const updated = new Set(current);
-					if (isEntering) {
-						updated.add(i);
-					} else {
-						updated.delete(i);
+		// Helper function to create wave in either direction
+		const createWave = (direction) => {
+			const isRightward = direction === 'right';
+			const start = isRightward ? startIndex : startIndex - 1;
+			const end = isRightward ? totalAvatars - 1 : 0;
+			const step = isRightward ? 1 : -1;
+
+			for (let i = start; isRightward ? i <= end : i >= end; i += step) {
+				const delayMultiplier = Math.abs(i - startIndex);
+				const timeout = setTimeout(() => {
+					setActiveIndices(current => {
+						const updated = new Set(current);
+						if (isEntering) {
+							updated.add(i);
+						} else {
+							updated.delete(i);
+						}
+						return updated;
+					});
+
+					if (isEntering && i !== startIndex) {
+						setRotationStates(current => {
+							const updated = new Map(current);
+							const neighborIndex = i - step;
+							const neighborRotation = updated.get(neighborIndex);
+							updated.set(i, neighborRotation === 'clockwise' ? 'counter' : 'clockwise');
+							return updated;
+						});
 					}
-					return updated;
-				});
-			}, (startIndex - i) * delay);
+				}, delayMultiplier * delay);
+				timeoutRefs.current.push(timeout);
+			}
+		};
+
+		// Create waves in both directions
+		createWave('right');
+		createWave('left');
+
+		// Clear rotations when wave finishes retracting
+		if (!isEntering) {
+			const maxDelay = Math.max(
+				(totalAvatars - startIndex) * delay,
+				startIndex * delay
+			);
+			const timeout = setTimeout(() => {
+				setRotationStates(new Map());
+			}, maxDelay + delay);
 			timeoutRefs.current.push(timeout);
 		}
 	};
@@ -76,25 +102,34 @@ const FacepileRow = ( { reactions } ) => {
 
 	return (
 		<ul className="reaction-avatars">
-			{ reactions.map( ( reaction, index ) => (
-				<li key={ index }>
-					<a
-						href={ reaction.url }
-						target="_blank"
-						rel="noopener noreferrer"
-						onMouseEnter={() => startWave(index, true)}
-						onMouseLeave={() => startWave(index, false)}
-					>
-						<img
-							src={ reaction.avatar }
-							alt={ reaction.name }
-							className={ `reaction-avatar${activeIndices.has(index) ? ' wave-active' : ''}` }
-							width="32"
-							height="32"
-						/>
-					</a>
-				</li>
-			) ) }
+			{ reactions.map( ( reaction, index ) => {
+				const rotationClass = rotationStates.get(index);
+				const classes = [
+					'reaction-avatar',
+					activeIndices.has(index) ? 'wave-active' : '',
+					rotationClass ? `rotate-${rotationClass}` : ''
+				].filter(Boolean).join(' ');
+
+				return (
+					<li key={ index }>
+						<a
+							href={ reaction.url }
+							target="_blank"
+							rel="noopener noreferrer"
+							onMouseEnter={() => startWave(index, true)}
+							onMouseLeave={() => startWave(index, false)}
+						>
+							<img
+								src={ reaction.avatar }
+								alt={ reaction.name }
+								className={ classes }
+								width="32"
+								height="32"
+							/>
+						</a>
+					</li>
+				);
+			} ) }
 		</ul>
 	);
 };
@@ -286,7 +321,7 @@ export function Reactions( {
 
 		setLoading( true );
 		apiFetch( {
-			path: `/${ namespace }/reactions/${ postId }`,
+			path: `/${ namespace }/posts/${ postId }/reactions`,
 		} )
 		.then( ( response ) => {
 			setReactions( response );

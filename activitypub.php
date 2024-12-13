@@ -49,6 +49,7 @@ function rest_init() {
 	Rest\Server::init();
 	Rest\Collection::init();
 	Rest\Interaction::init();
+	Rest\Post::init();
 
 	// Load NodeInfo endpoints only if blog is public.
 	if ( is_blog_public() ) {
