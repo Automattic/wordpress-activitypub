@@ -21,27 +21,83 @@ const { namespace } = window._activityPubOptions;
  * @param {Array}  props.reactions Array of reaction objects.
  * @return {JSX.Element}           The rendered component.
  */
-const FacepileRow = ( { reactions } ) => (
-	<ul className="reaction-avatars">
-		{ reactions.map( ( reaction, index ) => (
-			<li key={ index }>
-				<a
-					href={ reaction.url }
-					target="_blank"
-					rel="noopener noreferrer"
-				>
-					<img
-						src={ reaction.avatar }
-						alt={ reaction.name }
-						className="reaction-avatar"
-						width="32"
-						height="32"
-					/>
-				</a>
-			</li>
-		) ) }
-	</ul>
-);
+const FacepileRow = ( { reactions } ) => {
+	const [activeIndices, setActiveIndices] = useState(new Set());
+	const timeoutRefs = useRef([]);
+
+	const clearTimeouts = () => {
+		timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+		timeoutRefs.current = [];
+	};
+
+	const startWave = (startIndex, isEntering) => {
+		clearTimeouts();
+		const newIndices = new Set();
+		const delay = 150; // 150ms between each avatar
+		const totalAvatars = reactions.length;
+
+		// Spread the wave to the right
+		for (let i = startIndex; i < totalAvatars; i++) {
+			const timeout = setTimeout(() => {
+				setActiveIndices(current => {
+					const updated = new Set(current);
+					if (isEntering) {
+						updated.add(i);
+					} else {
+						updated.delete(i);
+					}
+					return updated;
+				});
+			}, (i - startIndex) * delay);
+			timeoutRefs.current.push(timeout);
+		}
+
+		// Spread the wave to the left
+		for (let i = startIndex - 1; i >= 0; i--) {
+			const timeout = setTimeout(() => {
+				setActiveIndices(current => {
+					const updated = new Set(current);
+					if (isEntering) {
+						updated.add(i);
+					} else {
+						updated.delete(i);
+					}
+					return updated;
+				});
+			}, (startIndex - i) * delay);
+			timeoutRefs.current.push(timeout);
+		}
+	};
+
+	// Cleanup timeouts on unmount
+	useEffect(() => {
+		return () => clearTimeouts();
+	}, []);
+
+	return (
+		<ul className="reaction-avatars">
+			{ reactions.map( ( reaction, index ) => (
+				<li key={ index }>
+					<a
+						href={ reaction.url }
+						target="_blank"
+						rel="noopener noreferrer"
+						onMouseEnter={() => startWave(index, true)}
+						onMouseLeave={() => startWave(index, false)}
+					>
+						<img
+							src={ reaction.avatar }
+							alt={ reaction.name }
+							className={ `reaction-avatar${activeIndices.has(index) ? ' wave-active' : ''}` }
+							width="32"
+							height="32"
+						/>
+					</a>
+				</li>
+			) ) }
+		</ul>
+	);
+};
 
 /**
  * A component that renders a dropdown list of reactions.
