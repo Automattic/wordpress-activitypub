@@ -84,7 +84,7 @@ class Server {
 	 *
 	 * @return bool Whether the request is authorized.
 	 */
-	public static function authorize_activitypub_permissions( $request ) {
+	public static function signature_verification( $request ) {
 		if ( 'HEAD' === $request->get_method() ) {
 			return true;
 		}
@@ -98,7 +98,7 @@ class Server {
 		 * @param bool             $defer   Whether to defer signature verification.
 		 * @param \WP_REST_Request $request The request used to generate the response.
 		 *
-		 * @return bool Whether to defer signature verification.
+		 * @return bool|WP_Error True if the request is authorized, WP_Error if not.
 		 */
 		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request );
 
@@ -107,14 +107,18 @@ class Server {
 		}
 
 		if (
-			// POST-Requests are always signed.
+			// POST-Requests have to be always signed.
 			'GET' !== $request->get_method() ||
 			// GET-Requests only require a signature in secure mode.
 			( 'GET' === $request->get_method() && use_authorized_fetch() )
 		) {
 			$verified_request = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_request ) ) {
-				return false;
+				return new WP_Error(
+					'activitypub_signature_verification',
+					$verified_request->get_error_message(),
+					array( 'status' => 401 )
+				);
 			}
 		}
 

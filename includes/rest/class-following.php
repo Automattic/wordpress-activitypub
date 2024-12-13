@@ -43,7 +43,7 @@ class Following {
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'get' ),
 					'args'                => self::request_parameters(),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'authorize_activitypub_permissions' ),
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'signature_verification' ),
 				),
 			)
 		);

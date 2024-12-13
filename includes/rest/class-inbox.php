@@ -45,7 +45,7 @@ class Inbox {
 					'methods'             => WP_REST_Server::CREATABLE,
 					'callback'            => array( self::class, 'shared_inbox_post' ),
 					'args'                => self::shared_inbox_post_parameters(),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'authorize_activitypub_permissions' ),
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'signature_verification' ),
 				),
 			)
 		);
@@ -58,13 +58,13 @@ class Inbox {
 					'methods'             => WP_REST_Server::CREATABLE,
 					'callback'            => array( self::class, 'user_inbox_post' ),
 					'args'                => self::user_inbox_post_parameters(),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'authorize_activitypub_permissions' ),
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'signature_verification' ),
 				),
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'user_inbox_get' ),
 					'args'                => self::user_inbox_get_parameters(),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'authorize_activitypub_permissions' ),
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'signature_verification' ),
 				),
 			)
 		);
