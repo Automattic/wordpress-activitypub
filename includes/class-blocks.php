@@ -149,7 +149,7 @@ class Blocks {
 			)
 		);
 
-		// Only register reactions block if globally enabled
+		// Only register reactions block if globally enabled.
 		if ( get_option( 'activitypub_reactions_enabled', '1' ) === '1' ) {
 			\register_block_type_from_metadata(
 				ACTIVITYPUB_PLUGIN_DIR . '/build/reactions',

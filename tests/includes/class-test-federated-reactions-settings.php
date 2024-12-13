@@ -120,7 +120,7 @@ class Test_Federated_Reactions_Settings extends \WP_UnitTestCase {
 		update_option( 'activitypub_reactions_enabled', '1' );
 		update_post_meta( $post->ID, 'activitypub_reactions_enabled', '0' );
 		$this->assertFalse( Federated_Reactions_Settings::is_reactions_enabled( $post->ID ) );
-		
+
 		update_option( 'activitypub_reactions_enabled', '0' );
 		update_post_meta( $post->ID, 'activitypub_reactions_enabled', '1' );
 		$this->assertTrue( Federated_Reactions_Settings::is_reactions_enabled( $post->ID ) );
