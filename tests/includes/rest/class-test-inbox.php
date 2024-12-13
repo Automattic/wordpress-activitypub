@@ -51,7 +51,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$response = \rest_do_request( $request );
 
 		$this->assertEquals( 401, $response->get_status() );
-		$this->assertEquals( 'activitypub_signature_verification', $response->get_data()['code'] );
+		$this->assertEquals( 'rest_forbidden', $response->get_data()['code'] );
 	}
 
 	/**
