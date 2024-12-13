@@ -27,6 +27,8 @@ class Blocks {
 		// Add editor plugin.
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor_assets' ) );
 		\add_action( 'init', array( self::class, 'register_postmeta' ), 11 );
+
+		\add_action( 'the_content', array( self::class, 'maybe_add_fediverse_reactions' ) );
 	}
 
 	/**
@@ -390,5 +392,26 @@ class Blocks {
 			esc_html( $data['preferredUsername'] ),
 			$external_svg
 		);
+	}
+
+	/**
+	 * Add fediverse reactions to the content.
+	 *
+	 * @param string $content The post content.
+	 * @return string The post content with fediverse reactions.
+	 */
+	public static function maybe_add_fediverse_reactions( $content ) {
+		if ( ! is_singular() || wp_is_block_theme() ) {
+			return $content;
+		}
+
+		if ( ! Federated_Reactions_Settings::is_reactions_enabled() ) {
+			return $content;
+		}
+
+		// Create a block instance for proper rendering.
+		$block_content = do_blocks( '<!-- wp:activitypub/reactions {"title":"' . esc_attr__( 'Fediverse Reactions', 'activitypub' ) . '"} /-->' );
+
+		return $content . $block_content;
 	}
 }
