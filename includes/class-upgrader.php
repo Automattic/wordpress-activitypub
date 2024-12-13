@@ -15,8 +15,8 @@ class Upgrader {
 	 * Initialize the Upgrader.
 	 */
 	public static function init() {
-		self::maybe_upgrade();
-		\add_action( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ), 10, 3 );
+		\add_action( 'admin_init', array( self::class, 'maybe_upgrade' ), 11 );
+		\add_action( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ), 10, 2 );
 	}
 
 	/**
@@ -45,8 +45,8 @@ class Upgrader {
 			return;
 		}
 
-		// Run the first batch immediately.
-		self::update_comment_counts( 100, 0 );
+		// Schedule the first batch.
+		\wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'activitypub_update_comment_counts' );
 	}
 
 	/**
