@@ -23,13 +23,13 @@ class Upgrader {
 	 * Maybe upgrade the plugin.
 	 */
 	public static function maybe_upgrade() {
-		$version = \get_option( 'activitypub_version' );
+		$version = \get_option( 'activitypub_version', '0.0.0' );
 
 		if ( ACTIVITYPUB_PLUGIN_VERSION === $version ) {
 			return;
 		}
 
-		if ( ! $version || version_compare( $version, '4.5.0', '<' ) ) {
+		if ( version_compare( $version, '4.5.0', '<' ) ) {
 			self::upgrade_to_450();
 		}
 
@@ -54,7 +54,7 @@ class Upgrader {
 	 *
 	 * @see Comment::pre_wp_update_comment_count_now()
 	 * @param int $batch_size Optional. Number of posts to process per batch. Default 100.
-	 * @param int $offset Optional. Number of posts to skip. Default 0.
+	 * @param int $offset     Optional. Number of posts to skip. Default 0.
 	 */
 	public static function update_comment_counts( $batch_size = 100, $offset = 0 ) {
 		global $wpdb;
@@ -104,7 +104,7 @@ class Upgrader {
 		}
 
 		foreach ( $post_ids as $post_id ) {
-			\wp_update_comment_count( $post_id );
+			\wp_update_comment_count_now( $post_id );
 		}
 
 		// Schedule next batch.
