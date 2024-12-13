@@ -1,6 +1,6 @@
 import { PluginDocumentSettingPanel, PluginPreviewMenuItem } from '@wordpress/editor';
 import { registerPlugin } from '@wordpress/plugins';
-import { TextControl, RadioControl, __experimentalText as Text } from '@wordpress/components';
+import { TextControl, RadioControl, CheckboxControl, __experimentalText as Text } from '@wordpress/components';
 import { Icon, notAllowed, globe, people, external } from '@wordpress/icons';
 import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
@@ -35,6 +35,9 @@ const EditorPlugin = () => {
 		return null;
 	}
 
+	// Default to enabled if not set
+	const isReactionsEnabled = meta?.activitypub_reactions_enabled !== '0';
+
 	return (
 		<PluginDocumentSettingPanel
 			name="activitypub"
@@ -49,6 +52,7 @@ const EditorPlugin = () => {
 				placeholder={ __( 'Optional content warning', 'activitypub' ) }
 				help={ __( 'Content warnings do not change the content on your site, only in the fediverse.', 'activitypub' ) }
 			/>
+
 			<RadioControl
 				label={ __( 'Visibility', 'activitypub' ) }
 				help={ __( 'This adjusts the visibility of a post in the fediverse, but note that it won\'t affect how the post appears on the blog.', 'activitypub' ) }
@@ -62,6 +66,15 @@ const EditorPlugin = () => {
 					setMeta( { ...meta, activitypub_content_visibility: value } );
 				} }
 				className="activitypub-visibility"
+			/>
+			<br />
+			<CheckboxControl
+				label={ __( 'Show federated reactions', 'activitypub' ) }
+				checked={ isReactionsEnabled }
+				onChange={ ( checked ) => {
+					setMeta( { ...meta, activitypub_reactions_enabled: checked ? '1' : '0' } );
+				} }
+				help={ __( 'When disabled, federated reactions will be hidden for this post.', 'activitypub' ) }
 			/>
 		</PluginDocumentSettingPanel>
 	);

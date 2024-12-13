@@ -148,12 +148,16 @@ class Blocks {
 				'render_callback' => array( self::class, 'render_reply_block' ),
 			)
 		);
-		\register_block_type_from_metadata(
-			ACTIVITYPUB_PLUGIN_DIR . '/build/reactions',
-			array(
-				'render_callback' => array( self::class, 'render_post_reactions_block' ),
-			)
-		);
+
+		// Only register reactions block if globally enabled
+		if ( get_option( 'activitypub_reactions_enabled', '1' ) === '1' ) {
+			\register_block_type_from_metadata(
+				ACTIVITYPUB_PLUGIN_DIR . '/build/reactions',
+				array(
+					'render_callback' => array( self::class, 'render_post_reactions_block' ),
+				)
+			);
+		}
 	}
 
 	/**
@@ -164,6 +168,11 @@ class Blocks {
 	 * @return string The HTML to render.
 	 */
 	public static function render_post_reactions_block( $attrs ) {
+		// Check if reactions are enabled, generally, or for the current post.
+		if ( ! Federated_Reactions_Settings::is_reactions_enabled() ) {
+			return '';
+		}
+
 		if ( ! isset( $attrs['postId'] ) ) {
 			$attrs['postId'] = get_the_ID();
 		}

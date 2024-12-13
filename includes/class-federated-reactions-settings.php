@@ -18,8 +18,6 @@ class Federated_Reactions_Settings {
 	public static function init() {
 		add_action( 'init', array( self::class, 'register_post_meta' ), 11 );
 		add_action( 'admin_init', array( self::class, 'register_settings' ) );
-		add_action( 'add_meta_boxes', array( self::class, 'add_meta_box' ) );
-		add_action( 'save_post', array( self::class, 'meta_box_save' ) );
 	}
 
 	/**
@@ -81,68 +79,6 @@ class Federated_Reactions_Settings {
 			</p>
 		</fieldset>
 		<?php
-	}
-
-	/**
-	 * Add meta box to posts.
-	 */
-	public static function add_meta_box() {
-		$post_types = get_post_types_by_support( 'activitypub' );
-		foreach ( $post_types as $post_type ) {
-			add_meta_box(
-				'activitypub_reactions',
-				__( 'Federated Reactions', 'activitypub' ),
-				array( self::class, 'render_meta_box' ),
-				$post_type,
-				'side'
-			);
-		}
-	}
-
-	/**
-	 * Render the meta box.
-	 *
-	 * @param \WP_Post $post The post object.
-	 */
-	public static function render_meta_box( $post ) {
-		$value = get_post_meta( $post->ID, 'activitypub_reactions_enabled', true );
-		if ( '' === $value ) {
-			$value = get_option( 'activitypub_reactions_enabled', '1' );
-		}
-		wp_nonce_field( 'activitypub_reactions_meta_box', 'activitypub_reactions_meta_box_nonce' );
-		?>
-		<label>
-			<input type="checkbox" name="activitypub_reactions_enabled" value="1" <?php checked( $value, '1' ); ?> />
-			<?php esc_html_e( 'Show federated reactions', 'activitypub' ); ?>
-		</label>
-		<p class="description">
-			<?php esc_html_e( 'When disabled, federated reactions will be hidden for this post.', 'activitypub' ); ?>
-		</p>
-		<?php
-	}
-
-	/**
-	 * Save the meta box data.
-	 *
-	 * @param int $post_id The post ID.
-	 */
-	public static function meta_box_save( $post_id ) {
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
-			return;
-		}
-
-		if ( ! isset( $_POST['activitypub_reactions_meta_box_nonce'] ) ||
-			! wp_verify_nonce( wp_unslash( $_POST['activitypub_reactions_meta_box_nonce'] ), 'activitypub_reactions_meta_box' ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		) {
-			return;
-		}
-
-		if ( ! current_user_can( 'edit_post', $post_id ) ) {
-			return;
-		}
-
-		$value = isset( $_POST['activitypub_reactions_enabled'] ) ? '1' : '0';
-		update_post_meta( $post_id, 'activitypub_reactions_enabled', $value );
 	}
 
 	/**
