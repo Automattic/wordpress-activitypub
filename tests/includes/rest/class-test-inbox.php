@@ -28,14 +28,14 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		\delete_option( 'permalink_structure' );
-		\add_filter( 'activitypub_defer_signature_verification', '__return_false' );
+		\add_filter( 'activitypub_defer_verify_signature', '__return_false' );
 	}
 
 	/**
 	 * Test the inbox signature issue.
 	 */
 	public function test_inbox_signature_issue() {
-		\add_filter( 'activitypub_defer_signature_verification', '__return_false' );
+		\add_filter( 'activitypub_defer_verify_signature', '__return_false' );
 
 		$json = array(
 			'id'     => 'https://remote.example/@id',
@@ -51,14 +51,14 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$response = \rest_do_request( $request );
 
 		$this->assertEquals( 401, $response->get_status() );
-		$this->assertEquals( 'activitypub_signature_verification', $response->get_data()['code'] );
+		$this->assertEquals( 'activitypub_verify_signature', $response->get_data()['code'] );
 	}
 
 	/**
 	 * Test missing attribute.
 	 */
 	public function test_missing_attribute() {
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'activitypub_defer_verify_signature', '__return_true' );
 
 		$json = array(
 			'id'    => 'https://remote.example/@id',
@@ -81,7 +81,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 * Test follow request.
 	 */
 	public function test_follow_request() {
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'activitypub_defer_verify_signature', '__return_true' );
 
 		$json = array(
 			'id'     => 'https://remote.example/@id',
@@ -103,7 +103,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 * Test follow request global inbox.
 	 */
 	public function test_follow_request_global_inbox() {
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'activitypub_defer_verify_signature', '__return_true' );
 
 		$json = array(
 			'id'     => 'https://remote.example/@id',
@@ -125,7 +125,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 * Test create request with a remote actor.
 	 */
 	public function test_create_request() {
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'activitypub_defer_verify_signature', '__return_true' );
 
 		// Invalid request, because of an invalid object.
 		$json = array(
@@ -165,7 +165,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 * Test create request global inbox.
 	 */
 	public function test_create_request_global_inbox() {
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'activitypub_defer_verify_signature', '__return_true' );
 
 		// Invalid request, because of an invalid object.
 		$json = array(
@@ -205,7 +205,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 * Test update request.
 	 */
 	public function test_update_request() {
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'activitypub_defer_verify_signature', '__return_true' );
 
 		$json = array(
 			'id'     => 'https://remote.example/@id',
@@ -233,7 +233,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 * Test like request.
 	 */
 	public function test_like_request() {
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'activitypub_defer_verify_signature', '__return_true' );
 
 		$json = array(
 			'id'     => 'https://remote.example/@id',
@@ -255,7 +255,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 * Test announce request.
 	 */
 	public function test_announce_request() {
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'activitypub_defer_verify_signature', '__return_true' );
 
 		$json = array(
 			'id'     => 'https://remote.example/@id',

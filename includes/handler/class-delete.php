@@ -27,8 +27,8 @@ class Delete {
 
 		// Defer signature verification for `Delete` requests.
 		\add_filter(
-			'activitypub_defer_signature_verification',
-			array( self::class, 'defer_signature_verification' ),
+			'activitypub_defer_verify_signature',
+			array( self::class, 'defer_verify_signature' ),
 			10,
 			2
 		);
@@ -183,7 +183,7 @@ class Delete {
 	 *
 	 * @return bool Whether to defer signature verification.
 	 */
-	public static function defer_signature_verification( $defer, $request ) {
+	public static function defer_verify_signature( $defer, $request ) {
 		$json = $request->get_json_params();
 
 		if ( isset( $json['type'] ) && 'Delete' === $json['type'] ) {

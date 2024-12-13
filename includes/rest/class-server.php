@@ -78,7 +78,7 @@ class Server {
 	 * The function is meant to be used as a permission callback for the rest api.
 	 *
 	 * It verifies the signature of POST, PUT, PATCH and DELETE requests and also the GET requests in secure mode.
-	 * You can use the filter 'activitypub_defer_signature_verification' to defer the signature verification.
+	 * You can use the filter 'activitypub_defer_verify_signature' to defer the signature verification.
 	 * The HEAD request is always bypassed.
 	 *
 	 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
@@ -88,7 +88,7 @@ class Server {
 	 *
 	 * @return bool|\WP_Error True if the request is authorized, WP_Error if not.
 	 */
-	public static function signature_verification( $request ) {
+	public static function verify_signature( $request ) {
 		if ( 'HEAD' === $request->get_method() ) {
 			return true;
 		}
@@ -104,7 +104,7 @@ class Server {
 		 *
 		 * @return bool Whether to defer signature verification.
 		 */
-		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request );
+		$defer = \apply_filters( 'activitypub_defer_verify_signature', false, $request );
 
 		if ( $defer ) {
 			return true;
@@ -119,7 +119,7 @@ class Server {
 			$verified_request = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_request ) ) {
 				return new WP_Error(
-					'activitypub_signature_verification',
+					'activitypub_verify_signature',
 					$verified_request->get_error_message(),
 					array( 'status' => 401 )
 				);
