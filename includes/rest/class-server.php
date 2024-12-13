@@ -73,16 +73,20 @@ class Server {
 	}
 
 	/**
-	 * Callback function to authorize each api requests
+	 * Callback function to authorize an api request.
 	 *
-	 * @see WP_REST_Request
+	 * The function is meant to be used as a permission callback for the rest api.
+	 *
+	 * It verifies the signature of POST, PUT, PATCH and DELETE requests and also the GET requests in secure mode.
+	 * You can use the filter 'activitypub_defer_signature_verification' to defer the signature verification.
+	 * The HEAD request is always bypassed.
 	 *
 	 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
 	 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
 	 *
-	 * @param \WP_REST_Request $request  Request used to generate the response.
+	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return bool Whether the request is authorized.
+	 * @return bool|\WP_Error True if the request is authorized, WP_Error if not.
 	 */
 	public static function signature_verification( $request ) {
 		if ( 'HEAD' === $request->get_method() ) {
@@ -98,7 +102,7 @@ class Server {
 		 * @param bool             $defer   Whether to defer signature verification.
 		 * @param \WP_REST_Request $request The request used to generate the response.
 		 *
-		 * @return bool|WP_Error True if the request is authorized, WP_Error if not.
+		 * @return bool Whether to defer signature verification.
 		 */
 		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request );
 
