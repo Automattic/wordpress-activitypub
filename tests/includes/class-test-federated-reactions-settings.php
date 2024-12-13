@@ -32,7 +32,7 @@ class Test_Federated_Reactions_Settings extends \WP_UnitTestCase {
 	 * @covers ::init
 	 */
 	public function test_init() {
-		$this->assertEquals( 11, has_action( 'init', array( Federated_Reactions_Settings::class, 'register_postmeta' ) ) );
+		$this->assertEquals( 11, has_action( 'init', array( Federated_Reactions_Settings::class, 'register_post_meta' ) ) );
 		$this->assertEquals( 10, has_action( 'admin_init', array( Federated_Reactions_Settings::class, 'register_settings' ) ) );
 		$this->assertEquals( 10, has_action( 'add_meta_boxes', array( Federated_Reactions_Settings::class, 'add_meta_box' ) ) );
 		$this->assertEquals( 10, has_action( 'save_post', array( Federated_Reactions_Settings::class, 'meta_box_save' ) ) );
