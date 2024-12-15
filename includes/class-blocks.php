@@ -305,23 +305,25 @@ class Blocks {
 	 * @return string The HTML to render.
 	 */
 	public static function render_reply_block( $attrs ) {
+		$html = '';
+
+		if ( ! empty( $attrs['url'] ) ) {
+			$html = sprintf(
+				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
+				esc_url( $attrs['url'] ),
+				esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
+				// translators: %s is the URL of the post being replied to.
+				sprintf( __( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', esc_url( $attrs['url'] ) ) )
+			);
+		}
+
 		/**
 		 * Filter the reply block.
 		 *
 		 * @param string $html  The HTML to render.
 		 * @param array  $attrs The block attributes.
 		 */
-		return apply_filters(
-			'activitypub_reply_block',
-			sprintf(
-				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
-				esc_url( $attrs['url'] ),
-				esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
-				// translators: %s is the URL of the post being replied to.
-				sprintf( __( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', $attrs['url'] ) )
-			),
-			$attrs
-		);
+		return apply_filters( 'activitypub_reply_block', $html, $attrs );
 	}
 
 	/**

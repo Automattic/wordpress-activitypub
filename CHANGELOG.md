@@ -9,13 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* `icon` support for `Audio` and `Video` attachments
 * Send "new follower" emails
+* Send "direct message" emails
+* Account for custom comment types when calculating comment counts
 
 ### Improved
 
 * Email templates for Likes and Reposts
 * Improve Interactions moderation
 * Compatibility with Akismet
+* Comment type mapping for `Like` and `Announce`
+
+### Fixed
+
+* Empty `url` attributes in the Reply block no longer cause PHP warnings
 
 ## [4.4.0] - 2024-12-09
 

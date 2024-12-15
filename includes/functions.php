@@ -690,6 +690,17 @@ function is_activity_public( $data ) {
 }
 
 /**
+ * Check if passed Activity is a reply.
+ *
+ * @param array $data The Activity object as array.
+ *
+ * @return boolean True if a reply, false if not.
+ */
+function is_activity_reply( $data ) {
+	return ! empty( $data['object']['inReplyTo'] );
+}
+
+/**
  * Get active users based on a given duration.
  *
  * @param int $duration Optional. The duration to check in month(s). Default 1.
@@ -822,6 +833,9 @@ function object_to_uri( $data ) {
 
 	// Return part of Object that makes most sense.
 	switch ( $type ) {
+		case 'Image':
+			$data = $data['url'];
+			break;
 		case 'Link':
 			$data = $data['href'];
 			break;
