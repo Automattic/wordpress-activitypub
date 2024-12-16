@@ -149,15 +149,12 @@ class Blocks {
 			)
 		);
 
-		// Only register reactions block if globally enabled.
-		if ( get_option( 'activitypub_reactions_enabled', '1' ) === '1' ) {
-			\register_block_type_from_metadata(
-				ACTIVITYPUB_PLUGIN_DIR . '/build/reactions',
-				array(
-					'render_callback' => array( self::class, 'render_post_reactions_block' ),
-				)
-			);
-		}
+		\register_block_type_from_metadata(
+			ACTIVITYPUB_PLUGIN_DIR . '/build/reactions',
+			array(
+				'render_callback' => array( self::class, 'render_post_reactions_block' ),
+			)
+		);
 	}
 
 	/**
