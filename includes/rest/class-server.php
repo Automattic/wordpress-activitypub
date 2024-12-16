@@ -111,7 +111,7 @@ class Server {
 		}
 
 		if (
-			// POST-Requests have to be always signed.
+			// POST-Requests always have to be signed.
 			'GET' !== $request->get_method() ||
 			// GET-Requests only require a signature in secure mode.
 			( 'GET' === $request->get_method() && use_authorized_fetch() )
