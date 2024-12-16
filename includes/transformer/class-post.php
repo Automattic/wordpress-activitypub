@@ -311,9 +311,9 @@ class Post extends Base {
 		);
 
 		$media = array(
+			'image' => array(),
 			'audio' => array(),
 			'video' => array(),
-			'image' => array(),
 		);
 		$id    = $this->wp_object->ID;
 
