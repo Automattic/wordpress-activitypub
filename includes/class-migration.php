@@ -411,6 +411,7 @@ class Migration {
 		// Update the lock, as by this point we've definitely got a lock.
 		\update_option( $lock_name, time() );
 
+		Comment::register_comment_types();
 		$comment_types  = Comment::get_comment_type_slugs();
 		$type_inclusion = "AND comment_type IN ('" . implode( "','", $comment_types ) . "')";
 
@@ -424,25 +425,21 @@ class Migration {
 			)
 		);
 
-		if ( empty( $post_ids ) ) {
-			\update_option( 'activitypub_450_comment_counts_updated', true );
-			\delete_option( $lock_name );
-			return;
-		}
-
 		foreach ( $post_ids as $post_id ) {
 			\wp_update_comment_count_now( $post_id );
 		}
 
-		// Schedule next batch.
-		\wp_schedule_single_event(
-			time() + MINUTE_IN_SECONDS,
-			'activitypub_update_comment_counts',
-			array(
-				'batch_size' => $batch_size,
-				'offset'     => $offset + $batch_size,
-			)
-		);
+		if ( count( $post_ids ) === $batch_size ) {
+			// Schedule next batch.
+			\wp_schedule_single_event(
+				time() + MINUTE_IN_SECONDS,
+				'activitypub_update_comment_counts',
+				array(
+					'batch_size' => $batch_size,
+					'offset'     => $offset + $batch_size,
+				)
+			);
+		}
 
 		\delete_option( $lock_name );
 	}
