@@ -60,7 +60,7 @@ class Migration {
 		global $wpdb;
 
 		// Try to lock.
-		$lock_result = $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO `$wpdb->options` ( `option_name`, `option_value`, `autoload` ) VALUES (%s, %s, 'no') /* LOCK */", 'activitypub_migration_lock', \time() ) ); // phpcs:ignore WordPress.DB
+		$lock_result = (bool) $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO `$wpdb->options` ( `option_name`, `option_value`, `autoload` ) VALUES (%s, %s, 'no') /* LOCK */", 'activitypub_migration_lock', \time() ) ); // phpcs:ignore WordPress.DB
 
 		if ( ! $lock_result ) {
 			$lock_result = \get_option( 'activitypub_migration_lock' );

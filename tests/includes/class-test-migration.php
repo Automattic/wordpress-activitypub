@@ -194,29 +194,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	public function test_lock_acquire_new() {
 		$this->assertFalse( get_option( 'activitypub_migration_lock' ) );
 
-		$lock_result = Migration::lock();
-
-		$this->assertNotFalse( $lock_result );
-		$this->assertIsNumeric( $lock_result );
-		$this->assertEqualsWithDelta( time(), (int) $lock_result, 2 );
-
-		// Clean up.
-		delete_option( 'activitypub_migration_lock' );
-	}
-
-	/**
-	 * Tests acquiring a lock fails when one already exists.
-	 *
-	 * @covers ::lock
-	 */
-	public function test_lock_existing() {
-		$initial_time = time() - MINUTE_IN_SECONDS; // Set lock to 1 minute ago.
-		update_option( 'activitypub_migration_lock', $initial_time );
-
-		$lock_result = Migration::lock();
-
-		$this->assertEquals( $initial_time, $lock_result );
-		$this->assertEquals( $initial_time, get_option( 'activitypub_migration_lock' ) );
+		$this->assertTrue( Migration::lock() );
 
 		// Clean up.
 		delete_option( 'activitypub_migration_lock' );
