@@ -5,7 +5,6 @@
  * @package Activitypub
  */
 
-\define( 'ACTIVITYPUB_DISABLE_REACTIONS', false );
 \define( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS', false );
 
 $_tests_dir = \getenv( 'WP_TESTS_DIR' );
