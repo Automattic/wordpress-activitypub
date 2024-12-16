@@ -53,9 +53,20 @@ class Migration {
 
 	/**
 	 * Locks the database migration process to prevent simultaneous migrations.
+	 *
+	 * @return bool|int True if the lock was successful, timestamp of existing lock otherwise.
 	 */
 	public static function lock() {
-		\update_option( 'activitypub_migration_lock', \time() );
+		global $wpdb;
+
+		// Try to lock.
+		$lock_result = $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO `$wpdb->options` ( `option_name`, `option_value`, `autoload` ) VALUES (%s, %s, 'no') /* LOCK */", 'activitypub_migration_lock', \time() ) ); // phpcs:ignore WordPress.DB
+
+		if ( ! $lock_result ) {
+			$lock_result = \get_option( 'activitypub_migration_lock' );
+		}
+
+		return $lock_result;
 	}
 
 	/**
@@ -116,7 +127,7 @@ class Migration {
 
 		$version_from_db = self::get_version();
 
-		// Check for inital migration.
+		// Check for initial migration.
 		if ( ! $version_from_db ) {
 			self::add_default_settings();
 			$version_from_db = ACTIVITYPUB_PLUGIN_VERSION;
@@ -386,30 +397,20 @@ class Migration {
 	public static function update_comment_counts( $batch_size = 100, $offset = 0 ) {
 		global $wpdb;
 
-		$lock_name = 'activitypub_update_comment_counts.lock';
-
-		// Try to lock.
-		$lock_result = $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO `$wpdb->options` ( `option_name`, `option_value`, `autoload` ) VALUES (%s, %s, 'no') /* LOCK */", $lock_name, time() ) ); // phpcs:ignore WordPress.DB
-
-		if ( ! $lock_result ) {
-			$lock_result = \get_option( $lock_name );
-
-			// Bail if we were unable to create a lock, or if the existing lock is still valid.
-			if ( ! $lock_result || ( $lock_result > ( time() - HOUR_IN_SECONDS ) ) ) {
-				\wp_schedule_single_event(
-					time() + ( 5 * MINUTE_IN_SECONDS ),
-					'activitypub_update_comment_counts',
-					array(
-						'batch_size' => $batch_size,
-						'offset'     => $offset,
-					)
-				);
-				return;
-			}
+		// Bail if the existing lock is still valid.
+		if ( self::is_locked() ) {
+			\wp_schedule_single_event(
+				time() + ( 5 * MINUTE_IN_SECONDS ),
+				'activitypub_update_comment_counts',
+				array(
+					'batch_size' => $batch_size,
+					'offset'     => $offset,
+				)
+			);
+			return;
 		}
 
-		// Update the lock, as by this point we've definitely got a lock.
-		\update_option( $lock_name, time() );
+		self::lock();
 
 		Comment::register_comment_types();
 		$comment_types  = Comment::get_comment_type_slugs();
@@ -441,7 +442,7 @@ class Migration {
 			);
 		}
 
-		\delete_option( $lock_name );
+		self::unlock();
 	}
 
 	/**
