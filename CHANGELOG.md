@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Improve Interactions moderation
 * Compatibility with Akismet
 * Comment type mapping for `Like` and `Announce`
+* Changed priority of Attachments, to favor `Image` over `Audio` and `Video`
 
 ### Fixed
 
