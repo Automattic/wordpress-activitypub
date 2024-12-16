@@ -169,7 +169,7 @@ class Blocks {
 	 */
 	public static function render_post_reactions_block( $attrs ) {
 		// Check if reactions are enabled, generally, or for the current post.
-		if ( ! Federated_Reactions_Settings::is_reactions_enabled() ) {
+		if ( ! Reactions_Settings::is_reactions_enabled() ) {
 			return '';
 		}
 
@@ -412,7 +412,7 @@ class Blocks {
 			return $content;
 		}
 
-		if ( ! Federated_Reactions_Settings::is_reactions_enabled() ) {
+		if ( ! Reactions_Settings::is_reactions_enabled() ) {
 			return $content;
 		}
 
