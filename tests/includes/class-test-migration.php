@@ -205,7 +205,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Tests that acquiring a lock fails when one already exists.
+	 * Tests acquiring a lock fails when one already exists.
 	 *
 	 * @covers ::lock
 	 */
@@ -240,12 +240,11 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Test update_comment_counts() properly cleans up the lock.
+	 * Tests update_comment_counts() properly cleans up the lock.
 	 *
 	 * @covers ::update_comment_counts
 	 */
 	public function test_update_comment_counts_with_lock() {
-
 		// Register comment types.
 		Comment::register_comment_types();
 
@@ -262,8 +261,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		Migration::update_comment_counts( 10, 0 );
 
 		// Verify lock was cleaned up.
-		$lock_name = 'activitypub_update_comment_counts.lock';
-		$this->assertFalse( get_option( $lock_name ) );
+		$this->assertFalse( get_option( 'activitypub_migration_lock' ) );
 
 		// Clean up.
 		wp_delete_comment( $comment_id, true );
@@ -271,7 +269,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Test update_comment_counts() with existing valid lock.
+	 * Tests update_comment_counts() with existing valid lock.
 	 *
 	 * @covers ::update_comment_counts
 	 */
@@ -279,8 +277,8 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		// Register comment types.
 		Comment::register_comment_types();
 
-		$lock_name = 'activitypub_update_comment_counts.lock';
-		update_option( $lock_name, time() );
+		// Set a lock.
+		Migration::lock();
 
 		Migration::update_comment_counts( 10, 0 );
 
@@ -295,7 +293,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		$this->assertNotFalse( $next_scheduled );
 
 		// Clean up.
-		delete_option( $lock_name );
+		delete_option( 'activitypub_migration_lock' );
 		wp_clear_scheduled_hook(
 			'activitypub_update_comment_counts',
 			array(
