@@ -455,4 +455,124 @@ class Test_Comment extends \WP_UnitTestCase {
 			),
 		);
 	}
+
+	/**
+	 * Test get_comment_type_by_activity_type method.
+	 *
+	 * @covers ::get_comment_type_by_activity_type
+	 */
+	public function test_get_comment_type_by_activity_type() {
+		// Test Like activity type.
+		$comment_type = Comment::get_comment_type_by_activity_type( 'Like' );
+		$this->assertIsArray( $comment_type );
+		$this->assertEquals( 'like', $comment_type['type'] );
+		$this->assertEquals( 'Like', $comment_type['singular'] );
+		$this->assertEquals( 'Likes', $comment_type['label'] );
+		$this->assertContains( 'like', $comment_type['activity_types'] );
+
+		// Test Announce activity type.
+		$comment_type = Comment::get_comment_type_by_activity_type( 'Announce' );
+		$this->assertIsArray( $comment_type );
+		$this->assertEquals( 'repost', $comment_type['type'] );
+		$this->assertEquals( 'Repost', $comment_type['singular'] );
+		$this->assertEquals( 'Reposts', $comment_type['label'] );
+		$this->assertContains( 'announce', $comment_type['activity_types'] );
+
+		// Test case insensitivity.
+		$comment_type = Comment::get_comment_type_by_activity_type( 'like' );
+		$this->assertIsArray( $comment_type );
+		$this->assertEquals( 'like', $comment_type['type'] );
+
+		$comment_type = Comment::get_comment_type_by_activity_type( 'ANNOUNCE' );
+		$this->assertIsArray( $comment_type );
+		$this->assertEquals( 'repost', $comment_type['type'] );
+
+		// Test invalid activity type.
+		$comment_type = Comment::get_comment_type_by_activity_type( 'InvalidType' );
+		$this->assertNull( $comment_type );
+
+		// Test empty activity type.
+		$comment_type = Comment::get_comment_type_by_activity_type( '' );
+		$this->assertNull( $comment_type );
+	}
+
+	/**
+	 * Test is_registered_comment_type.
+	 *
+	 * @covers ::is_registered_comment_type
+	 */
+	public function test_is_registered_comment_type() {
+		// Test registered types (these are registered in Comment::register_comment_types()).
+		$this->assertTrue( Comment::is_registered_comment_type( 'repost' ) );
+		$this->assertTrue( Comment::is_registered_comment_type( 'like' ) );
+
+		// Test case insensitivity.
+		$this->assertTrue( Comment::is_registered_comment_type( 'REPOST' ) );
+		$this->assertTrue( Comment::is_registered_comment_type( 'Like' ) );
+
+		// Test with spaces and special characters (sanitize_key removes these).
+		$this->assertTrue( Comment::is_registered_comment_type( ' repost ' ) );
+		$this->assertTrue( Comment::is_registered_comment_type( 'like!' ) );
+
+		// Test unregistered types.
+		$this->assertFalse( Comment::is_registered_comment_type( 'nonexistent' ) );
+		$this->assertFalse( Comment::is_registered_comment_type( '' ) );
+		$this->assertFalse( Comment::is_registered_comment_type( 'comment' ) );
+	}
+
+	/**
+	 * Test get_comment_type_slugs.
+	 *
+	 * @covers ::get_comment_type_slugs
+	 */
+	public function test_get_comment_type_slugs() {
+		// Get the registered slugs.
+		$slugs = Comment::get_comment_type_slugs();
+
+		// Test that we get an array.
+		$this->assertIsArray( $slugs );
+
+		// Test that the array is not empty.
+		$this->assertNotEmpty( $slugs );
+
+		// Test that it contains the expected default types.
+		$this->assertContains( 'repost', $slugs );
+		$this->assertContains( 'like', $slugs );
+
+		// Test that the array only contains strings.
+		foreach ( $slugs as $slug ) {
+			$this->assertIsString( $slug );
+		}
+
+		// Test that there are no duplicate slugs.
+		$this->assertEquals( count( $slugs ), count( array_unique( $slugs ) ) );
+	}
+
+	/**
+	 * Test get_comment_type_names to maintain backwards compatibility.
+	 *
+	 * @covers ::get_comment_type_names
+	 */
+	public function test_get_comment_type_names() {
+		$this->setExpectedDeprecated( 'Activitypub\Comment::get_comment_type_names' );
+
+		// Get both types of results.
+		$names = Comment::get_comment_type_names();
+		$slugs = Comment::get_comment_type_slugs();
+
+		// Test that we get an array.
+		$this->assertIsArray( $names );
+
+		// Test that the array is not empty.
+		$this->assertNotEmpty( $names );
+
+		// Test that it returns exactly the same as get_comment_type_slugs().
+		$this->assertEquals( $slugs, $names );
+
+		// Verify it returns slugs and not singular names.
+		$this->assertContains( 'repost', $names );
+		$this->assertContains( 'like', $names );
+		$this->assertNotContains( 'Repost', $names );
+		$this->assertNotContains( 'Like', $names );
+	}
 }
