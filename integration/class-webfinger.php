@@ -7,7 +7,7 @@
 
 namespace Activitypub\Integration;
 
-use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Collection\Actors;
 
 use function Activitypub\get_rest_url_by_path;
 
@@ -35,7 +35,7 @@ class Webfinger {
 	 * @return array The jrd array.
 	 */
 	public static function add_user_discovery( $jrd, $uri, $user ) {
-		$user = User_Collection::get_by_id( $user->ID );
+		$user = Actors::get_by_id( $user->ID );
 
 		if ( ! $user || is_wp_error( $user ) ) {
 			return $jrd;
@@ -47,6 +47,7 @@ class Webfinger {
 		$jrd['aliases'][] = $user->get_url();
 		$jrd['aliases'][] = $user->get_alternate_url();
 		$jrd['aliases']   = array_unique( $jrd['aliases'] );
+		$jrd['aliases']   = array_values( $jrd['aliases'] );
 
 		$jrd['links'][] = array(
 			'rel'  => 'self',
@@ -71,7 +72,7 @@ class Webfinger {
 	 * @return array|\WP_Error The jrd array or WP_Error.
 	 */
 	public static function add_pseudo_user_discovery( $jrd, $uri ) {
-		$user = User_Collection::get_by_resource( $uri );
+		$user = Actors::get_by_resource( $uri );
 
 		if ( \is_wp_error( $user ) ) {
 			return $user;
@@ -84,10 +85,11 @@ class Webfinger {
 		);
 
 		$aliases = array_unique( $aliases );
+		$aliases = array_values( $aliases );
 
 		$profile = array(
 			'subject' => sprintf( 'acct:%s', $user->get_webfinger() ),
-			'aliases' => array_values( array_unique( $aliases ) ),
+			'aliases' => $aliases,
 			'links'   => array(
 				array(
 					'rel'  => 'self',

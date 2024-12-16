@@ -8,7 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Followers;
-use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Collection\Actors;
 
 /**
  * Block class.
@@ -161,7 +161,7 @@ class Blocks {
 
 		// If the user string is 'site', return the Blog User ID.
 		if ( 'site' === $user_string ) {
-			return User_Collection::BLOG_USER_ID;
+			return Actors::BLOG_USER_ID;
 		}
 
 		// The only other value should be 'inherit', which means to use the query context to determine the User.
@@ -171,7 +171,7 @@ class Blocks {
 
 		// For a homepage/front page, if the Blog User is active, use it.
 		if ( ( is_front_page() || is_home() ) && ! is_user_type_disabled( 'blog' ) ) {
-			return User_Collection::BLOG_USER_ID;
+			return Actors::BLOG_USER_ID;
 		}
 
 		// If we're in a loop, use the post author.
@@ -219,7 +219,7 @@ class Blocks {
 	 */
 	public static function render_follow_me_block( $attrs ) {
 		$user_id = self::get_user_id( $attrs['selectedUser'] );
-		$user    = User_Collection::get_by_id( $user_id );
+		$user    = Actors::get_by_id( $user_id );
 		if ( is_wp_error( $user ) ) {
 			if ( 'inherit' === $attrs['selectedUser'] ) {
 				// If the user is 'inherit' and we couldn't determine the user, don't render anything.
@@ -237,7 +237,6 @@ class Blocks {
 
 		$wrapper_attributes = get_block_wrapper_attributes(
 			array(
-				'aria-label' => __( 'Follow me on the Fediverse', 'activitypub' ),
 				'class'      => 'activitypub-follow-me-block-wrapper',
 				'data-attrs' => wp_json_encode( $attrs ),
 			)
@@ -259,7 +258,7 @@ class Blocks {
 			return '<!-- Followers block: `inherit` mode does not display on this type of page -->';
 		}
 
-		$user = User_Collection::get_by_id( $followee_user_id );
+		$user = Actors::get_by_id( $followee_user_id );
 		if ( is_wp_error( $user ) ) {
 			return '<!-- Followers block: `' . $followee_user_id . '` not an active ActivityPub user -->';
 		}
@@ -306,23 +305,25 @@ class Blocks {
 	 * @return string The HTML to render.
 	 */
 	public static function render_reply_block( $attrs ) {
+		$html = '';
+
+		if ( ! empty( $attrs['url'] ) ) {
+			$html = sprintf(
+				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
+				esc_url( $attrs['url'] ),
+				esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
+				// translators: %s is the URL of the post being replied to.
+				sprintf( __( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', esc_url( $attrs['url'] ) ) )
+			);
+		}
+
 		/**
 		 * Filter the reply block.
 		 *
 		 * @param string $html  The HTML to render.
 		 * @param array  $attrs The block attributes.
 		 */
-		return apply_filters(
-			'activitypub_reply_block',
-			sprintf(
-				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
-				esc_url( $attrs['url'] ),
-				esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
-				// translators: %s is the URL of the post being replied to.
-				sprintf( __( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', $attrs['url'] ) )
-			),
-			$attrs
-		);
+		return apply_filters( 'activitypub_reply_block', $html, $attrs );
 	}
 
 	/**

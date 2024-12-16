@@ -7,7 +7,7 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Comment;
 
@@ -23,16 +23,19 @@ class Undo {
 	public static function init() {
 		\add_action(
 			'activitypub_inbox_undo',
-			array( self::class, 'handle_undo' )
+			array( self::class, 'handle_undo' ),
+			10,
+			2
 		);
 	}
 
 	/**
 	 * Handle "Unfollow" requests.
 	 *
-	 * @param array $activity The JSON "Undo" Activity.
+	 * @param array    $activity The JSON "Undo" Activity.
+	 * @param int|null $user_id  The ID of the user who initiated the "Undo" activity.
 	 */
-	public static function handle_undo( $activity ) {
+	public static function handle_undo( $activity, $user_id ) {
 		if (
 			! isset( $activity['object']['type'] ) ||
 			! isset( $activity['object']['object'] )
@@ -40,12 +43,13 @@ class Undo {
 			return;
 		}
 
-		$type = $activity['object']['type'];
+		$type  = $activity['object']['type'];
+		$state = false;
 
 		// Handle "Unfollow" requests.
 		if ( 'Follow' === $type ) {
-			$user_id = object_to_uri( $activity['object']['object'] );
-			$user    = Users::get_by_resource( $user_id );
+			$id   = object_to_uri( $activity['object']['object'] );
+			$user = Actors::get_by_resource( $id );
 
 			if ( ! $user || is_wp_error( $user ) ) {
 				// If we can not find a user, we can not initiate a follow process.
@@ -55,7 +59,7 @@ class Undo {
 			$user_id = $user->get__id();
 			$actor   = object_to_uri( $activity['actor'] );
 
-			Followers::remove_follower( $user_id, $actor );
+			$state = Followers::remove_follower( $user_id, $actor );
 		}
 
 		// Handle "Undo" requests for "Like" and "Create" activities.
@@ -72,8 +76,15 @@ class Undo {
 			}
 
 			$state = wp_trash_comment( $comment );
-
-			do_action( 'activitypub_handled_undo', $activity, $user_id, isset( $state ) ? $state : null, null );
 		}
+
+		/**
+		 * Fires after an "Undo" activity has been handled.
+		 *
+		 * @param array    $activity The JSON "Undo" Activity.
+		 * @param int|null $user_id  The ID of the user who initiated the "Undo" activity otherwise null.
+		 * @param mixed    $state    The state of the "Undo" activity.
+		 */
+		do_action( 'activitypub_handled_undo', $activity, $user_id, $state );
 	}
 }

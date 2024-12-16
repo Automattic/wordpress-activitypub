@@ -121,7 +121,7 @@ class User extends Actor {
 	 * @return string The Username.
 	 */
 	public function get_name() {
-		return \esc_attr( \get_the_author_meta( 'display_name', $this->_id ) );
+		return \get_the_author_meta( 'display_name', $this->_id );
 	}
 
 	/**
@@ -161,7 +161,7 @@ class User extends Actor {
 	 * @return string The preferred username.
 	 */
 	public function get_preferred_username() {
-		return \esc_attr( \get_the_author_meta( 'login', $this->_id ) );
+		return \get_the_author_meta( 'login', $this->_id );
 	}
 
 	/**

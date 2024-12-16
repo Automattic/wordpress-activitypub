@@ -21,7 +21,7 @@ class Activitypub {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_filter( 'template_include', array( self::class, 'render_json_template' ), 99 );
+		\add_filter( 'template_include', array( self::class, 'render_activitypub_template' ), 99 );
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
 		\add_filter( 'redirect_canonical', array( self::class, 'redirect_canonical' ), 10, 2 );
 		\add_filter( 'query_vars', array( self::class, 'add_query_vars' ) );
@@ -49,6 +49,8 @@ class Activitypub {
 		}
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
+
+		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
 
 		// Register several post_types.
 		self::register_post_types();
@@ -84,7 +86,7 @@ class Activitypub {
 	 *
 	 * @return string The new path to the JSON template.
 	 */
-	public static function render_json_template( $template ) {
+	public static function render_activitypub_template( $template ) {
 		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
 			return $template;
 		}
@@ -93,16 +95,22 @@ class Activitypub {
 			return $template;
 		}
 
-		$json_template = false;
+		$activitypub_template = false;
 
 		if ( \is_author() && ! is_user_disabled( \get_the_author_meta( 'ID' ) ) ) {
-			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/user-json.php';
+			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/user-json.php';
 		} elseif ( is_comment() ) {
-			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
+			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() && ! is_post_disabled( \get_the_ID() ) ) {
-			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
+			$preview = \get_query_var( 'preview' );
+			if ( $preview ) {
+				\define( 'ACTIVITYPUB_PREVIEW', true );
+				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php';
+			} else {
+				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
+			}
 		} elseif ( \is_home() && ! is_user_type_disabled( 'blog' ) ) {
-			$json_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
+			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
 		/*
@@ -111,7 +119,7 @@ class Activitypub {
 		 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
 		 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
 		 */
-		if ( $json_template && ACTIVITYPUB_AUTHORIZED_FETCH ) {
+		if ( $activitypub_template && use_authorized_fetch() ) {
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
 				header( 'HTTP/1.1 401 Unauthorized' );
@@ -121,8 +129,8 @@ class Activitypub {
 			}
 		}
 
-		if ( $json_template ) {
-			return $json_template;
+		if ( $activitypub_template ) {
+			return $activitypub_template;
 		}
 
 		return $template;
@@ -247,6 +255,7 @@ class Activitypub {
 	 */
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
+		$vars[] = 'preview';
 		$vars[] = 'c';
 		$vars[] = 'p';
 
@@ -558,6 +567,21 @@ class Activitypub {
 		if ( \user_can( $user_id, 'publish_posts' ) ) {
 			$user = \get_user_by( 'id', $user_id );
 			$user->add_cap( 'activitypub' );
+		}
+	}
+
+	/**
+	 * Delete `activitypub_content_visibility` when updated to an empty value.
+	 *
+	 * @param int    $meta_id    ID of updated metadata entry.
+	 * @param int    $object_id  Post ID.
+	 * @param string $meta_key   Metadata key.
+	 * @param mixed  $meta_value Metadata value. This will be a PHP-serialized string representation of the value
+	 *                           if the value is an array, an object, or itself a PHP-serialized string.
+	 */
+	public static function updated_postmeta( $meta_id, $object_id, $meta_key, $meta_value ) {
+		if ( 'activitypub_content_visibility' === $meta_key && empty( $meta_value ) ) {
+			\delete_post_meta( $object_id, 'activitypub_content_visibility' );
 		}
 	}
 }

@@ -7,7 +7,7 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 use WP_Comment_Query;
 
 /**
@@ -28,8 +28,9 @@ class Comment {
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
 		\add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
-
+		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 10, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
+		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
 	}
 
 	/**
@@ -113,7 +114,7 @@ class Comment {
 
 		if ( is_single_user() && \user_can( $current_user, 'publish_posts' ) ) {
 			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user.
-			$current_user = Users::BLOG_USER_ID;
+			$current_user = Actors::BLOG_USER_ID;
 		}
 
 		$is_user_disabled = is_user_disabled( $current_user );
@@ -223,7 +224,7 @@ class Comment {
 
 		if ( is_single_user() && \user_can( $user_id, 'publish_posts' ) ) {
 			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user.
-			$user_id = Users::BLOG_USER_ID;
+			$user_id = Actors::BLOG_USER_ID;
 		}
 
 		$is_user_disabled = is_user_disabled( $user_id );
@@ -506,6 +507,27 @@ class Comment {
 	}
 
 	/**
+	 * Get the comment type by activity type.
+	 *
+	 * @param string $activity_type The activity type.
+	 *
+	 * @return array|null The comment type.
+	 */
+	public static function get_comment_type_by_activity_type( $activity_type ) {
+		$activity_type = \strtolower( $activity_type );
+		$activity_type = \sanitize_key( $activity_type );
+		$comment_types = self::get_comment_types();
+
+		foreach ( $comment_types as $comment_type ) {
+			if ( in_array( $activity_type, $comment_type['activity_types'], true ) ) {
+				return $comment_type;
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Return the registered custom comment types.
 	 *
 	 * @return array The registered custom comment types
@@ -519,41 +541,63 @@ class Comment {
 	/**
 	 * Is this a registered comment type.
 	 *
-	 * @param string $slug The name of the type.
+	 * @param string $slug The slug of the type.
+	 *
 	 * @return boolean True if registered.
 	 */
 	public static function is_registered_comment_type( $slug ) {
-		$slug = strtolower( $slug );
-		$slug = sanitize_key( $slug );
+		$slug = \strtolower( $slug );
+		$slug = \sanitize_key( $slug );
 
-		return in_array( $slug, array_keys( self::get_comment_types() ), true );
+		$comment_types = self::get_comment_types();
+
+		return isset( $comment_types[ $slug ] );
 	}
 
 	/**
-	 * Return the registered custom comment types names.
+	 * Return the registered custom comment type slugs.
 	 *
-	 * @return array The registered custom comment type names.
+	 * @return array The registered custom comment type slugs.
+	 */
+	public static function get_comment_type_slugs() {
+		return array_keys( self::get_comment_types() );
+	}
+
+	/**
+	 * Return the registered custom comment type slugs.
+	 *
+	 * @deprecated 4.5.0 Use get_comment_type_slugs instead.
+	 *
+	 * @return array The registered custom comment type slugs.
 	 */
 	public static function get_comment_type_names() {
-		return array_values( wp_list_pluck( self::get_comment_types(), 'type' ) );
+		_deprecated_function( __METHOD__, '4.5.0', 'get_comment_type_slugs' );
+
+		return self::get_comment_type_slugs();
 	}
 
 	/**
-	 * Get a comment type.
+	 * Get the custom comment type.
+	 *
+	 * Check if the type is registered, if not, check if it is a custom type.
+	 *
+	 * It looks for the array key in the registered types and returns the array.
+	 * If it is not found, it looks for the type in the custom types and returns the array.
 	 *
 	 * @param string $type The comment type.
 	 *
 	 * @return array The comment type.
 	 */
 	public static function get_comment_type( $type ) {
-		$type  = strtolower( $type );
-		$type  = sanitize_key( $type );
-		$types = self::get_comment_types();
+		$type = strtolower( $type );
+		$type = sanitize_key( $type );
 
-		if ( in_array( $type, array_keys( $types ), true ) ) {
-			$type_array = $types[ $type ];
-		} else {
-			$type_array = array();
+		$comment_types = self::get_comment_types();
+		$type_array    = array();
+
+		// Check array keys.
+		if ( in_array( $type, array_keys( $comment_types ), true ) ) {
+			$type_array = $comment_types[ $type ];
 		}
 
 		/**
@@ -595,30 +639,30 @@ class Comment {
 	 */
 	public static function register_comment_types() {
 		register_comment_type(
-			'announce',
+			'repost',
 			array(
-				'label'       => __( 'Reposts', 'activitypub' ),
-				'singular'    => __( 'Repost', 'activitypub' ),
-				'description' => __( 'A repost on the indieweb is a post that is purely a 100% re-publication of another (typically someone else\'s) post.', 'activitypub' ),
-				'icon'        => '♻️',
-				'class'       => 'p-repost',
-				'type'        => 'repost',
-				// translators: %1$s username, %2$s object format (post, audio, ...), %3$s URL, %4$s domain.
-				'excerpt'     => __( '&hellip; reposted this!', 'activitypub' ),
+				'label'          => __( 'Reposts', 'activitypub' ),
+				'singular'       => __( 'Repost', 'activitypub' ),
+				'description'    => __( 'A repost on the indieweb is a post that is purely a 100% re-publication of another (typically someone else\'s) post.', 'activitypub' ),
+				'icon'           => '♻️',
+				'class'          => 'p-repost',
+				'type'           => 'repost',
+				'activity_types' => array( 'announce' ),
+				'excerpt'        => __( '&hellip; reposted this!', 'activitypub' ),
 			)
 		);
 
 		register_comment_type(
 			'like',
 			array(
-				'label'       => __( 'Likes', 'activitypub' ),
-				'singular'    => __( 'Like', 'activitypub' ),
-				'description' => __( 'A like is a popular webaction button and in some cases post type on various silos such as Facebook and Instagram.', 'activitypub' ),
-				'icon'        => '👍',
-				'class'       => 'p-like',
-				'type'        => 'like',
-				// translators: %1$s username, %2$s object format (post, audio, ...), %3$s URL, %4$s domain.
-				'excerpt'     => __( '&hellip; liked this!', 'activitypub' ),
+				'label'          => __( 'Likes', 'activitypub' ),
+				'singular'       => __( 'Like', 'activitypub' ),
+				'description'    => __( 'A like is a popular webaction button and in some cases post type on various silos such as Facebook and Instagram.', 'activitypub' ),
+				'icon'           => '👍',
+				'class'          => 'p-like',
+				'type'           => 'like',
+				'activity_types' => array( 'like' ),
+				'excerpt'        => __( '&hellip; liked this!', 'activitypub' ),
 			)
 		);
 	}
@@ -631,7 +675,7 @@ class Comment {
 	 * @return array show avatars on Activities
 	 */
 	public static function get_avatar_comment_types( $types ) {
-		$comment_types = self::get_comment_type_names();
+		$comment_types = self::get_comment_type_slugs();
 		$types         = array_merge( $types, $comment_types );
 
 		return array_unique( $types );
@@ -659,11 +703,68 @@ class Comment {
 			return;
 		}
 
-		if ( isset( $query->query_vars['count'] ) && true === $query->query_vars['count'] ) {
-			return;
+		// Exclude likes and reposts by the ActivityPub plugin.
+		$query->query_vars['type__not_in'] = self::get_comment_type_slugs();
+	}
+
+	/**
+	 * Filter the comment status before it is set.
+	 *
+	 * @param string $approved    The approved comment status.
+	 * @param array  $commentdata The comment data.
+	 *
+	 * @return boolean `true` if the comment is approved, `false` otherwise.
+	 */
+	public static function pre_comment_approved( $approved, $commentdata ) {
+		if ( $approved || \is_wp_error( $approved ) ) {
+			return $approved;
 		}
 
-		// Exclude likes and reposts by the Webmention plugin.
-		$query->query_vars['type__not_in'] = self::get_comment_type_names();
+		if ( '1' !== \get_option( 'comment_previously_approved' ) ) {
+			return $approved;
+		}
+
+		if (
+			empty( $commentdata['comment_meta']['protocol'] ) ||
+			'activitypub' !== $commentdata['comment_meta']['protocol']
+		) {
+			return $approved;
+		}
+
+		global $wpdb;
+
+		$author     = $commentdata['comment_author'];
+		$author_url = $commentdata['comment_author_url'];
+		// phpcs:ignore
+		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s and comment_approved = '1' LIMIT 1", $author, $author_url ) );
+
+		if ( 1 === (int) $ok_to_comment ) {
+			return 1;
+		}
+
+		return $approved;
+	}
+
+	/**
+	 * Filters the comment count to exclude ActivityPub comment types.
+	 *
+	 * @param int|null $new_count The new comment count. Default null.
+	 * @param int      $old_count The old comment count.
+	 * @param int      $post_id   Post ID.
+	 *
+	 * @return int|null The updated comment count, or null to use the default query.
+	 */
+	public static function pre_wp_update_comment_count_now( $new_count, $old_count, $post_id ) {
+		if ( null === $new_count ) {
+			global $wpdb;
+
+			$excluded_types = self::get_comment_type_slugs();
+
+			// phpcs:ignore WordPress.DB
+			$new_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->comments WHERE comment_post_ID = %d AND comment_approved = '1' AND comment_type NOT IN ('" . implode( "','", $excluded_types ) . "')", $post_id ) );
+
+		}
+
+		return $new_count;
 	}
 }

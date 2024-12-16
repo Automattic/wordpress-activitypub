@@ -10,7 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Http;
 use Activitypub\Notification;
 use Activitypub\Activity\Activity;
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 /**
@@ -40,7 +40,7 @@ class Follow {
 	 * @param array $activity The activity object.
 	 */
 	public static function handle_follow( $activity ) {
-		$user = Users::get_by_resource( $activity['object'] );
+		$user = Actors::get_by_resource( $activity['object'] );
 
 		if ( ! $user || is_wp_error( $user ) ) {
 			// If we can not find a user, we can not initiate a follow process.
@@ -100,7 +100,7 @@ class Follow {
 			)
 		);
 
-		$user = Users::get_by_id( $user_id );
+		$user = Actors::get_by_id( $user_id );
 
 		// Get inbox.
 		$inbox = $follower->get_shared_inbox();

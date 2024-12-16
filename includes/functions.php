@@ -10,7 +10,7 @@ namespace Activitypub;
 use WP_Error;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Followers;
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 use Activitypub\Transformer\Post;
 
 /**
@@ -187,22 +187,19 @@ function count_followers( $user_id ) {
  *
  * @param string $url Permalink to check.
  *
- * @return int User ID, or 0 on failure.
+ * @return int|null User ID, or null on failure.
  */
 function url_to_authorid( $url ) {
 	global $wp_rewrite;
 
 	// Check if url hase the same host.
 	if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== \wp_parse_url( $url, \PHP_URL_HOST ) ) {
-		return 0;
+		return null;
 	}
 
 	// First, check to see if there is a 'author=N' to match against.
 	if ( \preg_match( '/[?&]author=(\d+)/i', $url, $values ) ) {
-		$id = \absint( $values[1] );
-		if ( $id ) {
-			return $id;
-		}
+		return \absint( $values[1] );
 	}
 
 	// Check to see if we are using rewrite rules.
@@ -210,7 +207,7 @@ function url_to_authorid( $url ) {
 
 	// Not using rewrite rules, and 'author=N' method failed, so we're out of options.
 	if ( empty( $rewrite ) ) {
-		return 0;
+		return null;
 	}
 
 	// Generate rewrite rule for the author url.
@@ -225,7 +222,7 @@ function url_to_authorid( $url ) {
 		}
 	}
 
-	return 0;
+	return null;
 }
 
 /**
@@ -438,11 +435,11 @@ function is_user_disabled( $user_id ) {
 
 	switch ( $user_id ) {
 		// if the user is the application user, it's always enabled.
-		case \Activitypub\Collection\Users::APPLICATION_USER_ID:
+		case \Activitypub\Collection\Actors::APPLICATION_USER_ID:
 			$disabled = false;
 			break;
 		// if the user is the blog user, it's only enabled in single-user mode.
-		case \Activitypub\Collection\Users::BLOG_USER_ID:
+		case \Activitypub\Collection\Actors::BLOG_USER_ID:
 			if ( is_user_type_disabled( 'blog' ) ) {
 				$disabled = true;
 				break;
@@ -693,6 +690,17 @@ function is_activity_public( $data ) {
 }
 
 /**
+ * Check if passed Activity is a reply.
+ *
+ * @param array $data The Activity object as array.
+ *
+ * @return boolean True if a reply, false if not.
+ */
+function is_activity_reply( $data ) {
+	return ! empty( $data['object']['inReplyTo'] );
+}
+
+/**
  * Get active users based on a given duration.
  *
  * @param int $duration Optional. The duration to check in month(s). Default 1.
@@ -730,7 +738,7 @@ function get_active_users( $duration = 1 ) {
 	}
 
 	// If blog user is disabled.
-	if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
+	if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
 		return (int) $count;
 	}
 
@@ -762,7 +770,7 @@ function get_total_users() {
 	}
 
 	// If blog user is disabled.
-	if ( is_user_disabled( Users::BLOG_USER_ID ) ) {
+	if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
 		return (int) $users;
 	}
 
@@ -825,6 +833,9 @@ function object_to_uri( $data ) {
 
 	// Return part of Object that makes most sense.
 	switch ( $type ) {
+		case 'Image':
+			$data = $data['url'];
+			break;
 		case 'Link':
 			$data = $data['href'];
 			break;
@@ -1009,6 +1020,11 @@ function get_enclosures( $post_id ) {
 
 	$enclosures = array_map(
 		function ( $enclosure ) {
+			// Check if the enclosure is a string.
+			if ( ! $enclosure || ! is_string( $enclosure ) ) {
+				return false;
+			}
+
 			$attributes = explode( "\n", $enclosure );
 
 			if ( ! isset( $attributes[0] ) || ! \wp_http_validate_url( $attributes[0] ) ) {
@@ -1017,8 +1033,8 @@ function get_enclosures( $post_id ) {
 
 			return array(
 				'url'       => $attributes[0],
-				'length'    => isset( $attributes[1] ) ? trim( $attributes[1] ) : null,
-				'mediaType' => isset( $attributes[2] ) ? trim( $attributes[2] ) : null,
+				'length'    => $attributes[1] ?? null,
+				'mediaType' => $attributes[2] ?? 'application/octet-stream',
 			);
 		},
 		$enclosures
@@ -1372,7 +1388,7 @@ function get_content_warning( $post_id ) {
  * @return string The ActivityPub ID (a URL) of the User.
  */
 function get_user_id( $id ) {
-	$user = Users::get_by_id( $id );
+	$user = Actors::get_by_id( $id );
 
 	if ( ! $user ) {
 		return false;
@@ -1473,4 +1489,82 @@ function get_attribution_domains() {
 	}
 
 	return $domains;
+}
+
+/**
+ * Get the base URL for uploads.
+ *
+ * @return string The upload base URL.
+ */
+function get_upload_baseurl() {
+	/**
+	 * Early filter to allow plugins to set the upload base URL.
+	 *
+	 * @param string|false $maybe_upload_dir The upload base URL or false if not set.
+	 */
+	$maybe_upload_dir = apply_filters( 'pre_activitypub_get_upload_baseurl', false );
+	if ( false !== $maybe_upload_dir ) {
+		return $maybe_upload_dir;
+	}
+
+	$upload_dir = \wp_get_upload_dir();
+
+	/**
+	 * Filters the upload base URL.
+	 *
+	 * @param string \wp_get_upload_dir()['baseurl'] The upload base URL.
+	 */
+	return apply_filters( 'activitypub_get_upload_baseurl', $upload_dir['baseurl'] );
+}
+
+/**
+ * Check if Authorized-Fetch is enabled.
+ *
+ * @see https://docs.joinmastodon.org/admin/config/#authorized_fetch
+ *
+ * @return boolean True if Authorized-Fetch is enabled, false otherwise.
+ */
+function use_authorized_fetch() {
+	$use = false;
+
+	// Prefer the constant over the option.
+	if ( \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
+		$use = ACTIVITYPUB_AUTHORIZED_FETCH;
+	} else {
+		$use = (bool) \get_option( 'activitypub_authorized_fetch', '0' );
+	}
+
+	/**
+	 * Filters whether to use Authorized-Fetch.
+	 *
+	 * @param boolean $use_authorized_fetch True if Authorized-Fetch is enabled, false otherwise.
+	 */
+	return apply_filters( 'activitypub_use_authorized_fetch', $use );
+}
+
+/**
+ * Check if an ID is from the same domain as the site.
+ *
+ * @param string $id The ID URI to check.
+ *
+ * @return boolean True if the ID is a self-pint, false otherwise.
+ */
+function is_self_ping( $id ) {
+	$query_string = \wp_parse_url( $id, PHP_URL_QUERY );
+
+	if ( ! $query_string ) {
+		return false;
+	}
+
+	$query = array();
+	\parse_str( $query_string, $query );
+
+	if (
+		is_same_domain( $id ) &&
+		in_array( 'c', array_keys( $query ), true )
+	) {
+		return true;
+	}
+
+	return false;
 }

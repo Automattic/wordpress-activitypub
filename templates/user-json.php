@@ -5,7 +5,7 @@
  * @package Activitypub
  */
 
-$user = \Activitypub\Collection\Users::get_by_id( \get_the_author_meta( 'ID' ) );
+$user = \Activitypub\Collection\Actors::get_by_id( \get_the_author_meta( 'ID' ) );
 
 /**
  * Action triggered prior to the ActivityPub profile being created and sent to the client

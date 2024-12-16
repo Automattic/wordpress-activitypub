@@ -8,7 +8,7 @@
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args, array( 'description' => '' ) );
 
-$user = \Activitypub\Collection\Users::get_by_id( \get_current_user_id() ); ?>
+$user = \Activitypub\Collection\Actors::get_by_id( \get_current_user_id() ); ?>
 <h2 id="activitypub"><?php \esc_html_e( 'ActivityPub', 'activitypub' ); ?></h2>
 
 <p><?php esc_html_e( 'Define what others can see on your public Fediverse profile and next to your posts. With a profile picture and a fully completed profile, you are more likely to gain interactions and followers.', 'activitypub' ); ?></p>

@@ -7,7 +7,7 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 /**
@@ -31,10 +31,14 @@ class Migration {
 	 * This is the version that the database structure will be updated to.
 	 * It is the same as the plugin version.
 	 *
+	 * @deprecated 4.2.0 Use constant ACTIVITYPUB_PLUGIN_VERSION directly.
+	 *
 	 * @return string The target version.
 	 */
 	public static function get_target_version() {
-		return get_plugin_version();
+		_deprecated_function( __FUNCTION__, '4.2.0', 'ACTIVITYPUB_PLUGIN_VERSION' );
+
+		return ACTIVITYPUB_PLUGIN_VERSION;
 	}
 
 	/**
@@ -90,7 +94,7 @@ class Migration {
 	public static function is_latest_version() {
 		return (bool) \version_compare(
 			self::get_version(),
-			self::get_target_version(),
+			ACTIVITYPUB_PLUGIN_VERSION,
 			'=='
 		);
 	}
@@ -114,7 +118,7 @@ class Migration {
 		// Check for inital migration.
 		if ( ! $version_from_db ) {
 			self::add_default_settings();
-			$version_from_db = self::get_target_version();
+			$version_from_db = ACTIVITYPUB_PLUGIN_VERSION;
 		}
 
 		// Schedule the async migration.
@@ -139,6 +143,9 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.0.0', '<' ) ) {
 			self::migrate_to_4_0_0();
 		}
+		if ( \version_compare( $version_from_db, '4.1.0', '<' ) ) {
+			self::migrate_to_4_1_0();
+		}
 
 		/**
 		 * Fires when the system has to be migrated.
@@ -146,9 +153,9 @@ class Migration {
 		 * @param string $version_from_db The version from which to migrate.
 		 * @param string $target_version  The target version to migrate to.
 		 */
-		\do_action( 'activitypub_migrate', $version_from_db, self::get_target_version() );
+		\do_action( 'activitypub_migrate', $version_from_db, ACTIVITYPUB_PLUGIN_VERSION );
 
-		\update_option( 'activitypub_db_version', self::get_target_version() );
+		\update_option( 'activitypub_db_version', ACTIVITYPUB_PLUGIN_VERSION );
 
 		self::unlock();
 	}
@@ -312,13 +319,57 @@ class Migration {
 			}
 		}
 
-		$followers = Followers::get_followers( Users::BLOG_USER_ID );
+		$followers = Followers::get_followers( Actors::BLOG_USER_ID );
 
 		if ( $followers ) {
 			\update_option( 'activitypub_use_permalink_as_id_for_blog', '1' );
 		}
 
 		self::migrate_actor_mode();
+	}
+
+	/**
+	 * Upate to 4.1.0
+	 *
+	 * * Migrate the `activitypub_post_content_type` to only use `activitypub_custom_post_content`.
+	 */
+	public static function migrate_to_4_1_0() {
+		$content_type = \get_option( 'activitypub_post_content_type' );
+
+		switch ( $content_type ) {
+			case 'excerpt':
+				$template = "[ap_excerpt]\n\n[ap_permalink type=\"html\"]";
+				break;
+			case 'title':
+				$template = "[ap_title type=\"html\"]\n\n[ap_permalink type=\"html\"]";
+				break;
+			case 'content':
+				$template = "[ap_content]\n\n[ap_permalink type=\"html\"]\n\n[ap_hashtags]";
+				break;
+			case 'custom':
+				$template = \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
+				break;
+			default:
+				$template = ACTIVITYPUB_CUSTOM_POST_CONTENT;
+				break;
+		}
+
+		\update_option( 'activitypub_custom_post_content', $template );
+
+		\delete_option( 'activitypub_post_content_type' );
+
+		$object_type = \get_option( 'activitypub_object_type', false );
+		if ( ! $object_type ) {
+			\update_option( 'activitypub_object_type', 'note' );
+		}
+
+		// Clean up empty visibility meta.
+		global $wpdb;
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"DELETE FROM $wpdb->postmeta
+			WHERE meta_key = 'activitypub_content_visibility'
+			AND (meta_value IS NULL OR meta_value = '')"
+		);
 	}
 
 	/**

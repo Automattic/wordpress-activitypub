@@ -51,7 +51,7 @@
 		<?php
 	endif;
 
-	if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Users::BLOG_USER_ID ) ) :
+	if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Actors::BLOG_USER_ID ) ) :
 		$blog_user = new \Activitypub\Model\Blog();
 		?>
 	<div class="box">
@@ -84,7 +84,7 @@
 
 	<?php
 	if ( ! \Activitypub\is_user_disabled( get_current_user_id() ) ) :
-		$user = \Activitypub\Collection\Users::get_by_id( wp_get_current_user()->ID );
+		$user = \Activitypub\Collection\Actors::get_by_id( wp_get_current_user()->ID );
 		?>
 	<div class="box">
 		<h3><?php \esc_html_e( 'Author profile', 'activitypub' ); ?></h3>

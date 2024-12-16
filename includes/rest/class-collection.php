@@ -14,7 +14,7 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Replies;
 use Activitypub\Transformer\Factory;
 use Activitypub\Activity\Base_Object;
-use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Collection\Actors;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -154,7 +154,7 @@ class Collection {
 	 */
 	public static function tags_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = User_Collection::get_by_various( $user_id );
+		$user    = Actors::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;
@@ -206,7 +206,7 @@ class Collection {
 	 */
 	public static function featured_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = User_Collection::get_by_various( $user_id );
+		$user    = Actors::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;
@@ -214,14 +214,22 @@ class Collection {
 
 		$sticky_posts = \get_option( 'sticky_posts' );
 
-		if ( ! is_single_user() && User_Collection::BLOG_USER_ID === $user->get__id() ) {
+		if ( ! is_single_user() && Actors::BLOG_USER_ID === $user->get__id() ) {
 			$posts = array();
 		} elseif ( $sticky_posts && is_array( $sticky_posts ) ) {
+			// only show public posts.
 			$args = array(
 				'post__in'            => $sticky_posts,
 				'ignore_sticky_posts' => 1,
 				'orderby'             => 'date',
 				'order'               => 'DESC',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'          => array(
+					array(
+						'key'     => 'activitypub_content_visibility',
+						'compare' => 'NOT EXISTS',
+					),
+				),
 			);
 
 			if ( $user->get__id() > 0 ) {
@@ -270,11 +278,19 @@ class Collection {
 			'orderedItems' => array(),
 		);
 
-		$users = User_Collection::get_collection();
+		$users  = Actors::get_collection();
+		$actors = array();
 
 		foreach ( $users as $user ) {
-			$response['orderedItems'][] = $user->get_id();
+			$actors[] = $user->get_id();
 		}
+
+		/**
+		 * Filter the list of moderators.
+		 *
+		 * @param array $actors The list of moderators.
+		 */
+		$response['orderedItems'] = apply_filters( 'activitypub_rest_moderators', $actors );
 
 		$rest_response = new WP_REST_Response( $response, 200 );
 		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );

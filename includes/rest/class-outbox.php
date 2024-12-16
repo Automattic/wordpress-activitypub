@@ -11,7 +11,7 @@ use stdClass;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Activity\Activity;
-use Activitypub\Collection\Users as User_Collection;
+use Activitypub\Collection\Actors;
 use Activitypub\Transformer\Factory;
 
 use function Activitypub\get_context;
@@ -59,7 +59,7 @@ class Outbox {
 	 */
 	public static function user_outbox_get( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = User_Collection::get_by_various( $user_id );
+		$user    = Actors::get_by_various( $user_id );
 
 		if ( is_wp_error( $user ) ) {
 			return $user;
@@ -114,6 +114,19 @@ class Outbox {
 					'author'         => $user_id > 0 ? $user_id : null,
 					'paged'          => $page,
 					'post_type'      => $post_types,
+					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					'meta_query'     => array(
+						'relation' => 'OR',
+						array(
+							'key'     => 'activitypub_content_visibility',
+							'compare' => 'NOT EXISTS',
+						),
+						array(
+							'key'     => 'activitypub_content_visibility',
+							'value'   => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
+							'compare' => '!=',
+						),
+					),
 				)
 			);
 

@@ -8,7 +8,7 @@
 namespace Activitypub;
 
 use WP_Error;
-use Activitypub\Collection\Users;
+use Activitypub\Collection\Actors;
 
 /**
  * ActivityPub Health_Check Class.
@@ -258,7 +258,7 @@ class Health_Check {
 	 * @return boolean|WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
-		$user     = Users::get_by_id( Users::APPLICATION_USER_ID );
+		$user     = Actors::get_by_id( Actors::APPLICATION_USER_ID );
 		$resource = $user->get_webfinger();
 
 		$url = Webfinger::resolve( $resource );
@@ -363,7 +363,7 @@ class Health_Check {
 				),
 				'plugin_version' => array(
 					'label'   => __( 'Plugin Version', 'activitypub' ),
-					'value'   => get_plugin_version(),
+					'value'   => ACTIVITYPUB_PLUGIN_VERSION,
 					'private' => true,
 				),
 			),
