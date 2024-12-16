@@ -18,6 +18,8 @@ class Reactions_Settings {
 	public static function init() {
 		add_action( 'init', array( self::class, 'register_post_meta' ), 11 );
 		add_action( 'admin_init', array( self::class, 'register_settings' ) );
+		add_action( 'add_meta_boxes', array( self::class, 'add_meta_box' ) );
+		add_action( 'save_post', array( self::class, 'save_meta_box' ) );
 	}
 
 	/**
@@ -80,6 +82,74 @@ class Reactions_Settings {
 			</p>
 		</fieldset>
 		<?php
+	}
+
+	/**
+	 * Add meta box for classic editor.
+	 */
+	public static function add_meta_box() {
+		$post_type = get_post_type();
+
+		// Return early if block editor is active.
+		if ( use_block_editor_for_post_type( $post_type ) ) {
+			return;
+		}
+
+		if ( post_type_supports( $post_type, 'activitypub' ) ) {
+			add_meta_box(
+				'activitypub_reactions',
+				__( 'ActivityPub Reactions', 'activitypub' ),
+				array( self::class, 'render_meta_box' ),
+				$post_type,
+				'side'
+			);
+		}
+	}
+
+	/**
+	 * Render meta box content.
+	 *
+	 * @param \WP_Post $post Post object.
+	 */
+	public static function render_meta_box( $post ) {
+		wp_nonce_field( 'activitypub_reactions_meta_box', 'activitypub_reactions_meta_box_nonce' );
+		$value = get_post_meta( $post->ID, 'activitypub_reactions_enabled', true );
+		if ( '' === $value ) {
+			$value = '1'; // Default to enabled.
+		}
+		?>
+		<label>
+			<input type="checkbox" name="activitypub_reactions_enabled" value="1" <?php checked( '1', $value ); ?> />
+			<?php esc_html_e( 'Show federated reactions', 'activitypub' ); ?>
+		</label>
+		<p class="description">
+			<?php esc_html_e( 'When disabled, federated reactions will be hidden for this post.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Save meta box data.
+	 *
+	 * @param int $post_id Post ID.
+	 */
+	public static function save_meta_box( $post_id ) {
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+
+		if ( ! isset( $_POST['activitypub_reactions_meta_box_nonce'] ) ||
+			! wp_verify_nonce( wp_unslash( $_POST['activitypub_reactions_meta_box_nonce'] ), 'activitypub_reactions_meta_box' ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		) {
+			return;
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+
+		$value = isset( $_POST['activitypub_reactions_enabled'] ) ? '1' : '0';
+		update_post_meta( $post_id, 'activitypub_reactions_enabled', $value );
 	}
 
 	/**
