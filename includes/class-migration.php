@@ -21,6 +21,7 @@ class Migration {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_migrate', array( self::class, 'async_migration' ) );
+		\add_action( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ), 10, 2 );
 
 		self::maybe_migrate();
 	}
@@ -145,6 +146,9 @@ class Migration {
 		}
 		if ( \version_compare( $version_from_db, '4.1.0', '<' ) ) {
 			self::migrate_to_4_1_0();
+		}
+		if ( \version_compare( $version_from_db, '4.5.0', '<' ) ) {
+			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_update_comment_counts' );
 		}
 
 		/**
@@ -370,6 +374,77 @@ class Migration {
 			WHERE meta_key = 'activitypub_content_visibility'
 			AND (meta_value IS NULL OR meta_value = '')"
 		);
+	}
+
+	/**
+	 * Update comment counts for posts in batches.
+	 *
+	 * @see Comment::pre_wp_update_comment_count_now()
+	 * @param int $batch_size Optional. Number of posts to process per batch. Default 100.
+	 * @param int $offset     Optional. Number of posts to skip. Default 0.
+	 */
+	public static function update_comment_counts( $batch_size = 100, $offset = 0 ) {
+		global $wpdb;
+
+		$lock_name = 'activitypub_update_comment_counts.lock';
+
+		// Try to lock.
+		$lock_result = $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO `$wpdb->options` ( `option_name`, `option_value`, `autoload` ) VALUES (%s, %s, 'no') /* LOCK */", $lock_name, time() ) ); // phpcs:ignore WordPress.DB
+
+		if ( ! $lock_result ) {
+			$lock_result = \get_option( $lock_name );
+
+			// Bail if we were unable to create a lock, or if the existing lock is still valid.
+			if ( ! $lock_result || ( $lock_result > ( time() - HOUR_IN_SECONDS ) ) ) {
+				\wp_schedule_single_event(
+					time() + ( 5 * MINUTE_IN_SECONDS ),
+					'activitypub_update_comment_counts',
+					array(
+						'batch_size' => $batch_size,
+						'offset'     => $offset,
+					)
+				);
+				return;
+			}
+		}
+
+		// Update the lock, as by this point we've definitely got a lock.
+		\update_option( $lock_name, time() );
+
+		$comment_types  = Comment::get_comment_type_slugs();
+		$type_inclusion = "AND comment_type IN ('" . implode( "','", $comment_types ) . "')";
+
+		// Get and process this batch.
+		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT DISTINCT comment_post_ID FROM {$wpdb->comments} WHERE comment_approved = '1' {$type_inclusion} ORDER BY comment_post_ID LIMIT %d OFFSET %d",
+				$batch_size,
+				$offset
+			)
+		);
+
+		if ( empty( $post_ids ) ) {
+			\update_option( 'activitypub_450_comment_counts_updated', true );
+			\delete_option( $lock_name );
+			return;
+		}
+
+		foreach ( $post_ids as $post_id ) {
+			\wp_update_comment_count_now( $post_id );
+		}
+
+		// Schedule next batch.
+		\wp_schedule_single_event(
+			time() + MINUTE_IN_SECONDS,
+			'activitypub_update_comment_counts',
+			array(
+				'batch_size' => $batch_size,
+				'offset'     => $offset + $batch_size,
+			)
+		);
+
+		\delete_option( $lock_name );
 	}
 
 	/**
