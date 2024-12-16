@@ -75,11 +75,11 @@ class Server {
 	/**
 	 * Callback function to authorize an api request.
 	 *
-	 * The function is meant to be used as a permission callback for the rest api.
+	 * The function is meant to be used as part of permission callbacks for rest api endpoints.
 	 *
-	 * It verifies the signature of POST, PUT, PATCH and DELETE requests and also the GET requests in secure mode.
+	 * It verifies the signature of POST, PUT, PATCH, and DELETE requests, as well as GET requests in secure mode.
 	 * You can use the filter 'activitypub_defer_verify_signature' to defer the signature verification.
-	 * The HEAD request is always bypassed.
+	 * HEAD requests are always bypassed.
 	 *
 	 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
 	 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
