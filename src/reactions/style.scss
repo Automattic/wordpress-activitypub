@@ -53,18 +53,18 @@
 			box-shadow: 
 				0 0 0 0.5px rgba(255, 255, 255, 0.8), // Crisp white border
 				0 1px 3px rgba(0, 0, 0, 0.2); // Soft drop shadow
-			transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+			transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 			will-change: transform;
 
 			&.wave-active {
-				transform: translateY(-16px) scale(1.2);
+				transform: translateY(-5px);
 
 				&.rotate-clockwise {
-					transform: translateY(-16px) scale(1.2) rotate(360deg);
+					transform: translateY(-5px) rotate(30deg);
 				}
 
 				&.rotate-counter {
-					transform: translateY(-16px) scale(1.2) rotate(-360deg);
+					transform: translateY(-5px) rotate(-30deg);
 				}
 			}
 

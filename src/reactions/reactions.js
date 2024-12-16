@@ -33,7 +33,7 @@ const FacepileRow = ( { reactions } ) => {
 
 	const startWave = (startIndex, isEntering) => {
 		clearTimeouts();
-		const delay = 150; // 150ms between each avatar
+		const delay = 100; // 100ms between each avatar
 		const totalAvatars = reactions.length;
 
 		if (isEntering) {
@@ -343,7 +343,7 @@ export function Reactions( {
 		<div className="activitypub-reactions">
 			{ isEditing ? (
 				<RichText
-					tagName="h4"
+					tagName="h6"
 					value={ title }
 					onChange={ setTitle }
 					placeholder={ __( 'Fediverse reactions', 'activitypub' ) }
@@ -351,7 +351,7 @@ export function Reactions( {
 					allowedFormats={ [] }
 				/>
 			) : (
-				title && <h4>{ title }</h4>
+				title && <h6>{ title }</h6>
 			) }
 
 			{ Object.entries( reactions ).map( ( [ key, group ] ) => {
