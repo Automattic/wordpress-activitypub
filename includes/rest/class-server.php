@@ -78,7 +78,7 @@ class Server {
 	 * The function is meant to be used as part of permission callbacks for rest api endpoints.
 	 *
 	 * It verifies the signature of POST, PUT, PATCH, and DELETE requests, as well as GET requests in secure mode.
-	 * You can use the filter 'activitypub_defer_verify_signature' to defer the signature verification.
+	 * You can use the filter 'activitypub_defer_signature_verification' to defer the signature verification.
 	 * HEAD requests are always bypassed.
 	 *
 	 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
@@ -104,7 +104,7 @@ class Server {
 		 *
 		 * @return bool Whether to defer signature verification.
 		 */
-		$defer = \apply_filters( 'activitypub_defer_verify_signature', false, $request );
+		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request );
 
 		if ( $defer ) {
 			return true;
