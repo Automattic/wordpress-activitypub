@@ -18,8 +18,10 @@ class Reactions_Settings {
 	public static function init() {
 		add_action( 'init', array( self::class, 'register_post_meta' ), 11 );
 		add_action( 'admin_init', array( self::class, 'register_settings' ) );
-		add_action( 'add_meta_boxes', array( self::class, 'add_meta_box' ) );
-		add_action( 'save_post', array( self::class, 'save_meta_box' ) );
+		if ( self::is_reactions_globally_enabled() ) {
+			add_action( 'add_meta_boxes', array( self::class, 'add_meta_box' ) );
+			add_action( 'save_post', array( self::class, 'save_meta_box' ) );
+		}
 	}
 
 	/**
@@ -70,18 +72,47 @@ class Reactions_Settings {
 	 * Render the reactions enabled field.
 	 */
 	public static function render_reactions_enabled_field() {
-		?>
-		<fieldset>
-			<legend class="screen-reader-text"><?php esc_html_e( 'Federated Reactions', 'activitypub' ); ?></legend>
-			<label>
-				<input type="checkbox" name="activitypub_reactions_enabled" value="1" <?php checked( '1', get_option( 'activitypub_reactions_enabled', '1' ) ); ?> />
-				<?php esc_html_e( 'Show federated reactions on posts.', 'activitypub' ); ?>
-			</label>
-			<p class="description">
-				<?php esc_html_e( 'This can be overridden on individual posts.', 'activitypub' ); ?>
+		if ( ! wp_is_block_theme() ) {
+			?>
+			<fieldset>
+				<legend class="screen-reader-text"><?php esc_html_e( 'Federated Reactions', 'activitypub' ); ?></legend>
+				<label>
+					<input type="checkbox" name="activitypub_reactions_enabled" value="1" <?php checked( '1', get_option( 'activitypub_reactions_enabled', '1' ) ); ?> />
+					<?php esc_html_e( 'Show federated reactions on posts.', 'activitypub' ); ?>
+				</label>
+				<p class="description">
+					<?php esc_html_e( 'This can be overridden on individual posts.', 'activitypub' ); ?>
+				</p>
+			</fieldset>
+			<?php
+		} else {
+			$editor_url = add_query_arg(
+				array(
+					'postType' => 'wp_template',
+					'postId'   => get_stylesheet() . '//single',
+					'canvas'   => 'edit',
+				),
+				admin_url( 'site-editor.php' )
+			);
+			?>
+			<p>
+				<?php
+				printf(
+					wp_kses(
+						/* translators: %s: URL to edit Single Posts template */
+						__( 'The Reactions block is automatically inserted into your Single Posts template. To disable it, select the Content block in the Single Posts template, and uncheck "Fediverse Reactions" under ActivityPub in the sidebar. <a href="%s">Edit Single Posts template</a>', 'activitypub' ),
+						array(
+							'a' => array(
+								'href' => array(),
+							),
+						)
+					),
+					esc_url( $editor_url )
+				);
+				?>
 			</p>
-		</fieldset>
-		<?php
+			<?php
+		}
 	}
 
 	/**
@@ -159,18 +190,27 @@ class Reactions_Settings {
 	 * @return bool
 	 */
 	public static function is_reactions_enabled( $post_id = 0 ) {
+		// Check global setting first - if disabled globally, return false.
+		if ( ! self::is_reactions_globally_enabled() ) {
+			return false;
+		}
+
 		if ( ! $post_id ) {
 			$post_id = get_the_ID();
 		}
 
 		$post_setting = get_post_meta( $post_id, 'activitypub_reactions_enabled', true );
 
-		// If meta exists, check if it's '1'.
-		if ( '' !== $post_setting ) {
-			return '1' === $post_setting;
-		}
+		// If meta exists, check if it's '1', otherwise default to true since global setting is enabled.
+		return '' === $post_setting || '1' === $post_setting;
+	}
 
-		// Otherwise use global setting.
+	/**
+	 * Check if reactions are enabled globally.
+	 *
+	 * @return bool
+	 */
+	private static function is_reactions_globally_enabled() {
 		return get_option( 'activitypub_reactions_enabled', '1' ) === '1';
 	}
 }
