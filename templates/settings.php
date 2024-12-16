@@ -59,10 +59,9 @@
 							</p>
 						</td>
 					</tr>
+					<?php \do_settings_fields( 'activitypub', 'user' ); ?>
 				</tbody>
 			</table>
-
-			<?php \do_settings_fields( 'activitypub', 'user' ); ?>
 		</div>
 
 		<div class="box">
@@ -231,10 +230,10 @@
 							</p>
 						</td>
 					</tr>
+					<?php \do_settings_fields( 'activitypub', 'general' ); ?>
+					<?php \do_settings_fields( 'activitypub', 'server' ); ?>
 				</tbody>
 			</table>
-			<?php \do_settings_fields( 'activitypub', 'general' ); ?>
-			<?php \do_settings_fields( 'activitypub', 'server' ); ?>
 		</div>
 		<div class="box">
 			<h3><?php \esc_html_e( 'Security', 'activitypub' ); ?></h3>
@@ -261,9 +260,9 @@
 						</td>
 					</tr>
 					<?php endif; ?>
+					<?php \do_settings_fields( 'activitypub', 'security' ); ?>
 				</tbody>
 			</table>
-			<?php \do_settings_fields( 'activitypub', 'security' ); ?>
 		</div>
 		<?php \do_settings_sections( 'activitypub' ); ?>
 
