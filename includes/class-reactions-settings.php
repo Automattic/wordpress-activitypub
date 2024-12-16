@@ -1,6 +1,6 @@
 <?php
 /**
- * Federated Reactions Settings file.
+ * Reactions Settings file.
  *
  * @package ActivityPub
  */
@@ -8,9 +8,9 @@
 namespace Activitypub;
 
 /**
- * Federated Reactions Settings class.
+ *  Reactions Settings class.
  */
-class Federated_Reactions_Settings {
+class Reactions_Settings {
 
 	/**
 	 * Initialize the class, registering WordPress hooks.

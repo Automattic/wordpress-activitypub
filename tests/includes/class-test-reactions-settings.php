@@ -1,20 +1,20 @@
 <?php
 /**
- * Test Federated Reactions Settings.
+ * Test Reactions Settings.
  *
  * @package ActivityPub
  */
 
 namespace Activitypub\Tests;
 
-use Activitypub\Federated_Reactions_Settings;
+use Activitypub\Reactions_Settings;
 
 /**
  * Test Federated Reactions Settings.
  *
- * @coversDefaultClass \Activitypub\Federated_Reactions_Settings
+ * @coversDefaultClass \Activitypub\Reactions_Settings
  */
-class Test_Federated_Reactions_Settings extends \WP_UnitTestCase {
+class Test_Reactions_Settings extends \WP_UnitTestCase {
 
 	/**
 	 * Clean up after each test.
@@ -30,8 +30,8 @@ class Test_Federated_Reactions_Settings extends \WP_UnitTestCase {
 	 * @covers ::init
 	 */
 	public function test_init() {
-		$this->assertEquals( 11, has_action( 'init', array( Federated_Reactions_Settings::class, 'register_post_meta' ) ) );
-		$this->assertEquals( 10, has_action( 'admin_init', array( Federated_Reactions_Settings::class, 'register_settings' ) ) );
+		$this->assertEquals( 11, has_action( 'init', array( Reactions_Settings::class, 'register_post_meta' ) ) );
+		$this->assertEquals( 10, has_action( 'admin_init', array( Reactions_Settings::class, 'register_settings' ) ) );
 	}
 
 	/**
@@ -40,7 +40,7 @@ class Test_Federated_Reactions_Settings extends \WP_UnitTestCase {
 	 * @covers ::register_post_meta
 	 */
 	public function test_register_post_meta() {
-		Federated_Reactions_Settings::register_post_meta();
+		Reactions_Settings::register_post_meta();
 
 		$post_type  = 'post';
 		$registered = get_registered_meta_keys( 'post', $post_type );
@@ -63,7 +63,7 @@ class Test_Federated_Reactions_Settings extends \WP_UnitTestCase {
 	 * @covers ::register_settings
 	 */
 	public function test_register_settings() {
-		Federated_Reactions_Settings::register_settings();
+		Reactions_Settings::register_settings();
 
 		$registered = get_registered_settings();
 		$this->assertArrayHasKey( 'activitypub_reactions_enabled', $registered );
@@ -81,7 +81,7 @@ class Test_Federated_Reactions_Settings extends \WP_UnitTestCase {
 		// Test with default value.
 		update_option( 'activitypub_reactions_enabled', '1' );
 		ob_start();
-		Federated_Reactions_Settings::render_reactions_enabled_field();
+		Reactions_Settings::render_reactions_enabled_field();
 		$output = ob_get_clean();
 
 		$this->assertStringContainsString( '<input type="checkbox"', $output );
@@ -92,7 +92,7 @@ class Test_Federated_Reactions_Settings extends \WP_UnitTestCase {
 		// Test with disabled value.
 		update_option( 'activitypub_reactions_enabled', '0' );
 		ob_start();
-		Federated_Reactions_Settings::render_reactions_enabled_field();
+		Reactions_Settings::render_reactions_enabled_field();
 		$output = ob_get_clean();
 
 		$this->assertStringContainsString( '<input type="checkbox"', $output );
@@ -110,19 +110,19 @@ class Test_Federated_Reactions_Settings extends \WP_UnitTestCase {
 		$post = self::factory()->post->create_and_get();
 
 		// Test with default global setting.
-		$this->assertTrue( Federated_Reactions_Settings::is_reactions_enabled( $post->ID ) );
+		$this->assertTrue( Reactions_Settings::is_reactions_enabled( $post->ID ) );
 
 		// Test with global setting disabled.
 		update_option( 'activitypub_reactions_enabled', '0' );
-		$this->assertFalse( Federated_Reactions_Settings::is_reactions_enabled( $post->ID ) );
+		$this->assertFalse( Reactions_Settings::is_reactions_enabled( $post->ID ) );
 
 		// Test with global setting enabled but post setting disabled.
 		update_option( 'activitypub_reactions_enabled', '1' );
 		update_post_meta( $post->ID, 'activitypub_reactions_enabled', '0' );
-		$this->assertFalse( Federated_Reactions_Settings::is_reactions_enabled( $post->ID ) );
+		$this->assertFalse( Reactions_Settings::is_reactions_enabled( $post->ID ) );
 
 		update_option( 'activitypub_reactions_enabled', '0' );
 		update_post_meta( $post->ID, 'activitypub_reactions_enabled', '1' );
-		$this->assertTrue( Federated_Reactions_Settings::is_reactions_enabled( $post->ID ) );
+		$this->assertTrue( Reactions_Settings::is_reactions_enabled( $post->ID ) );
 	}
 }
