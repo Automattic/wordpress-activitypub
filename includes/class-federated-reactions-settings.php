@@ -46,7 +46,7 @@ class Federated_Reactions_Settings {
 	 */
 	public static function register_settings() {
 		register_setting(
-			'discussion',
+			'activitypub',
 			'activitypub_reactions_enabled',
 			array(
 				'type'         => 'boolean',
@@ -59,7 +59,8 @@ class Federated_Reactions_Settings {
 			'activitypub_reactions_enabled',
 			__( 'Federated Reactions', 'activitypub' ),
 			array( self::class, 'render_reactions_enabled_field' ),
-			'discussion'
+			'activitypub',
+			'activity'
 		);
 	}
 
@@ -72,7 +73,7 @@ class Federated_Reactions_Settings {
 			<legend class="screen-reader-text"><?php esc_html_e( 'Federated Reactions', 'activitypub' ); ?></legend>
 			<label>
 				<input type="checkbox" name="activitypub_reactions_enabled" value="1" <?php checked( '1', get_option( 'activitypub_reactions_enabled', '1' ) ); ?> />
-				<?php esc_html_e( 'Show federated reactions on posts', 'activitypub' ); ?>
+				<?php esc_html_e( 'Show federated reactions on posts.', 'activitypub' ); ?>
 			</label>
 			<p class="description">
 				<?php esc_html_e( 'This can be overridden on individual posts.', 'activitypub' ); ?>

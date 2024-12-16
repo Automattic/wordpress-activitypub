@@ -183,10 +183,9 @@
 							</p>
 						</td>
 					</tr>
+					<?php \do_settings_fields( 'activitypub', 'activity' ); ?>
 				</tbody>
 			</table>
-
-			<?php \do_settings_fields( 'activitypub', 'activity' ); ?>
 		</div>
 
 		<div class="box">
