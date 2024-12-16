@@ -119,7 +119,7 @@ class Server {
 			$verified_request = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_request ) ) {
 				return new WP_Error(
-					'activitypub_verify_signature',
+					'activitypub_signature_verification',
 					$verified_request->get_error_message(),
 					array( 'status' => 401 )
 				);
