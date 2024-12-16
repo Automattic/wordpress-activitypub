@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compatibility with Akismet
 * Comment type mapping for `Like` and `Announce`
 * Signature verification for API endpoints
+* Changed priority of Attachments, to favor `Image` over `Audio` and `Video`
 
 ### Fixed
 
