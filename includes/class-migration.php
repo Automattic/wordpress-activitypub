@@ -21,6 +21,7 @@ class Migration {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_migrate', array( self::class, 'async_migration' ) );
+		\add_action( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ), 10, 2 );
 
 		self::maybe_migrate();
 	}
@@ -52,9 +53,20 @@ class Migration {
 
 	/**
 	 * Locks the database migration process to prevent simultaneous migrations.
+	 *
+	 * @return bool|int True if the lock was successful, timestamp of existing lock otherwise.
 	 */
 	public static function lock() {
-		\update_option( 'activitypub_migration_lock', \time() );
+		global $wpdb;
+
+		// Try to lock.
+		$lock_result = (bool) $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO `$wpdb->options` ( `option_name`, `option_value`, `autoload` ) VALUES (%s, %s, 'no') /* LOCK */", 'activitypub_migration_lock', \time() ) ); // phpcs:ignore WordPress.DB
+
+		if ( ! $lock_result ) {
+			$lock_result = \get_option( 'activitypub_migration_lock' );
+		}
+
+		return $lock_result;
 	}
 
 	/**
@@ -115,7 +127,7 @@ class Migration {
 
 		$version_from_db = self::get_version();
 
-		// Check for inital migration.
+		// Check for initial migration.
 		if ( ! $version_from_db ) {
 			self::add_default_settings();
 			$version_from_db = ACTIVITYPUB_PLUGIN_VERSION;
@@ -145,6 +157,9 @@ class Migration {
 		}
 		if ( \version_compare( $version_from_db, '4.1.0', '<' ) ) {
 			self::migrate_to_4_1_0();
+		}
+		if ( \version_compare( $version_from_db, '4.5.0', '<' ) ) {
+			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_update_comment_counts' );
 		}
 
 		/**
@@ -370,6 +385,64 @@ class Migration {
 			WHERE meta_key = 'activitypub_content_visibility'
 			AND (meta_value IS NULL OR meta_value = '')"
 		);
+	}
+
+	/**
+	 * Update comment counts for posts in batches.
+	 *
+	 * @see Comment::pre_wp_update_comment_count_now()
+	 * @param int $batch_size Optional. Number of posts to process per batch. Default 100.
+	 * @param int $offset     Optional. Number of posts to skip. Default 0.
+	 */
+	public static function update_comment_counts( $batch_size = 100, $offset = 0 ) {
+		global $wpdb;
+
+		// Bail if the existing lock is still valid.
+		if ( self::is_locked() ) {
+			\wp_schedule_single_event(
+				time() + ( 5 * MINUTE_IN_SECONDS ),
+				'activitypub_update_comment_counts',
+				array(
+					'batch_size' => $batch_size,
+					'offset'     => $offset,
+				)
+			);
+			return;
+		}
+
+		self::lock();
+
+		Comment::register_comment_types();
+		$comment_types  = Comment::get_comment_type_slugs();
+		$type_inclusion = "AND comment_type IN ('" . implode( "','", $comment_types ) . "')";
+
+		// Get and process this batch.
+		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT DISTINCT comment_post_ID FROM {$wpdb->comments} WHERE comment_approved = '1' {$type_inclusion} ORDER BY comment_post_ID LIMIT %d OFFSET %d",
+				$batch_size,
+				$offset
+			)
+		);
+
+		foreach ( $post_ids as $post_id ) {
+			\wp_update_comment_count_now( $post_id );
+		}
+
+		if ( count( $post_ids ) === $batch_size ) {
+			// Schedule next batch.
+			\wp_schedule_single_event(
+				time() + MINUTE_IN_SECONDS,
+				'activitypub_update_comment_counts',
+				array(
+					'batch_size' => $batch_size,
+					'offset'     => $offset + $batch_size,
+				)
+			);
+		}
+
+		self::unlock();
 	}
 
 	/**

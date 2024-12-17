@@ -8,6 +8,11 @@
 \define( 'ACTIVITYPUB_DISABLE_REACTIONS', false );
 \define( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS', false );
 
+// Defined here because setting them in .wp-env.json doesn't work for some reason.
+\define( 'WP_TESTS_DOMAIN', 'example.org' );
+\define( 'WP_SITEURL', 'http://example.org' );
+\define( 'WP_HOME', 'http://example.org' );
+
 $_tests_dir = \getenv( 'WP_TESTS_DIR' );
 
 if ( ! $_tests_dir ) {

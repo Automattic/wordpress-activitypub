@@ -8,6 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Migration;
+use Activitypub\Comment;
 
 /**
  * Test class for Activitypub Migrate.
@@ -183,5 +184,100 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 
 		$this->assertEquals( $custom, $template );
 		$this->assertFalse( $content_type );
+	}
+
+	/**
+	 * Tests that a new migration lock can be successfully acquired when no lock exists.
+	 *
+	 * @covers ::lock
+	 */
+	public function test_lock_acquire_new() {
+		$this->assertFalse( get_option( 'activitypub_migration_lock' ) );
+
+		$this->assertTrue( Migration::lock() );
+
+		// Clean up.
+		delete_option( 'activitypub_migration_lock' );
+	}
+
+	/**
+	 * Tests retrieving the timestamp of an existing lock.
+	 *
+	 * @covers ::lock
+	 */
+	public function test_lock_get_existing() {
+		$lock_time = time() - MINUTE_IN_SECONDS; // Set lock to 1 minute ago.
+		update_option( 'activitypub_migration_lock', $lock_time );
+
+		$lock_result = Migration::lock();
+
+		$this->assertEquals( $lock_time, $lock_result );
+
+		// Clean up.
+		delete_option( 'activitypub_migration_lock' );
+	}
+
+	/**
+	 * Tests update_comment_counts() properly cleans up the lock.
+	 *
+	 * @covers ::update_comment_counts
+	 */
+	public function test_update_comment_counts_with_lock() {
+		// Register comment types.
+		Comment::register_comment_types();
+
+		// Create test comments.
+		$post_id    = $this->factory->post->create();
+		$comment_id = $this->factory->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '1',
+				'comment_type'     => 'repost', // One of the registered comment types.
+			)
+		);
+
+		Migration::update_comment_counts( 10, 0 );
+
+		// Verify lock was cleaned up.
+		$this->assertFalse( get_option( 'activitypub_migration_lock' ) );
+
+		// Clean up.
+		wp_delete_comment( $comment_id, true );
+		wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Tests update_comment_counts() with existing valid lock.
+	 *
+	 * @covers ::update_comment_counts
+	 */
+	public function test_update_comment_counts_with_existing_valid_lock() {
+		// Register comment types.
+		Comment::register_comment_types();
+
+		// Set a lock.
+		Migration::lock();
+
+		Migration::update_comment_counts( 10, 0 );
+
+		// Verify a scheduled event was created.
+		$next_scheduled = wp_next_scheduled(
+			'activitypub_update_comment_counts',
+			array(
+				'batch_size' => 10,
+				'offset'     => 0,
+			)
+		);
+		$this->assertNotFalse( $next_scheduled );
+
+		// Clean up.
+		delete_option( 'activitypub_migration_lock' );
+		wp_clear_scheduled_hook(
+			'activitypub_update_comment_counts',
+			array(
+				'batch_size' => 10,
+				'offset'     => 0,
+			)
+		);
 	}
 }
