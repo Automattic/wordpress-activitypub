@@ -321,7 +321,6 @@ class Signature {
 		}
 
 		$verified = \openssl_verify( $signed_data, $signature_block['signature'], $public_key, $algorithm ) > 0;
-
 		if ( ! $verified ) {
 			return new WP_Error( 'activitypub_signature', __( 'Invalid signature', 'activitypub' ), array( 'status' => 401 ) );
 		}
@@ -403,7 +402,11 @@ class Signature {
 			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', trim( $matches[1] ) ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 		}
 
-		if ( ( $parsed_header['signature'] ) && ( $parsed_header['algorithm'] ) && ( ! $parsed_header['headers'] ) ) {
+		if (
+			! empty( $parsed_header['signature'] ) &&
+			! empty( $parsed_header['algorithm'] ) &&
+			empty( $parsed_header['headers'] )
+		) {
 			$parsed_header['headers'] = array( 'date' );
 		}
 
@@ -461,6 +464,10 @@ class Signature {
 				}
 			}
 			if ( 'date' === $header ) {
+				if ( empty( $headers[ $header ][0] ) ) {
+					continue;
+				}
+
 				// Allow a bit of leeway for misconfigured clocks.
 				$d = new DateTime( $headers[ $header ][0] );
 				$d->setTimeZone( new DateTimeZone( 'UTC' ) );
@@ -474,7 +481,10 @@ class Signature {
 					return false;
 				}
 			}
-			$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
+
+			if ( ! empty( $headers[ $header ][0] ) ) {
+				$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
+			}
 		}
 		return \rtrim( $signed_data, "\n" );
 	}
