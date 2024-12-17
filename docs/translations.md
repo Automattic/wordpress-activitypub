@@ -1,11 +1,3 @@
----
-title: Translate
-layout: page
-nav_order: 2
-description: "How To Translate the ActivityPub Plugin"
-permalink: /translate/
----
-
 # How To Translate the ActivityPub Plugin
 
 ## Who translates the ActivityPub plugin? How can I get involved?

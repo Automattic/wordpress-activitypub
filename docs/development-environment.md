@@ -1,11 +1,3 @@
----
-title: Development Environment
-layout: page
-nav_order: 2
-description: ""
-permalink: /development-environment/
----
-
 # Setting up your environment
 
 ## Overview

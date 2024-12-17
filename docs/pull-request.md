@@ -1,11 +1,3 @@
----
-title: Pull Requests
-layout: page
-nav_order: 2
-description: ""
-permalink: /pull-request/
----
-
 # Life Cycle of a Pull Request
 
 When you’re first starting out, your natural instinct when creating a new feature will be to create a local feature branch, and start building away. If you start doing this, *stop*, take your hands off the keyboard, grab a coffee and read on. :)
