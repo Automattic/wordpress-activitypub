@@ -35,5 +35,5 @@ More information on HTTP Signatures, as well as examples, can be found here: <ht
 
 ## Additional documentation
 
-- Plugin Documentation: <https://automattic.github.io/wordpress-activitypub/>
+- Plugin Documentation: [docs/readme.md](docs/readme.md)
 - Changelog: <https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md>

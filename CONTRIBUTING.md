@@ -12,9 +12,9 @@ If you’re filing a bug, specific steps to reproduce are helpful. Please includ
 
 ## Write and submit a patch
 
-If you'd like to fix a bug or make an enhancement, you can submit a Pull Request. Before you get started, you'll want to **[set up your development environment.](https://automattic.github.io/wordpress-activitypub/development-environment)**
+If you'd like to fix a bug or make an enhancement, you can submit a Pull Request. Before you get started, you'll want to **[set up your development environment.](docs/development-environment.md)**
 
-Once your development environment is ready, you can get started and [create your first Pull Request!](https://automattic.github.io/wordpress-activitypub/pull-request)
+Once your development environment is ready, you can get started and [create your first Pull Request!](docs/pull-request.md)
 
 ### Get started
 
@@ -29,7 +29,7 @@ We encourage you to ask for help at any point. We want your first experience wit
 
 ## Translate the plugin
 
-If you speak a foreign language, you can help translate the ActivityPub plugin into your own language. [here is how.](https://automattic.github.io/wordpress-activitypub/translations)
+If you speak a foreign language, you can help translate the ActivityPub plugin into your own language. [here is how.](docs/translations)
 
 ## License
 
