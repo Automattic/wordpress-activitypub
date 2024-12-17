@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+* Hide ActivityPub post meta keys from the custom Fields UI
+
 ### Fixed
 
 * Undefined array key warnings in various places

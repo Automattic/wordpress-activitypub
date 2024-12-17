@@ -134,6 +134,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Changed: Hide ActivityPub post meta keys from the custom Fields UI
 * Fixed: Undefined array key warnings in various places
 
 = 4.6.0 =
