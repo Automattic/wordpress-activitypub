@@ -2,7 +2,7 @@
 /**
  * Test Timer Listener for PHPUnit.
  *
- * phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped PHPCompatibility.FunctionDeclarations.NewReturnTypeDeclarations.voidFound
+ * phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped,PHPCompatibility.FunctionDeclarations.NewReturnTypeDeclarations.voidFound
  *
  * @package Activitypub
  */
