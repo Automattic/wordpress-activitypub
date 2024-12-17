@@ -339,7 +339,7 @@ class Activitypub {
 	public static function trash_post( $post_id ) {
 		\add_post_meta(
 			$post_id,
-			'activitypub_canonical_url',
+			'_activitypub_canonical_url',
 			\get_permalink( $post_id ),
 			true
 		);
@@ -351,7 +351,7 @@ class Activitypub {
 	 * @param string $post_id The Post ID.
 	 */
 	public static function untrash_post( $post_id ) {
-		\delete_post_meta( $post_id, 'activitypub_canonical_url' );
+		\delete_post_meta( $post_id, '_activitypub_canonical_url' );
 	}
 
 	/**
@@ -482,7 +482,7 @@ class Activitypub {
 
 		\register_post_meta(
 			Followers::POST_TYPE,
-			'activitypub_inbox',
+			'_activitypub_inbox',
 			array(
 				'type'              => 'string',
 				'single'            => true,
@@ -492,7 +492,7 @@ class Activitypub {
 
 		\register_post_meta(
 			Followers::POST_TYPE,
-			'activitypub_errors',
+			'_activitypub_errors',
 			array(
 				'type'              => 'string',
 				'single'            => false,
@@ -508,7 +508,7 @@ class Activitypub {
 
 		\register_post_meta(
 			Followers::POST_TYPE,
-			'activitypub_user_id',
+			'_activitypub_user_id',
 			array(
 				'type'              => 'string',
 				'single'            => false,
@@ -520,7 +520,7 @@ class Activitypub {
 
 		\register_post_meta(
 			Followers::POST_TYPE,
-			'activitypub_actor_json',
+			'_activitypub_actor_json',
 			array(
 				'type'              => 'string',
 				'single'            => true,
@@ -579,7 +579,7 @@ class Activitypub {
 	}
 
 	/**
-	 * Delete `activitypub_content_visibility` when updated to an empty value.
+	 * Delete `_activitypub_content_visibility` when updated to an empty value.
 	 *
 	 * @param int    $meta_id    ID of updated metadata entry.
 	 * @param int    $object_id  Post ID.
@@ -588,8 +588,8 @@ class Activitypub {
 	 *                           if the value is an array, an object, or itself a PHP-serialized string.
 	 */
 	public static function updated_postmeta( $meta_id, $object_id, $meta_key, $meta_value ) {
-		if ( 'activitypub_content_visibility' === $meta_key && empty( $meta_value ) ) {
-			\delete_post_meta( $object_id, 'activitypub_content_visibility' );
+		if ( '_activitypub_content_visibility' === $meta_key && empty( $meta_value ) ) {
+			\delete_post_meta( $object_id, '_activitypub_content_visibility' );
 		}
 	}
 }

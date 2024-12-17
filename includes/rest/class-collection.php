@@ -226,7 +226,7 @@ class Collection {
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'          => array(
 					array(
-						'key'     => 'activitypub_content_visibility',
+						'key'     => '_activitypub_content_visibility',
 						'compare' => 'NOT EXISTS',
 					),
 				),

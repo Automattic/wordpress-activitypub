@@ -286,7 +286,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$this->assertEquals( $permalink, $activitypub_post->get_id() );
 
-		$cached = \get_post_meta( $post, 'activitypub_canonical_url', true );
+		$cached = \get_post_meta( $post, '_activitypub_canonical_url', true );
 
 		$this->assertEquals( $cached, $activitypub_post->get_id() );
 	}
@@ -304,19 +304,19 @@ class Test_Post extends \WP_UnitTestCase {
 			)
 		);
 
-		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+		\update_post_meta( $post_id, '_activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 
 		$this->assertFalse( \Activitypub\is_post_disabled( $post_id ) );
 		$object = Post::transform( get_post( $post_id ) )->to_object();
 		$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', $object->get_to() );
 
-		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
+		\update_post_meta( $post_id, '_activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
 
 		$this->assertFalse( \Activitypub\is_post_disabled( $post_id ) );
 		$object = Post::transform( get_post( $post_id ) )->to_object();
 		$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', $object->get_cc() );
 
-		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+		\update_post_meta( $post_id, '_activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 
 		$this->assertTrue( \Activitypub\is_post_disabled( $post_id ) );
 		$object = Post::transform( get_post( $post_id ) )->to_object();

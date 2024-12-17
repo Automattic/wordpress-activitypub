@@ -31,9 +31,9 @@ class Jetpack {
 			return $allow_list;
 		}
 		$activitypub_meta_keys = array(
-			'activitypub_user_id',
+			'_activitypub_user_id',
 			'activitypub_inbox',
-			'activitypub_actor_json',
+			'_activitypub_actor_json',
 		);
 		return \array_merge( $allow_list, $activitypub_meta_keys );
 	}

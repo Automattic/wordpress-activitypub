@@ -427,7 +427,7 @@ function is_activitypub_request() {
 function is_post_disabled( $post ) {
 	$post       = \get_post( $post );
 	$disabled   = false;
-	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+	$visibility = \get_post_meta( $post->ID, '_activitypub_content_visibility', true );
 
 	if ( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ) {
 		$disabled = true;
@@ -1388,7 +1388,7 @@ function get_content_warning( $post_id ) {
 		return false;
 	}
 
-	$warning = get_post_meta( $post->ID, 'activitypub_content_warning', true );
+	$warning = get_post_meta( $post->ID, '_activitypub_content_warning', true );
 	if ( empty( $warning ) ) {
 		return false;
 	}
@@ -1464,7 +1464,7 @@ function get_content_visibility( $post_id ) {
 		return false;
 	}
 
-	$visibility  = get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+	$visibility  = get_post_meta( $post->ID, '_activitypub_content_visibility', true );
 	$_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
 	$options     = array(
 		ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,

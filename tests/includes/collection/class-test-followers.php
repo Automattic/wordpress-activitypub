@@ -291,7 +291,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
 
 		for ( $i = 1; $i <= 15; $i++ ) {
-			add_post_meta( $follower->get__id(), 'activitypub_errors', 'error ' . $i );
+			add_post_meta( $follower->get__id(), '_activitypub_errors', 'error ' . $i );
 		}
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
@@ -332,7 +332,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		$this->assertContains( $follower, $db_followers );
 
 		$follower = current( $db_followers );
-		$meta     = get_post_meta( $follower->get__id(), 'activitypub_user_id', false );
+		$meta     = get_post_meta( $follower->get__id(), '_activitypub_user_id', false );
 
 		$this->assertCount( 1, $meta );
 	}
@@ -477,7 +477,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 			$id = $follower->upsert();
 
-			add_post_meta( $id, 'activitypub_user_id', 1 );
+			add_post_meta( $id, '_activitypub_user_id', 1 );
 		}
 
 		$inboxes = Followers::get_inboxes( 1 );
@@ -503,7 +503,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 			$id = $follower->upsert();
 
-			add_post_meta( $id, 'activitypub_user_id', 1 );
+			add_post_meta( $id, '_activitypub_user_id', 1 );
 		}
 
 		$inboxes2 = Followers::get_inboxes( 1 );
@@ -533,7 +533,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 			$id = $follower->upsert();
 
-			add_post_meta( $id, 'activitypub_user_id', 1 );
+			add_post_meta( $id, '_activitypub_user_id', 1 );
 		}
 
 		$followers = Followers::get_all_followers();

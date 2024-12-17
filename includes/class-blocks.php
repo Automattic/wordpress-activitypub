@@ -37,7 +37,7 @@ class Blocks {
 		foreach ( $ap_post_types as $post_type ) {
 			\register_post_meta(
 				$post_type,
-				'activitypub_content_warning',
+				'_activitypub_content_warning',
 				array(
 					'show_in_rest'      => true,
 					'single'            => true,
@@ -53,7 +53,7 @@ class Blocks {
 			);
 			\register_post_meta(
 				$post_type,
-				'activitypub_content_visibility',
+				'_activitypub_content_visibility',
 				array(
 					'show_in_rest'      => true,
 					'single'            => true,

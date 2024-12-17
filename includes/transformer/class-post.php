@@ -152,7 +152,7 @@ class Post extends Base {
 
 		switch ( \get_post_status( $post ) ) {
 			case 'trash':
-				$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
+				$permalink = \get_post_meta( $post->ID, '_activitypub_canonical_url', true );
 				break;
 			case 'draft':
 				// Get_sample_permalink is in wp-admin, not always loaded.
