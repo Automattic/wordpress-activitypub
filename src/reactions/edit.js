@@ -92,27 +92,6 @@ const generateDummyReactions = () => ( {
 } );
 
 /**
- * Title editor component that handles both display and editing of the title.
- *
- * @param {Object}   props            Component props.
- * @param {string}   props.value      The current title value.
- * @param {Function} props.onChange   Callback when title changes.
- * @return {JSX.Element}             The rendered component.
- */
-function TitleEditor({ value, onChange }) {
-	return (
-		<RichText
-			tagName="h6"
-			value={ value }
-			onChange={ onChange }
-			placeholder={ __( 'Fediverse reactions', 'activitypub' ) }
-			disableLineBreaks={ true }
-			allowedFormats={ [] }
-		/>
-	);
-}
-
-/**
  * Edit component for the Reactions block.
  *
  * @param {Object}   props               Block props.
@@ -125,9 +104,13 @@ export default function Edit( { attributes, setAttributes, __unstableLayoutClass
 	const [ dummyReactions ] = useState( generateDummyReactions() );
 
 	const titleEditor = (
-		<TitleEditor
+		<RichText
+			tagName="h6"
 			value={ attributes.title }
 			onChange={ ( title ) => setAttributes( { title } ) }
+			placeholder={ __( 'Fediverse reactions', 'activitypub' ) }
+			disableLineBreaks={ true }
+			allowedFormats={ [] }
 		/>
 	);
 
