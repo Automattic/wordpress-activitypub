@@ -21,7 +21,7 @@ class Test_Reactions_Settings extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		parent::tear_down();
-		delete_option( 'activitypub_reactions_legacy_mode' );
+		delete_option( 'activitypub_show_reactions_on_posts' );
 	}
 
 	/**
@@ -45,13 +45,13 @@ class Test_Reactions_Settings extends \WP_UnitTestCase {
 		$post_type  = 'post';
 		$registered = get_registered_meta_keys( 'post', $post_type );
 
-		$this->assertArrayHasKey( 'activitypub_reactions_legacy_mode', $registered );
-		$this->assertTrue( $registered['activitypub_reactions_legacy_mode']['show_in_rest'] );
-		$this->assertTrue( $registered['activitypub_reactions_legacy_mode']['single'] );
-		$this->assertEquals( 'string', $registered['activitypub_reactions_legacy_mode']['type'] );
+		$this->assertArrayHasKey( 'activitypub_show_reactions_on_posts', $registered );
+		$this->assertTrue( $registered['activitypub_show_reactions_on_posts']['show_in_rest'] );
+		$this->assertTrue( $registered['activitypub_show_reactions_on_posts']['single'] );
+		$this->assertEquals( 'string', $registered['activitypub_show_reactions_on_posts']['type'] );
 
 		// Test sanitize callback.
-		$sanitize_callback = $registered['activitypub_reactions_legacy_mode']['sanitize_callback'];
+		$sanitize_callback = $registered['activitypub_show_reactions_on_posts']['sanitize_callback'];
 		$this->assertEquals( '1', $sanitize_callback( '1' ) );
 		$this->assertEquals( '0', $sanitize_callback( '0' ) );
 		$this->assertEquals( '1', $sanitize_callback( 'invalid' ) );
@@ -66,10 +66,10 @@ class Test_Reactions_Settings extends \WP_UnitTestCase {
 		Reactions_Settings::register_settings();
 
 		$registered = get_registered_settings();
-		$this->assertArrayHasKey( 'activitypub_reactions_legacy_mode', $registered );
-		$this->assertEquals( 'boolean', $registered['activitypub_reactions_legacy_mode']['type'] );
-		$this->assertTrue( $registered['activitypub_reactions_legacy_mode']['show_in_rest'] );
-		$this->assertTrue( $registered['activitypub_reactions_legacy_mode']['default'] );
+		$this->assertArrayHasKey( 'activitypub_show_reactions_on_posts', $registered );
+		$this->assertEquals( 'boolean', $registered['activitypub_show_reactions_on_posts']['type'] );
+		$this->assertTrue( $registered['activitypub_show_reactions_on_posts']['show_in_rest'] );
+		$this->assertTrue( $registered['activitypub_show_reactions_on_posts']['default'] );
 	}
 
 	/**
@@ -79,24 +79,24 @@ class Test_Reactions_Settings extends \WP_UnitTestCase {
 	 */
 	public function test_render_reactions_enabled_field() {
 		// Test with default value.
-		update_option( 'activitypub_reactions_legacy_mode', '1' );
+		update_option( 'activitypub_show_reactions_on_posts', '1' );
 		ob_start();
 		Reactions_Settings::render_reactions_enabled_field();
 		$output = ob_get_clean();
 
 		$this->assertStringContainsString( '<input type="checkbox"', $output );
-		$this->assertStringContainsString( 'name="activitypub_reactions_legacy_mode"', $output );
+		$this->assertStringContainsString( 'name="activitypub_show_reactions_on_posts"', $output );
 		$this->assertStringContainsString( 'value="1"', $output );
 		$this->assertStringContainsString( 'checked=\'checked\'', $output );
 
 		// Test with disabled value.
-		update_option( 'activitypub_reactions_legacy_mode', '0' );
+		update_option( 'activitypub_show_reactions_on_posts', '0' );
 		ob_start();
 		Reactions_Settings::render_reactions_enabled_field();
 		$output = ob_get_clean();
 
 		$this->assertStringContainsString( '<input type="checkbox"', $output );
-		$this->assertStringContainsString( 'name="activitypub_reactions_legacy_mode"', $output );
+		$this->assertStringContainsString( 'name="activitypub_show_reactions_on_posts"', $output );
 		$this->assertStringContainsString( 'value="1"', $output );
 		$this->assertStringNotContainsString( 'checked=\'checked\'', $output );
 	}
@@ -113,16 +113,16 @@ class Test_Reactions_Settings extends \WP_UnitTestCase {
 		$this->assertTrue( Reactions_Settings::is_reactions_enabled( $post->ID ) );
 
 		// Test with global setting disabled.
-		update_option( 'activitypub_reactions_legacy_mode', '0' );
+		update_option( 'activitypub_show_reactions_on_posts', '0' );
 		$this->assertFalse( Reactions_Settings::is_reactions_enabled( $post->ID ) );
 
 		// Test with global setting enabled but post setting disabled.
-		update_option( 'activitypub_reactions_legacy_mode', '1' );
-		update_post_meta( $post->ID, 'activitypub_reactions_legacy_mode', '0' );
+		update_option( 'activitypub_show_reactions_on_posts', '1' );
+		update_post_meta( $post->ID, 'activitypub_show_reactions_on_posts', '0' );
 		$this->assertFalse( Reactions_Settings::is_reactions_enabled( $post->ID ) );
 
-		update_option( 'activitypub_reactions_legacy_mode', '0' );
-		update_post_meta( $post->ID, 'activitypub_reactions_legacy_mode', '1' );
+		update_option( 'activitypub_show_reactions_on_posts', '0' );
+		update_post_meta( $post->ID, 'activitypub_show_reactions_on_posts', '1' );
 		$this->assertTrue( Reactions_Settings::is_reactions_enabled( $post->ID ) );
 	}
 }
