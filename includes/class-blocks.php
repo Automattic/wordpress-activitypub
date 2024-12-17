@@ -409,7 +409,10 @@ class Blocks {
 			return $content;
 		}
 
-		if ( ! Reactions_Settings::is_reactions_enabled() ) {
+		if (
+			! Reactions_Settings::use_legacy_mode() ||
+			! Reactions_Settings::is_reactions_enabled()
+		) {
 			return $content;
 		}
 

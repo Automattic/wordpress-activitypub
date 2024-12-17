@@ -18,7 +18,7 @@ class Reactions_Settings {
 	public static function init() {
 		add_action( 'init', array( self::class, 'register_post_meta' ), 11 );
 		add_action( 'admin_init', array( self::class, 'register_settings' ) );
-		if ( self::is_reactions_globally_enabled() ) {
+		if ( self::use_legacy_mode() ) {
 			add_action( 'add_meta_boxes', array( self::class, 'add_meta_box' ) );
 			add_action( 'save_post', array( self::class, 'save_meta_box' ) );
 		}
@@ -32,7 +32,7 @@ class Reactions_Settings {
 		foreach ( $ap_post_types as $post_type ) {
 			register_post_meta(
 				$post_type,
-				'activitypub_reactions_enabled',
+				'activitypub_reactions_legacy_mode',
 				array(
 					'show_in_rest'      => true,
 					'single'            => true,
@@ -51,7 +51,7 @@ class Reactions_Settings {
 	public static function register_settings() {
 		register_setting(
 			'activitypub',
-			'activitypub_reactions_enabled',
+			'activitypub_reactions_legacy_mode',
 			array(
 				'type'         => 'boolean',
 				'show_in_rest' => true,
@@ -60,7 +60,7 @@ class Reactions_Settings {
 		);
 
 		add_settings_field(
-			'activitypub_reactions_enabled',
+			'activitypub_reactions_legacy_mode',
 			__( 'Federated Reactions', 'activitypub' ),
 			array( self::class, 'render_reactions_enabled_field' ),
 			'activitypub',
@@ -77,7 +77,7 @@ class Reactions_Settings {
 			<fieldset>
 				<legend class="screen-reader-text"><?php esc_html_e( 'Federated Reactions', 'activitypub' ); ?></legend>
 				<label>
-					<input type="checkbox" name="activitypub_reactions_enabled" value="1" <?php checked( '1', get_option( 'activitypub_reactions_enabled', '1' ) ); ?> />
+					<input type="checkbox" name="activitypub_reactions_legacy_mode" value="1" <?php checked( '1', get_option( 'activitypub_reactions_legacy_mode', '1' ) ); ?> />
 					<?php esc_html_e( 'Show federated reactions on posts.', 'activitypub' ); ?>
 				</label>
 				<p class="description">
@@ -144,13 +144,13 @@ class Reactions_Settings {
 	 */
 	public static function render_meta_box( $post ) {
 		wp_nonce_field( 'activitypub_reactions_meta_box', 'activitypub_reactions_meta_box_nonce' );
-		$value = get_post_meta( $post->ID, 'activitypub_reactions_enabled', true );
+		$value = get_post_meta( $post->ID, 'activitypub_reactions_legacy_mode', true );
 		if ( '' === $value ) {
 			$value = '1'; // Default to enabled.
 		}
 		?>
 		<label>
-			<input type="checkbox" name="activitypub_reactions_enabled" value="1" <?php checked( '1', $value ); ?> />
+			<input type="checkbox" name="activitypub_reactions_legacy_mode" value="1" <?php checked( '1', $value ); ?> />
 			<?php esc_html_e( 'Show federated reactions', 'activitypub' ); ?>
 		</label>
 		<p class="description">
@@ -179,8 +179,8 @@ class Reactions_Settings {
 			return;
 		}
 
-		$value = isset( $_POST['activitypub_reactions_enabled'] ) ? '1' : '0';
-		update_post_meta( $post_id, 'activitypub_reactions_enabled', $value );
+		$value = isset( $_POST['activitypub_reactions_legacy_mode'] ) ? '1' : '0';
+		update_post_meta( $post_id, 'activitypub_reactions_legacy_mode', $value );
 	}
 
 	/**
@@ -190,16 +190,11 @@ class Reactions_Settings {
 	 * @return bool
 	 */
 	public static function is_reactions_enabled( $post_id = 0 ) {
-		// Check global setting first - if disabled globally, return false.
-		if ( ! self::is_reactions_globally_enabled() ) {
-			return false;
-		}
-
 		if ( ! $post_id ) {
 			$post_id = get_the_ID();
 		}
 
-		$post_setting = get_post_meta( $post_id, 'activitypub_reactions_enabled', true );
+		$post_setting = get_post_meta( $post_id, 'activitypub_reactions_legacy_mode', true );
 
 		// If meta exists, check if it's '1', otherwise default to true since global setting is enabled.
 		return '' === $post_setting || '1' === $post_setting;
@@ -210,7 +205,7 @@ class Reactions_Settings {
 	 *
 	 * @return bool
 	 */
-	private static function is_reactions_globally_enabled() {
-		return get_option( 'activitypub_reactions_enabled', '1' ) === '1';
+	public static function use_legacy_mode() {
+		return get_option( 'activitypub_reactions_legacy_mode', '1' ) === '1';
 	}
 }
