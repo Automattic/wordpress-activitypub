@@ -206,15 +206,15 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 			)
 		);
 
-		// Set up test meta data
+		// Set up test meta data.
 		$meta_data = array(
-			'activitypub_actor_json'           => '{"type":"Person"}',
-			'activitypub_canonical_url'        => 'https://example.com/post-1',
-			'activitypub_content_visibility'   => 'public',
-			'activitypub_content_warning'      => 'Test warning',
-			'activitypub_errors'               => 'Test error',
-			'activitypub_user_id'             => '123',
-			'unrelated_meta'                   => 'should not change',
+			'activitypub_actor_json'         => '{"type":"Person"}',
+			'activitypub_canonical_url'      => 'https://example.com/post-1',
+			'activitypub_content_visibility' => 'public',
+			'activitypub_content_warning'    => 'Test warning',
+			'activitypub_errors'             => 'Test error',
+			'activitypub_user_id'            => '123',
+			'unrelated_meta'                 => 'should not change',
 		);
 
 		foreach ( $meta_data as $key => $value ) {
@@ -222,14 +222,14 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 			\update_post_meta( $post2, $key, $value . '-2' );
 		}
 
-		// Run migration
+		// Run migration.
 		Migration::migrate_to_4_6_0();
 
-		// Clean post cache to ensure fresh meta data
+		// Clean post cache to ensure fresh meta data.
 		\clean_post_cache( $post1 );
 		\clean_post_cache( $post2 );
 
-		// Check post 1 meta
+		// Check post 1 meta.
 		$this->assertEmpty( \get_post_meta( $post1, 'activitypub_actor_json', true ), 'Old actor_json meta should be empty' );
 		$this->assertEmpty( \get_post_meta( $post1, 'activitypub_canonical_url', true ), 'Old canonical_url meta should be empty' );
 		$this->assertEmpty( \get_post_meta( $post1, 'activitypub_content_visibility', true ), 'Old content_visibility meta should be empty' );
@@ -244,7 +244,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		$this->assertEquals( 'Test error', \get_post_meta( $post1, '_activitypub_errors', true ), 'New errors meta should match' );
 		$this->assertEquals( '123', \get_post_meta( $post1, '_activitypub_user_id', true ), 'New user_id meta should match' );
 
-		// Check post 2 meta
+		// Check post 2 meta.
 		$this->assertEmpty( \get_post_meta( $post2, 'activitypub_actor_json', true ), 'Old actor_json meta should be empty' );
 		$this->assertEmpty( \get_post_meta( $post2, 'activitypub_canonical_url', true ), 'Old canonical_url meta should be empty' );
 		$this->assertEmpty( \get_post_meta( $post2, 'activitypub_content_visibility', true ), 'Old content_visibility meta should be empty' );
@@ -259,7 +259,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		$this->assertEquals( 'Test error-2', \get_post_meta( $post2, '_activitypub_errors', true ), 'New errors meta should match' );
 		$this->assertEquals( '123-2', \get_post_meta( $post2, '_activitypub_user_id', true ), 'New user_id meta should match' );
 
-		// Verify unrelated meta is unchanged
+		// Verify unrelated meta is unchanged.
 		$this->assertEquals( 'should not change', \get_post_meta( $post1, 'unrelated_meta', true ), 'Unrelated meta should not change' );
 		$this->assertEquals( 'should not change-2', \get_post_meta( $post2, 'unrelated_meta', true ), 'Unrelated meta should not change' );
 	}
