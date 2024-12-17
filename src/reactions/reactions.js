@@ -1,7 +1,6 @@
 /**
  * WordPress dependencies
  */
-import { RichText } from '@wordpress/block-editor';
 import { useState, useEffect, useRef } from '@wordpress/element';
 import { Popover, Button } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
@@ -289,20 +288,20 @@ const ReactionGroup = ( { items, label } ) => {
 /**
  * The Reactions component.
  *
- * @param {Object}   props                  Component props.
- * @param {string}   props.title            The title text.
- * @param {?number}  props.postId           The post ID.
- * @param {boolean}  props.isEditing        Whether in edit mode.
- * @param {Function} props.setTitle         Title update callback.
- * @param {?Object}  props.reactions        Optional reactions data.
- * @return {?JSX.Element}                   The rendered component.
+ * @param {Object}    props                  Component props.
+ * @param {string}    props.title            The title text.
+ * @param {?number}   props.postId           The post ID.
+ * @param {boolean}   props.isEditing        Whether in edit mode.
+ * @param {?Object}   props.reactions        Optional reactions data.
+ * @param {?JSX.Element} props.titleComponent Optional component for title editing.
+ * @return {?JSX.Element}                    The rendered component.
  */
 export function Reactions( {
 	title = '',
 	postId = null,
 	isEditing = false,
-	setTitle = () => {},
 	reactions: providedReactions = null,
+	titleComponent = null,
 } ) {
 	const [ reactions, setReactions ] = useState( providedReactions );
 	const [ loading, setLoading ] = useState( ! providedReactions );
@@ -341,16 +340,7 @@ export function Reactions( {
 
 	return (
 		<div className="activitypub-reactions">
-			{ isEditing ? (
-				<RichText
-					tagName="h6"
-					value={ title }
-					onChange={ setTitle }
-					placeholder={ __( 'Fediverse reactions', 'activitypub' ) }
-					disableLineBreaks={ true }
-					allowedFormats={ [] }
-				/>
-			) : (
+			{ isEditing && titleComponent ? titleComponent : (
 				title && <h6>{ title }</h6>
 			) }
 
