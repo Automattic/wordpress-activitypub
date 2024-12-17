@@ -439,21 +439,23 @@ class Test_Inbox extends \WP_UnitTestCase {
 			2
 		);
 
-		// Get the post object
+		// Get the post object.
 		$post = get_post( self::$post_id );
 
 		// Test valid request.
 		$actor    = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$object   = \Activitypub\Transformer\Post::transform( $post )->to_object();
 		$activity = new \Activitypub\Activity\Activity( 'Like' );
-		$activity->from_array( array(
-			'id'     => 'https://example.com/activity/1',
-			'type'   => 'Like',
-			'actor'  => 'https://example.com/actor',
-			'object' => $object->get_id(),
-		) );
+		$activity->from_array(
+			array(
+				'id'     => 'https://example.com/activity/1',
+				'type'   => 'Like',
+				'actor'  => 'https://example.com/actor',
+				'object' => $object->get_id(),
+			)
+		);
 
-		// Mock remote actor URL
+		// Mock remote actor URL.
 		$activity->add_cc( $actor->get_id() );
 		$activity = $activity->to_json();
 

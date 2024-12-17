@@ -286,7 +286,7 @@ class Signature {
 			$signed_headers = array( 'date' );
 		}
 
- 		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
+		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
 		if ( ! $signed_data ) {
 			return new WP_Error( 'activitypub_signature', __( 'Signed request date outside acceptable time window', 'activitypub' ), array( 'status' => 401 ) );
 		}
