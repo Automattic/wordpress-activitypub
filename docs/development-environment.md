@@ -57,3 +57,45 @@ docker-compose up -d
 This will start a local WordPress environment with the ActivityPub plugin installed and activated.
 
 You can open the WordPress site in your browser by visiting `http://localhost:8076`.
+
+## Running Tests
+
+You can now run the test suite using either npm or composer:
+
+```bash
+# Using npm
+npm run env-start
+npm run env-test
+
+# Using composer
+wp-env start
+composer run test:wp-env
+```
+
+### PHPUnit Arguments
+
+Both commands support additional PHPUnit arguments. Add them after `--`:
+
+```bash
+# Run a specific test
+npm run env-test -- --filter=test_migrate_to_4_1_0
+
+# Run tests in a specific file
+npm run env-test -- tests/includes/class-test-migration.php
+
+# Run tests with a specific group
+npm run env-test -- --group=migration
+
+# Run tests with verbose output
+npm run env-test -- --verbose
+
+# The same works with composer
+composer run test:wp-env -- --filter=test_migrate_to_4_1_0
+```
+
+Common PHPUnit arguments:
+- `--filter`: Run tests matching a pattern
+- `--group`: Run tests with a specific @group annotation
+- `--exclude-group`: Exclude tests with a specific @group annotation
+- `--verbose`: Output more verbose information
+- `--debug`: Display debugging information
