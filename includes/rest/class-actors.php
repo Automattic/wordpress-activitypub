@@ -41,7 +41,7 @@ class Actors {
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'get' ),
-					'permission_callback' => '__return_true',
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
 				),
 			)
 		);

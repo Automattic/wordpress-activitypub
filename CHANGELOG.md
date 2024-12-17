@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Send "new follower" emails
 * Send "direct message" emails
 * Account for custom comment types when calculating comment counts
+* Plugin upgrade routine that automatically updates comment counts
 
 ### Improved
 
@@ -22,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Improve Interactions moderation
 * Compatibility with Akismet
 * Comment type mapping for `Like` and `Announce`
+* Signature verification for API endpoints
 * Changed priority of Attachments, to favor `Image` over `Audio` and `Video`
 
 ### Fixed
