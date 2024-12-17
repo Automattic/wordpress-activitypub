@@ -56,7 +56,7 @@ class Activitypub_Testcase_Timer implements TestListener {
 	 * @param Test  $test The test case.
 	 * @param float $time Time taken.
 	 */
-	public function endTest( Test $test, float $time ): void { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+	public function endTest( Test $test, $time ): void { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$test_name = $test->getName();
 		if ( ! isset( $this->test_start_times[ $test_name ] ) ) {
 			return;
