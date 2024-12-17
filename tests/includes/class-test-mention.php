@@ -142,7 +142,7 @@ ENDPRE;
 			return self::$users[ $actor ];
 		}
 
-		// Handle remote users
+		// Handle remote users.
 		if ( 'pfefferle@notiz.blog' === $actor ) {
 			return array(
 				'id'   => 'https://notiz.blog/author/matthias-pfefferle/',

@@ -2,7 +2,7 @@
 /**
  * Test Timer Listener for PHPUnit.
  *
- * phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped
+ * phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped PHPCompatibility.FunctionDeclarations.NewReturnTypeDeclarations.voidFound
  *
  * @package Activitypub
  */
@@ -17,7 +17,7 @@ use PHPUnit\Framework\TestSuite;
 /**
  * Activitypub Testcase Timer class.
  */
-class Activitpub_Testcase_Timer implements TestListener {
+class Activitypub_Testcase_Timer implements TestListener {
 	use TestListenerDefaultImplementation;
 
 	/**
@@ -56,7 +56,7 @@ class Activitpub_Testcase_Timer implements TestListener {
 	 * @param Test  $test The test case.
 	 * @param float $time Time taken.
 	 */
-	public function endTest( Test $test, float $time ): void {
+	public function endTest( Test $test, float $time ): void { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$test_name = $test->getName();
 		if ( ! isset( $this->test_start_times[ $test_name ] ) ) {
 			return;
