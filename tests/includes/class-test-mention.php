@@ -30,6 +30,24 @@ class Test_Mention extends \WP_UnitTestCase {
 	);
 
 	/**
+	 * Set up the test case.
+	 */
+	public function set_up() {
+		parent::set_up();
+		add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ), 10, 2 );
+		add_filter( 'pre_http_request', array( $this, 'pre_http_request' ), 10, 3 );
+	}
+
+	/**
+	 * Tear down the test case.
+	 */
+	public function tear_down() {
+		remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ) );
+		remove_filter( 'pre_http_request', array( $this, 'pre_http_request' ) );
+		parent::tear_down();
+	}
+
+	/**
 	 * Test the content.
 	 *
 	 * @dataProvider the_content_provider
@@ -39,11 +57,7 @@ class Test_Mention extends \WP_UnitTestCase {
 	 * @param string $content_with_mention The content with mention.
 	 */
 	public function test_the_content( $content, $content_with_mention ) {
-		add_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ), 10, 2 );
-		$content = Mention::the_content( $content );
-		remove_filter( 'pre_get_remote_metadata_by_actor', array( get_called_class(), 'pre_get_remote_metadata_by_actor' ) );
-
-		$this->assertEquals( $content_with_mention, $content );
+		$this->assertEquals( $content_with_mention, Mention::the_content( $content ) );
 	}
 
 	/**
@@ -77,17 +91,74 @@ ENDPRE;
 	}
 
 	/**
-	 * Filter for get_remote_metadata_by_actor.
+	 * Mock HTTP requests.
 	 *
-	 * @param string $pre The pre.
-	 * @param string $actor The actor.
-	 * @return array
+	 * @param false|array|\WP_Error $response    HTTP response.
+	 * @param array                 $parsed_args HTTP request arguments.
+	 * @param string                $url         The request URL.
+	 * @return array|false|\WP_Error
+	 */
+	public function pre_http_request( $response, $parsed_args, $url ) {
+		// Mock responses for remote users.
+		if ( false !== strpos( $url, 'notiz.blog' ) ) {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => wp_json_encode(
+					array(
+						'id'   => 'https://notiz.blog/author/matthias-pfefferle/',
+						'url'  => 'https://notiz.blog/author/matthias-pfefferle/',
+						'name' => 'pfefferle',
+					)
+				),
+			);
+		}
+		if ( false !== strpos( $url, 'lemmy.ml' ) ) {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => wp_json_encode(
+					array(
+						'id'   => 'https://lemmy.ml/u/pfefferle',
+						'url'  => 'https://lemmy.ml/u/pfefferle',
+						'name' => 'pfefferle',
+					)
+				),
+			);
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Filters remote metadata by actor.
+	 *
+	 * @param array|string $pre   The pre-filtered value.
+	 * @param string       $actor The actor.
+	 * @return array|string
 	 */
 	public static function pre_get_remote_metadata_by_actor( $pre, $actor ) {
 		$actor = ltrim( $actor, '@' );
+
 		if ( isset( self::$users[ $actor ] ) ) {
 			return self::$users[ $actor ];
 		}
+
+		// Handle remote users
+		if ( 'pfefferle@notiz.blog' === $actor ) {
+			return array(
+				'id'   => 'https://notiz.blog/author/matthias-pfefferle/',
+				'url'  => 'https://notiz.blog/author/matthias-pfefferle/',
+				'name' => 'pfefferle',
+			);
+		}
+
+		if ( 'pfefferle@lemmy.ml' === $actor ) {
+			return array(
+				'id'   => 'https://lemmy.ml/u/pfefferle',
+				'url'  => 'https://lemmy.ml/u/pfefferle',
+				'name' => 'pfefferle',
+			);
+		}
+
 		return $pre;
 	}
 }

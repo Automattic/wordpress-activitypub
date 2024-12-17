@@ -11,4 +11,7 @@
 			<directory prefix="class-test-" suffix=".php">./tests</directory>
 		</testsuite>
 	</testsuites>
+	<listeners>
+		<listener class="Activitypub\Tests\Activitpub_Testcase_Timer" file="tests/class-activitypub-testcase-timer.php" />
+	</listeners>
 </phpunit>
