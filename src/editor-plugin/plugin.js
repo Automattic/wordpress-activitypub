@@ -48,9 +48,6 @@ const EditorPlugin = () => {
 		return null;
 	}
 
-	// Default to enabled if not set
-	const isReactionsEnabled = meta?.activitypub_reactions_enabled !== '0';
-
 	return (
 		<PluginDocumentSettingPanel
 			name="activitypub"
@@ -79,15 +76,6 @@ const EditorPlugin = () => {
 					setMeta( { ...meta, activitypub_content_visibility: value } );
 				} }
 				className="activitypub-visibility"
-			/>
-			<br />
-			<CheckboxControl
-				label={ __( 'Show federated reactions', 'activitypub' ) }
-				checked={ isReactionsEnabled }
-				onChange={ ( checked ) => {
-					setMeta( { ...meta, activitypub_reactions_enabled: checked ? '1' : '0' } );
-				} }
-				help={ __( 'When disabled, federated reactions will be hidden for this post.', 'activitypub' ) }
 			/>
 		</PluginDocumentSettingPanel>
 	);
