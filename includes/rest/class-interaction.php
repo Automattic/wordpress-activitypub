@@ -7,7 +7,6 @@
 
 namespace Activitypub\Rest;
 
-use Activitypub\Comment;
 use WP_REST_Response;
 use Activitypub\Http;
 
