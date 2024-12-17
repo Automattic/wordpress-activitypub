@@ -7,6 +7,8 @@
 
 namespace Activitypub;
 
+use function Activitypub\site_supports_blocks;
+
 /**
  *  Reactions Settings class.
  */
@@ -18,7 +20,7 @@ class Reactions_Settings {
 	public static function init() {
 		add_action( 'init', array( self::class, 'register_post_meta' ), 11 );
 		add_action( 'admin_init', array( self::class, 'register_settings' ) );
-		if ( self::show_reactions_on_posts() ) {
+		if ( ! site_supports_blocks() ) {
 			add_action( 'add_meta_boxes', array( self::class, 'add_meta_box' ) );
 			add_action( 'save_post', array( self::class, 'save_meta_box' ) );
 		}
@@ -32,7 +34,7 @@ class Reactions_Settings {
 		foreach ( $ap_post_types as $post_type ) {
 			register_post_meta(
 				$post_type,
-				'activitypub_show_reactions_on_posts',
+				'activitypub_show_reactions',
 				array(
 					'show_in_rest'      => true,
 					'single'            => true,
@@ -144,13 +146,13 @@ class Reactions_Settings {
 	 */
 	public static function render_meta_box( $post ) {
 		wp_nonce_field( 'activitypub_reactions_meta_box', 'activitypub_reactions_meta_box_nonce' );
-		$value = get_post_meta( $post->ID, 'activitypub_show_reactions_on_posts', true );
+		$value = get_post_meta( $post->ID, 'activitypub_show_reactions', true );
 		if ( '' === $value ) {
 			$value = '1'; // Default to enabled.
 		}
 		?>
 		<label>
-			<input type="checkbox" name="activitypub_show_reactions_on_posts" value="1" <?php checked( '1', $value ); ?> />
+			<input type="checkbox" name="activitypub_show_reactions" value="1" <?php checked( '1', $value ); ?> />
 			<?php esc_html_e( 'Add federated reactions to posts.', 'activitypub' ); ?>
 		</label>
 		<p class="description">
@@ -179,8 +181,8 @@ class Reactions_Settings {
 			return;
 		}
 
-		$value = isset( $_POST['activitypub_show_reactions_on_posts'] ) ? '1' : '0';
-		update_post_meta( $post_id, 'activitypub_show_reactions_on_posts', $value );
+		$value = isset( $_POST['activitypub_show_reactions'] ) ? '1' : '0';
+		update_post_meta( $post_id, 'activitypub_show_reactions', $value );
 	}
 
 	/**
@@ -194,7 +196,7 @@ class Reactions_Settings {
 			$post_id = get_the_ID();
 		}
 
-		$post_setting = get_post_meta( $post_id, 'activitypub_show_reactions_on_posts', true );
+		$post_setting = get_post_meta( $post_id, 'activitypub_show_reactions', true );
 
 		// If meta exists, check if it's '1', otherwise default to true since global setting is enabled.
 		return '' === $post_setting || '1' === $post_setting;

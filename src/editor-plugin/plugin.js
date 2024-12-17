@@ -49,7 +49,7 @@ const EditorPlugin = () => {
 	}
 
 	// Default to enabled if not set
-	const isReactionsEnabled = meta?.activitypub_reactions_enabled !== '0';
+	const isReactionsEnabled = meta?.activitypub_show_reactions !== '0';
 
 	return (
 		<PluginDocumentSettingPanel
