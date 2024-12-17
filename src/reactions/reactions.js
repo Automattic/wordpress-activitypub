@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
 import { Popover, Button } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
-import { __, _nx, sprintf } from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Extract the namespace from the global _activityPubOptions object.
@@ -291,7 +291,6 @@ const ReactionGroup = ( { items, label } ) => {
  * @param {Object}    props                  Component props.
  * @param {string}    props.title            The title text.
  * @param {?number}   props.postId           The post ID.
- * @param {boolean}   props.isEditing        Whether in edit mode.
  * @param {?Object}   props.reactions        Optional reactions data.
  * @param {?JSX.Element} props.titleComponent Optional component for title editing.
  * @return {?JSX.Element}                    The rendered component.
@@ -299,7 +298,6 @@ const ReactionGroup = ( { items, label } ) => {
 export function Reactions( {
 	title = '',
 	postId = null,
-	isEditing = false,
 	reactions: providedReactions = null,
 	titleComponent = null,
 } ) {
@@ -340,9 +338,7 @@ export function Reactions( {
 
 	return (
 		<div className="activitypub-reactions">
-			{ isEditing && titleComponent ? titleComponent : (
-				title && <h6>{ title }</h6>
-			) }
+			{ titleComponent || ( title && <h6>{ title }</h6> ) }
 
 			{ Object.entries( reactions ).map( ( [ key, group ] ) => {
 				if ( ! group.items?.length ) {

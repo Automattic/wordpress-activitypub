@@ -117,8 +117,6 @@ export default function Edit( { attributes, setAttributes, __unstableLayoutClass
 	return (
 		<div { ...blockProps }>
 			<Reactions
-				isEditing={ true }
-				title={ attributes.title }
 				titleComponent={ titleEditor }
 				reactions={ dummyReactions }
 			/>
