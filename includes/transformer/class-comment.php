@@ -7,7 +7,6 @@
 
 namespace Activitypub\Transformer;
 
-use WP_HTML_Tag_Processor;
 use Activitypub\Webfinger;
 use Activitypub\Comment as Comment_Utils;
 use Activitypub\Model\Blog;
