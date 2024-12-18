@@ -62,8 +62,8 @@ class Comment extends Base {
 		foreach ( $reply_context as $acct => $url ) {
 			$at_replies .= sprintf(
 				'<a class="u-mention mention" href="%s">%s</a> ',
-				$url,
-				$acct
+				esc_url( $url ),
+				esc_html( $acct )
 			);
 		}
 
