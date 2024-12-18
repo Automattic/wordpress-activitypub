@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improved
 * Reactions block: Remove the `wp-block-editor` dependency for frontend views 
 
+### Fixed
+* Direct Messages: Don't send notification for received public activities
+
 ## [4.5.0] - 2024-12-17
 
 ### Added

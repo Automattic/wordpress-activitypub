@@ -217,7 +217,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	 */
 	public function test_direct_message() {
 		$user_id = self::$user_id;
-		$mock = new \MockAction();
+		$mock    = new \MockAction();
 
 		$activity = array(
 			'actor'  => 'https://example.com/author',
