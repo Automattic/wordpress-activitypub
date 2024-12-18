@@ -141,8 +141,7 @@ class Test_Comment extends WP_UnitTestCase {
 		$content = $object->get_content();
 
 		// Test that reply context is added.
-		$this->assertStringContainsString( 'Reply comment', $content );
-		$this->assertStringContainsString( '<a class="u-mention mention" href="https://remote.example/@author">@author@remote.example</a>', $content );
+		$this->assertEquals( '<p><a class="u-mention mention" href="https://example.net/@remote">@remote@example.net</a> <a class="u-mention mention" href="https://remote.example/@author">@author@remote.example</a></p><p>Reply comment</p>', $content );
 
 		// Clean up.
 		wp_delete_comment( $reply_comment_id, true );
