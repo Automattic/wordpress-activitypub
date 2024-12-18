@@ -208,12 +208,12 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 
 		// Set up test meta data.
 		$meta_data = array(
-			'activitypub_actor_json'      => '{"type":"Person"}',
-			'activitypub_canonical_url'   => 'https://example.com/post-1',
-			'activitypub_errors'          => 'Test error',
-			'activitypub_inbox'           => 'https://example.com/inbox',
-			'activitypub_user_id'         => '123',
-			'unrelated_meta'              => 'should not change',
+			'activitypub_actor_json'    => '{"type":"Person"}',
+			'activitypub_canonical_url' => 'https://example.com/post-1',
+			'activitypub_errors'        => 'Test error',
+			'activitypub_inbox'         => 'https://example.com/inbox',
+			'activitypub_user_id'       => '123',
+			'unrelated_meta'            => 'should not change',
 		);
 
 		foreach ( $meta_data as $key => $value ) {
