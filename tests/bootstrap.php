@@ -5,7 +5,6 @@
  * @package Activitypub
  */
 
-\define( 'ACTIVITYPUB_DISABLE_REACTIONS', false );
 \define( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS', false );
 
 // Defined here because setting them in .wp-env.json doesn't work for some reason.
