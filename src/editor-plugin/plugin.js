@@ -55,9 +55,9 @@ const EditorPlugin = () => {
 		>
 			<TextControl
 				label={ __( 'Content Warning', 'activitypub' ) }
-				value={ meta?.activitypub_content_warning }
+				value={ meta?._activitypub_content_warning }
 				onChange={ ( value ) => {
-					setMeta( { ...meta, activitypub_content_warning: value } );
+					setMeta( { ...meta, _activitypub_content_warning: value } );
 				} }
 				placeholder={ __( 'Optional content warning', 'activitypub' ) }
 				help={ __( 'Content warnings do not change the content on your site, only in the fediverse.', 'activitypub' ) }

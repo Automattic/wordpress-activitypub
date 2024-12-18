@@ -189,7 +189,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	 * @covers ::schedule_post_activity
 	 */
 	public function test_disabled_post_should_not_schedule_federation() {
-		update_post_meta( $this->post->ID, '_activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+		update_post_meta( $this->post->ID, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 		Scheduler::schedule_post_activity( 'publish', 'draft', $this->post );
 
 		$this->assertFalse(

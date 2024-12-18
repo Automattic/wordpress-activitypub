@@ -118,11 +118,11 @@ class Outbox {
 					'meta_query'     => array(
 						'relation' => 'OR',
 						array(
-							'key'     => '_activitypub_content_visibility',
+							'key'     => 'activitypub_content_visibility',
 							'compare' => 'NOT EXISTS',
 						),
 						array(
-							'key'     => '_activitypub_content_visibility',
+							'key'     => 'activitypub_content_visibility',
 							'value'   => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
 							'compare' => '!=',
 						),

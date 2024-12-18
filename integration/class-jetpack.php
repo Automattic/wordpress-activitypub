@@ -32,7 +32,7 @@ class Jetpack {
 		}
 		$activitypub_meta_keys = array(
 			'_activitypub_user_id',
-			'activitypub_inbox',
+			'_activitypub_inbox',
 			'_activitypub_actor_json',
 		);
 		return \array_merge( $allow_list, $activitypub_meta_keys );

@@ -53,7 +53,7 @@ class Blocks {
 			);
 			\register_post_meta(
 				$post_type,
-				'_activitypub_content_visibility',
+				'activitypub_content_visibility',
 				array(
 					'show_in_rest'      => true,
 					'single'            => true,
