@@ -65,6 +65,13 @@ class Comment {
 			esc_attr( wp_json_encode( $attrs ) )
 		);
 
+		/**
+		 * Filters the HTML markup for the ActivityPub remote comment reply container.
+		 *
+		 * @param string $div The HTML markup for the remote reply container. Default is a div
+		 *                    with class 'activitypub-remote-reply' and data attributes for
+		 *                    the selected comment ID and internal comment ID.
+		 */
 		return apply_filters( 'activitypub_comment_reply_link', $div );
 	}
 

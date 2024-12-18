@@ -21,6 +21,15 @@ use Activitypub\Transformer\Post;
 function get_context() {
 	$context = Activity::JSON_LD_CONTEXT;
 
+	/**
+	 * Filters the ActivityPub JSON-LD context.
+	 *
+	 * This filter allows developers to modify or extend the JSON-LD context used
+	 * in ActivityPub responses. The context defines the vocabulary and terms used
+	 * in the ActivityPub JSON objects.
+	 *
+	 * @param array $context The default ActivityPub JSON-LD context array.
+	 */
 	return \apply_filters( 'activitypub_json_context', $context );
 }
 
@@ -68,6 +77,16 @@ function get_webfinger_resource( $user_id ) {
  * @return array|WP_Error The Actor profile as array or WP_Error on failure.
  */
 function get_remote_metadata_by_actor( $actor, $cached = true ) {
+	/**
+	 * Filters the metadata before it is retrieved from a remote actor.
+	 *
+	 * Passing a non-false value will effectively short-circuit the remote request,
+	 * returning that value instead.
+	 *
+	 * @param mixed  $pre   The value to return instead of the remote metadata.
+	 *                      Default false to continue with the remote request.
+	 * @param string $actor The actor URL.
+	 */
 	$pre = apply_filters( 'pre_get_remote_metadata_by_actor', false, $actor );
 	if ( $pre ) {
 		return $pre;
@@ -414,7 +433,7 @@ function is_post_disabled( $post ) {
 		$disabled = true;
 	}
 
-	/*
+	/**
 	 * Allow plugins to disable posts for ActivityPub.
 	 *
 	 * @param boolean  $disabled True if the post is disabled, false otherwise.
@@ -1312,11 +1331,7 @@ function generate_post_summary( $post, $length = 500 ) {
 	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
 
 	if ( $content ) {
-		/**
-		 * Filters the post excerpt.
-		 *
-		 * @param string $content The post excerpt.
-		 */
+		/** This filter is documented in wp-includes/post-template.php */
 		return \apply_filters( 'the_excerpt', $content );
 	}
 
@@ -1354,6 +1369,7 @@ function generate_post_summary( $post, $length = 500 ) {
 
 	/*
 	Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
+	/** This filter is documented in wp-includes/post-template.php
 	return \apply_filters( 'the_excerpt', $content );
 	*/
 	return $content;
@@ -1459,6 +1475,15 @@ function get_content_visibility( $post_id ) {
 		$_visibility = $visibility;
 	}
 
+	/**
+	 * Filters the visibility of a post.
+	 *
+	 * @param string   $_visibility The visibility of the post. Possible values are:
+	 *                              - 'public': Post is public and federated.
+	 *                              - 'quiet_public': Post is public but not federated.
+	 *                              - 'local': Post is only visible locally.
+	 * @param \WP_Post $post        The post object.
+	 */
 	return \apply_filters( 'activitypub_content_visibility', $_visibility, $post );
 }
 
@@ -1512,7 +1537,7 @@ function get_upload_baseurl() {
 	/**
 	 * Filters the upload base URL.
 	 *
-	 * @param string \wp_get_upload_dir()['baseurl'] The upload base URL.
+	 * @param string $upload_dir The upload base URL. Default \wp_get_upload_dir()['baseurl']
 	 */
 	return apply_filters( 'activitypub_get_upload_baseurl', $upload_dir['baseurl'] );
 }
