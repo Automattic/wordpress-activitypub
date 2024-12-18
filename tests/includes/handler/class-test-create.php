@@ -129,7 +129,7 @@ class Test_Create extends \WP_UnitTestCase {
 	 */
 	public function test_handle_create_public_accepted() {
 		$object    = $this->create_test_object();
-		$converted = Create::handle_create( $object, $this->user_id );
+		Create::handle_create( $object, $this->user_id );
 
 		$args = array(
 			'type'    => 'comment',
