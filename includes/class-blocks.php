@@ -339,7 +339,19 @@ class Blocks {
 		$html = '';
 
 		if ( ! empty( $attrs['url'] ) ) {
-			$html = sprintf(
+			wp_oembed_add_provider( '#https?://mastodon\.social/(@.+)/([0-9]+)#i', 'https://mastodon.social/api/oembed', true );
+
+			/**
+			 * Fires to add an oEmbed provider for the reply block.
+			 */
+			do_action( 'activitypub_reply_block_add_oembed_provider' );
+
+			$embed = wp_oembed_get( $attrs['url'] );
+			if ( $embed ) {
+				$html .= $embed;
+			}
+
+			$html .= sprintf(
 				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
 				esc_url( $attrs['url'] ),
 				esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),

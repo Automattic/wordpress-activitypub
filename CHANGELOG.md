@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improved
 
 * Direct Messages: Improve HTML to e-mail text conversion
+* The Reply block now shows an embedded version of the referenced post, if available
 
 ## [4.5.1] - 2024-12-18
 
