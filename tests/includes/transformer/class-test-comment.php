@@ -42,27 +42,31 @@ class Test_Comment extends WP_UnitTestCase {
 			'pre_http_request',
 			function ( $data, $parsed_args, $url ) {
 				if ( str_starts_with( $url, 'https://remote.example' ) ) {
-					return self::dummy_response( wp_json_encode(
-						array(
-							'subject' => 'acct:author@remote.example',
-							'links'   => array(
-								'self' => array( 'href' => 'https://remote.example/@author' ),
-							),
+					return self::dummy_response(
+						wp_json_encode(
+							array(
+								'subject' => 'acct:author@remote.example',
+								'links'   => array(
+									'self' => array( 'href' => 'https://remote.example/@author' ),
+								),
+							)
 						)
-					) );
+					);
 				}
 				if ( str_starts_with( $url, 'https://example.net/' ) ) {
-					return self::dummy_response( wp_json_encode(
-						array(
-							'subject' => 'https://example.net/@remote',
-							'aliases' => array(
-								'acct:remote@example.net',
-							),
-							'links'   => array(
-								'self' => array( 'href' => 'https://example.net/@remote' ),
-							),
+					return self::dummy_response(
+						wp_json_encode(
+							array(
+								'subject' => 'https://example.net/@remote',
+								'aliases' => array(
+									'acct:remote@example.net',
+								),
+								'links'   => array(
+									'self' => array( 'href' => 'https://example.net/@remote' ),
+								),
+							)
 						)
-					) );
+					);
 				}
 				return $data;
 			},
@@ -84,7 +88,7 @@ class Test_Comment extends WP_UnitTestCase {
 	 * @covers ::to_object
 	 */
 	public function test_content_with_reply_context() {
-		// Create a parent ActivityPub comment
+		// Create a parent ActivityPub comment.
 		$parent_comment_id = wp_insert_comment(
 			array(
 				'comment_post_ID'      => self::$post_id,
@@ -99,7 +103,7 @@ class Test_Comment extends WP_UnitTestCase {
 			)
 		);
 
-		// Create a reply comment
+		// Create a reply comment.
 		$reply_comment_id = wp_insert_comment(
 			array(
 				'comment_post_ID'      => self::$post_id,
@@ -115,7 +119,7 @@ class Test_Comment extends WP_UnitTestCase {
 			)
 		);
 
-		// Create a reply comment
+		// Create a reply comment.
 		$test_comment_id = wp_insert_comment(
 			array(
 				'comment_post_ID'      => self::$post_id,
@@ -128,23 +132,30 @@ class Test_Comment extends WP_UnitTestCase {
 			)
 		);
 
-		// Transform comment to ActivityPub object
+		// Transform comment to ActivityPub object.
 		$comment     = get_comment( $test_comment_id );
 		$transformer = new Comment( $comment );
 		$object      = $transformer->to_object();
 
-		// Get the content
+		// Get the content.
 		$content = $object->get_content();
 
-		// Test that reply context is added
+		// Test that reply context is added.
 		$this->assertStringContainsString( 'Reply comment', $content );
 		$this->assertStringContainsString( '<a class="u-mention mention" href="https://remote.example/@author">@author@remote.example</a>', $content );
 
-		// Clean up
+		// Clean up.
 		wp_delete_comment( $reply_comment_id, true );
 		wp_delete_comment( $parent_comment_id, true );
 	}
 
+	/**
+	 * Create a dummy response.
+	 *
+	 * @param string $body The body of the response.
+	 *
+	 * @return array The dummy response.
+	 */
 	private static function dummy_response( $body ) {
 		return array(
 			'headers'  => array(),
