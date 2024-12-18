@@ -128,7 +128,7 @@ class Test_Create extends \WP_UnitTestCase {
 	 * @covers ::handle_create
 	 */
 	public function test_handle_create_public_accepted() {
-		$object    = $this->create_test_object();
+		$object = $this->create_test_object();
 		Create::handle_create( $object, $this->user_id );
 
 		$args = array(
