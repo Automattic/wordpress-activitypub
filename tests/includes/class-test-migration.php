@@ -241,7 +241,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		$this->assertEquals( 'https://example.com/post-1', \get_post_meta( $post1, '_activitypub_canonical_url', true ), 'New canonical_url meta should match' );
 		$this->assertEquals( 'Test warning', \get_post_meta( $post1, '_activitypub_content_warning', true ), 'New content_warning meta should match' );
 		$this->assertEquals( 'Test error', \get_post_meta( $post1, '_activitypub_errors', true ), 'New errors meta should match' );
-		$this->assertEquals( 'https://example.com/inbox', \get_post_meta( $post1, '_activitypub_errors', true ), 'New inbox meta should match' );
+		$this->assertEquals( 'https://example.com/inbox', \get_post_meta( $post1, '_activitypub_inbox', true ), 'New inbox meta should match' );
 		$this->assertEquals( '123', \get_post_meta( $post1, '_activitypub_user_id', true ), 'New user_id meta should match' );
 
 		// Check post 2 meta.
@@ -256,7 +256,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		$this->assertEquals( 'https://example.com/post-1-2', \get_post_meta( $post2, '_activitypub_canonical_url', true ), 'New canonical_url meta should match' );
 		$this->assertEquals( 'Test warning-2', \get_post_meta( $post2, '_activitypub_content_warning', true ), 'New content_warning meta should match' );
 		$this->assertEquals( 'Test error-2', \get_post_meta( $post2, '_activitypub_errors', true ), 'New errors meta should match' );
-		$this->assertEquals( 'https://example.com/inbox', \get_post_meta( $post2, '_activitypub_errors', true ), 'New inbox meta should match' );
+		$this->assertEquals( 'https://example.com/inbox-2', \get_post_meta( $post2, '_activitypub_inbox', true ), 'New inbox meta should match' );
 		$this->assertEquals( '123-2', \get_post_meta( $post2, '_activitypub_user_id', true ), 'New user_id meta should match' );
 
 		// Verify unrelated meta is unchanged.
