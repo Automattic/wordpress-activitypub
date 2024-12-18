@@ -399,7 +399,6 @@ class Migration {
 		$meta_keys = array(
 			'activitypub_actor_json',
 			'activitypub_canonical_url',
-			'activitypub_content_warning',
 			'activitypub_errors',
 			'activitypub_inbox',
 			'activitypub_user_id',

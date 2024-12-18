@@ -210,7 +210,6 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		$meta_data = array(
 			'activitypub_actor_json'      => '{"type":"Person"}',
 			'activitypub_canonical_url'   => 'https://example.com/post-1',
-			'activitypub_content_warning' => 'Test warning',
 			'activitypub_errors'          => 'Test error',
 			'activitypub_inbox'           => 'https://example.com/inbox',
 			'activitypub_user_id'         => '123',
@@ -232,14 +231,12 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		// Check post 1 meta.
 		$this->assertEmpty( \get_post_meta( $post1, 'activitypub_actor_json', true ), 'Old actor_json meta should be empty' );
 		$this->assertEmpty( \get_post_meta( $post1, 'activitypub_canonical_url', true ), 'Old canonical_url meta should be empty' );
-		$this->assertEmpty( \get_post_meta( $post1, 'activitypub_content_warning', true ), 'Old content_warning meta should be empty' );
 		$this->assertEmpty( \get_post_meta( $post1, 'activitypub_errors', true ), 'Old errors meta should be empty' );
 		$this->assertEmpty( \get_post_meta( $post1, 'activitypub_inbox', true ), 'Old inbox meta should be empty' );
 		$this->assertEmpty( \get_post_meta( $post1, 'activitypub_user_id', true ), 'Old user_id meta should be empty' );
 
 		$this->assertEquals( '{"type":"Person"}', \get_post_meta( $post1, '_activitypub_actor_json', true ), 'New actor_json meta should match' );
 		$this->assertEquals( 'https://example.com/post-1', \get_post_meta( $post1, '_activitypub_canonical_url', true ), 'New canonical_url meta should match' );
-		$this->assertEquals( 'Test warning', \get_post_meta( $post1, '_activitypub_content_warning', true ), 'New content_warning meta should match' );
 		$this->assertEquals( 'Test error', \get_post_meta( $post1, '_activitypub_errors', true ), 'New errors meta should match' );
 		$this->assertEquals( 'https://example.com/inbox', \get_post_meta( $post1, '_activitypub_inbox', true ), 'New inbox meta should match' );
 		$this->assertEquals( '123', \get_post_meta( $post1, '_activitypub_user_id', true ), 'New user_id meta should match' );
@@ -247,14 +244,12 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		// Check post 2 meta.
 		$this->assertEmpty( \get_post_meta( $post2, 'activitypub_actor_json', true ), 'Old actor_json meta should be empty' );
 		$this->assertEmpty( \get_post_meta( $post2, 'activitypub_canonical_url', true ), 'Old canonical_url meta should be empty' );
-		$this->assertEmpty( \get_post_meta( $post2, 'activitypub_content_warning', true ), 'Old content_warning meta should be empty' );
 		$this->assertEmpty( \get_post_meta( $post2, 'activitypub_errors', true ), 'Old errors meta should be empty' );
 		$this->assertEmpty( \get_post_meta( $post2, 'activitypub_inbox', true ), 'Old inbox meta should be empty' );
 		$this->assertEmpty( \get_post_meta( $post2, 'activitypub_user_id', true ), 'Old user_id meta should be empty' );
 
 		$this->assertEquals( '{"type":"Person"}-2', \get_post_meta( $post2, '_activitypub_actor_json', true ), 'New actor_json meta should match' );
 		$this->assertEquals( 'https://example.com/post-1-2', \get_post_meta( $post2, '_activitypub_canonical_url', true ), 'New canonical_url meta should match' );
-		$this->assertEquals( 'Test warning-2', \get_post_meta( $post2, '_activitypub_content_warning', true ), 'New content_warning meta should match' );
 		$this->assertEquals( 'Test error-2', \get_post_meta( $post2, '_activitypub_errors', true ), 'New errors meta should match' );
 		$this->assertEquals( 'https://example.com/inbox-2', \get_post_meta( $post2, '_activitypub_inbox', true ), 'New inbox meta should match' );
 		$this->assertEquals( '123-2', \get_post_meta( $post2, '_activitypub_user_id', true ), 'New user_id meta should match' );

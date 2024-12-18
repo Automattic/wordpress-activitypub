@@ -1388,7 +1388,7 @@ function get_content_warning( $post_id ) {
 		return false;
 	}
 
-	$warning = get_post_meta( $post->ID, '_activitypub_content_warning', true );
+	$warning = get_post_meta( $post->ID, 'activitypub_content_warning', true );
 	if ( empty( $warning ) ) {
 		return false;
 	}
