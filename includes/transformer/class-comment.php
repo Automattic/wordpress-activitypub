@@ -7,6 +7,7 @@
 
 namespace Activitypub\Transformer;
 
+use WP_HTML_Tag_Processor;
 use Activitypub\Webfinger;
 use Activitypub\Comment as Comment_Utils;
 use Activitypub\Model\Blog;
@@ -57,10 +58,21 @@ class Comment extends Base {
 		$object  = parent::to_object();
 
 		$content       = $this->get_content();
+		$at_replies    = '';
 		$reply_context = $this->extract_reply_context( array() );
 
 		foreach ( $reply_context as $acct => $url ) {
-			$content .= sprintf( '<a href="%s">%s</a>', $url, $acct );
+			$at_replies .= sprintf(
+				'<a class="u-mention mention" href="%s">%s</a> ',
+				$url,
+				$acct
+			);
+		}
+
+		$at_replies = trim( $at_replies );
+
+		if ( $at_replies ) {
+			$content = sprintf( '<p>%s</p>%s', $at_replies, $content );
 		}
 
 		$object->set_content( $content );
