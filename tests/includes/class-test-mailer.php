@@ -308,6 +308,11 @@ class Test_Mailer extends WP_UnitTestCase {
 		wp_delete_user( $user_id );
 	}
 
+	/**
+	 * Data provider for direct message notification text.
+	 *
+	 * @return array
+	 */
 	public function direct_message_text_provider() {
 		return array(
 			'HTML entities' => array(
@@ -323,6 +328,9 @@ class Test_Mailer extends WP_UnitTestCase {
 
 	/**
 	 * Test direct message notification text.
+	 *
+	 * @param string $text     Text to test.
+	 * @param string $expected Expected result.
 	 *
 	 * @covers ::direct_message
 	 * @dataProvider direct_message_text_provider
