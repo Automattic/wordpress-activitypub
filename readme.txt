@@ -132,10 +132,13 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Improved: HTML to e-mail text conversion
+
 = 4.5.1 =
 
 * Improved: Reactions block: Remove the `wp-block-editor` dependency for frontend views
-* Improved: HTML to e-mail text conversion
 * Fixed: Direct Messages: Don't send notification for received public activities
 
 = 4.5.0 =
