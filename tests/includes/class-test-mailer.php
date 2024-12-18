@@ -312,11 +312,11 @@ class Test_Mailer extends WP_UnitTestCase {
 		return array(
 			'HTML entities' => array(
 				json_decode( '"<p>Interesting story from <span class=\"h-card\" translate=\"no\"><a href=\"https:\/\/example.com\/@test\" class=\"u-url mention\">@<span>test<\/span><\/a><\/span> about people who don&#39;t own their own domain.<\/p><p>&quot;This is not a new issue, of course, but Service\u2019s implementation shows limitations.&quot;<\/p>"' ),
-				'Interesting story from @test about people who don\'t own their own domain.' . PHP_EOL . PHP_EOL . '"This is not a new issue, of course, but Service’s implementation shows limitations."'
+				'Interesting story from @test about people who don\'t own their own domain.' . PHP_EOL . PHP_EOL . '"This is not a new issue, of course, but Service’s implementation shows limitations."',
 			),
-			'invalid HTML' => array(
+			'invalid HTML'  => array(
 				json_decode( '"<ptest"' ),
-				''
+				'',
 			),
 		);
 	}
