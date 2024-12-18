@@ -134,6 +134,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Added: `@mentions` in the JSON representation of the reply
 * Improved: Reactions block: Remove the `wp-block-editor` dependency for frontend views
 
 = 4.5.0 =
