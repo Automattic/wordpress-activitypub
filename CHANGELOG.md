@@ -5,12 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [4.5.1] - 2024-12-18
 
 ### Improved
-* Reactions block: Remove the `wp-block-editor` dependency for frontend views 
+
+* Reactions block: Remove the `wp-block-editor` dependency for frontend views
 
 ### Fixed
+
 * Direct Messages: Don't send notification for received public activities
 
 ## [4.5.0] - 2024-12-17
@@ -1160,6 +1162,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/4.5.0...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[4.5.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.5.0...4.5.1
 [4.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.4.0...4.5.0
 [4.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.3.0...4.4.0
 [4.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.2.1...4.3.0
