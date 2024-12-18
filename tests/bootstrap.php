@@ -96,7 +96,7 @@ function http_disable_request( $response, $args, $url ) {
 		}
 	}
 
-	return new WP_Error( 'killed', 'Live HTTP Request Killed by Bootstrap Code' );
+	return new WP_Error( 'cancelled', 'Live HTTP request cancelled by bootstrap.php' );
 }
 \tests_add_filter( 'pre_http_request', 'http_disable_request', 99, 3 );
 
