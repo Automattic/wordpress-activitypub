@@ -12,6 +12,7 @@
 \define( 'WP_SITEURL', 'http://example.org' );
 \define( 'WP_HOME', 'http://example.org' );
 
+\define( 'AP_TESTS_DIR', __DIR__ );
 $_tests_dir = \getenv( 'WP_TESTS_DIR' );
 
 if ( ! $_tests_dir ) {
