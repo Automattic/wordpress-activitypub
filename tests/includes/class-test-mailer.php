@@ -236,7 +236,7 @@ class Test_Mailer extends WP_UnitTestCase {
 				);
 			}
 		);
-		add_filter( 'wp_mail', array( $mock, 'action' ), 1 );
+		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 
 		// Capture email.
 		add_filter(
@@ -257,7 +257,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$public_activity = array(
 			'actor'  => 'https://example.com/author',
 			'object' => array(
-				'content'   => 'Test public message',
+				'content'   => 'Test public reply',
 				'inReplyTo' => 'https://example.com/post/1',
 			),
 			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
@@ -265,7 +265,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		// Reset email capture.
 		remove_all_filters( 'wp_mail' );
-		add_filter( 'wp_mail', array( $mock, 'action' ), 1 );
+		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 		add_filter(
 			'wp_mail',
 			function ( $args ) {
@@ -280,15 +280,16 @@ class Test_Mailer extends WP_UnitTestCase {
 		$public_activity = array(
 			'actor'  => 'https://example.com/author',
 			'object' => array(
-				'content'   => 'Test public message',
+				'content'   => 'Test public activity',
 				'inReplyTo' => null,
 			),
 			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'cc'     => array( 'https://example.com/followers' ),
 		);
 
 		// Reset email capture.
 		remove_all_filters( 'wp_mail' );
-		add_filter( 'wp_mail', array( $mock, 'action' ), 1 );
+		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 		add_filter(
 			'wp_mail',
 			function ( $args ) {
