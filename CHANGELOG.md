@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improved
 * Reactions block: Remove the `wp-block-editor` dependency for frontend views 
+* Direct Messages: HTML to e-mail text conversion
 
 ### Fixed
 * Direct Messages: Don't send notification for received public activities
