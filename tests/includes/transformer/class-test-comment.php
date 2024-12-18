@@ -37,7 +37,7 @@ class Test_Comment extends WP_UnitTestCase {
 			)
 		);
 
-		// Mock the WebFinger wp_safe_remote_get
+		// Mock the WebFinger wp_safe_remote_get.
 		add_filter(
 			'pre_http_request',
 			function ( $data, $parsed_args, $url ) {

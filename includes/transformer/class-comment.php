@@ -54,8 +54,7 @@ class Comment extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object.
 	 */
 	public function to_object() {
-		$comment = $this->wp_object;
-		$object  = parent::to_object();
+		$object = parent::to_object();
 
 		$content       = $this->get_content();
 		$at_replies    = '';
