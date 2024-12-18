@@ -236,7 +236,7 @@ class Test_Mailer extends WP_UnitTestCase {
 				);
 			}
 		);
-		add_filter( 'wp_mail', array( $mock, 'action' ), 1 );
+		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 
 		// Capture email.
 		add_filter(
@@ -265,7 +265,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		// Reset email capture.
 		remove_all_filters( 'wp_mail' );
-		add_filter( 'wp_mail', array( $mock, 'action' ), 1 );
+		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 		add_filter(
 			'wp_mail',
 			function ( $args ) {
@@ -288,7 +288,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		// Reset email capture.
 		remove_all_filters( 'wp_mail' );
-		add_filter( 'wp_mail', array( $mock, 'action' ), 1 );
+		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 		add_filter(
 			'wp_mail',
 			function ( $args ) {
