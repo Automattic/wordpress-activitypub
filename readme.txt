@@ -132,6 +132,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Improved: Reactions block: Remove the `wp-block-editor` dependency for frontend views
+
 = 4.5.0 =
 
 * Improved: Reactions (likes and reposts) now enabled by default
