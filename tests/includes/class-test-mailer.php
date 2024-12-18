@@ -217,6 +217,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	 */
 	public function test_direct_message() {
 		$user_id = self::$user_id;
+		$mock    = new \MockAction();
 
 		$activity = array(
 			'actor'  => 'https://example.com/author',
@@ -235,6 +236,7 @@ class Test_Mailer extends WP_UnitTestCase {
 				);
 			}
 		);
+		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 
 		// Capture email.
 		add_filter(
@@ -255,7 +257,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$public_activity = array(
 			'actor'  => 'https://example.com/author',
 			'object' => array(
-				'content'   => 'Test public message',
+				'content'   => 'Test public reply',
 				'inReplyTo' => 'https://example.com/post/1',
 			),
 			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
@@ -263,6 +265,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		// Reset email capture.
 		remove_all_filters( 'wp_mail' );
+		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 		add_filter(
 			'wp_mail',
 			function ( $args ) {
@@ -272,6 +275,32 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		Mailer::direct_message( $public_activity, $user_id );
+
+		// Test public activity (should not send email).
+		$public_activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'content'   => 'Test public activity',
+				'inReplyTo' => null,
+			),
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'cc'     => array( 'https://example.com/followers' ),
+		);
+
+		// Reset email capture.
+		remove_all_filters( 'wp_mail' );
+		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+		add_filter(
+			'wp_mail',
+			function ( $args ) {
+				$this->fail( 'Email should not be sent for public activity' );
+				return $args;
+			}
+		);
+
+		Mailer::direct_message( $public_activity, $user_id );
+
+		$this->assertEquals( 1, $mock->get_call_count() );
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );

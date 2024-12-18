@@ -149,10 +149,7 @@ class Mailer {
 	 */
 	public static function direct_message( $activity, $user_id ) {
 		// Check if Activity is public or not.
-		if (
-			is_activity_public( $activity ) &&
-			is_activity_reply( $activity )
-		) {
+		if ( is_activity_public( $activity ) ) {
 			return;
 		}
 
