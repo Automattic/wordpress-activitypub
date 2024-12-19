@@ -301,8 +301,15 @@ class Post extends Base {
 			return array();
 		}
 
-		// Once upon a time we only supported images, but we now support audio/video as well.
-		// We maintain the image-centric naming for backwards compatibility.
+		/**
+		 * Filters the maximum number of media attachments allowed in a post.
+		 *
+		 * Despite the name suggesting only images, this filter controls the maximum number
+		 * of all media attachments (images, audio, and video) that can be included in an
+		 * ActivityPub post. The name is maintained for backwards compatibility.
+		 *
+		 * @param int $max_media Maximum number of media attachments. Default ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS.
+		 */
 		$max_media = \intval(
 			\apply_filters(
 				'activitypub_max_image_attachments',
@@ -1003,6 +1010,12 @@ class Post extends Base {
 		$content = \preg_replace( '/[\n\r\t]/', '', $content );
 		$content = \trim( $content );
 
+		/**
+		 * Filters the post content before it is transformed for ActivityPub.
+		 *
+		 * @param string  $content The post content to be transformed.
+		 * @param WP_Post $post    The post object being transformed.
+		 */
 		$content = \apply_filters( 'activitypub_the_content', $content, $post );
 
 		// Don't need these anymore, should never appear in a post.
@@ -1032,6 +1045,17 @@ class Post extends Base {
 			$template .= '[ap_content]';
 		}
 
+		/**
+		 * Filters the template used to generate ActivityPub object content.
+		 *
+		 * This filter allows developers to modify the template that determines how post
+		 * content is formatted in ActivityPub objects. The template can include special
+		 * shortcodes like [ap_title] and [ap_content] that are processed during content
+		 * generation.
+		 *
+		 * @param string  $template  The template string containing shortcodes.
+		 * @param WP_Post $wp_object The WordPress post object being transformed.
+		 */
 		return apply_filters( 'activitypub_object_content_template', $template, $this->wp_object );
 	}
 

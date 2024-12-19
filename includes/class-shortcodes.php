@@ -129,6 +129,7 @@ class Shortcodes {
 
 		$excerpt = generate_post_summary( $item, $excerpt_length );
 
+		/** This filter is documented in wp-includes/post-template.php */
 		return \apply_filters( 'the_excerpt', $excerpt );
 	}
 
@@ -169,6 +170,7 @@ class Shortcodes {
 			$content = \get_post_field( 'post_content', $item );
 
 			if ( 'yes' === $atts['apply_filters'] ) {
+				/** This filter is documented in wp-includes/post-template.php */
 				$content = \apply_filters( 'the_content', $content );
 			} else {
 				$content = do_blocks( $content );

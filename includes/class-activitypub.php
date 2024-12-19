@@ -555,6 +555,9 @@ class Activitypub {
 		\register_post_type( Extra_Fields::USER_POST_TYPE, $args );
 		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $args );
 
+		/**
+		 * Fires after ActivityPub custom post types have been registered.
+		 */
 		\do_action( 'activitypub_after_register_post_type' );
 	}
 
