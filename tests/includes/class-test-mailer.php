@@ -8,6 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Mailer;
+use Activitypub\Model\User;
 use Activitypub\Notification;
 use WP_UnitTestCase;
 
@@ -312,7 +313,8 @@ class Test_Mailer extends WP_UnitTestCase {
 		// We need to replace back in the user URL because the user_id is not available in the data provider.
 		$replace = function ( $url ) use ( $user_id ) {
 			if ( 'user_url' === $url ) {
-				return get_author_posts_url( $user_id );
+				return ( new User( $user_id ) )->get_id();
+
 			}
 			return $url;
 		};
@@ -406,7 +408,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'object' => array(
 				'content' => $text,
 			),
-			'to'     => array( get_author_posts_url( $user_id ) ),
+			'to'     => array( ( new User( $user_id ) )->get_id() ),
 		);
 
 		// Mock remote metadata.
