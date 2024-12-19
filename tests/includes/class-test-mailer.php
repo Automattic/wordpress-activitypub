@@ -282,6 +282,18 @@ class Test_Mailer extends WP_UnitTestCase {
 					'to'     => array( 'https://example.com/followers' ),
 				),
 			),
+			'reply+cc'        => array(
+				false,
+				array(
+					'actor'  => 'https://example.com/author',
+					'object' => array(
+						'content'   => 'Reply activity to me and to followers',
+						'inReplyTo' => 'https://example.com/post/1',
+					),
+					'to'     => array( 'https://example.com/followers' ),
+					'cc'     => array( 'user_url' ),
+				),
+			),
 		);
 	}
 
