@@ -148,17 +148,12 @@ class Mailer {
 	 * @param int   $user_id  The id of the local blog-user.
 	 */
 	public static function direct_message( $activity, $user_id ) {
-		$recipients = extract_recipients_from_activity( $activity );
-
 		if (
 			is_activity_public( $activity ) ||
-			! in_array( \get_author_posts_url( $user_id ), $recipients, true )
+			// Only accept messages that have the user in the "to" field.
+			empty( $activity['to'] ) ||
+			! in_array( \get_author_posts_url( $user_id ), (array) $activity['to'], true )
 		) {
-			return;
-		}
-
-		// Only accept messages that have the user in the "to" field.
-		if ( ! in_array( \get_author_posts_url( $user_id ), $activity['to'], true ) ) {
 			return;
 		}
 
