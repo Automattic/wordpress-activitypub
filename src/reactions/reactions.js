@@ -11,7 +11,7 @@ import { __ } from '@wordpress/i18n';
  *
  * @type {string}
  */
-const { namespace } = window._activityPubOptions;
+const { namespace, defaultAvatarUrl } = window._activityPubOptions;
 
 /**
  * A component that renders a row of user avatars for a given set of reactions.
@@ -108,8 +108,9 @@ const FacepileRow = ( { reactions } ) => {
 					activeIndices.has(index) ? 'wave-active' : '',
 					rotationClass ? `rotate-${rotationClass}` : ''
 				].filter(Boolean).join(' ');
+				const avatar = reaction.avatar || defaultAvatarUrl;
 
-				return reaction.avatar && (
+				return (
 					<li key={ index }>
 						<a
 							href={ reaction.url }
@@ -119,7 +120,7 @@ const FacepileRow = ( { reactions } ) => {
 							onMouseLeave={() => startWave(index, false)}
 						>
 							<img
-								src={ reaction.avatar }
+								src={ avatar }
 								alt={ reaction.name }
 								className={ classes }
 								width="32"
