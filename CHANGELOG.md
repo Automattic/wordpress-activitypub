@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* `@mentions` in the JSON representation of the reply
+
 ### Improved
 
 * Direct Messages: Improve HTML to e-mail text conversion
