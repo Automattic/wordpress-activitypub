@@ -217,6 +217,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	 */
 	public function test_direct_message() {
 		$user_id = self::$user_id;
+		$mock    = new \MockAction();
 
 		$activity = array(
 			'actor'  => 'https://example.com/author',
@@ -235,6 +236,7 @@ class Test_Mailer extends WP_UnitTestCase {
 				);
 			}
 		);
+		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 
 		// Capture email.
 		add_filter(
@@ -255,7 +257,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$public_activity = array(
 			'actor'  => 'https://example.com/author',
 			'object' => array(
-				'content'   => 'Test public message',
+				'content'   => 'Test public reply',
 				'inReplyTo' => 'https://example.com/post/1',
 			),
 			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
@@ -263,6 +265,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		// Reset email capture.
 		remove_all_filters( 'wp_mail' );
+		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 		add_filter(
 			'wp_mail',
 			function ( $args ) {
@@ -272,6 +275,98 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		Mailer::direct_message( $public_activity, $user_id );
+
+		// Test public activity (should not send email).
+		$public_activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'content'   => 'Test public activity',
+				'inReplyTo' => null,
+			),
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'cc'     => array( 'https://example.com/followers' ),
+		);
+
+		// Reset email capture.
+		remove_all_filters( 'wp_mail' );
+		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
+		add_filter(
+			'wp_mail',
+			function ( $args ) {
+				$this->fail( 'Email should not be sent for public activity' );
+				return $args;
+			}
+		);
+
+		Mailer::direct_message( $public_activity, $user_id );
+
+		$this->assertEquals( 1, $mock->get_call_count() );
+
+		// Clean up.
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'wp_mail' );
+		wp_delete_user( $user_id );
+	}
+
+	/**
+	 * Data provider for direct message notification text.
+	 *
+	 * @return array
+	 */
+	public function direct_message_text_provider() {
+		return array(
+			'HTML entities' => array(
+				json_decode( '"<p>Interesting story from <span class=\"h-card\" translate=\"no\"><a href=\"https:\/\/example.com\/@test\" class=\"u-url mention\">@<span>test<\/span><\/a><\/span> about people who don&#39;t own their own domain.<\/p><p>&quot;This is not a new issue, of course, but Service\u2019s implementation shows limitations.&quot;<\/p>"' ),
+				'Interesting story from @test about people who don\'t own their own domain.' . PHP_EOL . PHP_EOL . '"This is not a new issue, of course, but Service’s implementation shows limitations."',
+			),
+			'invalid HTML'  => array(
+				json_decode( '"<ptest"' ),
+				'',
+			),
+		);
+	}
+
+	/**
+	 * Test direct message notification text.
+	 *
+	 * @param string $text     Text to test.
+	 * @param string $expected Expected result.
+	 *
+	 * @covers ::direct_message
+	 * @dataProvider direct_message_text_provider
+	 */
+	public function test_direct_message_text( $text, $expected ) {
+		$user_id = self::$user_id;
+
+		$activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'content' => $text,
+			),
+		);
+
+		// Mock remote metadata.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name' => 'Test Sender',
+					'url'  => 'https://example.com/author',
+				);
+			}
+		);
+
+		// Capture email.
+		add_filter(
+			'wp_mail',
+			function ( $args ) use ( $expected, $user_id ) {
+				$this->assertStringContainsString( $expected, $args['message'] );
+				$this->assertEquals( get_user_by( 'id', $user_id )->user_email, $args['to'] );
+				return $args;
+			}
+		);
+
+		Mailer::direct_message( $activity, $user_id );
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );

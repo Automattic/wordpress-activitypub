@@ -121,4 +121,25 @@ class Test_Create extends \WP_UnitTestCase {
 		$converted    = Create::handle_create( $object, $this->user_id );
 		$this->assertNull( $converted );
 	}
+
+	/**
+	 * Test handle create.
+	 *
+	 * @covers ::handle_create
+	 */
+	public function test_handle_create_public_accepted() {
+		$object = $this->create_test_object();
+		Create::handle_create( $object, $this->user_id );
+
+		$args = array(
+			'type'    => 'comment',
+			'post_id' => $this->post_id,
+		);
+
+		$query  = new \WP_Comment_Query( $args );
+		$result = $query->comments;
+
+		$this->assertInstanceOf( 'WP_Comment', $result[0] );
+		$this->assertEquals( 'example', $result[0]->comment_content );
+	}
 }

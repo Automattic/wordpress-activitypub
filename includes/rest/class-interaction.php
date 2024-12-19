@@ -80,10 +80,26 @@ class Interaction {
 			case 'Service':
 			case 'Application':
 			case 'Organization':
+				/**
+				 * Filters the URL used for following an ActivityPub actor.
+				 *
+				 * @param string $redirect_url The URL to redirect to.
+				 * @param string $uri          The URI of the actor to follow.
+				 * @param array  $object       The full actor object data.
+				 */
 				$redirect_url = \apply_filters( 'activitypub_interactions_follow_url', $redirect_url, $uri, $object );
 				break;
 			default:
 				$redirect_url = \admin_url( 'post-new.php?in_reply_to=' . $uri );
+				/**
+				 * Filters the URL used for replying to an ActivityPub object.
+				 *
+				 * By default, this redirects to the WordPress post editor with the in_reply_to parameter set.
+				 *
+				 * @param string $redirect_url The URL to redirect to.
+				 * @param string $uri          The URI of the object to reply to.
+				 * @param array  $object       The full object data being replied to.
+				 */
 				$redirect_url = \apply_filters( 'activitypub_interactions_reply_url', $redirect_url, $uri, $object );
 		}
 

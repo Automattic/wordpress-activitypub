@@ -40,6 +40,9 @@
             "bin/install-wp-tests.sh activitypub-test root activitypub-test test-db latest true",
             "vendor/bin/phpunit"
         ],
+        "test:wp-env": [
+            "wp-env run tests-cli --env-cwd=\"wp-content/plugins/activitypub\" vendor/bin/phpunit"
+        ],
         "lint": [
             "vendor/bin/phpcs"
         ],

@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
-Stable tag: 4.4.0
+Stable tag: 4.5.1
 Requires PHP: 7.0
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -134,12 +134,30 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Improved: HTML to e-mail text conversion
+
+= 4.5.1 =
+
+* Added: `@mentions` in the JSON representation of the reply
+* Improved: Reactions block: Remove the `wp-block-editor` dependency for frontend views
+* Fixed: Direct Messages: Don't send notification for received public activities
+
+= 4.5.0 =
+
+* Improved: Reactions (likes and reposts) now enabled by default
+* Added: Reactions block to display likes and reposts
 * Added: `icon` support for `Audio` and `Video` attachments
 * Added: Send "new follower" emails
 * Added: Send "direct message" emails
+* Added: Account for custom comment types when calculating comment counts
+* Added: Plugin upgrade routine that automatically updates comment counts
 * Improved: Email templates for Likes and Reposts
 * Improved: Interactions moderation
 * Improved: Compatibility with Akismet
+* Improved: Comment type mapping for `Like` and `Announce`
+* Improved: Signature verification for API endpoints
+* Improved: Changed priority of Attachments, to favor `Image` over `Audio` and `Video`
+* Fixed: Empty `url` attributes in the Reply block no longer cause PHP warnings
 
 = 4.4.0 =
 
@@ -169,25 +187,6 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Show Followers name instead of avatar on mobile view
 * Fixed: Missing attachement-type for enclosures
 * Fixed: Prevention against self pings
-
-= 4.2.1 =
-
-* Added: Mastodon Apps status provider
-* Improved: Image-Handling
-* Improved: Have better checks if audience should be set or not
-* Fixed: Don't overwrite an existing `wp-tests-config.php`
-* Fixed: PHPCS for phpunit files
-
-= 4.2.0 =
-
-* Added: Unit tests for the `ActivityPub\Transformer\Post` class
-* Improved: Reuse constants once they're defined
-* Improved: "FEP-b2b8: Long-form Text" support
-* Improved: Admin notice for plain permalink settings is more user-friendly and actionable
-* Improved: Post-Formats support
-* Fixed: Do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts.
-* Fixed: Proper margins for notices and font size for page title in settings screen.
-* Fixed: Ensure that `?author=0` resolves to blog user
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).
 

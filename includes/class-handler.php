@@ -36,10 +36,7 @@ class Handler {
 		Follow::init();
 		Undo::init();
 		Update::init();
-
-		if ( ! ACTIVITYPUB_DISABLE_REACTIONS ) {
-			Like::init();
-		}
+		Like::init();
 
 		/**
 		 * Register additional handlers.

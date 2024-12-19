@@ -44,9 +44,7 @@ class Announce {
 			return;
 		}
 
-		if ( ! ACTIVITYPUB_DISABLE_REACTIONS ) {
-			self::maybe_save_announce( $announcement, $user_id );
-		}
+		self::maybe_save_announce( $announcement, $user_id );
 
 		if ( is_string( $announcement['object'] ) ) {
 			$object = Http::get_remote_object( $announcement['object'] );
