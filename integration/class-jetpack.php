@@ -17,6 +17,8 @@ class Jetpack {
 	 */
 	public static function init() {
 		\add_filter( 'jetpack_sync_post_meta_whitelist', array( self::class, 'add_sync_meta' ) );
+		\add_filter( 'jetpack_json_api_comment_types', array( self::class, 'add_comment_types' ) );
+		\add_filter( 'jetpack_api_include_comment_types_count', array( self::class, 'add_comment_types' ) );
 	}
 
 	/**
@@ -36,5 +38,19 @@ class Jetpack {
 			'activitypub_actor_json',
 		);
 		return \array_merge( $allow_list, $activitypub_meta_keys );
+	}
+
+	/**
+	 * Add custom comment types to the list of comment types.
+	 *
+	 * @param array $comment_types Default comment types.
+	 * @return array
+	 */
+	public static function add_comment_types( $comment_types ) {
+		if ( \method_exists( 'Activitypub\Comment', 'get_comment_type_slugs' ) ) {
+			$comment_types = \array_merge( $comment_types, \Activitypub\Comment::get_comment_type_slugs() );
+		}
+
+		return array_unique( $comment_types );
 	}
 }

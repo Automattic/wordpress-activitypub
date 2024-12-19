@@ -134,6 +134,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Added: A filter to make custom comment types manageable in WP.com Calypso
 * Improved: HTML to e-mail text conversion
 
 = 4.5.1 =

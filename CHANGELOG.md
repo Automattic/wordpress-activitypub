@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* Added a filter to make custom comment types manageable in WP.com Calypso
 * `@mentions` in the JSON representation of the reply
 
 ### Improved
