@@ -135,6 +135,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Improved: HTML to e-mail text conversion
+* Fixed: Reactions: Provide a fallback for empty avatar URLs
 
 = 4.5.1 =
 
