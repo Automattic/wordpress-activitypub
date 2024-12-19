@@ -109,7 +109,7 @@ const FacepileRow = ( { reactions } ) => {
 					rotationClass ? `rotate-${rotationClass}` : ''
 				].filter(Boolean).join(' ');
 
-				return (
+				return reaction.avatar && (
 					<li key={ index }>
 						<a
 							href={ reaction.url }
@@ -224,7 +224,7 @@ const ReactionGroup = ( { items, label } ) => {
 	const AVATAR_OVERLAP = 10; // How much each avatar overlaps
 	const EFFECTIVE_AVATAR_WIDTH = AVATAR_WIDTH - AVATAR_OVERLAP; // Width each additional avatar takes
 	const BUTTON_GAP = 12; // Gap between avatars and button (0.75em)
-	
+
 	useEffect( () => {
 		if ( ! containerRef.current ) {
 			return;
@@ -243,7 +243,7 @@ const ReactionGroup = ( { items, label } ) => {
 			// Calculate how many avatars can fit
 			// First avatar takes full width, rest take effective width
 			const maxAvatars = Math.max( 1, Math.floor( ( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH ) );
-			
+
 			// Ensure we don't show more than we have
 			setVisibleCount( Math.min( maxAvatars, items.length ) );
 		};
