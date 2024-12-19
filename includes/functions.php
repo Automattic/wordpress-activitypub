@@ -1611,125 +1611,100 @@ function embed_get( $url ) {
 		return $embed;
 	}
 
-	// Create unique transient keys for both HTTP calls.
-	$main_transient_key = '_activitypub_embed_' . md5( $url );
-	$embed              = \get_transient( $main_transient_key );
+	$embed = Http::get_remote_object( $url );
+	if ( is_wp_error( $embed ) ) {
+		return false;
+	}
 
-	if ( false === $embed ) {
-		$response = Http::get( $url );
-		if ( \wp_remote_retrieve_response_code( $response ) === 200 ) {
-			$embed = \json_decode( \wp_remote_retrieve_body( $response ), true );
-			\set_transient( $main_transient_key, $embed, DAY_IN_SECONDS );
-		} else {
-			return \wp_oembed_get( $url );
+	$author_name = isset( $embed['attributedTo'] ) ? $embed['attributedTo'] : '';
+	$author_url  = $author_name;
+	$avatar_url  = isset( $embed['icon']['url'] ) ? $embed['icon']['url'] : '';
+
+	// If we don't have an avatar URL but we have an author URL, try to fetch it.
+	if ( ! $avatar_url && $author_url ) {
+		$author = Http::get_remote_object( $author_url );
+
+		if ( ! is_wp_error( $author ) ) {
+			if ( isset( $author['icon']['url'] ) ) {
+				$avatar_url = $author['icon']['url'];
+			}
+			if ( isset( $author['name'] ) ) {
+				$author_name = $author['name'];
+			}
 		}
 	}
 
-	if ( $embed ) {
-		$author_name = isset( $embed['attributedTo'] ) ? $embed['attributedTo'] : '';
-		$author_url  = $author_name;
-		$avatar_url  = isset( $embed['icon']['url'] ) ? $embed['icon']['url'] : '';
+	$published = isset( $embed['published'] ) ? \gmdate( get_option( 'date_format' ) . ', ' . get_option( 'time_format' ), \strtotime( $embed['published'] ) ) : '';
+	$title     = isset( $embed['name'] ) ? $embed['name'] : '';
+	$content   = isset( $embed['content'] ) ? $embed['content'] : '';
+	$boosts    = isset( $embed['shares']['totalItems'] ) ? (int) $embed['shares']['totalItems'] : 0;
+	$favorites = isset( $embed['likes']['totalItems'] ) ? (int) $embed['likes']['totalItems'] : 0;
 
-		// If we don't have an avatar URL but we have an author URL, try to fetch it.
-		if ( ! $avatar_url && $author_url ) {
-			$author_transient_key = '_activitypub_author_' . md5( $author_url );
-			$author               = \get_transient( $author_transient_key );
-
-			if ( false === $author ) {
-				$author_response = Http::get( $author_url );
-				if ( \wp_remote_retrieve_response_code( $author_response ) === 200 ) {
-					$author = \json_decode( \wp_remote_retrieve_body( $author_response ), true );
-					\set_transient( $author_transient_key, $author, DAY_IN_SECONDS );
-				}
-			}
-
-			if ( $author ) {
-				if ( isset( $author['icon']['url'] ) ) {
-					$avatar_url = $author['icon']['url'];
-				}
-				if ( isset( $author['name'] ) ) {
-					$author_name = $author['name'];
-				}
+	$image = '';
+	if ( isset( $embed['image']['url'] ) ) {
+		$image = $embed['image']['url'];
+	} elseif ( isset( $embed['attachment'] ) ) {
+		foreach ( $embed['attachment'] as $attachment ) {
+			if ( isset( $attachment['type'] ) && 'Document' === $attachment['type'] ) {
+				$image = $attachment['url'];
+				break;
 			}
 		}
+	}
 
-		$published = isset( $embed['published'] ) ? \gmdate( get_option( 'date_format' ) . ', ' . get_option( 'time_format' ), \strtotime( $embed['published'] ) ) : '';
-		$title     = isset( $embed['name'] ) ? $embed['name'] : '';
-		$content   = isset( $embed['content'] ) ? $embed['content'] : '';
-		$boosts    = isset( $embed['shares']['totalItems'] ) ? (int) $embed['shares']['totalItems'] : 0;
-		$favorites = isset( $embed['likes']['totalItems'] ) ? (int) $embed['likes']['totalItems'] : 0;
+	\wp_enqueue_style( 'activitypub-embed', ACTIVITYPUB_PLUGIN_URL . 'assets/css/activitypub-embed.css', array(), ACTIVITYPUB_PLUGIN_VERSION );
 
-		$image = '';
-		if ( isset( $embed['image']['url'] ) ) {
-			$image = $embed['image']['url'];
-		} elseif ( isset( $embed['attachment'] ) ) {
-			foreach ( $embed['attachment'] as $attachment ) {
-				if ( isset( $attachment['type'] ) && 'Document' === $attachment['type'] ) {
-					$image = $attachment['url'];
-					break;
-				}
-			}
-		}
-
-		ob_start();
-		?>
-		<div class="activitypub-embed">
-			<div class="activitypub-embed-header">
-				<?php if ( $avatar_url ) : ?>
-					<img src="<?php echo \esc_url( $avatar_url ); ?>" alt="" />
+	ob_start();
+	?>
+	<div class="activitypub-embed">
+		<div class="activitypub-embed-header">
+			<?php if ( $avatar_url ) : ?>
+				<img src="<?php echo \esc_url( $avatar_url ); ?>" alt="" />
+			<?php endif; ?>
+			<div class="activitypub-embed-header-text">
+				<h2><?php echo \esc_html( $author_name ); ?></h2>
+				<?php if ( $author_url ) : ?>
+					<a href="<?php echo \esc_url( $author_url ); ?>" class="ap-account"><?php echo \esc_html( $author_url ); ?></a>
 				<?php endif; ?>
-				<div class="activitypub-embed-header-text">
-					<h2><?php echo \esc_html( $author_name ); ?></h2>
-					<?php if ( $author_url ) : ?>
-						<a href="<?php echo \esc_url( $author_url ); ?>" class="ap-account"><?php echo \esc_html( $author_url ); ?></a>
-					<?php endif; ?>
-				</div>
-			</div>
-
-			<div class="activitypub-embed-content">
-				<?php if ( $title ) : ?>
-					<h3 class="ap-title"><?php echo \esc_html( $title ); ?></h3>
-				<?php endif; ?>
-
-				<?php if ( $content ) : ?>
-					<div class="ap-subtitle"><?php echo \wp_kses_post( $content ); ?></div>
-				<?php endif; ?>
-
-				<?php if ( $image ) : ?>
-					<div class="ap-preview">
-						<img src="<?php echo \esc_url( $image ); ?>" alt="" />
-					</div>
-				<?php endif; ?>
-			</div>
-
-			<div class="activitypub-embed-meta">
-				<?php if ( $published ) : ?>
-					<a href="<?php echo \esc_url( $url ); ?>" class="ap-stat ap-date"><?php echo \esc_html( $published ); ?></a>
-				<?php endif; ?>
-
-				<span class="ap-stat">
-					<?php
-					/* translators: %s: number of boosts */
-					printf( \esc_html__( '%s boosts', 'activitypub' ), '<strong>' . \esc_html( $boosts ) . '</strong>' );
-					?>
-				</span>
-
-				<span class="ap-stat">
-					<?php
-					/* translators: %s: number of favorites */
-					printf( \esc_html__( '%s favorites', 'activitypub' ), '<strong>' . \esc_html( $favorites ) . '</strong>' );
-					?>
-				</span>
 			</div>
 		</div>
-		<?php
-		$output = ob_get_clean();
 
-		if ( $output ) {
-			\wp_enqueue_style( 'activitypub-embed', ACTIVITYPUB_PLUGIN_URL . 'assets/css/activitypub-embed.css', array(), ACTIVITYPUB_PLUGIN_VERSION );
-			return $output;
-		}
-	}
+		<div class="activitypub-embed-content">
+			<?php if ( $title ) : ?>
+				<h3 class="ap-title"><?php echo \esc_html( $title ); ?></h3>
+			<?php endif; ?>
 
-	return false;
+			<?php if ( $content ) : ?>
+				<div class="ap-subtitle"><?php echo \wp_kses_post( $content ); ?></div>
+			<?php endif; ?>
+
+			<?php if ( $image ) : ?>
+				<div class="ap-preview">
+					<img src="<?php echo \esc_url( $image ); ?>" alt="" />
+				</div>
+			<?php endif; ?>
+		</div>
+
+		<div class="activitypub-embed-meta">
+			<?php if ( $published ) : ?>
+				<a href="<?php echo \esc_url( $url ); ?>" class="ap-stat ap-date"><?php echo \esc_html( $published ); ?></a>
+			<?php endif; ?>
+
+			<span class="ap-stat">
+				<?php
+				/* translators: %s: number of boosts */
+				printf( \esc_html__( '%s boosts', 'activitypub' ), '<strong>' . \esc_html( $boosts ) . '</strong>' );
+				?>
+			</span>
+
+			<span class="ap-stat">
+				<?php
+				/* translators: %s: number of favorites */
+				printf( \esc_html__( '%s favorites', 'activitypub' ), '<strong>' . \esc_html( $favorites ) . '</strong>' );
+				?>
+			</span>
+		</div>
+	</div>
+	<?php
+	return ob_get_clean();
 }
