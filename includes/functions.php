@@ -1606,8 +1606,9 @@ function is_self_ping( $id ) {
  * @return string|false The embed of the URL or false if not found.
  */
 function embed_get( $url ) {
-	if ( ! \get_the_ID() ) {
-		return false;
+	$embed = \wp_oembed_get( $url );
+	if ( $embed ) {
+		return $embed;
 	}
 
 	// Create unique transient keys for both HTTP calls.
@@ -1730,5 +1731,5 @@ function embed_get( $url ) {
 		}
 	}
 
-	return \wp_oembed_get( $url );
+	return false;
 }
