@@ -148,8 +148,12 @@ class Mailer {
 	 * @param int   $user_id  The id of the local blog-user.
 	 */
 	public static function direct_message( $activity, $user_id ) {
-		// Check if Activity is public or not.
-		if ( is_activity_public( $activity ) ) {
+		$recipients = extract_recipients_from_activity( $activity );
+
+		if (
+			is_activity_public( $activity ) ||
+			! in_array( \get_author_posts_url( $user_id ), $recipients )
+		) {
 			return;
 		}
 
