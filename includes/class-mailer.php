@@ -157,6 +157,11 @@ class Mailer {
 			return;
 		}
 
+		// Only accept messages that have the user in the "to" field.
+		if ( ! in_array( \get_author_posts_url( $user_id ), $activity['to'] ) ) {
+			return;
+		}
+
 		$actor = get_remote_metadata_by_actor( $activity['actor'] );
 
 		if ( ! $actor || \is_wp_error( $actor ) || empty( $activity['object']['content'] ) ) {
