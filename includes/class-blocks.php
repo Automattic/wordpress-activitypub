@@ -7,8 +7,8 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Followers;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
 
 /**
  * Block class.
@@ -339,14 +339,7 @@ class Blocks {
 		$html = '';
 
 		if ( ! empty( $attrs['url'] ) ) {
-			wp_oembed_add_provider( '#https?://mastodon\.social/(@.+)/([0-9]+)#i', 'https://mastodon.social/api/oembed', true );
-
-			/**
-			 * Fires to add an oEmbed provider for the reply block.
-			 */
-			do_action( 'activitypub_reply_block_add_oembed_provider' );
-
-			$embed = wp_oembed_get( $attrs['url'] );
+			$embed = embed_get( $attrs['url'] );
 			if ( $embed ) {
 				$html .= $embed;
 			}

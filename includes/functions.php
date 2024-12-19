@@ -1593,3 +1593,19 @@ function is_self_ping( $id ) {
 
 	return false;
 }
+
+/**
+ * Get the embed of a URL.
+ *
+ * This function supports oEmbed URLs, but it is planned to also
+ * support ActivityPub in the future.
+ *
+ * @todo Add ActivityPub support.
+ *
+ * @param string $url The URL to get the embed of.
+ *
+ * @return string|false The embed of the URL or false if not found.
+ */
+function embed_get( $url ) {
+	return wp_oembed_get( $url );
+}
