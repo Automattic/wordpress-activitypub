@@ -7,6 +7,8 @@
 
 namespace Activitypub\Integration;
 
+use Activitypub\Comment;
+
 /**
  * Jetpack integration class.
  */
@@ -47,10 +49,6 @@ class Jetpack {
 	 * @return array
 	 */
 	public static function add_comment_types( $comment_types ) {
-		if ( \method_exists( 'Activitypub\Comment', 'get_comment_type_slugs' ) ) {
-			$comment_types = \array_merge( $comment_types, \Activitypub\Comment::get_comment_type_slugs() );
-		}
-
-		return array_unique( $comment_types );
+		return array_unique( \array_merge( $comment_types, Comment::get_comment_type_slugs() ) );
 	}
 }
