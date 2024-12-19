@@ -134,6 +134,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Direct Messages: Test for the user being in the to field
 * Improved: HTML to e-mail text conversion
 
 = 4.5.1 =

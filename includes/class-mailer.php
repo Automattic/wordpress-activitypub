@@ -152,13 +152,13 @@ class Mailer {
 
 		if (
 			is_activity_public( $activity ) ||
-			! in_array( \get_author_posts_url( $user_id ), $recipients )
+			! in_array( \get_author_posts_url( $user_id ), $recipients, true )
 		) {
 			return;
 		}
 
 		// Only accept messages that have the user in the "to" field.
-		if ( ! in_array( \get_author_posts_url( $user_id ), $activity['to'] ) ) {
+		if ( ! in_array( \get_author_posts_url( $user_id ), $activity['to'], true ) ) {
 			return;
 		}
 

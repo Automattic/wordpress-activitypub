@@ -282,7 +282,7 @@ class Test_Mailer extends WP_UnitTestCase {
 					'to'     => array( 'https://example.com/followers' ),
 				),
 			),
-			'reply+cc'        => array(
+			'reply+cc'         => array(
 				false,
 				array(
 					'actor'  => 'https://example.com/author',
@@ -311,7 +311,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		// We need to replace back in the user URL because the user_id is not available in the data provider.
 		$replace = function ( $url ) use ( $user_id ) {
-			if ( $url === 'user_url' ) {
+			if ( 'user_url' === $url ) {
 				return get_author_posts_url( $user_id );
 			}
 			return $url;
@@ -406,7 +406,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'object' => array(
 				'content' => $text,
 			),
-			'to' => array( get_author_posts_url( $user_id ) ),
+			'to'     => array( get_author_posts_url( $user_id ) ),
 		);
 
 		// Mock remote metadata.

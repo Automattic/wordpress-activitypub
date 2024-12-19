@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improved
 
+* Direct Messages: Test for the user being in the to field
 * Direct Messages: Improve HTML to e-mail text conversion
 
 ## [4.5.1] - 2024-12-18
