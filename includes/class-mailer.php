@@ -153,7 +153,7 @@ class Mailer {
 			is_activity_public( $activity ) ||
 			// Only accept messages that have the user in the "to" field.
 			empty( $activity['to'] ) ||
-			! in_array( ( new User( $user_id ) )->get_id(), (array) $activity['to'], true )
+			! in_array( Actors::get_by_id( $user_id )->get_id(), (array) $activity['to'], true )
 		) {
 			return;
 		}
