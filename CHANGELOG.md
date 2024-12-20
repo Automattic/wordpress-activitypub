@@ -1178,7 +1178,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/4.5.0...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/4.6.0...trunk
 <!-- Add new release below and update "Unreleased" link -->
 [4.6.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.5.1...4.6.0
 [4.5.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.5.0...4.5.1
