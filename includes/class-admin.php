@@ -319,7 +319,7 @@ class Admin {
 			array(
 				'type'        => 'boolean',
 				'description' => \__( 'Send notifications via e-mail when a new follower is added.', 'activitypub' ),
-				'default'     => false,
+				'default'     => '0',
 			)
 		);
 		\register_setting(
@@ -328,7 +328,7 @@ class Admin {
 			array(
 				'type'        => 'boolean',
 				'description' => \__( 'Send notifications via e-mail when a direct message is received.', 'activitypub' ),
-				'default'     => false,
+				'default'     => '0',
 			)
 		);
 
