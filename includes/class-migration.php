@@ -475,8 +475,8 @@ class Migration {
 	 * Add default notification settings.
 	 */
 	private static function add_notification_defaults() {
-		\update_option( 'activitypub_mailer_new_follower', '1' );
-		\update_option( 'activitypub_mailer_new_dm', '1' );
+		\add_option( 'activitypub_mailer_new_follower', '1' );
+		\add_option( 'activitypub_mailer_new_dm', '1' );
 	}
 
 	/**
