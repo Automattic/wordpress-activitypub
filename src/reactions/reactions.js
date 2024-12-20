@@ -152,7 +152,7 @@ const ReactionDropdown = ( { reactions, anchor, onClose } ) => (
 		noArrow={ false }
 		offset={ 10 }
 	>
-		<ul className="reaction-list">
+		<ul className="activitypub-reaction-list">
 			{ reactions.map( ( reaction, index ) => (
 				<li key={ index }>
 					<a
@@ -184,7 +184,7 @@ const ReactionDropdown = ( { reactions, anchor, onClose } ) => (
  * @return {JSX.Element}            The rendered component.
  */
 const ReactionList = ( { reactions, type } ) => (
-	<ul className="reaction-list">
+	<ul className="activitypub-reaction-list">
 		{ reactions.map( ( reaction, index ) => (
 			<li key={ index }>
 				<a
