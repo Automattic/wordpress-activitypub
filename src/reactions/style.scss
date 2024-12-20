@@ -49,8 +49,7 @@
 			width: 32px;
 			height: 32px;
 			border-radius: 50%;
-			border: 0.5px solid rgba(255, 255, 255, 0.8);
-			border-color: var( --wp--preset--color--contrast );
+			border: 0.5px solid var( --wp--preset--color--contrast, rgba(255, 255, 255, 0.8) );
 			box-shadow:
 				0 0 0 0.5px rgba(255, 255, 255, 0.8), // Crisp white border
 				0 1px 3px rgba(0, 0, 0, 0.2); // Soft drop shadow
@@ -81,20 +80,17 @@
 		height: auto;
 		padding: 0;
 		text-decoration: none;
-		color: #2271b1;
-		color: var( --wp--preset--color--contrast );
+		color: var( --wp--preset--color--contrast, --wp--preset--color--secondary, #2271b1 );
 		flex: 0 0 auto;
 
 		&:hover {
-			color: #135e96;
-			color: var( --wp--preset--color--contrast );
+			color: var( --wp--preset--color--contrast, --wp--preset--color--secondary, #135e96 );
 			text-decoration: underline;
 		}
 
 		&:focus:not(:disabled) {
 			box-shadow: none;
-			outline: 1px solid #135e96;
-			outline-color: var( --wp--preset--color--contrast );
+			outline: 1px solid var( --wp--preset--color--contrast, #135e96 );
 			outline-offset: 2px;
 		}
 	}
@@ -106,7 +102,7 @@
 	list-style: none;
 	width: max-content;
 	max-width: 300px;
-	background-color: var(--wp--preset--color--base);
+	background-color: var( --wp--preset--color--background, --wp--preset--color--custom-background, --wp--preset--color--base );
 
 	ul {
 		margin: 0;
@@ -116,7 +112,7 @@
 	li {
 		margin: 0;
 		padding: 0;
-		font-size: var(--wp--preset--font-size--small);
+		font-size: var( --wp--preset--font-size--small );
 	}
 
 	a {
@@ -127,7 +123,7 @@
 		padding: .5em;
 		text-decoration: none;
 		font-size: var( --wp--preset--font-size--small, .75rem );
-		color: var( --wp--preset--color--contrast );
+		color: var( --wp--preset--color--contrast, --wp--preset--color--secondary );
 
 		&:hover {
 			text-decoration: underline;
