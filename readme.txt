@@ -138,6 +138,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: `@mentions` in the JSON representation of the reply
 * Improved: HTML to e-mail text conversion
 * Improved: Direct Messages: Test for the user being in the to field
+* Improved: Better support for FSE color schemes
 * Fixed: Reactions: Provide a fallback for empty avatar URLs
 
 = 4.5.1 =
