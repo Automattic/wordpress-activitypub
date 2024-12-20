@@ -207,7 +207,19 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		$this->assertEquals( 10, has_filter( 'comment_notification_subject', array( Mailer::class, 'comment_notification_subject' ) ) );
 		$this->assertEquals( 10, has_filter( 'comment_notification_text', array( Mailer::class, 'comment_notification_text' ) ) );
+		$this->assertEquals( false, has_action( 'activitypub_notification_follow', array( Mailer::class, 'new_follower' ) ) );
+		$this->assertEquals( false, has_action( 'activitypub_inbox_create', array( Mailer::class, 'direct_message' ) ) );
+
+		update_option( 'activitypub_mailer_new_follower', '1' );
+		update_option( 'activitypub_mailer_new_dm', '1' );
+
+		Mailer::init();
+
 		$this->assertEquals( 10, has_action( 'activitypub_notification_follow', array( Mailer::class, 'new_follower' ) ) );
+		$this->assertEquals( 10, has_action( 'activitypub_inbox_create', array( Mailer::class, 'direct_message' ) ) );
+
+		delete_option( 'activitypub_mailer_new_follower' );
+		delete_option( 'activitypub_mailer_new_dm' );
 	}
 
 	/**

@@ -135,6 +135,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: `@mentions` in the JSON representation of the reply
+* Added: Settings to enable/disable e-mail notifications for new followers and direct messages
 * Improved: HTML to e-mail text conversion
 
 = 4.5.1 =
