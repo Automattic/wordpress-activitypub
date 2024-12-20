@@ -171,10 +171,17 @@ class Mailer {
 			$email = $user->user_email;
 		}
 
+		$content = \html_entity_decode(
+			\wp_strip_all_tags(
+				str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
+			),
+			ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401
+		);
+
 		/* translators: 1: Blog name, 2 Actor name */
 		$subject = \sprintf( \esc_html__( '[%1$s] Direct Message from: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
 		/* translators: 1: Blog name, 2: Actor name */
-		$message = \sprintf( \esc_html__( 'New Direct Message: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \wp_strip_all_tags( $activity['object']['content'] ) ) . "\r\n\r\n";
+		$message = \sprintf( \esc_html__( 'New Direct Message: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), $content ) . "\r\n\r\n";
 		/* translators: Actor name */
 		$message .= \sprintf( \esc_html__( 'From: %s', 'activitypub' ), \esc_html( $actor['name'] ) ) . "\r\n";
 		/* translators: Actor URL */

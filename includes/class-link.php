@@ -112,6 +112,11 @@ class Link {
 			$display_class .= 'ellipsis';
 		}
 
+		/**
+		 * Filters the rel attribute for ActivityPub links.
+		 *
+		 * @param string $rel The rel attribute string. Default 'nofollow noopener noreferrer'.
+		 */
 		$rel = apply_filters( 'activitypub_link_rel', 'nofollow noopener noreferrer' );
 
 		return \sprintf(

@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Add a filter to allow modifying the ActivityPub preview template
+* `@mentions` in the JSON representation of the reply
+
+### Improved
+
+* Direct Messages: Improve HTML to e-mail text conversion
 
 ## [4.5.1] - 2024-12-18
 
