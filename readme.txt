@@ -134,12 +134,14 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Added: A filter to allow modifying the ActivityPub preview template
+* Added: `@mentions` in the JSON representation of the reply
 * Improved: HTML to e-mail text conversion
+* Improved: Direct Messages: Test for the user being in the to field
 * Fixed: Reactions: Provide a fallback for empty avatar URLs
 
 = 4.5.1 =
 
-* Added: `@mentions` in the JSON representation of the reply
 * Improved: Reactions block: Remove the `wp-block-editor` dependency for frontend views
 * Fixed: Direct Messages: Don't send notification for received public activities
 

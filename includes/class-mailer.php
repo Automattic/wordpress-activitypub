@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Model\User;
 
 /**
  * Mailer Class.
@@ -148,8 +149,12 @@ class Mailer {
 	 * @param int   $user_id  The id of the local blog-user.
 	 */
 	public static function direct_message( $activity, $user_id ) {
-		// Check if Activity is public or not.
-		if ( is_activity_public( $activity ) ) {
+		if (
+			is_activity_public( $activity ) ||
+			// Only accept messages that have the user in the "to" field.
+			empty( $activity['to'] ) ||
+			! in_array( Actors::get_by_id( $user_id )->get_id(), (array) $activity['to'], true )
+		) {
 			return;
 		}
 

@@ -8,6 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Mailer;
+use Activitypub\Collection\Actors;
 use Activitypub\Notification;
 use WP_UnitTestCase;
 
@@ -211,20 +212,120 @@ class Test_Mailer extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Data provider for direct message notification.
+	 *
+	 * @return array
+	 */
+	public function direct_message_provider() {
+		return array(
+			'to'               => array(
+				true,
+				array(
+					'actor'  => 'https://example.com/author',
+					'object' => array(
+						'content' => 'Test direct message',
+					),
+					'to'     => array( 'user_url' ),
+				),
+			),
+			'none'             => array(
+				false,
+				array(
+					'actor'  => 'https://example.com/author',
+					'object' => array(
+						'content' => 'Test direct message',
+					),
+				),
+			),
+			'public+reply'     => array(
+				false,
+				array(
+					'actor'  => 'https://example.com/author',
+					'object' => array(
+						'content'   => 'Test public reply',
+						'inReplyTo' => 'https://example.com/post/1',
+					),
+					'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+				),
+			),
+			'public+reply+cc'  => array(
+				false,
+				array(
+					'actor'  => 'https://example.com/author',
+					'object' => array(
+						'content'   => 'Test public reply',
+						'inReplyTo' => 'https://example.com/post/1',
+					),
+					'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					'cc'     => array( 'user_url' ),
+				),
+			),
+			'public+followers' => array(
+				false,
+				array(
+					'actor'  => 'https://example.com/author',
+					'object' => array(
+						'content'   => 'Test public activity',
+						'inReplyTo' => null,
+					),
+					'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					'cc'     => array( 'https://example.com/followers' ),
+				),
+			),
+			'followers'        => array(
+				false,
+				array(
+					'actor'  => 'https://example.com/author',
+					'object' => array(
+						'content'   => 'Test activity just to followers',
+						'inReplyTo' => null,
+					),
+					'to'     => array( 'https://example.com/followers' ),
+				),
+			),
+			'reply+cc'         => array(
+				false,
+				array(
+					'actor'  => 'https://example.com/author',
+					'object' => array(
+						'content'   => 'Reply activity to me and to followers',
+						'inReplyTo' => 'https://example.com/post/1',
+					),
+					'to'     => array( 'https://example.com/followers' ),
+					'cc'     => array( 'user_url' ),
+				),
+			),
+		);
+	}
+
+	/**
 	 * Test direct message notification.
 	 *
+	 * @param bool  $send_email Whether email should be sent.
+	 * @param array $activity   Activity object.
+	 * @dataProvider direct_message_provider
 	 * @covers ::direct_message
 	 */
-	public function test_direct_message() {
+	public function test_direct_message( $send_email, $activity ) {
 		$user_id = self::$user_id;
 		$mock    = new \MockAction();
 
-		$activity = array(
-			'actor'  => 'https://example.com/author',
-			'object' => array(
-				'content' => 'Test direct message',
-			),
-		);
+		// We need to replace back in the user URL because the user_id is not available in the data provider.
+		$replace = function ( $url ) use ( $user_id ) {
+			if ( 'user_url' === $url ) {
+				return Actors::get_by_id( $user_id )->get_id();
+
+			}
+			return $url;
+		};
+
+		foreach ( $activity as $key => $value ) {
+			if ( is_array( $value ) ) {
+				$activity[ $key ] = array_map( $replace, $value );
+			} else {
+				$activity[ $key ] = $replace( $value );
+			}
+		}
 
 		// Mock remote metadata.
 		add_filter(
@@ -238,69 +339,33 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 
-		// Capture email.
-		add_filter(
-			'wp_mail',
-			function ( $args ) use ( $user_id ) {
-				$this->assertStringContainsString( 'Direct Message', $args['subject'] );
-				$this->assertStringContainsString( 'Test Sender', $args['subject'] );
-				$this->assertStringContainsString( 'Test direct message', $args['message'] );
-				$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
-				$this->assertEquals( get_user_by( 'id', $user_id )->user_email, $args['to'] );
-				return $args;
-			}
-		);
+		if ( $send_email ) {
+			// Capture email.
+			add_filter(
+				'wp_mail',
+				function ( $args ) use ( $user_id, $activity ) {
+					$this->assertStringContainsString( 'Direct Message', $args['subject'] );
+					$this->assertStringContainsString( 'Test Sender', $args['subject'] );
+					$this->assertStringContainsString( $activity['object']['content'], $args['message'] );
+					$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
+					$this->assertEquals( get_user_by( 'id', $user_id )->user_email, $args['to'] );
+					return $args;
+				}
+			);
+		} else {
+			add_filter(
+				'wp_mail',
+				function ( $args ) {
+					$this->fail( 'Email should not be sent for public activity' );
+					return $args;
+				}
+			);
+
+		}
 
 		Mailer::direct_message( $activity, $user_id );
 
-		// Test public activity (should not send email).
-		$public_activity = array(
-			'actor'  => 'https://example.com/author',
-			'object' => array(
-				'content'   => 'Test public reply',
-				'inReplyTo' => 'https://example.com/post/1',
-			),
-			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-		);
-
-		// Reset email capture.
-		remove_all_filters( 'wp_mail' );
-		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
-		add_filter(
-			'wp_mail',
-			function ( $args ) {
-				$this->fail( 'Email should not be sent for public activity' );
-				return $args;
-			}
-		);
-
-		Mailer::direct_message( $public_activity, $user_id );
-
-		// Test public activity (should not send email).
-		$public_activity = array(
-			'actor'  => 'https://example.com/author',
-			'object' => array(
-				'content'   => 'Test public activity',
-				'inReplyTo' => null,
-			),
-			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-			'cc'     => array( 'https://example.com/followers' ),
-		);
-
-		// Reset email capture.
-		remove_all_filters( 'wp_mail' );
-		add_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
-		add_filter(
-			'wp_mail',
-			function ( $args ) {
-				$this->fail( 'Email should not be sent for public activity' );
-				return $args;
-			}
-		);
-
-		Mailer::direct_message( $public_activity, $user_id );
-
-		$this->assertEquals( 1, $mock->get_call_count() );
+		$this->assertEquals( $send_email ? 1 : 0, $mock->get_call_count() );
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
@@ -343,6 +408,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'object' => array(
 				'content' => $text,
 			),
+			'to'     => array( Actors::get_by_id( $user_id )->get_id() ),
 		);
 
 		// Mock remote metadata.
