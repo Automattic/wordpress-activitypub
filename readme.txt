@@ -135,11 +135,11 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: A filter to make custom comment types manageable in WP.com Calypso
+* Added: `@mentions` in the JSON representation of the reply
 * Improved: HTML to e-mail text conversion
 
 = 4.5.1 =
 
-* Added: `@mentions` in the JSON representation of the reply
 * Improved: Reactions block: Remove the `wp-block-editor` dependency for frontend views
 * Fixed: Direct Messages: Don't send notification for received public activities
 
