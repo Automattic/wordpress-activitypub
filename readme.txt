@@ -139,6 +139,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: Settings to enable/disable e-mail notifications for new followers and direct messages
 * Improved: HTML to e-mail text conversion
 * Improved: Direct Messages: Test for the user being in the to field
+* Fixed: Reactions: Provide a fallback for empty avatar URLs
 
 = 4.5.1 =
 

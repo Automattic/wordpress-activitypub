@@ -11,7 +11,7 @@ import { __ } from '@wordpress/i18n';
  *
  * @type {string}
  */
-const { namespace } = window._activityPubOptions;
+const { namespace, defaultAvatarUrl } = window._activityPubOptions;
 
 /**
  * A component that renders a row of user avatars for a given set of reactions.
@@ -108,6 +108,7 @@ const FacepileRow = ( { reactions } ) => {
 					activeIndices.has(index) ? 'wave-active' : '',
 					rotationClass ? `rotate-${rotationClass}` : ''
 				].filter(Boolean).join(' ');
+				const avatar = reaction.avatar || defaultAvatarUrl;
 
 				return (
 					<li key={ index }>
@@ -119,7 +120,7 @@ const FacepileRow = ( { reactions } ) => {
 							onMouseLeave={() => startWave(index, false)}
 						>
 							<img
-								src={ reaction.avatar }
+								src={ avatar }
 								alt={ reaction.name }
 								className={ classes }
 								width="32"
@@ -224,7 +225,7 @@ const ReactionGroup = ( { items, label } ) => {
 	const AVATAR_OVERLAP = 10; // How much each avatar overlaps
 	const EFFECTIVE_AVATAR_WIDTH = AVATAR_WIDTH - AVATAR_OVERLAP; // Width each additional avatar takes
 	const BUTTON_GAP = 12; // Gap between avatars and button (0.75em)
-	
+
 	useEffect( () => {
 		if ( ! containerRef.current ) {
 			return;
@@ -243,7 +244,7 @@ const ReactionGroup = ( { items, label } ) => {
 			// Calculate how many avatars can fit
 			// First avatar takes full width, rest take effective width
 			const maxAvatars = Math.max( 1, Math.floor( ( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH ) );
-			
+
 			// Ensure we don't show more than we have
 			setVisibleCount( Math.min( maxAvatars, items.length ) );
 		};
