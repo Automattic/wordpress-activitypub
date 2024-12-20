@@ -452,6 +452,7 @@ class Migration {
 	 */
 	public static function add_default_settings() {
 		self::add_activitypub_capability();
+		self::add_notification_defaults();
 	}
 
 	/**
