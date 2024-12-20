@@ -56,5 +56,6 @@ jobs:
               {"path": "src", "label": "[Focus] Editor"},
               {"path": "includes/class-blocks.php", "label": "[Focus] Editor"},
               {"path": "integration", "label": "[Focus] Compatibility"},
-              {"path": "includes/collection", "label": "[Feature] Collections"}
+              {"path": "includes/collection", "label": "[Feature] Collections"},
+              {"path": "includes/class-mailer.php", "label": "[Feature] Notifications"}
             ]'
