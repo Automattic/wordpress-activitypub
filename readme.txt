@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
-Stable tag: 4.5.1
+Stable tag: 4.6.0
 Requires PHP: 7.0
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -132,45 +132,45 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-= Unreleased =
+= 4.6.0 =
 
 * Added: A filter to allow modifying the ActivityPub preview template
 * Added: `@mentions` in the JSON representation of the reply
 * Added: Settings to enable/disable e-mail notifications for new followers and direct messages
-* Improved: HTML to e-mail text conversion
-* Improved: Direct Messages: Test for the user being in the to field
-* Improved: Better support for FSE color schemes
+* Changed: HTML to e-mail text conversion
+* Changed: Direct Messages: Test for the user being in the to field
+* Changed: Better support for FSE color schemes
 * Fixed: Reactions: Provide a fallback for empty avatar URLs
 
 = 4.5.1 =
 
-* Improved: Reactions block: Remove the `wp-block-editor` dependency for frontend views
+* Changed: Reactions block: Remove the `wp-block-editor` dependency for frontend views
 * Fixed: Direct Messages: Don't send notification for received public activities
 
 = 4.5.0 =
 
-* Improved: Reactions (likes and reposts) now enabled by default
+* Changed: Reactions (likes and reposts) now enabled by default
 * Added: Reactions block to display likes and reposts
 * Added: `icon` support for `Audio` and `Video` attachments
 * Added: Send "new follower" emails
 * Added: Send "direct message" emails
 * Added: Account for custom comment types when calculating comment counts
 * Added: Plugin upgrade routine that automatically updates comment counts
-* Improved: Email templates for Likes and Reposts
-* Improved: Interactions moderation
-* Improved: Compatibility with Akismet
-* Improved: Comment type mapping for `Like` and `Announce`
-* Improved: Signature verification for API endpoints
-* Improved: Changed priority of Attachments, to favor `Image` over `Audio` and `Video`
+* Changed: Email templates for Likes and Reposts
+* Changed: Interactions moderation
+* Changed: Compatibility with Akismet
+* Changed: Comment type mapping for `Like` and `Announce`
+* Changed: Signature verification for API endpoints
+* Changed: Changed priority of Attachments, to favor `Image` over `Audio` and `Video`
 * Fixed: Empty `url` attributes in the Reply block no longer cause PHP warnings
 
 = 4.4.0 =
 
 * Added: Setting to enable/disable Authorized-Fetch
-* Improved: Added screen reader text for the "Follow Me" block for improved accessibility
-* Improved: Added `media_type` support to Activity-Object-Transformers
-* Improved: Clarified settings page text around which users get Activitypub profiles
-* Improved: Add a filter to the REST API moderators list
+* Changed: Added screen reader text for the "Follow Me" block for improved accessibility
+* Changed: Added `media_type` support to Activity-Object-Transformers
+* Changed: Clarified settings page text around which users get Activitypub profiles
+* Changed: Add a filter to the REST API moderators list
 * Fixed: Prevent hex color codes in HTML attributes from being added as post tags
 * Fixed: A typo in the custom post content settings
 * Fixed: Prevent draft posts from being federated when bulk deleted
@@ -181,10 +181,10 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: Fediverse Preview on post-overview page
 * Added: GitHub action to enforce Changelog updates
 * Added: New contributors
-* Improved: Basic enclosure validation
-* Improved: More User -> Actor renaming
-* Improved: Outsource Constants to a separate file
-* Improved: Better handling of `readme.txt` and `README.md`
+* Changed: Basic enclosure validation
+* Changed: More User -> Actor renaming
+* Changed: Outsource Constants to a separate file
+* Changed: Better handling of `readme.txt` and `README.md`
 * Fixed: editor error when switching to edit a synced Pattern
 * Fixed: Fediverse preview showing `preferredUsername` instead of `name`
 * Fixed: Potential fatal error in Enable Mastodon Apps

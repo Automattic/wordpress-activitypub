@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [4.6.0] - 2024-12-20
 
 ### Added
 
@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `@mentions` in the JSON representation of the reply
 * Add settings to enable/disable e-mail notifications for new followers and direct messages
 
-### Improved
+### Changed
 
 * Direct Messages: Test for the user being in the to field
 * Direct Messages: Improve HTML to e-mail text conversion
@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.5.1] - 2024-12-18
 
-### Improved
+### Changed
 
 * Reactions block: Remove the `wp-block-editor` dependency for frontend views
 
@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Account for custom comment types when calculating comment counts
 * Plugin upgrade routine that automatically updates comment counts
 
-### Improved
+### Changed
 
 * Likes and Reposts enabled by default
 * Email templates for Likes and Reposts
@@ -64,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Setting to enable/disable Authorized-Fetch
 
-### Improved
+### Changed
 
 * Added screen reader text to the "Follow Me" block for improved accessibility
 * Added `media_type` support to Activity-Object-Transformers
@@ -87,7 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * GitHub action to enforce Changelog updates
 * New contributors
 
-### Improved
+### Changed
 
 * Basic enclosure validation
 * More User -> Actor renaming
@@ -110,7 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Mastodon Apps status provider
 
-### Improved
+### Changed
 
 * Image-Handling
 * Have better checks if audience should be set or not
@@ -126,7 +126,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Unit tests for the `ActivityPub\Transformer\Post` class
 
-### Improved
+### Changed
 
 * Reuse constants once they're defined
 * "FEP-b2b8: Long-form Text" support
@@ -162,7 +162,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Hide sticky posts that are not public
 
-### Improved
+### Changed
 
 * `activity_handle_undo` action
 * Add title to content if post is a `Note`
@@ -174,7 +174,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Do not federate "Local" posts
 
-### Improved
+### Changed
 
 * Help-text for Content-Warning box
 
@@ -186,7 +186,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Seriously Simple Podcasting integration
 * Multiple small fixes
 
-### Improved
+### Changed
 
 * Provide contextual fallback for dynamic blocks
 
@@ -200,7 +200,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Post "visibility" feature
 * Attribution-Domains support
 
-### Improved
+### Changed
 
 * Inbox validation
 * WordPress-Post-Type - Detection
@@ -220,7 +220,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Sanitization callback
 
-### Improved
+### Changed
 
 * A lot of PHPCS cleanups
 * Prepare multi-lang support
@@ -232,7 +232,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Keep priority of Icons
 * Fatal error if remote-object is `WP_Error`
 
-### Improved
+### Changed
 
 * Adopt WordPress PHP Coding Standards
 
@@ -256,7 +256,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Cropping Header Images for users without the 'customize' capability
 
-### Improved
+### Changed
 
 * OpenSSL handling
 * Added missing @ in Follow-Me block
@@ -270,7 +270,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.2.4] - 2024-09-16
 
-### Improved
+### Changed
 
 * Inbox validation
 
@@ -281,7 +281,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * NodeInfo endpoint
 * (Temporarily) Remove HTML from `summary`, because it seems that Mastodon has issues with it
 
-### Improved
+### Changed
 
 * Accessibility for Reply-Context
 * Use `Article` Object-Type as default
@@ -310,7 +310,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * "Stream" Plugin support
 * New Fediverse symbol
 
-### Improved
+### Changed
 
 * Replace hashtags, URLs, and mentions in summary with links
 * Hide Bookmarklet if site does not support Blocks
@@ -331,7 +331,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Line breaks to user biography
 * Blueprint
 
-### Improved
+### Changed
 
 * Simplified WebFinger code
 
@@ -351,7 +351,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * ActivityPub link HTML/HTTP-Header support
 * Tag support for Actors (only auto-generated for now)
 
-### Improved
+### Changed
 
 * Add setting to enable/disable the `fediverse:creator` OGP tag.
 
@@ -372,7 +372,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Support for FEP-fb2a
 * CRUD support for Extra Fields
 
-### Improved
+### Changed
 
 * Remote-Follow UI and UX
 * Open Graph `fediverse:creator` implementation
@@ -1180,6 +1180,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/4.5.0...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[4.6.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.5.1...4.6.0
 [4.5.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.5.0...4.5.1
 [4.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.4.0...4.5.0
 [4.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.3.0...4.4.0
