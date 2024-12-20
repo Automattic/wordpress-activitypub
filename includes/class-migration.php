@@ -472,6 +472,14 @@ class Migration {
 	}
 
 	/**
+	 * Add default notification settings.
+	 */
+	private static function add_notification_defaults() {
+		\update_option( 'activitypub_mailer_new_follower', '1', false );
+		\update_option( 'activitypub_mailer_new_dm', '1', false );
+	}
+
+	/**
 	 * Rename meta keys.
 	 *
 	 * @param string $old_key The old comment meta key.
