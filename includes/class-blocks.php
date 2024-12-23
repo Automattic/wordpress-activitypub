@@ -110,8 +110,9 @@ class Blocks {
 	 */
 	public static function inject_activitypub_options() {
 		$data = array(
-			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
-			'enabled'   => array(
+			'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
+			'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+			'enabled'          => array(
 				'site'  => ! is_user_type_disabled( 'blog' ),
 				'users' => ! is_user_type_disabled( 'user' ),
 			),

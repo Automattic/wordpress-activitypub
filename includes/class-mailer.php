@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Model\User;
 
 /**
  * Mailer Class.
@@ -21,10 +22,14 @@ class Mailer {
 		\add_filter( 'comment_notification_text', array( self::class, 'comment_notification_text' ), 10, 2 );
 
 		// New follower notification.
-		\add_action( 'activitypub_notification_follow', array( self::class, 'new_follower' ) );
+		if ( '1' === \get_option( 'activitypub_mailer_new_follower', '0' ) ) {
+			\add_action( 'activitypub_notification_follow', array( self::class, 'new_follower' ) );
+		}
 
 		// Direct message notification.
-		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
+		if ( '1' === \get_option( 'activitypub_mailer_new_dm', '0' ) ) {
+			\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
+		}
 	}
 
 	/**
@@ -148,8 +153,12 @@ class Mailer {
 	 * @param int   $user_id  The id of the local blog-user.
 	 */
 	public static function direct_message( $activity, $user_id ) {
-		// Check if Activity is public or not.
-		if ( is_activity_public( $activity ) ) {
+		if (
+			is_activity_public( $activity ) ||
+			// Only accept messages that have the user in the "to" field.
+			empty( $activity['to'] ) ||
+			! in_array( Actors::get_by_id( $user_id )->get_id(), (array) $activity['to'], true )
+		) {
 			return;
 		}
 

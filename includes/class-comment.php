@@ -487,7 +487,8 @@ class Comment {
 
 		$handle     = 'activitypub-remote-reply';
 		$data       = array(
-			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
+			'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
+			'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
 		);
 		$js         = sprintf( 'var _activityPubOptions = %s;', wp_json_encode( $data ) );
 		$asset_file = ACTIVITYPUB_PLUGIN_DIR . 'build/remote-reply/index.asset.php';
