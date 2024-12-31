@@ -800,9 +800,15 @@ class Enable_Mastodon_Apps {
 			return $context;
 		}
 
-		$replies_url = $meta['replies']['first']['next'];
-		$replies     = Http::get_remote_object( $replies_url, true );
-		if ( is_wp_error( $replies ) || ! isset( $replies['items'] ) ) {
+		if ( isset( $meta['replies']['first']['items'] ) ) {
+			$replies = $meta['replies']['first'];
+		} elseif ( isset( $meta['replies']['first']['next'] ) ) {
+			$replies_url = $meta['replies']['first']['next'];
+			$replies     = Http::get_remote_object( $replies_url, true );
+			if ( is_wp_error( $replies ) || ! isset( $replies['items'] ) ) {
+				return $context;
+			}
+		} else {
 			return $context;
 		}
 
