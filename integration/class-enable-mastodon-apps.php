@@ -807,20 +807,24 @@ class Enable_Mastodon_Apps {
 		}
 
 		foreach ( $replies['items'] as $reply ) {
-			if ( is_string( $reply ) ){
-				$url = $reply;
-			} elseif ( isset( $reply['url'] ) && is_string( $reply['url'] ) ) {
-				$url = $reply['url'];
+			if ( isset( $reply['id'] ) && is_string( $reply['id'] ) && isset( $reply['content'] ) && is_string( $reply['content'] ) ) {
+				$status = $reply;
 			} else {
-				continue;
-			}
-			$response = Http::get( $url, true );
-			if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
-				continue;
-			}
-			$status = json_decode( wp_remote_retrieve_body( $response ), true );
-			if ( ! $status || is_wp_error( $status ) ) {
-				continue;
+				if ( is_string( $reply ) ) {
+					$url = $reply;
+				} elseif (  isset( $reply['url'] ) && is_string( $reply['url'] ) ) {
+					$url = $reply['url'];
+				} else {
+					continue;
+				}
+				$response = Http::get( $url, true );
+				if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
+					continue;
+				}
+				$status = json_decode( wp_remote_retrieve_body( $response ), true );
+				if ( ! $status || is_wp_error( $status ) ) {
+					continue;
+				}
 			}
 
 			$account = self::get_account_for_actor( $status['attributedTo'] );
