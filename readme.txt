@@ -132,6 +132,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Fetching replies for Enable Mastodon Apps
+
 = 4.6.0 =
 
 * Added: A filter to allow modifying the ActivityPub preview template
