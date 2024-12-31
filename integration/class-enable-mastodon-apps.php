@@ -800,7 +800,7 @@ class Enable_Mastodon_Apps {
 			return $context;
 		}
 
-		if ( isset( $meta['replies']['first']['items'] ) ) {
+		if ( ! empty( $meta['replies']['first']['items'] ) ) {
 			$replies = $meta['replies']['first'];
 		} elseif ( isset( $meta['replies']['first']['next'] ) ) {
 			$replies_url = $meta['replies']['first']['next'];
