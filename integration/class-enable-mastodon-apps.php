@@ -42,7 +42,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search_by_url' ), 40, 2 );
 		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ) );
 		\add_filter( 'mastodon_api_statuses', array( self::class, 'api_statuses_external' ), 10, 2 );
-		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 23 );
+		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 3 );
 		\add_action( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
 	}
 
@@ -806,7 +806,14 @@ class Enable_Mastodon_Apps {
 			return $context;
 		}
 
-		foreach ( $replies['items'] as $url ) {
+		foreach ( $replies['items'] as $reply ) {
+			if ( is_string( $reply ) ){
+				$url = $reply;
+			} elseif ( isset( $reply['url'] ) && is_string( $reply['url'] ) ) {
+				$url = $reply['url'];
+			} else {
+				continue;
+			}
 			$response = Http::get( $url, true );
 			if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
 				continue;
