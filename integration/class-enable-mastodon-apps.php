@@ -812,7 +812,7 @@ class Enable_Mastodon_Apps {
 			} else {
 				if ( is_string( $reply ) ) {
 					$url = $reply;
-				} elseif (  isset( $reply['url'] ) && is_string( $reply['url'] ) ) {
+				} elseif ( isset( $reply['url'] ) && is_string( $reply['url'] ) ) {
 					$url = $reply['url'];
 				} else {
 					continue;
