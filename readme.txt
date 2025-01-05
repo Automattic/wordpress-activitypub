@@ -135,6 +135,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Fetching replies for Enable Mastodon Apps
+* Fediverse Preview: Fix links
 
 = 4.6.0 =
 
