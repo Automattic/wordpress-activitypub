@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 * Fetching replies for Enable Mastodon Apps
+* Fediverse Preview: Fix links
 
 ## [4.6.0] - 2024-12-20
 
