@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Comment counts get updated when the plugin is activated/deactivated/deleted
+
 ### Fixed
 
 * Undefined array key warnings in various places

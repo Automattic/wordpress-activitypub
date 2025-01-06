@@ -62,6 +62,9 @@ class Activitypub {
 	public static function activate() {
 		self::flush_rewrite_rules();
 		Scheduler::register_schedules();
+
+		\add_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
+		Migration::update_comment_counts();
 	}
 
 	/**
@@ -70,6 +73,9 @@ class Activitypub {
 	public static function deactivate() {
 		self::flush_rewrite_rules();
 		Scheduler::deregister_schedules();
+
+		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
+		Migration::update_comment_counts( 2000 );
 	}
 
 	/**
@@ -77,6 +83,9 @@ class Activitypub {
 	 */
 	public static function uninstall() {
 		Scheduler::deregister_schedules();
+
+		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
+		Migration::update_comment_counts( 2000 );
 	}
 
 	/**

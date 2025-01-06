@@ -134,6 +134,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Added: Comment counts get updated when the plugin is activated/deactivated/deleted
 * Fixed: Undefined array key warnings in various places
 
 = 4.6.0 =
