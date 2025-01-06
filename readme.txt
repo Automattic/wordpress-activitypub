@@ -132,6 +132,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Fixed: Undefined array key warnings in various places
+
 = 4.6.0 =
 
 * Added: A filter to allow modifying the ActivityPub preview template

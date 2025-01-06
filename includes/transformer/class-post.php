@@ -1114,7 +1114,7 @@ class Post extends Base {
 		$blocks = \parse_blocks( $this->wp_object->post_content );
 
 		foreach ( $blocks as $block ) {
-			if ( 'activitypub/reply' === $block['blockName'] ) {
+			if ( 'activitypub/reply' === $block['blockName'] && isset( $block['attrs']['url'] ) ) {
 				// We only support one reply block per post for now.
 				return $block['attrs']['url'];
 			}
