@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Added a filter to make custom comment types manageable in WP.com Calypso
+
 ### Changed
 
 * Hide ActivityPub post meta keys from the custom Fields UI
