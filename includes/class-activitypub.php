@@ -29,7 +29,7 @@ class Activitypub {
 		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
 
 		// Add support for ActivityPub to custom post types.
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post' ) ) : array();
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
 
 		foreach ( $post_types as $post_type ) {
 			\add_post_type_support( $post_type, 'activitypub' );
@@ -87,6 +87,46 @@ class Activitypub {
 
 		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
 		Migration::update_comment_counts( 2000 );
+
+		delete_metadata( 'user', 0, '_activitypub_user_identifier', '', true );
+		delete_metadata( 'user', 0, 'activitypub_default_extra_fields', '', true );
+		delete_metadata( 'user', 0, 'activitypub_followers', '', true );
+		delete_metadata( 'user', 0, 'magic_sig_public_key', '', true );
+		delete_metadata( 'user', 0, 'magic_sig_private_key', '', true );
+
+		delete_metadata( 'post', 0, '_activitypub_actor_json', '', true );
+		delete_metadata( 'post', 0, '_activitypub_canonical_url', '', true );
+		delete_metadata( 'post', 0, '_activitypub_errors', '', true );
+		delete_metadata( 'post', 0, '_activitypub_inbox', '', true );
+		delete_metadata( 'post', 0, '_activitypub_user_id', '', true );
+		delete_metadata( 'post', 0, 'activitypub_content_warning', '', true );
+		delete_metadata( 'post', 0, 'activitypub_content_visibility', '', true );
+
+		delete_option( 'activitypub_actor_mode' );
+		delete_option( 'activitypub_attribution_domains' );
+		delete_option( 'activitypub_authorized_fetch' );
+		delete_option( 'activitypub_application_user_private_key' );
+		delete_option( 'activitypub_application_user_public_key' );
+		delete_option( 'activitypub_blog_user_private_key' );
+		delete_option( 'activitypub_blog_user_public_key' );
+		delete_option( 'activitypub_blog_description' );
+		delete_option( 'activitypub_blog_identifier' );
+		delete_option( 'activitypub_custom_post_content' );
+		delete_option( 'activitypub_db_version' );
+		delete_option( 'activitypub_default_extra_fields' );
+		delete_option( 'activitypub_enable_blog_user' );
+		delete_option( 'activitypub_enable_users' );
+		delete_option( 'activitypub_header_image' );
+		delete_option( 'activitypub_last_post_with_permalink_as_id' );
+		delete_option( 'activitypub_mailer_new_follower' );
+		delete_option( 'activitypub_mailer_new_dm' );
+		delete_option( 'activitypub_max_image_attachments' );
+		delete_option( 'activitypub_migration_lock' );
+		delete_option( 'activitypub_object_type' );
+		delete_option( 'activitypub_support_post_types' );
+		delete_option( 'activitypub_use_hashtags' );
+		delete_option( 'activitypub_use_opengraph' );
+		delete_option( 'activitypub_use_permalink_as_id_for_blog' );
 	}
 
 	/**
