@@ -135,6 +135,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: A filter to make custom comment types manageable in WP.com Calypso
+* Fixed: Undefined array key warnings in various places
 
 = 4.6.0 =
 

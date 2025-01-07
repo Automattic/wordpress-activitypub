@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added a filter to make custom comment types manageable in WP.com Calypso
 
+### Fixed
+
+* Undefined array key warnings in various places
+
 ## [4.6.0] - 2024-12-20
 
 ### Added
