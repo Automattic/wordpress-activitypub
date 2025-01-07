@@ -32,10 +32,32 @@ function fetchProfile( userId ) {
 	return apiFetch( fetchOptions );
 }
 
-function Profile( { profile, popupStyles, userId } ) {
+function Profile( {
+	profile,
+	popupStyles,
+	userId,
+	buttonText,
+	buttonOnly,
+	buttonSize,
+} ) {
 	const { webfinger, avatar, name } = profile;
 	// check if webfinger starts with @ and add it if it doesn't
 	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
+
+	if ( buttonOnly ) {
+		return (
+			<div className="activitypub-profile">
+				<Follow
+					profile={ profile }
+					popupStyles={ popupStyles }
+					userId={ userId }
+					buttonText={ buttonText }
+					buttonSize={ buttonSize }
+				/>
+			</div>
+		);
+	}
+
 	return (
 		<div className="activitypub-profile">
 			<img className="activitypub-profile__avatar" src={ avatar } alt={ name } />
@@ -43,12 +65,24 @@ function Profile( { profile, popupStyles, userId } ) {
 				<div className="activitypub-profile__name">{ name }</div>
 				<div className="activitypub-profile__handle" title={ webfingerWithAt }>{ webfingerWithAt }</div>
 			</div>
-			<Follow profile={ profile } popupStyles={ popupStyles } userId={ userId } />
+			<Follow
+				profile={ profile }
+				popupStyles={ popupStyles }
+				userId={ userId }
+				buttonText={ buttonText }
+				buttonSize={ buttonSize }
+			/>
 		</div>
 	);
 }
 
-function Follow( { profile, popupStyles, userId } ) {
+function Follow( {
+	profile,
+	popupStyles,
+	userId,
+	buttonText,
+	buttonSize,
+} ) {
 	const [ isOpen, setIsOpen ] = useState( false );
 	const title = sprintf( __( 'Follow %s', 'activitypub' ), profile?.name );
 
@@ -60,8 +94,9 @@ function Follow( { profile, popupStyles, userId } ) {
 				aria-haspopup="dialog"
 				aria-expanded={ isOpen }
 				aria-label={  __( 'Follow me on the Fediverse', 'activitypub' ) }
+				size={ buttonSize }
 			>
-				{ __( 'Follow', 'activitypub' ) }
+				{ buttonText }
 			</Button>
 			{ isOpen && (
 				<Modal
@@ -95,25 +130,44 @@ function DialogFollow( { profile, userId } ) {
 	/>;
 }
 
-export default function FollowMe( { selectedUser, style, backgroundColor, id, useId = false, profileData = false } ) {
+export default function FollowMe( {
+	selectedUser,
+	style,
+	backgroundColor,
+	id,
+	useId = false,
+	profileData = false,
+	buttonOnly = false,
+	buttonText = __( 'Follow', 'activitypub' ),
+	buttonSize = 'default',
+} ) {
 	const [ profile, setProfile ] = useState( getNormalizedProfile() );
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
 	const popupStyles = getPopupStyles( style );
 	const wrapperProps = useId ? { id } : {};
-	function setProfileData( profile ) {
-		setProfile( getNormalizedProfile( profile ) );
-	}
+
 	useEffect( () => {
 		if ( profileData ) {
-			return setProfileData( profileData );
+			setProfile( getNormalizedProfile( profileData ) );
+			return;
 		}
-		fetchProfile( userId ).then( setProfileData );
+
+		fetchProfile( userId ).then( ( data ) => {
+			setProfile( getNormalizedProfile( data ) );
+		} );
 	}, [ userId, profileData ] );
 
-	return(
-		<div { ...wrapperProps }>
+	return (
+		<div { ...wrapperProps } className="activitypub-follow-me-block-wrapper">
 			<ButtonStyle selector={ `#${ id }` } style={ style } backgroundColor={ backgroundColor } />
-			<Profile profile={ profile } userId={ userId } popupStyles={ popupStyles } />
+			<Profile 
+				profile={ profile } 
+				userId={ userId } 
+				popupStyles={ popupStyles } 
+				buttonText={ buttonText }
+				buttonOnly={ buttonOnly }
+				buttonSize={ buttonSize }
+			/>
 		</div>
-	)
+	);
 }
