@@ -60,8 +60,8 @@ export default function Edit({
 
   return (
 	<div { ...blockProps }>
-	  <InspectorControls key="setting">
-		<PanelBody title={ __( 'Followers Options', 'activitypub' ) }>
+	  <InspectorControls key="activitypub-follow-me">
+		<PanelBody title={ __( 'Follow Me Options', 'activitypub' ) }>
 		  { usersOptions.length > 1 && (
 			<SelectControl
 			  label= { __( 'Select User', 'activitypub' ) }
