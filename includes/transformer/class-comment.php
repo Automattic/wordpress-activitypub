@@ -53,31 +53,30 @@ class Comment extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object.
 	 */
 	public function to_object() {
-		$comment = $this->wp_object;
-		$object  = parent::to_object();
+		$object = parent::to_object();
 
-		$object->set_url( $this->get_id() );
-		$object->set_type( 'Note' );
+		$content       = $this->get_content();
+		$at_replies    = '';
+		$reply_context = $this->extract_reply_context( array() );
 
-		$published = \strtotime( $comment->comment_date_gmt );
-		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', $published ) );
-
-		$updated = \get_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', true );
-		if ( $updated > $published ) {
-			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', $updated ) );
+		foreach ( $reply_context as $acct => $url ) {
+			$at_replies .= sprintf(
+				'<a class="u-mention mention" href="%s">%s</a> ',
+				esc_url( $url ),
+				esc_html( $acct )
+			);
 		}
 
+		$at_replies = trim( $at_replies );
+
+		if ( $at_replies ) {
+			$content = sprintf( '<p>%s</p>%s', $at_replies, $content );
+		}
+
+		$object->set_content( $content );
 		$object->set_content_map(
 			array(
-				$this->get_locale() => $this->get_content(),
-			)
-		);
-		$path = sprintf( 'actors/%d/followers', intval( $comment->comment_author ) );
-
-		$object->set_to(
-			array(
-				'https://www.w3.org/ns/activitystreams#Public',
-				get_rest_url_by_path( $path ),
+				$this->get_locale() => $content,
 			)
 		);
 
@@ -307,5 +306,62 @@ class Comment extends Base {
 		 * @return string The filtered locale of the comment.
 		 */
 		return apply_filters( 'activitypub_comment_locale', $lang, $comment_id, $this->wp_object );
+	}
+
+	/**
+	 * Returns the updated date of the comment.
+	 *
+	 * @return string|null The updated date of the comment.
+	 */
+	public function get_updated() {
+		$updated   = \get_comment_meta( $this->wp_object->comment_ID, 'activitypub_comment_modified', true );
+		$published = \get_comment_meta( $this->wp_object->comment_ID, 'activitypub_comment_published', true );
+
+		if ( $updated > $published ) {
+			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Returns the published date of the comment.
+	 *
+	 * @return string The published date of the comment.
+	 */
+	public function get_published() {
+		return \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $this->wp_object->comment_date_gmt ) );
+	}
+
+	/**
+	 * Returns the URL of the comment.
+	 *
+	 * @return string The URL of the comment.
+	 */
+	public function get_url() {
+		return $this->get_id();
+	}
+
+	/**
+	 * Returns the type of the comment.
+	 *
+	 * @return string The type of the comment.
+	 */
+	public function get_type() {
+		return 'Note';
+	}
+
+	/**
+	 * Returns the to of the comment.
+	 *
+	 * @return array The to of the comment.
+	 */
+	public function get_to() {
+		$path = sprintf( 'actors/%d/followers', intval( $this->wp_object->comment_author ) );
+
+		return array(
+			'https://www.w3.org/ns/activitystreams#Public',
+			get_rest_url_by_path( $path ),
+		);
 	}
 }

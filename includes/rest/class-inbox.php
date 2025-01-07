@@ -85,7 +85,7 @@ class Inbox {
 		}
 
 		/**
-		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
+		 * Fires before the ActivityPub inbox is created and sent to the client.
 		 */
 		\do_action( 'activitypub_rest_inbox_pre' );
 
@@ -103,14 +103,14 @@ class Inbox {
 		// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 
 		/**
-		 * Filter the ActivityPub inbox array.
+		 * Filters the ActivityPub inbox data before it is sent to the client.
 		 *
 		 * @param array $json The ActivityPub inbox array.
 		 */
 		$json = \apply_filters( 'activitypub_rest_inbox_array', $json );
 
 		/**
-		 * Action triggered after the ActivityPub profile has been created and sent to the client.
+		 * Fires after the ActivityPub inbox has been created and sent to the client.
 		 */
 		\do_action( 'activitypub_inbox_post' );
 

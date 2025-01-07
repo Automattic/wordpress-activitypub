@@ -452,6 +452,7 @@ class Migration {
 	 */
 	public static function add_default_settings() {
 		self::add_activitypub_capability();
+		self::add_notification_defaults();
 	}
 
 	/**
@@ -469,6 +470,14 @@ class Migration {
 		foreach ( $users as $user ) {
 			$user->add_cap( 'activitypub' );
 		}
+	}
+
+	/**
+	 * Add default notification settings.
+	 */
+	private static function add_notification_defaults() {
+		\add_option( 'activitypub_mailer_new_follower', '1' );
+		\add_option( 'activitypub_mailer_new_dm', '1' );
 	}
 
 	/**

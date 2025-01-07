@@ -16,6 +16,7 @@ _site
 bin
 CHANGELOG.md
 CODE_OF_CONDUCT.md
+CONTRIBUTING.md
 composer.json
 composer.lock
 Dockerfile

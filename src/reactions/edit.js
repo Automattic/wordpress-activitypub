@@ -1,4 +1,4 @@
-import { useBlockProps } from '@wordpress/block-editor';
+import { useBlockProps, RichText } from '@wordpress/block-editor';
 import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { Reactions } from './reactions';
@@ -103,12 +103,21 @@ export default function Edit( { attributes, setAttributes, __unstableLayoutClass
 	const blockProps = useBlockProps( { className: __unstableLayoutClassNames } );
 	const [ dummyReactions ] = useState( generateDummyReactions() );
 
+	const titleEditor = (
+		<RichText
+			tagName="h6"
+			value={ attributes.title }
+			onChange={ ( title ) => setAttributes( { title } ) }
+			placeholder={ __( 'Fediverse reactions', 'activitypub' ) }
+			disableLineBreaks={ true }
+			allowedFormats={ [] }
+		/>
+	);
+
 	return (
 		<div { ...blockProps }>
 			<Reactions
-				isEditing={ true }
-				title={ attributes.title }
-				setTitle={ ( title ) => setAttributes( { title } ) }
+				titleComponent={ titleEditor }
 				reactions={ dummyReactions }
 			/>
 		</div>

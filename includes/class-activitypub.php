@@ -102,10 +102,15 @@ class Activitypub {
 		} elseif ( is_comment() ) {
 			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() && ! is_post_disabled( \get_the_ID() ) ) {
-			$preview = \get_query_var( 'preview' );
-			if ( $preview ) {
+			if ( \get_query_var( 'preview' ) ) {
 				\define( 'ACTIVITYPUB_PREVIEW', true );
-				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php';
+
+				/**
+				 * Filter the template used for the ActivityPub preview.
+				 *
+				 * @param string $activitypub_template Absolute path to the template file.
+				 */
+				$activitypub_template = apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
 			} else {
 				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
 			}
@@ -555,6 +560,9 @@ class Activitypub {
 		\register_post_type( Extra_Fields::USER_POST_TYPE, $args );
 		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $args );
 
+		/**
+		 * Fires after ActivityPub custom post types have been registered.
+		 */
 		\do_action( 'activitypub_after_register_post_type' );
 	}
 

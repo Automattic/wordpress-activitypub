@@ -1,18 +1,17 @@
 /**
  * WordPress dependencies
  */
-import { RichText } from '@wordpress/block-editor';
 import { useState, useEffect, useRef } from '@wordpress/element';
 import { Popover, Button } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
-import { __, _nx, sprintf } from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Extract the namespace from the global _activityPubOptions object.
  *
  * @type {string}
  */
-const { namespace } = window._activityPubOptions;
+const { namespace, defaultAvatarUrl } = window._activityPubOptions;
 
 /**
  * A component that renders a row of user avatars for a given set of reactions.
@@ -109,6 +108,7 @@ const FacepileRow = ( { reactions } ) => {
 					activeIndices.has(index) ? 'wave-active' : '',
 					rotationClass ? `rotate-${rotationClass}` : ''
 				].filter(Boolean).join(' ');
+				const avatar = reaction.avatar || defaultAvatarUrl;
 
 				return (
 					<li key={ index }>
@@ -120,7 +120,7 @@ const FacepileRow = ( { reactions } ) => {
 							onMouseLeave={() => startWave(index, false)}
 						>
 							<img
-								src={ reaction.avatar }
+								src={ avatar }
 								alt={ reaction.name }
 								className={ classes }
 								width="32"
@@ -152,7 +152,7 @@ const ReactionDropdown = ( { reactions, anchor, onClose } ) => (
 		noArrow={ false }
 		offset={ 10 }
 	>
-		<ul className="reaction-list">
+		<ul className="activitypub-reaction-list">
 			{ reactions.map( ( reaction, index ) => (
 				<li key={ index }>
 					<a
@@ -184,7 +184,7 @@ const ReactionDropdown = ( { reactions, anchor, onClose } ) => (
  * @return {JSX.Element}            The rendered component.
  */
 const ReactionList = ( { reactions, type } ) => (
-	<ul className="reaction-list">
+	<ul className="activitypub-reaction-list">
 		{ reactions.map( ( reaction, index ) => (
 			<li key={ index }>
 				<a
@@ -225,7 +225,7 @@ const ReactionGroup = ( { items, label } ) => {
 	const AVATAR_OVERLAP = 10; // How much each avatar overlaps
 	const EFFECTIVE_AVATAR_WIDTH = AVATAR_WIDTH - AVATAR_OVERLAP; // Width each additional avatar takes
 	const BUTTON_GAP = 12; // Gap between avatars and button (0.75em)
-	
+
 	useEffect( () => {
 		if ( ! containerRef.current ) {
 			return;
@@ -244,7 +244,7 @@ const ReactionGroup = ( { items, label } ) => {
 			// Calculate how many avatars can fit
 			// First avatar takes full width, rest take effective width
 			const maxAvatars = Math.max( 1, Math.floor( ( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH ) );
-			
+
 			// Ensure we don't show more than we have
 			setVisibleCount( Math.min( maxAvatars, items.length ) );
 		};
@@ -289,20 +289,18 @@ const ReactionGroup = ( { items, label } ) => {
 /**
  * The Reactions component.
  *
- * @param {Object}   props                  Component props.
- * @param {string}   props.title            The title text.
- * @param {?number}  props.postId           The post ID.
- * @param {boolean}  props.isEditing        Whether in edit mode.
- * @param {Function} props.setTitle         Title update callback.
- * @param {?Object}  props.reactions        Optional reactions data.
- * @return {?JSX.Element}                   The rendered component.
+ * @param {Object}    props                  Component props.
+ * @param {string}    props.title            The title text.
+ * @param {?number}   props.postId           The post ID.
+ * @param {?Object}   props.reactions        Optional reactions data.
+ * @param {?JSX.Element} props.titleComponent Optional component for title editing.
+ * @return {?JSX.Element}                    The rendered component.
  */
 export function Reactions( {
 	title = '',
 	postId = null,
-	isEditing = false,
-	setTitle = () => {},
 	reactions: providedReactions = null,
+	titleComponent = null,
 } ) {
 	const [ reactions, setReactions ] = useState( providedReactions );
 	const [ loading, setLoading ] = useState( ! providedReactions );
@@ -341,18 +339,7 @@ export function Reactions( {
 
 	return (
 		<div className="activitypub-reactions">
-			{ isEditing ? (
-				<RichText
-					tagName="h6"
-					value={ title }
-					onChange={ setTitle }
-					placeholder={ __( 'Fediverse reactions', 'activitypub' ) }
-					disableLineBreaks={ true }
-					allowedFormats={ [] }
-				/>
-			) : (
-				title && <h6>{ title }</h6>
-			) }
+			{ titleComponent || ( title && <h6>{ title }</h6> ) }
 
 			{ Object.entries( reactions ).map( ( [ key, group ] ) => {
 				if ( ! group.items?.length ) {
