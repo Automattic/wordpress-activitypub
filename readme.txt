@@ -135,6 +135,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Fixed: Undefined array key warnings in various places
+* Fixed: Image captions not being included in the ActivityPub representation when the image is attached to the post
 
 = 4.6.0 =
 

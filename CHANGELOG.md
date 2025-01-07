@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Undefined array key warnings in various places
+* Image captions not being included in the ActivityPub representation when the image is attached to the post
 
 ## [4.6.0] - 2024-12-20
 
