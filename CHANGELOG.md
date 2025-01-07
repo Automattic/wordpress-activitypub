@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Undefined array key warnings in various places
 
+### Changed
+* Print `_activityPubOptions` later in `<head>` on the frontend.
+
 ## [4.6.0] - 2024-12-20
 
 ### Added
