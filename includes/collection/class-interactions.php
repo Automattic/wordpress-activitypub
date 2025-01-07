@@ -107,8 +107,9 @@ class Interactions {
 		}
 
 		// Found a local comment id.
-		$comment_data['comment_author']  = \esc_attr( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
-		$comment_data['comment_content'] = \addslashes( $activity['object']['content'] );
+		$comment_author                  = empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'];
+		$comment_data['comment_author']  = self::replace_custom_emoji( $comment_author, $meta );
+		$comment_data['comment_content'] = \addslashes( self::replace_custom_emoji( $activity['object']['content'], $activity['object'] ) );
 
 		return self::persist( $comment_data, self::UPDATE );
 	}
@@ -303,12 +304,20 @@ class Interactions {
 		}
 
 		// Add `p` and `br` to the list of allowed tags.
-		if ( ! array_key_exists( 'br', $allowed_tags ) ) {
+		if ( ! isset( $allowed_tags['br'] ) ) {
 			$allowed_tags['br'] = array();
 		}
 
-		if ( ! array_key_exists( 'p', $allowed_tags ) ) {
+		if ( ! isset( $allowed_tags['p'] ) ) {
 			$allowed_tags['p'] = array();
+		}
+
+		if ( ! isset( $allowed_tags['img'] ) ) {
+			$allowed_tags['img'] = array(
+				'src'   => array(),
+				'alt'   => array(),
+				'class' => array(),
+			);
 		}
 
 		return $allowed_tags;
@@ -360,9 +369,9 @@ class Interactions {
 		$gm_date   = \gmdate( 'Y-m-d H:i:s', \strtotime( $published ) );
 
 		$comment_data = array(
-			'comment_author'       => $comment_author ?? __( 'Anonymous', 'activitypub' ),
+			'comment_author'       => self::replace_custom_emoji( $comment_author ?? __( 'Anonymous', 'activitypub' ), $actor ),
 			'comment_author_url'   => \esc_url_raw( $url ),
-			'comment_content'      => $comment_content,
+			'comment_content'      => self::replace_custom_emoji( $comment_content, $activity['object'] ),
 			'comment_type'         => 'comment',
 			'comment_author_email' => $webfinger,
 			'comment_date'         => \get_date_from_gmt( $gm_date ),
@@ -484,5 +493,35 @@ class Interactions {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Replace custom emoji shortcodes with their corresponding emoji.
+	 *
+	 * @param string $text     The text to process.
+	 * @param array  $activity The activity array containing emoji definitions.
+	 *
+	 * @return string The processed text with emoji replacements.
+	 */
+	private static function replace_custom_emoji( $text, $activity ) {
+		if ( empty( $activity['tag'] ) || ! is_array( $activity['tag'] ) ) {
+			return $text;
+		}
+
+		foreach ( $activity['tag'] as $tag ) {
+			if ( isset( $tag['type'] ) && 'Emoji' === $tag['type'] && ! empty( $tag['name'] ) && ! empty( $tag['icon']['url'] ) ) {
+				$text = str_replace(
+					$tag['name'],
+					sprintf(
+						'<img src="%s" alt="%s" class="emoji" />',
+						\esc_url( $tag['icon']['url'] ),
+						\esc_attr( $tag['name'] )
+					),
+					$text
+				);
+			}
+		}
+
+		return $text;
 	}
 }

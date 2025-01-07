@@ -1143,4 +1143,59 @@ class Test_Interactions extends \WP_UnitTestCase {
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 	}
+
+	/**
+	 * Test emoji replacement in activity_to_comment.
+	 *
+	 * @covers ::activity_to_comment
+	 */
+	public function test_activity_to_comment_with_emoji() {
+		$activity = array(
+			'@context' => array(
+				'https://www.w3.org/ns/activitystreams',
+				array(
+					'Emoji' => 'http://joinmastodon.org/ns#Emoji',
+				),
+			),
+			'id'       => 'https://example.com/activities/1',
+			'type'     => 'Note',
+			'content'  => 'Hello world :kappa: and :smile:',
+			'actor'    => self::$user_url,
+			'object'   => array(
+				'id'      => 'https://example.com/objects/1',
+				'content' => 'Hello world :kappa: and :smile:',
+				'tag'     => array(
+					array(
+						'type' => 'Emoji',
+						'name' => ':kappa:',
+						'icon' => array(
+							'type'      => 'Image',
+							'mediaType' => 'image/png',
+							'url'       => 'https://example.com/files/kappa.png',
+						),
+					),
+					array(
+						'type' => 'Emoji',
+						'name' => ':smile:',
+						'icon' => array(
+							'type'      => 'Image',
+							'mediaType' => 'image/png',
+							'url'       => 'https://example.com/files/smile.png',
+						),
+					),
+				),
+			),
+		);
+
+		$comment_data = Interactions::activity_to_comment( $activity );
+
+		$this->assertStringContainsString(
+			'<img src="https://example.com/files/kappa.png" alt=":kappa:" class="emoji" />',
+			$comment_data['comment_content']
+		);
+		$this->assertStringContainsString(
+			'<img src="https://example.com/files/smile.png" alt=":smile:" class="emoji" />',
+			$comment_data['comment_content']
+		);
+	}
 }
