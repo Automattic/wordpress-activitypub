@@ -233,6 +233,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fetching replies from the same instance for Enable Mastodon Apps
 - Image captions not being included in the ActivityPub representation when the image is attached to the post
 
+### Changed
+
+* Button only mode for the "Follow Me" Block
+
 ## [4.6.0] - 2024-12-20
 ### Added
 - Add a filter to allow modifying the ActivityPub preview template
