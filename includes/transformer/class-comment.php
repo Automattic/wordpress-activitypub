@@ -53,25 +53,8 @@ class Comment extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object.
 	 */
 	public function to_object() {
-		$object = parent::to_object();
-
-		$content       = $this->get_content();
-		$at_replies    = '';
-		$reply_context = $this->extract_reply_context( array() );
-
-		foreach ( $reply_context as $acct => $url ) {
-			$at_replies .= sprintf(
-				'<a class="u-mention mention" href="%s">%s</a> ',
-				esc_url( $url ),
-				esc_html( $acct )
-			);
-		}
-
-		$at_replies = trim( $at_replies );
-
-		if ( $at_replies ) {
-			$content = sprintf( '<p>%s</p>%s', $at_replies, $content );
-		}
+		$object  = parent::to_object();
+		$content = $this->get_content();
 
 		$object->set_content( $content );
 		$object->set_content_map(
@@ -109,6 +92,21 @@ class Comment extends Base {
 	protected function get_content() {
 		$comment = $this->wp_object;
 		$content = $comment->comment_content;
+
+		$at_replies    = '';
+		$reply_context = $this->extract_reply_context();
+
+		foreach ( $reply_context as $acct => $url ) {
+			$at_replies .= sprintf(
+				'<a class="u-mention mention" href="%s">%s</a> ',
+				esc_url( $url ),
+				esc_html( $acct )
+			);
+		}
+
+		if ( $at_replies ) {
+			$content = $at_replies . $content;
+		}
 
 		/**
 		 * Filter the content of the comment.
@@ -258,11 +256,11 @@ class Comment extends Base {
 	 * Collect all other Users that participated in this comment-thread
 	 * to send them a notification about the new reply.
 	 *
-	 * @param array $mentions The already mentioned ActivityPub users.
+	 * @param array $mentions Optional. The already mentioned ActivityPub users. Default empty array.
 	 *
 	 * @return array The list of all Repliers.
 	 */
-	public function extract_reply_context( $mentions ) {
+	public function extract_reply_context( $mentions = array() ) {
 		// Check if `$this->wp_object` is a WP_Comment.
 		if ( 'WP_Comment' !== get_class( $this->wp_object ) ) {
 			return $mentions;
