@@ -135,7 +135,9 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: A filter to make custom comment types manageable in WP.com Calypso
+* Changed: Hide ActivityPub post meta keys from the custom Fields UI
 * Fixed: Undefined array key warnings in various places
+* Fixed: Image captions not being included in the ActivityPub representation when the image is attached to the post
 * Changed: Print `_activityPubOptions` in the `wp_footer` action on the frontend.
 
 = 4.6.0 =

@@ -11,9 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added a filter to make custom comment types manageable in WP.com Calypso
 
+### Changed
+
+* Hide ActivityPub post meta keys from the custom Fields UI
+
 ### Fixed
 
 * Undefined array key warnings in various places
+* Image captions not being included in the ActivityPub representation when the image is attached to the post
 
 ### Changed
 * Print `_activityPubOptions` in the `wp_footer` action on the frontend.
