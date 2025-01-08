@@ -286,7 +286,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$this->assertEquals( $permalink, $activitypub_post->get_id() );
 
-		$cached = \get_post_meta( $post, 'activitypub_canonical_url', true );
+		$cached = \get_post_meta( $post, '_activitypub_canonical_url', true );
 
 		$this->assertEquals( $cached, $activitypub_post->get_id() );
 	}

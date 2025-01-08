@@ -5,12 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### Fixed
-
 ## [Unreleased]
 
-* Fetching replies for Enable Mastodon Apps
-* Fediverse Preview: Fix links
+### Added
+
+* Added a filter to make custom comment types manageable in WP.com Calypso
+
+### Changed
+
+* Hide ActivityPub post meta keys from the custom Fields UI
+
+### Fixed
+
+* Undefined array key warnings in various places
+* Fetching replies from the same instance for Enable Mastodon Apps
 
 ## [4.6.0] - 2024-12-20
 

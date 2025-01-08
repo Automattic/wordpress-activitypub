@@ -134,8 +134,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
-* Fetching replies for Enable Mastodon Apps
-* Fediverse Preview: Fix links
+* Added: A filter to make custom comment types manageable in WP.com Calypso
+* Changed: Hide ActivityPub post meta keys from the custom Fields UI
+* Fixed: Undefined array key warnings in various places
+* Fixed: Fetching replies from the same instance for Enable Mastodon Apps
 
 = 4.6.0 =
 
