@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 * Hide ActivityPub post meta keys from the custom Fields UI
+* Bumped minimum required PHP version to 7.2
 
 ### Fixed
 

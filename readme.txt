@@ -4,7 +4,7 @@ Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
 Stable tag: 4.6.0
-Requires PHP: 7.0
+Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
 
@@ -136,6 +136,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Added: A filter to make custom comment types manageable in WP.com Calypso
 * Changed: Hide ActivityPub post meta keys from the custom Fields UI
+* Changed: Bumped minimum required PHP version to 7.2
 * Fixed: Undefined array key warnings in various places
 * Fixed: Image captions not being included in the ActivityPub representation when the image is attached to the post
 
