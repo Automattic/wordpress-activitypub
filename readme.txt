@@ -136,7 +136,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Added: A filter to make custom comment types manageable in WP.com Calypso
 * Fixed: Undefined array key warnings in various places
-* Changed: Print `_activityPubOptions` later in `<head>` on the frontend.
+* Changed: Print `_activityPubOptions` in the `wp_footer` action on the frontend.
 
 = 4.6.0 =
 
