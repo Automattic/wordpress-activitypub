@@ -90,23 +90,18 @@ class Comment extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		$comment = $this->wp_object;
-		$content = $comment->comment_content;
+		$comment  = $this->wp_object;
+		$content  = $comment->comment_content;
+		$mentions = '';
 
-		$at_replies    = '';
-		$reply_context = $this->extract_reply_context();
-
-		foreach ( $reply_context as $acct => $url ) {
-			$at_replies .= sprintf(
+		foreach ( $this->extract_reply_context() as $acct => $url ) {
+			$mentions .= sprintf(
 				'<a class="u-mention mention" href="%s">%s</a> ',
 				esc_url( $url ),
 				esc_html( $acct )
 			);
 		}
-
-		if ( $at_replies ) {
-			$content = $at_replies . $content;
-		}
+		$content = $mentions . $content;
 
 		/**
 		 * Filter the content of the comment.
