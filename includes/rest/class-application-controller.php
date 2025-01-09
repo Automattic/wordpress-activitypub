@@ -1,6 +1,6 @@
 <?php
 /**
- * Application Controller REST-Class file.
+ * Application Controller file.
  *
  * @package Activitypub
  */
@@ -10,7 +10,7 @@ namespace Activitypub\Rest;
 use Activitypub\Model\Application;
 
 /**
- * ActivityPub Application Controller REST-Class.
+ * ActivityPub Application Controller.
  */
 class Application_Controller extends \WP_REST_Controller {
 	/**
