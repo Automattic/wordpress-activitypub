@@ -49,6 +49,7 @@ function rest_init() {
 	Rest\Collection::init();
 	Rest\Interaction::init();
 	Rest\Post::init();
+	( new Rest\Application_Controller() )->register_routes();
 	( new Rest\Webfinger_Controller() )->register_routes();
 
 	// Load NodeInfo endpoints only if blog is public.
