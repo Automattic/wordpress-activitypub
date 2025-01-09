@@ -117,7 +117,7 @@ class Test_Webfinger_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 * @covers ::get_item
 	 */
 	public function test_get_item_with_missing_resource() {
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger' );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger' );
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 400, $response->get_status() );
@@ -143,8 +143,8 @@ class Test_Webfinger_Controller extends \Activitypub\Tests\Test_REST_Controller_
 
 		\add_filter(
 			'webfinger_data',
-			function( $data, $resource ) use ( $test_data ) {
-				$this->assertEquals( 'acct:test_user@example.org', $resource );
+			function ( $data, $webfinger ) use ( $test_data ) {
+				$this->assertEquals( 'acct:test_user@example.org', $webfinger );
 				return $test_data;
 			},
 			10,
@@ -167,7 +167,7 @@ class Test_Webfinger_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 */
 	public function test_get_item_with_author_url() {
 		$author_url = \get_author_posts_url( self::$user->ID );
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger' );
+		$request    = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger' );
 		$request->set_param( 'resource', $author_url );
 
 		$response = rest_get_server()->dispatch( $request );

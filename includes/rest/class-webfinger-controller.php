@@ -143,16 +143,16 @@ class Webfinger_Controller extends \WP_REST_Controller {
 					'items'       => array(
 						'type'       => 'object',
 						'properties' => array(
-							'rel'  => array(
+							'rel'      => array(
 								'description' => 'The relation type of the link.',
 								'type'        => 'string',
 								'required'    => true,
 							),
-							'type' => array(
+							'type'     => array(
 								'description' => 'The content type of the link.',
 								'type'        => 'string',
 							),
-							'href' => array(
+							'href'     => array(
 								'description' => 'The target URL of the link.',
 								'type'        => 'string',
 								'format'      => 'uri',
