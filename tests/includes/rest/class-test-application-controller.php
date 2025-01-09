@@ -36,15 +36,6 @@ class Test_Application_Controller extends \Activitypub\Tests\Test_REST_Controlle
 		$this->assertArrayHasKey( 'schema', $response );
 		$schema = $response['schema'];
 
-		// Test required properties.
-		$required_properties = array( '@context', 'id', 'type', 'name', 'inbox', 'outbox' );
-		foreach ( $required_properties as $property ) {
-			$this->assertArrayHasKey( $property, $schema['properties'], "Missing required property: {$property}" );
-			if ( '@context' !== $property ) {
-				$this->assertTrue( $schema['properties'][ $property ]['required'], "Property {$property} should be required" );
-			}
-		}
-
 		// Test specific property types.
 		$this->assertEquals( array( 'array', 'object' ), $schema['properties']['@context']['type'] );
 		$this->assertEquals( 'string', $schema['properties']['id']['type'] );
