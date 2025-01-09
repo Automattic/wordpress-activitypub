@@ -10,6 +10,7 @@ namespace Activitypub\Rest;
 use function Activitypub\get_total_users;
 use function Activitypub\get_active_users;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\get_masked_wp_version;
 
 /**
  * ActivityPub NodeInfo REST-Class.
@@ -51,7 +52,7 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 
 		\register_rest_route(
 			$this->namespace,
-			'/' . $this->rest_base . '/(?P<version>[\d\.\d]+)',
+			'/' . $this->rest_base . '/(?P<version>\d\.\d)',
 			array(
 				'args' => array(
 					'version' => array(
@@ -64,6 +65,18 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_item' ),
+					'permission_callback' => '__return_true',
+				),
+			)
+		);
+
+		\register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '2',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_nodeinfo2' ),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -159,119 +172,44 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Get the schema for the NodeInfo response.
+	 * Retrieves the NodeInfo2 well-known profile.
 	 *
-	 * @return array
+	 * @return \WP_REST_Response Response object.
 	 */
-	public function get_item_schema() {
-		return array(
-			'$schema'     => 'http://json-schema.org/draft-04/schema#',
-			'title'       => 'nodeinfo',
-			'type'        => 'object',
-			'properties'  => array(
-				'version'           => array(
-					'description' => 'The schema version, must be 2.0.',
-					'type'        => 'string',
-					'enum'        => array( '2.0' ),
-					'required'    => true,
+	public function get_nodeinfo2() {
+		/**
+		 * Fires before the NodeInfo 2.0 data is created and sent to the client.
+		 */
+		\do_action( 'activitypub_rest_nodeinfo2_pre' );
+
+		$posts    = \wp_count_posts();
+		$comments = \wp_count_comments();
+
+		$response = array(
+			'version'           => '2.0',
+			'server'            => array(
+				'baseUrl'  => \home_url( '/' ),
+				'name'     => \get_bloginfo( 'name' ),
+				'software' => 'wordpress',
+				'version'  => get_masked_wp_version(),
+			),
+			'usage'             => array(
+				'users'         => array(
+					'total'          => get_total_users(),
+					'activeHalfyear' => get_active_users( 6 ),
+					'activeMonth'    => get_active_users( 1 ),
 				),
-				'software'          => array(
-					'description' => 'Metadata about server software in use.',
-					'type'        => 'object',
-					'properties'  => array(
-						'name'    => array(
-							'description' => 'The canonical name of this server software.',
-							'type'        => 'string',
-							'required'    => true,
-						),
-						'version' => array(
-							'description' => 'The version of this server software.',
-							'type'        => 'string',
-							'required'    => true,
-						),
-					),
-					'required'    => true,
-				),
-				'protocols'         => array(
-					'description' => 'The protocols supported on this server.',
-					'type'        => 'array',
-					'items'       => array(
-						'type' => 'string',
-					),
-					'required'    => true,
-				),
-				'services'          => array(
-					'description' => 'The third party sites this server can connect to via their application API.',
-					'type'        => 'object',
-					'properties'  => array(
-						'inbound'  => array(
-							'type'  => 'array',
-							'items' => array(
-								'type' => 'string',
-							),
-						),
-						'outbound' => array(
-							'type'  => 'array',
-							'items' => array(
-								'type' => 'string',
-							),
-						),
-					),
-					'required'    => true,
-				),
-				'openRegistrations' => array(
-					'description' => 'Whether this server allows open registration.',
-					'type'        => 'boolean',
-					'required'    => true,
-				),
-				'usage'             => array(
-					'description' => 'Usage statistics for this server.',
-					'type'        => 'object',
-					'properties'  => array(
-						'users'         => array(
-							'type'       => 'object',
-							'properties' => array(
-								'total'          => array(
-									'description' => 'The total amount of on this server registered users.',
-									'type'        => 'integer',
-								),
-								'activeHalfyear' => array(
-									'description' => 'The amount of users that signed in at least once in the last 6 months.',
-									'type'        => 'integer',
-								),
-								'activeMonth'    => array(
-									'description' => 'The amount of users that signed in at least once in the last month.',
-									'type'        => 'integer',
-								),
-							),
-						),
-						'localPosts'    => array(
-							'description' => 'The amount of posts that were made by users that are registered on this server.',
-							'type'        => 'integer',
-						),
-						'localComments' => array(
-							'description' => 'The amount of comments that were made by users that are registered on this server.',
-							'type'        => 'integer',
-						),
-					),
-					'required'    => true,
-				),
-				'metadata'          => array(
-					'description' => 'Free form key value pairs for software specific values.',
-					'type'        => 'object',
-					'properties'  => array(
-						'nodeName'        => array(
-							'type' => 'string',
-						),
-						'nodeDescription' => array(
-							'type' => 'string',
-						),
-						'nodeIcon'        => array(
-							'type' => 'string',
-						),
-					),
-				),
+				'localPosts'    => (int) $posts->publish,
+				'localComments' => (int) $comments->approved,
+			),
+			'openRegistrations' => false,
+			'protocols'         => array( 'activitypub' ),
+			'services'          => array(
+				'inbound'  => array(),
+				'outbound' => array(),
 			),
 		);
+
+		return \rest_ensure_response( $response );
 	}
 }
