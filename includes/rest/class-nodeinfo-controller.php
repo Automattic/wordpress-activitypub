@@ -90,7 +90,7 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 	 *
 	 * @return \WP_REST_Response Response object.
 	 */
-	public function get_items( $request ) {
+	public function get_items( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$response = array(
 			'links' => array(
 				array(
