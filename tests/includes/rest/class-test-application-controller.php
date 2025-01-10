@@ -37,7 +37,7 @@ class Test_Application_Controller extends \Activitypub\Tests\Test_REST_Controlle
 		$schema = $response['schema'];
 
 		// Test specific property types.
-		$this->assertEquals( array( 'array', 'object' ), $schema['properties']['@context']['type'] );
+		$this->assertEquals( 'array', $schema['properties']['@context']['type'] );
 		$this->assertEquals( 'string', $schema['properties']['id']['type'] );
 		$this->assertEquals( 'uri', $schema['properties']['id']['format'] );
 		$this->assertEquals( array( 'Application' ), $schema['properties']['type']['enum'] );
