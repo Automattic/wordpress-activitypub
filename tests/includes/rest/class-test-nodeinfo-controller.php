@@ -89,24 +89,6 @@ class Test_Nodeinfo_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 	}
 
 	/**
-	 * Test get_nodeinfo2 method.
-	 *
-	 * @covers ::get_nodeinfo2
-	 */
-	public function test_get_nodeinfo2() {
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo2' );
-		$response = \rest_get_server()->dispatch( $request );
-		$data     = $response->get_data();
-
-		$this->assertEquals( 200, $response->get_status() );
-
-		// Test required fields.
-		$this->assertEquals( '2.0', $data['version'] );
-		$this->assertArrayHasKey( 'server', $data );
-		$this->assertEquals( (bool) \get_option( 'users_can_register' ), $data['openRegistrations'] );
-	}
-
-	/**
 	 * Test get_item_schema method.
 	 *
 	 * @doesNotPerformAssertions

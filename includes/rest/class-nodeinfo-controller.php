@@ -10,7 +10,6 @@ namespace Activitypub\Rest;
 use function Activitypub\get_total_users;
 use function Activitypub\get_active_users;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\get_masked_wp_version;
 
 /**
  * ActivityPub NodeInfo Controller.
@@ -64,18 +63,6 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_item' ),
-					'permission_callback' => '__return_true',
-				),
-			)
-		);
-
-		\register_rest_route(
-			$this->namespace,
-			'/' . $this->rest_base . '2',
-			array(
-				array(
-					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( $this, 'get_nodeinfo2' ),
 					'permission_callback' => '__return_true',
 				),
 			)
@@ -171,47 +158,5 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 				'nodeIcon'        => \get_site_icon_url(),
 			),
 		);
-	}
-
-	/**
-	 * Retrieves the NodeInfo2 well-known profile.
-	 *
-	 * @return \WP_REST_Response Response object.
-	 */
-	public function get_nodeinfo2() {
-		/**
-		 * Fires before the NodeInfo 2.0 data is created and sent to the client.
-		 */
-		\do_action( 'activitypub_rest_nodeinfo2_pre' );
-
-		$posts    = \wp_count_posts();
-		$comments = \wp_count_comments();
-
-		$response = array(
-			'version'           => '2.0',
-			'server'            => array(
-				'baseUrl'  => \home_url( '/' ),
-				'name'     => \get_bloginfo( 'name' ),
-				'software' => 'wordpress',
-				'version'  => get_masked_wp_version(),
-			),
-			'usage'             => array(
-				'users'         => array(
-					'total'          => get_total_users(),
-					'activeHalfyear' => get_active_users( 6 ),
-					'activeMonth'    => get_active_users( 1 ),
-				),
-				'localPosts'    => (int) $posts->publish,
-				'localComments' => (int) $comments->approved,
-			),
-			'openRegistrations' => false,
-			'protocols'         => array( 'activitypub' ),
-			'services'          => array(
-				'inbound'  => array(),
-				'outbound' => array(),
-			),
-		);
-
-		return \rest_ensure_response( $response );
 	}
 }

@@ -389,11 +389,6 @@ class Activitypub {
 				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo',
 				'top'
 			);
-			\add_rewrite_rule(
-				'^.well-known/x-nodeinfo2',
-				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo2',
-				'top'
-			);
 		}
 
 		\add_rewrite_rule(
