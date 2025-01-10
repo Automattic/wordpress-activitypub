@@ -7,6 +7,8 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Http;
+
 /**
  * Interaction Controller.
  */
@@ -60,7 +62,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 	public function get_item( $request ) {
 		$uri          = $request->get_param( 'uri' );
 		$redirect_url = null;
-		$object       = \Activitypub\Http::get_remote_object( $uri );
+		$object       = Http::get_remote_object( $uri );
 
 		if ( \is_wp_error( $object ) || ! isset( $object['type'] ) ) {
 			return new \WP_Error( 'activitypub_invalid_object', \esc_html__( 'The URL is not supported!', 'activitypub' ), array( 'status' => 400 ) );
