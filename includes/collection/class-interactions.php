@@ -246,10 +246,10 @@ class Interactions {
 			return false;
 		}
 
-		$url = object_to_uri( $actor['url'] );
+		$url = object_to_uri( $actor['url'] ?? $actor['id'] );
 
 		if ( ! $url ) {
-			object_to_uri( $actor['id'] );
+			$url = object_to_uri( $actor['id'] );
 		}
 
 		if ( isset( $activity['object']['content'] ) ) {

@@ -620,7 +620,7 @@ function is_json( $data ) {
 }
 
 /**
- * Check whther a blog is public based on the `blog_public` option.
+ * Check whether a blog is public based on the `blog_public` option.
  *
  * @return bool True if public, false if not
  */
@@ -1071,7 +1071,7 @@ function get_enclosures( $post_id ) {
  *
  * @param int|\WP_Comment $comment Comment ID or comment object.
  *
- * @return \WP_Comment[] Array of ancestor comments or empty array if there are none.
+ * @return int[] Array of ancestor IDs.
  */
 function get_comment_ancestors( $comment ) {
 	$comment = \get_comment( $comment );

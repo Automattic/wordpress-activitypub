@@ -152,7 +152,7 @@ class Post extends Base {
 
 		switch ( \get_post_status( $post ) ) {
 			case 'trash':
-				$permalink = \get_post_meta( $post->ID, 'activitypub_canonical_url', true );
+				$permalink = \get_post_meta( $post->ID, '_activitypub_canonical_url', true );
 				break;
 			case 'draft':
 				// Get_sample_permalink is in wp-admin, not always loaded.
@@ -454,10 +454,21 @@ class Post extends Base {
 							$alt = $match[2];
 						}
 
-						$media['image'][] = array(
-							'id'  => $block['attrs']['id'],
-							'alt' => $alt,
-						);
+						$found = false;
+						foreach ( $media['image'] as $i => $image ) {
+							if ( $image['id'] === $block['attrs']['id'] ) {
+								$media['image'][ $i ]['alt'] = $alt;
+								$found                       = true;
+								break;
+							}
+						}
+
+						if ( ! $found ) {
+							$media['image'][] = array(
+								'id'  => $block['attrs']['id'],
+								'alt' => $alt,
+							);
+						}
 					}
 					break;
 				case 'core/audio':
@@ -1114,7 +1125,7 @@ class Post extends Base {
 		$blocks = \parse_blocks( $this->wp_object->post_content );
 
 		foreach ( $blocks as $block ) {
-			if ( 'activitypub/reply' === $block['blockName'] ) {
+			if ( 'activitypub/reply' === $block['blockName'] && isset( $block['attrs']['url'] ) ) {
 				// We only support one reply block per post for now.
 				return $block['attrs']['url'];
 			}

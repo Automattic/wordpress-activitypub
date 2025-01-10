@@ -8,6 +8,7 @@
 				"WP_SITEURL": "http://example.org",
 				"WP_HOME": "http://example.org"
 			},
+			"port": 80,
 			"mappings": {
 				"wp-content/plugins/activitypub": ".",
 				"wp-content/plugins/activitypub/tests": "./tests"

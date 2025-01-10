@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Added a filter to make custom comment types manageable in WP.com Calypso
+
 ### Changed
 
+* Hide ActivityPub post meta keys from the custom Fields UI
 * The Reply block now shows an embedded version of the referenced post, if available
+
+### Fixed
+
+* Undefined array key warnings in various places
+* Fetching replies from the same instance for Enable Mastodon Apps
+* Image captions not being included in the ActivityPub representation when the image is attached to the post
 
 ## [4.6.0] - 2024-12-20
 

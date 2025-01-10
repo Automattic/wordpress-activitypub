@@ -36,7 +36,7 @@ class Follower extends Actor {
 	 * @return mixed
 	 */
 	public function get_errors() {
-		return get_post_meta( $this->_id, 'activitypub_errors', false );
+		return get_post_meta( $this->_id, '_activitypub_errors', false );
 	}
 
 	/**
@@ -72,7 +72,7 @@ class Follower extends Actor {
 	 * Reset (delete) all errors.
 	 */
 	public function reset_errors() {
-		delete_post_meta( $this->_id, 'activitypub_errors' );
+		delete_post_meta( $this->_id, '_activitypub_errors' );
 	}
 
 	/**
@@ -216,9 +216,9 @@ class Follower extends Actor {
 	 * Update the post meta.
 	 */
 	protected function get_post_meta_input() {
-		$meta_input                           = array();
-		$meta_input['activitypub_inbox']      = $this->get_shared_inbox();
-		$meta_input['activitypub_actor_json'] = $this->to_json();
+		$meta_input                            = array();
+		$meta_input['_activitypub_inbox']      = $this->get_shared_inbox();
+		$meta_input['_activitypub_actor_json'] = $this->to_json();
 
 		return $meta_input;
 	}
@@ -334,7 +334,7 @@ class Follower extends Actor {
 	 * @return \Activitypub\Activity\Base_Object|WP_Error
 	 */
 	public static function init_from_cpt( $post ) {
-		$actor_json = get_post_meta( $post->ID, 'activitypub_actor_json', true );
+		$actor_json = get_post_meta( $post->ID, '_activitypub_actor_json', true );
 		$object     = self::init_from_json( $actor_json );
 		$object->set__id( $post->ID );
 		$object->set_id( $post->guid );

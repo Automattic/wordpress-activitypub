@@ -134,7 +134,12 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Added: A filter to make custom comment types manageable in WP.com Calypso
+* Changed: Hide ActivityPub post meta keys from the custom Fields UI
 * Changed: The Reply block now shows an embedded version of the referenced post, if available
+* Fixed: Undefined array key warnings in various places
+* Fixed: Fetching replies from the same instance for Enable Mastodon Apps
+* Fixed: Image captions not being included in the ActivityPub representation when the image is attached to the post
 
 = 4.6.0 =
 
