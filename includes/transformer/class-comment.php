@@ -46,27 +46,6 @@ class Comment extends Base {
 	}
 
 	/**
-	 * Transforms the WP_Comment object to an ActivityPub Object.
-	 *
-	 * @see \Activitypub\Activity\Base_Object
-	 *
-	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object.
-	 */
-	public function to_object() {
-		$object  = parent::to_object();
-		$content = $this->get_content();
-
-		$object->set_content( $content );
-		$object->set_content_map(
-			array(
-				$this->get_locale() => $content,
-			)
-		);
-
-		return $object;
-	}
-
-	/**
 	 * Returns the User-URL of the Author of the Post.
 	 *
 	 * If `single_user` mode is enabled, the URL of the Blog-User is returned.
@@ -96,7 +75,7 @@ class Comment extends Base {
 
 		foreach ( $this->extract_reply_context() as $acct => $url ) {
 			$mentions .= sprintf(
-				'<a class="u-mention mention" href="%s">%s</a> ',
+				'<a rel="mention" class="u-url mention" href="%s">%s</a> ',
 				esc_url( $url ),
 				esc_html( $acct )
 			);
@@ -355,6 +334,17 @@ class Comment extends Base {
 		return array(
 			'https://www.w3.org/ns/activitystreams#Public',
 			get_rest_url_by_path( $path ),
+		);
+	}
+
+	/**
+	 * Returns the content map for the comment.
+	 *
+	 * @return array The content map for the comment.
+	 */
+	public function get_content_map() {
+		return array(
+			$this->get_locale() => $this->get_content(),
 		);
 	}
 }
