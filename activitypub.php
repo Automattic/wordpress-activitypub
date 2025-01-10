@@ -44,12 +44,12 @@ function rest_init() {
 	Rest\Inbox::init();
 	Rest\Followers::init();
 	Rest\Following::init();
-	Rest\Webfinger::init();
 	Rest\Comment::init();
 	Rest\Server::init();
 	Rest\Collection::init();
 	Rest\Interaction::init();
 	Rest\Post::init();
+	( new Rest\Webfinger_Controller() )->register_routes();
 
 	// Load NodeInfo endpoints only if blog is public.
 	if ( is_blog_public() ) {
