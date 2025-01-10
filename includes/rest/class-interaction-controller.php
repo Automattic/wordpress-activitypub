@@ -1,73 +1,70 @@
 <?php
 /**
- * ActivityPub Interaction REST-Class file.
+ * ActivityPub Interaction Controller file.
  *
  * @package Activitypub
  */
 
 namespace Activitypub\Rest;
 
-use WP_REST_Response;
-use Activitypub\Http;
-
 /**
- * Interaction class.
+ * Interaction Controller.
  */
-class Interaction {
+class Interaction_Controller extends \WP_REST_Controller {
 	/**
-	 * Initialize the class, registering WordPress hooks.
+	 * The namespace of this controller's route.
+	 *
+	 * @var string
 	 */
-	public static function init() {
-		self::register_routes();
-	}
+	protected $namespace = ACTIVITYPUB_REST_NAMESPACE;
 
 	/**
-	 * Register routes
+	 * The base of this controller's route.
+	 *
+	 * @var string
 	 */
-	public static function register_routes() {
+	protected $rest_base = 'interactions';
+
+	/**
+	 * Register routes.
+	 */
+	public function register_routes() {
 		\register_rest_route(
-			ACTIVITYPUB_REST_NAMESPACE,
-			'/interactions',
+			$this->namespace,
+			'/' . $this->rest_base,
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( self::class, 'get' ),
+					'callback'            => array( $this, 'get_item' ),
 					'permission_callback' => '__return_true',
 					'args'                => array(
 						'uri' => array(
-							'type'              => 'string',
-							'required'          => true,
-							'sanitize_callback' => 'esc_url',
+							'description' => 'The URI of the object to interact with.',
+							'type'        => 'string',
+							'format'      => 'uri',
+							'required'    => true,
 						),
 					),
+					'schema'              => array( $this, 'get_item_schema' ),
 				),
 			)
 		);
 	}
 
 	/**
-	 * Handle GET request.
+	 * Retrieves the interaction URL for a given URI.
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return WP_REST_Response Redirect to the editor or die.
+	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
-	public static function get( $request ) {
+	public function get_item( $request ) {
 		$uri          = $request->get_param( 'uri' );
 		$redirect_url = null;
-		$object       = Http::get_remote_object( $uri );
+		$object       = \Activitypub\Http::get_remote_object( $uri );
 
-		if (
-			\is_wp_error( $object ) ||
-			! isset( $object['type'] )
-		) {
-			\wp_die(
-				\esc_html__(
-					'The URL is not supported!',
-					'activitypub'
-				),
-				400
-			);
+		if ( \is_wp_error( $object ) || ! isset( $object['type'] ) ) {
+			return new \WP_Error( 'activitypub_invalid_object', \esc_html__( 'The URL is not supported!', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		if ( ! empty( $object['url'] ) ) {
@@ -104,31 +101,22 @@ class Interaction {
 		}
 
 		/**
-		 * Filter the redirect URL.
+		 * Filters the redirect URL.
+		 *
+		 * This filter runs after the type-specific filters and allows for final modifications
+		 * to the interaction URL regardless of the object type.
 		 *
 		 * @param string $redirect_url The URL to redirect to.
 		 * @param string $uri          The URI of the object.
-		 * @param array  $object       The object.
+		 * @param array  $object       The object being interacted with.
 		 */
 		$redirect_url = \apply_filters( 'activitypub_interactions_url', $redirect_url, $uri, $object );
 
 		// Check if hook is implemented.
 		if ( ! $redirect_url ) {
-			\wp_die(
-				esc_html__(
-					'This Interaction type is not supported yet!',
-					'activitypub'
-				),
-				400
-			);
+			return new \WP_Error( 'activitypub_interaction_not_supported', \esc_html__( 'This Interaction type is not supported yet!', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
-		return new WP_REST_Response(
-			null,
-			302,
-			array(
-				'Location' => \esc_url( $redirect_url ),
-			)
-		);
+		return new \WP_REST_Response( null, 302, array( 'Location' => \esc_url( $redirect_url ) ) );
 	}
 }
