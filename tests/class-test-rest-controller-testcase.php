@@ -5,7 +5,6 @@
  * @package Activitypub
  */
 
-
 /**
  * REST Controller Testcase.
  */
