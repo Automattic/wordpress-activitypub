@@ -138,6 +138,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: A filter to make custom comment types manageable in WP.com Calypso
 * Changed: Hide ActivityPub post meta keys from the custom Fields UI
 * Changed: Bumped minimum required PHP version to 7.2
+* Changed: Improved conneg and AUTHORIZED_FETCH support for custom extensions
 * Fixed: Undefined array key warnings in various places
 * Fixed: @-mentions in federated comments being displayed with a line break
 * Fixed: Fetching replies from the same instance for Enable Mastodon Apps
