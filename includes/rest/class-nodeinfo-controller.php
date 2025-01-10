@@ -1,6 +1,6 @@
 <?php
 /**
- * NodeInfo REST-Class file.
+ * NodeInfo controller file.
  *
  * @package Activitypub
  */
@@ -13,7 +13,7 @@ use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_masked_wp_version;
 
 /**
- * ActivityPub NodeInfo REST-Class.
+ * ActivityPub NodeInfo Controller.
  *
  * @author Matthias Pfefferle
  *
@@ -58,7 +58,7 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 					'version' => array(
 						'description' => 'The version of the NodeInfo schema.',
 						'type'        => 'string',
-						'enum'        => array( '2.0' ),
+						'enum'        => array( '1.0', '1.1', '2.0', '2.1' ),
 						'required'    => true,
 					),
 				),
@@ -125,8 +125,11 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 
 		switch ( $version ) {
 			case '2.0':
-			default:
 				$response = $this->get_version_2_0();
+				break;
+
+			default:
+				$response = new \WP_Error( 'activitypub_rest_nodeinfo_invalid_version', 'Unsupported NodeInfo version.', array( 'status' => 405 ) );
 				break;
 		}
 
