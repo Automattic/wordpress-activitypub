@@ -45,7 +45,6 @@ class Interaction_Controller extends \WP_REST_Controller {
 							'required'    => true,
 						),
 					),
-					'schema'              => array( $this, 'get_item_schema' ),
 				),
 			)
 		);
