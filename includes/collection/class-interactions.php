@@ -304,20 +304,12 @@ class Interactions {
 		}
 
 		// Add `p` and `br` to the list of allowed tags.
-		if ( ! isset( $allowed_tags['br'] ) ) {
+		if ( ! array_key_exists( 'br', $allowed_tags ) ) {
 			$allowed_tags['br'] = array();
 		}
 
-		if ( ! isset( $allowed_tags['p'] ) ) {
+		if ( ! array_key_exists( 'p', $allowed_tags ) ) {
 			$allowed_tags['p'] = array();
-		}
-
-		if ( ! isset( $allowed_tags['img'] ) ) {
-			$allowed_tags['img'] = array(
-				'src'   => array(),
-				'alt'   => array(),
-				'class' => array(),
-			);
 		}
 
 		return $allowed_tags;
