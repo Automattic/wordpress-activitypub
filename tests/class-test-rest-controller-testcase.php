@@ -5,6 +5,8 @@
  * @package Activitypub
  */
 
+namespace Activitypub\Tests;
+
 /**
  * REST Controller Testcase.
  */

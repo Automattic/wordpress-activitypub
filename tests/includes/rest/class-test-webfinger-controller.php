@@ -12,7 +12,7 @@ namespace Activitypub\Tests\Rest;
  *
  * @coversDefaultClass \Activitypub\Rest\Webfinger_Controller
  */
-class Test_Webfinger_Controller extends \Test_REST_Controller_Testcase {
+class Test_Webfinger_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
 
 	/**
 	 * Test user.
