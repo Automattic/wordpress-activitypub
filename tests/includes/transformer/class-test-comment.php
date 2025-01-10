@@ -89,7 +89,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		$content = $object->get_content();
 
 		// Test that reply context is added.
-		$this->assertEquals( '<p><a class="u-mention mention" href="https://example.net/@remote">@remote@example.net</a> <a class="u-mention mention" href="https://remote.example/@author">@author@remote.example</a></p><p>This is a comment</p>', $content );
+		$this->assertSame( '<p><a rel="mention" class="u-url mention" href="https://example.net/@remote">@remote@example.net</a> <a rel="mention" class="u-url mention" href="https://remote.example/@author">@author@remote.example</a> This is a comment</p>', $content );
 
 		// Clean up.
 		wp_delete_comment( $reply_comment_id, true );

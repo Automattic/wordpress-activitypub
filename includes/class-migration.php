@@ -161,6 +161,9 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.5.0', '<' ) ) {
 			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_update_comment_counts' );
 		}
+		if ( \version_compare( $version_from_db, '4.6.0', '<' ) ) {
+			self::migrate_to_4_6_0();
+		}
 
 		/**
 		 * Fires when the system has to be migrated.
@@ -385,6 +388,26 @@ class Migration {
 			WHERE meta_key = 'activitypub_content_visibility'
 			AND (meta_value IS NULL OR meta_value = '')"
 		);
+	}
+
+	/**
+	 * Updates post meta keys to be prefixed with an underscore.
+	 */
+	public static function migrate_to_4_6_0() {
+		global $wpdb;
+
+		$meta_keys = array(
+			'activitypub_actor_json',
+			'activitypub_canonical_url',
+			'activitypub_errors',
+			'activitypub_inbox',
+			'activitypub_user_id',
+		);
+
+		foreach ( $meta_keys as $meta_key ) {
+			// phpcs:ignore WordPress.DB
+			$wpdb->update( $wpdb->postmeta, array( 'meta_key' => '_' . $meta_key ), array( 'meta_key' => $meta_key ) );
+		}
 	}
 
 	/**

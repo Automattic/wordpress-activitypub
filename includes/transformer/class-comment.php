@@ -46,44 +46,6 @@ class Comment extends Base {
 	}
 
 	/**
-	 * Transforms the WP_Comment object to an ActivityPub Object.
-	 *
-	 * @see \Activitypub\Activity\Base_Object
-	 *
-	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object.
-	 */
-	public function to_object() {
-		$object = parent::to_object();
-
-		$content       = $this->get_content();
-		$at_replies    = '';
-		$reply_context = $this->extract_reply_context( array() );
-
-		foreach ( $reply_context as $acct => $url ) {
-			$at_replies .= sprintf(
-				'<a class="u-mention mention" href="%s">%s</a> ',
-				esc_url( $url ),
-				esc_html( $acct )
-			);
-		}
-
-		$at_replies = trim( $at_replies );
-
-		if ( $at_replies ) {
-			$content = sprintf( '<p>%s</p>%s', $at_replies, $content );
-		}
-
-		$object->set_content( $content );
-		$object->set_content_map(
-			array(
-				$this->get_locale() => $content,
-			)
-		);
-
-		return $object;
-	}
-
-	/**
 	 * Returns the User-URL of the Author of the Post.
 	 *
 	 * If `single_user` mode is enabled, the URL of the Blog-User is returned.
@@ -107,8 +69,18 @@ class Comment extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		$comment = $this->wp_object;
-		$content = $comment->comment_content;
+		$comment  = $this->wp_object;
+		$content  = $comment->comment_content;
+		$mentions = '';
+
+		foreach ( $this->extract_reply_context() as $acct => $url ) {
+			$mentions .= sprintf(
+				'<a rel="mention" class="u-url mention" href="%s">%s</a> ',
+				esc_url( $url ),
+				esc_html( $acct )
+			);
+		}
+		$content = $mentions . $content;
 
 		/**
 		 * Filter the content of the comment.
@@ -258,11 +230,11 @@ class Comment extends Base {
 	 * Collect all other Users that participated in this comment-thread
 	 * to send them a notification about the new reply.
 	 *
-	 * @param array $mentions The already mentioned ActivityPub users.
+	 * @param array $mentions Optional. The already mentioned ActivityPub users. Default empty array.
 	 *
 	 * @return array The list of all Repliers.
 	 */
-	public function extract_reply_context( $mentions ) {
+	public function extract_reply_context( $mentions = array() ) {
 		// Check if `$this->wp_object` is a WP_Comment.
 		if ( 'WP_Comment' !== get_class( $this->wp_object ) ) {
 			return $mentions;
@@ -362,6 +334,17 @@ class Comment extends Base {
 		return array(
 			'https://www.w3.org/ns/activitystreams#Public',
 			get_rest_url_by_path( $path ),
+		);
+	}
+
+	/**
+	 * Returns the content map for the comment.
+	 *
+	 * @return array The content map for the comment.
+	 */
+	public function get_content_map() {
+		return array(
+			$this->get_locale() => $this->get_content(),
 		);
 	}
 }
