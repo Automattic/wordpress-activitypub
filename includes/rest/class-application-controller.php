@@ -93,17 +93,7 @@ class Application_Controller extends \WP_REST_Controller {
 					'type' => 'string',
 				),
 				'icon'                      => array(
-					'type'       => 'object',
-					'properties' => array(
-						'type' => array(
-							'type' => 'string',
-							'enum' => array( 'Image' ),
-						),
-						'url'  => array(
-							'type'   => 'string',
-							'format' => 'uri',
-						),
-					),
+					'type' => 'object',
 				),
 				'published'                 => array(
 					'type'   => 'string',
