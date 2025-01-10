@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Undefined array key warnings in various places
 * @-mentions in federated comments being displayed with a line break
+* Fetching replies from the same instance for Enable Mastodon Apps
+* Image captions not being included in the ActivityPub representation when the image is attached to the post
 
 ## [4.6.0] - 2024-12-20
 

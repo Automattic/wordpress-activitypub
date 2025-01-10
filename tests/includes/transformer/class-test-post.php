@@ -387,56 +387,105 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Saves an attachment.
+	 * Test get_media_from_blocks adds alt text to existing images.
 	 *
-	 * @param string $file      The file name to create attachment object for.
-	 * @param int    $parent_id ID of the post to attach the file to.
-	 *
-	 * @return int|WP_Error The attachment ID on success. The value 0 or WP_Error on failure.
+	 * @covers ::get_media_from_blocks
 	 */
-	public function create_upload_object( $file, $parent_id = 0 ) {
-		if ( ! class_exists( 'WP_Filesystem_Direct' ) ) {
-			require ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php';
-			require ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php';
-		}
+	public function test_get_media_from_blocks_adds_alt_text_to_existing_images() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:image {"id":123} --><figure class="wp-block-image"><img src="test.jpg" alt="Test alt text" /></figure><!-- /wp:image -->',
+			)
+		);
+		$post    = get_post( $post_id );
 
-		$dest = dirname( $file ) . DIRECTORY_SEPARATOR . 'test-temp.jpg';
-		$fs   = new \WP_Filesystem_Direct( array() );
-		$fs->copy( $file, $dest );
-
-		$file = $dest;
-
-		$file_array = array(
-			'name'     => wp_basename( $file ),
-			'tmp_name' => $file,
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(
+				array(
+					'id'  => 123,
+					'alt' => '',
+				),
+			),
+			'audio' => array(),
+			'video' => array(),
 		);
 
-		$upload = wp_handle_sideload( $file_array, array( 'test_form' => false ) );
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		$method->setAccessible( true );
 
-		$type = '';
-		if ( ! empty( $upload['type'] ) ) {
-			$type = $upload['type'];
-		} else {
-			$mime = wp_check_filetype( $upload['file'] );
-			if ( $mime ) {
-				$type = $mime['type'];
-			}
-		}
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
 
-		$attachment = array(
-			'post_title'     => wp_basename( $upload['file'] ),
-			'post_content'   => '',
-			'post_type'      => 'attachment',
-			'post_parent'    => $parent_id,
-			'post_mime_type' => $type,
-			'guid'           => $upload['url'],
+		$this->assertSame( 'Test alt text', $result['image'][0]['alt'] );
+		$this->assertSame( 123, $result['image'][0]['id'] );
+	}
+
+	/**
+	 * Test get_media_from_blocks adds new image when none exist.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_adds_new_image() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:image {"id":123} --><figure class="wp-block-image"><img src="test.jpg" alt="Test alt text" /></figure><!-- /wp:image -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
 		);
 
-		// Save the data.
-		$id = wp_insert_attachment( $attachment, $upload['file'], $parent_id );
-		wp_update_attachment_metadata( $id, @wp_generate_attachment_metadata( $id, $upload['file'] ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		$method->setAccessible( true );
 
-		return $id;
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['image'] );
+		$this->assertSame( 123, $result['image'][0]['id'] );
+		$this->assertSame( 'Test alt text', $result['image'][0]['alt'] );
+	}
+
+	/**
+	 * Test get_media_from_blocks handles multiple blocks correctly.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_handles_multiple_blocks() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:image {"id":123} --><figure class="wp-block-image"><img src="test1.jpg" alt="Test alt 1" /></figure><!-- /wp:image --><!-- wp:image {"id":456} --><figure class="wp-block-image"><img src="test2.jpg" alt="Test alt 2" /></figure><!-- /wp:image -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		$method->setAccessible( true );
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 2, $result['image'] );
+		$this->assertSame( 123, $result['image'][0]['id'] );
+		$this->assertSame( 'Test alt 1', $result['image'][0]['alt'] );
+		$this->assertSame( 456, $result['image'][1]['id'] );
+		$this->assertSame( 'Test alt 2', $result['image'][1]['alt'] );
 	}
 
 	/**
@@ -457,7 +506,7 @@ class Test_Post extends \WP_UnitTestCase {
 		$attachment_id = $this->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
 
 		// Set up reflection method.
-		$reflection = new ReflectionClass( Post::class );
+		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_icon' );
 		$method->setAccessible( true );
 
@@ -512,5 +561,57 @@ class Test_Post extends \WP_UnitTestCase {
 		// Cleanup.
 		wp_delete_post( $post_id, true );
 		wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Saves an attachment.
+	 *
+	 * @param string $file      The file name to create attachment object for.
+	 * @param int    $parent_id ID of the post to attach the file to.
+	 * @return int|\WP_Error The attachment ID on success. The value 0 or WP_Error on failure.
+	 */
+	public function create_upload_object( $file, $parent_id = 0 ) {
+		if ( ! class_exists( 'WP_Filesystem_Direct' ) ) {
+			require ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php';
+			require ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php';
+		}
+
+		$dest = dirname( $file ) . DIRECTORY_SEPARATOR . 'test-temp.jpg';
+		$fs   = new \WP_Filesystem_Direct( array() );
+		$fs->copy( $file, $dest );
+
+		$file = $dest;
+
+		$file_array = array(
+			'name'     => wp_basename( $file ),
+			'tmp_name' => $file,
+		);
+
+		$upload = wp_handle_sideload( $file_array, array( 'test_form' => false ) );
+
+		$type = '';
+		if ( ! empty( $upload['type'] ) ) {
+			$type = $upload['type'];
+		} else {
+			$mime = wp_check_filetype( $upload['file'] );
+			if ( $mime ) {
+				$type = $mime['type'];
+			}
+		}
+
+		$attachment = array(
+			'post_title'     => wp_basename( $upload['file'] ),
+			'post_content'   => '',
+			'post_type'      => 'attachment',
+			'post_parent'    => $parent_id,
+			'post_mime_type' => $type,
+			'guid'           => $upload['url'],
+		);
+
+		// Save the data.
+		$id = wp_insert_attachment( $attachment, $upload['file'], $parent_id );
+		wp_update_attachment_metadata( $id, @wp_generate_attachment_metadata( $id, $upload['file'] ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+
+		return $id;
 	}
 }

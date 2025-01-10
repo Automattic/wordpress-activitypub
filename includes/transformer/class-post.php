@@ -454,10 +454,21 @@ class Post extends Base {
 							$alt = $match[2];
 						}
 
-						$media['image'][] = array(
-							'id'  => $block['attrs']['id'],
-							'alt' => $alt,
-						);
+						$found = false;
+						foreach ( $media['image'] as $i => $image ) {
+							if ( $image['id'] === $block['attrs']['id'] ) {
+								$media['image'][ $i ]['alt'] = $alt;
+								$found                       = true;
+								break;
+							}
+						}
+
+						if ( ! $found ) {
+							$media['image'][] = array(
+								'id'  => $block['attrs']['id'],
+								'alt' => $alt,
+							);
+						}
 					}
 					break;
 				case 'core/audio':
