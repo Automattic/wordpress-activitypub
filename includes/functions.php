@@ -365,11 +365,20 @@ function esc_hashtag( $input ) {
 function is_activitypub_request() {
 	global $wp_query;
 
+	/**
+	 * Filter whether the request supports content negotiation.
+	 *
+	 * This filter is meant to support custom requests asides from the default ones.
+	 *
+	 * @param bool $custom_request Whether the request is supported.
+	 */
+	$custom_request = apply_filters( 'activitypub_uri_supports_conneg', false );
+
 	/*
 	 * ActivityPub requests are currently only made for
 	 * author archives, singular posts, and the homepage.
 	 */
-	if ( ! \is_author() && ! \is_singular() && ! \is_home() && ! defined( '\REST_REQUEST' ) ) {
+	if ( ! \is_author() && ! \is_singular() && ! \is_home() && ! defined( '\REST_REQUEST' ) && ! $custom_request ) {
 		return false;
 	}
 

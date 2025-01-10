@@ -143,7 +143,21 @@ class Activitypub {
 			}
 		}
 
+		/**
+		 * Filter the ActivityPub template.
+		 *
+		 * @param string|false $activitypub_template The path to the template file or false.
+		 */
+		$activitypub_template = apply_filters( 'activitypub_template', $activitypub_template );
+
 		if ( $activitypub_template ) {
+			/**
+			 * Fires before the ActivityPub template is rendered.
+			 *
+			 * @param string $activitypub_template The path to the template file.
+			 */
+			\do_action( 'pre_render_activitypub_template', $activitypub_template );
+
 			return $activitypub_template;
 		}
 
