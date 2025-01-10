@@ -25,38 +25,38 @@ $args = wp_parse_args(
 \wp_enqueue_style( 'activitypub-embed', ACTIVITYPUB_PLUGIN_URL . 'assets/css/activitypub-embed.css', array(), ACTIVITYPUB_PLUGIN_VERSION );
 ?>
 
-<div class="activitypub-embed">
-	<div class="activitypub-embed-header">
+<div class="activitypub-embed u-in-reply-to h-cite">
+	<div class="activitypub-embed-header p-author h-card">
 		<?php if ( $args['avatar_url'] ) : ?>
-			<img src="<?php echo \esc_url( $args['avatar_url'] ); ?>" alt="" />
+			<img class="u-photo" src="<?php echo \esc_url( $args['avatar_url'] ); ?>" alt="" />
 		<?php endif; ?>
 		<div class="activitypub-embed-header-text">
-			<h2><?php echo \esc_html( $args['author_name'] ); ?></h2>
+			<h2 class="p-name"><?php echo \esc_html( $args['author_name'] ); ?></h2>
 			<?php if ( $args['author_url'] ) : ?>
-				<a href="<?php echo \esc_url( $args['author_url'] ); ?>" class="ap-account"><?php echo \esc_html( $args['author_url'] ); ?></a>
+				<a href="<?php echo \esc_url( $args['author_url'] ); ?>" class="ap-account u-url"><?php echo \esc_html( $args['author_url'] ); ?></a>
 			<?php endif; ?>
 		</div>
 	</div>
 
 	<div class="activitypub-embed-content">
 		<?php if ( $args['title'] ) : ?>
-			<h3 class="ap-title"><?php echo \esc_html( $args['title'] ); ?></h3>
+			<h3 class="ap-title p-name"><?php echo \esc_html( $args['title'] ); ?></h3>
 		<?php endif; ?>
 
 		<?php if ( $args['content'] ) : ?>
-			<div class="ap-subtitle"><?php echo \wp_kses_post( $args['content'] ); ?></div>
+			<div class="ap-subtitle p-summary e-content"><?php echo \wp_kses_post( $args['content'] ); ?></div>
 		<?php endif; ?>
 
 		<?php if ( $args['image'] ) : ?>
 			<div class="ap-preview">
-				<img src="<?php echo \esc_url( $args['image'] ); ?>" alt="" />
+				<img class="u-photo u-featured" src="<?php echo \esc_url( $args['image'] ); ?>" alt="" />
 			</div>
 		<?php endif; ?>
 	</div>
 
 	<div class="activitypub-embed-meta">
 		<?php if ( $args['published'] ) : ?>
-			<a href="<?php echo \esc_url( $args['url'] ); ?>" class="ap-stat ap-date"><?php echo \esc_html( $args['published'] ); ?></a>
+			<a href="<?php echo \esc_url( $args['url'] ); ?>" class="ap-stat ap-date dt-published"><?php echo \esc_html( $args['published'] ); ?></a>
 		<?php endif; ?>
 
 		<span class="ap-stat">
