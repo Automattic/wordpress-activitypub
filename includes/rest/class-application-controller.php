@@ -28,7 +28,7 @@ class Application_Controller extends \WP_REST_Controller {
 	protected $rest_base = 'application';
 
 	/**
-	 * Register routes
+	 * Register routes.
 	 */
 	public function register_routes() {
 		\register_rest_route(
@@ -93,7 +93,16 @@ class Application_Controller extends \WP_REST_Controller {
 					'type' => 'string',
 				),
 				'icon'                      => array(
-					'type' => 'object',
+					'type'       => 'object',
+					'properties' => array(
+						'type' => array(
+							'type' => 'string',
+						),
+						'url'  => array(
+							'type'   => 'string',
+							'format' => 'uri',
+						),
+					),
 				),
 				'published'                 => array(
 					'type'   => 'string',
