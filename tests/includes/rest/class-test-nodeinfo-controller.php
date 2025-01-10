@@ -80,6 +80,11 @@ class Test_Nodeinfo_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo/1.0' );
 		$response = \rest_get_server()->dispatch( $request );
 
+		$this->assertEquals( 405, $response->get_status() );
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo/0.1' );
+		$response = \rest_get_server()->dispatch( $request );
+
 		$this->assertEquals( 400, $response->get_status() );
 	}
 
