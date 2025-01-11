@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Exception;
+use Activitypub\Transformer\Factory;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
 
@@ -51,6 +52,8 @@ class Activitypub {
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
+
+		\add_filter( 'pre_render_activitypub_template', array( self::class, 'add_headers' ), 10, 3 );
 
 		// Register several post_types.
 		self::register_post_types();
@@ -175,17 +178,16 @@ class Activitypub {
 			return;
 		}
 
-		$id = false;
-
-		// Only add self link to author pages...
 		if ( is_author() ) {
-			if ( ! is_user_disabled( get_queried_object_id() ) ) {
-				$id = get_user_id( get_queried_object_id() );
+			$id = get_user_id( get_queried_object_id() );
+		} else {
+			$transformer = Factory::get_transformer( \get_queried_object() );
+
+			if ( ! $transformer || is_wp_error( $transformer ) ) {
+				return;
 			}
-		} elseif ( is_singular() ) { // or posts/pages/custom-post-types...
-			if ( \post_type_supports( \get_post_type(), 'activitypub' ) ) {
-				$id = get_post_id( get_queried_object_id() );
-			}
+
+			$id = $transformer->to_object()->get_id();
 		}
 
 		if ( ! $id ) {
@@ -247,8 +249,6 @@ class Activitypub {
 	 * @return void
 	 */
 	public static function template_redirect() {
-		self::add_headers();
-
 		$comment_id = get_query_var( 'c', null );
 
 		// Check if it seems to be a comment.
