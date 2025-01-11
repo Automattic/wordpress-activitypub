@@ -365,39 +365,6 @@ function esc_hashtag( $input ) {
 function is_activitypub_request() {
 	global $wp_query;
 
-	/**
-	 * Filter whether the request supports content negotiation.
-	 *
-	 * This filter is meant to support custom requests asides from the default ones.
-	 *
-	 * @param bool $custom_request Whether the request is supported.
-	 */
-	$custom_request = apply_filters( 'activitypub_uri_supports_conneg', false );
-
-	/*
-	 * ActivityPub requests are currently only made for
-	 * author archives, singular posts, and the homepage.
-	 */
-	if ( ! \is_author() && ! \is_singular() && ! \is_home() && ! defined( '\REST_REQUEST' ) && ! $custom_request ) {
-		return false;
-	}
-
-	// Check if the current post type supports ActivityPub.
-	if ( \is_singular() ) {
-		$queried_object = \get_queried_object();
-		$post_type      = \get_post_type( $queried_object );
-
-		if ( ! \post_type_supports( $post_type, 'activitypub' ) ) {
-			return false;
-		}
-	}
-
-	// Check if header already sent.
-	if ( ! \headers_sent() && ACTIVITYPUB_SEND_VARY_HEADER ) {
-		// Send Vary header for Accept header.
-		\header( 'Vary: Accept' );
-	}
-
 	// One can trigger an ActivityPub request by adding ?activitypub to the URL.
 	if ( isset( $wp_query->query_vars['activitypub'] ) ) {
 		return true;
@@ -419,6 +386,15 @@ function is_activitypub_request() {
 		 * - application/json
 		 */
 		if ( preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
+			// Check if header already sent.
+			if ( ! \headers_sent() && ACTIVITYPUB_SEND_VARY_HEADER ) {
+				// Send Vary header for Accept header.
+				\header( 'Vary: Accept' );
+			}
+
+			// Set the query var to true, to speed up the next check.
+			$wp_query->query_vars['activitypub'] = true;
+
 			return true;
 		}
 	}
