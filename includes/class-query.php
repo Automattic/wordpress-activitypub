@@ -139,7 +139,7 @@ class Query {
 			if ( preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
 				// Set the query var to true, to speed up the next check.
 				$wp_query->query_vars['activitypub'] = true;
-				$this->is_activitypub_request = true;
+				$this->is_activitypub_request        = true;
 				return true;
 			}
 		}
