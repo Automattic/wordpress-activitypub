@@ -79,7 +79,7 @@ class Query {
 	 * @return bool True if the request has a queried object, false otherwise.
 	 */
 	public function has_queried_object() {
-		return $this->activitypub_object !== null;
+		return null !== $this->activitypub_object;
 	}
 
 	/**
