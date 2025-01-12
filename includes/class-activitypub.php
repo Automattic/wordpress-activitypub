@@ -107,26 +107,10 @@ class Activitypub {
 		}
 
 		$activitypub_template = false;
+		$activitypub_object   = Query::get_instance()->get_queried_object();
 
-		if ( \is_author() && ! is_user_disabled( \get_the_author_meta( 'ID' ) ) ) {
-			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/user-json.php';
-		} elseif ( is_comment() ) {
-			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
-		} elseif ( \is_singular() && ! is_post_disabled( \get_the_ID() ) ) {
-			if ( \get_query_var( 'preview' ) ) {
-				\define( 'ACTIVITYPUB_PREVIEW', true );
-
-				/**
-				 * Filter the template used for the ActivityPub preview.
-				 *
-				 * @param string $activitypub_template Absolute path to the template file.
-				 */
-				$activitypub_template = apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
-			} else {
-				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
-			}
-		} elseif ( \is_home() && ! is_user_type_disabled( 'blog' ) ) {
-			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
+		if ( $activitypub_object ) {
+			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/activitypub-json.php';
 		}
 
 		/*
@@ -145,20 +129,12 @@ class Activitypub {
 			}
 		}
 
-		/**
-		 * Filter the ActivityPub template.
-		 *
-		 * @param string|false $activitypub_template The path to the template file or false.
-		 */
-		$activitypub_template = apply_filters( 'activitypub_template', $activitypub_template );
-
 		if ( $activitypub_template ) {
-			/**
-			 * Fires before the ActivityPub template is rendered.
-			 *
-			 * @param string $activitypub_template The path to the template file.
-			 */
-			\do_action( 'pre_render_activitypub_template', $activitypub_template );
+			// Check if header already sent.
+			if ( ! \headers_sent() && ACTIVITYPUB_SEND_VARY_HEADER ) {
+				// Send Vary header for Accept header.
+				\header( 'Vary: Accept' );
+			}
 
 			return $activitypub_template;
 		}
