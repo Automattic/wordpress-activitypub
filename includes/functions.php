@@ -371,9 +371,9 @@ function is_activitypub_request() {
 	}
 
 	/*
-	* The other (more common) option to make an ActivityPub request
-	* is to send an Accept header.
-	*/
+	 * The other (more common) option to make an ActivityPub request
+	 * is to send an Accept header.
+	 */
 	if ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
 		$accept = sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
 
