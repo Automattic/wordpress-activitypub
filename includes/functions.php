@@ -369,17 +369,26 @@ function is_activitypub_request() {
 /**
  * Check if a post is disabled for ActivityPub.
  *
+ * This function checks if the post type supports ActivityPub and if the post is set to be local.
+ *
  * @param mixed $post The post object or ID.
  *
  * @return boolean True if the post is disabled, false otherwise.
  */
 function is_post_disabled( $post ) {
-	$post       = \get_post( $post );
-	$disabled   = false;
-	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+	$post     = \get_post( $post );
+	$disabled = false;
 
-	if ( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ) {
+	// Check if the post type supports ActivityPub.
+	if ( ! \post_type_supports( $post->post_type, 'activitypub' ) ) {
 		$disabled = true;
+	} else {
+		$post       = \get_post( $post );
+		$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+
+		if ( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ) {
+			$disabled = true;
+		}
 	}
 
 	/**
