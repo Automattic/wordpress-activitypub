@@ -46,6 +46,9 @@ class User extends Base {
 	 */
 	public function change_wp_user_id( $user_id ) {
 		// TODO: Will be removed with the new Outbox implementation.
+		$this->wp_object->ID = $user_id;
+
+		return $this;
 	}
 
 	/**

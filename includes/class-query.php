@@ -124,8 +124,12 @@ class Query {
 			return \get_comment( $comment_id );
 		}
 
+		if ( ! isset( $_SERVER['REQUEST_URI'] ) ) {
+			return null;
+		}
+
 		// Try to get Author by ID.
-		$url       = sanitize_url( $_SERVER['REQUEST_URI'] );
+		$url       = \sanitize_url( \wp_unslash( $_SERVER['REQUEST_URI'] ) );
 		$author_id = url_to_authorid( $url );
 		if ( $author_id ) {
 			return \get_user_by( 'id', $author_id );
