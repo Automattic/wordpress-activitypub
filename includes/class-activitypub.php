@@ -107,7 +107,7 @@ class Activitypub {
 		}
 
 		$activitypub_template = false;
-		$activitypub_object   = Query::get_instance()->get_queried_object();
+		$activitypub_object   = Query::get_instance()->get_activitypub_object();
 
 		if ( $activitypub_object ) {
 			if ( \get_query_var( 'preview' ) ) {
