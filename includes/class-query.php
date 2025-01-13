@@ -107,7 +107,9 @@ class Query {
 	/**
 	 * Get the queried object.
 	 *
-	 * @return WP_Term|WP_Post_Type|WP_Post|WP_User|null The queried object.
+	 * This adds support for Comments by `?c=123` IDs and Users by `?author=123` and `@username` IDs.
+	 *
+	 * @return WP_Term|WP_Post_Type|WP_Post|WP_User|WP_Comment|null The queried object.
 	 */
 	public function get_queried_object() {
 		$queried_object = \get_queried_object();
@@ -130,6 +132,19 @@ class Query {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get the queried object ID.
+	 *
+	 * @return int The queried object ID.
+	 */
+	public function get_queried_object_id() {
+		if ( ! $this->get_queried_object() ) {
+			return null;
+		}
+
+		return $this->get_queried_object()->ID;
 	}
 
 	/**
