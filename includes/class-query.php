@@ -58,6 +58,8 @@ class Query {
 		}
 
 		$this->activitypub_object = $transformer->to_object();
+
+		$this->is_activitypub_request = $this->is_activitypub_request();
 	}
 
 	/**
