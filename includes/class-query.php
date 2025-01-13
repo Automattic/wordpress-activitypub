@@ -183,6 +183,11 @@ class Query {
 			return null;
 		}
 
-		return \sanitize_url( \wp_unslash( \WP_Http::make_absolute_url( $_SERVER['REQUEST_URI'], \home_url() ) ) );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$url = \wp_unslash( $_SERVER['REQUEST_URI'] );
+		$url = \WP_Http::make_absolute_url( $url, \home_url() );
+		$url = \sanitize_url( $url );
+
+		return $url;
 	}
 }
