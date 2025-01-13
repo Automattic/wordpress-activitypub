@@ -100,7 +100,7 @@ class Actors {
 				'meta_query'  => array(
 					'relation' => 'OR',
 					array(
-						'key'     => 'activitypub_user_identifier',
+						'key'     => '_activitypub_user_identifier',
 						'value'   => $username,
 						'compare' => 'LIKE',
 					),

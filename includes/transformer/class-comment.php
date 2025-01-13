@@ -84,8 +84,18 @@ class Comment extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		$comment = $this->item;
-		$content = $comment->comment_content;
+		$comment  = $this->item;
+		$content  = $comment->comment_content;
+		$mentions = '';
+
+		foreach ( $this->extract_reply_context() as $acct => $url ) {
+			$mentions .= sprintf(
+				'<a rel="mention" class="u-url mention" href="%s">%s</a> ',
+				esc_url( $url ),
+				esc_html( $acct )
+			);
+		}
+		$content = $mentions . $content;
 
 		/**
 		 * Filter the content of the comment.
@@ -266,11 +276,11 @@ class Comment extends Base {
 	 * Collect all other Users that participated in this comment-thread
 	 * to send them a notification about the new reply.
 	 *
-	 * @param array $mentions The already mentioned ActivityPub users.
+	 * @param array $mentions Optional. The already mentioned ActivityPub users. Default empty array.
 	 *
 	 * @return array The list of all Repliers.
 	 */
-	public function extract_reply_context( $mentions ) {
+	public function extract_reply_context( $mentions = array() ) {
 		// Check if `$this->item` is a WP_Comment.
 		if ( 'WP_Comment' !== get_class( $this->item ) ) {
 			return $mentions;
@@ -293,5 +303,94 @@ class Comment extends Base {
 		}
 
 		return $mentions;
+	}
+
+	/**
+	 * Returns the locale of the post.
+	 *
+	 * @return string The locale of the post.
+	 */
+	public function get_locale() {
+		$comment_id = $this->wp_object->ID;
+		$lang       = \strtolower( \strtok( \get_locale(), '_-' ) );
+
+		/**
+		 * Filter the locale of the comment.
+		 *
+		 * @param string   $lang    The locale of the comment.
+		 * @param int      $comment_id The comment ID.
+		 * @param \WP_Post $post    The comment object.
+		 *
+		 * @return string The filtered locale of the comment.
+		 */
+		return apply_filters( 'activitypub_comment_locale', $lang, $comment_id, $this->wp_object );
+	}
+
+	/**
+	 * Returns the updated date of the comment.
+	 *
+	 * @return string|null The updated date of the comment.
+	 */
+	public function get_updated() {
+		$updated   = \get_comment_meta( $this->wp_object->comment_ID, 'activitypub_comment_modified', true );
+		$published = \get_comment_meta( $this->wp_object->comment_ID, 'activitypub_comment_published', true );
+
+		if ( $updated > $published ) {
+			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Returns the published date of the comment.
+	 *
+	 * @return string The published date of the comment.
+	 */
+	public function get_published() {
+		return \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $this->wp_object->comment_date_gmt ) );
+	}
+
+	/**
+	 * Returns the URL of the comment.
+	 *
+	 * @return string The URL of the comment.
+	 */
+	public function get_url() {
+		return $this->get_id();
+	}
+
+	/**
+	 * Returns the type of the comment.
+	 *
+	 * @return string The type of the comment.
+	 */
+	public function get_type() {
+		return 'Note';
+	}
+
+	/**
+	 * Returns the to of the comment.
+	 *
+	 * @return array The to of the comment.
+	 */
+	public function get_to() {
+		$path = sprintf( 'actors/%d/followers', intval( $this->wp_object->comment_author ) );
+
+		return array(
+			'https://www.w3.org/ns/activitystreams#Public',
+			get_rest_url_by_path( $path ),
+		);
+	}
+
+	/**
+	 * Returns the content map for the comment.
+	 *
+	 * @return array The content map for the comment.
+	 */
+	public function get_content_map() {
+		return array(
+			$this->get_locale() => $this->get_content(),
+		);
 	}
 }

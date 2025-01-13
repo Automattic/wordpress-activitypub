@@ -77,7 +77,7 @@ class Nodeinfo {
 	 */
 	public static function nodeinfo() {
 		/**
-		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
+		 * Fires before the NodeInfo data is created and sent to the client.
 		 */
 		\do_action( 'activitypub_rest_nodeinfo_pre' );
 
@@ -126,7 +126,7 @@ class Nodeinfo {
 	 */
 	public static function nodeinfo2() {
 		/**
-		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
+		 * Fires before the NodeInfo 2.0 data is created and sent to the client.
 		 */
 		\do_action( 'activitypub_rest_nodeinfo2_pre' );
 

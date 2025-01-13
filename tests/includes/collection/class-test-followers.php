@@ -129,8 +129,8 @@ class Test_Followers extends \WP_UnitTestCase {
 		$db_followers  = Followers::get_followers( 1 );
 		$db_followers2 = Followers::get_followers( 2 );
 
-		$this->assertContains( $follower, $db_followers );
-		$this->assertContains( $follower2, $db_followers2 );
+		$this->assertStringContainsString( $follower, serialize( $db_followers ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+		$this->assertStringContainsString( $follower2, serialize( $db_followers2 ) );  // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 	}
 
 	/**
@@ -291,7 +291,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
 
 		for ( $i = 1; $i <= 15; $i++ ) {
-			add_post_meta( $follower->get__id(), 'activitypub_errors', 'error ' . $i );
+			add_post_meta( $follower->get__id(), '_activitypub_errors', 'error ' . $i );
 		}
 
 		$follower = Followers::get_follower( 1, 'http://sally.example.org' );
@@ -329,46 +329,114 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		$db_followers = Followers::get_followers( 1 );
 
-		$this->assertContains( $follower, $db_followers );
+		$this->assertStringContainsString( $follower, serialize( $db_followers ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
 		$follower = current( $db_followers );
-		$meta     = get_post_meta( $follower->get__id(), 'activitypub_user_id', false );
+		$meta     = get_post_meta( $follower->get__id(), '_activitypub_user_id', false );
 
 		$this->assertCount( 1, $meta );
 	}
 
 	/**
-	 * Tests maybe_migrate.
+	 * Tests scheduling of migration.
 	 *
 	 * @covers ::maybe_migrate
 	 */
-	public function test_migration() {
+	public function test_migration_scheduling() {
 		update_option( 'activitypub_db_version', '0.0.1' );
-
-		$followers = array(
-			'https://example.com/author/jon',
-			'https://example.og/errors',
-			'https://example.org/author/doe',
-			'http://sally.example.org',
-			'https://error.example.com',
-			'https://example.net/error',
-		);
-
-		$user_id = 1;
-
-		add_user_meta( $user_id, 'activitypub_followers', $followers, true );
 
 		\Activitypub\Migration::maybe_migrate();
 
 		$schedule = \wp_next_scheduled( 'activitypub_migrate', array( '0.0.1' ) );
-
 		$this->assertNotFalse( $schedule );
 
-		do_action( 'activitypub_migrate', '0.0.1' );
+		// Clean up.
+		delete_option( 'activitypub_db_version' );
+	}
+
+	/**
+	 * Data provider for migration test scenarios.
+	 *
+	 * @return array[]
+	 */
+	public function migration_scenarios_provider() {
+		return array(
+			'valid_followers' => array(
+				array(
+					'https://example.com/author/jon',
+					'https://example.org/author/doe',
+					'http://sally.example.org',
+				),
+				3,
+			),
+			'invalid_url'     => array(
+				array(
+					'not_a_url',
+					'https://example.org/author/doe',
+				),
+				1,
+			),
+			'empty_followers' => array(
+				array(),
+				0,
+			),
+		);
+	}
+
+	/**
+	 * Tests migration of followers from user meta to new format.
+	 *
+	 * @covers ::maybe_migrate
+	 * @dataProvider migration_scenarios_provider
+	 *
+	 * @param array $followers      List of followers to migrate.
+	 * @param int   $expected_count Expected number of successful migrations.
+	 */
+	public function test_migration_followers( $followers, $expected_count ) {
+		$user_id = 1;
+
+		// Mock remote metadata to avoid network calls.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function ( $pre, $actor ) {
+				if ( isset( self::$users[ $actor ] ) ) {
+					return self::$users[ $actor ];
+				}
+				return $pre;
+			},
+			10,
+			2
+		);
+
+		add_user_meta( $user_id, 'activitypub_followers', $followers, true );
+
+		\Activitypub\Migration::migrate_from_0_17();
 
 		$db_followers = Followers::get_followers( 1 );
+		$this->assertCount( $expected_count, $db_followers );
 
-		$this->assertCount( 3, $db_followers );
+		if ( $expected_count > 0 ) {
+			// Verify each valid follower was migrated correctly.
+			$db_follower_ids = array_map(
+				function ( $follower ) {
+					return $follower->get_id();
+				},
+				$db_followers
+			);
+			sort( $db_follower_ids );
+			$valid_followers = array_filter(
+				$followers,
+				function ( $url ) {
+					return filter_var( $url, FILTER_VALIDATE_URL );
+				}
+			);
+			sort( $valid_followers );
+			$this->assertEquals( $valid_followers, $db_follower_ids );
+		}
+
+		// Clean up.
+		delete_user_meta( $user_id, 'activitypub_followers' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'pre_get_remote_metadata_by_actor' ) );
 	}
 
 	/**
@@ -409,7 +477,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 			$id = $follower->upsert();
 
-			add_post_meta( $id, 'activitypub_user_id', 1 );
+			add_post_meta( $id, '_activitypub_user_id', 1 );
 		}
 
 		$inboxes = Followers::get_inboxes( 1 );
@@ -435,7 +503,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 			$id = $follower->upsert();
 
-			add_post_meta( $id, 'activitypub_user_id', 1 );
+			add_post_meta( $id, '_activitypub_user_id', 1 );
 		}
 
 		$inboxes2 = Followers::get_inboxes( 1 );
@@ -465,7 +533,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 			$id = $follower->upsert();
 
-			add_post_meta( $id, 'activitypub_user_id', 1 );
+			add_post_meta( $id, '_activitypub_user_id', 1 );
 		}
 
 		$followers = Followers::get_all_followers();

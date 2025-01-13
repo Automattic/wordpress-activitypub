@@ -31,12 +31,9 @@ In order to authenticate activities, Mastodon relies on HTTP Signatures, signing
 
 Mastodon requires all `POST` requests to be signed, and MAY require `GET` requests to be signed, depending on the configuration of the Mastodon server.
 
-More information on HTTP Signatures, as well as examples, can be found here: https://docs.joinmastodon.org/spec/security/#http
+More information on HTTP Signatures, as well as examples, can be found here: <https://docs.joinmastodon.org/spec/security/#http>
 
 ## Additional documentation
 
-- Plugin Description: https://github.com/Automattic/wordpress-activitypub?tab=readme-ov-file#description
-- Frequently Asked Questions: https://github.com/Automattic/wordpress-activitypub?tab=readme-ov-file#frequently-asked-questions
-- Installation Instructions: https://github.com/Automattic/wordpress-activitypub?tab=readme-ov-file#installation
-- Upgrade Notice: https://github.com/Automattic/wordpress-activitypub?tab=readme-ov-file#upgrade-notice
-- Changelog: https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md
+- Plugin Documentation: [docs/readme.md](docs/readme.md)
+- Changelog: <https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md>

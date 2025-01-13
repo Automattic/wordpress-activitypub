@@ -59,10 +59,9 @@
 							</p>
 						</td>
 					</tr>
+					<?php \do_settings_fields( 'activitypub', 'user' ); ?>
 				</tbody>
 			</table>
-
-			<?php \do_settings_fields( 'activitypub', 'user' ); ?>
 		</div>
 
 		<div class="box">
@@ -183,12 +182,47 @@
 							</p>
 						</td>
 					</tr>
+					<?php \do_settings_fields( 'activitypub', 'activity' ); ?>
 				</tbody>
 			</table>
-
-			<?php \do_settings_fields( 'activitypub', 'activity' ); ?>
 		</div>
-
+		<div class="box">
+			<h3><?php \esc_html_e( 'Notifications', 'activitypub' ); ?></h3>
+			<p><?php \esc_html_e( 'Choose which notifications you want to receive. The plugin currently only supports e-mail notifications, but we will add more options in the future.', 'activitypub' ); ?></p>
+			<table class="form-table">
+				<tbody>
+					<tr>
+						<th scope="row">
+							<?php \esc_html_e( 'Type', 'activitypub' ); ?>
+						</th>
+						<th>
+							<?php \esc_html_e( 'E-Mail', 'activitypub' ); ?>
+						</th>
+					</tr>
+					<tr>
+						<td scope="row">
+							<?php \esc_html_e( 'New followers', 'activitypub' ); ?>
+						</td>
+						<td>
+							<label>
+								<input type="checkbox" name="activitypub_mailer_new_follower" id="activitypub_mailer_new_follower" value="1" <?php \checked( '1', \get_option( 'activitypub_mailer_new_follower', '0' ) ); ?> />
+							</label>
+						</td>
+					</tr>
+					<tr>
+						<td scope="row">
+							<?php \esc_html_e( 'Direct Messages', 'activitypub' ); ?>
+						</td>
+						<td>
+							<label>
+								<input type="checkbox" name="activitypub_mailer_new_dm" id="activitypub_mailer_new_dm" value="1" <?php \checked( '1', \get_option( 'activitypub_mailer_new_dm', '0' ) ); ?> />
+							</label>
+						</td>
+					</tr>
+					<?php \do_settings_fields( 'activitypub', 'security' ); ?>
+				</tbody>
+			</table>
+		</div>
 		<div class="box">
 			<h3><?php \esc_html_e( 'General', 'activitypub' ); ?></h3>
 			<table class="form-table">
@@ -213,29 +247,10 @@
 							</p>
 						</td>
 					</tr>
-					<tr>
-						<th scope="row">
-							<?php \esc_html_e( 'Blocklist', 'activitypub' ); ?>
-						</th>
-						<td>
-							<p>
-								<?php
-								echo \wp_kses(
-									\sprintf(
-										// translators: %s is a URL.
-										\__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ),
-										\esc_url( \admin_url( 'options-discussion.php#disallowed_keys' ) )
-									),
-									'default'
-								);
-								?>
-							</p>
-						</td>
-					</tr>
+					<?php \do_settings_fields( 'activitypub', 'general' ); ?>
+					<?php \do_settings_fields( 'activitypub', 'server' ); ?>
 				</tbody>
 			</table>
-			<?php \do_settings_fields( 'activitypub', 'general' ); ?>
-			<?php \do_settings_fields( 'activitypub', 'server' ); ?>
 		</div>
 		<div class="box">
 			<h3><?php \esc_html_e( 'Security', 'activitypub' ); ?></h3>
@@ -262,9 +277,28 @@
 						</td>
 					</tr>
 					<?php endif; ?>
+					<tr>
+						<th scope="row">
+							<?php \esc_html_e( 'Blocklist', 'activitypub' ); ?>
+						</th>
+						<td>
+							<p>
+								<?php
+								echo \wp_kses(
+									\sprintf(
+										// translators: %s is a URL.
+										\__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ),
+										\esc_url( \admin_url( 'options-discussion.php#disallowed_keys' ) )
+									),
+									'default'
+								);
+								?>
+							</p>
+						</td>
+					</tr>
+					<?php \do_settings_fields( 'activitypub', 'security' ); ?>
 				</tbody>
 			</table>
-			<?php \do_settings_fields( 'activitypub', 'security' ); ?>
 		</div>
 		<?php \do_settings_sections( 'activitypub' ); ?>
 

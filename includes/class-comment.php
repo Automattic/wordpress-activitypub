@@ -65,6 +65,13 @@ class Comment {
 			esc_attr( wp_json_encode( $attrs ) )
 		);
 
+		/**
+		 * Filters the HTML markup for the ActivityPub remote comment reply container.
+		 *
+		 * @param string $div The HTML markup for the remote reply container. Default is a div
+		 *                    with class 'activitypub-remote-reply' and data attributes for
+		 *                    the selected comment ID and internal comment ID.
+		 */
 		return apply_filters( 'activitypub_comment_reply_link', $div );
 	}
 
@@ -480,7 +487,8 @@ class Comment {
 
 		$handle     = 'activitypub-remote-reply';
 		$data       = array(
-			'namespace' => ACTIVITYPUB_REST_NAMESPACE,
+			'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
+			'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
 		);
 		$js         = sprintf( 'var _activityPubOptions = %s;', wp_json_encode( $data ) );
 		$asset_file = ACTIVITYPUB_PLUGIN_DIR . 'build/remote-reply/index.asset.php';
@@ -647,8 +655,13 @@ class Comment {
 				'icon'           => '♻️',
 				'class'          => 'p-repost',
 				'type'           => 'repost',
+				'collection'     => 'reposts',
 				'activity_types' => array( 'announce' ),
 				'excerpt'        => __( '&hellip; reposted this!', 'activitypub' ),
+				/* translators: %d: Number of reposts */
+				'count_single'   => _x( '%d repost', 'number of reposts', 'activitypub' ),
+				/* translators: %d: Number of reposts */
+				'count_plural'   => _x( '%d reposts', 'number of reposts', 'activitypub' ),
 			)
 		);
 
@@ -661,8 +674,13 @@ class Comment {
 				'icon'           => '👍',
 				'class'          => 'p-like',
 				'type'           => 'like',
+				'collection'     => 'likes',
 				'activity_types' => array( 'like' ),
 				'excerpt'        => __( '&hellip; liked this!', 'activitypub' ),
+				/* translators: %d: Number of likes */
+				'count_single'   => _x( '%d like', 'number of likes', 'activitypub' ),
+				/* translators: %d: Number of likes */
+				'count_plural'   => _x( '%d likes', 'number of likes', 'activitypub' ),
 			)
 		);
 	}

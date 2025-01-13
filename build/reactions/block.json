@@ -1,0 +1,37 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "name": "activitypub/reactions",
+  "apiVersion": 2,
+  "version": "1.0.0",
+  "title": "Fediverse Reactions",
+  "category": "widgets",
+  "icon": "heart",
+  "description": "Display Fediverse likes and reposts",
+  "supports": {
+    "html": false,
+    "align": true,
+    "layout": {
+      "default": {
+        "type": "constrained",
+        "orientation": "vertical",
+        "justifyContent": "center"
+      }
+    }
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "default": "Fediverse reactions"
+    }
+  },
+  "blockHooks": {
+    "core/post-content": "after"
+  },
+  "textdomain": "activitypub",
+  "editorScript": "file:./index.js",
+  "style": [
+    "file:./style-index.css",
+    "wp-components"
+  ],
+  "viewScript": "file:./view.js"
+}

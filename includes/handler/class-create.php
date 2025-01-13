@@ -10,6 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Interactions;
 
 use function Activitypub\is_self_ping;
+use function Activitypub\is_activity_reply;
 use function Activitypub\is_activity_public;
 use function Activitypub\object_id_to_comment;
 
@@ -45,8 +46,10 @@ class Create {
 	 */
 	public static function handle_create( $activity, $user_id, $activity_object = null ) {
 		// Check if Activity is public or not.
-		if ( ! is_activity_public( $activity ) ) {
-			// @todo maybe send email.
+		if (
+			! is_activity_public( $activity ) ||
+			! is_activity_reply( $activity )
+		) {
 			return;
 		}
 
@@ -67,7 +70,6 @@ class Create {
 		}
 
 		if ( is_self_ping( $activity['object']['id'] ) ) {
-			// @todo maybe send email.
 			return;
 		}
 
@@ -120,7 +122,6 @@ class Create {
 
 		$required = array(
 			'id',
-			'inReplyTo',
 			'content',
 		);
 

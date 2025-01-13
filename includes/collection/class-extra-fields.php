@@ -42,6 +42,15 @@ class Extra_Fields {
 		$query  = new \WP_Query( $args );
 		$fields = $query->posts ?? array();
 
+		/**
+		 * Filters the extra fields for an ActivityPub actor.
+		 *
+		 * This filter allows developers to modify or add custom fields to an actor's
+		 * profile.
+		 *
+		 * @param \WP_Post[] $fields   Array of WP_Post objects representing the extra fields.
+		 * @param int        $user_id  The ID of the user whose fields are being retrieved.
+		 */
 		return apply_filters( 'activitypub_get_actor_extra_fields', $fields, $user_id );
 	}
 

@@ -10,14 +10,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Outbox queue
+* Comment counts get updated when the plugin is activated/deactivated/deleted
+* Added a filter to make custom comment types manageable in WP.com Calypso
+
+### Changed
+
+* Hide ActivityPub post meta keys from the custom Fields UI
+* Bumped minimum required PHP version to 7.2
+
+### Fixed
+
+* Undefined array key warnings in various places
+* @-mentions in federated comments being displayed with a line break
+* Fetching replies from the same instance for Enable Mastodon Apps
+* Image captions not being included in the ActivityPub representation when the image is attached to the post
+
+### Changed
+* Print `_activityPubOptions` in the `wp_footer` action on the frontend.
+
+## [4.6.0] - 2024-12-20
+
+### Added
+
+* Add a filter to allow modifying the ActivityPub preview template
+* `@mentions` in the JSON representation of the reply
+* Add settings to enable/disable e-mail notifications for new followers and direct messages
+
+### Changed
+
+* Direct Messages: Test for the user being in the to field
+* Direct Messages: Improve HTML to e-mail text conversion
+* Better support for FSE color schemes
+
+### Fixed
+
+* Reactions: Provide a fallback for empty avatar URLs
+
+## [4.5.1] - 2024-12-18
+
+### Changed
+
+* Reactions block: Remove the `wp-block-editor` dependency for frontend views
+
+### Fixed
+
+* Direct Messages: Don't send notification for received public activities
+
+## [4.5.0] - 2024-12-17
+
+### Added
+
+* Reactions block to display likes and reposts
 * `icon` support for `Audio` and `Video` attachments
 * Send "new follower" emails
 * Send "direct message" emails
 * Account for custom comment types when calculating comment counts
 * Plugin upgrade routine that automatically updates comment counts
 
-### Improved
+### Changed
 
+* Likes and Reposts enabled by default
 * Email templates for Likes and Reposts
 * Improve Interactions moderation
 * Compatibility with Akismet
@@ -35,7 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Setting to enable/disable Authorized-Fetch
 
-### Improved
+### Changed
 
 * Added screen reader text to the "Follow Me" block for improved accessibility
 * Added `media_type` support to Activity-Object-Transformers
@@ -58,7 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * GitHub action to enforce Changelog updates
 * New contributors
 
-### Improved
+### Changed
 
 * Basic enclosure validation
 * More User -> Actor renaming
@@ -81,7 +133,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Mastodon Apps status provider
 
-### Improved
+### Changed
 
 * Image-Handling
 * Have better checks if audience should be set or not
@@ -97,7 +149,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Unit tests for the `ActivityPub\Transformer\Post` class
 
-### Improved
+### Changed
 
 * Reuse constants once they're defined
 * "FEP-b2b8: Long-form Text" support
@@ -133,7 +185,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Hide sticky posts that are not public
 
-### Improved
+### Changed
 
 * `activity_handle_undo` action
 * Add title to content if post is a `Note`
@@ -145,7 +197,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Do not federate "Local" posts
 
-### Improved
+### Changed
 
 * Help-text for Content-Warning box
 
@@ -157,7 +209,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Seriously Simple Podcasting integration
 * Multiple small fixes
 
-### Improved
+### Changed
 
 * Provide contextual fallback for dynamic blocks
 
@@ -171,7 +223,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Post "visibility" feature
 * Attribution-Domains support
 
-### Improved
+### Changed
 
 * Inbox validation
 * WordPress-Post-Type - Detection
@@ -191,7 +243,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Sanitization callback
 
-### Improved
+### Changed
 
 * A lot of PHPCS cleanups
 * Prepare multi-lang support
@@ -203,7 +255,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Keep priority of Icons
 * Fatal error if remote-object is `WP_Error`
 
-### Improved
+### Changed
 
 * Adopt WordPress PHP Coding Standards
 
@@ -227,7 +279,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Cropping Header Images for users without the 'customize' capability
 
-### Improved
+### Changed
 
 * OpenSSL handling
 * Added missing @ in Follow-Me block
@@ -241,7 +293,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.2.4] - 2024-09-16
 
-### Improved
+### Changed
 
 * Inbox validation
 
@@ -252,7 +304,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * NodeInfo endpoint
 * (Temporarily) Remove HTML from `summary`, because it seems that Mastodon has issues with it
 
-### Improved
+### Changed
 
 * Accessibility for Reply-Context
 * Use `Article` Object-Type as default
@@ -281,7 +333,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * "Stream" Plugin support
 * New Fediverse symbol
 
-### Improved
+### Changed
 
 * Replace hashtags, URLs, and mentions in summary with links
 * Hide Bookmarklet if site does not support Blocks
@@ -302,7 +354,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Line breaks to user biography
 * Blueprint
 
-### Improved
+### Changed
 
 * Simplified WebFinger code
 
@@ -322,7 +374,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * ActivityPub link HTML/HTTP-Header support
 * Tag support for Actors (only auto-generated for now)
 
-### Improved
+### Changed
 
 * Add setting to enable/disable the `fediverse:creator` OGP tag.
 
@@ -343,7 +395,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Support for FEP-fb2a
 * CRUD support for Extra Fields
 
-### Improved
+### Changed
 
 * Remote-Follow UI and UX
 * Open Graph `fediverse:creator` implementation
@@ -524,7 +576,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Normalize attributes that can have mixed value types
 
-## [1.3.0] 2023-12-05
+## [1.3.0] - 2023-12-05
 
 ### Added
 
@@ -1149,8 +1201,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/4.4.0...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/4.6.0...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[4.6.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.5.1...4.6.0
+[4.5.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.5.0...4.5.1
+[4.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.4.0...4.5.0
 [4.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.3.0...4.4.0
 [4.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.2.1...4.3.0
 [4.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.2.0...4.2.1

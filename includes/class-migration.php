@@ -161,6 +161,9 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.5.0', '<' ) ) {
 			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_update_comment_counts' );
 		}
+		if ( \version_compare( $version_from_db, '4.6.0', '<' ) ) {
+			self::migrate_to_4_6_0();
+		}
 
 		/**
 		 * Fires when the system has to be migrated.
@@ -388,6 +391,26 @@ class Migration {
 	}
 
 	/**
+	 * Updates post meta keys to be prefixed with an underscore.
+	 */
+	public static function migrate_to_4_6_0() {
+		global $wpdb;
+
+		$meta_keys = array(
+			'activitypub_actor_json',
+			'activitypub_canonical_url',
+			'activitypub_errors',
+			'activitypub_inbox',
+			'activitypub_user_id',
+		);
+
+		foreach ( $meta_keys as $meta_key ) {
+			// phpcs:ignore WordPress.DB
+			$wpdb->update( $wpdb->postmeta, array( 'meta_key' => '_' . $meta_key ), array( 'meta_key' => $meta_key ) );
+		}
+	}
+
+	/**
 	 * Update comment counts for posts in batches.
 	 *
 	 * @see Comment::pre_wp_update_comment_count_now()
@@ -452,6 +475,7 @@ class Migration {
 	 */
 	public static function add_default_settings() {
 		self::add_activitypub_capability();
+		self::add_notification_defaults();
 	}
 
 	/**
@@ -469,6 +493,14 @@ class Migration {
 		foreach ( $users as $user ) {
 			$user->add_cap( 'activitypub' );
 		}
+	}
+
+	/**
+	 * Add default notification settings.
+	 */
+	private static function add_notification_defaults() {
+		\add_option( 'activitypub_mailer_new_follower', '1' );
+		\add_option( 'activitypub_mailer_new_dm', '1' );
 	}
 
 	/**

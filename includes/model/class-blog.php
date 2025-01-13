@@ -204,7 +204,11 @@ class Blog extends Actor {
 		/**
 		 * Filters the default blog username.
 		 *
-		 * @param string $host The default username.
+		 * This filter allows developers to modify the default username that is
+		 * generated for the blog, which by default is the site's host name
+		 * without the 'www.' prefix.
+		 *
+		 * @param string $host The default username (site's host name).
 		 */
 		return apply_filters( 'activitypub_default_blog_username', $host );
 	}

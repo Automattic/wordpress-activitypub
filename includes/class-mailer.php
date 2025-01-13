@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Model\User;
 
 /**
  * Mailer Class.
@@ -21,10 +22,14 @@ class Mailer {
 		\add_filter( 'comment_notification_text', array( self::class, 'comment_notification_text' ), 10, 2 );
 
 		// New follower notification.
-		\add_action( 'activitypub_notification_follow', array( self::class, 'new_follower' ) );
+		if ( '1' === \get_option( 'activitypub_mailer_new_follower', '0' ) ) {
+			\add_action( 'activitypub_notification_follow', array( self::class, 'new_follower' ) );
+		}
 
 		// Direct message notification.
-		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
+		if ( '1' === \get_option( 'activitypub_mailer_new_dm', '0' ) ) {
+			\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
+		}
 	}
 
 	/**
@@ -148,10 +153,11 @@ class Mailer {
 	 * @param int   $user_id  The id of the local blog-user.
 	 */
 	public static function direct_message( $activity, $user_id ) {
-		// Check if Activity is public or not.
 		if (
-			is_activity_public( $activity ) &&
-			is_activity_reply( $activity )
+			is_activity_public( $activity ) ||
+			// Only accept messages that have the user in the "to" field.
+			empty( $activity['to'] ) ||
+			! in_array( Actors::get_by_id( $user_id )->get_id(), (array) $activity['to'], true )
 		) {
 			return;
 		}
@@ -174,10 +180,17 @@ class Mailer {
 			$email = $user->user_email;
 		}
 
+		$content = \html_entity_decode(
+			\wp_strip_all_tags(
+				str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
+			),
+			ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401
+		);
+
 		/* translators: 1: Blog name, 2 Actor name */
 		$subject = \sprintf( \esc_html__( '[%1$s] Direct Message from: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
 		/* translators: 1: Blog name, 2: Actor name */
-		$message = \sprintf( \esc_html__( 'New Direct Message: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \wp_strip_all_tags( $activity['object']['content'] ) ) . "\r\n\r\n";
+		$message = \sprintf( \esc_html__( 'New Direct Message: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), $content ) . "\r\n\r\n";
 		/* translators: Actor name */
 		$message .= \sprintf( \esc_html__( 'From: %s', 'activitypub' ), \esc_html( $actor['name'] ) ) . "\r\n";
 		/* translators: Actor URL */

@@ -14,9 +14,9 @@
 	<arg name="parallel" value="50"/>
 
 	<rule ref="PHPCompatibility"/>
-	<config name="testVersion" value="7.0-"/>
+	<config name="testVersion" value="7.2-"/>
 	<rule ref="PHPCompatibilityWP"/>
-	<config name="minimum_supported_wp_version" value="4.7"/>
+	<config name="minimum_supported_wp_version" value="5.5"/>
 
 	<config name="text_domain" value="activitypub,default"/>
 

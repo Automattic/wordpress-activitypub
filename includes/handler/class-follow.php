@@ -55,13 +55,15 @@ class Follow {
 			$activity['actor']
 		);
 
-		do_action(
-			'activitypub_followers_post_follow',
-			$activity['actor'],
-			$activity,
-			$user_id,
-			$follower
-		);
+		/**
+		 * Fires after a new follower has been added.
+		 *
+		 * @param string                      $actor    The URL of the actor (follower) who initiated the follow.
+		 * @param array                       $activity The complete activity data of the follow request.
+		 * @param int                         $user_id  The ID of the WordPress user being followed.
+		 * @param \Activitypub\Model\Follower $follower The Follower object containing the new follower's data.
+		 */
+		do_action( 'activitypub_followers_post_follow', $activity['actor'], $activity, $user_id, $follower );
 
 		// Send notification.
 		$notification = new Notification(

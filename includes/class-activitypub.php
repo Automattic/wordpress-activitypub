@@ -63,6 +63,9 @@ class Activitypub {
 	public static function activate() {
 		self::flush_rewrite_rules();
 		Scheduler::register_schedules();
+
+		\add_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
+		Migration::update_comment_counts();
 	}
 
 	/**
@@ -71,6 +74,9 @@ class Activitypub {
 	public static function deactivate() {
 		self::flush_rewrite_rules();
 		Scheduler::deregister_schedules();
+
+		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
+		Migration::update_comment_counts( 2000 );
 	}
 
 	/**
@@ -78,6 +84,9 @@ class Activitypub {
 	 */
 	public static function uninstall() {
 		Scheduler::deregister_schedules();
+
+		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
+		Migration::update_comment_counts( 2000 );
 	}
 
 	/**
@@ -103,10 +112,15 @@ class Activitypub {
 		} elseif ( is_comment() ) {
 			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
 		} elseif ( \is_singular() && ! is_post_disabled( \get_the_ID() ) ) {
-			$preview = \get_query_var( 'preview' );
-			if ( $preview ) {
+			if ( \get_query_var( 'preview' ) ) {
 				\define( 'ACTIVITYPUB_PREVIEW', true );
-				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php';
+
+				/**
+				 * Filter the template used for the ActivityPub preview.
+				 *
+				 * @param string $activitypub_template Absolute path to the template file.
+				 */
+				$activitypub_template = apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
 			} else {
 				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
 			}
@@ -335,7 +349,7 @@ class Activitypub {
 	public static function trash_post( $post_id ) {
 		\add_post_meta(
 			$post_id,
-			'activitypub_canonical_url',
+			'_activitypub_canonical_url',
 			\get_permalink( $post_id ),
 			true
 		);
@@ -347,7 +361,7 @@ class Activitypub {
 	 * @param string $post_id The Post ID.
 	 */
 	public static function untrash_post( $post_id ) {
-		\delete_post_meta( $post_id, 'activitypub_canonical_url' );
+		\delete_post_meta( $post_id, '_activitypub_canonical_url' );
 	}
 
 	/**
@@ -478,7 +492,7 @@ class Activitypub {
 
 		\register_post_meta(
 			Followers::POST_TYPE,
-			'activitypub_inbox',
+			'_activitypub_inbox',
 			array(
 				'type'              => 'string',
 				'single'            => true,
@@ -488,7 +502,7 @@ class Activitypub {
 
 		\register_post_meta(
 			Followers::POST_TYPE,
-			'activitypub_errors',
+			'_activitypub_errors',
 			array(
 				'type'              => 'string',
 				'single'            => false,
@@ -504,7 +518,7 @@ class Activitypub {
 
 		\register_post_meta(
 			Followers::POST_TYPE,
-			'activitypub_user_id',
+			'_activitypub_user_id',
 			array(
 				'type'              => 'string',
 				'single'            => false,
@@ -516,7 +530,7 @@ class Activitypub {
 
 		\register_post_meta(
 			Followers::POST_TYPE,
-			'activitypub_actor_json',
+			'_activitypub_actor_json',
 			array(
 				'type'              => 'string',
 				'single'            => true,
@@ -609,6 +623,9 @@ class Activitypub {
 		\register_post_type( Extra_Fields::USER_POST_TYPE, $args );
 		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $args );
 
+		/**
+		 * Fires after ActivityPub custom post types have been registered.
+		 */
 		\do_action( 'activitypub_after_register_post_type' );
 	}
 
