@@ -96,7 +96,7 @@ class Query {
 	 * @return int The ActivityPub object ID.
 	 */
 	public function get_activitypub_object_id() {
-		if ( ! $this->has_queried_object() ) {
+		if ( ! $this->has_activitypub_object() ) {
 			return null;
 		}
 

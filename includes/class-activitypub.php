@@ -50,7 +50,6 @@ class Activitypub {
 		}
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
-		\add_filter( 'pre_render_activitypub_template', array( self::class, 'add_headers' ) );
 
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
 
@@ -101,6 +100,8 @@ class Activitypub {
 		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
 			return $template;
 		}
+
+		self::add_headers();
 
 		if ( ! is_activitypub_request() ) {
 			return $template;
@@ -157,31 +158,14 @@ class Activitypub {
 	 * Add the 'self' link to the header.
 	 */
 	public static function add_headers() {
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		$request_uri = $_SERVER['REQUEST_URI'];
-
-		if ( ! $request_uri ) {
-			return;
-		}
-
-		if ( is_author() ) {
-			$id = get_user_id( get_queried_object_id() );
-		} else {
-			$transformer = Factory::get_transformer( \get_queried_object() );
-
-			if ( ! $transformer || is_wp_error( $transformer ) ) {
-				return;
-			}
-
-			$id = $transformer->to_object()->get_id();
-		}
+		$id = Query::get_instance()->get_activitypub_object_id();
 
 		if ( ! $id ) {
 			return;
 		}
 
 		if ( ! headers_sent() ) {
-			header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"' );
+			header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
 		}
 
 		add_action(
