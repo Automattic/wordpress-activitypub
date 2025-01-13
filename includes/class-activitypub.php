@@ -550,8 +550,6 @@ class Activitypub {
 				),
 				'capabilities'     => array(
 					'create_posts' => false,
-					//'edit_posts'   => false,
-					//'delete_posts' => false,
 				),
 				'map_meta_cap'     => true,
 				'public'           => true,
@@ -569,9 +567,8 @@ class Activitypub {
 			'ap_actor',
 			Outbox::POST_TYPE,
 			array(
-				'labels'           => array(
-					'name'          => _x( 'Actor', 'post_type plural name', 'activitypub' ),
-					'singular_name' => _x( '', 'post_type single name', 'activitypub' ),
+				'labels'       => array(
+					'name' => _x( 'Actor', 'post_type plural name', 'activitypub' ),
 				),
 				'hierarchical' => true,
 				'public'       => false,
@@ -583,9 +580,8 @@ class Activitypub {
 			'ap_activity_type',
 			Outbox::POST_TYPE,
 			array(
-				'labels'           => array(
-					'name'          => _x( 'Activity Type', 'post_type plural name', 'activitypub' ),
-					'singular_name' => _x( '', 'post_type single name', 'activitypub' ),
+				'labels'       => array(
+					'name' => _x( 'Activity Type', 'post_type plural name', 'activitypub' ),
 				),
 				'hierarchical' => true,
 				'public'       => false,

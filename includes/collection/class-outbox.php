@@ -19,8 +19,9 @@ class Outbox {
 	 * @param \Activitypub\Activity\Base_Object $activity_object The Activity-Object  to add as JSON.
 	 * @param string                            $activity_type   The activity type.
 	 * @param int                               $user_id         The user ID.
+	 * @param string                            $visibility      Optional. The visibility of the content. Default 'public'.
 	 *
-	 * @return mixed The added item or an error.
+	 * @return false|int|\WP_Error The added item or an error.
 	 */
 	public static function add( $activity_object, $activity_type, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) { // phpcs:ignore
 		switch ( $user_id ) {

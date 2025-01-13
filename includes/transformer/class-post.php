@@ -634,13 +634,13 @@ class Post extends Base {
 	/**
 	 * Filter media IDs by object type.
 	 *
-	 * @param array   $media     The media array grouped by type.
-	 * @param string  $type      The object type.
-	 * @param WP_Post $item The post object.
+	 * @param array   $media The media array grouped by type.
+	 * @param string  $type  The object type.
+	 * @param WP_Post $item  The post object.
 	 *
 	 * @return array The filtered media IDs.
 	 */
-	protected function filter_media_by_object_type( $media, $type, $wp_object ) {
+	protected function filter_media_by_object_type( $media, $type, $item ) {
 		/**
 		 * Filter the object type for media attachments.
 		 *

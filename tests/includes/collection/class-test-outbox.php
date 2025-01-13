@@ -1,16 +1,18 @@
 <?php
 /**
- * Test file for Activitypub Outbox-Collection.
+ * Test file for Outbox collection.
  *
  * @package Activitypub
  */
 
+namespace Activitypub\Tests\Collection;
+
 /**
- * Test class for Activitypub Outbox-Collection.
+ * Test class for Outbox collection.
  *
  * @coversDefaultClass \Activitypub\Collection\Outbox
  */
-class Test_Activitypub_Outbox_Collection extends ActivityPub_TestCase_Cache_HTTP {
+class Test_Outbox extends \Activitypub\Tests\ActivityPub_TestCase_Cache_HTTP {
 
 	/**
 	 * Test add an item to the outbox.
@@ -18,8 +20,12 @@ class Test_Activitypub_Outbox_Collection extends ActivityPub_TestCase_Cache_HTTP
 	 * @covers ::add
 	 *
 	 * @dataProvider activity_object_provider
+	 * @param array  $data    The data to add.
+	 * @param string $type    The type of the activity.
+	 * @param int    $user_id The user ID.
+	 * @param string $json    The JSON representation of the data.
 	 */
-	public function asd_test_add( $data, $type, $user_id, $json ) {
+	public function test_add( $data, $type, $user_id, $json ) {
 		$id = \Activitypub\add_to_outbox( $data, $type, $user_id );
 
 		$this->assertIsInt( $id );
@@ -28,7 +34,7 @@ class Test_Activitypub_Outbox_Collection extends ActivityPub_TestCase_Cache_HTTP
 
 		$this->assertInstanceOf( 'WP_Post', $post );
 		$this->assertEquals( 'draft', $post->post_status );
-		//$this->assertEquals( $json, $post->post_content );
+		$this->assertEquals( $json, $post->post_content );
 	}
 
 	/**
