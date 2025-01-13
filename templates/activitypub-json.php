@@ -5,7 +5,7 @@
  * @package Activitypub
  */
 
-$object = \Activitypub\Query::get_instance()->get_queried_object();
+$object = \Activitypub\Query::get_instance()->get_activitypub_object();
 
 /**
  * Fires before an ActivityPub blog profile is generated and sent to the client.

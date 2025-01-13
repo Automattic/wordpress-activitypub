@@ -22,7 +22,7 @@ class Query {
 	private static $instance;
 
 	/**
-	 * The query object.
+	 * The ActivityPub object.
 	 *
 	 * @var object
 	 */
@@ -43,7 +43,7 @@ class Query {
 	 * @todo Handle Actors and Replies.
 	 */
 	private function __construct() {
-		$wp_object = \get_queried_object();
+		$wp_object = $this->get_queried_object();
 
 		if ( ! $wp_object ) {
 			$this->activitypub_object = null;
@@ -78,30 +78,58 @@ class Query {
 	 *
 	 * @return bool True if the request has a queried object, false otherwise.
 	 */
-	public function has_queried_object() {
+	public function has_activitypub_object() {
 		return null !== $this->activitypub_object;
 	}
 
 	/**
-	 * Get the query object.
+	 * Get the ActivityPub object.
 	 *
-	 * @return object The query object.
+	 * @return object The ActivityPub object.
 	 */
-	public function get_queried_object() {
+	public function get_activitypub_object() {
 		return $this->activitypub_object;
 	}
 
 	/**
-	 * Get the query object ID.
+	 * Get the ActivityPub object ID.
 	 *
-	 * @return int The query object ID.
+	 * @return int The ActivityPub object ID.
 	 */
-	public function get_queried_object_id() {
+	public function get_activitypub_object_id() {
 		if ( ! $this->has_queried_object() ) {
 			return null;
 		}
 
 		return $this->activitypub_object->get_id();
+	}
+
+	/**
+	 * Get the queried object.
+	 *
+	 * @return WP_Term|WP_Post_Type|WP_Post|WP_User|null The queried object.
+	 */
+	public function get_queried_object() {
+		$queried_object = \get_queried_object();
+
+		if ( $queried_object ) {
+			return $queried_object;
+		}
+
+		// Check Comment by ID.
+		$comment_id = \get_query_var( 'c' );
+		if ( $comment_id ) {
+			return \get_comment( $comment_id );
+		}
+
+		// Try to get Author by ID.
+		$url       = sanitize_url( $_SERVER['REQUEST_URI'] );
+		$author_id = url_to_authorid( $url );
+		if ( $author_id ) {
+			return \get_user_by( 'id', $author_id );
+		}
+
+		return null;
 	}
 
 	/**
@@ -137,7 +165,7 @@ class Query {
 			* - application/json
 			*/
 			if ( preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
-				// Set the query var to true, to speed up the next check.
+				// Set the ActivityPub var to true, to speed up the next check.
 				$wp_query->query_vars['activitypub'] = true;
 				$this->is_activitypub_request        = true;
 				return true;

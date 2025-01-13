@@ -78,6 +78,8 @@ class Factory {
 				return new Post( $data );
 			case 'WP_Comment':
 				return new Comment( $data );
+			case 'WP_User':
+				return new User( $data );
 			default:
 				return null;
 		}
