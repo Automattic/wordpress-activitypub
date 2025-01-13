@@ -107,9 +107,12 @@ async function createRelease(version) {
 	// Push to remote
 	exec(`git push -u origin ${branchName}`);
 
+	// Get current user's GitHub username
+	const currentUser = execWithOutput('gh api user --jq .login');
+
 	// Create PR using GitHub CLI
 	console.log('\nCreating draft PR...');
-	exec(`gh pr create --title "Release ${version}" --body "Release version ${version}" --base trunk --head ${branchName} --draft --label release`);
+	exec(`gh pr create --title "Release ${version}" --body "Release version ${version}" --base trunk --head ${branchName} --draft --reviewer "Automattic/fediverse" --assignee "${currentUser}"`);
 }
 
 async function release() {
