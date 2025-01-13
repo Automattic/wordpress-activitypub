@@ -142,6 +142,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: @-mentions in federated comments being displayed with a line break
 * Fixed: Fetching replies from the same instance for Enable Mastodon Apps
 * Fixed: Image captions not being included in the ActivityPub representation when the image is attached to the post
+* Changed: Print `_activityPubOptions` in the `wp_footer` action on the frontend.
 
 = 4.6.0 =
 
