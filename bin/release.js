@@ -129,9 +129,12 @@ async function release() {
     }
 
     const prUrl = `https://github.com/${repoPath}/compare/trunk...${branchName}?expand=1&title=Release%20${version}&labels=release`;
-    console.log('\nCreate your draft PR here:');
-    // Use ANSI escape codes to make the link clickable in modern terminals
-    console.log(`\x1b]8;;${prUrl}\x1b\\${prUrl}\x1b]8;;\x1b\\`);
+    console.log('\nOpening draft PR in your browser...');
+    exec(`open ${prUrl}`);
+    console.log('\nPR URL for reference:');
+    console.log('----------------------------------------');
+    console.log(prUrl);
+    console.log('----------------------------------------');
 
   } catch (error) {
     console.error('An error occurred:', error);
