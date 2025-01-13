@@ -378,13 +378,13 @@ function is_activitypub_request() {
 		$accept = sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
 
 		/*
-		* $accept can be a single value, or a comma separated list of values.
-		* We want to support both scenarios,
-		* and return true when the header includes at least one of the following:
-		* - application/activity+json
-		* - application/ld+json
-		* - application/json
-		*/
+		 * $accept can be a single value, or a comma separated list of values.
+		 * We want to support both scenarios,
+		 * and return true when the header includes at least one of the following:
+		 * - application/activity+json
+		 * - application/ld+json
+		 * - application/json
+		 */
 		if ( preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
 			// Set the ActivityPub var to true, to speed up the next check.
 			$wp_query->query_vars['activitypub'] = true;
