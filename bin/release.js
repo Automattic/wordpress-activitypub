@@ -110,9 +110,12 @@ async function createRelease(version) {
 	// Get current user's GitHub username
 	const currentUser = execWithOutput('gh api user --jq .login');
 
-	// Create PR using GitHub CLI
+	// Create PR using GitHub CLI and capture the URL
 	console.log('\nCreating draft PR...');
-	exec(`gh pr create --title "Release ${version}" --body "Release version ${version}" --base trunk --head ${branchName} --draft --reviewer "Automattic/fediverse" --assignee "${currentUser}"`);
+	const prUrl = execWithOutput(`gh pr create --title "Release ${version}" --body "Release version ${version}" --base trunk --head ${branchName} --draft --reviewer "Automattic/fediverse" --assignee "${currentUser}" --json url --jq .url`);
+
+	// Open PR in browser
+	exec(`open ${prUrl}`);
 }
 
 async function release() {
