@@ -81,7 +81,7 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 			'links' => array(
 				array(
 					'rel'  => 'https://nodeinfo.diaspora.software/ns/schema/2.0',
-					'href' => get_rest_url_by_path( '/nodeinfo' ),
+					'href' => get_rest_url_by_path( '/nodeinfo/2.0' ),
 				),
 				array(
 					'rel'  => 'https://www.w3.org/ns/activitystreams#Application',

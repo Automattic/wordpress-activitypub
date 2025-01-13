@@ -41,11 +41,20 @@ class Test_Nodeinfo_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 
 		// Test first link.
 		$this->assertEquals( 'https://nodeinfo.diaspora.software/ns/schema/2.0', $data['links'][0]['rel'] );
-		$this->assertStringEndsWith( '/nodeinfo', $data['links'][0]['href'] );
+		$this->assertStringEndsWith( '/nodeinfo/2.0', $data['links'][0]['href'] );
 
 		// Test second link.
 		$this->assertEquals( 'https://www.w3.org/ns/activitystreams#Application', $data['links'][1]['rel'] );
 		$this->assertStringEndsWith( '/application', $data['links'][1]['href'] );
+
+		// Make sure the links work.
+		$request  = new \WP_REST_Request( 'GET', str_replace( \get_rest_url(), '/', $data['links'][0]['href'] ) );
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$request  = new \WP_REST_Request( 'GET', str_replace( \get_rest_url(), '/', $data['links'][1]['href'] ) );
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
 	}
 
 	/**
