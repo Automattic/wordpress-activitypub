@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
-Stable tag: 4.6.0
+Stable tag: 4.7.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -132,7 +132,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-= Unreleased =
+= 4.7.0 =
 
 * Added: Comment counts get updated when the plugin is activated/deactivated/deleted
 * Added: A filter to make custom comment types manageable in WP.com Calypso
