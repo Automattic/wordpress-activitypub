@@ -110,7 +110,18 @@ class Activitypub {
 		$activitypub_object   = Query::get_instance()->get_queried_object();
 
 		if ( $activitypub_object ) {
-			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/activitypub-json.php';
+			if ( \get_query_var( 'preview' ) ) {
+				\define( 'ACTIVITYPUB_PREVIEW', true );
+
+				/**
+				 * Filter the template used for the ActivityPub preview.
+				 *
+				 * @param string $activitypub_template Absolute path to the template file.
+				 */
+				$activitypub_template = apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
+			} else {
+				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/activitypub-json.php';
+			}
 		}
 
 		/*
