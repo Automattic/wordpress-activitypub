@@ -2,13 +2,13 @@
 
 const { execSync } = require('child_process');
 const readline = require('readline');
-const { URL } = require('url');
 const fs = require('fs');
 
 const rl = readline.createInterface({
 	input: process.stdin,
 	output: process.stdout
 });
+
 const question = (query) => new Promise((resolve) => rl.question(query, resolve));
 
 const exec = (command) => {
@@ -20,10 +20,13 @@ const exec = (command) => {
 	}
 };
 
-const getRepoInfo = () => {
-	const remoteUrl = execSync('git remote get-url origin').toString().trim();
-	const match = remoteUrl.match(/github\.com[:/](.+?)(?:\.git)?$/);
-	return match ? match[1] : null;
+const execWithOutput = (command) => {
+	try {
+		return execSync(command, { stdio: 'pipe' }).toString().trim();
+	} catch (error) {
+		console.error(`Error executing command: ${command}`);
+		process.exit(1);
+	}
 };
 
 const updateVersionInFile = (filePath, version, patterns) => {
@@ -31,8 +34,8 @@ const updateVersionInFile = (filePath, version, patterns) => {
 
 	patterns.forEach(({ search, replace }) => {
 		content = content.replace(
-				search,
-				typeof replace === 'function' ? replace(version) : replace
+			search,
+			typeof replace === 'function' ? replace(version) : replace
 		);
 	});
 
@@ -45,91 +48,110 @@ const updateChangelog = (version) => {
 
 	// Update the Unreleased section
 	let updated = content.replace(
-			/## \[Unreleased\]/,
-			`## [${version}] - ${date}`
+		/## \[Unreleased\]/,
+		`## [${version}] - ${date}`
 	);
 
 	// Update the comparison links at the bottom
 	const prevVersion = content.match(/compare\/(\d+\.\d+\.\d+)\.\.\.trunk/)[1];
 	updated = updated.replace(
-			/\[Unreleased\]: .*\n/,
-			`[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/${version}...trunk\n`
+		/\[Unreleased\]: .*\n/,
+		`[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/${version}...trunk\n`
 	);
 
 	// Add the new version comparison link
 	const newVersionLink = `[${version}]: https://github.com/Automattic/wordpress-activitypub/compare/${prevVersion}...${version}\n`;
 	updated = updated.replace(
-			/<!-- Add new release below and update "Unreleased" link -->\n/,
-			`<!-- Add new release below and update "Unreleased" link -->\n${newVersionLink}`
+		/<!-- Add new release below and update "Unreleased" link -->\n/,
+		`<!-- Add new release below and update "Unreleased" link -->\n${newVersionLink}`
 	);
 
 	fs.writeFileSync('CHANGELOG.md', updated);
 };
 
+async function createRelease(version) {
+	// Create and checkout release branch
+	const branchName = `release/${version}`;
+	exec(`git checkout -b ${branchName}`);
+
+	// Update version numbers in files
+	updateVersionInFile('activitypub.php', version, [
+		{
+			search: /Version: \d+\.\d+\.\d+/,
+			replace: `Version: ${version}`
+		},
+		{
+			search: /ACTIVITYPUB_PLUGIN_VERSION', '\d+\.\d+\.\d+/,
+			replace: `ACTIVITYPUB_PLUGIN_VERSION', '${version}`
+		}
+	]);
+
+	updateVersionInFile('readme.txt', version, [
+		{
+			search: /Stable tag: \d+\.\d+\.\d+/,
+			replace: `Stable tag: ${version}`
+		},
+		{
+			search: /= Unreleased =/,
+			replace: `= ${version} =`
+		}
+	]);
+
+	// Update CHANGELOG.md
+	updateChangelog(version);
+
+	// Stage and commit changes
+	exec('git add .');
+	exec(`git commit -m "Release ${version}"`);
+
+	// Push to remote
+	exec(`git push -u origin ${branchName}`);
+
+	// Create PR using GitHub CLI
+	console.log('\nCreating draft PR...');
+	exec(`gh pr create --title "Release ${version}" --body "Release version ${version}" --base trunk --head ${branchName} --draft --label release`);
+}
+
 async function release() {
 	try {
-		// Get new version first
-		const version = await question('\nWhat version would you like to release? (x.x.x): ');
-		if (!/^\d+\.\d+\.\d+$/.test(version)) {
-			console.error('Invalid version format. Please use x.x.x');
+		// Check if gh CLI is installed
+		try {
+			execSync('gh --version', { stdio: 'ignore' });
+		} catch (error) {
+			console.error('GitHub CLI (gh) is not installed. Please install it first:');
+			console.error('https://cli.github.com/');
 			process.exit(1);
 		}
 
-		// Ensure we're on trunk branch and up to date
-		exec('git checkout trunk');
-		exec('git pull origin trunk');
+		// Store current branch
+		const currentBranch = execWithOutput('git rev-parse --abbrev-ref HEAD');
 
-		// Create and checkout release branch
-		const branchName = `release/${version}`;
-		exec(`git checkout -b ${branchName}`);
-
-		// Update version numbers in files
-		updateVersionInFile('activitypub.php', version, [
-			{
-				search: /Version: \d+\.\d+\.\d+/,
-				replace: `Version: ${version}`
-			},
-			{
-				search: /ACTIVITYPUB_PLUGIN_VERSION', '\d+\.\d+\.\d+/,
-				replace: `ACTIVITYPUB_PLUGIN_VERSION', '${version}`
+		while (true) {
+			// Get new version
+			const version = await question('\nWhat version would you like to release? (x.x.x): ');
+			if (!/^\d+\.\d+\.\d+$/.test(version)) {
+				console.error('Invalid version format. Please use x.x.x');
+				continue;
 			}
-		]);
 
-		updateVersionInFile('readme.txt', version, [
-			{
-				search: /Stable tag: \d+\.\d+\.\d+/,
-				replace: `Stable tag: ${version}`
-			},
-			{
-				search: /= Unreleased =/,
-				replace: `= ${version} =`
+			// Check if release branch already exists
+			const branchExists = execWithOutput(`git branch --list release/${version}`);
+			if (branchExists) {
+				console.error(`\nError: Branch release/${version} already exists.`);
+				// Return to original branch if we're not already there
+				if (currentBranch !== execWithOutput('git rev-parse --abbrev-ref HEAD')) {
+					exec(`git checkout ${currentBranch}`);
+				}
+				continue;
 			}
-		]);
 
-		// Update CHANGELOG.md
-		updateChangelog(version);
+			// Ensure we're on trunk branch and up to date
+			exec('git checkout trunk');
+			exec('git pull origin trunk');
 
-		// Stage and commit changes
-		exec('git add .');
-		exec(`git commit -m "Release ${version}"`);
-
-		// Push to remote
-		exec(`git push -u origin ${branchName}`);
-
-		// Generate PR URL with clickable link
-		const repoPath = getRepoInfo();
-		if (!repoPath) {
-			console.error('Could not determine repository URL');
-			process.exit(1);
+			await createRelease(version);
+			break;
 		}
-
-		const prUrl = `https://github.com/${repoPath}/compare/trunk...${branchName}?expand=1&title=Release%20${version}&labels=release`;
-		console.log('\nOpening draft PR in your browser...');
-		exec(`open ${prUrl}`);
-		console.log('\nPR URL for reference:');
-		console.log('----------------------------------------');
-		console.log(prUrl);
-		console.log('----------------------------------------');
 
 	} catch (error) {
 		console.error('An error occurred:', error);
