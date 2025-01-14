@@ -24,7 +24,7 @@ class Attachment extends Post {
 	 * @return array The Attachments.
 	 */
 	protected function get_attachment() {
-		$mime_type  = get_post_mime_type( $this->wp_object->ID );
+		$mime_type  = get_post_mime_type( $this->item->ID );
 		$media_type = preg_replace( '/(\/[a-zA-Z]+)/i', '', $mime_type );
 		$type       = '';
 
@@ -40,11 +40,11 @@ class Attachment extends Post {
 
 		$attachment = array(
 			'type'      => $type,
-			'url'       => wp_get_attachment_url( $this->wp_object->ID ),
+			'url'       => wp_get_attachment_url( $this->item->ID ),
 			'mediaType' => $mime_type,
 		);
 
-		$alt = \get_post_meta( $this->wp_object->ID, '_wp_attachment_image_alt', true );
+		$alt = \get_post_meta( $this->item->ID, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
 			$attachment['name'] = $alt;
 		}

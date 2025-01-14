@@ -28,28 +28,28 @@ abstract class Base {
 	 *
 	 * @var WP_Post|WP_Comment
 	 */
-	protected $wp_object;
+	protected $item;
 
 	/**
 	 * Static function to Transform a WordPress Object.
 	 *
 	 * This helps to chain the output of the Transformer.
 	 *
-	 * @param WP_Post|WP_Comment $wp_object The WordPress object.
+	 * @param WP_Post|WP_Comment $item The WordPress object.
 	 *
 	 * @return Base
 	 */
-	public static function transform( $wp_object ) {
-		return new static( $wp_object );
+	public static function transform( $item ) {
+		return new static( $item );
 	}
 
 	/**
 	 * Base constructor.
 	 *
-	 * @param WP_Post|WP_Comment $wp_object The WordPress object.
+	 * @param WP_Post|WP_Comment $item The WordPress object.
 	 */
-	public function __construct( $wp_object ) {
-		$this->wp_object = $wp_object;
+	public function __construct( $item ) {
+		$this->item = $item;
 	}
 
 	/**
@@ -124,7 +124,7 @@ abstract class Base {
 	 * @return array The replies collection.
 	 */
 	public function get_replies() {
-		return Replies::get_collection( $this->wp_object );
+		return Replies::get_collection( $this->item );
 	}
 
 	/**

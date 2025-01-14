@@ -46,7 +46,7 @@ class Post extends Base {
 	 * @return int The ID of the WordPress Post
 	 */
 	public function get_wp_user_id() {
-		return $this->wp_object->post_author;
+		return $this->item->post_author;
 	}
 
 	/**
@@ -57,7 +57,7 @@ class Post extends Base {
 	 * @return Post The Post Object.
 	 */
 	public function change_wp_user_id( $user_id ) {
-		$this->wp_object->post_author = $user_id;
+		$this->item->post_author = $user_id;
 
 		return $this;
 	}
@@ -70,7 +70,7 @@ class Post extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
-		$post   = $this->wp_object;
+		$post   = $this->item;
 		$object = parent::to_object();
 
 		$content_warning = get_content_warning( $post );
@@ -115,7 +115,7 @@ class Post extends Base {
 			return $blog_user;
 		}
 
-		$user = Actors::get_by_id( $this->wp_object->post_author );
+		$user = Actors::get_by_id( $this->item->post_author );
 
 		if ( $user && ! is_wp_error( $user ) ) {
 			$this->actor_object = $user;
@@ -132,7 +132,7 @@ class Post extends Base {
 	 */
 	public function get_id() {
 		$last_legacy_id = (int) \get_option( 'activitypub_last_post_with_permalink_as_id', 0 );
-		$post_id        = (int) $this->wp_object->ID;
+		$post_id        = (int) $this->item->ID;
 
 		if ( $post_id > $last_legacy_id ) {
 			// Generate URI based on post ID.
@@ -148,7 +148,7 @@ class Post extends Base {
 	 * @return string The Posts URL.
 	 */
 	public function get_url() {
-		$post = $this->wp_object;
+		$post = $this->item;
 
 		switch ( \get_post_status( $post ) ) {
 			case 'trash':
@@ -187,7 +187,7 @@ class Post extends Base {
 	 * @return array|null The Image or null if no image is available.
 	 */
 	protected function get_image() {
-		$post_id = $this->wp_object->ID;
+		$post_id = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
 		if (
@@ -240,7 +240,7 @@ class Post extends Base {
 	 * @return array|null The Icon or null if no icon is available.
 	 */
 	protected function get_icon() {
-		$post_id = $this->wp_object->ID;
+		$post_id = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
 		if ( \has_post_thumbnail( $post_id ) ) {
@@ -297,7 +297,7 @@ class Post extends Base {
 	 */
 	protected function get_attachment() {
 		// Remove attachments from drafts.
-		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+		if ( 'draft' === \get_post_status( $this->item ) ) {
 			return array();
 		}
 
@@ -322,7 +322,7 @@ class Post extends Base {
 			'audio' => array(),
 			'video' => array(),
 		);
-		$id    = $this->wp_object->ID;
+		$id    = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
 		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
@@ -331,13 +331,13 @@ class Post extends Base {
 
 		$media = $this->get_enclosures( $media );
 
-		if ( site_supports_blocks() && \has_blocks( $this->wp_object->post_content ) ) {
+		if ( site_supports_blocks() && \has_blocks( $this->item->post_content ) ) {
 			$media = $this->get_block_attachments( $media, $max_media );
 		} else {
 			$media = $this->get_classic_editor_images( $media, $max_media );
 		}
 
-		$media      = $this->filter_media_by_object_type( $media, \get_post_format( $this->wp_object ), $this->wp_object );
+		$media      = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
 		$unique_ids = \array_unique( \array_column( $media, 'id' ) );
 		$media      = \array_intersect_key( $media, $unique_ids );
 		$media      = \array_slice( $media, 0, $max_media );
@@ -345,24 +345,24 @@ class Post extends Base {
 		/**
 		 * Filter the attachment IDs for a post.
 		 *
-		 * @param array   $media           The media array grouped by type.
-		 * @param WP_Post $this->wp_object The post object.
+		 * @param array   $media The media array grouped by type.
+		 * @param WP_Post $item  The post object.
 		 *
 		 * @return array The filtered attachment IDs.
 		 */
-		$media = \apply_filters( 'activitypub_attachment_ids', $media, $this->wp_object );
+		$media = \apply_filters( 'activitypub_attachment_ids', $media, $this->item );
 
 		$attachments = \array_filter( \array_map( array( $this, 'wp_attachment_to_activity_attachment' ), $media ) );
 
 		/**
 		 * Filter the attachments for a post.
 		 *
-		 * @param array   $attachments     The attachments.
-		 * @param WP_Post $this->wp_object The post object.
+		 * @param array   $attachments The attachments.
+		 * @param WP_Post $item        The post object.
 		 *
 		 * @return array The filtered attachments.
 		 */
-		return \apply_filters( 'activitypub_attachments', $attachments, $this->wp_object );
+		return \apply_filters( 'activitypub_attachments', $attachments, $this->item );
 	}
 
 	/**
@@ -373,7 +373,7 @@ class Post extends Base {
 	 * @return array The media array extended with enclosures.
 	 */
 	public function get_enclosures( $media ) {
-		$enclosures = get_enclosures( $this->wp_object->ID );
+		$enclosures = get_enclosures( $this->item->ID );
 
 		if ( ! $enclosures ) {
 			return $media;
@@ -423,7 +423,7 @@ class Post extends Base {
 			return array();
 		}
 
-		$blocks = \parse_blocks( $this->wp_object->post_content );
+		$blocks = \parse_blocks( $this->item->post_content );
 
 		return $this->get_media_from_blocks( $blocks, $media );
 	}
@@ -556,7 +556,7 @@ class Post extends Base {
 
 		$images  = array();
 		$base    = get_upload_baseurl();
-		$content = \get_post_field( 'post_content', $this->wp_object );
+		$content = \get_post_field( 'post_content', $this->item );
 		$tags    = new \WP_HTML_Tag_Processor( $content );
 
 		// This linter warning is a false positive - we have to re-count each time here as we modify $images.
@@ -634,7 +634,7 @@ class Post extends Base {
 		$images = array();
 		$query  = new \WP_Query(
 			array(
-				'post_parent'    => $this->wp_object->ID,
+				'post_parent'    => $this->item->ID,
 				'post_status'    => 'inherit',
 				'post_type'      => 'attachment',
 				'post_mime_type' => 'image',
@@ -656,22 +656,22 @@ class Post extends Base {
 	/**
 	 * Filter media IDs by object type.
 	 *
-	 * @param array   $media     The media array grouped by type.
-	 * @param string  $type      The object type.
-	 * @param WP_Post $wp_object The post object.
+	 * @param array   $media The media array grouped by type.
+	 * @param string  $type  The object type.
+	 * @param WP_Post $item  The post object.
 	 *
 	 * @return array The filtered media IDs.
 	 */
-	protected function filter_media_by_object_type( $media, $type, $wp_object ) {
+	protected function filter_media_by_object_type( $media, $type, $item ) {
 		/**
 		 * Filter the object type for media attachments.
 		 *
-		 * @param string  $type      The object type.
-		 * @param WP_Post $wp_object The post object.
+		 * @param string  $type The object type.
+		 * @param WP_Post $item The post object.
 		 *
 		 * @return string The filtered object type.
 		 */
-		$type = \apply_filters( 'filter_media_by_object_type', \strtolower( $type ), $wp_object );
+		$type = \apply_filters( 'filter_media_by_object_type', \strtolower( $type ), $item );
 
 		if ( ! empty( $media[ $type ] ) ) {
 			return $media[ $type ];
@@ -813,13 +813,13 @@ class Post extends Base {
 			return \ucfirst( $post_format_setting );
 		}
 
-		$has_title = \post_type_supports( $this->wp_object->post_type, 'title' );
-		$content   = \wp_strip_all_tags( $this->wp_object->post_content );
+		$has_title = \post_type_supports( $this->item->post_type, 'title' );
+		$content   = \wp_strip_all_tags( $this->item->post_content );
 
 		// Check if the post has a title.
 		if (
 			! $has_title ||
-			! $this->wp_object->post_title ||
+			! $this->item->post_title ||
 			\strlen( $content ) <= ACTIVITYPUB_NOTE_LENGTH
 		) {
 			return 'Note';
@@ -827,11 +827,11 @@ class Post extends Base {
 
 		// Default to Note.
 		$object_type = 'Note';
-		$post_type   = \get_post_type( $this->wp_object );
+		$post_type   = \get_post_type( $this->item );
 
 		if ( 'page' === $post_type ) {
 			$object_type = 'Page';
-		} elseif ( ! \get_post_format( $this->wp_object ) ) {
+		} elseif ( ! \get_post_format( $this->item ) ) {
 			$object_type = 'Article';
 		}
 
@@ -899,7 +899,7 @@ class Post extends Base {
 	protected function get_tag() {
 		$tags = array();
 
-		$post_tags = \get_the_tags( $this->wp_object->ID );
+		$post_tags = \get_the_tags( $this->item->ID );
 		if ( $post_tags ) {
 			foreach ( $post_tags as $post_tag ) {
 				$tag    = array(
@@ -940,11 +940,11 @@ class Post extends Base {
 		}
 
 		// Remove Teaser from drafts.
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->wp_object ) ) {
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
 		}
 
-		return generate_post_summary( $this->wp_object );
+		return generate_post_summary( $this->item );
 	}
 
 	/**
@@ -960,7 +960,7 @@ class Post extends Base {
 			return null;
 		}
 
-		$title = \get_the_title( $this->wp_object->ID );
+		$title = \get_the_title( $this->item->ID );
 
 		if ( ! $title ) {
 			return null;
@@ -984,7 +984,7 @@ class Post extends Base {
 		add_filter( 'activitypub_reply_block', '__return_empty_string' );
 
 		// Remove Content from drafts.
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->wp_object ) ) {
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
 		}
 
@@ -1002,7 +1002,7 @@ class Post extends Base {
 		add_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ), 10, 2 );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		$post    = $this->wp_object;
+		$post    = $this->item;
 		$content = $this->get_post_content_template();
 
 		// It seems that shortcodes are only applied to published posts.
@@ -1064,10 +1064,10 @@ class Post extends Base {
 		 * shortcodes like [ap_title] and [ap_content] that are processed during content
 		 * generation.
 		 *
-		 * @param string  $template  The template string containing shortcodes.
-		 * @param WP_Post $wp_object The WordPress post object being transformed.
+		 * @param string  $template The template string containing shortcodes.
+		 * @param WP_Post $item     The WordPress post object being transformed.
 		 */
-		return apply_filters( 'activitypub_object_content_template', $template, $this->wp_object );
+		return apply_filters( 'activitypub_object_content_template', $template, $this->item );
 	}
 
 	/**
@@ -1088,8 +1088,8 @@ class Post extends Base {
 		return apply_filters(
 			'activitypub_extract_mentions',
 			array(),
-			$this->wp_object->post_content . ' ' . $this->wp_object->post_excerpt,
-			$this->wp_object
+			$this->item->post_content . ' ' . $this->item->post_excerpt,
+			$this->item
 		);
 	}
 
@@ -1099,7 +1099,7 @@ class Post extends Base {
 	 * @return string The locale of the post.
 	 */
 	public function get_locale() {
-		$post_id = $this->wp_object->ID;
+		$post_id = $this->item->ID;
 		$lang    = \strtolower( \strtok( \get_locale(), '_-' ) );
 
 		/**
@@ -1111,7 +1111,7 @@ class Post extends Base {
 		 *
 		 * @return string The filtered locale of the post.
 		 */
-		return apply_filters( 'activitypub_post_locale', $lang, $post_id, $this->wp_object );
+		return apply_filters( 'activitypub_post_locale', $lang, $post_id, $this->item );
 	}
 
 	/**
@@ -1122,7 +1122,7 @@ class Post extends Base {
 	 * @return string|null The in-reply-to URL of the post.
 	 */
 	public function get_in_reply_to() {
-		$blocks = \parse_blocks( $this->wp_object->post_content );
+		$blocks = \parse_blocks( $this->item->post_content );
 
 		foreach ( $blocks as $block ) {
 			if ( 'activitypub/reply' === $block['blockName'] && isset( $block['attrs']['url'] ) ) {
@@ -1140,7 +1140,7 @@ class Post extends Base {
 	 * @return string The published date of the post.
 	 */
 	public function get_published() {
-		$published = \strtotime( $this->wp_object->post_date_gmt );
+		$published = \strtotime( $this->item->post_date_gmt );
 
 		return \gmdate( 'Y-m-d\TH:i:s\Z', $published );
 	}
@@ -1151,8 +1151,8 @@ class Post extends Base {
 	 * @return string|null The updated date of the post.
 	 */
 	public function get_updated() {
-		$published = \strtotime( $this->wp_object->post_date_gmt );
-		$updated   = \strtotime( $this->wp_object->post_modified_gmt );
+		$published = \strtotime( $this->item->post_date_gmt );
+		$updated   = \strtotime( $this->item->post_modified_gmt );
 
 		if ( $updated > $published ) {
 			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );

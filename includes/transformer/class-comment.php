@@ -33,7 +33,7 @@ class Comment extends Base {
 	 * @return int The User-ID of the WordPress Comment
 	 */
 	public function get_wp_user_id() {
-		return $this->wp_object->user_id;
+		return $this->item->user_id;
 	}
 
 	/**
@@ -42,7 +42,7 @@ class Comment extends Base {
 	 * @param int $user_id The new user ID.
 	 */
 	public function change_wp_user_id( $user_id ) {
-		$this->wp_object->user_id = $user_id;
+		$this->item->user_id = $user_id;
 	}
 
 	/**
@@ -58,7 +58,7 @@ class Comment extends Base {
 			return $user->get_id();
 		}
 
-		return Actors::get_by_id( $this->wp_object->user_id )->get_id();
+		return Actors::get_by_id( $this->item->user_id )->get_id();
 	}
 
 	/**
@@ -69,7 +69,7 @@ class Comment extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		$comment  = $this->wp_object;
+		$comment  = $this->item;
 		$content  = $comment->comment_content;
 		$mentions = '';
 
@@ -112,7 +112,7 @@ class Comment extends Base {
 	 * @return false|string|null The URL of the in-reply-to.
 	 */
 	protected function get_in_reply_to() {
-		$comment        = $this->wp_object;
+		$comment        = $this->item;
 		$parent_comment = null;
 
 		if ( $comment->comment_parent ) {
@@ -140,8 +140,7 @@ class Comment extends Base {
 	 * @return string ActivityPub URI for comment
 	 */
 	protected function get_id() {
-		$comment = $this->wp_object;
-		return Comment_Utils::generate_id( $comment );
+		return Comment_Utils::generate_id( $this->item );
 	}
 
 	/**
@@ -206,7 +205,7 @@ class Comment extends Base {
 		 *
 		 * @return array The filtered list of mentions.
 		 */
-		return apply_filters( 'activitypub_extract_mentions', array(), $this->wp_object->comment_content, $this->wp_object );
+		return apply_filters( 'activitypub_extract_mentions', array(), $this->item->comment_content, $this->item );
 	}
 
 	/**
@@ -215,7 +214,7 @@ class Comment extends Base {
 	 * @return array The list of ancestors.
 	 */
 	protected function get_comment_ancestors() {
-		$ancestors = get_comment_ancestors( $this->wp_object );
+		$ancestors = get_comment_ancestors( $this->item );
 
 		// Now that we have the full tree of ancestors, only return the ones received from the fediverse.
 		return array_filter(
@@ -235,8 +234,8 @@ class Comment extends Base {
 	 * @return array The list of all Repliers.
 	 */
 	public function extract_reply_context( $mentions = array() ) {
-		// Check if `$this->wp_object` is a WP_Comment.
-		if ( 'WP_Comment' !== get_class( $this->wp_object ) ) {
+		// Check if `$this->item` is a WP_Comment.
+		if ( 'WP_Comment' !== get_class( $this->item ) ) {
 			return $mentions;
 		}
 
@@ -265,7 +264,7 @@ class Comment extends Base {
 	 * @return string The locale of the post.
 	 */
 	public function get_locale() {
-		$comment_id = $this->wp_object->ID;
+		$comment_id = $this->item->ID;
 		$lang       = \strtolower( \strtok( \get_locale(), '_-' ) );
 
 		/**
@@ -277,7 +276,7 @@ class Comment extends Base {
 		 *
 		 * @return string The filtered locale of the comment.
 		 */
-		return apply_filters( 'activitypub_comment_locale', $lang, $comment_id, $this->wp_object );
+		return apply_filters( 'activitypub_comment_locale', $lang, $comment_id, $this->item );
 	}
 
 	/**
@@ -286,8 +285,8 @@ class Comment extends Base {
 	 * @return string|null The updated date of the comment.
 	 */
 	public function get_updated() {
-		$updated   = \get_comment_meta( $this->wp_object->comment_ID, 'activitypub_comment_modified', true );
-		$published = \get_comment_meta( $this->wp_object->comment_ID, 'activitypub_comment_published', true );
+		$updated   = \get_comment_meta( $this->item->comment_ID, 'activitypub_comment_modified', true );
+		$published = \get_comment_meta( $this->item->comment_ID, 'activitypub_comment_published', true );
 
 		if ( $updated > $published ) {
 			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
@@ -302,7 +301,7 @@ class Comment extends Base {
 	 * @return string The published date of the comment.
 	 */
 	public function get_published() {
-		return \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $this->wp_object->comment_date_gmt ) );
+		return \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $this->item->comment_date_gmt ) );
 	}
 
 	/**
@@ -329,7 +328,7 @@ class Comment extends Base {
 	 * @return array The to of the comment.
 	 */
 	public function get_to() {
-		$path = sprintf( 'actors/%d/followers', intval( $this->wp_object->comment_author ) );
+		$path = sprintf( 'actors/%d/followers', intval( $this->item->comment_author ) );
 
 		return array(
 			'https://www.w3.org/ns/activitystreams#Public',
