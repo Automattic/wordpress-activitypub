@@ -1,0 +1,88 @@
+name: Validate Migration Versions
+
+on:
+  pull_request:
+    paths:
+      - 'includes/class-migration.php'
+      - 'activitypub.php'
+  push:
+    tags:
+      - '*'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Validate Migration Versions
+        run: |
+          # Get current plugin version
+          PLUGIN_VERSION=$(grep -oP "define\( 'ACTIVITYPUB_PLUGIN_VERSION', '\K[^']*" activitypub.php)
+          echo "Current plugin version: $PLUGIN_VERSION"
+
+          # Get the list of modified files in this PR/commit
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin ${{ github.base_ref }}
+            MODIFIED_FILES=$(git diff --name-only origin/${{ github.base_ref }})
+          else
+            # For tags, compare with the previous tag
+            PREV_TAG=$(git describe --tags --abbrev=0 HEAD^)
+            MODIFIED_FILES=$(git diff --name-only $PREV_TAG)
+          fi
+
+          # Only proceed with migration checks if class-migration.php was modified
+          if echo "$MODIFIED_FILES" | grep -q "class-migration.php"; then
+            # Extract all version numbers from migration checks
+            VERSIONS=$(grep -oP "version_compare\([^,]+, '\K[^']*" includes/class-migration.php | sort -V)
+            
+            # Verify versions are in ascending order
+            PREV_VERSION=""
+            for VERSION in $VERSIONS; do
+              if [ ! -z "$PREV_VERSION" ] && [ "$(printf '%s\n' "$PREV_VERSION" "$VERSION" | sort -V | head -n1)" != "$PREV_VERSION" ]; then
+                echo "Error: Migration versions are not in ascending order. Found $VERSION after $PREV_VERSION"
+                exit 1
+              fi
+              PREV_VERSION=$VERSION
+            done
+
+            # If class-migration.php was modified, check if new migrations were added
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              OLD_VERSIONS=$(git show origin/${{ github.base_ref }}:includes/class-migration.php | grep -oP "version_compare\([^,]+, '\K[^']*" | sort -V)
+            else
+              OLD_VERSIONS=$(git show $PREV_TAG:includes/class-migration.php | grep -oP "version_compare\([^,]+, '\K[^']*" | sort -V)
+            fi
+
+            # Compare old and new versions to find newly added ones
+            NEW_VERSIONS=$(comm -13 <(echo "$OLD_VERSIONS") <(echo "$VERSIONS"))
+
+            # If there are new versions, verify them based on the event type
+            if [ ! -z "$NEW_VERSIONS" ]; then
+              echo "Found new migration versions:"
+              echo "$NEW_VERSIONS"
+              
+              while read -r VERSION; do
+                if [ ! -z "$VERSION" ]; then
+                  if [ "${{ github.event_name }}" = "pull_request" ]; then
+                    # For PRs: New migrations must have higher version than current plugin version
+                    if [ "$(printf '%s\n' "$PLUGIN_VERSION" "$VERSION" | sort -V | head -n1)" = "$VERSION" ]; then
+                      echo "Error: New migration version ($VERSION) must be higher than current plugin version ($PLUGIN_VERSION)"
+                      exit 1
+                    fi
+                  else
+                    # For tags: New migrations must match the plugin version exactly
+                    if [ "$VERSION" != "$PLUGIN_VERSION" ]; then
+                      echo "Error: New migration version ($VERSION) must exactly match the plugin version ($PLUGIN_VERSION) in a release"
+                      exit 1
+                    fi
+                  fi
+                fi
+              done <<< "$NEW_VERSIONS"
+            else
+              echo "No new migrations added"
+            fi
+          else
+            echo "No changes to migration logic, skipping version validation"
+          fi
