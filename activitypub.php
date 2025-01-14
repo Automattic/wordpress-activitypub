@@ -54,7 +54,7 @@ function rest_init() {
 
 	// Load NodeInfo endpoints only if blog is public.
 	if ( is_blog_public() ) {
-		Rest\NodeInfo::init();
+		( new Rest\Nodeinfo_Controller() )->register_routes();
 	}
 }
 \add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
