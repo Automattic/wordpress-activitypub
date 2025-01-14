@@ -65,7 +65,14 @@ class Interaction_Controller extends \WP_REST_Controller {
 		$object       = Http::get_remote_object( $uri );
 
 		if ( \is_wp_error( $object ) || ! isset( $object['type'] ) ) {
-			return new \WP_Error( 'activitypub_invalid_object', \esc_html__( 'The URL is not supported!', 'activitypub' ), array( 'status' => 400 ) );
+			\wp_die(
+				esc_html__( 'The URL is not supported!', 'activitypub' ),
+				'',
+				array(
+					'response'  => 400,
+					'back_link' => true,
+				)
+			);
 		}
 
 		if ( ! empty( $object['url'] ) ) {
@@ -115,7 +122,14 @@ class Interaction_Controller extends \WP_REST_Controller {
 
 		// Check if hook is implemented.
 		if ( ! $redirect_url ) {
-			return new \WP_Error( 'activitypub_interaction_not_supported', \esc_html__( 'This Interaction type is not supported yet!', 'activitypub' ), array( 'status' => 400 ) );
+			\wp_die(
+				esc_html__( 'This Interaction type is not supported yet!', 'activitypub' ),
+				'',
+				array(
+					'response'  => 400,
+					'back_link' => true,
+				)
+			);
 		}
 
 		return new \WP_REST_Response( null, 302, array( 'Location' => \esc_url( $redirect_url ) ) );

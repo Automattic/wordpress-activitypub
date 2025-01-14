@@ -40,6 +40,8 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	 * @covers ::get_item
 	 */
 	public function test_get_item_invalid_uri() {
+		$this->expectException( \WPDieException::class );
+
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
 		$request->set_param( 'uri', 'invalid-uri' );
 		$response = rest_get_server()->dispatch( $request );
@@ -149,6 +151,8 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	 * @covers ::get_item
 	 */
 	public function test_get_item_wp_error() {
+		$this->expectException( \WPDieException::class );
+
 		\add_filter(
 			'pre_http_request',
 			function () {
@@ -172,6 +176,8 @@ class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	 * @covers ::get_item
 	 */
 	public function test_get_item_invalid_object() {
+		$this->expectException( \WPDieException::class );
+
 		\add_filter(
 			'pre_http_request',
 			function () {
