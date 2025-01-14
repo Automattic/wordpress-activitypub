@@ -161,8 +161,8 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.5.0', '<' ) ) {
 			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_update_comment_counts' );
 		}
-		if ( \version_compare( $version_from_db, '4.6.0', '<' ) ) {
-			self::migrate_to_4_6_0();
+		if ( \version_compare( $version_from_db, '4.7.1', '<' ) ) {
+			self::migrate_to_4_7_1();
 		}
 
 		/**
@@ -393,7 +393,7 @@ class Migration {
 	/**
 	 * Updates post meta keys to be prefixed with an underscore.
 	 */
-	public static function migrate_to_4_6_0() {
+	public static function migrate_to_4_7_1() {
 		global $wpdb;
 
 		$meta_keys = array(

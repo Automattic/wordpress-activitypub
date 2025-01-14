@@ -51,8 +51,11 @@ jobs:
               {"path": "src/reply", "label": "[Block] Federated reply"},
               {"path": "src/reply-intent", "label": "[Block] Federated reply"},
               {"path": "src/editor-plugin", "label": "[Block] Post settings"},
+              {"path": "src/reactions", "label": "[Block] Reactions"},
+              {"path": "src/reactions", "label": "[Feature] Reactions"},
               {"path": "src", "label": "[Focus] Editor"},
               {"path": "includes/class-blocks.php", "label": "[Focus] Editor"},
               {"path": "integration", "label": "[Focus] Compatibility"},
-              {"path": "includes/collection", "label": "[Feature] Collections"}
+              {"path": "includes/collection", "label": "[Feature] Collections"},
+              {"path": "includes/class-mailer.php", "label": "[Feature] Notifications"}
             ]'
