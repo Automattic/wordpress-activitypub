@@ -216,4 +216,90 @@ class Test_Query extends WP_UnitTestCase {
 
 		unset( $_SERVER['REQUEST_URI'] );
 	}
+
+	/**
+	 * Test comment activitypub object.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
+	public function test_comment_activitypub_object() {
+		Query::get_instance()->__destruct();
+		// New comment.
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'  => self::$post_id,
+				'comment_author'   => 'Test Author',
+				'comment_content'  => 'Test Content',
+				'comment_approved' => 1,
+				'comment_type'     => 'comment',
+				'comment_meta'     => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		$this->go_to( site_url( '/?c=' . $comment_id ) );
+		$query = Query::get_instance();
+
+		$object = $query->get_activitypub_object();
+		$this->assertNotNull( $object );
+		$this->assertEquals( '<p>Test Content</p>', $object->get_content() );
+
+		// Test unsupported comment.
+		Query::get_instance()->__destruct();
+
+		// New comment.
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'  => self::$post_id,
+				'comment_author'   => 'Test Author',
+				'comment_content'  => 'Test Content 2',
+				'comment_approved' => 1,
+				'comment_type'     => 'comment',
+			)
+		);
+
+		$this->go_to( site_url( '/?c=' . $comment_id ) );
+		$this->assertNull( Query::get_instance()->get_activitypub_object() );
+	}
+
+	/**
+	 * Test user activitypub object.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
+	public function test_user_activitypub_object() {
+		Query::get_instance()->__destruct();
+		$this->go_to( get_author_posts_url( self::$user_id ) );
+		$this->assertNotNull( Query::get_instance()->get_activitypub_object() );
+
+		Query::get_instance()->__destruct();
+		$user = get_user_by( 'id', self::$user_id );
+		$user->remove_cap( 'activitypub' );
+		$this->go_to( get_author_posts_url( self::$user_id ) );
+		$this->assertNull( Query::get_instance()->get_activitypub_object() );
+
+		$user->add_cap( 'activitypub' );
+	}
+
+	/**
+	 * Test post activitypub object.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
+	public function test_post_activity_object() {
+		Query::get_instance()->__destruct();
+		$this->go_to( get_permalink( self::$post_id ) );
+		$this->assertNotNull( Query::get_instance()->get_activitypub_object() );
+
+		Query::get_instance()->__destruct();
+		add_post_meta( self::$post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+		$this->go_to( get_permalink( self::$post_id ) );
+		$this->assertNull( Query::get_instance()->get_activitypub_object() );
+
+		Query::get_instance()->__destruct();
+		delete_post_meta( self::$post_id, 'activitypub_content_visibility' );
+		$this->go_to( get_permalink( self::$post_id ) );
+		$this->assertNotNull( Query::get_instance()->get_activitypub_object() );
+	}
 }

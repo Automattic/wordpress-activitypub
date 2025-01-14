@@ -14,6 +14,7 @@ use Activitypub\Collection\Actors;
 
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\was_comment_received;
 use function Activitypub\get_comment_ancestors;
 
 /**
@@ -53,6 +54,11 @@ class Comment extends Base {
 	 * @return string The User-URL.
 	 */
 	protected function get_attributed_to() {
+		// If the comment was received via ActivityPub, return the author URL.
+		if ( was_comment_received( $this->wp_object ) ) {
+			return $this->wp_object->comment_author_url;
+		}
+
 		if ( is_single_user() ) {
 			$user = new Blog();
 			return $user->get_id();
