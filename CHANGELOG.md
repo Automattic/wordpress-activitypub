@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+* Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
+
+## [4.7.1] - 2025-01-14
+
+### Fixed
+
+* Missing migration
+
+## [4.7.0] - 2025-01-13
+
 ### Added
 
 * Comment counts get updated when the plugin is activated/deactivated/deleted
@@ -1200,8 +1212,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/4.6.0...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.1...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[4.7.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.0...4.7.1
+[4.7.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.6.0...4.7.0
 [4.6.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.5.1...4.6.0
 [4.5.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.5.0...4.5.1
 [4.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.4.0...4.5.0

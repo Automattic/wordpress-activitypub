@@ -187,11 +187,11 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Test migrate to 4.6.0.
+	 * Test migrate to 4.7.1.
 	 *
-	 * @covers ::migrate_to_4_6_0
+	 * @covers ::migrate_to_4_7_1
 	 */
-	public function test_migrate_to_4_6_0() {
+	public function test_migrate_to_4_7_1() {
 		$post1 = \wp_insert_post(
 			array(
 				'post_author'  => 1,
@@ -222,7 +222,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		}
 
 		// Run migration.
-		Migration::migrate_to_4_6_0();
+		Migration::migrate_to_4_7_1();
 
 		// Clean post cache to ensure fresh meta data.
 		\clean_post_cache( $post1 );
