@@ -26,7 +26,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install subversion
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -37,7 +37,7 @@ jobs:
           extensions: mysql
 
       - name: Install Composer dependencies for PHP
-        uses: "ramsey/composer-install@v1"
+        uses: "ramsey/composer-install@v3"
 
       - name: Setup Test Environment
         run: bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1 ${{ matrix.wp-version }}

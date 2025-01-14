@@ -11,7 +11,6 @@ use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Signature;
-use Activitypub\Model\Application;
 
 use function Activitypub\use_authorized_fetch;
 
@@ -27,7 +26,6 @@ class Server {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		self::register_routes();
 		self::add_hooks();
 	}
 
@@ -37,39 +35,6 @@ class Server {
 	public static function add_hooks() {
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_requests' ), 9, 3 );
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
-	}
-
-	/**
-	 * Register routes
-	 */
-	public static function register_routes() {
-		\register_rest_route(
-			ACTIVITYPUB_REST_NAMESPACE,
-			'/application',
-			array(
-				array(
-					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( self::class, 'application_actor' ),
-					'permission_callback' => '__return_true',
-				),
-			)
-		);
-	}
-
-	/**
-	 * Render Application actor profile
-	 *
-	 * @return WP_REST_Response The JSON profile of the Application Actor.
-	 */
-	public static function application_actor() {
-		$user = new Application();
-
-		$json = $user->to_array();
-
-		$rest_response = new WP_REST_Response( $json, 200 );
-		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
-
-		return $rest_response;
 	}
 
 	/**
