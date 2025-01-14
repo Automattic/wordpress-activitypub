@@ -57,7 +57,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
+	 * @return \WP_REST_Response Response object on success, dies on failure.
 	 */
 	public function get_item( $request ) {
 		$uri          = $request->get_param( 'uri' );
@@ -65,6 +65,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 		$object       = Http::get_remote_object( $uri );
 
 		if ( \is_wp_error( $object ) || ! isset( $object['type'] ) ) {
+			// Use wp_die as this can be called from the front-end. See https://github.com/Automattic/wordpress-activitypub/pull/1149/files#r1915297109.
 			\wp_die(
 				esc_html__( 'The URL is not supported!', 'activitypub' ),
 				'',
@@ -122,6 +123,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 
 		// Check if hook is implemented.
 		if ( ! $redirect_url ) {
+			// Use wp_die as this can be called from the front-end. See https://github.com/Automattic/wordpress-activitypub/pull/1149/files#r1915297109.
 			\wp_die(
 				esc_html__( 'This Interaction type is not supported yet!', 'activitypub' ),
 				'',
