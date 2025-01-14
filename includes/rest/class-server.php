@@ -11,7 +11,6 @@ use WP_Error;
 use WP_REST_Server;
 use WP_REST_Response;
 use Activitypub\Signature;
-use Activitypub\Model\Application;
 
 use function Activitypub\use_authorized_fetch;
 
@@ -27,7 +26,6 @@ class Server {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		self::register_routes();
 		self::add_hooks();
 	}
 
@@ -35,78 +33,29 @@ class Server {
 	 * Add sever hooks.
 	 */
 	public static function add_hooks() {
-		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_activitypub_requests' ), 9, 3 );
-		\add_filter( 'rest_request_before_callbacks', array( self::class, 'authorize_activitypub_requests' ), 10, 3 );
+		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_requests' ), 9, 3 );
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
 	}
 
 	/**
-	 * Register routes
-	 */
-	public static function register_routes() {
-		\register_rest_route(
-			ACTIVITYPUB_REST_NAMESPACE,
-			'/application',
-			array(
-				array(
-					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( self::class, 'application_actor' ),
-					'permission_callback' => '__return_true',
-				),
-			)
-		);
-	}
-
-	/**
-	 * Render Application actor profile
+	 * Callback function to authorize an api request.
 	 *
-	 * @return WP_REST_Response The JSON profile of the Application Actor.
-	 */
-	public static function application_actor() {
-		$user = new Application();
-
-		$json = $user->to_array();
-
-		$rest_response = new WP_REST_Response( $json, 200 );
-		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
-
-		return $rest_response;
-	}
-
-	/**
-	 * Callback function to authorize each api requests
+	 * The function is meant to be used as part of permission callbacks for rest api endpoints.
 	 *
-	 * @see WP_REST_Request
+	 * It verifies the signature of POST, PUT, PATCH, and DELETE requests, as well as GET requests in secure mode.
+	 * You can use the filter 'activitypub_defer_signature_verification' to defer the signature verification.
+	 * HEAD requests are always bypassed.
 	 *
 	 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
 	 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
 	 *
-	 * @param WP_REST_Response|\WP_HTTP_Response|WP_Error|mixed $response Result to send to the client.
-	 *                                                                    Usually a WP_REST_Response or WP_Error.
-	 * @param array                                             $handler  Route handler used for the request.
-	 * @param \WP_REST_Request                                  $request  Request used to generate the response.
+	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return mixed|WP_Error The response, error, or modified response.
+	 * @return bool|\WP_Error True if the request is authorized, WP_Error if not.
 	 */
-	public static function authorize_activitypub_requests( $response, $handler, $request ) {
+	public static function verify_signature( $request ) {
 		if ( 'HEAD' === $request->get_method() ) {
-			return $response;
-		}
-
-		if ( \is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$route = $request->get_route();
-
-		// Check if it is an activitypub request and exclude webfinger and nodeinfo endpoints.
-		if (
-			! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ||
-			\str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'webfinger' ) ||
-			\str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'nodeinfo' ) ||
-			\str_starts_with( $route, '/' . \trailingslashit( ACTIVITYPUB_REST_NAMESPACE ) . 'application' )
-		) {
-			return $response;
+			return true;
 		}
 
 		/**
@@ -123,11 +72,11 @@ class Server {
 		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request );
 
 		if ( $defer ) {
-			return $response;
+			return true;
 		}
 
 		if (
-			// POST-Requests are always signed.
+			// POST-Requests always have to be signed.
 			'GET' !== $request->get_method() ||
 			// GET-Requests only require a signature in secure mode.
 			( 'GET' === $request->get_method() && use_authorized_fetch() )
@@ -142,7 +91,7 @@ class Server {
 			}
 		}
 
-		return $response;
+		return true;
 	}
 
 	/**
@@ -155,7 +104,7 @@ class Server {
 	 *
 	 * @return mixed|WP_Error The response, error, or modified response.
 	 */
-	public static function validate_activitypub_requests( $response, $handler, $request ) {
+	public static function validate_requests( $response, $handler, $request ) {
 		if ( 'HEAD' === $request->get_method() ) {
 			return $response;
 		}

@@ -8,7 +8,10 @@
 	>
 	<testsuites>
 		<testsuite name="ActivityPub">
-			<directory prefix="class-test-" suffix=".php">./tests/</directory>
+			<directory prefix="class-test-" suffix=".php">./tests</directory>
 		</testsuite>
 	</testsuites>
+	<listeners>
+		<listener class="Activitypub\Tests\Activitypub_Testcase_Timer" file="tests/class-activitypub-testcase-timer.php" />
+	</listeners>
 </phpunit>

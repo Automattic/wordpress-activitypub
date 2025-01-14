@@ -16,7 +16,7 @@ if ( \is_wp_error( $transformer ) ) {
 }
 
 /**
- * Action triggered prior to the ActivityPub profile being created and sent to the client
+ * Fires before an ActivityPub comment object is generated and sent to the client.
  */
 \do_action( 'activitypub_json_comment_pre' );
 
@@ -24,6 +24,6 @@ if ( \is_wp_error( $transformer ) ) {
 echo $transformer->to_object()->to_json(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 /**
- * Action triggered after the ActivityPub profile has been created and sent to the client
+ * Fires after an ActivityPub comment object has been generated and sent to the client.
  */
 \do_action( 'activitypub_json_comment_post' );

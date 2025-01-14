@@ -18,8 +18,6 @@
 \defined( 'ACTIVITYPUB_CUSTOM_POST_CONTENT' ) || \define( 'ACTIVITYPUB_CUSTOM_POST_CONTENT', "[ap_title type=\"html\"]\n\n[ap_content]\n\n[ap_hashtags]" );
 \defined( 'ACTIVITYPUB_DISABLE_REWRITES' ) || \define( 'ACTIVITYPUB_DISABLE_REWRITES', false );
 \defined( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS' ) || \define( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS', false );
-// Disable reactions like `Like` and `Announce` by default.
-\defined( 'ACTIVITYPUB_DISABLE_REACTIONS' ) || \define( 'ACTIVITYPUB_DISABLE_REACTIONS', true );
 \defined( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS' ) || \define( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS', false );
 \defined( 'ACTIVITYPUB_SHARED_INBOX_FEATURE' ) || \define( 'ACTIVITYPUB_SHARED_INBOX_FEATURE', false );
 \defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) || \define( 'ACTIVITYPUB_SEND_VARY_HEADER', false );
@@ -36,9 +34,13 @@
 	'ACTIVITYPUB_MASTODON_HTML_SANITIZER',
 	array(
 		'p'          => array(),
-		'span'       => array( 'class' ),
+		'span'       => array( 'class' => true ),
 		'br'         => array(),
-		'a'          => array( 'href', 'rel', 'class' ),
+		'a'          => array(
+			'href'  => true,
+			'rel'   => true,
+			'class' => true,
+		),
 		'del'        => array(),
 		'pre'        => array(),
 		'code'       => array(),
@@ -48,8 +50,11 @@
 		'i'          => array(),
 		'u'          => array(),
 		'ul'         => array(),
-		'ol'         => array( 'start', 'reversed' ),
-		'li'         => array( 'value' ),
+		'ol'         => array(
+			'start'    => true,
+			'reversed' => true,
+		),
+		'li'         => array( 'value' => true ),
 		'blockquote' => array(),
 		'h1'         => array(),
 		'h2'         => array(),

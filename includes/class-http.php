@@ -26,6 +26,13 @@ class Http {
 	 * @return array|WP_Error The POST Response or an WP_Error.
 	 */
 	public static function post( $url, $body, $user_id ) {
+		/**
+		 * Fires before an HTTP POST request is made.
+		 *
+		 * @param string $url     The URL endpoint.
+		 * @param string $body    The POST body.
+		 * @param int    $user_id The WordPress User ID.
+		 */
 		\do_action( 'activitypub_pre_http_post', $url, $body, $user_id );
 
 		$date      = \gmdate( 'D, d M Y H:i:s T' );
@@ -35,7 +42,7 @@ class Http {
 		$wp_version = get_masked_wp_version();
 
 		/**
-		 * Filter the HTTP headers user agent.
+		 * Filters the HTTP headers user agent string.
 		 *
 		 * @param string $user_agent The user agent string.
 		 */
@@ -84,6 +91,11 @@ class Http {
 	 * @return array|WP_Error The GET Response or a WP_Error.
 	 */
 	public static function get( $url, $cached = false ) {
+		/**
+		 * Fires before an HTTP GET request is made.
+		 *
+		 * @param string $url The URL endpoint.
+		 */
 		\do_action( 'activitypub_pre_http_get', $url );
 
 		if ( $cached ) {
@@ -110,14 +122,24 @@ class Http {
 		$wp_version = get_masked_wp_version();
 
 		/**
-		 * Filter the HTTP headers user agent.
+		 * Filters the HTTP headers user agent string.
+		 *
+		 * This filter allows developers to modify the user agent string that is
+		 * sent with HTTP requests.
 		 *
 		 * @param string $user_agent The user agent string.
 		 */
 		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . $wp_version . '; ' . \get_bloginfo( 'url' ) );
 
+		/**
+		 * Filters the timeout duration for remote GET requests in ActivityPub.
+		 *
+		 * @param int $timeout The timeout value in seconds. Default 100 seconds.
+		 */
+		$timeout = \apply_filters( 'activitypub_remote_get_timeout', 100 );
+
 		$args = array(
-			'timeout'             => apply_filters( 'activitypub_remote_get_timeout', 100 ),
+			'timeout'             => $timeout,
 			'limit_response_size' => 1048576,
 			'redirection'         => 3,
 			'user-agent'          => "$user_agent; ActivityPub",
@@ -164,7 +186,7 @@ class Http {
 	 */
 	public static function is_tombstone( $url ) {
 		/**
-		 * Action before checking if the URL is a tombstone.
+		 * Fires before checking if the URL is a tombstone.
 		 *
 		 * @param string $url The URL to check.
 		 */

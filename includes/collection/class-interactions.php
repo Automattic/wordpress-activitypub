@@ -98,11 +98,11 @@ class Interactions {
 		}
 
 		$url               = object_to_uri( $activity['object'] );
-		$comment_post_id   = url_to_postid( $url );
+		$comment_post_id   = \url_to_postid( $url );
 		$parent_comment_id = url_to_commentid( $url );
 
 		if ( ! $comment_post_id && $parent_comment_id ) {
-			$parent_comment  = get_comment( $parent_comment_id );
+			$parent_comment  = \get_comment( $parent_comment_id );
 			$comment_post_id = $parent_comment->comment_post_ID;
 		}
 
@@ -111,14 +111,13 @@ class Interactions {
 			return false;
 		}
 
-		$type = $activity['type'];
+		$comment_type = Comment::get_comment_type_by_activity_type( $activity['type'] );
 
-		if ( ! Comment::is_registered_comment_type( $type ) ) {
+		if ( ! $comment_type ) {
 			// Not a valid comment type.
 			return false;
 		}
 
-		$comment_type    = Comment::get_comment_type( $type );
 		$comment_content = $comment_type['excerpt'];
 
 		$commentdata['comment_post_ID']           = $comment_post_id;
@@ -247,10 +246,10 @@ class Interactions {
 			return false;
 		}
 
-		$url = object_to_uri( $actor['url'] );
+		$url = object_to_uri( $actor['url'] ?? $actor['id'] );
 
 		if ( ! $url ) {
-			object_to_uri( $actor['id'] );
+			$url = object_to_uri( $actor['id'] );
 		}
 
 		if ( isset( $activity['object']['content'] ) ) {

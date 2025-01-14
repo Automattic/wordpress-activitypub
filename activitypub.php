@@ -3,12 +3,12 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 4.3.0
+ * Version: 4.7.1
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
  * License URI: http://opensource.org/licenses/MIT
- * Requires PHP: 7.0
+ * Requires PHP: 7.2
  * Text Domain: activitypub
  * Domain Path: /languages
  *
@@ -19,7 +19,7 @@ namespace Activitypub;
 
 use WP_CLI;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '4.3.0' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '4.7.1' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -27,9 +27,13 @@ use WP_CLI;
 \define( 'ACTIVITYPUB_PLUGIN_FILE', ACTIVITYPUB_PLUGIN_DIR . basename( __FILE__ ) );
 \define( 'ACTIVITYPUB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
+require_once __DIR__ . '/includes/class-autoloader.php';
 require_once __DIR__ . '/includes/compat.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/constants.php';
+require_once __DIR__ . '/integration/load.php';
+
+Autoloader::register_path( __NAMESPACE__, __DIR__ . '/includes' );
 
 /**
  * Initialize REST routes.
@@ -40,11 +44,13 @@ function rest_init() {
 	Rest\Inbox::init();
 	Rest\Followers::init();
 	Rest\Following::init();
-	Rest\Webfinger::init();
 	Rest\Comment::init();
 	Rest\Server::init();
 	Rest\Collection::init();
 	Rest\Interaction::init();
+	Rest\Post::init();
+	( new Rest\Application_Controller() )->register_routes();
+	( new Rest\Webfinger_Controller() )->register_routes();
 
 	// Load NodeInfo endpoints only if blog is public.
 	if ( is_blog_public() ) {
@@ -68,6 +74,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Link', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Mailer', 'init' ) );
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
@@ -80,62 +87,6 @@ function plugin_init() {
 	}
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
-
-
-/**
- * Class Autoloader.
- */
-\spl_autoload_register(
-	function ( $full_class ) {
-		$base_dir = __DIR__ . '/includes/';
-		$base     = 'Activitypub\\';
-
-		if ( strncmp( $full_class, $base, strlen( $base ) ) === 0 ) {
-			$maybe_uppercase = str_replace( $base, '', $full_class );
-			$class           = strtolower( $maybe_uppercase );
-			// All classes should be capitalized. If this is instead looking for a lowercase method, we ignore that.
-			if ( $maybe_uppercase === $class ) {
-				return;
-			}
-
-			if ( false !== strpos( $class, '\\' ) ) {
-				$parts    = explode( '\\', $class );
-				$class    = array_pop( $parts );
-				$sub_dir  = strtr( implode( '/', $parts ), '_', '-' );
-				$base_dir = $base_dir . $sub_dir . '/';
-			}
-
-			$filename = 'class-' . strtr( $class, '_', '-' );
-			$file     = $base_dir . $filename . '.php';
-
-			if ( file_exists( $file ) && is_readable( $file ) ) {
-				require_once $file;
-			} else {
-				// translators: %s is the class name.
-				$message = sprintf( esc_html__( 'Required class not found or not readable: %s', 'activitypub' ), esc_html( $full_class ) );
-				Debug::write_log( $message );
-				\wp_die( $message ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			}
-		}
-	}
-);
-
-/**
- * Add plugin settings link.
- *
- * @param array $actions The current actions.
- */
-function plugin_settings_link( $actions ) {
-	$settings_link   = array();
-	$settings_link[] = \sprintf(
-		'<a href="%1s">%2s</a>',
-		\menu_page_url( 'activitypub', false ),
-		\__( 'Settings', 'activitypub' )
-	);
-
-	return \array_merge( $settings_link, $actions );
-}
-\add_filter( 'plugin_action_links_' . ACTIVITYPUB_PLUGIN_BASENAME, __NAMESPACE__ . '\plugin_settings_link' );
 
 \register_activation_hook(
 	__FILE__,
@@ -161,8 +112,6 @@ function plugin_settings_link( $actions ) {
 	)
 );
 
-// Load integrations.
-require_once __DIR__ . '/integration/load.php';
 
 /**
  * `get_plugin_data` wrapper.
