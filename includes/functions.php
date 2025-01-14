@@ -376,19 +376,15 @@ function is_activitypub_request() {
  * @return boolean True if the post is disabled, false otherwise.
  */
 function is_post_disabled( $post ) {
-	$post     = \get_post( $post );
-	$disabled = false;
+	$post       = \get_post( $post );
+	$disabled   = false;
+	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
-	// Check if the post type supports ActivityPub.
-	if ( ! \post_type_supports( $post->post_type, 'activitypub' ) ) {
+	if (
+		ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ||
+		! \post_type_supports( $post->post_type, 'activitypub' )
+	) {
 		$disabled = true;
-	} else {
-		$post       = \get_post( $post );
-		$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
-
-		if ( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ) {
-			$disabled = true;
-		}
 	}
 
 	/**
