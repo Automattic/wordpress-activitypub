@@ -40,8 +40,6 @@ class Query {
 	 * The constructor.
 	 *
 	 * Transform the queried object to an ActivityPub object.
-	 *
-	 * @todo Handle Actors and Replies.
 	 */
 	private function __construct() {
 		$wp_object = $this->get_queried_object();
@@ -59,6 +57,13 @@ class Query {
 		}
 
 		$this->is_activitypub_request = $this->is_activitypub_request();
+	}
+
+	/**
+	 * The destructor.
+	 */
+	public function __destruct() {
+		self::$instance = null;
 	}
 
 	/**
@@ -215,7 +220,7 @@ class Query {
 		* is to send an Accept header.
 		*/
 		if ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
-			$accept = sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
+			$accept = \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
 
 			/*
 			* $accept can be a single value, or a comma separated list of values.
@@ -225,7 +230,7 @@ class Query {
 			* - application/ld+json
 			* - application/json
 			*/
-			if ( preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
+			if ( \preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
 				// Set the ActivityPub var to true, to speed up the next check.
 				$wp_query->query_vars['activitypub'] = true;
 
