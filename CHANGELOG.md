@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+* Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
+
 ### Removed
 
 * Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
@@ -28,7 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Hide ActivityPub post meta keys from the custom Fields UI
 * Bumped minimum required PHP version to 7.2
-* Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
 
 ### Fixed
 
