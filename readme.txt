@@ -135,6 +135,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Removed: Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
+* Fixed: Print `_activityPubOptions` in the `wp_head` action on the frontend: printing in `wp_footer` is too late.
 
 = 4.7.1 =
 
