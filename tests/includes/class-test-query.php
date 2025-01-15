@@ -81,7 +81,7 @@ class Test_Query extends WP_UnitTestCase {
 	public function test_has_activitypub_object() {
 		// Test with no queried object.
 		Query::get_instance()->__destruct();
-		$this->go_to( site_url( '/404' ) );
+		$this->go_to( home_url( '/404' ) );
 		$this->assertFalse( Query::get_instance()->has_activitypub_object() );
 
 		// Set up post query.
@@ -238,7 +238,7 @@ class Test_Query extends WP_UnitTestCase {
 			)
 		);
 
-		$this->go_to( site_url( '/?c=' . $comment_id ) );
+		$this->go_to( home_url( '/?c=' . $comment_id ) );
 		$query = Query::get_instance();
 
 		$object = $query->get_activitypub_object();
@@ -259,7 +259,7 @@ class Test_Query extends WP_UnitTestCase {
 			)
 		);
 
-		$this->go_to( site_url( '/?c=' . $comment_id ) );
+		$this->go_to( home_url( '/?c=' . $comment_id ) );
 		$this->assertNull( Query::get_instance()->get_activitypub_object() );
 	}
 
