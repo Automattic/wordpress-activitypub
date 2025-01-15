@@ -47,8 +47,8 @@ function rest_init() {
 	Rest\Comment::init();
 	Rest\Server::init();
 	Rest\Collection::init();
-	Rest\Interaction::init();
 	Rest\Post::init();
+	( new Rest\Interaction_Controller() )->register_routes();
 	( new Rest\Application_Controller() )->register_routes();
 	( new Rest\Webfinger_Controller() )->register_routes();
 
