@@ -79,8 +79,8 @@ abstract class Base {
 		foreach ( $vars as $var ) {
 			$getter = 'get_' . $var;
 
-			if ( method_exists( $this, $getter ) ) {
-				$value = call_user_func( array( $this, $getter ) );
+			if ( \method_exists( $this, $getter ) ) {
+				$value = \call_user_func( array( $this, $getter ) );
 
 				if ( isset( $value ) ) {
 					/**
@@ -89,7 +89,7 @@ abstract class Base {
 					 * @param mixed $value The value that should be set.
 					 * @param mixed $item  The Object.
 					 */
-					$value = apply_filters( "activitypub_transform_set_{$var}", $value, $this->item );
+					$value = \apply_filters( "activitypub_transform_set_{$var}", $value, $this->item );
 
 					/**
 					 * Filter the value before it is set to the Activity-Object `$activity_object`.
@@ -98,9 +98,9 @@ abstract class Base {
 					 * @param string $var   The variable name.
 					 * @param mixed  $item  The Object.
 					 */
-					$value = apply_filters( 'activitypub_transform_set', $value, $var, $this->item );
+					$value = \apply_filters( 'activitypub_transform_set', $value, $var, $this->item );
 
-					call_user_func( array( $activity_object, $setter ), $value );
+					\call_user_func( array( $activity_object, $setter ), $value );
 				}
 			}
 		}
