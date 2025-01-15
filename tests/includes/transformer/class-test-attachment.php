@@ -29,7 +29,7 @@ class Test_Attachment extends WP_UnitTestCase {
 	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
-		// Create test attachment
+		// Create test attachment.
 		self::$attachment_id = $factory->attachment->create_object(
 			array(
 				'post_type'      => 'attachment',
@@ -65,6 +65,9 @@ class Test_Attachment extends WP_UnitTestCase {
 	 *
 	 * @covers ::get_attachment
 	 * @dataProvider provide_mime_types
+	 *
+	 * @param string $mime_type The mime type of the attachment.
+	 * @param string $expected_type The expected type of the attachment.
 	 */
 	public function test_get_attachment( $mime_type, $expected_type ) {
 		$attachment_id = self::factory()->attachment->create_object(
@@ -151,17 +154,17 @@ class Test_Attachment extends WP_UnitTestCase {
 	/**
 	 * Helper method to access protected methods.
 	 *
-	 * @param object $object     Object instance.
+	 * @param object $obj     Object instance.
 	 * @param string $method_name Method name.
 	 * @param array  $parameters Optional parameters.
 	 *
 	 * @return mixed Method result.
 	 */
-	protected function get_protected_method( $object, $method_name, $parameters = array() ) {
-		$reflection = new \ReflectionClass( get_class( $object ) );
+	protected function get_protected_method( $obj, $method_name, $parameters = array() ) {
+		$reflection = new \ReflectionClass( get_class( $obj ) );
 		$method     = $reflection->getMethod( $method_name );
 		$method->setAccessible( true );
 
-		return $method->invokeArgs( $object, $parameters );
+		return $method->invokeArgs( $obj, $parameters );
 	}
 }
