@@ -83,13 +83,15 @@ abstract class Base {
 				$value = \call_user_func( array( $this, $getter ) );
 
 				if ( isset( $value ) ) {
+					$setter = 'set_' . $var;
+
 					/**
 					 * Filter the value before it is set to the Activity-Object `$activity_object`.
 					 *
 					 * @param mixed $value The value that should be set.
 					 * @param mixed $item  The Object.
 					 */
-					$value = \apply_filters( "activitypub_transform_set_{$var}", $value, $this->item );
+					$value = \apply_filters( "activitypub_transform_{$setter}", $value, $this->item );
 
 					/**
 					 * Filter the value before it is set to the Activity-Object `$activity_object`.
