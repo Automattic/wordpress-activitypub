@@ -1,9 +1,10 @@
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
 import { useMemo } from '@wordpress/element';
-const enabled = window._activityPubOptions?.enabled;
+import getOptions from './get-options';
 
 export function useUserOptions( { withInherit = false } ) {
+	const enabled = getOptions( 'enabled' );
 	const users = enabled?.users ? useSelect( ( select ) => select( 'core' ).getUsers( { who: 'authors' } ) ) : [];
 	return useMemo( () => {
 		if ( ! users ) {

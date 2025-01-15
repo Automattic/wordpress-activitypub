@@ -5,13 +5,7 @@ import { useState, useEffect, useRef } from '@wordpress/element';
 import { Popover, Button } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
-
-/**
- * Extract the namespace from the global _activityPubOptions object.
- *
- * @type {string}
- */
-const { namespace, defaultAvatarUrl } = window._activityPubOptions;
+import getOptions from '../shared/get-options';
 
 /**
  * A component that renders a row of user avatars for a given set of reactions.
@@ -108,7 +102,7 @@ const FacepileRow = ( { reactions } ) => {
 					activeIndices.has(index) ? 'wave-active' : '',
 					rotationClass ? `rotate-${rotationClass}` : ''
 				].filter(Boolean).join(' ');
-				const avatar = reaction.avatar || defaultAvatarUrl;
+				const avatar = reaction.avatar || getOptions( 'defaultAvatarUrl' );
 
 				return (
 					<li key={ index }>
@@ -319,7 +313,7 @@ export function Reactions( {
 
 		setLoading( true );
 		apiFetch( {
-			path: `/${ namespace }/posts/${ postId }/reactions`,
+			path: `/${ getOptions( 'namespace' ) }/posts/${ postId }/reactions`,
 		} )
 		.then( ( response ) => {
 			setReactions( response );

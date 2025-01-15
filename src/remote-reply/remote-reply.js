@@ -5,12 +5,12 @@ import { Icon, cancelCircleFilled } from '@wordpress/icons';
 import { Dialog } from '../shared/dialog';
 import { useRemoteUser } from '../shared/use-remote-user';
 import './style.scss';
-const { namespace } = window._activityPubOptions;
+import getOptions from '../shared/get-options';
 
 
 function DialogReply( { selectedComment, commentId } ) {
 	const actionText = __( 'Reply', 'activitypub' );
-	const resourceUrl = `/${ namespace }/comments/${commentId}/remote-reply?resource=`;
+	const resourceUrl = `/${ getOptions( 'namespace' ) }/comments/${commentId}/remote-reply?resource=`;
 	const copyDescription = __( 'Copy and paste the Comment URL into the search field of your favorite fediverse app or server.', 'activitypub' );
 
 	return <Dialog
