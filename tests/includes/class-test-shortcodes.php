@@ -24,6 +24,9 @@ class Test_Shortcodes extends \WP_UnitTestCase {
 	 */
 	protected $post;
 
+	/**
+	 * Set up the test.
+	 */
 	public function set_up() {
 		parent::set_up();
 
@@ -41,6 +44,9 @@ class Test_Shortcodes extends \WP_UnitTestCase {
 		);
 	}
 
+	/**
+	 * Tear down the test.
+	 */
 	public function tear_down() {
 		parent::tear_down();
 
@@ -49,6 +55,7 @@ class Test_Shortcodes extends \WP_UnitTestCase {
 		// Delete the post.
 		wp_delete_post( $this->post->ID, true );
 	}
+
 	/**
 	 * Test the content shortcode.
 	 */
