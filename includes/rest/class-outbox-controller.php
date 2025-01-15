@@ -188,10 +188,10 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @param \WP_REST_Request $request Request object.
 	 * @return array Response object on success, or WP_Error object on failure.
 	 */
-	public function prepare_item_for_response( $item, $request ) {
+	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$transformer = Factory::get_transformer( $item->post_content );
 
-		$type  = 'Object';
+		$type  = 'Activity';
 		$terms = wp_get_object_terms( $item->ID, 'ap_activity_type' );
 		if ( isset( $terms[0]->name ) ) {
 			$type = ucfirst( $terms[0]->name );
