@@ -98,7 +98,7 @@ class Followers {
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
 	 *
-	 * @return Follower|null The Follower object or null
+	 * @return \Activitypub\Activity\Base_Object|WP_Error|null The Follower object or null
 	 */
 	public static function get_follower( $user_id, $actor ) {
 		global $wpdb;
@@ -266,7 +266,7 @@ class Followers {
 	}
 
 	/**
-	 * Returns all Inboxes for a Users Followers.
+	 * Returns all Inboxes for an Actor's Followers.
 	 *
 	 * @param int $user_id The ID of the WordPress User.
 	 *

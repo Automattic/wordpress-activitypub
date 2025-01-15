@@ -17,11 +17,11 @@ use Activitypub\Activity_Dispatcher;
 class Test_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HTTP {
 
 	/**
-	 * Users.
+	 * Actors.
 	 *
-	 * @var array[] $users
+	 * @var array[]
 	 */
-	public static $users = array(
+	public static $actors = array(
 		'username@example.org' => array(
 			'id'                => 'https://example.org/users/username',
 			'url'               => 'https://example.org/users/username',
@@ -109,7 +109,7 @@ class Test_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HTTP {
 			)
 		);
 
-		self::$users['https://example.com/alex'] = array(
+		self::$actors['https://example.com/alex'] = array(
 			'id'    => 'https://example.com/alex',
 			'url'   => 'https://example.com/alex',
 			'inbox' => 'https://example.com/alex/inbox',
@@ -300,10 +300,10 @@ class Test_Activity_Dispatcher extends ActivityPub_TestCase_Cache_HTTP {
 	 * @return array|bool
 	 */
 	public static function pre_get_remote_metadata_by_actor( $pre, $actor ) {
-		if ( isset( self::$users[ $actor ] ) ) {
-			return self::$users[ $actor ];
+		if ( isset( self::$actors[ $actor ] ) ) {
+			return self::$actors[ $actor ];
 		}
-		foreach ( self::$users as $data ) {
+		foreach ( self::$actors as $data ) {
 			if ( $data['url'] === $actor ) {
 				return $data;
 			}
