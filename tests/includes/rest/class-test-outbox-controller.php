@@ -29,8 +29,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$post_ids = $factory->post->create_many( 10 );
-
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
 	}
 
 	/**
@@ -84,6 +82,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::create_item
 	 */
 	public function test_create_item() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/outbox' );
 		$request->set_header( 'Content-Type', 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' );
 		$request->set_body(
@@ -113,7 +112,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertArrayHasKey( 'Location', $headers );
 
 		$post_id = \url_to_postid( \html_entity_decode( $headers['Location'] ) );
-		var_dump( get_post( $post_id ) );
+		$this->assertInstanceOf( \WP_Post::class, get_post( $post_id ) );
 
 		$this->assertEquals( 201, $response->get_status() );
 	}
