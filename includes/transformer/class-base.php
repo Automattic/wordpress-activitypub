@@ -207,7 +207,7 @@ abstract class Base {
 	 * @return array The name map for the post.
 	 */
 	protected function get_name_map() {
-		if ( ! $this->get_name() ) {
+		if ( ! \method_exists( $this, 'get_name' ) || ! $this->get_name() ) {
 			return null;
 		}
 
@@ -222,7 +222,7 @@ abstract class Base {
 	 * @return array The summary map for the post.
 	 */
 	protected function get_summary_map() {
-		if ( ! $this->get_summary() ) {
+		if ( ! \method_exists( $this, 'get_summary' ) || ! $this->get_summary() ) {
 			return null;
 		}
 

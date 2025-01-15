@@ -93,7 +93,7 @@ class Post extends Base {
 			return $blog_user;
 		}
 
-		$user = Actors::get_by_id( $this->wp_object->post_author );
+		$user = Actors::get_by_id( $this->item->post_author );
 
 		if ( $user && ! is_wp_error( $user ) ) {
 			$this->actor_object = $user;
@@ -165,7 +165,7 @@ class Post extends Base {
 	 * @return array|null The Image or null if no image is available.
 	 */
 	protected function get_image() {
-		$post_id = $this->wp_object->ID;
+		$post_id = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
 		if (
@@ -218,7 +218,7 @@ class Post extends Base {
 	 * @return array|null The Icon or null if no icon is available.
 	 */
 	protected function get_icon() {
-		$post_id = $this->wp_object->ID;
+		$post_id = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
 		if ( \has_post_thumbnail( $post_id ) ) {
@@ -315,7 +315,7 @@ class Post extends Base {
 			$media = $this->get_classic_editor_images( $media, $max_media );
 		}
 
-		$media      = $this->filter_media_by_object_type( $media, \get_post_format( $this->wp_object ), $this->wp_object );
+		$media      = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
 		$unique_ids = \array_unique( \array_column( $media, 'id' ) );
 		$media      = \array_intersect_key( $media, $unique_ids );
 		$media      = \array_slice( $media, 0, $max_media );
@@ -534,7 +534,7 @@ class Post extends Base {
 
 		$images  = array();
 		$base    = get_upload_baseurl();
-		$content = \get_post_field( 'post_content', $this->wp_object );
+		$content = \get_post_field( 'post_content', $this->item );
 		$tags    = new \WP_HTML_Tag_Processor( $content );
 
 		// This linter warning is a false positive - we have to re-count each time here as we modify $images.
@@ -805,11 +805,11 @@ class Post extends Base {
 
 		// Default to Note.
 		$object_type = 'Note';
-		$post_type   = \get_post_type( $this->wp_object );
+		$post_type   = \get_post_type( $this->item );
 
 		if ( 'page' === $post_type ) {
 			$object_type = 'Page';
-		} elseif ( ! \get_post_format( $this->wp_object ) ) {
+		} elseif ( ! \get_post_format( $this->item ) ) {
 			$object_type = 'Article';
 		}
 
@@ -897,7 +897,7 @@ class Post extends Base {
 		}
 
 		// Remove Teaser from drafts.
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->wp_object ) ) {
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
 		}
 
@@ -941,7 +941,7 @@ class Post extends Base {
 		add_filter( 'activitypub_reply_block', '__return_empty_string' );
 
 		// Remove Content from drafts.
-		if ( 'draft' === \get_post_status( $this->wp_object ) ) {
+		if ( 'draft' === \get_post_status( $this->item ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
 		}
 
@@ -1022,9 +1022,9 @@ class Post extends Base {
 		 * generation.
 		 *
 		 * @param string  $template  The template string containing shortcodes.
-		 * @param WP_Post $wp_object The WordPress post object being transformed.
+		 * @param WP_Post $item The WordPress post object being transformed.
 		 */
-		return apply_filters( 'activitypub_object_content_template', $template, $this->wp_object );
+		return apply_filters( 'activitypub_object_content_template', $template, $this->item );
 	}
 
 	/**
@@ -1057,7 +1057,7 @@ class Post extends Base {
 	 *
 	 * @return string|null The in-reply-to URL of the post.
 	 */
-	public function get_in_reply_to() {
+	protected function get_in_reply_to() {
 		$blocks = \parse_blocks( $this->item->post_content );
 
 		foreach ( $blocks as $block ) {
@@ -1075,7 +1075,7 @@ class Post extends Base {
 	 *
 	 * @return string The published date of the post.
 	 */
-	public function get_published() {
+	protected function get_published() {
 		$published = \strtotime( $this->item->post_date_gmt );
 
 		return \gmdate( 'Y-m-d\TH:i:s\Z', $published );
@@ -1086,7 +1086,7 @@ class Post extends Base {
 	 *
 	 * @return string|null The updated date of the post.
 	 */
-	public function get_updated() {
+	protected function get_updated() {
 		$published = \strtotime( $this->item->post_date_gmt );
 		$updated   = \strtotime( $this->item->post_modified_gmt );
 
