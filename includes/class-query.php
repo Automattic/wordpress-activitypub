@@ -55,8 +55,6 @@ class Query {
 		if ( $transformer && ! is_wp_error( $transformer ) ) {
 			$this->activitypub_object = $transformer->to_object();
 		}
-
-		$this->is_activitypub_request = $this->is_activitypub_request();
 	}
 
 	/**
@@ -218,6 +216,8 @@ class Query {
 
 		// One can trigger an ActivityPub request by adding ?activitypub to the URL.
 		if ( isset( $wp_query->query_vars['activitypub'] ) ) {
+			$this->is_activitypub_request = true;
+
 			return true;
 		}
 
@@ -237,12 +237,13 @@ class Query {
 			* - application/json
 			*/
 			if ( \preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
-				// Set the ActivityPub var to true, to speed up the next check.
-				$wp_query->query_vars['activitypub'] = true;
+				$this->is_activitypub_request = true;
 
 				return true;
 			}
 		}
+
+		$this->is_activitypub_request = false;
 
 		return false;
 	}
