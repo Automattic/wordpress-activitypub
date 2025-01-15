@@ -20,14 +20,14 @@ class Json extends Activity_Object {
 	 * @param string|array $item The item that should be transformed.
 	 */
 	public function __construct( $item ) {
-		$item = new Base_Object();
+		$object = new Base_Object();
 
-		if ( is_array( $this->item ) ) {
-			$item = Base_Object::init_from_array( $this->item );
-		} elseif ( is_string( $this->item ) ) {
-			$item = Base_Object::init_from_json( $this->item );
+		if ( is_array( $item ) ) {
+			$object = Base_Object::init_from_array( $item );
+		} elseif ( is_string( $item ) ) {
+			$object = Base_Object::init_from_json( $item );
 		}
 
-		parent::__construct( $item );
+		parent::__construct( $object );
 	}
 }

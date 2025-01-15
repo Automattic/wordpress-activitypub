@@ -70,6 +70,10 @@ abstract class Base {
 	 * @return Base_Object The transformed ActivityPub Object.
 	 */
 	protected function transform_object_properties( $activity_object ) {
+		if ( ! $activity_object || \is_wp_error( $activity_object ) ) {
+			return $activity_object;
+		}
+
 		$vars = $activity_object->get_object_var_keys();
 
 		foreach ( $vars as $var ) {
