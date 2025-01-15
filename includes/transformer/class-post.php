@@ -1098,47 +1098,6 @@ class Post extends Base {
 	}
 
 	/**
-	 * Returns the content map for the post.
-	 *
-	 * @return array The content map for the post.
-	 */
-	public function get_content_map() {
-		return array(
-			$this->get_locale() => $this->get_content(),
-		);
-	}
-
-	/**
-	 * Returns the name map for the post.
-	 *
-	 * @return array The name map for the post.
-	 */
-	public function get_name_map() {
-		if ( ! $this->get_name() ) {
-			return null;
-		}
-
-		return array(
-			$this->get_locale() => $this->get_name(),
-		);
-	}
-
-	/**
-	 * Returns the summary map for the post.
-	 *
-	 * @return array The summary map for the post.
-	 */
-	public function get_summary_map() {
-		if ( ! $this->get_summary() ) {
-			return null;
-		}
-
-		return array(
-			$this->get_locale() => $this->get_summary(),
-		);
-	}
-
-	/**
 	 * Transform Embed blocks to block level link.
 	 *
 	 * Remote servers will simply drop iframe elements, rendering incomplete content.
