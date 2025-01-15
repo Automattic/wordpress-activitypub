@@ -62,7 +62,11 @@ class Outbox {
 			\kses_init_filters();
 		}
 
-		if ( ! $id || \is_wp_error( $id ) ) {
+		if ( \is_wp_error( $id ) ) {
+			return $id;
+		}
+
+		if ( ! $id ) {
 			return false;
 		}
 

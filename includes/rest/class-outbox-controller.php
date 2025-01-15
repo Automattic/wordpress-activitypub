@@ -7,6 +7,7 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Transformer\Factory;
@@ -68,9 +69,30 @@ class Outbox_Controller extends \WP_REST_Controller {
 						),
 					),
 				),
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'create_item' ),
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'accept_json'         => true,
+				),
 				'schema' => array( $this, 'get_collection_schema' ),
 			)
 		);
+	}
+
+	/**
+	 * Validates the user_id parameter.
+	 *
+	 * @param mixed $user_id The user_id parameter.
+	 * @return bool|\WP_Error True if the user_id is valid, WP_Error otherwise.
+	 */
+	public function validate_user_id( $user_id ) {
+		$user = Actors::get_by_various( $user_id );
+		if ( \is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		return true;
 	}
 
 	/**
@@ -167,18 +189,29 @@ class Outbox_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Validates the user_id parameter.
+	 * Creates one item from the collection.
 	 *
-	 * @param mixed $user_id The user_id parameter.
-	 * @return bool|\WP_Error True if the user_id is valid, WP_Error otherwise.
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
-	public function validate_user_id( $user_id ) {
-		$user = Actors::get_by_various( $user_id );
-		if ( \is_wp_error( $user ) ) {
-			return $user;
+	public function create_item( $request ) {
+		$activity = new Activity();
+		$activity->set_object( $request->get_json_params() );
+
+		$result = Outbox::add( $activity, $request->get_param( 'type' ), $request->get_param( 'user_id' ) );
+
+		if ( \is_wp_error( $result ) ) {
+			return $result;
 		}
 
-		return true;
+		return new \WP_REST_Response(
+			null,
+			201,
+			array(
+				'Location'     => \esc_url( \get_permalink( $result ) ),
+				'Content-Type' => 'application/activity+json; charset=' . \get_option( 'blog_charset' ),
+			)
+		);
 	}
 
 	/**
