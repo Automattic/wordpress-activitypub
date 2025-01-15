@@ -24,11 +24,11 @@ class Attachment extends Post {
 	 * @return array The Attachments.
 	 */
 	protected function get_attachment() {
-		$mime_type  = get_post_mime_type( $this->item->ID );
-		$media_type = preg_replace( '/(\/[a-zA-Z]+)/i', '', $mime_type );
-		$type       = '';
+		$mime_type       = \get_post_mime_type( $this->item->ID );
+		$mime_type_parts = \explode( '/', $mime_type );
+		$type            = '';
 
-		switch ( $media_type ) {
+		switch ( $mime_type_parts[0] ) {
 			case 'audio':
 			case 'video':
 				$type = 'Document';
