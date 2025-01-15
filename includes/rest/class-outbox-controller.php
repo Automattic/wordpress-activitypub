@@ -1,111 +1,123 @@
 <?php
 /**
- * Outbox REST-Class file.
+ * Outbox Controller file.
  *
  * @package Activitypub
  */
 
 namespace Activitypub\Rest;
 
-use stdClass;
-use WP_REST_Server;
-use WP_REST_Response;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Transformer\Factory;
 
-use function Activitypub\get_context;
-use function Activitypub\get_rest_url_by_path;
-use function Activitypub\get_masked_wp_version;
-
 /**
- * ActivityPub Outbox REST-Class.
+ * ActivityPub Outbox Controller.
  *
  * @author Matthias Pfefferle
  *
  * @see https://www.w3.org/TR/activitypub/#outbox
  */
-class Outbox {
+class Outbox_Controller extends \WP_REST_Controller {
 	/**
-	 * Initialize the class, registering WordPress hooks.
+	 * The namespace of this controller's route.
+	 *
+	 * @var string
 	 */
-	public static function init() {
-		self::register_routes();
-	}
+	protected $namespace = ACTIVITYPUB_REST_NAMESPACE;
 
 	/**
-	 * Register routes
+	 * The base of this controller's route.
+	 *
+	 * @var string
 	 */
-	public static function register_routes() {
+	protected $rest_base = '(?:users|actors)/(?P<user_id>[\w\-\.]+)/outbox';
+
+	/**
+	 * Register routes.
+	 */
+	public function register_routes() {
 		\register_rest_route(
-			ACTIVITYPUB_REST_NAMESPACE,
-			'/(users|actors)/(?P<user_id>[\w\-\.]+)/outbox',
+			$this->namespace,
+			'/' . $this->rest_base,
 			array(
+				'args' => array(
+					'user_id' => array(
+						'description' => 'The ID of the user or actor.',
+						'type'        => 'string',
+					),
+				),
 				array(
-					'methods'             => WP_REST_Server::READABLE,
-					'callback'            => array( self::class, 'user_outbox_get' ),
-					'args'                => self::request_parameters(),
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_items' ),
 					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'args'                => array(
+						'page' => array(
+							'description' => 'Current page of the collection.',
+							'type'        => 'integer',
+							'default'     => 1,
+							'minimum'     => 1,
+						),
+					),
 				),
 			)
 		);
 	}
 
 	/**
-	 * Renders the user-outbox
+	 * Retrieves a collection of outbox items.
 	 *
-	 * @param \WP_REST_Request $request The request object.
-	 * @return WP_REST_Response|\WP_Error The response object or WP_Error.
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
-	public static function user_outbox_get( $request ) {
+	public function get_items( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 		$user    = Actors::get_by_various( $user_id );
 
-		if ( is_wp_error( $user ) ) {
+		if ( \is_wp_error( $user ) ) {
 			return $user;
 		}
 
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
-
-		$page = $request->get_param( 'page', 1 );
+		$page       = $request->get_param( 'page' );
 
 		/**
 		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
 		 */
 		\do_action( 'activitypub_rest_outbox_pre' );
 
-		$json = new stdClass();
-
-		// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-		$json->{'@context'} = get_context();
-		$json->id           = get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) );
-		$json->generator    = 'http://wordpress.org/?v=' . get_masked_wp_version();
-		$json->actor        = $user->get_id();
-		$json->type         = 'OrderedCollectionPage';
-		$json->partOf       = get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) );
-		$json->totalItems   = 0;
+		$response = array(
+			'@context'   => array( 'https://www.w3.org/ns/activitystreams' ),
+			'id'         => \get_rest_url( null, \sprintf( 'actors/%d/outbox', $user_id ) ),
+			'generator'  => 'https://wordpress.org/?v=' . \get_bloginfo( 'version' ),
+			'actor'      => $user->get_id(),
+			'type'       => 'OrderedCollectionPage',
+			'partOf'     => \get_rest_url( null, \sprintf( 'actors/%d/outbox', $user_id ) ),
+			'totalItems' => 0,
+		);
 
 		if ( $user_id > 0 ) {
-			$count_posts      = \count_user_posts( $user_id, $post_types, true );
-			$json->totalItems = \intval( $count_posts );
+			$count_posts            = \count_user_posts( $user_id, $post_types, true );
+			$response['totalItems'] = \intval( $count_posts );
 		} else {
 			foreach ( $post_types as $post_type ) {
-				$count_posts       = \wp_count_posts( $post_type );
-				$json->totalItems += \intval( $count_posts->publish );
+				$count_posts             = \wp_count_posts( $post_type );
+				$response['totalItems'] += \intval( $count_posts->publish );
 			}
 		}
 
-		$json->first = \add_query_arg( 'page', 1, $json->partOf );
-		$json->last  = \add_query_arg( 'page', \ceil( $json->totalItems / 10 ), $json->partOf );
+		$response['first'] = \add_query_arg( 'page', 1, $response['partOf'] );
+		$response['last']  = \add_query_arg( 'page', \ceil( $response['totalItems'] / 10 ), $response['partOf'] );
 
-		if ( $page && ( ( \ceil( $json->totalItems / 10 ) ) > $page ) ) {
-			$json->next = \add_query_arg( 'page', $page + 1, $json->partOf );
+		if ( $page && ( ( \ceil( $response['totalItems'] / 10 ) ) > $page ) ) {
+			$response['next'] = \add_query_arg( 'page', $page + 1, $response['partOf'] );
 		}
 
 		if ( $page && ( $page > 1 ) ) {
-			$json->prev = \add_query_arg( 'page', $page - 1, $json->partOf );
+			$response['prev'] = \add_query_arg( 'page', $page - 1, $response['partOf'] );
 		}
-		// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+
+		$response['orderedItems'] = array();
 
 		if ( $page ) {
 			$posts = \get_posts(
@@ -141,41 +153,25 @@ class Outbox {
 				$activity = new Activity();
 				$activity->set_type( 'Create' );
 				$activity->set_object( $post );
-				$json->orderedItems[] = $activity->to_array( false ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+				$response['orderedItems'][] = $activity->to_array( false );
 			}
 		}
 
 		/**
 		 * Filter the ActivityPub outbox array.
 		 *
-		 * @param array $json The ActivityPub outbox array.
+		 * @param array $response The ActivityPub outbox array.
 		 */
-		$json = \apply_filters( 'activitypub_rest_outbox_array', $json );
+		$response = \apply_filters( 'activitypub_rest_outbox_array', $response );
 
 		/**
-		 * Action triggered after the ActivityPub profile has been created and sent to the client
+		 * Action triggered after the ActivityPub profile has been created and sent to the client.
 		 */
 		\do_action( 'activitypub_outbox_post' );
 
-		$rest_response = new WP_REST_Response( $json, 200 );
-		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+		$response = \rest_ensure_response( $response );
+		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
-		return $rest_response;
-	}
-
-	/**
-	 * The supported parameters.
-	 *
-	 * @return array List of parameters.
-	 */
-	public static function request_parameters() {
-		$params = array();
-
-		$params['page'] = array(
-			'type'    => 'integer',
-			'default' => 1,
-		);
-
-		return $params;
+		return $response;
 	}
 }
