@@ -195,7 +195,7 @@ abstract class Base {
 	 *
 	 * @return array The content map for the post.
 	 */
-	public function get_content_map() {
+	protected function get_content_map() {
 		return array(
 			$this->get_locale() => $this->get_content(),
 		);
@@ -206,7 +206,7 @@ abstract class Base {
 	 *
 	 * @return array The name map for the post.
 	 */
-	public function get_name_map() {
+	protected function get_name_map() {
 		if ( ! $this->get_name() ) {
 			return null;
 		}
@@ -221,7 +221,7 @@ abstract class Base {
 	 *
 	 * @return array The summary map for the post.
 	 */
-	public function get_summary_map() {
+	protected function get_summary_map() {
 		if ( ! $this->get_summary() ) {
 			return null;
 		}
