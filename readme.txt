@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
-Stable tag: 4.6.0
+Stable tag: 4.7.1
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -70,7 +70,7 @@ In order for webfinger to work, it must be mapped to the root directory of the U
 
 Add the following to the .htaccess file in the root directory:
 
-	RedirectMatch "^\/\.well-known/(webfinger|nodeinfo|x-nodeinfo2)(.*)$" /blog/.well-known/$1$2
+	RedirectMatch "^\/\.well-known/(webfinger|nodeinfo)(.*)$" /blog/.well-known/$1$2
 
 Where 'blog' is the path to the subdirectory at which your blog resides.
 
@@ -135,15 +135,23 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: Outbox queue
+* Removed: Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
+
+= 4.7.1 =
+
+* Fixed: Missing migration
+
+= 4.7.0 =
+
 * Added: Comment counts get updated when the plugin is activated/deactivated/deleted
 * Added: A filter to make custom comment types manageable in WP.com Calypso
 * Changed: Hide ActivityPub post meta keys from the custom Fields UI
 * Changed: Bumped minimum required PHP version to 7.2
+* Changed: Print `_activityPubOptions` in the `wp_footer` action on the frontend.
 * Fixed: Undefined array key warnings in various places
 * Fixed: @-mentions in federated comments being displayed with a line break
 * Fixed: Fetching replies from the same instance for Enable Mastodon Apps
 * Fixed: Image captions not being included in the ActivityPub representation when the image is attached to the post
-* Changed: Print `_activityPubOptions` in the `wp_footer` action on the frontend.
 
 = 4.6.0 =
 
