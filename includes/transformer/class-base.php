@@ -31,6 +31,15 @@ abstract class Base {
 	protected $item;
 
 	/**
+	 * The WP_Post or WP_Comment object.
+	 *
+	 * @deprecated 4.8.0 Use $item instead.
+	 *
+	 * @var WP_Post|WP_Comment
+	 */
+	protected $wp_object;
+
+	/**
 	 * Static function to Transform a WordPress Object.
 	 *
 	 * This helps to chain the output of the Transformer.
@@ -49,7 +58,8 @@ abstract class Base {
 	 * @param WP_Post|WP_Comment $item The WordPress object.
 	 */
 	public function __construct( $item ) {
-		$this->item = $item;
+		$this->item      = $item;
+		$this->wp_object = $item;
 	}
 
 	/**
