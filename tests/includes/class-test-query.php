@@ -209,6 +209,7 @@ class Test_Query extends WP_UnitTestCase {
 		// New comment.
 		$comment_id = wp_insert_comment(
 			array(
+				'user_id'          => self::$user_id,
 				'comment_post_ID'  => self::$post_id,
 				'comment_author'   => 'Test Author',
 				'comment_content'  => 'Test Content',
