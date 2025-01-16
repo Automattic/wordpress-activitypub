@@ -93,10 +93,15 @@ class Post {
 				$type = false;
 		}
 
+		// Do not send Activities if `$type` is not set or unknown.
 		if ( empty( $type ) ) {
 			return;
 		}
 
-		add_to_outbox( $post, $type, $post->post_author );
+		// Get the content visibility.
+		$content_visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+
+		// Add the post to the outbox.
+		add_to_outbox( $post, $type, $post->post_author, $content_visibility );
 	}
 }
