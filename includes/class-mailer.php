@@ -143,7 +143,19 @@ class Mailer {
 		$message .= \esc_html__( 'You can see all followers here:', 'activitypub' ) . "\r\n";
 		$message .= \esc_url( \admin_url( $admin_url ) ) . "\r\n\r\n";
 
-		\wp_mail( $email, $subject, $message );
+		\ob_start();
+		require ACTIVITYPUB_PLUGIN_DIR . '/templates/new-follower-email.php';
+		$html_message = \ob_get_clean();
+
+		$alt_function = function ( $mailer ) use ( $message ) {
+			$mailer->{'AltBody'} = $message;
+		};
+		\add_action( 'phpmailer_init', $alt_function );
+
+		\wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
+
+		\remove_action( 'phpmailer_init', $alt_function );
+
 	}
 
 	/**
