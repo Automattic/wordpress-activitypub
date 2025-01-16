@@ -67,6 +67,9 @@ class Outbox {
 		// Set the activity type.
 		\wp_set_object_terms( $id, array( strtolower( $activity_type ) ), 'ap_activity_type' );
 
+		// Set the content visibility.
+		\update_post_meta( $id, 'activitypub_content_visibility', $content_visibility, true );
+
 		return $id;
 	}
 }

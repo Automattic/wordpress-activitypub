@@ -1605,7 +1605,7 @@ function is_self_ping( $id ) {
  *
  * @return boolean|int The ID of the outbox item or false on failure.
  */
-function add_to_outbox( $data, $type = 'Create', $user_id = 0 ) {
+function add_to_outbox( $data, $type = 'Create', $user_id = 0, $content_visibility = null ) {
 	$transformer = Transformer_Factory::get_transformer( $data );
 
 	if ( ! $transformer || is_wp_error( $transformer ) ) {
@@ -1620,7 +1620,7 @@ function add_to_outbox( $data, $type = 'Create', $user_id = 0 ) {
 
 	set_wp_object_state( $data, 'federate' );
 
-	$id = Outbox::add( $activity, $type, $user_id );
+	$id = Outbox::add( $activity, $type, $user_id, $content_visibility );
 
 	if ( ! $id ) {
 		return false;
