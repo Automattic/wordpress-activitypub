@@ -141,17 +141,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 			$response['orderedItems'][] = $this->prepare_item_for_response( $outbox_item, $request );
 		}
 
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
-		if ( $user_id > 0 ) {
-			$count_posts            = \count_user_posts( $user_id, $post_types, true );
-			$response['totalItems'] = \intval( $count_posts );
-		} else {
-			foreach ( $post_types as $post_type ) {
-				$count_posts             = \wp_count_posts( $post_type );
-				$response['totalItems'] += \intval( $count_posts->publish );
-			}
-		}
-
 		$max_pages         = \ceil( $response['totalItems'] / $request->get_param( 'per_page' ) );
 		$response['first'] = \add_query_arg( 'page', 1, $response['partOf'] );
 		$response['last']  = \add_query_arg( 'page', $max_pages, $response['partOf'] );

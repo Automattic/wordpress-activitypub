@@ -69,8 +69,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 *
 	 * @covers ::get_items
 	 */
-	public function test_get_item() {
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/outbox' );
+	public function test_get_items() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
 		$response = \rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
@@ -130,6 +130,15 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 		$valid = \rest_validate_value_from_schema( $data, $schema );
 		$this->assertNotWPError( $valid, 'Response failed schema validation: ' . ( \is_wp_error( $valid ) ? $valid->get_error_message() : '' ) );
+	}
+
+	/**
+	 * Test get_item method.
+	 *
+	 * @doesNotPerformAssertions
+	 */
+	public function test_get_item() {
+		// Controller does not implement get_item().
 	}
 
 	/**
