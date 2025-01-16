@@ -1599,13 +1599,14 @@ function is_self_ping( $id ) {
 /**
  * Add an object to the outbox.
  *
- * @param mixed   $data    The object to add to the outbox.
- * @param string  $type    The type of the Activity.
- * @param integer $user_id The User-ID.
+ * @param mixed   $data               The object to add to the outbox.
+ * @param string  $type               The type of the Activity.
+ * @param integer $user_id            The User-ID.
+ * @param string  $content_visibility The visibility of the content.
  *
  * @return boolean|int The ID of the outbox item or false on failure.
  */
-function add_to_outbox( $data, $type = 'Create', $user_id = 0, $content_visibility = null ) {
+function add_to_outbox( $data, $type = 'Create', $user_id = 0, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
 	$transformer = Transformer_Factory::get_transformer( $data );
 
 	if ( ! $transformer || is_wp_error( $transformer ) ) {

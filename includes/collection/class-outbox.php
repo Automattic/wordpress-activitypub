@@ -16,14 +16,14 @@ class Outbox {
 	/**
 	 * Add an Item to the outbox.
 	 *
-	 * @param \Activitypub\Activity\Base_Object $activity_object The Activity-Object  to add as JSON.
-	 * @param string                            $activity_type   The activity type.
-	 * @param int                               $user_id         The user ID.
-	 * @param string                            $visibility      Optional. The visibility of the content. Default 'public'.
+	 * @param \Activitypub\Activity\Base_Object $activity_object    The Activity-Object  to add as JSON.
+	 * @param string                            $activity_type      The activity type.
+	 * @param int                               $user_id            The user ID.
+	 * @param string                            $content_visibility Optional. The visibility of the content. Default 'public'.
 	 *
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
-	public static function add( $activity_object, $activity_type, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) { // phpcs:ignore
+	public static function add( $activity_object, $activity_type, $user_id, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) { // phpcs:ignore
 		switch ( $user_id ) {
 			case -1:
 				$actor = 'application';
@@ -68,7 +68,9 @@ class Outbox {
 		\wp_set_object_terms( $id, array( strtolower( $activity_type ) ), 'ap_activity_type' );
 
 		// Set the content visibility.
-		\update_post_meta( $id, 'activitypub_content_visibility', $content_visibility, true );
+		if ( $content_visibility ) {
+			\update_post_meta( $id, 'activitypub_content_visibility', $content_visibility, true );
+		}
 
 		return $id;
 	}
