@@ -153,14 +153,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 			$response['prev'] = \add_query_arg( 'page', $page - 1, $response['partOf'] );
 		}
 
-		if ( $page > $max_pages && $response['totalItems'] > 0 ) {
-			return new \WP_Error(
-				'rest_post_invalid_page_number',
-				'The page number requested is larger than the number of pages available.',
-				array( 'status' => 400 )
-			);
-		}
-
 		/**
 		 * Filter the ActivityPub outbox array.
 		 *
