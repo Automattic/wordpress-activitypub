@@ -35,6 +35,9 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_TestCase_Cache_HTTP {
 		$this->assertInstanceOf( 'WP_Post', $post );
 		$this->assertEquals( 'draft', $post->post_status );
 		$this->assertEquals( $json, $post->post_content );
+
+		$this->assertEquals( $type, get_post_meta( $id, '_activitypub_activity_type', true ) );
+		$this->assertEquals( 'user', get_post_meta( $id, '_activitypub_activity_actor', true ) );
 	}
 
 	/**

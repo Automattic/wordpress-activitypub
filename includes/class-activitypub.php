@@ -554,35 +554,59 @@ class Activitypub {
 				'delete_with_user' => true,
 				'can_export'       => true,
 				'supports'         => array(),
-				'taxonomies'       => array( 'ap_actor', 'ap_activity_type' ),
 			)
 		);
 
-		\register_taxonomy(
-			'ap_actor',
+		/**
+		 * Register Activity Type meta for Outbox items.
+		 *
+		 * @see https://www.w3.org/TR/activitystreams-vocabulary/#activity-types
+		 */
+		\register_post_meta(
 			Outbox::POST_TYPE,
+			'_activitypub_activity_type',
 			array(
-				'labels'       => array(
-					'name' => _x( 'Actor', 'post_type plural name', 'activitypub' ),
-				),
-				'hierarchical' => true,
-				'public'       => false,
-			)
-		);
-		\register_taxonomy_for_object_type( 'ap_actor', Outbox::POST_TYPE );
+				'type'              => 'string',
+				'description'       => 'The type of the activity',
+				'single'            => true,
+				'sanitize_callback' => function ( $value ) {
+					$value  = ucfirst( strtolower( $value ) );
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'Accept', 'Add', 'Announce', 'Arrive', 'Block', 'Create', 'Delete', 'Dislike', 'Flag', 'Follow', 'Ignore', 'Invite', 'Join', 'Leave', 'Like', 'Listen', 'Move', 'Offer', 'Question', 'Reject', 'Read', 'Remove', 'TentativeReject', 'TentativeAccept', 'Travel', 'Undo', 'Update', 'View' ),
+						'default' => 'Announce',
+					);
 
-		\register_taxonomy(
-			'ap_activity_type',
-			Outbox::POST_TYPE,
-			array(
-				'labels'       => array(
-					'name' => _x( 'Activity Type', 'post_type plural name', 'activitypub' ),
-				),
-				'hierarchical' => true,
-				'public'       => false,
+					if ( is_wp_error( rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
 			)
 		);
-		\register_taxonomy_for_object_type( 'ap_activity_type', Outbox::POST_TYPE );
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'_activitypub_activity_actor',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'application', 'blog', 'user' ),
+						'default' => 'user',
+					);
+
+					if ( is_wp_error( rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
 
 		// Both User and Blog Extra Fields types have the same args.
 		$args = array(
