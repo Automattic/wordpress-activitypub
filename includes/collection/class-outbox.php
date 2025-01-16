@@ -43,6 +43,10 @@ class Outbox {
 			// ensure that user ID is not below 0.
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'draft',
+			'meta_input'   => array(
+				'_activitypub_activity_type'  => $activity_type,
+				'_activitypub_activity_actor' => $actor,
+			),
 		);
 
 		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
@@ -60,12 +64,6 @@ class Outbox {
 		if ( ! $id || \is_wp_error( $id ) ) {
 			return false;
 		}
-
-		// Set the actor type.
-		\wp_set_object_terms( $id, array( $actor ), 'ap_actor' );
-
-		// Set the activity type.
-		\wp_set_object_terms( $id, array( strtolower( $activity_type ) ), 'ap_activity_type' );
 
 		return $id;
 	}
