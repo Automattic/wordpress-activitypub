@@ -205,7 +205,7 @@ class Query {
 
 		$user = Actors::get_by_id( $author_id );
 
-		if ( is_wp_error( $user ) || ! $user ) {
+		if ( \is_wp_error( $user ) || ! $user ) {
 			return null;
 		}
 
