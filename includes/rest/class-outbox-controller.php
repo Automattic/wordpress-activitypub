@@ -135,6 +135,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			'orderedItems' => array(),
 		);
 
+		update_postmeta_cache( \wp_list_pluck( $query_result, 'ID' ) );
 		foreach ( $query_result as $outbox_item ) {
 			$response['orderedItems'][] = $this->prepare_item_for_response( $outbox_item, $request );
 		}
@@ -222,15 +223,9 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @return array Response object on success, or WP_Error object on failure.
 	 */
 	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$type        = \get_post_meta( $item->ID, '_activitypub_activity_type', true );
 		$transformer = Factory::get_transformer( $item->post_content );
-
-		$type  = 'Activity';
-		$terms = wp_get_object_terms( $item->ID, 'ap_activity_type' );
-		if ( isset( $terms[0]->name ) ) {
-			$type = ucfirst( $terms[0]->name );
-		}
-
-		$activity = $transformer->to_activity( $type );
+		$activity    = $transformer->to_activity( $type );
 
 		return $activity->to_array( false );
 	}
