@@ -7,8 +7,10 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Transformer\Factory;
 
 /**
  * ActivityPub Migration Class
@@ -22,6 +24,7 @@ class Migration {
 	public static function init() {
 		\add_action( 'activitypub_migrate', array( self::class, 'async_migration' ) );
 		\add_action( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ), 10, 2 );
+		\add_action( 'activitypub_create_outbox_items', array( self::class, 'create_outbox_items' ), 10, 2 );
 
 		self::maybe_migrate();
 	}
@@ -169,6 +172,9 @@ class Migration {
 		}
 		if ( \version_compare( $version_from_db, '4.7.3', '<' ) ) {
 			add_action( 'init', 'flush_rewrite_rules', 20 );
+		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_create_outbox_items' );
 		}
 
 		/*
@@ -486,6 +492,98 @@ class Migration {
 		}
 
 		if ( count( $post_ids ) === $batch_size ) {
+			// Schedule next batch.
+			\wp_schedule_single_event(
+				time() + MINUTE_IN_SECONDS,
+				'activitypub_update_comment_counts',
+				array(
+					'batch_size' => $batch_size,
+					'offset'     => $offset + $batch_size,
+				)
+			);
+		}
+
+		self::unlock();
+	}
+
+	/**
+	 * Create outbox items for posts in batches.
+	 *
+	 * @param int $batch_size Optional. Number of posts to process per batch. Default 100.
+	 * @param int $offset     Optional. Number of posts to skip. Default 0.
+	 */
+	public static function create_outbox_items( $batch_size = 100, $offset = 0 ) {
+
+		// Bail if the existing lock is still valid.
+		if ( self::is_locked() ) {
+			\wp_schedule_single_event(
+				time() + ( 5 * MINUTE_IN_SECONDS ),
+				'activitypub_update_comment_counts',
+				array(
+					'batch_size' => $batch_size,
+					'offset'     => $offset,
+				)
+			);
+			return;
+		}
+
+		self::lock();
+
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
+		$posts      = \get_posts(
+			array(
+				'posts_per_page' => $batch_size,
+				'offset'         => $offset,
+				'post_type'      => $post_types,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					'relation' => 'OR',
+					array(
+						'key'     => 'activitypub_content_visibility',
+						'compare' => 'NOT EXISTS',
+					),
+					array(
+						'key'     => 'activitypub_content_visibility',
+						'value'   => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
+						'compare' => '!=',
+					),
+				),
+			)
+		);
+
+		// Avoid multiple queries for post meta.
+		update_postmeta_cache( \wp_list_pluck( $posts, 'ID' ) );
+
+		// Don't schedule federation events while processing.
+		add_filter( 'pre_schedule_event', '__return_false' );
+
+		foreach ( $posts as $post ) {
+			$content_visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+
+			add_to_outbox( $post, 'Create', $post->post_author, $content_visibility );
+
+			// Add Update activity when the post has been modified.
+			if ( $post->post_modified_gmt !== $post->post_date_gmt ) {
+				add_to_outbox( $post, 'Update', $post->post_author, $content_visibility );
+			}
+		}
+
+		$comments = get_comments(
+			array(
+				'author__not_in' => array( 0 ), // Limit to comments by registered users.
+				'number'         => $batch_size,
+				'offset'         => $offset,
+			)
+		);
+
+		foreach ( $comments as $comment ) {
+			add_to_outbox( $comment, 'Create', $comment->user_id );
+		}
+
+		// Allow new events to be scheduled again.
+		remove_filter( 'pre_schedule_event', '__return_false' );
+
+		if ( count( $posts ) === $batch_size || count( $comments ) === $batch_size ) {
 			// Schedule next batch.
 			\wp_schedule_single_event(
 				time() + MINUTE_IN_SECONDS,
