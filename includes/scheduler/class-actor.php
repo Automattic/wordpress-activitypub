@@ -85,7 +85,7 @@ class Actor {
 	 * @return mixed
 	 */
 	public static function blog_user_update( $value = null ) {
-		self::schedule_profile_update( 0 );
+		self::schedule_profile_update( Actors::BLOG_USER_ID );
 		return $value;
 	}
 
