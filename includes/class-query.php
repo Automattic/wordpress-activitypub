@@ -25,9 +25,20 @@ class Query {
 	/**
 	 * The ActivityPub object.
 	 *
+	 * @link https://www.w3.org/TR/activitystreams-vocabulary/#dfn-object
+	 *
 	 * @var object
 	 */
 	private $activitypub_object;
+
+	/**
+	 * The ActivityPub object ID.
+	 *
+	 * @link https://www.w3.org/TR/activitystreams-vocabulary/#dfn-id
+	 *
+	 * @var string
+	 */
+	private $activitypub_object_id;
 
 	/**
 	 * Whether the current request is an ActivityPub request.
@@ -42,19 +53,7 @@ class Query {
 	 * Transform the queried object to an ActivityPub object.
 	 */
 	private function __construct() {
-		$wp_object = $this->get_queried_object();
-
-		if ( ! $wp_object ) {
-			// If the object is not a valid ActivityPub object, try to get a virtual object.
-			$this->activitypub_object = $this->maybe_get_virtual_object();
-			return;
-		}
-
-		$transformer = Factory::get_transformer( $wp_object );
-
-		if ( $transformer && ! is_wp_error( $transformer ) ) {
-			$this->activitypub_object = $transformer->to_object();
-		}
+		// Do nothing.
 	}
 
 	/**
@@ -78,20 +77,29 @@ class Query {
 	}
 
 	/**
-	 * Check if the current request has a queried object.
-	 *
-	 * @return bool True if the request has a queried object, false otherwise.
-	 */
-	public function has_activitypub_object() {
-		return null !== $this->activitypub_object;
-	}
-
-	/**
 	 * Get the ActivityPub object.
 	 *
 	 * @return object The ActivityPub object.
 	 */
 	public function get_activitypub_object() {
+		if ( $this->activitypub_object ) {
+			return $this->activitypub_object;
+		}
+
+		$wp_object = $this->get_queried_object();
+
+		if ( ! $wp_object ) {
+			// If the object is not a valid ActivityPub object, try to get a virtual object.
+			$this->activitypub_object = $this->maybe_get_virtual_object();
+			return $this->activitypub_object;
+		}
+
+		$transformer = Factory::get_transformer( $wp_object );
+
+		if ( $transformer && ! is_wp_error( $transformer ) ) {
+			$this->activitypub_object = $transformer->to_object();
+		}
+
 		return $this->activitypub_object;
 	}
 
@@ -101,11 +109,31 @@ class Query {
 	 * @return int The ActivityPub object ID.
 	 */
 	public function get_activitypub_object_id() {
-		if ( ! $this->has_activitypub_object() ) {
-			return null;
+		if ( $this->activitypub_object_id ) {
+			return $this->activitypub_object_id;
 		}
 
-		return $this->activitypub_object->get_id();
+		$wp_object                   = $this->get_queried_object();
+		$this->activitypub_object_id = null;
+
+		if ( ! $wp_object ) {
+			// If the object is not a valid ActivityPub object, try to get a virtual object.
+			$virtual_object = $this->maybe_get_virtual_object();
+
+			if ( $virtual_object ) {
+				$this->activitypub_object_id = $virtual_object->get_id();
+
+				return $this->activitypub_object_id;
+			}
+		}
+
+		$transformer = Factory::get_transformer( $wp_object );
+
+		if ( $transformer && ! is_wp_error( $transformer ) ) {
+			$this->activitypub_object_id = $transformer->to_id();
+		}
+
+		return $this->activitypub_object_id;
 	}
 
 	/**

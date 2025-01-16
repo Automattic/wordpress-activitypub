@@ -74,24 +74,6 @@ class Test_Query extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test has_activitypub_object method.
-	 *
-	 * @covers ::has_activitypub_object
-	 */
-	public function test_has_activitypub_object() {
-		// Test with no queried object.
-		Query::get_instance()->__destruct();
-		$this->go_to( home_url( '/404' ) );
-		$this->assertFalse( Query::get_instance()->has_activitypub_object() );
-
-		// Set up post query.
-		Query::get_instance()->__destruct();
-		$this->go_to( get_permalink( self::$post_id ) );
-
-		$this->assertTrue( Query::get_instance()->has_activitypub_object() );
-	}
-
-	/**
 	 * Test get_activitypub_object method.
 	 *
 	 * @covers ::get_activitypub_object
