@@ -234,4 +234,60 @@ abstract class Base {
 			$this->get_locale() => $this->get_summary(),
 		);
 	}
+
+	/**
+	 * Returns the tags for the post.
+	 *
+	 * @return array The tags for the post.
+	 */
+	protected function get_tag() {
+		$tags     = array();
+		$mentions = $this->extract_mentions();
+
+		if ( $mentions ) {
+			foreach ( $mentions as $mention => $url ) {
+				$tag    = array(
+					'type' => 'Mention',
+					'href' => \esc_url( $url ),
+					'name' => \esc_html( $mention ),
+				);
+				$tags[] = $tag;
+			}
+		}
+
+		return \array_unique( $tags, SORT_REGULAR );
+	}
+
+	/**
+	 * Extracts mentions from the content.
+	 *
+	 * @return array The mentions.
+	 */
+	protected function extract_mentions() {
+		$content = '';
+
+		if ( method_exists( $this, 'get_content' ) ) {
+			$content = $content . ' ' . $this->get_content();
+		}
+
+		if ( method_exists( $this, 'get_summary' ) ) {
+			$content = $content . ' ' . $this->get_summary();
+		}
+
+		/**
+		 * Filter the mentions in the post content.
+		 *
+		 * @param array   $mentions The mentions.
+		 * @param string  $content  The post content.
+		 * @param WP_Post $post     The post object.
+		 *
+		 * @return array The filtered mentions.
+		 */
+		return apply_filters(
+			'activitypub_extract_mentions',
+			array(),
+			$content,
+			$this->item
+		);
+	}
 }

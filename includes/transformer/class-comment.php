@@ -200,7 +200,7 @@ class Comment extends Base {
 			$this->get_actor_object()->get_followers(),
 		);
 
-		$mentions = $this->get_mentions();
+		$mentions = $this->extract_mentions();
 		if ( $mentions ) {
 			foreach ( $mentions as $url ) {
 				$cc[] = $url;
@@ -211,36 +211,11 @@ class Comment extends Base {
 	}
 
 	/**
-	 * Returns a list of Tags, used in the Comment.
-	 *
-	 * This includes Hash-Tags and Mentions.
-	 *
-	 * @return array The list of Tags.
-	 */
-	protected function get_tag() {
-		$tags = array();
-
-		$mentions = $this->get_mentions();
-		if ( $mentions ) {
-			foreach ( $mentions as $mention => $url ) {
-				$tag    = array(
-					'type' => 'Mention',
-					'href' => \esc_url( $url ),
-					'name' => \esc_html( $mention ),
-				);
-				$tags[] = $tag;
-			}
-		}
-
-		return \array_unique( $tags, SORT_REGULAR );
-	}
-
-	/**
 	 * Helper function to get the @-Mentions from the comment content.
 	 *
 	 * @return array The list of @-Mentions.
 	 */
-	protected function get_mentions() {
+	protected function extract_mentions() {
 		\add_filter( 'activitypub_extract_mentions', array( $this, 'extract_reply_context' ) );
 
 		/**

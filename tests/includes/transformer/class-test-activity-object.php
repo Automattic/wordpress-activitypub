@@ -62,11 +62,11 @@ class Test_Activity_Object extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_mentions method.
+	 * Test extract_mentions method.
 	 *
-	 * @covers ::get_mentions
+	 * @covers ::extract_mentions
 	 */
-	public function test_get_mentions() {
+	public function test_extract_mentions() {
 		add_filter(
 			'activitypub_extract_mentions',
 			function () {
@@ -81,7 +81,7 @@ class Test_Activity_Object extends WP_UnitTestCase {
 		);
 
 		$transformer = new Activity_Object( $this->test_object );
-		$mentions    = $this->get_protected_method( $transformer, 'get_mentions' );
+		$mentions    = $this->get_protected_method( $transformer, 'extract_mentions' );
 
 		$this->assertIsArray( $mentions );
 		$this->assertCount( 3, $mentions );
