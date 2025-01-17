@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Print `_activityPubOptions` in the `wp_head` action on the frontend: printing in `wp_footer` is too late.
 
+### Added
+
+* Support for WPML post locale
+
 ### Removed
 
 * Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.

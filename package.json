@@ -14,7 +14,8 @@
     "build": "wp-scripts build",
     "env-start": "wp-env start && wp-env run cli wp rewrite structure '/%year%/%monthnum%/%postname%/'",
     "env-stop": "wp-env stop",
-    "env-test": "wp-env run tests-cli --env-cwd=\"wp-content/plugins/activitypub\" vendor/bin/phpunit"
+    "env-test": "wp-env run tests-cli --env-cwd=\"wp-content/plugins/activitypub\" vendor/bin/phpunit",
+    "release": "node bin/release.js"
   },
   "license": "MIT",
   "bugs": {
