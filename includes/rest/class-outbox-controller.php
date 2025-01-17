@@ -108,16 +108,50 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 */
 		\do_action( 'activitypub_rest_outbox_pre', $request );
 
-		$query_args = array(
+		/**
+		 * Filters the list of activity types to include in the outbox.
+		 *
+		 * @param string[] $activity_types The list of activity types.
+		 */
+		$activity_types = apply_filters( 'rest_activitypub_outbox_activity_types', array( 'Announce', 'Create', 'Like', 'Update' ) );
+
+		$args = array(
 			'posts_per_page' => $request->get_param( 'per_page' ),
 			'author'         => $user_id > 0 ? $user_id : null,
 			'paged'          => $page,
 			'post_type'      => Outbox::POST_TYPE,
 			'post_status'    => 'draft',
+
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'     => array(
+				array(
+					'key'     => '_activitypub_activity_type',
+					'value'   => $activity_types,
+					'compare' => 'IN',
+				),
+			),
 		);
 
+		if ( ! current_user_can( 'activitypub' ) ) {
+			$args['meta_query'][] = array(
+				'key'     => 'activitypub_content_visibility',
+				'value'   => array( ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+				'compare' => 'NOT IN',
+			);
+		}
+
+		/**
+		 * Filters WP_Query arguments when querying Outbox items via the REST API.
+		 *
+		 * Enables adding extra arguments or setting defaults for an outbox collection request.
+		 *
+		 * @param array            $args    Array of arguments for WP_Query.
+		 * @param \WP_REST_Request $request The REST API request.
+		 */
+		$args = apply_filters( 'rest_activitypub_outbox_query', $args, $request );
+
 		$outbox_query = new \WP_Query();
-		$query_result = $outbox_query->query( $query_args );
+		$query_result = $outbox_query->query( $args );
 
 		$response = array(
 			'@context'     => array( 'https://www.w3.org/ns/activitystreams' ),

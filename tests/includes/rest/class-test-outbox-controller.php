@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Collection\Outbox;
 use Activitypub\Rest\Outbox_Controller;
 
 /**
@@ -167,8 +168,9 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 					)
 				),
 				'meta_input'   => array(
-					'_activitypub_activity_type'  => 'Create',
-					'_activitypub_activity_actor' => 'user',
+					'_activitypub_activity_type'     => 'Create',
+					'_activitypub_activity_actor'    => 'user',
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
 				),
 			)
 		);
@@ -255,6 +257,172 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$response = \rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
+	}
+
+	/**
+	 * Data provider for test_get_items_activity_type.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function data_activity_types() {
+		return array(
+			'create_activity'   => array(
+				'type'      => 'Create',
+				'object'    => array(
+					'id'      => 'https://example.org/note/1',
+					'type'    => 'Note',
+					'content' => 'Test content',
+				),
+				'allowed'   => true,
+			),
+			'announce_activity' => array(
+				'type'      => 'Announce',
+				'object'    => 'https://example.org/note/2',
+				'allowed'   => true,
+			),
+			'like_activity'     => array(
+				'type'      => 'Like',
+				'object'    => 'https://example.org/note/3',
+				'allowed'   => true,
+			),
+			'update_activity'   => array(
+				'type'      => 'Update',
+				'object'    => array(
+					'id'      => 'https://example.org/note/4',
+					'type'    => 'Note',
+					'content' => 'Updated content',
+				),
+				'allowed'   => true,
+			),
+			'delete_activity'   => array(
+				'type'      => 'Delete',
+				'object'    => 'https://example.org/note/5',
+				'allowed'   => false,
+			),
+		);
+	}
+
+	/**
+	 * Test getting items with different activity types.
+	 *
+	 * @covers ::get_items
+	 * @dataProvider data_activity_types
+	 *
+	 * @param string       $type    Activity type.
+	 * @param string|array $object  Activity object.
+	 * @param bool        $allowed Whether the activity type is allowed.
+	 */
+	public function test_get_items_activity_type( $type, $object, $allowed ) {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'  => $user_id,
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'draft',
+				'post_title'   => "https://example.org/activity/{$type}",
+				'post_content' => \wp_json_encode(
+					array(
+						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+						'id'       => "https://example.org/activity/{$type}",
+						'type'     => $type,
+						'actor'    => 'https://example.org/user/' . $user_id,
+						'object'   => $object,
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => $type,
+					'_activitypub_activity_actor'    => 'user',
+					'activitypub_content_visibility' => \ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				),
+			)
+		);
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$activity_types = \wp_list_pluck( $data['orderedItems'], 'type' );
+
+		if ( $allowed ) {
+			$this->assertContains( $type, $activity_types, "Activity type '{$type}' should be allowed." );
+			$this->assertSame( 1, (int) $data['totalItems'], "Activity type '{$type}' should be included in total items." );
+		} else {
+			$this->assertNotContains( $type, $activity_types, "Activity type '{$type}' should not be allowed." );
+			$this->assertSame( 0, (int) $data['totalItems'], "Activity type '{$type}' should not be included in total items." );
+		}
+
+		\wp_delete_post( $post_id, true );
+		\wp_delete_user( $user_id );
+	}
+
+	/**
+	 * Test content visibility for logged-in and logged-out users.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_content_visibility() {
+		$user_id      = self::factory()->user->create( array( 'role' => 'author' ) );
+		$visibilities = array(
+			\ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC       => true,
+			\ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC => false,
+			\ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL        => false,
+		);
+
+		$post_ids = array();
+		foreach ( $visibilities as $visibility => $public_visible ) {
+			$post_ids[] = self::factory()->post->create(
+				array(
+					'post_author'  => $user_id,
+					'post_type'    => Outbox::POST_TYPE,
+					'post_status'  => 'draft',
+					'post_title'   => "https://example.org/activity/{$visibility}",
+					'post_content' => \wp_json_encode(
+						array(
+							'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+							'id'       => "https://example.org/activity/{$visibility}",
+							'type'     => 'Create',
+							'actor'    => 'https://example.org/user/' . $user_id,
+							'object'   => array(
+								'id'      => "https://example.org/note/{$visibility}",
+								'type'    => 'Note',
+								'content' => 'Test content',
+							),
+						)
+					),
+					'meta_input'   => array(
+						'_activitypub_activity_type'     => 'Create',
+						'_activitypub_activity_actor'    => 'user',
+						'activitypub_content_visibility' => $visibility,
+					),
+				)
+			);
+		}
+
+		// Test as logged-out user.
+		\wp_set_current_user( 0 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertSame( 1, (int) $data['totalItems'], 'Logged-out users should only see public content.' );
+
+		// Test as logged-in user with activitypub capability.
+		\wp_set_current_user( $user_id );
+		$this->assertTrue( \current_user_can( 'activitypub' ) );
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertSame( 3, (int) $data['totalItems'], 'Logged-in users with activitypub capability should see all content.' );
+
+		foreach ( $post_ids as $post_id ) {
+			\wp_delete_post( $post_id, true );
+		}
+		\wp_delete_user( $user_id );
 	}
 
 	/**
