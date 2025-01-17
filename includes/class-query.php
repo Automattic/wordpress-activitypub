@@ -167,19 +167,6 @@ class Query {
 	}
 
 	/**
-	 * Get the queried object ID.
-	 *
-	 * @return int The queried object ID.
-	 */
-	public function get_queried_object_id() {
-		if ( ! $this->get_queried_object() ) {
-			return null;
-		}
-
-		return $this->get_queried_object()->ID;
-	}
-
-	/**
 	 * Get the virtual object.
 	 *
 	 * Virtual objects are objects that are not stored in the database, but are created on the fly.
