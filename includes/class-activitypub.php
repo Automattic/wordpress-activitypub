@@ -608,6 +608,29 @@ class Activitypub {
 			)
 		);
 
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'activitypub_content_visibility',
+			array(
+				'show_in_rest'      => true,
+				'single'            => true,
+				'type'              => 'string',
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+						'default' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+					);
+
+					if ( is_wp_error( rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
 		// Both User and Blog Extra Fields types have the same args.
 		$args = array(
 			'labels'              => array(
