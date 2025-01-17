@@ -4,7 +4,7 @@ import { Button, Modal } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 import { ButtonStyle, getPopupStyles } from './button-style';
 import { Dialog } from '../shared/dialog';
-import getOptions from '../shared/get-options';
+import { useOptions } from '../shared/use-options';
 import './style.scss';
 
 const DEFAULT_PROFILE_DATA = {
@@ -24,9 +24,10 @@ function getNormalizedProfile( profile ) {
 }
 
 function fetchProfile( userId ) {
+	const { namespace } = useOptions();
 	const fetchOptions = {
 		headers: { Accept: 'application/activity+json' },
-		path: `/${ getOptions( 'namespace' ) }/actors/${ userId }`,
+		path: `/${ namespace }/actors/${ userId }`,
 	};
 	return apiFetch( fetchOptions );
 }
@@ -79,9 +80,10 @@ function Follow( { profile, popupStyles, userId } ) {
 }
 
 function DialogFollow( { profile, userId } ) {
+	const { namespace } = useOptions();
 	const { webfinger } = profile;
 	const actionText = __( 'Follow', 'activitypub' );
-	const resourceUrl = `/${ getOptions( 'namespace' ) }/actors/${userId}/remote-follow?resource=`;
+	const resourceUrl = `/${ namespace }/actors/${userId}/remote-follow?resource=`;
 	const copyDescription = __( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' );
 	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
 

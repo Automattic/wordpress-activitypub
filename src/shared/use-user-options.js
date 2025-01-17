@@ -1,10 +1,10 @@
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
 import { useMemo } from '@wordpress/element';
-import getOptions from './get-options';
+import { useOptions } from './use-options';
 
 export function useUserOptions( { withInherit = false } ) {
-	const enabled = getOptions( 'enabled' );
+	const { enabled } = useOptions();
 	const users = enabled?.users ? useSelect( ( select ) => select( 'core' ).getUsers( { who: 'authors' } ) ) : [];
 	return useMemo( () => {
 		if ( ! users ) {

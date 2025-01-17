@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from '@wordpress/element';
 import { Popover, Button } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
-import getOptions from '../shared/get-options';
+import { useOptions } from '../shared/use-options';
 
 /**
  * A component that renders a row of user avatars for a given set of reactions.
@@ -15,6 +15,7 @@ import getOptions from '../shared/get-options';
  * @return {JSX.Element}           The rendered component.
  */
 const FacepileRow = ( { reactions } ) => {
+	const { defaultAvatarUrl } = useOptions();
 	const [activeIndices, setActiveIndices] = useState(new Set());
 	const [rotationStates, setRotationStates] = useState(new Map());
 	const timeoutRefs = useRef([]);
@@ -102,7 +103,7 @@ const FacepileRow = ( { reactions } ) => {
 					activeIndices.has(index) ? 'wave-active' : '',
 					rotationClass ? `rotate-${rotationClass}` : ''
 				].filter(Boolean).join(' ');
-				const avatar = reaction.avatar || getOptions( 'defaultAvatarUrl' );
+				const avatar = reaction.avatar || defaultAvatarUrl;
 
 				return (
 					<li key={ index }>
@@ -296,6 +297,7 @@ export function Reactions( {
 	reactions: providedReactions = null,
 	titleComponent = null,
 } ) {
+	const { namespace } = useOptions();
 	const [ reactions, setReactions ] = useState( providedReactions );
 	const [ loading, setLoading ] = useState( ! providedReactions );
 
@@ -313,7 +315,7 @@ export function Reactions( {
 
 		setLoading( true );
 		apiFetch( {
-			path: `/${ getOptions( 'namespace' ) }/posts/${ postId }/reactions`,
+			path: `/${ namespace }/posts/${ postId }/reactions`,
 		} )
 		.then( ( response ) => {
 			setReactions( response );
