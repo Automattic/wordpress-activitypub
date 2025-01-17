@@ -267,37 +267,37 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	public function data_activity_types() {
 		return array(
 			'create_activity'   => array(
-				'type'      => 'Create',
-				'object'    => array(
+				'type'    => 'Create',
+				'object'  => array(
 					'id'      => 'https://example.org/note/1',
 					'type'    => 'Note',
 					'content' => 'Test content',
 				),
-				'allowed'   => true,
+				'allowed' => true,
 			),
 			'announce_activity' => array(
-				'type'      => 'Announce',
-				'object'    => 'https://example.org/note/2',
-				'allowed'   => true,
+				'type'    => 'Announce',
+				'object'  => 'https://example.org/note/2',
+				'allowed' => true,
 			),
 			'like_activity'     => array(
-				'type'      => 'Like',
-				'object'    => 'https://example.org/note/3',
-				'allowed'   => true,
+				'type'    => 'Like',
+				'object'  => 'https://example.org/note/3',
+				'allowed' => true,
 			),
 			'update_activity'   => array(
-				'type'      => 'Update',
-				'object'    => array(
+				'type'    => 'Update',
+				'object'  => array(
 					'id'      => 'https://example.org/note/4',
 					'type'    => 'Note',
 					'content' => 'Updated content',
 				),
-				'allowed'   => true,
+				'allowed' => true,
 			),
 			'delete_activity'   => array(
-				'type'      => 'Delete',
-				'object'    => 'https://example.org/note/5',
-				'allowed'   => false,
+				'type'    => 'Delete',
+				'object'  => 'https://example.org/note/5',
+				'allowed' => false,
 			),
 		);
 	}
@@ -308,11 +308,11 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::get_items
 	 * @dataProvider data_activity_types
 	 *
-	 * @param string       $type    Activity type.
-	 * @param string|array $object  Activity object.
-	 * @param bool        $allowed Whether the activity type is allowed.
+	 * @param string       $type     Activity type.
+	 * @param string|array $activity Activity object.
+	 * @param bool         $allowed  Whether the activity type is allowed.
 	 */
-	public function test_get_items_activity_type( $type, $object, $allowed ) {
+	public function test_get_items_activity_type( $type, $activity, $allowed ) {
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 		$post_id = self::factory()->post->create(
 			array(
@@ -326,7 +326,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 						'id'       => "https://example.org/activity/{$type}",
 						'type'     => $type,
 						'actor'    => 'https://example.org/user/' . $user_id,
-						'object'   => $object,
+						'object'   => $activity,
 					)
 				),
 				'meta_input'   => array(
@@ -363,22 +363,22 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 */
 	public function data_content_visibility() {
 		return array(
-			'no_visibility'     => array(
+			'no_visibility' => array(
 				'visibility'      => null,
 				'public_visible'  => true,
 				'private_visible' => true,
 			),
-			'public'           => array(
+			'public'        => array(
 				'visibility'      => \ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
 				'public_visible'  => true,
 				'private_visible' => true,
 			),
-			'quiet_public'     => array(
+			'quiet_public'  => array(
 				'visibility'      => \ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
 				'public_visible'  => false,
 				'private_visible' => true,
 			),
-			'local'           => array(
+			'local'         => array(
 				'visibility'      => \ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
 				'public_visible'  => false,
 				'private_visible' => true,
@@ -397,10 +397,10 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @param bool        $private_visible Whether content should be visible to users with activitypub capability.
 	 */
 	public function test_get_items_content_visibility( $visibility, $public_visible, $private_visible ) {
-		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$user_id    = self::factory()->user->create( array( 'role' => 'author' ) );
 		$meta_input = array(
-			'_activitypub_activity_type'     => 'Create',
-			'_activitypub_activity_actor'    => 'user',
+			'_activitypub_activity_type'  => 'Create',
+			'_activitypub_activity_actor' => 'user',
 		);
 
 		if ( null !== $visibility ) {
