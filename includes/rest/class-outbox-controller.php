@@ -134,9 +134,16 @@ class Outbox_Controller extends \WP_REST_Controller {
 
 		if ( ! current_user_can( 'activitypub' ) ) {
 			$args['meta_query'][] = array(
-				'key'     => 'activitypub_content_visibility',
-				'value'   => array( ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
-				'compare' => 'NOT IN',
+				'relation' => 'OR',
+				array(
+					'key'     => 'activitypub_content_visibility',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'     => 'activitypub_content_visibility',
+					'value'   => array( ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+					'compare' => 'NOT IN',
+				),
 			);
 		}
 

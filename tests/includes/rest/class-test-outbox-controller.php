@@ -357,47 +357,78 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	}
 
 	/**
+	 * Data provider for test_get_items_content_visibility.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function data_content_visibility() {
+		return array(
+			'no_visibility'     => array(
+				'visibility'      => null,
+				'public_visible'  => true,
+				'private_visible' => true,
+			),
+			'public'           => array(
+				'visibility'      => \ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				'public_visible'  => true,
+				'private_visible' => true,
+			),
+			'quiet_public'     => array(
+				'visibility'      => \ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
+				'public_visible'  => false,
+				'private_visible' => true,
+			),
+			'local'           => array(
+				'visibility'      => \ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
+				'public_visible'  => false,
+				'private_visible' => true,
+			),
+		);
+	}
+
+	/**
 	 * Test content visibility for logged-in and logged-out users.
 	 *
 	 * @covers ::get_items
+	 * @dataProvider data_content_visibility
+	 *
+	 * @param string|null $visibility      Content visibility setting.
+	 * @param bool        $public_visible  Whether content should be visible to public users.
+	 * @param bool        $private_visible Whether content should be visible to users with activitypub capability.
 	 */
-	public function test_get_items_content_visibility() {
-		$user_id      = self::factory()->user->create( array( 'role' => 'author' ) );
-		$visibilities = array(
-			\ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC       => true,
-			\ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC => false,
-			\ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL        => false,
+	public function test_get_items_content_visibility( $visibility, $public_visible, $private_visible ) {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$meta_input = array(
+			'_activitypub_activity_type'     => 'Create',
+			'_activitypub_activity_actor'    => 'user',
 		);
 
-		$post_ids = array();
-		foreach ( $visibilities as $visibility => $public_visible ) {
-			$post_ids[] = self::factory()->post->create(
-				array(
-					'post_author'  => $user_id,
-					'post_type'    => Outbox::POST_TYPE,
-					'post_status'  => 'draft',
-					'post_title'   => "https://example.org/activity/{$visibility}",
-					'post_content' => \wp_json_encode(
-						array(
-							'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
-							'id'       => "https://example.org/activity/{$visibility}",
-							'type'     => 'Create',
-							'actor'    => 'https://example.org/user/' . $user_id,
-							'object'   => array(
-								'id'      => "https://example.org/note/{$visibility}",
-								'type'    => 'Note',
-								'content' => 'Test content',
-							),
-						)
-					),
-					'meta_input'   => array(
-						'_activitypub_activity_type'     => 'Create',
-						'_activitypub_activity_actor'    => 'user',
-						'activitypub_content_visibility' => $visibility,
-					),
-				)
-			);
+		if ( null !== $visibility ) {
+			$meta_input['activitypub_content_visibility'] = $visibility;
 		}
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'  => $user_id,
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'draft',
+				'post_title'   => 'https://example.org/activity/1',
+				'post_content' => \wp_json_encode(
+					array(
+						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+						'id'       => 'https://example.org/activity/1',
+						'type'     => 'Create',
+						'actor'    => 'https://example.org/user/' . $user_id,
+						'object'   => array(
+							'id'      => 'https://example.org/note/1',
+							'type'    => 'Note',
+							'content' => 'Test content',
+						),
+					)
+				),
+				'meta_input'   => $meta_input,
+			)
+		);
 
 		// Test as logged-out user.
 		\wp_set_current_user( 0 );
@@ -406,7 +437,15 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame( 1, (int) $data['totalItems'], 'Logged-out users should only see public content.' );
+		$this->assertSame(
+			(int) $public_visible,
+			(int) $data['totalItems'],
+			sprintf(
+				'Content with visibility "%s" should%s be visible to logged-out users.',
+				$visibility ?? 'none',
+				$public_visible ? '' : ' not'
+			)
+		);
 
 		// Test as logged-in user with activitypub capability.
 		\wp_set_current_user( $user_id );
@@ -417,11 +456,17 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame( 3, (int) $data['totalItems'], 'Logged-in users with activitypub capability should see all content.' );
+		$this->assertSame(
+			(int) $private_visible,
+			(int) $data['totalItems'],
+			sprintf(
+				'Content with visibility "%s" should%s be visible to users with activitypub capability.',
+				$visibility ?? 'none',
+				$private_visible ? '' : ' not'
+			)
+		);
 
-		foreach ( $post_ids as $post_id ) {
-			\wp_delete_post( $post_id, true );
-		}
+		\wp_delete_post( $post_id, true );
 		\wp_delete_user( $user_id );
 	}
 
