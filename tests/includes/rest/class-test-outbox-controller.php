@@ -299,6 +299,11 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 				'object'  => 'https://example.org/note/5',
 				'allowed' => false,
 			),
+			'follow_activity'   => array(
+				'type'    => 'Follow',
+				'object'  => 'https://example.org/user/6',
+				'allowed' => false,
+			),
 		);
 	}
 
@@ -310,7 +315,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 *
 	 * @param string       $type     Activity type.
 	 * @param string|array $activity Activity object.
-	 * @param bool         $allowed  Whether the activity type is allowed.
+	 * @param bool         $allowed  Whether the activity type is allowed for public users.
 	 */
 	public function test_get_items_activity_type( $type, $activity, $allowed ) {
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
@@ -337,6 +342,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			)
 		);
 
+		// Test as logged-out user.
+		\wp_set_current_user( 0 );
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
@@ -345,12 +352,26 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$activity_types = \wp_list_pluck( $data['orderedItems'], 'type' );
 
 		if ( $allowed ) {
-			$this->assertContains( $type, $activity_types, "Activity type '{$type}' should be allowed." );
-			$this->assertSame( 1, (int) $data['totalItems'], "Activity type '{$type}' should be included in total items." );
+			$this->assertContains( $type, $activity_types, sprintf( 'Activity type "%s" should be visible to logged-out users.', $type ) );
+			$this->assertSame( 1, (int) $data['totalItems'], sprintf( 'Activity type "%s" should be included in total items for logged-out users.', $type ) );
 		} else {
-			$this->assertNotContains( $type, $activity_types, "Activity type '{$type}' should not be allowed." );
-			$this->assertSame( 0, (int) $data['totalItems'], "Activity type '{$type}' should not be included in total items." );
+			$this->assertNotContains( $type, $activity_types, sprintf( 'Activity type "%s" should not be visible to logged-out users.', $type ) );
+			$this->assertSame( 0, (int) $data['totalItems'], sprintf( 'Activity type "%s" should not be included in total items for logged-out users.', $type ) );
 		}
+
+		// Test as logged-in user with activitypub capability.
+		\wp_set_current_user( $user_id );
+		$this->assertTrue( \current_user_can( 'activitypub' ) );
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$activity_types = \wp_list_pluck( $data['orderedItems'], 'type' );
+
+		$this->assertContains( $type, $activity_types, sprintf( 'Activity type "%s" should be visible to users with activitypub capability.', $type ) );
+		$this->assertSame( 1, (int) $data['totalItems'], sprintf( 'Activity type "%s" should be included in total items for users with activitypub capability.', $type ) );
 
 		\wp_delete_post( $post_id, true );
 		\wp_delete_user( $user_id );

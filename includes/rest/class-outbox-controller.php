@@ -121,28 +121,27 @@ class Outbox_Controller extends \WP_REST_Controller {
 			'paged'          => $page,
 			'post_type'      => Outbox::POST_TYPE,
 			'post_status'    => 'draft',
+		);
 
+		if ( ! current_user_can( 'activitypub' ) ) {
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'     => array(
+			$args['meta_query'] = array(
 				array(
 					'key'     => '_activitypub_activity_type',
 					'value'   => $activity_types,
 					'compare' => 'IN',
 				),
-			),
-		);
-
-		if ( ! current_user_can( 'activitypub' ) ) {
-			$args['meta_query'][] = array(
-				'relation' => 'OR',
 				array(
-					'key'     => 'activitypub_content_visibility',
-					'compare' => 'NOT EXISTS',
-				),
-				array(
-					'key'     => 'activitypub_content_visibility',
-					'value'   => array( ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
-					'compare' => 'NOT IN',
+					'relation' => 'OR',
+					array(
+						'key'     => 'activitypub_content_visibility',
+						'compare' => 'NOT EXISTS',
+					),
+					array(
+						'key'     => 'activitypub_content_visibility',
+						'value'   => array( ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+						'compare' => 'NOT IN',
+					),
 				),
 			);
 		}
