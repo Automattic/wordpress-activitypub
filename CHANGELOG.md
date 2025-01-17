@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-* Print `_activityPubOptions` in the `wp_head` action on the frontend: printing in `wp_footer` is too late.
+* More robust handling of `_activityPubOptions` in scripts, using a `useOptions()` helper.
 
 ### Added
 
