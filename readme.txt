@@ -137,6 +137,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: Support for WPML post locale
 * Removed: Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
 * Fixed: More robust handling of `_activityPubOptions` in scripts, using a `useOptions()` helper.
+* Fixed: Flush post caches after Followers migration.
 
 = 4.7.1 =
 

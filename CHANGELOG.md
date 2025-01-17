@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * More robust handling of `_activityPubOptions` in scripts, using a `useOptions()` helper.
+* Flush post caches after Followers migration.
 
 ### Added
 
