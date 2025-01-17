@@ -7,9 +7,9 @@
 
 namespace Activitypub;
 
-use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Outbox;
 use Activitypub\Transformer\Factory;
 
 /**
@@ -552,23 +552,35 @@ class Migration {
 		);
 
 		// Avoid multiple queries for post meta.
-		update_postmeta_cache( \wp_list_pluck( $posts, 'ID' ) );
+		\update_postmeta_cache( \wp_list_pluck( $posts, 'ID' ) );
 
-		// Don't schedule federation events while processing.
-		add_filter( 'pre_schedule_event', '__return_false' );
+		// Local function to add an activity to the outbox.
+		$add_to_outbox = function ( $comment, $activity_type, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
+			$transformer = Factory::get_transformer( $comment );
+			if ( ! $transformer || \is_wp_error( $transformer ) ) {
+				return;
+			}
+
+			$activity = $transformer->to_object();
+			if ( ! $activity || \is_wp_error( $activity ) ) {
+				return;
+			}
+
+			Outbox::add( $activity, $activity_type, $user_id, $visibility );
+		};
 
 		foreach ( $posts as $post ) {
-			$content_visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+			$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
-			add_to_outbox( $post, 'Create', $post->post_author, $content_visibility );
+			$add_to_outbox( $post, 'Create', $post->post_author, $visibility );
 
 			// Add Update activity when the post has been modified.
 			if ( $post->post_modified_gmt !== $post->post_date_gmt ) {
-				add_to_outbox( $post, 'Update', $post->post_author, $content_visibility );
+				$add_to_outbox( $post, 'Update', $post->post_author, $visibility );
 			}
 		}
 
-		$comments = get_comments(
+		$comments = \get_comments(
 			array(
 				'author__not_in' => array( 0 ), // Limit to comments by registered users.
 				'number'         => $batch_size,
@@ -577,11 +589,8 @@ class Migration {
 		);
 
 		foreach ( $comments as $comment ) {
-			add_to_outbox( $comment, 'Create', $comment->user_id );
+			$add_to_outbox( $comment, 'Create', $comment->user_id );
 		}
-
-		// Allow new events to be scheduled again.
-		remove_filter( 'pre_schedule_event', '__return_false' );
 
 		if ( count( $posts ) === $batch_size || count( $comments ) === $batch_size ) {
 			// Schedule next batch.
