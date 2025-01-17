@@ -418,6 +418,7 @@ class Migration {
 	 */
 	public static function migrate_to_4_7_2() {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB
 		$followers = $wpdb->get_col(
 			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", Followers::POST_TYPE )
 		);
