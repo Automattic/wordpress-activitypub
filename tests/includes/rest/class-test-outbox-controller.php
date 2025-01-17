@@ -85,47 +85,6 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	}
 
 	/**
-	 * Test creating items.
-	 *
-	 * @covers ::create_item
-	 */
-	public function test_create_item() {
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/outbox' );
-		$request->set_header( 'Content-Type', 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' );
-		$request->set_body(
-			wp_json_encode(
-				array(
-					'@context' => array(
-						'https://www.w3.org/ns/activitystreams',
-						array( '@language' => 'en' ),
-					),
-					'type'     => 'Like',
-					'actor'    => 'https://dustycloud.org/chris/',
-					'name'     => "Chris liked 'Minimal ActivityPub update client'",
-					'object'   => 'https://rhiaro.co.uk/2016/05/minimal-activitypub',
-					'to'       => array(
-						'https://rhiaro.co.uk/#amy',
-						'https://dustycloud.org/followers',
-						'https://rhiaro.co.uk/followers/',
-					),
-					'cc'       => 'https://e14n.com/evan',
-
-				)
-			)
-		);
-		$response = \rest_get_server()->dispatch( $request );
-
-		$headers = $response->get_headers();
-		$this->assertArrayHasKey( 'Location', $headers );
-
-		$post_id = \url_to_postid( \html_entity_decode( $headers['Location'] ) );
-		$this->assertInstanceOf( \WP_Post::class, get_post( $post_id ) );
-
-		$this->assertEquals( 201, $response->get_status() );
-	}
-
-	/**
 	 * Test schema.
 	 *
 	 * @covers ::get_collection_schema

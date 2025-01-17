@@ -70,12 +70,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 						),
 					),
 				),
-				array(
-					'methods'             => \WP_REST_Server::CREATABLE,
-					'callback'            => array( $this, 'create_item' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
-					'accept_json'         => true,
-				),
 				'schema' => array( $this, 'get_collection_schema' ),
 			)
 		);
@@ -169,32 +163,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $response;
-	}
-
-	/**
-	 * Creates one item from the collection.
-	 *
-	 * @param \WP_REST_Request $request Full details about the request.
-	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
-	 */
-	public function create_item( $request ) {
-		$activity = new Activity();
-		$activity->set_object( $request->get_json_params() );
-
-		$result = Outbox::add( $activity, $request->get_param( 'type' ), $request->get_param( 'user_id' ) );
-
-		if ( \is_wp_error( $result ) ) {
-			return $result;
-		}
-
-		return new \WP_REST_Response(
-			null,
-			201,
-			array(
-				'Location'     => \esc_url( \get_permalink( $result ) ),
-				'Content-Type' => 'application/activity+json; charset=' . \get_option( 'blog_charset' ),
-			)
-		);
 	}
 
 	/**
