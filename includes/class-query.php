@@ -49,8 +49,6 @@ class Query {
 
 	/**
 	 * The constructor.
-	 *
-	 * Transform the queried object to an ActivityPub object.
 	 */
 	private function __construct() {
 		// Do nothing.
