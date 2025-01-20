@@ -535,6 +535,7 @@ class Migration {
 				'posts_per_page' => $batch_size,
 				'offset'         => $offset,
 				'post_type'      => $post_types,
+
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'     => array(
 					'relation' => 'OR',
@@ -543,9 +544,8 @@ class Migration {
 						'compare' => 'NOT EXISTS',
 					),
 					array(
-						'key'     => 'activitypub_content_visibility',
-						'value'   => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
-						'compare' => '!=',
+						'key'   => 'activitypub_content_visibility',
+						'value' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
 					),
 				),
 			)
@@ -575,7 +575,7 @@ class Migration {
 			$add_to_outbox( $post, 'Create', $post->post_author, $visibility );
 
 			// Add Update activity when the post has been modified.
-			if ( $post->post_modified_gmt !== $post->post_date_gmt ) {
+			if ( $post->post_modified !== $post->post_date ) {
 				$add_to_outbox( $post, 'Update', $post->post_author, $visibility );
 			}
 		}
