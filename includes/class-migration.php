@@ -23,8 +23,8 @@ class Migration {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_migrate', array( self::class, 'async_migration' ) );
+		\add_action( 'activitypub_upgrade', array( self::class, 'async_upgrade' ) );
 		\add_action( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ), 10, 2 );
-		\add_action( 'activitypub_create_outbox_items', array( self::class, 'create_outbox_items' ), 10, 2 );
 
 		self::maybe_migrate();
 	}
@@ -174,7 +174,8 @@ class Migration {
 			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
-			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_create_outbox_items' );
+			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'create_post_outbox_items' ) );
+			\wp_schedule_single_event( \time() + 15, 'activitypub_upgrade', array( 'create_comment_outbox_items' ) );
 		}
 
 		/*
@@ -211,6 +212,31 @@ class Migration {
 		if ( \version_compare( $version_from_db, '1.0.0', '<' ) ) {
 			self::migrate_from_0_17();
 		}
+	}
+
+	/**
+	 * Asynchronously runs upgrade routines.
+	 *
+	 * @param string $callback The callback to run.
+	 * @param mixed  ...$args  The arguments to pass to the callback.
+	 */
+	public static function async_upgrade( $callback, ...$args ) {
+		// Bail if the existing lock is still valid.
+		if ( self::is_locked() ) {
+			\wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'activitypub_upgrade', \array_merge( array( $callback ), $args ) );
+			return;
+		}
+
+		self::lock();
+
+		$next = \call_user_func_array( array( self::class, $callback ), $args );
+
+		if ( ! empty( $next ) ) {
+			// Schedule the next run, adding the result to the arguments.
+			\wp_schedule_single_event( \time() + 30, 'activitypub_upgrade', \array_merge( array( $callback ), $next ) );
+		}
+
+		self::unlock();
 	}
 
 	/**
@@ -511,24 +537,9 @@ class Migration {
 	 *
 	 * @param int $batch_size Optional. Number of posts to process per batch. Default 100.
 	 * @param int $offset     Optional. Number of posts to skip. Default 0.
+	 * @return array|null Array with batch size and offset if there are more posts to process, null otherwise.
 	 */
-	public static function create_outbox_items( $batch_size = 100, $offset = 0 ) {
-
-		// Bail if the existing lock is still valid.
-		if ( self::is_locked() ) {
-			\wp_schedule_single_event(
-				time() + ( 5 * MINUTE_IN_SECONDS ),
-				'activitypub_create_outbox_items',
-				array(
-					'batch_size' => $batch_size,
-					'offset'     => $offset,
-				)
-			);
-			return;
-		}
-
-		self::lock();
-
+	public static function create_post_outbox_items( $batch_size = 100, $offset = 0 ) {
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
 		$posts      = \get_posts(
 			array(
@@ -565,6 +576,24 @@ class Migration {
 			}
 		}
 
+		if ( count( $posts ) === $batch_size ) {
+			return array(
+				'batch_size' => $batch_size,
+				'offset'     => $offset + $batch_size,
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Create outbox items for comments in batches.
+	 *
+	 * @param int $batch_size Optional. Number of posts to process per batch. Default 100.
+	 * @param int $offset     Optional. Number of posts to skip. Default 0.
+	 * @return array|null Array with batch size and offset if there are more posts to process, null otherwise.
+	 */
+	public static function create_comment_outbox_items( $batch_size = 100, $offset = 0 ) {
 		$comments = \get_comments(
 			array(
 				'author__not_in' => array( 0 ), // Limit to comments by registered users.
@@ -577,19 +606,14 @@ class Migration {
 			self::add_to_outbox( $comment, 'Create', $comment->user_id );
 		}
 
-		if ( count( $posts ) === $batch_size || count( $comments ) === $batch_size ) {
-			// Schedule next batch.
-			\wp_schedule_single_event(
-				time() + MINUTE_IN_SECONDS,
-				'activitypub_create_outbox_items',
-				array(
-					'batch_size' => $batch_size,
-					'offset'     => $offset + $batch_size,
-				)
+		if ( count( $comments ) === $batch_size ) {
+			return array(
+				'batch_size' => $batch_size,
+				'offset'     => $offset + $batch_size,
 			);
 		}
 
-		self::unlock();
+		return null;
 	}
 
 	/**

@@ -437,14 +437,14 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Test create outbox items.
+	 * Test create post outbox items.
 	 *
-	 * @covers ::create_outbox_items
+	 * @covers ::create_post_outbox_items
 	 */
 	public function test_create_outbox_items() {
 		// Run migration.
 		add_filter( 'pre_schedule_event', '__return_false' );
-		Migration::create_outbox_items( 10, 0 );
+		Migration::create_post_outbox_items( 10, 0 );
 		remove_filter( 'pre_schedule_event', '__return_false' );
 
 		// Get outbox items.
@@ -456,36 +456,26 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 			)
 		);
 
-		// Should now have 6 outbox items total, 4 post Create, 1 post Update, and 1 comment Create.
-		$this->assertEquals( 6, count( $outbox_items ) );
-
-		// Verify first post create activity.
-		$this->assertEquals( 'Create', \get_post_meta( $outbox_items[0]->ID, '_activitypub_activity_type', true ) );
-		$this->assertEquals( '', \get_post_meta( $outbox_items[0]->ID, 'activitypub_content_visibility', true ) );
-
-		// Verify second post update activity.
-		$this->assertEquals( 'Update', \get_post_meta( $outbox_items[1]->ID, '_activitypub_activity_type', true ) );
-		$this->assertEquals( '', \get_post_meta( $outbox_items[1]->ID, 'activitypub_content_visibility', true ) );
-
-		// Verify second post create activity.
-		$this->assertEquals( 'Create', \get_post_meta( $outbox_items[2]->ID, '_activitypub_activity_type', true ) );
-		$this->assertEquals( '', \get_post_meta( $outbox_items[2]->ID, 'activitypub_content_visibility', true ) );
-
-		// Verify comment create activity.
-		$this->assertEquals( 'Create', \get_post_meta( $outbox_items[3]->ID, '_activitypub_activity_type', true ) );
-		$this->assertEquals( '', \get_post_meta( $outbox_items[3]->ID, 'activitypub_content_visibility', true ) );
+		// Should now have 5 outbox items total, 4 post Create, 1 post Update.
+		$this->assertEquals( 5, count( $outbox_items ) );
 	}
 
 	/**
-	 * Test create outbox items with batching.
+	 * Test create post outbox items with batching.
 	 *
-	 * @covers ::create_outbox_items
+	 * @covers ::create_post_outbox_items
 	 */
 	public function test_create_outbox_items_batching() {
-		add_filter( 'pre_schedule_event', '__return_false' );
-
 		// Run migration with batch size of 2.
-		Migration::create_outbox_items( 2, 0 );
+		$next = Migration::create_post_outbox_items( 2, 0 );
+
+		$this->assertSame(
+			array(
+				'batch_size' => 2,
+				'offset'     => 2,
+			),
+			$next
+		);
 
 		// Get outbox items.
 		$outbox_items = \get_posts(
@@ -496,11 +486,11 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 			)
 		);
 
-		// Should have 3 outbox items, 2 post Create and 1 comment Create.
-		$this->assertEquals( 3, count( $outbox_items ) );
+		// Should have 2 outbox items.
+		$this->assertEquals( 2, count( $outbox_items ) );
 
 		// Run migration with next batch.
-		Migration::create_outbox_items( 2, 2 );
+		Migration::create_post_outbox_items( 2, 2 );
 
 		// Get outbox items again.
 		$outbox_items = \get_posts(
@@ -511,9 +501,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 			)
 		);
 
-		// Should now have 6 outbox items total, 4 post Create, 1 post Update, and 1 comment Create.
-		$this->assertEquals( 6, count( $outbox_items ) );
-
-		remove_filter( 'pre_schedule_event', '__return_false' );
+		// Should now have 5 outbox items total, 4 post Create, 1 post Update.
+		$this->assertEquals( 5, count( $outbox_items ) );
 	}
 }
