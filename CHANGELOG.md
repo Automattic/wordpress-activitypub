@@ -28,6 +28,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Support for WPML post locale
 
+### Added
+
+* Outbox queue
+
+### Changed
+
+* Rewrite the current dispatcher system, to use the Outbox instead of the Scheduler.
+
 ### Removed
 
 * Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
@@ -42,7 +50,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* Outbox queue
 * Comment counts get updated when the plugin is activated/deactivated/deleted
 * Added a filter to make custom comment types manageable in WP.com Calypso
 

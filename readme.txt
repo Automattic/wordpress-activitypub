@@ -134,8 +134,8 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
-
 * Added: Outbox queue
+* Changed: Rewrite the current dispatcher system, to use the Outbox instead of a Scheduler.
 * Changed: Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
 
 = 4.7.3 =
