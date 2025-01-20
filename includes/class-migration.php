@@ -518,7 +518,7 @@ class Migration {
 		if ( self::is_locked() ) {
 			\wp_schedule_single_event(
 				time() + ( 5 * MINUTE_IN_SECONDS ),
-				'activitypub_update_comment_counts',
+				'activitypub_create_outbox_items',
 				array(
 					'batch_size' => $batch_size,
 					'offset'     => $offset,
@@ -554,29 +554,14 @@ class Migration {
 		// Avoid multiple queries for post meta.
 		\update_postmeta_cache( \wp_list_pluck( $posts, 'ID' ) );
 
-		// Local function to add an activity to the outbox.
-		$add_to_outbox = function ( $comment, $activity_type, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
-			$transformer = Factory::get_transformer( $comment );
-			if ( ! $transformer || \is_wp_error( $transformer ) ) {
-				return;
-			}
-
-			$activity = $transformer->to_object();
-			if ( ! $activity || \is_wp_error( $activity ) ) {
-				return;
-			}
-
-			Outbox::add( $activity, $activity_type, $user_id, $visibility );
-		};
-
 		foreach ( $posts as $post ) {
 			$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
-			$add_to_outbox( $post, 'Create', $post->post_author, $visibility );
+			self::add_to_outbox( $post, 'Create', $post->post_author, $visibility );
 
 			// Add Update activity when the post has been modified.
 			if ( $post->post_modified !== $post->post_date ) {
-				$add_to_outbox( $post, 'Update', $post->post_author, $visibility );
+				self::add_to_outbox( $post, 'Update', $post->post_author, $visibility );
 			}
 		}
 
@@ -589,14 +574,14 @@ class Migration {
 		);
 
 		foreach ( $comments as $comment ) {
-			$add_to_outbox( $comment, 'Create', $comment->user_id );
+			self::add_to_outbox( $comment, 'Create', $comment->user_id );
 		}
 
 		if ( count( $posts ) === $batch_size || count( $comments ) === $batch_size ) {
 			// Schedule next batch.
 			\wp_schedule_single_event(
 				time() + MINUTE_IN_SECONDS,
-				'activitypub_update_comment_counts',
+				'activitypub_create_outbox_items',
 				array(
 					'batch_size' => $batch_size,
 					'offset'     => $offset + $batch_size,
@@ -615,6 +600,28 @@ class Migration {
 	public static function add_default_settings() {
 		self::add_activitypub_capability();
 		self::add_notification_defaults();
+	}
+
+	/**
+	 * Add an activity to the outbox without federating it.
+	 *
+	 * @param \WP_Post|\WP_Comment $comment       The comment or post object.
+	 * @param string               $activity_type The type of activity.
+	 * @param int                  $user_id       The user ID.
+	 * @param string               $visibility    Optional. The visibility of the content. Default 'public'.
+	 */
+	private static function add_to_outbox( $comment, $activity_type, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
+		$transformer = Factory::get_transformer( $comment );
+		if ( ! $transformer || \is_wp_error( $transformer ) ) {
+			return;
+		}
+
+		$activity = $transformer->to_object();
+		if ( ! $activity || \is_wp_error( $activity ) ) {
+			return;
+		}
+
+		Outbox::add( $activity, $activity_type, $user_id, $visibility );
 	}
 
 	/**
