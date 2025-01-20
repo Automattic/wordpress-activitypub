@@ -120,7 +120,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			'author'         => $user_id > 0 ? $user_id : null,
 			'paged'          => $page,
 			'post_type'      => Outbox::POST_TYPE,
-			'post_status'    => 'draft',
+			'post_status'    => 'publish',
 
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(
