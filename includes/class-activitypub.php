@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Exception;
+use Activitypub\Transformer\Factory;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
@@ -101,17 +102,16 @@ class Activitypub {
 			return $template;
 		}
 
+		self::add_headers();
+
 		if ( ! is_activitypub_request() ) {
 			return $template;
 		}
 
 		$activitypub_template = false;
+		$activitypub_object   = Query::get_instance()->get_activitypub_object();
 
-		if ( \is_author() && ! is_user_disabled( \get_the_author_meta( 'ID' ) ) ) {
-			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/user-json.php';
-		} elseif ( is_comment() ) {
-			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
-		} elseif ( \is_singular() && ! is_post_disabled( \get_the_ID() ) ) {
+		if ( $activitypub_object ) {
 			if ( \get_query_var( 'preview' ) ) {
 				\define( 'ACTIVITYPUB_PREVIEW', true );
 
@@ -122,10 +122,8 @@ class Activitypub {
 				 */
 				$activitypub_template = apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
 			} else {
-				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
+				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/activitypub-json.php';
 			}
-		} elseif ( \is_home() && ! is_user_type_disabled( 'blog' ) ) {
-			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
 		/*
@@ -145,6 +143,12 @@ class Activitypub {
 		}
 
 		if ( $activitypub_template ) {
+			// Check if header already sent.
+			if ( ! \headers_sent() && ACTIVITYPUB_SEND_VARY_HEADER ) {
+				// Send Vary header for Accept header.
+				\header( 'Vary: Accept' );
+			}
+
 			return $activitypub_template;
 		}
 
@@ -155,32 +159,14 @@ class Activitypub {
 	 * Add the 'self' link to the header.
 	 */
 	public static function add_headers() {
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		$request_uri = $_SERVER['REQUEST_URI'];
-
-		if ( ! $request_uri ) {
-			return;
-		}
-
-		$id = false;
-
-		// Only add self link to author pages...
-		if ( is_author() ) {
-			if ( ! is_user_disabled( get_queried_object_id() ) ) {
-				$id = get_user_id( get_queried_object_id() );
-			}
-		} elseif ( is_singular() ) { // or posts/pages/custom-post-types...
-			if ( \post_type_supports( \get_post_type(), 'activitypub' ) ) {
-				$id = get_post_id( get_queried_object_id() );
-			}
-		}
+		$id = Query::get_instance()->get_activitypub_object_id();
 
 		if ( ! $id ) {
 			return;
 		}
 
 		if ( ! headers_sent() ) {
-			header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"' );
+			header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
 		}
 
 		add_action(
@@ -234,8 +220,6 @@ class Activitypub {
 	 * @return void
 	 */
 	public static function template_redirect() {
-		self::add_headers();
-
 		$comment_id = get_query_var( 'c', null );
 
 		// Check if it seems to be a comment.

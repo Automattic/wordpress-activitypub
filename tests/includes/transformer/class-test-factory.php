@@ -43,6 +43,13 @@ class Test_Factory extends WP_UnitTestCase {
 	protected static $comment_id;
 
 	/**
+	 * Test user ID.
+	 *
+	 * @var int
+	 */
+	protected static $user_id;
+
+	/**
 	 * Create fake data before tests run.
 	 *
 	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
@@ -58,10 +65,20 @@ class Test_Factory extends WP_UnitTestCase {
 			)
 		);
 
+		self::$user_id = $factory->user->create(
+			array(
+				'role' => 'administrator',
+			)
+		);
+
 		// Create test comment.
 		self::$comment_id = $factory->comment->create(
 			array(
 				'comment_post_ID' => self::$post_id,
+				'user_id'         => self::$user_id,
+				'comment_meta'    => array(
+					'activitypub_status' => 'pending',
+				),
 			)
 		);
 	}
@@ -73,6 +90,7 @@ class Test_Factory extends WP_UnitTestCase {
 		wp_delete_post( self::$post_id, true );
 		wp_delete_post( self::$attachment_id, true );
 		wp_delete_comment( self::$comment_id, true );
+		wp_delete_user( self::$user_id, true );
 	}
 
 	/**
@@ -104,10 +122,16 @@ class Test_Factory extends WP_UnitTestCase {
 	 * @covers ::get_transformer
 	 */
 	public function test_get_transformer_attachment() {
+		// Allow attachment to be federated.
+		\add_post_type_support( 'attachment', 'activitypub' );
+
 		$attachment  = get_post( self::$attachment_id );
 		$transformer = Factory::get_transformer( $attachment );
 
 		$this->assertInstanceOf( Attachment::class, $transformer );
+
+		// Remove support for attachment.
+		\remove_post_type_support( 'attachment', 'activitypub' );
 	}
 
 	/**

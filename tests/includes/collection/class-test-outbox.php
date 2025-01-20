@@ -56,7 +56,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_TestCase_Cache_HTTP {
 				),
 				'Create',
 				1,
-				'{"@context":["https://www.w3.org/ns/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https://example.com/1","type":"Note","content":"This is a note","contentMap":{"en":"This is a note"},"tag":[],"to":["https://www.w3.org/ns/activitystreams#Public"],"cc":[],"mediaType":"text/html","sensitive":false}',
+				'{"@context":["https://www.w3.org/ns/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https://example.com/1","type":"Note","content":"This is a note","contentMap":{"en":"This is a note"},"tag":[],"to":["https://www.w3.org/ns/activitystreams#Public"],"mediaType":"text/html","sensitive":false}',
 			),
 			array(
 				array(
@@ -67,7 +67,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_TestCase_Cache_HTTP {
 				),
 				'Create',
 				2,
-				'{"@context":["https://www.w3.org/ns/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https://example.com/2","type":"Note","content":"This is another note","contentMap":{"en":"This is another note"},"tag":[],"to":["https://www.w3.org/ns/activitystreams#Public"],"cc":[],"mediaType":"text/html","sensitive":false}',
+				'{"@context":["https://www.w3.org/ns/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https://example.com/2","type":"Note","content":"This is another note","contentMap":{"en":"This is another note"},"tag":[],"to":["https://www.w3.org/ns/activitystreams#Public"],"mediaType":"text/html","sensitive":false}',
 			),
 		);
 	}

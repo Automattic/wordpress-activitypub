@@ -110,7 +110,7 @@ abstract class Base {
 	}
 
 	/**
-	 * Transform the WordPress Object into an ActivityPub Object.
+	 * Transform the item into an ActivityPub Object.
 	 *
 	 * @return Base_Object|object The Activity-Object.
 	 */
@@ -118,6 +118,15 @@ abstract class Base {
 		$activity_object = new Base_Object();
 
 		return $this->transform_object_properties( $activity_object );
+	}
+
+	/**
+	 * Transform the item to an ActivityPub ID.
+	 *
+	 * @return string The ID of the WordPress Object.
+	 */
+	public function to_id() {
+		return $this->get_id();
 	}
 
 	/**

@@ -365,62 +365,13 @@ function esc_hashtag( $input ) {
  * @return bool False by default.
  */
 function is_activitypub_request() {
-	global $wp_query;
-
-	/*
-	 * ActivityPub requests are currently only made for
-	 * author archives, singular posts, and the homepage.
-	 */
-	if ( ! \is_author() && ! \is_singular() && ! \is_home() && ! defined( '\REST_REQUEST' ) ) {
-		return false;
-	}
-
-	// Check if the current post type supports ActivityPub.
-	if ( \is_singular() ) {
-		$queried_object = \get_queried_object();
-		$post_type      = \get_post_type( $queried_object );
-
-		if ( ! \post_type_supports( $post_type, 'activitypub' ) ) {
-			return false;
-		}
-	}
-
-	// Check if header already sent.
-	if ( ! \headers_sent() && ACTIVITYPUB_SEND_VARY_HEADER ) {
-		// Send Vary header for Accept header.
-		\header( 'Vary: Accept' );
-	}
-
-	// One can trigger an ActivityPub request by adding ?activitypub to the URL.
-	if ( isset( $wp_query->query_vars['activitypub'] ) ) {
-		return true;
-	}
-
-	/*
-	 * The other (more common) option to make an ActivityPub request
-	 * is to send an Accept header.
-	 */
-	if ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
-		$accept = sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
-
-		/*
-		 * $accept can be a single value, or a comma separated list of values.
-		 * We want to support both scenarios,
-		 * and return true when the header includes at least one of the following:
-		 * - application/activity+json
-		 * - application/ld+json
-		 * - application/json
-		 */
-		if ( preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
-			return true;
-		}
-	}
-
-	return false;
+	return Query::get_instance()->is_activitypub_request();
 }
 
 /**
  * Check if a post is disabled for ActivityPub.
+ *
+ * This function checks if the post type supports ActivityPub and if the post is set to be local.
  *
  * @param mixed $post The post object or ID.
  *
@@ -431,7 +382,10 @@ function is_post_disabled( $post ) {
 	$disabled   = false;
 	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
-	if ( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ) {
+	if (
+		ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ||
+		! \post_type_supports( $post->post_type, 'activitypub' )
+	) {
 		$disabled = true;
 	}
 

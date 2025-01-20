@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
-Stable tag: 4.7.1
+Stable tag: 4.7.2
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -136,7 +136,17 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Added: Outbox queue
 * Changed: Rewrite the current dispatcher system, to use the Outbox instead of a Scheduler.
+
+= 4.7.2 =
+
+* Added: Support for WPML post locale
 * Removed: Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
+* Fixed: More robust handling of `_activityPubOptions` in scripts, using a `useOptions()` helper.
+* Fixed: Flush post caches after Followers migration.
+
+= Unreleased =
+
+* Changed: Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
 
 = 4.7.1 =
 
