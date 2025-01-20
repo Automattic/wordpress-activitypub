@@ -191,13 +191,16 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 * Filter the ActivityPub outbox array.
 		 *
 		 * @param array $response The ActivityPub outbox array.
+		 * @param \WP_REST_Request $request The request object.
 		 */
-		$response = \apply_filters( 'activitypub_rest_outbox_array', $response );
+		$response = \apply_filters( 'activitypub_rest_outbox_array', $response, $request );
 
 		/**
 		 * Action triggered after the ActivityPub profile has been created and sent to the client.
+		 *
+		 * @param \WP_REST_Request $request The request object.
 		 */
-		\do_action( 'activitypub_outbox_post' );
+		\do_action( 'activitypub_outbox_post', $request );
 
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
