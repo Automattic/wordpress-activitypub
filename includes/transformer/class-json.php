@@ -30,4 +30,15 @@ class Json extends Activity_Object {
 
 		parent::__construct( $object );
 	}
+
+	/**
+	 * Returns the public secondary audience of this object
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-cc
+	 *
+	 * @return array The secondary audience of this object.
+	 */
+	protected function get_cc() {
+		return $this->item->get( 'cc' );
+	}
 }
