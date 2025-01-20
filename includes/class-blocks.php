@@ -21,7 +21,7 @@ class Blocks {
 		// This is already being called on the init hook, so just add it.
 		self::register_blocks();
 
-		\add_action( 'wp_footer', array( self::class, 'inject_activitypub_options' ) );
+		\add_action( 'wp_head', array( self::class, 'inject_activitypub_options' ), 11 );
 		\add_action( 'admin_print_scripts', array( self::class, 'inject_activitypub_options' ) );
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
 		// Add editor plugin.
