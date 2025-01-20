@@ -84,15 +84,15 @@ class Query {
 			return $this->activitypub_object;
 		}
 
-		$wp_object = $this->get_queried_object();
+		$queried_object = $this->get_queried_object();
 
-		if ( ! $wp_object ) {
+		if ( ! $queried_object ) {
 			// If the object is not a valid ActivityPub object, try to get a virtual object.
 			$this->activitypub_object = $this->maybe_get_virtual_object();
 			return $this->activitypub_object;
 		}
 
-		$transformer = Factory::get_transformer( $wp_object );
+		$transformer = Factory::get_transformer( $queried_object );
 
 		if ( $transformer && ! is_wp_error( $transformer ) ) {
 			$this->activitypub_object = $transformer->to_object();
@@ -111,10 +111,10 @@ class Query {
 			return $this->activitypub_object_id;
 		}
 
-		$wp_object                   = $this->get_queried_object();
+		$queried_object              = $this->get_queried_object();
 		$this->activitypub_object_id = null;
 
-		if ( ! $wp_object ) {
+		if ( ! $queried_object ) {
 			// If the object is not a valid ActivityPub object, try to get a virtual object.
 			$virtual_object = $this->maybe_get_virtual_object();
 
@@ -125,7 +125,7 @@ class Query {
 			}
 		}
 
-		$transformer = Factory::get_transformer( $wp_object );
+		$transformer = Factory::get_transformer( $queried_object );
 
 		if ( $transformer && ! is_wp_error( $transformer ) ) {
 			$this->activitypub_object_id = $transformer->to_id();
