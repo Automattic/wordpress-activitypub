@@ -152,7 +152,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			array(
 				'post_author'  => $user_id,
 				'post_type'    => 'ap_outbox',
-				'post_status'  => 'draft',
+				'post_status'  => 'pending',
 				'post_title'   => 'https://example.org/activity/1',
 				'post_content' => wp_json_encode(
 					array(
@@ -323,7 +323,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			array(
 				'post_author'  => $user_id,
 				'post_type'    => Outbox::POST_TYPE,
-				'post_status'  => 'draft',
+				'post_status'  => 'pending',
 				'post_title'   => "https://example.org/activity/{$type}",
 				'post_content' => \wp_json_encode(
 					array(
@@ -432,7 +432,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			array(
 				'post_author'  => $user_id,
 				'post_type'    => Outbox::POST_TYPE,
-				'post_status'  => 'draft',
+				'post_status'  => 'pending',
 				'post_title'   => 'https://example.org/activity/1',
 				'post_content' => \wp_json_encode(
 					array(
