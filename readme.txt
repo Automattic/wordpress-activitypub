@@ -135,6 +135,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: Outbox queue
+* Changed: Rewrite the current dispatcher system, to use the Outbox instead of a Scheduler.
 * Removed: Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
 
 = 4.7.1 =
