@@ -22,10 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Support for WPML post locale
 
-### Fixed
-
-* More robust handling of `_activityPubOptions` in scripts, using a `useOptions()` helper.
-
 ### Removed
 
 * Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
