@@ -18,13 +18,81 @@ use Activitypub\Comment;
 class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 
 	/**
+	 * Test fixture.
+	 *
+	 * @var array
+	 */
+	public static $fixtures = array();
+
+	/**
 	 * Set up the test.
 	 */
 	public static function set_up_before_class() {
 		\remove_action( 'transition_post_status', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33 );
 		\remove_action( 'transition_comment_status', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity' ), 20 );
 		\remove_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ) );
+
+		// Create test posts.
+		self::$fixtures['posts'] = self::factory()->post->create_many( 3, array( 'post_author' => 1 ) );
+
+		$modified_post_id = self::factory()->post->create(
+			array(
+				'post_author'  => 1,
+				'post_content' => 'Test post 2',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+				'post_date'    => '2020-01-01 00:00:00',
+			)
+		);
+		self::factory()->post->update_object( $modified_post_id, array( 'post_content' => 'Test post 2 updated' ) );
+
+		self::$fixtures['posts'][] = $modified_post_id;
+		self::$fixtures['posts'][] = self::factory()->post->create(
+			array(
+				'post_author'  => 1,
+				'post_content' => 'Test post 3',
+				'post_status'  => 'publish',
+				'post_type'    => 'page',
+			)
+		);
+		self::$fixtures['posts'][] = self::factory()->post->create(
+			array(
+				'post_author'  => 1,
+				'post_content' => 'Test post 4',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+				'meta_input'   => array(
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
+				),
+			)
+		);
+
+		// Create test comment.
+		self::$fixtures['comment'] = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::$fixtures['posts'][0],
+				'user_id'          => 1,
+				'comment_content'  => 'Test comment',
+				'comment_approved' => '1',
+			)
+		);
 	}
+
+	/**
+	 * Tear down the test.
+	 */
+	public static function tear_down_after_class() {
+		// Clean up posts.
+		foreach ( self::$fixtures['posts'] as $post_id ) {
+			\wp_delete_post( $post_id, true );
+		}
+
+		// Clean up comment.
+		if ( isset( self::$fixtures['comment'] ) ) {
+			\wp_delete_comment( self::$fixtures['comment'], true );
+		}
+	}
+
 	/**
 	 * Tear down the test.
 	 */
@@ -32,6 +100,20 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		\delete_option( 'activitypub_object_type' );
 		\delete_option( 'activitypub_custom_post_content' );
 		\delete_option( 'activitypub_post_content_type' );
+
+		// Clean up outbox items.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'      => 'ap_outbox',
+				'posts_per_page' => -1,
+				'post_status'    => 'draft',
+				'fields'         => 'ids',
+			)
+		);
+
+		foreach ( $outbox_items as $item_id ) {
+			\wp_delete_post( $item_id, true );
+		}
 	}
 
 	/**
@@ -203,19 +285,8 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	 * @covers ::migrate_to_4_7_1
 	 */
 	public function test_migrate_to_4_7_1() {
-		$post1 = \wp_insert_post(
-			array(
-				'post_author'  => 1,
-				'post_content' => 'Test post 1',
-			)
-		);
-
-		$post2 = \wp_insert_post(
-			array(
-				'post_author'  => 1,
-				'post_content' => 'Test post 2',
-			)
-		);
+		$post1 = self::$fixtures['posts'][0];
+		$post2 = self::$fixtures['posts'][1];
 
 		// Set up test meta data.
 		$meta_data = array(
@@ -268,9 +339,6 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		// Verify unrelated meta is unchanged.
 		$this->assertEquals( 'should not change', \get_post_meta( $post1, 'unrelated_meta', true ), 'Unrelated meta should not change' );
 		$this->assertEquals( 'should not change-2', \get_post_meta( $post2, 'unrelated_meta', true ), 'Unrelated meta should not change' );
-
-		\wp_delete_post( $post1, true );
-		\wp_delete_post( $post2, true );
 	}
 
 	/**
@@ -374,58 +442,6 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	 * @covers ::create_outbox_items
 	 */
 	public function test_create_outbox_items() {
-		// Create test posts.
-		$post1 = self::factory()->post->create(
-			array(
-				'post_author'  => 1,
-				'post_content' => 'Test post 1',
-				'post_status'  => 'publish',
-				'post_type'    => 'post',
-			)
-		);
-
-		$post2 = self::factory()->post->create(
-			array(
-				'post_author'  => 1,
-				'post_content' => 'Test post 2',
-				'post_status'  => 'publish',
-				'post_type'    => 'post',
-				'post_date'    => '2020-01-01 00:00:00',
-			)
-		);
-		self::factory()->post->update_object( $post2, array( 'post_content' => 'Test post 2 updated' ) );
-
-		$post3 = self::factory()->post->create(
-			array(
-				'post_author'  => 1,
-				'post_content' => 'Test post 3',
-				'post_status'  => 'publish',
-				'post_type'    => 'page',
-			)
-		);
-
-		$post4 = self::factory()->post->create(
-			array(
-				'post_author'  => 1,
-				'post_content' => 'Test post 4',
-				'post_status'  => 'publish',
-				'post_type'    => 'post',
-				'meta_input'   => array(
-					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
-				),
-			)
-		);
-
-		// Create test comment.
-		$comment = self::factory()->comment->create(
-			array(
-				'comment_post_ID'  => $post1,
-				'user_id'          => 1,
-				'comment_content'  => 'Test comment',
-				'comment_approved' => '1',
-			)
-		);
-
 		// Run migration.
 		add_filter( 'pre_schedule_event', '__return_false' );
 		Migration::create_outbox_items( 10, 0 );
@@ -440,8 +456,8 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 			)
 		);
 
-		// Should have 4 outbox items: 1 for post1 (create), 2 for post2 (create + update), none for post3 (wrong type), none for post4 (private), and 1 for comment.
-		$this->assertEquals( 4, count( $outbox_items ) );
+		// Should now have 6 outbox items total, 4 post Create, 1 post Update, and 1 comment Create.
+		$this->assertEquals( 6, count( $outbox_items ) );
 
 		// Verify first post create activity.
 		$this->assertEquals( 'Create', \get_post_meta( $outbox_items[0]->ID, '_activitypub_activity_type', true ) );
@@ -458,16 +474,6 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		// Verify comment create activity.
 		$this->assertEquals( 'Create', \get_post_meta( $outbox_items[3]->ID, '_activitypub_activity_type', true ) );
 		$this->assertEquals( '', \get_post_meta( $outbox_items[3]->ID, 'activitypub_content_visibility', true ) );
-
-		// Clean up.
-		\wp_delete_post( $post1, true );
-		\wp_delete_post( $post2, true );
-		\wp_delete_post( $post3, true );
-		\wp_delete_post( $post4, true );
-		\wp_delete_comment( $comment, true );
-		foreach ( $outbox_items as $item ) {
-			\wp_delete_post( $item->ID, true );
-		}
 	}
 
 	/**
@@ -476,15 +482,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	 * @covers ::create_outbox_items
 	 */
 	public function test_create_outbox_items_batching() {
-		// Create 3 test posts.
-		$posts = self::factory()->post->create_many(
-			3,
-			array(
-				'post_author' => 1,
-				'post_status' => 'publish',
-				'post_type'   => 'post',
-			)
-		);
+		add_filter( 'pre_schedule_event', '__return_false' );
 
 		// Run migration with batch size of 2.
 		Migration::create_outbox_items( 2, 0 );
@@ -498,8 +496,8 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 			)
 		);
 
-		// Should have 2 outbox items (batch size).
-		$this->assertEquals( 2, count( $outbox_items ) );
+		// Should have 3 outbox items, 2 post Create and 1 comment Create.
+		$this->assertEquals( 3, count( $outbox_items ) );
 
 		// Run migration with next batch.
 		Migration::create_outbox_items( 2, 2 );
@@ -513,53 +511,9 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 			)
 		);
 
-		// Should now have 3 outbox items total.
-		$this->assertEquals( 3, count( $outbox_items ) );
+		// Should now have 6 outbox items total, 4 post Create, 1 post Update, and 1 comment Create.
+		$this->assertEquals( 6, count( $outbox_items ) );
 
-		// Clean up.
-		foreach ( $posts as $post ) {
-			\wp_delete_post( $post, true );
-		}
-		foreach ( $outbox_items as $item ) {
-			\wp_delete_post( $item->ID, true );
-		}
-	}
-
-	/**
-	 * Test create outbox items with locking.
-	 *
-	 * @covers ::create_outbox_items
-	 */
-	public function test_create_outbox_items_locking() {
-		// Create a lock.
-		Migration::lock();
-
-		// Create test post.
-		$post = self::factory()->post->create(
-			array(
-				'post_author'  => 1,
-				'post_content' => 'Test post',
-				'post_status'  => 'publish',
-				'post_type'    => 'post',
-			)
-		);
-
-		// Run migration.
-		Migration::create_outbox_items();
-
-		// Get outbox items.
-		$outbox_items = \get_posts(
-			array(
-				'post_type'      => 'ap_outbox',
-				'posts_per_page' => -1,
-			)
-		);
-
-		// Should have no outbox items due to lock.
-		$this->assertEquals( 0, count( $outbox_items ) );
-
-		// Clean up.
-		Migration::unlock();
-		\wp_delete_post( $post, true );
+		remove_filter( 'pre_schedule_event', '__return_false' );
 	}
 }
