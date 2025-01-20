@@ -80,19 +80,19 @@ class Factory {
 				} elseif ( ! is_post_disabled( $data ) ) {
 					return new Post( $data );
 				}
-				// fall-through.
+				break;
 			case 'WP_Comment':
 				if ( ! is_local_comment( $data ) ) {
 					return new Comment( $data );
 				}
-				// fall-through.
+				break;
 			case 'WP_User':
 				if ( ! is_user_disabled( $data->ID ) ) {
 					return new User( $data );
 				}
-				// fall-through.
-			default:
-				return null;
+				break;
 		}
+
+		return null;
 	}
 }
