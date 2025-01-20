@@ -504,4 +504,89 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		// Should now have 5 outbox items total, 4 post Create, 1 post Update.
 		$this->assertEquals( 5, count( $outbox_items ) );
 	}
+
+	/**
+	 * Test async upgrade functionality.
+	 *
+	 * @covers ::async_upgrade
+	 * @covers ::lock
+	 * @covers ::unlock
+	 * @covers ::create_post_outbox_items
+	 */
+	public function test_async_upgrade() {
+		// Test that lock prevents simultaneous upgrades.
+		Migration::lock();
+		Migration::async_upgrade( 'create_post_outbox_items' );
+		$scheduled = \wp_next_scheduled( 'activitypub_upgrade', array( 'create_post_outbox_items' ) );
+		$this->assertNotFalse( $scheduled );
+		Migration::unlock();
+
+		// Test scheduling next batch when callback returns more work.
+		Migration::async_upgrade( 'create_post_outbox_items', 1, 0 ); // Small batch size to force multiple batches.
+		$scheduled = \wp_next_scheduled(
+			'activitypub_upgrade',
+			array(
+				'create_post_outbox_items',
+				'batch_size' => 1,
+				'offset'     => 1,
+			)
+		);
+		$this->assertNotFalse( $scheduled );
+
+		// Test no scheduling when callback returns null (no more work).
+		Migration::async_upgrade( 'create_post_outbox_items', 100, 1000 ); // Large offset to ensure no posts found.
+		$this->assertFalse(
+			\wp_next_scheduled(
+				'activitypub_upgrade',
+				array(
+					'create_post_outbox_items',
+					'batch_size' => 100,
+					'offset'     => 1100,
+				)
+			)
+		);
+	}
+
+	/**
+	 * Test async upgrade with multiple arguments.
+	 *
+	 * @covers ::async_upgrade
+	 */
+	public function test_async_upgrade_multiple_args() {
+		// Test that multiple arguments are passed correctly.
+		Migration::async_upgrade( 'update_comment_counts', 50, 100 );
+		$scheduled = \wp_next_scheduled(
+			'activitypub_upgrade',
+			array(
+				'update_comment_counts',
+				array(
+					'batch_size' => 50,
+					'offset'     => 150,
+				),
+			)
+		);
+		$this->assertFalse( $scheduled, 'Should not schedule next batch when no comments found' );
+	}
+
+	/**
+	 * Test create_comment_outbox_items batch processing.
+	 *
+	 * @covers ::create_comment_outbox_items
+	 */
+	public function test_create_comment_outbox_items_batching() {
+		// Test with small batch size.
+		$result = Migration::create_comment_outbox_items( 1, 0 );
+		$this->assertIsArray( $result );
+		$this->assertEquals(
+			array(
+				'batch_size' => 1,
+				'offset'     => 1,
+			),
+			$result
+		);
+
+		// Test with large offset (no more comments).
+		$result = Migration::create_comment_outbox_items( 1, 1000 );
+		$this->assertNull( $result );
+	}
 }
