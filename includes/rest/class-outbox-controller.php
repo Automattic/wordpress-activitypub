@@ -136,9 +136,8 @@ class Outbox_Controller extends \WP_REST_Controller {
 						'compare' => 'NOT EXISTS',
 					),
 					array(
-						'key'     => 'activitypub_content_visibility',
-						'value'   => array( ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
-						'compare' => 'NOT IN',
+						'key'   => 'activitypub_content_visibility',
+						'value' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
 					),
 				),
 			),
