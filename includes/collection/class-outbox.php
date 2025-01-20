@@ -42,7 +42,7 @@ class Outbox {
 			'post_content' => $activity_object->to_json(),
 			// ensure that user ID is not below 0.
 			'post_author'  => \max( $user_id, 0 ),
-			'post_status'  => 'pending',
+			'post_status'  => 'draft',
 			'meta_input'   => array(
 				'_activitypub_activity_type'     => $activity_type,
 				'_activitypub_activity_actor'    => $actor,
