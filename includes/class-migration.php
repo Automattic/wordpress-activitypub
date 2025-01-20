@@ -164,6 +164,9 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.7.1', '<' ) ) {
 			self::migrate_to_4_7_1();
 		}
+		if ( \version_compare( $version_from_db, '4.7.2', '<' ) ) {
+			self::migrate_to_4_7_2();
+		}
 
 		/**
 		 * Fires when the system has to be migrated.
@@ -407,6 +410,20 @@ class Migration {
 		foreach ( $meta_keys as $meta_key ) {
 			// phpcs:ignore WordPress.DB
 			$wpdb->update( $wpdb->postmeta, array( 'meta_key' => '_' . $meta_key ), array( 'meta_key' => $meta_key ) );
+		}
+	}
+
+	/**
+	 * Clears the post cache for Followers, we should have done this in 4.7.1 when we renamed those keys.
+	 */
+	public static function migrate_to_4_7_2() {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB
+		$followers = $wpdb->get_col(
+			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", Followers::POST_TYPE )
+		);
+		foreach ( $followers as $id ) {
+			clean_post_cache( $id );
 		}
 	}
 
