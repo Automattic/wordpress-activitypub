@@ -21,32 +21,38 @@ class Post {
 	public static function init() {
 		// Post transitions.
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
-		\add_action(
-			'edit_attachment',
-			function ( $post_id ) {
-				self::schedule_post_activity( 'publish', 'publish', $post_id );
-			}
-		);
-		\add_action(
-			'add_attachment',
-			function ( $post_id ) {
+
+		// Attachment transitions.
+		\add_action( 'add_attachment', array( self::class, 'transition_attachment_status' ) );
+		\add_action( 'edit_attachment', array( self::class, 'transition_attachment_status' ) );
+		\add_action( 'delete_attachment', array( self::class, 'transition_attachment_status' ) );
+	}
+
+	/**
+	 * Schedules Activities for attachment transitions.
+	 *
+	 * @param int $post_id Attachment ID.
+	 */
+	public static function transition_attachment_status( $post_id ) {
+		switch ( current_action() ) {
+			case 'add_attachment':
 				self::schedule_post_activity( 'publish', '', $post_id );
-			}
-		);
-		\add_action(
-			'delete_attachment',
-			function ( $post_id ) {
+				break;
+			case 'edit_attachment':
+				self::schedule_post_activity( 'publish', 'publish', $post_id );
+				break;
+			case 'delete_attachment':
 				self::schedule_post_activity( 'trash', '', $post_id );
-			}
-		);
+				break;
+		}
 	}
 
 	/**
 	 * Schedule Activities.
 	 *
-	 * @param string   $new_status New post status.
-	 * @param string   $old_status Old post status.
-	 * @param \WP_Post $post       Post object.
+	 * @param string       $new_status New post status.
+	 * @param string       $old_status Old post status.
+	 * @param int|\WP_Post $post       Post ID or post object.
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
 		$post = get_post( $post );

@@ -25,18 +25,7 @@ class Comment {
 
 		// Comment transitions.
 		\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 20, 3 );
-		\add_action(
-			'edit_comment',
-			function ( $comment_id ) {
-				self::schedule_comment_activity( 'approved', 'approved', $comment_id );
-			}
-		);
-		\add_action(
-			'wp_insert_comment',
-			function ( $comment_id ) {
-				self::schedule_comment_activity( 'approved', '', $comment_id );
-			}
-		);
+		\add_action( 'wp_insert_comment', array( self::class, 'schedule_comment_activity_on_insert' ), 10, 2 );
 	}
 
 	/**
@@ -83,5 +72,17 @@ class Comment {
 		}
 
 		add_to_outbox( $comment, $type, $comment->user_id );
+	}
+
+	/**
+	 * Schedule Comment Activities on insert.
+	 *
+	 * @param int         $comment_id Comment ID.
+	 * @param \WP_Comment $comment    Comment object.
+	 */
+	public static function schedule_comment_activity_on_insert( $comment_id, $comment ) {
+		if ( 1 === (int) $comment->comment_approved ) {
+			self::schedule_comment_activity( 'approved', '', $comment );
+		}
 	}
 }
