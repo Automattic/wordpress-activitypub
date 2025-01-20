@@ -55,7 +55,7 @@ class Dispatcher {
 				break;
 			case 'user':
 			default:
-				$actor_id = $activity->post_author;
+				$actor_id = $outbox_item->post_author;
 				break;
 		}
 
