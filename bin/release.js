@@ -97,6 +97,13 @@ async function createRelease(version) {
 		}
 	]);
 
+	updateVersionInFile('includes/class-migration.php', version, [
+		{
+			search: /version_compare\([^,]+,\s*['"]unreleased['"]/gi,
+			replace: (match) => match.replace(/unreleased/i, version)
+		}
+	]);
+
 	// Update CHANGELOG.md
 	updateChangelog(version);
 

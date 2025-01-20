@@ -168,6 +168,18 @@ class Migration {
 			self::migrate_to_4_7_2();
 		}
 
+		/*
+		 * Add new update routines above this comment. ^
+		 *
+		 * Use 'unreleased' as the version number for new migrations and add tests for the callback directly.
+		 * The release script will automatically replace it with the actual version number.
+		 * Example:
+		 *
+		 * if ( version_compare( $version, 'unreleased', '<' ) ) {
+		 *     // Update routine.
+		 * }
+		 */
+
 		/**
 		 * Fires when the system has to be migrated.
 		 *
