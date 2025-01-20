@@ -37,14 +37,14 @@ class Dispatcher {
 	 * @param int $id The outbox ID.
 	 */
 	public static function process_outbox( $id ) {
-		$activity = \get_post( $id );
+		$outbox_item = \get_post( $id );
 
 		// If the activity is not a post, return.
-		if ( ! $activity ) {
+		if ( ! $outbox_item ) {
 			return;
 		}
 
-		$actor_type = \get_post_meta( $activity->ID, '_activitypub_activity_actor', true );
+		$actor_type = \get_post_meta( $outbox_item->ID, '_activitypub_activity_actor', true );
 
 		switch ( $actor_type ) {
 			case 'blog':
@@ -59,30 +59,30 @@ class Dispatcher {
 				break;
 		}
 
-		$type        = \get_post_meta( $activity->ID, '_activitypub_activity_type', true );
-		$transformer = Factory::get_transformer( $activity->post_content );
+		$type        = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
+		$transformer = Factory::get_transformer( $outbox_item->post_content );
 		$activity    = $transformer->to_activity( $type );
 
-		self::send_activity_to_followers( $activity, $actor_id );
+		self::send_activity_to_followers( $activity, $actor_id, $outbox_item );
 	}
 
 	/**
 	 * Send an Activity to all followers and mentioned users.
 	 *
-	 * @param Activity                    $activity  The ActivityPub Activity.
-	 * @param int                         $actor_id  The actor ID.
-	 * @param \WP_User|WP_Post|WP_Comment $wp_object The WordPress object.
+	 * @param Activity $activity  The ActivityPub Activity.
+	 * @param int      $actor_id  The actor ID.
+	 * @param \WP_Post $outbox_item The WordPress object.
 	 */
-	private static function send_activity_to_followers( $activity, $actor_id, $wp_object = null ) {
+	private static function send_activity_to_followers( $activity, $actor_id, $outbox_item = null ) {
 		/**
 		 * Filters whether to send an Activity to followers.
 		 *
-		 * @param bool                        $send_activity_to_followers Whether to send the Activity to followers.
-		 * @param Activity                    $activity                   The ActivityPub Activity.
-		 * @param int                         $actor_id                   The actor ID.
-		 * @param \WP_User|WP_Post|WP_Comment $wp_object                  The WordPress object.
+		 * @param bool     $send_activity_to_followers Whether to send the Activity to followers.
+		 * @param Activity $activity                   The ActivityPub Activity.
+		 * @param int      $actor_id                   The actor ID.
+		 * @param \WP_Post $outbox_item                The WordPress object.
 		 */
-		if ( ! apply_filters( 'activitypub_send_activity_to_followers', true, $activity, $actor_id, $wp_object ) ) {
+		if ( ! apply_filters( 'activitypub_send_activity_to_followers', true, $activity, $actor_id, $outbox_item ) ) {
 			return;
 		}
 
@@ -106,7 +106,8 @@ class Dispatcher {
 			safe_remote_post( $inbox, $json, $actor_id );
 		}
 
-		set_wp_object_state( $wp_object, 'federated' );
+		$outbox_item->post_status = 'publish';
+		\wp_update_post( $outbox_item );
 	}
 
 	/**
