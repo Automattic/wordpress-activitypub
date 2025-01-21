@@ -75,31 +75,10 @@ class Test_Comment extends \WP_UnitTestCase {
 		);
 		$activitpub_id = \Activitypub\Comment::generate_id( $comment_id );
 
-		$post = $this->get_leatest_outbox_item( $activitpub_id );
-		$this->assertNotEquals( $activitpub_id, $post->post_title );
-
 		wp_set_comment_status( $comment_id, 'approve' );
 
 		$post = $this->get_leatest_outbox_item( $activitpub_id );
 		$this->assertSame( $activitpub_id, $post->post_title );
-
-		wp_delete_comment( $comment_id, true );
-	}
-
-	/**
-	 * Test that no activity is scheduled for non-registered users.
-	 */
-	public function test_no_activity_for_non_registered_users() {
-		$comment_id    = self::factory()->comment->create(
-			array(
-				'comment_post_ID'  => self::$post_id,
-				'comment_approved' => 1,
-			)
-		);
-		$activitpub_id = \Activitypub\Comment::generate_id( $comment_id );
-
-		$post = $this->get_leatest_outbox_item( $activitpub_id );
-		$this->assertNotEquals( $activitpub_id, $post->post_title );
 
 		wp_delete_comment( $comment_id, true );
 	}
@@ -124,19 +103,41 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that no activity is scheduled when comment should not be federated.
+	 * Data provider for no activity tests.
+	 *
+	 * @return array[] Test parameters.
 	 */
-	public function test_no_activity_when_federation_disabled() {
-		$comment_id    = self::factory()->comment->create(
-			array(
+	public function no_activity_comment_provider() {
+		return array(
+			'unapproved_comment'  => array(
+				'comment_post_ID'  => self::$post_id,
+				'user_id'          => self::$user_id,
+				'comment_approved' => 0,
+			),
+			'non_registered_user' => array(
+				'comment_post_ID'  => self::$post_id,
+				'comment_approved' => 1,
+			),
+			'federation_disabled' => array(
 				'comment_post_ID'  => self::$post_id,
 				'user_id'          => self::$user_id,
 				'comment_approved' => 1,
 				'comment_meta'     => array(
 					'protocol' => 'activitypub',
 				),
-			)
+			),
 		);
+	}
+
+	/**
+	 * Test comment activity scheduling under various conditions.
+	 *
+	 * @dataProvider no_activity_comment_provider
+	 *
+	 * @param array $comment_data   Comment data for creating the test comment.
+	 */
+	public function test_no_activity_scheduled( $comment_data ) {
+		$comment_id    = self::factory()->comment->create( $comment_data );
 		$activitpub_id = \Activitypub\Comment::generate_id( $comment_id );
 
 		$post = $this->get_leatest_outbox_item( $activitpub_id );
