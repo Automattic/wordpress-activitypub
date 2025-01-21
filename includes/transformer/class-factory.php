@@ -8,10 +8,11 @@
 namespace Activitypub\Transformer;
 
 use WP_Error;
+use Activitypub\Comment as Comment_Helper;
 
 use function Activitypub\is_user_disabled;
 use function Activitypub\is_post_disabled;
-use function Activitypub\is_local_comment;
+
 /**
  * Transformer Factory.
  */
@@ -84,7 +85,7 @@ class Factory {
 				}
 				break;
 			case 'WP_Comment':
-				if ( ! is_local_comment( $data ) ) {
+				if ( Comment_Helper::should_be_federated( $data ) ) {
 					return new Comment( $data );
 				}
 				break;
