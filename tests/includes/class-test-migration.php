@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Outbox;
 use Activitypub\Migration;
 use Activitypub\Comment;
 
@@ -104,9 +105,9 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		// Clean up outbox items.
 		$outbox_items = \get_posts(
 			array(
-				'post_type'      => 'ap_outbox',
+				'post_type'      => Outbox::POST_TYPE,
 				'posts_per_page' => -1,
-				'post_status'    => 'draft',
+				'post_status'    => 'any',
 				'fields'         => 'ids',
 			)
 		);
