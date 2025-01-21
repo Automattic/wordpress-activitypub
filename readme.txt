@@ -132,9 +132,12 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-= 4.7.3 =
+= Unreleased =
 
 * Changed: Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
+
+= 4.7.3 =
+
 * Fixed: Flush rewrite rules after NodeInfo update.
 
 = 4.7.2 =
