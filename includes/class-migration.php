@@ -167,7 +167,7 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.7.2', '<' ) ) {
 			self::migrate_to_4_7_2();
 		}
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '4.7.3', '<' ) ) {
 			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 
