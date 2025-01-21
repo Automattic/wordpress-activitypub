@@ -132,6 +132,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Fixed: Flush rewrite rules after NodeInfo update.
+
 = 4.7.2 =
 
 * Added: Support for WPML post locale
