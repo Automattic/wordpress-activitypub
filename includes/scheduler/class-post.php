@@ -51,28 +51,26 @@ class Post {
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
 		$post = get_post( $post );
 
-		if ( ! $post || is_post_disabled( $post ) ) {
+		if ( ! $post ) {
 			return;
 		}
 
 		if ( 'ap_extrafield' === $post->post_type ) {
-			self::schedule_profile_update( $post->post_author );
+			Actor::schedule_profile_update( $post->post_author );
 			return;
 		}
 
 		if ( 'ap_extrafield_blog' === $post->post_type ) {
-			self::schedule_profile_update( 0 );
+			Actor::schedule_profile_update( 0 );
+			return;
+		}
+
+		if ( is_post_disabled( $post ) ) {
 			return;
 		}
 
 		// Do not send activities if post is password protected.
 		if ( \post_password_required( $post ) ) {
-			return;
-		}
-
-		// Check if post-type supports ActivityPub.
-		$post_types = \get_post_types_by_support( 'activitypub' );
-		if ( ! \in_array( $post->post_type, $post_types, true ) ) {
 			return;
 		}
 

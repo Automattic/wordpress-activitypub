@@ -97,6 +97,6 @@ class Actor {
 	public static function schedule_profile_update( $user_id ) {
 		$actor = Actors::get_by_id( $user_id );
 
-		add_to_outbox( $actor->get_id(), 'Update', $user_id );
+		add_to_outbox( $actor, 'Update', $user_id );
 	}
 }
