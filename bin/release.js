@@ -99,7 +99,7 @@ async function createRelease(version) {
 
 	updateVersionInFile('includes/class-migration.php', version, [
 		{
-			search: /version_compare\([^,]+,\s*['"]unreleased['"]/gi,
+			search: /(?<!\/\/[^\n]*?)version_compare\([^,]+,\s*(['"])unreleased\1/gi,
 			replace: (match) => match.replace(/unreleased/i, version)
 		}
 	]);
