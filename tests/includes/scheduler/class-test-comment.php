@@ -38,6 +38,9 @@ class Test_Comment extends \WP_UnitTestCase {
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$user_id = $factory->user->create( array( 'role' => 'author' ) );
 		self::$post_id = $factory->post->create( array( 'post_author' => self::$user_id ) );
+
+		// Add activitypub capability to the user.
+		get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
 	}
 
 	/**
