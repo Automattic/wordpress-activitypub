@@ -29,6 +29,7 @@ class Dispatcher {
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_follower' ), 10, 2 );
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
+		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'maybe_add_inboxes_of_blog_user' ), 10, 3 );
 	}
 
 	/**
@@ -200,6 +201,36 @@ class Dispatcher {
 				$inboxes[] = $actor['inbox'];
 			}
 		}
+
+		return $inboxes;
+	}
+
+	/**
+	 * Adds Blog Actor inboxes to Updates so the Blog User's followers are notified of edits.
+	 *
+	 * @param array $inboxes  The list of Inboxes.
+	 * @param int   $actor_id The WordPress Actor-ID.
+	 * @param array $activity The ActivityPub Activity.
+	 *
+	 * @return array The filtered Inboxes
+	 */
+	public static function maybe_add_inboxes_of_blog_user( $inboxes, $actor_id, $activity ) {
+		// Only if we're in both Blog and User modes.
+		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
+			return $inboxes;
+		}
+		// Only if this isn't the Blog Actor.
+		if ( Actors::BLOG_USER_ID === $actor_id ) {
+			return $inboxes;
+		}
+		// Only if this is an Update.
+		if ( 'Update' !== $activity->get_type() ) {
+			return $inboxes;
+		}
+
+		$blog_inboxes = Followers::get_inboxes( Actors::BLOG_USER_ID );
+		$inboxes      = array_merge( $inboxes, $blog_inboxes );
+		$inboxes      = array_unique( $inboxes );
 
 		return $inboxes;
 	}
