@@ -451,9 +451,8 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		// Get outbox items.
 		$outbox_items = \get_posts(
 			array(
-				'post_type'      => 'ap_outbox',
+				'post_type'      => Outbox::POST_TYPE,
 				'posts_per_page' => -1,
-				'post_status'    => 'draft',
 			)
 		);
 
@@ -481,9 +480,8 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		// Get outbox items.
 		$outbox_items = \get_posts(
 			array(
-				'post_type'      => 'ap_outbox',
+				'post_type'      => Outbox::POST_TYPE,
 				'posts_per_page' => -1,
-				'post_status'    => 'draft',
 			)
 		);
 
@@ -496,9 +494,8 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		// Get outbox items again.
 		$outbox_items = \get_posts(
 			array(
-				'post_type'      => 'ap_outbox',
+				'post_type'      => Outbox::POST_TYPE,
 				'posts_per_page' => -1,
-				'post_status'    => 'draft',
 			)
 		);
 

@@ -535,11 +535,11 @@ class Migration {
 	/**
 	 * Create outbox items for posts in batches.
 	 *
-	 * @param int $batch_size Optional. Number of posts to process per batch. Default 100.
+	 * @param int $batch_size Optional. Number of posts to process per batch. Default 50.
 	 * @param int $offset     Optional. Number of posts to skip. Default 0.
 	 * @return array|null Array with batch size and offset if there are more posts to process, null otherwise.
 	 */
-	public static function create_post_outbox_items( $batch_size = 100, $offset = 0 ) {
+	public static function create_post_outbox_items( $batch_size = 50, $offset = 0 ) {
 		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
 		$posts      = \get_posts(
 			array(
@@ -589,11 +589,11 @@ class Migration {
 	/**
 	 * Create outbox items for comments in batches.
 	 *
-	 * @param int $batch_size Optional. Number of posts to process per batch. Default 100.
+	 * @param int $batch_size Optional. Number of posts to process per batch. Default 50.
 	 * @param int $offset     Optional. Number of posts to skip. Default 0.
 	 * @return array|null Array with batch size and offset if there are more posts to process, null otherwise.
 	 */
-	public static function create_comment_outbox_items( $batch_size = 100, $offset = 0 ) {
+	public static function create_comment_outbox_items( $batch_size = 50, $offset = 0 ) {
 		$comments = \get_comments(
 			array(
 				'author__not_in' => array( 0 ), // Limit to comments by registered users.
@@ -645,7 +645,10 @@ class Migration {
 			return;
 		}
 
-		Outbox::add( $activity, $activity_type, $user_id, $visibility );
+		$post_id = Outbox::add( $activity, $activity_type, $user_id, $visibility );
+
+		// Immediately set to publish, no federation needed.
+		\wp_publish_post( $post_id );
 	}
 
 	/**
