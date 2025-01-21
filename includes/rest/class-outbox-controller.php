@@ -120,8 +120,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 			'author'         => $user_id > 0 ? $user_id : null,
 			'paged'          => $page,
 			'post_type'      => Outbox::POST_TYPE,
-			'post_status'    => 'publish',
-
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(
 				array(
@@ -171,7 +169,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			'orderedItems' => array(),
 		);
 
-		update_postmeta_cache( \wp_list_pluck( $query_result, 'ID' ) );
+		\update_postmeta_cache( \wp_list_pluck( $query_result, 'ID' ) );
 		foreach ( $query_result as $outbox_item ) {
 			$response['orderedItems'][] = $this->prepare_item_for_response( $outbox_item, $request );
 		}
