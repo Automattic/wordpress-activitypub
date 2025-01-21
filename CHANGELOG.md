@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
 
+### Fixed
+
+* Flush rewrite rules after NodeInfo update.
+
 ## [4.7.2] - 2025-01-17
 
 ### Fixed
