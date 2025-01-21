@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
-Stable tag: 4.7.2
+Stable tag: 4.7.3
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -132,7 +132,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-= Unreleased =
+= 4.7.3 =
 
 * Changed: Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
 * Fixed: Flush rewrite rules after NodeInfo update.
