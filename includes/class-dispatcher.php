@@ -26,7 +26,7 @@ class Dispatcher {
 		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ) );
 
 		// Default filters to add Inboxes to sent to.
-		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_follower' ), 10, 2 );
+		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_follower' ), 10, 3 );
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'maybe_add_inboxes_of_blog_user' ), 10, 3 );
@@ -118,7 +118,11 @@ class Dispatcher {
 	 *
 	 * @return array The filtered Inboxes
 	 */
-	public static function add_inboxes_of_follower( $inboxes, $actor_id ) {
+	public static function add_inboxes_of_follower( $inboxes, $actor_id, $activity ) {
+		if ( ! self::should_send_to_followers( $activity, $actor_id ) ) {
+			return $inboxes;
+		}
+
 		$follower_inboxes = Followers::get_inboxes( $actor_id );
 
 		return array_merge( $inboxes, $follower_inboxes );
@@ -214,6 +218,10 @@ class Dispatcher {
 	 * @return array The filtered Inboxes
 	 */
 	public static function maybe_add_inboxes_of_blog_user( $inboxes, $actor_id, $activity ) {
+		if ( ! self::should_send_to_followers( $activity, $actor_id ) ) {
+			return $inboxes;
+		}
+
 		// Only if we're in both Blog and User modes.
 		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
 			return $inboxes;
@@ -232,5 +240,39 @@ class Dispatcher {
 		$inboxes      = array_unique( $inboxes );
 
 		return $inboxes;
+	}
+
+	/**
+	 * Check if passed Activity is public.
+	 *
+	 * @param array $activity The Activity object as array.
+	 * @param int   $actor_id The Actor-ID.
+	 *
+	 * @return boolean True if public, false if not.
+	 */
+	protected static function should_send_to_followers( $activity, $actor_id ) {
+		// Check if follower endpoint is set.
+		$actor = Actors::get_by_id( $actor_id );
+
+		if ( ! $actor ) {
+			return $inboxes;
+		}
+
+		// Check if follower endpoint is set.
+		$cc = $activity->get_cc() ?? array();
+		$to = $activity->get_to() ?? array();
+
+		$audience = array_merge( $cc, $to );
+
+		if (
+			// Check if activity is public.
+			in_array( 'https://www.w3.org/ns/activitystreams#Public', $audience, true ) ||
+			// ...or check if follower endpoint is set.
+			in_array( $actor->get_followers(), $audience, true )
+		) {
+			return true;
+		}
+
+		return false;
 	}
 }
