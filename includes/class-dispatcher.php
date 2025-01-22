@@ -252,8 +252,8 @@ class Dispatcher {
 		// Check if follower endpoint is set.
 		$actor = Actors::get_by_id( $actor_id );
 
-		if ( ! $actor ) {
-			return $inboxes;
+		if ( ! $actor || is_wp_error( $actor ) ) {
+			return false;
 		}
 
 		// Check if follower endpoint is set.

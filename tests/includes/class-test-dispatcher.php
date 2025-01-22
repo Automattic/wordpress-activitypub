@@ -17,6 +17,7 @@ use Activitypub\Dispatcher;
  * @covers Activitypub\Dispatcher
  */
 class Test_Dispatcher extends WP_UnitTestCase {
+
 	/**
 	 * Test maybe_add_inboxes_of_blog_user when actor mode is not ACTIVITYPUB_ACTOR_AND_BLOG_MODE
 	 */
@@ -26,7 +27,7 @@ class Test_Dispatcher extends WP_UnitTestCase {
 		$inboxes  = array( 'https://example.com/inbox' );
 		$activity = $this->createMock( Activity::class );
 
-		$result = Dispatcher::maybe_add_inboxes_of_blog_user( $inboxes, 123, $activity );
+		$result = Dispatcher::maybe_add_inboxes_of_blog_user( $inboxes, 1, $activity );
 		$this->assertEquals( $inboxes, $result );
 	}
 
@@ -50,15 +51,28 @@ class Test_Dispatcher extends WP_UnitTestCase {
 		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
 		$inboxes  = array( 'https://example.com/inbox' );
-		$activity = $this->createMock( Activity::class );
+		$activity = $this->createMock( Activity::class, array( '__call' ) );
 
 		// Mock the static method using reflection.
-		$activity->expects( $this->once() )
+		$activity->expects( $this->any() )
 			->method( '__call' )
-			->with( 'get_type' )
-			->willReturn( 'Create' );
+			->willReturnCallback( function( $name, $args ) {
+				if ( 'get_to' === $name ) {
+					return array( 'https://www.w3.org/ns/activitystreams#Public' );
+				}
 
-		$result = Dispatcher::maybe_add_inboxes_of_blog_user( $inboxes, 123, $activity );
+				if ( 'get_cc' === $name ) {
+					return array();
+				}
+
+				if ( 'get_type' === $name ) {
+					return 'Create';
+				}
+
+				return null;
+			} );
+
+		$result = Dispatcher::maybe_add_inboxes_of_blog_user( $inboxes, 1, $activity );
 		$this->assertEquals( $inboxes, $result );
 	}
 }
