@@ -138,25 +138,6 @@ class Test_Actor extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test user meta update scheduling with non-publishing user.
-	 *
-	 * @covers ::user_meta_update
-	 */
-	public function test_user_meta_update_no_publish() {
-		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
-
-		// Temporarily remove the activitypub capability.
-		\get_user_by( 'id', self::$user_id )->remove_cap( 'activitypub' );
-
-		\update_user_meta( self::$user_id, 'description', 'test value' );
-
-		$this->assertNull( $this->get_latest_outbox_item( $activitpub_id ) );
-
-		// Restore the activitypub capability.
-		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
-	}
-
-	/**
 	 * Test user update scheduling.
 	 *
 	 * @covers ::user_update
@@ -167,6 +148,21 @@ class Test_Actor extends \WP_UnitTestCase {
 		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
 		$post          = $this->get_latest_outbox_item( $activitpub_id );
 		$this->assertSame( $activitpub_id, $post->post_title );
+	}
+
+	/**
+	 * Test blog user update scheduling.
+	 *
+	 * @covers ::blog_user_update
+	 */
+	public function test_blog_user_update() {
+		$test_value = 'test value';
+		$result     = \Activitypub\Scheduler\Actor::blog_user_update( $test_value );
+
+		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+		$post          = $this->get_latest_outbox_item( $activitpub_id );
+		$this->assertSame( $activitpub_id, $post->post_title );
+		$this->assertSame( $test_value, $result );
 	}
 
 	/**
@@ -188,18 +184,22 @@ class Test_Actor extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test blog user update scheduling.
+	 * Test user meta update scheduling with non-publishing user.
 	 *
-	 * @covers ::blog_user_update
+	 * @covers ::user_meta_update
 	 */
-	public function test_blog_user_update() {
-		$test_value = 'test value';
-		$result     = \Activitypub\Scheduler\Actor::blog_user_update( $test_value );
+	public function test_user_meta_update_no_publish() {
+		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
 
-		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
-		$post          = $this->get_latest_outbox_item( $activitpub_id );
-		$this->assertSame( $activitpub_id, $post->post_title );
-		$this->assertSame( $test_value, $result );
+		// Temporarily remove the activitypub capability.
+		\get_user_by( 'id', self::$user_id )->remove_cap( 'activitypub' );
+
+		\update_user_meta( self::$user_id, 'description', 'test value' );
+
+		$this->assertNull( $this->get_latest_outbox_item( $activitpub_id ) );
+
+		// Restore the activitypub capability.
+		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
 	}
 
 	/**
