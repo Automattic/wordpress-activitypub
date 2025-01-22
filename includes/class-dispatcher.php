@@ -231,13 +231,13 @@ class Dispatcher {
 		if ( Actors::BLOG_USER_ID === $actor_id ) {
 			return $inboxes;
 		}
-		// Only if this is an Update.
-		if ( 'Update' !== $activity->get_type() ) {
+		// Only if this is an Update or Delete. Create handles its own Announce in dual user mode.
+		if ( ! in_array( $activity->get_type(), array( 'Update', 'Delete' ), true ) ) {
 			return $inboxes;
 		}
 
 		$blog_inboxes = Followers::get_inboxes( Actors::BLOG_USER_ID );
-
+		// array_unique is done in `send_activity_to_followers()`, no need here.
 		return array_merge( $inboxes, $blog_inboxes );
 	}
 
