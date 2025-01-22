@@ -30,6 +30,8 @@ class Post {
 		\add_action( 'add_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'edit_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'delete_attachment', array( self::class, 'transition_attachment_status' ) );
+
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'send_announces' ), 10, 4 );
 	}
 
 	/**
@@ -49,8 +51,6 @@ class Post {
 				self::schedule_post_activity( 'trash', '', $post_id );
 				break;
 		}
-
-		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'send_announces' ), 10, 4 );
 	}
 
 	/**
