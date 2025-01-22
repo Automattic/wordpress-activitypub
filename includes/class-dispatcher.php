@@ -23,7 +23,7 @@ class Dispatcher {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ), 10, 1 );
+		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ) );
 
 		// Default filters to add Inboxes to sent to.
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_follower' ), 10, 2 );
