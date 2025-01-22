@@ -148,6 +148,11 @@ class Post {
 			return;
 		}
 
+		// Check if the object is an article, image, audio, video, event or document and ignore profile updates and other activities.
+		if ( ! in_array( $activity_object->get_type(), array( 'Note', 'Article', 'Image', 'Audio', 'Video', 'Event', 'Document' ), true ) ) {
+			return;
+		}
+
 		$transformer = Factory::get_transformer( $activity_object );
 		$activity    = $transformer->to_activity( $activity_type );
 
