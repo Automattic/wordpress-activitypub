@@ -1561,13 +1561,24 @@ function is_self_ping( $id ) {
  * @return boolean|int The ID of the outbox item or false on failure.
  */
 function add_to_outbox( $data, $type = 'Create', $user_id = 0, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
+	$trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+	$debug = false;
+	foreach ($trace as $call) {
+		if (isset($call['class']) && isset($call['function'])) {
+			if ($call['class'] === 'Activitypub\Tests\Scheduler\Test_Actor' && $call['function'] === 'test_user_update') {
+				// Method was called
+				$debug = true;
+			}
+		}
+	}
 	$transformer = Transformer_Factory::get_transformer( $data );
-
+$debug ? var_dump($data,$transformer) : null;
 	if ( ! $transformer || is_wp_error( $transformer ) ) {
 		return false;
 	}
 
 	$activity = $transformer->to_object();
+	$debug ? var_dump($activity) : null;
 
 	if ( ! $activity || is_wp_error( $activity ) ) {
 		return false;
@@ -1577,6 +1588,7 @@ function add_to_outbox( $data, $type = 'Create', $user_id = 0, $content_visibili
 
 	$id = Outbox::add( $activity, $type, $user_id, $content_visibility );
 
+	$debug ? var_dump('outbox return: ' . $id) : null;
 	if ( ! $id ) {
 		return false;
 	}

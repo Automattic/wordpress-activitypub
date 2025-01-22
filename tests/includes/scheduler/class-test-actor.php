@@ -61,6 +61,7 @@ class Test_Actor extends \WP_UnitTestCase {
 	 * Clean up test resources.
 	 */
 	public static function tear_down_after_class() {
+		\delete_option( 'activitypub_actor_mode' );
 		\wp_delete_user( self::$user_id );
 		\remove_filter( 'pre_schedule_event', '__return_false' );
 	}
@@ -120,7 +121,6 @@ class Test_Actor extends \WP_UnitTestCase {
 	 * @covers ::user_update
 	 */
 	public function test_user_update() {
-		var_dump(is_user_type_disabled( 'user' ),user_can( self::$user_id, 'activitypub' ));
 		self::factory()->user->update_object( self::$user_id, array( 'display_name' => 'Test Name' ) );
 
 		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
