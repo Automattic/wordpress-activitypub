@@ -107,8 +107,7 @@ class Dispatcher {
 			safe_remote_post( $inbox, $json, $actor_id );
 		}
 
-		$outbox_item->post_status = 'publish';
-		\wp_update_post( $outbox_item );
+		\wp_publish_post( $outbox_item );
 	}
 
 	/**
