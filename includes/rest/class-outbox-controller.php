@@ -139,7 +139,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 				array(
 					'key'     => '_activitypub_activity_actor',
 					'value'   => $actor_type,
-					'compare' => '=',
 				),
 				array(
 					'key'     => '_activitypub_activity_type',
