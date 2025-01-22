@@ -56,21 +56,23 @@ class Test_Dispatcher extends WP_UnitTestCase {
 		// Mock the static method using reflection.
 		$activity->expects( $this->any() )
 			->method( '__call' )
-			->willReturnCallback( function( $name, $args ) {
-				if ( 'get_to' === $name ) {
-					return array( 'https://www.w3.org/ns/activitystreams#Public' );
-				}
+			->willReturnCallback(
+				function ( $name ) {
+					if ( 'get_to' === $name ) {
+							return array( 'https://www.w3.org/ns/activitystreams#Public' );
+					}
 
-				if ( 'get_cc' === $name ) {
-					return array();
-				}
+					if ( 'get_cc' === $name ) {
+						return array();
+					}
 
-				if ( 'get_type' === $name ) {
-					return 'Create';
-				}
+					if ( 'get_type' === $name ) {
+						return 'Create';
+					}
 
-				return null;
-			} );
+					return null;
+				}
+			);
 
 		$result = Dispatcher::maybe_add_inboxes_of_blog_user( $inboxes, 1, $activity );
 		$this->assertEquals( $inboxes, $result );
