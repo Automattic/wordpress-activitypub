@@ -49,22 +49,6 @@ class Post {
 	 * @param \WP_Post $post       Post object.
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
-		$post = get_post( $post );
-
-		if ( ! $post ) {
-			return;
-		}
-
-		if ( 'ap_extrafield' === $post->post_type ) {
-			Actor::schedule_profile_update( $post->post_author );
-			return;
-		}
-
-		if ( 'ap_extrafield_blog' === $post->post_type ) {
-			Actor::schedule_profile_update( 0 );
-			return;
-		}
-
 		if ( is_post_disabled( $post ) ) {
 			return;
 		}
