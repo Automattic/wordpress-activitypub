@@ -178,7 +178,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 
 		$max_pages         = \ceil( $response['totalItems'] / $request->get_param( 'per_page' ) );
 		$response['first'] = \add_query_arg( 'page', 1, $response['partOf'] );
-		$response['last']  = \add_query_arg( 'page', $max_pages, $response['partOf'] );
+		$response['last']  = \add_query_arg( 'page', \max( $max_pages, 1 ), $response['partOf'] );
 
 		if ( $max_pages > $page ) {
 			$response['next'] = \add_query_arg( 'page', $page + 1, $response['partOf'] );
