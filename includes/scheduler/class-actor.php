@@ -72,6 +72,18 @@ class Actor {
 	 * @param int $user_id User ID being updated.
 	 */
 	public static function user_update( $user_id ) {
+		$trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+		$debug = false;
+		foreach ($trace as $call) {
+			if (isset($call['class']) && isset($call['function'])) {
+				if ($call['class'] === 'Activitypub\Tests\Scheduler\Test_Actor' && $call['function'] === 'test_user_update') {
+					// Method was called
+					$debug = true;
+				}
+			}
+		}
+
+		$debug ? var_dump($user_id, \user_can( $user_id, 'activitypub' )) : null;
 		// Don't bother if the user can't publish.
 		if ( ! \user_can( $user_id, 'activitypub' ) ) {
 			return;

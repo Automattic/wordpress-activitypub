@@ -10,7 +10,7 @@ namespace Activitypub\Tests\Scheduler;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Extra_Fields;
-use function Activitypub\is_user_type_disabled;
+use Activitypub\Scheduler\Actor;
 
 /**
  * Test Post scheduler class.
@@ -121,6 +121,7 @@ class Test_Actor extends \WP_UnitTestCase {
 	 * @covers ::user_update
 	 */
 	public function test_user_update() {
+		var_dump('has_action',has_action( 'wp_update_user', array( Actor::class, 'user_update' )));
 		self::factory()->user->update_object( self::$user_id, array( 'display_name' => 'Test Name' ) );
 
 		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
