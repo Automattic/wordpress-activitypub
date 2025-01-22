@@ -16,6 +16,14 @@ use Activitypub\Dispatcher;
  * @coversDefaultClass Activitypub\Dispatcher
  */
 class Test_Dispatcher extends WP_UnitTestCase {
+	/**
+	 * Tear down the test case.
+	 */
+	public function tear_down() {
+		\delete_option( 'activitypub_actor_mode' );
+
+		parent::tear_down();
+	}
 
 	/**
 	 * Test maybe_add_inboxes_of_blog_user when actor mode is not ACTIVITYPUB_ACTOR_AND_BLOG_MODE
@@ -23,7 +31,7 @@ class Test_Dispatcher extends WP_UnitTestCase {
 	 * @covers ::maybe_add_inboxes_of_blog_user
 	 */
 	public function test_maybe_add_inboxes_of_blog_user_wrong_mode() {
-		update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
 
 		$inboxes  = array( 'https://example.com/inbox' );
 		$activity = $this->createMock( Activity::class );
@@ -38,7 +46,7 @@ class Test_Dispatcher extends WP_UnitTestCase {
 	 * @covers ::maybe_add_inboxes_of_blog_user
 	 */
 	public function test_maybe_add_inboxes_of_blog_user_is_blog_user() {
-		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
 		$inboxes  = array( 'https://example.com/inbox' );
 		$activity = $this->createMock( Activity::class );
@@ -53,7 +61,7 @@ class Test_Dispatcher extends WP_UnitTestCase {
 	 * @covers ::maybe_add_inboxes_of_blog_user
 	 */
 	public function test_maybe_add_inboxes_of_blog_user_not_update() {
-		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
 		$inboxes  = array( 'https://example.com/inbox' );
 		$activity = $this->createMock( Activity::class, array( '__call' ) );
