@@ -117,6 +117,16 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertArrayHasKey( 'next', $data );
 		$this->assertStringContainsString( 'page=1', $data['prev'] );
 		$this->assertStringContainsString( 'page=3', $data['next'] );
+
+		// Empty collection.
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/outbox' );
+		$request->set_param( 'per_page', 3 );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertStringContainsString( 'page=1', $data['last'] );
+		$this->assertArrayNotHasKey( 'prev', $data );
+		$this->assertArrayNotHasKey( 'next', $data );
 	}
 
 	/**
@@ -396,6 +406,11 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			),
 			'quiet_public'  => array(
 				'visibility'      => \ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
+				'public_visible'  => false,
+				'private_visible' => true,
+			),
+			'private'       => array(
+				'visibility'      => \ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
 				'public_visible'  => false,
 				'private_visible' => true,
 			),

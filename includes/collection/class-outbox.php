@@ -9,6 +9,8 @@ namespace Activitypub\Collection;
 
 /**
  * ActivityPub Outbox Collection
+ *
+ * @link https://www.w3.org/TR/activitypub/#outbox
  */
 class Outbox {
 	const POST_TYPE = 'ap_outbox';
@@ -16,9 +18,9 @@ class Outbox {
 	/**
 	 * Add an Item to the outbox.
 	 *
-	 * @param \Activitypub\Activity\Base_Object $activity_object    The Activity-Object  to add as JSON.
+	 * @param \Activitypub\Activity\Base_Object $activity_object    The object of the activity that will be added to the outbox.
 	 * @param string                            $activity_type      The activity type.
-	 * @param int                               $user_id            The user ID.
+	 * @param int                               $user_id            The real or imaginary user ID of the actor that published the activity that will be added to the outbox.
 	 * @param string                            $content_visibility Optional. The visibility of the content. Default 'public'.
 	 *
 	 * @return false|int|\WP_Error The added item or an error.

@@ -574,7 +574,7 @@ class Activitypub {
 			Outbox::POST_TYPE,
 			'_activitypub_activity_actor',
 			array(
-				'type'              => 'integer',
+				'type'              => 'string',
 				'single'            => true,
 				'sanitize_callback' => function ( $value ) {
 					$schema = array(
@@ -602,7 +602,7 @@ class Activitypub {
 				'sanitize_callback' => function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
-						'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+						'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
 						'default' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
 					);
 

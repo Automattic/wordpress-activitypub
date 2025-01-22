@@ -7,9 +7,10 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
-use Activitypub\Transformer\Factory;
+use Activitypub\Transformer\Factory as Transformer_Factory;
 
 /**
  * ActivityPub Dispatcher Class.
@@ -23,10 +24,10 @@ class Dispatcher {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ), 10, 1 );
+		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ) );
 
 		// Default filters to add Inboxes to sent to.
-		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_follower' ), 10, 2 );
+		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_follower' ), 10, 3 );
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'maybe_add_inboxes_of_blog_user' ), 10, 3 );
@@ -61,7 +62,7 @@ class Dispatcher {
 		}
 
 		$type        = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
-		$transformer = Factory::get_transformer( $outbox_item->post_content );
+		$transformer = Transformer_Factory::get_transformer( $outbox_item->post_content );
 		$activity    = $transformer->to_activity( $type );
 
 		self::send_activity_to_followers( $activity, $actor_id, $outbox_item );
@@ -123,19 +124,23 @@ class Dispatcher {
 			\add_post_meta( $outbox_item->ID, 'activitypub_send_log', $to_log );
 		}
 
-		$outbox_item->post_status = 'publish';
-		\wp_update_post( $outbox_item );
+		\wp_publish_post( $outbox_item );
 	}
 
 	/**
 	 * Default filter to add Inboxes of Followers.
 	 *
-	 * @param array $inboxes  The list of Inboxes.
-	 * @param int   $actor_id The WordPress Actor-ID.
+	 * @param array    $inboxes  The list of Inboxes.
+	 * @param int      $actor_id The WordPress Actor-ID.
+	 * @param Activity $activity The ActivityPub Activity.
 	 *
 	 * @return array The filtered Inboxes
 	 */
-	public static function add_inboxes_of_follower( $inboxes, $actor_id ) {
+	public static function add_inboxes_of_follower( $inboxes, $actor_id, $activity ) {
+		if ( ! self::should_send_to_followers( $activity, $actor_id ) ) {
+			return $inboxes;
+		}
+
 		$follower_inboxes = Followers::get_inboxes( $actor_id );
 
 		return array_merge( $inboxes, $follower_inboxes );
@@ -144,9 +149,9 @@ class Dispatcher {
 	/**
 	 * Default filter to add Inboxes of Mentioned Actors
 	 *
-	 * @param array $inboxes  The list of Inboxes.
-	 * @param int   $actor_id The WordPress Actor-ID.
-	 * @param array $activity The ActivityPub Activity.
+	 * @param array    $inboxes  The list of Inboxes.
+	 * @param int      $actor_id The WordPress Actor-ID.
+	 * @param Activity $activity The ActivityPub Activity.
 	 *
 	 * @return array The filtered Inboxes.
 	 */
@@ -224,13 +229,17 @@ class Dispatcher {
 	/**
 	 * Adds Blog Actor inboxes to Updates so the Blog User's followers are notified of edits.
 	 *
-	 * @param array $inboxes  The list of Inboxes.
-	 * @param int   $actor_id The WordPress Actor-ID.
-	 * @param array $activity The ActivityPub Activity.
+	 * @param array    $inboxes  The list of Inboxes.
+	 * @param int      $actor_id The WordPress Actor-ID.
+	 * @param Activity $activity The ActivityPub Activity.
 	 *
 	 * @return array The filtered Inboxes
 	 */
 	public static function maybe_add_inboxes_of_blog_user( $inboxes, $actor_id, $activity ) {
+		if ( ! self::should_send_to_followers( $activity, $actor_id ) ) {
+			return $inboxes;
+		}
+
 		// Only if we're in both Blog and User modes.
 		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
 			return $inboxes;
@@ -239,15 +248,48 @@ class Dispatcher {
 		if ( Actors::BLOG_USER_ID === $actor_id ) {
 			return $inboxes;
 		}
-		// Only if this is an Update.
-		if ( 'Update' !== $activity->get_type() ) {
+
+		// Only if this is an Update or Delete. Create handles its own Announce in dual user mode.
+		if ( ! in_array( $activity->get_type(), array( 'Update', 'Delete' ), true ) ) {
 			return $inboxes;
 		}
 
 		$blog_inboxes = Followers::get_inboxes( Actors::BLOG_USER_ID );
-		$inboxes      = array_merge( $inboxes, $blog_inboxes );
-		$inboxes      = array_unique( $inboxes );
+		// array_unique is done in `send_activity_to_followers()`, no need here.
+		return array_merge( $inboxes, $blog_inboxes );
+	}
 
-		return $inboxes;
+	/**
+	 * Check if passed Activity is public.
+	 *
+	 * @param Activity $activity The Activity object.
+	 * @param int      $actor_id The Actor-ID.
+	 *
+	 * @return boolean True if public, false if not.
+	 */
+	protected static function should_send_to_followers( $activity, $actor_id ) {
+		// Check if follower endpoint is set.
+		$actor = Actors::get_by_id( $actor_id );
+
+		if ( ! $actor || is_wp_error( $actor ) ) {
+			return false;
+		}
+
+		// Check if follower endpoint is set.
+		$cc = $activity->get_cc() ?? array();
+		$to = $activity->get_to() ?? array();
+
+		$audience = array_merge( $cc, $to );
+
+		if (
+			// Check if activity is public.
+			in_array( 'https://www.w3.org/ns/activitystreams#Public', $audience, true ) ||
+			// ...or check if follower endpoint is set.
+			in_array( $actor->get_followers(), $audience, true )
+		) {
+			return true;
+		}
+
+		return false;
 	}
 }
