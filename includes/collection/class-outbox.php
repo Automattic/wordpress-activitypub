@@ -20,7 +20,7 @@ class Outbox {
 	 *
 	 * @param \Activitypub\Activity\Base_Object $activity_object    The Activity-Object  to add as JSON.
 	 * @param string                            $activity_type      The activity type.
-	 * @param int                               $user_id            The user ID.
+	 * @param int                               $user_id            The real or imaginary user ID of the actor that published the activity that will be added to the outbox.
 	 * @param string                            $content_visibility Optional. The visibility of the content. Default 'public'.
 	 *
 	 * @return false|int|\WP_Error The added item or an error.
