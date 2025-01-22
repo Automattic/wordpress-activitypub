@@ -116,10 +116,10 @@ class Outbox_Controller extends \WP_REST_Controller {
 		$activity_types = apply_filters( 'rest_activitypub_outbox_activity_types', array( 'Announce', 'Create', 'Like', 'Update' ) );
 
 		switch ( $user_id ) {
-			case -1:
+			case Actors::APPLICATION_USER_ID:
 				$actor_type = 'application';
 				break;
-			case 0:
+			case Actors::BLOG_USER_ID:
 				$actor_type = 'blog';
 				break;
 			default:

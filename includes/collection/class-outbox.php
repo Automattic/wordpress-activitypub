@@ -25,10 +25,10 @@ class Outbox {
 	 */
 	public static function add( $activity_object, $activity_type, $user_id, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) { // phpcs:ignore
 		switch ( $user_id ) {
-			case -1:
+			case Actors::APPLICATION_USER_ID:
 				$actor_type = 'application';
 				break;
-			case 0:
+			case Actors::BLOG_USER_ID:
 				$actor_type = 'blog';
 				break;
 			default:
