@@ -26,13 +26,13 @@ class Outbox {
 	public static function add( $activity_object, $activity_type, $user_id, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) { // phpcs:ignore
 		switch ( $user_id ) {
 			case -1:
-				$actor = 'application';
+				$actor_type = 'application';
 				break;
 			case 0:
-				$actor = 'blog';
+				$actor_type = 'blog';
 				break;
 			default:
-				$actor = 'user';
+				$actor_type = 'user';
 				break;
 		}
 
@@ -45,7 +45,7 @@ class Outbox {
 			'post_status'  => 'draft',
 			'meta_input'   => array(
 				'_activitypub_activity_type'     => $activity_type,
-				'_activitypub_activity_actor'    => $actor,
+				'_activitypub_activity_actor'    => $actor_type,
 				'activitypub_content_visibility' => $content_visibility,
 			),
 		);
