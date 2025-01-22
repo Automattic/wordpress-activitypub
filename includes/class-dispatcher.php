@@ -236,10 +236,8 @@ class Dispatcher {
 		}
 
 		$blog_inboxes = Followers::get_inboxes( Actors::BLOG_USER_ID );
-		$inboxes      = array_merge( $inboxes, $blog_inboxes );
-		$inboxes      = array_unique( $inboxes );
 
-		return $inboxes;
+		return array_merge( $inboxes, $blog_inboxes );
 	}
 
 	/**
