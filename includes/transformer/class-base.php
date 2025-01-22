@@ -146,7 +146,7 @@ abstract class Base {
 		$activity->set_object( $object );
 
 		// Use simple Object (only ID-URI) for Like and Announce.
-		if ( in_array( $type, array( 'Like', 'Announce' ), true ) ) {
+		if ( in_array( $type, array( 'Like' ), true ) ) {
 			$activity->set_object( $object->get_id() );
 		}
 
