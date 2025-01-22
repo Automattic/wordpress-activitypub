@@ -38,12 +38,13 @@ class Test_Actor extends \WP_UnitTestCase {
 		parent::set_up_before_class();
 		self::$user_id = self::factory()->user->create(
 			array(
-				'role'       => 'author',
-				'meta_input' => array(
+				'role'         => 'author',
+				'display_name' => 'Test User',
+				'meta_input'   => array(
 					'activitypub_description'  => 'test description',
 					'activitypub_header_image' => 'test header image',
 					'description'              => 'test description',
-					'user_url'                 => 'http://example.org',
+					'user_url'                 => 'https://example.org',
 					'display_name'             => 'Test Name',
 				),
 			)
@@ -87,17 +88,26 @@ class Test_Actor extends \WP_UnitTestCase {
 	 * @covers ::schedule_post_activity
 	 */
 	public function test_schedule_post_activity_extra_fields() {
-		$author_post_id = self::factory()->post->create(
+		$post_id       = self::factory()->post->create(
 			array(
 				'post_author' => self::$user_id,
 				'post_type'   => Extra_Fields::USER_POST_TYPE,
 			)
 		);
-		$activitpub_id  = Actors::get_by_id( self::$user_id )->get_id();
+		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
 
 		$post = $this->get_latest_outbox_item( $activitpub_id );
 		$this->assertSame( $activitpub_id, $post->post_title );
 
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test post activity scheduling for ActivityPub extra fields.
+	 *
+	 * @covers ::schedule_post_activity
+	 */
+	public function test_schedule_post_activity_extra_field_blog() {
 		update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
 		$blog_post_id  = self::factory()->post->create( array( 'post_type' => Extra_Fields::BLOG_POST_TYPE ) );
 		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
@@ -106,7 +116,6 @@ class Test_Actor extends \WP_UnitTestCase {
 		$this->assertSame( $activitpub_id, $post->post_title );
 
 		// Clean up.
-		\wp_delete_post( $author_post_id, true );
 		\wp_delete_post( $blog_post_id, true );
 		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 	}
