@@ -574,7 +574,7 @@ class Activitypub {
 			Outbox::POST_TYPE,
 			'_activitypub_activity_actor',
 			array(
-				'type'              => 'integer',
+				'type'              => 'string',
 				'single'            => true,
 				'sanitize_callback' => function ( $value ) {
 					$schema = array(
