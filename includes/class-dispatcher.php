@@ -9,7 +9,7 @@ namespace Activitypub;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
-use Activitypub\Transformer\Factory;
+use Activitypub\Transformer\Factory as Transformer_Factory;
 
 /**
  * ActivityPub Dispatcher Class.
@@ -61,7 +61,7 @@ class Dispatcher {
 		}
 
 		$type        = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
-		$transformer = Factory::get_transformer( $outbox_item->post_content );
+		$transformer = Transformer_Factory::get_transformer( $outbox_item->post_content );
 		$activity    = $transformer->to_activity( $type );
 
 		self::send_activity_to_followers( $activity, $actor_id, $outbox_item );

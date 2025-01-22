@@ -29,7 +29,7 @@ class Scheduler {
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
 
-		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_item_for_federation' ) );
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_activity_for_federation' ) );
 	}
 
 	/**
@@ -146,7 +146,7 @@ class Scheduler {
 	 *
 	 * @param int $id The ID of the outbox item.
 	 */
-	public static function schedule_outbox_item_for_federation( $id ) {
+	public static function schedule_outbox_activity_for_federation( $id ) {
 		$hook = 'activitypub_process_outbox';
 		$args = array( $id );
 

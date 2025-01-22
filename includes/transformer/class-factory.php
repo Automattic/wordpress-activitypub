@@ -94,7 +94,7 @@ class Factory {
 					return new User( $data );
 				}
 				break;
-			case 'Base_Object':
+			case 'Activitypub\Activity\Base_Object':
 				return new Activity_Object( $data );
 			case 'json':
 				return new Json( $data );
