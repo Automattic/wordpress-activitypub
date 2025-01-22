@@ -61,7 +61,12 @@ class Test_Actor extends \WP_UnitTestCase {
 	public static function tear_down_after_class() {
 		\wp_delete_user( self::$user_id );
 		\remove_filter( 'pre_schedule_event', '__return_false' );
+	}
 
+	/**
+	 * Tear down.
+	 */
+	public function tear_down() {
 		$outbox_items = get_posts(
 			array(
 				'post_type'      => Outbox::POST_TYPE,
