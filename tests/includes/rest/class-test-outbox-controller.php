@@ -409,6 +409,11 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 				'public_visible'  => false,
 				'private_visible' => true,
 			),
+			'private'       => array(
+				'visibility'      => \ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				'public_visible'  => false,
+				'private_visible' => true,
+			),
 			'local'         => array(
 				'visibility'      => \ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
 				'public_visible'  => false,
