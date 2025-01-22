@@ -59,7 +59,7 @@ class Test_Dispatcher extends WP_UnitTestCase {
 			->willReturnCallback(
 				function ( $name ) {
 					if ( 'get_to' === $name ) {
-							return array( 'https://www.w3.org/ns/activitystreams#Public' );
+						return array( 'https://www.w3.org/ns/activitystreams#Public' );
 					}
 
 					if ( 'get_cc' === $name ) {
