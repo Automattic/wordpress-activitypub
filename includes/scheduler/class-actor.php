@@ -32,7 +32,7 @@ class Actor {
 
 		// Profile updates for user options.
 		if ( ! is_user_type_disabled( 'user' ) ) {
-			\add_action( 'wp_update_user', array( self::class, 'user_update' ) );
+			\add_action( 'profile_update', array( self::class, 'user_update' ) );
 			\add_action( 'updated_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
 			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
 		}

@@ -121,14 +121,8 @@ class Test_Actor extends \WP_UnitTestCase {
 	 * @covers ::user_update
 	 */
 	public function test_user_update() {
-		add_action( 'wp_update_user', function(){ var_dump('called');});
-		$result = \wp_update_user(
-			array(
-				'ID'           => self::$user_id,
-				'display_name' => 'Test Name',
-			)
-		);
-		var_dump('result',$result);
+		self::factory()->user->update_object( self::$user_id, array( 'display_name' => 'Test Name' ) );
+
 		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
 		$post          = $this->get_latest_outbox_item( $activitpub_id );
 		$this->assertSame( $activitpub_id, $post->post_title );
