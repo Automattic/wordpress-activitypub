@@ -1582,6 +1582,14 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 		return false;
 	}
 
+	/**
+	 * Action triggered after an object has been added to the outbox.
+	 *
+	 * @param int                               $outbox_activity_id The ID of the outbox item.
+	 * @param \Activitypub\Activity\Base_Object $activity_object    The activity object.
+	 * @param int                               $user_id            The User-ID.
+	 * @param string                            $content_visibility The visibility of the content.
+	 */
 	\do_action( 'post_activitypub_add_to_outbox', $outbox_activity_id, $activity_object, $user_id, $content_visibility );
 
 	return $outbox_activity_id;
