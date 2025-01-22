@@ -33,7 +33,6 @@ The plugin works with the following tested federated platforms, but there may be
 * [Pixelfed](https://pixelfed.org/)
 * [Socialhome](https://socialhome.network/)
 * [Misskey](https://join.misskey.page/)
-* [Firefish](https://joinfirefish.org/) (rebrand of Calckey)
 
 Some things to note:
 
