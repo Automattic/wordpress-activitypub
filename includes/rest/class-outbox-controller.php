@@ -137,8 +137,8 @@ class Outbox_Controller extends \WP_REST_Controller {
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(
 				array(
-					'key'     => '_activitypub_activity_actor',
-					'value'   => $actor_type,
+					'key'   => '_activitypub_activity_actor',
+					'value' => $actor_type,
 				),
 			),
 		);
