@@ -7,7 +7,6 @@
 
 namespace Activitypub\Transformer;
 
-use Activitypub\Activity\Base_Object;
 use WP_Error;
 
 use function Activitypub\is_user_disabled;
@@ -98,7 +97,7 @@ class Factory {
 				return new Json( $data );
 		}
 
-		if ( $data instanceof Base_Object ) {
+		if ( $data instanceof \Activitypub\Activity\Base_Object ) {
 			return new Activity_Object( $data );
 		}
 
