@@ -83,44 +83,6 @@ class Test_Actor extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test post activity scheduling for ActivityPub extra fields.
-	 *
-	 * @covers ::schedule_post_activity
-	 */
-	public function test_schedule_post_activity_extra_fields() {
-		$post_id       = self::factory()->post->create(
-			array(
-				'post_author' => self::$user_id,
-				'post_type'   => Extra_Fields::USER_POST_TYPE,
-			)
-		);
-		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
-
-		$post = $this->get_latest_outbox_item( $activitpub_id );
-		$this->assertSame( $activitpub_id, $post->post_title );
-
-		\wp_delete_post( $post_id, true );
-	}
-
-	/**
-	 * Test post activity scheduling for ActivityPub extra fields.
-	 *
-	 * @covers ::schedule_post_activity
-	 */
-	public function test_schedule_post_activity_extra_field_blog() {
-		update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
-		$blog_post_id  = self::factory()->post->create( array( 'post_type' => Extra_Fields::BLOG_POST_TYPE ) );
-		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
-
-		$post = $this->get_latest_outbox_item( $activitpub_id );
-		$this->assertSame( $activitpub_id, $post->post_title );
-
-		// Clean up.
-		\wp_delete_post( $blog_post_id, true );
-		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
-	}
-
-	/**
 	 * Data provider for user meta update scheduling.
 	 *
 	 * @return string[][]
@@ -214,6 +176,44 @@ class Test_Actor extends \WP_UnitTestCase {
 
 		// Restore the activitypub capability.
 		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
+	}
+
+	/**
+	 * Test post activity scheduling for ActivityPub extra fields.
+	 *
+	 * @covers ::schedule_post_activity
+	 */
+	public function test_schedule_post_activity_extra_fields() {
+		$post_id       = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_type'   => Extra_Fields::USER_POST_TYPE,
+			)
+		);
+		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
+
+		$post = $this->get_latest_outbox_item( $activitpub_id );
+		$this->assertSame( $activitpub_id, $post->post_title );
+
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test post activity scheduling for ActivityPub extra fields.
+	 *
+	 * @covers ::schedule_post_activity
+	 */
+	public function test_schedule_post_activity_extra_field_blog() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		$blog_post_id  = self::factory()->post->create( array( 'post_type' => Extra_Fields::BLOG_POST_TYPE ) );
+		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+
+		$post = $this->get_latest_outbox_item( $activitpub_id );
+		$this->assertSame( $activitpub_id, $post->post_title );
+
+		// Clean up.
+		\wp_delete_post( $blog_post_id, true );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 	}
 
 	/**
