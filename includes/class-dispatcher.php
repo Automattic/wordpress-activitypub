@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Factory as Transformer_Factory;
@@ -113,9 +114,9 @@ class Dispatcher {
 	/**
 	 * Default filter to add Inboxes of Followers.
 	 *
-	 * @param array $inboxes  The list of Inboxes.
-	 * @param int   $actor_id The WordPress Actor-ID.
-	 * @param array $activity The ActivityPub Activity.
+	 * @param array    $inboxes  The list of Inboxes.
+	 * @param int      $actor_id The WordPress Actor-ID.
+	 * @param Activity $activity The ActivityPub Activity.
 	 *
 	 * @return array The filtered Inboxes
 	 */
@@ -132,9 +133,9 @@ class Dispatcher {
 	/**
 	 * Default filter to add Inboxes of Mentioned Actors
 	 *
-	 * @param array $inboxes  The list of Inboxes.
-	 * @param int   $actor_id The WordPress Actor-ID.
-	 * @param array $activity The ActivityPub Activity.
+	 * @param array    $inboxes  The list of Inboxes.
+	 * @param int      $actor_id The WordPress Actor-ID.
+	 * @param Activity $activity The ActivityPub Activity.
 	 *
 	 * @return array The filtered Inboxes.
 	 */
@@ -212,9 +213,9 @@ class Dispatcher {
 	/**
 	 * Adds Blog Actor inboxes to Updates so the Blog User's followers are notified of edits.
 	 *
-	 * @param array $inboxes  The list of Inboxes.
-	 * @param int   $actor_id The WordPress Actor-ID.
-	 * @param array $activity The ActivityPub Activity.
+	 * @param array    $inboxes  The list of Inboxes.
+	 * @param int      $actor_id The WordPress Actor-ID.
+	 * @param Activity $activity The ActivityPub Activity.
 	 *
 	 * @return array The filtered Inboxes
 	 */
@@ -244,8 +245,8 @@ class Dispatcher {
 	/**
 	 * Check if passed Activity is public.
 	 *
-	 * @param array $activity The Activity object as array.
-	 * @param int   $actor_id The Actor-ID.
+	 * @param Activity $activity The Activity object.
+	 * @param int      $actor_id The Actor-ID.
 	 *
 	 * @return boolean True if public, false if not.
 	 */

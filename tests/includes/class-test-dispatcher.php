@@ -10,16 +10,17 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Dispatcher;
 
-
 /**
  * Test class for Activitypub Dispatcher.
  *
- * @covers Activitypub\Dispatcher
+ * @coversDefaultClass Activitypub\Dispatcher
  */
 class Test_Dispatcher extends WP_UnitTestCase {
 
 	/**
 	 * Test maybe_add_inboxes_of_blog_user when actor mode is not ACTIVITYPUB_ACTOR_AND_BLOG_MODE
+	 *
+	 * @covers ::maybe_add_inboxes_of_blog_user
 	 */
 	public function test_maybe_add_inboxes_of_blog_user_wrong_mode() {
 		update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
@@ -33,6 +34,8 @@ class Test_Dispatcher extends WP_UnitTestCase {
 
 	/**
 	 * Test maybe_add_inboxes_of_blog_user when actor is blog user
+	 *
+	 * @covers ::maybe_add_inboxes_of_blog_user
 	 */
 	public function test_maybe_add_inboxes_of_blog_user_is_blog_user() {
 		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
@@ -46,6 +49,8 @@ class Test_Dispatcher extends WP_UnitTestCase {
 
 	/**
 	 * Test maybe_add_inboxes_of_blog_user when activity type is not Update
+	 *
+	 * @covers ::maybe_add_inboxes_of_blog_user
 	 */
 	public function test_maybe_add_inboxes_of_blog_user_not_update() {
 		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
