@@ -9,6 +9,8 @@ namespace Activitypub\Collection;
 
 /**
  * ActivityPub Outbox Collection
+ *
+ * @link https://www.w3.org/TR/activitypub/#outbox
  */
 class Outbox {
 	const POST_TYPE = 'ap_outbox';
