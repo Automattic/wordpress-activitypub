@@ -391,7 +391,7 @@ class Post extends Base {
 	 * @return array The list of Mentions.
 	 */
 	protected function get_cc() {
-		$cc   = array_values( $this->extract_mentions() );
+		$cc   = array_values( $this->get_mentions() );
 		$cc[] = $this->get_actor_object()->get_followers();
 
 		return $cc;
@@ -599,7 +599,7 @@ class Post extends Base {
 	 *
 	 * @return array The list of @-Mentions.
 	 */
-	protected function extract_mentions() {
+	protected function get_mentionsx() {
 		/**
 		 * Filter the mentions in the post content.
 		 *

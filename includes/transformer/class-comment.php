@@ -206,7 +206,7 @@ class Comment extends Base {
 			$this->get_actor_object()->get_followers(),
 		);
 
-		$mentions = $this->extract_mentions();
+		$mentions = $this->get_mentions();
 		if ( $mentions ) {
 			foreach ( $mentions as $url ) {
 				$cc[] = $url;
@@ -221,7 +221,7 @@ class Comment extends Base {
 	 *
 	 * @return array The list of @-Mentions.
 	 */
-	protected function extract_mentions() {
+	protected function get_mentionsx() {
 		\add_filter( 'activitypub_extract_mentions', array( $this, 'extract_reply_context' ) );
 
 		/**

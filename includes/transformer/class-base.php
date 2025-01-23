@@ -262,7 +262,7 @@ abstract class Base {
 	 */
 	protected function get_tag() {
 		$tags     = array();
-		$mentions = $this->extract_mentions();
+		$mentions = $this->get_mentions();
 
 		if ( $mentions ) {
 			foreach ( $mentions as $mention => $url ) {
@@ -283,7 +283,7 @@ abstract class Base {
 	 *
 	 * @return array The mentions.
 	 */
-	protected function extract_mentions() {
+	protected function get_mentionsx() {
 		$content = '';
 
 		if ( method_exists( $this, 'get_content' ) ) {

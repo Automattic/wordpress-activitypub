@@ -25,7 +25,7 @@ class Activity_Object extends Base {
 	 *
 	 * @return array The list of @-Mentions.
 	 */
-	protected function extract_mentions() {
+	protected function get_mentionsx() {
 		/**
 		 * Filter the mentions in the post content.
 		 *
@@ -52,7 +52,7 @@ class Activity_Object extends Base {
 	 */
 	protected function get_cc() {
 		$cc       = $this->item->get( 'cc' ) ?? array();
-		$mentions = $this->extract_mentions();
+		$mentions = $this->get_mentions();
 
 		if ( $mentions ) {
 			foreach ( $mentions as $url ) {
@@ -149,7 +149,7 @@ class Activity_Object extends Base {
 			$tags = array();
 		}
 
-		$mentions = $this->extract_mentions();
+		$mentions = $this->get_mentions();
 
 		if ( $mentions ) {
 			foreach ( $mentions as $mention => $url ) {
