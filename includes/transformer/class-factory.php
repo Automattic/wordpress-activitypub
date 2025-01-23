@@ -94,10 +94,12 @@ class Factory {
 					return new User( $data );
 				}
 				break;
-			case 'Base_Object':
-				return new Activity_Object( $data );
 			case 'json':
 				return new Json( $data );
+		}
+
+		if ( $data instanceof \Activitypub\Activity\Base_Object ) {
+			return new Activity_Object( $data );
 		}
 
 		return new WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );

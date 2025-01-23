@@ -8,6 +8,7 @@
 namespace Activitypub\Scheduler;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Extra_Fields;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_user_type_disabled;
@@ -31,10 +32,12 @@ class Actor {
 
 		// Profile updates for user options.
 		if ( ! is_user_type_disabled( 'user' ) ) {
-			\add_action( 'wp_update_user', array( self::class, 'user_update' ) );
+			\add_action( 'profile_update', array( self::class, 'user_update' ) );
 			\add_action( 'updated_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
 			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
 		}
+
+		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
 	}
 
 	/**
@@ -90,6 +93,21 @@ class Actor {
 	}
 
 	/**
+	 * Schedule Activities.
+	 *
+	 * @param string   $new_status New post status.
+	 * @param string   $old_status Old post status.
+	 * @param \WP_Post $post       Post object.
+	 */
+	public static function schedule_post_activity( $new_status, $old_status, $post ) {
+		if ( Extra_Fields::USER_POST_TYPE === $post->post_type ) {
+			self::schedule_profile_update( $post->post_author );
+		} elseif ( Extra_Fields::BLOG_POST_TYPE === $post->post_type ) {
+			self::schedule_profile_update( Actors::BLOG_USER_ID );
+		}
+	}
+
+	/**
 	 * Send a profile update to all followers. Gets hooked into all relevant options/meta etc.
 	 *
 	 * @param int $user_id  The user ID to update (Could be 0 for Blog-User).
@@ -97,6 +115,6 @@ class Actor {
 	public static function schedule_profile_update( $user_id ) {
 		$actor = Actors::get_by_id( $user_id );
 
-		add_to_outbox( $actor->get_id(), 'Update', $user_id );
+		add_to_outbox( $actor, 'Update', $user_id );
 	}
 }
