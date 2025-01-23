@@ -7,6 +7,7 @@
 
 namespace Activitypub\Scheduler;
 
+use Activitypub\Scheduler;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Actors;
 use Activitypub\Transformer\Factory;
@@ -156,6 +157,13 @@ class Post {
 		$transformer = Factory::get_transformer( $activity_object );
 		$activity    = $transformer->to_activity( $activity_type );
 
-		Outbox::add( $activity, 'Announce', Actors::BLOG_USER_ID, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+		$outbox_activity_id = Outbox::add( $activity, 'Announce', Actors::BLOG_USER_ID, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+
+		if ( ! $outbox_activity_id ) {
+			return false;
+		}
+
+		// Schedule the outbox item for federation.
+		Scheduler::schedule_outbox_activity_for_federation( $outbox_activity_id );
 	}
 }
