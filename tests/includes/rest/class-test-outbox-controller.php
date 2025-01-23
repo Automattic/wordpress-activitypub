@@ -173,8 +173,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			array(
 				'post_author'  => $user_id,
 				'post_type'    => Outbox::POST_TYPE,
-				'post_status'  => 'draft',
 				'post_title'   => 'https://example.org/activity/1',
+				'post_status'  => 'pending',
 				'post_content' => wp_json_encode(
 					array(
 						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
@@ -344,7 +344,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			array(
 				'post_author'  => $user_id,
 				'post_type'    => Outbox::POST_TYPE,
-				'post_status'  => 'draft',
+				'post_status'  => 'pending',
 				'post_title'   => "https://example.org/activity/{$type}",
 				'post_content' => \wp_json_encode(
 					array(
@@ -420,6 +420,11 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 				'public_visible'  => false,
 				'private_visible' => true,
 			),
+			'private'       => array(
+				'visibility'      => \ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				'public_visible'  => false,
+				'private_visible' => true,
+			),
 			'local'         => array(
 				'visibility'      => \ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
 				'public_visible'  => false,
@@ -453,7 +458,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			array(
 				'post_author'  => $user_id,
 				'post_type'    => Outbox::POST_TYPE,
-				'post_status'  => 'draft',
+				'post_status'  => 'pending',
 				'post_title'   => 'https://example.org/activity/1',
 				'post_content' => \wp_json_encode(
 					array(

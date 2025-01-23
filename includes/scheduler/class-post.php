@@ -7,6 +7,11 @@
 
 namespace Activitypub\Scheduler;
 
+use Activitypub\Scheduler;
+use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Actors;
+use Activitypub\Transformer\Factory;
+
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_post_disabled;
 use function Activitypub\get_wp_object_state;
@@ -26,6 +31,8 @@ class Post {
 		\add_action( 'add_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'edit_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'delete_attachment', array( self::class, 'transition_attachment_status' ) );
+
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'send_announces' ), 10, 4 );
 	}
 
 	/**
@@ -91,5 +98,54 @@ class Post {
 
 		// Add the post to the outbox.
 		add_to_outbox( $post, $type, $post->post_author, $content_visibility );
+	}
+
+	/**
+	 * Send announces.
+	 *
+	 * @param int   $outbox_activity_id The outbox activity ID.
+	 * @param array $activity_object    The activity object.
+	 * @param int   $actor_id           The actor ID.
+	 * @param int   $content_visibility The content visibility.
+	 */
+	public static function send_announces( $outbox_activity_id, $activity_object, $actor_id, $content_visibility ) {
+		// Only if we're in both Blog and User modes.
+		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
+			return;
+		}
+
+		// Only if this isn't the Blog Actor.
+		if ( Actors::BLOG_USER_ID === $actor_id ) {
+			return;
+		}
+
+		// Only if the content is public or quiet public.
+		if ( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC !== $content_visibility ) {
+			return;
+		}
+
+		$activity_type = \get_post_meta( $outbox_activity_id, '_activitypub_activity_type', true );
+
+		// Only if the activity is a Create, Update or Delete.
+		if ( ! in_array( $activity_type, array( 'Create', 'Update', 'Delete' ), true ) ) {
+			return;
+		}
+
+		// Check if the object is an article, image, audio, video, event or document and ignore profile updates and other activities.
+		if ( ! in_array( $activity_object->get_type(), array( 'Note', 'Article', 'Image', 'Audio', 'Video', 'Event', 'Document' ), true ) ) {
+			return;
+		}
+
+		$transformer = Factory::get_transformer( $activity_object );
+		$activity    = $transformer->to_activity( $activity_type );
+
+		$outbox_activity_id = Outbox::add( $activity, 'Announce', Actors::BLOG_USER_ID, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+
+		if ( ! $outbox_activity_id ) {
+			return false;
+		}
+
+		// Schedule the outbox item for federation.
+		Scheduler::schedule_outbox_activity_for_federation( $outbox_activity_id );
 	}
 }
