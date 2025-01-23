@@ -126,6 +126,11 @@ abstract class Base {
 	public function to_object() {
 		$activity_object = new Base_Object();
 		$activity_object = $this->transform_object_properties( $activity_object );
+
+		if ( \is_wp_error( $activity_object ) ) {
+			return $activity_object;
+		}
+
 		$activity_object = $this->set_audience( $activity_object );
 
 		return $activity_object;
@@ -158,7 +163,11 @@ abstract class Base {
 	protected function set_audience( $activity_object ) {
 		$public    = 'https://www.w3.org/ns/activitystreams#Public';
 		$actor     = Actors::get_by_resource( $this->get_attributed_to() );
-		$followers = $actor->get_followers();
+		if ( ! $actor || is_wp_error( $actor ) ) {
+			$followers = array();
+		} else {
+			$followers = $actor->get_followers();
+		}
 		$mentions  = array_values( $this->get_mentions() );
 
 		switch ( $this->get_content_visibility() ) {
@@ -311,6 +320,15 @@ abstract class Base {
 		}
 
 		return \array_unique( $tags, SORT_REGULAR );
+	}
+
+	/**
+	 * Get the attributed to.
+	 *
+	 * @return string The attributed to.
+	 */
+	protected function get_attributed_to() {
+		return null;
 	}
 
 	/**

@@ -18,6 +18,11 @@ class Activity_Object extends Base {
 	 */
 	public function to_object() {
 		$activity_object = $this->transform_object_properties( $this->item );
+
+		if ( \is_wp_error( $activity_object ) ) {
+			return $activity_object;
+		}
+
 		$activity_object = $this->set_audience( $activity_object );
 
 		return $activity_object;
