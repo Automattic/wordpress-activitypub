@@ -93,11 +93,8 @@ class Post {
 			return;
 		}
 
-		// Get the content visibility.
-		$content_visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
-
 		// Add the post to the outbox.
-		add_to_outbox( $post, $type, $post->post_author, $content_visibility );
+		add_to_outbox( $post, $type, $post->post_author );
 	}
 
 	/**
