@@ -25,7 +25,7 @@ class Activity_Object extends Base {
 	 *
 	 * @return array The list of @-Mentions.
 	 */
-	protected function get_mentionsx() {
+	protected function get_mentions() {
 		/**
 		 * Filter the mentions in the post content.
 		 *

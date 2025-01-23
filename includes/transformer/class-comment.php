@@ -221,7 +221,7 @@ class Comment extends Base {
 	 *
 	 * @return array The list of @-Mentions.
 	 */
-	protected function get_mentionsx() {
+	protected function get_mentions() {
 		\add_filter( 'activitypub_extract_mentions', array( $this, 'extract_reply_context' ) );
 
 		/**

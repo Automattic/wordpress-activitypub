@@ -283,7 +283,7 @@ abstract class Base {
 	 *
 	 * @return array The mentions.
 	 */
-	protected function get_mentionsx() {
+	protected function get_mentions() {
 		$content = '';
 
 		if ( method_exists( $this, 'get_content' ) ) {
