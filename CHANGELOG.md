@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 * Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
+* Send full Actor object in profile updates
 
 ## [4.7.3] - 2025-01-21
 
