@@ -144,7 +144,7 @@ class Activity_Dispatcher {
 		$activity = new Activity();
 		$activity->set_type( 'Update' );
 		$activity->set_actor( $user->get_id() );
-		$activity->set_object( $user->get_id() );
+		$activity->set_object( $user->to_array() );
 		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
 
 		// Send the update.
