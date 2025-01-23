@@ -45,7 +45,7 @@ abstract class Base {
 	 *
 	 * @var string
 	 */
-	protected $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+	protected $content_visibility;
 
 	/**
 	 * Static function to Transform a WordPress Object.
@@ -137,6 +137,10 @@ abstract class Base {
 	 * @return string The content visibility.
 	 */
 	public function get_content_visibility() {
+		if ( ! $this->content_visibility ) {
+			return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+		}
+
 		return $this->content_visibility;
 	}
 
@@ -151,7 +155,7 @@ abstract class Base {
 		return $this;
 	}
 
-	private function set_audience( $activity_object ) {
+	protected function set_audience( $activity_object ) {
 		$public    = 'https://www.w3.org/ns/activitystreams#Public';
 		$actor     = Actors::get_by_resource( $this->get_attributed_to() );
 		$followers = $actor->get_followers();

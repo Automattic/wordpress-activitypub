@@ -1570,6 +1570,8 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 
 	if ( $content_visibility ) {
 		$transformer->set_content_visibility( $content_visibility );
+	} else {
+		$content_visibility = $transformer->get_content_visibility();
 	}
 
 	$activity_object = $transformer->to_object();
@@ -1580,7 +1582,7 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 
 	set_wp_object_state( $data, 'federate' );
 
-	$outbox_activity_id = Outbox::add( $activity_object, $activity_type, $user_id, $transformer->get_content_visibility() );
+	$outbox_activity_id = Outbox::add( $activity_object, $activity_type, $user_id, $content_visibility );
 
 	if ( ! $outbox_activity_id ) {
 		return false;

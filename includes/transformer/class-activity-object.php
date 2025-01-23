@@ -17,7 +17,19 @@ class Activity_Object extends Base {
 	 * @return Base_Object The ActivityPub Object.
 	 */
 	public function to_object() {
-		return $this->transform_object_properties( $this->item );
+		$activity_object = $this->transform_object_properties( $this->item );
+		$activity_object = $this->set_audience( $activity_object );
+
+		return $activity_object;
+	}
+
+	/**
+	 * Get the attributed to.
+	 *
+	 * @return string The attributed to.
+	 */
+	public function get_attributed_to() {
+		return $this->item->get_attributed_to();
 	}
 
 	/**

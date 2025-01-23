@@ -67,7 +67,11 @@ class Post extends Base {
 	 * @return string The content visibility.
 	 */
 	public function get_content_visibility() {
-		return get_content_visibility( $this->item );
+		if ( ! $this->content_visibility ) {
+			return get_content_visibility( $this->item );
+		}
+
+		return $this->content_visibility;
 	}
 
 	/**
