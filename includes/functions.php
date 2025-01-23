@@ -1568,7 +1568,7 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 		return false;
 	}
 
-	if ( null === $content_visibility ) {
+	if ( $content_visibility ) {
 		$transformer->set_content_visibility( $content_visibility );
 	}
 
