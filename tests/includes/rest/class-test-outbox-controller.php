@@ -541,7 +541,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		// Create a post with blog actor type.
 		$blog_post_id = self::factory()->post->create(
 			array(
-				'post_author'  => $user_id,
+				'post_author'  => 0,
 				'post_type'    => Outbox::POST_TYPE,
 				'post_status'  => 'draft',
 				'post_title'   => 'https://example.org/activity/2',
