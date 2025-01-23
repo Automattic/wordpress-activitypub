@@ -142,7 +142,7 @@ class Mention {
 	 *
 	 * @return array The discovered mentions.
 	 */
-	public static function get_mentions( $mentions, $post_content ) {
+	public static function extract_mentions( $mentions, $post_content ) {
 		\preg_match_all( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i', $post_content, $matches );
 		foreach ( $matches[0] as $match ) {
 			$link = Webfinger::resolve( $match );
