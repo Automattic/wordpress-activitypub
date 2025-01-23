@@ -41,7 +41,7 @@ class Outbox {
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
 			'post_title'   => $activity_object->get_id(),
-			'post_content' => $activity_object->to_json(),
+			'post_content' => wp_slash( $activity_object->to_json() ),
 			// ensure that user ID is not below 0.
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'pending',
