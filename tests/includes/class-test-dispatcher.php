@@ -36,7 +36,6 @@ class Test_Dispatcher extends WP_UnitTestCase {
 		$inboxes  = array( 'https://example.com/inbox' );
 		$activity = $this->createMock( Activity::class );
 		$result   = Dispatcher::maybe_add_inboxes_of_blog_user( $inboxes, 1, $activity );
-
 		$this->assertEquals( $inboxes, $result );
 	}
 
@@ -88,7 +87,6 @@ class Test_Dispatcher extends WP_UnitTestCase {
 			);
 
 		$result = Dispatcher::maybe_add_inboxes_of_blog_user( $inboxes, 1, $activity );
-
 		$this->assertEquals( $inboxes, $result );
 	}
 }
