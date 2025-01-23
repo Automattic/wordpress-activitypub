@@ -79,6 +79,11 @@ class Post {
 			return;
 		}
 
+		// Skip if the post author is not allowed to publish activities.
+		if ( $post->post_author > 0 && ! \user_can( $post->post_author, 'activitypub' ) ) {
+			return;
+		}
+
 		switch ( $new_status ) {
 			case 'publish':
 				$type = ( 'publish' === $old_status ) ? 'Update' : 'Create';
