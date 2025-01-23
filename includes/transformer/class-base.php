@@ -160,15 +160,22 @@ abstract class Base {
 		return $this;
 	}
 
+	/**
+	 * Set the audience.
+	 *
+	 * @param Base_Object $activity_object The ActivityPub Object.
+	 *
+	 * @return Base_Object The ActivityPub Object.
+	 */
 	protected function set_audience( $activity_object ) {
-		$public    = 'https://www.w3.org/ns/activitystreams#Public';
-		$actor     = Actors::get_by_resource( $this->get_attributed_to() );
+		$public = 'https://www.w3.org/ns/activitystreams#Public';
+		$actor  = Actors::get_by_resource( $this->get_attributed_to() );
 		if ( ! $actor || is_wp_error( $actor ) ) {
 			$followers = array();
 		} else {
 			$followers = $actor->get_followers();
 		}
-		$mentions  = array_values( $this->get_mentions() );
+		$mentions = array_values( $this->get_mentions() );
 
 		switch ( $this->get_content_visibility() ) {
 			case ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC:

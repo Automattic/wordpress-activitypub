@@ -570,7 +570,7 @@ class Base_Object {
 			$this->$key = array( $this->$key );
 		}
 
-		$attributes   = $this->$key;
+		$attributes = $this->$key;
 
 		if ( is_array( $value ) ) {
 			$attributes = array_merge( $attributes, $value );
