@@ -1424,6 +1424,7 @@ function get_content_visibility( $post_id ) {
 	$_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
 	$options     = array(
 		ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
+		ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
 		ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
 	);
 
@@ -1554,43 +1555,42 @@ function is_self_ping( $id ) {
  * Add an object to the outbox.
  *
  * @param mixed   $data               The object to add to the outbox.
- * @param string  $type               The type of the Activity.
+ * @param string  $activity_type      The type of the Activity.
  * @param integer $user_id            The User-ID.
  * @param string  $content_visibility The visibility of the content.
  *
  * @return boolean|int The ID of the outbox item or false on failure.
  */
-function add_to_outbox( $data, $type = 'Create', $user_id = 0, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
+function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
 	$transformer = Transformer_Factory::get_transformer( $data );
 
 	if ( ! $transformer || is_wp_error( $transformer ) ) {
 		return false;
 	}
 
-	$activity = $transformer->to_object();
+	$activity_object = $transformer->to_object();
 
-	if ( ! $activity || is_wp_error( $activity ) ) {
+	if ( ! $activity_object || \is_wp_error( $activity_object ) ) {
 		return false;
 	}
 
 	set_wp_object_state( $data, 'federate' );
 
-	$id = Outbox::add( $activity, $type, $user_id, $content_visibility );
+	$outbox_activity_id = Outbox::add( $activity_object, $activity_type, $user_id, $content_visibility );
 
-	if ( ! $id ) {
+	if ( ! $outbox_activity_id ) {
 		return false;
 	}
 
-	$hook = 'activitypub_process_outbox';
-	$args = array( $id );
+	/**
+	 * Action triggered after an object has been added to the outbox.
+	 *
+	 * @param int                               $outbox_activity_id The ID of the outbox item.
+	 * @param \Activitypub\Activity\Base_Object $activity_object    The activity object.
+	 * @param int                               $user_id            The User-ID.
+	 * @param string                            $content_visibility The visibility of the content.
+	 */
+	\do_action( 'post_activitypub_add_to_outbox', $outbox_activity_id, $activity_object, $user_id, $content_visibility );
 
-	if ( false === wp_next_scheduled( $hook, $args ) ) {
-		\wp_schedule_single_event(
-			\time() + 10,
-			$hook,
-			$args
-		);
-	}
-
-	return $id;
+	return $outbox_activity_id;
 }
