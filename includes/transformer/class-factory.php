@@ -9,6 +9,9 @@ namespace Activitypub\Transformer;
 
 use WP_Error;
 
+use function Activitypub\is_user_disabled;
+use function Activitypub\is_post_disabled;
+use function Activitypub\is_local_comment;
 /**
  * Transformer Factory.
  */
@@ -72,14 +75,24 @@ class Factory {
 		// Use default transformer.
 		switch ( $class ) {
 			case 'WP_Post':
-				if ( 'attachment' === $data->post_type ) {
+				if ( 'attachment' === $data->post_type && ! is_post_disabled( $data ) ) {
 					return new Attachment( $data );
+				} elseif ( ! is_post_disabled( $data ) ) {
+					return new Post( $data );
 				}
-				return new Post( $data );
+				break;
 			case 'WP_Comment':
-				return new Comment( $data );
-			default:
-				return null;
+				if ( ! is_local_comment( $data ) ) {
+					return new Comment( $data );
+				}
+				break;
+			case 'WP_User':
+				if ( ! is_user_disabled( $data->ID ) ) {
+					return new User( $data );
+				}
+				break;
 		}
+
+		return null;
 	}
 }

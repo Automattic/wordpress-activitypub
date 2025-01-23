@@ -45,7 +45,7 @@ class Inbox {
 					'methods'             => WP_REST_Server::CREATABLE,
 					'callback'            => array( self::class, 'shared_inbox_post' ),
 					'args'                => self::shared_inbox_post_parameters(),
-					'permission_callback' => '__return_true',
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
 				),
 			)
 		);
@@ -58,13 +58,13 @@ class Inbox {
 					'methods'             => WP_REST_Server::CREATABLE,
 					'callback'            => array( self::class, 'user_inbox_post' ),
 					'args'                => self::user_inbox_post_parameters(),
-					'permission_callback' => '__return_true',
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
 				),
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( self::class, 'user_inbox_get' ),
 					'args'                => self::user_inbox_get_parameters(),
-					'permission_callback' => '__return_true',
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
 				),
 			)
 		);
@@ -85,7 +85,7 @@ class Inbox {
 		}
 
 		/**
-		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
+		 * Fires before the ActivityPub inbox is created and sent to the client.
 		 */
 		\do_action( 'activitypub_rest_inbox_pre' );
 
@@ -103,14 +103,14 @@ class Inbox {
 		// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 
 		/**
-		 * Filter the ActivityPub inbox array.
+		 * Filters the ActivityPub inbox data before it is sent to the client.
 		 *
 		 * @param array $json The ActivityPub inbox array.
 		 */
 		$json = \apply_filters( 'activitypub_rest_inbox_array', $json );
 
 		/**
-		 * Action triggered after the ActivityPub profile has been created and sent to the client.
+		 * Fires after the ActivityPub inbox has been created and sent to the client.
 		 */
 		\do_action( 'activitypub_inbox_post' );
 

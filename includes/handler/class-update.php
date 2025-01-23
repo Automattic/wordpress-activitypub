@@ -26,9 +26,9 @@ class Update {
 	}
 
 	/**
-	 * Handle "Update" requests
+	 * Handle "Update" requests.
 	 *
-	 * @param array $activity The activity-object.
+	 * @param array $activity The Activity object.
 	 */
 	public static function handle_update( $activity ) {
 		$object_type = isset( $activity['object']['type'] ) ? $activity['object']['type'] : '';
@@ -75,7 +75,7 @@ class Update {
 	/**
 	 * Update an Interaction.
 	 *
-	 * @param array $activity The activity-object.
+	 * @param array $activity The Activity object.
 	 */
 	public static function update_interaction( $activity ) {
 		$commentdata = Interactions::update_comment( $activity );
@@ -88,13 +88,21 @@ class Update {
 			$state = $commentdata;
 		}
 
+		/**
+		 * Fires after an Update activity has been handled.
+		 *
+		 * @param array            $activity The complete Update activity data.
+		 * @param null             $user     Always null for Update activities.
+		 * @param int|array        $state    1 if comment was updated successfully, error data otherwise.
+		 * @param \WP_Comment|null $reaction The updated comment object if successful, null otherwise.
+		 */
 		\do_action( 'activitypub_handled_update', $activity, null, $state, $reaction );
 	}
 
 	/**
 	 * Update an Actor.
 	 *
-	 * @param array $activity The activity-object.
+	 * @param array $activity The Activity object.
 	 */
 	public static function update_actor( $activity ) {
 		// Update cache.

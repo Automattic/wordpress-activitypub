@@ -14,6 +14,7 @@ use Activitypub\Collection\Actors;
 
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\was_comment_received;
 use function Activitypub\get_comment_ancestors;
 
 /**
@@ -46,45 +47,6 @@ class Comment extends Base {
 	}
 
 	/**
-	 * Transforms the WP_Comment object to an ActivityPub Object.
-	 *
-	 * @see \Activitypub\Activity\Base_Object
-	 *
-	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object.
-	 */
-	public function to_object() {
-		$comment = $this->wp_object;
-		$object  = parent::to_object();
-
-		$object->set_url( $this->get_id() );
-		$object->set_type( 'Note' );
-
-		$published = \strtotime( $comment->comment_date_gmt );
-		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', $published ) );
-
-		$updated = \get_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', true );
-		if ( $updated > $published ) {
-			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', $updated ) );
-		}
-
-		$object->set_content_map(
-			array(
-				$this->get_locale() => $this->get_content(),
-			)
-		);
-		$path = sprintf( 'actors/%d/followers', intval( $comment->comment_author ) );
-
-		$object->set_to(
-			array(
-				'https://www.w3.org/ns/activitystreams#Public',
-				get_rest_url_by_path( $path ),
-			)
-		);
-
-		return $object;
-	}
-
-	/**
 	 * Returns the User-URL of the Author of the Post.
 	 *
 	 * If `single_user` mode is enabled, the URL of the Blog-User is returned.
@@ -92,6 +54,11 @@ class Comment extends Base {
 	 * @return string The User-URL.
 	 */
 	protected function get_attributed_to() {
+		// If the comment was received via ActivityPub, return the author URL.
+		if ( was_comment_received( $this->wp_object ) ) {
+			return $this->wp_object->comment_author_url;
+		}
+
 		if ( is_single_user() ) {
 			$user = new Blog();
 			return $user->get_id();
@@ -108,8 +75,18 @@ class Comment extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		$comment = $this->wp_object;
-		$content = $comment->comment_content;
+		$comment  = $this->wp_object;
+		$content  = $comment->comment_content;
+		$mentions = '';
+
+		foreach ( $this->extract_reply_context() as $acct => $url ) {
+			$mentions .= sprintf(
+				'<a rel="mention" class="u-url mention" href="%s">%s</a> ',
+				esc_url( $url ),
+				esc_html( $acct )
+			);
+		}
+		$content = $mentions . $content;
 
 		/**
 		 * Filter the content of the comment.
@@ -259,11 +236,11 @@ class Comment extends Base {
 	 * Collect all other Users that participated in this comment-thread
 	 * to send them a notification about the new reply.
 	 *
-	 * @param array $mentions The already mentioned ActivityPub users.
+	 * @param array $mentions Optional. The already mentioned ActivityPub users. Default empty array.
 	 *
 	 * @return array The list of all Repliers.
 	 */
-	public function extract_reply_context( $mentions ) {
+	public function extract_reply_context( $mentions = array() ) {
 		// Check if `$this->wp_object` is a WP_Comment.
 		if ( 'WP_Comment' !== get_class( $this->wp_object ) ) {
 			return $mentions;
@@ -307,5 +284,73 @@ class Comment extends Base {
 		 * @return string The filtered locale of the comment.
 		 */
 		return apply_filters( 'activitypub_comment_locale', $lang, $comment_id, $this->wp_object );
+	}
+
+	/**
+	 * Returns the updated date of the comment.
+	 *
+	 * @return string|null The updated date of the comment.
+	 */
+	public function get_updated() {
+		$updated   = \get_comment_meta( $this->wp_object->comment_ID, 'activitypub_comment_modified', true );
+		$published = \get_comment_meta( $this->wp_object->comment_ID, 'activitypub_comment_published', true );
+
+		if ( $updated > $published ) {
+			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Returns the published date of the comment.
+	 *
+	 * @return string The published date of the comment.
+	 */
+	public function get_published() {
+		return \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $this->wp_object->comment_date_gmt ) );
+	}
+
+	/**
+	 * Returns the URL of the comment.
+	 *
+	 * @return string The URL of the comment.
+	 */
+	public function get_url() {
+		return $this->get_id();
+	}
+
+	/**
+	 * Returns the type of the comment.
+	 *
+	 * @return string The type of the comment.
+	 */
+	public function get_type() {
+		return 'Note';
+	}
+
+	/**
+	 * Returns the to of the comment.
+	 *
+	 * @return array The to of the comment.
+	 */
+	public function get_to() {
+		$path = sprintf( 'actors/%d/followers', intval( $this->wp_object->comment_author ) );
+
+		return array(
+			'https://www.w3.org/ns/activitystreams#Public',
+			get_rest_url_by_path( $path ),
+		);
+	}
+
+	/**
+	 * Returns the content map for the comment.
+	 *
+	 * @return array The content map for the comment.
+	 */
+	public function get_content_map() {
+		return array(
+			$this->get_locale() => $this->get_content(),
+		);
 	}
 }

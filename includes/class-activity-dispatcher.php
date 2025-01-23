@@ -160,7 +160,7 @@ class Activity_Dispatcher {
 	 */
 	private static function send_activity_to_followers( $activity, $user_id, $wp_object ) {
 		/**
-		 * Filter to prevent sending an Activity to followers.
+		 * Filters whether to send an Activity to followers.
 		 *
 		 * @param bool                        $send_activity_to_followers Whether to send the Activity to followers.
 		 * @param Activity                    $activity                   The ActivityPub Activity.
@@ -172,11 +172,11 @@ class Activity_Dispatcher {
 		}
 
 		/**
-		 * Filter to modify the Activity before sending it to followers.
+		 * Filters the list of inboxes to send the Activity to.
 		 *
-		 * @param Activity                    $activity  The ActivityPub Activity.
-		 * @param int                         $user_id   The user ID.
-		 * @param \WP_User|WP_Post|WP_Comment $wp_object The WordPress object.
+		 * @param array    $inboxes  The list of inboxes to send to.
+		 * @param int      $user_id  The user ID.
+		 * @param Activity $activity The ActivityPub Activity.
 		 */
 		$inboxes = apply_filters( 'activitypub_send_to_inboxes', array(), $user_id, $activity );
 		$inboxes = array_unique( $inboxes );
@@ -208,7 +208,7 @@ class Activity_Dispatcher {
 		}
 
 		/**
-		 * Action to send an Activity for a Post.
+		 * Fires when an Activity is being sent for any object type.
 		 *
 		 * @param WP_Post $post The WordPress Post.
 		 * @param string  $type The Activity-Type.
@@ -216,7 +216,7 @@ class Activity_Dispatcher {
 		do_action( 'activitypub_send_activity', $post, $type );
 
 		/**
-		 * Action to send a specific Activity for a Post.
+		 * Fires when a specific type of Activity is being sent.
 		 *
 		 * @param WP_Post $post The WordPress Post.
 		 */
@@ -237,7 +237,7 @@ class Activity_Dispatcher {
 		}
 
 		/**
-		 * Action to send an Activity for a Comment.
+		 * Fires when an Activity is being sent for a Comment.
 		 *
 		 * @param WP_Comment $comment The WordPress Comment.
 		 * @param string     $type    The Activity-Type.
@@ -245,7 +245,7 @@ class Activity_Dispatcher {
 		do_action( 'activitypub_send_activity', $comment, $type );
 
 		/**
-		 * Action to send a specific Activity for a Comment.
+		 * Fires when a specific type of Activity is being sent for a Comment.
 		 *
 		 * @param WP_Comment $comment The WordPress Comment.
 		 */

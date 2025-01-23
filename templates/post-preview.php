@@ -179,7 +179,7 @@ $user   = $transformer->get_actor_object();
 	<body>
 		<div class="columns">
 			<aside class="sidebar">
-				<input type="search" disabled="disabled" placeholder="<?php echo esc_html_e( 'Search', 'activitypub' ); ?>" disabled="disabled" />
+				<input type="search" disabled="disabled" placeholder="<?php esc_html_e( 'Search', 'activitypub' ); ?>" />
 				<div>
 					<div class="fake-image"></div>
 					<div>
@@ -218,7 +218,7 @@ $user   = $transformer->get_actor_object();
 					<div class="attachments">
 						<?php foreach ( $object->get_attachment() as $attachment ) : ?>
 							<?php if ( 'Image' === $attachment['type'] ) : ?>
-								<img src="<?php echo esc_url( $attachment['url'] ); ?>" alt="<?php echo esc_attr( $attachment['name'] ); ?>" />
+								<img src="<?php echo esc_url( $attachment['url'] ); ?>" alt="<?php echo esc_attr( $attachment['name'] ?? '' ); ?>" />
 							<?php endif; ?>
 						<?php endforeach; ?>
 					</div>

@@ -42,7 +42,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search_by_url' ), 40, 2 );
 		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ) );
 		\add_filter( 'mastodon_api_statuses', array( self::class, 'api_statuses_external' ), 10, 2 );
-		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 23 );
+		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 3 );
 		\add_action( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
 	}
 
@@ -800,20 +800,37 @@ class Enable_Mastodon_Apps {
 			return $context;
 		}
 
-		$replies_url = $meta['replies']['first']['next'];
-		$replies     = Http::get_remote_object( $replies_url, true );
-		if ( is_wp_error( $replies ) || ! isset( $replies['items'] ) ) {
+		if ( ! empty( $meta['replies']['first']['items'] ) ) {
+			$replies = $meta['replies']['first'];
+		} elseif ( isset( $meta['replies']['first']['next'] ) ) {
+			$replies_url = $meta['replies']['first']['next'];
+			$replies     = Http::get_remote_object( $replies_url, true );
+			if ( is_wp_error( $replies ) || ! isset( $replies['items'] ) ) {
+				return $context;
+			}
+		} else {
 			return $context;
 		}
 
-		foreach ( $replies['items'] as $url ) {
-			$response = Http::get( $url, true );
-			if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
-				continue;
-			}
-			$status = json_decode( wp_remote_retrieve_body( $response ), true );
-			if ( ! $status || is_wp_error( $status ) ) {
-				continue;
+		foreach ( $replies['items'] as $reply ) {
+			if ( isset( $reply['id'] ) && is_string( $reply['id'] ) && isset( $reply['content'] ) && is_string( $reply['content'] ) ) {
+				$status = $reply;
+			} else {
+				if ( is_string( $reply ) ) {
+					$url = $reply;
+				} elseif ( isset( $reply['url'] ) && is_string( $reply['url'] ) ) {
+					$url = $reply['url'];
+				} else {
+					continue;
+				}
+				$response = Http::get( $url, true );
+				if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
+					continue;
+				}
+				$status = json_decode( wp_remote_retrieve_body( $response ), true );
+				if ( ! $status || is_wp_error( $status ) ) {
+					continue;
+				}
 			}
 
 			$account = self::get_account_for_actor( $status['attributedTo'] );

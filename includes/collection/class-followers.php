@@ -52,11 +52,11 @@ class Followers {
 			return $id;
 		}
 
-		$post_meta = get_post_meta( $id, 'activitypub_user_id', false );
+		$post_meta = get_post_meta( $id, '_activitypub_user_id', false );
 
 		// phpcs:ignore WordPress.PHP.StrictInArray.MissingTrueStrict
 		if ( is_array( $post_meta ) && ! in_array( $user_id, $post_meta ) ) {
-			add_post_meta( $id, 'activitypub_user_id', $user_id );
+			add_post_meta( $id, '_activitypub_user_id', $user_id );
 			wp_cache_delete( sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 
@@ -89,7 +89,7 @@ class Followers {
 		 */
 		do_action( 'activitypub_followers_pre_remove_follower', $follower, $user_id, $actor );
 
-		return delete_post_meta( $follower->get__id(), 'activitypub_user_id', $user_id );
+		return delete_post_meta( $follower->get__id(), '_activitypub_user_id', $user_id );
 	}
 
 	/**
@@ -98,7 +98,7 @@ class Followers {
 	 * @param int    $user_id The ID of the WordPress User.
 	 * @param string $actor   The Actor URL.
 	 *
-	 * @return Follower|null The Follower object or null
+	 * @return \Activitypub\Activity\Base_Object|WP_Error|null The Follower object or null
 	 */
 	public static function get_follower( $user_id, $actor ) {
 		global $wpdb;
@@ -106,7 +106,7 @@ class Followers {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = 'activitypub_user_id' AND pm.meta_value = %d AND p.guid = %s",
+				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = '_activitypub_user_id' AND pm.meta_value = %d AND p.guid = %s",
 				array(
 					esc_sql( self::POST_TYPE ),
 					esc_sql( $user_id ),
@@ -188,7 +188,7 @@ class Followers {
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query'     => array(
 				array(
-					'key'   => 'activitypub_user_id',
+					'key'   => '_activitypub_user_id',
 					'value' => $user_id,
 				),
 			),
@@ -219,11 +219,11 @@ class Followers {
 			'meta_query' => array(
 				'relation' => 'AND',
 				array(
-					'key'     => 'activitypub_inbox',
+					'key'     => '_activitypub_inbox',
 					'compare' => 'EXISTS',
 				),
 				array(
-					'key'     => 'activitypub_actor_json',
+					'key'     => '_activitypub_actor_json',
 					'compare' => 'EXISTS',
 				),
 			),
@@ -247,15 +247,15 @@ class Followers {
 				'meta_query' => array(
 					'relation' => 'AND',
 					array(
-						'key'   => 'activitypub_user_id',
+						'key'   => '_activitypub_user_id',
 						'value' => $user_id,
 					),
 					array(
-						'key'     => 'activitypub_inbox',
+						'key'     => '_activitypub_inbox',
 						'compare' => 'EXISTS',
 					),
 					array(
-						'key'     => 'activitypub_actor_json',
+						'key'     => '_activitypub_actor_json',
 						'compare' => 'EXISTS',
 					),
 				),
@@ -266,7 +266,7 @@ class Followers {
 	}
 
 	/**
-	 * Returns all Inboxes for a Users Followers.
+	 * Returns all Inboxes for an Actor's Followers.
 	 *
 	 * @param int $user_id The ID of the WordPress User.
 	 *
@@ -290,15 +290,15 @@ class Followers {
 				'meta_query' => array(
 					'relation' => 'AND',
 					array(
-						'key'     => 'activitypub_inbox',
+						'key'     => '_activitypub_inbox',
 						'compare' => 'EXISTS',
 					),
 					array(
-						'key'   => 'activitypub_user_id',
+						'key'   => '_activitypub_user_id',
 						'value' => $user_id,
 					),
 					array(
-						'key'     => 'activitypub_inbox',
+						'key'     => '_activitypub_inbox',
 						'value'   => '',
 						'compare' => '!=',
 					),
@@ -318,7 +318,7 @@ class Followers {
 			$wpdb->prepare(
 				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
 				WHERE post_id IN (" . implode( ', ', array_fill( 0, count( $posts ), '%d' ) ) . ")
-				AND meta_key = 'activitypub_inbox'
+				AND meta_key = '_activitypub_inbox'
 				AND meta_value IS NOT NULL",
 				$posts
 			)
@@ -378,24 +378,24 @@ class Followers {
 			'meta_query'     => array(
 				'relation' => 'OR',
 				array(
-					'key'     => 'activitypub_errors',
+					'key'     => '_activitypub_errors',
 					'compare' => 'EXISTS',
 				),
 				array(
-					'key'     => 'activitypub_inbox',
+					'key'     => '_activitypub_inbox',
 					'compare' => 'NOT EXISTS',
 				),
 				array(
-					'key'     => 'activitypub_actor_json',
+					'key'     => '_activitypub_actor_json',
 					'compare' => 'NOT EXISTS',
 				),
 				array(
-					'key'     => 'activitypub_inbox',
+					'key'     => '_activitypub_inbox',
 					'value'   => '',
 					'compare' => '=',
 				),
 				array(
-					'key'     => 'activitypub_actor_json',
+					'key'     => '_activitypub_actor_json',
 					'value'   => '',
 					'compare' => '=',
 				),
@@ -437,7 +437,7 @@ class Followers {
 
 		return add_post_meta(
 			$post_id,
-			'activitypub_errors',
+			'_activitypub_errors',
 			$error_message
 		);
 	}

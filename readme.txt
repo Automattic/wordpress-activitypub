@@ -3,8 +3,8 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
-Stable tag: 4.4.0
-Requires PHP: 7.0
+Stable tag: 4.7.3
+Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
 
@@ -33,7 +33,6 @@ The plugin works with the following tested federated platforms, but there may be
 * [Pixelfed](https://pixelfed.org/)
 * [Socialhome](https://socialhome.network/)
 * [Misskey](https://join.misskey.page/)
-* [Firefish](https://joinfirefish.org/) (rebrand of Calckey)
 
 Some things to note:
 
@@ -70,7 +69,7 @@ In order for webfinger to work, it must be mapped to the root directory of the U
 
 Add the following to the .htaccess file in the root directory:
 
-	RedirectMatch "^\/\.well-known/(webfinger|nodeinfo|x-nodeinfo2)(.*)$" /blog/.well-known/$1$2
+	RedirectMatch "^\/\.well-known/(webfinger|nodeinfo)(.*)$" /blog/.well-known/$1$2
 
 Where 'blog' is the path to the subdirectory at which your blog resides.
 
@@ -134,23 +133,74 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Changed: Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
+
+= 4.7.3 =
+
+* Fixed: Flush rewrite rules after NodeInfo update.
+
+= 4.7.2 =
+
+* Added: Support for WPML post locale
+* Removed: Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
+* Fixed: More robust handling of `_activityPubOptions` in scripts, using a `useOptions()` helper.
+* Fixed: Flush post caches after Followers migration.
+
+= 4.7.1 =
+
+* Fixed: Missing migration
+
+= 4.7.0 =
+
+* Added: Comment counts get updated when the plugin is activated/deactivated/deleted
+* Added: A filter to make custom comment types manageable in WP.com Calypso
+* Changed: Hide ActivityPub post meta keys from the custom Fields UI
+* Changed: Bumped minimum required PHP version to 7.2
+* Changed: Print `_activityPubOptions` in the `wp_footer` action on the frontend.
+* Fixed: Undefined array key warnings in various places
+* Fixed: @-mentions in federated comments being displayed with a line break
+* Fixed: Fetching replies from the same instance for Enable Mastodon Apps
+* Fixed: Image captions not being included in the ActivityPub representation when the image is attached to the post
+
+= 4.6.0 =
+
+* Added: A filter to allow modifying the ActivityPub preview template
+* Added: `@mentions` in the JSON representation of the reply
+* Added: Settings to enable/disable e-mail notifications for new followers and direct messages
+* Changed: HTML to e-mail text conversion
+* Changed: Direct Messages: Test for the user being in the to field
+* Changed: Better support for FSE color schemes
+* Fixed: Reactions: Provide a fallback for empty avatar URLs
+
+= 4.5.1 =
+
+* Changed: Reactions block: Remove the `wp-block-editor` dependency for frontend views
+* Fixed: Direct Messages: Don't send notification for received public activities
+
+= 4.5.0 =
+
+* Changed: Reactions (likes and reposts) now enabled by default
+* Added: Reactions block to display likes and reposts
 * Added: `icon` support for `Audio` and `Video` attachments
 * Added: Send "new follower" emails
 * Added: Send "direct message" emails
 * Added: Account for custom comment types when calculating comment counts
-* Improved: Email templates for Likes and Reposts
-* Improved: Interactions moderation
-* Improved: Compatibility with Akismet
-* Improved: Comment type mapping for `Like` and `Announce`
+* Added: Plugin upgrade routine that automatically updates comment counts
+* Changed: Email templates for Likes and Reposts
+* Changed: Interactions moderation
+* Changed: Compatibility with Akismet
+* Changed: Comment type mapping for `Like` and `Announce`
+* Changed: Signature verification for API endpoints
+* Changed: Changed priority of Attachments, to favor `Image` over `Audio` and `Video`
 * Fixed: Empty `url` attributes in the Reply block no longer cause PHP warnings
 
 = 4.4.0 =
 
 * Added: Setting to enable/disable Authorized-Fetch
-* Improved: Added screen reader text for the "Follow Me" block for improved accessibility
-* Improved: Added `media_type` support to Activity-Object-Transformers
-* Improved: Clarified settings page text around which users get Activitypub profiles
-* Improved: Add a filter to the REST API moderators list
+* Changed: Added screen reader text for the "Follow Me" block for improved accessibility
+* Changed: Added `media_type` support to Activity-Object-Transformers
+* Changed: Clarified settings page text around which users get Activitypub profiles
+* Changed: Add a filter to the REST API moderators list
 * Fixed: Prevent hex color codes in HTML attributes from being added as post tags
 * Fixed: A typo in the custom post content settings
 * Fixed: Prevent draft posts from being federated when bulk deleted
@@ -161,10 +211,10 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: Fediverse Preview on post-overview page
 * Added: GitHub action to enforce Changelog updates
 * Added: New contributors
-* Improved: Basic enclosure validation
-* Improved: More User -> Actor renaming
-* Improved: Outsource Constants to a separate file
-* Improved: Better handling of `readme.txt` and `README.md`
+* Changed: Basic enclosure validation
+* Changed: More User -> Actor renaming
+* Changed: Outsource Constants to a separate file
+* Changed: Better handling of `readme.txt` and `README.md`
 * Fixed: editor error when switching to edit a synced Pattern
 * Fixed: Fediverse preview showing `preferredUsername` instead of `name`
 * Fixed: Potential fatal error in Enable Mastodon Apps
@@ -172,25 +222,6 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Show Followers name instead of avatar on mobile view
 * Fixed: Missing attachement-type for enclosures
 * Fixed: Prevention against self pings
-
-= 4.2.1 =
-
-* Added: Mastodon Apps status provider
-* Improved: Image-Handling
-* Improved: Have better checks if audience should be set or not
-* Fixed: Don't overwrite an existing `wp-tests-config.php`
-* Fixed: PHPCS for phpunit files
-
-= 4.2.0 =
-
-* Added: Unit tests for the `ActivityPub\Transformer\Post` class
-* Improved: Reuse constants once they're defined
-* Improved: "FEP-b2b8: Long-form Text" support
-* Improved: Admin notice for plain permalink settings is more user-friendly and actionable
-* Improved: Post-Formats support
-* Fixed: Do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts.
-* Fixed: Proper margins for notices and font size for page title in settings screen.
-* Fixed: Ensure that `?author=0` resolves to blog user
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).
 

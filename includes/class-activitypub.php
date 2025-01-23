@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Exception;
+use Activitypub\Transformer\Factory;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
 
@@ -62,6 +63,9 @@ class Activitypub {
 	public static function activate() {
 		self::flush_rewrite_rules();
 		Scheduler::register_schedules();
+
+		\add_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
+		Migration::update_comment_counts();
 	}
 
 	/**
@@ -70,6 +74,9 @@ class Activitypub {
 	public static function deactivate() {
 		self::flush_rewrite_rules();
 		Scheduler::deregister_schedules();
+
+		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
+		Migration::update_comment_counts( 2000 );
 	}
 
 	/**
@@ -77,6 +84,9 @@ class Activitypub {
 	 */
 	public static function uninstall() {
 		Scheduler::deregister_schedules();
+
+		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
+		Migration::update_comment_counts( 2000 );
 	}
 
 	/**
@@ -91,26 +101,28 @@ class Activitypub {
 			return $template;
 		}
 
+		self::add_headers();
+
 		if ( ! is_activitypub_request() ) {
 			return $template;
 		}
 
 		$activitypub_template = false;
+		$activitypub_object   = Query::get_instance()->get_activitypub_object();
 
-		if ( \is_author() && ! is_user_disabled( \get_the_author_meta( 'ID' ) ) ) {
-			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/user-json.php';
-		} elseif ( is_comment() ) {
-			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
-		} elseif ( \is_singular() && ! is_post_disabled( \get_the_ID() ) ) {
-			$preview = \get_query_var( 'preview' );
-			if ( $preview ) {
+		if ( $activitypub_object ) {
+			if ( \get_query_var( 'preview' ) ) {
 				\define( 'ACTIVITYPUB_PREVIEW', true );
-				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php';
+
+				/**
+				 * Filter the template used for the ActivityPub preview.
+				 *
+				 * @param string $activitypub_template Absolute path to the template file.
+				 */
+				$activitypub_template = apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
 			} else {
-				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
+				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/activitypub-json.php';
 			}
-		} elseif ( \is_home() && ! is_user_type_disabled( 'blog' ) ) {
-			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
 		/*
@@ -130,6 +142,12 @@ class Activitypub {
 		}
 
 		if ( $activitypub_template ) {
+			// Check if header already sent.
+			if ( ! \headers_sent() && ACTIVITYPUB_SEND_VARY_HEADER ) {
+				// Send Vary header for Accept header.
+				\header( 'Vary: Accept' );
+			}
+
 			return $activitypub_template;
 		}
 
@@ -140,32 +158,14 @@ class Activitypub {
 	 * Add the 'self' link to the header.
 	 */
 	public static function add_headers() {
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		$request_uri = $_SERVER['REQUEST_URI'];
-
-		if ( ! $request_uri ) {
-			return;
-		}
-
-		$id = false;
-
-		// Only add self link to author pages...
-		if ( is_author() ) {
-			if ( ! is_user_disabled( get_queried_object_id() ) ) {
-				$id = get_user_id( get_queried_object_id() );
-			}
-		} elseif ( is_singular() ) { // or posts/pages/custom-post-types...
-			if ( \post_type_supports( \get_post_type(), 'activitypub' ) ) {
-				$id = get_post_id( get_queried_object_id() );
-			}
-		}
+		$id = Query::get_instance()->get_activitypub_object_id();
 
 		if ( ! $id ) {
 			return;
 		}
 
 		if ( ! headers_sent() ) {
-			header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"' );
+			header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
 		}
 
 		add_action(
@@ -219,8 +219,6 @@ class Activitypub {
 	 * @return void
 	 */
 	public static function template_redirect() {
-		self::add_headers();
-
 		$comment_id = get_query_var( 'c', null );
 
 		// Check if it seems to be a comment.
@@ -334,7 +332,7 @@ class Activitypub {
 	public static function trash_post( $post_id ) {
 		\add_post_meta(
 			$post_id,
-			'activitypub_canonical_url',
+			'_activitypub_canonical_url',
 			\get_permalink( $post_id ),
 			true
 		);
@@ -346,7 +344,7 @@ class Activitypub {
 	 * @param string $post_id The Post ID.
 	 */
 	public static function untrash_post( $post_id ) {
-		\delete_post_meta( $post_id, 'activitypub_canonical_url' );
+		\delete_post_meta( $post_id, '_activitypub_canonical_url' );
 	}
 
 	/**
@@ -372,12 +370,7 @@ class Activitypub {
 		if ( ! \class_exists( 'Nodeinfo_Endpoint' ) && true === (bool) \get_option( 'blog_public', 1 ) ) {
 			\add_rewrite_rule(
 				'^.well-known/nodeinfo',
-				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo/discovery',
-				'top'
-			);
-			\add_rewrite_rule(
-				'^.well-known/x-nodeinfo2',
-				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo2',
+				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo',
 				'top'
 			);
 		}
@@ -477,7 +470,7 @@ class Activitypub {
 
 		\register_post_meta(
 			Followers::POST_TYPE,
-			'activitypub_inbox',
+			'_activitypub_inbox',
 			array(
 				'type'              => 'string',
 				'single'            => true,
@@ -487,7 +480,7 @@ class Activitypub {
 
 		\register_post_meta(
 			Followers::POST_TYPE,
-			'activitypub_errors',
+			'_activitypub_errors',
 			array(
 				'type'              => 'string',
 				'single'            => false,
@@ -503,7 +496,7 @@ class Activitypub {
 
 		\register_post_meta(
 			Followers::POST_TYPE,
-			'activitypub_user_id',
+			'_activitypub_user_id',
 			array(
 				'type'              => 'string',
 				'single'            => false,
@@ -515,7 +508,7 @@ class Activitypub {
 
 		\register_post_meta(
 			Followers::POST_TYPE,
-			'activitypub_actor_json',
+			'_activitypub_actor_json',
 			array(
 				'type'              => 'string',
 				'single'            => true,
@@ -555,6 +548,9 @@ class Activitypub {
 		\register_post_type( Extra_Fields::USER_POST_TYPE, $args );
 		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $args );
 
+		/**
+		 * Fires after ActivityPub custom post types have been registered.
+		 */
 		\do_action( 'activitypub_after_register_post_type' );
 	}
 

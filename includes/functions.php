@@ -21,6 +21,15 @@ use Activitypub\Transformer\Post;
 function get_context() {
 	$context = Activity::JSON_LD_CONTEXT;
 
+	/**
+	 * Filters the ActivityPub JSON-LD context.
+	 *
+	 * This filter allows developers to modify or extend the JSON-LD context used
+	 * in ActivityPub responses. The context defines the vocabulary and terms used
+	 * in the ActivityPub JSON objects.
+	 *
+	 * @param array $context The default ActivityPub JSON-LD context array.
+	 */
 	return \apply_filters( 'activitypub_json_context', $context );
 }
 
@@ -68,6 +77,16 @@ function get_webfinger_resource( $user_id ) {
  * @return array|WP_Error The Actor profile as array or WP_Error on failure.
  */
 function get_remote_metadata_by_actor( $actor, $cached = true ) {
+	/**
+	 * Filters the metadata before it is retrieved from a remote actor.
+	 *
+	 * Passing a non-false value will effectively short-circuit the remote request,
+	 * returning that value instead.
+	 *
+	 * @param mixed  $pre   The value to return instead of the remote metadata.
+	 *                      Default false to continue with the remote request.
+	 * @param string $actor The actor URL.
+	 */
 	$pre = apply_filters( 'pre_get_remote_metadata_by_actor', false, $actor );
 	if ( $pre ) {
 		return $pre;
@@ -344,62 +363,13 @@ function esc_hashtag( $input ) {
  * @return bool False by default.
  */
 function is_activitypub_request() {
-	global $wp_query;
-
-	/*
-	 * ActivityPub requests are currently only made for
-	 * author archives, singular posts, and the homepage.
-	 */
-	if ( ! \is_author() && ! \is_singular() && ! \is_home() && ! defined( '\REST_REQUEST' ) ) {
-		return false;
-	}
-
-	// Check if the current post type supports ActivityPub.
-	if ( \is_singular() ) {
-		$queried_object = \get_queried_object();
-		$post_type      = \get_post_type( $queried_object );
-
-		if ( ! \post_type_supports( $post_type, 'activitypub' ) ) {
-			return false;
-		}
-	}
-
-	// Check if header already sent.
-	if ( ! \headers_sent() && ACTIVITYPUB_SEND_VARY_HEADER ) {
-		// Send Vary header for Accept header.
-		\header( 'Vary: Accept' );
-	}
-
-	// One can trigger an ActivityPub request by adding ?activitypub to the URL.
-	if ( isset( $wp_query->query_vars['activitypub'] ) ) {
-		return true;
-	}
-
-	/*
-	 * The other (more common) option to make an ActivityPub request
-	 * is to send an Accept header.
-	 */
-	if ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
-		$accept = sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
-
-		/*
-		 * $accept can be a single value, or a comma separated list of values.
-		 * We want to support both scenarios,
-		 * and return true when the header includes at least one of the following:
-		 * - application/activity+json
-		 * - application/ld+json
-		 * - application/json
-		 */
-		if ( preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
-			return true;
-		}
-	}
-
-	return false;
+	return Query::get_instance()->is_activitypub_request();
 }
 
 /**
  * Check if a post is disabled for ActivityPub.
+ *
+ * This function checks if the post type supports ActivityPub and if the post is set to be local.
  *
  * @param mixed $post The post object or ID.
  *
@@ -410,11 +380,14 @@ function is_post_disabled( $post ) {
 	$disabled   = false;
 	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
-	if ( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ) {
+	if (
+		ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ||
+		! \post_type_supports( $post->post_type, 'activitypub' )
+	) {
 		$disabled = true;
 	}
 
-	/*
+	/**
 	 * Allow plugins to disable posts for ActivityPub.
 	 *
 	 * @param boolean  $disabled True if the post is disabled, false otherwise.
@@ -601,7 +574,7 @@ function is_json( $data ) {
 }
 
 /**
- * Check whther a blog is public based on the `blog_public` option.
+ * Check whether a blog is public based on the `blog_public` option.
  *
  * @return bool True if public, false if not
  */
@@ -1052,7 +1025,7 @@ function get_enclosures( $post_id ) {
  *
  * @param int|\WP_Comment $comment Comment ID or comment object.
  *
- * @return \WP_Comment[] Array of ancestor comments or empty array if there are none.
+ * @return int[] Array of ancestor IDs.
  */
 function get_comment_ancestors( $comment ) {
 	$comment = \get_comment( $comment );
@@ -1312,11 +1285,7 @@ function generate_post_summary( $post, $length = 500 ) {
 	$content = \sanitize_post_field( 'post_excerpt', $post->post_excerpt, $post->ID );
 
 	if ( $content ) {
-		/**
-		 * Filters the post excerpt.
-		 *
-		 * @param string $content The post excerpt.
-		 */
+		/** This filter is documented in wp-includes/post-template.php */
 		return \apply_filters( 'the_excerpt', $content );
 	}
 
@@ -1354,6 +1323,7 @@ function generate_post_summary( $post, $length = 500 ) {
 
 	/*
 	Removed until this is merged: https://github.com/mastodon/mastodon/pull/28629
+	/** This filter is documented in wp-includes/post-template.php
 	return \apply_filters( 'the_excerpt', $content );
 	*/
 	return $content;
@@ -1459,6 +1429,15 @@ function get_content_visibility( $post_id ) {
 		$_visibility = $visibility;
 	}
 
+	/**
+	 * Filters the visibility of a post.
+	 *
+	 * @param string   $_visibility The visibility of the post. Possible values are:
+	 *                              - 'public': Post is public and federated.
+	 *                              - 'quiet_public': Post is public but not federated.
+	 *                              - 'local': Post is only visible locally.
+	 * @param \WP_Post $post        The post object.
+	 */
 	return \apply_filters( 'activitypub_content_visibility', $_visibility, $post );
 }
 
@@ -1512,7 +1491,7 @@ function get_upload_baseurl() {
 	/**
 	 * Filters the upload base URL.
 	 *
-	 * @param string \wp_get_upload_dir()['baseurl'] The upload base URL.
+	 * @param string $upload_dir The upload base URL. Default \wp_get_upload_dir()['baseurl']
 	 */
 	return apply_filters( 'activitypub_get_upload_baseurl', $upload_dir['baseurl'] );
 }
