@@ -566,6 +566,10 @@ class Migration {
 		\update_postmeta_cache( \wp_list_pluck( $posts, 'ID' ) );
 
 		foreach ( $posts as $post ) {
+			if ( is_user_disabled( $post->post_author ) ) {
+				continue;
+			}
+
 			$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
 			self::add_to_outbox( $post, 'Create', $post->post_author, $visibility );

@@ -443,6 +443,9 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	 * @covers ::create_post_outbox_items
 	 */
 	public function test_create_outbox_items() {
+		// Create additional post that should not be included in outbox.
+		$post_id = self::factory()->post->create( array( 'post_author' => 90210 ) );
+
 		// Run migration.
 		add_filter( 'pre_schedule_event', '__return_false' );
 		Migration::create_post_outbox_items( 10, 0 );
@@ -458,6 +461,8 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 
 		// Should now have 5 outbox items total, 4 post Create, 1 post Update.
 		$this->assertEquals( 5, count( $outbox_items ) );
+
+		\wp_delete_post( $post_id, true );
 	}
 
 	/**
