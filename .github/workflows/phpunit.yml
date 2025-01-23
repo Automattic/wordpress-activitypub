@@ -1,8 +1,11 @@
 name: Unit Testing
-on: [ push, pull_request ]
+on:
+  push:
+    branches:
+      - trunk
+  pull_request:
 jobs:
   phpunit:
-    if: ${{ 'push' == github.event_name || ( 'pull_request' == github.event_name && true == github.event.pull_request.head.repo.fork ) }}
     runs-on: ubuntu-latest
     services:
      mysql:
