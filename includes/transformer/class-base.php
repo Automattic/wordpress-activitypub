@@ -195,6 +195,17 @@ abstract class Base {
 	}
 
 	/**
+	 * Returns the recipient of the post.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-cc
+	 *
+	 * @return array The recipient URLs of the post.
+	 */
+	protected function get_cc() {
+		return null;
+	}
+
+	/**
 	 * Get the replies Collection.
 	 *
 	 * @return array The replies collection.

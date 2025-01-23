@@ -51,7 +51,7 @@ class Activity_Object extends Base {
 	 * @return array The list of Mentions.
 	 */
 	protected function get_cc() {
-		$cc       = array();
+		$cc       = $this->item->get( 'cc' ) ?? array();
 		$mentions = $this->extract_mentions();
 
 		if ( $mentions ) {
@@ -60,7 +60,28 @@ class Activity_Object extends Base {
 			}
 		}
 
-		return $cc;
+		if ( $cc ) {
+			return $cc;
+		}
+
+		return parent::get_cc();
+	}
+
+	/**
+	 * Returns the public secondary audience of this object
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-to
+	 *
+	 * @return array The secondary audience of this object.
+	 */
+	protected function get_to() {
+		$to = $this->item->get( 'to' );
+
+		if ( $to ) {
+			return $to;
+		}
+
+		return parent::get_to();
 	}
 
 	/**
