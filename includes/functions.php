@@ -1561,11 +1561,15 @@ function is_self_ping( $id ) {
  *
  * @return boolean|int The ID of the outbox item or false on failure.
  */
-function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
+function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content_visibility = null ) {
 	$transformer = Transformer_Factory::get_transformer( $data );
 
 	if ( ! $transformer || is_wp_error( $transformer ) ) {
 		return false;
+	}
+
+	if ( null === $content_visibility ) {
+		$transformer->set_content_visibility( $content_visibility );
 	}
 
 	$activity_object = $transformer->to_object();
@@ -1576,7 +1580,7 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 
 	set_wp_object_state( $data, 'federate' );
 
-	$outbox_activity_id = Outbox::add( $activity_object, $activity_type, $user_id, $content_visibility );
+	$outbox_activity_id = Outbox::add( $activity_object, $activity_type, $user_id, $transformer->get_content_visibility() );
 
 	if ( ! $outbox_activity_id ) {
 		return false;

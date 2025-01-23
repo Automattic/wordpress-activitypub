@@ -11,6 +11,7 @@ use WP_Post;
 use WP_Comment;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Replies;
 use Activitypub\Activity\Base_Object;
 
@@ -38,6 +39,13 @@ abstract class Base {
 	 * @var WP_Post|WP_Comment
 	 */
 	protected $wp_object;
+
+	/**
+	 * The content visibility.
+	 *
+	 * @var string
+	 */
+	protected $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
 
 	/**
 	 * Static function to Transform a WordPress Object.
@@ -106,6 +114,7 @@ abstract class Base {
 				}
 			}
 		}
+
 		return $activity_object;
 	}
 
@@ -116,8 +125,54 @@ abstract class Base {
 	 */
 	public function to_object() {
 		$activity_object = new Base_Object();
+		$activity_object = $this->transform_object_properties( $activity_object );
+		$activity_object = $this->set_audience( $activity_object );
 
-		return $this->transform_object_properties( $activity_object );
+		return $activity_object;
+	}
+
+	/**
+	 * Get the content visibility.
+	 *
+	 * @return string The content visibility.
+	 */
+	public function get_content_visibility() {
+		return $this->content_visibility;
+	}
+
+	/**
+	 * Set the content visibility.
+	 *
+	 * @param string $content_visibility The content visibility.
+	 */
+	public function set_content_visibility( $content_visibility ) {
+		$this->content_visibility = $content_visibility;
+
+		return $this;
+	}
+
+	private function set_audience( $activity_object ) {
+		$public    = 'https://www.w3.org/ns/activitystreams#Public';
+		$actor     = Actors::get_by_resource( $this->get_attributed_to() );
+		$followers = $actor->get_followers();
+		$mentions  = array_values( $this->get_mentions() );
+
+		switch ( $this->get_content_visibility() ) {
+			case ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC:
+				$activity_object->add_to( $public );
+				$activity_object->add_cc( $followers );
+				$activity_object->add_cc( $mentions );
+				break;
+			case ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC:
+				$activity_object->add_to( $followers );
+				$activity_object->add_to( $mentions );
+				$activity_object->add_cc( $public );
+				break;
+			case ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE:
+				$activity_object->add_to( $mentions );
+		}
+
+		return $activity_object;
 	}
 
 	/**
@@ -179,30 +234,6 @@ abstract class Base {
 	 */
 	public function get_media_type() {
 		return 'text/html';
-	}
-
-	/**
-	 * Returns the recipient of the post.
-	 *
-	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-to
-	 *
-	 * @return array The recipient URLs of the post.
-	 */
-	protected function get_to() {
-		return array(
-			'https://www.w3.org/ns/activitystreams#Public',
-		);
-	}
-
-	/**
-	 * Returns the recipient of the post.
-	 *
-	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-cc
-	 *
-	 * @return array The recipient URLs of the post.
-	 */
-	protected function get_cc() {
-		return null;
 	}
 
 	/**

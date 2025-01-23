@@ -195,28 +195,6 @@ class Comment extends Base {
 	}
 
 	/**
-	 * Returns a list of Mentions, used in the Comment.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#Mention
-	 *
-	 * @return array The list of Mentions.
-	 */
-	protected function get_cc() {
-		$cc = array(
-			$this->get_actor_object()->get_followers(),
-		);
-
-		$mentions = $this->get_mentions();
-		if ( $mentions ) {
-			foreach ( $mentions as $url ) {
-				$cc[] = $url;
-			}
-		}
-
-		return array_unique( $cc );
-	}
-
-	/**
 	 * Helper function to get the @-Mentions from the comment content.
 	 *
 	 * @return array The list of @-Mentions.

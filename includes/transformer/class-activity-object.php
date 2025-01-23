@@ -44,47 +44,6 @@ class Activity_Object extends Base {
 	}
 
 	/**
-	 * Returns a list of Mentions, used in the Post.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#Mention
-	 *
-	 * @return array The list of Mentions.
-	 */
-	protected function get_cc() {
-		$cc       = $this->item->get( 'cc' ) ?? array();
-		$mentions = $this->get_mentions();
-
-		if ( $mentions ) {
-			foreach ( $mentions as $url ) {
-				$cc[] = $url;
-			}
-		}
-
-		if ( $cc ) {
-			return $cc;
-		}
-
-		return parent::get_cc();
-	}
-
-	/**
-	 * Returns the public secondary audience of this object
-	 *
-	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-to
-	 *
-	 * @return array The secondary audience of this object.
-	 */
-	protected function get_to() {
-		$to = $this->item->get( 'to' );
-
-		if ( $to ) {
-			return $to;
-		}
-
-		return parent::get_to();
-	}
-
-	/**
 	 * Returns the content map for the post.
 	 *
 	 * @return array The content map for the post.

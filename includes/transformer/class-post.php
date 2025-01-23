@@ -58,20 +58,16 @@ class Post extends Base {
 			$object->set_summary_map( null );
 		}
 
-		$visibility = get_content_visibility( $post );
-
-		switch ( $visibility ) {
-			case ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC:
-				$object->set_to( $this->get_cc() );
-				$object->set_cc( $this->get_to() );
-				break;
-			case ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL:
-				$object->set_to( array() );
-				$object->set_cc( array() );
-				break;
-		}
-
 		return $object;
+	}
+
+	/**
+	 * Get the content visibility.
+	 *
+	 * @return string The content visibility.
+	 */
+	public function get_content_visibility() {
+		return get_content_visibility( $this->item );
 	}
 
 	/**
@@ -381,20 +377,6 @@ class Post extends Base {
 		}
 
 		return $object_type;
-	}
-
-	/**
-	 * Returns a list of Mentions, used in the Post.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#Mention
-	 *
-	 * @return array The list of Mentions.
-	 */
-	protected function get_cc() {
-		$cc   = array_values( $this->get_mentions() );
-		$cc[] = $this->get_actor_object()->get_followers();
-
-		return $cc;
 	}
 
 	/**
