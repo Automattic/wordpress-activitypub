@@ -14,8 +14,9 @@ use Activitypub\Collection\Actors;
 use Activitypub\Transformer\Factory;
 
 use function Activitypub\add_to_outbox;
-use function Activitypub\is_post_disabled;
 use function Activitypub\get_wp_object_state;
+use function Activitypub\is_post_disabled;
+use function Activitypub\is_user_disabled;
 
 /**
  * Post scheduler class.
@@ -80,7 +81,7 @@ class Post {
 		}
 
 		// Skip if the post author is not allowed to publish activities.
-		if ( $post->post_author > 0 && ! \user_can( $post->post_author, 'activitypub' ) ) {
+		if ( is_user_disabled( $post->post_author ) ) {
 			return;
 		}
 
