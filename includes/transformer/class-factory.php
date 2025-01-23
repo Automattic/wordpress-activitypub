@@ -8,6 +8,10 @@
 namespace Activitypub\Transformer;
 
 use WP_Error;
+use Activitypub\Comment as Comment_Helper;
+
+use function Activitypub\is_user_disabled;
+use function Activitypub\is_post_disabled;
 
 /**
  * Transformer Factory.
@@ -74,18 +78,28 @@ class Factory {
 		// Use default transformer.
 		switch ( $class ) {
 			case 'WP_Post':
-				if ( 'attachment' === $data->post_type ) {
+				if ( 'attachment' === $data->post_type && ! is_post_disabled( $data ) ) {
 					return new Attachment( $data );
+				} elseif ( ! is_post_disabled( $data ) ) {
+					return new Post( $data );
 				}
-				return new Post( $data );
+				break;
 			case 'WP_Comment':
-				return new Comment( $data );
+				if ( Comment_Helper::should_be_federated( $data ) ) {
+					return new Comment( $data );
+				}
+				break;
+			case 'WP_User':
+				if ( ! is_user_disabled( $data->ID ) ) {
+					return new User( $data );
+				}
+				break;
 			case 'Base_Object':
 				return new Activity_Object( $data );
 			case 'json':
 				return new Json( $data );
-			default:
-				return new WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
 		}
+
+		return new WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
 	}
 }

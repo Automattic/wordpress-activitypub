@@ -293,6 +293,9 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_content'      => 'This is a sent comment.',
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
+					'comment_meta'         => array(
+						'activitypub_status' => 'pending',
+					),
 				),
 				'expected' => array(
 					'was_sent'            => true,
@@ -362,6 +365,9 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_content'      => 'This is another comment.',
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
+					'comment_meta'         => array(
+						'activitypub_status' => 'pending',
+					),
 				),
 				'expected'       => array(
 					'was_sent'            => false,
@@ -386,6 +392,9 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_content'      => 'This is yet another comment.',
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
+					'comment_meta'         => array(
+						'activitypub_status' => 'pending',
+					),
 				),
 				'expected'       => array(
 					'was_sent'            => true,
@@ -440,6 +449,9 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_content'      => 'This is a parent comment that should not be possible.',
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
+					'comment_meta'         => array(
+						'activitypub_status' => 'federated',
+					),
 				),
 				'comment'        => array(
 					'comment_type'         => 'comment',
