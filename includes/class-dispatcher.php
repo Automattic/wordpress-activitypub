@@ -61,9 +61,16 @@ class Dispatcher {
 				break;
 		}
 
-		$type        = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
-		$transformer = Transformer_Factory::get_transformer( $outbox_item->post_content );
-		$activity    = $transformer->to_activity( $type );
+		$type     = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
+		$activity = new Activity();
+		$activity->set_type( $type );
+		// Pre-fill the Activity with data (for example cc and to).
+		$activity->from_json( $outbox_item->post_content );
+
+		// Use simple Object (only ID-URI) for Like and Announce.
+		if ( 'Like' === $type ) {
+			$activity->set_object( $object->get_id() );
+		}
 
 		self::send_activity_to_followers( $activity, $actor_id, $outbox_item );
 	}
