@@ -7,6 +7,7 @@
 
 namespace Activitypub\Scheduler;
 
+use Activitypub\Scheduler;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Actors;
 use Activitypub\Transformer\Factory;
@@ -61,30 +62,12 @@ class Post {
 	 * @param int|\WP_Post $post       Post ID or post object.
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
-		$post = get_post( $post );
-
-		if ( ! $post || is_post_disabled( $post ) ) {
-			return;
-		}
-
-		if ( 'ap_extrafield' === $post->post_type ) {
-			self::schedule_profile_update( $post->post_author );
-			return;
-		}
-
-		if ( 'ap_extrafield_blog' === $post->post_type ) {
-			self::schedule_profile_update( 0 );
+		if ( is_post_disabled( $post ) ) {
 			return;
 		}
 
 		// Do not send activities if post is password protected.
 		if ( \post_password_required( $post ) ) {
-			return;
-		}
-
-		// Check if post-type supports ActivityPub.
-		$post_types = \get_post_types_by_support( 'activitypub' );
-		if ( ! \in_array( $post->post_type, $post_types, true ) ) {
 			return;
 		}
 
@@ -156,6 +139,13 @@ class Post {
 		$transformer = Factory::get_transformer( $activity_object );
 		$activity    = $transformer->to_activity( $activity_type );
 
-		Outbox::add( $activity, 'Announce', Actors::BLOG_USER_ID, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+		$outbox_activity_id = Outbox::add( $activity, 'Announce', Actors::BLOG_USER_ID, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+
+		if ( ! $outbox_activity_id ) {
+			return false;
+		}
+
+		// Schedule the outbox item for federation.
+		Scheduler::schedule_outbox_activity_for_federation( $outbox_activity_id );
 	}
 }

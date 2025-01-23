@@ -122,6 +122,8 @@ class Dispatcher {
 				$to_log['error'] = $response['body'];
 			}
 			\add_post_meta( $outbox_item->ID, 'activitypub_send_log', $to_log );
+
+			safe_remote_post( $inbox, $json, $actor_id );
 		}
 
 		\wp_publish_post( $outbox_item );
