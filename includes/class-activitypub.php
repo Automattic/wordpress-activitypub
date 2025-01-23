@@ -617,30 +617,6 @@ class Activitypub {
 
 		register_post_meta(
 			Outbox::POST_TYPE,
-			'activitypub_sent_json',
-			array(
-				'type'              => 'string',
-				'description'       => 'JSON activity for regular user',
-				'single'            => true,
-				'sanitize_callback' => null,
-				'show_in_rest'      => false,
-			)
-		);
-
-		register_post_meta(
-			Outbox::POST_TYPE,
-			'activitypub_sent_inboxes',
-			array(
-				'type'              => 'array',
-				'description'       => 'List of inboxes for regular user',
-				'single'            => true,
-				'sanitize_callback' => null,
-				'show_in_rest'      => false,
-			)
-		);
-
-		register_post_meta(
-			Outbox::POST_TYPE,
 			'activitypub_send_log',
 			array(
 				'type'              => 'array',
