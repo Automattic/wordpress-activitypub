@@ -23,7 +23,7 @@ class Migration {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_migrate', array( self::class, 'async_migration' ) );
-		\add_action( 'activitypub_upgrade', array( self::class, 'async_upgrade' ) );
+		\add_action( 'activitypub_upgrade', array( self::class, 'async_upgrade' ), 10, 99 );
 		\add_action( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ), 10, 2 );
 
 		self::maybe_migrate();
@@ -221,22 +221,29 @@ class Migration {
 	 * @param mixed  ...$args  The arguments to pass to the callback.
 	 */
 	public static function async_upgrade( $callback, ...$args ) {
+		$args = \func_get_args();
+
 		// Bail if the existing lock is still valid.
 		if ( self::is_locked() ) {
-			\wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'activitypub_upgrade', \array_merge( array( $callback ), $args ) );
+			\wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'activitypub_upgrade', $args );
 			return;
 		}
 
 		self::lock();
 
-		$next = \call_user_func_array( array( self::class, $callback ), $args );
+		$callback = array_shift( $args );  // Remove $callback from arguments.
+		$next     = \call_user_func_array( array( self::class, $callback ), $args );
+
+		self::unlock();
 
 		if ( ! empty( $next ) ) {
 			// Schedule the next run, adding the result to the arguments.
-			\wp_schedule_single_event( \time() + 30, 'activitypub_upgrade', \array_merge( array( $callback ), $next ) );
+			\wp_schedule_single_event(
+				\time() + 30,
+				'activitypub_upgrade',
+				\array_merge( array( $callback ), \array_values( $next ) )
+			);
 		}
-
-		self::unlock();
 	}
 
 	/**

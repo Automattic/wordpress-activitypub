@@ -534,27 +534,13 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 
 		// Test scheduling next batch when callback returns more work.
 		Migration::async_upgrade( 'create_post_outbox_items', 1, 0 ); // Small batch size to force multiple batches.
-		$scheduled = \wp_next_scheduled(
-			'activitypub_upgrade',
-			array(
-				'create_post_outbox_items',
-				'batch_size' => 1,
-				'offset'     => 1,
-			)
-		);
+		$scheduled = \wp_next_scheduled( 'activitypub_upgrade', array( 'create_post_outbox_items', 1, 1 ) );
 		$this->assertNotFalse( $scheduled );
 
 		// Test no scheduling when callback returns null (no more work).
 		Migration::async_upgrade( 'create_post_outbox_items', 100, 1000 ); // Large offset to ensure no posts found.
 		$this->assertFalse(
-			\wp_next_scheduled(
-				'activitypub_upgrade',
-				array(
-					'create_post_outbox_items',
-					'batch_size' => 100,
-					'offset'     => 1100,
-				)
-			)
+			\wp_next_scheduled( 'activitypub_upgrade', array( 'create_post_outbox_items', 100, 1100 ) )
 		);
 	}
 
@@ -566,16 +552,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	public function test_async_upgrade_multiple_args() {
 		// Test that multiple arguments are passed correctly.
 		Migration::async_upgrade( 'update_comment_counts', 50, 100 );
-		$scheduled = \wp_next_scheduled(
-			'activitypub_upgrade',
-			array(
-				'update_comment_counts',
-				array(
-					'batch_size' => 50,
-					'offset'     => 150,
-				),
-			)
-		);
+		$scheduled = \wp_next_scheduled( 'activitypub_upgrade', array( 'update_comment_counts', 50, 150 ) );
 		$this->assertFalse( $scheduled, 'Should not schedule next batch when no comments found' );
 	}
 
