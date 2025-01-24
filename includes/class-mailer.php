@@ -143,11 +143,11 @@ class Mailer {
 
 		$alt_function = function ( $mailer ) use ( $actor, $admin_url ) {
 			/* translators: 1: Blog name, 2: Follower name */
-			$message = \sprintf( \__( 'New Follower: %2$s.', 'activitypub' ), \get_option( 'blogname' ), $actor['name'] ). "\r\n\r\n";
+			$message = \sprintf( \__( 'New Follower: %2$s.', 'activitypub' ), \get_option( 'blogname' ), $actor['name'] ) . "\r\n\r\n";
 			/* translators: Follower URL */
-			$message .= \sprintf( \__( 'URL: %s', 'activitypub' ), \esc_url( $actor['url'] ) ) . "\r\n\r\n";
-			$message .= \esc_html__( 'You can see all followers here:', 'activitypub' ) . "\r\n";
-			$message .= \esc_url( \admin_url( $admin_url ) ) . "\r\n\r\n";
+			$message            .= \sprintf( \__( 'URL: %s', 'activitypub' ), \esc_url( $actor['url'] ) ) . "\r\n\r\n";
+			$message            .= \esc_html__( 'You can see all followers here:', 'activitypub' ) . "\r\n";
+			$message            .= \esc_url( \admin_url( $admin_url ) ) . "\r\n\r\n";
 			$mailer->{'AltBody'} = $message;
 		};
 		\add_action( 'phpmailer_init', $alt_function );
@@ -155,7 +155,6 @@ class Mailer {
 		\wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
 
 		\remove_action( 'phpmailer_init', $alt_function );
-
 	}
 
 	/**

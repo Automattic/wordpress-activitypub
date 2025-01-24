@@ -1,6 +1,19 @@
+<?php
+/**
+ * ActivityPub New Follower E-Mail template.
+ *
+ * @package Activitypub
+ */
+
+if ( ! isset( $actor ) ) {
+	$actor = array();
+	return;
+}
+
+?>
 <p>
 	<?php
-	echo __( 'You have a new follower:', 'friends' );
+	esc_html_e( 'You have a new follower:', 'activitypub' );
 	?>
 </p>
 
