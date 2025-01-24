@@ -1420,7 +1420,7 @@ function get_content_visibility( $post_id ) {
 		return false;
 	}
 
-	$visibility  = get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+	$visibility  = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 	$_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
 	$options     = array(
 		ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
@@ -1561,11 +1561,17 @@ function is_self_ping( $id ) {
  *
  * @return boolean|int The ID of the outbox item or false on failure.
  */
-function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
+function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content_visibility = null ) {
 	$transformer = Transformer_Factory::get_transformer( $data );
 
 	if ( ! $transformer || is_wp_error( $transformer ) ) {
 		return false;
+	}
+
+	if ( $content_visibility ) {
+		$transformer->set_content_visibility( $content_visibility );
+	} else {
+		$content_visibility = $transformer->get_content_visibility();
 	}
 
 	$activity_object = $transformer->to_object();

@@ -483,7 +483,7 @@ class Base_Object {
 		}
 
 		if ( \strncasecmp( $method, 'add', 3 ) === 0 ) {
-			$this->add( $var, $params[0] );
+			return $this->add( $var, $params[0] );
 		}
 	}
 
@@ -566,8 +566,17 @@ class Base_Object {
 			$this->$key = array();
 		}
 
-		$attributes   = $this->$key;
-		$attributes[] = $value;
+		if ( is_string( $this->$key ) ) {
+			$this->$key = array( $this->$key );
+		}
+
+		$attributes = $this->$key;
+
+		if ( is_array( $value ) ) {
+			$attributes = array_merge( $attributes, $value );
+		} else {
+			$attributes[] = $value;
+		}
 
 		$this->$key = $attributes;
 

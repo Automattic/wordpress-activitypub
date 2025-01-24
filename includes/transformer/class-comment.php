@@ -67,6 +67,34 @@ class Comment extends Base {
 	}
 
 	/**
+	 * Get the content visibility.
+	 *
+	 * @return string The content visibility.
+	 */
+	public function get_content_visibility() {
+		if ( $this->content_visibility ) {
+			return $this->content_visibility;
+		}
+
+		$comment = $this->item;
+		$post    = \get_post( $comment->comment_post_ID );
+
+		if ( ! $post ) {
+			return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+		}
+
+		$content_visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+
+		if ( ! $content_visibility ) {
+			return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+		}
+
+		$this->content_visibility = $content_visibility;
+
+		return $this->content_visibility;
+	}
+
+	/**
 	 * Returns the User-URL of the Author of the Post.
 	 *
 	 * If `single_user` mode is enabled, the URL of the Blog-User is returned.
@@ -195,53 +223,6 @@ class Comment extends Base {
 	}
 
 	/**
-	 * Returns a list of Mentions, used in the Comment.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#Mention
-	 *
-	 * @return array The list of Mentions.
-	 */
-	protected function get_cc() {
-		$cc = array(
-			$this->get_actor_object()->get_followers(),
-		);
-
-		$mentions = $this->get_mentions();
-		if ( $mentions ) {
-			foreach ( $mentions as $url ) {
-				$cc[] = $url;
-			}
-		}
-
-		return array_unique( $cc );
-	}
-
-	/**
-	 * Returns a list of Tags, used in the Comment.
-	 *
-	 * This includes Hash-Tags and Mentions.
-	 *
-	 * @return array The list of Tags.
-	 */
-	protected function get_tag() {
-		$tags = array();
-
-		$mentions = $this->get_mentions();
-		if ( $mentions ) {
-			foreach ( $mentions as $mention => $url ) {
-				$tag    = array(
-					'type' => 'Mention',
-					'href' => \esc_url( $url ),
-					'name' => \esc_html( $mention ),
-				);
-				$tags[] = $tag;
-			}
-		}
-
-		return \array_unique( $tags, SORT_REGULAR );
-	}
-
-	/**
 	 * Helper function to get the @-Mentions from the comment content.
 	 *
 	 * @return array The list of @-Mentions.
@@ -352,19 +333,5 @@ class Comment extends Base {
 	 */
 	public function get_type() {
 		return 'Note';
-	}
-
-	/**
-	 * Returns the to of the comment.
-	 *
-	 * @return array The to of the comment.
-	 */
-	public function get_to() {
-		$path = sprintf( 'actors/%d/followers', intval( $this->item->comment_author ) );
-
-		return array(
-			'https://www.w3.org/ns/activitystreams#Public',
-			get_rest_url_by_path( $path ),
-		);
 	}
 }

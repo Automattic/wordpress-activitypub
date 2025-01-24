@@ -170,6 +170,7 @@ class Test_Comment extends \WP_UnitTestCase {
 				'post_title'   => 'Test Post',
 				'post_content' => 'This is a test post.',
 				'post_status'  => 'publish',
+				'post_author'  => 1,
 			)
 		);
 
@@ -240,7 +241,11 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @covers ::pre_wp_update_comment_count_now
 	 */
 	public function test_pre_wp_update_comment_count_now() {
-		$post_id = self::factory()->post->create();
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => 1,
+			)
+		);
 
 		// Case 1: $new is null, no approved comments of non-ActivityPub types.
 		$this->assertSame( 0, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );

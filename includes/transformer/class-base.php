@@ -11,6 +11,7 @@ use WP_Post;
 use WP_Comment;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Replies;
 use Activitypub\Activity\Base_Object;
 
@@ -38,6 +39,13 @@ abstract class Base {
 	 * @var WP_Post|WP_Comment
 	 */
 	protected $wp_object;
+
+	/**
+	 * The content visibility.
+	 *
+	 * @var string
+	 */
+	protected $content_visibility;
 
 	/**
 	 * Static function to Transform a WordPress Object.
@@ -106,6 +114,7 @@ abstract class Base {
 				}
 			}
 		}
+
 		return $activity_object;
 	}
 
@@ -116,8 +125,74 @@ abstract class Base {
 	 */
 	public function to_object() {
 		$activity_object = new Base_Object();
+		$activity_object = $this->transform_object_properties( $activity_object );
 
-		return $this->transform_object_properties( $activity_object );
+		if ( \is_wp_error( $activity_object ) ) {
+			return $activity_object;
+		}
+
+		$activity_object = $this->set_audience( $activity_object );
+
+		return $activity_object;
+	}
+
+	/**
+	 * Get the content visibility.
+	 *
+	 * @return string The content visibility.
+	 */
+	public function get_content_visibility() {
+		if ( ! $this->content_visibility ) {
+			return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+		}
+
+		return $this->content_visibility;
+	}
+
+	/**
+	 * Set the content visibility.
+	 *
+	 * @param string $content_visibility The content visibility.
+	 */
+	public function set_content_visibility( $content_visibility ) {
+		$this->content_visibility = $content_visibility;
+
+		return $this;
+	}
+
+	/**
+	 * Set the audience.
+	 *
+	 * @param Base_Object $activity_object The ActivityPub Object.
+	 *
+	 * @return Base_Object The ActivityPub Object.
+	 */
+	protected function set_audience( $activity_object ) {
+		$public = 'https://www.w3.org/ns/activitystreams#Public';
+		$actor  = Actors::get_by_resource( $this->get_attributed_to() );
+		if ( ! $actor || is_wp_error( $actor ) ) {
+			$followers = array();
+		} else {
+			$followers = $actor->get_followers();
+		}
+		$mentions = array_values( $this->get_mentions() );
+
+		switch ( $this->get_content_visibility() ) {
+			case ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC:
+				$activity_object->add_to( $public );
+				$activity_object->add_cc( $followers );
+				$activity_object->add_cc( $mentions );
+				break;
+			case ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC:
+				$activity_object->add_to( $followers );
+				$activity_object->add_to( $mentions );
+				$activity_object->add_cc( $public );
+				break;
+			case ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE:
+				$activity_object->add_to( $mentions );
+		}
+
+		return $activity_object;
 	}
 
 	/**
@@ -182,19 +257,6 @@ abstract class Base {
 	}
 
 	/**
-	 * Returns the recipient of the post.
-	 *
-	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-to
-	 *
-	 * @return array The recipient URLs of the post.
-	 */
-	protected function get_to() {
-		return array(
-			'https://www.w3.org/ns/activitystreams#Public',
-		);
-	}
-
-	/**
 	 * Get the replies Collection.
 	 *
 	 * @return array The replies collection.
@@ -241,6 +303,68 @@ abstract class Base {
 
 		return array(
 			$this->get_locale() => $this->get_summary(),
+		);
+	}
+
+	/**
+	 * Returns the tags for the post.
+	 *
+	 * @return array The tags for the post.
+	 */
+	protected function get_tag() {
+		$tags     = array();
+		$mentions = $this->get_mentions();
+
+		foreach ( $mentions as $mention => $url ) {
+			$tags[] = array(
+				'type' => 'Mention',
+				'href' => \esc_url( $url ),
+				'name' => \esc_html( $mention ),
+			);
+		}
+
+		return \array_unique( $tags, SORT_REGULAR );
+	}
+
+	/**
+	 * Get the attributed to.
+	 *
+	 * @return string The attributed to.
+	 */
+	protected function get_attributed_to() {
+		return null;
+	}
+
+	/**
+	 * Extracts mentions from the content.
+	 *
+	 * @return array The mentions.
+	 */
+	protected function get_mentions() {
+		$content = '';
+
+		if ( method_exists( $this, 'get_content' ) ) {
+			$content = $content . ' ' . $this->get_content();
+		}
+
+		if ( method_exists( $this, 'get_summary' ) ) {
+			$content = $content . ' ' . $this->get_summary();
+		}
+
+		/**
+		 * Filter the mentions in the post content.
+		 *
+		 * @param array   $mentions The mentions.
+		 * @param string  $content  The post content.
+		 * @param WP_Post $post     The post object.
+		 *
+		 * @return array The filtered mentions.
+		 */
+		return apply_filters(
+			'activitypub_extract_mentions',
+			array(),
+			$content,
+			$this->item
 		);
 	}
 }
