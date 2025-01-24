@@ -34,7 +34,13 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		\remove_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ) );
 
 		// Create test posts.
-		self::$fixtures['posts'] = self::factory()->post->create_many( 3, array( 'post_author' => 1 ) );
+		self::$fixtures['posts'] = self::factory()->post->create_many(
+			3,
+			array(
+				'post_author' => 1,
+				'meta_input'  => array( 'activitypub_status' => 'federated' ),
+			)
+		);
 
 		$modified_post_id = self::factory()->post->create(
 			array(
@@ -43,6 +49,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 				'post_status'  => 'publish',
 				'post_type'    => 'post',
 				'post_date'    => '2020-01-01 00:00:00',
+				'meta_input'   => array( 'activitypub_status' => 'federated' ),
 			)
 		);
 		self::factory()->post->update_object( $modified_post_id, array( 'post_content' => 'Test post 2 updated' ) );
@@ -77,6 +84,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 				'comment_approved' => '1',
 			)
 		);
+		\add_comment_meta( self::$fixtures['comment'], 'activitypub_status', 'federated' );
 	}
 
 	/**
