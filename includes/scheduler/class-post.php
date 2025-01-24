@@ -7,6 +7,7 @@
 
 namespace Activitypub\Scheduler;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Scheduler;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Actors;
@@ -107,10 +108,10 @@ class Post {
 	/**
 	 * Send announces.
 	 *
-	 * @param int   $outbox_activity_id The outbox activity ID.
-	 * @param array $activity_object    The activity object.
-	 * @param int   $actor_id           The actor ID.
-	 * @param int   $content_visibility The content visibility.
+	 * @param int      $outbox_activity_id The outbox activity ID.
+	 * @param Activity $activity_object    The activity object.
+	 * @param int      $actor_id           The actor ID.
+	 * @param int      $content_visibility The content visibility.
 	 */
 	public static function send_announces( $outbox_activity_id, $activity_object, $actor_id, $content_visibility ) {
 		// Only if we're in both Blog and User modes.
@@ -146,7 +147,7 @@ class Post {
 		$outbox_activity_id = Outbox::add( $activity, 'Announce', Actors::BLOG_USER_ID, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 
 		if ( ! $outbox_activity_id ) {
-			return false;
+			return;
 		}
 
 		// Schedule the outbox item for federation.
