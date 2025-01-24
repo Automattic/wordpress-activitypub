@@ -14,9 +14,8 @@ use Activitypub\Collection\Actors;
 use Activitypub\Transformer\Factory;
 
 use function Activitypub\add_to_outbox;
-use function Activitypub\get_wp_object_state;
 use function Activitypub\is_post_disabled;
-use function Activitypub\is_user_disabled;
+use function Activitypub\get_wp_object_state;
 
 /**
  * Post scheduler class.
