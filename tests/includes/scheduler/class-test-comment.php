@@ -7,20 +7,12 @@
 
 namespace Activitypub\Tests\Scheduler;
 
-use Activitypub\Collection\Outbox;
-
 /**
  * Test Comment scheduler class.
  *
  * @coversDefaultClass \Activitypub\Scheduler\Comment
  */
-class Test_Comment extends \WP_UnitTestCase {
-	/**
-	 * User ID for testing.
-	 *
-	 * @var int
-	 */
-	protected static $user_id;
+class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 	/**
 	 * Post ID for testing.
@@ -33,13 +25,9 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * Set up test resources.
 	 */
 	public static function set_up_before_class() {
-		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		parent::set_up_before_class();
+
 		self::$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
-
-		// Add activitypub capability to the user.
-		get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
-
-		add_filter( 'pre_schedule_event', '__return_false' );
 	}
 
 	/**
@@ -47,22 +35,6 @@ class Test_Comment extends \WP_UnitTestCase {
 	 */
 	public static function tear_down_after_class() {
 		wp_delete_post( self::$post_id, true );
-		wp_delete_user( self::$user_id );
-
-		remove_filter( 'pre_schedule_event', '__return_false' );
-
-		$outbox_items = get_posts(
-			array(
-				'post_type'      => Outbox::POST_TYPE,
-				'posts_per_page' => -1,
-				'post_status'    => 'any',
-				'fields'         => 'ids',
-			)
-		);
-
-		foreach ( $outbox_items as $outbox_item ) {
-			\wp_delete_post( $outbox_item, true );
-		}
 	}
 
 	/**
@@ -149,30 +121,8 @@ class Test_Comment extends \WP_UnitTestCase {
 		$comment_id    = self::factory()->comment->create( $comment_data );
 		$activitpub_id = \Activitypub\Comment::generate_id( $comment_id );
 
-		$post = $this->get_latest_outbox_item( $activitpub_id );
-		$this->assertNotEquals( $activitpub_id, $post->post_title );
+		$this->assertNull( $this->get_latest_outbox_item( $activitpub_id ) );
 
 		wp_delete_comment( $comment_id, true );
-	}
-
-	/**
-	 * Retrieve the latest Outbox item to compare against.
-	 *
-	 * @param string $title Title of the Outbox item.
-	 * @return int|\WP_Post|null
-	 */
-	private function get_latest_outbox_item( $title = '' ) {
-		$outbox = get_posts(
-			array(
-				'post_type'      => Outbox::POST_TYPE,
-				'posts_per_page' => 1,
-				'post_status'    => 'pending',
-				'post_title'     => $title,
-				'orderby'        => 'date',
-				'order'          => 'DESC',
-			)
-		);
-
-		return $outbox ? $outbox[0] : null;
 	}
 }

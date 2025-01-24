@@ -8,38 +8,24 @@
 namespace Activitypub\Tests\Scheduler;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Extra_Fields;
-use Activitypub\Scheduler\Actor;
 
 /**
  * Test Post scheduler class.
  *
  * @coversDefaultClass \Activitypub\Scheduler\Actor
  */
-class Test_Actor extends \WP_UnitTestCase {
-	/**
-	 * User ID for testing.
-	 *
-	 * @var int
-	 */
-	protected static $user_id;
-
-	/**
-	 * Post ID for testing.
-	 *
-	 * @var int
-	 */
-	protected static $post_id;
+class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 	/**
 	 * Set up test resources.
 	 */
 	public static function set_up_before_class() {
 		parent::set_up_before_class();
-		self::$user_id = self::factory()->user->create(
+
+		self::factory()->user->update_object(
+			self::$user_id,
 			array(
-				'role'         => 'author',
 				'display_name' => 'Test User',
 				'meta_input'   => array(
 					'activitypub_description'  => 'test description',
@@ -50,38 +36,6 @@ class Test_Actor extends \WP_UnitTestCase {
 				),
 			)
 		);
-
-		// Add activitypub capability to the user.
-		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
-
-		\add_filter( 'pre_schedule_event', '__return_false' );
-	}
-
-	/**
-	 * Clean up test resources.
-	 */
-	public static function tear_down_after_class() {
-		\delete_option( 'activitypub_actor_mode' );
-		\wp_delete_user( self::$user_id );
-		\remove_filter( 'pre_schedule_event', '__return_false' );
-	}
-
-	/**
-	 * Tear down.
-	 */
-	public function tear_down() {
-		$outbox_items = get_posts(
-			array(
-				'post_type'      => Outbox::POST_TYPE,
-				'posts_per_page' => -1,
-				'post_status'    => 'any',
-				'fields'         => 'ids',
-			)
-		);
-
-		foreach ( $outbox_items as $outbox_item ) {
-			\wp_delete_post( $outbox_item, true );
-		}
 	}
 
 	/**
@@ -216,26 +170,5 @@ class Test_Actor extends \WP_UnitTestCase {
 		// Clean up.
 		\wp_delete_post( $blog_post_id, true );
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
-	}
-
-	/**
-	 * Retrieve the latest Outbox item to compare against.
-	 *
-	 * @param string $title Title of the Outbox item.
-	 * @return int|\WP_Post|null
-	 */
-	private function get_latest_outbox_item( $title = '' ) {
-		$outbox = get_posts(
-			array(
-				'post_type'      => Outbox::POST_TYPE,
-				'posts_per_page' => 1,
-				'post_status'    => 'pending',
-				'post_title'     => $title,
-				'orderby'        => 'date',
-				'order'          => 'DESC',
-			)
-		);
-
-		return $outbox ? $outbox[0] : null;
 	}
 }
