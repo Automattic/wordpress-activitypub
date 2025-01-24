@@ -1420,7 +1420,7 @@ function get_content_visibility( $post_id ) {
 		return false;
 	}
 
-	$visibility  = get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+	$visibility  = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 	$_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
 	$options     = array(
 		ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
