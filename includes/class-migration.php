@@ -540,7 +540,7 @@ class Migration {
 	 * @return array|null Array with batch size and offset if there are more posts to process, null otherwise.
 	 */
 	public static function create_post_outbox_items( $batch_size = 50, $offset = 0 ) {
-		$posts      = \get_posts(
+		$posts = \get_posts(
 			array(
 				'posts_per_page' => $batch_size,
 				'offset'         => $offset,
