@@ -33,6 +33,13 @@ class Post {
 		\add_action( 'delete_attachment', array( self::class, 'transition_attachment_status' ) );
 
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'send_announces' ), 10, 4 );
+
+		// Get all post types that support ActivityPub.
+		$post_types = \get_post_types_by_support( 'activitypub' );
+
+		foreach ( $post_types as $post_type ) {
+			\add_filter( "rest_pre_insert_{$post_type}", array( self::class, 'rest_insert' ), 10, 2 );
+		}
 	}
 
 	/**
@@ -144,5 +151,36 @@ class Post {
 
 		// Schedule the outbox item for federation.
 		Scheduler::schedule_outbox_activity_for_federation( $outbox_activity_id );
+	}
+
+	/**
+	 * Filter the post data before it is inserted via the REST API.
+	 *
+	 * @param \WP_Post         $post     The post object.
+	 * @param \WP_REST_Request $request  The request object.
+	 *
+	 * @return \WP_Post The post object.
+	 */
+	public static function rest_insert( $post, $request ) {
+		$metas = $request->get_param( 'meta' );
+
+		if ( ! $post->ID || ! $metas || ! is_array( $metas ) ) {
+			return $post;
+		}
+
+		foreach ( $metas as $meta_key => $meta_value ) {
+			if (
+				\str_starts_with( $meta_key, 'activitypub_' ) ||
+				\str_starts_with( $meta_key, '_activitypub_' )
+			) {
+				if ( $meta_value ) {
+					\update_post_meta( $post->ID, $meta_key, $meta_value );
+				} else {
+					\delete_post_meta( $post->ID, $meta_key );
+				}
+			}
+		}
+
+		return $post;
 	}
 }
