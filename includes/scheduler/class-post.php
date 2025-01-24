@@ -80,11 +80,6 @@ class Post {
 			return;
 		}
 
-		// Skip if the post author is not allowed to publish activities.
-		if ( is_user_disabled( $post->post_author ) ) {
-			return;
-		}
-
 		switch ( $new_status ) {
 			case 'publish':
 				$type = ( 'publish' === $old_status ) ? 'Update' : 'Create';
