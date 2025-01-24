@@ -160,10 +160,10 @@ class Post {
 	/**
 	 * Filter the post data before it is inserted via the REST API.
 	 *
-	 * @param \WP_Post         $post     The post object.
+	 * @param \stdClass        $post     An object representing a single post prepared for inserting or updating the database.
 	 * @param \WP_REST_Request $request  The request object.
 	 *
-	 * @return \WP_Post The post object.
+	 * @return \stdClass The prepared post.
 	 */
 	public static function rest_insert( $post, $request ) {
 		$metas = $request->get_param( 'meta' );
