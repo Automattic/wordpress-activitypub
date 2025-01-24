@@ -67,6 +67,34 @@ class Comment extends Base {
 	}
 
 	/**
+	 * Get the content visibility.
+	 *
+	 * @return string The content visibility.
+	 */
+	public function get_content_visibility() {
+		if ( $this->content_visibility ) {
+			return $this->content_visibility;
+		}
+
+		$comment = $this->item;
+		$post    = \get_post( $comment->comment_post_ID );
+
+		if ( ! $post ) {
+			return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+		}
+
+		$content_visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+
+		if ( ! $content_visibility ) {
+			return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
+		}
+
+		$this->content_visibility = $content_visibility;
+
+		return $this->content_visibility;
+	}
+
+	/**
 	 * Returns the User-URL of the Author of the Post.
 	 *
 	 * If `single_user` mode is enabled, the URL of the Blog-User is returned.
@@ -305,19 +333,5 @@ class Comment extends Base {
 	 */
 	public function get_type() {
 		return 'Note';
-	}
-
-	/**
-	 * Returns the to of the comment.
-	 *
-	 * @return array The to of the comment.
-	 */
-	public function get_to() {
-		$path = sprintf( 'actors/%d/followers', intval( $this->item->comment_author ) );
-
-		return array(
-			'https://www.w3.org/ns/activitystreams#Public',
-			get_rest_url_by_path( $path ),
-		);
 	}
 }
