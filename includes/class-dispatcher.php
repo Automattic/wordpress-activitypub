@@ -64,6 +64,7 @@ class Dispatcher {
 		$type     = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 		$activity = new Activity();
 		$activity->set_type( $type );
+		$activity->set_id( $outbox_item->guid );
 		// Pre-fill the Activity with data (for example cc and to).
 		$activity->from_json( $outbox_item->post_content );
 
