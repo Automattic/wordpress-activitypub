@@ -650,15 +650,12 @@ class Activitypub {
 	}
 
 	/**
-	 * Add the 'activitypub' capability to users who can publish posts.
+	 * Add the 'activitypub' capability to new users.
 	 *
 	 * @param int $user_id User ID.
 	 */
 	public static function user_register( $user_id ) {
-		if ( \user_can( $user_id, 'publish_posts' ) ) {
-			$user = \get_user_by( 'id', $user_id );
-			$user->add_cap( 'activitypub' );
-		}
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
 	}
 
 	/**

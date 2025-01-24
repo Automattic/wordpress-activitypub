@@ -674,15 +674,8 @@ class Migration {
 	 * Add the ActivityPub capability to all users that can publish posts.
 	 */
 	private static function add_activitypub_capability() {
-		// Get all WP_User objects that can publish posts.
-		$users = \get_users(
-			array(
-				'capability__in' => array( 'publish_posts' ),
-			)
-		);
-
-		// Add ActivityPub capability to all users that can publish posts.
-		foreach ( $users as $user ) {
+		// Add ActivityPub capability to all users.
+		foreach ( \get_users() as $user ) {
 			$user->add_cap( 'activitypub' );
 		}
 	}
