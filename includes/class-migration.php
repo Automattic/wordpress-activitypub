@@ -173,7 +173,7 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.7.3', '<' ) ) {
 			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '4.7.4', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'create_post_outbox_items' ) );
 			\wp_schedule_single_event( \time() + 15, 'activitypub_upgrade', array( 'create_comment_outbox_items' ) );
 		}
@@ -540,23 +540,15 @@ class Migration {
 	 * @return array|null Array with batch size and offset if there are more posts to process, null otherwise.
 	 */
 	public static function create_post_outbox_items( $batch_size = 50, $offset = 0 ) {
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
 		$posts      = \get_posts(
 			array(
 				'posts_per_page' => $batch_size,
 				'offset'         => $offset,
-				'post_type'      => $post_types,
-
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'     => array(
-					'relation' => 'OR',
 					array(
-						'key'     => 'activitypub_content_visibility',
-						'compare' => 'NOT EXISTS',
-					),
-					array(
-						'key'   => 'activitypub_content_visibility',
-						'value' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+						'key'   => 'activitypub_status',
+						'value' => 'federated',
 					),
 				),
 			)
@@ -603,6 +595,13 @@ class Migration {
 				'author__not_in' => array( 0 ), // Limit to comments by registered users.
 				'number'         => $batch_size,
 				'offset'         => $offset,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					array(
+						'key'   => 'activitypub_status',
+						'value' => 'federated',
+					),
+				),
 			)
 		);
 
