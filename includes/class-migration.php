@@ -173,7 +173,7 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.7.3', '<' ) ) {
 			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
-		if ( \version_compare( $version_from_db, '4.7.4', '<' ) ) {
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'create_post_outbox_items' ) );
 			\wp_schedule_single_event( \time() + 15, 'activitypub_upgrade', array( 'create_comment_outbox_items' ) );
 		}
@@ -549,6 +549,7 @@ class Migration {
 	public static function create_post_outbox_items( $batch_size = 50, $offset = 0 ) {
 		$posts = \get_posts(
 			array(
+				// our own `ap_outbox` will be excluded from `any` by virtue of its `exclude_from_search` arg.
 				'post_type'      => 'any',
 				'posts_per_page' => $batch_size,
 				'offset'         => $offset,
