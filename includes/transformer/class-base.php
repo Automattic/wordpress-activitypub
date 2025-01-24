@@ -315,15 +315,12 @@ abstract class Base {
 		$tags     = array();
 		$mentions = $this->get_mentions();
 
-		if ( $mentions ) {
-			foreach ( $mentions as $mention => $url ) {
-				$tag    = array(
-					'type' => 'Mention',
-					'href' => \esc_url( $url ),
-					'name' => \esc_html( $mention ),
-				);
-				$tags[] = $tag;
-			}
+		foreach ( $mentions as $mention => $url ) {
+			$tags[] = array(
+				'type' => 'Mention',
+				'href' => \esc_url( $url ),
+				'name' => \esc_html( $mention ),
+			);
 		}
 
 		return \array_unique( $tags, SORT_REGULAR );
