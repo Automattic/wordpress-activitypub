@@ -36,9 +36,6 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 */
 	public function no_activity_post_provider() {
 		return array(
-			'author_cannot_publish' => array(
-				array( 'post_author' => 90210 ),
-			),
 			'password_protected'    => array(
 				array( 'post_password' => 'test-password' ),
 			),

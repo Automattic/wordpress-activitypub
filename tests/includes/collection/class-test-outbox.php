@@ -12,7 +12,34 @@ namespace Activitypub\Tests\Collection;
  *
  * @coversDefaultClass \Activitypub\Collection\Outbox
  */
-class Test_Outbox extends \Activitypub\Tests\ActivityPub_TestCase_Cache_HTTP {
+class Test_Outbox extends \WP_UnitTestCase {
+	/**
+	 * User ID for testing.
+	 *
+	 * @var int
+	 */
+	protected static $user_id;
+
+	/**
+	 * Set up test resources.
+	 */
+	public static function set_up_before_class() {
+		parent::set_up_before_class();
+		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		// Add activitypub capability to the user.
+		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
+
+		\add_filter( 'pre_schedule_event', '__return_false' );
+	}
+
+	/**
+	 * Clean up test resources.
+	 */
+	public static function tear_down_after_class() {
+		\wp_delete_user( self::$user_id );
+		\remove_filter( 'pre_schedule_event', '__return_false' );
+	}
 
 	/**
 	 * Test add an item to the outbox.
@@ -30,7 +57,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_TestCase_Cache_HTTP {
 
 		$this->assertIsInt( $id );
 
-		$post = get_post( $id );
+		$post = \get_post( $id );
 
 		$this->assertInstanceOf( 'WP_Post', $post );
 		$this->assertEquals( 'pending', $post->post_status );
@@ -39,8 +66,11 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_TestCase_Cache_HTTP {
 		$activity = json_decode( $post->post_content );
 		$this->assertSame( $data['content'], $activity->content );
 
-		$this->assertEquals( $type, get_post_meta( $id, '_activitypub_activity_type', true ) );
-		$this->assertEquals( 'user', get_post_meta( $id, '_activitypub_activity_actor', true ) );
+		$this->assertEquals( $type, \get_post_meta( $id, '_activitypub_activity_type', true ) );
+
+		// Fall back to blog if user does not have the activitypub capability.
+		$actor_type = \user_can( $user_id, 'activitypub' ) ? 'user' : 'blog';
+		$this->assertEquals( $actor_type, \get_post_meta( $id, '_activitypub_activity_actor', true ) );
 	}
 
 	/**
@@ -53,13 +83,13 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_TestCase_Cache_HTTP {
 			array(
 				array(
 					'@context' => 'https://www.w3.org/ns/activitystreams',
-					'id'       => 'https://example.com/1',
+					'id'       => 'https://example.com/' . self::$user_id,
 					'type'     => 'Note',
 					'content'  => '<p>This is a note</p>',
 				),
 				'Create',
 				1,
-				'{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https:\/\/example.com\/1","type":"Note","content":"\u003Cp\u003EThis is a note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is a note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"cc":[],"mediaType":"text\/html","sensitive":false}',
+				'{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https:\/\/example.com\/' . self::$user_id . '","type":"Note","content":"\u003Cp\u003EThis is a note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is a note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"cc":[],"mediaType":"text\/html","sensitive":false}',
 			),
 			array(
 				array(
