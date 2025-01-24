@@ -217,10 +217,10 @@ class Migration {
 	/**
 	 * Asynchronously runs upgrade routines.
 	 *
-	 * @param string $callback The callback to run.
-	 * @param mixed  ...$args  The arguments to pass to the callback.
+	 * @param callable $callback Callable upgrade routine. Must be a method of this class.
+	 * @params mixed   ...$args  Optional. Parameters that get passed to the callback.
 	 */
-	public static function async_upgrade( $callback, ...$args ) {
+	public static function async_upgrade( $callback ) {
 		$args = \func_get_args();
 
 		// Bail if the existing lock is still valid.
@@ -231,7 +231,7 @@ class Migration {
 
 		self::lock();
 
-		$callback = array_shift( $args );  // Remove $callback from arguments.
+		$callback = array_shift( $args ); // Remove $callback from arguments.
 		$next     = \call_user_func_array( array( self::class, $callback ), $args );
 
 		self::unlock();
