@@ -133,6 +133,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Added: Undo API for Outbox items.
 * Added: Setting to adjust the number of days Outbox items are kept before being purged.
+* Added: Show metadata in the New Follower E-Mail.
 * Fixed: The Outbox purging routine no longer is limited to deleting 5 items at a time.
 
 = 5.2.0 =
