@@ -542,6 +542,7 @@ class Migration {
 	public static function create_post_outbox_items( $batch_size = 50, $offset = 0 ) {
 		$posts = \get_posts(
 			array(
+				'post_type'      => 'any',
 				'posts_per_page' => $batch_size,
 				'offset'         => $offset,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
