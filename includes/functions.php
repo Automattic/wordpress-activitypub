@@ -1580,9 +1580,13 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 		return false;
 	}
 
-	// If the user is disabled, use the blog user.
-	if ( is_user_disabled( $user_id ) && ! is_user_disabled( Actors::BLOG_USER_ID ) ) {
-		$user_id = Actors::BLOG_USER_ID;
+	// If the user is disabled, fall back to the blog user when available.
+	if ( is_user_disabled( $user_id ) ) {
+		if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
+			return false;
+		} else {
+			$user_id = Actors::BLOG_USER_ID;
+		}
 	}
 
 	set_wp_object_state( $data, 'federate' );

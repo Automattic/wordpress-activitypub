@@ -58,7 +58,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$this->assertEquals( $key_pair['private_key'], $private_key );
 
 		// Check application user.
-		$user = Actors::get_by_id( -1 );
+		$user = Actors::get_by_id( Actors::APPLICATION_USER_ID );
 
 		$public_key  = 'public key ' . $user->get__id();
 		$private_key = 'private key ' . $user->get__id();
@@ -73,8 +73,9 @@ class Test_Signature extends \WP_UnitTestCase {
 		$this->assertEquals( $key_pair['private_key'], $private_key );
 
 		// Check blog user.
-		\define( 'ACTIVITYPUB_DISABLE_BLOG_USER', false );
-		$user = Actors::get_by_id( 0 );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		$user = Actors::get_by_id( Actors::BLOG_USER_ID );
+		\delete_option( 'activitypub_actor_mode' );
 
 		$public_key  = 'public key ' . $user->get__id();
 		$private_key = 'private key ' . $user->get__id();

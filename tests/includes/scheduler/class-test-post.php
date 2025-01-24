@@ -20,7 +20,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @covers ::schedule_post_activity
 	 */
 	public function test_schedule_post_activity_regular_post() {
-		$post_id       = self::factory()->post->create();
+		$post_id       = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$activitpub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 
 		$post = $this->get_latest_outbox_item( $activitpub_id );

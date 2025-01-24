@@ -37,6 +37,7 @@ class Test_Outbox extends \WP_UnitTestCase {
 	 * Clean up test resources.
 	 */
 	public static function tear_down_after_class() {
+		\delete_option( 'activitypub_actor_mode' );
 		\wp_delete_user( self::$user_id );
 		\remove_filter( 'pre_schedule_event', '__return_false' );
 	}
@@ -53,6 +54,8 @@ class Test_Outbox extends \WP_UnitTestCase {
 	 * @param string $json    The JSON representation of the data.
 	 */
 	public function test_add( $data, $type, $user_id, $json ) {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
 		$id = \Activitypub\add_to_outbox( $data, $type, $user_id );
 
 		$this->assertIsInt( $id );
@@ -102,6 +105,45 @@ class Test_Outbox extends \WP_UnitTestCase {
 				2,
 				'{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https:\/\/example.com\/2","type":"Note","content":"\u003Cp\u003EThis is another note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is another note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"cc":[],"mediaType":"text\/html","sensitive":false}',
 			),
+		);
+	}
+
+	/**
+	 * Test add an item to the outbox with a user.
+	 *
+	 * @covers ::add
+	 * @dataProvider author_object_provider
+	 *
+	 * @param string $mode           The actor mode.
+	 * @param int    $user_id        The user ID.
+	 * @param string $expected_actor The expected actor.
+	 */
+	public function test_author_fallbacks( $mode, $user_id, $expected_actor ) {
+		\update_option( 'activitypub_actor_mode', $mode );
+
+		$user_id = $user_id ?? self::$user_id;
+		$data    = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => 'https://example.com/' . $user_id,
+			'type'     => 'Note',
+			'content'  => '<p>This is a note</p>',
+		);
+
+		$id = \Activitypub\add_to_outbox( $data, 'Create', $user_id );
+		$this->assertEquals( $expected_actor, \get_post_meta( $id, '_activitypub_activity_actor', true ) );
+	}
+
+	/**
+	 * Data provider for test_author_fallbacks.
+	 *
+	 * @return array[]
+	 */
+	public function author_object_provider() {
+		return array(
+			array( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, self::$user_id, 'user' ), // Not sure why we can't access self::$user_id directly.
+			array( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, 90210, 'blog' ),
+			array( ACTIVITYPUB_BLOG_MODE, 90210, 'blog' ),
+			array( ACTIVITYPUB_ACTOR_MODE, 90210, false ),
 		);
 	}
 }

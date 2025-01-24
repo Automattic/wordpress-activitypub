@@ -88,6 +88,7 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @covers ::blog_user_update
 	 */
 	public function test_blog_user_update() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 		$test_value = 'test value';
 		$result     = \Activitypub\Scheduler\Actor::blog_user_update( $test_value );
 
@@ -160,7 +161,7 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @covers ::schedule_post_activity
 	 */
 	public function test_schedule_post_activity_extra_field_blog() {
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 		$blog_post_id  = self::factory()->post->create( array( 'post_type' => Extra_Fields::BLOG_POST_TYPE ) );
 		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 
@@ -169,6 +170,5 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		// Clean up.
 		\wp_delete_post( $blog_post_id, true );
-		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 	}
 }
