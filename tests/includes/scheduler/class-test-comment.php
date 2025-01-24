@@ -19,7 +19,7 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 *
 	 * @var int
 	 */
-	protected static $post_id;
+	protected static $comment_post_ID;
 
 	/**
 	 * Set up test resources.
@@ -27,14 +27,7 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	public static function set_up_before_class() {
 		parent::set_up_before_class();
 
-		self::$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
-	}
-
-	/**
-	 * Clean up test resources.
-	 */
-	public static function tear_down_after_class() {
-		wp_delete_post( self::$post_id, true );
+		self::$comment_post_ID = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 	}
 
 	/**
@@ -43,7 +36,7 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	public function test_schedule_comment_activity_on_approval() {
 		$comment_id    = self::factory()->comment->create(
 			array(
-				'comment_post_ID'  => self::$post_id,
+				'comment_post_ID'  => self::$comment_post_ID,
 				'user_id'          => self::$user_id,
 				'comment_approved' => 0,
 			)
@@ -64,7 +57,7 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	public function test_schedule_comment_activity_on_insert() {
 		$comment_id    = self::factory()->comment->create(
 			array(
-				'comment_post_ID'  => self::$post_id,
+				'comment_post_ID'  => self::$comment_post_ID,
 				'user_id'          => self::$user_id,
 				'comment_approved' => 1,
 			)
@@ -86,20 +79,20 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		return array(
 			'unapproved_comment'  => array(
 				array(
-					'comment_post_ID'  => self::$post_id,
+					'comment_post_ID'  => self::$comment_post_ID,
 					'user_id'          => self::$user_id,
 					'comment_approved' => 0,
 				),
 			),
 			'non_registered_user' => array(
 				array(
-					'comment_post_ID'  => self::$post_id,
+					'comment_post_ID'  => self::$comment_post_ID,
 					'comment_approved' => 1,
 				),
 			),
 			'federation_disabled' => array(
 				array(
-					'comment_post_ID'  => self::$post_id,
+					'comment_post_ID'  => self::$comment_post_ID,
 					'user_id'          => self::$user_id,
 					'comment_approved' => 1,
 					'comment_meta'     => array(
@@ -118,6 +111,12 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @param array $comment_data   Comment data for creating the test comment.
 	 */
 	public function test_no_activity_scheduled( $comment_data ) {
+		foreach ( array( 'comment_post_ID', 'user_id' ) as $key ) {
+			if ( isset( $comment_data[ $key ] ) ) {
+				$comment_data[ $key ] = self::$$key;
+			}
+		}
+
 		$comment_id    = self::factory()->comment->create( $comment_data );
 		$activitpub_id = \Activitypub\Comment::generate_id( $comment_id );
 
