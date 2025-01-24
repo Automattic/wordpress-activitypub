@@ -21,13 +21,6 @@ class ActivityPub_Outbox_TestCase extends \WP_UnitTestCase {
 	protected static $user_id;
 
 	/**
-	 * Post ID for testing.
-	 *
-	 * @var int
-	 */
-	protected static $post_id;
-
-	/**
 	 * Set up test resources.
 	 */
 	public static function set_up_before_class() {
