@@ -567,10 +567,6 @@ class Migration {
 		\update_postmeta_cache( \wp_list_pluck( $posts, 'ID' ) );
 
 		foreach ( $posts as $post ) {
-			if ( is_user_disabled( $post->post_author ) ) {
-				continue;
-			}
-
 			$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
 			self::add_to_outbox( $post, 'Create', $post->post_author, $visibility );
@@ -655,6 +651,15 @@ class Migration {
 		$activity = $transformer->to_object();
 		if ( ! $activity || \is_wp_error( $activity ) ) {
 			return;
+		}
+
+		// If the user is disabled, fall back to the blog user when available.
+		if ( is_user_disabled( $user_id ) ) {
+			if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
+				return;
+			} else {
+				$user_id = Actors::BLOG_USER_ID;
+			}
 		}
 
 		$post_id = Outbox::add( $activity, $activity_type, $user_id, $visibility );
