@@ -12,35 +12,7 @@ namespace Activitypub\Tests\Collection;
  *
  * @coversDefaultClass \Activitypub\Collection\Outbox
  */
-class Test_Outbox extends \WP_UnitTestCase {
-	/**
-	 * User ID for testing.
-	 *
-	 * @var int
-	 */
-	protected static $user_id;
-
-	/**
-	 * Set up test resources.
-	 */
-	public static function set_up_before_class() {
-		parent::set_up_before_class();
-		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
-
-		// Add activitypub capability to the user.
-		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
-
-		\add_filter( 'pre_schedule_event', '__return_false' );
-	}
-
-	/**
-	 * Clean up test resources.
-	 */
-	public static function tear_down_after_class() {
-		\delete_option( 'activitypub_actor_mode' );
-		\wp_delete_user( self::$user_id );
-		\remove_filter( 'pre_schedule_event', '__return_false' );
-	}
+class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 	/**
 	 * Test add an item to the outbox.
@@ -140,7 +112,7 @@ class Test_Outbox extends \WP_UnitTestCase {
 	 */
 	public function author_object_provider() {
 		return array(
-			array( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, self::$user_id, 'user' ), // Not sure why we can't access self::$user_id directly.
+			array( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, null, 'user' ),
 			array( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, 90210, 'blog' ),
 			array( ACTIVITYPUB_BLOG_MODE, 90210, 'blog' ),
 			array( ACTIVITYPUB_ACTOR_MODE, 90210, false ),
