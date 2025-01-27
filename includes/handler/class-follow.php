@@ -30,7 +30,7 @@ class Follow {
 
 		\add_action(
 			'activitypub_followers_post_follow',
-			array( self::class, 'send_follow_response' ),
+			array( self::class, 'queue_accept' ),
 			10,
 			4
 		);
@@ -85,7 +85,7 @@ class Follow {
 	 * @param int                         $user_id         The ID of the WordPress User.
 	 * @param \Activitypub\Model\Follower $follower        The Follower object.
 	 */
-	public static function send_follow_response( $actor, $activity_object, $user_id, $follower ) {
+	public static function queue_accept( $actor, $activity_object, $user_id, $follower ) {
 		if ( \is_wp_error( $follower ) ) {
 			// Impossible to send a "Reject" because we can not get the Remote-Inbox.
 			return;

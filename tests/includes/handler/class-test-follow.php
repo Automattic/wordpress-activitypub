@@ -46,11 +46,11 @@ class Test_Follow extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test send_follow_response method.
+	 * Test queue_accept method.
 	 *
-	 * @covers ::send_follow_response
+	 * @covers ::queue_accept
 	 */
-	public function test_send_follow_response() {
+	public function test_queue_accept() {
 		$actor           = 'https://example.com/actor';
 		$activity_object = array(
 			'id'     => 'https://example.com/activity/123',
@@ -61,7 +61,7 @@ class Test_Follow extends WP_UnitTestCase {
 
 		// Test with WP_Error follower - should not create outbox entry.
 		$wp_error = new \WP_Error( 'test_error', 'Test Error' );
-		Follow::send_follow_response( $actor, $activity_object, self::$user_id, $wp_error );
+		Follow::queue_accept( $actor, $activity_object, self::$user_id, $wp_error );
 
 		$outbox_posts = get_posts(
 			array(
@@ -85,7 +85,7 @@ class Test_Follow extends WP_UnitTestCase {
 		$follower->set_type( 'Person' );
 		$follower->set_inbox( 'https://example.com/inbox' );
 
-		Follow::send_follow_response( $actor, $activity_object, self::$user_id, $follower );
+		Follow::queue_accept( $actor, $activity_object, self::$user_id, $follower );
 
 		$outbox_posts = get_posts(
 			array(
