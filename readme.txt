@@ -33,7 +33,6 @@ The plugin works with the following tested federated platforms, but there may be
 * [Pixelfed](https://pixelfed.org/)
 * [Socialhome](https://socialhome.network/)
 * [Misskey](https://join.misskey.page/)
-* [Firefish](https://joinfirefish.org/) (rebrand of Calckey)
 
 Some things to note:
 
@@ -135,6 +134,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: Outbox queue
+* Changed: Rewrite the current dispatcher system, to use the Outbox instead of a Scheduler.
 * Changed: Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
 
 = 4.7.3 =

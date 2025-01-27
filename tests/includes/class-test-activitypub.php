@@ -44,7 +44,11 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	 */
 	public function test_preview_template_filter() {
 		// Create a test post.
-		$post_id = self::factory()->post->create();
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => 1,
+			)
+		);
 		$this->go_to( get_permalink( $post_id ) );
 
 		// Simulate ActivityPub request and preview mode.

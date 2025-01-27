@@ -300,7 +300,11 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		Comment::register_comment_types();
 
 		// Create test comments.
-		$post_id    = $this->factory->post->create();
+		$post_id    = $this->factory->post->create(
+			array(
+				'post_author' => 1,
+			)
+		);
 		$comment_id = $this->factory->comment->create(
 			array(
 				'comment_post_ID'  => $post_id,

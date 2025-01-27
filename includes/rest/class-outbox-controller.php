@@ -187,7 +187,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			'orderedItems' => array(),
 		);
 
-		update_postmeta_cache( \wp_list_pluck( $query_result, 'ID' ) );
+		\update_postmeta_cache( \wp_list_pluck( $query_result, 'ID' ) );
 		foreach ( $query_result as $outbox_item ) {
 			$response['orderedItems'][] = $this->prepare_item_for_response( $outbox_item, $request );
 		}

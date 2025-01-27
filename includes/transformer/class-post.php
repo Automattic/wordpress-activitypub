@@ -58,20 +58,20 @@ class Post extends Base {
 			$object->set_summary_map( null );
 		}
 
-		$visibility = get_content_visibility( $post );
+		return $object;
+	}
 
-		switch ( $visibility ) {
-			case ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC:
-				$object->set_to( $this->get_cc() );
-				$object->set_cc( $this->get_to() );
-				break;
-			case ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL:
-				$object->set_to( array() );
-				$object->set_cc( array() );
-				break;
+	/**
+	 * Get the content visibility.
+	 *
+	 * @return string The content visibility.
+	 */
+	public function get_content_visibility() {
+		if ( ! $this->content_visibility ) {
+			return get_content_visibility( $this->item );
 		}
 
-		return $object;
+		return $this->content_visibility;
 	}
 
 	/**
@@ -341,6 +341,295 @@ class Post extends Base {
 		 * @return array The filtered attachments.
 		 */
 		return \apply_filters( 'activitypub_attachments', $attachments, $this->item );
+	}
+
+	/**
+	 * Returns the ActivityStreams 2.0 Object-Type for a Post based on the
+	 * settings and the Post-Type.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#activity-types
+	 *
+	 * @return string The Object-Type.
+	 */
+	protected function get_type() {
+		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
+
+		if ( 'wordpress-post-format' !== $post_format_setting ) {
+			return \ucfirst( $post_format_setting );
+		}
+
+		$has_title = \post_type_supports( $this->item->post_type, 'title' );
+		$content   = \wp_strip_all_tags( $this->item->post_content );
+
+		// Check if the post has a title.
+		if (
+			! $has_title ||
+			! $this->item->post_title ||
+			\strlen( $content ) <= ACTIVITYPUB_NOTE_LENGTH
+		) {
+			return 'Note';
+		}
+
+		// Default to Note.
+		$object_type = 'Note';
+		$post_type   = \get_post_type( $this->item );
+
+		if ( 'page' === $post_type ) {
+			$object_type = 'Page';
+		} elseif ( ! \get_post_format( $this->item ) ) {
+			$object_type = 'Article';
+		}
+
+		return $object_type;
+	}
+
+	/**
+	 * Returns the Audience for the Post.
+	 *
+	 * @return string|null The audience.
+	 */
+	public function get_audience() {
+		$actor_mode = \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE === $actor_mode ) {
+			$blog = new Blog();
+			return $blog->get_id();
+		}
+
+		return null;
+	}
+
+	/**
+	 * Returns a list of Tags, used in the Post.
+	 *
+	 * This includes Hash-Tags and Mentions.
+	 *
+	 * @return array The list of Tags.
+	 */
+	protected function get_tag() {
+		$tags = parent::get_tag();
+
+		$post_tags = \get_the_tags( $this->item->ID );
+		if ( $post_tags ) {
+			foreach ( $post_tags as $post_tag ) {
+				$tag    = array(
+					'type' => 'Hashtag',
+					'href' => \esc_url( \get_tag_link( $post_tag->term_id ) ),
+					'name' => esc_hashtag( $post_tag->name ),
+				);
+				$tags[] = $tag;
+			}
+		}
+
+		return \array_unique( $tags, SORT_REGULAR );
+	}
+
+	/**
+	 * Returns the summary for the ActivityPub Item.
+	 *
+	 * The summary will be generated based on the user settings and only if the
+	 * object type is not set to `note`.
+	 *
+	 * @return string|null The summary or null if the object type is `note`.
+	 */
+	protected function get_summary() {
+		if ( 'Note' === $this->get_type() ) {
+			return null;
+		}
+
+		// Remove Teaser from drafts.
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+			return \__( '(This post is being modified)', 'activitypub' );
+		}
+
+		return generate_post_summary( $this->item );
+	}
+
+	/**
+	 * Returns the title for the ActivityPub Item.
+	 *
+	 * The title will be generated based on the user settings and only if the
+	 * object type is not set to `note`.
+	 *
+	 * @return string|null The title or null if the object type is `note`.
+	 */
+	protected function get_name() {
+		if ( 'Note' === $this->get_type() ) {
+			return null;
+		}
+
+		$title = \get_the_title( $this->item->ID );
+
+		if ( ! $title ) {
+			return null;
+		}
+
+		return \wp_strip_all_tags(
+			\html_entity_decode(
+				$title
+			)
+		);
+	}
+
+	/**
+	 * Returns the content for the ActivityPub Item.
+	 *
+	 * The content will be generated based on the user settings.
+	 *
+	 * @return string The content.
+	 */
+	protected function get_content() {
+		add_filter( 'activitypub_reply_block', '__return_empty_string' );
+
+		// Remove Content from drafts.
+		if ( 'draft' === \get_post_status( $this->item ) ) {
+			return \__( '(This post is being modified)', 'activitypub' );
+		}
+
+		global $post;
+
+		/**
+		 * Provides an action hook so plugins can add their own hooks/filters before AP content is generated.
+		 *
+		 * Example: if a plugin adds a filter to `the_content` to add a button to the end of posts, it can also remove that filter here.
+		 *
+		 * @param WP_Post $post The post object.
+		 */
+		do_action( 'activitypub_before_get_content', $post );
+
+		add_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ), 10, 2 );
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$post    = $this->item;
+		$content = $this->get_post_content_template();
+
+		// It seems that shortcodes are only applied to published posts.
+		if ( is_preview() ) {
+			$post->post_status = 'publish';
+		}
+
+		// Register our shortcodes just in time.
+		Shortcodes::register();
+		// Fill in the shortcodes.
+		\setup_postdata( $post );
+		$content = \do_shortcode( $content );
+		\wp_reset_postdata();
+
+		$content = \wpautop( $content );
+		$content = \preg_replace( '/[\n\r\t]/', '', $content );
+		$content = \trim( $content );
+
+		/**
+		 * Filters the post content before it is transformed for ActivityPub.
+		 *
+		 * @param string  $content The post content to be transformed.
+		 * @param WP_Post $post    The post object being transformed.
+		 */
+		$content = \apply_filters( 'activitypub_the_content', $content, $post );
+
+		// Don't need these anymore, should never appear in a post.
+		Shortcodes::unregister();
+
+		return $content;
+	}
+
+	/**
+	 * Returns the in-reply-to URL of the post.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-inreplyto
+	 *
+	 * @return string|null The in-reply-to URL of the post.
+	 */
+	protected function get_in_reply_to() {
+		$blocks = \parse_blocks( $this->item->post_content );
+
+		foreach ( $blocks as $block ) {
+			if ( 'activitypub/reply' === $block['blockName'] && isset( $block['attrs']['url'] ) ) {
+				// We only support one reply block per post for now.
+				return $block['attrs']['url'];
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Returns the published date of the post.
+	 *
+	 * @return string The published date of the post.
+	 */
+	protected function get_published() {
+		$published = \strtotime( $this->item->post_date_gmt );
+
+		return \gmdate( 'Y-m-d\TH:i:s\Z', $published );
+	}
+
+	/**
+	 * Returns the updated date of the post.
+	 *
+	 * @return string|null The updated date of the post.
+	 */
+	protected function get_updated() {
+		$published = \strtotime( $this->item->post_date_gmt );
+		$updated   = \strtotime( $this->item->post_modified_gmt );
+
+		if ( $updated > $published ) {
+			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Helper function to extract the @-Mentions from the post content.
+	 *
+	 * @return array The list of @-Mentions.
+	 */
+	protected function get_mentions() {
+		/**
+		 * Filter the mentions in the post content.
+		 *
+		 * @param array   $mentions The mentions.
+		 * @param string  $content  The post content.
+		 * @param WP_Post $post     The post object.
+		 *
+		 * @return array The filtered mentions.
+		 */
+		return apply_filters(
+			'activitypub_extract_mentions',
+			array(),
+			$this->item->post_content . ' ' . $this->item->post_excerpt,
+			$this->item
+		);
+	}
+
+	/**
+	 * Transform Embed blocks to block level link.
+	 *
+	 * Remote servers will simply drop iframe elements, rendering incomplete content.
+	 *
+	 * @see https://www.w3.org/TR/activitypub/#security-sanitizing-content
+	 * @see https://www.w3.org/wiki/ActivityPub/Primer/HTML
+	 *
+	 * @param string $block_content The block content (html).
+	 * @param object $block         The block object.
+	 *
+	 * @return string A block level link
+	 */
+	public function revert_embed_links( $block_content, $block ) {
+		if ( ! isset( $block['attrs']['url'] ) ) {
+			return $block_content;
+		}
+		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
+	}
+
+	/**
+	 * Check if the post is a preview.
+	 *
+	 * @return boolean True if the post is a preview, false otherwise.
+	 */
+	private function is_preview() {
+		return defined( 'ACTIVITYPUB_PREVIEW' ) && ACTIVITYPUB_PREVIEW;
 	}
 
 	/**
@@ -777,222 +1066,6 @@ class Post extends Base {
 	}
 
 	/**
-	 * Returns the ActivityStreams 2.0 Object-Type for a Post based on the
-	 * settings and the Post-Type.
-	 *
-	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#activity-types
-	 *
-	 * @return string The Object-Type.
-	 */
-	protected function get_type() {
-		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
-
-		if ( 'wordpress-post-format' !== $post_format_setting ) {
-			return \ucfirst( $post_format_setting );
-		}
-
-		$has_title = \post_type_supports( $this->item->post_type, 'title' );
-		$content   = \wp_strip_all_tags( $this->item->post_content );
-
-		// Check if the post has a title.
-		if (
-			! $has_title ||
-			! $this->item->post_title ||
-			\strlen( $content ) <= ACTIVITYPUB_NOTE_LENGTH
-		) {
-			return 'Note';
-		}
-
-		// Default to Note.
-		$object_type = 'Note';
-		$post_type   = \get_post_type( $this->item );
-
-		if ( 'page' === $post_type ) {
-			$object_type = 'Page';
-		} elseif ( ! \get_post_format( $this->item ) ) {
-			$object_type = 'Article';
-		}
-
-		return $object_type;
-	}
-
-	/**
-	 * Returns a list of Mentions, used in the Post.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#Mention
-	 *
-	 * @return array The list of Mentions.
-	 */
-	protected function get_cc() {
-		$cc   = array_values( $this->get_mentions() );
-		$cc[] = $this->get_actor_object()->get_followers();
-
-		return $cc;
-	}
-
-	/**
-	 * Returns the Audience for the Post.
-	 *
-	 * @return string|null The audience.
-	 */
-	public function get_audience() {
-		$actor_mode = \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
-
-		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE === $actor_mode ) {
-			$blog = new Blog();
-			return $blog->get_id();
-		}
-
-		return null;
-	}
-
-	/**
-	 * Returns a list of Tags, used in the Post.
-	 *
-	 * This includes Hash-Tags and Mentions.
-	 *
-	 * @return array The list of Tags.
-	 */
-	protected function get_tag() {
-		$tags = array();
-
-		$post_tags = \get_the_tags( $this->item->ID );
-		if ( $post_tags ) {
-			foreach ( $post_tags as $post_tag ) {
-				$tag    = array(
-					'type' => 'Hashtag',
-					'href' => \esc_url( \get_tag_link( $post_tag->term_id ) ),
-					'name' => esc_hashtag( $post_tag->name ),
-				);
-				$tags[] = $tag;
-			}
-		}
-
-		$mentions = $this->get_mentions();
-		if ( $mentions ) {
-			foreach ( $mentions as $mention => $url ) {
-				$tag    = array(
-					'type' => 'Mention',
-					'href' => \esc_url( $url ),
-					'name' => \esc_html( $mention ),
-				);
-				$tags[] = $tag;
-			}
-		}
-
-		return $tags;
-	}
-
-	/**
-	 * Returns the summary for the ActivityPub Item.
-	 *
-	 * The summary will be generated based on the user settings and only if the
-	 * object type is not set to `note`.
-	 *
-	 * @return string|null The summary or null if the object type is `note`.
-	 */
-	protected function get_summary() {
-		if ( 'Note' === $this->get_type() ) {
-			return null;
-		}
-
-		// Remove Teaser from drafts.
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
-			return \__( '(This post is being modified)', 'activitypub' );
-		}
-
-		return generate_post_summary( $this->item );
-	}
-
-	/**
-	 * Returns the title for the ActivityPub Item.
-	 *
-	 * The title will be generated based on the user settings and only if the
-	 * object type is not set to `note`.
-	 *
-	 * @return string|null The title or null if the object type is `note`.
-	 */
-	protected function get_name() {
-		if ( 'Note' === $this->get_type() ) {
-			return null;
-		}
-
-		$title = \get_the_title( $this->item->ID );
-
-		if ( ! $title ) {
-			return null;
-		}
-
-		return \wp_strip_all_tags(
-			\html_entity_decode(
-				$title
-			)
-		);
-	}
-
-	/**
-	 * Returns the content for the ActivityPub Item.
-	 *
-	 * The content will be generated based on the user settings.
-	 *
-	 * @return string The content.
-	 */
-	protected function get_content() {
-		add_filter( 'activitypub_reply_block', '__return_empty_string' );
-
-		// Remove Content from drafts.
-		if ( 'draft' === \get_post_status( $this->item ) ) {
-			return \__( '(This post is being modified)', 'activitypub' );
-		}
-
-		global $post;
-
-		/**
-		 * Provides an action hook so plugins can add their own hooks/filters before AP content is generated.
-		 *
-		 * Example: if a plugin adds a filter to `the_content` to add a button to the end of posts, it can also remove that filter here.
-		 *
-		 * @param WP_Post $post The post object.
-		 */
-		do_action( 'activitypub_before_get_content', $post );
-
-		add_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ), 10, 2 );
-
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		$post    = $this->item;
-		$content = $this->get_post_content_template();
-
-		// It seems that shortcodes are only applied to published posts.
-		if ( is_preview() ) {
-			$post->post_status = 'publish';
-		}
-
-		// Register our shortcodes just in time.
-		Shortcodes::register();
-		// Fill in the shortcodes.
-		\setup_postdata( $post );
-		$content = \do_shortcode( $content );
-		\wp_reset_postdata();
-
-		$content = \wpautop( $content );
-		$content = \preg_replace( '/[\n\r\t]/', '', $content );
-		$content = \trim( $content );
-
-		/**
-		 * Filters the post content before it is transformed for ActivityPub.
-		 *
-		 * @param string  $content The post content to be transformed.
-		 * @param WP_Post $post    The post object being transformed.
-		 */
-		$content = \apply_filters( 'activitypub_the_content', $content, $post );
-
-		// Don't need these anymore, should never appear in a post.
-		Shortcodes::unregister();
-
-		return $content;
-	}
-
-	/**
 	 * Gets the template to use to generate the content of the activitypub item.
 	 *
 	 * @return string The Template.
@@ -1025,104 +1098,5 @@ class Post extends Base {
 		 * @param WP_Post $item The WordPress post object being transformed.
 		 */
 		return apply_filters( 'activitypub_object_content_template', $template, $this->item );
-	}
-
-	/**
-	 * Helper function to get the @-Mentions from the post content.
-	 *
-	 * @return array The list of @-Mentions.
-	 */
-	protected function get_mentions() {
-		/**
-		 * Filter the mentions in the post content.
-		 *
-		 * @param array   $mentions The mentions.
-		 * @param string  $content  The post content.
-		 * @param WP_Post $post     The post object.
-		 *
-		 * @return array The filtered mentions.
-		 */
-		return apply_filters(
-			'activitypub_extract_mentions',
-			array(),
-			$this->item->post_content . ' ' . $this->item->post_excerpt,
-			$this->item
-		);
-	}
-
-	/**
-	 * Returns the in-reply-to URL of the post.
-	 *
-	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-inreplyto
-	 *
-	 * @return string|null The in-reply-to URL of the post.
-	 */
-	protected function get_in_reply_to() {
-		$blocks = \parse_blocks( $this->item->post_content );
-
-		foreach ( $blocks as $block ) {
-			if ( 'activitypub/reply' === $block['blockName'] && isset( $block['attrs']['url'] ) ) {
-				// We only support one reply block per post for now.
-				return $block['attrs']['url'];
-			}
-		}
-
-		return null;
-	}
-
-	/**
-	 * Returns the published date of the post.
-	 *
-	 * @return string The published date of the post.
-	 */
-	protected function get_published() {
-		$published = \strtotime( $this->item->post_date_gmt );
-
-		return \gmdate( 'Y-m-d\TH:i:s\Z', $published );
-	}
-
-	/**
-	 * Returns the updated date of the post.
-	 *
-	 * @return string|null The updated date of the post.
-	 */
-	protected function get_updated() {
-		$published = \strtotime( $this->item->post_date_gmt );
-		$updated   = \strtotime( $this->item->post_modified_gmt );
-
-		if ( $updated > $published ) {
-			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
-		}
-
-		return null;
-	}
-
-	/**
-	 * Transform Embed blocks to block level link.
-	 *
-	 * Remote servers will simply drop iframe elements, rendering incomplete content.
-	 *
-	 * @see https://www.w3.org/TR/activitypub/#security-sanitizing-content
-	 * @see https://www.w3.org/wiki/ActivityPub/Primer/HTML
-	 *
-	 * @param string $block_content The block content (html).
-	 * @param object $block         The block object.
-	 *
-	 * @return string A block level link
-	 */
-	public function revert_embed_links( $block_content, $block ) {
-		if ( ! isset( $block['attrs']['url'] ) ) {
-			return $block_content;
-		}
-		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
-	}
-
-	/**
-	 * Check if the post is a preview.
-	 *
-	 * @return boolean True if the post is a preview, false otherwise.
-	 */
-	private function is_preview() {
-		return defined( 'ACTIVITYPUB_PREVIEW' ) && ACTIVITYPUB_PREVIEW;
 	}
 }

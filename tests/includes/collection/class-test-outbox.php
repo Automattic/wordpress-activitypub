@@ -33,8 +33,11 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_TestCase_Cache_HTTP {
 		$post = get_post( $id );
 
 		$this->assertInstanceOf( 'WP_Post', $post );
-		$this->assertEquals( 'draft', $post->post_status );
+		$this->assertEquals( 'pending', $post->post_status );
 		$this->assertEquals( $json, $post->post_content );
+
+		$activity = json_decode( $post->post_content );
+		$this->assertSame( $data['content'], $activity->content );
 
 		$this->assertEquals( $type, get_post_meta( $id, '_activitypub_activity_type', true ) );
 		$this->assertEquals( 'user', get_post_meta( $id, '_activitypub_activity_actor', true ) );
@@ -52,22 +55,22 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_TestCase_Cache_HTTP {
 					'@context' => 'https://www.w3.org/ns/activitystreams',
 					'id'       => 'https://example.com/1',
 					'type'     => 'Note',
-					'content'  => 'This is a note',
+					'content'  => '<p>This is a note</p>',
 				),
 				'Create',
 				1,
-				'{"@context":["https://www.w3.org/ns/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https://example.com/1","type":"Note","content":"This is a note","contentMap":{"en":"This is a note"},"tag":[],"to":["https://www.w3.org/ns/activitystreams#Public"],"mediaType":"text/html","sensitive":false}',
+				'{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https:\/\/example.com\/1","type":"Note","content":"\u003Cp\u003EThis is a note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is a note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"cc":[],"mediaType":"text\/html","sensitive":false}',
 			),
 			array(
 				array(
 					'@context' => 'https://www.w3.org/ns/activitystreams',
 					'id'       => 'https://example.com/2',
 					'type'     => 'Note',
-					'content'  => 'This is another note',
+					'content'  => '<p>This is another note</p>',
 				),
 				'Create',
 				2,
-				'{"@context":["https://www.w3.org/ns/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https://example.com/2","type":"Note","content":"This is another note","contentMap":{"en":"This is another note"},"tag":[],"to":["https://www.w3.org/ns/activitystreams#Public"],"mediaType":"text/html","sensitive":false}',
+				'{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https:\/\/example.com\/2","type":"Note","content":"\u003Cp\u003EThis is another note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is another note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"cc":[],"mediaType":"text\/html","sensitive":false}',
 			),
 		);
 	}

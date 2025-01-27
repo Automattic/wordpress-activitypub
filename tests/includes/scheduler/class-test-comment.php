@@ -166,7 +166,7 @@ class Test_Comment extends \WP_UnitTestCase {
 			array(
 				'post_type'      => Outbox::POST_TYPE,
 				'posts_per_page' => 1,
-				'post_status'    => 'draft',
+				'post_status'    => 'pending',
 				'post_title'     => $title,
 				'orderby'        => 'date',
 				'order'          => 'DESC',

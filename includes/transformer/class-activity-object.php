@@ -17,7 +17,24 @@ class Activity_Object extends Base {
 	 * @return Base_Object The ActivityPub Object.
 	 */
 	public function to_object() {
-		return $this->transform_object_properties( $this->item );
+		$activity_object = $this->transform_object_properties( $this->item );
+
+		if ( \is_wp_error( $activity_object ) ) {
+			return $activity_object;
+		}
+
+		$activity_object = $this->set_audience( $activity_object );
+
+		return $activity_object;
+	}
+
+	/**
+	 * Get the attributed to.
+	 *
+	 * @return string The attributed to.
+	 */
+	public function get_attributed_to() {
+		return $this->item->get_attributed_to();
 	}
 
 	/**
@@ -41,26 +58,6 @@ class Activity_Object extends Base {
 			$this->item->get_content() . ' ' . $this->item->get_summary(),
 			$this->item
 		);
-	}
-
-	/**
-	 * Returns a list of Mentions, used in the Post.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#Mention
-	 *
-	 * @return array The list of Mentions.
-	 */
-	protected function get_cc() {
-		$cc       = array();
-		$mentions = $this->get_mentions();
-
-		if ( $mentions ) {
-			foreach ( $mentions as $url ) {
-				$cc[] = $url;
-			}
-		}
-
-		return $cc;
 	}
 
 	/**

@@ -7,6 +7,12 @@
 
 namespace Activitypub\Scheduler;
 
+use Activitypub\Activity\Activity;
+use Activitypub\Scheduler;
+use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Actors;
+use Activitypub\Transformer\Factory;
+
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_post_disabled;
 use function Activitypub\get_wp_object_state;
@@ -26,6 +32,15 @@ class Post {
 		\add_action( 'add_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'edit_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'delete_attachment', array( self::class, 'transition_attachment_status' ) );
+
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'send_announces' ), 10, 4 );
+
+		// Get all post types that support ActivityPub.
+		$post_types = \get_post_types_by_support( 'activitypub' );
+
+		foreach ( $post_types as $post_type ) {
+			\add_filter( "rest_pre_insert_{$post_type}", array( self::class, 'rest_insert' ), 10, 2 );
+		}
 	}
 
 	/**
@@ -55,30 +70,12 @@ class Post {
 	 * @param int|\WP_Post $post       Post ID or post object.
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
-		$post = get_post( $post );
-
-		if ( ! $post || is_post_disabled( $post ) ) {
-			return;
-		}
-
-		if ( 'ap_extrafield' === $post->post_type ) {
-			self::schedule_profile_update( $post->post_author );
-			return;
-		}
-
-		if ( 'ap_extrafield_blog' === $post->post_type ) {
-			self::schedule_profile_update( 0 );
+		if ( is_post_disabled( $post ) ) {
 			return;
 		}
 
 		// Do not send activities if post is password protected.
 		if ( \post_password_required( $post ) ) {
-			return;
-		}
-
-		// Check if post-type supports ActivityPub.
-		$post_types = \get_post_types_by_support( 'activitypub' );
-		if ( ! \in_array( $post->post_type, $post_types, true ) ) {
 			return;
 		}
 
@@ -104,10 +101,87 @@ class Post {
 			return;
 		}
 
-		// Get the content visibility.
-		$content_visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
-
 		// Add the post to the outbox.
-		add_to_outbox( $post, $type, $post->post_author, $content_visibility );
+		add_to_outbox( $post, $type, $post->post_author );
+	}
+
+	/**
+	 * Send announces.
+	 *
+	 * @param int      $outbox_activity_id The outbox activity ID.
+	 * @param Activity $activity_object    The activity object.
+	 * @param int      $actor_id           The actor ID.
+	 * @param int      $content_visibility The content visibility.
+	 */
+	public static function send_announces( $outbox_activity_id, $activity_object, $actor_id, $content_visibility ) {
+		// Only if we're in both Blog and User modes.
+		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
+			return;
+		}
+
+		// Only if this isn't the Blog Actor.
+		if ( Actors::BLOG_USER_ID === $actor_id ) {
+			return;
+		}
+
+		// Only if the content is public or quiet public.
+		if ( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC !== $content_visibility ) {
+			return;
+		}
+
+		$activity_type = \get_post_meta( $outbox_activity_id, '_activitypub_activity_type', true );
+
+		// Only if the activity is a Create, Update or Delete.
+		if ( ! in_array( $activity_type, array( 'Create', 'Update', 'Delete' ), true ) ) {
+			return;
+		}
+
+		// Check if the object is an article, image, audio, video, event or document and ignore profile updates and other activities.
+		if ( ! in_array( $activity_object->get_type(), array( 'Note', 'Article', 'Image', 'Audio', 'Video', 'Event', 'Document' ), true ) ) {
+			return;
+		}
+
+		$transformer = Factory::get_transformer( $activity_object );
+		$activity    = $transformer->to_activity( $activity_type );
+
+		$outbox_activity_id = Outbox::add( $activity, 'Announce', Actors::BLOG_USER_ID, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+
+		if ( ! $outbox_activity_id ) {
+			return;
+		}
+
+		// Schedule the outbox item for federation.
+		Scheduler::schedule_outbox_activity_for_federation( $outbox_activity_id );
+	}
+
+	/**
+	 * Filter the post data before it is inserted via the REST API.
+	 *
+	 * @param \stdClass        $post     An object representing a single post prepared for inserting or updating the database.
+	 * @param \WP_REST_Request $request  The request object.
+	 *
+	 * @return \stdClass The prepared post.
+	 */
+	public static function rest_insert( $post, $request ) {
+		$metas = $request->get_param( 'meta' );
+
+		if ( ! $post->ID || ! $metas || ! is_array( $metas ) ) {
+			return $post;
+		}
+
+		foreach ( $metas as $meta_key => $meta_value ) {
+			if (
+				\str_starts_with( $meta_key, 'activitypub_' ) ||
+				\str_starts_with( $meta_key, '_activitypub_' )
+			) {
+				if ( $meta_value ) {
+					\update_post_meta( $post->ID, $meta_key, $meta_value );
+				} else {
+					\delete_post_meta( $post->ID, $meta_key );
+				}
+			}
+		}
+
+		return $post;
 	}
 }

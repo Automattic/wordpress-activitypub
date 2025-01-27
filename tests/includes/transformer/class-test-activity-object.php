@@ -107,7 +107,8 @@ class Test_Activity_Object extends WP_UnitTestCase {
 		);
 
 		$transformer = new Activity_Object( $this->test_object );
-		$cc          = $this->get_protected_method( $transformer, 'get_cc' );
+		$object      = $transformer->to_object();
+		$cc          = $object->get_cc();
 
 		$this->assertIsArray( $cc );
 		$this->assertCount( 2, $cc );

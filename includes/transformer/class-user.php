@@ -26,38 +26,4 @@ class User extends Base {
 
 		return $actor;
 	}
-
-	/**
-	 * Get the User ID.
-	 *
-	 * @return int The User ID.
-	 */
-	public function get_id() {
-		// TODO: Will be removed with the new Outbox implementation.
-		return $this->wp_object->ID;
-	}
-
-	/**
-	 * Change the User ID.
-	 *
-	 * @param int $user_id The new user ID.
-	 *
-	 * @return User The User Object.
-	 */
-	public function change_wp_user_id( $user_id ) {
-		// TODO: Will be removed with the new Outbox implementation.
-		$this->wp_object->ID = $user_id;
-
-		return $this;
-	}
-
-	/**
-	 * Get the WP_User ID.
-	 *
-	 * @return int The WP_User ID.
-	 */
-	public function get_wp_user_id() {
-		// TODO: Will be removed with the new Outbox implementation.
-		return $this->wp_object->ID;
-	}
 }
