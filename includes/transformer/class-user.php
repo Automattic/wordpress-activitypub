@@ -21,9 +21,15 @@ class User extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
-		$user  = $this->wp_object;
-		$actor = Actors::get_by_id( $user->ID );
+		return Actors::get_by_id(  $this->item->ID );
+	}
 
-		return $actor;
+	/**
+	 * Get the Actor ID.
+	 *
+	 * @return string The Actor ID.
+	 */
+	public function to_id() {
+		return Actors::get_by_id( $this->item->ID )->get_id();
 	}
 }
