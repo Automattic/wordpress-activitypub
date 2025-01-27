@@ -9,6 +9,8 @@ namespace Activitypub;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Outbox;
+use Activitypub\Transformer\Factory;
 
 /**
  * ActivityPub Migration Class
@@ -21,6 +23,7 @@ class Migration {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_migrate', array( self::class, 'async_migration' ) );
+		\add_action( 'activitypub_upgrade', array( self::class, 'async_upgrade' ), 10, 99 );
 		\add_action( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ), 10, 2 );
 
 		self::maybe_migrate();
@@ -170,6 +173,10 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.7.3', '<' ) ) {
 			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'create_post_outbox_items' ) );
+			\wp_schedule_single_event( \time() + 15, 'activitypub_upgrade', array( 'create_comment_outbox_items' ) );
+		}
 
 		/*
 		 * Add new update routines above this comment. ^
@@ -204,6 +211,38 @@ class Migration {
 	public static function async_migration( $version_from_db ) {
 		if ( \version_compare( $version_from_db, '1.0.0', '<' ) ) {
 			self::migrate_from_0_17();
+		}
+	}
+
+	/**
+	 * Asynchronously runs upgrade routines.
+	 *
+	 * @param callable $callback Callable upgrade routine. Must be a method of this class.
+	 * @params mixed   ...$args  Optional. Parameters that get passed to the callback.
+	 */
+	public static function async_upgrade( $callback ) {
+		$args = \func_get_args();
+
+		// Bail if the existing lock is still valid.
+		if ( self::is_locked() ) {
+			\wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'activitypub_upgrade', $args );
+			return;
+		}
+
+		self::lock();
+
+		$callback = array_shift( $args ); // Remove $callback from arguments.
+		$next     = \call_user_func_array( array( self::class, $callback ), $args );
+
+		self::unlock();
+
+		if ( ! empty( $next ) ) {
+			// Schedule the next run, adding the result to the arguments.
+			\wp_schedule_single_event(
+				\time() + 30,
+				'activitypub_upgrade',
+				\array_merge( array( $callback ), \array_values( $next ) )
+			);
 		}
 	}
 
@@ -501,6 +540,91 @@ class Migration {
 	}
 
 	/**
+	 * Create outbox items for posts in batches.
+	 *
+	 * @param int $batch_size Optional. Number of posts to process per batch. Default 50.
+	 * @param int $offset     Optional. Number of posts to skip. Default 0.
+	 * @return array|null Array with batch size and offset if there are more posts to process, null otherwise.
+	 */
+	public static function create_post_outbox_items( $batch_size = 50, $offset = 0 ) {
+		$posts = \get_posts(
+			array(
+				// our own `ap_outbox` will be excluded from `any` by virtue of its `exclude_from_search` arg.
+				'post_type'      => 'any',
+				'posts_per_page' => $batch_size,
+				'offset'         => $offset,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					array(
+						'key'   => 'activitypub_status',
+						'value' => 'federated',
+					),
+				),
+			)
+		);
+
+		// Avoid multiple queries for post meta.
+		\update_postmeta_cache( \wp_list_pluck( $posts, 'ID' ) );
+
+		foreach ( $posts as $post ) {
+			$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+
+			self::add_to_outbox( $post, 'Create', $post->post_author, $visibility );
+
+			// Add Update activity when the post has been modified.
+			if ( $post->post_modified !== $post->post_date ) {
+				self::add_to_outbox( $post, 'Update', $post->post_author, $visibility );
+			}
+		}
+
+		if ( count( $posts ) === $batch_size ) {
+			return array(
+				'batch_size' => $batch_size,
+				'offset'     => $offset + $batch_size,
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Create outbox items for comments in batches.
+	 *
+	 * @param int $batch_size Optional. Number of posts to process per batch. Default 50.
+	 * @param int $offset     Optional. Number of posts to skip. Default 0.
+	 * @return array|null Array with batch size and offset if there are more posts to process, null otherwise.
+	 */
+	public static function create_comment_outbox_items( $batch_size = 50, $offset = 0 ) {
+		$comments = \get_comments(
+			array(
+				'author__not_in' => array( 0 ), // Limit to comments by registered users.
+				'number'         => $batch_size,
+				'offset'         => $offset,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					array(
+						'key'   => 'activitypub_status',
+						'value' => 'federated',
+					),
+				),
+			)
+		);
+
+		foreach ( $comments as $comment ) {
+			self::add_to_outbox( $comment, 'Create', $comment->user_id );
+		}
+
+		if ( count( $comments ) === $batch_size ) {
+			return array(
+				'batch_size' => $batch_size,
+				'offset'     => $offset + $batch_size,
+			);
+		}
+
+		return null;
+	}
+
+	/**
 	 * Set the defaults needed for the plugin to work.
 	 *
 	 * Add the ActivityPub capability to all users that can publish posts.
@@ -508,6 +632,40 @@ class Migration {
 	public static function add_default_settings() {
 		self::add_activitypub_capability();
 		self::add_notification_defaults();
+	}
+
+	/**
+	 * Add an activity to the outbox without federating it.
+	 *
+	 * @param \WP_Post|\WP_Comment $comment       The comment or post object.
+	 * @param string               $activity_type The type of activity.
+	 * @param int                  $user_id       The user ID.
+	 * @param string               $visibility    Optional. The visibility of the content. Default 'public'.
+	 */
+	private static function add_to_outbox( $comment, $activity_type, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
+		$transformer = Factory::get_transformer( $comment );
+		if ( ! $transformer || \is_wp_error( $transformer ) ) {
+			return;
+		}
+
+		$activity = $transformer->to_object();
+		if ( ! $activity || \is_wp_error( $activity ) ) {
+			return;
+		}
+
+		// If the user is disabled, fall back to the blog user when available.
+		if ( is_user_disabled( $user_id ) ) {
+			if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
+				return;
+			} else {
+				$user_id = Actors::BLOG_USER_ID;
+			}
+		}
+
+		$post_id = Outbox::add( $activity, $activity_type, $user_id, $visibility );
+
+		// Immediately set to publish, no federation needed.
+		\wp_publish_post( $post_id );
 	}
 
 	/**

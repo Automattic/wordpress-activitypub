@@ -523,21 +523,23 @@ class Activitypub {
 		register_post_type(
 			Outbox::POST_TYPE,
 			array(
-				'labels'           => array(
+				'labels'              => array(
 					'name'          => _x( 'Outbox', 'post_type plural name', 'activitypub' ),
 					'singular_name' => _x( 'Outbox Item', 'post_type single name', 'activitypub' ),
 				),
-				'capabilities'     => array(
+				'capabilities'        => array(
 					'create_posts' => false,
 				),
-				'map_meta_cap'     => true,
-				'public'           => true,
-				'hierarchical'     => true,
-				'rewrite'          => false,
-				'query_var'        => false,
-				'delete_with_user' => true,
-				'can_export'       => true,
-				'supports'         => array(),
+				'map_meta_cap'        => true,
+				'public'              => true,
+				'hierarchical'        => true,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'delete_with_user'    => true,
+				'can_export'          => true,
+				'supports'            => array(),
+				'exclude_from_search' => true,
+				'menu_icon'           => 'dashicons-networking',
 			)
 		);
 
