@@ -59,7 +59,7 @@ class Test_Follow extends WP_UnitTestCase {
 			'object' => 'https://example.com/user/1',
 		);
 
-		// Test with WP_Error follower - should not create outbox entry
+		// Test with WP_Error follower - should not create outbox entry.
 		$wp_error = new \WP_Error( 'test_error', 'Test Error' );
 		Follow::send_follow_response( $actor, $activity_object, self::$user_id, $wp_error );
 
@@ -68,6 +68,7 @@ class Test_Follow extends WP_UnitTestCase {
 				'post_type'   => Outbox::POST_TYPE,
 				'author'      => self::$user_id,
 				'post_status' => 'pending',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'  => array(
 					array(
 						'key'   => '_activitypub_activity_actor',
@@ -78,7 +79,7 @@ class Test_Follow extends WP_UnitTestCase {
 		);
 		$this->assertEmpty( $outbox_posts, 'No outbox entry should be created for WP_Error follower' );
 
-		// Test with valid follower
+		// Test with valid follower.
 		$follower = new Follower();
 		$follower->set_actor( $actor );
 		$follower->set_type( 'Person' );
@@ -91,6 +92,7 @@ class Test_Follow extends WP_UnitTestCase {
 				'post_type'   => Outbox::POST_TYPE,
 				'author'      => self::$user_id,
 				'post_status' => 'pending',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'  => array(
 					array(
 						'key'   => '_activitypub_activity_actor',
@@ -107,7 +109,7 @@ class Test_Follow extends WP_UnitTestCase {
 		$activity_json = \json_decode( $outbox_post->post_content, true );
 		$visibility    = \get_post_meta( $outbox_post->ID, 'activitypub_content_visibility', true );
 
-		// Verify outbox entry
+		// Verify outbox entry.
 		$this->assertEquals( 'Accept', $activity_type );
 		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, $visibility );
 
@@ -116,7 +118,7 @@ class Test_Follow extends WP_UnitTestCase {
 		$this->assertEquals( array( $actor ), $activity_json['to'] );
 		$this->assertEquals( $actor, $activity_json['actor'] );
 
-		// Clean up
+		// Clean up.
 		wp_delete_post( $outbox_post->ID, true );
 	}
 }

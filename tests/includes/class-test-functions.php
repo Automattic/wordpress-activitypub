@@ -223,7 +223,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 * @covers ::is_activity
 	 */
 	public function test_is_activity_with_array() {
-		// Test valid activity types
+		// Test valid activity types.
 		$valid_activities = array(
 			array( 'type' => 'Create' ),
 			array( 'type' => 'Update' ),
@@ -245,7 +245,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			);
 		}
 
-		// Test invalid activity types
+		// Test invalid activity types.
 		$invalid_activities = array(
 			array( 'type' => 'Note' ),
 			array( 'type' => 'Article' ),
@@ -272,20 +272,20 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 * @covers ::is_activity
 	 */
 	public function test_is_activity_with_object() {
-		// Test Activity object
+		// Test Activity object.
 		$activity = new \Activitypub\Activity\Activity();
 		$activity->set_type( 'Create' );
 		$this->assertTrue( \Activitypub\is_activity( $activity ), 'Activity object should be valid' );
 
-		// Test Base_Object
+		// Test Base_Object.
 		$object = new \Activitypub\Activity\Base_Object();
 		$object->set_type( 'Note' );
 		$this->assertFalse( \Activitypub\is_activity( $object ), 'Base_Object should be invalid' );
 
-		// Test with custom filter
+		// Test with custom filter.
 		add_filter(
 			'activitypub_activity_types',
-			function( $types ) {
+			function ( $types ) {
 				$types[] = 'CustomActivity';
 				return $types;
 			}
