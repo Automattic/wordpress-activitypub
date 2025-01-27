@@ -1654,7 +1654,7 @@ function is_activity( $data ) {
 		return in_array( $data['type'], $types, true );
 	}
 
-	if ( is_object( $data ) && $data instanceof Base_Object ) {
+	if ( $data instanceof Base_Object ) {
 		return in_array( $data->get_type(), $types, true );
 	}
 
