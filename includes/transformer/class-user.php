@@ -21,7 +21,7 @@ class User extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
-		return Actors::get_by_id(  $this->item->ID );
+		return Actors::get_by_id( $this->item->ID );
 	}
 
 	/**
