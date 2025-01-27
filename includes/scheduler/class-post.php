@@ -49,15 +49,19 @@ class Post {
 	 * @param int $post_id Attachment ID.
 	 */
 	public static function transition_attachment_status( $post_id ) {
+		if ( ! \post_type_supports( 'attachment', 'activitypub' ) ) {
+			return;
+		}
+
 		switch ( current_action() ) {
 			case 'add_attachment':
-				self::schedule_post_activity( 'publish', '', $post_id );
+				self::schedule_post_activity( 'publish', '', get_post( $post_id ) );
 				break;
 			case 'edit_attachment':
-				self::schedule_post_activity( 'publish', 'publish', $post_id );
+				self::schedule_post_activity( 'publish', 'publish', get_post( $post_id ) );
 				break;
 			case 'delete_attachment':
-				self::schedule_post_activity( 'trash', '', $post_id );
+				self::schedule_post_activity( 'trash', '', get_post( $post_id ) );
 				break;
 		}
 	}
