@@ -7,62 +7,27 @@
 
 namespace Activitypub\Tests\Scheduler;
 
-use Activitypub\Collection\Outbox;
-
 /**
  * Test Comment scheduler class.
  *
  * @coversDefaultClass \Activitypub\Scheduler\Comment
  */
-class Test_Comment extends \WP_UnitTestCase {
-	/**
-	 * User ID for testing.
-	 *
-	 * @var int
-	 */
-	protected static $user_id;
+class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 	/**
 	 * Post ID for testing.
 	 *
 	 * @var int
 	 */
-	protected static $post_id;
+	protected static $comment_post_ID;
 
 	/**
 	 * Set up test resources.
 	 */
 	public static function set_up_before_class() {
-		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
-		self::$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		parent::set_up_before_class();
 
-		// Add activitypub capability to the user.
-		get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
-
-		add_filter( 'pre_schedule_event', '__return_false' );
-	}
-
-	/**
-	 * Clean up test resources.
-	 */
-	public static function tear_down_after_class() {
-		wp_delete_post( self::$post_id, true );
-		wp_delete_user( self::$user_id );
-
-		remove_filter( 'pre_schedule_event', '__return_false' );
-
-		$outbox_items = get_posts(
-			array(
-				'post_type'      => Outbox::POST_TYPE,
-				'posts_per_page' => -1,
-				'post_status'    => 'any',
-				'fields'         => 'ids',
-			)
-		);
-
-		foreach ( $outbox_items as $outbox_item ) {
-			\wp_delete_post( $outbox_item, true );
-		}
+		self::$comment_post_ID = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 	}
 
 	/**
@@ -71,7 +36,7 @@ class Test_Comment extends \WP_UnitTestCase {
 	public function test_schedule_comment_activity_on_approval() {
 		$comment_id    = self::factory()->comment->create(
 			array(
-				'comment_post_ID'  => self::$post_id,
+				'comment_post_ID'  => self::$comment_post_ID,
 				'user_id'          => self::$user_id,
 				'comment_approved' => 0,
 			)
@@ -92,7 +57,7 @@ class Test_Comment extends \WP_UnitTestCase {
 	public function test_schedule_comment_activity_on_insert() {
 		$comment_id    = self::factory()->comment->create(
 			array(
-				'comment_post_ID'  => self::$post_id,
+				'comment_post_ID'  => self::$comment_post_ID,
 				'user_id'          => self::$user_id,
 				'comment_approved' => 1,
 			)
@@ -114,20 +79,20 @@ class Test_Comment extends \WP_UnitTestCase {
 		return array(
 			'unapproved_comment'  => array(
 				array(
-					'comment_post_ID'  => self::$post_id,
+					'comment_post_ID'  => self::$comment_post_ID,
 					'user_id'          => self::$user_id,
 					'comment_approved' => 0,
 				),
 			),
 			'non_registered_user' => array(
 				array(
-					'comment_post_ID'  => self::$post_id,
+					'comment_post_ID'  => self::$comment_post_ID,
 					'comment_approved' => 1,
 				),
 			),
 			'federation_disabled' => array(
 				array(
-					'comment_post_ID'  => self::$post_id,
+					'comment_post_ID'  => self::$comment_post_ID,
 					'user_id'          => self::$user_id,
 					'comment_approved' => 1,
 					'comment_meta'     => array(
@@ -146,33 +111,17 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @param array $comment_data   Comment data for creating the test comment.
 	 */
 	public function test_no_activity_scheduled( $comment_data ) {
+		foreach ( array( 'comment_post_ID', 'user_id' ) as $key ) {
+			if ( isset( $comment_data[ $key ] ) ) {
+				$comment_data[ $key ] = self::$$key;
+			}
+		}
+
 		$comment_id    = self::factory()->comment->create( $comment_data );
 		$activitpub_id = \Activitypub\Comment::generate_id( $comment_id );
 
-		$post = $this->get_latest_outbox_item( $activitpub_id );
-		$this->assertNotEquals( $activitpub_id, $post->post_title );
+		$this->assertNull( $this->get_latest_outbox_item( $activitpub_id ) );
 
 		wp_delete_comment( $comment_id, true );
-	}
-
-	/**
-	 * Retrieve the latest Outbox item to compare against.
-	 *
-	 * @param string $title Title of the Outbox item.
-	 * @return int|\WP_Post|null
-	 */
-	private function get_latest_outbox_item( $title = '' ) {
-		$outbox = get_posts(
-			array(
-				'post_type'      => Outbox::POST_TYPE,
-				'posts_per_page' => 1,
-				'post_status'    => 'pending',
-				'post_title'     => $title,
-				'orderby'        => 'date',
-				'order'          => 'DESC',
-			)
-		);
-
-		return $outbox ? $outbox[0] : null;
 	}
 }
