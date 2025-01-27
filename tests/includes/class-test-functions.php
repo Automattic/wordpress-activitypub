@@ -216,4 +216,87 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			),
 		);
 	}
+
+	/**
+	 * Test is_activity with array input.
+	 *
+	 * @covers ::is_activity
+	 *
+	 * @dataProvider is_activity_data
+	 *
+	 * @param mixed $activity The activity object.
+	 * @param bool  $expected The expected result.
+	 */
+	public function test_is_activity( $activity, $expected ) {
+		$this->assertEquals( $expected, \Activitypub\is_activity( $activity ) );
+	}
+
+	/**
+	 * Data provider for test_is_activity.
+	 *
+	 * @return array[]
+	 */
+	public function is_activity_data() {
+		// Test Activity object.
+		$create = new \Activitypub\Activity\Activity();
+		$create->set_type( 'Create' );
+
+		// Test Base_Object.
+		$note = new \Activitypub\Activity\Base_Object();
+		$note->set_type( 'Note' );
+
+		return array(
+			array( array( 'type' => 'Create' ), true ),
+			array( array( 'type' => 'Update' ), true ),
+			array( array( 'type' => 'Delete' ), true ),
+			array( array( 'type' => 'Follow' ), true ),
+			array( array( 'type' => 'Accept' ), true ),
+			array( array( 'type' => 'Reject' ), true ),
+			array( array( 'type' => 'Add' ), true ),
+			array( array( 'type' => 'Remove' ), true ),
+			array( array( 'type' => 'Like' ), true ),
+			array( array( 'type' => 'Announce' ), true ),
+			array( array( 'type' => 'Undo' ), true ),
+			array( array( 'type' => 'Note' ), false ),
+			array( array( 'type' => 'Article' ), false ),
+			array( array( 'type' => 'Person' ), false ),
+			array( array( 'type' => 'Image' ), false ),
+			array( array( 'type' => 'Video' ), false ),
+			array( array( 'type' => 'Audio' ), false ),
+			array( array( 'type' => '' ), false ),
+			array( array( 'type' => null ), false ),
+			array( array(), false ),
+			array( $create, true ),
+			array( $note, false ),
+			array( 'string', false ),
+			array( 123, false ),
+			array( true, false ),
+			array( false, false ),
+			array( null, false ),
+			array( new \stdClass(), false ),
+		);
+	}
+
+	/**
+	 * Test is_activity with invalid input.
+	 *
+	 * @covers ::is_activity
+	 */
+	public function test_is_activity_with_invalid_input() {
+		$invalid_inputs = array(
+			'string',
+			123,
+			true,
+			false,
+			null,
+			new \stdClass(),
+		);
+
+		foreach ( $invalid_inputs as $input ) {
+			$this->assertFalse(
+				\Activitypub\is_activity( $input ),
+				sprintf( 'Input of type %s should be invalid', gettype( $input ) )
+			);
+		}
+	}
 }
