@@ -154,7 +154,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Added: Comment counts get updated when the plugin is activated/deactivated/deleted
 * Added: A filter to make custom comment types manageable in WP.com Calypso
-* Added: Cleanup of options, post meta, and user meta when the plugin is uninstalled
+* Added: Cleanup of option values when the plugin is uninstalled
 * Changed: Hide ActivityPub post meta keys from the custom Fields UI
 * Changed: Bumped minimum required PHP version to 7.2
 * Changed: Print `_activityPubOptions` in the `wp_footer` action on the frontend.

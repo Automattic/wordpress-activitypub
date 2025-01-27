@@ -88,20 +88,6 @@ class Activitypub {
 		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
 		Migration::update_comment_counts( 2000 );
 
-		delete_metadata( 'user', 0, '_activitypub_user_identifier', '', true );
-		delete_metadata( 'user', 0, 'activitypub_default_extra_fields', '', true );
-		delete_metadata( 'user', 0, 'activitypub_followers', '', true );
-		delete_metadata( 'user', 0, 'magic_sig_public_key', '', true );
-		delete_metadata( 'user', 0, 'magic_sig_private_key', '', true );
-
-		delete_metadata( 'post', 0, '_activitypub_actor_json', '', true );
-		delete_metadata( 'post', 0, '_activitypub_canonical_url', '', true );
-		delete_metadata( 'post', 0, '_activitypub_errors', '', true );
-		delete_metadata( 'post', 0, '_activitypub_inbox', '', true );
-		delete_metadata( 'post', 0, '_activitypub_user_id', '', true );
-		delete_metadata( 'post', 0, 'activitypub_content_warning', '', true );
-		delete_metadata( 'post', 0, 'activitypub_content_visibility', '', true );
-
 		delete_option( 'activitypub_actor_mode' );
 		delete_option( 'activitypub_attribution_domains' );
 		delete_option( 'activitypub_authorized_fetch' );

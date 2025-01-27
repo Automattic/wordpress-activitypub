@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Comment counts get updated when the plugin is activated/deactivated/deleted
 * Added a filter to make custom comment types manageable in WP.com Calypso
-* Cleanup of options, post meta, and user meta when the plugin is uninstalled
+* Cleanup of option values when the plugin is uninstalled
 
 ### Changed
 
