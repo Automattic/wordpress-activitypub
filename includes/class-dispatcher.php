@@ -67,11 +67,7 @@ class Dispatcher {
 		$activity->set_id( $outbox_item->guid );
 		// Pre-fill the Activity with data (for example cc and to).
 		$activity->from_json( $outbox_item->post_content );
-
-		// If the activity doesn't have an actor, set the actor to the post author.
-		if ( ! $activity->get_actor() ) {
-			$activity->set_actor( Actors::get_by_id( $outbox_item->post_author )->get_id() );
-		}
+		$activity->set_actor( Actors::get_by_id( $outbox_item->post_author )->get_id() );
 
 		// Use simple Object (only ID-URI) for Like and Announce.
 		if ( 'Like' === $type ) {
