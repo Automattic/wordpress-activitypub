@@ -216,4 +216,111 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			),
 		);
 	}
+
+	/**
+	 * Test is_activity with array input.
+	 *
+	 * @covers ::is_activity
+	 */
+	public function test_is_activity_with_array() {
+		// Test valid activity types
+		$valid_activities = array(
+			array( 'type' => 'Create' ),
+			array( 'type' => 'Update' ),
+			array( 'type' => 'Delete' ),
+			array( 'type' => 'Follow' ),
+			array( 'type' => 'Accept' ),
+			array( 'type' => 'Reject' ),
+			array( 'type' => 'Add' ),
+			array( 'type' => 'Remove' ),
+			array( 'type' => 'Like' ),
+			array( 'type' => 'Announce' ),
+			array( 'type' => 'Undo' ),
+		);
+
+		foreach ( $valid_activities as $activity ) {
+			$this->assertTrue(
+				\Activitypub\is_activity( $activity ),
+				sprintf( 'Activity type %s should be valid', $activity['type'] )
+			);
+		}
+
+		// Test invalid activity types
+		$invalid_activities = array(
+			array( 'type' => 'Note' ),
+			array( 'type' => 'Article' ),
+			array( 'type' => 'Person' ),
+			array( 'type' => 'Image' ),
+			array( 'type' => 'Video' ),
+			array( 'type' => 'Audio' ),
+			array( 'type' => '' ),
+			array( 'type' => null ),
+			array(),
+		);
+
+		foreach ( $invalid_activities as $activity ) {
+			$this->assertFalse(
+				\Activitypub\is_activity( $activity ),
+				sprintf( 'Activity type %s should be invalid', isset( $activity['type'] ) ? $activity['type'] : 'null' )
+			);
+		}
+	}
+
+	/**
+	 * Test is_activity with object input.
+	 *
+	 * @covers ::is_activity
+	 */
+	public function test_is_activity_with_object() {
+		// Test Activity object
+		$activity = new \Activitypub\Activity\Activity();
+		$activity->set_type( 'Create' );
+		$this->assertTrue( \Activitypub\is_activity( $activity ), 'Activity object should be valid' );
+
+		// Test Base_Object
+		$object = new \Activitypub\Activity\Base_Object();
+		$object->set_type( 'Note' );
+		$this->assertFalse( \Activitypub\is_activity( $object ), 'Base_Object should be invalid' );
+
+		// Test with custom filter
+		add_filter(
+			'activitypub_activity_types',
+			function( $types ) {
+				$types[] = 'CustomActivity';
+				return $types;
+			}
+		);
+
+		$activity = new \Activitypub\Activity\Activity();
+		$activity->set_type( 'CustomActivity' );
+		$this->assertTrue(
+			\Activitypub\is_activity( $activity ),
+			'Custom activity type should be valid after filter'
+		);
+
+		remove_all_filters( 'activitypub_activity_types' );
+	}
+
+	/**
+	 * Test is_activity with invalid input.
+	 *
+	 * @covers ::is_activity
+	 */
+	public function test_is_activity_with_invalid_input() {
+		$invalid_inputs = array(
+			'string',
+			123,
+			true,
+			false,
+			null,
+			new \stdClass(),
+		);
+
+		foreach ( $invalid_inputs as $input ) {
+			$this->assertFalse(
+				\Activitypub\is_activity( $input ),
+				sprintf( 'Input of type %s should be invalid', gettype( $input ) )
+			);
+		}
+	}
 }
