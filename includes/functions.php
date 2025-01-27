@@ -1650,7 +1650,7 @@ function is_activity( $data ) {
 		)
 	);
 
-	if ( is_array( $data ) && isset( $data['type'] ) ) {
+	if ( isset( $data['type'] ) ) {
 		return in_array( $data['type'], $types, true );
 	}
 
