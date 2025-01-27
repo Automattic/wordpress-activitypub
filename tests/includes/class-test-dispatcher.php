@@ -15,7 +15,7 @@ use Activitypub\Dispatcher;
  *
  * @coversDefaultClass Activitypub\Dispatcher
  */
-class Test_Dispatcher extends WP_UnitTestCase {
+class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Tear down the test case.
 	 */
@@ -89,5 +89,28 @@ class Test_Dispatcher extends WP_UnitTestCase {
 
 		$result = Dispatcher::maybe_add_inboxes_of_blog_user( $inboxes, 1, $activity );
 		$this->assertEquals( $inboxes, $result );
+	}
+
+	/**
+	 * Test process_outbox.
+	 *
+	 * @covers ::process_outbox
+	 */
+	public function test_process_outbox() {
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+
+		$test_callback = function ( $send, $activity ) {
+			$this->assertInstanceOf( Activity::class, $activity );
+			$this->assertEquals( 'Create', $activity->get_type() );
+
+			return $send;
+		};
+		add_filter( 'activitypub_send_activity_to_followers', $test_callback, 10, 2 );
+
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		Dispatcher::process_outbox( $outbox_item->ID );
+
+		remove_filter( 'activitypub_send_activity_to_followers', $test_callback );
 	}
 }
