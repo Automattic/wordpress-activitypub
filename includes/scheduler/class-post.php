@@ -161,6 +161,10 @@ class Post {
 	/**
 	 * Filter the post data before it is inserted via the REST API.
 	 *
+	 * Posts being inserted via the REST API have a different order of operations than in wp_insert_post().
+	 * This filter updates post meta before the post is inserted into the database, so that the
+	 * information is available by the time @see Outbox::add() runs.
+	 *
 	 * @param \stdClass        $post     An object representing a single post prepared for inserting or updating the database.
 	 * @param \WP_REST_Request $request  The request object.
 	 *
