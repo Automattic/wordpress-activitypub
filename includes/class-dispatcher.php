@@ -10,7 +10,6 @@ namespace Activitypub;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
-use Activitypub\Transformer\Factory as Transformer_Factory;
 
 /**
  * ActivityPub Dispatcher Class.
@@ -65,8 +64,10 @@ class Dispatcher {
 		$activity = new Activity();
 		$activity->set_type( $type );
 		$activity->set_id( $outbox_item->guid );
+
 		// Pre-fill the Activity with data (for example cc and to).
-		$activity->from_json( $outbox_item->post_content );
+		$activity_object = Activity::init_from_json( $outbox_item->post_content );
+		$activity->set_object( $activity_object );
 
 		// If the activity doesn't have an actor, set the actor to the post author.
 		if ( ! $activity->get_actor() ) {
