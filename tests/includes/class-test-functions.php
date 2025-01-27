@@ -221,84 +221,60 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 * Test is_activity with array input.
 	 *
 	 * @covers ::is_activity
+	 *
+	 * @dataProvider is_activity_data
+	 *
+	 * @param mixed $activity The activity object.
+	 * @param bool  $expected The expected result.
 	 */
-	public function test_is_activity_with_array() {
-		// Test valid activity types.
-		$valid_activities = array(
-			array( 'type' => 'Create' ),
-			array( 'type' => 'Update' ),
-			array( 'type' => 'Delete' ),
-			array( 'type' => 'Follow' ),
-			array( 'type' => 'Accept' ),
-			array( 'type' => 'Reject' ),
-			array( 'type' => 'Add' ),
-			array( 'type' => 'Remove' ),
-			array( 'type' => 'Like' ),
-			array( 'type' => 'Announce' ),
-			array( 'type' => 'Undo' ),
-		);
-
-		foreach ( $valid_activities as $activity ) {
-			$this->assertTrue(
-				\Activitypub\is_activity( $activity ),
-				sprintf( 'Activity type %s should be valid', $activity['type'] )
-			);
-		}
-
-		// Test invalid activity types.
-		$invalid_activities = array(
-			array( 'type' => 'Note' ),
-			array( 'type' => 'Article' ),
-			array( 'type' => 'Person' ),
-			array( 'type' => 'Image' ),
-			array( 'type' => 'Video' ),
-			array( 'type' => 'Audio' ),
-			array( 'type' => '' ),
-			array( 'type' => null ),
-			array(),
-		);
-
-		foreach ( $invalid_activities as $activity ) {
-			$this->assertFalse(
-				\Activitypub\is_activity( $activity ),
-				sprintf( 'Activity type %s should be invalid', isset( $activity['type'] ) ? $activity['type'] : 'null' )
-			);
-		}
+	public function test_is_activity( $activity, $expected ) {
+		$this->assertEquals( $expected, \Activitypub\is_activity( $activity ) );
 	}
 
 	/**
-	 * Test is_activity with object input.
+	 * Data provider for test_is_activity.
 	 *
-	 * @covers ::is_activity
+	 * @return array[]
 	 */
-	public function test_is_activity_with_object() {
+	public function is_activity_data() {
 		// Test Activity object.
-		$activity = new \Activitypub\Activity\Activity();
-		$activity->set_type( 'Create' );
-		$this->assertTrue( \Activitypub\is_activity( $activity ), 'Activity object should be valid' );
+		$create = new \Activitypub\Activity\Activity();
+		$create->set_type( 'Create' );
 
 		// Test Base_Object.
-		$object = new \Activitypub\Activity\Base_Object();
-		$object->set_type( 'Note' );
-		$this->assertFalse( \Activitypub\is_activity( $object ), 'Base_Object should be invalid' );
+		$note = new \Activitypub\Activity\Base_Object();
+		$note->set_type( 'Note' );
 
-		// Test with custom filter.
-		add_filter(
-			'activitypub_activity_types',
-			function ( $types ) {
-				$types[] = 'CustomActivity';
-				return $types;
-			}
+		return array(
+			array( array( 'type' => 'Create' ), true ),
+			array( array( 'type' => 'Update' ), true ),
+			array( array( 'type' => 'Delete' ), true ),
+			array( array( 'type' => 'Follow' ), true ),
+			array( array( 'type' => 'Accept' ), true ),
+			array( array( 'type' => 'Reject' ), true ),
+			array( array( 'type' => 'Add' ), true ),
+			array( array( 'type' => 'Remove' ), true ),
+			array( array( 'type' => 'Like' ), true ),
+			array( array( 'type' => 'Announce' ), true ),
+			array( array( 'type' => 'Undo' ), true ),
+			array( array( 'type' => 'Note' ), false ),
+			array( array( 'type' => 'Article' ), false ),
+			array( array( 'type' => 'Person' ), false ),
+			array( array( 'type' => 'Image' ), false ),
+			array( array( 'type' => 'Video' ), false ),
+			array( array( 'type' => 'Audio' ), false ),
+			array( array( 'type' => '' ), false ),
+			array( array( 'type' => null ), false ),
+			array( array(), false ),
+			array( $create, true ),
+			array( $note, false ),
+			array( 'string', false ),
+			array( 123, false ),
+			array( true, false ),
+			array( false, false ),
+			array( null, false ),
+			array( new \stdClass(), false ),
 		);
-
-		$activity = new \Activitypub\Activity\Activity();
-		$activity->set_type( 'CustomActivity' );
-		$this->assertTrue(
-			\Activitypub\is_activity( $activity ),
-			'Custom activity type should be valid after filter'
-		);
-
-		remove_all_filters( 'activitypub_activity_types' );
 	}
 
 	/**

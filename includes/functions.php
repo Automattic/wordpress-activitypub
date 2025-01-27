@@ -1650,11 +1650,11 @@ function is_activity( $data ) {
 		)
 	);
 
-	if ( isset( $data['type'] ) ) {
+	if ( is_array( $data ) && isset( $data['type'] ) ) {
 		return in_array( $data['type'], $types, true );
 	}
 
-	if ( $data instanceof Base_Object ) {
+	if ( is_object( $data ) && $data instanceof Base_Object ) {
 		return in_array( $data->get_type(), $types, true );
 	}
 
