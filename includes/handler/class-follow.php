@@ -13,6 +13,8 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
+use function Activitypub\add_to_outbox;
+
 /**
  * Handle Follow requests.
  */
