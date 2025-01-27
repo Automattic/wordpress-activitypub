@@ -69,9 +69,9 @@ class Post {
 	/**
 	 * Schedule Activities.
 	 *
-	 * @param string       $new_status New post status.
-	 * @param string       $old_status Old post status.
-	 * @param int|\WP_Post $post       Post ID or post object.
+	 * @param string   $new_status New post status.
+	 * @param string   $old_status Old post status.
+	 * @param \WP_Post $post       Post object.
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
 		if ( is_post_disabled( $post ) ) {
