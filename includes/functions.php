@@ -9,6 +9,7 @@ namespace Activitypub;
 
 use WP_Error;
 use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
@@ -1599,4 +1600,63 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 	\do_action( 'post_activitypub_add_to_outbox', $outbox_activity_id, $activity_object, $user_id, $content_visibility );
 
 	return $outbox_activity_id;
+}
+
+/**
+ * Check if an object is an Activity.
+ *
+ * @param array|object $data The object to check.
+ *
+ * @see https://www.w3.org/ns/activitystreams#activities
+ *
+ * @return boolean True if the object is an Activity, false otherwise.
+ */
+function is_activity( $data ) {
+	/**
+	 * Filters the activity types.
+	 *
+	 * @param array $types The activity types.
+	 */
+	$types = apply_filters(
+		'activitypub_activity_types',
+		array(
+			'Accept',
+			'Add',
+			'Announce',
+			'Arrive',
+			'Block',
+			'Create',
+			'Delete',
+			'Dislike',
+			'Follow',
+			'Flag',
+			'Ignore',
+			'Invite',
+			'Join',
+			'Leave',
+			'Like',
+			'Listen',
+			'Move',
+			'Offer',
+			'Read',
+			'Reject',
+			'Remove',
+			'TentativeAccept',
+			'TentativeReject',
+			'Travel',
+			'Undo',
+			'Update',
+			'View',
+		)
+	);
+
+	if ( is_array( $data ) && isset( $data['type'] ) ) {
+		return in_array( $data['type'], $types, true );
+	}
+
+	if ( is_object( $data ) && $data instanceof Base_Object ) {
+		return in_array( $data->get_type(), $types, true );
+	}
+
+	return false;
 }
