@@ -170,6 +170,9 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.7.3', '<' ) ) {
 			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
+		if ( \version_compare( $version_from_db, '5.0.0', '<' ) ) {
+			add_action( 'init', 'flush_rewrite_rules', 20 );
+		}
 
 		/*
 		 * Add new update routines above this comment. ^
