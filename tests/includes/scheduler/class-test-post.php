@@ -40,9 +40,8 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Delete.
 		\wp_delete_attachment( $post_id, true );
 
-		// Not federated, should not send Delete activity.
 		$outbox_item = $this->get_latest_outbox_item( $activitpub_id );
-		$this->assertSame( 'Update', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
+		$this->assertSame( 'Delete', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
 
 		remove_post_type_support( 'attachment', 'activitypub' );
 	}

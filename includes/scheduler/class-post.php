@@ -93,7 +93,7 @@ class Post {
 				break;
 
 			case 'trash':
-				$type = 'federated' === get_wp_object_state( $post ) ? 'Delete' : false;
+				$type = 'Delete';
 				break;
 
 			default:
