@@ -99,11 +99,12 @@ class Dispatcher {
 		/**
 		 * Filters the list of inboxes to send the Activity to.
 		 *
-		 * @param array    $inboxes  The list of inboxes to send to.
-		 * @param int      $actor_id The actor ID.
-		 * @param Activity $activity The ActivityPub Activity.
+		 * @param array    $inboxes     The list of inboxes to send to.
+		 * @param int      $actor_id    The actor ID.
+		 * @param Activity $activity    The ActivityPub Activity.
+		 * @param \WP_Post $outbox_item The WordPress object.
 		 */
-		$inboxes = apply_filters( 'activitypub_send_to_inboxes', array(), $actor_id, $activity );
+		$inboxes = apply_filters( 'activitypub_send_to_inboxes', array(), $actor_id, $activity, $outbox_item );
 		$inboxes = array_unique( $inboxes );
 
 		$json = $activity->to_json();
