@@ -249,11 +249,11 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Verify activities from both users are returned.
 		$authors = array_map(
 			function ( $activity ) {
-				return $activity->post_author;
+				return (int) $activity->post_author;
 			},
 			$pending_activities
 		);
-var_dump($authors, wp_list_pluck($pending_activities, 'post_author'));
+
 		$this->assertContains( self::$user_id, $authors );
 		$this->assertContains( $second_user_id, $authors );
 
