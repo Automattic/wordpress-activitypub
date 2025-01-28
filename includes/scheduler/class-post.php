@@ -146,9 +146,11 @@ class Post {
 		}
 
 		$transformer = Factory::get_transformer( $activity_object );
-		$activity    = $transformer->to_activity( $activity_type );
+		if ( ! $transformer || \is_wp_error( $transformer ) ) {
+			return;
+		}
 
-		$outbox_activity_id = Outbox::add( $activity, 'Announce', Actors::BLOG_USER_ID, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+		$outbox_activity_id = Outbox::add( $transformer->to_activity( $activity_type ), 'Announce', Actors::BLOG_USER_ID );
 
 		if ( ! $outbox_activity_id ) {
 			return;
