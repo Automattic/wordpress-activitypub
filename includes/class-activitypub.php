@@ -531,15 +531,11 @@ class Activitypub {
 					'create_posts' => false,
 				),
 				'map_meta_cap'        => true,
-				'public'              => true,
-				'hierarchical'        => true,
 				'rewrite'             => false,
 				'query_var'           => false,
 				'delete_with_user'    => true,
 				'can_export'          => true,
-				'supports'            => array(),
 				'exclude_from_search' => true,
-				'menu_icon'           => 'dashicons-networking',
 			)
 		);
 
