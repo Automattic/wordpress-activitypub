@@ -15,6 +15,39 @@ namespace Activitypub\Tests\Scheduler;
 class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 	/**
+	 * Test post activity scheduling for attachments.
+	 *
+	 * @covers ::transition_attachment_status
+	 */
+	public function test_transition_attachment_status() {
+		add_post_type_support( 'attachment', 'activitypub' );
+		wp_set_current_user( self::$user_id );
+
+		// Create.
+		$post_id       = self::factory()->attachment->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
+		$activitpub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+		$outbox_item   = $this->get_latest_outbox_item( $activitpub_id );
+
+		$this->assertNotNull( $outbox_item );
+		$this->assertSame( 'Create', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
+
+		// Update.
+		self::factory()->attachment->update_object( $post_id, array( 'post_title' => 'Updated title' ) );
+
+		$outbox_item = $this->get_latest_outbox_item( $activitpub_id );
+		$this->assertSame( 'Update', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
+
+		// Delete.
+		\wp_delete_attachment( $post_id, true );
+
+		// Not federated, should not send Delete activity.
+		$outbox_item = $this->get_latest_outbox_item( $activitpub_id );
+		$this->assertSame( 'Update', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
+
+		remove_post_type_support( 'attachment', 'activitypub' );
+	}
+
+	/**
 	 * Test post activity scheduling for regular posts.
 	 *
 	 * @covers ::schedule_post_activity

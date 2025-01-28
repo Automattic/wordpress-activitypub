@@ -49,15 +49,19 @@ class Post {
 	 * @param int $post_id Attachment ID.
 	 */
 	public static function transition_attachment_status( $post_id ) {
+		if ( ! \post_type_supports( 'attachment', 'activitypub' ) ) {
+			return;
+		}
+
 		switch ( current_action() ) {
 			case 'add_attachment':
-				self::schedule_post_activity( 'publish', '', $post_id );
+				self::schedule_post_activity( 'publish', '', get_post( $post_id ) );
 				break;
 			case 'edit_attachment':
-				self::schedule_post_activity( 'publish', 'publish', $post_id );
+				self::schedule_post_activity( 'publish', 'publish', get_post( $post_id ) );
 				break;
 			case 'delete_attachment':
-				self::schedule_post_activity( 'trash', '', $post_id );
+				self::schedule_post_activity( 'trash', '', get_post( $post_id ) );
 				break;
 		}
 	}
@@ -65,9 +69,9 @@ class Post {
 	/**
 	 * Schedule Activities.
 	 *
-	 * @param string       $new_status New post status.
-	 * @param string       $old_status Old post status.
-	 * @param int|\WP_Post $post       Post ID or post object.
+	 * @param string   $new_status New post status.
+	 * @param string   $old_status Old post status.
+	 * @param \WP_Post $post       Post object.
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
 		if ( is_post_disabled( $post ) ) {
@@ -156,6 +160,10 @@ class Post {
 
 	/**
 	 * Filter the post data before it is inserted via the REST API.
+	 *
+	 * Posts being inserted via the REST API have a different order of operations than in wp_insert_post().
+	 * This filter updates post meta before the post is inserted into the database, so that the
+	 * information is available by the time @see Outbox::add() runs.
 	 *
 	 * @param \stdClass        $post     An object representing a single post prepared for inserting or updating the database.
 	 * @param \WP_REST_Request $request  The request object.
