@@ -253,7 +253,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			},
 			$pending_activities
 		);
-var_dump($pending_activities);
+var_dump($authors, wp_list_pluck($pending_activities, 'post_author'));
 		$this->assertContains( self::$user_id, $authors );
 		$this->assertContains( $second_user_id, $authors );
 
