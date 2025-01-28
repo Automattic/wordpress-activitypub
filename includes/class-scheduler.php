@@ -76,6 +76,7 @@ class Scheduler {
 	public static function deregister_schedules() {
 		wp_unschedule_hook( 'activitypub_update_followers' );
 		wp_unschedule_hook( 'activitypub_cleanup_followers' );
+		wp_unschedule_hook( 'activitypub_reprocess_outbox' );
 	}
 
 	/**
