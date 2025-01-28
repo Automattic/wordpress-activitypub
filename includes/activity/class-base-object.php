@@ -578,7 +578,7 @@ class Base_Object {
 			$attributes[] = $value;
 		}
 
-		$this->$key = $attributes;
+		$this->$key = array_unique( $attributes );
 
 		return $this->$key;
 	}
