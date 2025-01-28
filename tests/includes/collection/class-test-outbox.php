@@ -7,16 +7,13 @@
 
 namespace Activitypub\Tests\Collection;
 
-use Activitypub\Collection\Outbox;
-use Activitypub\Activity\Base_Object;
-use WP_UnitTestCase;
-
 /**
  * Test class for Outbox collection.
  *
  * @coversDefaultClass \Activitypub\Collection\Outbox
  */
 class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
+
 	/**
 	 * Test add an item to the outbox.
 	 *
