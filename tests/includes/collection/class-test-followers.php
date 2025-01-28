@@ -120,7 +120,7 @@ class Test_Followers extends \WP_UnitTestCase {
 	 * @covers ::get_followers
 	 */
 	public function test_get_followers_without_errors() {
-		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'https://sally.example.org' );
+		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
 
 		foreach ( $followers as $follower ) {
 			Followers::add_follower( 1, $follower );
