@@ -197,12 +197,8 @@ class Followers {
 		$args      = wp_parse_args( $args, $defaults );
 		$query     = new WP_Query( $args );
 		$total     = $query->found_posts;
-		$followers = array_map(
-			function ( $post ) {
-				return Follower::init_from_cpt( $post );
-			},
-			$query->get_posts()
-		);
+		$followers = array_map( array( Follower::class, 'init_from_cpt' ), $query->get_posts() );
+		$followers = array_filter( $followers );
 
 		return compact( 'followers', 'total' );
 	}
@@ -354,13 +350,9 @@ class Followers {
 		);
 
 		$posts = new WP_Query( $args );
-		$items = array();
+		$items = array_map( array( Follower::class, 'init_from_cpt' ), $posts->get_posts() );
 
-		foreach ( $posts->get_posts() as $follower ) {
-			$items[] = Follower::init_from_cpt( $follower );
-		}
-
-		return $items;
+		return array_filter( $items );
 	}
 
 	/**
@@ -403,13 +395,9 @@ class Followers {
 		);
 
 		$posts = new WP_Query( $args );
-		$items = array();
+		$items = array_map( array( Follower::class, 'init_from_cpt' ), $posts->get_posts() );
 
-		foreach ( $posts->get_posts() as $follower ) {
-			$items[] = Follower::init_from_cpt( $follower );
-		}
-
-		return $items;
+		return array_filter( $items );
 	}
 
 	/**
