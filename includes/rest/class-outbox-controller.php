@@ -236,6 +236,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 		$type        = \get_post_meta( $item->ID, '_activitypub_activity_type', true );
 		$transformer = Factory::get_transformer( $item->post_content );
 		$activity    = $transformer->to_activity( $type );
+		$activity->set_id( $item->guid );
 
 		return $activity->to_array( false );
 	}
