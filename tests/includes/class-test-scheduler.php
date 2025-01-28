@@ -71,7 +71,7 @@ class Test_Scheduler extends WP_UnitTestCase {
 		$scheduled_events = array();
 		add_filter(
 			'schedule_event',
-			function( $event ) use ( &$scheduled_events ) {
+			function ( $event ) use ( &$scheduled_events ) {
 				if ( 'activitypub_process_outbox' === $event->hook ) {
 					$scheduled_events[] = $event->args[0];
 				}
@@ -128,7 +128,7 @@ class Test_Scheduler extends WP_UnitTestCase {
 		$scheduled_events = array();
 		add_filter(
 			'schedule_event',
-			function( $event ) use ( &$scheduled_events ) {
+			function ( $event ) use ( &$scheduled_events ) {
 				if ( 'activitypub_process_outbox' === $event->hook ) {
 					$scheduled_events[] = $event->args[0];
 				}
@@ -167,7 +167,7 @@ class Test_Scheduler extends WP_UnitTestCase {
 		$scheduled_time = 0;
 		add_filter(
 			'schedule_event',
-			function( $event ) use ( &$scheduled_time ) {
+			function ( $event ) use ( &$scheduled_time ) {
 				if ( 'activitypub_process_outbox' === $event->hook ) {
 					$scheduled_time = $event->timestamp;
 				}
