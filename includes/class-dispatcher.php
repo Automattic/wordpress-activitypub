@@ -99,19 +99,28 @@ class Dispatcher {
 		/**
 		 * Filters the list of inboxes to send the Activity to.
 		 *
-		 * @param array    $inboxes     The list of inboxes to send to.
-		 * @param int      $actor_id    The actor ID.
-		 * @param Activity $activity    The ActivityPub Activity.
-		 * @param \WP_Post $outbox_item The WordPress object.
+		 * @param array    $inboxes  The list of inboxes to send to.
+		 * @param int      $actor_id The actor ID.
+		 * @param Activity $activity The ActivityPub Activity.
 		 */
-		$inboxes = apply_filters( 'activitypub_send_to_inboxes', array(), $actor_id, $activity, $outbox_item );
+		$inboxes = apply_filters( 'activitypub_send_to_inboxes', array(), $actor_id, $activity );
 		$inboxes = array_unique( $inboxes );
 
 		$json = $activity->to_json();
 
+		$results = array();
 		foreach ( $inboxes as $inbox ) {
-			safe_remote_post( $inbox, $json, $actor_id );
+			$results[] = safe_remote_post( $inbox, $json, $actor_id );
 		}
+
+		/**
+		 * Fires after an Activity has been sent to all followers and mentioned users.
+		 *
+		 * @param array    $results     The results of the remote posts.
+		 * @param Activity $activity    The ActivityPub Activity.
+		 * @param \WP_Post $outbox_item The WordPress object.
+		 */
+		do_action( 'activitypub_sent_to_followers', $results, $activity, $outbox_item );
 
 		\wp_publish_post( $outbox_item );
 	}

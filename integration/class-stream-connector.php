@@ -31,7 +31,7 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 */
 	public $actions = array(
 		'activitypub_notification_follow',
-		'activitypub_send_to_inboxes',
+		'activitypub_sent_to_followers',
 	);
 
 	/**
@@ -97,17 +97,25 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 */
 	public function action_links( $links, $record ) {
 		if ( 'processed' === $record->action ) {
-			$inboxes = json_decode( $record->get_meta( 'inboxes', true ) );
-			if ( empty( $inboxes ) ) {
-				$inboxes = __( 'No inboxes to notify about this activity.', 'activitypub' );
+			$results = json_decode( $record->get_meta( 'results', true ), true );
+
+			if ( empty( $results ) ) {
+				$results = __( 'No inboxes to notify about this activity.', 'activitypub' );
 			} else {
-				$inboxes = implode( "\n", (array) $inboxes );
+				$results = array_map(
+					function ( $inbox, $result ) {
+						return sprintf( '%1$s: %2$s', $inbox, $result );
+					},
+					array_keys( $results ),
+					$results
+				);
+				$results = implode( "\n", $results );
 			}
 
 			$message = sprintf(
 				'<details><summary>%1$s</summary><pre>%2$s</pre></details>',
 				__( 'Notified Inboxes', 'activitypub' ),
-				$inboxes
+				$results
 			);
 
 			$links[ $message ] = '';
@@ -119,21 +127,11 @@ class Stream_Connector extends \WP_Stream\Connector {
 	/**
 	 * Callback for activitypub_send_to_inboxes.
 	 *
-	 * @param array                          $inboxes     The list of inboxes to send to.
-	 * @param int                            $actor_id    The actor ID.
-	 * @param \Activitypub\Activity\Activity $activity    The ActivityPub Activity.
+	 * @param array                          $results     The results of the remote posts.
+	 * @param \ActivityPub\Activity\Activity $activity    The ActivityPub Activity.
 	 * @param \WP_Post                       $outbox_item The WordPress object.
 	 */
-	public function callback_activitypub_send_to_inboxes( $inboxes, $actor_id, $activity, $outbox_item ) {
-		static $initial_run = true;
-
-		// Jump back in priority to catch modified inboxes.
-		if ( $initial_run ) {
-			add_action( 'activitypub_send_to_inboxes', array( $this, __FUNCTION__ ), 99, 4 );
-			$initial_run = false;
-			return $inboxes;
-		}
-
+	public function callback_activitypub_sent_to_followers( $results, $activity, $outbox_item ) {
 		$object_id    = $outbox_item->ID;
 		$object_type  = $outbox_item->post_type;
 		$object_title = $outbox_item->post_title;
@@ -156,18 +154,24 @@ class Stream_Connector extends \WP_Stream\Connector {
 			$object_title = $comment->comment_content;
 		}
 
+		$data = array();
+		foreach ( $results as $inbox => $result ) {
+			if ( is_wp_error( $result ) ) {
+				$data[ $inbox ] = $result->get_error_message();
+				continue;
+			}
+			$data[ $inbox ] = wp_remote_retrieve_response_message( $result );
+		}
+
 		$this->log(
 			// translators: 1: post title.
 			sprintf( __( 'Outbox processed for "%1$s"', 'activitypub' ), $object_title ),
 			array(
-				'inboxes' => wp_json_encode( $inboxes ),
+				'results' => wp_json_encode( $data ),
 			),
 			$object_id,
 			$object_type,
 			'processed'
 		);
-
-		// We're in a filter, so we need to return the inboxes.
-		return $inboxes;
 	}
 }
