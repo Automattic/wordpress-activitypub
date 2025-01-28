@@ -157,6 +157,7 @@ class Test_Scheduler extends WP_UnitTestCase {
 		$activity_object->set_content( 'Test Content' );
 		$activity_object->set_type( 'Note' );
 		$activity_object->set_id( 'https://example.com/test-id-2' );
+
 		$pending_id = Outbox::add(
 			$activity_object,
 			'Create',

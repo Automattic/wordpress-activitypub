@@ -132,6 +132,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activity_object = new Base_Object();
 		$activity_object->set_content( 'Test Content' );
 		$activity_object->set_type( 'Note' );
+		$activity_object->set_id( 'https://example.com/test-id-5' );
 
 		// Add multiple pending activities.
 		$pending_ids = array();
@@ -192,6 +193,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activity_object = new Base_Object();
 		$activity_object->set_content( 'Test Content' );
 		$activity_object->set_type( 'Note' );
+		$activity_object->set_id( 'https://example.com/test-id-3' );
 
 		$pending_id = Outbox::add(
 			$activity_object,
@@ -223,6 +225,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activity_object = new Base_Object();
 		$activity_object->set_content( 'Test Content' );
 		$activity_object->set_type( 'Note' );
+		$activity_object->set_id( 'https://example.com/test-id-4' );
 
 		// Add activities for first user.
 		$first_user_id_post = Outbox::add(
