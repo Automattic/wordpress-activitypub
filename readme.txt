@@ -136,6 +136,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: Outbox queue
 * Changed: Rewrite the current dispatcher system, to use the Outbox instead of a Scheduler.
 * Changed: Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
+* Fixed: Handle deletes from remote servers that leave behind an accessible Tombstone object.
 
 = 4.7.3 =
 
