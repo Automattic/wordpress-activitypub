@@ -33,7 +33,7 @@ class Post {
 		\add_action( 'edit_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'delete_attachment', array( self::class, 'transition_attachment_status' ) );
 
-		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'send_announces' ), 10, 4 );
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_announce_activity' ), 10, 4 );
 
 		// Get all post types that support ActivityPub.
 		$post_types = \get_post_types_by_support( 'activitypub' );
@@ -113,7 +113,7 @@ class Post {
 	 * @param int      $actor_id           The actor ID.
 	 * @param int      $content_visibility The content visibility.
 	 */
-	public static function send_announces( $outbox_activity_id, $activity_object, $actor_id, $content_visibility ) {
+	public static function schedule_announce_activity( $outbox_activity_id, $activity_object, $actor_id, $content_visibility ) {
 		// Only if we're in both Blog and User modes.
 		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
 			return;
