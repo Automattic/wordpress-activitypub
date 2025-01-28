@@ -10,6 +10,7 @@ namespace Activitypub;
 use Activitypub\Scheduler\Post;
 use Activitypub\Scheduler\Actor;
 use Activitypub\Scheduler\Comment;
+use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 
 /**
@@ -58,6 +59,10 @@ class Scheduler {
 
 		if ( ! \wp_next_scheduled( 'activitypub_cleanup_followers' ) ) {
 			\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_followers' );
+		}
+
+		if ( ! \wp_next_scheduled( 'activitypub_reprocess_outbox' ) ) {
+			\wp_schedule_event( time(), 'hourly', 'activitypub_reprocess_outbox' );
 		}
 	}
 
@@ -156,6 +161,17 @@ class Scheduler {
 				$hook,
 				$args
 			);
+		}
+	}
+
+	/**
+	 * Reprocess the outbox.
+	 */
+	public static function reprocess_outbox() {
+		$activities = Outbox::get_pending();
+
+		foreach ( $activities as $activity ) {
+			self::schedule_outbox_activity_for_federation( $activity->ID );
 		}
 	}
 }

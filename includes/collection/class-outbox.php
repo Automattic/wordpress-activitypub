@@ -74,4 +74,23 @@ class Outbox {
 
 		return $id;
 	}
+
+	/**
+	 * Get pending activities.
+	 *
+	 * @param int $limit The number of activities to get.
+	 *
+	 * @return WP_Post[] The pending activities.
+	 */
+	public static function get_pending( $limit = 10 ) {
+		$activites = \get_posts(
+			array(
+				'post_type'      => self::POST_TYPE,
+				'post_status'    => 'pending',
+				'posts_per_page' => $limit,
+			)
+		);
+
+		return $activites;
+	}
 }
