@@ -225,7 +225,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activity_object->set_type( 'Note' );
 
 		// Add activities for first user.
-		$first_user_id = Outbox::add(
+		$first_user_id_post = Outbox::add(
 			$activity_object,
 			'Create',
 			self::$user_id,
@@ -250,12 +250,13 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			},
 			$pending_activities
 		);
+
 		$this->assertContains( self::$user_id, $authors );
 		$this->assertContains( $second_user_id, $authors );
 
 		// Clean up.
-		wp_delete_post( $first_user_id, true );
-		wp_delete_post( $second_user_id_post, true );
-		wp_delete_user( $second_user_id );
+		\wp_delete_post( $first_user_id_post, true );
+		\wp_delete_post( $second_user_id_post, true );
+		\wp_delete_user( $second_user_id );
 	}
 }
