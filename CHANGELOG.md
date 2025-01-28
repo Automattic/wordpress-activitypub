@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
 
+### Fixed
+
+* Handle deletes from remote servers that leave behind an accessible Tombstone object.
+
 ## [4.7.3] - 2025-01-21
 
 ### Fixed
