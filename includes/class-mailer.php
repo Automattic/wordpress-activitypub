@@ -146,7 +146,7 @@ class Mailer {
 			$message = \sprintf( \__( 'New Follower: %2$s.', 'activitypub' ), \get_option( 'blogname' ), $actor['name'] ) . "\r\n\r\n";
 			/* translators: Follower URL */
 			$message            .= \sprintf( \__( 'URL: %s', 'activitypub' ), \esc_url( $actor['url'] ) ) . "\r\n\r\n";
-			$message            .= \esc_html__( 'You can see all followers here:', 'activitypub' ) . "\r\n";
+			$message            .= \__( 'You can see all followers here:', 'activitypub' ) . "\r\n";
 			$message            .= \esc_url( \admin_url( $admin_url ) ) . "\r\n\r\n";
 			$mailer->{'AltBody'} = $message;
 		};
