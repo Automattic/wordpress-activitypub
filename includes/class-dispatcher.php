@@ -106,10 +106,6 @@ class Dispatcher {
 		$inboxes = apply_filters( 'activitypub_send_to_inboxes', array(), $actor_id, $activity );
 		$inboxes = array_unique( $inboxes );
 
-		if ( empty( $inboxes ) ) {
-			return;
-		}
-
 		$json = $activity->to_json();
 
 		foreach ( $inboxes as $inbox ) {

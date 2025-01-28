@@ -111,6 +111,10 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		Dispatcher::process_outbox( $outbox_item->ID );
 
+		// Check that the outbox item is now published.
+		$outbox_item = \get_post( $outbox_item->ID );
+		$this->assertEquals( 'publish', $outbox_item->post_status );
+
 		remove_filter( 'activitypub_send_activity_to_followers', $test_callback );
 	}
 }
