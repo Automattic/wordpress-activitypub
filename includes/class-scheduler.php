@@ -29,6 +29,7 @@ class Scheduler {
 		// Follower Cleanups.
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
+
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_activity_for_federation' ) );
@@ -169,10 +170,17 @@ class Scheduler {
 	 * Reprocess the outbox.
 	 */
 	public static function reprocess_outbox() {
-		$activities = Outbox::get_pending();
+		$ids = \get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'post_status'    => 'pending',
+				'posts_per_page' => 10,
+				'fields'         => 'ids',
+			)
+		);
 
-		foreach ( $activities as $activity ) {
-			self::schedule_outbox_activity_for_federation( $activity->ID );
+		foreach ( $ids as $id ) {
+			self::schedule_outbox_activity_for_federation( $id );
 		}
 	}
 }
