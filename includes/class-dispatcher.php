@@ -69,7 +69,7 @@ class Dispatcher {
 		$activity->set_actor( Actors::get_by_id( $outbox_item->post_author )->get_id() );
 
 		// Use simple Object (only ID-URI) for Like and Announce.
-		if ( 'Like' === $type ) {
+		if ( in_array( $type, array( 'Like', 'Delete' ), true ) ) {
 			$activity->set_object( $activity->get_object()->get_id() );
 		}
 
