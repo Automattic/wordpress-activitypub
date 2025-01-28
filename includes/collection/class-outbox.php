@@ -21,7 +21,7 @@ class Outbox {
 	 * @param \Activitypub\Activity\Base_Object $activity_object    The object of the activity that will be added to the outbox.
 	 * @param string                            $activity_type      The activity type.
 	 * @param int                               $user_id            The real or imaginary user ID of the actor that published the activity that will be added to the outbox.
-	 * @param string                            $content_visibility Optional. The visibility of the content. Default 'public'.
+	 * @param string                            $content_visibility Optional. The visibility of the content. Default: `ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC`. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
 	 *
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
