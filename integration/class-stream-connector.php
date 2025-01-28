@@ -97,11 +97,11 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 */
 	public function action_links( $links, $record ) {
 		if ( 'processed' === $record->action ) {
-			$inboxes = $record->get_meta( 'inboxes', true );
+			$inboxes = json_decode( $record->get_meta( 'inboxes', true ) );
 			if ( empty( $inboxes ) ) {
 				$inboxes = __( 'No inboxes to notify about this activity.', 'activitypub' );
 			} else {
-				$inboxes = implode( "\n", $inboxes );
+				$inboxes = implode( "\n", (array) $inboxes );
 			}
 
 			$message = sprintf(
@@ -160,7 +160,7 @@ class Stream_Connector extends \WP_Stream\Connector {
 			// translators: 1: post title.
 			sprintf( __( 'Outbox processed for "%1$s"', 'activitypub' ), $object_title ),
 			array(
-				'inboxes' => $inboxes,
+				'inboxes' => wp_json_encode( $inboxes ),
 			),
 			$object_id,
 			$object_type,
