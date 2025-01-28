@@ -29,6 +29,7 @@ class Scheduler {
 		// Follower Cleanups.
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
+		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_activity_for_federation' ) );
 	}
