@@ -16,34 +16,7 @@ use WP_UnitTestCase;
  *
  * @coversDefaultClass \Activitypub\Collection\Outbox
  */
-class Test_Outbox extends WP_UnitTestCase {
-	/**
-	 * Test user ID.
-	 *
-	 * @var int
-	 */
-	protected static $user_id;
-
-	/**
-	 * Create fake data before tests run.
-	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
-	 */
-	public static function wpSetUpBeforeClass( $factory ) {
-		self::$user_id = $factory->user->create(
-			array(
-				'role' => 'author',
-			)
-		);
-	}
-
-	/**
-	 * Clean up after tests.
-	 */
-	public static function wpTearDownAfterClass() {
-		wp_delete_user( self::$user_id );
-	}
-
+class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Test add an item to the outbox.
 	 *
