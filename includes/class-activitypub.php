@@ -535,7 +535,6 @@ class Activitypub {
 				'query_var'           => false,
 				'delete_with_user'    => true,
 				'can_export'          => true,
-				'supports'            => false,
 				'exclude_from_search' => true,
 			)
 		);
