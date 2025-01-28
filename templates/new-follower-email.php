@@ -44,6 +44,6 @@ if ( ! isset( $actor ) ) {
 <?php
 
 /**
- * { item_description }
+ * Fires at the bottom of the new follower email.
  */
 do_action( 'activitypub_new_follower_email', $actor );
