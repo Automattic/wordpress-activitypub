@@ -159,7 +159,7 @@ class Activity extends Base_Object {
 		if ( is_array( $data ) ) {
 			// Check if the item is an Activity or an Object.
 			if ( is_activity( $data ) ) {
-				$data = Activity::init_from_array( $data );
+				$data = self::init_from_array( $data );
 			} elseif ( is_actor( $data ) ) {
 				$data = Actor::init_from_array( $data );
 			} else {
