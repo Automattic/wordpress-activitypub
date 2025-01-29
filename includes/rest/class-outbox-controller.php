@@ -233,13 +233,14 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @return array Response object on success, or WP_Error object on failure.
 	 */
 	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$type     = \get_post_meta( $item->ID, '_activitypub_activity_type', true );
+		$type = \get_post_meta( $item->ID, '_activitypub_activity_type', true );
+
 		$activity = new Activity();
 		$activity->set_type( $type );
 		$activity->set_id( $item->guid );
 		// Pre-fill the Activity with data (for example cc and to).
 		$activity->set_object( \json_decode( $item->post_content, true ) );
-		$activity->set_actor( Actors::get_by_id( $item->post_author )->get_id() );
+		$activity->set_actor( Actors::get_by_various( $request->get_param( 'user_id' ) )->get_id() );
 
 		return $activity->to_array( false );
 	}
