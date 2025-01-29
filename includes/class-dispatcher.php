@@ -65,7 +65,7 @@ class Dispatcher {
 		$activity->set_type( $type );
 		$activity->set_id( $outbox_item->guid );
 		// Pre-fill the Activity with data (for example cc and to).
-		$activity->set_object( Activity::init_from_json( $outbox_item->post_content ) );
+		$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
 		$activity->set_actor( Actors::get_by_id( $outbox_item->post_author )->get_id() );
 
 		// Use simple Object (only ID-URI) for Like and Announce.

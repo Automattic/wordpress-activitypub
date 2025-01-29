@@ -75,7 +75,7 @@ abstract class Base {
 	 *
 	 * @param Base_Object $activity_object The ActivityPub Object.
 	 *
-	 * @return Base_Object The transformed ActivityPub Object.
+	 * @return Base_Object|\WP_Error The transformed ActivityPub Object.
 	 */
 	protected function transform_object_properties( $activity_object ) {
 		if ( ! $activity_object || \is_wp_error( $activity_object ) ) {
@@ -268,9 +268,13 @@ abstract class Base {
 	/**
 	 * Returns the content map for the post.
 	 *
-	 * @return array The content map for the post.
+	 * @return array|null The content map for the post or null if not set.
 	 */
 	protected function get_content_map() {
+		if ( ! \method_exists( $this, 'get_content' ) || ! $this->get_content() ) {
+			return null;
+		}
+
 		return array(
 			$this->get_locale() => $this->get_content(),
 		);
@@ -279,7 +283,7 @@ abstract class Base {
 	/**
 	 * Returns the name map for the post.
 	 *
-	 * @return array The name map for the post.
+	 * @return array|null The name map for the post or null if not set.
 	 */
 	protected function get_name_map() {
 		if ( ! \method_exists( $this, 'get_name' ) || ! $this->get_name() ) {
@@ -294,7 +298,7 @@ abstract class Base {
 	/**
 	 * Returns the summary map for the post.
 	 *
-	 * @return array The summary map for the post.
+	 * @return array|null The summary map for the post or null if not set.
 	 */
 	protected function get_summary_map() {
 		if ( ! \method_exists( $this, 'get_summary' ) || ! $this->get_summary() ) {
