@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Handle deletes from remote servers that leave behind an accessible Tombstone object.
+* No longer parses tags for post types that don't support Activitypub.
 
 ## [4.7.3] - 2025-01-21
 

@@ -137,6 +137,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Changed: Rewrite the current dispatcher system, to use the Outbox instead of a Scheduler.
 * Changed: Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
 * Fixed: Handle deletes from remote servers that leave behind an accessible Tombstone object.
+* Fixed: No longer parses tags for post types that don't support Activitypub.
 
 = 4.7.3 =
 
