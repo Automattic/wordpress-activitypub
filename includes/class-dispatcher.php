@@ -110,7 +110,7 @@ class Dispatcher {
 
 		$results = array();
 		foreach ( $inboxes as $inbox ) {
-			$results[] = safe_remote_post( $inbox, $json, $actor_id );
+			$results[ $inbox ] = safe_remote_post( $inbox, $json, $actor_id );
 		}
 
 		/**
