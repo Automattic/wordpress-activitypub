@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Scheduler;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Scheduler\Actor;
 
 /**
  * Test Post scheduler class.
@@ -96,6 +97,27 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post          = $this->get_latest_outbox_item( $activitpub_id );
 		$this->assertSame( $activitpub_id, $post->post_title );
 		$this->assertSame( $test_value, $result );
+	}
+
+	/**
+	 * Test blog user image update.
+	 *
+	 * @covers ::blog_user_update
+	 */
+	public function test_blog_user_image_update() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		Actor::init();
+
+		$attachment_id = self::factory()->attachment->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
+		\update_option( 'activitypub_header_image', $attachment_id );
+
+		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+		$post          = $this->get_latest_outbox_item( $activitpub_id );
+
+		$this->assertSame( $activitpub_id, $post->post_title );
+
+		$activity_object = \json_decode( $post->post_content, true );
+		$this->assertArrayHasKey( 'image', $activity_object );
 	}
 
 	/**
