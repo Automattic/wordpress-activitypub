@@ -14,11 +14,11 @@ use Activitypub\Collection\Actors;
  */
 class User extends Base {
 	/**
-	 * Transforms the WP_User object to an Actor
+	 * Transforms the WP_User object to an Actor.
 	 *
 	 * @see \Activitypub\Activity\Actor
 	 *
-	 * @return \Activitypub\Activity\Actor The Actor
+	 * @return \Activitypub\Activity\Base_Object|\WP_Error The Actor or WP_Error on failure.
 	 */
 	public function to_object() {
 		$activity_object = $this->transform_object_properties( Actors::get_by_id( $this->item->ID ) );

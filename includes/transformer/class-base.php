@@ -75,7 +75,7 @@ abstract class Base {
 	 *
 	 * @param Base_Object $activity_object The ActivityPub Object.
 	 *
-	 * @return Base_Object The transformed ActivityPub Object.
+	 * @return Base_Object|\WP_Error The transformed ActivityPub Object.
 	 */
 	protected function transform_object_properties( $activity_object ) {
 		if ( ! $activity_object || \is_wp_error( $activity_object ) ) {
