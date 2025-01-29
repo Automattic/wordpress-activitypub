@@ -86,7 +86,7 @@ class Test_Activity extends \WP_UnitTestCase {
 
 		$activity = Activity::init_from_array( $test_array );
 
-		$this->assertEquals( 'Hello world!', $activity->get_object()->get_content() );
+		$this->assertEquals( 'Hello world!', $activity->get_object()['content'] );
 		Assert::assertArraySubset( $test_array, $activity->to_array() );
 	}
 

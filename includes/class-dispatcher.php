@@ -70,7 +70,7 @@ class Dispatcher {
 
 		// Use simple Object (only ID-URI) for Like and Announce.
 		if ( in_array( $type, array( 'Like', 'Delete' ), true ) ) {
-			$activity->set_object( $activity->get_object()->get_id() );
+			$activity->set_object( $activity->get_object()['id'] );
 		}
 
 		self::send_activity_to_followers( $activity, $actor_id, $outbox_item );

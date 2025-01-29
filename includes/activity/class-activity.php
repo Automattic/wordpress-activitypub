@@ -154,7 +154,7 @@ class Activity extends Base_Object {
 	public function set_object( $data ) {
 		// Convert array to object.
 		if ( is_array( $data ) ) {
-			$data = self::init_from_array( $data );
+			unset( $data['@context'] );
 		}
 
 		// Set object.
@@ -168,37 +168,42 @@ class Activity extends Base_Object {
 		}
 
 		// Check if `$data` is an object and copy some properties otherwise do nothing.
-		if ( ! is_object( $data ) ) {
-			return;
+		if ( is_object( $data ) ) {
+			$data = $data->to_array();
 		}
 
 		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
-			$this->set( $i, $data->get( $i ) );
-		}
-
-		if ( $data->get_published() && ! $this->get_published() ) {
-			$this->set( 'published', $data->get_published() );
-		}
-
-		if ( $data->get_updated() && ! $this->get_updated() ) {
-			$this->set( 'updated', $data->get_updated() );
-		}
-
-		if ( $data->get_attributed_to() && ! $this->get_actor() ) {
-			$this->set( 'actor', $data->get_attributed_to() );
-		}
-
-		if ( $data->get_in_reply_to() ) {
-			$this->set( 'in_reply_to', $data->get_in_reply_to() );
-		}
-
-		if ( $data->get_id() && ! $this->get_id() ) {
-			$id = strtok( $data->get_id(), '#' );
-			if ( $data->get_updated() ) {
-				$updated = $data->get_updated();
-			} else {
-				$updated = $data->get_published();
+			if ( isset( $data[ $i ] ) ) {
+				$this->set( $i, $data[ $i ] );
 			}
+		}
+
+		if ( isset( $data['published'] ) && ! $this->get_published() ) {
+			$this->set( 'published', $data['published'] );
+		}
+
+		if ( isset( $data['updated'] ) && ! $this->get_updated() ) {
+			$this->set( 'updated', $data['updated'] );
+		}
+
+		if ( isset( $data['attributed_to'] ) && ! $this->get_actor() ) {
+			$this->set( 'actor', $data['attributed_to'] );
+		}
+
+		if ( isset( $data['in_reply_to'] ) ) {
+			$this->set( 'in_reply_to', $data['in_reply_to'] );
+		}
+
+		if ( isset( $data['id'] ) && ! $this->get_id() ) {
+			$id = strtok( $data['id'], '#' );
+			if ( isset( $data['updated'] ) ) {
+				$updated = $data['updated'];
+			} elseif ( isset( $data['published'] ) ) {
+				$updated = $data['published'];
+			} else {
+				$updated = time();
+			}
+
 			$this->set( 'id', $id . '#activity-' . strtolower( $this->get_type() ) . '-' . $updated );
 		}
 	}
