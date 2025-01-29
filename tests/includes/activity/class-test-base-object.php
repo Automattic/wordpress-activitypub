@@ -58,4 +58,16 @@ class Test_Base_Object extends \WP_UnitTestCase {
 			array( array( 'value', 'value' ), array( 'value' ) ),
 		);
 	}
+
+	/**
+	 * Test init_from_json method.
+	 *
+	 * @covers ::init_from_json
+	 */
+	public function test_init_from_json() {
+		$invalid_json = '{"@context":https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https:\/\/example.com\/2","type":"Note","content":"\u003Cp\u003EThis is another note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is another note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"cc":[],"mediaType":"text\/html","sensitive":false}';
+		$base_object  = Base_Object::init_from_json( $invalid_json );
+
+		$this->assertInstanceOf( 'WP_Error', $base_object );
+	}
 }

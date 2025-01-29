@@ -588,7 +588,7 @@ class Base_Object {
 	 *
 	 * @param string $json The JSON string.
 	 *
-	 * @return Base_Object An Object built from the JSON string.
+	 * @return Base_Object|WP_Error An Object built from the JSON string or WP_Error when it's not a JSON string.
 	 */
 	public static function init_from_json( $json ) {
 		$array = \json_decode( $json, true );
