@@ -23,8 +23,6 @@ class Json extends Activity_Object {
 	 * @param string|array $item The item that should be transformed.
 	 */
 	public function __construct( $item ) {
-		$object = new Base_Object();
-
 		if ( \is_string( $item ) ) {
 			$item = \json_decode( $item, true );
 		}
