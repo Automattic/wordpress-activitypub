@@ -53,6 +53,11 @@ class Hashtag {
 	 * @param \WP_Post $post    Post object.
 	 */
 	public static function insert_post( $post_id, $post ) {
+		// Check if the post supports ActivityPub.
+		if ( ! \post_type_supports( \get_post_type( $post ), 'activitypub' ) ) {
+			return;
+		}
+
 		$tags = array();
 
 		// Skip hashtags in HTML attributes, like hex colors.
