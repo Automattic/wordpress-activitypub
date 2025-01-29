@@ -99,10 +99,21 @@ async function createRelease(version) {
 
 	updateVersionInFile('includes/class-migration.php', version, [
 		{
-			search: /version_compare\([^,]+,\s*['"]unreleased['"]/gi,
+			search: /(?<!\*[\s\S]{0,50})(?<=version_compare\s*\(\s*\$version_from_db,\s*')unreleased(?=',\s*['<=>])/g,
 			replace: (match) => match.replace(/unreleased/i, version)
 		}
 	]);
+
+	const phpFiles = execWithOutput('find . -name "*.php"').split('\n');
+
+	phpFiles.forEach((filePath) => {
+		updateVersionInFile(filePath, version, [
+			{
+				search: /@since unreleased/g,
+				replace: `@since ${version}`
+			}
+		]);
+	});
 
 	// Update CHANGELOG.md
 	updateChangelog(version);
