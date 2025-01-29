@@ -1614,9 +1614,9 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 /**
  * Check if an `$data` is an Activity.
  *
- * @param array|object|string $data The data to check.
- *
  * @see https://www.w3.org/ns/activitystreams#activities
+ *
+ * @param array|object|string $data The data to check.
  *
  * @return boolean True if the `$data` is an Activity, false otherwise.
  */
@@ -1677,9 +1677,9 @@ function is_activity( $data ) {
 /**
  * Check if an `$data` is an Actor.
  *
- * @param array|object|string $data The data to check.
- *
  * @see https://www.w3.org/ns/activitystreams#actor
+ *
+ * @param array|object|string $data The data to check.
  *
  * @return boolean True if the `$data` is an Actor, false otherwise.
  */
