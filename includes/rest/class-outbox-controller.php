@@ -232,7 +232,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @param \WP_REST_Request $request Request object.
 	 * @return array Response object on success, or WP_Error object on failure.
 	 */
-	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+	public function prepare_item_for_response( $item, $request ) {
 		$type = \get_post_meta( $item->ID, '_activitypub_activity_type', true );
 
 		$activity = new Activity();
