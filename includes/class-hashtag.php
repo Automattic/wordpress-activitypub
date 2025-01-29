@@ -58,6 +58,12 @@ class Hashtag {
 			return;
 		}
 
+		// Check if the (custom) post supports tags.
+		$taxonomies = \get_object_taxonomies( $post );
+		if ( ! in_array( 'post_tag', $taxonomies, true ) ) {
+			return;
+		}
+
 		$tags = array();
 
 		// Skip hashtags in HTML attributes, like hex colors.
