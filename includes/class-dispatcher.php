@@ -68,12 +68,6 @@ class Dispatcher {
 		$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
 		$activity->set_actor( Actors::get_by_id( $outbox_item->post_author )->get_id() );
 
-		// Pre-fill the Activity with data (for example cc and to).
-		$activity_object = Activity::init_from_json( $outbox_item->post_content );
-		if ( ! is_wp_error( $activity_object ) ) {
-			$activity->set_object( $activity_object );
-		}
-
 		// Use simple Object (only ID-URI) for Like and Announce.
 		if ( in_array( $type, array( 'Like', 'Delete' ), true ) ) {
 			$activity->set_object( $activity->get_object()->get_id() );
