@@ -1612,13 +1612,13 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 }
 
 /**
- * Check if an object is an Activity.
+ * Check if an `$data` is an Activity.
  *
- * @param array|object|string $data The object to check.
+ * @param array|object|string $data The data to check.
  *
  * @see https://www.w3.org/ns/activitystreams#activities
  *
- * @return boolean True if the object is an Activity, false otherwise.
+ * @return boolean True if the `$data` is an Activity, false otherwise.
  */
 function is_activity( $data ) {
 	/**
@@ -1675,13 +1675,13 @@ function is_activity( $data ) {
 }
 
 /**
- * Check if an object is an Actor.
+ * Check if an `$data` is an Actor.
  *
- * @param array|object|string $data The object to check.
+ * @param array|object|string $data The data to check.
  *
  * @see https://www.w3.org/ns/activitystreams#actor
  *
- * @return boolean True if the object is an Activity, false otherwise.
+ * @return boolean True if the `$data` is an Actor, false otherwise.
  */
 function is_actor( $data ) {
 	/**
