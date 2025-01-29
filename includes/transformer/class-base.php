@@ -268,7 +268,7 @@ abstract class Base {
 	/**
 	 * Returns the content map for the post.
 	 *
-	 * @return array The content map for the post.
+	 * @return array|null The content map for the post or null if not set.
 	 */
 	protected function get_content_map() {
 		if ( ! \method_exists( $this, 'get_content' ) || ! $this->get_content() ) {
@@ -283,7 +283,7 @@ abstract class Base {
 	/**
 	 * Returns the name map for the post.
 	 *
-	 * @return array The name map for the post.
+	 * @return array|null The name map for the post or null if not set.
 	 */
 	protected function get_name_map() {
 		if ( ! \method_exists( $this, 'get_name' ) || ! $this->get_name() ) {
@@ -298,7 +298,7 @@ abstract class Base {
 	/**
 	 * Returns the summary map for the post.
 	 *
-	 * @return array The summary map for the post.
+	 * @return array|null The summary map for the post or null if not set.
 	 */
 	protected function get_summary_map() {
 		if ( ! \method_exists( $this, 'get_summary' ) || ! $this->get_summary() ) {
