@@ -271,6 +271,10 @@ abstract class Base {
 	 * @return array The content map for the post.
 	 */
 	protected function get_content_map() {
+		if ( ! \method_exists( $this, 'get_content' ) || ! $this->get_content() ) {
+			return null;
+		}
+
 		return array(
 			$this->get_locale() => $this->get_content(),
 		);

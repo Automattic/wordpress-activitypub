@@ -10,6 +10,7 @@ namespace Activitypub;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+use Activitypub\Transformer\Factory;
 
 /**
  * ActivityPub Dispatcher Class.
@@ -65,7 +66,7 @@ class Dispatcher {
 		$activity->set_type( $type );
 		$activity->set_id( $outbox_item->guid );
 		// Pre-fill the Activity with data (for example cc and to).
-		$activity->set_object( Activity::init_from_json( $outbox_item->post_content ) );
+		$activity->set_object( Factory::get_transformer( $outbox_item->post_content )->to_object() );
 		$activity->set_actor( Actors::get_by_id( $outbox_item->post_author )->get_id() );
 
 		// Use simple Object (only ID-URI) for Like and Announce.

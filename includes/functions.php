@@ -1614,7 +1614,7 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 /**
  * Check if an object is an Activity.
  *
- * @param array|object $data The object to check.
+ * @param array|object|string $data The object to check.
  *
  * @see https://www.w3.org/ns/activitystreams#activities
  *
@@ -1658,6 +1658,51 @@ function is_activity( $data ) {
 			'View',
 		)
 	);
+
+	if ( is_string( $data ) ) {
+		return in_array( $data, $types, true );
+	}
+
+	if ( is_array( $data ) && isset( $data['type'] ) ) {
+		return in_array( $data['type'], $types, true );
+	}
+
+	if ( is_object( $data ) && $data instanceof Base_Object ) {
+		return in_array( $data->get_type(), $types, true );
+	}
+
+	return false;
+}
+
+/**
+ * Check if an object is an Actor.
+ *
+ * @param array|object|string $data The object to check.
+ *
+ * @see https://www.w3.org/ns/activitystreams#actor
+ *
+ * @return boolean True if the object is an Activity, false otherwise.
+ */
+function is_actor( $data ) {
+	/**
+	 * Filters the actor types.
+	 *
+	 * @param array $types The actor types.
+	 */
+	$types = apply_filters(
+		'activitypub_actor_types',
+		array(
+			'Application',
+			'Group',
+			'Organization',
+			'Person',
+			'Service',
+		)
+	);
+
+	if ( is_string( $data ) ) {
+		return in_array( $data, $types, true );
+	}
 
 	if ( is_array( $data ) && isset( $data['type'] ) ) {
 		return in_array( $data['type'], $types, true );

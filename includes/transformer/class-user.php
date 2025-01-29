@@ -21,7 +21,15 @@ class User extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
-		return Actors::get_by_id( $this->item->ID );
+		$activity_object = $this->transform_object_properties( Actors::get_by_id( $this->item->ID ) );
+
+		if ( \is_wp_error( $activity_object ) ) {
+			return $activity_object;
+		}
+
+		$activity_object = $this->set_audience( $activity_object );
+
+		return $activity_object;
 	}
 
 	/**
