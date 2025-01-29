@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Followers;
+
 /**
  * Test class for Activitypub Hashtag.
  *
@@ -89,7 +91,7 @@ ENDPRE;
 	 * @param string   $message       The error message.
 	 */
 	public function test_hashtag_conversion( $content, $excerpt, $expected_tags, $message ) {
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_content' => $content,
 				'post_excerpt' => $excerpt,
@@ -102,6 +104,25 @@ ENDPRE;
 		foreach ( $expected_tags as $tag ) {
 			$this->assertContains( $tag, $tags, $message );
 		}
+	}
+
+	/**
+	 * Test no hashtags for unsupported post types.
+	 *
+	 * @covers ::insert_post
+	 */
+	public function test_no_hashtags_for_unsupported_post_types() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => 'Testing #php and #programming',
+				'post_type'    => Followers::POST_TYPE,
+			)
+		);
+
+		\Activitypub\Hashtag::insert_post( $post_id, get_post( $post_id ) );
+		$tags = wp_get_post_tags( $post_id, array( 'fields' => 'names' ) );
+
+		$this->assertEmpty( $tags, 'Should not add hashtags to unsupported post types' );
 	}
 
 	/**
