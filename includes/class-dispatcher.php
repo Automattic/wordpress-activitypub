@@ -108,9 +108,19 @@ class Dispatcher {
 
 		$json = $activity->to_json();
 
+		$results = array();
 		foreach ( $inboxes as $inbox ) {
-			safe_remote_post( $inbox, $json, $actor_id );
+			$results[ $inbox ] = safe_remote_post( $inbox, $json, $actor_id );
 		}
+
+		/**
+		 * Fires after an Activity has been sent to all followers and mentioned users.
+		 *
+		 * @param array    $results     The results of the remote posts.
+		 * @param Activity $activity    The ActivityPub Activity.
+		 * @param \WP_Post $outbox_item The WordPress object.
+		 */
+		do_action( 'activitypub_sent_to_followers', $results, $activity, $outbox_item );
 
 		\wp_publish_post( $outbox_item );
 	}
