@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Scheduler;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Scheduler\Actor;
 
 /**
  * Test Post scheduler class.
@@ -96,6 +97,84 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post          = $this->get_latest_outbox_item( $activitpub_id );
 		$this->assertSame( $activitpub_id, $post->post_title );
 		$this->assertSame( $test_value, $result );
+	}
+
+	/**
+	 * Data provider for blog user image updates.
+	 *
+	 * @return string[][]
+	 */
+	public function blog_user_images_provider() {
+		return array(
+			array( 'image', 'activitypub_header_image' ),
+			array( 'icon', 'site_icon' ),
+		);
+	}
+
+	/**
+	 * Test blog user image updates.
+	 *
+	 * @dataProvider blog_user_images_provider
+	 * @covers ::blog_user_update
+	 *
+	 * @param string $field  Field to test.
+	 * @param string $option Option to test.
+	 */
+	public function test_blog_user_image_updates( $field, $option ) {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		Actor::init();
+
+		$attachment_id = self::factory()->attachment->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
+		\update_option( $option, $attachment_id );
+
+		$expected = array(
+			'type' => 'Image',
+			'url'  => \wp_get_attachment_url( $attachment_id ),
+		);
+
+		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+		$post          = $this->get_latest_outbox_item( $activitpub_id );
+
+		$activity_object = \json_decode( $post->post_content, true );
+		$this->assertArrayHasKey( $field, $activity_object );
+		$this->assertSame( $expected, $activity_object[ $field ] );
+	}
+
+	/**
+	 * Data provider for blog user text updates.
+	 *
+	 * @return string[][]
+	 */
+	public function blog_user_text_provider() {
+		return array(
+			array( 'preferredUsername', 'activitypub_blog_identifier', 'blog' ),
+			array( 'summary', 'activitypub_blog_description', 'blog description' ),
+			array( 'name', 'blogname', 'test site' ),
+		);
+	}
+
+	/**
+	 * Test blog user image updates.
+	 *
+	 * @dataProvider blog_user_text_provider
+	 * @covers ::blog_user_update
+	 *
+	 * @param string $field  Field to test.
+	 * @param string $option Option to test.
+	 * @param string $value  Value to test.
+	 */
+	public function test_blog_user_text_updates( $field, $option, $value ) {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		Actor::init();
+
+		\update_option( $option, $value );
+
+		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+		$post          = $this->get_latest_outbox_item( $activitpub_id );
+
+		$activity_object = \json_decode( $post->post_content, true );
+		$this->assertArrayHasKey( $field, $activity_object );
+		$this->assertStringContainsString( $value, $activity_object[ $field ] );
 	}
 
 	/**
