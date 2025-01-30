@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "wp-scripts start",
     "build": "wp-scripts build",
+    "env": "wp-env",
     "env-start": "wp-env start && wp-env run cli wp rewrite structure '/%year%/%monthnum%/%postname%/'",
     "env-stop": "wp-env stop",
     "env-test": "wp-env run tests-cli --env-cwd=\"wp-content/plugins/activitypub\" vendor/bin/phpunit",
