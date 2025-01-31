@@ -232,7 +232,7 @@ $user   = $transformer->get_actor_object();
 				</article>
 			</main>
 			<aside class="sidebar">
-				<h1>⁂ Fediverse</h1>
+				<h1>Fediverse ⁂</h1>
 				<ul>
 					<li>████████</li>
 					<li>███████████</li>

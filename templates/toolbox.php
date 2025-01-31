@@ -8,7 +8,7 @@
 ?>
 
 <div class="card activitypub" id="activitypub">
-	<h2><?php esc_html_e( '⁂ Fediverse Bookmarklet', 'activitypub' ); ?></h2>
+	<h2><?php esc_html_e( 'Fediverse Bookmarklet ⁂', 'activitypub' ); ?></h2>
 	<p>
 		<?php esc_html_e( 'This lightweight bookmarklet makes it simple to reply to content on any webpage that supports ActivityPub, enhancing your interaction on the fediverse.', 'activitypub' ); ?>
 	</p>
