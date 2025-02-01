@@ -7,6 +7,8 @@
 
 namespace Activitypub\Integration;
 
+use Activitypub\Collection\Actors;
+use function Activitypub\url_to_authorid;
 use function Activitypub\url_to_commentid;
 
 /**
@@ -97,28 +99,25 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 */
 	public function action_links( $links, $record ) {
 		if ( 'processed' === $record->action ) {
-			$results = json_decode( $record->get_meta( 'results', true ), true );
+			$errors = json_decode( $record->get_meta( 'errors', true ), true );
 
-			if ( empty( $results ) ) {
-				$results = __( 'No inboxes to notify about this activity.', 'activitypub' );
-			} else {
-				$results = array_map(
+			if ( $errors ) {
+				$errors = array_map(
 					function ( $inbox, $result ) {
 						return sprintf( '%1$s: %2$s', $inbox, $result );
 					},
-					array_keys( $results ),
-					$results
+					array_keys( $errors ),
+					$errors
 				);
-				$results = implode( "\n", $results );
+
+				$message = sprintf(
+					'<details><summary>%1$s</summary><pre>%2$s</pre></details>',
+					__( 'Inbox Errors', 'activitypub' ),
+					implode( "\n", $errors )
+				);
+
+				$links[ $message ] = '';
 			}
-
-			$message = sprintf(
-				'<details><summary>%1$s</summary><pre>%2$s</pre></details>',
-				__( 'Notified Inboxes', 'activitypub' ),
-				$results
-			);
-
-			$links[ $message ] = '';
 		}
 
 		return $links;
@@ -143,31 +142,47 @@ class Stream_Connector extends \WP_Stream\Connector {
 			$object_id    = $post_id;
 			$object_type  = $post->post_type;
 			$object_title = $post->post_title;
+		} else {
+			$comment_id = url_to_commentid( $outbox_item->post_title );
+			if ( $comment_id ) {
+				$comment = get_comment( $comment_id );
+
+				$object_id    = $comment_id;
+				$object_type  = 'comments';
+				$object_title = $comment->comment_content;
+			} else {
+				$author_id = url_to_authorid( $outbox_item->post_title );
+				if ( null !== $author_id ) {
+					$object_id   = $author_id;
+					$object_type = 'profiles';
+
+					if ( $author_id ) {
+						$object_title = get_userdata( $author_id )->display_name;
+					} elseif ( Actors::BLOG_USER_ID === $author_id ) {
+						$object_title = __( 'Blog User', 'activitypub' );
+					} elseif ( Actors::APPLICATION_USER_ID === $author_id ) {
+						$object_title = __( 'Application User', 'activitypub' );
+					}
+				}
+			}
 		}
 
-		$comment_id = url_to_commentid( $outbox_item->post_title );
-		if ( $comment_id ) {
-			$comment = get_comment( $comment_id );
-
-			$object_id    = $comment_id;
-			$object_type  = $comment->comment_type;
-			$object_title = $comment->comment_content;
-		}
-
-		$data = array();
+		$errors = array();
 		foreach ( $results as $inbox => $result ) {
 			if ( is_wp_error( $result ) ) {
-				$data[ $inbox ] = $result->get_error_message();
+				$errors[ $inbox ] = $result->get_error_message();
 				continue;
 			}
-			$data[ $inbox ] = wp_remote_retrieve_response_message( $result );
+			if ( wp_remote_retrieve_response_code( $result ) >= 300 ) {
+				$errors[ $inbox ] = wp_remote_retrieve_response_message( $result );
+			}
 		}
 
 		$this->log(
 			// translators: 1: post title.
 			sprintf( __( 'Outbox processed for "%1$s"', 'activitypub' ), $object_title ),
 			array(
-				'results' => wp_json_encode( $data ),
+				'errors' => wp_json_encode( $errors ),
 			),
 			$object_id,
 			$object_type,
