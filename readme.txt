@@ -134,6 +134,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: Outbox queue
+* Added: Outbox processed events get logged in Stream and show any errors returned from inboxes
 * Changed: Rewrite the current dispatcher system, to use the Outbox instead of a Scheduler.
 * Changed: Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
 * Fixed: Handle deletes from remote servers that leave behind an accessible Tombstone object.

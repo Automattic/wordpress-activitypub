@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Outbox queue
+* Outbox processed events get logged in Stream and show any errors returned from inboxes
+
 ### Changed
 
 * Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
@@ -32,10 +37,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Support for WPML post locale
-
-### Added
-
-* Outbox queue
 
 ### Changed
 
