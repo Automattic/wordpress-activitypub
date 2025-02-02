@@ -138,6 +138,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Changed: Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
 * Fixed: Handle deletes from remote servers that leave behind an accessible Tombstone object.
 * Fixed: No longer parses tags for post types that don't support Activitypub.
+* Fixed: rel attribute will now contain no more than one "me" value.
 
 = 4.7.3 =
 
