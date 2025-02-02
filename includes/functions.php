@@ -385,7 +385,10 @@ function is_post_disabled( $post ) {
 
 	if (
 		ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ||
-		! \post_type_supports( $post->post_type, 'activitypub' )
+		ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === $visibility ||
+		! \post_type_supports( $post->post_type, 'activitypub' ) ||
+		'private' === $post->post_status ||
+		! empty( $post->post_password )
 	) {
 		$disabled = true;
 	}

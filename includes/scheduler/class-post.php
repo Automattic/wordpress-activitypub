@@ -78,11 +78,6 @@ class Post {
 			return;
 		}
 
-		// Do not send activities if post is password protected.
-		if ( \post_password_required( $post ) ) {
-			return;
-		}
-
 		switch ( $new_status ) {
 			case 'publish':
 				$type = ( 'publish' === $old_status ) ? 'Update' : 'Create';
