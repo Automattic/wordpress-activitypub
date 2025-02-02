@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-* Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
+* Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins.
+* Moved password check to `is_post_disabled` function.
 
 ### Fixed
 
