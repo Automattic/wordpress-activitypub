@@ -1,15 +1,12 @@
 <?php
 /**
- * Followers REST-Class file.
+ * Followers_Controller file.
  *
  * @package Activitypub
  */
 
 namespace Activitypub\Rest;
 
-use stdClass;
-use WP_REST_Server;
-use WP_REST_Response;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers as Follower_Collection;
 
@@ -17,133 +14,231 @@ use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_masked_wp_version;
 
 /**
- * ActivityPub Followers REST-Class.
+ * Followers_Controller class.
  *
  * @author Matthias Pfefferle
  *
  * @see https://www.w3.org/TR/activitypub/#followers
  */
-class Followers {
+class Followers_Controller extends \WP_REST_Controller {
 	/**
-	 * Initialize the class, registering WordPress hooks.
+	 * The namespace of this controller's route.
+	 *
+	 * @var string
 	 */
-	public static function init() {
-		self::register_routes();
-	}
+	protected $namespace = ACTIVITYPUB_REST_NAMESPACE;
+
+	/**
+	 * The base of this controller's route.
+	 *
+	 * @var string
+	 */
+	protected $rest_base = '(?:users|actors)/(?P<user_id>[\w\-\.]+)';
 
 	/**
 	 * Register routes.
 	 */
-	public static function register_routes() {
+	public function register_routes() {
 		\register_rest_route(
-			ACTIVITYPUB_REST_NAMESPACE,
-			'/(users|actors)/(?P<user_id>[\w\-\.]+)/followers',
+			$this->namespace,
+			'/' . $this->rest_base . '/followers',
 			array(
-				array(
-					'methods'             => WP_REST_Server::READABLE,
-					'callback'            => array( self::class, 'get' ),
-					'args'                => self::request_parameters(),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+				'args'   => array(
+					'user_id' => array(
+						'description' => 'The ID or username of the actor.',
+						'type'        => 'string',
+						'required'    => true,
+						'pattern'     => '[\w\-\.]+',
+					),
 				),
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_items' ),
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'args'                => array(
+						'page'     => array(
+							'description' => 'Current page of the collection.',
+							'type'        => 'integer',
+							'default'     => 1,
+							'minimum'     => 1,
+						),
+						'per_page' => array(
+							'description' => 'Maximum number of items to be returned in result set.',
+							'type'        => 'integer',
+							'default'     => 20,
+							'minimum'     => 1,
+						),
+						'order'    => array(
+							'description' => 'Order sort attribute ascending or descending.',
+							'type'        => 'string',
+							'default'     => 'desc',
+							'enum'        => array( 'asc', 'desc' ),
+						),
+						'context'  => array(
+							'description' => 'The context in which the request is made.',
+							'type'        => 'string',
+							'default'     => 'simple',
+							'enum'        => array( 'simple', 'full' ),
+						),
+					),
+				),
+				'schema' => array( $this, 'get_item_schema' ),
 			)
 		);
 	}
 
 	/**
-	 * Handle GET request
+	 * Retrieves followers list.
 	 *
-	 * @param \WP_REST_Request $request The request object.
-	 *
-	 * @return WP_REST_Response|\WP_Error The response object or WP_Error.
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
-	public static function get( $request ) {
+	public function get_items( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 		$user    = Actors::get_by_various( $user_id );
 
-		if ( is_wp_error( $user ) ) {
+		if ( \is_wp_error( $user ) ) {
 			return $user;
 		}
 
-		$order    = $request->get_param( 'order' );
-		$per_page = (int) $request->get_param( 'per_page' );
-		$page     = (int) $request->get_param( 'page' );
-		$context  = $request->get_param( 'context' );
-
 		/**
-		 * Action triggered prior to the ActivityPub profile being created and sent to the client
+		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
 		 */
 		\do_action( 'activitypub_rest_followers_pre' );
 
-		$data = Follower_Collection::get_followers_with_count( $user_id, $per_page, $page, array( 'order' => ucwords( $order ) ) );
-		$json = new stdClass();
+		$order    = $request->get_param( 'order' );
+		$per_page = $request->get_param( 'per_page' );
+		$page     = $request->get_param( 'page' );
+		$context  = $request->get_param( 'context' );
 
-		// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-		$json->{'@context'} = \Activitypub\get_context();
-		$json->id           = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user->get__id() ) );
-		$json->generator    = 'http://wordpress.org/?v=' . get_masked_wp_version();
-		$json->actor        = $user->get_id();
-		$json->type         = 'OrderedCollectionPage';
-		$json->totalItems   = $data['total'];
-		$json->partOf       = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user->get__id() ) );
+		$data = Follower_Collection::get_followers_with_count( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
 
-		$json->first = \add_query_arg( 'page', 1, $json->partOf );
-		$json->last  = \add_query_arg( 'page', \ceil( $json->totalItems / $per_page ), $json->partOf );
+		$response = array(
+			'@context'     => \Activitypub\get_context(),
+			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/followers', $user->get__id() ) ),
+			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
+			'actor'        => $user->get_id(),
+			'type'         => 'OrderedCollectionPage',
+			'totalItems'   => $data['total'],
+			'partOf'       => get_rest_url_by_path( \sprintf( 'actors/%d/followers', $user->get__id() ) ),
+			'orderedItems' => array_map(
+				function ( $item ) use ( $context ) {
+					if ( 'full' === $context ) {
+						return $item->to_array( false );
+					}
+					return $item->get_id();
+				},
+				$data['followers']
+			),
+		);
 
-		if ( $page && ( ( \ceil( $json->totalItems / $per_page ) ) > $page ) ) {
-			$json->next = \add_query_arg( 'page', $page + 1, $json->partOf );
+		if ( $page && ( ( \ceil( $response['totalItems'] / $per_page ) ) > $page ) ) {
+			$response['next'] = \add_query_arg( 'page', $page + 1, $response['partOf'] );
 		}
 
 		if ( $page && ( $page > 1 ) ) {
-			$json->prev = \add_query_arg( 'page', $page - 1, $json->partOf );
+			$response['prev'] = \add_query_arg( 'page', $page - 1, $response['partOf'] );
 		}
 
-		$json->orderedItems = array_map(
-			function ( $item ) use ( $context ) {
-				if ( 'full' === $context ) {
-					return $item->to_array( false );
-				}
-				return $item->get_id();
-			},
-			$data['followers']
-		);
-		// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		$response['first'] = \add_query_arg( 'page', 1, $response['partOf'] );
+		$response['last']  = \add_query_arg( 'page', \ceil( $response['totalItems'] / $per_page ), $response['partOf'] );
 
-		$rest_response = new WP_REST_Response( $json, 200 );
-		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+		$response = \rest_ensure_response( $response );
+		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
-		return $rest_response;
+		return $response;
 	}
 
 	/**
-	 * The supported parameters.
+	 * Retrieves the followers schema, conforming to JSON Schema.
 	 *
-	 * @return array List of parameters.
+	 * @return array Item schema data.
 	 */
-	public static function request_parameters() {
-		$params = array();
+	public function get_item_schema() {
+		if ( $this->schema ) {
+			return $this->add_additional_fields_schema( $this->schema );
+		}
 
-		$params['page'] = array(
-			'type'    => 'integer',
-			'default' => 1,
+		$this->schema = array(
+			'$schema'    => 'http://json-schema.org/draft-04/schema#',
+			'title'      => 'followers',
+			'type'       => 'object',
+			'properties' => array(
+				'@context'     => array(
+					'description' => 'The JSON-LD context for the response.',
+					'type'        => array( 'array', 'object' ),
+					'readonly'    => true,
+				),
+				'id'           => array(
+					'description' => 'The unique identifier for the followers collection.',
+					'type'        => 'string',
+					'format'      => 'uri',
+					'readonly'    => true,
+				),
+				'generator'    => array(
+					'description' => 'The generator of the followers collection.',
+					'type'        => 'string',
+					'format'      => 'uri',
+					'readonly'    => true,
+				),
+				'actor'        => array(
+					'description' => 'The actor who owns the followers collection.',
+					'type'        => 'string',
+					'format'      => 'uri',
+					'readonly'    => true,
+				),
+				'type'         => array(
+					'description' => 'The type of the followers collection.',
+					'type'        => 'string',
+					'enum'        => array( 'OrderedCollectionPage' ),
+					'readonly'    => true,
+				),
+				'totalItems'   => array(
+					'description' => 'The total number of items in the followers collection.',
+					'type'        => 'integer',
+					'readonly'    => true,
+				),
+				'partOf'       => array(
+					'description' => 'The collection this page is part of.',
+					'type'        => 'string',
+					'format'      => 'uri',
+					'readonly'    => true,
+				),
+				'orderedItems' => array(
+					'description' => 'The items in the followers collection.',
+					'type'        => 'array',
+					'items'       => array(
+						'type' => array( 'string', 'object' ),
+					),
+					'readonly'    => true,
+				),
+				'next'         => array(
+					'description' => 'The next page in the collection.',
+					'type'        => 'string',
+					'format'      => 'uri',
+					'readonly'    => true,
+				),
+				'prev'         => array(
+					'description' => 'The previous page in the collection.',
+					'type'        => 'string',
+					'format'      => 'uri',
+					'readonly'    => true,
+				),
+				'first'        => array(
+					'description' => 'The first page in the collection.',
+					'type'        => 'string',
+					'format'      => 'uri',
+					'readonly'    => true,
+				),
+				'last'         => array(
+					'description' => 'The last page in the collection.',
+					'type'        => 'string',
+					'format'      => 'uri',
+					'readonly'    => true,
+				),
+			),
 		);
 
-		$params['per_page'] = array(
-			'type'    => 'integer',
-			'default' => 20,
-		);
-
-		$params['order'] = array(
-			'type'    => 'string',
-			'default' => 'desc',
-			'enum'    => array( 'asc', 'desc' ),
-		);
-
-		$params['context'] = array(
-			'type'    => 'string',
-			'default' => 'simple',
-			'enum'    => array( 'simple', 'full' ),
-		);
-
-		return $params;
+		return $this->add_additional_fields_schema( $this->schema );
 	}
 }
