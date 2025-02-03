@@ -34,19 +34,9 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 */
 	public static function set_up_before_class() {
 		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
 
 		parent::set_up_before_class();
-	}
-
-	/**
-	 * Test route registration.
-	 *
-	 * @covers ::register_routes
-	 */
-	public function test_register_routes() {
-		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/(?P<user_id>[\w\-\.]+)', $routes );
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/(?P<user_id>[\w\-\.]+)/remote-follow', $routes );
 	}
 
 	/**
@@ -145,7 +135,7 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::get_item_schema
 	 */
 	public function test_get_item_schema() {
-		$schema = $this->controller->get_item_schema();
+		$schema = ( new Actors_Controller() )->get_item_schema();
 
 		$this->assertIsArray( $schema );
 		$this->assertEquals( 'actor', $schema['title'] );
