@@ -135,6 +135,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Changed: Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
 * Fixed: Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
+* Fixed: Avoid PHP warnings when using Debug mode and when the `actor` is not set.
 
 = 5.0.0 =
 
