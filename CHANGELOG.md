@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
+* Avoid PHP warnings when using Debug mode and when the `actor` is not set.
 
 ## [5.0.0] - 2025-02-03
 
