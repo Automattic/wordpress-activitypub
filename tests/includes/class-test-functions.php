@@ -299,4 +299,82 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			);
 		}
 	}
+
+	/**
+	 * Test is_post_disabled function.
+	 *
+	 * @covers ::is_post_disabled
+	 */
+	public function test_is_post_disabled() {
+		// Test standard public post.
+		$public_post_id = self::factory()->post->create();
+		$this->assertFalse( \Activitypub\is_post_disabled( $public_post_id ) );
+
+		// Test local-only post.
+		$local_post_id = self::factory()->post->create();
+		add_post_meta( $local_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+		$this->assertTrue( \Activitypub\is_post_disabled( $local_post_id ) );
+
+		// Test private post.
+		$private_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'private',
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_disabled( $private_post_id ) );
+
+		// Test password protected post.
+		$password_post_id = self::factory()->post->create(
+			array(
+				'post_password' => 'test123',
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_disabled( $password_post_id ) );
+
+		// Test unsupported post type.
+		register_post_type( 'unsupported', array() );
+		$unsupported_post_id = self::factory()->post->create(
+			array(
+				'post_type' => 'unsupported',
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_disabled( $unsupported_post_id ) );
+		unregister_post_type( 'unsupported' );
+
+		// Test with filter.
+		add_filter( 'activitypub_is_post_disabled', '__return_true' );
+		$this->assertTrue( \Activitypub\is_post_disabled( $public_post_id ) );
+		remove_filter( 'activitypub_is_post_disabled', '__return_true' );
+
+		// Clean up.
+		wp_delete_post( $public_post_id, true );
+		wp_delete_post( $local_post_id, true );
+		wp_delete_post( $private_post_id, true );
+		wp_delete_post( $password_post_id, true );
+	}
+
+	/**
+	 * Test is_post_disabled with private visibility.
+	 *
+	 * @covers ::is_post_disabled
+	 */
+	public function test_is_post_disabled_private_visibility() {
+		$visible_private_post_id = self::factory()->post->create();
+
+		add_post_meta( $visible_private_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+		$this->assertFalse( \Activitypub\is_post_disabled( $visible_private_post_id ) );
+
+		wp_delete_post( $visible_private_post_id, true );
+	}
+
+	/**
+	 * Test is_post_disabled with invalid post.
+	 *
+	 * @covers ::is_post_disabled
+	 */
+	public function test_is_post_disabled_invalid_post() {
+		$this->assertTrue( \Activitypub\is_post_disabled( 0 ) );
+		$this->assertTrue( \Activitypub\is_post_disabled( null ) );
+		$this->assertTrue( \Activitypub\is_post_disabled( 999999 ) );
+	}
 }

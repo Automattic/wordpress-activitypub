@@ -177,6 +177,7 @@ class Migration {
 			Scheduler::register_schedules();
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'create_post_outbox_items' ) );
 			\wp_schedule_single_event( \time() + 15, 'activitypub_upgrade', array( 'create_comment_outbox_items' ) );
+			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 
 		/*
