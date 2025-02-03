@@ -5,16 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## Unreleased
 
 ### Changed
 
-* Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins
+* Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
+
+## [5.0.0] - 2025-02-03
+
+### Changed
+
+* Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins.
+* Moved password check to `is_post_disabled` function.
 
 ### Fixed
 
 * Handle deletes from remote servers that leave behind an accessible Tombstone object.
 * No longer parses tags for post types that don't support Activitypub.
+* rel attribute will now contain no more than one "me" value.
 
 ## [4.7.3] - 2025-01-21
 
@@ -1246,8 +1254,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.3...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.0.0...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[5.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.3...5.0.0
 [4.7.3]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.2...4.7.3
 [4.7.2]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.1...4.7.2
 [4.7.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.0...4.7.1

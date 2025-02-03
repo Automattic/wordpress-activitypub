@@ -379,13 +379,21 @@ function is_activitypub_request() {
  * @return boolean True if the post is disabled, false otherwise.
  */
 function is_post_disabled( $post ) {
-	$post       = \get_post( $post );
-	$disabled   = false;
+	$post     = \get_post( $post );
+	$disabled = false;
+
+	if ( ! $post ) {
+		return true;
+	}
+
 	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
 	if (
 		ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ||
-		! \post_type_supports( $post->post_type, 'activitypub' )
+		ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === $visibility ||
+		! \post_type_supports( $post->post_type, 'activitypub' ) ||
+		'private' === $post->post_status ||
+		! empty( $post->post_password )
 	) {
 		$disabled = true;
 	}
@@ -1590,8 +1598,6 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 		}
 	}
 
-	set_wp_object_state( $data, 'federate' );
-
 	$outbox_activity_id = Outbox::add( $activity_object, $activity_type, $user_id, $content_visibility );
 
 	if ( ! $outbox_activity_id ) {
@@ -1607,6 +1613,8 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 	 * @param string                            $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
 	 */
 	\do_action( 'post_activitypub_add_to_outbox', $outbox_activity_id, $activity_object, $user_id, $content_visibility );
+
+	set_wp_object_state( $data, 'federated' );
 
 	return $outbox_activity_id;
 }
