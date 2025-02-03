@@ -134,6 +134,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: Cleanup of option values when the plugin is uninstalled
+* Added: Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
 * Changed: Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
 * Changed: Allow Base Transformer to handle WP_Term objects for transformation.
 * Fixed: Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.

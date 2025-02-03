@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Cleanup of option values when the plugin is uninstalled
 
+### Added
+
+* Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
+
 ### Changed
 
 * Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
