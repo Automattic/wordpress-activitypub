@@ -20,49 +20,9 @@ use function Activitypub\get_rest_url_by_path;
  * Class containing code for getting replies Collections and CollectionPages of posts and comments.
  */
 class Replies {
-	/**
-	 * Build base arguments for fetching the comments of either a WordPress post or comment.
-	 *
-	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
-	 */
-	private static function build_args( $wp_object ) {
-		$args = array(
-			'status'  => 'approve',
-			'orderby' => 'comment_date_gmt',
-			'order'   => 'ASC',
-		);
-
-		if ( $wp_object instanceof WP_Post ) {
-			$args['parent']  = 0; // TODO: maybe this is unnecessary.
-			$args['post_id'] = $wp_object->ID;
-		} elseif ( $wp_object instanceof WP_Comment ) {
-			$args['parent'] = $wp_object->comment_ID;
-		} else {
-			return new WP_Error();
-		}
-
-		return $args;
-	}
 
 	/**
-	 * Adds pagination args comments query.
-	 *
-	 * @param array $args              Query args built by self::build_args.
-	 * @param int   $page              The current pagination page.
-	 * @param int   $comments_per_page The number of comments per page.
-	 */
-	private static function add_pagination_args( $args, $page, $comments_per_page ) {
-		$args['number'] = $comments_per_page;
-
-		$offset         = intval( $page ) * $comments_per_page;
-		$args['offset'] = $offset;
-
-		return $args;
-	}
-
-
-	/**
-	 * Get the replies collections ID.
+	 * Get the Replies collection.
 	 *
 	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
 	 *
@@ -83,13 +43,13 @@ class Replies {
 	 *
 	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
 	 *
-	 * @return array|null An associative array containing the replies collection without JSON-LD context.
+	 * @return array|\WP_Error|null An associative array containing the replies collection without JSON-LD context on success.
 	 */
 	public static function get_collection( $wp_object ) {
 		$id = self::get_id( $wp_object );
 
-		if ( ! $id || is_wp_error( $id ) ) {
-			return null;
+		if ( is_wp_error( $id ) ) {
+			return defined( 'REST_REQUEST' ) && REST_REQUEST ? $id : null;
 		}
 
 		$replies = array(
@@ -100,6 +60,57 @@ class Replies {
 		$replies['first'] = self::get_collection_page( $wp_object, 0, $replies['id'] );
 
 		return $replies;
+	}
+
+	/**
+	 * Returns a replies collection page as an associative array.
+	 *
+	 * @link https://www.w3.org/TR/activitystreams-vocabulary/#dfn-collectionpage
+	 *
+	 * @param WP_Post|WP_Comment $wp_object The post of comment the replies are for.
+	 * @param int                $page      The current pagination page.
+	 * @param string             $part_of   Optional. The collection id/url the returned CollectionPage belongs to. Default null.
+	 *
+	 * @return array|WP_Error|null A CollectionPage as an associative array on success, WP_Error or null on failure.
+	 */
+	public static function get_collection_page( $wp_object, $page, $part_of = null ) {
+		// Build initial arguments for fetching approved comments.
+		$args = self::build_args( $wp_object );
+		if ( is_wp_error( $args ) ) {
+			return defined( 'REST_REQUEST' ) && REST_REQUEST ? $args : null;
+		}
+
+		// Retrieve the partOf if not already given.
+		$part_of = $part_of ?? self::get_id( $wp_object );
+
+		// If the collection page does not exist.
+		if ( is_wp_error( $part_of ) ) {
+			return defined( 'REST_REQUEST' ) && REST_REQUEST ? $part_of : null;
+		}
+
+		// Get to total replies count.
+		$total_replies = \get_comments( array_merge( $args, array( 'count' => true ) ) );
+
+		// If set to zero, we get errors below. You need at least one comment per page, here.
+		$args['number'] = max( (int) \get_option( 'comments_per_page' ), 1 );
+		$args['offset'] = intval( $page ) * $args['number'];
+
+		// Get the ActivityPub ID's of the comments, without local-only comments.
+		$comment_ids = self::get_reply_ids( \get_comments( $args ) );
+
+		// Build the associative CollectionPage array.
+		$collection_page = array(
+			'id'     => \add_query_arg( 'page', $page, $part_of ),
+			'type'   => 'CollectionPage',
+			'partOf' => $part_of,
+			'items'  => $comment_ids,
+		);
+
+		if ( $total_replies / $args['number'] > $page + 1 ) {
+			$collection_page['next'] = \add_query_arg( 'page', $page + 1, $part_of );
+		}
+
+		return $collection_page;
 	}
 
 	/**
@@ -130,56 +141,43 @@ class Replies {
 	}
 
 	/**
-	 * Returns a replies collection page as an associative array.
+	 * Build base arguments for fetching the comments of either a WordPress post or comment.
 	 *
-	 * @link https://www.w3.org/TR/activitystreams-vocabulary/#dfn-collectionpage
-	 *
-	 * @param WP_Post|WP_Comment $wp_object The post of comment the replies are for.
-	 * @param int                $page      The current pagination page.
-	 * @param string             $part_of   The collection id/url the returned CollectionPage belongs to.
-	 *
-	 * @return array A CollectionPage as an associative array.
+	 * @param WP_Post|WP_Comment|WP_Error $wp_object The post or comment to fetch replies for on success.
 	 */
-	public static function get_collection_page( $wp_object, $page, $part_of = null ) {
-		// Build initial arguments for fetching approved comments.
-		$args = self::build_args( $wp_object );
-
-		// Retrieve the partOf if not already given.
-		$part_of = $part_of ?? self::get_id( $wp_object );
-
-		// If the collection page does not exist.
-		if ( is_wp_error( $args ) || is_wp_error( $part_of ) ) {
-			return null;
-		}
-
-		// Get to total replies count.
-		$total_replies = \get_comments( array_merge( $args, array( 'count' => true ) ) );
-
-		// Modify query args to retrieve paginated results.
-		$comments_per_page = (int) \get_option( 'comments_per_page' );
-		// If set to zero, we get errors below. You need at least one comment per page, here.
-		if ( ! $comments_per_page ) {
-			$comments_per_page = 1;
-		}
-
-		// Fetch internal and external comments for current page.
-		$comments = get_comments( self::add_pagination_args( $args, $page, $comments_per_page ) );
-
-		// Get the ActivityPub ID's of the comments, without out local-only comments.
-		$comment_ids = self::get_reply_ids( $comments );
-
-		// Build the associative CollectionPage array.
-		$collection_page = array(
-			'id'     => \add_query_arg( 'page', $page, $part_of ),
-			'type'   => 'CollectionPage',
-			'partOf' => $part_of,
-			'items'  => $comment_ids,
+	private static function build_args( $wp_object ) {
+		$args = array(
+			'status'  => 'approve',
+			'orderby' => 'comment_date_gmt',
+			'order'   => 'ASC',
 		);
 
-		if ( $total_replies / $comments_per_page > $page + 1 ) {
-			$collection_page['next'] = \add_query_arg( 'page', $page + 1, $part_of );
+		if ( $wp_object instanceof WP_Post ) {
+			$args['parent']  = 0; // TODO: maybe this is unnecessary.
+			$args['post_id'] = $wp_object->ID;
+		} elseif ( $wp_object instanceof WP_Comment ) {
+			$args['parent'] = $wp_object->comment_ID;
+		} else {
+			return new WP_Error();
 		}
 
-		return $collection_page;
+		return $args;
+	}
+
+	/**
+	 * Get the replies collections ID.
+	 *
+	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
+	 *
+	 * @return string|WP_Error The rest URL of the replies collection or WP_Error if the object is not a post or comment.
+	 */
+	private static function get_id( $wp_object ) {
+		if ( $wp_object instanceof WP_Post ) {
+			return get_rest_url_by_path( sprintf( 'posts/%d/replies', $wp_object->ID ) );
+		} elseif ( $wp_object instanceof WP_Comment ) {
+			return get_rest_url_by_path( sprintf( 'comments/%d/replies', $wp_object->comment_ID ) );
+		} else {
+			return new WP_Error( 'unsupported_object', 'The object is not a post or comment.' );
+		}
 	}
 }
