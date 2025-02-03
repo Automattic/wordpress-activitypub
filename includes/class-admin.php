@@ -155,28 +155,54 @@ class Admin {
 			$tab = sanitize_key( $_GET['tab'] );
 		}
 
+		$settings_tabs = array(
+			'welcome'  => array(
+				'label'    => __( 'Welcome', 'activitypub' ),
+				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/welcome.php',
+			),
+			'settings' => array(
+				'label'    => __( 'Settings', 'activitypub' ),
+				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
+			),
+		);
+		if ( ! is_user_disabled( Actors::BLOG_USER_ID ) ) {
+			$settings_tabs['blog-profile'] = array(
+				'label'    => __( 'Blog Profile', 'activitypub' ),
+				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-settings.php',
+			);
+			$settings_tabs['followers']    = array(
+				'label'    => __( 'Followers', 'activitypub' ),
+				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-followers-list.php',
+			);
+		}
+
+		/**
+		 * Filters the tabs displayed in the ActivityPub settings.
+		 *
+		 * @param array $settings_tabs The tabs to display.
+		 */
+		$custom_tabs   = \apply_filters( 'activitypub_admin_settings_tabs', array() );
+		$settings_tabs = \array_merge( $settings_tabs, $custom_tabs );
+
 		switch ( $tab ) {
-			case 'settings':
-				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php' );
-				break;
 			case 'blog-profile':
 				wp_enqueue_media();
 				wp_enqueue_script( 'activitypub-header-image' );
-
-				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-settings.php' );
-				break;
-			case 'followers':
-				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-followers-list.php' );
 				break;
 			case 'welcome':
-			default:
 				wp_enqueue_script( 'plugin-install' );
 				add_thickbox();
 				wp_enqueue_script( 'updates' );
-
-				\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/welcome.php' );
 				break;
 		}
+
+		\load_template(
+			$settings_tabs[ $tab ]['template'],
+			true,
+			array(
+				'settings_tabs' => wp_list_pluck( $settings_tabs, 'label' ),
+			)
+		);
 	}
 
 	/**
