@@ -133,6 +133,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Added: `context` support for posts and comments.
 * Changed: Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
 
 = 5.0.0 =
