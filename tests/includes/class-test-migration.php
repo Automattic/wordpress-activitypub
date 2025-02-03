@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Outbox;
 use Activitypub\Migration;
 use Activitypub\Comment;
 
@@ -18,12 +19,110 @@ use Activitypub\Comment;
 class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 
 	/**
+	 * Test fixture.
+	 *
+	 * @var array
+	 */
+	public static $fixtures = array();
+
+	/**
+	 * Set up the test.
+	 */
+	public static function set_up_before_class() {
+		\remove_action( 'transition_post_status', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33 );
+		\remove_action( 'transition_comment_status', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity' ), 20 );
+		\remove_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ) );
+
+		// Create test posts.
+		self::$fixtures['posts'] = self::factory()->post->create_many(
+			3,
+			array(
+				'post_author' => 1,
+				'meta_input'  => array( 'activitypub_status' => 'federated' ),
+			)
+		);
+
+		$modified_post_id = self::factory()->post->create(
+			array(
+				'post_author'  => 1,
+				'post_content' => 'Test post 2',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+				'post_date'    => '2020-01-01 00:00:00',
+				'meta_input'   => array( 'activitypub_status' => 'federated' ),
+			)
+		);
+		self::factory()->post->update_object( $modified_post_id, array( 'post_content' => 'Test post 2 updated' ) );
+
+		self::$fixtures['posts'][] = $modified_post_id;
+		self::$fixtures['posts'][] = self::factory()->post->create(
+			array(
+				'post_author'  => 1,
+				'post_content' => 'Test post 3',
+				'post_status'  => 'publish',
+				'post_type'    => 'page',
+			)
+		);
+		self::$fixtures['posts'][] = self::factory()->post->create(
+			array(
+				'post_author'  => 1,
+				'post_content' => 'Test post 4',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+				'meta_input'   => array(
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
+				),
+			)
+		);
+
+		// Create test comment.
+		self::$fixtures['comment'] = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::$fixtures['posts'][0],
+				'user_id'          => 1,
+				'comment_content'  => 'Test comment',
+				'comment_approved' => '1',
+			)
+		);
+		\add_comment_meta( self::$fixtures['comment'], 'activitypub_status', 'federated' );
+	}
+
+	/**
+	 * Tear down the test.
+	 */
+	public static function tear_down_after_class() {
+		// Clean up posts.
+		foreach ( self::$fixtures['posts'] as $post_id ) {
+			\wp_delete_post( $post_id, true );
+		}
+
+		// Clean up comment.
+		if ( isset( self::$fixtures['comment'] ) ) {
+			\wp_delete_comment( self::$fixtures['comment'], true );
+		}
+	}
+
+	/**
 	 * Tear down the test.
 	 */
 	public function tear_down() {
 		\delete_option( 'activitypub_object_type' );
 		\delete_option( 'activitypub_custom_post_content' );
 		\delete_option( 'activitypub_post_content_type' );
+
+		// Clean up outbox items.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'posts_per_page' => -1,
+				'post_status'    => 'any',
+				'fields'         => 'ids',
+			)
+		);
+
+		foreach ( $outbox_items as $item_id ) {
+			\wp_delete_post( $item_id, true );
+		}
 	}
 
 	/**
@@ -184,6 +283,9 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 
 		$this->assertEquals( $custom, $template );
 		$this->assertFalse( $content_type );
+
+		\wp_delete_post( $post1, true );
+		\wp_delete_post( $post2, true );
 	}
 
 	/**
@@ -192,19 +294,8 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	 * @covers ::migrate_to_4_7_1
 	 */
 	public function test_migrate_to_4_7_1() {
-		$post1 = \wp_insert_post(
-			array(
-				'post_author'  => 1,
-				'post_content' => 'Test post 1',
-			)
-		);
-
-		$post2 = \wp_insert_post(
-			array(
-				'post_author'  => 1,
-				'post_content' => 'Test post 2',
-			)
-		);
+		$post1 = self::$fixtures['posts'][0];
+		$post2 = self::$fixtures['posts'][1];
 
 		// Set up test meta data.
 		$meta_data = array(
@@ -274,7 +365,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Tests retrieving the timestamp of an existing lock.
+	 * Test retrieving the timestamp of an existing lock.
 	 *
 	 * @covers ::lock
 	 */
@@ -291,7 +382,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Tests update_comment_counts() properly cleans up the lock.
+	 * Test update_comment_counts() properly cleans up the lock.
 	 *
 	 * @covers ::update_comment_counts
 	 */
@@ -300,7 +391,11 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		Comment::register_comment_types();
 
 		// Create test comments.
-		$post_id    = $this->factory->post->create();
+		$post_id    = $this->factory->post->create(
+			array(
+				'post_author' => 1,
+			)
+		);
 		$comment_id = $this->factory->comment->create(
 			array(
 				'comment_post_ID'  => $post_id,
@@ -320,7 +415,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Tests update_comment_counts() with existing valid lock.
+	 * Test update_comment_counts() with existing valid lock.
 	 *
 	 * @covers ::update_comment_counts
 	 */
@@ -352,5 +447,138 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 				'offset'     => 0,
 			)
 		);
+	}
+
+	/**
+	 * Test create post outbox items.
+	 *
+	 * @covers ::create_post_outbox_items
+	 */
+	public function test_create_outbox_items() {
+		// Create additional post that should not be included in outbox.
+		$post_id = self::factory()->post->create( array( 'post_author' => 90210 ) );
+
+		// Run migration.
+		add_filter( 'pre_schedule_event', '__return_false' );
+		Migration::create_post_outbox_items( 10, 0 );
+		remove_filter( 'pre_schedule_event', '__return_false' );
+
+		// Get outbox items.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'posts_per_page' => -1,
+			)
+		);
+
+		// Should now have 5 outbox items total, 4 post Create, 1 post Update.
+		$this->assertEquals( 5, count( $outbox_items ) );
+
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test create post outbox items with batching.
+	 *
+	 * @covers ::create_post_outbox_items
+	 */
+	public function test_create_outbox_items_batching() {
+		// Run migration with batch size of 2.
+		$next = Migration::create_post_outbox_items( 2, 0 );
+
+		$this->assertSame(
+			array(
+				'batch_size' => 2,
+				'offset'     => 2,
+			),
+			$next
+		);
+
+		// Get outbox items.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'posts_per_page' => -1,
+			)
+		);
+
+		// Should have 2 outbox items.
+		$this->assertEquals( 2, count( $outbox_items ) );
+
+		// Run migration with next batch.
+		Migration::create_post_outbox_items( 2, 2 );
+
+		// Get outbox items again.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'posts_per_page' => -1,
+			)
+		);
+
+		// Should now have 5 outbox items total, 4 post Create, 1 post Update.
+		$this->assertEquals( 5, count( $outbox_items ) );
+	}
+
+	/**
+	 * Test async upgrade functionality.
+	 *
+	 * @covers ::async_upgrade
+	 * @covers ::lock
+	 * @covers ::unlock
+	 * @covers ::create_post_outbox_items
+	 */
+	public function test_async_upgrade() {
+		// Test that lock prevents simultaneous upgrades.
+		Migration::lock();
+		Migration::async_upgrade( 'create_post_outbox_items' );
+		$scheduled = \wp_next_scheduled( 'activitypub_upgrade', array( 'create_post_outbox_items' ) );
+		$this->assertNotFalse( $scheduled );
+		Migration::unlock();
+
+		// Test scheduling next batch when callback returns more work.
+		Migration::async_upgrade( 'create_post_outbox_items', 1, 0 ); // Small batch size to force multiple batches.
+		$scheduled = \wp_next_scheduled( 'activitypub_upgrade', array( 'create_post_outbox_items', 1, 1 ) );
+		$this->assertNotFalse( $scheduled );
+
+		// Test no scheduling when callback returns null (no more work).
+		Migration::async_upgrade( 'create_post_outbox_items', 100, 1000 ); // Large offset to ensure no posts found.
+		$this->assertFalse(
+			\wp_next_scheduled( 'activitypub_upgrade', array( 'create_post_outbox_items', 100, 1100 ) )
+		);
+	}
+
+	/**
+	 * Test async upgrade with multiple arguments.
+	 *
+	 * @covers ::async_upgrade
+	 */
+	public function test_async_upgrade_multiple_args() {
+		// Test that multiple arguments are passed correctly.
+		Migration::async_upgrade( 'update_comment_counts', 50, 100 );
+		$scheduled = \wp_next_scheduled( 'activitypub_upgrade', array( 'update_comment_counts', 50, 150 ) );
+		$this->assertFalse( $scheduled, 'Should not schedule next batch when no comments found' );
+	}
+
+	/**
+	 * Test create_comment_outbox_items batch processing.
+	 *
+	 * @covers ::create_comment_outbox_items
+	 */
+	public function test_create_comment_outbox_items_batching() {
+		// Test with small batch size.
+		$result = Migration::create_comment_outbox_items( 1, 0 );
+		$this->assertIsArray( $result );
+		$this->assertEquals(
+			array(
+				'batch_size' => 1,
+				'offset'     => 1,
+			),
+			$result
+		);
+
+		// Test with large offset (no more comments).
+		$result = Migration::create_comment_outbox_items( 1, 1000 );
+		$this->assertNull( $result );
 	}
 }

@@ -9,6 +9,7 @@ namespace Activitypub;
 
 use Exception;
 use Activitypub\Transformer\Factory;
+use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
 
@@ -474,7 +475,7 @@ class Activitypub {
 	}
 
 	/**
-	 * Register the "Followers" Taxonomy.
+	 * Register Custom Post Types.
 	 */
 	private static function register_post_types() {
 		\register_post_type(
@@ -540,6 +541,100 @@ class Activitypub {
 				'single'            => true,
 				'sanitize_callback' => function ( $value ) {
 					return sanitize_text_field( $value );
+				},
+			)
+		);
+
+		// Register Outbox Post-Type.
+		register_post_type(
+			Outbox::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => _x( 'Outbox', 'post_type plural name', 'activitypub' ),
+					'singular_name' => _x( 'Outbox Item', 'post_type single name', 'activitypub' ),
+				),
+				'capabilities'        => array(
+					'create_posts' => false,
+				),
+				'map_meta_cap'        => true,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'delete_with_user'    => true,
+				'can_export'          => true,
+				'exclude_from_search' => true,
+			)
+		);
+
+		/**
+		 * Register Activity Type meta for Outbox items.
+		 *
+		 * @see https://www.w3.org/TR/activitystreams-vocabulary/#activity-types
+		 */
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'_activitypub_activity_type',
+			array(
+				'type'              => 'string',
+				'description'       => 'The type of the activity',
+				'single'            => true,
+				'sanitize_callback' => function ( $value ) {
+					$value  = ucfirst( strtolower( $value ) );
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'Accept', 'Add', 'Announce', 'Arrive', 'Block', 'Create', 'Delete', 'Dislike', 'Flag', 'Follow', 'Ignore', 'Invite', 'Join', 'Leave', 'Like', 'Listen', 'Move', 'Offer', 'Question', 'Reject', 'Read', 'Remove', 'TentativeReject', 'TentativeAccept', 'Travel', 'Undo', 'Update', 'View' ),
+						'default' => 'Announce',
+					);
+
+					if ( is_wp_error( rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'_activitypub_activity_actor',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'application', 'blog', 'user' ),
+						'default' => 'user',
+					);
+
+					if ( is_wp_error( rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'activitypub_content_visibility',
+			array(
+				'show_in_rest'      => true,
+				'single'            => true,
+				'type'              => 'string',
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+						'default' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+					);
+
+					if ( is_wp_error( rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
 				},
 			)
 		);

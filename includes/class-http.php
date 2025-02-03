@@ -66,7 +66,14 @@ class Http {
 		$code     = \wp_remote_retrieve_response_code( $response );
 
 		if ( $code >= 400 ) {
-			$response = new WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
+			$response = new WP_Error(
+				$code,
+				__( 'Failed HTTP Request', 'activitypub' ),
+				array(
+					'status'   => $code,
+					'response' => $response,
+				)
+			);
 		}
 
 		/**

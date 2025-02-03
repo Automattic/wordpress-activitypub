@@ -229,7 +229,7 @@ class Comment {
 			return false;
 		}
 
-		if ( is_single_user() && \user_can( $user_id, 'publish_posts' ) ) {
+		if ( is_single_user() && \user_can( $user_id, 'activitypub' ) ) {
 			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user.
 			$user_id = Actors::BLOG_USER_ID;
 		}

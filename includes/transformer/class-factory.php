@@ -8,10 +8,11 @@
 namespace Activitypub\Transformer;
 
 use WP_Error;
+use Activitypub\Comment as Comment_Helper;
 
 use function Activitypub\is_user_disabled;
 use function Activitypub\is_post_disabled;
-use function Activitypub\is_local_comment;
+
 /**
  * Transformer Factory.
  */
@@ -24,11 +25,13 @@ class Factory {
 	 * @return Base|WP_Error The transformer to use, or an error.
 	 */
 	public static function get_transformer( $data ) {
-		if ( ! \is_object( $data ) ) {
+		if ( \is_array( $data ) || \is_string( $data ) ) {
+			$class = 'json';
+		} elseif ( \is_object( $data ) ) {
+			$class = \get_class( $data );
+		} else {
 			return new WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
 		}
-
-		$class = \get_class( $data );
 
 		/**
 		 * Filter the transformer for a given object.
@@ -82,7 +85,7 @@ class Factory {
 				}
 				break;
 			case 'WP_Comment':
-				if ( ! is_local_comment( $data ) ) {
+				if ( Comment_Helper::should_be_federated( $data ) ) {
 					return new Comment( $data );
 				}
 				break;
@@ -91,8 +94,14 @@ class Factory {
 					return new User( $data );
 				}
 				break;
+			case 'json':
+				return new Json( $data );
 		}
 
-		return null;
+		if ( $data instanceof \Activitypub\Activity\Base_Object ) {
+			return new Activity_Object( $data );
+		}
+
+		return new WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
 	}
 }

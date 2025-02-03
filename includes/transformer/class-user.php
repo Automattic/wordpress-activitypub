@@ -14,50 +14,30 @@ use Activitypub\Collection\Actors;
  */
 class User extends Base {
 	/**
-	 * Transforms the WP_User object to an ActivityPub Object
+	 * Transforms the WP_User object to an Actor.
 	 *
-	 * @see \Activitypub\Activity\Base_Object
+	 * @see \Activitypub\Activity\Actor
 	 *
-	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
+	 * @return \Activitypub\Activity\Base_Object|\WP_Error The Actor or WP_Error on failure.
 	 */
 	public function to_object() {
-		$user  = $this->wp_object;
-		$actor = Actors::get_by_id( $user->ID );
+		$activity_object = $this->transform_object_properties( Actors::get_by_id( $this->item->ID ) );
 
-		return $actor;
+		if ( \is_wp_error( $activity_object ) ) {
+			return $activity_object;
+		}
+
+		$activity_object = $this->set_audience( $activity_object );
+
+		return $activity_object;
 	}
 
 	/**
-	 * Get the User ID.
+	 * Get the Actor ID.
 	 *
-	 * @return int The User ID.
+	 * @return string The Actor ID.
 	 */
-	public function get_id() {
-		// TODO: Will be removed with the new Outbox implementation.
-		return $this->wp_object->ID;
-	}
-
-	/**
-	 * Change the User ID.
-	 *
-	 * @param int $user_id The new user ID.
-	 *
-	 * @return User The User Object.
-	 */
-	public function change_wp_user_id( $user_id ) {
-		// TODO: Will be removed with the new Outbox implementation.
-		$this->wp_object->ID = $user_id;
-
-		return $this;
-	}
-
-	/**
-	 * Get the WP_User ID.
-	 *
-	 * @return int The WP_User ID.
-	 */
-	public function get_wp_user_id() {
-		// TODO: Will be removed with the new Outbox implementation.
-		return $this->wp_object->ID;
+	public function to_id() {
+		return Actors::get_by_id( $this->item->ID )->get_id();
 	}
 }

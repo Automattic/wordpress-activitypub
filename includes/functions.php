@@ -9,9 +9,12 @@ namespace Activitypub;
 
 use WP_Error;
 use Activitypub\Activity\Activity;
-use Activitypub\Collection\Followers;
+use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Post;
+use Activitypub\Transformer\Factory as Transformer_Factory;
 
 /**
  * Returns the ActivityPub default JSON-context.
@@ -376,13 +379,21 @@ function is_activitypub_request() {
  * @return boolean True if the post is disabled, false otherwise.
  */
 function is_post_disabled( $post ) {
-	$post       = \get_post( $post );
-	$disabled   = false;
+	$post     = \get_post( $post );
+	$disabled = false;
+
+	if ( ! $post ) {
+		return true;
+	}
+
 	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
 	if (
 		ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ||
-		! \post_type_supports( $post->post_type, 'activitypub' )
+		ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === $visibility ||
+		! \post_type_supports( $post->post_type, 'activitypub' ) ||
+		'private' === $post->post_status ||
+		! empty( $post->post_password )
 	) {
 		$disabled = true;
 	}
@@ -1418,10 +1429,11 @@ function get_content_visibility( $post_id ) {
 		return false;
 	}
 
-	$visibility  = get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+	$visibility  = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 	$_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
 	$options     = array(
 		ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
+		ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
 		ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
 	);
 
@@ -1543,6 +1555,169 @@ function is_self_ping( $id ) {
 		in_array( 'c', array_keys( $query ), true )
 	) {
 		return true;
+	}
+
+	return false;
+}
+
+/**
+ * Add an object to the outbox.
+ *
+ * @param mixed   $data               The object to add to the outbox.
+ * @param string  $activity_type      The type of the Activity.
+ * @param integer $user_id            The User-ID.
+ * @param string  $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+ *
+ * @return boolean|int The ID of the outbox item or false on failure.
+ */
+function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content_visibility = null ) {
+	$transformer = Transformer_Factory::get_transformer( $data );
+
+	if ( ! $transformer || is_wp_error( $transformer ) ) {
+		return false;
+	}
+
+	if ( $content_visibility ) {
+		$transformer->set_content_visibility( $content_visibility );
+	} else {
+		$content_visibility = $transformer->get_content_visibility();
+	}
+
+	$activity_object = $transformer->to_object();
+
+	if ( ! $activity_object || \is_wp_error( $activity_object ) ) {
+		return false;
+	}
+
+	// If the user is disabled, fall back to the blog user when available.
+	if ( is_user_disabled( $user_id ) ) {
+		if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
+			return false;
+		} else {
+			$user_id = Actors::BLOG_USER_ID;
+		}
+	}
+
+	$outbox_activity_id = Outbox::add( $activity_object, $activity_type, $user_id, $content_visibility );
+
+	if ( ! $outbox_activity_id ) {
+		return false;
+	}
+
+	/**
+	 * Action triggered after an object has been added to the outbox.
+	 *
+	 * @param int                               $outbox_activity_id The ID of the outbox item.
+	 * @param \Activitypub\Activity\Base_Object $activity_object    The activity object.
+	 * @param int                               $user_id            The User-ID.
+	 * @param string                            $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+	 */
+	\do_action( 'post_activitypub_add_to_outbox', $outbox_activity_id, $activity_object, $user_id, $content_visibility );
+
+	set_wp_object_state( $data, 'federated' );
+
+	return $outbox_activity_id;
+}
+
+/**
+ * Check if an `$data` is an Activity.
+ *
+ * @see https://www.w3.org/ns/activitystreams#activities
+ *
+ * @param array|object|string $data The data to check.
+ *
+ * @return boolean True if the `$data` is an Activity, false otherwise.
+ */
+function is_activity( $data ) {
+	/**
+	 * Filters the activity types.
+	 *
+	 * @param array $types The activity types.
+	 */
+	$types = apply_filters(
+		'activitypub_activity_types',
+		array(
+			'Accept',
+			'Add',
+			'Announce',
+			'Arrive',
+			'Block',
+			'Create',
+			'Delete',
+			'Dislike',
+			'Follow',
+			'Flag',
+			'Ignore',
+			'Invite',
+			'Join',
+			'Leave',
+			'Like',
+			'Listen',
+			'Move',
+			'Offer',
+			'Read',
+			'Reject',
+			'Remove',
+			'TentativeAccept',
+			'TentativeReject',
+			'Travel',
+			'Undo',
+			'Update',
+			'View',
+		)
+	);
+
+	if ( is_string( $data ) ) {
+		return in_array( $data, $types, true );
+	}
+
+	if ( is_array( $data ) && isset( $data['type'] ) ) {
+		return in_array( $data['type'], $types, true );
+	}
+
+	if ( is_object( $data ) && $data instanceof Base_Object ) {
+		return in_array( $data->get_type(), $types, true );
+	}
+
+	return false;
+}
+
+/**
+ * Check if an `$data` is an Actor.
+ *
+ * @see https://www.w3.org/ns/activitystreams#actor
+ *
+ * @param array|object|string $data The data to check.
+ *
+ * @return boolean True if the `$data` is an Actor, false otherwise.
+ */
+function is_actor( $data ) {
+	/**
+	 * Filters the actor types.
+	 *
+	 * @param array $types The actor types.
+	 */
+	$types = apply_filters(
+		'activitypub_actor_types',
+		array(
+			'Application',
+			'Group',
+			'Organization',
+			'Person',
+			'Service',
+		)
+	);
+
+	if ( is_string( $data ) ) {
+		return in_array( $data, $types, true );
+	}
+
+	if ( is_array( $data ) && isset( $data['type'] ) ) {
+		return in_array( $data['type'], $types, true );
+	}
+
+	if ( is_object( $data ) && $data instanceof Base_Object ) {
+		return in_array( $data->get_type(), $types, true );
 	}
 
 	return false;

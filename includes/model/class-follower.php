@@ -331,11 +331,16 @@ class Follower extends Actor {
 	 * Convert a Custom-Post-Type input to an Activitypub\Model\Follower.
 	 *
 	 * @param \WP_Post $post The post object.
-	 * @return \Activitypub\Activity\Base_Object|WP_Error
+	 * @return \Activitypub\Activity\Base_Object|false The Follower object or false on failure.
 	 */
 	public static function init_from_cpt( $post ) {
 		$actor_json = get_post_meta( $post->ID, '_activitypub_actor_json', true );
 		$object     = self::init_from_json( $actor_json );
+
+		if ( is_wp_error( $object ) ) {
+			return false;
+		}
+
 		$object->set__id( $post->ID );
 		$object->set_id( $post->guid );
 		$object->set_name( $post->post_title );

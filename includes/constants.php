@@ -71,4 +71,5 @@
 // Post visibility constants.
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC', '' );
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC', 'quiet_public' );
+\define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE', 'private' );
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL', 'local' );

@@ -11,6 +11,9 @@ namespace Activitypub\Activity;
 
 use Activitypub\Link;
 
+use function Activitypub\is_actor;
+use function Activitypub\is_activity;
+
 /**
  * \Activitypub\Activity\Activity implements the common
  * attributes of an Activity.
@@ -154,7 +157,14 @@ class Activity extends Base_Object {
 	public function set_object( $data ) {
 		// Convert array to object.
 		if ( is_array( $data ) ) {
-			$data = self::init_from_array( $data );
+			// Check if the item is an Activity or an Object.
+			if ( is_activity( $data ) ) {
+				$data = self::init_from_array( $data );
+			} elseif ( is_actor( $data ) ) {
+				$data = Actor::init_from_array( $data );
+			} else {
+				$data = Base_Object::init_from_array( $data );
+			}
 		}
 
 		// Set object.

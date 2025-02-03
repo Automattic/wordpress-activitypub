@@ -1,6 +1,6 @@
 <?php
 /**
- * Test Scheduler class.
+ * Test file for Scheduler class.
  *
  * @package ActivityPub
  */
@@ -8,214 +8,184 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Scheduler;
+use Activitypub\Collection\Outbox;
+use Activitypub\Activity\Base_Object;
+use WP_UnitTestCase;
 
 /**
  * Test class for Scheduler.
  *
  * @coversDefaultClass \Activitypub\Scheduler
  */
-class Test_Scheduler extends \WP_UnitTestCase {
+class Test_Scheduler extends WP_UnitTestCase {
 	/**
-	 * Test post.
+	 * Test user ID.
 	 *
-	 * @var \WP_Post
+	 * @var int
 	 */
-	protected $post;
+	protected static $user_id;
 
 	/**
-	 * Set up test resources before each test.
+	 * Create fake data before tests run.
 	 *
-	 * Creates a test post in draft status.
+	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
-	public function set_up() {
-		parent::set_up();
-
-		$this->post = self::factory()->post->create_and_get(
+	public static function wpSetUpBeforeClass( $factory ) {
+		self::$user_id = $factory->user->create(
 			array(
-				'post_title'   => 'Test Post',
-				'post_content' => 'Test Content',
-				'post_status'  => 'draft',
-				'post_author'  => 1,
+				'role' => 'author',
 			)
 		);
 	}
 
 	/**
-	 * Clean up test resources after each test.
-	 *
-	 * Deletes the test post.
+	 * Clean up after tests.
 	 */
-	public function tear_down() {
-		wp_delete_post( $this->post->ID, true );
-		parent::tear_down();
+	public static function wpTearDownAfterClass() {
+		wp_delete_user( self::$user_id );
 	}
 
 	/**
-	 * Test that moving a draft post to trash does not schedule federation.
+	 * Test reprocess_outbox method.
 	 *
-	 * @covers ::schedule_post_activity
+	 * @covers ::reprocess_outbox
 	 */
-	public function test_draft_to_trash_should_not_schedule_federation() {
-		Scheduler::schedule_post_activity( 'trash', 'draft', $this->post );
+	public function test_reprocess_outbox() {
+		// Create test activity objects.
+		$activity_object = new Base_Object();
+		$activity_object->set_content( 'Test Content' );
+		$activity_object->set_type( 'Note' );
+		$activity_object->set_id( 'https://example.com/test-id' );
 
-		$this->assertFalse(
-			wp_next_scheduled( 'activitypub_send_post', array( $this->post->ID, 'Delete' ) ),
-			'Draft to trash transition should not schedule federation'
-		);
-	}
+		// Add multiple pending activities.
+		$pending_ids = array();
+		for ( $i = 0; $i < 3; $i++ ) {
+			$pending_ids[] = Outbox::add(
+				$activity_object,
+				'Create',
+				self::$user_id,
+				ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC
+			);
+		}
 
-	/**
-	 * Test that moving a published post to trash schedules a delete activity only if federated.
-	 *
-	 * @covers ::schedule_post_activity
-	 */
-	public function test_publish_to_trash_should_schedule_delete_only_if_federated() {
-		wp_publish_post( $this->post->ID );
-		$this->post = get_post( $this->post->ID );
-
-		// Test without federation state.
-		Scheduler::schedule_post_activity( 'trash', 'publish', $this->post );
-		$this->assertFalse(
-			wp_next_scheduled( 'activitypub_send_post', array( $this->post->ID, 'Delete' ) ),
-			'Published to trash transition should not schedule delete activity when not federated'
-		);
-
-		// Test with federation state.
-		\Activitypub\set_wp_object_state( $this->post, 'federated' );
-		Scheduler::schedule_post_activity( 'trash', 'publish', $this->post );
-
-		$this->assertNotFalse(
-			wp_next_scheduled( 'activitypub_send_post', array( $this->post->ID, 'Delete' ) ),
-			'Published to trash transition should schedule delete activity when federated'
-		);
-	}
-
-	/**
-	 * Test that updating a draft post does not schedule federation.
-	 *
-	 * @covers ::schedule_post_activity
-	 */
-	public function test_draft_to_draft_should_not_schedule_federation() {
-		Scheduler::schedule_post_activity( 'draft', 'draft', $this->post );
-
-		$this->assertFalse(
-			wp_next_scheduled( 'activitypub_send_post', array( $this->post->ID, 'Update' ) ),
-			'Draft to draft transition should not schedule federation'
-		);
-	}
-
-	/**
-	 * Test that moving a published post to draft schedules an update activity.
-	 *
-	 * @covers ::schedule_post_activity
-	 */
-	public function test_publish_to_draft_should_schedule_update() {
-		wp_publish_post( $this->post->ID );
-		$this->post = get_post( $this->post->ID );
-		Scheduler::schedule_post_activity( 'draft', 'publish', $this->post );
-
-		$this->assertNotFalse(
-			wp_next_scheduled( 'activitypub_send_post', array( $this->post->ID, 'Update' ) ),
-			'Published to draft transition should schedule update activity'
-		);
-	}
-
-	/**
-	 * Test that publishing a draft post schedules a create activity.
-	 *
-	 * @covers ::schedule_post_activity
-	 */
-	public function test_draft_to_publish_should_schedule_create() {
-		Scheduler::schedule_post_activity( 'publish', 'draft', $this->post );
-
-		$this->assertNotFalse(
-			wp_next_scheduled( 'activitypub_send_post', array( $this->post->ID, 'Create' ) ),
-			'Draft to publish transition should schedule create activity'
-		);
-	}
-
-	/**
-	 * Test that updating a published post schedules an update activity.
-	 *
-	 * @covers ::schedule_post_activity
-	 */
-	public function test_publish_to_publish_should_schedule_update() {
-		wp_publish_post( $this->post->ID );
-		$this->post = get_post( $this->post->ID );
-		Scheduler::schedule_post_activity( 'publish', 'publish', $this->post );
-
-		$this->assertNotFalse(
-			wp_next_scheduled( 'activitypub_send_post', array( $this->post->ID, 'Update' ) ),
-			'Published to published transition should schedule update activity'
-		);
-	}
-
-	/**
-	 * Test that various non-standard status transitions do not schedule federation.
-	 *
-	 * Tests transitions from pending, private, and future statuses.
-	 *
-	 * @covers ::schedule_post_activity
-	 */
-	public function test_other_status_transitions_should_not_schedule_federation() {
-		// Test pending to draft.
-		Scheduler::schedule_post_activity( 'draft', 'pending', $this->post );
-
-		$this->assertFalse(
-			wp_next_scheduled( 'activitypub_send_post', array( $this->post->ID, 'Update' ) ),
-			'Pending to draft transition should not schedule federation'
+		// Track scheduled events.
+		$scheduled_events = array();
+		add_filter(
+			'schedule_event',
+			function ( $event ) use ( &$scheduled_events ) {
+				if ( 'activitypub_process_outbox' === $event->hook ) {
+					$scheduled_events[] = $event->args[0];
+				}
+				return $event;
+			}
 		);
 
-		// Test private to draft.
-		Scheduler::schedule_post_activity( 'draft', 'private', $this->post );
+		// Run reprocess_outbox.
+		Scheduler::reprocess_outbox();
 
-		$this->assertFalse(
-			wp_next_scheduled( 'activitypub_send_post', array( $this->post->ID, 'Update' ) ),
-			'Private to draft transition should not schedule federation'
+		// Verify each pending activity was scheduled.
+		$this->assertCount( 3, $scheduled_events, 'Should schedule 3 activities for processing' );
+		foreach ( $pending_ids as $id ) {
+			$this->assertContains( $id, $scheduled_events, "Activity $id should be scheduled" );
+		}
+
+		// Test with published activities (should not be scheduled).
+		$published_id = Outbox::add(
+			$activity_object,
+			'Create',
+			self::$user_id,
+			ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC
 		);
-
-		// Test future to draft.
-		Scheduler::schedule_post_activity( 'draft', 'future', $this->post );
-
-		$this->assertFalse(
-			wp_next_scheduled( 'activitypub_send_post', array( $this->post->ID, 'Update' ) ),
-			'Future to draft transition should not schedule federation'
-		);
-	}
-
-	/**
-	 * Test that disabled posts do not schedule federation activities.
-	 *
-	 * @covers ::schedule_post_activity
-	 */
-	public function test_disabled_post_should_not_schedule_federation() {
-		update_post_meta( $this->post->ID, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
-		Scheduler::schedule_post_activity( 'publish', 'draft', $this->post );
-
-		$this->assertFalse(
-			wp_next_scheduled( 'activitypub_send_post', array( $this->post->ID, 'Create' ) ),
-			'Disabled posts should not schedule federation activities'
-		);
-	}
-
-	/**
-	 * Test that password protected posts do not schedule federation activities.
-	 *
-	 * @covers ::schedule_post_activity
-	 */
-	public function test_password_protected_post_should_not_schedule_federation() {
 		wp_update_post(
 			array(
-				'ID'            => $this->post->ID,
-				'post_password' => 'test-password',
+				'ID'          => $published_id,
+				'post_status' => 'publish',
 			)
 		);
-		$this->post = get_post( $this->post->ID );
-		Scheduler::schedule_post_activity( 'publish', 'draft', $this->post );
 
-		$this->assertFalse(
-			wp_next_scheduled( 'activitypub_send_post', array( $this->post->ID, 'Create' ) ),
-			'Password protected posts should not schedule federation activities'
+		// Reset tracked events.
+		$scheduled_events = array();
+
+		// Run reprocess_outbox again.
+		Scheduler::reprocess_outbox();
+
+		// Verify published activity was not scheduled.
+		$this->assertNotContains( $published_id, $scheduled_events, 'Published activity should not be scheduled' );
+
+		// Clean up.
+		foreach ( $pending_ids as $id ) {
+			wp_delete_post( $id, true );
+		}
+		wp_delete_post( $published_id, true );
+		remove_all_filters( 'schedule_event' );
+	}
+
+	/**
+	 * Test reprocess_outbox with no pending activities.
+	 *
+	 * @covers ::reprocess_outbox
+	 */
+	public function test_reprocess_outbox_no_pending() {
+		$scheduled_events = array();
+		add_filter(
+			'schedule_event',
+			function ( $event ) use ( &$scheduled_events ) {
+				if ( 'activitypub_process_outbox' === $event->hook ) {
+					$scheduled_events[] = $event->args[0];
+				}
+				return $event;
+			}
 		);
+
+		// Run reprocess_outbox with no pending activities.
+		Scheduler::reprocess_outbox();
+
+		// Verify no events were scheduled.
+		$this->assertEmpty( $scheduled_events, 'No events should be scheduled when there are no pending activities' );
+
+		remove_all_filters( 'schedule_event' );
+	}
+
+	/**
+	 * Test reprocess_outbox scheduling behavior.
+	 *
+	 * @covers ::reprocess_outbox
+	 */
+	public function test_reprocess_outbox_scheduling() {
+		// Create a test activity.
+		$activity_object = new Base_Object();
+		$activity_object->set_content( 'Test Content' );
+		$activity_object->set_type( 'Note' );
+		$activity_object->set_id( 'https://example.com/test-id-2' );
+
+		$pending_id = Outbox::add(
+			$activity_object,
+			'Create',
+			self::$user_id,
+			ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC
+		);
+
+		// Track scheduled events and their timing.
+		$scheduled_time = 0;
+		add_filter(
+			'schedule_event',
+			function ( $event ) use ( &$scheduled_time ) {
+				if ( 'activitypub_process_outbox' === $event->hook ) {
+					$scheduled_time = $event->timestamp;
+				}
+				return $event;
+			}
+		);
+
+		// Run reprocess_outbox.
+		Scheduler::reprocess_outbox();
+
+		// Verify scheduling time.
+		$this->assertGreaterThan( 0, $scheduled_time, 'Event should be scheduled with a future timestamp' );
+		$this->assertGreaterThanOrEqual( time() + 10, $scheduled_time, 'Event should be scheduled at least 10 seconds in the future' );
+
+		// Clean up.
+		wp_delete_post( $pending_id, true );
+		remove_all_filters( 'schedule_event' );
 	}
 }

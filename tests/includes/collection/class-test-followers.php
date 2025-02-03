@@ -115,6 +115,26 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Tests get_followers with corrupted json.
+	 *
+	 * @covers ::get_followers
+	 */
+	public function test_get_followers_without_errors() {
+		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
+
+		foreach ( $followers as $follower ) {
+			Followers::add_follower( 1, $follower );
+		}
+
+		$follower = Followers::get_follower( 1, 'https://example.org/author/doe' );
+		update_post_meta( $follower->get__id(), '_activitypub_actor_json', 'invalid json' );
+
+		$db_followers = Followers::get_followers( 1 );
+
+		$this->assertEquals( 2, \count( $db_followers ) );
+	}
+
+	/**
 	 * Tests add_follower.
 	 *
 	 * @covers ::add_follower

@@ -781,10 +781,7 @@ class Admin {
 
 		foreach ( $users as $user_id ) {
 			$user = new \WP_User( $user_id );
-			if (
-				'add_activitypub_cap' === $action &&
-				user_can( $user_id, 'publish_posts' )
-			) {
+			if ( 'add_activitypub_cap' === $action ) {
 				$user->add_cap( 'activitypub' );
 			} elseif ( 'remove_activitypub_cap' === $action ) {
 				$user->remove_cap( 'activitypub' );

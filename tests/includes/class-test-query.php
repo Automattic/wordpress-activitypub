@@ -109,6 +109,19 @@ class Test_Query extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_activitypub_object_id method for authors.
+	 *
+	 * @covers ::get_activitypub_object_id
+	 */
+	public function test_get_activitypub_object_id_for_author() {
+		$author_url = get_author_posts_url( self::$user_id );
+		$this->go_to( $author_url );
+		$query = Query::get_instance();
+
+		$this->assertEquals( $author_url, $query->get_activitypub_object_id() );
+	}
+
+	/**
 	 * Test get_queried_object method.
 	 *
 	 * @covers ::get_queried_object
