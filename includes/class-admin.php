@@ -27,6 +27,7 @@ class Admin {
 		\add_action( 'load-comment.php', array( self::class, 'edit_comment' ) );
 		\add_action( 'load-post.php', array( self::class, 'edit_post' ) );
 		\add_action( 'load-edit.php', array( self::class, 'list_posts' ) );
+		\add_action( 'load-users.php', array( self::class, 'user_errors' ) );
 		\add_filter( 'page_row_actions', array( self::class, 'row_actions' ), 10, 2 );
 		\add_filter( 'post_row_actions', array( self::class, 'row_actions' ), 10, 2 );
 		\add_action( 'personal_options_update', array( self::class, 'save_user_settings' ) );
@@ -782,13 +783,37 @@ class Admin {
 		foreach ( $users as $user_id ) {
 			$user = new \WP_User( $user_id );
 			if ( 'add_activitypub_cap' === $action ) {
-				$user->add_cap( 'activitypub' );
+				if ( \user_can( $user_id, 'publish_posts' ) ) {
+					$user->add_cap( 'activitypub' );
+				} else {
+					$sendback = \add_query_arg( 'update', 'activitypub_cap_error', $sendback );
+				}
 			} elseif ( 'remove_activitypub_cap' === $action ) {
 				$user->remove_cap( 'activitypub' );
 			}
 		}
 
 		return $sendback;
+	}
+
+	/**
+	 * Display an error message if the user has no publish_posts capability.
+	 */
+	public static function user_errors() {
+		if ( ! isset( $_GET['update'] ) || 'activitypub_cap_error' !== $_GET['update'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return;
+		}
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$GLOBALS['errors'] = new \WP_Error( 'activitypub_cap_error', esc_html__( 'The user has to be able to publish posts to use ActivityPub.', 'activitypub' ) );
+
+		add_filter(
+			'wp_admin_notice_args',
+			function ( $args ) {
+				$args['paragraph_wrap'] = false;
+				return $args;
+			}
+		);
 	}
 
 	/**
