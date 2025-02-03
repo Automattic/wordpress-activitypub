@@ -192,6 +192,13 @@ class Replies {
 		return $collection_page;
 	}
 
+	/**
+	 * Get the context collection for a post.
+	 *
+	 * @param int $post_id The post ID.
+	 *
+	 * @return array|false The context for the post or false if the post is not found or disabled.
+	 */
 	public static function get_context_collection( $post_id ) {
 		$post = \get_post( $post_id );
 
@@ -205,7 +212,7 @@ class Replies {
 			return array();
 		}
 
-		$ids = self::get_reply_ids( $comments, true );
+		$ids      = self::get_reply_ids( $comments, true );
 		$post_uri = ( new PostTransformer( $post ) )->to_id();
 		\array_unshift( $ids, $post_uri );
 

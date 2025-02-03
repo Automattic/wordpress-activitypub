@@ -128,6 +128,13 @@ class Post {
 		return new WP_REST_Response( $reactions );
 	}
 
+	/**
+	 * Get the context for a post.
+	 *
+	 * @param \WP_REST_Request $request The request.
+	 *
+	 * @return WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
+	 */
 	public static function get_context( $request ) {
 		$post_id = $request->get_param( 'id' );
 
@@ -140,9 +147,9 @@ class Post {
 		$response = array_merge(
 			array(
 				'@context' => Base_Object::JSON_LD_CONTEXT,
-				'id' => get_rest_url_by_path( sprintf( 'posts/%d/context', $post_id ) ),
+				'id'       => get_rest_url_by_path( sprintf( 'posts/%d/context', $post_id ) ),
 			),
-			$collection,
+			$collection
 		);
 
 		$response = \rest_ensure_response( $response );
