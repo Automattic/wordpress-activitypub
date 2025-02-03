@@ -44,9 +44,9 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::register_routes
 	 */
 	public function test_register_routes() {
-		$routes = $this->server->get_routes();
-		$this->assertArrayHasKey( '/activitypub/1.0/users/(?P<user_id>[\w\-\.]+)', $routes );
-		$this->assertArrayHasKey( '/activitypub/1.0/users/(?P<user_id>[\w\-\.]+)/remote-follow', $routes );
+		$routes = rest_get_server()->get_routes();
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/(?P<user_id>[\w\-\.]+)', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/(?P<user_id>[\w\-\.]+)/remote-follow', $routes );
 	}
 
 	/**
@@ -57,8 +57,8 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	public function test_get_item() {
 		wp_set_current_user( self::$user_id );
 
-		$request  = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . self::$user_id );
-		$response = $this->server->dispatch( $request );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id );
+		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
 		$data = $response->get_data();
@@ -76,8 +76,8 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::get_item
 	 */
 	public function test_get_non_existent_item() {
-		$request  = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/999999' );
-		$response = $this->server->dispatch( $request );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/999999' );
+		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 404, $response->get_status() );
 	}
@@ -90,7 +90,7 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	public function test_get_remote_follow_item() {
 		wp_set_current_user( self::$user_id );
 
-		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . self::$user_id . '/remote-follow' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id . '/remote-follow' );
 		$request->set_param( 'resource', 'https://example.com/user' );
 
 		// Mock Webfinger::get_remote_follow_endpoint.
@@ -113,7 +113,7 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			}
 		);
 
-		$response = $this->server->dispatch( $request );
+		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
 		$data = $response->get_data();
@@ -131,10 +131,10 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	public function test_get_remote_follow_item_invalid_resource() {
 		wp_set_current_user( self::$user_id );
 
-		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . self::$user_id . '/remote-follow' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id . '/remote-follow' );
 		$request->set_param( 'resource', 'invalid-url' );
 
-		$response = $this->server->dispatch( $request );
+		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 400, $response->get_status() );
 	}
@@ -156,5 +156,21 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertArrayHasKey( 'id', $properties );
 		$this->assertArrayHasKey( 'type', $properties );
 		$this->assertArrayHasKey( 'attachment', $properties );
+	}
+
+	/**
+	 * Test that the Actors response matches its schema.
+	 *
+	 * @covers ::get_item
+	 * @covers ::get_item_schema
+	 */
+	public function test_response_matches_schema() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+		$schema   = ( new Actors_Controller() )->get_item_schema();
+
+		$valid = \rest_validate_value_from_schema( $data, $schema );
+		$this->assertNotWPError( $valid, 'Response failed schema validation: ' . ( \is_wp_error( $valid ) ? $valid->get_error_message() : '' ) );
 	}
 }
