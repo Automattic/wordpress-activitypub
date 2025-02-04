@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Collection\Followers;
+
 /**
  * Tests for Followers REST API endpoint.
  *
@@ -15,19 +17,40 @@ namespace Activitypub\Tests\Rest;
 class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
 
 	/**
+	 * Set up before class.
+	 */
+	public static function set_up_before_class() {
+		self::factory()->post->create_many(
+			25,
+			array(
+				'post_type'  => Followers::POST_TYPE,
+				'meta_input' => array(
+					'_activitypub_user_id'    => '0',
+					'_activitypub_actor_json' => wp_json_encode(
+						array(
+							'id'                => 'https://example.org/actor/1',
+							'type'              => 'Person',
+							'preferredUsername' => 'user1',
+							'name'              => 'User 1',
+						)
+					),
+				),
+			)
+		);
+	}
+
+	/**
 	 * Test route registration.
 	 *
 	 * @covers ::register_routes
 	 */
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)/(?P<user_id>[\w\-\.]+)/followers', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)\/(?P<user_id>[\w\-\.]+)/followers', $routes );
 	}
 
 	/**
 	 * Test schema.
-	 *
-	 * @TODO
 	 *
 	 * @covers ::get_item_schema
 	 */
@@ -39,23 +62,29 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$schema = $response['schema'];
 
 		// Test specific property types.
-		$this->assertEquals( 'array', $schema['properties']['@context']['type'] );
+		$this->assertContains( 'array', (array) $schema['properties']['@context']['type'] );
+		$this->assertContains( 'object', (array) $schema['properties']['@context']['type'] );
 		$this->assertEquals( 'string', $schema['properties']['id']['type'] );
 		$this->assertEquals( 'uri', $schema['properties']['id']['format'] );
-		$this->assertEquals( array( 'Application' ), $schema['properties']['type']['enum'] );
-		$this->assertEquals( 'object', $schema['properties']['icon']['type'] );
-		$this->assertEquals( 'date-time', $schema['properties']['published']['format'] );
+		$this->assertEquals( 'string', $schema['properties']['generator']['type'] );
+		$this->assertEquals( 'uri', $schema['properties']['generator']['format'] );
+		$this->assertEquals( 'string', $schema['properties']['actor']['type'] );
+		$this->assertEquals( 'uri', $schema['properties']['actor']['format'] );
+		$this->assertEquals( array( 'OrderedCollectionPage' ), $schema['properties']['type']['enum'] );
+		$this->assertEquals( 'integer', $schema['properties']['totalItems']['type'] );
+		$this->assertEquals( 'string', $schema['properties']['partOf']['type'] );
+		$this->assertEquals( 'uri', $schema['properties']['partOf']['format'] );
+		$this->assertEquals( 'array', $schema['properties']['orderedItems']['type'] );
 	}
 
 	/**
-	 * Test get_item response.
+	 * Test get_items response.
 	 *
-	 * @TODO
-	 *
-	 * @covers ::get_item
+	 * @covers ::get_items
 	 */
-	public function test_get_item() {
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+	public function test_get_items() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+		$request->set_param( 'context', 'simple' );
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
@@ -67,21 +96,73 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$this->assertArrayHasKey( '@context', $data );
 		$this->assertArrayHasKey( 'id', $data );
 		$this->assertArrayHasKey( 'type', $data );
-		$this->assertArrayHasKey( 'name', $data );
-		$this->assertArrayHasKey( 'inbox', $data );
-		$this->assertArrayHasKey( 'outbox', $data );
+		$this->assertArrayHasKey( 'generator', $data );
+		$this->assertArrayHasKey( 'actor', $data );
+		$this->assertArrayHasKey( 'totalItems', $data );
+		$this->assertArrayHasKey( 'partOf', $data );
+		$this->assertArrayHasKey( 'orderedItems', $data );
 
 		// Test property values.
-		$this->assertEquals( 'Application', $data['type'] );
-		$this->assertStringContainsString( '/activitypub/1.0/application', $data['id'] );
-		$this->assertStringContainsString( '/activitypub/1.0/actors/-1/inbox', $data['inbox'] );
-		$this->assertStringContainsString( '/activitypub/1.0/actors/-1/outbox', $data['outbox'] );
+		$this->assertEquals( 'OrderedCollectionPage', $data['type'] );
+		$this->assertStringContainsString( 'wordpress.org', $data['generator'] );
+		$this->assertNotEmpty( $data['orderedItems'] );
 	}
 
 	/**
-	 * Test that the Application response matches its schema.
+	 * Test get_items response with full context.
 	 *
-	 * @covers ::get_item
+	 * @covers ::get_items
+	 */
+	public function test_get_items_full_context() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+		$request->set_param( 'context', 'full' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data['orderedItems'] );
+var_dump($data['orderedItems']);
+		// In full context, orderedItems should contain full actor objects.
+		foreach ( $data['orderedItems'] as $item ) {
+			$this->assertIsArray( $item );
+		}
+	}
+
+	/**
+	 * Test get_items with pagination.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_pagination() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+		$request->set_param( 'page', 2 );
+		$request->set_param( 'per_page', 10 );
+		$response = rest_get_server()->dispatch( $request );
+
+		$data = $response->get_data();
+
+		// Test pagination properties.
+		$this->assertArrayHasKey( 'first', $data );
+		$this->assertArrayHasKey( 'last', $data );
+		$this->assertStringContainsString( 'page=1', $data['first'] );
+		$this->assertIsString( $data['last'] );
+	}
+
+	/**
+	 * Test get_items with invalid user.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_invalid_user() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/999999/followers' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertErrorResponse( 'activitypub_user_not_found', $response, 404 );
+	}
+
+	/**
+	 * Test that the Followers response matches its schema.
+	 *
+	 * @covers ::get_items
 	 * @covers ::get_item_schema
 	 */
 	public function test_response_matches_schema() {
@@ -92,5 +173,14 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 
 		$valid = \rest_validate_value_from_schema( $data, $schema );
 		$this->assertNotWPError( $valid, 'Response failed schema validation: ' . ( \is_wp_error( $valid ) ? $valid->get_error_message() : '' ) );
+	}
+
+	/**
+	 * Test get_item method.
+	 *
+	 * @doesNotPerformAssertions
+	 */
+	public function test_get_item() {
+		// Controller does not implement get_item().
 	}
 }
