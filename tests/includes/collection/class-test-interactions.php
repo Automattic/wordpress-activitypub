@@ -346,7 +346,7 @@ class Test_Interactions extends WP_UnitTestCase {
 		$result = Interactions::add_comment( $activity );
 		$this->assertFalse( $result, 'Comment should not be added to disabled post' );
 
-		// Clean up
+		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 		wp_delete_post( $disabled_post_id, true );
 	}
