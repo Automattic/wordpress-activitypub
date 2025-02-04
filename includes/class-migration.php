@@ -173,7 +173,7 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.7.3', '<' ) ) {
 			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '5.0.0', '<' ) ) {
 			Scheduler::register_schedules();
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'create_post_outbox_items' ) );
 			\wp_schedule_single_event( \time() + 15, 'activitypub_upgrade', array( 'create_comment_outbox_items' ) );

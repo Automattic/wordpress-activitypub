@@ -5,13 +5,6 @@
  * @package Activitypub
  */
 
-\load_template(
-	__DIR__ . '/admin-header.php',
-	true,
-	array(
-		'settings' => 'active',
-	)
-);
 ?>
 
 <div class="activitypub-settings activitypub-settings-page hide-if-no-js">

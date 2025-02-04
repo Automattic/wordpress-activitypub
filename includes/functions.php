@@ -1598,8 +1598,6 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 		}
 	}
 
-	set_wp_object_state( $data, 'federate' );
-
 	$outbox_activity_id = Outbox::add( $activity_object, $activity_type, $user_id, $content_visibility );
 
 	if ( ! $outbox_activity_id ) {
@@ -1615,6 +1613,8 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 	 * @param string                            $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
 	 */
 	\do_action( 'post_activitypub_add_to_outbox', $outbox_activity_id, $activity_object, $user_id, $content_visibility );
+
+	set_wp_object_state( $data, 'federated' );
 
 	return $outbox_activity_id;
 }

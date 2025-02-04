@@ -154,6 +154,12 @@ class Query {
 			return \get_comment( $comment_id );
 		}
 
+		// Check Post by ID (works for custom post types).
+		$post_id = \get_query_var( 'p' );
+		if ( $post_id ) {
+			return \get_post( $post_id );
+		}
+
 		// Try to get Author by ID.
 		$url       = $this->get_request_url();
 		$author_id = url_to_authorid( $url );
