@@ -290,13 +290,14 @@ class Dispatcher {
 	}
 
 	/**
-	 * Adds Blog Actor inboxes to Updates so the Blog User's followers are notified of edits.
+	 * Default filter to add Inboxes of the Blog User in dual mode.
 	 *
 	 * @deprecated Unreleased Use {@see Followers::maybe_add_inboxes_of_blog_user} instead.
 	 *
 	 * @param array    $inboxes  The list of Inboxes.
 	 * @param int      $actor_id The WordPress Actor-ID.
 	 * @param Activity $activity The ActivityPub Activity.
+	 * @param int      $actor_id The WordPress Actor ID.
 	 *
 	 * @return array The filtered Inboxes.
 	 */
