@@ -19,6 +19,14 @@ use Activitypub\Collection\Followers;
  * @see https://www.w3.org/TR/activitypub/
  */
 class Dispatcher {
+
+	/**
+	 * Batch size.
+	 *
+	 * @var int
+	 */
+	public static $batch_size = 50;
+
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
@@ -26,7 +34,6 @@ class Dispatcher {
 		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ) );
 
 		// Default filters to add Inboxes to sent to.
-		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_follower' ), 10, 3 );
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
 		\add_filter( 'activitypub_send_to_inboxes', array( self::class, 'maybe_add_inboxes_of_blog_user' ), 10, 3 );
@@ -80,17 +87,6 @@ class Dispatcher {
 			$activity->set_object( $activity->get_object()->get_id() );
 		}
 
-		self::send_activity_to_followers( $activity, $actor_id, $outbox_item );
-	}
-
-	/**
-	 * Send an Activity to all followers and mentioned users.
-	 *
-	 * @param Activity $activity  The ActivityPub Activity.
-	 * @param int      $actor_id  The actor ID.
-	 * @param \WP_Post $outbox_item The WordPress object.
-	 */
-	private static function send_activity_to_followers( $activity, $actor_id, $outbox_item = null ) {
 		/**
 		 * Filters whether to send an Activity to followers.
 		 *
@@ -103,6 +99,150 @@ class Dispatcher {
 			return;
 		}
 
+		self::send_activity_to_followers( $activity, $actor_id, $outbox_item );
+		self::async_batch_processor( $activity, $actor_id, $outbox_item );
+	}
+
+	/**
+	 * Asynchronously runs batch processing routines.
+	 *
+	 * @params mixed ...$args  Optional. Parameters that get passed to the callback.
+	 */
+	public static function async_batch_processor( $activity, $actor_id, $outbox_item ) {
+		// Bail if the existing lock is still valid.
+		if ( self::is_locked( $outbox_item->ID ) ) {
+			// phpcs:ignore PHPCompatibility.FunctionUse.ArgumentFunctionsReportCurrentValue.NeedsInspection
+			\wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'activitypub_outbox_process_batch', \func_get_args() );
+			return;
+		}
+
+		self::lock( $outbox_item->ID );
+
+		// Query for the next batch of followers.
+		$followers = get_posts(
+			array(
+				'post_type'      => Followers::POST_TYPE,
+				'posts_per_page' => self::$batch_size,
+				'fields'         => 'ids',
+
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'   => '_activitypub_user_id',
+						'value' => $actor_id,
+					),
+					array(
+						'key'     => '_activitypub_inbox',
+						'compare' => 'EXISTS',
+					),
+					array(
+						'key'     => '_activitypub_inbox',
+						'value'   => '',
+						'compare' => '!=',
+					),
+					array(
+						'key'     => '_activitypub_processed_outbox_' . $outbox_item->ID,
+						'compare' => 'NOT EXISTS',
+					),
+				),
+			)
+		);
+
+		$json = $activity->to_json();
+
+		foreach ( $followers as $follower_id ) {
+			$inbox  = get_post_meta( $follower_id, '_activitypub_inbox', true );
+			$result = safe_remote_post( $inbox, $json, $actor_id );
+
+			if ( wp_remote_retrieve_response_code( $result ) >= 400 ) {
+				$attempt = get_post_meta( $follower_id, '_activitypub_outbox_attempt_' . $outbox_item->ID, true );
+				$attempt = $attempt ? $attempt + 1 : 1;
+
+				if ( $attempt <= 3 ) {
+					// Log attempt and move on.
+					update_post_meta( $follower_id, '_activitypub_outbox_attempt_' . $outbox_item->ID, $attempt );
+					continue;
+				} else {
+					Followers::add_error( $follower_id, wp_remote_retrieve_response_message( $result ) );
+				}
+			}
+
+			// Mark as processed.
+			\update_post_meta( $follower_id, '_activitypub_processed_outbox_' . $outbox_item->ID, true );
+		}
+
+		self::unlock( $outbox_item->ID );
+
+		if ( is_countable( $followers ) && count( $followers ) < self::$batch_size ) {
+			// No more followers to process for this update.
+			\delete_metadata( 'post', 0, '_activitypub_processed_outbox_' . $outbox_item->ID, '', true );
+			\wp_publish_post( $outbox_item );
+		} else {
+			// phpcs:ignore PHPCompatibility.FunctionUse.ArgumentFunctionsReportCurrentValue.NeedsInspection
+			\wp_schedule_single_event( \time() + 30, 'activitypub_outbox_process_batch', \func_get_args() );
+		}
+	}
+
+	/**
+	 * Locks the database migration process to prevent simultaneous migrations.
+	 *
+	 * @param int $outbox_item_id The Outbox item ID.
+	 * @return bool|int True if the lock was successful, timestamp of existing lock otherwise.
+	 */
+	public static function lock( $outbox_item_id ) {
+		global $wpdb;
+
+		// Try to lock.
+		$lock_result = (bool) $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO `$wpdb->options` ( `option_name`, `option_value`, `autoload` ) VALUES (%s, %s, 'no') /* LOCK */", 'activitypub_outbox_processing_lock_' . $outbox_item_id, \time() ) ); // phpcs:ignore WordPress.DB
+
+		if ( ! $lock_result ) {
+			$lock_result = \get_option( 'activitypub_outbox_processing_lock_' . $outbox_item_id );
+		}
+
+		return $lock_result;
+	}
+
+	/**
+	 * Unlocks processing for this Outbox item.
+	 *
+	 * @param int $outbox_item_id The Outbox item ID.
+	 */
+	public static function unlock( $outbox_item_id ) {
+		\delete_option( 'activitypub_outbox_processing_lock_' . $outbox_item_id );
+	}
+
+	/**
+	 * Whether the outbox processing for this Outbox item is locked.
+	 *
+	 * @param int $outbox_item_id The Outbox item ID.
+	 * @return boolean
+	 */
+	public static function is_locked( $outbox_item_id ) {
+		$lock = \get_option( 'activitypub_outbox_processing_lock_' . $outbox_item_id );
+
+		if ( ! $lock ) {
+			return false;
+		}
+
+		$lock = (int) $lock;
+
+		if ( $lock < \time() - 1800 ) {
+			self::unlock( $outbox_item_id );
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Send an Activity to all followers and mentioned users.
+	 *
+	 * @param Activity $activity  The ActivityPub Activity.
+	 * @param int      $actor_id  The actor ID.
+	 * @param \WP_Post $outbox_item The WordPress object.
+	 */
+	private static function send_activity_to_followers( $activity, $actor_id, $outbox_item = null ) {
 		/**
 		 * Filters the list of inboxes to send the Activity to.
 		 *
