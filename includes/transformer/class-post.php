@@ -19,6 +19,7 @@ use function Activitypub\get_enclosures;
 use function Activitypub\get_upload_baseurl;
 use function Activitypub\get_content_warning;
 use function Activitypub\site_supports_blocks;
+use function Activitypub\get_rest_url_by_path;
 use function Activitypub\generate_post_summary;
 use function Activitypub\get_content_visibility;
 
@@ -1063,6 +1064,17 @@ class Post extends Base {
 		do_action( 'activitypub_get_image_post', $id, $image_size );
 
 		return $image;
+	}
+
+	/**
+	 * Get the context of the post.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-context
+	 *
+	 * @return string The context of the post.
+	 */
+	protected function get_context() {
+		return get_rest_url_by_path( sprintf( 'posts/%d/context', $this->item->ID ) );
 	}
 
 	/**

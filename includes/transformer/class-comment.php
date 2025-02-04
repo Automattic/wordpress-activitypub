@@ -334,4 +334,19 @@ class Comment extends Base {
 	public function get_type() {
 		return 'Note';
 	}
+
+	/**
+	 * Get the context of the post.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-context
+	 *
+	 * @return string The context of the post.
+	 */
+	protected function get_context() {
+		if ( $this->item->comment_post_ID ) {
+			return get_rest_url_by_path( sprintf( 'posts/%d/context', $this->item->comment_post_ID ) );
+		}
+
+		return null;
+	}
 }
