@@ -74,6 +74,10 @@ class Post {
 	 * @param \WP_Post $post       Post object.
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
+		if ( defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+			return;
+		}
+
 		if ( is_post_disabled( $post ) ) {
 			return;
 		}
