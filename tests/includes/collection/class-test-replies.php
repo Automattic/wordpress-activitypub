@@ -63,30 +63,30 @@ class Test_Replies extends \WP_UnitTestCase {
 	 * @covers ::get_context_collection
 	 */
 	public function test_get_context_collection() {
-		// Erstelle einen Test-Post.
+		// Create a test post.
 		$context_post_id = self::factory()->post->create(
 			array(
 				'post_author' => 1,
 			)
 		);
 
-		// Test mit deaktiviertem Post.
+		// Test with disabled post.
 		add_post_meta( $context_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
-		$this->assertFalse( Replies::get_context_collection( $context_post_id ), 'Sollte false für deaktivierte Posts zurückgeben' );
+		$this->assertFalse( Replies::get_context_collection( $context_post_id ), 'Should return false for disabled posts' );
 		delete_post_meta( $context_post_id, 'activitypub_content_visibility' );
 
-		// Test mit ungültigem Post.
-		$this->assertFalse( Replies::get_context_collection( 999999 ), 'Sollte false für nicht existierende Posts zurückgeben' );
+		// Test with non-existent post.
+		$this->assertFalse( Replies::get_context_collection( 999999 ), 'Should return false for non-existent posts' );
 
-		// Test ohne Kommentare.
+		// Test without comments.
 		$context = Replies::get_context_collection( $context_post_id );
-		$this->assertIsArray( $context, 'Sollte ein leeres Array für Posts ohne Kommentare zurückgeben' );
-		$this->assertEmpty( $context, 'Array sollte leer sein für Posts ohne Kommentare' );
+		$this->assertIsArray( $context, 'Should return an array for posts without comments' );
+		$this->assertCount( 1, $context['items'], 'Array should contain only one item for posts without comments' );
 
-		// Erstelle Test-Kommentare.
+		// Create test comments.
 		$comments = array();
 
-		// Lokaler Kommentar.
+		// Local comment.
 		$comments[] = self::factory()->comment->create(
 			array(
 				'comment_post_ID'  => $context_post_id,
@@ -98,7 +98,7 @@ class Test_Replies extends \WP_UnitTestCase {
 			)
 		);
 
-		// ActivityPub Kommentar.
+		// ActivityPub comment.
 		$comments[] = self::factory()->comment->create(
 			array(
 				'comment_post_ID'  => $context_post_id,
@@ -111,25 +111,25 @@ class Test_Replies extends \WP_UnitTestCase {
 			)
 		);
 
-		// Test mit Kommentaren.
+		// Test with comments.
 		$context = Replies::get_context_collection( $context_post_id );
 
-		$this->assertIsArray( $context, 'Sollte ein Array zurückgeben' );
-		$this->assertEquals( 'OrderedCollection', $context['type'], 'Sollte vom Typ OrderedCollection sein' );
-		$this->assertEquals( get_permalink( $context_post_id ), $context['url'], 'Sollte die Post-URL enthalten' );
-		$this->assertArrayHasKey( 'attributedTo', $context, 'Sollte attributedTo enthalten' );
-		$this->assertArrayHasKey( 'totalItems', $context, 'Sollte totalItems enthalten' );
-		$this->assertArrayHasKey( 'items', $context, 'Sollte items enthalten' );
+		$this->assertIsArray( $context, 'Should return an array' );
+		$this->assertEquals( 'OrderedCollection', $context['type'], 'Should be of type OrderedCollection' );
+		$this->assertEquals( get_permalink( $context_post_id ), $context['url'], 'Should contain the post URL' );
+		$this->assertArrayHasKey( 'attributedTo', $context, 'Should contain attributedTo' );
+		$this->assertArrayHasKey( 'totalItems', $context, 'Should contain totalItems' );
+		$this->assertArrayHasKey( 'items', $context, 'Should contain items' );
 
-		// Überprüfe die Anzahl der Items (Post + alle Kommentare).
-		$this->assertEquals( 3, $context['totalItems'], 'Sollte Post + alle Kommentare zählen' );
-		$this->assertCount( 3, $context['items'], 'Items sollte Post + alle Kommentare enthalten' );
+		// Check the number of items (Post + all comments).
+		$this->assertEquals( 3, $context['totalItems'], 'Should count Post + all comments' );
+		$this->assertCount( 3, $context['items'], 'Items should contain Post + all comments' );
 
-		// Überprüfe, dass der Post-URI das erste Element ist.
-		$this->assertStringContainsString( (string) $context_post_id, $context['items'][0], 'Erstes Item sollte Post-URI sein' );
+		// Check that the post URI is the first item.
+		$this->assertStringContainsString( (string) $context_post_id, $context['items'][0], 'First item should be the post URI' );
 
-		// Überprüfe, dass der ActivityPub Kommentar enthalten ist.
-		$this->assertContains( 'https://example.com/comment/1', $context['items'], 'Sollte ActivityPub Kommentar-ID enthalten' );
+		// Check that the ActivityPub comment is contained.
+		$this->assertContains( 'https://example.com/comment/1', $context['items'], 'Should contain ActivityPub comment ID' );
 
 		// Clean up.
 		wp_delete_post( $context_post_id, true );
