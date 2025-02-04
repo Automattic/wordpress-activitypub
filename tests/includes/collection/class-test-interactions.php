@@ -90,6 +90,13 @@ class Test_Interactions extends WP_UnitTestCase {
 		self::$post_permalink = get_permalink( self::$post_id );
 
 		self::$user_url = get_author_posts_url( self::$user_id );
+	}
+
+	/**
+	 * Set up.
+	 */
+	public function set_up() {
+		parent::set_up();
 
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( __CLASS__, 'get_remote_metadata_by_actor' ), 0, 2 );
 	}
@@ -168,21 +175,21 @@ class Test_Interactions extends WP_UnitTestCase {
 	 * @covers ::add_comment
 	 */
 	public function test_handle_create_basic() {
-		$comment_id = Interactions::add_comment( $this->create_test_object() );
-		$comment    = get_comment( $comment_id, ARRAY_A );
+		$basic_comment_id = Interactions::add_comment( $this->create_test_object() );
+		$basic_comment    = get_comment( $basic_comment_id, ARRAY_A );
 
-		$this->assertIsArray( $comment );
-		$this->assertEquals( self::$post_id, $comment['comment_post_ID'] );
-		$this->assertEquals( 'Example User', $comment['comment_author'] );
-		$this->assertEquals( self::$user_url, $comment['comment_author_url'] );
-		$this->assertEquals( 'example', $comment['comment_content'] );
-		$this->assertEquals( 'comment', $comment['comment_type'] );
-		$this->assertEquals( '', $comment['comment_author_email'] );
-		$this->assertEquals( 0, $comment['comment_parent'] );
-		$this->assertEquals( 'https://example.com/123', get_comment_meta( $comment_id, 'source_id', true ) );
-		$this->assertEquals( 'https://example.com/example', get_comment_meta( $comment_id, 'source_url', true ) );
-		$this->assertEquals( 'https://example.com/icon', get_comment_meta( $comment_id, 'avatar_url', true ) );
-		$this->assertEquals( 'activitypub', get_comment_meta( $comment_id, 'protocol', true ) );
+		$this->assertIsArray( $basic_comment );
+		$this->assertEquals( self::$post_id, $basic_comment['comment_post_ID'] );
+		$this->assertEquals( 'Example User', $basic_comment['comment_author'] );
+		$this->assertEquals( self::$user_url, $basic_comment['comment_author_url'] );
+		$this->assertEquals( 'example', $basic_comment['comment_content'] );
+		$this->assertEquals( 'comment', $basic_comment['comment_type'] );
+		$this->assertEquals( '', $basic_comment['comment_author_email'] );
+		$this->assertEquals( 0, $basic_comment['comment_parent'] );
+		$this->assertEquals( 'https://example.com/123', get_comment_meta( $basic_comment_id, 'source_id', true ) );
+		$this->assertEquals( 'https://example.com/example', get_comment_meta( $basic_comment_id, 'source_url', true ) );
+		$this->assertEquals( 'https://example.com/icon', get_comment_meta( $basic_comment_id, 'avatar_url', true ) );
+		$this->assertEquals( 'activitypub', get_comment_meta( $basic_comment_id, 'protocol', true ) );
 	}
 
 	/**
@@ -191,12 +198,12 @@ class Test_Interactions extends WP_UnitTestCase {
 	 * @covers ::add_comment
 	 */
 	public function test_handle_create_rich() {
-		$comment_id = Interactions::add_comment( $this->create_test_rich_object() );
-		$comment    = get_comment( $comment_id, ARRAY_A );
+		$rich_comment_id = Interactions::add_comment( $this->create_test_rich_object() );
+		$rich_comment    = get_comment( $rich_comment_id, ARRAY_A );
 
-		$this->assertEquals( 'Hello<br />example<p>example</p>', $comment['comment_content'] );
+		$this->assertEquals( 'Hello<br />example<p>example</p>', $rich_comment['comment_content'] );
 
-		$commentarray = array(
+		$rich_comment_array = array(
 			'comment_post_ID'      => self::$post_id,
 			'comment_author'       => 'Example User',
 			'comment_author_url'   => self::$user_url,
@@ -213,13 +220,13 @@ class Test_Interactions extends WP_UnitTestCase {
 
 		\add_filter( 'duplicate_comment_id', '__return_false' );
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
-		$comment_id = wp_new_comment( $commentarray );
+		$rich_comment_id = wp_new_comment( $rich_comment_array );
 		\remove_filter( 'duplicate_comment_id', '__return_false' );
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
-		$comment = get_comment( $comment_id, ARRAY_A );
+		$rich_comment = get_comment( $rich_comment_id, ARRAY_A );
 
-		$this->assertEquals( 'Helloexampleexample', $comment['comment_content'] );
+		$this->assertEquals( 'Helloexampleexample', $rich_comment['comment_content'] );
 	}
 
 	/**
