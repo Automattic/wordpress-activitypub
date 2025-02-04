@@ -140,7 +140,7 @@ class Post {
 
 		$collection = Replies::get_context_collection( $post_id );
 
-		if ( false ===$collection ) {
+		if ( false === $collection ) {
 			return new WP_Error( 'post_not_found', 'Post not found', array( 'status' => 404 ) );
 		}
 
