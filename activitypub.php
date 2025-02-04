@@ -39,7 +39,6 @@ Autoloader::register_path( __NAMESPACE__, __DIR__ . '/includes' );
  * Initialize REST routes.
  */
 function rest_init() {
-	Rest\Actors::init();
 	Rest\Inbox::init();
 	Rest\Followers::init();
 	Rest\Following::init();
@@ -47,6 +46,7 @@ function rest_init() {
 	Rest\Server::init();
 	Rest\Collection::init();
 	Rest\Post::init();
+	( new Rest\Actors_Controller() )->register_routes();
 	( new Rest\Application_Controller() )->register_routes();
 	( new Rest\Interaction_Controller() )->register_routes();
 	( new Rest\Outbox_Controller() )->register_routes();
