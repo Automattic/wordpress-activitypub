@@ -66,7 +66,7 @@ class Test_Replies extends \WP_UnitTestCase {
 		// Erstelle einen Test-Post.
 		$context_post_id = self::factory()->post->create(
 			array(
-				'post_author'  => 1,
+				'post_author' => 1,
 			)
 		);
 
