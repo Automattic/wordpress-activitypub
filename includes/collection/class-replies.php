@@ -207,11 +207,6 @@ class Replies {
 		}
 
 		$comments = \get_comments( array( 'post_id' => $post_id ) );
-
-		if ( ! $comments ) {
-			return array();
-		}
-
 		$ids      = self::get_reply_ids( $comments, true );
 		$post_uri = ( new PostTransformer( $post ) )->to_id();
 		\array_unshift( $ids, $post_uri );
