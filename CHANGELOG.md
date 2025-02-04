@@ -10,9 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Cleanup of option values when the plugin is uninstalled
-
-### Added
-
 * Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
 
 ### Changed
