@@ -5,10 +5,8 @@
  * @package Activitypub
  */
 
-global $settings_tabs;
-
 /* @var array $args Template arguments. */
-$args = wp_parse_args( $args, array_fill_keys( array_keys( $settings_tabs ), '' ) );
+$args = wp_parse_args( $args );
 ?>
 <div class="activitypub-settings-header">
 	<div class="activitypub-settings-title-section">
@@ -17,7 +15,7 @@ $args = wp_parse_args( $args, array_fill_keys( array_keys( $settings_tabs ), '' 
 
 	<nav class="activitypub-settings-tabs-wrapper" aria-label="<?php \esc_attr_e( 'Secondary menu', 'activitypub' ); ?>">
 		<?php
-		foreach ( $settings_tabs as $slug => $label ) :
+		foreach ( $args['tabs'] as $slug => $label ) :
 			$url = add_query_arg(
 				array( 'tab' => 'welcome' !== $slug ? $slug : false ),
 				\admin_url( 'options-general.php?page=activitypub' )

@@ -148,12 +148,7 @@ class Admin {
 	 */
 	public static function settings_page() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( empty( $_GET['tab'] ) ) {
-			$tab = 'welcome';
-		} else {
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$tab = sanitize_key( $_GET['tab'] );
-		}
+		$tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'welcome';
 
 		$settings_tabs = array(
 			'welcome'  => array(
@@ -196,13 +191,13 @@ class Admin {
 				break;
 		}
 
-		\load_template(
-			$settings_tabs[ $tab ]['template'],
-			true,
-			array(
-				'settings_tabs' => wp_list_pluck( $settings_tabs, 'label' ),
-			)
-		);
+		$labels       = wp_list_pluck( $settings_tabs, 'label' );
+		$args         = array_fill_keys( array_keys( $labels ), '' );
+		$args[ $tab ] = 'active';
+		$args['tabs'] = $labels;
+
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/admin-header.php', true, $args );
+		\load_template( $settings_tabs[ $tab ]['template'] );
 	}
 
 	/**

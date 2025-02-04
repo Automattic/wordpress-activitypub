@@ -5,14 +5,6 @@
  * @package Activitypub
  */
 
-\load_template(
-	__DIR__ . '/admin-header.php',
-	true,
-	array(
-		'followers' => 'active',
-	)
-);
-
 $table          = new \Activitypub\Table\Followers();
 $follower_count = $table->get_user_count();
 // translators: The follower count.
