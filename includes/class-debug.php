@@ -48,7 +48,8 @@ class Debug {
 		$type = strtolower( $type );
 
 		if ( 'delete' !== $type ) {
-			$url = object_to_uri( $data['actor'] );
+			$actor = $data['actor'] ?? '';
+			$url   = object_to_uri( $actor );
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions
 			\error_log( "[INBOX] Request From: {$url} with Activity: " . \print_r( $data, true ) );
 		}

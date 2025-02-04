@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [Unreleased]
 
 ### Added
 
@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 * Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
+* Changed: Allow Base Transformer to handle WP_Term objects for transformation.
+
+### Fixed
+
+* Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
+* Avoid PHP warnings when using Debug mode and when the `actor` is not set.
 
 ## [5.0.0] - 2025-02-03
 
