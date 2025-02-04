@@ -219,7 +219,7 @@ class Replies {
 		return array(
 			'type'         => 'OrderedCollection',
 			'url'          => \get_permalink( $post_id ),
-			'attributedTo' => Actors::get_by_id( $post_uri )->get_id(),
+			'attributedTo' => Actors::get_by_id( $post->post_author )->get_id(),
 			'totalItems'   => count( $ids ),
 			'items'        => $ids,
 		);
