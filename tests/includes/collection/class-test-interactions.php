@@ -309,7 +309,7 @@ class Test_Interactions extends WP_UnitTestCase {
 	 * @covers ::add_comment
 	 */
 	public function test_add_comment_disabled_post() {
-		// Erstelle einen deaktivierten Post
+		// Create a disabled post.
 		$disabled_post_id = wp_insert_post(
 			array(
 				'post_type'   => 'post',
@@ -329,7 +329,7 @@ class Test_Interactions extends WP_UnitTestCase {
 			),
 		);
 
-		// Mock actor metadata
+		// Mock actor metadata.
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
 			function () {
@@ -342,9 +342,9 @@ class Test_Interactions extends WP_UnitTestCase {
 			}
 		);
 
-		// Versuche Kommentar hinzuzufügen
+		// Try to add comment.
 		$result = Interactions::add_comment( $activity );
-		$this->assertFalse( $result, 'Kommentar sollte nicht zu deaktiviertem Post hinzugefügt werden' );
+		$this->assertFalse( $result, 'Comment should not be added to disabled post' );
 
 		// Clean up
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
@@ -367,7 +367,7 @@ class Test_Interactions extends WP_UnitTestCase {
 			),
 		);
 
-		// Mock actor metadata
+		// Mock actor metadata.
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
 			function () {
@@ -380,9 +380,9 @@ class Test_Interactions extends WP_UnitTestCase {
 			}
 		);
 
-		// Versuche Kommentar hinzuzufügen
+		// Try to add comment.
 		$result = Interactions::add_comment( $activity );
-		$this->assertFalse( $result, 'Kommentar sollte nicht zu deaktiviertem Post hinzugefügt werden' );
+		$this->assertFalse( $result, 'Comment should not be added to disabled post' );
 
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 	}
@@ -393,7 +393,7 @@ class Test_Interactions extends WP_UnitTestCase {
 	 * @covers ::add_reaction
 	 */
 	public function test_add_reaction_disabled_post() {
-		// Erstelle einen deaktivierten Post
+		// Create a disabled post.
 		$disabled_post_id = wp_insert_post(
 			array(
 				'post_type'   => 'post',
@@ -410,7 +410,7 @@ class Test_Interactions extends WP_UnitTestCase {
 			'id'     => 'https://example.com/activities/like/123',
 		);
 
-		// Mock actor metadata
+		// Mock actor metadata.
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
 			function () {
@@ -423,11 +423,11 @@ class Test_Interactions extends WP_UnitTestCase {
 			}
 		);
 
-		// Versuche Reaktion hinzuzufügen
+		// Try to add reaction.
 		$result = Interactions::add_reaction( $activity );
-		$this->assertFalse( $result, 'Reaktion sollte nicht zu deaktiviertem Post hinzugefügt werden' );
+		$this->assertFalse( $result, 'Reaction should not be added to disabled post' );
 
-		// Clean up
+		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 		wp_delete_post( $disabled_post_id, true );
 	}
@@ -445,7 +445,7 @@ class Test_Interactions extends WP_UnitTestCase {
 			'id'     => 'https://example.com/activities/like/123',
 		);
 
-		// Mock actor metadata
+		// Mock actor metadata.
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
 			function () {
@@ -458,9 +458,9 @@ class Test_Interactions extends WP_UnitTestCase {
 			}
 		);
 
-		// Versuche Reaktion hinzuzufügen
+		// Try to add reaction.
 		$result = Interactions::add_reaction( $activity );
-		$this->assertFalse( $result, 'Reaktion sollte nicht zu deaktiviertem Post hinzugefügt werden' );
+		$this->assertFalse( $result, 'Reaction should not be added to disabled post' );
 
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 	}
