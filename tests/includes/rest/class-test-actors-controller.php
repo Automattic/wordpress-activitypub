@@ -23,13 +23,6 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	protected static $user_id;
 
 	/**
-	 * Actors Controller instance.
-	 *
-	 * @var Actors_Controller
-	 */
-	protected $controller;
-
-	/**
 	 * Original server global.
 	 *
 	 * @var array
@@ -40,10 +33,10 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * Create fake data before our tests run.
 	 */
 	public static function set_up_before_class() {
+		parent::set_up_before_class();
+
 		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
-
-		parent::set_up_before_class();
 	}
 
 	/**
