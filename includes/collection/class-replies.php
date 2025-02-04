@@ -135,7 +135,7 @@ class Replies {
 			}
 		}
 
-		return $comment_ids;
+		return \array_unique( $comment_ids );
 	}
 
 	/**
