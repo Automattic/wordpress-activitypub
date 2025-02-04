@@ -120,7 +120,7 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 
 		$data = $response->get_data();
 		$this->assertIsArray( $data['orderedItems'] );
-var_dump($data['orderedItems']);
+
 		// In full context, orderedItems should contain full actor objects.
 		foreach ( $data['orderedItems'] as $item ) {
 			$this->assertIsArray( $item );
