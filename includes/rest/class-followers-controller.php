@@ -195,7 +195,66 @@ class Followers_Controller extends Actors_Controller {
 					'description' => 'The items in the followers collection.',
 					'type'        => 'array',
 					'items'       => array(
-						'type' => array( 'string', 'object' ),
+						'oneOf' => array(
+							array(
+								'type'   => 'string',
+								'format' => 'uri',
+							),
+							array(
+								'type'       => 'object',
+								'properties' => array(
+									'id'                => array(
+										'type'   => 'string',
+										'format' => 'uri',
+									),
+									'type'              => array(
+										'type' => 'string',
+									),
+									'name'              => array(
+										'type' => 'string',
+									),
+									'icon'              => array(
+										'type'       => 'object',
+										'properties' => array(
+											'type'      => array(
+												'type' => 'string',
+											),
+											'mediaType' => array(
+												'type' => 'string',
+											),
+											'url'       => array(
+												'type'   => 'string',
+												'format' => 'uri',
+											),
+										),
+									),
+									'published'         => array(
+										'type'   => 'string',
+										'format' => 'date-time',
+									),
+									'summary'           => array(
+										'type' => 'string',
+									),
+									'updated'           => array(
+										'type'   => 'string',
+										'format' => 'date-time',
+									),
+									'url'               => array(
+										'type'   => 'string',
+										'format' => 'uri',
+									),
+									'streams'           => array(
+										'type' => 'array',
+									),
+									'preferredUsername' => array(
+										'type' => 'string',
+									),
+									'manuallyApprovesFollowers' => array(
+										'type' => 'boolean',
+									),
+								),
+							),
+						),
 					),
 					'readonly'    => true,
 				),
