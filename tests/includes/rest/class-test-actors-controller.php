@@ -30,6 +30,13 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	protected $controller;
 
 	/**
+	 * Original server global.
+	 *
+	 * @var array
+	 */
+	protected $original_server;
+
+	/**
 	 * Create fake data before our tests run.
 	 */
 	public static function set_up_before_class() {
@@ -40,13 +47,29 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	}
 
 	/**
+	 * Set up the test case.
+	 */
+	public function set_up() {
+		parent::set_up();
+		$this->original_server = $_SERVER;
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+	}
+
+	/**
+	 * Reset the server global after each test.
+	 */
+	public function tear_down() {
+		$_SERVER = $this->original_server;
+		parent::tear_down();
+	}
+
+	/**
 	 * Test getting a single actor.
 	 *
 	 * @covers ::get_item
 	 */
 	public function test_get_item() {
-		wp_set_current_user( self::$user_id );
-
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id );
 		$response = rest_get_server()->dispatch( $request );
 
@@ -78,8 +101,6 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::get_remote_follow_item
 	 */
 	public function test_get_remote_follow_item() {
-		wp_set_current_user( self::$user_id );
-
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id . '/remote-follow' );
 		$request->set_param( 'resource', 'https://example.com/user' );
 
@@ -119,8 +140,6 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::get_remote_follow_item
 	 */
 	public function test_get_remote_follow_item_invalid_resource() {
-		wp_set_current_user( self::$user_id );
-
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id . '/remote-follow' );
 		$request->set_param( 'resource', 'invalid-url' );
 
