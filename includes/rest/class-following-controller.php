@@ -20,21 +20,7 @@ use function Activitypub\get_masked_wp_version;
  *
  * @see https://www.w3.org/TR/activitypub/#following
  */
-class Following_Controller extends \WP_REST_Controller {
-	/**
-	 * The namespace of this controller's route.
-	 *
-	 * @var string
-	 */
-	protected $namespace = ACTIVITYPUB_REST_NAMESPACE;
-
-	/**
-	 * The base of this controller's route.
-	 *
-	 * @var string
-	 */
-	protected $rest_base = '(?:users|actors)/(?P<user_id>[\w\-\.]+)';
-
+class Following_Controller extends Actors_Controller {
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
@@ -204,7 +190,8 @@ class Following_Controller extends \WP_REST_Controller {
 					'description' => 'The items in the following collection.',
 					'type'        => 'array',
 					'items'       => array(
-						'type' => array( 'string', 'object' ),
+						'type'   => 'string',
+						'format' => 'uri',
 					),
 					'readonly'    => true,
 				),

@@ -15,18 +15,46 @@ namespace Activitypub\Tests\Rest;
 class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
 
 	/**
+	 * Set up.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		add_filter(
+			'activitypub_rest_following',
+			function ( $follow_list ) {
+				$users = \Activitypub\Collection\Actors::get_collection();
+
+				foreach ( $users as $user ) {
+					$follow_list[] = $user->get_id();
+				}
+
+				return $follow_list;
+			}
+		);
+	}
+
+	/**
+	 * Tear down.
+	 */
+	public function tear_down() {
+		remove_all_filters( 'activitypub_rest_following' );
+
+		parent::tear_down();
+	}
+	/**
 	 * Test route registration.
 	 *
 	 * @covers ::register_routes
 	 */
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)/(?P<user_id>[\w\-\.]+)/following', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)\/(?P<user_id>[\w\-\.]+)/following', $routes );
 	}
 
 	/**
 	 * Test schema.
-	 * @todo
+	 *
 	 * @covers ::get_item_schema
 	 */
 	public function test_get_item_schema() {
@@ -37,20 +65,22 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$schema = $response['schema'];
 
 		// Test specific property types.
-		$this->assertEquals( 'array', $schema['properties']['@context']['type'] );
+		$this->assertEquals( array( 'array', 'object' ), $schema['properties']['@context']['type'] );
 		$this->assertEquals( 'string', $schema['properties']['id']['type'] );
 		$this->assertEquals( 'uri', $schema['properties']['id']['format'] );
-		$this->assertEquals( array( 'Following' ), $schema['properties']['type']['enum'] );
-		$this->assertEquals( 'object', $schema['properties']['icon']['type'] );
-		$this->assertEquals( 'date-time', $schema['properties']['published']['format'] );
+		$this->assertEquals( array( 'OrderedCollectionPage' ), $schema['properties']['type']['enum'] );
+		$this->assertEquals( 'array', $schema['properties']['orderedItems']['type'] );
+		$this->assertEquals( 'string', $schema['properties']['orderedItems']['items']['type'] );
+		$this->assertEquals( 'string', $schema['properties']['generator']['type'] );
+		$this->assertEquals( 'uri', $schema['properties']['generator']['format'] );
 	}
 
 	/**
-	 * Test get_item response.
-	 * @todo
-	 * @covers ::get_item
+	 * Test get_items response.
+	 *
+	 * @covers ::get_items
 	 */
-	public function test_get_item() {
+	public function test_get_items() {
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
 		$response = rest_get_server()->dispatch( $request );
 
@@ -63,15 +93,18 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$this->assertArrayHasKey( '@context', $data );
 		$this->assertArrayHasKey( 'id', $data );
 		$this->assertArrayHasKey( 'type', $data );
-		$this->assertArrayHasKey( 'name', $data );
-		$this->assertArrayHasKey( 'inbox', $data );
-		$this->assertArrayHasKey( 'outbox', $data );
+		$this->assertArrayHasKey( 'generator', $data );
+		$this->assertArrayHasKey( 'actor', $data );
+		$this->assertArrayHasKey( 'totalItems', $data );
+		$this->assertArrayHasKey( 'orderedItems', $data );
+		$this->assertArrayHasKey( 'partOf', $data );
+		$this->assertArrayHasKey( 'first', $data );
 
 		// Test property values.
-		$this->assertEquals( 'Following', $data['type'] );
-		$this->assertStringContainsString( '/activitypub/1.0/application', $data['id'] );
-		$this->assertStringContainsString( '/activitypub/1.0/actors/-1/inbox', $data['inbox'] );
-		$this->assertStringContainsString( '/activitypub/1.0/actors/-1/outbox', $data['outbox'] );
+		$this->assertEquals( 'OrderedCollectionPage', $data['type'] );
+		$this->assertStringContainsString( 'wordpress.org', $data['generator'] );
+		$this->assertEquals( $data['partOf'], $data['first'] );
+		$this->assertIsArray( $data['orderedItems'] );
 	}
 
 	/**
@@ -88,5 +121,14 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 
 		$valid = \rest_validate_value_from_schema( $data, $schema );
 		$this->assertNotWPError( $valid, 'Response failed schema validation: ' . ( \is_wp_error( $valid ) ? $valid->get_error_message() : '' ) );
+	}
+
+	/**
+	 * Test get_item method.
+	 *
+	 * @doesNotPerformAssertions
+	 */
+	public function test_get_item() {
+		// Controller does not implement get_item().
 	}
 }
