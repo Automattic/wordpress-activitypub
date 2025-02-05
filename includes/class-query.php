@@ -149,7 +149,7 @@ class Query {
 	public function get_queried_object() {
 		$queried_object = \get_queried_object();
 
-		// Check Comment by ID
+		// Check Comment by ID.
 		if ( ! $queried_object ) {
 			$comment_id = \get_query_var( 'c' );
 			if ( $comment_id ) {
@@ -157,7 +157,7 @@ class Query {
 			}
 		}
 
-		// Check Post by ID (works for custom post types)
+		// Check Post by ID (works for custom post types).
 		if ( ! $queried_object ) {
 			$post_id = \get_query_var( 'p' );
 			if ( $post_id ) {
@@ -165,9 +165,9 @@ class Query {
 			}
 		}
 
-		// Try to get Author by ID
+		// Try to get Author by ID.
 		if ( ! $queried_object ) {
-			$url = $this->get_request_url();
+			$url       = $this->get_request_url();
 			$author_id = url_to_authorid( $url );
 			if ( $author_id ) {
 				$queried_object = \get_user_by( 'id', $author_id );
