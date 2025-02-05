@@ -88,8 +88,13 @@ class Query {
 
 		if ( ! $queried_object ) {
 			// If the object is not a valid ActivityPub object, try to get a virtual object.
-			$this->activitypub_object = $this->maybe_get_virtual_object();
-			return $this->activitypub_object;
+			$activitypub_object = $this->maybe_get_virtual_object();
+
+			if ( $activitypub_object ) {
+				$this->activitypub_object = $activitypub_object;
+
+				return $this->activitypub_object;
+			}
 		}
 
 		$transformer = Factory::get_transformer( $queried_object );
