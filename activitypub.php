@@ -20,8 +20,6 @@ namespace Activitypub;
 use WP_CLI;
 
 \define( 'ACTIVITYPUB_PLUGIN_VERSION', '5.0.0' );
-ini_set('log_errors', 'On');
-ini_set('error_log', ABSPATH . '/wp-content/elm-error-logs/php-errors.log');
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
