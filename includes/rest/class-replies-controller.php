@@ -91,7 +91,8 @@ class Replies_Controller extends \WP_REST_Controller {
 					// translators: %s: The type (post, comment, etc.) for which no replies collection exists.
 					\__( 'No reply collection exists for the type %s.', 'activitypub' ),
 					$type
-				)
+				),
+				array( 'status' => 404 )
 			);
 		}
 

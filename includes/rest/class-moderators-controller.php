@@ -99,7 +99,7 @@ class Moderators_Controller extends \WP_REST_Controller {
 				'@context'     => array(
 					'type'     => 'array',
 					'items'    => array(
-						'type' => 'string',
+						'type' => array( 'string', 'object' ),
 					),
 					'required' => true,
 				),
