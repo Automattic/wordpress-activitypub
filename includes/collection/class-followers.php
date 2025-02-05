@@ -362,17 +362,17 @@ class Followers {
 			$args['meta_query'][] = array(
 				'relation' => 'OR',
 				array(
-					'key'   => '_activitypub_actor_id',
+					'key'   => '_activitypub_user_id',
 					'value' => Actors::BLOG_USER_ID,
 				),
 				array(
-					'key'   => '_activitypub_actor_id',
+					'key'   => '_activitypub_user_id',
 					'value' => $actor_id,
 				),
 			);
 		} else {
 			$args['meta_query'][] = array(
-				'key'   => '_activitypub_actor_id',
+				'key'   => '_activitypub_user_id',
 				'value' => $actor_id,
 			);
 		}
@@ -380,8 +380,8 @@ class Followers {
 		$followers = get_posts( $args );
 		$inboxes   = array();
 
-		foreach ( \update_postmeta_cache( $followers ) as $post ) {
-			$inboxes[] = $post['_activitypub_inbox'][0];
+		foreach ( $followers as $id ) {
+			$inboxes[] = get_post_meta( $id, '_activitypub_inbox', true );
 		}
 
 		return $inboxes;
