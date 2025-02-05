@@ -104,7 +104,7 @@ class Query {
 	/**
 	 * Get the ActivityPub object ID.
 	 *
-	 * @return int The ActivityPub object ID.
+	 * @return string The ActivityPub object ID.
 	 */
 	public function get_activitypub_object_id() {
 		if ( $this->activitypub_object_id ) {
