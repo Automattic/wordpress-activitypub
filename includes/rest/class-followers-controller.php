@@ -119,16 +119,17 @@ class Followers_Controller extends Actors_Controller {
 			),
 		);
 
-		if ( $page && ( ( \ceil( $response['totalItems'] / $per_page ) ) > $page ) ) {
+		$max_pages         = \ceil( $response['totalItems'] / $per_page );
+		$response['first'] = \add_query_arg( 'page', 1, $response['partOf'] );
+		$response['last']  = \add_query_arg( 'page', \max( $max_pages, 1 ), $response['partOf'] );
+
+		if ( $max_pages > $page ) {
 			$response['next'] = \add_query_arg( 'page', $page + 1, $response['partOf'] );
 		}
 
-		if ( $page && ( $page > 1 ) ) {
+		if ( $page > 1 ) {
 			$response['prev'] = \add_query_arg( 'page', $page - 1, $response['partOf'] );
 		}
-
-		$response['first'] = \add_query_arg( 'page', 1, $response['partOf'] );
-		$response['last']  = \add_query_arg( 'page', \ceil( $response['totalItems'] / $per_page ), $response['partOf'] );
 
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
