@@ -7,9 +7,10 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Activity\Activity;
+use Activitypub\Model\Follower;
 use WP_Error;
 use WP_Query;
-use Activitypub\Model\Follower;
 
 use function Activitypub\is_tombstone;
 use function Activitypub\get_remote_metadata_by_actor;
@@ -324,6 +325,90 @@ class Followers {
 		wp_cache_set( $cache_key, $inboxes, 'activitypub' );
 
 		return $inboxes;
+	}
+
+	/**
+	 * Get all Inboxes for a given Activity.
+	 *
+	 * @param int      $actor_id   The WordPress Actor ID.
+	 * @param Activity $activity   The ActivityPub Activity.
+	 * @param int      $batch_size Optional. The batch size. Default 50.
+	 * @param int      $offset     Optional. The offset. Default 0.
+	 * @return array The list of Inboxes.
+	 */
+	public static function get_inboxes_for_activity( $actor_id, $activity, $batch_size = 50, $offset = 0 ) {
+		$args = array(
+			'post_type'      => self::POST_TYPE,
+			'posts_per_page' => $batch_size,
+			'offset'         => $offset,
+			'fields'         => 'ids',
+
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array(
+					'key'     => '_activitypub_inbox',
+					'compare' => 'EXISTS',
+				),
+				array(
+					'key'     => '_activitypub_inbox',
+					'value'   => '',
+					'compare' => '!=',
+				),
+			),
+		);
+
+		if ( self::maybe_add_inboxes_of_blog_user( $activity, $actor_id ) ) {
+			$args['meta_query'][] = array(
+				'relation' => 'OR',
+				array(
+					'key'   => '_activitypub_actor_id',
+					'value' => Actors::BLOG_USER_ID,
+				),
+				array(
+					'key'   => '_activitypub_actor_id',
+					'value' => $actor_id,
+				),
+			);
+		} else {
+			$args['meta_query'][] = array(
+				'key'   => '_activitypub_actor_id',
+				'value' => $actor_id,
+			);
+		}
+
+		$followers = get_posts( $args );
+		$inboxes   = array();
+
+		foreach ( \update_postmeta_cache( $followers ) as $post ) {
+			$inboxes[] = $post['_activitypub_inbox'][0];
+		}
+
+		return $inboxes;
+	}
+
+	/**
+	 * Maybe add Inboxes of the Blog User.
+	 *
+	 * @param Activity $activity The ActivityPub Activity.
+	 * @param int      $actor_id The WordPress Actor ID.
+	 * @return bool True if the Inboxes of the Blog User should be added, false otherwise.
+	 */
+	public static function maybe_add_inboxes_of_blog_user( $activity, $actor_id ) {
+		// Only if we're in both Blog and User modes.
+		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
+			return false;
+		}
+		// Only if this isn't the Blog Actor.
+		if ( Actors::BLOG_USER_ID === $actor_id ) {
+			return false;
+		}
+		// Only if this is an Update or Delete. Create handles its own Announce in dual user mode.
+		if ( ! in_array( $activity->get_type(), array( 'Update', 'Delete' ), true ) ) {
+			return false;
+		}
+
+		return true;
 	}
 
 	/**

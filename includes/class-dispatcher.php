@@ -91,7 +91,19 @@ class Dispatcher {
 		}
 
 		self::send_activity_to_followers( $activity, $actor_id, $outbox_item );
-		self::async_batch_processor( $activity, $actor_id, $outbox_item );
+
+		// TODO: Should we call Scheduler::async_batch directly here?
+		\wp_schedule_single_event(
+			\time(),
+			'activitypub_async_batch',
+			array(
+				array( self::class, 'send_to_followers' ),
+				$activity,
+				$actor_id,
+				$outbox_item,
+				self::$batch_size,
+			)
+		);
 	}
 
 	/**
@@ -100,147 +112,29 @@ class Dispatcher {
 	 * @param Activity $activity    The ActivityPub Activity.
 	 * @param int      $actor_id    The actor ID.
 	 * @param \WP_Post $outbox_item The Outbox item.
+	 * @param int      $batch_size  Optional. The batch size. Default 50.
+	 * @param int      $offset      Optional. The offset. Default 0.
+	 * @return array|void The next batch of followers to process, or void if done.
 	 */
-	public static function async_batch_processor( $activity, $actor_id, $outbox_item ) {
-		// Bail if the existing lock is still valid.
-		if ( self::is_locked( $outbox_item->ID ) ) {
-			// phpcs:ignore PHPCompatibility.FunctionUse.ArgumentFunctionsReportCurrentValue.NeedsInspection
-			\wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'activitypub_outbox_process_batch', \func_get_args() );
-			return;
-		}
+	public static function send_to_followers( $activity, $actor_id, $outbox_item, $batch_size = 50, $offset = 0 ) {
+		$inboxes = Followers::get_inboxes_for_activity( $actor_id, $activity, $batch_size, $offset );
+		$json    = $activity->to_json();
 
-		self::lock( $outbox_item->ID );
-
-		$args = array(
-			'post_type'      => Followers::POST_TYPE,
-			'posts_per_page' => self::$batch_size,
-			'fields'         => 'ids',
-
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'     => array(
-				'relation' => 'AND',
-				array(
-					'key'     => '_activitypub_inbox',
-					'compare' => 'EXISTS',
-				),
-				array(
-					'key'     => '_activitypub_inbox',
-					'value'   => '',
-					'compare' => '!=',
-				),
-				array(
-					'key'     => '_activitypub_processed_outbox_' . $outbox_item->ID,
-					'compare' => 'NOT EXISTS',
-				),
-			),
-		);
-
-		if ( self::maybe_add_inboxes_of_blog_user( $activity, $actor_id ) ) {
-			$args['meta_query'][] = array(
-				'relation' => 'OR',
-				array(
-					'key'   => '_activitypub_actor_id',
-					'value' => Actors::BLOG_USER_ID,
-				),
-				array(
-					'key'   => '_activitypub_actor_id',
-					'value' => $actor_id,
-				),
-			);
-		} else {
-			$args['meta_query'][] = array(
-				'key'   => '_activitypub_actor_id',
-				'value' => $actor_id,
-			);
-		}
-
-		// Query for the next batch of followers.
-		$followers = get_posts( $args );
-		$json      = $activity->to_json();
-
-		foreach ( $followers as $follower_id ) {
-			$inbox  = get_post_meta( $follower_id, '_activitypub_inbox', true );
+		foreach ( $inboxes as $inbox ) {
 			$result = safe_remote_post( $inbox, $json, $actor_id );
 
 			// @TODO Handle errors more elegantly.
 			if ( wp_remote_retrieve_response_code( $result ) >= 400 ) {
-				$attempt = get_post_meta( $follower_id, '_activitypub_outbox_attempt_' . $outbox_item->ID, true );
-				$attempt = $attempt ? $attempt + 1 : 1;
-
-				if ( $attempt <= 3 ) {
-					// Log attempt and move on.
-					update_post_meta( $follower_id, '_activitypub_outbox_attempt_' . $outbox_item->ID, $attempt );
-					continue;
-				} else {
-					Followers::add_error( $follower_id, wp_remote_retrieve_response_message( $result ) );
-				}
+				\error_log( 'Error sending to follower: ' . $inbox ); // phpcs:ignore
 			}
-
-			// Mark as processed.
-			\update_post_meta( $follower_id, '_activitypub_processed_outbox_' . $outbox_item->ID, true );
 		}
 
-		self::unlock( $outbox_item->ID );
-
-		if ( is_countable( $followers ) && count( $followers ) < self::$batch_size ) {
+		if ( is_countable( $inboxes ) && count( $inboxes ) < self::$batch_size ) {
 			// No more followers to process for this update.
-			\delete_metadata( 'post', 0, '_activitypub_processed_outbox_' . $outbox_item->ID, '', true );
 			\wp_publish_post( $outbox_item );
 		} else {
-			// phpcs:ignore PHPCompatibility.FunctionUse.ArgumentFunctionsReportCurrentValue.NeedsInspection
-			\wp_schedule_single_event( \time() + 30, 'activitypub_outbox_process_batch', \func_get_args() );
+			return array( $activity, $actor_id, $outbox_item, $batch_size, $offset + $batch_size );
 		}
-	}
-
-	/**
-	 * Locks the database migration process to prevent simultaneous migrations.
-	 *
-	 * @param int $outbox_item_id The Outbox item ID.
-	 * @return bool|int True if the lock was successful, timestamp of existing lock otherwise.
-	 */
-	public static function lock( $outbox_item_id ) {
-		global $wpdb;
-
-		// Try to lock.
-		$lock_result = (bool) $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO `$wpdb->options` ( `option_name`, `option_value`, `autoload` ) VALUES (%s, %s, 'no') /* LOCK */", 'activitypub_outbox_processing_lock_' . $outbox_item_id, \time() ) ); // phpcs:ignore WordPress.DB
-
-		if ( ! $lock_result ) {
-			$lock_result = \get_option( 'activitypub_outbox_processing_lock_' . $outbox_item_id );
-		}
-
-		return $lock_result;
-	}
-
-	/**
-	 * Unlocks processing for this Outbox item.
-	 *
-	 * @param int $outbox_item_id The Outbox item ID.
-	 */
-	public static function unlock( $outbox_item_id ) {
-		\delete_option( 'activitypub_outbox_processing_lock_' . $outbox_item_id );
-	}
-
-	/**
-	 * Whether the outbox processing for this Outbox item is locked.
-	 *
-	 * @param int $outbox_item_id The Outbox item ID.
-	 * @return boolean
-	 */
-	public static function is_locked( $outbox_item_id ) {
-		$lock = \get_option( 'activitypub_outbox_processing_lock_' . $outbox_item_id );
-
-		if ( ! $lock ) {
-			return false;
-		}
-
-		$lock = (int) $lock;
-
-		if ( $lock < \time() - 1800 ) {
-			self::unlock( $outbox_item_id );
-			return false;
-		}
-
-		return true;
 	}
 
 	/**
@@ -361,27 +255,17 @@ class Dispatcher {
 	/**
 	 * Default filter to add Inboxes of the Blog User in dual mode.
 	 *
+	 * @deprecated 5.1.0 Use {@see Followers::maybe_add_inboxes_of_blog_user} instead.
+	 *
 	 * @param Activity $activity The ActivityPub Activity.
 	 * @param int      $actor_id The WordPress Actor ID.
 	 *
 	 * @return bool True if the Blog User's inboxes should be added.
 	 */
 	public static function maybe_add_inboxes_of_blog_user( $activity, $actor_id ) {
+		_deprecated_function( __METHOD__, '5.1.0', 'Followers::maybe_add_inboxes_of_blog_user' );
 
-		// Only if we're in both Blog and User modes.
-		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
-			return false;
-		}
-		// Only if this isn't the Blog Actor.
-		if ( Actors::BLOG_USER_ID === $actor_id ) {
-			return false;
-		}
-		// Only if this is an Update or Delete. Create handles its own Announce in dual user mode.
-		if ( ! in_array( $activity->get_type(), array( 'Update', 'Delete' ), true ) ) {
-			return false;
-		}
-
-		return true;
+		return Followers::maybe_add_inboxes_of_blog_user( $activity, $actor_id );
 	}
 
 	/**
