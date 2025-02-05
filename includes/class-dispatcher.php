@@ -297,7 +297,6 @@ class Dispatcher {
 	 * @param array    $inboxes  The list of Inboxes.
 	 * @param int      $actor_id The WordPress Actor-ID.
 	 * @param Activity $activity The ActivityPub Activity.
-	 * @param int      $actor_id The WordPress Actor ID.
 	 *
 	 * @return array The filtered Inboxes.
 	 */
