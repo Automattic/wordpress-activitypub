@@ -83,7 +83,7 @@ class Replies {
 	 *
 	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
 	 *
-	 * @return array An associative array containing the replies collection without JSON-LD context.
+	 * @return array|null An associative array containing the replies collection without JSON-LD context.
 	 */
 	public static function get_collection( $wp_object ) {
 		$id = self::get_id( $wp_object );
