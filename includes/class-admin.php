@@ -74,8 +74,8 @@ class Admin {
 		// User has to be able to publish posts.
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			$followers_list_page = \add_users_page(
-				\__( '⁂ Followers', 'activitypub' ),
-				\__( '⁂ Followers', 'activitypub' ),
+				\__( 'Followers ⁂', 'activitypub' ),
+				\__( 'Followers ⁂', 'activitypub' ),
 				'activitypub',
 				'activitypub-followers-list',
 				array(
@@ -90,8 +90,8 @@ class Admin {
 			);
 
 			\add_users_page(
-				\__( '⁂ Extra Fields', 'activitypub' ),
-				\__( '⁂ Extra Fields', 'activitypub' ),
+				\__( 'Extra Fields ⁂', 'activitypub' ),
+				\__( 'Extra Fields ⁂', 'activitypub' ),
 				'activitypub',
 				\esc_url( \admin_url( '/edit.php?post_type=ap_extrafield' ) )
 			);
@@ -866,7 +866,7 @@ class Admin {
 	}
 
 	/**
-	 * Add a "⁂ Preview" link to the row actions.
+	 * Add a "Fediverse Preview ⁂" link to the row actions.
 	 *
 	 * @param array    $actions The existing actions.
 	 * @param \WP_Post $post    The post object.
@@ -890,7 +890,7 @@ class Admin {
 		$actions['activitypub'] = sprintf(
 			'<a href="%s" target="_blank">%s</a>',
 			\esc_url( $preview_url ),
-			\esc_html__( '⁂ Fediverse Preview', 'activitypub' )
+			\esc_html__( 'Fediverse Preview ⁂', 'activitypub' )
 		);
 
 		return $actions;
