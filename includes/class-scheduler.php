@@ -30,6 +30,7 @@ class Scheduler {
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
 
+		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_activity_for_federation' ) );
@@ -183,5 +184,97 @@ class Scheduler {
 		foreach ( $ids as $id ) {
 			self::schedule_outbox_activity_for_federation( $id );
 		}
+	}
+
+	/**
+	 * Asynchronously runs batch processing routines.
+	 *
+	 * The batching part is optional and only comes into play if the callback returns anything.
+	 * Beyond that it's a helper to run a callback asynchronously with locking to prevent simultaneous processing.
+	 *
+	 * @param callable $callback Callable processing routine.
+	 * @params mixed   ...$args  Optional. Parameters that get passed to the callback.
+	 */
+	public static function async_batch( $callback ) {
+		if ( ! \is_callable( $callback ) ) {
+			return;
+		}
+
+		$args = \func_get_args(); // phpcs:ignore PHPCompatibility.FunctionUse.ArgumentFunctionsReportCurrentValue
+		$key  = \md5( \serialize( $callback ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+
+		// Bail if the existing lock is still valid.
+		if ( self::is_locked( $key ) ) {
+			\wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'activitypub_async_batch', $args );
+			return;
+		}
+
+		self::lock( $key );
+
+		$callback = array_shift( $args ); // Remove $callback from arguments.
+		$next     = \call_user_func_array( $callback, $args );
+
+		self::unlock( $key );
+
+		if ( ! empty( $next ) ) {
+			// Schedule the next run, adding the result to the arguments.
+			\wp_schedule_single_event(
+				\time() + 30,
+				'activitypub_async_batch',
+				\array_merge( array( $callback ), \array_values( $next ) )
+			);
+		}
+	}
+
+
+	/**
+	 * Locks the async batch process for individual callbacks to prevent simultaneous processing.
+	 *
+	 * @param string $key Serialized callback name.
+	 * @return bool|int True if the lock was successful, timestamp of existing lock otherwise.
+	 */
+	public static function lock( $key ) {
+		global $wpdb;
+
+		// Try to lock.
+		$lock_result = (bool) $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO `$wpdb->options` ( `option_name`, `option_value`, `autoload` ) VALUES (%s, %s, 'no') /* LOCK */", 'activitypub_async_batch_' . $key, \time() ) ); // phpcs:ignore WordPress.DB
+
+		if ( ! $lock_result ) {
+			$lock_result = \get_option( 'activitypub_async_batch_' . $key );
+		}
+
+		return $lock_result;
+	}
+
+	/**
+	 * Unlocks processing for the async batch callback.
+	 *
+	 * @param string $key Serialized callback name.
+	 */
+	public static function unlock( $key ) {
+		\delete_option( 'activitypub_async_batch_' . $key );
+	}
+
+	/**
+	 * Whether the async batch callback is locked.
+	 *
+	 * @param string $key Serialized callback name.
+	 * @return boolean
+	 */
+	public static function is_locked( $key ) {
+		$lock = \get_option( 'activitypub_async_batch_' . $key );
+
+		if ( ! $lock ) {
+			return false;
+		}
+
+		$lock = (int) $lock;
+
+		if ( $lock < \time() - 1800 ) {
+			self::unlock( $key );
+			return false;
+		}
+
+		return true;
 	}
 }
