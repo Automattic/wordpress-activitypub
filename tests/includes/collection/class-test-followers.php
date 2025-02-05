@@ -17,11 +17,11 @@ use Activitypub\Collection\Followers;
 class Test_Followers extends \WP_UnitTestCase {
 
 	/**
-	 * Users.
+	 * Actors.
 	 *
 	 * @var array[]
 	 */
-	public static $users = array(
+	public static $actors = array(
 		'username@example.org' => array(
 			'id'                => 'https://example.org/users/username',
 			'url'               => 'https://example.org/users/username',
@@ -115,6 +115,26 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Tests get_followers with corrupted json.
+	 *
+	 * @covers ::get_followers
+	 */
+	public function test_get_followers_without_errors() {
+		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
+
+		foreach ( $followers as $follower ) {
+			Followers::add_follower( 1, $follower );
+		}
+
+		$follower = Followers::get_follower( 1, 'https://example.org/author/doe' );
+		update_post_meta( $follower->get__id(), '_activitypub_actor_json', 'invalid json' );
+
+		$db_followers = Followers::get_followers( 1 );
+
+		$this->assertEquals( 2, \count( $db_followers ) );
+	}
+
+	/**
 	 * Tests add_follower.
 	 *
 	 * @covers ::add_follower
@@ -129,8 +149,8 @@ class Test_Followers extends \WP_UnitTestCase {
 		$db_followers  = Followers::get_followers( 1 );
 		$db_followers2 = Followers::get_followers( 2 );
 
-		$this->assertContains( $follower, $db_followers );
-		$this->assertContains( $follower2, $db_followers2 );
+		$this->assertStringContainsString( $follower, serialize( $db_followers ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+		$this->assertStringContainsString( $follower2, serialize( $db_followers2 ) );  // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 	}
 
 	/**
@@ -329,7 +349,7 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		$db_followers = Followers::get_followers( 1 );
 
-		$this->assertContains( $follower, $db_followers );
+		$this->assertStringContainsString( $follower, serialize( $db_followers ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
 		$follower = current( $db_followers );
 		$meta     = get_post_meta( $follower->get__id(), '_activitypub_user_id', false );
@@ -399,8 +419,8 @@ class Test_Followers extends \WP_UnitTestCase {
 		add_filter(
 			'pre_get_remote_metadata_by_actor',
 			function ( $pre, $actor ) {
-				if ( isset( self::$users[ $actor ] ) ) {
-					return self::$users[ $actor ];
+				if ( isset( self::$actors[ $actor ] ) ) {
+					return self::$actors[ $actor ];
 				}
 				return $pre;
 			},
@@ -549,10 +569,10 @@ class Test_Followers extends \WP_UnitTestCase {
 	 * @return array
 	 */
 	public static function pre_get_remote_metadata_by_actor( $pre, $actor ) {
-		if ( isset( self::$users[ $actor ] ) ) {
-			return self::$users[ $actor ];
+		if ( isset( self::$actors[ $actor ] ) ) {
+			return self::$actors[ $actor ];
 		}
-		foreach ( self::$users as $data ) {
+		foreach ( self::$actors as $data ) {
 			if ( $data['url'] === $actor ) {
 				return $data;
 			}

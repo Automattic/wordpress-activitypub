@@ -5,10 +5,10 @@ import { createInterpolateElement } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { Pagination } from './pagination';
 import { ExternalLink } from '@wordpress/components';
-
-const { namespace } = window._activityPubOptions;
+import { useOptions } from '../shared/use-options';
 
 function getPath( userId, per_page, order, page ) {
+	const { namespace } = useOptions();
 	const path = `/${ namespace }/actors/${ userId }/followers`;
 	const args = {
 		per_page,

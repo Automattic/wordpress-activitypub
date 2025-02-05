@@ -26,9 +26,9 @@ class Update {
 	}
 
 	/**
-	 * Handle "Update" requests
+	 * Handle "Update" requests.
 	 *
-	 * @param array $activity The activity-object.
+	 * @param array $activity The Activity object.
 	 */
 	public static function handle_update( $activity ) {
 		$object_type = isset( $activity['object']['type'] ) ? $activity['object']['type'] : '';
@@ -75,7 +75,7 @@ class Update {
 	/**
 	 * Update an Interaction.
 	 *
-	 * @param array $activity The activity-object.
+	 * @param array $activity The Activity object.
 	 */
 	public static function update_interaction( $activity ) {
 		$commentdata = Interactions::update_comment( $activity );
@@ -102,7 +102,7 @@ class Update {
 	/**
 	 * Update an Actor.
 	 *
-	 * @param array $activity The activity-object.
+	 * @param array $activity The Activity object.
 	 */
 	public static function update_actor( $activity ) {
 		// Update cache.

@@ -216,4 +216,240 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 			),
 		);
 	}
+
+	/**
+	 * Test is_activity with array input.
+	 *
+	 * @covers ::is_activity
+	 *
+	 * @dataProvider is_activity_data
+	 *
+	 * @param mixed $activity The activity object.
+	 * @param bool  $expected The expected result.
+	 */
+	public function test_is_activity( $activity, $expected ) {
+		$this->assertEquals( $expected, \Activitypub\is_activity( $activity ) );
+	}
+
+	/**
+	 * Data provider for test_is_activity.
+	 *
+	 * @return array[]
+	 */
+	public function is_activity_data() {
+		// Test Activity object.
+		$create = new \Activitypub\Activity\Activity();
+		$create->set_type( 'Create' );
+
+		// Test Base_Object.
+		$note = new \Activitypub\Activity\Base_Object();
+		$note->set_type( 'Note' );
+
+		return array(
+			array( array( 'type' => 'Create' ), true ),
+			array( array( 'type' => 'Update' ), true ),
+			array( array( 'type' => 'Delete' ), true ),
+			array( array( 'type' => 'Follow' ), true ),
+			array( array( 'type' => 'Accept' ), true ),
+			array( array( 'type' => 'Reject' ), true ),
+			array( array( 'type' => 'Add' ), true ),
+			array( array( 'type' => 'Remove' ), true ),
+			array( array( 'type' => 'Like' ), true ),
+			array( array( 'type' => 'Announce' ), true ),
+			array( array( 'type' => 'Undo' ), true ),
+			array( array( 'type' => 'Note' ), false ),
+			array( array( 'type' => 'Article' ), false ),
+			array( array( 'type' => 'Person' ), false ),
+			array( array( 'type' => 'Image' ), false ),
+			array( array( 'type' => 'Video' ), false ),
+			array( array( 'type' => 'Audio' ), false ),
+			array( array( 'type' => '' ), false ),
+			array( array( 'type' => null ), false ),
+			array( array(), false ),
+			array( $create, true ),
+			array( $note, false ),
+			array( 'string', false ),
+			array( 123, false ),
+			array( true, false ),
+			array( false, false ),
+			array( null, false ),
+			array( new \stdClass(), false ),
+		);
+	}
+
+	/**
+	 * Test is_activity with invalid input.
+	 *
+	 * @covers ::is_activity
+	 */
+	public function test_is_activity_with_invalid_input() {
+		$invalid_inputs = array(
+			'string',
+			123,
+			true,
+			false,
+			null,
+			new \stdClass(),
+		);
+
+		foreach ( $invalid_inputs as $input ) {
+			$this->assertFalse(
+				\Activitypub\is_activity( $input ),
+				sprintf( 'Input of type %s should be invalid', gettype( $input ) )
+			);
+		}
+	}
+
+	/**
+	 * Test is_post_disabled function.
+	 *
+	 * @covers ::is_post_disabled
+	 */
+	public function test_is_post_disabled() {
+		// Test standard public post.
+		$public_post_id = self::factory()->post->create();
+		$this->assertFalse( \Activitypub\is_post_disabled( $public_post_id ) );
+
+		// Test local-only post.
+		$local_post_id = self::factory()->post->create();
+		add_post_meta( $local_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+		$this->assertTrue( \Activitypub\is_post_disabled( $local_post_id ) );
+
+		// Test private post.
+		$private_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'private',
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_disabled( $private_post_id ) );
+
+		// Test password protected post.
+		$password_post_id = self::factory()->post->create(
+			array(
+				'post_password' => 'test123',
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_disabled( $password_post_id ) );
+
+		// Test unsupported post type.
+		register_post_type( 'unsupported', array() );
+		$unsupported_post_id = self::factory()->post->create(
+			array(
+				'post_type' => 'unsupported',
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_disabled( $unsupported_post_id ) );
+		unregister_post_type( 'unsupported' );
+
+		// Test with filter.
+		add_filter( 'activitypub_is_post_disabled', '__return_true' );
+		$this->assertTrue( \Activitypub\is_post_disabled( $public_post_id ) );
+		remove_filter( 'activitypub_is_post_disabled', '__return_true' );
+
+		// Clean up.
+		wp_delete_post( $public_post_id, true );
+		wp_delete_post( $local_post_id, true );
+		wp_delete_post( $private_post_id, true );
+		wp_delete_post( $password_post_id, true );
+	}
+
+	/**
+	 * Test is_post_disabled with private visibility.
+	 *
+	 * @covers ::is_post_disabled
+	 */
+	public function test_is_post_disabled_private_visibility() {
+		$visible_private_post_id = self::factory()->post->create();
+
+		add_post_meta( $visible_private_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+		$this->assertFalse( \Activitypub\is_post_disabled( $visible_private_post_id ) );
+
+		wp_delete_post( $visible_private_post_id, true );
+	}
+
+	/**
+	 * Test is_post_disabled with invalid post.
+	 *
+	 * @covers ::is_post_disabled
+	 */
+	public function test_is_post_disabled_invalid_post() {
+		$this->assertTrue( \Activitypub\is_post_disabled( 0 ) );
+		$this->assertTrue( \Activitypub\is_post_disabled( null ) );
+		$this->assertTrue( \Activitypub\is_post_disabled( 999999 ) );
+	}
+
+	/**
+	 * Test get_masked_wp_version function.
+	 *
+	 * @covers ::get_masked_wp_version
+	 * @dataProvider provide_wp_versions
+	 *
+	 * @param string $input    The input version.
+	 * @param string $expected The expected masked version.
+	 */
+	public function test_get_masked_wp_version( $input, $expected ) {
+		global $wp_version;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$wp_version = $input;
+
+		$this->assertEquals(
+			$expected,
+			\Activitypub\get_masked_wp_version(),
+			sprintf( 'Version %s should be masked to %s', $input, $expected )
+		);
+	}
+
+	/**
+	 * Data provider for WordPress versions.
+	 *
+	 * @return array[] Array of test cases.
+	 */
+	public function provide_wp_versions() {
+		return array(
+			'standard version'                   => array(
+				'6.4.2',
+				'6.4',
+			),
+			'alpha version'                      => array(
+				'6.4.2-alpha',
+				'6.4',
+			),
+			'different alpha version'            => array(
+				'6.4-alpha',
+				'6.4',
+			),
+			'alpha version with patch'           => array(
+				'6.4.2-alpha-59438',
+				'6.4',
+			),
+			'different alpha version with patch' => array(
+				'6.5-alpha-59438',
+				'6.5',
+			),
+			'beta version'                       => array(
+				'6.4.2-beta1',
+				'6.4',
+			),
+			'RC version'                         => array(
+				'6.4.2-RC1',
+				'6.4',
+			),
+			'no patch version'                   => array(
+				'6.4',
+				'6.4',
+			),
+			'triple zero'                        => array(
+				'6.0.0',
+				'6.0',
+			),
+			'double digit'                       => array(
+				'10.5',
+				'10.5',
+			),
+			'single number'                      => array(
+				'6',
+				'6',
+			),
+		);
+	}
 }

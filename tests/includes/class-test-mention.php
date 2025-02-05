@@ -17,11 +17,11 @@ use Activitypub\Mention;
 class Test_Mention extends \WP_UnitTestCase {
 
 	/**
-	 * Users.
+	 * Actors.
 	 *
-	 * @var array
+	 * @var array[]
 	 */
-	public static $users = array(
+	public static $actors = array(
 		'username@example.org' => array(
 			'id'   => 'https://example.org/users/username',
 			'url'  => 'https://example.org/users/username',
@@ -133,8 +133,8 @@ ENDPRE;
 	public static function pre_get_remote_metadata_by_actor( $pre, $actor ) {
 		$actor = ltrim( $actor, '@' );
 
-		if ( isset( self::$users[ $actor ] ) ) {
-			return self::$users[ $actor ];
+		if ( isset( self::$actors[ $actor ] ) ) {
+			return self::$actors[ $actor ];
 		}
 
 		return $pre;

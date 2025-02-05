@@ -13,6 +13,8 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
+use function Activitypub\add_to_outbox;
+
 /**
  * Handle Follow requests.
  */
@@ -28,7 +30,7 @@ class Follow {
 
 		\add_action(
 			'activitypub_followers_post_follow',
-			array( self::class, 'send_follow_response' ),
+			array( self::class, 'queue_accept' ),
 			10,
 			4
 		);
@@ -83,7 +85,7 @@ class Follow {
 	 * @param int                         $user_id         The ID of the WordPress User.
 	 * @param \Activitypub\Model\Follower $follower        The Follower object.
 	 */
-	public static function send_follow_response( $actor, $activity_object, $user_id, $follower ) {
+	public static function queue_accept( $actor, $activity_object, $user_id, $follower ) {
 		if ( \is_wp_error( $follower ) ) {
 			// Impossible to send a "Reject" because we can not get the Remote-Inbox.
 			return;
@@ -102,21 +104,9 @@ class Follow {
 			)
 		);
 
-		$user = Actors::get_by_id( $user_id );
+		// Send response only to the Follower.
+		$activity_object['to'] = $actor;
 
-		// Get inbox.
-		$inbox = $follower->get_shared_inbox();
-
-		// Send "Accept" activity.
-		$activity = new Activity();
-		$activity->set_type( 'Accept' );
-		$activity->set_object( $activity_object );
-		$activity->set_actor( $user->get_id() );
-		$activity->set_to( $actor );
-		$activity->set_id( $user->get_id() . '#follow-' . \preg_replace( '~^https?://~', '', $actor ) . '-' . \time() );
-
-		$activity = $activity->to_json();
-
-		Http::post( $inbox, $activity, $user_id );
+		add_to_outbox( $activity_object, 'Accept', $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 	}
 }

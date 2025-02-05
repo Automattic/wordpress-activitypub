@@ -483,7 +483,7 @@ class Base_Object {
 		}
 
 		if ( \strncasecmp( $method, 'add', 3 ) === 0 ) {
-			$this->add( $var, $params[0] );
+			return $this->add( $var, $params[0] );
 		}
 	}
 
@@ -566,10 +566,19 @@ class Base_Object {
 			$this->$key = array();
 		}
 
-		$attributes   = $this->$key;
-		$attributes[] = $value;
+		if ( is_string( $this->$key ) ) {
+			$this->$key = array( $this->$key );
+		}
 
-		$this->$key = $attributes;
+		$attributes = $this->$key;
+
+		if ( is_array( $value ) ) {
+			$attributes = array_merge( $attributes, $value );
+		} else {
+			$attributes[] = $value;
+		}
+
+		$this->$key = array_unique( $attributes );
 
 		return $this->$key;
 	}
@@ -579,13 +588,13 @@ class Base_Object {
 	 *
 	 * @param string $json The JSON string.
 	 *
-	 * @return Base_Object An Object built from the JSON string.
+	 * @return Base_Object|WP_Error An Object built from the JSON string or WP_Error when it's not a JSON string.
 	 */
 	public static function init_from_json( $json ) {
 		$array = \json_decode( $json, true );
 
 		if ( ! is_array( $array ) ) {
-			$array = array();
+			return new WP_Error( 'invalid_json', __( 'Invalid JSON', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		return self::init_from_array( $array );
@@ -600,15 +609,11 @@ class Base_Object {
 	 */
 	public static function init_from_array( $data ) {
 		if ( ! is_array( $data ) ) {
-			return new WP_Error( 'invalid_array', __( 'Invalid array', 'activitypub' ), array( 'status' => 404 ) );
+			return new WP_Error( 'invalid_array', __( 'Invalid array', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		$object = new static();
-
-		foreach ( $data as $key => $value ) {
-			$key = camel_to_snake_case( $key );
-			call_user_func( array( $object, 'set_' . $key ), $value );
-		}
+		$object->from_array( $data );
 
 		return $object;
 	}

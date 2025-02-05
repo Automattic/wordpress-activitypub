@@ -9,18 +9,93 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* Cleanup of option values when the plugin is uninstalled.
+* Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
+* Show ActivityPub preview in row actions when Block Editor is enabled but not used for the post type.
+* 
+### Changed
+
+* Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
+* Allow omitting replies in ActivityPub representations instead of setting them as empty.
+* Allow Base Transformer to handle WP_Term objects for transformation.
+* Improved Query extensibility for third party plugins.
+
+### Fixed
+
+* Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
+* Avoid PHP warnings when using Debug mode and when the `actor` is not set.
+* No longer creates Outbox items when importing content/users.
+
+## [5.0.0] - 2025-02-03
+
+### Changed
+
+* Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins.
+* Moved password check to `is_post_disabled` function.
+* The Reply block now shows an embedded version of the referenced post, if available
+
+### Fixed
+
+* Handle deletes from remote servers that leave behind an accessible Tombstone object.
+* No longer parses tags for post types that don't support Activitypub.
+* rel attribute will now contain no more than one "me" value.
+
+## [4.7.3] - 2025-01-21
+
+### Fixed
+
+* Flush rewrite rules after NodeInfo update.
+
+## [4.7.2] - 2025-01-17
+
+### Fixed
+
+* More robust handling of `_activityPubOptions` in scripts, using a `useOptions()` helper.
+* Flush post caches after Followers migration.
+
+### Added
+
+* Support for WPML post locale
+
+### Added
+
+* Outbox queue
+
+### Changed
+
+* Rewrite the current dispatcher system, to use the Outbox instead of the Scheduler.
+
+### Removed
+
+* Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
+
+## [4.7.1] - 2025-01-14
+
+### Fixed
+
+* Missing migration
+
+## [4.7.0] - 2025-01-13
+
+### Added
+
+* Comment counts get updated when the plugin is activated/deactivated/deleted
 * Added a filter to make custom comment types manageable in WP.com Calypso
 
 ### Changed
 
 * Hide ActivityPub post meta keys from the custom Fields UI
-* The Reply block now shows an embedded version of the referenced post, if available
+* Bumped minimum required PHP version to 7.2
 
 ### Fixed
 
 * Undefined array key warnings in various places
+* @-mentions in federated comments being displayed with a line break
 * Fetching replies from the same instance for Enable Mastodon Apps
 * Image captions not being included in the ActivityPub representation when the image is attached to the post
+
+### Changed
+* Print `_activityPubOptions` in the `wp_footer` action on the frontend.
 
 ## [4.6.0] - 2024-12-20
 
@@ -1195,8 +1270,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/4.6.0...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.0.0...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[5.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.3...5.0.0
+[4.7.3]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.2...4.7.3
+[4.7.2]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.1...4.7.2
+[4.7.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.0...4.7.1
+[4.7.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.6.0...4.7.0
 [4.6.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.5.1...4.6.0
 [4.5.1]: https://github.com/Automattic/wordpress-activitypub/compare/4.5.0...4.5.1
 [4.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.4.0...4.5.0

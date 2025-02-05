@@ -17,7 +17,7 @@ use Activitypub\Integration\Enable_Mastodon_Apps;
 class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 
 	/**
-	 * Users.
+	 * Actors.
 	 *
 	 * @var array[]
 	 */
@@ -129,6 +129,25 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test api_status.
+	 *
+	 * @covers ::api_status
+	 */
+	public function test_api_status() {
+		$post_id = self::factory()->post->create(
+			array(
+				'meta_input' => array(
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
+				),
+			)
+		);
+
+		$this->assertNull( Enable_Mastodon_Apps::api_status( null, $post_id ) );
+
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
 	 * Filters the HTTP request before it is sent.
 	 *
 	 * @param array|bool $preempt Whether to preempt an HTTP request's return value.
@@ -173,18 +192,6 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 				);
 		}
 		return $preempt;
-	}
-
-	/**
-	 * Filters the HTTP response before it is returned.
-	 *
-	 * @param array|WP_Error $response HTTP response or WP_Error object.
-	 * @param array          $args     HTTP request arguments.
-	 * @param string         $url      The request URL.
-	 * @return array|WP_Error
-	 */
-	public static function http_response( $response, $args, $url ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		return $response;
 	}
 
 	/**

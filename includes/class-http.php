@@ -66,7 +66,14 @@ class Http {
 		$code     = \wp_remote_retrieve_response_code( $response );
 
 		if ( $code >= 400 ) {
-			$response = new WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
+			$response = new WP_Error(
+				$code,
+				__( 'Failed HTTP Request', 'activitypub' ),
+				array(
+					'status'   => $code,
+					'response' => $response,
+				)
+			);
 		}
 
 		/**
@@ -192,10 +199,16 @@ class Http {
 		 */
 		\do_action( 'activitypub_pre_http_is_tombstone', $url );
 
-		$response = \wp_safe_remote_get( $url );
+		$response = \wp_safe_remote_get( $url, array( 'headers' => array( 'Accept' => 'application/activity+json' ) ) );
 		$code     = \wp_remote_retrieve_response_code( $response );
 
 		if ( in_array( (int) $code, array( 404, 410 ), true ) ) {
+			return true;
+		}
+
+		$data = \wp_remote_retrieve_body( $response );
+		$data = \json_decode( $data, true );
+		if ( $data && isset( $data['type'] ) && 'Tombstone' === $data['type'] ) {
 			return true;
 		}
 

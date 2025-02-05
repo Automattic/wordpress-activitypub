@@ -47,7 +47,7 @@ class Test_Signature_Verification extends \WP_UnitTestCase {
 		$date      = gmdate( 'D, d M Y H:i:s T' );
 		$signature = Signature::generate_signature( 1, 'POST', $remote_actor, $date, $digest );
 
-		$this->assertRegExp( '/keyId="http:\/\/example\.org\/\?author=1#main-key",algorithm="rsa-sha256",headers="\(request-target\) host date digest",signature="[^"]*"/', $signature );
+		$this->assertMatchesRegularExpression( '/keyId="http:\/\/example\.org\/\?author=1#main-key",algorithm="rsa-sha256",headers="\(request-target\) host date digest",signature="[^"]*"/', $signature );
 
 		// Signed headers.
 		$url_parts = wp_parse_url( $remote_actor );

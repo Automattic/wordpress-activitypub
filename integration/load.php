@@ -100,6 +100,17 @@ function plugin_init() {
 			3
 		);
 	}
+
+	/**
+	 * Adds WPML Multilingual CMS (plugin) support.
+	 *
+	 * This class handles the compatibility with the WPML plugin.
+	 *
+	 * @see https://wpml.org/
+	 */
+	if ( \defined( 'ICL_SITEPRESS_VERSION' ) ) {
+		WPML::init();
+	}
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
 

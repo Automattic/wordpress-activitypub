@@ -1,12 +1,11 @@
-
 import apiFetch from '@wordpress/api-fetch';
 import { useEffect, useState } from '@wordpress/element';
 import { Button, Modal } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 import { ButtonStyle, getPopupStyles } from './button-style';
 import { Dialog } from '../shared/dialog';
+import { useOptions } from '../shared/use-options';
 import './style.scss';
-const { namespace } = window._activityPubOptions;
 
 const DEFAULT_PROFILE_DATA = {
 	avatar: '',
@@ -25,6 +24,7 @@ function getNormalizedProfile( profile ) {
 }
 
 function fetchProfile( userId ) {
+	const { namespace } = useOptions();
 	const fetchOptions = {
 		headers: { Accept: 'application/activity+json' },
 		path: `/${ namespace }/actors/${ userId }`,
@@ -80,6 +80,7 @@ function Follow( { profile, popupStyles, userId } ) {
 }
 
 function DialogFollow( { profile, userId } ) {
+	const { namespace } = useOptions();
 	const { webfinger } = profile;
 	const actionText = __( 'Follow', 'activitypub' );
 	const resourceUrl = `/${ namespace }/actors/${userId}/remote-follow?resource=`;

@@ -5,13 +5,7 @@ import { useState, useEffect, useRef } from '@wordpress/element';
 import { Popover, Button } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
-
-/**
- * Extract the namespace from the global _activityPubOptions object.
- *
- * @type {string}
- */
-const { namespace, defaultAvatarUrl } = window._activityPubOptions;
+import { useOptions } from '../shared/use-options';
 
 /**
  * A component that renders a row of user avatars for a given set of reactions.
@@ -21,6 +15,7 @@ const { namespace, defaultAvatarUrl } = window._activityPubOptions;
  * @return {JSX.Element}           The rendered component.
  */
 const FacepileRow = ( { reactions } ) => {
+	const { defaultAvatarUrl } = useOptions();
 	const [activeIndices, setActiveIndices] = useState(new Set());
 	const [rotationStates, setRotationStates] = useState(new Map());
 	const timeoutRefs = useRef([]);
@@ -302,6 +297,7 @@ export function Reactions( {
 	reactions: providedReactions = null,
 	titleComponent = null,
 } ) {
+	const { namespace } = useOptions();
 	const [ reactions, setReactions ] = useState( providedReactions );
 	const [ loading, setLoading ] = useState( ! providedReactions );
 

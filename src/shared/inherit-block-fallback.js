@@ -1,9 +1,10 @@
 import { Card, CardBody } from '@wordpress/components';
 import { sprintf, __ } from '@wordpress/i18n';
 import { createInterpolateElement } from '@wordpress/element';
-const enabled = window._activityPubOptions?.enabled;
+import { useOptions } from './use-options';
 
 export function InheritModeBlockFallback( { name } ) {
+	const { enabled } = useOptions();
 	const nonAuthorExtra = enabled?.site ? '' : __( 'It will be empty in other non-author contexts.', 'activitypub' );
 	const text = sprintf(
 		/* translators: %1$s: block name, %2$s: extra information for non-author context */

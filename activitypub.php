@@ -3,12 +3,12 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 4.6.0
+ * Version: 5.0.0
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
  * License URI: http://opensource.org/licenses/MIT
- * Requires PHP: 7.0
+ * Requires PHP: 7.2
  * Text Domain: activitypub
  * Domain Path: /languages
  *
@@ -19,7 +19,7 @@ namespace Activitypub;
 
 use WP_CLI;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '4.6.0' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '5.0.0' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -39,21 +39,22 @@ Autoloader::register_path( __NAMESPACE__, __DIR__ . '/includes' );
  * Initialize REST routes.
  */
 function rest_init() {
-	Rest\Actors::init();
-	Rest\Outbox::init();
 	Rest\Inbox::init();
-	Rest\Followers::init();
-	Rest\Following::init();
-	Rest\Webfinger::init();
 	Rest\Comment::init();
 	Rest\Server::init();
 	Rest\Collection::init();
-	Rest\Interaction::init();
 	Rest\Post::init();
+	( new Rest\Actors_Controller() )->register_routes();
+	( new Rest\Application_Controller() )->register_routes();
+	( new Rest\Followers_Controller() )->register_routes();
+	( new Rest\Following_Controller() )->register_routes();
+	( new Rest\Interaction_Controller() )->register_routes();
+	( new Rest\Outbox_Controller() )->register_routes();
+	( new Rest\Webfinger_Controller() )->register_routes();
 
 	// Load NodeInfo endpoints only if blog is public.
 	if ( is_blog_public() ) {
-		Rest\NodeInfo::init();
+		( new Rest\Nodeinfo_Controller() )->register_routes();
 	}
 }
 \add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
@@ -64,7 +65,7 @@ function rest_init() {
 function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Activity_Dispatcher', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Admin', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );

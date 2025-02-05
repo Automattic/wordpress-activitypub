@@ -8,6 +8,8 @@
 namespace Activitypub;
 
 use Exception;
+use Activitypub\Transformer\Factory;
+use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
 
@@ -28,7 +30,7 @@ class Activitypub {
 		\add_filter( 'pre_get_avatar_data', array( self::class, 'pre_get_avatar_data' ), 11, 2 );
 
 		// Add support for ActivityPub to custom post types.
-		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) ) ? \get_option( 'activitypub_support_post_types', array( 'post' ) ) : array();
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
 
 		foreach ( $post_types as $post_type ) {
 			\add_post_type_support( $post_type, 'activitypub' );
@@ -64,6 +66,9 @@ class Activitypub {
 	public static function activate() {
 		self::flush_rewrite_rules();
 		Scheduler::register_schedules();
+
+		\add_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
+		Migration::update_comment_counts();
 	}
 
 	/**
@@ -72,6 +77,9 @@ class Activitypub {
 	public static function deactivate() {
 		self::flush_rewrite_rules();
 		Scheduler::deregister_schedules();
+
+		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
+		Migration::update_comment_counts( 2000 );
 	}
 
 	/**
@@ -79,6 +87,35 @@ class Activitypub {
 	 */
 	public static function uninstall() {
 		Scheduler::deregister_schedules();
+
+		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
+		Migration::update_comment_counts( 2000 );
+
+		delete_option( 'activitypub_actor_mode' );
+		delete_option( 'activitypub_attribution_domains' );
+		delete_option( 'activitypub_authorized_fetch' );
+		delete_option( 'activitypub_application_user_private_key' );
+		delete_option( 'activitypub_application_user_public_key' );
+		delete_option( 'activitypub_blog_user_private_key' );
+		delete_option( 'activitypub_blog_user_public_key' );
+		delete_option( 'activitypub_blog_description' );
+		delete_option( 'activitypub_blog_identifier' );
+		delete_option( 'activitypub_custom_post_content' );
+		delete_option( 'activitypub_db_version' );
+		delete_option( 'activitypub_default_extra_fields' );
+		delete_option( 'activitypub_enable_blog_user' );
+		delete_option( 'activitypub_enable_users' );
+		delete_option( 'activitypub_header_image' );
+		delete_option( 'activitypub_last_post_with_permalink_as_id' );
+		delete_option( 'activitypub_mailer_new_follower' );
+		delete_option( 'activitypub_mailer_new_dm' );
+		delete_option( 'activitypub_max_image_attachments' );
+		delete_option( 'activitypub_migration_lock' );
+		delete_option( 'activitypub_object_type' );
+		delete_option( 'activitypub_support_post_types' );
+		delete_option( 'activitypub_use_hashtags' );
+		delete_option( 'activitypub_use_opengraph' );
+		delete_option( 'activitypub_use_permalink_as_id_for_blog' );
 	}
 
 	/**
@@ -93,17 +130,16 @@ class Activitypub {
 			return $template;
 		}
 
+		self::add_headers();
+
 		if ( ! is_activitypub_request() ) {
 			return $template;
 		}
 
 		$activitypub_template = false;
+		$activitypub_object   = Query::get_instance()->get_activitypub_object();
 
-		if ( \is_author() && ! is_user_disabled( \get_the_author_meta( 'ID' ) ) ) {
-			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/user-json.php';
-		} elseif ( is_comment() ) {
-			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/comment-json.php';
-		} elseif ( \is_singular() && ! is_post_disabled( \get_the_ID() ) ) {
+		if ( $activitypub_object ) {
 			if ( \get_query_var( 'preview' ) ) {
 				\define( 'ACTIVITYPUB_PREVIEW', true );
 
@@ -114,10 +150,8 @@ class Activitypub {
 				 */
 				$activitypub_template = apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
 			} else {
-				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/post-json.php';
+				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/activitypub-json.php';
 			}
-		} elseif ( \is_home() && ! is_user_type_disabled( 'blog' ) ) {
-			$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/blog-json.php';
 		}
 
 		/*
@@ -137,6 +171,12 @@ class Activitypub {
 		}
 
 		if ( $activitypub_template ) {
+			// Check if header already sent.
+			if ( ! \headers_sent() && ACTIVITYPUB_SEND_VARY_HEADER ) {
+				// Send Vary header for Accept header.
+				\header( 'Vary: Accept' );
+			}
+
 			return $activitypub_template;
 		}
 
@@ -147,32 +187,14 @@ class Activitypub {
 	 * Add the 'self' link to the header.
 	 */
 	public static function add_headers() {
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		$request_uri = $_SERVER['REQUEST_URI'];
-
-		if ( ! $request_uri ) {
-			return;
-		}
-
-		$id = false;
-
-		// Only add self link to author pages...
-		if ( is_author() ) {
-			if ( ! is_user_disabled( get_queried_object_id() ) ) {
-				$id = get_user_id( get_queried_object_id() );
-			}
-		} elseif ( is_singular() ) { // or posts/pages/custom-post-types...
-			if ( \post_type_supports( \get_post_type(), 'activitypub' ) ) {
-				$id = get_post_id( get_queried_object_id() );
-			}
-		}
+		$id = Query::get_instance()->get_activitypub_object_id();
 
 		if ( ! $id ) {
 			return;
 		}
 
 		if ( ! headers_sent() ) {
-			header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"' );
+			header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
 		}
 
 		add_action(
@@ -226,8 +248,6 @@ class Activitypub {
 	 * @return void
 	 */
 	public static function template_redirect() {
-		self::add_headers();
-
 		$comment_id = get_query_var( 'c', null );
 
 		// Check if it seems to be a comment.
@@ -263,6 +283,7 @@ class Activitypub {
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
 		$vars[] = 'preview';
+		$vars[] = 'author';
 		$vars[] = 'c';
 		$vars[] = 'p';
 
@@ -379,12 +400,7 @@ class Activitypub {
 		if ( ! \class_exists( 'Nodeinfo_Endpoint' ) && true === (bool) \get_option( 'blog_public', 1 ) ) {
 			\add_rewrite_rule(
 				'^.well-known/nodeinfo',
-				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo/discovery',
-				'top'
-			);
-			\add_rewrite_rule(
-				'^.well-known/x-nodeinfo2',
-				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo2',
+				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo',
 				'top'
 			);
 		}
@@ -462,7 +478,7 @@ class Activitypub {
 	}
 
 	/**
-	 * Register the "Followers" Taxonomy.
+	 * Register Custom Post Types.
 	 */
 	private static function register_post_types() {
 		\register_post_type(
@@ -528,6 +544,100 @@ class Activitypub {
 				'single'            => true,
 				'sanitize_callback' => function ( $value ) {
 					return sanitize_text_field( $value );
+				},
+			)
+		);
+
+		// Register Outbox Post-Type.
+		register_post_type(
+			Outbox::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => _x( 'Outbox', 'post_type plural name', 'activitypub' ),
+					'singular_name' => _x( 'Outbox Item', 'post_type single name', 'activitypub' ),
+				),
+				'capabilities'        => array(
+					'create_posts' => false,
+				),
+				'map_meta_cap'        => true,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'delete_with_user'    => true,
+				'can_export'          => true,
+				'exclude_from_search' => true,
+			)
+		);
+
+		/**
+		 * Register Activity Type meta for Outbox items.
+		 *
+		 * @see https://www.w3.org/TR/activitystreams-vocabulary/#activity-types
+		 */
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'_activitypub_activity_type',
+			array(
+				'type'              => 'string',
+				'description'       => 'The type of the activity',
+				'single'            => true,
+				'sanitize_callback' => function ( $value ) {
+					$value  = ucfirst( strtolower( $value ) );
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'Accept', 'Add', 'Announce', 'Arrive', 'Block', 'Create', 'Delete', 'Dislike', 'Flag', 'Follow', 'Ignore', 'Invite', 'Join', 'Leave', 'Like', 'Listen', 'Move', 'Offer', 'Question', 'Reject', 'Read', 'Remove', 'TentativeReject', 'TentativeAccept', 'Travel', 'Undo', 'Update', 'View' ),
+						'default' => 'Announce',
+					);
+
+					if ( is_wp_error( rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'_activitypub_activity_actor',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( 'application', 'blog', 'user' ),
+						'default' => 'user',
+					);
+
+					if ( is_wp_error( rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
+				},
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'activitypub_content_visibility',
+			array(
+				'show_in_rest'      => true,
+				'single'            => true,
+				'type'              => 'string',
+				'sanitize_callback' => function ( $value ) {
+					$schema = array(
+						'type'    => 'string',
+						'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+						'default' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+					);
+
+					if ( is_wp_error( rest_validate_enum( $value, $schema, '' ) ) ) {
+						return $schema['default'];
+					}
+
+					return $value;
 				},
 			)
 		);

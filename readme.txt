@@ -3,8 +3,8 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
-Stable tag: 4.6.0
-Requires PHP: 7.0
+Stable tag: 5.0.0
+Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
 
@@ -33,7 +33,6 @@ The plugin works with the following tested federated platforms, but there may be
 * [Pixelfed](https://pixelfed.org/)
 * [Socialhome](https://socialhome.network/)
 * [Misskey](https://join.misskey.page/)
-* [Firefish](https://joinfirefish.org/) (rebrand of Calckey)
 
 Some things to note:
 
@@ -70,7 +69,7 @@ In order for webfinger to work, it must be mapped to the root directory of the U
 
 Add the following to the .htaccess file in the root directory:
 
-	RedirectMatch "^\/\.well-known/(webfinger|nodeinfo|x-nodeinfo2)(.*)$" /blog/.well-known/$1$2
+	RedirectMatch "^\/\.well-known/(webfinger|nodeinfo)(.*)$" /blog/.well-known/$1$2
 
 Where 'blog' is the path to the subdirectory at which your blog resides.
 
@@ -134,10 +133,52 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Added: Cleanup of option values when the plugin is uninstalled.
+* Added: Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
+* Added: Show ActivityPub preview in row actions when Block Editor is enabled but not used for the post type.
+* Changed: Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
+* Changed: Allow Base Transformer to handle WP_Term objects for transformation.
+* Changed: Allow omitting replies in ActivityPub representations instead of setting them as empty.
+* Changed: Improved Query extensibility for third party plugins.
+* Changed: The Reply block now shows an embedded version of the referenced post, if available
+* Fixed: Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
+* Fixed: Avoid PHP warnings when using Debug mode and when the `actor` is not set.
+* Fixed: No longer creates Outbox items when importing content/users.
+
+= 5.0.0 =
+
+* Added: Outbox queue
+* Changed: Rewrite the current dispatcher system, to use the Outbox instead of a Scheduler.
+* Changed: Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins.
+* Changed: Moved password check to `is_post_disabled` function.
+* Fixed: Handle deletes from remote servers that leave behind an accessible Tombstone object.
+* Fixed: No longer parses tags for post types that don't support Activitypub.
+* Fixed: rel attribute will now contain no more than one "me" value.
+
+= 4.7.3 =
+
+* Fixed: Flush rewrite rules after NodeInfo update.
+
+= 4.7.2 =
+
+* Added: Support for WPML post locale
+* Removed: Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
+* Fixed: More robust handling of `_activityPubOptions` in scripts, using a `useOptions()` helper.
+* Fixed: Flush post caches after Followers migration.
+
+= 4.7.1 =
+
+* Fixed: Missing migration
+
+= 4.7.0 =
+
+* Added: Comment counts get updated when the plugin is activated/deactivated/deleted
 * Added: A filter to make custom comment types manageable in WP.com Calypso
 * Changed: Hide ActivityPub post meta keys from the custom Fields UI
-* Changed: The Reply block now shows an embedded version of the referenced post, if available
+* Changed: Bumped minimum required PHP version to 7.2
+* Changed: Print `_activityPubOptions` in the `wp_footer` action on the frontend.
 * Fixed: Undefined array key warnings in various places
+* Fixed: @-mentions in federated comments being displayed with a line break
 * Fixed: Fetching replies from the same instance for Enable Mastodon Apps
 * Fixed: Image captions not being included in the ActivityPub representation when the image is attached to the post
 

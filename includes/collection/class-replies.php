@@ -74,7 +74,7 @@ class Replies {
 		} elseif ( $wp_object instanceof WP_Comment ) {
 			return get_rest_url_by_path( sprintf( 'comments/%d/replies', $wp_object->comment_ID ) );
 		} else {
-			return new WP_Error();
+			return new WP_Error( 'unsupported_object', 'The object is not a post or comment.' );
 		}
 	}
 
@@ -83,12 +83,12 @@ class Replies {
 	 *
 	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
 	 *
-	 * @return array An associative array containing the replies collection without JSON-LD context.
+	 * @return array|null An associative array containing the replies collection without JSON-LD context.
 	 */
 	public static function get_collection( $wp_object ) {
 		$id = self::get_id( $wp_object );
 
-		if ( ! $id ) {
+		if ( ! $id || is_wp_error( $id ) ) {
 			return null;
 		}
 

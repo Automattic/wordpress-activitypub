@@ -320,8 +320,8 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$this->assertTrue( \Activitypub\is_post_disabled( $post_id ) );
 		$object = Post::transform( get_post( $post_id ) )->to_object();
-		$this->assertEquals( array(), $object->get_to() );
-		$this->assertEquals( array(), $object->get_cc() );
+		$this->assertEmpty( $object->get_to() );
+		$this->assertEmpty( $object->get_cc() );
 	}
 
 	/**
@@ -369,6 +369,16 @@ class Test_Post extends \WP_UnitTestCase {
 				'post_status'  => 'publish',
 			)
 		);
+
+		// For WP versions 6.1 and prior, we only look for attached images.
+		if ( ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
+			wp_update_post(
+				array(
+					'ID'          => $attachment_id,
+					'post_parent' => $post_id,
+				)
+			);
+		}
 
 		$object = Post::transform( get_post( $post_id ) )->to_object();
 
