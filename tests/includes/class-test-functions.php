@@ -406,39 +406,47 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	 */
 	public function provide_wp_versions() {
 		return array(
-			'standard version'        => array(
+			'standard version'                   => array(
 				'6.4.2',
 				'6.4',
 			),
-			'alpha version'           => array(
+			'alpha version'                      => array(
 				'6.4.2-alpha',
 				'6.4',
 			),
-			'different alpha version' => array(
+			'different alpha version'            => array(
 				'6.4-alpha',
 				'6.4',
 			),
-			'beta version'            => array(
+			'alpha version with patch'           => array(
+				'6.4.2-alpha-59438',
+				'6.4',
+			),
+			'different alpha version with patch' => array(
+				'6.5-alpha-59438',
+				'6.5',
+			),
+			'beta version'                       => array(
 				'6.4.2-beta1',
 				'6.4',
 			),
-			'RC version'              => array(
+			'RC version'                         => array(
 				'6.4.2-RC1',
 				'6.4',
 			),
-			'no patch version'        => array(
+			'no patch version'                   => array(
 				'6.4',
 				'6.4',
 			),
-			'triple zero'             => array(
+			'triple zero'                        => array(
 				'6.0.0',
 				'6.0',
 			),
-			'double digit'            => array(
+			'double digit'                       => array(
 				'10.5',
 				'10.5',
 			),
-			'single number'           => array(
+			'single number'                      => array(
 				'6',
 				'6',
 			),
