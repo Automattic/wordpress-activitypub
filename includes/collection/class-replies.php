@@ -20,26 +20,8 @@ use function Activitypub\get_rest_url_by_path;
  * Class containing code for getting replies Collections and CollectionPages of posts and comments.
  */
 class Replies {
-
 	/**
 	 * Get the Replies collection.
-	 *
-	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
-	 *
-	 * @return string|WP_Error The rest URL of the replies collection or WP_Error if the object is not a post or comment.
-	 */
-	private static function get_id( $wp_object ) {
-		if ( $wp_object instanceof WP_Post ) {
-			return get_rest_url_by_path( sprintf( 'posts/%d/replies', $wp_object->ID ) );
-		} elseif ( $wp_object instanceof WP_Comment ) {
-			return get_rest_url_by_path( sprintf( 'comments/%d/replies', $wp_object->comment_ID ) );
-		} else {
-			return new WP_Error( 'unsupported_object', 'The object is not a post or comment.' );
-		}
-	}
-
-	/**
-	 * Get the replies collection.
 	 *
 	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
 	 *
@@ -137,6 +119,7 @@ class Replies {
 				$comment_ids[] = $public_comment_id;
 			}
 		}
+
 		return $comment_ids;
 	}
 

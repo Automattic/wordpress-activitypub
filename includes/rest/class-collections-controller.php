@@ -27,28 +27,14 @@ use function Activitypub\get_rest_url_by_path;
  * @see https://docs.joinmastodon.org/spec/activitypub/#featuredTags
  * @see https://www.w3.org/TR/activitypub/#collections
  */
-class Collections_Controller extends \WP_REST_Controller {
-	/**
-	 * The namespace of this controller's route.
-	 *
-	 * @var string
-	 */
-	protected $namespace = ACTIVITYPUB_REST_NAMESPACE;
-
-	/**
-	 * The base of this controller's route.
-	 *
-	 * @var string
-	 */
-	protected $rest_base = '(?:users|actors)/(?P<user_id>[\w\-\.]+)/collections';
-
+class Collections_Controller extends Actors_Controller {
 	/**
 	 * Register routes.
 	 */
 	public function register_routes() {
 		\register_rest_route(
 			$this->namespace,
-			'/' . $this->rest_base . '/(?P<type>[\w\-\.]+)',
+			'/' . $this->rest_base . '/collections/(?P<type>[\w\-\.]+)',
 			array(
 				'args'   => array(
 					'user_id' => array(
@@ -65,7 +51,7 @@ class Collections_Controller extends \WP_REST_Controller {
 				),
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( $this, 'get_featured' ),
+					'callback'            => array( $this, 'get_items' ),
 					'permission_callback' => '__return_true',
 				),
 				'schema' => array( $this, 'get_item_schema' ),
@@ -224,7 +210,7 @@ class Collections_Controller extends \WP_REST_Controller {
 				'@context'   => array(
 					'type'     => 'array',
 					'items'    => array(
-						'type' => 'string',
+						'type' => array( 'string', 'object' ),
 					),
 					'required' => true,
 				),
@@ -235,7 +221,7 @@ class Collections_Controller extends \WP_REST_Controller {
 				),
 				'type'       => array(
 					'type'     => 'string',
-					'enum'     => array( 'OrderedCollection' ),
+					'enum'     => array( 'Collection', 'OrderedCollection' ),
 					'required' => true,
 				),
 				'totalItems' => array(

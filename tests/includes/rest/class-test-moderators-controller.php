@@ -8,21 +8,13 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Rest\Collection;
 
 /**
  * Test Moderators REST Endpoint.
  *
- * @coversDefaultClass \Activitypub\Rest\Collection
+ * @coversDefaultClass \Activitypub\Rest\Moderators_Controller
  */
-class Test_Collection extends \WP_UnitTestCase {
-	/**
-	 * The REST Server.
-	 *
-	 * @var \WP_REST_Server
-	 */
-	protected $server;
-
+class Test_Moderators_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
 	/**
 	 * A user with activitypub capability.
 	 *
@@ -66,25 +58,11 @@ class Test_Collection extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Set up before each test.
-	 */
-	public function set_up() {
-		parent::set_up();
-
-		global $wp_rest_server;
-
-		$wp_rest_server = new \WP_REST_Server();
-		$this->server   = $wp_rest_server;
-
-		do_action( 'rest_api_init' );
-	}
-
-	/**
 	 * Test moderators endpoint response structure.
 	 */
-	public function test_moderators_get() {
-		new \WP_REST_Request( 'GET', '/activitypub/1.0/collections/moderators' );
-		$response = Collection::moderators_get();
+	public function test_get_items() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/collections/moderators' );
+		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertEquals( 'application/activity+json; charset=' . get_option( 'blog_charset' ), $response->get_headers()['Content-Type'] );
@@ -107,5 +85,39 @@ class Test_Collection extends \WP_UnitTestCase {
 		// Test that user without cap is not in the list.
 		$user_id = home_url( '?author=' . self::$user_without_cap->ID );
 		$this->assertNotContains( $user_id, $data['orderedItems'] );
+	}
+
+	/**
+	 * Test that the Followers response matches its schema.
+	 *
+	 * @covers ::get_items
+	 * @covers ::get_item_schema
+	 */
+	public function test_response_matches_schema() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/collections/moderators' );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+		$schema   = ( new \Activitypub\Rest\Moderators_Controller() )->get_item_schema();
+
+		$valid = \rest_validate_value_from_schema( $data, $schema );
+		$this->assertNotWPError( $valid, 'Response failed schema validation: ' . ( \is_wp_error( $valid ) ? $valid->get_error_message() : '' ) );
+	}
+
+	/**
+	 * Test get_item method.
+	 *
+	 * @doesNotPerformAssertions
+	 */
+	public function test_get_item() {
+		// Controller does not implement get_item().
+	}
+
+	/**
+	 * Test get_item_schema method.
+	 *
+	 * @doesNotPerformAssertions
+	 */
+	public function test_get_item_schema() {
+		// Controller does not implement get_item_schema().
 	}
 }
