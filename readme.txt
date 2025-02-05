@@ -140,7 +140,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Changed: Allow Base Transformer to handle WP_Term objects for transformation.
 * Changed: Allow omitting replies in ActivityPub representations instead of setting them as empty.
 * Changed: Improved Query extensibility for third party plugins.
-* Changed: The Reply block now shows an embedded version of the referenced post, if available
+* Changed: The Reply block now shows an embedded version of the referenced post, if available.
 * Fixed: Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
 * Fixed: Avoid PHP warnings when using Debug mode and when the `actor` is not set.
 * Fixed: No longer creates Outbox items when importing content/users.
