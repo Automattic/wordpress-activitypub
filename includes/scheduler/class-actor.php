@@ -119,8 +119,10 @@ class Actor {
 	 * @param int $user_id  The user ID to update (Could be 0 for Blog-User).
 	 */
 	public static function schedule_profile_update( $user_id ) {
-		$actor = Actors::get_by_id( $user_id );
+		if ( defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+			return;
+		}
 
-		add_to_outbox( $actor, 'Update', $user_id );
+		add_to_outbox( Actors::get_by_id( $user_id ), 'Update', $user_id );
 	}
 }

@@ -377,4 +377,71 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		$this->assertTrue( \Activitypub\is_post_disabled( null ) );
 		$this->assertTrue( \Activitypub\is_post_disabled( 999999 ) );
 	}
+
+	/**
+	 * Test get_masked_wp_version function.
+	 *
+	 * @covers ::get_masked_wp_version
+	 * @dataProvider provide_wp_versions
+	 *
+	 * @param string $input    The input version.
+	 * @param string $expected The expected masked version.
+	 */
+	public function test_get_masked_wp_version( $input, $expected ) {
+		global $wp_version;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$wp_version = $input;
+
+		$this->assertEquals(
+			$expected,
+			\Activitypub\get_masked_wp_version(),
+			sprintf( 'Version %s should be masked to %s', $input, $expected )
+		);
+	}
+
+	/**
+	 * Data provider for WordPress versions.
+	 *
+	 * @return array[] Array of test cases.
+	 */
+	public function provide_wp_versions() {
+		return array(
+			'standard version'        => array(
+				'6.4.2',
+				'6.4',
+			),
+			'alpha version'           => array(
+				'6.4.2-alpha',
+				'6.4',
+			),
+			'different alpha version' => array(
+				'6.4-alpha',
+				'6.4',
+			),
+			'beta version'            => array(
+				'6.4.2-beta1',
+				'6.4',
+			),
+			'RC version'              => array(
+				'6.4.2-RC1',
+				'6.4',
+			),
+			'no patch version'        => array(
+				'6.4',
+				'6.4',
+			),
+			'triple zero'             => array(
+				'6.0.0',
+				'6.0',
+			),
+			'double digit'            => array(
+				'10.5',
+				'10.5',
+			),
+			'single number'           => array(
+				'6',
+				'6',
+			),
+		);
+	}
 }
