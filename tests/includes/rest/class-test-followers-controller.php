@@ -145,6 +145,12 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$this->assertArrayHasKey( 'last', $data );
 		$this->assertStringContainsString( 'page=1', $data['first'] );
 		$this->assertIsString( $data['last'] );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+		$request->set_param( 'page', 100 );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertErrorResponse( 'rest_post_invalid_page_number', $response, 400 );
 	}
 
 	/**

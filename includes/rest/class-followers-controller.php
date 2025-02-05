@@ -119,7 +119,16 @@ class Followers_Controller extends Actors_Controller {
 			),
 		);
 
-		$max_pages         = \ceil( $response['totalItems'] / $per_page );
+		$max_pages = \ceil( $response['totalItems'] / $per_page );
+
+		if ( $page > $max_pages ) {
+			return new \WP_Error(
+				'rest_post_invalid_page_number',
+				'The page number requested is larger than the number of pages available.',
+				array( 'status' => 400 )
+			);
+		}
+
 		$response['first'] = \add_query_arg( 'page', 1, $response['partOf'] );
 		$response['last']  = \add_query_arg( 'page', \max( $max_pages, 1 ), $response['partOf'] );
 
