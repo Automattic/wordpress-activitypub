@@ -174,6 +174,11 @@ class Query {
 			}
 		}
 
+		/**
+		 * Filters the queried object.
+		 *
+		 * @param \WP_Term|\WP_Post_Type|\WP_Post|\WP_User|\WP_Comment|null $queried_object The queried object.
+		 */
 		return apply_filters( 'activitypub_queried_object', $queried_object );
 	}
 
