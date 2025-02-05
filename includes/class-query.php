@@ -88,8 +88,13 @@ class Query {
 
 		if ( ! $queried_object ) {
 			// If the object is not a valid ActivityPub object, try to get a virtual object.
-			$this->activitypub_object = $this->maybe_get_virtual_object();
-			return $this->activitypub_object;
+			$activitypub_object = $this->maybe_get_virtual_object();
+
+			if ( $activitypub_object ) {
+				$this->activitypub_object = $activitypub_object;
+
+				return $this->activitypub_object;
+			}
 		}
 
 		$transformer = Factory::get_transformer( $queried_object );
@@ -144,30 +149,37 @@ class Query {
 	public function get_queried_object() {
 		$queried_object = \get_queried_object();
 
-		if ( $queried_object ) {
-			return $queried_object;
-		}
-
 		// Check Comment by ID.
-		$comment_id = \get_query_var( 'c' );
-		if ( $comment_id ) {
-			return \get_comment( $comment_id );
+		if ( ! $queried_object ) {
+			$comment_id = \get_query_var( 'c' );
+			if ( $comment_id ) {
+				$queried_object = \get_comment( $comment_id );
+			}
 		}
 
 		// Check Post by ID (works for custom post types).
-		$post_id = \get_query_var( 'p' );
-		if ( $post_id ) {
-			return \get_post( $post_id );
+		if ( ! $queried_object ) {
+			$post_id = \get_query_var( 'p' );
+			if ( $post_id ) {
+				$queried_object = \get_post( $post_id );
+			}
 		}
 
 		// Try to get Author by ID.
-		$url       = $this->get_request_url();
-		$author_id = url_to_authorid( $url );
-		if ( $author_id ) {
-			return \get_user_by( 'id', $author_id );
+		if ( ! $queried_object ) {
+			$url       = $this->get_request_url();
+			$author_id = url_to_authorid( $url );
+			if ( $author_id ) {
+				$queried_object = \get_user_by( 'id', $author_id );
+			}
 		}
 
-		return null;
+		/**
+		 * Filters the queried object.
+		 *
+		 * @param \WP_Term|\WP_Post_Type|\WP_Post|\WP_User|\WP_Comment|null $queried_object The queried object.
+		 */
+		return apply_filters( 'activitypub_queried_object', $queried_object );
 	}
 
 	/**

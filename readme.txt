@@ -136,9 +136,11 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: `context` support for posts and comments.
 * Added: Cleanup of option values when the plugin is uninstalled.
 * Added: Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
+* Added: Show ActivityPub preview in row actions when Block Editor is enabled but not used for the post type.
 * Changed: Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
 * Changed: Allow Base Transformer to handle WP_Term objects for transformation.
 * Changed: Allow omitting replies in ActivityPub representations instead of setting them as empty.
+* Changed: Improved Query extensibility for third party plugins.
 * Fixed: Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
 * Fixed: Avoid PHP warnings when using Debug mode and when the `actor` is not set.
 * Fixed: No longer creates Outbox items when importing content/users.

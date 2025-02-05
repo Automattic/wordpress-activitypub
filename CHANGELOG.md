@@ -12,12 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `context` support for posts and comments.
 * Cleanup of option values when the plugin is uninstalled.
 * Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
-
+* Show ActivityPub preview in row actions when Block Editor is enabled but not used for the post type.
+*
 ### Changed
 
 * Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
 * Allow omitting replies in ActivityPub representations instead of setting them as empty.
 * Allow Base Transformer to handle WP_Term objects for transformation.
+* Improved Query extensibility for third party plugins.
 
 ### Fixed
 

@@ -879,8 +879,8 @@ class Admin {
 			! \post_type_supports( \get_post_type( $post ), 'activitypub' ) ||
 			! in_array( $post->post_status, array( 'pending', 'draft', 'future', 'publish' ), true ) ||
 			! \current_user_can( 'edit_post', $post->ID ) ||
-			ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === get_content_visibility( $post ) ||
-			site_supports_blocks()
+			ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === get_content_visibility( $post->ID ) ||
+			( site_supports_blocks() && \use_block_editor_for_post_type( $post->post_type ) )
 		) {
 			return $actions;
 		}
