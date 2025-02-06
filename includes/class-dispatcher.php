@@ -317,12 +317,12 @@ class Dispatcher {
 	 * @deprecated Unreleased Use {@see Followers::maybe_add_inboxes_of_blog_user} instead.
 	 *
 	 * @param array    $inboxes  The list of Inboxes.
+	 * @param int      $actor_id The WordPress Actor-ID.
 	 * @param Activity $activity The ActivityPub Activity.
-	 * @param int      $actor_id The WordPress Actor ID.
 	 *
 	 * @return array The filtered Inboxes.
 	 */
-	public static function maybe_add_inboxes_of_blog_user( $inboxes, $activity, $actor_id ) { // phpcs:ignore
+	public static function maybe_add_inboxes_of_blog_user( $inboxes, $actor_id, $activity ) { // phpcs:ignore
 		_deprecated_function( __METHOD__, 'Unreleased', 'Followers::maybe_add_inboxes_of_blog_user' );
 
 		return $inboxes;
