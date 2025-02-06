@@ -287,7 +287,7 @@ class Dispatcher {
 	}
 
 	/**
-	 * Default filter to add Inboxes of the Blog User in dual mode.
+	 * Adds Blog Actor inboxes to Updates so the Blog User's followers are notified of edits.
 	 *
 	 * @deprecated Unreleased Use {@see Followers::maybe_add_inboxes_of_blog_user} instead.
 	 *
