@@ -109,11 +109,12 @@ class Dispatcher {
 	/**
 	 * Asynchronously runs batch processing routines.
 	 *
-	 * @param string   $json           The ActivityPub Activity JSON.
-	 * @param int      $actor_id       The actor ID.
-	 * @param \WP_Post $outbox_item_id The Outbox item ID.
-	 * @param int      $batch_size     Optional. The batch size. Default 50.
-	 * @param int      $offset         Optional. The offset. Default 0.
+	 * @param string $json           The ActivityPub Activity JSON.
+	 * @param int    $actor_id       The actor ID.
+	 * @param int    $outbox_item_id The Outbox item ID.
+	 * @param int    $batch_size     Optional. The batch size. Default 50.
+	 * @param int    $offset         Optional. The offset. Default 0.
+	 *
 	 * @return array|void The next batch of followers to process, or void if done.
 	 */
 	public static function send_to_followers( $json, $actor_id, $outbox_item_id, $batch_size = 50, $offset = 0 ) {
@@ -122,16 +123,46 @@ class Dispatcher {
 		foreach ( $inboxes as $inbox ) {
 			$result = safe_remote_post( $inbox, $json, $actor_id );
 
-			// @TODO Handle errors more elegantly.
-			if ( wp_remote_retrieve_response_code( $result ) >= 400 ) {
-				\error_log( 'Error sending to follower: ' . $inbox ); // phpcs:ignore
-			}
+			/**
+			 * Fires when the batch of followers is complete.
+			 *
+			 * @param array  $result         The result of the remote post request.
+			 * @param string $inbox          The inbox URL.
+			 * @param string $json           The ActivityPub Activity JSON.
+			 * @param int    $actor_id       The actor ID.
+			 * @param int    $outbox_item_id The Outbox item ID.
+			 */
+			\do_action( 'activitypub_sent_to_inbox', $result, $inbox, $json, $actor_id, $outbox_item_id );
 		}
 
 		if ( is_countable( $inboxes ) && count( $inboxes ) < self::$batch_size ) {
+			/**
+			 * Fires when the followers are complete.
+			 *
+			 * @param array  $inboxes        The inboxes.
+			 * @param string $json           The ActivityPub Activity JSON
+			 * @param int    $actor_id       The actor ID.
+			 * @param int    $outbox_item_id The Outbox item ID.
+			 * @param int    $batch_size     The batch size.
+			 * @param int    $offset         The offset.
+			 */
+			\do_action( 'activitypub_outbox_processing_complete', $inboxes, $json, $actor_id, $outbox_item_id, $batch_size, $offset );
+
 			// No more followers to process for this update.
 			\wp_publish_post( $outbox_item_id );
 		} else {
+			/**
+			 * Fires when the batch of followers is complete.
+			 *
+			 * @param array  $inboxes        The inboxes.
+			 * @param string $json           The ActivityPub Activity JSON
+			 * @param int    $actor_id       The actor ID.
+			 * @param int    $outbox_item_id The Outbox item ID.
+			 * @param int    $batch_size     The batch size.
+			 * @param int    $offset         The offset.
+			 */
+			\do_action( 'activitypub_outbox_processing_batch_complete', $inboxes, $json, $actor_id, $outbox_item_id, $batch_size, $offset );
+
 			return array( $json, $actor_id, $outbox_item_id, $batch_size, $offset + $batch_size );
 		}
 	}
@@ -254,7 +285,7 @@ class Dispatcher {
 	/**
 	 * Default filter to add Inboxes of the Blog User in dual mode.
 	 *
-	 * @deprecated 5.2.0 Use {@see Followers::maybe_add_inboxes_of_blog_user} instead.
+	 * @deprecated Unreleased Use {@see Followers::maybe_add_inboxes_of_blog_user} instead.
 	 *
 	 * @param array    $inboxes  The list of Inboxes.
 	 * @param Activity $activity The ActivityPub Activity.
@@ -263,7 +294,7 @@ class Dispatcher {
 	 * @return array The filtered Inboxes.
 	 */
 	public static function maybe_add_inboxes_of_blog_user( $inboxes, $activity, $actor_id ) { // phpcs:ignore
-		_deprecated_function( __METHOD__, '5.1.0', 'Followers::maybe_add_inboxes_of_blog_user' );
+		_deprecated_function( __METHOD__, 'Unreleased', 'Followers::maybe_add_inboxes_of_blog_user' );
 
 		return $inboxes;
 	}
