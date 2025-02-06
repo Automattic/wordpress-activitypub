@@ -172,6 +172,17 @@ class Scheduler {
 	 * Reprocess the outbox.
 	 */
 	public static function reprocess_outbox() {
+		// Bail if there is a pending batch.
+		if ( self::next_scheduled_hook( 'activitypub_async_batch' ) ) {
+			return;
+		}
+
+		// Bail if there is a batch in progress.
+		$key = \md5( \serialize( Dispatcher::$callback ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+		if ( self::is_locked( $key ) ) {
+			return;
+		}
+
 		$ids = \get_posts(
 			array(
 				'post_type'      => Outbox::POST_TYPE,
@@ -276,5 +287,29 @@ class Scheduler {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Get the next scheduled hook.
+	 *
+	 * @param string $hook The hook name.
+	 * @return int|bool The timestamp of the next scheduled hook, or false if none found.
+	 */
+	private static function next_scheduled_hook( $hook ) {
+		$crons = _get_cron_array();
+		if ( empty( $crons ) ) {
+			return false;
+		}
+
+		// Get next event.
+		$next = false;
+		foreach ( $crons as $timestamp => $cron ) {
+			if ( isset( $cron[ $hook ] ) ) {
+				$next = $timestamp;
+				break;
+			}
+		}
+
+		return $next;
 	}
 }
