@@ -123,16 +123,44 @@ class Dispatcher {
 		foreach ( $inboxes as $inbox ) {
 			$result = safe_remote_post( $inbox, $json, $actor_id );
 
-			// @TODO Handle errors more elegantly.
-			if ( wp_remote_retrieve_response_code( $result ) >= 400 ) {
-				\error_log( 'Error sending to follower: ' . $inbox ); // phpcs:ignore
-			}
+			/**
+			 * Fires when the batch of followers is complete.
+			 *
+			 * @param array    $inboxes  The inboxes.
+			 * @param int      $actor_id The actor ID.
+			 * @param Activity $activity The activity.
+			 * @param int      $batch_size The batch size.
+			 * @param int      $offset The offset.
+			 */
+			\do_action( 'post_activitypub_sent_to_inbox', $result, $inbox, $actor_id, $activity, $outbox_item );
 		}
 
 		if ( is_countable( $inboxes ) && count( $inboxes ) < self::$batch_size ) {
+			/**
+			 * Fires when the batch of followers is complete.
+			 *
+			 * @param array    $inboxes  The inboxes.
+			 * @param int      $actor_id The actor ID.
+			 * @param Activity $activity The activity.
+			 * @param int      $batch_size The batch size.
+			 * @param int      $offset The offset.
+			 */
+			\do_action( 'activitypub_sent_to_inboxes_batch_complete', $inboxes, $actor_id, $activity, $batch_size, $offset );
+
 			// No more followers to process for this update.
 			\wp_publish_post( $outbox_item );
 		} else {
+			/**
+			 * Fires when the followers are complete.
+			 *
+			 * @param array    $inboxes  The inboxes.
+			 * @param int      $actor_id The actor ID.
+			 * @param Activity $activity The activity.
+			 * @param int      $batch_size The batch size.
+			 * @param int      $offset The offset.
+			 */
+			\do_action( 'activitypub_sent_to_inboxes_complete', $inboxes, $actor_id, $activity, $batch_size, $offset );
+
 			return array( $activity, $actor_id, $outbox_item, $batch_size, $offset + $batch_size );
 		}
 	}
