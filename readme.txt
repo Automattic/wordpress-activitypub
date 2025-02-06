@@ -132,6 +132,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: Batch Outbox-Processing.
+* Added: Outbox processed events get logged in Stream and show any errors returned from inboxes.
 * Changed: Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
 
 = 5.1.0 =
@@ -151,7 +152,6 @@ For reasons of data protection, it is not possible to see the followers of other
 = 5.0.0 =
 
 * Added: Outbox queue
-* Added: Outbox processed events get logged in Stream and show any errors returned from inboxes
 * Changed: Rewrite the current dispatcher system, to use the Outbox instead of a Scheduler.
 * Changed: Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins.
 * Changed: Moved password check to `is_post_disabled` function.
