@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 * Increased probability of Outbox items being processed with the correct author.
+* Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
 
 ## [5.1.0] - 2025-02-06
 
