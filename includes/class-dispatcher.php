@@ -114,6 +114,7 @@ class Dispatcher {
 	 * @param \WP_Post $outbox_item_id The Outbox item ID.
 	 * @param int      $batch_size     Optional. The batch size. Default 50.
 	 * @param int      $offset         Optional. The offset. Default 0.
+	 *
 	 * @return array|void The next batch of followers to process, or void if done.
 	 */
 	public static function send_to_followers( $json, $actor_id, $outbox_item_id, $batch_size = 50, $offset = 0 ) {
@@ -138,12 +139,12 @@ class Dispatcher {
 			/**
 			 * Fires when the followers are complete.
 			 *
-			 * @param array    $inboxes  The inboxes.
-			 * @param int      $actor_id The actor ID.
-			 * @param Activity $json The activity.
+			 * @param array    $inboxes     The inboxes.
+			 * @param int      $actor_id    The actor ID.
+			 * @param Activity $json        The activity.
 			 * @param \WP_Post $outbox_item The outbox item.
-			 * @param int      $batch_size The batch size.
-			 * @param int      $offset The offset.
+			 * @param int      $batch_size  The batch size.
+			 * @param int      $offset      The offset.
 			 */
 			\do_action( 'activitypub_outbox_processing_complete', $inboxes, $actor_id, $json, $outbox_item, $batch_size, $offset );
 
@@ -153,12 +154,12 @@ class Dispatcher {
 			/**
 			 * Fires when the batch of followers is complete.
 			 *
-			 * @param array    $inboxes  The inboxes.
-			 * @param int      $actor_id The actor ID.
-			 * @param Activity $json.    The activity.
+			 * @param array    $inboxes     The inboxes.
+			 * @param int      $actor_id    The actor ID.
+			 * @param Activity $json.       The activity.
 			 * @param \WP_Post $outbox_item The outbox item.
-			 * @param int      $batch_size The batch size.
-			 * @param int      $offset The offset.
+			 * @param int      $batch_size  The batch size.
+			 * @param int      $offset      The offset.
 			 */
 			\do_action( 'activitypub_outbox_processing_batch_complete', $inboxes, $actor_id, $json, $outbox_item, $batch_size, $offset );
 
