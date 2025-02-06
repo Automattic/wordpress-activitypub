@@ -129,6 +129,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Changed: Increased probability of Outbox items being processed with the correct author.
+
 = 5.1.0 =
 
 * Added: Cleanup of option values when the plugin is uninstalled.

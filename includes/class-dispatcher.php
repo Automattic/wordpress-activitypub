@@ -60,13 +60,20 @@ class Dispatcher {
 				break;
 		}
 
+		$actor = Actors::get_by_id( $actor_id );
+		if ( \is_wp_error( $actor ) ) {
+			// If the actor is not found, publish the post and don't try again.
+			\wp_publish_post( $outbox_item );
+			return;
+		}
+
 		$type     = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 		$activity = new Activity();
 		$activity->set_type( $type );
 		$activity->set_id( $outbox_item->guid );
 		// Pre-fill the Activity with data (for example cc and to).
 		$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
-		$activity->set_actor( Actors::get_by_id( $outbox_item->post_author )->get_id() );
+		$activity->set_actor( $actor->get_id() );
 
 		// Use simple Object (only ID-URI) for Like and Announce.
 		if ( in_array( $type, array( 'Like', 'Delete' ), true ) ) {
