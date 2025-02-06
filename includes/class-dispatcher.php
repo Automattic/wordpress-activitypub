@@ -28,6 +28,13 @@ class Dispatcher {
 	public static $batch_size = 50;
 
 	/**
+	 * Callback for the async batch processing.
+	 *
+	 * @var array
+	 */
+	public static $callback = array( self::class, 'send_to_followers' );
+
+	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
@@ -97,7 +104,7 @@ class Dispatcher {
 			\time(),
 			'activitypub_async_batch',
 			array(
-				array( self::class, 'send_to_followers' ),
+				self::$callback,
 				$activity,
 				$actor_id,
 				$outbox_item,
