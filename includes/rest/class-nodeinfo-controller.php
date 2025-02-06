@@ -80,6 +80,10 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 		$response = array(
 			'links' => array(
 				array(
+					'rel'  => 'http://nodeinfo.diaspora.software/ns/schema/2.0',
+					'href' => get_rest_url_by_path( '/nodeinfo/2.0' ),
+				),
+				array(
 					'rel'  => 'https://nodeinfo.diaspora.software/ns/schema/2.0',
 					'href' => get_rest_url_by_path( '/nodeinfo/2.0' ),
 				),

@@ -5,22 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.1.0] - 2025-02-06
 
 ### Added
 
-* Cleanup of option values when the plugin is uninstalled
+* Cleanup of option values when the plugin is uninstalled.
 * Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
+* Show ActivityPub preview in row actions when Block Editor is enabled but not used for the post type.
 
 ### Changed
 
 * Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
-* Changed: Allow Base Transformer to handle WP_Term objects for transformation.
+* Allow omitting replies in ActivityPub representations instead of setting them as empty.
+* Allow Base Transformer to handle WP_Term objects for transformation.
+* Improved Query extensibility for third party plugins.
 
 ### Fixed
 
 * Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
 * Avoid PHP warnings when using Debug mode and when the `actor` is not set.
+* No longer creates Outbox items when importing content/users.
+* Fix NodeInfo 2.0 URL to be HTTP instead of HTTPS.
 
 ## [5.0.0] - 2025-02-03
 
@@ -1265,8 +1270,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.0.0...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.1.0...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[5.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.0.0...5.1.0
 [5.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.3...5.0.0
 [4.7.3]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.2...4.7.3
 [4.7.2]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.1...4.7.2

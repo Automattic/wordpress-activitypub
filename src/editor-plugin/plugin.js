@@ -51,7 +51,7 @@ const EditorPlugin = () => {
 	return (
 		<PluginDocumentSettingPanel
 			name="activitypub"
-			title={ __( '⁂ Fediverse', 'activitypub' ) }
+			title={ __( 'Fediverse ⁂', 'activitypub' ) }
 		>
 			<TextControl
 				label={ __( 'Content Warning', 'activitypub' ) }
@@ -100,7 +100,7 @@ const EditorPreview = () => {
 					icon={ external }
 					disabled={ post_status === 'auto-draft' }
 				>
-					{ __( '⁂ Fediverse preview', 'activitypub' ) }
+					{ __( 'Fediverse preview ⁂', 'activitypub' ) }
 				</PluginPreviewMenuItem>
 			) : null }
 		</>

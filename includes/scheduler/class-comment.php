@@ -38,6 +38,10 @@ class Comment {
 	 * @param \WP_Comment $comment    Comment object.
 	 */
 	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
+		if ( defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+			return;
+		}
+
 		$comment = get_comment( $comment );
 
 		// Federate only comments that are written by a registered user.
