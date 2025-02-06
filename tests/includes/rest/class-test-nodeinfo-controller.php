@@ -37,7 +37,7 @@ class Test_Nodeinfo_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertArrayHasKey( 'links', $data );
-		$this->assertCount( 2, $data['links'] );
+		$this->assertCount( 3, $data['links'] );
 
 		// Test first link.
 		$this->assertEquals( 'https://nodeinfo.diaspora.software/ns/schema/2.0', $data['links'][0]['rel'] );
