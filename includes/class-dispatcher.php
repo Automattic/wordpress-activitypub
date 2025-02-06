@@ -200,6 +200,10 @@ class Dispatcher {
 			 */
 			\do_action( 'activitypub_sent_to_inbox', $result, $inbox, $json, $actor_id, $outbox_item->ID );
 		}
+
+		if ( ! self::should_send_to_followers( $activity, $actor_id, $outbox_item ) ) {
+			\wp_publish_post( $outbox_item );
+		}
 	}
 
 	/**
