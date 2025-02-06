@@ -64,9 +64,6 @@ class Debug {
 		if ( \is_wp_error( $result ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions
 			\error_log( "[DISPATCHER] Failed Request to: {$inbox} with Result: " . \print_r( $result, true ) );
-		} else {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions
-			\error_log( "[DISPATCHER] Success Request to: {$inbox} with Result: " . \print_r( $result, true ) );
 		}
 	}
 
