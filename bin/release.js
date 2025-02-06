@@ -109,8 +109,16 @@ async function createRelease(version) {
 	phpFiles.forEach((filePath) => {
 		updateVersionInFile(filePath, version, [
 			{
-				search: /@since unreleased/g,
+				search: /@since unreleased/gi,
 				replace: `@since ${version}`
+			},
+			{
+				search: /@deprecated unreleased/gi,
+				replace: `@deprecated ${version}`
+			},
+			{
+				search: /(_deprecated_function\([^,]*,\s*['"])(unreleased)(['"])/gi,
+				replace: (match) => match.replace(/unreleased/i, version)
 			}
 		]);
 	});
