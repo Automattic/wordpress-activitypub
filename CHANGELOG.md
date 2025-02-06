@@ -40,6 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * No longer creates Outbox items when importing content/users.
 * Fix NodeInfo 2.0 URL to be HTTP instead of HTTPS.
 
+## [Unreleased]
+
+### Added
+
+* Batch Outbox-Processing.
+
 ## [5.0.0] - 2025-02-03
 
 ### Changed

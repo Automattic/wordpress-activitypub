@@ -35,13 +35,6 @@ class Dispatcher {
 	public static $callback = array( self::class, 'send_to_followers' );
 
 	/**
-	 * Callback for the async batch processing.
-	 *
-	 * @var array
-	 */
-	public static $callback = array( self::class, 'send_to_followers' );
-
-	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
