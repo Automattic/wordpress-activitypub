@@ -17,11 +17,11 @@ class Debug {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		if ( \WP_DEBUG_LOG ) {
+		if ( \WP_DEBUG && \WP_DEBUG_LOG ) {
 			\add_action( 'activitypub_safe_remote_post_response', array( self::class, 'log_remote_post_responses' ), 10, 2 );
 			\add_action( 'activitypub_inbox', array( self::class, 'log_inbox' ), 10, 3 );
 
-			\add_action( 'activitypub_sent_to_inbox', array( self::class, 'log_sent_to_follower' ), 10, 4 );
+			\add_action( 'activitypub_sent_to_inbox', array( self::class, 'log_sent_to_inbox' ), 10, 2 );
 		}
 	}
 
@@ -59,10 +59,8 @@ class Debug {
 	 *
 	 * @param array  $result The result of the remote post request.
 	 * @param string $inbox  The inbox URL.
-	 * @param int    $actor_id The ID of the actor.
-	 * @param array  $activity The activity.
 	 */
-	public static function log_sent_to_follower( $result, $inbox, $actor_id, $activity ) {
+	public static function log_sent_to_inbox( $result, $inbox ) {
 		if ( \is_wp_error( $result ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions
 			\error_log( "[DISPATCHER] Failed Request to: {$inbox} with Result: " . \print_r( $result, true ) );
