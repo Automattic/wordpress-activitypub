@@ -260,7 +260,7 @@ abstract class Base {
 	/**
 	 * Get the replies Collection.
 	 *
-	 * @return array The replies collection.
+	 * @return array|null The replies collection on success or null on failure.
 	 */
 	public function get_replies() {
 		return Replies::get_collection( $this->item );

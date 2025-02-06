@@ -281,6 +281,7 @@ class Activitypub {
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
 		$vars[] = 'preview';
+		$vars[] = 'author';
 		$vars[] = 'c';
 		$vars[] = 'p';
 
