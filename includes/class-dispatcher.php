@@ -98,9 +98,9 @@ class Dispatcher {
 			'activitypub_async_batch',
 			array(
 				self::$callback,
-				$activity,
+				$activity->to_json(),
 				$actor_id,
-				$outbox_item,
+				$outbox_item->ID,
 				self::$batch_size,
 			)
 		);
@@ -109,16 +109,15 @@ class Dispatcher {
 	/**
 	 * Asynchronously runs batch processing routines.
 	 *
-	 * @param Activity $activity    The ActivityPub Activity.
-	 * @param int      $actor_id    The actor ID.
-	 * @param \WP_Post $outbox_item The Outbox item.
-	 * @param int      $batch_size  Optional. The batch size. Default 50.
-	 * @param int      $offset      Optional. The offset. Default 0.
+	 * @param Activity $json           The ActivityPub Activity JSON.
+	 * @param int      $actor_id       The actor ID.
+	 * @param \WP_Post $outbox_item_id The Outbox item ID.
+	 * @param int      $batch_size     Optional. The batch size. Default 50.
+	 * @param int      $offset         Optional. The offset. Default 0.
 	 * @return array|void The next batch of followers to process, or void if done.
 	 */
-	public static function send_to_followers( $activity, $actor_id, $outbox_item, $batch_size = 50, $offset = 0 ) {
-		$inboxes = Followers::get_inboxes_for_activity( $actor_id, $activity, $batch_size, $offset );
-		$json    = $activity->to_json();
+	public static function send_to_followers( $json, $actor_id, $outbox_item_id, $batch_size = 50, $offset = 0 ) {
+		$inboxes = Followers::get_inboxes_for_activity( $json, $actor_id, $batch_size, $offset );
 
 		foreach ( $inboxes as $inbox ) {
 			$result = safe_remote_post( $inbox, $json, $actor_id );
@@ -131,9 +130,9 @@ class Dispatcher {
 
 		if ( is_countable( $inboxes ) && count( $inboxes ) < self::$batch_size ) {
 			// No more followers to process for this update.
-			\wp_publish_post( $outbox_item );
+			\wp_publish_post( $outbox_item_id );
 		} else {
-			return array( $activity, $actor_id, $outbox_item, $batch_size, $offset + $batch_size );
+			return array( $json, $actor_id, $outbox_item_id, $batch_size, $offset + $batch_size );
 		}
 	}
 
@@ -255,17 +254,18 @@ class Dispatcher {
 	/**
 	 * Default filter to add Inboxes of the Blog User in dual mode.
 	 *
-	 * @deprecated 5.1.0 Use {@see Followers::maybe_add_inboxes_of_blog_user} instead.
+	 * @deprecated 5.2.0 Use {@see Followers::maybe_add_inboxes_of_blog_user} instead.
 	 *
+	 * @param array    $inboxes  The list of Inboxes.
 	 * @param Activity $activity The ActivityPub Activity.
 	 * @param int      $actor_id The WordPress Actor ID.
 	 *
-	 * @return bool True if the Blog User's inboxes should be added.
+	 * @return array The filtered Inboxes.
 	 */
-	public static function maybe_add_inboxes_of_blog_user( $activity, $actor_id ) {
+	public static function maybe_add_inboxes_of_blog_user( $inboxes, $activity, $actor_id ) { // phpcs:ignore
 		_deprecated_function( __METHOD__, '5.1.0', 'Followers::maybe_add_inboxes_of_blog_user' );
 
-		return Followers::maybe_add_inboxes_of_blog_user( $activity, $actor_id );
+		return $inboxes;
 	}
 
 	/**
