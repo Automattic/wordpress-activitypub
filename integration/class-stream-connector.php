@@ -224,7 +224,7 @@ class Stream_Connector extends \WP_Stream\Connector {
 		$object_type  = $outbox_item->post_type;
 		$object_title = $outbox_item->post_title;
 
-		$post_id      = url_to_postid( $outbox_item->post_title );
+		$post_id = url_to_postid( $outbox_item->post_title );
 		if ( $post_id ) {
 			$post = get_post( $post_id );
 
