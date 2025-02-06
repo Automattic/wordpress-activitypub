@@ -29,6 +29,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * Test maybe_add_inboxes_of_blog_user when actor mode is not ACTIVITYPUB_ACTOR_AND_BLOG_MODE
 	 *
 	 * @covers ::maybe_add_inboxes_of_blog_user
+	 * @expectedDeprecated Activitypub\Dispatcher::maybe_add_inboxes_of_blog_user
 	 */
 	public function test_maybe_add_inboxes_of_blog_user_wrong_mode() {
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
@@ -44,6 +45,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * Test maybe_add_inboxes_of_blog_user when actor is blog user
 	 *
 	 * @covers ::maybe_add_inboxes_of_blog_user
+	 * @expectedDeprecated Activitypub\Dispatcher::maybe_add_inboxes_of_blog_user
 	 */
 	public function test_maybe_add_inboxes_of_blog_user_is_blog_user() {
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
@@ -59,6 +61,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * Test maybe_add_inboxes_of_blog_user when activity type is not Update
 	 *
 	 * @covers ::maybe_add_inboxes_of_blog_user
+	 * @expectedDeprecated Activitypub\Dispatcher::maybe_add_inboxes_of_blog_user
 	 */
 	public function test_maybe_add_inboxes_of_blog_user_not_update() {
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
@@ -109,11 +112,28 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
 
+		$type     = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
+		$activity = new Activity();
+		$activity->set_type( $type );
+		$activity->set_id( $outbox_item->guid );
+		// Pre-fill the Activity with data (for example cc and to).
+		$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
+		$activity->set_actor( Actors::get_by_id( $outbox_item->post_author )->get_id() );
+
 		Dispatcher::process_outbox( $outbox_item->ID );
 
-		// Check that the outbox item is now published.
-		$outbox_item = \get_post( $outbox_item->ID );
-		$this->assertEquals( 'publish', $outbox_item->post_status );
+		$this->assertNotFalse(
+			wp_next_scheduled(
+				'activitypub_async_batch',
+				array(
+					Dispatcher::$callback,
+					$activity->to_json(),
+					(string) self::$user_id,
+					$outbox_item->ID,
+					Dispatcher::$batch_size,
+				)
+			)
+		);
 
 		remove_filter( 'activitypub_send_activity_to_followers', $test_callback );
 	}

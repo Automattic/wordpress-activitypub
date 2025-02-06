@@ -281,6 +281,7 @@ class Activitypub {
 	public static function add_query_vars( $vars ) {
 		$vars[] = 'activitypub';
 		$vars[] = 'preview';
+		$vars[] = 'author';
 		$vars[] = 'c';
 		$vars[] = 'p';
 
@@ -557,8 +558,11 @@ class Activitypub {
 					'create_posts' => false,
 				),
 				'map_meta_cap'        => true,
+				'public'              => false,
+				'show_in_rest'        => true,
 				'rewrite'             => false,
 				'query_var'           => false,
+				'supports'            => array( 'title', 'editor', 'author', 'custom-fields' ),
 				'delete_with_user'    => true,
 				'can_export'          => true,
 				'exclude_from_search' => true,
@@ -577,6 +581,7 @@ class Activitypub {
 				'type'              => 'string',
 				'description'       => 'The type of the activity',
 				'single'            => true,
+				'show_in_rest'      => true,
 				'sanitize_callback' => function ( $value ) {
 					$value  = ucfirst( strtolower( $value ) );
 					$schema = array(
@@ -600,6 +605,7 @@ class Activitypub {
 			array(
 				'type'              => 'string',
 				'single'            => true,
+				'show_in_rest'      => true,
 				'sanitize_callback' => function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
@@ -618,11 +624,22 @@ class Activitypub {
 
 		\register_post_meta(
 			Outbox::POST_TYPE,
-			'activitypub_content_visibility',
+			'_activitypub_object_id',
 			array(
 				'show_in_rest'      => true,
 				'single'            => true,
 				'type'              => 'string',
+				'sanitize_callback' => 'sanatize_url',
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'activitypub_content_visibility',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'show_in_rest'      => true,
 				'sanitize_callback' => function ( $value ) {
 					$schema = array(
 						'type'    => 'string',

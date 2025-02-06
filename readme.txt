@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
-Stable tag: 5.0.0
+Stable tag: 5.1.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -84,8 +84,6 @@ Add the following to the site.conf in sites-available:
 
 Where 'blog' is the path to the subdirectory at which your blog resides.
 
-= What if you are running your blog in a subdirectory? =
-
 If you are running your blog in a subdirectory, but have a different [wp_siteurl](https://wordpress.org/documentation/article/giving-wordpress-its-own-directory/), you don't need the redirect, because the index.php will take care of that.
 
 = What if you are running your blog behind a reverse proxy with Apache? =
@@ -133,12 +131,22 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
-* Added: Cleanup of option values when the plugin is uninstalled
+* Added: Batch Outbox-Processing.
+* Changed: Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
+
+= 5.1.0 =
+
+* Added: Cleanup of option values when the plugin is uninstalled.
 * Added: Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
+* Added: Show ActivityPub preview in row actions when Block Editor is enabled but not used for the post type.
 * Changed: Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
 * Changed: Allow Base Transformer to handle WP_Term objects for transformation.
+* Changed: Allow omitting replies in ActivityPub representations instead of setting them as empty.
+* Changed: Improved Query extensibility for third party plugins.
 * Fixed: Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
 * Fixed: Avoid PHP warnings when using Debug mode and when the `actor` is not set.
+* Fixed: No longer creates Outbox items when importing content/users.
+* Fixed: NodeInfo 2.0 URL to be HTTP instead of HTTPS.
 
 = 5.0.0 =
 
