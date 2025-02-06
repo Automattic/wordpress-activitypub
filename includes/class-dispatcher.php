@@ -97,7 +97,8 @@ class Dispatcher {
 			return;
 		}
 
-		self::send_activity_to_followers( $activity, $actor_id, $outbox_item );
+		// Send to mentioned and replied-to users. Everyone other than followers.
+		self::send_to_interactees( $activity, $actor_id, $outbox_item );
 
 		// TODO: Should we call Scheduler::async_batch directly here?
 		\wp_schedule_single_event(
@@ -131,7 +132,7 @@ class Dispatcher {
 			$result = safe_remote_post( $inbox, $json, $actor_id );
 
 			/**
-			 * Fires when the batch of followers is complete.
+			 * Fires after an Activity has been sent to an inbox.
 			 *
 			 * @param array  $result         The result of the remote post request.
 			 * @param string $inbox          The inbox URL.
@@ -181,7 +182,7 @@ class Dispatcher {
 	 * @param int      $actor_id  The actor ID.
 	 * @param \WP_Post $outbox_item The WordPress object.
 	 */
-	private static function send_activity_to_followers( $activity, $actor_id, $outbox_item = null ) {
+	private static function send_to_interactees( $activity, $actor_id, $outbox_item = null ) {
 		/**
 		 * Filters the list of inboxes to send the Activity to.
 		 *
@@ -194,19 +195,20 @@ class Dispatcher {
 
 		$json = $activity->to_json();
 
-		$results = array();
 		foreach ( $inboxes as $inbox ) {
-			$results[ $inbox ] = safe_remote_post( $inbox, $json, $actor_id );
-		}
+			$result = safe_remote_post( $inbox, $json, $actor_id );
 
-		/**
-		 * Fires after an Activity has been sent to all followers and mentioned users.
-		 *
-		 * @param array    $results     The results of the remote posts.
-		 * @param Activity $activity    The ActivityPub Activity.
-		 * @param \WP_Post $outbox_item The WordPress object.
-		 */
-		do_action( 'activitypub_sent_to_followers', $results, $activity, $outbox_item );
+			/**
+			 * Fires after an Activity has been sent to an inbox.
+			 *
+			 * @param array  $result         The result of the remote post request.
+			 * @param string $inbox          The inbox URL.
+			 * @param string $json           The ActivityPub Activity JSON.
+			 * @param int    $actor_id       The actor ID.
+			 * @param int    $outbox_item_id The Outbox item ID.
+			 */
+			\do_action( 'activitypub_sent_to_inbox', $result, $inbox, $json, $actor_id, $outbox_item->ID );
+		}
 	}
 
 	/**
