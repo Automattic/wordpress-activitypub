@@ -293,7 +293,7 @@ class Dispatcher {
 	 *
 	 * @return array The filtered Inboxes.
 	 */
-	public static function maybe_add_inboxes_of_blog_user( $inboxes, $activity, $actor_id ) {
+	public static function maybe_add_inboxes_of_blog_user( $inboxes, $activity, $actor_id ) { // phpcs:ignore
 		_deprecated_function( __METHOD__, 'Unreleased', 'Followers::maybe_add_inboxes_of_blog_user' );
 
 		return $inboxes;
