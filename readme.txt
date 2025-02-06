@@ -132,6 +132,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: Batch Outbox-Processing.
+* Changed: Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
 
 = 5.1.0 =
 
