@@ -129,6 +129,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Changed: Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
+
 = 5.1.0 =
 
 * Added: Cleanup of option values when the plugin is uninstalled.

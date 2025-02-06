@@ -558,8 +558,11 @@ class Activitypub {
 					'create_posts' => false,
 				),
 				'map_meta_cap'        => true,
+				'public'              => false,
+				'show_in_rest'        => true,
 				'rewrite'             => false,
 				'query_var'           => false,
+				'supports'            => array( 'title', 'editor', 'author', 'custom-fields' ),
 				'delete_with_user'    => true,
 				'can_export'          => true,
 				'exclude_from_search' => true,
@@ -578,6 +581,7 @@ class Activitypub {
 				'type'              => 'string',
 				'description'       => 'The type of the activity',
 				'single'            => true,
+				'show_in_rest'      => true,
 				'sanitize_callback' => function ( $value ) {
 					$value  = ucfirst( strtolower( $value ) );
 					$schema = array(
@@ -601,6 +605,7 @@ class Activitypub {
 			array(
 				'type'              => 'string',
 				'single'            => true,
+				'show_in_rest'      => true,
 				'sanitize_callback' => function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
@@ -621,9 +626,9 @@ class Activitypub {
 			Outbox::POST_TYPE,
 			'activitypub_content_visibility',
 			array(
-				'show_in_rest'      => true,
-				'single'            => true,
 				'type'              => 'string',
+				'single'            => true,
+				'show_in_rest'      => true,
 				'sanitize_callback' => function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
