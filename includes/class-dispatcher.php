@@ -132,7 +132,7 @@ class Dispatcher {
 			 * @param Activity $activity    The activity.
 			 * @param \WP_Post $outbox_item The outbox item.
 			 */
-			\do_action( 'post_activitypub_sent_to_inbox', $result, $inbox, $actor_id, $activity, $outbox_item );
+			\do_action( 'activitypub_sent_to_inbox', $result, $inbox, $actor_id, $activity, $outbox_item );
 		}
 
 		if ( is_countable( $inboxes ) && count( $inboxes ) < self::$batch_size ) {
@@ -146,7 +146,7 @@ class Dispatcher {
 			 * @param int      $batch_size The batch size.
 			 * @param int      $offset The offset.
 			 */
-			\do_action( 'activitypub_sent_to_inboxes_complete', $inboxes, $actor_id, $activity, $outbox_item, $batch_size, $offset );
+			\do_action( 'activitypub_outbox_processing_complete', $inboxes, $actor_id, $activity, $outbox_item, $batch_size, $offset );
 
 			// No more followers to process for this update.
 			\wp_publish_post( $outbox_item );
@@ -161,7 +161,7 @@ class Dispatcher {
 			 * @param int      $batch_size The batch size.
 			 * @param int      $offset The offset.
 			 */
-			\do_action( 'activitypub_sent_to_inboxes_batch_complete', $inboxes, $actor_id, $activity, $outbox_item, $batch_size, $offset );
+			\do_action( 'activitypub_outbox_processing_batch_complete', $inboxes, $actor_id, $activity, $outbox_item, $batch_size, $offset );
 
 			return array( $activity, $actor_id, $outbox_item, $batch_size, $offset + $batch_size );
 		}

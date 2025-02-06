@@ -21,7 +21,7 @@ class Debug {
 			\add_action( 'activitypub_safe_remote_post_response', array( self::class, 'log_remote_post_responses' ), 10, 2 );
 			\add_action( 'activitypub_inbox', array( self::class, 'log_inbox' ), 10, 3 );
 
-			\add_action( 'post_activitypub_sent_to_follower', array( self::class, 'log_sent_to_follower' ), 10, 4 );
+			\add_action( 'activitypub_sent_to_inbox', array( self::class, 'log_sent_to_follower' ), 10, 4 );
 		}
 	}
 
