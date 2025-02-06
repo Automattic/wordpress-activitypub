@@ -131,14 +131,12 @@ class Stream_Connector extends \WP_Stream\Connector {
 			return;
 		}
 
-		$outbox_item  = \get_post( $outbox_item_id );
-		$object_id    = $outbox_item->ID;
-		$object_type  = $outbox_item->post_type;
-		$object_title = $this->get_outbox_object_title( $outbox_item );
+		$outbox_item = \get_post( $outbox_item_id );
+		$outbox_args = $this->get_outbox_object_args( $outbox_item );
 
 		$this->log(
 			// translators: 1: post title.
-			sprintf( __( 'Outbox error for "%1$s"', 'activitypub' ), $object_title ),
+			sprintf( __( 'Outbox error for "%1$s"', 'activitypub' ), $outbox_args['object_title'] ),
 			array(
 				'error' => wp_json_encode(
 					array(
@@ -148,8 +146,8 @@ class Stream_Connector extends \WP_Stream\Connector {
 					)
 				),
 			),
-			$object_id,
-			$object_type,
+			$outbox_args['object_id'],
+			$outbox_args['object_type'],
 			'processed'
 		);
 	}
@@ -161,27 +159,23 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 * @param string $json           The ActivityPub Activity JSON.
 	 * @param int    $actor_id       The actor ID.
 	 * @param int    $outbox_item_id The Outbox item ID.
-	 * @param int    $batch_size     The batch size.
-	 * @param int    $offset         The offset.
 	 */
-	public function callback_activitypub_outbox_processing_complete( $inboxes, $json, $actor_id, $outbox_item_id, $batch_size, $offset ) {
-		$outbox_item  = \get_post( $outbox_item_id );
-		$object_id    = $outbox_item->ID;
-		$object_type  = $outbox_item->post_type;
-		$object_title = $this->get_outbox_object_title( $outbox_item );
+	public function callback_activitypub_outbox_processing_complete( $inboxes, $json, $actor_id, $outbox_item_id ) {
+		$outbox_item = \get_post( $outbox_item_id );
+		$outbox_args = $this->get_outbox_object_args( $outbox_item );
 
 		$this->log(
 			sprintf(
 				// translators: %s is a URL.
 				__( 'Outbox processing complete: %s', 'activitypub' ),
-				$object_title
+				$outbox_args['object_title']
 			),
 			array(
 				'actor_id'       => $actor_id,
 				'outbox_item_id' => $outbox_item_id,
 			),
-			$object_id,
-			$object_type,
+			$outbox_args['object_id'],
+			$outbox_args['object_type'],
 			'processed'
 		);
 	}
@@ -197,16 +191,14 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 * @param int    $offset The offset.
 	 */
 	public function callback_activitypub_outbox_processing_batch_complete( $inboxes, $json, $actor_id, $outbox_item_id, $batch_size, $offset ) {
-		$outbox_item  = \get_post( $outbox_item_id );
-		$object_id    = $outbox_item->ID;
-		$object_type  = $outbox_item->post_type;
-		$object_title = $this->get_outbox_object_title( $outbox_item );
+		$outbox_item = \get_post( $outbox_item_id );
+		$outbox_args = $this->get_outbox_object_args( $outbox_item );
 
 		$this->log(
 			sprintf(
 				// translators: %s is a URL.
 				__( 'Outbox processing batch complete: %s', 'activitypub' ),
-				$object_title
+				$outbox_args['object_title']
 			),
 			array(
 				'actor_id'       => $actor_id,
@@ -214,8 +206,8 @@ class Stream_Connector extends \WP_Stream\Connector {
 				'batch_size'     => $batch_size,
 				'offset'         => $offset,
 			),
-			$object_id,
-			$object_type,
+			$outbox_args['object_id'],
+			$outbox_args['object_type'],
 			'processed'
 		);
 	}
@@ -225,10 +217,13 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 *
 	 * @param \WP_Post $outbox_item The outbox item.
 	 *
-	 * @return string The title of the outbox object.
+	 * @return array The title, object ID, and object type of the outbox object.
 	 */
-	protected function get_outbox_object_title( $outbox_item ) {
+	protected function get_outbox_object_args( $outbox_item ) {
+		$object_id    = $outbox_item->ID;
+		$object_type  = $outbox_item->post_type;
 		$object_title = $outbox_item->post_title;
+
 		$post_id      = url_to_postid( $outbox_item->post_title );
 		if ( $post_id ) {
 			$post = get_post( $post_id );
@@ -261,6 +256,10 @@ class Stream_Connector extends \WP_Stream\Connector {
 			}
 		}
 
-		return $object_title;
+		return array(
+			'object_id'    => $object_id,
+			'object_type'  => $object_type,
+			'object_title' => $object_title,
+		);
 	}
 }
