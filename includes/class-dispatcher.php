@@ -109,7 +109,7 @@ class Dispatcher {
 	/**
 	 * Asynchronously runs batch processing routines.
 	 *
-	 * @param Activity $json           The ActivityPub Activity JSON.
+	 * @param string   $json           The ActivityPub Activity JSON.
 	 * @param int      $actor_id       The actor ID.
 	 * @param \WP_Post $outbox_item_id The Outbox item ID.
 	 * @param int      $batch_size     Optional. The batch size. Default 50.
