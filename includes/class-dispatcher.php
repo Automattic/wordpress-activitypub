@@ -44,23 +44,7 @@ class Dispatcher {
 		\add_filter( 'activitypub_interactees_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
 		\add_filter( 'activitypub_interactees_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
 
-		// Fallback to followers if no other inboxes are found.
-		// @deprecated Use `activitypub_interactees_inboxes` instead.
-		\add_filter(
-			'activitypub_send_to_inboxes',
-			function ( $inboxes, $actor_id, $activity ) {
-				/**
-				 * Filters the list of inboxes to send the Activity to.
-				 *
-				 * @param array    $inboxes  The list of inboxes to send to.
-				 * @param int      $actor_id The actor ID.
-				 * @param Activity $activity The ActivityPub Activity.
-				 */
-				return \apply_filters( 'activitypub_interactees_inboxes', $inboxes, $actor_id, $activity );
-			},
-			10,
-			3
-		);
+		\apply_filters_deprecated( 'activitypub_send_to_inboxes', array( $inboxes, $actor_id, $activity ), 'Unreleased', 'activitypub_interactees_inboxes' );
 	}
 
 	/**
