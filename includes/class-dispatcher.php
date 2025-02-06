@@ -25,7 +25,7 @@ class Dispatcher {
 	 *
 	 * @var int
 	 */
-	public static $batch_size = ACTIVITYPUB_INBOX_PROCESSING_BATCH_SIZE;
+	public static $batch_size = ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE;
 
 	/**
 	 * Callback for the async batch processing.
