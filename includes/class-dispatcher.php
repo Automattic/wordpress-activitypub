@@ -285,7 +285,7 @@ class Dispatcher {
 	/**
 	 * Default filter to add Inboxes of the Blog User in dual mode.
 	 *
-	 * @deprecated 5.1.0 Use {@see Followers::maybe_add_inboxes_of_blog_user} instead.
+	 * @deprecated Unreleased Use {@see Followers::maybe_add_inboxes_of_blog_user} instead.
 	 *
 	 * @param Activity $activity The ActivityPub Activity.
 	 * @param int      $actor_id The WordPress Actor ID.
@@ -293,7 +293,7 @@ class Dispatcher {
 	 * @return bool True if the Blog User's inboxes should be added.
 	 */
 	public static function maybe_add_inboxes_of_blog_user( $activity, $actor_id ) {
-		_deprecated_function( __METHOD__, '5.1.0', 'Followers::maybe_add_inboxes_of_blog_user' );
+		_deprecated_function( __METHOD__, 'Unreleased', 'Followers::maybe_add_inboxes_of_blog_user' );
 
 		return Followers::maybe_add_inboxes_of_blog_user( $activity, $actor_id );
 	}
