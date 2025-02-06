@@ -619,6 +619,17 @@ class Activitypub {
 
 		\register_post_meta(
 			Outbox::POST_TYPE,
+			'_activitypub_object_id',
+			array(
+				'show_in_rest'      => true,
+				'single'            => true,
+				'type'              => 'string',
+				'sanitize_callback' => 'sanatize_url',
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
 			'activitypub_content_visibility',
 			array(
 				'show_in_rest'      => true,
