@@ -330,10 +330,10 @@ class Followers {
 	/**
 	 * Get all Inboxes for a given Activity.
 	 *
-	 * @param Activity $json       The ActivityPub Activity JSON.
-	 * @param int      $actor_id   The WordPress Actor ID.
-	 * @param int      $batch_size Optional. The batch size. Default 50.
-	 * @param int      $offset     Optional. The offset. Default 0.
+	 * @param string $json       The ActivityPub Activity JSON.
+	 * @param int    $actor_id   The WordPress Actor ID.
+	 * @param int    $batch_size Optional. The batch size. Default 50.
+	 * @param int    $offset     Optional. The offset. Default 0.
 	 *
 	 * @return array The list of Inboxes.
 	 */
@@ -391,8 +391,8 @@ class Followers {
 	/**
 	 * Maybe add Inboxes of the Blog User.
 	 *
-	 * @param Activity $json     The ActivityPub Activity JSON.
-	 * @param int      $actor_id The WordPress Actor ID.
+	 * @param string $json     The ActivityPub Activity JSON.
+	 * @param int    $actor_id The WordPress Actor ID.
 	 * @return bool True if the Inboxes of the Blog User should be added, false otherwise.
 	 */
 	public static function maybe_add_inboxes_of_blog_user( $json, $actor_id ) {
