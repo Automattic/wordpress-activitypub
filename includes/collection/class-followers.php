@@ -330,13 +330,14 @@ class Followers {
 	/**
 	 * Get all Inboxes for a given Activity.
 	 *
+	 * @param Activity $json       The ActivityPub Activity JSON.
 	 * @param int      $actor_id   The WordPress Actor ID.
-	 * @param Activity $activity   The ActivityPub Activity.
 	 * @param int      $batch_size Optional. The batch size. Default 50.
 	 * @param int      $offset     Optional. The offset. Default 0.
+	 *
 	 * @return array The list of Inboxes.
 	 */
-	public static function get_inboxes_for_activity( $actor_id, $activity, $batch_size = 50, $offset = 0 ) {
+	public static function get_inboxes_for_activity( $json, $actor_id, $batch_size = 50, $offset = 0 ) {
 		$args = array(
 			'post_type'      => self::POST_TYPE,
 			'posts_per_page' => $batch_size,
@@ -358,7 +359,7 @@ class Followers {
 			),
 		);
 
-		if ( self::maybe_add_inboxes_of_blog_user( $activity, $actor_id ) ) {
+		if ( self::maybe_add_inboxes_of_blog_user( $json, $actor_id ) ) {
 			$args['meta_query'][] = array(
 				'relation' => 'OR',
 				array(
@@ -390,11 +391,11 @@ class Followers {
 	/**
 	 * Maybe add Inboxes of the Blog User.
 	 *
-	 * @param Activity $activity The ActivityPub Activity.
+	 * @param Activity $json     The ActivityPub Activity JSON.
 	 * @param int      $actor_id The WordPress Actor ID.
 	 * @return bool True if the Inboxes of the Blog User should be added, false otherwise.
 	 */
-	public static function maybe_add_inboxes_of_blog_user( $activity, $actor_id ) {
+	public static function maybe_add_inboxes_of_blog_user( $json, $actor_id ) {
 		// Only if we're in both Blog and User modes.
 		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
 			return false;
@@ -403,8 +404,10 @@ class Followers {
 		if ( Actors::BLOG_USER_ID === $actor_id ) {
 			return false;
 		}
+
+		$activity = json_decode( $json, true );
 		// Only if this is an Update or Delete. Create handles its own Announce in dual user mode.
-		if ( ! in_array( $activity->get_type(), array( 'Update', 'Delete' ), true ) ) {
+		if ( ! in_array( $activity['type'], array( 'Update', 'Delete' ), true ) ) {
 			return false;
 		}
 
