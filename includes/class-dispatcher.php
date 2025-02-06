@@ -93,25 +93,23 @@ class Dispatcher {
 			$activity->set_object( $activity->get_object()->get_id() );
 		}
 
-		if ( ! self::should_send_to_followers( $activity, $actor_id, $outbox_item ) ) {
-			return;
-		}
-
 		// Send to mentioned and replied-to users. Everyone other than followers.
 		self::send_to_interactees( $activity, $actor_id, $outbox_item );
 
-		// TODO: Should we call Scheduler::async_batch directly here?
-		\wp_schedule_single_event(
-			\time(),
-			'activitypub_async_batch',
-			array(
-				self::$callback,
-				$activity->to_json(),
-				$actor_id,
-				$outbox_item->ID,
-				self::$batch_size,
-			)
-		);
+		if ( self::should_send_to_followers( $activity, $actor_id, $outbox_item ) ) {
+			// TODO: Should we call Scheduler::async_batch directly here?
+			\wp_schedule_single_event(
+				\time(),
+				'activitypub_async_batch',
+				array(
+					self::$callback,
+					$activity->to_json(),
+					$actor_id,
+					$outbox_item->ID,
+					self::$batch_size,
+				)
+			);
+		}
 	}
 
 	/**
