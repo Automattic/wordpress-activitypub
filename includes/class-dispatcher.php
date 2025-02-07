@@ -10,9 +10,6 @@ namespace Activitypub;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
-use Activitypub\Model\Application;
-use Activitypub\Model\Blog;
-use Activitypub\Model\User;
 
 /**
  * ActivityPub Dispatcher Class.
@@ -312,9 +309,9 @@ class Dispatcher {
 	/**
 	 * Check if passed Activity is public.
 	 *
-	 * @param Activity  $activity    The Activity object.
-	 * @param User|Blog $actor       The Actor object.
-	 * @param \WP_Post  $outbox_item The Outbox item.
+	 * @param Activity                                        $activity    The Activity object.
+	 * @param \Activitypub\Model\User|\Activitypub\Model\Blog $actor       The Actor object.
+	 * @param \WP_Post                                        $outbox_item The Outbox item.
 	 *
 	 * @return boolean True if public, false if not.
 	 */
@@ -376,7 +373,7 @@ class Dispatcher {
 	 * Get the Actor object from the Outbox item.
 	 *
 	 * @param \WP_Post $outbox_item The Outbox post.
-	 * @return User|Blog|Application|\WP_Error The Actor object or WP_Error.
+	 * @return \Activitypub\Model\User|\Activitypub\Model\Blog|\WP_Error The Actor object or WP_Error.
 	 */
 	private static function get_actor( $outbox_item ) {
 		$actor_type = \get_post_meta( $outbox_item->ID, '_activitypub_activity_actor', true );
