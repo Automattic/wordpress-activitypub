@@ -46,7 +46,7 @@ class Dispatcher {
 
 		// Fallback for `activitypub_send_to_inboxes` filter.
 		\add_filter(
-			'activitypub_send_to_inboxes',
+			'activitypub_interactees_inboxes',
 			function ( $inboxes, $actor_id, $activity ) {
 				/**
 				 * Filters the list of interactees inboxes to send the Activity to.
