@@ -407,7 +407,7 @@ class Followers {
 
 		$activity = json_decode( $json, true );
 		// Only if this is an Update or Delete. Create handles its own Announce in dual user mode.
-		if ( ! in_array( $activity['type'], array( 'Update', 'Delete' ), true ) ) {
+		if ( ! in_array( $activity['type'] ?? null, array( 'Update', 'Delete' ), true ) ) {
 			return false;
 		}
 

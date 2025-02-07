@@ -110,6 +110,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 					(string) self::$user_id,
 					$outbox_item->ID,
 					Dispatcher::$batch_size,
+					0,
 				)
 			)
 		);
