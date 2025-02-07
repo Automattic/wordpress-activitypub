@@ -128,6 +128,9 @@ class Dispatcher {
 					\get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ),
 				)
 			);
+		} else {
+			// No followers to process for this update. We're done.
+			\wp_publish_post( $outbox_item );
 		}
 	}
 
@@ -229,10 +232,6 @@ class Dispatcher {
 			 * @param int    $outbox_item_id The Outbox item ID.
 			 */
 			\do_action( 'activitypub_sent_to_inbox', $result, $inbox, $json, $actor_id, $outbox_item->ID );
-		}
-
-		if ( ! self::should_send_to_followers( $activity, $actor_id, $outbox_item ) ) {
-			\wp_publish_post( $outbox_item );
 		}
 	}
 
