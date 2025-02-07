@@ -77,52 +77,25 @@ class Dispatcher {
 			return;
 		}
 
-		$actor_type = \get_post_meta( $outbox_item->ID, '_activitypub_activity_actor', true );
-
-		switch ( $actor_type ) {
-			case 'blog':
-				$actor_id = Actors::BLOG_USER_ID;
-				break;
-			case 'application':
-				$actor_id = Actors::APPLICATION_USER_ID;
-				break;
-			case 'user':
-			default:
-				$actor_id = $outbox_item->post_author;
-				break;
-		}
-
-		$actor = Actors::get_by_id( $actor_id );
+		$actor = self::get_actor( $outbox_item );
 		if ( \is_wp_error( $actor ) ) {
 			// If the actor is not found, publish the post and don't try again.
 			\wp_publish_post( $outbox_item );
 			return;
 		}
 
-		$type     = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
-		$activity = new Activity();
-		$activity->set_type( $type );
-		$activity->set_id( $outbox_item->guid );
-		// Pre-fill the Activity with data (for example cc and to).
-		$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
-		$activity->set_actor( $actor->get_id() );
-
-		// Use simple Object (only ID-URI) for Like and Announce.
-		if ( in_array( $type, array( 'Like', 'Delete' ), true ) ) {
-			$activity->set_object( $activity->get_object()->get_id() );
-		}
+		$activity = self::get_activity( $outbox_item );
 
 		// Send to mentioned and replied-to users. Everyone other than followers.
-		self::send_to_interactees( $activity, $actor_id, $outbox_item );
+		self::send_to_interactees( $activity, $actor->get__id(), $outbox_item );
 
-		if ( self::should_send_to_followers( $activity, $actor_id, $outbox_item ) ) {
+		if ( self::should_send_to_followers( $activity, $actor, $outbox_item ) ) {
 			\wp_schedule_single_event(
 				\time(),
 				'activitypub_async_batch',
 				array(
 					self::$callback,
-					$activity->to_json(),
-					$actor_id,
+					$actor->get__id(),
 					$outbox_item->ID,
 					self::$batch_size,
 					\get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
@@ -137,16 +110,17 @@ class Dispatcher {
 	/**
 	 * Asynchronously runs batch processing routines.
 	 *
-	 * @param string $json           The ActivityPub Activity JSON.
-	 * @param int    $actor_id       The actor ID.
-	 * @param int    $outbox_item_id The Outbox item ID.
-	 * @param int    $batch_size     Optional. The batch size. Default 50.
-	 * @param int    $offset         Optional. The offset. Default 0.
+	 * @param int $actor_id       The actor ID.
+	 * @param int $outbox_item_id The Outbox item ID.
+	 * @param int $batch_size     Optional. The batch size. Default 50.
+	 * @param int $offset         Optional. The offset. Default 0.
 	 *
 	 * @return array|void The next batch of followers to process, or void if done.
 	 */
-	public static function send_to_followers( $json, $actor_id, $outbox_item_id, $batch_size = 50, $offset = 0 ) {
-		$inboxes = Followers::get_inboxes_for_activity( $json, $actor_id, $batch_size, $offset );
+	public static function send_to_followers( $actor_id, $outbox_item_id, $batch_size = 50, $offset = 0 ) {
+		$activity = self::get_activity( $outbox_item_id );
+		$json     = $activity->to_json();
+		$inboxes  = Followers::get_inboxes_for_activity( $json, $actor_id, $batch_size, $offset );
 
 		foreach ( $inboxes as $inbox ) {
 			$result = safe_remote_post( $inbox, $json, $actor_id );
@@ -195,7 +169,7 @@ class Dispatcher {
 			 */
 			\do_action( 'activitypub_outbox_processing_batch_complete', $inboxes, $json, $actor_id, $outbox_item_id, $batch_size, $offset );
 
-			return array( $json, $actor_id, $outbox_item_id, $batch_size, $offset + $batch_size );
+			return array( $actor_id, $outbox_item_id, $batch_size, $offset + $batch_size );
 		}
 	}
 
@@ -335,20 +309,13 @@ class Dispatcher {
 	/**
 	 * Check if passed Activity is public.
 	 *
-	 * @param Activity $activity    The Activity object.
-	 * @param int      $actor_id    The Actor ID.
-	 * @param \WP_Post $outbox_item The Outbox item.
+	 * @param Activity                                        $activity    The Activity object.
+	 * @param \Activitypub\Model\User|\Activitypub\Model\Blog $actor       The Actor object.
+	 * @param \WP_Post                                        $outbox_item The Outbox item.
 	 *
 	 * @return boolean True if public, false if not.
 	 */
-	protected static function should_send_to_followers( $activity, $actor_id, $outbox_item ) {
-		// Check if follower endpoint is set.
-		$actor = Actors::get_by_id( $actor_id );
-
-		if ( ! $actor || is_wp_error( $actor ) ) {
-			return false;
-		}
-
+	protected static function should_send_to_followers( $activity, $actor, $outbox_item ) {
 		// Check if follower endpoint is set.
 		$cc = $activity->get_cc() ?? array();
 		$to = $activity->get_to() ?? array();
@@ -370,6 +337,60 @@ class Dispatcher {
 		 * @param int      $actor_id                   The actor ID.
 		 * @param \WP_Post $outbox_item                The WordPress object.
 		 */
-		return apply_filters( 'activitypub_send_activity_to_followers', $send, $activity, $actor_id, $outbox_item );
+		return apply_filters( 'activitypub_send_activity_to_followers', $send, $activity, $actor->get__id(), $outbox_item );
+	}
+
+	/**
+	 * Get the Activity object from the Outbox item.
+	 *
+	 * @param int|\WP_Post $outbox_item The Outbox post or post ID.
+	 * @return Activity|\WP_Error The Activity object or WP_Error.
+	 */
+	private static function get_activity( $outbox_item ) {
+		$outbox_item = get_post( $outbox_item );
+		$actor       = self::get_actor( $outbox_item );
+		if ( is_wp_error( $actor ) ) {
+			return $actor;
+		}
+
+		$type     = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
+		$activity = new Activity();
+		$activity->set_type( $type );
+		$activity->set_id( $outbox_item->guid );
+		// Pre-fill the Activity with data (for example cc and to).
+		$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
+		$activity->set_actor( $actor->get_id() );
+
+		// Use simple Object (only ID-URI) for Like and Announce.
+		if ( in_array( $type, array( 'Like', 'Delete' ), true ) ) {
+			$activity->set_object( $activity->get_object()->get_id() );
+		}
+
+		return $activity;
+	}
+
+	/**
+	 * Get the Actor object from the Outbox item.
+	 *
+	 * @param \WP_Post $outbox_item The Outbox post.
+	 * @return \Activitypub\Model\User|\Activitypub\Model\Blog|\WP_Error The Actor object or WP_Error.
+	 */
+	private static function get_actor( $outbox_item ) {
+		$actor_type = \get_post_meta( $outbox_item->ID, '_activitypub_activity_actor', true );
+
+		switch ( $actor_type ) {
+			case 'blog':
+				$actor_id = Actors::BLOG_USER_ID;
+				break;
+			case 'application':
+				$actor_id = Actors::APPLICATION_USER_ID;
+				break;
+			case 'user':
+			default:
+				$actor_id = $outbox_item->post_author;
+				break;
+		}
+
+		return Actors::get_by_id( $actor_id );
 	}
 }
