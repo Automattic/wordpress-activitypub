@@ -796,11 +796,7 @@ class Post extends Base {
 		}
 
 		if ( \count( $media['image'] ) <= $max_images ) {
-			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_embeds( $max_images ) );
-			} else {
-				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_attachments( $max_images ) );
-			}
+			$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_embeds( $max_images ) );
 		}
 
 		return $media;
@@ -880,43 +876,6 @@ class Post extends Base {
 						'alt' => $tags->get_attribute( 'alt' ),
 					);
 				}
-			}
-		}
-
-		return $images;
-	}
-
-	/**
-	 * Get image attachments from the classic editor.
-	 * This is imperfect as the contained images aren't necessarily the
-	 * same as the attachments.
-	 *
-	 * @param int $max_images The maximum number of images to return.
-	 *
-	 * @return array The attachment IDs.
-	 */
-	protected function get_classic_editor_image_attachments( $max_images ) {
-		// Max images can't be negative or zero.
-		if ( $max_images <= 0 ) {
-			return array();
-		}
-
-		$images = array();
-		$query  = new \WP_Query(
-			array(
-				'post_parent'    => $this->item->ID,
-				'post_status'    => 'inherit',
-				'post_type'      => 'attachment',
-				'post_mime_type' => 'image',
-				'order'          => 'ASC',
-				'orderby'        => 'menu_order ID',
-				'posts_per_page' => $max_images,
-			)
-		);
-
-		foreach ( $query->get_posts() as $attachment ) {
-			if ( ! \in_array( $attachment->ID, $images, true ) ) {
-				$images[] = array( 'id' => $attachment->ID );
 			}
 		}
 
