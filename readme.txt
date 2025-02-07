@@ -131,7 +131,9 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Changed: Increased probability of Outbox items being processed with the correct author.
 * Changed: Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
+* Changed: Updated terminology to be client-neutral in the Federated Reply block.
 
 = 5.1.0 =
 
