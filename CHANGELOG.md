@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Batch Outbox-Processing.
+* Outbox processed events get logged in Stream and show any errors returned from inboxes.
+
 ### Changed
 
 * Increased probability of Outbox items being processed with the correct author.
@@ -64,10 +69,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Support for WPML post locale
-
-### Added
-
-* Outbox queue
 
 ### Changed
 

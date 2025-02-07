@@ -624,6 +624,18 @@ class Activitypub {
 
 		\register_post_meta(
 			Outbox::POST_TYPE,
+			'_activitypub_outbox_offset',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'description'       => 'Keeps track of the followers offset when processing outbox items.',
+				'sanitize_callback' => 'absint',
+				'default'           => 0,
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
 			'activitypub_content_visibility',
 			array(
 				'type'              => 'string',
