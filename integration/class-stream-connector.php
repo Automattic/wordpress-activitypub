@@ -90,6 +90,18 @@ class Stream_Connector extends \WP_Stream\Connector {
 
 				$links[ $message ] = '';
 			}
+
+			$debug = json_decode( $record->get_meta( 'debug', true ), true );
+
+			if ( $debug ) {
+				$message = sprintf(
+					'<details><summary>%1$s</summary><pre>%2$s</pre></details>',
+					__( 'Debug', 'activitypub' ),
+					wp_json_encode( $debug )
+				);
+
+				$links[ $message ] = '';
+			}
 		}
 
 		return $links;
@@ -171,8 +183,12 @@ class Stream_Connector extends \WP_Stream\Connector {
 				$outbox_item->post_title
 			),
 			array(
-				'actor_id'       => $actor_id,
-				'outbox_item_id' => $outbox_item_id,
+				'debug' => wp_json_encode(
+					array(
+						'actor_id'       => $actor_id,
+						'outbox_item_id' => $outbox_item_id,
+					)
+				),
 			),
 			$outbox_item->ID,
 			$outbox_item->post_type,
@@ -201,10 +217,14 @@ class Stream_Connector extends \WP_Stream\Connector {
 				$outbox_item->post_title
 			),
 			array(
-				'actor_id'       => $actor_id,
-				'outbox_item_id' => $outbox_item_id,
-				'batch_size'     => $batch_size,
-				'offset'         => $offset,
+				'debug' => wp_json_encode(
+					array(
+						'actor_id'       => $actor_id,
+						'outbox_item_id' => $outbox_item_id,
+						'batch_size'     => $batch_size,
+						'offset'         => $offset,
+					)
+				),
 			),
 			$outbox_item->ID,
 			$outbox_item->post_type,
