@@ -40,12 +40,19 @@ class Outbox {
 
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
-			'post_title'   => $activity_object->get_id(),
+			'post_title'   => sprintf(
+				/* translators: 1. Activity type, 2. Object type, 3. Object Title or Excerpt */
+				__( '[%1$s] %2$s: %3$s', 'activitypub' ),
+				$activity_type,
+				$activity_object->get_type(),
+				\wp_trim_words( $activity_object->get_name() ?? $activity_object->get_content(), 5 )
+			),
 			'post_content' => wp_slash( $activity_object->to_json() ),
 			// ensure that user ID is not below 0.
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'pending',
 			'meta_input'   => array(
+				'_activitypub_object_id'         => $activity_object->get_id(),
 				'_activitypub_activity_type'     => $activity_type,
 				'_activitypub_activity_actor'    => $actor_type,
 				'activitypub_content_visibility' => $content_visibility,
