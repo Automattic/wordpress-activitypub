@@ -125,7 +125,7 @@ class Dispatcher {
 					$actor_id,
 					$outbox_item->ID,
 					self::$batch_size,
-					\get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
+					\get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ),
 				)
 			);
 		}
