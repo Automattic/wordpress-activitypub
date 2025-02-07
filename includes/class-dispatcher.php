@@ -116,7 +116,6 @@ class Dispatcher {
 		self::send_to_interactees( $activity, $actor_id, $outbox_item );
 
 		if ( self::should_send_to_followers( $activity, $actor_id, $outbox_item ) ) {
-			// TODO: Should we call Scheduler::async_batch directly here?
 			\wp_schedule_single_event(
 				\time(),
 				'activitypub_async_batch',
@@ -126,6 +125,7 @@ class Dispatcher {
 					$actor_id,
 					$outbox_item->ID,
 					self::$batch_size,
+					\get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
 				)
 			);
 		}
@@ -161,6 +161,8 @@ class Dispatcher {
 		}
 
 		if ( is_countable( $inboxes ) && count( $inboxes ) < self::$batch_size ) {
+			\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
+
 			/**
 			 * Fires when the followers are complete.
 			 *
@@ -176,6 +178,8 @@ class Dispatcher {
 			// No more followers to process for this update.
 			\wp_publish_post( $outbox_item_id );
 		} else {
+			\update_post_meta( $outbox_item_id, '_activitypub_outbox_offset', $offset + $batch_size );
+
 			/**
 			 * Fires when the batch of followers is complete.
 			 *
