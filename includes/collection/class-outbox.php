@@ -97,29 +97,32 @@ class Outbox {
 	private static function invalidate_existing_items( $object_id, $activity_type, $current_id ) {
 		$meta_query = array(
 			array(
-				'key' => '_activitypub_object_id',
+				'key'   => '_activitypub_object_id',
 				'value' => $object_id,
 			),
 		);
 
-		// For non-Delete activities, only invalidate items of the same type
+		// For non-Delete activities, only invalidate items of the same type.
 		if ( 'Delete' !== $activity_type ) {
 			$meta_query[] = array(
-				'key' => '_activitypub_activity_type',
+				'key'   => '_activitypub_activity_type',
 				'value' => $activity_type,
 			);
 		}
 
-		$existing_items = get_posts(array(
-			'post_type' => self::POST_TYPE,
-			'post_status' => 'pending',
-			'exclude' => array( $current_id ),
-			'meta_query' => $meta_query,
-			'fields' => 'ids',
-		));
+		$existing_items = get_posts(
+			array(
+				'post_type'   => self::POST_TYPE,
+				'post_status' => 'pending',
+				'exclude'     => array( $current_id ),
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => $meta_query,
+				'fields'      => 'ids',
+			)
+		);
 
-		if ($existing_items) {
-			foreach ($existing_items as $existing_item_id) {
+		if ( $existing_items ) {
+			foreach ( $existing_items as $existing_item_id ) {
 				\wp_publish_post( $existing_item_id );
 			}
 		}
