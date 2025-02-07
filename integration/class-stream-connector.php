@@ -256,8 +256,8 @@ class Stream_Connector extends \WP_Stream\Connector {
 			}
 		}
 
-		$outbox_item->ID = $object_id;
-		$outbox_item->post_type = $object_type;
+		$outbox_item->ID         = $object_id;
+		$outbox_item->post_type  = $object_type;
 		$outbox_item->post_title = $object_title;
 
 		return $outbox_item;
