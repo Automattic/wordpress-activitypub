@@ -79,6 +79,44 @@ class Outbox {
 			return false;
 		}
 
+		self::invalidate_existing_items( $activity_object->get_id(), $activity_type, $id );
+
 		return $id;
+	}
+
+	/**
+	 * Invalidate existing outbox items with the same activity type and object ID
+	 * by setting their status to 'publish'.
+	 *
+	 * @param string $object_id     The ID of the activity object.
+	 * @param string $activity_type The type of the activity.
+	 * @param int    $current_id    The ID of the current outbox item to exclude.
+	 *
+	 * @return void
+	 */
+	private static function invalidate_existing_items( $object_id, $activity_type, $current_id ) {
+		$existing_items = get_posts(array(
+			'post_type' => self::POST_TYPE,
+			'post_status' => 'pending',
+			'exclude' => array( $current_id ),
+			'meta_query' => array(
+				'relation' => 'AND',
+				array(
+					'key' => '_activitypub_object_id',
+					'value' => $object_id,
+				),
+				array(
+					'key' => '_activitypub_activity_type',
+					'value' => $activity_type,
+				)
+			),
+			'fields' => 'ids',
+		));
+
+		if ($existing_items) {
+			foreach ($existing_items as $existing_item_id) {
+				\wp_publish_post( $existing_item_id );
+			}
+		}
 	}
 }

@@ -68,6 +68,13 @@ class Test_Scheduler extends WP_UnitTestCase {
 			);
 		}
 
+		$pending_ids[] = Outbox::add(
+			$activity_object,
+			'Update',
+			self::$user_id,
+			ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC
+		);
+
 		// Track scheduled events.
 		$scheduled_events = array();
 		add_filter(
@@ -84,10 +91,9 @@ class Test_Scheduler extends WP_UnitTestCase {
 		Scheduler::reprocess_outbox();
 
 		// Verify each pending activity was scheduled.
-		$this->assertCount( 3, $scheduled_events, 'Should schedule 3 activities for processing' );
-		foreach ( $pending_ids as $id ) {
-			$this->assertContains( $id, $scheduled_events, "Activity $id should be scheduled" );
-		}
+		$this->assertCount( 2, $scheduled_events, 'Should schedule 2 activities for processing' );
+		$this->assertNotContains( $pending_ids[0], $scheduled_events, "Activity $pending_ids[0] should be scheduled" );
+		$this->assertContains( $pending_ids[3], $scheduled_events, "Activity $pending_ids[3] should be scheduled" );
 
 		// Test with published activities (should not be scheduled).
 		$published_id = Outbox::add(
