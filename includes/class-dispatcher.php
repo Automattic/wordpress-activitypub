@@ -44,11 +44,19 @@ class Dispatcher {
 		\add_filter( 'activitypub_interactees_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
 		\add_filter( 'activitypub_interactees_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
 
-		// Fallback to followers if no other inboxes are found.
-		// @deprecated Use `activitypub_interactees_inboxes` instead.
+		// Fallback for `activitypub_send_to_inboxes` filter.
 		\add_filter(
-			'activitypub_send_to_inboxes',
+			'activitypub_interactees_inboxes',
 			function ( $inboxes, $actor_id, $activity ) {
+				/**
+				 * Filters the list of interactees inboxes to send the Activity to.
+				 *
+				 * @param array    $inboxes  The list of inboxes to send to.
+				 * @param int      $actor_id The actor ID.
+				 * @param Activity $activity The ActivityPub Activity.
+				 *
+				 * @deprecated Unreleased Use `activitypub_interactees_inboxes` instead.
+				 */
 				return \apply_filters_deprecated( 'activitypub_send_to_inboxes', array( $inboxes, $actor_id, $activity ), 'Unreleased', 'activitypub_interactees_inboxes' );
 			},
 			10,
@@ -101,7 +109,6 @@ class Dispatcher {
 		self::send_to_interactees( $activity, $actor_id, $outbox_item );
 
 		if ( self::should_send_to_followers( $activity, $actor_id, $outbox_item ) ) {
-			// TODO: Should we call Scheduler::async_batch directly here?
 			\wp_schedule_single_event(
 				\time(),
 				'activitypub_async_batch',
@@ -111,6 +118,7 @@ class Dispatcher {
 					$actor_id,
 					$outbox_item->ID,
 					self::$batch_size,
+					\get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
 				)
 			);
 		}
@@ -146,6 +154,8 @@ class Dispatcher {
 		}
 
 		if ( is_countable( $inboxes ) && count( $inboxes ) < self::$batch_size ) {
+			\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
+
 			/**
 			 * Fires when the followers are complete.
 			 *
@@ -161,6 +171,8 @@ class Dispatcher {
 			// No more followers to process for this update.
 			\wp_publish_post( $outbox_item_id );
 		} else {
+			\update_post_meta( $outbox_item_id, '_activitypub_outbox_offset', $offset + $batch_size );
+
 			/**
 			 * Fires when the batch of followers is complete.
 			 *

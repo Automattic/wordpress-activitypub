@@ -67,28 +67,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
 		$inboxes  = array( 'https://example.com/inbox' );
-		$activity = $this->createMock( Activity::class, array( '__call' ) );
-
-		// Mock the static method using reflection.
-		$activity->expects( $this->any() )
-			->method( '__call' )
-			->willReturnCallback(
-				function ( $name ) {
-					if ( 'get_to' === $name ) {
-						return array( 'https://www.w3.org/ns/activitystreams#Public' );
-					}
-
-					if ( 'get_cc' === $name ) {
-						return array();
-					}
-
-					if ( 'get_type' === $name ) {
-						return 'Create';
-					}
-
-					return null;
-				}
-			);
+		$activity = $this->get_activity_mock();
 
 		$result = Dispatcher::maybe_add_inboxes_of_blog_user( $inboxes, 1, $activity );
 		$this->assertEquals( $inboxes, $result );
@@ -136,5 +115,60 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		);
 
 		remove_filter( 'activitypub_send_activity_to_followers', $test_callback );
+	}
+
+	/**
+	 * Test that the deprecated filter activitypub_send_to_inboxes is still working.
+	 * This test can be removed when the filter is removed.
+	 *
+	 * @covers ::maybe_add_inboxes_of_blog_user
+	 * @expectedDeprecated activitypub_send_to_inboxes
+	 */
+	public function test_deprecated_filter() {
+		add_filter(
+			'activitypub_send_to_inboxes',
+			function ( $inboxes ) {
+				$inboxes[] = 'https://example.com/inbox';
+
+				return $inboxes;
+			}
+		);
+
+		$inboxes = apply_filters( 'activitypub_interactees_inboxes', array(), 1, $this->get_activity_mock() );
+		$this->assertContains( 'https://example.com/inbox', $inboxes );
+
+		remove_all_filters( 'activitypub_send_to_inboxes' );
+	}
+
+	/**
+	 * Returns a mock of an Activity object.
+	 *
+	 * @return Activity
+	 */
+	private function get_activity_mock() {
+		$activity = $this->createMock( Activity::class, array( '__call' ) );
+
+		// Mock the static method using reflection.
+		$activity->expects( $this->any() )
+			->method( '__call' )
+			->willReturnCallback(
+				function ( $name ) {
+					if ( 'get_to' === $name ) {
+						return array( 'https://www.w3.org/ns/activitystreams#Public' );
+					}
+
+					if ( 'get_cc' === $name ) {
+						return array();
+					}
+
+					if ( 'get_type' === $name ) {
+						return 'Create';
+					}
+
+					return null;
+				}
+			);
+
+		return $activity;
 	}
 }
