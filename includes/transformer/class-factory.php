@@ -25,7 +25,9 @@ class Factory {
 	 * @return Base|WP_Error The transformer to use, or an error.
 	 */
 	public static function get_transformer( $data ) {
-		if ( \is_array( $data ) || \is_string( $data ) ) {
+		if ( \filter_var( $data, FILTER_VALIDATE_URL ) ) {
+			$class = 'uri';
+		} elseif ( \is_array( $data ) || \is_string( $data ) ) {
 			$class = 'json';
 		} elseif ( \is_object( $data ) ) {
 			$class = \get_class( $data );
@@ -96,6 +98,8 @@ class Factory {
 				break;
 			case 'json':
 				return new Json( $data );
+			case 'uri':
+				return new Uri( $data );
 		}
 
 		if ( $data instanceof \Activitypub\Activity\Base_Object ) {
