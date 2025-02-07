@@ -48,7 +48,6 @@ class Outbox {
 			'meta_input'   => array(
 				'_activitypub_activity_type'     => $activity_type,
 				'_activitypub_activity_actor'    => $actor_type,
-				'_activitypub_object_id'         => $activity_object->get_id(),
 				'activitypub_content_visibility' => $content_visibility,
 			),
 		);
