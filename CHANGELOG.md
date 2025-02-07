@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Batch Outbox-Processing.
+* Outbox processed events get logged in Stream and show any errors returned from inboxes.
+
 ### Changed
 
 * Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
@@ -32,12 +37,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Avoid PHP warnings when using Debug mode and when the `actor` is not set.
 * No longer creates Outbox items when importing content/users.
 * Fix NodeInfo 2.0 URL to be HTTP instead of HTTPS.
-
-## [Unreleased]
-
-### Added
-
-* Batch Outbox-Processing.
 
 ## [5.0.0] - 2025-02-03
 
