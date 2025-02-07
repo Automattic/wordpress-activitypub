@@ -7,7 +7,6 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Activity\Activity;
 use Activitypub\Model\Follower;
 use WP_Error;
 use WP_Query;
