@@ -144,11 +144,11 @@ class Stream_Connector extends \WP_Stream\Connector {
 		}
 
 		$outbox_item = \get_post( $outbox_item_id );
-		$outbox_item = $this->prepare_outbox_item_for_response( $outbox_item );
+		$outbox_data = $this->prepare_outbox_data_for_response( $outbox_item );
 
 		$this->log(
 			// translators: 1: post title.
-			sprintf( __( 'Outbox error for "%1$s"', 'activitypub' ), $outbox_item->post_title ),
+			sprintf( __( 'Outbox error for "%1$s"', 'activitypub' ), $outbox_data['title'] ),
 			array(
 				'error' => wp_json_encode(
 					array(
@@ -158,8 +158,8 @@ class Stream_Connector extends \WP_Stream\Connector {
 					)
 				),
 			),
-			$outbox_item->ID,
-			$outbox_item->post_type,
+			$outbox_data['id'],
+			$outbox_data['type'],
 			'processed'
 		);
 	}
@@ -174,13 +174,13 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 */
 	public function callback_activitypub_outbox_processing_complete( $inboxes, $json, $actor_id, $outbox_item_id ) {
 		$outbox_item = \get_post( $outbox_item_id );
-		$outbox_item = $this->prepare_outbox_item_for_response( $outbox_item );
+		$outbox_data = $this->prepare_outbox_data_for_response( $outbox_item );
 
 		$this->log(
 			sprintf(
 				// translators: %s is a URL.
 				__( 'Outbox processing complete: %s', 'activitypub' ),
-				$outbox_item->post_title
+				$outbox_data['title']
 			),
 			array(
 				'debug' => wp_json_encode(
@@ -190,8 +190,8 @@ class Stream_Connector extends \WP_Stream\Connector {
 					)
 				),
 			),
-			$outbox_item->ID,
-			$outbox_item->post_type,
+			$outbox_data['id'],
+			$outbox_data['type'],
 			'processed'
 		);
 	}
@@ -208,13 +208,13 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 */
 	public function callback_activitypub_outbox_processing_batch_complete( $inboxes, $json, $actor_id, $outbox_item_id, $batch_size, $offset ) {
 		$outbox_item = \get_post( $outbox_item_id );
-		$outbox_item = $this->prepare_outbox_item_for_response( $outbox_item );
+		$outbox_data = $this->prepare_outbox_data_for_response( $outbox_item );
 
 		$this->log(
 			sprintf(
 				// translators: %s is a URL.
 				__( 'Outbox processing batch complete: %s', 'activitypub' ),
-				$outbox_item->post_title
+				$outbox_data['title']
 			),
 			array(
 				'debug' => wp_json_encode(
@@ -226,8 +226,8 @@ class Stream_Connector extends \WP_Stream\Connector {
 					)
 				),
 			),
-			$outbox_item->ID,
-			$outbox_item->post_type,
+			$outbox_data['id'],
+			$outbox_data['type'],
 			'processed'
 		);
 	}
@@ -239,7 +239,7 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 *
 	 * @return array The title, object ID, and object type of the outbox object.
 	 */
-	protected function prepare_outbox_item_for_response( $outbox_item ) {
+	protected function prepare_outbox_data_for_response( $outbox_item ) {
 		$object_id    = $outbox_item->ID;
 		$object_type  = $outbox_item->post_type;
 		$object_title = $outbox_item->post_title;
@@ -276,10 +276,10 @@ class Stream_Connector extends \WP_Stream\Connector {
 			}
 		}
 
-		$outbox_item->ID         = $object_id;
-		$outbox_item->post_type  = $object_type;
-		$outbox_item->post_title = $object_title;
-
-		return $outbox_item;
+		return array(
+			'id'    => $object_id,
+			'type'  => $object_type,
+			'title' => $object_title,
+		);
 	}
 }
