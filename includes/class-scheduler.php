@@ -208,6 +208,7 @@ class Scheduler {
 	 */
 	public static function async_batch( $callback ) {
 		if ( ! \is_callable( $callback ) ) {
+			_doing_it_wrong( __METHOD__, 'The first argument must be a valid callback.', '5.2.0' );
 			return;
 		}
 
