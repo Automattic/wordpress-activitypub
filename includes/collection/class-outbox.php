@@ -95,21 +95,26 @@ class Outbox {
 	 * @return void
 	 */
 	private static function invalidate_existing_items( $object_id, $activity_type, $current_id ) {
+		$meta_query = array(
+			array(
+				'key' => '_activitypub_object_id',
+				'value' => $object_id,
+			),
+		);
+
+		// For non-Delete activities, only invalidate items of the same type
+		if ( 'Delete' !== $activity_type ) {
+			$meta_query[] = array(
+				'key' => '_activitypub_activity_type',
+				'value' => $activity_type,
+			);
+		}
+
 		$existing_items = get_posts(array(
 			'post_type' => self::POST_TYPE,
 			'post_status' => 'pending',
 			'exclude' => array( $current_id ),
-			'meta_query' => array(
-				'relation' => 'AND',
-				array(
-					'key' => '_activitypub_object_id',
-					'value' => $object_id,
-				),
-				array(
-					'key' => '_activitypub_activity_type',
-					'value' => $activity_type,
-				)
-			),
+			'meta_query' => $meta_query,
 			'fields' => 'ids',
 		));
 
