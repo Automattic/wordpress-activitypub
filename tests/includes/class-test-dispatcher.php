@@ -91,14 +91,6 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
 
-		$type     = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
-		$activity = new Activity();
-		$activity->set_type( $type );
-		$activity->set_id( $outbox_item->guid );
-		// Pre-fill the Activity with data (for example cc and to).
-		$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
-		$activity->set_actor( Actors::get_by_id( $outbox_item->post_author )->get_id() );
-
 		Dispatcher::process_outbox( $outbox_item->ID );
 
 		$this->assertNotFalse(
@@ -106,8 +98,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 				'activitypub_async_batch',
 				array(
 					Dispatcher::$callback,
-					$activity->to_json(),
-					(string) self::$user_id,
+					self::$user_id,
 					$outbox_item->ID,
 					Dispatcher::$batch_size,
 					0,
