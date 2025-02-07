@@ -121,10 +121,9 @@ class Outbox {
 			)
 		);
 
-		if ( $existing_items ) {
-			foreach ( $existing_items as $existing_item_id ) {
-				\wp_publish_post( $existing_item_id );
-			}
+		foreach ( $existing_items as $existing_item_id ) {
+			\wp_publish_post( $existing_item_id );
+			\delete_post_meta( $existing_item_id, '_activitypub_outbox_offset' );
 		}
 	}
 }

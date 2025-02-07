@@ -104,6 +104,7 @@ class Dispatcher {
 		} else {
 			// No followers to process for this update. We're done.
 			\wp_publish_post( $outbox_item );
+			\delete_post_meta( $outbox_item->ID, '_activitypub_outbox_offset' );
 		}
 	}
 
