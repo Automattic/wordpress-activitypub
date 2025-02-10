@@ -20,6 +20,48 @@ use function Activitypub\get_rest_url_by_path;
  * Class containing code for getting replies Collections and CollectionPages of posts and comments.
  */
 class Replies {
+
+	/**
+	 * Build base arguments for fetching the comments of either a WordPress post or comment.
+	 *
+	 * @param WP_Post|WP_Comment|WP_Error $wp_object The post or comment to fetch replies for on success.
+	 */
+	private static function build_args( $wp_object ) {
+		$args = array(
+			'status'  => 'approve',
+			'orderby' => 'comment_date_gmt',
+			'order'   => 'ASC',
+		);
+
+		if ( $wp_object instanceof WP_Post ) {
+			$args['parent']  = 0; // TODO: maybe this is unnecessary.
+			$args['post_id'] = $wp_object->ID;
+		} elseif ( $wp_object instanceof WP_Comment ) {
+			$args['parent'] = $wp_object->comment_ID;
+		} else {
+			return new WP_Error();
+		}
+
+		return $args;
+	}
+
+	/**
+	 * Get the replies collections ID.
+	 *
+	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
+	 *
+	 * @return string|WP_Error The rest URL of the replies collection or WP_Error if the object is not a post or comment.
+	 */
+	private static function get_id( $wp_object ) {
+		if ( $wp_object instanceof WP_Post ) {
+			return get_rest_url_by_path( sprintf( 'posts/%d/replies', $wp_object->ID ) );
+		} elseif ( $wp_object instanceof WP_Comment ) {
+			return get_rest_url_by_path( sprintf( 'comments/%d/replies', $wp_object->comment_ID ) );
+		} else {
+			return new WP_Error( 'unsupported_object', 'The object is not a post or comment.' );
+		}
+	}
+
 	/**
 	 * Get the Replies collection.
 	 *
@@ -121,46 +163,5 @@ class Replies {
 		}
 
 		return $comment_ids;
-	}
-
-	/**
-	 * Build base arguments for fetching the comments of either a WordPress post or comment.
-	 *
-	 * @param WP_Post|WP_Comment|WP_Error $wp_object The post or comment to fetch replies for on success.
-	 */
-	private static function build_args( $wp_object ) {
-		$args = array(
-			'status'  => 'approve',
-			'orderby' => 'comment_date_gmt',
-			'order'   => 'ASC',
-		);
-
-		if ( $wp_object instanceof WP_Post ) {
-			$args['parent']  = 0; // TODO: maybe this is unnecessary.
-			$args['post_id'] = $wp_object->ID;
-		} elseif ( $wp_object instanceof WP_Comment ) {
-			$args['parent'] = $wp_object->comment_ID;
-		} else {
-			return new WP_Error();
-		}
-
-		return $args;
-	}
-
-	/**
-	 * Get the replies collections ID.
-	 *
-	 * @param WP_Post|WP_Comment $wp_object The post or comment to fetch replies for.
-	 *
-	 * @return string|WP_Error The rest URL of the replies collection or WP_Error if the object is not a post or comment.
-	 */
-	private static function get_id( $wp_object ) {
-		if ( $wp_object instanceof WP_Post ) {
-			return get_rest_url_by_path( sprintf( 'posts/%d/replies', $wp_object->ID ) );
-		} elseif ( $wp_object instanceof WP_Comment ) {
-			return get_rest_url_by_path( sprintf( 'comments/%d/replies', $wp_object->comment_ID ) );
-		} else {
-			return new WP_Error( 'unsupported_object', 'The object is not a post or comment.' );
-		}
 	}
 }
