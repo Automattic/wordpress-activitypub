@@ -141,7 +141,7 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	 * @covers ::render_activitypub_template
 	 */
 	public function test_custom_post_type_returns_404() {
-		// Register a custom post type
+		// Register a custom post type.
 		register_post_type(
 			'test_cpt',
 			array(
@@ -150,7 +150,7 @@ class Test_Activitypub extends \WP_UnitTestCase {
 			)
 		);
 
-		// Create a post with the custom post type
+		// Create a post with the custom post type.
 		$post_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'test_cpt',
@@ -161,18 +161,18 @@ class Test_Activitypub extends \WP_UnitTestCase {
 
 		global $wp_query;
 
-		// Mock the Accept header
+		// Mock the Accept header.
 		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
 
 		// Use the ugly post-url instead.
 		$this->go_to( '/?p=' . $post_id );
 
-		// Test the template response
+		// Test the template response.
 		$template = \Activitypub\Activitypub::render_activitypub_template( 'index.php' );
 		$this->assertStringContainsString( 'activitypub-json.php', $template );
 		$this->assertFalse( $wp_query->is_404 );
 
-		// Clean up
+		// Clean up.
 		unset( $_SERVER['HTTP_ACCEPT'] );
 		_unregister_post_type( 'test_cpt' );
 	}
@@ -183,17 +183,17 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	 * @covers ::render_activitypub_template
 	 */
 	public function test_custom_post_type_with_support_returns_404() {
-		// Register a custom post type with ActivityPub support
+		// Register a custom post type with ActivityPub support.
 		register_post_type(
 			'test_cpt_supported',
 			array(
-				'public'       => true,
-				'label'        => 'Test CPT Supported',
-				'supports'     => array( 'activitypub' ),
+				'public'   => true,
+				'label'    => 'Test CPT Supported',
+				'supports' => array( 'activitypub' ),
 			)
 		);
 
-		// Create a post with the custom post type
+		// Create a post with the custom post type.
 		$post_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'test_cpt_supported',
@@ -204,20 +204,19 @@ class Test_Activitypub extends \WP_UnitTestCase {
 
 		global $wp_query;
 
-		// Mock the Accept header
+		// Mock the Accept header.
 		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
 
 		// Set up the query for the custom post type.
 		$this->go_to( '/?p=' . $post_id );
 
-		// Test the template response
+		// Test the template response.
 		$template = \Activitypub\Activitypub::render_activitypub_template( 'index.php' );
 		$this->assertStringContainsString( 'activitypub-json.php', $template );
 		$this->assertFalse( $wp_query->is_404 );
 
-		// Clean up
+		// Clean up.
 		unset( $_SERVER['HTTP_ACCEPT'] );
 		_unregister_post_type( 'test_cpt_supported' );
 	}
-
 }
