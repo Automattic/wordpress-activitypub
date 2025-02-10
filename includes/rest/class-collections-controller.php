@@ -143,32 +143,33 @@ class Collections_Controller extends Actors_Controller {
 	 * @return array Collection of featured posts.
 	 */
 	public function get_featured( $request, $user ) {
-		$sticky_posts = \get_option( 'sticky_posts' );
-		$posts        = array();
+		$posts = array();
 
-		if ( ! is_single_user() && Actors::BLOG_USER_ID === $user->get__id() ) {
-			$posts = array();
-		} elseif ( $sticky_posts && is_array( $sticky_posts ) ) {
-			// Only show public posts.
-			$args = array(
-				'post__in'            => $sticky_posts,
-				'ignore_sticky_posts' => 1,
-				'orderby'             => 'date',
-				'order'               => 'DESC',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query'          => array(
-					array(
-						'key'     => 'activitypub_content_visibility',
-						'compare' => 'NOT EXISTS',
+		if ( is_single_user() || Actors::BLOG_USER_ID !== $user->get__id() ) {
+			$sticky_posts = \get_option( 'sticky_posts' );
+
+			if ( $sticky_posts && is_array( $sticky_posts ) ) {
+				// Only show public posts.
+				$args = array(
+					'post__in'            => $sticky_posts,
+					'ignore_sticky_posts' => 1,
+					'orderby'             => 'date',
+					'order'               => 'DESC',
+					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					'meta_query'          => array(
+						array(
+							'key'     => 'activitypub_content_visibility',
+							'compare' => 'NOT EXISTS',
+						),
 					),
-				),
-			);
+				);
 
-			if ( $user->get__id() > 0 ) {
-				$args['author'] = $user->get__id();
+				if ( $user->get__id() > 0 ) {
+					$args['author'] = $user->get__id();
+				}
+
+				$posts = \get_posts( $args );
 			}
-
-			$posts = \get_posts( $args );
 		}
 
 		$response = array(
