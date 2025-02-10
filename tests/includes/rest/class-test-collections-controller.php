@@ -12,6 +12,7 @@ use Activitypub\Activity\Base_Object;
 /**
  * Test Collections REST Endpoint.
  *
+ * @group rest
  * @coversDefaultClass \Activitypub\Rest\Collections_Controller
  */
 class Test_Collections_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {

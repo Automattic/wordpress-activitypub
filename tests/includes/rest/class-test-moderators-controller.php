@@ -12,6 +12,7 @@ use Activitypub\Activity\Actor;
 /**
  * Test Moderators REST Endpoint.
  *
+ * @group rest
  * @coversDefaultClass \Activitypub\Rest\Moderators_Controller
  */
 class Test_Moderators_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
@@ -35,18 +36,10 @@ class Test_Moderators_Controller extends \Activitypub\Tests\Test_REST_Controller
 	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
-		self::$user_with_cap = $factory->user->create_and_get(
-			array(
-				'role' => 'administrator',
-			)
-		);
+		self::$user_with_cap = $factory->user->create_and_get( array( 'role' => 'administrator' ) );
 		self::$user_with_cap->add_cap( 'activitypub' );
 
-		self::$user_without_cap = $factory->user->create_and_get(
-			array(
-				'role' => 'subscriber',
-			)
-		);
+		self::$user_without_cap = $factory->user->create_and_get( array( 'role' => 'subscriber' ) );
 	}
 
 	/**
@@ -104,20 +97,28 @@ class Test_Moderators_Controller extends \Activitypub\Tests\Test_REST_Controller
 	}
 
 	/**
+	 * Test the get item schema.
+	 *
+	 * @covers ::get_item_schema
+	 */
+	public function test_get_item_schema() {
+		$request    = new \WP_REST_Request( 'OPTIONS', '/' . ACTIVITYPUB_REST_NAMESPACE . '/collections/moderators' );
+		$response   = rest_get_server()->dispatch( $request );
+		$data       = $response->get_data();
+		$properties = $data['schema']['properties'];
+
+		$this->assertArrayHasKey( '@context', $properties );
+		$this->assertArrayHasKey( 'id', $properties );
+		$this->assertArrayHasKey( 'type', $properties );
+		$this->assertArrayHasKey( 'orderedItems', $properties );
+	}
+
+	/**
 	 * Test get_item method.
 	 *
 	 * @doesNotPerformAssertions
 	 */
 	public function test_get_item() {
 		// Controller does not implement get_item().
-	}
-
-	/**
-	 * Test get_item_schema method.
-	 *
-	 * @doesNotPerformAssertions
-	 */
-	public function test_get_item_schema() {
-		// Controller does not implement get_item_schema().
 	}
 }

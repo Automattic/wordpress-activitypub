@@ -7,11 +7,10 @@
 
 namespace Activitypub\Tests\Rest;
 
-use Activitypub\Activity\Base_Object;
-
 /**
  * Test Replies REST Endpoint.
  *
+ * @group rest
  * @coversDefaultClass \Activitypub\Rest\Replies_Controller
  */
 class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
@@ -57,13 +56,13 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 		$comment_1 = self::factory()->comment->create(
 			array(
 				'comment_post_ID' => self::$post_id,
-				'user_id'        => self::$user_id,
+				'user_id'         => self::$user_id,
 			)
 		);
 
 		$comment_2 = self::factory()->comment->create(
 			array(
-				'comment_post_ID'  => self::$post_id,
+				'comment_post_ID' => self::$post_id,
 				'user_id'         => self::$user_id,
 				'comment_parent'  => $comment_1,
 			)
