@@ -136,11 +136,11 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that ActivityPub requests for custom post types return 404.
+	 * Test that ActivityPub requests for custom post types return 200.
 	 *
 	 * @covers ::render_activitypub_template
 	 */
-	public function test_custom_post_type_returns_404() {
+	public function test_custom_post_type_returns_200() {
 		// Register a custom post type.
 		register_post_type(
 			'test_cpt',
@@ -178,11 +178,11 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that ActivityPub requests for custom post types return 404 even with post type support.
+	 * Test that ActivityPub requests for custom post types return 200.
 	 *
 	 * @covers ::render_activitypub_template
 	 */
-	public function test_custom_post_type_with_support_returns_404() {
+	public function test_custom_post_type_with_support_returns_200() {
 		// Register a custom post type with ActivityPub support.
 		register_post_type(
 			'test_cpt_supported',
