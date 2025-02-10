@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Collection\Outbox;
+
 /**
  * Test class for Outbox collection.
  *
@@ -199,6 +201,52 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$object->set_id( 'https://example.com/test-object' );
 		$object->set_type( 'Note' );
 		$object->set_content( 'Test content' );
+
 		return $object;
+	}
+
+	/**
+	 * Test undo.
+	 *
+	 * @covers ::undo
+	 * @dataProvider undo_object_provider
+	 *
+	 * @param string $type     Type of the activity to be undone.
+	 * @param string $expected Expected type.
+	 */
+	public function test_undo( $type, $expected ) {
+		$data = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => 'https://example.com/' . self::$user_id,
+			'type'     => 'Note',
+			'content'  => '<p>This is a note</p>',
+		);
+
+		$id = \Activitypub\add_to_outbox( $data, $type, self::$user_id );
+
+		$undo_id  = Outbox::undo( $id );
+		$activity = Outbox::get_activity( $undo_id );
+
+		// Only ID for Deletes.
+		if ( 'Delete' === $expected ) {
+			$this->assertSame( get_post( $undo_id )->post_title, $activity->get_object() );
+		} else {
+			$this->assertEquals( json_decode( get_post( $undo_id )->post_content, true ), $activity->get_object()->to_array() );
+		}
+
+		$this->assertSame( $expected, $activity->get_type() );
+	}
+
+	/**
+	 * Data provider for test_undo.
+	 *
+	 * @return array[]
+	 */
+	public function undo_object_provider() {
+		return array(
+			array( 'Create', 'Delete' ),
+			array( 'Update', 'Undo' ),
+			array( 'Add', 'Remove' ),
+		);
 	}
 }
