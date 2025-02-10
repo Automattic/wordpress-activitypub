@@ -20,7 +20,6 @@ use function Activitypub\get_rest_url_by_path;
  * Class containing code for getting replies Collections and CollectionPages of posts and comments.
  */
 class Replies {
-
 	/**
 	 * Build base arguments for fetching the comments of either a WordPress post or comment.
 	 *
@@ -130,8 +129,12 @@ class Replies {
 			'items'  => $comment_ids,
 		);
 
-		if ( $total_replies / $args['number'] > $page + 1 ) {
+		if ( ( $total_replies / $args['number'] ) > $page ) {
 			$collection_page['next'] = \add_query_arg( 'page', $page + 1, $part_of );
+		}
+
+		if ( $page > 1 ) {
+			$collection_page['prev'] = \add_query_arg( 'page', $page - 1, $part_of );
 		}
 
 		return $collection_page;
