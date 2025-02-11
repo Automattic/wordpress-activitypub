@@ -51,24 +51,26 @@ class Blocks {
 					},
 				)
 			);
+
 			\register_post_meta(
 				$post_type,
 				'activitypub_content_visibility',
 				array(
-					'show_in_rest'      => true,
-					'single'            => true,
 					'type'              => 'string',
-					'sanitize_callback' => function ( $visibility ) {
-						$options = array(
-							ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
-							ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
+					'single'            => true,
+					'show_in_rest'      => true,
+					'sanitize_callback' => function ( $value ) {
+						$schema = array(
+							'type'    => 'string',
+							'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+							'default' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
 						);
 
-						if ( in_array( $visibility, $options, true ) ) {
-							return $visibility;
+						if ( is_wp_error( rest_validate_enum( $value, $schema, '' ) ) ) {
+							return $schema['default'];
 						}
 
-						return null;
+						return $value;
 					},
 				)
 			);

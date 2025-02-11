@@ -53,6 +53,7 @@ class Activitypub {
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
+		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
 
 		// Register several post_types.
 		self::register_post_types();
@@ -148,7 +149,7 @@ class Activitypub {
 				 */
 				$activitypub_template = apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
 			} else {
-				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/activitypub-json.php';
+				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . 'templates/activitypub-json.php';
 			}
 		}
 
@@ -169,10 +170,17 @@ class Activitypub {
 		}
 
 		if ( $activitypub_template ) {
+			\set_query_var( 'is_404', false );
+
 			// Check if header already sent.
-			if ( ! \headers_sent() && ACTIVITYPUB_SEND_VARY_HEADER ) {
-				// Send Vary header for Accept header.
-				\header( 'Vary: Accept' );
+			if ( ! \headers_sent() ) {
+				// Send 200 status header.
+				\status_header( 200 );
+
+				if ( ACTIVITYPUB_SEND_VARY_HEADER ) {
+					// Send Vary header for Accept header.
+					\header( 'Vary: Accept' );
+				}
 			}
 
 			return $activitypub_template;
@@ -619,6 +627,18 @@ class Activitypub {
 
 					return $value;
 				},
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'_activitypub_outbox_offset',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'description'       => 'Keeps track of the followers offset when processing outbox items.',
+				'sanitize_callback' => 'absint',
+				'default'           => 0,
 			)
 		);
 
