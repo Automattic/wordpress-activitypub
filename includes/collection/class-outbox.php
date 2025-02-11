@@ -7,6 +7,8 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Dispatcher;
+
 /**
  * ActivityPub Outbox Collection
  *
