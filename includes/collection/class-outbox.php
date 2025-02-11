@@ -137,6 +137,8 @@ class Outbox {
 			);
 			$timestamp  = wp_next_scheduled( 'activitypub_async_batch', $event_args );
 			wp_unschedule_event( $timestamp, 'activitypub_async_batch', $event_args );
+			$timestamp = wp_next_scheduled( 'activitypub_process_outbox', array( $existing_item_id ) );
+			wp_unschedule_event( $timestamp, 'activitypub_process_outbox', array( $existing_item_id ) );
 
 			\wp_publish_post( $existing_item_id );
 			\delete_post_meta( $existing_item_id, '_activitypub_outbox_offset' );
