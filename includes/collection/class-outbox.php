@@ -40,6 +40,11 @@ class Outbox {
 				break;
 		}
 
+		$title = $activity_object->get_name() ?? $activity_object->get_content();
+		if ( empty( $title ) && $activity_object->get_object() ) {
+			$title = $activity_object->get_object()->get_name() ?? $activity_object->get_object()->get_content();
+		}
+
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
 			'post_title'   => sprintf(
@@ -47,7 +52,7 @@ class Outbox {
 				__( '[%1$s] %2$s: %3$s', 'activitypub' ),
 				$activity_type,
 				$activity_object->get_type(),
-				\wp_trim_words( $activity_object->get_name() ?? $activity_object->get_content(), 5 )
+				\wp_trim_words( $title, 5 )
 			),
 			'post_content' => wp_slash( $activity_object->to_json() ),
 			// ensure that user ID is not below 0.
