@@ -53,6 +53,7 @@ class Activitypub {
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
+		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
 
 		// Register several post_types.
 		self::register_post_types();

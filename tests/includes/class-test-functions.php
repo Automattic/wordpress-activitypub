@@ -362,9 +362,16 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		$visible_private_post_id = self::factory()->post->create();
 
 		add_post_meta( $visible_private_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
-		$this->assertFalse( \Activitypub\is_post_disabled( $visible_private_post_id ) );
+		$this->assertTrue( \Activitypub\is_post_disabled( $visible_private_post_id ) );
 
 		wp_delete_post( $visible_private_post_id, true );
+
+		$visible_local_post_id = self::factory()->post->create();
+
+		add_post_meta( $visible_local_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+		$this->assertTrue( \Activitypub\is_post_disabled( $visible_local_post_id ) );
+
+		wp_delete_post( $visible_local_post_id, true );
 	}
 
 	/**

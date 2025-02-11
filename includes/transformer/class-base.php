@@ -13,7 +13,6 @@ use WP_Term;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Replies;
 use Activitypub\Activity\Base_Object;
 
 /**
@@ -255,15 +254,6 @@ abstract class Base {
 	 */
 	public function get_media_type() {
 		return 'text/html';
-	}
-
-	/**
-	 * Get the replies Collection.
-	 *
-	 * @return array|null The replies collection on success or null on failure.
-	 */
-	public function get_replies() {
-		return Replies::get_collection( $this->item );
 	}
 
 	/**
