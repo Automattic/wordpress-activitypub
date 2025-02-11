@@ -658,6 +658,10 @@ class Base_Object {
 		$vars  = get_object_vars( $this );
 
 		foreach ( $vars as $key => $value ) {
+			if ( \is_wp_error( $value ) ) {
+				continue;
+			}
+
 			// Ignore all _prefixed keys.
 			if ( '_' === substr( $key, 0, 1 ) ) {
 				continue;

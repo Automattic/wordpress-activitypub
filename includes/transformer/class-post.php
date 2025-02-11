@@ -11,7 +11,7 @@ use WP_Post;
 use Activitypub\Shortcodes;
 use Activitypub\Model\Blog;
 use Activitypub\Collection\Actors;
-
+use Activitypub\Collection\Replies;
 use function Activitypub\esc_hashtag;
 use function Activitypub\object_to_uri;
 use function Activitypub\is_single_user;
@@ -1098,5 +1098,14 @@ class Post extends Base {
 		 * @param WP_Post $item The WordPress post object being transformed.
 		 */
 		return apply_filters( 'activitypub_object_content_template', $template, $this->item );
+	}
+
+	/**
+	 * Get the replies Collection.
+	 *
+	 * @return array|null The replies collection on success or null on failure.
+	 */
+	public function get_replies() {
+		return Replies::get_collection( $this->item );
 	}
 }

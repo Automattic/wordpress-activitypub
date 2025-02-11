@@ -11,7 +11,7 @@ use Activitypub\Webfinger;
 use Activitypub\Comment as Comment_Utils;
 use Activitypub\Model\Blog;
 use Activitypub\Collection\Actors;
-
+use Activitypub\Collection\Replies;
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\was_comment_received;
@@ -333,5 +333,14 @@ class Comment extends Base {
 	 */
 	public function get_type() {
 		return 'Note';
+	}
+
+	/**
+	 * Get the replies Collection.
+	 *
+	 * @return array|null The replies collection on success or null on failure.
+	 */
+	public function get_replies() {
+		return Replies::get_collection( $this->item );
 	}
 }
