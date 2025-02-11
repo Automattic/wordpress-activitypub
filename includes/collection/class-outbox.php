@@ -41,7 +41,7 @@ class Outbox {
 		}
 
 		$title = $activity_object->get_name() ?? $activity_object->get_content();
-		if ( empty( $title ) && $activity_object->get_object() ) {
+		if ( empty( $title ) && $activity_object->get_object() instanceof \Activitypub\Activity\Base_Object ) {
 			$title = $activity_object->get_object()->get_name() ?? $activity_object->get_object()->get_content();
 		}
 
