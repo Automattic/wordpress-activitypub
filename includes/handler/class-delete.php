@@ -114,12 +114,12 @@ class Delete {
 	 * @param array $activity The delete activity.
 	 */
 	public static function maybe_delete_follower( $activity ) {
-		/* @var Followers $follower Followers object. */
+		/* @var \Activitypub\Model\Follower $follower Follower object. */
 		$follower = Followers::get_follower_by_actor( $activity['actor'] );
 
 		// Verify that Actor is deleted.
 		if ( $follower && Http::is_tombstone( $activity['actor'] ) ) {
-			$follower->delete(); // TODO: Does `delete()` exist?
+			$follower->delete();
 			self::maybe_delete_interactions( $activity );
 		}
 	}
