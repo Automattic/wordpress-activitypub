@@ -128,7 +128,7 @@ class Outbox {
 				Dispatcher::$callback,
 				$existing_item_id,
 				Dispatcher::$batch_size,
-				\get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
+				\get_post_meta( $current_id, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
 			);
 			$timestamp  = wp_next_scheduled( 'activitypub_async_batch', $event_args );
 			wp_unschedule_event( $timestamp, 'activitypub_async_batch', $event_args );
