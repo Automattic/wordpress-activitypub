@@ -349,9 +349,9 @@ class Comment extends Base {
 		}
 
 		return null;
-  }
+	}
 
-  /**
+	/**
 	 * Get the replies Collection.
 	 *
 	 * @return array|null The replies collection on success or null on failure.

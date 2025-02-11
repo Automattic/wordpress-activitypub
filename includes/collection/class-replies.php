@@ -89,39 +89,6 @@ class Replies {
 	}
 
 	/**
-	 * Get the ActivityPub ID's from a list of comments.
-	 *
-	 * It takes only federated/non-local comments into account, others also do not have an
-	 * ActivityPub ID available.
-	 *
-	 * @param WP_Comment[] $comments              The comments to retrieve the ActivityPub ids from.
-	 * @param boolean      $include_blog_comments Include blog comments in the returned array.
-	 *
-	 * @return string[] A list of the ActivityPub ID's.
-	 */
-	private static function get_reply_ids( $comments, $include_blog_comments = false ) {
-		$comment_ids = array();
-
-		foreach ( $comments as $comment ) {
-			if ( is_local_comment( $comment ) ) {
-				continue;
-			}
-
-			$public_comment_id = Comment::get_source_id( $comment->comment_ID );
-			if ( $public_comment_id ) {
-				$comment_ids[] = $public_comment_id;
-				continue;
-			}
-
-			if ( $include_blog_comments ) {
-				$comment_ids[] = ( new CommentTransformer( $comment ) )->to_id();
-			}
-		}
-
-		return \array_unique( $comment_ids );
-	}
-
-	/**
 	 * Returns a replies collection page as an associative array.
 	 *
 	 * @link https://www.w3.org/TR/activitystreams-vocabulary/#dfn-collectionpage
@@ -202,22 +169,22 @@ class Replies {
 			'totalItems'   => count( $ids ),
 			'items'        => $ids,
 		);
-  }
+	}
 
-  /**
+	/**
 	 * Get the ActivityPub ID's from a list of comments.
 	 *
 	 * It takes only federated/non-local comments into account, others also do not have an
 	 * ActivityPub ID available.
 	 *
-	 * @param WP_Comment[] $comments The comments to retrieve the ActivityPub ids from.
+	 * @param WP_Comment[] $comments              The comments to retrieve the ActivityPub ids from.
+	 * @param boolean      $include_blog_comments Include blog comments in the returned array.
 	 *
 	 * @return string[] A list of the ActivityPub ID's.
 	 */
-	private static function get_reply_ids( $comments ) {
+	private static function get_reply_ids( $comments, $include_blog_comments = false ) {
 		$comment_ids = array();
-		// Only add external comments from the fediverse.
-		// Maybe use the Comment class more and the function is_local_comment etc.
+
 		foreach ( $comments as $comment ) {
 			if ( is_local_comment( $comment ) ) {
 				continue;
@@ -226,9 +193,14 @@ class Replies {
 			$public_comment_id = Comment::get_source_id( $comment->comment_ID );
 			if ( $public_comment_id ) {
 				$comment_ids[] = $public_comment_id;
+				continue;
+			}
+
+			if ( $include_blog_comments ) {
+				$comment_ids[] = ( new CommentTransformer( $comment ) )->to_id();
 			}
 		}
 
-		return $comment_ids;
+		return \array_unique( $comment_ids );
 	}
 }
