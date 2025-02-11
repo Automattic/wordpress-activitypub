@@ -373,6 +373,7 @@ class Dispatcher {
 	 * Get the Actor object from the Outbox item.
 	 *
 	 * @param \WP_Post $outbox_item The Outbox post.
+	 *
 	 * @return \Activitypub\Model\User|\Activitypub\Model\Blog|\WP_Error The Actor object or WP_Error.
 	 */
 	private static function get_actor( $outbox_item ) {
