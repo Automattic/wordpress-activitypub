@@ -22,17 +22,17 @@ use Activitypub\Collection\Followers;
  *
  * @see https://www.w3.org/TR/activitypub/#follow-activity-inbox
  *
- * @method string|null  get__id()      Get the internal user ID.
- * @method string|array get_image()    Get the user's profile image.
- * @method string|null  get_inbox()    Get the user's ActivityPub inbox URL.
- * @method array|null   get_endpoints() Get the user's ActivityPub endpoints.
+ * @method int         get__id()       Gets the post ID of the follower record.
+ * @method array|null  get_image()     Gets the follower's profile image data.
+ * @method string|null get_inbox()     Gets the follower's ActivityPub inbox URL.
+ * @method array|null  get_endpoints() Gets the follower's ActivityPub endpoints.
  *
- * @method Follower set__id( int $id )             Set the internal user ID.
- * @method Follower set_id( string $guid )         Set the user's GUID.
- * @method Follower set_name( string $name )       Set the user's display name.
- * @method Follower set_summary( string $summary ) Set the user's bio/summary.
- * @method Follower set_published( int $timestamp ) Set the user's published timestamp.
- * @method Follower set_updated( int $timestamp )   Set the user's last updated timestamp.
+ * @method Follower set__id( int $id )                Sets the post ID of the follower record.
+ * @method Follower set_id( string $guid )            Sets the follower's GUID.
+ * @method Follower set_name( string $name )          Sets the follower's display name.
+ * @method Follower set_summary( string $summary )    Sets the follower's bio/summary.
+ * @method Follower set_published( string $datetime ) Sets the follower's published datetime in ISO 8601 format.
+ * @method Follower set_updated( string $datetime )   Sets the follower's last updated datetime in ISO 8601 format.
  */
 class Follower extends Actor {
 	/**

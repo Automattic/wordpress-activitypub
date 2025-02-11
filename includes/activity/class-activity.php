@@ -21,37 +21,37 @@ use function Activitypub\is_activity;
  * @see https://www.w3.org/TR/activitystreams-core/#activities
  * @see https://www.w3.org/TR/activitystreams-core/#intransitiveactivities
  *
- * @method string|null       get_actor()          Gets the actor performing the activity.
- * @method string|null       get_id()            Gets the object's unique global identifier.
- * @method string|null       get_type()          Gets the type of the object.
- * @method string|null       get_name()          Gets the natural language name of the object.
- * @method string|null       get_url()           Gets the URL of the object.
- * @method string|null       get_summary()       Gets the natural language summary of the object.
- * @method string|null       get_published()     Gets the date and time the object was published.
- * @method string|null       get_updated()       Gets the date and time the object was updated.
- * @method string|null       get_attributed_to() Gets the entity attributed as the original author.
- * @method string|null       get_cc()            Gets the secondary recipients of the object.
- * @method string|null       get_to()            Gets the primary recipients of the object.
- * @method array|null        get_attachment()    Gets the attachment property of the object.
- * @method array|null        get_icon()          Gets the icon property of the object.
- * @method array|null        get_image()         Gets the image property of the object.
- * @method array|object|null get_object()        Gets the activity object.
- * @method array|null        get_in_reply_to()   Gets the in_reply_to list of the object.
+ * @method string|array|null  get_actor()          Gets one or more entities that performed or are expected to perform the activity.
+ * @method string|null        get_id()             Gets the object's unique global identifier.
+ * @method string             get_type()           Gets the type of the object.
+ * @method string|null        get_name()           Gets the natural language name of the object.
+ * @method string|null        get_url()            Gets the URL of the object.
+ * @method string|null        get_summary()        Gets the natural language summary of the object.
+ * @method string|null        get_published()      Gets the date and time the object was published in ISO 8601 format.
+ * @method string|null        get_updated()        Gets the date and time the object was updated in ISO 8601 format.
+ * @method string|null        get_attributed_to()  Gets the entity attributed as the original author.
+ * @method array|string|null  get_cc()             Gets the secondary recipients of the object.
+ * @method array|string|null  get_to()             Gets the primary recipients of the object.
+ * @method array|null         get_attachment()     Gets the attachment property of the object.
+ * @method array|null         get_icon()           Gets the icon property of the object.
+ * @method array|null         get_image()          Gets the image property of the object.
+ * @method Base_Object|string|null get_object()    Gets the direct object of the activity.
+ * @method array|string|null  get_in_reply_to()    Gets the objects this object is in reply to.
  *
- * @method Activity set_actor( string $actor )     Sets the actor performing the activity.
- * @method Activity set_id( string $id )           Sets the object's unique global identifier.
- * @method Activity set_type( string $type )       Sets the type of the object.
- * @method Activity set_name( string $name )       Sets the natural language name of the object.
- * @method Activity set_url( string $url )         Sets the URL of the object.
- * @method Activity set_summary( string $summary ) Sets the natural language summary of the object.
- * @method Activity set_published( string $published ) Sets the date and time the object was published.
- * @method Activity set_updated( string $updated ) Sets the date and time the object was updated.
+ * @method Activity set_actor( string|array $actor )    Sets one or more entities that performed the activity.
+ * @method Activity set_id( string $id )                Sets the object's unique global identifier.
+ * @method Activity set_type( string $type )            Sets the type of the object.
+ * @method Activity set_name( string $name )            Sets the natural language name of the object.
+ * @method Activity set_url( string $url )              Sets the URL of the object.
+ * @method Activity set_summary( string $summary )      Sets the natural language summary of the object.
+ * @method Activity set_published( string $published )  Sets the date and time the object was published in ISO 8601 format.
+ * @method Activity set_updated( string $updated )      Sets the date and time the object was updated in ISO 8601 format.
  * @method Activity set_attributed_to( string $attributed_to ) Sets the entity attributed as the original author.
- * @method Activity set_cc( array $cc )            Sets the secondary recipients of the object.
- * @method Activity set_to( array $to )            Sets the primary recipients of the object.
- * @method Activity set_attachment( string $url )  Sets the attachment property of the object.
- * @method Activity set_icon( string $url )        Sets the icon property of the object.
- * @method Activity set_image( string $url )       Sets the image property of the object.
+ * @method Activity set_cc( array|string $cc )          Sets the secondary recipients of the object.
+ * @method Activity set_to( array|string $to )          Sets the primary recipients of the object.
+ * @method Activity set_attachment( array $attachment ) Sets the attachment property of the object.
+ * @method Activity set_icon( array $icon )             Sets the icon property of the object.
+ * @method Activity set_image( array $image )           Sets the image property of the object.
  */
 class Activity extends Base_Object {
 	const JSON_LD_CONTEXT = array(
@@ -67,122 +67,84 @@ class Activity extends Base_Object {
 
 	/**
 	 * Describes the direct object of the activity.
-	 * For instance, in the activity "John added a movie to his
-	 * wishlist", the object of the activity is the movie added.
+	 * For instance, in the activity "John added a movie to his wishlist", the object of the activity is the movie added.
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-object-term
 	 *
-	 * @var string
-	 *    | Base_Object
-	 *    | Link
-	 *    | null
+	 * @var string|Base_Object|null
 	 */
 	protected $object;
 
 	/**
-	 * Describes one or more entities that either performed or are
-	 * expected to perform the activity.
+	 * Describes one or more entities that either performed or are expected to perform the activity.
 	 * Any single activity can have multiple actors.
-	 * The actor MAY be specified using an indirect Link.
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-actor
 	 *
-	 * @var string
-	 *    | \ActivityPhp\Type\Extended\AbstractActor
-	 *    | array<Actor>
-	 *    | array<Link>
-	 *    | Link
+	 * @var string|\ActivityPhp\Type\Extended\AbstractActor|array<Actor>|null
 	 */
 	protected $actor;
 
 	/**
 	 * The indirect object, or target, of the activity.
-	 * The precise meaning of the target is largely dependent on the
-	 * type of action being described but will often be the object of
-	 * the English preposition "to".
-	 * For instance, in the activity "John added a movie to his
-	 * wishlist", the target of the activity is John's wishlist.
+	 * The precise meaning of the target is largely dependent on the type of action being described but will often be the object of the English preposition "to".
+	 * For instance, in the activity "John added a movie to his wishlist", the target of the activity is John's wishlist.
 	 * An activity can have more than one target.
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-target
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | array<ObjectType>
-	 *    | Link
-	 *    | array<Link>
+	 * @var string|ObjectType|array<ObjectType>|null
 	 */
 	protected $target;
 
 	/**
 	 * Describes the result of the activity.
-	 * For instance, if a particular action results in the creation of
-	 * a new resource, the result property can be used to describe
-	 * that new resource.
+	 * For instance, if a particular action results in the creation of a new resource, the result property can be used to describe that new resource.
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-result
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | null
+	 * @var string|ObjectType|null
 	 */
 	protected $result;
 
 	/**
-	 * Identifies a Collection containing objects considered to be responses
-	 * to this object.
-	 * WordPress has a strong core system of approving replies. We only include
-	 * approved replies here.
+	 * Identifies a Collection containing objects considered to be responses to this object.
+	 * WordPress has a strong core system of approving replies. We only include approved replies here.
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-replies
 	 *
-	 * @var array
-	 *    | ObjectType
-	 *    | Link
-	 *    | null
+	 * @var array|ObjectType|null
 	 */
 	protected $replies;
 
 	/**
-	 * An indirect object of the activity from which the
-	 * activity is directed.
-	 * The precise meaning of the origin is the object of the English
-	 * preposition "from".
-	 * For instance, in the activity "John moved an item to List B
-	 * from List A", the origin of the activity is "List A".
+	 * An indirect object of the activity from which the activity is directed.
+	 * The precise meaning of the origin is the object of the English preposition "from".
+	 * For instance, in the activity "John moved an item to List B from List A", the origin of the activity is "List A".
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-origin
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | null
+	 * @var string|ObjectType|null
 	 */
 	protected $origin;
 
 	/**
-	 * One or more objects used (or to be used) in the completion of an
-	 * Activity.
+	 * One or more objects used (or to be used) in the completion of an Activity.
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-instrument
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | null
+	 * @var string|ObjectType|null
 	 */
 	protected $instrument;
 
 	/**
 	 * Set the object and copy Object properties to the Activity.
 	 *
-	 * Any to, bto, cc, bcc, and audience properties specified on the object
-	 * MUST be copied over to the new Create activity by the server.
+	 * Any to, bto, cc, bcc, and audience properties specified on the object MUST be copied over to the new Create activity by the server.
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#object-without-create
 	 *
-	 * @param array|string|Base_Object|Link|null $data Activity object.
+	 * @param array|string|Base_Object|null $data Activity object.
 	 *
 	 * @return void
 	 */
