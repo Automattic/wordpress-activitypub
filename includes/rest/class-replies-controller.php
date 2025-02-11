@@ -109,8 +109,8 @@ class Replies_Controller extends \WP_REST_Controller {
 			return $response;
 		}
 
-		// Add ActivityPub Context.
-		$response['@context'] = Base_Object::JSON_LD_CONTEXT;
+		// Prepend ActivityPub Context.
+		$response = array_merge( array( '@context' => Base_Object::JSON_LD_CONTEXT ), $response );
 
 		return \rest_ensure_response( $response );
 	}
