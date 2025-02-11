@@ -19,6 +19,8 @@ use function Activitypub\get_attribution_domains;
 
 /**
  * User class.
+ *
+ * @method string get__id()
  */
 class User extends Actor {
 	/**

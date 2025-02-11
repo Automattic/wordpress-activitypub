@@ -114,11 +114,12 @@ class Delete {
 	 * @param array $activity The delete activity.
 	 */
 	public static function maybe_delete_follower( $activity ) {
+		/* @var Followers $follower Followers object. */
 		$follower = Followers::get_follower_by_actor( $activity['actor'] );
 
 		// Verify that Actor is deleted.
 		if ( $follower && Http::is_tombstone( $activity['actor'] ) ) {
-			$follower->delete();
+			$follower->delete(); // TODO: Does `delete()` exist?
 			self::maybe_delete_interactions( $activity );
 		}
 	}
@@ -142,7 +143,7 @@ class Delete {
 	/**
 	 * Delete comments from an Actor.
 	 *
-	 * @param array $actor The actor whose comments to delete.
+	 * @param string $actor The URL of the actor whose comments to delete.
 	 */
 	public static function delete_interactions( $actor ) {
 		$comments = Interactions::get_interactions_by_actor( $actor );

@@ -21,6 +21,18 @@ use Activitypub\Collection\Followers;
  * @author Matthias Pfefferle
  *
  * @see https://www.w3.org/TR/activitypub/#follow-activity-inbox
+ *
+ * @method string|null  get__id()
+ * @method string|array get_image()
+ * @method string|null  get_inbox()
+ * @method array|null   get_endpoints()
+ *
+ * @method Follower set__id( int $id );
+ * @method Follower set_id( string $guid );
+ * @method Follower set_name( string $name );
+ * @method Follower set_summary( string $summary );
+ * @method Follower set_published( int $timestamp );
+ * @method Follower set_updated( int $timestamp );
  */
 class Follower extends Actor {
 	/**
@@ -335,7 +347,9 @@ class Follower extends Actor {
 	 */
 	public static function init_from_cpt( $post ) {
 		$actor_json = get_post_meta( $post->ID, '_activitypub_actor_json', true );
-		$object     = self::init_from_json( $actor_json );
+
+		/* @var Follower $object Follower object. */
+		$object = self::init_from_json( $actor_json );
 
 		if ( is_wp_error( $object ) ) {
 			return false;

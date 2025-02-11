@@ -22,6 +22,8 @@ use function Activitypub\get_attribution_domains;
 
 /**
  * Blog class.
+ *
+ * @method string|null get__id()
  */
 class Blog extends Actor {
 	/**

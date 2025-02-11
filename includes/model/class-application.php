@@ -16,6 +16,8 @@ use function Activitypub\get_rest_url_by_path;
 
 /**
  * Application class.
+ *
+ * @method string|null get__id()
  */
 class Application extends Actor {
 	/**

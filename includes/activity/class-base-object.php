@@ -191,7 +191,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-icon
 	 *
-	 * @var string
+	 * @var string|array
 	 *    | Image
 	 *    | Link
 	 *    | array<Image>

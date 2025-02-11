@@ -20,6 +20,38 @@ use function Activitypub\is_activity;
  *
  * @see https://www.w3.org/TR/activitystreams-core/#activities
  * @see https://www.w3.org/TR/activitystreams-core/#intransitiveactivities
+ *
+ * @method string|null       get_actor()
+ * @method string|null       get_id()            Gets the object's unique global identifier.
+ * @method string|null       get_type()          Gets the type of the object.
+ * @method string|null       get_name()          Gets the natural language name of the object.
+ * @method string|null       get_url()           Gets the URL of the object.
+ * @method string|null       get_summary()       Gets the natural language summary of the object.
+ * @method string|null       get_published()
+ * @method string|null       get_updated()
+ * @method string|null       get_attributed_to()
+ * @method string|null       get_cc()
+ * @method string|null       get_to()
+ * @method array|null        get_attachment()    Gets the attachment property of the object.
+ * @method array|null        get_icon()          Gets the icon property of the object.
+ * @method array|null        get_image()         Gets the image property of the object.
+ * @method array|object|null get_object()        Returns activity object.
+ * @method array|null        get_in_reply_to()   Gets the in_reply_to list of the object.
+ *
+ * @method Activity set_actor( string $actor )     Sets the object's unique global identifier.
+ * @method Activity set_id( string $id )           Sets the object's unique global identifier.
+ * @method Activity set_type( string $type )       Sets the type of the object.
+ * @method Activity set_name( string $name )       Sets the natural language name of the object.
+ * @method Activity set_url( string $url )         Sets the URL of the object.
+ * @method Activity set_summary( string $summary ) Sets the natural language summary of the object.
+ * @method Activity set_published( string $published )
+ * @method Activity set_updated( string $updated )
+ * @method Activity set_attributed_to( string $attributed_to )
+ * @method Activity set_cc()
+ * @method Activity set_to()
+ * @method Activity set_attachment( string $url )  Sets the attachment property of the object.
+ * @method Activity set_icon( string $url )        Sets the icon property of the object.
+ * @method Activity set_image( string $url )       Sets the image property of the object.
  */
 class Activity extends Base_Object {
 	const JSON_LD_CONTEXT = array(
