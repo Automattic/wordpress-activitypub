@@ -122,6 +122,14 @@ class Outbox {
 		);
 
 		foreach ( $existing_items as $existing_item_id ) {
+			$event_args = array(
+				Dispatcher::$callback,
+				$existing_item_id,
+				Dispatcher::$batch_size,
+				\get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
+			);
+			$timestamp = wp_next_scheduled( 'activitypub_async_batch', $event_args );
+			wp_unschedule_event( $timestamp, 'activitypub_async_batch', $event_args );
 			\wp_publish_post( $existing_item_id );
 			\delete_post_meta( $existing_item_id, '_activitypub_outbox_offset' );
 		}
