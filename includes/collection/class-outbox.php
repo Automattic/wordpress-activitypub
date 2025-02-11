@@ -130,6 +130,7 @@ class Outbox {
 			);
 			$timestamp  = wp_next_scheduled( 'activitypub_async_batch', $event_args );
 			wp_unschedule_event( $timestamp, 'activitypub_async_batch', $event_args );
+
 			\wp_publish_post( $existing_item_id );
 			\delete_post_meta( $existing_item_id, '_activitypub_outbox_offset' );
 		}
