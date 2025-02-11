@@ -122,7 +122,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		remove_filter( 'wp_is_comment_flood', '__return_false', 99 );
 
 		$query_result = \Activitypub\object_id_to_comment( $duplicate_comment_source_id );
-		$this->assertFalse( $query_result );
+		$this->assertInstanceOf( \WP_Comment::class, $query_result );
 	}
 
 	/**
