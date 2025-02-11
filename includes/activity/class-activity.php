@@ -21,22 +21,22 @@ use function Activitypub\is_activity;
  * @see https://www.w3.org/TR/activitystreams-core/#activities
  * @see https://www.w3.org/TR/activitystreams-core/#intransitiveactivities
  *
- * @method string|array|null  get_actor()          Gets one or more entities that performed or are expected to perform the activity.
- * @method string|null        get_id()             Gets the object's unique global identifier.
- * @method string             get_type()           Gets the type of the object.
- * @method string|null        get_name()           Gets the natural language name of the object.
- * @method string|null        get_url()            Gets the URL of the object.
- * @method string|null        get_summary()        Gets the natural language summary of the object.
- * @method string|null        get_published()      Gets the date and time the object was published in ISO 8601 format.
- * @method string|null        get_updated()        Gets the date and time the object was updated in ISO 8601 format.
- * @method string|null        get_attributed_to()  Gets the entity attributed as the original author.
- * @method array|string|null  get_cc()             Gets the secondary recipients of the object.
- * @method array|string|null  get_to()             Gets the primary recipients of the object.
- * @method array|null         get_attachment()     Gets the attachment property of the object.
- * @method array|null         get_icon()           Gets the icon property of the object.
- * @method array|null         get_image()          Gets the image property of the object.
- * @method Base_Object|string|null get_object()    Gets the direct object of the activity.
- * @method array|string|null  get_in_reply_to()    Gets the objects this object is in reply to.
+ * @method string|array|null       get_actor()          Gets one or more entities that performed or are expected to perform the activity.
+ * @method string|null             get_id()             Gets the object's unique global identifier.
+ * @method string                  get_type()           Gets the type of the object.
+ * @method string|null             get_name()           Gets the natural language name of the object.
+ * @method string|null             get_url()            Gets the URL of the object.
+ * @method string|null             get_summary()        Gets the natural language summary of the object.
+ * @method string|null             get_published()      Gets the date and time the object was published in ISO 8601 format.
+ * @method string|null             get_updated()        Gets the date and time the object was updated in ISO 8601 format.
+ * @method string|null             get_attributed_to()  Gets the entity attributed as the original author.
+ * @method array|string|null       get_cc()             Gets the secondary recipients of the object.
+ * @method array|string|null       get_to()             Gets the primary recipients of the object.
+ * @method array|null              get_attachment()     Gets the attachment property of the object.
+ * @method array|null              get_icon()           Gets the icon property of the object.
+ * @method array|null              get_image()          Gets the image property of the object.
+ * @method Base_Object|string|null get_object()         Gets the direct object of the activity.
+ * @method array|string|null       get_in_reply_to()    Gets the objects this object is in reply to.
  *
  * @method Activity set_actor( string|array $actor )    Sets one or more entities that performed the activity.
  * @method Activity set_id( string $id )                Sets the object's unique global identifier.
