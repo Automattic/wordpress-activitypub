@@ -271,10 +271,6 @@ class Comment {
 			return false;
 		}
 
-		if ( count( $comment_query->comments ) > 1 ) {
-			return false;
-		}
-
 		return $comment_query->comments[0];
 	}
 
