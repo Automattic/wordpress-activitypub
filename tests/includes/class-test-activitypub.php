@@ -15,6 +15,25 @@ use Activitypub\Collection\Outbox;
  * @coversDefaultClass \Activitypub\Activitypub
  */
 class Test_Activitypub extends \WP_UnitTestCase {
+	/**
+	 * Test user ID.
+	 *
+	 * @var int
+	 */
+	protected static $user_id;
+
+	/**
+	 * Create fake data before tests run.
+	 *
+	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 */
+	public static function wpSetUpBeforeClass( $factory ) {
+		self::$user_id = $factory->user->create(
+			array(
+				'role' => 'author',
+			)
+		);
+	}
 
 	/**
 	 * Set up test environment.
@@ -114,5 +133,90 @@ class Test_Activitypub extends \WP_UnitTestCase {
 			array( '_activitypub_activity_actor', 'user', 'user' ),
 			array( '_activitypub_activity_actor', 'blog', 'user' ),
 		);
+	}
+
+	/**
+	 * Test that ActivityPub requests for custom post types return 200.
+	 *
+	 * @covers ::render_activitypub_template
+	 */
+	public function test_custom_post_type_returns_200() {
+		// Register a custom post type.
+		register_post_type(
+			'test_cpt',
+			array(
+				'public' => true,
+				'label'  => 'Test CPT',
+			)
+		);
+
+		// Create a post with the custom post type.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'test_cpt',
+				'post_status' => 'publish',
+				'post_author' => self::$user_id,
+			)
+		);
+
+		global $wp_query;
+
+		// Mock the Accept header.
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+
+		// Use the ugly post-url instead.
+		$this->go_to( '/?p=' . $post_id );
+
+		// Test the template response.
+		$template = \Activitypub\Activitypub::render_activitypub_template( 'index.php' );
+		$this->assertStringContainsString( 'activitypub-json.php', $template );
+		$this->assertFalse( $wp_query->is_404 );
+
+		// Clean up.
+		unset( $_SERVER['HTTP_ACCEPT'] );
+		_unregister_post_type( 'test_cpt' );
+	}
+
+	/**
+	 * Test that ActivityPub requests for custom post types return 200.
+	 *
+	 * @covers ::render_activitypub_template
+	 */
+	public function test_custom_post_type_with_support_returns_200() {
+		// Register a custom post type with ActivityPub support.
+		register_post_type(
+			'test_cpt_supported',
+			array(
+				'public'   => true,
+				'label'    => 'Test CPT Supported',
+				'supports' => array( 'activitypub' ),
+			)
+		);
+
+		// Create a post with the custom post type.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'test_cpt_supported',
+				'post_status' => 'publish',
+				'post_author' => self::$user_id,
+			)
+		);
+
+		global $wp_query;
+
+		// Mock the Accept header.
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+
+		// Set up the query for the custom post type.
+		$this->go_to( '/?p=' . $post_id );
+
+		// Test the template response.
+		$template = \Activitypub\Activitypub::render_activitypub_template( 'index.php' );
+		$this->assertStringContainsString( 'activitypub-json.php', $template );
+		$this->assertFalse( $wp_query->is_404 );
+
+		// Clean up.
+		unset( $_SERVER['HTTP_ACCEPT'] );
+		_unregister_post_type( 'test_cpt_supported' );
 	}
 }
