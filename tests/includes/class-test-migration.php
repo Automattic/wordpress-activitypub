@@ -207,8 +207,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 
 		$this->assertEquals(
 			array(
-				'activitypub_content_visibility' => array( '' ),
-				'activitypub_content_123'        => array( '456' ),
+				'activitypub_content_123' => array( '456' ),
 			),
 			$metas1
 		);
