@@ -264,6 +264,8 @@ class Comment {
 			array(
 				'meta_key'   => 'source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_value' => $id,         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'orderby'    => 'comment_date',
+				'order'      => 'DESC',
 			)
 		);
 
