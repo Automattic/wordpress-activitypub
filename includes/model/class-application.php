@@ -17,7 +17,7 @@ use function Activitypub\get_rest_url_by_path;
 /**
  * Application class.
  *
- * @method string|null get__id()
+ * @method string|null get__id() Get the internal user ID.
  */
 class Application extends Actor {
 	/**

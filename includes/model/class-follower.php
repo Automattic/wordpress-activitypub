@@ -22,17 +22,17 @@ use Activitypub\Collection\Followers;
  *
  * @see https://www.w3.org/TR/activitypub/#follow-activity-inbox
  *
- * @method string|null  get__id()
- * @method string|array get_image()
- * @method string|null  get_inbox()
- * @method array|null   get_endpoints()
+ * @method string|null  get__id()      Get the internal user ID.
+ * @method string|array get_image()    Get the user's profile image.
+ * @method string|null  get_inbox()    Get the user's ActivityPub inbox URL.
+ * @method array|null   get_endpoints() Get the user's ActivityPub endpoints.
  *
- * @method Follower set__id( int $id );
- * @method Follower set_id( string $guid );
- * @method Follower set_name( string $name );
- * @method Follower set_summary( string $summary );
- * @method Follower set_published( int $timestamp );
- * @method Follower set_updated( int $timestamp );
+ * @method Follower set__id( int $id )             Set the internal user ID.
+ * @method Follower set_id( string $guid )         Set the user's GUID.
+ * @method Follower set_name( string $name )       Set the user's display name.
+ * @method Follower set_summary( string $summary ) Set the user's bio/summary.
+ * @method Follower set_published( int $timestamp ) Set the user's published timestamp.
+ * @method Follower set_updated( int $timestamp )   Set the user's last updated timestamp.
  */
 class Follower extends Actor {
 	/**

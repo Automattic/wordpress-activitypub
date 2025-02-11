@@ -23,7 +23,7 @@ use function Activitypub\get_attribution_domains;
 /**
  * Blog class.
  *
- * @method string|null get__id()
+ * @method string|null get__id() Get the internal user ID.
  */
 class Blog extends Actor {
 	/**

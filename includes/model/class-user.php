@@ -20,7 +20,7 @@ use function Activitypub\get_attribution_domains;
 /**
  * User class.
  *
- * @method string get__id()
+ * @method string get__id() Get the internal user ID.
  */
 class User extends Actor {
 	/**
