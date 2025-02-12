@@ -592,4 +592,54 @@ class Test_Comment extends \WP_UnitTestCase {
 		$this->assertNotContains( 'Repost', $names );
 		$this->assertNotContains( 'Like', $names );
 	}
+
+	/**
+	 * Test object_id_to_comment method.
+	 *
+	 * @covers ::object_id_to_comment
+	 */
+	public function test_object_id_to_comment() {
+		$source_id = 'https://example.com/1';
+
+		// No comment with the same source_id.
+		$comment_0 = Comment::object_id_to_comment( $source_id );
+		$this->assertFalse( $comment_0 );
+
+		// Create a comment with the same source_id.
+		$id_1 = self::factory()->comment->create();
+		add_comment_meta( $id_1, 'source_id', $source_id, true );
+
+		// Get the comment with the same source_id.
+		$comment_1 = Comment::object_id_to_comment( $source_id );
+		$this->assertEquals( $id_1, $comment_1->comment_ID );
+
+		// Create another comment with the same source_id.
+		$id_2 = self::factory()->comment->create(
+			array(
+				'comment_date' => '2024-01-01 00:00:00',
+			)
+		);
+		add_comment_meta( $id_2, 'source_id', $source_id, true );
+
+		// Get the comment with the same source_id.
+		$comment_2 = Comment::object_id_to_comment( $source_id );
+		$this->assertEquals( $id_1, $comment_2->comment_ID );
+
+		// Create another comment with the same source_id.
+		$id_3 = self::factory()->comment->create(
+			array(
+				'comment_date' => '2024-01-01 00:00:00',
+			)
+		);
+		add_comment_meta( $id_3, 'source_id', $source_id, true );
+
+		// Get the comment with the same source_id.
+		$comment_3 = Comment::object_id_to_comment( $source_id );
+		$this->assertEquals( $id_1, $comment_3->comment_ID );
+
+		// Delete the comments.
+		wp_delete_comment( $id_1, true );
+		wp_delete_comment( $id_2, true );
+		wp_delete_comment( $id_3, true );
+	}
 }
