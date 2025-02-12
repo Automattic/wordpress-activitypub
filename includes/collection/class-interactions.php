@@ -335,6 +335,7 @@ class Interactions {
 				'type'    => $type,
 				'count'   => true,
 				'paging'  => false,
+				'fields'  => 'ids',
 			)
 		);
 	}

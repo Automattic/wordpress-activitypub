@@ -30,6 +30,7 @@ class Replies {
 			'status'  => 'approve',
 			'orderby' => 'comment_date_gmt',
 			'order'   => 'ASC',
+			'type'    => 'comment',
 		);
 
 		if ( $wp_object instanceof WP_Post ) {

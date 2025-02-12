@@ -1115,7 +1115,7 @@ class Post extends Base {
 	/**
 	 * Get the likes Collection.
 	 *
-	 * @return array|null The likes collection on success or null on failure.
+	 * @return array The likes collection.
 	 */
 	public function get_likes() {
 		return array(
@@ -1128,7 +1128,7 @@ class Post extends Base {
 	/**
 	 * Get the shares Collection.
 	 *
-	 * @return array|null The shares collection on success or null on failure.
+	 * @return array The shares collection.
 	 */
 	public function get_shares() {
 		return array(
