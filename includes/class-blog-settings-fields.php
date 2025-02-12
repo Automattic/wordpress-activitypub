@@ -15,7 +15,7 @@ class Blog_Settings_Fields {
 	 * Initialize the settings fields.
 	 */
 	public static function init() {
-		add_action( 'settings_page_activitypub', array( __CLASS__, 'register_settings' ) );
+		add_action( 'settings_page_activitypub', array( self::class, 'register_settings' ) );
 	}
 
 	/**
@@ -32,7 +32,7 @@ class Blog_Settings_Fields {
 		add_settings_field(
 			'activitypub_blog_avatar',
 			__( 'Manage Avatar', 'activitypub' ),
-			array( __CLASS__, 'avatar_callback' ),
+			array( self::class, 'avatar_callback' ),
 			'activitypub_blog_settings',
 			'activitypub_blog_profile'
 		);
@@ -40,7 +40,7 @@ class Blog_Settings_Fields {
 		add_settings_field(
 			'activitypub_header_image',
 			__( 'Manage Header Image', 'activitypub' ),
-			array( __CLASS__, 'header_image_callback' ),
+			array( self::class, 'header_image_callback' ),
 			'activitypub_blog_settings',
 			'activitypub_blog_profile'
 		);
@@ -48,23 +48,25 @@ class Blog_Settings_Fields {
 		add_settings_field(
 			'activitypub_blog_identifier',
 			__( 'Change Profile ID', 'activitypub' ),
-			array( __CLASS__, 'profile_id_callback' ),
+			array( self::class, 'profile_id_callback' ),
 			'activitypub_blog_settings',
-			'activitypub_blog_profile'
+			'activitypub_blog_profile',
+			array( 'label_for' => 'activitypub_blog_identifier' )
 		);
 
 		add_settings_field(
 			'activitypub_blog_description',
 			__( 'Change Description', 'activitypub' ),
-			array( __CLASS__, 'description_callback' ),
+			array( self::class, 'description_callback' ),
 			'activitypub_blog_settings',
-			'activitypub_blog_profile'
+			'activitypub_blog_profile',
+			array( 'label_for' => 'activitypub_blog_description' )
 		);
 
 		add_settings_field(
 			'activitypub_extra_fields',
 			__( 'Extra Fields', 'activitypub' ),
-			array( __CLASS__, 'extra_fields_callback' ),
+			array( self::class, 'extra_fields_callback' ),
 			'activitypub_blog_settings',
 			'activitypub_blog_profile'
 		);
@@ -141,7 +143,7 @@ class Blog_Settings_Fields {
 	public static function profile_id_callback() {
 		?>
 		<label for="activitypub_blog_identifier">
-			<input class="blog-user-identifier" name="activitypub_blog_identifier" id="activitypub_blog_identifier" type="text" value="<?php echo esc_attr( get_option( 'activitypub_blog_identifier', Model\Blog::get_default_username() ) ); ?>" />
+			<input id="activitypub_blog_identifier" class="blog-user-identifier" name="activitypub_blog_identifier" type="text" value="<?php echo esc_attr( get_option( 'activitypub_blog_identifier', Model\Blog::get_default_username() ) ); ?>" />
 			@<?php echo esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) ); ?>
 		</label>
 		<p class="description">

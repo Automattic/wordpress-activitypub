@@ -15,7 +15,7 @@ class Settings_Fields {
 	 * Initialize the settings fields.
 	 */
 	public static function init() {
-		add_action( 'settings_page_activitypub', array( __CLASS__, 'register_settings_fields' ) );
+		add_action( 'settings_page_activitypub', array( self::class, 'register_settings_fields' ) );
 	}
 
 	/**
@@ -26,21 +26,21 @@ class Settings_Fields {
 		add_settings_section(
 			'activitypub_profiles',
 			__( 'Profiles', 'activitypub' ),
-			array( __CLASS__, 'render_profiles_section' ),
+			array( self::class, 'render_profiles_section' ),
 			'activitypub_settings'
 		);
 
 		add_settings_section(
 			'activitypub_activities',
 			__( 'Activities', 'activitypub' ),
-			array( __CLASS__, 'render_activities_section' ),
+			array( self::class, 'render_activities_section' ),
 			'activitypub_settings'
 		);
 
 		add_settings_section(
 			'activitypub_general',
 			__( 'General', 'activitypub' ),
-			array( __CLASS__, 'render_general_section' ),
+			array( self::class, 'render_general_section' ),
 			'activitypub_settings'
 		);
 
@@ -48,7 +48,7 @@ class Settings_Fields {
 		add_settings_field(
 			'activitypub_actor_mode',
 			__( 'Enable profiles by type', 'activitypub' ),
-			array( __CLASS__, 'render_actor_mode_field' ),
+			array( self::class, 'render_actor_mode_field' ),
 			'activitypub_settings',
 			'activitypub_profiles'
 		);
@@ -56,7 +56,7 @@ class Settings_Fields {
 		add_settings_field(
 			'activitypub_object_type',
 			__( 'Activity-Object-Type', 'activitypub' ),
-			array( __CLASS__, 'render_object_type_field' ),
+			array( self::class, 'render_object_type_field' ),
 			'activitypub_settings',
 			'activitypub_activities'
 		);
@@ -66,7 +66,7 @@ class Settings_Fields {
 			add_settings_field(
 				'activitypub_custom_post_content',
 				__( 'Post content', 'activitypub' ),
-				array( __CLASS__, 'render_custom_post_content_field' ),
+				array( self::class, 'render_custom_post_content_field' ),
 				'activitypub_settings',
 				'activitypub_activities',
 				array(
@@ -79,18 +79,16 @@ class Settings_Fields {
 		add_settings_field(
 			'activitypub_max_image_attachments',
 			__( 'Media attachments', 'activitypub' ),
-			array( __CLASS__, 'render_max_image_attachments_field' ),
+			array( self::class, 'render_max_image_attachments_field' ),
 			'activitypub_settings',
 			'activitypub_activities',
-			array(
-				'label_for' => 'activitypub_max_image_attachments',
-			)
+			array( 'label_for' => 'activitypub_max_image_attachments' )
 		);
 
 		add_settings_field(
 			'activitypub_support_post_types',
 			__( 'Supported post types', 'activitypub' ),
-			array( __CLASS__, 'render_support_post_types_field' ),
+			array( self::class, 'render_support_post_types_field' ),
 			'activitypub_settings',
 			'activitypub_activities'
 		);
@@ -98,40 +96,34 @@ class Settings_Fields {
 		add_settings_field(
 			'activitypub_use_hashtags',
 			__( 'Hashtags', 'activitypub' ),
-			array( __CLASS__, 'render_use_hashtags_field' ),
+			array( self::class, 'render_use_hashtags_field' ),
 			'activitypub_settings',
 			'activitypub_activities',
-			array(
-				'label_for' => 'activitypub_use_hashtags',
-			)
+			array( 'label_for' => 'activitypub_use_hashtags' )
 		);
 
 		add_settings_field(
 			'activitypub_use_opengraph',
 			__( 'OpenGraph', 'activitypub' ),
-			array( __CLASS__, 'render_use_opengraph_field' ),
+			array( self::class, 'render_use_opengraph_field' ),
 			'activitypub_settings',
 			'activitypub_general',
-			array(
-				'label_for' => 'activitypub_use_opengraph',
-			)
+			array( 'label_for' => 'activitypub_use_opengraph' )
 		);
 
 		add_settings_field(
 			'activitypub_attribution_domains',
 			__( 'Attribution Domains', 'activitypub' ),
-			array( __CLASS__, 'render_attribution_domains_field' ),
+			array( self::class, 'render_attribution_domains_field' ),
 			'activitypub_settings',
 			'activitypub_general',
-			array(
-				'label_for' => 'activitypub_attribution_domains',
-			)
+			array( 'label_for' => 'activitypub_attribution_domains' )
 		);
 
 		add_settings_field(
 			'activitypub_blocklist',
 			__( 'Blocklist', 'activitypub' ),
-			array( __CLASS__, 'render_blocklist_field' ),
+			array( self::class, 'render_blocklist_field' ),
 			'activitypub_settings',
 			'activitypub_general'
 		);
@@ -140,19 +132,17 @@ class Settings_Fields {
 			add_settings_section(
 				'activitypub_security',
 				__( 'Security', 'activitypub' ),
-				array( __CLASS__, 'render_security_section' ),
+				array( self::class, 'render_security_section' ),
 				'activitypub_settings'
 			);
 
 			add_settings_field(
 				'activitypub_authorized_fetch',
 				__( 'Authorized Fetch', 'activitypub' ),
-				array( __CLASS__, 'render_authorized_fetch_field' ),
+				array( self::class, 'render_authorized_fetch_field' ),
 				'activitypub_settings',
 				'activitypub_security',
-				array(
-					'label_for' => 'activitypub_authorized_fetch    ',
-				)
+				array( 'label_for' => 'activitypub_authorized_fetch' )
 			);
 		}
 	}
@@ -199,7 +189,8 @@ class Settings_Fields {
 		</p>
 		<p class="description">
 			<?php echo wp_kses( __( 'Every author on this blog (with the <code>activitypub</code> capability) gets their own ActivityPub profile.', 'activitypub' ), array( 'code' => array() ) ); ?>
-			<strong><?php
+			<strong>
+			<?php
 			echo wp_kses(
 				sprintf(
 					// translators: %s is a URL.
@@ -208,7 +199,8 @@ class Settings_Fields {
 				),
 				array( 'a' => array( 'href' => array() ) )
 			);
-			?></strong>
+			?>
+			</strong>
 			<?php echo wp_kses( __( 'Select all the users you want to update, choose the method from the drop-down list and click on the "Apply" button.', 'activitypub' ), array( 'code' => array() ) ); ?>
 		</p>
 		<p>
@@ -269,7 +261,7 @@ class Settings_Fields {
 		?>
 		<p><strong><?php esc_html_e( 'These settings only apply if you use the "Note" Object-Type setting above.', 'activitypub' ); ?></strong></p>
 		<p>
-			<textarea name="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo esc_attr( ACTIVITYPUB_CUSTOM_POST_CONTENT ); ?>"><?php echo esc_textarea( wp_kses( $value, 'post' ) ); ?></textarea>
+			<textarea id="activitypub_custom_post_content" name="activitypub_custom_post_content" rows="10" cols="50" class="large-text" placeholder="<?php echo esc_attr( ACTIVITYPUB_CUSTOM_POST_CONTENT ); ?>"><?php echo esc_textarea( wp_kses( $value, 'post' ) ); ?></textarea>
 			<details>
 				<summary><?php esc_html_e( 'See a list of ActivityPub Template Tags.', 'activitypub' ); ?></summary>
 				<div class="description">
@@ -294,7 +286,7 @@ class Settings_Fields {
 	public static function render_max_image_attachments_field() {
 		$value = get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
 		?>
-		<input value="<?php echo esc_attr( $value ); ?>" name="activitypub_max_image_attachments" type="number" min="0" />
+		<input id="activitypub_max_image_attachments" value="<?php echo esc_attr( $value ); ?>" name="activitypub_max_image_attachments" type="number" min="0" />
 		<p class="description">
 			<?php
 			echo wp_kses(
@@ -347,7 +339,7 @@ class Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" name="activitypub_use_hashtags" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_use_hashtags" name="activitypub_use_hashtags" value="1" <?php checked( '1', $value ); ?> />
 				<?php echo wp_kses( __( 'Add hashtags in the content as native tags and replace the <code>#tag</code> with the tag link.', 'activitypub' ), 'default' ); ?>
 			</label>
 		</p>
@@ -362,7 +354,7 @@ class Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" name="activitypub_use_opengraph" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_use_opengraph" name="activitypub_use_opengraph" value="1" <?php checked( '1', $value ); ?> />
 				<?php echo wp_kses( __( 'Automatically add <code>&lt;meta name="fediverse:creator" /&gt;</code> tags for Authors and the Blog-User. You can read more about the feature on the <a href="https://blog.joinmastodon.org/2024/07/highlighting-journalism-on-mastodon/" target="_blank">Mastodon Blog</a>.', 'activitypub' ), 'post' ); ?>
 			</label>
 		</p>
@@ -375,7 +367,7 @@ class Settings_Fields {
 	public static function render_attribution_domains_field() {
 		$value = get_option( 'activitypub_attribution_domains', home_host() );
 		?>
-		<textarea name="activitypub_attribution_domains" class="large-text" cols="50" rows="5" placeholder="<?php echo esc_attr( home_host() ); ?>"><?php echo esc_textarea( $value ); ?></textarea>
+		<textarea id="activitypub_attribution_domains" name="activitypub_attribution_domains" class="large-text" cols="50" rows="5" placeholder="<?php echo esc_attr( home_host() ); ?>"><?php echo esc_textarea( $value ); ?></textarea>
 		<p class="description"><?php esc_html_e( 'Websites allowed to credit you, one per line. Protects from false attributions.', 'activitypub' ); ?></p>
 		<?php
 	}
@@ -408,7 +400,7 @@ class Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" name="activitypub_authorized_fetch" id="activitypub_authorized_fetch" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="1" <?php checked( '1', $value ); ?> />
 				<?php esc_html_e( 'Require HTTP signature authentication on ActivityPub representations of public posts and profiles.', 'activitypub' ); ?>
 			</label>
 		</p>
