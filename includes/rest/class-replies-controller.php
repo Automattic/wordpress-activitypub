@@ -137,7 +137,7 @@ class Replies_Controller extends \WP_REST_Controller {
 	 * @param \WP_REST_Request     $request   The request object.
 	 * @param \WP_Post|\WP_Comment $wp_object The WordPress object.
 	 *
-	 * @return \WP_REST_Response|\WP_Error Response object or WP_Error object.
+	 * @return array Response collection of replies.
 	 */
 	public function get_replies( $request, $wp_object ) {
 		$page = $request->get_param( 'page' );
@@ -158,7 +158,7 @@ class Replies_Controller extends \WP_REST_Controller {
 	 * @param \WP_REST_Request     $request   The request object.
 	 * @param \WP_Post|\WP_Comment $wp_object The WordPress object.
 	 *
-	 * @return \WP_REST_Response|\WP_Error Response object or WP_Error object.
+	 * @return array Response collection of likes.
 	 */
 	public function get_likes( $request, $wp_object ) {
 		if ( ! $wp_object instanceof \WP_Post ) {
@@ -182,7 +182,7 @@ class Replies_Controller extends \WP_REST_Controller {
 	 * @param \WP_REST_Request     $request   The request object.
 	 * @param \WP_Post|\WP_Comment $wp_object The WordPress object.
 	 *
-	 * @return \WP_REST_Response|\WP_Error Response object or WP_Error object.
+	 * @return array Response collection of shares.
 	 */
 	public function get_shares( $request, $wp_object ) {
 		if ( ! $wp_object instanceof \WP_Post ) {
