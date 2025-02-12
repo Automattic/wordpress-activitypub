@@ -42,9 +42,12 @@ class Outbox {
 				break;
 		}
 
-		$title = $activity_object->get_name() ?? $activity_object->get_content();
+		$title              = $activity_object->get_name() ?? $activity_object->get_content();
+		$activitypub_object_id = $activity_object->get_id();
+
 		if ( ! $title && is_activity( $activity_object ) && $activity_object->get_object() instanceof \Activitypub\Activity\Base_Object ) {
-			$title = $activity_object->get_object()->get_name() ?? $activity_object->get_object()->get_content();
+			$title                 = $activity_object->get_object()->get_name() ?? $activity_object->get_object()->get_content();
+			$activitypub_object_id = $activity_object->get_object()->get_id();
 		}
 
 		$outbox_item = array(
@@ -61,10 +64,10 @@ class Outbox {
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'pending',
 			'meta_input'   => array(
-				'_activitypub_object_id'         => $activity_object->get_id(),
-				'_activitypub_activity_type'     => $activity_type,
-				'_activitypub_activity_actor'    => $actor_type,
-				'activitypub_content_visibility' => $content_visibility,
+				'_activitypub_object_id'         => \esc_url_raw( $activitypub_object_id ),
+				'_activitypub_activity_type'     => \esc_attr( $activity_type ),
+				'_activitypub_activity_actor'    => \esc_attr( $actor_type ),
+				'activitypub_content_visibility' => \esc_attr( $content_visibility ),
 			),
 		);
 
@@ -88,7 +91,7 @@ class Outbox {
 			return false;
 		}
 
-		self::invalidate_existing_items( $activity_object->get_id(), $activity_type, $id );
+		self::invalidate_existing_items( $activitypub_object_id, $activity_type, $id );
 
 		return $id;
 	}
@@ -107,7 +110,7 @@ class Outbox {
 		$meta_query = array(
 			array(
 				'key'   => '_activitypub_object_id',
-				'value' => $object_id,
+				'value' => \esc_url_raw( $object_id ),
 			),
 		);
 
@@ -115,7 +118,7 @@ class Outbox {
 		if ( 'Delete' !== $activity_type ) {
 			$meta_query[] = array(
 				'key'   => '_activitypub_activity_type',
-				'value' => $activity_type,
+				'value' => \esc_attr( $activity_type ),
 			);
 		}
 
