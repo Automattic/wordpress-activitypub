@@ -64,10 +64,10 @@ class Outbox {
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'pending',
 			'meta_input'   => array(
-				'_activitypub_object_id'         => \esc_url_raw( $activitypub_object_id ),
-				'_activitypub_activity_type'     => \esc_attr( $activity_type ),
-				'_activitypub_activity_actor'    => \esc_attr( $actor_type ),
-				'activitypub_content_visibility' => \esc_attr( $content_visibility ),
+				'_activitypub_object_id'         => $activitypub_object_id,
+				'_activitypub_activity_type'     => $activity_type,
+				'_activitypub_activity_actor'    => $actor_type,
+				'activitypub_content_visibility' => $content_visibility,
 			),
 		);
 
