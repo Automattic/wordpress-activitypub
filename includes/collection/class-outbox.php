@@ -110,7 +110,7 @@ class Outbox {
 		$meta_query = array(
 			array(
 				'key'   => '_activitypub_object_id',
-				'value' => \esc_url_raw( $object_id ),
+				'value' => $object_id,
 			),
 		);
 
@@ -118,7 +118,7 @@ class Outbox {
 		if ( 'Delete' !== $activity_type ) {
 			$meta_query[] = array(
 				'key'   => '_activitypub_activity_type',
-				'value' => \esc_attr( $activity_type ),
+				'value' => $activity_type,
 			);
 		}
 
