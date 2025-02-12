@@ -20,3 +20,23 @@ function allow_localhost( $parsed_args ) {
 	return $parsed_args;
 }
 add_filter( 'http_request_args', '\Activitypub\allow_localhost' );
+
+/**
+ * Debug the outbox post type.
+ *
+ * @param array  $args      The arguments for the post type.
+ * @param string $post_type The post type.
+ *
+ * @return array The arguments for the post type.
+ */
+function debug_outbox_post_type( $args, $post_type ) {
+	if ( 'ap_outbox' !== $post_type ) {
+		return $args;
+	}
+
+	$args['show_ui']   = true;
+	$args['menu_icon'] = 'dashicons-upload';
+
+	return $args;
+}
+add_filter( 'register_post_type_args', '\Activitypub\debug_outbox_post_type', 10, 2 );
