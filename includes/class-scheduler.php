@@ -209,6 +209,11 @@ class Scheduler {
 	 * Purge outbox items based on a schedule.
 	 */
 	public static function purge_outbox() {
+		$total_posts = (int) wp_count_posts( Outbox::POST_TYPE )->publish;
+		if ( $total_posts <= 20 ) {
+			return;
+		}
+
 		$days     = 180; // TODO: Replace with a setting.
 		$timezone = new \DateTimeZone( 'UTC' );
 		$date     = new \DateTime( 'now', $timezone );
