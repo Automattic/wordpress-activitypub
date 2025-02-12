@@ -117,7 +117,11 @@ async function createRelease(version) {
 				replace: `@deprecated ${version}`
 			},
 			{
-				search: /(_deprecated_function\([^,]*,\s*['"])(unreleased)(['"])/gi,
+				search: /(?<=_deprecated_function\s*\(\s*__METHOD__,\s*')unreleased(?=',\s*['<=>])/gi,
+				replace: (match) => match.replace(/unreleased/i, version)
+			},
+			{
+				search: /(?<=\bapply_filters_deprecated\s*\(\s*'.*?'\s*,\s*array\s*\(.*?\)\s*,\s*')unreleased(?=',\s*['<=>])/gi,
 				replace: (match) => match.replace(/unreleased/i, version)
 			}
 		]);
