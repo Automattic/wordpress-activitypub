@@ -92,7 +92,7 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 	 */
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?P<type>[\w\-\.]+)s/(?P<id>[\w\-\.]+)/replies', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?P<object_type>[\w\-\.]+)s/(?P<id>[\w\-\.]+)/(?P<type>[\w\-\.]+)', $routes );
 	}
 
 	/**
@@ -111,7 +111,7 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 		$this->assertArrayHasKey( '@context', $data );
 		$this->assertArrayHasKey( 'type', $data );
 		$this->assertContains( $data['type'], array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
-		$this->assertArrayHasKey( 'items', $data );
+		$this->assertArrayHasKey( 'first', $data );
 	}
 
 	/**
@@ -130,7 +130,7 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 		$this->assertArrayHasKey( '@context', $data );
 		$this->assertArrayHasKey( 'type', $data );
 		$this->assertContains( $data['type'], array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
-		$this->assertArrayHasKey( 'items', $data );
+		$this->assertArrayHasKey( 'first', $data );
 	}
 
 	/**
@@ -140,7 +140,7 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 	 */
 	public function test_get_replies_pagination() {
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . self::$post_id . '/replies' );
-		$request->set_param( 'page', 1 );
+		$request->set_param( 'page', 2 );
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
@@ -149,7 +149,7 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 		$this->assertIsArray( $data );
 		$this->assertArrayHasKey( '@context', $data );
 		$this->assertArrayHasKey( 'type', $data );
-		$this->assertContains( $data['type'], array( 'CollectionPage', 'OrderedCollectionPage' ) );
+		$this->assertContains( $data['type'], array(  'Collection', 'CollectionPage', 'OrderedCollectionPage' ) );
 	}
 
 	/**
