@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Enforce 200 status header for valid ActivityPub requests.
-* Duplicate comment check.
+* `object_id_to_comment` returns a commment now, even if there are more than one matching comment in the DB.
 * Integration of content-visibility setup in the block editor.
 
 ## [5.1.0] - 2025-02-06
