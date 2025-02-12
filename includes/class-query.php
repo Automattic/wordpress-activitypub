@@ -247,6 +247,7 @@ class Query {
 
 		// One can trigger an ActivityPub request by adding ?activitypub to the URL.
 		if ( isset( $wp_query->query_vars['activitypub'] ) ) {
+			defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 			$this->is_activitypub_request = true;
 
 			return true;
@@ -268,6 +269,7 @@ class Query {
 			 * - application/json
 			 */
 			if ( \preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
+				defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 				$this->is_activitypub_request = true;
 
 				return true;

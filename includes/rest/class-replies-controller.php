@@ -9,6 +9,9 @@ namespace Activitypub\Rest;
 
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Replies;
+use Activitypub\Collection\Interactions;
+
+use function Activitypub\get_rest_url_by_path;
 
 /**
  * ActivityPub Replies_Controller class.
@@ -27,7 +30,7 @@ class Replies_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = '(?P<type>[\w\-\.]+)s/(?P<id>[\w\-\.]+)/replies';
+	protected $rest_base = '(?P<object_type>[\w\-\.]+)s/(?P<id>[\w\-\.]+)/(?P<type>[\w\-\.]+)';
 
 	/**
 	 * Register routes.
@@ -38,15 +41,21 @@ class Replies_Controller extends \WP_REST_Controller {
 			'/' . $this->rest_base,
 			array(
 				'args'   => array(
-					'type' => array(
+					'object_type' => array(
 						'description' => 'The type of object to get replies for.',
 						'type'        => 'string',
 						'enum'        => array( 'post', 'comment' ),
 						'required'    => true,
 					),
-					'id'   => array(
+					'id'          => array(
 						'description' => 'The ID of the object.',
 						'type'        => 'string',
+						'required'    => true,
+					),
+					'type'        => array(
+						'description' => 'The type of collection to query.',
+						'type'        => 'string',
+						'enum'        => array( 'replies', 'likes', 'shares' ),
 						'required'    => true,
 					),
 				),
@@ -72,13 +81,14 @@ class Replies_Controller extends \WP_REST_Controller {
 	 * Retrieves a collection of replies.
 	 *
 	 * @param \WP_REST_Request $request The request object.
+	 *
 	 * @return \WP_REST_Response|\WP_Error Response object or WP_Error object.
 	 */
 	public function get_items( $request ) {
-		$type = $request->get_param( 'type' );
-		$id   = (int) $request->get_param( 'id' );
+		$object_type = $request->get_param( 'object_type' );
+		$id          = (int) $request->get_param( 'id' );
 
-		if ( 'comment' === $type ) {
+		if ( 'comment' === $object_type ) {
 			$wp_object = \get_comment( $id );
 		} else {
 			$wp_object = \get_post( $id );
@@ -90,29 +100,104 @@ class Replies_Controller extends \WP_REST_Controller {
 				\sprintf(
 					// translators: %s: The type (post, comment, etc.) for which no replies collection exists.
 					\__( 'No reply collection exists for the type %s.', 'activitypub' ),
-					$type
+					$object_type
 				),
 				array( 'status' => 404 )
 			);
 		}
 
-		$page = $request->get_param( 'page' );
+		switch ( $request->get_param( 'type' ) ) {
+			case 'replies':
+				$response = $this->get_replies( $request, $wp_object );
+				break;
 
-		// If the request parameter page is present get the CollectionPage otherwise the Replies collection.
-		if ( $page ) {
-			$response = Replies::get_collection_page( $wp_object, $page );
-		} else {
-			$response = Replies::get_collection( $wp_object );
-		}
+			case 'likes':
+				$response = $this->get_likes( $request, $wp_object );
+				break;
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
+			case 'shares':
+				$response = $this->get_shares( $request, $wp_object );
+				break;
+
+			default:
+				$response = new \WP_Error( 'rest_unknown_collection_type', 'Unknown collection type.', array( 'status' => 404 ) );
 		}
 
 		// Prepend ActivityPub Context.
 		$response = array_merge( array( '@context' => Base_Object::JSON_LD_CONTEXT ), $response );
+		$response = \rest_ensure_response( $response );
+		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
-		return \rest_ensure_response( $response );
+		return $response;
+	}
+
+	/**
+	 * Retrieves a collection of replies.
+	 *
+	 * @param \WP_REST_Request     $request   The request object.
+	 * @param \WP_Post|\WP_Comment $wp_object The WordPress object.
+	 *
+	 * @return array Response collection of replies.
+	 */
+	public function get_replies( $request, $wp_object ) {
+		$page = $request->get_param( 'page' );
+
+		// If the request parameter page is present get the CollectionPage otherwise the Replies collection.
+		if ( $page <= 1 ) {
+			$response = Replies::get_collection( $wp_object );
+		} else {
+			$response = Replies::get_collection_page( $wp_object, $page );
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Retrieves a collection of likes.
+	 *
+	 * @param \WP_REST_Request     $request   The request object.
+	 * @param \WP_Post|\WP_Comment $wp_object The WordPress object.
+	 *
+	 * @return array Response collection of likes.
+	 */
+	public function get_likes( $request, $wp_object ) {
+		if ( $wp_object instanceof \WP_Post ) {
+			$likes = Interactions::count_by_type( $wp_object->ID, 'like' );
+		} else {
+			$likes = 0;
+		}
+
+		$response = array(
+			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/likes', $wp_object->ID ) ),
+			'type'       => 'Collection',
+			'totalItems' => $likes,
+		);
+
+		return $response;
+	}
+
+	/**
+	 * Retrieves a collection of shares.
+	 *
+	 * @param \WP_REST_Request     $request   The request object.
+	 * @param \WP_Post|\WP_Comment $wp_object The WordPress object.
+	 *
+	 * @return array Response collection of shares.
+	 */
+	public function get_shares( $request, $wp_object ) {
+		if ( $wp_object instanceof \WP_Post ) {
+			$shares = Interactions::count_by_type( $wp_object->ID, 'repost' );
+		} else {
+			$shares = 0;
+		}
+
+		$response = array(
+			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/shares', $wp_object->ID ) ),
+			'type'       => 'Collection',
+			'totalItems' => $shares,
+		);
+
+		return $response;
 	}
 
 	/**
