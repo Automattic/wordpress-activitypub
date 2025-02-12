@@ -72,10 +72,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-object-term
 	 *
-	 * @var string
-	 *    | Base_Object
-	 *    | Link
-	 *    | null
+	 * @var string|Base_Object|null
 	 */
 	protected $object;
 
@@ -87,11 +84,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-actor
 	 *
-	 * @var string
-	 *    | \ActivityPhp\Type\Extended\AbstractActor
-	 *    | array<Actor>
-	 *    | array<Link>
-	 *    | Link
+	 * @var string|array
 	 */
 	protected $actor;
 
@@ -106,11 +99,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-target
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | array<ObjectType>
-	 *    | Link
-	 *    | array<Link>
+	 * @var string|array
 	 */
 	protected $target;
 
@@ -122,10 +111,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-result
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | null
+	 * @var string|Base_Object
 	 */
 	protected $result;
 
@@ -138,9 +124,6 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-replies
 	 *
 	 * @var array
-	 *    | ObjectType
-	 *    | Link
-	 *    | null
 	 */
 	protected $replies;
 
@@ -154,10 +137,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-origin
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | null
+	 * @var string|array
 	 */
 	protected $origin;
 
@@ -167,10 +147,7 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-instrument
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | null
+	 * @var string|array
 	 */
 	protected $instrument;
 
@@ -183,8 +160,6 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitypub/#object-without-create
 	 *
 	 * @param array|string|Base_Object|Link|null $data Activity object.
-	 *
-	 * @return void
 	 */
 	public function set_object( $data ) {
 		// Convert array to object.
