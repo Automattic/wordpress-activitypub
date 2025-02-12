@@ -39,7 +39,11 @@ class Test_Nodeinfo_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 		$this->assertArrayHasKey( 'links', $data );
 		$this->assertCount( 3, $data['links'] );
 
-		// Test first link.
+		/*
+		 * Test first link.
+		 * Needs http protocol for spec compliance.
+		 * @ticket https://github.com/Automattic/wordpress-activitypub/pull/1275
+		 */
 		$this->assertEquals( 'http://nodeinfo.diaspora.software/ns/schema/2.0', $data['links'][0]['rel'] );
 		$this->assertStringEndsWith( '/nodeinfo/2.0', $data['links'][0]['href'] );
 
