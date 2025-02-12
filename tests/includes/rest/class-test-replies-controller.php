@@ -92,7 +92,7 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 	 */
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?P<type>[\w\-\.]+)s/(?P<id>[\w\-\.]+)/replies', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?P<object_type>[\w\-\.]+)s/(?P<id>[\w\-\.]+)/(?P<type>[\w\-\.]+)', $routes );
 	}
 
 	/**
@@ -111,7 +111,7 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 		$this->assertArrayHasKey( '@context', $data );
 		$this->assertArrayHasKey( 'type', $data );
 		$this->assertContains( $data['type'], array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
-		$this->assertArrayHasKey( 'items', $data );
+		$this->assertArrayHasKey( 'first', $data );
 	}
 
 	/**
@@ -130,7 +130,7 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 		$this->assertArrayHasKey( '@context', $data );
 		$this->assertArrayHasKey( 'type', $data );
 		$this->assertContains( $data['type'], array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
-		$this->assertArrayHasKey( 'items', $data );
+		$this->assertArrayHasKey( 'first', $data );
 	}
 
 	/**
@@ -140,7 +140,7 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 	 */
 	public function test_get_replies_pagination() {
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . self::$post_id . '/replies' );
-		$request->set_param( 'page', 1 );
+		$request->set_param( 'page', 2 );
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 200, $response->get_status() );
@@ -149,7 +149,7 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 		$this->assertIsArray( $data );
 		$this->assertArrayHasKey( '@context', $data );
 		$this->assertArrayHasKey( 'type', $data );
-		$this->assertContains( $data['type'], array( 'CollectionPage', 'OrderedCollectionPage' ) );
+		$this->assertContains( $data['type'], array( 'Collection', 'CollectionPage', 'OrderedCollectionPage' ) );
 	}
 
 	/**
@@ -171,6 +171,96 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 	 */
 	public function test_get_replies_non_existent_comment() {
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/99999/replies' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertErrorResponse( 'activitypub_replies_collection_does_not_exist', $response, 404 );
+	}
+
+	/**
+	 * Test getting likes for a post.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_post_likes() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . self::$post_id . '/likes' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$data = $response->get_data();
+
+		$this->assertIsArray( $data );
+		$this->assertArrayHasKey( '@context', $data );
+		$this->assertArrayHasKey( 'type', $data );
+		$this->assertContains( $data['type'], array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
+		$this->assertArrayHasKey( 'totalItems', $data );
+	}
+
+	/**
+	 * Test getting shares for a post.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_post_shares() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . self::$post_id . '/shares' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$data = $response->get_data();
+
+		$this->assertIsArray( $data );
+		$this->assertArrayHasKey( '@context', $data );
+		$this->assertArrayHasKey( 'type', $data );
+		$this->assertContains( $data['type'], array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
+		$this->assertArrayHasKey( 'totalItems', $data );
+	}
+
+	/**
+	 * Test getting shares for a comment.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_comment_shares() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/' . self::$comment_ids[0] . '/shares' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$data = $response->get_data();
+
+		$this->assertIsArray( $data );
+		$this->assertArrayHasKey( '@context', $data );
+		$this->assertArrayHasKey( 'type', $data );
+		$this->assertContains( $data['type'], array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
+		$this->assertArrayHasKey( 'totalItems', $data );
+		$this->assertEquals( 0, $data['totalItems'] );
+	}
+
+	/**
+	 * Test getting likes for a comment.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_comment_likes() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/' . self::$comment_ids[0] . '/likes' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$data = $response->get_data();
+
+		$this->assertIsArray( $data );
+		$this->assertArrayHasKey( '@context', $data );
+		$this->assertArrayHasKey( 'type', $data );
+		$this->assertContains( $data['type'], array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
+		$this->assertArrayHasKey( 'totalItems', $data );
+		$this->assertEquals( 0, $data['totalItems'] );
+	}
+
+	/**
+	 * Test getting shares for a non-existent post.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_post_shares_non_existent() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/99999/shares' );
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertErrorResponse( 'activitypub_replies_collection_does_not_exist', $response, 404 );

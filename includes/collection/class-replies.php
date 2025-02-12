@@ -30,6 +30,7 @@ class Replies {
 			'status'  => 'approve',
 			'orderby' => 'comment_date_gmt',
 			'order'   => 'ASC',
+			'type'    => 'comment',
 		);
 
 		if ( $wp_object instanceof WP_Post ) {
@@ -80,7 +81,7 @@ class Replies {
 			'type' => 'Collection',
 		);
 
-		$replies['first'] = self::get_collection_page( $wp_object, 0, $replies['id'] );
+		$replies['first'] = self::get_collection_page( $wp_object, 1, $replies['id'] );
 
 		return $replies;
 	}
@@ -116,7 +117,7 @@ class Replies {
 
 		// If set to zero, we get errors below. You need at least one comment per page, here.
 		$args['number'] = max( (int) \get_option( 'comments_per_page' ), 1 );
-		$args['offset'] = intval( $page ) * $args['number'];
+		$args['offset'] = intval( $page - 1 ) * $args['number'];
 
 		// Get the ActivityPub ID's of the comments, without local-only comments.
 		$comment_ids = self::get_reply_ids( \get_comments( $args ) );
