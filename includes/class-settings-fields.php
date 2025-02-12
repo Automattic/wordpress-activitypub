@@ -26,21 +26,21 @@ class Settings_Fields {
 		add_settings_section(
 			'activitypub_profiles',
 			__( 'Profiles', 'activitypub' ),
-			array( self::class, 'render_profiles_section' ),
+			'__return_empty_string',
 			'activitypub_settings'
 		);
 
 		add_settings_section(
 			'activitypub_activities',
 			__( 'Activities', 'activitypub' ),
-			array( self::class, 'render_activities_section' ),
+			'__return_empty_string',
 			'activitypub_settings'
 		);
 
 		add_settings_section(
 			'activitypub_general',
 			__( 'General', 'activitypub' ),
-			array( self::class, 'render_general_section' ),
+			'__return_empty_string',
 			'activitypub_settings'
 		);
 
@@ -132,7 +132,7 @@ class Settings_Fields {
 			add_settings_section(
 				'activitypub_security',
 				__( 'Security', 'activitypub' ),
-				array( self::class, 'render_security_section' ),
+				'__return_empty_string',
 				'activitypub_settings'
 			);
 
@@ -145,34 +145,6 @@ class Settings_Fields {
 				array( 'label_for' => 'activitypub_authorized_fetch' )
 			);
 		}
-	}
-
-	/**
-	 * Render profiles section.
-	 */
-	public static function render_profiles_section() {
-		// Section description if needed.
-	}
-
-	/**
-	 * Render activities section.
-	 */
-	public static function render_activities_section() {
-		// Section description if needed.
-	}
-
-	/**
-	 * Render general section.
-	 */
-	public static function render_general_section() {
-		// Section description if needed.
-	}
-
-	/**
-	 * Render security section.
-	 */
-	public static function render_security_section() {
-		// Section description if needed.
 	}
 
 	/**
