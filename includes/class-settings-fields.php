@@ -69,10 +69,7 @@ class Settings_Fields {
 				array( self::class, 'render_custom_post_content_field' ),
 				'activitypub_settings',
 				'activitypub_activities',
-				array(
-					'class'     => array( 'activitypub-custom-post-content' ),
-					'label_for' => 'activitypub_custom_post_content',
-				)
+				array( 'label_for' => 'activitypub_custom_post_content' )
 			);
 		}
 
