@@ -119,7 +119,6 @@ class Dispatcher {
 	public static function send_to_followers( $outbox_item_id, $batch_size = 50, $offset = 0 ) {
 		$activity = Outbox::get_activity( $outbox_item_id );
 		$actor    = Outbox::get_actor( \get_post( $outbox_item_id ) );
-
 		$json     = $activity->to_json();
 		$inboxes  = Followers::get_inboxes_for_activity( $json, $actor->get__id(), $batch_size, $offset );
 
