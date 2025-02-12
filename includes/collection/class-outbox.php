@@ -9,6 +9,8 @@ namespace Activitypub\Collection;
 
 use Activitypub\Dispatcher;
 
+use function Activitypub\is_activity;
+
 /**
  * ActivityPub Outbox Collection
  *
@@ -41,7 +43,7 @@ class Outbox {
 		}
 
 		$title = $activity_object->get_name() ?? $activity_object->get_content();
-		if ( empty( $title ) && $activity_object->get_object() instanceof \Activitypub\Activity\Base_Object ) {
+		if ( ! $title && is_activity( $activity_object ) && $activity_object->get_object() instanceof \Activitypub\Activity\Base_Object ) {
 			$title = $activity_object->get_object()->get_name() ?? $activity_object->get_object()->get_content();
 		}
 
@@ -135,8 +137,10 @@ class Outbox {
 				Dispatcher::$batch_size,
 				\get_post_meta( $existing_item_id, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
 			);
-			$timestamp  = \wp_next_scheduled( 'activitypub_async_batch', $event_args );
+
+			$timestamp = \wp_next_scheduled( 'activitypub_async_batch', $event_args );
 			\wp_unschedule_event( $timestamp, 'activitypub_async_batch', $event_args );
+
 			$timestamp = \wp_next_scheduled( 'activitypub_process_outbox', array( $existing_item_id ) );
 			\wp_unschedule_event( $timestamp, 'activitypub_process_outbox', array( $existing_item_id ) );
 
