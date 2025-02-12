@@ -19,7 +19,7 @@ function allow_localhost( $parsed_args ) {
 
 	return $parsed_args;
 }
-add_filter( 'http_request_args', '\Activitypub\allow_localhost' );
+\add_filter( 'http_request_args', '\Activitypub\allow_localhost' );
 
 /**
  * Debug the outbox post type.
@@ -39,4 +39,41 @@ function debug_outbox_post_type( $args, $post_type ) {
 
 	return $args;
 }
-add_filter( 'register_post_type_args', '\Activitypub\debug_outbox_post_type', 10, 2 );
+\add_filter( 'register_post_type_args', '\Activitypub\debug_outbox_post_type', 10, 2 );
+
+/**
+ * Debug the outbox post type column.
+ *
+ * @param array  $columns   The columns.
+ * @param string $post_type The post type.
+ *
+ * @return array The updated columns.
+ */
+function debug_outbox_post_type_column( $columns, $post_type ) {
+	if ( 'ap_outbox' !== $post_type ) {
+		return $columns;
+	}
+
+	$columns['ap_outbox_meta'] = "Meta";
+
+	return $columns;
+}
+\add_filter( 'manage_posts_columns', '\Activitypub\debug_outbox_post_type_column', 10, 2 );
+
+/**
+ * Debug the outbox post type meta.
+ *
+ * @param string $column_name The column name.
+ * @param int    $post_id     The post ID.
+ *
+ * @return void
+ */
+function manage_posts_custom_column( $column_name, $post_id ) {
+	if ( 'ap_outbox_meta' === $column_name ) {
+		$meta = get_post_meta( $post_id );
+		foreach ( $meta as $key => $value ) {
+			echo $key . ': ' . $value[0] . '<br>';
+		}
+	}
+}
+\add_action( 'manage_posts_custom_column', '\Activitypub\manage_posts_custom_column', 10, 2 );
