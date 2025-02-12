@@ -161,10 +161,10 @@ class Replies_Controller extends \WP_REST_Controller {
 	 * @return array Response collection of likes.
 	 */
 	public function get_likes( $request, $wp_object ) {
-		if ( ! $wp_object instanceof \WP_Post ) {
-			$likes = 0;
-		} else {
+		if ( $wp_object instanceof \WP_Post ) {
 			$likes = Interactions::count_by_type( $wp_object->ID, 'like' );
+		} else {
+			$likes = 0;
 		}
 
 		$response = array(
@@ -185,10 +185,10 @@ class Replies_Controller extends \WP_REST_Controller {
 	 * @return array Response collection of shares.
 	 */
 	public function get_shares( $request, $wp_object ) {
-		if ( ! $wp_object instanceof \WP_Post ) {
-			$shares = 0;
-		} else {
+		if ( $wp_object instanceof \WP_Post ) {
 			$shares = Interactions::count_by_type( $wp_object->ID, 'repost' );
+		} else {
+			$shares = 0;
 		}
 
 		$response = array(
