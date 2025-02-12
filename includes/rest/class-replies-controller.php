@@ -9,6 +9,7 @@ namespace Activitypub\Rest;
 
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Replies;
+use Activitypub\Collection\Interactions;
 
 use function Activitypub\get_rest_url_by_path;
 
@@ -163,15 +164,7 @@ class Replies_Controller extends \WP_REST_Controller {
 		if ( ! $wp_object instanceof \WP_Post ) {
 			$likes = 0;
 		} else {
-			$likes = \get_comments(
-				array(
-					'post_id' => $wp_object->ID,
-					'status'  => 'approve',
-					'type'    => 'like',
-					'count'   => true,
-					'fields'  => 'ids',
-				)
-			);
+			$likes = Interactions::count_by_type( $wp_object->ID, 'like' );
 		}
 
 		$response = array(
@@ -195,15 +188,7 @@ class Replies_Controller extends \WP_REST_Controller {
 		if ( ! $wp_object instanceof \WP_Post ) {
 			$shares = 0;
 		} else {
-			$shares = \get_comments(
-				array(
-					'post_id' => $wp_object->ID,
-					'status'  => 'approve',
-					'type'    => 'repost',
-					'count'   => true,
-					'fields'  => 'ids',
-				)
-			);
+			$shares = Interactions::count_by_type( $wp_object->ID, 'repost' );
 		}
 
 		$response = array(
