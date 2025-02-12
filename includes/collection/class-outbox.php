@@ -42,7 +42,7 @@ class Outbox {
 				break;
 		}
 
-		$title              = $activity_object->get_name() ?? $activity_object->get_content();
+		$title                 = $activity_object->get_name() ?? $activity_object->get_content();
 		$activitypub_object_id = $activity_object->get_id();
 
 		if ( ! $title && is_activity( $activity_object ) && $activity_object->get_object() instanceof \Activitypub\Activity\Base_Object ) {
