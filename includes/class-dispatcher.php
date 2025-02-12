@@ -95,7 +95,6 @@ class Dispatcher {
 				'activitypub_async_batch',
 				array(
 					self::$callback,
-					$actor->get__id(),
 					$outbox_item->ID,
 					self::$batch_size,
 					\get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
@@ -104,26 +103,27 @@ class Dispatcher {
 		} else {
 			// No followers to process for this update. We're done.
 			\wp_publish_post( $outbox_item );
+			\delete_post_meta( $outbox_item->ID, '_activitypub_outbox_offset' );
 		}
 	}
 
 	/**
 	 * Asynchronously runs batch processing routines.
 	 *
-	 * @param int $actor_id       The actor ID.
 	 * @param int $outbox_item_id The Outbox item ID.
 	 * @param int $batch_size     Optional. The batch size. Default 50.
 	 * @param int $offset         Optional. The offset. Default 0.
 	 *
 	 * @return array|void The next batch of followers to process, or void if done.
 	 */
-	public static function send_to_followers( $actor_id, $outbox_item_id, $batch_size = 50, $offset = 0 ) {
+	public static function send_to_followers( $outbox_item_id, $batch_size = 50, $offset = 0 ) {
 		$activity = self::get_activity( $outbox_item_id );
+		$actor    = self::get_actor( \get_post( $outbox_item_id ) );
 		$json     = $activity->to_json();
-		$inboxes  = Followers::get_inboxes_for_activity( $json, $actor_id, $batch_size, $offset );
+		$inboxes  = Followers::get_inboxes_for_activity( $json, $actor->get__id(), $batch_size, $offset );
 
 		foreach ( $inboxes as $inbox ) {
-			$result = safe_remote_post( $inbox, $json, $actor_id );
+			$result = safe_remote_post( $inbox, $json, $actor->get__id() );
 
 			/**
 			 * Fires after an Activity has been sent to an inbox.
@@ -134,7 +134,7 @@ class Dispatcher {
 			 * @param int    $actor_id       The actor ID.
 			 * @param int    $outbox_item_id The Outbox item ID.
 			 */
-			\do_action( 'activitypub_sent_to_inbox', $result, $inbox, $json, $actor_id, $outbox_item_id );
+			\do_action( 'activitypub_sent_to_inbox', $result, $inbox, $json, $actor->get__id(), $outbox_item_id );
 		}
 
 		if ( is_countable( $inboxes ) && count( $inboxes ) < self::$batch_size ) {
@@ -150,7 +150,7 @@ class Dispatcher {
 			 * @param int    $batch_size     The batch size.
 			 * @param int    $offset         The offset.
 			 */
-			\do_action( 'activitypub_outbox_processing_complete', $inboxes, $json, $actor_id, $outbox_item_id, $batch_size, $offset );
+			\do_action( 'activitypub_outbox_processing_complete', $inboxes, $json, $actor->get__id(), $outbox_item_id, $batch_size, $offset );
 
 			// No more followers to process for this update.
 			\wp_publish_post( $outbox_item_id );
@@ -167,9 +167,9 @@ class Dispatcher {
 			 * @param int    $batch_size     The batch size.
 			 * @param int    $offset         The offset.
 			 */
-			\do_action( 'activitypub_outbox_processing_batch_complete', $inboxes, $json, $actor_id, $outbox_item_id, $batch_size, $offset );
+			\do_action( 'activitypub_outbox_processing_batch_complete', $inboxes, $json, $actor->get__id(), $outbox_item_id, $batch_size, $offset );
 
-			return array( $actor_id, $outbox_item_id, $batch_size, $offset + $batch_size );
+			return array( $outbox_item_id, $batch_size, $offset + $batch_size );
 		}
 	}
 
@@ -373,6 +373,7 @@ class Dispatcher {
 	 * Get the Actor object from the Outbox item.
 	 *
 	 * @param \WP_Post $outbox_item The Outbox post.
+	 *
 	 * @return \Activitypub\Model\User|\Activitypub\Model\Blog|\WP_Error The Actor object or WP_Error.
 	 */
 	private static function get_actor( $outbox_item ) {
