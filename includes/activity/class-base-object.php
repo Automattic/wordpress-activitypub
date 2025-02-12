@@ -471,6 +471,10 @@ class Base_Object {
 	protected $shares;
 
 	/**
+	 * Used to mark an object as containing sensitive content.
+	 * Mastodon displays a content warning, requiring users to click
+	 * through to view the content.
+	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#sensitive
 	 *
 	 * @var boolean
