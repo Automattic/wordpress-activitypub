@@ -79,6 +79,11 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 	public function get_items( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$response = array(
 			'links' => array(
+
+				/*
+				 * Needs http protocol for spec compliance.
+				 * @ticket https://github.com/Automattic/wordpress-activitypub/pull/1275
+				 */
 				array(
 					'rel'  => 'http://nodeinfo.diaspora.software/ns/schema/2.0',
 					'href' => get_rest_url_by_path( '/nodeinfo/2.0' ),
