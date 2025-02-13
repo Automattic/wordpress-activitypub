@@ -178,7 +178,7 @@ class Activity extends Base_Object {
 		$this->set( 'object', $data );
 
 		// Check if `$data` is a URL and use it to generate an ID then.
-		if ( is_string( $data ) && filter_var( $data, FILTER_VALIDATE_URL ) ) {
+		if ( is_string( $data ) && filter_var( $data, FILTER_VALIDATE_URL ) && ! $this->get_id() ) {
 			$this->set( 'id', $data . '#activity-' . strtolower( $this->get_type() ) . '-' . time() );
 
 			return;

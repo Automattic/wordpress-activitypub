@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Integration of content-visibility setup in the block editor.
 * Update CLI commands to the new scheduler refactorings.
 * Do not add an audience to the Actor-Profiles.
+* `Activity::set_object` falsely overwrites the Activity-ID with a default.
 
 ## [5.1.0] - 2025-02-06
 
