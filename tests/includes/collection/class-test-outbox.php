@@ -194,10 +194,10 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Helper method to create a dummy activity object for testing.
 	 *
-	 * @return \Activitypub\Activity\Base_Object
+	 * @return \Activitypub\Activity\Activity
 	 */
 	private function get_dummy_activity_object() {
-		$object = new \Activitypub\Activity\Base_Object();
+		$object = new \Activitypub\Activity\Activity();
 		$object->set_id( 'https://example.com/test-object' );
 		$object->set_type( 'Note' );
 		$object->set_content( 'Test content' );
@@ -229,7 +229,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		// Only ID for Deletes.
 		if ( 'Delete' === $expected ) {
-			$this->assertSame( get_post( $undo_id )->post_title, $activity->get_object() );
+			$this->assertSame( get_permalink( $id ), $activity->get_object() );
 		} else {
 			$this->assertEquals( json_decode( get_post( $undo_id )->post_content, true ), $activity->get_object()->to_array() );
 		}
