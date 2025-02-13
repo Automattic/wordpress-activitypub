@@ -21,6 +21,18 @@ use Activitypub\Collection\Followers;
  * @author Matthias Pfefferle
  *
  * @see https://www.w3.org/TR/activitypub/#follow-activity-inbox
+ *
+ * @method int         get__id()       Gets the post ID of the follower record.
+ * @method array|null  get_image()     Gets the follower's profile image data.
+ * @method string|null get_inbox()     Gets the follower's ActivityPub inbox URL.
+ * @method array|null  get_endpoints() Gets the follower's ActivityPub endpoints.
+ *
+ * @method Follower set__id( int $id )                Sets the post ID of the follower record.
+ * @method Follower set_id( string $guid )            Sets the follower's GUID.
+ * @method Follower set_name( string $name )          Sets the follower's display name.
+ * @method Follower set_summary( string $summary )    Sets the follower's bio/summary.
+ * @method Follower set_published( string $datetime ) Sets the follower's published datetime in ISO 8601 format.
+ * @method Follower set_updated( string $datetime )   Sets the follower's last updated datetime in ISO 8601 format.
  */
 class Follower extends Actor {
 	/**
@@ -335,7 +347,9 @@ class Follower extends Actor {
 	 */
 	public static function init_from_cpt( $post ) {
 		$actor_json = get_post_meta( $post->ID, '_activitypub_actor_json', true );
-		$object     = self::init_from_json( $actor_json );
+
+		/* @var Follower $object Follower object. */
+		$object = self::init_from_json( $actor_json );
 
 		if ( is_wp_error( $object ) ) {
 			return false;
