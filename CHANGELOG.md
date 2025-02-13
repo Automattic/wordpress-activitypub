@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+* Batch Outbox-Processing.
+* Outbox processed events get logged in Stream and show any errors returned from inboxes.
+* REST API endpoints for likes and shares.
+
+### Changed
+
+* Increased probability of Outbox items being processed with the correct author.
+* Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
+* Updated terminology to be client-neutral in the Federated Reply block.
+
+### Fixed
+
+* Enforce 200 status header for valid ActivityPub requests.
+* Integration of content-visibility setup in the block editor.
+
 ## [5.1.0] - 2025-02-06
 
 ### Added
@@ -56,10 +75,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Support for WPML post locale
-
-### Added
-
-* Outbox queue
 
 ### Changed
 

@@ -53,6 +53,7 @@ class Activitypub {
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
+		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
 
 		// Register several post_types.
 		self::register_post_types();
@@ -148,7 +149,7 @@ class Activitypub {
 				 */
 				$activitypub_template = apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
 			} else {
-				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . '/templates/activitypub-json.php';
+				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . 'templates/activitypub-json.php';
 			}
 		}
 
@@ -169,10 +170,17 @@ class Activitypub {
 		}
 
 		if ( $activitypub_template ) {
+			\set_query_var( 'is_404', false );
+
 			// Check if header already sent.
-			if ( ! \headers_sent() && ACTIVITYPUB_SEND_VARY_HEADER ) {
-				// Send Vary header for Accept header.
-				\header( 'Vary: Accept' );
+			if ( ! \headers_sent() ) {
+				// Send 200 status header.
+				\status_header( 200 );
+
+				if ( ACTIVITYPUB_SEND_VARY_HEADER ) {
+					// Send Vary header for Accept header.
+					\header( 'Vary: Accept' );
+				}
 			}
 
 			return $activitypub_template;
@@ -558,8 +566,11 @@ class Activitypub {
 					'create_posts' => false,
 				),
 				'map_meta_cap'        => true,
+				'public'              => false,
+				'show_in_rest'        => true,
 				'rewrite'             => false,
 				'query_var'           => false,
+				'supports'            => array( 'title', 'editor', 'author', 'custom-fields' ),
 				'delete_with_user'    => true,
 				'can_export'          => true,
 				'exclude_from_search' => true,
@@ -578,6 +589,7 @@ class Activitypub {
 				'type'              => 'string',
 				'description'       => 'The type of the activity',
 				'single'            => true,
+				'show_in_rest'      => true,
 				'sanitize_callback' => function ( $value ) {
 					$value  = ucfirst( strtolower( $value ) );
 					$schema = array(
@@ -601,6 +613,7 @@ class Activitypub {
 			array(
 				'type'              => 'string',
 				'single'            => true,
+				'show_in_rest'      => true,
 				'sanitize_callback' => function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
@@ -619,11 +632,34 @@ class Activitypub {
 
 		\register_post_meta(
 			Outbox::POST_TYPE,
+			'_activitypub_outbox_offset',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'description'       => 'Keeps track of the followers offset when processing outbox items.',
+				'sanitize_callback' => 'absint',
+				'default'           => 0,
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'_activitypub_object_id',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The ID (ActivityPub URI) of the object that the outbox item is about.',
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
 			'activitypub_content_visibility',
 			array(
-				'show_in_rest'      => true,
-				'single'            => true,
 				'type'              => 'string',
+				'single'            => true,
+				'show_in_rest'      => true,
 				'sanitize_callback' => function ( $value ) {
 					$schema = array(
 						'type'    => 'string',

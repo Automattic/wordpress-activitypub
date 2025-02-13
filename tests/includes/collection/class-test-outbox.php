@@ -118,4 +118,87 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			array( ACTIVITYPUB_ACTOR_MODE, 90210, false ),
 		);
 	}
+
+	/**
+	 * Test invalidating existing outbox items.
+	 */
+	public function test_invalidate_existing_items() {
+		$object        = $this->get_dummy_activity_object();
+		$activity_type = 'Create';
+
+		// Create first outbox item.
+		$first_id = \Activitypub\add_to_outbox( $object, $activity_type, 1 );
+		$this->assertNotFalse( $first_id );
+		$this->assertEquals( 'pending', get_post_status( $first_id ) );
+
+		// Create second outbox item with same object_id and activity_type.
+		$second_id = \Activitypub\add_to_outbox( $object, $activity_type, 1 );
+		$this->assertNotFalse( $second_id );
+
+		// First item should now be published (invalidated).
+		$this->assertEquals( 'publish', get_post_status( $first_id ) );
+		// New item should still be pending.
+		$this->assertEquals( 'pending', get_post_status( $second_id ) );
+	}
+
+	/**
+	 * Test that only items with matching object_id and activity_type are invalidated.
+	 */
+	public function test_selective_invalidation() {
+		$object1 = $this->get_dummy_activity_object();
+		$object2 = $this->get_dummy_activity_object();
+		$object2->set_id( 'https://example.com/different-object' );
+
+		// Create items with different combinations.
+		$item1 = \Activitypub\add_to_outbox( $object1, 'Create', 1 ); // Should be invalidated.
+		$item2 = \Activitypub\add_to_outbox( $object2, 'Create', 1 ); // Should stay pending (different object).
+		$item3 = \Activitypub\add_to_outbox( $object1, 'Update', 1 ); // Should stay pending (different activity).
+
+		// Add new item that should trigger invalidation of item1.
+		$new_item = \Activitypub\add_to_outbox( $object1, 'Create', 1 );
+
+		$this->assertEquals( 'publish', get_post_status( $item1 ) );
+		$this->assertEquals( 'pending', get_post_status( $item2 ) );
+		$this->assertEquals( 'pending', get_post_status( $item3 ) );
+		$this->assertEquals( 'pending', get_post_status( $new_item ) );
+	}
+
+	/**
+	 * Test that Delete activities invalidate all existing items for the object.
+	 */
+	public function test_delete_invalidates_all_activities() {
+		$object = $this->get_dummy_activity_object();
+
+		// Create items with different activity types.
+		$create_id = \Activitypub\add_to_outbox( $object, 'Create', 1 );
+		$update_id = \Activitypub\add_to_outbox( $object, 'Update', 1 );
+		$like_id   = \Activitypub\add_to_outbox( $object, 'Like', 1 );
+
+		$this->assertEquals( 'pending', get_post_status( $create_id ) );
+		$this->assertEquals( 'pending', get_post_status( $update_id ) );
+		$this->assertEquals( 'pending', get_post_status( $like_id ) );
+
+		// Add Delete activity.
+		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
+
+		// All previous activities should be published (invalidated).
+		$this->assertEquals( 'publish', get_post_status( $create_id ) );
+		$this->assertEquals( 'publish', get_post_status( $update_id ) );
+		$this->assertEquals( 'publish', get_post_status( $like_id ) );
+		// Delete activity should still be pending.
+		$this->assertEquals( 'pending', get_post_status( $delete_id ) );
+	}
+
+	/**
+	 * Helper method to create a dummy activity object for testing.
+	 *
+	 * @return \Activitypub\Activity\Base_Object
+	 */
+	private function get_dummy_activity_object() {
+		$object = new \Activitypub\Activity\Base_Object();
+		$object->set_id( 'https://example.com/test-object' );
+		$object->set_type( 'Note' );
+		$object->set_content( 'Test content' );
+		return $object;
+	}
 }

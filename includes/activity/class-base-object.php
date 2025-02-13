@@ -451,6 +451,26 @@ class Base_Object {
 	protected $replies;
 
 	/**
+	 * A Collection containing objects considered to be likes for
+	 * this object.
+	 *
+	 * @see https://www.w3.org/TR/activitypub/#likes
+	 *
+	 * @var array
+	 */
+	protected $likes;
+
+	/**
+	 * A Collection containing objects considered to be shares for
+	 * this object.
+	 *
+	 * @see https://www.w3.org/TR/activitypub/#shares
+	 *
+	 * @var array
+	 */
+	protected $shares;
+
+	/**
 	 * Used to mark an object as containing sensitive content.
 	 * Mastodon displays a content warning, requiring users to click
 	 * through to view the content.
@@ -658,6 +678,10 @@ class Base_Object {
 		$vars  = get_object_vars( $this );
 
 		foreach ( $vars as $key => $value ) {
+			if ( \is_wp_error( $value ) ) {
+				continue;
+			}
+
 			// Ignore all _prefixed keys.
 			if ( '_' === substr( $key, 0, 1 ) ) {
 				continue;

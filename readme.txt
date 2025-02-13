@@ -84,8 +84,6 @@ Add the following to the site.conf in sites-available:
 
 Where 'blog' is the path to the subdirectory at which your blog resides.
 
-= What if you are running your blog in a subdirectory? =
-
 If you are running your blog in a subdirectory, but have a different [wp_siteurl](https://wordpress.org/documentation/article/giving-wordpress-its-own-directory/), you don't need the redirect, because the index.php will take care of that.
 
 = What if you are running your blog behind a reverse proxy with Apache? =
@@ -130,6 +128,17 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+= Unreleased =
+
+* Added: Batch Outbox-Processing.
+* Added: Outbox processed events get logged in Stream and show any errors returned from inboxes.
+* Added: REST API endpoints for likes and shares.
+* Changed: Increased probability of Outbox items being processed with the correct author.
+* Changed: Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
+* Changed: Updated terminology to be client-neutral in the Federated Reply block.
+* Fixed: Enforce 200 status header for valid ActivityPub requests.
+* Fixed: Integration of content-visibility setup in the block editor.
 
 = 5.1.0 =
 

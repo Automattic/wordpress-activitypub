@@ -7,6 +7,8 @@
 
 namespace Activitypub\Integration;
 
+use Activitypub\Collection\Actors;
+use function Activitypub\url_to_authorid;
 use function Activitypub\url_to_commentid;
 
 /**
@@ -31,7 +33,9 @@ class Stream_Connector extends \WP_Stream\Connector {
 	 */
 	public $actions = array(
 		'activitypub_notification_follow',
-		'activitypub_sent_to_followers',
+		'activitypub_sent_to_inbox',
+		'activitypub_outbox_processing_complete',
+		'activitypub_outbox_processing_batch_complete',
 	);
 
 	/**
@@ -64,6 +68,46 @@ class Stream_Connector extends \WP_Stream\Connector {
 	}
 
 	/**
+	 * Add action links to Stream drop row in admin list screen
+	 *
+	 * @filter wp_stream_action_links_{connector}
+	 *
+	 * @param array  $links   Previous links registered.
+	 * @param Record $record  Stream record.
+	 *
+	 * @return array Action links
+	 */
+	public function action_links( $links, $record ) {
+		if ( 'processed' === $record->action ) {
+			$error = json_decode( $record->get_meta( 'error', true ), true );
+
+			if ( $error ) {
+				$message = sprintf(
+					'<details><summary>%1$s</summary><pre>%2$s</pre></details>',
+					__( 'Inbox Error', 'activitypub' ),
+					wp_json_encode( $error )
+				);
+
+				$links[ $message ] = '';
+			}
+
+			$debug = json_decode( $record->get_meta( 'debug', true ), true );
+
+			if ( $debug ) {
+				$message = sprintf(
+					'<details><summary>%1$s</summary><pre>%2$s</pre></details>',
+					__( 'Debug', 'activitypub' ),
+					wp_json_encode( $debug )
+				);
+
+				$links[ $message ] = '';
+			}
+		}
+
+		return $links;
+	}
+
+	/**
 	 * Callback for activitypub_notification_follow.
 	 *
 	 * @param \Activitypub\Notification $notification The notification object.
@@ -86,52 +130,116 @@ class Stream_Connector extends \WP_Stream\Connector {
 	}
 
 	/**
-	 * Add action links to Stream drop row in admin list screen
+	 * Callback for activitypub_send_to_inboxes.
 	 *
-	 * @filter wp_stream_action_links_{connector}
-	 *
-	 * @param array  $links   Previous links registered.
-	 * @param Record $record  Stream record.
-	 *
-	 * @return array Action links
+	 * @param array  $result         The result of the remote post request.
+	 * @param string $inbox          The inbox URL.
+	 * @param string $json           The ActivityPub Activity JSON.
+	 * @param int    $actor_id       The actor ID.
+	 * @param int    $outbox_item_id The Outbox item ID.
 	 */
-	public function action_links( $links, $record ) {
-		if ( 'processed' === $record->action ) {
-			$results = json_decode( $record->get_meta( 'results', true ), true );
-
-			if ( empty( $results ) ) {
-				$results = __( 'No inboxes to notify about this activity.', 'activitypub' );
-			} else {
-				$results = array_map(
-					function ( $inbox, $result ) {
-						return sprintf( '%1$s: %2$s', $inbox, $result );
-					},
-					array_keys( $results ),
-					$results
-				);
-				$results = implode( "\n", $results );
-			}
-
-			$message = sprintf(
-				'<details><summary>%1$s</summary><pre>%2$s</pre></details>',
-				__( 'Notified Inboxes', 'activitypub' ),
-				$results
-			);
-
-			$links[ $message ] = '';
+	public function callback_activitypub_sent_to_inbox( $result, $inbox, $json, $actor_id, $outbox_item_id ) {
+		if ( ! \is_wp_error( $result ) ) {
+			return;
 		}
 
-		return $links;
+		$outbox_item = \get_post( $outbox_item_id );
+		$outbox_data = $this->prepare_outbox_data_for_response( $outbox_item );
+
+		$this->log(
+			// translators: 1: post title.
+			sprintf( __( 'Outbox error for "%1$s"', 'activitypub' ), $outbox_data['title'] ),
+			array(
+				'error' => wp_json_encode(
+					array(
+						'inbox'   => $inbox,
+						'code'    => $result->get_error_code(),
+						'message' => $result->get_error_message(),
+					)
+				),
+			),
+			$outbox_data['id'],
+			$outbox_data['type'],
+			'processed'
+		);
 	}
 
 	/**
-	 * Callback for activitypub_send_to_inboxes.
+	 * Callback for activitypub_outbox_processing_complete.
 	 *
-	 * @param array                          $results     The results of the remote posts.
-	 * @param \ActivityPub\Activity\Activity $activity    The ActivityPub Activity.
-	 * @param \WP_Post                       $outbox_item The WordPress object.
+	 * @param array  $inboxes        The inboxes.
+	 * @param string $json           The ActivityPub Activity JSON.
+	 * @param int    $actor_id       The actor ID.
+	 * @param int    $outbox_item_id The Outbox item ID.
 	 */
-	public function callback_activitypub_sent_to_followers( $results, $activity, $outbox_item ) {
+	public function callback_activitypub_outbox_processing_complete( $inboxes, $json, $actor_id, $outbox_item_id ) {
+		$outbox_item = \get_post( $outbox_item_id );
+		$outbox_data = $this->prepare_outbox_data_for_response( $outbox_item );
+
+		$this->log(
+			sprintf(
+				// translators: %s is a URL.
+				__( 'Outbox processing complete: %s', 'activitypub' ),
+				$outbox_data['title']
+			),
+			array(
+				'debug' => wp_json_encode(
+					array(
+						'actor_id'       => $actor_id,
+						'outbox_item_id' => $outbox_item_id,
+					)
+				),
+			),
+			$outbox_data['id'],
+			$outbox_data['type'],
+			'processed'
+		);
+	}
+
+	/**
+	 * Callback for activitypub_outbox_processing_batch_complete.
+	 *
+	 * @param array  $inboxes The inboxes.
+	 * @param string $json The ActivityPub Activity JSON.
+	 * @param int    $actor_id The actor ID.
+	 * @param int    $outbox_item_id The Outbox item ID.
+	 * @param int    $batch_size The batch size.
+	 * @param int    $offset The offset.
+	 */
+	public function callback_activitypub_outbox_processing_batch_complete( $inboxes, $json, $actor_id, $outbox_item_id, $batch_size, $offset ) {
+		$outbox_item = \get_post( $outbox_item_id );
+		$outbox_data = $this->prepare_outbox_data_for_response( $outbox_item );
+
+		$this->log(
+			sprintf(
+				// translators: %s is a URL.
+				__( 'Outbox processing batch complete: %s', 'activitypub' ),
+				$outbox_data['title']
+			),
+			array(
+				'debug' => wp_json_encode(
+					array(
+						'actor_id'       => $actor_id,
+						'outbox_item_id' => $outbox_item_id,
+						'batch_size'     => $batch_size,
+						'offset'         => $offset,
+					)
+				),
+			),
+			$outbox_data['id'],
+			$outbox_data['type'],
+			'processed'
+		);
+	}
+
+	/**
+	 * Get the title of the outbox object.
+	 *
+	 * @param \WP_Post $outbox_item The outbox item.
+	 *
+	 * @return array The title, object ID, and object type of the outbox object.
+	 */
+	protected function prepare_outbox_data_for_response( $outbox_item ) {
 		$object_id    = $outbox_item->ID;
 		$object_type  = $outbox_item->post_type;
 		$object_title = $outbox_item->post_title;
@@ -143,35 +251,35 @@ class Stream_Connector extends \WP_Stream\Connector {
 			$object_id    = $post_id;
 			$object_type  = $post->post_type;
 			$object_title = $post->post_title;
-		}
+		} else {
+			$comment_id = url_to_commentid( $outbox_item->post_title );
+			if ( $comment_id ) {
+				$comment = get_comment( $comment_id );
 
-		$comment_id = url_to_commentid( $outbox_item->post_title );
-		if ( $comment_id ) {
-			$comment = get_comment( $comment_id );
+				$object_id    = $comment_id;
+				$object_type  = 'comments';
+				$object_title = $comment->comment_content;
+			} else {
+				$author_id = url_to_authorid( $outbox_item->post_title );
+				if ( null !== $author_id ) {
+					$object_id   = $author_id;
+					$object_type = 'profiles';
 
-			$object_id    = $comment_id;
-			$object_type  = $comment->comment_type;
-			$object_title = $comment->comment_content;
-		}
-
-		$data = array();
-		foreach ( $results as $inbox => $result ) {
-			if ( is_wp_error( $result ) ) {
-				$data[ $inbox ] = $result->get_error_message();
-				continue;
+					if ( $author_id ) {
+						$object_title = get_userdata( $author_id )->display_name;
+					} elseif ( Actors::BLOG_USER_ID === $author_id ) {
+						$object_title = __( 'Blog User', 'activitypub' );
+					} elseif ( Actors::APPLICATION_USER_ID === $author_id ) {
+						$object_title = __( 'Application User', 'activitypub' );
+					}
+				}
 			}
-			$data[ $inbox ] = wp_remote_retrieve_response_message( $result );
 		}
 
-		$this->log(
-			// translators: 1: post title.
-			sprintf( __( 'Outbox processed for "%1$s"', 'activitypub' ), $object_title ),
-			array(
-				'results' => wp_json_encode( $data ),
-			),
-			$object_id,
-			$object_type,
-			'processed'
+		return array(
+			'id'    => $object_id,
+			'type'  => $object_type,
+			'title' => $object_title,
 		);
 	}
 }

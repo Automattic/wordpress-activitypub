@@ -318,4 +318,25 @@ class Interactions {
 			return $state; // Either WP_Comment, false, a WP_Error, 0, or 1!
 		}
 	}
+
+	/**
+	 * Get the total number of interactions by type for a given ID.
+	 *
+	 * @param int    $post_id The post ID.
+	 * @param string $type    The type of interaction to count.
+	 *
+	 * @return int The total number of interactions.
+	 */
+	public static function count_by_type( $post_id, $type ) {
+		return \get_comments(
+			array(
+				'post_id' => $post_id,
+				'status'  => 'approve',
+				'type'    => $type,
+				'count'   => true,
+				'paging'  => false,
+				'fields'  => 'ids',
+			)
+		);
+	}
 }

@@ -713,11 +713,23 @@ class Comment {
 			return;
 		}
 
+		// Do not exclude likes and reposts on ActivityPub requests.
+		if ( defined( 'ACTIVITYPUB_REQUEST' ) && ACTIVITYPUB_REQUEST ) {
+			return;
+		}
+
+		// Do not exclude likes and reposts on REST requests.
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return;
+		}
+
+		// Do not exclude likes and reposts on admin pages or on non-singular pages.
 		if ( is_admin() || ! is_singular() ) {
 			return;
 		}
 
-		if ( ! empty( $query->query_vars['type__in'] ) ) {
+		// Do not exclude likes and reposts if the query is for comments.
+		if ( ! empty( $query->query_vars['type__in'] ) || ! empty( $query->query_vars['type'] ) ) {
 			return;
 		}
 
