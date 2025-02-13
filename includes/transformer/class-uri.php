@@ -7,27 +7,26 @@
 
 namespace Activitypub\Transformer;
 
+use Activitypub\Http;
+
 /**
  * URI Transformer Class.
  *
  * @package Activitypub
  */
-class Uri extends Base {
+class Uri extends Json {
 	/**
-	 * Transform the item into an ActivityPub Object.
+	 * Base constructor.
 	 *
-	 * @return string The URI.
+	 * @param WP_Post|WP_Comment|Base_Object|string|array|WP_Term $item The item that should be transformed.
 	 */
-	public function to_object() {
-		return $this->item;
-	}
+	public function __construct( $item ) {
+		$response = Http::get_remote_object( $item );
 
-	/**
-	 * Get the ID of the item.
-	 *
-	 * @return string The ID of the item.
-	 */
-	public function to_id() {
-		return $this->item;
+		if ( \is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		parent::__construct( $response );
 	}
 }
