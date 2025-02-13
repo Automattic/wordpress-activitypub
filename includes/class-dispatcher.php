@@ -55,9 +55,9 @@ class Dispatcher {
 				 * @param int      $actor_id The actor ID.
 				 * @param Activity $activity The ActivityPub Activity.
 				 *
-				 * @deprecated Unreleased Use `activitypub_interactees_inboxes` instead.
+				 * @deprecated 5.2.0 Use `activitypub_interactees_inboxes` instead.
 				 */
-				return \apply_filters_deprecated( 'activitypub_send_to_inboxes', array( $inboxes, $actor_id, $activity ), 'Unreleased', 'activitypub_interactees_inboxes' );
+				return \apply_filters_deprecated( 'activitypub_send_to_inboxes', array( $inboxes, $actor_id, $activity ), '5.2.0', 'activitypub_interactees_inboxes' );
 			},
 			10,
 			3
@@ -292,7 +292,7 @@ class Dispatcher {
 	/**
 	 * Adds Blog Actor inboxes to Updates so the Blog User's followers are notified of edits.
 	 *
-	 * @deprecated Unreleased Use {@see Followers::maybe_add_inboxes_of_blog_user} instead.
+	 * @deprecated 5.2.0 Use {@see Followers::maybe_add_inboxes_of_blog_user} instead.
 	 *
 	 * @param array    $inboxes  The list of Inboxes.
 	 * @param int      $actor_id The WordPress Actor-ID.
@@ -301,7 +301,7 @@ class Dispatcher {
 	 * @return array The filtered Inboxes.
 	 */
 	public static function maybe_add_inboxes_of_blog_user( $inboxes, $actor_id, $activity ) { // phpcs:ignore
-		_deprecated_function( __METHOD__, 'Unreleased', 'Followers::maybe_add_inboxes_of_blog_user' );
+		_deprecated_function( __METHOD__, '5.2.0', 'Followers::maybe_add_inboxes_of_blog_user' );
 
 		return $inboxes;
 	}

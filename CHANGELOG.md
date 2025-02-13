@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.2.0] - 2025-02-13
 
 ### Added
 
@@ -1290,8 +1290,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.1.0...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.2.0...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[5.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.1.0...5.2.0
 [5.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.0.0...5.1.0
 [5.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.3...5.0.0
 [4.7.3]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.2...4.7.3
