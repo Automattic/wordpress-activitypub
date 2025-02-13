@@ -140,6 +140,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Enforce 200 status header for valid ActivityPub requests.
 * Fixed: `object_id_to_comment` returns a commment now, even if there are more than one matching comment in the DB.
 * Fixed: Integration of content-visibility setup in the block editor.
+* Fixed: Update CLI commands to the new scheduler refactorings.
 
 = 5.1.0 =
 
