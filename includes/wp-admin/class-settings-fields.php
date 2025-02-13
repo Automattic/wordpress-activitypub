@@ -5,7 +5,7 @@
  * @package Activitypub
  */
 
-namespace Activitypub;
+namespace Activitypub\WP_Admin;
 
 /**
  * Class Settings_Fields.
@@ -15,7 +15,7 @@ class Settings_Fields {
 	 * Initialize the settings fields.
 	 */
 	public static function init() {
-		add_action( 'settings_page_activitypub', array( self::class, 'register_settings_fields' ) );
+		add_action( 'load-settings_page_activitypub', array( self::class, 'register_settings_fields' ) );
 	}
 
 	/**
@@ -291,7 +291,7 @@ class Settings_Fields {
 					<input type="checkbox" id="activitypub_support_post_type_<?php echo esc_attr( $post_type->name ); ?>" name="activitypub_support_post_types[]" value="<?php echo esc_attr( $post_type->name ); ?>" <?php checked( in_array( $post_type->name, $supported_post_types, true ) ); ?> />
 					<label for="activitypub_support_post_type_<?php echo esc_attr( $post_type->name ); ?>"><?php echo esc_html( $post_type->label ); ?></label>
 					<span class="description">
-						<?php echo esc_html( get_post_type_description( $post_type ) ); ?>
+						<?php echo esc_html( \Activitypub\get_post_type_description( $post_type ) ); ?>
 					</span>
 				</li>
 			<?php endforeach; ?>
@@ -334,9 +334,9 @@ class Settings_Fields {
 	 * Render attribution domains field.
 	 */
 	public static function render_attribution_domains_field() {
-		$value = get_option( 'activitypub_attribution_domains', home_host() );
+		$value = get_option( 'activitypub_attribution_domains', \Activitypub\home_host() );
 		?>
-		<textarea id="activitypub_attribution_domains" name="activitypub_attribution_domains" class="large-text" cols="50" rows="5" placeholder="<?php echo esc_attr( home_host() ); ?>"><?php echo esc_textarea( $value ); ?></textarea>
+		<textarea id="activitypub_attribution_domains" name="activitypub_attribution_domains" class="large-text" cols="50" rows="5" placeholder="<?php echo esc_attr( \Activitypub\home_host() ); ?>"><?php echo esc_textarea( $value ); ?></textarea>
 		<p class="description"><?php esc_html_e( 'Websites allowed to credit you, one per line. Protects from false attributions.', 'activitypub' ); ?></p>
 		<?php
 	}
