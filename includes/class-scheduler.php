@@ -33,6 +33,7 @@ class Scheduler {
 
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
+		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_activity_for_federation' ) );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_announce_activity' ), 10, 4 );
@@ -69,6 +70,10 @@ class Scheduler {
 		if ( ! \wp_next_scheduled( 'activitypub_reprocess_outbox' ) ) {
 			\wp_schedule_event( time(), 'hourly', 'activitypub_reprocess_outbox' );
 		}
+
+		if ( ! wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
+			wp_schedule_event( time(), 'daily', 'activitypub_outbox_purge' );
+		}
 	}
 
 	/**
@@ -80,6 +85,7 @@ class Scheduler {
 		wp_unschedule_hook( 'activitypub_update_followers' );
 		wp_unschedule_hook( 'activitypub_cleanup_followers' );
 		wp_unschedule_hook( 'activitypub_reprocess_outbox' );
+		wp_unschedule_hook( 'activitypub_outbox_purge' );
 	}
 
 	/**
@@ -196,6 +202,39 @@ class Scheduler {
 
 		foreach ( $ids as $id ) {
 			self::schedule_outbox_activity_for_federation( $id );
+		}
+	}
+
+	/**
+	 * Purge outbox items based on a schedule.
+	 */
+	public static function purge_outbox() {
+		$total_posts = (int) wp_count_posts( Outbox::POST_TYPE )->publish;
+		if ( $total_posts <= 20 ) {
+			return;
+		}
+
+		$days     = 180; // TODO: Replace with a setting.
+		$timezone = new \DateTimeZone( 'UTC' );
+		$date     = new \DateTime( 'now', $timezone );
+
+		$date->sub( \DateInterval::createFromDateString( "$days days" ) );
+
+		$post_ids = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'date_query'  => array(
+					array(
+						'before' => $date->format( 'Y-m-d' ),
+					),
+				),
+			)
+		);
+
+		foreach ( $post_ids as $post_id ) {
+			\wp_delete_post( $post_id, true );
 		}
 	}
 

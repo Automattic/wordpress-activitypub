@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Batch Outbox-Processing.
 * Outbox processed events get logged in Stream and show any errors returned from inboxes.
+* Outbox items older than 6 months will be purged to avoid performance issues.
 * REST API endpoints for likes and shares.
 
 ### Changed
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `object_id_to_comment` returns a commment now, even if there are more than one matching comment in the DB.
 * Integration of content-visibility setup in the block editor.
 * Update CLI commands to the new scheduler refactorings.
+* `Activity::set_object` falsely overwrites the Activity-ID with a default.
 
 ## [5.1.0] - 2025-02-06
 

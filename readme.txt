@@ -133,6 +133,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Added: Batch Outbox-Processing.
 * Added: Outbox processed events get logged in Stream and show any errors returned from inboxes.
+* Added: Outbox items older than 6 months will be purged to avoid performance issues.
 * Added: REST API endpoints for likes and shares.
 * Changed: Increased probability of Outbox items being processed with the correct author.
 * Changed: Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
@@ -141,6 +142,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: `object_id_to_comment` returns a commment now, even if there are more than one matching comment in the DB.
 * Fixed: Integration of content-visibility setup in the block editor.
 * Fixed: Update CLI commands to the new scheduler refactorings.
+* Fixed: `Activity::set_object` falsely overwrites the Activity-ID with a default.
 
 = 5.1.0 =
 
