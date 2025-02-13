@@ -237,4 +237,13 @@ class Activity extends Base_Object {
 
 		return static::JSON_LD_CONTEXT;
 	}
+
+	/**
+	 * Get the cc.
+	 *
+	 * @return array|string|null The cc.
+	 */
+	public function get_cc() {
+		return $this->cc ?? array();
+	}
 }

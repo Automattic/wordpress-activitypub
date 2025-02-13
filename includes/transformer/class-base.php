@@ -171,7 +171,7 @@ abstract class Base {
 		$public = 'https://www.w3.org/ns/activitystreams#Public';
 		$actor  = Actors::get_by_resource( $this->get_attributed_to() );
 		if ( ! $actor || is_wp_error( $actor ) ) {
-			$followers = null;
+			$followers = array();
 		} else {
 			$followers = $actor->get_followers();
 		}
