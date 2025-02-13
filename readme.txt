@@ -140,6 +140,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Enforce 200 status header for valid ActivityPub requests.
 * Fixed: Integration of content-visibility setup in the block editor.
 * Fixed: Update CLI commands to the new scheduler refactorings.
+* Fixed: `Activity::set_object` falsely overwrites the Activity-ID with a default.
 
 = 5.1.0 =
 
