@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Enforce 200 status header for valid ActivityPub requests.
 * Integration of content-visibility setup in the block editor.
 * Update CLI commands to the new scheduler refactorings.
+* Do not add an audience to the Actor-Profiles.
 
 ## [5.1.0] - 2025-02-06
 
