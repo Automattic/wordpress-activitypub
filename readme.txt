@@ -129,13 +129,16 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Added: Undo API for Outbox items.
+
 = 5.2.0 =
 
 * Added: Batch Outbox-Processing.
 * Added: Outbox processed events get logged in Stream and show any errors returned from inboxes.
 * Added: Outbox items older than 6 months will be purged to avoid performance issues.
 * Added: REST API endpoints for likes and shares.
-* Added: Undo API for Outbox items.
 * Changed: Increased probability of Outbox items being processed with the correct author.
 * Changed: Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
 * Changed: Updated terminology to be client-neutral in the Federated Reply block.
