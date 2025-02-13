@@ -19,6 +19,8 @@ use function Activitypub\get_attribution_domains;
 
 /**
  * User class.
+ *
+ * @method int get__id() Gets the WordPress user ID.
  */
 class User extends Actor {
 	/**

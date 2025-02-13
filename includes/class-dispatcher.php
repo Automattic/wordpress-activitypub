@@ -244,9 +244,9 @@ class Dispatcher {
 	/**
 	 * Default filter to add Inboxes of Posts that are set as `in-reply-to`
 	 *
-	 * @param array $inboxes  The list of Inboxes.
-	 * @param int   $actor_id The WordPress Actor-ID.
-	 * @param array $activity The ActivityPub Activity.
+	 * @param array    $inboxes  The list of Inboxes.
+	 * @param int      $actor_id The WordPress Actor-ID.
+	 * @param Activity $activity The ActivityPub Activity.
 	 *
 	 * @return array The filtered Inboxes
 	 */
