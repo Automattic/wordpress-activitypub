@@ -8,15 +8,12 @@
 ?>
 
 <div class="activitypub-settings activitypub-welcome-page hide-if-no-js">
-	<div class="box">
-		<h2><?php \esc_html_e( 'Welcome', 'activitypub' ); ?></h2>
+	<h2><?php \esc_html_e( 'Welcome', 'activitypub' ); ?></h2>
 
-		<p><?php echo wp_kses( \__( 'Enter the fediverse with <strong>ActivityPub</strong>, broadcasting your blog to a wider audience. Attract followers, deliver updates, and receive comments from a diverse user base on <strong>Mastodon</strong>, <strong>Friendica</strong>, <strong>Pleroma</strong>, <strong>Pixelfed</strong>, and all <strong>ActivityPub</strong>-compliant platforms.', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
-	</div>
+	<p><?php echo wp_kses( \__( 'Enter the fediverse with <strong>ActivityPub</strong>, broadcasting your blog to a wider audience. Attract followers, deliver updates, and receive comments from a diverse user base on <strong>Mastodon</strong>, <strong>Friendica</strong>, <strong>Pleroma</strong>, <strong>Pixelfed</strong>, and all <strong>ActivityPub</strong>-compliant platforms.', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
 
 	<?php if ( \Activitypub\site_supports_blocks() ) : ?>
-	<div class="box">
-		<h3><?php \esc_html_e( 'Bookmarklet', 'activitypub' ); ?></h3>
+		<h2><?php \esc_html_e( 'Bookmarklet', 'activitypub' ); ?></h2>
 
 		<p>
 			<?php
@@ -40,15 +37,13 @@
 			printf( ' <a href="%s">%s</a>', esc_url( \admin_url( 'tools.php#activitypub' ) ), esc_html__( 'For additional information, please visit the Tools page.', 'activitypub' ) );
 			?>
 		</p>
-	</div>
 		<?php
 	endif;
 
 	if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Actors::BLOG_USER_ID ) ) :
 		$blog_user = new \Activitypub\Model\Blog();
 		?>
-	<div class="box">
-		<h3><?php \esc_html_e( 'Blog profile', 'activitypub' ); ?></h3>
+		<h2><?php \esc_html_e( 'Blog profile', 'activitypub' ); ?></h2>
 		<p>
 			<?php \esc_html_e( 'People can follow your blog by using:', 'activitypub' ); ?>
 		</p>
@@ -66,21 +61,19 @@
 		</p>
 		<p>
 			<?php \esc_html_e( 'This blog profile will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
+		</p>
 		<p>
-		<p>
-			<a href="<?php echo \esc_url_raw( \admin_url( '/options-general.php?page=activitypub&tab=blog-profile	' ) ); ?>">
+			<a href="<?php echo \esc_url( \admin_url( '/options-general.php?page=activitypub&tab=blog-profile' ) ); ?>">
 				<?php \esc_html_e( 'Customize the blog profile', 'activitypub' ); ?>
 			</a>
 		</p>
-	</div>
 	<?php endif; ?>
 
 	<?php
 	if ( ! \Activitypub\is_user_disabled( get_current_user_id() ) ) :
 		$user = \Activitypub\Collection\Actors::get_by_id( wp_get_current_user()->ID );
 		?>
-	<div class="box">
-		<h3><?php \esc_html_e( 'Author profile', 'activitypub' ); ?></h3>
+		<h2><?php \esc_html_e( 'Author profile', 'activitypub' ); ?></h2>
 		<p>
 			<?php \esc_html_e( 'People can follow you by using your author name:', 'activitypub' ); ?>
 		</p>
@@ -100,15 +93,13 @@
 			<?php \esc_html_e( 'Authors who can not access this settings page will find their username on the "Edit Profile" page.', 'activitypub' ); ?>
 		<p>
 		<p>
-			<a href="<?php echo \esc_url_raw( \admin_url( '/profile.php#activitypub' ) ); ?>">
-			<?php \esc_html_e( 'Customize username on "Edit Profile" page.', 'activitypub' ); ?>
+			<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>">
+				<?php \esc_html_e( 'Customize username on "Edit Profile" page.', 'activitypub' ); ?>
 			</a>
 		</p>
-	</div>
 	<?php endif; ?>
 
-	<div class="box">
-		<h3><?php \esc_html_e( 'Troubleshooting', 'activitypub' ); ?></h3>
+		<h2><?php \esc_html_e( 'Troubleshooting', 'activitypub' ); ?></h2>
 		<p>
 			<?php
 			echo wp_kses(
@@ -124,11 +115,10 @@
 			);
 			?>
 		</p>
-	</div>
 
 	<?php if ( ACTIVITYPUB_SHOW_PLUGIN_RECOMMENDATIONS ) : ?>
 	<div class="box plugin-recommendations">
-		<h3><?php \esc_html_e( 'Recommended Plugins', 'activitypub' ); ?></h3>
+		<h2><?php \esc_html_e( 'Recommended Plugins', 'activitypub' ); ?></h2>
 
 		<p><?php \esc_html_e( 'ActivityPub works as is and there is no need for you to install additional plugins, nevertheless there are some plugins that extends the functionality of ActivityPub.', 'activitypub' ); ?></p>
 	</div>

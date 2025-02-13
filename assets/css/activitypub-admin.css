@@ -3,6 +3,20 @@
 	margin: 0 auto;
 }
 
+@media screen and (max-width: 782px) {
+	.activitypub-settings {
+		margin: 0 12px;
+		width: auto
+	}
+}
+
+@media only screen and (max-width: 1004px) {
+	.activitypub-settings {
+		margin: 0 22px;
+		width: auto
+	}
+}
+
 .settings_page_activitypub .notice {
 	max-width: 800px;
 	margin: 0 auto 30px;
