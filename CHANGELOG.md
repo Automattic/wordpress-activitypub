@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+* `context` support for posts and comments.
+
 ## [5.2.0] - 2025-02-13
 
 ### Added
@@ -33,7 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* `context` support for posts and comments.
 * Cleanup of option values when the plugin is uninstalled.
 * Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
 * Show ActivityPub preview in row actions when Block Editor is enabled but not used for the post type.
