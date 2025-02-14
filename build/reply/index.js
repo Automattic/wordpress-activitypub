@@ -1654,23 +1654,10 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const save = () => null;
-const migrate = attributes => {
-  if (attributes.embedPost === undefined) {
-    attributes.embedPost = false;
-  }
-  return attributes;
-};
 (0,_wordpress_blocks__WEBPACK_IMPORTED_MODULE_0__.registerBlockType)('activitypub/reply', {
   edit: _edit__WEBPACK_IMPORTED_MODULE_1__["default"],
   save,
-  icon: _wordpress_icons__WEBPACK_IMPORTED_MODULE_2__["default"],
-  attributes: {
-    embedPost: {
-      type: 'boolean',
-      default: true
-    }
-  },
-  migrate
+  icon: _wordpress_icons__WEBPACK_IMPORTED_MODULE_2__["default"]
 });
 })();
 

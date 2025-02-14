@@ -342,9 +342,11 @@ class Blocks {
 		$html = '';
 
 		if ( ! empty( $attrs['url'] ) ) {
-			$embed = embed_get( $attrs['url'] );
-			if ( $embed ) {
-				$html .= $embed;
+			if ( $attrs['embedPost'] ) {
+				$embed = embed_get( $attrs['url'] );
+				if ( $embed ) {
+					$html .= $embed;
+				}
 			}
 
 			$html .= sprintf(
