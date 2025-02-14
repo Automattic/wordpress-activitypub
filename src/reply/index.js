@@ -20,7 +20,6 @@ registerBlockType( 'activitypub/reply', {
 			},
 			save,
 			migrate( attributes ) {
-				console.log( 'migrate', attributes );
 				return {
 					...attributes,
 					embedPost: false // Preserve false for existing blocks
