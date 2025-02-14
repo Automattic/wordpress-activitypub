@@ -16,6 +16,10 @@
 	"attributes": {
 		"url": {
 			"type": "string"
+		},
+		"embedPost": {
+			"type": "boolean",
+			"default": true
 		}
 	}
 }

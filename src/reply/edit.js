@@ -1,6 +1,6 @@
 import { __ } from '@wordpress/i18n';
 import { useBlockProps, store as blockEditorStore } from '@wordpress/block-editor';
-import { TextControl } from '@wordpress/components';
+import { TextControl, ToggleControl } from '@wordpress/components';
 import { useState } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 
@@ -25,6 +25,10 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 		setAttributes( { url } );
 	};
 
+	const onEmbedPostChange = ( embedPost ) => {
+		setAttributes( { embedPost } );
+	};
+
 	const onKeyDown = ( event ) => {
 		if ( event.key === 'Enter' ) {
 			insertAfterBlock( clientId );
@@ -46,6 +50,11 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 				placeholder='https://example.org/path'
 				className={ className }
 				help={ isSelected ? helpText : '' }
+			/>
+			<ToggleControl
+				label={ __( 'Embed Post', 'activitypub' ) }
+				checked={ attr.embedPost }
+				onChange={ onEmbedPostChange }
 			/>
 		</div>
 	);
