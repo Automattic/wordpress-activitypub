@@ -63,7 +63,10 @@ class Test_Blocks extends \WP_UnitTestCase {
 			}
 		);
 
-		$attrs  = array( 'url' => 'https://mastodon.social/@user/123456' );
+		$attrs  = array(
+			'url'       => 'https://mastodon.social/@user/123456',
+			'embedPost' => true,
+		);
 		$output = \Activitypub\Blocks::render_reply_block( $attrs );
 
 		$this->assertStringContainsString( $mock_embed, $output, 'Output should contain the embedded content.' );
@@ -79,7 +82,10 @@ class Test_Blocks extends \WP_UnitTestCase {
 	public function test_render_reply_block_with_no_embed() {
 		add_filter( 'pre_oembed_result', '__return_false' );
 
-		$attrs  = array( 'url' => 'https://example.com/no-embed' );
+		$attrs  = array(
+			'url'       => 'https://example.com/no-embed',
+			'embedPost' => true,
+		);
 		$output = \Activitypub\Blocks::render_reply_block( $attrs );
 
 		$this->assertStringNotContainsString( '<blockquote', $output, 'Output should not contain any embedded content.' );

@@ -344,7 +344,7 @@ class Blocks {
 		$html = '';
 
 		if ( ! empty( $attrs['url'] ) ) {
-			if ( $attrs['embedPost'] ) {
+			if ( isset( $attrs['embedPost'] ) && $attrs['embedPost'] ) {
 				$embed = embed_get( $attrs['url'] );
 				if ( $embed ) {
 					$html .= $embed;
