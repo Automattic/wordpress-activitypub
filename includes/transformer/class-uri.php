@@ -24,7 +24,7 @@ class Uri extends Json {
 		$response = Http::get_remote_object( $item );
 
 		if ( \is_wp_error( $response ) ) {
-			return $response;
+			$response = array();
 		}
 
 		parent::__construct( $response );
