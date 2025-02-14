@@ -65,6 +65,16 @@ class Settings {
 
 		\register_setting(
 			'activitypub',
+			'activitypub_outbox_purge_days',
+			array(
+				'type'        => 'integer',
+				'description' => \__( 'Number of days to keep items in the Outbox.', 'activitypub' ),
+				'default'     => 180,
+			)
+		);
+
+		\register_setting(
+			'activitypub',
 			'activitypub_object_type',
 			array(
 				'type'         => 'string',
