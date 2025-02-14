@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Batch Outbox-Processing.
 * Outbox processed events get logged in Stream and show any errors returned from inboxes.
+* URL support for Transformers for use as an Announce.
 
 ### Changed
 
