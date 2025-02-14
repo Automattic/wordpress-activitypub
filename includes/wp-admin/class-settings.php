@@ -307,6 +307,44 @@ class Settings {
 	 * Adds the ActivityPub settings to the Help tab.
 	 */
 	public static function add_settings_help_tab() {
-		require_once ACTIVITYPUB_PLUGIN_DIR . 'includes/help.php';
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'template-tags',
+				'title'   => \__( 'Template Tags', 'activitypub' ),
+				'content' => self::get_help_content( 'template-tags' ),
+			)
+		);
+
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'glossary',
+				'title'   => \__( 'Glossary', 'activitypub' ),
+				'content' => self::get_help_content( 'glossary' ),
+			)
+		);
+
+		\get_current_screen()->set_help_sidebar(
+			'<p><strong>' . \__( 'For more information:', 'activitypub' ) . '</strong></p>' .
+			'<p>' . \__( '<a href="https://wordpress.org/support/plugin/activitypub/">Get support</a>', 'activitypub' ) . '</p>' .
+			'<p>' . \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues">Report an issue</a>', 'activitypub' ) . '</p>'
+		);
+	}
+
+	/**
+	 * Get the content for the help tab.
+	 *
+	 * @param string $template The template to load.
+	 * @return string
+	 */
+	private static function get_help_content( $template ) {
+		$template = ACTIVITYPUB_PLUGIN_DIR . 'templates/wp-admin/help-' . $template . '.php';
+		if ( ! \file_exists( $template ) ) {
+			_doing_it_wrong( __METHOD__, \sprintf( 'The template file %s does not exist.', esc_html( $template ) ), 'unreleased' );
+			return '';
+		}
+
+		ob_start();
+		include $template;
+		return ob_get_clean();
 	}
 }
