@@ -228,6 +228,7 @@ class Scheduler {
 				'post_type'   => Outbox::POST_TYPE,
 				'post_status' => 'any',
 				'fields'      => 'ids',
+				'numberposts' => -1,
 				'date_query'  => array(
 					array(
 						'before' => $date->format( 'Y-m-d' ),
