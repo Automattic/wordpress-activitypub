@@ -5,12 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.2.0] - 2025-02-13
 
 ### Added
 
 * Batch Outbox-Processing.
 * Outbox processed events get logged in Stream and show any errors returned from inboxes.
+* Outbox items older than 6 months will be purged to avoid performance issues.
+* REST API endpoints for likes and shares.
 
 ### Changed
 
@@ -21,7 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Enforce 200 status header for valid ActivityPub requests.
+* `object_id_to_comment` returns a commment now, even if there are more than one matching comment in the DB.
 * Integration of content-visibility setup in the block editor.
+* Update CLI commands to the new scheduler refactorings.
+* Do not add an audience to the Actor-Profiles.
+* `Activity::set_object` falsely overwrites the Activity-ID with a default.
 
 ## [5.1.0] - 2025-02-06
 
@@ -177,6 +183,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added `media_type` support to Activity-Object-Transformers
 * Clarified settings page text around which users get Activitypub profiles
 * Add a filter to the REST API moderators list
+* Refactored settings to use the WordPress Settings API
 
 ### Fixed
 
@@ -1285,8 +1292,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.1.0...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.2.0...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[5.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.1.0...5.2.0
 [5.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.0.0...5.1.0
 [5.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.3...5.0.0
 [4.7.3]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.2...4.7.3

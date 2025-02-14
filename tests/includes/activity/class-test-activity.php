@@ -72,6 +72,8 @@ class Test_Activity extends \WP_UnitTestCase {
 
 	/**
 	 * Test activity object.
+	 *
+	 * @covers ::init_from_array
 	 */
 	public function test_activity_object() {
 		$test_array = array(
@@ -92,8 +94,34 @@ class Test_Activity extends \WP_UnitTestCase {
 
 	/**
 	 * Test activity object.
+	 *
+	 * @covers ::init_from_array
 	 */
 	public function test_activity_object_url() {
+		$test_array = array(
+			'id'     => 'https://example.com/id/123',
+			'type'   => 'Follow',
+			'object' => 'https://example.com/post/123',
+		);
+
+		$activity = Activity::init_from_array( $test_array );
+
+		$this->assertEquals( 'https://example.com/id/123', $activity->get_id() );
+
+		$test_array2 = array(
+			'type'   => 'Follow',
+			'object' => 'https://example.com/post/123',
+		);
+
+		$activity2 = Activity::init_from_array( $test_array2 );
+
+		$this->assertTrue( str_starts_with( $activity2->get_id(), 'https://example.com/post/123#activity-follow-' ) );
+	}
+
+	/**
+	 * Test activity object.
+	 */
+	public function test_activity_object_id() {
 		$id = 'https://example.com/author/123';
 
 		// Build the update.

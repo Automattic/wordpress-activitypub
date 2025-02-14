@@ -56,7 +56,8 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activitpub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 
 		$post = $this->get_latest_outbox_item( $activitpub_id );
-		$this->assertSame( $activitpub_id, $post->post_title );
+		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $activitpub_id, $id );
 
 		\wp_delete_post( $post_id, true );
 	}

@@ -114,6 +114,7 @@ class Delete {
 	 * @param array $activity The delete activity.
 	 */
 	public static function maybe_delete_follower( $activity ) {
+		/* @var \Activitypub\Model\Follower $follower Follower object. */
 		$follower = Followers::get_follower_by_actor( $activity['actor'] );
 
 		// Verify that Actor is deleted.
@@ -142,7 +143,7 @@ class Delete {
 	/**
 	 * Delete comments from an Actor.
 	 *
-	 * @param array $actor The actor whose comments to delete.
+	 * @param string $actor The URL of the actor whose comments to delete.
 	 */
 	public static function delete_interactions( $actor ) {
 		$comments = Interactions::get_interactions_by_actor( $actor );

@@ -644,6 +644,17 @@ class Activitypub {
 
 		\register_post_meta(
 			Outbox::POST_TYPE,
+			'_activitypub_object_id',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'The ID (ActivityPub URI) of the object that the outbox item is about.',
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		\register_post_meta(
+			Outbox::POST_TYPE,
 			'activitypub_content_visibility',
 			array(
 				'type'              => 'string',

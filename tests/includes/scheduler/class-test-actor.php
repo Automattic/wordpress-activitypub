@@ -67,7 +67,8 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
 		$post          = $this->get_latest_outbox_item( $activitpub_id );
-		$this->assertSame( $activitpub_id, $post->post_title );
+		$id            = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $activitpub_id, $id );
 	}
 
 	/**
@@ -80,7 +81,8 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
 		$post          = $this->get_latest_outbox_item( $activitpub_id );
-		$this->assertSame( $activitpub_id, $post->post_title );
+		$id            = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $activitpub_id, $id );
 	}
 
 	/**
@@ -95,7 +97,8 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 		$post          = $this->get_latest_outbox_item( $activitpub_id );
-		$this->assertSame( $activitpub_id, $post->post_title );
+		$id            = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $activitpub_id, $id );
 		$this->assertSame( $test_value, $result );
 	}
 
@@ -229,7 +232,8 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
 
 		$post = $this->get_latest_outbox_item( $activitpub_id );
-		$this->assertSame( $activitpub_id, $post->post_title );
+		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $activitpub_id, $id );
 
 		\wp_delete_post( $post_id, true );
 	}
@@ -245,7 +249,8 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 
 		$post = $this->get_latest_outbox_item( $activitpub_id );
-		$this->assertSame( $activitpub_id, $post->post_title );
+		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $activitpub_id, $id );
 
 		// Clean up.
 		\wp_delete_post( $blog_post_id, true );
