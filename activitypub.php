@@ -69,16 +69,20 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Admin', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Health_Check', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Link', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Mailer', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Settings_Fields', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Blog_Settings_Fields', 'init' ) );
+
+	// Menus are registered before `admin_init`, because of course they are.
+	\add_action( 'admin_menu', array( __NAMESPACE__ . '\WP_Admin\Menu', 'admin_menu' ) );
+	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Admin', 'init' ) );
+	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Health_Check', 'init' ) );
+	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings', 'init' ) );
+	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings_Fields', 'init' ) );
+	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Blog_Settings_Fields', 'init' ) );
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
