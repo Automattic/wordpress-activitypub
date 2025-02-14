@@ -25,7 +25,7 @@ class Factory {
 	 * @return Base|WP_Error The transformer to use, or an error.
 	 */
 	public static function get_transformer( $data ) {
-		if ( \filter_var( $data, FILTER_VALIDATE_URL ) ) {
+		if ( \is_string( $data ) && \filter_var( $data, FILTER_VALIDATE_URL ) ) {
 			$class = 'uri';
 		} elseif ( \is_array( $data ) || \is_string( $data ) ) {
 			$class = 'json';
