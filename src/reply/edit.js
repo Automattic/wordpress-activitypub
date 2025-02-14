@@ -1,6 +1,6 @@
 import { __ } from '@wordpress/i18n';
-import { useBlockProps, store as blockEditorStore } from '@wordpress/block-editor';
-import { TextControl, ToggleControl } from '@wordpress/components';
+import { useBlockProps, store as blockEditorStore, InspectorControls } from '@wordpress/block-editor';
+import { TextControl, ToggleControl, PanelBody } from '@wordpress/components';
 import { useState } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 
@@ -40,23 +40,29 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 
 
 	return (
-		<div { ...useBlockProps() }>
-			<TextControl
-				label={ __( 'This post is a reply to the following URL', 'activitypub' ) }
-				value={ attr.url }
-				onChange={ onUrlChange }
-				onKeyDown={ onKeyDown }
-				type='url'
-				placeholder='https://example.org/path'
-				className={ className }
-				help={ isSelected ? helpText : '' }
-			/>
-			<ToggleControl
-				label={ __( 'Embed Post', 'activitypub' ) }
-				checked={ attr.embedPost }
-				onChange={ onEmbedPostChange }
-			/>
-		</div>
+		<>
+			<InspectorControls>
+				<PanelBody title={ __( 'Settings', 'activitypub' ) }>
+					<ToggleControl
+						label={ __( 'Embed Post', 'activitypub' ) }
+						checked={ attr.embedPost }
+						onChange={ onEmbedPostChange }
+					/>
+				</PanelBody>
+			</InspectorControls>
+			<div { ...useBlockProps() }>
+				<TextControl
+					label={ __( 'This post is a reply to the following URL', 'activitypub' ) }
+					value={ attr.url }
+					onChange={ onUrlChange }
+					onKeyDown={ onKeyDown }
+					type='url'
+					placeholder='https://example.org/path'
+					className={ className }
+					help={ isSelected ? helpText : '' }
+				/>
+			</div>
+		</>
 	);
 }
 
