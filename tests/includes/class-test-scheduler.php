@@ -68,6 +68,13 @@ class Test_Scheduler extends WP_UnitTestCase {
 			);
 		}
 
+		$pending_ids[] = Outbox::add(
+			$activity_object,
+			'Update',
+			self::$user_id,
+			ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC
+		);
+
 		// Track scheduled events.
 		$scheduled_events = array();
 		add_filter(
@@ -84,10 +91,9 @@ class Test_Scheduler extends WP_UnitTestCase {
 		Scheduler::reprocess_outbox();
 
 		// Verify each pending activity was scheduled.
-		$this->assertCount( 3, $scheduled_events, 'Should schedule 3 activities for processing' );
-		foreach ( $pending_ids as $id ) {
-			$this->assertContains( $id, $scheduled_events, "Activity $id should be scheduled" );
-		}
+		$this->assertCount( 2, $scheduled_events, 'Should schedule 2 activities for processing' );
+		$this->assertNotContains( $pending_ids[0], $scheduled_events, "Activity $pending_ids[0] should be scheduled" );
+		$this->assertContains( $pending_ids[3], $scheduled_events, "Activity $pending_ids[3] should be scheduled" );
 
 		// Test with published activities (should not be scheduled).
 		$published_id = Outbox::add(
@@ -187,5 +193,59 @@ class Test_Scheduler extends WP_UnitTestCase {
 		// Clean up.
 		wp_delete_post( $pending_id, true );
 		remove_all_filters( 'schedule_event' );
+	}
+
+	/**
+	 * Test purge_outbox method with more than 20 posts.
+	 *
+	 * @covers ::purge_outbox
+	 */
+	public function test_purge_outbox_more_than_20_posts() {
+		// Create 25 posts, 5 older than 6 months.
+		self::factory()->post->create_many(
+			25,
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 month' ) ),
+			)
+		);
+		self::factory()->post->create_many(
+			5,
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 months' ) ),
+			)
+		);
+
+		Scheduler::purge_outbox();
+		wp_cache_delete( _count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+
+		// Assert that 5 posts were deleted, leaving 25.
+		$this->assertEquals( 25, wp_count_posts( Outbox::POST_TYPE )->publish );
+	}
+
+	/**
+	 * Test purge_outbox method with 20 or fewer posts.
+	 *
+	 * @covers ::purge_outbox
+	 */
+	public function test_purge_outbox_20_or_fewer_posts() {
+		// Create 20 posts, all older than 6 months.
+		self::factory()->post->create_many(
+			20,
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 months' ) ),
+			)
+		);
+
+		Scheduler::purge_outbox();
+		wp_cache_delete( _count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+
+		// Assert that no posts were deleted.
+		$this->assertEquals( 20, wp_count_posts( Outbox::POST_TYPE )->publish );
 	}
 }

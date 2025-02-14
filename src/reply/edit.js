@@ -7,7 +7,7 @@ import { useDispatch } from '@wordpress/data';
 export default function Edit( { attributes: attr, setAttributes, clientId, isSelected } ) {
 	const [ className, setClassName ] = useState( '' );
 	const { insertAfterBlock, removeBlock } = useDispatch( blockEditorStore );
-	const defaultHelpText = __( 'For example: Paste a URL from a Mastodon post or note into the field above to leave a comment.', 'activitypub' );
+	const defaultHelpText = __( 'For example: Paste a URL from a Fediverse (e.g. Mastodon, Pixelfed, etc.) post or note into the field above to leave a comment.', 'activitypub' );
 	const [ helpText, setHelpText ] = useState( defaultHelpText );
 	const reset = () => {
 		setClassName( '' );

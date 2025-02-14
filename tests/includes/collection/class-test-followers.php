@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 /**
@@ -559,6 +560,133 @@ class Test_Followers extends \WP_UnitTestCase {
 		$followers = Followers::get_all_followers();
 
 		$this->assertCount( 30, $followers );
+	}
+
+	/**
+	 * Data provider for test_maybe_add_inboxes_of_blog_user.
+	 *
+	 * @return array[] Test data.
+	 */
+	public function data_maybe_add_inboxes_of_blog_user() {
+		return array(
+			'actor mode'      => array(
+				'actor_mode' => ACTIVITYPUB_ACTOR_MODE,
+				'json'       => '{"type":"Update","id":"test"}',
+				'actor_id'   => 123,
+				'expected'   => false,
+				'message'    => 'Should return false when not in blog and user mode.',
+			),
+			'blog actor'      => array(
+				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
+				'json'       => '{"type":"Update","id":"test"}',
+				'actor_id'   => Actors::BLOG_USER_ID,
+				'expected'   => false,
+				'message'    => 'Should return false when using blog actor.',
+			),
+			'create activity' => array(
+				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
+				'json'       => '{"type":"Create","id":"test"}',
+				'actor_id'   => 123,
+				'expected'   => false,
+				'message'    => 'Should return false for non-Update/Delete activity types.',
+			),
+			'update activity' => array(
+				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
+				'json'       => '{"type":"Update","id":"test"}',
+				'actor_id'   => 123,
+				'expected'   => true,
+				'message'    => 'Should return true for Update activity in dual mode.',
+			),
+			'delete activity' => array(
+				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
+				'json'       => '{"type":"Delete","id":"test"}',
+				'actor_id'   => 123,
+				'expected'   => true,
+				'message'    => 'Should return true for Delete activity in dual mode.',
+			),
+			'invalid json'    => array(
+				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
+				'json'       => 'invalid json',
+				'actor_id'   => 123,
+				'expected'   => false,
+				'message'    => 'Should return false for invalid JSON.',
+			),
+		);
+	}
+
+	/**
+	 * Test maybe_add_inboxes_of_blog_user method.
+	 *
+	 * @covers ::maybe_add_inboxes_of_blog_user
+	 * @dataProvider data_maybe_add_inboxes_of_blog_user
+	 *
+	 * @param string  $actor_mode The actor mode to test with.
+	 * @param string  $json       The JSON to test with.
+	 * @param int     $actor_id   The actor ID to test with.
+	 * @param boolean $expected   The expected result.
+	 * @param string  $message    The assertion message.
+	 */
+	public function test_maybe_add_inboxes_of_blog_user( $actor_mode, $json, $actor_id, $expected, $message ) {
+		update_option( 'activitypub_actor_mode', $actor_mode );
+		$this->assertSame(
+			$expected,
+			Followers::maybe_add_inboxes_of_blog_user( $json, $actor_id ),
+			$message
+		);
+	}
+
+	/**
+	 * Tests get_inboxes_for_activity method.
+	 *
+	 * @covers ::get_inboxes_for_activity
+	 */
+	public function test_get_inboxes_for_activity() {
+		$actor_id  = 123;
+		$followers = array(
+			'username@example.org',
+			'jon@example.com',
+			'doe@example.org',
+		);
+
+		// Create test followers.
+		foreach ( $followers as $follower ) {
+			$actor = self::$actors[ $follower ];
+			Followers::add_follower( $actor_id, $actor['id'] );
+		}
+
+		// Test basic retrieval.
+		$inboxes = Followers::get_inboxes_for_activity(
+			'{"type":"Create"}',
+			$actor_id,
+			50,
+			0
+		);
+		$this->assertCount( 3, $inboxes, 'Should retrieve exactly 3 inboxes.' );
+		$this->assertContains( self::$actors['username@example.org']['inbox'], $inboxes, 'Should contain first inbox.' );
+		$this->assertContains( self::$actors['jon@example.com']['inbox'], $inboxes, 'Should contain second inbox.' );
+		$this->assertContains( self::$actors['doe@example.org']['inbox'], $inboxes, 'Should contain third inbox.' );
+
+		// Test pagination.
+		$inboxes = Followers::get_inboxes_for_activity(
+			'{"type":"Create"}',
+			$actor_id,
+			1,
+			0
+		);
+		$this->assertCount( 1, $inboxes, 'Should retrieve exactly 1 inbox with batch size 1.' );
+
+		// Test with blog user in dual mode.
+		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		Followers::add_follower( Actors::BLOG_USER_ID, self::$actors['sally@example.org']['id'] );
+
+		$inboxes = Followers::get_inboxes_for_activity(
+			'{"type":"Update"}',
+			$actor_id,
+			50,
+			0
+		);
+		$this->assertCount( 4, $inboxes, 'Should include blog user followers in dual mode.' );
+		$this->assertContains( self::$actors['sally@example.org']['inbox'], $inboxes, 'Should contain blog user inbox.' );
 	}
 
 	/**

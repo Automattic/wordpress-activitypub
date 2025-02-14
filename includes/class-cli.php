@@ -9,6 +9,8 @@ namespace Activitypub;
 
 use WP_CLI;
 use WP_CLI_Command;
+use Activitypub\Scheduler\Post;
+use Activitypub\Scheduler\Comment;
 
 /**
  * WP-CLI commands.
@@ -67,11 +69,11 @@ class Cli extends WP_CLI_Command {
 		switch ( $args[0] ) {
 			case 'delete':
 				WP_CLI::confirm( 'Do you really want to delete the (Custom) Post with the ID: ' . $args[1] );
-				Scheduler::schedule_post_activity( 'trash', 'publish', $args[1] );
+				Post::schedule_post_activity( 'trash', 'publish', $post );
 				WP_CLI::success( '"Delete" activity is queued.' );
 				break;
 			case 'update':
-				Scheduler::schedule_post_activity( 'publish', 'publish', $args[1] );
+				Post::schedule_post_activity( 'publish', 'publish', $post );
 				WP_CLI::success( '"Update" activity is queued.' );
 				break;
 			default:
@@ -117,11 +119,11 @@ class Cli extends WP_CLI_Command {
 		switch ( $args[0] ) {
 			case 'delete':
 				WP_CLI::confirm( 'Do you really want to delete the Comment with the ID: ' . $args[1] );
-				Scheduler::schedule_comment_activity( 'trash', 'approved', $args[1] );
+				Comment::schedule_comment_activity( 'trash', 'approved', $comment );
 				WP_CLI::success( '"Delete" activity is queued.' );
 				break;
 			case 'update':
-				Scheduler::schedule_comment_activity( 'approved', 'approved', $args[1] );
+				Comment::schedule_comment_activity( 'approved', 'approved', $comment );
 				WP_CLI::success( '"Update" activity is queued.' );
 				break;
 			default:

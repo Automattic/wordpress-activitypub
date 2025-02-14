@@ -109,8 +109,20 @@ async function createRelease(version) {
 	phpFiles.forEach((filePath) => {
 		updateVersionInFile(filePath, version, [
 			{
-				search: /@since unreleased/g,
+				search: /@since unreleased/gi,
 				replace: `@since ${version}`
+			},
+			{
+				search: /@deprecated unreleased/gi,
+				replace: `@deprecated ${version}`
+			},
+			{
+				search: /(?<=_deprecated_function\s*\(\s*__METHOD__,\s*')unreleased(?=',\s*['<=>])/gi,
+				replace: (match) => match.replace(/unreleased/i, version)
+			},
+			{
+				search: /(?<=\bapply_filters_deprecated\s*\(\s*'.*?'\s*,\s*array\s*\(.*?\)\s*,\s*')unreleased(?=',\s*['<=>])/gi,
+				replace: (match) => match.replace(/unreleased/i, version)
 			}
 		]);
 	});
@@ -129,11 +141,13 @@ async function createRelease(version) {
 	const currentUser = execWithOutput('gh api user --jq .login');
 
 	// Create PR using GitHub CLI and capture the URL
-	console.log('\nCreating draft PR...');
-	const prUrl = execWithOutput(`gh pr create --title "Release ${version}" --body "Release version ${version}" --base trunk --head ${branchName} --draft --reviewer "Automattic/fediverse" --assignee "${currentUser}" --json url --jq .url`);
+	console.log('\nCreating PR...');
+	const prUrl = execWithOutput(`gh pr create --title "Release ${version}" --body "Release version ${version}" --base trunk --head ${branchName} --reviewer "Automattic/fediverse" --assignee "${currentUser}"`);
 
-	// Open PR in browser
-	exec(`open ${prUrl}`);
+	// Open PR in browser if a URL was returned
+	if (prUrl && prUrl.includes('github.com')) {
+		exec(`open ${prUrl}`);
+	}
 }
 
 async function release() {
