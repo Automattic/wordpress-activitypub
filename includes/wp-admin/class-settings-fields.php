@@ -125,6 +125,15 @@ class Settings_Fields {
 			'activitypub_general'
 		);
 
+		add_settings_field(
+			'activitypub_outbox_purge_days',
+			__( 'Outbox Retention Period', 'activitypub' ),
+			array( self::class, 'render_outbox_purge_days_field' ),
+			'activitypub_settings',
+			'activitypub_general',
+			array( 'label_for' => 'activitypub_outbox_purge_days' )
+		);
+
 		if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
 			add_settings_section(
 				'activitypub_security',
@@ -255,7 +264,7 @@ class Settings_Fields {
 	public static function render_max_image_attachments_field() {
 		$value = get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
 		?>
-		<input id="activitypub_max_image_attachments" value="<?php echo esc_attr( $value ); ?>" name="activitypub_max_image_attachments" type="number" min="0" />
+		<input id="activitypub_max_image_attachments" value="<?php echo esc_attr( $value ); ?>" name="activitypub_max_image_attachments" type="number" min="0" class="small-text" />
 		<p class="description">
 			<?php
 			echo wp_kses(
@@ -359,6 +368,15 @@ class Settings_Fields {
 			?>
 		</p>
 		<?php
+	}
+
+	/**
+	 * Render outbox purge days field.
+	 */
+	public static function render_outbox_purge_days_field() {
+		$value = get_option( 'activitypub_outbox_purge_days', 180 );
+		echo '<input type="number" id="activitypub_outbox_purge_days" name="activitypub_outbox_purge_days" value="' . esc_attr( $value ) . '" class="small-text" min="0" max="365" />';
+		echo '<p class="description">' . esc_html__( 'Maximum number of days to keep items in the Outbox. A lower value might be better for sites with lots of activity to maintain site performance.', 'activitypub' ) . '</p>';
 	}
 
 	/**
