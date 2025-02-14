@@ -22,7 +22,6 @@ use function Activitypub\get_upload_baseurl;
 use function Activitypub\get_content_warning;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\site_supports_blocks;
-use function Activitypub\get_rest_url_by_path;
 use function Activitypub\generate_post_summary;
 use function Activitypub\get_content_visibility;
 
