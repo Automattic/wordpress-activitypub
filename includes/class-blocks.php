@@ -148,6 +148,8 @@ class Blocks {
 				'render_callback' => array( self::class, 'render_reply_block' ),
 			)
 		);
+		// maintain legacy blocks as no embed.
+		\add_filter( 'render_block_data', array( self::class, 'maybe_migrate_reply_block' ) );
 
 		\register_block_type_from_metadata(
 			ACTIVITYPUB_PLUGIN_DIR . '/build/reactions',
@@ -365,6 +367,23 @@ class Blocks {
 		 * @param array  $attrs The block attributes.
 		 */
 		return apply_filters( 'activitypub_reply_block', $html, $attrs );
+	}
+
+	/**
+	 * Migrate legacy reply blocks to not have embeds, despite the default being true.
+	 *
+	 * @param array $parsed_block The block data.
+	 *
+	 * @return array The block data.
+	 */
+	public static function maybe_migrate_reply_block( $parsed_block ) {
+		if (
+			'activitypub/reply' === $parsed_block['blockName']
+			&& empty( $parsed_block['attrs']['embedPost'] )
+		) {
+			$parsed_block['attrs']['embedPost'] = false;
+		}
+		return $parsed_block;
 	}
 
 	/**

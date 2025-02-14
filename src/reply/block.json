@@ -19,7 +19,7 @@
 		},
 		"embedPost": {
 			"type": "boolean",
-			"default": false
+			"default": true
 		}
 	}
 }
