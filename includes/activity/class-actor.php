@@ -66,8 +66,7 @@ class Actor extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#inbox
 	 *
-	 * @var string
-	 *    | null
+	 * @var string|null
 	 */
 	protected $inbox;
 
@@ -77,8 +76,7 @@ class Actor extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#outbox
 	 *
-	 * @var string
-	 *    | null
+	 * @var string|null
 	 */
 	protected $outbox;
 

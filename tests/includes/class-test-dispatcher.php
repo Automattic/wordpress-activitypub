@@ -98,7 +98,6 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 				'activitypub_async_batch',
 				array(
 					Dispatcher::$callback,
-					self::$user_id,
 					$outbox_item->ID,
 					Dispatcher::$batch_size,
 					0,

@@ -11,6 +11,8 @@ use WP_Post;
 use Activitypub\Shortcodes;
 use Activitypub\Model\Blog;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Replies;
+use Activitypub\Collection\Interactions;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\object_to_uri;
@@ -18,6 +20,7 @@ use function Activitypub\is_single_user;
 use function Activitypub\get_enclosures;
 use function Activitypub\get_upload_baseurl;
 use function Activitypub\get_content_warning;
+use function Activitypub\get_rest_url_by_path;
 use function Activitypub\site_supports_blocks;
 use function Activitypub\generate_post_summary;
 use function Activitypub\get_content_visibility;
@@ -1098,5 +1101,40 @@ class Post extends Base {
 		 * @param WP_Post $item The WordPress post object being transformed.
 		 */
 		return apply_filters( 'activitypub_object_content_template', $template, $this->item );
+	}
+
+	/**
+	 * Get the replies Collection.
+	 *
+	 * @return array|null The replies collection on success or null on failure.
+	 */
+	public function get_replies() {
+		return Replies::get_collection( $this->item );
+	}
+
+	/**
+	 * Get the likes Collection.
+	 *
+	 * @return array The likes collection.
+	 */
+	public function get_likes() {
+		return array(
+			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/likes', $this->item->ID ) ),
+			'type'       => 'Collection',
+			'totalItems' => Interactions::count_by_type( $this->item->ID, 'like' ),
+		);
+	}
+
+	/**
+	 * Get the shares Collection.
+	 *
+	 * @return array The shares collection.
+	 */
+	public function get_shares() {
+		return array(
+			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/shares', $this->item->ID ) ),
+			'type'       => 'Collection',
+			'totalItems' => Interactions::count_by_type( $this->item->ID, 'repost' ),
+		);
 	}
 }

@@ -122,7 +122,7 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		remove_filter( 'wp_is_comment_flood', '__return_false', 99 );
 
 		$query_result = \Activitypub\object_id_to_comment( $duplicate_comment_source_id );
-		$this->assertFalse( $query_result );
+		$this->assertInstanceOf( \WP_Comment::class, $query_result );
 	}
 
 	/**
@@ -362,9 +362,16 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 		$visible_private_post_id = self::factory()->post->create();
 
 		add_post_meta( $visible_private_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
-		$this->assertFalse( \Activitypub\is_post_disabled( $visible_private_post_id ) );
+		$this->assertTrue( \Activitypub\is_post_disabled( $visible_private_post_id ) );
 
 		wp_delete_post( $visible_private_post_id, true );
+
+		$visible_local_post_id = self::factory()->post->create();
+
+		add_post_meta( $visible_local_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+		$this->assertTrue( \Activitypub\is_post_disabled( $visible_local_post_id ) );
+
+		wp_delete_post( $visible_local_post_id, true );
 	}
 
 	/**
