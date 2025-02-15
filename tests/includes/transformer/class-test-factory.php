@@ -259,7 +259,7 @@ class Test_Factory extends WP_UnitTestCase {
 
 		$uri_transformer = Factory::get_transformer( 'https://example.com/invalid' );
 
-		$this->assertInstanceOf( \WP_Error::class, $uri_transformer );
+		$this->assertWPError( $uri_transformer );
 
 		remove_filter( 'pre_http_request', $fake_request, 10 );
 	}
