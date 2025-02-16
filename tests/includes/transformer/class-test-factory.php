@@ -219,16 +219,16 @@ class Test_Factory extends WP_UnitTestCase {
 	 * Test successful URI transformation.
 	 */
 	public function test_successful_uri_transformation() {
-		// Mock-Daten für die HTTP-Antwor;
+		// Mock-Daten für die HTTP-Antwort.
 		$fake_request = function () {
 			return array(
 				'response' => array( 'code' => 200 ),
-				'body'     => json_encode(
+				'body'     => wp_json_encode(
 					array(
-						'id' => 'https://example.com/activity/1',
-						'type' => 'Note',
+						'id'      => 'https://example.com/activity/1',
+						'type'    => 'Note',
 						'content' => 'Test Content',
-					),
+					)
 				),
 			);
 		};
@@ -236,7 +236,7 @@ class Test_Factory extends WP_UnitTestCase {
 		add_filter( 'pre_http_request', $fake_request, 10 );
 
 		$uri_transformer = Factory::get_transformer( 'https://example.com/activity/1' );
-		$result = $uri_transformer->to_object();
+		$result          = $uri_transformer->to_object();
 
 		$this->assertIsObject( $result );
 		$this->assertEquals( 'https://example.com/activity/1', $result->get_id() );
@@ -250,7 +250,7 @@ class Test_Factory extends WP_UnitTestCase {
 	 * Test URI transformation with error.
 	 */
 	public function test_uri_transformation_error() {
-		// WP_Error für fehlgeschlagene Anfrage erstellen
+		// WP_Error für fehlgeschlagene Anfrage erstellen.
 		$fake_request = function () {
 			return new \WP_Error( 'fetch_error', 'Failed to fetch remote object' );
 		};
