@@ -118,7 +118,7 @@ class Post {
 	public static function rest_insert( $post, $request ) {
 		$metas = $request->get_param( 'meta' );
 
-		if ( ! $post->ID || ! $metas || ! is_array( $metas ) ) {
+		if ( empty( $post->ID ) || ! $metas || ! is_array( $metas ) ) {
 			return $post;
 		}
 
