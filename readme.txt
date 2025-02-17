@@ -131,7 +131,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
-* Added: `context` support for posts and comments.
+* Added: A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
 * Added: Undo API for Outbox items.
 
 = 5.2.0 =
