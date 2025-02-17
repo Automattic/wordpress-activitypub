@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* A `preview` property to the `Article` object.
+* A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
 * Undo API for Outbox items.
 
 
