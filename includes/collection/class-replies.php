@@ -158,7 +158,7 @@ class Replies {
 			return false;
 		}
 
-		$comments = \get_comments( array( 'post_id' => $post_id ) );
+		$comments = \get_comments( array( 'post_id' => $post_id, 'comment_type' => 'comment' ) );
 		$ids      = self::get_reply_ids( $comments, true );
 		$post_uri = ( new PostTransformer( $post ) )->to_id();
 		\array_unshift( $ids, $post_uri );
