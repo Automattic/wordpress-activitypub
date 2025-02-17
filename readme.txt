@@ -131,6 +131,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Added: Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
 * Added: Undo API for Outbox items.
 * Added: Setting to adjust the number of days Outbox items are kept before being purged.
 * Changed: Bumped minimum required WordPress version to 6.4.
