@@ -11,6 +11,7 @@ use WP_Comment_Query;
 use Activitypub\Comment;
 
 use function Activitypub\object_to_uri;
+use function Activitypub\is_post_disabled;
 use function Activitypub\url_to_commentid;
 use function Activitypub\object_id_to_comment;
 use function Activitypub\get_remote_metadata_by_actor;
@@ -47,8 +48,7 @@ class Interactions {
 			$comment_post_id = $parent_comment->comment_post_ID;
 		}
 
-		// Not a reply to a post or comment.
-		if ( ! $comment_post_id ) {
+		if ( is_post_disabled( $comment_post_id ) ) {
 			return false;
 		}
 
@@ -106,7 +106,7 @@ class Interactions {
 			$comment_post_id = $parent_comment->comment_post_ID;
 		}
 
-		if ( ! $comment_post_id ) {
+		if ( ! $comment_post_id || is_post_disabled( $comment_post_id ) ) {
 			// Not a reply to a post or comment.
 			return false;
 		}
@@ -317,5 +317,26 @@ class Interactions {
 		} else {
 			return $state; // Either WP_Comment, false, a WP_Error, 0, or 1!
 		}
+	}
+
+	/**
+	 * Get the total number of interactions by type for a given ID.
+	 *
+	 * @param int    $post_id The post ID.
+	 * @param string $type    The type of interaction to count.
+	 *
+	 * @return int The total number of interactions.
+	 */
+	public static function count_by_type( $post_id, $type ) {
+		return \get_comments(
+			array(
+				'post_id' => $post_id,
+				'status'  => 'approve',
+				'type'    => $type,
+				'count'   => true,
+				'paging'  => false,
+				'fields'  => 'ids',
+			)
+		);
 	}
 }

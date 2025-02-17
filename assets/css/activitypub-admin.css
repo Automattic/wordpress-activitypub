@@ -45,11 +45,10 @@
 }
 
 .activitypub-settings-tabs-wrapper {
-	display: -ms-inline-grid;
-	-ms-grid-columns: auto auto auto auto;
+	display: inline-flex;
 	vertical-align: top;
-	display: inline-grid;
-	grid-template-columns: auto auto auto auto;
+	flex-wrap: nowrap;
+	gap: 0;
 }
 
 .activitypub-settings-tab.active {

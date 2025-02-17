@@ -7,6 +7,9 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Outbox;
+use Activitypub\Scheduler\Comment;
+use Activitypub\Scheduler\Post;
 use WP_CLI;
 use WP_CLI_Command;
 
@@ -67,11 +70,11 @@ class Cli extends WP_CLI_Command {
 		switch ( $args[0] ) {
 			case 'delete':
 				WP_CLI::confirm( 'Do you really want to delete the (Custom) Post with the ID: ' . $args[1] );
-				Scheduler::schedule_post_activity( 'trash', 'publish', $args[1] );
+				Post::schedule_post_activity( 'trash', 'publish', $post );
 				WP_CLI::success( '"Delete" activity is queued.' );
 				break;
 			case 'update':
-				Scheduler::schedule_post_activity( 'publish', 'publish', $args[1] );
+				Post::schedule_post_activity( 'publish', 'publish', $post );
 				WP_CLI::success( '"Update" activity is queued.' );
 				break;
 			default:
@@ -117,15 +120,50 @@ class Cli extends WP_CLI_Command {
 		switch ( $args[0] ) {
 			case 'delete':
 				WP_CLI::confirm( 'Do you really want to delete the Comment with the ID: ' . $args[1] );
-				Scheduler::schedule_comment_activity( 'trash', 'approved', $args[1] );
+				Comment::schedule_comment_activity( 'trash', 'approved', $comment );
 				WP_CLI::success( '"Delete" activity is queued.' );
 				break;
 			case 'update':
-				Scheduler::schedule_comment_activity( 'approved', 'approved', $args[1] );
+				Comment::schedule_comment_activity( 'approved', 'approved', $comment );
 				WP_CLI::success( '"Update" activity is queued.' );
 				break;
 			default:
 				WP_CLI::error( 'Unknown action.' );
 		}
+	}
+
+	/**
+	 * Undo an activity that was sent to the Fediverse.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <outbox_item_id>
+	 *     The ID or URL of the outbox item to undo.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *    $ wp activitypub undo 123
+	 *    $ wp activitypub undo "https://example.com/?post_type=ap_outbox&p=123"
+	 *
+	 * @synopsis <outbox_item_id>
+	 *
+	 * @param array $args The arguments.
+	 */
+	public function undo( $args ) {
+		$outbox_item_id = $args[0];
+		if ( ! is_numeric( $outbox_item_id ) ) {
+			$outbox_item_id = url_to_postid( $outbox_item_id );
+		}
+
+		$outbox_item_id = get_post( $outbox_item_id );
+		if ( ! $outbox_item_id ) {
+			WP_CLI::error( 'Activity not found.' );
+		}
+
+		$undo_id = Outbox::undo( $outbox_item_id );
+		if ( ! $undo_id ) {
+			WP_CLI::error( 'Failed to undo activity.' );
+		}
+		WP_CLI::success( 'Undo activity scheduled.' );
 	}
 }

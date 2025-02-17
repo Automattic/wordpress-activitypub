@@ -22,6 +22,7 @@
 \defined( 'ACTIVITYPUB_SHARED_INBOX_FEATURE' ) || \define( 'ACTIVITYPUB_SHARED_INBOX_FEATURE', false );
 \defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) || \define( 'ACTIVITYPUB_SEND_VARY_HEADER', false );
 \defined( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE' ) || \define( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE', 'wordpress-post-format' );
+\defined( 'ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE' ) || \define( 'ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE', 100 );
 
 // The following constants are invariable and define values used throughout the plugin.
 
@@ -71,4 +72,5 @@
 // Post visibility constants.
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC', '' );
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC', 'quiet_public' );
+\define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE', 'private' );
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL', 'local' );

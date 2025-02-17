@@ -29,7 +29,7 @@ class Seriously_Simple_Podcasting extends Post {
 	 * @return array The attachments array.
 	 */
 	public function get_attachment() {
-		$post       = $this->wp_object;
+		$post       = $this->item;
 		$attachment = array(
 			'type' => \esc_attr( ucfirst( \get_post_meta( $post->ID, 'episode_type', true ) ?? 'Audio' ) ),
 			'url'  => \esc_url( \get_post_meta( $post->ID, 'audio_file', true ) ),
@@ -67,6 +67,6 @@ class Seriously_Simple_Podcasting extends Post {
 	 * @return string The content.
 	 */
 	public function get_content() {
-		return generate_post_summary( $this->wp_object );
+		return generate_post_summary( $this->item );
 	}
 }

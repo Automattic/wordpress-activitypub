@@ -361,9 +361,14 @@ class Enable_Mastodon_Apps {
 	 * @return Status|null The Mastodon API status object, or null if the post is not found
 	 */
 	private static function api_post_status( $post_id ) {
-		$post    = Factory::get_transformer( get_post( $post_id ) );
+		$post = Factory::get_transformer( get_post( $post_id ) );
+		if ( is_wp_error( $post ) ) {
+			return null;
+		}
+
 		$data    = $post->to_object()->to_array();
 		$account = self::api_account_internal( null, get_post_field( 'post_author', $post_id ) );
+
 		return self::activity_to_status( $data, $account, $post_id );
 	}
 

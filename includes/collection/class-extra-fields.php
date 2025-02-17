@@ -93,14 +93,7 @@ class Extra_Fields {
 	 */
 	public static function fields_to_attachments( $fields ) {
 		$attachments = array();
-		\add_filter(
-			'activitypub_link_rel',
-			function ( $rel ) {
-				$rel .= ' me';
-
-				return $rel;
-			}
-		);
+		\add_filter( 'activitypub_link_rel', array( self::class, 'add_rel_me' ) );
 
 		foreach ( $fields as $post ) {
 			$content       = self::get_formatted_content( $post );
@@ -114,7 +107,7 @@ class Extra_Fields {
 				),
 			);
 
-			$link_added = false;
+			$attachment = false;
 
 			// Add support for FEP-fb2a, for more information see FEDERATION.md.
 			$link_content = \trim( \strip_tags( $content, '<a>' ) );
@@ -139,12 +132,10 @@ class Extra_Fields {
 					if ( $rel && \is_string( $rel ) ) {
 						$attachment['rel'] = \explode( ' ', $rel );
 					}
-
-					$link_added = true;
 				}
 			}
 
-			if ( ! $link_added ) {
+			if ( ! $attachment ) {
 				$attachment = array(
 					'type'    => 'Note',
 					'name'    => \get_the_title( $post ),
@@ -158,6 +149,8 @@ class Extra_Fields {
 
 			$attachments[] = $attachment;
 		}
+
+		\remove_filter( 'activitypub_link_rel', array( self::class, 'add_rel_me' ) );
 
 		return $attachments;
 	}
@@ -283,6 +276,16 @@ class Extra_Fields {
 			return $content;
 		}
 		return '<!-- wp:paragraph --><p>' . $content . '</p><!-- /wp:paragraph -->';
+	}
+
+	/**
+	 * Add the 'me' rel to the link.
+	 *
+	 * @param string $rel The rel attribute.
+	 * @return string The modified rel attribute.
+	 */
+	public static function add_rel_me( $rel ) {
+		return $rel . ' me';
 	}
 
 	/**

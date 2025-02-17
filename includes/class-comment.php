@@ -229,7 +229,7 @@ class Comment {
 			return false;
 		}
 
-		if ( is_single_user() && \user_can( $user_id, 'publish_posts' ) ) {
+		if ( is_single_user() && \user_can( $user_id, 'activitypub' ) ) {
 			// On a single user site, comments by users with the `publish_posts` capability will be federated as the blog user.
 			$user_id = Actors::BLOG_USER_ID;
 		}
@@ -264,14 +264,12 @@ class Comment {
 			array(
 				'meta_key'   => 'source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_value' => $id,         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'orderby'    => 'comment_date',
+				'order'      => 'DESC',
 			)
 		);
 
 		if ( ! $comment_query->comments ) {
-			return false;
-		}
-
-		if ( count( $comment_query->comments ) > 1 ) {
 			return false;
 		}
 
@@ -713,11 +711,23 @@ class Comment {
 			return;
 		}
 
+		// Do not exclude likes and reposts on ActivityPub requests.
+		if ( defined( 'ACTIVITYPUB_REQUEST' ) && ACTIVITYPUB_REQUEST ) {
+			return;
+		}
+
+		// Do not exclude likes and reposts on REST requests.
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return;
+		}
+
+		// Do not exclude likes and reposts on admin pages or on non-singular pages.
 		if ( is_admin() || ! is_singular() ) {
 			return;
 		}
 
-		if ( ! empty( $query->query_vars['type__in'] ) ) {
+		// Do not exclude likes and reposts if the query is for comments.
+		if ( ! empty( $query->query_vars['type__in'] ) || ! empty( $query->query_vars['type'] ) ) {
 			return;
 		}
 

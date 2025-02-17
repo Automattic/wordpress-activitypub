@@ -7,8 +7,13 @@
 
 namespace Activitypub;
 
+use Activitypub\Scheduler\Post;
+use Activitypub\Scheduler\Actor;
+use Activitypub\Scheduler\Comment;
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
-
+use Activitypub\Transformer\Factory;
 /**
  * Scheduler class.
  *
@@ -20,63 +25,37 @@ class Scheduler {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		// Post transitions.
-		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
-		\add_action(
-			'edit_attachment',
-			function ( $post_id ) {
-				self::schedule_post_activity( 'publish', 'publish', $post_id );
-			}
-		);
-		\add_action(
-			'add_attachment',
-			function ( $post_id ) {
-				self::schedule_post_activity( 'publish', '', $post_id );
-			}
-		);
-		\add_action(
-			'delete_attachment',
-			function ( $post_id ) {
-				self::schedule_post_activity( 'trash', '', $post_id );
-			}
-		);
-
-		if ( ! ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS ) {
-			// Comment transitions.
-			\add_action( 'transition_comment_status', array( self::class, 'schedule_comment_activity' ), 20, 3 );
-			\add_action(
-				'edit_comment',
-				function ( $comment_id ) {
-					self::schedule_comment_activity( 'approved', 'approved', $comment_id );
-				}
-			);
-			\add_action(
-				'wp_insert_comment',
-				function ( $comment_id ) {
-					self::schedule_comment_activity( 'approved', '', $comment_id );
-				}
-			);
-		}
+		self::register_schedulers();
 
 		// Follower Cleanups.
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
 
-		// Profile updates for blog options.
-		if ( ! is_user_type_disabled( 'blog' ) ) {
-			\add_action( 'update_option_site_icon', array( self::class, 'blog_user_update' ) );
-			\add_action( 'update_option_blogdescription', array( self::class, 'blog_user_update' ) );
-			\add_action( 'update_option_blogname', array( self::class, 'blog_user_update' ) );
-			\add_filter( 'pre_set_theme_mod_custom_logo', array( self::class, 'blog_user_update' ) );
-			\add_filter( 'pre_set_theme_mod_header_image', array( self::class, 'blog_user_update' ) );
-		}
+		// Event callbacks.
+		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
+		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
+		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 
-		// Profile updates for user options.
-		if ( ! is_user_type_disabled( 'user' ) ) {
-			\add_action( 'wp_update_user', array( self::class, 'user_update' ) );
-			\add_action( 'updated_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
-			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
-		}
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_activity_for_federation' ) );
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_announce_activity' ), 10, 4 );
+
+		\add_action( 'update_option_activitypub_outbox_purge_days', array( self::class, 'handle_outbox_purge_days_update' ), 10, 2 );
+	}
+
+	/**
+	 * Register handlers.
+	 */
+	public static function register_schedulers() {
+		Post::init();
+		Actor::init();
+		Comment::init();
+
+		/**
+		 * Register additional schedulers.
+		 *
+		 * @since 5.0.0
+		 */
+		do_action( 'activitypub_register_schedulers' );
 	}
 
 	/**
@@ -90,6 +69,14 @@ class Scheduler {
 		if ( ! \wp_next_scheduled( 'activitypub_cleanup_followers' ) ) {
 			\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_followers' );
 		}
+
+		if ( ! \wp_next_scheduled( 'activitypub_reprocess_outbox' ) ) {
+			\wp_schedule_event( time(), 'hourly', 'activitypub_reprocess_outbox' );
+		}
+
+		if ( ! wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
+			wp_schedule_event( time(), 'daily', 'activitypub_outbox_purge' );
+		}
 	}
 
 	/**
@@ -100,125 +87,8 @@ class Scheduler {
 	public static function deregister_schedules() {
 		wp_unschedule_hook( 'activitypub_update_followers' );
 		wp_unschedule_hook( 'activitypub_cleanup_followers' );
-	}
-
-
-	/**
-	 * Schedule Activities.
-	 *
-	 * @param string   $new_status New post status.
-	 * @param string   $old_status Old post status.
-	 * @param \WP_Post $post       Post object.
-	 */
-	public static function schedule_post_activity( $new_status, $old_status, $post ) {
-		$post = get_post( $post );
-
-		if ( ! $post || is_post_disabled( $post ) ) {
-			return;
-		}
-
-		if ( 'ap_extrafield' === $post->post_type ) {
-			self::schedule_profile_update( $post->post_author );
-			return;
-		}
-
-		if ( 'ap_extrafield_blog' === $post->post_type ) {
-			self::schedule_profile_update( 0 );
-			return;
-		}
-
-		// Do not send activities if post is password protected.
-		if ( \post_password_required( $post ) ) {
-			return;
-		}
-
-		// Check if post-type supports ActivityPub.
-		$post_types = \get_post_types_by_support( 'activitypub' );
-		if ( ! \in_array( $post->post_type, $post_types, true ) ) {
-			return;
-		}
-
-		switch ( $new_status ) {
-			case 'publish':
-				$type = ( 'publish' === $old_status ) ? 'Update' : 'Create';
-				break;
-
-			case 'draft':
-				$type = ( 'publish' === $old_status ) ? 'Update' : false;
-				break;
-
-			case 'trash':
-				$type = 'federated' === get_wp_object_state( $post ) ? 'Delete' : false;
-				break;
-
-			default:
-				$type = false;
-		}
-
-		// No activity to schedule.
-		if ( empty( $type ) ) {
-			return;
-		}
-
-		$hook = 'activitypub_send_post';
-		$args = array( $post->ID, $type );
-
-		if ( false === wp_next_scheduled( $hook, $args ) ) {
-			set_wp_object_state( $post, 'federate' );
-			\wp_schedule_single_event( \time() + 10, $hook, $args );
-		}
-	}
-
-	/**
-	 * Schedule Comment Activities.
-	 *
-	 * @see transition_comment_status()
-	 *
-	 * @param string      $new_status New comment status.
-	 * @param string      $old_status Old comment status.
-	 * @param \WP_Comment $comment    Comment object.
-	 */
-	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
-		$comment = get_comment( $comment );
-
-		// Federate only comments that are written by a registered user.
-		if ( ! $comment || ! $comment->user_id ) {
-			return;
-		}
-
-		$type = false;
-
-		if (
-			'approved' === $new_status &&
-			'approved' !== $old_status
-		) {
-			$type = 'Create';
-		} elseif ( 'approved' === $new_status ) {
-			$type = 'Update';
-			\update_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', time(), true );
-		} elseif (
-			'trash' === $new_status ||
-			'spam' === $new_status
-		) {
-			$type = 'Delete';
-		}
-
-		if ( empty( $type ) ) {
-			return;
-		}
-
-		// Check if comment should be federated or not.
-		if ( ! should_comment_be_federated( $comment ) ) {
-			return;
-		}
-
-		$hook = 'activitypub_send_comment';
-		$args = array( $comment->comment_ID, $type );
-
-		if ( false === wp_next_scheduled( $hook, $args ) ) {
-			set_wp_object_state( $comment, 'federate' );
-			\wp_schedule_single_event( \time(), $hook, $args );
-		}
+		wp_unschedule_hook( 'activitypub_reprocess_outbox' );
+		wp_unschedule_hook( 'activitypub_outbox_purge' );
 	}
 
 	/**
@@ -292,67 +162,269 @@ class Scheduler {
 	}
 
 	/**
-	 * Send a profile update when relevant user meta is updated.
+	 * Schedule the outbox item for federation.
 	 *
-	 * @param  int    $meta_id  Meta ID being updated.
-	 * @param  int    $user_id  User ID being updated.
-	 * @param  string $meta_key Meta key being updated.
+	 * @param int $id The ID of the outbox item.
 	 */
-	public static function user_meta_update( $meta_id, $user_id, $meta_key ) {
-		// Don't bother if the user can't publish.
-		if ( ! \user_can( $user_id, 'activitypub' ) ) {
+	public static function schedule_outbox_activity_for_federation( $id ) {
+		$hook = 'activitypub_process_outbox';
+		$args = array( $id );
+
+		if ( false === wp_next_scheduled( $hook, $args ) ) {
+			\wp_schedule_single_event(
+				\time() + 10,
+				$hook,
+				$args
+			);
+		}
+	}
+
+	/**
+	 * Reprocess the outbox.
+	 */
+	public static function reprocess_outbox() {
+		// Bail if there is a pending batch.
+		if ( self::next_scheduled_hook( 'activitypub_async_batch' ) ) {
 			return;
 		}
 
-		// The user meta fields that affect a profile.
-		$fields = array(
-			'activitypub_description',
-			'activitypub_header_image',
-			'description',
-			'user_url',
-			'display_name',
-		);
-		if ( in_array( $meta_key, $fields, true ) ) {
-			self::schedule_profile_update( $user_id );
-		}
-	}
-
-	/**
-	 * Send a profile update when a user is updated.
-	 *
-	 * @param int $user_id User ID being updated.
-	 */
-	public static function user_update( $user_id ) {
-		// Don't bother if the user can't publish.
-		if ( ! \user_can( $user_id, 'activitypub' ) ) {
+		// Bail if there is a batch in progress.
+		$key = \md5( \serialize( Dispatcher::$callback ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+		if ( self::is_locked( $key ) ) {
 			return;
 		}
 
-		self::schedule_profile_update( $user_id );
-	}
-
-	/**
-	 * Theme mods only have a dynamic filter so we fudge it like this.
-	 *
-	 * @param mixed $value Optional. The value to be updated. Default null.
-	 *
-	 * @return mixed
-	 */
-	public static function blog_user_update( $value = null ) {
-		self::schedule_profile_update( 0 );
-		return $value;
-	}
-
-	/**
-	 * Send a profile update to all followers. Gets hooked into all relevant options/meta etc.
-	 *
-	 * @param int $user_id  The user ID to update (Could be 0 for Blog-User).
-	 */
-	public static function schedule_profile_update( $user_id ) {
-		\wp_schedule_single_event(
-			\time() + 10,
-			'activitypub_send_update_profile_activity',
-			array( $user_id )
+		$ids = \get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'post_status'    => 'pending',
+				'posts_per_page' => 10,
+				'fields'         => 'ids',
+			)
 		);
+
+		foreach ( $ids as $id ) {
+			self::schedule_outbox_activity_for_federation( $id );
+		}
+	}
+
+	/**
+	 * Purge outbox items based on a schedule.
+	 */
+	public static function purge_outbox() {
+		$total_posts = (int) wp_count_posts( Outbox::POST_TYPE )->publish;
+		if ( $total_posts <= 20 ) {
+			return;
+		}
+
+		$days     = (int) get_option( 'activitypub_outbox_purge_days', 180 );
+		$timezone = new \DateTimeZone( 'UTC' );
+		$date     = new \DateTime( 'now', $timezone );
+
+		$date->sub( \DateInterval::createFromDateString( "$days days" ) );
+
+		$post_ids = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'numberposts' => -1,
+				'date_query'  => array(
+					array(
+						'before' => $date->format( 'Y-m-d' ),
+					),
+				),
+			)
+		);
+
+		foreach ( $post_ids as $post_id ) {
+			\wp_delete_post( $post_id, true );
+		}
+	}
+
+	/**
+	 * Update schedules when outbox purge days settings change.
+	 *
+	 * @param int $old_value The old value.
+	 * @param int $value     The new value.
+	 */
+	public static function handle_outbox_purge_days_update( $old_value, $value ) {
+		if ( 0 === (int) $value ) {
+			wp_clear_scheduled_hook( 'activitypub_outbox_purge' );
+		} elseif ( ! wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
+			wp_schedule_event( time(), 'daily', 'activitypub_outbox_purge' );
+		}
+	}
+
+	/**
+	 * Asynchronously runs batch processing routines.
+	 *
+	 * The batching part is optional and only comes into play if the callback returns anything.
+	 * Beyond that it's a helper to run a callback asynchronously with locking to prevent simultaneous processing.
+	 *
+	 * @param callable $callback Callable processing routine.
+	 * @params mixed   ...$args  Optional. Parameters that get passed to the callback.
+	 */
+	public static function async_batch( $callback ) {
+		if ( ! \is_callable( $callback ) ) {
+			_doing_it_wrong( __METHOD__, 'The first argument must be a valid callback.', '5.2.0' );
+			return;
+		}
+
+		$args = \func_get_args(); // phpcs:ignore PHPCompatibility.FunctionUse.ArgumentFunctionsReportCurrentValue
+		$key  = \md5( \serialize( $callback ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+
+		// Bail if the existing lock is still valid.
+		if ( self::is_locked( $key ) ) {
+			\wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'activitypub_async_batch', $args );
+			return;
+		}
+
+		self::lock( $key );
+
+		$callback = array_shift( $args ); // Remove $callback from arguments.
+		$next     = \call_user_func_array( $callback, $args );
+
+		self::unlock( $key );
+
+		if ( ! empty( $next ) ) {
+			// Schedule the next run, adding the result to the arguments.
+			\wp_schedule_single_event(
+				\time() + 30,
+				'activitypub_async_batch',
+				\array_merge( array( $callback ), \array_values( $next ) )
+			);
+		}
+	}
+
+
+	/**
+	 * Locks the async batch process for individual callbacks to prevent simultaneous processing.
+	 *
+	 * @param string $key Serialized callback name.
+	 * @return bool|int True if the lock was successful, timestamp of existing lock otherwise.
+	 */
+	public static function lock( $key ) {
+		global $wpdb;
+
+		// Try to lock.
+		$lock_result = (bool) $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO `$wpdb->options` ( `option_name`, `option_value`, `autoload` ) VALUES (%s, %s, 'no') /* LOCK */", 'activitypub_async_batch_' . $key, \time() ) ); // phpcs:ignore WordPress.DB
+
+		if ( ! $lock_result ) {
+			$lock_result = \get_option( 'activitypub_async_batch_' . $key );
+		}
+
+		return $lock_result;
+	}
+
+	/**
+	 * Unlocks processing for the async batch callback.
+	 *
+	 * @param string $key Serialized callback name.
+	 */
+	public static function unlock( $key ) {
+		\delete_option( 'activitypub_async_batch_' . $key );
+	}
+
+	/**
+	 * Whether the async batch callback is locked.
+	 *
+	 * @param string $key Serialized callback name.
+	 * @return boolean
+	 */
+	public static function is_locked( $key ) {
+		$lock = \get_option( 'activitypub_async_batch_' . $key );
+
+		if ( ! $lock ) {
+			return false;
+		}
+
+		$lock = (int) $lock;
+
+		if ( $lock < \time() - 1800 ) {
+			self::unlock( $key );
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Get the next scheduled hook.
+	 *
+	 * @param string $hook The hook name.
+	 * @return int|bool The timestamp of the next scheduled hook, or false if none found.
+	 */
+	private static function next_scheduled_hook( $hook ) {
+		$crons = _get_cron_array();
+		if ( empty( $crons ) ) {
+			return false;
+		}
+
+		// Get next event.
+		$next = false;
+		foreach ( $crons as $timestamp => $cron ) {
+			if ( isset( $cron[ $hook ] ) ) {
+				$next = $timestamp;
+				break;
+			}
+		}
+
+		return $next;
+	}
+
+	/**
+	 * Send announces.
+	 *
+	 * @param int      $outbox_activity_id The outbox activity ID.
+	 * @param Activity $activity_object    The activity object.
+	 * @param int      $actor_id           The actor ID.
+	 * @param int      $content_visibility The content visibility.
+	 */
+	public static function schedule_announce_activity( $outbox_activity_id, $activity_object, $actor_id, $content_visibility ) {
+		// Only if we're in both Blog and User modes.
+		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
+			return;
+		}
+
+		// Only if this isn't the Blog Actor.
+		if ( Actors::BLOG_USER_ID === $actor_id ) {
+			return;
+		}
+
+		// Only if the content is public or quiet public.
+		if ( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC !== $content_visibility ) {
+			return;
+		}
+
+		$activity_type = \get_post_meta( $outbox_activity_id, '_activitypub_activity_type', true );
+
+		// Only if the activity is a Create, Update or Delete.
+		if ( ! in_array( $activity_type, array( 'Create', 'Update', 'Delete' ), true ) ) {
+			return;
+		}
+
+		// Check if the object is an article, image, audio, video, event or document and ignore profile updates and other activities.
+		if ( ! in_array( $activity_object->get_type(), array( 'Note', 'Article', 'Image', 'Audio', 'Video', 'Event', 'Document' ), true ) ) {
+			return;
+		}
+
+		$transformer = Factory::get_transformer( $activity_object );
+		if ( ! $transformer || \is_wp_error( $transformer ) ) {
+			return;
+		}
+
+		$post     = get_post( $outbox_activity_id );
+		$activity = $transformer->to_activity( $activity_type );
+		$activity->set_id( $post->guid );
+
+		$outbox_activity_id = Outbox::add( $activity, 'Announce', Actors::BLOG_USER_ID );
+
+		if ( ! $outbox_activity_id ) {
+			return;
+		}
+
+		// Schedule the outbox item for federation.
+		self::schedule_outbox_activity_for_federation( $outbox_activity_id );
 	}
 }

@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Scheduler\Post;
 use Activitypub\Shortcodes;
 
 /**
@@ -17,103 +18,93 @@ use Activitypub\Shortcodes;
 class Test_Shortcodes extends \WP_UnitTestCase {
 
 	/**
+	 * Post object.
+	 *
+	 * @var \WP_Post
+	 */
+	protected $post;
+
+	/**
+	 * Set up the test.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		remove_action( 'transition_post_status', array( Post::class, 'schedule_post_activity' ), 33 );
+
+		Shortcodes::register();
+
+		// Create a post.
+		$this->post = self::factory()->post->create_and_get(
+			array(
+				'post_title'   => 'Test title for shortcode',
+				'post_content' => 'Lorem ipsum dolor sit amet, consectetur.',
+				'post_excerpt' => '',
+			)
+		);
+	}
+
+	/**
+	 * Tear down the test.
+	 */
+	public function tear_down() {
+		parent::tear_down();
+
+		Shortcodes::unregister();
+
+		// Delete the post.
+		wp_delete_post( $this->post->ID, true );
+	}
+
+	/**
 	 * Test the content shortcode.
 	 */
 	public function test_content() {
-
-		Shortcodes::register();
 		global $post;
 
-		$post_id              = -99; // Negative ID, to avoid clash with a valid post.
-		$post                 = new \stdClass();
-		$post->ID             = $post_id;
-		$post->post_author    = 1;
-		$post->post_date      = current_time( 'mysql' );
-		$post->post_date_gmt  = current_time( 'mysql', 1 );
-		$post->post_title     = 'Some title or other';
-		$post->post_content   = '<script>test</script>hallo<script type="javascript">{"asdf": "qwerty"}</script><style></style>';
-		$post->post_status    = 'publish';
-		$post->comment_status = 'closed';
-		$post->ping_status    = 'closed';
-		$post->post_name      = 'fake-post-' . wp_rand( 1, 99999 ); // Append random number to avoid clash.
-		$post->post_type      = 'post';
-		$post->filter         = 'raw'; // important!
-
-		$content = '[ap_content]';
+		$post               = $this->post;
+		$post->post_content = '<script>test</script>hallo<script type="javascript">{"asdf": "qwerty"}</script><style></style>';
 
 		// Fill in the shortcodes.
 		setup_postdata( $post );
-		$content = do_shortcode( $content );
+		$content = do_shortcode( '[ap_content]' );
 		wp_reset_postdata();
 
 		$this->assertEquals( '<p>hallo</p>', $content );
-		Shortcodes::unregister();
 	}
 
 	/**
 	 * Test the content shortcode with password protected content.
 	 */
 	public function test_password_protected_content() {
-		Shortcodes::register();
 		global $post;
 
-		$post_id              = -98; // Negative ID, to avoid clash with a valid post.
-		$post                 = new \stdClass();
-		$post->ID             = $post_id;
-		$post->post_author    = 1;
-		$post->post_date      = current_time( 'mysql' );
-		$post->post_date_gmt  = current_time( 'mysql', 1 );
-		$post->post_title     = 'Some title or other';
-		$post->post_content   = '<script>test</script>hallo<script type="javascript">{"asdf": "qwerty"}</script><style></style>';
-		$post->comment_status = 'closed';
-		$post->ping_status    = 'closed';
-		$post->post_name      = 'fake-post-' . wp_rand( 1, 99999 ); // Append random number to avoid clash.
-		$post->post_type      = 'post';
-		$post->filter         = 'raw'; // important!
-		$post->post_password  = 'abc';
-
-		$content = '[ap_content]';
+		$post                = $this->post;
+		$post->post_password = 'abc';
 
 		// Fill in the shortcodes.
 		setup_postdata( $post );
-		$content = do_shortcode( $content );
+		$content = do_shortcode( '[ap_content]' );
 		wp_reset_postdata();
 
 		$this->assertEquals( '', $content );
-		Shortcodes::unregister();
 	}
 
 	/**
 	 * Test the excerpt shortcode.
 	 */
 	public function test_excerpt() {
-		Shortcodes::register();
 		global $post;
 
-		$post_id              = -97; // Negative ID, to avoid clash with a valid post.
-		$post                 = new \stdClass();
-		$post->ID             = $post_id;
-		$post->post_author    = 1;
-		$post->post_date      = current_time( 'mysql' );
-		$post->post_date_gmt  = current_time( 'mysql', 1 );
-		$post->post_title     = 'Some title or other';
-		$post->post_content   = '<script>test</script>Lorem ipsum dolor sit amet, consectetur.<script type="javascript">{"asdf": "qwerty"}</script><style></style>';
-		$post->post_status    = 'publish';
-		$post->comment_status = 'closed';
-		$post->ping_status    = 'closed';
-		$post->post_name      = 'fake-post-' . wp_rand( 1, 99999 ); // Append random number to avoid clash.
-		$post->post_type      = 'post';
-		$post->filter         = 'raw'; // important!
-
-		$content = '[ap_excerpt length="25"]';
+		$post               = $this->post;
+		$post->post_content = 'Lorem ipsum dolor sit amet, consectetur.';
 
 		// Fill in the shortcodes.
 		setup_postdata( $post );
-		$content = do_shortcode( $content );
+		$content = do_shortcode( '[ap_excerpt length="25"]' );
 		wp_reset_postdata();
 
 		$this->assertEquals( "<p>Lorem ipsum dolor […]</p>\n", $content );
-		Shortcodes::unregister();
 	}
 
 	/**
@@ -122,22 +113,14 @@ class Test_Shortcodes extends \WP_UnitTestCase {
 	 * @covers ::title
 	 */
 	public function test_title() {
-		Shortcodes::register();
 		global $post;
 
-		$post = self::factory()->post->create_and_get(
-			array(
-				'post_title' => 'Test title for shortcode',
-			)
-		);
-
-		$content = '[ap_title]';
+		$post = $this->post;
 
 		// Fill in the shortcodes.
 		setup_postdata( $post );
-		$content = do_shortcode( $content );
+		$content = do_shortcode( '[ap_title]' );
 		wp_reset_postdata();
-		Shortcodes::unregister();
 
 		$this->assertEquals( 'Test title for shortcode', $content );
 	}

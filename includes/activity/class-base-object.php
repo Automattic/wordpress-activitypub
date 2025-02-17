@@ -61,12 +61,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-attachment
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | array<ObjectType>
-	 *    | array<Link>
-	 *    | null
+	 * @var string|null
 	 */
 	protected $attachment;
 
@@ -77,12 +72,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-attributedto
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | array<ObjectType>
-	 *    | array<Link>
-	 *    | null
+	 * @var string|null
 	 */
 	protected $attributed_to;
 
@@ -92,12 +82,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-audience
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | array<ObjectType>
-	 *    | array<Link>
-	 *    | null
+	 * @var string|null
 	 */
 	protected $audience;
 
@@ -127,10 +112,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-context
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | null
+	 * @var string|null
 	 */
 	protected $context;
 
@@ -191,12 +173,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-icon
 	 *
-	 * @var string
-	 *    | Image
-	 *    | Link
-	 *    | array<Image>
-	 *    | array<Link>
-	 *    | null
+	 * @var string|array|null
 	 */
 	protected $icon;
 
@@ -207,12 +184,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-image-term
 	 *
-	 * @var string
-	 *    | Image
-	 *    | Link
-	 *    | array<Image>
-	 *    | array<Link>
-	 *    | null
+	 * @var string|array|null
 	 */
 	protected $image;
 
@@ -222,12 +194,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-inreplyto
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | array<ObjectType>
-	 *    | array<Link>
-	 *    | null
+	 * @var string|null
 	 */
 	protected $in_reply_to;
 
@@ -237,12 +204,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-location
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | array<ObjectType>
-	 *    | array<Link>
-	 *    | null
+	 * @var string|null
 	 */
 	protected $location;
 
@@ -251,10 +213,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-preview
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | null
+	 * @var string|null
 	 */
 	protected $preview;
 
@@ -286,10 +245,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-summary
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | null
+	 * @var string|null
 	 */
 	protected $summary;
 
@@ -299,7 +255,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-summary
 	 *
-	 * @var array<string>|null
+	 * @var string[]|null
 	 */
 	protected $summary_map;
 
@@ -312,12 +268,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-tag
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | array<ObjectType>
-	 *    | array<Link>
-	 *    | null
+	 * @var string|null
 	 */
 	protected $tag;
 
@@ -333,11 +284,7 @@ class Base_Object {
 	/**
 	 * One or more links to representations of the object.
 	 *
-	 * @var string
-	 *    | array<string>
-	 *    | Link
-	 *    | array<Link>
-	 *    | null
+	 * @var string|null
 	 */
 	protected $url;
 
@@ -347,12 +294,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-to
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | array<ObjectType>
-	 *    | array<Link>
-	 *    | null
+	 * @var string|array|null
 	 */
 	protected $to;
 
@@ -362,12 +304,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-bto
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | array<ObjectType>
-	 *    | array<Link>
-	 *    | null
+	 * @var string|array|null
 	 */
 	protected $bto;
 
@@ -377,12 +314,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-cc
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | array<ObjectType>
-	 *    | array<Link>
-	 *    | null
+	 * @var string|array|null
 	 */
 	protected $cc;
 
@@ -392,12 +324,7 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-bcc
 	 *
-	 * @var string
-	 *    | ObjectType
-	 *    | Link
-	 *    | array<ObjectType>
-	 *    | array<Link>
-	 *    | null
+	 * @var string|array|null
 	 */
 	protected $bcc;
 
@@ -443,12 +370,29 @@ class Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-replies
 	 *
-	 * @var string
-	 *    | Collection
-	 *    | Link
-	 *    | null
+	 * @var string|array|null
 	 */
 	protected $replies;
+
+	/**
+	 * A Collection containing objects considered to be likes for
+	 * this object.
+	 *
+	 * @see https://www.w3.org/TR/activitypub/#likes
+	 *
+	 * @var array
+	 */
+	protected $likes;
+
+	/**
+	 * A Collection containing objects considered to be shares for
+	 * this object.
+	 *
+	 * @see https://www.w3.org/TR/activitypub/#shares
+	 *
+	 * @var array
+	 */
+	protected $shares;
 
 	/**
 	 * Used to mark an object as containing sensitive content.
@@ -483,7 +427,7 @@ class Base_Object {
 		}
 
 		if ( \strncasecmp( $method, 'add', 3 ) === 0 ) {
-			$this->add( $var, $params[0] );
+			return $this->add( $var, $params[0] );
 		}
 	}
 
@@ -566,10 +510,19 @@ class Base_Object {
 			$this->$key = array();
 		}
 
-		$attributes   = $this->$key;
-		$attributes[] = $value;
+		if ( is_string( $this->$key ) ) {
+			$this->$key = array( $this->$key );
+		}
 
-		$this->$key = $attributes;
+		$attributes = $this->$key;
+
+		if ( is_array( $value ) ) {
+			$attributes = array_merge( $attributes, $value );
+		} else {
+			$attributes[] = $value;
+		}
+
+		$this->$key = array_unique( $attributes );
 
 		return $this->$key;
 	}
@@ -579,13 +532,13 @@ class Base_Object {
 	 *
 	 * @param string $json The JSON string.
 	 *
-	 * @return Base_Object An Object built from the JSON string.
+	 * @return Base_Object|WP_Error An Object built from the JSON string or WP_Error when it's not a JSON string.
 	 */
 	public static function init_from_json( $json ) {
 		$array = \json_decode( $json, true );
 
 		if ( ! is_array( $array ) ) {
-			$array = array();
+			return new WP_Error( 'invalid_json', __( 'Invalid JSON', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		return self::init_from_array( $array );
@@ -600,15 +553,11 @@ class Base_Object {
 	 */
 	public static function init_from_array( $data ) {
 		if ( ! is_array( $data ) ) {
-			return new WP_Error( 'invalid_array', __( 'Invalid array', 'activitypub' ), array( 'status' => 404 ) );
+			return new WP_Error( 'invalid_array', __( 'Invalid array', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		$object = new static();
-
-		foreach ( $data as $key => $value ) {
-			$key = camel_to_snake_case( $key );
-			call_user_func( array( $object, 'set_' . $key ), $value );
-		}
+		$object->from_array( $data );
 
 		return $object;
 	}
@@ -653,6 +602,10 @@ class Base_Object {
 		$vars  = get_object_vars( $this );
 
 		foreach ( $vars as $key => $value ) {
+			if ( \is_wp_error( $value ) ) {
+				continue;
+			}
+
 			// Ignore all _prefixed keys.
 			if ( '_' === substr( $key, 0, 1 ) ) {
 				continue;
@@ -668,7 +621,7 @@ class Base_Object {
 			}
 
 			// If value is still empty, ignore it for the array and continue.
-			if ( isset( $value ) ) {
+			if ( ! empty( $value ) || false === $value ) {
 				$array[ snake_to_camel_case( $key ) ] = $value;
 			}
 		}

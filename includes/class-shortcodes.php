@@ -166,23 +166,25 @@ class Shortcodes {
 			if ( empty( $content ) ) {
 				$content = get_post_meta( $item->ID, '_wp_attachment_image_alt', true );
 			}
-		} else {
-			$content = \get_post_field( 'post_content', $item );
-
-			if ( 'yes' === $atts['apply_filters'] ) {
-				/** This filter is documented in wp-includes/post-template.php */
-				$content = \apply_filters( 'the_content', $content );
-			} else {
-				$content = do_blocks( $content );
-				$content = wptexturize( $content );
-				$content = wp_filter_content_tags( $content );
-			}
-
-			// Replace script and style elements.
-			$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
-			$content = strip_shortcodes( $content );
-			$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
 		}
+
+		if ( empty( $content ) ) {
+			$content = \get_post_field( 'post_content', $item );
+		}
+
+		if ( 'yes' === $atts['apply_filters'] ) {
+			/** This filter is documented in wp-includes/post-template.php */
+			$content = \apply_filters( 'the_content', $content );
+		} else {
+			$content = do_blocks( $content );
+			$content = wptexturize( $content );
+			$content = wp_filter_content_tags( $content );
+		}
+
+		// Replace script and style elements.
+		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
+		$content = strip_shortcodes( $content );
+		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
 
 		add_shortcode( 'ap_content', array( 'Activitypub\Shortcodes', 'content' ) );
 

@@ -7,9 +7,9 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Model\Follower;
 use WP_Error;
 use WP_Query;
-use Activitypub\Model\Follower;
 
 use function Activitypub\is_tombstone;
 use function Activitypub\get_remote_metadata_by_actor;
@@ -197,12 +197,8 @@ class Followers {
 		$args      = wp_parse_args( $args, $defaults );
 		$query     = new WP_Query( $args );
 		$total     = $query->found_posts;
-		$followers = array_map(
-			function ( $post ) {
-				return Follower::init_from_cpt( $post );
-			},
-			$query->get_posts()
-		);
+		$followers = array_map( array( Follower::class, 'init_from_cpt' ), $query->get_posts() );
+		$followers = array_filter( $followers );
 
 		return compact( 'followers', 'total' );
 	}
@@ -331,6 +327,93 @@ class Followers {
 	}
 
 	/**
+	 * Get all Inboxes for a given Activity.
+	 *
+	 * @param string $json       The ActivityPub Activity JSON.
+	 * @param int    $actor_id   The WordPress Actor ID.
+	 * @param int    $batch_size Optional. The batch size. Default 50.
+	 * @param int    $offset     Optional. The offset. Default 0.
+	 *
+	 * @return array The list of Inboxes.
+	 */
+	public static function get_inboxes_for_activity( $json, $actor_id, $batch_size = 50, $offset = 0 ) {
+		$args = array(
+			'post_type'      => self::POST_TYPE,
+			'posts_per_page' => $batch_size,
+			'offset'         => $offset,
+			'fields'         => 'ids',
+
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array(
+					'key'     => '_activitypub_inbox',
+					'compare' => 'EXISTS',
+				),
+				array(
+					'key'     => '_activitypub_inbox',
+					'value'   => '',
+					'compare' => '!=',
+				),
+			),
+		);
+
+		if ( self::maybe_add_inboxes_of_blog_user( $json, $actor_id ) ) {
+			$args['meta_query'][] = array(
+				'relation' => 'OR',
+				array(
+					'key'   => '_activitypub_user_id',
+					'value' => Actors::BLOG_USER_ID,
+				),
+				array(
+					'key'   => '_activitypub_user_id',
+					'value' => $actor_id,
+				),
+			);
+		} else {
+			$args['meta_query'][] = array(
+				'key'   => '_activitypub_user_id',
+				'value' => $actor_id,
+			);
+		}
+
+		$followers = get_posts( $args );
+		$inboxes   = array();
+
+		foreach ( $followers as $id ) {
+			$inboxes[] = get_post_meta( $id, '_activitypub_inbox', true );
+		}
+
+		return $inboxes;
+	}
+
+	/**
+	 * Maybe add Inboxes of the Blog User.
+	 *
+	 * @param string $json     The ActivityPub Activity JSON.
+	 * @param int    $actor_id The WordPress Actor ID.
+	 * @return bool True if the Inboxes of the Blog User should be added, false otherwise.
+	 */
+	public static function maybe_add_inboxes_of_blog_user( $json, $actor_id ) {
+		// Only if we're in both Blog and User modes.
+		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
+			return false;
+		}
+		// Only if this isn't the Blog Actor.
+		if ( Actors::BLOG_USER_ID === $actor_id ) {
+			return false;
+		}
+
+		$activity = json_decode( $json, true );
+		// Only if this is an Update or Delete. Create handles its own Announce in dual user mode.
+		if ( ! in_array( $activity['type'] ?? null, array( 'Update', 'Delete' ), true ) ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
 	 * Get all Followers that have not been updated for a given time.
 	 *
 	 * @param int $number     Optional. Limits the result. Default 50.
@@ -354,13 +437,9 @@ class Followers {
 		);
 
 		$posts = new WP_Query( $args );
-		$items = array();
+		$items = array_map( array( Follower::class, 'init_from_cpt' ), $posts->get_posts() );
 
-		foreach ( $posts->get_posts() as $follower ) {
-			$items[] = Follower::init_from_cpt( $follower );
-		}
-
-		return $items;
+		return array_filter( $items );
 	}
 
 	/**
@@ -403,13 +482,9 @@ class Followers {
 		);
 
 		$posts = new WP_Query( $args );
-		$items = array();
+		$items = array_map( array( Follower::class, 'init_from_cpt' ), $posts->get_posts() );
 
-		foreach ( $posts->get_posts() as $follower ) {
-			$items[] = Follower::init_from_cpt( $follower );
-		}
-
-		return $items;
+		return array_filter( $items );
 	}
 
 	/**

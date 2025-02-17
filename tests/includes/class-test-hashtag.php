@@ -95,6 +95,7 @@ ENDPRE;
 			array(
 				'post_content' => $content,
 				'post_excerpt' => $excerpt,
+				'post_author'  => 1,
 			)
 		);
 

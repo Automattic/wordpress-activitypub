@@ -147,6 +147,14 @@ class Actors {
 	public static function get_by_resource( $uri ) {
 		$uri = object_to_uri( $uri );
 
+		if ( ! $uri ) {
+			return new WP_Error(
+				'activitypub_no_uri',
+				\__( 'No URI provided', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
 		$scheme = 'acct';
 		$match  = array();
 		// Try to extract the scheme and the host.

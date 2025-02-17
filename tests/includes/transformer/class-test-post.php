@@ -320,8 +320,8 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$this->assertTrue( \Activitypub\is_post_disabled( $post_id ) );
 		$object = Post::transform( get_post( $post_id ) )->to_object();
-		$this->assertEquals( array(), $object->get_to() );
-		$this->assertEquals( array(), $object->get_cc() );
+		$this->assertEmpty( $object->get_to() );
+		$this->assertEmpty( $object->get_cc() );
 	}
 
 	/**
