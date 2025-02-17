@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Outbox items older than 6 months will be purged to avoid performance issues.
 * REST API endpoints for likes and shares.
 
+### Fixed
+
+* Fixed an issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
+
 ### Changed
 
 * Increased probability of Outbox items being processed with the correct author.
