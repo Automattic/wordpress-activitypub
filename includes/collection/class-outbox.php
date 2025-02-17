@@ -7,7 +7,6 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Activity\Activity;
 use Activitypub\Dispatcher;
 use Activitypub\Activity\Activity;
 

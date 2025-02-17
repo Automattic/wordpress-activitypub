@@ -5,7 +5,7 @@
  * @package Activitypub
  */
 
-$activity = \Activitypub\Collection\Outbox::get_as_activity( \get_query_var( 'p' ) );
+$activity = \Activitypub\Collection\Outbox::get_activity( \get_query_var( 'p' ) );
 
 /**
  * Fires before an ActivityPub blog profile is generated and sent to the client.
