@@ -10,7 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
+* Setting to adjust the number of days Outbox items are kept before being purged.
 * Undo API for Outbox items.
+
+### Fixed
+
+* The Outbox purging routine no longer is limited to deleting 5 items at a time.
 
 ## [5.2.0] - 2025-02-13
 
