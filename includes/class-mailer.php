@@ -134,11 +134,13 @@ class Mailer {
 			$admin_url = '/users.php?page=activitypub-followers-list';
 		}
 
+		$template_args = array_merge( $actor, array( 'admin_url' => $admin_url ) );
+
 		/* translators: 1: Blog name, 2: Follower name */
 		$subject = \sprintf( \__( '[%1$s] New Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] );
 
 		\ob_start();
-		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/new-follower-email.php', false, $actor );
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/new-follower-email.php', false, $template_args );
 		$html_message = \ob_get_clean();
 
 		$alt_function = function ( $mailer ) use ( $actor, $admin_url ) {

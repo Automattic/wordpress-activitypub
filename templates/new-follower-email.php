@@ -35,6 +35,17 @@ $args = wp_parse_args( $args );
 			?>
 		</td>
 	</tr>
+	<tr>
+		<td colspan="2">
+			<?php
+			printf(
+				/* translators: %s: URL to followers list. */
+				wp_kses( __( 'Visit the <a href="%s">followers list</a> to see all followers.', 'activitypub' ), array( 'a' => array( 'href' => array() ) ) ),
+				esc_url( admin_url( $args['admin_url'] ) )
+			);
+			?>
+		</td>
+	</tr>
 </table>
 
 <?php
