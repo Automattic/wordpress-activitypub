@@ -29,6 +29,15 @@ class Activity_Object extends Base {
 	}
 
 	/**
+	 * Get the ID of the object.
+	 *
+	 * @return string The ID of the object.
+	 */
+	public function get_id() {
+		return $this->item->get_id();
+	}
+
+	/**
 	 * Get the attributed to.
 	 *
 	 * @return string The attributed to.
