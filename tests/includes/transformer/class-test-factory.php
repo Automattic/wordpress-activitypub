@@ -214,4 +214,53 @@ class Test_Factory extends WP_UnitTestCase {
 
 		remove_all_filters( 'activitypub_transformer' );
 	}
+
+	/**
+	 * Test successful URI transformation.
+	 */
+	public function test_successful_uri_transformation() {
+		// Mock-Daten für die HTTP-Antwort.
+		$fake_request = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => wp_json_encode(
+					array(
+						'id'      => 'https://example.com/activity/1',
+						'type'    => 'Note',
+						'content' => 'Test Content',
+					)
+				),
+			);
+		};
+
+		add_filter( 'pre_http_request', $fake_request, 10 );
+
+		$uri_transformer = Factory::get_transformer( 'https://example.com/activity/1' );
+		$result          = $uri_transformer->to_object();
+
+		$this->assertIsObject( $result );
+		$this->assertEquals( 'https://example.com/activity/1', $result->get_id() );
+		$this->assertEquals( 'Note', $result->get_type() );
+		$this->assertEquals( 'Test Content', $result->get_content() );
+
+		remove_filter( 'pre_http_request', $fake_request, 10 );
+	}
+
+	/**
+	 * Test URI transformation with error.
+	 */
+	public function test_uri_transformation_error() {
+		// WP_Error für fehlgeschlagene Anfrage erstellen.
+		$fake_request = function () {
+			return new \WP_Error( 'fetch_error', 'Failed to fetch remote object' );
+		};
+
+		add_filter( 'pre_http_request', $fake_request, 10 );
+
+		$uri_transformer = Factory::get_transformer( 'https://example.com/invalid' );
+
+		$this->assertWPError( $uri_transformer );
+
+		remove_filter( 'pre_http_request', $fake_request, 10 );
+	}
 }

@@ -235,24 +235,7 @@ class Http {
 	 * @return array|WP_Error The Object data as array or WP_Error on failure.
 	 */
 	public static function get_remote_object( $url_or_object, $cached = true ) {
-		if ( is_array( $url_or_object ) ) {
-			if ( array_key_exists( 'id', $url_or_object ) ) {
-				$url = $url_or_object['id'];
-			} elseif ( array_key_exists( 'url', $url_or_object ) ) {
-				$url = $url_or_object['url'];
-			} else {
-				return new WP_Error(
-					'activitypub_no_valid_actor_identifier',
-					\__( 'The "actor" identifier is not valid', 'activitypub' ),
-					array(
-						'status' => 404,
-						'object' => $url_or_object,
-					)
-				);
-			}
-		} else {
-			$url = $url_or_object;
-		}
+		$url = object_to_uri( $url_or_object );
 
 		if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $url ) ) {
 			$url = Webfinger::resolve( $url );
