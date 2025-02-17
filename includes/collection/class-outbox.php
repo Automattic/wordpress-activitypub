@@ -7,10 +7,12 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Dispatcher;
 use Activitypub\Activity\Activity;
 
 use function Activitypub\is_activity;
+use function Activitypub\add_to_outbox;
 
 /**
  * ActivityPub Outbox Collection
@@ -154,41 +156,76 @@ class Outbox {
 	}
 
 	/**
-	 * Get an outbox item as an Activity.
+	 * Creates an Undo activity.
 	 *
-	 * @param int $outbox_id The ID of the outbox item.
-	 *
-	 * @return \Activitypub\Activity\Activity|\WP_Error The outbox item as an Activity or an error.
+	 * @param int|\WP_Post $outbox_item The Outbox post or post ID.
+	 * @return int|bool The ID of the outbox item or false on failure.
 	 */
-	public static function get_as_activity( $outbox_id ) {
-		$outbox = get_post( $outbox_id );
+	public static function undo( $outbox_item ) {
+		$outbox_item = get_post( $outbox_item );
+		$activity    = self::get_activity( $outbox_item );
 
-		if ( ! $outbox ) {
-			return new \WP_Error( 'outbox_item_not_found', 'Outbox item not found' );
+		$type = 'Undo';
+		if ( 'Create' === $activity->get_type() ) {
+			$type = 'Delete';
+		} elseif ( 'Add' === $activity->get_type() ) {
+			$type = 'Remove';
 		}
 
-		$author_type = \get_post_meta( $outbox->ID, '_activitypub_activity_actor', true );
+		return add_to_outbox( $activity, $type, $outbox_item->post_author );
+	}
 
-		switch ( $author_type ) {
-			case 'application':
-				$actor_id = Actors::APPLICATION_USER_ID;
-				break;
+	/**
+	 * Get the Activity object from the Outbox item.
+	 *
+	 * @param int|\WP_Post $outbox_item The Outbox post or post ID.
+	 * @return Activity|\WP_Error The Activity object or WP_Error.
+	 */
+	public static function get_activity( $outbox_item ) {
+		$outbox_item = get_post( $outbox_item );
+		$actor       = self::get_actor( $outbox_item );
+		if ( is_wp_error( $actor ) ) {
+			return $actor;
+		}
+
+		$type     = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
+		$activity = new Activity();
+		$activity->set_type( $type );
+		$activity->set_id( $outbox_item->guid );
+		// Pre-fill the Activity with data (for example cc and to).
+		$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
+		$activity->set_actor( $actor->get_id() );
+
+		// Use simple Object (only ID-URI) for Like and Announce.
+		if ( in_array( $type, array( 'Like', 'Delete' ), true ) ) {
+			$activity->set_object( $activity->get_object()->get_id() );
+		}
+
+		return $activity;
+	}
+
+	/**
+	 * Get the Actor object from the Outbox item.
+	 *
+	 * @param \WP_Post $outbox_item The Outbox post.
+	 * @return \Activitypub\Model\User|\Activitypub\Model\Blog|\WP_Error The Actor object or WP_Error.
+	 */
+	public static function get_actor( $outbox_item ) {
+		$actor_type = \get_post_meta( $outbox_item->ID, '_activitypub_activity_actor', true );
+
+		switch ( $actor_type ) {
 			case 'blog':
 				$actor_id = Actors::BLOG_USER_ID;
 				break;
+			case 'application':
+				$actor_id = Actors::APPLICATION_USER_ID;
+				break;
+			case 'user':
 			default:
-				$actor_id = $outbox->post_author;
+				$actor_id = $outbox_item->post_author;
 				break;
 		}
 
-		$type = \get_post_meta( $outbox->ID, '_activitypub_activity_type', true );
-
-		$activity = new Activity();
-		$activity->set_type( $type );
-		$activity->set_id( $outbox->guid );
-		$activity->set_actor( Actors::get_by_various( $actor_id )->get_id() );
-		$activity->set_object( \json_decode( $outbox->post_content, true ) );
-
-		return $activity;
+		return Actors::get_by_id( $actor_id );
 	}
 }

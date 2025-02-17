@@ -129,6 +129,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Added: Undo API for Outbox items.
+
 = 5.2.0 =
 
 * Added: Batch Outbox-Processing.
