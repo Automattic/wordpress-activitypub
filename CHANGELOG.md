@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* Setting to adjust the number of days Outbox items are kept before being purged.
+
+### Fixed
+
+* The Outbox purging routine no longer is limited to deleting 5 items at a time.
 * Undo API for Outbox items.
 * URL support for Transformers for use as an Announce.
 
