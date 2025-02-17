@@ -132,6 +132,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: URL support for Transformers for use as an Announce.
+* Added: Undo API for Outbox items.
 
 = 5.2.0 =
 

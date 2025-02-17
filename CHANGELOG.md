@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Undo API for Outbox items.
 * URL support for Transformers for use as an Announce.
 
 ## [5.2.0] - 2025-02-13
