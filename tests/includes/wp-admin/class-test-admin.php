@@ -5,14 +5,21 @@
  * @package Activitypub
  */
 
-namespace Activitypub\Tests;
+namespace Activitypub\Tests\WP_Admin;
 
 /**
  * Test class for Admin.
  *
- * @coversDefaultClass \Activitypub\Admin
+ * @coversDefaultClass \Activitypub\WP_Admin\Admin
  */
 class Test_Admin extends \WP_UnitTestCase {
+
+	/**
+	 * Set up before class.
+	 */
+	public static function set_up_before_class() {
+		\Activitypub\WP_Admin\Admin::init();
+	}
 
 	/**
 	 * Test the admin notice for missing permalink structure.

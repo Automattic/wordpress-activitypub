@@ -5,10 +5,12 @@
  * @package Activitypub
  */
 
-namespace Activitypub;
+namespace Activitypub\WP_Admin;
 
+use Activitypub\Webfinger;
 use WP_Error;
 use Activitypub\Collection\Actors;
+use function Activitypub\is_user_disabled;
 
 /**
  * ActivityPub Health_Check Class.
