@@ -5,12 +5,18 @@
  * @package Activitypub
  */
 
+use Activitypub\Collection\Actors;
+
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args );
 ?>
 <p>
 	<?php
-	esc_html_e( 'You have a new follower:', 'activitypub' );
+	if ( Actors::BLOG_USER_ID === $args['target'] ) :
+		esc_html_e( 'Your blog has a new follower:', 'activitypub' );
+	else :
+		esc_html_e( 'You have a new follower:', 'activitypub' );
+	endif;
 	?>
 </p>
 

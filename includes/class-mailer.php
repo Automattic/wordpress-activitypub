@@ -134,7 +134,13 @@ class Mailer {
 			$admin_url = '/users.php?page=activitypub-followers-list';
 		}
 
-		$template_args = array_merge( $actor, array( 'admin_url' => $admin_url ) );
+		$template_args = array_merge(
+			$actor,
+			array(
+				'admin_url' => $admin_url,
+				'target'    => $notification->target,
+			)
+		);
 
 		/* translators: 1: Blog name, 2: Follower name */
 		$subject = \sprintf( \__( '[%1$s] New Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] );
