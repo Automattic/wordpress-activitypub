@@ -27,15 +27,14 @@ if ( ! isset( $actor ) ) {
 			</a>
 		</td>
 		<td>
-
 			<a href="<?php echo esc_url( $actor['url'] ); ?>">
 				<strong><?php echo esc_html( $actor['name'] ); ?></strong> (<?php echo esc_html( $actor['url'] ); ?>)
 			</a>
 			<br>
 			<?php
-			if ( ! empty( $actor['summary'] ) ) {
+			if ( ! empty( $actor['summary'] ) ) :
 				echo wp_kses_post( nl2br( $actor['summary'] ) );
-			}
+			endif;
 			?>
 		</td>
 	</tr>
@@ -45,5 +44,7 @@ if ( ! isset( $actor ) ) {
 
 /**
  * Fires at the bottom of the new follower email.
+ *
+ * @param array $actor The actor that followed the blog.
  */
 do_action( 'activitypub_new_follower_email', $actor );
