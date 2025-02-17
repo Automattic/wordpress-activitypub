@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Collection\Outbox;
+
 /**
  * Test class for Outbox collection.
  *
@@ -64,7 +66,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 				),
 				'Create',
 				1,
-				'{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https:\/\/example.com\/' . self::$user_id . '","type":"Note","content":"\u003Cp\u003EThis is a note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is a note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"cc":[],"mediaType":"text\/html","sensitive":false}',
+				'{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https:\/\/example.com\/' . self::$user_id . '","type":"Note","content":"\u003Cp\u003EThis is a note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is a note\u003C\/p\u003E"},"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html","sensitive":false}',
 			),
 			array(
 				array(
@@ -75,7 +77,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 				),
 				'Create',
 				2,
-				'{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https:\/\/example.com\/2","type":"Note","content":"\u003Cp\u003EThis is another note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is another note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"cc":[],"mediaType":"text\/html","sensitive":false}',
+				'{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https:\/\/example.com\/2","type":"Note","content":"\u003Cp\u003EThis is another note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is another note\u003C\/p\u003E"},"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html","sensitive":false}',
 			),
 		);
 	}
@@ -192,13 +194,59 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Helper method to create a dummy activity object for testing.
 	 *
-	 * @return \Activitypub\Activity\Base_Object
+	 * @return \Activitypub\Activity\Activity
 	 */
 	private function get_dummy_activity_object() {
-		$object = new \Activitypub\Activity\Base_Object();
+		$object = new \Activitypub\Activity\Activity();
 		$object->set_id( 'https://example.com/test-object' );
 		$object->set_type( 'Note' );
 		$object->set_content( 'Test content' );
+
 		return $object;
+	}
+
+	/**
+	 * Test undo.
+	 *
+	 * @covers ::undo
+	 * @dataProvider undo_object_provider
+	 *
+	 * @param string $type     Type of the activity to be undone.
+	 * @param string $expected Expected type.
+	 */
+	public function test_undo( $type, $expected ) {
+		$data = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => 'https://example.com/' . self::$user_id,
+			'type'     => 'Note',
+			'content'  => '<p>This is a note</p>',
+		);
+
+		$id = \Activitypub\add_to_outbox( $data, $type, self::$user_id );
+
+		$undo_id  = Outbox::undo( $id );
+		$activity = Outbox::get_activity( $undo_id );
+
+		// Only ID for Deletes.
+		if ( 'Delete' === $expected ) {
+			$this->assertSame( get_permalink( $id ), $activity->get_object() );
+		} else {
+			$this->assertEquals( json_decode( get_post( $undo_id )->post_content, true ), $activity->get_object()->to_array() );
+		}
+
+		$this->assertSame( $expected, $activity->get_type() );
+	}
+
+	/**
+	 * Data provider for test_undo.
+	 *
+	 * @return array[]
+	 */
+	public function undo_object_provider() {
+		return array(
+			array( 'Create', 'Delete' ),
+			array( 'Update', 'Undo' ),
+			array( 'Add', 'Remove' ),
+		);
 	}
 }
