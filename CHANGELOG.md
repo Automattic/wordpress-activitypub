@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Setting to adjust the number of days Outbox items are kept before being purged.
 
+### Changed
+
+* Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
+
 ### Fixed
 
 * The Outbox purging routine no longer is limited to deleting 5 items at a time.
