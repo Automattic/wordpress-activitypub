@@ -129,6 +129,11 @@ class Activitypub {
 			return $template;
 		}
 
+		$template = self::maybe_load_outbox_template();
+		if ( $template ) {
+			return $template;
+		}
+
 		self::add_headers();
 
 		if ( ! is_activitypub_request() ) {
@@ -187,6 +192,45 @@ class Activitypub {
 		}
 
 		return $template;
+	}
+
+	/**
+	 * Maybe load the outbox template.
+	 *
+	 * @return string|false The path to the outbox template or false if it doesn't exist.
+	 */
+	public static function maybe_load_outbox_template() {
+		if ( ! \get_query_var( 'p' ) ) {
+			return false;
+		}
+
+		$post = \get_post( \get_query_var( 'p' ) );
+		if ( ! $post ) {
+			return false;
+		}
+
+		if ( 'ap_outbox' !== $post->post_type ) {
+			return false;
+		}
+
+		// Check if Outbox Activity is public
+		$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+
+		if ( ! in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ) ) ) {
+			return false;
+		}
+
+		$activity_types = apply_filters( 'rest_activitypub_outbox_activity_types', array( 'Announce', 'Create', 'Like', 'Update' ) );
+		$activity_type  = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
+
+		if ( ! in_array( $activity_type, $activity_types ) ) {
+			return false;
+		}
+
+		\set_query_var( 'is_404', false );
+		\status_header( 200 );
+
+		return ACTIVITYPUB_PLUGIN_DIR . 'templates/outbox-json.php';
 	}
 
 	/**

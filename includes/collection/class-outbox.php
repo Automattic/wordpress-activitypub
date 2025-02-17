@@ -8,6 +8,7 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Dispatcher;
+use Activitypub\Activity\Activity;
 
 use function Activitypub\is_activity;
 
@@ -150,5 +151,44 @@ class Outbox {
 			\wp_publish_post( $existing_item_id );
 			\delete_post_meta( $existing_item_id, '_activitypub_outbox_offset' );
 		}
+	}
+
+	/**
+	 * Get an outbox item as an Activity.
+	 *
+	 * @param int $outbox_id The ID of the outbox item.
+	 *
+	 * @return \Activitypub\Activity\Activity|\WP_Error The outbox item as an Activity or an error.
+	 */
+	public static function get_as_activity( $outbox_id ) {
+		$outbox = get_post( $outbox_id );
+
+		if ( ! $outbox ) {
+			return new \WP_Error( 'outbox_item_not_found', 'Outbox item not found' );
+		}
+
+		$author_type = \get_post_meta( $outbox->ID, '_activitypub_activity_actor', true );
+
+		switch ( $author_type ) {
+			case 'application':
+				$actor_id = Actors::APPLICATION_USER_ID;
+				break;
+			case 'blog':
+				$actor_id = Actors::BLOG_USER_ID;
+				break;
+			default:
+				$actor_id = $outbox->post_author;
+				break;
+		}
+
+		$type = \get_post_meta( $outbox->ID, '_activitypub_activity_type', true );
+
+		$activity = new Activity();
+		$activity->set_type( $type );
+		$activity->set_id( $outbox->guid );
+		$activity->set_actor( Actors::get_by_various( $actor_id )->get_id() );
+		$activity->set_object( \json_decode( $outbox->post_content, true ) );
+
+		return $activity;
 	}
 }
