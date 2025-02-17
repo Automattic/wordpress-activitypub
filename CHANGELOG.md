@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Setting to adjust the number of days Outbox items are kept before being purged.
 
+### Changed
+
+* Bumped minimum required WordPress version to 6.4.
+
 ### Fixed
 
 * The Outbox purging routine no longer is limited to deleting 5 items at a time.
