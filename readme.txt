@@ -132,6 +132,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: `context` support for posts and comments.
+* Added: Undo API for Outbox items.
 
 = 5.2.0 =
 

@@ -7,10 +7,11 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Outbox;
+use Activitypub\Scheduler\Comment;
+use Activitypub\Scheduler\Post;
 use WP_CLI;
 use WP_CLI_Command;
-use Activitypub\Scheduler\Post;
-use Activitypub\Scheduler\Comment;
 
 /**
  * WP-CLI commands.
@@ -129,5 +130,40 @@ class Cli extends WP_CLI_Command {
 			default:
 				WP_CLI::error( 'Unknown action.' );
 		}
+	}
+
+	/**
+	 * Undo an activity that was sent to the Fediverse.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <outbox_item_id>
+	 *     The ID or URL of the outbox item to undo.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *    $ wp activitypub undo 123
+	 *    $ wp activitypub undo "https://example.com/?post_type=ap_outbox&p=123"
+	 *
+	 * @synopsis <outbox_item_id>
+	 *
+	 * @param array $args The arguments.
+	 */
+	public function undo( $args ) {
+		$outbox_item_id = $args[0];
+		if ( ! is_numeric( $outbox_item_id ) ) {
+			$outbox_item_id = url_to_postid( $outbox_item_id );
+		}
+
+		$outbox_item_id = get_post( $outbox_item_id );
+		if ( ! $outbox_item_id ) {
+			WP_CLI::error( 'Activity not found.' );
+		}
+
+		$undo_id = Outbox::undo( $outbox_item_id );
+		if ( ! $undo_id ) {
+			WP_CLI::error( 'Failed to undo activity.' );
+		}
+		WP_CLI::success( 'Undo activity scheduled.' );
 	}
 }
