@@ -106,8 +106,6 @@ class Factory {
 				break;
 			case 'json':
 				return new Json( $data );
-			case 'uri':
-				return new Uri( $data );
 		}
 
 		if ( $data instanceof \Activitypub\Activity\Base_Object ) {
