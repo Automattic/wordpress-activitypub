@@ -111,6 +111,7 @@ class Activitypub {
 		delete_option( 'activitypub_max_image_attachments' );
 		delete_option( 'activitypub_migration_lock' );
 		delete_option( 'activitypub_object_type' );
+		delete_option( 'activitypub_outbox_purge_days' );
 		delete_option( 'activitypub_support_post_types' );
 		delete_option( 'activitypub_use_hashtags' );
 		delete_option( 'activitypub_use_opengraph' );

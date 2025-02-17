@@ -69,7 +69,9 @@
 			'<p>' . \__( 'For more information please visit <a href="https://webfinger.net/" target="_blank">webfinger.net</a>', 'activitypub' ) . '</p>' .
 			'<p><h2>' . \__( 'NodeInfo', 'activitypub' ) . '</h2></p>' .
 			'<p>' . \__( 'NodeInfo is an effort to create a standardized way of exposing metadata about a server running one of the distributed social networks. The two key goals are being able to get better insights into the user base of distributed social networking and the ability to build tools that allow users to choose the best fitting software and server for their needs.', 'activitypub' ) . '</p>' .
-			'<p>' . \__( 'For more information please visit <a href="http://nodeinfo.diaspora.software/" target="_blank">nodeinfo.diaspora.software</a>', 'activitypub' ) . '</p>',
+			'<p>' . \__( 'For more information please visit <a href="http://nodeinfo.diaspora.software/" target="_blank">nodeinfo.diaspora.software</a>', 'activitypub' ) . '</p>' .
+			'<p><h2>' . \__( 'Outbox', 'activitypub' ) . '</h2></p>' .
+			'<p>' . \__( 'An "Outbox" is a virtual location on a user&#8217;s profile where all the activities (posts, likes, replies) they publish are stored, acting as a feed that other users can access to see their publicly shared content; it&#8217;s essentially how a user "sends" information to others on a decentralized social network following the ActivityPub standard.', 'activitypub' ) . '</p>',
 	)
 );
 

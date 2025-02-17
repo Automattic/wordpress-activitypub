@@ -28,7 +28,7 @@ class Test_Scheduler extends WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$user_id = $factory->user->create(
@@ -247,5 +247,39 @@ class Test_Scheduler extends WP_UnitTestCase {
 
 		// Assert that no posts were deleted.
 		$this->assertEquals( 20, wp_count_posts( Outbox::POST_TYPE )->publish );
+	}
+
+	/**
+	 * Test purge_outbox method with changing activitypub_outbox_purge_days option.
+	 *
+	 * @covers ::purge_outbox
+	 */
+	public function test_purge_outbox_with_different_purge_days() {
+		// Create posts older than initial_days.
+		self::factory()->post->create_many(
+			25,
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '-4 months' ) ),
+				'post_status' => 'publish',
+			)
+		);
+
+		// Run purge_outbox with initial_days.
+		Scheduler::purge_outbox();
+		wp_cache_delete( _count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+
+		// Verify posts are not deleted.
+		$this->assertEquals( 25, wp_count_posts( Outbox::POST_TYPE )->publish );
+
+		// Change the purge days option.
+		update_option( 'activitypub_outbox_purge_days', 90 );
+
+		// Run purge_outbox with changed_days.
+		Scheduler::purge_outbox();
+		wp_cache_delete( _count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+
+		// Verify posts are deleted.
+		$this->assertEquals( 0, wp_count_posts( Outbox::POST_TYPE )->publish );
 	}
 }

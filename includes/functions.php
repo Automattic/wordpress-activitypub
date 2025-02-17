@@ -797,6 +797,10 @@ function object_to_uri( $data ) {
 		return $data;
 	}
 
+	if ( is_object( $data ) ) {
+		$data = $data->to_array();
+	}
+
 	/*
 	 * Check if it is a list, then take first item.
 	 * This plugin does not support collections.
