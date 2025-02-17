@@ -19,7 +19,7 @@ $args = wp_parse_args( $args );
 		<td style="vertical-align: top">
 			<a href="<?php echo esc_url( $args['url'] ); ?>" style="float: left; margin-right: 1em;">
 				<?php if ( ! empty( $args['icon']['url'] ) ) : ?>
-				<img src="<?php echo esc_url( $args['icon']['url'] ); ?>" alt="<?php echo esc_attr( $args['name'] ); ?>" width="64" height="64">
+					<img src="<?php echo esc_url( $args['icon']['url'] ); ?>" alt="<?php echo esc_attr( $args['name'] ); ?>" width="64" height="64">
 				<?php endif; ?>
 			</a>
 		</td>
@@ -35,18 +35,17 @@ $args = wp_parse_args( $args );
 			?>
 		</td>
 	</tr>
-	<tr>
-		<td colspan="2">
-			<?php
-			printf(
-				/* translators: %s: URL to followers list. */
-				wp_kses( __( 'Visit the <a href="%s">followers list</a> to see all followers.', 'activitypub' ), array( 'a' => array( 'href' => array() ) ) ),
-				esc_url( admin_url( $args['admin_url'] ) )
-			);
-			?>
-		</td>
-	</tr>
 </table>
+
+<p>
+	<?php
+	printf(
+		/* translators: %s: URL to followers list. */
+		wp_kses( __( 'Visit the <a href="%s">followers list</a> to see all followers.', 'activitypub' ), array( 'a' => array( 'href' => array() ) ) ),
+		esc_url( admin_url( $args['admin_url'] ) )
+	);
+	?>
+</p>
 
 <?php
 
