@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests\Scheduler;
 
+use Activitypub\Scheduler\Post;
+
 /**
  * Test Post scheduler class.
  *
@@ -58,6 +60,25 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post = $this->get_latest_outbox_item( $activitpub_id );
 		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $activitpub_id, $id );
+
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test post activity scheduling for regular posts.
+	 *
+	 * @covers ::schedule_post_activity
+	 */
+	public function test_not_schedule_post_activity_unfederated_post() {
+		\remove_action( 'transition_post_status', array( Post::class, 'schedule_post_activity' ), 33 );
+		$post_id       = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitpub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+		\add_action( 'transition_post_status', array( Post::class, 'schedule_post_activity' ), 33, 3 );
+
+		// Update the post.
+		self::factory()->post->update_object( $post_id, array( 'ping_status' => false ) );
+
+		$this->assertNull( $this->get_latest_outbox_item( $activitpub_id ) );
 
 		\wp_delete_post( $post_id, true );
 	}
