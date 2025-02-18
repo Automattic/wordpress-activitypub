@@ -187,7 +187,7 @@ class Replies {
 	 * ActivityPub ID available.
 	 *
 	 * @param WP_Comment[] $comments              The comments to retrieve the ActivityPub ids from.
-	 * @param boolean      $include_blog_comments Include blog comments in the returned array.
+	 * @param boolean      $include_blog_comments Optional. Include blog comments in the returned array. Default false.
 	 *
 	 * @return string[] A list of the ActivityPub ID's.
 	 */
