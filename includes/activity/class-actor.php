@@ -177,17 +177,6 @@ class Actor extends Base_Object {
 	protected $manually_approves_followers = false;
 
 	/**
-	 * Used to mark an object as containing sensitive content.
-	 * Mastodon displays a content warning, requiring users to click
-	 * through to view the content.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#sensitive
-	 *
-	 * @var boolean
-	 */
-	protected $sensitive = null;
-
-	/**
 	 * Domains allowed to use `fediverse:creator` for this actor in
 	 * published articles.
 	 *

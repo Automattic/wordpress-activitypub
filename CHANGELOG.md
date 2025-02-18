@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Setting to adjust the number of days Outbox items are kept before being purged.
+* Metadata to New Follower E-Mail.
+
+### Changed
+
+* Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
 
 ### Changed
 
@@ -29,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Outbox processed events get logged in Stream and show any errors returned from inboxes.
 * Outbox items older than 6 months will be purged to avoid performance issues.
 * REST API endpoints for likes and shares.
+
+### Fixed
+
+* Fixed an issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
 
 ### Changed
 
