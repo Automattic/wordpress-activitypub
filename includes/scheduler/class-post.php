@@ -99,6 +99,11 @@ class Post {
 			return;
 		}
 
+		// If the post is not federated, do not send Updates.
+		if ( 'Update' === $type && 'federated' !== get_wp_object_state( $post ) ) {
+			return;
+		}
+
 		// Add the post to the outbox.
 		add_to_outbox( $post, $type, $post->post_author );
 	}
