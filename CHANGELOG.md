@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 * Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
+* Updates to unfederated posts no longer trigger a new Activity.
 
 ### Fixed
 
