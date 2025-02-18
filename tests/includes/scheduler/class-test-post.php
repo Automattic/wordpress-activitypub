@@ -68,6 +68,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @covers ::schedule_post_activity
 	 */
 	public function test_schedule_post_activity_bulk_edit() {
+		wp_set_current_user( self::$user_id );
 		$post_id       = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		$activitpub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 
@@ -75,19 +76,21 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$_REQUEST['bulk_edit']   = 1;
 		$_REQUEST['post_author'] = -1;
 		$_REQUEST['_status']     = -1;
+		$_REQUEST['post']        = array( $post_id );
 
-		self::factory()->post->update_object( $post_id, array( 'post_title' => 'Updated Title' ) );
+		bulk_edit_posts( $_REQUEST ); // phpcs:ignore WordPress.Security.NonceVerification
 
 		$outbox_item = $this->get_latest_outbox_item( $activitpub_id );
 		$this->assertNotSame( 'Update', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
 
 		// Test bulk edit with author change (should not bail).
-		$new_user_id = self::factory()->user->create();
+		$new_user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		get_userdata( $new_user_id )->add_cap( 'activitypub' );
-		$_REQUEST['post_author'] = $new_user_id;
-		$_REQUEST['_status']     = -1;
+		wp_set_current_user( $new_user_id );
 
-		self::factory()->post->update_object( $post_id, array( 'post_author' => $new_user_id ) );
+		$_REQUEST['post_author'] = $new_user_id;
+
+		bulk_edit_posts( $_REQUEST ); // phpcs:ignore WordPress.Security.NonceVerification
 
 		$outbox_item = $this->get_latest_outbox_item( $activitpub_id );
 		$this->assertNotNull( $outbox_item );
@@ -95,10 +98,9 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertSame( 'Update', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
 
 		// Test bulk edit with status change (should not bail).
-		$_REQUEST['post_author'] = -1;
-		$_REQUEST['_status']     = 'draft';
+		$_REQUEST['_status'] = 'trash';
 
-		self::factory()->post->update_object( $post_id, array( 'post_status' => 'trash' ) );
+		bulk_edit_posts( $_REQUEST ); // phpcs:ignore WordPress.Security.NonceVerification
 
 		$outbox_item = $this->get_latest_outbox_item( $activitpub_id );
 		$this->assertNotNull( $outbox_item );
