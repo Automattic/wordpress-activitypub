@@ -121,9 +121,14 @@ class Dispatcher {
 		$actor    = Outbox::get_actor( \get_post( $outbox_item_id ) );
 		$json     = $activity->to_json();
 		$inboxes  = Followers::get_inboxes_for_activity( $json, $actor->get__id(), $batch_size, $offset );
+		$retries  = array();
 
 		foreach ( $inboxes as $inbox ) {
 			$result = safe_remote_post( $inbox, $json, $actor->get__id() );
+
+			if ( is_wp_error( $result ) ) {
+				$retries[] = $inbox;
+			}
 
 			/**
 			 * Fires after an Activity has been sent to an inbox.
@@ -135,6 +140,19 @@ class Dispatcher {
 			 * @param int    $outbox_item_id The Outbox item ID.
 			 */
 			\do_action( 'activitypub_sent_to_inbox', $result, $inbox, $json, $actor->get__id(), $outbox_item_id );
+		}
+
+		// Retry failed inboxes.
+		if ( ! empty( $retries ) ) {
+			\wp_schedule_single_event(
+				\time() + ( 5 * MINUTE_IN_SECONDS ),
+				'activitypub_async_batch',
+				array(
+					array( self::class, 'retry_send_to_followers' ),
+					$outbox_item_id,
+					$retries,
+				)
+			);
 		}
 
 		if ( is_countable( $inboxes ) && count( $inboxes ) < self::$batch_size ) {
@@ -170,6 +188,45 @@ class Dispatcher {
 			\do_action( 'activitypub_outbox_processing_batch_complete', $inboxes, $json, $actor->get__id(), $outbox_item_id, $batch_size, $offset );
 
 			return array( $outbox_item_id, $batch_size, $offset + $batch_size );
+		}
+	}
+
+	/**
+	 * Retry sending to followers.
+	 *
+	 * @param int   $outbox_item_id The Outbox item ID.
+	 * @param array $inboxes        The inboxes.
+	 * @param int   $attempt        The attempt number.
+	 * @return array|void The next batch of followers to process or void if done.
+	 */
+	public static function retry_send_to_followers( $outbox_item_id, $inboxes, $attempt = 1 ) {
+		$activity = Outbox::get_activity( $outbox_item_id );
+		$actor    = Outbox::get_actor( \get_post( $outbox_item_id ) );
+		$json     = $activity->to_json();
+		$retries  = array();
+
+		foreach ( $inboxes as $inbox ) {
+			$result = safe_remote_post( $inbox, $json, $actor->get__id() );
+
+			if ( is_wp_error( $result ) ) {
+				$retries[] = $inbox;
+			}
+
+			/**
+			 * Fires after an Activity has been sent to an inbox.
+			 *
+			 * @param array  $result         The result of the remote post request.
+			 * @param string $inbox          The inbox URL.
+			 * @param string $json           The ActivityPub Activity JSON.
+			 * @param int    $actor_id       The actor ID.
+			 * @param int    $outbox_item_id The Outbox item ID.
+			 */
+			\do_action( 'activitypub_sent_to_inbox', $result, $inbox, $json, $actor->get__id(), $outbox_item_id );
+		}
+
+		// Retry failed inboxes.
+		if ( ++$attempt > 3 && ! empty( $retries ) ) {
+			return array( $outbox_item_id, $inboxes, $attempt );
 		}
 	}
 
