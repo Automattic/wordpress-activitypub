@@ -163,6 +163,8 @@ class Replies {
 				'post_id' => $post_id,
 				'type'    => 'comment',
 				'status'  => 'approve',
+				'orderby' => 'comment_date_gmt',
+				'order'   => 'ASC',
 			)
 		);
 		$ids      = self::get_reply_ids( $comments, true );
