@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * The Outbox purging routine no longer is limited to deleting 5 items at a time.
 * Undo API for Outbox items.
 * Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
+* Ellipses now display correctly in notification emails for Likes and Reposts.
 
 ## [5.2.0] - 2025-02-13
 
