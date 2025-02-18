@@ -70,4 +70,45 @@ class Test_Base_Object extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( 'WP_Error', $base_object );
 	}
+
+	/**
+	 * Test init_from_array method.
+	 *
+	 * @covers ::init_from_array
+	 */
+	public function test_init_from_array() {
+		$test_data = array(
+			'id'           => 'https://example.com/test',
+			'type'         => 'Test',
+			'name'         => 'Test Name',
+			'summary'      => 'Test Summary',
+			'content'      => 'Test Content',
+			'published'    => '2024-03-20T12:00:00Z',
+			'to'           => array( 'https://example.com/user1' ),
+			'cc'           => array( 'https://example.com/user2' ),
+			'attachment'   => array(
+				array(
+					'type' => 'Image',
+					'url'  => 'https://example.com/image.jpg',
+				),
+			),
+			'attributedTo' => 'https://example.com/author',
+			'unsupported'  => 'unsupported',
+		);
+
+		$object = Base_Object::init_from_array( $test_data );
+
+		// Test if all attributes are set correctly.
+		$this->assertEquals( $test_data['id'], $object->get_id() );
+		$this->assertEquals( $test_data['type'], $object->get_type() );
+		$this->assertEquals( $test_data['name'], $object->get_name() );
+		$this->assertEquals( $test_data['summary'], $object->get_summary() );
+		$this->assertEquals( $test_data['content'], $object->get_content() );
+		$this->assertEquals( $test_data['published'], $object->get_published() );
+		$this->assertEquals( $test_data['to'], $object->get_to() );
+		$this->assertEquals( $test_data['cc'], $object->get_cc() );
+		$this->assertEquals( $test_data['attachment'], $object->get_attachment() );
+		$this->assertEquals( $test_data['attributedTo'], $object->get_attributed_to() );
+		$this->assertNull( $object->get_unsupported() );
+	}
 }
