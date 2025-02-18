@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
 * Setting to adjust the number of days Outbox items are kept before being purged.
+* Metadata to New Follower E-Mail.
 
 ### Changed
 
