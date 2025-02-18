@@ -1069,6 +1069,17 @@ class Post extends Base {
 	}
 
 	/**
+	 * Get the context of the post.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-context
+	 *
+	 * @return string The context of the post.
+	 */
+	protected function get_context() {
+		return get_rest_url_by_path( sprintf( 'posts/%d/context', $this->item->ID ) );
+	}
+
+	/**
 	 * Gets the template to use to generate the content of the activitypub item.
 	 *
 	 * @return string The Template.

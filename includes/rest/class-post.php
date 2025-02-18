@@ -11,6 +11,10 @@ use WP_REST_Server;
 use WP_REST_Response;
 use WP_Error;
 use Activitypub\Comment;
+use Activitypub\Activity\Base_Object;
+use Activitypub\Collection\Replies;
+
+use function Activitypub\get_rest_url_by_path;
 
 /**
  * Class Post
@@ -36,6 +40,22 @@ class Post {
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( static::class, 'get_reactions' ),
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'id' => array(
+						'required' => true,
+						'type'     => 'integer',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			ACTIVITYPUB_REST_NAMESPACE,
+			'/posts/(?P<id>\d+)/context',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( static::class, 'get_context' ),
 				'permission_callback' => '__return_true',
 				'args'                => array(
 					'id' => array(
@@ -106,5 +126,35 @@ class Post {
 		}
 
 		return new WP_REST_Response( $reactions );
+	}
+
+	/**
+	 * Get the context for a post.
+	 *
+	 * @param \WP_REST_Request $request The request.
+	 *
+	 * @return WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
+	 */
+	public static function get_context( $request ) {
+		$post_id = $request->get_param( 'id' );
+
+		$collection = Replies::get_context_collection( $post_id );
+
+		if ( false === $collection ) {
+			return new WP_Error( 'post_not_found', 'Post not found', array( 'status' => 404 ) );
+		}
+
+		$response = array_merge(
+			array(
+				'@context' => Base_Object::JSON_LD_CONTEXT,
+				'id'       => get_rest_url_by_path( sprintf( 'posts/%d/context', $post_id ) ),
+			),
+			$collection
+		);
+
+		$response = \rest_ensure_response( $response );
+		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
+
+		return $response;
 	}
 }

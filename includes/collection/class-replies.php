@@ -12,7 +12,10 @@ use WP_Comment;
 use WP_Error;
 
 use Activitypub\Comment;
+use Activitypub\Transformer\Post as PostTransformer;
+use Activitypub\Transformer\Comment as CommentTransformer;
 
+use function Activitypub\is_post_disabled;
 use function Activitypub\is_local_comment;
 use function Activitypub\get_rest_url_by_path;
 
@@ -142,19 +145,55 @@ class Replies {
 	}
 
 	/**
+	 * Get the context collection for a post.
+	 *
+	 * @param int $post_id The post ID.
+	 *
+	 * @return array|false The context for the post or false if the post is not found or disabled.
+	 */
+	public static function get_context_collection( $post_id ) {
+		$post = \get_post( $post_id );
+
+		if ( ! $post || is_post_disabled( $post_id ) ) {
+			return false;
+		}
+
+		$comments = \get_comments(
+			array(
+				'post_id' => $post_id,
+				'type'    => 'comment',
+				'status'  => 'approve',
+				'orderby' => 'comment_date_gmt',
+				'order'   => 'ASC',
+			)
+		);
+		$ids      = self::get_reply_ids( $comments, true );
+		$post_uri = ( new PostTransformer( $post ) )->to_id();
+		\array_unshift( $ids, $post_uri );
+
+		return array(
+			'type'         => 'OrderedCollection',
+			'url'          => \get_permalink( $post_id ),
+			'attributedTo' => Actors::get_by_id( $post->post_author )->get_id(),
+			'totalItems'   => count( $ids ),
+			'items'        => $ids,
+		);
+	}
+
+	/**
 	 * Get the ActivityPub ID's from a list of comments.
 	 *
 	 * It takes only federated/non-local comments into account, others also do not have an
 	 * ActivityPub ID available.
 	 *
-	 * @param WP_Comment[] $comments The comments to retrieve the ActivityPub ids from.
+	 * @param WP_Comment[] $comments              The comments to retrieve the ActivityPub ids from.
+	 * @param boolean      $include_blog_comments Optional. Include blog comments in the returned array. Default false.
 	 *
 	 * @return string[] A list of the ActivityPub ID's.
 	 */
-	private static function get_reply_ids( $comments ) {
+	private static function get_reply_ids( $comments, $include_blog_comments = false ) {
 		$comment_ids = array();
-		// Only add external comments from the fediverse.
-		// Maybe use the Comment class more and the function is_local_comment etc.
+
 		foreach ( $comments as $comment ) {
 			if ( is_local_comment( $comment ) ) {
 				continue;
@@ -163,9 +202,14 @@ class Replies {
 			$public_comment_id = Comment::get_source_id( $comment->comment_ID );
 			if ( $public_comment_id ) {
 				$comment_ids[] = $public_comment_id;
+				continue;
+			}
+
+			if ( $include_blog_comments ) {
+				$comment_ids[] = ( new CommentTransformer( $comment ) )->to_id();
 			}
 		}
 
-		return $comment_ids;
+		return \array_unique( $comment_ids );
 	}
 }
