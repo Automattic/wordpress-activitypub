@@ -74,7 +74,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Test bulk edit that should bail (no author or status change).
 		$_REQUEST['bulk_edit']   = 1;
 		$_REQUEST['post_author'] = -1;
-		$_REQUEST['post_status'] = -1;
+		$_REQUEST['_status']     = -1;
 
 		self::factory()->post->update_object( $post_id, array( 'post_title' => 'Updated Title' ) );
 
@@ -85,7 +85,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$new_user_id = self::factory()->user->create();
 		get_userdata( $new_user_id )->add_cap( 'activitypub' );
 		$_REQUEST['post_author'] = $new_user_id;
-		$_REQUEST['post_status'] = -1;
+		$_REQUEST['_status']     = -1;
 
 		self::factory()->post->update_object( $post_id, array( 'post_author' => $new_user_id ) );
 
@@ -96,7 +96,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		// Test bulk edit with status change (should not bail).
 		$_REQUEST['post_author'] = -1;
-		$_REQUEST['post_status'] = 'draft';
+		$_REQUEST['_status']     = 'draft';
 
 		self::factory()->post->update_object( $post_id, array( 'post_status' => 'trash' ) );
 
