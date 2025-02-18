@@ -131,6 +131,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Added: A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
 * Added: Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
 * Added: Undo API for Outbox items.
 * Added: Setting to adjust the number of days Outbox items are kept before being purged.
@@ -139,6 +140,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Changed: Updates to unfederated posts no longer trigger a new Activity.
 * Fixed: The Outbox purging routine no longer is limited to deleting 5 items at a time.
 * Fixed an issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
+* Fixed: Ellipses now display correctly in notification emails for Likes and Reposts.
 
 = 5.2.0 =
 
