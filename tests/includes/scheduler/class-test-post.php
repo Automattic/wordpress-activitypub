@@ -63,6 +63,53 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test post activity scheduling during bulk edits.
+	 *
+	 * @covers ::schedule_post_activity
+	 */
+	public function test_schedule_post_activity_bulk_edit() {
+		$post_id       = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitpub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		// Test bulk edit that should bail (no author or status change).
+		$_REQUEST['bulk_edit']   = 1;
+		$_REQUEST['post_author'] = -1;
+		$_REQUEST['post_status'] = -1;
+
+		self::factory()->post->update_object( $post_id, array( 'post_title' => 'Updated Title' ) );
+
+		$outbox_item = $this->get_latest_outbox_item( $activitpub_id );
+		$this->assertNotSame( 'Update', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
+
+		// Test bulk edit with author change (should not bail).
+		$new_user_id = self::factory()->user->create();
+		get_userdata( $new_user_id )->add_cap( 'activitypub' );
+		$_REQUEST['post_author'] = $new_user_id;
+		$_REQUEST['post_status'] = -1;
+
+		self::factory()->post->update_object( $post_id, array( 'post_author' => $new_user_id ) );
+
+		$outbox_item = $this->get_latest_outbox_item( $activitpub_id );
+		$this->assertNotNull( $outbox_item );
+
+		$this->assertSame( 'Update', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
+
+		// Test bulk edit with status change (should not bail).
+		$_REQUEST['post_author'] = -1;
+		$_REQUEST['post_status'] = 'draft';
+
+		self::factory()->post->update_object( $post_id, array( 'post_status' => 'trash' ) );
+
+		$outbox_item = $this->get_latest_outbox_item( $activitpub_id );
+		$this->assertNotNull( $outbox_item );
+		$this->assertSame( 'Delete', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
+
+		// Clean up.
+		unset( $_REQUEST['bulk_edit'], $_REQUEST['post_author'], $_REQUEST['post_status'] );
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
 	 * Data provider for no activity tests.
 	 *
 	 * @return array[] Test parameters.
