@@ -90,15 +90,11 @@ class Dispatcher {
 		self::send_to_interactees( $activity, $actor->get__id(), $outbox_item );
 
 		if ( self::should_send_to_followers( $activity, $actor, $outbox_item ) ) {
-			\wp_schedule_single_event(
-				\time(),
-				'activitypub_async_batch',
-				array(
-					self::$callback,
-					$outbox_item->ID,
-					self::$batch_size,
-					\get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
-				)
+			Scheduler::async_batch(
+				self::$callback,
+				$outbox_item->ID,
+				self::$batch_size,
+				\get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ) ?: 0 // phpcs:ignore
 			);
 		} else {
 			// No followers to process for this update. We're done.

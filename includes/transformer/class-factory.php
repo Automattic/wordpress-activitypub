@@ -8,6 +8,7 @@
 namespace Activitypub\Transformer;
 
 use WP_Error;
+use Activitypub\Http;
 use Activitypub\Comment as Comment_Helper;
 
 use function Activitypub\is_user_disabled;
@@ -25,7 +26,16 @@ class Factory {
 	 * @return Base|WP_Error The transformer to use, or an error.
 	 */
 	public static function get_transformer( $data ) {
-		if ( \is_array( $data ) || \is_string( $data ) ) {
+		if ( \is_string( $data ) && \filter_var( $data, FILTER_VALIDATE_URL ) ) {
+			$response = Http::get_remote_object( $data );
+
+			if ( \is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$class = 'json';
+			$data  = $response;
+		} elseif ( \is_array( $data ) || \is_string( $data ) ) {
 			$class = 'json';
 		} elseif ( \is_object( $data ) ) {
 			$class = \get_class( $data );
