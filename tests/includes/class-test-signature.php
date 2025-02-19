@@ -16,6 +16,9 @@ use Activitypub\Collection\Actors;
  * @coversDefaultClass \Activitypub\Signature
  */
 class Test_Signature extends \WP_UnitTestCase {
+	/**
+	 * Tear down.
+	 */
 	public function tear_down() {
 		parent::tear_down();
 		\delete_option( 'activitypub_keypair_for_0' );
