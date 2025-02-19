@@ -339,7 +339,7 @@ class Settings {
 	private static function get_help_content( $template ) {
 		$template = ACTIVITYPUB_PLUGIN_DIR . 'templates/wp-admin/help-' . $template . '.php';
 		if ( ! \file_exists( $template ) ) {
-			_doing_it_wrong( __METHOD__, \sprintf( 'The template file %s does not exist.', esc_html( $template ) ), 'unreleased' );
+			\_doing_it_wrong( __METHOD__, \sprintf( 'The template file %s does not exist.', \esc_html( $template ) ), 'unreleased' );
 			return '';
 		}
 
