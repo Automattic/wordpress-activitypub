@@ -16,6 +16,22 @@ use Activitypub\Collection\Actors;
  * @coversDefaultClass \Activitypub\Signature
  */
 class Test_Signature extends \WP_UnitTestCase {
+	/**
+	 * Tear down.
+	 */
+	public function tear_down() {
+		parent::tear_down();
+		\delete_option( 'activitypub_keypair_for_0' );
+		\delete_option( 'activitypub_keypair_for_-1' );
+		\delete_option( 'activitypub_keypair_for_admin' );
+		\delete_option( 'activitypub_blog_user_public_key' );
+		\delete_option( 'activitypub_blog_user_private_key' );
+		\delete_option( 'activitypub_application_user_public_key' );
+		\delete_option( 'activitypub_application_user_private_key' );
+		\delete_option( 'activitypub_actor_mode' );
+		\delete_user_meta( 1, 'magic_sig_public_key' );
+		\delete_user_meta( 1, 'magic_sig_private_key' );
+	}
 
 	/**
 	 * Test signature creation.
@@ -45,6 +61,8 @@ class Test_Signature extends \WP_UnitTestCase {
 		// Check user.
 		$user = Actors::get_by_id( 1 );
 
+		\delete_option( 'activitypub_keypair_for_admin' );
+
 		$public_key  = 'public key ' . $user->get__id();
 		$private_key = 'private key ' . $user->get__id();
 
@@ -60,11 +78,13 @@ class Test_Signature extends \WP_UnitTestCase {
 		// Check application user.
 		$user = Actors::get_by_id( Actors::APPLICATION_USER_ID );
 
+		\delete_option( 'activitypub_keypair_for_-1' );
+
 		$public_key  = 'public key ' . $user->get__id();
 		$private_key = 'private key ' . $user->get__id();
 
-		add_option( 'activitypub_application_user_public_key', $public_key );
-		add_option( 'activitypub_application_user_private_key', $private_key );
+		\add_option( 'activitypub_application_user_public_key', $public_key );
+		\add_option( 'activitypub_application_user_private_key', $private_key );
 
 		$key_pair = Signature::get_keypair_for( $user->get__id() );
 
@@ -80,8 +100,10 @@ class Test_Signature extends \WP_UnitTestCase {
 		$public_key  = 'public key ' . $user->get__id();
 		$private_key = 'private key ' . $user->get__id();
 
-		add_option( 'activitypub_blog_user_public_key', $public_key );
-		add_option( 'activitypub_blog_user_private_key', $private_key );
+		\delete_option( 'activitypub_keypair_for_0' );
+
+		\add_option( 'activitypub_blog_user_public_key', $public_key );
+		\add_option( 'activitypub_blog_user_private_key', $private_key );
 
 		$key_pair = Signature::get_keypair_for( $user->get__id() );
 

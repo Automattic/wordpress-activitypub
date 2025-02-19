@@ -7,7 +7,6 @@
 
 namespace Activitypub\Scheduler;
 
-use Activitypub\Scheduler;
 use Activitypub\Collection\Outbox;
 
 use function Activitypub\add_to_outbox;
@@ -77,6 +76,11 @@ class Post {
 			return;
 		}
 
+		// Bail on bulk edits, unless post author or post status changed.
+		if ( isset( $_REQUEST['bulk_edit'] ) && -1 === (int) $_REQUEST['post_author'] && -1 === (int) $_REQUEST['_status'] ) { // phpcs:ignore WordPress
+			return;
+		}
+
 		switch ( $new_status ) {
 			case 'publish':
 				$type = ( 'publish' === $old_status ) ? 'Update' : 'Create';
@@ -110,8 +114,8 @@ class Post {
 	 * This filter updates post meta before the post is inserted into the database, so that the
 	 * information is available by the time @see Outbox::add() runs.
 	 *
-	 * @param \stdClass        $post     An object representing a single post prepared for inserting or updating the database.
-	 * @param \WP_REST_Request $request  The request object.
+	 * @param \stdClass        $post    An object representing a single post prepared for inserting or updating the database.
+	 * @param \WP_REST_Request $request The request object.
 	 *
 	 * @return \stdClass The prepared post.
 	 */
