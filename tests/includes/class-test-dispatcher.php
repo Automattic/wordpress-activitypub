@@ -93,17 +93,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		Dispatcher::process_outbox( $outbox_item->ID );
 
-		$this->assertNotFalse(
-			wp_next_scheduled(
-				'activitypub_async_batch',
-				array(
-					Dispatcher::$callback,
-					$outbox_item->ID,
-					Dispatcher::$batch_size,
-					0,
-				)
-			)
-		);
+		$this->assertEquals( 'publish', \get_post( $outbox_item->ID )->post_status );
 
 		remove_filter( 'activitypub_send_activity_to_followers', $test_callback );
 	}

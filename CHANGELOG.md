@@ -9,7 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
+* Setting to adjust the number of days Outbox items are kept before being purged.
 * Undo API for Outbox items.
+* Metadata to New Follower E-Mail.
+
+### Changed
+
+* Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
+
+### Fixed
+
+* The Outbox purging routine no longer is limited to deleting 5 items at a time.
+* Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
+* Ellipses now display correctly in notification emails for Likes and Reposts.
 
 ## [5.2.0] - 2025-02-13
 
@@ -19,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Outbox processed events get logged in Stream and show any errors returned from inboxes.
 * Outbox items older than 6 months will be purged to avoid performance issues.
 * REST API endpoints for likes and shares.
+
+### Fixed
+
+* Fixed an issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
 
 ### Changed
 
