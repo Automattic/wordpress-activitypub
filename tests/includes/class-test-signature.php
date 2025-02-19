@@ -17,6 +17,33 @@ use Activitypub\Collection\Actors;
  */
 class Test_Signature extends \WP_UnitTestCase {
 
+	public function set_up() {
+		parent::set_up();
+		\delete_option( 'activitypub_keypair_for_0' );
+		\delete_option( 'activitypub_keypair_for_-1' );
+		\delete_option( 'activitypub_keypair_for_admin' );
+		\delete_option( 'activitypub_blog_user_public_key' );
+		\delete_option( 'activitypub_blog_user_private_key' );
+		\delete_option( 'activitypub_application_user_public_key' );
+		\delete_option( 'activitypub_application_user_private_key' );
+		\delete_user_meta( 1, 'magic_sig_public_key' );
+		\delete_user_meta( 1, 'magic_sig_private_key' );
+	}
+
+	public function tear_down() {
+		parent::tear_down();
+		\delete_option( 'activitypub_keypair_for_0' );
+		\delete_option( 'activitypub_keypair_for_-1' );
+		\delete_option( 'activitypub_keypair_for_admin' );
+		\delete_option( 'activitypub_blog_user_public_key' );
+		\delete_option( 'activitypub_blog_user_private_key' );
+		\delete_option( 'activitypub_application_user_public_key' );
+		\delete_option( 'activitypub_application_user_private_key' );
+		\delete_option( 'activitypub_actor_mode' );
+		\delete_user_meta( 1, 'magic_sig_public_key' );
+		\delete_user_meta( 1, 'magic_sig_private_key' );
+	}
+
 	/**
 	 * Test signature creation.
 	 *
