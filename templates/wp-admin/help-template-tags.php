@@ -8,7 +8,7 @@
 $code_html = array( 'code' => array() );
 ?>
 
-<h2><?php esc_html_e( 'The following Template Tags are available:', 'activitypub' ); ?></h2>
+<h2><?php \esc_html_e( 'The following Template Tags are available:', 'activitypub' ); ?></h2>
 <dl>
 	<dt><code>[ap_title]</code></dt>
 	<dd><?php echo \wp_kses( __( 'The post&#8217;s title.', 'activitypub' ), $code_html ); ?></dd>
@@ -43,8 +43,8 @@ $code_html = array( 'code' => array() );
 	<dt><code>[ap_blogdesc]</code></dt>
 	<dd><?php echo \wp_kses( __( 'The description of the site.', 'activitypub' ), $code_html ); ?></dd>
 </dl>
-<p><?php esc_html_e( 'You may also use any Shortcode normally available to you on your site, however be aware that Shortcodes may significantly increase the size of your content depending on what they do.', 'activitypub' ); ?></p>
-<p><?php esc_html_e( 'Note: the old Template Tags are now deprecated and automatically converted to the new ones.', 'activitypub' ); ?></p>
+<p><?php \esc_html_e( 'You may also use any Shortcode normally available to you on your site, however be aware that Shortcodes may significantly increase the size of your content depending on what they do.', 'activitypub' ); ?></p>
+<p><?php \esc_html_e( 'Note: the old Template Tags are now deprecated and automatically converted to the new ones.', 'activitypub' ); ?></p>
 <p>
 <?php
 echo \wp_kses(
