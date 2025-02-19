@@ -35,6 +35,14 @@ class Dispatcher {
 	public static $callback = array( self::class, 'send_to_followers' );
 
 	/**
+	 * Error codes that qualify for a retry.
+	 *
+	 * @see https://github.com/tfredrich/RestApiTutorial.com/blob/fd08b0f67f07450521d143b123cd6e1846cb2e3b/content/advanced/responses/retries.md
+	 * @var int[]
+	 */
+	public static $retry_error_codes = array( 408, 429, 500, 502, 503, 504 );
+
+	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
@@ -191,7 +199,7 @@ class Dispatcher {
 		foreach ( $inboxes as $inbox ) {
 			$result = safe_remote_post( $inbox, $json, $actor->get__id() );
 
-			if ( is_wp_error( $result ) ) {
+			if ( is_wp_error( $result ) && in_array( $result->get_error_code(), self::$retry_error_codes, true ) ) {
 				$retries[] = $inbox;
 			}
 
