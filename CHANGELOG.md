@@ -20,9 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
 * Post bulk edits no longer create Outbox items, unless author or post status change.
-
-### Changed
-
 * Bumped minimum required WordPress version to 6.4.
 
 ### Fixed
