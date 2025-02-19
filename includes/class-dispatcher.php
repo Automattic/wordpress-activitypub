@@ -121,15 +121,7 @@ class Dispatcher {
 
 		// Retry failed inboxes.
 		if ( ! empty( $retries ) ) {
-			\wp_schedule_single_event(
-				\time() + ( 5 * MINUTE_IN_SECONDS ),
-				'activitypub_async_batch',
-				array(
-					array( self::class, 'retry_send_to_followers' ),
-					$retries,
-					$outbox_item_id,
-				)
-			);
+			self::schedule_retry( $retries, $outbox_item_id );
 		}
 
 		if ( is_countable( $inboxes ) && count( $inboxes ) < self::$batch_size ) {
@@ -180,16 +172,7 @@ class Dispatcher {
 
 		// Retry failed inboxes.
 		if ( ++$attempt < 3 && ! empty( $retries ) ) {
-			\wp_schedule_single_event(
-				\time() + ( $attempt * 5 * MINUTE_IN_SECONDS ),
-				'activitypub_async_batch',
-				array(
-					array( self::class, 'retry_send_to_followers' ),
-					$retries,
-					$outbox_item_id,
-					$attempt,
-				)
-			);
+			self::schedule_retry( $retries, $outbox_item_id, $attempt );
 		}
 	}
 
@@ -225,6 +208,26 @@ class Dispatcher {
 		}
 
 		return $retries;
+	}
+
+	/**
+	 * Schedule a retry.
+	 *
+	 * @param array $retries        The retries.
+	 * @param int   $outbox_item_id The Outbox item ID.
+	 * @param int   $attempt        Optional. The attempt number. Default 1.
+	 */
+	private static function schedule_retry( $retries, $outbox_item_id, $attempt = 1 ) {
+		\wp_schedule_single_event(
+			\time() + ( $attempt * 5 * MINUTE_IN_SECONDS ),
+			'activitypub_async_batch',
+			array(
+				array( self::class, 'retry_send_to_followers' ),
+				$retries,
+				$outbox_item_id,
+				$attempt,
+			)
+		);
 	}
 
 	/**
