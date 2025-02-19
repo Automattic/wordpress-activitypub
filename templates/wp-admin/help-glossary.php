@@ -14,7 +14,7 @@
 	<?php
 	printf(
 		/* translators: %s: Link to more information */
-		esc_html__( 'For more information please visit %s', 'activitypub' ),
+		esc_html__( 'For more information please visit %s.', 'activitypub' ),
 		'<a href="https://fediverse.party/" target="_blank">fediverse.party</a>'
 	);
 	?>
@@ -42,7 +42,7 @@
 	<?php
 	printf(
 		/* translators: %s: Link to more information */
-		esc_html__( 'For more information please visit %s', 'activitypub' ),
+		esc_html__( 'For more information please visit %s.', 'activitypub' ),
 		'<a href="https://webfinger.net/" target="_blank">webfinger.net</a>'
 	);
 	?>
@@ -53,7 +53,7 @@
 	<?php
 	printf(
 		/* translators: %s: Link to more information */
-		esc_html__( 'For more information please visit %s', 'activitypub' ),
+		esc_html__( 'For more information please visit %s.', 'activitypub' ),
 		'<a href="http://nodeinfo.diaspora.software/" target="_blank">nodeinfo.diaspora.software</a>'
 	);
 	?>
