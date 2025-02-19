@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Setting to adjust the number of days Outbox items are kept before being purged.
+* Failed Follower notifications for Outbox items now get retried for two more times.
 
 ### Fixed
 
