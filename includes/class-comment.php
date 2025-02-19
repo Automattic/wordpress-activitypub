@@ -34,6 +34,7 @@ class Comment {
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
+		\add_filter( 'comment_author', array( static::class, 'allow_emoji' ) );
 	}
 
 	/**
@@ -840,5 +841,19 @@ class Comment {
 		 * @param string[] $post_types Array of post type names to hide comments for.
 		 */
 		return \apply_filters( 'activitypub_hide_comments_for', $post_types );
+	}
+
+	/**
+	 * Allow emoji in comment author name.
+	 *
+	 * @param string $author The comment author name.
+	 * @return string The comment author name with rendered emoji.
+	 */
+	public static function allow_emoji( $author ) {
+		if ( false !== strpos( $author, 'emoji' ) ) {
+			$author = str_replace( '"', '"', \html_entity_decode( $author ) );
+		}
+
+		return $author;
 	}
 }
