@@ -53,6 +53,7 @@ function rest_init() {
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Replies_Controller() )->register_routes();
 	( new Rest\Webfinger_Controller() )->register_routes();
+	( new Rest\Embed_Controller() )->register_routes();
 
 	// Load NodeInfo endpoints only if blog is public.
 	if ( is_blog_public() ) {

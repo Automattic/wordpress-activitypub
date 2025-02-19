@@ -12,7 +12,8 @@
   },
   "textdomain": "activitypub",
   "editorScript": "file:./index.js",
-  "editorStyle": "file:./edit.css",
+  "editorStyle": "file:./index.css",
+  "style": "file:./index.css",
   "attributes": {
     "url": {
       "type": "string"

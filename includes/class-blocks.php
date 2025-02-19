@@ -343,12 +343,18 @@ class Blocks {
 
 		if ( ! empty( $attrs['url'] ) ) {
 			if ( isset( $attrs['embedPost'] ) && $attrs['embedPost'] ) {
-				$embed = embed_get( $attrs['url'] );
-				if ( $embed ) {
-					$html .= $embed;
+				$request = new \WP_REST_Request( 'GET', '/activitypub/v1/embed' );
+				$request->set_param( 'url', $attrs['url'] );
+
+				$controller = new Rest\Embed_Controller();
+				$response   = $controller->get_item( $request );
+
+				if ( ! \is_wp_error( $response ) && isset( $response->data['html'] ) ) {
+					$html .= $response->data['html'];
 				}
 			}
 
+			// Always add the microformats markup for the reply
 			$html .= sprintf(
 				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
 				esc_url( $attrs['url'] ),
