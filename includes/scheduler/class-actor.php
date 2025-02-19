@@ -43,6 +43,9 @@ class Actor {
 			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
 		}
 
+		\add_action( 'add_option_activitypub_actor_mode', array( self::class, 'blog_user_update' ) );
+		\add_action( 'update_option_activitypub_actor_mode', array( self::class, 'blog_user_update' ) );
+
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
 	}
 
@@ -67,6 +70,7 @@ class Actor {
 			'user_url',
 			'display_name',
 		);
+
 		if ( in_array( $meta_key, $fields, true ) ) {
 			self::schedule_profile_update( $user_id );
 		}
