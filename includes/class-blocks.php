@@ -343,7 +343,7 @@ class Blocks {
 
 		if ( ! empty( $attrs['url'] ) ) {
 			if ( isset( $attrs['embedPost'] ) && $attrs['embedPost'] ) {
-				$request = new \WP_REST_Request( 'GET', '/activitypub/v1/embed' );
+				$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/embed' );
 				$request->set_param( 'url', $attrs['url'] );
 
 				$controller = new Rest\Embed_Controller();
