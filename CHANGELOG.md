@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Setting to adjust the number of days Outbox items are kept before being purged.
 * Undo API for Outbox items.
 * Metadata to New Follower E-Mail.
+* Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
 
 ### Changed
 
@@ -21,8 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * The Outbox purging routine no longer is limited to deleting 5 items at a time.
-* Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
 * Ellipses now display correctly in notification emails for Likes and Reposts.
+* Send Update-Activity when "Actor-Mode" is changed.
 
 ## [5.2.0] - 2025-02-13
 
