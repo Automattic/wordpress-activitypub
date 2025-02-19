@@ -655,7 +655,7 @@ class Comment {
 				'type'           => 'repost',
 				'collection'     => 'reposts',
 				'activity_types' => array( 'announce' ),
-				'excerpt'        => __( '&hellip; reposted this!', 'activitypub' ),
+				'excerpt'        => html_entity_decode( \__( '&hellip; reposted this!', 'activitypub' ) ),
 				/* translators: %d: Number of reposts */
 				'count_single'   => _x( '%d repost', 'number of reposts', 'activitypub' ),
 				/* translators: %d: Number of reposts */
@@ -674,7 +674,7 @@ class Comment {
 				'type'           => 'like',
 				'collection'     => 'likes',
 				'activity_types' => array( 'like' ),
-				'excerpt'        => __( '&hellip; liked this!', 'activitypub' ),
+				'excerpt'        => html_entity_decode( \__( '&hellip; liked this!', 'activitypub' ) ),
 				/* translators: %d: Number of likes */
 				'count_single'   => _x( '%d like', 'number of likes', 'activitypub' ),
 				/* translators: %d: Number of likes */
