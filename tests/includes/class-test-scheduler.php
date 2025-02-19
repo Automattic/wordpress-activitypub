@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Comment;
+use Activitypub\Migration;
 use Activitypub\Scheduler;
 use Activitypub\Collection\Outbox;
 use Activitypub\Activity\Base_Object;
@@ -281,5 +283,66 @@ class Test_Scheduler extends WP_UnitTestCase {
 
 		// Verify posts are deleted.
 		$this->assertEquals( 0, wp_count_posts( Outbox::POST_TYPE )->publish );
+	}
+
+	/**
+	 * Test update_comment_counts() with existing valid lock.
+	 *
+	 * @covers ::lock
+	 * @covers ::async_batch
+	 */
+	public function test_update_comment_counts_with_existing_valid_lock() {
+		// Register comment types.
+		Comment::register_comment_types();
+
+		$callback = array( Migration::class, 'update_comment_counts' );
+		$key      = \md5( \serialize( $callback ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+
+		// Set a lock.
+		Scheduler::lock( $key );
+
+		Scheduler::async_batch( $callback, 10, 0 );
+
+		// Verify a scheduled event was created.
+		$next_scheduled = wp_next_scheduled( 'activitypub_async_batch', array( $callback, 10, 0 ) );
+		$this->assertNotFalse( $next_scheduled );
+
+		// Clean up.
+		delete_option( 'activitypub_migration_lock' );
+		wp_clear_scheduled_hook( 'activitypub_async_batch', array( $callback, 10, 0 ) );
+	}
+
+	/**
+	 * Test async upgrade functionality.
+	 *
+	 * @covers ::async_batch
+	 * @covers ::lock
+	 * @covers ::unlock
+	 */
+	public function test_async_upgrade() {
+		$callback = array( Migration::class, 'create_post_outbox_items' );
+		$key      = \md5( \serialize( $callback ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+
+		// Test that lock prevents simultaneous upgrades.
+		Scheduler::lock( $key );
+		Scheduler::async_batch( $callback );
+		$scheduled = \wp_next_scheduled( 'activitypub_async_batch', array( $callback ) );
+		$this->assertNotFalse( $scheduled );
+		Scheduler::unlock( $key );
+
+		\remove_action( 'transition_post_status', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33 );
+		self::factory()->post->create( array( 'meta_input' => array( 'activitypub_status' => 'federated' ) ) );
+		\add_action( 'transition_post_status', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33, 3 );
+
+		// Test scheduling next batch when callback returns more work.
+		Scheduler::async_batch( $callback, 1, 0 ); // Small batch size to force multiple batches.
+		$scheduled = \wp_next_scheduled( 'activitypub_async_batch', array( $callback, 1, 1 ) );
+		$this->assertNotFalse( $scheduled );
+
+		// Test no scheduling when callback returns null (no more work).
+		Scheduler::async_batch( $callback, 100, 1000 ); // Large offset to ensure no posts found.
+		$this->assertFalse(
+			\wp_next_scheduled( 'activitypub_async_batch', array( $callback, 100, 1100 ) )
+		);
 	}
 }

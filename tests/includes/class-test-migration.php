@@ -10,6 +10,7 @@ namespace Activitypub\Tests;
 use Activitypub\Collection\Outbox;
 use Activitypub\Migration;
 use Activitypub\Comment;
+use Activitypub\Scheduler;
 
 /**
  * Test class for Activitypub Migrate.
@@ -390,12 +391,12 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		Comment::register_comment_types();
 
 		// Create test comments.
-		$post_id    = $this->factory->post->create(
+		$post_id    = self::factory()->post->create(
 			array(
 				'post_author' => 1,
 			)
 		);
-		$comment_id = $this->factory->comment->create(
+		$comment_id = self::factory()->comment->create(
 			array(
 				'comment_post_ID'  => $post_id,
 				'comment_approved' => '1',
@@ -411,41 +412,6 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		// Clean up.
 		wp_delete_comment( $comment_id, true );
 		wp_delete_post( $post_id, true );
-	}
-
-	/**
-	 * Test update_comment_counts() with existing valid lock.
-	 *
-	 * @covers ::update_comment_counts
-	 */
-	public function test_update_comment_counts_with_existing_valid_lock() {
-		// Register comment types.
-		Comment::register_comment_types();
-
-		// Set a lock.
-		Migration::lock();
-
-		Migration::update_comment_counts( 10, 0 );
-
-		// Verify a scheduled event was created.
-		$next_scheduled = wp_next_scheduled(
-			'activitypub_update_comment_counts',
-			array(
-				'batch_size' => 10,
-				'offset'     => 0,
-			)
-		);
-		$this->assertNotFalse( $next_scheduled );
-
-		// Clean up.
-		delete_option( 'activitypub_migration_lock' );
-		wp_clear_scheduled_hook(
-			'activitypub_update_comment_counts',
-			array(
-				'batch_size' => 10,
-				'offset'     => 0,
-			)
-		);
 	}
 
 	/**
@@ -520,42 +486,14 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Test async upgrade functionality.
-	 *
-	 * @covers ::async_upgrade
-	 * @covers ::lock
-	 * @covers ::unlock
-	 * @covers ::create_post_outbox_items
-	 */
-	public function test_async_upgrade() {
-		// Test that lock prevents simultaneous upgrades.
-		Migration::lock();
-		Migration::async_upgrade( 'create_post_outbox_items' );
-		$scheduled = \wp_next_scheduled( 'activitypub_upgrade', array( 'create_post_outbox_items' ) );
-		$this->assertNotFalse( $scheduled );
-		Migration::unlock();
-
-		// Test scheduling next batch when callback returns more work.
-		Migration::async_upgrade( 'create_post_outbox_items', 1, 0 ); // Small batch size to force multiple batches.
-		$scheduled = \wp_next_scheduled( 'activitypub_upgrade', array( 'create_post_outbox_items', 1, 1 ) );
-		$this->assertNotFalse( $scheduled );
-
-		// Test no scheduling when callback returns null (no more work).
-		Migration::async_upgrade( 'create_post_outbox_items', 100, 1000 ); // Large offset to ensure no posts found.
-		$this->assertFalse(
-			\wp_next_scheduled( 'activitypub_upgrade', array( 'create_post_outbox_items', 100, 1100 ) )
-		);
-	}
-
-	/**
 	 * Test async upgrade with multiple arguments.
 	 *
 	 * @covers ::async_upgrade
 	 */
 	public function test_async_upgrade_multiple_args() {
 		// Test that multiple arguments are passed correctly.
-		Migration::async_upgrade( 'update_comment_counts', 50, 100 );
-		$scheduled = \wp_next_scheduled( 'activitypub_upgrade', array( 'update_comment_counts', 50, 150 ) );
+		Scheduler::async_batch( array( Migration::class, 'update_comment_counts' ), 50, 100 );
+		$scheduled = \wp_next_scheduled( 'activitypub_async_batch', array( array( Migration::class, 'update_comment_counts' ), 50, 150 ) );
 		$this->assertFalse( $scheduled, 'Should not schedule next batch when no comments found' );
 	}
 
