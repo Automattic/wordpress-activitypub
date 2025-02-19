@@ -163,7 +163,7 @@ class Dispatcher {
 	/**
 	 * Retry sending to followers.
 	 *
-	 * @param array $inboxes        The inboxes.
+	 * @param array $inboxes        The inboxes to retry.
 	 * @param int   $outbox_item_id The Outbox item ID.
 	 * @param int   $attempt        The attempt number.
 	 */
@@ -179,7 +179,7 @@ class Dispatcher {
 	/**
 	 * Send to inboxes.
 	 *
-	 * @param array $inboxes        The inboxes.
+	 * @param array $inboxes        The inboxes to notify.
 	 * @param int   $outbox_item_id The Outbox item ID.
 	 * @return array The failed inboxes.
 	 */
@@ -213,7 +213,7 @@ class Dispatcher {
 	/**
 	 * Schedule a retry.
 	 *
-	 * @param array $retries        The retries.
+	 * @param array $retries        The inboxes to retry.
 	 * @param int   $outbox_item_id The Outbox item ID.
 	 * @param int   $attempt        Optional. The attempt number. Default 1.
 	 */
@@ -233,8 +233,8 @@ class Dispatcher {
 	/**
 	 * Send an Activity to all followers and mentioned users.
 	 *
-	 * @param Activity $activity  The ActivityPub Activity.
-	 * @param int      $actor_id  The actor ID.
+	 * @param Activity $activity    The ActivityPub Activity.
+	 * @param int      $actor_id    The actor ID.
 	 * @param \WP_Post $outbox_item The WordPress object.
 	 */
 	private static function send_to_interactees( $activity, $actor_id, $outbox_item = null ) {
