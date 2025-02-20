@@ -92,7 +92,6 @@ class Move {
 			}
 
 			$origin_follower->delete();
-			return;
 		}
 	}
 
