@@ -338,10 +338,11 @@ class Followers {
 	 */
 	public static function get_inboxes_for_activity( $json, $actor_id, $batch_size = 50, $offset = 0 ) {
 		$inboxes = self::get_inboxes( $actor_id );
+
 		if ( self::maybe_add_inboxes_of_blog_user( $json, $actor_id ) ) {
 			$inboxes = array_merge( $inboxes, self::get_inboxes( Actors::BLOG_USER_ID ) );
+			$inboxes = array_unique( $inboxes );
 		}
-		$inboxes = array_unique( $inboxes );
 
 		return array_slice( $inboxes, $offset, $batch_size );
 	}
