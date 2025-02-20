@@ -353,8 +353,8 @@ class Blocks {
 				$request->set_param( 'url', $attrs['url'] );
 				$response = rest_get_server()->dispatch( $request );
 
-				if ( ! \is_wp_error( $response ) && isset( $response->data['html'] ) ) {
-					$html .= $response->data['html'];
+				if ( ! \is_wp_error( $response ) && isset( $response->data->html ) ) {
+					$html .= $response->data->html;
 				}
 			}
 

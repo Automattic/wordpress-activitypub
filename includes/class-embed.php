@@ -29,10 +29,10 @@ class Embed {
 	/**
 	 * Filter the oembed response to handle ActivityPub content
 	 *
-	 * @param mixed           $response The response data.
-	 * @param array           $handler  The handler used for the response.
-	 * @param WP_REST_Request $request  The request object.
-	 * @return mixed
+	 * @param \stdClass|WP_REST_Response $response The response data.
+	 * @param array                      $handler  The handler used for the response.
+	 * @param \WP_REST_Request           $request  The request object.
+	 * @return \stdClass|WP_REST_Response
 	 */
 	public static function filter_oembed_response( $response, $handler, $request ) {
 		// Only process oembed proxy requests.
@@ -41,9 +41,14 @@ class Embed {
 		}
 
 		// If we already have a valid response with HTML, return it.
-		if ( ! is_wp_error( $response ) && $response instanceof WP_REST_Response ) {
-			$data = $response->get_data();
-			if ( ! empty( $data['html'] ) ) {
+		if ( ! is_wp_error( $response ) ) {
+			if ( $response instanceof WP_REST_Response ) {
+				$data = $response->get_data();
+				if ( ! empty( $data['html'] ) ) {
+					return $response;
+				}
+			}
+			if ( $response instanceof \stdClass && ! empty( $response->html ) ) {
 				return $response;
 			}
 		}
@@ -124,7 +129,7 @@ class Embed {
 		// We embed CSS directly because this may be in an iframe.
 		printf( '<style>%s</style>', $css ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
-		$embed_response = array(
+		$embed_response = (object) array(
 			'version'       => '1.0',
 			'provider_name' => 'ActivityPub',
 			'provider_url'  => 'https://activitypub.rocks/',
