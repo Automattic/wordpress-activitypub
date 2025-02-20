@@ -18,6 +18,13 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	const { insertAfterBlock, removeBlock, updateBlockAttributes } = useDispatch( 'core/block-editor' );
 	const innerBlocks = useSelect( ( select ) => select( 'core/block-editor' ).getBlocks( clientId ), [ clientId ] );
 
+	useEffect(() => {
+		if ( attr.embedPost === null ) {
+			// No existing attributes means this is a new block.
+			setAttributes({ embedPost: ! attr.url });
+		}
+	}, []);
+
 	// Debounced URL validation check.
 	const checkUrl = useCallback( async ( urlToCheck ) => {
 		if ( ! urlToCheck || ! isUrl( urlToCheck ) ) {
@@ -120,7 +127,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 					/>
 				) }
 				{ attr.embedPost && url && (
-					<div 
+					<div
 						className="activitypub-embed-container"
 						contentEditable={ false }
 						onFocus={ ( e ) => e.stopPropagation() }

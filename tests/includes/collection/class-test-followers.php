@@ -29,6 +29,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			'inbox'             => 'https://example.org/users/username/inbox',
 			'name'              => 'username',
 			'preferredUsername' => 'username',
+			'endpoints'         => array( 'sharedInbox' => 'https://example.org/sharedInbox' ),
 		),
 		'jon@example.com'      => array(
 			'id'                => 'https://example.com/author/jon',
@@ -36,6 +37,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			'inbox'             => 'https://example.com/author/jon/inbox',
 			'name'              => 'jon',
 			'preferredUsername' => 'jon',
+			'endpoints'         => array( 'sharedInbox' => 'https://example.org/sharedInbox' ),
 		),
 		'doe@example.org'      => array(
 			'id'                => 'https://example.org/author/doe',
@@ -661,10 +663,10 @@ class Test_Followers extends \WP_UnitTestCase {
 			50,
 			0
 		);
-		$this->assertCount( 3, $inboxes, 'Should retrieve exactly 3 inboxes.' );
-		$this->assertContains( self::$actors['username@example.org']['inbox'], $inboxes, 'Should contain first inbox.' );
-		$this->assertContains( self::$actors['jon@example.com']['inbox'], $inboxes, 'Should contain second inbox.' );
-		$this->assertContains( self::$actors['doe@example.org']['inbox'], $inboxes, 'Should contain third inbox.' );
+		// username and jon have sharedInbox endpoints.
+		$this->assertCount( 2, $inboxes, 'Should retrieve exactly 3 inboxes.' );
+		$this->assertContains( self::$actors['username@example.org']['endpoints']['sharedInbox'], $inboxes, 'Should contain first inbox.' );
+		$this->assertContains( self::$actors['doe@example.org']['inbox'], $inboxes, 'Should contain second inbox.' );
 
 		// Test pagination.
 		$inboxes = Followers::get_inboxes_for_activity(
@@ -685,7 +687,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			50,
 			0
 		);
-		$this->assertCount( 4, $inboxes, 'Should include blog user followers in dual mode.' );
+		$this->assertCount( 3, $inboxes, 'Should include blog user followers in dual mode.' );
 		$this->assertContains( self::$actors['sally@example.org']['inbox'], $inboxes, 'Should contain blog user inbox.' );
 	}
 
