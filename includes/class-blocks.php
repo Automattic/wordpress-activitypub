@@ -339,6 +339,10 @@ class Blocks {
 	 * @return string The HTML to render.
 	 */
 	public static function render_reply_block( $attrs ) {
+		// Return early if no URL is provided.
+		if ( empty( $attrs['url'] ) ) {
+			return null;
+		}
 		$wrapper_attrs = get_block_wrapper_attributes(
 			array(
 				'aria-label' => __( 'Reply', 'activitypub' ),
@@ -347,26 +351,25 @@ class Blocks {
 		);
 		$html          = '<div ' . $wrapper_attrs . '>';
 
-		if ( ! empty( $attrs['url'] ) ) {
-			if ( isset( $attrs['embedPost'] ) && $attrs['embedPost'] ) {
-				$request = new \WP_REST_Request( 'GET', '/oembed/1.0/proxy' );
-				$request->set_param( 'url', $attrs['url'] );
-				$response = rest_get_server()->dispatch( $request );
+		if ( isset( $attrs['embedPost'] ) && $attrs['embedPost'] ) {
+			// We use the endpoint because it has our filters.
+			$request = new \WP_REST_Request( 'GET', '/oembed/1.0/proxy' );
+			$request->set_param( 'url', $attrs['url'] );
+			$response = rest_get_server()->dispatch( $request );
 
-				if ( ! \is_wp_error( $response ) && isset( $response->data->html ) ) {
-					$html .= $response->data->html;
-				}
+			if ( ! \is_wp_error( $response ) && isset( $response->data->html ) ) {
+				$html .= $response->data->html;
 			}
-
-			// Always add the microformats markup for the reply.
-			$html .= sprintf(
-				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
-				esc_url( $attrs['url'] ),
-				esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
-				// translators: %s is the URL of the post being replied to.
-				sprintf( __( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', esc_url( $attrs['url'] ) ) )
-			);
 		}
+
+		// Always add the microformats markup for the reply.
+		$html .= sprintf(
+			'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
+			esc_url( $attrs['url'] ),
+			esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
+			// translators: %s is the URL of the post being replied to.
+			sprintf( __( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', esc_url( $attrs['url'] ) ) )
+		);
 
 		$html .= '</div>';
 
