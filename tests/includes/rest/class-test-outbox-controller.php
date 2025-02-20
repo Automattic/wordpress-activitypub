@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Scheduler\Actor;
 use Activitypub\Collection\Outbox;
 use Activitypub\Rest\Outbox_Controller;
 
@@ -528,6 +529,9 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::get_items
 	 */
 	public function test_get_items_actor_type_filtering() {
+		\remove_action( 'add_option_activitypub_actor_mode', array( Actor::class, 'blog_user_update' ) );
+		\remove_action( 'update_option_activitypub_actor_mode', array( Actor::class, 'blog_user_update' ) );
+
 		$actor_mode = \get_option( 'activitypub_actor_mode' );
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
@@ -600,9 +604,9 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertSame( 'https://example.org/activity/1', $data['orderedItems'][0]['object']['id'] );
 
 		// Test blog outbox only returns blog actor type.
-		$request2  = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/0/outbox', ACTIVITYPUB_REST_NAMESPACE ) );
-		$response2 = \rest_get_server()->dispatch( $request2 );
-		$data2     = $response2->get_data();
+		$request  = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/0/outbox', ACTIVITYPUB_REST_NAMESPACE ) );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertSame( 1, (int) $data['totalItems'] );
@@ -612,6 +616,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		\wp_delete_user( $user_id );
 
 		\update_option( 'activitypub_actor_mode', $actor_mode );
+		\add_action( 'add_option_activitypub_actor_mode', array( Actor::class, 'blog_user_update' ) );
+		\add_action( 'update_option_activitypub_actor_mode', array( Actor::class, 'blog_user_update' ) );
 	}
 
 	/**
