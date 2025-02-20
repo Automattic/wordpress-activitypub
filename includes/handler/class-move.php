@@ -121,7 +121,7 @@ class Move {
 	/**
 	 * Extract the origin from the activity.
 	 *
-	 * The ActivityStreams spec devine the `origin` attribute as source
+	 * The ActivityStreams spec define the `origin` attribute as source
 	 * of the activity, but Mastodon uses the `actor` attribute as source
 	 * to move profiles.
 	 *
