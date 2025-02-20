@@ -42,8 +42,11 @@ class Move {
 		}
 
 		$target_object = Http::get_remote_object( $target );
+		$origin_object = Http::get_remote_object( $origin );
 
-		if ( \is_wp_error( $target_object ) || ! is_actor( $target_object ) ) {
+		$verified = self::verify_move( $target_object, $origin_object );
+
+		if ( ! $verified ) {
 			return;
 		}
 
@@ -138,5 +141,52 @@ class Move {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Verify the move.
+	 *
+	 * @param array $target_object The target object.
+	 * @param array $origin_object The origin object.
+	 *
+	 * @return bool True if the move is verified, false otherwise.
+	 */
+	private static function verify_move( $target_object, $origin_object ) {
+		// Check if both objects are valid.
+		if ( \is_wp_error( $target_object ) || \is_wp_error( $origin_object ) ) {
+			return false;
+		}
+
+		// Check if both objects are persons.
+		if ( $target_object['type'] !== 'Person' || $origin_object['type'] !== 'Person' ) {
+			return false;
+		}
+
+		// Check if the target and origin are not the same.
+		if ( $target_object['id'] === $origin_object['id'] ) {
+			return false;
+		}
+
+		// Check if the target has an alsoKnownAs <property class=""></property>
+		if ( empty( $target_object['also_known_as'] ) ) {
+			return false;
+		}
+
+		// Check if the origin is in the alsoKnownAs property of the target.
+		if ( ! in_array( $origin_object['id'], $target_object['also_known_as'], true ) ) {
+			return false;
+		}
+
+		// Check if the origin has a movedTo property.
+		if ( empty( $origin_object['movedTo'] ) ) {
+			return false;
+		}
+
+		// Check if the movedTo property of the origin is the target.
+		if ( $origin_object['movedTo'] !== $target_object['id'] ) {
+			return false;
+		}
+
+		return true;
 	}
 }
