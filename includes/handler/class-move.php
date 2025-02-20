@@ -10,7 +10,6 @@ namespace Activitypub\Handler;
 use Activitypub\Http;
 use Activitypub\Collection\Followers;
 
-use function Activitypub\is_actor;
 use function Activitypub\object_to_uri;
 
 /**
