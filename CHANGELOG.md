@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Undo API for Outbox items.
 * Metadata to New Follower E-Mail.
 * Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
+* Outbox Activity IDs can now be resolved when the ActivityPub `Accept header is used.
 
 ### Changed
 
@@ -26,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * The Outbox purging routine no longer is limited to deleting 5 items at a time.
 * Ellipses now display correctly in notification emails for Likes and Reposts.
 * Send Update-Activity when "Actor-Mode" is changed.
+* `Actor` validation in several REST API endpoints.
 
 ## [5.2.0] - 2025-02-13
 
