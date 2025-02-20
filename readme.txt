@@ -138,6 +138,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: Setting to adjust the number of days Outbox items are kept before being purged.
 * Added: Support incoming `Move` activities and ensure that followed persons are updated accordingly.
 * Added: Show metadata in the New Follower E-Mail.
+* Added: Labels to add context to visibility settings in the block editor.
 * Changed: Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
 * Changed: Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
 * Changed: Post bulk edits no longer create Outbox items, unless author or post status change.

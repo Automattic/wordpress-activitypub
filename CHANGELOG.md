@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Metadata to New Follower E-Mail.
 * Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
 * Support for incoming `Move` activities and ensure that followed persons are updated accordingly.
+* Labels to add context to visibility settings in the block editor.
 
 ### Changed
 
