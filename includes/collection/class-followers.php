@@ -337,54 +337,17 @@ class Followers {
 	 * @return array The list of Inboxes.
 	 */
 	public static function get_inboxes_for_activity( $json, $actor_id, $batch_size = 50, $offset = 0 ) {
-		$args = array(
-			'post_type'      => self::POST_TYPE,
-			'posts_per_page' => $batch_size,
-			'offset'         => $offset,
-			'fields'         => 'ids',
-
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'     => array(
-				'relation' => 'AND',
-				array(
-					'key'     => '_activitypub_inbox',
-					'compare' => 'EXISTS',
-				),
-				array(
-					'key'     => '_activitypub_inbox',
-					'value'   => '',
-					'compare' => '!=',
-				),
-			),
-		);
+		$inboxes = self::get_inboxes( $actor_id );
 
 		if ( self::maybe_add_inboxes_of_blog_user( $json, $actor_id ) ) {
-			$args['meta_query'][] = array(
-				'relation' => 'OR',
-				array(
-					'key'   => '_activitypub_user_id',
-					'value' => Actors::BLOG_USER_ID,
-				),
-				array(
-					'key'   => '_activitypub_user_id',
-					'value' => $actor_id,
-				),
-			);
-		} else {
-			$args['meta_query'][] = array(
-				'key'   => '_activitypub_user_id',
-				'value' => $actor_id,
-			);
+			$inboxes = array_fill_keys( $inboxes, 1 );
+			foreach ( self::get_inboxes( Actors::BLOG_USER_ID ) as $inbox ) {
+				$inboxes[ $inbox ] = 1;
+			}
+			$inboxes = array_keys( $inboxes );
 		}
 
-		$followers = get_posts( $args );
-		$inboxes   = array();
-
-		foreach ( $followers as $id ) {
-			$inboxes[] = get_post_meta( $id, '_activitypub_inbox', true );
-		}
-
-		return $inboxes;
+		return array_slice( $inboxes, $offset, $batch_size );
 	}
 
 	/**

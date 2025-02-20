@@ -1,6 +1,6 @@
 import { PluginDocumentSettingPanel, PluginPreviewMenuItem } from '@wordpress/editor';
 import { registerPlugin } from '@wordpress/plugins';
-import { TextControl, RadioControl, CheckboxControl, __experimentalText as Text } from '@wordpress/components';
+import { TextControl, RadioControl, CheckboxControl, __experimentalText as Text, Tooltip } from '@wordpress/components';
 import { Icon, globe, people, external } from '@wordpress/icons';
 import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
@@ -36,11 +36,13 @@ const EditorPlugin = () => {
 		alignItems: "center"
 	}
 
-	const labelWithIcon = ( text, icon ) => (
-		<Text style={labelStyling}>
-			<Icon icon={ icon } />
-			{text}
-		</Text>
+	const enhancedLabel = ( icon, text, tooltip ) => (
+		<Tooltip text={ tooltip }>
+			<Text style={ labelStyling }>
+				<Icon icon={ icon } />
+				{text}
+			</Text>
+		</Tooltip>
 	);
 
 	// Don't show when editing sync blocks.
@@ -68,9 +70,30 @@ const EditorPlugin = () => {
 				help={ __( 'This adjusts the visibility of a post in the fediverse, but note that it won\'t affect how the post appears on the blog.', 'activitypub' ) }
 				selected={ meta?.activitypub_content_visibility || 'public' }
 				options={ [
-					{ label: labelWithIcon( __( 'Public', 'activitypub' ), globe ), value: 'public' },
-					{ label: labelWithIcon( __( 'Quiet public', 'activitypub' ), people ), value: 'quiet_public' },
-					{ label: labelWithIcon( __( 'Do not federate', 'activitypub' ), notAllowed ), value: 'local' },
+					{
+						label: enhancedLabel(
+							globe,
+							__( 'Public', 'activitypub' ),
+							__( 'Post will be visible to everyone and appear in public timelines.', 'activitypub' )
+						),
+						value: 'public'
+					},
+					{
+						label: enhancedLabel(
+							people,
+							__( 'Quiet public', 'activitypub' ),
+							__( 'Post will be visible to everyone but will not appear in public timelines.', 'activitypub' )
+						),
+						value: 'quiet_public'
+					},
+					{
+						label: enhancedLabel(
+							notAllowed,
+							__( 'Do not federate', 'activitypub' ),
+							__( 'Post will not be shared to the Fediverse.', 'activitypub' )
+						),
+						value: 'local'
+					},
 				] }
 				onChange={ ( value ) => {
 					setMeta( { ...meta, activitypub_content_visibility: value } );

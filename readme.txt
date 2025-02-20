@@ -131,14 +131,17 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Added: A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
 * Added: A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
 * Added: Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
 * Added: Undo API for Outbox items.
 * Added: Setting to adjust the number of days Outbox items are kept before being purged.
 * Added: Failed Follower notifications for Outbox items now get retried for two more times.
 * Added: Show metadata in the New Follower E-Mail.
+* Added: Labels to add context to visibility settings in the block editor.
 * Changed: Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
 * Changed: Post bulk edits no longer create Outbox items, unless author or post status change.
+* Changed: Outbox processing accounts for shared inboxes again.
 * Fixed: The Outbox purging routine no longer is limited to deleting 5 items at a time.
 * Fixed: An issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
 * Fixed: Ellipses now display correctly in notification emails for Likes and Reposts.
