@@ -158,7 +158,7 @@ class Move {
 		}
 
 		// Check if both objects are persons.
-		if ( $target_object['type'] !== 'Person' || $origin_object['type'] !== 'Person' ) {
+		if ( 'Person' !== $target_object['type'] || 'Person' !== $origin_object['type'] ) {
 			return false;
 		}
 
@@ -167,7 +167,7 @@ class Move {
 			return false;
 		}
 
-		// Check if the target has an alsoKnownAs <property class=""></property>
+		// Check if the target has an alsoKnownAs property.
 		if ( empty( $target_object['also_known_as'] ) ) {
 			return false;
 		}
