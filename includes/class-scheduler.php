@@ -31,12 +31,15 @@ class Scheduler {
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
 		\add_action( 'activitypub_cleanup_followers', array( self::class, 'cleanup_followers' ) );
 
+		// Event callbacks.
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_activity_for_federation' ) );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_announce_activity' ), 10, 4 );
+
+		\add_action( 'update_option_activitypub_outbox_purge_days', array( self::class, 'handle_outbox_purge_days_update' ), 10, 2 );
 	}
 
 	/**
@@ -214,7 +217,7 @@ class Scheduler {
 			return;
 		}
 
-		$days     = 180; // TODO: Replace with a setting.
+		$days     = (int) get_option( 'activitypub_outbox_purge_days', 180 );
 		$timezone = new \DateTimeZone( 'UTC' );
 		$date     = new \DateTime( 'now', $timezone );
 
@@ -225,6 +228,7 @@ class Scheduler {
 				'post_type'   => Outbox::POST_TYPE,
 				'post_status' => 'any',
 				'fields'      => 'ids',
+				'numberposts' => -1,
 				'date_query'  => array(
 					array(
 						'before' => $date->format( 'Y-m-d' ),
@@ -235,6 +239,20 @@ class Scheduler {
 
 		foreach ( $post_ids as $post_id ) {
 			\wp_delete_post( $post_id, true );
+		}
+	}
+
+	/**
+	 * Update schedules when outbox purge days settings change.
+	 *
+	 * @param int $old_value The old value.
+	 * @param int $value     The new value.
+	 */
+	public static function handle_outbox_purge_days_update( $old_value, $value ) {
+		if ( 0 === (int) $value ) {
+			wp_clear_scheduled_hook( 'activitypub_outbox_purge' );
+		} elseif ( ! wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
+			wp_schedule_event( time(), 'daily', 'activitypub_outbox_purge' );
 		}
 	}
 

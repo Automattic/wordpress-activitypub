@@ -105,7 +105,7 @@ class Follow {
 		);
 
 		// Send response only to the Follower.
-		$activity_object['to'] = $actor;
+		$activity_object['to'] = array( $actor );
 
 		add_to_outbox( $activity_object, 'Accept', $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 	}
