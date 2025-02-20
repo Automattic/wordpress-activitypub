@@ -9,28 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
-* Undo API for Outbox items.
+* A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
+* A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
 * Setting to adjust the number of days Outbox items are kept before being purged.
+* Undo API for Outbox items.
+* Metadata to New Follower E-Mail.
+* Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
 * Support for incoming `Move` activities and ensure that followed persons are updated accordingly.
 
 ### Changed
 
-* Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
-* A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
-* Setting to adjust the number of days Outbox items are kept before being purged.
-* Metadata to New Follower E-Mail.
-
-### Changed
-
 * Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
+* Post bulk edits no longer create Outbox items, unless author or post status change.
+* Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
 
 ### Fixed
 
 * The Outbox purging routine no longer is limited to deleting 5 items at a time.
-* Fixed an issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
-* Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
 * Ellipses now display correctly in notification emails for Likes and Reposts.
+* Send Update-Activity when "Actor-Mode" is changed.
 
 ## [5.2.0] - 2025-02-13
 
@@ -40,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Outbox processed events get logged in Stream and show any errors returned from inboxes.
 * Outbox items older than 6 months will be purged to avoid performance issues.
 * REST API endpoints for likes and shares.
+
+### Fixed
+
+* Fixed an issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
 
 ### Changed
 
