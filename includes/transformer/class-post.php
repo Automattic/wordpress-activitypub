@@ -544,6 +544,10 @@ class Post extends Base {
 	 * @return string|null The in-reply-to URL of the post.
 	 */
 	protected function get_in_reply_to() {
+		if ( ! site_supports_blocks() ) {
+			return null;
+		}
+
 		$blocks = \parse_blocks( $this->item->post_content );
 
 		foreach ( $blocks as $block ) {

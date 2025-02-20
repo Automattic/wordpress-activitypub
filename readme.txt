@@ -140,6 +140,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: Labels to add context to visibility settings in the block editor.
 * Changed: Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
 * Changed: Post bulk edits no longer create Outbox items, unless author or post status change.
+* Changed: Outbox processing accounts for shared inboxes again.
 * Fixed: The Outbox purging routine no longer is limited to deleting 5 items at a time.
 * Fixed: An issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
 * Fixed: Ellipses now display correctly in notification emails for Likes and Reposts.
