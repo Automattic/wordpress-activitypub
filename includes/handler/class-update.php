@@ -7,7 +7,6 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Model\Follower;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Interactions;
 
