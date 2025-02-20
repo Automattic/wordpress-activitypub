@@ -98,7 +98,7 @@ class Move {
 	/**
 	 * Extract the target from the activity.
 	 *
-	 * The ActivityStreams spec devine the `target` attribute as the
+	 * The ActivityStreams spec define the `target` attribute as the
 	 * destination of the activity, but Mastodon uses the `object`
 	 * attribute to move profiles.
 	 *
