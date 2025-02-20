@@ -340,8 +340,11 @@ class Followers {
 		$inboxes = self::get_inboxes( $actor_id );
 
 		if ( self::maybe_add_inboxes_of_blog_user( $json, $actor_id ) ) {
-			$inboxes = array_merge( $inboxes, self::get_inboxes( Actors::BLOG_USER_ID ) );
-			$inboxes = array_unique( $inboxes );
+			$inboxes = array_fill_keys( $inboxes, 1 );
+			foreach ( self::get_inboxes( Actors::BLOG_USER_ID ) as $inbox ) {
+				$inboxes[ $inbox ] = 1;
+			}
+			$inboxes = array_keys( $inboxes );
 		}
 
 		return array_slice( $inboxes, $offset, $batch_size );
