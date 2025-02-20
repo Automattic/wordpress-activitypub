@@ -23,7 +23,7 @@
     },
     "embedPost": {
       "type": "boolean",
-      "default": true
+      "default": null
     }
   },
   "allowedBlocks": [
