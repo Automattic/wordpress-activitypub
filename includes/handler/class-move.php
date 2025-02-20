@@ -17,7 +17,8 @@ use function Activitypub\object_to_uri;
  * Handle Move requests.
  *
  * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-move
- * @see
+ * @see https://docs.joinmastodon.org/user/moving/
+ * @see https://docs.joinmastodon.org/spec/activitypub/#Move
  */
 class Move {
 	/**
@@ -57,7 +58,12 @@ class Move {
 			$origin_id = $origin_follower->upsert();
 
 			global $wpdb;
-			$wpdb->update( $wpdb->posts, array( 'guid' => sanitize_url( $target ) ), array( 'ID' => sanitize_key( $origin_id ) ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$wpdb->update(
+				$wpdb->posts,
+				array( 'guid' => sanitize_url( $target ) ),
+				array( 'ID' => sanitize_key( $origin_id ) )
+			);
 
 			// Clear the cache.
 			wp_cache_delete( $origin_id, 'posts' );
@@ -73,8 +79,8 @@ class Move {
 		// If the new target is followed, and the origin is followed,
 		// move users and delete the origin follower.
 		if ( $target_follower && $origin_follower ) {
-			$origin_users = \get_post_meta( $origin_follower->get__id(), '_activitypub_user_id' );
-			$target_users = \get_post_meta( $target_follower->get__id(), '_activitypub_user_id' );
+			$origin_users = \get_post_meta( $origin_follower->get__id(), '_activitypub_user_id', false );
+			$target_users = \get_post_meta( $target_follower->get__id(), '_activitypub_user_id', false );
 
 			// Get all user ids from $origin_users that are not in $target_users.
 			$users = \array_diff( $origin_users, $target_users );

@@ -199,7 +199,7 @@ class Test_Move extends \WP_UnitTestCase {
 		Move::handle_move( $activity );
 
 		// Check if the user IDs were moved correctly.
-		$target_users = \get_post_meta( $target_id, '_activitypub_user_id' );
+		$target_users = \get_post_meta( $target_id, '_activitypub_user_id', false );
 
 		$this->assertContains( (string) $this->user_id, $target_users );
 		$this->assertContains( (string) $this->user_id_2, $target_users );
