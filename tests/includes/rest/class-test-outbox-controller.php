@@ -78,10 +78,15 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::validate_user_id
 	 */
 	public function test_validate_user_id() {
+		$actor_mode = \get_option( 'activitypub_actor_mode' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
 		$controller = new Outbox_Controller();
 		$this->assertTrue( $controller->validate_user_id( 0 ) );
 		$this->assertTrue( $controller->validate_user_id( '1' ) );
-		$this->assertWPError( $controller->validate_user_id( 'user-1' ) );
+		$this->assertFalse( $controller->validate_user_id( 'user-1' ) );
+
+		\update_option( 'activitypub_actor_mode', $actor_mode );
 	}
 
 	/**
@@ -523,6 +528,9 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::get_items
 	 */
 	public function test_get_items_actor_type_filtering() {
+		$actor_mode = \get_option( 'activitypub_actor_mode' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 
 		// Create a post with user actor type.
@@ -602,6 +610,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		\wp_delete_post( $user_post_id, true );
 		\wp_delete_post( $blog_post_id, true );
 		\wp_delete_user( $user_id );
+
+		\update_option( 'activitypub_actor_mode', $actor_mode );
 	}
 
 	/**

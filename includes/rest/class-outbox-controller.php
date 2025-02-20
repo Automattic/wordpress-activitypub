@@ -84,7 +84,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	public function validate_user_id( $user_id ) {
 		$user = Actors::get_by_various( $user_id );
 		if ( \is_wp_error( $user ) ) {
-			return $user;
+			return false;
 		}
 
 		return true;
@@ -232,8 +232,8 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @param \WP_REST_Request $request Request object.
 	 * @return array Response object on success, or WP_Error object on failure.
 	 */
-	public function prepare_item_for_response( $item, $request ) {
-		$activity = Outbox::get_as_activity( $item->ID );
+	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$activity = Outbox::get_activity( $item->ID );
 
 		return $activity->to_array( false );
 	}

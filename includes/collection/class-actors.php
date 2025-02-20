@@ -260,13 +260,11 @@ class Actors {
 			filter_var( $id, FILTER_VALIDATE_EMAIL )
 		) {
 			$user = self::get_by_resource( $id );
+		} else {
+			$user = self::get_by_username( $id );
 		}
 
-		if ( $user && ! is_wp_error( $user ) ) {
-			return $user;
-		}
-
-		return self::get_by_username( $id );
+		return $user;
 	}
 
 	/**
