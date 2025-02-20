@@ -538,7 +538,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			array(
 				'post_author'  => $user_id,
 				'post_type'    => Outbox::POST_TYPE,
-				'post_status'  => 'draft',
+				'post_status'  => 'pending',
 				'post_title'   => 'https://example.org/activity/1',
 				'post_content' => wp_json_encode(
 					array(
@@ -566,7 +566,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 			array(
 				'post_author'  => 0,
 				'post_type'    => Outbox::POST_TYPE,
-				'post_status'  => 'draft',
+				'post_status'  => 'pending',
 				'post_title'   => 'https://example.org/activity/2',
 				'post_content' => wp_json_encode(
 					array(
@@ -600,9 +600,9 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertSame( 'https://example.org/activity/1', $data['orderedItems'][0]['object']['id'] );
 
 		// Test blog outbox only returns blog actor type.
-		$request  = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/0/outbox', ACTIVITYPUB_REST_NAMESPACE ) );
-		$response = \rest_get_server()->dispatch( $request );
-		$data     = $response->get_data();
+		$request2  = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/0/outbox', ACTIVITYPUB_REST_NAMESPACE ) );
+		$response2 = \rest_get_server()->dispatch( $request2 );
+		$data2     = $response2->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertSame( 1, (int) $data['totalItems'] );
