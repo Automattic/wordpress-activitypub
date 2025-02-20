@@ -57,21 +57,21 @@ class Test_Move extends \WP_UnitTestCase {
 
 		// Mock the HTTP response for the origin object.
 		$origin_object = array(
-			'type'  => 'Person',
-			'id'    => $origin,
-			'url'   => $origin,
-			'name'  => 'Old Profile',
-			'inbox' => 'https://example.com/old-profile/inbox',
+			'type'    => 'Person',
+			'id'      => $origin,
+			'url'     => $origin,
+			'name'    => 'Old Profile',
+			'inbox'   => 'https://example.com/old-profile/inbox',
 			'movedTo' => $target,
 		);
 
 		// Mock the HTTP response for the target object.
 		$target_object = array(
-			'type'  => 'Person',
-			'id'    => $target,
-			'url'   => $target,
-			'name'  => 'New Profile',
-			'inbox' => 'https://example.com/new-profile/inbox',
+			'type'          => 'Person',
+			'id'            => $target,
+			'url'           => $target,
+			'name'          => 'New Profile',
+			'inbox'         => 'https://example.com/new-profile/inbox',
 			'also_known_as' => array(
 				$origin,
 			),
@@ -171,21 +171,21 @@ class Test_Move extends \WP_UnitTestCase {
 
 		// Mock the HTTP response for the origin object.
 		$origin_object = array(
-			'type'  => 'Person',
-			'id'    => $origin,
-			'url'   => $origin,
-			'name'  => 'Old Profile',
-			'inbox' => 'https://example.com/old-profile/inbox',
+			'type'    => 'Person',
+			'id'      => $origin,
+			'url'     => $origin,
+			'name'    => 'Old Profile',
+			'inbox'   => 'https://example.com/old-profile/inbox',
 			'movedTo' => $target,
 		);
 
 		// Mock the HTTP response for the target object.
 		$target_object = array(
-			'type'  => 'Person',
-			'id'    => $target,
-			'url'   => $target,
-			'name'  => 'New Profile',
-			'inbox' => 'https://example.com/new-profile/inbox',
+			'type'          => 'Person',
+			'id'            => $target,
+			'url'           => $target,
+			'name'          => 'New Profile',
+			'inbox'         => 'https://example.com/new-profile/inbox',
 			'also_known_as' => array(
 				$origin,
 			),
