@@ -227,7 +227,7 @@ class Dispatcher {
 	 */
 	private static function schedule_retry( $retries, $outbox_item_id, $attempt = 1 ) {
 		\wp_schedule_single_event(
-			\time() + ( $attempt * 5 * MINUTE_IN_SECONDS ),
+			\time() + ( $attempt * $attempt * HOUR_IN_SECONDS ),
 			'activitypub_async_batch',
 			array(
 				array( self::class, 'retry_send_to_followers' ),
