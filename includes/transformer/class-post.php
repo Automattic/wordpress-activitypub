@@ -1148,4 +1148,20 @@ class Post extends Base {
 			'totalItems' => Interactions::count_by_type( $this->item->ID, 'repost' ),
 		);
 	}
+
+	/**
+	 * Get the preview of the post.
+	 *
+	 * @return array|null The preview of the post or null if the post is not an Article.
+	 */
+	public function get_preview() {
+		if ( 'Article' !== $this->get_type() ) {
+			return null;
+		}
+
+		return array(
+			'type'    => 'Note',
+			'content' => $this->get_summary(),
+		);
+	}
 }
