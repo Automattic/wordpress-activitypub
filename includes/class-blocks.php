@@ -339,22 +339,26 @@ class Blocks {
 	 * @return string The HTML to render.
 	 */
 	public static function render_reply_block( $attrs ) {
-		$html = '';
+		$wrapper_attrs = get_block_wrapper_attributes(
+			array(
+				'aria-label' => __( 'Reply', 'activitypub' ),
+				'class'      => 'activitypub-reply-block',
+			)
+		);
+		$html          = '<div ' . $wrapper_attrs . '>';
 
 		if ( ! empty( $attrs['url'] ) ) {
 			if ( isset( $attrs['embedPost'] ) && $attrs['embedPost'] ) {
-				$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/embed' );
+				$request = new \WP_REST_Request( 'GET', '/oembed/1.0/proxy' );
 				$request->set_param( 'url', $attrs['url'] );
-
-				$controller = new Rest\Embed_Controller();
-				$response   = $controller->get_item( $request );
+				$response = rest_get_server()->dispatch( $request );
 
 				if ( ! \is_wp_error( $response ) && isset( $response->data['html'] ) ) {
 					$html .= $response->data['html'];
 				}
 			}
 
-			// Always add the microformats markup for the reply
+			// Always add the microformats markup for the reply.
 			$html .= sprintf(
 				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
 				esc_url( $attrs['url'] ),
@@ -363,6 +367,8 @@ class Blocks {
 				sprintf( __( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', esc_url( $attrs['url'] ) ) )
 			);
 		}
+
+		$html .= '</div>';
 
 		/**
 		 * Filter the reply block.

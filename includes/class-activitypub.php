@@ -48,6 +48,7 @@ class Activitypub {
 
 		if ( site_supports_blocks() ) {
 			\add_action( 'tool_box', array( self::class, 'tool_box' ) );
+			Embed::init();
 		}
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
