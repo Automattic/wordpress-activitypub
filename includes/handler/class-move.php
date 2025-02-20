@@ -49,8 +49,8 @@ class Move {
 			return;
 		}
 
-		$target_follower = Followers::get_follower_by_actor( $target, false );
-		$origin_follower = Followers::get_follower_by_actor( $origin, false );
+		$target_follower = Followers::get_follower_by_actor( $target );
+		$origin_follower = Followers::get_follower_by_actor( $origin );
 
 		// If the new target is not followed, but the origin is,
 		// update the origin follower to the new target.
