@@ -214,17 +214,17 @@ class Activitypub {
 			return false;
 		}
 
-		// Check if Outbox Activity is public
+		// Check if Outbox Activity is public.
 		$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
-		if ( ! in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ) ) ) {
+		if ( ! in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ), true ) ) {
 			return false;
 		}
 
 		$activity_types = apply_filters( 'rest_activitypub_outbox_activity_types', array( 'Announce', 'Create', 'Like', 'Update' ) );
 		$activity_type  = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
 
-		if ( ! in_array( $activity_type, $activity_types ) ) {
+		if ( ! in_array( $activity_type, $activity_types, true ) ) {
 			return false;
 		}
 

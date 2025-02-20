@@ -16,6 +16,7 @@ $activity = \Activitypub\Collection\Outbox::get_activity( \get_query_var( 'p' ) 
 
 \header( 'Content-Type: application/activity+json' );
 
+// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 echo $activity->to_json();
 
 /**
