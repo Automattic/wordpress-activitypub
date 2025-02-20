@@ -130,15 +130,15 @@ class Activitypub {
 			return $template;
 		}
 
-		$template = self::maybe_load_outbox_template();
-		if ( $template ) {
-			return $template;
-		}
-
 		self::add_headers();
 
 		if ( ! is_activitypub_request() ) {
 			return $template;
+		}
+
+		$outbox_template = self::maybe_load_outbox_template();
+		if ( $outbox_template ) {
+			return $outbox_template;
 		}
 
 		$activitypub_template = false;
