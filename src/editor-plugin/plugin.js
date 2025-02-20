@@ -36,7 +36,7 @@ const EditorPlugin = () => {
 		alignItems: "center"
 	}
 
-	const enhancedLabel = ( text, icon, tooltip ) => (
+	const enhancedLabel = ( icon, text, tooltip ) => (
 		<Tooltip text={ tooltip }>
 			<Text style={ labelStyling }>
 				<Icon icon={ icon } />
@@ -72,24 +72,24 @@ const EditorPlugin = () => {
 				options={ [
 					{
 						label: enhancedLabel(
-							__( 'Public', 'activitypub' ),
 							globe,
+							__( 'Public', 'activitypub' ),
 							__( 'Post will be visible to everyone and appear in public timelines.', 'activitypub' )
 						),
 						value: 'public'
 					},
 					{
 						label: enhancedLabel(
-							__( 'Quiet public', 'activitypub' ),
 							people,
+							__( 'Quiet public', 'activitypub' ),
 							__( 'Post will be visible to everyone but will not appear in public timelines.', 'activitypub' )
 						),
 						value: 'quiet_public'
 					},
 					{
 						label: enhancedLabel(
-							__( 'Do not federate', 'activitypub' ),
 							notAllowed,
+							__( 'Do not federate', 'activitypub' ),
 							__( 'Post will not be shared to the Fediverse.', 'activitypub' )
 						),
 						value: 'local'
