@@ -41,11 +41,13 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 			} );
 			const isValid = !! response?.html;
 			setIsValidEmbed( isValid );
+			setAttributes( { embedPost: isValid } );
 			isValid
 				? setHelpText( successHelpText )
 				: setHelpText( errorHelpText );
 		} catch ( error ) {
 			setIsValidEmbed( false );
+			setAttributes( { embedPost: false } );
 			setHelpText( errorHelpText );
 		} finally {
 			setIsCheckingEmbed( false );
@@ -109,8 +111,8 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 						label={ __( 'Embed Post', 'activitypub' ) }
 						checked={ attr.embedPost }
 						onChange={ onEmbedPostChange }
-						disabled={ ! isValidEmbed }
-						help={ ! isValidEmbed && url ? __( 'Embedding is not available for this URL.', 'activitypub' ) : '' }
+					disabled={ ! isValidEmbed }
+					help={ ! isValidEmbed && url ? __( 'Embedding is not available for this URL.', 'activitypub' ) : '' }
 					/>
 				</PanelBody>
 			</InspectorControls>
@@ -126,18 +128,18 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 						help={ helpText }
 					/>
 				) }
-				{ attr.embedPost && url && (
+				{ isCheckingEmbed && (
+					<div className="activitypub-embed-container activitypub-embed-loading">
+						<Spinner />
+					</div>
+				) }
+				{ isValidEmbed && attr.embedPost && url && (
 					<div
 						className="activitypub-embed-container"
 						contentEditable={ false }
 						onFocus={ ( e ) => e.stopPropagation() }
 						onClick={ ( e ) => e.stopPropagation() }
 					>
-						{ isCheckingEmbed && (
-							<div className="activitypub-embed-loading">
-								<Spinner />
-							</div>
-						) }
 						{ isValidEmbed && ! isCheckingEmbed && (
 							<div className="activitypub-embed-preview">
 								<InnerBlocks
