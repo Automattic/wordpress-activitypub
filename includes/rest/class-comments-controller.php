@@ -1,100 +1,156 @@
 <?php
 /**
- * Comment REST-Class file.
+ * Comments_Controller file.
  *
  * @package Activitypub
  */
 
 namespace Activitypub\Rest;
 
-use WP_Error;
-use WP_REST_Server;
-use WP_REST_Request;
-use WP_REST_Response;
-use Activitypub\Comment as Comment_Utils;
-use Activitypub\Webfinger as Webfinger_Utils;
+use Activitypub\Comment;
+use Activitypub\Webfinger;
 
 /**
- * ActivityPub Followers REST-Class.
+ * Comments_Controller class.
  *
  * @author Matthias Pfefferle
  *
  * @see https://www.w3.org/TR/activitypub/#followers
  */
-class Comment {
+class Comments_Controller extends \WP_REST_Controller {
 	/**
-	 * Initialize the class, registering WordPress hooks.
+	 * The namespace of this controller's route.
+	 *
+	 * @var string
 	 */
-	public static function init() {
-		self::register_routes();
-	}
+	protected $namespace = ACTIVITYPUB_REST_NAMESPACE;
+
+	/**
+	 * The base of this controller's route.
+	 *
+	 * @var string
+	 */
+	protected $rest_base = 'comments/(?P<comment_id>\d+)';
 
 	/**
 	 * Register routes.
 	 */
-	public static function register_routes() {
+	public function register_routes() {
 		\register_rest_route(
-			ACTIVITYPUB_REST_NAMESPACE,
-			'/comments/(?P<comment_id>\d+)/remote-reply',
+			$this->namespace,
+			'/' . $this->rest_base . '/remote-reply',
 			array(
+				'args' => array(
+					'comment_id' => array(
+						'description'       => 'The ID of the comment.',
+						'type'              => 'integer',
+						'required'          => true,
+						'validate_callback' => array( $this, 'validate_comment' ),
+					),
+				),
 				array(
-					'methods'             => WP_REST_Server::READABLE,
-					'callback'            => array( self::class, 'remote_reply_get' ),
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_item' ),
 					'permission_callback' => '__return_true',
 					'args'                => array(
 						'resource' => array(
-							'required'          => true,
-							'sanitize_callback' => 'sanitize_text_field',
+							'description' => 'The resource to reply to.',
+							'type'        => 'string',
+							'required'    => true,
 						),
 					),
+					'schema'              => array( $this, 'get_public_item_schema' ),
 				),
 			)
 		);
 	}
 
 	/**
-	 * Endpoint for remote follow UI/Block.
+	 * Validates if a comment can be replied to remotely.
 	 *
-	 * @param WP_REST_Request $request The request object.
+	 * @param mixed $param The parameter to validate.
 	 *
-	 * @return array|string|WP_Error|WP_REST_Response The URL to the remote follow page or an error.
+	 * @return true|\WP_Error True if the comment can be replied to, WP_Error otherwise.
 	 */
-	public static function remote_reply_get( WP_REST_Request $request ) {
+	public function validate_comment( $param ) {
+		$comment = \get_comment( $param );
+
+		if ( ! $comment ) {
+			return new \WP_Error( 'activitypub_comment_not_found', \__( 'Comment not found', 'activitypub' ), array( 'status' => 404 ) );
+		}
+
+		$is_local = Comment::is_local( $comment );
+
+		if ( $is_local ) {
+			return new \WP_Error( 'activitypub_local_only_comment', \__( 'Comment is local only', 'activitypub' ), array( 'status' => 403 ) );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Retrieves the remote reply URL for a comment.
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return \WP_REST_Response|\WP_Error Response object or WP_Error object.
+	 */
+	public function get_item( $request ) {
 		$resource   = $request->get_param( 'resource' );
 		$comment_id = $request->get_param( 'comment_id' );
 
-		$comment = get_comment( $comment_id );
+		$template = Webfinger::get_remote_follow_endpoint( $resource );
 
-		if ( ! $comment ) {
-			return new WP_Error( 'activitypub_comment_not_found', __( 'Comment not found', 'activitypub' ), array( 'status' => 404 ) );
-		}
-
-		$is_local = Comment_Utils::is_local( $comment );
-
-		if ( $is_local ) {
-			return new WP_Error( 'activitypub_local_only_comment', __( 'Comment is local only', 'activitypub' ), array( 'status' => 403 ) );
-		}
-
-		$template = Webfinger_Utils::get_remote_follow_endpoint( $resource );
-
-		if ( is_wp_error( $template ) ) {
+		if ( \is_wp_error( $template ) ) {
 			return $template;
 		}
 
-		$resource = Comment_Utils::get_source_id( $comment_id );
+		$resource = Comment::get_source_id( $comment_id );
 
 		if ( ! $resource ) {
-			$resource = Comment_Utils::generate_id( $comment );
+			$resource = Comment::generate_id( \get_comment( $comment_id ) );
 		}
 
-		$url = str_replace( '{uri}', $resource, $template );
+		$url = \str_replace( '{uri}', $resource, $template );
 
-		return new WP_REST_Response(
+		return \rest_ensure_response(
 			array(
 				'url'      => $url,
 				'template' => $template,
-			),
-			200
+			)
 		);
+	}
+
+	/**
+	 * Retrieves the schema for the remote reply endpoint.
+	 *
+	 * @return array Schema data.
+	 */
+	public function get_public_item_schema() {
+		if ( $this->schema ) {
+			return $this->add_additional_fields_schema( $this->schema );
+		}
+
+		$this->schema = array(
+			'$schema'    => 'http://json-schema.org/draft-04/schema#',
+			'title'      => 'remote-reply',
+			'type'       => 'object',
+			'properties' => array(
+				'url'      => array(
+					'description' => 'The URL to the remote reply page.',
+					'type'        => 'string',
+					'format'      => 'uri',
+					'required'    => true,
+				),
+				'template' => array(
+					'description' => 'The template URL for remote replies.',
+					'type'        => 'string',
+					'format'      => 'uri',
+					'required'    => true,
+				),
+			),
+		);
+
+		return $this->add_additional_fields_schema( $this->schema );
 	}
 }
