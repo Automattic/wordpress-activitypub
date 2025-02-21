@@ -83,9 +83,14 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 * @covers ::get_items
 	 */
 	public function test_get_items() {
+		$actor_mode = \get_option( 'activitypub_actor_mode' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
 		$request->set_param( 'context', 'simple' );
 		$response = rest_get_server()->dispatch( $request );
+
+		\update_option( 'activitypub_actor_mode', $actor_mode );
 
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertStringContainsString( 'application/activity+json', $response->get_headers()['Content-Type'] );
@@ -114,9 +119,14 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 * @covers ::get_items
 	 */
 	public function test_get_items_full_context() {
+		$actor_mode = \get_option( 'activitypub_actor_mode' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
 		$request->set_param( 'context', 'full' );
 		$response = rest_get_server()->dispatch( $request );
+
+		\update_option( 'activitypub_actor_mode', $actor_mode );
 
 		$data = $response->get_data();
 		$this->assertIsArray( $data['orderedItems'] );
@@ -133,10 +143,15 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 * @covers ::get_items
 	 */
 	public function test_get_items_pagination() {
+		$actor_mode = \get_option( 'activitypub_actor_mode' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
 		$request->set_param( 'page', 2 );
 		$request->set_param( 'per_page', 10 );
 		$response = rest_get_server()->dispatch( $request );
+
+		\update_option( 'activitypub_actor_mode', $actor_mode );
 
 		$data = $response->get_data();
 

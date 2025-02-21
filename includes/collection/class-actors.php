@@ -18,6 +18,7 @@ use function Activitypub\normalize_url;
 use function Activitypub\normalize_host;
 use function Activitypub\url_to_authorid;
 use function Activitypub\is_user_disabled;
+use function Activitypub\is_user_type_disabled;
 
 /**
  * Actors collection.
@@ -260,13 +261,11 @@ class Actors {
 			filter_var( $id, FILTER_VALIDATE_EMAIL )
 		) {
 			$user = self::get_by_resource( $id );
+		} else {
+			$user = self::get_by_username( $id );
 		}
 
-		if ( $user && ! is_wp_error( $user ) ) {
-			return $user;
-		}
-
-		return self::get_by_username( $id );
+		return $user;
 	}
 
 	/**
@@ -275,6 +274,10 @@ class Actors {
 	 * @return array The Actor collection.
 	 */
 	public static function get_collection() {
+		if ( is_user_type_disabled( 'user' ) ) {
+			return array();
+		}
+
 		$users = \get_users(
 			array(
 				'capability__in' => array( 'activitypub' ),
@@ -284,7 +287,13 @@ class Actors {
 		$return = array();
 
 		foreach ( $users as $user ) {
-			$return[] = User::from_wp_user( $user->ID );
+			$actor = User::from_wp_user( $user->ID );
+
+			if ( \is_wp_error( $actor ) ) {
+				continue;
+			}
+
+			$return[] = $actor;
 		}
 
 		return $return;
