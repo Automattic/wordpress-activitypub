@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Metadata to New Follower E-Mail.
 * Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
 * Labels to add context to visibility settings in the block editor.
+* WP CLI command to reschedule Outbox-Activities.
 
 ### Changed
 
@@ -28,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * The Outbox purging routine no longer is limited to deleting 5 items at a time.
 * Ellipses now display correctly in notification emails for Likes and Reposts.
 * Send Update-Activity when "Actor-Mode" is changed.
+* Added delay to `Announce` Activity from the Blog-Actor, to not have race conditions.
 
 ## [5.2.0] - 2025-02-13
 
