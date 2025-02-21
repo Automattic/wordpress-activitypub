@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Outbox;
 use Activitypub\Query;
 use WP_UnitTestCase;
 
@@ -297,5 +298,46 @@ class Test_Query extends WP_UnitTestCase {
 		delete_post_meta( self::$post_id, 'activitypub_content_visibility' );
 		$this->go_to( get_permalink( self::$post_id ) );
 		$this->assertNotNull( Query::get_instance()->get_activitypub_object() );
+	}
+
+	/**
+	 * Test outbox item visibility.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
+	public function test_outbox_item_visibility() {
+		$outbox_item_id = $this->factory->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'any',
+				'meta_input'  => array(
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+					'_activitypub_activity_type'     => 'Create',
+				),
+			)
+		);
+
+		$outbox_item = get_post( $outbox_item_id );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( get_permalink( $outbox_item->ID ) );
+		$this->assertNotNull( Query::get_instance()->get_activitypub_object() );
+
+		// Private Activity.
+		\update_post_meta( $outbox_item->ID, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( get_permalink( $outbox_item->ID ) );
+		$this->assertNull( Query::get_instance()->get_activitypub_object() );
+
+		// Private Activity Type.
+		\update_post_meta( $outbox_item->ID, '_activitypub_activity_type', 'Delete' );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( get_permalink( $outbox_item->ID ) );
+		$this->assertNull( Query::get_instance()->get_activitypub_object() );
+
+		\wp_delete_post( $outbox_item->ID, true );
 	}
 }
