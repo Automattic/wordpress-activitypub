@@ -85,7 +85,15 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$controller = new Outbox_Controller();
 		$this->assertTrue( $controller->validate_user_id( 0 ) );
 		$this->assertTrue( $controller->validate_user_id( '1' ) );
-		$this->assertFalse( $controller->validate_user_id( 'user-1' ) );
+		$this->assertWPError( $controller->validate_user_id( 'user-1' ) );
+
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		$this->assertWPError( $controller->validate_user_id( 0 ) );
+		$this->assertTrue( $controller->validate_user_id( 1 ) );
+
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		$this->assertTrue( $controller->validate_user_id( '0' ) );
+		$this->assertWPError( $controller->validate_user_id( 1 ) );
 
 		\update_option( 'activitypub_actor_mode', $actor_mode );
 	}

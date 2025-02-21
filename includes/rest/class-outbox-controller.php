@@ -84,7 +84,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	public function validate_user_id( $user_id ) {
 		$user = Actors::get_by_various( $user_id );
 		if ( \is_wp_error( $user ) ) {
-			return false;
+			return $user;
 		}
 
 		return true;
