@@ -1,6 +1,6 @@
 <?php
 /**
- * ActivityPub Blog JSON template.
+ * ActivityPub JSON template.
  *
  * @package Activitypub
  */

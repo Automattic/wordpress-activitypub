@@ -47,6 +47,14 @@ class Actor extends Base_Object {
 				'@id'   => 'toot:attributionDomains',
 				'@type' => '@id',
 			),
+			'alsoKnownAs'               => array(
+				'@id'   => 'as:alsoKnownAs',
+				'@type' => '@id',
+			),
+			'movedTo'                   => array(
+				'@id'   => 'as:movedTo',
+				'@type' => '@id',
+			),
 			'postingRestrictedToMods'   => 'lemmy:postingRestrictedToMods',
 			'discoverable'              => 'toot:discoverable',
 			'indexable'                 => 'toot:indexable',
@@ -185,4 +193,18 @@ class Actor extends Base_Object {
 	 * @var array
 	 */
 	protected $attribution_domains = null;
+
+	/**
+	 * The target of the actor.
+	 *
+	 * @var string|null
+	 */
+	protected $moved_to;
+
+	/**
+	 * The alsoKnownAs of the actor.
+	 *
+	 * @var array
+	 */
+	protected $also_known_as;
 }
