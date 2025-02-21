@@ -256,21 +256,11 @@ class Dispatcher {
 		$inboxes = apply_filters( 'activitypub_interactees_inboxes', array(), $actor_id, $activity );
 		$inboxes = array_unique( $inboxes );
 
-		$json = $activity->to_json();
+		$retries = self::send_to_inboxes( $inboxes, $outbox_item->ID );
 
-		foreach ( $inboxes as $inbox ) {
-			$result = safe_remote_post( $inbox, $json, $actor_id );
-
-			/**
-			 * Fires after an Activity has been sent to an inbox.
-			 *
-			 * @param array  $result         The result of the remote post request.
-			 * @param string $inbox          The inbox URL.
-			 * @param string $json           The ActivityPub Activity JSON.
-			 * @param int    $actor_id       The actor ID.
-			 * @param int    $outbox_item_id The Outbox item ID.
-			 */
-			\do_action( 'activitypub_sent_to_inbox', $result, $inbox, $json, $actor_id, $outbox_item->ID );
+		// Retry failed inboxes.
+		if ( ! empty( $retries ) ) {
+			self::schedule_retry( $retries, $outbox_item->ID );
 		}
 	}
 
