@@ -313,12 +313,17 @@ class Test_Query extends WP_UnitTestCase {
 		$this->assertNotNull( Query::get_instance()->get_activitypub_object() );
 	}
 
+	/**
+	 * Test outbox item visibility.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
 	public function test_outbox_item_visibility() {
 		$args = array(
-			'author'         => self::$user_id,
-			'paged'          => 1,
-			'post_type'      => Outbox::POST_TYPE,
-			'post_status'    => 'any',
+			'author'      => self::$user_id,
+			'paged'       => 1,
+			'post_type'   => Outbox::POST_TYPE,
+			'post_status' => 'any',
 		);
 
 		$outbox_items = get_posts( $args );
