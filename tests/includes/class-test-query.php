@@ -306,15 +306,17 @@ class Test_Query extends WP_UnitTestCase {
 	 * @covers ::get_activitypub_object
 	 */
 	public function test_outbox_item_visibility() {
-		$outbox_item_id = $this->factory->post->create( array(
-			'post_author'  => self::$user_id,
-			'post_type'   => Outbox::POST_TYPE,
-			'post_status' => 'any',
-			'meta_input'  => array(
-				'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
-				'_activitypub_activity_type'     => 'Create',
-			),
-		) );
+		$outbox_item_id = $this->factory->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'any',
+				'meta_input'  => array(
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+					'_activitypub_activity_type'     => 'Create',
+				),
+			)
+		);
 
 		$outbox_item = get_post( $outbox_item_id );
 
