@@ -9,6 +9,7 @@ namespace Activitypub\Collection;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Dispatcher;
+use Activitypub\Scheduler;
 
 use function Activitypub\is_activity;
 use function Activitypub\add_to_outbox;
@@ -158,6 +159,7 @@ class Outbox {
 	 * Creates an Undo activity.
 	 *
 	 * @param int|\WP_Post $outbox_item The Outbox post or post ID.
+	 *
 	 * @return int|bool The ID of the outbox item or false on failure.
 	 */
 	public static function undo( $outbox_item ) {
@@ -172,6 +174,26 @@ class Outbox {
 		}
 
 		return add_to_outbox( $activity, $type, $outbox_item->post_author );
+	}
+
+	/**
+	 * Reschedule an activity.
+	 *
+	 * @param int|\WP_Post $outbox_item The Outbox post or post ID.
+	 *
+	 * @return bool True if the activity was rescheduled, false otherwise.
+	 */
+	public static function reschedule( $outbox_item ) {
+		$outbox_item = get_post( $outbox_item );
+
+		$outbox_item->post_status = 'pending';
+		$outbox_item->post_date   = current_time( 'mysql' );
+
+		wp_update_post( $outbox_item );
+
+		Scheduler::schedule_outbox_activity_for_federation( $outbox_item->ID );
+
+		return true;
 	}
 
 	/**
