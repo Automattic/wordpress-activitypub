@@ -52,8 +52,18 @@ class Move {
 		$target_follower = Followers::get_follower_by_actor( $target );
 		$origin_follower = Followers::get_follower_by_actor( $origin );
 
-		// If the new target is not followed, but the origin is,
-		// update the origin follower to the new target.
+		/*
+		 * If the new target is followed, but the origin is not,
+		 * everything is fine, so we can return.
+		 */
+		if ( $target_follower && ! $origin_follower ) {
+			return;
+		}
+
+		/*
+		 * If the new target is not followed, but the origin is,
+		 * update the origin follower to the new target.
+		 */
 		if ( ! $target_follower && $origin_follower ) {
 			$origin_follower->from_array( $target_object );
 			$origin_follower->set_id( $target );
@@ -72,14 +82,10 @@ class Move {
 			return;
 		}
 
-		// If the new target is followed, but the origin is not,
-		// everything is fine, so we can return.
-		if ( $target_follower && ! $origin_follower ) {
-			return;
-		}
-
-		// If the new target is followed, and the origin is followed,
-		// move users and delete the origin follower.
+		/*
+		 * If the new target is followed, and the origin is followed,
+		 * move users and delete the origin follower.
+		 */
 		if ( $target_follower && $origin_follower ) {
 			$origin_users = \get_post_meta( $origin_follower->get__id(), '_activitypub_user_id', false );
 			$target_users = \get_post_meta( $target_follower->get__id(), '_activitypub_user_id', false );
