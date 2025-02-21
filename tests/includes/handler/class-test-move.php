@@ -135,39 +135,100 @@ class Test_Move extends \WP_UnitTestCase {
 
 	/**
 	 * Test the handle_move method with an invalid target.
+	 *
+	 * @covers ::verify_move
 	 */
 	public function test_handle_move_with_invalid_target() {
-		$activity = array(
-			'type'   => 'Move',
-			'actor'  => 'https://example.com/old-profile',
-			'object' => 'https://example.com/invalid-profile',
-		);
+		$target = 'https://example.com/new-profile';
+		$origin = 'https://example.com/old-profile';
+
+		// Create a follower for the origin.
+		$origin_follower = new Follower();
+		$origin_follower->set_inbox( 'https://example.com/old-profile/inbox' );
+		$origin_follower->set_name( 'Old Profile' );
+		$origin_follower->set_type( 'Person' );
+		$origin_follower->set_id( $origin );
+		$origin_follower->set_url( $origin );
+		$id = $origin_follower->upsert();
+
+		// Add the user ID meta value.
+		add_post_meta( $id, '_activitypub_user_id', $this->user_id );
 
 		$filter = function () {
-			return new \WP_Error( 'http_request_failed', 'Invalid request' );
+			return array(
+				'body'     => wp_json_encode( array( 'type' => 'Invalid' ) ),
+				'response' => array( 'code' => 200 ),
+			);
 		};
 
-		// Mock the HTTP request to return an error.
+		// Mock HTTP request to return invalid data.
 		add_filter(
 			'pre_http_request',
-			$filter,
+			$filter
 		);
 
-		// Should return without error.
-		$this->assertNull( Move::handle_move( $activity ) );
+		$activity = array(
+			'type'   => 'Move',
+			'actor'  => $origin,
+			'object' => $target,
+		);
 
-		remove_filter( 'pre_http_request', $filter, 10 );
+		Move::handle_move( $activity );
+
+		// Assert that the original follower still exists and wasn't modified.
+		$existing_follower = Followers::get_follower( $this->user_id, $origin );
+		$this->assertNotNull( $existing_follower );
+		$this->assertEquals( $origin, $existing_follower->get_id() );
+
+		// Assert that no new follower was created for the target.
+		$target_follower = Followers::get_follower( $this->user_id, $target );
+		$this->assertNull( $target_follower );
+
+		// Cleanup.
+		$origin_follower->delete();
+		remove_filter( 'pre_http_request', $filter );
 	}
 
 	/**
 	 * Test the handle_move method without a target or origin.
+	 *
+	 * @covers ::verify_move
 	 */
 	public function test_handle_move_without_target_or_origin() {
+		// Create a test follower to ensure it's not affected.
+		$test_follower = new Follower();
+		$test_follower->set_inbox( 'https://example.com/test/inbox' );
+		$test_follower->set_name( 'Test Profile' );
+		$test_follower->set_type( 'Person' );
+		$test_follower->set_id( 'https://example.com/test-profile' );
+		$test_follower->set_url( 'https://example.com/test-profile' );
+		$id = $test_follower->upsert();
+
+		// Add the user ID meta value.
+		add_post_meta( $id, '_activitypub_user_id', $this->user_id );
+
+		// Store initial followers count.
+		$initial_followers = Followers::get_followers( $this->user_id );
+		$initial_count     = count( $initial_followers );
+
 		$activity = array(
 			'type' => 'Move',
 		);
 
-		$this->assertNull( Move::handle_move( $activity ) );
+		Move::handle_move( $activity );
+
+		// Verify that no followers were added or removed.
+		$final_followers = Followers::get_followers( $this->user_id );
+		$this->assertEquals( $initial_count, count( $final_followers ) );
+
+		// Verify that our test follower remains unchanged.
+		$existing_follower = Followers::get_follower( $this->user_id, 'https://example.com/test-profile' );
+		$this->assertNotNull( $existing_follower );
+		$this->assertEquals( 'https://example.com/test-profile', $existing_follower->get_id() );
+		$this->assertEquals( 'https://example.com/test/inbox', $existing_follower->get_inbox() );
+
+		// Cleanup.
+		$test_follower->delete();
 	}
 
 	/**
