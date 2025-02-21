@@ -89,24 +89,26 @@ class Test_Move extends \WP_UnitTestCase {
 		// Add the user ID meta value.
 		add_post_meta( $id, '_activitypub_user_id', $this->user_id );
 
+		$filter = function ( $preempt, $args, $url ) use ( $target, $target_object, $origin, $origin_object ) {
+			if ( $url === $target ) {
+				return array(
+					'body'     => wp_json_encode( $target_object ),
+					'response' => array( 'code' => 200 ),
+				);
+			}
+			if ( $url === $origin ) {
+				return array(
+					'body'     => wp_json_encode( $origin_object ),
+					'response' => array( 'code' => 200 ),
+				);
+			}
+			return $preempt;
+		};
+
 		// Mock the HTTP request.
 		add_filter(
 			'pre_http_request',
-			function ( $preempt, $args, $url ) use ( $target, $target_object, $origin, $origin_object ) {
-				if ( $url === $target ) {
-					return array(
-						'body'     => wp_json_encode( $target_object ),
-						'response' => array( 'code' => 200 ),
-					);
-				}
-				if ( $url === $origin ) {
-					return array(
-						'body'     => wp_json_encode( $origin_object ),
-						'response' => array( 'code' => 200 ),
-					);
-				}
-				return $preempt;
-			},
+			$filter,
 			10,
 			3
 		);
@@ -127,6 +129,8 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertEquals( 'https://example.com/new-profile/inbox', $updated_follower->get_inbox() );
 
 		$updated_follower->delete();
+
+		remove_filter( 'pre_http_request', $filter, 10 );
 	}
 
 	/**
@@ -139,16 +143,20 @@ class Test_Move extends \WP_UnitTestCase {
 			'object' => 'https://example.com/invalid-profile',
 		);
 
+		$filter = function () {
+			return new \WP_Error( 'http_request_failed', 'Invalid request' );
+		};
+
 		// Mock the HTTP request to return an error.
 		add_filter(
 			'pre_http_request',
-			function () {
-				return new \WP_Error( 'http_request_failed', 'Invalid request' );
-			}
+			$filter,
 		);
 
 		// Should return without error.
 		$this->assertNull( Move::handle_move( $activity ) );
+
+		remove_filter( 'pre_http_request', $filter, 10 );
 	}
 
 	/**
@@ -215,24 +223,26 @@ class Test_Move extends \WP_UnitTestCase {
 		\wp_cache_delete( $origin_id, 'posts' );
 		\wp_cache_delete( $target_id, 'posts' );
 
+		$filter = function ( $preempt, $args, $url ) use ( $target, $target_object, $origin, $origin_object ) {
+			if ( $url === $target ) {
+				return array(
+					'body'     => wp_json_encode( $target_object ),
+					'response' => array( 'code' => 200 ),
+				);
+			}
+			if ( $url === $origin ) {
+				return array(
+					'body'     => wp_json_encode( $origin_object ),
+					'response' => array( 'code' => 200 ),
+				);
+			}
+			return $preempt;
+		};
+
 		// Mock the HTTP request.
 		add_filter(
 			'pre_http_request',
-			function ( $preempt, $args, $url ) use ( $target, $target_object, $origin, $origin_object ) {
-				if ( $url === $target ) {
-					return array(
-						'body'     => wp_json_encode( $target_object ),
-						'response' => array( 'code' => 200 ),
-					);
-				}
-				if ( $url === $origin ) {
-					return array(
-						'body'     => wp_json_encode( $origin_object ),
-						'response' => array( 'code' => 200 ),
-					);
-				}
-				return $preempt;
-			},
+			$filter,
 			10,
 			3
 		);
@@ -253,5 +263,7 @@ class Test_Move extends \WP_UnitTestCase {
 
 		// Check if the origin follower was deleted.
 		$this->assertNull( Followers::get_follower_by_actor( $origin, true ) );
+
+		remove_filter( 'pre_http_request', $filter, 10 );
 	}
 }
