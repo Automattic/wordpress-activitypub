@@ -40,7 +40,7 @@ class Comments_Controller extends \WP_REST_Controller {
 			$this->namespace,
 			'/' . $this->rest_base . '/remote-reply',
 			array(
-				'args' => array(
+				'args'   => array(
 					'comment_id' => array(
 						'description'       => 'The ID of the comment.',
 						'type'              => 'integer',
@@ -59,8 +59,8 @@ class Comments_Controller extends \WP_REST_Controller {
 							'required'    => true,
 						),
 					),
-					'schema'              => array( $this, 'get_public_item_schema' ),
 				),
+				'schema' => array( $this, 'get_item_schema' ),
 			)
 		);
 	}
@@ -126,7 +126,7 @@ class Comments_Controller extends \WP_REST_Controller {
 	 *
 	 * @return array Schema data.
 	 */
-	public function get_public_item_schema() {
+	public function get_item_schema() {
 		if ( $this->schema ) {
 			return $this->add_additional_fields_schema( $this->schema );
 		}
