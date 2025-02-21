@@ -7,6 +7,7 @@
 
 namespace Activitypub\Handler;
 
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Interactions;
 
 use function Activitypub\get_remote_metadata_by_actor;
@@ -106,8 +107,19 @@ class Update {
 	 */
 	public static function update_actor( $activity ) {
 		// Update cache.
-		get_remote_metadata_by_actor( $activity['actor'], false );
+		$actor = get_remote_metadata_by_actor( $activity['actor'], false );
 
-		// @todo maybe also update all interactions.
+		if ( ! $actor || \is_wp_error( $actor ) || ! isset( $actor['id'] ) ) {
+			return;
+		}
+
+		$follower = Followers::get_follower_by_actor( $actor['id'] );
+
+		if ( ! $follower ) {
+			return;
+		}
+
+		$follower->from_array( $actor );
+		$follower->upsert();
 	}
 }

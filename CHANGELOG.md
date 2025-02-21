@@ -16,12 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Metadata to New Follower E-Mail.
 * Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
 * Outbox Activity IDs can now be resolved when the ActivityPub `Accept header is used.
+* Support for incoming `Move` activities and ensure that followed persons are updated accordingly.
 * Labels to add context to visibility settings in the block editor.
 
 ### Changed
 
 * Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
 * Post bulk edits no longer create Outbox items, unless author or post status change.
+* Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
 * Outbox processing accounts for shared inboxes again.
 
 ### Fixed
