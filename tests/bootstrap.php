@@ -96,6 +96,15 @@ function http_disable_request( $response, $args, $url ) {
 }
 \tests_add_filter( 'pre_http_request', 'http_disable_request', 99, 3 );
 
+/**
+ * Remove all filters for the current filter.
+ */
+function tests_remove_all_filters() {
+	remove_all_filters( current_filter() );
+}
+\tests_add_filter( 'add_option_activitypub_actor_mode', 'tests_remove_all_filters', 1 );
+\tests_add_filter( 'update_option_activitypub_actor_mode', 'tests_remove_all_filters', 1 );
+
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
 require __DIR__ . '/class-activitypub-outbox-testcase.php';
