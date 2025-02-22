@@ -62,10 +62,9 @@ class URL_Validator_Controller extends WP_REST_Controller {
 	/**
 	 * Check if a given request has access to validate URLs.
 	 *
-	 * @param WP_REST_Request $request Full data about the request.
 	 * @return true|WP_Error True if the request has access, WP_Error object otherwise.
 	 */
-	public function validate_url_permissions_check( $request ) {
+	public function validate_url_permissions_check() {
 		return current_user_can( 'edit_posts' );
 	}
 
@@ -109,7 +108,7 @@ class URL_Validator_Controller extends WP_REST_Controller {
 
 		$response = array(
 			'is_activitypub' => ! empty( $object['type'] ),
-			'html' => false,
+			'html'           => false,
 		);
 
 		if ( $response['is_activitypub'] ) {

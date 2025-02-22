@@ -1673,7 +1673,6 @@ function is_activity( $data ) {
 	}
 
 	if ( is_array( $data ) && isset( $data['type'] ) ) {
-		var_dump( $data['type'] . ' being checked', $types );
 		return in_array( $data['type'], $types, true );
 	}
 
