@@ -50,9 +50,6 @@ class Test_Comments_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 		self::$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
 		self::$comment_ids = self::factory()->comment->create_post_comments( self::$post_id, 2, array( 'comment_approved' => '1' ) );
 		add_comment_meta( self::$comment_ids[0], 'protocol', 'activitypub', true );
-
-		// Mock Webfinger::get_remote_follow_endpoint.
-		add_filter( 'pre_http_request', array( self::class, 'mock_remote_follow_endpoint' ) );
 	}
 
 	/**
@@ -65,9 +62,26 @@ class Test_Comments_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 			\wp_delete_comment( $comment_id );
 		}
 
-		remove_filter( 'pre_http_request', array( self::class, 'mock_remote_follow_endpoint' ) );
-
 		parent::tear_down_after_class();
+	}
+
+	/**
+	 * Set up the test case.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		// Mock Webfinger::get_remote_follow_endpoint.
+		add_filter( 'pre_http_request', array( $this, 'mock_remote_follow_endpoint' ) );
+	}
+
+	/**
+	 * Tear down.
+	 */
+	public function tear_down() {
+		remove_filter( 'pre_http_request', array( $this, 'mock_remote_follow_endpoint' ) );
+
+		parent::tear_down();
 	}
 
 	/**
@@ -148,7 +162,7 @@ class Test_Comments_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 	 *
 	 * @return array
 	 */
-	public static function mock_remote_follow_endpoint() {
+	public function mock_remote_follow_endpoint() {
 		return array(
 			'response' => array( 'code' => 200 ),
 			'body'     => wp_json_encode(
