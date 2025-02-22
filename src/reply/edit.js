@@ -37,7 +37,9 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	const [ helpText, setHelpText ] = useState( HELP_TEXT.default );
 	const [ isValidEmbed, setIsValidEmbed ] = useState( false );
 	const [ isCheckingEmbed, setIsCheckingEmbed ] = useState( false );
-	const [ nullAtTheStart, setNullAtTheStart ] = useState( attr.embedPost === null );
+	// Optimistic embeds mean that we will toggle embedPost to true whenever we find a valid embed.
+	// This will be true when the block is instantiated with `true` because it was saved that way, or because this is a new block with no initial URL.
+	const [ optimisticEmbed, setOptimisticEmbed ] = useState( attr.embedPost === true || ! url );
 	const [ embedHtml, setEmbedHtml ] = useState( null );
 	const { insertAfterBlock, removeBlock } = useDispatch( 'core/block-editor' );
 	// Get block props and dispatch functions.
@@ -48,7 +50,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	 *
 	 * @param {string} urlToCheck The URL to check.
 	 */
-	const checkUrl = async ( urlToCheck ) => {
+	const checkUrl = async ( urlToCheck, optimisticEmbed ) => {
 		// Don't check empty URLs.
 		if ( ! urlToCheck ) {
 			setIsCheckingEmbed( false );
@@ -73,7 +75,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 			 * In that case, we should set embedPost to true by default when we have a good result.
 			 * This will make the choice explicit when editing old posts, as a kind of upgrade, but which will otherwise be left alone.
 			 */
-			if ( nullAtTheStart ) {
+			if ( optimisticEmbed ) {
 				setAttributes( { embedPost: true } );
 			}
 			setHelpText( HELP_TEXT.valid );
@@ -93,9 +95,9 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	// Check URL when it changes.
 	useEffect( () => {
 		if ( url ) {
-			debouncedCheckUrl( url );
+			debouncedCheckUrl( url, optimisticEmbed );
 		}
-	}, [ url ] );
+	}, [ url, optimisticEmbed ] );
 
 	/**
 	 * Handle embed toggle changes.
@@ -103,6 +105,8 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	 * @param {boolean} value - New embed toggle value.
 	 */
 	const onEmbedPostChange = ( value ) => {
+		// Every manual toggle indicates a preference about embedding we can default to.
+		setOptimisticEmbed( value );
 		setAttributes( { embedPost: value } );
 	};
 
