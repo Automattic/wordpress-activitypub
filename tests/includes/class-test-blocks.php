@@ -73,7 +73,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 			),
 		);
 
-		$pre_filter = function( $preempt, $args, $url ) use ( $mock_activity ) {
+		$pre_filter = function ( $preempt, $args, $url ) use ( $mock_activity ) {
 			if ( false !== strpos( $url, 'mastodon.social' ) ) {
 				return array(
 					'response' => array( 'code' => 200 ),
