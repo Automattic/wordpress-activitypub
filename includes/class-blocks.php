@@ -344,8 +344,6 @@ class Blocks {
 			return null;
 		}
 
-		l( $attrs );
-
 		$wrapper_attrs = get_block_wrapper_attributes(
 			array(
 				'aria-label' => __( 'Reply', 'activitypub' ),
@@ -359,7 +357,6 @@ class Blocks {
 		if ( isset( $attrs['embedPost'] ) && $attrs['embedPost'] ) {
 			$embed = get_embed_html( $attrs['url'], false );
 			if ( $embed ) {
-				l( 'adding embed' );
 				$html .= $embed;
 			}
 		}
