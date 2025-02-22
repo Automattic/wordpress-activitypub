@@ -1673,6 +1673,7 @@ function is_activity( $data ) {
 	}
 
 	if ( is_array( $data ) && isset( $data['type'] ) ) {
+		var_dump( $data['type'] . ' being checked', $types );
 		return in_array( $data['type'], $types, true );
 	}
 
@@ -1722,4 +1723,80 @@ function is_actor( $data ) {
 	}
 
 	return false;
+}
+
+/**
+ * Get an ActivityPub embed HTML for a URL.
+ *
+ * @param string  $url        The URL to get the embed for.
+ * @param boolean $inline_css Whether to inline CSS. Default true.
+ *
+ * @return string|false The embed HTML or false if not found.
+ */
+function get_embed_html( $url, $inline_css = true ) {
+	// Try to get ActivityPub representation.
+	$object = Http::get_remote_object( $url );
+	if ( is_wp_error( $object ) ) {
+		return false;
+	}
+
+	$author_name = $object['attributedTo'] ?? '';
+	$avatar_url  = $object['icon']['url'] ?? '';
+	$author_url  = $author_name;
+
+	// If we don't have an avatar URL but we have an author URL, try to fetch it.
+	if ( ! $avatar_url && $author_url ) {
+		$author = Http::get_remote_object( $author_url );
+		if ( ! is_wp_error( $author ) ) {
+			$avatar_url  = $author['icon']['url'] ?? '';
+			$author_name = $author['name'] ?? $author_name;
+		}
+	}
+
+	$title     = $object['name'] ?? '';
+	$content   = $object['content'] ?? '';
+	$published = isset( $object['published'] ) ? gmdate( get_option( 'date_format' ) . ', ' . get_option( 'time_format' ), strtotime( $object['published'] ) ) : '';
+	$boosts    = isset( $object['shares']['totalItems'] ) ? (int) $object['shares']['totalItems'] : 0;
+	$favorites = isset( $object['likes']['totalItems'] ) ? (int) $object['likes']['totalItems'] : 0;
+
+	$image = '';
+	if ( isset( $object['image']['url'] ) ) {
+		$image = $object['image']['url'];
+	} elseif ( isset( $object['attachment'] ) ) {
+		foreach ( $object['attachment'] as $attachment ) {
+			if ( isset( $attachment['type'] ) && 'Document' === $attachment['type'] ) {
+				$image = $attachment['url'];
+				break;
+			}
+		}
+	}
+
+	ob_start();
+	load_template(
+		ACTIVITYPUB_PLUGIN_DIR . 'templates/reply-embed.php',
+		false,
+		array(
+			'author_name' => $author_name,
+			'author_url'  => $author_url,
+			'avatar_url'  => $avatar_url,
+			'published'   => $published,
+			'title'       => $title,
+			'content'     => $content,
+			'image'       => $image,
+			'boosts'      => $boosts,
+			'favorites'   => $favorites,
+			'url'         => $url,
+		)
+	);
+
+	if ( $inline_css ) {
+		// Grab the CSS.
+		$css = \file_get_contents( ACTIVITYPUB_PLUGIN_DIR . 'assets/css/activitypub-embed.css' ); // phpcs:ignore
+		// A little light whitespace cleanup.
+		$css = preg_replace( '/\s+/', ' ', $css );
+		// We embed CSS directly because this may be in an iframe.
+		printf( '<style>%s</style>', $css ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	return ob_get_clean();
 }

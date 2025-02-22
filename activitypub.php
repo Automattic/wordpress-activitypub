@@ -43,6 +43,7 @@ function rest_init() {
 	Rest\Comment::init();
 	Rest\Server::init();
 	Rest\Post::init();
+	( new Rest\URL_Validator_Controller() )->register_routes();
 	( new Rest\Actors_Controller() )->register_routes();
 	( new Rest\Application_Controller() )->register_routes();
 	( new Rest\Collections_Controller() )->register_routes();

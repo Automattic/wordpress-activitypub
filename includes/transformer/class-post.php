@@ -533,6 +533,9 @@ class Post extends Base {
 		// Don't need these anymore, should never appear in a post.
 		Shortcodes::unregister();
 
+		// Get rid of the reply block filter.
+		remove_filter( 'activitypub_reply_block', '__return_empty_string' );
+
 		return $content;
 	}
 

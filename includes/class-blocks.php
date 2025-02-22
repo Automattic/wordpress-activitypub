@@ -343,22 +343,24 @@ class Blocks {
 		if ( empty( $attrs['url'] ) ) {
 			return null;
 		}
+
+		l( $attrs );
+
 		$wrapper_attrs = get_block_wrapper_attributes(
 			array(
 				'aria-label' => __( 'Reply', 'activitypub' ),
 				'class'      => 'activitypub-reply-block',
 			)
 		);
-		$html          = '<div ' . $wrapper_attrs . '>';
 
+		$html = '<div ' . $wrapper_attrs . '>';
+
+		// Try to get and append the embed if requested.
 		if ( isset( $attrs['embedPost'] ) && $attrs['embedPost'] ) {
-			// We use the endpoint because it has our filters.
-			$request = new \WP_REST_Request( 'GET', '/oembed/1.0/proxy' );
-			$request->set_param( 'url', $attrs['url'] );
-			$response = rest_get_server()->dispatch( $request );
-
-			if ( ! \is_wp_error( $response ) && isset( $response->data->html ) ) {
-				$html .= $response->data->html;
+			$embed = get_embed_html( $attrs['url'], false );
+			if ( $embed ) {
+				l( 'adding embed' );
+				$html .= $embed;
 			}
 		}
 
@@ -373,13 +375,7 @@ class Blocks {
 
 		$html .= '</div>';
 
-		/**
-		 * Filter the reply block.
-		 *
-		 * @param string $html  The HTML to render.
-		 * @param array  $attrs The block attributes.
-		 */
-		return apply_filters( 'activitypub_reply_block', $html, $attrs );
+		return $html;
 	}
 
 	/**

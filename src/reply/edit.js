@@ -1,85 +1,109 @@
+import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
+import { TextControl, PanelBody, ToggleControl, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { useBlockProps, InspectorControls, InnerBlocks } from '@wordpress/block-editor';
-import { TextControl, ToggleControl, PanelBody, Spinner } from '@wordpress/components';
-import { useState, useEffect, useCallback } from '@wordpress/element';
-import { useDispatch, useSelect } from '@wordpress/data';
+import { useEffect, useState } from '@wordpress/element';
 import { useDebounce } from '@wordpress/compose';
 import apiFetch from '@wordpress/api-fetch';
+import { addQueryArgs } from '@wordpress/url';
+import { useOptions } from '../shared/use-options';
+import { useDispatch } from '@wordpress/data';
+
+/**
+ * Edit component for the ActivityPub block.
+ *
+ * @param {Object} props - Component props.
+ * @param {Object} props.attributes - Block attributes.
+ * @param {string} props.attributes.url - URL of the post being replied to.
+ * @param {boolean} props.attributes.embedPost - Whether to embed the post.
+ * @param {Function} props.setAttributes - Function to update block attributes.
+ * @param {string} props.clientId - Block client ID.
+ * @param {boolean} props.isSelected - Whether the block is selected.
+ */
+
+// Help text messages for different states.
+const HELP_TEXT = {
+	default: __( 'Enter the URL of a post from the Fediverse (Mastodon, Pixelfed, etc.) that you want to reply to. Your reply will be sent to their inbox when published.', 'activitypub' ),
+	checking: __( 'Checking if this URL supports ActivityPub replies...', 'activitypub' ),
+	valid: __( 'Great! This URL supports ActivityPub replies. When you publish, the author will be notified of your response. You can also choose to embed the original post below.', 'activitypub' ),
+	invalid: __( 'This URL does not appear to support ActivityPub replies.', 'activitypub' ),
+	error: __( 'Unable to verify this URL. Please check that it is correct and try again.', 'activitypub' ),
+};
 
 export default function Edit( { attributes: attr, setAttributes, clientId, isSelected } ) {
 	const { url } = attr;
-	const defaultHelpText = __( 'For example: Paste a URL from a Fediverse (e.g. Mastodon, Pixelfed, etc.) post or note into the field above to leave a comment.', 'activitypub' );
-	const successHelpText = __( 'Embed success!', 'activitypub' );
-	const errorHelpText = __( 'This URL cannot be embedded. We will still attempt to notify the post\'s author on publish.', 'activitypub' );
-	const [ helpText, setHelpText ] = useState( defaultHelpText );
+	const { namespace } = useOptions();
+
+	// State variables for help text, embed validity, and embed checking status.
+	const [ helpText, setHelpText ] = useState( HELP_TEXT.default );
 	const [ isValidEmbed, setIsValidEmbed ] = useState( false );
 	const [ isCheckingEmbed, setIsCheckingEmbed ] = useState( false );
+	const [ nullAtTheStart, setNullAtTheStart ] = useState( attr.embedPost === null );
+	const [ embedHtml, setEmbedHtml ] = useState( null );
+	const { insertAfterBlock, removeBlock } = useDispatch( 'core/block-editor' );
+	// Get block props and dispatch functions.
 	const blockProps = useBlockProps();
-	const { insertAfterBlock, removeBlock, updateBlockAttributes } = useDispatch( 'core/block-editor' );
-	const innerBlocks = useSelect( ( select ) => select( 'core/block-editor' ).getBlocks( clientId ), [ clientId ] );
 
-	useEffect(() => {
-		if ( attr.embedPost === null ) {
-			// No existing attributes means this is a new block.
-			setAttributes({ embedPost: ! attr.url });
-		}
-	}, []);
-
-	// Debounced URL validation check.
-	const checkUrl = useCallback( async ( urlToCheck ) => {
-		if ( ! urlToCheck || ! isUrl( urlToCheck ) ) {
+	/**
+	 * Check if a URL is an ActivityPub URL.
+	 *
+	 * @param {string} urlToCheck The URL to check.
+	 */
+	const checkUrl = async ( urlToCheck ) => {
+		// Don't check empty URLs.
+		if ( ! urlToCheck ) {
+			setIsCheckingEmbed( false );
 			setIsValidEmbed( false );
+			setEmbedHtml( '' );
 			return;
 		}
 
-		setIsCheckingEmbed( true );
-		setHelpText( __( 'Checking URL…', 'activitypub' ) );
-
 		try {
+			setIsCheckingEmbed( true );
+
 			const response = await apiFetch( {
-				path: `/oembed/1.0/proxy?url=${ encodeURIComponent( urlToCheck ) }`,
+				path: addQueryArgs( `${ namespace }/url/validate`, {
+					url: urlToCheck,
+				} ),
 			} );
-			const isValid = !! response?.html;
-			setIsValidEmbed( isValid );
-			setAttributes( { embedPost: isValid } );
-			isValid
-				? setHelpText( successHelpText )
-				: setHelpText( errorHelpText );
+
+			setIsValidEmbed( response.is_activitypub );
+			setEmbedHtml( response.html || '' );
+			/**
+			 * Null at the start means that we're a new block, or an old block from before embeds were added.
+			 * In that case, we should set embedPost to true by default when we have a good result.
+			 * This will make the choice explicit when editing old posts, as a kind of upgrade, but which will otherwise be left alone.
+			 */
+			if ( nullAtTheStart ) {
+				setAttributes( { embedPost: true } );
+			}
+			setHelpText( HELP_TEXT.valid );
 		} catch ( error ) {
 			setIsValidEmbed( false );
 			setAttributes( { embedPost: false } );
-			setHelpText( errorHelpText );
+			setHelpText( HELP_TEXT.error );
+			setEmbedHtml( '' );
 		} finally {
 			setIsCheckingEmbed( false );
 		}
-	}, [ defaultHelpText, errorHelpText, successHelpText ] );
-
-	const debouncedCheck = useDebounce( checkUrl, 250 );
-
-	// Check if URL is embeddable.
-	useEffect( () => {
-		debouncedCheck( url );
-	}, [ url, debouncedCheck ] );
-
-	// Update inner embed block URL when parent URL changes.
-	useEffect( () => {
-		if ( innerBlocks?.length && innerBlocks[0]?.name === 'core/embed' ) {
-			updateBlockAttributes( innerBlocks[0].clientId, { url } );
-		}
-	}, [ url, innerBlocks ] );
-
-	const onUrlChange = ( newUrl ) => {
-		if ( ! isUrl( newUrl ) ) {
-			setHelpText( __( 'Please enter a valid URL.', 'activitypub' ) );
-		} else {
-			setHelpText( defaultHelpText );
-		}
-
-		setAttributes( { url: newUrl } );
 	};
 
-	const onEmbedPostChange = ( embedPost ) => {
-		setAttributes( { embedPost } );
+	// Debounce the URL check to avoid too many requests.
+	const debouncedCheckUrl = useDebounce( checkUrl, 250 );
+
+	// Check URL when it changes.
+	useEffect( () => {
+		if ( url ) {
+			debouncedCheckUrl( url );
+		}
+	}, [ url ] );
+
+	/**
+	 * Handle embed toggle changes.
+	 *
+	 * @param {boolean} value - New embed toggle value.
+	 */
+	const onEmbedPostChange = ( value ) => {
+		setAttributes( { embedPost: value } );
 	};
 
 	const onKeyDown = ( event ) => {
@@ -89,19 +113,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 		if ( ! attr.url && [ 'Backspace', 'Delete' ].includes( event.key ) ) {
 			removeBlock( clientId );
 		}
-	}
-
-	const embedTemplate = [
-		[
-			'core/embed',
-			{
-				url,
-				type: 'rich',
-				providerNameSlug: 'activitypub',
-				responsive: true,
-			},
-		],
-	];
+	};
 
 	return (
 		<>
@@ -111,71 +123,57 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 						label={ __( 'Embed Post', 'activitypub' ) }
 						checked={ attr.embedPost }
 						onChange={ onEmbedPostChange }
-					disabled={ ! isValidEmbed }
-					help={ ! isValidEmbed && url ? __( 'Embedding is not available for this URL.', 'activitypub' ) : '' }
+						disabled={ ! isValidEmbed }
+						help={ helpText }
 					/>
 				</PanelBody>
 			</InspectorControls>
+
 			<div { ...blockProps }>
 				{ isSelected && (
 					<TextControl
 						label={ __( 'This post is a reply to the following URL', 'activitypub' ) }
-						value={ url || '' }
-						onChange={ onUrlChange }
-						onKeyDown={ onKeyDown }
-						type='url'
-						placeholder={ __( 'Enter URL here...', 'activitypub' ) }
+						value={ url }
+						onChange={ ( value ) => setAttributes( { url: value } ) }
 						help={ helpText }
+						onKeyDown={ onKeyDown }
 					/>
 				) }
+
 				{ isCheckingEmbed && (
 					<div className="activitypub-embed-container activitypub-embed-loading">
 						<Spinner />
 					</div>
 				) }
-				{ isValidEmbed && attr.embedPost && url && (
+
+				{ isValidEmbed && attr.embedPost && embedHtml && (
 					<div
 						className="activitypub-embed-container"
 						contentEditable={ false }
 						onFocus={ ( e ) => e.stopPropagation() }
 						onClick={ ( e ) => e.stopPropagation() }
-					>
-						{ isValidEmbed && ! isCheckingEmbed && (
-							<div className="activitypub-embed-preview">
-								<InnerBlocks
-									template={ embedTemplate }
-									templateLock="all"
-								/>
-							</div>
-						) }
-					</div>
+						dangerouslySetInnerHTML={{ __html: embedHtml }}
+					/>
 				) }
+
 				{ url && (
-					<div className="activitypub-reply-display">
-						<p>
-							<a
-								title={ __( 'This post is a response to the referenced content.', 'activitypub' ) }
-								aria-label={ __( 'This post is a response to the referenced content.', 'activitypub' ) }
-								href={ url }
-								className="u-in-reply-to"
-								target="_blank"
-								rel="noreferrer"
-							>
-								{ '↬' + url.replace( /^https?:\/\//, '' ) }
-							</a>
-						</p>
+					<div
+						className="activitypub-reply-block-editor__preview"
+						contentEditable={ false }
+						onMouseDown={ ( e ) => e.preventDefault() }
+						style={ { pointerEvents: 'none' } }
+					>
+						<a
+							href={ url }
+							className="u-in-reply-to"
+							target="_blank"
+							rel="noreferrer"
+						>
+							{ url.replace( /^https?:\/\//, '' ) }
+						</a>
 					</div>
 				) }
 			</div>
 		</>
 	);
-}
-
-function isUrl( string ) {
-	try {
-		new URL( string );
-		return true;
-	} catch ( _ ) {
-		return false;
-	}
 }

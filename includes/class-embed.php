@@ -58,76 +58,20 @@ class Embed {
 			return $response;
 		}
 
-		// Generate a cache key based on the URL.
-		$cache_key = 'activitypub_embed_' . md5( $url );
-
-		// Try to get the cached response.
-		$cached_response = get_transient( $cache_key );
-		if ( false !== $cached_response ) {
-			return rest_ensure_response( $cached_response );
-		}
-
 		// Try to get ActivityPub representation.
 		$object = Http::get_remote_object( $url );
 		if ( is_wp_error( $object ) ) {
 			return $response;
 		}
+		// Most of the work is in here, and cached.
+		$html = get_embed_html( $url, true );
+		if ( ! $html ) {
+			return $response;
+		}
 
 		$author_name = $object['attributedTo'] ?? '';
-		$avatar_url  = $object['icon']['url'] ?? '';
-		$author_url  = $author_name;
-
-		// If we don't have an avatar URL but we have an author URL, try to fetch it.
-		if ( ! $avatar_url && $author_url ) {
-			$author = Http::get_remote_object( $author_url );
-			if ( ! is_wp_error( $author ) ) {
-				$avatar_url  = $author['icon']['url'] ?? '';
-				$author_name = $author['name'] ?? $author_name;
-			}
-		}
-
-		$title     = $object['name'] ?? '';
-		$content   = $object['content'] ?? '';
-		$published = isset( $object['published'] ) ? gmdate( get_option( 'date_format' ) . ', ' . get_option( 'time_format' ), strtotime( $object['published'] ) ) : '';
-		$boosts    = isset( $object['shares']['totalItems'] ) ? (int) $object['shares']['totalItems'] : 0;
-		$favorites = isset( $object['likes']['totalItems'] ) ? (int) $object['likes']['totalItems'] : 0;
-
-		$image = '';
-		if ( isset( $object['image']['url'] ) ) {
-			$image = $object['image']['url'];
-		} elseif ( isset( $object['attachment'] ) ) {
-			foreach ( $object['attachment'] as $attachment ) {
-				if ( isset( $attachment['type'] ) && 'Document' === $attachment['type'] ) {
-					$image = $attachment['url'];
-					break;
-				}
-			}
-		}
-
-		ob_start();
-		load_template(
-			ACTIVITYPUB_PLUGIN_DIR . 'templates/reply-embed.php',
-			false,
-			array(
-				'author_name' => $author_name,
-				'author_url'  => $author_url,
-				'avatar_url'  => $avatar_url,
-				'published'   => $published,
-				'title'       => $title,
-				'content'     => $content,
-				'image'       => $image,
-				'boosts'      => $boosts,
-				'favorites'   => $favorites,
-				'url'         => $url,
-			)
-		);
-
-		// Grab the CSS.
-		$css = \file_get_contents( ACTIVITYPUB_PLUGIN_DIR . 'assets/css/activitypub-embed.css' ); // phpcs:ignore
-		// A little light whitespace cleanup.
-		$css = preg_replace( '/\s+/', ' ', $css );
-		// We embed CSS directly because this may be in an iframe.
-		printf( '<style>%s</style>', $css ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		$author_url  = $object['icon']['url'] ?? '';
+		$title       = $object['name'] ?? '';
 
 		$embed_response = (object) array(
 			'version'       => '1.0',
@@ -139,11 +83,8 @@ class Embed {
 			'type'          => 'rich',
 			'width'         => 600,
 			'height'        => null,
-			'html'          => ob_get_clean(),
+			'html'          => $html,
 		);
-
-		// Cache the successful response.
-		set_transient( $cache_key, $embed_response, self::CACHE_EXPIRATION );
 
 		return rest_ensure_response( $embed_response );
 	}
