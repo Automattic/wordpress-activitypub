@@ -7,6 +7,9 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Blocks;
+use WP_UnitTestCase;
+
 /**
  * Test class for Blocks.
  *
@@ -53,38 +56,65 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test the reply block with a Mastodon URL that has an embed.
-	 *
-	 * @covers ::render_reply_block
+	 * Test render_reply_block with Mastodon embed.
 	 */
 	public function test_render_reply_block_with_mastodon_embed() {
-		$mock_embed = '<div class="mastodon-embed">Mock Embed Content</div>';
+		$url = 'https://mastodon.social/@Gargron/109924476225391570';
 
-		// Create a proper REST response object with the mock embed.
-		$response = new \WP_REST_Response(
-			(object) array(
-				'html' => $mock_embed,
-			)
+		// Mock the ActivityPub object that would be returned by Http::get_remote_object.
+		$mock_activity = array(
+			'type'         => 'Note',
+			'attributedTo' => 'https://mastodon.social/users/Gargron',
+			'content'      => 'Test toot content',
+			'published'    => '2023-03-23T12:34:56Z',
+			'name'         => 'Test Toot',
+			'icon'         => array(
+				'url' => 'https://files.mastodon.social/accounts/avatars/000/000/001/original/avatar.jpg',
+			),
 		);
 
-		$pre_dispatch_function = function ( $result, $server, $request ) use ( $response ) {
-			if ( '/oembed/1.0/proxy' === $request->get_route() ) {
-				return $response;
+		$pre_filter = function( $preempt, $args, $url ) use ( $mock_activity ) {
+			if ( false !== strpos( $url, 'mastodon.social' ) ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => wp_json_encode( $mock_activity ),
+				);
 			}
-			return $result;
+			return $preempt;
 		};
 
-		// Mock the REST Server dispatch to return our response.
-		add_filter( 'rest_pre_dispatch', $pre_dispatch_function, 10, 3 );
+		// Add filter to mock the HTTP response before Http::get_remote_object is called.
+		add_filter( 'pre_http_request', $pre_filter, 10, 3 );
 
-		$block_markup = '<!-- wp:activitypub/reply {"url":"https://mastodon.social/@user/123456","embedPost":true} /-->';
-		$output       = do_blocks( $block_markup );
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/reply {"url":"%s","embedPost":true} /-->',
+			$url
+		);
 
-		remove_filter( 'rest_pre_dispatch', $pre_dispatch_function );
+		$output = do_blocks( $block_markup );
 
-		$this->assertStringContainsString( $mock_embed, $output, 'Output should contain the embedded content.' );
-		$this->assertStringContainsString( 'u-in-reply-to', $output, 'Output should still contain the reply link.' );
-		$this->assertStringContainsString( 'mastodon.social/@user/123456', $output, 'Output should contain the Mastodon URL.' );
+		// Test the wrapper and microformats.
+		$this->assertStringContainsString( 'wp-block-activitypub-reply', $output );
+		$this->assertStringContainsString( 'activitypub-embed', $output );
+		$this->assertStringContainsString( 'h-cite', $output );
+
+		// Test the embed content.
+		$this->assertStringContainsString( 'Test toot content', $output );
+		$this->assertStringContainsString( 'Test Toot', $output );
+		$this->assertStringContainsString( $url, $output );
+
+		// Test author info.
+		$this->assertStringContainsString( 'https://mastodon.social/users/Gargron', $output );
+		$this->assertStringContainsString( 'accounts/avatars/000/000/001/original/avatar.jpg', $output );
+
+		// Test microformats classes.
+		$this->assertStringContainsString( 'p-author', $output );
+		$this->assertStringContainsString( 'h-card', $output );
+		$this->assertStringContainsString( 'u-photo', $output );
+		$this->assertStringContainsString( 'p-name', $output );
+		$this->assertStringContainsString( 'u-url', $output );
+
+		remove_filter( 'pre_http_request', $pre_filter, 10, 3 );
 	}
 
 	/**
