@@ -248,8 +248,13 @@ class Query {
 		}
 
 		// Fallback to parse_url, because it might be too early to use $wp_query.
-		$query_vars = \wp_parse_url( $this->get_request_url(), PHP_URL_QUERY );
-		parse_str( $query_vars, $query_vars );
+		$query_string = \wp_parse_url( $this->get_request_url(), PHP_URL_QUERY );
+
+		if ( ! $query_string ) {
+			return false;
+		}
+
+		parse_str( $query_string, $query_vars );
 
 		return isset( $query_vars['activitypub'] );
 	}
