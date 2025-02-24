@@ -62,7 +62,7 @@ class Move {
 	public static function account( $from, $to ) {
 		$user = Actors::get_by_resource( $from );
 
-		if ( ! $user ) {
+		if ( ! $user || is_wp_error( $user ) ) {
 			return false;
 		}
 
