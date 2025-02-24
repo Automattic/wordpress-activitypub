@@ -114,7 +114,8 @@ class Extra_Fields {
 			if (
 				\stripos( $link_content, '<a' ) === 0 &&
 				\stripos( $link_content, '<a', 3 ) === false &&
-				\stripos( $link_content, '</a>', \strlen( $link_content ) - 4 ) !== false
+				\stripos( $link_content, '</a>', \strlen( $link_content ) - 4 ) !== false &&
+				\class_exists( '\WP_HTML_Tag_Processor' )
 			) {
 				$tags = new \WP_HTML_Tag_Processor( $link_content );
 				$tags->next_tag( 'A' );
