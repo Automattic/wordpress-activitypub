@@ -22,7 +22,7 @@ class Post {
 	 */
 	public static function init() {
 		// Post transitions.
-		\add_action( 'wp_after_insert_post', array( self::class, 'handle_post_update' ), 33, 4 );
+		\add_action( 'wp_after_insert_post', array( self::class, 'schedule_post_activity' ), 33, 4 );
 
 		// Attachment transitions.
 		\add_action( 'add_attachment', array( self::class, 'transition_attachment_status' ) );
@@ -45,7 +45,7 @@ class Post {
 	 * @param bool     $update      Whether this is an existing post being updated.
 	 * @param \WP_Post $post_before Post object before the update.
 	 */
-	public static function handle_post_update( $post_id, $post, $update, $post_before ) {
+	public static function schedule_post_activity( $post_id, $post, $update, $post_before ) {
 		if ( defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
 			return;
 		}
