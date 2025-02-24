@@ -105,6 +105,23 @@ function tests_remove_all_filters() {
 \tests_add_filter( 'add_option_activitypub_actor_mode', 'tests_remove_all_filters', 1 );
 \tests_add_filter( 'update_option_activitypub_actor_mode', 'tests_remove_all_filters', 1 );
 
+/**
+ * Remove the ActivityPub Outbox post type from the REST API.
+ *
+ * It is unused in tests and only increases memory usage.
+ *
+ * @param array  $args      Arguments for registering a post type.
+ * @param string $post_type Post type key.
+ * @return array
+ */
+function tests_remove_outbox_rest( $args, $post_type ) {
+	if ( 'ap_outbox' === $post_type ) {
+		$args['show_in_rest'] = false;
+	}
+	return $args;
+}
+\tests_add_filter( 'register_post_type_args', 'tests_remove_outbox_rest', 10, 2 );
+
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
 require __DIR__ . '/class-activitypub-outbox-testcase.php';
