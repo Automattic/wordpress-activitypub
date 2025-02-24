@@ -55,6 +55,14 @@ class Actor extends Base_Object {
 				'@id'   => 'toot:attributionDomains',
 				'@type' => '@id',
 			),
+			'alsoKnownAs'               => array(
+				'@id'   => 'as:alsoKnownAs',
+				'@type' => '@id',
+			),
+			'movedTo'                   => array(
+				'@id'   => 'as:movedTo',
+				'@type' => '@id',
+			),
 			'postingRestrictedToMods'   => 'lemmy:postingRestrictedToMods',
 			'discoverable'              => 'toot:discoverable',
 			'indexable'                 => 'toot:indexable',
@@ -185,17 +193,6 @@ class Actor extends Base_Object {
 	protected $manually_approves_followers = false;
 
 	/**
-	 * Used to mark an object as containing sensitive content.
-	 * Mastodon displays a content warning, requiring users to click
-	 * through to view the content.
-	 *
-	 * @see https://docs.joinmastodon.org/spec/activitypub/#sensitive
-	 *
-	 * @var boolean
-	 */
-	protected $sensitive = null;
-
-	/**
 	 * Domains allowed to use `fediverse:creator` for this actor in
 	 * published articles.
 	 *
@@ -204,4 +201,18 @@ class Actor extends Base_Object {
 	 * @var array
 	 */
 	protected $attribution_domains = null;
+
+	/**
+	 * The target of the actor.
+	 *
+	 * @var string|null
+	 */
+	protected $moved_to;
+
+	/**
+	 * The alsoKnownAs of the actor.
+	 *
+	 * @var array
+	 */
+	protected $also_known_as;
 }

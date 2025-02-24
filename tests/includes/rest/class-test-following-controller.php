@@ -81,6 +81,9 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 * @covers ::get_items
 	 */
 	public function test_get_items() {
+		$actor_mode = \get_option( 'activitypub_actor_mode' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
 		$response = rest_get_server()->dispatch( $request );
 
@@ -105,6 +108,8 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$this->assertStringContainsString( 'wordpress.org', $data['generator'] );
 		$this->assertEquals( $data['partOf'], $data['first'] );
 		$this->assertIsArray( $data['orderedItems'] );
+
+		\update_option( 'activitypub_actor_mode', $actor_mode );
 	}
 
 	/**

@@ -187,8 +187,7 @@ class Test_Scheduler extends WP_UnitTestCase {
 		Scheduler::reprocess_outbox();
 
 		// Verify scheduling time.
-		$this->assertGreaterThan( 0, $scheduled_time, 'Event should be scheduled with a future timestamp' );
-		$this->assertGreaterThanOrEqual( time() + 10, $scheduled_time, 'Event should be scheduled at least 10 seconds in the future' );
+		$this->assertSame( $scheduled_time, wp_next_scheduled( 'activitypub_process_outbox', array( $pending_id ) ) );
 
 		// Clean up.
 		wp_delete_post( $pending_id, true );

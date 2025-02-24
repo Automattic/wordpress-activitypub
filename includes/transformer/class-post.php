@@ -544,6 +544,10 @@ class Post extends Base {
 	 * @return string|null The in-reply-to URL of the post.
 	 */
 	protected function get_in_reply_to() {
+		if ( ! site_supports_blocks() ) {
+			return null;
+		}
+
 		$blocks = \parse_blocks( $this->item->post_content );
 
 		foreach ( $blocks as $block ) {
@@ -1069,6 +1073,17 @@ class Post extends Base {
 	}
 
 	/**
+	 * Get the context of the post.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-context
+	 *
+	 * @return string The context of the post.
+	 */
+	protected function get_context() {
+		return get_rest_url_by_path( sprintf( 'posts/%d/context', $this->item->ID ) );
+	}
+
+	/**
 	 * Gets the template to use to generate the content of the activitypub item.
 	 *
 	 * @return string The Template.
@@ -1135,6 +1150,22 @@ class Post extends Base {
 			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/shares', $this->item->ID ) ),
 			'type'       => 'Collection',
 			'totalItems' => Interactions::count_by_type( $this->item->ID, 'repost' ),
+		);
+	}
+
+	/**
+	 * Get the preview of the post.
+	 *
+	 * @return array|null The preview of the post or null if the post is not an Article.
+	 */
+	public function get_preview() {
+		if ( 'Article' !== $this->get_type() ) {
+			return null;
+		}
+
+		return array(
+			'type'    => 'Note',
+			'content' => $this->get_summary(),
 		);
 	}
 }

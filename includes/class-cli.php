@@ -166,4 +166,37 @@ class Cli extends WP_CLI_Command {
 		}
 		WP_CLI::success( 'Undo activity scheduled.' );
 	}
+
+	/**
+	 * Re-Schedule an activity that was sent to the Fediverse before.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <outbox_item_id>
+	 *     The ID or URL of the outbox item to reschedule.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *    $ wp activitypub reschedule 123
+	 *    $ wp activitypub reschedule "https://example.com/?post_type=ap_outbox&p=123"
+	 *
+	 * @synopsis <outbox_item_id>
+	 *
+	 * @param array $args The arguments.
+	 */
+	public function reschedule( $args ) {
+		$outbox_item_id = $args[0];
+		if ( ! is_numeric( $outbox_item_id ) ) {
+			$outbox_item_id = url_to_postid( $outbox_item_id );
+		}
+
+		$outbox_item_id = get_post( $outbox_item_id );
+		if ( ! $outbox_item_id ) {
+			WP_CLI::error( 'Activity not found.' );
+		}
+
+		Outbox::reschedule( $outbox_item_id );
+
+		WP_CLI::success( 'Rescheduled activity.' );
+	}
 }
