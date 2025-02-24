@@ -236,30 +236,6 @@ class Query {
 	}
 
 	/**
-	 * Check if the request has the activitypub query var.
-	 *
-	 * @return bool True if the request has the activitypub query var, false otherwise.
-	 */
-	public function has_query_var() {
-		global $wp_query;
-
-		if ( isset( $wp_query->query_vars['activitypub'] ) ) {
-			return true;
-		}
-
-		// Fallback to parse_url, because it might be too early to use $wp_query.
-		$query_string = \wp_parse_url( $this->get_request_url(), PHP_URL_QUERY );
-
-		if ( ! $query_string ) {
-			return false;
-		}
-
-		parse_str( $query_string, $query_vars );
-
-		return isset( $query_vars['activitypub'] );
-	}
-
-	/**
 	 * Check if the current request is an ActivityPub request.
 	 *
 	 * @return bool True if the request is an ActivityPub request, false otherwise.
@@ -269,8 +245,13 @@ class Query {
 			return $this->is_activitypub_request;
 		}
 
-		// One can trigger an ActivityPub request by adding ?activitypub to the URL.
-		if ( $this->has_query_var() ) {
+		global $wp_query;
+
+		// One can trigger an ActivityPub request by adding `?activitypub` to the URL.
+		if (
+			isset( $wp_query->query_vars['activitypub'] ) ||
+			isset( $_GET['activitypub'] )
+		 ) {
 			defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 			$this->is_activitypub_request = true;
 
