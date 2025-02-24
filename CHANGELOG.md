@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Post bulk edits no longer create Outbox items, unless author or post status change.
 * Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
 * Outbox processing accounts for shared inboxes again.
+* Rewrite rules: be more specific in author rewrite rules to avoid conflicts on sites that use the "@author" pattern in their permalinks.
 
 ### Fixed
 
