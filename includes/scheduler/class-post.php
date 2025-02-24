@@ -28,13 +28,6 @@ class Post {
 		\add_action( 'add_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'edit_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'delete_attachment', array( self::class, 'transition_attachment_status' ) );
-
-		// Get all post types that support ActivityPub.
-		$post_types = \get_post_types_by_support( 'activitypub' );
-
-		foreach ( $post_types as $post_type ) {
-			//\add_filter( "rest_pre_insert_{$post_type}", array( self::class, 'rest_insert' ), 10, 2 );
-		}
 	}
 
 	/**
@@ -114,40 +107,5 @@ class Post {
 				add_to_outbox( $post, 'Delete', $post->post_author );
 				break;
 		}
-	}
-
-	/**
-	 * Filter the post data before it is inserted via the REST API.
-	 *
-	 * Posts being inserted via the REST API have a different order of operations than in wp_insert_post().
-	 * This filter updates post meta before the post is inserted into the database, so that the
-	 * information is available by the time @see Outbox::add() runs.
-	 *
-	 * @param \stdClass        $post    An object representing a single post prepared for inserting or updating the database.
-	 * @param \WP_REST_Request $request The request object.
-	 *
-	 * @return \stdClass The prepared post.
-	 */
-	public static function rest_insert( $post, $request ) {
-		$metas = $request->get_param( 'meta' );
-
-		if ( empty( $post->ID ) || ! $metas || ! is_array( $metas ) ) {
-			return $post;
-		}
-
-		foreach ( $metas as $meta_key => $meta_value ) {
-			if (
-				\str_starts_with( $meta_key, 'activitypub_' ) ||
-				\str_starts_with( $meta_key, '_activitypub_' )
-			) {
-				if ( $meta_value ) {
-					\update_post_meta( $post->ID, $meta_key, $meta_value );
-				} else {
-					\delete_post_meta( $post->ID, $meta_key );
-				}
-			}
-		}
-
-		return $post;
 	}
 }
