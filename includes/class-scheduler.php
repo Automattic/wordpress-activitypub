@@ -164,15 +164,16 @@ class Scheduler {
 	/**
 	 * Schedule the outbox item for federation.
 	 *
-	 * @param int $id The ID of the outbox item.
+	 * @param int $id     The ID of the outbox item.
+	 * @param int $offset The offset to add to the scheduled time.
 	 */
-	public static function schedule_outbox_activity_for_federation( $id ) {
+	public static function schedule_outbox_activity_for_federation( $id, $offset = 0 ) {
 		$hook = 'activitypub_process_outbox';
 		$args = array( $id );
 
 		if ( false === wp_next_scheduled( $hook, $args ) ) {
 			\wp_schedule_single_event(
-				\time() + 10,
+				\time() + $offset,
 				$hook,
 				$args
 			);
@@ -425,6 +426,6 @@ class Scheduler {
 		}
 
 		// Schedule the outbox item for federation.
-		self::schedule_outbox_activity_for_federation( $outbox_activity_id );
+		self::schedule_outbox_activity_for_federation( $outbox_activity_id, 30 );
 	}
 }

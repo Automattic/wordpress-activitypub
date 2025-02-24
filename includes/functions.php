@@ -74,8 +74,8 @@ function get_webfinger_resource( $user_id ) {
 /**
  * Requests the Meta-Data from the Actors profile.
  *
- * @param string $actor  The Actor URL.
- * @param bool   $cached Optional. Whether the result should be cached. Default true.
+ * @param array|string $actor  The Actor array or URL.
+ * @param bool         $cached Optional. Whether the result should be cached. Default true.
  *
  * @return array|WP_Error The Actor profile as array or WP_Error on failure.
  */
@@ -95,89 +95,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) {
 		return $pre;
 	}
 
-	if ( is_array( $actor ) ) {
-		if ( array_key_exists( 'id', $actor ) ) {
-			$actor = $actor['id'];
-		} elseif ( array_key_exists( 'url', $actor ) ) {
-			$actor = $actor['url'];
-		} else {
-			return new WP_Error(
-				'activitypub_no_valid_actor_identifier',
-				\__( 'The "actor" identifier is not valid', 'activitypub' ),
-				array(
-					'status' => 404,
-					'actor'  => $actor,
-				)
-			);
-		}
-	}
-
-	if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $actor ) ) {
-		$actor = Webfinger::resolve( $actor );
-	}
-
-	if ( ! $actor ) {
-		return new WP_Error(
-			'activitypub_no_valid_actor_identifier',
-			\__( 'The "actor" identifier is not valid', 'activitypub' ),
-			array(
-				'status' => 404,
-				'actor'  => $actor,
-			)
-		);
-	}
-
-	if ( is_wp_error( $actor ) ) {
-		return $actor;
-	}
-
-	$transient_key = 'activitypub_' . $actor;
-
-	// Only check the cache if needed.
-	if ( $cached ) {
-		$metadata = \get_transient( $transient_key );
-
-		if ( $metadata ) {
-			return $metadata;
-		}
-	}
-
-	if ( ! \wp_http_validate_url( $actor ) ) {
-		$metadata = new WP_Error(
-			'activitypub_no_valid_actor_url',
-			\__( 'The "actor" is no valid URL', 'activitypub' ),
-			array(
-				'status' => 400,
-				'actor'  => $actor,
-			)
-		);
-		return $metadata;
-	}
-
-	$response = Http::get( $actor );
-
-	if ( \is_wp_error( $response ) ) {
-		return $response;
-	}
-
-	$metadata = \wp_remote_retrieve_body( $response );
-	$metadata = \json_decode( $metadata, true );
-
-	if ( ! $metadata ) {
-		$metadata = new WP_Error(
-			'activitypub_invalid_json',
-			\__( 'No valid JSON data', 'activitypub' ),
-			array(
-				'status' => 400,
-				'actor'  => $actor,
-			)
-		);
-		return $metadata;
-	}
-
-	\set_transient( $transient_key, $metadata, WEEK_IN_SECONDS );
-
-	return $metadata;
+	return Http::get_remote_object( $actor, $cached );
 }
 
 /**
