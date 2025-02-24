@@ -787,7 +787,8 @@ class Post extends Base {
 	/**
 	 * Get image embeds from the classic editor by parsing HTML.
 	 *
-	 * @param int $max_images The maximum number of images to return.
+	 * @param array $media      The media array grouped by type.
+	 * @param int   $max_images The maximum number of images to return.
 	 *
 	 * @return array The attachments.
 	 */
