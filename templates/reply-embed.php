@@ -19,6 +19,7 @@ $args = wp_parse_args(
 		'url'         => '',
 		'boosts'      => '',
 		'favorites'   => '',
+		'webfinger'   => '',
 	)
 );
 
@@ -33,7 +34,7 @@ $args = wp_parse_args(
 		<div class="activitypub-embed-header-text">
 			<h2 class="p-name"><?php echo \esc_html( $args['author_name'] ); ?></h2>
 			<?php if ( $args['author_url'] ) : ?>
-				<a href="<?php echo \esc_url( $args['author_url'] ); ?>" class="ap-account u-url"><?php echo \esc_html( $args['author_url'] ); ?></a>
+				<a href="<?php echo \esc_url( $args['author_url'] ); ?>" class="ap-account u-url"><?php echo \esc_html( $args['webfinger'] ?? $args['author_url'] ); ?></a>
 			<?php endif; ?>
 		</div>
 	</div>

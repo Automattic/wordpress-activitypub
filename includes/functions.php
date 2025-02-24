@@ -1752,6 +1752,18 @@ function get_embed_html( $url, $inline_css = true ) {
 		}
 	}
 
+	// Create Webfinger where not found.
+	if ( empty( $author['webfinger'] ) ) {
+		if ( ! empty( $author['preferredUsername'] ) && ! empty( $author['url'] ) ) {
+			// Construct webfinger-style identifier from username and domain.
+			$domain              = wp_parse_url( $author['url'], PHP_URL_HOST );
+			$author['webfinger'] = '@' . $author['preferredUsername'] . '@' . $domain;
+		} else {
+			// Fallback to URL.
+			$author['webfinger'] = $author_url;
+		}
+	}
+
 	$title     = $object['name'] ?? '';
 	$content   = $object['content'] ?? '';
 	$published = isset( $object['published'] ) ? gmdate( get_option( 'date_format' ) . ', ' . get_option( 'time_format' ), strtotime( $object['published'] ) ) : '';
@@ -1785,17 +1797,17 @@ function get_embed_html( $url, $inline_css = true ) {
 			'boosts'      => $boosts,
 			'favorites'   => $favorites,
 			'url'         => $url,
+			'webfinger'   => $author['webfinger'],
 		)
 	);
 
 	if ( $inline_css ) {
 		// Grab the CSS.
 		$css = \file_get_contents( ACTIVITYPUB_PLUGIN_DIR . 'assets/css/activitypub-embed.css' ); // phpcs:ignore
-		// A little light whitespace cleanup.
-		$css = preg_replace( '/\s+/', ' ', $css );
 		// We embed CSS directly because this may be in an iframe.
 		printf( '<style>%s</style>', $css ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
-	return ob_get_clean();
+	// A little light whitespace cleanup.
+	return preg_replace( '/\s+/', ' ', ob_get_clean() );
 }
