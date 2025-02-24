@@ -250,8 +250,9 @@ class Query {
 		// One can trigger an ActivityPub request by adding `?activitypub` to the URL.
 		if (
 			isset( $wp_query->query_vars['activitypub'] ) ||
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			isset( $_GET['activitypub'] )
-		 ) {
+		) {
 			defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 			$this->is_activitypub_request = true;
 
