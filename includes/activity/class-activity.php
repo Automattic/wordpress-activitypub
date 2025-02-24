@@ -26,12 +26,14 @@ use function Activitypub\is_activity;
  * @method string                  get_type()           Gets the type of the object.
  * @method string|null             get_name()           Gets the natural language name of the object.
  * @method string|null             get_url()            Gets the URL of the object.
+ * @method string|null             get_content()        Gets the content property of the object.
  * @method string|null             get_summary()        Gets the natural language summary of the object.
  * @method string|null             get_published()      Gets the date and time the object was published in ISO 8601 format.
  * @method string|null             get_updated()        Gets the date and time the object was updated in ISO 8601 format.
  * @method string|null             get_attributed_to()  Gets the entity attributed as the original author.
  * @method array|string|null       get_cc()             Gets the secondary recipients of the object.
  * @method array|string|null       get_to()             Gets the primary recipients of the object.
+ * @method array|null              get_tag()            Gets the tag property of the object.
  * @method array|null              get_attachment()     Gets the attachment property of the object.
  * @method array|null              get_icon()           Gets the icon property of the object.
  * @method array|null              get_image()          Gets the image property of the object.
@@ -156,11 +158,11 @@ class Activity extends Base_Object {
 	 * Set the object and copy Object properties to the Activity.
 	 *
 	 * Any to, bto, cc, bcc, and audience properties specified on the object
-	 * MUST be copied over to the new Create activity by the server.
+	 * MUST be copied over to the new "Create" activity by the server.
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#object-without-create
 	 *
-	 * @param array|string|Base_Object|Link|null $data Activity object.
+	 * @param array|string|Activity|Link|null $data Activity object.
 	 */
 	public function set_object( $data ) {
 		// Convert array to object.

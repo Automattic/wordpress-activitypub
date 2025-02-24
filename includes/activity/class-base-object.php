@@ -20,6 +20,24 @@ namespace Activitypub\Activity;
  * 'Base_' for this reason.
  *
  * @see https://www.w3.org/TR/activitystreams-core/#object
+ *
+ * @method string|null get_id()      Gets the object's unique global identifier.
+ * @method string      get_type()    Gets the type of the object.
+ * @method string|null get_name()    Gets the natural language name of the object.
+ * @method mixed       get_object()  Gets the direct object of the activity.
+ * @method string|null get_content() Gets the content property of the object.
+ *
+ * @method string|array add_to( string|array $to ) Adds one or more entities to the primary audience of the object.
+ * @method string|array add_cc( string|array $cc ) Adds one or more entities to the secondary audience of the object.
+ *
+ * @method Base_Object set_type( string $type )              Sets the type of the object.
+ * @method Base_Object set_url( string $url )                Sets the URL of the object.
+ * @method Base_Object set_summary( string $summary )        Sets the summary of the object.
+ * @method Base_Object set_published( string $published )    Sets the date and time the object was published in ISO 8601 format.
+ * @method Base_Object set_updated( string $updated )        Sets the date and time the object was updated in ISO 8601 format.
+ * @method Base_Object set_content_map( array $content_map ) Sets the content property of the object.
+ * @method Base_Object set_summary_map( array|null $summary_map ) Sets the summary property of the object.
+ * @method Base_Object set_sensitive( bool $sensitive )      Sets the sensitive property of the object.
  */
 class Base_Object extends Generic_Object {
 	/**
