@@ -171,11 +171,19 @@ class Dispatcher {
 	/**
 	 * Retry sending to followers.
 	 *
-	 * @param array $inboxes        The inboxes to retry.
-	 * @param int   $outbox_item_id The Outbox item ID.
-	 * @param int   $attempt        The attempt number.
+	 * @param string $transient_key  The key to retrieve retry inboxes.
+	 * @param int    $outbox_item_id The Outbox item ID.
+	 * @param int    $attempt        The attempt number.
 	 */
-	public static function retry_send_to_followers( $inboxes, $outbox_item_id, $attempt = 1 ) {
+	public static function retry_send_to_followers( $transient_key, $outbox_item_id, $attempt = 1 ) {
+		$inboxes = \get_transient( $transient_key );
+		if ( false === $inboxes ) {
+			return;
+		}
+
+		// Delete the transient as we no longer need it.
+		\delete_transient( $transient_key );
+
 		$retries = self::send_to_inboxes( $inboxes, $outbox_item_id );
 
 		// Retry failed inboxes.
@@ -226,12 +234,15 @@ class Dispatcher {
 	 * @param int   $attempt        Optional. The attempt number. Default 1.
 	 */
 	private static function schedule_retry( $retries, $outbox_item_id, $attempt = 1 ) {
+		$transient_key = 'activitypub_retry_' . \wp_generate_password( 12, false );
+		\set_transient( $transient_key, $retries, WEEK_IN_SECONDS );
+
 		\wp_schedule_single_event(
 			\time() + ( $attempt * $attempt * HOUR_IN_SECONDS ),
 			'activitypub_async_batch',
 			array(
 				array( self::class, 'retry_send_to_followers' ),
-				$retries,
+				$transient_key,
 				$outbox_item_id,
 				$attempt,
 			)
