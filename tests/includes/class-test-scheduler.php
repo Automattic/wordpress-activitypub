@@ -281,4 +281,25 @@ class Test_Scheduler extends WP_UnitTestCase {
 		// Verify posts are deleted.
 		$this->assertEquals( 0, wp_count_posts( Outbox::POST_TYPE )->publish );
 	}
+
+	/**
+	 * Test async_batch method.
+	 *
+	 * @covers ::async_batch
+	 */
+	public function test_async_batch_with_invalid_callback() {
+		// Set up expectations for _doing_it_wrong notice.
+		$this->setExpectedIncorrectUsage( 'Activitypub\Scheduler::async_batch' );
+
+		// Create a mock callback that implements __invoke but is not in the allowed list.
+		$mock_class = $this->getMockBuilder( 'stdClass' )
+			->addMethods( array( 'callback' ) )
+			->getMock();
+
+		$mock_class->expects( $this->never() )
+			->method( 'callback' );
+
+		// Run async_batch with invalid callback.
+		Scheduler::async_batch( array( $mock_class, 'callback' ) );
+	}
 }

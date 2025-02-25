@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
 * A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
 * Setting to adjust the number of days Outbox items are kept before being purged.
+* Failed Follower notifications for Outbox items now get retried for two more times.
 * Undo API for Outbox items.
 * Metadata to New Follower E-Mail.
 * Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
@@ -26,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Post bulk edits no longer create Outbox items, unless author or post status change.
 * Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
 * Outbox processing accounts for shared inboxes again.
+* Improved check for `?activitypub` query-var.
+* Rewrite rules: be more specific in author rewrite rules to avoid conflicts on sites that use the "@author" pattern in their permalinks.
 
 ### Fixed
 

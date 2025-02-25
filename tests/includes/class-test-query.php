@@ -159,6 +159,11 @@ class Test_Query extends WP_UnitTestCase {
 
 		// Test with ActivityPub query var.
 		Query::get_instance()->__destruct();
+		$_GET['activitypub'] = '';
+		$this->assertTrue( Query::get_instance()->is_activitypub_request() );
+		unset( $_GET['activitypub'] );
+
+		Query::get_instance()->__destruct();
 		$this->go_to( get_permalink( self::$post_id ) );
 		set_query_var( 'activitypub', '1' );
 		$this->assertTrue( Query::get_instance()->is_activitypub_request() );
