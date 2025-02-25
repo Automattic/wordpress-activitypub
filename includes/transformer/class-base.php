@@ -236,6 +236,28 @@ abstract class Base {
 	protected function get_locale() {
 		$lang = \strtolower( \strtok( \get_locale(), '_-' ) );
 
+		if ( $this->item instanceof \WP_Post ) {
+			/**
+			 * Deprecates the `activitypub_post_locale` filter.
+			 *
+			 * @param string $lang The locale of the post.
+			 * @param mixed  $item The post object.
+			 *
+			 * @return string The filtered locale of the post.
+			 */
+			$lang = apply_filters_deprecated(
+				'activitypub_post_locale',
+				array(
+					$lang,
+					$this->item->ID,
+					$this->item,
+				),
+				'5.4.0',
+				'activitypub_locale',
+				'Use the `activitypub_locale` filter instead.'
+			);
+		}
+
 		/**
 		 * Filter the locale of the post.
 		 *
