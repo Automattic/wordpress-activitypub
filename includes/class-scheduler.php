@@ -22,10 +22,22 @@ use Activitypub\Transformer\Factory;
 class Scheduler {
 
 	/**
+	 * Allowed batch callbacks.
+	 *
+	 * @var array
+	 */
+	private static $batch_callbacks = array();
+
+	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		self::register_schedulers();
+
+		self::$batch_callbacks = array(
+			Dispatcher::$callback,
+			array( Dispatcher::class, 'retry_send_to_followers' ),
+		);
 
 		// Follower Cleanups.
 		\add_action( 'activitypub_update_followers', array( self::class, 'update_followers' ) );
@@ -267,7 +279,7 @@ class Scheduler {
 	 * @params mixed   ...$args  Optional. Parameters that get passed to the callback.
 	 */
 	public static function async_batch( $callback ) {
-		if ( ! \is_callable( $callback ) ) {
+		if ( ! in_array( $callback, self::$batch_callbacks, true ) || ! \is_callable( $callback ) ) {
 			_doing_it_wrong( __METHOD__, 'The first argument must be a valid callback.', '5.2.0' );
 			return;
 		}
