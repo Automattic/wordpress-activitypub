@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
-Stable tag: 5.2.0
+Stable tag: 5.3.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -131,6 +131,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Changed: Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
+
+= 5.3.0 =
+
 * Added: A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
 * Added: A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
 * Added: Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
@@ -148,13 +152,14 @@ For reasons of data protection, it is not possible to see the followers of other
 * Changed: Outbox processing accounts for shared inboxes again.
 * Changed: Improved check for `?activitypub` query-var.
 * Changed: Rewrite rules: be more specific in author rewrite rules to avoid conflicts on sites that use the "@author" pattern in their permalinks.
-* Changed: Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
+* Changed: Deprecate the `activitypub_post_locale` filter in favor of the `activitypub_locale` filter.
 * Fixed: The Outbox purging routine no longer is limited to deleting 5 items at a time.
 * Fixed: An issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
 * Fixed: Ellipses now display correctly in notification emails for Likes and Reposts.
 * Fixed: Send Update-Activity when "Actor-Mode" is changed.
 * Fixed: Added delay to `Announce` Activity from the Blog-Actor, to not have race conditions.
 * Fixed: `Actor` validation in several REST API endpoints.
+* Fixed: Bring back the `activitypub_post_locale` filter to allow overriding the post's locale.
 
 = 5.2.0 =
 
