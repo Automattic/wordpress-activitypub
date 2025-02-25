@@ -177,11 +177,6 @@ class Activitypub {
 			if ( ! \headers_sent() ) {
 				// Send 200 status header.
 				\status_header( 200 );
-
-				if ( ACTIVITYPUB_SEND_VARY_HEADER ) {
-					// Send Vary header for Accept header.
-					\header( 'Vary: Accept' );
-				}
 			}
 
 			return $activitypub_template;
@@ -201,7 +196,12 @@ class Activitypub {
 		}
 
 		if ( ! headers_sent() ) {
-			header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
+			\header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
+
+			if ( ACTIVITYPUB_SEND_VARY_HEADER ) {
+				// Send Vary header for Accept header.
+				\header( 'Vary: Accept', false );
+			}
 		}
 
 		add_action(
