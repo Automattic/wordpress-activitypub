@@ -30,7 +30,7 @@ class Test_Shortcodes extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		remove_action( 'transition_post_status', array( Post::class, 'schedule_post_activity' ), 33 );
+		remove_action( 'wp_after_insert_post', array( Post::class, 'schedule_post_activity' ), 33 );
 
 		Shortcodes::register();
 

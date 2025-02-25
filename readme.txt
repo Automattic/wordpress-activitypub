@@ -129,6 +129,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Changed: Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
+
 = 5.3.0 =
 
 * Added: A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.

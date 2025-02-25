@@ -29,7 +29,7 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 	 * Set up the test.
 	 */
 	public static function set_up_before_class() {
-		\remove_action( 'transition_post_status', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33 );
+		\remove_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'schedule_post_activity' ), 33 );
 		\remove_action( 'transition_comment_status', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity' ), 20 );
 		\remove_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ) );
 
