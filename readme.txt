@@ -132,6 +132,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = 5.3.1 =
 
 * Fixed: Blog profile settings can be saved again without errors.
+* Fixed: Followers with backslashes in their descriptions no longer break their actor representation.
 
 = 5.3.0 =
 

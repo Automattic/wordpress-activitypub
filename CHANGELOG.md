@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Blog profile settings can be saved again without errors.
+* Followers with backslashes in their descriptions no longer break their actor representation.
 
 ## [5.3.0] - 2025-02-25
 
