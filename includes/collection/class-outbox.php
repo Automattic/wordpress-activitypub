@@ -25,14 +25,15 @@ class Outbox {
 	/**
 	 * Add an Item to the outbox.
 	 *
-	 * @param \Activitypub\Activity\Base_Object $activity_object    The object of the activity that will be added to the outbox.
-	 * @param string                            $activity_type      The activity type.
-	 * @param int                               $user_id            The real or imaginary user ID of the actor that published the activity that will be added to the outbox.
-	 * @param string                            $content_visibility Optional. The visibility of the content. Default: `ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC`. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+	 * @param \Activitypub\Activity\Base_Object $activity_object      The object of the activity that will be added to the outbox.
+	 * @param string                            $activity_type        The activity type.
+	 * @param int                               $user_id              The real or imaginary user ID of the actor that published the activity that will be added to the outbox.
+	 * @param string                            $content_visibility   Optional. The visibility of the content. Default: `ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC`. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+	 * @param boolean                           $use_data_as_activity Whether to use the data as the main Activity object.
 	 *
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
-	public static function add( $activity_object, $activity_type, $user_id, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) { // phpcs:ignore
+	public static function add( $activity_object, $activity_type, $user_id, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $use_data_as_activity = false ) { // phpcs:ignore
 		switch ( $user_id ) {
 			case Actors::APPLICATION_USER_ID:
 				$actor_type = 'application';
@@ -73,6 +74,10 @@ class Outbox {
 				'activitypub_content_visibility' => $content_visibility,
 			),
 		);
+
+		if ( $use_data_as_activity ) {
+			$outbox_item['meta_input']['_activitypub_activity_source'] = 'post_content';
+		}
 
 		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
 		if ( $has_kses ) {
@@ -209,18 +214,25 @@ class Outbox {
 			return $actor;
 		}
 
-		$type     = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 		$activity = new Activity();
+		$source   = \get_post_meta( $outbox_item->ID, '_activitypub_activity_source', true );
+
+		if ( 'post_content' === $source ) {
+			$activity->from_json( $outbox_item->post_content );
+		} else {
+			// Pre-fill the Activity with data (for example cc and to).
+			$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
+
+			// Use simple Object (only ID-URI) for Like and Announce.
+			if ( in_array( $type, array( 'Like', 'Delete' ), true ) ) {
+				$activity->set_object( $activity->get_object()->get_id() );
+			}
+		}
+
+		$type = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 		$activity->set_type( $type );
 		$activity->set_id( $outbox_item->guid );
-		// Pre-fill the Activity with data (for example cc and to).
-		$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
 		$activity->set_actor( $actor->get_id() );
-
-		// Use simple Object (only ID-URI) for Like and Announce.
-		if ( in_array( $type, array( 'Like', 'Delete' ), true ) ) {
-			$activity->set_object( $activity->get_object()->get_id() );
-		}
 
 		return $activity;
 	}

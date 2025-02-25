@@ -76,15 +76,14 @@ class Move {
 		\update_user_option( $user->get__id(), 'activitypub_also_known_as', $also_known_as );
 
 		// Create Move activity.
-		$activity = array(
-			'@context' => get_context(),
-			'type'     => 'Move',
-			'actor'    => $from,
-			'object'   => $from,
-			'target'   => $to,
-		);
+		$activity = new Activity();
+		$activity->set_type( 'Move' );
+		$activity->set_actor( $from );
+		$activity->set_origin( $from );
+		$activity->set_object( $to );
+		$activity->set_target( $to );
 
 		// Add to outbox.
-		return add_to_outbox( $activity, 'Move', $user->get__id() );
+		return add_to_outbox( $activity, 'Move', $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, true );
 	}
 }
