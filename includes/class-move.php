@@ -75,15 +75,22 @@ class Move {
 		$also_known_as   = array_unique( $also_known_as );
 		\update_user_option( $user->get__id(), 'activitypub_also_known_as', $also_known_as );
 
-		// Create Move activity.
-		$activity = new Activity();
-		$activity->set_type( 'Move' );
-		$activity->set_actor( $from );
-		$activity->set_origin( $from );
-		$activity->set_object( $to );
-		$activity->set_target( $to );
+		$response = Http::get_remote_object( $to );
+
+		if ( \is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$actor = new Actor();
+		$actor->from_array( $response );
+
+		// Check if the `Move` Activity is valid.
+		$also_known_as = $actor->get_also_known_as();
+		if ( ! in_array( $from, $also_known_as, true ) ) {
+			return new WP_Error( 'invalid_target', __( 'Invalid target', 'activitypub' ) );
+		}
 
 		// Add to outbox.
-		return add_to_outbox( $activity, 'Move', $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, true );
+		return add_to_outbox( $actor, 'Move', $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 	}
 }
