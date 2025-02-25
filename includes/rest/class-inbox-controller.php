@@ -35,7 +35,6 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 * Register routes.
 	 */
 	public function register_routes() {
-		// Shared inbox.
 		\register_rest_route(
 			$this->namespace,
 			'/' . $this->rest_base,
@@ -186,7 +185,6 @@ class Inbox_Controller extends \WP_REST_Controller {
 				'type'     => array(
 					'description' => 'The type of the activity.',
 					'type'        => 'string',
-					'enum'        => array( 'Create', 'Update', 'Delete', 'Follow', 'Accept', 'Reject', 'Add', 'Remove', 'Like', 'Announce', 'Undo', 'Block' ),
 					'required'    => true,
 				),
 				'actor'    => array(
