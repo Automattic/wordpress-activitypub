@@ -482,8 +482,6 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		add_filter( 'activitypub_reply_block', '__return_empty_string' );
-
 		// Remove Content from drafts.
 		if ( 'draft' === \get_post_status( $this->item ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
@@ -498,9 +496,10 @@ class Post extends Base {
 		 *
 		 * @param WP_Post $post The post object.
 		 */
-		do_action( 'activitypub_before_get_content', $post );
+		\do_action( 'activitypub_before_get_content', $post );
 
-		add_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ), 10, 2 );
+		\add_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ), 10, 2 );
+		\add_filter( 'render_block_activitypub/reply', '__return_empty_string' );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$post    = $this->item;
@@ -534,7 +533,7 @@ class Post extends Base {
 		Shortcodes::unregister();
 
 		// Get rid of the reply block filter.
-		remove_filter( 'activitypub_reply_block', '__return_empty_string' );
+		\remove_filter( 'render_block_activitypub/reply', '__return_empty_string' );
 
 		return $content;
 	}
