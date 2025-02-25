@@ -110,7 +110,7 @@ class Move {
 	 */
 	public static function outbox_activity( $activity ) {
 		if ( 'Move' === $activity->get_type() ) {
-			$activity->set_object( $activity->get_object()->get_id() );
+			$activity->set_object( object_to_uri( $activity->get_object() ) );
 			$activity->set_origin( $activity->get_actor() );
 			$activity->set_target( $activity->get_object() );
 		}

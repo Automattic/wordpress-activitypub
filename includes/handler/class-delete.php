@@ -12,6 +12,8 @@ use Activitypub\Http;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Interactions;
 
+use function Activitypub\object_to_uri;
+
 /**
  * Handles Delete requests.
  */
@@ -188,7 +190,7 @@ class Delete {
 	 */
 	public static function outbox_activity( $activity ) {
 		if ( 'Delete' === $activity->get_type() ) {
-			$activity->set_object( $activity->get_object()->get_id() );
+			$activity->set_object( object_to_uri( $activity->get_object() ) );
 		}
 
 		return $activity;

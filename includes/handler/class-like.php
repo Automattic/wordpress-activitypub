@@ -72,7 +72,7 @@ class Like {
 	 */
 	public static function outbox_activity( $activity ) {
 		if ( 'Like' === $activity->get_type() ) {
-			$activity->set_object( $activity->get_object()->get_id() );
+			$activity->set_object( object_to_uri( $activity->get_object() ) );
 		}
 
 		return $activity;
