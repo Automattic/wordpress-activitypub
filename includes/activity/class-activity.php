@@ -53,6 +53,8 @@ use function Activitypub\is_activity;
  * @method Activity set_icon( array $icon )             Sets the icon property of the object.
  * @method Activity set_image( array $image )           Sets the image property of the object.
  * @method Activity set_content( string $content )      Sets the content property of the object.
+ * @method Activity set_origin( string|array $origin )  Sets the indirect object of the activity from which the activity is directed.
+ * @method Activity set_target( string|array $target )  Sets the indirect object, or target, of the activity.
  */
 class Activity extends Base_Object {
 	const JSON_LD_CONTEXT = array(

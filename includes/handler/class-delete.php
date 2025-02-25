@@ -20,24 +20,10 @@ class Delete {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action(
-			'activitypub_inbox_delete',
-			array( self::class, 'handle_delete' )
-		);
-
-		// Defer signature verification for `Delete` requests.
-		\add_filter(
-			'activitypub_defer_signature_verification',
-			array( self::class, 'defer_signature_verification' ),
-			10,
-			2
-		);
-
-		// Side effect.
-		\add_action(
-			'activitypub_delete_actor_interactions',
-			array( self::class, 'delete_interactions' )
-		);
+		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ) );
+		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
+		\add_action( 'activitypub_delete_actor_interactions', array( self::class, 'delete_interactions' ) );
+		\add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ) );
 	}
 
 	/**
@@ -192,5 +178,19 @@ class Delete {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Set the object to the object ID.
+	 *
+	 * @param \Activitypub\Activity\Activity $activity The Activity object.
+	 * @return \Activitypub\Activity\Activity The filtered Activity object.
+	 */
+	public static function outbox_activity( $activity ) {
+		if ( 'Delete' === $activity->get_type() ) {
+			$activity->set_object( $activity->get_object()->get_id() );
+		}
+
+		return $activity;
 	}
 }

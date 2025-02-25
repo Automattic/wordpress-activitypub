@@ -217,18 +217,13 @@ class Outbox {
 		// Pre-fill the Activity with data (for example cc and to).
 		$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
 
-		// Use simple Object (only ID-URI) for Like and Announce.
-		if ( in_array( $type, array( 'Like', 'Delete', 'Move' ), true ) ) {
-			$activity->set_object( $activity->get_object()->get_id() );
-		}
-
-		// Set origin and target for Move.
-		if ( 'Move' === $type ) {
-			$activity->set_origin( $activity->get_actor() );
-			$activity->set_target( $activity->get_object() );
-		}
-
-		return $activity;
+		/**
+		 * Filters the Activity object before it is returned.
+		 *
+		 * @param Activity $activity    The Activity object.
+		 * @param \WP_Post $outbox_item The outbox item post object.
+		 */
+		return apply_filters( 'activitypub_get_outbox_activity', $activity, $outbox_item );
 	}
 
 	/**
