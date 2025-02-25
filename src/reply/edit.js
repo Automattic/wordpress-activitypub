@@ -1,7 +1,7 @@
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
 import { TextControl, PanelBody, ToggleControl, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { useEffect, useState } from '@wordpress/element';
+import { useEffect, useState, useRef } from '@wordpress/element';
 import { useDebounce } from '@wordpress/compose';
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
@@ -20,13 +20,18 @@ import { useDispatch } from '@wordpress/data';
  * @param {boolean} props.isSelected - Whether the block is selected.
  */
 
-// Help text messages for different states.
+// Help text messages for different reply states.
 const HELP_TEXT = {
-	default: __( 'Enter the URL of a post from the Fediverse (Mastodon, Pixelfed, etc.) that you want to reply to. Your reply will be sent to their inbox when published.', 'activitypub' ),
+	default: __( 'Enter the URL of a post from the Fediverse (Mastodon, Pixelfed, etc.) that you want to reply to.', 'activitypub' ),
 	checking: __( 'Checking if this URL supports ActivityPub replies...', 'activitypub' ),
-	valid: __( 'Great! This URL supports ActivityPub replies. When you publish, the author will be notified of your response. You can also choose to embed the original post below.', 'activitypub' ),
-	invalid: __( 'This URL does not appear to support ActivityPub replies.', 'activitypub' ),
-	error: __( 'Unable to verify this URL. Please check that it is correct and try again.', 'activitypub' ),
+	valid: __( 'The author will be notified of your response.', 'activitypub' ),
+	error: __( 'This URL probably won\'t receive your reply. We\'ll still try.', 'activitypub' ),
+};
+
+// Help text messages for embed toggle states.
+const EMBED_HELP_TEXT = {
+	valid: __( 'This post can be embedded with your reply.', 'activitypub' ),
+	invalid: __( 'This post cannot be embedded.', 'activitypub' ),
 };
 
 export default function Edit( { attributes: attr, setAttributes, clientId, isSelected } ) {
@@ -44,6 +49,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	const { insertAfterBlock, removeBlock } = useDispatch( 'core/block-editor' );
 	// Get block props and dispatch functions.
 	const blockProps = useBlockProps();
+	const urlInputRef = useRef();
 
 	/**
 	 * Check if a URL is an ActivityPub URL.
@@ -128,7 +134,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 						checked={ attr.embedPost }
 						onChange={ onEmbedPostChange }
 						disabled={ ! isValidEmbed }
-						help={ helpText }
+						help={ isValidEmbed ? EMBED_HELP_TEXT.valid : EMBED_HELP_TEXT.invalid }
 					/>
 				</PanelBody>
 			</InspectorControls>
@@ -136,17 +142,19 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 			<div { ...blockProps }>
 				{ isSelected && (
 					<TextControl
-						label={ __( 'This post is a reply to the following URL', 'activitypub' ) }
+						label={ __( 'Your post is a reply to the following URL', 'activitypub' ) }
 						value={ url }
 						onChange={ ( value ) => setAttributes( { url: value } ) }
 						help={ helpText }
 						onKeyDown={ onKeyDown }
+						ref={ urlInputRef }
 					/>
 				) }
 
 				{ isCheckingEmbed && (
 					<div className="activitypub-embed-container activitypub-embed-loading">
 						<Spinner />
+						<div>{ HELP_TEXT.checking }</div>
 					</div>
 				) }
 
@@ -164,8 +172,11 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 					<div
 						className="activitypub-reply-block-editor__preview"
 						contentEditable={ false }
-						onMouseDown={ ( e ) => e.preventDefault() }
-						style={ { pointerEvents: 'none' } }
+						onClick={ ( e ) => {
+							e.preventDefault();
+							setTimeout( () => urlInputRef.current?.focus(), 20 );
+						} }
+						style={ { pointerEvents: 'auto', cursor: 'pointer' } }
 					>
 						<a
 							href={ url }
