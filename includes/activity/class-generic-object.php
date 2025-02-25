@@ -17,7 +17,7 @@ use function Activitypub\snake_to_camel_case;
  * It is used to create objects that might be unknown by the plugin but
  * conform to the ActivityStreams vocabulary.
  *
- * @since Unreleased
+ * @since 5.3.0
  */
 #[\AllowDynamicProperties]
 class Generic_Object {
