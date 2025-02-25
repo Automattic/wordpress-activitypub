@@ -62,10 +62,12 @@ class Test_Followers extends \WP_UnitTestCase {
 		),
 		'user2@example.com'    => array(
 			'id'                => 'https://user2.example.com',
+			'type'              => 'Person',
 			'url'               => 'https://user2.example.com',
 			'inbox'             => 'https://user2.example.com/inbox',
 			'name'              => 'úser2',
 			'preferredUsername' => 'user2',
+			'summary'           => 'father since 04\24', // @ticket https://github.com/Automattic/wordpress-activitypub/pull/1373
 		),
 		'error@example.com'    => array(
 			'url'               => 'https://error.example.com',
