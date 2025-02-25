@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Send Update-Activity when "Actor-Mode" is changed.
 * Added delay to `Announce` Activity from the Blog-Actor, to not have race conditions.
 * `Actor` validation in several REST API endpoints.
+* Bring back the `activitypub_post_locale` filter to allow overriding the post's locale.
 
 ## [5.2.0] - 2025-02-13
 

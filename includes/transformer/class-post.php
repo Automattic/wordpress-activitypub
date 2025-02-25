@@ -78,6 +78,33 @@ class Post extends Base {
 	}
 
 	/**
+	 * Get the post's locale.
+	 * By default, the post's locale is the same as the blog's locale,
+	 * and is already set in the parent class's get_locale() method.
+	 * This method allows for overriding the locale for a specific post,
+	 * via a `activitypub_post_locale` filter.
+	 *
+	 * @return string The post's locale.
+	 */
+	public function get_locale() {
+		/**
+		 * Filter the locale of the post.
+		 *
+		 * @param string  $lang    The locale of the post.
+		 * @param int     $post_id The post ID.
+		 * @param WP_Post $post    The post object.
+		 *
+		 * @return string The filtered locale of the post.
+		 */
+		return apply_filters(
+			'activitypub_post_locale',
+			parent::get_locale(),
+			$this->item->ID,
+			$this->item
+		);
+	}
+
+	/**
 	 * Returns the User-Object of the Author of the Post.
 	 *
 	 * If `single_user` mode is enabled, the Blog-User is returned.

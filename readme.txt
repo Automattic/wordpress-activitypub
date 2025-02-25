@@ -151,6 +151,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Send Update-Activity when "Actor-Mode" is changed.
 * Fixed: Added delay to `Announce` Activity from the Blog-Actor, to not have race conditions.
 * Fixed: `Actor` validation in several REST API endpoints.
+* Fixed: Bring back the `activitypub_post_locale` filter to allow overriding the post's locale.
 
 = 5.2.0 =
 
