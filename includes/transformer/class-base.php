@@ -236,6 +236,18 @@ abstract class Base {
 	protected function get_locale() {
 		$lang = \strtolower( \strtok( \get_locale(), '_-' ) );
 
+		$lang = apply_filters_deprecated(
+			'activitypub_post_locale',
+			array(
+				$lang,
+				$this->item->ID,
+				$this->item,
+			),
+			'5.4.0',
+			'activitypub_locale',
+			'Use the `activitypub_locale` filter instead.'
+		);
+
 		/**
 		 * Filter the locale of the post.
 		 *

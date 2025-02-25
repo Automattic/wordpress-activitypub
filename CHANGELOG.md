@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Outbox processing accounts for shared inboxes again.
 * Improved check for `?activitypub` query-var.
 * Rewrite rules: be more specific in author rewrite rules to avoid conflicts on sites that use the "@author" pattern in their permalinks.
+* Deprecate the `activitypub_post_locale` filter in favor of the `activitypub_locale` filter.
 
 ### Fixed
 

@@ -148,6 +148,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Changed: Outbox processing accounts for shared inboxes again.
 * Changed: Improved check for `?activitypub` query-var.
 * Changed: Rewrite rules: be more specific in author rewrite rules to avoid conflicts on sites that use the "@author" pattern in their permalinks.
+* Changed: Deprecate the `activitypub_post_locale` filter in favor of the `activitypub_locale` filter.
 * Fixed: The Outbox purging routine no longer is limited to deleting 5 items at a time.
 * Fixed: An issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
 * Fixed: Ellipses now display correctly in notification emails for Likes and Reposts.
