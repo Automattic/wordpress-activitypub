@@ -5,13 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.3.0] - 2025-02-25
 
 ### Added
 
 * A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
 * A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
 * Setting to adjust the number of days Outbox items are kept before being purged.
+* Failed Follower notifications for Outbox items now get retried for two more times.
 * Undo API for Outbox items.
 * Metadata to New Follower E-Mail.
 * Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
@@ -26,7 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Post bulk edits no longer create Outbox items, unless author or post status change.
 * Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
 * Outbox processing accounts for shared inboxes again.
+* Improved check for `?activitypub` query-var.
 * Rewrite rules: be more specific in author rewrite rules to avoid conflicts on sites that use the "@author" pattern in their permalinks.
+* Deprecate the `activitypub_post_locale` filter in favor of the `activitypub_locale` filter.
 
 ### Fixed
 
@@ -35,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Send Update-Activity when "Actor-Mode" is changed.
 * Added delay to `Announce` Activity from the Blog-Actor, to not have race conditions.
 * `Actor` validation in several REST API endpoints.
+* Bring back the `activitypub_post_locale` filter to allow overriding the post's locale.
 
 ## [5.2.0] - 2025-02-13
 
@@ -1326,8 +1330,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.2.0...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.0...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[5.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.2.0...5.3.0
 [5.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.1.0...5.2.0
 [5.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.0.0...5.1.0
 [5.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/4.7.3...5.0.0

@@ -122,6 +122,56 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Data provider for test_send_to_inboxes.
+	 *
+	 * @return array
+	 */
+	public function data_provider_send_to_inboxes() {
+		$inboxes = array( 'https://example.com/inbox1', 'https://example.com/inbox2' );
+
+		return array(
+			array( 503, 'Service Unavailable', $inboxes, $inboxes ),
+			array( 404, 'Not Found', $inboxes, array() ),
+		);
+	}
+
+	/**
+	 * Test send_to_inboxes schedules retry for failed requests.
+	 *
+	 * @dataProvider data_provider_send_to_inboxes
+	 * @covers ::send_to_inboxes
+	 *
+	 * @param int    $code HTTP response code.
+	 * @param string $message HTTP response message.
+	 * @param array  $inboxes Inboxes to send to.
+	 * @param array  $expected Expected inboxes to be scheduled for retry.
+	 *
+	 * @throws ReflectionException If the method does not exist.
+	 */
+	public function test_send_to_inboxes_schedules_retry( $code, $message, $inboxes, $expected ) {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		// Mock safe_remote_post to simulate a failed request.
+		add_filter(
+			'pre_http_request',
+			function () use ( $code, $message ) {
+				return new \WP_Error( $code, $message );
+			}
+		);
+
+		$send_to_inboxes = new ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
+		$send_to_inboxes->setAccessible( true );
+
+		// Invoke the method.
+		$retries = $send_to_inboxes->invoke( null, $inboxes, $outbox_item ); // null for static methods.
+
+		$this->assertSame( $expected, $retries, 'Expected all inboxes to be scheduled for retry' );
+
+		remove_all_filters( 'pre_http_request' );
+	}
+
+	/**
 	 * Returns a mock of an Activity object.
 	 *
 	 * @return Activity
