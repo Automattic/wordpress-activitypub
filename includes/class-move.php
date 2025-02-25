@@ -57,13 +57,14 @@ class Move {
 	 *
 	 * @param string $from The current account URL.
 	 * @param string $to   The new account URL.
-	 * @return int|bool The ID of the outbox item or false on failure.
+	 *
+	 * @return int|bool|\WP_Error The ID of the outbox item or false or WP_Error on failure.
 	 */
 	public static function account( $from, $to ) {
 		$user = Actors::get_by_resource( $from );
 
-		if ( ! $user || is_wp_error( $user ) ) {
-			return false;
+		if ( \is_wp_error( $user ) ) {
+			return $user;
 		}
 
 		// Update the movedTo property.
@@ -72,7 +73,7 @@ class Move {
 		// Add the old account URL to alsoKnownAs.
 		$also_known_as   = (array) \get_user_option( 'activitypub_also_known_as', $user->get__id() );
 		$also_known_as[] = $from;
-		$also_known_as   = array_unique( $also_known_as );
+		$also_known_as   = \array_unique( $also_known_as );
 		\update_user_option( $user->get__id(), 'activitypub_also_known_as', $also_known_as );
 
 		$response = Http::get_remote_object( $to );
@@ -81,13 +82,13 @@ class Move {
 			return $response;
 		}
 
-		$actor = new Actor();
+		$actor = new Activity\Actor();
 		$actor->from_array( $response );
 
 		// Check if the `Move` Activity is valid.
 		$also_known_as = $actor->get_also_known_as();
 		if ( ! in_array( $from, $also_known_as, true ) ) {
-			return new WP_Error( 'invalid_target', __( 'Invalid target', 'activitypub' ) );
+			return new \WP_Error( 'invalid_target', __( 'Invalid target', 'activitypub' ) );
 		}
 
 		// Add to outbox.

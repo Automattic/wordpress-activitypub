@@ -21,7 +21,8 @@ namespace Activitypub\Activity;
  *
  * @see https://www.w3.org/TR/activitystreams-core/#object
  *
- * @method string|null get_id() Gets the object's unique global identifier.
+ * @method array|null  get_also_known_as() Gets an alternate alias for the object.
+ * @method string|null get_id()            Gets the object's unique global identifier.
  */
 class Base_Object extends Generic_Object {
 	/**
