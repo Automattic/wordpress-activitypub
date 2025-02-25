@@ -133,6 +133,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Changed: Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
 * Changed: Use webfinger as author email for comments from the Fediverse.
+* Fixed: Followers with backslashes in their descriptions no longer break their actor representation.
 
 = 5.3.0 =
 
