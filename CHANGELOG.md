@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
 
+### Fixed
+
+* Followers with backslashes in their descriptions no longer break their actor representation.
+
 ## [5.3.0] - 2025-02-25
 
 ### Added
