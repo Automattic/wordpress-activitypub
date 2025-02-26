@@ -659,7 +659,7 @@ class Migration {
 
 			// If json_decode fails, try adding slashes.
 			if ( null === $json && \json_last_error() !== JSON_ERROR_NONE ) {
-				$escaped_value = preg_replace( '#\\\\(?!["\\\\/bfnrtu])#', '\\\\\\\\', $meta->meta_value );
+				$escaped_value = \preg_replace( '#\\\\(?!["\\\\/bfnrtu])#', '\\\\\\\\', $meta->meta_value );
 				$json          = \json_decode( $escaped_value, true );
 
 				// Update the meta if json_decode succeeds with slashes.
@@ -669,7 +669,7 @@ class Migration {
 			}
 		}
 
-		if ( count( $meta_values ) === $batch_size ) {
+		if ( \count( $meta_values ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
 				'offset'     => $offset + $batch_size,
