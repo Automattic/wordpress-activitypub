@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 5.5
 Tested up to: 6.7
-Stable tag: 5.3.0
+Stable tag: 5.3.1
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -129,7 +129,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-= Unreleased =
+= 5.3.1 =
 
 * Fixed: Blog profile settings can be saved again without errors.
 
