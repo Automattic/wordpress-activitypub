@@ -424,19 +424,6 @@ class Activitypub {
 	}
 
 	/**
-	 * Adds metabox on wp-admin/tools.php.
-	 *
-	 * @deprecated unreleased
-	 */
-	public static function tool_box() {
-		_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\WP_Admin\Admin::tool_box' );
-
-		if ( \current_user_can( 'edit_posts' ) ) {
-			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
-		}
-	}
-
-	/**
 	 * Theme compatibility stuff.
 	 */
 	public static function theme_compat() {
@@ -456,16 +443,6 @@ class Activitypub {
 				);
 			}
 		}
-	}
-
-	/**
-	 * Display plugin upgrade notice to users.
-	 *
-	 * @deprecated unreleased
-	 * @param array $data The plugin data.
-	 */
-	public static function plugin_update_message( $data ) { // phpcs:ignore
-		_deprecated_function( __METHOD__, 'unreleased' );
 	}
 
 	/**
