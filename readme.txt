@@ -129,6 +129,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Fixed: Remove `activitypub_reply_block` Filter after Activity-JSON is rendered, to not affect the HTML representation.
+
 = 5.3.1 =
 
 * Fixed: Blog profile settings can be saved again without errors.
