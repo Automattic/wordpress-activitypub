@@ -480,7 +480,7 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		add_filter( 'activitypub_reply_block', '__return_empty_string' );
+		\add_filter( 'activitypub_reply_block', '__return_empty_string' );
 
 		// Remove Content from drafts.
 		if ( 'draft' === \get_post_status( $this->item ) ) {
@@ -530,6 +530,8 @@ class Post extends Base {
 
 		// Don't need these anymore, should never appear in a post.
 		Shortcodes::unregister();
+
+		\remove_filter( 'activitypub_reply_block', '__return_empty_string' );
 
 		return $content;
 	}
