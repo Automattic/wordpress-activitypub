@@ -129,6 +129,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Fixed: Blog profile settings can be saved again without errors.
+
 = 5.3.0 =
 
 * Added: A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
