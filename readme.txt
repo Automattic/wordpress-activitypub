@@ -131,12 +131,13 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Changed: Bumped minimum required WordPress version to 6.4.
 * Changed: Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
-* Fixed: Followers with backslashes in their descriptions no longer break their actor representation.
 
 = 5.3.1 =
 
 * Fixed: Blog profile settings can be saved again without errors.
+* Fixed: Followers with backslashes in their descriptions no longer break their actor representation.
 
 = 5.3.0 =
 
@@ -151,7 +152,6 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: Outbox Activity IDs can now be resolved when the ActivityPub `Accept header is used.
 * Added: Labels to add context to visibility settings in the block editor.
 * Added: WP CLI command to reschedule Outbox-Activities.
-* Changed: Bumped minimum required WordPress version to 6.4.
 * Changed: Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
 * Changed: Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
 * Changed: Post bulk edits no longer create Outbox items, unless author or post status change.
