@@ -31,7 +31,7 @@ class Test_Base_Object extends \WP_UnitTestCase {
 	/**
 	 * Test the magic add method.
 	 *
-	 * @covers ::add_* Magic function.
+	 * @covers ::__call
 	 *
 	 * @dataProvider data_magic_add
 	 *
