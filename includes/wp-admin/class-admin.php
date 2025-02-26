@@ -57,6 +57,10 @@ class Admin {
 
 		\add_filter( 'dashboard_glance_items', array( self::class, 'dashboard_glance_items' ) );
 		\add_filter( 'plugin_action_links_' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'add_plugin_settings_link' ) );
+
+		if ( site_supports_blocks() ) {
+			\add_action( 'tool_box', array( self::class, 'tool_box' ) );
+		}
 	}
 
 	/**
@@ -596,5 +600,12 @@ class Admin {
 		);
 
 		return $actions;
+	}
+
+	/**
+	 * Adds metabox on wp-admin/tools.php.
+	 */
+	public static function tool_box() {
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
 	}
 }
