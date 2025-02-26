@@ -22,10 +22,6 @@ class Test_Extra_Fields extends \WP_UnitTestCase {
 	 * @covers ::get_attachment
 	 */
 	public function test_get_attachment() {
-		if ( ! class_exists( '\WP_HTML_Tag_Processor' ) ) {
-			$this->markTestSkipped( 'WP_HTML_Tag_Processor not available' );
-		}
-
 		$post = self::factory()->post->create_and_get(
 			array(
 				'post_type'    => Extra_Fields::BLOG_POST_TYPE,

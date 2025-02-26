@@ -25,25 +25,6 @@ if ( ! function_exists( 'str_starts_with' ) ) {
 	}
 }
 
-if ( ! function_exists( 'get_self_link' ) ) {
-	/**
-	 * Returns the link for the currently displayed feed.
-	 *
-	 * @return string Correct link for the atom:self element.
-	 */
-	function get_self_link() {
-		$host = wp_parse_url( home_url() );
-		$path = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
-
-		/**
-		 * Filters the self link.
-		 *
-		 * @param string $link The self link.
-		 */
-		return esc_url( apply_filters( 'self_link', set_url_scheme( 'http://' . $host['host'] . $path ) ) );
-	}
-}
-
 if ( ! function_exists( 'is_countable' ) ) {
 	/**
 	 * Polyfill for `is_countable()` function added in PHP 7.3.

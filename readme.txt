@@ -1,7 +1,7 @@
 === ActivityPub ===
 Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaformat, nuriapena, cavalierlife, andremenrath
 Tags: OStatus, fediverse, activitypub, activitystream
-Requires at least: 5.5
+Requires at least: 6.4
 Tested up to: 6.7
 Stable tag: 5.3.0
 Requires PHP: 7.2
@@ -148,6 +148,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: Outbox Activity IDs can now be resolved when the ActivityPub `Accept header is used.
 * Added: Labels to add context to visibility settings in the block editor.
 * Added: WP CLI command to reschedule Outbox-Activities.
+* Changed: Bumped minimum required WordPress version to 6.4.
 * Changed: Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
 * Changed: Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
 * Changed: Post bulk edits no longer create Outbox items, unless author or post status change.
