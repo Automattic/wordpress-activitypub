@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Followers with backslashes in their descriptions no longer break their actor representation.
 
-## [Unreleased]
+## [5.3.1] - 2025-02-26
 
 ### Fixed
 
@@ -1347,8 +1347,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.0...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.1...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[5.3.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.0...5.3.1
 [5.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.2.0...5.3.0
 [5.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.1.0...5.2.0
 [5.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.0.0...5.1.0
