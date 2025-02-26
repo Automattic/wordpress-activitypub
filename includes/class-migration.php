@@ -182,6 +182,9 @@ class Migration {
 		if ( \version_compare( $version_from_db, '5.2.0', '<' ) ) {
 			Scheduler::register_schedules();
 		}
+		if ( \version_compare( $version_from_db, '5.3.0', '<' ) ) {
+			add_action( 'init', 'flush_rewrite_rules', 20 );
+		}
 
 		/*
 		 * Add new update routines above this comment. ^

@@ -315,7 +315,7 @@ class Post extends Base {
 		if ( site_supports_blocks() && \has_blocks( $this->item->post_content ) ) {
 			$media = $this->get_block_attachments( $media, $max_media );
 		} else {
-			$media = $this->get_classic_editor_images( $media, $max_media );
+			$media = $this->get_classic_editor_image_embeds( $media, $max_media );
 		}
 
 		$media      = $this->filter_media_by_object_type( $media, \get_post_format( $this->item ), $this->item );
@@ -785,47 +785,22 @@ class Post extends Base {
 	}
 
 	/**
-	 * Get post images from the classic editor.
-	 * Note that audio/video attachments are only supported in the block editor.
+	 * Get image embeds from the classic editor by parsing HTML.
 	 *
 	 * @param array $media      The media array grouped by type.
 	 * @param int   $max_images The maximum number of images to return.
 	 *
 	 * @return array The attachments.
 	 */
-	protected function get_classic_editor_images( $media, $max_images ) {
-		// Max images can't be negative or zero.
-		if ( $max_images <= 0 ) {
-			return array();
-		}
-
-		if ( \count( $media['image'] ) <= $max_images ) {
-			if ( \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_embeds( $max_images ) );
-			} else {
-				$media['image'] = \array_merge( $media['image'], $this->get_classic_editor_image_attachments( $max_images ) );
-			}
-		}
-
-		return $media;
-	}
-
-	/**
-	 * Get image embeds from the classic editor by parsing HTML.
-	 *
-	 * @param int $max_images The maximum number of images to return.
-	 *
-	 * @return array The attachments.
-	 */
-	protected function get_classic_editor_image_embeds( $max_images ) {
+	protected function get_classic_editor_image_embeds( $media, $max_images ) {
 		// If someone calls that function directly, bail.
 		if ( ! \class_exists( '\WP_HTML_Tag_Processor' ) ) {
-			return array();
+			return $media;
 		}
 
 		// Max images can't be negative or zero.
 		if ( $max_images <= 0 ) {
-			return array();
+			return $media;
 		}
 
 		$images  = array();
@@ -887,44 +862,11 @@ class Post extends Base {
 			}
 		}
 
-		return $images;
-	}
-
-	/**
-	 * Get image attachments from the classic editor.
-	 * This is imperfect as the contained images aren't necessarily the
-	 * same as the attachments.
-	 *
-	 * @param int $max_images The maximum number of images to return.
-	 *
-	 * @return array The attachment IDs.
-	 */
-	protected function get_classic_editor_image_attachments( $max_images ) {
-		// Max images can't be negative or zero.
-		if ( $max_images <= 0 ) {
-			return array();
+		if ( \count( $media['image'] ) <= $max_images ) {
+			$media['image'] = \array_merge( $media['image'], $images );
 		}
 
-		$images = array();
-		$query  = new \WP_Query(
-			array(
-				'post_parent'    => $this->item->ID,
-				'post_status'    => 'inherit',
-				'post_type'      => 'attachment',
-				'post_mime_type' => 'image',
-				'order'          => 'ASC',
-				'orderby'        => 'menu_order ID',
-				'posts_per_page' => $max_images,
-			)
-		);
-
-		foreach ( $query->get_posts() as $attachment ) {
-			if ( ! \in_array( $attachment->ID, $images, true ) ) {
-				$images[] = array( 'id' => $attachment->ID );
-			}
-		}
-
-		return $images;
+		return $media;
 	}
 
 	/**

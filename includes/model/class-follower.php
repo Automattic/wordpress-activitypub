@@ -230,7 +230,7 @@ class Follower extends Actor {
 	protected function get_post_meta_input() {
 		$meta_input                            = array();
 		$meta_input['_activitypub_inbox']      = $this->get_shared_inbox();
-		$meta_input['_activitypub_actor_json'] = $this->to_json();
+		$meta_input['_activitypub_actor_json'] = wp_slash( $this->to_json() );
 
 		return $meta_input;
 	}

@@ -1,9 +1,9 @@
 === ActivityPub ===
 Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaformat, nuriapena, cavalierlife, andremenrath
 Tags: OStatus, fediverse, activitypub, activitystream
-Requires at least: 5.5
+Requires at least: 6.4
 Tested up to: 6.7
-Stable tag: 5.2.0
+Stable tag: 5.3.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -131,6 +131,11 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Changed: Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
+* Fixed: Followers with backslashes in their descriptions no longer break their actor representation.
+
+= 5.3.0 =
+
 * Added: A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
 * Added: A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
 * Added: Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
@@ -142,18 +147,21 @@ For reasons of data protection, it is not possible to see the followers of other
 * Added: Outbox Activity IDs can now be resolved when the ActivityPub `Accept header is used.
 * Added: Labels to add context to visibility settings in the block editor.
 * Added: WP CLI command to reschedule Outbox-Activities.
+* Changed: Bumped minimum required WordPress version to 6.4.
 * Changed: Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
 * Changed: Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
 * Changed: Post bulk edits no longer create Outbox items, unless author or post status change.
 * Changed: Outbox processing accounts for shared inboxes again.
 * Changed: Improved check for `?activitypub` query-var.
 * Changed: Rewrite rules: be more specific in author rewrite rules to avoid conflicts on sites that use the "@author" pattern in their permalinks.
+* Changed: Deprecate the `activitypub_post_locale` filter in favor of the `activitypub_locale` filter.
 * Fixed: The Outbox purging routine no longer is limited to deleting 5 items at a time.
 * Fixed: An issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
 * Fixed: Ellipses now display correctly in notification emails for Likes and Reposts.
 * Fixed: Send Update-Activity when "Actor-Mode" is changed.
 * Fixed: Added delay to `Announce` Activity from the Blog-Actor, to not have race conditions.
 * Fixed: `Actor` validation in several REST API endpoints.
+* Fixed: Bring back the `activitypub_post_locale` filter to allow overriding the post's locale.
 
 = 5.2.0 =
 
@@ -195,94 +203,6 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Handle deletes from remote servers that leave behind an accessible Tombstone object.
 * Fixed: No longer parses tags for post types that don't support Activitypub.
 * Fixed: rel attribute will now contain no more than one "me" value.
-
-= 4.7.3 =
-
-* Fixed: Flush rewrite rules after NodeInfo update.
-
-= 4.7.2 =
-
-* Added: Support for WPML post locale
-* Removed: Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
-* Fixed: More robust handling of `_activityPubOptions` in scripts, using a `useOptions()` helper.
-* Fixed: Flush post caches after Followers migration.
-
-= 4.7.1 =
-
-* Fixed: Missing migration
-
-= 4.7.0 =
-
-* Added: Comment counts get updated when the plugin is activated/deactivated/deleted
-* Added: A filter to make custom comment types manageable in WP.com Calypso
-* Changed: Hide ActivityPub post meta keys from the custom Fields UI
-* Changed: Bumped minimum required PHP version to 7.2
-* Changed: Print `_activityPubOptions` in the `wp_footer` action on the frontend.
-* Fixed: Undefined array key warnings in various places
-* Fixed: @-mentions in federated comments being displayed with a line break
-* Fixed: Fetching replies from the same instance for Enable Mastodon Apps
-* Fixed: Image captions not being included in the ActivityPub representation when the image is attached to the post
-
-= 4.6.0 =
-
-* Added: A filter to allow modifying the ActivityPub preview template
-* Added: `@mentions` in the JSON representation of the reply
-* Added: Settings to enable/disable e-mail notifications for new followers and direct messages
-* Changed: HTML to e-mail text conversion
-* Changed: Direct Messages: Test for the user being in the to field
-* Changed: Better support for FSE color schemes
-* Fixed: Reactions: Provide a fallback for empty avatar URLs
-
-= 4.5.1 =
-
-* Changed: Reactions block: Remove the `wp-block-editor` dependency for frontend views
-* Fixed: Direct Messages: Don't send notification for received public activities
-
-= 4.5.0 =
-
-* Changed: Reactions (likes and reposts) now enabled by default
-* Added: Reactions block to display likes and reposts
-* Added: `icon` support for `Audio` and `Video` attachments
-* Added: Send "new follower" emails
-* Added: Send "direct message" emails
-* Added: Account for custom comment types when calculating comment counts
-* Added: Plugin upgrade routine that automatically updates comment counts
-* Changed: Email templates for Likes and Reposts
-* Changed: Interactions moderation
-* Changed: Compatibility with Akismet
-* Changed: Comment type mapping for `Like` and `Announce`
-* Changed: Signature verification for API endpoints
-* Changed: Changed priority of Attachments, to favor `Image` over `Audio` and `Video`
-* Fixed: Empty `url` attributes in the Reply block no longer cause PHP warnings
-
-= 4.4.0 =
-
-* Added: Setting to enable/disable Authorized-Fetch
-* Changed: Added screen reader text for the "Follow Me" block for improved accessibility
-* Changed: Added `media_type` support to Activity-Object-Transformers
-* Changed: Clarified settings page text around which users get Activitypub profiles
-* Changed: Add a filter to the REST API moderators list
-* Fixed: Prevent hex color codes in HTML attributes from being added as post tags
-* Fixed: A typo in the custom post content settings
-* Fixed: Prevent draft posts from being federated when bulk deleted
-
-= 4.3.0 =
-
-* Added: A `pre_activitypub_get_upload_baseurl` filter
-* Added: Fediverse Preview on post-overview page
-* Added: GitHub action to enforce Changelog updates
-* Added: New contributors
-* Changed: Basic enclosure validation
-* Changed: More User -> Actor renaming
-* Changed: Outsource Constants to a separate file
-* Changed: Better handling of `readme.txt` and `README.md`
-* Fixed: editor error when switching to edit a synced Pattern
-* Fixed: Fediverse preview showing `preferredUsername` instead of `name`
-* Fixed: Potential fatal error in Enable Mastodon Apps
-* Fixed: Broken escaping of Usernames in Actor-JSON
-* Fixed: Show Followers name instead of avatar on mobile view
-* Fixed: Missing attachement-type for enclosures
-* Fixed: Prevention against self pings
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).
 
