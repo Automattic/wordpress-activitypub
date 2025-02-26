@@ -134,6 +134,10 @@ For reasons of data protection, it is not possible to see the followers of other
 * Changed: Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
 * Fixed: Followers with backslashes in their descriptions no longer break their actor representation.
 
+= Unreleased =
+
+* Fixed: Blog profile settings can be saved again without errors.
+
 = 5.3.0 =
 
 * Added: A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
