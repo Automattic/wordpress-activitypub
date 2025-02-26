@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 
 /**
@@ -82,7 +83,7 @@ class Move {
 			return $response;
 		}
 
-		$actor = new Activity\Actor();
+		$actor = new Actor();
 		$actor->from_array( $response );
 
 		// Check if the `Move` Activity is valid.
