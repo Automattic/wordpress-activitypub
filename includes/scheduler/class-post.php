@@ -7,11 +7,8 @@
 
 namespace Activitypub\Scheduler;
 
-use Activitypub\Collection\Outbox;
-
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_post_disabled;
-use function Activitypub\get_wp_object_state;
 
 /**
  * Post scheduler class.

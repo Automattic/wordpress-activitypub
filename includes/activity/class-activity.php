@@ -11,9 +11,6 @@ namespace Activitypub\Activity;
 
 use Activitypub\Link;
 
-use function Activitypub\is_actor;
-use function Activitypub\is_activity;
-
 /**
  * \Activitypub\Activity\Activity implements the common
  * attributes of an Activity.
