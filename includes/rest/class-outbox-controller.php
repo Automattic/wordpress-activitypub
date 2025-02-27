@@ -7,10 +7,8 @@
 
 namespace Activitypub\Rest;
 
-use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
-use Activitypub\Transformer\Factory;
 use function ActivityPub\get_rest_url_by_path;
 
 /**

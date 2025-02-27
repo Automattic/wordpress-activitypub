@@ -218,7 +218,7 @@ class Test_Followers extends \WP_UnitTestCase {
 	/**
 	 * Tests delete_follower.
 	 *
-	 * @covers ::delete_follower
+	 * @covers ::remove_follower
 	 */
 	public function test_delete_follower() {
 		$followers  = array(
@@ -260,9 +260,9 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests get_followers_count.
+	 * Tests get_outdated_followers.
 	 *
-	 * @covers ::get_followers_count
+	 * @covers ::get_outdated_followers
 	 */
 	public function test_get_outdated_followers() {
 		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
@@ -363,23 +363,6 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests scheduling of migration.
-	 *
-	 * @covers ::maybe_migrate
-	 */
-	public function test_migration_scheduling() {
-		update_option( 'activitypub_db_version', '0.0.1' );
-
-		\Activitypub\Migration::maybe_migrate();
-
-		$schedule = \wp_next_scheduled( 'activitypub_migrate', array( '0.0.1' ) );
-		$this->assertNotFalse( $schedule );
-
-		// Clean up.
-		delete_option( 'activitypub_db_version' );
-	}
-
-	/**
 	 * Data provider for migration test scenarios.
 	 *
 	 * @return array[]
@@ -411,7 +394,6 @@ class Test_Followers extends \WP_UnitTestCase {
 	/**
 	 * Tests migration of followers from user meta to new format.
 	 *
-	 * @covers ::maybe_migrate
 	 * @dataProvider migration_scenarios_provider
 	 *
 	 * @param array $followers      List of followers to migrate.
