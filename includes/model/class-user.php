@@ -421,4 +421,22 @@ class User extends Actor {
 	public function get_attribution_domains() {
 		return get_attribution_domains();
 	}
+
+	/**
+	 * Returns the alsoKnownAs.
+	 *
+	 * @return array The alsoKnownAs.
+	 */
+	public function get_also_known_as() {
+		return \get_user_option( 'activitypub_also_known_as', $this->_id );
+	}
+
+	/**
+	 * Returns the movedTo.
+	 *
+	 * @return string The movedTo.
+	 */
+	public function get_moved_to() {
+		return \get_user_option( 'activitypub_move_to', $this->_id );
+	}
 }
