@@ -209,7 +209,7 @@ class Settings {
 					$sanitized = implode( '.', $sanitized );
 
 					// Check for login or nicename.
-					$user = new WP_User_Query(
+					$user = new \WP_User_Query(
 						array(
 							'search'         => $sanitized,
 							'search_columns' => array( 'user_login', 'user_nicename' ),

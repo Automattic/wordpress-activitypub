@@ -175,7 +175,7 @@ class Generic_Object {
 	 *
 	 * @param array $data The object array.
 	 *
-	 * @return Base_Object|\WP_Error An Object built from the input array or WP_Error when it's not an array.
+	 * @return Generic_Object|\WP_Error An Object built from the input array or WP_Error when it's not an array.
 	 */
 	public static function init_from_array( $data ) {
 		if ( ! is_array( $data ) ) {

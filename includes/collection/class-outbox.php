@@ -256,7 +256,7 @@ class Outbox {
 	 *
 	 * @param \WP_Post $outbox_item The Outbox post.
 	 *
-	 * @return \Activitypub\Activity\Activity|\WP_Error The Activity object or WP_Error.
+	 * @return Activity|\WP_Error The Activity object or WP_Error.
 	 */
 	public static function maybe_get_activity( $outbox_item ) {
 		if ( ! $outbox_item || ! $outbox_item instanceof \WP_Post ) {
