@@ -95,6 +95,8 @@ class Activitypub {
 		delete_option( 'activitypub_authorized_fetch' );
 		delete_option( 'activitypub_application_user_private_key' );
 		delete_option( 'activitypub_application_user_public_key' );
+		delete_option( 'activitypub_blog_user_also_known_as' );
+		delete_option( 'activitypub_blog_user_moved_to' );
 		delete_option( 'activitypub_blog_user_private_key' );
 		delete_option( 'activitypub_blog_user_public_key' );
 		delete_option( 'activitypub_blog_description' );
