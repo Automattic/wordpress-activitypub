@@ -15,77 +15,61 @@ use WP_REST_Response;
 class Embed {
 
 	/**
-	 * Cache expiration time in seconds (24 hours)
-	 */
-	const CACHE_EXPIRATION = DAY_IN_SECONDS;
-
-	/**
 	 * Initialize the embed handler
 	 */
 	public static function init() {
-		add_filter( 'rest_request_after_callbacks', array( __CLASS__, 'filter_oembed_response' ), 10, 3 );
+		add_filter( 'pre_oembed_result', array( __CLASS__, 'maybe_use_activitypub_embed' ), 10, 3 );
 	}
 
 	/**
-	 * Filter the oembed response to handle ActivityPub content
+	 * Check if a real oEmbed result exists for the given URL.
 	 *
-	 * @param \stdClass|WP_REST_Response $response The response data.
-	 * @param array                      $handler  The handler used for the response.
-	 * @param \WP_REST_Request           $request  The request object.
-	 * @return \stdClass|WP_REST_Response
+	 * @param string $url The URL to check.
+	 * @param array  $args Additional arguments passed to wp_oembed_get().
+	 * @return bool True if a real oEmbed result exists, false otherwise.
 	 */
-	public static function filter_oembed_response( $response, $handler, $request ) {
-		// Only process oembed proxy requests.
-		if ( '/oembed/1.0/proxy' !== $request->get_route() ) {
-			return $response;
+	public static function has_real_oembed( $url, $args = array() ) {
+		// Temporarily remove our filter to avoid infinite loops.
+		remove_filter( 'pre_oembed_result', array( __CLASS__, 'maybe_use_activitypub_embed' ), 10, 3 );
+
+		// Try to get a "real" oEmbed result. If found, it'll be cached to avoid unnecessary HTTP requests in `wp_oembed_get`.
+		$oembed_result = wp_oembed_get( $url, $args );
+
+		// Add our filter back.
+		add_filter( 'pre_oembed_result', array( __CLASS__, 'maybe_use_activitypub_embed' ), 10, 3 );
+
+		return false !== $oembed_result;
+	}
+
+	/**
+	 * Filter the oembed result to handle ActivityPub content when no oEmbed is found.
+	 * Implementation is a bit weird because there's no way to filter on a false result, we have to use `pre_oembed_result`.
+	 *
+	 * @param null|string $result The UNSANITIZED (and potentially unsafe) HTML that should be used to embed.
+	 * @param string      $url    The URL to the content that should be attempted to be embedded.
+	 * @param array       $args   Additional arguments passed to wp_oembed_get().
+	 * @return null|string         Return null to allow normal oEmbed processing, or string for ActivityPub embed.
+	 */
+	public static function maybe_use_activitypub_embed( $result, $url, $args ) {
+		// If we already have a result, return it.
+		if ( null !== $result ) {
+			return $result;
 		}
 
-		// If we already have a valid response with HTML, return it.
-		if ( ! is_wp_error( $response ) ) {
-			if ( $response instanceof WP_REST_Response ) {
-				$data = $response->get_data();
-				if ( ! empty( $data['html'] ) ) {
-					return $response;
-				}
-			}
-			if ( $response instanceof \stdClass && ! empty( $response->html ) ) {
-				return $response;
-			}
+		// If we found a real oEmbed, return null to allow normal processing.
+		if ( self::has_real_oembed( $url, $args ) ) {
+			return null;
 		}
 
-		$url = $request->get_param( 'url' );
-		if ( ! $url ) {
-			return $response;
-		}
+		// No oEmbed found, try to get ActivityPub representation.
+		$html = get_embed_html( $url );
 
-		// Try to get ActivityPub representation.
-		$object = Http::get_remote_object( $url );
-		if ( is_wp_error( $object ) ) {
-			return $response;
-		}
-		// Most of the work is in here, and cached.
-		$html = get_embed_html( $url, true );
+		// If we couldn't get an ActivityPub embed either, return null to allow normal processing.
 		if ( ! $html ) {
-			return $response;
+			return null;
 		}
 
-		$author_name = $object['attributedTo'] ?? '';
-		$author_url  = $object['icon']['url'] ?? '';
-		$title       = $object['name'] ?? '';
-
-		$embed_response = (object) array(
-			'version'       => '1.0',
-			'provider_name' => 'ActivityPub',
-			'provider_url'  => 'https://activitypub.rocks/',
-			'author_name'   => $author_name,
-			'author_url'    => $author_url,
-			'title'         => $title,
-			'type'          => 'rich',
-			'width'         => 600,
-			'height'        => null,
-			'html'          => $html,
-		);
-
-		return rest_ensure_response( $embed_response );
+		// Return the ActivityPub embed HTML.
+		return $html;
 	}
 }

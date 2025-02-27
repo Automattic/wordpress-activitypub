@@ -7,6 +7,7 @@ import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
 import { useOptions } from '../shared/use-options';
 import { useDispatch } from '@wordpress/data';
+import { InnerBlocks } from '@wordpress/block-editor';
 
 /**
  * Edit component for the ActivityPub block.
@@ -41,6 +42,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	// State variables for help text, embed validity, and embed checking status.
 	const [ helpText, setHelpText ] = useState( HELP_TEXT.default );
 	const [ isValidEmbed, setIsValidEmbed ] = useState( false );
+	const [ isRealOembed, setIsRealOembed ] = useState( false );
 	const [ isCheckingEmbed, setIsCheckingEmbed ] = useState( false );
 	// Optimistic embeds mean that we will toggle embedPost to true whenever we find a valid embed.
 	// This will be true when the block is instantiated with `true` because it was saved that way, or because this is a new block with no initial URL.
@@ -61,6 +63,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 		if ( ! urlToCheck ) {
 			setIsCheckingEmbed( false );
 			setIsValidEmbed( false );
+			setIsRealOembed( false );
 			setEmbedHtml( '' );
 			return;
 		}
@@ -75,6 +78,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 			} );
 
 			setIsValidEmbed( response.is_activitypub );
+			setIsRealOembed( response.is_real_oembed );
 			setEmbedHtml( response.html || '' );
 			/**
 			 * Null at the start means that we're a new block, or an old block from before embeds were added.
@@ -87,6 +91,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 			setHelpText( HELP_TEXT.valid );
 		} catch ( error ) {
 			setIsValidEmbed( false );
+			setIsRealOembed( false );
 			setAttributes( { embedPost: false } );
 			setHelpText( HELP_TEXT.error );
 			setEmbedHtml( '' );
@@ -159,13 +164,23 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 				) }
 
 				{ isValidEmbed && attr.embedPost && embedHtml && (
-					<div
-						className="activitypub-embed-container"
-						contentEditable={ false }
-						onFocus={ ( e ) => e.stopPropagation() }
-						onClick={ ( e ) => e.stopPropagation() }
-						dangerouslySetInnerHTML={{ __html: embedHtml }}
-					/>
+					<div className="activitypub-embed-container">
+						{ isRealOembed ? (
+							<InnerBlocks
+								template={ [
+									[ 'core/embed', { url, className: 'wp-embed-aspect-16-9 wp-has-aspect-ratio' } ]
+								] }
+								templateLock="all"
+							/>
+						) : (
+							<div
+								contentEditable={ false }
+								onFocus={ ( e ) => e.stopPropagation() }
+								onClick={ ( e ) => e.stopPropagation() }
+								dangerouslySetInnerHTML={{ __html: embedHtml }}
+							/>
+						) }
+					</div>
 				) }
 
 				{ url && (

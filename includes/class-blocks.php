@@ -355,7 +355,7 @@ class Blocks {
 
 		// Try to get and append the embed if requested.
 		if ( isset( $attrs['embedPost'] ) && $attrs['embedPost'] ) {
-			$embed = get_embed_html( $attrs['url'], false );
+			$embed = wp_oembed_get( $attrs['url'] );
 			if ( $embed ) {
 				$html .= $embed;
 			}

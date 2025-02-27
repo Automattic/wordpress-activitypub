@@ -13,6 +13,7 @@ use WP_REST_Request;
 use WP_REST_Response;
 use WP_Error;
 use Activitypub\Http;
+use Activitypub\Embed;
 
 use function Activitypub\get_embed_html;
 use function Activitypub\is_activity;
@@ -109,11 +110,12 @@ class URL_Validator_Controller extends WP_REST_Controller {
 
 		$response = array(
 			'is_activitypub' => ! empty( $object['type'] ),
+			'is_real_oembed' => Embed::has_real_oembed( $url ),
 			'html'           => false,
 		);
 
 		if ( $response['is_activitypub'] ) {
-			$response['html'] = get_embed_html( $url, false );
+			$response['html'] = wp_oembed_get( $url );
 		}
 
 		return rest_ensure_response( $response );
