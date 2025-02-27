@@ -211,6 +211,12 @@ For reasons of data protection, it is not possible to see the followers of other
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).
 
+== Upgrade Notice ==
+
+= 1.0.0 =
+
+For version 1.0.0 we have completely rebuilt the followers lists. There is a migration from the old format to the new, but it may take some time until the migration is complete. No data will be lost in the process, please give the migration some time.
+
 == Installation ==
 
 Follow the normal instructions for [installing WordPress plugins](https://wordpress.org/support/article/managing-plugins/).
