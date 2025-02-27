@@ -39,36 +39,6 @@ class Test_Move extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test the extend_actor_profiles.
-	 *
-	 * @covers ::extend_actor_profiles
-	 */
-	public function test_extend_actor_profiles() {
-		$actor = array(
-			'type' => 'Person',
-			'id'   => 'https://example.com/user/1',
-		);
-
-		// Invalid user.
-		$this->assertSameSets( $actor, \Activitypub\Move::extend_actor_profiles( $actor, 1, get_userdata( self::$user_id ) ) );
-
-		// No move_to or also_known_as.
-		$actor = User::from_wp_user( self::$user_id )->to_array();
-
-		$this->assertArrayNotHasKey( 'movedTo', $actor );
-		$this->assertArrayNotHasKey( 'alsoKnownAs', $actor );
-
-		// Move_to and also_known_as.
-		update_user_option( self::$user_id, 'activitypub_move_to', 'https://example.com/user/2' );
-		update_user_option( self::$user_id, 'activitypub_also_known_as', array( 'https://example.com/user/3' ) );
-
-		$actor = User::from_wp_user( self::$user_id )->to_array();
-
-		$this->assertArrayHasKey( 'movedTo', $actor );
-		$this->assertArrayHasKey( 'alsoKnownAs', $actor );
-	}
-
-	/**
 	 * Test the account() method with valid input.
 	 *
 	 * @covers ::account
@@ -79,10 +49,10 @@ class Test_Move extends \WP_UnitTestCase {
 
 		\Activitypub\Move::account( $from, $to );
 
-		$moved_to = get_user_option( 'activitypub_move_to', self::$user_id );
+		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
 		$this->assertEquals( $to, $moved_to );
 
-		$also_known_as = get_user_option( 'activitypub_also_known_as', self::$user_id );
+		$also_known_as = Actors::get_by_id( self::$user_id )->get_also_known_as();
 		$this->assertContains( $from, $also_known_as );
 	}
 
@@ -144,11 +114,30 @@ class Test_Move extends \WP_UnitTestCase {
 
 		\Activitypub\Move::account( $from, $to );
 
-		$also_known_as = \get_user_option( 'activitypub_also_known_as', self::$user_id );
+		$also_known_as = Actors::get_by_id( self::$user_id )->get_also_known_as();
 		$this->assertCount( 2, $also_known_as );
 		$this->assertContains( $from, $also_known_as );
 		$this->assertContains( 'https://old.example.com/user/1', $also_known_as );
 
 		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test the account() method with duplicate moves.
+	 *
+	 * @covers ::account
+	 */
+	public function test_account_with_blog_author_as_actor() {
+		// Change user mode to blog author.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		$from = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+		$to   = 'https://newsite.com/user/0';
+
+		\Activitypub\Move::account( $from, $to );
+
+		$also_known_as = Actors::get_by_id( Actors::BLOG_USER_ID )->get_also_known_as();
+		$this->assertCount( 2, $also_known_as );
+		$this->assertContains( $from, $also_known_as );
 	}
 }
