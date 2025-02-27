@@ -14,8 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-* Remove `activitypub_reply_block` Filter after Activity-JSON is rendered, to not affect the HTML representation.
 * Do not redirect `/@username` URLs to the API any more, to improve `AUTHORIZED_FETCH` handling.
+
+## [5.3.2] - 2025-02-27
+
+### Fixed
+
+* Remove `activitypub_reply_block` filter after Activity-JSON is rendered, to not affect the HTML representation.
+* Remove `render_block_core/embed` filter after Activity-JSON is rendered, to not affect the HTML representation.
 
 ## [5.3.1] - 2025-02-26
 
@@ -1349,8 +1355,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.1...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.2...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[5.3.2]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.1...5.3.2
 [5.3.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.0...5.3.1
 [5.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.2.0...5.3.0
 [5.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.1.0...5.2.0
