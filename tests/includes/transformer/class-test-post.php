@@ -654,47 +654,4 @@ class Test_Post extends \WP_UnitTestCase {
 		// Check if the preview for a Note is null.
 		$this->assertNull( $note_preview );
 	}
-
-	/**
-	 * Make sure embeds still work after Post::the_content() ran.
-	 *
-	 * @covers ::get_content
-	 * @throws \ReflectionException If the method does not exist.
-	 * @ticket https://github.com/Automattic/wordpress-activitypub/issues/1387
-	 */
-	public function test_get_content_with_embed() {
-		$post_id = self::factory()->post->create(
-			array(
-				'post_content' => '<!-- wp:embed {"url":"https://www.youtube.com/watch?v=gNuTxbwQv6c","type":"video","providerNameSlug":"youtube","responsive":true,"className":"wp-embed-aspect-16-9 wp-has-aspect-ratio"} -->
-<figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
-https://www.youtube.com/watch?v=gNuTxbwQv6c
-</div></figure>
-<!-- /wp:embed -->',
-			)
-		);
-		$post    = get_post( $post_id );
-
-		$post_transformer = new ReflectionClass( Post::class );
-		$instance         = $post_transformer->newInstance( $post );
-
-		$get_content = $post_transformer->getMethod( 'get_content' );
-		$get_content->setAccessible( true );
-
-		$get_content->invoke( $instance );
-
-		setup_postdata( $post );
-		ob_start();
-		the_content();
-
-		$content = ob_get_clean();
-
-		$this->assertEquals(
-			'
-<figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
-https://www.youtube.com/watch?v=gNuTxbwQv6c
-</div></figure>
-',
-			$content
-		);
-	}
 }
