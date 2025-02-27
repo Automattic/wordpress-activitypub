@@ -597,4 +597,99 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		$result = Migration::create_comment_outbox_items( 1, 1000 );
 		$this->assertNull( $result );
 	}
+
+	/**
+	 * Test update_comment_author_emails updates emails with webfinger addresses.
+	 *
+	 * @covers ::update_comment_author_emails
+	 */
+	public function test_update_comment_author_emails() {
+		$author_url = 'https://example.com/users/test';
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => self::$fixtures['posts'][0],
+				'comment_author'       => 'Test User',
+				'comment_author_url'   => $author_url,
+				'comment_author_email' => '',
+				'comment_type'         => 'comment',
+				'comment_meta'         => array( 'protocol' => 'activitypub' ),
+			)
+		);
+
+		// Mock the HTTP request.
+		\add_filter( 'pre_http_request', array( $this, 'mock_webfinger' ) );
+
+		$result = Migration::update_comment_author_emails( 50, 0 );
+
+		$this->assertNull( $result );
+
+		$updated_comment = \get_comment( $comment_id );
+		$this->assertEquals( 'test@example.com', $updated_comment->comment_author_email );
+
+		// Clean up.
+		\remove_filter( 'pre_http_request', array( $this, 'mock_webfinger' ) );
+		\wp_delete_comment( $comment_id, true );
+	}
+
+	/**
+	 * Test update_comment_author_emails handles batching correctly.
+	 *
+	 * @covers ::update_comment_author_emails
+	 */
+	public function test_update_comment_author_emails_batching() {
+		// Create multiple comments.
+		$comment_ids = array();
+		for ( $i = 0; $i < 3; $i++ ) {
+			$comment_ids[] = self::factory()->comment->create(
+				array(
+					'comment_post_ID'      => self::$fixtures['posts'][0],
+					'comment_author'       => "Test User $i",
+					'comment_author_url'   => "https://example.com/users/test$i",
+					'comment_author_email' => '',
+					'comment_content'      => "Test comment $i",
+					'comment_type'         => 'comment',
+					'comment_meta'         => array( 'protocol' => 'activitypub' ),
+				)
+			);
+		}
+
+		// Mock the HTTP request.
+		\add_filter( 'pre_http_request', array( $this, 'mock_webfinger' ) );
+
+		// Process first batch of 2 comments.
+		$result = Migration::update_comment_author_emails( 2, 0 );
+		$this->assertEqualSets(
+			array(
+				'batch_size' => 2,
+				'offset'     => 2,
+			),
+			$result
+		);
+
+		// Process second batch with remaining comment.
+		$result = Migration::update_comment_author_emails( 2, 2 );
+		$this->assertNull( $result );
+
+		// Verify all comments were updated.
+		foreach ( $comment_ids as $comment_id ) {
+			$comment = \get_comment( $comment_id );
+			$this->assertEquals( 'test@example.com', $comment->comment_author_email );
+
+			wp_delete_comment( $comment_id, true );
+		}
+
+		\remove_filter( 'pre_http_request', array( $this, 'mock_webfinger' ) );
+	}
+
+	/**
+	 * Mock webfinger response.
+	 *
+	 * @return array
+	 */
+	public function mock_webfinger() {
+		return array(
+			'body'     => wp_json_encode( array( 'subject' => 'acct:test@example.com' ) ),
+			'response' => array( 'code' => 200 ),
+		);
+	}
 }
