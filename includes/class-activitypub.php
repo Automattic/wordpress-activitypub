@@ -8,7 +8,6 @@
 namespace Activitypub;
 
 use Exception;
-use Activitypub\Transformer\Factory;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
@@ -267,7 +266,7 @@ class Activitypub {
 
 		$comment = get_comment( $comment_id );
 
-		// Load a 404 page if `c` is set but not valid.
+		// Load a 404-page if `c` is set but not valid.
 		if ( ! $comment ) {
 			global $wp_query;
 			$wp_query->set_404();

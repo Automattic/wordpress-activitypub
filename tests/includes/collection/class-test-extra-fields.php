@@ -19,7 +19,7 @@ class Test_Extra_Fields extends \WP_UnitTestCase {
 	/**
 	 * Test the get_attachment.
 	 *
-	 * @covers ::get_attachment
+	 * @covers ::fields_to_attachments
 	 */
 	public function test_get_attachment() {
 		$post = self::factory()->post->create_and_get(
