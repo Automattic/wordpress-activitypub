@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Remove `activitypub_reply_block` Filter after Activity-JSON is rendered, to not affect the HTML representation.
+* Do not redirect `/@username` URLs to the API any more, to improve `AUTHORIZED_FETCH` handling.
 
 ## [5.3.1] - 2025-02-26
 
