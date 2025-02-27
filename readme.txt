@@ -133,7 +133,8 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Changed: Bumped minimum required WordPress version to 6.4.
 * Changed: Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
-* Fixed: Remove `activitypub_reply_block` Filter after Activity-JSON is rendered, to not affect the HTML representation.
+* Fixed: Remove `activitypub_reply_block` filter after Activity-JSON is rendered, to not affect the HTML representation.
+* Fixed: Remove `render_block_core/embed` filter after Activity-JSON is rendered, to not affect the HTML representation.
 
 = 5.3.1 =
 

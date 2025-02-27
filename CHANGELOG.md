@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-* Remove `activitypub_reply_block` Filter after Activity-JSON is rendered, to not affect the HTML representation.
+* Remove `activitypub_reply_block` filter after Activity-JSON is rendered, to not affect the HTML representation.
+* Remove `render_block_core/embed` filter after Activity-JSON is rendered, to not affect the HTML representation.
 
 ## [5.3.1] - 2025-02-26
 
