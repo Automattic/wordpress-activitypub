@@ -17,6 +17,7 @@
 	<coverage>
 		<include>
 			<directory suffix=".php">./includes</directory>
+			<directory suffix=".php">./integration</directory>
 		</include>
 	</coverage>
 </phpunit>
