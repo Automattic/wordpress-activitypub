@@ -131,7 +131,8 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
-* Fixed: Remove `activitypub_reply_block` Filter after Activity-JSON is rendered, to not affect the HTML representation.
+* Fixed: Remove `activitypub_reply_block` filter after Activity-JSON is rendered, to not affect the HTML representation.
+* Fixed: Remove `render_block_core/embed` filter after Activity-JSON is rendered, to not affect the HTML representation.
 
 = 5.3.1 =
 
