@@ -8,8 +8,6 @@
 namespace Activitypub\WP_Admin;
 
 use Activitypub\Comment;
-use WP_User_Query;
-use Activitypub\Model\Blog;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use function Activitypub\count_followers;
