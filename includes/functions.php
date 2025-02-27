@@ -137,7 +137,7 @@ function url_to_authorid( $url ) {
 		return null;
 	}
 
-	// First, check to see if there is a 'author=N' to match against.
+	// First, check to see if there is an 'author=N' to match against.
 	if ( \preg_match( '/[?&]author=(\d+)/i', $url, $values ) ) {
 		return \absint( $values[1] );
 	}
@@ -471,17 +471,6 @@ function is_single_user() {
  * @return boolean True if the site supports the block editor, false otherwise.
  */
 function site_supports_blocks() {
-	if ( \version_compare( \get_bloginfo( 'version' ), '5.9', '<' ) ) {
-		return false;
-	}
-
-	if (
-		! \function_exists( 'register_block_type_from_metadata' ) ||
-		! \function_exists( 'do_blocks' )
-	) {
-		return false;
-	}
-
 	/**
 	 * Allow plugins to disable block editor support,
 	 * thus disabling blocks registered by the ActivityPub plugin.

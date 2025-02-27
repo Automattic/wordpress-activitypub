@@ -39,8 +39,6 @@ class Comment extends Base {
 	/**
 	 * Transforms the WP_Comment object to an ActivityPub Object.
 	 *
-	 * @see \Activitypub\Activity\Base_Object
-	 *
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object.
 	 */
 	public function to_object() {
@@ -104,8 +102,8 @@ class Comment extends Base {
 	 */
 	protected function get_attributed_to() {
 		// If the comment was received via ActivityPub, return the author URL.
-		if ( was_comment_received( $this->wp_object ) ) {
-			return $this->wp_object->comment_author_url;
+		if ( was_comment_received( $this->item ) ) {
+			return $this->item->comment_author_url;
 		}
 
 		return $this->get_actor_object()->get_id();

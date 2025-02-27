@@ -1,9 +1,9 @@
 === ActivityPub ===
 Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaformat, nuriapena, cavalierlife, andremenrath
 Tags: OStatus, fediverse, activitypub, activitystream
-Requires at least: 5.5
+Requires at least: 6.4
 Tested up to: 6.7
-Stable tag: 5.3.0
+Stable tag: 5.3.1
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -131,7 +131,14 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Changed: Bumped minimum required WordPress version to 6.4.
 * Changed: Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
+* Fixed: Remove `activitypub_reply_block` Filter after Activity-JSON is rendered, to not affect the HTML representation.
+
+= 5.3.1 =
+
+* Fixed: Blog profile settings can be saved again without errors.
+* Fixed: Followers with backslashes in their descriptions no longer break their actor representation.
 
 = 5.3.0 =
 

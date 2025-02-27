@@ -230,7 +230,7 @@ class Follower extends Actor {
 	protected function get_post_meta_input() {
 		$meta_input                            = array();
 		$meta_input['_activitypub_inbox']      = $this->get_shared_inbox();
-		$meta_input['_activitypub_actor_json'] = $this->to_json();
+		$meta_input['_activitypub_actor_json'] = wp_slash( $this->to_json() );
 
 		return $meta_input;
 	}
@@ -343,7 +343,7 @@ class Follower extends Actor {
 	 * Convert a Custom-Post-Type input to an Activitypub\Model\Follower.
 	 *
 	 * @param \WP_Post $post The post object.
-	 * @return \Activitypub\Activity\Base_Object|false The Follower object or false on failure.
+	 * @return Follower|false The Follower object or false on failure.
 	 */
 	public static function init_from_cpt( $post ) {
 		$actor_json = get_post_meta( $post->ID, '_activitypub_actor_json', true );

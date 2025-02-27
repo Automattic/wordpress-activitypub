@@ -14,6 +14,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Transformer\Factory;
+
 /**
  * Scheduler class.
  *
@@ -389,10 +390,10 @@ class Scheduler {
 	/**
 	 * Send announces.
 	 *
-	 * @param int      $outbox_activity_id The outbox activity ID.
-	 * @param Activity $activity_object    The activity object.
-	 * @param int      $actor_id           The actor ID.
-	 * @param int      $content_visibility The content visibility.
+	 * @param int                            $outbox_activity_id The outbox activity ID.
+	 * @param \Activitypub\Activity\Activity $activity_object    The activity object.
+	 * @param int                            $actor_id           The actor ID.
+	 * @param int                            $content_visibility The content visibility.
 	 */
 	public static function schedule_announce_activity( $outbox_activity_id, $activity_object, $actor_id, $content_visibility ) {
 		// Only if we're in both Blog and User modes.
