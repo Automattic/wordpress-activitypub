@@ -637,9 +637,9 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		$decoded = \json_decode( $updated_meta, true );
 		$this->assertNotNull( $decoded, 'Updated meta should be valid JSON' );
 		$this->assertEquals( JSON_ERROR_NONE, \json_last_error() );
-  }
-  
-  /**
+	}
+
+	/**
 	 * Test update_comment_author_emails updates emails with webfinger addresses.
 	 *
 	 * @covers ::update_comment_author_emails

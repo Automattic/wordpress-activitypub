@@ -671,7 +671,7 @@ class Migration {
 		}
 
 		if ( \count( $meta_values ) === $batch_size ) {
-      return array(
+			return array(
 				'batch_size' => $batch_size,
 				'offset'     => $offset + $batch_size,
 			);
@@ -680,7 +680,7 @@ class Migration {
 		return null;
 	}
 
-  /**
+	/**
 	 * Update comment author emails with webfinger addresses for ActivityPub comments.
 	 *
 	 * @param int $batch_size Optional. Number of comments to process per batch. Default 50.
