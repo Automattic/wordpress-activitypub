@@ -86,6 +86,8 @@ class Activitypub {
 		Migration::update_comment_counts( 2000 );
 
 		delete_option( 'activitypub_actor_mode' );
+		delete_option( 'activitypub_allow_likes' );
+		delete_option( 'activitypub_allow_replies' );
 		delete_option( 'activitypub_attribution_domains' );
 		delete_option( 'activitypub_authorized_fetch' );
 		delete_option( 'activitypub_application_user_private_key' );

@@ -35,6 +35,11 @@ class Like {
 			return;
 		}
 
+		// Check if likes are allowed.
+		if ( '1' !== \get_option( 'activitypub_allow_likes', '1' ) ) {
+			return;
+		}
+
 		$url = object_to_uri( $like['object'] );
 
 		if ( empty( $url ) ) {

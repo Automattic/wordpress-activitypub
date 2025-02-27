@@ -44,6 +44,11 @@ class Announce {
 			return;
 		}
 
+		// Check if reposts are allowed.
+		if ( '1' !== \get_option( 'activitypub_allow_reposts', '1' ) ) {
+			return;
+		}
+
 		self::maybe_save_announce( $announcement, $user_id );
 
 		if ( is_string( $announcement['object'] ) ) {

@@ -68,6 +68,14 @@ class Settings_Fields {
 			'activitypub_activities'
 		);
 
+		add_settings_field(
+			'activitypub_allow_interactions',
+			__( 'Post interactions', 'activitypub' ),
+			array( self::class, 'render_allow_interactions_field' ),
+			'activitypub_settings',
+			'activitypub_activities'
+		);
+
 		$object_type = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 		if ( 'note' === $object_type ) {
 			add_settings_field(
@@ -447,7 +455,34 @@ class Settings_Fields {
 	}
 
 	/**
-	 * Render use hashtags field.
+	 * Render allow interactions field.
+	 */
+	public static function render_allow_interactions_field() {
+		$allow_likes   = get_option( 'activitypub_allow_likes', '1' );
+		$allow_reposts = get_option( 'activitypub_allow_reposts', '1' );
+		?>
+		<fieldset>
+			<p><?php esc_html_e( 'Choose which fediverse interactions to receive as comments on your blog:', 'activitypub' ); ?></p>
+			<ul>
+				<li>
+					<label>
+						<input type="checkbox" name="activitypub_allow_likes" value="1" <?php checked( '1', $allow_likes ); ?> />
+						<?php esc_html_e( 'Receive likes', 'activitypub' ); ?>
+					</label>
+				</li>
+				<li>
+					<label>
+						<input type="checkbox" name="activitypub_allow_announces" value="1" <?php checked( '1', $allow_reposts ); ?> />
+						<?php esc_html_e( 'Receive reblogs', 'activitypub' ); ?>
+					</label>
+				</li>
+			</ul>
+		</fieldset>
+		<?php
+	}
+
+	/**
+	 * Render authorized fetch field.
 	 */
 	public static function render_authorized_fetch_field() {
 		$value = get_option( 'activitypub_authorized_fetch', '1' );
