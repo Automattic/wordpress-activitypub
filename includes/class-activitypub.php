@@ -291,7 +291,13 @@ class Activitypub {
 				return;
 			}
 
-			wp_safe_redirect( $actor->get_url(), 301 );
+			if ( $actor->get__id() > 0 ) {
+				$redirect_url = $actor->get_url();
+			} else {
+				$redirect_url = get_bloginfo( 'url' );
+			}
+
+			wp_safe_redirect( $redirect_url, 301 );
 			exit;
 		}
 	}
@@ -429,7 +435,7 @@ class Activitypub {
 			);
 		}
 
-		\add_rewrite_rule( '^@([\w\-\.]+)/?$', 'index.php?actor=$matches[1]', 'top' );
+		\add_rewrite_rule( '^@([\w\-\.]+)$', 'index.php?actor=$matches[1]', 'top' );
 		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 	}
 
