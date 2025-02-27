@@ -8,7 +8,6 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Model\User;
 
 /**
  * Mailer Class.

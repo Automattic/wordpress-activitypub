@@ -92,8 +92,6 @@ class Test_Activity_Object extends WP_UnitTestCase {
 
 	/**
 	 * Test get_cc method.
-	 *
-	 * @covers ::get_cc
 	 */
 	public function test_get_cc() {
 		add_filter(

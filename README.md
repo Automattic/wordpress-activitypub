@@ -13,7 +13,11 @@ You can test out the plugin (settings) with [WordPress Playground](https://wordp
 
 ## Documentation
 
-WIP.
+- [Developer Documentation](docs/developer-docs.md) - Guide for developers working with the plugin.
+- [Development Environment](docs/development-environment.md) - Setting up your development environment.
+- [Pull Request Guidelines](docs/pull-request.md) - How to submit pull requests.
+- [Release Process](docs/release-process.md) - Guide for releasing new versions.
+- [Translations](docs/translations.md) - Information about translating the plugin.
 
 ## Federation
 

@@ -84,6 +84,8 @@ class Webfinger {
 	/**
 	 * Transform a URI to an acct <identifier>@<host>.
 	 *
+	 * @see https://swicg.github.io/activitypub-webfinger/#reverse-discovery
+	 *
 	 * @param string $uri The URI (acct:, mailto:, http:, https:).
 	 *
 	 * @return string|WP_Error Error or acct URI.

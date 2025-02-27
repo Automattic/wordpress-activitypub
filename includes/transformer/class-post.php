@@ -531,6 +531,7 @@ class Post extends Base {
 		// Don't need these anymore, should never appear in a post.
 		Shortcodes::unregister();
 
+		\remove_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ) );
 		\remove_filter( 'activitypub_reply_block', '__return_empty_string' );
 
 		return $content;
