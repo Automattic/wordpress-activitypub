@@ -256,6 +256,8 @@ class Activitypub {
 	 * @return void
 	 */
 	public static function template_redirect() {
+		global $wp_query;
+
 		$comment_id = get_query_var( 'c', null );
 
 		// Check if it seems to be a comment.
@@ -264,7 +266,6 @@ class Activitypub {
 
 			// Load a 404-page if `c` is set but not valid.
 			if ( ! $comment ) {
-				global $wp_query;
 				$wp_query->set_404();
 				return;
 			}
@@ -282,7 +283,6 @@ class Activitypub {
 		if ( $actor ) {
 			$actor = Actors::get_by_username( $actor );
 			if ( ! $actor || \is_wp_error( $actor ) ) {
-				global $wp_query;
 				$wp_query->set_404();
 				return;
 			}
