@@ -45,15 +45,14 @@ class URL_Validator_Controller extends WP_REST_Controller {
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
-					'callback'            => array( $this, 'validate' ),
+					'callback'            => array( $this, 'get_items' ),
 					'args'                => array(
 						'url' => array(
-							'required'          => true,
-							'type'              => 'string',
-							'sanitize_callback' => 'esc_url_raw',
+							'required' => true,
+							'type'     => 'uri',
 						),
 					),
-					'permission_callback' => array( $this, 'validate_url_permissions_check' ),
+					'permission_callback' => array( $this, 'get_items_permissions_check' ),
 				),
 			)
 		);
@@ -62,9 +61,11 @@ class URL_Validator_Controller extends WP_REST_Controller {
 	/**
 	 * Check if a given request has access to validate URLs.
 	 *
+	 * @param \WP_REST_Request $request The request.
+	 *
 	 * @return true|WP_Error True if the request has access, WP_Error object otherwise.
 	 */
-	public function validate_url_permissions_check() {
+	public function get_items_permissions_check( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		return current_user_can( 'edit_posts' );
 	}
 
@@ -75,7 +76,7 @@ class URL_Validator_Controller extends WP_REST_Controller {
 	 *
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public function validate( $request ) {
+	public function get_items( $request ) {
 		$url = $request->get_param( 'url' );
 
 		if ( ! $url ) {
