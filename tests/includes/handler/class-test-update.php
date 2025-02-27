@@ -14,6 +14,8 @@ use WP_UnitTestCase;
 
 /**
  * Update Handler Test Class.
+ *
+ * @coversDefaultClass \Activitypub\Handler\Update
  */
 class Test_Update extends WP_UnitTestCase {
 

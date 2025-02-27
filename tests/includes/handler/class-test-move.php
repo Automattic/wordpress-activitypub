@@ -14,6 +14,8 @@ use Activitypub\Http;
 
 /**
  * Test class for the Move handler.
+ *
+ * @coversDefaultClass \Activitypub\Handler\Move
  */
 class Test_Move extends \WP_UnitTestCase {
 	/**
