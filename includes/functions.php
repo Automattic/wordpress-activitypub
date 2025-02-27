@@ -137,7 +137,7 @@ function url_to_authorid( $url ) {
 		return null;
 	}
 
-	// First, check to see if there is a 'author=N' to match against.
+	// First, check to see if there is an 'author=N' to match against.
 	if ( \preg_match( '/[?&]author=(\d+)/i', $url, $values ) ) {
 		return \absint( $values[1] );
 	}

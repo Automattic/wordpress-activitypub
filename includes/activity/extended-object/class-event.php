@@ -50,7 +50,7 @@ class Event extends Base_Object {
 	);
 
 	/**
-	 * Mobilizon compatible values for repliesModertaionOption.
+	 * Mobilizon compatible values for repliesModerationOption.
 	 *
 	 * @var array
 	 */
@@ -342,15 +342,15 @@ class Event extends Base_Object {
 	/**
 	 * Custom setter for the event category.
 	 *
-	 * Falls back to Mobilizons default category.
+	 * Falls back to Mobilizon's default category.
 	 *
-	 * @param string $category               The category of the event.
-	 * @param bool   $mobilizon_compatibilty Optional. Whether the category must be compatibly with Mobilizon. Default true.
+	 * @param string $category                The category of the event.
+	 * @param bool   $mobilizon_compatibility Optional. Whether the category must be compatibly with Mobilizon. Default true.
 	 *
 	 * @return Event
 	 */
-	public function set_category( $category, $mobilizon_compatibilty = true ) {
-		if ( $mobilizon_compatibilty ) {
+	public function set_category( $category, $mobilizon_compatibility = true ) {
+		if ( $mobilizon_compatibility ) {
 			$this->category = in_array( $category, self::DEFAULT_EVENT_CATEGORIES, true ) ? $category : 'MEETING';
 		} else {
 			$this->category = $category;

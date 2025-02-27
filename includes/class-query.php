@@ -190,8 +190,8 @@ class Query {
 	 * Virtual objects are objects that are not stored in the database, but are created on the fly.
 	 * The plugins currently supports two virtual objects: The Blog-Actor and the Application-Actor.
 	 *
-	 * @see \Activitypub\Blog
-	 * @see \Activitypub\Application
+	 * @see \Activitypub\Model\Blog
+	 * @see \Activitypub\Model\Application
 	 *
 	 * @return object|null The virtual object.
 	 */
