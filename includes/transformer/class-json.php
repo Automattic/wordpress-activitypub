@@ -7,8 +7,6 @@
 
 namespace Activitypub\Transformer;
 
-use Activitypub\Activity\Base_Object;
-
 use function Activitypub\is_actor;
 use function Activitypub\is_activity;
 

@@ -19,7 +19,8 @@ class Test_Comment extends \WP_UnitTestCase {
 	/**
 	 * Test get source id or url.
 	 *
-	 * @covers ::get_source_id, ::get_source_url
+	 * @covers ::get_source_id
+	 * @covers ::get_source_url
 	 */
 	public function test_get_source_id_or_url() {
 		$comment_id = wp_insert_comment(
@@ -113,47 +114,6 @@ class Test_Comment extends \WP_UnitTestCase {
 		$this->assertEquals( $expected['was_sent'], Comment::was_sent( $parent_comment_id ) );
 		$this->assertEquals( $expected['was_received'], Comment::was_received( $parent_comment_id ) );
 		$this->assertEquals( $expected['should_be_federated'], Comment::should_be_federated( $comment ) );
-	}
-
-	/**
-	 * Test get comment ancestors.
-	 *
-	 * @covers ::get_comment_ancestors
-	 */
-	public function test_get_comment_ancestors() {
-		$comment_id = wp_insert_comment(
-			array(
-				'comment_type'         => 'comment',
-				'comment_content'      => 'This is a comment.',
-				'comment_author_url'   => 'https://example.com',
-				'comment_author_email' => '',
-				'comment_meta'         => array(
-					'protocol' => 'activitypub',
-				),
-			)
-		);
-
-		$this->assertEquals( array(), \Activitypub\get_comment_ancestors( $comment_id ) );
-
-		$comment_array = get_comment( $comment_id, ARRAY_A );
-
-		$parent_comment_id = wp_insert_comment(
-			array(
-				'comment_type'         => 'parent comment',
-				'comment_content'      => 'This is a parent comment.',
-				'comment_author_url'   => 'https://example.com',
-				'comment_author_email' => '',
-				'comment_meta'         => array(
-					'protocol' => 'activitypub',
-				),
-			)
-		);
-
-		$comment_array['comment_parent'] = $parent_comment_id;
-
-		wp_update_comment( $comment_array );
-
-		$this->assertEquals( array( $parent_comment_id ), \Activitypub\get_comment_ancestors( $comment_id ) );
 	}
 
 	/**

@@ -7,9 +7,7 @@
 
 namespace Activitypub\Handler;
 
-use Activitypub\Http;
 use Activitypub\Notification;
-use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 

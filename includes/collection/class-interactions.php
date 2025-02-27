@@ -7,6 +7,7 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Webfinger;
 use WP_Comment_Query;
 use Activitypub\Comment;
 
@@ -256,12 +257,19 @@ class Interactions {
 			$comment_content = \addslashes( $activity['object']['content'] );
 		}
 
+		$webfinger = Webfinger::uri_to_acct( $url );
+		if ( is_wp_error( $webfinger ) ) {
+			$webfinger = '';
+		} else {
+			$webfinger = str_replace( 'acct:', '', $webfinger );
+		}
+
 		$commentdata = array(
 			'comment_author'       => \esc_attr( $comment_author ),
 			'comment_author_url'   => \esc_url_raw( $url ),
 			'comment_content'      => $comment_content,
 			'comment_type'         => 'comment',
-			'comment_author_email' => '',
+			'comment_author_email' => $webfinger,
 			'comment_meta'         => array(
 				'source_id' => \esc_url_raw( object_to_uri( $activity['object'] ) ),
 				'protocol'  => 'activitypub',

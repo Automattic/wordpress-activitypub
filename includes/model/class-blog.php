@@ -128,7 +128,7 @@ class Blog extends Actor {
 	/**
 	 * Get the type of the object.
 	 *
-	 * If the Blog is in "single user" mode, return "Person" insted of "Group".
+	 * If the Blog is in "single user" mode, return "Person" instead of "Group".
 	 *
 	 * @return string The type of the object.
 	 */

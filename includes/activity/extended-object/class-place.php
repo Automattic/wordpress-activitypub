@@ -38,8 +38,8 @@ class Place extends Base_Object {
 	protected $accuracy;
 
 	/**
-	 * Indicates the altitude of a place. The measurement units is indicated using the units property.
-	 * If units is not specified, the default is assumed to be "m" indicating meters.
+	 * Indicates the altitude of a place. The measurement unit is indicated using the unit's property.
+	 * If unit is not specified, the default is assumed to be "m" indicating meters.
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-altitude
 	 * @var float xsd:float

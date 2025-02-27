@@ -8,7 +8,6 @@
 namespace Activitypub\Scheduler;
 
 use function Activitypub\add_to_outbox;
-use function Activitypub\set_wp_object_state;
 use function Activitypub\should_comment_be_federated;
 
 /**
