@@ -108,7 +108,8 @@ class Actors_Controller extends \WP_REST_Controller {
 
 		$data = $user->to_array();
 
-		$response = \rest_ensure_response( $data );
+		$response    = \rest_ensure_response( $data );
+		$link_header = \sprintf( '<%1$s>; rel="alternate"; type="application/activity+json"', $user->get_id() );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 		$response->header( 'Link', $link_header );
 
