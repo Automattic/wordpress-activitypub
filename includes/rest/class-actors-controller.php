@@ -101,15 +101,6 @@ class Actors_Controller extends \WP_REST_Controller {
 			return $user;
 		}
 
-		$link_header = \sprintf( '<%1$s>; rel="alternate"; type="application/activity+json"', $user->get_id() );
-
-		// Redirect to canonical URL if it is not an ActivityPub request.
-		if ( ! is_activitypub_request() ) {
-			\header( 'Link: ' . $link_header );
-			\header( 'Location: ' . $user->get_canonical_url(), true, 301 );
-			exit;
-		}
-
 		/**
 		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
 		 */

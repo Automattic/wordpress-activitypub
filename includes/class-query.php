@@ -176,6 +176,17 @@ class Query {
 			}
 		}
 
+		// Try to get Actor by username.
+		if ( ! $queried_object ) {
+			$actor = \get_query_var( 'actor', null );
+			if ( $actor ) {
+				$actor = Actors::get_by_username( $actor );
+				if ( $actor && ! \is_wp_error( $actor ) ) {
+					$queried_object = $actor;
+				}
+			}
+		}
+
 		/**
 		 * Filters the queried object.
 		 *

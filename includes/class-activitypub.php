@@ -9,6 +9,7 @@ namespace Activitypub;
 
 use Exception;
 use Activitypub\Transformer\Factory;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
@@ -258,26 +259,41 @@ class Activitypub {
 		$comment_id = get_query_var( 'c', null );
 
 		// Check if it seems to be a comment.
-		if ( ! $comment_id ) {
-			return;
+		if ( $comment_id ) {
+			$comment = get_comment( $comment_id );
+
+			// Load a 404-page if `c` is set but not valid.
+			if ( ! $comment ) {
+				global $wp_query;
+				$wp_query->set_404();
+				return;
+			}
+
+			// Stop if it's not an ActivityPub comment.
+			if ( is_activitypub_request() && ! is_local_comment( $comment ) ) {
+				return;
+			}
+
+			wp_safe_redirect( get_comment_link( $comment ) );
+			exit;
 		}
 
-		$comment = get_comment( $comment_id );
+		$actor = get_query_var( 'actor', null );
+		if ( $actor ) {
+			$actor = Actors::get_by_username( $actor );
+			if ( ! $actor || \is_wp_error( $actor ) ) {
+				global $wp_query;
+				$wp_query->set_404();
+				return;
+			}
 
-		// Load a 404-page if `c` is set but not valid.
-		if ( ! $comment ) {
-			global $wp_query;
-			$wp_query->set_404();
-			return;
+			if ( is_activitypub_request() ) {
+				return;
+			}
+
+			wp_safe_redirect( $actor->get_url(), 301 );
+			exit;
 		}
-
-		// Stop if it's not an ActivityPub comment.
-		if ( is_activitypub_request() && ! is_local_comment( $comment ) ) {
-			return;
-		}
-
-		wp_safe_redirect( get_comment_link( $comment ) );
-		exit;
 	}
 
 	/**
@@ -291,6 +307,7 @@ class Activitypub {
 		$vars[] = 'activitypub';
 		$vars[] = 'preview';
 		$vars[] = 'author';
+		$vars[] = 'actor';
 		$vars[] = 'c';
 		$vars[] = 'p';
 
@@ -412,12 +429,7 @@ class Activitypub {
 			);
 		}
 
-		\add_rewrite_rule(
-			'^@([\w\-\.]+)$',
-			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/$matches[1]',
-			'top'
-		);
-
+		\add_rewrite_rule( '^@([\w\-\.]+)/?$', 'index.php?actor=$matches[1]', 'top' );
 		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 	}
 
