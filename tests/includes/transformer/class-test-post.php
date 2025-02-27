@@ -660,6 +660,7 @@ class Test_Post extends \WP_UnitTestCase {
 	 *
 	 * @covers ::get_content
 	 * @throws \ReflectionException If the method does not exist.
+	 * @ticket https://github.com/Automattic/wordpress-activitypub/issues/1387
 	 */
 	public function test_get_content_with_embed() {
 		$post_id = self::factory()->post->create(
