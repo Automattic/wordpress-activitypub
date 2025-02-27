@@ -223,7 +223,7 @@ class Cli extends WP_CLI_Command {
 		$from = $args[0];
 		$to   = $args[1];
 
-		$outbox_item_id = Move::from_to( $from, $to );
+		$outbox_item_id = Move::account( $from, $to );
 
 		if ( is_wp_error( $outbox_item_id ) ) {
 			WP_CLI::error( $outbox_item_id->get_error_message() );
