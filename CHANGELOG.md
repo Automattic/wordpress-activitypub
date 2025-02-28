@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Upgrade script to fix Follower json representations with unescaped backslashes.
+* Centralized place for sanitization functions.
 
 ### Changed
 
