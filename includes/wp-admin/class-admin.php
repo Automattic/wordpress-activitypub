@@ -125,11 +125,9 @@ class Admin {
 	}
 
 	/**
-	 * Add the profile.
-	 *
-	 * @param \WP_User $user The user object.
+	 * Render user settings.
 	 */
-	public static function add_profile( $user ) {
+	public static function add_profile() {
 		wp_enqueue_media();
 		wp_enqueue_script( 'activitypub-header-image' );
 
