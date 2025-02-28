@@ -171,7 +171,6 @@ class Settings {
 			)
 		);
 
-
 		\register_setting(
 			'activitypub',
 			'activitypub_relays',

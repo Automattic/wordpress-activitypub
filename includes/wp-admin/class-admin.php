@@ -118,13 +118,6 @@ class Admin {
 	}
 
 	/**
-	 * Adds the ActivityPub settings to the Help tab.
-	 */
-	public static function add_settings_help_tab() {
-		require_once ACTIVITYPUB_PLUGIN_DIR . 'includes/help.php';
-	}
-
-	/**
 	 * Adds the follower list to the Help tab.
 	 */
 	public static function add_followers_list_help_tab() {
