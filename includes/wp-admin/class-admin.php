@@ -172,6 +172,17 @@ class Admin {
 		} else {
 			\delete_user_option( $user_id, 'activitypub_header_image' );
 		}
+
+		$also_known_as = $_POST['activitypub_blog_user_also_known_as'];
+		if ( $also_known_as ) {
+			$also_known_as = explode( PHP_EOL, $also_known_as );
+			$also_known_as = array_map( 'trim', $also_known_as );
+			$also_known_as = array_filter( $also_known_as );
+			$also_known_as = array_map( 'esc_url', $also_known_as );
+			\update_user_option( $user_id, 'activitypub_also_known_as', $also_known_as );
+		} else {
+			\delete_user_option( $user_id, 'activitypub_also_known_as' );
+		}
 	}
 
 	/**

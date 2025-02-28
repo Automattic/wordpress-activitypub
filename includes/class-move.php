@@ -44,6 +44,10 @@ class Move {
 		$also_known_as   = \array_unique( $also_known_as );
 
 		if ( $user->get__id() > 0 ) {
+			$also_known_as = array_map( 'trim', $also_known_as );
+			$also_known_as = array_map( 'esc_url', $also_known_as );
+			$also_known_as = array_filter( $also_known_as );
+
 			\update_user_option( $user->get__id(), 'activitypub_also_known_as', $also_known_as );
 		} else {
 			\update_option( 'activitypub_blog_user_also_known_as', $also_known_as );
