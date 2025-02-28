@@ -271,7 +271,7 @@ class Test_Query extends WP_UnitTestCase {
 	 * @covers ::get_activitypub_object
 	 */
 	public function test_user_at_url_activity_object() {
-		$user_id = $this->factory->user->create(
+		$user_id = self::factory()->user->create(
 			array(
 				'user_login' => 'testuser',
 				'role'       => 'author',
