@@ -183,10 +183,8 @@ class Migration {
 			Scheduler::register_schedules();
 		}
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
-			add_action( 'init', 'flush_rewrite_rules', 20 );
-		}
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_comment_author_emails' ) );
+			\add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 
 		/*
