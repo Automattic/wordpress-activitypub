@@ -173,8 +173,7 @@ class Admin {
 			\delete_user_option( $user_id, 'activitypub_header_image' );
 		}
 
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		$also_known_as = \sanitize_text_field( \wp_unslash( isset( $_POST['activitypub_blog_user_also_known_as'] ) ? $_POST['activitypub_blog_user_also_known_as'] : '' ) );
+		$also_known_as = ! empty( $_POST['activitypub_blog_user_also_known_as'] ) ? \sanitize_textarea_field( wp_unslash( $_POST['activitypub_blog_user_also_known_as'] ) ) : false;
 		if ( $also_known_as ) {
 			$also_known_as = explode( PHP_EOL, $also_known_as );
 			$also_known_as = array_map( 'trim', $also_known_as );
