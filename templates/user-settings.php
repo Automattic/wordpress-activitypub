@@ -134,6 +134,26 @@ $user = \Activitypub\Collection\Actors::get_by_id( \get_current_user_id() ); ?>
 				</p>
 			</td>
 		</tr>
+		<tr scope="row">
+			<th>
+				<label><?php \esc_html_e( 'Account Aliases', 'activitypub' ); ?></label>
+			</th>
+			<td>
+				<?php $also_known_as = \get_user_option( 'activitypub_also_known_as', \get_current_user_id() ); ?>
+				<textarea
+					class="large-text"
+					name="activitypub_blog_user_also_known_as"
+					id="activitypub_blog_user_also_known_as"
+					rows="5"
+				><?php echo esc_textarea( implode( PHP_EOL, (array) $also_known_as ) ); ?></textarea>
+				<p class="description">
+					<?php esc_html_e( 'If you’re moving from another account to this one, you’ll need to create an alias here first before transferring your followers. This step is safe, reversible, and doesn’t affect anything on its own. The migration itself is initiated from your old account.', 'activitypub' ); ?>
+				</p>
+				<p class="description">
+					<?php esc_html_e( 'Enter one URL per line.', 'activitypub' ); ?>
+				</p>
+			</td>
+		</tr>
 	</tbody>
 </table>
 

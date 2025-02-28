@@ -39,14 +39,10 @@ class Move {
 		}
 
 		// Add the old account URL to alsoKnownAs.
-		$also_known_as   = (array) \get_user_option( 'activitypub_also_known_as', $user->get__id() );
-		$also_known_as[] = $from;
-		$also_known_as   = \array_unique( $also_known_as );
-
 		if ( $user->get__id() > 0 ) {
-			\update_user_option( $user->get__id(), 'activitypub_also_known_as', $also_known_as );
+			self::update_user_also_known_as( $user->get__id(), $from );
 		} else {
-			\update_option( 'activitypub_blog_user_also_known_as', $also_known_as );
+			self::update_blog_also_known_as( $from );
 		}
 
 		$response = Http::get_remote_object( $to );
@@ -66,5 +62,30 @@ class Move {
 
 		// Add to outbox.
 		return add_to_outbox( $actor, 'Move', $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+	}
+
+	/**
+	 * Update the alsoKnownAs property of a user.
+	 *
+	 * @param int    $user_id The user ID.
+	 * @param string $from    The current account URL.
+	 */
+	private static function update_user_also_known_as( $user_id, $from ) {
+		$also_known_as   = (array) \get_user_option( 'activitypub_also_known_as', $user_id );
+		$also_known_as[] = $from;
+
+		\update_user_option( $user_id, 'activitypub_also_known_as', $also_known_as );
+	}
+
+	/**
+	 * Update the alsoKnownAs property of the blog.
+	 *
+	 * @param string $from The current account URL.
+	 */
+	private static function update_blog_also_known_as( $from ) {
+		$also_known_as   = (array) \get_option( 'activitypub_blog_user_also_known_as' );
+		$also_known_as[] = $from;
+
+		\update_option( 'activitypub_blog_user_also_known_as', $also_known_as );
 	}
 }

@@ -9,6 +9,7 @@ namespace Activitypub\WP_Admin;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
+use Activitypub\Sanitize;
 use function Activitypub\is_user_disabled;
 
 /**
@@ -242,6 +243,17 @@ class Settings {
 				'type'        => 'integer',
 				'description' => \__( 'The Attachment-ID of the Sites Header-Image', 'activitypub' ),
 				'default'     => null,
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_blog_user_also_known_as',
+			array(
+				'type'              => 'array',
+				'description'       => 'An array of URLs that the blog user is known by.',
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
 			)
 		);
 	}
