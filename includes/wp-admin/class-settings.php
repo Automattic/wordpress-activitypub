@@ -257,10 +257,10 @@ class Settings {
 						$value = explode( PHP_EOL, $value );
 					}
 
-					$value = array_filter( array_map( 'trim', $value ) );
-					$value = array_filter( array_map( 'esc_url_raw', $value ) );
+					$value = array_map( 'trim', $value );
+					$value = array_map( 'esc_url_raw', $value );
 
-					return $value;
+					return array_filter( $value );
 				},
 			)
 		);
