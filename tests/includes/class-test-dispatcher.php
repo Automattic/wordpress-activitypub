@@ -7,6 +7,7 @@
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Dispatcher;
 
@@ -169,6 +170,65 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertSame( $expected, $retries, 'Expected all inboxes to be scheduled for retry' );
 
 		remove_all_filters( 'pre_http_request' );
+	}
+
+	public function test_send_to_relays() {
+		global $wp_actions;
+
+		$post_id      = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item  = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+		$fake_request = function () {
+			return new \WP_Error( 'test', 'test' );
+		};
+
+		add_filter( 'pre_http_request', $fake_request, 10, 3 );
+
+		Dispatcher::send_to_relays( $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+
+		// Test how often the request was sent.
+		$this->assertEquals( 0, did_action( 'activitypub_sent_to_inbox' ) );
+
+		$wp_actions = null;
+
+		// Add a relay.
+		$relays = array( 'https://relay1.example.com/inbox' );
+		update_option( 'activitypub_relays', $relays );
+
+		Dispatcher::send_to_relays( $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+
+		// Test how often the request was sent.
+		$this->assertEquals( 1, did_action( 'activitypub_sent_to_inbox' ) );
+
+		$wp_actions = null;
+
+		// Add a relay.
+		$relays = array( 'https://relay1.example.com/inbox', 'https://relay2.example.com/inbox' );
+		update_option( 'activitypub_relays', $relays );
+
+		Dispatcher::send_to_relays( $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+
+		// Test how often the request was sent.
+		$this->assertEquals( 2, did_action( 'activitypub_sent_to_inbox' ) );
+
+		$wp_actions = null;
+
+		$private_activity = Outbox::get_activity( $outbox_item->ID );
+		$private_activity->set_to( null );
+		$private_activity->set_cc( null );
+
+		// Clone object.
+		$private_activity = clone $private_activity;
+
+		Dispatcher::send_to_relays( $private_activity, Actors::get_by_id( self::$user_id ), $outbox_item );
+
+		// Test how often the request was sent.
+		$this->assertEquals( 0, did_action( 'activitypub_sent_to_inbox' ) );
+
+		\remove_filter( 'pre_http_request', $fake_request, 10 );
+
+		\delete_option( 'activitypub_relays' );
+		\wp_delete_post( $post_id );
+		\wp_delete_post( $outbox_item->ID );
 	}
 
 	/**

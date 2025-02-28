@@ -97,6 +97,9 @@ class Dispatcher {
 		// Send to mentioned and replied-to users. Everyone other than followers.
 		self::send_to_interactees( $activity, $actor->get__id(), $outbox_item );
 
+		// Send to relays.
+		self::send_to_relays( $activity, $actor, $outbox_item );
+
 		if ( self::should_send_to_followers( $activity, $actor, $outbox_item ) ) {
 			Scheduler::async_batch(
 				self::$callback,
@@ -404,5 +407,29 @@ class Dispatcher {
 		 * @param \WP_Post $outbox_item                The WordPress object.
 		 */
 		return apply_filters( 'activitypub_send_activity_to_followers', $send, $activity, $actor->get__id(), $outbox_item );
+	}
+
+	/**
+	 * Add Inboxes of Relays.
+	 *
+	 * @param Activity                                        $activity    The ActivityPub Activity.
+	 * @param \Activitypub\Model\User|\Activitypub\Model\Blog $actor       The Actor object.
+	 * @param \WP_Post                                        $outbox_item The Outbox item.
+	 */
+	public static function send_to_relays( $activity, $actor, $outbox_item ) {
+		// Check if follower endpoint is set.
+		$cc = $activity->get_cc() ?? array();
+		$to = $activity->get_to() ?? array();
+
+		$audience = array_merge( $cc, $to );
+
+		// Check if activity is public.
+		if ( ! in_array( 'https://www.w3.org/ns/activitystreams#Public', $audience, true ) ) {
+			return;
+		}
+
+		$relays = \get_option( 'activitypub_relays', array() );
+
+		self::send_to_inboxes( $relays, $outbox_item->ID );
 	}
 }
