@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Upgrade script to fix Follower json representations with unescaped backslashes.
 * Centralized place for sanitization functions.
+* Support for sending Activities to ActivityPub Relays, to improve discoverability of public content.
 
 ### Changed
 
