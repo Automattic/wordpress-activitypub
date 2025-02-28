@@ -244,6 +244,26 @@ class Settings {
 				'default'     => null,
 			)
 		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_blog_user_also_known_as',
+			array(
+				'type'        => 'array',
+				'description' => \__( 'Also Known As', 'activitypub' ),
+				'default'     => array(),
+				'sanitize_callback' => function ( $value ) {
+					if ( ! is_array( $value ) ) {
+						$value = explode( PHP_EOL, $value );
+					}
+
+					$value = array_filter( array_map( 'trim', $value ) );
+					$value = array_filter( array_map( 'esc_url', $value ) );
+
+					return $value;
+				}
+			)
+		);
 	}
 
 	/**
