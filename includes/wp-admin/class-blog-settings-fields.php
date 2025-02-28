@@ -239,9 +239,6 @@ class Blog_Settings_Fields {
 	public static function also_known_as_callback() {
 		$also_known_as = \get_option( 'activitypub_blog_user_also_known_as' );
 		?>
-		<p class="description">
-			<?php esc_html_e( 'If you’re moving from another account to this one, you’ll need to create an alias here first before transferring your followers. This step is safe, reversible, and doesn’t affect anything on its own. The migration itself is initiated from your old account.', 'activitypub' ); ?>
-		</p>
 		<label for="activitypub_blog_user_also_known_as">
 			<textarea
 				class="large-text"
@@ -250,6 +247,9 @@ class Blog_Settings_Fields {
 				rows="5"
 			><?php echo esc_textarea( implode( PHP_EOL, (array) $also_known_as ) ); ?></textarea>
 		</label>
+		<p class="description">
+			<?php esc_html_e( 'If you’re moving from another account to this one, you’ll need to create an alias here first before transferring your followers. This step is safe, reversible, and doesn’t affect anything on its own. The migration itself is initiated from your old account.', 'activitypub' ); ?>
+		</p>
 		<p class="description">
 			<?php esc_html_e( 'Enter one URL per line.', 'activitypub' ); ?>
 		</p>
