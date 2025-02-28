@@ -175,9 +175,9 @@ class Settings {
 			'activitypub',
 			'activitypub_relays',
 			array(
-				'type'        => 'array',
-				'description' => \__( 'Relays', 'activitypub' ),
-				'default'     => array(),
+				'type'              => 'array',
+				'description'       => \__( 'Relays', 'activitypub' ),
+				'default'           => array(),
 				'sanitize_callback' => function ( $value ) {
 					if ( ! is_array( $value ) ) {
 						$value = explode( PHP_EOL, $value );
