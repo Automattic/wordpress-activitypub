@@ -7,6 +7,7 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Activitypub;
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
 use function Activitypub\is_user_disabled;
@@ -250,18 +251,9 @@ class Settings {
 			'activitypub_blog_user_also_known_as',
 			array(
 				'type'              => 'array',
-				'description'       => \__( 'The Account Aliases for the Blog-Actor', 'activitypub' ),
+				'description'       => 'An array of URLs that the blog user is known by.',
 				'default'           => array(),
-				'sanitize_callback' => function ( $value ) {
-					if ( ! is_array( $value ) ) {
-						$value = explode( PHP_EOL, $value );
-					}
-
-					$value = array_map( 'trim', $value );
-					$value = array_map( 'esc_url_raw', $value );
-
-					return array_filter( $value );
-				},
+				'sanitize_callback' => array( Activitypub::class, 'sanitize_textarea_urls' ),
 			)
 		);
 	}

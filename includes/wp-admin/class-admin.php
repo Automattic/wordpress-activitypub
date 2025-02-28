@@ -175,10 +175,6 @@ class Admin {
 
 		$also_known_as = ! empty( $_POST['activitypub_blog_user_also_known_as'] ) ? \sanitize_textarea_field( wp_unslash( $_POST['activitypub_blog_user_also_known_as'] ) ) : false;
 		if ( $also_known_as ) {
-			$also_known_as = explode( PHP_EOL, $also_known_as );
-			$also_known_as = array_map( 'trim', $also_known_as );
-			$also_known_as = array_filter( $also_known_as );
-			$also_known_as = array_map( 'esc_url', $also_known_as );
 			\update_user_option( $user_id, 'activitypub_also_known_as', $also_known_as );
 		} else {
 			\delete_user_option( $user_id, 'activitypub_also_known_as' );
