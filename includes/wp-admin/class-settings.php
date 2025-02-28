@@ -259,6 +259,7 @@ class Settings {
 
 					$value = array_map( 'trim', $value );
 					$value = array_map( 'esc_url_raw', $value );
+					$value = array_unique( $value );
 
 					return array_filter( $value );
 				},
