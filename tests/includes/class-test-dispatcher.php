@@ -172,6 +172,11 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		remove_all_filters( 'pre_http_request' );
 	}
 
+	/**
+	 * Test send_to_relays.
+	 *
+	 * @covers ::send_to_relays
+	 */
 	public function test_send_to_relays() {
 		global $wp_actions;
 
@@ -188,6 +193,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Test how often the request was sent.
 		$this->assertEquals( 0, did_action( 'activitypub_sent_to_inbox' ) );
 
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$wp_actions = null;
 
 		// Add a relay.
@@ -199,6 +205,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Test how often the request was sent.
 		$this->assertEquals( 1, did_action( 'activitypub_sent_to_inbox' ) );
 
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$wp_actions = null;
 
 		// Add a relay.
@@ -210,6 +217,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Test how often the request was sent.
 		$this->assertEquals( 2, did_action( 'activitypub_sent_to_inbox' ) );
 
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$wp_actions = null;
 
 		$private_activity = Outbox::get_activity( $outbox_item->ID );
