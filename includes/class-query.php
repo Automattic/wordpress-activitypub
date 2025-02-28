@@ -176,17 +176,6 @@ class Query {
 			}
 		}
 
-		// Try to get Actor by username.
-		if ( ! $queried_object ) {
-			$actor = \get_query_var( 'actor', null );
-			if ( $actor ) {
-				$actor = Actors::get_by_username( $actor );
-				if ( $actor && ! \is_wp_error( $actor ) ) {
-					$queried_object = $actor;
-				}
-			}
-		}
-
 		/**
 		 * Filters the queried object.
 		 *
@@ -216,10 +205,10 @@ class Query {
 		$author_id = url_to_authorid( $url );
 
 		if ( ! is_numeric( $author_id ) ) {
-			return null;
+			$author_id = $url;
 		}
 
-		$user = Actors::get_by_id( $author_id );
+		$user = Actors::get_by_various( $author_id );
 
 		if ( \is_wp_error( $user ) || ! $user ) {
 			return null;
