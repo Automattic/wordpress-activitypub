@@ -44,12 +44,6 @@ class Activitypub {
 
 		\add_action( 'user_register', array( self::class, 'user_register' ) );
 
-		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
-
-		if ( site_supports_blocks() ) {
-			\add_action( 'tool_box', array( self::class, 'tool_box' ) );
-		}
-
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
@@ -447,15 +441,6 @@ class Activitypub {
 	}
 
 	/**
-	 * Adds metabox on wp-admin/tools.php.
-	 */
-	public static function tool_box() {
-		if ( \current_user_can( 'edit_posts' ) ) {
-			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
-		}
-	}
-
-	/**
 	 * Theme compatibility stuff.
 	 */
 	public static function theme_compat() {
@@ -475,30 +460,6 @@ class Activitypub {
 				);
 			}
 		}
-	}
-
-	/**
-	 * Display plugin upgrade notice to users.
-	 *
-	 * @param array $data The plugin data.
-	 */
-	public static function plugin_update_message( $data ) {
-		if ( ! isset( $data['upgrade_notice'] ) ) {
-			return;
-		}
-
-		printf(
-			'<div class="update-message">%s</div>',
-			wp_kses(
-				wpautop( $data['upgrade_notice '] ),
-				array(
-					'p'      => array(),
-					'a'      => array( 'href', 'title' ),
-					'strong' => array(),
-					'em'     => array(),
-				)
-			)
-		);
 	}
 
 	/**

@@ -55,6 +55,11 @@ class Admin {
 
 		\add_filter( 'dashboard_glance_items', array( self::class, 'dashboard_glance_items' ) );
 		\add_filter( 'plugin_action_links_' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'add_plugin_settings_link' ) );
+		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ), 10, 2 );
+
+		if ( site_supports_blocks() ) {
+			\add_action( 'tool_box', array( self::class, 'tool_box' ) );
+		}
 	}
 
 	/**
@@ -594,5 +599,26 @@ class Admin {
 		);
 
 		return $actions;
+	}
+
+	/**
+	 * Display plugin upgrade notice to users.
+	 *
+	 * @param array  $data   The plugin data.
+	 * @param object $update The plugin update data.
+	 */
+	public static function plugin_update_message( $data, $update ) {
+		if ( ! isset( $update->upgrade_notice ) ) {
+			return;
+		}
+
+		echo '<br>' . wp_strip_all_tags( $update->upgrade_notice ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	/**
+	 * Adds metabox on wp-admin/tools.php.
+	 */
+	public static function tool_box() {
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
 	}
 }
