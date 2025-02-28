@@ -219,9 +219,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 1.0.0 =
+= 5.4.0 =
 
-For version 1.0.0 we have completely rebuilt the followers lists. There is a migration from the old format to the new, but it may take some time until the migration is complete. No data will be lost in the process, please give the migration some time.
+Note: This update requires WordPress 6.4+. Please ensure your site meets this requirement before upgrading.
 
 == Installation ==
 
