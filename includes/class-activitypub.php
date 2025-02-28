@@ -754,26 +754,8 @@ class Activitypub {
 				'description'       => 'An array of URLs that the user is known by.',
 				'single'            => false,
 				'default'           => array(),
-				'sanitize_callback' => array( self::class, 'sanitize_textarea_urls' ),
+				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
 			)
 		);
-	}
-
-	/**
-	 * Sanitize a list of URLs.
-	 *
-	 * @param string|array $value The value to sanitize.
-	 * @return array The sanitized list of URLs.
-	 */
-	public static function sanitize_textarea_urls( $value ) {
-		if ( ! is_array( $value ) ) {
-			$value = explode( PHP_EOL, $value );
-		}
-
-		$value = array_map( 'trim', $value );
-		$value = array_map( 'sanitize_url', $value );
-		$value = array_unique( $value );
-
-		return array_filter( $value );
 	}
 }

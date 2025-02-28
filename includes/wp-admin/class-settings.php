@@ -7,9 +7,9 @@
 
 namespace Activitypub\WP_Admin;
 
-use Activitypub\Activitypub;
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
+use Activitypub\Sanitize;
 use function Activitypub\is_user_disabled;
 
 /**
@@ -253,7 +253,7 @@ class Settings {
 				'type'              => 'array',
 				'description'       => 'An array of URLs that the blog user is known by.',
 				'default'           => array(),
-				'sanitize_callback' => array( Activitypub::class, 'sanitize_textarea_urls' ),
+				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
 			)
 		);
 	}
