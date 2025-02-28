@@ -8,7 +8,6 @@
 namespace Activitypub;
 
 use Exception;
-use Activitypub\Transformer\Factory;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
