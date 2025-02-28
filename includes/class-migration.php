@@ -186,6 +186,7 @@ class Migration {
 			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_slashing' ) );
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_comment_author_emails' ) );
 		}
 
@@ -626,6 +627,50 @@ class Migration {
 		}
 
 		if ( count( $comments ) === $batch_size ) {
+			return array(
+				'batch_size' => $batch_size,
+				'offset'     => $offset + $batch_size,
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Update _activitypub_actor_json meta values to ensure they are properly slashed.
+	 *
+	 * @param int $batch_size Optional. Number of meta values to process per batch. Default 100.
+	 * @param int $offset     Optional. Number of meta values to skip. Default 0.
+	 * @return array|null Array with batch size and offset if there are more meta values to process, null otherwise.
+	 */
+	public static function update_actor_json_slashing( $batch_size = 100, $offset = 0 ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$meta_values = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_actor_json' LIMIT %d OFFSET %d",
+				$batch_size,
+				$offset
+			)
+		);
+
+		foreach ( $meta_values as $meta ) {
+			$json = \json_decode( $meta->meta_value, true );
+
+			// If json_decode fails, try adding slashes.
+			if ( null === $json && \json_last_error() !== JSON_ERROR_NONE ) {
+				$escaped_value = \preg_replace( '#\\\\(?!["\\\\/bfnrtu])#', '\\\\\\\\', $meta->meta_value );
+				$json          = \json_decode( $escaped_value, true );
+
+				// Update the meta if json_decode succeeds with slashes.
+				if ( null !== $json && \json_last_error() === JSON_ERROR_NONE ) {
+					\update_post_meta( $meta->post_id, '_activitypub_actor_json', \wp_slash( $escaped_value ) );
+				}
+			}
+		}
+
+		if ( \count( $meta_values ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
 				'offset'     => $offset + $batch_size,
