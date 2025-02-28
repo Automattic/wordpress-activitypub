@@ -430,6 +430,10 @@ class Dispatcher {
 
 		$relays = \get_option( 'activitypub_relays', array() );
 
+		if ( empty( $relays ) ) {
+			return;
+		}
+
 		self::send_to_inboxes( $relays, $outbox_item->ID );
 	}
 }
