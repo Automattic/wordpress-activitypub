@@ -74,6 +74,49 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Data provider for host list tests.
+	 *
+	 * @return array Test data.
+	 */
+	public function host_list_provider() {
+		return array(
+			'single_valid_host'    => array(
+				'example.com',
+				'example.com',
+			),
+			'multiple_valid_hosts' => array(
+				"ftp://example.com\nhttp://wordpress.org\nhttps://test.example.com",
+				"example.com\nwordpress.org\ntest.example.com",
+			),
+			'mixed_case_hosts'     => array(
+				"ExAmPlE.cOm\nWoRdPrEsS.oRg",
+				"example.com\nwordpress.org",
+			),
+			'invalid_hosts'        => array(
+				"   not-a-domain\n\nexample.com\n\t@invalid.com",
+				"not-a-domain\nexample.com\ninvalid.com",
+			),
+			'empty_string'         => array(
+				'',
+				'',
+			),
+		);
+	}
+
+	/**
+	 * Test host_list with various inputs.
+	 *
+	 * @dataProvider host_list_provider
+	 * @covers ::host_list
+	 *
+	 * @param string $input    Input value.
+	 * @param string $expected Expected output.
+	 */
+	public function test_host_list( $input, $expected ) {
+		$this->assertEquals( $expected, Sanitize::host_list( $input ) );
+	}
+
+	/**
 	 * Data provider for blog identifier tests.
 	 *
 	 * @return array Test data.

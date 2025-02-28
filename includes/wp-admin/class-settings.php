@@ -137,9 +137,7 @@ class Settings {
 				'type'              => 'string',
 				'description'       => \__( 'Websites allowed to credit you.', 'activitypub' ),
 				'default'           => \Activitypub\home_host(),
-				'sanitize_callback' => function ( $value ) {
-					return implode( PHP_EOL, Sanitize::url_list( $value ) );
-				},
+				'sanitize_callback' => array( Sanitize::class, 'host_list' ),
 			)
 		);
 

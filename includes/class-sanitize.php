@@ -33,6 +33,34 @@ class Sanitize {
 	}
 
 	/**
+	 * Sanitize a list of hosts.
+	 *
+	 * @param string $value The value to sanitize.
+	 * @return string The sanitized list of hosts.
+	 */
+	public static function host_list( $value ) {
+		$value = \explode( PHP_EOL, $value );
+		$value = \array_map(
+			function ( $host ) {
+				$host = \trim( $host );
+				$host = \strtolower( $host );
+				$host = \set_url_scheme( $host );
+				$host = \sanitize_url( $host, array( 'http', 'https' ) );
+
+				// Remove protocol.
+				if ( \str_contains( $host, 'http' ) ) {
+					$host = \wp_parse_url( $host, PHP_URL_HOST );
+				}
+
+				return \filter_var( $host, FILTER_VALIDATE_DOMAIN );
+			},
+			$value
+		);
+
+		return \implode( PHP_EOL, \array_filter( $value ) );
+	}
+
+	/**
 	 * Sanitize a blog identifier.
 	 *
 	 * @param string $value The value to sanitize.
