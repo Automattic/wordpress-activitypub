@@ -171,6 +171,28 @@ class Settings {
 			)
 		);
 
+
+		\register_setting(
+			'activitypub',
+			'activitypub_relays',
+			array(
+				'type'        => 'array',
+				'description' => \__( 'Relays', 'activitypub' ),
+				'default'     => array(),
+				'sanitize_callback' => function ( $value ) {
+					if ( ! is_array( $value ) ) {
+						$value = explode( PHP_EOL, $value );
+					}
+
+					$value = array_map( 'trim', $value );
+					$value = array_filter( $value );
+					$value = array_map( 'esc_url', $value );
+
+					return $value;
+				},
+			)
+		);
+
 		// Blog-User Settings.
 		\register_setting(
 			'activitypub_blog',
