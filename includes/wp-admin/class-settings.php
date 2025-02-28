@@ -250,7 +250,7 @@ class Settings {
 			'activitypub_blog_user_also_known_as',
 			array(
 				'type'              => 'array',
-				'description'       => \__( 'Also Known As', 'activitypub' ),
+				'description'       => \__( 'The Account Aliases for the Blog-Actor', 'activitypub' ),
 				'default'           => array(),
 				'sanitize_callback' => function ( $value ) {
 					if ( ! is_array( $value ) ) {
@@ -258,7 +258,7 @@ class Settings {
 					}
 
 					$value = array_filter( array_map( 'trim', $value ) );
-					$value = array_filter( array_map( 'esc_url', $value ) );
+					$value = array_filter( array_map( 'esc_url_raw', $value ) );
 
 					return $value;
 				},
