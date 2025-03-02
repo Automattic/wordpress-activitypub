@@ -340,14 +340,6 @@ class Enable_Mastodon_Apps {
 			return $status;
 		}
 
-		// EMA makes a `comment` post_type to mirror comments and so that there can be a single get_posts() call for everything.
-		if ( get_post_type( $post ) === 'comment' ) {
-			$comment_id = get_post_meta( $post->ID, 'comment_id', true );
-			if ( $comment_id ) {
-				return self::api_comment_status( $comment_id, $post_id );
-			}
-		}
-
 		return self::api_post_status( $post_id );
 	}
 
@@ -432,48 +424,6 @@ class Enable_Mastodon_Apps {
 
 		return $account;
 	}
-
-	/**
-	 * Convert a WordPress comment to a Status.
-	 *
-	 * @param int $comment_id The comment ID.
-	 * @param int $post_id    The post ID (this is the mirrored `comment` post).
-	 *
-	 * @return Status|null The status.
-	 */
-	private static function api_comment_status( $comment_id, $post_id ) {
-		$comment = get_comment( $comment_id );
-		$post    = get_post( $post_id );
-		if ( ! $comment || ! $post ) {
-			return null;
-		}
-
-		$is_remote_comment = get_comment_meta( $comment->comment_ID, 'protocol', true ) === 'activitypub';
-
-		if ( $is_remote_comment ) {
-			$account = self::get_account_for_actor( $comment->comment_author_url );
-			// @todo fallback to locally stored data from the time the comment was made,
-			// if the remote actor is not found/no longer available.
-		} else {
-			$account = self::get_account_for_local_comment( $comment );
-		}
-
-		if ( ! $account ) {
-			return null;
-		}
-
-		$status                 = new Status();
-		$status->id             = $comment->comment_ID;
-		$status->created_at     = new DateTime( $comment->comment_date_gmt );
-		$status->content        = $comment->comment_content;
-		$status->account        = $account;
-		$status->visibility     = 'public';
-		$status->uri            = get_comment_link( $comment );
-		$status->in_reply_to_id = $post->post_parent;
-
-		return $status;
-	}
-
 
 	/**
 	 * Get account for actor.
