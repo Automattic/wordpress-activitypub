@@ -366,67 +366,6 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
-	 * Traditional WP commenters may leave a URL, which itself may be a valid actor.
-	 * If so, we'll use that actor's data to represent the comment.
-	 *
-	 * @param string $url The URL.
-	 * @return Account|false The account or false.
-	 */
-	private static function maybe_get_account_for_actor( $url ) {
-		if ( empty( $url ) ) {
-			return false;
-		}
-		$uri = Webfinger_Util::resolve( $url );
-		if ( $uri && ! is_wp_error( $uri ) ) {
-			return self::get_account_for_actor( $uri );
-		}
-		// Next, if the URL does not have a path, we'll try to resolve it in the form of domain.com@domain.com.
-		$parts = \wp_parse_url( $url );
-		if ( ( ! isset( $parts['path'] ) || ! $parts['path'] ) && isset( $parts['host'] ) ) {
-			$url  = trailingslashit( $url ) . '@' . $parts['host'];
-			$acct = Webfinger_Util::uri_to_acct( $url );
-			if ( $acct && ! is_wp_error( $acct ) ) {
-				return self::get_account_for_actor( $acct );
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * Convert an local WP comment into a pseudo-account, after first checking if their
-	 * supplied URL is a valid actor.
-	 *
-	 * @param \WP_Comment $comment The comment.
-	 * @return Account The account.
-	 */
-	private static function get_account_for_local_comment( $comment ) {
-		$maybe_actor = self::maybe_get_account_for_actor( $comment->comment_author_url );
-		if ( $maybe_actor ) {
-			return $maybe_actor;
-		}
-
-		// We will make a pretend local account for this comment.
-		$account                 = new Account();
-		$account->id             = 999999; // This is a fake ID.
-		$account->username       = $comment->comment_author;
-		$account->acct           = sprintf( 'comments@%s', wp_parse_url( home_url(), PHP_URL_HOST ) );
-		$account->display_name   = $comment->comment_author;
-		$account->url            = get_comment_link( $comment );
-		$account->avatar         = get_avatar_url( $comment->comment_author_email );
-		$account->avatar_static  = $account->avatar;
-		$account->created_at     = new DateTime( $comment->comment_date_gmt );
-		$account->last_status_at = new DateTime( $comment->comment_date_gmt );
-		$account->note           = sprintf(
-			/* translators: %s: comment author name */
-			__( 'This is a local comment by %s, not a fediverse comment. This profile cannot be followed.', 'activitypub' ),
-			$comment->comment_author
-		);
-
-		return $account;
-	}
-
-	/**
 	 * Get account for actor.
 	 *
 	 * @param string $uri The URI.
