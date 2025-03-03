@@ -725,8 +725,7 @@ class Activitypub {
 	 * Register user meta.
 	 */
 	public static function register_user_meta() {
-		global $wpdb;
-		$blog_prefix = $wpdb->get_blog_prefix();
+		$blog_prefix = $GLOBALS['wpdb']->get_blog_prefix();
 
 		\register_meta(
 			'user',
@@ -745,7 +744,7 @@ class Activitypub {
 			$blog_prefix . 'activitypub_description',
 			array(
 				'type'              => 'string',
-				'description'       => 'The user\'s description.',
+				'description'       => 'The user&#8217;s description.',
 				'single'            => true,
 				'default'           => '',
 				'sanitize_callback' => 'wp_kses_post',
@@ -754,10 +753,22 @@ class Activitypub {
 
 		\register_meta(
 			'user',
+			$blog_prefix . 'activitypub_icon',
+			array(
+				'type'              => 'integer',
+				'description'       => 'The attachment ID for user&#8217;s profile image.',
+				'single'            => true,
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_meta(
+			'user',
 			$blog_prefix . 'activitypub_header_image',
 			array(
 				'type'              => 'integer',
-				'description'       => 'The user\'s header image.',
+				'description'       => 'The attachment ID for the user&#8217;s header image.',
 				'single'            => true,
 				'default'           => 0,
 				'sanitize_callback' => 'absint',
