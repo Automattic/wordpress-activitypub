@@ -46,8 +46,6 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 */
 	public function user_meta_provider() {
 		return array(
-			array( 'activitypub_description' ),
-			array( 'activitypub_header_image' ),
 			array( 'description' ),
 			array( 'user_url' ),
 			array( 'display_name' ),
@@ -69,6 +67,41 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post          = $this->get_latest_outbox_item( $activitpub_id );
 		$id            = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $activitpub_id, $id );
+	}
+
+
+
+	/**
+	 * Data provider for user option update scheduling.
+	 *
+	 * @return string[][]
+	 */
+	public function user_option_provider() {
+		return array(
+			array( 'activitypub_description', 'test value' ),
+			array( 'activitypub_header_image', 2 ),
+		);
+	}
+
+	/**
+	 * Test user option update scheduling.
+	 *
+	 * @dataProvider user_option_provider
+	 * @covers ::user_meta_update
+	 *
+	 * @param string $option_key   User option key to test.
+	 * @param mixed  $option_value User option value to test.
+	 */
+	public function test_user_option_update( $option_key, $option_value ) {
+		_delete_all_posts();
+		\update_user_option( self::$user_id, $option_key, $option_value );
+
+		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
+		$post          = $this->get_latest_outbox_item( $activitpub_id );
+		$id            = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $activitpub_id, $id );
+
+		\wp_delete_post( $post->ID, true );
 	}
 
 	/**
