@@ -5,17 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.4.0] - 2025-03-03
 
 ### Added
 
 * Upgrade script to fix Follower json representations with unescaped backslashes.
+* Centralized place for sanitization functions.
 
 ### Changed
 
 * Bumped minimum required WordPress version to 6.4.
 * Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
 * Use webfinger as author email for comments from the Fediverse.
+
+### Fixed
+
+* Do not redirect `/@username` URLs to the API any more, to improve `AUTHORIZED_FETCH` handling.
 
 ## [5.3.2] - 2025-02-27
 
@@ -1356,8 +1361,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.2...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.4.0...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[5.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.2...5.4.0
 [5.3.2]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.1...5.3.2
 [5.3.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.0...5.3.1
 [5.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.2.0...5.3.0

@@ -137,14 +137,7 @@ class Settings {
 				'type'              => 'string',
 				'description'       => \__( 'Websites allowed to credit you.', 'activitypub' ),
 				'default'           => \Activitypub\home_host(),
-				'sanitize_callback' => function ( $value ) {
-					$value = explode( PHP_EOL, $value );
-					$value = array_filter( array_map( 'trim', $value ) );
-					$value = array_filter( array_map( 'esc_attr', $value ) );
-					$value = implode( PHP_EOL, $value );
-
-					return $value;
-				},
+				'sanitize_callback' => array( Sanitize::class, 'host_list' ),
 			)
 		);
 
@@ -198,41 +191,7 @@ class Settings {
 				'description'       => \esc_html__( 'The Identifier of the Blog-User', 'activitypub' ),
 				'show_in_rest'      => true,
 				'default'           => Blog::get_default_username(),
-				'sanitize_callback' => function ( $value ) {
-					// Hack to allow dots in the username.
-					$parts     = explode( '.', $value );
-					$sanitized = array();
-
-					foreach ( $parts as $part ) {
-						$sanitized[] = \sanitize_title( $part );
-					}
-
-					$sanitized = implode( '.', $sanitized );
-
-					// Check for login or nicename.
-					$user = new \WP_User_Query(
-						array(
-							'search'         => $sanitized,
-							'search_columns' => array( 'user_login', 'user_nicename' ),
-							'number'         => 1,
-							'hide_empty'     => true,
-							'fields'         => 'ID',
-						)
-					);
-
-					if ( $user->results ) {
-						add_settings_error(
-							'activitypub_blog_identifier',
-							'activitypub_blog_identifier',
-							\esc_html__( 'You cannot use an existing author\'s name for the blog profile ID.', 'activitypub' ),
-							'error'
-						);
-
-						return Blog::get_default_username();
-					}
-
-					return $sanitized;
-				},
+				'sanitize_callback' => array( Sanitize::class, 'blog_identifier' ),
 			)
 		);
 
