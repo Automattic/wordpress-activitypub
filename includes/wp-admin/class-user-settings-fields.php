@@ -113,7 +113,7 @@ class User_Settings_Fields {
 	 * Description field callback.
 	 */
 	public static function description_callback() {
-		$description = \get_user_meta( \get_current_user_id(), 'activitypub_description', true );
+		$description = \get_user_option( 'activitypub_description', \get_current_user_id() );
 		$placeholder = \get_user_meta( \get_current_user_id(), 'description', true );
 		?>
 		<textarea name="activitypub_description" id="activitypub_description" rows="5" cols="30" placeholder="<?php echo \esc_attr( $placeholder ); ?>"><?php echo \esc_html( $description ); ?></textarea>

@@ -731,9 +731,33 @@ class Activitypub {
 			array(
 				'type'              => 'array',
 				'description'       => 'An array of URLs that the user is known by.',
-				'single'            => false,
+				'single'            => true,
 				'default'           => array(),
 				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+			)
+		);
+
+		\register_meta(
+			'user',
+			'activitypub_description',
+			array(
+				'type'              => 'string',
+				'description'       => 'The user\'s description.',
+				'single'            => true,
+				'default'           => '',
+				'sanitize_callback' => 'wp_kses_post',
+			)
+		);
+
+		\register_meta(
+			'user',
+			'activitypub_header_image',
+			array(
+				'type'              => 'integer',
+				'description'       => 'The user\'s header image.',
+				'single'            => true,
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
 			)
 		);
 	}
