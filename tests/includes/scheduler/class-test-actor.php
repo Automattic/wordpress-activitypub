@@ -19,13 +19,6 @@ use Activitypub\Scheduler\Actor;
 class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 	/**
-	 * Attachment ID.
-	 *
-	 * @var int
-	 */
-	public static $attachment_id;
-
-	/**
 	 * Set up test resources.
 	 */
 	public static function set_up_before_class() {
@@ -44,17 +37,6 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 				),
 			)
 		);
-
-		self::$attachment_id = self::factory()->attachment->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
-	}
-
-	/**
-	 * Tear down test resources.
-	 */
-	public static function tear_down_after_class() {
-		parent::tear_down_after_class();
-
-		\wp_delete_attachment( self::$attachment_id, true );
 	}
 
 	/**
@@ -99,6 +81,8 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			\wp_delete_post( $post->ID, true );
 		}
 
+		$attachment_id = self::factory()->attachment->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
+
 		// Update activitypub_description.
 		$actor->update_summary( 'test summary' );
 
@@ -109,7 +93,7 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		\wp_delete_post( $post->ID, true );
 
 		// Update activitypub_icon.
-		$actor->update_icon( self::$attachment_id );
+		$actor->update_icon( $attachment_id );
 
 		$post = $this->get_latest_outbox_item( $actor->get_id() );
 		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
@@ -118,13 +102,14 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		\wp_delete_post( $post->ID, true );
 
 		// Update activitypub_header_image.
-		$actor->update_header( self::$attachment_id );
+		$actor->update_header( $attachment_id );
 
 		$post = $this->get_latest_outbox_item( $actor->get_id() );
 		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $actor->get_id(), $id );
 
 		\wp_delete_post( $post->ID, true );
+		\wp_delete_attachment( $attachment_id, true );
 	}
 
 	/**
