@@ -23,7 +23,7 @@
 		</p>
 		<div class="activitypub-code-wrap clear" id="activitypub-code-wrap">
 			<p id="activitypub-code-desc">
-				<?php esc_html_e( 'Or copy the following code and create a new bookmark. Paste the code into the new bookmark&#8217;s URL field.', 'activitypub' ); ?>
+				<?php esc_html_e( 'Or copy the following code and create a new bookmark. Paste the code into the new bookmark’s URL field.', 'activitypub' ); ?>
 			</p>
 			<p>
 				<textarea id="activitypub-bookmarklet-code" class="large-text activitypub-code" rows="5" readonly="readonly" aria-labelledby="activitypub-code-desc"><?php echo esc_textarea( \Activitypub\get_reply_intent_js() ); ?></textarea>

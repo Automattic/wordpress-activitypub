@@ -87,7 +87,7 @@ class Sanitize {
 			\add_settings_error(
 				'activitypub_blog_identifier',
 				'activitypub_blog_identifier',
-				\esc_html__( 'You cannot use an existing author&#8217;s name for the blog profile ID.', 'activitypub' )
+				\esc_html__( 'You cannot use an existing author’s name for the blog profile ID.', 'activitypub' )
 			);
 
 			return Blog::get_default_username();

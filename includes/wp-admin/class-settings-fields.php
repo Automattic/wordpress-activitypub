@@ -294,12 +294,12 @@ class Settings_Fields {
 				<summary><?php esc_html_e( 'See a list of ActivityPub Template Tags.', 'activitypub' ); ?></summary>
 				<div class="description">
 					<ul>
-						<li><code>[ap_title]</code> - <?php esc_html_e( 'The post&#8217;s title.', 'activitypub' ); ?></li>
-						<li><code>[ap_content]</code> - <?php esc_html_e( 'The post&#8217;s content.', 'activitypub' ); ?></li>
-						<li><code>[ap_excerpt]</code> - <?php esc_html_e( 'The post&#8217;s excerpt (may be truncated).', 'activitypub' ); ?></li>
-						<li><code>[ap_permalink]</code> - <?php esc_html_e( 'The post&#8217;s permalink.', 'activitypub' ); ?></li>
-						<li><code>[ap_shortlink]</code> - <?php echo wp_kses( __( 'The post&#8217;s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>.', 'activitypub' ), 'default' ); ?></li>
-						<li><code>[ap_hashtags]</code> - <?php esc_html_e( 'The post&#8217;s tags as hashtags.', 'activitypub' ); ?></li>
+						<li><code>[ap_title]</code> - <?php esc_html_e( 'The post’s title.', 'activitypub' ); ?></li>
+						<li><code>[ap_content]</code> - <?php esc_html_e( 'The post’s content.', 'activitypub' ); ?></li>
+						<li><code>[ap_excerpt]</code> - <?php esc_html_e( 'The post’s excerpt (may be truncated).', 'activitypub' ); ?></li>
+						<li><code>[ap_permalink]</code> - <?php esc_html_e( 'The post’s permalink.', 'activitypub' ); ?></li>
+						<li><code>[ap_shortlink]</code> - <?php echo wp_kses( __( 'The post’s shortlink. I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>.', 'activitypub' ), 'default' ); ?></li>
+						<li><code>[ap_hashtags]</code> - <?php esc_html_e( 'The post’s tags as hashtags.', 'activitypub' ); ?></li>
 					</ul>
 					<p><?php esc_html_e( 'You can find the full list with all possible attributes in the help section on the top-right of the screen.', 'activitypub' ); ?></p>
 				</div>
@@ -430,7 +430,7 @@ class Settings_Fields {
 			sprintf(
 				// translators: 1: Definition of Outbox; 2: Default value (180).
 				__( 'Maximum number of days to keep items in the <abbr title="%1$s">Outbox</abbr>. A lower value might be better for sites with lots of activity to maintain site performance. Default: <code>%2$s</code>', 'activitypub' ),
-				esc_attr__( 'A virtual location on a user&#8217;s profile where all the activities (posts, likes, replies) they publish are stored, acting as a feed that other users can access to see their publicly shared content', 'activitypub' ),
+				esc_attr__( 'A virtual location on a user’s profile where all the activities (posts, likes, replies) they publish are stored, acting as a feed that other users can access to see their publicly shared content', 'activitypub' ),
 				esc_html( 180 )
 			),
 			array(

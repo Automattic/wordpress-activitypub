@@ -282,31 +282,31 @@ class Settings {
 				'content' => '<h2>' . \esc_html__( 'The following Template Tags are available:', 'activitypub' ) . '</h2>' . "\n" .
 					'<dl>' . "\n" .
 						'<dt><code>[ap_title]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s title.', 'activitypub' ) . '</dd>' . "\n" .
+						'<dd>' . \esc_html__( 'The post’s title.', 'activitypub' ) . '</dd>' . "\n" .
 						'<dt><code>[ap_content apply_filters="yes"]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( \__( 'The post&#8217;s content. With <code>apply_filters</code> you can decide if filters (<code>apply_filters( \'the_content\', $content )</code>) should be applied or not (default is <code>yes</code>). The values can be <code>yes</code> or <code>no</code>. <code>apply_filters</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
+						'<dd>' . \wp_kses( \__( 'The post’s content. With <code>apply_filters</code> you can decide if filters (<code>apply_filters( \'the_content\', $content )</code>) should be applied or not (default is <code>yes</code>). The values can be <code>yes</code> or <code>no</code>. <code>apply_filters</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
 						'<dt><code>[ap_excerpt length="400"]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( \__( 'The post&#8217;s excerpt (uses <code>the_excerpt</code> if that is set). If no excerpt is provided, will truncate at <code>length</code> (optional, default = 400).', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
+						'<dd>' . \wp_kses( \__( 'The post’s excerpt (uses <code>the_excerpt</code> if that is set). If no excerpt is provided, will truncate at <code>length</code> (optional, default = 400).', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
 						'<dt><code>[ap_permalink type="url"]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( \__( 'The post&#8217;s permalink. <code>type</code> can be either: <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
+						'<dd>' . \wp_kses( \__( 'The post’s permalink. <code>type</code> can be either: <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
 						'<dt><code>[ap_shortlink type="url"]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( \__( 'The post&#8217;s shortlink. <code>type</code> can be either <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks. <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
+						'<dd>' . \wp_kses( \__( 'The post’s shortlink. <code>type</code> can be either <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks. <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
 						'<dt><code>[ap_hashtags]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s tags as hashtags.', 'activitypub' ) . '</dd>' . "\n" .
+						'<dd>' . \esc_html__( 'The post’s tags as hashtags.', 'activitypub' ) . '</dd>' . "\n" .
 						'<dt><code>[ap_hashcats]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s categories as hashtags.', 'activitypub' ) . '</dd>' . "\n" .
+						'<dd>' . \esc_html__( 'The post’s categories as hashtags.', 'activitypub' ) . '</dd>' . "\n" .
 						'<dt><code>[ap_image type=full]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( __( 'The URL for the post&#8217;s featured image, defaults to full size. The type attribute can be any of the following: <code>thumbnail</code>, <code>medium</code>, <code>large</code>, <code>full</code>. <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
+						'<dd>' . \wp_kses( __( 'The URL for the post’s featured image, defaults to full size. The type attribute can be any of the following: <code>thumbnail</code>, <code>medium</code>, <code>large</code>, <code>full</code>. <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
 						'<dt><code>[ap_author]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The author&#8217;s name.', 'activitypub' ) . '</dd>' . "\n" .
+						'<dd>' . \esc_html__( 'The author’s name.', 'activitypub' ) . '</dd>' . "\n" .
 						'<dt><code>[ap_authorurl]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The URL to the author&#8217;s profile page.', 'activitypub' ) . '</dd>' . "\n" .
+						'<dd>' . \esc_html__( 'The URL to the author’s profile page.', 'activitypub' ) . '</dd>' . "\n" .
 						'<dt><code>[ap_date]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s date.', 'activitypub' ) . '</dd>' . "\n" .
+						'<dd>' . \esc_html__( 'The post’s date.', 'activitypub' ) . '</dd>' . "\n" .
 						'<dt><code>[ap_time]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s time.', 'activitypub' ) . '</dd>' . "\n" .
+						'<dd>' . \esc_html__( 'The post’s time.', 'activitypub' ) . '</dd>' . "\n" .
 						'<dt><code>[ap_datetime]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s date/time formated as "date @ time".', 'activitypub' ) . '</dd>' . "\n" .
+						'<dd>' . \esc_html__( 'The post’s date/time formated as "date @ time".', 'activitypub' ) . '</dd>' . "\n" .
 						'<dt><code>[ap_blogurl]</code></dt>' . "\n" .
 						'<dd>' . \esc_html__( 'The URL to the site.', 'activitypub' ) . '</dd>' . "\n" .
 						'<dt><code>[ap_blogname]</code></dt>' . "\n" .
@@ -330,7 +330,7 @@ class Settings {
 				'content' =>
 					'<h2>' . \esc_html__( 'Fediverse', 'activitypub' ) . '</h2>' . "\n" .
 					'<p>' . \esc_html__( 'The Fediverse is a new word made of two words: "federation" + "universe"', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \esc_html__( 'It is a federated social network running on free open software on a myriad of computers across the globe. Many independent servers are interconnected and allow people to interact with one another. There&#8217;s no one central site: you choose a server to register. This ensures some decentralization and sovereignty of data. Fediverse (also called Fedi) has no built-in advertisements, no tricky algorithms, no one big corporation dictating the rules. Instead we have small cozy communities of like-minded people. Welcome!', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'It is a federated social network running on free open software on a myriad of computers across the globe. Many independent servers are interconnected and allow people to interact with one another. There’s no one central site: you choose a server to register. This ensures some decentralization and sovereignty of data. Fediverse (also called Fedi) has no built-in advertisements, no tricky algorithms, no one big corporation dictating the rules. Instead we have small cozy communities of like-minded people. Welcome!', 'activitypub' ) . '</p>' . "\n" .
 					'<p>' . \sprintf( $info_string, '<a href="https://fediverse.party/" target="_blank">fediverse.party</a>' ) . '</p>' . "\n" .
 
 					'<h2>' . \esc_html__( 'ActivityPub', 'activitypub' ) . '</h2>' . "\n" .
@@ -339,7 +339,7 @@ class Settings {
 					'<h2>' . \esc_html__( 'WebFinger', 'activitypub' ) . '</h2>' . "\n" .
 					'<p>' . \esc_html__( 'WebFinger is used to discover information about people or other entities on the Internet that are identified by a URI using standard Hypertext Transfer Protocol (HTTP) methods over a secure transport. A WebFinger resource returns a JavaScript Object Notation (JSON) object describing the entity that is queried. The JSON object is referred to as the JSON Resource Descriptor (JRD).', 'activitypub' ) . '</p>' . "\n" .
 					'<p>' . \esc_html__( 'For a person, the type of information that might be discoverable via WebFinger includes a personal profile address, identity service, telephone number, or preferred avatar. For other entities on the Internet, a WebFinger resource might return JRDs containing link relations that enable a client to discover, for example, that a printer can print in color on A4 paper, the physical location of a server, or other static information.', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \wp_kses( \__( 'On Mastodon [and other platforms], user profiles can be hosted either locally on the same website as yours, or remotely on a completely different website. The same username may be used on a different domain. Therefore, a Mastodon user&#8217;s full mention consists of both the username and the domain, in the form <code>@username@domain</code>. In practical terms, <code>@user@example.com</code> is not the same as <code>@user@example.org</code>. If the domain is not included, Mastodon will try to find a local user named <code>@username</code>. However, in order to deliver to someone over ActivityPub, the <code>@username@domain</code> mention is not enough – mentions must be translated to an HTTPS URI first, so that the remote actor&#8217;s inbox and outbox can be found. (This paragraph is copied from the <a href="https://docs.joinmastodon.org/spec/webfinger/" target="_blank">Mastodon Documentation</a>)', 'activitypub' ), array_merge( $code_html, $anchor_html ) ) . '</p>' . "\n" .
+					'<p>' . \wp_kses( \__( 'On Mastodon [and other platforms], user profiles can be hosted either locally on the same website as yours, or remotely on a completely different website. The same username may be used on a different domain. Therefore, a Mastodon user’s full mention consists of both the username and the domain, in the form <code>@username@domain</code>. In practical terms, <code>@user@example.com</code> is not the same as <code>@user@example.org</code>. If the domain is not included, Mastodon will try to find a local user named <code>@username</code>. However, in order to deliver to someone over ActivityPub, the <code>@username@domain</code> mention is not enough – mentions must be translated to an HTTPS URI first, so that the remote actor’s inbox and outbox can be found. (This paragraph is copied from the <a href="https://docs.joinmastodon.org/spec/webfinger/" target="_blank">Mastodon Documentation</a>)', 'activitypub' ), array_merge( $code_html, $anchor_html ) ) . '</p>' . "\n" .
 					'<p>' . \sprintf( $info_string, '<a href="https://webfinger.net/" target="_blank">webfinger.net</a>' ) . '</p>' . "\n" .
 
 					'<h2>' . \esc_html__( 'NodeInfo', 'activitypub' ) . '</h2>' . "\n" .

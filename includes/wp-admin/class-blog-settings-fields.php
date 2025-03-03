@@ -151,7 +151,7 @@ class Blog_Settings_Fields {
 		</p>
 		<p class="description">
 			<strong>
-				<?php esc_html_e( 'Please avoid using an existing author&#8217;s name as the blog profile ID. Fediverse platforms might use caching and this could break the functionality completely.', 'activitypub' ); ?>
+				<?php esc_html_e( 'Please avoid using an existing author’s name as the blog profile ID. Fediverse platforms might use caching and this could break the functionality completely.', 'activitypub' ); ?>
 			</strong>
 		</p>
 		<?php
