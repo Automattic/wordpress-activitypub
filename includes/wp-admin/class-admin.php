@@ -125,23 +125,14 @@ class Admin {
 	}
 
 	/**
-	 * Add the profile.
-	 *
-	 * @param \WP_User $user The user object.
+	 * Render user settings.
 	 */
-	public static function add_profile( $user ) {
-		$description = \get_user_option( 'activitypub_description', $user->ID );
-
+	public static function add_profile() {
 		wp_enqueue_media();
 		wp_enqueue_script( 'activitypub-header-image' );
 
-		\load_template(
-			ACTIVITYPUB_PLUGIN_DIR . 'templates/user-settings.php',
-			true,
-			array(
-				'description' => $description,
-			)
-		);
+		wp_nonce_field( 'activitypub-user-settings', '_apnonce' );
+		do_settings_sections( 'activitypub_user_settings' );
 	}
 
 	/**

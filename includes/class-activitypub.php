@@ -725,15 +725,55 @@ class Activitypub {
 	 * Register user meta.
 	 */
 	public static function register_user_meta() {
+		$blog_prefix = $GLOBALS['wpdb']->get_blog_prefix();
+
 		\register_meta(
 			'user',
-			'activitypub_also_known_as',
+			$blog_prefix . 'activitypub_also_known_as',
 			array(
 				'type'              => 'array',
 				'description'       => 'An array of URLs that the user is known by.',
-				'single'            => false,
+				'single'            => true,
 				'default'           => array(),
 				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+			)
+		);
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_description',
+			array(
+				'type'              => 'string',
+				'description'       => 'The user’s description.',
+				'single'            => true,
+				'default'           => '',
+				'sanitize_callback' => function ( $value ) {
+					return wp_kses( $value, 'user_description' );
+				},
+			)
+		);
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_icon',
+			array(
+				'type'              => 'integer',
+				'description'       => 'The attachment ID for user’s profile image.',
+				'single'            => true,
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_header_image',
+			array(
+				'type'              => 'integer',
+				'description'       => 'The attachment ID for the user’s header image.',
+				'single'            => true,
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
 			)
 		);
 	}
