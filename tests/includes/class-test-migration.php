@@ -7,9 +7,11 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
 use Activitypub\Migration;
 use Activitypub\Comment;
+use Activitypub\Model\Follower;
 
 /**
  * Test class for Activitypub Migrate.
@@ -596,6 +598,45 @@ class Test_Migration extends ActivityPub_TestCase_Cache_HTTP {
 		// Test with large offset (no more comments).
 		$result = Migration::create_comment_outbox_items( 1, 1000 );
 		$this->assertNull( $result );
+	}
+
+	/**
+	 * Test update_actor_json_slashing updates unslashed meta values.
+	 *
+	 * @covers ::update_actor_json_slashing
+	 */
+	public function test_update_actor_json_slashing() {
+		$follower = new Follower();
+		$follower->from_array(
+			array(
+				'type'    => 'Person',
+				'summary' => '<p>unescaped backslash 04\2024</p>',
+			)
+		);
+		$unslashed_json = $follower->to_json();
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'  => Followers::POST_TYPE,
+				'meta_input' => array( '_activitypub_actor_json' => $unslashed_json ),
+			)
+		);
+
+		$original_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+		$this->assertNull( \json_decode( $original_meta, true ) );
+		$this->assertEquals( JSON_ERROR_SYNTAX, \json_last_error() );
+
+		$result = Migration::update_actor_json_slashing();
+
+		// No additional batch should be scheduled.
+		$this->assertNull( $result );
+
+		$updated_meta = \get_post_meta( $post_id, '_activitypub_actor_json', true );
+
+		// Verify the updated value can be successfully decoded.
+		$decoded = \json_decode( $updated_meta, true );
+		$this->assertNotNull( $decoded, 'Updated meta should be valid JSON' );
+		$this->assertEquals( JSON_ERROR_NONE, \json_last_error() );
 	}
 
 	/**
