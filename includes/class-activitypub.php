@@ -744,7 +744,7 @@ class Activitypub {
 			$blog_prefix . 'activitypub_description',
 			array(
 				'type'              => 'string',
-				'description'       => 'The user&#8217;s description.',
+				'description'       => 'The user’s description.',
 				'single'            => true,
 				'default'           => '',
 				'sanitize_callback' => function ( $value ) {
@@ -758,7 +758,7 @@ class Activitypub {
 			$blog_prefix . 'activitypub_icon',
 			array(
 				'type'              => 'integer',
-				'description'       => 'The attachment ID for user&#8217;s profile image.',
+				'description'       => 'The attachment ID for user’s profile image.',
 				'single'            => true,
 				'default'           => 0,
 				'sanitize_callback' => 'absint',
@@ -770,7 +770,7 @@ class Activitypub {
 			$blog_prefix . 'activitypub_header_image',
 			array(
 				'type'              => 'integer',
-				'description'       => 'The attachment ID for the user&#8217;s header image.',
+				'description'       => 'The attachment ID for the user’s header image.',
 				'single'            => true,
 				'default'           => 0,
 				'sanitize_callback' => 'absint',
