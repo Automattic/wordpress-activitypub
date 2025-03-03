@@ -726,7 +726,7 @@ class Activitypub {
 	 */
 	public static function register_user_meta() {
 		global $wpdb;
-		$blog_prefix =$wpdb->get_blog_prefix();
+		$blog_prefix = $wpdb->get_blog_prefix();
 
 		\register_meta(
 			'user',
