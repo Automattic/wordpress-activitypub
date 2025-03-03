@@ -500,7 +500,15 @@ class Settings_Fields {
 			<?php echo wp_kses( __( 'A <strong>Fediverse-Relay</strong> distributes content across instances, expanding reach, engagement, and discoverability, especially for smaller instances.', 'activitypub' ), 'default' ); ?>
 		</p>
 		<p class="description">
-			<?php echo wp_kses( __( 'Enter the <strong>Inbox-URLs</strong> (e.g. <code>https://relay.example.com/inbox</code>) of the relays you want to use, one per line.', 'activitypub' ), array( 'strong' => array(), 'code' => array() ) ); ?>
+			<?php
+			echo wp_kses(
+				__( 'Enter the <strong>Inbox-URLs</strong> (e.g. <code>https://relay.example.com/inbox</code>) of the relays you want to use, one per line.', 'activitypub' ),
+				array(
+					'strong' => array(),
+					'code'   => array(),
+				)
+			);
+			?>
 			<?php echo wp_kses( __( 'You can find a list of public relays on <a href="https://relaylist.com/" target="_blank">relaylist.com</a> or on <a href="https://fedidb.org/software/activity-relay" target="_blank">FediDB</a>.', 'activitypub' ), 'default' ); ?>
 		</p>
 		<?php
