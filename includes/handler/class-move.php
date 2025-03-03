@@ -25,6 +25,7 @@ class Move {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_move', array( self::class, 'handle_move' ) );
+		\add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ) );
 	}
 
 	/**
@@ -99,6 +100,22 @@ class Move {
 
 			$origin_follower->delete();
 		}
+	}
+
+	/**
+	 * Convert the object and origin to the correct format.
+	 *
+	 * @param \Activitypub\Activity\Activity $activity The Activity object.
+	 * @return \Activitypub\Activity\Activity The filtered Activity object.
+	 */
+	public static function outbox_activity( $activity ) {
+		if ( 'Move' === $activity->get_type() ) {
+			$activity->set_object( object_to_uri( $activity->get_object() ) );
+			$activity->set_origin( $activity->get_actor() );
+			$activity->set_target( $activity->get_object() );
+		}
+
+		return $activity;
 	}
 
 	/**

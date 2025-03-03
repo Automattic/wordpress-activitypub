@@ -32,7 +32,7 @@ class Outbox {
 	 *
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
-	public static function add( $activity_object, $activity_type, $user_id, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) { // phpcs:ignore
+	public static function add( $activity_object, $activity_type, $user_id, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
 		switch ( $user_id ) {
 			case Actors::APPLICATION_USER_ID:
 				$actor_type = 'application';
@@ -209,20 +209,21 @@ class Outbox {
 			return $actor;
 		}
 
-		$type     = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 		$activity = new Activity();
+		$type     = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 		$activity->set_type( $type );
 		$activity->set_id( $outbox_item->guid );
+		$activity->set_actor( $actor->get_id() );
 		// Pre-fill the Activity with data (for example cc and to).
 		$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
-		$activity->set_actor( $actor->get_id() );
 
-		// Use simple Object (only ID-URI) for Like and Announce.
-		if ( in_array( $type, array( 'Like', 'Delete' ), true ) ) {
-			$activity->set_object( $activity->get_object()->get_id() );
-		}
-
-		return $activity;
+		/**
+		 * Filters the Activity object before it is returned.
+		 *
+		 * @param Activity $activity    The Activity object.
+		 * @param \WP_Post $outbox_item The outbox item post object.
+		 */
+		return apply_filters( 'activitypub_get_outbox_activity', $activity, $outbox_item );
 	}
 
 	/**
@@ -259,7 +260,7 @@ class Outbox {
 	 * @return Activity|\WP_Error The Activity object or WP_Error.
 	 */
 	public static function maybe_get_activity( $outbox_item ) {
-		if ( ! $outbox_item || ! $outbox_item instanceof \WP_Post ) {
+		if ( ! $outbox_item instanceof \WP_Post ) {
 			return new \WP_Error( 'invalid_outbox_item', 'Invalid Outbox item.' );
 		}
 
