@@ -63,10 +63,12 @@ class Actor {
 			return;
 		}
 
+		$blog_prefix = $GLOBALS['wpdb']->get_blog_prefix();
+
 		// The user meta fields that affect a profile.
 		$fields = array(
-			'activitypub_description',
-			'activitypub_header_image',
+			$blog_prefix . 'activitypub_description',
+			$blog_prefix . 'activitypub_header_image',
 			'description',
 			'user_url',
 			'display_name',
