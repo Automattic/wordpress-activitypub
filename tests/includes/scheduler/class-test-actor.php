@@ -95,7 +95,9 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	public function test_user_option_update() {
 		$actor = Actors::get_by_id( self::$user_id );
 		$post  = $this->get_latest_outbox_item( $actor->get_id() );
-		\wp_delete_post( $post->ID, true );
+		if ( $post ) {
+			\wp_delete_post( $post->ID, true );
+		}
 
 		// Update activitypub_description.
 		$actor->update_summary( 'test summary' );
