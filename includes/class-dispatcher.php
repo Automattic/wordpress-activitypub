@@ -440,9 +440,6 @@ class Dispatcher {
 			return $inboxes;
 		}
 
-		$inboxes = array_merge( $inboxes, $relays );
-		$inboxes = array_unique( $inboxes );
-
-		return $inboxes;
+		return array_merge( $inboxes, $relays );
 	}
 }
