@@ -19,6 +19,13 @@ use Activitypub\Scheduler\Actor;
 class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 	/**
+	 * Attachment ID.
+	 *
+	 * @var int
+	 */
+	public static $attachment_id;
+
+	/**
 	 * Set up test resources.
 	 */
 	public static function set_up_before_class() {
@@ -37,6 +44,17 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 				),
 			)
 		);
+
+		self::$attachment_id = self::factory()->attachment->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
+	}
+
+	/**
+	 * Tear down test resources.
+	 */
+	public static function tear_down_after_class() {
+		parent::tear_down_after_class();
+
+		\wp_delete_attachment( self::$attachment_id, true );
 	}
 
 	/**
@@ -69,37 +87,31 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertSame( $activitpub_id, $id );
 	}
 
-
-
-	/**
-	 * Data provider for user option update scheduling.
-	 *
-	 * @return string[][]
-	 */
-	public function user_option_provider() {
-		return array(
-			array( 'activitypub_description', 'test value' ),
-			array( 'activitypub_header_image', 2 ),
-		);
-	}
-
 	/**
 	 * Test user option update scheduling.
 	 *
-	 * @dataProvider user_option_provider
 	 * @covers ::user_meta_update
-	 *
-	 * @param string $option_key   User option key to test.
-	 * @param mixed  $option_value User option value to test.
 	 */
-	public function test_user_option_update( $option_key, $option_value ) {
-		_delete_all_posts();
-		\update_user_option( self::$user_id, $option_key, $option_value );
+	public function test_user_option_update() {
+		$actor = Actors::get_by_id( self::$user_id );
+		$post  = $this->get_latest_outbox_item( $actor->get_id() );
+		\wp_delete_post( $post->ID, true );
 
-		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
-		$post          = $this->get_latest_outbox_item( $activitpub_id );
-		$id            = \get_post_meta( $post->ID, '_activitypub_object_id', true );
-		$this->assertSame( $activitpub_id, $id );
+		// Update activitypub_description.
+		$actor->update_summary( 'test summary' );
+
+		$post = $this->get_latest_outbox_item( $actor->get_id() );
+		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $actor->get_id(), $id );
+
+		\wp_delete_post( $post->ID, true );
+
+		// Update activitypub_header_image.
+		$actor->update_header( self::$attachment_id );
+
+		$post = $this->get_latest_outbox_item( $actor->get_id() );
+		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $actor->get_id(), $id );
 
 		\wp_delete_post( $post->ID, true );
 	}
