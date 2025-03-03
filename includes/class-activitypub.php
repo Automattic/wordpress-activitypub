@@ -748,7 +748,7 @@ class Activitypub {
 				'single'            => true,
 				'default'           => '',
 				'sanitize_callback' => function ( $value ) {
-					return wp_kses_post( $value, 'pre_user_description' );
+					return wp_kses_post( $value, 'user_description' );
 				},
 			)
 		);
