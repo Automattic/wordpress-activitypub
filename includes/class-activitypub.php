@@ -747,7 +747,9 @@ class Activitypub {
 				'description'       => 'The user&#8217;s description.',
 				'single'            => true,
 				'default'           => '',
-				'sanitize_callback' => 'wp_kses_post',
+				'sanitize_callback' => function ( $value ) {
+					return wp_kses_post( $value, 'pre_user_description' );
+				},
 			)
 		);
 
