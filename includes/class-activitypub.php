@@ -725,9 +725,12 @@ class Activitypub {
 	 * Register user meta.
 	 */
 	public static function register_user_meta() {
+		global $wpdb;
+		$blog_prefix =$wpdb->get_blog_prefix();
+
 		\register_meta(
 			'user',
-			'activitypub_also_known_as',
+			$blog_prefix . 'activitypub_also_known_as',
 			array(
 				'type'              => 'array',
 				'description'       => 'An array of URLs that the user is known by.',
@@ -739,7 +742,7 @@ class Activitypub {
 
 		\register_meta(
 			'user',
-			'activitypub_description',
+			$blog_prefix . 'activitypub_description',
 			array(
 				'type'              => 'string',
 				'description'       => 'The user\'s description.',
@@ -751,7 +754,7 @@ class Activitypub {
 
 		\register_meta(
 			'user',
-			'activitypub_header_image',
+			$blog_prefix . 'activitypub_header_image',
 			array(
 				'type'              => 'integer',
 				'description'       => 'The user\'s header image.',
