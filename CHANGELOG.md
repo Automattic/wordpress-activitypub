@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
 * Use webfinger as author email for comments from the Fediverse.
 
+### Fixed
+
+* Do not redirect `/@username` URLs to the API any more, to improve `AUTHORIZED_FETCH` handling.
+
 ## [5.3.2] - 2025-02-27
 
 ### Fixed

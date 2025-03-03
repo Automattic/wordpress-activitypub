@@ -137,6 +137,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Changed: Bumped minimum required WordPress version to 6.4.
 * Changed: Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
 * Changed: Use webfinger as author email for comments from the Fediverse.
+* Fixed: Do not redirect `/@username` URLs to the API any more, to improve `AUTHORIZED_FETCH` handling.
 
 = 5.3.2 =
 
@@ -221,9 +222,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 1.0.0 =
+= 5.4.0 =
 
-For version 1.0.0 we have completely rebuilt the followers lists. There is a migration from the old format to the new, but it may take some time until the migration is complete. No data will be lost in the process, please give the migration some time.
+Note: This update requires WordPress 6.4+. Please ensure your site meets this requirement before upgrading.
 
 == Installation ==
 

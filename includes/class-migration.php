@@ -182,12 +182,10 @@ class Migration {
 		if ( \version_compare( $version_from_db, '5.2.0', '<' ) ) {
 			Scheduler::register_schedules();
 		}
-		if ( \version_compare( $version_from_db, '5.3.0', '<' ) ) {
-			add_action( 'init', 'flush_rewrite_rules', 20 );
-		}
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_slashing' ) );
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_comment_author_emails' ) );
+			\add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 
 		/*
