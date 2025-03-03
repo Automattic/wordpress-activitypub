@@ -489,9 +489,6 @@ class Settings_Fields {
 	public static function render_relays_field() {
 		$value = get_option( 'activitypub_relays', array() );
 		?>
-		<p>
-			<?php echo wp_kses( __( 'A <strong>Fediverse-Relay</strong> distributes content across instances, expanding reach, engagement, and discoverability, especially for smaller instances.', 'activitypub' ), 'default' ); ?>
-		</p>
 		<textarea
 			id="activitypub_relays"
 			name="activitypub_relays"
@@ -499,6 +496,9 @@ class Settings_Fields {
 			cols="50"
 			rows="5"
 		><?php echo esc_textarea( implode( PHP_EOL, $value ) ); ?></textarea>
+		<p class="description">
+			<?php echo wp_kses( __( 'A <strong>Fediverse-Relay</strong> distributes content across instances, expanding reach, engagement, and discoverability, especially for smaller instances.', 'activitypub' ), 'default' ); ?>
+		</p>
 		<p class="description">
 			<?php echo wp_kses( __( 'Enter the <strong>Inbox-URLs</strong> (e.g. <code>https://relay.example.com/inbox</code>) of the relays you want to use, one per line.', 'activitypub' ), array( 'strong' => array(), 'code' => array() ) ); ?>
 			<?php echo wp_kses( __( 'You can find a list of public relays on <a href="https://relaylist.com/" target="_blank">relaylist.com</a> or on <a href="https://fedidb.org/software/activity-relay" target="_blank">FediDB</a>.', 'activitypub' ), 'default' ); ?>
