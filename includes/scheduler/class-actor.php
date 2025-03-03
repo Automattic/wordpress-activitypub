@@ -68,11 +68,11 @@ class Actor {
 		// The user meta fields that affect a profile.
 		$fields = array(
 			$blog_prefix . 'activitypub_description',
-			$blog_prefix . 'activitypub_icon',
 			$blog_prefix . 'activitypub_header_image',
+			$blog_prefix . 'activitypub_icon',
 			'description',
-			'user_url',
 			'display_name',
+			'user_url',
 		);
 
 		if ( in_array( $meta_key, $fields, true ) ) {
