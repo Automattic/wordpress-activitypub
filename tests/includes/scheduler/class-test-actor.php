@@ -106,6 +106,15 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		\wp_delete_post( $post->ID, true );
 
+		// Update activitypub_icon.
+		$actor->update_icon( self::$attachment_id );
+
+		$post = $this->get_latest_outbox_item( $actor->get_id() );
+		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $actor->get_id(), $id );
+
+		\wp_delete_post( $post->ID, true );
+
 		// Update activitypub_header_image.
 		$actor->update_header( self::$attachment_id );
 
