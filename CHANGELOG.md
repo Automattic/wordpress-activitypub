@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+* Updates to certain user meta fields did not trigger an Update activity.
+
+## [5.4.0] - 2025-03-03
+
 ### Added
 
 * Upgrade script to fix Follower json representations with unescaped backslashes.
@@ -20,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-* Updates to certain user meta fields did not trigger an Update activity.
+* Do not redirect `/@username` URLs to the API any more, to improve `AUTHORIZED_FETCH` handling.
 
 ## [5.3.2] - 2025-02-27
 
@@ -1361,8 +1367,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.2...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.4.0...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[5.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.2...5.4.0
 [5.3.2]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.1...5.3.2
 [5.3.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.0...5.3.1
 [5.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.2.0...5.3.0
