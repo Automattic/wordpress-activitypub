@@ -1,0 +1,229 @@
+<?php
+/**
+ * ActivityPub User Settings Fields Handler.
+ *
+ * @package ActivityPub
+ */
+
+namespace Activitypub\WP_Admin;
+
+/**
+ * Class to handle all user settings fields and callbacks.
+ */
+class User_Settings_Fields {
+	/**
+	 * Initialize the settings fields.
+	 */
+	public static function init() {
+		add_action( 'load-profile.php', array( self::class, 'register_settings' ) );
+	}
+
+	/**
+	 * Register all settings fields.
+	 */
+	public static function register_settings() {
+		\add_settings_section(
+			'activitypub_user_profile',
+			\esc_html__( 'ActivityPub', 'activitypub' ),
+			array( self::class, 'section_description' ),
+			'activitypub_user_settings'
+		);
+
+		\add_settings_field(
+			'activitypub_profile_url',
+			\esc_html__( 'Profile URL', 'activitypub' ),
+			array( self::class, 'profile_url_callback' ),
+			'activitypub_user_settings',
+			'activitypub_user_profile'
+		);
+
+		\add_settings_field(
+			'activitypub_description',
+			\esc_html__( 'Biography', 'activitypub' ),
+			array( self::class, 'description_callback' ),
+			'activitypub_user_settings',
+			'activitypub_user_profile',
+			array( 'label_for' => 'activitypub_description' )
+		);
+
+		\add_settings_field(
+			'activitypub_header_image',
+			\esc_html__( 'Header Image', 'activitypub' ),
+			array( self::class, 'header_image_callback' ),
+			'activitypub_user_settings',
+			'activitypub_user_profile',
+			array( 'label_for' => 'activitypub_header_image' )
+		);
+
+		\add_settings_field(
+			'activitypub_extra_fields',
+			\esc_html__( 'Extra Fields', 'activitypub' ),
+			array( self::class, 'extra_fields_callback' ),
+			'activitypub_user_settings',
+			'activitypub_user_profile'
+		);
+
+		\add_settings_field(
+			'activitypub_also_known_as',
+			\esc_html__( 'Account Aliases', 'activitypub' ),
+			array( self::class, 'also_known_as_callback' ),
+			'activitypub_user_settings',
+			'activitypub_user_profile',
+			array( 'label_for' => 'activitypub_blog_user_also_known_as' )
+		);
+	}
+
+	/**
+	 * Section description callback.
+	 */
+	public static function section_description() {
+		echo '<p>' . \esc_html__( 'Define what others can see on your public Fediverse profile and next to your posts. With a profile picture and a fully completed profile, you are more likely to gain interactions and followers.', 'activitypub' ) . '</p>';
+		echo '<p>' . \esc_html__( 'The ActivityPub plugin tries to take as much information as possible from your profile settings. However, the following settings are not supported by WordPress or should be adjusted independently of the WordPress settings.', 'activitypub' ) . '</p>';
+	}
+
+	/**
+	 * Profile URL field callback.
+	 */
+	public static function profile_url_callback() {
+		$user = \Activitypub\Collection\Actors::get_by_id( \get_current_user_id() );
+		?>
+		<p>
+			<?php
+			\printf(
+				// translators: 1: the webfinger resource, 2: the author URL.
+				\esc_html__( '%1$s or %2$s', 'activitypub' ),
+				'<code>' . \esc_html( $user->get_webfinger() ) . '</code>',
+				'<code>' . \esc_url( $user->get_url() ) . '</code>'
+			);
+			?>
+		</p>
+		<p class="description">
+			<?php
+			\printf(
+				// translators: the webfinger resource.
+				\esc_html__( 'Follow "@%s" by searching for it on Mastodon, Friendica, etc.', 'activitypub' ),
+				\esc_html( $user->get_webfinger() )
+			);
+			?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Description field callback.
+	 */
+	public static function description_callback() {
+		$description = \get_user_option( 'activitypub_description', \get_current_user_id() );
+		$placeholder = \get_user_meta( \get_current_user_id(), 'description', true );
+		?>
+		<textarea name="activitypub_description" id="activitypub_description" rows="5" cols="30" placeholder="<?php echo \esc_attr( $placeholder ); ?>"><?php echo \esc_html( $description ); ?></textarea>
+		<p class="description"><?php \esc_html_e( 'If you wish to use different biographical info for the fediverse, enter your alternate bio here.', 'activitypub' ); ?></p>
+		<?php
+	}
+
+	/**
+	 * Header image field callback.
+	 */
+	public static function header_image_callback() {
+		$header_image              = \get_user_option( 'activitypub_header_image', \get_current_user_id() );
+		$classes_for_upload_button = 'button upload-button button-add-media button-add-header-image';
+		$classes_for_update_button = 'button';
+		$classes_for_wrapper       = '';
+
+		if ( (int) $header_image ) {
+			$classes_for_wrapper         .= ' has-header-image';
+			$classes_for_button           = $classes_for_update_button;
+			$classes_for_button_on_change = $classes_for_upload_button;
+		} else {
+			$classes_for_wrapper         .= ' hidden';
+			$classes_for_button           = $classes_for_upload_button;
+			$classes_for_button_on_change = $classes_for_update_button;
+		}
+		?>
+		<div id="activitypub-header-image-preview-wrapper" class="<?php echo \esc_attr( $classes_for_wrapper ); ?>">
+			<img id="activitypub-header-image-preview" src="<?php echo \esc_url( \wp_get_attachment_url( $header_image ) ); ?>" style="max-width: 100%;" alt="" />
+		</div>
+		<button
+			type="button"
+			id="activitypub-choose-from-library-button"
+			class="<?php echo \esc_attr( $classes_for_button ); ?>"
+			data-alt-classes="<?php echo \esc_attr( $classes_for_button_on_change ); ?>"
+			data-choose-text="<?php \esc_attr_e( 'Choose a Header Image', 'activitypub' ); ?>"
+			data-update-text="<?php \esc_attr_e( 'Change Header Image', 'activitypub' ); ?>"
+			data-update="<?php \esc_attr_e( 'Set as Header Image', 'activitypub' ); ?>"
+			<?php
+			if ( ! \current_user_can( 'edit_others_posts' ) ) :
+				\printf( 'data-user-id="%s"', \esc_attr( \get_current_user_id() ) );
+			endif;
+			?>
+			data-state="<?php echo \esc_attr( (int) $header_image ); ?>">
+			<?php echo (int) $header_image ? \esc_html__( 'Change Header Image', 'activitypub' ) : \esc_html__( 'Choose a Header Image', 'activitypub' ); ?>
+		</button>
+		<button
+			id="activitypub-remove-header-image"
+			type="button"
+			<?php echo (int) $header_image ? 'class="button button-secondary reset"' : 'class="button button-secondary reset hidden"'; ?>>
+			<?php \esc_html_e( 'Remove Header Image', 'activitypub' ); ?>
+		</button>
+		<input type="hidden" name="activitypub_header_image" id="activitypub_header_image" value="<?php echo \esc_attr( $header_image ); ?>">
+		<?php
+	}
+
+	/**
+	 * Extra fields callback.
+	 */
+	public static function extra_fields_callback() {
+		$extra_fields = \Activitypub\Collection\Extra_Fields::get_actor_fields( \get_current_user_id() );
+		?>
+		<p class="description">
+			<?php \esc_html_e( 'Your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' ); ?>
+		</p>
+
+		<?php if ( ! empty( $extra_fields ) ) : ?>
+		<table class="widefat striped activitypub-extra-fields" role="presentation" style="margin: 15px 0;">
+			<?php foreach ( $extra_fields as $extra_field ) : ?>
+				<tr>
+					<td><?php echo \esc_html( $extra_field->post_title ); ?></td>
+					<td><?php echo \wp_kses_post( \get_the_excerpt( $extra_field ) ); ?></td>
+					<td>
+						<a href="<?php echo \esc_url( \get_edit_post_link( $extra_field->ID ) ); ?>" class="button">
+							<?php \esc_html_e( 'Edit', 'activitypub' ); ?>
+						</a>
+					</td>
+				</tr>
+			<?php endforeach; ?>
+		</table>
+		<?php endif; ?>
+
+		<p>
+			<a href="<?php echo \esc_url( \admin_url( '/post-new.php?post_type=ap_extrafield' ) ); ?>" class="button">
+				<?php \esc_html_e( 'Add new', 'activitypub' ); ?>
+			</a>
+			<a href="<?php echo \esc_url( \admin_url( '/edit.php?post_type=ap_extrafield' ) ); ?>">
+				<?php \esc_html_e( 'Manage all', 'activitypub' ); ?>
+			</a>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Also Known As field callback.
+	 */
+	public static function also_known_as_callback() {
+		$also_known_as = \get_user_option( 'activitypub_also_known_as', \get_current_user_id() );
+		?>
+		<textarea
+			class="large-text"
+			name="activitypub_blog_user_also_known_as"
+			id="activitypub_blog_user_also_known_as"
+			rows="5"
+		><?php echo \esc_textarea( implode( PHP_EOL, (array) $also_known_as ) ); ?></textarea>
+		<p class="description">
+			<?php \esc_html_e( 'If you&#8217;re moving from another account to this one, you&#8217;ll need to create an alias here first before transferring your followers. This step is safe, reversible, and doesn&#8217;t affect anything on its own. The migration itself is initiated from your old account.', 'activitypub' ); ?>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( 'Enter one URL per line.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+}
