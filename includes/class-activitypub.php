@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Exception;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
@@ -43,22 +44,17 @@ class Activitypub {
 
 		\add_action( 'user_register', array( self::class, 'user_register' ) );
 
-		\add_action( 'in_plugin_update_message-' . ACTIVITYPUB_PLUGIN_BASENAME, array( self::class, 'plugin_update_message' ) );
-
-		if ( site_supports_blocks() ) {
-			\add_action( 'tool_box', array( self::class, 'tool_box' ) );
-			Embed::init();
-		}
-
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
 		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
+		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
 
 		// Register several post_types.
 		self::register_post_types();
 
 		self::register_oembed_providers();
+		Embed::init();
 	}
 
 	/**
@@ -97,6 +93,8 @@ class Activitypub {
 		delete_option( 'activitypub_authorized_fetch' );
 		delete_option( 'activitypub_application_user_private_key' );
 		delete_option( 'activitypub_application_user_public_key' );
+		delete_option( 'activitypub_blog_user_also_known_as' );
+		delete_option( 'activitypub_blog_user_moved_to' );
 		delete_option( 'activitypub_blog_user_private_key' );
 		delete_option( 'activitypub_blog_user_public_key' );
 		delete_option( 'activitypub_blog_description' );
@@ -257,29 +255,50 @@ class Activitypub {
 	 * @return void
 	 */
 	public static function template_redirect() {
+		global $wp_query;
+
 		$comment_id = get_query_var( 'c', null );
 
 		// Check if it seems to be a comment.
-		if ( ! $comment_id ) {
-			return;
+		if ( $comment_id ) {
+			$comment = get_comment( $comment_id );
+
+			// Load a 404-page if `c` is set but not valid.
+			if ( ! $comment ) {
+				$wp_query->set_404();
+				return;
+			}
+
+			// Stop if it's not an ActivityPub comment.
+			if ( is_activitypub_request() && ! is_local_comment( $comment ) ) {
+				return;
+			}
+
+			wp_safe_redirect( get_comment_link( $comment ) );
+			exit;
 		}
 
-		$comment = get_comment( $comment_id );
+		$actor = get_query_var( 'actor', null );
+		if ( $actor ) {
+			$actor = Actors::get_by_username( $actor );
+			if ( ! $actor || \is_wp_error( $actor ) ) {
+				$wp_query->set_404();
+				return;
+			}
 
-		// Load a 404-page if `c` is set but not valid.
-		if ( ! $comment ) {
-			global $wp_query;
-			$wp_query->set_404();
-			return;
+			if ( is_activitypub_request() ) {
+				return;
+			}
+
+			if ( $actor->get__id() > 0 ) {
+				$redirect_url = $actor->get_url();
+			} else {
+				$redirect_url = get_bloginfo( 'url' );
+			}
+
+			wp_safe_redirect( $redirect_url, 301 );
+			exit;
 		}
-
-		// Stop if it's not an ActivityPub comment.
-		if ( is_activitypub_request() && ! is_local_comment( $comment ) ) {
-			return;
-		}
-
-		wp_safe_redirect( get_comment_link( $comment ) );
-		exit;
 	}
 
 	/**
@@ -293,6 +312,7 @@ class Activitypub {
 		$vars[] = 'activitypub';
 		$vars[] = 'preview';
 		$vars[] = 'author';
+		$vars[] = 'actor';
 		$vars[] = 'c';
 		$vars[] = 'p';
 
@@ -414,12 +434,7 @@ class Activitypub {
 			);
 		}
 
-		\add_rewrite_rule(
-			'^@([\w\-\.]+)$',
-			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/$matches[1]',
-			'top'
-		);
-
+		\add_rewrite_rule( '^@([\w\-\.]+)\/?$', 'index.php?actor=$matches[1]', 'top' );
 		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 	}
 
@@ -429,15 +444,6 @@ class Activitypub {
 	public static function flush_rewrite_rules() {
 		self::add_rewrite_rules();
 		\flush_rewrite_rules();
-	}
-
-	/**
-	 * Adds metabox on wp-admin/tools.php.
-	 */
-	public static function tool_box() {
-		if ( \current_user_can( 'edit_posts' ) ) {
-			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
-		}
 	}
 
 	/**
@@ -460,30 +466,6 @@ class Activitypub {
 				);
 			}
 		}
-	}
-
-	/**
-	 * Display plugin upgrade notice to users.
-	 *
-	 * @param array $data The plugin data.
-	 */
-	public static function plugin_update_message( $data ) {
-		if ( ! isset( $data['upgrade_notice'] ) ) {
-			return;
-		}
-
-		printf(
-			'<div class="update-message">%s</div>',
-			wp_kses(
-				wpautop( $data['upgrade_notice '] ),
-				array(
-					'p'      => array(),
-					'a'      => array( 'href', 'title' ),
-					'strong' => array(),
-					'em'     => array(),
-				)
-			)
-		);
 	}
 
 	/**
@@ -752,5 +734,62 @@ class Activitypub {
 		\wp_oembed_add_provider( '#https?://mstdn\.social/(@.+)/([0-9]+)#i', 'https://mstdn.social/api/oembed', true );
 		\wp_oembed_add_provider( '#https?://mastodon\.world/(@.+)/([0-9]+)#i', 'https://mastodon.world/api/oembed', true );
 		\wp_oembed_add_provider( '#https?://mas\.to/(@.+)/([0-9]+)#i', 'https://mas.to/api/oembed', true );
+	}
+
+	/**
+	 * Register user meta.
+	 */
+	public static function register_user_meta() {
+		$blog_prefix = $GLOBALS['wpdb']->get_blog_prefix();
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_also_known_as',
+			array(
+				'type'              => 'array',
+				'description'       => 'An array of URLs that the user is known by.',
+				'single'            => true,
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+			)
+		);
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_description',
+			array(
+				'type'              => 'string',
+				'description'       => 'The user’s description.',
+				'single'            => true,
+				'default'           => '',
+				'sanitize_callback' => function ( $value ) {
+					return wp_kses( $value, 'user_description' );
+				},
+			)
+		);
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_icon',
+			array(
+				'type'              => 'integer',
+				'description'       => 'The attachment ID for user’s profile image.',
+				'single'            => true,
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_header_image',
+			array(
+				'type'              => 'integer',
+				'description'       => 'The attachment ID for the user’s header image.',
+				'single'            => true,
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
+			)
+		);
 	}
 }

@@ -46,8 +46,6 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 */
 	public function user_meta_provider() {
 		return array(
-			array( 'activitypub_description' ),
-			array( 'activitypub_header_image' ),
 			array( 'description' ),
 			array( 'user_url' ),
 			array( 'display_name' ),
@@ -69,6 +67,49 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post          = $this->get_latest_outbox_item( $activitpub_id );
 		$id            = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $activitpub_id, $id );
+	}
+
+	/**
+	 * Test user option update scheduling.
+	 *
+	 * @covers ::user_meta_update
+	 */
+	public function test_user_option_update() {
+		$actor = Actors::get_by_id( self::$user_id );
+		$post  = $this->get_latest_outbox_item( $actor->get_id() );
+		if ( $post ) {
+			\wp_delete_post( $post->ID, true );
+		}
+
+		$attachment_id = self::factory()->attachment->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
+
+		// Update activitypub_description.
+		$actor->update_summary( 'test summary' );
+
+		$post = $this->get_latest_outbox_item( $actor->get_id() );
+		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $actor->get_id(), $id );
+
+		\wp_delete_post( $post->ID, true );
+
+		// Update activitypub_icon.
+		$actor->update_icon( $attachment_id );
+
+		$post = $this->get_latest_outbox_item( $actor->get_id() );
+		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $actor->get_id(), $id );
+
+		\wp_delete_post( $post->ID, true );
+
+		// Update activitypub_header_image.
+		$actor->update_header( $attachment_id );
+
+		$post = $this->get_latest_outbox_item( $actor->get_id() );
+		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $actor->get_id(), $id );
+
+		\wp_delete_post( $post->ID, true );
+		\wp_delete_attachment( $attachment_id, true );
 	}
 
 	/**

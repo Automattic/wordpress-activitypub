@@ -39,6 +39,7 @@ class Actor {
 		// Profile updates for user options.
 		if ( ! is_user_type_disabled( 'user' ) ) {
 			\add_action( 'profile_update', array( self::class, 'user_update' ) );
+			\add_action( 'added_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
 			\add_action( 'updated_user_meta', array( self::class, 'user_meta_update' ), 10, 3 );
 			// @todo figure out a feasible way of updating the header image since it's not unique to any user.
 		}
@@ -62,13 +63,16 @@ class Actor {
 			return;
 		}
 
+		$blog_prefix = $GLOBALS['wpdb']->get_blog_prefix();
+
 		// The user meta fields that affect a profile.
 		$fields = array(
-			'activitypub_description',
-			'activitypub_header_image',
+			$blog_prefix . 'activitypub_description',
+			$blog_prefix . 'activitypub_header_image',
+			$blog_prefix . 'activitypub_icon',
 			'description',
-			'user_url',
 			'display_name',
+			'user_url',
 		);
 
 		if ( in_array( $meta_key, $fields, true ) ) {

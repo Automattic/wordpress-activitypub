@@ -266,6 +266,29 @@ class Test_Query extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test user at URL activity object.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
+	public function test_user_at_url_activity_object() {
+		$user_id = self::factory()->user->create(
+			array(
+				'user_login' => 'testuser',
+				'role'       => 'author',
+			)
+		);
+
+		Query::get_instance()->__destruct();
+		$user   = get_user_by( 'id', $user_id );
+		$at_url = home_url( '/@' . $user->user_login . '/?activitypub' );
+
+		$this->go_to( $at_url );
+		$this->assertNotNull( Query::get_instance()->get_activitypub_object() );
+
+		\wp_delete_user( $user_id );
+	}
+
+	/**
 	 * Test user activitypub object.
 	 *
 	 * @covers ::get_activitypub_object
