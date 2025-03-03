@@ -20,12 +20,8 @@ class Like {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action(
-			'activitypub_inbox_like',
-			array( self::class, 'handle_like' ),
-			10,
-			3
-		);
+		\add_action( 'activitypub_inbox_like', array( self::class, 'handle_like' ), 10, 3 );
+		\add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ) );
 	}
 
 	/**
@@ -66,5 +62,19 @@ class Like {
 		 * @param mixed $reaction The reaction object.
 		 */
 		do_action( 'activitypub_handled_like', $like, $user_id, $state, $reaction );
+	}
+
+	/**
+	 * Set the object to the object ID.
+	 *
+	 * @param \Activitypub\Activity\Activity $activity The Activity object.
+	 * @return \Activitypub\Activity\Activity The filtered Activity object.
+	 */
+	public static function outbox_activity( $activity ) {
+		if ( 'Like' === $activity->get_type() ) {
+			$activity->set_object( object_to_uri( $activity->get_object() ) );
+		}
+
+		return $activity;
 	}
 }

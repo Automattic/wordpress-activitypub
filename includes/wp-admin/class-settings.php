@@ -204,6 +204,17 @@ class Settings {
 				'default'     => null,
 			)
 		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_blog_user_also_known_as',
+			array(
+				'type'              => 'array',
+				'description'       => 'An array of URLs that the blog user is known by.',
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+			)
+		);
 	}
 
 	/**

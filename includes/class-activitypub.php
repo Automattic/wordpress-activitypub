@@ -48,6 +48,7 @@ class Activitypub {
 
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
 		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
+		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
 
 		// Register several post_types.
 		self::register_post_types();
@@ -89,6 +90,8 @@ class Activitypub {
 		delete_option( 'activitypub_authorized_fetch' );
 		delete_option( 'activitypub_application_user_private_key' );
 		delete_option( 'activitypub_application_user_public_key' );
+		delete_option( 'activitypub_blog_user_also_known_as' );
+		delete_option( 'activitypub_blog_user_moved_to' );
 		delete_option( 'activitypub_blog_user_private_key' );
 		delete_option( 'activitypub_blog_user_public_key' );
 		delete_option( 'activitypub_blog_description' );
@@ -716,5 +719,22 @@ class Activitypub {
 		if ( 'activitypub_content_visibility' === $meta_key && empty( $meta_value ) ) {
 			\delete_post_meta( $object_id, 'activitypub_content_visibility' );
 		}
+	}
+
+	/**
+	 * Register user meta.
+	 */
+	public static function register_user_meta() {
+		\register_meta(
+			'user',
+			'activitypub_also_known_as',
+			array(
+				'type'              => 'array',
+				'description'       => 'An array of URLs that the user is known by.',
+				'single'            => false,
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+			)
+		);
 	}
 }

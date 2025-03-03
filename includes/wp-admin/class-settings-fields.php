@@ -395,7 +395,13 @@ class Settings_Fields {
 	public static function render_attribution_domains_field() {
 		$value = get_option( 'activitypub_attribution_domains', \Activitypub\home_host() );
 		?>
-		<textarea id="activitypub_attribution_domains" name="activitypub_attribution_domains" class="large-text" cols="50" rows="5" placeholder="<?php echo esc_attr( \Activitypub\home_host() ); ?>"><?php echo esc_textarea( $value ); ?></textarea>
+		<textarea
+			id="activitypub_attribution_domains"
+			name="activitypub_attribution_domains"
+			class="large-text"
+			cols="50" rows="5"
+			placeholder="<?php echo esc_attr( \Activitypub\home_host() ); ?>"
+		><?php echo esc_textarea( $value ); ?></textarea>
 		<p class="description"><?php esc_html_e( 'Websites allowed to credit you, one per line. Protects from false attributions.', 'activitypub' ); ?></p>
 		<?php
 	}
