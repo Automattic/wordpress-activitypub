@@ -429,7 +429,7 @@ class User extends Actor {
 	 */
 	public function get_also_known_as() {
 		$also_known_as = array(
-			\add_query_arg( 'author', $this->_id, \trailingslashit( \home_url() ) ),
+			\add_query_arg( 'author', $this->_id, \home_url( '/' ) ),
 			$this->get_url(),
 			$this->get_alternate_url(),
 		);
