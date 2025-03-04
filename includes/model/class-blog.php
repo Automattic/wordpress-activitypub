@@ -565,7 +565,7 @@ class Blog extends Actor {
 			$this->get_alternate_url(),
 		);
 
-		$also_known_as = array_merge( $also_known_as, \get_option( 'activitypub_blog_user_also_known_as' ) ?? array() );
+		$also_known_as = array_merge( $also_known_as, \get_option( 'activitypub_blog_user_also_known_as', array() ) );
 
 		return array_unique( $also_known_as );
 	}
