@@ -428,7 +428,15 @@ class User extends Actor {
 	 * @return array The alsoKnownAs.
 	 */
 	public function get_also_known_as() {
-		return \get_user_option( 'activitypub_also_known_as', $this->_id );
+		$also_known_as = array(
+			\add_query_arg( 'author', $this->_id, \trailingslashit( \home_url() ) ),
+			$this->get_url(),
+			$this->get_alternate_url(),
+		);
+
+		$also_known_as = array_merge( $also_known_as, \get_user_option( 'activitypub_also_known_as', $this->_id ) );
+
+		return array_unique( $also_known_as );
 	}
 
 	/**
