@@ -77,7 +77,7 @@ class Embed {
 	/**
 	 * Handle cases where WordPress has filtered out the oEmbed result for security reasons,
 	 * but we can provide a safe ActivityPub-specific markup.
-	 * 
+	 *
 	 * This runs after wp_filter_oembed_result has potentially nullified the result.
 	 *
 	 * @param string|false $html The returned oEmbed HTML.
