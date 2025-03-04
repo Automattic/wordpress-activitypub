@@ -70,6 +70,9 @@ class Dispatcher {
 			10,
 			3
 		);
+
+		\add_filter( 'activitypub_outbox_processing_complete', array( self::class, 'log_progress' ), 10, 7 );
+		\add_filter( 'activitypub_outbox_processing_batch_complete', array( self::class, 'log_progress' ), 10, 7 );
 	}
 
 	/**
@@ -142,10 +145,11 @@ class Dispatcher {
 			 * @param string $json           The ActivityPub Activity JSON
 			 * @param int    $actor_id       The actor ID.
 			 * @param int    $outbox_item_id The Outbox item ID.
+			 * @param array  $retries        The failed inboxes.
 			 * @param int    $batch_size     The batch size.
 			 * @param int    $offset         The offset.
 			 */
-			\do_action( 'activitypub_outbox_processing_complete', $inboxes, $json, $actor->get__id(), $outbox_item_id, $batch_size, $offset );
+			\do_action( 'activitypub_outbox_processing_complete', $inboxes, $json, $actor->get__id(), $outbox_item_id, $retries, $batch_size, $offset );
 
 			// No more followers to process for this update.
 			\wp_publish_post( $outbox_item_id );
@@ -159,10 +163,11 @@ class Dispatcher {
 			 * @param string $json           The ActivityPub Activity JSON
 			 * @param int    $actor_id       The actor ID.
 			 * @param int    $outbox_item_id The Outbox item ID.
+			 * @param array  $retries        The failed inboxes.
 			 * @param int    $batch_size     The batch size.
 			 * @param int    $offset         The offset.
 			 */
-			\do_action( 'activitypub_outbox_processing_batch_complete', $inboxes, $json, $actor->get__id(), $outbox_item_id, $batch_size, $offset );
+			\do_action( 'activitypub_outbox_processing_batch_complete', $inboxes, $json, $actor->get__id(), $outbox_item_id, $retries, $batch_size, $offset );
 
 			return array( $outbox_item_id, $batch_size, $offset + $batch_size );
 		}
@@ -353,6 +358,39 @@ class Dispatcher {
 		}
 
 		return $inboxes;
+	}
+
+	/**
+	 * Track progress of outbox processing.
+	 *
+	 * @param array  $inboxes        The inboxes.
+	 * @param string $json           The ActivityPub Activity JSON.
+	 * @param int    $actor_id       The actor ID.
+	 * @param int    $outbox_item_id The Outbox item ID.
+	 * @param array  $retries        The failed inboxes.
+	 * @param int    $batch_size     The batch size.
+	 * @param int    $offset         The offset.
+	 */
+	public static function log_progress( $inboxes, $json, $actor_id, $outbox_item_id, $retries, $batch_size, $offset ) {
+		// Initialize processing data if this is the first batch.
+		if ( 0 === $offset ) {
+			$processing = array(
+				'started'       => current_time( 'mysql' ),
+				'total_inboxes' => 0,
+				'error_count'   => 0,
+			);
+		} else {
+			$processing = \get_post_meta( $outbox_item_id, '_activitypub_outbox_processing', true );
+		}
+
+		$processing['total_inboxes'] += count( $inboxes );
+		$processing['error_count']   += count( $retries );
+
+		if ( 'activitypub_outbox_processing_complete' === current_filter() ) {
+			$processing['completed'] = current_time( 'mysql' );
+		}
+
+		\update_post_meta( $outbox_item_id, '_activitypub_outbox_processing', $processing );
 	}
 
 	/**

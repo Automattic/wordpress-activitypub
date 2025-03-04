@@ -658,6 +658,35 @@ class Activitypub {
 			)
 		);
 
+		\register_post_meta(
+			Outbox::POST_TYPE,
+			'_activitypub_outbox_processing',
+			array(
+				'type'         => 'object',
+				'single'       => true,
+				'description'  => 'Information about the processing of the outbox item.',
+				'show_in_rest' => array(
+					'schema' => array(
+						'type'       => 'object',
+						'properties' => array(
+							'started'       => array(
+								'type' => 'string',
+							),
+							'completed'     => array(
+								'type' => 'string',
+							),
+							'total_inboxes' => array(
+								'type' => 'integer',
+							),
+							'error_count'   => array(
+								'type' => 'integer',
+							),
+						),
+					),
+				),
+			)
+		);
+
 		// Both User and Blog Extra Fields types have the same args.
 		$args = array(
 			'labels'              => array(
