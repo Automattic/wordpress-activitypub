@@ -49,8 +49,9 @@ class URL_Validator_Controller extends WP_REST_Controller {
 					'callback'            => array( $this, 'get_items' ),
 					'args'                => array(
 						'url' => array(
+							'type'     => 'string',
+							'format'   => 'uri',
 							'required' => true,
-							'type'     => 'uri',
 						),
 					),
 					'permission_callback' => array( $this, 'get_items_permissions_check' ),
@@ -78,26 +79,7 @@ class URL_Validator_Controller extends WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function get_items( $request ) {
-		$url = $request->get_param( 'url' );
-
-		if ( ! $url ) {
-			return new \WP_Error(
-				'activitypub_no_url',
-				__( 'No URL provided.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		// sanity check: parse it, see if its a good URL at least.
-		$parts = \wp_parse_url( $url );
-		if ( ! $parts || ! \array_key_exists( 'scheme', $parts ) ) {
-			return new \WP_Error(
-				'activitypub_invalid_url',
-				__( 'Invalid URL.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
-		}
-
+		$url    = $request->get_param( 'url' );
 		$object = Http::get_remote_object( $url );
 
 		if ( is_wp_error( $object ) ) {
