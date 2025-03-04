@@ -42,7 +42,6 @@ function rest_init() {
 	Rest\Inbox::init();
 	Rest\Server::init();
 	Rest\Post::init();
-	( new Rest\URL_Validator_Controller() )->register_routes();
 	( new Rest\Actors_Controller() )->register_routes();
 	( new Rest\Application_Controller() )->register_routes();
 	( new Rest\Collections_Controller() )->register_routes();
@@ -53,6 +52,7 @@ function rest_init() {
 	( new Rest\Moderators_Controller() )->register_routes();
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Replies_Controller() )->register_routes();
+	( new Rest\URL_Validator_Controller() )->register_routes();
 	( new Rest\Webfinger_Controller() )->register_routes();
 
 	// Load NodeInfo endpoints only if blog is public.
