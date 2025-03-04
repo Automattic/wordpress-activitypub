@@ -135,11 +135,17 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = 5.4.0 =
 
+* Fixed: Updates to certain user meta fields did not trigger an Update activity.
+* Fixed: Transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
+
+= 5.4.0 =
+
 * Added: Upgrade script to fix Follower json representations with unescaped backslashes.
 * Added: Centralized place for sanitization functions.
 * Changed: Bumped minimum required WordPress version to 6.4.
 * Changed: Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
 * Changed: Use webfinger as author email for comments from the Fediverse.
+* Changed: Remove the special handling of comments from Enable Mastodon Apps.
 * Fixed: Do not redirect `/@username` URLs to the API any more, to improve `AUTHORIZED_FETCH` handling.
 
 = 5.3.2 =

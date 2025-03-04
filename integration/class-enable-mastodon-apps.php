@@ -10,11 +10,11 @@ namespace Activitypub\Integration;
 use DateTime;
 use Activitypub\Webfinger as Webfinger_Util;
 use Activitypub\Http;
+use Activitypub\Mention;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Transformer\Factory;
-use Enable_Mastodon_Apps\Mastodon_API;
 use Enable_Mastodon_Apps\Entity\Account;
 use Enable_Mastodon_Apps\Entity\Status;
 use Enable_Mastodon_Apps\Entity\Media_Attachment;
@@ -44,6 +44,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_statuses', array( self::class, 'api_statuses_external' ), 10, 2 );
 		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 3 );
 		\add_action( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
+		\add_action( 'mastodon_api_submit_status_text', array( Mention::class, 'the_content' ), 10, 2 );
 	}
 
 	/**
@@ -340,14 +341,6 @@ class Enable_Mastodon_Apps {
 			return $status;
 		}
 
-		// EMA makes a `comment` post_type to mirror comments and so that there can be a single get_posts() call for everything.
-		if ( get_post_type( $post ) === 'comment' ) {
-			$comment_id = get_post_meta( $post->ID, 'comment_id', true );
-			if ( $comment_id ) {
-				return self::api_comment_status( $comment_id, $post_id );
-			}
-		}
-
 		return self::api_post_status( $post_id );
 	}
 
@@ -371,109 +364,6 @@ class Enable_Mastodon_Apps {
 
 		return self::activity_to_status( $data, $account, $post_id );
 	}
-
-	/**
-	 * Traditional WP commenters may leave a URL, which itself may be a valid actor.
-	 * If so, we'll use that actor's data to represent the comment.
-	 *
-	 * @param string $url The URL.
-	 * @return Account|false The account or false.
-	 */
-	private static function maybe_get_account_for_actor( $url ) {
-		if ( empty( $url ) ) {
-			return false;
-		}
-		$uri = Webfinger_Util::resolve( $url );
-		if ( $uri && ! is_wp_error( $uri ) ) {
-			return self::get_account_for_actor( $uri );
-		}
-		// Next, if the URL does not have a path, we'll try to resolve it in the form of domain.com@domain.com.
-		$parts = \wp_parse_url( $url );
-		if ( ( ! isset( $parts['path'] ) || ! $parts['path'] ) && isset( $parts['host'] ) ) {
-			$url  = trailingslashit( $url ) . '@' . $parts['host'];
-			$acct = Webfinger_Util::uri_to_acct( $url );
-			if ( $acct && ! is_wp_error( $acct ) ) {
-				return self::get_account_for_actor( $acct );
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * Convert an local WP comment into a pseudo-account, after first checking if their
-	 * supplied URL is a valid actor.
-	 *
-	 * @param \WP_Comment $comment The comment.
-	 * @return Account The account.
-	 */
-	private static function get_account_for_local_comment( $comment ) {
-		$maybe_actor = self::maybe_get_account_for_actor( $comment->comment_author_url );
-		if ( $maybe_actor ) {
-			return $maybe_actor;
-		}
-
-		// We will make a pretend local account for this comment.
-		$account                 = new Account();
-		$account->id             = 999999; // This is a fake ID.
-		$account->username       = $comment->comment_author;
-		$account->acct           = sprintf( 'comments@%s', wp_parse_url( home_url(), PHP_URL_HOST ) );
-		$account->display_name   = $comment->comment_author;
-		$account->url            = get_comment_link( $comment );
-		$account->avatar         = get_avatar_url( $comment->comment_author_email );
-		$account->avatar_static  = $account->avatar;
-		$account->created_at     = new DateTime( $comment->comment_date_gmt );
-		$account->last_status_at = new DateTime( $comment->comment_date_gmt );
-		$account->note           = sprintf(
-			/* translators: %s: comment author name */
-			__( 'This is a local comment by %s, not a fediverse comment. This profile cannot be followed.', 'activitypub' ),
-			$comment->comment_author
-		);
-
-		return $account;
-	}
-
-	/**
-	 * Convert a WordPress comment to a Status.
-	 *
-	 * @param int $comment_id The comment ID.
-	 * @param int $post_id    The post ID (this is the mirrored `comment` post).
-	 *
-	 * @return Status|null The status.
-	 */
-	private static function api_comment_status( $comment_id, $post_id ) {
-		$comment = get_comment( $comment_id );
-		$post    = get_post( $post_id );
-		if ( ! $comment || ! $post ) {
-			return null;
-		}
-
-		$is_remote_comment = get_comment_meta( $comment->comment_ID, 'protocol', true ) === 'activitypub';
-
-		if ( $is_remote_comment ) {
-			$account = self::get_account_for_actor( $comment->comment_author_url );
-			// @todo fallback to locally stored data from the time the comment was made,
-			// if the remote actor is not found/no longer available.
-		} else {
-			$account = self::get_account_for_local_comment( $comment );
-		}
-
-		if ( ! $account ) {
-			return null;
-		}
-
-		$status                 = new Status();
-		$status->id             = $comment->comment_ID;
-		$status->created_at     = new DateTime( $comment->comment_date_gmt );
-		$status->content        = $comment->comment_content;
-		$status->account        = $account;
-		$status->visibility     = 'public';
-		$status->uri            = get_comment_link( $comment );
-		$status->in_reply_to_id = $post->post_parent;
-
-		return $status;
-	}
-
 
 	/**
 	 * Get account for actor.

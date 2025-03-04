@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [5.4.0] - 2025-03-03
 
+### Fixed
+
+* Updates to certain user meta fields did not trigger an Update activity.
+* Fixed transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
+
+## [5.4.0] - 2025-03-03
+
 ### Added
 
 * Upgrade script to fix Follower json representations with unescaped backslashes.
@@ -23,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Bumped minimum required WordPress version to 6.4.
 * Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
 * Use webfinger as author email for comments from the Fediverse.
+* Remove the special handling of comments from Enable Mastodon Apps.
 
 ### Fixed
 
