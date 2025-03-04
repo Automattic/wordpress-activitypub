@@ -25,8 +25,5 @@
       "type": "boolean",
       "default": null
     }
-  },
-  "allowedBlocks": [
-    "core/embed"
-  ]
+  }
 }

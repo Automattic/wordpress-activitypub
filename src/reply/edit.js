@@ -7,7 +7,6 @@ import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
 import { useOptions } from '../shared/use-options';
 import { useDispatch } from '@wordpress/data';
-import { InnerBlocks } from '@wordpress/block-editor';
 
 /**
  * Edit component for the ActivityPub block.
@@ -48,10 +47,13 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	// This will be true when the block is instantiated with `true` because it was saved that way, or because this is a new block with no initial URL.
 	const [ optimisticEmbed, setOptimisticEmbed ] = useState( attr.embedPost === true || ! url );
 	const [ embedHtml, setEmbedHtml ] = useState( null );
+	const [ iframeHeight, setIframeHeight ] = useState( 300 ); // Default height
 	const { insertAfterBlock, removeBlock } = useDispatch( 'core/block-editor' );
 	// Get block props and dispatch functions.
 	const blockProps = useBlockProps();
 	const urlInputRef = useRef();
+	const iframeRef = useRef();
+	const iframeContainerRef = useRef();
 
 	/**
 	 * Check if a URL is an ActivityPub URL.
@@ -110,6 +112,96 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 		}
 	}, [ url, optimisticEmbed ] );
 
+	// Prepare the HTML content with auto-height script
+	const getEnhancedHtml = (html) => {
+		return `
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<meta charset="UTF-8">
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<style>
+					body {
+						margin: 0;
+						padding: 0;
+						overflow-x: hidden;
+						font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+					}
+					img { max-width: 100%; height: auto; }
+				</style>
+			</head>
+			<body>
+				${html}
+			</body>
+			</html>
+		`;
+	};
+
+	// Handle iframe load and resize events
+	const handleIframeLoad = () => {
+		if (!iframeRef.current) return;
+
+		try {
+			// Initial height adjustment
+			adjustIframeHeight();
+
+			// Set up a timer to periodically check height (catches dynamic content changes)
+			const intervalId = setInterval(adjustIframeHeight, 1000);
+
+			// Clean up interval on component unmount
+			return () => clearInterval(intervalId);
+		} catch (e) {
+			console.error('Error setting up iframe height adjustment:', e);
+		}
+	};
+
+	// Function to adjust iframe height based on content
+	const adjustIframeHeight = () => {
+		if (!iframeRef.current) return;
+
+		try {
+			const iframe = iframeRef.current;
+
+			// Try to access iframe content height
+			let newHeight = 300; // Default fallback height
+
+			try {
+				// Try to get the scrollHeight of the body
+				if (iframe.contentDocument && iframe.contentDocument.body) {
+					newHeight = iframe.contentDocument.body.scrollHeight;
+				} else if (iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.body) {
+					newHeight = iframe.contentWindow.document.body.scrollHeight;
+				}
+			} catch (e) {
+				console.log('Could not access iframe content document:', e);
+				// This is expected in some cases due to same-origin policy
+			}
+
+			// Add a small buffer to prevent scrollbars
+			newHeight += 30;
+
+			// Update height state if it changed
+			if (newHeight !== iframeHeight) {
+				setIframeHeight(newHeight);
+			}
+		} catch (e) {
+			console.error('Error adjusting iframe height:', e);
+		}
+	};
+
+	// Set up iframe load handler
+	useEffect(() => {
+		if (iframeRef.current) {
+			iframeRef.current.addEventListener('load', handleIframeLoad);
+
+			return () => {
+				if (iframeRef.current) {
+					iframeRef.current.removeEventListener('load', handleIframeLoad);
+				}
+			};
+		}
+	}, [embedHtml]);
+
 	/**
 	 * Handle embed toggle changes.
 	 *
@@ -164,14 +256,36 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 				) }
 
 				{ isValidEmbed && attr.embedPost && embedHtml && (
-					<div className="activitypub-embed-container">
+					<div className="activitypub-embed-container" style={{ pointerEvents: 'auto' }}>
 						{ isRealOembed ? (
-							<InnerBlocks
-								template={ [
-									[ 'core/embed', { url, className: 'wp-embed-aspect-16-9 wp-has-aspect-ratio' } ]
-								] }
-								templateLock="all"
-							/>
+							<div
+								ref={iframeContainerRef}
+								contentEditable={ false }
+								onFocus={ ( e ) => e.stopPropagation() }
+								onClick={ ( e ) => e.stopPropagation() }
+								style={{
+									height: iframeHeight + 'px',
+									overflow: 'hidden',
+									pointerEvents: 'none',
+									transition: 'height 0.2s ease-in-out'
+								}}
+							>
+								<iframe
+									ref={iframeRef}
+									srcDoc={getEnhancedHtml(embedHtml)}
+									style={{
+										position: 'absolute',
+										top: 0,
+										left: 0,
+										width: '100%',
+										height: '100%',
+										pointerEvents: 'none'
+									}}
+									frameBorder="0"
+									allowFullScreen
+									title={ __( 'Embedded content from', 'activitypub' ) + ' ' + url }
+								></iframe>
+							</div>
 						) : (
 							<div
 								contentEditable={ false }
@@ -199,7 +313,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 							target="_blank"
 							rel="noreferrer"
 						>
-							{ url.replace( /^https?:\/\//, '' ) }
+							{ '↬' + url.replace( /^https?:\/\//, '' ) }
 						</a>
 					</div>
 				) }
