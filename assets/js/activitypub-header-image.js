@@ -161,9 +161,9 @@
 				currentRatio = attachment.attributes.width / attachment.attributes.height,
 				alreadyCropped = false;
 
-			// Check if the image already has the correct aspect ratio (with a small tolerance)
-			if ( Math.abs(currentRatio - targetRatio) < 0.01 ) {
-				// Check if this is the same image that was already selected
+			// Check if the image already has the correct aspect ratio (with a small tolerance).
+			if ( Math.abs( currentRatio - targetRatio ) < 0.01 ) {
+				// Check if this is the same image that was already selected.
 				if ( attachment.id !== parseInt( $hiddenDataField.val(), 10 ) ) {
 					// This is a new image with the correct aspect ratio.
 					$hiddenDataField.val( attachment.id );
@@ -173,7 +173,7 @@
 			}
 
 			if ( alreadyCropped ) {
-				// Skip cropping for already cropped images
+				// Skip cropping for already cropped images.
 				switchToUpdate( attachment.attributes );
 				frame.close();
 			} else {
