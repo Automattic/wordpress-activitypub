@@ -7,21 +7,13 @@
 
 namespace Activitypub\Rest;
 
-use WP_REST_Controller;
-use WP_REST_Server;
-use WP_REST_Request;
-use WP_REST_Response;
-use WP_Error;
 use Activitypub\Http;
 use Activitypub\Embed;
-
-use function Activitypub\get_embed_html;
-use function Activitypub\is_activity;
 
 /**
  * URL Validator Controller Class.
  */
-class URL_Validator_Controller extends WP_REST_Controller {
+class URL_Validator_Controller extends \WP_REST_Controller {
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -45,8 +37,9 @@ class URL_Validator_Controller extends WP_REST_Controller {
 			'/' . $this->rest_base,
 			array(
 				array(
-					'methods'             => WP_REST_Server::READABLE,
+					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_items' ),
+					'permission_callback' => array( $this, 'get_items_permissions_check' ),
 					'args'                => array(
 						'url' => array(
 							'type'     => 'string',
@@ -54,7 +47,6 @@ class URL_Validator_Controller extends WP_REST_Controller {
 							'required' => true,
 						),
 					),
-					'permission_callback' => array( $this, 'get_items_permissions_check' ),
 				),
 			)
 		);
@@ -65,7 +57,7 @@ class URL_Validator_Controller extends WP_REST_Controller {
 	 *
 	 * @param \WP_REST_Request $request The request.
 	 *
-	 * @return true|WP_Error True if the request has access, WP_Error object otherwise.
+	 * @return bool True if the request has access to validate URLs, false otherwise.
 	 */
 	public function get_items_permissions_check( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		return current_user_can( 'edit_posts' );
