@@ -48,6 +48,7 @@ class URL_Validator_Controller extends \WP_REST_Controller {
 						),
 					),
 				),
+				'schema' => array( $this, 'get_item_schema' ),
 			)
 		);
 	}
@@ -93,5 +94,40 @@ class URL_Validator_Controller extends \WP_REST_Controller {
 		}
 
 		return rest_ensure_response( $response );
+	}
+
+	/**
+	 * Get the URL validation schema.
+	 *
+	 * @return array
+	 */
+	public function get_item_schema() {
+		if ( $this->schema ) {
+			return $this->add_additional_fields_schema( $this->schema );
+		}
+
+		$schema = array(
+			'$schema'    => 'http://json-schema.org/draft-04/schema#',
+			'title'      => 'validated-url',
+			'type'       => 'object',
+			'properties' => array(
+				'is_activitypub' => array(
+					'type'    => 'boolean',
+					'default' => false,
+				),
+				'is_real_oembed' => array(
+					'type'    => 'boolean',
+					'default' => false,
+				),
+				'html'           => array(
+					'type'    => 'string',
+					'default' => false,
+				),
+			),
+		);
+
+		$this->schema = $schema;
+
+		return $this->add_additional_fields_schema( $this->schema );
 	}
 }
