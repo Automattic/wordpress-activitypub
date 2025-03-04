@@ -100,7 +100,7 @@ class Dispatcher {
 		$activity = Outbox::get_activity( $outbox_item );
 
 		// Send to mentioned and replied-to users. Everyone other than followers.
-		self::send_to_custom_inboxes( $activity, $actor->get__id(), $outbox_item );
+		self::send_to_additional_inboxes( $activity, $actor->get__id(), $outbox_item );
 
 		if ( self::should_send_to_followers( $activity, $actor, $outbox_item ) ) {
 			Scheduler::async_batch(
@@ -263,7 +263,7 @@ class Dispatcher {
 	 * @param int      $actor_id    The actor ID.
 	 * @param \WP_Post $outbox_item The WordPress object.
 	 */
-	private static function send_to_custom_inboxes( $activity, $actor_id, $outbox_item = null ) {
+	private static function send_to_additional_inboxes( $activity, $actor_id, $outbox_item = null ) {
 		/**
 		 * Filters the list of inboxes to send the Activity to.
 		 *

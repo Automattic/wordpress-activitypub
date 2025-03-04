@@ -173,9 +173,9 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Test send_to_custom_inboxes.
+	 * Test send_to_additional_inboxes.
 	 *
-	 * @covers ::send_to_custom_inboxes
+	 * @covers ::send_to_additional_inboxes
 	 */
 	public function test_send_to_relays() {
 		global $wp_actions;
@@ -188,11 +188,11 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		add_filter( 'pre_http_request', $fake_request, 10, 3 );
 
-		// Make `Dispatcher::send_to_custom_inboxes` a public method.
-		$send_to_custom_inboxes = new ReflectionMethod( Dispatcher::class, 'send_to_custom_inboxes' );
-		$send_to_custom_inboxes->setAccessible( true );
+		// Make `Dispatcher::send_to_additional_inboxes` a public method.
+		$send_to_additional_inboxes = new ReflectionMethod( Dispatcher::class, 'send_to_additional_inboxes' );
+		$send_to_additional_inboxes->setAccessible( true );
 
-		$send_to_custom_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+		$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
 
 		// Test how often the request was sent.
 		$this->assertEquals( 0, did_action( 'activitypub_sent_to_inbox' ) );
@@ -204,7 +204,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$relays = array( 'https://relay1.example.com/inbox' );
 		update_option( 'activitypub_relays', $relays );
 
-		$send_to_custom_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+		$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
 
 		// Test how often the request was sent.
 		$this->assertEquals( 1, did_action( 'activitypub_sent_to_inbox' ) );
@@ -216,7 +216,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$relays = array( 'https://relay1.example.com/inbox', 'https://relay2.example.com/inbox' );
 		update_option( 'activitypub_relays', $relays );
 
-		$send_to_custom_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+		$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
 
 		// Test how often the request was sent.
 		$this->assertEquals( 2, did_action( 'activitypub_sent_to_inbox' ) );
@@ -231,7 +231,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Clone object.
 		$private_activity = clone $private_activity;
 
-		$send_to_custom_inboxes->invoke( null, $private_activity, Actors::get_by_id( self::$user_id ), $outbox_item );
+		$send_to_additional_inboxes->invoke( null, $private_activity, Actors::get_by_id( self::$user_id ), $outbox_item );
 
 		// Test how often the request was sent.
 		$this->assertEquals( 0, did_action( 'activitypub_sent_to_inbox' ) );
