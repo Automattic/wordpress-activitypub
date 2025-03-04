@@ -71,7 +71,8 @@ class Move {
 	 * @param string $from    The current account URL.
 	 */
 	private static function update_user_also_known_as( $user_id, $from ) {
-		$also_known_as   = (array) \get_user_option( 'activitypub_also_known_as', $user_id );
+		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+		$also_known_as   = \get_user_option( 'activitypub_also_known_as', $user_id ) ?: array();
 		$also_known_as[] = $from;
 
 		\update_user_option( $user_id, 'activitypub_also_known_as', $also_known_as );
@@ -83,7 +84,7 @@ class Move {
 	 * @param string $from The current account URL.
 	 */
 	private static function update_blog_also_known_as( $from ) {
-		$also_known_as   = (array) \get_option( 'activitypub_blog_user_also_known_as' );
+		$also_known_as   = \get_option( 'activitypub_blog_user_also_known_as', array() );
 		$also_known_as[] = $from;
 
 		\update_option( 'activitypub_blog_user_also_known_as', $also_known_as );
