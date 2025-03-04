@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Updates to certain user meta fields did not trigger an Update activity.
+* Fixed transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
 
 ## [5.4.0] - 2025-03-03
 
