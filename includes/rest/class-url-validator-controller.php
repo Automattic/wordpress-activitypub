@@ -7,21 +7,13 @@
 
 namespace Activitypub\Rest;
 
-use WP_REST_Controller;
-use WP_REST_Server;
-use WP_REST_Request;
-use WP_REST_Response;
-use WP_Error;
 use Activitypub\Http;
 use Activitypub\Embed;
-
-use function Activitypub\get_embed_html;
-use function Activitypub\is_activity;
 
 /**
  * URL Validator Controller Class.
  */
-class URL_Validator_Controller extends WP_REST_Controller {
+class URL_Validator_Controller extends \WP_REST_Controller {
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -45,16 +37,18 @@ class URL_Validator_Controller extends WP_REST_Controller {
 			'/' . $this->rest_base,
 			array(
 				array(
-					'methods'             => WP_REST_Server::READABLE,
+					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_items' ),
+					'permission_callback' => array( $this, 'get_items_permissions_check' ),
 					'args'                => array(
 						'url' => array(
+							'type'     => 'string',
+							'format'   => 'uri',
 							'required' => true,
-							'type'     => 'uri',
 						),
 					),
-					'permission_callback' => array( $this, 'get_items_permissions_check' ),
 				),
+				'schema' => array( $this, 'get_item_schema' ),
 			)
 		);
 	}
@@ -64,7 +58,7 @@ class URL_Validator_Controller extends WP_REST_Controller {
 	 *
 	 * @param \WP_REST_Request $request The request.
 	 *
-	 * @return true|WP_Error True if the request has access, WP_Error object otherwise.
+	 * @return bool True if the request has access to validate URLs, false otherwise.
 	 */
 	public function get_items_permissions_check( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		return current_user_can( 'edit_posts' );
@@ -78,26 +72,7 @@ class URL_Validator_Controller extends WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function get_items( $request ) {
-		$url = $request->get_param( 'url' );
-
-		if ( ! $url ) {
-			return new \WP_Error(
-				'activitypub_no_url',
-				__( 'No URL provided.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		// sanity check: parse it, see if its a good URL at least.
-		$parts = \wp_parse_url( $url );
-		if ( ! $parts || ! \array_key_exists( 'scheme', $parts ) ) {
-			return new \WP_Error(
-				'activitypub_invalid_url',
-				__( 'Invalid URL.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
-		}
-
+		$url    = $request->get_param( 'url' );
 		$object = Http::get_remote_object( $url );
 
 		if ( is_wp_error( $object ) ) {
@@ -119,5 +94,40 @@ class URL_Validator_Controller extends WP_REST_Controller {
 		}
 
 		return rest_ensure_response( $response );
+	}
+
+	/**
+	 * Get the URL validation schema.
+	 *
+	 * @return array
+	 */
+	public function get_item_schema() {
+		if ( $this->schema ) {
+			return $this->add_additional_fields_schema( $this->schema );
+		}
+
+		$schema = array(
+			'$schema'    => 'http://json-schema.org/draft-04/schema#',
+			'title'      => 'validated-url',
+			'type'       => 'object',
+			'properties' => array(
+				'is_activitypub' => array(
+					'type'    => 'boolean',
+					'default' => false,
+				),
+				'is_real_oembed' => array(
+					'type'    => 'boolean',
+					'default' => false,
+				),
+				'html'           => array(
+					'type'    => 'string',
+					'default' => false,
+				),
+			),
+		);
+
+		$this->schema = $schema;
+
+		return $this->add_additional_fields_schema( $this->schema );
 	}
 }
