@@ -7,11 +7,16 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Model\Blog;
 use Activitypub\Scheduler\Comment;
 use Activitypub\Scheduler\Post;
 use WP_CLI;
 use WP_CLI_Command;
+
+use function Activitypub\is_user_disabled;
+use function Activitypub\is_user_type_disabled;
 
 /**
  * WP-CLI commands.
@@ -229,6 +234,99 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::error( $outbox_item_id->get_error_message() );
 		} else {
 			WP_CLI::success( 'Moved Scheduled.' );
+		}
+	}
+
+	/**
+	 * Move all ActivityPub enabled users from one domain to another.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <domain>
+	 *     The new domain to move to.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *    $ wp activitypub move_domain newsite.com
+	 *
+	 * @synopsis <domain>
+	 *
+	 * @param array $args The arguments.
+	 */
+	public function move_domain( $args ) {
+		$domain = $args[0];
+
+		// Make sure the domain has a scheme.
+		if ( ! preg_match( '#^https?://#', $domain ) ) {
+			$domain = 'https://' . $domain;
+		}
+
+		$domain = \esc_url_raw( $domain );
+		$domain = \trailingslashit( $domain );
+
+		// Get the current site URL.
+		$site_url = site_url( '/' );
+
+		$moved_count = 0;
+		$errors      = array();
+
+		// Check if blog user is enabled.
+		if ( ! is_user_disabled( \Activitypub\Collection\Actors::BLOG_USER_ID ) ) {
+			WP_CLI::line( 'Moving blog user...' );
+			$from   = ( new Blog() )->get_id();
+			$result = Move::account( $from, str_replace( $site_url, $domain, $from ) );
+
+			if ( is_wp_error( $result ) ) {
+				$errors[] = 'Blog user: ' . $result->get_error_message();
+				WP_CLI::warning( 'Failed to move blog user: ' . $result->get_error_message() );
+			} else {
+				++$moved_count;
+				WP_CLI::line( 'Blog user moved successfully.' );
+			}
+		}
+
+		// Check if regular users are enabled.
+		if ( ! is_user_type_disabled( 'user' ) ) {
+			// Get all users with ActivityPub capability.
+			$users = get_users( array( 'capability__in' => array( 'activitypub' ) ) );
+
+			WP_CLI::line( sprintf( 'Found %d ActivityPub enabled users.', count( $users ) ) );
+
+			foreach ( $users as $user ) {
+				// Skip disabled users.
+				if ( is_user_disabled( $user->ID ) ) {
+					WP_CLI::line( sprintf( 'Skipping disabled user %s.', $user->user_login ) );
+					continue;
+				}
+
+				$from = Actors::get_by_id( $user->ID )->get_id();
+				$to   = str_replace( $site_url, $domain, $from );
+
+				WP_CLI::line( sprintf( 'Moving user %s from %s to %s...', $user->user_login, $from, $to ) );
+
+				$result = Move::account( $from, $to );
+
+				if ( is_wp_error( $result ) ) {
+					$errors[] = 'User ' . $user->user_login . ': ' . $result->get_error_message();
+					WP_CLI::warning( sprintf( 'Failed to move user %s: %s', $user->user_login, $result->get_error_message() ) );
+				} else {
+					++$moved_count;
+					WP_CLI::line( sprintf( 'User %s moved successfully.', $user->user_login ) );
+				}
+			}
+		}
+
+		if ( $moved_count > 0 ) {
+			WP_CLI::success( sprintf( 'Successfully moved %d users to %s.', $moved_count, $domain ) );
+		} else {
+			WP_CLI::error( 'No users were moved.' );
+		}
+
+		if ( ! empty( $errors ) ) {
+			WP_CLI::warning( 'The following errors occurred:' );
+			foreach ( $errors as $error ) {
+				WP_CLI::line( ' - ' . $error );
+			}
 		}
 	}
 }
