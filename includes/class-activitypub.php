@@ -577,7 +577,7 @@ class Activitypub {
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => array( 'Accept', 'Add', 'Announce', 'Arrive', 'Block', 'Create', 'Delete', 'Dislike', 'Flag', 'Follow', 'Ignore', 'Invite', 'Join', 'Leave', 'Like', 'Listen', 'Move', 'Offer', 'Question', 'Reject', 'Read', 'Remove', 'TentativeReject', 'TentativeAccept', 'Travel', 'Undo', 'Update', 'View' ),
-						'default' => 'Announce',
+						'default' => 'Inherit',
 					);
 
 					if ( is_wp_error( rest_validate_enum( $value, $schema, '' ) ) ) {
