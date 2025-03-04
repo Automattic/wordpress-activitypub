@@ -5,6 +5,9 @@
  * @package Activitypub
  */
 
+use Activitypub\Collection\Actors;
+
+$user = false;
 ?>
 
 <div class="activitypub-settings activitypub-welcome-page hide-if-no-js">
@@ -44,8 +47,8 @@
 		<?php
 	endif;
 
-	if ( ! \Activitypub\is_user_disabled( \Activitypub\Collection\Actors::BLOG_USER_ID ) ) :
-		$blog_user = new \Activitypub\Model\Blog();
+	if ( ! \Activitypub\is_user_disabled( Actors::BLOG_USER_ID ) ) :
+		$user = new \Activitypub\Model\Blog();
 		?>
 	<div class="box">
 		<h3><?php \esc_html_e( 'Blog profile', 'activitypub' ); ?></h3>
@@ -56,13 +59,13 @@
 			<label for="activitypub-blog-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
 		</p>
 		<p>
-			<input type="text" class="regular-text" id="activitypub-blog-identifier" value="<?php echo \esc_attr( $blog_user->get_webfinger() ); ?>" readonly />
+			<input type="text" class="regular-text" id="activitypub-blog-identifier" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly />
 		</p>
 		<p>
 			<label for="activitypub-blog-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label>
 		</p>
 		<p>
-			<input type="text" class="regular-text" id="activitypub-blog-url" value="<?php echo \esc_attr( $blog_user->get_url() ); ?>" readonly />
+			<input type="text" class="regular-text" id="activitypub-blog-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly />
 		</p>
 		<p>
 			<?php \esc_html_e( 'This blog profile will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
@@ -77,7 +80,7 @@
 
 	<?php
 	if ( ! \Activitypub\is_user_disabled( get_current_user_id() ) ) :
-		$user = \Activitypub\Collection\Actors::get_by_id( wp_get_current_user()->ID );
+		$user = Actors::get_by_id( get_current_user_id() );
 		?>
 	<div class="box">
 		<h3><?php \esc_html_e( 'Author profile', 'activitypub' ); ?></h3>
@@ -123,6 +126,56 @@
 				'default'
 			);
 			?>
+		</p>
+	</div>
+
+	<div class="box">
+		<h3><?php \esc_html_e( 'Account Migration', 'activitypub' ); ?></h3>
+		<p>
+			<?php \esc_html_e( 'You can migrate your followers between Mastodon and WordPress. This allows you to move your social presence without losing your audience.', 'activitypub' ); ?>
+		</p>
+		<h4><?php \esc_html_e( 'Migrating from Mastodon to WordPress', 'activitypub' ); ?></h4>
+		<p>
+			<?php
+			echo \wp_kses(
+				\sprintf(
+					/* translators: %1$s is the URL to the profile page, %2$s is the user's ActivityPub username */
+					\__(
+						'To migrate your followers from Mastodon to WordPress, add your Mastodon profile URL to the <a href="%1$s">Account Aliases</a> section in your WordPress profile, then initiate the migration from your Mastodon account settings. Your WordPress ActivityPub username is <code>%2$s</code>.',
+						'activitypub'
+					),
+					\esc_url( \admin_url( 'profile.php#activitypub_blog_user_also_known_as' ) ),
+					\esc_html( $user->get_webfinger() )
+				),
+				array(
+					'a'    => array( 'href' => array() ),
+					'code' => array(),
+				)
+			);
+			?>
+		</p>
+		<h4><?php \esc_html_e( 'Migrating from WordPress to Mastodon', 'activitypub' ); ?></h4>
+		<p>
+			<?php
+			echo \wp_kses(
+				\sprintf(
+					/* translators: %1$s is the URL to the profile page, %2$s is the user's ActivityPub username */
+					\__(
+						'To migrate your followers from WordPress to Mastodon, add your WordPress ActivityPub username (<code>%2$s</code>) as an alias in your Mastodon profile, then add your Mastodon profile URL to the <a href="%1$s">Account Aliases</a> section in WordPress, and finally initiate the migration from Mastodon.',
+						'activitypub'
+					),
+					\esc_url( \admin_url( 'profile.php#activitypub_blog_user_also_known_as' ) ),
+					\esc_html( $user->get_webfinger() )
+				),
+				array(
+					'a'    => array( 'href' => array() ),
+					'code' => array(),
+				)
+			);
+			?>
+		</p>
+		<p>
+			<?php \esc_html_e( 'For detailed migration instructions, click the "Help" tab in the top-right corner of this screen, then select "Account Migration".', 'activitypub' ); ?>
 		</p>
 	</div>
 
