@@ -129,6 +129,10 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+= Unreleased =
+
+* Fixed: Transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
+
 = 5.4.0 =
 
 * Added: Upgrade script to fix Follower json representations with unescaped backslashes.
