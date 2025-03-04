@@ -25,7 +25,7 @@ class Move {
 	 * @return int|bool|\WP_Error The ID of the outbox item or false or WP_Error on failure.
 	 */
 	public static function account( $from, $to ) {
-		$user = Actors::get_by_resource( $from );
+		$user = Actors::get_by_various( $from );
 
 		if ( \is_wp_error( $user ) ) {
 			return $user;
@@ -55,7 +55,7 @@ class Move {
 		$actor->from_array( $response );
 
 		// Check if the `Move` Activity is valid.
-		$also_known_as = $actor->get_also_known_as();
+		$also_known_as = $actor->get_also_known_as() ?? array();
 		if ( ! in_array( $from, $also_known_as, true ) ) {
 			return new \WP_Error( 'invalid_target', __( 'Invalid target', 'activitypub' ) );
 		}
