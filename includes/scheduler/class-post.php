@@ -54,7 +54,7 @@ class Post {
 
 		switch ( $new_status ) {
 			case 'publish':
-				$type = ( ! $old_status || 'auto-draft' === $old_status ) ? 'Create' : 'Update';
+				$type = ( 'publish' === $old_status ) ? 'Update' : 'Create';
 				break;
 
 			case 'draft':
