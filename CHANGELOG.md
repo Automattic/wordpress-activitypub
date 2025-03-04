@@ -5,17 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [5.4.1] - 2025-03-04
-
-### Fixed
-
-* Fixed transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
-
-## [5.4.0] - 2025-03-03
+## [Unreleased]
 
 ### Fixed
 
 * Updates to certain user meta fields did not trigger an Update activity.
+
+## [5.4.1] - 2025-03-04
+
+### Fixed
+
 * Fixed transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
 
 ## [5.4.0] - 2025-03-03
