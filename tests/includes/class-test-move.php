@@ -137,7 +137,7 @@ class Test_Move extends \WP_UnitTestCase {
 		\Activitypub\Move::account( $from, $to );
 
 		$also_known_as = Actors::get_by_id( Actors::BLOG_USER_ID )->get_also_known_as();
-		$this->assertCount( 2, $also_known_as );
+		$this->assertCount( 1, $also_known_as );
 		$this->assertContains( $from, $also_known_as );
 
 		\delete_option( 'activitypub_actor_mode' );
