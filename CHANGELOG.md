@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* CLI command to create Move activities with a domain change.
+
 ### Fixed
 
 * Updates to certain user meta fields did not trigger an Update activity.

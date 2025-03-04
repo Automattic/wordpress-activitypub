@@ -131,6 +131,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Added: CLI command to create Move activities with a domain change.
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
 
 = 5.4.1 =
