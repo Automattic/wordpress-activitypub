@@ -434,7 +434,7 @@ class User extends Actor {
 			$this->get_alternate_url(),
 		);
 
-		$also_known_as = array_merge( $also_known_as, \get_user_option( 'activitypub_also_known_as', $this->_id ) );
+		$also_known_as = array_merge( $also_known_as, \get_user_option( 'activitypub_also_known_as', $this->_id ) ?? array() );
 
 		return array_unique( $also_known_as );
 	}
