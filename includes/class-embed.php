@@ -19,6 +19,7 @@ class Embed {
 	 */
 	public static function init() {
 		add_filter( 'pre_oembed_result', array( __CLASS__, 'maybe_use_activitypub_embed' ), 10, 3 );
+		add_filter( 'oembed_dataparse', array( __CLASS__, 'handle_filtered_oembed_result' ), 11, 3 );
 	}
 
 	/**
@@ -71,5 +72,42 @@ class Embed {
 
 		// Return the ActivityPub embed HTML.
 		return $html;
+	}
+
+	/**
+	 * Handle cases where WordPress has filtered out the oEmbed result for security reasons,
+	 * but we can provide a safe ActivityPub-specific markup.
+	 * 
+	 * This runs after wp_filter_oembed_result has potentially nullified the result.
+	 *
+	 * @param string|false $html The returned oEmbed HTML.
+	 * @param object       $data A data object result from an oEmbed provider.
+	 * @param string       $url  The URL of the content to be embedded.
+	 * @return string|false      The filtered oEmbed HTML or our ActivityPub embed.
+	 */
+	public static function handle_filtered_oembed_result( $html, $data, $url ) {
+		// If we already have valid HTML, return it.
+		if ( $html ) {
+			return $html;
+		}
+
+		// If this isn't a rich or video type, we can't help.
+		if ( ! isset( $data->type ) || ! in_array( $data->type, array( 'rich', 'video' ), true ) ) {
+			return $html;
+		}
+
+		// If there's no HTML in the data, we can't help.
+		if ( empty( $data->html ) || ! is_string( $data->html ) ) {
+			return $html;
+		}
+
+		// Try to get ActivityPub representation.
+		$activitypub_html = get_embed_html( $url );
+		if ( ! $activitypub_html ) {
+			return $html;
+		}
+
+		// Return our safer ActivityPub embed HTML.
+		return $activitypub_html;
 	}
 }
