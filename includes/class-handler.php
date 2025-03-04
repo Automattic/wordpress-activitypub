@@ -12,6 +12,7 @@ use Activitypub\Handler\Create;
 use Activitypub\Handler\Delete;
 use Activitypub\Handler\Follow;
 use Activitypub\Handler\Like;
+use Activitypub\Handler\Move;
 use Activitypub\Handler\Undo;
 use Activitypub\Handler\Update;
 
@@ -37,6 +38,7 @@ class Handler {
 		Undo::init();
 		Update::init();
 		Like::init();
+		Move::init();
 
 		/**
 		 * Register additional handlers.
