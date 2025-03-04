@@ -133,6 +133,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Added: Post meta to log Outbox processing progress in the Outbox post type API endpoint.
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
+* Fixed: Transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
 
 = 5.4.0 =
 
