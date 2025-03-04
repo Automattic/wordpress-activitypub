@@ -116,7 +116,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			}
 		);
 
-		$inboxes = apply_filters( 'activitypub_custom_inboxes', array(), 1, $this->get_activity_mock() );
+		$inboxes = apply_filters( 'activitypub_additional_inboxes', array(), 1, $this->get_activity_mock() );
 		$this->assertContains( 'https://example.com/inbox', $inboxes );
 
 		remove_all_filters( 'activitypub_interactees_inboxes' );
