@@ -413,8 +413,8 @@ class Scheduler {
 
 		$activity_type = \get_post_meta( $outbox_activity_id, '_activitypub_activity_type', true );
 
-		// Only if the activity is a Create, Update or Delete.
-		if ( ! in_array( $activity_type, array( 'Create', 'Update', 'Delete' ), true ) ) {
+		// Only if the activity is a Create.
+		if ( ! in_array( $activity_type, array( 'Create' ), true ) ) {
 			return;
 		}
 
@@ -439,6 +439,6 @@ class Scheduler {
 		}
 
 		// Schedule the outbox item for federation.
-		self::schedule_outbox_activity_for_federation( $outbox_activity_id, 30 );
+		self::schedule_outbox_activity_for_federation( $outbox_activity_id, 120 );
 	}
 }
