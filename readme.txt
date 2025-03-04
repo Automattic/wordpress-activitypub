@@ -132,6 +132,8 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
+* Fixed: No more PHP warnings when a header image gets cropped.
+* Fixed: Images with the correct aspect ratio no longer get sent through the crop step again.
 
 = 5.4.1 =
 
