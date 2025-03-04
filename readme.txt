@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 6.4
 Tested up to: 6.7
-Stable tag: 5.4.0
+Stable tag: 5.4.1
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -133,6 +133,9 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Added: Post meta to log Outbox processing progress in the Outbox post type API endpoint.
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
+
+= 5.4.1 =
+
 * Fixed: Transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
 
 = 5.4.0 =
