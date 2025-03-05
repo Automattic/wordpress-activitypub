@@ -137,4 +137,20 @@ class Test_Replies extends \WP_UnitTestCase {
 			wp_delete_comment( $comment_id, true );
 		}
 	}
+
+	/**
+	 * Test get_context_collection method with disabled author.
+	 *
+	 * @covers ::get_context_collection
+	 */
+	public function test_get_context_collection_disabled_author() {
+		$context_post_id = self::factory()->post->create( array( 'post_author' => 1 ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		$context = Replies::get_context_collection( $context_post_id );
+
+		$this->assertSame( \get_author_posts_url( 1 ), $context['attributedTo'] );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
 }
