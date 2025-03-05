@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Updates to certain user meta fields did not trigger an Update activity.
+* Properly re-added support for `Update` and `Delete` `Announce`ments.
 
 ## [5.4.1] - 2025-03-04
 

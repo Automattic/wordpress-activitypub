@@ -132,6 +132,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
+* Fixed: Properly re-added support for `Update` and `Delete` `Announce`ments.
 
 = 5.4.1 =
 
