@@ -131,7 +131,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
-* Added: Documentation for migrating from a Mastodon instance to WordPress and vice versa.
+* Added: Documentation for migrating from a Mastodon instance to WordPress.
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
 
 = 5.4.1 =

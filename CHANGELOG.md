@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* Documentation for migrating from a Mastodon instance to WordPress and vice versa.
+* Documentation for migrating from a Mastodon instance to WordPress.
 
 ### Fixed
 
