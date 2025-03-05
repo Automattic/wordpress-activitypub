@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Documentation for migrating from a Mastodon instance to WordPress.
+
 ### Changed
 
 * Outbox items only get sent to followers when there are any.
@@ -14,12 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Updates to certain user meta fields did not trigger an Update activity.
+* Properly re-added support for `Update` and `Delete` `Announce`ments.
 
 ## [5.4.1] - 2025-03-04
 
 ### Fixed
 
 * Fixed transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
+* Show "full content" preview even if post is in still in draft mode.
 
 ## [5.4.0] - 2025-03-03
 
