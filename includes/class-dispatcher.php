@@ -395,6 +395,13 @@ class Dispatcher {
 			in_array( $actor->get_followers(), $audience, true )
 		);
 
+		if ( $send ) {
+			$followers = Followers::get_inboxes_for_activity( $activity->to_json(), $actor->get__id() );
+
+			// Only send if there are followers to send to.
+			$send = ! is_countable( $followers ) || 0 < count( $followers );
+		}
+
 		/**
 		 * Filters whether to send an Activity to followers.
 		 *

@@ -172,6 +172,41 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test whether an activity should be sent to followers.
+	 *
+	 * @covers ::should_send_to_followers
+	 */
+	public function test_should_send_to_followers() {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+		$activity    = \Activitypub\Collection\Outbox::get_activity( $outbox_item );
+
+		$should_send = new ReflectionMethod( Dispatcher::class, 'should_send_to_followers' );
+		$should_send->setAccessible( true );
+
+		// No followers, so should not send.
+		$this->assertFalse( $should_send->invoke( null, $activity, Actors::get_by_id( self::$user_id ), $outbox_item ) );
+
+		// Add a follower.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'id'                => 'https://example.org/users/username',
+					'url'               => 'https://example.org/users/username',
+					'inbox'             => 'https://example.org/users/username/inbox',
+					'name'              => 'username',
+					'preferredUsername' => 'username',
+					'endpoints'         => array( 'sharedInbox' => 'https://example.org/sharedInbox' ),
+				);
+			}
+		);
+		Followers::add_follower( self::$user_id, 'https://example.org/users/username' );
+
+		$this->assertTrue( $should_send->invoke( null, $activity, Actors::get_by_id( self::$user_id ), $outbox_item ) );
+	}
+
+	/**
 	 * Returns a mock of an Activity object.
 	 *
 	 * @return Activity

@@ -131,6 +131,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Changed: Outbox items only get sent to followers when there are any.
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
 
 = 5.4.1 =
