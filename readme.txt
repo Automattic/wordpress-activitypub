@@ -132,6 +132,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
+* Fixed: Show "full content" preview even if post is in still in draft mode.
 
 = 5.4.1 =
 
