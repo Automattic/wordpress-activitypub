@@ -414,7 +414,7 @@ class Scheduler {
 		$activity_type = \get_post_meta( $outbox_activity_id, '_activitypub_activity_type', true );
 
 		// Only if the activity is a Create.
-		if ( ! in_array( $activity_type, array( 'Create' ), true ) ) {
+		if ( 'Create' !== $activity_type ) {
 			return;
 		}
 
