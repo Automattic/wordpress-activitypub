@@ -132,6 +132,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
+* Fixed: When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled.
 
 = 5.4.1 =
 

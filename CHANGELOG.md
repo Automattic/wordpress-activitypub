@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Updates to certain user meta fields did not trigger an Update activity.
+* When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled.
 
 ## [5.4.1] - 2025-03-04
 
