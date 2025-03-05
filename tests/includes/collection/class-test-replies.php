@@ -145,7 +145,14 @@ class Test_Replies extends \WP_UnitTestCase {
 	 * @covers ::get_context_collection
 	 */
 	public function test_get_context_collection_disabled_author() {
-		$context_post_id = self::factory()->post->create( array( 'post_author' => 1 ) );
+		$user_id         = self::factory()->user->create( array( 'role' => 'author' ) );
+		$context_post_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		get_user_by( 'id', $user_id )->remove_cap( 'activitypub' );
+
+		// Author disabled, Blog user disabled.
+		$this->assertFalse( Replies::get_context_collection( $context_post_id ) );
+
+		// Enable Blog user.
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
 
 		$context = Replies::get_context_collection( $context_post_id );
