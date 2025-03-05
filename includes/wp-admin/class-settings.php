@@ -349,7 +349,7 @@ class Settings {
 					'<ol>' . "\n" .
 					'<li>' . \wp_kses(
 						\sprintf(
-						/* translators: %s is the URL to the profile page */
+							/* translators: %s is the URL to the profile page */
 							\__( 'In your WordPress profile, go to the <a href="%s">Account Aliases</a> section and add your Mastodon profile URL (e.g., <code>https://mastodon.social/@username</code>).', 'activitypub' ),
 							\esc_url( \admin_url( 'profile.php#activitypub_blog_user_also_known_as' ) )
 						),
@@ -360,7 +360,7 @@ class Settings {
 					'<li>' . \esc_html__( 'Go to Preferences > Account > Move to a different account.', 'activitypub' ) . '</li>' . "\n" .
 					'<li>' . \wp_kses(
 						\sprintf(
-						/* translators: %s is the user's ActivityPub username */
+							/* translators: %s is the user's ActivityPub username */
 							\__( 'Enter your WordPress ActivityPub username (e.g., <code>%s</code>) in the "Handle of the new account" field.', 'activitypub' ),
 							\esc_html( $webfinger )
 						),
@@ -368,39 +368,7 @@ class Settings {
 					) . '</li>' . "\n" .
 					'<li>' . \esc_html__( 'Confirm the migration in Mastodon by entering your password.', 'activitypub' ) . '</li>' . "\n" .
 					'<li>' . \esc_html__( 'Your followers will be notified and redirected to follow your WordPress account.', 'activitypub' ) . '</li>' . "\n" .
-					'</ol>' . "\n" .
-
-					'<h3>' . \esc_html__( 'Migrating from WordPress to Mastodon', 'activitypub' ) . '</h3>' . "\n" .
-					'<ol>' . "\n" .
-					'<li>' . \esc_html__( 'Create a Mastodon account if you don\'t already have one.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'In your Mastodon profile settings, go to Account > Moving From a Different Account.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \wp_kses(
-						\sprintf(
-						/* translators: %s is the user's ActivityPub username */
-							\__( 'Add your WordPress ActivityPub username (e.g., <code>%s</code>) as an alias.', 'activitypub' ),
-							\esc_html( $webfinger )
-						),
-						$code_html
-					) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Save your Mastodon profile changes.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \wp_kses(
-						\sprintf(
-						/* translators: %s is the URL to the profile page */
-							\__( 'In your WordPress profile, go to the <a href="%s">Account Aliases</a> section.', 'activitypub' ),
-							\esc_url( \admin_url( 'profile.php#activitypub_blog_user_also_known_as' ) )
-						),
-						$anchor_html
-					) . '</li>' . "\n" .
-					'<li>' . \wp_kses( \__( 'Add your Mastodon profile URL (e.g., <code>https://mastodon.social/@username</code>).', 'activitypub' ), $code_html ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Save your WordPress profile changes.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Go back to your Mastodon account settings.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Go to Preferences > Account > Move to a different account.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \wp_kses( \__( 'Enter your Mastodon handle (e.g., <code>username@mastodon.social</code>) in the "Handle of the new account" field.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Confirm the migration in Mastodon.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Your followers will be notified and redirected to follow your Mastodon account.', 'activitypub' ) . '</li>' . "\n" .
-					'</ol>' . "\n" .
-
-					'<p>' . \esc_html__( 'Note: The account migration process is designed to be safe and reversible. Adding an alias does not affect your account until you initiate the actual migration.', 'activitypub' ) . '</p>',
+					'</ol>' . "\n",
 			)
 		);
 
