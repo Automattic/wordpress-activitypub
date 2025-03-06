@@ -189,7 +189,7 @@ class Comment extends Base {
 	 */
 	protected function get_id() {
 		$comment = $this->item;
-		return Comment_Utils::generate_id( $comment );
+		return force_ssl( Comment_Utils::generate_id( $comment ) );
 	}
 
 	/**

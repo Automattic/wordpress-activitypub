@@ -1633,3 +1633,14 @@ function is_actor( $data ) {
 
 	return false;
 }
+
+/**
+ * Force the URL to use HTTPS.
+ *
+ * @param string $url The URL to force HTTPS.
+ *
+ * @return string The URL with HTTPS.
+ */
+function force_ssl( $url ) {
+	return preg_replace( '/^http:/', 'https:', $url );
+}

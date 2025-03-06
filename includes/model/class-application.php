@@ -13,6 +13,7 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\force_ssl;
 
 /**
  * Application class.
@@ -87,7 +88,7 @@ class Application extends Actor {
 	 * @return string The User-Url.
 	 */
 	public function get_url() {
-		return $this->get_id();
+		return force_ssl( $this->get_id() );
 	}
 
 	/**
@@ -96,7 +97,7 @@ class Application extends Actor {
 	 * @return string The User-URL with @-Prefix for the username.
 	 */
 	public function get_alternate_url() {
-		return $this->get_id();
+		return force_ssl( $this->get_id() );
 	}
 
 	/**

@@ -24,6 +24,7 @@ use function Activitypub\get_rest_url_by_path;
 use function Activitypub\site_supports_blocks;
 use function Activitypub\generate_post_summary;
 use function Activitypub\get_content_visibility;
+use function Activitypub\force_ssl;
 
 /**
  * WordPress Post Transformer.
@@ -115,10 +116,12 @@ class Post extends Base {
 
 		if ( $post_id > $last_legacy_id ) {
 			// Generate URI based on post ID.
-			return \add_query_arg( 'p', $post_id, \trailingslashit( \home_url() ) );
+			$id = \add_query_arg( 'p', $post_id, \trailingslashit( \home_url() ) );
+		} else {
+			$id = $this->get_url();
 		}
 
-		return $this->get_url();
+		return force_ssl( $id );
 	}
 
 	/**
@@ -146,7 +149,7 @@ class Post extends Base {
 				break;
 		}
 
-		return \esc_url( $permalink );
+		return force_ssl( \esc_url( $permalink ) );
 	}
 
 	/**

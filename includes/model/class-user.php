@@ -16,6 +16,7 @@ use function Activitypub\is_blog_public;
 use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_attribution_domains;
+use function Activitypub\force_ssl;
 
 /**
  * User class.
@@ -114,7 +115,9 @@ class User extends Actor {
 			return $this->get_url();
 		}
 
-		return \add_query_arg( 'author', $this->_id, \trailingslashit( \home_url() ) );
+		$id = \add_query_arg( 'author', $this->_id, \trailingslashit( \home_url() ) );
+
+		return force_ssl( $id );
 	}
 
 	/**
@@ -145,7 +148,7 @@ class User extends Actor {
 	 * @return string The User url.
 	 */
 	public function get_url() {
-		return \esc_url( \get_author_posts_url( $this->_id ) );
+		return force_ssl( \esc_url( \get_author_posts_url( $this->_id ) ) );
 	}
 
 	/**
@@ -154,7 +157,7 @@ class User extends Actor {
 	 * @return string The User URL with @-Prefix for the username.
 	 */
 	public function get_alternate_url() {
-		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() );
+		return force_ssl( \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() ) );
 	}
 
 	/**
