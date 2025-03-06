@@ -17,14 +17,14 @@ use Activitypub\Collection\Actors;
  */
 class Move {
 	/**
-	 * Move an ActivityPub account from one location to another.
+	 * Move an ActivityPub Actor from one location (internal) to another (external).
 	 *
 	 * @param string $from The current account URL.
 	 * @param string $to   The new account URL.
 	 *
 	 * @return int|bool|\WP_Error The ID of the outbox item or false or WP_Error on failure.
 	 */
-	public static function account( $from, $to ) {
+	public static function externally( $from, $to ) {
 		$user = Actors::get_by_various( $from );
 
 		if ( \is_wp_error( $user ) ) {
@@ -36,13 +36,6 @@ class Move {
 			\update_user_option( $user->get__id(), 'activitypub_move_to', $to );
 		} else {
 			\update_option( 'activitypub_blog_user_moved_to', $to );
-		}
-
-		// Add the old account URL to alsoKnownAs.
-		if ( $user->get__id() > 0 ) {
-			self::update_user_also_known_as( $user->get__id(), $from );
-		} else {
-			self::update_blog_also_known_as( $from );
 		}
 
 		$response = Http::get_remote_object( $to );

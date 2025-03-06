@@ -47,7 +47,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = Actors::get_by_id( self::$user_id )->get_id();
 		$to   = 'https://newsite.com/user/1';
 
-		\Activitypub\Move::account( $from, $to );
+		\Activitypub\Move::externally( $from, $to );
 
 		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
 		$this->assertEquals( $to, $moved_to );
@@ -62,7 +62,7 @@ class Test_Move extends \WP_UnitTestCase {
 	 * @covers ::account
 	 */
 	public function test_account_with_invalid_user() {
-		$result = \Activitypub\Move::account(
+		$result = \Activitypub\Move::externally(
 			'https://example.com/nonexistent/user',
 			'https://newsite.com/user/999'
 		);
@@ -85,7 +85,7 @@ class Test_Move extends \WP_UnitTestCase {
 		};
 		\add_filter( 'pre_http_request', $filter );
 
-		$result = \Activitypub\Move::account( $from, $to );
+		$result = \Activitypub\Move::externally( $from, $to );
 
 		$this->assertWPError( $result );
 		$this->assertEquals( 'http_request_failed', $result->get_error_code() );
@@ -112,7 +112,7 @@ class Test_Move extends \WP_UnitTestCase {
 		};
 		\add_filter( 'pre_http_request', $filter );
 
-		\Activitypub\Move::account( $from, $to );
+		\Activitypub\Move::externally( $from, $to );
 
 		$also_known_as = Actors::get_by_id( self::$user_id )->get_also_known_as();
 		$this->assertCount( 3, $also_known_as );
@@ -134,7 +134,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 		$to   = 'https://newsite.com/user/0';
 
-		\Activitypub\Move::account( $from, $to );
+		\Activitypub\Move::externally( $from, $to );
 
 		$also_known_as = Actors::get_by_id( Actors::BLOG_USER_ID )->get_also_known_as();
 		$this->assertCount( 3, $also_known_as );
