@@ -140,5 +140,24 @@ class Test_Move extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_actor_mode' );
 	}
 
+	/**
+	 * Test the internally() method with valid input.
+	 *
+	 * @covers ::internally
+	 */
+	public function test_internally_with_valid_input() {
+		$from = get_author_posts_url( self::$user_id );
+		$to   = Actors::get_by_id( self::$user_id )->get_id();
 
+		\Activitypub\Move::internally( $from, $to );
+
+		// Clear cache.
+		wp_cache_delete( self::$user_id, 'users' );
+
+		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
+		$this->assertEquals( $to, $moved_to );
+
+		$also_known_as = Actors::get_by_id( self::$user_id )->get_also_known_as();
+		$this->assertContains( $from, $also_known_as );
+	}
 }

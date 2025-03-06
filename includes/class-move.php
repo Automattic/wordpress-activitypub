@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Activity\Actor;
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 
 /**
@@ -91,8 +92,10 @@ class Move {
 		// Add the old account URL to alsoKnownAs.
 		if ( $user->get__id() > 0 ) {
 			self::update_user_also_known_as( $user->get__id(), $from );
+			\update_user_option( $user->get__id(), 'activitypub_move_to', $to );
 		} else {
 			self::update_blog_also_known_as( $from );
+			\update_option( 'activitypub_blog_user_moved_to', $to );
 		}
 
 		// check if `$from` is a URL or an ID
