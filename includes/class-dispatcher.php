@@ -205,7 +205,7 @@ class Dispatcher {
 		$retries = array();
 
 		foreach ( $inboxes as $inbox ) {
-			$result = safe_remote_post( $inbox, $json, $actor->get__id() );
+			$result = Http::post( $inbox, $json, $actor->get__id() );
 
 			if ( is_wp_error( $result ) && in_array( $result->get_error_code(), self::$retry_error_codes, true ) ) {
 				$retries[] = $inbox;
