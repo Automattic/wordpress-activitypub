@@ -18,8 +18,17 @@ use function Activitypub\add_to_outbox;
  * Handler Test Class
  */
 class Test_Handler extends WP_UnitTestCase {
+
+	/**
+	 * The user ID.
+	 *
+	 * @var int
+	 */
 	protected $user_id;
 
+	/**
+	 * Set up the test.
+	 */
 	public function set_up() {
 		parent::set_up();
 		$this->user_id = self::factory()->user->create(

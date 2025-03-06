@@ -57,7 +57,6 @@ class Handler {
 	 * @return Activity The activity.
 	 */
 	public static function outbox_activity( $activity ) {
-		var_dump( $activity->get_type() );
 		if ( 'Inherit' === $activity->get_type() ) {
 			$inherit_activity = $activity->get_object();
 			$inherit_activity->set_id( $activity->get_id() );
