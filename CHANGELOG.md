@@ -7,10 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Documentation for migrating from a Mastodon instance to WordPress.
+
 ### Fixed
 
 * Updates to certain user meta fields did not trigger an Update activity.
+* Properly re-added support for `Update` and `Delete` `Announce`ments.
+
+## [5.4.1] - 2025-03-04
+
+### Fixed
+
 * Fixed transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
+* Show "full content" preview even if post is in still in draft mode.
 
 ## [5.4.0] - 2025-03-03
 
@@ -1369,8 +1380,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * initial
 
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.4.0...trunk
+[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.4.1...trunk
 <!-- Add new release below and update "Unreleased" link -->
+[5.4.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.4.0...5.4.1
 [5.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.2...5.4.0
 [5.3.2]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.1...5.3.2
 [5.3.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.0...5.3.1

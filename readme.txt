@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 6.4
 Tested up to: 6.7
-Stable tag: 5.4.0
+Stable tag: 5.4.1
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -131,7 +131,13 @@ For reasons of data protection, it is not possible to see the followers of other
 
 = Unreleased =
 
+* Added: Documentation for migrating from a Mastodon instance to WordPress.
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
+* Fixed: Properly re-added support for `Update` and `Delete` `Announce`ments.
+* Fixed: Show "full content" preview even if post is in still in draft mode.
+
+= 5.4.1 =
+
 * Fixed: Transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
 
 = 5.4.0 =
