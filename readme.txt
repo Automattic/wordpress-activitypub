@@ -132,6 +132,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: Documentation for migrating from a Mastodon instance to WordPress.
+* Added: Introduce `Inherit` as a valid activity type, to store full Activities as main object.
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
 * Fixed: Properly re-added support for `Update` and `Delete` `Announce`ments.
 * Fixed: Show "full content" preview even if post is in still in draft mode.
