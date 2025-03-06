@@ -42,7 +42,7 @@ class Test_Handler extends WP_UnitTestCase {
 	 * Test the inherit functionality
 	 */
 	public function test_inherit_activity() {
-		// Create a mock inherit activity
+		// Create a mock inherit activity.
 		$activity = new Activity();
 		$activity->set_type( 'Move' );
 		$activity->set_content( 'Test content' );
