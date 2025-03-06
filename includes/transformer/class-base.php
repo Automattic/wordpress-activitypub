@@ -68,6 +68,13 @@ abstract class Base {
 	public function __construct( $item ) {
 		$this->item      = $item;
 		$this->wp_object = $item;
+
+		/**
+		 * Fires after a transformer has been constructed.
+		 *
+		 * @param Base $transformer The transformer.
+		 */
+		\do_action( 'activitypub_transformer_constructed', $this );
 	}
 
 	/**
