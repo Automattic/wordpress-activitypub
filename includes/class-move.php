@@ -98,7 +98,7 @@ class Move {
 			\update_option( 'activitypub_blog_user_moved_to', $to );
 		}
 
-		// check if `$from` is a URL or an ID
+		// check if `$from` is a URL or an ID.
 		if ( \filter_var( $from, FILTER_VALIDATE_URL ) ) {
 			$actor = $from;
 		} else {
