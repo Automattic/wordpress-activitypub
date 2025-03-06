@@ -12,9 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Documentation for migrating from a Mastodon instance to WordPress.
 * Introduce `Inherit` as a valid activity type, to store full Activities as main object.
 
+### Changed
+
+* Outbox items only get sent to followers when there are any.
+
 ### Fixed
 
 * Updates to certain user meta fields did not trigger an Update activity.
+* When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled.
 * Properly re-added support for `Update` and `Delete` `Announce`ments.
 
 ## [5.4.1] - 2025-03-04
