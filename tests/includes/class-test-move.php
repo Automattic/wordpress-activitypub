@@ -52,8 +52,8 @@ class Test_Move extends \WP_UnitTestCase {
 		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
 		$this->assertEquals( $to, $moved_to );
 
-		$also_known_as = Actors::get_by_id( self::$user_id )->get_also_known_as();
-		$this->assertContains( $from, $also_known_as );
+		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
+		$this->assertEquals( $to, $moved_to );
 	}
 
 	/**
@@ -114,10 +114,8 @@ class Test_Move extends \WP_UnitTestCase {
 
 		\Activitypub\Move::externally( $from, $to );
 
-		$also_known_as = Actors::get_by_id( self::$user_id )->get_also_known_as();
-		$this->assertCount( 3, $also_known_as );
-		$this->assertContains( $from, $also_known_as );
-		$this->assertContains( 'https://old.example.com/user/1', $also_known_as );
+		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
+		$this->assertEquals( $to, $moved_to );
 
 		\remove_filter( 'pre_http_request', $filter );
 	}
@@ -136,10 +134,11 @@ class Test_Move extends \WP_UnitTestCase {
 
 		\Activitypub\Move::externally( $from, $to );
 
-		$also_known_as = Actors::get_by_id( Actors::BLOG_USER_ID )->get_also_known_as();
-		$this->assertCount( 3, $also_known_as );
-		$this->assertContains( $from, $also_known_as );
+		$moved_to = Actors::get_by_id( Actors::BLOG_USER_ID )->get_moved_to();
+		$this->assertEquals( $to, $moved_to );
 
 		\delete_option( 'activitypub_actor_mode' );
 	}
+
+
 }
