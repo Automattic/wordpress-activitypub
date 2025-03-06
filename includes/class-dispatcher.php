@@ -215,16 +215,6 @@ class Dispatcher {
 		\do_action( 'pre_activitypub_send_to_inboxes', $inboxes, $json, $actor->get__id(), $outbox_item_id );
 
 		foreach ( $inboxes as $inbox ) {
-			/**
-			 * Fires before an Activity has been sent to an inbox.
-			 *
-			 * @param string $inbox          The inbox URL.
-			 * @param string $json           The ActivityPub Activity JSON.
-			 * @param int    $actor_id       The actor ID.
-			 * @param int    $outbox_item_id The Outbox item ID.
-			 */
-			\do_action( 'pre_activitypub_send_to_inbox', $inbox, $json, $actor->get__id(), $outbox_item_id );
-
 			$result = safe_remote_post( $inbox, $json, $actor->get__id() );
 
 			if ( is_wp_error( $result ) && in_array( $result->get_error_code(), self::$retry_error_codes, true ) ) {
