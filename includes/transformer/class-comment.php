@@ -322,7 +322,7 @@ class Comment extends Base {
 	 * @return string The URL of the comment.
 	 */
 	public function get_url() {
-		return $this->get_id();
+		return force_ssl( $this->get_id() );
 	}
 
 	/**

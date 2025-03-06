@@ -115,9 +115,7 @@ class User extends Actor {
 			return $this->get_url();
 		}
 
-		$id = \add_query_arg( 'author', $this->_id, \trailingslashit( \home_url() ) );
-
-		return force_ssl( $id );
+		return force_ssl( \add_query_arg( 'author', $this->_id, \trailingslashit( \home_url() ) ) );
 	}
 
 	/**
