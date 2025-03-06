@@ -17,7 +17,13 @@ use Activitypub\Collection\Actors;
  */
 class Move {
 	/**
+	 * External Move.
+	 *
 	 * Move an ActivityPub Actor from one location (internal) to another (external).
+	 *
+	 * This helps migrating local profiles to a new external profile:
+	 *
+	 * `Move::externally( 'https://example.com/?author=123', 'https://mastodon.example/users/foo' );`
 	 *
 	 * @param string $from The current account URL.
 	 * @param string $to   The new account URL.
@@ -55,6 +61,55 @@ class Move {
 
 		// Add to outbox.
 		return add_to_outbox( $actor, 'Move', $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+	}
+
+	/**
+	 * Internal Move.
+	 *
+	 * Move an ActivityPub Actor from one location (internal) to another (internal).
+	 *
+	 * This helps migrating abandoned profiles to `Move` to other profiles:
+	 *
+	 * `Move::internally( 'https://example.com/?author=123', 'https://example.com/?author=321' );`
+	 *
+	 * ... or to change Actor-IDs like:
+	 *
+	 * `Move::internally( 'https://example.com/author/foo', 'https://example.com/?author=123' );`
+	 *
+	 * @param string $from The current account URL.
+	 * @param string $to   The new account URL.
+	 *
+	 * @return int|bool|\WP_Error The ID of the outbox item or false or WP_Error on failure.
+	 */
+	public static function internally( $from, $to ) {
+		$user = Actors::get_by_various( $from );
+
+		if ( \is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		// Add the old account URL to alsoKnownAs.
+		if ( $user->get__id() > 0 ) {
+			self::update_user_also_known_as( $user->get__id(), $from );
+		} else {
+			self::update_blog_also_known_as( $from );
+		}
+
+		// check if `$from` is a URL or an ID
+		if ( \filter_var( $from, FILTER_VALIDATE_URL ) ) {
+			$actor = $from;
+		} else {
+			$actor = $user->get_id();
+		}
+
+		$activity = new Activity();
+		$activity->set_type( 'Move' );
+		$activity->set_actor( $actor );
+		$activity->set_origin( $actor );
+		$activity->set_object( $to );
+		$activity->set_target( $to );
+
+		return add_to_outbox( $activity, 'Inherit', $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
 	}
 
 	/**
