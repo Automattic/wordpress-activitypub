@@ -12,7 +12,7 @@ use Activitypub\Http;
 use Activitypub\Collection\Actors;
 use Activitypub\Sanitize;
 
-use function Activitypub\is_user_disabled;
+use function Activitypub\user_can_activitypub;
 
 /**
  * ActivityPub Health_Check Class.
@@ -37,7 +37,7 @@ class Health_Check {
 	 * @return array The filtered test array.
 	 */
 	public static function add_tests( $tests ) {
-		if ( ! is_user_disabled( get_current_user_id() ) ) {
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			$tests['direct']['activitypub_test_author_url'] = array(
 				'label' => \__( 'Author URL test', 'activitypub' ),
 				'test'  => array( self::class, 'test_author_url' ),

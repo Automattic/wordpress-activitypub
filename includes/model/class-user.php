@@ -13,9 +13,9 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Extra_Fields;
 
 use function Activitypub\is_blog_public;
-use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_attribution_domains;
+use function Activitypub\user_can_activitypub;
 
 /**
  * User class.
@@ -88,7 +88,7 @@ class User extends Actor {
 	 * @return WP_Error|User The User object or WP_Error if user not found.
 	 */
 	public static function from_wp_user( $user_id ) {
-		if ( is_user_disabled( $user_id ) ) {
+		if ( ! user_can_activitypub( $user_id ) ) {
 			return new WP_Error(
 				'activitypub_user_not_found',
 				\__( 'User not found', 'activitypub' ),
