@@ -483,7 +483,7 @@ class Post extends Base {
 		\add_filter( 'activitypub_reply_block', '__return_empty_string' );
 
 		// Remove Content from drafts.
-		if ( 'draft' === \get_post_status( $this->item ) ) {
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
 			return \__( '(This post is being modified)', 'activitypub' );
 		}
 
