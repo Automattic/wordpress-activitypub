@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 * Outbox items only get sent to followers when there are any.
+* Restrict modifications to settings if they are predefined as constants.
 
 ### Fixed
 

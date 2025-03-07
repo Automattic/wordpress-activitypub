@@ -133,6 +133,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Added: Documentation for migrating from a Mastodon instance to WordPress.
 * Changed: Outbox items only get sent to followers when there are any.
+* Changed: Restrict modifications to settings if they are predefined as constants.
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
 * Fixed: When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled.
 * Fixed: Properly re-added support for `Update` and `Delete` `Announce`ments.
