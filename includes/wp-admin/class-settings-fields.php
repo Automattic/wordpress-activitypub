@@ -207,11 +207,20 @@ class Settings_Fields {
 	 * Render actor mode field.
 	 */
 	public static function render_actor_mode_field() {
-		$value = get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		\Activitypub\Migration::set_actor_mode_based_on_constants();
+		$value         = get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		$disabled      = ACTIVITYPUB_SINGLE_USER_MODE || ACTIVITYPUB_DISABLE_USER || ACTIVITYPUB_DISABLE_BLOG_USER;
+		$disable_input = $disabled ? 'disabled="disabled"' : '';
+
+		if ( $disabled ) :
 		?>
+		<p class="description">
+			<strong><?php esc_html_e( '⚠ This setting is defined through server configuration by your blog&#8217;s administrator and cannot be changed. Please contact them if you need different settings.', 'activitypub' ); ?></strong>
+		</p>
+		<?php endif; ?>
 		<p>
 			<label>
-				<input type="radio" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_ACTOR_MODE ); ?>" <?php checked( ACTIVITYPUB_ACTOR_MODE, $value ); ?> />
+				<input type="radio" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_ACTOR_MODE ); ?>" <?php checked( ACTIVITYPUB_ACTOR_MODE, $value ); ?> <?php echo $disable_input; ?> />
 				<strong><?php esc_html_e( 'Author Profiles Only', 'activitypub' ); ?></strong>
 			</label>
 		</p>
@@ -233,7 +242,7 @@ class Settings_Fields {
 		</p>
 		<p>
 			<label>
-				<input type="radio" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_BLOG_MODE ); ?>" <?php checked( ACTIVITYPUB_BLOG_MODE, $value ); ?> />
+				<input type="radio" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_BLOG_MODE ); ?>" <?php checked( ACTIVITYPUB_BLOG_MODE, $value ); ?> <?php echo $disable_input; ?> />
 				<strong><?php esc_html_e( 'Blog profile only', 'activitypub' ); ?></strong>
 			</label>
 		</p>
@@ -242,7 +251,7 @@ class Settings_Fields {
 		</p>
 		<p>
 			<label>
-				<input type="radio" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_ACTOR_AND_BLOG_MODE ); ?>" <?php checked( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, $value ); ?> />
+				<input type="radio" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_ACTOR_AND_BLOG_MODE ); ?>" <?php checked( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, $value ); ?> <?php echo $disable_input; ?> />
 				<strong><?php esc_html_e( 'Both author and blog profiles', 'activitypub' ); ?></strong>
 			</label>
 		</p>

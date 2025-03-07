@@ -858,4 +858,21 @@ class Migration {
 			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 		}
 	}
+
+	/**
+	 * Set the actor mode based on constants.
+	 */
+	public static function set_actor_mode_based_on_constants() {
+		if ( ACTIVITYPUB_SINGLE_USER_MODE ) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		}
+
+		if ( ACTIVITYPUB_DISABLE_USER ) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		}
+
+		if ( ACTIVITYPUB_DISABLE_BLOG_USER ) {
+			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+		}
+	}
 }
