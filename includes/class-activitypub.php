@@ -376,15 +376,15 @@ class Activitypub {
 	 * @return string|false The actor mode or false if it should not be filtered.
 	 */
 	public static function pre_get_option( $pre ) {
-		if ( ACTIVITYPUB_SINGLE_USER_MODE ) {
+		if ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) && ACTIVITYPUB_SINGLE_USER_MODE ) {
 			return ACTIVITYPUB_BLOG_MODE;
 		}
 
-		if ( ACTIVITYPUB_DISABLE_USER ) {
+		if ( \defined( 'ACTIVITYPUB_DISABLE_USER' ) && ACTIVITYPUB_DISABLE_USER ) {
 			return ACTIVITYPUB_BLOG_MODE;
 		}
 
-		if ( ACTIVITYPUB_DISABLE_BLOG_USER ) {
+		if ( \defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) && ACTIVITYPUB_DISABLE_BLOG_USER ) {
 			return ACTIVITYPUB_ACTOR_MODE;
 		}
 

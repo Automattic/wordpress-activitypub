@@ -74,8 +74,3 @@
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC', 'quiet_public' );
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE', 'private' );
 \define( 'ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL', 'local' );
-
-// Actor mode constants.
-\defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) || \define( 'ACTIVITYPUB_SINGLE_USER_MODE', false );
-\defined( 'ACTIVITYPUB_DISABLE_USER' ) || \define( 'ACTIVITYPUB_DISABLE_USER', false );
-\defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) || \define( 'ACTIVITYPUB_DISABLE_BLOG_USER', false );
