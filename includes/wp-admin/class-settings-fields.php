@@ -207,7 +207,6 @@ class Settings_Fields {
 	 * Render actor mode field.
 	 */
 	public static function render_actor_mode_field() {
-		\Activitypub\Migration::set_actor_mode_based_on_constants();
 		$value         = get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 		$disabled      = ACTIVITYPUB_SINGLE_USER_MODE || ACTIVITYPUB_DISABLE_USER || ACTIVITYPUB_DISABLE_BLOG_USER;
 		$disable_input = $disabled ? 'disabled="disabled"' : '';
