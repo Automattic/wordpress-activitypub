@@ -209,8 +209,8 @@ class Settings_Fields {
 	public static function render_actor_mode_field() {
 		$value         = get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 		$disabled      = ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) && ACTIVITYPUB_SINGLE_USER_MODE ) ||
-		                 ( \defined( 'ACTIVITYPUB_DISABLE_USER' ) && ACTIVITYPUB_DISABLE_USER ) ||
-		                 ( \defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) && ACTIVITYPUB_DISABLE_BLOG_USER );
+						( \defined( 'ACTIVITYPUB_DISABLE_USER' ) && ACTIVITYPUB_DISABLE_USER ) ||
+						( \defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) && ACTIVITYPUB_DISABLE_BLOG_USER );
 		$disable_input = $disabled ? 'disabled' : '';
 
 		if ( $disabled ) :
