@@ -128,6 +128,8 @@ class Blog_Settings_Fields {
 			data-choose-text="<?php esc_attr_e( 'Choose a Header Image', 'activitypub' ); ?>"
 			data-update-text="<?php esc_attr_e( 'Change Header Icon', 'activitypub' ); ?>"
 			data-update="<?php esc_attr_e( 'Set as Header Image', 'activitypub' ); ?>"
+			data-width="1500"
+			data-height="500"
 			data-state="<?php echo esc_attr( (int) get_option( 'activitypub_header_image', 0 ) ); ?>">
 			<?php if ( (int) get_option( 'activitypub_header_image', 0 ) ) : ?>
 				<?php esc_html_e( 'Change Header Image', 'activitypub' ); ?>
