@@ -222,6 +222,7 @@ $user   = $transformer->get_actor_object();
 							<?php endif; ?>
 						<?php endforeach; ?>
 					</div>
+					<?php if ( $object->get_tag() ) : ?>
 					<div class="tags">
 						<?php foreach ( $object->get_tag() as $hashtag ) : ?>
 							<?php if ( 'Hashtag' === $hashtag['type'] ) : ?>
@@ -229,6 +230,7 @@ $user   = $transformer->get_actor_object();
 							<?php endif; ?>
 						<?php endforeach; ?>
 					</div>
+					<?php endif; ?>
 				</article>
 			</main>
 			<aside class="sidebar">
