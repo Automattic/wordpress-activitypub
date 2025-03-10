@@ -19,8 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Updates to certain user meta fields did not trigger an Update activity.
+* No more PHP warnings when a header image gets cropped.
+* Images with the correct aspect ratio no longer get sent through the crop step again.
 * When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled.
 * Properly re-added support for `Update` and `Delete` `Announce`ments.
+* Fix a fatal error in the Preview when a post contains no (hash)tags.
 
 ## [5.4.1] - 2025-03-04
 
