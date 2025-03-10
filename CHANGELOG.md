@@ -7,17 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Documentation for migrating from a Mastodon instance to WordPress.
+
+### Changed
+
+* Outbox items only get sent to followers when there are any.
+
 ### Fixed
 
 * Updates to certain user meta fields did not trigger an Update activity.
 * No more PHP warnings when a header image gets cropped.
 * Images with the correct aspect ratio no longer get sent through the crop step again.
+* When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled.
+* Properly re-added support for `Update` and `Delete` `Announce`ments.
+* Fix a fatal error in the Preview when a post contains no (hash)tags.
 
 ## [5.4.1] - 2025-03-04
 
 ### Fixed
 
 * Fixed transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
+* Show "full content" preview even if post is in still in draft mode.
 
 ## [5.4.0] - 2025-03-03
 

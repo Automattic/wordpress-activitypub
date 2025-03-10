@@ -12,12 +12,14 @@ use WP_Comment;
 use WP_Error;
 
 use Activitypub\Comment;
+use Activitypub\Model\Blog;
 use Activitypub\Transformer\Post as PostTransformer;
 use Activitypub\Transformer\Comment as CommentTransformer;
 
 use function Activitypub\is_post_disabled;
 use function Activitypub\is_local_comment;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_user_type_disabled;
 
 /**
  * Class containing code for getting replies Collections and CollectionPages of posts and comments.
@@ -171,10 +173,19 @@ class Replies {
 		$post_uri = ( new PostTransformer( $post ) )->to_id();
 		\array_unshift( $ids, $post_uri );
 
+		$author = Actors::get_by_id( $post->post_author );
+		if ( is_wp_error( $author ) ) {
+			if ( is_user_type_disabled( 'blog' ) ) {
+				return false;
+			}
+
+			$author = new Blog();
+		}
+
 		return array(
 			'type'         => 'OrderedCollection',
 			'url'          => \get_permalink( $post_id ),
-			'attributedTo' => Actors::get_by_id( $post->post_author )->get_id(),
+			'attributedTo' => $author->get_id(),
 			'totalItems'   => count( $ids ),
 			'items'        => $ids,
 		);
