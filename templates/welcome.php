@@ -107,6 +107,7 @@
 	</div>
 	<?php endif; ?>
 
+	<?php if ( ACTIVITYPUB_SHOW_TROUBLESHOOTING ) : ?>
 	<div class="box">
 		<h3><?php \esc_html_e( 'Troubleshooting', 'activitypub' ); ?></h3>
 		<p>
@@ -125,7 +126,7 @@
 			?>
 		</p>
 	</div>
-
+	<?php endif; ?>
 	<?php if ( ACTIVITYPUB_SHOW_PLUGIN_RECOMMENDATIONS ) : ?>
 	<div class="box plugin-recommendations">
 		<h3><?php \esc_html_e( 'Recommended Plugins', 'activitypub' ); ?></h3>
