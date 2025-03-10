@@ -137,7 +137,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled.
 * Fixed: Properly re-added support for `Update` and `Delete` `Announce`ments.
 * Fixed: Show "full content" preview even if post is in still in draft mode.
-* Changed: Improved title case for Nodeinfo settings
+* Changed: Improved title case for NodeInfo settings
 
 = 5.4.1 =
 
