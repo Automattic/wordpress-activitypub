@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled.
 * Properly re-added support for `Update` and `Delete` `Announce`ments.
 * Fix a fatal error in the Preview when a post contains no (hash)tags.
-* PHP warnings when trying to process empty tags.
+* PHP warnings when trying to process empty tags or image blocks without ID attributes.
 
 ## [5.4.1] - 2025-03-04
 

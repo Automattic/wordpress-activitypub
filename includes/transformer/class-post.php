@@ -735,7 +735,7 @@ class Post extends Base {
 
 						$found = false;
 						foreach ( $media['image'] as $i => $image ) {
-							if ( $image['id'] === $block['attrs']['id'] ) {
+							if ( isset( $image['id'] ) && $image['id'] === $block['attrs']['id'] ) {
 								$media['image'][ $i ]['alt'] = $alt;
 								$found                       = true;
 								break;
