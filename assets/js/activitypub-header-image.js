@@ -128,14 +128,15 @@
 					title: $el.data( 'choose-text' ),
 					library: wp.media.query( mediaQuery ),
 					date: false,
-					suggestedWidth: $el.data( 'size' ),
-					suggestedHeight: $el.data( 'size' ),
+					suggestedWidth: $el.data( 'width' ),
+					suggestedHeight: $el.data( 'height' ),
 				} ),
 				new ImageCropperNoCustomizer( {
 					control: {
+						id: 'activitypub-header-image',
 						params: {
-							width: $el.data( 'size' ),
-							height: $el.data( 'size' ),
+							width: $el.data( 'width' ),
+							height: $el.data( 'height' ),
 						},
 					},
 					imgSelectOptions: calculateImageSelectOptions,
@@ -155,17 +156,26 @@
 		// When an image is selected, run a callback.
 		frame.on( 'select', function () {
 			// Grab the selected attachment.
-			var attachment = frame.state().get( 'selection' ).first();
+			var attachment = frame.state().get( 'selection' ).first(),
+				targetRatio = $el.data( 'width' ) / $el.data( 'height' ),
+				currentRatio = attachment.attributes.width / attachment.attributes.height,
+				alreadyCropped = false;
 
-			if (
-				attachment.attributes.height === $el.data( 'size' ) &&
-				$el.data( 'size' ) === attachment.attributes.width
-			) {
+			// Check if the image already has the correct aspect ratio (with a small tolerance).
+			if ( Math.abs( currentRatio - targetRatio ) < 0.01 ) {
+				// Check if this is the same image that was already selected.
+				if ( attachment.id !== parseInt( $hiddenDataField.val(), 10 ) ) {
+					// This is a new image with the correct aspect ratio.
+					$hiddenDataField.val( attachment.id );
+				}
+
+				alreadyCropped = true;
+			}
+
+			if ( alreadyCropped ) {
+				// Skip cropping for already cropped images.
 				switchToUpdate( attachment.attributes );
 				frame.close();
-
-				// Set the value of the hidden input to the attachment id.
-				$hiddenDataField.val( attachment.id );
 			} else {
 				frame.setState( 'cropper' );
 			}
