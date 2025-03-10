@@ -413,12 +413,16 @@ class Post extends Base {
 		$post_tags = \get_the_tags( $this->item->ID );
 		if ( $post_tags ) {
 			foreach ( $post_tags as $post_tag ) {
-				$tag    = array(
+				// Tag can be empty.
+				if ( ! $post_tag ) {
+					continue;
+				}
+
+				$tags[] = array(
 					'type' => 'Hashtag',
 					'href' => \esc_url( \get_tag_link( $post_tag->term_id ) ),
 					'name' => esc_hashtag( $post_tag->name ),
 				);
-				$tags[] = $tag;
 			}
 		}
 

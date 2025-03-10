@@ -140,6 +140,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Properly re-added support for `Update` and `Delete` `Announce`ments.
 * Fixed: Show "full content" preview even if post is in still in draft mode.
 * Fixed: Fix a fatal error in the Preview when a post contains no (hash)tags.
+* Fixed: PHP warnings when trying to process empty tags.
 
 = 5.4.1 =
 
