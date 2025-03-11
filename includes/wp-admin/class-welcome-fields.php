@@ -8,7 +8,6 @@
 namespace Activitypub\WP_Admin;
 
 use Activitypub\Model\Blog;
-use Activitypub\Model\User;
 use Activitypub\Collection\Actors;
 
 use function Activitypub\get_reply_intent_js;
