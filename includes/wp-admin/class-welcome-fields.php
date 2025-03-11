@@ -157,7 +157,7 @@ class Welcome_Fields {
 	 * Render author profile section.
 	 */
 	public static function render_author_profile_section() {
-		$user = Actors::get_by_id( wp_get_current_user()->ID );
+		$user = Actors::get_by_id( wp_get_current_user_id() );
 		?>
 		<p>
 			<?php \esc_html_e( 'People can follow you by using your author name:', 'activitypub' ); ?>
