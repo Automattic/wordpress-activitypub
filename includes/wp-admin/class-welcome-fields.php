@@ -44,23 +44,23 @@ class Welcome_Fields {
 			'activitypub_welcome'
 		);
 
-		if ( ! is_user_disabled( Actors::BLOG_USER_ID ) ) :
+		if ( ! is_user_disabled( Actors::BLOG_USER_ID ) ) {
 			add_settings_section(
 				'activitypub_blog_profile',
 				\__( 'Blog profile', 'activitypub' ),
 				array( self::class, 'render_blog_profile_section' ),
 				'activitypub_welcome'
 			);
-		endif;
+		}
 
-		if ( ! is_user_disabled( get_current_user_id() ) ) :
+		if ( ! is_user_disabled( get_current_user_id() ) ) {
 			add_settings_section(
 				'activitypub_author_profile',
 				\__( 'Author profile', 'activitypub' ),
 				array( self::class, 'render_author_profile_section' ),
 				'activitypub_welcome'
 			);
-		endif;
+		}
 
 		add_settings_section(
 			'activitypub_troubleshooting',
@@ -69,14 +69,14 @@ class Welcome_Fields {
 			'activitypub_welcome'
 		);
 
-		if ( ACTIVITYPUB_SHOW_PLUGIN_RECOMMENDATIONS ) :
+		if ( ACTIVITYPUB_SHOW_PLUGIN_RECOMMENDATIONS ) {
 			add_settings_section(
 				'activitypub_recommended_plugins',
 				\__( 'Recommended Plugins', 'activitypub' ),
 				array( self::class, 'render_recommended_plugins_section' ),
 				'activitypub_welcome'
 			);
-		endif;
+		}
 	}
 
 	/**
