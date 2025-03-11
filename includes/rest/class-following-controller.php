@@ -20,7 +20,7 @@ use function Activitypub\get_masked_wp_version;
  * @see https://www.w3.org/TR/activitypub/#following
  */
 class Following_Controller extends Actors_Controller {
-	use Collection_Links;
+	use Collection;
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
@@ -107,7 +107,7 @@ class Following_Controller extends Actors_Controller {
 		$response['totalItems']   = \is_countable( $items ) ? \count( $items ) : 0;
 		$response['orderedItems'] = $items;
 
-		$response = $this->add_collection_links( $response, $request );
+		$response = $this->prepare_collection_response( $response, $request );
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}

@@ -1,6 +1,6 @@
 <?php
 /**
- * Collection Links Trait file.
+ * Collection Trait file.
  *
  * @package Activitypub
  */
@@ -8,22 +8,24 @@
 namespace Activitypub\Rest;
 
 /**
- * Collection Links Trait.
+ * Collection Trait.
  *
- * Provides methods for adding navigation links to collection responses.
+ * Provides methods for handling ActivityPub Collections, including pagination
+ * and type transitions between Collection and CollectionPage.
  */
-trait Collection_Links {
+trait Collection {
 	/**
-	 * Adds navigation links to a collection response.
+	 * Prepares a collection response by adding navigation links and handling pagination.
 	 *
 	 * Adds first, last, next, and previous page links to a collection response
-	 * based on the current page and total items.
+	 * based on the current page and total items. Also handles the transformation
+	 * between Collection and CollectionPage types.
 	 *
 	 * @param array            $response The collection response array.
 	 * @param \WP_REST_Request $request  The request object.
 	 * @return array|\WP_Error The response array with navigation links or WP_Error on invalid page.
 	 */
-	protected function add_collection_links( $response, $request ) {
+	protected function prepare_collection_response( $response, $request ) {
 		$page      = $request->get_param( 'page' );
 		$per_page  = $request->get_param( 'per_page' );
 		$max_pages = \ceil( $response['totalItems'] / $per_page );

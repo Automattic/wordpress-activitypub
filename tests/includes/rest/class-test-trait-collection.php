@@ -1,21 +1,21 @@
 <?php
 /**
- * Test Collection Links Trait.
+ * Test Collection Trait.
  *
  * @package ActivityPub
  */
 
 namespace Activitypub\Tests\Rest;
 
-use Activitypub\Rest\Collection_Links;
+use Activitypub\Rest\Collection;
 
 /**
- * Test Collection Links Trait.
+ * Test Collection Trait.
  *
  * @group rest
- * @coversDefaultClass \Activitypub\Rest\Collection_Links
+ * @coversDefaultClass Collection
  */
-class Test_Trait_Collection_Links extends \WP_UnitTestCase {
+class Test_Trait_Collection extends \WP_UnitTestCase {
 
 	/**
 	 * Test class instance.
@@ -27,21 +27,21 @@ class Test_Trait_Collection_Links extends \WP_UnitTestCase {
 	/**
 	 * Set up.
 	 */
-	public function set_up() {
-		parent::set_up();
+	public function setUp(): void {
+		parent::setUp();
 
 		// Create a test class that uses the trait.
 		$this->instance = new class() {
-			use Collection_Links;
+			use Collection;
 		};
 	}
 
 	/**
 	 * Test adding collection links when there's only one page.
 	 *
-	 * @covers ::add_collection_links
+	 * @covers ::prepare_collection_response
 	 */
-	public function add_collection_links_single_page() {
+	public function prepare_collection_response_single_page() {
 		$request = new \WP_REST_Request();
 		$request->set_param( 'per_page', 10 );
 
@@ -52,7 +52,7 @@ class Test_Trait_Collection_Links extends \WP_UnitTestCase {
 			'items'      => array( 'item1', 'item2', 'item3', 'item4', 'item5' ),
 		);
 
-		$result = $this->instance->add_collection_links( $response, $request );
+		$result = $this->instance->prepare_collection_response( $response, $request );
 
 		$this->assertEquals( $response, $result );
 		$this->assertArrayNotHasKey( 'first', $result );
@@ -64,9 +64,9 @@ class Test_Trait_Collection_Links extends \WP_UnitTestCase {
 	/**
 	 * Test adding collection links for a Collection (not a page).
 	 *
-	 * @covers ::add_collection_links
+	 * @covers ::prepare_collection_response
 	 */
-	public function add_collection_links_collection() {
+	public function prepare_collection_response_collection() {
 		$request = new \WP_REST_Request();
 		$request->set_param( 'per_page', 10 );
 
@@ -77,7 +77,7 @@ class Test_Trait_Collection_Links extends \WP_UnitTestCase {
 			'items'      => array( 'item1', 'item2', 'item3' ),
 		);
 
-		$result = $this->instance->add_collection_links( $response, $request );
+		$result = $this->instance->prepare_collection_response( $response, $request );
 
 		$this->assertEquals( 'Collection', $result['type'] );
 		$this->assertEquals( 'https://example.org/collection?page=1', $result['first'] );
@@ -89,9 +89,9 @@ class Test_Trait_Collection_Links extends \WP_UnitTestCase {
 	/**
 	 * Test adding collection links for a CollectionPage.
 	 *
-	 * @covers ::add_collection_links
+	 * @covers ::prepare_collection_response
 	 */
-	public function add_collection_links_collection_page() {
+	public function prepare_collection_response_collection_page() {
 		$request = new \WP_REST_Request();
 		$request->set_param( 'page', 2 );
 		$request->set_param( 'per_page', 10 );
@@ -103,7 +103,7 @@ class Test_Trait_Collection_Links extends \WP_UnitTestCase {
 			'items'      => array( 'item11', 'item12', 'item13' ),
 		);
 
-		$result = $this->instance->add_collection_links( $response, $request );
+		$result = $this->instance->prepare_collection_response( $response, $request );
 
 		$this->assertEquals( 'CollectionPage', $result['type'] );
 		$this->assertEquals( 'https://example.org/collection', $result['partOf'] );
@@ -117,9 +117,9 @@ class Test_Trait_Collection_Links extends \WP_UnitTestCase {
 	/**
 	 * Test adding collection links for the first page.
 	 *
-	 * @covers ::add_collection_links
+	 * @covers ::prepare_collection_response
 	 */
-	public function add_collection_links_first_page() {
+	public function prepare_collection_response_first_page() {
 		$request = new \WP_REST_Request();
 		$request->set_param( 'page', 1 );
 		$request->set_param( 'per_page', 10 );
@@ -131,7 +131,7 @@ class Test_Trait_Collection_Links extends \WP_UnitTestCase {
 			'items'      => array( 'item1', 'item2', 'item3' ),
 		);
 
-		$result = $this->instance->add_collection_links( $response, $request );
+		$result = $this->instance->prepare_collection_response( $response, $request );
 
 		$this->assertEquals( 'OrderedCollectionPage', $result['type'] );
 		$this->assertEquals( 'https://example.org/collection?page=1', $result['id'] );
@@ -142,9 +142,9 @@ class Test_Trait_Collection_Links extends \WP_UnitTestCase {
 	/**
 	 * Test adding collection links for the last page.
 	 *
-	 * @covers ::add_collection_links
+	 * @covers ::prepare_collection_response
 	 */
-	public function add_collection_links_last_page() {
+	public function prepare_collection_response_last_page() {
 		$request = new \WP_REST_Request();
 		$request->set_param( 'page', 3 );
 		$request->set_param( 'per_page', 10 );
@@ -156,7 +156,7 @@ class Test_Trait_Collection_Links extends \WP_UnitTestCase {
 			'items'      => array( 'item21', 'item22', 'item23', 'item24', 'item25' ),
 		);
 
-		$result = $this->instance->add_collection_links( $response, $request );
+		$result = $this->instance->prepare_collection_response( $response, $request );
 
 		$this->assertEquals( 'CollectionPage', $result['type'] );
 		$this->assertEquals( 'https://example.org/collection?page=3', $result['id'] );
@@ -167,9 +167,9 @@ class Test_Trait_Collection_Links extends \WP_UnitTestCase {
 	/**
 	 * Test invalid page number.
 	 *
-	 * @covers ::add_collection_links
+	 * @covers ::prepare_collection_response
 	 */
-	public function add_collection_links_invalid_page() {
+	public function prepare_collection_response_invalid_page() {
 		$request = new \WP_REST_Request();
 		$request->set_param( 'page', 5 );
 		$request->set_param( 'per_page', 10 );
@@ -181,7 +181,7 @@ class Test_Trait_Collection_Links extends \WP_UnitTestCase {
 			'items'      => array(),
 		);
 
-		$result = $this->instance->add_collection_links( $response, $request );
+		$result = $this->instance->prepare_collection_response( $response, $request );
 
 		$this->assertInstanceOf( \WP_Error::class, $result );
 		$this->assertEquals( 'rest_post_invalid_page_number', $result->get_error_code() );

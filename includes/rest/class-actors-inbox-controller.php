@@ -22,7 +22,7 @@ use function Activitypub\get_masked_wp_version;
  * @see https://www.w3.org/TR/activitypub/#inbox
  */
 class Actors_Inbox_Controller extends Actors_Controller {
-	use Collection_Links;
+	use Collection;
 
 	/**
 	 * Register routes.
@@ -138,7 +138,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		 */
 		$response = \apply_filters( 'activitypub_rest_inbox_array', $response );
 
-		$response = $this->add_collection_links( $response, $request );
+		$response = $this->prepare_collection_response( $response, $request );
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}

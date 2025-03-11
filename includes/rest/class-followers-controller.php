@@ -21,7 +21,7 @@ use function Activitypub\get_masked_wp_version;
  * @see https://www.w3.org/TR/activitypub/#followers
  */
 class Followers_Controller extends Actors_Controller {
-	use Collection_Links;
+	use Collection;
 
 	/**
 	 * Register routes.
@@ -127,7 +127,7 @@ class Followers_Controller extends Actors_Controller {
 			),
 		);
 
-		$response = $this->add_collection_links( $response, $request );
+		$response = $this->prepare_collection_response( $response, $request );
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}

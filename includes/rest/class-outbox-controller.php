@@ -20,7 +20,7 @@ use function ActivityPub\get_rest_url_by_path;
  * @see https://www.w3.org/TR/activitypub/#outbox
  */
 class Outbox_Controller extends \WP_REST_Controller {
-	use Collection_Links;
+	use Collection;
 
 	/**
 	 * The namespace of this controller's route.
@@ -179,7 +179,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			$response['orderedItems'][] = $this->prepare_item_for_response( $outbox_item, $request );
 		}
 
-		$response = $this->add_collection_links( $response, $request );
+		$response = $this->prepare_collection_response( $response, $request );
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
