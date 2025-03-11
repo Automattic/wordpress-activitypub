@@ -133,6 +133,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Added: Documentation for migrating from a Mastodon instance to WordPress.
 * Changed: Outbox items only get sent to followers when there are any.
+* Changed: The Welcome page now uses WordPress's Settings API and the classic design of the WP Admin.
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
 * Fixed: No more PHP warnings when a header image gets cropped.
 * Fixed: Images with the correct aspect ratio no longer get sent through the crop step again.

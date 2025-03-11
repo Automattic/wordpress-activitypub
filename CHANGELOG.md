@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 * Outbox items only get sent to followers when there are any.
+* The Welcome page now uses WordPress's Settings API and the classic design of the WP Admin.
 * Improved title case for NodeInfo settings.
 
 ### Fixed
