@@ -30,14 +30,14 @@ class Welcome_Fields {
 	 */
 	public static function register_welcome_fields() {
 		// Add settings sections.
-		add_settings_section(
+		\add_settings_section(
 			'activitypub_intro',
 			\__( 'Welcome', 'activitypub' ),
 			array( self::class, 'render_welcome_intro_section' ),
 			'activitypub_welcome'
 		);
 
-		add_settings_section(
+		\add_settings_section(
 			'activitypub_bookmarklet',
 			\__( 'Bookmarklet', 'activitypub' ),
 			array( self::class, 'render_bookmarklet_section' ),
@@ -45,7 +45,7 @@ class Welcome_Fields {
 		);
 
 		if ( ! is_user_disabled( Actors::BLOG_USER_ID ) ) {
-			add_settings_section(
+			\add_settings_section(
 				'activitypub_blog_profile',
 				\__( 'Blog profile', 'activitypub' ),
 				array( self::class, 'render_blog_profile_section' ),
@@ -54,7 +54,7 @@ class Welcome_Fields {
 		}
 
 		if ( ! is_user_disabled( get_current_user_id() ) ) {
-			add_settings_section(
+			\add_settings_section(
 				'activitypub_author_profile',
 				\__( 'Author profile', 'activitypub' ),
 				array( self::class, 'render_author_profile_section' ),
@@ -62,7 +62,7 @@ class Welcome_Fields {
 			);
 		}
 
-		add_settings_section(
+		\add_settings_section(
 			'activitypub_troubleshooting',
 			\__( 'Troubleshooting', 'activitypub' ),
 			array( self::class, 'render_troubleshooting_section' ),
@@ -70,7 +70,7 @@ class Welcome_Fields {
 		);
 
 		if ( ACTIVITYPUB_SHOW_PLUGIN_RECOMMENDATIONS ) {
-			add_settings_section(
+			\add_settings_section(
 				'activitypub_recommended_plugins',
 				\__( 'Recommended Plugins', 'activitypub' ),
 				array( self::class, 'render_recommended_plugins_section' ),
