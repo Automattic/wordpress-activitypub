@@ -173,7 +173,7 @@
 		<?php if ( ! \function_exists( 'nodeinfo_init' ) ) : ?>
 		<h4 class="activitypub-settings-accordion-heading">
 			<button aria-expanded="false" class="activitypub-settings-accordion-trigger" aria-controls="activitypub-settings-accordion-block-activitypub-nodeinfo-plugin" type="button">
-				<span class="title"><?php \esc_html_e( 'Provide Enhanced Information about Your Blog', 'activitypub' ); ?></span>
+				<span class="title"><?php \esc_html_e( 'Provide Enhanced Information About Your Blog', 'activitypub' ); ?></span>
 				<span class="icon"></span>
 			</button>
 		</h4>
