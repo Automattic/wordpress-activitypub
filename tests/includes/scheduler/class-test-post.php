@@ -63,6 +63,30 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that publishing a post schedules a Create activity.
+	 *
+	 * @ticket https://github.com/Automattic/wordpress-activitypub/pull/1408
+	 * @covers ::schedule_post_activity
+	 */
+	public function test_activity_type_on_publish() {
+		$post_id       = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'draft',
+			)
+		);
+		$activitpub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		\wp_publish_post( $post_id );
+
+		$post = $this->get_latest_outbox_item( $activitpub_id );
+		$type = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
+		$this->assertSame( 'Create', $type );
+
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
 	 * Test post activity scheduling during bulk edits.
 	 *
 	 * @covers ::schedule_post_activity

@@ -110,6 +110,11 @@ class Outbox {
 	 * @return void
 	 */
 	private static function invalidate_existing_items( $object_id, $activity_type, $current_id ) {
+		// Do not invalidate items for Announce activities.
+		if ( 'Announce' === $activity_type ) {
+			return;
+		}
+
 		$meta_query = array(
 			array(
 				'key'   => '_activitypub_object_id',
