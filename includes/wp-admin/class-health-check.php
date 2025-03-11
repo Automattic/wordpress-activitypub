@@ -355,12 +355,12 @@ class Health_Check {
 		$info['activitypub'] = array(
 			'label'  => __( 'ActivityPub', 'activitypub' ),
 			'fields' => array(
-				'webfinger'      => array(
+				'webfinger'  => array(
 					'label'   => __( 'WebFinger Resource', 'activitypub' ),
 					'value'   => Webfinger::get_user_resource( wp_get_current_user()->ID ),
 					'private' => false,
 				),
-				'author_url'     => array(
+				'author_url' => array(
 					'label'   => __( 'Author URL', 'activitypub' ),
 					'value'   => get_author_posts_url( wp_get_current_user()->ID ),
 					'private' => false,
@@ -374,21 +374,17 @@ class Health_Check {
 			return $info;
 		}
 
-		$output = array();
-
 		foreach ( $consts['user'] as $key => $value ) {
 			if ( ! str_starts_with( $key, 'ACTIVITYPUB_' ) ) {
 				continue;
 			}
 
-			$info['activitypub']['fields'][$key] = array(
+			$info['activitypub']['fields'][ $key ] = array(
 				'label'   => esc_attr( $key ),
 				'value'   => Sanitize::constant_value( $value ),
 				'private' => false,
 			);
 		}
-
-
 
 		return $info;
 	}
