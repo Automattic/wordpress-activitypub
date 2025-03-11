@@ -180,7 +180,7 @@ class Welcome_Fields {
 		</table>
 		<p>
 			<?php \esc_html_e( 'Authors who can not access this settings page will find their username on the "Edit Profile" page.', 'activitypub' ); ?>
-			<a href="<?php echo \esc_url_raw( \admin_url( '/profile.php#activitypub' ) ); ?>">
+			<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>">
 			<?php \esc_html_e( 'Customize username on "Edit Profile" page.', 'activitypub' ); ?>
 			</a>
 		</p>
