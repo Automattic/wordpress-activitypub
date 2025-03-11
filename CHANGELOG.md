@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Properly re-added support for `Update` and `Delete` `Announce`ments.
 * Fix a fatal error in the Preview when a post contains no (hash)tags.
 * PHP warnings when trying to process empty tags or image blocks without ID attributes.
+* No trailing slash redirect for actor URLs
 
 ## [5.4.1] - 2025-03-04
 
