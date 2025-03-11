@@ -132,6 +132,7 @@ For reasons of data protection, it is not possible to see the followers of other
 = Unreleased =
 
 * Added: Documentation for migrating from a Mastodon instance to WordPress.
+* Added: Added Constants to the Site-Health debug informations.
 * Changed: Outbox items only get sent to followers when there are any.
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
 * Fixed: No more PHP warnings when a header image gets cropped.
