@@ -103,14 +103,14 @@ class Welcome_Fields {
 			printf(
 				'<a href="%s" class="button">%s</a>',
 				esc_attr( $bookmarklet_js ), // Need to escape quotes for the bookmarklet.
-				sprintf( $reply_from_template, \wp_parse_url( \home_url(), PHP_URL_HOST ) )
+				sprintf( esc_html( $reply_from_template ), esc_html( \wp_parse_url( \home_url(), PHP_URL_HOST ) ) )
 			);
 			?>
 		</p>
 		<p>
 			<?php
 			/* translators: %s is where the button HTML will be rendered. */
-			\_e(
+			\esc_html_e(
 				'Save this bookmarklet to reply to posts on other sites from your own blog! When visiting a post on another site, click the bookmarklet to start a reply.',
 				'activitypub'
 			);
