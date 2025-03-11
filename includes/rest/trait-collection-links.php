@@ -28,6 +28,11 @@ trait Collection_Links {
 		$per_page  = $request->get_param( 'per_page' );
 		$max_pages = \ceil( $response['totalItems'] / $per_page );
 
+		// No need to add links if there's only one page.
+		if ( 1 >= $max_pages ) {
+			return $response;
+		}
+
 		if ( $max_pages && $page > $max_pages ) {
 			return new \WP_Error(
 				'rest_post_invalid_page_number',
@@ -36,15 +41,28 @@ trait Collection_Links {
 			);
 		}
 
-		$response['first'] = \add_query_arg( 'page', 1, $response['partOf'] );
-		$response['last']  = \add_query_arg( 'page', \max( $max_pages, 1 ), $response['partOf'] );
+		$response['first'] = \add_query_arg( 'page', 1, $response['id'] );
+		$response['last']  = \add_query_arg( 'page', $max_pages, $response['id'] );
 
-		if ( $max_pages > $page ) {
-			$response['next'] = \add_query_arg( 'page', $page + 1, $response['partOf'] );
+		// If this is a Collection request, return early.
+		if ( null === $page ) {
+			// No items in Collections, only links to CollectionPages.
+			unset( $response['items'], $response['orderedItems'] );
+
+			return $response;
 		}
 
-		if ( $response['totalItems'] > 0 && $page > 1 ) {
-			$response['prev'] = \add_query_arg( 'page', $page - 1, $response['partOf'] );
+		// Still here, so this is a Page request. Append the type.
+		$response['type']  .= 'Page';
+		$response['partOf'] = $response['id'];
+		$response['id']    .= '?page=' . $page;
+
+		if ( $max_pages > $page ) {
+			$response['next'] = \add_query_arg( 'page', $page + 1, $response['id'] );
+		}
+
+		if ( $page > 1 ) {
+			$response['prev'] = \add_query_arg( 'page', $page - 1, $response['id'] );
 		}
 
 		return $response;

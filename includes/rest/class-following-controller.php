@@ -53,8 +53,7 @@ class Following_Controller extends Actors_Controller {
 						'page'     => array(
 							'description' => 'Current page of the collection.',
 							'type'        => 'integer',
-							'default'     => 1,
-							'minimum'     => 1,
+							// No default so we differentiate between Collection and CollectionPage requests.
 						),
 						'per_page' => array(
 							'description' => 'Maximum number of items to be returned in result set.',
@@ -94,8 +93,7 @@ class Following_Controller extends Actors_Controller {
 			'id'        => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user->get__id() ) ),
 			'generator' => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'     => $user->get_id(),
-			'type'      => 'OrderedCollectionPage',
-			'partOf'    => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user->get__id() ) ),
+			'type'      => 'OrderedCollection',
 		);
 
 		/**

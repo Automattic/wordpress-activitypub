@@ -47,8 +47,7 @@ class Followers_Controller extends Actors_Controller {
 						'page'     => array(
 							'description' => 'Current page of the collection.',
 							'type'        => 'integer',
-							'default'     => 1,
-							'minimum'     => 1,
+							// No default so we differentiate between Collection and CollectionPage requests.
 						),
 						'per_page' => array(
 							'description' => 'Maximum number of items to be returned in result set.',
@@ -96,7 +95,7 @@ class Followers_Controller extends Actors_Controller {
 
 		$order    = $request->get_param( 'order' );
 		$per_page = $request->get_param( 'per_page' );
-		$page     = $request->get_param( 'page' );
+		$page     = $request->get_param( 'page' ) ?? 1;
 		$context  = $request->get_param( 'context' );
 
 		$data = Follower_Collection::get_followers_with_count( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
@@ -115,9 +114,8 @@ class Followers_Controller extends Actors_Controller {
 			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/followers', $user->get__id() ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),
-			'type'         => 'OrderedCollectionPage',
+			'type'         => 'OrderedCollection',
 			'totalItems'   => $data['total'],
-			'partOf'       => get_rest_url_by_path( \sprintf( 'actors/%d/followers', $user->get__id() ) ),
 			'orderedItems' => array_map(
 				function ( $item ) use ( $context ) {
 					if ( 'full' === $context ) {

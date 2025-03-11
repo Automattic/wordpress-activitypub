@@ -59,13 +59,12 @@ class Outbox_Controller extends \WP_REST_Controller {
 						'page'     => array(
 							'description' => 'Current page of the collection.',
 							'type'        => 'integer',
-							'default'     => 1,
-							'minimum'     => 1,
+							// No default so we differentiate between Collection and CollectionPage requests.
 						),
 						'per_page' => array(
 							'description' => 'Maximum number of items to be returned in result set.',
 							'type'        => 'integer',
-							'default'     => 10,
+							'default'     => 20,
 							'minimum'     => 1,
 							'maximum'     => 100,
 						),
@@ -99,7 +98,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 */
 	public function get_items( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$page    = $request->get_param( 'page' );
+		$page    = $request->get_param( 'page' ) ?? 1;
 		$user    = Actors::get_by_various( $user_id );
 
 		/**
@@ -170,8 +169,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),
-			'type'         => 'OrderedCollectionPage',
-			'partOf'       => get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) ),
+			'type'         => 'OrderedCollection',
 			'totalItems'   => $outbox_query->found_posts,
 			'orderedItems' => array(),
 		);
