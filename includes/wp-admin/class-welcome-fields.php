@@ -11,6 +11,7 @@ use Activitypub\Model\Blog;
 use Activitypub\Model\User;
 use Activitypub\Collection\Actors;
 
+use function Activitypub\get_reply_intent_js;
 use function Activitypub\is_user_disabled;
 
 /**
@@ -94,7 +95,7 @@ class Welcome_Fields {
 		?>
 		<p>
 			<?php
-			$bookmarklet_js = \Activitypub\get_reply_intent_js();
+			$bookmarklet_js = get_reply_intent_js();
 
 			/* translators: %s is the domain of this site */
 			$reply_from_template = __( 'Reply from %s', 'activitypub' );
