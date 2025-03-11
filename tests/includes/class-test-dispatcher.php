@@ -241,9 +241,9 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		\delete_option( 'activitypub_relays' );
 		\wp_delete_post( $post_id );
 		\wp_delete_post( $outbox_item->ID );
-  }
-  
-  /**
+	}
+
+	/**
 	 * Test whether an activity should be sent to followers.
 	 *
 	 * @covers ::should_send_to_followers
