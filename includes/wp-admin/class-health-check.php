@@ -10,6 +10,8 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Webfinger;
 use WP_Error;
 use Activitypub\Collection\Actors;
+use Activitypub\Sanitize;
+
 use function Activitypub\is_user_disabled;
 
 /**
@@ -356,20 +358,37 @@ class Health_Check {
 				'webfinger'      => array(
 					'label'   => __( 'WebFinger Resource', 'activitypub' ),
 					'value'   => Webfinger::get_user_resource( wp_get_current_user()->ID ),
-					'private' => true,
+					'private' => false,
 				),
 				'author_url'     => array(
 					'label'   => __( 'Author URL', 'activitypub' ),
 					'value'   => get_author_posts_url( wp_get_current_user()->ID ),
-					'private' => true,
-				),
-				'plugin_version' => array(
-					'label'   => __( 'Plugin Version', 'activitypub' ),
-					'value'   => ACTIVITYPUB_PLUGIN_VERSION,
-					'private' => true,
+					'private' => false,
 				),
 			),
 		);
+
+		$consts = get_defined_constants( true );
+
+		if ( ! isset( $consts['user'] ) ) {
+			return $info;
+		}
+
+		$output = array();
+
+		foreach ( $consts['user'] as $key => $value ) {
+			if ( ! str_starts_with( $key, 'ACTIVITYPUB_' ) ) {
+				continue;
+			}
+
+			$info['activitypub']['fields'][$key] = array(
+				'label'   => esc_attr( $key ),
+				'value'   => Sanitize::constant_value( $value ),
+				'private' => false,
+			);
+		}
+
+
 
 		return $info;
 	}

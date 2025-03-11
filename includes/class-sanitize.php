@@ -95,4 +95,27 @@ class Sanitize {
 
 		return $sanitized;
 	}
+
+	/**
+	 * Get the sanitized value of a constant.
+	 *
+	 * @param mixed $value The constant value.
+	 *
+	 * @return string The sanitized value.
+	 */
+	public static function constant_value( $value ) {
+		if ( is_bool( $value ) ) {
+			return $value ? 'true' : 'false';
+		}
+
+		if ( is_string( $value ) ) {
+			return esc_attr( $value );
+		}
+
+		if ( is_array( $value ) ) {
+			return print_r( $value, true );
+		}
+
+		return $value;
+	}
 }
