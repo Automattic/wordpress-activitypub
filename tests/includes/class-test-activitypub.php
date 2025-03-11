@@ -229,7 +229,7 @@ class Test_Activitypub extends \WP_UnitTestCase {
 		// Test case 1: When actor query var is set, it should return the requested URL.
 		set_query_var( 'actor', 'testuser' );
 		$requested_url = 'https://example.org/@testuser';
-		$redirect_url = 'https://example.org/@testuser/';
+		$redirect_url  = 'https://example.org/@testuser/';
 
 		$result = \Activitypub\Activitypub::no_trailing_redirect( $redirect_url, $requested_url );
 		$this->assertEquals( $requested_url, $result, 'Should return requested URL when actor query var is set.' );
@@ -237,7 +237,7 @@ class Test_Activitypub extends \WP_UnitTestCase {
 		// Test case 2: When actor query var is not set, it should return the redirect URL.
 		set_query_var( 'actor', '' );
 		$requested_url = 'https://example.org/some-page';
-		$redirect_url = 'https://example.org/some-page/';
+		$redirect_url  = 'https://example.org/some-page/';
 
 		$result = \Activitypub\Activitypub::no_trailing_redirect( $redirect_url, $requested_url );
 		$this->assertEquals( $redirect_url, $result, 'Should return redirect URL when actor query var is not set.' );
