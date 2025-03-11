@@ -141,6 +141,7 @@ For reasons of data protection, it is not possible to see the followers of other
 * Fixed: Show "full content" preview even if post is in still in draft mode.
 * Fixed: Fix a fatal error in the Preview when a post contains no (hash)tags.
 * Fixed: PHP warnings when trying to process empty tags or image blocks without ID attributes.
+* Changed: Improved title case for NodeInfo settings
 
 = 5.4.1 =
 
