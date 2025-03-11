@@ -133,6 +133,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Added: Documentation for migrating from a Mastodon instance to WordPress.
 * Changed: Outbox items only get sent to followers when there are any.
+* Changed: The Welcome page now uses WordPress's Settings API and the classic design of the WP Admin.
 * Fixed: Updates to certain user meta fields did not trigger an Update activity.
 * Fixed: No more PHP warnings when a header image gets cropped.
 * Fixed: Images with the correct aspect ratio no longer get sent through the crop step again.
@@ -150,7 +151,6 @@ For reasons of data protection, it is not possible to see the followers of other
 
 * Added: Upgrade script to fix Follower json representations with unescaped backslashes.
 * Added: Centralized place for sanitization functions.
-* Added: A feature switch to deactivate the Troubleshooting block on the Welcome page.
 * Changed: Bumped minimum required WordPress version to 6.4.
 * Changed: Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
 * Changed: Use webfinger as author email for comments from the Fediverse.

@@ -10,11 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Documentation for migrating from a Mastodon instance to WordPress.
-* A feature switch to deactivate the Troubleshooting block on the Welcome page.
 
 ### Changed
 
 * Outbox items only get sent to followers when there are any.
+* The Welcome page now uses WordPress's Settings API and the classic design of the WP Admin.
 
 ### Fixed
 
