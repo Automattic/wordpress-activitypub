@@ -21,6 +21,7 @@ use function Activitypub\get_masked_wp_version;
  * @see https://www.w3.org/TR/activitypub/#followers
  */
 class Followers_Controller extends Actors_Controller {
+	use Collection_Links;
 
 	/**
 	 * Register routes.
@@ -100,6 +101,15 @@ class Followers_Controller extends Actors_Controller {
 
 		$data = Follower_Collection::get_followers_with_count( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
 
+		// Special case: WP_Query doesn't return the total number of items when it runs out of items.
+		if ( 0 === $data['total'] && $page > 1 ) {
+			return new \WP_Error(
+				'rest_post_invalid_page_number',
+				'The page number requested is larger than the number of pages available.',
+				array( 'status' => 400 )
+			);
+		}
+
 		$response = array(
 			'@context'     => \Activitypub\get_context(),
 			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/followers', $user->get__id() ) ),
@@ -119,25 +129,9 @@ class Followers_Controller extends Actors_Controller {
 			),
 		);
 
-		$max_pages = \ceil( $response['totalItems'] / $per_page );
-
-		if ( $page > $max_pages ) {
-			return new \WP_Error(
-				'rest_post_invalid_page_number',
-				'The page number requested is larger than the number of pages available.',
-				array( 'status' => 400 )
-			);
-		}
-
-		$response['first'] = \add_query_arg( 'page', 1, $response['partOf'] );
-		$response['last']  = \add_query_arg( 'page', \max( $max_pages, 1 ), $response['partOf'] );
-
-		if ( $max_pages > $page ) {
-			$response['next'] = \add_query_arg( 'page', $page + 1, $response['partOf'] );
-		}
-
-		if ( $page > 1 ) {
-			$response['prev'] = \add_query_arg( 'page', $page - 1, $response['partOf'] );
+		$response = $this->add_collection_links( $response, $request );
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
 
 		$response = \rest_ensure_response( $response );

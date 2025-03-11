@@ -8,7 +8,6 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Collection\Actors;
-
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_masked_wp_version;
@@ -21,6 +20,8 @@ use function Activitypub\get_masked_wp_version;
  * @see https://www.w3.org/TR/activitypub/#following
  */
 class Following_Controller extends Actors_Controller {
+	use Collection_Links;
+
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
@@ -49,11 +50,18 @@ class Following_Controller extends Actors_Controller {
 					'callback'            => array( $this, 'get_items' ),
 					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
 					'args'                => array(
-						'page' => array(
+						'page'     => array(
 							'description' => 'Current page of the collection.',
 							'type'        => 'integer',
 							'default'     => 1,
 							'minimum'     => 1,
+						),
+						'per_page' => array(
+							'description' => 'Maximum number of items to be returned in result set.',
+							'type'        => 'integer',
+							'default'     => 10,
+							'minimum'     => 1,
+							'maximum'     => 100,
 						),
 					),
 				),
@@ -100,7 +108,11 @@ class Following_Controller extends Actors_Controller {
 
 		$response['totalItems']   = \is_countable( $items ) ? \count( $items ) : 0;
 		$response['orderedItems'] = $items;
-		$response['first']        = $response['partOf'];
+
+		$response = $this->add_collection_links( $response, $request );
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
 
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );

@@ -20,6 +20,8 @@ use function ActivityPub\get_rest_url_by_path;
  * @see https://www.w3.org/TR/activitypub/#outbox
  */
 class Outbox_Controller extends \WP_REST_Controller {
+	use Collection_Links;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -179,23 +181,16 @@ class Outbox_Controller extends \WP_REST_Controller {
 			$response['orderedItems'][] = $this->prepare_item_for_response( $outbox_item, $request );
 		}
 
-		$max_pages         = \ceil( $response['totalItems'] / $request->get_param( 'per_page' ) );
-		$response['first'] = \add_query_arg( 'page', 1, $response['partOf'] );
-		$response['last']  = \add_query_arg( 'page', \max( $max_pages, 1 ), $response['partOf'] );
-
-		if ( $max_pages > $page ) {
-			$response['next'] = \add_query_arg( 'page', $page + 1, $response['partOf'] );
-		}
-
-		if ( $page > 1 ) {
-			$response['prev'] = \add_query_arg( 'page', $page - 1, $response['partOf'] );
+		$response = $this->add_collection_links( $response, $request );
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
 
 		/**
 		 * Filter the ActivityPub outbox array.
 		 *
-		 * @param array $response The ActivityPub outbox array.
-		 * @param \WP_REST_Request $request The request object.
+		 * @param array            $response The ActivityPub outbox array.
+		 * @param \WP_REST_Request $request  The request object.
 		 */
 		$response = \apply_filters( 'activitypub_rest_outbox_array', $response, $request );
 

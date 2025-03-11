@@ -106,7 +106,6 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		// Test property values.
 		$this->assertEquals( 'OrderedCollectionPage', $data['type'] );
 		$this->assertStringContainsString( 'wordpress.org', $data['generator'] );
-		$this->assertEquals( $data['partOf'], $data['first'] );
 		$this->assertIsArray( $data['orderedItems'] );
 
 		\update_option( 'activitypub_actor_mode', $actor_mode );
