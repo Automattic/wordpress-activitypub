@@ -99,18 +99,21 @@ class Welcome_Fields {
 
 			/* translators: %s is the domain of this site */
 			$reply_from_template = __( 'Reply from %s', 'activitypub' );
-			$button              = sprintf(
+
+			printf(
 				'<a href="%s" class="button">%s</a>',
 				esc_attr( $bookmarklet_js ), // Need to escape quotes for the bookmarklet.
 				sprintf( $reply_from_template, \wp_parse_url( \home_url(), PHP_URL_HOST ) )
 			);
+			?>
+		</p>
+		<p>
+			<?php
 			/* translators: %s is where the button HTML will be rendered. */
-			$button_and_explanation_template = \__(
-				'%s Save this bookmarklet to reply to posts on other sites from your own blog! When visiting a post on another site, click the bookmarklet to start a reply.',
+			\_e(
+				'Save this bookmarklet to reply to posts on other sites from your own blog! When visiting a post on another site, click the bookmarklet to start a reply.',
 				'activitypub'
 			);
-
-			printf( $button_and_explanation_template, $button ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 			printf( ' <a href="%s">%s</a>', esc_url( \admin_url( 'tools.php#activitypub' ) ), esc_html__( 'For additional information, please visit the Tools page.', 'activitypub' ) );
 			?>
