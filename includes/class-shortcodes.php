@@ -54,6 +54,11 @@ class Shortcodes {
 		$hash_tags = array();
 
 		foreach ( $tags as $tag ) {
+			// Tag can be empty.
+			if ( ! $tag ) {
+				continue;
+			}
+
 			$hash_tags[] = \sprintf(
 				'<a rel="tag" class="hashtag u-tag u-category" href="%s">%s</a>',
 				\esc_url( \get_tag_link( $tag ) ),
