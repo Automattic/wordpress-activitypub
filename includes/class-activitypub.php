@@ -469,9 +469,9 @@ class Activitypub {
 	/**
 	 * Pre-get option filter for the Authorized Fetch.
 	 *
-	 * @param bool $pre The pre-get option value.
+	 * @param string $pre The pre-get option value.
 	 *
-	 * @return bool If the option is defined, return the value, otherwise return the pre-get option value.
+	 * @return string If the constant is defined, return the value, otherwise return the pre-get option value.
 	 */
 	public static function pre_option_activitypub_authorized_fetch( $pre ) {
 		if ( ! \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
