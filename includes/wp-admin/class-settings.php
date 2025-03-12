@@ -32,7 +32,7 @@ class Settings {
 			'activitypub',
 			'activitypub_advanced_settings',
 			array(
-				'type' => 'boolean',
+				'type'    => 'boolean',
 				'default' => '0',
 			)
 		);
