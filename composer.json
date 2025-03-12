@@ -60,7 +60,7 @@
 		],
 		"changelog:write": [
 			"composer install",
-			"vendor/bin/changelogger write"
+			"vendor/bin/changelogger write --add-pr-num"
 		]
 	}
 }
