@@ -72,15 +72,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Outbox items older than 6 months will be purged to avoid performance issues.
 - REST API endpoints for likes and shares.
 
-### Fixed
-- Fixed an issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
-
 ### Changed
 - Increased probability of Outbox items being processed with the correct author.
 - Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
 - Updated terminology to be client-neutral in the Federated Reply block.
 
 ### Fixed
+- Fixed an issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
 - Enforce 200 status header for valid ActivityPub requests.
 - `object_id_to_comment` returns a commment now, even if there are more than one matching comment in the DB.
 - Integration of content-visibility setup in the block editor.
@@ -146,15 +144,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Hide ActivityPub post meta keys from the custom Fields UI
 - Bumped minimum required PHP version to 7.2
+- Print `_activityPubOptions` in the `wp_footer` action on the frontend.
 
 ### Fixed
 - Undefined array key warnings in various places
 - @-mentions in federated comments being displayed with a line break
 - Fetching replies from the same instance for Enable Mastodon Apps
 - Image captions not being included in the ActivityPub representation when the image is attached to the post
-
-### Changed
-- Print `_activityPubOptions` in the `wp_footer` action on the frontend.
 
 ## [4.6.0] - 2024-12-20
 ### Added
