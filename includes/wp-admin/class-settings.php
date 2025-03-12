@@ -232,9 +232,10 @@ class Settings {
 			'settings' => array(
 				'label'    => __( 'Settings', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
-			)
+			),
 		);
-		if ( isset( $_GET['tab'] ) && $_GET['tab'] === 'advanced' ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) {
 			$settings_tabs['advanced'] = array(
 				'label'    => __( 'Advanced', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/advanced-settings.php',

@@ -58,7 +58,7 @@ class Advanced_Settings_Fields {
 			<?php
 			$allowed_html = array(
 				'a' => array(
-					'href' => true,
+					'href'   => true,
 					'target' => true,
 				),
 			);
@@ -100,7 +100,7 @@ class Advanced_Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="1" <?php checked( '1', $value ); ?> <?php echo $disabled; ?> />
+				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="1" <?php checked( '1', $value ); ?> <?php echo esc_attr( $disabled ); ?> />
 				<?php esc_html_e( 'Require HTTP signature authentication on ActivityPub representations of public posts and profiles.', 'activitypub' ); ?>
 			</label>
 		</p>
