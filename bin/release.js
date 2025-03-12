@@ -138,7 +138,7 @@ const updateReadmeWithChangelog = (version) => {
 	}
 
 	// At the bottom of the changelog section, add a link to the full changelog on GitHub.
-	formattedChangelog += '\n\nSee full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md)';
+	formattedChangelog += '\n\nSee full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).';
 
 	// Update the readme.txt with the new changelog section
 	const updatedReadmeContent = readmeContent.replace(
