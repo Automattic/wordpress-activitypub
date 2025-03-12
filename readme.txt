@@ -129,98 +129,118 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-= 5.4.1 =
+### 5.4.1 - 2025-03-04
+#### Fixed
+- Transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
 
-* Fixed: Transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
+### 5.4.0 - 2025-03-03
+#### Added
+- Upgrade script to fix Follower json representations with unescaped backslashes.
+- Centralized place for sanitization functions.
 
-= 5.4.0 =
+#### Changed
+- Bumped minimum required WordPress version to 6.4.
+- Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
+- Use webfinger as author email for comments from the Fediverse.
+- Remove the special handling of comments from Enable Mastodon Apps.
 
-* Added: Upgrade script to fix Follower json representations with unescaped backslashes.
-* Added: Centralized place for sanitization functions.
-* Changed: Bumped minimum required WordPress version to 6.4.
-* Changed: Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
-* Changed: Use webfinger as author email for comments from the Fediverse.
-* Changed: Remove the special handling of comments from Enable Mastodon Apps.
-* Fixed: Do not redirect `/@username` URLs to the API any more, to improve `AUTHORIZED_FETCH` handling.
+#### Fixed
+- Do not redirect `/@username` URLs to the API any more, to improve `AUTHORIZED_FETCH` handling.
 
-= 5.3.2 =
+### 5.3.2 - 2025-02-27
+#### Fixed
+- Remove `activitypub_reply_block` filter after Activity-JSON is rendered, to not affect the HTML representation.
+- Remove `render_block_core/embed` filter after Activity-JSON is rendered, to not affect the HTML representation.
 
-* Fixed: Remove `activitypub_reply_block` filter after Activity-JSON is rendered, to not affect the HTML representation.
-* Fixed: Remove `render_block_core/embed` filter after Activity-JSON is rendered, to not affect the HTML representation.
+### 5.3.1 - 2025-02-26
+#### Fixed
+- Blog profile settings can be saved again without errors.
+- Followers with backslashes in their descriptions no longer break their actor representation.
 
-= 5.3.1 =
+### 5.3.0 - 2025-02-25
+#### Added
+- A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
+- A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
+- Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
+- Undo API for Outbox items.
+- Setting to adjust the number of days Outbox items are kept before being purged.
+- Failed Follower notifications for Outbox items now get retried for two more times.
+- Support incoming `Move` activities and ensure that followed persons are updated accordingly.
+- Show metadata in the New Follower E-Mail.
+- Outbox Activity IDs can now be resolved when the ActivityPub `Accept header is used.
+- Labels to add context to visibility settings in the block editor.
+- WP CLI command to reschedule Outbox-Activities.
 
-* Fixed: Blog profile settings can be saved again without errors.
-* Fixed: Followers with backslashes in their descriptions no longer break their actor representation.
+#### Changed
+- Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
+- Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
+- Post bulk edits no longer create Outbox items, unless author or post status change.
+- Outbox processing accounts for shared inboxes again.
+- Improved check for `?activitypub` query-var.
+- Rewrite rules: be more specific in author rewrite rules to avoid conflicts on sites that use the "@author" pattern in their permalinks.
+- Deprecate the `activitypub_post_locale` filter in favor of the `activitypub_locale` filter.
 
-= 5.3.0 =
+#### Fixed
+- The Outbox purging routine no longer is limited to deleting 5 items at a time.
+- An issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
+- Ellipses now display correctly in notification emails for Likes and Reposts.
+- Send Update-Activity when "Actor-Mode" is changed.
+- Added delay to `Announce` Activity from the Blog-Actor, to not have race conditions.
+- `Actor` validation in several REST API endpoints.
+- Bring back the `activitypub_post_locale` filter to allow overriding the post's locale.
 
-* Added: A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
-* Added: A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
-* Added: Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
-* Added: Undo API for Outbox items.
-* Added: Setting to adjust the number of days Outbox items are kept before being purged.
-* Added: Failed Follower notifications for Outbox items now get retried for two more times.
-* Added: Support incoming `Move` activities and ensure that followed persons are updated accordingly.
-* Added: Show metadata in the New Follower E-Mail.
-* Added: Outbox Activity IDs can now be resolved when the ActivityPub `Accept header is used.
-* Added: Labels to add context to visibility settings in the block editor.
-* Added: WP CLI command to reschedule Outbox-Activities.
-* Changed: Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
-* Changed: Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
-* Changed: Post bulk edits no longer create Outbox items, unless author or post status change.
-* Changed: Outbox processing accounts for shared inboxes again.
-* Changed: Improved check for `?activitypub` query-var.
-* Changed: Rewrite rules: be more specific in author rewrite rules to avoid conflicts on sites that use the "@author" pattern in their permalinks.
-* Changed: Deprecate the `activitypub_post_locale` filter in favor of the `activitypub_locale` filter.
-* Fixed: The Outbox purging routine no longer is limited to deleting 5 items at a time.
-* Fixed: An issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
-* Fixed: Ellipses now display correctly in notification emails for Likes and Reposts.
-* Fixed: Send Update-Activity when "Actor-Mode" is changed.
-* Fixed: Added delay to `Announce` Activity from the Blog-Actor, to not have race conditions.
-* Fixed: `Actor` validation in several REST API endpoints.
-* Fixed: Bring back the `activitypub_post_locale` filter to allow overriding the post's locale.
+### 5.2.0 - 2025-02-13
+#### Added
+- Batch Outbox-Processing.
+- Outbox processed events get logged in Stream and show any errors returned from inboxes.
+- Outbox items older than 6 months will be purged to avoid performance issues.
+- REST API endpoints for likes and shares.
 
-= 5.2.0 =
+#### Changed
+- Increased probability of Outbox items being processed with the correct author.
+- Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
+- Updated terminology to be client-neutral in the Federated Reply block.
+- Refactored settings to use the WordPress Settings API.
 
-* Added: Batch Outbox-Processing.
-* Added: Outbox processed events get logged in Stream and show any errors returned from inboxes.
-* Added: Outbox items older than 6 months will be purged to avoid performance issues.
-* Added: REST API endpoints for likes and shares.
-* Changed: Increased probability of Outbox items being processed with the correct author.
-* Changed: Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
-* Changed: Updated terminology to be client-neutral in the Federated Reply block.
-* Changed: Refactored settings to use the WordPress Settings API
-* Fixed: Enforce 200 status header for valid ActivityPub requests.
-* Fixed: `object_id_to_comment` returns a commment now, even if there are more than one matching comment in the DB.
-* Fixed: Integration of content-visibility setup in the block editor.
-* Fixed: Update CLI commands to the new scheduler refactorings.
-* Fixed: Do not add an audience to the Actor-Profiles.
-* Fixed: `Activity::set_object` falsely overwrites the Activity-ID with a default.
+#### Fixed
+- Enforce 200 status header for valid ActivityPub requests.
+- `object_id_to_comment` returns a commment now, even if there are more than one matching comment in the DB.
+- Integration of content-visibility setup in the block editor.
+- Update CLI commands to the new scheduler refactorings.
+- Do not add an audience to the Actor-Profiles.
+- `Activity::set_object` falsely overwrites the Activity-ID with a default.
 
-= 5.1.0 =
+### 5.1.0 - 2025-02-06
+#### Added
+- Cleanup of option values when the plugin is uninstalled.
+- Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
+- Show ActivityPub preview in row actions when Block Editor is enabled but not used for the post type.
 
-* Added: Cleanup of option values when the plugin is uninstalled.
-* Added: Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
-* Added: Show ActivityPub preview in row actions when Block Editor is enabled but not used for the post type.
-* Changed: Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
-* Changed: Allow Base Transformer to handle WP_Term objects for transformation.
-* Changed: Allow omitting replies in ActivityPub representations instead of setting them as empty.
-* Changed: Improved Query extensibility for third party plugins.
-* Fixed: Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
-* Fixed: Avoid PHP warnings when using Debug mode and when the `actor` is not set.
-* Fixed: No longer creates Outbox items when importing content/users.
-* Fixed: NodeInfo 2.0 URL to be HTTP instead of HTTPS.
+#### Changed
+- Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
+- Allow Base Transformer to handle WP_Term objects for transformation.
+- Allow omitting replies in ActivityPub representations instead of setting them as empty.
+- Improved Query extensibility for third party plugins.
 
-= 5.0.0 =
+#### Fixed
+- Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
+- Avoid PHP warnings when using Debug mode and when the `actor` is not set.
+- No longer creates Outbox items when importing content/users.
+- NodeInfo 2.0 URL to be HTTP instead of HTTPS.
 
-* Added: Outbox queue
-* Changed: Rewrite the current dispatcher system, to use the Outbox instead of a Scheduler.
-* Changed: Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins.
-* Changed: Moved password check to `is_post_disabled` function.
-* Fixed: Handle deletes from remote servers that leave behind an accessible Tombstone object.
-* Fixed: No longer parses tags for post types that don't support Activitypub.
-* Fixed: rel attribute will now contain no more than one "me" value.
+### 5.0.0 - 2025-02-03
+#### Added
+- Outbox queue
+
+#### Changed
+- Rewrite the current dispatcher system, to use the Outbox instead of a Scheduler.
+- Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins.
+- Moved password check to `is_post_disabled` function.
+
+#### Fixed
+- Handle deletes from remote servers that leave behind an accessible Tombstone object.
+- No longer parses tags for post types that don't support Activitypub.
+- rel attribute will now contain no more than one "me" value.
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).
 
