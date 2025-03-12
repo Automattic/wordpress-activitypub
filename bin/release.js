@@ -143,6 +143,9 @@ const updateReadmeWithChangelog = (version) => {
 		`== Changelog ==\n\n${formattedChangelog}\n\n`
 	);
 
+	// At the bottom of the changelog section, add a link to the full changelog on GitHub.
+	updatedReadmeContent += '\n\nSee full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md)';
+
 	fs.writeFileSync('readme.txt', updatedReadmeContent);
 	console.log(`Updated readme.txt with changelog entries for version ${version} and other entries from major version ${majorVersion}`);
 };
