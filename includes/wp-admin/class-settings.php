@@ -30,6 +30,15 @@ class Settings {
 	public static function register_settings() {
 		\register_setting(
 			'activitypub',
+			'activitypub_advanced_settings',
+			array(
+				'type' => 'boolean',
+				'default' => '0',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
 			'activitypub_post_content_type',
 			array(
 				'type'         => 'string',
