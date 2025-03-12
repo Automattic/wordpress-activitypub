@@ -5,28 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-
-* Documentation for migrating from a Mastodon instance to WordPress.
-
-### Changed
-
-* Outbox items only get sent to followers when there are any.
-* The Welcome page now uses WordPress's Settings API and the classic design of the WP Admin.
-* Improved title case for NodeInfo settings.
-
-### Fixed
-
-* Updates to certain user meta fields did not trigger an Update activity.
-* No more PHP warnings when a header image gets cropped.
-* Images with the correct aspect ratio no longer get sent through the crop step again.
-* When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled.
-* Properly re-added support for `Update` and `Delete` `Announce`ments.
-* Fix a fatal error in the Preview when a post contains no (hash)tags.
-* PHP warnings when trying to process empty tags or image blocks without ID attributes.
-
 ## [5.4.1] - 2025-03-04
 
 ### Fixed

@@ -129,21 +129,6 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-= Unreleased =
-
-* Added: Documentation for migrating from a Mastodon instance to WordPress.
-* Changed: Outbox items only get sent to followers when there are any.
-* Changed: The Welcome page now uses WordPress's Settings API and the classic design of the WP Admin.
-* Fixed: Updates to certain user meta fields did not trigger an Update activity.
-* Fixed: No more PHP warnings when a header image gets cropped.
-* Fixed: Images with the correct aspect ratio no longer get sent through the crop step again.
-* Fixed: When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled.
-* Fixed: Properly re-added support for `Update` and `Delete` `Announce`ments.
-* Fixed: Show "full content" preview even if post is in still in draft mode.
-* Fixed: Fix a fatal error in the Preview when a post contains no (hash)tags.
-* Fixed: PHP warnings when trying to process empty tags or image blocks without ID attributes.
-* Changed: Improved title case for NodeInfo settings
-
 = 5.4.1 =
 
 * Fixed: Transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
