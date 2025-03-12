@@ -138,7 +138,7 @@ const updateReadmeWithChangelog = (version) => {
 	}
 
 	// Update the readme.txt with the new changelog section
-	const updatedReadmeContent = readmeContent.replace(
+	let updatedReadmeContent = readmeContent.replace(
 		changelogSectionRegex,
 		`== Changelog ==\n\n${formattedChangelog}\n\n`
 	);
