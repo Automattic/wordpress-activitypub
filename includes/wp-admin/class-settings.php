@@ -66,16 +66,6 @@ class Settings {
 
 		\register_setting(
 			'activitypub',
-			'activitypub_outbox_purge_days',
-			array(
-				'type'        => 'integer',
-				'description' => \__( 'Number of days to keep items in the Outbox.', 'activitypub' ),
-				'default'     => 180,
-			)
-		);
-
-		\register_setting(
-			'activitypub',
 			'activitypub_object_type',
 			array(
 				'type'         => 'string',
@@ -143,16 +133,6 @@ class Settings {
 
 		\register_setting(
 			'activitypub',
-			'activitypub_authorized_fetch',
-			array(
-				'type'        => 'boolean',
-				'description' => \__( 'Require HTTP signature authentication.', 'activitypub' ),
-				'default'     => false,
-			)
-		);
-
-		\register_setting(
-			'activitypub',
 			'activitypub_mailer_new_follower',
 			array(
 				'type'        => 'boolean',
@@ -168,6 +148,26 @@ class Settings {
 				'type'        => 'boolean',
 				'description' => \__( 'Send notifications via e-mail when a direct message is received.', 'activitypub' ),
 				'default'     => '0',
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_outbox_purge_days',
+			array(
+				'type'        => 'integer',
+				'description' => \__( 'Number of days to keep items in the Outbox.', 'activitypub' ),
+				'default'     => 180,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_authorized_fetch',
+			array(
+				'type'        => 'boolean',
+				'description' => \__( 'Require HTTP signature authentication.', 'activitypub' ),
+				'default'     => false,
 			)
 		);
 
@@ -232,8 +232,14 @@ class Settings {
 			'settings' => array(
 				'label'    => __( 'Settings', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
-			),
+			)
 		);
+		if ( isset( $_GET['tab'] ) && $_GET['tab'] === 'advanced' ) {
+			$settings_tabs['advanced'] = array(
+				'label'    => __( 'Advanced', 'activitypub' ),
+				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/advanced-settings.php',
+			);
+		}
 		if ( ! is_user_disabled( Actors::BLOG_USER_ID ) ) {
 			$settings_tabs['blog-profile'] = array(
 				'label'    => __( 'Blog Profile', 'activitypub' ),

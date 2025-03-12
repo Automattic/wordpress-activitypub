@@ -131,33 +131,6 @@ class Settings_Fields {
 			'activitypub_settings',
 			'activitypub_general'
 		);
-
-		add_settings_field(
-			'activitypub_outbox_purge_days',
-			__( 'Outbox Retention Period', 'activitypub' ),
-			array( self::class, 'render_outbox_purge_days_field' ),
-			'activitypub_settings',
-			'activitypub_general',
-			array( 'label_for' => 'activitypub_outbox_purge_days' )
-		);
-
-		if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
-			add_settings_section(
-				'activitypub_security',
-				__( 'Security', 'activitypub' ),
-				'__return_empty_string',
-				'activitypub_settings'
-			);
-
-			add_settings_field(
-				'activitypub_authorized_fetch',
-				__( 'Authorized Fetch', 'activitypub' ),
-				array( self::class, 'render_authorized_fetch_field' ),
-				'activitypub_settings',
-				'activitypub_security',
-				array( 'label_for' => 'activitypub_authorized_fetch' )
-			);
-		}
 	}
 
 	/**
@@ -422,47 +395,6 @@ class Settings_Fields {
 				'default'
 			);
 			?>
-		</p>
-		<?php
-	}
-
-	/**
-	 * Render outbox purge days field.
-	 */
-	public static function render_outbox_purge_days_field() {
-		$value = get_option( 'activitypub_outbox_purge_days', 180 );
-		echo '<input type="number" id="activitypub_outbox_purge_days" name="activitypub_outbox_purge_days" value="' . esc_attr( $value ) . '" class="small-text" min="0" max="365" />';
-		echo '<p class="description">' . wp_kses(
-			sprintf(
-				// translators: 1: Definition of Outbox; 2: Default value (180).
-				__( 'Maximum number of days to keep items in the <abbr title="%1$s">Outbox</abbr>. A lower value might be better for sites with lots of activity to maintain site performance. Default: <code>%2$s</code>', 'activitypub' ),
-				esc_attr__( 'A virtual location on a user&#8217;s profile where all the activities (posts, likes, replies) they publish are stored, acting as a feed that other users can access to see their publicly shared content', 'activitypub' ),
-				esc_html( 180 )
-			),
-			array(
-				'abbr' => array( 'title' => array() ),
-				'code' => array(),
-			)
-		) . '</p>';
-	}
-
-	/**
-	 * Render use hashtags field.
-	 */
-	public static function render_authorized_fetch_field() {
-		$value = get_option( 'activitypub_authorized_fetch', '1' );
-		?>
-		<p>
-			<label>
-				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="1" <?php checked( '1', $value ); ?> />
-				<?php esc_html_e( 'Require HTTP signature authentication on ActivityPub representations of public posts and profiles.', 'activitypub' ); ?>
-			</label>
-		</p>
-		<p class="description">
-			<?php \esc_html_e( '⚠ Secure mode has its limitations, which is why it is not enabled by default. It is not fully supported by all software in the fediverse, and some features may break, especially when interacting with Mastodon servers older than version 3.0. Additionally, since it requires authentication for public content, caching is not possible, leading to higher computational costs.', 'activitypub' ); ?>
-		</p>
-		<p class="description">
-			<?php \esc_html_e( '⚠ Secure mode does not hide the HTML representations of public posts and profiles. While HTML is a less consistent format (that potentially changes often) compared to first-class ActivityPub representations or the REST API, it still poses a potential risk for content scraping.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}

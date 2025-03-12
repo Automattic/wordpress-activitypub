@@ -48,6 +48,7 @@ class Activitypub {
 
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
 		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
+		\add_filter( 'pre_option_activitypub_authorized_fetch', array( self::class, 'pre_option_activitypub_authorized_fetch' ) );
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
 
 		// Register several post_types.
@@ -463,6 +464,25 @@ class Activitypub {
 				);
 			}
 		}
+	}
+
+	/**
+	 * Pre-get option filter for the Authorized Fetch.
+	 *
+	 * @param bool $pre The pre-get option value.
+	 *
+	 * @return bool If the option is defined, return the value, otherwise return the pre-get option value.
+	 */
+	public static function pre_option_activitypub_authorized_fetch( $pre ) {
+		if ( ! \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
+			return $pre;
+		}
+
+		if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
+			return '1';
+		}
+
+		return '0';
 	}
 
 	/**
