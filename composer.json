@@ -35,7 +35,8 @@
 	"extra": {
 		"installer-name": "activitypub",
 		"changelogger": {
-			"changes-dir": ".github/changelog/"
+			"changes-dir": ".github/changelog/",
+			"link-template": "https://github.com/Automattic/wordpress-activitypub/compare/${old}...${new}"
 		}
 	},
 	"scripts": {
