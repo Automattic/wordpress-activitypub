@@ -9,8 +9,6 @@ const rl = readline.createInterface({
 	output: process.stdout
 });
 
-const question = (query) => new Promise((resolve) => rl.question(query, resolve));
-
 const exec = (command) => {
 	try {
 		return execSync(command, { stdio: 'inherit' });
@@ -42,34 +40,47 @@ const updateVersionInFile = (filePath, version, patterns) => {
 	fs.writeFileSync(filePath, content);
 };
 
-const updateChangelog = (version) => {
-	const date = new Date().toISOString().split('T')[0];
+const generateChangelog = async () => {
+	// Run the changelog generation command
+	try {
+		execSync('composer changelog:write', { stdio: 'ignore' });
+	} catch (error) {
+		console.error('Error generating changelog:');
+		console.error(error);
+		process.exit(1);
+	}
+
+	// Grab the version from the generated changelog
 	const content = fs.readFileSync('CHANGELOG.md', 'utf8');
+	const version = content.match(/## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}/)[1];
 
-	// Update the Unreleased section
-	let updated = content.replace(
-		/## \[Unreleased\]/,
-		`## [${version}] - ${date}`
-	);
+	if (!version) {
+		console.error('No version found in CHANGELOG.md');
+		process.exit(1);
+	}
 
-	// Update the comparison links at the bottom
-	const prevVersion = content.match(/compare\/(\d+\.\d+\.\d+)\.\.\.trunk/)[1];
-	updated = updated.replace(
-		/\[Unreleased\]: .*\n/,
-		`[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/${version}...trunk\n`
-	);
-
-	// Add the new version comparison link
-	const newVersionLink = `[${version}]: https://github.com/Automattic/wordpress-activitypub/compare/${prevVersion}...${version}\n`;
-	updated = updated.replace(
-		/<!-- Add new release below and update "Unreleased" link -->\n/,
-		`<!-- Add new release below and update "Unreleased" link -->\n${newVersionLink}`
-	);
-
-	fs.writeFileSync('CHANGELOG.md', updated);
+	return version;
 };
 
-async function createRelease(version) {
+async function createRelease() {
+	// Start by generating the changelog.
+	// The changelog will automatically pick a version
+	// based off each changelog entry's provided significance.
+	const version = await generateChangelog();
+
+	const currentBranch = execWithOutput('git rev-parse --abbrev-ref HEAD');
+
+	// Check if release branch already exists
+	const branchExists = execWithOutput(`git branch --list release/${version}`);
+	if (branchExists) {
+		console.error(`\nError: Branch release/${version} already exists.`);
+		// Return to original branch if we're not already there
+		if (currentBranch !== execWithOutput('git rev-parse --abbrev-ref HEAD')) {
+			exec(`git checkout ${currentBranch}`);
+		}
+		process.exit(1);
+	}
+
 	// Create and checkout release branch
 	const branchName = `release/${version}`;
 	exec(`git checkout -b ${branchName}`);
@@ -127,9 +138,6 @@ async function createRelease(version) {
 		]);
 	});
 
-	// Update CHANGELOG.md
-	updateChangelog(version);
-
 	// Stage and commit changes
 	exec('git add .');
 	exec(`git commit -m "Release ${version}"`);
@@ -161,35 +169,11 @@ async function release() {
 			process.exit(1);
 		}
 
-		// Store current branch
-		const currentBranch = execWithOutput('git rev-parse --abbrev-ref HEAD');
+		// Ensure we're on trunk branch and up to date
+		// exec('git checkout trunk');
+		// exec('git pull origin trunk');
 
-		while (true) {
-			// Get new version
-			const version = await question('\nWhat version would you like to release? (x.x.x): ');
-			if (!/^\d+\.\d+\.\d+$/.test(version)) {
-				console.error('Invalid version format. Please use x.x.x');
-				continue;
-			}
-
-			// Check if release branch already exists
-			const branchExists = execWithOutput(`git branch --list release/${version}`);
-			if (branchExists) {
-				console.error(`\nError: Branch release/${version} already exists.`);
-				// Return to original branch if we're not already there
-				if (currentBranch !== execWithOutput('git rev-parse --abbrev-ref HEAD')) {
-					exec(`git checkout ${currentBranch}`);
-				}
-				continue;
-			}
-
-			// Ensure we're on trunk branch and up to date
-			exec('git checkout trunk');
-			exec('git pull origin trunk');
-
-			await createRelease(version);
-			break;
-		}
+		await createRelease();
 
 	} catch (error) {
 		console.error('An error occurred:', error);
