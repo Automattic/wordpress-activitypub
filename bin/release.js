@@ -117,13 +117,13 @@ const updateReadmeWithChangelog = (version) => {
 	});
 
 	// Format the changelog entries for readme.txt
-	// 1. Remove the square brackets from the version numbers.
-	// 2. Increase the header level by one (add one more #)
+	// 1. Increase the header level by one (add one more #)
+	// 2. Remove the square brackets from the version numbers.
 	// 3. Remove PR numbers like [#123] from the ends of lines.
 	let formattedChangelog = releases.map(release => {
 		return release.content
-			.replace(`## [${release.version}] - ${release.date}`, `### ${release.version} - ${release.date}`)
 			.replace(/### /g, '#### ')
+			.replace(`## [${release.version}] - ${release.date}`, `### ${release.version} - ${release.date}`)
 			.replace(/\s+\[#\d+\]$/mg, '')
 			.trim();
 	}).join('\n\n');
