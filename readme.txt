@@ -131,7 +131,8 @@ For reasons of data protection, it is not possible to see the followers of other
 
 ### 5.4.1 - 2025-03-04
 #### Fixed
-- Transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
+- Fixed transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
+- Show "full content" preview even if post is in still in draft mode.
 
 ### 5.4.0 - 2025-03-03
 #### Added
@@ -161,20 +162,20 @@ For reasons of data protection, it is not possible to see the followers of other
 #### Added
 - A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
 - A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
-- Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
-- Undo API for Outbox items.
 - Setting to adjust the number of days Outbox items are kept before being purged.
 - Failed Follower notifications for Outbox items now get retried for two more times.
-- Support incoming `Move` activities and ensure that followed persons are updated accordingly.
-- Show metadata in the New Follower E-Mail.
+- Undo API for Outbox items.
+- Metadata to New Follower E-Mail.
+- Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
 - Outbox Activity IDs can now be resolved when the ActivityPub `Accept header is used.
+- Support for incoming `Move` activities and ensure that followed persons are updated accordingly.
 - Labels to add context to visibility settings in the block editor.
 - WP CLI command to reschedule Outbox-Activities.
 
 #### Changed
-- Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
 - Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
 - Post bulk edits no longer create Outbox items, unless author or post status change.
+- Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
 - Outbox processing accounts for shared inboxes again.
 - Improved check for `?activitypub` query-var.
 - Rewrite rules: be more specific in author rewrite rules to avoid conflicts on sites that use the "@author" pattern in their permalinks.
@@ -182,7 +183,6 @@ For reasons of data protection, it is not possible to see the followers of other
 
 #### Fixed
 - The Outbox purging routine no longer is limited to deleting 5 items at a time.
-- An issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
 - Ellipses now display correctly in notification emails for Likes and Reposts.
 - Send Update-Activity when "Actor-Mode" is changed.
 - Added delay to `Announce` Activity from the Blog-Actor, to not have race conditions.
@@ -200,9 +200,9 @@ For reasons of data protection, it is not possible to see the followers of other
 - Increased probability of Outbox items being processed with the correct author.
 - Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
 - Updated terminology to be client-neutral in the Federated Reply block.
-- Refactored settings to use the WordPress Settings API.
 
 #### Fixed
+- Fixed an issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
 - Enforce 200 status header for valid ActivityPub requests.
 - `object_id_to_comment` returns a commment now, even if there are more than one matching comment in the DB.
 - Integration of content-visibility setup in the block editor.
@@ -218,22 +218,18 @@ For reasons of data protection, it is not possible to see the followers of other
 
 #### Changed
 - Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
-- Allow Base Transformer to handle WP_Term objects for transformation.
 - Allow omitting replies in ActivityPub representations instead of setting them as empty.
+- Allow Base Transformer to handle WP_Term objects for transformation.
 - Improved Query extensibility for third party plugins.
 
 #### Fixed
 - Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
 - Avoid PHP warnings when using Debug mode and when the `actor` is not set.
 - No longer creates Outbox items when importing content/users.
-- NodeInfo 2.0 URL to be HTTP instead of HTTPS.
+- Fix NodeInfo 2.0 URL to be HTTP instead of HTTPS.
 
 ### 5.0.0 - 2025-02-03
-#### Added
-- Outbox queue
-
 #### Changed
-- Rewrite the current dispatcher system, to use the Outbox instead of a Scheduler.
 - Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins.
 - Moved password check to `is_post_disabled` function.
 
