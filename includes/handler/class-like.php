@@ -31,11 +31,6 @@ class Like {
 	 * @param int   $user_id The ID of the local blog user.
 	 */
 	public static function handle_like( $like, $user_id ) {
-		if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
-			return;
-		}
-
-		// Check if likes are allowed.
 		if ( '1' !== \get_option( 'activitypub_allow_likes', '1' ) ) {
 			return;
 		}
