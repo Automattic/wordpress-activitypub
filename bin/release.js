@@ -62,6 +62,91 @@ const generateChangelog = async () => {
 	return version;
 };
 
+const updateReadmeWithChangelog = (version) => {
+	// Grab the contents of the changelog and readme files.
+	const changelogContent = fs.readFileSync('CHANGELOG.md', 'utf8');
+	const readmeContent = fs.readFileSync('readme.txt', 'utf8');
+
+	// Ensure the latest release entry was found in the list of latest releases we grabbed.
+	const latestReleaseRegex = new RegExp(`## \\[${version}\\].*?(?=## \\[|$)`, 's');
+	const latestReleaseMatch = changelogContent.match(latestReleaseRegex);
+	if (!latestReleaseMatch) {
+		console.error(`No changelog entry found for version ${version}`);
+		process.exit(1);
+	}
+
+	// Extract the changelog entries for the given version
+	// as well as any other entries from other releases under the same major version
+	// e.g. if the latest release is 5.4.1, then we want to include all entries from 5.0.0 to 5.4.1.
+	const majorVersion = version.split('.')[0];
+
+	// Find all releases with the same major version
+	const releaseRegex = /## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})/g;
+	const releases = [];
+	let match;
+
+	while ((match = releaseRegex.exec(changelogContent)) !== null) {
+		const [, releaseVersion, releaseDate] = match;
+		if (releaseVersion.startsWith(`${majorVersion}.`)) {
+			// Find the content for this release
+			const releaseContentRegex = new RegExp(`## \\[${releaseVersion}\\].*?(?=## \\[|$)`, 's');
+			const releaseContent = changelogContent.match(releaseContentRegex);
+
+			if (releaseContent) {
+				releases.push({
+					version: releaseVersion,
+					date: releaseDate,
+					content: releaseContent[0]
+				});
+			}
+		}
+	}
+
+	// Sort releases by version number (newest first)
+	releases.sort((a, b) => {
+		const aParts = a.version.split('.').map(Number);
+		const bParts = b.version.split('.').map(Number);
+
+		for (let i = 0; i < 3; i++) {
+			if (aParts[i] !== bParts[i]) {
+				return bParts[i] - aParts[i]; // Descending order
+			}
+		}
+
+		return 0;
+	});
+
+	// Format the changelog entries for readme.txt
+	// 1. Remove the square brackets from the version numbers.
+	// 2. Increase the header level by one (add one more #)
+	// 3. Remove PR numbers like [#123] from the ends of lines.
+	const formattedChangelog = releases.map(release => {
+		return release.content
+			.replace(`## [${release.version}] - ${release.date}`, `### ${release.version} - ${release.date}`)
+			.replace(/### /g, '#### ')
+			.replace(/\s+\[#\d+\]$/mg, '')
+			.trim();
+	}).join('\n\n');
+
+	// Find the changelog section in readme.txt
+	const changelogSectionRegex = /== Changelog ==([\s\S]*?)(?=== |$)/;
+	const changelogSection = readmeContent.match(changelogSectionRegex);
+
+	if (!changelogSection) {
+		console.error('No changelog section found in readme.txt');
+		process.exit(1);
+	}
+
+	// Update the readme.txt with the new changelog section
+	const updatedReadmeContent = readmeContent.replace(
+		changelogSectionRegex,
+		`== Changelog ==\n\n${formattedChangelog}\n\n`
+	);
+
+	fs.writeFileSync('readme.txt', updatedReadmeContent);
+	console.log(`Updated readme.txt with changelog entries for version ${version} and other entries from major version ${majorVersion}`);
+};
+
 async function createRelease() {
 	// Start by generating the changelog.
 	// The changelog will automatically pick a version
@@ -107,6 +192,9 @@ async function createRelease() {
 			replace: `= ${version} =`
 		}
 	]);
+
+	// Update the changelog section in readme.txt
+	updateReadmeWithChangelog(version);
 
 	updateVersionInFile('includes/class-migration.php', version, [
 		{
