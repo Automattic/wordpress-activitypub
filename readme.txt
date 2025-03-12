@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 6.4
 Tested up to: 6.7
-Stable tag: 5.4.1
+Stable tag: 5.5.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -128,6 +128,27 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 5.5.0 - 2025-03-12
+#### Added
+- Added Constants to the Site-Health debug informations.
+- Development environment: add Changelogger tool to environment dependencies.
+- Documentation for migrating from a Mastodon instance to WordPress.
+
+#### Changed
+- Improved title case for NodeInfo settings.
+- Outbox items only get sent to followers when there are any.
+- The Welcome page now uses WordPress's Settings API and the classic design of the WP Admin.
+- Uses two-digit version numbers in Outbox and NodeInfo responses.
+
+#### Fixed
+- Fix a fatal error in the Preview when a post contains no (hash)tags.
+- Images with the correct aspect ratio no longer get sent through the crop step again.
+- No more PHP warnings when a header image gets cropped.
+- PHP warnings when trying to process empty tags or image blocks without ID attributes.
+- Properly re-added support for `Update` and `Delete` `Announce`ments.
+- Updates to certain user meta fields did not trigger an Update activity.
+- When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled.
 
 ### 5.4.1 - 2025-03-04
 #### Fixed
