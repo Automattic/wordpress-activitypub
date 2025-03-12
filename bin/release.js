@@ -261,8 +261,8 @@ async function release() {
 		}
 
 		// Ensure we're on trunk branch and up to date
-		exec('git checkout trunk');
-		exec('git pull origin trunk');
+		// exec('git checkout trunk');
+		// exec('git pull origin trunk');
 
 		await createRelease();
 
