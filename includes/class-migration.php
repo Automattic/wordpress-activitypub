@@ -867,7 +867,7 @@ class Migration {
 	 * Migrate the advanced settings.
 	 */
 	public static function migrate_advanced_settings() {
-		// Check if one of the advanced settings is set and show the tab
+		// Check if one of the advanced settings is set and show the tab.
 		if ( '1' === \get_option( 'activitypub_authorized_fetch' ) || '180' !== \get_option( 'activitypub_outbox_purge_days' ) ) {
 			\update_option( 'activitypub_advanced_settings', '1' );
 		}
