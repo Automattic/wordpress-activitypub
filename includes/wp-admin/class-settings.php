@@ -235,7 +235,7 @@ class Settings {
 			),
 		);
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) {
+		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || '1' === \get_option( 'activitypub_advanced_settings', '0' ) ) {
 			$settings_tabs['advanced'] = array(
 				'label'    => __( 'Advanced', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/advanced-settings.php',
