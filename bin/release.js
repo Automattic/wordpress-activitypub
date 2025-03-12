@@ -120,7 +120,7 @@ const updateReadmeWithChangelog = (version) => {
 	// 1. Remove the square brackets from the version numbers.
 	// 2. Increase the header level by one (add one more #)
 	// 3. Remove PR numbers like [#123] from the ends of lines.
-	const formattedChangelog = releases.map(release => {
+	let formattedChangelog = releases.map(release => {
 		return release.content
 			.replace(`## [${release.version}] - ${release.date}`, `### ${release.version} - ${release.date}`)
 			.replace(/### /g, '#### ')
@@ -137,14 +137,14 @@ const updateReadmeWithChangelog = (version) => {
 		process.exit(1);
 	}
 
+	// At the bottom of the changelog section, add a link to the full changelog on GitHub.
+	formattedChangelog += '\n\nSee full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md)';
+
 	// Update the readme.txt with the new changelog section
-	let updatedReadmeContent = readmeContent.replace(
+	const updatedReadmeContent = readmeContent.replace(
 		changelogSectionRegex,
 		`== Changelog ==\n\n${formattedChangelog}\n\n`
 	);
-
-	// At the bottom of the changelog section, add a link to the full changelog on GitHub.
-	updatedReadmeContent += '\n\nSee full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md)';
 
 	fs.writeFileSync('readme.txt', updatedReadmeContent);
 	console.log(`Updated readme.txt with changelog entries for version ${version} and other entries from major version ${majorVersion}`);
