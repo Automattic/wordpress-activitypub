@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Documentation for migrating from a Mastodon instance to WordPress.
 * Added Constants to the Site-Health debug informations.
+* Advanced Settings tab, with special settings for advanced users.
 
 ### Changed
 
