@@ -68,7 +68,8 @@ Patch releases require a more manual process as they need to be created from the
    - Resolve merge conflicts that may come up as you cherry-pick commits.
 
 3. **Update changelog and version numbers**
-   - Run `composer changelog:write`. It will update `CHANGELOG.md` and `readme.txt` with the changelog entries you cherry-picked, as well as the version numbers.
+   - Run `composer changelog:write`. It will update `CHANGELOG.md` with the changelog entries you cherry-picked, and will give you a version number for that release.
+   - Edit `readme.txt` to paste the changelog entries from `CHANGELOG.md` into the `== Changelog ==` section.
    - The release script doesn't support releasing patch versions, so you'll need to manually update version numbers in the different files (`activitypub.php`, `readme.txt`, and files that may have been changed to introduce an `unreleased` text).
 
 4. **Review and push your changes**
