@@ -123,7 +123,7 @@ class Activitypub {
 	 * @return string The new path to the JSON template.
 	 */
 	public static function render_activitypub_template( $template ) {
-		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+		if ( wp_is_serving_rest_request() || wp_doing_ajax() ) {
 			return $template;
 		}
 
