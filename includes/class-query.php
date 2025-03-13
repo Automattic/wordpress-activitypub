@@ -138,7 +138,15 @@ class Query {
 			return $this->activitypub_object_id;
 		}
 
-		return $this->get_activitypub_object();
+		$object = $this->get_activitypub_object();
+
+		if ( ! $object || \is_wp_error( $object ) ) {
+			return $object;
+		}
+
+		$this->activitypub_object_id = $object->get_id();
+
+		return $this->activitypub_object_id;
 	}
 
 	/**
