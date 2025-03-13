@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: ActivityPub
+ * Plugin Name: ActivityPub and a change
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
  * Version: 5.4.1
