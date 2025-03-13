@@ -55,6 +55,8 @@ Fixes #
 -   [ ] Fixed - for any bug fixes
 -   [ ] Security - in case of vulnerabilities
 
-#### Message <!-- Add a changelog message here -->
+#### Message
+
+<!-- Add a changelog message here -->
 
 </details>
