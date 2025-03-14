@@ -1,4 +1,4 @@
-name: "Changelog Updated"
+name: "Changelog entry"
 on:
   pull_request:
     # The specific activity types are listed here to include "labeled" and "unlabeled"
@@ -8,19 +8,57 @@ on:
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
 
 jobs:
-  # Enforces the update of a changelog file on every pull request.
+  # Enforces the addition of a changelog entry (a file in the .github/changelog directory) every pull request.
   changelog:
     runs-on: ubuntu-latest
     steps:
-      # CHANGELOG.md
-      - uses: dangoslen/changelog-enforcer@v3
+      - name: "Check changelog requirements"
+        uses: actions/github-script@v7
         with:
-          skipLabels: 'Skip Changelog'
-          versionPattern: '## \\[((v|V)?\\d*\\.\\d*\\.\\d*-?\\w*|unreleased|Unreleased|UNRELEASED|Dev)\\]'
+          script: |
+            const { repo: { owner, repo }, payload : { pull_request : { number, labels } } } = context;
 
-      # readme.txt
-      - uses: dangoslen/changelog-enforcer@v3
-        with:
-          changeLogPath: 'readme.txt'
-          skipLabels: 'Skip Changelog'
-          versionPattern: '^=\\s*((v|V)?\\d+\\.\\d+\\.\\d+|Dev)\\s*='
+            // Check for Skip Changelog label
+            core.debug( 'Changelog check: Check for Skip Changelog label' );
+            const skipLabel = 'Skip Changelog';
+            const prLabels = labels.map( label => label.name );
+            const hasSkipLabel = prLabels.includes( skipLabel );
+
+            if ( hasSkipLabel ) {
+              core.info( `Skipping changelog requirement for this PR (#${ number }) because of the "${ skipLabel }" label.` );
+              return;
+            }
+
+            // If no skip label, check for changelog file
+            core.debug( `Changelog check: Get list of files modified in ${ owner }/${ repo } #${ number }.` );
+
+            const fileList = [];
+            for await ( const response of github.paginate.iterator( github.rest.pulls.listFiles, {
+                owner,
+                repo,
+                pull_number: +number,
+                per_page: 100,
+            } ) ) {
+                for ( const file of response.data ) {
+                    fileList.push( file.filename );
+                    if ( file.previous_filename ) {
+                        fileList.push( file.previous_filename );
+                    }
+                }
+            }
+
+            const hasChangelogFile = fileList.some( file => {
+                core.debug( `Checking file: ${ file }` );
+                if ( file.startsWith( '.github/changelog' ) ) {
+                    core.info( `Found changelog file: ${ file }` );
+                    return true;
+                }
+                return false;
+            } );
+
+            if ( hasChangelogFile ) {
+                core.info( `PR #${ number } includes a changelog file.` );
+            } else {
+                core.info( `PR #${ number } does not include a changelog file.` );
+                core.setFailed( 'Your PR does not include a changelog file. Please add a changelog entry by running `composer changelog:add`, checking in the resulting file, and pushing that change to your branch.' );
+            }
