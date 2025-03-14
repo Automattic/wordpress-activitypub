@@ -15,9 +15,9 @@ Major and minor releases follow the same release process. These releases are cre
      npm run release
      ```
    - The script will:
-     - Prompt for the new version number
+     - Determine the new version number based on the unreleased changelog entries.
      - Update version numbers in relevant files
-     - Update the changelog
+     - Update `CHANGELOG.md` and `readme.txt` with the changelog entries
      - Create a new branch
      - Commit changes
      - Push to GitHub
@@ -46,18 +46,16 @@ Patch releases require a more manual process as they need to be created from the
 ### Steps
 
 1. **Restore Release Branch**
-   - Locate the most recent release branch (for `5.3.0` it was [#1371](https://github.com/Automattic/wordpress-activitypub/pull/1371)).
-   - If needed, recreate the branch from the last release tag.
+   - Locate the most recent release branch (for `5.3.0` it was `release/5.3.0`, created via [#1371](https://github.com/Automattic/wordpress-activitypub/pull/1371)).
+   - Click "Restore branch" to recreate it.
+   - Locally, checkout that release branch you just restored: `git fetch origin release/5.3.0 && git checkout release/5.3.0`
 
-2. **Create Version PR**
-   - Base the version PR on PR [#1192](https://github.com/Automattic/wordpress-activitypub/pull/1192).
-   - The release script doesn't support releasing patch versions, so you'll need to manually update version numbers and changelog entries.
-   - Manually update version numbers in relevant files.
-   - Manually update changelog and readme.txt with the patch version number above the entries that will be part of the release.
+2. **Cherry-pick Changes into the release branch**
+   - Identify merge commits from `trunk` that need to be included. You can find them at the bottom of each PR:
 
-3. **Cherry-pick Changes**
-   - Identify merge commits from `trunk` that need to be included.
-   - Cherry-pick each merge commit into the release branch:
+<img width="904" alt="image" src="https://github.com/user-attachments/assets/4c49c5bd-928c-44d2-b64b-39454baa8d9d" />
+
+   - Cherry-pick each merge commit into this branch:
      ```bash
      # Checkout the release branch.
      git checkout release/5.3.0
@@ -67,12 +65,15 @@ Patch releases require a more manual process as they need to be created from the
      ```
      > Note: The `-m 1` flag is required when cherry-picking merge commits. Merge commits have two parent commits - the first parent (`-m 1`) is the target branch of the original merge (usually the main branch), and the second parent (`-m 2`) is the source branch that was being merged. We use `-m 1` to tell Git to use the changes as they appeared in the main branch.
 
-4. **Resolve Conflicts**
-   - Common conflict areas:
-     - `CHANGELOG.md`
-     - `readme.txt`
-   - Resolve conflicts maintaining chronological order in changelog.
-   - Ensure version numbers are correct.
+   - Resolve merge conflicts that may come up as you cherry-pick commits.
+
+3. **Update changelog and version numbers**
+   - Run `composer changelog:write`. It will update `CHANGELOG.md` with the changelog entries you cherry-picked, and will give you a version number for that release.
+   - Edit `readme.txt` to paste the changelog entries from `CHANGELOG.md` into the `== Changelog ==` section.
+   - The release script doesn't support releasing patch versions, so you'll need to manually update version numbers in the different files (`activitypub.php`, `readme.txt`, and files that may have been changed to introduce an `unreleased` text).
+
+4. **Review and push your changes**
+   - Review your changes locally, and `git push` to push your changes to the remote.
 
 5. **Create Release**
    - On GitHub, navigate to the main page of the repository.
