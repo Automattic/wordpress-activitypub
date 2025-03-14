@@ -58,6 +58,18 @@ This will start a local WordPress environment with the ActivityPub plugin instal
 
 You can open the WordPress site in your browser by visiting `http://localhost:8076`.
 
+### Composer
+
+Composer is used to install development dependencies for the ActivityPub plugin, to run unit tests, and to manage changelog entries.
+
+To install Composer, follow the instructions on the [Composer website](https://getcomposer.org/).
+
+Once Composer is available on your machin, you can install dependencies for the project like so:
+
+```bash
+composer install
+```
+
 ## Running Tests
 
 You can now run the test suite using either npm or composer:
