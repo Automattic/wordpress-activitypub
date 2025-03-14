@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Outbox items only get sent to followers when there are any.
