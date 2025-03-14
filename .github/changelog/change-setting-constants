@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Restricted modifications to settings if they are predefined as constants.
