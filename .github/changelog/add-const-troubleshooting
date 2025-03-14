@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+The Welcome page now uses WordPress's Settings API and the classic design of the WP Admin.
