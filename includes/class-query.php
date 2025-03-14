@@ -138,13 +138,41 @@ class Query {
 			return $this->activitypub_object_id;
 		}
 
-		$object = $this->get_activitypub_object();
+		$queried_object = $this->get_queried_object();
 
-		if ( ! $object || \is_wp_error( $object ) ) {
-			return $object;
+		// Check for Outbox Activity.
+		if (
+			$queried_object instanceof \WP_Post &&
+			Outbox::POST_TYPE === $queried_object->post_type
+		) {
+			$activitypub_object = Outbox::maybe_get_activity( $queried_object );
+
+			// Check if the Outbox Activity is public.
+			if ( ! \is_wp_error( $activitypub_object ) ) {
+				$this->activitypub_object    = $activitypub_object;
+				$this->activitypub_object_id = $this->activitypub_object->get_id();
+
+				return $this->activitypub_object_id;
+			}
 		}
 
-		$this->activitypub_object_id = $object->get_id();
+		if ( ! $queried_object ) {
+			// If the object is not a valid ActivityPub object, try to get a virtual object.
+			$activitypub_object = $this->maybe_get_virtual_object();
+
+			if ( $activitypub_object ) {
+				$this->activitypub_object    = $activitypub_object;
+				$this->activitypub_object_id = $this->activitypub_object->get_id();
+
+				return $this->activitypub_object_id;
+			}
+		}
+
+		$transformer = Factory::get_transformer( $queried_object );
+
+		if ( $transformer && ! \is_wp_error( $transformer ) ) {
+			$this->activitypub_object_id = $transformer->to_id();
+		}
 
 		return $this->activitypub_object_id;
 	}
