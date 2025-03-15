@@ -167,26 +167,24 @@ jobs:
             // Get the changelog information from the previous step.
             const significance = '${{ steps.check-pr-body.outputs.significance }}';
             const type = '${{ steps.check-pr-body.outputs.type }}';
-            
+
             // Get the raw message from the previous step and process it.
             // We need to handle it as a regular string to avoid template literal syntax issues.
             // The message is passed through environment variables to avoid syntax issues.
             const rawMessage = process.env.PR_MESSAGE;
-            
+
             // Ensure the message is not empty.
-            if (!rawMessage) {
-              core.setFailed('Changelog message is missing or empty. Please provide a meaningful message in the PR description.');
+            if ( ! rawMessage ) {
+              core.setFailed( 'Changelog message is missing or empty. Please provide a meaningful message in the PR description.' );
               return;
             }
-            
+
             // Process the message to remove HTML comments and preserve special characters.
             let message = rawMessage
               // Remove HTML comments.
-              .replace(/<!--[\s\S]*?-->/g, '')
+              .replace( /<!--[\s\S]*?-->/g, '' )
               // Trim whitespace.
               .trim();
-            
-            core.info(`Processed changelog message: ${message}`);
 
             // Create the changelog file content.
             const content = [
