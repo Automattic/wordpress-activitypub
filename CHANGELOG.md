@@ -5,1383 +5,1041 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-
-* Documentation for migrating from a Mastodon instance to WordPress.
-
-### Fixed
-
-* Updates to certain user meta fields did not trigger an Update activity.
-* Properly re-added support for `Update` and `Delete` `Announce`ments.
-
 ## [5.4.1] - 2025-03-04
-
 ### Fixed
-
-* Fixed transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
-* Show "full content" preview even if post is in still in draft mode.
+- Fixed transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
+- Show "full content" preview even if post is in still in draft mode.
 
 ## [5.4.0] - 2025-03-03
-
 ### Added
-
-* Upgrade script to fix Follower json representations with unescaped backslashes.
-* Centralized place for sanitization functions.
+- Upgrade script to fix Follower json representations with unescaped backslashes.
+- Centralized place for sanitization functions.
 
 ### Changed
-
-* Bumped minimum required WordPress version to 6.4.
-* Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
-* Use webfinger as author email for comments from the Fediverse.
-* Remove the special handling of comments from Enable Mastodon Apps.
+- Bumped minimum required WordPress version to 6.4.
+- Use a later hook for Posts to get published to the Outbox, to get sure all `post_meta`s and `taxonomy`s are set stored properly.
+- Use webfinger as author email for comments from the Fediverse.
+- Remove the special handling of comments from Enable Mastodon Apps.
 
 ### Fixed
-
-* Do not redirect `/@username` URLs to the API any more, to improve `AUTHORIZED_FETCH` handling.
+- Do not redirect `/@username` URLs to the API any more, to improve `AUTHORIZED_FETCH` handling.
 
 ## [5.3.2] - 2025-02-27
-
 ### Fixed
-
-* Remove `activitypub_reply_block` filter after Activity-JSON is rendered, to not affect the HTML representation.
-* Remove `render_block_core/embed` filter after Activity-JSON is rendered, to not affect the HTML representation.
+- Remove `activitypub_reply_block` filter after Activity-JSON is rendered, to not affect the HTML representation.
+- Remove `render_block_core/embed` filter after Activity-JSON is rendered, to not affect the HTML representation.
 
 ## [5.3.1] - 2025-02-26
-
 ### Fixed
-
-* Blog profile settings can be saved again without errors.
-* Followers with backslashes in their descriptions no longer break their actor representation.
+- Blog profile settings can be saved again without errors.
+- Followers with backslashes in their descriptions no longer break their actor representation.
 
 ## [5.3.0] - 2025-02-25
-
 ### Added
-
-* A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
-* A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
-* Setting to adjust the number of days Outbox items are kept before being purged.
-* Failed Follower notifications for Outbox items now get retried for two more times.
-* Undo API for Outbox items.
-* Metadata to New Follower E-Mail.
-* Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
-* Outbox Activity IDs can now be resolved when the ActivityPub `Accept header is used.
-* Support for incoming `Move` activities and ensure that followed persons are updated accordingly.
-* Labels to add context to visibility settings in the block editor.
-* WP CLI command to reschedule Outbox-Activities.
+- A fallback `Note` for `Article` objects to improve previews on services that don't support Articles yet.
+- A reply `context` for Posts and Comments to allow relying parties to discover the whole conversation of a thread.
+- Setting to adjust the number of days Outbox items are kept before being purged.
+- Failed Follower notifications for Outbox items now get retried for two more times.
+- Undo API for Outbox items.
+- Metadata to New Follower E-Mail.
+- Allow Activities on URLs instead of requiring Activity-Objects. This is useful especially for sending Announces and Likes.
+- Outbox Activity IDs can now be resolved when the ActivityPub `Accept header is used.
+- Support for incoming `Move` activities and ensure that followed persons are updated accordingly.
+- Labels to add context to visibility settings in the block editor.
+- WP CLI command to reschedule Outbox-Activities.
 
 ### Changed
-
-* Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
-* Post bulk edits no longer create Outbox items, unless author or post status change.
-* Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
-* Outbox processing accounts for shared inboxes again.
-* Improved check for `?activitypub` query-var.
-* Rewrite rules: be more specific in author rewrite rules to avoid conflicts on sites that use the "@author" pattern in their permalinks.
-* Deprecate the `activitypub_post_locale` filter in favor of the `activitypub_locale` filter.
+- Outbox now precesses the first batch of followers right away to avoid delays in processing new Activities.
+- Post bulk edits no longer create Outbox items, unless author or post status change.
+- Properly process `Update` activities on profiles and ensure all properties of a followed person are updated accordingly.
+- Outbox processing accounts for shared inboxes again.
+- Improved check for `?activitypub` query-var.
+- Rewrite rules: be more specific in author rewrite rules to avoid conflicts on sites that use the "@author" pattern in their permalinks.
+- Deprecate the `activitypub_post_locale` filter in favor of the `activitypub_locale` filter.
 
 ### Fixed
-
-* The Outbox purging routine no longer is limited to deleting 5 items at a time.
-* Ellipses now display correctly in notification emails for Likes and Reposts.
-* Send Update-Activity when "Actor-Mode" is changed.
-* Added delay to `Announce` Activity from the Blog-Actor, to not have race conditions.
-* `Actor` validation in several REST API endpoints.
-* Bring back the `activitypub_post_locale` filter to allow overriding the post's locale.
+- The Outbox purging routine no longer is limited to deleting 5 items at a time.
+- Ellipses now display correctly in notification emails for Likes and Reposts.
+- Send Update-Activity when "Actor-Mode" is changed.
+- Added delay to `Announce` Activity from the Blog-Actor, to not have race conditions.
+- `Actor` validation in several REST API endpoints.
+- Bring back the `activitypub_post_locale` filter to allow overriding the post's locale.
 
 ## [5.2.0] - 2025-02-13
-
 ### Added
-
-* Batch Outbox-Processing.
-* Outbox processed events get logged in Stream and show any errors returned from inboxes.
-* Outbox items older than 6 months will be purged to avoid performance issues.
-* REST API endpoints for likes and shares.
-
-### Fixed
-
-* Fixed an issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
+- Batch Outbox-Processing.
+- Outbox processed events get logged in Stream and show any errors returned from inboxes.
+- Outbox items older than 6 months will be purged to avoid performance issues.
+- REST API endpoints for likes and shares.
 
 ### Changed
-
-* Increased probability of Outbox items being processed with the correct author.
-* Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
-* Updated terminology to be client-neutral in the Federated Reply block.
+- Increased probability of Outbox items being processed with the correct author.
+- Enabled querying of Outbox posts through the REST API to improve troubleshooting and debugging.
+- Updated terminology to be client-neutral in the Federated Reply block.
 
 ### Fixed
-
-* Enforce 200 status header for valid ActivityPub requests.
-* `object_id_to_comment` returns a commment now, even if there are more than one matching comment in the DB.
-* Integration of content-visibility setup in the block editor.
-* Update CLI commands to the new scheduler refactorings.
-* Do not add an audience to the Actor-Profiles.
-* `Activity::set_object` falsely overwrites the Activity-ID with a default.
+- Fixed an issue where the outbox could not send object types other than `Base_Object` (introduced in 5.0.0).
+- Enforce 200 status header for valid ActivityPub requests.
+- `object_id_to_comment` returns a commment now, even if there are more than one matching comment in the DB.
+- Integration of content-visibility setup in the block editor.
+- Update CLI commands to the new scheduler refactorings.
+- Do not add an audience to the Actor-Profiles.
+- `Activity::set_object` falsely overwrites the Activity-ID with a default.
 
 ## [5.1.0] - 2025-02-06
-
 ### Added
-
-* Cleanup of option values when the plugin is uninstalled.
-* Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
-* Show ActivityPub preview in row actions when Block Editor is enabled but not used for the post type.
+- Cleanup of option values when the plugin is uninstalled.
+- Third-party plugins can filter settings tabs to add their own settings pages for ActivityPub.
+- Show ActivityPub preview in row actions when Block Editor is enabled but not used for the post type.
 
 ### Changed
-
-* Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
-* Allow omitting replies in ActivityPub representations instead of setting them as empty.
-* Allow Base Transformer to handle WP_Term objects for transformation.
-* Improved Query extensibility for third party plugins.
+- Manually granting `activitypub` cap no longer requires the receiving user to have `publish_post`.
+- Allow omitting replies in ActivityPub representations instead of setting them as empty.
+- Allow Base Transformer to handle WP_Term objects for transformation.
+- Improved Query extensibility for third party plugins.
 
 ### Fixed
-
-* Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
-* Avoid PHP warnings when using Debug mode and when the `actor` is not set.
-* No longer creates Outbox items when importing content/users.
-* Fix NodeInfo 2.0 URL to be HTTP instead of HTTPS.
+- Negotiation of ActivityPub requests for custom post types when queried by the ActivityPub ID.
+- Avoid PHP warnings when using Debug mode and when the `actor` is not set.
+- No longer creates Outbox items when importing content/users.
+- Fix NodeInfo 2.0 URL to be HTTP instead of HTTPS.
 
 ## [5.0.0] - 2025-02-03
-
 ### Changed
-
-* Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins.
-* Moved password check to `is_post_disabled` function.
+- Improved content negotiation and AUTHORIZED_FETCH support for third-party plugins.
+- Moved password check to `is_post_disabled` function.
 
 ### Fixed
-
-* Handle deletes from remote servers that leave behind an accessible Tombstone object.
-* No longer parses tags for post types that don't support Activitypub.
-* rel attribute will now contain no more than one "me" value.
+- Handle deletes from remote servers that leave behind an accessible Tombstone object.
+- No longer parses tags for post types that don't support Activitypub.
+- rel attribute will now contain no more than one "me" value.
 
 ## [4.7.3] - 2025-01-21
-
 ### Fixed
-
-* Flush rewrite rules after NodeInfo update.
+- Flush rewrite rules after NodeInfo update.
 
 ## [4.7.2] - 2025-01-17
-
 ### Fixed
-
-* More robust handling of `_activityPubOptions` in scripts, using a `useOptions()` helper.
-* Flush post caches after Followers migration.
+- More robust handling of `_activityPubOptions` in scripts, using a `useOptions()` helper.
+- Flush post caches after Followers migration.
 
 ### Added
-
-* Support for WPML post locale
+- Support for WPML post locale
 
 ### Changed
-
-* Rewrite the current dispatcher system, to use the Outbox instead of the Scheduler.
+- Rewrite the current dispatcher system, to use the Outbox instead of the Scheduler.
 
 ### Removed
-
-* Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
+- Built-in support for nodeinfo2. Use the [NodeInfo plugin](https://wordpress.org/plugins/nodeinfo/) instead.
 
 ## [4.7.1] - 2025-01-14
-
 ### Fixed
-
-* Missing migration
+- Missing migration
 
 ## [4.7.0] - 2025-01-13
-
 ### Added
-
-* Comment counts get updated when the plugin is activated/deactivated/deleted
-* Added a filter to make custom comment types manageable in WP.com Calypso
+- Comment counts get updated when the plugin is activated/deactivated/deleted
+- Added a filter to make custom comment types manageable in WP.com Calypso
 
 ### Changed
-
-* Hide ActivityPub post meta keys from the custom Fields UI
-* Bumped minimum required PHP version to 7.2
+- Hide ActivityPub post meta keys from the custom Fields UI
+- Bumped minimum required PHP version to 7.2
+- Print `_activityPubOptions` in the `wp_footer` action on the frontend.
 
 ### Fixed
-
-* Undefined array key warnings in various places
-* @-mentions in federated comments being displayed with a line break
-* Fetching replies from the same instance for Enable Mastodon Apps
-* Image captions not being included in the ActivityPub representation when the image is attached to the post
-
-### Changed
-* Print `_activityPubOptions` in the `wp_footer` action on the frontend.
+- Undefined array key warnings in various places
+- @-mentions in federated comments being displayed with a line break
+- Fetching replies from the same instance for Enable Mastodon Apps
+- Image captions not being included in the ActivityPub representation when the image is attached to the post
 
 ## [4.6.0] - 2024-12-20
-
 ### Added
-
-* Add a filter to allow modifying the ActivityPub preview template
-* `@mentions` in the JSON representation of the reply
-* Add settings to enable/disable e-mail notifications for new followers and direct messages
+- Add a filter to allow modifying the ActivityPub preview template
+- `@mentions` in the JSON representation of the reply
+- Add settings to enable/disable e-mail notifications for new followers and direct messages
 
 ### Changed
-
-* Direct Messages: Test for the user being in the to field
-* Direct Messages: Improve HTML to e-mail text conversion
-* Better support for FSE color schemes
+- Direct Messages: Test for the user being in the to field
+- Direct Messages: Improve HTML to e-mail text conversion
+- Better support for FSE color schemes
 
 ### Fixed
-
-* Reactions: Provide a fallback for empty avatar URLs
+- Reactions: Provide a fallback for empty avatar URLs
 
 ## [4.5.1] - 2024-12-18
-
 ### Changed
-
-* Reactions block: Remove the `wp-block-editor` dependency for frontend views
+- Reactions block: Remove the `wp-block-editor` dependency for frontend views
 
 ### Fixed
-
-* Direct Messages: Don't send notification for received public activities
+- Direct Messages: Don't send notification for received public activities
 
 ## [4.5.0] - 2024-12-17
-
 ### Added
-
-* Reactions block to display likes and reposts
-* `icon` support for `Audio` and `Video` attachments
-* Send "new follower" emails
-* Send "direct message" emails
-* Account for custom comment types when calculating comment counts
-* Plugin upgrade routine that automatically updates comment counts
+- Reactions block to display likes and reposts
+- `icon` support for `Audio` and `Video` attachments
+- Send "new follower" emails
+- Send "direct message" emails
+- Account for custom comment types when calculating comment counts
+- Plugin upgrade routine that automatically updates comment counts
 
 ### Changed
-
-* Likes and Reposts enabled by default
-* Email templates for Likes and Reposts
-* Improve Interactions moderation
-* Compatibility with Akismet
-* Comment type mapping for `Like` and `Announce`
-* Signature verification for API endpoints
-* Changed priority of Attachments, to favor `Image` over `Audio` and `Video`
+- Likes and Reposts enabled by default
+- Email templates for Likes and Reposts
+- Improve Interactions moderation
+- Compatibility with Akismet
+- Comment type mapping for `Like` and `Announce`
+- Signature verification for API endpoints
+- Changed priority of Attachments, to favor `Image` over `Audio` and `Video`
 
 ### Fixed
-
-* Empty `url` attributes in the Reply block no longer cause PHP warnings
+- Empty `url` attributes in the Reply block no longer cause PHP warnings
 
 ## [4.4.0] - 2024-12-09
-
 ### Added
-
-* Setting to enable/disable Authorized-Fetch
+- Setting to enable/disable Authorized-Fetch
 
 ### Changed
-
-* Added screen reader text to the "Follow Me" block for improved accessibility
-* Added `media_type` support to Activity-Object-Transformers
-* Clarified settings page text around which users get Activitypub profiles
-* Add a filter to the REST API moderators list
-* Refactored settings to use the WordPress Settings API
+- Added screen reader text to the "Follow Me" block for improved accessibility
+- Added `media_type` support to Activity-Object-Transformers
+- Clarified settings page text around which users get Activitypub profiles
+- Add a filter to the REST API moderators list
+- Refactored settings to use the WordPress Settings API
 
 ### Fixed
-
-* Prevent hex color codes in HTML attributes from being added as post tags
-* Fixed a typo in the custom post content settings
-* Prevent draft posts from being federated when bulk deleted
+- Prevent hex color codes in HTML attributes from being added as post tags
+- Fixed a typo in the custom post content settings
+- Prevent draft posts from being federated when bulk deleted
 
 ## [4.3.0] - 2024-12-02
-
 ### Added
-
-* Fix editor error when switching to edit a synced Pattern
-* A `pre_activitypub_get_upload_baseurl` filter
-* Fediverse Preview on post-overview page
-* GitHub action to enforce Changelog updates
-* New contributors
+- Fix editor error when switching to edit a synced Pattern
+- A `pre_activitypub_get_upload_baseurl` filter
+- Fediverse Preview on post-overview page
+- GitHub action to enforce Changelog updates
+- New contributors
 
 ### Changed
-
-* Basic enclosure validation
-* More User -> Actor renaming
-* Outsource Constants to a separate file
-* Better handling of `readme.txt` and `README.md`
+- Basic enclosure validation
+- More User -> Actor renaming
+- Outsource Constants to a separate file
+- Better handling of `readme.txt` and `README.md`
 
 ### Fixed
-
-* Fediverse preview showing `preferredUsername` instead of `name`
-* A potential fatal error in Enable Mastodon Apps
-* Show Followers name instead of avatar on mobile view
-* Fixed a potential fatal error in Enable Mastodon Apps
-* Broken escaping of Usernames in Actor-JSON
-* Fixed missing attachement-type for enclosures
-* Prevention against self pings
+- Fediverse preview showing `preferredUsername` instead of `name`
+- A potential fatal error in Enable Mastodon Apps
+- Show Followers name instead of avatar on mobile view
+- Fixed a potential fatal error in Enable Mastodon Apps
+- Broken escaping of Usernames in Actor-JSON
+- Fixed missing attachement-type for enclosures
+- Prevention against self pings
 
 ## [4.2.1] - 2024-11-20
-
 ### Added
-
-* Mastodon Apps status provider
+- Mastodon Apps status provider
 
 ### Changed
-
-* Image-Handling
-* Have better checks if audience should be set or not
+- Image-Handling
+- Have better checks if audience should be set or not
 
 ### Fixed
-
-* Don't overwrite an existing `wp-tests-config.php`
-* PHPCS for phpunit files
+- Don't overwrite an existing `wp-tests-config.php`
+- PHPCS for phpunit files
 
 ## [4.2.0] - 2024-11-15
-
 ### Added
-
-* Unit tests for the `ActivityPub\Transformer\Post` class
+- Unit tests for the `ActivityPub\Transformer\Post` class
 
 ### Changed
-
-* Reuse constants once they're defined
-* "FEP-b2b8: Long-form Text" support
-* Admin notice for plain permalink settings is more user-friendly and actionable
-* Post-Formats support
+- Reuse constants once they're defined
+- "FEP-b2b8: Long-form Text" support
+- Admin notice for plain permalink settings is more user-friendly and actionable
+- Post-Formats support
 
 ### Fixed
-
-* Do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts
-* Proper margins for notices and font size for page title in settings screen
-* Ensure that `?author=0` resolves to blog user
+- Do not display ActivityPub's user sub-menus to users who do not have the capabilities of writing posts
+- Proper margins for notices and font size for page title in settings screen
+- Ensure that `?author=0` resolves to blog user
 
 ### Removed
-
-* Remove `meta` CLI command
-* Remove unneeded translation functions from CLI commands
+- Remove `meta` CLI command
+- Remove unneeded translation functions from CLI commands
 
 ## [4.1.1] - 2024-11-10
-
 ### Fixed
-
-* Only revert to URL if there is one
-* Migration
+- Only revert to URL if there is one
+- Migration
 
 ## [4.1.0] - 2024-11-08
-
 ### Added
-
-* Add custom Preview for "Fediverse"
-* Support `comment_previously_approved` setting
+- Add custom Preview for "Fediverse"
+- Support `comment_previously_approved` setting
 
 ### Fixed
-
-* Hide sticky posts that are not public
+- Hide sticky posts that are not public
 
 ### Changed
-
-* `activity_handle_undo` action
-* Add title to content if post is a `Note`
-* Fallback to blog-user if user is disabled
+- `activity_handle_undo` action
+- Add title to content if post is a `Note`
+- Fallback to blog-user if user is disabled
 
 ## [4.0.2] - 2024-10-30
-
 ### Fixed
-
-* Do not federate "Local" posts
+- Do not federate "Local" posts
 
 ### Changed
-
-* Help-text for Content-Warning box
+- Help-text for Content-Warning box
 
 ## [4.0.1] - 2024-10-26
-
 ### Fixed
-
-* Missing URL-Param handling in REST API
-* Seriously Simple Podcasting integration
-* Multiple small fixes
+- Missing URL-Param handling in REST API
+- Seriously Simple Podcasting integration
+- Multiple small fixes
 
 ### Changed
-
-* Provide contextual fallback for dynamic blocks
+- Provide contextual fallback for dynamic blocks
 
 ## [4.0.0] - 2024-10-23
-
 ### Added
-
-* Fire an action before a follower is removed
-* Make Intent-URL filterable
-* `title` attribute to link headers for better readability
-* Post "visibility" feature
-* Attribution-Domains support
+- Fire an action before a follower is removed
+- Make Intent-URL filterable
+- `title` attribute to link headers for better readability
+- Post "visibility" feature
+- Attribution-Domains support
 
 ### Changed
-
-* Inbox validation
-* WordPress-Post-Type - Detection
-* Only validate POST params and do not fall back to GET params
-* ID handling for a better compatibility with caching plugins
+- Inbox validation
+- WordPress-Post-Type - Detection
+- Only validate POST params and do not fall back to GET params
+- ID handling for a better compatibility with caching plugins
 
 ### Fixed
-
-* The "Shared Inbox" endpoint
-* Ensure that sticky_posts is an array
-* URLs and Hashtags in profiles were not converted
-* A lot of small improvements and fixes
+- The "Shared Inbox" endpoint
+- Ensure that sticky_posts is an array
+- URLs and Hashtags in profiles were not converted
+- A lot of small improvements and fixes
 
 ## [3.3.3] - 2024-10-09
-
 ### Fixed
-
-* Sanitization callback
+- Sanitization callback
 
 ### Changed
-
-* A lot of PHPCS cleanups
-* Prepare multi-lang support
+- A lot of PHPCS cleanups
+- Prepare multi-lang support
 
 ## [3.3.2] - 2024-10-02
-
 ### Fixed
-
-* Keep priority of Icons
-* Fatal error if remote-object is `WP_Error`
+- Keep priority of Icons
+- Fatal error if remote-object is `WP_Error`
 
 ### Changed
-
-* Adopt WordPress PHP Coding Standards
+- Adopt WordPress PHP Coding Standards
 
 ## [3.3.1] - 2024-09-26
-
 ### Fixed
-
-* PHP Warnings
-* PHPCS issues
+- PHP Warnings
+- PHPCS issues
 
 ## [3.3.0] - 2024-09-25
-
 ### Added
-
-* Content warning support
-* Replies collection
-* Enable Mastodon Apps: support profile editing, blog user
-* Follow Me/Followers: add inherit mode for dynamic templating
+- Content warning support
+- Replies collection
+- Enable Mastodon Apps: support profile editing, blog user
+- Follow Me/Followers: add inherit mode for dynamic templating
 
 ### Fixed
-
-* Cropping Header Images for users without the 'customize' capability
+- Cropping Header Images for users without the 'customize' capability
 
 ### Changed
-
-* OpenSSL handling
-* Added missing @ in Follow-Me block
+- OpenSSL handling
+- Added missing @ in Follow-Me block
 
 ## [3.2.5] - 2024-09-17
-
 ### Fixed
-
-* Enable Mastodon Apps check
-* Fediverse replies were not threaded properly
+- Enable Mastodon Apps check
+- Fediverse replies were not threaded properly
 
 ## [3.2.4] - 2024-09-16
-
 ### Changed
-
-* Inbox validation
+- Inbox validation
 
 ## [3.2.3] - 2024-09-15
-
 ### Fixed
-
-* NodeInfo endpoint
-* (Temporarily) Remove HTML from `summary`, because it seems that Mastodon has issues with it
+- NodeInfo endpoint
+- (Temporarily) Remove HTML from `summary`, because it seems that Mastodon has issues with it
 
 ### Changed
-
-* Accessibility for Reply-Context
-* Use `Article` Object-Type as default
+- Accessibility for Reply-Context
+- Use `Article` Object-Type as default
 
 ## [3.2.2] - 2024-09-09
-
 ### Fixed
-
-* Fixed: Extra-Fields check
+- Fixed: Extra-Fields check
 
 ## [3.2.1] - 2024-09-09
-
 ### Fixed
-
-* Fixed: Use `Excerpt` for Podcast Episodes
+- Fixed: Use `Excerpt` for Podcast Episodes
 
 ## [3.2.0] - 2024-09-09
-
 ### Added
-
-* Support for Seriously Simple Podcasting
-* Blog extra fields
-* Support "read more" for Activity-Summary
-* `Like` and `Announce` (Boost) handler
-* Simple Remote-Reply endpoint
-* "Stream" Plugin support
-* New Fediverse symbol
+- Support for Seriously Simple Podcasting
+- Blog extra fields
+- Support "read more" for Activity-Summary
+- `Like` and `Announce` (Boost) handler
+- Simple Remote-Reply endpoint
+- "Stream" Plugin support
+- New Fediverse symbol
 
 ### Changed
-
-* Replace hashtags, URLs, and mentions in summary with links
-* Hide Bookmarklet if site does not support Blocks
+- Replace hashtags, URLs, and mentions in summary with links
+- Hide Bookmarklet if site does not support Blocks
 
 ### Fixed
-
-* Link detection for extra fields when spaces after the link and fix when two links in the content
-* `Undo` for `Likes` and `Announces`
-* Show Avatars on `Likes` and `Announces`
-* Remove proprietary WebFinger resource
-* Wrong followers URL in "to" attribute of posts
+- Link detection for extra fields when spaces after the link and fix when two links in the content
+- `Undo` for `Likes` and `Announces`
+- Show Avatars on `Likes` and `Announces`
+- Remove proprietary WebFinger resource
+- Wrong followers URL in "to" attribute of posts
 
 ## [3.1.0] - 2024-08-07
-
 ### Added
-
-* `menu_order` to `ap_extrafield` so that user can decide in which order they will be displayed
-* Line breaks to user biography
-* Blueprint
+- `menu_order` to `ap_extrafield` so that user can decide in which order they will be displayed
+- Line breaks to user biography
+- Blueprint
 
 ### Changed
-
-* Simplified WebFinger code
+- Simplified WebFinger code
 
 ### Fixed
-
-* Changed missing `activitypub_user_description` to `activitypub_description`
-* Undefined `get_sample_permalink`
-* Only send Update for previously-published posts
+- Changed missing `activitypub_user_description` to `activitypub_description`
+- Undefined `get_sample_permalink`
+- Only send Update for previously-published posts
 
 ## [3.0.0] - 2024-07-29
-
 ### Added
-
-* "Reply Context" support, you can now reply to posts on the Fediverse through a WordPress post
-* Bookmarklet to automatically pre-fill the "Reply Context" block
-* "Header Image" support and ability to edit other profile information for Authors and the Blog-User
-* ActivityPub link HTML/HTTP-Header support
-* Tag support for Actors (only auto-generated for now)
+- "Reply Context" support, you can now reply to posts on the Fediverse through a WordPress post
+- Bookmarklet to automatically pre-fill the "Reply Context" block
+- "Header Image" support and ability to edit other profile information for Authors and the Blog-User
+- ActivityPub link HTML/HTTP-Header support
+- Tag support for Actors (only auto-generated for now)
 
 ### Changed
-
-* Add setting to enable/disable the `fediverse:creator` OGP tag.
+- Add setting to enable/disable the `fediverse:creator` OGP tag.
 
 ### Removed
-
-* Deprecated `class-post.php` model
+- Deprecated `class-post.php` model
 
 ## [2.6.1] - 2024-07-18
-
 ### Fixed
-
-* Extra Fields will generate wrong entries
+- Extra Fields will generate wrong entries
 
 ## [2.6.0] - 2024-07-17
-
 ### Added
-
-* Support for FEP-fb2a
-* CRUD support for Extra Fields
+- Support for FEP-fb2a
+- CRUD support for Extra Fields
 
 ### Changed
-
-* Remote-Follow UI and UX
-* Open Graph `fediverse:creator` implementation
+- Remote-Follow UI and UX
+- Open Graph `fediverse:creator` implementation
 
 ### Fixed
-
-* Compatibility issues with fed.brid.gy
-* Remote-Reply endpoint
-* WebFinger Error Codes (thanks to the FediTest project)
-* Fatal Error when `wp_schedule_single_event` third argument is being passed as a string
+- Compatibility issues with fed.brid.gy
+- Remote-Reply endpoint
+- WebFinger Error Codes (thanks to the FediTest project)
+- Fatal Error when `wp_schedule_single_event` third argument is being passed as a string
 
 ## [2.5.0] - 2024-07-01
-
 ### Added
-
-* WebFinger cors header
-* WebFinger Content-Type
-* The Fediverse creator of a post to OpenGraph
+- WebFinger cors header
+- WebFinger Content-Type
+- The Fediverse creator of a post to OpenGraph
 
 ### Changed
-
-* Try to lookup local users first for Enable Mastodon Apps
-* Send also Announces for deletes
-* Load time by adding `count_total=false` to `WP_User_Query`
+- Try to lookup local users first for Enable Mastodon Apps
+- Send also Announces for deletes
+- Load time by adding `count_total=false` to `WP_User_Query`
 
 ### Fixed
-
-* Several WebFinger issues
-* Redirect issue for Application user
-* Accessibilty issues with missing screen-reader-text on User overview page
+- Several WebFinger issues
+- Redirect issue for Application user
+- Accessibilty issues with missing screen-reader-text on User overview page
 
 
 ## [2.4.0] - 2024-06-05
-
 ### Added
-
-* A core/embed block filter to transform iframes to links
-* Basic support of incoming `Announce`s
-* Improve attachment handling
-* Notifications: Introduce general class and use it for new follows
-* Always fall back to `get_by_username` if one of the above fail
-* Notification support for Jetpack
-* EMA: Support for fetching external statuses without replies
-* EMA: Remote context
-* EMA: Allow searching for URLs
-* EMA: Ensuring numeric ids is now done in EMA directly
-* Podcast support
-* Follower count to "At a Glance" dashboard widget
+- A core/embed block filter to transform iframes to links
+- Basic support of incoming `Announce`s
+- Improve attachment handling
+- Notifications: Introduce general class and use it for new follows
+- Always fall back to `get_by_username` if one of the above fail
+- Notification support for Jetpack
+- EMA: Support for fetching external statuses without replies
+- EMA: Remote context
+- EMA: Allow searching for URLs
+- EMA: Ensuring numeric ids is now done in EMA directly
+- Podcast support
+- Follower count to "At a Glance" dashboard widget
 
 ### Changed
-
-* Use `Note` as default Object-Type, instead of `Article`
-* Improve `AUTHORIZED_FETCH`
-* Only send Mentions to comments in the direct hierarchy
-* Improve transformer
-* Improve Lemmy compatibility
-* Updated JS dependencies
+- Use `Note` as default Object-Type, instead of `Article`
+- Improve `AUTHORIZED_FETCH`
+- Only send Mentions to comments in the direct hierarchy
+- Improve transformer
+- Improve Lemmy compatibility
+- Updated JS dependencies
 
 ### Fixed
-
-* EMA: Add missing static keyword and try to lookup if the id is 0
-* Blog-wide account when WordPress is in subdirectory
-* Funkwhale URLs
-* Prevent infinite loops in `get_comment_ancestors`
-* Better Content-Negotiation handling
+- EMA: Add missing static keyword and try to lookup if the id is 0
+- Blog-wide account when WordPress is in subdirectory
+- Funkwhale URLs
+- Prevent infinite loops in `get_comment_ancestors`
+- Better Content-Negotiation handling
 
 ## [2.3.1] - 2024-04-29
-
 ### Added
-
-* Enable Mastodon Apps: Add remote outbox fetching
-* Help texts
+- Enable Mastodon Apps: Add remote outbox fetching
+- Help texts
 
 ### Fixed
-
-* Compatibility issues with Discourse
-* Do not announce replies
-* Also delete interactions with deleted person
-* Check Author-URL only if user is enabled for ActivityPub
-* Generate comment IDs for federation from home_url
+- Compatibility issues with Discourse
+- Do not announce replies
+- Also delete interactions with deleted person
+- Check Author-URL only if user is enabled for ActivityPub
+- Generate comment IDs for federation from home_url
 
 ### Removed
-
-* Beta label from the #Hashtag settings
+- Beta label from the #Hashtag settings
 
 ## [2.3.0] - 2024-04-16
-
 ### Added
+- Mark links as "unhandled-link" and "status-link", for a better UX in the Mastodon App
+- Enable-Mastodon-Apps: Provide followers
+- Enable-Mastodon-Apps: Extend account with ActivityPub data
+- Enable-Mastodon-Apps: Search in followers
+- Add `alt` support for images (for Block and Classic-Editor)
 
-* Mark links as "unhandled-link" and "status-link", for a better UX in the Mastodon App
-* Enable-Mastodon-Apps: Provide followers
-* Enable-Mastodon-Apps: Extend account with ActivityPub data
-* Enable-Mastodon-Apps: Search in followers
-* Add `alt` support for images (for Block and Classic-Editor)
+### Fixed
+- Counter for system users outbox
+- Don't set a default actor type in the actor class
+- Outbox collection for blog and application user
 
-## Fixed
-
-* Counter for system users outbox
-* Don't set a default actor type in the actor class
-* Outbox collection for blog and application user
-
-## Changed
-
-* A better default content handling based on the Object Type
-* Improve User management
-* Federated replies: Improved UX for "your reply will federate"
-* Comment reply federation: support `is_single_user` sites
-* Mask WordPress version number
-* Improve remote reply handling
-* Remote Reply: limit enqueue to when needed
-* Abstract shared Dialog code
+### Changed
+- A better default content handling based on the Object Type
+- Improve User management
+- Federated replies: Improved UX for "your reply will federate"
+- Comment reply federation: support `is_single_user` sites
+- Mask WordPress version number
+- Improve remote reply handling
+- Remote Reply: limit enqueue to when needed
+- Abstract shared Dialog code
 
 ## [2.2.0] - 2024-02-27
-
 ### Added
+- Remote-Reply lightbox
+- Support `application/ld+json` mime-type with AP profile in WebFinger
 
-* Remote-Reply lightbox
-* Support `application/ld+json` mime-type with AP profile in WebFinger
-
-## Fixed
-
-* Prevent scheduler overload
+### Fixed
+- Prevent scheduler overload
 
 ## [2.1.1] - 2024-02-13
-
 ### Added
-
-* Add `@` prefix to Follow-Block
-* Apply `comment_text` filter to Activity
+- Add `@` prefix to Follow-Block
+- Apply `comment_text` filter to Activity
 
 ## [2.1.0] - 2024-02-12
-
 ### Added
-
-* Various endpoints for the "Enable Mastodon Apps" plugin
-* Event Objects
-* Send notification to all Repliers if a new Comment is added
-* Vary-Header support behind feature flag
+- Various endpoints for the "Enable Mastodon Apps" plugin
+- Event Objects
+- Send notification to all Repliers if a new Comment is added
+- Vary-Header support behind feature flag
 
 ### Fixed
-
-* Some Federated Comment improvements
-* Remove old/abandoned Crons
+- Some Federated Comment improvements
+- Remove old/abandoned Crons
 
 ## [2.0.1] - 2024-01-12
-
 ### Fixed
-
-* Comment `Update` Federation
-* WebFinger check
-* Classic editor image finding for large images
+- Comment `Update` Federation
+- WebFinger check
+- Classic editor image finding for large images
 
 ### Changed
-
-* Re-Added Post Model Class because of some weird caching issues
+- Re-Added Post Model Class because of some weird caching issues
 
 ## [2.0.0] - 2024-01-09
-
 ### Added
-
-* Bidirectional Comment Federation
-* URL support for WebFinger
-* Make Post-Template filterable
-* CSS class for ActivityPub comments to allow custom designs
-* FEP-2677: Identifying the Application Actor
-* FEP-2c59: Discovery of a Webfinger address from an ActivityPub actor
-* Profile Update Activities
+- Bidirectional Comment Federation
+- URL support for WebFinger
+- Make Post-Template filterable
+- CSS class for ActivityPub comments to allow custom designs
+- FEP-2677: Identifying the Application Actor
+- FEP-2c59: Discovery of a Webfinger address from an ActivityPub actor
+- Profile Update Activities
 
 ### Changed
-
-* WebFinger endpoints
+- WebFinger endpoints
 
 ### Removed
-
-* Deprecated Classes
+- Deprecated Classes
 
 ### Fixed
-
-* Normalize attributes that can have mixed value types
+- Normalize attributes that can have mixed value types
 
 ## [1.3.0] - 2023-12-05
-
 ### Added
-
-* Threaded-Comments support
+- Threaded-Comments support
 
 ### Changed
-
-* alt text for avatars in Follow Me/Followers blocks
-* `Delete`, `Update` and `Follow` Activities
-* better/more effective handling of `Delete` Activities
-* allow `<p />` and `<br />` for Comments
+- alt text for avatars in Follow Me/Followers blocks
+- `Delete`, `Update` and `Follow` Activities
+- better/more effective handling of `Delete` Activities
+- allow `<p />` and `<br />` for Comments
 
 ### Fixed
-
-* removed default limit of WP_Query to send updates to all Inboxes and not only to the first 10
+- removed default limit of WP_Query to send updates to all Inboxes and not only to the first 10
 
 ## [1.2.0] - 2023-11-18
-
 ### Added
-
-* Search and order followerer lists
-* Have a filter to defer signature verification
+- Search and order followerer lists
+- Have a filter to defer signature verification
 
 ### Changed
-
-* "Follow Me" styles for dark themes
-* Allow `p` and `br` tags only for AP comments
+- "Follow Me" styles for dark themes
+- Allow `p` and `br` tags only for AP comments
 
 ### Fixed
-
-* Deduplicate attachments earlier to prevent incorrect max_media
+- Deduplicate attachments earlier to prevent incorrect max_media
 
 ## [1.1.0] - 2023-11-08
-
 ### Changed
-
-* audio and video attachments are now supported!
-* better error messages if remote profile is not accessible
-* PHP 8.1 compatibility
-* more reliable [ap_author], props @uk3
-* NodeInfo statistics
+- audio and video attachments are now supported!
+- better error messages if remote profile is not accessible
+- PHP 8.1 compatibility
+- more reliable [ap_author], props @uk3
+- NodeInfo statistics
 
 ### Fixed
+- don't try to parse mentions or hashtags for very large (>1MB) posts to prevent timeouts
+- better handling of ISO-639-1 locale codes
 
-* don't try to parse mentions or hashtags for very large (>1MB) posts to prevent timeouts
-* better handling of ISO-639-1 locale codes
+## [1.0.10] - 2023-10-24
+### Changed
+- better error messages if remote profile is not accessible
 
-## [1.0.10]
+## [1.0.9] - 2023-10-24
+### Fixed
+- broken following endpoint
+
+## [1.0.8] - 2023-10-24
+### Fixed
+- blocking of HEAD requests
+- PHP fatal error
+- several typos
+- error codes
 
 ### Changed
-
-* better error messages if remote profile is not accessible
-
-## [1.0.9]
-
-### Fixed
-
-* broken following endpoint
-
-## [1.0.8]
-
-### Fixed
-
-* blocking of HEAD requests
-* PHP fatal error
-* several typos
-* error codes
-
-### Changed
-
-* loading of shortcodes
-* caching of followers
-* Application-User is no longer "indexable"
-* more consistent usage of the `application/activity+json` Content-Type
+- loading of shortcodes
+- caching of followers
+- Application-User is no longer "indexable"
+- more consistent usage of the `application/activity+json` Content-Type
 
 ### Removed
+- featured tags endpoint
 
-* featured tags endpoint
-
-## [1.0.7]
-
+## [1.0.7] - 2023-10-13
 ### Added
-
-* filter to hook into "is blog public" check
-
-### Fixed
-
-* broken function call
-
-## [1.0.6]
+- filter to hook into "is blog public" check
 
 ### Fixed
+- broken function call
 
-* more restrictive request verification
-
-## [1.0.5]
-
+## [1.0.6] - 2023-10-12
 ### Fixed
+- more restrictive request verification
 
-* compatibility with WebFinger and NodeInfo plugin
-
-## [1.0.4]
-
+## [1.0.5] - 2023-10-11
 ### Fixed
+- compatibility with WebFinger and NodeInfo plugin
 
-* Constants were not loaded early enough, resulting in a race condition
-* Featured image was ignored when using the block editor
+## [1.0.4] - 2023-10-10
+### Fixed
+- Constants were not loaded early enough, resulting in a race condition
+- Featured image was ignored when using the block editor
 
-## [1.0.3]
-
+## [1.0.3] - 2023-10-10
 ### Changed
-
-* refactoring of the Plugin init process
-* better frontend UX and improved theme compat for blocks
-* add a `ACTIVITYPUB_DISABLE_REWRITES` constant
-* add pre-fetch hook to allow plugins to hang filters on
+- refactoring of the Plugin init process
+- better frontend UX and improved theme compat for blocks
+- add a `ACTIVITYPUB_DISABLE_REWRITES` constant
+- add pre-fetch hook to allow plugins to hang filters on
 
 ### Fixed
+- compatibility with older WordPress/PHP versions
 
-* compatibility with older WordPress/PHP versions
-
-## [1.0.2]
-
+## [1.0.2] - 2023-10-02
 ### Changed
-
-* improved hashtag visibility in default template
-* reduced number of followers to be checked/updated via Cron, when System Cron is not set up
-* check if username of Blog-User collides with an Authors name
-* improved Group meta informations
+- improved hashtag visibility in default template
+- reduced number of followers to be checked/updated via Cron, when System Cron is not set up
+- check if username of Blog-User collides with an Authors name
+- improved Group meta informations
 
 ### Fixed
+- detection of single user mode
+- remote delete
+- styles in Follow-Me block
+- various encoding and formatting issues
+- (health) check Author URLs only if Authors are enabled
 
-* detection of single user mode
-* remote delete
-* styles in Follow-Me block
-* various encoding and formatting issues
-* (health) check Author URLs only if Authors are enabled
-
-## [1.0.1]
-
+## [1.0.1] - 2023-09-22
 ### Changed
-
-* improve image attachment detection using the block editor
-* better error code handling for API responses
-* use a tag stack instead of regex for protecting tags for Hashtags and @-Mentions
-* better signature support for subpath-installations
-* allow deactivating blocks registered by the plugin
-* avoid Fatal Errors when using ClassicPress
-* improve the Group-Actor to play nicely with existing implementations
+- improve image attachment detection using the block editor
+- better error code handling for API responses
+- use a tag stack instead of regex for protecting tags for Hashtags and @-Mentions
+- better signature support for subpath-installations
+- allow deactivating blocks registered by the plugin
+- avoid Fatal Errors when using ClassicPress
+- improve the Group-Actor to play nicely with existing implementations
 
 ### Fixed
+- truncate long blog titles and handles for the "Follow me" block
+- ensure that only a valid user can be selected for the "Follow me" block
+- fix a typo in a hook name
+- a problem with signatures when running WordPress in a sub-path
 
-* truncate long blog titles and handles for the "Follow me" block
-* ensure that only a valid user can be selected for the "Follow me" block
-* fix a typo in a hook name
-* a problem with signatures when running WordPress in a sub-path
-
-## [1.0.0]
-
+## [1.0.0] - 2023-09-13
 ### Added
-
-* blog-wide Account (catchall, like `example.com@example.com`)
-* a Follow Me block (help visitors to follow your Profile)
-* Signature Verification: https://docs.joinmastodon.org/spec/security/
-* a Followers Block (show off your Followers)
-* Simple caching
-* Collection endpoints for Featured Tags and Featured Posts
-* Better handling of Hashtags in mobile apps
+- blog-wide Account (catchall, like `example.com@example.com`)
+- a Follow Me block (help visitors to follow your Profile)
+- Signature Verification: https://docs.joinmastodon.org/spec/security/
+- a Followers Block (show off your Followers)
+- Simple caching
+- Collection endpoints for Featured Tags and Featured Posts
+- Better handling of Hashtags in mobile apps
 
 ### Changed
-
-* Complete rewrite of the Follower-System based on Custom Post Types
-* Improved linter (PHPCS)
-* Add a new conditional, `\Activitypub\is_activitypub_request()`, to allow third-party plugins to detect ActivityPub requests
-* Add hooks to allow modifying images returned in ActivityPub requests
-* Indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.3
-* Avoid PHP notice on sites using PHP 8.2
+- Complete rewrite of the Follower-System based on Custom Post Types
+- Improved linter (PHPCS)
+- Add a new conditional, `\Activitypub\is_activitypub_request()`, to allow third-party plugins to detect ActivityPub requests
+- Add hooks to allow modifying images returned in ActivityPub requests
+- Indicate that the plugin is compatible and has been tested with the latest version of WordPress, 6.3
+- Avoid PHP notice on sites using PHP 8.2
 
 ### Fixed
+- Load the plugin later in the WordPress code lifecycle to avoid errors in some requests
+- Updating posts
+- Hashtag now support CamelCase and UTF-8
 
-* Load the plugin later in the WordPress code lifecycle to avoid errors in some requests
-* Updating posts
-* Hashtag now support CamelCase and UTF-8
-
-## [0.17.0]
-
+## [0.17.0] - 2023-03-03
 ### Changed
-
-* Allow more HTML elements in Activity-Objects
+- Allow more HTML elements in Activity-Objects
 
 ### Fixed
+- Fix type-selector
 
-* Fix type-selector
-
-## [0.16.5]
-
+## [0.16.5] - 2023-03-02
 ### Changed
+- Return empty content/excerpt on password protected posts/pages
 
-* Return empty content/excerpt on password protected posts/pages
-
-## [0.16.4]
-
+## [0.16.4] - 2023-02-20
 ### Changed
+- Remove scripts later in the queue, to also handle scripts added by blocks
+- Add published date to author profiles
 
-* Remove scripts later in the queue, to also handle scripts added by blocks
-* Add published date to author profiles
-
-## [0.16.3]
-
+## [0.16.3] - 2023-02-20
 ### Changed
-
-* "cc", "to", ... fields can either be an array or a string
+- "cc", "to", ... fields can either be an array or a string
 
 ### Removed
+- Remove "style" and "script" HTML elements from content
 
-* Remove "style" and "script" HTML elements from content
-
-## [0.16.2]
-
+## [0.16.2] - 2023-02-02
 ### Fixed
+- Fix fatal error in outbox
 
-* Fix fatal error in outbox
-
-## [0.16.1]
-
+## [0.16.1] - 2023-02-02
 ### Fixed
+- Fix "update and create, posts appear blank on Mastodon" issue
 
-* Fix "update and create, posts appear blank on Mastodon" issue
-
-## [0.16.0]
-
+## [0.16.0] - 2023-02-01
 ### Added
-
-* Add "Outgoing Mentions" ([#213](https://github.com/pfefferle/wordpress-activitypub/pull/213)) props [@akirk](https://github.com/akirk)
-* Add configuration item for number of images to attach ([#248](https://github.com/pfefferle/wordpress-activitypub/pull/248)) props [@mexon](https://github.com/mexon)
-* Use shortcodes instead of custom templates, to setup the Activity Post-Content ([#250](https://github.com/pfefferle/wordpress-activitypub/pull/250)) props [@toolstack](https://github.com/toolstack)
+- Add "Outgoing Mentions" ([#213](https://github.com/pfefferle/wordpress-activitypub/pull/213)) props [@akirk](https://github.com/akirk)
+- Add configuration item for number of images to attach ([#248](https://github.com/pfefferle/wordpress-activitypub/pull/248)) props [@mexon](https://github.com/mexon)
+- Use shortcodes instead of custom templates, to setup the Activity Post-Content ([#250](https://github.com/pfefferle/wordpress-activitypub/pull/250)) props [@toolstack](https://github.com/toolstack)
 
 ### Changed
-
-* Change priorites, to maybe fix the hashtag issue
+- Change priorites, to maybe fix the hashtag issue
 
 ### Removed
-
-* Remove custom REST Server, because the needed changes are now merged into Core.
+- Remove custom REST Server, because the needed changes are now merged into Core.
 
 ### Fixed
+- Fix hashtags ([#261](https://github.com/pfefferle/wordpress-activitypub/pull/261)) props [@akirk](https://github.com/akirk)
 
-* Fix hashtags ([#261](https://github.com/pfefferle/wordpress-activitypub/pull/261)) props [@akirk](https://github.com/akirk)
-
-## [0.15.0]
-
+## [0.15.0] - 2023-01-12
 ### Changed
-
-* Enable ActivityPub only for users that can `publish_posts`
-* Persist only public Activities
+- Enable ActivityPub only for users that can `publish_posts`
+- Persist only public Activities
 
 ### Fixed
+- Fix remote-delete
 
-* Fix remote-delete
-
-## [0.14.3]
-
+## [0.14.3] - 2022-12-15
 ### Changed
+- Better error handling. props [@akirk](https://github.com/akirk)
 
-* Better error handling. props [@akirk](https://github.com/akirk)
-
-## [0.14.2]
-
+## [0.14.2] - 2022-12-11
 ### Fixed
+- Fix Critical error when using Friends Plugin and adding new URL to follow. props [@akirk](https://github.com/akirk)
 
-* Fix Critical error when using Friends Plugin and adding new URL to follow. props [@akirk](https://github.com/akirk)
-
-## [0.14.1]
-
+## [0.14.1] - 2022-12-10
 ### Fixed
+- Fix "WebFinger not compatible with PHP < 8.0". props [@mexon](https://github.com/mexon)
 
-* Fix "WebFinger not compatible with PHP < 8.0". props [@mexon](https://github.com/mexon)
-
-## [0.14.0]
-
+## [0.14.0] - 2022-12-09
 ### Changed
-
-* Friends support: https://wordpress.org/plugins/friends/ props [@akirk](https://github.com/akirk)
-* Massive guidance improvements. props [mediaformat](https://github.com/mediaformat) & [@akirk](https://github.com/akirk)
-* Add Custom Post Type support to outbox API. props [blueset](https://github.com/blueset)
-* Better hash-tag support. props [bocops](https://github.com/bocops)
-
-### Fixed
-
-* Fix user-count (NodeInfo). props [mediaformat](https://github.com/mediaformat)
-
-## [0.13.4]
+- Friends support: https://wordpress.org/plugins/friends/ props [@akirk](https://github.com/akirk)
+- Massive guidance improvements. props [mediaformat](https://github.com/mediaformat) & [@akirk](https://github.com/akirk)
+- Add Custom Post Type support to outbox API. props [blueset](https://github.com/blueset)
+- Better hash-tag support. props [bocops](https://github.com/bocops)
 
 ### Fixed
+- Fix user-count (NodeInfo). props [mediaformat](https://github.com/mediaformat)
 
-* fix webfinger for email identifiers
-
-## [0.13.3]
-
+## [0.13.4] - 2022-07-08
 ### Fixed
+- fix webfinger for email identifiers
 
-* Create and Note should not have the same ActivityPub ID
-
-## [0.13.2]
-
+## [0.13.3] - 2022-01-26
 ### Fixed
+- Create and Note should not have the same ActivityPub ID
 
-* fix Follow issue AGAIN
-
-## [0.13.1]
-
+## [0.13.2] - 2021-11-25
 ### Fixed
+- fix Follow issue AGAIN
 
-* fix Inbox issue
+## [0.13.1] - 2021-07-26
+### Fixed
+- fix Inbox issue
 
-## [0.13.0]
-
+## [0.13.0] - 2021-07-23
 ### Added
-
-* add Autor URL and WebFinger health checks
+- add Autor URL and WebFinger health checks
 
 ### Fixed
+- fix NodeInfo endpoint
 
-* fix NodeInfo endpoint
-
-## [0.12.0]
-
+## [0.12.0] - 2020-12-21
 ### Changed
+- use "pre_option_require_name_email" filter instead of "check_comment_flood". props [@akirk](https://github.com/akirk)
+- save only comments/replies
+- check for an explicit "undo -> follow" action. see https://wordpress.org/support/topic/qs-after-latest/
 
-* use "pre_option_require_name_email" filter instead of "check_comment_flood". props [@akirk](https://github.com/akirk)
-* save only comments/replies
-* check for an explicit "undo -> follow" action. see https://wordpress.org/support/topic/qs-after-latest/
-
-## [0.11.2]
-
+## [0.11.2] - 2020-12-17
 ### Fixed
+- fix inconsistent `%tags%` placeholder
 
-* fix inconsistent `%tags%` placeholder
-
-## [0.11.1]
-
+## [0.11.1] - 2020-12-17
 ### Fixed
+- fix follow/unfollow actions
 
-* fix follow/unfollow actions
-
-## [0.11.0]
-
+## [0.11.0] - 2020-12-17
 ### Added
-
-* add support for customizable post-content
-* first try of a delete activity
+- add support for customizable post-content
+- first try of a delete activity
 
 ### Changed
-
-* do not require email for AP entries. props [@akirk](https://github.com/akirk)
-
-### Fixed
-
-* fix [timezones](https://github.com/pfefferle/wordpress-activitypub/issues/63) bug. props [@mediaformat](https://github.com/mediaformat)
-* fix [digest header](https://github.com/pfefferle/wordpress-activitypub/issues/104) bug. props [@mediaformat](https://github.com/mediaformat)
-
-
-## [0.10.1]
+- do not require email for AP entries. props [@akirk](https://github.com/akirk)
 
 ### Fixed
+- fix [timezones](https://github.com/pfefferle/wordpress-activitypub/issues/63) bug. props [@mediaformat](https://github.com/mediaformat)
+- fix [digest header](https://github.com/pfefferle/wordpress-activitypub/issues/104) bug. props [@mediaformat](https://github.com/mediaformat)
 
-* fix inbox activities, like follow
-* fix debug
 
-## [0.10.0]
+## [0.10.1] - 2020-05-03
+### Fixed
+- fix inbox activities, like follow
+- fix debug
 
+## [0.10.0] - 2020-03-15
 ### Added
-
-* add image alt text to the ActivityStreams attachment property in a format that Mastodon can read. props [@BenLubar](https://github.com/BenLubar)
-* use the "summary" property for a title as Mastodon does. props [@BenLubar](https://github.com/BenLubar)
-* add new post type: "title and link only". props [@bgcarlisle](https://github.com/bgcarlisle)
+- add image alt text to the ActivityStreams attachment property in a format that Mastodon can read. props [@BenLubar](https://github.com/BenLubar)
+- use the "summary" property for a title as Mastodon does. props [@BenLubar](https://github.com/BenLubar)
+- add new post type: "title and link only". props [@bgcarlisle](https://github.com/bgcarlisle)
 
 ### Changed
+- support authorized fetch to avoid having comments from "Anonymous". props [@BenLubar](https://github.com/BenLubar)
 
-* support authorized fetch to avoid having comments from "Anonymous". props [@BenLubar](https://github.com/BenLubar)
-
-## [0.9.1]
-
+## [0.9.1] - 2019-11-27
 ### Removed
+- disable shared inbox
+- disable delete activity
 
-* disable shared inbox
-* disable delete activity
-
-## [0.9.0]
-
+## [0.9.0] - 2019-11-24
 ### Changed
-
-* some code refactorings
-
-### Fixed
-
-* fix #73
-
-## [0.8.3]
+- some code refactorings
 
 ### Fixed
+- fix #73
 
-* fixed accept header bug
+## [0.8.3] - 2019-09-30
+### Fixed
+- fixed accept header bug
 
-## [0.8.2]
-
+## [0.8.2] - 2019-09-29
 ### Added
-
-* all required accept header
-* debugging mechanism
-* setting to enable AP for different (public) Post-Types
+- all required accept header
+- debugging mechanism
+- setting to enable AP for different (public) Post-Types
 
 ### Changed
+- explicit use of global functions
+- better/simpler accept-header handling
 
-* explicit use of global functions
-* better/simpler accept-header handling
-
-## [0.8.1]
-
+## [0.8.1] - 2019-08-21
 ### Fixed
+- fixed PHP warnings
 
-* fixed PHP warnings
-
-## [0.8.0]
-
+## [0.8.0] - 2019-08-21
 ### Changed
+- Moved followers list to user-menu
 
-* Moved followers list to user-menu
-
-## [0.7.4]
-
+## [0.7.4] - 2019-08-20
 ### Added
+- added admin_email to metadata, to be able to "Manage your instance" on https://fediverse.network/manage/
 
-* added admin_email to metadata, to be able to "Manage your instance" on https://fediverse.network/manage/
-
-## [0.7.3]
-
+## [0.7.3] - 2019-08-20
 ### Changed
+- refactorings
+- fixed PHP warnings
+- better hashtag regex
 
-* refactorings
-* fixed PHP warnings
-* better hashtag regex
-
-## [0.7.2]
-
+## [0.7.2] - 2019-04-13
 ### Fixed
+- fixed JSON representation of posts https://merveilles.town/@xuv/101907542498716956
 
-* fixed JSON representation of posts https://merveilles.town/@xuv/101907542498716956
-
-## [0.7.1]
-
+## [0.7.1] - 2019-03-14
 ### Fixed
+- fixed inbox problems with pleroma
 
-* fixed inbox problems with pleroma
-
-## [0.7.0]
-
+## [0.7.0] - 2019-03-12
 ### Added
-
-* added "following" endpoint
+- added "following" endpoint
 
 ### Changed
-
-* simplified "followers" endpoint
+- simplified "followers" endpoint
 
 ### Fixed
+- finally fixed pleroma compatibility
+- fixed default value problem
 
-* finally fixed pleroma compatibility
-* fixed default value problem
-
-## [0.6.0]
-
+## [0.6.0] - 2019-03-09
 ### Added
-
-* add tags as hashtags to the end of each activity
-
-### Changed
-
-* followers-list improvements
-
-### Fixed
-
-* fixed pleroma following issue
-
-## [0.5.1]
-
-### Fixed
-
-* fixed name-collision that caused an infinite loop
-
-## [0.5.0]
+- add tags as hashtags to the end of each activity
 
 ### Changed
-
-* complete refactoring
+- followers-list improvements
 
 ### Fixed
+- fixed pleroma following issue
 
-* fixed bug #30: Password-protected posts are federated
-* only send Activites when ActivityPub is enabled for this post-type
+## [0.5.1] - 2019-03-02
+### Fixed
+- fixed name-collision that caused an infinite loop
 
-## [0.4.4]
-
+## [0.5.0] - 2019-02-28
 ### Changed
-
-* show avatars
-
-## [0.4.3]
+- complete refactoring
 
 ### Fixed
+- fixed bug #30: Password-protected posts are federated
+- only send Activites when ActivityPub is enabled for this post-type
 
-* finally fixed backlink in excerpt/summary posts
+## [0.4.4] - 2019-02-20
+### Changed
+- show avatars
 
-## [0.4.2]
-
+## [0.4.3] - 2019-02-20
 ### Fixed
+- finally fixed backlink in excerpt/summary posts
 
-* fixed backlink in excerpt/summary posts (thanks @depone)
-
-## [0.4.1]
-
+## [0.4.2] - 2019-02-20
 ### Fixed
+- fixed backlink in excerpt/summary posts (thanks @depone)
 
-* finally fixed contact list
+## [0.4.1] - 2019-02-19
+### Fixed
+- finally fixed contact list
 
 ## [0.4.0] - 2019-02-17
-
 ### Added
-
-* added settings to enable/disable hashtag support
+- added settings to enable/disable hashtag support
 
 ### Fixed
-
-* fixed follower list
+- fixed follower list
 
 ### Changed
-
-* send activities only for new posts, otherwise send updates
+- send activities only for new posts, otherwise send updates
 
 ## [0.3.2] - 2019-02-04
-
 ### Added
-
-* added "followers" endpoint
+- added "followers" endpoint
 
 ### Changed
-
-* change activity content from blog 'excerpt' to blog 'content'
+- change activity content from blog 'excerpt' to blog 'content'
 
 ## [0.3.1] - 2019-02-03
-
 ### Changed
-
-* better json encoding
+- better json encoding
 
 ## [0.3.0] - 2019-02-02
-
 ### Adeed
-
-* basic hashtag support
-* added support for actor objects
+- basic hashtag support
+- added support for actor objects
 
 ### Removed
-
-* temporarily deactivated likes and boosts
+- temporarily deactivated likes and boosts
 
 ### Fixed
-
-* fixed encoding issue
+- fixed encoding issue
 
 ## [0.2.1] - 2019-01-16
-
 ### Changed
-
-* customizable backlink (permalink or shorturl)
-* show profile-identifiers also on profile settings
+- customizable backlink (permalink or shorturl)
+- show profile-identifiers also on profile settings
 
 ## [0.2.0] - 2019-01-04
-
 ### Added
-
-* option to switch between content and excerpt
+- option to switch between content and excerpt
 
 ### Removed
-
-* html and duplicate new-lines
+- html and duplicate new-lines
 
 ## [0.1.1] - 2018-12-30
-
 ### Added
-
-* settings for the activity-summary and for the activity-object-type
+- settings for the activity-summary and for the activity-object-type
 
 ### Fixed
-
-* "excerpt" in AS JSON
+- "excerpt" in AS JSON
 
 ## [0.1.0] - 2018-12-20
-
 ### Added
-
-* basic WebFinger support
-* basic NodeInfo support
-* fully functional "follow" activity
-* send new posts to your followers
-* receive comments from your followers
+- basic WebFinger support
+- basic NodeInfo support
+- fully functional "follow" activity
+- send new posts to your followers
+- receive comments from your followers
 
 ## [0.0.2] - 2018-11-06
-
 ### Added
-
-* functional inbox
+- functional inbox
 
 ### Changed
-
-* refactoring
-* nicer profile views
+- refactoring
+- nicer profile views
 
 ## [0.0.1] - 2018-09-24
-
 ### Added
+- initial
 
-* initial
-
-[Unreleased]: https://github.com/Automattic/wordpress-activitypub/compare/5.4.1...trunk
-<!-- Add new release below and update "Unreleased" link -->
 [5.4.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.4.0...5.4.1
 [5.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.2...5.4.0
 [5.3.2]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.1...5.3.2

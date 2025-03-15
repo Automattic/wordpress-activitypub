@@ -78,7 +78,7 @@ class Test_Move extends \WP_UnitTestCase {
 	 */
 	public function test_account_with_invalid_target() {
 		$from = Actors::get_by_id( self::$user_id )->get_id();
-		$to   = 'https://invalid-url.com/user/1';
+		$to   = 'https://example.com/user/1';
 
 		$filter = function () {
 			return new \WP_Error( 'http_request_failed', 'Invalid URL' );

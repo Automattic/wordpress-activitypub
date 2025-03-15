@@ -49,12 +49,13 @@ class Dispatcher {
 		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ) );
 
 		// Default filters to add Inboxes to sent to.
-		\add_filter( 'activitypub_interactees_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
-		\add_filter( 'activitypub_interactees_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
+		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_by_mentioned_actors' ), 10, 3 );
+		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_replied_urls' ), 10, 3 );
+		\add_filter( 'activitypub_additional_inboxes', array( self::class, 'add_inboxes_of_relays' ), 10, 3 );
 
 		// Fallback for `activitypub_send_to_inboxes` filter.
 		\add_filter(
-			'activitypub_interactees_inboxes',
+			'activitypub_additional_inboxes',
 			function ( $inboxes, $actor_id, $activity ) {
 				/**
 				 * Filters the list of interactees inboxes to send the Activity to.
@@ -63,9 +64,13 @@ class Dispatcher {
 				 * @param int      $actor_id The actor ID.
 				 * @param Activity $activity The ActivityPub Activity.
 				 *
-				 * @deprecated 5.2.0 Use `activitypub_interactees_inboxes` instead.
+				 * @deprecated 5.2.0 Use `activitypub_additional_inboxes` instead.
+				 * @deprecated 5.4.0 Use `activitypub_additional_inboxes` instead.
 				 */
-				return \apply_filters_deprecated( 'activitypub_send_to_inboxes', array( $inboxes, $actor_id, $activity ), '5.2.0', 'activitypub_interactees_inboxes' );
+				$inboxes = \apply_filters_deprecated( 'activitypub_send_to_inboxes', array( $inboxes, $actor_id, $activity ), '5.2.0', 'activitypub_additional_inboxes' );
+				$inboxes = \apply_filters_deprecated( 'activitypub_interactees_inboxes', array( $inboxes, $actor_id, $activity ), '5.4.0', 'activitypub_additional_inboxes' );
+
+				return $inboxes;
 			},
 			10,
 			3
@@ -95,7 +100,7 @@ class Dispatcher {
 		$activity = Outbox::get_activity( $outbox_item );
 
 		// Send to mentioned and replied-to users. Everyone other than followers.
-		self::send_to_interactees( $activity, $actor->get__id(), $outbox_item );
+		self::send_to_additional_inboxes( $activity, $actor->get__id(), $outbox_item );
 
 		if ( self::should_send_to_followers( $activity, $actor, $outbox_item ) ) {
 			Scheduler::async_batch(
@@ -250,13 +255,15 @@ class Dispatcher {
 	}
 
 	/**
-	 * Send an Activity to all followers and mentioned users.
+	 * Send an Activity to a custom list of inboxes, like mentioned users or replied-to posts.
+	 *
+	 * For all custom implementations, please use the `activitypub_additional_inboxes` filter.
 	 *
 	 * @param Activity $activity    The ActivityPub Activity.
 	 * @param int      $actor_id    The actor ID.
 	 * @param \WP_Post $outbox_item The WordPress object.
 	 */
-	private static function send_to_interactees( $activity, $actor_id, $outbox_item = null ) {
+	private static function send_to_additional_inboxes( $activity, $actor_id, $outbox_item = null ) {
 		/**
 		 * Filters the list of inboxes to send the Activity to.
 		 *
@@ -264,7 +271,7 @@ class Dispatcher {
 		 * @param int      $actor_id The actor ID.
 		 * @param Activity $activity The ActivityPub Activity.
 		 */
-		$inboxes = apply_filters( 'activitypub_interactees_inboxes', array(), $actor_id, $activity );
+		$inboxes = apply_filters( 'activitypub_additional_inboxes', array(), $actor_id, $activity );
 		$inboxes = array_unique( $inboxes );
 
 		$retries = self::send_to_inboxes( $inboxes, $outbox_item->ID );
@@ -395,6 +402,13 @@ class Dispatcher {
 			in_array( $actor->get_followers(), $audience, true )
 		);
 
+		if ( $send ) {
+			$followers = Followers::get_inboxes_for_activity( $activity->to_json(), $actor->get__id() );
+
+			// Only send if there are followers to send to.
+			$send = ! is_countable( $followers ) || 0 < count( $followers );
+		}
+
 		/**
 		 * Filters whether to send an Activity to followers.
 		 *
@@ -404,5 +418,35 @@ class Dispatcher {
 		 * @param \WP_Post $outbox_item                The WordPress object.
 		 */
 		return apply_filters( 'activitypub_send_activity_to_followers', $send, $activity, $actor->get__id(), $outbox_item );
+	}
+
+	/**
+	 * Add Inboxes of Relays.
+	 *
+	 * @param array    $inboxes  The list of Inboxes.
+	 * @param int      $actor_id The Actor-ID.
+	 * @param Activity $activity The ActivityPub Activity.
+	 *
+	 * @return array The filtered Inboxes.
+	 */
+	public static function add_inboxes_of_relays( $inboxes, $actor_id, $activity ) {
+		// Check if follower endpoint is set.
+		$cc = $activity->get_cc() ?? array();
+		$to = $activity->get_to() ?? array();
+
+		$audience = array_merge( $cc, $to );
+
+		// Check if activity is public.
+		if ( ! in_array( 'https://www.w3.org/ns/activitystreams#Public', $audience, true ) ) {
+			return $inboxes;
+		}
+
+		$relays = \get_option( 'activitypub_relays', array() );
+
+		if ( empty( $relays ) ) {
+			return $inboxes;
+		}
+
+		return array_merge( $inboxes, $relays );
 	}
 }

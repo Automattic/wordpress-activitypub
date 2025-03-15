@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Images with the correct aspect ratio no longer get sent through the crop step again.

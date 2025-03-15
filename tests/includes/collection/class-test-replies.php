@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Replies;
 
 /**
@@ -136,5 +137,28 @@ class Test_Replies extends \WP_UnitTestCase {
 		foreach ( $comments as $comment_id ) {
 			wp_delete_comment( $comment_id, true );
 		}
+	}
+
+	/**
+	 * Test get_context_collection method with disabled author.
+	 *
+	 * @covers ::get_context_collection
+	 */
+	public function test_get_context_collection_disabled_author() {
+		$user_id         = self::factory()->user->create( array( 'role' => 'author' ) );
+		$context_post_id = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		get_user_by( 'id', $user_id )->remove_cap( 'activitypub' );
+
+		// Author disabled, Blog user disabled.
+		$this->assertFalse( Replies::get_context_collection( $context_post_id ) );
+
+		// Enable Blog user.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		$context = Replies::get_context_collection( $context_post_id );
+
+		$this->assertSame( \get_author_posts_url( Actors::BLOG_USER_ID ), $context['attributedTo'] );
+
+		\delete_option( 'activitypub_actor_mode' );
 	}
 }

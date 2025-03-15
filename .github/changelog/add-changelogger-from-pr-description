@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Development environment: allow contributors to specify a changelog entry directly from their Pull Request description.
