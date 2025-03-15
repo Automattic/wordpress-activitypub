@@ -48,4 +48,26 @@ class Test_User extends \WP_UnitTestCase {
 
 		$this->assertTrue( $can );
 	}
+
+	/**
+	 * Test that on attachment pages the user avatar is returned.
+	 *
+	 * @ticket https://github.com/Automattic/wordpress-activitypub/issues/1459
+	 * @covers ::get_icon
+	 */
+	public function test_icon() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$user    = User::from_wp_user( $user_id );
+
+		// Add attachment.
+		$attachment_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/assets/test.jpg' );
+
+		// Navigate to attachment page.
+		$this->go_to( get_attachment_link( $attachment_id ) );
+
+		$icon = $user->get_icon();
+
+		$this->assertArrayHasKey( 'url', $icon );
+		$this->assertNotSame( wp_get_attachment_url( $attachment_id ), $icon['url'] );
+	}
 }
