@@ -165,7 +165,7 @@ jobs:
             // Get the changelog information from the previous step
             const significance = '${{ steps.check-pr-body.outputs.significance }}';
             const type = '${{ steps.check-pr-body.outputs.type }}';
-            const message = `${{ steps.check-pr-body.outputs.message }}`.replace(/`/g, '\\`').replace(/\r/g, '');
+            const message = `${{ toJSON(steps.check-pr-body.outputs.message) }}`.replace(/\r/g, '');
 
             // Create the changelog file content
             const content = [
