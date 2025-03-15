@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled.

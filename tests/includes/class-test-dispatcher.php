@@ -7,6 +7,7 @@
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Followers;
 use Activitypub\Dispatcher;
 
@@ -103,11 +104,11 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * This test can be removed when the filter is removed.
 	 *
 	 * @covers ::maybe_add_inboxes_of_blog_user
-	 * @expectedDeprecated activitypub_send_to_inboxes
+	 * @expectedDeprecated activitypub_interactees_inboxes
 	 */
 	public function test_deprecated_filter() {
 		add_filter(
-			'activitypub_send_to_inboxes',
+			'activitypub_interactees_inboxes',
 			function ( $inboxes ) {
 				$inboxes[] = 'https://example.com/inbox';
 
@@ -115,10 +116,10 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			}
 		);
 
-		$inboxes = apply_filters( 'activitypub_interactees_inboxes', array(), 1, $this->get_activity_mock() );
+		$inboxes = apply_filters( 'activitypub_additional_inboxes', array(), 1, $this->get_activity_mock() );
 		$this->assertContains( 'https://example.com/inbox', $inboxes );
 
-		remove_all_filters( 'activitypub_send_to_inboxes' );
+		remove_all_filters( 'activitypub_interactees_inboxes' );
 	}
 
 	/**
@@ -169,6 +170,77 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertSame( $expected, $retries, 'Expected all inboxes to be scheduled for retry' );
 
 		remove_all_filters( 'pre_http_request' );
+	}
+
+	/**
+	 * Test send_to_additional_inboxes.
+	 *
+	 * @covers ::send_to_additional_inboxes
+	 */
+	public function test_send_to_relays() {
+		global $wp_actions;
+
+		$post_id      = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item  = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+		$fake_request = function () {
+			return new \WP_Error( 'test', 'test' );
+		};
+
+		add_filter( 'pre_http_request', $fake_request, 10, 3 );
+
+		// Make `Dispatcher::send_to_additional_inboxes` a public method.
+		$send_to_additional_inboxes = new ReflectionMethod( Dispatcher::class, 'send_to_additional_inboxes' );
+		$send_to_additional_inboxes->setAccessible( true );
+
+		$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+
+		// Test how often the request was sent.
+		$this->assertEquals( 0, did_action( 'activitypub_sent_to_inbox' ) );
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$wp_actions = null;
+
+		// Add a relay.
+		$relays = array( 'https://relay1.example.com/inbox' );
+		update_option( 'activitypub_relays', $relays );
+
+		$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+
+		// Test how often the request was sent.
+		$this->assertEquals( 1, did_action( 'activitypub_sent_to_inbox' ) );
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$wp_actions = null;
+
+		// Add a relay.
+		$relays = array( 'https://relay1.example.com/inbox', 'https://relay2.example.com/inbox' );
+		update_option( 'activitypub_relays', $relays );
+
+		$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
+
+		// Test how often the request was sent.
+		$this->assertEquals( 2, did_action( 'activitypub_sent_to_inbox' ) );
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$wp_actions = null;
+
+		$private_activity = Outbox::get_activity( $outbox_item->ID );
+		$private_activity->set_to( null );
+		$private_activity->set_cc( null );
+
+		// Clone object.
+		$private_activity = clone $private_activity;
+
+		$send_to_additional_inboxes->invoke( null, $private_activity, Actors::get_by_id( self::$user_id ), $outbox_item );
+
+		// Test how often the request was sent.
+		$this->assertEquals( 0, did_action( 'activitypub_sent_to_inbox' ) );
+
+		\remove_filter( 'pre_http_request', $fake_request, 10 );
+
+		\delete_option( 'activitypub_relays' );
+		\wp_delete_post( $post_id );
+		\wp_delete_post( $outbox_item->ID );
 	}
 
 	/**
