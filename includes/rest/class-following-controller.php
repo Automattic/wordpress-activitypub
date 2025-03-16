@@ -151,68 +151,29 @@ class Following_Controller extends Actors_Controller {
 			return $this->add_additional_fields_schema( $this->schema );
 		}
 
-		$this->schema = array(
-			'$schema'    => 'http://json-schema.org/draft-04/schema#',
-			'title'      => 'following',
-			'type'       => 'object',
-			'properties' => array(
-				'@context'     => array(
-					'description' => 'The JSON-LD context for the response.',
-					'type'        => array( 'array', 'object' ),
-					'readonly'    => true,
-				),
-				'id'           => array(
-					'description' => 'The unique identifier for the following collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'generator'    => array(
-					'description' => 'The generator of the following collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'actor'        => array(
-					'description' => 'The actor who owns the following collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'type'         => array(
-					'description' => 'The type of the following collection.',
-					'type'        => 'string',
-					'enum'        => array( 'OrderedCollectionPage' ),
-					'readonly'    => true,
-				),
-				'totalItems'   => array(
-					'description' => 'The total number of items in the following collection.',
-					'type'        => 'integer',
-					'readonly'    => true,
-				),
-				'partOf'       => array(
-					'description' => 'The collection this page is part of.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'orderedItems' => array(
-					'description' => 'The items in the following collection.',
-					'type'        => 'array',
-					'items'       => array(
-						'type'   => 'string',
-						'format' => 'uri',
-					),
-					'readonly'    => true,
-				),
-				'first'        => array(
-					'description' => 'The first page in the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-			),
+		$item_schema = array(
+			'type'   => 'string',
+			'format' => 'uri',
 		);
+
+		$schema = $this->get_collection_schema( $item_schema );
+
+		// Add following-specific properties.
+		$schema['title']                   = 'following';
+		$schema['properties']['actor']     = array(
+			'description' => 'The actor who owns the following collection.',
+			'type'        => 'string',
+			'format'      => 'uri',
+			'readonly'    => true,
+		);
+		$schema['properties']['generator'] = array(
+			'description' => 'The generator of the following collection.',
+			'type'        => 'string',
+			'format'      => 'uri',
+			'readonly'    => true,
+		);
+
+		$this->schema = $schema;
 
 		return $this->add_additional_fields_schema( $this->schema );
 	}

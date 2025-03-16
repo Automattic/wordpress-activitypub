@@ -25,7 +25,7 @@ trait Collection {
 	 * @param \WP_REST_Request $request  The request object.
 	 * @return array|\WP_Error The response array with navigation links or WP_Error on invalid page.
 	 */
-	protected function prepare_collection_response( $response, $request ) {
+	public function prepare_collection_response( $response, $request ) {
 		$page      = $request->get_param( 'page' );
 		$per_page  = $request->get_param( 'per_page' );
 		$max_pages = \ceil( $response['totalItems'] / $per_page );
@@ -68,5 +68,80 @@ trait Collection {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Get the schema for an ActivityPub OrderedCollection.
+	 *
+	 * Returns a schema definition for ActivityPub OrderedCollection and OrderedCollectionPage
+	 * that controllers can use to compose their full schema by passing in their
+	 * item schema.
+	 *
+	 * @param array $item_schema The schema for the items in the collection.
+	 * @return array The ordered collection schema.
+	 */
+	public function get_collection_schema( $item_schema ) {
+		$collection_schema = array(
+			'$schema'    => 'http://json-schema.org/draft-04/schema#',
+			'title'      => 'collection',
+			'type'       => 'object',
+			'properties' => array(
+				'@context'     => array(
+					'description' => 'The JSON-LD context of the OrderedCollection.',
+					'type'        => array( 'string', 'array', 'object' ),
+				),
+				'id'           => array(
+					'description' => 'The unique identifier for the OrderedCollection.',
+					'type'        => 'string',
+					'format'      => 'uri',
+				),
+				'type'         => array(
+					'description' => 'The type of the object. Either OrderedCollection or OrderedCollectionPage.',
+					'type'        => 'string',
+					'enum'        => array( 'OrderedCollection', 'OrderedCollectionPage' ),
+				),
+				'totalItems'   => array(
+					'description' => 'The total number of items in the collection.',
+					'type'        => 'integer',
+					'minimum'     => 0,
+				),
+				'orderedItems' => array(
+					'description' => 'The ordered items in the collection.',
+					'type'        => 'array',
+				),
+				'first'        => array(
+					'description' => 'Link to the first page of the collection.',
+					'type'        => 'string',
+					'format'      => 'uri',
+				),
+				'last'         => array(
+					'description' => 'Link to the last page of the collection.',
+					'type'        => 'string',
+					'format'      => 'uri',
+				),
+				'next'         => array(
+					'description' => 'Link to the next page of the collection.',
+					'type'        => 'string',
+					'format'      => 'uri',
+				),
+				'prev'         => array(
+					'description' => 'Link to the previous page of the collection.',
+					'type'        => 'string',
+					'format'      => 'uri',
+				),
+				'partOf'       => array(
+					'description' => 'The OrderedCollection to which this OrderedCollectionPage belongs.',
+					'type'        => 'string',
+					'format'      => 'uri',
+				),
+			),
+		);
+
+		// Add the orderedItems property based on the provided item schema.
+		if ( ! empty( $item_schema ) ) {
+			$collection_schema['properties']['orderedItems']['items'] = $item_schema;
+		}
+
+		return $collection_schema;
 	}
 }

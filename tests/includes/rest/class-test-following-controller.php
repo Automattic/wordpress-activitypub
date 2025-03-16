@@ -66,10 +66,10 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$schema = $response['schema'];
 
 		// Test specific property types.
-		$this->assertEquals( array( 'array', 'object' ), $schema['properties']['@context']['type'] );
+		$this->assertEquals( array( 'string', 'array', 'object' ), $schema['properties']['@context']['type'] );
 		$this->assertEquals( 'string', $schema['properties']['id']['type'] );
 		$this->assertEquals( 'uri', $schema['properties']['id']['format'] );
-		$this->assertEquals( array( 'OrderedCollectionPage' ), $schema['properties']['type']['enum'] );
+		$this->assertEquals( array( 'OrderedCollection', 'OrderedCollectionPage' ), $schema['properties']['type']['enum'] );
 		$this->assertEquals( 'array', $schema['properties']['orderedItems']['type'] );
 		$this->assertEquals( 'string', $schema['properties']['orderedItems']['items']['type'] );
 		$this->assertEquals( 'string', $schema['properties']['generator']['type'] );

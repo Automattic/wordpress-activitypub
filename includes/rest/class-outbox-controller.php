@@ -70,7 +70,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 						),
 					),
 				),
-				'schema' => array( $this, 'get_collection_schema' ),
+				'schema' => array( $this, 'get_item_schema' ),
 			)
 		);
 	}
@@ -223,74 +223,29 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 *
 	 * @return array Collection schema data.
 	 */
-	public function get_collection_schema() {
+	public function get_item_schema() {
 		if ( $this->schema ) {
 			return $this->add_additional_fields_schema( $this->schema );
 		}
 
-		$schema = array(
-			'$schema'    => 'http://json-schema.org/draft-04/schema#',
-			'title'      => 'outbox',
-			'type'       => 'object',
-			'properties' => array(
-				'@context'     => array(
-					'description' => 'The JSON-LD context for the collection.',
-					'type'        => array( 'string', 'array', 'object' ),
-					'required'    => true,
-				),
-				'id'           => array(
-					'description' => 'The unique identifier for the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'required'    => true,
-				),
-				'type'         => array(
-					'description' => 'The type of the collection.',
-					'type'        => 'string',
-					'enum'        => array( 'OrderedCollection', 'OrderedCollectionPage' ),
-					'required'    => true,
-				),
-				'actor'        => array(
-					'description' => 'The actor who owns this outbox.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'required'    => true,
-				),
-				'totalItems'   => array(
-					'description' => 'The total number of items in the collection.',
-					'type'        => 'integer',
-					'minimum'     => 0,
-					'required'    => true,
-				),
-				'orderedItems' => array(
-					'description' => 'The items in the collection.',
-					'type'        => 'array',
-					'items'       => array(
-						'type' => 'object',
-					),
-					'required'    => true,
-				),
-				'first'        => array(
-					'description' => 'The first page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'last'         => array(
-					'description' => 'The last page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'next'         => array(
-					'description' => 'The next page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'prev'         => array(
-					'description' => 'The previous page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-			),
+		$item_schema = array(
+			'type' => 'object',
+		);
+
+		$schema = $this->get_collection_schema( $item_schema );
+
+		// Add outbox-specific properties.
+		$schema['title']                   = 'outbox';
+		$schema['properties']['actor']     = array(
+			'description' => 'The actor who owns this outbox.',
+			'type'        => 'string',
+			'format'      => 'uri',
+			'required'    => true,
+		);
+		$schema['properties']['generator'] = array(
+			'description' => 'The software used to generate the collection.',
+			'type'        => 'string',
+			'format'      => 'uri',
 		);
 
 		$this->schema = $schema;

@@ -8,10 +8,9 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Followers as Follower_Collection;
-
-use function Activitypub\get_rest_url_by_path;
+use Activitypub\Collection\Followers;
 use function Activitypub\get_masked_wp_version;
+use function Activitypub\get_rest_url_by_path;
 
 /**
  * Followers_Controller class.
@@ -98,7 +97,7 @@ class Followers_Controller extends Actors_Controller {
 		$page     = $request->get_param( 'page' ) ?? 1;
 		$context  = $request->get_param( 'context' );
 
-		$data = Follower_Collection::get_followers_with_count( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
+		$data = Followers::get_followers_with_count( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
 
 		// Special case: WP_Query doesn't return the total number of items when it runs out of items.
 		if ( 0 === $data['total'] && $page > 1 ) {
@@ -148,144 +147,85 @@ class Followers_Controller extends Actors_Controller {
 			return $this->add_additional_fields_schema( $this->schema );
 		}
 
-		$this->schema = array(
-			'$schema'    => 'http://json-schema.org/draft-04/schema#',
-			'title'      => 'followers',
-			'type'       => 'object',
-			'properties' => array(
-				'@context'     => array(
-					'description' => 'The JSON-LD context for the response.',
-					'type'        => array( 'array', 'object' ),
-					'readonly'    => true,
+		// Define the schema for items in the followers collection.
+		$item_schema = array(
+			'oneOf' => array(
+				array(
+					'type'   => 'string',
+					'format' => 'uri',
 				),
-				'id'           => array(
-					'description' => 'The unique identifier for the followers collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'generator'    => array(
-					'description' => 'The generator of the followers collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'actor'        => array(
-					'description' => 'The actor who owns the followers collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'type'         => array(
-					'description' => 'The type of the followers collection.',
-					'type'        => 'string',
-					'enum'        => array( 'OrderedCollectionPage' ),
-					'readonly'    => true,
-				),
-				'totalItems'   => array(
-					'description' => 'The total number of items in the followers collection.',
-					'type'        => 'integer',
-					'readonly'    => true,
-				),
-				'partOf'       => array(
-					'description' => 'The collection this page is part of.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'orderedItems' => array(
-					'description' => 'The items in the followers collection.',
-					'type'        => 'array',
-					'items'       => array(
-						'oneOf' => array(
-							array(
-								'type'   => 'string',
-								'format' => 'uri',
-							),
-							array(
-								'type'       => 'object',
-								'properties' => array(
-									'id'                => array(
-										'type'   => 'string',
-										'format' => 'uri',
-									),
-									'type'              => array(
-										'type' => 'string',
-									),
-									'name'              => array(
-										'type' => 'string',
-									),
-									'icon'              => array(
-										'type'       => 'object',
-										'properties' => array(
-											'type'      => array(
-												'type' => 'string',
-											),
-											'mediaType' => array(
-												'type' => 'string',
-											),
-											'url'       => array(
-												'type'   => 'string',
-												'format' => 'uri',
-											),
-										),
-									),
-									'published'         => array(
-										'type'   => 'string',
-										'format' => 'date-time',
-									),
-									'summary'           => array(
-										'type' => 'string',
-									),
-									'updated'           => array(
-										'type'   => 'string',
-										'format' => 'date-time',
-									),
-									'url'               => array(
-										'type'   => 'string',
-										'format' => 'uri',
-									),
-									'streams'           => array(
-										'type' => 'array',
-									),
-									'preferredUsername' => array(
-										'type' => 'string',
-									),
-									'manuallyApprovesFollowers' => array(
-										'type' => 'boolean',
-									),
+				array(
+					'type'       => 'object',
+					'properties' => array(
+						'id'                => array(
+							'type'   => 'string',
+							'format' => 'uri',
+						),
+						'type'              => array(
+							'type' => 'string',
+						),
+						'name'              => array(
+							'type' => 'string',
+						),
+						'icon'              => array(
+							'type'       => 'object',
+							'properties' => array(
+								'type'      => array(
+									'type' => 'string',
+								),
+								'mediaType' => array(
+									'type' => 'string',
+								),
+								'url'       => array(
+									'type'   => 'string',
+									'format' => 'uri',
 								),
 							),
 						),
+						'published'         => array(
+							'type'   => 'string',
+							'format' => 'date-time',
+						),
+						'summary'           => array(
+							'type' => 'string',
+						),
+						'updated'           => array(
+							'type'   => 'string',
+							'format' => 'date-time',
+						),
+						'url'               => array(
+							'type'   => 'string',
+							'format' => 'uri',
+						),
+						'streams'           => array(
+							'type' => 'array',
+						),
+						'preferredUsername' => array(
+							'type' => 'string',
+						),
 					),
-					'readonly'    => true,
-				),
-				'next'         => array(
-					'description' => 'The next page in the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'prev'         => array(
-					'description' => 'The previous page in the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'first'        => array(
-					'description' => 'The first page in the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'last'         => array(
-					'description' => 'The last page in the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
 				),
 			),
 		);
+
+		$schema = $this->get_collection_schema( $item_schema );
+
+		// Add followers-specific properties.
+		$schema['title']                   = 'followers';
+		$schema['properties']['actor']     = array(
+			'description' => 'The actor who owns the followers collection.',
+			'type'        => 'string',
+			'format'      => 'uri',
+			'readonly'    => true,
+		);
+		$schema['properties']['generator'] = array(
+			'description' => 'The generator of the followers collection.',
+			'type'        => 'string',
+			'format'      => 'uri',
+			'readonly'    => true,
+		);
+
+		$this->schema = $schema;
 
 		return $this->add_additional_fields_schema( $this->schema );
 	}

@@ -210,73 +210,18 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			return $this->add_additional_fields_schema( $this->schema );
 		}
 
-		$schema = array(
-			'$schema'    => 'https://json-schema.org/draft-04/schema#',
-			'title'      => 'inbox',
-			'type'       => 'object',
-			'properties' => array(
-				'@context'     => array(
-					'description' => 'The JSON-LD context for the collection.',
-					'type'        => array( 'string', 'array', 'object' ),
-					'required'    => true,
-				),
-				'id'           => array(
-					'description' => 'The unique identifier for the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'required'    => true,
-				),
-				'type'         => array(
-					'description' => 'The type of the collection.',
-					'type'        => 'string',
-					'enum'        => array( 'OrderedCollection', 'OrderedCollectionPage' ),
-					'required'    => true,
-				),
-				'totalItems'   => array(
-					'description' => 'The total number of items in the collection.',
-					'type'        => 'integer',
-					'minimum'     => 0,
-					'required'    => true,
-				),
-				'orderedItems' => array(
-					'description' => 'The items in the collection.',
-					'type'        => 'array',
-					'items'       => array(
-						'type' => 'object',
-					),
-					'required'    => true,
-				),
-				'first'        => array(
-					'description' => 'The first page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'last'         => array(
-					'description' => 'The last page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'next'         => array(
-					'description' => 'The next page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'prev'         => array(
-					'description' => 'The previous page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'partOf'       => array(
-					'description' => 'The collection this page is part of.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'generator'    => array(
-					'description' => 'The software used to generate the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-			),
+		$item_schema = array(
+			'type' => 'object',
+		);
+
+		$schema = $this->get_collection_schema( $item_schema );
+
+		// Add inbox-specific properties.
+		$schema['title']                   = 'inbox';
+		$schema['properties']['generator'] = array(
+			'description' => 'The software used to generate the collection.',
+			'type'        => 'string',
+			'format'      => 'uri',
 		);
 
 		$this->schema = $schema;

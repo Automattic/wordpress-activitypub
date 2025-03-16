@@ -41,7 +41,7 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 	 *
 	 * @covers ::prepare_collection_response
 	 */
-	public function prepare_collection_response_single_page() {
+	public function test_prepare_collection_response_single_page() {
 		$request = new \WP_REST_Request();
 		$request->set_param( 'per_page', 10 );
 
@@ -66,7 +66,7 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 	 *
 	 * @covers ::prepare_collection_response
 	 */
-	public function prepare_collection_response_collection() {
+	public function test_prepare_collection_response_collection() {
 		$request = new \WP_REST_Request();
 		$request->set_param( 'per_page', 10 );
 
@@ -91,7 +91,7 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 	 *
 	 * @covers ::prepare_collection_response
 	 */
-	public function prepare_collection_response_collection_page() {
+	public function test_prepare_collection_response_collection_page() {
 		$request = new \WP_REST_Request();
 		$request->set_param( 'page', 2 );
 		$request->set_param( 'per_page', 10 );
@@ -119,7 +119,7 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 	 *
 	 * @covers ::prepare_collection_response
 	 */
-	public function prepare_collection_response_first_page() {
+	public function test_prepare_collection_response_first_page() {
 		$request = new \WP_REST_Request();
 		$request->set_param( 'page', 1 );
 		$request->set_param( 'per_page', 10 );
@@ -144,7 +144,7 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 	 *
 	 * @covers ::prepare_collection_response
 	 */
-	public function prepare_collection_response_last_page() {
+	public function test_prepare_collection_response_last_page() {
 		$request = new \WP_REST_Request();
 		$request->set_param( 'page', 3 );
 		$request->set_param( 'per_page', 10 );
@@ -169,7 +169,7 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 	 *
 	 * @covers ::prepare_collection_response
 	 */
-	public function prepare_collection_response_invalid_page() {
+	public function test_prepare_collection_response_invalid_page() {
 		$request = new \WP_REST_Request();
 		$request->set_param( 'page', 5 );
 		$request->set_param( 'per_page', 10 );
