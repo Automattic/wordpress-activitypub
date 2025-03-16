@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Don't redirect @-name URLs to trailing slashed versions

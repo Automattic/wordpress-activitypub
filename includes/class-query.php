@@ -85,35 +85,12 @@ class Query {
 			return $this->activitypub_object;
 		}
 
+		if ( $this->prepare_activitypub_data() ) {
+			return $this->activitypub_object;
+		}
+
 		$queried_object = $this->get_queried_object();
-
-		// Check for Outbox Activity.
-		if (
-			$queried_object instanceof \WP_Post &&
-			Outbox::POST_TYPE === $queried_object->post_type
-		) {
-			$activitypub_object = Outbox::maybe_get_activity( $queried_object );
-
-			// Check if the Outbox Activity is public.
-			if ( ! \is_wp_error( $activitypub_object ) ) {
-				$this->activitypub_object = $activitypub_object;
-
-				return $this->activitypub_object;
-			}
-		}
-
-		if ( ! $queried_object ) {
-			// If the object is not a valid ActivityPub object, try to get a virtual object.
-			$activitypub_object = $this->maybe_get_virtual_object();
-
-			if ( $activitypub_object ) {
-				$this->activitypub_object = $activitypub_object;
-
-				return $this->activitypub_object;
-			}
-		}
-
-		$transformer = Factory::get_transformer( $queried_object );
+		$transformer    = Factory::get_transformer( $queried_object );
 
 		if ( $transformer && ! \is_wp_error( $transformer ) ) {
 			$this->activitypub_object = $transformer->to_object();
@@ -132,13 +109,55 @@ class Query {
 			return $this->activitypub_object_id;
 		}
 
-		if ( $this->activitypub_object ) {
-			$this->activitypub_object_id = $this->activitypub_object->get_id();
-
+		if ( $this->prepare_activitypub_data() ) {
 			return $this->activitypub_object_id;
 		}
 
-		return $this->get_activitypub_object();
+		$queried_object = $this->get_queried_object();
+		$transformer    = Factory::get_transformer( $queried_object );
+
+		if ( $transformer && ! \is_wp_error( $transformer ) ) {
+			$this->activitypub_object_id = $transformer->to_id();
+		}
+
+		return $this->activitypub_object_id;
+	}
+
+	/**
+	 * Prepare and set both ActivityPub object and ID for Outbox activities and virtual objects.
+	 *
+	 * @return bool True if an object was found and set, false otherwise.
+	 */
+	private function prepare_activitypub_data() {
+		$queried_object = $this->get_queried_object();
+
+		// Check for Outbox Activity.
+		if (
+			$queried_object instanceof \WP_Post &&
+			Outbox::POST_TYPE === $queried_object->post_type
+		) {
+			$activitypub_object = Outbox::maybe_get_activity( $queried_object );
+
+			// Check if the Outbox Activity is public.
+			if ( ! \is_wp_error( $activitypub_object ) ) {
+				$this->activitypub_object    = $activitypub_object;
+				$this->activitypub_object_id = $this->activitypub_object->get_id();
+				return true;
+			}
+		}
+
+		if ( ! $queried_object ) {
+			// If the object is not a valid ActivityPub object, try to get a virtual object.
+			$activitypub_object = $this->maybe_get_virtual_object();
+
+			if ( $activitypub_object ) {
+				$this->activitypub_object    = $activitypub_object;
+				$this->activitypub_object_id = $this->activitypub_object->get_id();
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -253,7 +272,7 @@ class Query {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			isset( $_GET['activitypub'] )
 		) {
-			defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
+			\defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 			$this->is_activitypub_request = true;
 
 			return true;
@@ -275,7 +294,7 @@ class Query {
 			 * - application/json
 			 */
 			if ( \preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
-				defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
+				\defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 				$this->is_activitypub_request = true;
 
 				return true;
