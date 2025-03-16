@@ -344,31 +344,36 @@ class Blocks {
 			return null;
 		}
 
+		$show_embed = isset( $attrs['embedPost'] ) && $attrs['embedPost'];
+
 		$wrapper_attrs = get_block_wrapper_attributes(
 			array(
-				'aria-label' => __( 'Reply', 'activitypub' ),
-				'class'      => 'activitypub-reply-block',
+				'aria-label'       => __( 'Reply', 'activitypub' ),
+				'class'            => 'activitypub-reply-block',
+				'data-in-reply-to' => $attrs['url'],
 			)
 		);
 
 		$html = '<div ' . $wrapper_attrs . '>';
 
 		// Try to get and append the embed if requested.
-		if ( isset( $attrs['embedPost'] ) && $attrs['embedPost'] ) {
+		if ( $show_embed ) {
 			$embed = wp_oembed_get( $attrs['url'] );
 			if ( $embed ) {
 				$html .= $embed;
 			}
 		}
 
-		// Always add the microformats markup for the reply.
-		$html .= sprintf(
-			'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
-			esc_url( $attrs['url'] ),
-			esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
-			// translators: %s is the URL of the post being replied to.
-			sprintf( __( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', esc_url( $attrs['url'] ) ) )
-		);
+		// Only show the link if we're not showing the embed.
+		if ( ! $show_embed ) {
+			$html .= sprintf(
+				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
+				esc_url( $attrs['url'] ),
+				esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
+				// translators: %s is the URL of the post being replied to.
+				sprintf( __( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', esc_url( $attrs['url'] ) ) )
+			);
+		}
 
 		$html .= '</div>';
 
