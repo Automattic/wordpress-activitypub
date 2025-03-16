@@ -470,7 +470,7 @@ class Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="0" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="1" <?php checked( '1', $value ); ?> />
 				<?php esc_html_e( 'Require HTTP signature authentication on ActivityPub representations of public posts and profiles.', 'activitypub' ); ?>
 			</label>
 		</p>
