@@ -506,21 +506,6 @@ function is_blog_public() {
 }
 
 /**
- * Sanitize a URL.
- *
- * @param string $value The URL to sanitize.
- *
- * @return string|null The sanitized URL or null if invalid.
- */
-function sanitize_url( $value ) {
-	if ( filter_var( $value, FILTER_VALIDATE_URL ) === false ) {
-		return null;
-	}
-
-	return esc_url_raw( $value );
-}
-
-/**
  * Extract recipient URLs from Activity object.
  *
  * @param array $data The Activity object as array.

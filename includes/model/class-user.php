@@ -173,7 +173,7 @@ class User extends Actor {
 	 */
 	public function get_icon() {
 		$icon = \get_user_option( 'activitypub_icon', $this->_id );
-		if ( wp_attachment_is_image( $icon ) ) {
+		if ( false !== $icon && wp_attachment_is_image( $icon ) ) {
 			return array(
 				'type' => 'Image',
 				'url'  => esc_url( wp_get_attachment_url( $icon ) ),

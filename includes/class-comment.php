@@ -717,7 +717,7 @@ class Comment {
 		}
 
 		// Do not exclude likes and reposts on REST requests.
-		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+		if ( \wp_is_serving_rest_request() ) {
 			return;
 		}
 
