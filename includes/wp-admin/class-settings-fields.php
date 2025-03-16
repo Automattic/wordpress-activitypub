@@ -466,11 +466,11 @@ class Settings_Fields {
 	 * Render use hashtags field.
 	 */
 	public static function render_authorized_fetch_field() {
-		$value = get_option( 'activitypub_authorized_fetch', '1' );
+		$value = get_option( 'activitypub_authorized_fetch', '0' );
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="0" <?php checked( '1', $value ); ?> />
 				<?php esc_html_e( 'Require HTTP signature authentication on ActivityPub representations of public posts and profiles.', 'activitypub' ); ?>
 			</label>
 		</p>
