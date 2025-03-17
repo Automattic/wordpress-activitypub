@@ -157,17 +157,36 @@ jobs:
       - name: "Create changelog file from PR description"
         id: create-changelog-file
         if: steps.check-skip-label.outputs.skip-changelog != 'true' && steps.check-changelog-file.outputs.has-changelog-file != 'true' && steps.check-pr-body.outputs.has-changelog-info == 'true'
+        env:
+          PR_MESSAGE: '${{ steps.check-pr-body.outputs.message }}'
         uses: actions/github-script@v7
         with:
           script: |
             const { repo: { owner, repo }, payload : { pull_request : { number, head : { ref } } } } = context;
 
-            // Get the changelog information from the previous step
+            // Get the changelog information from the previous step.
             const significance = '${{ steps.check-pr-body.outputs.significance }}';
             const type = '${{ steps.check-pr-body.outputs.type }}';
-            const message = '${{ steps.check-pr-body.outputs.message }}';
 
-            // Create the changelog file content
+            // Get the raw message from the previous step and process it.
+            // We need to handle it as a regular string to avoid template literal syntax issues.
+            // The message is passed through environment variables to avoid syntax issues.
+            const rawMessage = process.env.PR_MESSAGE;
+
+            // Ensure the message is not empty.
+            if ( ! rawMessage ) {
+              core.setFailed( 'Changelog message is missing or empty. Please provide a meaningful message in the PR description.' );
+              return;
+            }
+
+            // Process the message to remove HTML comments and preserve special characters.
+            let message = rawMessage
+              // Remove HTML comments.
+              .replace( /<!--[\s\S]*?-->/g, '' )
+              // Trim whitespace.
+              .trim();
+
+            // Create the changelog file content.
             const content = [
               `Significance: ${ significance }`,
               `Type: ${ type }`,
