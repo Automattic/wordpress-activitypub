@@ -44,7 +44,7 @@ function get_context() {
  * @param string $url     The URL endpoint.
  * @param string $body    The Post Body.
  * @param int    $user_id The WordPress user ID.
-
+ *
  * @return array|WP_Error The POST Response or an WP_Error.
  */
 function safe_remote_post( $url, $body, $user_id ) {
