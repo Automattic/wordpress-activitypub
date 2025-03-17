@@ -51,6 +51,13 @@ class Settings_Fields {
 			'activitypub_settings'
 		);
 
+		add_settings_section(
+			'activitypub_server',
+			__( 'Server', 'activitypub' ),
+			'__return_empty_string',
+			'activitypub_settings'
+		);
+
 		// Add settings fields.
 		add_settings_field(
 			'activitypub_actor_mode',
@@ -129,7 +136,16 @@ class Settings_Fields {
 			__( 'Blocklist', 'activitypub' ),
 			array( self::class, 'render_blocklist_field' ),
 			'activitypub_settings',
-			'activitypub_general'
+			'activitypub_server'
+		);
+
+		add_settings_field(
+			'activitypub_relays',
+			__( 'Relays', 'activitypub' ),
+			array( self::class, 'render_relays_field' ),
+			'activitypub_settings',
+			'activitypub_server',
+			array( 'label_for' => 'activitypub_relays' )
 		);
 
 		add_settings_field(
@@ -137,7 +153,7 @@ class Settings_Fields {
 			__( 'Outbox Retention Period', 'activitypub' ),
 			array( self::class, 'render_outbox_purge_days_field' ),
 			'activitypub_settings',
-			'activitypub_general',
+			'activitypub_server',
 			array( 'label_for' => 'activitypub_outbox_purge_days' )
 		);
 
@@ -450,7 +466,7 @@ class Settings_Fields {
 	 * Render use hashtags field.
 	 */
 	public static function render_authorized_fetch_field() {
-		$value = get_option( 'activitypub_authorized_fetch', '1' );
+		$value = get_option( 'activitypub_authorized_fetch', '0' );
 		?>
 		<p>
 			<label>
@@ -463,6 +479,37 @@ class Settings_Fields {
 		</p>
 		<p class="description">
 			<?php \esc_html_e( '⚠ Secure mode does not hide the HTML representations of public posts and profiles. While HTML is a less consistent format (that potentially changes often) compared to first-class ActivityPub representations or the REST API, it still poses a potential risk for content scraping.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render relays field.
+	 */
+	public static function render_relays_field() {
+		$value = get_option( 'activitypub_relays', array() );
+		?>
+		<textarea
+			id="activitypub_relays"
+			name="activitypub_relays"
+			class="large-text"
+			cols="50"
+			rows="5"
+		><?php echo esc_textarea( implode( PHP_EOL, $value ) ); ?></textarea>
+		<p class="description">
+			<?php echo wp_kses( __( 'A <strong>Fediverse-Relay</strong> distributes content across instances, expanding reach, engagement, and discoverability, especially for smaller instances.', 'activitypub' ), 'default' ); ?>
+		</p>
+		<p class="description">
+			<?php
+			echo wp_kses(
+				__( 'Enter the <strong>Inbox-URLs</strong> (e.g. <code>https://relay.example.com/inbox</code>) of the relays you want to use, one per line.', 'activitypub' ),
+				array(
+					'strong' => array(),
+					'code'   => array(),
+				)
+			);
+			?>
+			<?php echo wp_kses( __( 'You can find a list of public relays on <a href="https://relaylist.com/" target="_blank">relaylist.com</a> or on <a href="https://fedidb.org/software/activity-relay" target="_blank">FediDB</a>.', 'activitypub' ), 'default' ); ?>
 		</p>
 		<?php
 	}

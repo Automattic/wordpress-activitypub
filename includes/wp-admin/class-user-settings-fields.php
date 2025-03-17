@@ -151,6 +151,8 @@ class User_Settings_Fields {
 			data-choose-text="<?php \esc_attr_e( 'Choose a Header Image', 'activitypub' ); ?>"
 			data-update-text="<?php \esc_attr_e( 'Change Header Image', 'activitypub' ); ?>"
 			data-update="<?php \esc_attr_e( 'Set as Header Image', 'activitypub' ); ?>"
+			data-width="1500"
+			data-height="500"
 			<?php
 			if ( ! \current_user_can( 'edit_others_posts' ) ) :
 				\printf( 'data-user-id="%s"', \esc_attr( \get_current_user_id() ) );

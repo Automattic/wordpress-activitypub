@@ -171,6 +171,17 @@ class Settings {
 			)
 		);
 
+		\register_setting(
+			'activitypub',
+			'activitypub_relays',
+			array(
+				'type'              => 'array',
+				'description'       => \__( 'Relays', 'activitypub' ),
+				'default'           => array(),
+				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+			)
+		);
+
 		// Blog-User Settings.
 		\register_setting(
 			'activitypub_blog',
