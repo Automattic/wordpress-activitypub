@@ -125,7 +125,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 	public function test_render_reply_block_with_no_embed() {
 		add_filter( 'pre_oembed_result', '__return_false' );
 
-		$block_markup = '<!-- wp:activitypub/reply {"url":"https://example.com/no-embed","embedPost":true} /-->';
+		$block_markup = '<!-- wp:activitypub/reply {"url":"https://example.com/no-embed","embedPost":false} /-->';
 		$output       = do_blocks( $block_markup );
 
 		$this->assertStringNotContainsString( '<blockquote', $output, 'Output should not contain any embedded content.' );

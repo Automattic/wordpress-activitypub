@@ -57,7 +57,7 @@ $args = wp_parse_args(
 
 	<div class="activitypub-embed-meta">
 		<?php if ( $args['published'] ) : ?>
-			<a href="<?php echo \esc_url( $args['url'] ); ?>" class="ap-stat ap-date dt-published"><?php echo \esc_html( $args['published'] ); ?></a>
+			<a href="<?php echo \esc_url( $args['url'] ); ?>" class="ap-stat ap-date dt-published u-in-reply-to"><?php echo \esc_html( $args['published'] ); ?></a>
 		<?php endif; ?>
 
 		<span class="ap-stat">
