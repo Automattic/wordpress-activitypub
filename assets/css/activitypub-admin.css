@@ -188,22 +188,6 @@ input.blog-user-identifier {
 	left: 40px;
 }
 
-.settings_page_activitypub .box  {
-	border: 1px solid #c3c4c7;
-	background-color: #fff;
-	padding: 1em 1.5em;
-	margin-bottom: 1.5em;
-}
-
-.settings_page_activitypub .activitypub-welcome-page .box label {
-	font-weight: bold;
-}
-
-.settings_page_activitypub .activitypub-welcome-page input {
-	font-size: 20px;
-	width: 95%;
-}
-
 .settings_page_activitypub .plugin-recommendations {
 	border-bottom: none;
 	margin-bottom: 0;

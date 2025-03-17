@@ -12,12 +12,14 @@ use WP_Comment;
 use WP_Error;
 
 use Activitypub\Comment;
+use Activitypub\Model\Blog;
 use Activitypub\Transformer\Post as PostTransformer;
 use Activitypub\Transformer\Comment as CommentTransformer;
 
 use function Activitypub\is_post_disabled;
 use function Activitypub\is_local_comment;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_user_type_disabled;
 
 /**
  * Class containing code for getting replies Collections and CollectionPages of posts and comments.
@@ -76,7 +78,7 @@ class Replies {
 		$id = self::get_id( $wp_object );
 
 		if ( is_wp_error( $id ) ) {
-			return defined( 'REST_REQUEST' ) && REST_REQUEST ? $id : null;
+			return \wp_is_serving_rest_request() ? $id : null;
 		}
 
 		$replies = array(
@@ -104,7 +106,7 @@ class Replies {
 		// Build initial arguments for fetching approved comments.
 		$args = self::build_args( $wp_object );
 		if ( is_wp_error( $args ) ) {
-			return defined( 'REST_REQUEST' ) && REST_REQUEST ? $args : null;
+			return \wp_is_serving_rest_request() ? $args : null;
 		}
 
 		// Retrieve the partOf if not already given.
@@ -112,7 +114,7 @@ class Replies {
 
 		// If the collection page does not exist.
 		if ( is_wp_error( $part_of ) ) {
-			return defined( 'REST_REQUEST' ) && REST_REQUEST ? $part_of : null;
+			return \wp_is_serving_rest_request() ? $part_of : null;
 		}
 
 		// Get to total replies count.
@@ -171,10 +173,19 @@ class Replies {
 		$post_uri = ( new PostTransformer( $post ) )->to_id();
 		\array_unshift( $ids, $post_uri );
 
+		$author = Actors::get_by_id( $post->post_author );
+		if ( is_wp_error( $author ) ) {
+			if ( is_user_type_disabled( 'blog' ) ) {
+				return false;
+			}
+
+			$author = new Blog();
+		}
+
 		return array(
 			'type'         => 'OrderedCollection',
 			'url'          => \get_permalink( $post_id ),
-			'attributedTo' => Actors::get_by_id( $post->post_author )->get_id(),
+			'attributedTo' => $author->get_id(),
 			'totalItems'   => count( $ids ),
 			'items'        => $ids,
 		);
