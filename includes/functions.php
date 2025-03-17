@@ -37,6 +37,38 @@ function get_context() {
 }
 
 /**
+ * Send a POST request to a remote server.
+ *
+ * @deprecated unreleased Use Http::post instead.
+ *
+ * @param string $url     The URL endpoint.
+ * @param string $body    The Post Body.
+ * @param int    $user_id The WordPress user ID.
+
+ * @return array|WP_Error The POST Response or an WP_Error.
+ */
+function safe_remote_post( $url, $body, $user_id ) {
+	_deprecated_function( __FUNCTION__, 'unreleased', 'Http::post' );
+
+	return Http::post( $url, $body, $user_id );
+}
+
+/**
+ * Send a GET request to a remote server.
+ *
+ * @deprecated unreleased Use Http::get instead.
+ *
+ * @param string $url The URL endpoint.
+ *
+ * @return array|WP_Error The GET Response or an WP_Error.
+ */
+function safe_remote_get( $url ) {
+	_deprecated_function( __FUNCTION__, 'unreleased', 'Http::get' );
+
+	return Http::get( $url );
+}
+
+/**
  * Returns a users WebFinger "resource".
  *
  * @param int $user_id The user ID.
