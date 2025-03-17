@@ -1,0 +1,4 @@
+Significance: patch
+Type: removed
+
+Our version of `sanitize_url()` was unused—use Core's `sanitize_url()` instead.

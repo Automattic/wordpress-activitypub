@@ -232,6 +232,30 @@ class Welcome_Fields {
 				<p><a href="<?php echo \esc_url( \admin_url( 'plugin-install.php?tab=plugin-information&plugin=friends&TB_iframe=true' ) ); ?>" class="thickbox open-plugin-details-modal button install-now" target="_blank"><?php \esc_html_e( 'Install the Friends Plugin', 'activitypub' ); ?></a></p>
 			</div>
 			<?php endif; ?>
+			<?php if ( ! \defined( 'EVENT_BRIDGE_FOR_ACTIVITYPUB_PLUGIN_VERSION' ) ) : ?>
+			<h4 class="activitypub-settings-accordion-heading">
+				<button aria-expanded="false" class="activitypub-settings-accordion-trigger" aria-controls="activitypub-settings-accordion-block-event-bridge-for-activitypub-plugin" type="button">
+					<span class="title"><?php \esc_html_e( 'Federate Events', 'activitypub' ); ?></span>
+					<span class="icon"></span>
+				</button>
+			</h4>
+			<div id="activitypub-settings-accordion-block-event-bridge-for-activitypub-plugin" class="activitypub-settings-accordion-panel plugin-card-block-event-bridge-for-activitypub" hidden="hidden">
+				<p><?php \esc_html_e( 'Make your events more discoverable, expand your reach effortlessly while being independent of other (commercial) platforms, and be a part of the growing decentralized web (the Fediverse). With the Event Bridge for ActivityPub Plugin for WordPress, your events can be automatically followed, aggregated and displayed across decentralized platforms like Mastodon or Gancio, without any extra work.', 'activitypub' ); ?></p>
+				<p><a href="<?php echo \esc_url( \admin_url( 'plugin-install.php?tab=plugin-information&plugin=event-bridge-for-activitypub&TB_iframe=true' ) ); ?>" class="thickbox open-plugin-details-modal button install-now" target="_blank"><?php \esc_html_e( 'Install the Event Bridge for ActivityPub Plugin', 'activitypub' ); ?></a></p>
+			</div>
+			<?php endif; ?>
+			<?php if ( ! \defined( 'ENABLE_MASTODON_APPS_VERSION' ) ) : ?>
+			<h4 class="activitypub-settings-accordion-heading">
+				<button aria-expanded="false" class="activitypub-settings-accordion-trigger" aria-controls="activitypub-settings-accordion-block-enable-mastodon-apps-plugin" type="button">
+					<span class="title"><?php \esc_html_e( 'Use Mastodon Apps', 'activitypub' ); ?></span>
+					<span class="icon"></span>
+				</button>
+			</h4>
+			<div id="activitypub-settings-accordion-block-enable-mastodon-apps-plugin" class="activitypub-settings-accordion-panel plugin-card-block-enable-mastodon-apps" hidden="hidden">
+				<p><?php \esc_html_e( 'Use Mastodon Apps to connect your WordPress site to Mastodon. This plugin allows you to use Mastodon apps to authenticate users on your WordPress site.', 'activitypub' ); ?></p>
+				<p><a href="<?php echo \esc_url( \admin_url( 'plugin-install.php?tab=plugin-information&plugin=enable-mastodon-apps&TB_iframe=true' ) ); ?>" class="thickbox open-plugin-details-modal button install-now" target="_blank"><?php \esc_html_e( 'Install the Enable Mastodon Apps Plugin', 'activitypub' ); ?></a></p>
+			</div>
+			<?php endif; ?>
 			<?php if ( ! \class_exists( 'Hum' ) ) : ?>
 			<h4 class="activitypub-settings-accordion-heading">
 				<button aria-expanded="false" class="activitypub-settings-accordion-trigger" aria-controls="activitypub-settings-accordion-block-activitypub-hum-plugin" type="button">
