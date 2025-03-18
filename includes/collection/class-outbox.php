@@ -25,34 +25,33 @@ class Outbox {
 	/**
 	 * Add an Item to the outbox.
 	 *
-	 * @param \Activitypub\Activity\Base_Object $activity_object    The object of the activity that will be added to the outbox.
-	 * @param int                               $user_id            The real or imaginary user ID of the actor that published the activity that will be added to the outbox.
-	 * @param string                            $content_visibility Optional. The visibility of the content. Default: `ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC`. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+	 * @param Activity $activity   Full Activity object that will be added to the outbox.
+	 * @param int      $user_id    The real or imaginary user ID of the actor that published the activity that will be added to the outbox.
+	 * @param string   $visibility Optional. The visibility of the content. Default: `ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC`. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
 	 *
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
-	public static function add( $activity_object, $user_id, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
+	public static function add( $activity, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
 		$actor_type                        = Actors::get_type_by_id( $user_id );
-		[ $title, $activitypub_object_id ] = self::recursively_get_activity_meta( $activity_object );
+		[ $title, $activitypub_object_id ] = self::recursively_get_activity_meta( $activity );
 
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
 			'post_title'   => sprintf(
 				/* translators: 1. Activity type, 2. Object type, 3. Object Title or Excerpt */
-				__( '[%1$s] %2$s: %3$s', 'activitypub' ),
-				$activity_type,
-				$activity_object->get_type(),
+				__( '[%1$s] %2$s', 'activitypub' ),
+				$activity->get_type(),
 				\wp_trim_words( $title, 5 )
 			),
-			'post_content' => wp_slash( $activity_object->to_json() ),
+			'post_content' => wp_slash( $activity->to_json() ),
 			// ensure that user ID is not below 0.
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'pending',
 			'meta_input'   => array(
 				'_activitypub_object_id'         => $activitypub_object_id,
-				'_activitypub_activity_type'     => $activity_type,
+				'_activitypub_activity_type'     => $activity->get_type(),
 				'_activitypub_activity_actor'    => $actor_type,
-				'activitypub_content_visibility' => $content_visibility,
+				'activitypub_content_visibility' => $visibility,
 			),
 		);
 
@@ -76,7 +75,7 @@ class Outbox {
 			return false;
 		}
 
-		self::invalidate_existing_items( $activitypub_object_id, $activity_type, $id );
+		self::invalidate_existing_items( $activitypub_object_id, $activity->get_type(), $id );
 
 		return $id;
 	}
