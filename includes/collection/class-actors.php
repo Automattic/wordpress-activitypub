@@ -298,4 +298,22 @@ class Actors {
 
 		return $return;
 	}
+
+	/**
+	 * Returns the actor type based on the user ID.
+	 *
+	 * @param int $user_id The user ID to check.
+	 * @return string The user type.
+	 */
+	public static function get_type_by_id( $user_id ) {
+		if ( self::APPLICATION_USER_ID === $user_id ) {
+			return 'application';
+		}
+
+		if ( self::BLOG_USER_ID === $user_id ) {
+			return 'blog';
+		}
+
+		return 'user';
+	}
 }

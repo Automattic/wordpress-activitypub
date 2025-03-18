@@ -113,4 +113,16 @@ class Test_Actors extends \WP_UnitTestCase {
 			array( 'http://example.org/@blogs/', 'WP_Error' ),
 		);
 	}
+
+	/**
+	 * Test get_type_by_id()
+	 *
+	 * @covers ::get_type_by_id
+	 */
+	public function test_get_type_by_id() {
+		$this->assertSame( 'application', Actors::get_type_by_id( Actors::APPLICATION_USER_ID ) );
+		$this->assertSame( 'blog', Actors::get_type_by_id( Actors::BLOG_USER_ID ) );
+		$this->assertSame( 'user', Actors::get_type_by_id( 1 ) );
+		$this->assertSame( 'user', Actors::get_type_by_id( 2 ) );
+	}
 }

@@ -219,4 +219,30 @@ class Test_Activitypub extends \WP_UnitTestCase {
 		unset( $_SERVER['HTTP_ACCEPT'] );
 		_unregister_post_type( 'test_cpt_supported' );
 	}
+
+	/**
+	 * Test no_trailing_redirect method.
+	 *
+	 * @covers ::no_trailing_redirect
+	 */
+	public function test_no_trailing_redirect() {
+		// Test case 1: When actor query var is set, it should return the requested URL.
+		set_query_var( 'actor', 'testuser' );
+		$requested_url = 'https://example.org/@testuser';
+		$redirect_url  = 'https://example.org/@testuser/';
+
+		$result = \Activitypub\Activitypub::no_trailing_redirect( $redirect_url, $requested_url );
+		$this->assertEquals( $requested_url, $result, 'Should return requested URL when actor query var is set.' );
+
+		// Test case 2: When actor query var is not set, it should return the redirect URL.
+		set_query_var( 'actor', '' );
+		$requested_url = 'https://example.org/some-page';
+		$redirect_url  = 'https://example.org/some-page/';
+
+		$result = \Activitypub\Activitypub::no_trailing_redirect( $redirect_url, $requested_url );
+		$this->assertEquals( $redirect_url, $result, 'Should return redirect URL when actor query var is not set.' );
+
+		// Clean up.
+		set_query_var( 'actor', null );
+	}
 }

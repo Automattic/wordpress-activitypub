@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed default value for `activitypub_authorized_fetch` option.

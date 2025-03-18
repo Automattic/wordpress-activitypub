@@ -78,7 +78,7 @@ class Replies {
 		$id = self::get_id( $wp_object );
 
 		if ( is_wp_error( $id ) ) {
-			return defined( 'REST_REQUEST' ) && REST_REQUEST ? $id : null;
+			return \wp_is_serving_rest_request() ? $id : null;
 		}
 
 		$replies = array(
@@ -106,7 +106,7 @@ class Replies {
 		// Build initial arguments for fetching approved comments.
 		$args = self::build_args( $wp_object );
 		if ( is_wp_error( $args ) ) {
-			return defined( 'REST_REQUEST' ) && REST_REQUEST ? $args : null;
+			return \wp_is_serving_rest_request() ? $args : null;
 		}
 
 		// Retrieve the partOf if not already given.
@@ -114,7 +114,7 @@ class Replies {
 
 		// If the collection page does not exist.
 		if ( is_wp_error( $part_of ) ) {
-			return defined( 'REST_REQUEST' ) && REST_REQUEST ? $part_of : null;
+			return \wp_is_serving_rest_request() ? $part_of : null;
 		}
 
 		// Get to total replies count.
