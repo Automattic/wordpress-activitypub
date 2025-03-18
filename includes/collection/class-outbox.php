@@ -34,18 +34,8 @@ class Outbox {
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
 	public static function add( $activity_object, $activity_type, $user_id, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
-		$actor_type            = Actors::get_type_by_id( $user_id );
-		$title                 = $activity_object->get_name() ?? $activity_object->get_content();
-		$activitypub_object_id = $activity_object->get_id();
-
-		if ( ! $title && is_activity( $activity_object ) && $activity_object->get_object() instanceof \Activitypub\Activity\Base_Object ) {
-			$title                 = $activity_object->get_object()->get_name() ?? $activity_object->get_object()->get_content();
-			$activitypub_object_id = $activity_object->get_object()->get_id();
-		}
-
-    if ( null === $activity_type ) {
-			$activity_type = $activity_object->get_type();
-		}
+		$actor_type                        = Actors::get_type_by_id( $user_id );
+		[ $title, $activitypub_object_id ] = self::recursively_get_activity_meta( $activity_object );
 
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
@@ -288,5 +278,22 @@ class Outbox {
 		}
 
 		return self::get_activity( $outbox_item );
+	}
+
+	/**
+	 * Get the metadata of an activity recursively.
+	 *
+	 * @param \Activitypub\Activity\Base_Object $activity The activity object.
+	 * @return array The meta data.
+	 */
+	private static function recursively_get_activity_meta( $activity ) {
+		$title                 = $activity->get_name() ?? $activity->get_content();
+		$activitypub_object_id = $activity->get_id();
+
+		if ( ! $title && is_activity( $activity ) && $activity->get_object() instanceof \Activitypub\Activity\Base_Object ) {
+			return self::recursively_get_activity_meta( $activity->get_object() );
+		}
+
+		return array( $title, $activitypub_object_id );
 	}
 }
