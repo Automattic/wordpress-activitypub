@@ -7,6 +7,7 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Activitypub;
 use Activitypub\Dispatcher;
 use Activitypub\Scheduler;
 use Activitypub\Activity\Activity;
@@ -26,7 +27,7 @@ class Outbox {
 	 * Add an Item to the outbox.
 	 *
 	 * @param \Activitypub\Activity\Base_Object $activity_object    The object of the activity that will be added to the outbox.
-	 * @param string                            $activity_type      The activity type.
+	 * @param null|string                       $activity_type      The activity type. null if the full activity is provided in $activity_object.
 	 * @param int                               $user_id            The real or imaginary user ID of the actor that published the activity that will be added to the outbox.
 	 * @param string                            $content_visibility Optional. The visibility of the content. Default: `ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC`. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
 	 *
@@ -43,6 +44,10 @@ class Outbox {
 			default:
 				$actor_type = 'user';
 				break;
+		}
+
+		if ( null === $activity_type ) {
+			$activity_type = $activity_object->get_type();
 		}
 
 		$title                 = $activity_object->get_name() ?? $activity_object->get_content();
@@ -214,13 +219,18 @@ class Outbox {
 			return $actor;
 		}
 
-		$activity = new Activity();
-		$type     = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
-		$activity->set_type( $type );
-		$activity->set_id( $outbox_item->guid );
-		$activity->set_actor( $actor->get_id() );
-		// Pre-fill the Activity with data (for example cc and to).
-		$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
+		$type = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
+
+		if ( in_array( $type, Activitypub::$object_types, true ) ) {
+			$activity = new Activity();
+			$activity->set_type( $type );
+			$activity->set_id( $outbox_item->guid );
+			$activity->set_actor( $actor->get_id() );
+			// Pre-fill the Activity with data (for example cc and to).
+			$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
+		} else {
+			$activity = Activity::init_from_array( \json_decode( $outbox_item->post_content, true ) );
+		}
 
 		/**
 		 * Filters the Activity object before it is returned.
