@@ -34,28 +34,17 @@ class Outbox {
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
 	public static function add( $activity_object, $activity_type, $user_id, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
-		switch ( $user_id ) {
-			case Actors::APPLICATION_USER_ID:
-				$actor_type = 'application';
-				break;
-			case Actors::BLOG_USER_ID:
-				$actor_type = 'blog';
-				break;
-			default:
-				$actor_type = 'user';
-				break;
-		}
-
-		if ( null === $activity_type ) {
-			$activity_type = $activity_object->get_type();
-		}
-
+		$actor_type            = Actors::get_type_by_id( $user_id );
 		$title                 = $activity_object->get_name() ?? $activity_object->get_content();
 		$activitypub_object_id = $activity_object->get_id();
 
 		if ( ! $title && is_activity( $activity_object ) && $activity_object->get_object() instanceof \Activitypub\Activity\Base_Object ) {
 			$title                 = $activity_object->get_object()->get_name() ?? $activity_object->get_object()->get_content();
 			$activitypub_object_id = $activity_object->get_object()->get_id();
+		}
+    
+    if ( null === $activity_type ) {
+			$activity_type = $activity_object->get_type();
 		}
 
 		$outbox_item = array(
