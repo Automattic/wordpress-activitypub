@@ -16,7 +16,7 @@ use WP_UnitTestCase;
  *
  * @coversDefaultClass \Activitypub\Query
  */
-class Test_Query extends ActivityPub_Outbox_TestCase {
+class Test_Query extends \WP_UnitTestCase {
 	/**
 	 * Test user ID.
 	 *
@@ -335,7 +335,17 @@ class Test_Query extends ActivityPub_Outbox_TestCase {
 	 */
 	public function test_outbox_item_visibility() {
 		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
-		$outbox_item = $this->get_latest_outbox_item();
+		$outbox_item = \current(
+			\get_posts(
+				array(
+					'post_type'      => Outbox::POST_TYPE,
+					'posts_per_page' => 1,
+					'post_status'    => 'pending',
+					'orderby'        => 'date',
+					'order'          => 'DESC',
+				)
+			)
+		);
 
 		Query::get_instance()->__destruct();
 		$this->go_to( get_permalink( $outbox_item->ID ) );
