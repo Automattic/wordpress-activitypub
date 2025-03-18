@@ -33,7 +33,7 @@ class Move {
 
 		// Update the movedTo property.
 		if ( $user->get__id() > 0 ) {
-			\update_user_option( $user->get__id(), 'activitypub_move_to', $to );
+			\update_user_option( $user->get__id(), 'activitypub_moved_to', $to );
 		} else {
 			\update_option( 'activitypub_blog_user_moved_to', $to );
 		}
