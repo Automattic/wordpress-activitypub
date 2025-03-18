@@ -65,6 +65,20 @@
 	transition: box-shadow .5s ease-in-out;
 }
 
+.activitypub-settings .row {
+	margin-bottom: 16px;
+}
+
+.activitypub-settings .row > div {
+	max-width: calc(100% - 24px);
+	display: inline-flex;
+	flex-direction: column;
+}
+
+.activitypub-settings .row .description {
+	margin-top: 0;
+}
+
 .wp-header-end {
 	visibility: hidden;
 	margin: -2px 0 0;
@@ -179,8 +193,7 @@ input.blog-user-identifier {
 	background-size: cover;
 }
 
-.activitypub-settings
-.logo {
+.activitypub-settings .logo {
 	height: 80px;
 	width: 80px;
 	position: relative;
