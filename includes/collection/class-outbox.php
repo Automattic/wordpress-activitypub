@@ -26,13 +26,12 @@ class Outbox {
 	 * Add an Item to the outbox.
 	 *
 	 * @param \Activitypub\Activity\Base_Object $activity_object    The object of the activity that will be added to the outbox.
-	 * @param null|string                       $activity_type      The activity type. null if the full activity is provided in $activity_object.
 	 * @param int                               $user_id            The real or imaginary user ID of the actor that published the activity that will be added to the outbox.
 	 * @param string                            $content_visibility Optional. The visibility of the content. Default: `ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC`. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
 	 *
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
-	public static function add( $activity_object, $activity_type, $user_id, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
+	public static function add( $activity_object, $user_id, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
 		$actor_type                        = Actors::get_type_by_id( $user_id );
 		[ $title, $activitypub_object_id ] = self::recursively_get_activity_meta( $activity_object );
 
