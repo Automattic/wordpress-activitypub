@@ -257,7 +257,7 @@ class Welcome_Fields {
 					echo \wp_kses(
 						\sprintf(
 							// translators: %s is a URL.
-							\__( 'Interact with your WordPress site using <a href="%s" target="_blank">Mastodon apps</a>. This gives you a wide choice of apps that you can use to read or write posts that will be federated using the ActivityPub plugin.', 'activitypub' ),
+							\__( 'Enable the use of a wide variety of <a href="%s" target="_blank">Mastodon apps</a>to interact with your WordPress site, for example write posts that can then be federated via the ActivityPub plugin.', 'activitypub' ),
 							'https://joinmastodon.org/apps'
 						),
 						array(
