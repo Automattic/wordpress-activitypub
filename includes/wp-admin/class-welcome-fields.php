@@ -252,7 +252,23 @@ class Welcome_Fields {
 				</button>
 			</h4>
 			<div id="activitypub-settings-accordion-block-enable-mastodon-apps-plugin" class="activitypub-settings-accordion-panel plugin-card-block-enable-mastodon-apps" hidden="hidden">
-				<p><?php \esc_html_e( 'Use Mastodon Apps to connect your WordPress site to Mastodon. This plugin allows you to use Mastodon apps to authenticate users on your WordPress site.', 'activitypub' ); ?></p>
+				<p>
+					<?php
+					echo \wp_kses(
+						\sprintf(
+							// translators: %s is a URL.
+							\__( 'Enable the use of a wide variety of <a href="%s" target="_blank">Mastodon apps</a>to interact with your WordPress site, for example write posts that can then be federated via the ActivityPub plugin.', 'activitypub' ),
+							'https://joinmastodon.org/apps'
+						),
+						array(
+							'a' => array(
+								'href'   => true,
+								'target' => true,
+							),
+						)
+					);
+					?>
+				</p>
 				<p><a href="<?php echo \esc_url( \admin_url( 'plugin-install.php?tab=plugin-information&plugin=enable-mastodon-apps&TB_iframe=true' ) ); ?>" class="thickbox open-plugin-details-modal button install-now" target="_blank"><?php \esc_html_e( 'Install the Enable Mastodon Apps Plugin', 'activitypub' ); ?></a></p>
 			</div>
 			<?php endif; ?>
