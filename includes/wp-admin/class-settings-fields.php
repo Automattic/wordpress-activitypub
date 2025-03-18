@@ -223,8 +223,19 @@ class Settings_Fields {
 	 * Render actor mode field.
 	 */
 	public static function render_actor_mode_field() {
-		$value = get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
-		?>
+		$disabled = ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) && ACTIVITYPUB_SINGLE_USER_MODE ) ||
+						( \defined( 'ACTIVITYPUB_DISABLE_USER' ) && ACTIVITYPUB_DISABLE_USER ) ||
+						( \defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) && ACTIVITYPUB_DISABLE_BLOG_USER );
+
+		if ( $disabled ) :
+			?>
+			<p class="description">
+				<?php esc_html_e( '⚠ This setting is defined through server configuration by your blog&#8217;s administrator and cannot be changed. Please contact them if you need different settings.', 'activitypub' ); ?>
+			</p>
+			<?php
+		else :
+			$value = get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+			?>
 			<fieldset class="actor-mode-selection">
 				<div class="row">
 					<input type="radio" id="actor-mode" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_ACTOR_MODE ); ?>" <?php checked( ACTIVITYPUB_ACTOR_MODE, $value ); ?> />
@@ -267,8 +278,8 @@ class Settings_Fields {
 					</div>
 				</div>
 			</fieldset>
-
-		<?php
+			<?php
+		endif;
 	}
 
 	/**
