@@ -42,7 +42,7 @@ class Outbox {
 			$title                 = $activity_object->get_object()->get_name() ?? $activity_object->get_object()->get_content();
 			$activitypub_object_id = $activity_object->get_object()->get_id();
 		}
-    
+
     if ( null === $activity_type ) {
 			$activity_type = $activity_object->get_type();
 		}
@@ -211,15 +211,15 @@ class Outbox {
 		$activity_object = \json_decode( $outbox_item->post_content, true );
 		$type            = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 
-		if ( in_array( $activity_object['type'], Activitypub::$object_types, true ) || in_array( $type, array( 'Delete', 'Remove', 'Undo' ), true ) ) {
+		if ( $activity_object['type'] === $type ) {
+			$activity = Activity::init_from_array( $activity_object );
+		} else {
 			$activity = new Activity();
 			$activity->set_type( $type );
 			$activity->set_id( $outbox_item->guid );
 			$activity->set_actor( $actor->get_id() );
 			// Pre-fill the Activity with data (for example cc and to).
 			$activity->set_object( $activity_object );
-		} else {
-			$activity = Activity::init_from_array( $activity_object );
 		}
 
 		/**
