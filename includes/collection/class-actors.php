@@ -306,6 +306,8 @@ class Actors {
 	 * @return string The user type.
 	 */
 	public static function get_type_by_id( $user_id ) {
+		$user_id = (int) $user_id;
+
 		if ( self::APPLICATION_USER_ID === $user_id ) {
 			return 'application';
 		}
