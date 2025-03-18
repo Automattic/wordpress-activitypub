@@ -16,7 +16,7 @@ use WP_UnitTestCase;
  *
  * @coversDefaultClass \Activitypub\Query
  */
-class Test_Query extends WP_UnitTestCase {
+class Test_Query extends ActivityPub_Outbox_TestCase {
 	/**
 	 * Test user ID.
 	 *
@@ -334,19 +334,8 @@ class Test_Query extends WP_UnitTestCase {
 	 * @covers ::get_activitypub_object
 	 */
 	public function test_outbox_item_visibility() {
-		$outbox_item_id = $this->factory->post->create(
-			array(
-				'post_author' => self::$user_id,
-				'post_type'   => Outbox::POST_TYPE,
-				'post_status' => 'any',
-				'meta_input'  => array(
-					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
-					'_activitypub_activity_type'     => 'Create',
-				),
-			)
-		);
-
-		$outbox_item = get_post( $outbox_item_id );
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item();
 
 		Query::get_instance()->__destruct();
 		$this->go_to( get_permalink( $outbox_item->ID ) );
@@ -366,6 +355,6 @@ class Test_Query extends WP_UnitTestCase {
 		$this->go_to( get_permalink( $outbox_item->ID ) );
 		$this->assertNull( Query::get_instance()->get_activitypub_object() );
 
-		\wp_delete_post( $outbox_item->ID, true );
+		\wp_delete_post( $post_id, true );
 	}
 }

@@ -219,17 +219,18 @@ class Outbox {
 			return $actor;
 		}
 
-		$type = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
+		$activity_object = \json_decode( $outbox_item->post_content, true );
+		$type            = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 
-		if ( in_array( $type, Activitypub::$object_types, true ) ) {
+		if ( in_array( $activity_object['type'], Activitypub::$object_types, true ) || in_array( $type, array( 'Delete', 'Remove', 'Undo' ), true ) ) {
 			$activity = new Activity();
 			$activity->set_type( $type );
 			$activity->set_id( $outbox_item->guid );
 			$activity->set_actor( $actor->get_id() );
 			// Pre-fill the Activity with data (for example cc and to).
-			$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
+			$activity->set_object( $activity_object );
 		} else {
-			$activity = Activity::init_from_array( \json_decode( $outbox_item->post_content, true ) );
+			$activity = Activity::init_from_array( $activity_object );
 		}
 
 		/**
