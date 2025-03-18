@@ -758,6 +758,17 @@ class Activitypub {
 
 		\register_meta(
 			'user',
+			$blog_prefix . 'activitypub_moved_to',
+			array(
+				'type'              => 'string',
+				'description'       => 'The new URL of the user.',
+				'single'            => true,
+				'sanitize_callback' => 'sanitize_url',
+			)
+		);
+
+		\register_meta(
+			'user',
 			$blog_prefix . 'activitypub_description',
 			array(
 				'type'              => 'string',

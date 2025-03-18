@@ -446,6 +446,6 @@ class User extends Actor {
 	 * @return string The movedTo.
 	 */
 	public function get_moved_to() {
-		return \get_user_option( 'activitypub_move_to', $this->_id );
+		return \get_user_option( 'activitypub_moved_to', $this->_id );
 	}
 }
