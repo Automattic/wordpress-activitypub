@@ -262,7 +262,8 @@ class Welcome_Fields {
 						),
 						array(
 							'a' => array(
-								'href' => true,
+								'href'   => true,
+								'target' => true,
 							),
 						)
 					);
