@@ -114,18 +114,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 */
 		$activity_types = apply_filters( 'rest_activitypub_outbox_activity_types', array( 'Announce', 'Create', 'Like', 'Update' ) );
 
-		switch ( $user_id ) {
-			case Actors::APPLICATION_USER_ID:
-				$actor_type = 'application';
-				break;
-			case Actors::BLOG_USER_ID:
-				$actor_type = 'blog';
-				break;
-			default:
-				$actor_type = 'user';
-				break;
-		}
-
 		$args = array(
 			'posts_per_page' => $request->get_param( 'per_page' ),
 			'author'         => $user_id > 0 ? $user_id : null,
@@ -137,7 +125,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			'meta_query'     => array(
 				array(
 					'key'   => '_activitypub_activity_actor',
-					'value' => $actor_type,
+					'value' => Actors::get_type_by_id( $user_id ),
 				),
 			),
 		);
