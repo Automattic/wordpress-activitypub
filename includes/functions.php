@@ -1460,9 +1460,9 @@ function is_self_ping( $id ) {
  * Add an object to the outbox.
  *
  * @param mixed       $data               The object to add to the outbox.
- * @param string|null $activity_type      The type of the Activity or null if `$data` is an Activity.
- * @param integer     $user_id            The User-ID.
- * @param string      $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+ * @param string|null $activity_type      Optional. The type of the Activity or null if `$data` is an Activity. Default null.
+ * @param integer     $user_id            Optional. The User-ID. Default 0.
+ * @param string      $content_visibility Optional. The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`. Default null.
  *
  * @return boolean|int The ID of the outbox item or false on failure.
  */
@@ -1534,7 +1534,38 @@ function is_activity( $data ) {
 	 *
 	 * @param array $types The activity types.
 	 */
-	$types = apply_filters( 'activitypub_activity_types', Activitypub::$activity_types );
+	$types = apply_filters(
+		'activitypub_activity_types',
+		array(
+			'Accept',
+			'Add',
+			'Announce',
+			'Arrive',
+			'Block',
+			'Create',
+			'Delete',
+			'Dislike',
+			'Follow',
+			'Flag',
+			'Ignore',
+			'Invite',
+			'Join',
+			'Leave',
+			'Like',
+			'Listen',
+			'Move',
+			'Offer',
+			'Read',
+			'Reject',
+			'Remove',
+			'TentativeAccept',
+			'TentativeReject',
+			'Travel',
+			'Undo',
+			'Update',
+			'View',
+		)
+	);
 
 	if ( is_string( $data ) ) {
 		return in_array( $data, $types, true );
