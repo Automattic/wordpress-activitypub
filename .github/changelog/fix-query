@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Ensured that Query::get_object_id() returns an ID instead of an Object.

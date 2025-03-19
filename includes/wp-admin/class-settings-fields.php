@@ -223,51 +223,63 @@ class Settings_Fields {
 	 * Render actor mode field.
 	 */
 	public static function render_actor_mode_field() {
+		$disabled = ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) && ACTIVITYPUB_SINGLE_USER_MODE ) ||
+						( \defined( 'ACTIVITYPUB_DISABLE_USER' ) && ACTIVITYPUB_DISABLE_USER ) ||
+						( \defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) && ACTIVITYPUB_DISABLE_BLOG_USER );
+
+		if ( $disabled ) :
+			?>
+			<p class="description">
+				<?php esc_html_e( '⚠ This setting is defined through server configuration by your blog&#8217;s administrator.', 'activitypub' ); ?>
+			</p>
+			<?php
+			return;
+		endif;
+
 		$value = get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 		?>
-			<fieldset class="actor-mode-selection">
-				<div class="row">
-					<input type="radio" id="actor-mode" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_ACTOR_MODE ); ?>" <?php checked( ACTIVITYPUB_ACTOR_MODE, $value ); ?> />
-					<div>
-						<label for="actor-mode"><strong><?php esc_html_e( 'Author Profiles Only', 'activitypub' ); ?></strong></label>
-						<p class="description">
-							<?php echo wp_kses( __( 'Every author on this blog (with the <code>activitypub</code> capability) gets their own ActivityPub profile.', 'activitypub' ), array( 'code' => array() ) ); ?>
-							<strong>
-								<?php
-								echo wp_kses(
-									sprintf(
-									// translators: %s is a URL.
-										__( 'You can add/remove the capability in the <a href="%s">user settings.</a>', 'activitypub' ),
-										admin_url( '/users.php' )
-									),
-									array( 'a' => array( 'href' => array() ) )
-								);
-								?>
-							</strong>
-							<?php echo wp_kses( __( 'Select all the users you want to update, choose the method from the drop-down list and click on the "Apply" button.', 'activitypub' ), array( 'code' => array() ) ); ?>
-						</p>
-					</div>
+		<fieldset class="actor-mode-selection">
+			<div class="row">
+				<input type="radio" id="actor-mode" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_ACTOR_MODE ); ?>" <?php checked( ACTIVITYPUB_ACTOR_MODE, $value ); ?> />
+				<div>
+					<label for="actor-mode"><strong><?php esc_html_e( 'Author Profiles Only', 'activitypub' ); ?></strong></label>
+					<p class="description">
+						<?php echo wp_kses( __( 'Every author on this blog (with the <code>activitypub</code> capability) gets their own ActivityPub profile.', 'activitypub' ), array( 'code' => array() ) ); ?>
+						<strong>
+							<?php
+							echo wp_kses(
+								sprintf(
+								// translators: %s is a URL.
+									__( 'You can add/remove the capability in the <a href="%s">user settings.</a>', 'activitypub' ),
+									admin_url( '/users.php' )
+								),
+								array( 'a' => array( 'href' => array() ) )
+							);
+							?>
+						</strong>
+						<?php echo wp_kses( __( 'Select all the users you want to update, choose the method from the drop-down list and click on the "Apply" button.', 'activitypub' ), array( 'code' => array() ) ); ?>
+					</p>
 				</div>
-				<div class="row">
-					<input type="radio" id="blog-mode" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_BLOG_MODE ); ?>" <?php checked( ACTIVITYPUB_BLOG_MODE, $value ); ?> />
-					<div>
-						<label for="blog-mode"><strong><?php esc_html_e( 'Blog profile only', 'activitypub' ); ?></strong></label>
-						<p class="description">
-							<?php esc_html_e( 'Your blog becomes a single ActivityPub profile and every post will be published under this profile instead of the individual author profiles.', 'activitypub' ); ?>
-						</p>
-					</div>
+			</div>
+			<div class="row">
+				<input type="radio" id="blog-mode" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_BLOG_MODE ); ?>" <?php checked( ACTIVITYPUB_BLOG_MODE, $value ); ?> />
+				<div>
+					<label for="blog-mode"><strong><?php esc_html_e( 'Blog profile only', 'activitypub' ); ?></strong></label>
+					<p class="description">
+						<?php esc_html_e( 'Your blog becomes a single ActivityPub profile and every post will be published under this profile instead of the individual author profiles.', 'activitypub' ); ?>
+					</p>
 				</div>
-				<div class="row">
-					<input type="radio" id="actor-blog-mode" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_ACTOR_AND_BLOG_MODE ); ?>" <?php checked( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, $value ); ?> />
-					<div>
-						<label for="actor-blog-mode"><strong><?php esc_html_e( 'Both author and blog profiles', 'activitypub' ); ?></strong></label>
-						<p class="description">
-							<?php esc_html_e( "This combines both modes. Users can be followed individually, while following the blog will show boosts of individual user's posts.", 'activitypub' ); ?>
-						</p>
-					</div>
-				</div>
-			</fieldset>
-
+			</div>
+			<div class="row">
+				<input type="radio" id="actor-blog-mode" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_ACTOR_AND_BLOG_MODE ); ?>" <?php checked( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, $value ); ?> />
+				<div>
+					<label for="actor-blog-mode"><strong><?php esc_html_e( 'Both author and blog profiles', 'activitypub' ); ?></strong></label>
+					<p class="description">
+						<?php esc_html_e( "This combines both modes. Users can be followed individually, while following the blog will show boosts of individual user's posts.", 'activitypub' ); ?>
+					</p>
+			</div>
+		</div>
+	</fieldset>
 		<?php
 	}
 
