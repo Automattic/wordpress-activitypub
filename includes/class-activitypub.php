@@ -28,12 +28,6 @@ class Activitypub {
 	public static $activity_types = array( 'Accept', 'Add', 'Announce', 'Arrive', 'Block', 'Create', 'Delete', 'Dislike', 'Flag', 'Follow', 'Ignore', 'Invite', 'Join', 'Leave', 'Like', 'Listen', 'Move', 'Offer', 'Question', 'Reject', 'Read', 'Remove', 'TentativeReject', 'TentativeAccept', 'Travel', 'Undo', 'Update', 'View' );
 
 	/**
-	 * Supported object types.
-	 *
-	 * @var string[] The supported object types.
-	 */
-	public static $object_types = array( 'Article', 'Audio', 'Document', 'Event', 'Image', 'Note', 'Page', 'Place', 'Profile', 'Relationship', 'Tombstone', 'Video' );
-	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
