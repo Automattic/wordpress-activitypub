@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-No more PHP warnings when a header image gets cropped.
