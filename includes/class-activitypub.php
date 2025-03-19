@@ -442,7 +442,7 @@ class Activitypub {
 			return;
 		}
 
-		$activity = Activity::from_json( $content );
+		$activity = Activity::init_from_json( $content );
 
 		if ( ! $activity || \is_wp_error( $activity ) ) {
 			return;
