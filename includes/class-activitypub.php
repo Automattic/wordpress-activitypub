@@ -449,7 +449,7 @@ class Activitypub {
 		}
 
 		$activity->set_id( $guid );
-		$content        = wp_slash( $activity->to_json() );
+		$content = wp_slash( $activity->to_json() );
 
 		wp_update_post(
 			array(
