@@ -18,8 +18,22 @@ use Activitypub\Collection\Actors;
  */
 class Move {
 	/**
-	 * External Move.
+	 * Move an ActivityPub account from one location to another.
 	 *
+	 * @param string $from The current account URL.
+	 * @param string $to   The new account URL.
+	 *
+	 * @return int|bool|\WP_Error The ID of the outbox item or false or WP_Error on failure.
+	 */
+	public static function account( $from, $to ) {
+		if ( is_same_domain( $from, $to ) ) {
+			return self::internally( $from, $to );
+		}
+
+		return self::externally( $from, $to );
+	}
+
+	/**
 	 * Move an ActivityPub Actor from one location (internal) to another (external).
 	 *
 	 * This helps migrating local profiles to a new external profile:
@@ -51,17 +65,24 @@ class Move {
 			return $response;
 		}
 
-		$actor = new Actor();
-		$actor->from_array( $response );
+		$target_actor = new Actor();
+		$target_actor->from_array( $response );
 
 		// Check if the `Move` Activity is valid.
-		$also_known_as = $actor->get_also_known_as() ?? array();
+		$also_known_as = $target_actor->get_also_known_as() ?? array();
 		if ( ! in_array( $from, $also_known_as, true ) ) {
 			return new \WP_Error( 'invalid_target', __( 'Invalid target', 'activitypub' ) );
 		}
 
+		$activity = new Activity();
+		$activity->set_type( 'Move' );
+		$activity->set_actor( $user->get_id() );
+		$activity->set_origin( $user->get_id() );
+		$activity->set_object( $target_actor->get_id() );
+		$activity->set_target( $target_actor->get_id() );
+
 		// Add to outbox.
-		return add_to_outbox( $actor, 'Move', $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+		return add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 	}
 
 	/**
@@ -92,7 +113,7 @@ class Move {
 		// Add the old account URL to alsoKnownAs.
 		if ( $user->get__id() > 0 ) {
 			self::update_user_also_known_as( $user->get__id(), $from );
-			\update_user_option( $user->get__id(), 'activitypub_move_to', $to );
+			\update_user_option( $user->get__id(), 'activitypub_moved_to', $to );
 		} else {
 			self::update_blog_also_known_as( $from );
 			\update_option( 'activitypub_blog_user_moved_to', $to );
