@@ -49,6 +49,7 @@ class Test_Handler extends WP_UnitTestCase {
 		$activity->set_id( 'https://example.com/activity/1' );
 		$activity->set_to( array( 'https://example.com/to' ) );
 		$activity->set_cc( array( 'https://example.com/cc' ) );
+		$activity->set_object( 'https://example.com/object' );
 
 		$id = add_to_outbox( $activity, null, $this->user_id );
 
