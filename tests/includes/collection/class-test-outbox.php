@@ -38,6 +38,11 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$post = \get_post( $id );
 
+		// Replace the post ID in the JSON with the actual post ID.
+		$json       = json_decode( $json, true );
+		$json['id'] = add_query_arg( 'p', $id, $json['id'] );
+		$json       = wp_json_encode( $json, JSON_UNESCAPED_SLASHES );
+
 		$this->assertInstanceOf( 'WP_Post', $post );
 		$this->assertEquals( 'pending', $post->post_status );
 		$this->assertJsonStringEqualsJsonString( $json, $post->post_content );
