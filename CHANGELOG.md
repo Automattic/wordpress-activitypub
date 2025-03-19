@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.5.0] - 2025-03-19
+### Added
+- Added "Enable Mastodon Apps" and "Event Bridge for ActivityPub" to the recommended plugins section. [#1450]
+- Added Constants to the Site-Health debug informations. [#1452]
+- Development environment: add Changelogger tool to environment dependencies. [#1452]
+- Development environment: allow contributors to specify a changelog entry directly from their Pull Request description. [#1456]
+- Documentation for migrating from a Mastodon instance to WordPress. [#1452]
+- Support for sending Activities to ActivityPub Relays, to improve discoverability of public content. [#1291]
+
+### Changed
+- Documentation: expand Pull Request process docs, and mention the new changelog process as well as the updated release process. [#1454]
+- Don't redirect @-name URLs to trailing slashed versions [#1447]
+- Improved and simplified Query code. [#1453]
+- Improved readability for actor mode setting. [#1472]
+- Improved title case for NodeInfo settings. [#1452]
+- Introduced utility function to determine actor type based on user ID. [#1473]
+- Outbox items only get sent to followers when there are any. [#1452]
+- Restricted modifications to settings if they are predefined as constants. [#1430]
+- The Welcome page now uses WordPress's Settings API and the classic design of the WP Admin. [#1452]
+- Uses two-digit version numbers in Outbox and NodeInfo responses. [#1452]
+
+### Removed
+- Our version of `sanitize_url()` was unused—use Core's `sanitize_url()` instead. [#1462]
+
+### Fixed
+- Ensured that Query::get_object_id() returns an ID instead of an Object. [#1453]
+- Fix a fatal error in the Preview when a post contains no (hash)tags. [#1452]
+- Fixed an issue with the Content Carousel and Blog Posts block: https://github.com/Automattic/wp-calypso/issues/101220 [#1453]
+- Fixed default value for `activitypub_authorized_fetch` option. [#1465]
+- Follow-Me blocks now show the correct avatar on attachment pages. [#1460]
+- Images with the correct aspect ratio no longer get sent through the crop step again. [#1452]
+- No more PHP warnings when a header image gets cropped. [#1452]
+- PHP warnings when trying to process empty tags or image blocks without ID attributes. [#1452]
+- Properly re-added support for `Update` and `Delete` `Announce`ments. [#1452]
+- Updates to certain user meta fields did not trigger an Update activity. [#1452]
+- When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled. [#1452]
+
 ## [5.4.1] - 2025-03-04
 ### Fixed
 - Fixed transition handling of posts to ensure that `Create` and `Update` activities are properly processed.
@@ -463,7 +500,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redirect issue for Application user
 - Accessibilty issues with missing screen-reader-text on User overview page
 
-
 ## [2.4.0] - 2024-06-05
 ### Added
 - A core/embed block filter to transform iframes to links
@@ -853,7 +889,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix [timezones](https://github.com/pfefferle/wordpress-activitypub/issues/63) bug. props [@mediaformat](https://github.com/mediaformat)
 - fix [digest header](https://github.com/pfefferle/wordpress-activitypub/issues/104) bug. props [@mediaformat](https://github.com/mediaformat)
 
-
 ## [0.10.1] - 2020-05-03
 ### Fixed
 - fix inbox activities, like follow
@@ -1040,6 +1075,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[5.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.4.1...5.5.0
 [5.4.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.4.0...5.4.1
 [5.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.2...5.4.0
 [5.3.2]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.1...5.3.2
