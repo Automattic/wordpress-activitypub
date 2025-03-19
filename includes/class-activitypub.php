@@ -19,14 +19,6 @@ use Activitypub\Collection\Extra_Fields;
  * @author Matthias Pfefferle
  */
 class Activitypub {
-
-	/**
-	 * Supported activity types.
-	 *
-	 * @var string[] The supported activity types.
-	 */
-	public static $activity_types = array( 'Accept', 'Add', 'Announce', 'Arrive', 'Block', 'Create', 'Delete', 'Dislike', 'Flag', 'Follow', 'Ignore', 'Invite', 'Join', 'Leave', 'Like', 'Listen', 'Move', 'Offer', 'Question', 'Reject', 'Read', 'Remove', 'TentativeReject', 'TentativeAccept', 'Travel', 'Undo', 'Update', 'View' );
-
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
@@ -626,7 +618,7 @@ class Activitypub {
 					$value  = ucfirst( strtolower( $value ) );
 					$schema = array(
 						'type'    => 'string',
-						'enum'    => self::$activity_types,
+						'enum'    => array( 'Accept', 'Add', 'Announce', 'Arrive', 'Block', 'Create', 'Delete', 'Dislike', 'Flag', 'Follow', 'Ignore', 'Invite', 'Join', 'Leave', 'Like', 'Listen', 'Move', 'Offer', 'Question', 'Reject', 'Read', 'Remove', 'TentativeReject', 'TentativeAccept', 'Travel', 'Undo', 'Update', 'View' ),
 						'default' => 'Announce',
 					);
 
