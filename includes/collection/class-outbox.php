@@ -11,7 +11,6 @@ use Activitypub\Dispatcher;
 use Activitypub\Scheduler;
 use Activitypub\Activity\Activity;
 
-use function Activitypub\is_activity;
 use function Activitypub\add_to_outbox;
 
 /**
@@ -32,8 +31,9 @@ class Outbox {
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
 	public static function add( $activity, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
-		$actor_type                        = Actors::get_type_by_id( $user_id );
-		[ $title, $activitypub_object_id ] = self::recursively_get_activity_meta( $activity );
+		$actor_type = Actors::get_type_by_id( $user_id );
+		$object_id  = is_string( $activity->get_object() ) ? $activity->get_object() : $activity->get_object()->get_id();
+		$title      = self::recursively_get_title( $activity->get_object() );
 
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
@@ -48,7 +48,7 @@ class Outbox {
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'pending',
 			'meta_input'   => array(
-				'_activitypub_object_id'         => $activitypub_object_id,
+				'_activitypub_object_id'         => $object_id,
 				'_activitypub_activity_type'     => $activity->get_type(),
 				'_activitypub_activity_actor'    => $actor_type,
 				'activitypub_content_visibility' => $visibility,
@@ -87,7 +87,7 @@ class Outbox {
 			return false;
 		}
 
-		self::invalidate_existing_items( $activitypub_object_id, $activity->get_type(), $id );
+		self::invalidate_existing_items( $object_id, $activity->get_type(), $id );
 
 		return $id;
 	}
@@ -290,19 +290,24 @@ class Outbox {
 	}
 
 	/**
-	 * Get the metadata of an activity recursively.
+	 * Get the title of an activity recursively.
 	 *
-	 * @param \Activitypub\Activity\Base_Object $activity The activity object.
-	 * @return array The meta data.
+	 * @param \Activitypub\Activity\Base_Object $activity_object The activity object.
+	 * @return string The title.
 	 */
-	private static function recursively_get_activity_meta( $activity ) {
-		$title                 = $activity->get_name() ?? $activity->get_content();
-		$activitypub_object_id = $activity->get_id();
+	private static function recursively_get_title( $activity_object ) {
+		if ( is_string( $activity_object ) ) {
+			$post_id = url_to_postid( $activity_object );
 
-		if ( ! $title && is_activity( $activity ) && $activity->get_object() instanceof \Activitypub\Activity\Base_Object ) {
-			return self::recursively_get_activity_meta( $activity->get_object() );
+			return $post_id ? get_the_title( $post_id ) : '';
 		}
 
-		return array( $title, $activitypub_object_id );
+		$title = $activity_object->get_name() ?? $activity_object->get_content();
+
+		if ( ! $title && $activity_object->get_object() instanceof \Activitypub\Activity\Base_Object ) {
+			$title = $activity_object->get_object()->get_name() ?? $activity_object->get_object()->get_content();
+		}
+
+		return $title;
 	}
 }

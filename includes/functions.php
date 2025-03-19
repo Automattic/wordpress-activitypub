@@ -1507,10 +1507,10 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 	/**
 	 * Action triggered after an object has been added to the outbox.
 	 *
-	 * @param int                            $outbox_activity_id The ID of the outbox item.
-	 * @param \Activitypub\Activity\Activity $activity           The activity object.
-	 * @param int                            $user_id            The User-ID.
-	 * @param string                         $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+	 * @param int      $outbox_activity_id The ID of the outbox item.
+	 * @param Activity $activity           The activity object.
+	 * @param int      $user_id            The User-ID.
+	 * @param string   $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
 	 */
 	\do_action( 'post_activitypub_add_to_outbox', $outbox_activity_id, $activity, $user_id, $content_visibility );
 

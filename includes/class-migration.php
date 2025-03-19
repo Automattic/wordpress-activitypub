@@ -9,7 +9,6 @@ namespace Activitypub;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
-use Activitypub\Collection\Outbox;
 use Activitypub\Transformer\Factory;
 
 /**
@@ -767,7 +766,7 @@ class Migration {
 			}
 		}
 
-		$post_id = Outbox::add( $activity, $activity_type, $user_id, $visibility );
+		$post_id = add_to_outbox( $activity, $activity_type, $user_id, $visibility );
 
 		// Immediately set to publish, no federation needed.
 		\wp_publish_post( $post_id );

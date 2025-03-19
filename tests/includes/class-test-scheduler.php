@@ -12,6 +12,7 @@ use Activitypub\Scheduler;
 use Activitypub\Collection\Outbox;
 use Activitypub\Activity\Base_Object;
 use WP_UnitTestCase;
+use function Activitypub\add_to_outbox;
 
 /**
  * Test class for Scheduler.
@@ -151,7 +152,7 @@ class Test_Scheduler extends WP_UnitTestCase {
 		$activity_object->set_type( 'Note' );
 		$activity_object->set_id( 'https://example.com/test-id-2' );
 
-		$pending_id = Outbox::add(
+		$pending_id = add_to_outbox(
 			$activity_object,
 			'Create',
 			self::$user_id,
