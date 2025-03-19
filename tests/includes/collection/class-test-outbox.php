@@ -7,8 +7,10 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Activity\Extended_Object\Event;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 
 /**
@@ -246,17 +248,35 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Helper method to create a dummy activity object for testing.
+	 * Test get_object_id with various activity object types using reflection.
 	 *
-	 * @return \Activitypub\Activity\Activity
+	 * @covers ::get_object_id
 	 */
-	private function get_dummy_activity_object() {
-		$object = new \Activitypub\Activity\Activity();
-		$object->set_id( 'https://example.com/test-object' );
-		$object->set_type( 'Note' );
-		$object->set_content( 'Test content' );
+	public function test_get_object_id() {
+		$object = $this->get_dummy_activity_object();
 
-		return $object;
+		// Activity object of type object.
+		$create_id = \Activitypub\add_to_outbox( $object, 'Create', 1 );
+		$this->assertEquals( 'https://example.com/test-object', get_post_meta( $create_id, '_activitypub_object_id', true ) );
+
+		// Activity object of type string.
+		$activity = new Activity();
+		$activity->set_type( 'Like' );
+		$activity->set_object( 'https://example.com/test-string' );
+
+		$like_id = \Activitypub\add_to_outbox( $activity, null, 1 );
+		$this->assertEquals( 'https://example.com/test-string', get_post_meta( $like_id, '_activitypub_object_id', true ) );
+
+		// No object.
+		$actor    = Actors::get_by_id( 1 );
+		$activity = new Activity();
+		$activity->set_type( 'Move' );
+		$activity->set_actor( $actor->get_id() );
+		$activity->set_origin( $actor->get_id() );
+		$activity->set_target( home_url( '/author/1' ) );
+
+		$move_id = \Activitypub\add_to_outbox( $activity, null, 1 );
+		$this->assertEquals( $actor->get_id(), get_post_meta( $move_id, '_activitypub_object_id', true ) );
 	}
 
 	/**
@@ -303,5 +323,19 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			array( 'Update', 'Undo' ),
 			array( 'Add', 'Remove' ),
 		);
+	}
+
+	/**
+	 * Helper method to create a dummy activity object for testing.
+	 *
+	 * @return Activity
+	 */
+	private function get_dummy_activity_object() {
+		$object = new Activity();
+		$object->set_id( 'https://example.com/test-object' );
+		$object->set_type( 'Note' );
+		$object->set_content( 'Test content' );
+
+		return $object;
 	}
 }
