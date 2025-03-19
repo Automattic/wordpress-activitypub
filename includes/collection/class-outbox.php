@@ -317,14 +317,14 @@ class Outbox {
 	 * @return string The title.
 	 */
 	private static function get_object_title( $activity_object ) {
+		if ( ! $activity_object ) {
+			return '';
+		}
+
 		if ( is_string( $activity_object ) ) {
 			$post_id = url_to_postid( $activity_object );
 
 			return $post_id ? get_the_title( $post_id ) : '';
-		}
-
-		if ( null === $activity_object ) {
-			return '';
 		}
 
 		$title = $activity_object->get_name() ?? $activity_object->get_content();
