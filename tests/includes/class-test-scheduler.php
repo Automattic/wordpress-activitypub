@@ -147,17 +147,12 @@ class Test_Scheduler extends WP_UnitTestCase {
 	 */
 	public function test_reprocess_outbox_scheduling() {
 		// Create a test activity.
-		$activity_object = new Base_Object();
-		$activity_object->set_content( 'Test Content' );
-		$activity_object->set_type( 'Note' );
-		$activity_object->set_id( 'https://example.com/test-id-2' );
+		$activity = new Activity();
+		$activity->set_object( array( 'content' => 'Test Content' ) );
+		$activity->set_type( 'Create' );
+		$activity->set_id( 'https://example.com/test-id' );
 
-		$pending_id = add_to_outbox(
-			$activity_object,
-			'Create',
-			self::$user_id,
-			ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC
-		);
+		$pending_id = Outbox::add( $activity, self::$user_id );
 
 		// Track scheduled events and their timing.
 		$scheduled_time = 0;
