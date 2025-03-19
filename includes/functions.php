@@ -1479,7 +1479,11 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 		$content_visibility = $transformer->get_content_visibility();
 	}
 
-	$activity = $transformer->to_object();
+	if ( $activity_type ) {
+		$activity = $transformer->to_activity( $activity_type );
+	} else {
+		$activity = $transformer->to_object();
+	}
 
 	if ( ! $activity || \is_wp_error( $activity ) ) {
 		return false;
