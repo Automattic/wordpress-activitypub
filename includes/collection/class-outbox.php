@@ -32,8 +32,12 @@ class Outbox {
 	 */
 	public static function add( Activity $activity, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
 		$actor_type = Actors::get_type_by_id( $user_id );
-		$object_id  = is_string( $activity->get_object() ) ? $activity->get_object() : $activity->get_object()->get_id();
-		$title      = self::recursively_get_title( $activity->get_object() );
+		$object_id  = false;
+		$title      = '';
+		if ( $activity->get_object() ) {
+			$object_id = is_string( $activity->get_object() ) ? $activity->get_object() : $activity->get_object()->get_id();
+			$title     = self::recursively_get_title( $activity->get_object() );
+		}
 
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
@@ -48,12 +52,15 @@ class Outbox {
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'pending',
 			'meta_input'   => array(
-				'_activitypub_object_id'         => $object_id,
 				'_activitypub_activity_type'     => $activity->get_type(),
 				'_activitypub_activity_actor'    => $actor_type,
 				'activitypub_content_visibility' => $visibility,
 			),
 		);
+
+		if ( $object_id ) {
+			$outbox_item['meta_input']['_activitypub_object_id'] = $object_id;
+		}
 
 		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
 		if ( $has_kses ) {
