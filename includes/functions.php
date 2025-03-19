@@ -1534,7 +1534,38 @@ function is_activity( $data ) {
 	 *
 	 * @param array $types The activity types.
 	 */
-	$types = apply_filters( 'activitypub_activity_types', Activitypub::$activity_types );
+	$types = apply_filters(
+		'activitypub_activity_types',
+		array(
+			'Accept',
+			'Add',
+			'Announce',
+			'Arrive',
+			'Block',
+			'Create',
+			'Delete',
+			'Dislike',
+			'Follow',
+			'Flag',
+			'Ignore',
+			'Invite',
+			'Join',
+			'Leave',
+			'Like',
+			'Listen',
+			'Move',
+			'Offer',
+			'Read',
+			'Reject',
+			'Remove',
+			'TentativeAccept',
+			'TentativeReject',
+			'Travel',
+			'Undo',
+			'Update',
+			'View',
+		)
+	);
 
 	if ( is_string( $data ) ) {
 		return in_array( $data, $types, true );
