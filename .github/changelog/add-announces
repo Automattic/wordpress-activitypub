@@ -1,4 +1,0 @@
-Significance: minor
-Type: fixed
-
-Properly re-added support for `Update` and `Delete` `Announce`ments.

@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Updates to certain user meta fields did not trigger an Update activity.
