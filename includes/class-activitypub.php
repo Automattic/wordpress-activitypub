@@ -49,16 +49,16 @@ class Activitypub {
 
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
 		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
-		\add_filter( 'pre_option_activitypub_actor_mode', array( self::class, 'pre_get_option' ) );
-    \add_filter( 'pre_option_activitypub_authorized_fetch', array( self::class, 'pre_option_activitypub_authorized_fetch' ) );
-		
+		\add_filter( 'pre_option_activitypub_actor_mode', array( self::class, 'pre_option_activitypub_actor_mode' ) );
+		\add_filter( 'pre_option_activitypub_authorized_fetch', array( self::class, 'pre_option_activitypub_authorized_fetch' ) );
+
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
 
 		// Register several post_types.
 		self::register_post_types();
 	}
 
-
+	/**
 	 * Activation Hook.
 	 */
 	public static function activate() {
@@ -393,7 +393,7 @@ class Activitypub {
 	 *
 	 * @return string|false The actor mode or false if it should not be filtered.
 	 */
-	public static function pre_get_option( $pre ) {
+	public static function pre_option_activitypub_actor_mode( $pre ) {
 		if ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) && ACTIVITYPUB_SINGLE_USER_MODE ) {
 			return ACTIVITYPUB_BLOG_MODE;
 		}
