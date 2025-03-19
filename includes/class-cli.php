@@ -228,7 +228,7 @@ class Cli extends WP_CLI_Command {
 		if ( is_wp_error( $outbox_item_id ) ) {
 			WP_CLI::error( $outbox_item_id->get_error_message() );
 		} else {
-			WP_CLI::success( 'Moved Scheduled.' );
+			WP_CLI::success( 'Move Scheduled.' );
 		}
 	}
 }

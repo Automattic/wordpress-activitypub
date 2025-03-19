@@ -45,9 +45,9 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activity = json_decode( $post->post_content );
 
 		if ( is_array( $data ) ) {
-			$this->assertSame( $data['content'], $activity->content );
+			$this->assertSame( $data['content'], $activity->object->content );
 		} elseif ( $data instanceof Base_Object ) {
-			$this->assertSame( $data->get_content(), $activity->content );
+			$this->assertSame( $data->get_content(), $activity->object->content );
 		}
 		$this->assertEquals( $type, \get_post_meta( $id, '_activitypub_activity_type', true ) );
 
@@ -66,13 +66,13 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			array(
 				array(
 					'@context' => 'https://www.w3.org/ns/activitystreams',
-					'id'       => 'https://example.com/' . self::$user_id,
+					'id'       => 'https://example.com/1',
 					'type'     => 'Note',
 					'content'  => '<p>This is a note</p>',
 				),
 				'Create',
 				1,
-				'{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https:\/\/example.com\/' . self::$user_id . '","type":"Note","content":"\u003Cp\u003EThis is a note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is a note\u003C\/p\u003E"},"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}',
+				'{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=351","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/1","type":"Note","content":"\u003Cp\u003EThis is a note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is a note\u003C\/p\u003E"},"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}',
 			),
 			array(
 				array(
@@ -83,7 +83,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 				),
 				'Create',
 				2,
-				'{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"https:\/\/example.com\/2","type":"Note","content":"\u003Cp\u003EThis is another note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is another note\u003C\/p\u003E"},"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}',
+				'{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive"}],"id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=352","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/2","type":"Note","content":"\u003Cp\u003EThis is another note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is another note\u003C\/p\u003E"},"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}',
 			),
 			array(
 				Event::init_from_array(
@@ -120,7 +120,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 				),
 				'Create',
 				1,
-				'{"@context":["https:\/\/schema.org\/","https:\/\/www.w3.org\/ns\/activitystreams",{"pt":"https:\/\/joinpeertube.org\/ns#","mz":"https:\/\/joinmobilizon.org\/ns#","status":"http:\/\/www.w3.org\/2002\/12\/cal\/ical#status","commentsEnabled":"pt:commentsEnabled","isOnline":"mz:isOnline","timezone":"mz:timezone","participantCount":"mz:participantCount","anonymousParticipationEnabled":"mz:anonymousParticipationEnabled","joinMode":{"@id":"mz:joinMode","@type":"mz:joinModeType"},"externalParticipationUrl":{"@id":"mz:externalParticipationUrl","@type":"schema:URL"},"repliesModerationOption":{"@id":"mz:repliesModerationOption","@type":"@vocab"},"contacts":{"@id":"mz:contacts","@type":"@id"}}],"type":"Event","name":"WP Test Event","timezone":"Europe\/Vienna","category":"MOVEMENTS_POLITICS","joinMode":"external","id":"https:\/\/example.com\/3","nameMap":{"en":"WP Test Event"},"endTime":"2030-02-29T17:00:00+01:00","location":[{"id":"https:\/\/example.com\/place\/1","type":"Place","attributedTo":"https:\/\/wp-test.event-federation.eu\/@test","name":"Fediverse Place","address":{"type":"PostalAddress","addressCountry":"FediCountry","addressLocality":"FediTown","postalCode":"1337","streetAddress":"FediStreet"}},{"type":"VirtualLocation","url":"https:\/\/example.com\/VirtualMeetingRoom"}],"startTime":"2030-02-29T16:00:00+01:00","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html","content":"\u003Cp\u003EYou should not miss this Event!\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EYou should not miss this Event!\u003C\/p\u003E"}}',
+				'{"@context":["https:\/\/schema.org\/","https:\/\/www.w3.org\/ns\/activitystreams",{"pt":"https:\/\/joinpeertube.org\/ns#","mz":"https:\/\/joinmobilizon.org\/ns#","status":"http:\/\/www.w3.org\/2002\/12\/cal\/ical#status","commentsEnabled":"pt:commentsEnabled","isOnline":"mz:isOnline","timezone":"mz:timezone","participantCount":"mz:participantCount","anonymousParticipationEnabled":"mz:anonymousParticipationEnabled","joinMode":{"@id":"mz:joinMode","@type":"mz:joinModeType"},"externalParticipationUrl":{"@id":"mz:externalParticipationUrl","@type":"schema:URL"},"repliesModerationOption":{"@id":"mz:repliesModerationOption","@type":"@vocab"},"contacts":{"@id":"mz:contacts","@type":"@id"}}],"id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=353","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/3","type":"Event","content":"\u003Cp\u003EYou should not miss this Event!\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EYou should not miss this Event!\u003C\/p\u003E"},"name":"WP Test Event","nameMap":{"en":"WP Test Event"},"endTime":"2030-02-29T17:00:00+01:00","location":[{"id":"https:\/\/example.com\/place\/1","type":"Place","attributedTo":"https:\/\/wp-test.event-federation.eu\/@test","name":"Fediverse Place","address":{"type":"PostalAddress","addressCountry":"FediCountry","addressLocality":"FediTown","postalCode":"1337","streetAddress":"FediStreet"}},{"type":"VirtualLocation","url":"https:\/\/example.com\/VirtualMeetingRoom"}],"startTime":"2030-02-29T16:00:00+01:00","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html","timezone":"Europe\/Vienna","category":"MOVEMENTS_POLITICS","joinMode":"external"}}',
 			),
 		);
 	}
@@ -166,6 +166,8 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 	/**
 	 * Test invalidating existing outbox items.
+	 *
+	 * @covers ::invalidate_existing_items
 	 */
 	public function test_invalidate_existing_items() {
 		$object        = $this->get_dummy_activity_object();
@@ -188,6 +190,8 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 	/**
 	 * Test that only items with matching object_id and activity_type are invalidated.
+	 *
+	 * @covers ::invalidate_existing_items
 	 */
 	public function test_selective_invalidation() {
 		$object1 = $this->get_dummy_activity_object();
@@ -210,6 +214,8 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 	/**
 	 * Test that Delete activities invalidate all existing items for the object.
+	 *
+	 * @covers ::invalidate_existing_items
 	 */
 	public function test_delete_invalidates_all_activities() {
 		$object = $this->get_dummy_activity_object();
@@ -274,7 +280,8 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		if ( 'Delete' === $expected ) {
 			$this->assertSame( get_permalink( $id ), $activity->get_object() );
 		} else {
-			$this->assertEquals( json_decode( get_post( $undo_id )->post_content, true ), $activity->get_object()->to_array() );
+			$outbox_activity = json_decode( get_post( $undo_id )->post_content, true );
+			$this->assertEquals( $outbox_activity['object'], $activity->get_object()->to_array( false ) );
 		}
 
 		$this->assertSame( $expected, $activity->get_type() );
