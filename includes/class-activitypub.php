@@ -64,6 +64,7 @@ class Activitypub {
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
 		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
 		\add_filter( 'pre_option_activitypub_actor_mode', array( self::class, 'pre_get_option' ) );
+		\add_action( 'save_post_ap_outbox', array( self::class, 'save_post_ap_outbox' ), 10, 3 );
 
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
 
@@ -420,6 +421,40 @@ class Activitypub {
 		}
 
 		return $pre;
+	}
+
+	/**
+	 * Save the post ap outbox.
+	 *
+	 * @param int     $post_id The post ID.
+	 * @param WP_Post $post    The post object.
+	 * @param bool    $update  Whether the post is being updated.
+	 */
+	public static function save_post_ap_outbox( $post_id, $post, $update ) {
+		if ( $update ) {
+			return;
+		}
+
+		$guid    = get_the_guid( $post_id );
+		$content = get_post_field( 'post_content', $post_id );
+
+		if ( ! $guid || ! $content ) {
+			return;
+		}
+
+		$activity = json_decode( $content, true );
+
+		if ( ! $activity || ! is_array( $activity ) ) {
+			return;
+		}
+
+		$activity['id'] = $guid;
+		$content        = json_encode( $activity );
+
+		wp_update_post( array(
+			'ID' => $post_id,
+			'post_content' => $content,
+		) );
 	}
 
 	/**
