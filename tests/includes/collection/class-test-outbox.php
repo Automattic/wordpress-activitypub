@@ -45,9 +45,9 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activity = json_decode( $post->post_content );
 
 		if ( is_array( $data ) ) {
-			$this->assertSame( $data['content'], $activity->content );
+			$this->assertSame( $data['content'], $activity->object->content );
 		} elseif ( $data instanceof Base_Object ) {
-			$this->assertSame( $data->get_content(), $activity->content );
+			$this->assertSame( $data->get_content(), $activity->object->content );
 		}
 		$this->assertEquals( $type, \get_post_meta( $id, '_activitypub_activity_type', true ) );
 
@@ -272,7 +272,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		// Only ID for Deletes.
 		if ( 'Delete' === $expected ) {
-			$this->assertSame( get_permalink( $id ), $activity->get_object()->get_object() );
+			$this->assertSame( get_permalink( $id ), $activity->get_object() );
 		} else {
 			$outbox_activity = json_decode( get_post( $undo_id )->post_content, true );
 			$this->assertEquals( $outbox_activity['object'], $activity->get_object()->to_array( false ) );

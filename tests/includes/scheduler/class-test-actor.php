@@ -182,7 +182,7 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activity = \json_decode( $post->post_content, true );
 		$this->assertArrayHasKey( 'object', $activity );
 		$this->assertArrayHasKey( $field, $activity['object'] );
-		$this->assertStringContainsString( $expected, $activity['object'][ $field ] );
+		$this->assertSame( $expected, $activity['object'][ $field ] );
 	}
 
 	/**
