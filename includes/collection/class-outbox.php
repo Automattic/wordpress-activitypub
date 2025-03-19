@@ -63,6 +63,18 @@ class Outbox {
 
 		$id = \wp_insert_post( $outbox_item, true );
 
+		// Update the activity ID if the post was inserted successfully.
+		if ( $id && ! \is_wp_error( $id ) ) {
+			$activity->set_id( \get_the_guid( $id ) );
+			$content = \wp_slash( $activity->to_json() );
+			\wp_update_post(
+				array(
+					'ID'           => $id,
+					'post_content' => $content,
+				)
+			);
+		}
+
 		if ( $has_kses ) {
 			\kses_init_filters();
 		}
