@@ -442,19 +442,21 @@ class Activitypub {
 			return;
 		}
 
-		$activity = json_decode( $content, true );
+		$activity = Activity::from_json( $content );
 
-		if ( ! $activity || ! is_array( $activity ) ) {
+		if ( ! $activity || \is_wp_error( $activity ) ) {
 			return;
 		}
 
-		$activity['id'] = $guid;
-		$content        = json_encode( $activity );
+		$activity->set_id( $guid );
+		$content        = wp_slash( $activity->to_json() );
 
-		wp_update_post( array(
-			'ID' => $post_id,
-			'post_content' => $content,
-		) );
+		wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_content' => $content,
+			)
+		);
 	}
 
 	/**
