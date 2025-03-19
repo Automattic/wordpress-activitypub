@@ -1,4 +1,0 @@
-Significance: patch
-Type: changed
-
-Uses two-digit version numbers in Outbox and NodeInfo responses.

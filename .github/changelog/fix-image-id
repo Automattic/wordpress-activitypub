@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-PHP warnings when trying to process empty tags or image blocks without ID attributes.
