@@ -35,8 +35,8 @@ class Outbox {
 		$object_id  = false;
 		$title      = '';
 		if ( $activity->get_object() ) {
-			$object_id  = is_string( $activity->get_object() ) ? $activity->get_object() : $activity->get_object()->get_id();
-			$title      = self::recursively_get_title( $activity->get_object() );
+			$object_id = is_string( $activity->get_object() ) ? $activity->get_object() : $activity->get_object()->get_id();
+			$title     = self::recursively_get_title( $activity->get_object() );
 		}
 
 		$outbox_item = array(
