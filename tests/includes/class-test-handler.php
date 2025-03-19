@@ -50,7 +50,7 @@ class Test_Handler extends WP_UnitTestCase {
 		$activity->set_to( array( 'https://example.com/to' ) );
 		$activity->set_cc( array( 'https://example.com/cc' ) );
 
-		$id = add_to_outbox( $activity, 'Inherit', $this->user_id );
+		$id = add_to_outbox( $activity, null, $this->user_id );
 
 		$outbox_item     = get_post( $id );
 		$outbox_activity = Outbox::get_activity( $outbox_item );

@@ -25,8 +25,6 @@ class Handler {
 	 */
 	public static function init() {
 		self::register_handlers();
-
-		add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ), 99 );
 	}
 
 	/**
@@ -48,24 +46,5 @@ class Handler {
 		 * @since 1.3.0
 		 */
 		do_action( 'activitypub_register_handlers' );
-	}
-
-	/**
-	 * Filter the outbox activity.
-	 *
-	 * @param Activity $activity The activity.
-	 * @return Activity The activity.
-	 */
-	public static function outbox_activity( $activity ) {
-		if ( 'Inherit' === $activity->get_type() ) {
-			$inherit_activity = $activity->get_object();
-			$inherit_activity->set_id( $activity->get_id() );
-			$inherit_activity->set_cc( $activity->get_cc() );
-			$inherit_activity->set_to( $activity->get_to() );
-
-			return $inherit_activity;
-		}
-
-		return $activity;
 	}
 }

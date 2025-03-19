@@ -112,7 +112,7 @@ class Move {
 		$activity->set_object( $to );
 		$activity->set_target( $to );
 
-		return add_to_outbox( $activity, 'Inherit', $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
+		return add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
 	}
 
 	/**
