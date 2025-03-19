@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Scheduler;
 use Activitypub\Collection\Outbox;
 use Activitypub\Activity\Base_Object;
@@ -52,28 +53,19 @@ class Test_Scheduler extends WP_UnitTestCase {
 	 */
 	public function test_reprocess_outbox() {
 		// Create test activity objects.
-		$activity_object = new Base_Object();
-		$activity_object->set_content( 'Test Content' );
-		$activity_object->set_type( 'Note' );
-		$activity_object->set_id( 'https://example.com/test-id' );
+		$activity = new Activity();
+		$activity->set_object( array( 'content' => 'Test Content' ) );
+		$activity->set_type( 'Create' );
+		$activity->set_id( 'https://example.com/test-id' );
 
 		// Add multiple pending activities.
 		$pending_ids = array();
 		for ( $i = 0; $i < 3; $i++ ) {
-			$pending_ids[] = Outbox::add(
-				$activity_object,
-				'Create',
-				self::$user_id,
-				ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC
-			);
+			$pending_ids[] = Outbox::add( $activity, self::$user_id );
 		}
 
-		$pending_ids[] = Outbox::add(
-			$activity_object,
-			'Update',
-			self::$user_id,
-			ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC
-		);
+		$activity->set_type( 'Update' );
+		$pending_ids[] = Outbox::add( $activity, self::$user_id );
 
 		// Track scheduled events.
 		$scheduled_events = array();
@@ -96,12 +88,7 @@ class Test_Scheduler extends WP_UnitTestCase {
 		$this->assertContains( $pending_ids[3], $scheduled_events, "Activity $pending_ids[3] should be scheduled" );
 
 		// Test with published activities (should not be scheduled).
-		$published_id = Outbox::add(
-			$activity_object,
-			'Create',
-			self::$user_id,
-			ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC
-		);
+		$published_id = Outbox::add( $activity, self::$user_id );
 		wp_update_post(
 			array(
 				'ID'          => $published_id,
