@@ -30,7 +30,7 @@ class Outbox {
 	 *
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
-	public static function add( $activity, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
+	public static function add( Activity $activity, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
 		$actor_type = Actors::get_type_by_id( $user_id );
 		$object_id  = is_string( $activity->get_object() ) ? $activity->get_object() : $activity->get_object()->get_id();
 		$title      = self::recursively_get_title( $activity->get_object() );
