@@ -307,7 +307,7 @@ class Outbox {
 		}
 
 		// Exceptional.
-		return $activity->get_actor();
+		return $activity->get_actor() ?? $activity->get_id();
 	}
 
 	/**
