@@ -56,7 +56,7 @@ class Following_Controller extends Actors_Controller {
 							'description' => 'Current page of the collection.',
 							'type'        => 'integer',
 							'minimum'     => 1,
-							// No default so we differentiate between Collection and CollectionPage requests.
+							// No default so we can differentiate between Collection and CollectionPage requests.
 						),
 						'per_page' => array(
 							'description' => 'Maximum number of items to be returned in result set.',
