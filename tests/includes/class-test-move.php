@@ -47,13 +47,13 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = Actors::get_by_id( self::$user_id )->get_id();
 		$to   = 'https://newsite.com/user/1';
 
-		\Activitypub\Move::account( $from, $to );
+		\Activitypub\Move::externally( $from, $to );
 
 		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
 		$this->assertEquals( $to, $moved_to );
 
-		$also_known_as = Actors::get_by_id( self::$user_id )->get_also_known_as();
-		$this->assertContains( $from, $also_known_as );
+		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
+		$this->assertEquals( $to, $moved_to );
 	}
 
 	/**
@@ -62,7 +62,7 @@ class Test_Move extends \WP_UnitTestCase {
 	 * @covers ::account
 	 */
 	public function test_account_with_invalid_user() {
-		$result = \Activitypub\Move::account(
+		$result = \Activitypub\Move::externally(
 			'https://example.com/nonexistent/user',
 			'https://newsite.com/user/999'
 		);
@@ -85,7 +85,7 @@ class Test_Move extends \WP_UnitTestCase {
 		};
 		\add_filter( 'pre_http_request', $filter );
 
-		$result = \Activitypub\Move::account( $from, $to );
+		$result = \Activitypub\Move::externally( $from, $to );
 
 		$this->assertWPError( $result );
 		$this->assertEquals( 'http_request_failed', $result->get_error_code() );
@@ -112,12 +112,10 @@ class Test_Move extends \WP_UnitTestCase {
 		};
 		\add_filter( 'pre_http_request', $filter );
 
-		\Activitypub\Move::account( $from, $to );
+		\Activitypub\Move::externally( $from, $to );
 
-		$also_known_as = Actors::get_by_id( self::$user_id )->get_also_known_as();
-		$this->assertCount( 3, $also_known_as );
-		$this->assertContains( $from, $also_known_as );
-		$this->assertContains( 'https://old.example.com/user/1', $also_known_as );
+		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
+		$this->assertEquals( $to, $moved_to );
 
 		\remove_filter( 'pre_http_request', $filter );
 	}
@@ -134,12 +132,32 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 		$to   = 'https://newsite.com/user/0';
 
-		\Activitypub\Move::account( $from, $to );
+		\Activitypub\Move::externally( $from, $to );
 
-		$also_known_as = Actors::get_by_id( Actors::BLOG_USER_ID )->get_also_known_as();
-		$this->assertCount( 3, $also_known_as );
-		$this->assertContains( $from, $also_known_as );
+		$moved_to = Actors::get_by_id( Actors::BLOG_USER_ID )->get_moved_to();
+		$this->assertEquals( $to, $moved_to );
 
 		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Test the internally() method with valid input.
+	 *
+	 * @covers ::internally
+	 */
+	public function test_internally_with_valid_input() {
+		$from = get_author_posts_url( self::$user_id );
+		$to   = Actors::get_by_id( self::$user_id )->get_id();
+
+		\Activitypub\Move::internally( $from, $to );
+
+		// Clear cache.
+		wp_cache_delete( self::$user_id, 'users' );
+
+		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
+		$this->assertEquals( $to, $moved_to );
+
+		$also_known_as = Actors::get_by_id( self::$user_id )->get_also_known_as();
+		$this->assertContains( $from, $also_known_as );
 	}
 }

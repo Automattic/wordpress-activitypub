@@ -162,7 +162,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { repo: { owner, repo }, payload : { pull_request : { number, head : { ref } } } } = context;
+            const { repo: { owner, repo }, payload : { pull_request : { number, head : { ref, repo: head_repo } } } } = context;
 
             // Get the changelog information from the previous step.
             const significance = '${{ steps.check-pr-body.outputs.significance }}';
@@ -198,8 +198,64 @@ jobs:
             const path = `.github/changelog/${ number }-from-description`;
             core.info( `Creating changelog file: ${ path }` );
 
+            // Check if PR is from a fork
+            const isFromFork = head_repo.full_name !== `${owner}/${repo}`;
+
+            if ( isFromFork ) {
+              core.info( 'PR is from a fork, so we cannot create the changelog file automatically.' );
+              // For forks, we cannot create the file automatically, so we add a helpful comment to the PR,
+              // asking the contributor to create the file manually.
+              const commentBody = `👋 Thanks for your contribution!
+
+              I see you have provided all the required changelog information in your PR description. To complete the process, you'll need to create a changelog file in your branch.
+
+              Please create a file named \`.github/changelog/${number}-from-description\` with this content:
+
+              \`\`\`
+              ${content}
+              \`\`\`
+
+              You can do this by either:
+              1. Running \`composer changelog:add\` in your local repository, or
+              2. Creating the file manually with the content above
+
+              Once you've committed and pushed the file to your PR branch, the checks will pass automatically.`;
+
+              // Check for existing comments first
+              let hasExistingComment = false;
+              for await ( const response of github.paginate.iterator( github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: +number,
+                per_page: 100,
+              } ) ) {
+                for ( const comment of response.data ) {
+                  if ( comment.body.includes('👋 Thanks for your contribution!') ) {
+                    hasExistingComment = true;
+                    break;
+                  }
+                }
+                if ( hasExistingComment ) {
+                  core.info( 'A comment already exists, so we will not add another one.' );
+                  break;
+                }
+              }
+
+              // Only post the comment if we haven't posted one before
+              if ( ! hasExistingComment ) {
+                core.info( 'No existing comment found, so we will add a new one.' );
+                await github.rest.issues.createComment( {
+                  owner,
+                  repo,
+                  issue_number: number,
+                  body: commentBody
+                } );
+              }
+              return;
+            }
+
             try {
-              // Create or update the file in the repository
+              // For internal PRs, create the file automatically
               await github.rest.repos.createOrUpdateFileContents( {
                 owner,
                 repo,
