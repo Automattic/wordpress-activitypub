@@ -59,6 +59,7 @@ class Collections_Controller extends Actors_Controller {
 						'page'     => array(
 							'description' => 'Current page of the collection.',
 							'type'        => 'integer',
+							'minimum'     => 1,
 							// No default so we differentiate between Collection and CollectionPage requests.
 						),
 						'per_page' => array(

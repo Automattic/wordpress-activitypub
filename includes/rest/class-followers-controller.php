@@ -48,6 +48,7 @@ class Followers_Controller extends Actors_Controller {
 						'page'     => array(
 							'description' => 'Current page of the collection.',
 							'type'        => 'integer',
+							'minimum'     => 1,
 							// No default so we differentiate between Collection and CollectionPage requests.
 						),
 						'per_page' => array(
@@ -100,15 +101,6 @@ class Followers_Controller extends Actors_Controller {
 		$context  = $request->get_param( 'context' );
 
 		$data = Followers::get_followers_with_count( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
-
-		// Special case: WP_Query doesn't return the total number of items when it runs out of items.
-		if ( 0 === $data['total'] && $page > 1 ) {
-			return new \WP_Error(
-				'rest_post_invalid_page_number',
-				'The page number requested is larger than the number of pages available.',
-				array( 'status' => 400 )
-			);
-		}
 
 		$response = array(
 			'@context'     => get_context(),
