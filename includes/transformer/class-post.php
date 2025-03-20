@@ -959,7 +959,7 @@ class Post extends Base {
 			case 'audio':
 			case 'video':
 				$attachment = array(
-					'type'      => 'Document',
+					'type'      => \ucfirst( $mime_type_parts[0] ),
 					'mediaType' => \esc_attr( $mime_type ),
 					'url'       => \esc_url( \wp_get_attachment_url( $id ) ),
 					'name'      => \esc_attr( \get_the_title( $id ) ),
