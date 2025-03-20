@@ -96,7 +96,7 @@ class User extends Actor {
 			);
 		}
 
-		$object      = new self();
+		$object      = new static();
 		$object->_id = $user_id;
 
 		return $object;
