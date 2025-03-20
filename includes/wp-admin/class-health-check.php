@@ -279,7 +279,7 @@ class Health_Check {
 					'value'   => $actor->get_url(),
 					'private' => false,
 				),
-				'author_id' => array(
+				'author_id'  => array(
 					'label'   => __( 'Author ID', 'activitypub' ),
 					'value'   => $actor->get_id(),
 					'private' => false,
