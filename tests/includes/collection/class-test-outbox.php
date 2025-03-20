@@ -19,7 +19,6 @@ use Activitypub\Collection\Outbox;
  * @coversDefaultClass \Activitypub\Collection\Outbox
  */
 class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
-
 	/**
 	 * Test add an item to the outbox.
 	 *
@@ -61,6 +60,42 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Fall back to blog if user does not have the activitypub capability.
 		$actor_type = \user_can( $user_id, 'activitypub' ) ? 'user' : 'blog';
 		$this->assertEquals( $actor_type, \get_post_meta( $id, '_activitypub_activity_actor', true ) );
+	}
+
+	/**
+	 * Test comparing objects.
+	 *
+	 * @covers ::add
+	 */
+	public function test_compare_objects() {
+		$object1 = new Base_Object();
+		$object1->set_id( 'https://example.com/1' );
+		$object1->set_type( 'Note' );
+		$object1->set_content( '<p>Test content</p>' );
+
+		$id1 = \Activitypub\add_to_outbox( $object1, 'Create', 1 );
+
+		$post1     = \get_post( $id1 );
+		$activity1 = json_decode( $post1->post_content );
+
+		$object2 = new Activity();
+		$object2->set_id( 'https://example.com/1' );
+		$object2->set_type( 'Create' );
+		$object2->set_object(
+			array(
+				'id'      => 'https://example.com/1',
+				'type'    => 'Note',
+				'content' => '<p>Test content</p>',
+			)
+		);
+
+		$id2 = \Activitypub\add_to_outbox( $object2, null, 1 );
+
+		$post2     = \get_post( $id2 );
+		$activity2 = json_decode( $post2->post_content );
+
+		$this->assertEquals( $activity1->object->type, $activity2->object->type );
+		$this->assertEquals( $activity1->object->content, $activity2->object->content );
 	}
 
 	/**
