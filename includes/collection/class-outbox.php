@@ -11,7 +11,6 @@ use Activitypub\Dispatcher;
 use Activitypub\Scheduler;
 use Activitypub\Activity\Activity;
 
-use function Activitypub\is_activity;
 use function Activitypub\add_to_outbox;
 
 /**
@@ -25,41 +24,34 @@ class Outbox {
 	/**
 	 * Add an Item to the outbox.
 	 *
-	 * @param \Activitypub\Activity\Base_Object $activity_object    The object of the activity that will be added to the outbox.
-	 * @param string                            $activity_type      The activity type.
-	 * @param int                               $user_id            The real or imaginary user ID of the actor that published the activity that will be added to the outbox.
-	 * @param string                            $content_visibility Optional. The visibility of the content. Default: `ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC`. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+	 * @param Activity $activity   Full Activity object that will be added to the outbox.
+	 * @param int      $user_id    The real or imaginary user ID of the actor that published the activity that will be added to the outbox.
+	 * @param string   $visibility Optional. The visibility of the content. Default: `ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC`. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
 	 *
 	 * @return false|int|\WP_Error The added item or an error.
 	 */
-	public static function add( $activity_object, $activity_type, $user_id, $content_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
-		$actor_type            = Actors::get_type_by_id( $user_id );
-		$title                 = $activity_object->get_name() ?? $activity_object->get_content();
-		$activitypub_object_id = $activity_object->get_id();
-
-		if ( ! $title && is_activity( $activity_object ) && $activity_object->get_object() instanceof \Activitypub\Activity\Base_Object ) {
-			$title                 = $activity_object->get_object()->get_name() ?? $activity_object->get_object()->get_content();
-			$activitypub_object_id = $activity_object->get_object()->get_id();
-		}
+	public static function add( Activity $activity, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
+		$actor_type = Actors::get_type_by_id( $user_id );
+		$object_id  = self::get_object_id( $activity );
+		$title      = self::get_object_title( $activity->get_object() );
 
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
 			'post_title'   => sprintf(
-				/* translators: 1. Activity type, 2. Object type, 3. Object Title or Excerpt */
-				__( '[%1$s] %2$s: %3$s', 'activitypub' ),
-				$activity_type,
-				$activity_object->get_type(),
+				/* translators: 1. Activity type, 2. Object Title or Excerpt */
+				__( '[%1$s] %2$s', 'activitypub' ),
+				$activity->get_type(),
 				\wp_trim_words( $title, 5 )
 			),
-			'post_content' => wp_slash( $activity_object->to_json() ),
+			'post_content' => wp_slash( $activity->to_json() ),
 			// ensure that user ID is not below 0.
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'pending',
 			'meta_input'   => array(
-				'_activitypub_object_id'         => $activitypub_object_id,
-				'_activitypub_activity_type'     => $activity_type,
+				'_activitypub_object_id'         => $object_id,
+				'_activitypub_activity_type'     => $activity->get_type(),
 				'_activitypub_activity_actor'    => $actor_type,
-				'activitypub_content_visibility' => $content_visibility,
+				'activitypub_content_visibility' => $visibility,
 			),
 		);
 
@@ -70,6 +62,18 @@ class Outbox {
 		}
 
 		$id = \wp_insert_post( $outbox_item, true );
+
+		// Update the activity ID if the post was inserted successfully.
+		if ( $id && ! \is_wp_error( $id ) ) {
+			$activity->set_id( \get_the_guid( $id ) );
+
+			\wp_update_post(
+				array(
+					'ID'           => $id,
+					'post_content' => \wp_slash( $activity->to_json() ),
+				)
+			);
+		}
 
 		if ( $has_kses ) {
 			\kses_init_filters();
@@ -83,7 +87,7 @@ class Outbox {
 			return false;
 		}
 
-		self::invalidate_existing_items( $activitypub_object_id, $activity_type, $id );
+		self::invalidate_existing_items( $object_id, $activity->get_type(), $id );
 
 		return $id;
 	}
@@ -203,13 +207,19 @@ class Outbox {
 			return $actor;
 		}
 
-		$activity = new Activity();
-		$type     = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
-		$activity->set_type( $type );
-		$activity->set_id( $outbox_item->guid );
-		$activity->set_actor( $actor->get_id() );
-		// Pre-fill the Activity with data (for example cc and to).
-		$activity->set_object( \json_decode( $outbox_item->post_content, true ) );
+		$activity_object = \json_decode( $outbox_item->post_content, true );
+		$type            = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
+
+		if ( $activity_object['type'] === $type ) {
+			$activity = Activity::init_from_array( $activity_object );
+		} else {
+			$activity = new Activity();
+			$activity->set_type( $type );
+			$activity->set_id( $outbox_item->guid );
+			$activity->set_actor( $actor->get_id() );
+			// Pre-fill the Activity with data (for example cc and to).
+			$activity->set_object( $activity_object );
+		}
 
 		/**
 		 * Filters the Activity object before it is returned.
@@ -277,5 +287,52 @@ class Outbox {
 		}
 
 		return self::get_activity( $outbox_item );
+	}
+
+	/**
+	 * Get the object ID of an activity.
+	 *
+	 * @param Activity $activity The activity object.
+	 * @return string The object ID.
+	 */
+	private static function get_object_id( $activity ) {
+		// Most common.
+		if ( is_object( $activity->get_object() ) ) {
+			return $activity->get_object()->get_id();
+		}
+
+		// Rare.
+		if ( is_string( $activity->get_object() ) ) {
+			return $activity->get_object();
+		}
+
+		// Exceptional.
+		return $activity->get_actor() ?? $activity->get_id();
+	}
+
+	/**
+	 * Get the title of an activity recursively.
+	 *
+	 * @param \Activitypub\Activity\Base_Object $activity_object The activity object.
+	 * @return string The title.
+	 */
+	private static function get_object_title( $activity_object ) {
+		if ( ! $activity_object ) {
+			return '';
+		}
+
+		if ( is_string( $activity_object ) ) {
+			$post_id = url_to_postid( $activity_object );
+
+			return $post_id ? get_the_title( $post_id ) : '';
+		}
+
+		$title = $activity_object->get_name() ?? $activity_object->get_content();
+
+		if ( ! $title && $activity_object->get_object() instanceof \Activitypub\Activity\Base_Object ) {
+			$title = $activity_object->get_object()->get_name() ?? $activity_object->get_object()->get_content();
+		}
+
+		return $title;
 	}
 }

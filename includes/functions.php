@@ -1459,14 +1459,14 @@ function is_self_ping( $id ) {
 /**
  * Add an object to the outbox.
  *
- * @param mixed   $data               The object to add to the outbox.
- * @param string  $activity_type      The type of the Activity.
- * @param integer $user_id            The User-ID.
- * @param string  $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+ * @param mixed       $data               The object to add to the outbox.
+ * @param string|null $activity_type      Optional. The type of the Activity or null if `$data` is an Activity. Default null.
+ * @param integer     $user_id            Optional. The User-ID. Default 0.
+ * @param string      $content_visibility Optional. The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`. Default null.
  *
  * @return boolean|int The ID of the outbox item or false on failure.
  */
-function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content_visibility = null ) {
+function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_visibility = null ) {
 	$transformer = Transformer_Factory::get_transformer( $data );
 
 	if ( ! $transformer || is_wp_error( $transformer ) ) {
@@ -1479,9 +1479,13 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 		$content_visibility = $transformer->get_content_visibility();
 	}
 
-	$activity_object = $transformer->to_object();
+	if ( $activity_type ) {
+		$activity = $transformer->to_activity( $activity_type );
+	} else {
+		$activity = $transformer->to_object();
+	}
 
-	if ( ! $activity_object || \is_wp_error( $activity_object ) ) {
+	if ( ! $activity || \is_wp_error( $activity ) ) {
 		return false;
 	}
 
@@ -1494,7 +1498,7 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 		}
 	}
 
-	$outbox_activity_id = Outbox::add( $activity_object, $activity_type, $user_id, $content_visibility );
+	$outbox_activity_id = Outbox::add( $activity, $user_id, $content_visibility );
 
 	if ( ! $outbox_activity_id ) {
 		return false;
@@ -1503,12 +1507,12 @@ function add_to_outbox( $data, $activity_type = 'Create', $user_id = 0, $content
 	/**
 	 * Action triggered after an object has been added to the outbox.
 	 *
-	 * @param int                               $outbox_activity_id The ID of the outbox item.
-	 * @param \Activitypub\Activity\Base_Object $activity_object    The activity object.
-	 * @param int                               $user_id            The User-ID.
-	 * @param string                            $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
+	 * @param int      $outbox_activity_id The ID of the outbox item.
+	 * @param Activity $activity           The activity object.
+	 * @param int      $user_id            The User-ID.
+	 * @param string   $content_visibility The visibility of the content. See `constants.php` for possible values: `ACTIVITYPUB_CONTENT_VISIBILITY_*`.
 	 */
-	\do_action( 'post_activitypub_add_to_outbox', $outbox_activity_id, $activity_object, $user_id, $content_visibility );
+	\do_action( 'post_activitypub_add_to_outbox', $outbox_activity_id, $activity, $user_id, $content_visibility );
 
 	set_wp_object_state( $data, 'federated' );
 
