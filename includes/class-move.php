@@ -26,7 +26,7 @@ class Move {
 	 * @return int|bool|\WP_Error The ID of the outbox item or false or WP_Error on failure.
 	 */
 	public static function account( $from, $to ) {
-		if ( is_same_domain( $from, $to ) ) {
+		if ( is_same_domain( $from ) && is_same_domain( $to ) ) {
 			return self::internally( $from, $to );
 		}
 
