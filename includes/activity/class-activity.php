@@ -171,8 +171,10 @@ class Activity extends Base_Object {
 			$id = strtok( $data->get_id(), '#' );
 			if ( $data->get_updated() ) {
 				$updated = $data->get_updated();
-			} else {
+			} elseif ( $data->get_published() ) {
 				$updated = $data->get_published();
+			} else {
+				$updated = time();
 			}
 			$this->set( 'id', $id . '#activity-' . strtolower( $this->get_type() ) . '-' . $updated );
 		}

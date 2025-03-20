@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Use `add_to_outbox` instead of the changed scheduler hooks.
