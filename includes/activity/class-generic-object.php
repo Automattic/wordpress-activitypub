@@ -296,7 +296,7 @@ class Generic_Object {
 		$options = \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT | \JSON_UNESCAPED_SLASHES;
 
 		/**
-		 * Options to be passed to json_encode()
+		 * Options to be passed to json_encode().
 		 *
 		 * @param int $options The current options flags.
 		 */
