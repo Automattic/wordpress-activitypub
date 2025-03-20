@@ -30,17 +30,17 @@ trait Collection {
 		$per_page  = $request->get_param( 'per_page' );
 		$max_pages = \ceil( $response['totalItems'] / $per_page );
 
-		// No need to add links if there's only one page.
-		if ( 1 >= $max_pages ) {
-			return $response;
-		}
-
-		if ( $max_pages && $page > $max_pages ) {
+		if ( $page > $max_pages ) {
 			return new \WP_Error(
 				'rest_post_invalid_page_number',
 				'The page number requested is larger than the number of pages available.',
 				array( 'status' => 400 )
 			);
+		}
+
+		// No need to add links if there's only one page.
+		if ( 1 >= $max_pages && null === $page ) {
+			return $response;
 		}
 
 		$response['first'] = \add_query_arg( 'page', 1, $response['id'] );
