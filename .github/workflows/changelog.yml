@@ -1,6 +1,6 @@
 name: "Changelog entry"
 on:
-  pull_request:
+  pull_request_target:
     # The specific activity types are listed here to include "labeled" and "unlabeled"
     # (which are not included by default for the "pull_request" trigger).
     # This is needed to allow skipping enforcement of the changelog in PRs with specific labels,

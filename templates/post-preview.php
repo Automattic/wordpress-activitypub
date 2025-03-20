@@ -215,6 +215,7 @@ $user   = $transformer->get_actor_object();
 						<?php endif; ?>
 						<?php echo wp_kses( 'Article' === $object->get_type() ? $object->get_summary() : $object->get_content(), ACTIVITYPUB_MASTODON_HTML_SANITIZER ); ?>
 					</div>
+					<?php if ( $object->get_attachment() ) : ?>
 					<div class="attachments">
 						<?php foreach ( $object->get_attachment() as $attachment ) : ?>
 							<?php if ( 'Image' === $attachment['type'] ) : ?>
@@ -222,6 +223,7 @@ $user   = $transformer->get_actor_object();
 							<?php endif; ?>
 						<?php endforeach; ?>
 					</div>
+					<?php endif; ?>
 					<?php if ( $object->get_tag() ) : ?>
 					<div class="tags">
 						<?php foreach ( $object->get_tag() as $hashtag ) : ?>
