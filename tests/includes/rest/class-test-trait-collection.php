@@ -27,8 +27,8 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 	/**
 	 * Set up.
 	 */
-	public function setUp(): void {
-		parent::setUp();
+	public function set_up() {
+		parent::set_up();
 
 		// Create a test class that uses the trait.
 		$this->instance = new class() {
