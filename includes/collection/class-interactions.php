@@ -317,7 +317,7 @@ class Interactions {
 		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ) );
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 		// Restore flood control.
-		\add_action( 'check_comment_flood', 'check_comment_flood_db' );
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
 		if ( 1 === $state ) {
 			return $commentdata;
