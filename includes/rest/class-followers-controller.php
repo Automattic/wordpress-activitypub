@@ -9,6 +9,8 @@ namespace Activitypub\Rest;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
+
+use function Activitypub\get_context;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
 
@@ -109,7 +111,7 @@ class Followers_Controller extends Actors_Controller {
 		}
 
 		$response = array(
-			'@context'     => \Activitypub\get_context(),
+			'@context'     => get_context(),
 			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/followers', $user->get__id() ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),

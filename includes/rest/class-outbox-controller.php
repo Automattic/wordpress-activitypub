@@ -7,6 +7,7 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use function Activitypub\get_masked_wp_version;
@@ -165,7 +166,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 		$query_result = $outbox_query->query( $args );
 
 		$response = array(
-			'@context'     => array( 'https://www.w3.org/ns/activitystreams' ),
+			'@context'     => Base_Object::JSON_LD_CONTEXT,
 			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),

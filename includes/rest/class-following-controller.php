@@ -8,6 +8,8 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Collection\Actors;
+
+use function Activitypub\get_context;
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_masked_wp_version;
@@ -89,7 +91,7 @@ class Following_Controller extends Actors_Controller {
 		\do_action( 'activitypub_rest_following_pre' );
 
 		$response = array(
-			'@context'  => \Activitypub\get_context(),
+			'@context'  => get_context(),
 			'id'        => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user->get__id() ) ),
 			'generator' => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'     => $user->get_id(),
