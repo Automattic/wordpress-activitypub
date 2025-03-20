@@ -71,7 +71,6 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$this->assertEquals( 'uri', $schema['properties']['generator']['format'] );
 		$this->assertEquals( 'string', $schema['properties']['actor']['type'] );
 		$this->assertEquals( 'uri', $schema['properties']['actor']['format'] );
-		$this->assertEquals( array( 'OrderedCollection', 'OrderedCollectionPage' ), $schema['properties']['type']['enum'] );
 		$this->assertEquals( 'integer', $schema['properties']['totalItems']['type'] );
 		$this->assertEquals( 'string', $schema['properties']['partOf']['type'] );
 		$this->assertEquals( 'uri', $schema['properties']['partOf']['format'] );

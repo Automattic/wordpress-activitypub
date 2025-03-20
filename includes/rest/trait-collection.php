@@ -71,16 +71,15 @@ trait Collection {
 	}
 
 	/**
-	 * Get the schema for an ActivityPub OrderedCollection.
+	 * Get the schema for an ActivityPub Collection.
 	 *
-	 * Returns a schema definition for ActivityPub OrderedCollection and OrderedCollectionPage
-	 * that controllers can use to compose their full schema by passing in their
-	 * item schema.
+	 * Returns a schema definition for ActivityPub (Ordered)Collection and (Ordered)CollectionPage
+	 * that controllers can use to compose their full schema by passing in their item schema.
 	 *
-	 * @param array $item_schema The schema for the items in the collection.
-	 * @return array The ordered collection schema.
+	 * @param array $item_schema Optional. The schema for the items in the collection. Default empty array.
+	 * @return array The collection schema.
 	 */
-	public function get_collection_schema( $item_schema ) {
+	public function get_collection_schema( $item_schema = array() ) {
 		$collection_schema = array(
 			'$schema'    => 'http://json-schema.org/draft-04/schema#',
 			'title'      => 'collection',
@@ -98,7 +97,7 @@ trait Collection {
 				'type'         => array(
 					'description' => 'The type of the object. Either OrderedCollection or OrderedCollectionPage.',
 					'type'        => 'string',
-					'enum'        => array( 'OrderedCollection', 'OrderedCollectionPage' ),
+					'enum'        => array( 'Collection', 'CollectionPage', 'OrderedCollection', 'OrderedCollectionPage' ),
 				),
 				'totalItems'   => array(
 					'description' => 'The total number of items in the collection.',
