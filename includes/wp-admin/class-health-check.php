@@ -262,8 +262,7 @@ class Health_Check {
 	 * @return array The filtered information
 	 */
 	public static function debug_information( $info ) {
-		$user  = \wp_get_current_user();
-		$actor = Actors::get_by_id( $user->ID );
+		$actor = Actors::get_by_id( \wp_get_current_user_id() );
 
 		$info['activitypub'] = array(
 			'label'  => __( 'ActivityPub', 'activitypub' ),
