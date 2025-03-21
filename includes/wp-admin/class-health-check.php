@@ -177,8 +177,7 @@ class Health_Check {
 	 * @return bool|\WP_Error True if the author URL is accessible, WP_Error otherwise.
 	 */
 	public static function is_author_url_accessible() {
-		$user  = \wp_get_current_user();
-		$actor = Actors::get_by_id( $user->ID );
+		$actor = Actors::get_by_id( \wp_get_current_user_id() );
 
 		// Try to access author URL.
 		$response = Http::get_remote_object( $actor->get_id() );
