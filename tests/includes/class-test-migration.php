@@ -763,7 +763,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		$this->assertCount( 1, $user_fields, 'There should be one extra field for the user' );
 		$this->assertEquals( 'Powered by', $user_fields[0]->post_title, 'The title should be "Powered by"' );
-		$this->assertEquals( 'WordPress ❤️', $user_fields[0]->post_content, 'The content should be "WordPress ❤️"' );
+		$this->assertEquals( 'WordPress', $user_fields[0]->post_content, 'The content should be "WordPress"' );
 
 		// Check the extra field for the blog user.
 		$blog_fields = get_posts(
@@ -776,7 +776,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		$this->assertCount( 1, $blog_fields, 'There should be one extra field for the blog user' );
 		$this->assertEquals( 'Powered by', $blog_fields[0]->post_title, 'The title should be "Powered by"' );
-		$this->assertEquals( 'WordPress ❤️', $blog_fields[0]->post_content, 'The content should be "WordPress ❤️"' );
+		$this->assertEquals( 'WordPress', $blog_fields[0]->post_content, 'The content should be "WordPress"' );
 
 		$this->delete_extra_fields();
 	}
