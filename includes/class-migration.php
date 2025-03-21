@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
 use Activitypub\Transformer\Factory;
@@ -737,6 +738,7 @@ class Migration {
 	public static function add_default_settings() {
 		self::add_activitypub_capability();
 		self::add_notification_defaults();
+		self::add_default_extra_field();
 	}
 
 	/**
@@ -796,6 +798,65 @@ class Migration {
 	private static function add_notification_defaults() {
 		\add_option( 'activitypub_mailer_new_follower', '1' );
 		\add_option( 'activitypub_mailer_new_dm', '1' );
+	}
+
+	/**
+	 * Add a default extra field for the user.
+	 */
+	private static function add_default_extra_field() {
+		$users = \get_users(
+			array(
+				'capability__in' => array( 'activitypub' ),
+			)
+		);
+
+		$title   = __( 'Powered by', 'activitypub' );
+		$content = __( 'WordPress ❤️', 'activitypub' );
+
+		// Add a default extra field for each user.
+		foreach ( $users as $user ) {
+			// check if the extra field already exists.
+			$extra_field = get_posts( array(
+				'post_type' => Extra_Fields::USER_POST_TYPE,
+				'author' => $user->ID,
+				'posts_per_page' => 1,
+			) );
+
+			if ( $extra_field ) {
+				continue;
+			}
+
+			wp_insert_post(
+				array(
+					'post_type'    => Extra_Fields::USER_POST_TYPE,
+					'post_author'  => $user->ID,
+					'post_status'  => 'publish',
+					'post_title'   => $title,
+					'post_content' => $content,
+				)
+			);
+		}
+
+		// Add a default extra field for the blog user.
+		$extra_field = get_posts( array(
+			'post_type' => Extra_Fields::BLOG_POST_TYPE,
+			'author' => 0,
+			'posts_per_page' => 1,
+		) );
+
+		if ( $extra_field ) {
+			return;
+		}
+
+		wp_insert_post(
+			array(
+				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+				'post_author'  => 0,
+				'post_status'  => 'publish',
+				'post_title'   => $title,
+				'post_content' => $content,
+			)
+		);
 	}
 
 	/**
