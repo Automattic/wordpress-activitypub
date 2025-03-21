@@ -55,7 +55,7 @@ class Health_Check {
 	/**
 	 * Author URL tests.
 	 *
-	 * @return array
+	 * @return array The test result.
 	 */
 	public static function test_author_url() {
 		$result = array(
@@ -93,7 +93,7 @@ class Health_Check {
 	/**
 	 * System Cron tests.
 	 *
-	 * @return array
+	 * @return array The test result.
 	 */
 	public static function test_system_cron() {
 		$result = array(
@@ -136,7 +136,7 @@ class Health_Check {
 	/**
 	 * WebFinger tests.
 	 *
-	 * @return array
+	 * @return array The test result.
 	 */
 	public static function test_webfinger() {
 		$result = array(
@@ -202,7 +202,7 @@ class Health_Check {
 	/**
 	 * Check if WebFinger endpoint is accessible and profile request returns correct JSON
 	 *
-	 * @return boolean|WP_Error
+	 * @return boolean|\WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
 		$user     = Actors::get_by_id( Actors::APPLICATION_USER_ID );
@@ -259,6 +259,7 @@ class Health_Check {
 	 * Static function for generating site debug data when required.
 	 *
 	 * @param array $info The debug information to be added to the core information page.
+	 *
 	 * @return array The filtered information
 	 */
 	public static function debug_information( $info ) {
