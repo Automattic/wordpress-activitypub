@@ -293,10 +293,10 @@ class Generic_Object {
 	 */
 	public function to_json( $include_json_ld_context = true ) {
 		$array   = $this->to_array( $include_json_ld_context );
-		$options = \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT;
+		$options = \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT | \JSON_UNESCAPED_SLASHES;
 
 		/**
-		 * Options to be passed to json_encode()
+		 * Options to be passed to json_encode().
 		 *
 		 * @param int $options The current options flags.
 		 */
