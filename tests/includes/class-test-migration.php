@@ -759,9 +759,9 @@ class Test_Migration extends \WP_UnitTestCase {
 			)
 		);
 
-		$this->assertCount( 1, $user_fields, 'Es sollte ein Extra-Feld für den Benutzer erstellt worden sein' );
-		$this->assertEquals( 'Powered by', $user_fields[0]->post_title, 'Der Titel sollte "Powered by" sein' );
-		$this->assertEquals( 'WordPress ❤️', $user_fields[0]->post_content, 'Der Inhalt sollte "WordPress ❤️" sein' );
+		$this->assertCount( 1, $user_fields, 'There should be one extra field for the user' );
+		$this->assertEquals( 'Powered by', $user_fields[0]->post_title, 'The title should be "Powered by"' );
+		$this->assertEquals( 'WordPress ❤️', $user_fields[0]->post_content, 'The content should be "WordPress ❤️"' );
 
 		// Check the extra field for the blog user.
 		$blog_fields = get_posts(
@@ -772,9 +772,9 @@ class Test_Migration extends \WP_UnitTestCase {
 			)
 		);
 
-		$this->assertCount( 1, $blog_fields, 'Es sollte ein Extra-Feld für den Blog-Benutzer erstellt worden sein' );
-		$this->assertEquals( 'Powered by', $blog_fields[0]->post_title, 'Der Titel sollte "Powered by" sein' );
-		$this->assertEquals( 'WordPress ❤️', $blog_fields[0]->post_content, 'Der Inhalt sollte "WordPress ❤️" sein' );
+		$this->assertCount( 1, $blog_fields, 'There should be one extra field for the blog user' );
+		$this->assertEquals( 'Powered by', $blog_fields[0]->post_title, 'The title should be "Powered by"' );
+		$this->assertEquals( 'WordPress ❤️', $blog_fields[0]->post_content, 'The content should be "WordPress ❤️"' );
 
 		// Delete the extra fields by querying the posts.
 		$user_fields = get_posts(
@@ -820,7 +820,7 @@ class Test_Migration extends \WP_UnitTestCase {
 				)
 			);
 
-			$this->assertCount( 1, $user_fields, "Benutzer $user_id sollte ein Extra-Feld haben" );
+			$this->assertCount( 1, $user_fields, "User $user_id should have one extra field" );
 		}
 
 		// Check that the user without ActivityPub permission has no extra field.
@@ -832,7 +832,7 @@ class Test_Migration extends \WP_UnitTestCase {
 			)
 		);
 
-		$this->assertCount( 0, $non_ap_user_fields, 'Benutzer ohne ActivityPub-Berechtigung sollte kein Extra-Feld haben' );
+		$this->assertCount( 0, $non_ap_user_fields, 'User without ActivityPub permission should not have an extra field' );
 
 		// Delete the extra fields by querying the posts.
 		$user_fields = get_posts(
@@ -871,7 +871,7 @@ class Test_Migration extends \WP_UnitTestCase {
 			)
 		);
 
-		$this->assertCount( 1, $user_fields, 'Es sollten zwei Extra-Felder für den Benutzer erstellt worden sein' );
+		$this->assertCount( 1, $user_fields, 'There should be one extra field for the user' );
 
 		// Check blog user extra fields.
 		$blog_fields = get_posts(
@@ -882,7 +882,7 @@ class Test_Migration extends \WP_UnitTestCase {
 			)
 		);
 
-		$this->assertCount( 1, $blog_fields, 'Es sollten zwei Extra-Felder für den Blog-Benutzer erstellt worden sein' );
+		$this->assertCount( 1, $blog_fields, 'There should be one extra field for the blog user' );
 
 		// Delete the extra fields by querying the posts.
 		$user_fields = get_posts(
