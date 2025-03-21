@@ -811,7 +811,7 @@ class Migration {
 		);
 
 		$title   = __( 'Powered by', 'activitypub' );
-		$content = __( 'WordPress ❤️', 'activitypub' );
+		$content = __( 'WordPress', 'activitypub' );
 
 		// Add a default extra field for each user.
 		foreach ( $users as $user ) {
