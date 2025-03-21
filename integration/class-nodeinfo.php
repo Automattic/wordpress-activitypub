@@ -45,8 +45,8 @@ class Nodeinfo {
 
 		$nodeinfo['usage']['users'] = array(
 			'total'          => get_total_users(),
-			'activeMonth'    => get_active_users( '1 month ago' ),
-			'activeHalfyear' => get_active_users( '6 month ago' ),
+			'activeMonth'    => get_active_users(),
+			'activeHalfyear' => get_active_users( 6 ),
 		);
 
 		return $nodeinfo;
@@ -64,8 +64,8 @@ class Nodeinfo {
 
 		$nodeinfo['usage']['users'] = array(
 			'total'          => get_total_users(),
-			'activeMonth'    => get_active_users( '1 month ago' ),
-			'activeHalfyear' => get_active_users( '6 month ago' ),
+			'activeMonth'    => get_active_users(),
+			'activeHalfyear' => get_active_users( 6 ),
 		);
 
 		return $nodeinfo;
