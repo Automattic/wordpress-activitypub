@@ -174,7 +174,7 @@ class Health_Check {
 	/**
 	 * Check if `author_posts_url` is accessible and that request returns correct JSON.
 	 *
-	 * @return bool|WP_Error True if the author URL is accessible, WP_Error otherwise.
+	 * @return bool|\WP_Error True if the author URL is accessible, WP_Error otherwise.
 	 */
 	public static function is_author_url_accessible() {
 		$user  = \wp_get_current_user();
