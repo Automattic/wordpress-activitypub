@@ -179,20 +179,19 @@ class Interactions {
 			$actor = object_to_uri( $meta['url'] );
 		}
 
-		$args          = array(
+		$args = array(
 			'nopaging'   => true,
 			'author_url' => $actor,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
 				array(
-					'key'     => 'protocol',
-					'value'   => 'activitypub',
-					'compare' => '=',
+					'key'   => 'protocol',
+					'value' => 'activitypub',
 				),
 			),
 		);
-		$comment_query = new WP_Comment_Query( $args );
-		return $comment_query->comments;
+
+		return get_comments( $args );
 	}
 
 	/**

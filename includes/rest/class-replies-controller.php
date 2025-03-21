@@ -67,8 +67,8 @@ class Replies_Controller extends \WP_REST_Controller {
 						'page' => array(
 							'description' => 'Current page of the collection.',
 							'type'        => 'integer',
-							'default'     => 1,
 							'minimum'     => 1,
+							// No default so we can differentiate between Collection and CollectionPage requests.
 						),
 					),
 				),
@@ -143,7 +143,7 @@ class Replies_Controller extends \WP_REST_Controller {
 		$page = $request->get_param( 'page' );
 
 		// If the request parameter page is present get the CollectionPage otherwise the Replies collection.
-		if ( $page <= 1 ) {
+		if ( null === $page ) {
 			$response = Replies::get_collection( $wp_object );
 		} else {
 			$response = Replies::get_collection_page( $wp_object, $page );

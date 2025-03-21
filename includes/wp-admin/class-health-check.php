@@ -8,7 +8,7 @@
 namespace Activitypub\WP_Admin;
 
 use Activitypub\Webfinger;
-use WP_Error;
+use Activitypub\Http;
 use Activitypub\Collection\Actors;
 use Activitypub\Sanitize;
 
@@ -55,7 +55,7 @@ class Health_Check {
 	/**
 	 * Author URL tests.
 	 *
-	 * @return array
+	 * @return array The test result.
 	 */
 	public static function test_author_url() {
 		$result = array(
@@ -93,7 +93,7 @@ class Health_Check {
 	/**
 	 * System Cron tests.
 	 *
-	 * @return array
+	 * @return array The test result.
 	 */
 	public static function test_system_cron() {
 		$result = array(
@@ -136,7 +136,7 @@ class Health_Check {
 	/**
 	 * WebFinger tests.
 	 *
-	 * @return array
+	 * @return array The test result.
 	 */
 	public static function test_webfinger() {
 		$result = array(
@@ -174,39 +174,16 @@ class Health_Check {
 	/**
 	 * Check if `author_posts_url` is accessible and that request returns correct JSON.
 	 *
-	 * @return bool|WP_Error True if the author URL is accessible, WP_Error otherwise.
+	 * @return bool|\WP_Error True if the author URL is accessible, WP_Error otherwise.
 	 */
 	public static function is_author_url_accessible() {
-		$user                 = \wp_get_current_user();
-		$author_url           = \get_author_posts_url( $user->ID );
-		$reference_author_url = self::get_author_posts_url( $user->ID, $user->user_nicename );
-
-		// Check for "author" in URL.
-		if ( $author_url !== $reference_author_url ) {
-			return new WP_Error(
-				'author_url_not_accessible',
-				\sprintf(
-					// translators: %s: Author URL.
-					\__(
-						'Your author URL <code>%s</code> was replaced, this is often done by plugins.',
-						'activitypub'
-					),
-					$author_url
-				)
-			);
-		}
+		$actor = Actors::get_by_id( \get_current_user_id() );
 
 		// Try to access author URL.
-		$response = \wp_remote_get(
-			$author_url,
-			array(
-				'headers'     => array( 'Accept' => 'application/activity+json' ),
-				'redirection' => 0,
-			)
-		);
+		$response = Http::get_remote_object( $actor->get_id() );
 
 		if ( \is_wp_error( $response ) ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'author_url_not_accessible',
 				\sprintf(
 					// translators: %s: Author URL.
@@ -214,41 +191,7 @@ class Health_Check {
 						'Your author URL <code>%s</code> is not accessible. Please check your WordPress setup or permalink structure. If the setup seems fine, maybe check if a plugin might restrict the access.',
 						'activitypub'
 					),
-					$author_url
-				)
-			);
-		}
-
-		$response_code = \wp_remote_retrieve_response_code( $response );
-
-		// Check for redirects.
-		if ( \in_array( $response_code, array( 301, 302, 307, 308 ), true ) ) {
-			return new WP_Error(
-				'author_url_not_accessible',
-				\sprintf(
-					// translators: %s: Author URL.
-					\__(
-						'Your author URL <code>%s</code> is redirecting to another page, this is often done by SEO plugins like "Yoast SEO".',
-						'activitypub'
-					),
-					$author_url
-				)
-			);
-		}
-
-		// Check if response is JSON.
-		$body = \wp_remote_retrieve_body( $response );
-
-		if ( ! \is_string( $body ) || ! \is_array( \json_decode( $body, true ) ) ) {
-			return new WP_Error(
-				'author_url_not_accessible',
-				\sprintf(
-					// translators: %s: Author URL.
-					\__(
-						'Your author URL <code>%s</code> does not return valid JSON for <code>application/activity+json</code>. Please check if your hosting supports alternate <code>Accept</code> headers.',
-						'activitypub'
-					),
-					$author_url
+					$actor->get_id()
 				)
 			);
 		}
@@ -259,7 +202,7 @@ class Health_Check {
 	/**
 	 * Check if WebFinger endpoint is accessible and profile request returns correct JSON
 	 *
-	 * @return boolean|WP_Error
+	 * @return boolean|\WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
 		$user     = Actors::get_by_id( Actors::APPLICATION_USER_ID );
@@ -302,7 +245,7 @@ class Health_Check {
 				$message = $health_messages[ $url->get_error_code() ];
 			}
 
-			return new WP_Error(
+			return new \WP_Error(
 				$url->get_error_code(),
 				$message,
 				$url->get_error_data()
@@ -313,45 +256,15 @@ class Health_Check {
 	}
 
 	/**
-	 * Retrieve the URL to the author page for the user with the ID provided.
-	 *
-	 * @global \WP_Rewrite $wp_rewrite WordPress rewrite component.
-	 *
-	 * @param int    $author_id       Author ID.
-	 * @param string $author_nicename Optional. The author's nicename (slug). Default empty.
-	 *
-	 * @return string The URL to the author's page.
-	 */
-	public static function get_author_posts_url( $author_id, $author_nicename = '' ) {
-		global $wp_rewrite;
-
-		$auth_id = (int) $author_id;
-		$link    = $wp_rewrite->get_author_permastruct();
-
-		if ( empty( $link ) ) {
-			$file = home_url( '/' );
-			$link = $file . '?author=' . $auth_id;
-		} else {
-			if ( '' === $author_nicename ) {
-				$user = get_userdata( $author_id );
-				if ( ! empty( $user->user_nicename ) ) {
-					$author_nicename = $user->user_nicename;
-				}
-			}
-			$link = str_replace( '%author%', $author_nicename, $link );
-			$link = home_url( user_trailingslashit( $link ) );
-		}
-
-		return $link;
-	}
-
-	/**
 	 * Static function for generating site debug data when required.
 	 *
 	 * @param array $info The debug information to be added to the core information page.
+	 *
 	 * @return array The filtered information
 	 */
 	public static function debug_information( $info ) {
+		$actor = Actors::get_by_id( \get_current_user_id() );
+
 		$info['activitypub'] = array(
 			'label'  => __( 'ActivityPub', 'activitypub' ),
 			'fields' => array(
@@ -362,7 +275,12 @@ class Health_Check {
 				),
 				'author_url' => array(
 					'label'   => __( 'Author URL', 'activitypub' ),
-					'value'   => get_author_posts_url( wp_get_current_user()->ID ),
+					'value'   => $actor->get_url(),
+					'private' => false,
+				),
+				'author_id'  => array(
+					'label'   => __( 'Author ID', 'activitypub' ),
+					'value'   => $actor->get_id(),
 					'private' => false,
 				),
 			),

@@ -10,6 +10,7 @@ namespace Activitypub\Tests\Rest;
 /**
  * Tests for Interaction REST API endpoint.
  *
+ * @group rest
  * @coversDefaultClass \Activitypub\Rest\Interaction_Controller
  */
 class Test_Interaction_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {

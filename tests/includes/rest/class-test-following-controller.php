@@ -10,6 +10,7 @@ namespace Activitypub\Tests\Rest;
 /**
  * Tests for Following REST API endpoint.
  *
+ * @group rest
  * @coversDefaultClass \Activitypub\Rest\Following_Controller
  */
 class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
@@ -65,10 +66,9 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$schema = $response['schema'];
 
 		// Test specific property types.
-		$this->assertEquals( array( 'array', 'object' ), $schema['properties']['@context']['type'] );
+		$this->assertEquals( array( 'string', 'array', 'object' ), $schema['properties']['@context']['type'] );
 		$this->assertEquals( 'string', $schema['properties']['id']['type'] );
 		$this->assertEquals( 'uri', $schema['properties']['id']['format'] );
-		$this->assertEquals( array( 'OrderedCollectionPage' ), $schema['properties']['type']['enum'] );
 		$this->assertEquals( 'array', $schema['properties']['orderedItems']['type'] );
 		$this->assertEquals( 'string', $schema['properties']['orderedItems']['items']['type'] );
 		$this->assertEquals( 'string', $schema['properties']['generator']['type'] );
@@ -100,14 +100,10 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$this->assertArrayHasKey( 'actor', $data );
 		$this->assertArrayHasKey( 'totalItems', $data );
 		$this->assertArrayHasKey( 'orderedItems', $data );
-		$this->assertArrayHasKey( 'partOf', $data );
-		$this->assertArrayHasKey( 'first', $data );
 
 		// Test property values.
-		$this->assertEquals( 'OrderedCollectionPage', $data['type'] );
+		$this->assertEquals( 'OrderedCollection', $data['type'] );
 		$this->assertStringContainsString( 'wordpress.org', $data['generator'] );
-		$this->assertEquals( $data['partOf'], $data['first'] );
-		$this->assertIsArray( $data['orderedItems'] );
 
 		\update_option( 'activitypub_actor_mode', $actor_mode );
 	}

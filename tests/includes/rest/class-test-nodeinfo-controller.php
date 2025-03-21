@@ -10,6 +10,7 @@ namespace Activitypub\Tests\Rest;
 /**
  * Tests for NodeInfo REST API endpoint.
  *
+ * @group rest
  * @coversDefaultClass \Activitypub\Rest\Nodeinfo_Controller
  */
 class Test_Nodeinfo_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
