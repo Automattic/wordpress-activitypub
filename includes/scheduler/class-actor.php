@@ -132,7 +132,12 @@ class Actor {
 		}
 
 		$actor = Actors::get_by_id( $user_id );
-		$actor->set_updated( time() );
+
+		if ( ! $actor || \is_wp_error( $actor ) ) {
+			return;
+		}
+
+		$actor->set_updated( gmdate( 'Y-m-d H:i:s', time() ) );
 
 		add_to_outbox( $actor, 'Update', $user_id );
 	}
