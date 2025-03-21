@@ -62,7 +62,6 @@ class Create {
 			 *
 			 * @param array                          $activity        The activity-object.
 			 * @param int                            $user_id         The id of the local blog-user.
-			 * @param \WP_Comment|\WP_Error          $check_dupe      The comment object or WP_Error.
 			 * @param \Activitypub\Activity\Activity $activity_object The activity object.
 			 */
 			\do_action( 'activitypub_inbox_update', $activity, $user_id, $activity_object );

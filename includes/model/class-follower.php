@@ -22,10 +22,10 @@ use Activitypub\Collection\Followers;
  *
  * @see https://www.w3.org/TR/activitypub/#follow-activity-inbox
  *
- * @method int         get__id()       Gets the post ID of the follower record.
- * @method array|null  get_image()     Gets the follower's profile image data.
- * @method string|null get_inbox()     Gets the follower's ActivityPub inbox URL.
- * @method array|null  get_endpoints() Gets the follower's ActivityPub endpoints.
+ * @method int           get__id()       Gets the post ID of the follower record.
+ * @method string[]|null get_image()     Gets the follower's profile image data.
+ * @method string|null   get_inbox()     Gets the follower's ActivityPub inbox URL.
+ * @method string[]|null get_endpoints() Gets the follower's ActivityPub endpoints.
  *
  * @method Follower set__id( int $id )                Sets the post ID of the follower record.
  * @method Follower set_id( string $guid )            Sets the follower's GUID.
@@ -240,7 +240,7 @@ class Follower extends Actor {
 	 *
 	 * Sets a fallback to better handle API and HTML outputs.
 	 *
-	 * @return array The icon.
+	 * @return string[] The icon.
 	 */
 	public function get_icon() {
 		if ( isset( $this->icon['url'] ) ) {

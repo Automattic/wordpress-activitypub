@@ -39,13 +39,13 @@ class Admin {
 		\add_filter( 'comment_row_actions', array( self::class, 'comment_row_actions' ), 10, 2 );
 		\add_filter( 'manage_edit-comments_columns', array( static::class, 'manage_comment_columns' ) );
 		\add_action( 'manage_comments_custom_column', array( static::class, 'manage_comments_custom_column' ), 9, 2 );
-		\add_action( 'admin_comment_types_dropdown', array( static::class, 'comment_types_dropdown' ) );
+		\add_filter( 'admin_comment_types_dropdown', array( static::class, 'comment_types_dropdown' ) );
 
 		\add_filter( 'manage_posts_columns', array( static::class, 'manage_post_columns' ), 10, 2 );
 		\add_action( 'manage_posts_custom_column', array( self::class, 'manage_posts_custom_column' ), 10, 2 );
 
 		\add_filter( 'manage_users_columns', array( self::class, 'manage_users_columns' ) );
-		\add_action( 'manage_users_custom_column', array( self::class, 'manage_users_custom_column' ), 10, 3 );
+		\add_filter( 'manage_users_custom_column', array( self::class, 'manage_users_custom_column' ), 10, 3 );
 		\add_filter( 'bulk_actions-users', array( self::class, 'user_bulk_options' ) );
 		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
 

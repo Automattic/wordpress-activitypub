@@ -144,8 +144,8 @@ class Server {
 	/**
 	 * Modify the parameter priority order for a REST API request.
 	 *
-	 * @param string[]        $order   Array of types to check, in order of priority.
-	 * @param WP_REST_Request $request The request object.
+	 * @param string[]         $order   Array of types to check, in order of priority.
+	 * @param \WP_REST_Request $request The request object.
 	 *
 	 * @return string[] The modified order of types to check.
 	 */

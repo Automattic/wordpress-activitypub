@@ -63,7 +63,7 @@ class Extra_Fields {
 	 */
 	public static function get_formatted_content( $post ) {
 		$content = \get_the_content( null, false, $post );
-		$content = Link::the_content( $content, true );
+		$content = Link::the_content( $content );
 		if ( site_supports_blocks() ) {
 			$content = \do_blocks( $content );
 		}
