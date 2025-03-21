@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Deprecated `safe_remote_get()` and `safe_remote_post()` in favor of using `Http` methods directly.
