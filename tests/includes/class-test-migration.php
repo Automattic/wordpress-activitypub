@@ -739,140 +739,158 @@ class Test_Migration extends \WP_UnitTestCase {
 	 * Test add_default_extra_field.
 	 */
 	public function test_add_default_extra_field() {
-		// Erstelle einen Test-Benutzer mit ActivityPub-Berechtigung
+		// Create a test user with ActivityPub permission.
 		$user_id = self::factory()->user->create();
-		$user = get_user_by( 'id', $user_id );
+		$user    = get_user_by( 'id', $user_id );
 		$user->add_cap( 'activitypub' );
 
-		// Rufe die private Methode über Reflection auf
+		// Run the private method over Reflection.
 		$reflection = new \ReflectionClass( Migration::class );
-		$method = $reflection->getMethod( 'add_default_extra_field' );
+		$method     = $reflection->getMethod( 'add_default_extra_field' );
 		$method->setAccessible( true );
 		$method->invoke( null );
 
-		// Überprüfe das Extra-Feld für den Benutzer
-		$user_fields = get_posts( array(
-			'post_type' => Extra_Fields::USER_POST_TYPE,
-			'author' => $user_id,
-			'posts_per_page' => -1,
-		) );
+		// Check the extra field for the user.
+		$user_fields = get_posts(
+			array(
+				'post_type'      => Extra_Fields::USER_POST_TYPE,
+				'author'         => $user_id,
+				'posts_per_page' => -1,
+			)
+		);
 
 		$this->assertCount( 1, $user_fields, 'Es sollte ein Extra-Feld für den Benutzer erstellt worden sein' );
 		$this->assertEquals( 'Powered by', $user_fields[0]->post_title, 'Der Titel sollte "Powered by" sein' );
 		$this->assertEquals( 'WordPress ❤️', $user_fields[0]->post_content, 'Der Inhalt sollte "WordPress ❤️" sein' );
 
-		// Überprüfe das Extra-Feld für den Blog-Benutzer
-		$blog_fields = get_posts( array(
-			'post_type' => Extra_Fields::BLOG_POST_TYPE,
-			'author' => 0,
-			'posts_per_page' => -1,
-		) );
+		// Check the extra field for the blog user.
+		$blog_fields = get_posts(
+			array(
+				'post_type'      => Extra_Fields::BLOG_POST_TYPE,
+				'author'         => 0,
+				'posts_per_page' => -1,
+			)
+		);
 
 		$this->assertCount( 1, $blog_fields, 'Es sollte ein Extra-Feld für den Blog-Benutzer erstellt worden sein' );
 		$this->assertEquals( 'Powered by', $blog_fields[0]->post_title, 'Der Titel sollte "Powered by" sein' );
 		$this->assertEquals( 'WordPress ❤️', $blog_fields[0]->post_content, 'Der Inhalt sollte "WordPress ❤️" sein' );
 
 		// Delete the extra fields by querying the posts.
-		$user_fields = get_posts( array(
-			'post_type' => Extra_Fields::USER_POST_TYPE,
-			'posts_per_page' => -1,
-		) );
+		$user_fields = get_posts(
+			array(
+				'post_type'      => Extra_Fields::USER_POST_TYPE,
+				'posts_per_page' => -1,
+			)
+		);
 		foreach ( $user_fields as $user_field ) {
 			\wp_delete_post( $user_field->ID, true );
 		}
 	}
 
 	/**
-	 * Test add_default_extra_field mit mehreren Benutzern.
+	 * Test add_default_extra_field with multiple users.
 	 */
 	public function test_add_default_extra_field_multiple_users() {
-		// Erstelle mehrere Test-Benutzer mit ActivityPub-Berechtigung
+		// Create multiple test users with ActivityPub permission.
 		$user_ids = array();
 		for ( $i = 0; $i < 3; $i++ ) {
 			$user_id = self::factory()->user->create();
-			$user = get_user_by( 'id', $user_id );
+			$user    = get_user_by( 'id', $user_id );
 			$user->add_cap( 'activitypub' );
 			$user_ids[] = $user_id;
 		}
 
-		// Erstelle einen Benutzer ohne ActivityPub-Berechtigung
+		// Create a user without ActivityPub permission.
 		$non_ap_user_id = self::factory()->user->create();
 
-		// Rufe die private Methode über Reflection auf
+		// Run the private method over Reflection.
 		$reflection = new \ReflectionClass( Migration::class );
-		$method = $reflection->getMethod( 'add_default_extra_field' );
+		$method     = $reflection->getMethod( 'add_default_extra_field' );
 		$method->setAccessible( true );
 		$method->invoke( null );
 
-		// Überprüfe Extra-Felder für jeden Benutzer mit ActivityPub-Berechtigung
+		// Check extra fields for each user with ActivityPub permission.
 		foreach ( $user_ids as $user_id ) {
-			$user_fields = get_posts( array(
-				'post_type' => Extra_Fields::USER_POST_TYPE,
-				'author' => $user_id,
-				'posts_per_page' => -1,
-			) );
+			$user_fields = get_posts(
+				array(
+					'post_type'      => Extra_Fields::USER_POST_TYPE,
+					'author'         => $user_id,
+					'posts_per_page' => -1,
+				)
+			);
 
 			$this->assertCount( 1, $user_fields, "Benutzer $user_id sollte ein Extra-Feld haben" );
 		}
 
-		// Überprüfe, dass der Benutzer ohne ActivityPub-Berechtigung kein Extra-Feld hat
-		$non_ap_user_fields = get_posts( array(
-			'post_type' => Extra_Fields::USER_POST_TYPE,
-			'author' => $non_ap_user_id,
-			'posts_per_page' => -1,
-		) );
+		// Check that the user without ActivityPub permission has no extra field.
+		$non_ap_user_fields = get_posts(
+			array(
+				'post_type'      => Extra_Fields::USER_POST_TYPE,
+				'author'         => $non_ap_user_id,
+				'posts_per_page' => -1,
+			)
+		);
 
 		$this->assertCount( 0, $non_ap_user_fields, 'Benutzer ohne ActivityPub-Berechtigung sollte kein Extra-Feld haben' );
 
 		// Delete the extra fields by querying the posts.
-		$user_fields = get_posts( array(
-			'post_type' => Extra_Fields::USER_POST_TYPE,
-			'posts_per_page' => -1,
-		) );
+		$user_fields = get_posts(
+			array(
+				'post_type'      => Extra_Fields::USER_POST_TYPE,
+				'posts_per_page' => -1,
+			)
+		);
 		foreach ( $user_fields as $user_field ) {
 			\wp_delete_post( $user_field->ID, true );
 		}
 	}
 
 	/**
-	 * Test add_default_extra_field für doppelte Ausführung.
+	 * Test add_default_extra_field for duplicate execution.
 	 */
 	public function test_add_default_extra_field_duplicate_execution() {
-		// Erstelle einen Test-Benutzer mit ActivityPub-Berechtigung
+		// Create a test user with ActivityPub permission.
 		$user_id = self::factory()->user->create();
-		$user = get_user_by( 'id', $user_id );
+		$user    = get_user_by( 'id', $user_id );
 		$user->add_cap( 'activitypub' );
 
-		// Rufe die Methode zweimal auf
+		// Run the method twice.
 		$reflection = new \ReflectionClass( Migration::class );
-		$method = $reflection->getMethod( 'add_default_extra_field' );
+		$method     = $reflection->getMethod( 'add_default_extra_field' );
 		$method->setAccessible( true );
 		$method->invoke( null );
 		$method->invoke( null );
 
-		// Überprüfe, dass nur ein Extra-Feld pro Benutzer erstellt wurde
-		$user_fields = get_posts( array(
-			'post_type' => Extra_Fields::USER_POST_TYPE,
-			'author' => $user_id,
-			'posts_per_page' => -1,
-		) );
+		// Check that only one extra field per user was created.
+		$user_fields = get_posts(
+			array(
+				'post_type'      => Extra_Fields::USER_POST_TYPE,
+				'author'         => $user_id,
+				'posts_per_page' => -1,
+			)
+		);
 
 		$this->assertCount( 1, $user_fields, 'Es sollten zwei Extra-Felder für den Benutzer erstellt worden sein' );
 
-		// Überprüfe Blog-Benutzer Extra-Felder
-		$blog_fields = get_posts( array(
-			'post_type' => Extra_Fields::BLOG_POST_TYPE,
-			'author' => 0,
-			'posts_per_page' => -1,
-		) );
+		// Check blog user extra fields.
+		$blog_fields = get_posts(
+			array(
+				'post_type'      => Extra_Fields::BLOG_POST_TYPE,
+				'author'         => 0,
+				'posts_per_page' => -1,
+			)
+		);
 
 		$this->assertCount( 1, $blog_fields, 'Es sollten zwei Extra-Felder für den Blog-Benutzer erstellt worden sein' );
 
 		// Delete the extra fields by querying the posts.
-		$user_fields = get_posts( array(
-			'post_type' => Extra_Fields::USER_POST_TYPE,
-			'posts_per_page' => -1,
-		) );
+		$user_fields = get_posts(
+			array(
+				'post_type'      => Extra_Fields::USER_POST_TYPE,
+				'posts_per_page' => -1,
+			)
+		);
 		foreach ( $user_fields as $user_field ) {
 			\wp_delete_post( $user_field->ID, true );
 		}

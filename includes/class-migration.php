@@ -816,11 +816,13 @@ class Migration {
 		// Add a default extra field for each user.
 		foreach ( $users as $user ) {
 			// check if the extra field already exists.
-			$extra_field = get_posts( array(
-				'post_type' => Extra_Fields::USER_POST_TYPE,
-				'author' => $user->ID,
-				'posts_per_page' => 1,
-			) );
+			$extra_field = get_posts(
+				array(
+					'post_type'      => Extra_Fields::USER_POST_TYPE,
+					'author'         => $user->ID,
+					'posts_per_page' => 1,
+				)
+			);
 
 			if ( $extra_field ) {
 				continue;
@@ -838,11 +840,13 @@ class Migration {
 		}
 
 		// Add a default extra field for the blog user.
-		$extra_field = get_posts( array(
-			'post_type' => Extra_Fields::BLOG_POST_TYPE,
-			'author' => 0,
-			'posts_per_page' => 1,
-		) );
+		$extra_field = get_posts(
+			array(
+				'post_type'      => Extra_Fields::BLOG_POST_TYPE,
+				'author'         => 0,
+				'posts_per_page' => 1,
+			)
+		);
 
 		if ( $extra_field ) {
 			return;
