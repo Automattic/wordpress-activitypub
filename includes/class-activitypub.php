@@ -49,6 +49,8 @@ class Activitypub {
 
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
 		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
+		\add_filter( 'pre_option_activitypub_actor_mode', array( self::class, 'pre_get_option' ) );
+
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
 
 		// Register several post_types.
@@ -381,6 +383,29 @@ class Activitypub {
 		}
 
 		return $args;
+	}
+
+	/**
+	 * Pre-get option filter for the Actor-Mode.
+	 *
+	 * @param string|false $pre The pre-get option value.
+	 *
+	 * @return string|false The actor mode or false if it should not be filtered.
+	 */
+	public static function pre_get_option( $pre ) {
+		if ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) && ACTIVITYPUB_SINGLE_USER_MODE ) {
+			return ACTIVITYPUB_BLOG_MODE;
+		}
+
+		if ( \defined( 'ACTIVITYPUB_DISABLE_USER' ) && ACTIVITYPUB_DISABLE_USER ) {
+			return ACTIVITYPUB_BLOG_MODE;
+		}
+
+		if ( \defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) && ACTIVITYPUB_DISABLE_BLOG_USER ) {
+			return ACTIVITYPUB_ACTOR_MODE;
+		}
+
+		return $pre;
 	}
 
 	/**
@@ -753,6 +778,17 @@ class Activitypub {
 				'single'            => true,
 				'default'           => array(),
 				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
+			)
+		);
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_moved_to',
+			array(
+				'type'              => 'string',
+				'description'       => 'The new URL of the user.',
+				'single'            => true,
+				'sanitize_callback' => 'sanitize_url',
 			)
 		);
 

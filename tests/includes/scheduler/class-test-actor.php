@@ -179,9 +179,10 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 		$post          = $this->get_latest_outbox_item( $activitpub_id );
 
-		$activity_object = \json_decode( $post->post_content, true );
-		$this->assertArrayHasKey( $field, $activity_object );
-		$this->assertSame( $expected, $activity_object[ $field ] );
+		$activity = \json_decode( $post->post_content, true );
+		$this->assertArrayHasKey( 'object', $activity );
+		$this->assertArrayHasKey( $field, $activity['object'] );
+		$this->assertSame( $expected, $activity['object'][ $field ] );
 	}
 
 	/**
@@ -216,9 +217,10 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activitpub_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 		$post          = $this->get_latest_outbox_item( $activitpub_id );
 
-		$activity_object = \json_decode( $post->post_content, true );
-		$this->assertArrayHasKey( $field, $activity_object );
-		$this->assertStringContainsString( $value, $activity_object[ $field ] );
+		$activity = \json_decode( $post->post_content, true );
+		$this->assertArrayHasKey( 'object', $activity );
+		$this->assertArrayHasKey( $field, $activity['object'] );
+		$this->assertStringContainsString( $value, $activity['object'][ $field ] );
 	}
 
 	/**

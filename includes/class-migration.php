@@ -753,7 +753,7 @@ class Migration {
 			return;
 		}
 
-		$activity = $transformer->to_object();
+		$activity = $transformer->to_activity( $activity_type );
 		if ( ! $activity || \is_wp_error( $activity ) ) {
 			return;
 		}
@@ -767,7 +767,7 @@ class Migration {
 			}
 		}
 
-		$post_id = Outbox::add( $activity, $activity_type, $user_id, $visibility );
+		$post_id = Outbox::add( $activity, $user_id, $visibility );
 
 		// Immediately set to publish, no federation needed.
 		\wp_publish_post( $post_id );

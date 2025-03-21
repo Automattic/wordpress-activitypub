@@ -113,10 +113,10 @@ class Test_Follow extends WP_UnitTestCase {
 		$this->assertEquals( 'Accept', $activity_type );
 		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, $visibility );
 
-		$this->assertEquals( 'Follow', $activity_json['type'] );
-		$this->assertEquals( 'https://example.com/user/1', $activity_json['object'] );
-		$this->assertEquals( array( $actor ), $activity_json['to'] );
-		$this->assertEquals( $actor, $activity_json['actor'] );
+		$this->assertEquals( 'Follow', $activity_json['object']['type'] );
+		$this->assertEquals( 'https://example.com/user/1', $activity_json['object']['object'] );
+		$this->assertEquals( array( $actor ), $activity_json['object']['to'] );
+		$this->assertEquals( $actor, $activity_json['object']['actor'] );
 
 		// Clean up.
 		wp_delete_post( $outbox_post->ID, true );

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Changelog entries: allow automating changelog entry generation from forks as well.
