@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Use `JSON_UNESCAPED_SLASHES` because Mastodon seems to have problems with encoded URLs.

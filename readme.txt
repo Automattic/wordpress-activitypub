@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 6.4
 Tested up to: 6.7
-Stable tag: 5.4.1
+Stable tag: 5.5.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -128,6 +128,43 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 5.5.0 - 2025-03-19
+#### Added
+- Added "Enable Mastodon Apps" and "Event Bridge for ActivityPub" to the recommended plugins section.
+- Added Constants to the Site-Health debug informations.
+- Development environment: add Changelogger tool to environment dependencies.
+- Development environment: allow contributors to specify a changelog entry directly from their Pull Request description.
+- Documentation for migrating from a Mastodon instance to WordPress.
+- Support for sending Activities to ActivityPub Relays, to improve discoverability of public content.
+
+#### Changed
+- Documentation: expand Pull Request process docs, and mention the new changelog process as well as the updated release process.
+- Don't redirect @-name URLs to trailing slashed versions
+- Improved and simplified Query code.
+- Improved readability for actor mode setting.
+- Improved title case for NodeInfo settings.
+- Introduced utility function to determine actor type based on user ID.
+- Outbox items only get sent to followers when there are any.
+- Restricted modifications to settings if they are predefined as constants.
+- The Welcome page now uses WordPress's Settings API and the classic design of the WP Admin.
+- Uses two-digit version numbers in Outbox and NodeInfo responses.
+
+#### Removed
+- Our version of `sanitize_url()` was unused—use Core's `sanitize_url()` instead.
+
+#### Fixed
+- Ensured that Query::get_object_id() returns an ID instead of an Object.
+- Fix a fatal error in the Preview when a post contains no (hash)tags.
+- Fixed an issue with the Content Carousel and Blog Posts block: https://github.com/Automattic/wp-calypso/issues/101220
+- Fixed default value for `activitypub_authorized_fetch` option.
+- Follow-Me blocks now show the correct avatar on attachment pages.
+- Images with the correct aspect ratio no longer get sent through the crop step again.
+- No more PHP warnings when a header image gets cropped.
+- PHP warnings when trying to process empty tags or image blocks without ID attributes.
+- Properly re-added support for `Update` and `Delete` `Announce`ments.
+- Updates to certain user meta fields did not trigger an Update activity.
+- When viewing Reply Contexts, we'll now attribute the post to the blog user when the post author is disabled.
 
 ### 5.4.1 - 2025-03-04
 #### Fixed

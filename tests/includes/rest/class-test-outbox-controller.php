@@ -609,7 +609,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertSame( 1, (int) $data['totalItems'] );
 		$this->assertCount( 1, $data['orderedItems'] );
-		$this->assertSame( 'https://example.org/activity/1', $data['orderedItems'][0]['object']['id'] );
+		$this->assertSame( 'https://example.org/note/1', $data['orderedItems'][0]['object']['id'] );
 
 		// Test blog outbox only returns blog actor type.
 		$request  = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/0/outbox', ACTIVITYPUB_REST_NAMESPACE ) );
@@ -698,7 +698,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertSame( 1, (int) $data['totalItems'] );
 		$this->assertCount( 1, $data['orderedItems'] );
-		$this->assertSame( 'https://example.org/activity/1', $data['orderedItems'][0]['object']['id'] );
+		$this->assertSame( 'https://example.org/note/1', $data['orderedItems'][0]['object']['id'] );
 
 		// Test as privileged user.
 		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );

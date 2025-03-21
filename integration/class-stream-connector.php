@@ -130,41 +130,6 @@ class Stream_Connector extends \WP_Stream\Connector {
 	}
 
 	/**
-	 * Callback for activitypub_send_to_inboxes.
-	 *
-	 * @param array  $result         The result of the remote post request.
-	 * @param string $inbox          The inbox URL.
-	 * @param string $json           The ActivityPub Activity JSON.
-	 * @param int    $actor_id       The actor ID.
-	 * @param int    $outbox_item_id The Outbox item ID.
-	 */
-	public function callback_activitypub_sent_to_inbox( $result, $inbox, $json, $actor_id, $outbox_item_id ) {
-		if ( ! \is_wp_error( $result ) ) {
-			return;
-		}
-
-		$outbox_item = \get_post( $outbox_item_id );
-		$outbox_data = $this->prepare_outbox_data_for_response( $outbox_item );
-
-		$this->log(
-			// translators: 1: post title.
-			sprintf( __( 'Outbox error for "%1$s"', 'activitypub' ), $outbox_data['title'] ),
-			array(
-				'error' => wp_json_encode(
-					array(
-						'inbox'   => $inbox,
-						'code'    => $result->get_error_code(),
-						'message' => $result->get_error_message(),
-					)
-				),
-			),
-			$outbox_data['id'],
-			$outbox_data['type'],
-			'processed'
-		);
-	}
-
-	/**
 	 * Callback for activitypub_outbox_processing_complete.
 	 *
 	 * @param array  $inboxes        The inboxes.

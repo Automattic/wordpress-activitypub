@@ -51,6 +51,13 @@ class Settings_Fields {
 			'activitypub_settings'
 		);
 
+		add_settings_section(
+			'activitypub_server',
+			__( 'Server', 'activitypub' ),
+			'__return_empty_string',
+			'activitypub_settings'
+		);
+
 		// Add settings fields.
 		add_settings_field(
 			'activitypub_actor_mode',
@@ -137,7 +144,16 @@ class Settings_Fields {
 			__( 'Blocklist', 'activitypub' ),
 			array( self::class, 'render_blocklist_field' ),
 			'activitypub_settings',
-			'activitypub_general'
+			'activitypub_server'
+		);
+
+		add_settings_field(
+			'activitypub_relays',
+			__( 'Relays', 'activitypub' ),
+			array( self::class, 'render_relays_field' ),
+			'activitypub_settings',
+			'activitypub_server',
+			array( 'label_for' => 'activitypub_relays' )
 		);
 
 		add_settings_field(
@@ -145,7 +161,7 @@ class Settings_Fields {
 			__( 'Outbox Retention Period', 'activitypub' ),
 			array( self::class, 'render_outbox_purge_days_field' ),
 			'activitypub_settings',
-			'activitypub_general',
+			'activitypub_server',
 			array( 'label_for' => 'activitypub_outbox_purge_days' )
 		);
 
@@ -215,48 +231,63 @@ class Settings_Fields {
 	 * Render actor mode field.
 	 */
 	public static function render_actor_mode_field() {
+		$disabled = ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) && ACTIVITYPUB_SINGLE_USER_MODE ) ||
+						( \defined( 'ACTIVITYPUB_DISABLE_USER' ) && ACTIVITYPUB_DISABLE_USER ) ||
+						( \defined( 'ACTIVITYPUB_DISABLE_BLOG_USER' ) && ACTIVITYPUB_DISABLE_BLOG_USER );
+
+		if ( $disabled ) :
+			?>
+			<p class="description">
+				<?php esc_html_e( '⚠ This setting is defined through server configuration by your blog&#8217;s administrator.', 'activitypub' ); ?>
+			</p>
+			<?php
+			return;
+		endif;
+
 		$value = get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 		?>
-		<p>
-			<label>
-				<input type="radio" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_ACTOR_MODE ); ?>" <?php checked( ACTIVITYPUB_ACTOR_MODE, $value ); ?> />
-				<strong><?php esc_html_e( 'Author Profiles Only', 'activitypub' ); ?></strong>
-			</label>
-		</p>
-		<p class="description">
-			<?php echo wp_kses( __( 'Every author on this blog (with the <code>activitypub</code> capability) gets their own ActivityPub profile.', 'activitypub' ), array( 'code' => array() ) ); ?>
-			<strong>
-			<?php
-			echo wp_kses(
-				sprintf(
-					// translators: %s is a URL.
-					__( 'You can add/remove the capability in the <a href="%s">user settings.</a>', 'activitypub' ),
-					admin_url( '/users.php' )
-				),
-				array( 'a' => array( 'href' => array() ) )
-			);
-			?>
-			</strong>
-			<?php echo wp_kses( __( 'Select all the users you want to update, choose the method from the drop-down list and click on the "Apply" button.', 'activitypub' ), array( 'code' => array() ) ); ?>
-		</p>
-		<p>
-			<label>
-				<input type="radio" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_BLOG_MODE ); ?>" <?php checked( ACTIVITYPUB_BLOG_MODE, $value ); ?> />
-				<strong><?php esc_html_e( 'Blog profile only', 'activitypub' ); ?></strong>
-			</label>
-		</p>
-		<p class="description">
-			<?php esc_html_e( 'Your blog becomes a single ActivityPub profile and every post will be published under this profile instead of the individual author profiles.', 'activitypub' ); ?>
-		</p>
-		<p>
-			<label>
-				<input type="radio" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_ACTOR_AND_BLOG_MODE ); ?>" <?php checked( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, $value ); ?> />
-				<strong><?php esc_html_e( 'Both author and blog profiles', 'activitypub' ); ?></strong>
-			</label>
-		</p>
-		<p class="description">
-			<?php esc_html_e( "This combines both modes. Users can be followed individually, while following the blog will show boosts of individual user's posts.", 'activitypub' ); ?>
-		</p>
+		<fieldset class="actor-mode-selection">
+			<div class="row">
+				<input type="radio" id="actor-mode" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_ACTOR_MODE ); ?>" <?php checked( ACTIVITYPUB_ACTOR_MODE, $value ); ?> />
+				<div>
+					<label for="actor-mode"><strong><?php esc_html_e( 'Author Profiles Only', 'activitypub' ); ?></strong></label>
+					<p class="description">
+						<?php echo wp_kses( __( 'Every author on this blog (with the <code>activitypub</code> capability) gets their own ActivityPub profile.', 'activitypub' ), array( 'code' => array() ) ); ?>
+						<strong>
+							<?php
+							echo wp_kses(
+								sprintf(
+								// translators: %s is a URL.
+									__( 'You can add/remove the capability in the <a href="%s">user settings.</a>', 'activitypub' ),
+									admin_url( '/users.php' )
+								),
+								array( 'a' => array( 'href' => array() ) )
+							);
+							?>
+						</strong>
+						<?php echo wp_kses( __( 'Select all the users you want to update, choose the method from the drop-down list and click on the "Apply" button.', 'activitypub' ), array( 'code' => array() ) ); ?>
+					</p>
+				</div>
+			</div>
+			<div class="row">
+				<input type="radio" id="blog-mode" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_BLOG_MODE ); ?>" <?php checked( ACTIVITYPUB_BLOG_MODE, $value ); ?> />
+				<div>
+					<label for="blog-mode"><strong><?php esc_html_e( 'Blog profile only', 'activitypub' ); ?></strong></label>
+					<p class="description">
+						<?php esc_html_e( 'Your blog becomes a single ActivityPub profile and every post will be published under this profile instead of the individual author profiles.', 'activitypub' ); ?>
+					</p>
+				</div>
+			</div>
+			<div class="row">
+				<input type="radio" id="actor-blog-mode" name="activitypub_actor_mode" value="<?php echo esc_attr( ACTIVITYPUB_ACTOR_AND_BLOG_MODE ); ?>" <?php checked( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, $value ); ?> />
+				<div>
+					<label for="actor-blog-mode"><strong><?php esc_html_e( 'Both author and blog profiles', 'activitypub' ); ?></strong></label>
+					<p class="description">
+						<?php esc_html_e( "This combines both modes. Users can be followed individually, while following the blog will show boosts of individual user's posts.", 'activitypub' ); ?>
+					</p>
+			</div>
+		</div>
+	</fieldset>
 		<?php
 	}
 
@@ -485,7 +516,7 @@ class Settings_Fields {
 	 * Render authorized fetch field.
 	 */
 	public static function render_authorized_fetch_field() {
-		$value = get_option( 'activitypub_authorized_fetch', '1' );
+		$value = get_option( 'activitypub_authorized_fetch', '0' );
 		?>
 		<p>
 			<label>
@@ -498,6 +529,37 @@ class Settings_Fields {
 		</p>
 		<p class="description">
 			<?php \esc_html_e( '⚠ Secure mode does not hide the HTML representations of public posts and profiles. While HTML is a less consistent format (that potentially changes often) compared to first-class ActivityPub representations or the REST API, it still poses a potential risk for content scraping.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render relays field.
+	 */
+	public static function render_relays_field() {
+		$value = get_option( 'activitypub_relays', array() );
+		?>
+		<textarea
+			id="activitypub_relays"
+			name="activitypub_relays"
+			class="large-text"
+			cols="50"
+			rows="5"
+		><?php echo esc_textarea( implode( PHP_EOL, $value ) ); ?></textarea>
+		<p class="description">
+			<?php echo wp_kses( __( 'A <strong>Fediverse-Relay</strong> distributes content across instances, expanding reach, engagement, and discoverability, especially for smaller instances.', 'activitypub' ), 'default' ); ?>
+		</p>
+		<p class="description">
+			<?php
+			echo wp_kses(
+				__( 'Enter the <strong>Inbox-URLs</strong> (e.g. <code>https://relay.example.com/inbox</code>) of the relays you want to use, one per line.', 'activitypub' ),
+				array(
+					'strong' => array(),
+					'code'   => array(),
+				)
+			);
+			?>
+			<?php echo wp_kses( __( 'You can find a list of public relays on <a href="https://relaylist.com/" target="_blank">relaylist.com</a> or on <a href="https://fedidb.org/software/activity-relay" target="_blank">FediDB</a>.', 'activitypub' ), 'default' ); ?>
 		</p>
 		<?php
 	}
