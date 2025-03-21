@@ -367,7 +367,7 @@ class Activitypub {
 		}
 
 		// Check if comment has an avatar.
-		$avatar = self::get_avatar_url( $id_or_email->comment_ID );
+		$avatar = \get_comment_meta( $id_or_email->comment_ID, 'avatar_url', true );
 
 		if ( $avatar ) {
 			if ( empty( $args['class'] ) ) {
@@ -406,20 +406,6 @@ class Activitypub {
 		}
 
 		return $pre;
-	}
-
-	/**
-	 * Function to retrieve Avatar URL if stored in meta.
-	 *
-	 * @param int|\WP_Comment $comment The comment ID or object.
-	 *
-	 * @return string The Avatar URL.
-	 */
-	public static function get_avatar_url( $comment ) {
-		if ( \is_numeric( $comment ) ) {
-			$comment = \get_comment( $comment );
-		}
-		return \get_comment_meta( $comment->comment_ID, 'avatar_url', true );
 	}
 
 	/**
