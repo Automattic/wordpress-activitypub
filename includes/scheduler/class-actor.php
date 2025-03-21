@@ -131,6 +131,9 @@ class Actor {
 			return;
 		}
 
-		add_to_outbox( Actors::get_by_id( $user_id ), 'Update', $user_id );
+		$actor = Actors::get_by_id( $user_id );
+		$actor->set_updated( time() );
+
+		add_to_outbox( $actor, 'Update', $user_id );
 	}
 }
