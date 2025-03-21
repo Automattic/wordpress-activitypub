@@ -65,13 +65,12 @@ class Test_Delete extends \WP_UnitTestCase {
 		self::factory()->comment->create_many(
 			5,
 			array(
-				'user_id'      => self::$user_id,
 				'author_url'   => get_author_posts_url( self::$user_id ),
 				'comment_meta' => array( 'protocol' => 'activitypub' ),
 			)
 		);
 
-		Delete::delete_interactions( self::$user_id );
+		Delete::delete_interactions( get_author_posts_url( self::$user_id ) );
 
 		$this->assertEmpty( get_comments( array( 'user_id' => self::$user_id ) ) );
 	}

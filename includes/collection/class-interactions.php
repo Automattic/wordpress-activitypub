@@ -180,10 +180,10 @@ class Interactions {
 		}
 
 		$args = array(
-			'nopaging'           => true,
-			'comment_author_url' => $actor,
+			'nopaging'   => true,
+			'author_url' => $actor,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'         => array(
+			'meta_query' => array(
 				array(
 					'key'   => 'protocol',
 					'value' => 'activitypub',
