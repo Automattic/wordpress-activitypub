@@ -161,6 +161,7 @@ jobs:
           PR_MESSAGE: '${{ steps.check-pr-body.outputs.message }}'
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.API_TOKEN_GITHUB }}
           script: |
             const { repo: { owner, repo }, payload : { pull_request : { number, head : { ref, repo: head_repo } } } } = context;
 
