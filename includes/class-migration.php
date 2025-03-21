@@ -810,12 +810,12 @@ class Migration {
 			)
 		);
 
-		$title   = __( 'Powered by', 'activitypub' );
-		$content = __( 'WordPress', 'activitypub' );
+		$title   = \__( 'Powered by', 'activitypub' );
+		$content = 'WordPress';
 
 		// Add a default extra field for each user.
 		foreach ( $users as $user ) {
-			wp_insert_post(
+			\wp_insert_post(
 				array(
 					'post_type'    => Extra_Fields::USER_POST_TYPE,
 					'post_author'  => $user->ID,
@@ -826,7 +826,7 @@ class Migration {
 			);
 		}
 
-		wp_insert_post(
+		\wp_insert_post(
 			array(
 				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
 				'post_author'  => 0,
