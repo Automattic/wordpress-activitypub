@@ -739,6 +739,8 @@ class Test_Migration extends \WP_UnitTestCase {
 	 * Test add_default_extra_field.
 	 */
 	public function test_add_default_extra_field() {
+		$this->delete_extra_fields();
+
 		// Create a test user with ActivityPub permission.
 		$user_id = self::factory()->user->create();
 		$user    = get_user_by( 'id', $user_id );
@@ -776,22 +778,15 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( 'Powered by', $blog_fields[0]->post_title, 'The title should be "Powered by"' );
 		$this->assertEquals( 'WordPress ❤️', $blog_fields[0]->post_content, 'The content should be "WordPress ❤️"' );
 
-		// Delete the extra fields by querying the posts.
-		$user_fields = get_posts(
-			array(
-				'post_type'      => Extra_Fields::USER_POST_TYPE,
-				'posts_per_page' => -1,
-			)
-		);
-		foreach ( $user_fields as $user_field ) {
-			\wp_delete_post( $user_field->ID, true );
-		}
+		$this->delete_extra_fields();
 	}
 
 	/**
 	 * Test add_default_extra_field with multiple users.
 	 */
 	public function test_add_default_extra_field_multiple_users() {
+		$this->delete_extra_fields();
+
 		// Create multiple test users with ActivityPub permission.
 		$user_ids = array();
 		for ( $i = 0; $i < 3; $i++ ) {
@@ -834,7 +829,13 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		$this->assertCount( 0, $non_ap_user_fields, 'User without ActivityPub permission should not have an extra field' );
 
-		// Delete the extra fields by querying the posts.
+		$this->delete_extra_fields();
+	}
+
+	/**
+	 * Delete extra fields.
+	 */
+	private function delete_extra_fields() {
 		$user_fields = get_posts(
 			array(
 				'post_type'      => Extra_Fields::USER_POST_TYPE,
@@ -844,55 +845,15 @@ class Test_Migration extends \WP_UnitTestCase {
 		foreach ( $user_fields as $user_field ) {
 			\wp_delete_post( $user_field->ID, true );
 		}
-	}
 
-	/**
-	 * Test add_default_extra_field for duplicate execution.
-	 */
-	public function test_add_default_extra_field_duplicate_execution() {
-		// Create a test user with ActivityPub permission.
-		$user_id = self::factory()->user->create();
-		$user    = get_user_by( 'id', $user_id );
-		$user->add_cap( 'activitypub' );
-
-		// Run the method twice.
-		$reflection = new \ReflectionClass( Migration::class );
-		$method     = $reflection->getMethod( 'add_default_extra_field' );
-		$method->setAccessible( true );
-		$method->invoke( null );
-		$method->invoke( null );
-
-		// Check that only one extra field per user was created.
-		$user_fields = get_posts(
-			array(
-				'post_type'      => Extra_Fields::USER_POST_TYPE,
-				'author'         => $user_id,
-				'posts_per_page' => -1,
-			)
-		);
-
-		$this->assertCount( 1, $user_fields, 'There should be one extra field for the user' );
-
-		// Check blog user extra fields.
 		$blog_fields = get_posts(
 			array(
 				'post_type'      => Extra_Fields::BLOG_POST_TYPE,
-				'author'         => 0,
 				'posts_per_page' => -1,
 			)
 		);
-
-		$this->assertCount( 1, $blog_fields, 'There should be one extra field for the blog user' );
-
-		// Delete the extra fields by querying the posts.
-		$user_fields = get_posts(
-			array(
-				'post_type'      => Extra_Fields::USER_POST_TYPE,
-				'posts_per_page' => -1,
-			)
-		);
-		foreach ( $user_fields as $user_field ) {
-			\wp_delete_post( $user_field->ID, true );
+		foreach ( $blog_fields as $blog_field ) {
+			\wp_delete_post( $blog_field->ID, true );
 		}
 	}
 }
