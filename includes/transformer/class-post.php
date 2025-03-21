@@ -426,6 +426,16 @@ class Post extends Base {
 			}
 		}
 
+		if ( '1' === \get_option( 'activitypub_add_fediblog_hashtag', '0' ) ) {
+			\wp_insert_term( 'fediblog', 'post_tag' );
+
+			$tags[] = array(
+				'type' => 'Hashtag',
+				'href' => \esc_url( \get_tag_link( \get_term_by( 'name', 'fediblog', 'post_tag' )->term_id ) ),
+				'name' => esc_hashtag( '#FediBlog' ),
+			);
+		}
+
 		return \array_unique( $tags, SORT_REGULAR );
 	}
 

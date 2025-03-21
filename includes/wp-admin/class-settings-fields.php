@@ -123,6 +123,15 @@ class Settings_Fields {
 		);
 
 		add_settings_field(
+			'activitypub_add_fediblog_hashtag',
+			__( 'FediBlog', 'activitypub' ),
+			array( self::class, 'render_add_fediblog_hashtag_field' ),
+			'activitypub_settings',
+			'activitypub_general',
+			array( 'label_for' => 'activitypub_add_fediblog_hashtag' )
+		);
+
+		add_settings_field(
 			'activitypub_attribution_domains',
 			__( 'Attribution Domains', 'activitypub' ),
 			array( self::class, 'render_attribution_domains_field' ),
@@ -415,6 +424,21 @@ class Settings_Fields {
 			<label>
 				<input type="checkbox" id="activitypub_use_opengraph" name="activitypub_use_opengraph" value="1" <?php checked( '1', $value ); ?> />
 				<?php echo wp_kses( __( 'Automatically add <code>&lt;meta name="fediverse:creator" /&gt;</code> tags for Authors and the Blog-User. You can read more about the feature on the <a href="https://blog.joinmastodon.org/2024/07/highlighting-journalism-on-mastodon/" target="_blank">Mastodon Blog</a>.', 'activitypub' ), 'post' ); ?>
+			</label>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render add #FediBlog hashtag field.
+	 */
+	public static function render_add_fediblog_hashtag_field() {
+		$value = \get_option( 'activitypub_add_fediblog_hashtag', '0' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_add_fediblog_hashtag" name="activitypub_add_fediblog_hashtag" value="1" <?php checked( '1', $value ); ?> />
+				<?php echo wp_kses( __( 'Include the <code>#FediBlog</code> hashtag in every federated blog post to highlight long-form content and make it easier for users to discover.', 'activitypub' ), 'default' ); ?>
 			</label>
 		</p>
 		<?php

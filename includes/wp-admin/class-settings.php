@@ -111,6 +111,16 @@ class Settings {
 
 		\register_setting(
 			'activitypub',
+			'activitypub_add_fediblog_hashtag',
+			array(
+				'type'        => 'boolean',
+				'description' => \__( 'Include the <code>#FediBlog</code> hashtag in every federated blog post to highlight long-form content and make it easier for users to discover.', 'activitypub' ),
+				'default'     => '0',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
 			'activitypub_support_post_types',
 			array(
 				'type'         => 'string',
