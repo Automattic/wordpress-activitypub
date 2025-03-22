@@ -53,10 +53,12 @@ namespace Activitypub\Activity;
  * @method Base_Object set_id( string $id )                       Sets the object's unique global identifier.
  * @method Base_Object set_image( array $image )                  Sets the image property of the object.
  * @method Base_Object set_name( string $name )                   Sets the natural language name of the object.
+ * @method Base_Object set_origin( string $origin )               Sets the origin property of the object.
  * @method Base_Object set_published( string $published )         Sets the date and time the object was published in ISO 8601 format.
  * @method Base_Object set_sensitive( bool $sensitive )           Sets the sensitive property of the object.
  * @method Base_Object set_summary( string $summary )             Sets the natural language summary of the object.
  * @method Base_Object set_summary_map( array|null $summary_map ) Sets the summary property of the object.
+ * @method Base_Object set_target( string $target )               Sets the target property of the object.
  * @method Base_Object set_to( array|string $to )                 Sets the primary recipients of the object.
  * @method Base_Object set_type( string $type )                   Sets the type of the object.
  * @method Base_Object set_updated( string $updated )             Sets the date and time the object was updated in ISO 8601 format.

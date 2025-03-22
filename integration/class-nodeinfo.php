@@ -24,7 +24,7 @@ class Nodeinfo {
 		\add_filter( 'nodeinfo_data', array( self::class, 'add_nodeinfo_data' ), 10, 2 );
 		\add_filter( 'nodeinfo2_data', array( self::class, 'add_nodeinfo2_data' ) );
 
-		\add_filter( 'wellknown_nodeinfo_data', array( self::class, 'add_wellknown_nodeinfo_data' ), 10, 2 );
+		\add_filter( 'wellknown_nodeinfo_data', array( self::class, 'add_wellknown_nodeinfo_data' ) );
 	}
 
 	/**
@@ -45,8 +45,8 @@ class Nodeinfo {
 
 		$nodeinfo['usage']['users'] = array(
 			'total'          => get_total_users(),
-			'activeMonth'    => get_active_users( '1 month ago' ),
-			'activeHalfyear' => get_active_users( '6 month ago' ),
+			'activeMonth'    => get_active_users(),
+			'activeHalfyear' => get_active_users( 6 ),
 		);
 
 		return $nodeinfo;
@@ -64,8 +64,8 @@ class Nodeinfo {
 
 		$nodeinfo['usage']['users'] = array(
 			'total'          => get_total_users(),
-			'activeMonth'    => get_active_users( '1 month ago' ),
-			'activeHalfyear' => get_active_users( '6 month ago' ),
+			'activeMonth'    => get_active_users(),
+			'activeHalfyear' => get_active_users( 6 ),
 		);
 
 		return $nodeinfo;

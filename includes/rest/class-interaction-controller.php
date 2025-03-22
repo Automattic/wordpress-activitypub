@@ -61,7 +61,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 	 */
 	public function get_item( $request ) {
 		$uri          = $request->get_param( 'uri' );
-		$redirect_url = null;
+		$redirect_url = '';
 		$object       = Http::get_remote_object( $uri );
 
 		if ( \is_wp_error( $object ) || ! isset( $object['type'] ) ) {

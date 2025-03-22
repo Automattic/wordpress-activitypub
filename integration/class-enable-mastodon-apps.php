@@ -43,8 +43,8 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ) );
 		\add_filter( 'mastodon_api_statuses', array( self::class, 'api_statuses_external' ), 10, 2 );
 		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 3 );
-		\add_action( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
-		\add_action( 'mastodon_api_submit_status_text', array( Mention::class, 'the_content' ), 10, 2 );
+		\add_filter( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
+		\add_filter( 'mastodon_api_submit_status_text', array( Mention::class, 'the_content' ) );
 	}
 
 	/**

@@ -801,7 +801,6 @@ function set_wp_object_state( $wp_object, $state ) {
 		 * Allow plugins to mark WordPress objects as federated.
 		 *
 		 * @param \WP_Comment|\WP_Post $wp_object The WordPress object.
-		 * @param string               $state     The state of the object.
 		 */
 		\apply_filters( 'activitypub_mark_wp_object_as_federated', $wp_object );
 	}
@@ -825,6 +824,7 @@ function get_wp_object_state( $wp_object ) {
 		/**
 		 * Allow plugins to get the federation state of a WordPress object.
 		 *
+		 * @param false                $state     The state of the object.
 		 * @param \WP_Comment|\WP_Post $wp_object The WordPress object.
 		 */
 		return \apply_filters( 'activitypub_get_wp_object_state', false, $wp_object );
@@ -862,8 +862,9 @@ function get_post_type_description( $post_type ) {
 	/**
 	 * Allow plugins to get the description of a post type.
 	 *
-	 * @param string        $description The description of the post type.
-	 * @param \WP_Post_Type $post_type   The post type object.
+	 * @param string        $description    The description of the post type.
+	 * @param string        $post_type_name The post type name.
+	 * @param \WP_Post_Type $post_type      The post type object.
 	 */
 	return apply_filters( 'activitypub_post_type_description', $description, $post_type->name, $post_type );
 }

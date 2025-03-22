@@ -20,7 +20,7 @@ class Like {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_like', array( self::class, 'handle_like' ), 10, 3 );
+		\add_action( 'activitypub_inbox_like', array( self::class, 'handle_like' ), 10, 2 );
 		\add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ) );
 	}
 
