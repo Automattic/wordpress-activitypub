@@ -383,16 +383,16 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$object = $this->get_dummy_activity_object();
 		$object->set_content( 'Original content' );
 
-		// Create an Update activity
+		// Create an Update activity.
 		$id = \Activitypub\add_to_outbox( $object, 'Update', 1 );
 		$this->assertNotFalse( $id );
 
-		// Get the activity from the outbox
+		// Get the activity from the outbox.
 		$activity = Outbox::get_activity( $id );
 		$this->assertNotInstanceOf( \WP_Error::class, $activity );
 
-		// Verify the updated attribute is set and matches the post's modified date
-		$post = get_post( $id );
+		// Verify the updated attribute is set and matches the post's modified date.
+		$post             = get_post( $id );
 		$expected_updated = gmdate( 'Y-m-d H:i:s', strtotime( $post->post_modified ) );
 		$this->assertEquals( $expected_updated, $activity->get_updated() );
 
