@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+OrderedCollection and OrderedCollectionPage behave closer to spec now.

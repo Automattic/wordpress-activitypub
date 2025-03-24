@@ -12,6 +12,7 @@ use Activitypub\Signature;
 /**
  * Test class for Signature Verification.
  *
+ * @group rest
  * @coversDefaultClass \Activitypub\Signature
  */
 class Test_Signature_Verification extends \WP_UnitTestCase {

@@ -62,9 +62,9 @@ class Activity_Object extends Base {
 		/**
 		 * Filter the mentions in the post content.
 		 *
-		 * @param array    $mentions The mentions.
-		 * @param string   $content  The post content.
-		 * @param \WP_Post $post     The post object.
+		 * @param array                          $mentions The mentions.
+		 * @param string                         $content  The post content.
+		 * @param \Activitypub\Activity\Activity $item     The Activity object.
 		 *
 		 * @return array The filtered mentions.
 		 */

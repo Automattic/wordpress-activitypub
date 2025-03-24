@@ -7,8 +7,9 @@
 
 namespace Activitypub\Rest;
 
-use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
+
+use function Activitypub\get_context;
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -69,7 +70,7 @@ class Moderators_Controller extends \WP_REST_Controller {
 		$actors = apply_filters( 'activitypub_rest_moderators', $actors );
 
 		$response = array(
-			'@context'     => Actor::JSON_LD_CONTEXT,
+			'@context'     => get_context(),
 			'id'           => get_rest_url_by_path( 'collections/moderators' ),
 			'type'         => 'OrderedCollection',
 			'orderedItems' => $actors,

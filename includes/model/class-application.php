@@ -120,7 +120,7 @@ class Application extends Actor {
 	/**
 	 * Get the User-Icon.
 	 *
-	 * @return array The User-Icon.
+	 * @return string[] The User-Icon.
 	 */
 	public function get_icon() {
 		// Try site icon first.
@@ -154,7 +154,7 @@ class Application extends Actor {
 	/**
 	 * Get the User-Header-Image.
 	 *
-	 * @return array|null The User-Header-Image.
+	 * @return string[]|null The User-Header-Image.
 	 */
 	public function get_header_image() {
 		if ( \has_header_image() ) {
@@ -220,7 +220,7 @@ class Application extends Actor {
 	/**
 	 * Returns the public key.
 	 *
-	 * @return array The public key.
+	 * @return string[] The public key.
 	 */
 	public function get_public_key() {
 		return array(
