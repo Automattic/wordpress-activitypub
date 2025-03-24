@@ -298,4 +298,27 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Clean up.
 		\wp_delete_post( $blog_post_id, true );
 	}
+
+	/**
+	 * Test that actor profile updates set the updated attribute.
+	 *
+	 * @covers ::schedule_profile_update
+	 */
+	public function test_actor_profile_update_sets_updated_attribute() {
+		// Update the user's display name to trigger a profile update.
+		self::factory()->user->update_object( self::$user_id, array( 'display_name' => 'Updated Display Name' ) );
+
+		$activitpub_id = Actors::get_by_id( self::$user_id )->get_id();
+		$post          = $this->get_latest_outbox_item( $activitpub_id );
+
+		// Verify the activity type is Update.
+		$this->assertEquals( 'Update', \get_post_meta( $post->ID, '_activitypub_activity_type', true ) );
+
+		// Get the activity from the outbox.
+		$activity = \json_decode( $post->post_content, true );
+
+		// Verify the updated attribute is set and matches the post's modified date.
+		$expected_updated = gmdate( 'Y-m-d H:i:s', strtotime( $post->post_modified ) );
+		$this->assertEquals( $expected_updated, $activity['updated'] );
+	}
 }

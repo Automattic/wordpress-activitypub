@@ -8,6 +8,7 @@ _site
 package-lock.json
 composer.lock
 .DS_Store
+.cursor
 .idea/
 .php_cs.cache
 .vscode/settings.json
