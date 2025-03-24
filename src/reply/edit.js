@@ -1,7 +1,7 @@
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
 import { TextControl, PanelBody, ToggleControl, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { useEffect, useState, useRef } from '@wordpress/element';
+import { useEffect, useState, useRef, useCallback } from '@wordpress/element';
 import { useDebounce } from '@wordpress/compose';
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
@@ -23,7 +23,12 @@ import { useDispatch } from '@wordpress/data';
 // Help text messages for different reply states.
 const HELP_TEXT = {
 	default: __( 'Enter the URL of a post from the Fediverse (Mastodon, Pixelfed, etc.) that you want to reply to.', 'activitypub' ),
-	checking: __( 'Checking if this URL supports ActivityPub replies...', 'activitypub' ),
+	checking: () => (
+		<>
+			<Spinner />
+			{ ' ' + __( 'Checking if this URL supports ActivityPub replies...', 'activitypub' ) }
+		</>
+	),
 	valid: __( 'The author will be notified of your response.', 'activitypub' ),
 	error: __( 'This URL probably won\'t receive your reply. We\'ll still try.', 'activitypub' ),
 };
@@ -54,13 +59,28 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	const urlInputRef = useRef();
 	const iframeRef = useRef();
 	const iframeContainerRef = useRef();
+	// Use a ref to track optimisticEmbed without causing re-renders
+	const optimisticEmbedRef = useRef( optimisticEmbed );
+
+	// Update the ref when optimisticEmbed changes
+	useEffect( () => {
+		optimisticEmbedRef.current = optimisticEmbed;
+	}, [ optimisticEmbed ] );
+
+	// Create a stable callback that uses the ref value
+	const setIsValidEmbedAndMaybeEnableEmbed = useCallback( ( isValid ) => {
+		setIsValidEmbed( isValid );
+		if ( optimisticEmbedRef.current && isValid ) {
+			setAttributes( { embedPost: true } );
+		}
+	}, [ setAttributes ] );
 
 	/**
 	 * Check if a URL is an ActivityPub URL.
 	 *
 	 * @param {string} urlToCheck The URL to check.
 	 */
-	const checkUrl = async ( urlToCheck, optimisticEmbed ) => {
+	const checkUrl = async ( urlToCheck ) => {
 		// Don't check empty URLs.
 		if ( ! urlToCheck ) {
 			setIsCheckingEmbed( false );
@@ -72,6 +92,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 
 		try {
 			setIsCheckingEmbed( true );
+			setHelpText( HELP_TEXT.checking() );
 
 			const response = await apiFetch( {
 				path: addQueryArgs( `${ namespace }/url/validate`, {
@@ -79,22 +100,13 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 				} ),
 			} );
 
-			setIsValidEmbed( response.is_activitypub );
+			setIsValidEmbedAndMaybeEnableEmbed( response.is_activitypub );
 			setIsRealOembed( response.is_real_oembed );
 			setEmbedHtml( response.html || '' );
-			/**
-			 * Null at the start means that we're a new block, or an old block from before embeds were added.
-			 * In that case, we should set embedPost to true by default when we have a good result.
-			 * This will make the choice explicit when editing old posts, as a kind of upgrade, but which will otherwise be left alone.
-			 */
-			if ( optimisticEmbed ) {
-				setAttributes( { embedPost: true } );
-			}
 			setHelpText( HELP_TEXT.valid );
 		} catch ( error ) {
 			setIsValidEmbed( false );
 			setIsRealOembed( false );
-			setAttributes( { embedPost: false } );
 			setHelpText( HELP_TEXT.error );
 			setEmbedHtml( '' );
 		} finally {
@@ -108,12 +120,12 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	// Check URL when it changes.
 	useEffect( () => {
 		if ( url ) {
-			debouncedCheckUrl( url, optimisticEmbed );
+			debouncedCheckUrl( url );
 		}
-	}, [ url, optimisticEmbed ] );
+	}, [ url ] );
 
 	// Prepare the HTML content with auto-height script
-	const getEnhancedHtml = (html) => {
+	const getEnhancedHtml = ( html ) => {
 		return `
 			<!DOCTYPE html>
 			<html>
@@ -139,25 +151,25 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 
 	// Handle iframe load and resize events
 	const handleIframeLoad = () => {
-		if (!iframeRef.current) return;
+		if ( ! iframeRef.current ) return;
 
 		try {
 			// Initial height adjustment
 			adjustIframeHeight();
 
 			// Set up a timer to periodically check height (catches dynamic content changes)
-			const intervalId = setInterval(adjustIframeHeight, 1000);
+			const intervalId = setInterval( adjustIframeHeight, 1000 );
 
 			// Clean up interval on component unmount
-			return () => clearInterval(intervalId);
-		} catch (e) {
-			console.error('Error setting up iframe height adjustment:', e);
+			return () => clearInterval( intervalId );
+		} catch ( e ) {
+			console.error( 'Error setting up iframe height adjustment:', e );
 		}
 	};
 
 	// Function to adjust iframe height based on content
 	const adjustIframeHeight = () => {
-		if (!iframeRef.current) return;
+		if ( ! iframeRef.current ) return;
 
 		try {
 			const iframe = iframeRef.current;
@@ -167,13 +179,13 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 
 			try {
 				// Try to get the scrollHeight of the body
-				if (iframe.contentDocument && iframe.contentDocument.body) {
+				if ( iframe.contentDocument && iframe.contentDocument.body ) {
 					newHeight = iframe.contentDocument.body.scrollHeight;
-				} else if (iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.body) {
+				} else if ( iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.body ) {
 					newHeight = iframe.contentWindow.document.body.scrollHeight;
 				}
-			} catch (e) {
-				console.log('Could not access iframe content document:', e);
+			} catch ( e ) {
+				console.log( 'Could not access iframe content document:', e );
 				// This is expected in some cases due to same-origin policy
 			}
 
@@ -181,26 +193,26 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 			newHeight += 30;
 
 			// Update height state if it changed
-			if (newHeight !== iframeHeight) {
-				setIframeHeight(newHeight);
+			if ( newHeight !== iframeHeight ) {
+				setIframeHeight( newHeight );
 			}
-		} catch (e) {
-			console.error('Error adjusting iframe height:', e);
+		} catch ( e ) {
+			console.error( 'Error adjusting iframe height:', e );
 		}
 	};
 
 	// Set up iframe load handler
-	useEffect(() => {
-		if (iframeRef.current) {
-			iframeRef.current.addEventListener('load', handleIframeLoad);
+	useEffect( () => {
+		if ( iframeRef.current ) {
+			iframeRef.current.addEventListener( 'load', handleIframeLoad );
 
 			return () => {
-				if (iframeRef.current) {
-					iframeRef.current.removeEventListener('load', handleIframeLoad);
+				if ( iframeRef.current ) {
+					iframeRef.current.removeEventListener( 'load', handleIframeLoad );
 				}
 			};
 		}
-	}, [embedHtml]);
+	}, [ embedHtml ] );
 
 	/**
 	 * Handle embed toggle changes.
@@ -208,9 +220,9 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	 * @param {boolean} value - New embed toggle value.
 	 */
 	const onEmbedPostChange = ( value ) => {
-		// Every manual toggle indicates a preference about embedding we can default to.
-		setOptimisticEmbed( value );
 		setAttributes( { embedPost: value } );
+		// Explicitly setting this value implies an intent towards embedding the post.
+		setOptimisticEmbed( value );
 	};
 
 	const onKeyDown = ( event ) => {
@@ -248,18 +260,11 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 					/>
 				) }
 
-				{ isCheckingEmbed && (
-					<div className="activitypub-embed-container activitypub-embed-loading">
-						<Spinner />
-						<div>{ HELP_TEXT.checking }</div>
-					</div>
-				) }
-
 				{ isValidEmbed && attr.embedPost && embedHtml && (
 					<div className="activitypub-embed-container" style={{ pointerEvents: 'auto' }}>
 						{ isRealOembed ? (
 							<div
-								ref={iframeContainerRef}
+								ref={ iframeContainerRef }
 								contentEditable={ false }
 								onFocus={ ( e ) => e.stopPropagation() }
 								onClick={ ( e ) => e.stopPropagation() }
@@ -271,8 +276,8 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 								}}
 							>
 								<iframe
-									ref={iframeRef}
-									srcDoc={getEnhancedHtml(embedHtml)}
+									ref={ iframeRef }
+									srcDoc={ getEnhancedHtml( embedHtml ) }
 									style={{
 										position: 'absolute',
 										top: 0,
