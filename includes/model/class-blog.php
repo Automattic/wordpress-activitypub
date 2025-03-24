@@ -233,7 +233,7 @@ class Blog extends Actor {
 	/**
 	 * Get the User icon.
 	 *
-	 * @return array The User icon.
+	 * @return string[] The User icon.
 	 */
 	public function get_icon() {
 		// Try site_logo, falling back to site_icon, first.
@@ -267,7 +267,7 @@ class Blog extends Actor {
 	/**
 	 * Get the User-Header-Image.
 	 *
-	 * @return array|null The User-Header-Image.
+	 * @return string[]|null The User-Header-Image.
 	 */
 	public function get_image() {
 		$header_image = get_option( 'activitypub_header_image' );
@@ -352,7 +352,7 @@ class Blog extends Actor {
 	/**
 	 * Get the public key information.
 	 *
-	 * @return array The public key.
+	 * @return string[] The public key.
 	 */
 	public function get_public_key() {
 		return array(
@@ -414,7 +414,7 @@ class Blog extends Actor {
 	/**
 	 * Returns endpoints.
 	 *
-	 * @return array|null The endpoints.
+	 * @return string[]|null The endpoints.
 	 */
 	public function get_endpoints() {
 		$endpoints = null;
@@ -510,7 +510,7 @@ class Blog extends Actor {
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#Hashtag
 	 *
-	 * @return array The User - Hashtags.
+	 * @return string[] The User - Hashtags.
 	 */
 	public function get_tag() {
 		$hashtags = array();
@@ -547,7 +547,7 @@ class Blog extends Actor {
 	/**
 	 * Returns the website hosts allowed to credit this blog.
 	 *
-	 * @return array|null The attribution domains or null if not found.
+	 * @return string[]|null The attribution domains or null if not found.
 	 */
 	public function get_attribution_domains() {
 		return get_attribution_domains();
@@ -556,7 +556,7 @@ class Blog extends Actor {
 	/**
 	 * Returns the alsoKnownAs.
 	 *
-	 * @return array The alsoKnownAs.
+	 * @return string[] The alsoKnownAs.
 	 */
 	public function get_also_known_as() {
 		$also_known_as = array(

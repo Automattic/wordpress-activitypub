@@ -7,7 +7,7 @@
 
 namespace Activitypub\Tests\Rest;
 
-use Activitypub\Activity\Actor;
+use function Activitypub\get_context;
 
 /**
  * Test Moderators REST Endpoint.
@@ -64,7 +64,7 @@ class Test_Moderators_Controller extends \Activitypub\Tests\Test_REST_Controller
 
 		// Test response structure.
 		$this->assertArrayHasKey( '@context', $data );
-		$this->assertEquals( Actor::JSON_LD_CONTEXT, $data['@context'] );
+		$this->assertEquals( get_context(), $data['@context'] );
 		$this->assertArrayHasKey( 'id', $data );
 		$this->assertArrayHasKey( 'type', $data );
 		$this->assertEquals( 'OrderedCollection', $data['type'] );

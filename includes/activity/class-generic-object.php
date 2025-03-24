@@ -158,7 +158,7 @@ class Generic_Object {
 	 *
 	 * @param string $json The JSON string.
 	 *
-	 * @return Base_Object|\WP_Error An Object built from the JSON string or WP_Error when it's not a JSON string.
+	 * @return Generic_Object|\WP_Error An Object built from the JSON string or WP_Error when it's not a JSON string.
 	 */
 	public static function init_from_json( $json ) {
 		$array = \json_decode( $json, true );
@@ -263,10 +263,10 @@ class Generic_Object {
 		/**
 		 * Filter the array of the ActivityPub object.
 		 *
-		 * @param array       $array  The array of the ActivityPub object.
-		 * @param string      $class  The class of the ActivityPub object.
-		 * @param int         $id     The ID of the ActivityPub object.
-		 * @param Base_Object $object The ActivityPub object.
+		 * @param array          $array  The array of the ActivityPub object.
+		 * @param string         $class  The class of the ActivityPub object.
+		 * @param string         $id     The ID of the ActivityPub object.
+		 * @param Generic_Object $object The ActivityPub object.
 		 *
 		 * @return array The filtered array of the ActivityPub object.
 		 */
@@ -275,9 +275,9 @@ class Generic_Object {
 		/**
 		 * Filter the array of the ActivityPub object by class.
 		 *
-		 * @param array       $array  The array of the ActivityPub object.
-		 * @param int         $id     The ID of the ActivityPub object.
-		 * @param Base_Object $object The ActivityPub object.
+		 * @param array          $array  The array of the ActivityPub object.
+		 * @param string         $id     The ID of the ActivityPub object.
+		 * @param Generic_Object $object The ActivityPub object.
 		 *
 		 * @return array The filtered array of the ActivityPub object.
 		 */
@@ -293,10 +293,10 @@ class Generic_Object {
 	 */
 	public function to_json( $include_json_ld_context = true ) {
 		$array   = $this->to_array( $include_json_ld_context );
-		$options = \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT;
+		$options = \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT | \JSON_UNESCAPED_SLASHES;
 
 		/**
-		 * Options to be passed to json_encode()
+		 * Options to be passed to json_encode().
 		 *
 		 * @param int $options The current options flags.
 		 */

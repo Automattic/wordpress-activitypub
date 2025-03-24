@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
 use Activitypub\Transformer\Factory;
@@ -737,6 +738,7 @@ class Migration {
 	public static function add_default_settings() {
 		self::add_activitypub_capability();
 		self::add_notification_defaults();
+		self::add_default_extra_field();
 	}
 
 	/**
@@ -753,7 +755,7 @@ class Migration {
 			return;
 		}
 
-		$activity = $transformer->to_object();
+		$activity = $transformer->to_activity( $activity_type );
 		if ( ! $activity || \is_wp_error( $activity ) ) {
 			return;
 		}
@@ -767,7 +769,7 @@ class Migration {
 			}
 		}
 
-		$post_id = Outbox::add( $activity, $activity_type, $user_id, $visibility );
+		$post_id = Outbox::add( $activity, $user_id, $visibility );
 
 		// Immediately set to publish, no federation needed.
 		\wp_publish_post( $post_id );
@@ -796,6 +798,43 @@ class Migration {
 	private static function add_notification_defaults() {
 		\add_option( 'activitypub_mailer_new_follower', '1' );
 		\add_option( 'activitypub_mailer_new_dm', '1' );
+	}
+
+	/**
+	 * Add a default extra field for the user.
+	 */
+	private static function add_default_extra_field() {
+		$users = \get_users(
+			array(
+				'capability__in' => array( 'activitypub' ),
+			)
+		);
+
+		$title   = \__( 'Powered by', 'activitypub' );
+		$content = 'WordPress';
+
+		// Add a default extra field for each user.
+		foreach ( $users as $user ) {
+			\wp_insert_post(
+				array(
+					'post_type'    => Extra_Fields::USER_POST_TYPE,
+					'post_author'  => $user->ID,
+					'post_status'  => 'publish',
+					'post_title'   => $title,
+					'post_content' => $content,
+				)
+			);
+		}
+
+		\wp_insert_post(
+			array(
+				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+				'post_author'  => 0,
+				'post_status'  => 'publish',
+				'post_title'   => $title,
+				'post_content' => $content,
+			)
+		);
 	}
 
 	/**

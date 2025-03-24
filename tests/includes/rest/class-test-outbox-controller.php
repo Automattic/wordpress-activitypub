@@ -14,6 +14,7 @@ use Activitypub\Rest\Outbox_Controller;
 /**
  * Tests for Outbox REST API endpoint.
  *
+ * @group rest
  * @coversDefaultClass \Activitypub\Rest\Outbox_Controller
  */
 class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
@@ -119,7 +120,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$request  = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/%s/outbox', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
 		$response = rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
-		$schema   = ( new Outbox_Controller() )->get_collection_schema();
+		$schema   = ( new Outbox_Controller() )->get_item_schema();
 
 		$valid = \rest_validate_value_from_schema( $data, $schema );
 		$this->assertNotWPError( $valid, 'Response failed schema validation: ' . ( \is_wp_error( $valid ) ? $valid->get_error_message() : '' ) );
@@ -149,9 +150,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
-		$this->assertStringContainsString( 'page=1', $data['last'] );
-		$this->assertArrayNotHasKey( 'prev', $data );
-		$this->assertArrayNotHasKey( 'next', $data );
+		$this->assertArrayNotHasKey( 'first', $data );
+		$this->assertArrayNotHasKey( 'last', $data );
 	}
 
 	/**
@@ -169,7 +169,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertArrayHasKey( 'type', $data );
 		$this->assertArrayHasKey( 'totalItems', $data );
 		$this->assertArrayHasKey( 'orderedItems', $data );
-		$this->assertEquals( 'OrderedCollectionPage', $data['type'] );
+		$this->assertEquals( 'OrderedCollection', $data['type'] );
 		$this->assertIsArray( $data['orderedItems'] );
 
 		$headers = $response->get_headers();
@@ -273,6 +273,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 */
 	public function test_get_items_minimum_per_page() {
 		$request = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/%s/outbox', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
+		$request->set_param( 'page', 1 );
 		$request->set_param( 'per_page', 1 );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
@@ -609,7 +610,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertSame( 1, (int) $data['totalItems'] );
 		$this->assertCount( 1, $data['orderedItems'] );
-		$this->assertSame( 'https://example.org/activity/1', $data['orderedItems'][0]['object']['id'] );
+		$this->assertSame( 'https://example.org/note/1', $data['orderedItems'][0]['object']['id'] );
 
 		// Test blog outbox only returns blog actor type.
 		$request  = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/0/outbox', ACTIVITYPUB_REST_NAMESPACE ) );
@@ -698,7 +699,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertSame( 1, (int) $data['totalItems'] );
 		$this->assertCount( 1, $data['orderedItems'] );
-		$this->assertSame( 'https://example.org/activity/1', $data['orderedItems'][0]['object']['id'] );
+		$this->assertSame( 'https://example.org/note/1', $data['orderedItems'][0]['object']['id'] );
 
 		// Test as privileged user.
 		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );

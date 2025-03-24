@@ -22,6 +22,8 @@ use function Activitypub\get_masked_wp_version;
  * @see https://www.w3.org/TR/activitypub/#inbox
  */
 class Actors_Inbox_Controller extends Actors_Controller {
+	use Collection;
+
 	/**
 	 * Register routes.
 	 */
@@ -46,8 +48,8 @@ class Actors_Inbox_Controller extends Actors_Controller {
 						'page'     => array(
 							'description' => 'Current page of the collection.',
 							'type'        => 'integer',
-							'default'     => 1,
 							'minimum'     => 1,
+							// No default so we can differentiate between Collection and CollectionPage requests.
 						),
 						'per_page' => array(
 							'description' => 'Maximum number of items to be returned in result set.',
@@ -121,18 +123,13 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		 */
 		\do_action( 'activitypub_rest_inbox_pre' );
 
-		$page     = $request->get_param( 'page' );
-		$per_page = $request->get_param( 'per_page' );
-
 		$response = array(
 			'@context'     => get_context(),
 			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user->get__id() ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
-			'type'         => 'OrderedCollectionPage',
-			'partOf'       => get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user->get__id() ) ),
+			'type'         => 'OrderedCollection',
 			'totalItems'   => 0,
 			'orderedItems' => array(),
-			'first'        => get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user->get__id() ) ),
 		);
 
 		/**
@@ -142,24 +139,9 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		 */
 		$response = \apply_filters( 'activitypub_rest_inbox_array', $response );
 
-		$max_pages = \ceil( $response['totalItems'] / $per_page );
-
-		if ( $page > $max_pages ) {
-			return new \WP_Error(
-				'rest_post_invalid_page_number',
-				'The page number requested is larger than the number of pages available.',
-				array( 'status' => 400 )
-			);
-		}
-
-		$response['last'] = \add_query_arg( 'page', \max( $max_pages, 1 ), $response['partOf'] );
-
-		if ( $max_pages > $page ) {
-			$response['next'] = \add_query_arg( 'page', $page + 1, $response['partOf'] );
-		}
-
-		if ( $page > 1 ) {
-			$response['prev'] = \add_query_arg( 'page', $page - 1, $response['partOf'] );
+		$response = $this->prepare_collection_response( $response, $request );
+		if ( \is_wp_error( $response ) ) {
+			return $response;
 		}
 
 		/**
@@ -196,19 +178,19 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		/**
 		 * ActivityPub inbox action.
 		 *
-		 * @param array    $data     The data array.
-		 * @param int|null $user_id  The user ID.
-		 * @param string   $type     The type of the activity.
-		 * @param Activity $activity The Activity object.
+		 * @param array              $data     The data array.
+		 * @param int|null           $user_id  The user ID.
+		 * @param string             $type     The type of the activity.
+		 * @param Activity|\WP_Error $activity The Activity object.
 		 */
 		\do_action( 'activitypub_inbox', $data, $user->get__id(), $type, $activity );
 
 		/**
 		 * ActivityPub inbox action for specific activity types.
 		 *
-		 * @param array    $data     The data array.
-		 * @param int|null $user_id  The user ID.
-		 * @param Activity $activity The Activity object.
+		 * @param array              $data     The data array.
+		 * @param int|null           $user_id  The user ID.
+		 * @param Activity|\WP_Error $activity The Activity object.
 		 */
 		\do_action( 'activitypub_inbox_' . $type, $data, $user->get__id(), $activity );
 
@@ -229,73 +211,18 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			return $this->add_additional_fields_schema( $this->schema );
 		}
 
-		$schema = array(
-			'$schema'    => 'https://json-schema.org/draft-04/schema#',
-			'title'      => 'inbox',
-			'type'       => 'object',
-			'properties' => array(
-				'@context'     => array(
-					'description' => 'The JSON-LD context for the collection.',
-					'type'        => array( 'string', 'array', 'object' ),
-					'required'    => true,
-				),
-				'id'           => array(
-					'description' => 'The unique identifier for the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'required'    => true,
-				),
-				'type'         => array(
-					'description' => 'The type of the collection.',
-					'type'        => 'string',
-					'enum'        => array( 'OrderedCollection', 'OrderedCollectionPage' ),
-					'required'    => true,
-				),
-				'totalItems'   => array(
-					'description' => 'The total number of items in the collection.',
-					'type'        => 'integer',
-					'minimum'     => 0,
-					'required'    => true,
-				),
-				'orderedItems' => array(
-					'description' => 'The items in the collection.',
-					'type'        => 'array',
-					'items'       => array(
-						'type' => 'object',
-					),
-					'required'    => true,
-				),
-				'first'        => array(
-					'description' => 'The first page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'last'         => array(
-					'description' => 'The last page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'next'         => array(
-					'description' => 'The next page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'prev'         => array(
-					'description' => 'The previous page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'partOf'       => array(
-					'description' => 'The collection this page is part of.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'generator'    => array(
-					'description' => 'The software used to generate the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-			),
+		$item_schema = array(
+			'type' => 'object',
+		);
+
+		$schema = $this->get_collection_schema( $item_schema );
+
+		// Add inbox-specific properties.
+		$schema['title']                   = 'inbox';
+		$schema['properties']['generator'] = array(
+			'description' => 'The software used to generate the collection.',
+			'type'        => 'string',
+			'format'      => 'uri',
 		);
 
 		$this->schema = $schema;

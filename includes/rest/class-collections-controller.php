@@ -28,6 +28,8 @@ use function Activitypub\get_rest_url_by_path;
  * @see https://www.w3.org/TR/activitypub/#collections
  */
 class Collections_Controller extends Actors_Controller {
+	use Collection;
+
 	/**
 	 * Register routes.
 	 */
@@ -53,6 +55,20 @@ class Collections_Controller extends Actors_Controller {
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_items' ),
 					'permission_callback' => '__return_true',
+					'args'                => array(
+						'page'     => array(
+							'description' => 'Current page of the collection.',
+							'type'        => 'integer',
+							'minimum'     => 1,
+							// No default so we can differentiate between Collection and CollectionPage requests.
+						),
+						'per_page' => array(
+							'description' => 'Maximum number of items to be returned in result set.',
+							'type'        => 'integer',
+							'default'     => 20,
+							'minimum'     => 1,
+						),
+					),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
 			)
@@ -85,6 +101,10 @@ class Collections_Controller extends Actors_Controller {
 
 			default:
 				$response = new \WP_Error( 'rest_unknown_collection_type', 'Unknown collection type.', array( 'status' => 404 ) );
+		}
+
+		if ( \is_wp_error( $response ) ) {
+			return $response;
 		}
 
 		$response = \rest_ensure_response( $response );
@@ -131,7 +151,7 @@ class Collections_Controller extends Actors_Controller {
 			);
 		}
 
-		return $response;
+		return $this->prepare_collection_response( $response, $request );
 	}
 
 	/**
@@ -190,7 +210,7 @@ class Collections_Controller extends Actors_Controller {
 			$response['orderedItems'][] = $transformer->to_object()->to_array( false );
 		}
 
-		return $response;
+		return $this->prepare_collection_response( $response, $request );
 	}
 
 	/**
@@ -203,64 +223,47 @@ class Collections_Controller extends Actors_Controller {
 			return $this->add_additional_fields_schema( $this->schema );
 		}
 
-		$schema = array(
-			'$schema'    => 'http://json-schema.org/draft-04/schema#',
-			'title'      => 'featured',
-			'type'       => 'object',
-			'properties' => array(
-				'@context'   => array(
-					'type'     => 'array',
-					'items'    => array(
-						'type' => array( 'string', 'object' ),
-					),
-					'required' => true,
+		$schema = $this->get_collection_schema();
+
+		// Add collections-specific properties.
+		$schema['title']                   = 'featured';
+		$schema['properties']['generator'] = array(
+			'description' => 'The software used to generate the collection.',
+			'type'        => 'string',
+			'format'      => 'uri',
+		);
+		$schema['properties']['oneOf']     = array(
+			'orderedItems' => array(
+				'type'  => 'array',
+				'items' => array(
+					'type' => 'object',
 				),
-				'id'         => array(
-					'type'     => 'string',
-					'format'   => 'uri',
-					'required' => true,
-				),
-				'type'       => array(
-					'type'     => 'string',
-					'enum'     => array( 'Collection', 'OrderedCollection' ),
-					'required' => true,
-				),
-				'totalItems' => array(
-					'type'     => 'integer',
-					'required' => true,
-				),
-				'oneOf'      => array(
-					'orderedItems' => array(
-						'type'  => 'array',
-						'items' => array(
-							'type' => 'object',
+			),
+			'items'        => array(
+				'type'  => 'array',
+				'items' => array(
+					'type'       => 'object',
+					'properties' => array(
+						'type' => array(
+							'type'     => 'string',
+							'enum'     => array( 'Hashtag' ),
+							'required' => true,
 						),
-					),
-					'items'        => array(
-						'type'  => 'array',
-						'items' => array(
-							'type'       => 'object',
-							'properties' => array(
-								'type' => array(
-									'type'     => 'string',
-									'enum'     => array( 'Hashtag' ),
-									'required' => true,
-								),
-								'href' => array(
-									'type'     => 'string',
-									'format'   => 'uri',
-									'required' => true,
-								),
-								'name' => array(
-									'type'     => 'string',
-									'required' => true,
-								),
-							),
+						'href' => array(
+							'type'     => 'string',
+							'format'   => 'uri',
+							'required' => true,
+						),
+						'name' => array(
+							'type'     => 'string',
+							'required' => true,
 						),
 					),
 				),
 			),
 		);
+
+		unset( $schema['properties']['orderedItems'] );
 
 		$this->schema = $schema;
 

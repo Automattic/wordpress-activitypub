@@ -324,8 +324,8 @@ class Post extends Base {
 		/**
 		 * Filter the attachment IDs for a post.
 		 *
-		 * @param array   $media           The media array grouped by type.
-		 * @param WP_Post $this->item The post object.
+		 * @param array   $media The media array grouped by type.
+		 * @param WP_Post $item  The post object.
 		 *
 		 * @return array The filtered attachment IDs.
 		 */
@@ -336,8 +336,8 @@ class Post extends Base {
 		/**
 		 * Filter the attachments for a post.
 		 *
-		 * @param array   $attachments     The attachments.
-		 * @param WP_Post $this->item The post object.
+		 * @param array   $attachments The attachments.
+		 * @param WP_Post $item        The post object.
 		 *
 		 * @return array The filtered attachments.
 		 */
