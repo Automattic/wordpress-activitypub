@@ -1,4 +1,5 @@
 .codeclimate.yml
+.cursor
 .data
 .distignore
 .DS_Store
