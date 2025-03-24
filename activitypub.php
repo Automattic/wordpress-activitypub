@@ -102,6 +102,11 @@ function plugin_admin_init() {
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Welcome_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Blog_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\User_Settings_Fields', 'init' ) );
+
+	if ( defined( 'WP_LOAD_IMPORTERS' ) && WP_LOAD_IMPORTERS ) {
+		require_once __DIR__ . '/includes/wp-admin/import/load.php';
+		\add_action( 'init', __NAMESPACE__ . '\WP_Admin\Import\load' );
+	}
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_admin_init' );
 
