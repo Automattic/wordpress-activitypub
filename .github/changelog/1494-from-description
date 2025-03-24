@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+The option to automatically add the `#FediBlog` to every federated Blog-Post (only Articles, not Notes), to improve the visibility of long form content.
