@@ -148,7 +148,10 @@ class Activity extends Base_Object {
 		}
 
 		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
-			$this->set( $i, $data->get( $i ) );
+			$value = $data->get( $i );
+			if ( $value ) {
+				$this->set( $i, $value );
+			}
 		}
 
 		if ( $data->get_published() && ! $this->get_published() ) {
