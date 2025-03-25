@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+`Scheduler::schedule_announce_activity` to handle Activities instead of Activity-Objects.
