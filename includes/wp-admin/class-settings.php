@@ -22,6 +22,47 @@ class Settings {
 	public static function init() {
 		\add_action( 'admin_init', array( self::class, 'register_settings' ), 11 );
 		\add_action( 'admin_menu', array( self::class, 'add_settings_page' ) );
+
+		\add_filter( 'screen_settings', array( self::class, 'add_screen_option' ), 10, 2 );
+
+		\add_filter( 'screen_options_show_submit', function( $show_submit, $screen ) {
+			if ( 'settings_page_activitypub' !== $screen->id ) {
+				return $show_submit;
+			}
+
+			return true;
+		}, 10, 2 );
+	}
+
+	/**
+	 * Add screen option.
+	 *
+	 * @param string $screen_settings The screen settings.
+	 * @param object $screen The screen object.
+	 *
+	 * @return string The screen settings.
+	 */
+	public static function add_screen_option( $screen_settings, $screen ) {
+		if ( 'settings_page_activitypub' !== $screen->id ) {
+			return $screen_settings;
+		}
+
+		if ( isset( $_GET['welcome'] ) ) {
+			$welcome_checked = empty( $_GET['welcome'] ) ? 0 : 1;
+			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
+		}
+
+		$screen_settings = '<fieldset>
+		<legend class="screen-layout">' . __( 'Pages', 'activitypub' ) . '</legend>
+		<p>
+			' . __( 'Some pages can be shown or hidden by using the checkboxes.', 'activitypub' ) . '
+		</p>
+		<div class="metabox-prefs-container">
+			<label for="activitypub_show_welcome_tab"><input name="activitypub_show_welcome_tab" type="checkbox" id="activitypub_show_welcome_tab" value="1" ' . \checked( 1, \get_user_meta( get_current_user_id(), 'activitypub_show_welcome_tab', true ), false ) . ' />' . __( 'Welcome Page', 'activitypub' ) . '</label>
+		</div>
+	</fieldset>';
+
+		return $screen_settings;
 	}
 
 	/**
@@ -241,11 +282,6 @@ class Settings {
 	 * Load settings page.
 	 */
 	public static function settings_page() {
-		if ( isset( $_GET['welcome'] ) ) {
-			$welcome_checked = empty( $_GET['welcome'] ) ? 0 : 1;
-			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
-		}
-
 		$default_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ) ? 'welcome' : 'settings';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : $default_tab;
