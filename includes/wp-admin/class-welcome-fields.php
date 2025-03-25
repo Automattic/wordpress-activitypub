@@ -83,7 +83,12 @@ class Welcome_Fields {
 	 */
 	public static function render_welcome_intro_section() {
 		?>
-		<p><?php echo wp_kses( \__( 'Enter the fediverse with <strong>ActivityPub</strong>, broadcasting your blog to a wider audience. Attract followers, deliver updates, and receive comments from a diverse user base on <strong>Mastodon</strong>, <strong>Friendica</strong>, <strong>Pleroma</strong>, <strong>Pixelfed</strong>, and all <strong>ActivityPub</strong>-compliant platforms.', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
+		<p><?php \esc_html_e( '...to the ActivityPub plugin for WordPress! This site gives you a quick overview of the most important informations you need to get started. You can skip this page if you are already familiar with the ActivityPub plugin.', 'activitypub' ); ?></p>
+		<form method="post" action="options.php">
+			<?php \settings_fields( 'activitypub_welcome' ); ?>
+			<input type="hidden" name="activitypub_welcome_skip" value="1" />
+			<?php \submit_button( \__( 'Skip this page', 'activitypub' ) ); ?>
+		</form>
 		<?php
 	}
 

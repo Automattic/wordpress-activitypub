@@ -226,25 +226,43 @@ class Settings {
 				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
 			)
 		);
+
+		\register_setting(
+			'activitypub_welcome',
+			'activitypub_welcome_skip',
+			array(
+				'type'    => 'boolean',
+				'default' => false,
+			)
+		);
 	}
 
 	/**
 	 * Load settings page.
 	 */
 	public static function settings_page() {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'welcome';
+		$default_tab = \get_option( 'activitypub_welcome_skip' ) ? 'settings' : 'welcome';
+		$tab         = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : $default_tab;
 
-		$settings_tabs = array(
-			'welcome'  => array(
+		// Redirect welcome tab to settings if skipped.
+		if ( $tab === 'welcome' && \get_option( 'activitypub_welcome_skip' ) ) {
+			$tab = 'settings';
+		}
+
+		$settings_tabs = array();
+
+		if ( ! \get_option( 'activitypub_welcome_skip' ) ) {
+			$settings_tabs['welcome'] = array(
 				'label'    => __( 'Welcome', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/welcome.php',
-			),
-			'settings' => array(
-				'label'    => __( 'Settings', 'activitypub' ),
-				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
-			),
+			);
+		}
+
+		$settings_tabs['settings'] = array(
+			'label'    => __( 'Settings', 'activitypub' ),
+			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
 		);
+
 		if ( ! is_user_disabled( Actors::BLOG_USER_ID ) ) {
 			$settings_tabs['blog-profile'] = array(
 				'label'    => __( 'Blog Profile', 'activitypub' ),
