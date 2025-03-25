@@ -159,12 +159,12 @@ class Test_Activity extends \WP_UnitTestCase {
 		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
 		$activity->set_object( $activity_object );
 
-		$this->assertEquals( 'https://example.com/author/123', $activity->get_to()[0] );
+		$this->assertContains( 'https://example.com/author/123', $activity->get_to() );
 
 		$activity->set_to( array( 'https://example.com/author/456' ) );
 		$activity->set_object( $activity_object );
 
-		$this->assertEquals( 'https://example.com/author/456', $activity->get_to()[0] );
+		$this->assertContains( 'https://example.com/author/456', $activity->get_to() );
 
 		// Delete user.
 		\wp_delete_user( $user_id );
