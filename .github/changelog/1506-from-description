@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+PHP Warnings when attempting to get an author rom an invalid outbox item.
