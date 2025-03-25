@@ -294,6 +294,10 @@ class Settings {
 				break;
 		}
 
+		if ( ! isset( $settings_tabs[ $tab ] ) ) {
+			$tab = $default_tab;
+		}
+
 		$labels       = wp_list_pluck( $settings_tabs, 'label' );
 		$args         = array_fill_keys( array_keys( $labels ), '' );
 		$args[ $tab ] = 'active';
