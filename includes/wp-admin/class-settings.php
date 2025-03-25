@@ -25,13 +25,18 @@ class Settings {
 
 		\add_filter( 'screen_settings', array( self::class, 'add_screen_option' ), 10, 2 );
 
-		\add_filter( 'screen_options_show_submit', function( $show_submit, $screen ) {
-			if ( 'settings_page_activitypub' !== $screen->id ) {
-				return $show_submit;
-			}
+		\add_filter(
+			'screen_options_show_submit',
+			function ( $show_submit, $screen ) {
+				if ( 'settings_page_activitypub' !== $screen->id ) {
+					return $show_submit;
+				}
 
-			return true;
-		}, 10, 2 );
+				return true;
+			},
+			10,
+			2
+		);
 	}
 
 	/**
