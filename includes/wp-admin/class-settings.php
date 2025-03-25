@@ -242,10 +242,11 @@ class Settings {
 	 */
 	public static function settings_page() {
 		$default_tab = \get_option( 'activitypub_welcome_skip' ) ? 'settings' : 'welcome';
-		$tab         = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : $default_tab;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : $default_tab;
 
 		// Redirect welcome tab to settings if skipped.
-		if ( $tab === 'welcome' && \get_option( 'activitypub_welcome_skip' ) ) {
+		if ( 'welcome' === $tab && \get_option( 'activitypub_welcome_skip' ) ) {
 			$tab = 'settings';
 		}
 
