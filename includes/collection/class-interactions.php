@@ -229,7 +229,7 @@ class Interactions {
 	 */
 	public static function activity_to_comment( $activity ) {
 		$comment_content = null;
-		$actor           = object_to_uri( $activity['actor'] );
+		$actor           = object_to_uri( $activity['actor'] ?? null );
 		$actor           = get_remote_metadata_by_actor( $actor );
 
 		// Check Actor-Meta.
