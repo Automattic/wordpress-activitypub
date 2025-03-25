@@ -8,6 +8,7 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Notification;
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
@@ -102,9 +103,12 @@ class Follow {
 			)
 		);
 
-		// Send response only to the Follower.
-		$activity_object['to'] = array( $actor );
+		$activity = new Activity();
+		$activity->set_type( 'Accept' );
+		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
+		$activity->set_object( $activity_object );
+		$activity->set_to( array( $actor ) );
 
-		add_to_outbox( $activity_object, 'Accept', $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 	}
 }

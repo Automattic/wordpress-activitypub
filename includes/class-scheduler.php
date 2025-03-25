@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Scheduler\Post;
 use Activitypub\Scheduler\Actor;
 use Activitypub\Scheduler\Comment;
@@ -391,11 +392,11 @@ class Scheduler {
 	 * Send announces.
 	 *
 	 * @param int                            $outbox_activity_id The outbox activity ID.
-	 * @param \Activitypub\Activity\Activity $activity_object    The activity object.
+	 * @param \Activitypub\Activity\Activity $activity           The activity object.
 	 * @param int                            $actor_id           The actor ID.
 	 * @param int                            $content_visibility The content visibility.
 	 */
-	public static function schedule_announce_activity( $outbox_activity_id, $activity_object, $actor_id, $content_visibility ) {
+	public static function schedule_announce_activity( $outbox_activity_id, $activity, $actor_id, $content_visibility ) {
 		// Only if we're in both Blog and User modes.
 		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
 			return;
@@ -411,28 +412,26 @@ class Scheduler {
 			return;
 		}
 
-		$activity_type = \get_post_meta( $outbox_activity_id, '_activitypub_activity_type', true );
-
 		// Only if the activity is a Create, Update or Delete.
-		if ( ! in_array( $activity_type, array( 'Create', 'Update', 'Delete' ), true ) ) {
+		if ( ! in_array( $activity->get_type(), array( 'Create', 'Update', 'Delete' ), true ) ) {
 			return;
 		}
 
-		// Check if the object is an article, image, audio, video, event or document and ignore profile updates and other activities.
-		if ( ! in_array( $activity_object->get_type(), array( 'Note', 'Article', 'Image', 'Audio', 'Video', 'Event', 'Document' ), true ) ) {
+		if ( ! is_object( $activity->get_object() ) ) {
 			return;
 		}
 
-		$transformer = Factory::get_transformer( $activity_object );
-		if ( ! $transformer || \is_wp_error( $transformer ) ) {
+		// Check if the object is an article, image, audio, video, event, or document and ignore profile updates and other activities.
+		if ( ! in_array( $activity->get_object()->get_type(), array( 'Note', 'Article', 'Image', 'Audio', 'Video', 'Event', 'Document' ), true ) ) {
 			return;
 		}
 
-		$post     = get_post( $outbox_activity_id );
-		$activity = $transformer->to_activity( $activity_type );
-		$activity->set_id( $post->guid );
+		$announce = new Activity();
+		$announce->set_type( 'Announce' );
+		$announce->set_actor( Actors::get_by_id( Actors::BLOG_USER_ID )->get_id() );
+		$announce->set_object( $activity );
 
-		$outbox_activity_id = Outbox::add( $activity, 'Announce', Actors::BLOG_USER_ID );
+		$outbox_activity_id = Outbox::add( $announce, Actors::BLOG_USER_ID );
 
 		if ( ! $outbox_activity_id ) {
 			return;
