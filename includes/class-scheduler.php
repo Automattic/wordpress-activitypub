@@ -426,12 +426,12 @@ class Scheduler {
 			return;
 		}
 
-		$announce_activity = new Activity();
-		$announce_activity->set_type( 'Announce' );
-		$announce_activity->set_actor( Actors::get_by_id( Actors::BLOG_USER_ID )->get_id() );
-		$announce_activity->set_object( $activity );
+		$announce = new Activity();
+		$announce->set_type( 'Announce' );
+		$announce->set_actor( Actors::get_by_id( Actors::BLOG_USER_ID )->get_id() );
+		$announce->set_object( $activity );
 
-		$outbox_activity_id = Outbox::add( $announce_activity, Actors::BLOG_USER_ID );
+		$outbox_activity_id = Outbox::add( $announce, Actors::BLOG_USER_ID );
 
 		if ( ! $outbox_activity_id ) {
 			return;
