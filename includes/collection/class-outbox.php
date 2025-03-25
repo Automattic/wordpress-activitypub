@@ -221,6 +221,10 @@ class Outbox {
 			$activity->set_object( $activity_object );
 		}
 
+		if ( 'Update' === $type ) {
+			$activity->set_updated( gmdate( 'Y-m-d H:i:s', strtotime( $outbox_item->post_modified ) ) );
+		}
+
 		/**
 		 * Filters the Activity object before it is returned.
 		 *

@@ -131,6 +131,14 @@ class Actor {
 			return;
 		}
 
-		add_to_outbox( Actors::get_by_id( $user_id ), 'Update', $user_id );
+		$actor = Actors::get_by_id( $user_id );
+
+		if ( ! $actor || \is_wp_error( $actor ) ) {
+			return;
+		}
+
+		$actor->set_updated( gmdate( 'Y-m-d H:i:s', time() ) );
+
+		add_to_outbox( $actor, 'Update', $user_id );
 	}
 }
