@@ -242,6 +242,10 @@ class Outbox {
 	 * @return \Activitypub\Model\User|\Activitypub\Model\Blog|\WP_Error The Actor object or WP_Error.
 	 */
 	public static function get_actor( $outbox_item ) {
+		if ( ! $outbox_item instanceof \WP_Post ) {
+			return new \WP_Error( 'invalid_outbox_item', 'Invalid Outbox item.' );
+		}
+
 		$actor_type = \get_post_meta( $outbox_item->ID, '_activitypub_activity_actor', true );
 
 		switch ( $actor_type ) {
