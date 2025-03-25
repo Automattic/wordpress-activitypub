@@ -47,8 +47,7 @@ class Comment {
 	 */
 	public static function comment_reply_link( $link, $args, $comment ) {
 		if ( self::are_comments_allowed( $comment ) ) {
-			$user_id = get_current_user_id();
-			if ( $user_id && self::was_received( $comment ) && \user_can( $user_id, 'activitypub' ) ) {
+			if ( \current_user_can( 'activitypub' ) && self::was_received( $comment ) ) {
 				return self::create_fediverse_reply_link( $link, $args );
 			}
 
@@ -61,7 +60,7 @@ class Comment {
 		);
 
 		$div = sprintf(
-			'<div class="activitypub-remote-reply" data-attrs="%s"></div>',
+			'<div class="reply activitypub-remote-reply" data-attrs="%s"></div>',
 			esc_attr( wp_json_encode( $attrs ) )
 		);
 
