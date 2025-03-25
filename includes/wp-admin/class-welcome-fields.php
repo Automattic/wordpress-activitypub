@@ -83,12 +83,8 @@ class Welcome_Fields {
 	 */
 	public static function render_welcome_intro_section() {
 		?>
+		<a class="welcome-tab-close" href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&welcome=0' ) ); ?>" aria-label="Dismiss the welcome tab">Dismiss Welcome Tab</a>
 		<p><?php \esc_html_e( '...to the ActivityPub plugin for WordPress! This site gives you a quick overview of the most important informations you need to get started. You can skip this page if you are already familiar with the ActivityPub plugin.', 'activitypub' ); ?></p>
-		<form method="post" action="options.php">
-			<?php \settings_fields( 'activitypub_welcome' ); ?>
-			<input type="hidden" name="activitypub_welcome_skip" value="1" />
-			<?php \submit_button( \__( 'Skip this page', 'activitypub' ) ); ?>
-		</form>
 		<?php
 	}
 
