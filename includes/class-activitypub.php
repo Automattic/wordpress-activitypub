@@ -49,6 +49,7 @@ class Activitypub {
 
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
 		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
+		\add_action( 'default_user_metadata', array( self::class, 'default_user_metadata' ), 10, 3 );
 		\add_filter( 'pre_option_activitypub_actor_mode', array( self::class, 'pre_get_option' ) );
 
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
@@ -815,5 +816,26 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
+	}
+
+	/**
+	 * Add default value to user meta.
+	 *
+	 * @param mixed  $value     The value to check.
+	 * @param int    $object_id The object ID.
+	 * @param string $meta_key  The meta key.
+	 *
+	 * @return mixed The value.
+	 */
+	public static function default_user_metadata( $value, $object_id, $meta_key ) {
+		if ( 'activitypub_show_welcome_tab' !== $meta_key ) {
+			return $value;
+		}
+
+		if ( ! $value ) {
+			return '1';
+		}
+
+		return $value;
 	}
 }
