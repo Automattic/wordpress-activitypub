@@ -238,7 +238,7 @@ class Settings {
 		$show_welcome_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true );
 		$default_tab      = $show_welcome_tab ? 'welcome' : 'settings';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : $default_tab;
+		$tab = isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : $default_tab;
 
 		// Redirect welcome tab to settings if skipped.
 		if ( 'welcome' === $tab && ! $show_welcome_tab ) {
@@ -280,13 +280,13 @@ class Settings {
 
 		switch ( $tab ) {
 			case 'blog-profile':
-				wp_enqueue_media();
-				wp_enqueue_script( 'activitypub-header-image' );
+				\wp_enqueue_media();
+				\wp_enqueue_script( 'activitypub-header-image' );
 				break;
 			case 'welcome':
-				wp_enqueue_script( 'plugin-install' );
-				add_thickbox();
-				wp_enqueue_script( 'updates' );
+				\wp_enqueue_script( 'plugin-install' );
+				\add_thickbox();
+				\wp_enqueue_script( 'updates' );
 				break;
 		}
 
@@ -298,10 +298,10 @@ class Settings {
 		if ( \count( $settings_tabs ) <= 1 ) {
 			$labels = array();
 		} else {
-			$labels = wp_list_pluck( $settings_tabs, 'label' );
+			$labels = \wp_list_pluck( $settings_tabs, 'label' );
 		}
 
-		$args         = array_fill_keys( array_keys( $labels ), '' );
+		$args         = \array_fill_keys( \array_keys( $labels ), '' );
 		$args[ $tab ] = 'active';
 		$args['tabs'] = $labels;
 
@@ -321,8 +321,8 @@ class Settings {
 			),
 		);
 
-		if ( ! is_user_disabled( get_current_user_id() ) ) {
-			$webfinger = Actors::get_by_id( get_current_user_id() )->get_webfinger();
+		if ( ! is_user_disabled( \get_current_user_id() ) ) {
+			$webfinger = Actors::get_by_id( \get_current_user_id() )->get_webfinger();
 		} else {
 			$webfinger = ( new Blog() )->get_webfinger();
 		}
@@ -461,8 +461,8 @@ class Settings {
 		}
 
 		if ( isset( $_POST['activitypub_show_welcome_tab'] ) && isset( $_POST['screenoptionnonce'] ) ) {
-			$nonce   = sanitize_text_field( wp_unslash( $_POST['screenoptionnonce'] ) );
-			$welcome = sanitize_text_field( wp_unslash( $_POST['activitypub_show_welcome_tab'] ) );
+			$nonce   = \sanitize_text_field( \wp_unslash( $_POST['screenoptionnonce'] ) );
+			$welcome = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_welcome_tab'] ) );
 			// Verify screen options nonce.
 			if ( \wp_verify_nonce( $nonce, 'screen-options-nonce' ) ) {
 				$welcome_checked = empty( $welcome ) ? 0 : 1;
@@ -473,13 +473,13 @@ class Settings {
 		$screen_settings = '<fieldset>
 		<legend class="screen-layout">' . \esc_html__( 'Settings Pages', 'activitypub' ) . '</legend>
 		<p>
-			' . __( 'Some settings pages can be shown or hidden by using the checkboxes.', 'activitypub' ) . '
+			' . \__( 'Some settings pages can be shown or hidden by using the checkboxes.', 'activitypub' ) . '
 		</p>
 		<div class="metabox-prefs-container">
 			<label for="activitypub_show_welcome_tab">
 				<input name="activitypub_show_welcome_tab" type="hidden" value="0" />
-				<input name="activitypub_show_welcome_tab" type="checkbox" id="activitypub_show_welcome_tab" value="1" ' . \checked( 1, \get_user_meta( get_current_user_id(), 'activitypub_show_welcome_tab', true ), false ) . ' />
-				' . __( 'Welcome Page', 'activitypub' ) . '
+				<input name="activitypub_show_welcome_tab" type="checkbox" id="activitypub_show_welcome_tab" value="1" ' . \checked( 1, \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ), false ) . ' />
+				' . \__( 'Welcome Page', 'activitypub' ) . '
 			</label>
 		</div>
 	</fieldset>';
