@@ -33,7 +33,7 @@ class Settings {
 	public static function register_settings() {
 		\register_setting(
 			'activitypub',
-			'activitypub_advanced_settings',
+			'activitypub_show_advanced_settings',
 			array(
 				'type'    => 'boolean',
 				'default' => '0',
@@ -269,7 +269,7 @@ class Settings {
 		);
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || '1' === \get_option( 'activitypub_advanced_settings', '0' ) ) {
+		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || '1' === \get_option( 'activitypub_show_advanced_settings', '0' ) ) {
 			$settings_tabs['advanced'] = array(
 				'label'    => __( 'Advanced', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/advanced-settings.php',
@@ -497,6 +497,11 @@ class Settings {
 				<input name="activitypub_show_welcome_tab" type="hidden" value="0" />
 				<input name="activitypub_show_welcome_tab" type="checkbox" id="activitypub_show_welcome_tab" value="1" ' . \checked( 1, \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ), false ) . ' />
 				' . \__( 'Welcome Page', 'activitypub' ) . '
+			</label>
+			<label for="activitypub_show_advanced_settings">
+				<input name="activitypub_show_advanced_settings" type="hidden" value="0" />
+				<input name="activitypub_show_advanced_settings" type="checkbox" id="activitypub_show_advanced_settings" value="1" ' . \checked( 1, \get_option( 'activitypub_show_advanced_settings', '0' ), false ) . ' />
+				' . \__( 'Advanced Settings', 'activitypub' ) . '
 			</label>
 		</div>
 	</fieldset>';
