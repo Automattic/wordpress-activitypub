@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Outbox batch processing adheres to passed batch size.
