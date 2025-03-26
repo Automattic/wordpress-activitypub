@@ -75,14 +75,6 @@ class Settings_Fields {
 			'activitypub_activities'
 		);
 
-		add_settings_field(
-			'activitypub_allow_interactions',
-			__( 'Post interactions', 'activitypub' ),
-			array( self::class, 'render_allow_interactions_field' ),
-			'activitypub_settings',
-			'activitypub_activities'
-		);
-
 		$object_type = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 		if ( 'note' === $object_type ) {
 			add_settings_field(
@@ -108,6 +100,14 @@ class Settings_Fields {
 			'activitypub_support_post_types',
 			__( 'Supported post types', 'activitypub' ),
 			array( self::class, 'render_support_post_types_field' ),
+			'activitypub_settings',
+			'activitypub_activities'
+		);
+
+		add_settings_field(
+			'activitypub_allow_interactions',
+			__( 'Post interactions', 'activitypub' ),
+			array( self::class, 'render_allow_interactions_field' ),
 			'activitypub_settings',
 			'activitypub_activities'
 		);
