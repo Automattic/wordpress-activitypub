@@ -72,15 +72,15 @@ class Mention {
 			! is_wp_error( $metadata ) &&
 			( ! empty( $metadata['id'] ) || ! empty( $metadata['url'] ) )
 		) {
-			$url = isset( $metadata['url'] ) ? object_to_uri( $metadata['url'] ) : object_to_uri( $metadata['id'] );
-
 			$username = ltrim( $result[0], '@' );
 			if ( ! empty( $metadata['name'] ) ) {
 				$username = $metadata['name'];
 			}
 			if ( ! empty( $metadata['preferredUsername'] ) ) {
-				$username = sprintf( '%1$s@%2$s', $metadata['preferredUsername'], wp_parse_url( $url, PHP_URL_HOST ) );
+				$username = $metadata['preferredUsername'];
 			}
+
+			$url = isset( $metadata['url'] ) ? object_to_uri( $metadata['url'] ) : object_to_uri( $metadata['id'] );
 
 			return \sprintf( '<a rel="mention" class="u-url mention" href="%s">@<span>%s</span></a>', esc_url( $url ), esc_html( $username ) );
 		}
