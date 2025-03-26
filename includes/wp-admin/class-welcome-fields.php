@@ -83,8 +83,8 @@ class Welcome_Fields {
 	 */
 	public static function render_welcome_intro_section() {
 		?>
-		<a class="welcome-tab-close" href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&welcome=0' ) ); ?>" aria-label="Dismiss the welcome tab">Dismiss Welcome Tab</a>
-		<p><?php \esc_html_e( '...to the ActivityPub plugin for WordPress! This site gives you a quick overview of the most important informations you need to get started. You can skip this page if you are already familiar with the ActivityPub plugin.', 'activitypub' ); ?></p>
+		<a class="welcome-tab-close" href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&welcome=0' ) ); ?>" aria-label="Dismiss the welcome page">Dismiss Welcome Page</a>
+		<p><?php echo wp_kses( \__( 'Enter the fediverse with <strong>ActivityPub</strong>, broadcasting your blog to a wider audience. Attract followers, deliver updates, and receive comments from a diverse user base on <strong>Mastodon</strong>, <strong>Friendica</strong>, <strong>Pleroma</strong>, <strong>Pixelfed</strong>, and all <strong>ActivityPub</strong>-compliant platforms.', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
 		<?php
 	}
 
