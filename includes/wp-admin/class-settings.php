@@ -269,7 +269,7 @@ class Settings {
 		);
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || '1' === \get_option( 'activitypub_show_advanced_settings', '0' ) ) {
+		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || \get_option( 'activitypub_show_advanced_settings' ) ) {
 			$settings_tabs['advanced'] = array(
 				'label'    => __( 'Advanced', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/advanced-settings.php',
@@ -477,14 +477,24 @@ class Settings {
 			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
 		}
 
-		if ( isset( $_POST['activitypub_show_welcome_tab'] ) && isset( $_POST['screenoptionnonce'] ) ) {
-			$nonce   = \sanitize_text_field( \wp_unslash( $_POST['screenoptionnonce'] ) );
-			$welcome = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_welcome_tab'] ) );
-			// Verify screen options nonce.
-			if ( \wp_verify_nonce( $nonce, 'screen-options-nonce' ) ) {
-				$welcome_checked = empty( $welcome ) ? 0 : 1;
-				\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
+		// Verify screen options nonce.
+		if ( isset( $_POST['screenoptionnonce'] ) ) {
+			$nonce = \sanitize_text_field( \wp_unslash( $_POST['screenoptionnonce'] ) );
+			if ( ! \wp_verify_nonce( $nonce, 'screen-options-nonce' ) ) {
+				return $screen_settings;
 			}
+		}
+
+		if ( isset( $_POST['activitypub_show_welcome_tab'] ) ) {
+			$welcome         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_welcome_tab'] ) );
+			$welcome_checked = empty( $welcome ) ? 0 : 1;
+			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
+		}
+
+		if ( isset( $_POST['activitypub_show_advanced_settings'] ) ) {
+			$advanced_settings         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_advanced_settings'] ) );
+			$advanced_settings_checked = empty( $advanced_settings ) ? 0 : 1;
+			\update_option( 'activitypub_show_advanced_settings', $advanced_settings_checked );
 		}
 
 		$screen_settings = '<fieldset>
@@ -500,7 +510,7 @@ class Settings {
 			</label>
 			<label for="activitypub_show_advanced_settings">
 				<input name="activitypub_show_advanced_settings" type="hidden" value="0" />
-				<input name="activitypub_show_advanced_settings" type="checkbox" id="activitypub_show_advanced_settings" value="1" ' . \checked( 1, \get_option( 'activitypub_show_advanced_settings', '0' ), false ) . ' />
+				<input name="activitypub_show_advanced_settings" type="checkbox" id="activitypub_show_advanced_settings" value="1" ' . \checked( 1, \get_option( 'activitypub_show_advanced_settings' ), false ) . ' />
 				' . \__( 'Advanced Settings', 'activitypub' ) . '
 			</label>
 		</div>
