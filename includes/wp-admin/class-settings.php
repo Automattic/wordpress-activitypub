@@ -33,7 +33,7 @@ class Settings {
 	public static function register_settings() {
 		\register_setting(
 			'activitypub',
-			'activitypub_show_advanced_settings',
+			'activitypub_show_advanced_tab',
 			array(
 				'type'    => 'boolean',
 				'default' => '0',
@@ -269,7 +269,7 @@ class Settings {
 		);
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || \get_option( 'activitypub_show_advanced_settings' ) ) {
+		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || \get_option( 'activitypub_show_advanced_tab' ) ) {
 			$settings_tabs['advanced'] = array(
 				'label'    => __( 'Advanced', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/advanced-settings.php',
@@ -491,10 +491,10 @@ class Settings {
 			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
 		}
 
-		if ( isset( $_POST['activitypub_show_advanced_settings'] ) ) {
-			$advanced_settings         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_advanced_settings'] ) );
+		if ( isset( $_POST['activitypub_show_advanced_tab'] ) ) {
+			$advanced_settings         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_advanced_tab'] ) );
 			$advanced_settings_checked = empty( $advanced_settings ) ? 0 : 1;
-			\update_option( 'activitypub_show_advanced_settings', $advanced_settings_checked );
+			\update_option( 'activitypub_show_advanced_tab', $advanced_settings_checked );
 		}
 
 		$screen_settings = '<fieldset>
@@ -508,9 +508,9 @@ class Settings {
 				<input name="activitypub_show_welcome_tab" type="checkbox" id="activitypub_show_welcome_tab" value="1" ' . \checked( 1, \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ), false ) . ' />
 				' . \__( 'Welcome Page', 'activitypub' ) . '
 			</label>
-			<label for="activitypub_show_advanced_settings">
-				<input name="activitypub_show_advanced_settings" type="hidden" value="0" />
-				<input name="activitypub_show_advanced_settings" type="checkbox" id="activitypub_show_advanced_settings" value="1" ' . \checked( 1, \get_option( 'activitypub_show_advanced_settings' ), false ) . ' />
+			<label for="activitypub_show_advanced_tab">
+				<input name="activitypub_show_advanced_tab" type="hidden" value="0" />
+				<input name="activitypub_show_advanced_tab" type="checkbox" id="activitypub_show_advanced_tab" value="1" ' . \checked( 1, \get_option( 'activitypub_show_advanced_tab' ), false ) . ' />
 				' . \__( 'Advanced Settings', 'activitypub' ) . '
 			</label>
 		</div>
