@@ -75,6 +75,13 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 		}
 	}, [ setAttributes ] );
 
+	const resetEmbedState = ( isChecking = false ) => {
+		setIsCheckingEmbed( isChecking );
+		setIsValidEmbed( false );
+		setIsRealOembed( false );
+		setEmbedHtml( '' );
+	};
+
 	/**
 	 * Check if a URL is an ActivityPub URL.
 	 *
@@ -83,15 +90,12 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	const checkUrl = async ( urlToCheck ) => {
 		// Don't check empty URLs.
 		if ( ! urlToCheck ) {
-			setIsCheckingEmbed( false );
-			setIsValidEmbed( false );
-			setIsRealOembed( false );
-			setEmbedHtml( '' );
+			resetEmbedState();
 			return;
 		}
 
 		try {
-			setIsCheckingEmbed( true );
+			resetEmbedState( true );
 			setHelpText( HELP_TEXT.checking() );
 
 			const response = await apiFetch( {
@@ -105,10 +109,8 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 			setEmbedHtml( response.html || '' );
 			setHelpText( HELP_TEXT.valid );
 		} catch ( error ) {
-			setIsValidEmbed( false );
-			setIsRealOembed( false );
+			resetEmbedState();
 			setHelpText( HELP_TEXT.error );
-			setEmbedHtml( '' );
 		} finally {
 			setIsCheckingEmbed( false );
 		}
