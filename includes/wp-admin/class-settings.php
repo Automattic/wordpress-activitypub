@@ -452,7 +452,7 @@ class Settings {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$welcome_checked = empty( \sanitize_text_field( \wp_unslash( $_GET['welcome'] ) ) ) ? 0 : 1;
 			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
-			\wp_safe_redirect( \admin_url( 'admin.php?page=activitypub&tab=settings' ) );
+			\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=settings' ) );
 			exit;
 		}
 	}
