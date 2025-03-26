@@ -235,18 +235,19 @@ class Settings {
 	 * Load settings page.
 	 */
 	public static function settings_page() {
-		$default_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ) ? 'welcome' : 'settings';
+		$show_welcome_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true );
+		$default_tab      = $show_welcome_tab ? 'welcome' : 'settings';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : $default_tab;
 
 		// Redirect welcome tab to settings if skipped.
-		if ( 'welcome' === $tab && ! \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ) ) {
+		if ( 'welcome' === $tab && ! $show_welcome_tab ) {
 			$tab = 'settings';
 		}
 
 		$settings_tabs = array();
 
-		if ( \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ) ) {
+		if ( $show_welcome_tab ) {
 			$settings_tabs['welcome'] = array(
 				'label'    => __( 'Welcome', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/welcome.php',
