@@ -282,7 +282,7 @@ class Comment extends Base {
 			if ( $comment && ! empty( $comment->comment_author_url ) ) {
 				$acct = Webfinger::uri_to_acct( $comment->comment_author_url );
 				if ( $acct && ! is_wp_error( $acct ) ) {
-					$acct              = str_replace( 'acct:', '@', $acct );
+					$acct              = str_replace( 'acct:', '@', strtok( $acct, '@' ) );
 					$mentions[ $acct ] = $comment->comment_author_url;
 				}
 			}
