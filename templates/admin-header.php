@@ -6,7 +6,7 @@
  */
 
 /* @var array $args Template arguments. */
-$args = wp_parse_args( $args );
+$args = wp_parse_args( $args ?? array() );
 ?>
 <div class="activitypub-settings-header">
 	<div class="activitypub-settings-title-section">

@@ -148,7 +148,10 @@ class Activity extends Base_Object {
 		}
 
 		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
-			$this->set( $i, $data->get( $i ) );
+			$value = $data->get( $i );
+			if ( $value && ! $this->get( $i ) ) {
+				$this->set( $i, $value );
+			}
 		}
 
 		if ( $data->get_published() && ! $this->get_published() ) {
@@ -163,7 +166,7 @@ class Activity extends Base_Object {
 			$this->set( 'actor', $data->get_attributed_to() );
 		}
 
-		if ( $data->get_in_reply_to() ) {
+		if ( $data->get_in_reply_to() && ! $this->get_in_reply_to() ) {
 			$this->set( 'in_reply_to', $data->get_in_reply_to() );
 		}
 

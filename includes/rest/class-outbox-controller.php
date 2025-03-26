@@ -7,6 +7,7 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use function Activitypub\get_masked_wp_version;
@@ -20,6 +21,8 @@ use function ActivityPub\get_rest_url_by_path;
  * @see https://www.w3.org/TR/activitypub/#outbox
  */
 class Outbox_Controller extends \WP_REST_Controller {
+	use Collection;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -57,19 +60,19 @@ class Outbox_Controller extends \WP_REST_Controller {
 						'page'     => array(
 							'description' => 'Current page of the collection.',
 							'type'        => 'integer',
-							'default'     => 1,
 							'minimum'     => 1,
+							// No default so we can differentiate between Collection and CollectionPage requests.
 						),
 						'per_page' => array(
 							'description' => 'Maximum number of items to be returned in result set.',
 							'type'        => 'integer',
-							'default'     => 10,
+							'default'     => 20,
 							'minimum'     => 1,
 							'maximum'     => 100,
 						),
 					),
 				),
-				'schema' => array( $this, 'get_collection_schema' ),
+				'schema' => array( $this, 'get_item_schema' ),
 			)
 		);
 	}
@@ -97,7 +100,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 */
 	public function get_items( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$page    = $request->get_param( 'page' );
+		$page    = $request->get_param( 'page' ) ?? 1;
 		$user    = Actors::get_by_various( $user_id );
 
 		/**
@@ -164,12 +167,11 @@ class Outbox_Controller extends \WP_REST_Controller {
 		$query_result = $outbox_query->query( $args );
 
 		$response = array(
-			'@context'     => array( 'https://www.w3.org/ns/activitystreams' ),
+			'@context'     => Base_Object::JSON_LD_CONTEXT,
 			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),
-			'type'         => 'OrderedCollectionPage',
-			'partOf'       => get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) ),
+			'type'         => 'OrderedCollection',
 			'totalItems'   => $outbox_query->found_posts,
 			'orderedItems' => array(),
 		);
@@ -179,23 +181,16 @@ class Outbox_Controller extends \WP_REST_Controller {
 			$response['orderedItems'][] = $this->prepare_item_for_response( $outbox_item, $request );
 		}
 
-		$max_pages         = \ceil( $response['totalItems'] / $request->get_param( 'per_page' ) );
-		$response['first'] = \add_query_arg( 'page', 1, $response['partOf'] );
-		$response['last']  = \add_query_arg( 'page', \max( $max_pages, 1 ), $response['partOf'] );
-
-		if ( $max_pages > $page ) {
-			$response['next'] = \add_query_arg( 'page', $page + 1, $response['partOf'] );
-		}
-
-		if ( $page > 1 ) {
-			$response['prev'] = \add_query_arg( 'page', $page - 1, $response['partOf'] );
+		$response = $this->prepare_collection_response( $response, $request );
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
 
 		/**
 		 * Filter the ActivityPub outbox array.
 		 *
-		 * @param array $response The ActivityPub outbox array.
-		 * @param \WP_REST_Request $request The request object.
+		 * @param array            $response The ActivityPub outbox array.
+		 * @param \WP_REST_Request $request  The request object.
 		 */
 		$response = \apply_filters( 'activitypub_rest_outbox_array', $response, $request );
 
@@ -230,74 +225,29 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 *
 	 * @return array Collection schema data.
 	 */
-	public function get_collection_schema() {
+	public function get_item_schema() {
 		if ( $this->schema ) {
 			return $this->add_additional_fields_schema( $this->schema );
 		}
 
-		$schema = array(
-			'$schema'    => 'http://json-schema.org/draft-04/schema#',
-			'title'      => 'outbox',
-			'type'       => 'object',
-			'properties' => array(
-				'@context'     => array(
-					'description' => 'The JSON-LD context for the collection.',
-					'type'        => array( 'string', 'array', 'object' ),
-					'required'    => true,
-				),
-				'id'           => array(
-					'description' => 'The unique identifier for the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'required'    => true,
-				),
-				'type'         => array(
-					'description' => 'The type of the collection.',
-					'type'        => 'string',
-					'enum'        => array( 'OrderedCollection', 'OrderedCollectionPage' ),
-					'required'    => true,
-				),
-				'actor'        => array(
-					'description' => 'The actor who owns this outbox.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'required'    => true,
-				),
-				'totalItems'   => array(
-					'description' => 'The total number of items in the collection.',
-					'type'        => 'integer',
-					'minimum'     => 0,
-					'required'    => true,
-				),
-				'orderedItems' => array(
-					'description' => 'The items in the collection.',
-					'type'        => 'array',
-					'items'       => array(
-						'type' => 'object',
-					),
-					'required'    => true,
-				),
-				'first'        => array(
-					'description' => 'The first page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'last'         => array(
-					'description' => 'The last page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'next'         => array(
-					'description' => 'The next page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-				'prev'         => array(
-					'description' => 'The previous page of the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-				),
-			),
+		$item_schema = array(
+			'type' => 'object',
+		);
+
+		$schema = $this->get_collection_schema( $item_schema );
+
+		// Add outbox-specific properties.
+		$schema['title']                   = 'outbox';
+		$schema['properties']['actor']     = array(
+			'description' => 'The actor who owns this outbox.',
+			'type'        => 'string',
+			'format'      => 'uri',
+			'required'    => true,
+		);
+		$schema['properties']['generator'] = array(
+			'description' => 'The software used to generate the collection.',
+			'type'        => 'string',
+			'format'      => 'uri',
 		);
 
 		$this->schema = $schema;

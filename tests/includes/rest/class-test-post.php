@@ -16,6 +16,7 @@ use WP_REST_Response;
 /**
  * Test Post REST Endpoints.
  *
+ * @group rest
  * @coversDefaultClass \Activitypub\Rest\Post
  */
 class Test_Post extends WP_UnitTestCase {

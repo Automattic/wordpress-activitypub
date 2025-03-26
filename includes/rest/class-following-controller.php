@@ -9,6 +9,7 @@ namespace Activitypub\Rest;
 
 use Activitypub\Collection\Actors;
 
+use function Activitypub\get_context;
 use function Activitypub\is_single_user;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_masked_wp_version;
@@ -21,6 +22,8 @@ use function Activitypub\get_masked_wp_version;
  * @see https://www.w3.org/TR/activitypub/#following
  */
 class Following_Controller extends Actors_Controller {
+	use Collection;
+
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
@@ -49,11 +52,18 @@ class Following_Controller extends Actors_Controller {
 					'callback'            => array( $this, 'get_items' ),
 					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
 					'args'                => array(
-						'page' => array(
+						'page'     => array(
 							'description' => 'Current page of the collection.',
 							'type'        => 'integer',
-							'default'     => 1,
 							'minimum'     => 1,
+							// No default so we can differentiate between Collection and CollectionPage requests.
+						),
+						'per_page' => array(
+							'description' => 'Maximum number of items to be returned in result set.',
+							'type'        => 'integer',
+							'default'     => 10,
+							'minimum'     => 1,
+							'maximum'     => 100,
 						),
 					),
 				),
@@ -82,12 +92,11 @@ class Following_Controller extends Actors_Controller {
 		\do_action( 'activitypub_rest_following_pre' );
 
 		$response = array(
-			'@context'  => \Activitypub\get_context(),
+			'@context'  => get_context(),
 			'id'        => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user->get__id() ) ),
 			'generator' => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'     => $user->get_id(),
-			'type'      => 'OrderedCollectionPage',
-			'partOf'    => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user->get__id() ) ),
+			'type'      => 'OrderedCollection',
 		);
 
 		/**
@@ -100,7 +109,11 @@ class Following_Controller extends Actors_Controller {
 
 		$response['totalItems']   = \is_countable( $items ) ? \count( $items ) : 0;
 		$response['orderedItems'] = $items;
-		$response['first']        = $response['partOf'];
+
+		$response = $this->prepare_collection_response( $response, $request );
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
 
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
@@ -141,68 +154,29 @@ class Following_Controller extends Actors_Controller {
 			return $this->add_additional_fields_schema( $this->schema );
 		}
 
-		$this->schema = array(
-			'$schema'    => 'http://json-schema.org/draft-04/schema#',
-			'title'      => 'following',
-			'type'       => 'object',
-			'properties' => array(
-				'@context'     => array(
-					'description' => 'The JSON-LD context for the response.',
-					'type'        => array( 'array', 'object' ),
-					'readonly'    => true,
-				),
-				'id'           => array(
-					'description' => 'The unique identifier for the following collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'generator'    => array(
-					'description' => 'The generator of the following collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'actor'        => array(
-					'description' => 'The actor who owns the following collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'type'         => array(
-					'description' => 'The type of the following collection.',
-					'type'        => 'string',
-					'enum'        => array( 'OrderedCollectionPage' ),
-					'readonly'    => true,
-				),
-				'totalItems'   => array(
-					'description' => 'The total number of items in the following collection.',
-					'type'        => 'integer',
-					'readonly'    => true,
-				),
-				'partOf'       => array(
-					'description' => 'The collection this page is part of.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-				'orderedItems' => array(
-					'description' => 'The items in the following collection.',
-					'type'        => 'array',
-					'items'       => array(
-						'type'   => 'string',
-						'format' => 'uri',
-					),
-					'readonly'    => true,
-				),
-				'first'        => array(
-					'description' => 'The first page in the collection.',
-					'type'        => 'string',
-					'format'      => 'uri',
-					'readonly'    => true,
-				),
-			),
+		$item_schema = array(
+			'type'   => 'string',
+			'format' => 'uri',
 		);
+
+		$schema = $this->get_collection_schema( $item_schema );
+
+		// Add following-specific properties.
+		$schema['title']                   = 'following';
+		$schema['properties']['actor']     = array(
+			'description' => 'The actor who owns the following collection.',
+			'type'        => 'string',
+			'format'      => 'uri',
+			'readonly'    => true,
+		);
+		$schema['properties']['generator'] = array(
+			'description' => 'The generator of the following collection.',
+			'type'        => 'string',
+			'format'      => 'uri',
+			'readonly'    => true,
+		);
+
+		$this->schema = $schema;
 
 		return $this->add_additional_fields_schema( $this->schema );
 	}

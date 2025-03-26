@@ -136,10 +136,8 @@ class Delete {
 	public static function delete_interactions( $actor ) {
 		$comments = Interactions::get_interactions_by_actor( $actor );
 
-		if ( is_array( $comments ) ) {
-			foreach ( $comments as $comment ) {
-				wp_delete_comment( $comment->comment_ID, true );
-			}
+		foreach ( $comments as $comment ) {
+			wp_delete_comment( $comment, true );
 		}
 	}
 

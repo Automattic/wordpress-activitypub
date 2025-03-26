@@ -22,6 +22,10 @@ class Settings {
 	public static function init() {
 		\add_action( 'admin_init', array( self::class, 'register_settings' ), 11 );
 		\add_action( 'admin_menu', array( self::class, 'add_settings_page' ) );
+
+		\add_action( 'load-settings_page_activitypub', array( self::class, 'handle_welcome_query_arg' ) );
+		\add_filter( 'screen_settings', array( self::class, 'add_screen_option' ), 10, 2 );
+		\add_filter( 'screen_options_show_submit', array( self::class, 'screen_options_show_submit' ), 10, 2 );
 	}
 
 	/**
@@ -232,19 +236,30 @@ class Settings {
 	 * Load settings page.
 	 */
 	public static function settings_page() {
+		$show_welcome_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true );
+		$default_tab      = $show_welcome_tab ? 'welcome' : 'settings';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'welcome';
+		$tab = isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : $default_tab;
 
-		$settings_tabs = array(
-			'welcome'  => array(
+		// Redirect welcome tab to settings if skipped.
+		if ( 'welcome' === $tab && ! $show_welcome_tab ) {
+			$tab = 'settings';
+		}
+
+		$settings_tabs = array();
+
+		if ( $show_welcome_tab ) {
+			$settings_tabs['welcome'] = array(
 				'label'    => __( 'Welcome', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/welcome.php',
-			),
-			'settings' => array(
-				'label'    => __( 'Settings', 'activitypub' ),
-				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
-			),
+			);
+		}
+
+		$settings_tabs['settings'] = array(
+			'label'    => __( 'Settings', 'activitypub' ),
+			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
 		);
+
 		if ( ! is_user_disabled( Actors::BLOG_USER_ID ) ) {
 			$settings_tabs['blog-profile'] = array(
 				'label'    => __( 'Blog Profile', 'activitypub' ),
@@ -266,18 +281,28 @@ class Settings {
 
 		switch ( $tab ) {
 			case 'blog-profile':
-				wp_enqueue_media();
-				wp_enqueue_script( 'activitypub-header-image' );
+				\wp_enqueue_media();
+				\wp_enqueue_script( 'activitypub-header-image' );
 				break;
 			case 'welcome':
-				wp_enqueue_script( 'plugin-install' );
-				add_thickbox();
-				wp_enqueue_script( 'updates' );
+				\wp_enqueue_script( 'plugin-install' );
+				\add_thickbox();
+				\wp_enqueue_script( 'updates' );
 				break;
 		}
 
-		$labels       = wp_list_pluck( $settings_tabs, 'label' );
-		$args         = array_fill_keys( array_keys( $labels ), '' );
+		if ( ! isset( $settings_tabs[ $tab ] ) ) {
+			$tab = $default_tab;
+		}
+
+		// Only show tabs if there are more than one.
+		if ( \count( $settings_tabs ) <= 1 ) {
+			$labels = array();
+		} else {
+			$labels = \wp_list_pluck( $settings_tabs, 'label' );
+		}
+
+		$args         = \array_fill_keys( \array_keys( $labels ), '' );
 		$args[ $tab ] = 'active';
 		$args['tabs'] = $labels;
 
@@ -297,8 +322,8 @@ class Settings {
 			),
 		);
 
-		if ( ! is_user_disabled( get_current_user_id() ) ) {
-			$webfinger = Actors::get_by_id( get_current_user_id() )->get_webfinger();
+		if ( ! is_user_disabled( \get_current_user_id() ) ) {
+			$webfinger = Actors::get_by_id( \get_current_user_id() )->get_webfinger();
 		} else {
 			$webfinger = ( new Blog() )->get_webfinger();
 		}
@@ -416,5 +441,75 @@ class Settings {
 			'<p>' . \__( '<a href="https://wordpress.org/support/plugin/activitypub/">Get support</a>', 'activitypub' ) . '</p>' . "\n" .
 			'<p>' . \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues">Report an issue</a>', 'activitypub' ) . '</p>'
 		);
+	}
+
+	/**
+	 * Handle 'welcome' query arg.
+	 */
+	public static function handle_welcome_query_arg() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['welcome'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$welcome_checked = empty( \sanitize_text_field( \wp_unslash( $_GET['welcome'] ) ) ) ? 0 : 1;
+			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
+			\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=settings' ) );
+			exit;
+		}
+	}
+
+	/**
+	 * Add screen option.
+	 *
+	 * @param string $screen_settings The screen settings.
+	 * @param object $screen          The screen object.
+	 *
+	 * @return string The screen settings.
+	 */
+	public static function add_screen_option( $screen_settings, $screen ) {
+		if ( 'settings_page_activitypub' !== $screen->id ) {
+			return $screen_settings;
+		}
+
+		if ( isset( $_POST['activitypub_show_welcome_tab'] ) && isset( $_POST['screenoptionnonce'] ) ) {
+			$nonce   = \sanitize_text_field( \wp_unslash( $_POST['screenoptionnonce'] ) );
+			$welcome = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_welcome_tab'] ) );
+			// Verify screen options nonce.
+			if ( \wp_verify_nonce( $nonce, 'screen-options-nonce' ) ) {
+				$welcome_checked = empty( $welcome ) ? 0 : 1;
+				\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
+			}
+		}
+
+		$screen_settings = '<fieldset>
+		<legend class="screen-layout">' . \esc_html__( 'Settings Pages', 'activitypub' ) . '</legend>
+		<p>
+			' . \__( 'Some settings pages can be shown or hidden by using the checkboxes.', 'activitypub' ) . '
+		</p>
+		<div class="metabox-prefs-container">
+			<label for="activitypub_show_welcome_tab">
+				<input name="activitypub_show_welcome_tab" type="hidden" value="0" />
+				<input name="activitypub_show_welcome_tab" type="checkbox" id="activitypub_show_welcome_tab" value="1" ' . \checked( 1, \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ), false ) . ' />
+				' . \__( 'Welcome Page', 'activitypub' ) . '
+			</label>
+		</div>
+	</fieldset>';
+
+		return $screen_settings;
+	}
+
+	/**
+	 * Show the submit button on the screen options page.
+	 *
+	 * @param bool   $show_submit Whether to show the submit button.
+	 * @param object $screen      The screen object.
+	 *
+	 * @return bool Whether to show the submit button.
+	 */
+	public static function screen_options_show_submit( $show_submit, $screen ) {
+		if ( 'settings_page_activitypub' !== $screen->id ) {
+			return $show_submit;
+		}
+
+		return true;
 	}
 }

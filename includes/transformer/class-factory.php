@@ -66,9 +66,9 @@ class Factory {
 		 *     return $transformer;
 		 * }, 10, 3 );
 		 *
-		 * @param Base   $transformer  The transformer to use.
-		 * @param mixed  $data         The object to transform.
-		 * @param string $object_class The class of the object to transform.
+		 * @param null|Base $transformer  The transformer to use. Default null.
+		 * @param mixed     $data         The object to transform.
+		 * @param string    $object_class The class of the object to transform.
 		 *
 		 * @return mixed The transformer to use.
 		 */

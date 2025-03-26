@@ -86,7 +86,7 @@ class Blog_Settings_Fields {
 	public static function avatar_callback() {
 		?>
 		<?php if ( has_site_icon() ) : ?>
-			<p><img src="<?php echo esc_url( get_site_icon_url( '50' ) ); ?>" alt="" /></p>
+			<p><img src="<?php echo esc_url( get_site_icon_url( 50 ) ); ?>" alt="" /></p>
 		<?php endif; ?>
 		<p class="description">
 			<?php

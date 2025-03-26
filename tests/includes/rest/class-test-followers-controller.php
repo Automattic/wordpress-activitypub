@@ -12,6 +12,7 @@ use Activitypub\Collection\Followers;
 /**
  * Tests for Followers REST API endpoint.
  *
+ * @group rest
  * @coversDefaultClass \Activitypub\Rest\Followers_Controller
  */
 class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
@@ -70,7 +71,6 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$this->assertEquals( 'uri', $schema['properties']['generator']['format'] );
 		$this->assertEquals( 'string', $schema['properties']['actor']['type'] );
 		$this->assertEquals( 'uri', $schema['properties']['actor']['format'] );
-		$this->assertEquals( array( 'OrderedCollectionPage' ), $schema['properties']['type']['enum'] );
 		$this->assertEquals( 'integer', $schema['properties']['totalItems']['type'] );
 		$this->assertEquals( 'string', $schema['properties']['partOf']['type'] );
 		$this->assertEquals( 'uri', $schema['properties']['partOf']['format'] );
@@ -87,6 +87,7 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+		$request->set_param( 'page', 1 );
 		$request->set_param( 'context', 'simple' );
 		$response = rest_get_server()->dispatch( $request );
 
@@ -104,8 +105,6 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$this->assertArrayHasKey( 'generator', $data );
 		$this->assertArrayHasKey( 'actor', $data );
 		$this->assertArrayHasKey( 'totalItems', $data );
-		$this->assertArrayHasKey( 'partOf', $data );
-		$this->assertArrayHasKey( 'orderedItems', $data );
 
 		// Test property values.
 		$this->assertEquals( 'OrderedCollectionPage', $data['type'] );
@@ -123,6 +122,7 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+		$request->set_param( 'page', 1 );
 		$request->set_param( 'context', 'full' );
 		$response = rest_get_server()->dispatch( $request );
 

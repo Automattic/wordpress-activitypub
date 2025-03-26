@@ -10,6 +10,7 @@ namespace Activitypub\Tests\Rest;
 /**
  * Tests for Application REST API endpoint.
  *
+ * @group rest
  * @coversDefaultClass \Activitypub\Rest\Application_Controller
  */
 class Test_Application_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {

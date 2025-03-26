@@ -29,7 +29,7 @@ class Interactions {
 	 *
 	 * @param array $activity The activity-object.
 	 *
-	 * @return array|false The comment data or false on failure.
+	 * @return int|false|\WP_Error The comment ID or false or WP_Error on failure.
 	 */
 	public static function add_comment( $activity ) {
 		$commentdata = self::activity_to_comment( $activity );
@@ -179,20 +179,19 @@ class Interactions {
 			$actor = object_to_uri( $meta['url'] );
 		}
 
-		$args          = array(
+		$args = array(
 			'nopaging'   => true,
 			'author_url' => $actor,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			'meta_query' => array(
 				array(
-					'key'     => 'protocol',
-					'value'   => 'activitypub',
-					'compare' => '=',
+					'key'   => 'protocol',
+					'value' => 'activitypub',
 				),
 			),
 		);
-		$comment_query = new WP_Comment_Query( $args );
-		return $comment_query->comments;
+
+		return get_comments( $args );
 	}
 
 	/**
@@ -230,7 +229,7 @@ class Interactions {
 	 */
 	public static function activity_to_comment( $activity ) {
 		$comment_content = null;
-		$actor           = object_to_uri( $activity['actor'] );
+		$actor           = object_to_uri( $activity['actor'] ?? null );
 		$actor           = get_remote_metadata_by_actor( $actor );
 
 		// Check Actor-Meta.
@@ -297,7 +296,7 @@ class Interactions {
 	 */
 	public static function persist( $commentdata, $action = self::INSERT ) {
 		// Disable flood control.
-		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
 		// Do not require email for AP entries.
 		\add_filter( 'pre_option_require_name_email', '__return_false' );
 		// No nonce possible for this submission route.
@@ -315,7 +314,7 @@ class Interactions {
 			$state = \wp_update_comment( $commentdata, true );
 		}
 
-		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10 );
+		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ) );
 		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 		// Restore flood control.
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );

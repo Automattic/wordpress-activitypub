@@ -25,7 +25,7 @@ class Comment {
 
 		\add_filter( 'comment_reply_link', array( self::class, 'comment_reply_link' ), 10, 3 );
 		\add_filter( 'comment_class', array( self::class, 'comment_class' ), 10, 3 );
-		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 3 );
+		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
 		\add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
 		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 10, 2 );
@@ -49,8 +49,7 @@ class Comment {
 	 */
 	public static function comment_reply_link( $link, $args, $comment ) {
 		if ( self::are_comments_allowed( $comment ) ) {
-			$user_id = get_current_user_id();
-			if ( $user_id && self::was_received( $comment ) && \user_can( $user_id, 'activitypub' ) ) {
+			if ( \current_user_can( 'activitypub' ) && self::was_received( $comment ) ) {
 				return self::create_fediverse_reply_link( $link, $args );
 			}
 
@@ -63,7 +62,7 @@ class Comment {
 		);
 
 		$div = sprintf(
-			'<div class="activitypub-remote-reply" data-attrs="%s"></div>',
+			'<div class="reply activitypub-remote-reply" data-attrs="%s"></div>',
 			esc_attr( wp_json_encode( $attrs ) )
 		);
 

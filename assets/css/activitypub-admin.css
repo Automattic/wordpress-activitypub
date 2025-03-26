@@ -1,6 +1,7 @@
 .activitypub-settings {
 	max-width: 800px;
 	margin: 0 auto;
+	position: relative;
 }
 
 .settings_page_activitypub .notice {
@@ -219,4 +220,24 @@ input.blog-user-identifier {
 .repost .dashboard-comment-wrap .comment-author,
 .like .dashboard-comment-wrap .comment-author {
 	margin-block: 0;
+}
+
+.activitypub-settings .welcome-tab-close {
+	position: absolute;
+	top: 0px;
+	right: 0px;
+	font-size: 13px;
+	padding: 0 5px 0 20px;
+	text-decoration: none;
+	z-index: 1;
+}
+
+.activitypub-settings .welcome-tab-close::before {
+	position: absolute;
+	top: 0px;
+	left: 0;
+	transition: all .1s ease-in-out;
+	font: normal 16px/20px dashicons;
+	content: '\f335';
+	font-size: 20px;
 }

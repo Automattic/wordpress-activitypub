@@ -12,6 +12,7 @@ use Activitypub\Rest\Actors_Controller;
 /**
  * Tests for Actors REST API endpoint.
  *
+ * @group rest
  * @coversDefaultClass \Activitypub\Rest\Actors_Controller
  */
 class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
