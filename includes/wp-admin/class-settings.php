@@ -482,7 +482,7 @@ class Settings {
 		}
 
 		$screen_settings = '<fieldset>
-		<legend class="screen-layout">' . __( 'Settings Pages', 'activitypub' ) . '</legend>
+		<legend class="screen-layout">' . \esc_html__( 'Settings Pages', 'activitypub' ) . '</legend>
 		<p>
 			' . __( 'Some settings pages can be shown or hidden by using the checkboxes.', 'activitypub' ) . '
 		</p>
