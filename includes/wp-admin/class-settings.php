@@ -241,15 +241,6 @@ class Settings {
 				'sanitize_callback' => array( Sanitize::class, 'url_list' ),
 			)
 		);
-
-		\register_setting(
-			'activitypub_welcome',
-			'activitypub_welcome_skip',
-			array(
-				'type'    => 'boolean',
-				'default' => false,
-			)
-		);
 	}
 
 	/**
