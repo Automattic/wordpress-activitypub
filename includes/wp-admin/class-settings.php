@@ -23,7 +23,7 @@ class Settings {
 		\add_action( 'admin_init', array( self::class, 'register_settings' ), 11 );
 		\add_action( 'admin_menu', array( self::class, 'add_settings_page' ) );
 
-		\add_action( 'admin_init', array( self::class, 'handle_welcome_query_arg' ), 12 );
+		\add_action( 'load-settings_page_activitypub', array( self::class, 'handle_welcome_query_arg' ) );
 		\add_filter( 'screen_settings', array( self::class, 'add_screen_option' ), 10, 2 );
 		\add_filter( 'screen_options_show_submit', array( self::class, 'screen_options_show_submit' ), 10, 2 );
 	}
