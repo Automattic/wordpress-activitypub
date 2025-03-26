@@ -119,8 +119,9 @@ function plugin_admin_init() {
  * @param string $plugin The plugin basename.
  */
 function activation_redirect( $plugin ) {
-	if( ACTIVITYPUB_PLUGIN_BASENAME === $plugin ) {
-		exit( \wp_redirect( \admin_url( 'options-general.php?page=activitypub' ) ) );
+	if ( ACTIVITYPUB_PLUGIN_BASENAME === $plugin ) {
+		\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub' ) );
+		exit;
 	}
 }
 \add_action( 'activated_plugin', __NAMESPACE__ . '\activation_redirect' );
