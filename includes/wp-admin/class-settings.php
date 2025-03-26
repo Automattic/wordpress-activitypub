@@ -23,8 +23,6 @@ class Settings {
 		\add_action( 'admin_init', array( self::class, 'register_settings' ), 11 );
 		\add_action( 'admin_menu', array( self::class, 'add_settings_page' ) );
 
-		\add_filter( 'screen_settings', array( self::class, 'add_screen_option' ), 10, 2 );
-
 		\add_filter(
 			'screen_options_show_submit',
 			function ( $show_submit, $screen ) {
@@ -37,37 +35,8 @@ class Settings {
 			10,
 			2
 		);
-	}
 
-	/**
-	 * Add screen option.
-	 *
-	 * @param string $screen_settings The screen settings.
-	 * @param object $screen The screen object.
-	 *
-	 * @return string The screen settings.
-	 */
-	public static function add_screen_option( $screen_settings, $screen ) {
-		if ( 'settings_page_activitypub' !== $screen->id ) {
-			return $screen_settings;
-		}
-
-		if ( isset( $_GET['welcome'] ) ) {
-			$welcome_checked = empty( $_GET['welcome'] ) ? 0 : 1;
-			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
-		}
-
-		$screen_settings = '<fieldset>
-		<legend class="screen-layout">' . __( 'Pages', 'activitypub' ) . '</legend>
-		<p>
-			' . __( 'Some pages can be shown or hidden by using the checkboxes.', 'activitypub' ) . '
-		</p>
-		<div class="metabox-prefs-container">
-			<label for="activitypub_show_welcome_tab"><input name="activitypub_show_welcome_tab" type="checkbox" id="activitypub_show_welcome_tab" value="1" ' . \checked( 1, \get_user_meta( get_current_user_id(), 'activitypub_show_welcome_tab', true ), false ) . ' />' . __( 'Welcome Page', 'activitypub' ) . '</label>
-		</div>
-	</fieldset>';
-
-		return $screen_settings;
+		\add_filter( 'screen_settings', array( self::class, 'add_screen_option' ), 10, 2 );
 	}
 
 	/**
@@ -345,7 +314,13 @@ class Settings {
 			$tab = $default_tab;
 		}
 
-		$labels       = wp_list_pluck( $settings_tabs, 'label' );
+		// Only show tabs if there are more than one.
+		if ( \count( $settings_tabs ) <= 1 ) {
+			$labels = array();
+		} else {
+			$labels = wp_list_pluck( $settings_tabs, 'label' );
+		}
+
 		$args         = array_fill_keys( array_keys( $labels ), '' );
 		$args[ $tab ] = 'active';
 		$args['tabs'] = $labels;
@@ -485,5 +460,50 @@ class Settings {
 			'<p>' . \__( '<a href="https://wordpress.org/support/plugin/activitypub/">Get support</a>', 'activitypub' ) . '</p>' . "\n" .
 			'<p>' . \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues">Report an issue</a>', 'activitypub' ) . '</p>'
 		);
+	}
+
+	/**
+	 * Add screen option.
+	 *
+	 * @param string $screen_settings The screen settings.
+	 * @param object $screen          The screen object.
+	 *
+	 * @return string The screen settings.
+	 */
+	public static function add_screen_option( $screen_settings, $screen ) {
+		if ( 'settings_page_activitypub' !== $screen->id ) {
+			return $screen_settings;
+		}
+
+		if ( isset( $_GET['welcome'] ) ) {
+			$welcome_checked = empty( $_GET['welcome'] ) ? 0 : 1;
+			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
+		}
+
+		if ( isset( $_POST['activitypub_show_welcome_tab'] ) && isset( $_POST['screenoptionnonce'] ) ) {
+			$nonce   = sanitize_text_field( wp_unslash( $_POST['screenoptionnonce'] ) );
+			$welcome = sanitize_text_field( wp_unslash( $_POST['activitypub_show_welcome_tab'] ) );
+			// Verify screen options nonce.
+			if ( \wp_verify_nonce( $nonce, 'screen-options-nonce' ) ) {
+				$welcome_checked = empty( $welcome ) ? 0 : 1;
+				\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
+			}
+		}
+
+		$screen_settings = '<fieldset>
+		<legend class="screen-layout">' . __( 'SettingsPages', 'activitypub' ) . '</legend>
+		<p>
+			' . __( 'Some settings pages can be shown or hidden by using the checkboxes.', 'activitypub' ) . '
+		</p>
+		<div class="metabox-prefs-container">
+			<label for="activitypub_show_welcome_tab">
+				<input name="activitypub_show_welcome_tab" type="hidden" value="0" />
+				<input name="activitypub_show_welcome_tab" type="checkbox" id="activitypub_show_welcome_tab" value="1" ' . \checked( 1, \get_user_meta( get_current_user_id(), 'activitypub_show_welcome_tab', true ), false ) . ' />
+				' . __( 'Welcome Page', 'activitypub' ) . '
+			</label>
+		</div>
+	</fieldset>';
+
+		return $screen_settings;
 	}
 }
