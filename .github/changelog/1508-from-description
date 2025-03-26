@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+PHP Warning when there's no actor information in comment activities.
