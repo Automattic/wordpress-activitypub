@@ -113,6 +113,19 @@ function plugin_admin_init() {
 	)
 );
 
+/**
+ * Redirect to the welcome page after plugin activation.
+ *
+ * @param string $plugin The plugin basename.
+ */
+function activation_redirect( $plugin ) {
+	if ( ACTIVITYPUB_PLUGIN_BASENAME === $plugin ) {
+		\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub' ) );
+		exit;
+	}
+}
+\add_action( 'activated_plugin', __NAMESPACE__ . '\activation_redirect' );
+
 \register_deactivation_hook(
 	__FILE__,
 	array(
