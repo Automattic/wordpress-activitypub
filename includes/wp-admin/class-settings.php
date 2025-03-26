@@ -23,20 +23,8 @@ class Settings {
 		\add_action( 'admin_init', array( self::class, 'register_settings' ), 11 );
 		\add_action( 'admin_menu', array( self::class, 'add_settings_page' ) );
 
-		\add_filter(
-			'screen_options_show_submit',
-			function ( $show_submit, $screen ) {
-				if ( 'settings_page_activitypub' !== $screen->id ) {
-					return $show_submit;
-				}
-
-				return true;
-			},
-			10,
-			2
-		);
-
 		\add_filter( 'screen_settings', array( self::class, 'add_screen_option' ), 10, 2 );
+		\add_filter( 'screen_options_show_submit', array( self::class, 'screen_options_show_submit' ), 10, 2 );
 	}
 
 	/**
@@ -496,5 +484,21 @@ class Settings {
 	</fieldset>';
 
 		return $screen_settings;
+	}
+
+	/**
+	 * Show the submit button on the screen options page.
+	 *
+	 * @param bool   $show_submit Whether to show the submit button.
+	 * @param object $screen      The screen object.
+	 *
+	 * @return bool Whether to show the submit button.
+	 */
+	public static function screen_options_show_submit( $show_submit, $screen ) {
+		if ( 'settings_page_activitypub' !== $screen->id ) {
+			return $show_submit;
+		}
+
+		return true;
 	}
 }
