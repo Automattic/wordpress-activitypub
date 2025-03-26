@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Redirect user to the welcome page after ActivityPub plugin is activated.
