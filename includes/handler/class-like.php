@@ -31,7 +31,7 @@ class Like {
 	 * @param int   $user_id The ID of the local blog user.
 	 */
 	public static function handle_like( $like, $user_id ) {
-		if ( '1' !== \get_option( 'activitypub_allow_likes', '1' ) ) {
+		if ( ! Comment::is_comment_type_enabled( 'like' ) ) {
 			return;
 		}
 

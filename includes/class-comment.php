@@ -819,7 +819,7 @@ class Comment {
 	 * @param string $comment_type The comment type.
 	 * @return bool True if the comment type is enabled.
 	 */
-	private static function is_comment_type_enabled( $comment_type ) {
+	public static function is_comment_type_enabled( $comment_type ) {
 		return '1' === get_option( "activitypub_allow_{$comment_type}s", '1' );
 	}
 }

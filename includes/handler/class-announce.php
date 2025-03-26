@@ -45,7 +45,7 @@ class Announce {
 		}
 
 		// Check if reposts are allowed.
-		if ( '1' !== \get_option( 'activitypub_allow_reposts', '1' ) ) {
+		if ( ! Comment::is_comment_type_enabled( 'repost' ) ) {
 			return;
 		}
 

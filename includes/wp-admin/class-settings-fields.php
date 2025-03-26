@@ -489,25 +489,28 @@ class Settings_Fields {
 	 * Render allow interactions field.
 	 */
 	public static function render_allow_interactions_field() {
+		if ( defined( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS' ) && ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
+			echo '<p class="description">' . \esc_html__( '⚠ This setting is defined through server configuration by your blog&#8217;s administrator.', 'activitypub' ) . '</p>';
+			return;
+		}
+
 		$allow_likes   = get_option( 'activitypub_allow_likes', '1' );
 		$allow_reposts = get_option( 'activitypub_allow_reposts', '1' );
 		?>
 		<fieldset>
-			<p><?php esc_html_e( 'Choose which fediverse interactions to receive as comments on your blog:', 'activitypub' ); ?></p>
-			<ul>
-				<li>
-					<label>
-						<input type="checkbox" name="activitypub_allow_likes" value="1" <?php checked( '1', $allow_likes ); ?> />
-						<?php esc_html_e( 'Receive likes', 'activitypub' ); ?>
-					</label>
-				</li>
-				<li>
-					<label>
-						<input type="checkbox" name="activitypub_allow_announces" value="1" <?php checked( '1', $allow_reposts ); ?> />
-						<?php esc_html_e( 'Receive reblogs', 'activitypub' ); ?>
-					</label>
-				</li>
-			</ul>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_allow_likes" value="1" <?php checked( '1', $allow_likes ); ?> />
+					<?php esc_html_e( 'Receive likes', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_allow_announces" value="1" <?php checked( '1', $allow_reposts ); ?> />
+					<?php esc_html_e( 'Receive reblogs', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p class="description"><?php esc_html_e( 'Types of interactions from the Fediverse your blog should accept.', 'activitypub' ); ?></p>
 		</fieldset>
 		<?php
 	}
