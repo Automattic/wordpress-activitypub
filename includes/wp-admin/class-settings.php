@@ -267,6 +267,7 @@ class Settings {
 			'label'    => __( 'Settings', 'activitypub' ),
 			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
 		);
+
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || '1' === \get_option( 'activitypub_advanced_settings', '0' ) ) {
 			$settings_tabs['advanced'] = array(
