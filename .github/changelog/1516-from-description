@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Use the `$from` account for the object in Move activity for internal Moves
