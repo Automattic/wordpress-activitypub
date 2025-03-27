@@ -130,7 +130,7 @@ class Move {
 		$activity->set_type( 'Move' );
 		$activity->set_actor( $actor );
 		$activity->set_origin( $actor );
-		$activity->set_object( $to );
+		$activity->set_object( $actor );
 		$activity->set_target( $to );
 
 		return add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
