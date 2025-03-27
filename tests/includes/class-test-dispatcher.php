@@ -5,6 +5,8 @@
  * @package ActivityPub
  */
 
+namespace Activitypub\Tests;
+
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
@@ -14,14 +16,25 @@ use Activitypub\Dispatcher;
 /**
  * Test class for Activitypub Dispatcher.
  *
- * @coversDefaultClass Activitypub\Dispatcher
+ * @coversDefaultClass \Activitypub\Dispatcher
  */
-class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
+class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
+
+	/**
+	 * Set up the test case.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'add_follower' ), 10, 2 );
+	}
+
 	/**
 	 * Tear down the test case.
 	 */
 	public function tear_down() {
 		\delete_option( 'activitypub_actor_mode' );
+		remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'add_follower' ) );
 
 		parent::tear_down();
 	}
@@ -72,6 +85,23 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$result = Dispatcher::maybe_add_inboxes_of_blog_user( $inboxes, 1, $activity );
 		$this->assertEquals( $inboxes, $result );
+	}
+
+	/**
+	 * Tests send_to_followers.
+	 *
+	 * @covers ::send_to_followers
+	 */
+	public function test_send_to_followers() {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		Followers::add_follower( self::$user_id, 'https://example.org/users/username' );
+		Followers::add_follower( self::$user_id, 'https://example.com/users/username' );
+
+		$result = Dispatcher::send_to_followers( $outbox_item->ID, 1 );
+
+		$this->assertEquals( array( $outbox_item->ID, 1, 1 ), $result );
 	}
 
 	/**
@@ -147,7 +177,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @param array  $inboxes Inboxes to send to.
 	 * @param array  $expected Expected inboxes to be scheduled for retry.
 	 *
-	 * @throws ReflectionException If the method does not exist.
+	 * @throws \ReflectionException If the method does not exist.
 	 */
 	public function test_send_to_inboxes_schedules_retry( $code, $message, $inboxes, $expected ) {
 		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
@@ -161,7 +191,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			}
 		);
 
-		$send_to_inboxes = new ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
+		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
 		$send_to_inboxes->setAccessible( true );
 
 		// Invoke the method.
@@ -189,7 +219,7 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		add_filter( 'pre_http_request', $fake_request, 10, 3 );
 
 		// Make `Dispatcher::send_to_additional_inboxes` a public method.
-		$send_to_additional_inboxes = new ReflectionMethod( Dispatcher::class, 'send_to_additional_inboxes' );
+		$send_to_additional_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_additional_inboxes' );
 		$send_to_additional_inboxes->setAccessible( true );
 
 		$send_to_additional_inboxes->invoke( null, $this->get_activity_mock(), Actors::get_by_id( self::$user_id ), $outbox_item );
@@ -253,26 +283,13 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
 		$activity    = \Activitypub\Collection\Outbox::get_activity( $outbox_item );
 
-		$should_send = new ReflectionMethod( Dispatcher::class, 'should_send_to_followers' );
+		$should_send = new \ReflectionMethod( Dispatcher::class, 'should_send_to_followers' );
 		$should_send->setAccessible( true );
 
 		// No followers, so should not send.
 		$this->assertFalse( $should_send->invoke( null, $activity, Actors::get_by_id( self::$user_id ), $outbox_item ) );
 
 		// Add a follower.
-		add_filter(
-			'pre_get_remote_metadata_by_actor',
-			function () {
-				return array(
-					'id'                => 'https://example.org/users/username',
-					'url'               => 'https://example.org/users/username',
-					'inbox'             => 'https://example.org/users/username/inbox',
-					'name'              => 'username',
-					'preferredUsername' => 'username',
-					'endpoints'         => array( 'sharedInbox' => 'https://example.org/sharedInbox' ),
-				);
-			}
-		);
 		Followers::add_follower( self::$user_id, 'https://example.org/users/username' );
 
 		$this->assertTrue( $should_send->invoke( null, $activity, Actors::get_by_id( self::$user_id ), $outbox_item ) );
@@ -308,5 +325,23 @@ class Test_Dispatcher extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			);
 
 		return $activity;
+	}
+
+	/**
+	 * Add a follower for testing.
+	 *
+	 * @param array  $pre   The pre metadata.
+	 * @param string $actor The actor ID.
+	 * @return array
+	 */
+	public function add_follower( $pre, $actor ) {
+		return array(
+			'id'                => $actor,
+			'url'               => $actor,
+			'inbox'             => $actor . '/inbox',
+			'name'              => 'username',
+			'preferredUsername' => 'username',
+			'endpoints'         => array( 'sharedInbox' => 'https://example.org/sharedInbox' ),
+		);
 	}
 }

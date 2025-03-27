@@ -115,7 +115,7 @@ class Test_Follow extends WP_UnitTestCase {
 
 		$this->assertEquals( 'Follow', $activity_json['object']['type'] );
 		$this->assertEquals( 'https://example.com/user/1', $activity_json['object']['object'] );
-		$this->assertEquals( array( $actor ), $activity_json['object']['to'] );
+		$this->assertEquals( array( $actor ), $activity_json['to'] );
 		$this->assertEquals( $actor, $activity_json['object']['actor'] );
 
 		// Clean up.
