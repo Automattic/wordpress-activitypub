@@ -815,5 +815,17 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
+
+		\register_meta(
+			'user',
+			'activitypub_show_welcome_tab',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Whether to show the welcome tab.',
+				'single'            => true,
+				'default'           => 1,
+				'sanitize_callback' => 'absint',
+			)
+		);
 	}
 }
