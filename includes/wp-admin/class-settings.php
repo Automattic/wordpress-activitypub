@@ -492,8 +492,8 @@ class Settings {
 			$nonce = \sanitize_text_field( \wp_unslash( $_POST['screenoptionnonce'] ) );
 			if ( ! \wp_verify_nonce( $nonce, 'screen-options-nonce' ) ) {
 				return $screen_settings;
-      }
-    }
+			}
+		}
 
 		if ( isset( $_POST['activitypub_show_welcome_tab'] ) ) {
 			$welcome         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_welcome_tab'] ) );
