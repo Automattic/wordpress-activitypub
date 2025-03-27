@@ -9,6 +9,7 @@ namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
 
+use function Activitypub\add_to_outbox;
 use function Activitypub\is_self_ping;
 use function Activitypub\is_activity_reply;
 use function Activitypub\is_activity_public;
@@ -78,6 +79,8 @@ class Create {
 		if ( $state && ! \is_wp_error( $state ) ) {
 			$reaction = \get_comment( $state );
 		}
+
+		add_to_outbox( $activity, 'Announce', $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 
 		/**
 		 * Fires after a Create activity has been handled.
