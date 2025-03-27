@@ -7,6 +7,8 @@
 
 namespace Activitypub\WP_Admin\Import;
 
+use function Activitypub\site_supports_blocks;
+
 /**
  * Mastodon importer class.
  */
@@ -17,28 +19,35 @@ class Mastodon {
 	 *
 	 * @var int
 	 */
-	public static $import_id;
+	private static $import_id;
+
+	/**
+	 * Archive folder.
+	 *
+	 * @var string
+	 */
+	private static $archive;
 
 	/**
 	 * Outbox file.
 	 *
 	 * @var object
 	 */
-	public static $outbox;
+	private static $outbox;
 
 	/**
 	 * Author ID.
 	 *
 	 * @var int
 	 */
-	public static $author;
+	private static $author;
 
 	/**
 	 * Whether to fetch attachments.
 	 *
 	 * @var bool
 	 */
-	public static $fetch_attachments;
+	private static $fetch_attachments;
 
 	/**
 	 * Dispatch
@@ -168,16 +177,16 @@ class Mastodon {
 
 		global $wp_filesystem;
 		$import_folder = $wp_filesystem->wp_content_dir() . 'import/';
-		$working_dir   = $import_folder . \basename( \basename( $file, '.txt' ), '.zip' );
+		self::$archive = $import_folder . \basename( \basename( $file, '.txt' ), '.zip' );
 
 		// Clean up working directory.
-		if ( $wp_filesystem->is_dir( $working_dir ) ) {
-			$wp_filesystem->delete( $working_dir, true );
+		if ( $wp_filesystem->is_dir( self::$archive ) ) {
+			$wp_filesystem->delete( self::$archive, true );
 		}
 
 		// Unzip package to working directory.
-		\unzip_file( $file, $working_dir );
-		$files = $wp_filesystem->dirlist( $working_dir );
+		\unzip_file( $file, self::$archive );
+		$files = $wp_filesystem->dirlist( self::$archive );
 
 		if ( ! isset( $files['outbox.json'] ) ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
@@ -185,9 +194,7 @@ class Mastodon {
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		self::$outbox = \json_decode( \file_get_contents( $working_dir . '/outbox.json' ) );
-
-		$wp_filesystem->delete( $import_folder, true );
+		self::$outbox = \json_decode( \file_get_contents( self::$archive . '/outbox.json' ) );
 
 		\wp_suspend_cache_invalidation();
 		\wp_defer_term_counting( true );
@@ -204,6 +211,7 @@ class Mastodon {
 		\wp_defer_term_counting( false );
 		\wp_defer_comment_counting( false );
 
+		$wp_filesystem->delete( $import_folder, true );
 		\wp_import_cleanup( self::$import_id );
 
 		if ( \is_wp_error( $result ) ) {
@@ -290,10 +298,87 @@ class Mastodon {
 
 			\set_post_format( $post_id, 'status' );
 
+			// Process attachments if enabled.
+			$attachment_ids = array();
+			if ( self::$fetch_attachments && ! empty( $post->object->attachment ) ) {
+				global $wp_filesystem;
+
+				require_once ABSPATH . 'wp-admin/includes/media.php';
+				require_once ABSPATH . 'wp-admin/includes/file.php';
+				require_once ABSPATH . 'wp-admin/includes/image.php';
+
+				foreach ( $post->object->attachment as $attachment ) {
+					if ( ! isset( $attachment->url ) || ! isset( $attachment->{'mediaType'} ) ) {
+						continue;
+					}
+
+					$file_path = self::$archive . $attachment->url;
+					if ( ! $wp_filesystem->exists( $file_path ) ) {
+						continue;
+					}
+
+					$file_array = array(
+						'name'     => \basename( $file_path ),
+						'tmp_name' => $file_path,
+					);
+
+					$attachment_data = array(
+						'post_mime_type' => $attachment->{'mediaType'},
+						'post_title'     => $attachment->name ?? '',
+						'post_content'   => $attachment->name ?? '',
+						'post_status'    => 'inherit',
+						'post_author'    => self::$author,
+					);
+
+					$attachment_id = \media_handle_sideload( $file_array, $post_id, '', $attachment_data );
+
+					if ( \is_wp_error( $attachment_id ) ) {
+						continue;
+					}
+
+					$attachment_ids[] = $attachment_id;
+				}
+
+				// If we have attachments, add them to the post content.
+				if ( ! empty( $attachment_ids ) ) {
+					if ( site_supports_blocks() ) {
+						// Block editor: Use gallery block.
+						$gallery  = '<!-- wp:gallery {"ids":[' . \implode( ',', $attachment_ids ) . '],"linkTo":"none"} -->' . "\n";
+						$gallery .= '<figure class="wp-block-gallery has-nested-images columns-default is-cropped">';
+
+						foreach ( $attachment_ids as $id ) {
+							$caption   = \get_post_field( 'post_content', $id );
+							$image_src = \wp_get_attachment_image_src( $id, 'large' );
+							$gallery  .= "\n<!-- wp:image {\"id\":{$id},\"sizeSlug\":\"large\",\"linkDestination\":\"none\"} -->\n";
+							$gallery  .= '<figure class="wp-block-image size-large">';
+							$gallery  .= '<img src="' . \esc_url( $image_src[0] ) . '" alt="' . \esc_attr( $caption ) . '" class="' . \esc_attr( 'wp-image-' . $id ) . '"/>';
+							$gallery  .= '</figure>';
+							$gallery  .= "\n<!-- /wp:image -->\n";
+						}
+
+						$gallery .= "</figure>\n";
+						$gallery .= '<!-- /wp:gallery -->';
+					} else {
+						// Classic editor: Use gallery shortcode.
+						$gallery = '[gallery ids="' . \implode( ',', $attachment_ids ) . '" link="none"]';
+					}
+
+					\wp_update_post(
+						array(
+							'ID'           => $post_id,
+							'post_content' => $post_data['post_content'] . "\n\n" . $gallery,
+						)
+					);
+				}
+			}
+
 			// phpcs:ignore
 			if ( $post_id && isset( $post->object->replies->first->next ) ) {
 				// @todo: Import replies as comments.
 			}
+
+			/* translators: %s: Post ID */
+			printf( \esc_html__( 'Imported post %s', 'activitypub' ) . "\n", \esc_html( $post->object->id ) );
 		}
 
 		return true;
