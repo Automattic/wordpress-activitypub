@@ -7,6 +7,7 @@
 
 namespace Activitypub\WP_Admin\Import;
 
+use function Activitypub\is_activity_public;
 use function Activitypub\site_supports_blocks;
 
 /**
@@ -243,7 +244,7 @@ class Mastodon {
 				continue;
 			}
 
-			if ( ! \Activitypub\is_activity_public( \get_object_vars( $post ) ) ) {
+			if ( ! is_activity_public( \get_object_vars( $post ) ) ) {
 				continue;
 			}
 
