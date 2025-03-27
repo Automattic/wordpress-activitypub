@@ -120,7 +120,7 @@ class Dispatcher {
 	 * Asynchronously runs batch processing routines.
 	 *
 	 * @param int $outbox_item_id The Outbox item ID.
-	 * @param int $batch_size     Optional. The batch size. Default 50.
+	 * @param int $batch_size     Optional. The batch size. Default ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE.
 	 * @param int $offset         Optional. The offset. Default 0.
 	 *
 	 * @return array|void The next batch of followers to process, or void if done.
