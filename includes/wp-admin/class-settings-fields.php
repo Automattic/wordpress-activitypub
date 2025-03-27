@@ -507,7 +507,7 @@ class Settings_Fields {
 			<p>
 				<label>
 					<input type="checkbox" name="activitypub_allow_announces" value="1" <?php checked( '1', $allow_reposts ); ?> />
-					<?php esc_html_e( 'Receive reblogs', 'activitypub' ); ?>
+					<?php esc_html_e( 'Receive reblogs (boosts)', 'activitypub' ); ?>
 				</label>
 			</p>
 			<p class="description"><?php esc_html_e( 'Types of interactions from the Fediverse your blog should accept.', 'activitypub' ); ?></p>
