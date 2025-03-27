@@ -80,6 +80,7 @@ class Create {
 			$reaction = \get_comment( $state );
 		}
 
+		/* @ticket https://github.com/Automattic/wordpress-activitypub/issues/1001 */
 		add_to_outbox( $activity, 'Announce', $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 
 		/**
