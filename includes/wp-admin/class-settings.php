@@ -23,6 +23,7 @@ class Settings {
 		\add_action( 'admin_init', array( self::class, 'register_settings' ), 11 );
 		\add_action( 'admin_menu', array( self::class, 'add_settings_page' ) );
 
+		\add_action( 'load-settings_page_activitypub', array( self::class, 'handle_welcome_query_arg' ) );
 		\add_filter( 'screen_settings', array( self::class, 'add_screen_option' ), 10, 2 );
 		\add_filter( 'screen_options_show_submit', array( self::class, 'screen_options_show_submit' ), 10, 2 );
 	}
@@ -460,6 +461,20 @@ class Settings {
 	}
 
 	/**
+	 * Handle 'welcome' query arg.
+	 */
+	public static function handle_welcome_query_arg() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['welcome'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$welcome_checked = empty( \sanitize_text_field( \wp_unslash( $_GET['welcome'] ) ) ) ? 0 : 1;
+			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
+			\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=settings' ) );
+			exit;
+		}
+	}
+
+	/**
 	 * Add screen option.
 	 *
 	 * @param string $screen_settings The screen settings.
@@ -472,18 +487,13 @@ class Settings {
 			return $screen_settings;
 		}
 
-		if ( isset( $_GET['welcome'] ) ) {
-			$welcome_checked = empty( $_GET['welcome'] ) ? 0 : 1;
-			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
-		}
-
 		// Verify screen options nonce.
 		if ( isset( $_POST['screenoptionnonce'] ) ) {
 			$nonce = \sanitize_text_field( \wp_unslash( $_POST['screenoptionnonce'] ) );
 			if ( ! \wp_verify_nonce( $nonce, 'screen-options-nonce' ) ) {
 				return $screen_settings;
-			}
-		}
+      }
+    }
 
 		if ( isset( $_POST['activitypub_show_welcome_tab'] ) ) {
 			$welcome         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_welcome_tab'] ) );
