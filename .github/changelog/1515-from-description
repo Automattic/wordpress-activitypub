@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Incoming comments create an Announce activity so other instances get notified about it.
