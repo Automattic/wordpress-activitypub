@@ -53,6 +53,9 @@ class Activitypub {
 
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
 
+		\add_filter( 'pre_option_activitypub_allow_likes', array( self::class, 'maybe_disable_interactions' ) );
+		\add_filter( 'pre_option_activitypub_allow_replies', array( self::class, 'maybe_disable_interactions' ) );
+
 		// Register several post_types.
 		self::register_post_types();
 	}
@@ -89,6 +92,8 @@ class Activitypub {
 		Migration::update_comment_counts( 2000 );
 
 		delete_option( 'activitypub_actor_mode' );
+		delete_option( 'activitypub_allow_likes' );
+		delete_option( 'activitypub_allow_replies' );
 		delete_option( 'activitypub_attribution_domains' );
 		delete_option( 'activitypub_authorized_fetch' );
 		delete_option( 'activitypub_application_user_private_key' );
@@ -827,5 +832,19 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
+	}
+
+	/**
+	 * Disallow interactions if the constant is set.
+	 *
+	 * @param bool $pre_option The value of the option.
+	 * @return bool|string The value of the option.
+	 */
+	public static function maybe_disable_interactions( $pre_option ) {
+		if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
+			return '0';
+		}
+
+		return $pre_option;
 	}
 }

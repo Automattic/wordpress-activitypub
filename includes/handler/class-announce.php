@@ -44,6 +44,11 @@ class Announce {
 			return;
 		}
 
+		// Check if reposts are allowed.
+		if ( ! Comment::is_comment_type_enabled( 'repost' ) ) {
+			return;
+		}
+
 		self::maybe_save_announce( $announcement, $user_id );
 
 		if ( is_string( $announcement['object'] ) ) {
