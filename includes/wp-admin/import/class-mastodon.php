@@ -257,6 +257,7 @@ class Mastodon {
 				'post_content' => $post->object->content,
 				'post_status'  => 'publish',
 				'post_type'    => 'post',
+				'meta_input'   => array( '_source_id' => $post->object->id ),
 				'tags_input'   => \array_map(
 					function ( $tag ) {
 						if ( 'Hashtag' === $tag->type ) {
