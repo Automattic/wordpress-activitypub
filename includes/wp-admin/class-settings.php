@@ -510,18 +510,18 @@ class Settings {
 		$screen_settings = '<fieldset>
 		<legend class="screen-layout">' . \esc_html__( 'Settings Pages', 'activitypub' ) . '</legend>
 		<p>
-			' . \__( 'Some settings pages can be shown or hidden by using the checkboxes.', 'activitypub' ) . '
+			' . \esc_html__( 'Some settings pages can be shown or hidden by using the checkboxes.', 'activitypub' ) . '
 		</p>
 		<div class="metabox-prefs-container">
 			<label for="activitypub_show_welcome_tab">
 				<input name="activitypub_show_welcome_tab" type="hidden" value="0" />
 				<input name="activitypub_show_welcome_tab" type="checkbox" id="activitypub_show_welcome_tab" value="1" ' . \checked( 1, \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ), false ) . ' />
-				' . \__( 'Welcome Page', 'activitypub' ) . '
+				' . \esc_html__( 'Welcome Page', 'activitypub' ) . '
 			</label>
 			<label for="activitypub_show_advanced_tab">
 				<input name="activitypub_show_advanced_tab" type="hidden" value="0" />
 				<input name="activitypub_show_advanced_tab" type="checkbox" id="activitypub_show_advanced_tab" value="1" ' . \checked( 1, \get_option( 'activitypub_show_advanced_tab' ), false ) . ' />
-				' . \__( 'Advanced Settings', 'activitypub' ) . '
+				' . \esc_html__( 'Advanced Settings', 'activitypub' ) . '
 			</label>
 		</div>
 	</fieldset>';
