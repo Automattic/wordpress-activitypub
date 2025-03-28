@@ -301,17 +301,16 @@ class Outbox {
 	 * @return string The object ID.
 	 */
 	private static function get_object_id( $data ) {
-		// Most common.
-		if ( is_object( $data->get_object() ) ) {
-			return self::get_object_id( $data->get_object() );
+		$object = $data->get_object();
+
+		if ( is_object( $object ) ) {
+			return self::get_object_id( $object );
 		}
 
-		// Rare.
-		if ( is_string( $data->get_object() ) ) {
-			return $data->get_object();
+		if ( is_string( $object ) ) {
+			return $object;
 		}
 
-		// Exceptional.
 		return $data->get_id() ?? $data->get_actor();
 	}
 
