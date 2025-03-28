@@ -28,13 +28,6 @@ class Dispatcher {
 	public static $batch_size = ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE;
 
 	/**
-	 * Callback for the async batch processing.
-	 *
-	 * @var array
-	 */
-	public static $callback = array( self::class, 'send_to_followers' );
-
-	/**
 	 * Error codes that qualify for a retry.
 	 *
 	 * @see https://github.com/tfredrich/RestApiTutorial.com/blob/fd08b0f67f07450521d143b123cd6e1846cb2e3b/content/advanced/responses/retries.md
@@ -103,8 +96,8 @@ class Dispatcher {
 		self::send_to_additional_inboxes( $activity, $actor->get__id(), $outbox_item );
 
 		if ( self::should_send_to_followers( $activity, $actor, $outbox_item ) ) {
-			Scheduler::async_batch(
-				self::$callback,
+			do_action(
+				'activitypub_send_followers',
 				$outbox_item->ID,
 				self::$batch_size,
 				\get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ) ?: 0 // phpcs:ignore
