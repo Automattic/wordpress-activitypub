@@ -148,6 +148,24 @@ class Outbox {
 			$timestamp = \wp_next_scheduled( 'activitypub_process_outbox', array( $existing_item_id ) );
 			\wp_unschedule_event( $timestamp, 'activitypub_process_outbox', array( $existing_item_id ) );
 
+			// Invalidate any retries for this outbox item.
+			$crons = _get_cron_array();
+			foreach ( $crons as $timestamp => $cron ) {
+				if ( ! isset( $cron['activitypub_async_batch'] ) ) {
+					continue;
+				}
+				foreach ( $cron['activitypub_async_batch'] as $event ) {
+					if (
+						isset( $event['args'][0][1] ) &&
+						$event['args'][0][1] === 'retry_send_to_followers' &&
+						isset( $event['args'][2] ) &&
+						$event['args'][2] === $existing_item_id
+					) {
+						\wp_unschedule_event( $timestamp, 'activitypub_async_batch', $event['args'] );
+					}
+				}
+			}
+
 			\wp_publish_post( $existing_item_id );
 			\delete_post_meta( $existing_item_id, '_activitypub_outbox_offset' );
 		}

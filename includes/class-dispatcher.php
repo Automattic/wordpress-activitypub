@@ -242,7 +242,7 @@ class Dispatcher {
 		$transient_key = 'activitypub_retry_' . \wp_generate_password( 12, false );
 		\set_transient( $transient_key, $retries, WEEK_IN_SECONDS );
 
-		\wp_schedule_single_event(
+		$test = \wp_schedule_single_event(
 			\time() + ( $attempt * $attempt * HOUR_IN_SECONDS ),
 			'activitypub_async_batch',
 			array(
@@ -250,8 +250,11 @@ class Dispatcher {
 				$transient_key,
 				$outbox_item_id,
 				$attempt,
-			)
+			),
+			true
 		);
+
+		var_dump( $test );
 	}
 
 	/**

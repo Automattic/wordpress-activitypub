@@ -12,6 +12,7 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Activity\Extended_Object\Event;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Dispatcher;
 
 /**
  * Test class for Outbox collection.
