@@ -414,7 +414,7 @@ class Settings_Fields {
 	 * Render relays field.
 	 */
 	public static function render_relays_field() {
-		$value = get_option( 'activitypub_relays', array() );
+		$value = \get_option( 'activitypub_relays', array() );
 		?>
 		<textarea
 			id="activitypub_relays"
@@ -422,21 +422,21 @@ class Settings_Fields {
 			class="large-text"
 			cols="50"
 			rows="5"
-		><?php echo esc_textarea( implode( PHP_EOL, $value ) ); ?></textarea>
+		><?php echo \esc_textarea( implode( PHP_EOL, $value ) ); ?></textarea>
 		<p class="description">
-			<?php echo wp_kses( __( 'A <strong>Fediverse-Relay</strong> distributes content across instances, expanding reach, engagement, and discoverability, especially for smaller instances.', 'activitypub' ), 'default' ); ?>
+			<?php echo \wp_kses( __( 'A <strong>Fediverse-Relay</strong> distributes content across instances, expanding reach, engagement, and discoverability, especially for smaller instances.', 'activitypub' ), 'default' ); ?>
 		</p>
 		<p class="description">
 			<?php
-			echo wp_kses(
-				__( 'Enter the <strong>Inbox-URLs</strong> (e.g. <code>https://relay.example.com/inbox</code>) of the relays you want to use, one per line.', 'activitypub' ),
+			echo \wp_kses(
+				\__( 'Enter the <strong>Inbox-URLs</strong> (e.g. <code>https://relay.example.com/inbox</code>) of the relays you want to use, one per line.', 'activitypub' ),
 				array(
 					'strong' => array(),
 					'code'   => array(),
 				)
 			);
 			?>
-			<?php echo wp_kses( __( 'You can find a list of public relays on <a href="https://relaylist.com/" target="_blank">relaylist.com</a> or on <a href="https://fedidb.org/software/activity-relay" target="_blank">FediDB</a>.', 'activitypub' ), 'default' ); ?>
+			<?php echo \wp_kses( \__( 'You can find a list of public relays on <a href="https://relaylist.com/" target="_blank">relaylist.com</a> or on <a href="https://fedidb.org/software/activity-relay" target="_blank">FediDB</a>.', 'activitypub' ), 'default' ); ?>
 		</p>
 		<?php
 	}
@@ -448,11 +448,11 @@ class Settings_Fields {
 		?>
 		<p>
 			<?php
-			echo wp_kses(
-				sprintf(
+			echo \wp_kses(
+				\sprintf(
 					// translators: %s is a URL.
-					__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ),
-					esc_url( admin_url( 'options-discussion.php#disallowed_keys' ) )
+					\__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ),
+					\esc_url( \admin_url( 'options-discussion.php#disallowed_keys' ) )
 				),
 				'default'
 			);
