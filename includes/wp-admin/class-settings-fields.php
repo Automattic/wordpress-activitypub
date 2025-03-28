@@ -105,6 +105,14 @@ class Settings_Fields {
 		);
 
 		add_settings_field(
+			'activitypub_allow_interactions',
+			__( 'Post interactions', 'activitypub' ),
+			array( self::class, 'render_allow_interactions_field' ),
+			'activitypub_settings',
+			'activitypub_activities'
+		);
+
+		add_settings_field(
 			'activitypub_use_hashtags',
 			__( 'Hashtags', 'activitypub' ),
 			array( self::class, 'render_use_hashtags_field' ),
