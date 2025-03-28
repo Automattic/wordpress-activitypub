@@ -593,9 +593,10 @@ class Post extends Base {
 
 		// Generate HTML @ link.
 		return \sprintf(
-			'<p class="ap-reply-mention"><a href="%1$s" rel="ugc">%2$s</a></p>',
+			'<p class="ap-reply-mention"><a rel="mention ugc" href="%1$s" title="%2$s">%3$s</a></p>',
 			\esc_url( $url ),
-			\esc_html( $webfinger )
+			\esc_attr( $webfinger ),
+			\esc_html( '@' . strtok( $webfinger, '@' ) )
 		);
 	}
 
