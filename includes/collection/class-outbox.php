@@ -7,10 +7,10 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Activity\Base_Object;
 use Activitypub\Dispatcher;
 use Activitypub\Scheduler;
 use Activitypub\Activity\Activity;
-use Activitypub\Activity\Generic_Object;
 use function Activitypub\add_to_outbox;
 
 /**
@@ -296,16 +296,11 @@ class Outbox {
 	/**
 	 * Get the object ID of an activity.
 	 *
-	 * @param Generic_Object $data The activity object.
+	 * @param Activity|Base_Object|string $data The activity object.
 	 *
 	 * @return string The object ID.
 	 */
 	private static function get_object_id( $data ) {
-		// If the object is an array, convert it to a Generic_Object.
-		if ( is_array( $data->get_object() ) ) {
-			$data->set_object( Generic_Object::init_from_array( $data->get_object() ) );
-		}
-
 		// Most common.
 		if ( is_object( $data->get_object() ) ) {
 			return self::get_object_id( $data->get_object() );
@@ -323,7 +318,7 @@ class Outbox {
 	/**
 	 * Get the title of an activity recursively.
 	 *
-	 * @param \Activitypub\Activity\Base_Object $activity_object The activity object.
+	 * @param Base_Object $activity_object The activity object.
 	 *
 	 * @return string The title.
 	 */
@@ -340,7 +335,7 @@ class Outbox {
 
 		$title = $activity_object->get_name() ?? $activity_object->get_content();
 
-		if ( ! $title && $activity_object->get_object() instanceof \Activitypub\Activity\Base_Object ) {
+		if ( ! $title && $activity_object->get_object() instanceof Base_Object ) {
 			$title = $activity_object->get_object()->get_name() ?? $activity_object->get_object()->get_content();
 		}
 

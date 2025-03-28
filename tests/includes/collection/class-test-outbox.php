@@ -289,12 +289,10 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @dataProvider data_provider_get_object_id
 	 * @covers ::get_object_id
 	 *
-	 * @param array  $activity_data The activity data to test.
-	 * @param string $expected      The expected object ID.
+	 * @param Activity $activity The activity data to test.
+	 * @param string   $expected The expected object ID.
 	 */
-	public function test_get_object_id( $activity_data, $expected ) {
-		$activity = Generic_Object::init_from_array( $activity_data );
-
+	public function test_get_object_id( $activity, $expected ) {
 		// Get the object ID using reflection since it's a private method.
 		$get_object_id = new \ReflectionMethod( Outbox::class, 'get_object_id' );
 		$get_object_id->setAccessible( true );
@@ -310,64 +308,67 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @return array
 	 */
 	public function data_provider_get_object_id() {
+		$create_with_id = Activity::init_from_array(
+			array(
+				'type'   => 'Create',
+				'object' => array(
+					'type' => 'Note',
+					'id'   => 'https://example.com/note/123',
+				),
+			)
+		);
+		$create_no_id   = Activity::init_from_array(
+			array(
+				'type'   => 'Create',
+				'object' => array(
+					'type'    => 'Note',
+					'content' => 'Test content',
+				),
+			)
+		);
+
 		return array(
 			'object is a string'             => array(
-				'activity' => array(
-					'type'   => 'Create',
-					'object' => 'https://example.com/note/123',
+				'activity' => Activity::init_from_array(
+					array(
+						'type'   => 'Create',
+						'object' => 'https://example.com/note/123',
+					)
 				),
 				'expected' => 'https://example.com/note/123',
 			),
 			'object is an object with id'    => array(
-				'activity' => array(
-					'type'   => 'Create',
-					'object' => array(
-						'type' => 'Note',
-						'id'   => 'https://example.com/note/123',
-					),
-				),
+				'activity' => $create_with_id,
 				'expected' => 'https://example.com/note/123',
 			),
 			'object is an object without id' => array(
-				'activity' => array(
-					'type'   => 'Create',
-					'object' => array(
-						'type'    => 'Note',
-						'content' => 'Test content',
-					),
-				),
+				'activity' => $create_no_id,
 				'expected' => null, // Will use activity ID as fallback.
 			),
 			'nested object with id'          => array(
-				'activity' => array(
-					'type'   => 'Create',
-					'object' => array(
-						'type'   => 'Article',
-						'object' => array(
-							'type' => 'Note',
-							'id'   => 'https://example.com/note/123',
-						),
-					),
+				'activity' => Activity::init_from_array(
+					array(
+						'type'   => 'Announce',
+						'object' => $create_with_id,
+					)
 				),
 				'expected' => 'https://example.com/note/123',
 			),
 			'nested object without id'       => array(
-				'activity' => array(
-					'type'   => 'Create',
-					'object' => array(
-						'type'   => 'Article',
-						'object' => array(
-							'type'    => 'Note',
-							'content' => 'Test content',
-						),
-					),
+				'activity' => Activity::init_from_array(
+					array(
+						'type'   => 'Announce',
+						'object' => $create_no_id,
+					)
 				),
 				'expected' => null, // Will use activity ID as fallback.
 			),
 			'activity with no object'        => array(
-				'activity' => array(
-					'type'  => 'Delete',
-					'actor' => 'https://example.com/user/1',
+				'activity' => Activity::init_from_array(
+					array(
+						'type'  => 'Delete',
+						'actor' => 'https://example.com/user/1',
+					)
 				),
 				'expected' => 'https://example.com/user/1', // Will use actor as fallback.
 			),
