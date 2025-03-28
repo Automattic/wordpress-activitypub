@@ -16,10 +16,6 @@ $args = wp_parse_args( $args ?? array() );
 	<nav class="activitypub-settings-tabs-wrapper" aria-label="<?php \esc_attr_e( 'Secondary menu', 'activitypub' ); ?>">
 		<?php
 		foreach ( $args['tabs'] as $slug => $label ) :
-			if ( isset( $args[ $slug ]['visible'] ) && ! $args[ $slug ]['visible'] ) {
-				continue;
-			}
-
 			$url = add_query_arg(
 				array( 'tab' => 'welcome' !== $slug ? $slug : false ),
 				\admin_url( 'options-general.php?page=activitypub' )
