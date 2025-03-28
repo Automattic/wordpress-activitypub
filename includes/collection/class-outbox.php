@@ -157,9 +157,9 @@ class Outbox {
 				foreach ( $cron['activitypub_async_batch'] as $event ) {
 					if (
 						isset( $event['args'][0][1] ) &&
-						$event['args'][0][1] === 'retry_send_to_followers' &&
+						'retry_send_to_followers' === $event['args'][0][1] &&
 						isset( $event['args'][2] ) &&
-						$event['args'][2] === $existing_item_id
+						$existing_item_id === $event['args'][2]
 					) {
 						\wp_unschedule_event( $timestamp, 'activitypub_async_batch', $event['args'] );
 					}

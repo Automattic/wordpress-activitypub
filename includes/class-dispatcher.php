@@ -253,8 +253,6 @@ class Dispatcher {
 			),
 			true
 		);
-
-		var_dump( $test );
 	}
 
 	/**
