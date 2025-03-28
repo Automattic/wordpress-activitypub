@@ -351,19 +351,19 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	 * @covers ::add_inboxes_of_replied_urls
 	 */
 	public function test_ignore_same_domain_in_reply_to() {
-		// Create a test activity with in_reply_to pointing to same domain
+		// Create a test activity with in_reply_to pointing to same domain.
 		$activity = new Activity();
 		$activity->set_type( 'Create' );
 		$activity->set_id( 'https://example.com/test-id' );
 		$activity->set_in_reply_to( 'https://example.com/post/123' );
 
-		// Create a test actor
+		// Create a test actor.
 		$actor_id = self::$user_id;
 
-		// Get inboxes for the activity
+		// Get inboxes for the activity.
 		$inboxes = Dispatcher::add_inboxes_of_replied_urls( array(), $actor_id, $activity );
 
-		// Verify that no inboxes were added since the in_reply_to is from same domain
+		// Verify that no inboxes were added since the in_reply_to is from same domain.
 		$this->assertEmpty( $inboxes, 'Inboxes should be empty for same domain in_reply_to URLs' );
 	}
 
@@ -373,52 +373,66 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	 * @covers ::add_inboxes_of_replied_urls
 	 */
 	public function test_process_different_domain_in_reply_to() {
-		// Create a test activity with in_reply_to pointing to different domain
+		// Create a test activity with in_reply_to pointing to different domain.
 		$activity = new Activity();
 		$activity->set_type( 'Create' );
 		$activity->set_id( 'https://example.com/test-id' );
 		$activity->set_in_reply_to( 'https://mastodon.social/@user/123456789' );
 
-		// Create a test actor
+		// Create a test actor.
 		$actor_id = self::$user_id;
 
-		// Mock the HTTP response for the remote object
-		add_filter( 'pre_http_request', function( $pre, $parsed_args, $url ) {
-			if ( 'https://mastodon.social/@user/123456789' === $url ) {
-				return array(
-					'response' => array( 'code' => 200 ),
-					'body' => json_encode( array(
-						'type' => 'Note',
-						'id' => 'https://mastodon.social/@user/123456789',
-						'attributedTo' => 'https://mastodon.social/@user',
-					) ),
-				);
-			}
-			return $pre;
-		}, 10, 3 );
+		// Mock the HTTP response for the remote object.
+		add_filter(
+			'pre_http_request',
+			function ( $pre, $parsed_args, $url ) {
+				if ( 'https://mastodon.social/@user/123456789' === $url ) {
+					return array(
+						'response' => array( 'code' => 200 ),
+						'body'     => \wp_json_encode(
+							array(
+								'type'         => 'Note',
+								'id'           => 'https://mastodon.social/@user/123456789',
+								'attributedTo' => 'https://mastodon.social/@user',
+							)
+						),
+					);
+				}
+				return $pre;
+			},
+			10,
+			3
+		);
 
-		// Mock the HTTP response for the actor
-		add_filter( 'pre_http_request', function( $pre, $parsed_args, $url ) {
-			if ( 'https://mastodon.social/@user' === $url ) {
-				return array(
-					'response' => array( 'code' => 200 ),
-					'body' => json_encode( array(
-						'type' => 'Person',
-						'id' => 'https://mastodon.social/@user',
-						'inbox' => 'https://mastodon.social/inbox',
-					) ),
-				);
-			}
-			return $pre;
-		}, 10, 3 );
+		// Mock the HTTP response for the actor.
+		add_filter(
+			'pre_http_request',
+			function ( $pre, $parsed_args, $url ) {
+				if ( 'https://mastodon.social/@user' === $url ) {
+					return array(
+						'response' => array( 'code' => 200 ),
+						'body'     => \wp_json_encode(
+							array(
+								'type'  => 'Person',
+								'id'    => 'https://mastodon.social/@user',
+								'inbox' => 'https://mastodon.social/inbox',
+							)
+						),
+					);
+				}
+				return $pre;
+			},
+			10,
+			3
+		);
 
-		// Get inboxes for the activity
+		// Get inboxes for the activity.
 		$inboxes = Dispatcher::add_inboxes_of_replied_urls( array(), $actor_id, $activity );
 
-		// Verify that the inbox was added
+		// Verify that the inbox was added.
 		$this->assertContains( 'https://mastodon.social/inbox', $inboxes, 'Inbox should be added for different domain in_reply_to URLs' );
 
-		// Clean up
+		// Clean up.
 		remove_all_filters( 'pre_http_request' );
 	}
 }
