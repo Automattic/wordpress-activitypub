@@ -382,49 +382,38 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		// Create a test actor.
 		$actor_id = self::$user_id;
 
-		// Mock the HTTP response for the remote object.
-		add_filter(
-			'pre_http_request',
-			function ( $pre, $parsed_args, $url ) {
-				if ( 'https://mastodon.social/@user/123456789' === $url ) {
-					return array(
-						'response' => array( 'code' => 200 ),
-						'body'     => \wp_json_encode(
-							array(
-								'type'         => 'Note',
-								'id'           => 'https://mastodon.social/@user/123456789',
-								'attributedTo' => 'https://mastodon.social/@user',
-							)
-						),
-					);
-				}
-				return $pre;
-			},
-			10,
-			3
-		);
+		$callback = function ( $pre, $parsed_args, $url ) {
+			if ( 'https://mastodon.social/@user/123456789' === $url ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => \wp_json_encode(
+						array(
+							'type'         => 'Note',
+							'id'           => 'https://mastodon.social/@user/123456789',
+							'attributedTo' => 'https://mastodon.social/@user',
+						)
+					),
+				);
+			}
 
-		// Mock the HTTP response for the actor.
-		add_filter(
-			'pre_http_request',
-			function ( $pre, $parsed_args, $url ) {
-				if ( 'https://mastodon.social/@user' === $url ) {
-					return array(
-						'response' => array( 'code' => 200 ),
-						'body'     => \wp_json_encode(
-							array(
-								'type'  => 'Person',
-								'id'    => 'https://mastodon.social/@user',
-								'inbox' => 'https://mastodon.social/inbox',
-							)
-						),
-					);
-				}
-				return $pre;
-			},
-			10,
-			3
-		);
+			if ( 'https://mastodon.social/@user' === $url ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => \wp_json_encode(
+						array(
+							'type'  => 'Person',
+							'id'    => 'https://mastodon.social/@user',
+							'inbox' => 'https://mastodon.social/inbox',
+						)
+					),
+				);
+			}
+
+			return $pre;
+		};
+
+		// Mock the HTTP response for the remote object.
+		add_filter( 'pre_http_request', $callback, 10, 3 );
 
 		// Get inboxes for the activity.
 		$inboxes = Dispatcher::add_inboxes_of_replied_urls( array(), $actor_id, $activity );
@@ -433,6 +422,6 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		$this->assertContains( 'https://mastodon.social/inbox', $inboxes, 'Inbox should be added for different domain in_reply_to URLs' );
 
 		// Clean up.
-		remove_all_filters( 'pre_http_request' );
+		remove_filter( 'pre_http_request', $callback );
 	}
 }
