@@ -160,4 +160,38 @@ class Test_Move extends \WP_UnitTestCase {
 		$also_known_as = Actors::get_by_id( self::$user_id )->get_also_known_as();
 		$this->assertContains( $from, $also_known_as );
 	}
+
+	/**
+	 * Test that the Move Activity created by internally() has the correct properties.
+	 *
+	 * @covers ::internally
+	 */
+	public function test_internally_activity_object_properties() {
+		$from = get_author_posts_url( self::$user_id );
+		$to   = Actors::get_by_id( self::$user_id )->get_id();
+
+		// Call the method and get the outbox item ID.
+		$outbox_id = \Activitypub\Move::internally( $from, $to );
+
+		// Verify we got a valid outbox ID.
+		$this->assertIsInt( $outbox_id );
+
+		// Get the outbox item from the database.
+		$outbox_item = get_post( $outbox_id );
+
+		// Verify the outbox item exists.
+		$this->assertNotNull( $outbox_item );
+
+		// Get the activity JSON from the outbox item.
+		$activity = json_decode( $outbox_item->post_content );
+
+		// Verify the activity type is Move.
+		$this->assertEquals( 'Move', $activity->type );
+
+		// Verify the activity object is set to the actor, not the target.
+		$this->assertEquals( $from, $activity->object );
+		$this->assertEquals( $from, $activity->actor );
+		$this->assertEquals( $from, $activity->origin );
+		$this->assertEquals( $to, $activity->target );
+	}
 }
