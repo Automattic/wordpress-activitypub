@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests\Scheduler;
 
+use Activitypub\Scheduler\Post;
+
 /**
  * Test Post scheduler class.
  *
@@ -24,9 +26,9 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		wp_set_current_user( self::$user_id );
 
 		// Create.
-		$post_id       = self::factory()->attachment->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
-		$activitpub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
-		$outbox_item   = $this->get_latest_outbox_item( $activitpub_id );
+		$post_id        = self::factory()->attachment->create_upload_object( dirname( __DIR__, 2 ) . '/assets/test.jpg' );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+		$outbox_item    = $this->get_latest_outbox_item( $activitypub_id );
 
 		$this->assertNotNull( $outbox_item );
 		$this->assertSame( 'Create', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
@@ -34,13 +36,13 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Update.
 		self::factory()->attachment->update_object( $post_id, array( 'post_title' => 'Updated title' ) );
 
-		$outbox_item = $this->get_latest_outbox_item( $activitpub_id );
+		$outbox_item = $this->get_latest_outbox_item( $activitypub_id );
 		$this->assertSame( 'Update', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
 
 		// Delete.
 		\wp_delete_attachment( $post_id, true );
 
-		$outbox_item = $this->get_latest_outbox_item( $activitpub_id );
+		$outbox_item = $this->get_latest_outbox_item( $activitypub_id );
 		$this->assertSame( 'Delete', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
 
 		remove_post_type_support( 'attachment', 'activitypub' );
@@ -52,12 +54,31 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @covers ::schedule_post_activity
 	 */
 	public function test_schedule_post_activity_regular_post() {
-		$post_id       = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
-		$activitpub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 
-		$post = $this->get_latest_outbox_item( $activitpub_id );
+		$post = $this->get_latest_outbox_item( $activitypub_id );
 		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
-		$this->assertSame( $activitpub_id, $id );
+		$this->assertSame( $activitypub_id, $id );
+
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test post activity scheduling for regular posts.
+	 *
+	 * @covers ::schedule_post_activity
+	 */
+	public function test_not_schedule_delete_activity_unfederated_post() {
+		\remove_action( 'wp_after_insert_post', array( Post::class, 'schedule_post_activity' ), 33 );
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+		\add_action( 'wp_after_insert_post', array( Post::class, 'schedule_post_activity' ), 33, 4 );
+
+		// Trash the post.
+		\wp_delete_post( $post_id );
+
+		$this->assertNull( $this->get_latest_outbox_item( $activitypub_id ) );
 
 		\wp_delete_post( $post_id, true );
 	}
@@ -69,17 +90,17 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @covers ::schedule_post_activity
 	 */
 	public function test_activity_type_on_publish() {
-		$post_id       = self::factory()->post->create(
+		$post_id        = self::factory()->post->create(
 			array(
 				'post_author' => self::$user_id,
 				'post_status' => 'draft',
 			)
 		);
-		$activitpub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 
 		\wp_publish_post( $post_id );
 
-		$post = $this->get_latest_outbox_item( $activitpub_id );
+		$post = $this->get_latest_outbox_item( $activitypub_id );
 		$type = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
 		$this->assertSame( 'Create', $type );
 
@@ -93,8 +114,8 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 */
 	public function test_schedule_post_activity_bulk_edit() {
 		wp_set_current_user( self::$user_id );
-		$post_id       = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
-		$activitpub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 
 		// Test bulk edit that should bail (no author or status change).
 		$_REQUEST['bulk_edit']   = 1;
@@ -104,7 +125,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		bulk_edit_posts( $_REQUEST ); // phpcs:ignore WordPress.Security.NonceVerification
 
-		$outbox_item = $this->get_latest_outbox_item( $activitpub_id );
+		$outbox_item = $this->get_latest_outbox_item( $activitypub_id );
 		$this->assertNotSame( 'Update', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
 
 		// Test bulk edit with author change (should not bail).
@@ -116,7 +137,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		bulk_edit_posts( $_REQUEST ); // phpcs:ignore WordPress.Security.NonceVerification
 
-		$outbox_item = $this->get_latest_outbox_item( $activitpub_id );
+		$outbox_item = $this->get_latest_outbox_item( $activitypub_id );
 		$this->assertNotNull( $outbox_item );
 
 		$this->assertSame( 'Update', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
@@ -126,7 +147,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		bulk_edit_posts( $_REQUEST ); // phpcs:ignore WordPress.Security.NonceVerification
 
-		$outbox_item = $this->get_latest_outbox_item( $activitpub_id );
+		$outbox_item = $this->get_latest_outbox_item( $activitypub_id );
 		$this->assertNotNull( $outbox_item );
 		$this->assertSame( 'Delete', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
 
@@ -138,7 +159,7 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Data provider for no activity tests.
 	 *
-	 * @return array[] Test parameters.
+	 * @return array[][] Test parameters.
 	 */
 	public function no_activity_post_provider() {
 		return array(
@@ -166,10 +187,10 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @param array $args Post data for creating the test post.
 	 */
 	public function test_no_activity_scheduled( $args ) {
-		$post_id       = self::factory()->post->create( $args );
-		$activitpub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+		$post_id        = self::factory()->post->create( $args );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
 
-		$this->assertNull( $this->get_latest_outbox_item( $activitpub_id ) );
+		$this->assertNull( $this->get_latest_outbox_item( $activitypub_id ) );
 
 		\wp_delete_post( $post_id, true );
 	}
