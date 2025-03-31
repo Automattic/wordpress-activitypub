@@ -7,10 +7,11 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Activity\Base_Object;
 use Activitypub\Dispatcher;
 use Activitypub\Scheduler;
 use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
+
 use function Activitypub\add_to_outbox;
 
 /**
