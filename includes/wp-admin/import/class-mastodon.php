@@ -424,7 +424,7 @@ class Mastodon {
 			}
 
 			/* translators: %s: Post ID */
-			printf( \esc_html__( 'Imported post %s', 'activitypub' ) . "\n", \esc_html( $post->object->id ) );
+			printf( \esc_html__( 'Imported post %s.', 'activitypub' ) . '<br>', \esc_html( $post->object->id ) );
 		}
 
 		return true;
