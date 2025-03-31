@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+No longer federates `Delete` activities for posts that were not federated.
