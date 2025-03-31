@@ -9,18 +9,137 @@ import { useOptions } from '../shared/use-options';
 import { useDispatch } from '@wordpress/data';
 
 /**
- * Edit component for the ActivityPub block.
- *
- * @param {Object} props - Component props.
- * @param {Object} props.attributes - Block attributes.
- * @param {string} props.attributes.url - URL of the post being replied to.
- * @param {boolean} props.attributes.embedPost - Whether to embed the post.
- * @param {Function} props.setAttributes - Function to update block attributes.
- * @param {string} props.clientId - Block client ID.
- * @param {boolean} props.isSelected - Whether the block is selected.
+ * Maps HTML attribute names to React prop names.
  */
+const attributeMap = {
+	class: 'className',
+	frameborder: 'frameBorder',
+	allowfullscreen: 'allowFullScreen',
+	allowtransparency: 'allowTransparency',
+	marginheight: 'marginHeight',
+	marginwidth: 'marginWidth',
+};
 
-// Help text messages for different reply states.
+/**
+ * Embed Overlay component for capturing clicks.
+ *
+ * @param {Object} props Component props.
+ * @param {Function} props.onClick Function to call when the overlay is clicked.
+ * @return {JSX.Element} The component.
+ */
+function EmbedOverlay( { onClick } ) {
+	return (
+		<div
+			className="activitypub-embed-overlay"
+			onClick={ onClick }
+			style={{
+				position: 'absolute',
+				top: 0,
+				left: 0,
+				width: '100%',
+				height: '100%',
+				cursor: 'pointer',
+				zIndex: 1,
+			}}
+		/>
+	);
+}
+
+/**
+ * WordPress Embed Preview component, adapted from Core.
+ * Handles WordPress-specific embeds that use the wp-embed format.
+ *
+ * @param {Object} props Component props.
+ * @param {string} props.html The HTML content to embed.
+ * @param {Function} props.onSelectBlock Function to call when the embed is clicked.
+ * @return {JSX.Element} The component.
+ */
+function WpEmbedPreview( { html, onSelectBlock } ) {
+	const ref = useRef();
+	const [ height, setHeight ] = useState( 282 ); // Default WordPress embed height
+	const [ interactive, setInteractive ] = useState( false );
+
+	// Parse iframe attributes from the HTML
+	const props = useCallback( () => {
+		const doc = new window.DOMParser().parseFromString( html, 'text/html' );
+		const iframe = doc.querySelector( 'iframe' );
+		const iframeProps = {};
+
+		if ( ! iframe ) {
+			return iframeProps;
+		}
+
+		Array.from( iframe.attributes ).forEach( ( { name, value } ) => {
+			if ( name === 'style' ) {
+				return;
+			}
+			iframeProps[ attributeMap[ name ] || name ] = value;
+		} );
+
+		return iframeProps;
+	}, [ html ] );
+
+	// Extract iframe properties
+	const iframeProps = props();
+
+	// Set up message listener for iframe height changes
+	useEffect( () => {
+		if ( ! ref.current ) {
+			return;
+		}
+
+		const { ownerDocument } = ref.current;
+		const { defaultView } = ownerDocument;
+
+		/**
+		 * Handles resize messages from the embedded iframe.
+		 *
+		 * @param {MessageEvent} event Message event.
+		 */
+		function resizeWPembeds( { data: { secret, message, value } = {} } ) {
+			if ( message !== 'height' || secret !== iframeProps[ 'data-secret' ] ) {
+				return;
+			}
+
+			setHeight( value );
+		}
+
+		defaultView.addEventListener( 'message', resizeWPembeds );
+		return () => {
+			defaultView.removeEventListener( 'message', resizeWPembeds );
+		};
+	}, [ iframeProps ] );
+
+	// If no iframe was found, render the HTML directly with an overlay
+	if ( ! iframeProps.src ) {
+		return (
+			<div className="wp-block-embed__wrapper" style={{ position: 'relative' }}>
+				<div dangerouslySetInnerHTML={{ __html: html }} />
+				<EmbedOverlay onClick={onSelectBlock} />
+			</div>
+		);
+	}
+
+	return (
+		<div className="wp-block-embed__wrapper" style={{ position: 'relative' }}>
+			<iframe
+				ref={ ref }
+				title={ iframeProps.title || __( 'Embedded WordPress content', 'activitypub' ) }
+				{ ...iframeProps }
+				height={ height }
+				style={{
+					width: '100%',
+					maxWidth: '100%'
+				}}
+			/>
+			{ ! interactive && <EmbedOverlay onClick={onSelectBlock} />}
+		</div>
+	);
+}
+
+/**
+ * Help text messages for different reply states.
+ */
 const HELP_TEXT = {
 	default: __( 'Enter the URL of a post from the Fediverse (Mastodon, Pixelfed, etc.) that you want to reply to.', 'activitypub' ),
 	checking: () => (
@@ -33,12 +152,25 @@ const HELP_TEXT = {
 	error: __( 'This URL probably won\'t receive your reply. We\'ll still try.', 'activitypub' ),
 };
 
-// Help text messages for embed toggle states.
+/**
+ * Help text messages for embed toggle states.
+ */
 const EMBED_HELP_TEXT = {
 	valid: __( 'This post can be embedded with your reply.', 'activitypub' ),
 	invalid: __( 'This post cannot be embedded.', 'activitypub' ),
 };
 
+/**
+ * Edit component for the ActivityPub block.
+ *
+ * @param {Object} props - Component props.
+ * @param {Object} props.attributes - Block attributes.
+ * @param {string} props.attributes.url - URL of the post being replied to.
+ * @param {boolean} props.attributes.embedPost - Whether to embed the post.
+ * @param {Function} props.setAttributes - Function to update block attributes.
+ * @param {string} props.clientId - Block client ID.
+ * @param {boolean} props.isSelected - Whether the block is selected.
+ */
 export default function Edit( { attributes: attr, setAttributes, clientId, isSelected } ) {
 	const { url } = attr;
 	const { namespace } = useOptions();
@@ -61,6 +193,10 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	const iframeContainerRef = useRef();
 	// Use a ref to track optimisticEmbed without causing re-renders
 	const optimisticEmbedRef = useRef( optimisticEmbed );
+
+	const focusInput = () => {
+		setTimeout( () => urlInputRef.current?.focus(), 50 );
+	};
 
 	// Update the ref when optimisticEmbed changes
 	useEffect( () => {
@@ -263,18 +399,20 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 				) }
 
 				{ isValidEmbed && attr.embedPost && embedHtml && (
-					<div className="activitypub-embed-container" style={{ pointerEvents: 'auto' }}>
+					<div className="activitypub-embed-container">
 						{ isRealOembed ? (
+							<WpEmbedPreview
+								html={ embedHtml }
+								onSelectBlock={ focusInput}
+							/>
+						) : (
 							<div
 								ref={ iframeContainerRef }
-								contentEditable={ false }
-								onFocus={ ( e ) => e.stopPropagation() }
-								onClick={ ( e ) => e.stopPropagation() }
 								style={{
 									height: iframeHeight + 'px',
 									overflow: 'hidden',
-									pointerEvents: 'none',
-									transition: 'height 0.2s ease-in-out'
+									transition: 'height 0.2s ease-in-out',
+									position: 'relative',
 								}}
 							>
 								<iframe
@@ -286,20 +424,12 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 										left: 0,
 										width: '100%',
 										height: '100%',
-										pointerEvents: 'none'
 									}}
-									frameBorder="0"
 									allowFullScreen
 									title={ __( 'Embedded content from', 'activitypub' ) + ' ' + url }
 								></iframe>
+								<EmbedOverlay onClick={ focusInput } />
 							</div>
-						) : (
-							<div
-								contentEditable={ false }
-								onFocus={ ( e ) => e.stopPropagation() }
-								onClick={ ( e ) => e.stopPropagation() }
-								dangerouslySetInnerHTML={{ __html: embedHtml }}
-							/>
 						) }
 					</div>
 				) }
@@ -308,11 +438,8 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 					<div
 						className="activitypub-reply-block-editor__preview"
 						contentEditable={ false }
-						onClick={ ( e ) => {
-							e.preventDefault();
-							setTimeout( () => urlInputRef.current?.focus(), 20 );
-						} }
-						style={ { pointerEvents: 'auto', cursor: 'pointer' } }
+						onClick={ focusInput }
+						style={ { cursor: 'pointer' } }
 					>
 						<a
 							href={ url }
