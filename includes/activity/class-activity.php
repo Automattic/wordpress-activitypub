@@ -163,9 +163,8 @@ class Activity extends Base_Object {
 	 * @see https://www.w3.org/TR/activitypub/#object-without-create
 	 *
 	 * @param array|string|Base_Object|Activity|Actor|null $data     Activity object.
-	 * @param bool                                         $pre_fill Whether to pre-fill the activity with object properties.
 	 */
-	public function set_object( $data, $pre_fill = true ) {
+	public function set_object( $data ) {
 		$object = $data;
 
 		// Convert array to appropriate object type.
@@ -194,10 +193,7 @@ class Activity extends Base_Object {
 		}
 
 		$this->set( 'object', $object );
-
-		if ( $pre_fill ) {
-			$this->pre_fill_activity_from_object();
-		}
+		$this->pre_fill_activity_from_object();
 	}
 
 	/**
