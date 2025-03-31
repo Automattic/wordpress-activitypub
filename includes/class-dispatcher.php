@@ -237,13 +237,8 @@ class Dispatcher {
 
 		\wp_schedule_single_event(
 			\time() + ( $attempt * $attempt * HOUR_IN_SECONDS ),
-			'activitypub_async_batch',
-			array(
-				array( self::class, 'retry_send_to_followers' ),
-				$transient_key,
-				$outbox_item_id,
-				$attempt,
-			)
+			'activitypub_retry_followers',
+			array( $transient_key, $outbox_item_id, $attempt )
 		);
 	}
 
