@@ -82,7 +82,7 @@ class Mention {
 
 			$url = isset( $metadata['url'] ) ? object_to_uri( $metadata['url'] ) : object_to_uri( $metadata['id'] );
 
-			return \sprintf( '<a rel="mention" class="u-url mention" href="%s">@<span>%s</span></a>', esc_url( $url ), esc_html( $username ) );
+			return \sprintf( '<a rel="mention" class="u-url mention" href="%1$s">@%2$s</a>', esc_url( $url ), esc_html( $username ) );
 		}
 
 		return $result[0];
