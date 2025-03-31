@@ -49,6 +49,16 @@ class Health_Check {
 			'test'  => array( self::class, 'test_webfinger' ),
 		);
 
+		$tests['direct']['activitypub_test_threaded_comments'] = array(
+			'label' => __( 'Threaded Comments Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_threaded_comments' ),
+		);
+
+		$tests['direct']['activitypub_test_pretty_permalinks'] = array(
+			'label' => __( 'Pretty Permalinks Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_pretty_permalinks' ),
+		);
+
 		return $tests;
 	}
 
@@ -305,5 +315,78 @@ class Health_Check {
 		}
 
 		return $info;
+	}
+
+	/**
+	 * Threaded Comments tests.
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_threaded_comments() {
+		$result = array(
+			'label'       => \__( 'Threaded (nested) comments enabled', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'Your threaded (nested) comments are enabled and working correctly.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_threaded_comments',
+		);
+
+		if ( '1' !== get_option( 'thread_comments', '0' ) ) {
+			$result['status']         = 'recommended';
+			$result['label']          = \__( 'Threaded (nested) comments are not enabled', 'activitypub' );
+			$result['badge']['color'] = 'orange';
+			$result['description']    = \sprintf(
+				'<p>%s</p>',
+				\__( 'We recommend enabling threaded (nested) comments to improve the user experience and engagement on your site and on the fediverse.', 'activitypub' )
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Pretty Permalinks tests.
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_pretty_permalinks() {
+		$result = array(
+			'label'       => \__( 'Pretty Permalinks enabled', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'Your pretty permalinks are enabled and working correctly.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_pretty_permalinks',
+		);
+
+		$permalink_structure = \get_option( 'permalink_structure' );
+		if ( empty( $permalink_structure ) ) {
+			$result['status']         = 'critical';
+			$result['label']          = \__( 'Pretty Permalinks are not enabled', 'activitypub' );
+			$result['badge']['color'] = 'red';
+			$result['description']    = \sprintf(
+				'<p>%s</p>',
+				sprintf(
+					/* translators: %s: Permalink settings URL. */
+					\__( 'ActivityPub needs SEO-friendly URLs to work properly. Please <a href="%s">update your permalink structure</a> to an option other than Plain.', 'activitypub' ),
+					esc_url( admin_url( 'options-permalink.php' ) )
+				)
+			);
+		}
+
+		return $result;
 	}
 }
