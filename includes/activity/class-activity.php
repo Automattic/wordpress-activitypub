@@ -177,11 +177,17 @@ class Activity extends Base_Object {
 			} elseif ( in_array( $type, Actor::DEFAULT_TYPES, true ) ) {
 				$object = Actor::init_from_array( $data );
 			} elseif ( in_array( $type, Base_Object::DEFAULT_TYPES, true ) ) {
-				$object = match ( $type ) {
-					'Event' => Event::init_from_array( $data ),
-					'Place' => Place::init_from_array( $data ),
-					default => Base_Object::init_from_array( $data ),
-				};
+				switch ( $type ) {
+					case 'Event':
+						$object = Event::init_from_array( $data );
+						break;
+					case 'Place':
+						$object = Place::init_from_array( $data );
+						break;
+					default:
+						$object = Base_Object::init_from_array( $data );
+						break;
+				}
 			} else {
 				$object = Generic_Object::init_from_array( $data );
 			}
