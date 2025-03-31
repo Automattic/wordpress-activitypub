@@ -393,13 +393,17 @@ class Mastodon {
 						$gallery .= '<figure class="wp-block-gallery has-nested-images columns-default is-cropped">';
 
 						foreach ( $attachment_ids as $id ) {
-							$caption   = \get_post_field( 'post_content', $id );
 							$image_src = \wp_get_attachment_image_src( $id, 'large' );
-							$gallery  .= "\n<!-- wp:image {\"id\":{$id},\"sizeSlug\":\"large\",\"linkDestination\":\"none\"} -->\n";
-							$gallery  .= '<figure class="wp-block-image size-large">';
-							$gallery  .= '<img src="' . \esc_url( $image_src[0] ) . '" alt="' . \esc_attr( $caption ) . '" class="' . \esc_attr( 'wp-image-' . $id ) . '"/>';
-							$gallery  .= '</figure>';
-							$gallery  .= "\n<!-- /wp:image -->\n";
+							if ( ! $image_src ) {
+								continue;
+							}
+
+							$caption  = \get_post_field( 'post_content', $id );
+							$gallery .= "\n<!-- wp:image {\"id\":{$id},\"sizeSlug\":\"large\",\"linkDestination\":\"none\"} -->\n";
+							$gallery .= '<figure class="wp-block-image size-large">';
+							$gallery .= '<img src="' . \esc_url( $image_src[0] ) . '" alt="' . \esc_attr( $caption ) . '" class="' . \esc_attr( 'wp-image-' . $id ) . '"/>';
+							$gallery .= '</figure>';
+							$gallery .= "\n<!-- /wp:image -->\n";
 						}
 
 						$gallery .= "</figure>\n";
