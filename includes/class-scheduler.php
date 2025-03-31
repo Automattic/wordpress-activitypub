@@ -46,8 +46,8 @@ class Scheduler {
 
 		// Event callbacks.
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
-		\add_action( 'activitypub_send_followers', array( self::class, 'async_batch' ), 10, 99 );
-		\add_action( 'activitypub_retry_followers', array( self::class, 'async_batch' ), 10, 99 );
+		\add_action( 'activitypub_send_followers', array( self::class, 'async_batch' ), 10, 3 );
+		\add_action( 'activitypub_retry_followers', array( self::class, 'async_batch' ), 10, 3 );
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 
