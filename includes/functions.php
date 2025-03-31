@@ -1536,10 +1536,7 @@ function is_activity( $data ) {
 	 *
 	 * @param array $types The activity types.
 	 */
-	$types = apply_filters(
-		'activitypub_activity_types',
-		Activity::TYPES
-	);
+	$types = apply_filters( 'activitypub_activity_types', Activity::TYPES );
 
 	if ( is_string( $data ) ) {
 		return in_array( $data, $types, true );
@@ -1571,10 +1568,7 @@ function is_actor( $data ) {
 	 *
 	 * @param array $types The actor types.
 	 */
-	$types = apply_filters(
-		'activitypub_actor_types',
-		Actor::TYPES
-	);
+	$types = apply_filters( 'activitypub_actor_types', Actor::TYPES );
 
 	if ( is_string( $data ) ) {
 		return in_array( $data, $types, true );
