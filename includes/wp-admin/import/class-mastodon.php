@@ -437,7 +437,7 @@ class Mastodon {
 		}
 
 		/* translators: %d: Number of posts */
-		echo '<p>' . \esc_html( \sprintf( \_n( 'Imported %d post.', 'Imported %d posts.', $imported, 'activitypub' ), $imported ) ) . '</p>';
+		echo '<p>' . \esc_html( \sprintf( \_n( 'Imported %s post.', 'Imported %s posts.', $imported, 'activitypub' ), \number_format_i18n( $imported ) ) ) . '</p>';
 
 		return true;
 	}
