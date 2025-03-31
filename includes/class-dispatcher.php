@@ -335,6 +335,11 @@ class Dispatcher {
 		}
 
 		foreach ( $in_reply_to as $url ) {
+			// No need to self-notify.
+			if ( is_same_domain( $url ) ) {
+				continue;
+			}
+
 			$object = Http::get_remote_object( $url );
 
 			if (

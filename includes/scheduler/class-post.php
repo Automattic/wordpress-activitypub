@@ -84,13 +84,17 @@ class Post {
 	 * @param int $post_id Attachment ID.
 	 */
 	public static function transition_attachment_status( $post_id ) {
+		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+			return;
+		}
+
 		if ( ! \post_type_supports( 'attachment', 'activitypub' ) ) {
 			return;
 		}
 
 		$post = \get_post( $post_id );
 
-		switch ( current_action() ) {
+		switch ( \current_action() ) {
 			case 'add_attachment':
 				// Add the post to the outbox.
 				add_to_outbox( $post, 'Create', $post->post_author );

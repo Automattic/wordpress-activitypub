@@ -75,7 +75,7 @@ class Undo {
 				return;
 			}
 
-			$state = wp_trash_comment( $comment );
+			$state = wp_delete_comment( $comment, true );
 		}
 
 		/**

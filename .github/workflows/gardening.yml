@@ -58,5 +58,6 @@ jobs:
               {"path": "integration", "label": "[Focus] Compatibility"},
               {"path": "includes/collection", "label": "[Feature] Collections"},
               {"path": "includes/class-mailer.php", "label": "[Feature] Notifications"},
+              {"path": "includes/wp-admin/import", "label": "[Feature] Import"},
               {"path": "includes/wp-admin", "label": "[Feature] WP Admin"}
             ]'
