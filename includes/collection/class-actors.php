@@ -12,6 +12,7 @@ use WP_User_Query;
 use Activitypub\Model\User;
 use Activitypub\Model\Blog;
 use Activitypub\Model\Application;
+use Activitypub\Model\Cached_Actor;
 
 use function Activitypub\object_to_uri;
 use function Activitypub\normalize_url;
@@ -110,7 +111,24 @@ class Actors {
 		);
 
 		if ( $user->results ) {
-			return self::get_by_id( $user->results[0] );
+			$actor = self::get_by_id( $user->results[0] );
+			
+			// Check if we're dealing with an old domain request.
+			$old_domain = \get_option( 'activitypub_old_domain', '' );
+			$request_domain = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+			
+			if ( ! empty( $old_domain ) && \wp_parse_url( $old_domain, PHP_URL_HOST ) === $request_domain ) {
+				// Check if we have cached actor data for this actor.
+				$option_key = 'activitypub_moved_' . md5( $actor->get_id() );
+				$cached_data = \get_option( $option_key, '' );
+				
+				if ( ! empty( $cached_data ) ) {
+					// Return the cached actor data.
+					return self::actor_from_cached_data( $cached_data );
+				}
+			}
+			
+			return $actor;
 		}
 
 		$username = str_replace( array( '*', '%' ), '', $username );
@@ -128,7 +146,24 @@ class Actors {
 		);
 
 		if ( $user->results ) {
-			return self::get_by_id( $user->results[0] );
+			$actor = self::get_by_id( $user->results[0] );
+			
+			// Check if we're dealing with an old domain request.
+			$old_domain = \get_option( 'activitypub_old_domain', '' );
+			$request_domain = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+			
+			if ( ! empty( $old_domain ) && \wp_parse_url( $old_domain, PHP_URL_HOST ) === $request_domain ) {
+				// Check if we have cached actor data for this actor.
+				$option_key = 'activitypub_moved_' . md5( $actor->get_id() );
+				$cached_data = \get_option( $option_key, '' );
+				
+				if ( ! empty( $cached_data ) ) {
+					// Return the cached actor data.
+					return self::actor_from_cached_data( $cached_data );
+				}
+			}
+			
+			return $actor;
 		}
 
 		return new WP_Error(
@@ -154,6 +189,30 @@ class Actors {
 				\__( 'No URI provided', 'activitypub' ),
 				array( 'status' => 404 )
 			);
+		}
+
+		// Check if we're dealing with an old domain.
+		$old_domain = \get_option( 'activitypub_old_domain', '' );
+		if ( ! empty( $old_domain ) && strpos( $uri, $old_domain ) !== false ) {
+			// Replace old domain with current domain for lookup.
+			$current_domain = \home_url();
+			$current_uri = str_replace( $old_domain, $current_domain, $uri );
+			
+			// Try to get the actor using the current domain URI.
+			$actor = self::get_by_resource( $current_uri );
+			
+			if ( ! \is_wp_error( $actor ) ) {
+				// Check if we have cached actor data for this URI.
+				$option_key = 'activitypub_moved_' . md5( $actor->get_id() );
+				$cached_data = \get_option( $option_key, '' );
+				
+				if ( ! empty( $cached_data ) ) {
+					// Return the cached actor data.
+					return self::actor_from_cached_data( $cached_data );
+				}
+				
+				return $actor;
+			}
 		}
 
 		$scheme = 'acct';
@@ -317,5 +376,47 @@ class Actors {
 		}
 
 		return 'user';
+	}
+
+	/**
+	 * Returns the actor from cached data.
+	 *
+	 * @param string $cached_data The cached data.
+	 * @return User|Blog|Application The actor.
+	 */
+	public static function actor_from_cached_data( $cached_data ) {
+		// Decode the cached data.
+		$actor_data = \json_decode( $cached_data, true );
+		
+		if ( ! $actor_data || ! is_array( $actor_data ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_cached_data',
+				\__( 'Invalid cached actor data', 'activitypub' ),
+				array( 'status' => 500 )
+			);
+		}
+		
+		// Create a new Actor object based on the type.
+		$type = isset( $actor_data['type'] ) ? $actor_data['type'] : '';
+		
+		switch ( $type ) {
+			case 'Person':
+				$actor = new \Activitypub\Activity\Actor();
+				break;
+			case 'Group':
+				$actor = new \Activitypub\Activity\Actor();
+				break;
+			case 'Application':
+				$actor = new \Activitypub\Activity\Actor();
+				break;
+			default:
+				$actor = new \Activitypub\Activity\Actor();
+		}
+		
+		// Initialize the actor with the cached data.
+		$actor->from_array( $actor_data );
+		
+		// Create a special cached actor wrapper that will return the cached data.
+		return new \Activitypub\Model\Cached_Actor( $actor );
 	}
 }
