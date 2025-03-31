@@ -91,22 +91,59 @@ class Mastodon {
 	 * @return bool
 	 */
 	public static function handle_upload() {
-		$file          = \wp_import_handle_upload();
 		$error_message = \__( 'Sorry, there has been an error.', 'activitypub' );
 
-		if ( isset( $file['error'] ) ) {
+		\check_admin_referer( 'import-upload' );
+
+		if ( ! isset( $_FILES['import']['name'] ) ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
-			echo \esc_html( $file['error'] ) . '</p>';
-			return false;
-		} elseif ( ! \file_exists( $file['file'] ) ) {
-			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
-			/* translators: File path. */
-			\printf( \wp_kses_post( \__( 'The export file could not be found at <code>%s</code>. It is likely that this was caused by a permission problem.', 'activitypub' ) ), esc_html( $file['file'] ) );
+			\printf(
+				/* translators: 1: php.ini, 2: post_max_size, 3: upload_max_filesize */
+				\esc_html__( 'File is empty. Please upload something more substantial. This error could also be caused by uploads being disabled in your %1$s file or by %2$s being defined as smaller than %3$s in %1$s.', 'activitypub' ),
+				'php.ini',
+				'post_max_size',
+				'upload_max_filesize'
+			);
 			echo '</p>';
 			return false;
 		}
 
-		self::$import_id = $file['id'];
+		$file_info = \wp_check_filetype( sanitize_file_name( $_FILES['import']['name'] ), array( 'zip' => 'application/zip' ) );
+		if ( 'application/zip' !== $file_info['type'] ) {
+			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
+			\esc_html_e( 'The uploaded file must be a ZIP archive. Please try again with the correct file format.', 'activitypub' );
+			echo '</p>';
+			return false;
+		}
+
+		$overrides = array(
+			'test_form' => false,
+			'test_type' => false,
+		);
+
+		$upload = wp_handle_upload( $_FILES['import'], $overrides );
+
+		if ( isset( $upload['error'] ) ) {
+			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
+			echo \esc_html( $upload['error'] ) . '</p>';
+			return false;
+		}
+
+		// Construct the attachment array.
+		$attachment = array(
+			'post_title'     => wp_basename( $upload['file'] ),
+			'post_content'   => $upload['url'],
+			'post_mime_type' => $upload['type'],
+			'guid'           => $upload['url'],
+			'context'        => 'import',
+			'post_status'    => 'private',
+		);
+
+		// Save the data.
+		self::$import_id = wp_insert_attachment( $attachment, $upload['file'] );
+
+		// Schedule a cleanup for one day from now in case of failed import or missing wp_import_cleanup() call.
+		wp_schedule_single_event( time() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
 
 		return true;
 	}
@@ -413,7 +450,28 @@ class Mastodon {
 	 */
 	public static function greet() {
 		echo '<div class="narrow">';
-		echo '<p>' . \esc_html__( 'Howdy! This importer allows you to extract posts from Mastodon exports into your site. Pick a Mastodon archive to upload and click Import.', 'activitypub' ) . '</p>';
+		echo '<p>' . \wp_kses(
+			\sprintf(
+				/* translators: %s: URL to Mastodon export documentation */
+				\__( 'This importer allows you to bring your Mastodon posts into your WordPress site. For a smooth import experience, check out the <a href="%s" target="_blank">Mastodon documentation</a>.', 'activitypub' ),
+				'https://docs.joinmastodon.org/user/moving/#export'
+			),
+			array(
+				'a' => array(
+					'href'   => array(),
+					'target' => array(),
+				),
+			)
+		) . '</p>';
+		echo '<p>' . \esc_html__( 'Here&#8217;s how to get started:', 'activitypub' ) . '</p>';
+
+		echo '<ol>';
+		echo '<li>' . \wp_kses( \__( 'Log in to your Mastodon account and go to <strong>Preferences > Export</strong>.', 'activitypub' ), array( 'strong' => array() ) ) . '</li>';
+		echo '<li>' . \esc_html__( 'Request a new archive of your data and wait for the email notification.', 'activitypub' ) . '</li>';
+		echo '<li>' . \wp_kses( \__( 'Download the archive file (it will be a <code>.zip</code> file).', 'activitypub' ), array( 'code' => array() ) ) . '</li>';
+		echo '<li>' . \esc_html__( 'Upload that file below to begin the import process.', 'activitypub' ) . '</li>';
+		echo '</ol>';
+
 		\wp_import_upload_form( 'admin.php?import=mastodon&amp;step=1' );
 		echo '</div>';
 	}
