@@ -274,8 +274,10 @@ class Mastodon {
 	 * @return true|\WP_Error True on success, WP_Error on failure.
 	 */
 	public static function import_posts() {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-		foreach ( self::$outbox->orderedItems as $post ) {
+		$skipped  = array();
+		$imported = 0;
+
+		foreach ( self::$outbox->{'orderedItems'} as $post ) {
 			// Skip boosts.
 			if ( 'Announce' === $post->type ) {
 				continue;
@@ -330,9 +332,7 @@ class Mastodon {
 			$post_exists = \apply_filters( 'wp_import_existing_post', $post_exists, $post_data );
 
 			if ( $post_exists ) {
-				/* translators: 1: Post type name */
-				\printf( \esc_html__( '%1$s already exists.', 'activitypub' ), \esc_html( \get_post_type_object( $post_data['post_type'] )->labels->singular_name ) );
-				echo '<br />';
+				$skipped[] = $post->object->id;
 				continue;
 			}
 
@@ -427,9 +427,17 @@ class Mastodon {
 				// @todo: Import replies as comments.
 			}
 
-			/* translators: %s: Post ID */
-			printf( \esc_html__( 'Imported post %s.', 'activitypub' ) . '<br>', \esc_html( $post->object->id ) );
+			++$imported;
 		}
+
+		if ( ! empty( $skipped ) ) {
+			echo '<p>' . \esc_html__( 'Skipped posts:', 'activitypub' ) . '<br>';
+			echo wp_kses( implode( '<br>', $skipped ), array( 'br' => array() ) );
+			echo '</p>';
+		}
+
+		/* translators: %d: Number of posts */
+		echo '<p>' . \esc_html( \sprintf( \_n( 'Imported %d post.', 'Imported %d posts.', $imported, 'activitypub' ), $imported ) ) . '</p>';
 
 		return true;
 	}
@@ -470,7 +478,7 @@ class Mastodon {
 		echo '<p>' . \esc_html__( 'Here&#8217;s how to get started:', 'activitypub' ) . '</p>';
 
 		echo '<ol>';
-		echo '<li>' . \wp_kses( \__( 'Log in to your Mastodon account and go to <strong>Preferences > Export</strong>.', 'activitypub' ), array( 'strong' => array() ) ) . '</li>';
+		echo '<li>' . \wp_kses( \__( 'Log in to your Mastodon account and go to <strong>Preferences > Import and Export</strong>.', 'activitypub' ), array( 'strong' => array() ) ) . '</li>';
 		echo '<li>' . \esc_html__( 'Request a new archive of your data and wait for the email notification.', 'activitypub' ) . '</li>';
 		echo '<li>' . \wp_kses( \__( 'Download the archive file (it will be a <code>.zip</code> file).', 'activitypub' ), array( 'code' => array() ) ) . '</li>';
 		echo '<li>' . \esc_html__( 'Upload that file below to begin the import process.', 'activitypub' ) . '</li>';
