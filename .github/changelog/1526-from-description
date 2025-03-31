@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Importing attachments no longer creates Outbox items for them.
