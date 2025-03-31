@@ -211,7 +211,7 @@ class Scheduler {
 		foreach ( $ids as $id ) {
 			// Bail if there is a pending batch.
 			$offset = \get_post_meta( $id, '_activitypub_outbox_offset', true ) ?: 0; // phpcs:ignore
-			if ( wp_next_scheduled( 'activitypub_send_followers', array( $id, ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE, $offset ) ) ) {
+			if ( \wp_next_scheduled( 'activitypub_send_followers', array( $id, ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE, $offset ) ) ) {
 				return;
 			}
 
@@ -283,9 +283,9 @@ class Scheduler {
 	 */
 	public static function async_batch() {
 		$args     = \func_get_args(); // phpcs:ignore PHPCompatibility.FunctionUse.ArgumentFunctionsReportCurrentValue
-		$callback = self::$batch_callbacks[ current_action() ] ?? $args[0] ?? null;
+		$callback = self::$batch_callbacks[ \current_action() ] ?? $args[0] ?? null;
 		if ( ! \is_callable( $callback ) ) {
-			_doing_it_wrong( __METHOD__, 'There must be a valid callback associated with the current action.', '5.2.0' );
+			\_doing_it_wrong( __METHOD__, 'There must be a valid callback associated with the current action.', '5.2.0' );
 			return;
 		}
 
@@ -293,14 +293,14 @@ class Scheduler {
 
 		// Bail if the existing lock is still valid.
 		if ( self::is_locked( $key ) ) {
-			\wp_schedule_single_event( time() + MINUTE_IN_SECONDS, current_action(), $args );
+			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, \current_action(), $args );
 			return;
 		}
 
 		self::lock( $key );
 
-		if ( is_callable( $args[0] ) ) {
-			$callback = array_shift( $args ); // Remove $callback from arguments.
+		if ( \is_callable( $args[0] ) ) {
+			$callback = \array_shift( $args ); // Remove $callback from arguments.
 		}
 		$next = \call_user_func_array( $callback, $args );
 
@@ -308,7 +308,7 @@ class Scheduler {
 
 		if ( ! empty( $next ) ) {
 			// Schedule the next run, adding the result to the arguments.
-			\wp_schedule_single_event( \time() + 30, current_action(), \array_values( $next ) );
+			\wp_schedule_single_event( \time() + 30, \current_action(), \array_values( $next ) );
 		}
 	}
 

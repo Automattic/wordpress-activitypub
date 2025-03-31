@@ -96,7 +96,7 @@ class Dispatcher {
 		self::send_to_additional_inboxes( $activity, $actor->get__id(), $outbox_item );
 
 		if ( self::should_send_to_followers( $activity, $actor, $outbox_item ) ) {
-			do_action(
+			\do_action(
 				'activitypub_send_followers',
 				$outbox_item->ID,
 				self::$batch_size,
