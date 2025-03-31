@@ -85,7 +85,7 @@ class Base_Object extends Generic_Object {
 	 *
 	 * @var array
 	 */
-	const DEFAULT_TYPES = array(
+	const TYPES = array(
 		'Article',
 		'Audio',
 		'Document',

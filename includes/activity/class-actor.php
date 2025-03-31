@@ -68,7 +68,7 @@ class Actor extends Base_Object {
 	 *
 	 * @var array
 	 */
-	const DEFAULT_TYPES = array(
+	const TYPES = array(
 		'Application',
 		'Group',
 		'Organization',

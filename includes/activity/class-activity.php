@@ -31,7 +31,7 @@ class Activity extends Base_Object {
 	 *
 	 * @var array
 	 */
-	const DEFAULT_TYPES = array(
+	const TYPES = array(
 		'Accept',
 		'Add',
 		'Announce',
@@ -171,11 +171,11 @@ class Activity extends Base_Object {
 		if ( is_array( $data ) ) {
 			$type = $data['type'] ?? null;
 
-			if ( in_array( $type, self::DEFAULT_TYPES, true ) ) {
+			if ( in_array( $type, self::TYPES, true ) ) {
 				$object = self::init_from_array( $data );
-			} elseif ( in_array( $type, Actor::DEFAULT_TYPES, true ) ) {
+			} elseif ( in_array( $type, Actor::TYPES, true ) ) {
 				$object = Actor::init_from_array( $data );
-			} elseif ( in_array( $type, Base_Object::DEFAULT_TYPES, true ) ) {
+			} elseif ( in_array( $type, Base_Object::TYPES, true ) ) {
 				switch ( $type ) {
 					case 'Event':
 						$object = Event::init_from_array( $data );

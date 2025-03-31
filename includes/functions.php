@@ -1538,7 +1538,7 @@ function is_activity( $data ) {
 	 */
 	$types = apply_filters(
 		'activitypub_activity_types',
-		Activity::DEFAULT_TYPES
+		Activity::TYPES
 	);
 
 	if ( is_string( $data ) ) {
@@ -1573,7 +1573,7 @@ function is_actor( $data ) {
 	 */
 	$types = apply_filters(
 		'activitypub_actor_types',
-		Actor::DEFAULT_TYPES
+		Actor::TYPES
 	);
 
 	if ( is_string( $data ) ) {
