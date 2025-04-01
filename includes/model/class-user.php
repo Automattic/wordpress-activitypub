@@ -471,7 +471,10 @@ class User extends Actor {
 	 * @return string The movedTo.
 	 */
 	public function get_moved_to() {
-		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-		return \get_user_option( 'activitypub_moved_to', $this->_id ) ?: null;
+		$moved_to = \get_user_option( 'activitypub_moved_to', $this->_id );
+		if ( $moved_to === $this->get_id() ) {
+			return null;
+		}
+		return $moved_to;
 	}
 }

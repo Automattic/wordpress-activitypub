@@ -598,7 +598,10 @@ class Blog extends Actor {
 	 * @return string The movedTo.
 	 */
 	public function get_moved_to() {
-		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-		return \get_option( 'activitypub_blog_user_moved_to' ) ?: null;
+		$moved_to = \get_option( 'activitypub_blog_user_moved_to' );
+		if ( $moved_to === $this->get_id() ) {
+			return null;
+		}
+		return $moved_to;
 	}
 }
