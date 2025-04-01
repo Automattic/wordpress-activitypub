@@ -9,7 +9,8 @@
 
 namespace Activitypub\Activity;
 
-use Activitypub\Link;
+use Activitypub\Activity\Extended_Object\Event;
+use Activitypub\Activity\Extended_Object\Place;
 
 /**
  * \Activitypub\Activity\Activity implements the common
@@ -21,6 +22,43 @@ use Activitypub\Link;
 class Activity extends Base_Object {
 	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
+	);
+
+	/**
+	 * The default types for Activities.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#activity-types
+	 *
+	 * @var array
+	 */
+	const TYPES = array(
+		'Accept',
+		'Add',
+		'Announce',
+		'Arrive',
+		'Block',
+		'Create',
+		'Delete',
+		'Dislike',
+		'Follow',
+		'Flag',
+		'Ignore',
+		'Invite',
+		'Join',
+		'Leave',
+		'Like',
+		'Listen',
+		'Move',
+		'Offer',
+		'Read',
+		'Reject',
+		'Remove',
+		'TentativeAccept',
+		'TentativeReject',
+		'Travel',
+		'Undo',
+		'Update',
+		'View',
 	);
 
 	/**
@@ -124,58 +162,87 @@ class Activity extends Base_Object {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#object-without-create
 	 *
-	 * @param array|string|Base_Object|Link|null $data Activity object.
+	 * @param array|string|Base_Object|Activity|Actor|null $data     Activity object.
 	 */
 	public function set_object( $data ) {
-		// Convert array to object.
+		$object = $data;
+
+		// Convert array to appropriate object type.
 		if ( is_array( $data ) ) {
-			$data = Generic_Object::init_from_array( $data );
+			$type = $data['type'] ?? null;
+
+			if ( in_array( $type, self::TYPES, true ) ) {
+				$object = self::init_from_array( $data );
+			} elseif ( in_array( $type, Actor::TYPES, true ) ) {
+				$object = Actor::init_from_array( $data );
+			} elseif ( in_array( $type, Base_Object::TYPES, true ) ) {
+				switch ( $type ) {
+					case 'Event':
+						$object = Event::init_from_array( $data );
+						break;
+					case 'Place':
+						$object = Place::init_from_array( $data );
+						break;
+					default:
+						$object = Base_Object::init_from_array( $data );
+						break;
+				}
+			} else {
+				$object = Generic_Object::init_from_array( $data );
+			}
 		}
 
-		// Set object.
-		$this->set( 'object', $data );
+		$this->set( 'object', $object );
+		$this->pre_fill_activity_from_object();
+	}
+
+	/**
+	 * Fills the Activity with the specified activity object.
+	 */
+	public function pre_fill_activity_from_object() {
+		$object = $this->get_object();
 
 		// Check if `$data` is a URL and use it to generate an ID then.
-		if ( is_string( $data ) && filter_var( $data, FILTER_VALIDATE_URL ) && ! $this->get_id() ) {
-			$this->set( 'id', $data . '#activity-' . strtolower( $this->get_type() ) . '-' . time() );
+		if ( is_string( $object ) && filter_var( $object, FILTER_VALIDATE_URL ) && ! $this->get_id() ) {
+			$this->set( 'id', $object . '#activity-' . strtolower( $this->get_type() ) . '-' . time() );
 
 			return;
 		}
 
 		// Check if `$data` is an object and copy some properties otherwise do nothing.
-		if ( ! is_object( $data ) ) {
+		if ( ! is_object( $object ) ) {
 			return;
 		}
 
 		foreach ( array( 'to', 'bto', 'cc', 'bcc', 'audience' ) as $i ) {
-			$value = $data->get( $i );
+			$value = $object->get( $i );
 			if ( $value && ! $this->get( $i ) ) {
 				$this->set( $i, $value );
 			}
 		}
 
-		if ( $data->get_published() && ! $this->get_published() ) {
-			$this->set( 'published', $data->get_published() );
+		if ( $object->get_published() && ! $this->get_published() ) {
+			$this->set( 'published', $object->get_published() );
 		}
 
-		if ( $data->get_updated() && ! $this->get_updated() ) {
-			$this->set( 'updated', $data->get_updated() );
+		if ( $object->get_updated() && ! $this->get_updated() ) {
+			$this->set( 'updated', $object->get_updated() );
 		}
 
-		if ( $data->get_attributed_to() && ! $this->get_actor() ) {
-			$this->set( 'actor', $data->get_attributed_to() );
+		if ( $object->get_attributed_to() && ! $this->get_actor() ) {
+			$this->set( 'actor', $object->get_attributed_to() );
 		}
 
-		if ( $data->get_in_reply_to() && ! $this->get_in_reply_to() ) {
-			$this->set( 'in_reply_to', $data->get_in_reply_to() );
+		if ( $object->get_in_reply_to() && ! $this->get_in_reply_to() ) {
+			$this->set( 'in_reply_to', $object->get_in_reply_to() );
 		}
 
-		if ( $data->get_id() && ! $this->get_id() ) {
-			$id = strtok( $data->get_id(), '#' );
-			if ( $data->get_updated() ) {
-				$updated = $data->get_updated();
-			} elseif ( $data->get_published() ) {
-				$updated = $data->get_published();
+		if ( $object->get_id() && ! $this->get_id() ) {
+			$id = strtok( $object->get_id(), '#' );
+			if ( $object->get_updated() ) {
+				$updated = $object->get_updated();
+			} elseif ( $object->get_published() ) {
+				$updated = $object->get_published();
 			} else {
 				$updated = time();
 			}
