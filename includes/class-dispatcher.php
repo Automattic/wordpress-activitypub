@@ -97,7 +97,7 @@ class Dispatcher {
 
 		if ( self::should_send_to_followers( $activity, $actor, $outbox_item ) ) {
 			\do_action(
-				'activitypub_send_followers',
+				'activitypub_send_activity',
 				$outbox_item->ID,
 				self::$batch_size,
 				\get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ) ?: 0 // phpcs:ignore
@@ -237,7 +237,7 @@ class Dispatcher {
 
 		\wp_schedule_single_event(
 			\time() + ( $attempt * $attempt * HOUR_IN_SECONDS ),
-			'activitypub_retry_followers',
+			'activitypub_retry_activity',
 			array( $transient_key, $outbox_item_id, $attempt )
 		);
 	}

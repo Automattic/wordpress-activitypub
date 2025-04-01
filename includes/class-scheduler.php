@@ -36,8 +36,8 @@ class Scheduler {
 		self::register_schedulers();
 
 		self::$batch_callbacks = array(
-			'activitypub_send_followers'  => array( Dispatcher::class, 'send_to_followers' ),
-			'activitypub_retry_followers' => array( Dispatcher::class, 'retry_send_to_followers' ),
+			'activitypub_send_activity'  => array( Dispatcher::class, 'send_to_followers' ),
+			'activitypub_retry_activity' => array( Dispatcher::class, 'retry_send_to_followers' ),
 		);
 
 		// Follower Cleanups.
@@ -46,8 +46,8 @@ class Scheduler {
 
 		// Event callbacks.
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
-		\add_action( 'activitypub_send_followers', array( self::class, 'async_batch' ), 10, 3 );
-		\add_action( 'activitypub_retry_followers', array( self::class, 'async_batch' ), 10, 3 );
+		\add_action( 'activitypub_send_activity', array( self::class, 'async_batch' ), 10, 3 );
+		\add_action( 'activitypub_retry_activity', array( self::class, 'async_batch' ), 10, 3 );
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 
@@ -211,7 +211,7 @@ class Scheduler {
 		foreach ( $ids as $id ) {
 			// Bail if there is a pending batch.
 			$offset = \get_post_meta( $id, '_activitypub_outbox_offset', true ) ?: 0; // phpcs:ignore
-			if ( \wp_next_scheduled( 'activitypub_send_followers', array( $id, ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE, $offset ) ) ) {
+			if ( \wp_next_scheduled( 'activitypub_send_activity', array( $id, ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE, $offset ) ) ) {
 				return;
 			}
 
