@@ -123,9 +123,10 @@ class Comment extends Base {
 
 		foreach ( $this->extract_reply_context() as $acct => $url ) {
 			$mentions .= sprintf(
-				'<a rel="mention" class="u-url mention" href="%s">%s</a> ',
+				'<a rel="mention" class="u-url mention" href="%1$s" title="%2$s">%3$s</a> ',
 				esc_url( $url ),
-				esc_html( $acct )
+				esc_attr( $acct ),
+				esc_html( '@' . strtok( $acct, '@' ) )
 			);
 		}
 		$content = $mentions . $content;

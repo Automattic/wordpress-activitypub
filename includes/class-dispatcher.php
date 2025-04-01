@@ -120,12 +120,12 @@ class Dispatcher {
 	 * Asynchronously runs batch processing routines.
 	 *
 	 * @param int $outbox_item_id The Outbox item ID.
-	 * @param int $batch_size     Optional. The batch size. Default 50.
+	 * @param int $batch_size     Optional. The batch size. Default ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE.
 	 * @param int $offset         Optional. The offset. Default 0.
 	 *
 	 * @return array|void The next batch of followers to process, or void if done.
 	 */
-	public static function send_to_followers( $outbox_item_id, $batch_size = 50, $offset = 0 ) {
+	public static function send_to_followers( $outbox_item_id, $batch_size = ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE, $offset = 0 ) {
 		$json    = Outbox::get_activity( $outbox_item_id )->to_json();
 		$actor   = Outbox::get_actor( \get_post( $outbox_item_id ) );
 		$inboxes = Followers::get_inboxes_for_activity( $json, $actor->get__id(), $batch_size, $offset );
@@ -137,7 +137,7 @@ class Dispatcher {
 			self::schedule_retry( $retries, $outbox_item_id );
 		}
 
-		if ( is_countable( $inboxes ) && count( $inboxes ) < self::$batch_size ) {
+		if ( is_countable( $inboxes ) && count( $inboxes ) < $batch_size ) {
 			\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
 
 			/**
@@ -335,6 +335,11 @@ class Dispatcher {
 		}
 
 		foreach ( $in_reply_to as $url ) {
+			// No need to self-notify.
+			if ( is_same_domain( $url ) ) {
+				continue;
+			}
+
 			$object = Http::get_remote_object( $url );
 
 			if (

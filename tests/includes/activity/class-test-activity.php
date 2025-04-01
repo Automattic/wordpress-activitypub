@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Activity;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Actors;
 use DMS\PHPUnitExtensions\ArraySubset\Assert;
 
 /**
@@ -131,5 +132,41 @@ class Test_Activity extends \WP_UnitTestCase {
 		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
 
 		$this->assertTrue( str_starts_with( $activity->get_id(), 'https://example.com/author/123#activity-update-' ) );
+	}
+
+	/**
+	 * Test activity object.
+	 */
+	public function test_activity_object_in_reply_to() {
+		// Create user with `activitypub` capabilities.
+		$user_id = self::factory()->user->create(
+			array(
+				'role' => 'author',
+			)
+		);
+
+		// Only send minimal data.
+		$activity_object = array(
+			'id'     => 'https://example.com/post/123',
+			'type'   => 'Follow',
+			'actor'  => 'https://example.com/author/123',
+			'object' => 'https://example.com/post/123',
+			'to'     => array( 'https://example.com/author/123' ),
+		);
+
+		$activity = new Activity();
+		$activity->set_type( 'Accept' );
+		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
+		$activity->set_object( $activity_object );
+
+		$this->assertContains( 'https://example.com/author/123', $activity->get_to() );
+
+		$activity->set_to( array( 'https://example.com/author/456' ) );
+		$activity->set_object( $activity_object );
+
+		$this->assertContains( 'https://example.com/author/456', $activity->get_to() );
+
+		// Delete user.
+		\wp_delete_user( $user_id );
 	}
 }
