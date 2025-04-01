@@ -77,6 +77,23 @@ class Actors {
 	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_username( $username ) {
+		// Check if we're dealing with an old domain request. This needs checking first to ensure we don't serve the new domain.
+		$old_domain     = \get_option( 'activitypub_old_domain', '' );
+		$request_domain = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+
+		if ( ! empty( $old_domain ) && \wp_parse_url( $old_domain, PHP_URL_HOST ) === $request_domain ) {
+			// todo: ensure this URL is being constructed properly. Probably move more of this logic into ::actor_from_cached_data.
+			$actor_url = sprintf( '%s/%s', $old_domain, $username );
+			// Check if we have cached actor data for this actor.
+			$option_key  = 'activitypub_moved_' . md5( $actor_url );
+			$cached_data = \get_option( $option_key, '' );
+
+			if ( ! empty( $cached_data ) ) {
+				// Return the cached actor data.
+				return self::actor_from_cached_data( $cached_data );
+			}
+		}
+
 		// Check for blog user.
 		if ( Blog::get_default_username() === $username ) {
 			return new Blog();
@@ -112,23 +129,9 @@ class Actors {
 
 		if ( $user->results ) {
 			$actor = self::get_by_id( $user->results[0] );
-			
-			// Check if we're dealing with an old domain request.
-			$old_domain = \get_option( 'activitypub_old_domain', '' );
-			$request_domain = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
-			
-			if ( ! empty( $old_domain ) && \wp_parse_url( $old_domain, PHP_URL_HOST ) === $request_domain ) {
-				// Check if we have cached actor data for this actor.
-				$option_key = 'activitypub_moved_' . md5( $actor->get_id() );
-				$cached_data = \get_option( $option_key, '' );
-				
-				if ( ! empty( $cached_data ) ) {
-					// Return the cached actor data.
-					return self::actor_from_cached_data( $cached_data );
-				}
+			if ( ! \is_wp_error( $actor ) ) {
+				return $actor;
 			}
-			
-			return $actor;
 		}
 
 		$username = str_replace( array( '*', '%' ), '', $username );
@@ -147,23 +150,9 @@ class Actors {
 
 		if ( $user->results ) {
 			$actor = self::get_by_id( $user->results[0] );
-			
-			// Check if we're dealing with an old domain request.
-			$old_domain = \get_option( 'activitypub_old_domain', '' );
-			$request_domain = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
-			
-			if ( ! empty( $old_domain ) && \wp_parse_url( $old_domain, PHP_URL_HOST ) === $request_domain ) {
-				// Check if we have cached actor data for this actor.
-				$option_key = 'activitypub_moved_' . md5( $actor->get_id() );
-				$cached_data = \get_option( $option_key, '' );
-				
-				if ( ! empty( $cached_data ) ) {
-					// Return the cached actor data.
-					return self::actor_from_cached_data( $cached_data );
-				}
+			if ( ! \is_wp_error( $actor ) ) {
+				return $actor;
 			}
-			
-			return $actor;
 		}
 
 		return new WP_Error(
@@ -191,30 +180,6 @@ class Actors {
 			);
 		}
 
-		// Check if we're dealing with an old domain.
-		$old_domain = \get_option( 'activitypub_old_domain', '' );
-		if ( ! empty( $old_domain ) && strpos( $uri, $old_domain ) !== false ) {
-			// Replace old domain with current domain for lookup.
-			$current_domain = \home_url();
-			$current_uri = str_replace( $old_domain, $current_domain, $uri );
-			
-			// Try to get the actor using the current domain URI.
-			$actor = self::get_by_resource( $current_uri );
-			
-			if ( ! \is_wp_error( $actor ) ) {
-				// Check if we have cached actor data for this URI.
-				$option_key = 'activitypub_moved_' . md5( $actor->get_id() );
-				$cached_data = \get_option( $option_key, '' );
-				
-				if ( ! empty( $cached_data ) ) {
-					// Return the cached actor data.
-					return self::actor_from_cached_data( $cached_data );
-				}
-				
-				return $actor;
-			}
-		}
-
 		$scheme = 'acct';
 		$match  = array();
 		// Try to extract the scheme and the host.
@@ -222,6 +187,9 @@ class Actors {
 			// Extract the scheme.
 			$scheme = \esc_attr( $match[1] );
 		}
+
+		// @todo: handle old domain URIs here before we serve a new domain below when we shouldn't.
+		// Although maybe passing through to ::get_by_username() is enough?
 
 		switch ( $scheme ) {
 			// Check for http(s) URIs.
@@ -387,7 +355,7 @@ class Actors {
 	public static function actor_from_cached_data( $cached_data ) {
 		// Decode the cached data.
 		$actor_data = \json_decode( $cached_data, true );
-		
+
 		if ( ! $actor_data || ! is_array( $actor_data ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_cached_data',
@@ -395,28 +363,8 @@ class Actors {
 				array( 'status' => 500 )
 			);
 		}
-		
-		// Create a new Actor object based on the type.
-		$type = isset( $actor_data['type'] ) ? $actor_data['type'] : '';
-		
-		switch ( $type ) {
-			case 'Person':
-				$actor = new \Activitypub\Activity\Actor();
-				break;
-			case 'Group':
-				$actor = new \Activitypub\Activity\Actor();
-				break;
-			case 'Application':
-				$actor = new \Activitypub\Activity\Actor();
-				break;
-			default:
-				$actor = new \Activitypub\Activity\Actor();
-		}
-		
-		// Initialize the actor with the cached data.
-		$actor->from_array( $actor_data );
-		
+
 		// Create a special cached actor wrapper that will return the cached data.
-		return new \Activitypub\Model\Cached_Actor( $actor );
+		return new Cached_Actor( $actor_data );
 	}
 }

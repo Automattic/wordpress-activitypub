@@ -181,10 +181,12 @@ class Move {
 		// Get all actors that need to be migrated.
 		$actors = Actors::get_collection();
 
-		// Also include the blog actor.
-		$blog_actor = Actors::get_by_id( Actors::BLOG_USER_ID );
-		if ( ! \is_wp_error( $blog_actor ) ) {
-			$actors[] = $blog_actor;
+		// Also include the blog actor if active.
+		if ( ! is_user_type_disabled( 'blog' ) ) {
+			$blog_actor = Actors::get_by_id( Actors::BLOG_USER_ID );
+			if ( ! \is_wp_error( $blog_actor ) ) {
+				$actors[] = $blog_actor;
+			}
 		}
 
 		$results = array();
