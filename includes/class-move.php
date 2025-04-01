@@ -11,7 +11,6 @@ use Activitypub\Activity\Actor;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
-use Activitypub\Model\User;
 
 /**
  * ActivityPub (Account) Move Class
@@ -201,7 +200,11 @@ class Move {
 			$result = self::internally( $actor_id, $new_actor_id );
 
 			// Save the current actor data after migration.
-			self::save_old_actor_data( $actor );
+			if ( $actor instanceof Blog ) {
+				\update_option( 'activitypub_blog_user_old_domain_data', $actor->to_json(), false );
+			} else {
+				\update_user_option( $actor->get__id(), 'activitypub_old_domain_data', $actor->to_json(), false );
+			}
 
 			$results[] = array(
 				'actor'  => $actor_id,
@@ -214,23 +217,5 @@ class Move {
 		\update_option( 'activitypub_old_domain', $old_domain );
 
 		return $results;
-	}
-
-	/**
-	 * Save the old actor data for future lookups.
-	 *
-	 * @param Blog|User $actor The actor object.
-	 */
-	private static function save_old_actor_data( $actor ) {
-		// Cache the actor data based on user type.
-		$json = $actor->to_json();
-
-		// Special case for Blog Actor (ID 0).
-		if ( $actor instanceof Blog ) {
-			\update_option( 'activitypub_blog_user_old_domain_data', $json, false );
-		} else {
-			// For regular users, store in user options.
-			\update_user_option( $actor->get__id(), 'activitypub_old_domain_data', $json, false );
-		}
 	}
 }
