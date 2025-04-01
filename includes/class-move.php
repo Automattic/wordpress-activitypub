@@ -227,7 +227,7 @@ class Move {
 
 		// Special case for Blog Actor (ID 0).
 		if ( $actor instanceof Blog ) {
-			\update_option( 'activitypub_old_domain_data_blog', $json, false );
+			\update_option( 'activitypub_blog_user_old_domain_data', $json, false );
 		} else {
 			// For regular users, store in user options.
 			\update_user_option( $actor->get__id(), 'activitypub_old_domain_data', $json, false );

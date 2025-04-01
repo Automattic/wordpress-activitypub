@@ -101,6 +101,7 @@ class Activitypub {
 		delete_option( 'activitypub_application_user_public_key' );
 		delete_option( 'activitypub_blog_user_also_known_as' );
 		delete_option( 'activitypub_blog_user_moved_to' );
+		delete_option( 'activitypub_blog_user_old_domain_data' );
 		delete_option( 'activitypub_blog_user_private_key' );
 		delete_option( 'activitypub_blog_user_public_key' );
 		delete_option( 'activitypub_blog_description' );
@@ -117,6 +118,7 @@ class Activitypub {
 		delete_option( 'activitypub_max_image_attachments' );
 		delete_option( 'activitypub_migration_lock' );
 		delete_option( 'activitypub_object_type' );
+		delete_option( 'activitypub_old_domain' );
 		delete_option( 'activitypub_outbox_purge_days' );
 		delete_option( 'activitypub_support_post_types' );
 		delete_option( 'activitypub_use_hashtags' );
