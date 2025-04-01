@@ -93,6 +93,28 @@ class Blog extends Actor {
 	protected $posting_restricted_to_mods;
 
 	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		// Check if we're on the old domain and should load cached data.
+		$old_domain = \get_option( 'activitypub_old_domain', '' );
+
+		if ( ! empty( $old_domain ) ) {
+			$request_domain  = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+			$old_domain_host = \wp_parse_url( $old_domain, PHP_URL_HOST );
+
+			// If the request is for the old domain, load the cached data.
+			if ( $request_domain === $old_domain_host ) {
+				$cached_data = \get_option( 'activitypub_old_domain_data_blog', '' );
+
+				if ( ! empty( $cached_data ) ) {
+					$this->from_json( $cached_data );
+				}
+			}
+		}
+	}
+
+	/**
 	 * Whether the User manually approves followers.
 	 *
 	 * @return false

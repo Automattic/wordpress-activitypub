@@ -12,7 +12,6 @@ use WP_User_Query;
 use Activitypub\Model\User;
 use Activitypub\Model\Blog;
 use Activitypub\Model\Application;
-use Activitypub\Model\Cached_Actor;
 
 use function Activitypub\object_to_uri;
 use function Activitypub\normalize_url;
@@ -77,20 +76,17 @@ class Actors {
 	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_username( $username ) {
-		// Check if we're dealing with an old domain request. This needs checking first to ensure we don't serve the new domain.
-		$old_domain     = \get_option( 'activitypub_old_domain', '' );
-		$request_domain = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+		// Check if we're dealing with an old domain request.
+		$old_domain      = \get_option( 'activitypub_old_domain', '' );
+		$request_domain  = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+		$old_domain_host = ! empty( $old_domain ) ? \wp_parse_url( $old_domain, PHP_URL_HOST ) : '';
 
-		if ( ! empty( $old_domain ) && \wp_parse_url( $old_domain, PHP_URL_HOST ) === $request_domain ) {
-			// todo: ensure this URL is being constructed properly. Probably move more of this logic into ::actor_from_cached_data.
-			$actor_url = sprintf( '%s/%s', $old_domain, $username );
-			// Check if we have cached actor data for this actor.
-			$option_key  = 'activitypub_moved_' . md5( $actor_url );
-			$cached_data = \get_option( $option_key, '' );
-
-			if ( ! empty( $cached_data ) ) {
-				// Return the cached actor data.
-				return self::actor_from_cached_data( $cached_data );
+		// Special case for Blog Actor on old domain.
+		if ( ! empty( $old_domain_host ) && $old_domain_host === $request_domain ) {
+			// Check if this is the Blog username.
+			if ( $old_domain_host === $username ) {
+				// Return a new Blog instance which will load the cached data in its constructor.
+				return new Blog();
 			}
 		}
 
@@ -344,27 +340,5 @@ class Actors {
 		}
 
 		return 'user';
-	}
-
-	/**
-	 * Returns the actor from cached data.
-	 *
-	 * @param string $cached_data The cached data.
-	 * @return User|Blog|Application The actor.
-	 */
-	public static function actor_from_cached_data( $cached_data ) {
-		// Decode the cached data.
-		$actor_data = \json_decode( $cached_data, true );
-
-		if ( ! $actor_data || ! is_array( $actor_data ) ) {
-			return new \WP_Error(
-				'activitypub_invalid_cached_data',
-				\__( 'Invalid cached actor data', 'activitypub' ),
-				array( 'status' => 500 )
-			);
-		}
-
-		// Create a special cached actor wrapper that will return the cached data.
-		return new Cached_Actor( $actor_data );
 	}
 }

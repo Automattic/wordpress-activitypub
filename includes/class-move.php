@@ -175,9 +175,6 @@ class Move {
 	 * @return array Array of results from Move::internally calls.
 	 */
 	public static function change_domain( $from, $to ) {
-		// Store the old domain for future reference.
-		\update_option( 'activitypub_old_domain', $from );
-
 		// Get all actors that need to be migrated.
 		$actors = Actors::get_collection();
 
@@ -195,14 +192,14 @@ class Move {
 		foreach ( $actors as $actor ) {
 			$actor_id = $actor->get_id();
 
-			// Save the current actor data before migration.
-			self::cache_old_actor_data( $actor, $from, $to );
-
 			// Replace the old domain with the new domain in the actor ID.
 			$new_actor_id = str_replace( $from, $to, $actor_id );
 
 			// Call Move::internally for this actor.
 			$result = self::internally( $actor_id, $new_actor_id );
+
+			// Save the current actor data after migration.
+			self::cache_old_actor_data( $actor );
 
 			$results[] = array(
 				'actor'  => $actor_id,
@@ -210,60 +207,28 @@ class Move {
 			);
 		}
 
+		// Store the old domain for future reference.
+		\update_option( 'activitypub_old_domain', $from );
+
 		return $results;
 	}
 
 	/**
 	 * Cache the old actor data for future lookups.
 	 *
-	 * @param object $actor      The actor object.
-	 * @param string $old_domain The old domain.
-	 * @param string $new_domain The new domain.
+	 * @param object $actor The actor object.
 	 */
-	private static function cache_old_actor_data( $actor, $old_domain, $new_domain ) {
-		// Get the actor data as an array.
-		$actor_data = $actor->to_array();
+	private static function cache_old_actor_data( $actor ) {
+		// Cache the actor data based on user type.
+		$cached_data = $actor->to_json();
 
-		// Get the actor ID.
-		$actor_id = $actor->get_id();
-
-		// Replace the new domain with the old domain in all URLs.
-		$actor_data = self::replace_urls_in_array( $actor_data, $new_domain, $old_domain );
-
-		// Don't show movedTo if it matches the current actor ID.
-		if ( isset( $actor_data['movedTo'] ) && $actor_data['movedTo'] === $actor_id ) {
-			unset( $actor_data['movedTo'] );
+		// Special case for Blog Actor (ID 0).
+		if ( $actor instanceof \Activitypub\Model\Blog ) {
+			\update_option( 'activitypub_old_domain_data_blog', $cached_data, false );
+		} else {
+			// For regular users, store in user options.
+			$user_id = $actor->get__id();
+			\update_user_option( $user_id, 'activitypub_old_domain_data', $cached_data, false );
 		}
-
-		// Cache the actor data.
-		$option_key = 'activitypub_moved_' . md5( $actor_id );
-		\update_option( $option_key, wp_json_encode( $actor_data ), false );
-	}
-
-	/**
-	 * Recursively replace URLs in an array.
-	 *
-	 * @param array  $arr        The array to process.
-	 * @param string $new_domain The new domain.
-	 * @param string $old_domain The old domain.
-	 *
-	 * @return array The processed array.
-	 */
-	private static function replace_urls_in_array( $arr, $new_domain, $old_domain ) {
-		foreach ( $arr as $key => $value ) {
-			if ( '@context' === $key ) {
-				continue;
-			}
-			if ( \is_array( $value ) ) {
-				$arr[ $key ] = self::replace_urls_in_array( $value, $new_domain, $old_domain );
-			} elseif ( \is_string( $value ) && \filter_var( $value, FILTER_VALIDATE_URL ) ) {
-				// Only replace if the URL contains the new domain.
-				if ( strpos( $value, $new_domain ) !== false ) {
-					$arr[ $key ] = str_replace( $new_domain, $old_domain, $value );
-				}
-			}
-		}
-
-		return $arr;
 	}
 }
