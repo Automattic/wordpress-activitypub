@@ -31,34 +31,6 @@ class User extends Actor {
 	protected $_id; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
-	 * Constructor.
-	 *
-	 * @param int $user_id Optional. The WordPress user ID. Default null.
-	 */
-	public function __construct( $user_id = null ) {
-		if ( $user_id ) {
-			$this->_id = $user_id;
-
-			// Check if we're on the old domain and should load cached data.
-			$old_domain = \get_option( 'activitypub_old_domain', '' );
-
-			if ( ! empty( $old_domain ) ) {
-				$request_domain  = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
-				$old_domain_host = \wp_parse_url( $old_domain, PHP_URL_HOST );
-
-				// If the request is for the old domain, load the cached data.
-				if ( $request_domain === $old_domain_host ) {
-					$cached_data = \get_user_option( 'activitypub_old_domain_data', $user_id );
-
-					if ( ! empty( $cached_data ) ) {
-						$this->from_json( $cached_data );
-					}
-				}
-			}
-		}
-	}
-
-	/**
 	 * The Featured-Posts.
 	 *
 	 * @see https://docs.joinmastodon.org/spec/activitypub/#featured
@@ -98,6 +70,34 @@ class User extends Actor {
 	 * @var string
 	 */
 	protected $webfinger;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param int $user_id Optional. The WordPress user ID. Default null.
+	 */
+	public function __construct( $user_id = null ) {
+		if ( $user_id ) {
+			$this->_id = $user_id;
+
+			// Check if we're on the old domain and should load cached data.
+			$old_domain = \get_option( 'activitypub_old_domain', '' );
+
+			if ( ! empty( $old_domain ) ) {
+				$request_domain  = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+				$old_domain_host = \wp_parse_url( $old_domain, PHP_URL_HOST );
+
+				// If the request is for the old domain, load the cached data.
+				if ( $request_domain === $old_domain_host ) {
+					$cached_data = \get_user_option( 'activitypub_old_domain_data', $user_id );
+
+					if ( ! empty( $cached_data ) ) {
+						$this->from_json( $cached_data );
+					}
+				}
+			}
+		}
+	}
 
 	/**
 	 * The type of the object.
