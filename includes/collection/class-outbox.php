@@ -223,7 +223,7 @@ class Outbox {
 		}
 
 		if ( 'Update' === $type ) {
-			$activity->set_updated( gmdate( 'Y-m-d H:i:s', strtotime( $outbox_item->post_modified ) ) );
+			$activity->set_updated( gmdate( 'Y-m-d\TH:i:s\Z', strtotime( $outbox_item->post_modified ) ) );
 		}
 
 		/**
