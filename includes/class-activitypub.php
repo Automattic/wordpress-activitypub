@@ -500,25 +500,6 @@ class Activitypub {
 	}
 
 	/**
-	 * Pre-get option filter for the Authorized Fetch.
-	 *
-	 * @param string $pre The pre-get option value.
-	 *
-	 * @return string If the constant is defined, return the value, otherwise return the pre-get option value.
-	 */
-	public static function pre_option_activitypub_authorized_fetch( $pre ) {
-		if ( ! \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
-			return $pre;
-		}
-
-		if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
-			return '1';
-		}
-
-		return '0';
-	}
-
-	/**
 	 * Register Custom Post Types.
 	 */
 	private static function register_post_types() {
@@ -878,5 +859,24 @@ class Activitypub {
 		}
 
 		return $pre_option;
+	}
+
+	/**
+	 * Pre-get option filter for the Authorized Fetch.
+	 *
+	 * @param string $pre The pre-get option value.
+	 *
+	 * @return string If the constant is defined, return the value, otherwise return the pre-get option value.
+	 */
+	public static function pre_option_activitypub_authorized_fetch( $pre ) {
+		if ( ! \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
+			return $pre;
+		}
+
+		if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
+			return '1';
+		}
+
+		return '0';
 	}
 }
