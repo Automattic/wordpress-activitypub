@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Use specified date format for `updated` field in Outbox-Activites.
