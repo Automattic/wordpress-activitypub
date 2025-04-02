@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+"Post Interactions" settings will now be saved to the options table.
