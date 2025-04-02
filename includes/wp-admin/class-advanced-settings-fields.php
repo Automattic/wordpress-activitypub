@@ -39,14 +39,16 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_outbox_purge_days' )
 		);
 
-		\add_settings_field(
-			'activitypub_authorized_fetch',
-			__( 'Authorized Fetch', 'activitypub' ),
-			array( self::class, 'render_authorized_fetch_field' ),
-			'activitypub_advanced_settings',
-			'activitypub_advanced_settings',
-			array( 'label_for' => 'activitypub_authorized_fetch' )
-		);
+		if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
+			\add_settings_field(
+				'activitypub_authorized_fetch',
+				__( 'Authorized Fetch', 'activitypub' ),
+				array( self::class, 'render_authorized_fetch_field' ),
+				'activitypub_advanced_settings',
+				'activitypub_advanced_settings',
+				array( 'label_for' => 'activitypub_authorized_fetch' )
+			);
+		}
 	}
 
 	/**
@@ -92,15 +94,11 @@ class Advanced_Settings_Fields {
 	 * Render use Authorized Fetch field.
 	 */
 	public static function render_authorized_fetch_field() {
-		$disabled = '';
-		if ( defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
-			$disabled = 'disabled';
-		}
 		$value = get_option( 'activitypub_authorized_fetch', '1' );
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="1" <?php checked( '1', $value ); ?> <?php echo esc_attr( $disabled ); ?> />
+				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="1" <?php checked( '1', $value ); ?> />
 				<?php esc_html_e( 'Require HTTP signature authentication on ActivityPub representations of public posts and profiles.', 'activitypub' ); ?>
 			</label>
 		</p>
