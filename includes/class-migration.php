@@ -189,10 +189,6 @@ class Migration {
 			\add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
-			self::migrate_advanced_settings();
-		}
-
 		/*
 		 * Add new update routines above this comment. ^
 		 *
@@ -899,16 +895,6 @@ class Migration {
 			'1' === $author_profiles
 		) {
 			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
-		}
-	}
-
-	/**
-	 * Migrate the advanced settings.
-	 */
-	public static function migrate_advanced_settings() {
-		// Check if one of the advanced settings is set and show the tab.
-		if ( '1' === \get_option( 'activitypub_authorized_fetch' ) || '180' !== \get_option( 'activitypub_outbox_purge_days' ) ) {
-			\update_option( 'activitypub_show_advanced_tab', '1' );
 		}
 	}
 }
