@@ -103,6 +103,8 @@ class Test_Migration extends \WP_UnitTestCase {
 		if ( isset( self::$fixtures['comment'] ) ) {
 			\wp_delete_comment( self::$fixtures['comment'], true );
 		}
+
+		parent::tear_down_after_class();
 	}
 
 	/**

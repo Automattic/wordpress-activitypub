@@ -36,6 +36,8 @@ class Test_Move extends \WP_UnitTestCase {
 	 */
 	public static function tear_down_after_class() {
 		wp_delete_user( self::$user_id );
+
+		parent::tear_down_after_class();
 	}
 
 	/**
