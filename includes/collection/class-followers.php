@@ -364,7 +364,7 @@ class Followers {
 			$inboxes = array_keys( $inboxes );
 		}
 
-		// Return all inboxes if batch_size is -1
+		// Return all inboxes if batch_size is -1.
 		if ( -1 === $batch_size ) {
 			return $inboxes;
 		}
