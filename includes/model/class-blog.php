@@ -311,7 +311,7 @@ class Blog extends Actor {
 			$time = \time();
 		}
 
-		return \gmdate( 'Y-m-d\TH:i:s\Z', $time );
+		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $time );
 	}
 
 	/**

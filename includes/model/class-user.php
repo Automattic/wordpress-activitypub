@@ -226,7 +226,7 @@ class User extends Actor {
 	 * @return false|string The date the user was created.
 	 */
 	public function get_published() {
-		return \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( \get_the_author_meta( 'registered', $this->_id ) ) );
+		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( \get_the_author_meta( 'registered', $this->_id ) ) );
 	}
 
 	/**
