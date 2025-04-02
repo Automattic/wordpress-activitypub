@@ -506,7 +506,7 @@ class Settings_Fields {
 			</p>
 			<p>
 				<label>
-					<input type="checkbox" name="activitypub_allow_announces" value="1" <?php checked( '1', $allow_reposts ); ?> />
+					<input type="checkbox" name="activitypub_allow_reposts" value="1" <?php checked( '1', $allow_reposts ); ?> />
 					<?php esc_html_e( 'Receive reblogs (boosts)', 'activitypub' ); ?>
 				</label>
 			</p>
