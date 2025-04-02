@@ -462,7 +462,7 @@ class Settings_Fields {
 			rows="5"
 		><?php echo \esc_textarea( implode( PHP_EOL, $value ) ); ?></textarea>
 		<p class="description">
-			<?php echo \wp_kses( __( 'A <strong>Fediverse-Relay</strong> distributes content across instances, expanding reach, engagement, and discoverability, especially for smaller instances.', 'activitypub' ), 'default' ); ?>
+			<?php echo \wp_kses( \__( 'A <strong>Fediverse-Relay</strong> distributes content across instances, expanding reach, engagement, and discoverability, especially for smaller instances.', 'activitypub' ), 'default' ); ?>
 		</p>
 		<p class="description">
 			<?php
