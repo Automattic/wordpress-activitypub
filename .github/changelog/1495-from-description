@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Set `updated` field for profile updates, otherwise the `Update`-`Activity` wouldn't be handled by Mastodon.
