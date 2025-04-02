@@ -257,8 +257,9 @@ class Settings {
 	 * Load settings page.
 	 */
 	public static function settings_page() {
-		$show_welcome_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true );
-		$default_tab      = $show_welcome_tab ? 'welcome' : 'settings';
+		$show_welcome_tab  = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true );
+		$show_advanced_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true );
+		$default_tab       = $show_welcome_tab ? 'welcome' : 'settings';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$tab = isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : $default_tab;
 
@@ -282,7 +283,7 @@ class Settings {
 		);
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || \get_option( 'activitypub_show_advanced_tab' ) ) {
+		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || $show_advanced_tab ) {
 			$settings_tabs['advanced'] = array(
 				'label'    => __( 'Advanced', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/advanced-settings.php',
@@ -516,7 +517,7 @@ class Settings {
 		if ( isset( $_POST['activitypub_show_advanced_tab'] ) ) {
 			$advanced_settings         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_advanced_tab'] ) );
 			$advanced_settings_checked = empty( $advanced_settings ) ? 0 : 1;
-			\update_option( 'activitypub_show_advanced_tab', $advanced_settings_checked );
+			\update_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', $advanced_settings_checked );
 		}
 
 		$screen_settings = '<fieldset>
@@ -532,7 +533,7 @@ class Settings {
 			</label>
 			<label for="activitypub_show_advanced_tab">
 				<input name="activitypub_show_advanced_tab" type="hidden" value="0" />
-				<input name="activitypub_show_advanced_tab" type="checkbox" id="activitypub_show_advanced_tab" value="1" ' . \checked( 1, \get_option( 'activitypub_show_advanced_tab' ), false ) . ' />
+				<input name="activitypub_show_advanced_tab" type="checkbox" id="activitypub_show_advanced_tab" value="1" ' . \checked( 1, \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true ), false ) . ' />
 				' . \esc_html__( 'Advanced Settings', 'activitypub' ) . '
 			</label>
 		</div>
