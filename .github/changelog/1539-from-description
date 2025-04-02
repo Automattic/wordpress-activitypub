@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+So not show `movedTo` attribute instead of setting it to `false` if empty.
