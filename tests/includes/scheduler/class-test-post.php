@@ -154,7 +154,6 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Clean up.
 		unset( $_REQUEST['bulk_edit'], $_REQUEST['post_author'], $_REQUEST['post_status'] );
 		\wp_delete_post( $post_id, true );
-		\wp_delete_user( $new_user_id );
 	}
 
 	/**

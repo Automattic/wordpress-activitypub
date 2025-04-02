@@ -29,10 +29,10 @@ class Test_User extends \WP_UnitTestCase {
 			'role'       => 'subscriber',
 		);
 
-		$user_id = self::factory()->user->create( $userdata );
-		$this->assertFalse( user_can( $user_id, 'activitypub' ) );
+		$user_id = wp_insert_user( $userdata );
+		$can     = user_can( $user_id, 'activitypub' );
 
-		\wp_delete_user( $user_id );
+		$this->assertFalse( $can );
 
 		$userdata = array(
 			'user_email' => 'editor@example.com',
@@ -43,10 +43,10 @@ class Test_User extends \WP_UnitTestCase {
 			'role'       => 'editor',
 		);
 
-		$user_id = self::factory()->user->create( $userdata );
-		$this->assertTrue( user_can( $user_id, 'activitypub' ) );
+		$user_id = wp_insert_user( $userdata );
+		$can     = user_can( $user_id, 'activitypub' );
 
-		\wp_delete_user( $user_id );
+		$this->assertTrue( $can );
 	}
 
 	/**
@@ -69,8 +69,6 @@ class Test_User extends \WP_UnitTestCase {
 
 		$this->assertArrayHasKey( 'url', $icon );
 		$this->assertNotSame( wp_get_attachment_url( $attachment_id ), $icon['url'] );
-
-		\wp_delete_user( $user_id );
 	}
 
 	/**

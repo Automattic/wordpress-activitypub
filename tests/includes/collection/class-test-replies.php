@@ -160,6 +160,5 @@ class Test_Replies extends \WP_UnitTestCase {
 		$this->assertSame( \get_author_posts_url( Actors::BLOG_USER_ID ), $context['attributedTo'] );
 
 		\delete_option( 'activitypub_actor_mode' );
-		\wp_delete_user( $user_id );
 	}
 }
