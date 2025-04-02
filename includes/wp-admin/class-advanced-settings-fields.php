@@ -16,7 +16,7 @@ class Advanced_Settings_Fields {
 	 * Initialize.
 	 */
 	public static function init() {
-		add_action( 'load-settings_page_activitypub', array( self::class, 'register_advanced_fields' ) );
+		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_advanced_fields' ) );
 	}
 
 	/**
