@@ -62,7 +62,7 @@ class Advanced_Settings_Fields {
 					'target' => true,
 				),
 			);
-			echo wp_kses( __( 'Advanced settings allow deep customization but can affect your site&rsquo;s functionality, security, or performance if misconfigured. Only proceed if you fully understand the changes, and always back up your site beforehand. If unsure, consult <a href="https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs" target="_blank">documentation</a> or seek <a href="https://wordpress.org/support/plugin/activitypub/" target="_blank">expert advice</a>.', 'activitypub' ), $allowed_html );
+			echo wp_kses( __( 'Advanced settings allow deep customization but can affect your site&#8217;s functionality, security, or performance if misconfigured. Only proceed if you fully understand the changes, and always back up your site beforehand. If unsure, consult <a href="https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs" target="_blank">documentation</a> or seek <a href="https://wordpress.org/support/plugin/activitypub/" target="_blank">expert advice</a>.', 'activitypub' ), $allowed_html );
 			?>
 		</p>
 		<?php
