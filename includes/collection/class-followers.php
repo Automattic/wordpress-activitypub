@@ -93,6 +93,23 @@ class Followers {
 	}
 
 	/**
+	 * Remove all followers for a given user.
+	 *
+	 * @param int $user_id The ID of the WordPress User.
+	 */
+	public static function remove_all_followers( $user_id ) {
+		$followers = self::get_followers( $user_id );
+
+		if ( empty( $followers ) ) {
+			return;
+		}
+
+		foreach ( $followers as $follower ) {
+			self::remove_follower( $user_id, $follower->get_actor() );
+		}
+	}
+
+	/**
 	 * Get a Follower.
 	 *
 	 * @param int    $user_id The ID of the WordPress User.
@@ -331,7 +348,7 @@ class Followers {
 	 *
 	 * @param string $json       The ActivityPub Activity JSON.
 	 * @param int    $actor_id   The WordPress Actor ID.
-	 * @param int    $batch_size Optional. The batch size. Default 50.
+	 * @param int    $batch_size Optional. The batch size. Default 50. Use -1 to get all inboxes.
 	 * @param int    $offset     Optional. The offset. Default 0.
 	 *
 	 * @return array The list of Inboxes.
@@ -345,6 +362,11 @@ class Followers {
 				$inboxes[ $inbox ] = 1;
 			}
 			$inboxes = array_keys( $inboxes );
+		}
+
+		// Return all inboxes if batch_size is -1
+		if ( -1 === $batch_size ) {
+			return $inboxes;
 		}
 
 		return array_slice( $inboxes, $offset, $batch_size );

@@ -228,7 +228,7 @@ class Actor extends Base_Object {
 	 *
 	 * @return bool True if the request is being served from the old domain, false otherwise.
 	 */
-	protected function is_serving_from_old_domain() {
+	public function is_serving_from_old_domain() {
 		$old_domain = \get_option( 'activitypub_old_domain', '' );
 		if ( ! empty( $old_domain ) ) {
 			$request_domain = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
