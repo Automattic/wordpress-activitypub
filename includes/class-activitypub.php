@@ -852,6 +852,18 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
+
+		\register_meta(
+			'user',
+			'activitypub_show_advanced_tab',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Whether to show the advanced tab.',
+				'single'            => true,
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
+			)
+		);
 	}
 
 	/**
