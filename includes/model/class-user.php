@@ -463,9 +463,7 @@ class User extends Actor {
 	 */
 	public function get_moved_to() {
 		$moved_to = \get_user_option( 'activitypub_moved_to', $this->_id );
-		if ( $moved_to === $this->get_id() ) {
-			return null;
-		}
-		return $moved_to;
+
+		return $moved_to && $moved_to !== $this->get_id() ? $moved_to : null;
 	}
 }

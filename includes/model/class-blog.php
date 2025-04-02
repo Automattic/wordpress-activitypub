@@ -590,9 +590,7 @@ class Blog extends Actor {
 	 */
 	public function get_moved_to() {
 		$moved_to = \get_option( 'activitypub_blog_user_moved_to' );
-		if ( $moved_to === $this->get_id() ) {
-			return null;
-		}
-		return $moved_to;
+
+		return $moved_to && $moved_to !== $this->get_id() ? $moved_to : null;
 	}
 }
