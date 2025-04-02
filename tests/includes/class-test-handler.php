@@ -39,6 +39,15 @@ class Test_Handler extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Clean up after tests.
+	 */
+	public function tear_down() {
+		\wp_delete_user( $this->user_id );
+
+		parent::tear_down();
+	}
+
+	/**
 	 * Test the inherit functionality
 	 */
 	public function test_activity() {

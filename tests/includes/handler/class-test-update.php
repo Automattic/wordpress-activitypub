@@ -36,6 +36,15 @@ class Test_Update extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Clean up after tests.
+	 */
+	public function tear_down() {
+		\wp_delete_user( $this->user_id );
+
+		parent::tear_down();
+	}
+
+	/**
 	 * Test updating an actor.
 	 *
 	 * @covers ::update_actor

@@ -779,6 +779,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( 'WordPress', $blog_fields[0]->post_content, 'The content should be "WordPress"' );
 
 		$this->delete_extra_fields();
+		\wp_delete_user( $user_id );
 	}
 
 	/**
@@ -830,6 +831,10 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertCount( 0, $non_ap_user_fields, 'User without ActivityPub permission should not have an extra field' );
 
 		$this->delete_extra_fields();
+		\wp_delete_user( $non_ap_user_id );
+		foreach ( $user_ids as $user_id ) {
+			\wp_delete_user( $user_id );
+		}
 	}
 
 	/**

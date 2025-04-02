@@ -36,6 +36,15 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Clean up after tests.
+	 */
+	public static function tear_down_after_class() {
+		\wp_delete_user( self::$user_id );
+
+		parent::tear_down_after_class();
+	}
+
+	/**
 	 * Set up test environment.
 	 */
 	public function setUp(): void {
