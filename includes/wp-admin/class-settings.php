@@ -147,6 +147,28 @@ class Settings {
 
 		\register_setting(
 			'activitypub',
+			'activitypub_allow_likes',
+			array(
+				'type'              => 'integer',
+				'description'       => \__( 'Allow likes.', 'activitypub' ),
+				'default'           => '1',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_allow_reposts',
+			array(
+				'type'              => 'integer',
+				'description'       => \__( 'Allow reposts.', 'activitypub' ),
+				'default'           => '1',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
 			'activitypub_authorized_fetch',
 			array(
 				'type'        => 'boolean',
