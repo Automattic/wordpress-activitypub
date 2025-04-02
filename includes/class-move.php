@@ -213,8 +213,7 @@ class Move {
 		}
 
 		// Store the old domain for future reference.
-		$old_domain = \wp_parse_url( $from, PHP_URL_HOST );
-		\update_option( 'activitypub_old_domain', $old_domain );
+		\update_option( 'activitypub_old_domain', \wp_parse_url( $from, PHP_URL_HOST ) );
 
 		return $results;
 	}

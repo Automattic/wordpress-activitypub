@@ -77,17 +77,13 @@ class Actors {
 	 */
 	public static function get_by_username( $username ) {
 		// Check if we're dealing with an old domain request.
-		$old_domain      = \get_option( 'activitypub_old_domain', '' );
-		$request_domain  = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
-		$old_domain_host = ! empty( $old_domain ) ? \wp_parse_url( $old_domain, PHP_URL_HOST ) : '';
+		$old_domain     = \get_option( 'activitypub_old_domain', '' );
+		$request_domain = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
 
 		// Special case for Blog Actor on old domain.
-		if ( ! empty( $old_domain_host ) && $old_domain_host === $request_domain ) {
-			// Check if this is the Blog username.
-			if ( $old_domain_host === $username ) {
-				// Return a new Blog instance which will load the cached data in its constructor.
-				return new Blog();
-			}
+		if ( $old_domain && $old_domain === $request_domain && $old_domain === $username ) {
+			// Return a new Blog instance which will load the cached data in its constructor.
+			return new Blog();
 		}
 
 		// Check for blog user.
