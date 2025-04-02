@@ -188,4 +188,41 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertEquals( $from, $activity->origin );
 		$this->assertEquals( $to, $activity->target );
 	}
+
+	/**
+	 * Test the change_domain() method with valid input.
+	 *
+	 * @covers ::change_domain
+	 */
+	public function test_change_domain_with_valid_input() {
+		// Enable blog actor.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$old_domain = home_url();
+		$new_domain = 'http://newdomain.com';
+		\update_option( 'home', $new_domain );
+
+		// Run the domain change.
+		$results = Move::change_domain( $old_domain, $new_domain );
+
+		// Verify the results.
+		$this->assertIsArray( $results );
+
+		// Check that each result has the expected structure.
+		$result      = reset( $results );
+		$outbox_item = json_decode( get_post_field( 'post_content', $result['result'] ) );
+
+		$this->assertSame( $outbox_item->actor, $result['actor'] );
+		$this->assertStringStartsWith( $new_domain, $outbox_item->target );
+
+		// Verify the old domain was stored.
+		$this->assertEquals( 'example.org', \get_option( 'activitypub_old_domain' ) );
+
+		// Clean up.
+		\delete_option( 'activitypub_old_domain' );
+		\delete_option( 'activitypub_blog_user_old_domain_data' );
+		\delete_option( 'activitypub_actor_mode' );
+		\delete_user_option( self::$user_id, 'activitypub_old_domain_data' );
+		\update_option( 'home', $old_domain );
+	}
 }
