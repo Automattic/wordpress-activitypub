@@ -8,12 +8,12 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Model\User;
+use Activitypub\Move;
 
 /**
  * Test class for Activitypub Move.
  *
- * @coversDefaultClass \Activitypub\Move
+ * @coversDefaultClass Move
  */
 class Test_Move extends \WP_UnitTestCase {
 
@@ -40,7 +40,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = Actors::get_by_id( self::$user_id )->get_id();
 		$to   = 'https://newsite.com/user/1';
 
-		\Activitypub\Move::externally( $from, $to );
+		Move::externally( $from, $to );
 
 		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
 		$this->assertEquals( $to, $moved_to );
@@ -55,7 +55,7 @@ class Test_Move extends \WP_UnitTestCase {
 	 * @covers ::account
 	 */
 	public function test_account_with_invalid_user() {
-		$result = \Activitypub\Move::externally(
+		$result = Move::externally(
 			'https://example.com/nonexistent/user',
 			'https://newsite.com/user/999'
 		);
@@ -78,7 +78,7 @@ class Test_Move extends \WP_UnitTestCase {
 		};
 		\add_filter( 'pre_http_request', $filter );
 
-		$result = \Activitypub\Move::externally( $from, $to );
+		$result = Move::externally( $from, $to );
 
 		$this->assertWPError( $result );
 		$this->assertEquals( 'http_request_failed', $result->get_error_code() );
@@ -105,7 +105,7 @@ class Test_Move extends \WP_UnitTestCase {
 		};
 		\add_filter( 'pre_http_request', $filter );
 
-		\Activitypub\Move::externally( $from, $to );
+		Move::externally( $from, $to );
 
 		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
 		$this->assertEquals( $to, $moved_to );
@@ -125,7 +125,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 		$to   = 'https://newsite.com/user/0';
 
-		\Activitypub\Move::externally( $from, $to );
+		Move::externally( $from, $to );
 
 		$moved_to = Actors::get_by_id( Actors::BLOG_USER_ID )->get_moved_to();
 		$this->assertEquals( $to, $moved_to );
@@ -142,13 +142,14 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = get_author_posts_url( self::$user_id );
 		$to   = Actors::get_by_id( self::$user_id )->get_id();
 
-		\Activitypub\Move::internally( $from, $to );
+		Move::internally( $from, $to );
 
 		// Clear cache.
 		wp_cache_delete( self::$user_id, 'users' );
 
+		// Updated user should not have moved_to set.
 		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
-		$this->assertEquals( $to, $moved_to );
+		$this->assertNull( $moved_to );
 
 		$also_known_as = Actors::get_by_id( self::$user_id )->get_also_known_as();
 		$this->assertContains( $from, $also_known_as );
@@ -164,7 +165,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$to   = Actors::get_by_id( self::$user_id )->get_id();
 
 		// Call the method and get the outbox item ID.
-		$outbox_id = \Activitypub\Move::internally( $from, $to );
+		$outbox_id = Move::internally( $from, $to );
 
 		// Verify we got a valid outbox ID.
 		$this->assertIsInt( $outbox_id );
