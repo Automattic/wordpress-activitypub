@@ -226,7 +226,7 @@ class User extends Actor {
 	 * @return false|string The date the user was created.
 	 */
 	public function get_published() {
-		return \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( \get_the_author_meta( 'registered', $this->_id ) ) );
+		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( \get_the_author_meta( 'registered', $this->_id ) ) );
 	}
 
 	/**
@@ -446,6 +446,7 @@ class User extends Actor {
 	 * @return string The movedTo.
 	 */
 	public function get_moved_to() {
-		return \get_user_option( 'activitypub_moved_to', $this->_id );
+		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+		return \get_user_option( 'activitypub_moved_to', $this->_id ) ?: null;
 	}
 }

@@ -454,7 +454,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		// Verify the updated attribute is set and matches the post's modified date.
 		$post             = get_post( $id );
-		$expected_updated = gmdate( 'Y-m-d H:i:s', strtotime( $post->post_modified ) );
+		$expected_updated = gmdate( 'Y-m-d\TH:i:s\Z', strtotime( $post->post_modified ) );
 		$this->assertEquals( $expected_updated, $activity->get_updated() );
 
 		// Delete the Outbox item.

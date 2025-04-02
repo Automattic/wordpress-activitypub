@@ -573,7 +573,7 @@ class Post extends Base {
 	protected function get_published() {
 		$published = \strtotime( $this->item->post_date_gmt );
 
-		return \gmdate( 'Y-m-d\TH:i:s\Z', $published );
+		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $published );
 	}
 
 	/**
@@ -586,7 +586,7 @@ class Post extends Base {
 		$updated   = \strtotime( $this->item->post_modified_gmt );
 
 		if ( $updated > $published ) {
-			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
+			return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $updated );
 		}
 
 		return null;

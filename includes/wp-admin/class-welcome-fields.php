@@ -150,7 +150,7 @@ class Welcome_Fields {
 		<p>
 			<?php \esc_html_e( 'This blog profile will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
 			<a href="<?php echo \esc_url( \admin_url( '/options-general.php?page=activitypub&tab=blog-profile' ) ); ?>">
-				<?php \esc_html_e( 'Customize the blog profile', 'activitypub' ); ?>
+				<?php \esc_html_e( 'Customize the blog profile.', 'activitypub' ); ?>
 			</a>
 		</p>
 		<?php

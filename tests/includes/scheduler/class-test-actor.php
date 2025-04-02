@@ -318,7 +318,7 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activity = \json_decode( $post->post_content, true );
 
 		// Verify the updated attribute is set and matches the post's modified date.
-		$expected_updated = gmdate( 'Y-m-d H:i:s', strtotime( $post->post_modified ) );
+		$expected_updated = gmdate( 'Y-m-d\TH:i:s\Z', strtotime( $post->post_modified ) );
 		$this->assertEqualsWithDelta( $expected_updated, $activity['updated'], 2, 'Updated attribute does not match post modified date.' );
 	}
 }
