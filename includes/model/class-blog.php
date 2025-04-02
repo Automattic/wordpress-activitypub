@@ -311,7 +311,7 @@ class Blog extends Actor {
 			$time = \time();
 		}
 
-		return \gmdate( 'Y-m-d\TH:i:s\Z', $time );
+		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $time );
 	}
 
 	/**
@@ -576,6 +576,7 @@ class Blog extends Actor {
 	 * @return string The movedTo.
 	 */
 	public function get_moved_to() {
-		return \get_option( 'activitypub_blog_user_moved_to' );
+		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+		return \get_option( 'activitypub_blog_user_moved_to' ) ?: null;
 	}
 }

@@ -146,11 +146,23 @@ class Settings {
 
 		\register_setting(
 			'activitypub',
-			'activitypub_mailer_new_follower',
+			'activitypub_allow_likes',
 			array(
-				'type'        => 'boolean',
-				'description' => \__( 'Send notifications via e-mail when a new follower is added.', 'activitypub' ),
-				'default'     => '0',
+				'type'              => 'integer',
+				'description'       => \__( 'Allow likes.', 'activitypub' ),
+				'default'           => '1',
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_allow_reposts',
+			array(
+				'type'              => 'integer',
+				'description'       => \__( 'Allow reposts.', 'activitypub' ),
+				'default'           => '1',
+				'sanitize_callback' => 'absint',
 			)
 		);
 

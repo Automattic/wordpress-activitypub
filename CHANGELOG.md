@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.6.1] - 2025-04-02
+### Fixed
+- "Post Interactions" settings will now be saved to the options table. [#1540]
+- So not show `movedTo` attribute instead of setting it to `false` if empty. [#1539]
+- Use specified date format for `updated` field in Outbox-Activites. [#1537]
+
 ## [5.6.0] - 2025-04-01
 ### Added
 - Added a Mastodon importer to move your Mastodon posts to your WordPress site. [#1502]
@@ -1113,6 +1119,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[5.6.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.6.0...5.6.1
 [5.6.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.5.0...5.6.0
 [5.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.4.1...5.5.0
 [5.4.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.4.0...5.4.1

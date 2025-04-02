@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 6.4
 Tested up to: 6.7
-Stable tag: 5.6.0
+Stable tag: 5.6.1
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -128,6 +128,12 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 5.6.1 - 2025-04-02
+#### Fixed
+- "Post Interactions" settings will now be saved to the options table.
+- So not show `movedTo` attribute instead of setting it to `false` if empty.
+- Use specified date format for `updated` field in Outbox-Activites.
 
 ### 5.6.0 - 2025-04-01
 #### Added
