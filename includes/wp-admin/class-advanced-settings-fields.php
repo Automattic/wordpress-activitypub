@@ -30,9 +30,9 @@ class Advanced_Settings_Fields {
 			'activitypub_advanced_settings'
 		);
 
-		add_settings_field(
+		\add_settings_field(
 			'activitypub_outbox_purge_days',
-			__( 'Outbox Retention Period', 'activitypub' ),
+			\__( 'Outbox Retention Period', 'activitypub' ),
 			array( self::class, 'render_outbox_purge_days_field' ),
 			'activitypub_advanced_settings',
 			'activitypub_advanced_settings',
@@ -42,7 +42,7 @@ class Advanced_Settings_Fields {
 		if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
 			\add_settings_field(
 				'activitypub_authorized_fetch',
-				__( 'Authorized Fetch', 'activitypub' ),
+				\__( 'Authorized Fetch', 'activitypub' ),
 				array( self::class, 'render_authorized_fetch_field' ),
 				'activitypub_advanced_settings',
 				'activitypub_advanced_settings',
@@ -64,7 +64,7 @@ class Advanced_Settings_Fields {
 					'target' => true,
 				),
 			);
-			echo wp_kses( __( 'Advanced settings allow deep customization but can affect your site&#8217;s functionality, security, or performance if misconfigured. Only proceed if you fully understand the changes, and always back up your site beforehand. If unsure, consult <a href="https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs" target="_blank">documentation</a> or seek <a href="https://wordpress.org/support/plugin/activitypub/" target="_blank">expert advice</a>.', 'activitypub' ), $allowed_html );
+			echo \wp_kses( \__( 'Advanced settings allow deep customization but can affect your site&#8217;s functionality, security, or performance if misconfigured. Only proceed if you fully understand the changes, and always back up your site beforehand. If unsure, consult <a href="https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs" target="_blank">documentation</a> or seek <a href="https://wordpress.org/support/plugin/activitypub/" target="_blank">expert advice</a>.', 'activitypub' ), $allowed_html );
 			?>
 		</p>
 		<?php
@@ -74,14 +74,14 @@ class Advanced_Settings_Fields {
 	 * Render outbox purge days field.
 	 */
 	public static function render_outbox_purge_days_field() {
-		$value = get_option( 'activitypub_outbox_purge_days', 180 );
+		$value = \get_option( 'activitypub_outbox_purge_days', 180 );
 		echo '<input type="number" id="activitypub_outbox_purge_days" name="activitypub_outbox_purge_days" value="' . esc_attr( $value ) . '" class="small-text" min="0" max="365" />';
-		echo '<p class="description">' . wp_kses(
+		echo '<p class="description">' . \wp_kses(
 			sprintf(
 				// translators: 1: Definition of Outbox; 2: Default value (180).
-				__( 'Maximum number of days to keep items in the <abbr title="%1$s">Outbox</abbr>. A lower value might be better for sites with lots of activity to maintain site performance. Default: <code>%2$s</code>', 'activitypub' ),
-				esc_attr__( 'A virtual location on a user&#8217;s profile where all the activities (posts, likes, replies) they publish are stored, acting as a feed that other users can access to see their publicly shared content', 'activitypub' ),
-				esc_html( 180 )
+				\__( 'Maximum number of days to keep items in the <abbr title="%1$s">Outbox</abbr>. A lower value might be better for sites with lots of activity to maintain site performance. Default: <code>%2$s</code>', 'activitypub' ),
+				\esc_attr__( 'A virtual location on a user&#8217;s profile where all the activities (posts, likes, replies) they publish are stored, acting as a feed that other users can access to see their publicly shared content', 'activitypub' ),
+				\esc_html( 180 )
 			),
 			array(
 				'abbr' => array( 'title' => array() ),
@@ -94,12 +94,12 @@ class Advanced_Settings_Fields {
 	 * Render use Authorized Fetch field.
 	 */
 	public static function render_authorized_fetch_field() {
-		$value = get_option( 'activitypub_authorized_fetch', '1' );
+		$value = \get_option( 'activitypub_authorized_fetch', '1' );
 		?>
 		<p>
 			<label>
 				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="1" <?php checked( '1', $value ); ?> />
-				<?php esc_html_e( 'Require HTTP signature authentication on ActivityPub representations of public posts and profiles.', 'activitypub' ); ?>
+				<?php \esc_html_e( 'Require HTTP signature authentication on ActivityPub representations of public posts and profiles.', 'activitypub' ); ?>
 			</label>
 		</p>
 		<p class="description">
