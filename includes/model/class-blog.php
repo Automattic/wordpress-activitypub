@@ -7,12 +7,12 @@
 
 namespace Activitypub\Model;
 
-use WP_Query;
-
-use Activitypub\Signature;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Http;
+use Activitypub\Signature;
+use WP_Query;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -97,7 +97,7 @@ class Blog extends Actor {
 	 */
 	public function __construct() {
 		// If the request is for the old domain, load the cached data.
-		if ( $this->is_serving_from_old_domain() ) {
+		if ( Http::is_domain_match( \get_option( 'activitypub_old_domain', '' ) ) ) {
 			$cached_data = \get_option( 'activitypub_old_domain_data_blog', '' );
 			if ( ! empty( $cached_data ) ) {
 				$this->from_json( $cached_data );

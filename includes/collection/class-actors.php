@@ -7,11 +7,12 @@
 
 namespace Activitypub\Collection;
 
-use WP_Error;
-use WP_User_Query;
+use Activitypub\Http;
 use Activitypub\Model\User;
 use Activitypub\Model\Blog;
 use Activitypub\Model\Application;
+use WP_Error;
+use WP_User_Query;
 
 use function Activitypub\object_to_uri;
 use function Activitypub\normalize_url;
@@ -76,12 +77,10 @@ class Actors {
 	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_username( $username ) {
-		// Check if we're dealing with an old domain request.
-		$old_domain     = \get_option( 'activitypub_old_domain', '' );
-		$request_domain = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+		$old_domain = \get_option( 'activitypub_old_domain', '' );
 
 		// Special case for Blog Actor on old domain.
-		if ( $old_domain && $old_domain === $request_domain && $old_domain === $username ) {
+		if ( $old_domain && $old_domain === $username && Http::is_domain_match( $old_domain ) ) {
 			// Return a new Blog instance which will load the cached data in its constructor.
 			return new Blog();
 		}

@@ -7,10 +7,11 @@
 
 namespace Activitypub\Model;
 
-use WP_Error;
-use Activitypub\Signature;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Http;
+use Activitypub\Signature;
+use WP_Error;
 
 use function Activitypub\is_blog_public;
 use function Activitypub\get_rest_url_by_path;
@@ -81,7 +82,7 @@ class User extends Actor {
 			$this->_id = $user_id;
 
 			// If the request is for the old domain, load the cached data.
-			if ( $this->is_serving_from_old_domain() ) {
+			if ( Http::is_domain_match( \get_option( 'activitypub_old_domain', '' ) ) ) {
 				$cached_data = \get_user_option( 'activitypub_old_domain_data', $user_id );
 				if ( ! empty( $cached_data ) ) {
 					$this->from_json( $cached_data );
