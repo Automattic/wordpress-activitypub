@@ -36,6 +36,15 @@ class Welcome_Fields {
 			'activitypub_welcome'
 		);
 
+		if ( Health_Check::count_results( 'critical' ) ) {
+			\add_settings_section(
+				'activitypub_troubleshooting',
+				'',
+				array( self::class, 'render_troubleshooting_section' ),
+				'activitypub_welcome'
+			);
+		}
+
 		\add_settings_section(
 			'activitypub_bookmarklet',
 			\__( 'Bookmarklet', 'activitypub' ),
@@ -60,13 +69,6 @@ class Welcome_Fields {
 				'activitypub_welcome'
 			);
 		}
-
-		\add_settings_section(
-			'activitypub_troubleshooting',
-			\__( 'Troubleshooting', 'activitypub' ),
-			array( self::class, 'render_troubleshooting_section' ),
-			'activitypub_welcome'
-		);
 
 		if ( ACTIVITYPUB_SHOW_PLUGIN_RECOMMENDATIONS ) {
 			\add_settings_section(
@@ -194,22 +196,51 @@ class Welcome_Fields {
 	 * Render troubleshooting section.
 	 */
 	public static function render_troubleshooting_section() {
+		$results = Health_Check::count_results();
 		?>
-		<p>
-			<?php
-			echo wp_kses(
-				\sprintf(
-					/* translators: the placeholder is the Site Health URL */
-					\__(
-						'If you have problems using this plugin, please check the <a href="%s">Site Health</a> page to ensure that your site is compatible and/or use the "Help" tab (in the top right of the settings pages).',
-						'activitypub'
+		<div class="notice notice-warning inline">
+			<p>
+				<span class="dashicons dashicons-warning"></span>
+				<?php
+				echo wp_kses(
+					\sprintf(
+						/* translators: the placeholders are the number of critical and recommended issues on the site. */
+						\__(
+							'<strong>Important:</strong> You have <span class="count">%d</span> critical and <span class="count">%d</span> recommended issues on your site. These issues may affect your site\'s compatibility with the fediverse.',
+							'activitypub'
+						),
+						$results['critical'],
+						$results['recommended']
 					),
-					\esc_url( admin_url( 'site-health.php' ) )
-				),
-				'default'
-			);
-			?>
-		</p>
+					array(
+						'strong' => array(),
+						'span'   => array(
+							'class' => array(),
+						),
+					)
+				);
+				?>
+			</p>
+			<p>
+				<?php
+				echo wp_kses(
+					\sprintf(
+						/* translators: %s: Site Health URL */
+						\__(
+							'Please check the <a href="%s">Site Health</a> page to resolve these issues. You can also use the "Help" tab (in the top right of the settings pages) for additional guidance.',
+							'activitypub'
+						),
+						\esc_url( \admin_url( 'site-health.php' ) )
+					),
+					array(
+						'a' => array(
+							'href' => array(),
+						),
+					)
+				);
+				?>
+			</p>
+		</div>
 		<?php
 	}
 
