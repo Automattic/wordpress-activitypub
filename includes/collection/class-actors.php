@@ -17,8 +17,8 @@ use function Activitypub\object_to_uri;
 use function Activitypub\normalize_url;
 use function Activitypub\normalize_host;
 use function Activitypub\url_to_authorid;
-use function Activitypub\is_user_disabled;
 use function Activitypub\is_user_type_disabled;
+use function Activitypub\user_can_activitypub;
 
 /**
  * Actors collection.
@@ -50,7 +50,7 @@ class Actors {
 			$user_id = (int) $user_id;
 		}
 
-		if ( is_user_disabled( $user_id ) ) {
+		if ( ! user_can_activitypub( $user_id ) ) {
 			return new WP_Error(
 				'activitypub_user_not_found',
 				\__( 'Actor not found', 'activitypub' ),
