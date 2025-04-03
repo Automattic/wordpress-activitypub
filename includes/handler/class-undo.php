@@ -59,9 +59,7 @@ class Undo {
 			$user_id = $user->get__id();
 			$actor   = object_to_uri( $activity['actor'] );
 
-			$state = $user->is_serving_from_old_domain()
-				? true // The followers have already been removed, so we fake a success.
-				: Followers::remove_follower( $user_id, $actor );
+			$state = Followers::remove_follower( $user_id, $actor );
 		}
 
 		// Handle "Undo" requests for "Like" and "Create" activities.

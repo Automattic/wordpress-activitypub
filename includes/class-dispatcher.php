@@ -126,18 +126,9 @@ class Dispatcher {
 	 * @return array|void The next batch of followers to process, or void if done.
 	 */
 	public static function send_to_followers( $outbox_item_id, $batch_size = ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE, $offset = 0 ) {
-		$activity = Outbox::get_activity( $outbox_item_id );
-		$json     = $activity->to_json();
-		$actor    = Outbox::get_actor( \get_post( $outbox_item_id ) );
-		$is_move  = $activity->get_type() === 'Move';
-		$batch    = $is_move ? -1 : $batch_size; // -1 for Move activities to get all inboxes at once before deleting below.
-		$inboxes  = Followers::get_inboxes_for_activity( $json, $actor->get__id(), $batch, $offset );
-
-		if ( $is_move && ! empty( $inboxes ) ) {
-			// We are sending a `Move` which means that we need to remove all Followers from the old Actor.
-			// The new Actor will receive the `Follow` activity from any Followers that choose to Follow it.
-			Followers::remove_all_followers( $actor->get__id() );
-		}
+		$json    = Outbox::get_activity( $outbox_item_id )->to_json();
+		$actor   = Outbox::get_actor( \get_post( $outbox_item_id ) );
+		$inboxes = Followers::get_inboxes_for_activity( $json, $actor->get__id(), $batch_size, $offset );
 
 		$retries = self::send_to_inboxes( $inboxes, $outbox_item_id );
 
