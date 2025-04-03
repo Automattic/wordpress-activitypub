@@ -155,33 +155,6 @@ class Settings_Fields {
 			'activitypub_server',
 			array( 'label_for' => 'activitypub_relays' )
 		);
-
-		add_settings_field(
-			'activitypub_outbox_purge_days',
-			__( 'Outbox Retention Period', 'activitypub' ),
-			array( self::class, 'render_outbox_purge_days_field' ),
-			'activitypub_settings',
-			'activitypub_server',
-			array( 'label_for' => 'activitypub_outbox_purge_days' )
-		);
-
-		if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
-			add_settings_section(
-				'activitypub_security',
-				__( 'Security', 'activitypub' ),
-				'__return_empty_string',
-				'activitypub_settings'
-			);
-
-			add_settings_field(
-				'activitypub_authorized_fetch',
-				__( 'Authorized Fetch', 'activitypub' ),
-				array( self::class, 'render_authorized_fetch_field' ),
-				'activitypub_settings',
-				'activitypub_security',
-				array( 'label_for' => 'activitypub_authorized_fetch' )
-			);
-		}
 	}
 
 	/**
@@ -399,6 +372,36 @@ class Settings_Fields {
 	}
 
 	/**
+	 * Render allow interactions field.
+	 */
+	public static function render_allow_interactions_field() {
+		if ( defined( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS' ) && ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
+			echo '<p class="description">' . \esc_html__( '⚠ This setting is defined through server configuration by your blog&#8217;s administrator.', 'activitypub' ) . '</p>';
+			return;
+		}
+
+		$allow_likes   = get_option( 'activitypub_allow_likes', '1' );
+		$allow_reposts = get_option( 'activitypub_allow_reposts', '1' );
+		?>
+		<fieldset>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_allow_likes" value="1" <?php checked( '1', $allow_likes ); ?> />
+					<?php esc_html_e( 'Receive likes', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_allow_announces" value="1" <?php checked( '1', $allow_reposts ); ?> />
+					<?php esc_html_e( 'Receive reblogs (boosts)', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p class="description"><?php esc_html_e( 'Types of interactions from the Fediverse your blog should accept.', 'activitypub' ); ?></p>
+		</fieldset>
+		<?php
+	}
+
+	/**
 	 * Render use hashtags field.
 	 */
 	public static function render_use_hashtags_field() {
@@ -446,101 +449,10 @@ class Settings_Fields {
 	}
 
 	/**
-	 * Render blocklist field.
-	 */
-	public static function render_blocklist_field() {
-		?>
-		<p>
-			<?php
-			echo wp_kses(
-				sprintf(
-					// translators: %s is a URL.
-					__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ),
-					esc_url( admin_url( 'options-discussion.php#disallowed_keys' ) )
-				),
-				'default'
-			);
-			?>
-		</p>
-		<?php
-	}
-
-	/**
-	 * Render outbox purge days field.
-	 */
-	public static function render_outbox_purge_days_field() {
-		$value = get_option( 'activitypub_outbox_purge_days', 180 );
-		echo '<input type="number" id="activitypub_outbox_purge_days" name="activitypub_outbox_purge_days" value="' . esc_attr( $value ) . '" class="small-text" min="0" max="365" />';
-		echo '<p class="description">' . wp_kses(
-			sprintf(
-				// translators: 1: Definition of Outbox; 2: Default value (180).
-				__( 'Maximum number of days to keep items in the <abbr title="%1$s">Outbox</abbr>. A lower value might be better for sites with lots of activity to maintain site performance. Default: <code>%2$s</code>', 'activitypub' ),
-				esc_attr__( 'A virtual location on a user&#8217;s profile where all the activities (posts, likes, replies) they publish are stored, acting as a feed that other users can access to see their publicly shared content', 'activitypub' ),
-				esc_html( 180 )
-			),
-			array(
-				'abbr' => array( 'title' => array() ),
-				'code' => array(),
-			)
-		) . '</p>';
-	}
-
-	/**
-	 * Render allow interactions field.
-	 */
-	public static function render_allow_interactions_field() {
-		if ( defined( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS' ) && ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
-			echo '<p class="description">' . \esc_html__( '⚠ This setting is defined through server configuration by your blog&#8217;s administrator.', 'activitypub' ) . '</p>';
-			return;
-		}
-
-		$allow_likes   = get_option( 'activitypub_allow_likes', '1' );
-		$allow_reposts = get_option( 'activitypub_allow_reposts', '1' );
-		?>
-		<fieldset>
-			<p>
-				<label>
-					<input type="checkbox" name="activitypub_allow_likes" value="1" <?php checked( '1', $allow_likes ); ?> />
-					<?php esc_html_e( 'Receive likes', 'activitypub' ); ?>
-				</label>
-			</p>
-			<p>
-				<label>
-					<input type="checkbox" name="activitypub_allow_reposts" value="1" <?php checked( '1', $allow_reposts ); ?> />
-					<?php esc_html_e( 'Receive reblogs (boosts)', 'activitypub' ); ?>
-				</label>
-			</p>
-			<p class="description"><?php esc_html_e( 'Types of interactions from the Fediverse your blog should accept.', 'activitypub' ); ?></p>
-		</fieldset>
-		<?php
-	}
-
-	/**
-	 * Render authorized fetch field.
-	 */
-	public static function render_authorized_fetch_field() {
-		$value = get_option( 'activitypub_authorized_fetch', '0' );
-		?>
-		<p>
-			<label>
-				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="1" <?php checked( '1', $value ); ?> />
-				<?php esc_html_e( 'Require HTTP signature authentication on ActivityPub representations of public posts and profiles.', 'activitypub' ); ?>
-			</label>
-		</p>
-		<p class="description">
-			<?php \esc_html_e( '⚠ Secure mode has its limitations, which is why it is not enabled by default. It is not fully supported by all software in the fediverse, and some features may break, especially when interacting with Mastodon servers older than version 3.0. Additionally, since it requires authentication for public content, caching is not possible, leading to higher computational costs.', 'activitypub' ); ?>
-		</p>
-		<p class="description">
-			<?php \esc_html_e( '⚠ Secure mode does not hide the HTML representations of public posts and profiles. While HTML is a less consistent format (that potentially changes often) compared to first-class ActivityPub representations or the REST API, it still poses a potential risk for content scraping.', 'activitypub' ); ?>
-		</p>
-		<?php
-	}
-
-	/**
 	 * Render relays field.
 	 */
 	public static function render_relays_field() {
-		$value = get_option( 'activitypub_relays', array() );
+		$value = \get_option( 'activitypub_relays', array() );
 		?>
 		<textarea
 			id="activitypub_relays"
@@ -548,21 +460,41 @@ class Settings_Fields {
 			class="large-text"
 			cols="50"
 			rows="5"
-		><?php echo esc_textarea( implode( PHP_EOL, $value ) ); ?></textarea>
+		><?php echo \esc_textarea( implode( PHP_EOL, $value ) ); ?></textarea>
 		<p class="description">
-			<?php echo wp_kses( __( 'A <strong>Fediverse-Relay</strong> distributes content across instances, expanding reach, engagement, and discoverability, especially for smaller instances.', 'activitypub' ), 'default' ); ?>
+			<?php echo \wp_kses( \__( 'A <strong>Fediverse-Relay</strong> distributes content across instances, expanding reach, engagement, and discoverability, especially for smaller instances.', 'activitypub' ), 'default' ); ?>
 		</p>
 		<p class="description">
 			<?php
-			echo wp_kses(
-				__( 'Enter the <strong>Inbox-URLs</strong> (e.g. <code>https://relay.example.com/inbox</code>) of the relays you want to use, one per line.', 'activitypub' ),
+			echo \wp_kses(
+				\__( 'Enter the <strong>Inbox-URLs</strong> (e.g. <code>https://relay.example.com/inbox</code>) of the relays you want to use, one per line.', 'activitypub' ),
 				array(
 					'strong' => array(),
 					'code'   => array(),
 				)
 			);
 			?>
-			<?php echo wp_kses( __( 'You can find a list of public relays on <a href="https://relaylist.com/" target="_blank">relaylist.com</a> or on <a href="https://fedidb.org/software/activity-relay" target="_blank">FediDB</a>.', 'activitypub' ), 'default' ); ?>
+			<?php echo \wp_kses( \__( 'You can find a list of public relays on <a href="https://relaylist.com/" target="_blank">relaylist.com</a> or on <a href="https://fedidb.org/software/activity-relay" target="_blank">FediDB</a>.', 'activitypub' ), 'default' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render blocklist field.
+	 */
+	public static function render_blocklist_field() {
+		?>
+		<p>
+			<?php
+			echo \wp_kses(
+				\sprintf(
+					// translators: %s is a URL.
+					\__( 'To block servers, add the host of the server to the "<a href="%s">Disallowed Comment Keys</a>" list.', 'activitypub' ),
+					\esc_url( \admin_url( 'options-discussion.php#disallowed_keys' ) )
+				),
+				'default'
+			);
+			?>
 		</p>
 		<?php
 	}

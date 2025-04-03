@@ -49,7 +49,8 @@ class Activitypub {
 
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
 		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
-		\add_filter( 'pre_option_activitypub_actor_mode', array( self::class, 'pre_get_option' ) );
+		\add_filter( 'pre_option_activitypub_actor_mode', array( self::class, 'pre_option_activitypub_actor_mode' ) );
+		\add_filter( 'pre_option_activitypub_authorized_fetch', array( self::class, 'pre_option_activitypub_authorized_fetch' ) );
 
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
 
@@ -397,7 +398,7 @@ class Activitypub {
 	 *
 	 * @return string|false The actor mode or false if it should not be filtered.
 	 */
-	public static function pre_get_option( $pre ) {
+	public static function pre_option_activitypub_actor_mode( $pre ) {
 		if ( \defined( 'ACTIVITYPUB_SINGLE_USER_MODE' ) && ACTIVITYPUB_SINGLE_USER_MODE ) {
 			return ACTIVITYPUB_BLOG_MODE;
 		}
@@ -411,6 +412,25 @@ class Activitypub {
 		}
 
 		return $pre;
+	}
+
+	/**
+	 * Pre-get option filter for the Authorized Fetch.
+	 *
+	 * @param string $pre The pre-get option value.
+	 *
+	 * @return string If the constant is defined, return the value, otherwise return the pre-get option value.
+	 */
+	public static function pre_option_activitypub_authorized_fetch( $pre ) {
+		if ( ! \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
+			return $pre;
+		}
+
+		if ( ACTIVITYPUB_AUTHORIZED_FETCH ) {
+			return '1';
+		}
+
+		return '0';
 	}
 
 	/**
@@ -829,6 +849,18 @@ class Activitypub {
 				'description'       => 'Whether to show the welcome tab.',
 				'single'            => true,
 				'default'           => 1,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_meta(
+			'user',
+			'activitypub_show_advanced_tab',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Whether to show the advanced tab.',
+				'single'            => true,
+				'default'           => 0,
 				'sanitize_callback' => 'absint',
 			)
 		);

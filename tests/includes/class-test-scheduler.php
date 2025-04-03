@@ -56,9 +56,15 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	public function test_reprocess_outbox() {
 		// Create test activity objects.
 		$activity = new Activity();
-		$activity->set_object( array( 'content' => 'Test Content' ) );
 		$activity->set_type( 'Create' );
 		$activity->set_id( 'https://example.com/test-id' );
+		$activity->set_object(
+			array(
+				'id'      => 'https://example.com/test-id',
+				'type'    => 'Note',
+				'content' => 'Test Content',
+			)
+		);
 
 		// Add multiple pending activities.
 		$pending_ids = array();
@@ -149,9 +155,15 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	public function test_reprocess_outbox_scheduling() {
 		// Create a test activity.
 		$activity = new Activity();
-		$activity->set_object( array( 'content' => 'Test Content' ) );
 		$activity->set_type( 'Create' );
 		$activity->set_id( 'https://example.com/test-id' );
+		$activity->set_object(
+			array(
+				'id'      => 'https://example.com/test-id',
+				'type'    => 'Note',
+				'content' => 'Test Content',
+			)
+		);
 
 		$pending_id = Outbox::add( $activity, self::$user_id );
 

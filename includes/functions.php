@@ -1414,14 +1414,7 @@ function get_upload_baseurl() {
  * @return boolean True if Authorized-Fetch is enabled, false otherwise.
  */
 function use_authorized_fetch() {
-	$use = false;
-
-	// Prefer the constant over the option.
-	if ( \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
-		$use = ACTIVITYPUB_AUTHORIZED_FETCH;
-	} else {
-		$use = (bool) \get_option( 'activitypub_authorized_fetch', '0' );
-	}
+	$use = (bool) \get_option( 'activitypub_authorized_fetch' );
 
 	/**
 	 * Filters whether to use Authorized-Fetch.
