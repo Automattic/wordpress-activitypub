@@ -94,7 +94,7 @@ class Advanced_Settings_Fields {
 	 * Render use Authorized Fetch field.
 	 */
 	public static function render_authorized_fetch_field() {
-		$value = \get_option( 'activitypub_authorized_fetch', '1' );
+		$value = \get_option( 'activitypub_authorized_fetch', '0' );
 		?>
 		<p>
 			<label>
