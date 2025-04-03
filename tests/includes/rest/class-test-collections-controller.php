@@ -52,21 +52,6 @@ class Test_Collections_Controller extends \Activitypub\Tests\Test_REST_Controlle
 		self::factory()->term->add_post_terms( self::$post_id, self::$tag_ids, 'post_tag' );
 	}
 
-
-	/**
-	 * Tear down.
-	 */
-	public static function tear_down_after_class() {
-		\wp_delete_user( self::$user_id );
-
-		foreach ( self::$tag_ids as $tag_id ) {
-			\wp_delete_term( $tag_id, 'post_tag' );
-		}
-
-		parent::tear_down_after_class();
-	}
-
-
 	/**
 	 * Test registration of routes.
 	 *
