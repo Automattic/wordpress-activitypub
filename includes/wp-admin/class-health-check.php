@@ -49,15 +49,15 @@ class Health_Check {
 			$result = call_user_func( $test['test'] );
 
 			if ( 'critical' === $result['status'] ) {
-				$critical++;
+				++$critical;
 			}
 
 			if ( 'recommended' === $result['status'] ) {
-				$recommended++;
+				++$recommended;
 			}
 
 			if ( 'good' === $result['status'] ) {
-				$good++;
+				++$good;
 			}
 		}
 

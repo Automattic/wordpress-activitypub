@@ -206,7 +206,7 @@ class Welcome_Fields {
 					\sprintf(
 						/* translators: the placeholders are the number of critical and recommended issues on the site. */
 						\__(
-							'<strong>Important:</strong> You have <span class="count">%d</span> critical and <span class="count">%d</span> recommended issues on your site. These issues may affect your site\'s compatibility with the fediverse.',
+							'<strong>Important:</strong> You have <span class="count">%1$d</span> critical and <span class="count">%2$d</span> recommended issues on your site. These issues may affect your site\'s compatibility with the fediverse.',
 							'activitypub'
 						),
 						$results['critical'],
