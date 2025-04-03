@@ -18,6 +18,24 @@ use Activitypub\Model\Blog;
  * @author Matthias Pfefferle
  */
 class Move {
+
+	/**
+	 * Initialize the Move class.
+	 */
+	public static function init() {
+		/**
+		 * Filter to enable automatically moving Fediverse accounts when the domain changes.
+		 *
+		 * @param bool $domain_moves_enabled Whether domain moves are enabled.
+		 */
+		$domain_moves_enabled = apply_filters( 'activitypub_enable_primary_domain_moves', false );
+
+		if ( $domain_moves_enabled ) {
+			// Add the filter to change the domain.
+			add_action( 'update_option_home', array( self::class, 'change_domain' ), 10, 2 );
+		}
+	}
+
 	/**
 	 * Move an ActivityPub account from one location to another.
 	 *
