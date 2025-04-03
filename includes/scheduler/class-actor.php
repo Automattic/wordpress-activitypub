@@ -139,7 +139,7 @@ class Actor {
 			return;
 		}
 
-		$actor->set_updated( gmdate( 'Y-m-d H:i:s', time() ) );
+		$actor->set_updated( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, time() ) );
 
 		add_to_outbox( $actor, 'Update', $user_id );
 	}

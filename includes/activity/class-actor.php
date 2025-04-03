@@ -62,6 +62,21 @@ class Actor extends Base_Object {
 	);
 
 	/**
+	 * The default types for Actors.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#actor-types
+	 *
+	 * @var array
+	 */
+	const TYPES = array(
+		'Application',
+		'Group',
+		'Organization',
+		'Person',
+		'Service',
+	);
+
+	/**
 	 * The type of the object.
 	 *
 	 * @var string

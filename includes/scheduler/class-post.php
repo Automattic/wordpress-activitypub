@@ -8,6 +8,7 @@
 namespace Activitypub\Scheduler;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\get_wp_object_state;
 use function Activitypub\is_post_disabled;
 
 /**
@@ -62,7 +63,7 @@ class Post {
 				break;
 
 			case 'trash':
-				$type = 'Delete';
+				$type = 'federated' === get_wp_object_state( $post ) ? 'Delete' : false;
 				break;
 
 			default:
@@ -84,13 +85,17 @@ class Post {
 	 * @param int $post_id Attachment ID.
 	 */
 	public static function transition_attachment_status( $post_id ) {
+		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+			return;
+		}
+
 		if ( ! \post_type_supports( 'attachment', 'activitypub' ) ) {
 			return;
 		}
 
 		$post = \get_post( $post_id );
 
-		switch ( current_action() ) {
+		switch ( \current_action() ) {
 			case 'add_attachment':
 				// Add the post to the outbox.
 				add_to_outbox( $post, 'Create', $post->post_author );

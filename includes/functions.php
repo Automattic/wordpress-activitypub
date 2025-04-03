@@ -9,6 +9,7 @@ namespace Activitypub;
 
 use WP_Error;
 use Activitypub\Activity\Activity;
+use Activitypub\Activity\Actor;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
@@ -1413,14 +1414,7 @@ function get_upload_baseurl() {
  * @return boolean True if Authorized-Fetch is enabled, false otherwise.
  */
 function use_authorized_fetch() {
-	$use = false;
-
-	// Prefer the constant over the option.
-	if ( \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
-		$use = ACTIVITYPUB_AUTHORIZED_FETCH;
-	} else {
-		$use = (bool) \get_option( 'activitypub_authorized_fetch', '0' );
-	}
+	$use = (bool) \get_option( 'activitypub_authorized_fetch' );
 
 	/**
 	 * Filters whether to use Authorized-Fetch.
@@ -1535,38 +1529,7 @@ function is_activity( $data ) {
 	 *
 	 * @param array $types The activity types.
 	 */
-	$types = apply_filters(
-		'activitypub_activity_types',
-		array(
-			'Accept',
-			'Add',
-			'Announce',
-			'Arrive',
-			'Block',
-			'Create',
-			'Delete',
-			'Dislike',
-			'Follow',
-			'Flag',
-			'Ignore',
-			'Invite',
-			'Join',
-			'Leave',
-			'Like',
-			'Listen',
-			'Move',
-			'Offer',
-			'Read',
-			'Reject',
-			'Remove',
-			'TentativeAccept',
-			'TentativeReject',
-			'Travel',
-			'Undo',
-			'Update',
-			'View',
-		)
-	);
+	$types = apply_filters( 'activitypub_activity_types', Activity::TYPES );
 
 	if ( is_string( $data ) ) {
 		return in_array( $data, $types, true );
@@ -1598,16 +1561,7 @@ function is_actor( $data ) {
 	 *
 	 * @param array $types The actor types.
 	 */
-	$types = apply_filters(
-		'activitypub_actor_types',
-		array(
-			'Application',
-			'Group',
-			'Organization',
-			'Person',
-			'Service',
-		)
-	);
+	$types = apply_filters( 'activitypub_actor_types', Actor::TYPES );
 
 	if ( is_string( $data ) ) {
 		return in_array( $data, $types, true );
