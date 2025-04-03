@@ -7,12 +7,11 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Http;
+use WP_Error;
+use WP_User_Query;
 use Activitypub\Model\User;
 use Activitypub\Model\Blog;
 use Activitypub\Model\Application;
-use WP_Error;
-use WP_User_Query;
 
 use function Activitypub\object_to_uri;
 use function Activitypub\normalize_url;
@@ -80,7 +79,7 @@ class Actors {
 		/**
 		 * Filter the username before we do anything else.
 		 *
-		 * @param null|User|Blog|Application|WP_Error $pre The pre-processed user.
+		 * @param null   $pre      The pre-existing value.
 		 * @param string $username The username.
 		 */
 		$pre = apply_filters( 'activitypub_pre_get_by_username', null, $username );
