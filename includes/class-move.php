@@ -32,7 +32,7 @@ class Move {
 
 		if ( $domain_moves_enabled ) {
 			// Add the filter to change the domain.
-			add_action( 'update_option_home', array( self::class, 'change_domain' ), 10, 2 );
+			\add_filter( 'pre_update_option_home', array( self::class, 'pre_update_option_home' ), 10, 2 );
 
 			if ( get_option( 'activitypub_old_domain' ) ) {
 
@@ -41,6 +41,27 @@ class Move {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Pre-update option home.
+	 *
+	 * This method is called before the home URL is updated.
+	 * It checks if the new domain is different from the old one and calls the change_domain method.
+	 *
+	 * @param string $new_domain The new domain.
+	 * @param string $old_domain The old domain.
+	 *
+	 * @return string The new domain.
+	 */
+	public static function pre_update_option_home( $new_domain, $old_domain ) {
+		// Check if the new domain is different from the old one.
+		if ( $new_domain !== $old_domain ) {
+			// Call the change_domain method to handle the migration.
+			self::change_domain( $old_domain, $new_domain );
+		}
+
+		return $new_domain;
 	}
 
 	/**

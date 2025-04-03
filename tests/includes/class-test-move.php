@@ -8,6 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Model\Blog;
 use Activitypub\Move;
 
 /**
@@ -200,6 +201,7 @@ class Test_Move extends \WP_UnitTestCase {
 
 		$old_domain = home_url();
 		$new_domain = 'http://newdomain.com';
+		\remove_filter( 'option_home', '_config_wp_home' );
 		\update_option( 'home', $new_domain );
 
 		// Run the domain change.
@@ -222,7 +224,8 @@ class Test_Move extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_old_domain' );
 		\delete_option( 'activitypub_blog_user_old_domain_data' );
 		\delete_option( 'activitypub_actor_mode' );
-		\delete_user_option( self::$user_id, 'activitypub_old_domain_data' );
 		\update_option( 'home', $old_domain );
+		\add_filter( 'option_home', '_config_wp_home' );
+		\delete_user_option( self::$user_id, 'activitypub_old_domain_data' );
 	}
 }

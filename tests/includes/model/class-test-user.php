@@ -8,13 +8,45 @@
 namespace Activitypub\Tests\Model;
 
 use Activitypub\Model\User;
+use Activitypub\Move;
 
 /**
  * Test class for Activitypub User.
  *
- * @coversDefaultClass \Activitypub\Model\User
+ * @coversDefaultClass User
  */
 class Test_User extends \WP_UnitTestCase {
+
+	/**
+	 * Test the Blog constructor.
+	 *
+	 * @covers ::__construct
+	 */
+	public function test___construct() {
+		$old_domain = home_url( '/' );
+		$new_domain = 'http://newdomain.com';
+		\remove_filter( 'option_home', '_config_wp_home' );
+
+		\add_filter( 'pre_update_option_home', array( Move::class, 'pre_update_option_home' ), 10, 2 );
+		\update_option( 'home', $new_domain );
+		\remove_filter( 'pre_update_option_home', array( Move::class, 'pre_update_option_home' ) );
+
+		// New domain is set.
+		$this->assertSame( 'http://newdomain.com/?author=1', ( new User( 1 ) )->get_id() );
+
+		// Set up the old domain.
+		$_SERVER['HTTP_HOST'] = \wp_parse_url( $old_domain, PHP_URL_HOST );
+
+		// Blog now returns old blog user.
+		$blog = ( new User( 1 ) )->to_array();
+		$this->assertSame( add_query_arg( 'author', 1, $old_domain ), $blog['id'] );
+
+		// Clean up.
+		\delete_option( 'activitypub_old_domain' );
+		\delete_option( 'activitypub_blog_user_old_domain_data' );
+		\update_option( 'home', $old_domain );
+		\add_filter( 'option_home', '_config_wp_home' );
+	}
 
 	/**
 	 * Test the activitypub capability.
