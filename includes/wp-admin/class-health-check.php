@@ -314,9 +314,6 @@ class Health_Check {
 			'private' => false,
 		);
 
-
-
-
 		$consts = get_defined_constants( true );
 
 		if ( ! isset( $consts['user'] ) ) {
