@@ -300,8 +300,12 @@ class Health_Check {
 			$result['label']          = \__( 'Threaded (nested) comments are not enabled', 'activitypub' );
 			$result['badge']['color'] = 'orange';
 			$result['description']    = \sprintf(
-				'<p>%s</p>',
-				\__( 'We recommend enabling threaded (nested) comments to improve the user experience and engagement on your site and on the fediverse.', 'activitypub' )
+				'<p>%s</p><p>%s</p><p>%s</p><p>%s</p>',
+				\__( 'We recommend enabling threaded (nested) comments to improve the user experience and engagement on your site and on the fediverse.', 'activitypub' ),
+				\__( 'When threaded comments are disabled, all comments appear in a flat list without any visual connection between replies. This makes it harder for users to follow conversations, especially when someone replies to a specific comment. Enabling threaded comments helps create a clear visual hierarchy of the discussion.', 'activitypub' ),
+				\__( 'This is particularly important for fediverse users, as they rely on the visual hierarchy to understand conversation threads across different platforms. Without threaded comments, it becomes much more difficult to follow discussions that span multiple platforms in the fediverse.', 'activitypub' ),
+				\__( 'You can enable them in the <a href="%s">Discussion Settings</a>.', 'activitypub' ),
+				esc_url( admin_url( 'options-discussion.php' ) )
 			);
 		}
 
