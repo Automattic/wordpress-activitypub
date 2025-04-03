@@ -46,8 +46,8 @@ class Move {
 	/**
 	 * Pre-update option home.
 	 *
-	 * This method is called before the home URL is updated.
-	 * It checks if the new domain is different from the old one and calls the change_domain method.
+	 * This method is called before the home URL is updated
+	 * so we can preserve actor json objects with the old domain.
 	 *
 	 * @param string $new_domain The new domain.
 	 * @param string $old_domain The old domain.
