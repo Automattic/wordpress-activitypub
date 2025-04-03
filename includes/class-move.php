@@ -33,6 +33,13 @@ class Move {
 		if ( $domain_moves_enabled ) {
 			// Add the filter to change the domain.
 			add_action( 'update_option_home', array( self::class, 'change_domain' ), 10, 2 );
+
+			if ( get_option( 'activitypub_old_domain' ) ) {
+
+				if ( ! is_user_type_disabled( 'blog' ) ) {
+					add_filter( 'activitypub_pre_get_by_username', array( self::class, 'old_blog_username' ), 10, 2 );
+				}
+			}
 		}
 	}
 
@@ -234,5 +241,25 @@ class Move {
 		\update_option( 'activitypub_old_domain', \wp_parse_url( $from, PHP_URL_HOST ) );
 
 		return $results;
+	}
+
+	/**
+	 * Filter to return the old blog username.
+	 *
+	 * @param null   $pre      The pre-existing value.
+	 * @param string $username The username to check.
+	 *
+	 * @return Blog|null The old blog instance or null.
+	 */
+	public static function old_blog_username( $pre, $username ) {
+		$old_domain = \get_option( 'activitypub_old_domain' );
+
+		// Special case for Blog Actor on old domain.
+		if ( $old_domain === $username && Http::is_domain_match( $old_domain ) ) {
+			// Return a new Blog instance which will load the cached data in its constructor.
+			$pre = new Blog();
+		}
+
+		return $pre;
 	}
 }

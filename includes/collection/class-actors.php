@@ -77,12 +77,15 @@ class Actors {
 	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_username( $username ) {
-		$old_domain = \get_option( 'activitypub_old_domain' );
-
-		// Special case for Blog Actor on old domain.
-		if ( $old_domain && $old_domain === $username && Http::is_domain_match( $old_domain ) ) {
-			// Return a new Blog instance which will load the cached data in its constructor.
-			return new Blog();
+		/**
+		 * Filter the username before we do anything else.
+		 *
+		 * @param null|User|Blog|Application|WP_Error $pre The pre-processed user.
+		 * @param string $username The username.
+		 */
+		$pre = apply_filters( 'activitypub_pre_get_by_username', null, $username );
+		if ( null !== $pre ) {
+			return $pre;
 		}
 
 		// Check for blog user.

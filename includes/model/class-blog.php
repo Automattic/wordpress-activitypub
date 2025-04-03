@@ -103,6 +103,13 @@ class Blog extends Actor {
 				$this->from_json( $cached_data );
 			}
 		}
+
+		/**
+		 * Fires when a model actor is constructed.
+		 *
+		 * @param Blog $this The Blog model.
+		 */
+		\do_action( 'activitypub_construct_model_actor', $this );
 	}
 
 	/**

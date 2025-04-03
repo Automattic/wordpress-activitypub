@@ -88,6 +88,13 @@ class User extends Actor {
 					$this->from_json( $cached_data );
 				}
 			}
+
+			/**
+			 * Fires when a model actor is constructed.
+			 *
+			 * @param User $this The User object.
+			 */
+			\do_action( 'activitypub_construct_model_actor', $this );
 		}
 	}
 
