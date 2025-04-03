@@ -112,6 +112,10 @@ class Sanitize {
 			return esc_attr( $value );
 		}
 
+		if ( is_array( $value ) ) {
+			return print_r( $value, true );
+		}
+
 		return $value;
 	}
 }
