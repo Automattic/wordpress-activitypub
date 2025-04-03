@@ -263,27 +263,55 @@ class Health_Check {
 	 * @return array The filtered information
 	 */
 	public static function debug_information( $info ) {
+		$info['activitypub'] = array(
+			'label'  => \__( 'ActivityPub', 'activitypub' ),
+			'fields' => array(),
+		);
+
 		$actor = Actors::get_by_id( \get_current_user_id() );
 
-		$info['activitypub'] = array(
-			'label'  => __( 'ActivityPub', 'activitypub' ),
-			'fields' => array(
-				'webfinger'  => array(
-					'label'   => __( 'WebFinger Resource', 'activitypub' ),
-					'value'   => Webfinger::get_user_resource( wp_get_current_user()->ID ),
-					'private' => false,
-				),
-				'author_url' => array(
-					'label'   => __( 'Author URL', 'activitypub' ),
-					'value'   => $actor->get_url(),
-					'private' => false,
-				),
-				'author_id'  => array(
-					'label'   => __( 'Author ID', 'activitypub' ),
-					'value'   => $actor->get_id(),
-					'private' => false,
-				),
-			),
+		if ( $actor && ! is_wp_error( $actor ) ) {
+			$info['activitypub']['fields']['webfinger'] = array(
+				'label'   => \__( 'WebFinger Resource', 'activitypub' ),
+				'value'   => Webfinger::get_user_resource( wp_get_current_user()->ID ),
+				'private' => false,
+			);
+
+			$info['activitypub']['fields']['author_url'] = array(
+				'label'   => \__( 'Author URL', 'activitypub' ),
+				'value'   => $actor->get_url(),
+				'private' => false,
+			);
+
+			$info['activitypub']['fields']['author_id'] = array(
+				'label'   => \__( 'Author ID', 'activitypub' ),
+				'value'   => $actor->get_id(),
+				'private' => false,
+			);
+		}
+
+		$info['activitypub']['fields']['actor_mode'] = array(
+			'label'   => \__( 'Actor Mode', 'activitypub' ),
+			'value'   => \esc_attr( \get_option( 'activitypub_actor_mode' ) ),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['object_type'] = array(
+			'label'   => \__( 'Object Type', 'activitypub' ),
+			'value'   => \esc_attr( \get_option( 'activitypub_object_type' ) ),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['post_template'] = array(
+			'label'   => \__( 'Post Template', 'activitypub' ),
+			'value'   => \esc_attr( \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ) ),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['authorized_fetch'] = array(
+			'label'   => \__( 'Authorized Fetch', 'activitypub' ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_authorized_fetch', '0' ) ),
+			'private' => false,
 		);
 
 		$consts = get_defined_constants( true );
@@ -298,7 +326,7 @@ class Health_Check {
 			}
 
 			$info['activitypub']['fields'][ $key ] = array(
-				'label'   => esc_attr( $key ),
+				'label'   => \esc_attr( $key ),
 				'value'   => Sanitize::constant_value( $value ),
 				'private' => false,
 			);
