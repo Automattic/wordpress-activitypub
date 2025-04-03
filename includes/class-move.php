@@ -11,6 +11,7 @@ use Activitypub\Activity\Actor;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
+use Activitypub\Model\User;
 
 /**
  * ActivityPub (Account) Move Class
@@ -35,6 +36,7 @@ class Move {
 			\add_filter( 'pre_update_option_home', array( self::class, 'pre_update_option_home' ), 10, 2 );
 
 			if ( get_option( 'activitypub_old_domain' ) ) {
+				\add_action( 'activitypub_construct_model_actor', array( self::class, 'maybe_initiate_old_user' ) );
 
 				if ( ! is_user_type_disabled( 'blog' ) ) {
 					add_filter( 'activitypub_pre_get_by_username', array( self::class, 'old_blog_username' ), 10, 2 );
@@ -262,6 +264,30 @@ class Move {
 		\update_option( 'activitypub_old_domain', \wp_parse_url( $from, PHP_URL_HOST ) );
 
 		return $results;
+	}
+
+	/**
+	 * Maybe initiate old user.
+	 *
+	 * This method checks if the current request domain matches the old domain.
+	 * If it does, it retrieves the cached data for the user and populates the instance.
+	 *
+	 * @param Blog|User $instance The Blog or User instance to populate.
+	 */
+	public static function maybe_initiate_old_user( $instance ) {
+		if ( ! Http::is_domain_match( \get_option( 'activitypub_old_domain' ) ) ) {
+			return;
+		}
+
+		if ( $instance instanceof Blog ) {
+			$cached_data = \get_option( 'activitypub_blog_user_old_domain_data' );
+		} elseif ( $instance instanceof User ) {
+			$cached_data = \get_user_option( 'activitypub_old_domain_data', $instance->get__id() );
+		}
+
+		if ( ! empty( $cached_data ) ) {
+			$instance->from_json( $cached_data );
+		}
 	}
 
 	/**
