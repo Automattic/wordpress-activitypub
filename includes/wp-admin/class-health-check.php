@@ -292,25 +292,25 @@ class Health_Check {
 
 		$info['activitypub']['fields']['actor_mode'] = array(
 			'label'   => \__( 'Actor Mode', 'activitypub' ),
-			'value'   => esc_attr( \get_option( 'activitypub_actor_mode' ) ),
+			'value'   => \esc_attr( \get_option( 'activitypub_actor_mode' ) ),
 			'private' => false,
 		);
 
 		$info['activitypub']['fields']['object_type'] = array(
 			'label'   => \__( 'Object Type', 'activitypub' ),
-			'value'   => esc_attr( \get_option( 'activitypub_object_type' ) ),
+			'value'   => \esc_attr( \get_option( 'activitypub_object_type' ) ),
 			'private' => false,
 		);
 
 		$info['activitypub']['fields']['post_template'] = array(
 			'label'   => \__( 'Post Template', 'activitypub' ),
-			'value'   => esc_attr( \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ) ),
+			'value'   => \esc_attr( \get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT ) ),
 			'private' => false,
 		);
 
 		$info['activitypub']['fields']['authorized_fetch'] = array(
 			'label'   => \__( 'Authorized Fetch', 'activitypub' ),
-			'value'   => esc_attr( (int) \get_option( 'activitypub_authorized_fetch', '0' ) ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_authorized_fetch', '0' ) ),
 			'private' => false,
 		);
 
@@ -326,7 +326,7 @@ class Health_Check {
 			}
 
 			$info['activitypub']['fields'][ $key ] = array(
-				'label'   => esc_attr( $key ),
+				'label'   => \esc_attr( $key ),
 				'value'   => Sanitize::constant_value( $value ),
 				'private' => false,
 			);
