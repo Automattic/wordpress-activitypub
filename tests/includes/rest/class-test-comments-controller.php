@@ -53,19 +53,6 @@ class Test_Comments_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 	}
 
 	/**
-	 * Tear down.
-	 */
-	public static function tear_down_after_class() {
-		\wp_delete_user( self::$user_id );
-
-		foreach ( self::$comment_ids as $comment_id ) {
-			\wp_delete_comment( $comment_id );
-		}
-
-		parent::tear_down_after_class();
-	}
-
-	/**
 	 * Set up the test case.
 	 */
 	public function set_up() {
