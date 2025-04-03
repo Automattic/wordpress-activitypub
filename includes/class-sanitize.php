@@ -112,6 +112,11 @@ class Sanitize {
 			return esc_attr( $value );
 		}
 
+		if ( is_array( $value ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
+			return print_r( $value, true );
+		}
+
 		return $value;
 	}
 }
