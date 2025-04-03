@@ -70,4 +70,24 @@ class Test_User extends \WP_UnitTestCase {
 		$this->assertArrayHasKey( 'url', $icon );
 		$this->assertNotSame( wp_get_attachment_url( $attachment_id ), $icon['url'] );
 	}
+
+	/**
+	 * Tests the get_moved_to method.
+	 *
+	 * @covers ::get_moved_to
+	 */
+	public function test_get_moved_to() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$user    = User::from_wp_user( $user_id );
+
+		// No value => should not even be set.
+		$this->assertArrayNotHasKey( 'movedTo', $user->to_array( false ) );
+
+		// Set movedTo.
+		\update_user_option( $user_id, 'activitypub_moved_to', 'https://example.com' );
+
+		$user = User::from_wp_user( $user_id )->to_array( false );
+		$this->assertArrayHasKey( 'movedTo', $user );
+		$this->assertSame( 'https://example.com', $user['movedTo'] );
+	}
 }

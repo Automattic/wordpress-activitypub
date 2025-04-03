@@ -64,6 +64,8 @@
 	)
 );
 
+\define( 'ACTIVITYPUB_DATE_TIME_RFC3339', 'Y-m-d\TH:i:s\Z' );
+
 // Define Actor-Modes for the plugin.
 \define( 'ACTIVITYPUB_ACTOR_MODE', 'actor' );
 \define( 'ACTIVITYPUB_BLOG_MODE', 'blog' );

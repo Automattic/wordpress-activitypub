@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Permanently delete reactions that were `Undo` instead of trashing them.

@@ -79,6 +79,28 @@ class Base_Object extends Generic_Object {
 	);
 
 	/**
+	 * The default types for Objects.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#object-types
+	 *
+	 * @var array
+	 */
+	const TYPES = array(
+		'Article',
+		'Audio',
+		'Document',
+		'Event',
+		'Image',
+		'Note',
+		'Page',
+		'Place',
+		'Profile',
+		'Relationship',
+		'Tombstone',
+		'Video',
+	);
+
+	/**
 	 * The type of the object.
 	 *
 	 * @var string

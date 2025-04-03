@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Properly set `to` audience of `Activity` instead of changing the `Follow` Object.
