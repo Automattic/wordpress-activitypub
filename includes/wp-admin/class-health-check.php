@@ -101,49 +101,6 @@ class Health_Check {
 	}
 
 	/**
-	 * System Cron tests.
-	 *
-	 * @return array The test result.
-	 */
-	public static function test_system_cron() {
-		$result = array(
-			'label'       => \__( 'System Task Scheduler configured', 'activitypub' ),
-			'status'      => 'good',
-			'badge'       => array(
-				'label' => \__( 'ActivityPub', 'activitypub' ),
-				'color' => 'green',
-			),
-			'description' => \sprintf(
-				'<p>%s</p>',
-				\esc_html__( 'You seem to use the System Task Scheduler to process WP_Cron tasks.', 'activitypub' )
-			),
-			'actions'     => '',
-			'test'        => 'test_system_cron',
-		);
-
-		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
-			return $result;
-		}
-
-		$result['status']         = 'recommended';
-		$result['label']          = \__( 'System Task Scheduler not configured', 'activitypub' );
-		$result['badge']['color'] = 'orange';
-		$result['description']    = \sprintf(
-			'<p>%s</p>',
-			\__( 'Enhance your WordPress site’s performance and mitigate potential heavy loads caused by plugins like ActivityPub by setting up a system cron job to run WP Cron. This ensures scheduled tasks are executed consistently and reduces the reliance on website traffic for trigger events.', 'activitypub' )
-		);
-		$result['actions']       .= sprintf(
-			'<p><a href="%s" target="_blank" rel="noopener">%s<span class="screen-reader-text"> %s</span><span aria-hidden="true" class="dashicons dashicons-external"></span></a></p>',
-			esc_url( __( 'https://developer.wordpress.org/plugins/cron/hooking-wp-cron-into-the-system-task-scheduler/', 'activitypub' ) ),
-			__( 'Learn how to hook the WP-Cron into the System Task Scheduler.', 'activitypub' ),
-			/* translators: Hidden accessibility text. */
-			__( '(opens in a new tab)', 'activitypub' )
-		);
-
-		return $result;
-	}
-
-	/**
 	 * WebFinger tests.
 	 *
 	 * @return array The test result.
