@@ -327,57 +327,67 @@ function is_post_disabled( $post ) {
 }
 
 /**
+ * This function checks if a user is enabled for ActivityPub.
+ *
+ * @param int $user_id The user ID.
+ * @return boolean True if the user is enabled, false otherwise.
+ */
+function user_can_activitypub( $user_id ) {
+	switch ( $user_id ) {
+		case Actors::APPLICATION_USER_ID:
+			$enabled = true; // Application user is always enabled.
+			break;
+
+		case Actors::BLOG_USER_ID:
+			$enabled = ! is_user_type_disabled( 'blog' );
+			break;
+
+		default:
+			if ( ! \get_user_by( 'id', $user_id ) ) {
+				$enabled = false;
+				break;
+			}
+
+			if ( is_user_type_disabled( 'user' ) ) {
+				$enabled = false;
+				break;
+			}
+
+			$enabled = \user_can( $user_id, 'activitypub' );
+	}
+
+	/**
+	 * Allow plugins to disable users for ActivityPub.
+	 *
+	 * @deprecated unreleased Use the `activitypub_user_can_activitypub` filter instead.
+	 *
+	 * @param boolean $disabled True if the user is disabled, false otherwise.
+	 * @param int     $user_id  The user ID.
+	 */
+	$enabled = ! \apply_filters_deprecated( 'activitypub_is_user_disabled', array( ! $enabled, $user_id ), 'unreleased', 'activitypub_user_can_activitypub' );
+
+	/**
+	 * Allow plugins to enable/disable users for ActivityPub.
+	 *
+	 * @param boolean $enabled True if the user is enabled, false otherwise.
+	 * @param int     $user_id The user ID.
+	 */
+	return apply_filters( 'activitypub_user_can_activitypub', $enabled, $user_id );
+}
+
+/**
  * This function checks if a user is disabled for ActivityPub.
+ *
+ * @deprecated unreleased Use the `user_can_activitypub` function instead.
  *
  * @param int $user_id The user ID.
  *
  * @return boolean True if the user is disabled, false otherwise.
  */
 function is_user_disabled( $user_id ) {
-	$disabled = false;
+	_deprecated_function( __FUNCTION__, 'unreleased', 'user_can_activitypub' );
 
-	switch ( $user_id ) {
-		// if the user is the application user, it's always enabled.
-		case \Activitypub\Collection\Actors::APPLICATION_USER_ID:
-			$disabled = false;
-			break;
-		// if the user is the blog user, it's only enabled in single-user mode.
-		case \Activitypub\Collection\Actors::BLOG_USER_ID:
-			if ( is_user_type_disabled( 'blog' ) ) {
-				$disabled = true;
-				break;
-			}
-
-			$disabled = false;
-			break;
-		// if the user is any other user, it's enabled if it can publish posts.
-		default:
-			if ( ! \get_user_by( 'id', $user_id ) ) {
-				$disabled = true;
-				break;
-			}
-
-			if ( is_user_type_disabled( 'user' ) ) {
-				$disabled = true;
-				break;
-			}
-
-			if ( ! \user_can( $user_id, 'activitypub' ) ) {
-				$disabled = true;
-				break;
-			}
-
-			$disabled = false;
-			break;
-	}
-
-	/**
-	 * Allow plugins to disable users for ActivityPub.
-	 *
-	 * @param boolean $disabled True if the user is disabled, false otherwise.
-	 * @param int     $user_id  The User-ID.
-	 */
-	return apply_filters( 'activitypub_is_user_disabled', $disabled, $user_id );
+	return ! user_can_activitypub( $user_id );
 }
 
 /**
@@ -615,7 +625,7 @@ function get_active_users( $duration = 1 ) {
 	}
 
 	// If blog user is disabled.
-	if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
+	if ( ! user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 		return (int) $count;
 	}
 
@@ -647,7 +657,7 @@ function get_total_users() {
 	}
 
 	// If blog user is disabled.
-	if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
+	if ( ! user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 		return (int) $users;
 	}
 
@@ -1485,11 +1495,11 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 	}
 
 	// If the user is disabled, fall back to the blog user when available.
-	if ( is_user_disabled( $user_id ) ) {
-		if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
-			return false;
-		} else {
+	if ( ! user_can_activitypub( $user_id ) ) {
+		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			$user_id = Actors::BLOG_USER_ID;
+		} else {
+			return false;
 		}
 	}
 

@@ -10,7 +10,7 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
 use Activitypub\Sanitize;
-use function Activitypub\is_user_disabled;
+use function Activitypub\user_can_activitypub;
 
 /**
  * ActivityPub Settings Class.
@@ -281,7 +281,7 @@ class Settings {
 			);
 		}
 
-		if ( ! is_user_disabled( Actors::BLOG_USER_ID ) ) {
+		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			$settings_tabs['blog-profile'] = array(
 				'label'    => __( 'Blog Profile', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-settings.php',
@@ -343,7 +343,7 @@ class Settings {
 			),
 		);
 
-		if ( ! is_user_disabled( \get_current_user_id() ) ) {
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			$webfinger = Actors::get_by_id( \get_current_user_id() )->get_webfinger();
 		} else {
 			$webfinger = ( new Blog() )->get_webfinger();

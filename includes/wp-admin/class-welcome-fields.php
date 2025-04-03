@@ -11,7 +11,7 @@ use Activitypub\Model\Blog;
 use Activitypub\Collection\Actors;
 
 use function Activitypub\get_reply_intent_js;
-use function Activitypub\is_user_disabled;
+use function Activitypub\user_can_activitypub;
 
 /**
  * Class Welcome_Fields.
@@ -43,7 +43,7 @@ class Welcome_Fields {
 			'activitypub_welcome'
 		);
 
-		if ( ! is_user_disabled( Actors::BLOG_USER_ID ) ) {
+		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			\add_settings_section(
 				'activitypub_blog_profile',
 				\__( 'Blog profile', 'activitypub' ),
@@ -52,7 +52,7 @@ class Welcome_Fields {
 			);
 		}
 
-		if ( ! is_user_disabled( get_current_user_id() ) ) {
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\add_settings_section(
 				'activitypub_author_profile',
 				\__( 'Author profile', 'activitypub' ),

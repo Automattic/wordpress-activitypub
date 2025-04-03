@@ -7,7 +7,7 @@
 
 namespace Activitypub\WP_Admin;
 
-use function Activitypub\is_user_disabled;
+use function Activitypub\user_can_activitypub;
 
 /**
  * ActivityPub Menu Class.
@@ -29,7 +29,7 @@ class Menu {
 		\add_action( 'load-' . $settings_page, array( Settings::class, 'add_settings_help_tab' ) );
 
 		// User has to be able to publish posts.
-		if ( ! is_user_disabled( get_current_user_id() ) ) {
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			$followers_list_page = \add_users_page(
 				\__( 'Followers ⁂', 'activitypub' ),
 				\__( 'Followers ⁂', 'activitypub' ),
