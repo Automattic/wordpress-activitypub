@@ -97,8 +97,8 @@ class Blog extends Actor {
 	 */
 	public function __construct() {
 		// If the request is for the old domain, load the cached data.
-		if ( Http::is_domain_match( \get_option( 'activitypub_old_domain', '' ) ) ) {
-			$cached_data = \get_option( 'activitypub_old_domain_data_blog', '' );
+		if ( Http::is_domain_match( \get_option( 'activitypub_old_domain' ) ) ) {
+			$cached_data = \get_option( 'activitypub_old_domain_data_blog' );
 			if ( ! empty( $cached_data ) ) {
 				$this->from_json( $cached_data );
 			}

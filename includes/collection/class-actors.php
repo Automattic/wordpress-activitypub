@@ -77,7 +77,7 @@ class Actors {
 	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_username( $username ) {
-		$old_domain = \get_option( 'activitypub_old_domain', '' );
+		$old_domain = \get_option( 'activitypub_old_domain' );
 
 		// Special case for Blog Actor on old domain.
 		if ( $old_domain && $old_domain === $username && Http::is_domain_match( $old_domain ) ) {
