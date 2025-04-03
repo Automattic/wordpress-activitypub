@@ -24,8 +24,8 @@ class Sanitize {
 			$value = \explode( PHP_EOL, $value );
 		}
 
-		$value = \array_map( 'trim', $value );
 		$value = \array_filter( $value );
+		$value = \array_map( 'trim', $value );
 		$value = \array_map( 'sanitize_url', $value );
 		$value = \array_unique( $value );
 

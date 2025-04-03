@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Support multiple layers of nested Outbox activities when searching for the Object ID.

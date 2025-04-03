@@ -8,6 +8,7 @@
 namespace Activitypub\Scheduler;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\get_wp_object_state;
 use function Activitypub\is_post_disabled;
 
 /**
@@ -62,7 +63,7 @@ class Post {
 				break;
 
 			case 'trash':
-				$type = 'Delete';
+				$type = 'federated' === get_wp_object_state( $post ) ? 'Delete' : false;
 				break;
 
 			default:

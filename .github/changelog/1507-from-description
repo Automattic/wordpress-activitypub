@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-PHP warnings when scheduling post activities for an invalid post.

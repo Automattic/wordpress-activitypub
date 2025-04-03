@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Outbox items now contain the full activity, not just activity objects.

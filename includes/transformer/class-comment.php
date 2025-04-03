@@ -49,11 +49,11 @@ class Comment extends Base {
 		$object->set_type( 'Note' );
 
 		$published = \strtotime( $comment->comment_date_gmt );
-		$object->set_published( \gmdate( 'Y-m-d\TH:i:s\Z', $published ) );
+		$object->set_published( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $published ) );
 
 		$updated = \get_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', true );
 		if ( $updated > $published ) {
-			$object->set_updated( \gmdate( 'Y-m-d\TH:i:s\Z', $updated ) );
+			$object->set_updated( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $updated ) );
 		}
 
 		$object->set_content_map(
@@ -302,7 +302,7 @@ class Comment extends Base {
 		$published = \get_comment_meta( $this->item->comment_ID, 'activitypub_comment_published', true );
 
 		if ( $updated > $published ) {
-			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
+			return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $updated );
 		}
 
 		return null;
@@ -314,7 +314,7 @@ class Comment extends Base {
 	 * @return string The published date of the comment.
 	 */
 	public function get_published() {
-		return \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $this->item->comment_date_gmt ) );
+		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( $this->item->comment_date_gmt ) );
 	}
 
 	/**
