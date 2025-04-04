@@ -267,17 +267,11 @@ class Signature {
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
-		if ( ! isset( $headers['signature'] ) ) {
-			return new WP_Error( 'activitypub_signature', __( 'Request not signed', 'activitypub' ), array( 'status' => 401 ) );
-		}
-
 		if ( array_key_exists( 'signature', $headers ) ) {
 			$signature_block = self::parse_signature_header( $headers['signature'][0] );
 		} elseif ( array_key_exists( 'authorization', $headers ) ) {
 			$signature_block = self::parse_signature_header( $headers['authorization'][0] );
-		}
-
-		if ( ! isset( $signature_block ) || ! $signature_block ) {
+		} else {
 			return new WP_Error( 'activitypub_signature', __( 'Incompatible request signature. keyId and signature are required', 'activitypub' ), array( 'status' => 401 ) );
 		}
 
