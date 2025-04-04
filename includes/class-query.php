@@ -339,4 +339,13 @@ class Query {
 
 		return $check;
 	}
+
+	/**
+	 * Fake an old domain request.
+	 *
+	 * @param bool $state Optional. The state to set. Default true.
+	 */
+	public function set_old_domain_request( $state = true ) {
+		$this->is_old_host_request = $state;
+	}
 }

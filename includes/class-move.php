@@ -37,6 +37,7 @@ class Move {
 
 			if ( get_option( 'activitypub_old_domain' ) ) {
 				\add_action( 'activitypub_construct_model_actor', array( self::class, 'maybe_initiate_old_user' ) );
+				\add_action( 'activitypub_pre_send_to_inboxes', array( self::class, 'pre_send_to_inboxes' ) );
 
 				if ( ! is_user_type_disabled( 'blog' ) ) {
 					add_filter( 'activitypub_pre_get_by_username', array( self::class, 'old_blog_username' ), 10, 2 );
@@ -288,6 +289,25 @@ class Move {
 		if ( ! empty( $cached_data ) ) {
 			$instance->from_json( $cached_data );
 		}
+	}
+
+	/**
+	 * Pre-send to inboxes.
+	 *
+	 * @param string $json The ActivityPub Activity JSON.
+	 */
+	public static function pre_send_to_inboxes( $json ) {
+		$json = json_decode( $json, true );
+
+		if ( 'Move' !== $json['type'] ) {
+			return;
+		}
+
+		if ( is_same_domain( $json['object'] ) ) {
+			return;
+		}
+
+		Query::get_instance()->set_old_domain_request();
 	}
 
 	/**
