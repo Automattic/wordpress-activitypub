@@ -124,6 +124,12 @@ class User extends Actor {
 	 * @return string The user ID.
 	 */
 	public function get_id() {
+		$id = parent::get_id();
+
+		if ( $id ) {
+			return $id;
+		}
+
 		$permalink = \get_user_option( 'activitypub_use_permalink_as_id', $this->_id );
 
 		if ( '1' === $permalink ) {
