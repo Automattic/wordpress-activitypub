@@ -55,7 +55,7 @@ class Health_Check {
 		);
 
 		$tests['direct']['activitypub_test_pretty_permalinks'] = array(
-			'label' => __( 'Pretty Permalinks Test', 'activitypub' ),
+			'label' => \__( 'Pretty Permalinks Test', 'activitypub' ),
 			'test'  => array( self::class, 'test_pretty_permalinks' ),
 		);
 
