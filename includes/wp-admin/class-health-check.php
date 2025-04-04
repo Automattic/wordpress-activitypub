@@ -365,7 +365,7 @@ class Health_Check {
 		$permalink_structure = \get_option( 'permalink_structure' );
 		if ( empty( $permalink_structure ) ) {
 			$result['status']         = 'critical';
-			$result['label']          = \__( 'Pretty Permalinks are not enabled', 'activitypub' );
+			$result['label']          = \__( 'Pretty Permalinks are not enabled.', 'activitypub' );
 			$result['badge']['color'] = 'red';
 			$result['description']    = \sprintf(
 				'<p>%s</p>',
