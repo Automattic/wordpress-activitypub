@@ -13,9 +13,9 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Extra_Fields;
 
 use function Activitypub\is_blog_public;
-use function Activitypub\is_user_disabled;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_attribution_domains;
+use function Activitypub\user_can_activitypub;
 
 /**
  * User class.
@@ -88,7 +88,7 @@ class User extends Actor {
 	 * @return WP_Error|User The User object or WP_Error if user not found.
 	 */
 	public static function from_wp_user( $user_id ) {
-		if ( is_user_disabled( $user_id ) ) {
+		if ( ! user_can_activitypub( $user_id ) ) {
 			return new WP_Error(
 				'activitypub_user_not_found',
 				\__( 'User not found', 'activitypub' ),
@@ -226,7 +226,7 @@ class User extends Actor {
 	 * @return false|string The date the user was created.
 	 */
 	public function get_published() {
-		return \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( \get_the_author_meta( 'registered', $this->_id ) ) );
+		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( \get_the_author_meta( 'registered', $this->_id ) ) );
 	}
 
 	/**
@@ -446,6 +446,7 @@ class User extends Actor {
 	 * @return string The movedTo.
 	 */
 	public function get_moved_to() {
-		return \get_user_option( 'activitypub_moved_to', $this->_id );
+		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+		return \get_user_option( 'activitypub_moved_to', $this->_id ) ?: null;
 	}
 }

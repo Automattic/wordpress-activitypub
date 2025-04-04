@@ -10,7 +10,7 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
 use Activitypub\Sanitize;
-use function Activitypub\is_user_disabled;
+use function Activitypub\user_can_activitypub;
 
 /**
  * ActivityPub Settings Class.
@@ -65,16 +65,6 @@ class Settings {
 				'type'        => 'integer',
 				'description' => \__( 'Number of images to attach to posts.', 'activitypub' ),
 				'default'     => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
-			)
-		);
-
-		\register_setting(
-			'activitypub',
-			'activitypub_outbox_purge_days',
-			array(
-				'type'        => 'integer',
-				'description' => \__( 'Number of days to keep items in the Outbox.', 'activitypub' ),
-				'default'     => 180,
 			)
 		);
 
@@ -147,21 +137,23 @@ class Settings {
 
 		\register_setting(
 			'activitypub',
-			'activitypub_authorized_fetch',
+			'activitypub_allow_likes',
 			array(
-				'type'        => 'boolean',
-				'description' => \__( 'Require HTTP signature authentication.', 'activitypub' ),
-				'default'     => false,
+				'type'              => 'integer',
+				'description'       => \__( 'Allow likes.', 'activitypub' ),
+				'default'           => '1',
+				'sanitize_callback' => 'absint',
 			)
 		);
 
 		\register_setting(
 			'activitypub',
-			'activitypub_mailer_new_follower',
+			'activitypub_allow_reposts',
 			array(
-				'type'        => 'boolean',
-				'description' => \__( 'Send notifications via e-mail when a new follower is added.', 'activitypub' ),
-				'default'     => '0',
+				'type'              => 'integer',
+				'description'       => \__( 'Allow reposts.', 'activitypub' ),
+				'default'           => '1',
+				'sanitize_callback' => 'absint',
 			)
 		);
 
@@ -172,6 +164,26 @@ class Settings {
 				'type'        => 'boolean',
 				'description' => \__( 'Send notifications via e-mail when a direct message is received.', 'activitypub' ),
 				'default'     => '0',
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_outbox_purge_days',
+			array(
+				'type'        => 'integer',
+				'description' => \__( 'Number of days to keep items in the Outbox.', 'activitypub' ),
+				'default'     => 180,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_authorized_fetch',
+			array(
+				'type'        => 'boolean',
+				'description' => \__( 'Require HTTP signature authentication.', 'activitypub' ),
+				'default'     => false,
 			)
 		);
 
@@ -236,8 +248,9 @@ class Settings {
 	 * Load settings page.
 	 */
 	public static function settings_page() {
-		$show_welcome_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true );
-		$default_tab      = $show_welcome_tab ? 'welcome' : 'settings';
+		$show_welcome_tab  = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true );
+		$show_advanced_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true );
+		$default_tab       = $show_welcome_tab ? 'welcome' : 'settings';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$tab = isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : $default_tab;
 
@@ -260,7 +273,15 @@ class Settings {
 			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
 		);
 
-		if ( ! is_user_disabled( Actors::BLOG_USER_ID ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ( isset( $_GET['tab'] ) && 'advanced' === $_GET['tab'] ) || $show_advanced_tab ) {
+			$settings_tabs['advanced'] = array(
+				'label'    => \__( 'Advanced', 'activitypub' ),
+				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/advanced-settings.php',
+			);
+		}
+
+		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			$settings_tabs['blog-profile'] = array(
 				'label'    => __( 'Blog Profile', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-settings.php',
@@ -322,7 +343,7 @@ class Settings {
 			),
 		);
 
-		if ( ! is_user_disabled( \get_current_user_id() ) ) {
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			$webfinger = Actors::get_by_id( \get_current_user_id() )->get_webfinger();
 		} else {
 			$webfinger = ( new Blog() )->get_webfinger();
@@ -470,26 +491,41 @@ class Settings {
 			return $screen_settings;
 		}
 
-		if ( isset( $_POST['activitypub_show_welcome_tab'] ) && isset( $_POST['screenoptionnonce'] ) ) {
-			$nonce   = \sanitize_text_field( \wp_unslash( $_POST['screenoptionnonce'] ) );
-			$welcome = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_welcome_tab'] ) );
-			// Verify screen options nonce.
-			if ( \wp_verify_nonce( $nonce, 'screen-options-nonce' ) ) {
-				$welcome_checked = empty( $welcome ) ? 0 : 1;
-				\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
+		// Verify screen options nonce.
+		if ( isset( $_POST['screenoptionnonce'] ) ) {
+			$nonce = \sanitize_text_field( \wp_unslash( $_POST['screenoptionnonce'] ) );
+			if ( ! \wp_verify_nonce( $nonce, 'screen-options-nonce' ) ) {
+				return $screen_settings;
 			}
+		}
+
+		if ( isset( $_POST['activitypub_show_welcome_tab'] ) ) {
+			$welcome         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_welcome_tab'] ) );
+			$welcome_checked = empty( $welcome ) ? 0 : 1;
+			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', $welcome_checked );
+		}
+
+		if ( isset( $_POST['activitypub_show_advanced_tab'] ) ) {
+			$advanced_settings         = \sanitize_text_field( \wp_unslash( $_POST['activitypub_show_advanced_tab'] ) );
+			$advanced_settings_checked = empty( $advanced_settings ) ? 0 : 1;
+			\update_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', $advanced_settings_checked );
 		}
 
 		$screen_settings = '<fieldset>
 		<legend class="screen-layout">' . \esc_html__( 'Settings Pages', 'activitypub' ) . '</legend>
 		<p>
-			' . \__( 'Some settings pages can be shown or hidden by using the checkboxes.', 'activitypub' ) . '
+			' . \esc_html__( 'Some settings pages can be shown or hidden by using the checkboxes.', 'activitypub' ) . '
 		</p>
 		<div class="metabox-prefs-container">
 			<label for="activitypub_show_welcome_tab">
 				<input name="activitypub_show_welcome_tab" type="hidden" value="0" />
 				<input name="activitypub_show_welcome_tab" type="checkbox" id="activitypub_show_welcome_tab" value="1" ' . \checked( 1, \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ), false ) . ' />
-				' . \__( 'Welcome Page', 'activitypub' ) . '
+				' . \esc_html__( 'Welcome Page', 'activitypub' ) . '
+			</label>
+			<label for="activitypub_show_advanced_tab">
+				<input name="activitypub_show_advanced_tab" type="hidden" value="0" />
+				<input name="activitypub_show_advanced_tab" type="checkbox" id="activitypub_show_advanced_tab" value="1" ' . \checked( 1, \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true ), false ) . ' />
+				' . \esc_html__( 'Advanced Settings', 'activitypub' ) . '
 			</label>
 		</div>
 	</fieldset>';

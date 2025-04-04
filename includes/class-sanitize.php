@@ -24,8 +24,8 @@ class Sanitize {
 			$value = \explode( PHP_EOL, $value );
 		}
 
-		$value = \array_map( 'trim', $value );
 		$value = \array_filter( $value );
+		$value = \array_map( 'trim', $value );
 		$value = \array_map( 'sanitize_url', $value );
 		$value = \array_unique( $value );
 
@@ -110,6 +110,11 @@ class Sanitize {
 
 		if ( is_string( $value ) ) {
 			return esc_attr( $value );
+		}
+
+		if ( is_array( $value ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
+			return print_r( $value, true );
 		}
 
 		return $value;

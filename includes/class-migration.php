@@ -761,11 +761,11 @@ class Migration {
 		}
 
 		// If the user is disabled, fall back to the blog user when available.
-		if ( is_user_disabled( $user_id ) ) {
-			if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
-				return;
-			} else {
+		if ( ! user_can_activitypub( $user_id ) ) {
+			if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 				$user_id = Actors::BLOG_USER_ID;
+			} else {
+				return;
 			}
 		}
 

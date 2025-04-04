@@ -44,13 +44,6 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	}
 
 	/**
-	 * Clean up after tests.
-	 */
-	public static function tear_down_after_class() {
-		wp_delete_user( self::$user_id );
-	}
-
-	/**
 	 * Set up the test.
 	 */
 	public function set_up() {

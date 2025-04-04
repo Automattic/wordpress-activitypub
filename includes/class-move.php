@@ -78,7 +78,7 @@ class Move {
 		$activity->set_type( 'Move' );
 		$activity->set_actor( $user->get_id() );
 		$activity->set_origin( $user->get_id() );
-		$activity->set_object( $target_actor->get_id() );
+		$activity->set_object( $user->get_id() );
 		$activity->set_target( $target_actor->get_id() );
 
 		// Add to outbox.
