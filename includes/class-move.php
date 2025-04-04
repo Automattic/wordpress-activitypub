@@ -275,7 +275,7 @@ class Move {
 	 * @param Blog|User $instance The Blog or User instance to populate.
 	 */
 	public static function maybe_initiate_old_user( $instance ) {
-		if ( ! Http::is_domain_match( \get_option( 'activitypub_old_domain' ) ) ) {
+		if ( ! Query::get_instance()->is_old_host_request() ) {
 			return;
 		}
 
@@ -302,7 +302,7 @@ class Move {
 		$old_domain = \get_option( 'activitypub_old_domain' );
 
 		// Special case for Blog Actor on old domain.
-		if ( $old_domain === $username && Http::is_domain_match( $old_domain ) ) {
+		if ( $old_domain === $username && Query::get_instance()->is_old_host_request() ) {
 			// Return a new Blog instance which will load the cached data in its constructor.
 			$pre = new Blog();
 		}

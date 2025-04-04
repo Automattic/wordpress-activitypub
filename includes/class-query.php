@@ -305,4 +305,23 @@ class Query {
 
 		return false;
 	}
+
+	/**
+	 * Check if the current request is from the old domain.
+	 *
+	 * @return bool True if the request is from the old domain, false otherwise.
+	 */
+	public function is_old_host_request() {
+		$old_host = \get_option( 'activitypub_old_domain' );
+
+		if ( ! $old_host ) {
+			return false;
+		}
+
+		$request_host = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+		$referer_host = isset( $_SERVER['HTTP_REFERER'] ) ? \wp_parse_url( \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_REFERER'] ) ), PHP_URL_HOST ) : '';
+
+		// Check if the domain matches either the request domain or referer.
+		return $old_host === $request_host || $old_host === $referer_host;
+	}
 }

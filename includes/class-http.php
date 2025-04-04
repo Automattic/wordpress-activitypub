@@ -302,23 +302,4 @@ class Http {
 
 		return $data;
 	}
-
-	/**
-	 * Checks if a domain matches the current request domain or referer.
-	 *
-	 * @param string $domain The domain to check against.
-	 *
-	 * @return bool True if the domain matches the request domain or referer, false otherwise.
-	 */
-	public static function is_domain_match( $domain ) {
-		if ( ! $domain ) {
-			return false;
-		}
-
-		$request_domain = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
-		$referer        = isset( $_SERVER['HTTP_REFERER'] ) ? \wp_parse_url( \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_REFERER'] ) ), PHP_URL_HOST ) : '';
-
-		// Check if the domain matches either the request domain or referer.
-		return $domain === $request_domain || $domain === $referer;
-	}
 }
