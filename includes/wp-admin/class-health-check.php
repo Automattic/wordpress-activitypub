@@ -317,7 +317,7 @@ class Health_Check {
 			),
 			'description' => \sprintf(
 				'<p>%s</p>',
-				\__( 'Your threaded (nested) comments are enabled and working correctly.', 'activitypub' )
+				\__( 'Threaded (nested) comments are enabled.', 'activitypub' )
 			),
 			'actions'     => '',
 			'test'        => 'test_threaded_comments',
