@@ -30,6 +30,51 @@ class Health_Check {
 	}
 
 	/**
+	 * Count critical and recommended results.
+	 *
+	 * @param string $type The type of results to count.
+	 *
+	 * @return array The number of critical and recommended results.
+	 */
+	public static function count_results( $type = 'all' ) {
+		$tests = self::add_tests( array() );
+
+		// Count critical and recommended results.
+		$good        = 0;
+		$critical    = 0;
+		$recommended = 0;
+
+		foreach ( $tests['direct'] as $test ) {
+			// Run tests.
+			$result = call_user_func( $test['test'] );
+
+			if ( 'critical' === $result['status'] ) {
+				++$critical;
+			}
+
+			if ( 'recommended' === $result['status'] ) {
+				++$recommended;
+			}
+
+			if ( 'good' === $result['status'] ) {
+				++$good;
+			}
+		}
+
+		$results = array(
+			'good'        => $good,
+			'critical'    => $critical,
+			'recommended' => $recommended,
+		);
+
+		if ( 'all' === $type ) {
+			return $results;
+		}
+
+		return $results[ $type ];
+	}
+
+	/**
 	 * Add tests to the Site Health Check.
 	 *
 	 * @param array $tests The test array.
