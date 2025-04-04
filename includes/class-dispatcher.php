@@ -209,6 +209,15 @@ class Dispatcher {
 		$actor   = Outbox::get_actor( \get_post( $outbox_item_id ) );
 		$retries = array();
 
+		/**
+		 * Fires before sending an Activity to inboxes.
+		 *
+		 * @param string $json           The ActivityPub Activity JSON.
+		 * @param array  $inboxes        The inboxes to send to.
+		 * @param int    $outbox_item_id The Outbox item ID.
+		 */
+		\do_action( 'activitypub_pre_send_to_inboxes', $json, $inboxes, $outbox_item_id );
+
 		foreach ( $inboxes as $inbox ) {
 			$result = safe_remote_post( $inbox, $json, $actor->get__id() );
 
