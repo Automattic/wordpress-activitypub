@@ -49,6 +49,13 @@ class Query {
 	private $is_activitypub_request;
 
 	/**
+	 * Whether the current request is from the old domain.
+	 *
+	 * @var bool
+	 */
+	private $is_old_host_request;
+
+	/**
 	 * The constructor.
 	 */
 	private function __construct() {
@@ -312,9 +319,14 @@ class Query {
 	 * @return bool True if the request is from the old domain, false otherwise.
 	 */
 	public function is_old_host_request() {
+		if ( isset( $this->is_old_host_request ) ) {
+			return $this->is_old_host_request;
+		}
+
 		$old_host = \get_option( 'activitypub_old_domain' );
 
 		if ( ! $old_host ) {
+			$this->is_old_host_request = false;
 			return false;
 		}
 
@@ -322,6 +334,9 @@ class Query {
 		$referer_host = isset( $_SERVER['HTTP_REFERER'] ) ? \wp_parse_url( \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_REFERER'] ) ), PHP_URL_HOST ) : '';
 
 		// Check if the domain matches either the request domain or referer.
-		return $old_host === $request_host || $old_host === $referer_host;
+		$check                     = $old_host === $request_host || $old_host === $referer_host;
+		$this->is_old_host_request = $check;
+
+		return $check;
 	}
 }
