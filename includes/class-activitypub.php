@@ -59,6 +59,9 @@ class Activitypub {
 
 		// Register several post_types.
 		self::register_post_types();
+
+		self::register_oembed_providers();
+		Embed::init();
 	}
 
 	/**
@@ -772,6 +775,18 @@ class Activitypub {
 		if ( 'activitypub_content_visibility' === $meta_key && empty( $meta_value ) ) {
 			\delete_post_meta( $object_id, 'activitypub_content_visibility' );
 		}
+	}
+
+	/**
+	 * Register some Mastodon oEmbed providers.
+	 */
+	public static function register_oembed_providers() {
+		\wp_oembed_add_provider( '#https?://mastodon\.social/(@.+)/([0-9]+)#i', 'https://mastodon.social/api/oembed', true );
+		\wp_oembed_add_provider( '#https?://mastodon\.online/(@.+)/([0-9]+)#i', 'https://mastodon.online/api/oembed', true );
+		\wp_oembed_add_provider( '#https?://mastodon\.cloud/(@.+)/([0-9]+)#i', 'https://mastodon.cloud/api/oembed', true );
+		\wp_oembed_add_provider( '#https?://mstdn\.social/(@.+)/([0-9]+)#i', 'https://mstdn.social/api/oembed', true );
+		\wp_oembed_add_provider( '#https?://mastodon\.world/(@.+)/([0-9]+)#i', 'https://mastodon.world/api/oembed', true );
+		\wp_oembed_add_provider( '#https?://mas\.to/(@.+)/([0-9]+)#i', 'https://mas.to/api/oembed', true );
 	}
 
 	/**

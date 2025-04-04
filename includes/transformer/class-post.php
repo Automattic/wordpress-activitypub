@@ -500,9 +500,10 @@ class Post extends Base {
 		 *
 		 * @param WP_Post $post The post object.
 		 */
-		do_action( 'activitypub_before_get_content', $post );
+		\do_action( 'activitypub_before_get_content', $post );
 
-		add_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ), 10, 2 );
+		\add_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ), 10, 2 );
+		\add_filter( 'render_block_activitypub/reply', array( $this, 'generate_reply_link' ), 10, 2 );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$post    = $this->item;
@@ -535,10 +536,68 @@ class Post extends Base {
 		// Don't need these anymore, should never appear in a post.
 		Shortcodes::unregister();
 
+		// Get rid of the reply block filter.
+		\remove_filter( 'render_block_activitypub/reply', array( $this, 'generate_reply_link' ), 10, 2 );
 		\remove_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ) );
 		\remove_filter( 'activitypub_reply_block', '__return_empty_string' );
 
 		return $content;
+	}
+
+	/**
+	 * Generate HTML @ link for reply block.
+	 *
+	 * @param string $block_content The block content.
+	 * @param array  $block         The block data.
+	 *
+	 * @return string The HTML @ link.
+	 */
+	public function generate_reply_link( $block_content, $block ) {
+		// Return empty string if no URL is provided.
+		if ( empty( $block['attrs']['url'] ) ) {
+			return '';
+		}
+
+		$url = $block['attrs']['url'];
+
+		// Try to get ActivityPub representation. Is likely already cached.
+		$object = \Activitypub\Http::get_remote_object( $url );
+		if ( \is_wp_error( $object ) ) {
+			return '';
+		}
+
+		$author_url = $object['attributedTo'] ?? '';
+		if ( ! $author_url ) {
+			return '';
+		}
+
+		// Fetch author information.
+		$author = \Activitypub\Http::get_remote_object( $author_url );
+		if ( \is_wp_error( $author ) ) {
+			return '';
+		}
+
+		// Get webfinger identifier.
+		$webfinger = '';
+		if ( ! empty( $author['webfinger'] ) ) {
+			$webfinger = $author['webfinger'];
+		} elseif ( ! empty( $author['preferredUsername'] ) && ! empty( $author['url'] ) ) {
+			// Construct webfinger-style identifier from username and domain.
+			$domain    = \wp_parse_url( $author['url'], PHP_URL_HOST );
+			$webfinger = '@' . $author['preferredUsername'] . '@' . $domain;
+		}
+
+		if ( ! $webfinger ) {
+			return '';
+		}
+
+		// Generate HTML @ link.
+		return \sprintf(
+			'<p class="ap-reply-mention"><a rel="mention ugc" href="%1$s" title="%2$s">%3$s</a></p>',
+			\esc_url( $url ),
+			\esc_attr( $webfinger ),
+			\esc_html( '@' . strtok( $webfinger, '@' ) )
+		);
 	}
 
 	/**

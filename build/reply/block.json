@@ -8,14 +8,22 @@
   "icon": "commentReplyLink",
   "description": "Respond to posts, notes, videos, and other content on the fediverse.  Ensure the URL originates from a federated social network like Mastodon, as other URLs might not function as expected.",
   "supports": {
-    "html": false
+    "html": false,
+    "inserter": true,
+    "reusable": false,
+    "lock": false
   },
   "textdomain": "activitypub",
   "editorScript": "file:./index.js",
-  "editorStyle": "file:./edit.css",
+  "editorStyle": "file:./style-index.css",
+  "style": "file:./index.css",
   "attributes": {
     "url": {
       "type": "string"
+    },
+    "embedPost": {
+      "type": "boolean",
+      "default": null
     }
   }
 }
