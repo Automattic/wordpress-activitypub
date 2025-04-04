@@ -50,7 +50,7 @@ class Health_Check {
 		);
 
 		$tests['direct']['activitypub_test_threaded_comments'] = array(
-			'label' => __( 'Threaded Comments Test', 'activitypub' ),
+			'label' => \__( 'Threaded Comments Test', 'activitypub' ),
 			'test'  => array( self::class, 'test_threaded_comments' ),
 		);
 
