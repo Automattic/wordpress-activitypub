@@ -214,7 +214,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$result      = reset( $results );
 		$outbox_item = json_decode( get_post_field( 'post_content', $result['result'] ) );
 
-		$this->assertSame( $outbox_item->actor, $result['actor'] );
+		$this->assertSame( $outbox_item->target, $result['actor'] );
 		$this->assertStringStartsWith( $new_domain, $outbox_item->target );
 
 		// Verify the old domain was stored.

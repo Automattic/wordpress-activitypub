@@ -47,9 +47,9 @@ class Test_Blog extends \WP_UnitTestCase {
 		$new_domain = 'http://newdomain.com';
 		\remove_filter( 'option_home', '_config_wp_home' );
 
-		\add_filter( 'pre_update_option_home', array( Move::class, 'pre_update_option_home' ), 10, 2 );
+		\add_filter( 'update_option_home', array( Move::class, 'change_domain' ), 10, 2 );
 		\update_option( 'home', $new_domain );
-		\remove_filter( 'pre_update_option_home', array( Move::class, 'pre_update_option_home' ) );
+		\remove_filter( 'update_option_home', array( Move::class, 'change_domain' ) );
 
 		// New domain is set.
 		$this->assertSame( 'http://newdomain.com/?author=0', ( new Blog() )->get_id() );

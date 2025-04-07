@@ -219,6 +219,9 @@ class Move {
 		$to_host   = \wp_parse_url( $to, \PHP_URL_HOST );
 		$from_host = \wp_parse_url( $from, \PHP_URL_HOST );
 
+		// Store the old domain for future reference.
+		\update_option( 'activitypub_old_domain', $from_host );
+
 		// Process each actor.
 		foreach ( $actors as $actor ) {
 			$actor_id = $actor->get_id();
@@ -249,9 +252,6 @@ class Move {
 				'result' => $result,
 			);
 		}
-
-		// Store the old domain for future reference.
-		\update_option( 'activitypub_old_domain', $from_host );
 
 		return $results;
 	}
