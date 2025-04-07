@@ -135,7 +135,7 @@ class Advanced_Settings_Fields {
 			</label>
 		</p>
 		<p class="description">
-			<?php \esc_html_e( 'This enables the use of the shared inbox for receiving ActivityPub messages, which is especially useful for sites with a large user base and may be required by certain platforms. This feature is still in beta, so please be aware that you might encounter issues.', 'activitypub' ); ?>
+			<?php \esc_html_e( 'Allows your site to handle incoming ActivityPub messages more efficiently, especially helpful for busy or multi-user sites. This feature is still in beta and may encounter issues.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}
