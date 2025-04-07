@@ -101,7 +101,6 @@ class Activitypub {
 		delete_option( 'activitypub_allow_replies' );
 		delete_option( 'activitypub_attribution_domains' );
 		delete_option( 'activitypub_authorized_fetch' );
-		delete_option( 'activitypub_shared_inbox' );
 		delete_option( 'activitypub_application_user_private_key' );
 		delete_option( 'activitypub_application_user_public_key' );
 		delete_option( 'activitypub_blog_user_also_known_as' );
@@ -123,6 +122,7 @@ class Activitypub {
 		delete_option( 'activitypub_migration_lock' );
 		delete_option( 'activitypub_object_type' );
 		delete_option( 'activitypub_outbox_purge_days' );
+		delete_option( 'activitypub_shared_inbox' );
 		delete_option( 'activitypub_support_post_types' );
 		delete_option( 'activitypub_use_hashtags' );
 		delete_option( 'activitypub_use_opengraph' );
