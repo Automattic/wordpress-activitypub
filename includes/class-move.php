@@ -33,7 +33,7 @@ class Move {
 
 		if ( $domain_moves_enabled ) {
 			// Add the filter to change the domain.
-			\add_filter( 'pre_update_option_home', array( self::class, 'pre_update_option_home' ), 10, 2 );
+			\add_filter( 'update_option_home', array( self::class, 'change_domain' ), 10, 2 );
 
 			if ( get_option( 'activitypub_old_domain' ) ) {
 				\add_action( 'activitypub_construct_model_actor', array( self::class, 'maybe_initiate_old_user' ) );
@@ -44,27 +44,6 @@ class Move {
 				}
 			}
 		}
-	}
-
-	/**
-	 * Pre-update option home.
-	 *
-	 * This method is called before the home URL is updated
-	 * so we can preserve actor json objects with the old domain.
-	 *
-	 * @param string $new_domain The new domain.
-	 * @param string $old_domain The old domain.
-	 *
-	 * @return string The new domain.
-	 */
-	public static function pre_update_option_home( $new_domain, $old_domain ) {
-		// Check if the new domain is different from the old one.
-		if ( $new_domain !== $old_domain ) {
-			// Call the change_domain method to handle the migration.
-			self::change_domain( $old_domain, $new_domain );
-		}
-
-		return $new_domain;
 	}
 
 	/**
@@ -236,23 +215,33 @@ class Move {
 			}
 		}
 
-		$results = array();
+		$results   = array();
+		$to_host   = \wp_parse_url( $to, \PHP_URL_HOST );
+		$from_host = \wp_parse_url( $from, \PHP_URL_HOST );
 
 		// Process each actor.
 		foreach ( $actors as $actor ) {
 			$actor_id = $actor->get_id();
 
 			// Replace the old domain with the new domain in the actor ID.
-			$new_actor_id = str_replace( $from, $to, $actor_id );
+			$old_actor_id = str_replace( $to_host, $from_host, $actor_id );
 
 			// Call Move::internally for this actor.
-			$result = self::internally( $actor_id, $new_actor_id );
+			$result = self::internally( $old_actor_id, $actor_id );
+
+			if ( \is_wp_error( $result ) ) {
+				// Log the error and continue with the next actor.
+				Debug::write_log( 'Error moving actor: ' . $actor_id . ' - ' . $result->get_error_message() );
+				continue;
+			}
+
+			$json = str_replace( $to_host, $from_host, $actor->to_json() );
 
 			// Save the current actor data after migration.
 			if ( $actor instanceof Blog ) {
-				\update_option( 'activitypub_blog_user_old_domain_data', $actor->to_json(), false );
+				\update_option( 'activitypub_blog_user_old_domain_data', $json, false );
 			} else {
-				\update_user_option( $actor->get__id(), 'activitypub_old_domain_data', $actor->to_json(), false );
+				\update_user_option( $actor->get__id(), 'activitypub_old_domain_data', $json, false );
 			}
 
 			$results[] = array(
@@ -262,7 +251,7 @@ class Move {
 		}
 
 		// Store the old domain for future reference.
-		\update_option( 'activitypub_old_domain', \wp_parse_url( $from, PHP_URL_HOST ) );
+		\update_option( 'activitypub_old_domain', $from_host );
 
 		return $results;
 	}
