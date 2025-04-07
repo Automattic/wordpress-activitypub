@@ -327,57 +327,67 @@ function is_post_disabled( $post ) {
 }
 
 /**
+ * This function checks if a user is enabled for ActivityPub.
+ *
+ * @param int $user_id The user ID.
+ * @return boolean True if the user is enabled, false otherwise.
+ */
+function user_can_activitypub( $user_id ) {
+	switch ( $user_id ) {
+		case Actors::APPLICATION_USER_ID:
+			$enabled = true; // Application user is always enabled.
+			break;
+
+		case Actors::BLOG_USER_ID:
+			$enabled = ! is_user_type_disabled( 'blog' );
+			break;
+
+		default:
+			if ( ! \get_user_by( 'id', $user_id ) ) {
+				$enabled = false;
+				break;
+			}
+
+			if ( is_user_type_disabled( 'user' ) ) {
+				$enabled = false;
+				break;
+			}
+
+			$enabled = \user_can( $user_id, 'activitypub' );
+	}
+
+	/**
+	 * Allow plugins to disable users for ActivityPub.
+	 *
+	 * @deprecated unreleased Use the `activitypub_user_can_activitypub` filter instead.
+	 *
+	 * @param boolean $disabled True if the user is disabled, false otherwise.
+	 * @param int     $user_id  The user ID.
+	 */
+	$enabled = ! \apply_filters_deprecated( 'activitypub_is_user_disabled', array( ! $enabled, $user_id ), 'unreleased', 'activitypub_user_can_activitypub' );
+
+	/**
+	 * Allow plugins to enable/disable users for ActivityPub.
+	 *
+	 * @param boolean $enabled True if the user is enabled, false otherwise.
+	 * @param int     $user_id The user ID.
+	 */
+	return apply_filters( 'activitypub_user_can_activitypub', $enabled, $user_id );
+}
+
+/**
  * This function checks if a user is disabled for ActivityPub.
+ *
+ * @deprecated unreleased Use the `user_can_activitypub` function instead.
  *
  * @param int $user_id The user ID.
  *
  * @return boolean True if the user is disabled, false otherwise.
  */
 function is_user_disabled( $user_id ) {
-	$disabled = false;
+	_deprecated_function( __FUNCTION__, 'unreleased', 'user_can_activitypub' );
 
-	switch ( $user_id ) {
-		// if the user is the application user, it's always enabled.
-		case \Activitypub\Collection\Actors::APPLICATION_USER_ID:
-			$disabled = false;
-			break;
-		// if the user is the blog user, it's only enabled in single-user mode.
-		case \Activitypub\Collection\Actors::BLOG_USER_ID:
-			if ( is_user_type_disabled( 'blog' ) ) {
-				$disabled = true;
-				break;
-			}
-
-			$disabled = false;
-			break;
-		// if the user is any other user, it's enabled if it can publish posts.
-		default:
-			if ( ! \get_user_by( 'id', $user_id ) ) {
-				$disabled = true;
-				break;
-			}
-
-			if ( is_user_type_disabled( 'user' ) ) {
-				$disabled = true;
-				break;
-			}
-
-			if ( ! \user_can( $user_id, 'activitypub' ) ) {
-				$disabled = true;
-				break;
-			}
-
-			$disabled = false;
-			break;
-	}
-
-	/**
-	 * Allow plugins to disable users for ActivityPub.
-	 *
-	 * @param boolean $disabled True if the user is disabled, false otherwise.
-	 * @param int     $user_id  The User-ID.
-	 */
-	return apply_filters( 'activitypub_is_user_disabled', $disabled, $user_id );
+	return ! user_can_activitypub( $user_id );
 }
 
 /**
@@ -615,7 +625,7 @@ function get_active_users( $duration = 1 ) {
 	}
 
 	// If blog user is disabled.
-	if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
+	if ( ! user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 		return (int) $count;
 	}
 
@@ -647,7 +657,7 @@ function get_total_users() {
 	}
 
 	// If blog user is disabled.
-	if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
+	if ( ! user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 		return (int) $users;
 	}
 
@@ -1414,14 +1424,7 @@ function get_upload_baseurl() {
  * @return boolean True if Authorized-Fetch is enabled, false otherwise.
  */
 function use_authorized_fetch() {
-	$use = false;
-
-	// Prefer the constant over the option.
-	if ( \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
-		$use = ACTIVITYPUB_AUTHORIZED_FETCH;
-	} else {
-		$use = (bool) \get_option( 'activitypub_authorized_fetch', '0' );
-	}
+	$use = (bool) \get_option( 'activitypub_authorized_fetch' );
 
 	/**
 	 * Filters whether to use Authorized-Fetch.
@@ -1492,11 +1495,11 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 	}
 
 	// If the user is disabled, fall back to the blog user when available.
-	if ( is_user_disabled( $user_id ) ) {
-		if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
-			return false;
-		} else {
+	if ( ! user_can_activitypub( $user_id ) ) {
+		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			$user_id = Actors::BLOG_USER_ID;
+		} else {
+			return false;
 		}
 	}
 
@@ -1583,4 +1586,92 @@ function is_actor( $data ) {
 	}
 
 	return false;
+}
+
+/**
+ * Get an ActivityPub embed HTML for a URL.
+ *
+ * @param string  $url        The URL to get the embed for.
+ * @param boolean $inline_css Whether to inline CSS. Default true.
+ *
+ * @return string|false The embed HTML or false if not found.
+ */
+function get_embed_html( $url, $inline_css = true ) {
+	// Try to get ActivityPub representation.
+	$object = Http::get_remote_object( $url );
+	if ( is_wp_error( $object ) ) {
+		return false;
+	}
+
+	$author_name = $object['attributedTo'] ?? '';
+	$avatar_url  = $object['icon']['url'] ?? '';
+	$author_url  = $author_name;
+
+	// If we don't have an avatar URL but we have an author URL, try to fetch it.
+	if ( ! $avatar_url && $author_url ) {
+		$author = Http::get_remote_object( $author_url );
+		if ( ! is_wp_error( $author ) ) {
+			$avatar_url  = $author['icon']['url'] ?? '';
+			$author_name = $author['name'] ?? $author_name;
+		}
+	}
+
+	// Create Webfinger where not found.
+	if ( empty( $author['webfinger'] ) ) {
+		if ( ! empty( $author['preferredUsername'] ) && ! empty( $author['url'] ) ) {
+			// Construct webfinger-style identifier from username and domain.
+			$domain              = wp_parse_url( $author['url'], PHP_URL_HOST );
+			$author['webfinger'] = '@' . $author['preferredUsername'] . '@' . $domain;
+		} else {
+			// Fallback to URL.
+			$author['webfinger'] = $author_url;
+		}
+	}
+
+	$title     = $object['name'] ?? '';
+	$content   = $object['content'] ?? '';
+	$published = isset( $object['published'] ) ? gmdate( get_option( 'date_format' ) . ', ' . get_option( 'time_format' ), strtotime( $object['published'] ) ) : '';
+	$boosts    = isset( $object['shares']['totalItems'] ) ? (int) $object['shares']['totalItems'] : 0;
+	$favorites = isset( $object['likes']['totalItems'] ) ? (int) $object['likes']['totalItems'] : 0;
+
+	$image = '';
+	if ( isset( $object['image']['url'] ) ) {
+		$image = $object['image']['url'];
+	} elseif ( isset( $object['attachment'] ) ) {
+		foreach ( $object['attachment'] as $attachment ) {
+			if ( isset( $attachment['type'] ) && 'Document' === $attachment['type'] ) {
+				$image = $attachment['url'];
+				break;
+			}
+		}
+	}
+
+	ob_start();
+	load_template(
+		ACTIVITYPUB_PLUGIN_DIR . 'templates/reply-embed.php',
+		false,
+		array(
+			'author_name' => $author_name,
+			'author_url'  => $author_url,
+			'avatar_url'  => $avatar_url,
+			'published'   => $published,
+			'title'       => $title,
+			'content'     => $content,
+			'image'       => $image,
+			'boosts'      => $boosts,
+			'favorites'   => $favorites,
+			'url'         => $url,
+			'webfinger'   => $author['webfinger'],
+		)
+	);
+
+	if ( $inline_css ) {
+		// Grab the CSS.
+		$css = \file_get_contents( ACTIVITYPUB_PLUGIN_DIR . 'assets/css/activitypub-embed.css' ); // phpcs:ignore
+		// We embed CSS directly because this may be in an iframe.
+		printf( '<style>%s</style>', $css ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	// A little light whitespace cleanup.
+	return preg_replace( '/\s+/', ' ', ob_get_clean() );
 }

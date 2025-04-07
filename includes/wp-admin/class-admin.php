@@ -12,9 +12,9 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
-use function Activitypub\is_user_disabled;
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\site_supports_blocks;
+use function Activitypub\user_can_activitypub;
 use function Activitypub\was_comment_received;
 
 /**
@@ -49,7 +49,7 @@ class Admin {
 		\add_filter( 'bulk_actions-users', array( self::class, 'user_bulk_options' ) );
 		\add_filter( 'handle_bulk_actions-users', array( self::class, 'handle_bulk_request' ), 10, 3 );
 
-		if ( ! is_user_disabled( get_current_user_id() ) ) {
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
 		}
 
@@ -66,16 +66,6 @@ class Admin {
 	 * Display admin menu notices about configuration problems or conflicts.
 	 */
 	public static function admin_notices() {
-		$permalink_structure = \get_option( 'permalink_structure' );
-		if ( empty( $permalink_structure ) ) {
-			$admin_notice = sprintf(
-				/* translators: %s: Permalink settings URL. */
-				\__( 'ActivityPub needs SEO-friendly URLs to work properly. Please <a href="%s">update your permalink structure</a> to an option other than Plain.', 'activitypub' ),
-				esc_url( admin_url( 'options-permalink.php' ) )
-			);
-			self::show_admin_notice( $admin_notice, 'error' );
-		}
-
 		$current_screen = get_current_screen();
 		if ( ! $current_screen ) {
 			return;
@@ -112,7 +102,7 @@ class Admin {
 	 */
 	public static function followers_list_page() {
 		// User has to be able to publish posts.
-		if ( ! is_user_disabled( get_current_user_id() ) ) {
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/user-followers-list.php' );
 		}
 	}
@@ -510,7 +500,7 @@ class Admin {
 	public static function dashboard_glance_items( $items ) {
 		\add_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 3 );
 
-		if ( ! is_user_disabled( get_current_user_id() ) ) {
+		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			$follower_count = sprintf(
 				// translators: %s: number of followers.
 				_n(

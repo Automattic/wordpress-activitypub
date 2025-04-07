@@ -125,13 +125,7 @@ class Comment {
 			$current_user = Actors::BLOG_USER_ID;
 		}
 
-		$is_user_disabled = is_user_disabled( $current_user );
-
-		if ( $is_user_disabled ) {
-			return false;
-		}
-
-		return true;
+		return user_can_activitypub( $current_user );
 	}
 
 	/**
@@ -235,10 +229,8 @@ class Comment {
 			$user_id = Actors::BLOG_USER_ID;
 		}
 
-		$is_user_disabled = is_user_disabled( $user_id );
-
-		// User is disabled for federation.
-		if ( $is_user_disabled ) {
+		// User is not allowed to federate comments.
+		if ( ! user_can_activitypub( $user_id ) ) {
 			return false;
 		}
 

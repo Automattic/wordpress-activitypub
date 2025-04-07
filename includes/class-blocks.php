@@ -7,8 +7,8 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Followers;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
 
 /**
  * Block class.
@@ -339,10 +339,34 @@ class Blocks {
 	 * @return string The HTML to render.
 	 */
 	public static function render_reply_block( $attrs ) {
-		$html = '';
+		// Return early if no URL is provided.
+		if ( empty( $attrs['url'] ) ) {
+			return null;
+		}
 
-		if ( ! empty( $attrs['url'] ) ) {
-			$html = sprintf(
+		$show_embed = isset( $attrs['embedPost'] ) && $attrs['embedPost'];
+
+		$wrapper_attrs = get_block_wrapper_attributes(
+			array(
+				'aria-label'       => __( 'Reply', 'activitypub' ),
+				'class'            => 'activitypub-reply-block',
+				'data-in-reply-to' => $attrs['url'],
+			)
+		);
+
+		$html = '<div ' . $wrapper_attrs . '>';
+
+		// Try to get and append the embed if requested.
+		if ( $show_embed ) {
+			$embed = wp_oembed_get( $attrs['url'] );
+			if ( $embed ) {
+				$html .= $embed;
+			}
+		}
+
+		// Only show the link if we're not showing the embed.
+		if ( ! $show_embed ) {
+			$html .= sprintf(
 				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
 				esc_url( $attrs['url'] ),
 				esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
@@ -351,13 +375,9 @@ class Blocks {
 			);
 		}
 
-		/**
-		 * Filter the reply block.
-		 *
-		 * @param string $html  The HTML to render.
-		 * @param array  $attrs The block attributes.
-		 */
-		return apply_filters( 'activitypub_reply_block', $html, $attrs );
+		$html .= '</div>';
+
+		return $html;
 	}
 
 	/**

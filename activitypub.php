@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 5.5.0
+ * Version: 5.6.1
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -19,7 +19,7 @@ namespace Activitypub;
 
 use WP_CLI;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '5.5.0' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '5.6.1' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -53,6 +53,7 @@ function rest_init() {
 	( new Rest\Moderators_Controller() )->register_routes();
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Replies_Controller() )->register_routes();
+	( new Rest\URL_Validator_Controller() )->register_routes();
 	( new Rest\Webfinger_Controller() )->register_routes();
 
 	// Load NodeInfo endpoints only if blog is public.
@@ -100,6 +101,7 @@ function plugin_admin_init() {
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Welcome_Fields', 'init' ) );
+	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Advanced_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Blog_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\User_Settings_Fields', 'init' ) );
 
