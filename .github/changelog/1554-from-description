@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Sites with comments from the Fediverse no longer create uncached extra fields posts that flood the Outbox.
