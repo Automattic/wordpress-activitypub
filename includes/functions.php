@@ -329,10 +329,14 @@ function is_post_disabled( $post ) {
 /**
  * This function checks if a user is enabled for ActivityPub.
  *
- * @param int $user_id The user ID.
+ * @param int|string $user_id The user ID.
  * @return boolean True if the user is enabled, false otherwise.
  */
 function user_can_activitypub( $user_id ) {
+	if ( ! is_numeric( $user_id ) ) {
+		return false;
+	}
+
 	switch ( $user_id ) {
 		case Actors::APPLICATION_USER_ID:
 			$enabled = true; // Application user is always enabled.
