@@ -1,7 +1,7 @@
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
 import { TextControl, PanelBody, ToggleControl, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { useEffect, useState, useRef, useCallback } from '@wordpress/element';
+import { useEffect, useState, useRef, useCallback, useLayoutEffect } from '@wordpress/element';
 import { useDebounce } from '@wordpress/compose';
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
@@ -163,6 +163,7 @@ function WpEmbedPreview( { html, onSelectBlock } ) {
 function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 	const iframeRef = useRef( null );
 	const [ iframeHeight, setIframeHeight ] = useState( 300 );
+	const previousHeightRef = useRef( 300 );
 
 	// Create a sandboxed document with the HTML content
 	const createSandboxedContent = useCallback( () => {
@@ -208,14 +209,16 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 			// Add a small buffer to prevent scrollbars
 			newHeight += 30;
 			
-			// Update height state if it changed
-			if ( newHeight !== iframeHeight ) {
+			// Only update height state if it changed significantly (more than 5px)
+			// This helps prevent update loops
+			if ( Math.abs( newHeight - previousHeightRef.current ) > 5 ) {
+				previousHeightRef.current = newHeight;
 				setIframeHeight( newHeight );
 			}
 		} catch ( e ) {
 			console.error( 'Error adjusting iframe height:', e );
 		}
-	}, [ iframeHeight ] );
+	}, [] );
 
 	// Handle iframe load and resize
 	const handleIframeLoad = useCallback( () => {
@@ -224,28 +227,45 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 		try {
 			// Initial height adjustment
 			adjustIframeHeight();
-			
-			// Set up a timer to periodically check height (catches dynamic content changes)
-			const intervalId = setInterval( adjustIframeHeight, 1000 );
-			
-			return () => clearInterval( intervalId );
 		} catch ( e ) {
 			console.error( 'Error setting up iframe height adjustment:', e );
 		}
 	}, [ adjustIframeHeight ] );
 
-	// Set up iframe load handler
+	// Set up iframe load handler and interval for height adjustments
 	useEffect( () => {
+		// Set up load event listener
 		if ( iframeRef.current ) {
 			iframeRef.current.addEventListener( 'load', handleIframeLoad );
-
-			return () => {
-				if ( iframeRef.current ) {
-					iframeRef.current.removeEventListener( 'load', handleIframeLoad );
-				}
-			};
 		}
-	}, [ handleIframeLoad ] );
+		
+		// Set up interval for periodic height checks
+		const intervalId = setInterval( adjustIframeHeight, 1000 );
+		
+		// Clean up function that will run when component unmounts or dependencies change
+		return () => {
+			// Clear the interval
+			clearInterval( intervalId );
+			
+			// Remove event listener
+			if ( iframeRef.current ) {
+				iframeRef.current.removeEventListener( 'load', handleIframeLoad );
+			}
+		};
+	}, [ handleIframeLoad, adjustIframeHeight ] );
+
+	// Use useEffect instead of useLayoutEffect to avoid update loops
+	useEffect( () => {
+		// Adjust height when HTML content changes
+		if ( iframeRef.current ) {
+			// Small delay to allow content to render
+			const timeoutId = setTimeout( () => {
+				adjustIframeHeight();
+			}, 100 );
+			
+			return () => clearTimeout( timeoutId );
+		}
+	}, [ html, adjustIframeHeight ] );
 
 	return (
 		<div 
