@@ -53,7 +53,7 @@ function EmbedOverlay( { onClick } ) {
  */
 function isWordPressEmbed( html ) {
 	return html && (
-		html.includes('wp-embedded-content') || 
+		html.includes('wp-embedded-content') ||
 		html.includes('wp-embed/') ||
 		html.includes('class="wp-embed"')
 	);
@@ -187,13 +187,13 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 	// Function to adjust iframe height based on content
 	const adjustIframeHeight = useCallback( () => {
 		if ( ! iframeRef.current ) return;
-		
+
 		try {
 			const iframe = iframeRef.current;
 
 			// Try to access iframe content height
 			let newHeight = 300; // Default fallback height
-			
+
 			try {
 				// Try to get the scrollHeight of the body
 				if ( iframe.contentDocument && iframe.contentDocument.body ) {
@@ -205,10 +205,10 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 				// This is expected in some cases due to same-origin policy
 				console.log( 'Could not access iframe content document:', e );
 			}
-			
+
 			// Add a small buffer to prevent scrollbars
 			newHeight += 30;
-			
+
 			// Only update height state if it changed significantly (more than 5px)
 			// This helps prevent update loops
 			if ( Math.abs( newHeight - previousHeightRef.current ) > 5 ) {
@@ -223,7 +223,7 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 	// Handle iframe load and resize
 	const handleIframeLoad = useCallback( () => {
 		if ( ! iframeRef.current ) return;
-		
+
 		try {
 			// Initial height adjustment
 			adjustIframeHeight();
@@ -238,15 +238,15 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 		if ( iframeRef.current ) {
 			iframeRef.current.addEventListener( 'load', handleIframeLoad );
 		}
-		
+
 		// Set up interval for periodic height checks
 		const intervalId = setInterval( adjustIframeHeight, 1000 );
-		
+
 		// Clean up function that will run when component unmounts or dependencies change
 		return () => {
 			// Clear the interval
 			clearInterval( intervalId );
-			
+
 			// Remove event listener
 			if ( iframeRef.current ) {
 				iframeRef.current.removeEventListener( 'load', handleIframeLoad );
@@ -262,14 +262,14 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 			const timeoutId = setTimeout( () => {
 				adjustIframeHeight();
 			}, 100 );
-			
+
 			return () => clearTimeout( timeoutId );
 		}
 	}, [ html, adjustIframeHeight ] );
 
 	return (
-		<div 
-			className="wp-block-embed__wrapper" 
+		<div
+			className="wp-block-embed__wrapper"
 			style={{ position: 'relative' }}
 		>
 			<iframe
@@ -285,7 +285,7 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 				title="Embedded content"
 			/>
 			{ isSelected && (
-				<div 
+				<div
 					onClick={ onClick }
 					style={{
 						position: 'absolute',
@@ -461,10 +461,10 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 		try {
 			// Initial height adjustment
 			adjustIframeHeight();
-			
+
 			// Set up a timer to periodically check height (catches dynamic content changes)
 			const intervalId = setInterval( adjustIframeHeight, 1000 );
-			
+
 			// Clean up interval on component unmount
 			return () => clearInterval( intervalId );
 		} catch ( e ) {
