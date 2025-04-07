@@ -9,6 +9,106 @@ import { useOptions } from '../shared/use-options';
 import { useDispatch } from '@wordpress/data';
 
 /**
+ * Custom hook for handling iframe height adjustments.
+ *
+ * @param {Object} options - Hook options.
+ * @param {string} options.html - HTML content for the iframe.
+ * @return {Object} - Hook return values.
+ */
+function useIframeHeight( { html } ) {
+	const iframeRef = useRef( null );
+	const [ iframeHeight, setIframeHeight ] = useState( 300 );
+	const previousHeightRef = useRef( 300 );
+
+	// Function to adjust iframe height based on content
+	const adjustIframeHeight = useCallback( () => {
+		if ( ! iframeRef.current ) return;
+
+		try {
+			const iframe = iframeRef.current;
+
+			// Try to access iframe content height
+			let newHeight = 300; // Default fallback height
+
+			try {
+				// Try to get the scrollHeight of the body
+				if ( iframe.contentDocument && iframe.contentDocument.body ) {
+					newHeight = iframe.contentDocument.body.scrollHeight;
+				} else if ( iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.body ) {
+					newHeight = iframe.contentWindow.document.body.scrollHeight;
+				}
+			} catch ( e ) {
+				// This is expected in some cases due to same-origin policy
+				console.log( 'Could not access iframe content document:', e );
+			}
+
+			// Add a small buffer to prevent scrollbars
+			newHeight += 5;
+
+			// Only update height state if it changed significantly (more than 5px)
+			// This helps prevent update loops
+			if ( Math.abs( newHeight - previousHeightRef.current ) > 5 ) {
+				previousHeightRef.current = newHeight;
+				setIframeHeight( newHeight );
+			}
+		} catch ( e ) {
+			console.error( 'Error adjusting iframe height:', e );
+		}
+	}, [] );
+
+	// Handle iframe load and resize events
+	const handleIframeLoad = useCallback( () => {
+		if ( ! iframeRef.current ) return;
+
+		try {
+			// Initial height adjustment
+			adjustIframeHeight();
+		} catch ( e ) {
+			console.error( 'Error setting up iframe height adjustment:', e );
+		}
+	}, [ adjustIframeHeight ] );
+
+	// Set up iframe load handler and interval for height adjustments
+	useEffect( () => {
+		if ( iframeRef.current ) {
+			iframeRef.current.addEventListener( 'load', handleIframeLoad );
+		}
+
+		// Set up interval for periodic height checks
+		const intervalId = setInterval( adjustIframeHeight, 1000 );
+
+		// Clean up function that will run when component unmounts or dependencies change
+		return () => {
+			// Clear the interval
+			clearInterval( intervalId );
+
+			// Remove event listener
+			if ( iframeRef.current ) {
+				iframeRef.current.removeEventListener( 'load', handleIframeLoad );
+			}
+		};
+	}, [ handleIframeLoad, adjustIframeHeight ] );
+
+	// Initial height adjustment after render
+	useEffect( () => {
+		if ( iframeRef.current ) {
+			const timeoutId = setTimeout( () => {
+				adjustIframeHeight();
+			}, 100 );
+
+			return () => clearTimeout( timeoutId );
+		}
+	}, [ html, adjustIframeHeight ] );
+
+	return {
+		iframeRef,
+		iframeHeight,
+		adjustIframeHeight,
+		handleIframeLoad,
+	};
+}
+
+/**
  * Maps HTML attribute names to React prop names.
  */
 const attributeMap = {
@@ -161,9 +261,7 @@ function WpEmbedPreview( { html, onSelectBlock } ) {
  * @return {JSX.Element} The component.
  */
 function ThirdPartyEmbed( { html, onClick, isSelected } ) {
-	const iframeRef = useRef( null );
-	const [ iframeHeight, setIframeHeight ] = useState( 300 );
-	const previousHeightRef = useRef( 300 );
+	const { iframeRef, iframeHeight, adjustIframeHeight, handleIframeLoad } = useIframeHeight( { html } );
 
 	// Create a sandboxed document with the HTML content
 	const createSandboxedContent = useCallback( () => {
@@ -184,89 +282,6 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 		`;
 	}, [ html ] );
 
-	// Function to adjust iframe height based on content
-	const adjustIframeHeight = useCallback( () => {
-		if ( ! iframeRef.current ) return;
-
-		try {
-			const iframe = iframeRef.current;
-
-			// Try to access iframe content height
-			let newHeight = 300; // Default fallback height
-
-			try {
-				// Try to get the scrollHeight of the body
-				if ( iframe.contentDocument && iframe.contentDocument.body ) {
-					newHeight = iframe.contentDocument.body.scrollHeight;
-				} else if ( iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.body ) {
-					newHeight = iframe.contentWindow.document.body.scrollHeight;
-				}
-			} catch ( e ) {
-				// This is expected in some cases due to same-origin policy
-				console.log( 'Could not access iframe content document:', e );
-			}
-
-			// Add a small buffer to prevent scrollbars
-			newHeight += 30;
-
-			// Only update height state if it changed significantly (more than 5px)
-			// This helps prevent update loops
-			if ( Math.abs( newHeight - previousHeightRef.current ) > 5 ) {
-				previousHeightRef.current = newHeight;
-				setIframeHeight( newHeight );
-			}
-		} catch ( e ) {
-			console.error( 'Error adjusting iframe height:', e );
-		}
-	}, [] );
-
-	// Handle iframe load and resize
-	const handleIframeLoad = useCallback( () => {
-		if ( ! iframeRef.current ) return;
-
-		try {
-			// Initial height adjustment
-			adjustIframeHeight();
-		} catch ( e ) {
-			console.error( 'Error setting up iframe height adjustment:', e );
-		}
-	}, [ adjustIframeHeight ] );
-
-	// Set up iframe load handler and interval for height adjustments
-	useEffect( () => {
-		// Set up load event listener
-		if ( iframeRef.current ) {
-			iframeRef.current.addEventListener( 'load', handleIframeLoad );
-		}
-
-		// Set up interval for periodic height checks
-		const intervalId = setInterval( adjustIframeHeight, 1000 );
-
-		// Clean up function that will run when component unmounts or dependencies change
-		return () => {
-			// Clear the interval
-			clearInterval( intervalId );
-
-			// Remove event listener
-			if ( iframeRef.current ) {
-				iframeRef.current.removeEventListener( 'load', handleIframeLoad );
-			}
-		};
-	}, [ handleIframeLoad, adjustIframeHeight ] );
-
-	// Use useEffect instead of useLayoutEffect to avoid update loops
-	useEffect( () => {
-		// Adjust height when HTML content changes
-		if ( iframeRef.current ) {
-			// Small delay to allow content to render
-			const timeoutId = setTimeout( () => {
-				adjustIframeHeight();
-			}, 100 );
-
-			return () => clearTimeout( timeoutId );
-		}
-	}, [ html, adjustIframeHeight ] );
-
 	return (
 		<div
 			className="wp-block-embed__wrapper"
@@ -282,7 +297,7 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 					border: 'none',
 					overflow: 'hidden'
 				}}
-				title="Embedded content"
+				onLoad={ handleIframeLoad }
 			/>
 			{ isSelected && (
 				<div
@@ -351,12 +366,11 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	// This will be true when the block is instantiated with `true` because it was saved that way, or because this is a new block with no initial URL.
 	const [ optimisticEmbed, setOptimisticEmbed ] = useState( attr.embedPost === true || ! url );
 	const [ embedHtml, setEmbedHtml ] = useState( null );
-	const [ iframeHeight, setIframeHeight ] = useState( 300 ); // Default height
+	const { iframeRef, iframeHeight, adjustIframeHeight, handleIframeLoad } = useIframeHeight( { html: embedHtml } );
 	const { insertAfterBlock, removeBlock } = useDispatch( 'core/block-editor' );
 	// Get block props and dispatch functions.
 	const blockProps = useBlockProps();
 	const urlInputRef = useRef();
-	const iframeRef = useRef();
 	const iframeContainerRef = useRef();
 	// Use a ref to track optimisticEmbed without causing re-renders
 	const optimisticEmbedRef = useRef( optimisticEmbed );
@@ -453,71 +467,6 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 			</html>
 		`;
 	};
-
-	// Handle iframe load and resize events
-	const handleIframeLoad = () => {
-		if ( ! iframeRef.current ) return;
-
-		try {
-			// Initial height adjustment
-			adjustIframeHeight();
-
-			// Set up a timer to periodically check height (catches dynamic content changes)
-			const intervalId = setInterval( adjustIframeHeight, 1000 );
-
-			// Clean up interval on component unmount
-			return () => clearInterval( intervalId );
-		} catch ( e ) {
-			console.error( 'Error setting up iframe height adjustment:', e );
-		}
-	};
-
-	// Function to adjust iframe height based on content
-	const adjustIframeHeight = () => {
-		if ( ! iframeRef.current ) return;
-
-		try {
-			const iframe = iframeRef.current;
-
-			// Try to access iframe content height
-			let newHeight = 300; // Default fallback height
-
-			try {
-				// Try to get the scrollHeight of the body
-				if ( iframe.contentDocument && iframe.contentDocument.body ) {
-					newHeight = iframe.contentDocument.body.scrollHeight;
-				} else if ( iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.body ) {
-					newHeight = iframe.contentWindow.document.body.scrollHeight;
-				}
-			} catch ( e ) {
-				console.log( 'Could not access iframe content document:', e );
-				// This is expected in some cases due to same-origin policy
-			}
-
-			// Add a small buffer to prevent scrollbars
-			newHeight += 30;
-
-			// Update height state if it changed
-			if ( newHeight !== iframeHeight ) {
-				setIframeHeight( newHeight );
-			}
-		} catch ( e ) {
-			console.error( 'Error adjusting iframe height:', e );
-		}
-	};
-
-	// Set up iframe load handler
-	useEffect( () => {
-		if ( iframeRef.current ) {
-			iframeRef.current.addEventListener( 'load', handleIframeLoad );
-
-			return () => {
-				if ( iframeRef.current ) {
-					iframeRef.current.removeEventListener( 'load', handleIframeLoad );
-				}
-			};
-		}
-	}, [ embedHtml ] );
 
 	/**
 	 * Handle embed toggle changes.
