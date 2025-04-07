@@ -333,27 +333,16 @@ function is_post_disabled( $post ) {
  * @return boolean True if the user is enabled, false otherwise.
  */
 function user_can_activitypub( $user_id ) {
-	switch ( $user_id ) {
-		case Actors::APPLICATION_USER_ID:
-			$enabled = true; // Application user is always enabled.
-			break;
-
-		case Actors::BLOG_USER_ID:
-			$enabled = ! is_user_type_disabled( 'blog' );
-			break;
-
-		default:
-			if ( ! \get_user_by( 'id', $user_id ) ) {
-				$enabled = false;
-				break;
-			}
-
-			if ( is_user_type_disabled( 'user' ) ) {
-				$enabled = false;
-				break;
-			}
-
-			$enabled = \user_can( $user_id, 'activitypub' );
+	if ( Actors::APPLICATION_USER_ID === $user_id ) {
+		$enabled = true; // Application user is always enabled.
+	} elseif ( Actors::BLOG_USER_ID === $user_id ) {
+		$enabled = ! is_user_type_disabled( 'blog' );
+	} elseif ( ! \get_user_by( 'id', $user_id ) ) {
+		$enabled = false;
+	} elseif ( is_user_type_disabled( 'user' ) ) {
+		$enabled = false;
+	} else {
+		$enabled = \user_can( $user_id, 'activitypub' );
 	}
 
 	/**
