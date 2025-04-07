@@ -162,10 +162,10 @@ function WpEmbedPreview( { html, onSelectBlock } ) {
  */
 function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 	const iframeRef = useRef( null );
-	const [iframeHeight, setIframeHeight] = useState(300);
+	const [ iframeHeight, setIframeHeight ] = useState( 300 );
 
 	// Create a sandboxed document with the HTML content
-	const createSandboxedContent = useCallback(() => {
+	const createSandboxedContent = useCallback( () => {
 		return `
 			<!DOCTYPE html>
 			<html>
@@ -183,29 +183,14 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 		`;
 	}, [ html ] );
 
-	// Handle iframe load and resize
-	const handleIframeLoad = useCallback( () => {
-		if ( ! iframeRef.current ) return;
-		
-		try {
-			// Initial height adjustment
-			adjustIframeHeight();
-			
-			// Set up a timer to periodically check height (catches dynamic content changes)
-			const intervalId = setInterval( adjustIframeHeight, 1000 );
-			
-			return () => clearInterval( intervalId );
-		} catch ( e ) {
-			console.error( 'Error setting up iframe height adjustment:', e );
-		}
-	}, []);
-
 	// Function to adjust iframe height based on content
 	const adjustIframeHeight = useCallback( () => {
 		if ( ! iframeRef.current ) return;
 		
 		try {
 			const iframe = iframeRef.current;
+
+			// Try to access iframe content height
 			let newHeight = 300; // Default fallback height
 			
 			try {
@@ -230,20 +215,37 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 		} catch ( e ) {
 			console.error( 'Error adjusting iframe height:', e );
 		}
-	}, [iframeHeight]);
+	}, [ iframeHeight ] );
+
+	// Handle iframe load and resize
+	const handleIframeLoad = useCallback( () => {
+		if ( ! iframeRef.current ) return;
+		
+		try {
+			// Initial height adjustment
+			adjustIframeHeight();
+			
+			// Set up a timer to periodically check height (catches dynamic content changes)
+			const intervalId = setInterval( adjustIframeHeight, 1000 );
+			
+			return () => clearInterval( intervalId );
+		} catch ( e ) {
+			console.error( 'Error setting up iframe height adjustment:', e );
+		}
+	}, [ adjustIframeHeight ] );
 
 	// Set up iframe load handler
 	useEffect( () => {
 		if ( iframeRef.current ) {
 			iframeRef.current.addEventListener( 'load', handleIframeLoad );
-			
+
 			return () => {
 				if ( iframeRef.current ) {
 					iframeRef.current.removeEventListener( 'load', handleIframeLoad );
 				}
 			};
 		}
-	}, [ html, handleIframeLoad ]);
+	}, [ handleIframeLoad ] );
 
 	return (
 		<div 
@@ -439,10 +441,10 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 		try {
 			// Initial height adjustment
 			adjustIframeHeight();
-
+			
 			// Set up a timer to periodically check height (catches dynamic content changes)
 			const intervalId = setInterval( adjustIframeHeight, 1000 );
-
+			
 			// Clean up interval on component unmount
 			return () => clearInterval( intervalId );
 		} catch ( e ) {
