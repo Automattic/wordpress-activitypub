@@ -326,6 +326,12 @@ class Health_Check {
 			'private' => false,
 		);
 
+		$info['activitypub']['fields']['shared_inbox'] = array(
+			'label'   => \__( 'Shared Inbox', 'activitypub' ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_shared_inbox', '0' ) ),
+			'private' => false,
+		);
+
 		$consts = get_defined_constants( true );
 
 		if ( ! isset( $consts['user'] ) ) {
