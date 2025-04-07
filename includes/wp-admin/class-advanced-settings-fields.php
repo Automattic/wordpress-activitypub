@@ -131,7 +131,7 @@ class Advanced_Settings_Fields {
 		<p>
 			<label>
 				<input type="checkbox" id="activitypub_shared_inbox" name="activitypub_shared_inbox" value="1" <?php checked( '1', $value ); ?> />
-				<?php \esc_html_e( 'Enable the shared inbox.', 'activitypub' ); ?>
+				<?php \esc_html_e( 'Use a shared inbox for incoming messages.', 'activitypub' ); ?>
 			</label>
 		</p>
 		<p class="description">
