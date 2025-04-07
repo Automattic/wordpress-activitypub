@@ -53,7 +53,7 @@ class Advanced_Settings_Fields {
 		if ( ! defined( 'ACTIVITYPUB_SHARED_INBOX_FEATURE' ) ) {
 			\add_settings_field(
 				'activitypub_shared_inbox',
-				\__( 'Shared Inbox', 'activitypub' ) . ' ' . \__( '(beta)', 'activitypub' ),
+				\__( 'Shared Inbox (beta)', 'activitypub' ),
 				array( self::class, 'render_shared_inbox_field' ),
 				'activitypub_advanced_settings',
 				'activitypub_advanced_settings',
