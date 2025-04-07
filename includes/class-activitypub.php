@@ -50,6 +50,7 @@ class Activitypub {
 		\add_action( 'updated_postmeta', array( self::class, 'updated_postmeta' ), 10, 4 );
 		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
 		\add_filter( 'pre_option_activitypub_actor_mode', array( self::class, 'pre_option_activitypub_actor_mode' ) );
+		\add_filter( 'pre_option_activitypub_vary_header', array( self::class, 'pre_option_activitypub_vary_header' ) );
 		\add_filter( 'pre_option_activitypub_authorized_fetch', array( self::class, 'pre_option_activitypub_authorized_fetch' ) );
 
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
@@ -207,7 +208,7 @@ class Activitypub {
 		if ( ! headers_sent() ) {
 			\header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
 
-			if ( ACTIVITYPUB_SEND_VARY_HEADER ) {
+			if ( \get_option( 'activitypub_vary_header' ) ) {
 				// Send Vary header for Accept header.
 				\header( 'Vary: Accept', false );
 			}
@@ -415,6 +416,25 @@ class Activitypub {
 		}
 
 		return $pre;
+	}
+
+	/**
+	 * Pre-get option filter for the Vary Header.
+	 *
+	 * @param string $pre The pre-get option value.
+	 *
+	 * @return string If the constant is defined, return the value, otherwise return the pre-get option value.
+	 */
+	public static function pre_option_activitypub_vary_header( $pre ) {
+		if ( ! \defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
+			return $pre;
+		}
+
+		if ( ACTIVITYPUB_SEND_VARY_HEADER ) {
+			return '1';
+		}
+
+		return '0';
 	}
 
 	/**

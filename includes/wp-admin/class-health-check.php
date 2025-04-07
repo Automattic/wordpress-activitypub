@@ -326,6 +326,12 @@ class Health_Check {
 			'private' => false,
 		);
 
+		$info['activitypub']['fields']['vary_header'] = array(
+			'label'   => \__( 'Vary Header', 'activitypub' ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_vary_header', '0' ) ),
+			'private' => false,
+		);
+
 		$consts = get_defined_constants( true );
 
 		if ( ! isset( $consts['user'] ) ) {

@@ -39,6 +39,17 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_outbox_purge_days' )
 		);
 
+		if ( ! defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
+			\add_settings_field(
+				'activitypub_vary_header',
+				\__( 'Vary Header', 'activitypub' ),
+				array( self::class, 'render_vary_header_field' ),
+				'activitypub_advanced_settings',
+				'activitypub_advanced_settings',
+				array( 'label_for' => 'activitypub_vary_header' )
+			);
+		}
+
 		if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
 			\add_settings_field(
 				'activitypub_authorized_fetch',
@@ -88,6 +99,24 @@ class Advanced_Settings_Fields {
 				'code' => array(),
 			)
 		) . '</p>';
+	}
+
+	/**
+	 * Render vary header field.
+	 */
+	public static function render_vary_header_field() {
+		$value = \get_option( 'activitypub_vary_header', '0' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_vary_header" name="activitypub_vary_header" value="1" <?php checked( '1', $value ); ?> />
+				<?php echo \wp_kses( \__( 'Add the <code>Accept</code> Vary header for <code>application/activity+json</code> requests to the ActivityPub response.', 'activitypub' ), array( 'code' => array() ) ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( 'This helps caching servers store the ActivityPub response based on different Accept headers. If you&#8217;re experiencing caching issues and seeing JSON responses in your browser, try enabling this option.', 'activitypub' ); ?>
+		</p>
+		<?php
 	}
 
 	/**
