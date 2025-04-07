@@ -161,55 +161,107 @@ function WpEmbedPreview( { html, onSelectBlock } ) {
  * @return {JSX.Element} The component.
  */
 function ThirdPartyEmbed( { html, onClick, isSelected } ) {
+	const iframeRef = useRef( null );
+	const [iframeHeight, setIframeHeight] = useState(300);
+
+	// Create a sandboxed document with the HTML content
+	const createSandboxedContent = useCallback(() => {
+		return `
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<meta charset="UTF-8">
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<style>
+					body { margin: 0; padding: 0; overflow-x: hidden; }
+				</style>
+			</head>
+			<body>
+				${ html }
+			</body>
+			</html>
+		`;
+	}, [ html ] );
+
+	// Handle iframe load and resize
+	const handleIframeLoad = useCallback( () => {
+		if ( ! iframeRef.current ) return;
+		
+		try {
+			// Initial height adjustment
+			adjustIframeHeight();
+			
+			// Set up a timer to periodically check height (catches dynamic content changes)
+			const intervalId = setInterval( adjustIframeHeight, 1000 );
+			
+			return () => clearInterval( intervalId );
+		} catch ( e ) {
+			console.error( 'Error setting up iframe height adjustment:', e );
+		}
+	}, []);
+
+	// Function to adjust iframe height based on content
+	const adjustIframeHeight = useCallback( () => {
+		if ( ! iframeRef.current ) return;
+		
+		try {
+			const iframe = iframeRef.current;
+			let newHeight = 300; // Default fallback height
+			
+			try {
+				// Try to get the scrollHeight of the body
+				if ( iframe.contentDocument && iframe.contentDocument.body ) {
+					newHeight = iframe.contentDocument.body.scrollHeight;
+				} else if ( iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.body ) {
+					newHeight = iframe.contentWindow.document.body.scrollHeight;
+				}
+			} catch ( e ) {
+				// This is expected in some cases due to same-origin policy
+				console.log( 'Could not access iframe content document:', e );
+			}
+			
+			// Add a small buffer to prevent scrollbars
+			newHeight += 30;
+			
+			// Update height state if it changed
+			if ( newHeight !== iframeHeight ) {
+				setIframeHeight( newHeight );
+			}
+		} catch ( e ) {
+			console.error( 'Error adjusting iframe height:', e );
+		}
+	}, [iframeHeight]);
+
+	// Set up iframe load handler
+	useEffect( () => {
+		if ( iframeRef.current ) {
+			iframeRef.current.addEventListener( 'load', handleIframeLoad );
+			
+			return () => {
+				if ( iframeRef.current ) {
+					iframeRef.current.removeEventListener( 'load', handleIframeLoad );
+				}
+			};
+		}
+	}, [ html, handleIframeLoad ]);
+
 	return (
 		<div 
 			className="wp-block-embed__wrapper" 
 			style={{ position: 'relative' }}
-			ref={ el => {
-				if (el && !el.getAttribute('data-embed-initialized')) {
-					// Insert the embed HTML
-					el.innerHTML = html;
-					
-					// Find all script tags and execute them manually
-					const scriptTags = el.querySelectorAll('script');
-					if (scriptTags.length > 0) {
-						scriptTags.forEach(scriptTag => {
-							// Only process script tags with src attribute
-							if (scriptTag.src) {
-								const newScript = document.createElement('script');
-								newScript.src = scriptTag.src;
-								newScript.async = true;
-								
-								// Copy all attributes from the original script
-								Array.from(scriptTag.attributes).forEach(attr => {
-									if (attr.name !== 'src') {
-										newScript.setAttribute(attr.name, attr.value);
-									}
-								});
-								
-								// Remove the original script
-								scriptTag.parentNode.removeChild(scriptTag);
-								
-								// Add the new script to the document head
-								document.head.appendChild(newScript);
-							} else if (scriptTag.textContent) {
-								// Handle inline scripts if needed
-								try {
-									// eslint-disable-next-line no-eval
-									eval(scriptTag.textContent);
-								} catch (e) {
-									console.error('Error executing inline script:', e);
-								}
-							}
-						});
-					}
-					
-					// Mark as initialized
-					el.setAttribute('data-embed-initialized', 'true');
-				}
-			}}
 		>
-			{/* Overlay is added dynamically after the embed is loaded */}
+			<iframe
+				ref={ iframeRef }
+				srcDoc={ createSandboxedContent() }
+				sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+				style={{
+					width: '100%',
+					height: `${ iframeHeight }px`,
+					border: 'none',
+					overflow: 'hidden'
+				}}
+				title="Embedded content"
+			/>
 			{ isSelected && (
 				<div 
 					onClick={ onClick }
@@ -225,7 +277,7 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 						display: isSelected ? 'block' : 'none'
 					}}
 				/>
-			)}
+			) }
 		</div>
 	);
 }
