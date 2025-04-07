@@ -508,7 +508,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 					</div>
 				) }
 
-				{ url && ! attr.embedPost && (
+				{ url && ( ! attr.embedPost || ! embedHtml ) && (
 					<div
 						className="activitypub-reply-block-editor__preview"
 						contentEditable={ false }
