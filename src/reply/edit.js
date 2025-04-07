@@ -46,6 +46,20 @@ function EmbedOverlay( { onClick } ) {
 }
 
 /**
+ * Determines if the HTML contains a WordPress embed.
+ *
+ * @param {string} html The HTML content to check.
+ * @return {boolean} Whether the HTML contains a WordPress embed.
+ */
+function isWordPressEmbed( html ) {
+	return html && (
+		html.includes('wp-embedded-content') || 
+		html.includes('wp-embed/') ||
+		html.includes('class="wp-embed"')
+	);
+}
+
+/**
  * WordPress Embed Preview component, adapted from Core.
  * Handles WordPress-specific embeds that use the wp-embed format.
  *
@@ -133,6 +147,85 @@ function WpEmbedPreview( { html, onSelectBlock } ) {
 				}}
 			/>
 			{ ! interactive && <EmbedOverlay onClick={onSelectBlock} />}
+		</div>
+	);
+}
+
+/**
+ * Handles third-party embeds that require script execution.
+ *
+ * @param {Object} props Component props.
+ * @param {string} props.html The HTML content to embed.
+ * @param {Function} props.onClick Function to call when the overlay is clicked.
+ * @param {boolean} props.isSelected Whether the block is selected.
+ * @return {JSX.Element} The component.
+ */
+function ThirdPartyEmbed( { html, onClick, isSelected } ) {
+	return (
+		<div 
+			className="wp-block-embed__wrapper" 
+			style={{ position: 'relative' }}
+			ref={ el => {
+				if (el && !el.getAttribute('data-embed-initialized')) {
+					// Insert the embed HTML
+					el.innerHTML = html;
+					
+					// Find all script tags and execute them manually
+					const scriptTags = el.querySelectorAll('script');
+					if (scriptTags.length > 0) {
+						scriptTags.forEach(scriptTag => {
+							// Only process script tags with src attribute
+							if (scriptTag.src) {
+								const newScript = document.createElement('script');
+								newScript.src = scriptTag.src;
+								newScript.async = true;
+								
+								// Copy all attributes from the original script
+								Array.from(scriptTag.attributes).forEach(attr => {
+									if (attr.name !== 'src') {
+										newScript.setAttribute(attr.name, attr.value);
+									}
+								});
+								
+								// Remove the original script
+								scriptTag.parentNode.removeChild(scriptTag);
+								
+								// Add the new script to the document head
+								document.head.appendChild(newScript);
+							} else if (scriptTag.textContent) {
+								// Handle inline scripts if needed
+								try {
+									// eslint-disable-next-line no-eval
+									eval(scriptTag.textContent);
+								} catch (e) {
+									console.error('Error executing inline script:', e);
+								}
+							}
+						});
+					}
+					
+					// Mark as initialized
+					el.setAttribute('data-embed-initialized', 'true');
+				}
+			}}
+		>
+			{/* Overlay is added dynamically after the embed is loaded */}
+			{ isSelected && (
+				<div 
+					onClick={ onClick }
+					style={{
+						position: 'absolute',
+						top: 0,
+						left: 0,
+						width: '100%',
+						height: '100%',
+						cursor: 'pointer',
+						zIndex: 1,
+						// Only show the overlay when the block is selected
+						display: isSelected ? 'block' : 'none'
+					}}
+				/>
+			)}
 		</div>
 	);
 }
@@ -400,36 +493,17 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 
 				{ isValidEmbed && attr.embedPost && embedHtml && (
 					<div className="activitypub-embed-container">
-						{ isRealOembed ? (
+						{ isRealOembed && isWordPressEmbed(embedHtml) ? (
 							<WpEmbedPreview
 								html={ embedHtml }
 								onSelectBlock={ focusInput}
 							/>
 						) : (
-							<div
-								ref={ iframeContainerRef }
-								style={{
-									height: iframeHeight + 'px',
-									overflow: 'hidden',
-									transition: 'height 0.2s ease-in-out',
-									position: 'relative',
-								}}
-							>
-								<iframe
-									ref={ iframeRef }
-									srcDoc={ getEnhancedHtml( embedHtml ) }
-									style={{
-										position: 'absolute',
-										top: 0,
-										left: 0,
-										width: '100%',
-										height: '100%',
-									}}
-									allowFullScreen
-									title={ __( 'Embedded content from', 'activitypub' ) + ' ' + url }
-								></iframe>
-								<EmbedOverlay onClick={ focusInput } />
-							</div>
+							<ThirdPartyEmbed
+								html={ embedHtml }
+								onClick={ focusInput }
+								isSelected={ isSelected }
+							/>
 						) }
 					</div>
 				) }
