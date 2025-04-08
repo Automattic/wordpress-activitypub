@@ -7,6 +7,11 @@ import { Dialog } from '../shared/dialog';
 import { useOptions } from '../shared/use-options';
 import './style.scss';
 
+/**
+ * Default profile data.
+ *
+ * @type {Object}
+ */
 const DEFAULT_PROFILE_DATA = {
 	avatar: '',
 	webfinger: '@well@hello.dolly',
@@ -14,6 +19,12 @@ const DEFAULT_PROFILE_DATA = {
 	url: '#',
 };
 
+/**
+ * Get normalized profile data.
+ *
+ * @param {Object} profile Profile data.
+ * @return {Object} Normalized profile data.
+ */
 function getNormalizedProfile( profile ) {
 	if ( ! profile ) {
 		return DEFAULT_PROFILE_DATA;
@@ -23,6 +34,12 @@ function getNormalizedProfile( profile ) {
 	return data;
 }
 
+/**
+ * Fetch profile data.
+ *
+ * @param {number} userId User ID.
+ * @return {Promise} Promise resolving with profile data.
+ */
 function fetchProfile( userId ) {
 	const { namespace } = useOptions();
 	const fetchOptions = {
@@ -32,10 +49,44 @@ function fetchProfile( userId ) {
 	return apiFetch( fetchOptions );
 }
 
-function Profile( { profile, popupStyles, userId } ) {
+/**
+ * Profile component.
+ *
+ * @param {Object} props Component props.
+ * @param {Object} props.profile Profile data.
+ * @param {string} props.popupStyles Popup styles.
+ * @param {number} props.userId User ID.
+ * @param {string} props.buttonText Button text.
+ * @param {boolean} props.buttonOnly Whether to render only the button.
+ * @param {string} props.buttonSize Button size.
+ * @return {JSX.Element} Profile component.
+ */
+function Profile( {
+	profile,
+	popupStyles,
+	userId,
+	buttonText,
+	buttonOnly,
+	buttonSize,
+} ) {
 	const { webfinger, avatar, name } = profile;
 	// check if webfinger starts with @ and add it if it doesn't
 	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
+
+	if ( buttonOnly ) {
+		return (
+			<div className="activitypub-profile">
+				<Follow
+					profile={ profile }
+					popupStyles={ popupStyles }
+					userId={ userId }
+					buttonText={ buttonText }
+					buttonSize={ buttonSize }
+				/>
+			</div>
+		);
+	}
+
 	return (
 		<div className="activitypub-profile">
 			<img className="activitypub-profile__avatar" src={ avatar } alt={ name } />
@@ -43,12 +94,35 @@ function Profile( { profile, popupStyles, userId } ) {
 				<div className="activitypub-profile__name">{ name }</div>
 				<div className="activitypub-profile__handle" title={ webfingerWithAt }>{ webfingerWithAt }</div>
 			</div>
-			<Follow profile={ profile } popupStyles={ popupStyles } userId={ userId } />
+			<Follow
+				profile={ profile }
+				popupStyles={ popupStyles }
+				userId={ userId }
+				buttonText={ buttonText }
+				buttonSize={ buttonSize }
+			/>
 		</div>
 	);
 }
 
-function Follow( { profile, popupStyles, userId } ) {
+/**
+ * Follow component.
+ *
+ * @param {Object} props Component props.
+ * @param {Object} props.profile Profile data.
+ * @param {string} props.popupStyles Popup styles.
+ * @param {number} props.userId User ID.
+ * @param {string} props.buttonText Button text.
+ * @param {string} props.buttonSize Button size.
+ * @return {JSX.Element} Follow component.
+ */
+function Follow( {
+	profile,
+	popupStyles,
+	userId,
+	buttonText,
+	buttonSize,
+} ) {
 	const [ isOpen, setIsOpen ] = useState( false );
 	const title = sprintf( __( 'Follow %s', 'activitypub' ), profile?.name );
 
@@ -59,61 +133,106 @@ function Follow( { profile, popupStyles, userId } ) {
 				onClick={ () => setIsOpen( true ) }
 				aria-haspopup="dialog"
 				aria-expanded={ isOpen }
-				aria-label={  __( 'Follow me on the Fediverse', 'activitypub' ) }
+				aria-label={ __( 'Follow me on the Fediverse', 'activitypub' ) }
+				size={ buttonSize }
 			>
-				{ __( 'Follow', 'activitypub' ) }
+				{ buttonText }
 			</Button>
 			{ isOpen && (
 				<Modal
-				className="activitypub-profile__confirm activitypub__modal"
-				onRequestClose={ () => setIsOpen( false ) }
-				title={ title }
-				aria-label={ title }
-				role="dialog"
+					className="activitypub-profile__confirm activitypub__modal"
+					onRequestClose={ () => setIsOpen( false ) }
+					title={ title }
+					aria-label={ title }
+					role="dialog"
 				>
 					<DialogFollow profile={ profile } userId={ userId } />
 					<style>{ popupStyles }</style>
-			</Modal>
+				</Modal>
 			) }
 		</>
 	);
 }
 
+/**
+ * Dialog follow component.
+ *
+ * @param {Object} props Component props.
+ * @param {Object} props.profile Profile data.
+ * @param {number} props.userId User ID.
+ * @return {JSX.Element} Dialog follow component.
+ */
 function DialogFollow( { profile, userId } ) {
 	const { namespace } = useOptions();
 	const { webfinger } = profile;
 	const actionText = __( 'Follow', 'activitypub' );
-	const resourceUrl = `/${ namespace }/actors/${userId}/remote-follow?resource=`;
+	const resourceUrl = `/${ namespace }/actors/${ userId }/remote-follow?resource=`;
 	const copyDescription = __( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' );
 	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
 
-	return <Dialog
-		actionText={ actionText }
-		copyDescription={ copyDescription }
-		handle={ webfingerWithAt }
-		resourceUrl={ resourceUrl }
-	/>;
+	return (
+		<Dialog
+			actionText={ actionText }
+			copyDescription={ copyDescription }
+			handle={ webfingerWithAt }
+			resourceUrl={ resourceUrl }
+		/>
+	);
 }
 
-export default function FollowMe( { selectedUser, style, backgroundColor, id, useId = false, profileData = false } ) {
+/**
+ * Follow me component.
+ *
+ * @param {Object} props Component props.
+ * @param {number|string} props.selectedUser Selected user ID or 'site'.
+ * @param {Object} props.style Style object.
+ * @param {string} props.backgroundColor Background color.
+ * @param {string} props.id Component ID.
+ * @param {boolean} props.useId Whether to use the ID.
+ * @param {Object} props.profileData Profile data.
+ * @param {boolean} props.buttonOnly Whether to render only the button.
+ * @param {string} props.buttonText Button text.
+ * @param {string} props.buttonSize Button size.
+ * @return {JSX.Element} Follow me component.
+ */
+export default function FollowMe( {
+	selectedUser,
+	style,
+	backgroundColor,
+	id,
+	useId = false,
+	profileData = false,
+	buttonOnly = false,
+	buttonText = __( 'Follow', 'activitypub' ),
+	buttonSize = 'default',
+} ) {
 	const [ profile, setProfile ] = useState( getNormalizedProfile() );
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
 	const popupStyles = getPopupStyles( style );
 	const wrapperProps = useId ? { id } : {};
-	function setProfileData( profile ) {
-		setProfile( getNormalizedProfile( profile ) );
-	}
+
 	useEffect( () => {
 		if ( profileData ) {
-			return setProfileData( profileData );
+			setProfile( getNormalizedProfile( profileData ) );
+			return;
 		}
-		fetchProfile( userId ).then( setProfileData );
+
+		fetchProfile( userId ).then( ( data ) => {
+			setProfile( getNormalizedProfile( data ) );
+		} );
 	}, [ userId, profileData ] );
 
-	return(
-		<div { ...wrapperProps }>
+	return (
+		<div { ...wrapperProps } className="activitypub-follow-me-block-wrapper">
 			<ButtonStyle selector={ `#${ id }` } style={ style } backgroundColor={ backgroundColor } />
-			<Profile profile={ profile } userId={ userId } popupStyles={ popupStyles } />
+			<Profile
+				profile={ profile }
+				userId={ userId }
+				popupStyles={ popupStyles }
+				buttonText={ buttonText }
+				buttonOnly={ buttonOnly }
+				buttonSize={ buttonSize }
+			/>
 		</div>
-	)
+	);
 }
