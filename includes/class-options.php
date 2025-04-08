@@ -13,6 +13,10 @@ namespace ActivityPub;
  * @package ActivityPub
  */
 class Options {
+
+	/**
+	 * Initialize the options.
+	 */
 	public static function init() {
 		\add_filter( 'pre_option_activitypub_actor_mode', array( self::class, 'pre_option_activitypub_actor_mode' ) );
 		\add_filter( 'pre_option_activitypub_authorized_fetch', array( self::class, 'pre_option_activitypub_authorized_fetch' ) );
