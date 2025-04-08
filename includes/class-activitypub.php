@@ -128,7 +128,7 @@ class Activitypub {
 		delete_option( 'activitypub_use_hashtags' );
 		delete_option( 'activitypub_use_opengraph' );
 		delete_option( 'activitypub_use_permalink_as_id_for_blog' );
-    \delete_option( 'activitypub_vary_header' );
+		\delete_option( 'activitypub_vary_header' );
 	}
 
 	/**
