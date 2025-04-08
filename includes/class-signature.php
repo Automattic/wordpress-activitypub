@@ -347,19 +347,19 @@ class Signature {
 		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
 			$public_key = \rtrim( $actor['publicKey']['publicKeyPem'] );
 
-			// Check if the key is in PKCS#1 format (begins with "-----BEGIN RSA PUBLIC KEY-----").
-			if ( str_starts_with( $public_key, '-----BEGIN RSA PUBLIC KEY-----' ) ) {
-				// Convert PKCS#1 to X.509 format for openssl_verify.
-				$key_resource = \openssl_pkey_get_public( $public_key );
-
-				if ( $key_resource ) {
-					$key_details = \openssl_pkey_get_details( $key_resource );
-					if ( isset( $key_details['key'] ) ) {
-						return $key_details['key']; // This returns the key in X.509 format.
-					}
+			// Try to normalize the key format to X.509 for compatibility with openssl_verify.
+			// This will handle various formats including PKCS#1 and others.
+			$key_resource = \openssl_pkey_get_public( $public_key );
+			
+			if ( $key_resource ) {
+				// If we can load the key, get its details and use the normalized X.509 format.
+				$key_details = \openssl_pkey_get_details( $key_resource );
+				if ( isset( $key_details['key'] ) ) {
+					return $key_details['key']; // This returns the key in X.509 format.
 				}
 			}
 
+			// If we couldn't process the key, return it as-is.
 			return $public_key;
 		}
 

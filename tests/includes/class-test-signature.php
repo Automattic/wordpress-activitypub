@@ -48,6 +48,31 @@ FwIDAQAB
 -----END PUBLIC KEY-----';
 
 	/**
+	 * The public key in EC format.
+	 *
+	 * @var string
+	 */
+	private $ec_key = '-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/jw3kftaHGIB2OTKTYFUTTqyzDs0
+eWKe+6k1Kh6HSrinXriBLbIhMPY9pQsvqkeT6wW975NDn7+8awb8kHRmIg==
+-----END PUBLIC KEY-----';
+
+	/**
+	 * The public key in PKCS#8 format.
+	 *
+	 * @var string
+	 */
+	private $pkcs8_key = '-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAy8dfWmTltr09m49uyESj
+x6UnQ9G/iVq+3dJbUdCdVEPR256UD6DLHE8uM4DgXhtoLVrBcvTAl9h0nRGX4uVN
+5jE+pTh47B9IUim0bVw2sOBNwPCTUuKbMVx3Cso/6UxJsot41q7+FHIxcAurDxfR
+xfJkf+1ecYSb5czoeOG+NUcTEQv1LQntAOJ1ngrmjKyL4UlKZgcs2TfueqlK1v2t
+Gw4ylFOQYRx1Nj5YttQAuXc+VpGfztyRK90R74WkE/N6miOoDHcvc+7AeW4zyWsh
+ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
+4wIDAQAB
+-----END PUBLIC KEY-----';
+
+	/**
 	 * Tear down.
 	 */
 	public function tear_down() {
@@ -221,7 +246,11 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		// X.509 key should remain unchanged.
 		$result = Signature::get_remote_key( 'https://example.com/author/x509' );
-		$this->assertEquals( trim( $this->x509_key ), trim( $result ) );
+		$this->assertStringContainsString( '-----BEGIN PUBLIC KEY-----', $result );
+
+		// Verify the key works with openssl functions.
+		$key_resource = \openssl_pkey_get_public( $result );
+		$this->assertNotFalse( $key_resource );
 
 		// PKCS#1 key should be converted to X.509 format.
 		$result = Signature::get_remote_key( 'https://example.com/author/pkcs1' );
@@ -230,6 +259,29 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		// Verify the converted key works with openssl functions.
 		$key_resource = \openssl_pkey_get_public( $result );
 		$this->assertNotFalse( $key_resource );
+
+		// EC key should be handled correctly.
+		$result = Signature::get_remote_key( 'https://example.com/author/ec' );
+		$this->assertStringContainsString( '-----BEGIN PUBLIC KEY-----', $result );
+
+		// Verify the EC key works with openssl functions.
+		$key_resource = \openssl_pkey_get_public( $result );
+		$this->assertNotFalse( $key_resource );
+
+		// PKCS#8 key should be handled correctly.
+		$result = Signature::get_remote_key( 'https://example.com/author/pkcs8' );
+		$this->assertStringContainsString( '-----BEGIN PUBLIC KEY-----', $result );
+
+		// Verify the PKCS#8 key works with openssl functions.
+		$key_resource = \openssl_pkey_get_public( $result );
+		$this->assertNotFalse( $key_resource );
+
+		// Test with invalid key.
+		$invalid_key = 'INVALID KEY DATA';
+		$result      = Signature::get_remote_key( 'https://example.com/author/invalid' );
+
+		// Invalid key should be returned as is.
+		$this->assertEquals( $invalid_key, $result );
 
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'pre_get_remote_metadata_by_actor' ) );
 	}
@@ -262,6 +314,42 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 					'id'           => 'https://example.com/author#main-key',
 					'owner'        => 'https://example.com/author',
 					'publicKeyPem' => $this->pkcs1_key,
+				),
+			);
+		}
+
+		if ( 'https://example.com/author/ec' === $url ) {
+			return array(
+				'name'      => 'Test Actor',
+				'url'       => 'https://example.com/author/ec',
+				'publicKey' => array(
+					'id'           => 'https://example.com/author#main-key',
+					'owner'        => 'https://example.com/author',
+					'publicKeyPem' => $this->ec_key,
+				),
+			);
+		}
+
+		if ( 'https://example.com/author/pkcs8' === $url ) {
+			return array(
+				'name'      => 'Test Actor',
+				'url'       => 'https://example.com/author/pkcs8',
+				'publicKey' => array(
+					'id'           => 'https://example.com/author#main-key',
+					'owner'        => 'https://example.com/author',
+					'publicKeyPem' => $this->pkcs8_key,
+				),
+			);
+		}
+
+		if ( 'https://example.com/author/invalid' === $url ) {
+			return array(
+				'name'      => 'Test Actor',
+				'url'       => 'https://example.com/author/invalid',
+				'publicKey' => array(
+					'id'           => 'https://example.com/author#main-key',
+					'owner'        => 'https://example.com/author',
+					'publicKeyPem' => 'INVALID KEY DATA',
 				),
 			);
 		}
