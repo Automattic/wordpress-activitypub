@@ -11,7 +11,6 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Http;
 use Activitypub\Signature;
-use WP_Error;
 
 use function Activitypub\is_blog_public;
 use function Activitypub\get_rest_url_by_path;
@@ -104,11 +103,11 @@ class User extends Actor {
 	 *
 	 * @param int $user_id The user ID.
 	 *
-	 * @return WP_Error|User The User object or WP_Error if user not found.
+	 * @return \WP_Error|User The User object or \WP_Error if user not found.
 	 */
 	public static function from_wp_user( $user_id ) {
 		if ( ! user_can_activitypub( $user_id ) ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'activitypub_user_not_found',
 				\__( 'User not found', 'activitypub' ),
 				array( 'status' => 404 )
@@ -389,7 +388,7 @@ class User extends Actor {
 	 * Update the username.
 	 *
 	 * @param string $value The new value.
-	 * @return int|WP_Error The updated user ID or WP_Error on failure.
+	 * @return int|\WP_Error The updated user ID or \WP_Error on failure.
 	 */
 	public function update_name( $value ) {
 		$userdata = array(
