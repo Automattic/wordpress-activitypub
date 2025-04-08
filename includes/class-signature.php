@@ -343,9 +343,26 @@ class Signature {
 				array( 'status' => 401 )
 			);
 		}
+
 		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
-			return \rtrim( $actor['publicKey']['publicKeyPem'] );
+			$public_key = \rtrim( $actor['publicKey']['publicKeyPem'] );
+
+			// Check if the key is in PKCS#1 format (begins with "-----BEGIN RSA PUBLIC KEY-----").
+			if ( str_starts_with( $public_key, '-----BEGIN RSA PUBLIC KEY-----' ) ) {
+				// Convert PKCS#1 to X.509 format for openssl_verify.
+				$key_resource = \openssl_pkey_get_public( $public_key );
+
+				if ( $key_resource ) {
+					$key_details = \openssl_pkey_get_details( $key_resource );
+					if ( isset( $key_details['key'] ) ) {
+						return $key_details['key']; // This returns the key in X.509 format.
+					}
+				}
+			}
+
+			return $public_key;
 		}
+
 		return new WP_Error(
 			'activitypub_no_remote_key_found',
 			__( 'No Public-Key found', 'activitypub' ),
