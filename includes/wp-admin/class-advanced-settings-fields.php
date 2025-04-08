@@ -121,11 +121,11 @@ class Advanced_Settings_Fields {
 		<p>
 			<label>
 				<input type="checkbox" id="activitypub_vary_header" name="activitypub_vary_header" value="1" <?php checked( '1', $value ); ?> />
-				<?php echo \wp_kses( \__( 'Add the <code>Accept</code> Vary header for <code>application/activity+json</code> requests to the ActivityPub response.', 'activitypub' ), array( 'code' => array() ) ); ?>
+				<?php echo \wp_kses( \__( 'Help prevent incorrect caching of ActivityPub responses.', 'activitypub' ), array( 'code' => array() ) ); ?>
 			</label>
 		</p>
 		<p class="description">
-			<?php \esc_html_e( 'This helps caching servers store the ActivityPub response based on different Accept headers. If you&#8217;re experiencing caching issues and seeing JSON responses in your browser, try enabling this option.', 'activitypub' ); ?>
+			<?php \esc_html_e( 'Enable this if you notice your site showing technical content instead of normal web pages, or if your ActivityPub connections seem unreliable. This setting helps your site deliver the right format of content to different services automatically.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}
