@@ -9,7 +9,6 @@ namespace Activitypub\Tests;
 
 use Activitypub\Signature;
 use Activitypub\Collection\Actors;
-use WP_Error;
 
 /**
  * Test class for Signature.
@@ -30,7 +29,8 @@ XmatWd32ln6elRmKG45U9R386j82OHzff8Ju65QxGL1LlyCKQ/XFx/pgvblF3cGj
 shk0dhNcyGAztODN5HFp9Qzf9d7+gi+xdKeGNhXBAulXoaDzx8FvLEXNfPJb3jUM
 1Ug0STFsiICcf7VxmQow6N6d0+HtWxrdtjUBdXrPxz998Ns/cu9jjg06d+XV3TcS
 U+AOldmGLJuB/AWV/+F9c9DlczqmnXqd1QIDAQAB
------END RSA PUBLIC KEY-----';
+-----END RSA PUBLIC KEY-----
+';
 
 	/**
 	 * The public key in X.509 format.
@@ -45,7 +45,8 @@ KQLSb8ZHu9lGh8TJMcLXVUdVkvkUjqHl6I5BoftMVDSKQF+V4X8Qyk7qP7wU8mpE
 +O6RuhUpZ3QXM+dBIalyey8NKLf2yN6CmKyW1220wdNupOYHbc8DSYEq6NDQZfZb
 yP2KLHN3rdNwsnlAP02Ws1qroBivHSV71KLebQUDU2KpDLKQF2Ix6X47IBFOXnb9
 FwIDAQAB
------END PUBLIC KEY-----';
+-----END PUBLIC KEY-----
+';
 
 	/**
 	 * The public key in EC format.
@@ -55,7 +56,8 @@ FwIDAQAB
 	private $ec_key = '-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/jw3kftaHGIB2OTKTYFUTTqyzDs0
 eWKe+6k1Kh6HSrinXriBLbIhMPY9pQsvqkeT6wW975NDn7+8awb8kHRmIg==
------END PUBLIC KEY-----';
+-----END PUBLIC KEY-----
+';
 
 	/**
 	 * The public key in PKCS#8 format.
@@ -70,7 +72,8 @@ xfJkf+1ecYSb5czoeOG+NUcTEQv1LQntAOJ1ngrmjKyL4UlKZgcs2TfueqlK1v2t
 Gw4ylFOQYRx1Nj5YttQAuXc+VpGfztyRK90R74WkE/N6miOoDHcvc+7AeW4zyWsh
 ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 4wIDAQAB
------END PUBLIC KEY-----';
+-----END PUBLIC KEY-----
+';
 
 	/**
 	 * Tear down.
@@ -169,11 +172,11 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 	}
 
 	/**
-	 * Test signature consistancy.
+	 * Test signature consistency.
 	 *
 	 * @covers ::get_keypair_for
 	 */
-	public function test_signature_consistancy() {
+	public function test_signature_consistency() {
 		// Check user.
 		$user = Actors::get_by_id( 1 );
 
@@ -204,7 +207,7 @@ ZfLXCbngI45TVhUr3ljxWs1Ykc8d4Xt3JrtcUzltbc6nWS0vstcUmxTLTRURn3SX
 	 *
 	 * @covers ::get_keypair_for
 	 */
-	public function test_signature_consistancy2() {
+	public function test_signature_consistency2() {
 		$user = Actors::get_by_id( 1 );
 
 		$key_pair    = Signature::get_keypair_for( $user->get__id() );
@@ -246,42 +249,31 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		// X.509 key should remain unchanged.
 		$result = Signature::get_remote_key( 'https://example.com/author/x509' );
-		$this->assertStringContainsString( '-----BEGIN PUBLIC KEY-----', $result );
 
 		// Verify the key works with openssl functions.
-		$key_resource = \openssl_pkey_get_public( $result );
+		$key_resource = \openssl_pkey_get_details( $result );
 		$this->assertNotFalse( $key_resource );
+		$this->assertSame( $this->x509_key, $key_resource['key'] );
 
 		// PKCS#1 key should be converted to X.509 format.
-		$result = Signature::get_remote_key( 'https://example.com/author/pkcs1' );
-		$this->assertSame( $expected, $result );
-
-		// Verify the converted key works with openssl functions.
-		$key_resource = \openssl_pkey_get_public( $result );
+		$result       = Signature::get_remote_key( 'https://example.com/author/pkcs1' );
+		$key_resource = \openssl_pkey_get_details( $result );
 		$this->assertNotFalse( $key_resource );
+		$this->assertSame( $expected, $key_resource['key'] );
 
 		// EC key should be handled correctly.
-		$result = Signature::get_remote_key( 'https://example.com/author/ec' );
-		$this->assertStringContainsString( '-----BEGIN PUBLIC KEY-----', $result );
-
-		// Verify the EC key works with openssl functions.
-		$key_resource = \openssl_pkey_get_public( $result );
+		$result       = Signature::get_remote_key( 'https://example.com/author/ec' );
+		$key_resource = \openssl_pkey_get_details( $result );
 		$this->assertNotFalse( $key_resource );
 
 		// PKCS#8 key should be handled correctly.
-		$result = Signature::get_remote_key( 'https://example.com/author/pkcs8' );
-		$this->assertStringContainsString( '-----BEGIN PUBLIC KEY-----', $result );
-
-		// Verify the PKCS#8 key works with openssl functions.
-		$key_resource = \openssl_pkey_get_public( $result );
+		$result       = Signature::get_remote_key( 'https://example.com/author/pkcs8' );
+		$key_resource = \openssl_pkey_get_details( $result );
 		$this->assertNotFalse( $key_resource );
 
 		// Test with invalid key.
-		$invalid_key = 'INVALID KEY DATA';
-		$result      = Signature::get_remote_key( 'https://example.com/author/invalid' );
-
-		// Invalid key should be returned as is.
-		$this->assertEquals( $invalid_key, $result );
+		$result = Signature::get_remote_key( 'https://example.com/author/invalid' );
+		$this->assertWPError( $result );
 
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'pre_get_remote_metadata_by_actor' ) );
 	}
