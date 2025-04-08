@@ -179,10 +179,30 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_vary_header',
+			array(
+				'type'        => 'boolean',
+				'description' => \__( 'Add the Vary header to the ActivityPub response.', 'activitypub' ),
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_authorized_fetch',
 			array(
 				'type'        => 'boolean',
 				'description' => \__( 'Require HTTP signature authentication.', 'activitypub' ),
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_shared_inbox',
+			array(
+				'type'        => 'boolean',
+				'description' => \__( 'Enable the shared inbox.', 'activitypub' ),
 				'default'     => false,
 			)
 		);

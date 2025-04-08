@@ -39,6 +39,17 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_outbox_purge_days' )
 		);
 
+		if ( ! defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
+			\add_settings_field(
+				'activitypub_vary_header',
+				\__( 'Vary Header', 'activitypub' ),
+				array( self::class, 'render_vary_header_field' ),
+				'activitypub_advanced_settings',
+				'activitypub_advanced_settings',
+				array( 'label_for' => 'activitypub_vary_header' )
+			);
+		}
+
 		if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
 			\add_settings_field(
 				'activitypub_authorized_fetch',
@@ -47,6 +58,17 @@ class Advanced_Settings_Fields {
 				'activitypub_advanced_settings',
 				'activitypub_advanced_settings',
 				array( 'label_for' => 'activitypub_authorized_fetch' )
+			);
+		}
+
+		if ( ! defined( 'ACTIVITYPUB_SHARED_INBOX_FEATURE' ) ) {
+			\add_settings_field(
+				'activitypub_shared_inbox',
+				\__( 'Shared Inbox (beta)', 'activitypub' ),
+				array( self::class, 'render_shared_inbox_field' ),
+				'activitypub_advanced_settings',
+				'activitypub_advanced_settings',
+				array( 'label_for' => 'activitypub_shared_inbox' )
 			);
 		}
 	}
@@ -91,6 +113,24 @@ class Advanced_Settings_Fields {
 	}
 
 	/**
+	 * Render vary header field.
+	 */
+	public static function render_vary_header_field() {
+		$value = \get_option( 'activitypub_vary_header', '0' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_vary_header" name="activitypub_vary_header" value="1" <?php checked( '1', $value ); ?> />
+				<?php echo \wp_kses( \__( 'Help prevent incorrect caching of ActivityPub responses.', 'activitypub' ), array( 'code' => array() ) ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( 'Enable this if you notice your site showing technical content instead of normal web pages, or if your ActivityPub connections seem unreliable. This setting helps your site deliver the right format of content to different services automatically.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
 	 * Render use Authorized Fetch field.
 	 */
 	public static function render_authorized_fetch_field() {
@@ -107,6 +147,24 @@ class Advanced_Settings_Fields {
 		</p>
 		<p class="description">
 			<?php \esc_html_e( '⚠ Secure mode does not hide the HTML representations of public posts and profiles. While HTML is a less consistent format (that potentially changes often) compared to first-class ActivityPub representations or the REST API, it still poses a potential risk for content scraping.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render shared inbox field.
+	 */
+	public static function render_shared_inbox_field() {
+		$value = \get_option( 'activitypub_shared_inbox', '0' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_shared_inbox" name="activitypub_shared_inbox" value="1" <?php checked( '1', $value ); ?> />
+				<?php \esc_html_e( 'Use a shared inbox for incoming messages.', 'activitypub' ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( 'Allows your site to handle incoming ActivityPub messages more efficiently, especially helpful for busy or multi-user sites. This feature is still in beta and may encounter issues.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}

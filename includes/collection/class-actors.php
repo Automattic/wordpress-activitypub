@@ -46,7 +46,7 @@ class Actors {
 	 * @return User|Blog|Application|WP_Error The Actor or WP_Error if user not found.
 	 */
 	public static function get_by_id( $user_id ) {
-		if ( is_string( $user_id ) || is_numeric( $user_id ) ) {
+		if ( is_numeric( $user_id ) ) {
 			$user_id = (int) $user_id;
 		}
 
