@@ -51,6 +51,7 @@ class Activitypub {
 		\add_action( 'added_post_meta', array( self::class, 'updated_postmeta' ), 10, 4 );
 		\add_filter( 'pre_option_activitypub_actor_mode', array( self::class, 'pre_option_activitypub_actor_mode' ) );
 		\add_filter( 'pre_option_activitypub_authorized_fetch', array( self::class, 'pre_option_activitypub_authorized_fetch' ) );
+		\add_filter( 'pre_option_activitypub_shared_inbox', array( self::class, 'pre_option_activitypub_shared_inbox' ) );
 
 		\add_action( 'init', array( self::class, 'register_user_meta' ), 11 );
 
@@ -121,6 +122,7 @@ class Activitypub {
 		delete_option( 'activitypub_migration_lock' );
 		delete_option( 'activitypub_object_type' );
 		delete_option( 'activitypub_outbox_purge_days' );
+		delete_option( 'activitypub_shared_inbox' );
 		delete_option( 'activitypub_support_post_types' );
 		delete_option( 'activitypub_use_hashtags' );
 		delete_option( 'activitypub_use_opengraph' );
@@ -435,6 +437,26 @@ class Activitypub {
 
 		return '0';
 	}
+
+	/**
+	 * Pre-get option filter for the Shared Inbox.
+	 *
+	 * @param string $pre The pre-get option value.
+	 *
+	 * @return string If the constant is defined, return the value, otherwise return the pre-get option value.
+	 */
+	public static function pre_option_activitypub_shared_inbox( $pre ) {
+		if ( ! \defined( 'ACTIVITYPUB_SHARED_INBOX_FEATURE' ) ) {
+			return $pre;
+		}
+
+		if ( ACTIVITYPUB_SHARED_INBOX_FEATURE ) {
+			return '1';
+		}
+
+		return '0';
+	}
+
 
 	/**
 	 * Store permalink in meta, to send delete Activity.

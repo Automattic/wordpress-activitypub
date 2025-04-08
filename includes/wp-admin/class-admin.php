@@ -66,16 +66,6 @@ class Admin {
 	 * Display admin menu notices about configuration problems or conflicts.
 	 */
 	public static function admin_notices() {
-		$permalink_structure = \get_option( 'permalink_structure' );
-		if ( empty( $permalink_structure ) ) {
-			$admin_notice = sprintf(
-				/* translators: %s: Permalink settings URL. */
-				\__( 'ActivityPub needs SEO-friendly URLs to work properly. Please <a href="%s">update your permalink structure</a> to an option other than Plain.', 'activitypub' ),
-				esc_url( admin_url( 'options-permalink.php' ) )
-			);
-			self::show_admin_notice( $admin_notice, 'error' );
-		}
-
 		$current_screen = get_current_screen();
 		if ( ! $current_screen ) {
 			return;

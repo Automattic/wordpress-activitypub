@@ -419,7 +419,7 @@ class Blog extends Actor {
 	public function get_endpoints() {
 		$endpoints = null;
 
-		if ( ACTIVITYPUB_SHARED_INBOX_FEATURE ) {
+		if ( \get_option( 'activitypub_shared_inbox' ) ) {
 			$endpoints = array(
 				'sharedInbox' => get_rest_url_by_path( 'inbox' ),
 			);
