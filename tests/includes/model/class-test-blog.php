@@ -54,7 +54,7 @@ class Test_Blog extends \WP_UnitTestCase {
 		// New domain is set.
 		$this->assertSame( 'http://newdomain.com/?author=0', ( new Blog() )->get_id() );
 
-		// Set up the old domain.
+		// Set up the old host.
 		$_SERVER['HTTP_HOST'] = \wp_parse_url( $old_domain, PHP_URL_HOST );
 
 		// Blog now returns old blog actor.
@@ -64,8 +64,8 @@ class Test_Blog extends \WP_UnitTestCase {
 		\remove_action( 'activitypub_construct_model_actor', array( Move::class, 'maybe_initiate_old_user' ) );
 
 		// Clean up.
-		\delete_option( 'activitypub_old_domain' );
-		\delete_option( 'activitypub_blog_user_old_domain_data' );
+		\delete_option( 'activitypub_old_host' );
+		\delete_option( 'activitypub_blog_user_old_host_data' );
 		\update_option( 'home', $old_domain );
 		\add_filter( 'option_home', '_config_wp_home' );
 	}

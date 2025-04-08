@@ -217,15 +217,15 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertSame( $outbox_item->target, $result['actor'] );
 		$this->assertStringStartsWith( $new_domain, $outbox_item->target );
 
-		// Verify the old domain was stored.
-		$this->assertEquals( 'example.org', \get_option( 'activitypub_old_domain' ) );
+		// Verify the old host was stored.
+		$this->assertEquals( 'example.org', \get_option( 'activitypub_old_host' ) );
 
 		// Clean up.
-		\delete_option( 'activitypub_old_domain' );
-		\delete_option( 'activitypub_blog_user_old_domain_data' );
+		\delete_option( 'activitypub_old_host' );
+		\delete_option( 'activitypub_blog_user_old_host_data' );
 		\delete_option( 'activitypub_actor_mode' );
 		\update_option( 'home', $old_domain );
 		\add_filter( 'option_home', '_config_wp_home' );
-		\delete_user_option( self::$user_id, 'activitypub_old_domain_data' );
+		\delete_user_option( self::$user_id, 'activitypub_old_host_data' );
 	}
 }

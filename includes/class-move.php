@@ -35,7 +35,7 @@ class Move {
 			// Add the filter to change the domain.
 			\add_filter( 'update_option_home', array( self::class, 'change_domain' ), 10, 2 );
 
-			if ( get_option( 'activitypub_old_domain' ) ) {
+			if ( get_option( 'activitypub_old_host' ) ) {
 				\add_action( 'activitypub_construct_model_actor', array( self::class, 'maybe_initiate_old_user' ) );
 				\add_action( 'activitypub_pre_send_to_inboxes', array( self::class, 'pre_send_to_inboxes' ) );
 
@@ -195,7 +195,7 @@ class Move {
 	 * Change domain for all ActivityPub Actors.
 	 *
 	 * This method handles domain migration according to the ActivityPub Data Portability spec.
-	 * It stores the old domain and calls Move::internally for each available profile.
+	 * It stores the old host and calls Move::internally for each available profile.
 	 * It also caches the JSON representation of the old Actor for future lookups.
 	 *
 	 * @param string $from The old domain.
@@ -219,14 +219,14 @@ class Move {
 		$to_host   = \wp_parse_url( $to, \PHP_URL_HOST );
 		$from_host = \wp_parse_url( $from, \PHP_URL_HOST );
 
-		// Store the old domain for future reference.
-		\update_option( 'activitypub_old_domain', $from_host );
+		// Store the old host for future reference.
+		\update_option( 'activitypub_old_host', $from_host );
 
 		// Process each actor.
 		foreach ( $actors as $actor ) {
 			$actor_id = $actor->get_id();
 
-			// Replace the old domain with the new domain in the actor ID.
+			// Replace the new host with the old host in the actor ID.
 			$old_actor_id = str_replace( $to_host, $from_host, $actor_id );
 
 			// Call Move::internally for this actor.
@@ -242,9 +242,9 @@ class Move {
 
 			// Save the current actor data after migration.
 			if ( $actor instanceof Blog ) {
-				\update_option( 'activitypub_blog_user_old_domain_data', $json, false );
+				\update_option( 'activitypub_blog_user_old_host_data', $json, false );
 			} else {
-				\update_user_option( $actor->get__id(), 'activitypub_old_domain_data', $json, false );
+				\update_user_option( $actor->get__id(), 'activitypub_old_host_data', $json, false );
 			}
 
 			$results[] = array(
@@ -259,7 +259,7 @@ class Move {
 	/**
 	 * Maybe initiate old user.
 	 *
-	 * This method checks if the current request domain matches the old domain.
+	 * This method checks if the current request domain matches the old host.
 	 * If it does, it retrieves the cached data for the user and populates the instance.
 	 *
 	 * @param Blog|User $instance The Blog or User instance to populate.
@@ -270,9 +270,9 @@ class Move {
 		}
 
 		if ( $instance instanceof Blog ) {
-			$cached_data = \get_option( 'activitypub_blog_user_old_domain_data' );
+			$cached_data = \get_option( 'activitypub_blog_user_old_host_data' );
 		} elseif ( $instance instanceof User ) {
-			$cached_data = \get_user_option( 'activitypub_old_domain_data', $instance->get__id() );
+			$cached_data = \get_user_option( 'activitypub_old_host_data', $instance->get__id() );
 		}
 
 		if ( ! empty( $cached_data ) ) {
@@ -296,7 +296,7 @@ class Move {
 			return;
 		}
 
-		Query::get_instance()->set_old_domain_request();
+		Query::get_instance()->set_old_host_request();
 	}
 
 	/**
@@ -308,10 +308,10 @@ class Move {
 	 * @return Blog|null The old blog instance or null.
 	 */
 	public static function old_blog_username( $pre, $username ) {
-		$old_domain = \get_option( 'activitypub_old_domain' );
+		$old_host = \get_option( 'activitypub_old_host' );
 
-		// Special case for Blog Actor on old domain.
-		if ( $old_domain === $username && Query::get_instance()->is_old_host_request() ) {
+		// Special case for Blog Actor on old host.
+		if ( $old_host === $username && Query::get_instance()->is_old_host_request() ) {
 			// Return a new Blog instance which will load the cached data in its constructor.
 			$pre = new Blog();
 		}

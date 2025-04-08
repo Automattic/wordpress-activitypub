@@ -49,7 +49,7 @@ class Query {
 	private $is_activitypub_request;
 
 	/**
-	 * Whether the current request is from the old domain.
+	 * Whether the current request is from the old host.
 	 *
 	 * @var bool
 	 */
@@ -314,16 +314,16 @@ class Query {
 	}
 
 	/**
-	 * Check if the current request is from the old domain.
+	 * Check if the current request is from the old host.
 	 *
-	 * @return bool True if the request is from the old domain, false otherwise.
+	 * @return bool True if the request is from the old host, false otherwise.
 	 */
 	public function is_old_host_request() {
 		if ( isset( $this->is_old_host_request ) ) {
 			return $this->is_old_host_request;
 		}
 
-		$old_host = \get_option( 'activitypub_old_domain' );
+		$old_host = \get_option( 'activitypub_old_host' );
 
 		if ( ! $old_host ) {
 			$this->is_old_host_request = false;
@@ -341,11 +341,11 @@ class Query {
 	}
 
 	/**
-	 * Fake an old domain request.
+	 * Fake an old host request.
 	 *
 	 * @param bool $state Optional. The state to set. Default true.
 	 */
-	public function set_old_domain_request( $state = true ) {
+	public function set_old_host_request( $state = true ) {
 		$this->is_old_host_request = $state;
 	}
 }
