@@ -248,9 +248,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'pre_get_remote_metadata_by_actor' ), 10, 2 );
 
 		// X.509 key should remain unchanged.
-		$result = Signature::get_remote_key( 'https://example.com/author/x509' );
-
-		// Verify the key works with openssl functions.
+		$result       = Signature::get_remote_key( 'https://example.com/author/x509' );
 		$key_resource = \openssl_pkey_get_details( $result );
 		$this->assertNotFalse( $key_resource );
 		$this->assertSame( $this->x509_key, $key_resource['key'] );
