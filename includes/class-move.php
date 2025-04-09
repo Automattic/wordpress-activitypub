@@ -40,7 +40,7 @@ class Move {
 				\add_action( 'activitypub_pre_send_to_inboxes', array( self::class, 'pre_send_to_inboxes' ) );
 
 				if ( ! is_user_type_disabled( 'blog' ) ) {
-					add_filter( 'activitypub_pre_get_by_username', array( self::class, 'old_blog_username' ), 10, 2 );
+					\add_filter( 'activitypub_pre_get_by_username', array( self::class, 'old_blog_username' ), 10, 2 );
 				}
 			}
 		}
