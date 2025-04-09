@@ -320,6 +320,43 @@ class Actors {
 	}
 
 	/**
+	 * Get all active Actors including the Blog Actor.
+	 *
+	 * @return array The actor collection.
+	 */
+	public static function get_all() {
+		$return = array();
+
+		if ( ! is_user_type_disabled( 'user' ) ) {
+			$users = \get_users(
+				array(
+					'capability__in' => array( 'activitypub' ),
+				)
+			);
+
+			foreach ( $users as $user ) {
+				$actor = User::from_wp_user( $user->ID );
+
+				if ( \is_wp_error( $actor ) ) {
+					continue;
+				}
+
+				$return[] = $actor;
+			}
+		}
+
+		// Also include the blog actor if active.
+		if ( ! is_user_type_disabled( 'blog' ) ) {
+			$blog_actor = self::get_by_id( self::BLOG_USER_ID );
+			if ( ! \is_wp_error( $blog_actor ) ) {
+				$return[] = $blog_actor;
+			}
+		}
+
+		return $return;
+	}
+
+	/**
 	 * Returns the actor type based on the user ID.
 	 *
 	 * @param int $user_id The user ID to check.

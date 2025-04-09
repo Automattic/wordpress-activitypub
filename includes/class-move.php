@@ -205,15 +205,7 @@ class Move {
 	 */
 	public static function change_domain( $from, $to ) {
 		// Get all actors that need to be migrated.
-		$actors = Actors::get_collection();
-
-		// Also include the blog actor if active.
-		if ( ! is_user_type_disabled( 'blog' ) ) {
-			$blog_actor = Actors::get_by_id( Actors::BLOG_USER_ID );
-			if ( ! \is_wp_error( $blog_actor ) ) {
-				$actors[] = $blog_actor;
-			}
-		}
+		$actors = Actors::get_all();
 
 		$results   = array();
 		$to_host   = \wp_parse_url( $to, \PHP_URL_HOST );
