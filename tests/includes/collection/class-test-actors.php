@@ -128,6 +128,32 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_collection.
+	 *
+	 * @covers ::get_collection
+	 */
+	public function test_get_collection() {
+		$users = Actors::get_collection();
+
+		foreach ( $users as $user ) {
+			$this->assertInstanceOf( 'Activitypub\Model\User', $user );
+		}
+
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		$all = Actors::get_collection( 'all' );
+
+		$blog = array_filter(
+			$all,
+			function ( $item ) {
+				return $item instanceof \Activitypub\Model\Blog;
+			}
+		);
+		$this->assertSame( 1, count( $blog ) );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
 	 * Test get_type_by_id()
 	 *
 	 * @covers ::get_type_by_id

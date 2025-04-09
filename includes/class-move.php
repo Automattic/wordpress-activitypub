@@ -205,7 +205,7 @@ class Move {
 	 */
 	public static function change_domain( $from, $to ) {
 		// Get all actors that need to be migrated.
-		$actors = Actors::get_all();
+		$actors = Actors::get_collection( 'all' );
 
 		$results   = array();
 		$to_host   = \wp_parse_url( $to, \PHP_URL_HOST );

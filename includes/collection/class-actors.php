@@ -291,29 +291,35 @@ class Actors {
 	/**
 	 * Get the Actor collection.
 	 *
+	 * @param string $type Optional. The type of Actor to get. Can be 'user' or 'all'. Default is 'user'.
 	 * @return array The Actor collection.
 	 */
-	public static function get_collection() {
-		if ( is_user_type_disabled( 'user' ) ) {
-			return array();
-		}
-
-		$users = \get_users(
-			array(
-				'capability__in' => array( 'activitypub' ),
-			)
-		);
-
+	public static function get_collection( $type = 'user' ) {
 		$return = array();
 
-		foreach ( $users as $user ) {
-			$actor = User::from_wp_user( $user->ID );
+		if ( ! is_user_type_disabled( 'user' ) ) {
+			$user_ids = \get_users(
+				array(
+					'capability__in' => array( 'activitypub' ),
+					'fields'         => 'ID',
+				)
+			);
 
-			if ( \is_wp_error( $actor ) ) {
-				continue;
+			foreach ( $user_ids as $user_id ) {
+				$actor = User::from_wp_user( $user_id );
+
+				if ( ! \is_wp_error( $actor ) ) {
+					$return[] = $actor;
+				}
 			}
+		}
 
-			$return[] = $actor;
+		// Also include the blog actor if requested.
+		if ( 'all' === $type && ! is_user_type_disabled( 'blog' ) ) {
+			$blog_actor = self::get_by_id( self::BLOG_USER_ID );
+			if ( ! \is_wp_error( $blog_actor ) ) {
+				$return[] = $blog_actor;
+			}
 		}
 
 		return $return;

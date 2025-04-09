@@ -68,11 +68,13 @@ class Users extends Actors {
 	/**
 	 * Get the User collection.
 	 *
+	 * @param string $type Optional. The type of Actor to get. Can be 'user' or 'all'. Default is 'user'.
+	 *
 	 * @return array The User collection.
 	 */
-	public static function get_collection() {
+	public static function get_collection( $type = 'user' ) {
 		_deprecated_function( __METHOD__, '4.2.0', 'Activitypub\Collection\Actors::get_collection' );
 
-		return parent::get_collection();
+		return parent::get_collection( $type );
 	}
 }
