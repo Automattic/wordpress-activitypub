@@ -233,6 +233,10 @@ class Activity extends Base_Object {
 			$this->set( 'actor', $object->get_attributed_to() );
 		}
 
+		if ( $this->get_type() !== 'Announce' && $object->get_in_reply_to() && ! $this->get_in_reply_to() ) {
+			$this->set( 'in_reply_to', $object->get_in_reply_to() );
+		}
+
 		if ( $object->get_id() && ! $this->get_id() ) {
 			$id = strtok( $object->get_id(), '#' );
 			if ( $object->get_updated() ) {
