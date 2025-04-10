@@ -828,7 +828,7 @@ class Comment {
 			return;
 		}
 
-		// get activity from comment meta
+		// Get activity from comment meta.
 		$activity = \get_comment_meta( $comment->comment_ID, '_activitypub_activity', true );
 
 		if ( ! $activity ) {
