@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Ensure that an `Activity` has an `Actor` before adding it to the Outbox.
