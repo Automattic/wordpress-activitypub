@@ -270,8 +270,9 @@ class Interactions {
 			'comment_type'         => 'comment',
 			'comment_author_email' => $webfinger,
 			'comment_meta'         => array(
-				'source_id' => \esc_url_raw( object_to_uri( $activity['object'] ) ),
-				'protocol'  => 'activitypub',
+				'source_id'             => \esc_url_raw( object_to_uri( $activity['object'] ) ),
+				'protocol'              => 'activitypub',
+				'_activitypub_activity' => $activity,
 			),
 		);
 
