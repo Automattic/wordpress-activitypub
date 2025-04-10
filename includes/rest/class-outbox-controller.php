@@ -99,9 +99,9 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function get_items( $request ) {
-		$user_id = $request->get_param( 'user_id' );
 		$page    = $request->get_param( 'page' ) ?? 1;
-		$user    = Actors::get_by_various( $user_id );
+		$user    = Actors::get_by_various( $request->get_param( 'user_id' ) );
+		$user_id = $user->get__id();
 
 		/**
 		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
