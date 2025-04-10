@@ -217,6 +217,9 @@ class Outbox {
 
 		if ( $activity_object['type'] === $type ) {
 			$activity = Activity::init_from_array( $activity_object );
+			if ( ! $activity->get_actor() ) {
+				$activity->set_actor( $actor->get_id() );
+			}
 		} else {
 			$activity = new Activity();
 			$activity->set_type( $type );
