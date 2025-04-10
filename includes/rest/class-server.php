@@ -35,6 +35,8 @@ class Server {
 	public static function add_hooks() {
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_requests' ), 9, 3 );
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
+
+		\add_filter( 'rest_pre_serve_request', array( self::class, 'filter_output' ), 10, 4 );
 	}
 
 	/**
@@ -169,5 +171,23 @@ class Server {
 			'URL',
 			'defaults',
 		);
+	}
+
+	/**
+	 * Filter the output before it is sent to the client.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md
+	 *
+	 * @param bool $served Whether the request has already been served.
+	 * @param WP_HTTP_Response $response The response data.
+	 * @param WP_REST_Request $request The request used to generate the response.
+	 * @param WP_REST_Server $server The response used to generate the response.
+	 *
+	 * @return WP_HTTP_Response The response.
+	 */
+	public static function filter_output( $served, $response, $request, $server ) {
+		// @todo reformat to use the error formatting of FEP-c180 https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md
+
+		return $response;
 	}
 }
