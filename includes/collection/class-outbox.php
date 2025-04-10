@@ -36,6 +36,10 @@ class Outbox {
 		$object_id  = self::get_object_id( $activity );
 		$title      = self::get_object_title( $activity->get_object() );
 
+		if ( ! $activity->get_actor() ) {
+			$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
+		}
+
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
 			'post_title'   => sprintf(
