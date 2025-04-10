@@ -7,10 +7,10 @@
 
 namespace Activitypub\Model;
 
-use WP_Error;
-use Activitypub\Signature;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Http;
+use Activitypub\Signature;
 
 use function Activitypub\is_blog_public;
 use function Activitypub\get_rest_url_by_path;
@@ -72,6 +72,24 @@ class User extends Actor {
 	protected $webfinger;
 
 	/**
+	 * Constructor.
+	 *
+	 * @param int $user_id Optional. The WordPress user ID. Default null.
+	 */
+	public function __construct( $user_id = null ) {
+		if ( $user_id ) {
+			$this->_id = $user_id;
+
+			/**
+			 * Fires when a model actor is constructed.
+			 *
+			 * @param User $this The User object.
+			 */
+			\do_action( 'activitypub_construct_model_actor', $this );
+		}
+	}
+
+	/**
 	 * The type of the object.
 	 *
 	 * @return string The type of the object.
@@ -85,21 +103,18 @@ class User extends Actor {
 	 *
 	 * @param int $user_id The user ID.
 	 *
-	 * @return WP_Error|User The User object or WP_Error if user not found.
+	 * @return \WP_Error|User The User object or \WP_Error if user not found.
 	 */
 	public static function from_wp_user( $user_id ) {
 		if ( ! user_can_activitypub( $user_id ) ) {
-			return new WP_Error(
+			return new \WP_Error(
 				'activitypub_user_not_found',
 				\__( 'User not found', 'activitypub' ),
 				array( 'status' => 404 )
 			);
 		}
 
-		$object      = new static();
-		$object->_id = $user_id;
-
-		return $object;
+		return new static( $user_id );
 	}
 
 	/**
@@ -108,6 +123,12 @@ class User extends Actor {
 	 * @return string The user ID.
 	 */
 	public function get_id() {
+		$id = parent::get_id();
+
+		if ( $id ) {
+			return $id;
+		}
+
 		$permalink = \get_user_option( 'activitypub_use_permalink_as_id', $this->_id );
 
 		if ( '1' === $permalink ) {
@@ -367,7 +388,7 @@ class User extends Actor {
 	 * Update the username.
 	 *
 	 * @param string $value The new value.
-	 * @return int|WP_Error The updated user ID or WP_Error on failure.
+	 * @return int|\WP_Error The updated user ID or \WP_Error on failure.
 	 */
 	public function update_name( $value ) {
 		$userdata = array(
@@ -446,7 +467,8 @@ class User extends Actor {
 	 * @return string The movedTo.
 	 */
 	public function get_moved_to() {
-		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
-		return \get_user_option( 'activitypub_moved_to', $this->_id ) ?: null;
+		$moved_to = \get_user_option( 'activitypub_moved_to', $this->_id );
+
+		return $moved_to && $moved_to !== $this->get_id() ? $moved_to : null;
 	}
 }

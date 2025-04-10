@@ -8,12 +8,13 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Model\User;
+use Activitypub\Model\Blog;
+use Activitypub\Move;
 
 /**
  * Test class for Activitypub Move.
  *
- * @coversDefaultClass \Activitypub\Move
+ * @coversDefaultClass Move
  */
 class Test_Move extends \WP_UnitTestCase {
 
@@ -40,7 +41,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = Actors::get_by_id( self::$user_id )->get_id();
 		$to   = 'https://newsite.com/user/1';
 
-		\Activitypub\Move::externally( $from, $to );
+		Move::externally( $from, $to );
 
 		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
 		$this->assertEquals( $to, $moved_to );
@@ -55,7 +56,7 @@ class Test_Move extends \WP_UnitTestCase {
 	 * @covers ::account
 	 */
 	public function test_account_with_invalid_user() {
-		$result = \Activitypub\Move::externally(
+		$result = Move::externally(
 			'https://example.com/nonexistent/user',
 			'https://newsite.com/user/999'
 		);
@@ -78,7 +79,7 @@ class Test_Move extends \WP_UnitTestCase {
 		};
 		\add_filter( 'pre_http_request', $filter );
 
-		$result = \Activitypub\Move::externally( $from, $to );
+		$result = Move::externally( $from, $to );
 
 		$this->assertWPError( $result );
 		$this->assertEquals( 'http_request_failed', $result->get_error_code() );
@@ -105,7 +106,7 @@ class Test_Move extends \WP_UnitTestCase {
 		};
 		\add_filter( 'pre_http_request', $filter );
 
-		\Activitypub\Move::externally( $from, $to );
+		Move::externally( $from, $to );
 
 		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
 		$this->assertEquals( $to, $moved_to );
@@ -125,7 +126,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 		$to   = 'https://newsite.com/user/0';
 
-		\Activitypub\Move::externally( $from, $to );
+		Move::externally( $from, $to );
 
 		$moved_to = Actors::get_by_id( Actors::BLOG_USER_ID )->get_moved_to();
 		$this->assertEquals( $to, $moved_to );
@@ -142,13 +143,14 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = get_author_posts_url( self::$user_id );
 		$to   = Actors::get_by_id( self::$user_id )->get_id();
 
-		\Activitypub\Move::internally( $from, $to );
+		Move::internally( $from, $to );
 
 		// Clear cache.
 		wp_cache_delete( self::$user_id, 'users' );
 
+		// Updated user should not have moved_to set.
 		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
-		$this->assertEquals( $to, $moved_to );
+		$this->assertNull( $moved_to );
 
 		$also_known_as = Actors::get_by_id( self::$user_id )->get_also_known_as();
 		$this->assertContains( $from, $also_known_as );
@@ -164,7 +166,7 @@ class Test_Move extends \WP_UnitTestCase {
 		$to   = Actors::get_by_id( self::$user_id )->get_id();
 
 		// Call the method and get the outbox item ID.
-		$outbox_id = \Activitypub\Move::internally( $from, $to );
+		$outbox_id = Move::internally( $from, $to );
 
 		// Verify we got a valid outbox ID.
 		$this->assertIsInt( $outbox_id );
@@ -186,5 +188,44 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertEquals( $from, $activity->actor );
 		$this->assertEquals( $from, $activity->origin );
 		$this->assertEquals( $to, $activity->target );
+	}
+
+	/**
+	 * Test the change_domain() method with valid input.
+	 *
+	 * @covers ::change_domain
+	 */
+	public function test_change_domain_with_valid_input() {
+		// Enable blog actor.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$old_domain = home_url();
+		$new_domain = 'http://newdomain.com';
+		\remove_filter( 'option_home', '_config_wp_home' );
+		\update_option( 'home', $new_domain );
+
+		// Run the domain change.
+		$results = Move::change_domain( $old_domain, $new_domain );
+
+		// Verify the results.
+		$this->assertIsArray( $results );
+
+		// Check that each result has the expected structure.
+		$result      = reset( $results );
+		$outbox_item = json_decode( get_post_field( 'post_content', $result['result'] ) );
+
+		$this->assertSame( $outbox_item->target, $result['actor'] );
+		$this->assertStringStartsWith( $new_domain, $outbox_item->target );
+
+		// Verify the old host was stored.
+		$this->assertEquals( 'example.org', \get_option( 'activitypub_old_host' ) );
+
+		// Clean up.
+		\delete_option( 'activitypub_old_host' );
+		\delete_option( 'activitypub_blog_user_old_host_data' );
+		\delete_option( 'activitypub_actor_mode' );
+		\update_option( 'home', $old_domain );
+		\add_filter( 'option_home', '_config_wp_home' );
+		\delete_user_option( self::$user_id, 'activitypub_old_host_data' );
 	}
 }

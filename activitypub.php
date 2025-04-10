@@ -67,16 +67,18 @@ function rest_init() {
  * Initialize plugin.
  */
 function plugin_init() {
-	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Link', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Mailer', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ), 1 );
+	\add_action( 'init', array( __NAMESPACE__ . '\Move', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Options', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
@@ -107,7 +109,7 @@ function plugin_admin_init() {
 
 	if ( defined( 'WP_LOAD_IMPORTERS' ) && WP_LOAD_IMPORTERS ) {
 		require_once __DIR__ . '/includes/wp-admin/import/load.php';
-		\add_action( 'init', __NAMESPACE__ . '\WP_Admin\Import\load' );
+		\add_action( 'admin_init', __NAMESPACE__ . '\WP_Admin\Import\load' );
 	}
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_admin_init' );

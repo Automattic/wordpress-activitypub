@@ -39,6 +39,17 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_outbox_purge_days' )
 		);
 
+		if ( ! defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
+			\add_settings_field(
+				'activitypub_vary_header',
+				\__( 'Vary Header', 'activitypub' ),
+				array( self::class, 'render_vary_header_field' ),
+				'activitypub_advanced_settings',
+				'activitypub_advanced_settings',
+				array( 'label_for' => 'activitypub_vary_header' )
+			);
+		}
+
 		if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
 			\add_settings_field(
 				'activitypub_authorized_fetch',
@@ -99,6 +110,24 @@ class Advanced_Settings_Fields {
 				'code' => array(),
 			)
 		) . '</p>';
+	}
+
+	/**
+	 * Render vary header field.
+	 */
+	public static function render_vary_header_field() {
+		$value = \get_option( 'activitypub_vary_header', '0' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_vary_header" name="activitypub_vary_header" value="1" <?php checked( '1', $value ); ?> />
+				<?php echo \wp_kses( \__( 'Help prevent incorrect caching of ActivityPub responses.', 'activitypub' ), array( 'code' => array() ) ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( 'Enable this if you notice your site showing technical content instead of normal web pages, or if your ActivityPub connections seem unreliable. This setting helps your site deliver the right format of content to different services automatically.', 'activitypub' ); ?>
+		</p>
+		<?php
 	}
 
 	/**

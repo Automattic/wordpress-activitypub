@@ -10,6 +10,8 @@ namespace Activitypub;
 use Activitypub\Activity\Actor;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
+use Activitypub\Model\Blog;
+use Activitypub\Model\User;
 
 /**
  * ActivityPub (Account) Move Class
@@ -17,6 +19,33 @@ use Activitypub\Collection\Actors;
  * @author Matthias Pfefferle
  */
 class Move {
+
+	/**
+	 * Initialize the Move class.
+	 */
+	public static function init() {
+		/**
+		 * Filter to enable automatically moving Fediverse accounts when the domain changes.
+		 *
+		 * @param bool $domain_moves_enabled Whether domain moves are enabled.
+		 */
+		$domain_moves_enabled = apply_filters( 'activitypub_enable_primary_domain_moves', false );
+
+		if ( $domain_moves_enabled ) {
+			// Add the filter to change the domain.
+			\add_filter( 'update_option_home', array( self::class, 'change_domain' ), 10, 2 );
+
+			if ( get_option( 'activitypub_old_host' ) ) {
+				\add_action( 'activitypub_construct_model_actor', array( self::class, 'maybe_initiate_old_user' ) );
+				\add_action( 'activitypub_pre_send_to_inboxes', array( self::class, 'pre_send_to_inboxes' ) );
+
+				if ( ! is_user_type_disabled( 'blog' ) ) {
+					\add_filter( 'activitypub_pre_get_by_username', array( self::class, 'old_blog_username' ), 10, 2 );
+				}
+			}
+		}
+	}
+
 	/**
 	 * Move an ActivityPub account from one location to another.
 	 *
@@ -160,5 +189,125 @@ class Move {
 		$also_known_as[] = $from;
 
 		\update_option( 'activitypub_blog_user_also_known_as', $also_known_as );
+	}
+
+	/**
+	 * Change domain for all ActivityPub Actors.
+	 *
+	 * This method handles domain migration according to the ActivityPub Data Portability spec.
+	 * It stores the old host and calls Move::internally for each available profile.
+	 * It also caches the JSON representation of the old Actor for future lookups.
+	 *
+	 * @param string $from The old domain.
+	 * @param string $to   The new domain.
+	 *
+	 * @return array Array of results from Move::internally calls.
+	 */
+	public static function change_domain( $from, $to ) {
+		// Get all actors that need to be migrated.
+		$actors = Actors::get_all();
+
+		$results   = array();
+		$to_host   = \wp_parse_url( $to, \PHP_URL_HOST );
+		$from_host = \wp_parse_url( $from, \PHP_URL_HOST );
+
+		// Store the old host for future reference.
+		\update_option( 'activitypub_old_host', $from_host );
+
+		// Process each actor.
+		foreach ( $actors as $actor ) {
+			$actor_id = $actor->get_id();
+
+			// Replace the new host with the old host in the actor ID.
+			$old_actor_id = str_replace( $to_host, $from_host, $actor_id );
+
+			// Call Move::internally for this actor.
+			$result = self::internally( $old_actor_id, $actor_id );
+
+			if ( \is_wp_error( $result ) ) {
+				// Log the error and continue with the next actor.
+				Debug::write_log( 'Error moving actor: ' . $actor_id . ' - ' . $result->get_error_message() );
+				continue;
+			}
+
+			$json = str_replace( $to_host, $from_host, $actor->to_json() );
+
+			// Save the current actor data after migration.
+			if ( $actor instanceof Blog ) {
+				\update_option( 'activitypub_blog_user_old_host_data', $json, false );
+			} else {
+				\update_user_option( $actor->get__id(), 'activitypub_old_host_data', $json, false );
+			}
+
+			$results[] = array(
+				'actor'  => $actor_id,
+				'result' => $result,
+			);
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Maybe initiate old user.
+	 *
+	 * This method checks if the current request domain matches the old host.
+	 * If it does, it retrieves the cached data for the user and populates the instance.
+	 *
+	 * @param Blog|User $instance The Blog or User instance to populate.
+	 */
+	public static function maybe_initiate_old_user( $instance ) {
+		if ( ! Query::get_instance()->is_old_host_request() ) {
+			return;
+		}
+
+		if ( $instance instanceof Blog ) {
+			$cached_data = \get_option( 'activitypub_blog_user_old_host_data' );
+		} elseif ( $instance instanceof User ) {
+			$cached_data = \get_user_option( 'activitypub_old_host_data', $instance->get__id() );
+		}
+
+		if ( ! empty( $cached_data ) ) {
+			$instance->from_json( $cached_data );
+		}
+	}
+
+	/**
+	 * Pre-send to inboxes.
+	 *
+	 * @param string $json The ActivityPub Activity JSON.
+	 */
+	public static function pre_send_to_inboxes( $json ) {
+		$json = json_decode( $json, true );
+
+		if ( 'Move' !== $json['type'] ) {
+			return;
+		}
+
+		if ( is_same_domain( $json['object'] ) ) {
+			return;
+		}
+
+		Query::get_instance()->set_old_host_request();
+	}
+
+	/**
+	 * Filter to return the old blog username.
+	 *
+	 * @param null   $pre      The pre-existing value.
+	 * @param string $username The username to check.
+	 *
+	 * @return Blog|null The old blog instance or null.
+	 */
+	public static function old_blog_username( $pre, $username ) {
+		$old_host = \get_option( 'activitypub_old_host' );
+
+		// Special case for Blog Actor on old host.
+		if ( $old_host === $username && Query::get_instance()->is_old_host_request() ) {
+			// Return a new Blog instance which will load the cached data in its constructor.
+			$pre = new Blog();
+		}
+
+		return $pre;
 	}
 }

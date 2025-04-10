@@ -36,6 +36,23 @@
     "selectedUser": {
       "type": "string",
       "default": "site"
+    },
+    "buttonOnly": {
+      "type": "boolean",
+      "default": false
+    },
+    "buttonText": {
+      "type": "string",
+      "default": "Follow"
+    },
+    "buttonSize": {
+      "type": "string",
+      "default": "default",
+      "enum": [
+        "small",
+        "default",
+        "compact"
+      ]
     }
   },
   "usesContext": [

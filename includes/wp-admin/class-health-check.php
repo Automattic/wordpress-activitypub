@@ -326,6 +326,12 @@ class Health_Check {
 			'private' => false,
 		);
 
+		$info['activitypub']['fields']['vary_header'] = array(
+			'label'   => \__( 'Vary Header', 'activitypub' ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_vary_header', '0' ) ),
+			'private' => false,
+		);
+
 		$info['activitypub']['fields']['shared_inbox'] = array(
 			'label'   => \__( 'Shared Inbox', 'activitypub' ),
 			'value'   => \esc_attr( (int) \get_option( 'activitypub_shared_inbox', '0' ) ),

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Outbox endpoint bug where non-numeric usernames caused errors when querying Outbox data.

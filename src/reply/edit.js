@@ -1,12 +1,112 @@
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
 import { TextControl, PanelBody, ToggleControl, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { useEffect, useState, useRef, useCallback } from '@wordpress/element';
+import { useEffect, useState, useRef, useCallback, useLayoutEffect } from '@wordpress/element';
 import { useDebounce } from '@wordpress/compose';
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
 import { useOptions } from '../shared/use-options';
 import { useDispatch } from '@wordpress/data';
+
+/**
+ * Custom hook for handling iframe height adjustments.
+ *
+ * @param {Object} options - Hook options.
+ * @param {string} options.html - HTML content for the iframe.
+ * @return {Object} - Hook return values.
+ */
+function useIframeHeight( { html } ) {
+	const iframeRef = useRef( null );
+	const [ iframeHeight, setIframeHeight ] = useState( 300 );
+	const previousHeightRef = useRef( 300 );
+
+	// Function to adjust iframe height based on content
+	const adjustIframeHeight = useCallback( () => {
+		if ( ! iframeRef.current ) return;
+
+		try {
+			const iframe = iframeRef.current;
+
+			// Try to access iframe content height
+			let newHeight = 300; // Default fallback height
+
+			try {
+				// Try to get the scrollHeight of the body
+				if ( iframe.contentDocument && iframe.contentDocument.body ) {
+					newHeight = iframe.contentDocument.body.scrollHeight;
+				} else if ( iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.body ) {
+					newHeight = iframe.contentWindow.document.body.scrollHeight;
+				}
+			} catch ( e ) {
+				// This is expected in some cases due to same-origin policy
+				console.log( 'Could not access iframe content document:', e );
+			}
+
+			// Add a small buffer to prevent scrollbars
+			newHeight += 5;
+
+			// Only update height state if it changed significantly (more than 5px)
+			// This helps prevent update loops
+			if ( Math.abs( newHeight - previousHeightRef.current ) > 5 ) {
+				previousHeightRef.current = newHeight;
+				setIframeHeight( newHeight );
+			}
+		} catch ( e ) {
+			console.error( 'Error adjusting iframe height:', e );
+		}
+	}, [] );
+
+	// Handle iframe load and resize events
+	const handleIframeLoad = useCallback( () => {
+		if ( ! iframeRef.current ) return;
+
+		try {
+			// Initial height adjustment
+			adjustIframeHeight();
+		} catch ( e ) {
+			console.error( 'Error setting up iframe height adjustment:', e );
+		}
+	}, [ adjustIframeHeight ] );
+
+	// Set up iframe load handler and interval for height adjustments
+	useEffect( () => {
+		if ( iframeRef.current ) {
+			iframeRef.current.addEventListener( 'load', handleIframeLoad );
+		}
+
+		// Set up interval for periodic height checks
+		const intervalId = setInterval( adjustIframeHeight, 1000 );
+
+		// Clean up function that will run when component unmounts or dependencies change
+		return () => {
+			// Clear the interval
+			clearInterval( intervalId );
+
+			// Remove event listener
+			if ( iframeRef.current ) {
+				iframeRef.current.removeEventListener( 'load', handleIframeLoad );
+			}
+		};
+	}, [ handleIframeLoad, adjustIframeHeight ] );
+
+	// Initial height adjustment after render
+	useEffect( () => {
+		if ( iframeRef.current ) {
+			const timeoutId = setTimeout( () => {
+				adjustIframeHeight();
+			}, 100 );
+
+			return () => clearTimeout( timeoutId );
+		}
+	}, [ html, adjustIframeHeight ] );
+
+	return {
+		iframeRef,
+		iframeHeight,
+		adjustIframeHeight,
+		handleIframeLoad,
+	};
+}
 
 /**
  * Maps HTML attribute names to React prop names.
@@ -42,6 +142,20 @@ function EmbedOverlay( { onClick } ) {
 				zIndex: 1,
 			}}
 		/>
+	);
+}
+
+/**
+ * Determines if the HTML contains a WordPress embed.
+ *
+ * @param {string} html The HTML content to check.
+ * @return {boolean} Whether the HTML contains a WordPress embed.
+ */
+function isWordPressEmbed( html ) {
+	return html && (
+		html.includes('wp-embedded-content') ||
+		html.includes('wp-embed/') ||
+		html.includes('class="wp-embed"')
 	);
 }
 
@@ -138,6 +252,74 @@ function WpEmbedPreview( { html, onSelectBlock } ) {
 }
 
 /**
+ * Handles third-party embeds that require script execution.
+ *
+ * @param {Object} props Component props.
+ * @param {string} props.html The HTML content to embed.
+ * @param {Function} props.onClick Function to call when the overlay is clicked.
+ * @param {boolean} props.isSelected Whether the block is selected.
+ * @return {JSX.Element} The component.
+ */
+function ThirdPartyEmbed( { html, onClick, isSelected } ) {
+	const { iframeRef, iframeHeight, adjustIframeHeight, handleIframeLoad } = useIframeHeight( { html } );
+
+	// Create a sandboxed document with the HTML content
+	const createSandboxedContent = useCallback( () => {
+		return `
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<meta charset="UTF-8">
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<style>
+					body { margin: 0; padding: 0; overflow-x: hidden; }
+				</style>
+			</head>
+			<body>
+				${ html }
+			</body>
+			</html>
+		`;
+	}, [ html ] );
+
+	return (
+		<div
+			className="wp-block-embed__wrapper"
+			style={{ position: 'relative' }}
+		>
+			<iframe
+				ref={ iframeRef }
+				srcDoc={ createSandboxedContent() }
+				sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+				style={{
+					width: '100%',
+					height: `${ iframeHeight }px`,
+					border: 'none',
+					overflow: 'hidden'
+				}}
+				onLoad={ handleIframeLoad }
+			/>
+			{ isSelected && (
+				<div
+					onClick={ onClick }
+					style={{
+						position: 'absolute',
+						top: 0,
+						left: 0,
+						width: '100%',
+						height: '100%',
+						cursor: 'pointer',
+						zIndex: 1,
+						// Only show the overlay when the block is selected
+						display: isSelected ? 'block' : 'none'
+					}}
+				/>
+			) }
+		</div>
+	);
+}
+
+/**
  * Help text messages for different reply states.
  */
 const HELP_TEXT = {
@@ -184,12 +366,11 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	// This will be true when the block is instantiated with `true` because it was saved that way, or because this is a new block with no initial URL.
 	const [ optimisticEmbed, setOptimisticEmbed ] = useState( attr.embedPost === true || ! url );
 	const [ embedHtml, setEmbedHtml ] = useState( null );
-	const [ iframeHeight, setIframeHeight ] = useState( 300 ); // Default height
+	const { iframeRef, iframeHeight, adjustIframeHeight, handleIframeLoad } = useIframeHeight( { html: embedHtml } );
 	const { insertAfterBlock, removeBlock } = useDispatch( 'core/block-editor' );
 	// Get block props and dispatch functions.
 	const blockProps = useBlockProps();
 	const urlInputRef = useRef();
-	const iframeRef = useRef();
 	const iframeContainerRef = useRef();
 	// Use a ref to track optimisticEmbed without causing re-renders
 	const optimisticEmbedRef = useRef( optimisticEmbed );
@@ -287,71 +468,6 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 		`;
 	};
 
-	// Handle iframe load and resize events
-	const handleIframeLoad = () => {
-		if ( ! iframeRef.current ) return;
-
-		try {
-			// Initial height adjustment
-			adjustIframeHeight();
-
-			// Set up a timer to periodically check height (catches dynamic content changes)
-			const intervalId = setInterval( adjustIframeHeight, 1000 );
-
-			// Clean up interval on component unmount
-			return () => clearInterval( intervalId );
-		} catch ( e ) {
-			console.error( 'Error setting up iframe height adjustment:', e );
-		}
-	};
-
-	// Function to adjust iframe height based on content
-	const adjustIframeHeight = () => {
-		if ( ! iframeRef.current ) return;
-
-		try {
-			const iframe = iframeRef.current;
-
-			// Try to access iframe content height
-			let newHeight = 300; // Default fallback height
-
-			try {
-				// Try to get the scrollHeight of the body
-				if ( iframe.contentDocument && iframe.contentDocument.body ) {
-					newHeight = iframe.contentDocument.body.scrollHeight;
-				} else if ( iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.body ) {
-					newHeight = iframe.contentWindow.document.body.scrollHeight;
-				}
-			} catch ( e ) {
-				console.log( 'Could not access iframe content document:', e );
-				// This is expected in some cases due to same-origin policy
-			}
-
-			// Add a small buffer to prevent scrollbars
-			newHeight += 30;
-
-			// Update height state if it changed
-			if ( newHeight !== iframeHeight ) {
-				setIframeHeight( newHeight );
-			}
-		} catch ( e ) {
-			console.error( 'Error adjusting iframe height:', e );
-		}
-	};
-
-	// Set up iframe load handler
-	useEffect( () => {
-		if ( iframeRef.current ) {
-			iframeRef.current.addEventListener( 'load', handleIframeLoad );
-
-			return () => {
-				if ( iframeRef.current ) {
-					iframeRef.current.removeEventListener( 'load', handleIframeLoad );
-				}
-			};
-		}
-	}, [ embedHtml ] );
-
 	/**
 	 * Handle embed toggle changes.
 	 *
@@ -400,41 +516,22 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 
 				{ isValidEmbed && attr.embedPost && embedHtml && (
 					<div className="activitypub-embed-container">
-						{ isRealOembed ? (
+						{ isRealOembed && isWordPressEmbed(embedHtml) ? (
 							<WpEmbedPreview
 								html={ embedHtml }
 								onSelectBlock={ focusInput}
 							/>
 						) : (
-							<div
-								ref={ iframeContainerRef }
-								style={{
-									height: iframeHeight + 'px',
-									overflow: 'hidden',
-									transition: 'height 0.2s ease-in-out',
-									position: 'relative',
-								}}
-							>
-								<iframe
-									ref={ iframeRef }
-									srcDoc={ getEnhancedHtml( embedHtml ) }
-									style={{
-										position: 'absolute',
-										top: 0,
-										left: 0,
-										width: '100%',
-										height: '100%',
-									}}
-									allowFullScreen
-									title={ __( 'Embedded content from', 'activitypub' ) + ' ' + url }
-								></iframe>
-								<EmbedOverlay onClick={ focusInput } />
-							</div>
+							<ThirdPartyEmbed
+								html={ embedHtml }
+								onClick={ focusInput }
+								isSelected={ isSelected }
+							/>
 						) }
 					</div>
 				) }
 
-				{ url && ! attr.embedPost && (
+				{ url && ( ! attr.embedPost || ! embedHtml ) && (
 					<div
 						className="activitypub-reply-block-editor__preview"
 						contentEditable={ false }

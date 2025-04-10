@@ -134,7 +134,8 @@ function url_to_authorid( $url ) {
 	global $wp_rewrite;
 
 	// Check if url hase the same host.
-	if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== \wp_parse_url( $url, \PHP_URL_HOST ) ) {
+	$request_host = \wp_parse_url( $url, \PHP_URL_HOST );
+	if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== $request_host && get_option( 'activitypub_old_host' ) !== $request_host ) {
 		return null;
 	}
 
@@ -329,10 +330,14 @@ function is_post_disabled( $post ) {
 /**
  * This function checks if a user is enabled for ActivityPub.
  *
- * @param int $user_id The user ID.
+ * @param int|string $user_id The user ID.
  * @return boolean True if the user is enabled, false otherwise.
  */
 function user_can_activitypub( $user_id ) {
+	if ( ! is_numeric( $user_id ) ) {
+		return false;
+	}
+
 	switch ( $user_id ) {
 		case Actors::APPLICATION_USER_ID:
 			$enabled = true; // Application user is always enabled.
