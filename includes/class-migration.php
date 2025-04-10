@@ -188,6 +188,9 @@ class Migration {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_comment_author_emails' ) );
 			\add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::delete_mastodon_api_orphaned_extra_fields();
+		}
 
 		/*
 		 * Add new update routines above this comment. ^
@@ -896,5 +899,28 @@ class Migration {
 		) {
 			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 		}
+	}
+
+	/**
+	 * Deletes user extra fields where the author is the blog user.
+	 *
+	 * These extra fields were created when the Enable Mastodon Apps integration passed
+	 * an author_url instead of a user_id to the mastodon_api_account filter. This caused
+	 * Extra_Fields::default_actor_extra_fields() to run but fail to cache the fact it ran
+	 * for non-existent users. The result is a number of user extra fields with no author.
+	 *
+	 * @ticket https://github.com/Automattic/wordpress-activitypub/pull/1554
+	 */
+	public static function delete_mastodon_api_orphaned_extra_fields() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->delete(
+			$wpdb->posts,
+			array(
+				'post_type'   => Extra_Fields::USER_POST_TYPE,
+				'post_author' => Actors::BLOG_USER_ID,
+			)
+		);
 	}
 }

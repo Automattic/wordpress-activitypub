@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Upgrade routine that removes any erroneously created extra field entries.
