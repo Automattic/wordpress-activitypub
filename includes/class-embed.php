@@ -136,7 +136,8 @@ class Embed {
 	public static function oembed_fediverse_fallback( $response, $handler, $request ) {
 		if ( is_wp_error( $response ) && 'oembed_invalid_url' === $response->get_error_code() ) {
 			$url  = $request->get_param( 'url' );
-			$html = get_embed_html( $request->get_param( 'url' ) );
+			$html = get_embed_html( $url );
+
 			if ( $html ) {
 				$args = $request->get_params();
 				$data = (object) array(
