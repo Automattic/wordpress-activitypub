@@ -178,9 +178,11 @@ class Server {
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md
 	 *
-	 * @param WP_HTTP_Response $result  Result to send to the client. Usually a `WP_REST_Response`.
-	 * @param WP_REST_Server   $server  Server instance.
-	 * @param WP_REST_Request  $request Request used to generate the response.
+	 * @param WP_HTTP_Response $response Result to send to the client. Usually a `WP_REST_Response`.
+	 * @param WP_REST_Server   $server   Server instance.
+	 * @param WP_REST_Request  $request  Request used to generate the response.
+	 *
+	 * @return WP_HTTP_Response The filtered response.
 	 */
 	public static function filter_output( $response, $server, $request ) {
 		$route = $request->get_route();
@@ -198,9 +200,10 @@ class Server {
 		$data  = $response->get_data();
 		$error = array(
 			'type'     => 'about:blank',
-			'title'    => isset( $data[ 'code' ] ) ? $data[ 'code' ] : '',
-			'detail'   => isset( $data[ 'message' ] ) ? $data[ 'message' ] : '',
+			'title'    => isset( $data['code'] ) ? $data['code'] : '',
+			'detail'   => isset( $data['message'] ) ? $data['message'] : '',
 			'status'   => $response->get_status(),
+
 			/*
 			 * Provides the unstructured error data.
 			 *
@@ -209,18 +212,18 @@ class Server {
 			'metadata' => $data,
 		);
 
-		switch ( $data[ 'code' ] ) {
+		switch ( $data['code'] ) {
 			case 'activitypub_signature':
 			case 'activitypub_signature_verification':
-				$error[ 'title' ] = 'Invalid Signature';
+				$error['title'] = 'Invalid Signature';
 				break;
 			case 'activitypub_comment_not_found':
 			case 'activitypub_local_only_comment':
 			case 'activitypub_post_not_found':
 			case 'activitypub_user_not_found':
-				$error[ 'type' ]   = 'https://w3id.org/fep/c180#object-does-not-exist';
-				$error[ 'status' ] = 400;
-				$error[ 'title' ]  = 'Object does not exist';
+				$error['type']   = 'https://w3id.org/fep/c180#object-does-not-exist';
+				$error['status'] = 400;
+				$error['title']  = 'Object does not exist';
 				$response->set_status( 400 );
 				break;
 		}
