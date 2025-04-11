@@ -29,6 +29,12 @@ class Mailer {
 		if ( '1' === \get_option( 'activitypub_mailer_new_dm', '0' ) ) {
 			\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
 		}
+
+		// Direct message notification.
+		if ( '1' === \get_option( 'activitypub_mailer_new_mention', '1' ) ) {
+			//	\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 10, 2 );
+		}
+		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 10, 2 );
 	}
 
 	/**
@@ -215,5 +221,68 @@ class Mailer {
 		$message .= \sprintf( \esc_html__( 'URL: %s', 'activitypub' ), \esc_url( $actor['url'] ) ) . "\r\n\r\n";
 
 		\wp_mail( $email, $subject, $message );
+	}
+
+	/**
+	 * Send a direct message.
+	 *
+	 * @param array $activity The activity object.
+	 * @param int   $user_id  The id of the local blog-user.
+	 */
+	public static function mention( $activity, $user_id ) {
+		if (
+			// Only accept messages that have the user in the "cc" field.
+			empty( $activity['cc'] ) ||
+			! in_array( Actors::get_by_id( $user_id )->get_id(), (array) $activity['cc'], true )
+		) {
+			return;
+		}
+
+		$actor = get_remote_metadata_by_actor( $activity['actor'] );
+		if ( ! $actor || \is_wp_error( $actor ) || empty( $activity['object']['content'] ) ) {
+			return;
+		}
+
+		$email = \get_option( 'admin_email' );
+
+		if ( (int) $user_id > Actors::BLOG_USER_ID ) {
+			$user = \get_user_by( 'id', $user_id );
+
+			if ( ! $user ) {
+				return;
+			}
+
+			$email = $user->user_email;
+		}
+
+		/* translators: 1: Blog name, 2 Actor name */
+		$subject = \sprintf( \esc_html__( '[%1$s] Mention from: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
+
+		\ob_start();
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/new-mention-email.php', false, $activity );
+		$html_message = \ob_get_clean();
+
+		$alt_function = function ( $mailer ) use ( $actor, $activity ) {
+			$content = \html_entity_decode(
+				\wp_strip_all_tags(
+					str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
+				),
+				ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401
+			);
+
+			/* translators: 1: Follower name */
+			$message = \sprintf( \esc_html__( 'New Mention: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), $content ) . "\r\n\r\n";
+			/* translators: Actor name */
+			$message .= \sprintf( \esc_html__( 'From: %s', 'activitypub' ), \esc_html( $actor['name'] ) ) . "\r\n";
+			/* translators: Actor URL */
+			$message .= \sprintf( \esc_html__( 'URL: %s', 'activitypub' ), \esc_url( $actor['url'] ) ) . "\r\n\r\n";
+
+			$mailer->{'AltBody'} = $message;
+		};
+		\add_action( 'phpmailer_init', $alt_function );
+
+		\wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
+
+		\remove_action( 'phpmailer_init', $alt_function );
 	}
 }
