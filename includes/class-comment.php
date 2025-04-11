@@ -33,8 +33,6 @@ class Comment {
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
-
-		\add_action( 'transition_comment_status', array( self::class, 'maybe_announce_interaction' ), 20, 3 );
 	}
 
 	/**
@@ -804,38 +802,6 @@ class Comment {
 		}
 
 		return $new_count;
-	}
-
-	/**
-	 * Announce an interaction.
-	 *
-	 * @param string      $new_status The new comment status.
-	 * @param string      $old_status The old comment status.
-	 * @param \WP_Comment $comment    The comment object.
-	 */
-	public static function maybe_announce_interaction( $new_status, $old_status, $comment ) {
-		if ( defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
-			return;
-		}
-
-		if ( 'approved' !== $new_status || 'approved' === $old_status ) {
-			return;
-		}
-
-		$comment = \get_comment( $comment );
-
-		if ( ! self::was_received( $comment ) ) {
-			return;
-		}
-
-		// Get activity from comment meta.
-		$activity = \get_comment_meta( $comment->comment_ID, '_activitypub_activity', true );
-
-		if ( ! $activity ) {
-			return;
-		}
-
-		add_to_outbox( $activity, 'Announce', Actors::BLOG_USER_ID, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 	}
 
 	/**

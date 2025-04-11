@@ -42,9 +42,12 @@ class Comment {
 		}
 
 		$comment = get_comment( $comment );
+		if ( ! $comment ) {
+			return;
+		}
 
-		// Federate only comments that are written by a registered user.
-		if ( ! $comment || ! $comment->user_id ) {
+		if ( ! $comment->user_id ) {
+			self::maybe_announce_interaction( $new_status, $old_status, $comment );
 			return;
 		}
 
@@ -75,6 +78,32 @@ class Comment {
 		}
 
 		add_to_outbox( $comment, $type, $comment->user_id );
+	}
+
+	/**
+	 * Announce an interaction.
+	 *
+	 * @param string      $new_status The new comment status.
+	 * @param string      $old_status The old comment status.
+	 * @param \WP_Comment $comment    The comment object.
+	 */
+	public static function maybe_announce_interaction( $new_status, $old_status, $comment ) {
+		if ( 'approved' !== $new_status || 'approved' === $old_status ) {
+			return;
+		}
+
+		if ( ! self::was_received( $comment ) ) {
+			return;
+		}
+
+		// Get activity from comment meta.
+		$activity = \get_comment_meta( $comment->comment_ID, '_activitypub_activity', true );
+
+		if ( ! $activity ) {
+			return;
+		}
+
+		add_to_outbox( $activity, 'Announce', Actors::BLOG_USER_ID, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 	}
 
 	/**
