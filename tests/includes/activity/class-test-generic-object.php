@@ -77,9 +77,9 @@ class Test_Generic_Object extends WP_UnitTestCase {
 
 		$this->assertEquals( $test_data['id'], $object->get_id() );
 		$this->assertEquals( $test_data['type'], $object->get_type() );
-		$this->assertNull( $object->get_name() );
+		$this->assertEmpty( $object->get_name() );
 		$this->assertNull( $object->get_summary() );
-		$this->assertNull( $object->get_content() );
+		$this->assertFalse( $object->get_content() );
 	}
 
 	/**
