@@ -8,7 +8,7 @@
 namespace Activitypub\Scheduler;
 
 use Activitypub\Activity;
-use Activitypub\Actors;
+use Activitypub\Collection\Actors;
 use Activitypub\Comment as Comment_Util;
 
 use function Activitypub\add_to_outbox;
