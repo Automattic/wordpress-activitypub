@@ -36,7 +36,7 @@ class Server {
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_requests' ), 9, 3 );
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
 
-		\add_filter( 'rest_pre_serve_request', array( self::class, 'filter_output' ), 10, 4 );
+		\add_filter( 'rest_post_dispatch', array( self::class, 'filter_output' ), 10, 3 );
 	}
 
 	/**
@@ -174,19 +174,58 @@ class Server {
 	}
 
 	/**
-	 * Filter the output before it is sent to the client.
+	 * Filters the REST API response to properly handle the ActivityPub error formatting.
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md
 	 *
-	 * @param bool $served Whether the request has already been served.
-	 * @param WP_HTTP_Response $response The response data.
-	 * @param WP_REST_Request $request The request used to generate the response.
-	 * @param WP_REST_Server $server The response used to generate the response.
-	 *
-	 * @return WP_HTTP_Response The response.
+	 * @param WP_HTTP_Response $result  Result to send to the client. Usually a `WP_REST_Response`.
+	 * @param WP_REST_Server   $server  Server instance.
+	 * @param WP_REST_Request  $request Request used to generate the response.
 	 */
-	public static function filter_output( $served, $response, $request, $server ) {
-		// @todo reformat to use the error formatting of FEP-c180 https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md
+	public static function filter_output( $response, $server, $request ) {
+		$route = $request->get_route();
+
+		// Check if it is an activitypub request and exclude webfinger and nodeinfo endpoints.
+		if ( ! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ) {
+			return $response;
+		}
+
+		// Only alter responses that return an error status code.
+		if ( $response->get_status() < 300 ) {
+			return $response;
+		}
+
+		$data  = $response->get_data();
+		$error = array(
+			'type'     => 'about:blank',
+			'title'    => isset( $data[ 'code' ] ) ? $data[ 'code' ] : '',
+			'detail'   => isset( $data[ 'message' ] ) ? $data[ 'message' ] : '',
+			'status'   => $response->get_status(),
+			/*
+			 * Provides the unstructured error data.
+			 *
+			 * @see https://nodeinfo.diaspora.software/schema.html#metadata.
+			 */
+			'metadata' => $data,
+		);
+
+		switch ( $data[ 'code' ] ) {
+			case 'activitypub_signature':
+			case 'activitypub_signature_verification':
+				$error[ 'title' ] = 'Invalid Signature';
+				break;
+			case 'activitypub_comment_not_found':
+			case 'activitypub_local_only_comment':
+			case 'activitypub_post_not_found':
+			case 'activitypub_user_not_found':
+				$error[ 'type' ]   = 'https://w3id.org/fep/c180#object-does-not-exist';
+				$error[ 'status' ] = 400;
+				$error[ 'title' ]  = 'Object does not exist';
+				$response->set_status( 400 );
+				break;
+		}
+
+		$response->set_data( $error );
 
 		return $response;
 	}
