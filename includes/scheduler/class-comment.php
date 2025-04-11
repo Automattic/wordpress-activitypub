@@ -7,6 +7,10 @@
 
 namespace Activitypub\Scheduler;
 
+use Activitypub\Activity;
+use Activitypub\Actors;
+use Activitypub\Comments;
+
 use function Activitypub\add_to_outbox;
 use function Activitypub\should_comment_be_federated;
 
