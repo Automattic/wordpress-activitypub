@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Increased compatibility with Mobilizon and other platforms by improving signature verification for different key formats.

@@ -1636,15 +1636,15 @@ function get_embed_html( $url, $inline_css = true ) {
 	$title     = $object['name'] ?? '';
 	$content   = $object['content'] ?? '';
 	$published = isset( $object['published'] ) ? gmdate( get_option( 'date_format' ) . ', ' . get_option( 'time_format' ), strtotime( $object['published'] ) ) : '';
-	$boosts    = isset( $object['shares']['totalItems'] ) ? (int) $object['shares']['totalItems'] : 0;
-	$favorites = isset( $object['likes']['totalItems'] ) ? (int) $object['likes']['totalItems'] : 0;
+	$boosts    = isset( $object['shares']['totalItems'] ) ? (int) $object['shares']['totalItems'] : null;
+	$favorites = isset( $object['likes']['totalItems'] ) ? (int) $object['likes']['totalItems'] : null;
 
 	$image = '';
 	if ( isset( $object['image']['url'] ) ) {
 		$image = $object['image']['url'];
 	} elseif ( isset( $object['attachment'] ) ) {
 		foreach ( $object['attachment'] as $attachment ) {
-			if ( isset( $attachment['type'] ) && 'Document' === $attachment['type'] ) {
+			if ( isset( $attachment['type'] ) && in_array( $attachment['type'], array( 'Image', 'Document' ), true ) ) {
 				$image = $attachment['url'];
 				break;
 			}

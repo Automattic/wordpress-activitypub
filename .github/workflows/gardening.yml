@@ -54,10 +54,12 @@ jobs:
               {"path": "src/reactions", "label": "[Block] Reactions"},
               {"path": "src/reactions", "label": "[Feature] Reactions"},
               {"path": "src", "label": "[Focus] Editor"},
-              {"path": "includes/class-blocks.php", "label": "[Focus] Editor"},
               {"path": "integration", "label": "[Focus] Compatibility"},
-              {"path": "includes/collection", "label": "[Feature] Collections"},
               {"path": "includes/class-mailer.php", "label": "[Feature] Notifications"},
+              {"path": "includes/class-blocks.php", "label": "[Focus] Editor"},
+              {"path": "includes/collection", "label": "[Feature] Collections"},
+              {"path": "includes/rest", "label": "[Feature] REST API"},
+              {"path": "includes/wp-admin", "label": "[Feature] WP Admin"},
               {"path": "includes/wp-admin/import", "label": "[Feature] Import"},
-              {"path": "includes/wp-admin", "label": "[Feature] WP Admin"}
+              {"path": "includes/wp-admin/class-health-check.php", "label": "[Feature] Health Check"}
             ]'

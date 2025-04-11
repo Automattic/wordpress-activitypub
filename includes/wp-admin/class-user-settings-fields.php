@@ -197,7 +197,7 @@ class User_Settings_Fields {
 		</table>
 		<?php endif; ?>
 
-		<p>
+		<p class="extra-fields-nav">
 			<a href="<?php echo \esc_url( \admin_url( '/post-new.php?post_type=ap_extrafield' ) ); ?>" class="button">
 				<?php \esc_html_e( 'Add new', 'activitypub' ); ?>
 			</a>
