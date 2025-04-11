@@ -224,7 +224,7 @@ class Blog_Settings_Fields {
 		<?php endforeach; ?>
 		</table>
 
-		<p>
+		<p class="extra-fields-nav">
 			<a href="<?php echo esc_url( admin_url( '/post-new.php?post_type=ap_extrafield_blog' ) ); ?>" class="button">
 				<?php esc_html_e( 'Add new', 'activitypub' ); ?>
 			</a>

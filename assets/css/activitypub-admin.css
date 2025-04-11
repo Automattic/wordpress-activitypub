@@ -262,3 +262,11 @@ input.blog-user-identifier {
 .activitypub-notice .dashicons-warning {
 	color: #dba617;
 }
+
+.extra-fields-nav a + a {
+	margin-left: 8px;
+}
+.rtl .extra-fields-nav a + a {
+	margin-left: auto;
+	margin-right: 8px;
+}

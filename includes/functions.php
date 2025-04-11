@@ -364,12 +364,12 @@ function user_can_activitypub( $user_id ) {
 	/**
 	 * Allow plugins to disable users for ActivityPub.
 	 *
-	 * @deprecated unreleased Use the `activitypub_user_can_activitypub` filter instead.
+	 * @deprecated 5.7.0 Use the `activitypub_user_can_activitypub` filter instead.
 	 *
 	 * @param boolean $disabled True if the user is disabled, false otherwise.
 	 * @param int     $user_id  The user ID.
 	 */
-	$enabled = ! \apply_filters_deprecated( 'activitypub_is_user_disabled', array( ! $enabled, $user_id ), 'unreleased', 'activitypub_user_can_activitypub' );
+	$enabled = ! \apply_filters_deprecated( 'activitypub_is_user_disabled', array( ! $enabled, $user_id ), '5.7.0', 'activitypub_user_can_activitypub' );
 
 	/**
 	 * Allow plugins to enable/disable users for ActivityPub.
@@ -383,7 +383,7 @@ function user_can_activitypub( $user_id ) {
 /**
  * This function checks if a user is disabled for ActivityPub.
  *
- * @deprecated unreleased Use the `user_can_activitypub` function instead.
+ * @deprecated 5.7.0 Use the `user_can_activitypub` function instead.
  *
  * @param int $user_id The user ID.
  *
@@ -1636,15 +1636,15 @@ function get_embed_html( $url, $inline_css = true ) {
 	$title     = $object['name'] ?? '';
 	$content   = $object['content'] ?? '';
 	$published = isset( $object['published'] ) ? gmdate( get_option( 'date_format' ) . ', ' . get_option( 'time_format' ), strtotime( $object['published'] ) ) : '';
-	$boosts    = isset( $object['shares']['totalItems'] ) ? (int) $object['shares']['totalItems'] : 0;
-	$favorites = isset( $object['likes']['totalItems'] ) ? (int) $object['likes']['totalItems'] : 0;
+	$boosts    = isset( $object['shares']['totalItems'] ) ? (int) $object['shares']['totalItems'] : null;
+	$favorites = isset( $object['likes']['totalItems'] ) ? (int) $object['likes']['totalItems'] : null;
 
 	$image = '';
 	if ( isset( $object['image']['url'] ) ) {
 		$image = $object['image']['url'];
 	} elseif ( isset( $object['attachment'] ) ) {
 		foreach ( $object['attachment'] as $attachment ) {
-			if ( isset( $attachment['type'] ) && 'Document' === $attachment['type'] ) {
+			if ( isset( $attachment['type'] ) && in_array( $attachment['type'], array( 'Image', 'Document' ), true ) ) {
 				$image = $attachment['url'];
 				break;
 			}

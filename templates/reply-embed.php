@@ -17,8 +17,8 @@ $args = wp_parse_args(
 		'image'       => '',
 		'published'   => '',
 		'url'         => '',
-		'boosts'      => '',
-		'favorites'   => '',
+		'boosts'      => null,
+		'favorites'   => null,
 		'webfinger'   => '',
 	)
 );
@@ -60,18 +60,22 @@ $args = wp_parse_args(
 			<a href="<?php echo \esc_url( $args['url'] ); ?>" class="ap-stat ap-date dt-published u-in-reply-to"><?php echo \esc_html( $args['published'] ); ?></a>
 		<?php endif; ?>
 
+		<?php if ( null !== $args['boosts'] ) : ?>
 		<span class="ap-stat">
-				<?php
-				/* translators: %s: number of boosts */
-				printf( \esc_html__( '%s boosts', 'activitypub' ), '<strong>' . \esc_html( $args['boosts'] ) . '</strong>' );
-				?>
-			</span>
+			<?php
+			/* translators: %s: number of boosts */
+			printf( \esc_html__( '%s boosts', 'activitypub' ), '<strong>' . \esc_html( $args['boosts'] ) . '</strong>' );
+			?>
+		</span>
+		<?php endif; ?>
 
+		<?php if ( null !== $args['favorites'] ) : ?>
 		<span class="ap-stat">
-				<?php
-				/* translators: %s: number of favorites */
-				printf( \esc_html__( '%s favorites', 'activitypub' ), '<strong>' . \esc_html( $args['favorites'] ) . '</strong>' );
-				?>
-			</span>
+			<?php
+			/* translators: %s: number of favorites */
+			printf( \esc_html__( '%s favorites', 'activitypub' ), '<strong>' . \esc_html( $args['favorites'] ) . '</strong>' );
+			?>
+		</span>
+		<?php endif; ?>
 	</div>
 </div>

@@ -1,4 +1,0 @@
-Significance: patch
-Type: changed
-
-Add option to enable/disable the `Vary` Header to the "Advanced Settings".

@@ -188,7 +188,7 @@ class Migration {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_comment_author_emails' ) );
 			\add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '5.7.0', '<' ) ) {
 			self::delete_mastodon_api_orphaned_extra_fields();
 		}
 

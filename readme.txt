@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 6.4
 Tested up to: 6.7
-Stable tag: 5.6.1
+Stable tag: 5.7.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -128,6 +128,31 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 5.7.0 - 2025-04-11
+#### Added
+- Advanced Settings tab, with special settings for advanced users.
+- Check if pretty permalinks are enabled and recommend to use threaded comments.
+- Reply block: show embeds where available.
+- Support same-server domain migrations.
+- Upgrade routine that removes any erroneously created extra field entries.
+
+#### Changed
+- Add option to enable/disable the "shared inbox" to the "Advanced Settings".
+- Add option to enable/disable the `Vary` Header to the "Advanced Settings".
+- Configure the "Follow Me" button to have a button-only mode.
+- Importers are loaded on admin-specific hook.
+- Improve the troubleshooting UI and show Site-Health stats in ActivityPub settings.
+- Increased compatibility with Mobilizon and other platforms by improving signature verification for different key formats.
+
+#### Fixed
+- Ensure that an `Activity` has an `Actor` before adding it to the Outbox.
+- Fixed some some bugs and added additional informations on the Debug tab of the Site-Health page.
+- Follow-up to the reply block changes that makes sure Mastodon embeds are displayed in the editor.
+- Outbox endpoint bug where non-numeric usernames caused errors when querying Outbox data.
+- Show Site Health error if site uses old "Almost Pretty Permalinks" structure.
+- Sites with comments from the Fediverse no longer create uncached extra fields posts that flood the Outbox.
+- Transformers allow settings values to false again, a regression from 5.5.0.
 
 ### 5.6.1 - 2025-04-02
 #### Fixed
