@@ -7,7 +7,7 @@
 
 namespace Activitypub\Scheduler;
 
-use Activitypub\Activity;
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Comment as Comment_Util;
 
