@@ -1,4 +1,4 @@
-Significance: major
+Significance: minor
 Type: added
 
-Support same-server domain migrations ⏩
+Support same-server domain migrations.
