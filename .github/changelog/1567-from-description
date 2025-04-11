@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Transformers allow settings values to false again, a regression from 5.5.0.
