@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Show Site Health error if site uses old "Almost Pretty Permalinks" structure.
