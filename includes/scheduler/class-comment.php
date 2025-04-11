@@ -88,6 +88,11 @@ class Comment {
 	 * @param \WP_Comment $comment    The comment object.
 	 */
 	public static function maybe_announce_interaction( $new_status, $old_status, $comment ) {
+		// Only if we're in both Blog and User modes.
+		if ( ACTIVITYPUB_ACTOR_AND_BLOG_MODE !== \get_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE ) ) {
+			return;
+		}
+
 		if ( 'approved' !== $new_status || 'approved' === $old_status ) {
 			return;
 		}
@@ -103,7 +108,14 @@ class Comment {
 			return;
 		}
 
-		add_to_outbox( $activity, 'Announce', Actors::BLOG_USER_ID, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+		$activity['cc'][]           = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+		$activity['object']['cc'][] = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+
+		$announce = new Activity();
+		$announce->set_type( 'Announce' );
+		$announce->set_object( $activity );
+
+		add_to_outbox( $announce, null, Actors::BLOG_USER_ID, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 	}
 
 	/**
