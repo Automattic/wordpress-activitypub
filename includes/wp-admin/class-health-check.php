@@ -432,6 +432,18 @@ class Health_Check {
 					esc_url( admin_url( 'options-permalink.php' ) )
 				)
 			);
+		} elseif ( str_starts_with( $permalink_structure, '/index.php' ) ) {
+			$result['status']         = 'critical';
+			$result['label']          = \__( 'ActivityPub does not support the "Almost Pretty Permalinks" structure.', 'activitypub' );
+			$result['badge']['color'] = 'red';
+			$result['description']    = \sprintf(
+				'<p>%s</p>',
+				sprintf(
+					/* translators: %s: Permalink settings URL. */
+					\__( 'ActivityPub needs SEO-friendly URLs to work properly. Please <a href="%s">remove the <code>/index.php</code></a> from your permalink structure.', 'activitypub' ),
+					esc_url( admin_url( 'options-permalink.php' ) )
+				)
+			);
 		}
 
 		return $result;
