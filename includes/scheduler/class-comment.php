@@ -9,7 +9,7 @@ namespace Activitypub\Scheduler;
 
 use Activitypub\Activity;
 use Activitypub\Actors;
-use Activitypub\Comments;
+use Activitypub\Comment as Comment_Util;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\should_comment_be_federated;
@@ -101,7 +101,7 @@ class Comment {
 			return;
 		}
 
-		if ( ! self::was_received( $comment ) ) {
+		if ( ! Comment_Util::was_received( $comment ) ) {
 			return;
 		}
 
