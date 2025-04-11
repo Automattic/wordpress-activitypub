@@ -90,7 +90,7 @@ abstract class Base {
 			if ( \method_exists( $this, $getter ) ) {
 				$value = \call_user_func( array( $this, $getter ) );
 
-				if ( ! empty( $value ) ) {
+				if ( null !== $value ) {
 					$setter = 'set_' . $var;
 
 					/**
