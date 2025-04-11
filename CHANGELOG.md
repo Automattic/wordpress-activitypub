@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Ensure that an `Activity` has an `Actor` before adding it to the Outbox. [#1564]
-- Fixed some some bugs and added additional informations on the Debug tab of the Site-Health page. [#1547]
+- Fixed some bugs and added additional information on the Debug tab of the Site-Health page. [#1547]
 - Follow-up to the reply block changes that makes sure Mastodon embeds are displayed in the editor. [#1555]
 - Outbox endpoint bug where non-numeric usernames caused errors when querying Outbox data. [#1559]
 - Show Site Health error if site uses old "Almost Pretty Permalinks" structure. [#1570]
