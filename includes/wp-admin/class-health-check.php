@@ -434,13 +434,13 @@ class Health_Check {
 			);
 		} elseif ( str_starts_with( $permalink_structure, '/index.php' ) ) {
 			$result['status']         = 'critical';
-			$result['label']          = \__( 'ActivityPub does not support the "Almost Pretty Permalinks" structure.', 'activitypub' );
+			$result['label']          = \__( 'Your permalink structure needs to be updated for ActivityPub to work properly.', 'activitypub' );
 			$result['badge']['color'] = 'red';
 			$result['description']    = \sprintf(
 				'<p>%s</p>',
 				sprintf(
 					/* translators: %s: Permalink settings URL. */
-					\__( 'ActivityPub needs SEO-friendly URLs to work properly. Please <a href="%s">remove the <code>/index.php</code></a> from your permalink structure.', 'activitypub' ),
+					\__( 'Your current permalink structure includes <code>/index.php</code> which is not compatible with ActivityPub. Please <a href="%s">update your permalink settings</a> to use a standard format without <code>/index.php</code>.', 'activitypub' ),
 					esc_url( admin_url( 'options-permalink.php' ) )
 				)
 			);
