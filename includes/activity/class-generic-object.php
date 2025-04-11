@@ -195,7 +195,7 @@ class Generic_Object {
 	 */
 	public function from_array( $data ) {
 		foreach ( $data as $key => $value ) {
-			if ( $value ) {
+			if ( null !== $value ) {
 				$key = camel_to_snake_case( $key );
 				call_user_func( array( $this, 'set_' . $key ), $value );
 			}
