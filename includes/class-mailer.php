@@ -152,7 +152,7 @@ class Mailer {
 		);
 
 		foreach ( $template_args['stats'] as $field => $value ) {
-			$result = wp_safe_remote_get( $actor[ $field ] );
+			$result = Http::get( $actor[ $field ], true );
 			if ( 200 === wp_remote_retrieve_response_code( $result ) ) {
 				$body = \json_decode( wp_remote_retrieve_body( $result ), true );
 				if ( isset( $body['totalItems'] ) ) {
