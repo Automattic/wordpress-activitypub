@@ -9,6 +9,9 @@ use Activitypub\Collection\Actors;
 
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args ?? array() );
+
+// Load header.
+require __DIR__ . '/parts/header.php';
 ?>
 <p>
 	<?php
@@ -54,6 +57,8 @@ $args = wp_parse_args( $args ?? array() );
 </p>
 
 <?php
+// Load footer.
+require __DIR__ . '/parts/footer.php';
 
 /**
  * Fires at the bottom of the new follower email.
