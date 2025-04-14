@@ -174,8 +174,9 @@ class Test_Mailer extends WP_UnitTestCase {
 			'pre_get_remote_metadata_by_actor',
 			function () {
 				return array(
-					'name' => 'Test Follower',
-					'url'  => 'https://example.com/author',
+					'name'              => 'Test Follower',
+					'url'               => 'https://example.com/author',
+					'preferredUsername' => 'follower',
 				);
 			}
 		);

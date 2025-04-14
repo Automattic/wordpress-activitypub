@@ -152,7 +152,7 @@ class Mailer {
 		);
 
 		foreach ( $template_args['stats'] as $field => $value ) {
-			if ( ! $actor[ $field ] ) {
+			if ( empty( $actor[ $field ] ) ) {
 				continue;
 			}
 
