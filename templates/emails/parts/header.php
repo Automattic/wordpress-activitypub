@@ -16,6 +16,11 @@
 		margin: 0;
 		padding: 0;
 	}
+	@media only screen and (max-width: 599px) {
+		body {
+			background-color: #f9f9f9 !important;
+		}
+	}
 	.container {
 		max-width: 600px;
 		margin: 20px auto;
@@ -23,6 +28,13 @@
 		background-color: #f9f9f9;
 		border-radius: 8px;
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	}
+	@media only screen and (max-width: 599px) {
+		.container {
+			border-radius: 0 !important;
+			box-shadow: none !important;
+			margin: 0 !important;
+		}
 	}
 	h1 {
 		font-size: 20px;
