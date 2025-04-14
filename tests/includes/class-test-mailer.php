@@ -238,6 +238,7 @@ class Test_Mailer extends WP_UnitTestCase {
 				array(
 					'actor'  => 'https://example.com/author',
 					'object' => array(
+						'id'      => 'https://example.com/post/1',
 						'content' => 'Test direct message',
 					),
 					'to'     => array( 'user_url' ),
@@ -248,6 +249,7 @@ class Test_Mailer extends WP_UnitTestCase {
 				array(
 					'actor'  => 'https://example.com/author',
 					'object' => array(
+						'id'      => 'https://example.com/post/1',
 						'content' => 'Test direct message',
 					),
 				),
@@ -257,6 +259,7 @@ class Test_Mailer extends WP_UnitTestCase {
 				array(
 					'actor'  => 'https://example.com/author',
 					'object' => array(
+						'id'        => 'https://example.com/post/1',
 						'content'   => 'Test public reply',
 						'inReplyTo' => 'https://example.com/post/1',
 					),
@@ -268,6 +271,7 @@ class Test_Mailer extends WP_UnitTestCase {
 				array(
 					'actor'  => 'https://example.com/author',
 					'object' => array(
+						'id'        => 'https://example.com/post/1',
 						'content'   => 'Test public reply',
 						'inReplyTo' => 'https://example.com/post/1',
 					),
@@ -280,6 +284,7 @@ class Test_Mailer extends WP_UnitTestCase {
 				array(
 					'actor'  => 'https://example.com/author',
 					'object' => array(
+						'id'        => 'https://example.com/post/1',
 						'content'   => 'Test public activity',
 						'inReplyTo' => null,
 					),
@@ -292,6 +297,7 @@ class Test_Mailer extends WP_UnitTestCase {
 				array(
 					'actor'  => 'https://example.com/author',
 					'object' => array(
+						'id'        => 'https://example.com/post/1',
 						'content'   => 'Test activity just to followers',
 						'inReplyTo' => null,
 					),
@@ -303,6 +309,7 @@ class Test_Mailer extends WP_UnitTestCase {
 				array(
 					'actor'  => 'https://example.com/author',
 					'object' => array(
+						'id'        => 'https://example.com/post/1',
 						'content'   => 'Reply activity to me and to followers',
 						'inReplyTo' => 'https://example.com/post/1',
 					),
@@ -397,7 +404,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		return array(
 			'HTML entities' => array(
 				json_decode( '"<p>Interesting story from <span class=\"h-card\" translate=\"no\"><a href=\"https:\/\/example.com\/@test\" class=\"u-url mention\">@<span>test<\/span><\/a><\/span> about people who don&#39;t own their own domain.<\/p><p>&quot;This is not a new issue, of course, but Service\u2019s implementation shows limitations.&quot;<\/p>"' ),
-				'Interesting story from @test about people who don\'t own their own domain.' . PHP_EOL . PHP_EOL . '"This is not a new issue, of course, but Service’s implementation shows limitations."',
+				'<p>Interesting story from <span class="h-card"><a href="https://example.com/@test" class="u-url mention">@<span>test</span></a></span> about people who don&#039;t own their own domain.</p><p>&quot;This is not a new issue, of course, but Service’s implementation shows limitations.&quot;</p>',
 			),
 			'invalid HTML'  => array(
 				json_decode( '"<ptest"' ),
@@ -421,6 +428,8 @@ class Test_Mailer extends WP_UnitTestCase {
 		$activity = array(
 			'actor'  => 'https://example.com/author',
 			'object' => array(
+				'id'      => 'https://example.com/post/1',
+				'type'    => 'Note',
 				'content' => $text,
 			),
 			'to'     => array( Actors::get_by_id( $user_id )->get_id() ),
