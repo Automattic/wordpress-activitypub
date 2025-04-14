@@ -35,7 +35,7 @@ require __DIR__ . '/parts/header.php';
 		$message = __( 'Looks like someone&#8217;s talking about you! You were just mentioned by %s in a post on the Fediverse. Here&#8217;s what they said:', 'activitypub' );
 	endif;
 
-	printf( esc_html( $message ), '<a href="' . esc_url( $args['activity']['actor'] ) . '">' . esc_html( $args['webfinger'] ) . '</a>' );
+	printf( esc_html( $message ), '<a href="' . esc_url( $args['actor']['url'] ) . '">' . esc_html( $args['actor']['webfinger'] ) . '</a>' );
 	?>
 </p>
 

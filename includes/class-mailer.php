@@ -242,11 +242,8 @@ class Mailer {
 			return;
 		}
 
-		$webfinger = Webfinger::uri_to_acct( $activity['actor'] );
-		if ( \is_wp_error( $webfinger ) ) {
-			$webfinger = '@' . implode( '@', Webfinger::get_identifier_and_host( $activity['actor'] ) );
-		} else {
-			$webfinger = str_replace( 'acct:', '@', $webfinger );
+		if ( empty( $actor['webfinger'] ) ) {
+			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . wp_parse_url( $actor['url'], PHP_URL_HOST );
 		}
 
 		$email = \get_option( 'admin_email' );
@@ -262,9 +259,9 @@ class Mailer {
 		}
 
 		$template_args = array(
-			'activity'  => $activity,
-			'user_id'   => $user_id,
-			'webfinger' => $webfinger,
+			'activity' => $activity,
+			'actor'    => $actor,
+			'user_id'  => $user_id,
 		);
 
 		/* translators: 1: Blog name, 2 Actor name */
