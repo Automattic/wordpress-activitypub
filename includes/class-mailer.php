@@ -124,6 +124,10 @@ class Mailer {
 			return;
 		}
 
+		if ( empty( $actor['webfinger'] ) ) {
+			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . wp_parse_url( $actor['url'], PHP_URL_HOST );
+		}
+
 		$email     = \get_option( 'admin_email' );
 		$admin_url = '/options-general.php?page=activitypub&tab=followers';
 

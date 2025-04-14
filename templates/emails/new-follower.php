@@ -70,7 +70,7 @@ require __DIR__ . '/parts/header.php';
 		$message = __( 'Meet your newest follower, %s. Here&#8217;s a quick look at their profile:', 'activitypub' );
 	endif;
 
-	printf( esc_html( $message ), '<a href="' . esc_url( $args['url'] ) . '">@' . esc_html( $args['preferredUsername'] ) . '</a>' );
+	printf( esc_html( $message ), '<a href="' . esc_url( $args['url'] ) . '">' . esc_html( $args['webfinger'] ) . '</a>' );
 	?>
 </p>
 
@@ -84,7 +84,7 @@ require __DIR__ . '/parts/header.php';
 			<img src="<?php echo esc_url( $args['icon']['url'] ); ?>" alt="<?php echo esc_attr( $args['name'] ); ?>">
 		<?php endif; ?>
 		<div class="card-content">
-			<h2><?php echo esc_html( $args['name'] ); ?> <small style="font-size: 14px; color: #666;">@<?php echo esc_html( $args['preferredUsername'] ); ?></small></h2>
+			<h2><?php echo esc_html( $args['name'] ); ?> <small style="font-size: 14px; color: #666;"><?php echo esc_html( $args['webfinger'] ); ?></small></h2>
 
 			<?php if ( ! empty( $args['summary'] ) ) : ?>
 				<p><?php echo wp_kses_post( nl2br( $args['summary'] ) ); ?></p>
