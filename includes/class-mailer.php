@@ -203,23 +203,40 @@ class Mailer {
 			$email = $user->user_email;
 		}
 
-		$content = \html_entity_decode(
-			\wp_strip_all_tags(
-				str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
-			),
-			ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401
+		$template_args = array(
+			'activity' => $activity,
+			'user_id'  => $user_id,
 		);
 
 		/* translators: 1: Blog name, 2 Actor name */
 		$subject = \sprintf( \esc_html__( '[%1$s] Direct Message from: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
-		/* translators: 1: Blog name, 2: Actor name */
-		$message = \sprintf( \esc_html__( 'New Direct Message: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), $content ) . "\r\n\r\n";
-		/* translators: Actor name */
-		$message .= \sprintf( \esc_html__( 'From: %s', 'activitypub' ), \esc_html( $actor['name'] ) ) . "\r\n";
-		/* translators: Actor URL */
-		$message .= \sprintf( \esc_html__( 'URL: %s', 'activitypub' ), \esc_url( $actor['url'] ) ) . "\r\n\r\n";
 
-		\wp_mail( $email, $subject, $message );
+		\ob_start();
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-dm.php', false, $template_args );
+		$html_message = \ob_get_clean();
+
+		$alt_function = function ( $mailer ) use ( $actor, $activity ) {
+			$content = \html_entity_decode(
+				\wp_strip_all_tags(
+					str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
+				),
+				ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401
+			);
+
+			/* translators: Actor name */
+			$message = \sprintf( \esc_html__( 'New Direct Message: %s', 'activitypub' ), $content ) . "\r\n\r\n";
+			/* translators: Actor name */
+			$message .= \sprintf( \esc_html__( 'From: %s', 'activitypub' ), \esc_html( $actor['name'] ) ) . "\r\n";
+			/* translators: Message URL */
+			$message .= \sprintf( \esc_html__( 'URL: %s', 'activitypub' ), \esc_url( $activity['object']['id'] ) ) . "\r\n\r\n";
+
+			$mailer->{'AltBody'} = $message;
+		};
+		\add_action( 'phpmailer_init', $alt_function );
+
+		\wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
+
+		\remove_action( 'phpmailer_init', $alt_function );
 	}
 
 	/**
