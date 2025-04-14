@@ -152,6 +152,10 @@ class Mailer {
 		);
 
 		foreach ( $template_args['stats'] as $field => $value ) {
+			if ( ! $actor[ $field ] ) {
+				continue;
+			}
+
 			$result = Http::get( $actor[ $field ], true );
 			if ( 200 === wp_remote_retrieve_response_code( $result ) ) {
 				$body = \json_decode( wp_remote_retrieve_body( $result ), true );
