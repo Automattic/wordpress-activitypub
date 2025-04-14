@@ -53,7 +53,7 @@ $args = wp_parse_args( $args ?? array() );
 	<div class="container">
 		<h1>
 			<?php
-			if ( Actors::BLOG_USER_ID === $args['target'] ) :
+			if ( Actors::BLOG_USER_ID === $args['user_id'] ) :
 				esc_html_e( 'Your blog was mentioned!', 'activitypub' );
 			else :
 				esc_html_e( 'You were mentioned!', 'activitypub' );
@@ -62,18 +62,24 @@ $args = wp_parse_args( $args ?? array() );
 		</h1>
 
 		<p>
-			<?php esc_html_e( 'Looks like someone’s talking about you! You were just mentioned in a post on the Fediverse. Here’s what they said:', 'activitypub' ); ?>
+			<?php
+			printf(
+				/* translators: %s: The name of the person who mentioned the user. */
+				esc_html__( 'Looks like someone’s talking about you! You were just mentioned by %s in a post on the Fediverse. Here’s what they said:', 'activitypub' ),
+				'<a href="' . esc_url( $args['activity']['actor'] ) . '">' . esc_html( $args['webfinger'] ) . '</a>'
+			)
+			?>
 		</p>
 
 		<div class="embed">
 			<?php
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			echo \Activitypub\get_embed_html( $args['object']['id'] );
+			echo \Activitypub\get_embed_html( $args['activity']['object']['id'] );
 			?>
 		</div>
 
 		<p>
-			<a class="button" href="<?php echo esc_url( admin_url( 'post-new.php?in_reply_to=' . $args['object']['id'] ) ); ?>">
+			<a class="button" href="<?php echo esc_url( admin_url( 'post-new.php?in_reply_to=' . $args['activity']['object']['id'] ) ); ?>">
 				<?php esc_html_e( 'Reply to the post', 'activitypub' ); ?>
 			</a>
 		</p>
@@ -92,6 +98,6 @@ $args = wp_parse_args( $args ?? array() );
 /**
  * Fires at the bottom of the new mention email.
  *
- * @param array $args The Activity with the mention.
+ * @param array $args The template arguments.
  */
 do_action( 'activitypub_new_mention_email', $args );
