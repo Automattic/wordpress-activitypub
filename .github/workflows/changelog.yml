@@ -11,15 +11,20 @@ jobs:
   # Enforces the addition of a changelog entry (a file in the .github/changelog directory) every pull request.
   changelog:
     runs-on: ubuntu-latest
-    # Skip this job if the PR is a draft
-    if: github.event.pull_request.draft == false
     steps:
-      - name: "Check for Skip Changelog label"
-        id: check-skip-label
+      - name: "Check for Draft PR or Skip Changelog label"
+        id: check-skip-conditions
         uses: actions/github-script@v7
         with:
           script: |
-            const { payload : { pull_request : { number, labels } } } = context;
+            const { payload : { pull_request : { number, labels, draft } } } = context;
+            
+            // Check if PR is a draft
+            if (draft) {
+              core.info(`Skipping changelog requirement for this PR (#${number}) because it is a draft PR.`);
+              core.setOutput('skip-changelog', 'true');
+              return;
+            }
 
             // Check for Skip Changelog label
             core.debug( 'Changelog check: Check for Skip Changelog label' );
@@ -36,7 +41,7 @@ jobs:
             }
 
       - name: "Check for changelog file"
-        if: steps.check-skip-label.outputs.skip-changelog != 'true'
+        if: steps.check-skip-conditions.outputs.skip-changelog != 'true'
         id: check-changelog-file
         uses: actions/github-script@v7
         with:
@@ -80,7 +85,7 @@ jobs:
 
       - name: "Check for changelog information in PR body"
         id: check-pr-body
-        if: steps.check-skip-label.outputs.skip-changelog != 'true' && steps.check-changelog-file.outputs.has-changelog-file != 'true'
+        if: steps.check-skip-conditions.outputs.skip-changelog != 'true' && steps.check-changelog-file.outputs.has-changelog-file != 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -158,7 +163,7 @@ jobs:
 
       - name: "Create changelog file from PR description"
         id: create-changelog-file
-        if: steps.check-skip-label.outputs.skip-changelog != 'true' && steps.check-changelog-file.outputs.has-changelog-file != 'true' && steps.check-pr-body.outputs.has-changelog-info == 'true'
+        if: steps.check-skip-conditions.outputs.skip-changelog != 'true' && steps.check-changelog-file.outputs.has-changelog-file != 'true' && steps.check-pr-body.outputs.has-changelog-info == 'true'
         env:
           PR_MESSAGE: '${{ steps.check-pr-body.outputs.message }}'
         uses: actions/github-script@v7
