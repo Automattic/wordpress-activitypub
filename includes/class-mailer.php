@@ -318,7 +318,7 @@ class Mailer {
 	}
 
 	/**
-	 * Send a direct message.
+	 * Send a mention notification.
 	 *
 	 * @param array $activity The activity object.
 	 * @param int   $user_id  The id of the local blog-user.
@@ -377,12 +377,12 @@ class Mailer {
 				ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401
 			);
 
-			/* translators: 1: Follower name */
-			$message = \sprintf( \esc_html__( 'New Mention: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), $content ) . "\r\n\r\n";
+			/* translators: Message content */
+			$message = \sprintf( \esc_html__( 'New Mention: %s', 'activitypub' ), $content ) . "\r\n\r\n";
 			/* translators: Actor name */
 			$message .= \sprintf( \esc_html__( 'From: %s', 'activitypub' ), \esc_html( $actor['name'] ) ) . "\r\n";
-			/* translators: Actor URL */
-			$message .= \sprintf( \esc_html__( 'URL: %s', 'activitypub' ), \esc_url( $actor['url'] ) ) . "\r\n\r\n";
+			/* translators: Message URL */
+			$message .= \sprintf( \esc_html__( 'URL: %s', 'activitypub' ), \esc_url( $activity['object']['id'] ) ) . "\r\n\r\n";
 
 			$mailer->{'AltBody'} = $message;
 		};
