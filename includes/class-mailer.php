@@ -238,8 +238,15 @@ class Mailer {
 		}
 
 		$actor = get_remote_metadata_by_actor( $activity['actor'] );
-		if ( ! $actor || \is_wp_error( $actor ) || empty( $activity['object']['content'] ) ) {
+		if ( \is_wp_error( $actor ) ) {
 			return;
+		}
+
+		$webfinger = Webfinger::uri_to_acct( $activity['actor'] );
+		if ( \is_wp_error( $webfinger ) ) {
+			$webfinger = '@' . implode( '@', Webfinger::get_identifier_and_host( $activity['actor'] ) );
+		} else {
+			$webfinger = str_replace( 'acct:', '@', $webfinger );
 		}
 
 		$email = \get_option( 'admin_email' );
@@ -254,11 +261,17 @@ class Mailer {
 			$email = $user->user_email;
 		}
 
+		$template_args = array(
+			'activity'  => $activity,
+			'user_id'   => $user_id,
+			'webfinger' => $webfinger,
+		);
+
 		/* translators: 1: Blog name, 2 Actor name */
 		$subject = \sprintf( \esc_html__( '[%1$s] Mention from: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
 
 		\ob_start();
-		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/new-mention-email.php', false, $activity );
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/new-mention-email.php', false, $template_args );
 		$html_message = \ob_get_clean();
 
 		$alt_function = function ( $mailer ) use ( $actor, $activity ) {
