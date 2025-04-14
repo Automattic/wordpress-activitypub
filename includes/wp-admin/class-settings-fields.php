@@ -195,6 +195,16 @@ class Settings_Fields {
 					</label>
 				</td>
 			</tr>
+			<tr>
+				<td>
+					<?php \esc_html_e( 'New Mentions', 'activitypub' ); ?>
+				</td>
+				<td>
+					<label>
+						<input type="checkbox" name="activitypub_mailer_new_dm" id="activitypub_mailer_new_dm" value="1" <?php \checked( '1', \get_option( 'activitypub_mailer_new_mention' ) ); ?> />
+					</label>
+				</td>
+			</tr>
 			</tbody>
 		</table>
 		<?php

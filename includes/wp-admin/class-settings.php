@@ -95,6 +95,36 @@ class Settings {
 
 		\register_setting(
 			'activitypub',
+			'activitypub_mailer_new_dm',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Send a notification when someone sends a user of the blog a direct message.',
+				'default'     => '1',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_mailer_new_follower',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Send a notification when someone starts to follow a user of the blog.',
+				'default'     => '1',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
+			'activitypub_mailer_new_mention',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Send a notification when someone mentions a user of the blog.',
+				'default'     => '1',
+			)
+		);
+
+		\register_setting(
+			'activitypub',
 			'activitypub_use_opengraph',
 			array(
 				'type'        => 'boolean',

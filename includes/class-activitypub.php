@@ -110,8 +110,9 @@ class Activitypub {
 		\delete_option( 'activitypub_enable_users' );
 		\delete_option( 'activitypub_header_image' );
 		\delete_option( 'activitypub_last_post_with_permalink_as_id' );
-		\delete_option( 'activitypub_mailer_new_follower' );
 		\delete_option( 'activitypub_mailer_new_dm' );
+		\delete_option( 'activitypub_mailer_new_follower' );
+		\delete_option( 'activitypub_mailer_new_mention' );
 		\delete_option( 'activitypub_max_image_attachments' );
 		\delete_option( 'activitypub_migration_lock' );
 		\delete_option( 'activitypub_object_type' );
