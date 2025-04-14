@@ -366,7 +366,7 @@ class Mailer {
 		$subject = \sprintf( \esc_html__( '[%1$s] Mention from: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
 
 		\ob_start();
-		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/new-mention-email.php', false, $template_args );
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-mention.php', false, $template_args );
 		$html_message = \ob_get_clean();
 
 		$alt_function = function ( $mailer ) use ( $actor, $activity ) {
