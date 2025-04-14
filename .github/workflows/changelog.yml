@@ -11,6 +11,8 @@ jobs:
   # Enforces the addition of a changelog entry (a file in the .github/changelog directory) every pull request.
   changelog:
     runs-on: ubuntu-latest
+    # Skip this job if the PR is a draft
+    if: github.event.pull_request.draft == false
     steps:
       - name: "Check for Skip Changelog label"
         id: check-skip-label
