@@ -150,7 +150,7 @@ class Mailer {
 		$subject = \sprintf( \__( '[%1$s] New Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] );
 
 		\ob_start();
-		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/new-follower-email.php', false, $template_args );
+		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/new-follower.php', false, $template_args );
 		$html_message = \ob_get_clean();
 
 		$alt_function = function ( $mailer ) use ( $actor, $admin_url ) {
