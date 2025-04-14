@@ -6,6 +6,7 @@
  */
 
 use Activitypub\Collection\Actors;
+use Activitypub\Embed;
 
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args ?? array() );
@@ -78,7 +79,7 @@ $args = wp_parse_args( $args ?? array() );
 		<div class="embed">
 			<?php
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			echo \Activitypub\get_embed_html( $args['activity']['object']['id'] );
+			echo Embed::get_html_for_object( $args['activity']['object'] );
 			?>
 		</div>
 
