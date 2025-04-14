@@ -11,14 +11,6 @@ use Activitypub\Embed;
 /* @var array $args Template arguments. */
 $args = wp_parse_args( $args ?? array() );
 
-$reply_url = add_query_arg(
-	array(
-		'reply_to'   => $args['activity']['id'],
-		'visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
-	),
-	admin_url( 'post-new.php' )
-);
-
 // Load header.
 require __DIR__ . '/parts/header.php';
 ?>
@@ -34,7 +26,7 @@ require __DIR__ . '/parts/header.php';
 		$message = __( 'Looks like someone&#8217;s reaching out! You just got a direct message from %s on the Fediverse. Here&#8217;s what they said:', 'activitypub' );
 	endif;
 
-	printf( esc_html( $message ), '<a href="' . esc_url( $args['activity']['actor'] ) . '">' . esc_html( $args['webfinger'] ) . '</a>' );
+	printf( esc_html( $message ), '<a href="' . esc_url( $args['actor']['url'] ) . '">' . esc_html( $args['actor']['webfinger'] ) . '</a>' );
 	?>
 </p>
 
@@ -44,12 +36,6 @@ require __DIR__ . '/parts/header.php';
 	echo Embed::get_html_for_object( $args['activity']['object'] );
 	?>
 </div>
-
-<p>
-	<a class="button" href="<?php echo esc_url( $reply_url ); ?>">
-		<?php esc_html_e( 'Reply', 'activitypub' ); ?>
-	</a>
-</p>
 
 <?php
 // Load footer.

@@ -191,6 +191,10 @@ class Mailer {
 			return;
 		}
 
+		if ( empty( $actor['webfinger'] ) ) {
+			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . wp_parse_url( $actor['url'], PHP_URL_HOST );
+		}
+
 		$email = \get_option( 'admin_email' );
 
 		if ( (int) $user_id > Actors::BLOG_USER_ID ) {
@@ -205,6 +209,7 @@ class Mailer {
 
 		$template_args = array(
 			'activity' => $activity,
+			'actor'    => $actor,
 			'user_id'  => $user_id,
 		);
 
