@@ -48,7 +48,7 @@
 		padding: 10px 16px;
 		border-radius: 4px;
 		font-weight: bold;
-		margin-top: 10px;
+		margin: 10px 0;
 	}
 	.footer {
 		font-size: 13px;

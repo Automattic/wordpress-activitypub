@@ -143,8 +143,23 @@ class Mailer {
 			array(
 				'admin_url' => $admin_url,
 				'target'    => $notification->target,
+				'stats'     => array(
+					'outbox'    => null,
+					'followers' => null,
+					'following' => null,
+				),
 			)
 		);
+
+		foreach ( $template_args['stats'] as $field => $value ) {
+			$result = wp_safe_remote_get( $actor[ $field ] );
+			if ( 200 === wp_remote_retrieve_response_code( $result ) ) {
+				$body = \json_decode( wp_remote_retrieve_body( $result ), true );
+				if ( isset( $body['totalItems'] ) ) {
+					$template_args['stats'][ $field ] = $body['totalItems'];
+				}
+			}
+		}
 
 		/* translators: 1: Blog name, 2: Follower name */
 		$subject = \sprintf( \__( '[%1$s] New Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] );
