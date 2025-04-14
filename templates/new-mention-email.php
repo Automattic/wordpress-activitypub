@@ -63,11 +63,15 @@ $args = wp_parse_args( $args ?? array() );
 
 		<p>
 			<?php
-			printf(
+			if ( Actors::BLOG_USER_ID === $args['user_id'] ) :
+				/* translators: %s: The name of the person who mentioned the blog. */
+				$message = __( 'Looks like someone&#8217;s talking about your blog! It was just mentioned by %s in a post on the Fediverse. Here&#8217;s what they said:', 'activitypub' );
+			else :
 				/* translators: %s: The name of the person who mentioned the user. */
-				esc_html__( 'Looks like someone’s talking about you! You were just mentioned by %s in a post on the Fediverse. Here’s what they said:', 'activitypub' ),
-				'<a href="' . esc_url( $args['activity']['actor'] ) . '">' . esc_html( $args['webfinger'] ) . '</a>'
-			)
+				$message = __( 'Looks like someone&#8217;s talking about you! You were just mentioned by %s in a post on the Fediverse. Here&#8217;s what they said:', 'activitypub' );
+			endif;
+
+			printf( esc_html( $message ), '<a href="' . esc_url( $args['activity']['actor'] ) . '">' . esc_html( $args['webfinger'] ) . '</a>' );
 			?>
 		</p>
 
