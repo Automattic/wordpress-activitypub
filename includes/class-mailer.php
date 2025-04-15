@@ -31,7 +31,7 @@ class Mailer {
 		}
 
 		// Direct message notification.
-		if ( '1' === \get_option( 'activitypub_mailer_new_mention' ) ) {
+		if ( '1' === \get_option( 'activitypub_mailer_new_mention', '1' ) ) {
 			\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 10, 2 );
 		}
 	}

@@ -201,7 +201,7 @@ class Settings_Fields {
 				</td>
 				<td>
 					<label>
-						<input type="checkbox" name="activitypub_mailer_new_dm" id="activitypub_mailer_new_dm" value="1" <?php \checked( '1', \get_option( 'activitypub_mailer_new_mention' ) ); ?> />
+						<input type="checkbox" name="activitypub_mailer_new_mention" id="activitypub_mailer_new_mention" value="1" <?php \checked( '1', \get_option( 'activitypub_mailer_new_mention', '1' ) ); ?> />
 					</label>
 				</td>
 			</tr>
