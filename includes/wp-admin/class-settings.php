@@ -99,7 +99,7 @@ class Settings {
 			array(
 				'type'        => 'boolean',
 				'description' => 'Send a notification when someone sends a user of the blog a direct message.',
-				'default'     => '1',
+				'default'     => false,
 			)
 		);
 
@@ -109,7 +109,7 @@ class Settings {
 			array(
 				'type'        => 'boolean',
 				'description' => 'Send a notification when someone starts to follow a user of the blog.',
-				'default'     => '1',
+				'default'     => false,
 			)
 		);
 
@@ -119,7 +119,7 @@ class Settings {
 			array(
 				'type'        => 'boolean',
 				'description' => 'Send a notification when someone mentions a user of the blog.',
-				'default'     => '1',
+				'default'     => false,
 			)
 		);
 
@@ -184,16 +184,6 @@ class Settings {
 				'description'       => \__( 'Allow reposts.', 'activitypub' ),
 				'default'           => '1',
 				'sanitize_callback' => 'absint',
-			)
-		);
-
-		\register_setting(
-			'activitypub',
-			'activitypub_mailer_new_dm',
-			array(
-				'type'        => 'boolean',
-				'description' => \__( 'Send notifications via e-mail when a direct message is received.', 'activitypub' ),
-				'default'     => '0',
 			)
 		);
 
