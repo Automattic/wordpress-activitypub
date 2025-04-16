@@ -282,7 +282,7 @@ class Mailer {
 
 			$email = \get_userdata( $user_id )->user_email;
 		} else {
-			if ( '1' !== \get_option( 'activitypub_mailer_new_mention', '0' ) ) {
+			if ( '1' !== \get_option( 'activitypub_mailer_new_mention', '1' ) ) {
 				return;
 			}
 
