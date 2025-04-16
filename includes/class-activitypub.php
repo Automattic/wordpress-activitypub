@@ -831,7 +831,7 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
-		add_filter( 'get_user_option_activitypub_mailer_new_dm', array( self::class, 'user_options_default' ), 10, 2 );
+		\add_filter( 'get_user_option_activitypub_mailer_new_dm', array( self::class, 'user_options_default' ), 10, 2 );
 
 		\register_meta(
 			'user',
@@ -843,7 +843,7 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
-		add_filter( 'get_user_option_activitypub_mailer_new_follower', array( self::class, 'user_options_default' ), 10, 2 );
+		\add_filter( 'get_user_option_activitypub_mailer_new_follower', array( self::class, 'user_options_default' ), 10, 2 );
 
 		\register_meta(
 			'user',
@@ -855,7 +855,7 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
-		add_filter( 'get_user_option_activitypub_mailer_new_mention', array( self::class, 'user_options_default' ), 10, 2 );
+		\add_filter( 'get_user_option_activitypub_mailer_new_mention', array( self::class, 'user_options_default' ), 10, 2 );
 
 		\register_meta(
 			'user',
@@ -892,9 +892,9 @@ class Activitypub {
 	public static function user_options_default( $value, $option ) {
 		if ( false === $value ) {
 			if ( 'activitypub_mailer_new_dm' === $option ) {
-				$value = (int) get_option( 'activitypub_mailer_new_dm', 1 );
+				$value = (int) \get_option( 'activitypub_mailer_new_dm', 1 );
 			} elseif ( 'activitypub_mailer_new_follower' === $option ) {
-				$value = (int) get_option( 'activitypub_mailer_new_follower', 1 );
+				$value = (int) \get_option( 'activitypub_mailer_new_follower', 1 );
 			} elseif ( 'activitypub_mailer_new_mention' === $option ) {
 				$value = 1;
 			}
