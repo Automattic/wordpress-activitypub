@@ -160,13 +160,10 @@ class Test_Mailer extends WP_UnitTestCase {
 	 * @covers ::new_follower
 	 */
 	public function test_new_follower() {
-		$notification = new Notification(
-			'follow',
-			'https://example.com/author',
-			array(
-				'object' => 'https://example.com/follow/1',
-			),
-			self::$user_id
+		$activity = array(
+			'type'   => 'Follow',
+			'actor'  => 'https://example.com/author',
+			'object' => 'https://example.com/follow/1',
 		);
 
 		// Mock remote metadata.
@@ -192,7 +189,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			}
 		);
 
-		Mailer::new_follower( $notification );
+		Mailer::new_follower( $activity, self::$user_id );
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
@@ -205,26 +202,13 @@ class Test_Mailer extends WP_UnitTestCase {
 	 * @covers ::init
 	 */
 	public function test_init() {
-		\delete_option( 'activitypub_mailer_new_follower' );
-		\delete_option( 'activitypub_mailer_new_dm' );
-
 		Mailer::init();
 
 		$this->assertEquals( 10, \has_filter( 'comment_notification_subject', array( Mailer::class, 'comment_notification_subject' ) ) );
 		$this->assertEquals( 10, \has_filter( 'comment_notification_text', array( Mailer::class, 'comment_notification_text' ) ) );
-		$this->assertEquals( 10, \has_action( 'activitypub_notification_follow', array( Mailer::class, 'new_follower' ) ) );
+		$this->assertEquals( 10, \has_action( 'activitypub_inbox_follow', array( Mailer::class, 'new_follower' ) ) );
 		$this->assertEquals( 10, \has_action( 'activitypub_inbox_create', array( Mailer::class, 'direct_message' ) ) );
-
-		\remove_action( 'activitypub_notification_follow', array( Mailer::class, 'new_follower' ) );
-		\remove_action( 'activitypub_inbox_create', array( Mailer::class, 'direct_message' ) );
-
-		\update_option( 'activitypub_mailer_new_follower', '0' );
-		\update_option( 'activitypub_mailer_new_dm', '0' );
-
-		Mailer::init();
-
-		$this->assertEquals( false, \has_action( 'activitypub_notification_follow', array( Mailer::class, 'new_follower' ) ) );
-		$this->assertEquals( false, \has_action( 'activitypub_inbox_create', array( Mailer::class, 'direct_message' ) ) );
+		$this->assertEquals( 10, \has_action( 'activitypub_inbox_create', array( Mailer::class, 'mention' ) ) );
 	}
 
 	/**
