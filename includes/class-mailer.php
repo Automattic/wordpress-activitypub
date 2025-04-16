@@ -113,7 +113,7 @@ class Mailer {
 				return;
 			}
 
-			$email     = get_userdata( $user_id )->user_email;
+			$email     = \get_userdata( $user_id )->user_email;
 			$admin_url = '/users.php?page=activitypub-followers-list';
 		} else {
 			if ( '1' !== \get_option( 'activitypub_mailer_new_follower', '0' ) ) {
@@ -130,7 +130,7 @@ class Mailer {
 		}
 
 		if ( empty( $actor['webfinger'] ) ) {
-			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . wp_parse_url( $actor['url'], PHP_URL_HOST );
+			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . \wp_parse_url( $actor['url'], PHP_URL_HOST );
 		}
 
 		$template_args = array_merge(
@@ -152,8 +152,8 @@ class Mailer {
 			}
 
 			$result = Http::get( $actor[ $field ], true );
-			if ( 200 === wp_remote_retrieve_response_code( $result ) ) {
-				$body = \json_decode( wp_remote_retrieve_body( $result ), true );
+			if ( 200 === \wp_remote_retrieve_response_code( $result ) ) {
+				$body = \json_decode( \wp_remote_retrieve_body( $result ), true );
 				if ( isset( $body['totalItems'] ) ) {
 					$template_args['stats'][ $field ] = $body['totalItems'];
 				}
@@ -161,7 +161,7 @@ class Mailer {
 		}
 
 		/* translators: 1: Blog name, 2: Follower name */
-		$subject = \sprintf( \__( '[%1$s] New Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] );
+		$subject = \sprintf( \__( '[%1$s] New Follower: %2$s', 'activitypub' ), \get_option( 'blogname' ), $actor['name'] );
 
 		\ob_start();
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-follower.php', false, $template_args );
@@ -204,7 +204,7 @@ class Mailer {
 				return;
 			}
 
-			$email = get_userdata( $user_id )->user_email;
+			$email = \get_userdata( $user_id )->user_email;
 		} else {
 			if ( '1' !== \get_option( 'activitypub_mailer_new_dm', '0' ) ) {
 				return;
@@ -220,7 +220,7 @@ class Mailer {
 		}
 
 		if ( empty( $actor['webfinger'] ) ) {
-			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . wp_parse_url( $actor['url'], PHP_URL_HOST );
+			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . \wp_parse_url( $actor['url'], PHP_URL_HOST );
 		}
 
 		$template_args = array(
@@ -230,7 +230,7 @@ class Mailer {
 		);
 
 		/* translators: 1: Blog name, 2 Actor name */
-		$subject = \sprintf( \esc_html__( '[%1$s] Direct Message from: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
+		$subject = \sprintf( \esc_html__( '[%1$s] Direct Message from: %2$s', 'activitypub' ), \esc_html( \get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
 
 		\ob_start();
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-dm.php', false, $template_args );
@@ -280,7 +280,7 @@ class Mailer {
 				return;
 			}
 
-			$email = get_userdata( $user_id )->user_email;
+			$email = \get_userdata( $user_id )->user_email;
 		} else {
 			if ( '1' !== \get_option( 'activitypub_mailer_new_mention', '0' ) ) {
 				return;
@@ -295,7 +295,7 @@ class Mailer {
 		}
 
 		if ( empty( $actor['webfinger'] ) ) {
-			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . wp_parse_url( $actor['url'], PHP_URL_HOST );
+			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . \wp_parse_url( $actor['url'], PHP_URL_HOST );
 		}
 
 		$template_args = array(
@@ -305,7 +305,7 @@ class Mailer {
 		);
 
 		/* translators: 1: Blog name, 2 Actor name */
-		$subject = \sprintf( \esc_html__( '[%1$s] Mention from: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
+		$subject = \sprintf( \esc_html__( '[%1$s] Mention from: %2$s', 'activitypub' ), \esc_html( \get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
 
 		\ob_start();
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-mention.php', false, $template_args );
