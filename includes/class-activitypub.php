@@ -823,6 +823,42 @@ class Activitypub {
 
 		\register_meta(
 			'user',
+			$blog_prefix . 'activitypub_mailer_new_dm',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send a notification when someone sends this user a direct message.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
+		add_filter( 'get_user_option_activitypub_mailer_new_dm', array( self::class, 'user_options_default' ), 10, 2 );
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_mailer_new_follower',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send a notification when someone starts to follow this user.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
+		add_filter( 'get_user_option_activitypub_mailer_new_follower', array( self::class, 'user_options_default' ), 10, 2 );
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_mailer_new_mention',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send a notification when someone mentions this user.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
+		add_filter( 'get_user_option_activitypub_mailer_new_mention', array( self::class, 'user_options_default' ), 10, 2 );
+
+		\register_meta(
+			'user',
 			'activitypub_show_welcome_tab',
 			array(
 				'type'              => 'integer',
@@ -844,5 +880,26 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
+	}
+
+	/**
+	 * Set default values for user options.
+	 *
+	 * @param bool|int $value  Option value.
+	 * @param string   $option Option name.
+	 * @return bool|int
+	 */
+	public static function user_options_default( $value, $option ) {
+		if ( false === $value ) {
+			if ( 'activitypub_mailer_new_dm' === $option ) {
+				$value = (int) get_option( 'activitypub_mailer_new_dm', 1 );
+			} elseif ( 'activitypub_mailer_new_follower' === $option ) {
+				$value = (int) get_option( 'activitypub_mailer_new_follower', 1 );
+			} elseif ( 'activitypub_mailer_new_mention' === $option ) {
+				$value = 1;
+			}
+		}
+
+		return $value;
 	}
 }
