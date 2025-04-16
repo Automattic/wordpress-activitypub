@@ -200,13 +200,13 @@ class Mailer {
 		}
 
 		if ( $user_id > Actors::BLOG_USER_ID ) {
-			if ( ! \get_user_option( 'activitypub_mailer_new_follower', $user_id ) ) {
+			if ( ! \get_user_option( 'activitypub_mailer_new_dm', $user_id ) ) {
 				return;
 			}
 
 			$email = get_userdata( $user_id )->user_email;
 		} else {
-			if ( '1' !== \get_option( 'activitypub_mailer_new_follower', '0' ) ) {
+			if ( '1' !== \get_option( 'activitypub_mailer_new_dm', '0' ) ) {
 				return;
 			}
 
@@ -276,13 +276,13 @@ class Mailer {
 		}
 
 		if ( $user_id > Actors::BLOG_USER_ID ) {
-			if ( ! \get_user_option( 'activitypub_mailer_new_follower', $user_id ) ) {
+			if ( ! \get_user_option( 'activitypub_mailer_new_mention', $user_id ) ) {
 				return;
 			}
 
 			$email = get_userdata( $user_id )->user_email;
 		} else {
-			if ( '1' !== \get_option( 'activitypub_mailer_new_follower', '0' ) ) {
+			if ( '1' !== \get_option( 'activitypub_mailer_new_mention', '0' ) ) {
 				return;
 			}
 
