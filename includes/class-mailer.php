@@ -137,7 +137,7 @@ class Mailer {
 			$actor,
 			array(
 				'admin_url' => $admin_url,
-				'target'    => $activity['target'],
+				'user_id'   => $user_id,
 				'stats'     => array(
 					'outbox'    => null,
 					'followers' => null,
