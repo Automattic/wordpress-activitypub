@@ -116,7 +116,7 @@ class Mailer {
 			$email     = \get_userdata( $user_id )->user_email;
 			$admin_url = '/users.php?page=activitypub-followers-list';
 		} else {
-			if ( '1' !== \get_option( 'activitypub_mailer_new_follower', '0' ) ) {
+			if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_follower', '0' ) ) {
 				return;
 			}
 
@@ -206,7 +206,7 @@ class Mailer {
 
 			$email = \get_userdata( $user_id )->user_email;
 		} else {
-			if ( '1' !== \get_option( 'activitypub_mailer_new_dm', '0' ) ) {
+			if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_dm', '0' ) ) {
 				return;
 			}
 
@@ -282,7 +282,7 @@ class Mailer {
 
 			$email = \get_userdata( $user_id )->user_email;
 		} else {
-			if ( '1' !== \get_option( 'activitypub_mailer_new_mention', '1' ) ) {
+			if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_mention', '1' ) ) {
 				return;
 			}
 

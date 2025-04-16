@@ -35,12 +35,19 @@ class Test_Mailer extends WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
+		$blog_prefix = $GLOBALS['wpdb']->get_blog_prefix();
+
 		self::$user_id = $factory->user->create(
 			array(
-				'role' => 'author',
+				'role'       => 'author',
+				'meta_input' => array(
+					$blog_prefix . 'activitypub_mailer_new_dm'       => 1,
+					$blog_prefix . 'activitypub_mailer_new_follower' => 1,
+					$blog_prefix . 'activitypub_mailer_new_mention'  => 1,
+				),
 			)
 		);
 
@@ -553,7 +560,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	 */
 	public function test_blog_new_follower_with_disabled_option() {
 		// Set blog option to false (0).
-		update_option( 'activitypub_mailer_new_follower', '0' );
+		update_option( 'activitypub_blog_user_mailer_new_follower', '0' );
 		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
 		$activity = array(
@@ -574,7 +581,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		// Clean up.
 		remove_all_filters( 'wp_before_load_template' );
-		delete_option( 'activitypub_mailer_new_follower' );
+		delete_option( 'activitypub_blog_user_mailer_new_follower' );
 		delete_option( 'activitypub_actor_mode' );
 	}
 
@@ -585,7 +592,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	 */
 	public function test_blog_direct_message_with_disabled_option() {
 		// Set blog option to false (0).
-		update_option( 'activitypub_mailer_new_dm', '0' );
+		update_option( 'activitypub_blog_user_mailer_new_dm', '0' );
 		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
 		$activity = array(
@@ -609,7 +616,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		// Clean up.
 		remove_all_filters( 'wp_before_load_template' );
-		delete_option( 'activitypub_mailer_new_dm' );
+		delete_option( 'activitypub_blog_user_mailer_new_dm' );
 		delete_option( 'activitypub_actor_mode' );
 	}
 
@@ -620,7 +627,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	 */
 	public function test_blog_mention_with_disabled_option() {
 		// Set blog option to false (0).
-		update_option( 'activitypub_mailer_new_mention', '0' );
+		update_option( 'activitypub_blog_user_mailer_new_mention', '0' );
 		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
 		$activity = array(
@@ -644,7 +651,7 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		// Clean up.
 		remove_all_filters( 'wp_before_load_template' );
-		delete_option( 'activitypub_mailer_new_mention' );
+		delete_option( 'activitypub_blog_user_mailer_new_mention' );
 		delete_option( 'activitypub_actor_mode' );
 	}
 }

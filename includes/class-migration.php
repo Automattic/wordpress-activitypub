@@ -192,7 +192,7 @@ class Migration {
 			self::delete_mastodon_api_orphaned_extra_fields();
 		}
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
-			self::add_mention_notification_option();
+			self::update_notification_options();
 		}
 
 		/*
@@ -802,9 +802,9 @@ class Migration {
 	 * Add default notification settings.
 	 */
 	private static function add_notification_defaults() {
-		\add_option( 'activitypub_mailer_new_follower', '1' );
-		\add_option( 'activitypub_mailer_new_dm', '1' );
-		\add_option( 'activitypub_mailer_new_mention', '1' );
+		\add_option( 'activitypub_blog_user_mailer_new_follower', '1' );
+		\add_option( 'activitypub_blog_user_mailer_new_dm', '1' );
+		\add_option( 'activitypub_blog_user_mailer_new_mention', '1' );
 	}
 
 	/**
@@ -931,7 +931,29 @@ class Migration {
 	/**
 	 * Add the new mention notification option.
 	 */
-	public static function add_mention_notification_option() {
-		\add_option( 'activitypub_mailer_new_mention', '1' );
+	public static function update_notification_options() {
+		$new_dm       = \get_option( 'activitypub_mailer_new_dm', '1' );
+		$new_follower = \get_option( 'activitypub_mailer_new_follower', '1' );
+
+		// Add the blog user notification options.
+		\add_option( 'activitypub_blog_user_mailer_new_dm', $new_dm );
+		\add_option( 'activitypub_blog_user_mailer_new_follower', $new_follower );
+		\add_option( 'activitypub_blog_user_mailer_new_mention', '1' );
+
+		// Add the actor notification options.
+		foreach ( Actors::get_collection() as $actor ) {
+			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_mention', 1 );
+
+			if ( '1' === $new_dm ) {
+				\update_user_option( $actor->get__id(), 'activitypub_mailer_new_dm', 1 );
+			}
+			if ( '1' === $new_follower ) {
+				\update_user_option( $actor->get__id(), 'activitypub_mailer_new_dm', 1 );
+			}
+		}
+
+		// Delete the old notification options.
+		\delete_option( 'activitypub_mailer_new_dm' );
+		\delete_option( 'activitypub_mailer_new_follower' );
 	}
 }

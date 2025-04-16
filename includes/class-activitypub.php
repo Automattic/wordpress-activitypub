@@ -98,6 +98,9 @@ class Activitypub {
 		\delete_option( 'activitypub_application_user_private_key' );
 		\delete_option( 'activitypub_application_user_public_key' );
 		\delete_option( 'activitypub_blog_user_also_known_as' );
+		\delete_option( 'activitypub_blog_user_mailer_new_dm' );
+		\delete_option( 'activitypub_blog_user_mailer_new_follower' );
+		\delete_option( 'activitypub_blog_user_mailer_new_mention' );
 		\delete_option( 'activitypub_blog_user_moved_to' );
 		\delete_option( 'activitypub_blog_user_private_key' );
 		\delete_option( 'activitypub_blog_user_public_key' );
@@ -110,9 +113,6 @@ class Activitypub {
 		\delete_option( 'activitypub_enable_users' );
 		\delete_option( 'activitypub_header_image' );
 		\delete_option( 'activitypub_last_post_with_permalink_as_id' );
-		\delete_option( 'activitypub_mailer_new_dm' );
-		\delete_option( 'activitypub_mailer_new_follower' );
-		\delete_option( 'activitypub_mailer_new_mention' );
 		\delete_option( 'activitypub_max_image_attachments' );
 		\delete_option( 'activitypub_migration_lock' );
 		\delete_option( 'activitypub_object_type' );
@@ -831,7 +831,6 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
-		\add_filter( 'get_user_option_activitypub_mailer_new_dm', array( self::class, 'user_options_default' ), 10, 2 );
 
 		\register_meta(
 			'user',
@@ -843,7 +842,6 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
-		\add_filter( 'get_user_option_activitypub_mailer_new_follower', array( self::class, 'user_options_default' ), 10, 2 );
 
 		\register_meta(
 			'user',
@@ -855,7 +853,6 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
-		\add_filter( 'get_user_option_activitypub_mailer_new_mention', array( self::class, 'user_options_default' ), 10, 2 );
 
 		\register_meta(
 			'user',
@@ -880,26 +877,5 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
-	}
-
-	/**
-	 * Set default values for user options.
-	 *
-	 * @param bool|int $value  Option value.
-	 * @param string   $option Option name.
-	 * @return bool|int
-	 */
-	public static function user_options_default( $value, $option ) {
-		if ( false === $value ) {
-			if ( 'activitypub_mailer_new_dm' === $option ) {
-				$value = (int) \get_option( 'activitypub_mailer_new_dm', 1 );
-			} elseif ( 'activitypub_mailer_new_follower' === $option ) {
-				$value = (int) \get_option( 'activitypub_mailer_new_follower', 1 );
-			} elseif ( 'activitypub_mailer_new_mention' === $option ) {
-				$value = 1;
-			}
-		}
-
-		return $value;
 	}
 }

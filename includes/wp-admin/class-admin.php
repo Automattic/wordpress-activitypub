@@ -491,6 +491,10 @@ class Admin {
 			$user = new \WP_User( $user_id );
 			if ( 'add_activitypub_cap' === $action ) {
 				$user->add_cap( 'activitypub' );
+
+				\update_user_option( $user_id, 'activitypub_mailer_new_dm', 1 );
+				\update_user_option( $user_id, 'activitypub_mailer_new_follower', 1 );
+				\update_user_option( $user_id, 'activitypub_mailer_new_mention', 1 );
 			} elseif ( 'remove_activitypub_cap' === $action ) {
 				$user->remove_cap( 'activitypub' );
 			}
