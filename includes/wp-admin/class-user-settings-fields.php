@@ -188,7 +188,7 @@ class User_Settings_Fields {
 			<p>
 				<label>
 					<input type="checkbox" name="activitypub_mailer_new_follower" id="activitypub_mailer_new_follower" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_new_follower' ) ); ?> />
-					<?php \esc_html_e( 'New followers', 'activitypub' ); ?>
+					<?php \esc_html_e( 'New Followers', 'activitypub' ); ?>
 				</label>
 			</p>
 			<p>
