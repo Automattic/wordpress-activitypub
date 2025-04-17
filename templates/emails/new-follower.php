@@ -98,7 +98,7 @@ require __DIR__ . '/parts/header.php';
 							printf(
 								/* translators: %s: Number of posts */
 								esc_html( _n( '%s post', '%s posts', (int) $args['stats']['outbox'], 'activitypub' ) ),
-								'<strong>' . esc_html( (int) $args['stats']['outbox'] ) . '</strong>'
+								'<strong>' . esc_html( number_format_i18n( $args['stats']['outbox'] ) ) . '</strong>'
 							);
 							?>
 						</div>
@@ -109,7 +109,7 @@ require __DIR__ . '/parts/header.php';
 							printf(
 								/* translators: %s: Number of followers */
 								esc_html( _n( '%s follower', '%s followers', (int) $args['stats']['followers'], 'activitypub' ) ),
-								'<strong>' . esc_html( (int) $args['stats']['followers'] ) . '</strong>'
+								'<strong>' . esc_html( number_format_i18n( $args['stats']['followers'] ) ) . '</strong>'
 							);
 							?>
 						</div>
@@ -120,7 +120,7 @@ require __DIR__ . '/parts/header.php';
 							printf(
 								/* translators: %s: Number of following */
 								esc_html( _n( '%s following', '%s following', (int) $args['stats']['following'], 'activitypub' ) ),
-								'<strong>' . esc_html( (int) $args['stats']['following'] ) . '</strong>'
+								'<strong>' . esc_html( number_format_i18n( $args['stats']['following'] ) ) . '</strong>'
 							);
 							?>
 						</div>
