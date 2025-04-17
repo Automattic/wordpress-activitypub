@@ -312,9 +312,10 @@ class Mastodon {
 			/**
 			 * Filter the post data before inserting it into the database.
 			 *
-			 * @param array $post_data The post data to be inserted.
+			 * @param array  $post_data The post data to be inserted.
+			 * @param object $post      The Mastodon Create activity.
 			 */
-			$post_data = \apply_filters( 'activitypub_import_mastodon_post_data', $post_data );
+			$post_data = \apply_filters( 'activitypub_import_mastodon_post_data', $post_data, $post );
 
 			$post_exists = \post_exists( '', $post_data['post_content'], $post_data['post_date'], $post_data['post_type'] );
 
