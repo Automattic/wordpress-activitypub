@@ -21,7 +21,7 @@ function isHandle( string ) {
 	return parts.length === 2 && isUrl( `https://${ parts[ 1 ] }` );
 }
 
-export function Dialog( { actionText, copyDescription, handle, resourceUrl, myProfile = false, rememberProfile = false } ) {
+export function Dialog( { actionText, copyDescription, handle, resourceUrl, myProfile = '', rememberProfile = false } ) {
 	const loadingText = __( 'Loading...', 'activitypub' );
 	const openingText = __( 'Opening...', 'activitypub' );
 	const errorText = __( 'Error', 'activitypub' );

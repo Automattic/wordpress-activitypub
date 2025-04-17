@@ -82,10 +82,12 @@ const generateDummyReaction = ( index ) => {
  */
 const generateDummyReactions = () => ( {
 	likes: {
+		/* translators: %d: Number of likes */
 		label: sprintf( _x( '%d likes', 'number of likes', 'activitypub' ), 9 ),
 		items: Array.from( { length: 9 }, ( _, i ) => generateDummyReaction( i ) ),
 	},
 	reposts: {
+		/* translators: %d: Number of reposts */
 		label:  sprintf( _x( '%d reposts', 'number of reposts', 'activitypub' ), 6 ),
 		items: Array.from( { length: 6 }, ( _, i ) => generateDummyReaction( i + 9 ) ),
 	},
