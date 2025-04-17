@@ -929,7 +929,7 @@ class Migration {
 	}
 
 	/**
-	 * Add the new mention notification option.
+	 * Update notification options.
 	 */
 	public static function update_notification_options() {
 		$new_dm       = \get_option( 'activitypub_mailer_new_dm', '1' );
