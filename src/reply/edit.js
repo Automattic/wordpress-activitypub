@@ -1,7 +1,7 @@
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
 import { TextControl, PanelBody, ToggleControl, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { useEffect, useState, useRef, useCallback, useLayoutEffect } from '@wordpress/element';
+import { useEffect, useState, useRef, useCallback } from '@wordpress/element';
 import { useDebounce } from '@wordpress/compose';
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
