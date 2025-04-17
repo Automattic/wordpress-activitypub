@@ -85,6 +85,54 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
+	 * Test disallow list block.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_disallow_list_block() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		// Add a keyword that will be in our test content.
+		\update_option( 'disallowed_keys', 'https://remote.example/@test' );
+
+		// Set up mock action.
+		$inbox_action = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox_action, 'action' ) );
+
+		// Create a valid request with content that contains the disallowed keyword.
+		$json = array(
+			'id'     => 'https://remote.example/@id',
+			'type'   => 'Create',
+			'actor'  => 'https://remote.example/@test',
+			'object' => array(
+				'id'        => 'https://remote.example/post/test',
+				'type'      => 'Note',
+				'content'   => 'Hello, World!',
+				'inReplyTo' => 'https://local.example/post/test',
+				'published' => '2020-01-01T00:00:00Z',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		// Dispatch the request.
+		$response = \rest_do_request( $request );
+
+		// Verify the response is still successful (202).
+		$this->assertEquals( 202, $response->get_status() );
+
+		// Verify that the hooks were not called.
+		$this->assertEquals( 0, $inbox_action->get_call_count(), 'activitypub_inbox hook should not be called when content is disallowed' );
+
+		// Clean up.
+		\delete_option( 'disallowed_keys' );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\remove_action( 'activitypub_inbox', array( $inbox_action, 'action' ) );
+	}
+
+	/**
 	 * Test whether an activity is public.
 	 *
 	 * @dataProvider public_activity_provider
