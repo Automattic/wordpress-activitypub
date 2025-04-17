@@ -53,12 +53,12 @@ require __DIR__ . '/parts/header.php';
 </p>
 
 <?php
-// Load footer.
-require __DIR__ . '/parts/footer.php';
-
 /**
  * Fires at the bottom of the new mention emails.
  *
  * @param array $args The template arguments.
  */
 do_action( 'activitypub_new_mention_email', $args );
+
+// Load footer.
+require __DIR__ . '/parts/footer.php';

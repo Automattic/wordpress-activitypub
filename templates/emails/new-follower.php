@@ -148,12 +148,12 @@ require __DIR__ . '/parts/header.php';
 </p>
 
 <?php
-// Load footer.
-require __DIR__ . '/parts/footer.php';
-
 /**
  * Fires at the bottom of the new follower email.
  *
  * @param array $args The actor that followed the blog.
  */
 do_action( 'activitypub_new_follower_email', $args );
+
+// Load footer.
+require __DIR__ . '/parts/footer.php';
