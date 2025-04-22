@@ -36,7 +36,7 @@ class Embed {
 		$oembed_result = \wp_oembed_get( $url, $args );
 
 		// Add our filter back.
-		\add_filter( 'pre_oembed_result', array( __CLASS__, 'maybe_use_activitypub_embed' ), 10, 3 );
+		\add_filter( 'pre_oembed_result', array( self::class, 'maybe_use_activitypub_embed' ), 10, 3 );
 
 		return false !== $oembed_result;
 	}
