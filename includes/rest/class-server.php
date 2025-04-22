@@ -212,22 +212,6 @@ class Server {
 			'metadata' => $data,
 		);
 
-		switch ( $data['code'] ) {
-			case 'activitypub_signature':
-			case 'activitypub_signature_verification':
-				$error['title'] = 'Invalid Signature';
-				break;
-			case 'activitypub_comment_not_found':
-			case 'activitypub_local_only_comment':
-			case 'activitypub_post_not_found':
-			case 'activitypub_user_not_found':
-				$error['type']   = 'https://w3id.org/fep/c180#object-does-not-exist';
-				$error['status'] = 400;
-				$error['title']  = 'Object does not exist';
-				$response->set_status( 400 );
-				break;
-		}
-
 		$response->set_data( $error );
 
 		return $response;
