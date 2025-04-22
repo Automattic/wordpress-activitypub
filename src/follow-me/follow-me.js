@@ -124,8 +124,11 @@ function Follow( {
 	buttonSize,
 } ) {
 	const [ isOpen, setIsOpen ] = useState( false );
-	/* translators: %s: profile name */
-	const title = sprintf( __( 'Follow %s', 'activitypub' ), profile?.name );
+	const title = sprintf(
+		/* translators: %s: profile name */
+		__( 'Follow %s', 'activitypub' ),
+		profile?.name
+	);
 
 	return (
 		<>
