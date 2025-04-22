@@ -425,19 +425,19 @@ class Blocks {
 	 */
 	public static function filter_import_mastodon_post_data( $data, $post ) {
 		// Convert paragraphs to blocks.
-		preg_match_all( '#<p>.*?</p>#is', $data['post_content'], $matches );
-		$blocks = array_map(
+		\preg_match_all( '#<p>.*?</p>#is', $data['post_content'], $matches );
+		$blocks = \array_map(
 			function ( $paragraph ) {
-				return '<!-- wp:paragraph -->' . PHP_EOL . $paragraph . PHP_EOL . '<!-- /wp:paragraph -->';
+				return '<!-- wp:paragraph -->' . PHP_EOL . $paragraph . PHP_EOL . '<!-- /wp:paragraph -->' . PHP_EOL;
 			},
 			$matches[0] ?? array()
 		);
 
-		$data['post_content'] = implode( PHP_EOL, $blocks );
+		$data['post_content'] = \rtrim( \implode( PHP_EOL, $blocks ), PHP_EOL );
 
 		// Add reply block if it's a reply.
 		if ( null !== $post->object->inReplyTo ) {
-			$reply_block          = sprintf( '<!-- wp:activitypub/reply {"url":"%1$s","embedPost":true} /-->' . PHP_EOL, esc_url( $post->object->inReplyTo ) );
+			$reply_block          = \sprintf( '<!-- wp:activitypub/reply {"url":"%1$s","embedPost":true} /-->' . PHP_EOL, \esc_url( $post->object->inReplyTo ) );
 			$data['post_content'] = $reply_block . $data['post_content'];
 		}
 
