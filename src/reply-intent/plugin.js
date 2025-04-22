@@ -2,7 +2,7 @@ import { registerPlugin } from '@wordpress/plugins';
 import { createBlock } from '@wordpress/blocks';
 import { dispatch } from '@wordpress/data';
 import { store as blockEditorStore } from '@wordpress/block-editor';
-import { useEffect, useState } from '@wordpress/element';
+import { useEffect } from '@wordpress/element';
 
 // We use a kind of global state to ensure only a single embed is rendered across component re-renders.
 let didHandleEmbed = false;

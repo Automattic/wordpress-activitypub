@@ -32,7 +32,10 @@ function RemoteUser( { profileURL, template, commentURL, deleteRemoteUser } ) {
 	return (
 		<>
 			<Button variant="link" className="comment-reply-link activitypub-remote-reply__button" onClick={ opener } >
-				{ sprintf( __( 'Reply as %s', 'activitypub' ), profileURL ) }
+				{
+					/* translators: %s: profile name */
+					sprintf( __( 'Reply as %s', 'activitypub' ), profileURL )
+				}
 			</Button>
 
 			<Button
