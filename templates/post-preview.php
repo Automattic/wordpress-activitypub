@@ -1,6 +1,6 @@
 <?php
 /**
- * ActivityPub Post JSON template.
+ * ActivityPub Post Preview template.
  *
  * @package Activitypub
  */
@@ -17,6 +17,28 @@ if ( \is_wp_error( $transformer ) ) {
 
 $object = $transformer->to_object();
 $user   = $transformer->get_actor_object();
+
+$has_images = false;
+$video      = false;
+$audio      = false;
+
+foreach ( $object->get_attachment() as $attachment ) {
+	if ( isset( $attachment['mediaType'] ) ) {
+		$media_type = strtok( $attachment['mediaType'], '/' );
+
+		switch ( $media_type ) {
+			case 'image':
+				$has_images = true;
+				break 2;
+			case 'video':
+				$video = $attachment;
+				break 2;
+			case 'audio':
+				$audio = $attachment;
+				break 2;
+		}
+	}
+}
 
 ?>
 <DOCTYPE html>
@@ -154,6 +176,16 @@ $user   = $transformer->get_actor_object();
 				object-fit: cover;
 				overflow: hidden;
 			}
+			main .attachments video,
+			main .attachments audio {
+				max-width: 100%;
+				margin: 1em 0;
+				display: block;
+				grid-column: 1 / span 2;
+			}
+			main .attachments audio {
+				width: 100%;
+			}
 			main .tags a {
 				background-color: #f6f6f6;
 				border-radius: 4px;
@@ -217,11 +249,25 @@ $user   = $transformer->get_actor_object();
 					</div>
 					<?php if ( $object->get_attachment() ) : ?>
 					<div class="attachments">
-						<?php foreach ( $object->get_attachment() as $attachment ) : ?>
-							<?php if ( 'Image' === $attachment['type'] ) : ?>
-								<img src="<?php echo esc_url( $attachment['url'] ); ?>" alt="<?php echo esc_attr( $attachment['name'] ?? '' ); ?>" />
-							<?php endif; ?>
-						<?php endforeach; ?>
+						<?php
+						if ( $has_images ) :
+							foreach ( $object->get_attachment() as $attachment ) :
+								if ( 'Image' === $attachment['type'] ) :
+									?>
+									<img src="<?php echo esc_url( $attachment['url'] ); ?>" alt="<?php echo esc_attr( $attachment['name'] ?? '' ); ?>" />
+									<?php
+								endif;
+							endforeach;
+						elseif ( $video ) :
+							?>
+							<video controls src="<?php echo esc_url( $video['url'] ); ?>" title="<?php echo esc_url( $video['name'] ?? '' ); ?>"></video>
+							<?php
+						elseif ( $audio ) :
+							?>
+							<audio controls src="<?php echo esc_url( $audio['url'] ); ?>" title="<?php echo esc_url( $audio['name'] ?? '' ); ?>"></audio>
+							<?php
+						endif;
+						?>
 					</div>
 					<?php endif; ?>
 					<?php if ( $object->get_tag() ) : ?>
