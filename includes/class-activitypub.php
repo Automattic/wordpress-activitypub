@@ -898,7 +898,7 @@ class Activitypub {
 			);
 
 			if ( \in_array( $option, $options_with_default, true ) ) {
-			//	return '1';
+				return '1';
 			}
 		}
 
