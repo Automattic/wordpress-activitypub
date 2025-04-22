@@ -23,6 +23,106 @@ class Embed {
 	}
 
 	/**
+	 * Get an ActivityPub embed HTML for a URL.
+	 *
+	 * @param string  $url        The URL to get the embed for.
+	 * @param boolean $inline_css Whether to inline CSS. Default true.
+	 *
+	 * @return string|false The embed HTML or false if not found.
+	 */
+	public static function get_html( $url, $inline_css = true ) {
+		// Try to get ActivityPub representation.
+		$object = Http::get_remote_object( $url );
+		if ( is_wp_error( $object ) ) {
+			return false;
+		}
+
+		return self::get_html_for_object( $object, $inline_css );
+	}
+
+	/**
+	 * Get an ActivityPub embed HTML for an ActivityPub object.
+	 *
+	 * @param array   $activity_object The ActivityPub object to build the embed for.
+	 * @param boolean $inline_css      Whether to inline CSS. Default true.
+	 *
+	 * @return string The embed HTML.
+	 */
+	public static function get_html_for_object( $activity_object, $inline_css = true ) {
+		$author_name = $activity_object['attributedTo'] ?? '';
+		$avatar_url  = $activity_object['icon']['url'] ?? '';
+		$author_url  = $author_name;
+
+		// If we don't have an avatar URL, but we have an author URL, try to fetch it.
+		if ( ! $avatar_url && $author_url ) {
+			$author = Http::get_remote_object( $author_url );
+			if ( ! is_wp_error( $author ) ) {
+				$avatar_url  = $author['icon']['url'] ?? '';
+				$author_name = $author['name'] ?? $author_name;
+			}
+		}
+
+		// Create Webfinger where not found.
+		if ( empty( $author['webfinger'] ) ) {
+			if ( ! empty( $author['preferredUsername'] ) && ! empty( $author['url'] ) ) {
+				// Construct webfinger-style identifier from username and domain.
+				$domain              = wp_parse_url( $author['url'], PHP_URL_HOST );
+				$author['webfinger'] = '@' . $author['preferredUsername'] . '@' . $domain;
+			} else {
+				// Fallback to URL.
+				$author['webfinger'] = $author_url;
+			}
+		}
+
+		$title     = $activity_object['name'] ?? '';
+		$content   = $activity_object['content'] ?? '';
+		$published = isset( $activity_object['published'] ) ? gmdate( get_option( 'date_format' ) . ', ' . get_option( 'time_format' ), strtotime( $activity_object['published'] ) ) : '';
+		$boosts    = isset( $activity_object['shares']['totalItems'] ) ? (int) $activity_object['shares']['totalItems'] : null;
+		$favorites = isset( $activity_object['likes']['totalItems'] ) ? (int) $activity_object['likes']['totalItems'] : null;
+
+		$image = '';
+		if ( isset( $activity_object['image']['url'] ) ) {
+			$image = $activity_object['image']['url'];
+		} elseif ( isset( $activity_object['attachment'] ) ) {
+			foreach ( $activity_object['attachment'] as $attachment ) {
+				if ( isset( $attachment['type'] ) && in_array( $attachment['type'], array( 'Image', 'Document' ), true ) ) {
+					$image = $attachment['url'];
+					break;
+				}
+			}
+		}
+
+		ob_start();
+		load_template(
+			ACTIVITYPUB_PLUGIN_DIR . 'templates/reply-embed.php',
+			false,
+			array(
+				'author_name' => $author_name,
+				'author_url'  => $author_url,
+				'avatar_url'  => $avatar_url,
+				'published'   => $published,
+				'title'       => $title,
+				'content'     => $content,
+				'image'       => $image,
+				'boosts'      => $boosts,
+				'favorites'   => $favorites,
+				'url'         => $activity_object['id'],
+				'webfinger'   => $author['webfinger'],
+			)
+		);
+
+		if ( $inline_css ) {
+			// Grab the CSS.
+			$css = \file_get_contents( ACTIVITYPUB_PLUGIN_DIR . 'assets/css/activitypub-embed.css' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			// We embed CSS directly because this may be in an iframe.
+			printf( '<style>%s</style>', $css ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		}
+
+		// A little light whitespace cleanup.
+		return preg_replace( '/\s+/', ' ', ob_get_clean() );
+	}
+
+	/**
 	 * Check if a real oEmbed result exists for the given URL.
 	 *
 	 * @param string $url The URL to check.

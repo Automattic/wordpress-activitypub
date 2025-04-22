@@ -276,9 +276,6 @@ class Signature {
 		}
 
 		$signed_headers = $signature_block['headers'];
-		if ( ! $signed_headers ) {
-			$signed_headers = array( 'date' );
-		}
 
 		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
 		if ( ! $signed_data ) {
@@ -401,11 +398,7 @@ class Signature {
 			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', trim( $matches[1] ) ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 		}
 
-		if (
-			! empty( $parsed_header['signature'] ) &&
-			! empty( $parsed_header['algorithm'] ) &&
-			empty( $parsed_header['headers'] )
-		) {
+		if ( empty( $parsed_header['headers'] ) ) {
 			$parsed_header['headers'] = array( 'date' );
 		}
 

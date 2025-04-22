@@ -62,6 +62,8 @@ class Test_Shortcodes extends \WP_UnitTestCase {
 	public function test_content() {
 		global $post;
 
+		remove_filter( 'the_content', 'apply_block_hooks_to_content_from_post_object', 8 );
+
 		$post               = $this->post;
 		$post->post_content = '<script>test</script>hallo<script type="javascript">{"asdf": "qwerty"}</script><style></style>';
 

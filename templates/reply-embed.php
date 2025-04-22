@@ -64,7 +64,7 @@ $args = wp_parse_args(
 		<span class="ap-stat">
 			<?php
 			/* translators: %s: number of boosts */
-			printf( \esc_html__( '%s boosts', 'activitypub' ), '<strong>' . \esc_html( $args['boosts'] ) . '</strong>' );
+			printf( \esc_html__( '%s boosts', 'activitypub' ), '<strong>' . \esc_html( \number_format_i18n( $args['boosts'] ) ) . '</strong>' );
 			?>
 		</span>
 		<?php endif; ?>
@@ -73,7 +73,7 @@ $args = wp_parse_args(
 		<span class="ap-stat">
 			<?php
 			/* translators: %s: number of favorites */
-			printf( \esc_html__( '%s favorites', 'activitypub' ), '<strong>' . \esc_html( $args['favorites'] ) . '</strong>' );
+			printf( \esc_html__( '%s favorites', 'activitypub' ), '<strong>' . \esc_html( \number_format_i18n( $args['favorites'] ) ) . '</strong>' );
 			?>
 		</span>
 		<?php endif; ?>

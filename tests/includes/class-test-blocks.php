@@ -63,6 +63,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		// Mock the ActivityPub object that would be returned by Http::get_remote_object.
 		$mock_activity = array(
+			'id'           => $url,
 			'type'         => 'Note',
 			'attributedTo' => 'https://mastodon.social/users/Gargron',
 			'content'      => 'Test toot content',
