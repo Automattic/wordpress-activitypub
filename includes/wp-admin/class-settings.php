@@ -244,31 +244,31 @@ class Settings {
 
 		\register_setting(
 			'activitypub_blog',
-			'activitypub_mailer_new_dm',
+			'activitypub_blog_user_mailer_new_dm',
 			array(
-				'type'        => 'boolean',
+				'type'        => 'integer',
 				'description' => 'Send a notification when someone sends a user of the blog a direct message.',
-				'default'     => false,
+				'default'     => 1,
 			)
 		);
 
 		\register_setting(
 			'activitypub_blog',
-			'activitypub_mailer_new_follower',
+			'activitypub_blog_user_mailer_new_follower',
 			array(
-				'type'        => 'boolean',
+				'type'        => 'integer',
 				'description' => 'Send a notification when someone starts to follow a user of the blog.',
-				'default'     => false,
+				'default'     => 1,
 			)
 		);
 
 		\register_setting(
 			'activitypub_blog',
-			'activitypub_mailer_new_mention',
+			'activitypub_blog_user_mailer_new_mention',
 			array(
-				'type'        => 'boolean',
+				'type'        => 'integer',
 				'description' => 'Send a notification when someone mentions a user of the blog.',
-				'default'     => false,
+				'default'     => 1,
 			)
 		);
 
