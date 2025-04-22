@@ -670,7 +670,7 @@ class Enable_Mastodon_Apps {
 				$posts['orderedItems']
 			);
 			$activitypub_statuses = array_merge( $activitypub_statuses, array_filter( $new_statuses ) );
-			$url                  = $posts['next'];
+			$url                  = $posts['next'] ?? null;
 
 			if ( count( $activitypub_statuses ) >= $limit ) {
 				break;

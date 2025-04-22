@@ -188,8 +188,11 @@ class Migration {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_comment_author_emails' ) );
 			\add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '5.7.0', '<' ) ) {
 			self::delete_mastodon_api_orphaned_extra_fields();
+		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::add_mention_notification_option();
 		}
 
 		/*
@@ -801,6 +804,7 @@ class Migration {
 	private static function add_notification_defaults() {
 		\add_option( 'activitypub_mailer_new_follower', '1' );
 		\add_option( 'activitypub_mailer_new_dm', '1' );
+		\add_option( 'activitypub_mailer_new_mention', '1' );
 	}
 
 	/**
@@ -922,5 +926,12 @@ class Migration {
 				'post_author' => Actors::BLOG_USER_ID,
 			)
 		);
+	}
+
+	/**
+	 * Add the new mention notification option.
+	 */
+	public static function add_mention_notification_option() {
+		\add_option( 'activitypub_mailer_new_mention', '1' );
 	}
 }
