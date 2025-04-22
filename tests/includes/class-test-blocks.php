@@ -152,7 +152,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
 
-		$this->assertSame( "<!-- wp:paragraph -->\n<p>First paragraph</p>\n<!-- /wp:paragraph -->\n<!-- wp:paragraph -->\n<p>Second paragraph</p>\n<!-- /wp:paragraph -->", $result['post_content'] );
+		$this->assertSame( "<!-- wp:paragraph -->\n<p>First paragraph</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Second paragraph</p>\n<!-- /wp:paragraph -->", $result['post_content'] );
 	}
 
 	/**
