@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Fallback embed support for Fediverse content that lacks native oEmbed responses.
