@@ -94,6 +94,11 @@
 	align-items: center;
 	gap: 5px;
 }
+@media only screen and (max-width: 399px) {
+	.activitypub-embed-meta .ap-stat {
+		display: none !important;
+	}
+}
 
 .activitypub-embed-meta a.ap-stat {
 	color: inherit;

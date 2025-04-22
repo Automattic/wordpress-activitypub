@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.7.0] - 2025-04-11
+### Added
+- Advanced Settings tab, with special settings for advanced users. [#1449]
+- Check if pretty permalinks are enabled and recommend to use threaded comments. [#1524]
+- Reply block: show embeds where available. [#1572]
+- Support same-server domain migrations. [#1572]
+- Upgrade routine that removes any erroneously created extra field entries. [#1566]
+
+### Changed
+- Add option to enable/disable the "shared inbox" to the "Advanced Settings". [#1553]
+- Add option to enable/disable the `Vary` Header to the "Advanced Settings". [#1552]
+- Configure the "Follow Me" button to have a button-only mode. [#1133]
+- Importers are loaded on admin-specific hook. [#1561]
+- Improve the troubleshooting UI and show Site-Health stats in ActivityPub settings. [#1546]
+- Increased compatibility with Mobilizon and other platforms by improving signature verification for different key formats. [#1557]
+
+### Fixed
+- Ensure that an `Activity` has an `Actor` before adding it to the Outbox. [#1564]
+- Fixed some bugs and added additional information on the Debug tab of the Site-Health page. [#1547]
+- Follow-up to the reply block changes that makes sure Mastodon embeds are displayed in the editor. [#1555]
+- Outbox endpoint bug where non-numeric usernames caused errors when querying Outbox data. [#1559]
+- Show Site Health error if site uses old "Almost Pretty Permalinks" structure. [#1570]
+- Sites with comments from the Fediverse no longer create uncached extra fields posts that flood the Outbox. [#1554]
+- Transformers allow settings values to false again, a regression from 5.5.0. [#1567]
+
 ## [5.6.1] - 2025-04-02
 ### Fixed
 - "Post Interactions" settings will now be saved to the options table. [#1540]
@@ -1119,6 +1144,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[5.7.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.6.1...5.7.0
 [5.6.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.6.0...5.6.1
 [5.6.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.5.0...5.6.0
 [5.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.4.1...5.5.0
