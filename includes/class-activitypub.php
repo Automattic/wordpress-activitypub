@@ -831,7 +831,7 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
-		\add_filter( 'get_user_option_activitypub_mailer_new_dm', array( self::class, 'user_options_default' ), 10, 2 );
+		\add_filter( 'get_user_option_activitypub_mailer_new_dm', array( self::class, 'user_options_default' ) );
 
 		\register_meta(
 			'user',
@@ -843,7 +843,7 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
-		\add_filter( 'get_user_option_activitypub_mailer_new_follower', array( self::class, 'user_options_default' ), 10, 2 );
+		\add_filter( 'get_user_option_activitypub_mailer_new_follower', array( self::class, 'user_options_default' ) );
 
 		\register_meta(
 			'user',
@@ -855,7 +855,7 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
-		\add_filter( 'get_user_option_activitypub_mailer_new_mention', array( self::class, 'user_options_default' ), 10, 2 );
+		\add_filter( 'get_user_option_activitypub_mailer_new_mention', array( self::class, 'user_options_default' ) );
 
 		\register_meta(
 			'user',
@@ -886,20 +886,11 @@ class Activitypub {
 	 * Set default values for user options.
 	 *
 	 * @param bool|string $value  Option value.
-	 * @param string      $option Option name.
-	 * @return string|int
+	 * @return bool|string
 	 */
-	public static function user_options_default( $value, $option ) {
+	public static function user_options_default( $value ) {
 		if ( false === $value ) {
-			$options_with_default = array(
-				'activitypub_mailer_new_dm',
-				'activitypub_mailer_new_follower',
-				'activitypub_mailer_new_mention',
-			);
-
-			if ( \in_array( $option, $options_with_default, true ) ) {
-				return '1';
-			}
+			return '1';
 		}
 
 		return $value;
