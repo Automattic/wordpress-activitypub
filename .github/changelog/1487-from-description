@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Run all Site-Health checks with the required headers and a valid signature.

@@ -30,6 +30,8 @@ class Comment {
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
 		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 10, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
+		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
+		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
 	}
 
@@ -47,8 +49,7 @@ class Comment {
 	 */
 	public static function comment_reply_link( $link, $args, $comment ) {
 		if ( self::are_comments_allowed( $comment ) ) {
-			$user_id = get_current_user_id();
-			if ( $user_id && self::was_received( $comment ) && \user_can( $user_id, 'activitypub' ) ) {
+			if ( \current_user_can( 'activitypub' ) && self::was_received( $comment ) ) {
 				return self::create_fediverse_reply_link( $link, $args );
 			}
 
@@ -61,7 +62,7 @@ class Comment {
 		);
 
 		$div = sprintf(
-			'<div class="activitypub-remote-reply" data-attrs="%s"></div>',
+			'<div class="reply activitypub-remote-reply" data-attrs="%s"></div>',
 			esc_attr( wp_json_encode( $attrs ) )
 		);
 
@@ -124,13 +125,7 @@ class Comment {
 			$current_user = Actors::BLOG_USER_ID;
 		}
 
-		$is_user_disabled = is_user_disabled( $current_user );
-
-		if ( $is_user_disabled ) {
-			return false;
-		}
-
-		return true;
+		return user_can_activitypub( $current_user );
 	}
 
 	/**
@@ -234,10 +229,8 @@ class Comment {
 			$user_id = Actors::BLOG_USER_ID;
 		}
 
-		$is_user_disabled = is_user_disabled( $user_id );
-
-		// User is disabled for federation.
-		if ( $is_user_disabled ) {
+		// User is not allowed to federate comments.
+		if ( ! user_can_activitypub( $user_id ) ) {
 			return false;
 		}
 
@@ -774,6 +767,20 @@ class Comment {
 	}
 
 	/**
+	 * Update comment counts when interaction settings are disabled.
+	 *
+	 * Triggers a recount when likes or reposts are disabled to ensure accurate comment counts.
+	 *
+	 * @param mixed $old_value The old option value.
+	 * @param mixed $value     The new option value.
+	 */
+	public static function maybe_update_comment_counts( $old_value, $value ) {
+		if ( '1' === $old_value && '1' !== $value ) {
+			Migration::update_comment_counts();
+		}
+	}
+
+	/**
 	 * Filters the comment count to exclude ActivityPub comment types.
 	 *
 	 * @param int|null $new_count The new comment count. Default null.
@@ -784,15 +791,26 @@ class Comment {
 	 */
 	public static function pre_wp_update_comment_count_now( $new_count, $old_count, $post_id ) {
 		if ( null === $new_count ) {
-			global $wpdb;
+			$excluded_types = array_filter( self::get_comment_type_slugs(), array( self::class, 'is_comment_type_enabled' ) );
 
-			$excluded_types = self::get_comment_type_slugs();
+			if ( ! empty( $excluded_types ) ) {
+				global $wpdb;
 
-			// phpcs:ignore WordPress.DB
-			$new_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->comments WHERE comment_post_ID = %d AND comment_approved = '1' AND comment_type NOT IN ('" . implode( "','", $excluded_types ) . "')", $post_id ) );
-
+				// phpcs:ignore WordPress.DB
+				$new_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->comments WHERE comment_post_ID = %d AND comment_approved = '1' AND comment_type NOT IN ('" . implode( "','", $excluded_types ) . "')", $post_id ) );
+			}
 		}
 
 		return $new_count;
+	}
+
+	/**
+	 * Check if a comment type is enabled.
+	 *
+	 * @param string $comment_type The comment type.
+	 * @return bool True if the comment type is enabled.
+	 */
+	public static function is_comment_type_enabled( $comment_type ) {
+		return '1' === get_option( "activitypub_allow_{$comment_type}s", '1' );
 	}
 }

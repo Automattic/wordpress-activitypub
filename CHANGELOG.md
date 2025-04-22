@@ -5,6 +5,75 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.7.0] - 2025-04-11
+### Added
+- Advanced Settings tab, with special settings for advanced users. [#1449]
+- Check if pretty permalinks are enabled and recommend to use threaded comments. [#1524]
+- Reply block: show embeds where available. [#1572]
+- Support same-server domain migrations. [#1572]
+- Upgrade routine that removes any erroneously created extra field entries. [#1566]
+
+### Changed
+- Add option to enable/disable the "shared inbox" to the "Advanced Settings". [#1553]
+- Add option to enable/disable the `Vary` Header to the "Advanced Settings". [#1552]
+- Configure the "Follow Me" button to have a button-only mode. [#1133]
+- Importers are loaded on admin-specific hook. [#1561]
+- Improve the troubleshooting UI and show Site-Health stats in ActivityPub settings. [#1546]
+- Increased compatibility with Mobilizon and other platforms by improving signature verification for different key formats. [#1557]
+
+### Fixed
+- Ensure that an `Activity` has an `Actor` before adding it to the Outbox. [#1564]
+- Fixed some bugs and added additional information on the Debug tab of the Site-Health page. [#1547]
+- Follow-up to the reply block changes that makes sure Mastodon embeds are displayed in the editor. [#1555]
+- Outbox endpoint bug where non-numeric usernames caused errors when querying Outbox data. [#1559]
+- Show Site Health error if site uses old "Almost Pretty Permalinks" structure. [#1570]
+- Sites with comments from the Fediverse no longer create uncached extra fields posts that flood the Outbox. [#1554]
+- Transformers allow settings values to false again, a regression from 5.5.0. [#1567]
+
+## [5.6.1] - 2025-04-02
+### Fixed
+- "Post Interactions" settings will now be saved to the options table. [#1540]
+- So not show `movedTo` attribute instead of setting it to `false` if empty. [#1539]
+- Use specified date format for `updated` field in Outbox-Activites. [#1537]
+
+## [5.6.0] - 2025-04-01
+### Added
+- Added a Mastodon importer to move your Mastodon posts to your WordPress site. [#1502]
+- A default Extra-Field to do a little advertising for WordPress. [#1493]
+- Move: Differentiate between `internal` and 'external' Move. [#1533]
+- Redirect user to the welcome page after ActivityPub plugin is activated. [#1511]
+- The option to show/hide the "Welcome Page". [#1504]
+- User setting to enable/disable Likes and Reblogs [#1395]
+
+### Changed
+- Logged-out remote reply button markup to look closer to logged-in version. [#1509]
+- No longer federates `Delete` activities for posts that were not federated. [#1528]
+- OrderedCollection and OrderedCollectionPage behave closer to spec now. [#1444]
+- Outbox items now contain the full activity, not just activity objects. [#1474]
+- Standardized mentions to use usernames only in comments and posts. [#1510]
+
+### Fixed
+- Changelog entries: allow automating changelog entry generation from forks as well. [#1479]
+- Comments from Fediverse actors will now be purged as expected. [#1485]
+- Importing attachments no longer creates Outbox items for them. [#1526]
+- Improved readability in Mastodon Apps plugin string. [#1477]
+- No more PHP warnings when previewing posts without attachments. [#1478]
+- Outbox batch processing adheres to passed batch size. [#1514]
+- Permanently delete reactions that were `Undo` instead of trashing them. [#1520]
+- PHP warnings when scheduling post activities for an invalid post. [#1507]
+- PHP Warning when there's no actor information in comment activities. [#1508]
+- Prevent self-replies on local comments. [#1517]
+- Properly set `to` audience of `Activity` instead of changing the `Follow` Object. [#1501]
+- Run all Site-Health checks with the required headers and a valid signature. [#1487]
+- Set `updated` field for profile updates, otherwise the `Update`-`Activity` wouldn't be handled by Mastodon. [#1495]
+- Support multiple layers of nested Outbox activities when searching for the Object ID. [#1518]
+- The Custom-Avatar getter on WP.com. [#1491]
+- Use the $from account for the object in Move activity for external Moves [#1531]
+- Use the `$from` account for the object in Move activity for internal Moves [#1516]
+- Use `add_to_outbox` instead of the changed scheduler hooks. [#1481]
+- Use `JSON_UNESCAPED_SLASHES` because Mastodon seems to have problems with encoded URLs. [#1488]
+- `Scheduler::schedule_announce_activity` to handle Activities instead of Activity-Objects. [#1500]
+
 ## [5.5.0] - 2025-03-19
 ### Added
 - Added "Enable Mastodon Apps" and "Event Bridge for ActivityPub" to the recommended plugins section. [#1450]
@@ -1075,6 +1144,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[5.7.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.6.1...5.7.0
+[5.6.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.6.0...5.6.1
+[5.6.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.5.0...5.6.0
 [5.5.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.4.1...5.5.0
 [5.4.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.4.0...5.4.1
 [5.4.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.3.2...5.4.0

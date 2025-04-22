@@ -39,10 +39,14 @@
 			font-size: 1.25em;
 		}
 		.activitypub-profile__follow {
-			margin-left: 1rem;
 			align-self: center;
 			background-color: var(--wp--preset--color--black);
 			color: var(--wp--preset--color--white);
+
+			// Only add left margin to the button when there's profile content.
+			&:not(:only-child) {
+				margin-left: 1rem;
+			}
 		}
 	}
 }

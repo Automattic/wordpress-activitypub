@@ -10,6 +10,7 @@ namespace Activitypub\Collection;
 use Activitypub\Dispatcher;
 use Activitypub\Scheduler;
 use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
 
 use function Activitypub\add_to_outbox;
 
@@ -34,6 +35,10 @@ class Outbox {
 		$actor_type = Actors::get_type_by_id( $user_id );
 		$object_id  = self::get_object_id( $activity );
 		$title      = self::get_object_title( $activity->get_object() );
+
+		if ( ! $activity->get_actor() ) {
+			$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
+		}
 
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
@@ -212,6 +217,9 @@ class Outbox {
 
 		if ( $activity_object['type'] === $type ) {
 			$activity = Activity::init_from_array( $activity_object );
+			if ( ! $activity->get_actor() ) {
+				$activity->set_actor( $actor->get_id() );
+			}
 		} else {
 			$activity = new Activity();
 			$activity->set_type( $type );
@@ -222,7 +230,7 @@ class Outbox {
 		}
 
 		if ( 'Update' === $type ) {
-			$activity->set_updated( gmdate( 'Y-m-d H:i:s', strtotime( $outbox_item->post_modified ) ) );
+			$activity->set_updated( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, strtotime( $outbox_item->post_modified ) ) );
 		}
 
 		/**
@@ -296,28 +304,29 @@ class Outbox {
 	/**
 	 * Get the object ID of an activity.
 	 *
-	 * @param Activity $activity The activity object.
+	 * @param Activity|Base_Object|string $data The activity object.
+	 *
 	 * @return string The object ID.
 	 */
-	private static function get_object_id( $activity ) {
-		// Most common.
-		if ( is_object( $activity->get_object() ) ) {
-			return $activity->get_object()->get_id();
+	private static function get_object_id( $data ) {
+		$object = $data->get_object();
+
+		if ( is_object( $object ) ) {
+			return self::get_object_id( $object );
 		}
 
-		// Rare.
-		if ( is_string( $activity->get_object() ) ) {
-			return $activity->get_object();
+		if ( is_string( $object ) ) {
+			return $object;
 		}
 
-		// Exceptional.
-		return $activity->get_actor() ?? $activity->get_id();
+		return $data->get_id() ?? $data->get_actor();
 	}
 
 	/**
 	 * Get the title of an activity recursively.
 	 *
-	 * @param \Activitypub\Activity\Base_Object $activity_object The activity object.
+	 * @param Base_Object $activity_object The activity object.
+	 *
 	 * @return string The title.
 	 */
 	private static function get_object_title( $activity_object ) {
@@ -333,7 +342,7 @@ class Outbox {
 
 		$title = $activity_object->get_name() ?? $activity_object->get_content();
 
-		if ( ! $title && $activity_object->get_object() instanceof \Activitypub\Activity\Base_Object ) {
+		if ( ! $title && $activity_object->get_object() instanceof Base_Object ) {
 			$title = $activity_object->get_object()->get_name() ?? $activity_object->get_object()->get_content();
 		}
 

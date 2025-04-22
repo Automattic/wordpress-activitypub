@@ -93,21 +93,6 @@ class Test_Migration extends \WP_UnitTestCase {
 	/**
 	 * Tear down the test.
 	 */
-	public static function tear_down_after_class() {
-		// Clean up posts.
-		foreach ( self::$fixtures['posts'] as $post_id ) {
-			\wp_delete_post( $post_id, true );
-		}
-
-		// Clean up comment.
-		if ( isset( self::$fixtures['comment'] ) ) {
-			\wp_delete_comment( self::$fixtures['comment'], true );
-		}
-	}
-
-	/**
-	 * Tear down the test.
-	 */
 	public function tear_down() {
 		\delete_option( 'activitypub_object_type' );
 		\delete_option( 'activitypub_custom_post_content' );
@@ -610,8 +595,10 @@ class Test_Migration extends \WP_UnitTestCase {
 		$follower = new Follower();
 		$follower->from_array(
 			array(
-				'type'    => 'Person',
-				'summary' => '<p>unescaped backslash 04\2024</p>',
+				'type'               => 'Person',
+				'name'               => 'Test Follower',
+				'preferred_username' => 'Follower',
+				'summary'            => '<p>unescaped backslash 04\2024</p>',
 			)
 		);
 		$unslashed_json = $follower->to_json();

@@ -10,6 +10,7 @@ on:
 jobs:
   # Enforces the addition of a changelog entry (a file in the .github/changelog directory) every pull request.
   changelog:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
       - name: "Check for Skip Changelog label"

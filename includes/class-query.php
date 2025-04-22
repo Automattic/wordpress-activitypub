@@ -49,6 +49,13 @@ class Query {
 	private $is_activitypub_request;
 
 	/**
+	 * Whether the current request is from the old host.
+	 *
+	 * @var bool
+	 */
+	private $is_old_host_request;
+
+	/**
 	 * The constructor.
 	 */
 	private function __construct() {
@@ -304,5 +311,41 @@ class Query {
 		$this->is_activitypub_request = false;
 
 		return false;
+	}
+
+	/**
+	 * Check if the current request is from the old host.
+	 *
+	 * @return bool True if the request is from the old host, false otherwise.
+	 */
+	public function is_old_host_request() {
+		if ( isset( $this->is_old_host_request ) ) {
+			return $this->is_old_host_request;
+		}
+
+		$old_host = \get_option( 'activitypub_old_host' );
+
+		if ( ! $old_host ) {
+			$this->is_old_host_request = false;
+			return false;
+		}
+
+		$request_host = isset( $_SERVER['HTTP_HOST'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+		$referer_host = isset( $_SERVER['HTTP_REFERER'] ) ? \wp_parse_url( \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_REFERER'] ) ), PHP_URL_HOST ) : '';
+
+		// Check if the domain matches either the request domain or referer.
+		$check                     = $old_host === $request_host || $old_host === $referer_host;
+		$this->is_old_host_request = $check;
+
+		return $check;
+	}
+
+	/**
+	 * Fake an old host request.
+	 *
+	 * @param bool $state Optional. The state to set. Default true.
+	 */
+	public function set_old_host_request( $state = true ) {
+		$this->is_old_host_request = $state;
 	}
 }

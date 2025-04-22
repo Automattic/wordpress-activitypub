@@ -188,6 +188,12 @@ class Migration {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_comment_author_emails' ) );
 			\add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
+		if ( \version_compare( $version_from_db, '5.7.0', '<' ) ) {
+			self::delete_mastodon_api_orphaned_extra_fields();
+		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::add_mention_notification_option();
+		}
 
 		/*
 		 * Add new update routines above this comment. ^
@@ -761,11 +767,11 @@ class Migration {
 		}
 
 		// If the user is disabled, fall back to the blog user when available.
-		if ( is_user_disabled( $user_id ) ) {
-			if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
-				return;
-			} else {
+		if ( ! user_can_activitypub( $user_id ) ) {
+			if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 				$user_id = Actors::BLOG_USER_ID;
+			} else {
+				return;
 			}
 		}
 
@@ -798,6 +804,7 @@ class Migration {
 	private static function add_notification_defaults() {
 		\add_option( 'activitypub_mailer_new_follower', '1' );
 		\add_option( 'activitypub_mailer_new_dm', '1' );
+		\add_option( 'activitypub_mailer_new_mention', '1' );
 	}
 
 	/**
@@ -896,5 +903,35 @@ class Migration {
 		) {
 			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 		}
+	}
+
+	/**
+	 * Deletes user extra fields where the author is the blog user.
+	 *
+	 * These extra fields were created when the Enable Mastodon Apps integration passed
+	 * an author_url instead of a user_id to the mastodon_api_account filter. This caused
+	 * Extra_Fields::default_actor_extra_fields() to run but fail to cache the fact it ran
+	 * for non-existent users. The result is a number of user extra fields with no author.
+	 *
+	 * @ticket https://github.com/Automattic/wordpress-activitypub/pull/1554
+	 */
+	public static function delete_mastodon_api_orphaned_extra_fields() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->delete(
+			$wpdb->posts,
+			array(
+				'post_type'   => Extra_Fields::USER_POST_TYPE,
+				'post_author' => Actors::BLOG_USER_ID,
+			)
+		);
+	}
+
+	/**
+	 * Add the new mention notification option.
+	 */
+	public static function add_mention_notification_option() {
+		\add_option( 'activitypub_mailer_new_mention', '1' );
 	}
 }

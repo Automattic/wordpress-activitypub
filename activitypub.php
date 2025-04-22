@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 5.5.0
+ * Version: 5.7.0
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -19,7 +19,7 @@ namespace Activitypub;
 
 use WP_CLI;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '5.5.0' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '5.7.0' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -53,6 +53,7 @@ function rest_init() {
 	( new Rest\Moderators_Controller() )->register_routes();
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Replies_Controller() )->register_routes();
+	( new Rest\URL_Validator_Controller() )->register_routes();
 	( new Rest\Webfinger_Controller() )->register_routes();
 
 	// Load NodeInfo endpoints only if blog is public.
@@ -66,16 +67,18 @@ function rest_init() {
  * Initialize plugin.
  */
 function plugin_init() {
-	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Link', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Mailer', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ), 1 );
+	\add_action( 'init', array( __NAMESPACE__ . '\Move', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Options', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ) );
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
@@ -100,8 +103,14 @@ function plugin_admin_init() {
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Welcome_Fields', 'init' ) );
+	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Advanced_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Blog_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\User_Settings_Fields', 'init' ) );
+
+	if ( defined( 'WP_LOAD_IMPORTERS' ) && WP_LOAD_IMPORTERS ) {
+		require_once __DIR__ . '/includes/wp-admin/import/load.php';
+		\add_action( 'admin_init', __NAMESPACE__ . '\WP_Admin\Import\load' );
+	}
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_admin_init' );
 
@@ -112,6 +121,19 @@ function plugin_admin_init() {
 		'activate',
 	)
 );
+
+/**
+ * Redirect to the welcome page after plugin activation.
+ *
+ * @param string $plugin The plugin basename.
+ */
+function activation_redirect( $plugin ) {
+	if ( ACTIVITYPUB_PLUGIN_BASENAME === $plugin ) {
+		\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub' ) );
+		exit;
+	}
+}
+\add_action( 'activated_plugin', __NAMESPACE__ . '\activation_redirect' );
 
 \register_deactivation_hook(
 	__FILE__,

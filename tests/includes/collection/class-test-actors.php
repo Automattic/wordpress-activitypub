@@ -28,6 +28,19 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_by_id.
+	 *
+	 * @covers ::get_by_id
+	 */
+	public function test_get_by_id() {
+		// External user.
+		$user_id = 'obenland@mastodon.social';
+
+		$actor = Actors::get_by_id( $user_id );
+		$this->assertWPError( $actor );
+	}
+
+	/**
 	 * Test get_by_various.
 	 *
 	 * @dataProvider the_resource_provider

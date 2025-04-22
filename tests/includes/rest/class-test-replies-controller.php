@@ -72,20 +72,6 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 	}
 
 	/**
-	 * Tear down.
-	 */
-	public static function tear_down_after_class() {
-		foreach ( self::$comment_ids as $comment_id ) {
-			\wp_delete_comment( $comment_id, true );
-		}
-
-		\wp_delete_post( self::$post_id, true );
-		\wp_delete_user( self::$user_id );
-
-		parent::tear_down_after_class();
-	}
-
-	/**
 	 * Test registration of routes.
 	 *
 	 * @covers ::register_routes

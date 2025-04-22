@@ -114,10 +114,12 @@ class Actor {
 	 * @param \WP_Post $post       Post object.
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
-		if ( Extra_Fields::USER_POST_TYPE === $post->post_type ) {
-			self::schedule_profile_update( $post->post_author );
-		} elseif ( Extra_Fields::BLOG_POST_TYPE === $post->post_type ) {
-			self::schedule_profile_update( Actors::BLOG_USER_ID );
+		if ( $post instanceof \WP_Post ) {
+			if ( Extra_Fields::USER_POST_TYPE === $post->post_type ) {
+				self::schedule_profile_update( $post->post_author );
+			} elseif ( Extra_Fields::BLOG_POST_TYPE === $post->post_type ) {
+				self::schedule_profile_update( Actors::BLOG_USER_ID );
+			}
 		}
 	}
 
@@ -137,7 +139,7 @@ class Actor {
 			return;
 		}
 
-		$actor->set_updated( gmdate( 'Y-m-d H:i:s', time() ) );
+		$actor->set_updated( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, time() ) );
 
 		add_to_outbox( $actor, 'Update', $user_id );
 	}

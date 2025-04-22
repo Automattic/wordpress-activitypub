@@ -267,24 +267,15 @@ class Signature {
 			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
-		if ( ! isset( $headers['signature'] ) ) {
-			return new WP_Error( 'activitypub_signature', __( 'Request not signed', 'activitypub' ), array( 'status' => 401 ) );
-		}
-
 		if ( array_key_exists( 'signature', $headers ) ) {
 			$signature_block = self::parse_signature_header( $headers['signature'][0] );
 		} elseif ( array_key_exists( 'authorization', $headers ) ) {
 			$signature_block = self::parse_signature_header( $headers['authorization'][0] );
-		}
-
-		if ( ! isset( $signature_block ) || ! $signature_block ) {
+		} else {
 			return new WP_Error( 'activitypub_signature', __( 'Incompatible request signature. keyId and signature are required', 'activitypub' ), array( 'status' => 401 ) );
 		}
 
 		$signed_headers = $signature_block['headers'];
-		if ( ! $signed_headers ) {
-			$signed_headers = array( 'date' );
-		}
 
 		$signed_data = self::get_signed_data( $signed_headers, $signature_block, $headers );
 		if ( ! $signed_data ) {
@@ -332,7 +323,7 @@ class Signature {
 	 *
 	 * @param string $key_id The URL to the public key.
 	 *
-	 * @return WP_Error|string The public key or WP_Error.
+	 * @return resource|WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_remote_key( $key_id ) {
 		$actor = get_remote_metadata_by_actor( strip_fragment_from_url( $key_id ) );
@@ -343,9 +334,14 @@ class Signature {
 				array( 'status' => 401 )
 			);
 		}
+
 		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
-			return \rtrim( $actor['publicKey']['publicKeyPem'] );
+			$key_resource = \openssl_pkey_get_public( \rtrim( $actor['publicKey']['publicKeyPem'] ) );
+			if ( $key_resource ) {
+				return $key_resource;
+			}
 		}
+
 		return new WP_Error(
 			'activitypub_no_remote_key_found',
 			__( 'No Public-Key found', 'activitypub' ),
@@ -402,11 +398,7 @@ class Signature {
 			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', trim( $matches[1] ) ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 		}
 
-		if (
-			! empty( $parsed_header['signature'] ) &&
-			! empty( $parsed_header['algorithm'] ) &&
-			empty( $parsed_header['headers'] )
-		) {
+		if ( empty( $parsed_header['headers'] ) ) {
 			$parsed_header['headers'] = array( 'date' );
 		}
 
