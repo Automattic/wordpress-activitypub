@@ -162,9 +162,6 @@ class Admin {
 		// User options that should be processed with `sanitize_text_field()`.
 		$text_field_user_options = array(
 			'activitypub_header_image',
-			'activitypub_mailer_new_dm',
-			'activitypub_mailer_new_follower',
-			'activitypub_mailer_new_mention',
 		);
 
 		foreach ( $text_field_user_options as $option ) {
@@ -173,6 +170,17 @@ class Admin {
 			} else {
 				\delete_user_option( $user_id, $option );
 			}
+		}
+
+		// User options that have a default value and therefore can't be empty (Empty triggers the default value).
+		$required_user_options = array(
+			'activitypub_mailer_new_dm',
+			'activitypub_mailer_new_follower',
+			'activitypub_mailer_new_mention',
+		);
+
+		foreach ( $required_user_options as $option ) {
+			\update_user_option( $user_id, $option, sanitize_text_field( wp_unslash( $_POST[ $option ] ?? 0 ) ) );
 		}
 	}
 
@@ -491,10 +499,6 @@ class Admin {
 			$user = new \WP_User( $user_id );
 			if ( 'add_activitypub_cap' === $action ) {
 				$user->add_cap( 'activitypub' );
-
-				\update_user_option( $user_id, 'activitypub_mailer_new_dm', 1 );
-				\update_user_option( $user_id, 'activitypub_mailer_new_follower', 1 );
-				\update_user_option( $user_id, 'activitypub_mailer_new_mention', 1 );
 			} elseif ( 'remove_activitypub_cap' === $action ) {
 				$user->remove_cap( 'activitypub' );
 			}

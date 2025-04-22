@@ -942,14 +942,9 @@ class Migration {
 
 		// Add the actor notification options.
 		foreach ( Actors::get_collection() as $actor ) {
-			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_mention', 1 );
-
-			if ( '1' === $new_dm ) {
-				\update_user_option( $actor->get__id(), 'activitypub_mailer_new_dm', 1 );
-			}
-			if ( '1' === $new_follower ) {
-				\update_user_option( $actor->get__id(), 'activitypub_mailer_new_dm', 1 );
-			}
+			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_dm', $new_dm );
+			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_follower', $new_follower );
+			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_mention', '1' );
 		}
 
 		// Delete the old notification options.
