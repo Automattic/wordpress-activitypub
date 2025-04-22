@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Reply links and popup modals are now properly translated for logged-out visitors.
