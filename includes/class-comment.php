@@ -495,6 +495,7 @@ class Comment {
 				true
 			);
 			\wp_add_inline_script( $handle, $js, 'before' );
+			\wp_set_script_translations( $handle, 'activitypub' );
 
 			\wp_enqueue_style(
 				$handle,
