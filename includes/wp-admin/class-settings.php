@@ -603,63 +603,6 @@ class Settings {
 			)
 		);
 
-		// 5. Settings Reference
-		\get_current_screen()->add_help_tab(
-			array(
-				'id'      => 'settings-reference',
-				'title'   => \__( 'Settings Reference', 'activitypub' ),
-				'content' =>
-					'<h2>' . \esc_html__( 'User vs. Site Settings', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'ActivityPub for WordPress has two types of settings:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'User settings: Apply to individual WordPress users and their Fediverse presence.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Site settings: Apply to the entire WordPress site and its Fediverse presence.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
-					'<p>' . \esc_html__( 'User settings are found in each user&#8217;s profile, while site settings are in the ActivityPub settings page.', 'activitypub' ) . '</p>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Content Settings', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'These settings control what content is federated and how:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Post Types: Choose which types of content (posts, pages, etc.) are federated.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Content Templates: Customize how your content appears in the Fediverse.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Media Handling: Control how images and other media are included.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Interaction Settings', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'These settings control how your site interacts with the Fediverse:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Comments: How Fediverse replies are handled as WordPress comments.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Notifications: Settings for ActivityPub notification handling.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Moderation: Tools for managing Fediverse interactions.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Profile and Identity Settings', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'These settings control how you appear in the Fediverse:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Profile Information: Your display name, bio, and other details.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Avatar and Header: Images that represent you in the Fediverse.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Username Options: How your username appears across platforms.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Advanced Settings', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'These settings are for advanced users and specific use cases:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Cache Settings: Control how ActivityPub data is cached.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Custom Endpoints: Configure special ActivityPub endpoints.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Debug Options: Tools for troubleshooting federation issues.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Security Considerations', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'Important security aspects to consider:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Public posts are truly public in the Fediverse.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Private posts should not be federated.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Consider limiting which post types are federated.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Review comment moderation settings for Fediverse interactions.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>',
-			)
-		);
-
 		// 6. Account Migration
 		\get_current_screen()->add_help_tab(
 			array(
@@ -703,50 +646,6 @@ class Settings {
 					'<li>' . \esc_html__( 'Consider which account will be your primary one.', 'activitypub' ) . '</li>' . "\n" .
 					'<li>' . \esc_html__( 'Be clear with your followers about where to find you.', 'activitypub' ) . '</li>' . "\n" .
 					'<li>' . \esc_html__( 'Remember that full migration moves your followers completely.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>',
-			)
-		);
-
-		// 7. Interoperability
-		\get_current_screen()->add_help_tab(
-			array(
-				'id'      => 'interoperability',
-				'title'   => \__( 'Interoperability', 'activitypub' ),
-				'content' =>
-					'<h2>' . \esc_html__( 'Platform Compatibility Overview', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'WordPress ActivityPub is designed to work with various Fediverse platforms, but compatibility can vary:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Mastodon: Excellent compatibility for most features.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Pleroma: Good compatibility with most features.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Pixelfed: Works well for image-focused content.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Other platforms: Compatibility varies based on their ActivityPub implementation.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Mastodon Interoperability', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'Mastodon is the most widely used Fediverse platform and works well with WordPress ActivityPub:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Your WordPress posts appear as standard Mastodon posts.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Featured images are included and properly displayed.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Mentions and replies work in both directions.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Account migration between Mastodon and WordPress is supported.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Other Platform Considerations', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'When federating with other platforms, keep in mind:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Some platforms may display your content differently.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Character limits vary between platforms.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Media handling can differ (image sizes, formats, etc.).', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Some platforms may not support all interaction types.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Testing Interoperability', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'To ensure your content works well across the Fediverse:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Test your posts by viewing them on different platforms.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Check how images and formatting appear.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Verify that interactions (comments, likes) work as expected.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Ask followers on different platforms for feedback.', 'activitypub' ) . '</li>' . "\n" .
 					'</ul>',
 			)
 		);
