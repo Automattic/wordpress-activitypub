@@ -621,14 +621,13 @@ class Admin {
 	public static function open_help_tab() {
 		?>
 		<script type="text/javascript">
-		jQuery(document).ready(function($) {
-			var hash = window.location.hash;
+		document.addEventListener('DOMContentLoaded', function() {
+			const hash = window.location.hash;
 			if (hash) {
-				// Small delay to ensure the help tab is loaded
+				// Small delay to ensure the help tab is loaded.
 				setTimeout(function() {
-					$('#contextual-help-link').click();
-					console.log(hash + ' a');
-					$(hash + ' a').click();
+					document.getElementById('contextual-help-link').click();
+					document.querySelector(hash + ' a').click();
 				}, 500);
 			}
 		});
