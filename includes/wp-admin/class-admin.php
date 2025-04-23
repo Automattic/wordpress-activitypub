@@ -61,7 +61,7 @@ class Admin {
 			\add_action( 'tool_box', array( self::class, 'tool_box' ) );
 		}
 
-		\add_action( 'admin_print_footer_scripts', array( self::class, 'open_help_tab' ) );
+		\add_action( 'admin_print_footer_scripts-settings_page_activitypub', array( self::class, 'open_help_tab' ) );
 	}
 
 	/**
