@@ -622,9 +622,12 @@ class Admin {
 		// get all tabs registered for the ActivityPub settings page.
 		$tabs = \get_current_screen()->get_help_tabs();
 		$ids  = array_values( wp_list_pluck( $tabs, 'id' ) );
-		$ids  = array_map( function( $id ) {
-			return '#tab-link-' . $id;
-		}, $ids );
+		$ids  = array_map(
+			function ( $id ) {
+				return '#tab-link-' . $id;
+			},
+			$ids
+		);
 		?>
 		<script type="text/javascript">
 		document.addEventListener('DOMContentLoaded', function() {
