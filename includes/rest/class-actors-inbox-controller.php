@@ -176,6 +176,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		$type     = $request->get_param( 'type' );
 		$type     = \strtolower( $type );
 
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		if ( \wp_check_comment_disallowed_list( $activity->to_json( false ), '', '', '', $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '' ) ) {
 			Debug::write_log( 'Blocked activity from: ' . $activity->get_actor() );
 		} else {
