@@ -271,6 +271,9 @@ input.blog-user-identifier {
 	margin-right: 8px;
 }
 
+.contextual-help-tabs-wrap dt {
+	font-weight: 600;
+}
 .contextual-help-tabs-wrap .activitypub-block-screenshot {
 	margin: 10px 0;
 }

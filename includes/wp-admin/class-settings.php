@@ -389,7 +389,7 @@ class Settings {
 			$webfinger = ( new Blog() )->get_webfinger();
 		}
 
-		// 1. Getting Started / Introduction to the Fediverse
+		// Getting Started / Introduction to the Fediverse.
 		\get_current_screen()->add_help_tab(
 			array(
 				'id'      => 'getting-started',
@@ -417,7 +417,7 @@ class Settings {
 			)
 		);
 
-		// 2. Core Features
+		// Core Features.
 		\get_current_screen()->add_help_tab(
 			array(
 				'id'      => 'core-features',
@@ -453,7 +453,7 @@ class Settings {
 			)
 		);
 
-		// 3. Template Tags (Expanded)
+		// Template Tags.
 		\get_current_screen()->add_help_tab(
 			array(
 				'id'      => 'template-tags',
@@ -533,7 +533,7 @@ class Settings {
 			)
 		);
 
-		// 4. Editor Blocks
+		// Editor Blocks.
 		\get_current_screen()->add_help_tab(
 			array(
 				'id'      => 'editor-blocks',
@@ -603,7 +603,7 @@ class Settings {
 			)
 		);
 
-		// 6. Account Migration
+		// Account Migration.
 		\get_current_screen()->add_help_tab(
 			array(
 				'id'      => 'account-migration',
@@ -650,7 +650,7 @@ class Settings {
 			)
 		);
 
-		// 8. Troubleshooting
+		// Troubleshooting.
 		\get_current_screen()->add_help_tab(
 			array(
 				'id'      => 'troubleshooting',
@@ -698,7 +698,7 @@ class Settings {
 			)
 		);
 
-		// 10. Glossary (Expanded)
+		// Glossary.
 		\get_current_screen()->add_help_tab(
 			array(
 				'id'      => 'glossary',
@@ -741,7 +741,11 @@ class Settings {
 
 					'<dt>' . \esc_html__( 'Handle', 'activitypub' ) . '</dt>' . "\n" .
 					'<dd>' . \wp_kses( \__( 'A user&#8217;s identity in the Fediverse, formatted as <code>@username@domain.com</code>. Similar to an email address, it includes both the username and the server where the account is hosted.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
-					'</dl>' . "\n" .
+
+					'<dt>' . \esc_html__( 'NodeInfo', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'A standardized way of exposing metadata about a server running one of the distributed social networks. It helps with compatibility and discovery between different Fediverse platforms.', 'activitypub' ) . '</dd>' . "\n" .
+
+				'</dl>' . "\n" .
 
 					'<h2>' . \esc_html__( 'WordPress-Specific Terms', 'activitypub' ) . '</h2>' . "\n" .
 					'<dl>' . "\n" .
@@ -750,14 +754,12 @@ class Settings {
 
 					'<dt>' . \esc_html__( 'Federation Settings', 'activitypub' ) . '</dt>' . "\n" .
 					'<dd>' . \esc_html__( 'Configuration options that control how WordPress content is shared with the Fediverse.', 'activitypub' ) . '</dd>' . "\n" .
-					'</dl>' . "\n" .
+					'</dl>' . "\n",
 
-					'<h2>' . \esc_html__( 'NodeInfo', 'activitypub' ) . '</h2>' . "\n" .
-					'<dd>' . \esc_html__( 'A standardized way of exposing metadata about a server running one of the distributed social networks. It helps with compatibility and discovery between different Fediverse platforms.', 'activitypub' ) . '</dd>',
 			)
 		);
 
-		// 11. Resources
+		// Resources.
 		\get_current_screen()->add_help_tab(
 			array(
 				'id'      => 'resources',
