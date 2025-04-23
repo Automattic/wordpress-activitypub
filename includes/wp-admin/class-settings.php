@@ -698,6 +698,9 @@ class Settings {
 			)
 		);
 
+		/* translators: %s: Link to more information */
+		$info_string = \esc_html__( 'For more information please visit %s.', 'activitypub' );
+
 		// Glossary.
 		\get_current_screen()->add_help_tab(
 			array(
@@ -708,6 +711,8 @@ class Settings {
 					'<dl>' . "\n" .
 					'<dt>' . \esc_html__( 'Fediverse', 'activitypub' ) . '</dt>' . "\n" .
 					'<dd>' . \esc_html__( 'A network of interconnected servers using open protocols, primarily ActivityPub, allowing users from different platforms to interact with each other. The term combines "federation" and "universe".', 'activitypub' ) . '</dd>' . "\n" .
+					'<dd>' . \esc_html__( 'It is a federated social network running on free open software on a myriad of computers across the globe. Many independent servers are interconnected and allow people to interact with one another. There&#8217;s no one central site: you choose a server to register. This ensures some decentralization and sovereignty of data. Fediverse (also called Fedi) has no built-in advertisements, no tricky algorithms, no one big corporation dictating the rules. Instead we have small cozy communities of like-minded people. Welcome!', 'activitypub' ) . '</dd>' . "\n" .
+					'<dd>' . \sprintf( $info_string, '<a href="https://fediverse.party/" target="_blank">fediverse.party</a>' ) . '</dd>' . "\n" .
 
 					'<dt>' . \esc_html__( 'Federation', 'activitypub' ) . '</dt>' . "\n" .
 					'<dd>' . \esc_html__( 'The process by which servers communicate with each other to share content and interactions across different platforms and instances.', 'activitypub' ) . '</dd>' . "\n" .
@@ -722,7 +727,7 @@ class Settings {
 					'<h2>' . \esc_html__( 'ActivityPub Concepts', 'activitypub' ) . '</h2>' . "\n" .
 					'<dl>' . "\n" .
 					'<dt>' . \esc_html__( 'ActivityPub', 'activitypub' ) . '</dt>' . "\n" .
-					'<dd>' . \esc_html__( 'A decentralized social networking protocol based on the ActivityStreams 2.0 data format. It provides a client-to-server API for creating, updating, and deleting content, as well as a server-to-server API for delivering notifications and content between servers.', 'activitypub' ) . '</dd>' . "\n" .
+					'<dd>' . \esc_html__( 'ActivityPub is a decentralized social networking protocol based on the ActivityStreams 2.0 data format. ActivityPub is an official W3C recommended standard published by the W3C Social Web Working Group. It provides a client to server API for creating, updating and deleting content, as well as a federated server to server API for delivering notifications and subscribing to content.', 'activitypub' ) . '</dd>' . "\n" .
 
 					'<dt>' . \esc_html__( 'Actor', 'activitypub' ) . '</dt>' . "\n" .
 					'<dd>' . \esc_html__( 'An entity that can perform activities. In WordPress, actors are typically users or the blog itself.', 'activitypub' ) . '</dd>' . "\n" .
@@ -737,14 +742,22 @@ class Settings {
 					'<h2>' . \esc_html__( 'WebFinger and Discovery', 'activitypub' ) . '</h2>' . "\n" .
 					'<dl>' . "\n" .
 					'<dt>' . \esc_html__( 'WebFinger', 'activitypub' ) . '</dt>' . "\n" .
-					'<dd>' . \esc_html__( 'A protocol used to discover information about people or entities identified by a URI. In the Fediverse, it&#8217;s used to find users across different instances.', 'activitypub' ) . '</dd>' . "\n" .
+					'<dd>' . \esc_html__( 'WebFinger is used to discover information about people or other entities on the Internet that are identified by a URI using standard Hypertext Transfer Protocol (HTTP) methods over a secure transport. A WebFinger resource returns a JavaScript Object Notation (JSON) object describing the entity that is queried. The JSON object is referred to as the JSON Resource Descriptor (JRD).', 'activitypub' ) . '</dd>' . "\n" .
+					'<dd>' . \esc_html__( 'For a person, the type of information that might be discoverable via WebFinger includes a personal profile address, identity service, telephone number, or preferred avatar. For other entities on the Internet, a WebFinger resource might return JRDs containing link relations that enable a client to discover, for example, that a printer can print in color on A4 paper, the physical location of a server, or other static information.', 'activitypub' ) . '</dd>' . "\n" .
+					'<dd>' . "\n" .
+					'<blockquote>' . "\n" .
+						\wp_kses( \__( 'On Mastodon [and other platforms], user profiles can be hosted either locally on the same website as yours, or remotely on a completely different website. The same username may be used on a different domain. Therefore, a Mastodon user&#8217;s full mention consists of both the username and the domain, in the form <code>@username@domain</code>. In practical terms, <code>@user@example.com</code> is not the same as <code>@user@example.org</code>. If the domain is not included, Mastodon will try to find a local user named <code>@username</code>. However, in order to deliver to someone over ActivityPub, the <code>@username@domain</code> mention is not enough – mentions must be translated to an HTTPS URI first, so that the remote actor&#8217;s inbox and outbox can be found.', 'activitypub' ), array_merge( $code_html, $anchor_html ) ) . "\n" .
+						'<cite><a href="https://docs.joinmastodon.org/spec/webfinger/" target="_blank">' . \esc_html__( 'Mastodon Documentation', 'activitypub' ) . '</a></cite>' . "\n" .
+					'</blockquote>' . "\n" .
+					'</dd>' . "\n" .
+					'<dd>' . \sprintf( $info_string, '<a href="https://webfinger.net/" target="_blank">webfinger.net</a>' ) . '</dd>' . "\n" .
 
 					'<dt>' . \esc_html__( 'Handle', 'activitypub' ) . '</dt>' . "\n" .
 					'<dd>' . \wp_kses( \__( 'A user&#8217;s identity in the Fediverse, formatted as <code>@username@domain.com</code>. Similar to an email address, it includes both the username and the server where the account is hosted.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
 
 					'<dt>' . \esc_html__( 'NodeInfo', 'activitypub' ) . '</dt>' . "\n" .
 					'<dd>' . \esc_html__( 'A standardized way of exposing metadata about a server running one of the distributed social networks. It helps with compatibility and discovery between different Fediverse platforms.', 'activitypub' ) . '</dd>' . "\n" .
-
+					'<dd>' . \sprintf( $info_string, '<a href="https://nodeinfo.diaspora.software/" target="_blank">nodeinfo.diaspora.software</a>' ) . '</dd>',
 				'</dl>' . "\n" .
 
 					'<h2>' . \esc_html__( 'WordPress-Specific Terms', 'activitypub' ) . '</h2>' . "\n" .
@@ -755,7 +768,6 @@ class Settings {
 					'<dt>' . \esc_html__( 'Federation Settings', 'activitypub' ) . '</dt>' . "\n" .
 					'<dd>' . \esc_html__( 'Configuration options that control how WordPress content is shared with the Fediverse.', 'activitypub' ) . '</dd>' . "\n" .
 					'</dl>' . "\n",
-
 			)
 		);
 

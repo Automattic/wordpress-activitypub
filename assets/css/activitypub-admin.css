@@ -290,3 +290,39 @@ input.blog-user-identifier {
 	font-size: 0.9em;
 	margin-top: 5px;
 }
+
+/* Blockquote Styles */
+.contextual-help-tabs-wrap blockquote {
+	border-left: 4px solid #3582c4;
+	background-color: #f6f7f7;
+	padding: 16px 20px;
+	margin: 0 0 20px;
+}
+
+.contextual-help-tabs-wrap blockquote p {
+	margin: 0 0 10px;
+	line-height: 1.5;
+}
+
+.contextual-help-tabs-wrap blockquote p:last-child {
+	margin-bottom: 0;
+}
+
+.contextual-help-tabs-wrap blockquote cite {
+	display: block;
+	font-weight: 600;
+	margin-top: 8px;
+	font-size: 0.9em;
+	color: #50575e;
+}
+
+.contextual-help-tabs-wrap blockquote cite:before {
+	content: "—";
+}
+
+/* RTL Support for blockquotes */
+.rtl .contextual-help-tabs-wrap blockquote {
+	border-left: none;
+	border-right: 4px solid #3582c4;
+	padding: 16px 20px;
+}
