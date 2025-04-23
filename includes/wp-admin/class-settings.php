@@ -389,11 +389,95 @@ class Settings {
 			$webfinger = ( new Blog() )->get_webfinger();
 		}
 
+		// 1. Getting Started / Introduction to the Fediverse
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'getting-started',
+				'title'   => \__( 'Getting Started', 'activitypub' ),
+				'content' =>
+					'<h2>' . \esc_html__( 'What is the Fediverse?', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'The Fediverse is a collection of social networks that talk to each other, similar to how email works between different providers. It allows people on different platforms to follow and interact with each other, regardless of which service they use.', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'Unlike traditional social media where everyone must use the same service (like Twitter or Facebook), the Fediverse lets you choose where your content lives while still reaching people across many different platforms.', 'activitypub' ) . '</p>' . "\n" .
+
+					'<h2>' . \esc_html__( 'How WordPress fits into the Fediverse', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'This plugin turns your WordPress blog into part of the Fediverse. When activated, your blog becomes a Fediverse "instance" that can interact with other platforms like Mastodon.', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'Your WordPress posts can be followed by people on Mastodon and other Fediverse platforms. Comments, likes, and shares from these platforms can appear on your WordPress site.', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'The plugin supports two modes: individual user accounts (each author has their own Fediverse identity) or a whole-blog account (the blog itself has a Fediverse identity).', 'activitypub' ) . '</p>' . "\n" .
+
+					'<h2>' . \esc_html__( 'What to expect when federating', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'When your content federates to the Fediverse:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Your posts will appear in the feeds of people who follow you.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'People can comment, like, and share your posts from their Fediverse accounts.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Your featured images, excerpts, and other post elements will be included.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Building a following takes time, just like on any social platform.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+					'<p>' . \esc_html__( 'Remember that public posts are truly public in the Fediverse - they can be seen by anyone on any connected platform.', 'activitypub' ) . '</p>',
+			)
+		);
+
+		// 2. Core Features
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'core-features',
+				'title'   => \__( 'Core Features', 'activitypub' ),
+				'content' =>
+					'<h2>' . \esc_html__( 'User Accounts vs. Blog Accounts', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'Your WordPress site can participate in the Fediverse in two ways:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Individual user accounts: Each author has their own Fediverse identity (username@yourdomain.com).', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Whole blog account: The blog itself has a Fediverse identity (blog@yourdomain.com).', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+					'<p>' . \esc_html__( 'User accounts are best when you want each author to have their own following and identity. The blog account is simpler and works well for single-author sites or when you want all content under one identity.', 'activitypub' ) . '</p>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Publishing to the Fediverse', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'When you publish a post:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'It automatically appears in the Fediverse feeds of your followers.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Featured images, excerpts, and other elements are included.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'You can control which post types are federated in the settings.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Individual posts can be excluded from federation if needed.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Receiving Interactions', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'The plugin allows your WordPress site to receive interactions from the Fediverse:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Comments from Fediverse users appear as WordPress comments.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Likes and shares are tracked and can be displayed.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'You can moderate these interactions just like regular WordPress comments.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Replies to these comments are federated back to the original commenter.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Mentions and Replies', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'You can mention Fediverse users in your posts:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \wp_kses( \__( 'Use the format <code>@username@domain.com</code> to mention someone.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'They will be notified of the mention.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'You&#8217;ll be notified when someone mentions you.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Replies to mentions are federated back to the original poster.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Content Visibility', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'You can control which content is federated:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Public posts are visible to anyone in the Fediverse.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Private posts are not federated.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'You can disable federation for specific posts.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Settings allow you to control which post types are federated.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>',
+			)
+		);
+
+		// 3. Template Tags (Expanded)
 		\get_current_screen()->add_help_tab(
 			array(
 				'id'      => 'template-tags',
 				'title'   => \__( 'Template Tags', 'activitypub' ),
-				'content' => '<h2>' . \esc_html__( 'The following Template Tags are available:', 'activitypub' ) . '</h2>' . "\n" .
+				'content' =>
+					'<h2>' . \esc_html__( 'What are Template Tags?', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'Template Tags let you control how your content appears in the Fediverse. They work as shortcodes within your post content templates, allowing you to customize what information is included and how it&#8217;s formatted.', 'activitypub' ) . '</p>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Content Tags', 'activitypub' ) . '</h2>' . "\n" .
 					'<dl>' . "\n" .
 						'<dt><code>[ap_title]</code></dt>' . "\n" .
 						'<dd>' . \esc_html__( 'The post&#8217;s title.', 'activitypub' ) . '</dd>' . "\n" .
@@ -401,16 +485,24 @@ class Settings {
 						'<dd>' . \wp_kses( \__( 'The post&#8217;s content. With <code>apply_filters</code> you can decide if filters (<code>apply_filters( \'the_content\', $content )</code>) should be applied or not (default is <code>yes</code>). The values can be <code>yes</code> or <code>no</code>. <code>apply_filters</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
 						'<dt><code>[ap_excerpt length="400"]</code></dt>' . "\n" .
 						'<dd>' . \wp_kses( \__( 'The post&#8217;s excerpt (uses <code>the_excerpt</code> if that is set). If no excerpt is provided, will truncate at <code>length</code> (optional, default = 400).', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
+						'<dt><code>[ap_image type="full"]</code></dt>' . "\n" .
+						'<dd>' . \wp_kses( __( 'The URL for the post&#8217;s featured image, defaults to full size. The type attribute can be any of the following: <code>thumbnail</code>, <code>medium</code>, <code>large</code>, <code>full</code>. <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
+					'</dl>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Link and Permalink Tags', 'activitypub' ) . '</h2>' . "\n" .
+					'<dl>' . "\n" .
 						'<dt><code>[ap_permalink type="url"]</code></dt>' . "\n" .
 						'<dd>' . \wp_kses( \__( 'The post&#8217;s permalink. <code>type</code> can be either: <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
 						'<dt><code>[ap_shortlink type="url"]</code></dt>' . "\n" .
 						'<dd>' . \wp_kses( \__( 'The post&#8217;s shortlink. <code>type</code> can be either <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks. <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
+					'</dl>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Metadata Tags', 'activitypub' ) . '</h2>' . "\n" .
+					'<dl>' . "\n" .
 						'<dt><code>[ap_hashtags]</code></dt>' . "\n" .
 						'<dd>' . \esc_html__( 'The post&#8217;s tags as hashtags.', 'activitypub' ) . '</dd>' . "\n" .
 						'<dt><code>[ap_hashcats]</code></dt>' . "\n" .
 						'<dd>' . \esc_html__( 'The post&#8217;s categories as hashtags.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_image type=full]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( __( 'The URL for the post&#8217;s featured image, defaults to full size. The type attribute can be any of the following: <code>thumbnail</code>, <code>medium</code>, <code>large</code>, <code>full</code>. <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
 						'<dt><code>[ap_author]</code></dt>' . "\n" .
 						'<dd>' . \esc_html__( 'The author&#8217;s name.', 'activitypub' ) . '</dd>' . "\n" .
 						'<dt><code>[ap_authorurl]</code></dt>' . "\n" .
@@ -421,6 +513,10 @@ class Settings {
 						'<dd>' . \esc_html__( 'The post&#8217;s time.', 'activitypub' ) . '</dd>' . "\n" .
 						'<dt><code>[ap_datetime]</code></dt>' . "\n" .
 						'<dd>' . \esc_html__( 'The post&#8217;s date/time formated as "date @ time".', 'activitypub' ) . '</dd>' . "\n" .
+					'</dl>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Site Information Tags', 'activitypub' ) . '</h2>' . "\n" .
+					'<dl>' . "\n" .
 						'<dt><code>[ap_blogurl]</code></dt>' . "\n" .
 						'<dd>' . \esc_html__( 'The URL to the site.', 'activitypub' ) . '</dd>' . "\n" .
 						'<dt><code>[ap_blogname]</code></dt>' . "\n" .
@@ -428,21 +524,140 @@ class Settings {
 						'<dt><code>[ap_blogdesc]</code></dt>' . "\n" .
 						'<dd>' . \esc_html__( 'The description of the site.', 'activitypub' ) . '</dd>' . "\n" .
 					'</dl>' . "\n" .
-					'<p>' . \esc_html__( 'You may also use any Shortcode normally available to you on your site, however be aware that Shortcodes may significantly increase the size of your content depending on what they do.', 'activitypub' ) . '</p>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Template Examples', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'Basic post template:', 'activitypub' ) . '</p>' . "\n" .
+					'<pre>[ap_title]
+
+[ap_excerpt]
+
+[ap_permalink type="url"] [ap_hashtags]</pre>' . "\n" .
+
+					'<p>' . \esc_html__( 'Image-focused template:', 'activitypub' ) . '</p>' . "\n" .
+					'<pre>[ap_title]
+
+[ap_image]
+
+[ap_excerpt length="200"]
+
+[ap_permalink] [ap_hashtags]</pre>' . "\n" .
+
 					'<p>' . \esc_html__( 'Note: the old Template Tags are now deprecated and automatically converted to the new ones.', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues/new" target="_blank">Let us know</a> if you miss a Template Tag.', 'activitypub' ), $anchor_html ) . '</p>',
+					'<p>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues/new" target="_blank">Let us know</a> if you miss a Template Tag.', 'activitypub' ), $anchor_html ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'You may also use any Shortcode normally available to you on your site, however be aware that Shortcodes may significantly increase the size of your content depending on what they do.', 'activitypub' ) . '</p>',
 			)
 		);
 
+		// 4. Custom Blocks
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'custom-blocks',
+				'title'   => \__( 'Custom Blocks', 'activitypub' ),
+				'content' =>
+					'<h2>' . \esc_html__( 'Introduction to ActivityPub Blocks', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'The plugin provides custom blocks for the WordPress Block Editor (Gutenberg) that enhance your Fediverse presence and make it easier to interact with the Fediverse.', 'activitypub' ) . '</p>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Available Blocks', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'The plugin includes the following custom blocks:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'ActivityPub Status - Create posts specifically formatted for the Fediverse.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'ActivityPub Share - Add sharing options for Fediverse platforms.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Block Settings and Options', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'Each block has configuration options that can be accessed from the block settings sidebar:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Visibility settings - Control who can see your content.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Formatting options - Customize how your content appears.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Media settings - Control how images and other media are handled.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Implementation Examples', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'Here are some common ways to use ActivityPub blocks:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Add an ActivityPub Status block to create a post optimized for Fediverse display.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Include an ActivityPub Share block at the end of your posts to encourage Fediverse sharing.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Tips for Optimal Block Usage', 'activitypub' ) . '</h2>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Keep content concise for better Fediverse presentation.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Use hashtags strategically to increase discoverability.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Include relevant images to make your posts stand out.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Test how your blocks appear on different Fediverse platforms.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>',
+			)
+		);
+
+		// 5. Settings Reference
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'settings-reference',
+				'title'   => \__( 'Settings Reference', 'activitypub' ),
+				'content' =>
+					'<h2>' . \esc_html__( 'User vs. Site Settings', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'ActivityPub for WordPress has two types of settings:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'User settings: Apply to individual WordPress users and their Fediverse presence.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Site settings: Apply to the entire WordPress site and its Fediverse presence.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+					'<p>' . \esc_html__( 'User settings are found in each user&#8217;s profile, while site settings are in the ActivityPub settings page.', 'activitypub' ) . '</p>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Content Settings', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'These settings control what content is federated and how:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Post Types: Choose which types of content (posts, pages, etc.) are federated.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Content Templates: Customize how your content appears in the Fediverse.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Media Handling: Control how images and other media are included.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Interaction Settings', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'These settings control how your site interacts with the Fediverse:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Comments: How Fediverse replies are handled as WordPress comments.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Notifications: Settings for ActivityPub notification handling.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Moderation: Tools for managing Fediverse interactions.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Profile and Identity Settings', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'These settings control how you appear in the Fediverse:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Profile Information: Your display name, bio, and other details.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Avatar and Header: Images that represent you in the Fediverse.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Username Options: How your username appears across platforms.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Advanced Settings', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'These settings are for advanced users and specific use cases:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Cache Settings: Control how ActivityPub data is cached.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Custom Endpoints: Configure special ActivityPub endpoints.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Debug Options: Tools for troubleshooting federation issues.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Security Considerations', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'Important security aspects to consider:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Public posts are truly public in the Fediverse.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Private posts should not be federated.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Consider limiting which post types are federated.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Review comment moderation settings for Fediverse interactions.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>',
+			)
+		);
+
+		// 6. Account Migration
 		\get_current_screen()->add_help_tab(
 			array(
 				'id'      => 'account-migration',
 				'title'   => \__( 'Account Migration', 'activitypub' ),
 				'content' =>
-					'<h2>' . \esc_html__( 'Migrating Between Mastodon and WordPress', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'The ActivityPub plugin allows you to migrate your account between WordPress and Mastodon (or other ActivityPub-compatible platforms) while bringing your followers with you.', 'activitypub' ) . '</p>' . "\n" .
+					'<h2>' . \esc_html__( 'Understanding Account Migration', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'Account migration in the Fediverse allows you to move your identity from one platform to another while bringing your followers with you.', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'When you migrate properly, your followers are automatically redirected to follow your new account, and your old account can point people to your new one.', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'This is especially useful if you&#8217;s moving from a Mastodon instance to your WordPress site, or if you&#8217;s changing domains.', 'activitypub' ) . '</p>' . "\n" .
 
-					'<h3>' . \esc_html__( 'Migrating from Mastodon to WordPress', 'activitypub' ) . '</h3>' . "\n" .
+					'<h2>' . \esc_html__( 'Migrating from Mastodon to WordPress', 'activitypub' ) . '</h2>' . "\n" .
 					'<ol>' . "\n" .
 					'<li>' . \wp_kses(
 						\sprintf(
@@ -465,42 +680,267 @@ class Settings {
 					) . '</li>' . "\n" .
 					'<li>' . \esc_html__( 'Confirm the migration in Mastodon by entering your password.', 'activitypub' ) . '</li>' . "\n" .
 					'<li>' . \esc_html__( 'Your followers will be notified and redirected to follow your WordPress account.', 'activitypub' ) . '</li>' . "\n" .
-					'</ol>' . "\n",
+					'</ol>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Managing Multiple Accounts', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'If you maintain presence on multiple platforms:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Use the Account Aliases feature to link your identities.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Consider which account will be your primary one.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Be clear with your followers about where to find you.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Remember that full migration moves your followers completely.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>',
 			)
 		);
 
-		/* translators: %s: Link to more information */
-		$info_string = \esc_html__( 'For more information please visit %s.', 'activitypub' );
+		// 7. Interoperability
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'interoperability',
+				'title'   => \__( 'Interoperability', 'activitypub' ),
+				'content' =>
+					'<h2>' . \esc_html__( 'Platform Compatibility Overview', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'WordPress ActivityPub is designed to work with various Fediverse platforms, but compatibility can vary:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Mastodon: Excellent compatibility for most features.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Pleroma: Good compatibility with most features.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Pixelfed: Works well for image-focused content.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Other platforms: Compatibility varies based on their ActivityPub implementation.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
 
+					'<h2>' . \esc_html__( 'Mastodon Interoperability', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'Mastodon is the most widely used Fediverse platform and works well with WordPress ActivityPub:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Your WordPress posts appear as standard Mastodon posts.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Featured images are included and properly displayed.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Mentions and replies work in both directions.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Account migration between Mastodon and WordPress is supported.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Other Platform Considerations', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'When federating with other platforms, keep in mind:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Some platforms may display your content differently.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Character limits vary between platforms.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Media handling can differ (image sizes, formats, etc.).', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Some platforms may not support all interaction types.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Testing Interoperability', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'To ensure your content works well across the Fediverse:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Test your posts by viewing them on different platforms.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Check how images and formatting appear.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Verify that interactions (comments, likes) work as expected.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Ask followers on different platforms for feedback.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>',
+			)
+		);
+
+		// 8. Troubleshooting
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'troubleshooting',
+				'title'   => \__( 'Troubleshooting', 'activitypub' ),
+				'content' =>
+					'<h2>' . \esc_html__( 'Common Issues and Solutions', 'activitypub' ) . '</h2>' . "\n" .
+					'<dl>' . "\n" .
+					'<dt>' . \esc_html__( 'My posts aren&#8217;t appearing in the Fediverse', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'Check that federation is enabled for your user or blog, verify the post type is set to be federated, and ensure the post is public. Also verify that your site is accessible from the public internet.', 'activitypub' ) . '</dd>' . "\n" .
+
+					'<dt>' . \esc_html__( 'Fediverse users can&#8217;t follow my account', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'Make sure your WebFinger endpoint is accessible. Try searching for your full username (user@yourdomain.com) from a Fediverse account. Check that your server allows the necessary API requests.', 'activitypub' ) . '</dd>' . "\n" .
+
+					'<dt>' . \esc_html__( 'Images aren&#8217;t displaying properly', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'Verify that your images are publicly accessible. Check image size limits on the receiving platforms. Consider using different image sizes in your templates.', 'activitypub' ) . '</dd>' . "\n" .
+
+					'<dt>' . \esc_html__( 'Comments from the Fediverse aren&#8217;t showing up', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'Check your WordPress comment moderation settings. Verify that your inbox endpoint is accessible. Look for any error messages in your logs.', 'activitypub' ) . '</dd>' . "\n" .
+					'</dl>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Debugging Federation Issues', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'To verify your WordPress site is properly federating:', 'activitypub' ) . '</p>' . "\n" .
+					'<ol>' . "\n" .
+					'<li>' . \esc_html__( 'Test your WebFinger endpoint by visiting yourdomain.com/.well-known/webfinger?resource=acct:username@yourdomain.com.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Check that your ActivityPub endpoints are accessible.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Try following your account from a Fediverse account.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Publish a test post and verify it appears for followers.', 'activitypub' ) . '</li>' . "\n" .
+					'</ol>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Understanding Error Messages', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'Common error messages you might encounter:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'WebFinger resource not found: Your WebFinger endpoint isn&#8217;t configured correctly or the username doesn&#8217;t exist.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Unable to deliver to inbox: The receiving server couldn&#8217;t be reached or rejected the message.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Signature verification failed: Authentication issues between servers.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Getting Help', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'If you&#8217;s still having issues:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \wp_kses( \__( 'Check the <a href="https://wordpress.org/support/plugin/activitypub/" target="_blank">support forum</a> for similar issues.', 'activitypub' ), $anchor_html ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( 'Report bugs on <a href="https://github.com/automattic/wordpress-activitypub/issues" target="_blank">GitHub</a> with detailed information.', 'activitypub' ), $anchor_html ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Include your WordPress and PHP versions, along with any error messages when seeking help.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>',
+			)
+		);
+
+		// 9. Developer Reference
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'developer-reference',
+				'title'   => \__( 'Developer Reference', 'activitypub' ),
+				'content' =>
+					'<h2>' . \esc_html__( 'Available Hooks and Filters', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'The plugin provides various hooks and filters for customization:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \wp_kses( \__( '<code>activitypub_post_types</code> - Filter the post types that are federated.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( '<code>activitypub_post_content_template</code> - Customize the content template.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( '<code>activitypub_should_federate_post</code> - Control whether a post should be federated.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( '<code>activitypub_object</code> - Modify the ActivityPub object before it&#8217;s sent.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+					'<p>' . \wp_kses( \__( 'For a complete list of hooks and filters, check the <a href="https://github.com/automattic/wordpress-activitypub" target="_blank">GitHub repository</a>.', 'activitypub' ), $anchor_html ) . '</p>' . "\n" .
+
+					'<h2>' . \esc_html__( 'API Endpoints', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'The plugin registers these main endpoints:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \wp_kses( \__( '<code>/.well-known/webfinger</code> - For discovering users.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( '<code>/.well-known/nodeinfo</code> - For server information.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( '<code>/wp-json/activitypub/1.0/...</code> - REST API endpoints.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Custom Development Examples', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'Example: Adding support for a custom post type', 'activitypub' ) . '</p>' . "\n" .
+					'<pre>add_filter( \'activitypub_post_types\', function( $post_types ) {
+    $post_types[] = \'my_custom_post_type\';
+    return $post_types;
+} );</pre>' . "\n" .
+
+					'<p>' . \esc_html__( 'Example: Customizing the content template for a specific post type', 'activitypub' ) . '</p>' . "\n" .
+					'<pre>add_filter( \'activitypub_post_content_template\', function( $template, $post ) {
+    if ( \'product\' === $post->post_type ) {
+        return \'[ap_title]\n\n[ap_excerpt]\n\nPrice: $\' . get_post_meta( $post->ID, \'_price\', true ) . \'\n\n[ap_permalink]\';
+    }
+    return $template;
+}, 10, 2 );</pre>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Integration with Other WordPress Plugins', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'When integrating with other plugins:', 'activitypub' ) . '</p>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \esc_html__( 'Use the provided hooks rather than modifying core files.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Test thoroughly with different Fediverse platforms.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Consider performance implications of your customizations.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Follow ActivityPub protocol specifications when extending functionality.', 'activitypub' ) . '</li>' . "\n" .
+					'</ul>',
+			)
+		);
+
+		// 10. Glossary (Expanded)
 		\get_current_screen()->add_help_tab(
 			array(
 				'id'      => 'glossary',
 				'title'   => \__( 'Glossary', 'activitypub' ),
 				'content' =>
-					'<h2>' . \esc_html__( 'Fediverse', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'The Fediverse is a new word made of two words: "federation" + "universe"', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \esc_html__( 'It is a federated social network running on free open software on a myriad of computers across the globe. Many independent servers are interconnected and allow people to interact with one another. There&#8217;s no one central site: you choose a server to register. This ensures some decentralization and sovereignty of data. Fediverse (also called Fedi) has no built-in advertisements, no tricky algorithms, no one big corporation dictating the rules. Instead we have small cozy communities of like-minded people. Welcome!', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \sprintf( $info_string, '<a href="https://fediverse.party/" target="_blank">fediverse.party</a>' ) . '</p>' . "\n" .
+					'<h2>' . \esc_html__( 'Fediverse Terminology', 'activitypub' ) . '</h2>' . "\n" .
+					'<dl>' . "\n" .
+					'<dt>' . \esc_html__( 'Fediverse', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'A network of interconnected servers using open protocols, primarily ActivityPub, allowing users from different platforms to interact with each other. The term combines "federation" and "universe".', 'activitypub' ) . '</dd>' . "\n" .
 
-					'<h2>' . \esc_html__( 'ActivityPub', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'ActivityPub is a decentralized social networking protocol based on the ActivityStreams 2.0 data format. ActivityPub is an official W3C recommended standard published by the W3C Social Web Working Group. It provides a client to server API for creating, updating and deleting content, as well as a federated server to server API for delivering notifications and subscribing to content.', 'activitypub' ) . '</p>' . "\n" .
+					'<dt>' . \esc_html__( 'Federation', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'The process by which servers communicate with each other to share content and interactions across different platforms and instances.', 'activitypub' ) . '</dd>' . "\n" .
 
-					'<h2>' . \esc_html__( 'WebFinger', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'WebFinger is used to discover information about people or other entities on the Internet that are identified by a URI using standard Hypertext Transfer Protocol (HTTP) methods over a secure transport. A WebFinger resource returns a JavaScript Object Notation (JSON) object describing the entity that is queried. The JSON object is referred to as the JSON Resource Descriptor (JRD).', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \esc_html__( 'For a person, the type of information that might be discoverable via WebFinger includes a personal profile address, identity service, telephone number, or preferred avatar. For other entities on the Internet, a WebFinger resource might return JRDs containing link relations that enable a client to discover, for example, that a printer can print in color on A4 paper, the physical location of a server, or other static information.', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \wp_kses( \__( 'On Mastodon [and other platforms], user profiles can be hosted either locally on the same website as yours, or remotely on a completely different website. The same username may be used on a different domain. Therefore, a Mastodon user&#8217;s full mention consists of both the username and the domain, in the form <code>@username@domain</code>. In practical terms, <code>@user@example.com</code> is not the same as <code>@user@example.org</code>. If the domain is not included, Mastodon will try to find a local user named <code>@username</code>. However, in order to deliver to someone over ActivityPub, the <code>@username@domain</code> mention is not enough – mentions must be translated to an HTTPS URI first, so that the remote actor&#8217;s inbox and outbox can be found. (This paragraph is copied from the <a href="https://docs.joinmastodon.org/spec/webfinger/" target="_blank">Mastodon Documentation</a>)', 'activitypub' ), array_merge( $code_html, $anchor_html ) ) . '</p>' . "\n" .
-					'<p>' . \sprintf( $info_string, '<a href="https://webfinger.net/" target="_blank">webfinger.net</a>' ) . '</p>' . "\n" .
+					'<dt>' . \esc_html__( 'Instance', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'A server running Fediverse software. Your WordPress site with ActivityPub enabled becomes an instance in the Fediverse.', 'activitypub' ) . '</dd>' . "\n" .
+
+					'<dt>' . \esc_html__( 'Local Timeline', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'Content from users on the same instance. In WordPress context, this would be posts from your WordPress site.', 'activitypub' ) . '</dd>' . "\n" .
+					'</dl>' . "\n" .
+
+					'<h2>' . \esc_html__( 'ActivityPub Concepts', 'activitypub' ) . '</h2>' . "\n" .
+					'<dl>' . "\n" .
+					'<dt>' . \esc_html__( 'ActivityPub', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'A decentralized social networking protocol based on the ActivityStreams 2.0 data format. It provides a client-to-server API for creating, updating, and deleting content, as well as a server-to-server API for delivering notifications and content between servers.', 'activitypub' ) . '</dd>' . "\n" .
+
+					'<dt>' . \esc_html__( 'Actor', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'An entity that can perform activities. In WordPress, actors are typically users or the blog itself.', 'activitypub' ) . '</dd>' . "\n" .
+
+					'<dt>' . \esc_html__( 'Activity', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'An action performed by an actor, such as creating a post, liking content, or following someone.', 'activitypub' ) . '</dd>' . "\n" .
+
+					'<dt>' . \esc_html__( 'Object', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'The target of an activity, such as a post, comment, or profile.', 'activitypub' ) . '</dd>' . "\n" .
+					'</dl>' . "\n" .
+
+					'<h2>' . \esc_html__( 'WebFinger and Discovery', 'activitypub' ) . '</h2>' . "\n" .
+					'<dl>' . "\n" .
+					'<dt>' . \esc_html__( 'WebFinger', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'A protocol used to discover information about people or entities identified by a URI. In the Fediverse, it&#8217;s used to find users across different instances.', 'activitypub' ) . '</dd>' . "\n" .
+
+					'<dt>' . \esc_html__( 'Handle', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \wp_kses( \__( 'A user&#8217;s identity in the Fediverse, formatted as <code>@username@domain.com</code>. Similar to an email address, it includes both the username and the server where the account is hosted.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
+					'</dl>' . "\n" .
+
+					'<h2>' . \esc_html__( 'WordPress-Specific Terms', 'activitypub' ) . '</h2>' . "\n" .
+					'<dl>' . "\n" .
+					'<dt>' . \esc_html__( 'Template Tags', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'Shortcodes used in the ActivityPub plugin to customize how content appears when federated to the Fediverse.', 'activitypub' ) . '</dd>' . "\n" .
+
+					'<dt>' . \esc_html__( 'Federation Settings', 'activitypub' ) . '</dt>' . "\n" .
+					'<dd>' . \esc_html__( 'Configuration options that control how WordPress content is shared with the Fediverse.', 'activitypub' ) . '</dd>' . "\n" .
+					'</dl>' . "\n" .
 
 					'<h2>' . \esc_html__( 'NodeInfo', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'NodeInfo is an effort to create a standardized way of exposing metadata about a server running one of the distributed social networks. The two key goals are being able to get better insights into the user base of distributed social networking and the ability to build tools that allow users to choose the best fitting software and server for their needs.', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \sprintf( $info_string, '<a href="http://nodeinfo.diaspora.software/" target="_blank">nodeinfo.diaspora.software</a>' ) . '</p>',
+					'<dd>' . \esc_html__( 'A standardized way of exposing metadata about a server running one of the distributed social networks. It helps with compatibility and discovery between different Fediverse platforms.', 'activitypub' ) . '</dd>',
 			)
 		);
 
+		// 11. Resources
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'resources',
+				'title'   => \__( 'Resources', 'activitypub' ),
+				'content' =>
+					'<h2>' . \esc_html__( 'Official Resources', 'activitypub' ) . '</h2>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \wp_kses( \__( '<a href="https://wordpress.org/plugins/activitypub/" target="_blank">WordPress.org Plugin Page</a> - Official plugin listing with documentation.', 'activitypub' ), $anchor_html ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub" target="_blank">GitHub Repository</a> - Source code and development.', 'activitypub' ), $anchor_html ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub/releases" target="_blank">Release Notes</a> - Latest changes and updates.', 'activitypub' ), $anchor_html ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Community Support', 'activitypub' ) . '</h2>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \wp_kses( \__( '<a href="https://wordpress.org/support/plugin/activitypub/" target="_blank">WordPress.org Support Forums</a> - Get help from the community.', 'activitypub' ), $anchor_html ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues" target="_blank">GitHub Issues</a> - Report bugs or suggest features.', 'activitypub' ), $anchor_html ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Complementary Plugins', 'activitypub' ) . '</h2>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \wp_kses( \__( '<a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a> - Enhance shortlinks for better sharing.', 'activitypub' ), $anchor_html ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( '<a href="https://wordpress.org/plugins/webmention/" target="_blank">Webmention</a> - Add Webmention support for additional interactions.', 'activitypub' ), $anchor_html ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Fediverse Resources', 'activitypub' ) . '</h2>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \wp_kses( \__( '<a href="https://fediverse.party/" target="_blank">Fediverse.Party</a> - Introduction to the Fediverse and its platforms.', 'activitypub' ), $anchor_html ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( '<a href="https://joinmastodon.org/" target="_blank">Join Mastodon</a> - Information about Mastodon, a popular Fediverse platform.', 'activitypub' ), $anchor_html ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( '<a href="https://w3c.github.io/activitypub/" target="_blank">ActivityPub Specification</a> - The official W3C specification.', 'activitypub' ), $anchor_html ) . '</li>' . "\n" .
+					'</ul>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Further Reading', 'activitypub' ) . '</h2>' . "\n" .
+					'<ul>' . "\n" .
+					'<li>' . \wp_kses( \__( '<a href="https://indieweb.org/" target="_blank">IndieWeb</a> - Movement focused on owning your content and identity online.', 'activitypub' ), $anchor_html ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( '<a href="https://webfinger.net/" target="_blank">WebFinger Protocol</a> - More information about WebFinger.', 'activitypub' ), $anchor_html ) . '</li>' . "\n" .
+					'</ul>',
+			)
+		);
+
+		// Enhanced Help Sidebar.
 		\get_current_screen()->set_help_sidebar(
 			'<p><strong>' . \__( 'For more information:', 'activitypub' ) . '</strong></p>' . "\n" .
-			'<p>' . \__( '<a href="https://wordpress.org/support/plugin/activitypub/">Get support</a>', 'activitypub' ) . '</p>' . "\n" .
-			'<p>' . \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues">Report an issue</a>', 'activitypub' ) . '</p>'
+			'<p>' . \wp_kses( \__( '<a href="https://wordpress.org/support/plugin/activitypub/">Get support</a>', 'activitypub' ), $anchor_html ) . '</p>' . "\n" .
+			'<p>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues">Report an issue</a>', 'activitypub' ), $anchor_html ) . '</p>' . "\n" .
+			'<p>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub">Documentation</a>', 'activitypub' ), $anchor_html ) . '</p>' . "\n" .
+			'<p>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub/releases">View latest changes</a>', 'activitypub' ), $anchor_html ) . '</p>'
 		);
 	}
 
