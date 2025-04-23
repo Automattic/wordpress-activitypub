@@ -638,7 +638,7 @@ class Admin {
 				// Small delay to ensure the help tab is loaded.
 				setTimeout(function() {
 					document.getElementById('contextual-help-link').click();
-					document.querySelector(hash + ' a').click();
+					document.querySelector(hash + ' > a[href^="#tab-panel-"]').click();
 				}, 500);
 			}
 		});
