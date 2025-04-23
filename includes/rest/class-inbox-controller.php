@@ -131,7 +131,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 		$type     = \strtolower( $request->get_param( 'type' ) );
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		if ( wp_check_comment_disallowed_list( $activity->to_json( false ), '', '', '', $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '' ) ) {
+		if ( \wp_check_comment_disallowed_list( $activity->to_json( false ), '', '', '', $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '' ) ) {
 			$response = \rest_ensure_response(
 				array(
 					'type'   => 'https://w3id.org/fep/c180#actor-not-authorized',
