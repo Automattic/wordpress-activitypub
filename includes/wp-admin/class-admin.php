@@ -60,6 +60,8 @@ class Admin {
 		if ( site_supports_blocks() ) {
 			\add_action( 'tool_box', array( self::class, 'tool_box' ) );
 		}
+
+		\add_action( 'admin_print_footer_scripts', array( self::class, 'open_help_tab' ) );
 	}
 
 	/**
@@ -608,5 +610,23 @@ class Admin {
 	 */
 	public static function tool_box() {
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
+	}
+
+	public static function open_help_tab() {
+	?>
+	<script type="text/javascript">
+	jQuery(document).ready(function($) {
+		var hash = window.location.hash;
+		if (hash) {
+			// Small delay to ensure the help tab is loaded
+			setTimeout(function() {
+				$('#contextual-help-link').click();
+				console.log(hash + ' a');
+				$(hash + ' a').click();
+			}, 500);
+		}
+	});
+	</script>
+	<?php
 	}
 }
