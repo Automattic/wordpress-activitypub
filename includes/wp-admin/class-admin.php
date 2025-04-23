@@ -612,21 +612,27 @@ class Admin {
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
 	}
 
+	/**
+	 * Open the help tab.
+	 *
+	 * This function is used to open the help tab,
+	 * it is triggered by the hash in the URL.
+	 */
 	public static function open_help_tab() {
-	?>
-	<script type="text/javascript">
-	jQuery(document).ready(function($) {
-		var hash = window.location.hash;
-		if (hash) {
-			// Small delay to ensure the help tab is loaded
-			setTimeout(function() {
-				$('#contextual-help-link').click();
-				console.log(hash + ' a');
-				$(hash + ' a').click();
-			}, 500);
-		}
-	});
-	</script>
-	<?php
+		?>
+		<script type="text/javascript">
+		jQuery(document).ready(function($) {
+			var hash = window.location.hash;
+			if (hash) {
+				// Small delay to ensure the help tab is loaded
+				setTimeout(function() {
+					$('#contextual-help-link').click();
+					console.log(hash + ' a');
+					$(hash + ' a').click();
+				}, 500);
+			}
+		});
+		</script>
+		<?php
 	}
 }
