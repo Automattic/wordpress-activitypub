@@ -621,8 +621,8 @@ class Admin {
 	public static function open_help_tab() {
 		// get all tabs registered for the ActivityPub settings page.
 		$tabs = \get_current_screen()->get_help_tabs();
-		$ids  = array_values( wp_list_pluck( $tabs, 'id' ) );
-		$ids  = array_map(
+		$ids  = \array_values( \wp_list_pluck( $tabs, 'id' ) );
+		$ids  = \array_map(
 			function ( $id ) {
 				return '#tab-link-' . $id;
 			},
@@ -633,7 +633,7 @@ class Admin {
 		document.addEventListener('DOMContentLoaded', function() {
 			// add allowed ids to the hash.
 			const hash = window.location.hash;
-			const allowed_ids = <?php echo wp_json_encode( $ids ); ?>;
+			const allowed_ids = <?php echo \wp_json_encode( $ids ); ?>;
 			if (allowed_ids.includes(hash)) {
 				// Small delay to ensure the help tab is loaded.
 				setTimeout(function() {
