@@ -453,86 +453,6 @@ class Settings {
 			)
 		);
 
-		// Template Tags.
-		\get_current_screen()->add_help_tab(
-			array(
-				'id'      => 'template-tags',
-				'title'   => \__( 'Template Tags', 'activitypub' ),
-				'content' =>
-					'<h2>' . \esc_html__( 'What are Template Tags?', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'Template Tags let you control how your content appears in the Fediverse. They work as shortcodes within your post content templates, allowing you to customize what information is included and how it&#8217;s formatted.', 'activitypub' ) . '</p>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Content Tags', 'activitypub' ) . '</h2>' . "\n" .
-					'<dl>' . "\n" .
-						'<dt><code>[ap_title]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s title.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_content apply_filters="yes"]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( \__( 'The post&#8217;s content. With <code>apply_filters</code> you can decide if filters (<code>apply_filters( \'the_content\', $content )</code>) should be applied or not (default is <code>yes</code>). The values can be <code>yes</code> or <code>no</code>. <code>apply_filters</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
-						'<dt><code>[ap_excerpt length="400"]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( \__( 'The post&#8217;s excerpt (uses <code>the_excerpt</code> if that is set). If no excerpt is provided, will truncate at <code>length</code> (optional, default = 400).', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
-						'<dt><code>[ap_image type="full"]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( __( 'The URL for the post&#8217;s featured image, defaults to full size. The type attribute can be any of the following: <code>thumbnail</code>, <code>medium</code>, <code>large</code>, <code>full</code>. <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
-					'</dl>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Link and Permalink Tags', 'activitypub' ) . '</h2>' . "\n" .
-					'<dl>' . "\n" .
-						'<dt><code>[ap_permalink type="url"]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( \__( 'The post&#8217;s permalink. <code>type</code> can be either: <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
-						'<dt><code>[ap_shortlink type="url"]</code></dt>' . "\n" .
-						'<dd>' . \wp_kses( \__( 'The post&#8217;s shortlink. <code>type</code> can be either <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks. <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
-					'</dl>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Metadata Tags', 'activitypub' ) . '</h2>' . "\n" .
-					'<dl>' . "\n" .
-						'<dt><code>[ap_hashtags]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s tags as hashtags.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_hashcats]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s categories as hashtags.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_author]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The author&#8217;s name.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_authorurl]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The URL to the author&#8217;s profile page.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_date]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s date.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_time]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s time.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_datetime]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The post&#8217;s date/time formated as "date @ time".', 'activitypub' ) . '</dd>' . "\n" .
-					'</dl>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Site Information Tags', 'activitypub' ) . '</h2>' . "\n" .
-					'<dl>' . "\n" .
-						'<dt><code>[ap_blogurl]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The URL to the site.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_blogname]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The name of the site.', 'activitypub' ) . '</dd>' . "\n" .
-						'<dt><code>[ap_blogdesc]</code></dt>' . "\n" .
-						'<dd>' . \esc_html__( 'The description of the site.', 'activitypub' ) . '</dd>' . "\n" .
-					'</dl>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Template Examples', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'Basic post template:', 'activitypub' ) . '</p>' . "\n" .
-					'<pre>[ap_title]
-
-[ap_excerpt]
-
-[ap_permalink type="url"] [ap_hashtags]</pre>' . "\n" .
-
-					'<p>' . \esc_html__( 'Image-focused template:', 'activitypub' ) . '</p>' . "\n" .
-					'<pre>[ap_title]
-
-[ap_image]
-
-[ap_excerpt length="200"]
-
-[ap_permalink] [ap_hashtags]</pre>' . "\n" .
-
-					'<p>' . \esc_html__( 'Note: the old Template Tags are now deprecated and automatically converted to the new ones.', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues/new" target="_blank">Let us know</a> if you miss a Template Tag.', 'activitypub' ), $anchor_html ) . '</p>' . "\n" .
-					'<p>' . \esc_html__( 'You may also use any Shortcode normally available to you on your site, however be aware that Shortcodes may significantly increase the size of your content depending on what they do.', 'activitypub' ) . '</p>',
-			)
-		);
-
 		// Editor Blocks.
 		\get_current_screen()->add_help_tab(
 			array(
@@ -647,6 +567,86 @@ class Settings {
 					'<li>' . \esc_html__( 'Be clear with your followers about where to find you.', 'activitypub' ) . '</li>' . "\n" .
 					'<li>' . \esc_html__( 'Remember that full migration moves your followers completely.', 'activitypub' ) . '</li>' . "\n" .
 					'</ul>',
+			)
+		);
+
+		// Template Tags.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'template-tags',
+				'title'   => \__( 'Template Tags', 'activitypub' ),
+				'content' =>
+					'<h2>' . \esc_html__( 'What are Template Tags?', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'Template Tags let you control how your content appears in the Fediverse. They work as shortcodes within your post content templates, allowing you to customize what information is included and how it&#8217;s formatted.', 'activitypub' ) . '</p>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Content Tags', 'activitypub' ) . '</h2>' . "\n" .
+					'<dl>' . "\n" .
+					'<dt><code>[ap_title]</code></dt>' . "\n" .
+					'<dd>' . \esc_html__( 'The post&#8217;s title.', 'activitypub' ) . '</dd>' . "\n" .
+					'<dt><code>[ap_content apply_filters="yes"]</code></dt>' . "\n" .
+					'<dd>' . \wp_kses( \__( 'The post&#8217;s content. With <code>apply_filters</code> you can decide if filters (<code>apply_filters( \'the_content\', $content )</code>) should be applied or not (default is <code>yes</code>). The values can be <code>yes</code> or <code>no</code>. <code>apply_filters</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
+					'<dt><code>[ap_excerpt length="400"]</code></dt>' . "\n" .
+					'<dd>' . \wp_kses( \__( 'The post&#8217;s excerpt (uses <code>the_excerpt</code> if that is set). If no excerpt is provided, will truncate at <code>length</code> (optional, default = 400).', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
+					'<dt><code>[ap_image type="full"]</code></dt>' . "\n" .
+					'<dd>' . \wp_kses( __( 'The URL for the post&#8217;s featured image, defaults to full size. The type attribute can be any of the following: <code>thumbnail</code>, <code>medium</code>, <code>large</code>, <code>full</code>. <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
+					'</dl>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Link and Permalink Tags', 'activitypub' ) . '</h2>' . "\n" .
+					'<dl>' . "\n" .
+					'<dt><code>[ap_permalink type="url"]</code></dt>' . "\n" .
+					'<dd>' . \wp_kses( \__( 'The post&#8217;s permalink. <code>type</code> can be either: <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
+					'<dt><code>[ap_shortlink type="url"]</code></dt>' . "\n" .
+					'<dd>' . \wp_kses( \__( 'The post&#8217;s shortlink. <code>type</code> can be either <code>url</code> or <code>html</code> (an &lt;a /&gt; tag). I can recommend <a href="https://wordpress.org/plugins/hum/" target="_blank">Hum</a>, to prettify the Shortlinks. <code>type</code> attribute is optional.', 'activitypub' ), $code_html ) . '</dd>' . "\n" .
+					'</dl>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Metadata Tags', 'activitypub' ) . '</h2>' . "\n" .
+					'<dl>' . "\n" .
+					'<dt><code>[ap_hashtags]</code></dt>' . "\n" .
+					'<dd>' . \esc_html__( 'The post&#8217;s tags as hashtags.', 'activitypub' ) . '</dd>' . "\n" .
+					'<dt><code>[ap_hashcats]</code></dt>' . "\n" .
+					'<dd>' . \esc_html__( 'The post&#8217;s categories as hashtags.', 'activitypub' ) . '</dd>' . "\n" .
+					'<dt><code>[ap_author]</code></dt>' . "\n" .
+					'<dd>' . \esc_html__( 'The author&#8217;s name.', 'activitypub' ) . '</dd>' . "\n" .
+					'<dt><code>[ap_authorurl]</code></dt>' . "\n" .
+					'<dd>' . \esc_html__( 'The URL to the author&#8217;s profile page.', 'activitypub' ) . '</dd>' . "\n" .
+					'<dt><code>[ap_date]</code></dt>' . "\n" .
+					'<dd>' . \esc_html__( 'The post&#8217;s date.', 'activitypub' ) . '</dd>' . "\n" .
+					'<dt><code>[ap_time]</code></dt>' . "\n" .
+					'<dd>' . \esc_html__( 'The post&#8217;s time.', 'activitypub' ) . '</dd>' . "\n" .
+					'<dt><code>[ap_datetime]</code></dt>' . "\n" .
+					'<dd>' . \esc_html__( 'The post&#8217;s date/time formated as "date @ time".', 'activitypub' ) . '</dd>' . "\n" .
+					'</dl>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Site Information Tags', 'activitypub' ) . '</h2>' . "\n" .
+					'<dl>' . "\n" .
+					'<dt><code>[ap_blogurl]</code></dt>' . "\n" .
+					'<dd>' . \esc_html__( 'The URL to the site.', 'activitypub' ) . '</dd>' . "\n" .
+					'<dt><code>[ap_blogname]</code></dt>' . "\n" .
+					'<dd>' . \esc_html__( 'The name of the site.', 'activitypub' ) . '</dd>' . "\n" .
+					'<dt><code>[ap_blogdesc]</code></dt>' . "\n" .
+					'<dd>' . \esc_html__( 'The description of the site.', 'activitypub' ) . '</dd>' . "\n" .
+					'</dl>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Template Examples', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'Basic post template:', 'activitypub' ) . '</p>' . "\n" .
+					'<pre>[ap_title]
+
+[ap_excerpt]
+
+[ap_permalink type="url"] [ap_hashtags]</pre>' . "\n" .
+
+					'<p>' . \esc_html__( 'Image-focused template:', 'activitypub' ) . '</p>' . "\n" .
+					'<pre>[ap_title]
+
+[ap_image]
+
+[ap_excerpt length="200"]
+
+[ap_permalink] [ap_hashtags]</pre>' . "\n" .
+
+					'<p>' . \esc_html__( 'Note: the old Template Tags are now deprecated and automatically converted to the new ones.', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues/new" target="_blank">Let us know</a> if you miss a Template Tag.', 'activitypub' ), $anchor_html ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'You may also use any Shortcode normally available to you on your site, however be aware that Shortcodes may significantly increase the size of your content depending on what they do.', 'activitypub' ) . '</p>',
 			)
 		);
 
@@ -814,10 +814,10 @@ class Settings {
 		// Enhanced Help Sidebar.
 		\get_current_screen()->set_help_sidebar(
 			'<p><strong>' . \__( 'For more information:', 'activitypub' ) . '</strong></p>' . "\n" .
-			'<p>' . \wp_kses( \__( '<a href="https://wordpress.org/support/plugin/activitypub/">Get support</a>', 'activitypub' ), $anchor_html ) . '</p>' . "\n" .
-			'<p>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues">Report an issue</a>', 'activitypub' ), $anchor_html ) . '</p>' . "\n" .
-			'<p>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub">Documentation</a>', 'activitypub' ), $anchor_html ) . '</p>' . "\n" .
-			'<p>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub/releases">View latest changes</a>', 'activitypub' ), $anchor_html ) . '</p>'
+			'<p><a href="https://wordpress.org/support/plugin/activitypub/">' . \esc_html__( 'Get support', 'activitypub' ) . '</a></p>' . "\n" .
+			'<p><a href="https://github.com/automattic/wordpress-activitypub/issues">' . \esc_html__( 'Report an issue', 'activitypub' ) . '</a></p>' . "\n" .
+			'<p><a href="https://github.com/automattic/wordpress-activitypub">' . \esc_html__( 'Documentation', 'activitypub' ) . '</a></p>' . "\n" .
+			'<p><a href="https://github.com/automattic/wordpress-activitypub/releases">' . \esc_html__( 'View latest changes', 'activitypub' ) . '</a></p>'
 		);
 	}
 
