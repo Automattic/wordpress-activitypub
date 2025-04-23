@@ -698,56 +698,6 @@ class Settings {
 			)
 		);
 
-		// 9. Developer Reference
-		\get_current_screen()->add_help_tab(
-			array(
-				'id'      => 'developer-reference',
-				'title'   => \__( 'Developer Reference', 'activitypub' ),
-				'content' =>
-					'<h2>' . \esc_html__( 'Available Hooks and Filters', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'The plugin provides various hooks and filters for customization:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \wp_kses( \__( '<code>activitypub_post_types</code> - Filter the post types that are federated.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
-					'<li>' . \wp_kses( \__( '<code>activitypub_post_content_template</code> - Customize the content template.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
-					'<li>' . \wp_kses( \__( '<code>activitypub_should_federate_post</code> - Control whether a post should be federated.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
-					'<li>' . \wp_kses( \__( '<code>activitypub_object</code> - Modify the ActivityPub object before it&#8217;s sent.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
-					'<p>' . \wp_kses( \__( 'For a complete list of hooks and filters, check the <a href="https://github.com/automattic/wordpress-activitypub" target="_blank">GitHub repository</a>.', 'activitypub' ), $anchor_html ) . '</p>' . "\n" .
-
-					'<h2>' . \esc_html__( 'API Endpoints', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'The plugin registers these main endpoints:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \wp_kses( \__( '<code>/.well-known/webfinger</code> - For discovering users.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
-					'<li>' . \wp_kses( \__( '<code>/.well-known/nodeinfo</code> - For server information.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
-					'<li>' . \wp_kses( \__( '<code>/wp-json/activitypub/1.0/...</code> - REST API endpoints.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Custom Development Examples', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'Example: Adding support for a custom post type', 'activitypub' ) . '</p>' . "\n" .
-					'<pre>add_filter( \'activitypub_post_types\', function( $post_types ) {
-    $post_types[] = \'my_custom_post_type\';
-    return $post_types;
-} );</pre>' . "\n" .
-
-					'<p>' . \esc_html__( 'Example: Customizing the content template for a specific post type', 'activitypub' ) . '</p>' . "\n" .
-					'<pre>add_filter( \'activitypub_post_content_template\', function( $template, $post ) {
-    if ( \'product\' === $post->post_type ) {
-        return \'[ap_title]\n\n[ap_excerpt]\n\nPrice: $\' . get_post_meta( $post->ID, \'_price\', true ) . \'\n\n[ap_permalink]\';
-    }
-    return $template;
-}, 10, 2 );</pre>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Integration with Other WordPress Plugins', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'When integrating with other plugins:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Use the provided hooks rather than modifying core files.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Test thoroughly with different Fediverse platforms.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Consider performance implications of your customizations.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Follow ActivityPub protocol specifications when extending functionality.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>',
-			)
-		);
-
 		// 10. Glossary (Expanded)
 		\get_current_screen()->add_help_tab(
 			array(
