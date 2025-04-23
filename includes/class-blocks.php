@@ -27,6 +27,8 @@ class Blocks {
 		// Add editor plugin.
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor_assets' ) );
 		\add_action( 'init', array( self::class, 'register_postmeta' ), 11 );
+
+		\add_filter( 'activitypub_import_mastodon_post_data', array( self::class, 'filter_import_mastodon_post_data' ), 10, 2 );
 	}
 
 	/**
@@ -411,5 +413,34 @@ class Blocks {
 			esc_html( $data['preferredUsername'] ),
 			$external_svg
 		);
+	}
+
+	/**
+	 * Converts content to blocks before saving to the database.
+	 *
+	 * @param array  $data The post data to be inserted.
+	 * @param object $post The Mastodon Create activity.
+	 *
+	 * @return array
+	 */
+	public static function filter_import_mastodon_post_data( $data, $post ) {
+		// Convert paragraphs to blocks.
+		\preg_match_all( '#<p>.*?</p>#is', $data['post_content'], $matches );
+		$blocks = \array_map(
+			function ( $paragraph ) {
+				return '<!-- wp:paragraph -->' . PHP_EOL . $paragraph . PHP_EOL . '<!-- /wp:paragraph -->' . PHP_EOL;
+			},
+			$matches[0] ?? array()
+		);
+
+		$data['post_content'] = \rtrim( \implode( PHP_EOL, $blocks ), PHP_EOL );
+
+		// Add reply block if it's a reply.
+		if ( null !== $post->object->inReplyTo ) {
+			$reply_block          = \sprintf( '<!-- wp:activitypub/reply {"url":"%1$s","embedPost":true} /-->' . PHP_EOL, \esc_url( $post->object->inReplyTo ) );
+			$data['post_content'] = $reply_block . $data['post_content'];
+		}
+
+		return $data;
 	}
 }
