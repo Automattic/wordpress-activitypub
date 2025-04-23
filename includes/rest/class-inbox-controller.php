@@ -132,7 +132,15 @@ class Inbox_Controller extends \WP_REST_Controller {
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		if ( wp_check_comment_disallowed_list( $activity->to_json( false ), '', '', '', $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '' ) ) {
-			Debug::write_log( 'Blocked activity from: ' . $activity->get_actor() );
+			$response = \rest_ensure_response(
+				array(
+					'type'   => 'https://w3id.org/fep/c180#actor-not-authorized',
+					'title'  => 'Actor not authorized',
+					'status' => '403',
+					'detail' => 'The actor is not authorized to perform the given activity on, to, or from a given object.',
+				)
+			);
+			$response->set_status( 403 );
 		} else {
 			/**
 			 * ActivityPub inbox action.
@@ -152,17 +160,18 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 * @param Activity|\WP_Error $activity The Activity object.
 			 */
 			\do_action( 'activitypub_inbox_' . $type, $data, null, $activity );
+
+			$response = \rest_ensure_response(
+				array(
+					'type'   => 'https://w3id.org/fep/c180#approval-required',
+					'title'  => 'Approval Required',
+					'status' => '202',
+					'detail' => 'This activity requires approval before it can be processed.',
+				)
+			);
+			$response->set_status( 202 );
 		}
 
-		$response = \rest_ensure_response(
-			array(
-				'type'   => 'https://w3id.org/fep/c180#approval-required',
-				'title'  => 'Approval Required',
-				'status' => '202',
-				'detail' => 'This activity requires approval before it can be processed.',
-			)
-		);
-		$response->set_status( 202 );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $response;
