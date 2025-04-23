@@ -270,3 +270,20 @@ input.blog-user-identifier {
 	margin-left: auto;
 	margin-right: 8px;
 }
+
+.contextual-help-tabs-wrap .activitypub-block-screenshot {
+	margin: 10px 0;
+}
+.contextual-help-tabs-wrap .activitypub-block-screenshot img {
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+	height: auto;
+	max-width: 100%;
+}
+.contextual-help-tabs-wrap .activitypub-block-screenshot figcaption {
+	color: #555;
+	font-style: italic;
+	font-size: 0.9em;
+	margin-top: 5px;
+}

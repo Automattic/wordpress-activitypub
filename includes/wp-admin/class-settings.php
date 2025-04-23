@@ -533,44 +533,73 @@ class Settings {
 			)
 		);
 
-		// 4. Custom Blocks
+		// 4. Editor Blocks
 		\get_current_screen()->add_help_tab(
 			array(
-				'id'      => 'custom-blocks',
-				'title'   => \__( 'Custom Blocks', 'activitypub' ),
+				'id'      => 'editor-blocks',
+				'title'   => \__( 'Editor Blocks', 'activitypub' ),
 				'content' =>
 					'<h2>' . \esc_html__( 'Introduction to ActivityPub Blocks', 'activitypub' ) . '</h2>' . "\n" .
 					'<p>' . \esc_html__( 'The plugin provides custom blocks for the WordPress Block Editor (Gutenberg) that enhance your Fediverse presence and make it easier to interact with the Fediverse.', 'activitypub' ) . '</p>' . "\n" .
 
-					'<h2>' . \esc_html__( 'Available Blocks', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'The plugin includes the following custom blocks:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'ActivityPub Status - Create posts specifically formatted for the Fediverse.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'ActivityPub Share - Add sharing options for Fediverse platforms.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
+					'<h2>' . \esc_html__( 'Follow Me on the Fediverse', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'This block displays your Fediverse profile so that visitors can follow you directly from your WordPress site.', 'activitypub' ) . '</p>' . "\n" .
+					'<figure class="activitypub-block-screenshot">' . "\n" .
+					'<img src="' . \esc_url( ACTIVITYPUB_PLUGIN_URL . 'assets/img/follow-me.png' ) . '" alt="' . \esc_attr__( 'Follow Me on the Fediverse block', 'activitypub' ) . '" width="600" height="auto">' . "\n" .
+					'<figcaption class="activitypub-screenshot-caption">' . \esc_html__( 'The Follow Me block showing both profile information and follow button.', 'activitypub' ) . '</figcaption>' . "\n" .
+					'</figure>' . "\n" .
+					'<h4>' . \esc_html__( 'Usage Tips', 'activitypub' ) . '</h4>' . "\n" .
+					'<p>' . \esc_html__( 'Place this block in your sidebar, footer, or about page to make it easy for visitors to follow you on the Fediverse. The button-only option works well in compact spaces, while the full profile display provides more context about your Fediverse presence.', 'activitypub' ) . '</p>' . "\n" .
 
-					'<h2>' . \esc_html__( 'Block Settings and Options', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'Each block has configuration options that can be accessed from the block settings sidebar:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Visibility settings - Control who can see your content.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Formatting options - Customize how your content appears.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Media settings - Control how images and other media are handled.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
+					'<h2>' . \esc_html__( 'Fediverse Followers', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'This block displays your followers from the Fediverse on your website, showcasing your community and reach across decentralized networks.', 'activitypub' ) . '</p>' . "\n" .
+					'<figure class="activitypub-block-screenshot">' . "\n" .
+					'<img src="' . \esc_url( ACTIVITYPUB_PLUGIN_URL . 'assets/img/followers.png' ) . '" alt="' . \esc_attr__( 'Fediverse Followers block', 'activitypub' ) . '" width="600" height="auto">' . "\n" .
+					'<figcaption class="activitypub-screenshot-caption">' . \esc_html__( 'The Followers block displaying a list of Fediverse followers with pagination.', 'activitypub' ) . '</figcaption>' . "\n" .
+					'</figure>' . "\n" .
+					'<h4>' . \esc_html__( 'Usage Tips', 'activitypub' ) . '</h4>' . "\n" .
+					'<p>' . \esc_html__( 'This block works well on community pages, about pages, or sidebars. The compact style is ideal for sidebars with limited space, while the Lines style provides clear visual separation between followers in wider layouts.', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'The block includes pagination controls when you have more followers than the per-page setting, allowing visitors to browse through all your followers.', 'activitypub' ) . '</p>' . "\n" .
 
-					'<h2>' . \esc_html__( 'Implementation Examples', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'Here are some common ways to use ActivityPub blocks:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Add an ActivityPub Status block to create a post optimized for Fediverse display.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Include an ActivityPub Share block at the end of your posts to encourage Fediverse sharing.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
+					'<h2>' . \esc_html__( 'Fediverse Reactions', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'This block displays likes and reposts from the Fediverse for your content, showing engagement metrics from across federated networks.', 'activitypub' ) . '</p>' . "\n" .
+					'<figure class="activitypub-block-screenshot">' . "\n" .
+					'<img src="' . \esc_url( ACTIVITYPUB_PLUGIN_URL . 'assets/img/reactions.png' ) . '" alt="' . \esc_attr__( 'Fediverse Reactions block', 'activitypub' ) . '" width="600" height="auto">' . "\n" .
+					'<figcaption class="activitypub-screenshot-caption">' . \esc_html__( 'The Reactions block showing likes and reposts from the Fediverse.', 'activitypub' ) . '</figcaption>' . "\n" .
+					'</figure>' . "\n" .
+					'<h4>' . \esc_html__( 'How It Works', 'activitypub' ) . '</h4>' . "\n" .
+					'<p>' . \esc_html__( 'The Reactions block dynamically fetches and displays likes and reposts (boosts) that your content receives from across the Fediverse. It updates automatically as new reactions come in, providing real-time feedback on how your content is being received.', 'activitypub' ) . '</p>' . "\n" .
+					'<h4>' . \esc_html__( 'Usage Tips', 'activitypub' ) . '</h4>' . "\n" .
+					'<p>' . \esc_html__( 'This block provides social proof by showing how your content is being received across the Fediverse. It works best at the end of posts or pages where it can display engagement metrics without interrupting the content flow.', 'activitypub' ) . '</p>' . "\n" .
 
-					'<h2>' . \esc_html__( 'Tips for Optimal Block Usage', 'activitypub' ) . '</h2>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Keep content concise for better Fediverse presentation.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Use hashtags strategically to increase discoverability.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Include relevant images to make your posts stand out.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Test how your blocks appear on different Fediverse platforms.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>',
+					'<h2>' . \esc_html__( 'Federated Reply', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'This block allows you to respond to posts, notes, videos, and other content on the Fediverse directly within your WordPress posts.', 'activitypub' ) . '</p>' . "\n" .
+					'<figure class="activitypub-block-screenshot">' . "\n" .
+					'<img src="' . \esc_url( ACTIVITYPUB_PLUGIN_URL . 'assets/img/reply.png' ) . '" alt="' . \esc_attr__( 'Federated Reply block', 'activitypub' ) . '" width="600" height="auto">' . "\n" .
+					'<figcaption class="activitypub-screenshot-caption">' . \esc_html__( 'The Federated Reply block with embedded Fediverse content and reply interface.', 'activitypub' ) . '</figcaption>' . "\n" .
+					'</figure>' . "\n" .
+					'<h4>' . \esc_html__( 'How It Works', 'activitypub' ) . '</h4>' . "\n" .
+					'<p>' . \esc_html__( 'When you add this block to your post and provide a Fediverse URL, the plugin will:', 'activitypub' ) . '</p>' . "\n" .
+					'<ol>' . "\n" .
+					'<li>' . \esc_html__( 'Fetch and optionally display the original content you&#8217;re replying to.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'When your post is published, send your reply to the Fediverse.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Create a proper threaded reply that will appear in the original post&#8217;s thread.', 'activitypub' ) . '</li>' . "\n" .
+					'</ol>' . "\n" .
+					'<h4>' . \esc_html__( 'Important Notes', 'activitypub' ) . '</h4>' . "\n" .
+					'<p>' . \esc_html__( 'This block only works with URLs from federated social networks. URLs from non-federated platforms may not function as expected. Your reply will be published to the Fediverse when your WordPress post is published.', 'activitypub' ) . '</p>' . "\n" .
+					'<h4>' . \esc_html__( 'Usage Tips', 'activitypub' ) . '</h4>' . "\n" .
+					'<p>' . \esc_html__( 'Use this block to create responses to Fediverse discussions. It&#8217;s perfect for bloggers who want to participate in Fediverse conversations while maintaining their content on their own WordPress site.', 'activitypub' ) . '</p>' . "\n" .
+
+					'<h2>' . \esc_html__( 'General Usage Instructions', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'To use any of these blocks:', 'activitypub' ) . '</p>' . "\n" .
+					'<ol>' . "\n" .
+					'<li>' . \esc_html__( 'Open the Block Editor when creating or editing a post/page.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Click the "+" button to add a new block.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Search for "ActivityPub" or the specific block name.', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \esc_html__( 'Select the desired block and configure its settings in the block sidebar.', 'activitypub' ) . '</li>' . "\n" .
+					'</ol>' . "\n" .
+
+					'<p>' . \esc_html__( 'These blocks help bridge the gap between your WordPress site and the Fediverse, enabling better integration and engagement with decentralized social networks.', 'activitypub' ) . '</p>',
 			)
 		);
 
