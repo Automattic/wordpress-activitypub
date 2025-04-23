@@ -426,46 +426,30 @@ class Settings {
 					'<h2>' . \esc_html__( 'User Accounts vs. Blog Accounts', 'activitypub' ) . '</h2>' . "\n" .
 					'<p>' . \esc_html__( 'Your WordPress site can participate in the Fediverse in two ways:', 'activitypub' ) . '</p>' . "\n" .
 					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Individual user accounts: Each author has their own Fediverse identity (username@yourdomain.com).', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Whole blog account: The blog itself has a Fediverse identity (blog@yourdomain.com).', 'activitypub' ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( 'Individual user accounts: Each author has their own Fediverse identity (<code>username@yourdomain.com</code>).', 'activitypub' ), $code_html ) . '</li>' . "\n" .
+					'<li>' . \wp_kses( \__( 'Whole blog account: The blog itself has a Fediverse identity (<code>blog@yourdomain.com</code>).', 'activitypub' ), $code_html ) . '</li>' . "\n" .
 					'</ul>' . "\n" .
 					'<p>' . \esc_html__( 'User accounts are best when you want each author to have their own following and identity. The blog account is simpler and works well for single-author sites or when you want all content under one identity.', 'activitypub' ) . '</p>' . "\n" .
 
 					'<h2>' . \esc_html__( 'Publishing to the Fediverse', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'When you publish a post:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'It automatically appears in the Fediverse feeds of your followers.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Featured images, excerpts, and other elements are included.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'You can control which post types are federated in the settings.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Individual posts can be excluded from federation if needed.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
+					'<p>' . \esc_html__( 'When you publish a post on your WordPress site, the ActivityPub plugin automatically shares it with your followers in the Fediverse. Your content appears in their feeds just like posts from other Fediverse platforms such as Mastodon or Pleroma.', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'The plugin intelligently formats your content for the Fediverse, including featured images, excerpts, and links back to your original post.', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'Before publishing, you can use the Fediverse Preview feature to see exactly how your post will appear to Fediverse users. This helps ensure your content looks great across different platforms. You can access this preview from the post editor sidebar.', 'activitypub' ) . '</p>' . "\n" .
+
+					'<h2>' . \esc_html__( 'Content Visibility Controls', 'activitypub' ) . '</h2>' . "\n" .
+					'<p>' . \esc_html__( 'The ActivityPub plugin gives you complete control over which content is shared to the Fediverse. By default, public posts are federated while private or password-protected posts remain exclusive to your WordPress site.', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'In the WordPress editor, each post has visibility settings that determine whether it appears in the Fediverse. You can find these controls in the editor sidebar under "Fediverse > Visibility." Options include "Public" (visible to everyone in the Fediverse), "Quiet Public" (doesn&#8217;t appear in public timelines), or "Do Not Federate" (keeps the post only on your WordPress site).', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'You can also configure global settings to control which post types (posts, pages, custom post types) are federated by default. This gives you both site-wide control and per-post flexibility to manage exactly how your content is shared.', 'activitypub' ) . '</p>' . "\n" .
 
 					'<h2>' . \esc_html__( 'Receiving Interactions', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'The plugin allows your WordPress site to receive interactions from the Fediverse:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Comments from Fediverse users appear as WordPress comments.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Likes and shares are tracked and can be displayed.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'You can moderate these interactions just like regular WordPress comments.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Replies to these comments are federated back to the original commenter.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
+					'<p>' . \esc_html__( 'One of the most powerful features of the ActivityPub plugin is its ability to receive and display interactions from across the Fediverse. When someone on Mastodon or another Fediverse platform comments on your post, their comment appears directly in your WordPress comments section, creating a seamless conversation between your blog and the wider Fediverse.', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'These Fediverse comments integrate naturally with your existing WordPress comment system. You can moderate them just like regular comments, and any replies you make are automatically federated back to the original commenter, maintaining the conversation thread across platforms.', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'Beyond comments, the plugin also tracks likes and shares (boosts) from Fediverse users. These interactions can provide valuable feedback and help you understand how your content is being received across the decentralized social web.', 'activitypub' ) . '</p>' . "\n" .
 
 					'<h2>' . \esc_html__( 'Mentions and Replies', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'You can mention Fediverse users in your posts:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \wp_kses( \__( 'Use the format <code>@username@domain.com</code> to mention someone.', 'activitypub' ), $code_html ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'They will be notified of the mention.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'You&#8217;ll be notified when someone mentions you.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Replies to mentions are federated back to the original poster.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>' . "\n" .
-
-					'<h2>' . \esc_html__( 'Content Visibility', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'You can control which content is federated:', 'activitypub' ) . '</p>' . "\n" .
-					'<ul>' . "\n" .
-					'<li>' . \esc_html__( 'Public posts are visible to anyone in the Fediverse.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Private posts are not federated.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'You can disable federation for specific posts.', 'activitypub' ) . '</li>' . "\n" .
-					'<li>' . \esc_html__( 'Settings allow you to control which post types are federated.', 'activitypub' ) . '</li>' . "\n" .
-					'</ul>',
+					'<p>' . \wp_kses( \__( 'The ActivityPub plugin enables true cross-platform conversations by supporting mentions and replies. When writing a post, you can mention any Fediverse user by using their full address format. For example, typing <code>@username@domain.com</code> will create a mention that notifies that user, regardless of which Fediverse platform they use.', 'activitypub' ), $code_html ) . '</p>' . "\n" .
+					'<p>' . \wp_kses( \__( 'Mentions use the format <code>@username@domain.com</code> and work just like mentions on other social platforms. The mentioned user receives a notification, and your post appears in their mentions timeline. This creates a direct connection between your WordPress site and users across the Fediverse.', 'activitypub' ), $code_html ) . '</p>' . "\n" .
+					'<p>' . \esc_html__( 'Similarly, when someone mentions your Fediverse identity in their post, you&#8217;ll receive an email notification that you can respond to with a new post. This two-way communication bridge makes your WordPress site a full participant in Fediverse conversations.', 'activitypub' ) . '</p>' . "\n",
 			)
 		);
 
