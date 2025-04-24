@@ -21,6 +21,7 @@ $user   = $transformer->get_actor_object();
 $has_images = false;
 $video      = false;
 $audio      = false;
+$layout     = 'layout-1';
 
 foreach ( $object->get_attachment() as $attachment ) {
 	if ( isset( $attachment['mediaType'] ) ) {
@@ -29,6 +30,7 @@ foreach ( $object->get_attachment() as $attachment ) {
 		switch ( $media_type ) {
 			case 'image':
 				$has_images = true;
+				$layout     = 'layout-' . count( wp_list_filter( $object->get_attachment(), array( 'type' => 'Image' ) ) );
 				break 2;
 			case 'video':
 				$video = $attachment;
@@ -102,7 +104,8 @@ foreach ( $object->get_attachment() as $attachment ) {
 				display: block;
 				margin-top: 0.5em;
 			}
-			address img, .sidebar .fake-image {
+			address img,
+			.sidebar .fake-image {
 				border-radius: 8px;
 				margin-right: 1em;
 				width: 48px;
@@ -161,20 +164,29 @@ foreach ( $object->get_attachment() as $attachment ) {
 				display: grid;
 				gap: 2px;
 				grid-template-columns: 1fr 1fr;
-				grid-template-rows: auto;
-				margin: 20px 0;
+				grid-template-rows: 1fr 1fr;
 				min-height: 64px;
 				overflow: hidden;
 				position: relative;
 				width: 100%;
 			}
+			main .attachments.layout-2 {
+				aspect-ratio: auto;
+				grid-template-rows: 1fr;
+				height: auto;
+			}
+			main .attachments.layout-3 > img:first-child {
+				grid-row: span 2;
+			}
 			main .attachments img {
-				max-width: 100%;
-				height: 100%;
-				margin: 1em 0;
+				border: 0;
+				box-sizing: border-box;
 				display: inline-block;
+				height: 100%;
 				object-fit: cover;
 				overflow: hidden;
+				position: relative;
+				width: 100%;
 			}
 			main .attachments video,
 			main .attachments audio {
@@ -248,7 +260,7 @@ foreach ( $object->get_attachment() as $attachment ) {
 						<?php echo wp_kses( 'Article' === $object->get_type() ? $object->get_summary() : $object->get_content(), ACTIVITYPUB_MASTODON_HTML_SANITIZER ); ?>
 					</div>
 					<?php if ( $object->get_attachment() ) : ?>
-					<div class="attachments">
+					<div class="attachments <?php echo \esc_attr( $layout ); ?>">
 						<?php
 						if ( $has_images ) :
 							foreach ( $object->get_attachment() as $attachment ) :
@@ -260,11 +272,11 @@ foreach ( $object->get_attachment() as $attachment ) {
 							endforeach;
 						elseif ( $video ) :
 							?>
-							<video controls src="<?php echo esc_url( $video['url'] ); ?>" title="<?php echo esc_url( $video['name'] ?? '' ); ?>"></video>
+							<video controls src="<?php echo esc_url( $video['url'] ); ?>" title="<?php echo esc_attr( $video['name'] ?? '' ); ?>"></video>
 							<?php
 						elseif ( $audio ) :
 							?>
-							<audio controls src="<?php echo esc_url( $audio['url'] ); ?>" title="<?php echo esc_url( $audio['name'] ?? '' ); ?>"></audio>
+							<audio controls src="<?php echo esc_url( $audio['url'] ); ?>" title="<?php echo esc_attr( $audio['name'] ?? '' ); ?>"></audio>
 							<?php
 						endif;
 						?>
