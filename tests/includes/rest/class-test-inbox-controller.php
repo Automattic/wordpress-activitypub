@@ -29,6 +29,13 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
+	 * Delete fake data after tests run.
+	 */
+	public static function tear_down_after_class() {
+		\wp_delete_user( self::$user_id );
+	}
+
+	/**
 	 * Test follow request global inbox.
 	 *
 	 * @covers ::get_items
