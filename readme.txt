@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 6.4
 Tested up to: 6.8
-Stable tag: 5.7.0
+Stable tag: 5.8.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -129,6 +129,28 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+### 5.8.0 - 2025-04-24
+#### Added
+- An option to receive notification emails when an Actor was mentioned in the Fediverse.
+- Enable direct linking to Help Tabs.
+- Fallback embed support for Fediverse content that lacks native oEmbed responses.
+- Support for all media types in the Mastodon Importer.
+
+#### Changed
+- Added WordPress disallowed list filtering to block unwanted ActivityPub interactions.
+- Mastodon imports now support blocks, with automatic reply embedding for conversations.
+- Tested and compatible with the latest version of WordPress.
+- Updated design of new follower notification email and added meta information.
+- Update DM email notification to include an embed display of the DM.
+- Updated notification settings to be user-specific for more personalization.
+
+#### Fixed
+- Add support for Multisite Language Switcher
+- Better check for an empty `headers` array key in the Signature class.
+- Include user context in Global-Inbox actions.
+- No more PHP warning when Mastodon Apps run out of posts to process.
+- Reply links and popup modals are now properly translated for logged-out visitors.
+
 ### 5.7.0 - 2025-04-11
 #### Added
 - Advanced Settings tab, with special settings for advanced users.
@@ -147,7 +169,7 @@ For reasons of data protection, it is not possible to see the followers of other
 
 #### Fixed
 - Ensure that an `Activity` has an `Actor` before adding it to the Outbox.
-- Fixed some some bugs and added additional informations on the Debug tab of the Site-Health page.
+- Fixed some bugs and added additional information on the Debug tab of the Site-Health page.
 - Follow-up to the reply block changes that makes sure Mastodon embeds are displayed in the editor.
 - Outbox endpoint bug where non-numeric usernames caused errors when querying Outbox data.
 - Show Site Health error if site uses old "Almost Pretty Permalinks" structure.

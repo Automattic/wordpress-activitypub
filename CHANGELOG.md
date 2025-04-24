@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.8.0] - 2025-04-24
+### Added
+- An option to receive notification emails when an Actor was mentioned in the Fediverse. [#1577]
+- Enable direct linking to Help Tabs. [#1598]
+- Fallback embed support for Fediverse content that lacks native oEmbed responses. [#1576]
+- Support for all media types in the Mastodon Importer. [#1585]
+
+### Changed
+- Added WordPress disallowed list filtering to block unwanted ActivityPub interactions. [#1590]
+- Mastodon imports now support blocks, with automatic reply embedding for conversations. [#1591]
+- Tested and compatible with the latest version of WordPress. [#1584]
+- Updated design of new follower notification email and added meta information. [#1581]
+- Update DM email notification to include an embed display of the DM. [#1582]
+- Updated notification settings to be user-specific for more personalization. [#1586]
+
+### Fixed
+- Add support for Multisite Language Switcher [#1604]
+- Better check for an empty `headers` array key in the Signature class. [#1594]
+- Include user context in Global-Inbox actions. [#1603]
+- No more PHP warning when Mastodon Apps run out of posts to process. [#1583]
+- Reply links and popup modals are now properly translated for logged-out visitors. [#1595]
+
 ## [5.7.0] - 2025-04-11
 ### Added
 - Advanced Settings tab, with special settings for advanced users. [#1449]
@@ -1144,6 +1166,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[5.8.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.7.0...5.8.0
 [5.7.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.6.1...5.7.0
 [5.6.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.6.0...5.6.1
 [5.6.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.5.0...5.6.0

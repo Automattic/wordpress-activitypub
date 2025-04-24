@@ -191,7 +191,7 @@ class Migration {
 		if ( \version_compare( $version_from_db, '5.7.0', '<' ) ) {
 			self::delete_mastodon_api_orphaned_extra_fields();
 		}
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '5.8.0', '<' ) ) {
 			self::update_notification_options();
 		}
 
