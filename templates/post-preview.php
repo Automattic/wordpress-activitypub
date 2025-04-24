@@ -257,7 +257,14 @@ foreach ( $object->get_attachment() as $attachment ) {
 						<?php if ( 'Article' === $object->get_type() && $object->get_name() ) : ?>
 							<h2><?php echo esc_html( $object->get_name() ); ?></h2>
 						<?php endif; ?>
-						<?php echo wp_kses( 'Article' === $object->get_type() ? $object->get_summary() : $object->get_content(), ACTIVITYPUB_MASTODON_HTML_SANITIZER ); ?>
+						<?php
+						$content_to_display = 'Article' === $object->get_type() ? $object->get_summary() : $object->get_content();
+
+						// Avoid captions making it through wp_kses.
+						$content_to_display = preg_replace( '/<figure.*?>.*?<\/figure>/s', '', $content_to_display );
+
+						echo wp_kses( $content_to_display, ACTIVITYPUB_MASTODON_HTML_SANITIZER );
+						?>
 					</div>
 					<?php if ( $object->get_attachment() ) : ?>
 					<div class="attachments <?php echo \esc_attr( $layout ); ?>">
