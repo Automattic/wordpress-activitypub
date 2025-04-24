@@ -147,7 +147,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 
 				$actor = Actors::get_by_various( $recipient );
 
-				if ( ! $actor || is_wp_error( $actor ) ) {
+				if ( ! $actor || \is_wp_error( $actor ) ) {
 					continue;
 				}
 
