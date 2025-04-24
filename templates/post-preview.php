@@ -5,7 +5,6 @@
  * @package Activitypub
  */
 
-
 $post        = \get_post(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 $transformer = \Activitypub\Transformer\Factory::get_transformer( $post );
 
