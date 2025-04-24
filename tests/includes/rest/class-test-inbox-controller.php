@@ -15,6 +15,20 @@ namespace Activitypub\Tests\Rest;
  */
 class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
 	/**
+	 * User ID.
+	 *
+	 * @var int
+	 */
+	protected static $user_id;
+
+	/**
+	 * Create fake data before tests run.
+	 */
+	public static function set_up_before_class() {
+		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+	}
+
+	/**
 	 * Test follow request global inbox.
 	 *
 	 * @covers ::get_items
@@ -273,6 +287,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$this->assertEquals( 1, $inbox_action->get_call_count() );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\delete_option( 'activitypub_actor_mode' );
 	}
 
 	/**
@@ -285,8 +300,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
-		$user_id    = self::factory()->user->create( array( 'role' => 'author' ) );
-		$user_actor = \Activitypub\Collection\Actors::get_by_id( $user_id );
+		$user_actor = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
 
 		// Set up mock action.
@@ -318,6 +332,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$this->assertEquals( 2, $inbox_action->get_call_count() );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\delete_option( 'activitypub_actor_mode' );
 	}
 
 	/**
@@ -330,8 +345,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
-		$user_id    = self::factory()->user->create( array( 'role' => 'author' ) );
-		$user_actor = \Activitypub\Collection\Actors::get_by_id( $user_id );
+		$user_actor = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
 
 		// Set up mock action.
@@ -363,6 +377,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$this->assertEquals( 2, $inbox_action->get_call_count() );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\delete_option( 'activitypub_actor_mode' );
 	}
 
 	/**
@@ -375,8 +390,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
-		$user_id    = self::factory()->user->create( array( 'role' => 'author' ) );
-		$user_actor = \Activitypub\Collection\Actors::get_by_id( $user_id );
+		$user_actor = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
 
 		// Set up mock action.
@@ -410,6 +424,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$this->assertEquals( 1, $inbox_action->get_call_count() );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\delete_option( 'activitypub_actor_mode' );
 	}
 
 	/**
@@ -422,8 +437,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 
-		$user_id        = self::factory()->user->create( array( 'role' => 'author' ) );
-		$user_actor     = \Activitypub\Collection\Actors::get_by_id( $user_id );
+		$user_actor     = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 		$activity_types = array( 'Update', 'Delete', 'Follow', 'Accept', 'Reject', 'Announce', 'Like' );
 
 		foreach ( $activity_types as $type ) {
@@ -457,6 +471,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		}
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\delete_option( 'activitypub_actor_mode' );
 	}
 
 	/**
