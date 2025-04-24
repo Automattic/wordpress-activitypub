@@ -259,7 +259,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 				'to'        => array( $blog_actor->get_id() ),
 				'published' => '2020-01-01T00:00:00Z',
 			),
-			'to' => array( $blog_actor->get_id() ),
+			'to'     => array( $blog_actor->get_id() ),
 		);
 
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
@@ -285,7 +285,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
-		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$user_id    = self::factory()->user->create( array( 'role' => 'author' ) );
 		$user_actor = \Activitypub\Collection\Actors::get_by_id( $user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
 
@@ -304,7 +304,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 				'to'        => array( $user_actor->get_id(), $blog_actor->get_id() ),
 				'published' => '2020-01-01T00:00:00Z',
 			),
-			'to' => array( $user_actor->get_id(), $blog_actor->get_id() ),
+			'to'     => array( $user_actor->get_id(), $blog_actor->get_id() ),
 		);
 
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
@@ -330,7 +330,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
-		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$user_id    = self::factory()->user->create( array( 'role' => 'author' ) );
 		$user_actor = \Activitypub\Collection\Actors::get_by_id( $user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
 
@@ -349,7 +349,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 				'to'        => array( $user_actor->get_id(), $blog_actor->get_id() ),
 				'published' => '2020-01-01T00:00:00Z',
 			),
-			'to' => array( $user_actor->get_id(), $blog_actor->get_id(), 'https://invalid.example/@test' ),
+			'to'     => array( $user_actor->get_id(), $blog_actor->get_id(), 'https://invalid.example/@test' ),
 		);
 
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
@@ -375,7 +375,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
-		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$user_id    = self::factory()->user->create( array( 'role' => 'author' ) );
 		$user_actor = \Activitypub\Collection\Actors::get_by_id( $user_id );
 		$blog_actor = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
 
@@ -394,7 +394,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 				'to'        => array( $user_actor->get_id(), $blog_actor->get_id() ),
 				'published' => '2020-01-01T00:00:00Z',
 			),
-			'to' => array( $user_actor->get_id(), $blog_actor->get_id() ),
+			'to'     => array( $user_actor->get_id(), $blog_actor->get_id() ),
 		);
 
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
@@ -422,8 +422,8 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 
-		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
-		$user_actor = \Activitypub\Collection\Actors::get_by_id( $user_id );
+		$user_id        = self::factory()->user->create( array( 'role' => 'author' ) );
+		$user_actor     = \Activitypub\Collection\Actors::get_by_id( $user_id );
 		$activity_types = array( 'Update', 'Delete', 'Follow', 'Accept', 'Reject', 'Announce', 'Like' );
 
 		foreach ( $activity_types as $type ) {
@@ -442,7 +442,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 					'to'        => array( $user_actor->get_id() ),
 					'published' => '2020-01-01T00:00:00Z',
 				),
-				'to' => array( $user_actor->get_id() ),
+				'to'     => array( $user_actor->get_id() ),
 			);
 
 			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
@@ -467,7 +467,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	public function test_create_item_with_invalid_request() {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
 
-		// Test with missing required fields
+		// Test with missing required fields.
 		$json = array(
 			'type' => 'Create',
 		);
@@ -479,7 +479,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$response = \rest_do_request( $request );
 		$this->assertEquals( 400, $response->get_status() );
 
-		// Test with invalid content type
+		// Test with invalid content type.
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
 		$request->set_header( 'Content-Type', 'application/json' );
 		$request->set_body( \wp_json_encode( $json ) );
