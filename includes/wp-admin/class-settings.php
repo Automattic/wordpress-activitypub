@@ -288,9 +288,10 @@ class Settings {
 	 * Load settings page.
 	 */
 	public static function settings_page() {
-		$show_welcome_tab  = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true );
-		$show_advanced_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true );
-		$default_tab       = $show_welcome_tab ? 'welcome' : 'settings';
+		$show_launchpad_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_launchpad_tab', true );
+		$show_welcome_tab   = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true );
+		$show_advanced_tab  = \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true );
+		$default_tab        = $show_welcome_tab ? 'welcome' : 'settings';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$tab = isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : $default_tab;
 
@@ -300,6 +301,13 @@ class Settings {
 		}
 
 		$settings_tabs = array();
+
+		if ( true ) {
+			$settings_tabs['launchpad'] = array(
+				'label'    => __( 'Launchpad', 'activitypub' ),
+				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/launchpad.php',
+			);
+		}
 
 		if ( $show_welcome_tab ) {
 			$settings_tabs['welcome'] = array(

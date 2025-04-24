@@ -1,0 +1,144 @@
+.activitypub-launchpad-page .wrap {
+	max-width: 800px;
+	margin: 40px auto;
+	background: #f0f0f1;
+	min-height: 100vh;
+	padding: 20px;
+}
+
+.activitypub-launchpad-page .launchpad-header {
+	text-align: center;
+	margin: 40px 0;
+}
+
+.activitypub-launchpad-page .launchpad-header h1 {
+	font-size: 32px;
+	font-weight: 400;
+	margin: 0 0 10px;
+}
+
+.activitypub-launchpad-page .launchpad-header p {
+	font-size: 14px;
+	color: #50575e;
+	margin: 0;
+}
+
+.activitypub-launchpad-page .launchpad-progress {
+	position: relative;
+	width: 80px;
+	height: 80px;
+	margin: 0 auto 40px;
+}
+
+.activitypub-launchpad-page .launchpad-progress-text {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	font-size: 14px;
+	color: #1d2327;
+}
+
+.activitypub-launchpad-page .launchpad-progress-circle {
+	transform: rotate(-90deg);
+}
+
+.activitypub-launchpad-page .launchpad-progress-circle circle {
+	fill: none;
+	stroke-width: 2;
+}
+
+.activitypub-launchpad-page .launchpad-progress-circle .bg {
+	stroke: #dcdcde;
+}
+
+.activitypub-launchpad-page .launchpad-progress-circle .progress {
+	stroke: #2271b1;
+	stroke-linecap: round;
+}
+
+.activitypub-launchpad-page .launchpad-card {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 0;
+	padding: 16px;
+	margin: 0;
+	display: flex;
+	align-items: center;
+	text-decoration: none;
+	color: inherit;
+	position: relative;
+	transition: all 0.1s ease-in-out;
+}
+
+.activitypub-launchpad-page .launchpad-card + .launchpad-card {
+	border-top: none;
+}
+
+.activitypub-launchpad-page .launchpad-card:first-child {
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+}
+
+.activitypub-launchpad-page .launchpad-card:last-child {
+	border-bottom-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+}
+
+.activitypub-launchpad-page .launchpad-card:hover,
+.activitypub-launchpad-page .launchpad-card:focus {
+	background-color: #f6f7f7;
+	border-color: #2271b1;
+	color: #1d2327;
+	box-shadow: 0 0 0 1px #2271b1;
+	z-index: 1;
+}
+
+.activitypub-launchpad-page .launchpad-card.done {
+	background: #f0f6fc;
+	pointer-events: none;
+}
+
+.activitypub-launchpad-page .launchpad-card.done::before {
+	content: "✓";
+	color: #2271b1;
+	margin-right: 12px;
+}
+
+.activitypub-launchpad-page .launchpad-card strong {
+	font-size: 14px;
+	font-weight: 600;
+	display: block;
+	margin-bottom: 4px;
+}
+
+.activitypub-launchpad-page .launchpad-card br + text {
+	font-size: 13px;
+	color: #50575e;
+}
+
+.activitypub-launchpad-page .launchpad-card::after {
+	content: "›";
+	position: absolute;
+	right: 16px;
+	color: #2271b1;
+	font-size: 20px;
+	font-weight: 300;
+}
+
+.activitypub-launchpad-page .launchpad-card.done::after {
+	display: none;
+}
+
+.activitypub-launchpad-page .launchpad-skip {
+	display: block;
+	text-align: center;
+	margin-top: 20px;
+	color: #646970;
+	text-decoration: none;
+	font-size: 13px;
+}
+
+.activitypub-launchpad-page .launchpad-skip:hover {
+	color: #135e96;
+}
