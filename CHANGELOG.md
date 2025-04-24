@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.8.1] - 2025-04-24
+### Changed
+- Use a dedicated hook for the "Dismiss Welcome Page Welcome" link. [#1600]
+
 ## [5.8.0] - 2025-04-24
 ### Added
 - An option to receive notification emails when an Actor was mentioned in the Fediverse. [#1577]
@@ -1166,6 +1170,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[5.8.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.8.0...5.8.1
 [5.8.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.7.0...5.8.0
 [5.7.0]: https://github.com/Automattic/wordpress-activitypub/compare/5.6.1...5.7.0
 [5.6.1]: https://github.com/Automattic/wordpress-activitypub/compare/5.6.0...5.6.1

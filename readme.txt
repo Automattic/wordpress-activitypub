@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: OStatus, fediverse, activitypub, activitystream
 Requires at least: 6.4
 Tested up to: 6.8
-Stable tag: 5.8.0
+Stable tag: 5.8.1
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -128,6 +128,10 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 5.8.1 - 2025-04-24
+#### Changed
+- Use a dedicated hook for the "Dismiss Welcome Page Welcome" link.
 
 ### 5.8.0 - 2025-04-24
 #### Added
@@ -370,10 +374,8 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 5.4.0 =
-
-Note: This update requires WordPress 6.4+. Please ensure your site meets this requirement before upgrading.
-
+= 5.8.1 =
+Intoduces new email templates and notification settings. Update now and win!
 == Installation ==
 
 Follow the normal instructions for [installing WordPress plugins](https://wordpress.org/support/article/managing-plugins/).
