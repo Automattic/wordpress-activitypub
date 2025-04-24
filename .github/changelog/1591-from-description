@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Mastodon imports now support blocks, with automatic reply embedding for conversations.

@@ -78,6 +78,17 @@ function plugin_init() {
 	}
 
 	/**
+	 * Adds Multisite Language Switcher support.
+	 *
+	 * This class handles the compatibility with the Multisite Language Switcher plugin.
+	 *
+	 * @see https://wordpress.org/plugins/multisite-language-switcher/
+	 */
+	if ( \defined( 'MSLS_PLUGIN_VERSION' ) ) {
+		Multisite_Language_Switcher::init();
+	}
+
+	/**
 	 * Adds Seriously Simple Podcasting support.
 	 *
 	 * This class handles the compatibility with Seriously Simple Podcasting.

@@ -843,4 +843,53 @@ class Test_Migration extends \WP_UnitTestCase {
 			\wp_delete_post( $blog_field->ID, true );
 		}
 	}
+
+	/**
+	 * Test update_notification_options.
+	 *
+	 * @covers ::update_notification_options
+	 */
+	public function test_update_notification_options() {
+		// Set up test user with the ActivityPub capability.
+		$user_id1 = self::factory()->user->create();
+
+		// Add the ActivityPub capability to the test users.
+		$user1 = get_user_by( 'id', $user_id1 );
+		$user1->add_cap( 'activitypub' );
+
+		// Set up the old notification options.
+		\update_option( 'activitypub_mailer_new_dm', '1' );
+		\update_option( 'activitypub_mailer_new_follower', '0' );
+		\update_option( 'activitypub_mailer_new_mention', '1' ); // This one doesn't get migrated, just added.
+
+		\delete_option( 'activitypub_blog_user_mailer_new_dm' );
+		\delete_option( 'activitypub_blog_user_mailer_new_follower' );
+		\delete_option( 'activitypub_blog_user_mailer_new_mention' );
+
+		// Run the migration method.
+		Migration::update_notification_options();
+
+		// Verify blog user notification options were created with correct values.
+		$this->assertEquals( '1', \get_option( 'activitypub_blog_user_mailer_new_dm' ), 'Blog user new DM option should match old value' );
+		$this->assertEquals( '0', \get_option( 'activitypub_blog_user_mailer_new_follower' ), 'Blog user new follower option should match old value' );
+		$this->assertEquals( '1', \get_option( 'activitypub_blog_user_mailer_new_mention' ), 'Blog user new mention option should be set to 1' );
+
+		// Verify actor notification options were created with correct values.
+		$this->assertEquals( '1', \get_user_option( 'activitypub_mailer_new_dm', $user_id1 ), 'Actor 1 new DM option should match old value' );
+		$this->assertEquals( '0', \get_user_option( 'activitypub_mailer_new_follower', $user_id1 ), 'Actor 1 new follower option should match old value' );
+		$this->assertEquals( '1', \get_user_option( 'activitypub_mailer_new_mention', $user_id1 ), 'Actor 1 new mention option should be set to 1' );
+
+		// Verify old options were deleted.
+		$this->assertFalse( \get_option( 'activitypub_mailer_new_dm' ), 'Old DM option should be deleted' );
+		$this->assertFalse( \get_option( 'activitypub_mailer_new_follower' ), 'Old follower option should be deleted' );
+
+		// Clean up.
+		\delete_option( 'activitypub_blog_user_mailer_new_dm' );
+		\delete_option( 'activitypub_blog_user_mailer_new_follower' );
+		\delete_option( 'activitypub_blog_user_mailer_new_mention' );
+		\delete_user_option( $user_id1, 'activitypub_mailer_new_dm' );
+		\delete_user_option( $user_id1, 'activitypub_mailer_new_follower' );
+		\delete_user_option( $user_id1, 'activitypub_mailer_new_mention' );
+		\wp_delete_user( $user_id1 );
+	}
 }
