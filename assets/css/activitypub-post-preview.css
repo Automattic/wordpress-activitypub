@@ -132,10 +132,16 @@ main .attachments {
 	gap: 2px;
 	grid-template-columns: 1fr 1fr;
 	grid-template-rows: 1fr 1fr;
+	margin: 1em 0;
 	min-height: 64px;
 	overflow: hidden;
 	position: relative;
 	width: 100%;
+}
+
+main .attachments.layout-1 {
+	grid-template-columns: 1fr;
+	grid-template-rows: 1fr;
 }
 
 main .attachments.layout-2 {
@@ -147,6 +153,7 @@ main .attachments.layout-2 {
 main .attachments.layout-3 > img:first-child {
 	grid-row: span 2;
 }
+
 main .attachments img {
 	border: 0;
 	box-sizing: border-box;
