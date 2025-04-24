@@ -56,6 +56,14 @@ class User_Settings_Fields {
 		);
 
 		\add_settings_field(
+			'activitypub_notifications',
+			\esc_html__( 'Email Notifications', 'activitypub' ),
+			array( self::class, 'notifications_callback' ),
+			'activitypub_user_settings',
+			'activitypub_user_profile'
+		);
+
+		\add_settings_field(
 			'activitypub_extra_fields',
 			\esc_html__( 'Extra Fields', 'activitypub' ),
 			array( self::class, 'extra_fields_callback' ),
@@ -168,6 +176,34 @@ class User_Settings_Fields {
 			<?php \esc_html_e( 'Remove Header Image', 'activitypub' ); ?>
 		</button>
 		<input type="hidden" name="activitypub_header_image" id="activitypub_header_image" value="<?php echo \esc_attr( $header_image ); ?>">
+		<?php
+	}
+
+	/**
+	 * Notifications field callback.
+	 */
+	public static function notifications_callback() {
+		?>
+		<fieldset id="activitypub-notifications">
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_new_follower" id="activitypub_mailer_new_follower" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_new_follower' ) ); ?> />
+					<?php \esc_html_e( 'New Followers', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_new_dm" id="activitypub_mailer_new_dm" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_new_dm' ) ); ?> />
+					<?php \esc_html_e( 'Direct Messages', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_new_mention" id="activitypub_mailer_new_mention" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_new_mention' ) ); ?> />
+					<?php \esc_html_e( 'New Mentions', 'activitypub' ); ?>
+				</label>
+			</p>
+		</fieldset>
 		<?php
 	}
 

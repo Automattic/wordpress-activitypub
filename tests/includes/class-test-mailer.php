@@ -35,12 +35,19 @@ class Test_Mailer extends WP_UnitTestCase {
 	/**
 	 * Create fake data before tests run.
 	 *
-	 * @param WP_UnitTest_Factory $factory Helper that creates fake data.
+	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
+		$blog_prefix = $GLOBALS['wpdb']->get_blog_prefix();
+
 		self::$user_id = $factory->user->create(
 			array(
-				'role' => 'author',
+				'role'       => 'author',
+				'meta_input' => array(
+					$blog_prefix . 'activitypub_mailer_new_dm'       => 1,
+					$blog_prefix . 'activitypub_mailer_new_follower' => 1,
+					$blog_prefix . 'activitypub_mailer_new_mention'  => 1,
+				),
 			)
 		);
 
@@ -160,13 +167,10 @@ class Test_Mailer extends WP_UnitTestCase {
 	 * @covers ::new_follower
 	 */
 	public function test_new_follower() {
-		$notification = new Notification(
-			'follow',
-			'https://example.com/author',
-			array(
-				'object' => 'https://example.com/follow/1',
-			),
-			self::$user_id
+		$activity = array(
+			'type'   => 'Follow',
+			'actor'  => 'https://example.com/author',
+			'object' => 'https://example.com/follow/1',
 		);
 
 		// Mock remote metadata.
@@ -192,7 +196,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			}
 		);
 
-		Mailer::new_follower( $notification );
+		Mailer::new_follower( $activity, self::$user_id );
 
 		// Clean up.
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
@@ -205,26 +209,13 @@ class Test_Mailer extends WP_UnitTestCase {
 	 * @covers ::init
 	 */
 	public function test_init() {
-		\delete_option( 'activitypub_mailer_new_follower' );
-		\delete_option( 'activitypub_mailer_new_dm' );
-
 		Mailer::init();
 
 		$this->assertEquals( 10, \has_filter( 'comment_notification_subject', array( Mailer::class, 'comment_notification_subject' ) ) );
 		$this->assertEquals( 10, \has_filter( 'comment_notification_text', array( Mailer::class, 'comment_notification_text' ) ) );
-		$this->assertEquals( 10, \has_action( 'activitypub_notification_follow', array( Mailer::class, 'new_follower' ) ) );
+		$this->assertEquals( 10, \has_action( 'activitypub_inbox_follow', array( Mailer::class, 'new_follower' ) ) );
 		$this->assertEquals( 10, \has_action( 'activitypub_inbox_create', array( Mailer::class, 'direct_message' ) ) );
-
-		\remove_action( 'activitypub_notification_follow', array( Mailer::class, 'new_follower' ) );
-		\remove_action( 'activitypub_inbox_create', array( Mailer::class, 'direct_message' ) );
-
-		\update_option( 'activitypub_mailer_new_follower', '0' );
-		\update_option( 'activitypub_mailer_new_dm', '0' );
-
-		Mailer::init();
-
-		$this->assertEquals( false, \has_action( 'activitypub_notification_follow', array( Mailer::class, 'new_follower' ) ) );
-		$this->assertEquals( false, \has_action( 'activitypub_inbox_create', array( Mailer::class, 'direct_message' ) ) );
+		$this->assertEquals( 10, \has_action( 'activitypub_inbox_create', array( Mailer::class, 'mention' ) ) );
 	}
 
 	/**
@@ -463,5 +454,204 @@ class Test_Mailer extends WP_UnitTestCase {
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 		remove_all_filters( 'wp_mail' );
 		wp_delete_user( $user_id );
+	}
+
+	/**
+	 * Test new follower notification when user option is disabled.
+	 *
+	 * @covers ::new_follower
+	 */
+	public function test_new_follower_with_disabled_option() {
+		$activity = array(
+			'type'   => 'Follow',
+			'actor'  => 'https://example.com/author',
+			'object' => 'https://example.com/follow/1',
+		);
+
+		// Set user option to false.
+		update_user_option( self::$user_id, 'activitypub_mailer_new_follower', false );
+
+		// Add a filter to fail the test if an email is sent.
+		$mock = new \MockAction();
+		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
+
+		// Call the method.
+		Mailer::new_follower( $activity, self::$user_id );
+
+		// Assert no email was sent.
+		$this->assertEquals( 0, $mock->get_call_count() );
+
+		// Clean up.
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'wp_mail' );
+		delete_user_option( self::$user_id, 'activitypub_mailer_new_follower' );
+	}
+
+	/**
+	 * Test direct message notification when user option is disabled.
+	 *
+	 * @covers ::direct_message
+	 */
+	public function test_direct_message_with_disabled_option() {
+		$activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'      => 'https://example.com/post/1',
+				'content' => 'Test direct message',
+			),
+			'to'     => array( Actors::get_by_id( self::$user_id )->get_id() ),
+		);
+
+		// Set user option to false.
+		update_user_option( self::$user_id, 'activitypub_mailer_new_dm', false );
+
+		// Add a filter to fail the test if an email is sent.
+		$mock = new \MockAction();
+		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
+
+		// Call the method.
+		Mailer::direct_message( $activity, self::$user_id );
+
+		// Assert no email was sent.
+		$this->assertEquals( 0, $mock->get_call_count() );
+
+		// Clean up.
+		remove_all_filters( 'wp_before_load_template' );
+		delete_user_option( self::$user_id, 'activitypub_mailer_new_dm' );
+	}
+
+	/**
+	 * Test mention notification when user option is disabled.
+	 *
+	 * @covers ::mention
+	 */
+	public function test_mention_with_disabled_option() {
+		$activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'      => 'https://example.com/post/1',
+				'content' => 'Test mention',
+			),
+			'cc'     => array( Actors::get_by_id( self::$user_id )->get_id() ),
+		);
+
+		// Set user option to false.
+		update_user_option( self::$user_id, 'activitypub_mailer_new_mention', false );
+
+		// Add a filter to fail the test if an email is sent.
+		$mock = new \MockAction();
+		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
+
+		// Call the method.
+		Mailer::mention( $activity, self::$user_id );
+
+		// Assert no email was sent.
+		$this->assertEquals( 0, $mock->get_call_count() );
+
+		// Clean up.
+		remove_all_filters( 'wp_before_load_template' );
+		delete_user_option( self::$user_id, 'activitypub_mailer_new_mention' );
+	}
+
+	/**
+	 * Test new follower notification for blog user when option is disabled.
+	 *
+	 * @covers ::new_follower
+	 */
+	public function test_blog_new_follower_with_disabled_option() {
+		// Set blog option to false (0).
+		update_option( 'activitypub_blog_user_mailer_new_follower', '0' );
+		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$activity = array(
+			'type'   => 'Follow',
+			'actor'  => 'https://example.com/author',
+			'object' => 'https://example.com/follow/1',
+		);
+
+		// Add a filter to fail the test if an email is sent.
+		$mock = new \MockAction();
+		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
+
+		// Call the method with blog user ID.
+		Mailer::new_follower( $activity, Actors::BLOG_USER_ID );
+
+		// Assert no email was sent.
+		$this->assertEquals( 0, $mock->get_call_count() );
+
+		// Clean up.
+		remove_all_filters( 'wp_before_load_template' );
+		delete_option( 'activitypub_blog_user_mailer_new_follower' );
+		delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Test direct message notification for blog user when option is disabled.
+	 *
+	 * @covers ::direct_message
+	 */
+	public function test_blog_direct_message_with_disabled_option() {
+		// Set blog option to false (0).
+		update_option( 'activitypub_blog_user_mailer_new_dm', '0' );
+		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'      => 'https://example.com/post/1',
+				'content' => 'Test direct message',
+			),
+			'to'     => array( Actors::get_by_id( Actors::BLOG_USER_ID )->get_id() ),
+		);
+
+		// Add a filter to fail the test if an email is sent.
+		$mock = new \MockAction();
+		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
+
+		// Call the method with blog user ID.
+		Mailer::direct_message( $activity, Actors::BLOG_USER_ID );
+
+		// Assert no email was sent.
+		$this->assertEquals( 0, $mock->get_call_count() );
+
+		// Clean up.
+		remove_all_filters( 'wp_before_load_template' );
+		delete_option( 'activitypub_blog_user_mailer_new_dm' );
+		delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Test mention notification for blog user when option is disabled.
+	 *
+	 * @covers ::mention
+	 */
+	public function test_blog_mention_with_disabled_option() {
+		// Set blog option to false (0).
+		update_option( 'activitypub_blog_user_mailer_new_mention', '0' );
+		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'      => 'https://example.com/post/1',
+				'content' => 'Test mention',
+			),
+			'cc'     => array( Actors::get_by_id( Actors::BLOG_USER_ID )->get_id() ),
+		);
+
+		// Add a filter to fail the test if an email is sent.
+		$mock = new \MockAction();
+		add_action( 'wp_before_load_template', array( $mock, 'action' ) );
+
+		// Call the method with blog user ID.
+		Mailer::mention( $activity, Actors::BLOG_USER_ID );
+
+		// Assert no email was sent.
+		$this->assertEquals( 0, $mock->get_call_count() );
+
+		// Clean up.
+		remove_all_filters( 'wp_before_load_template' );
+		delete_option( 'activitypub_blog_user_mailer_new_mention' );
+		delete_option( 'activitypub_actor_mode' );
 	}
 }

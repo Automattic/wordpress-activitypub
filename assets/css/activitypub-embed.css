@@ -95,7 +95,7 @@
 	gap: 5px;
 }
 @media only screen and (max-width: 399px) {
-	.activitypub-embed-meta .ap-stat {
+	.activitypub-embed-meta span.ap-stat {
 		display: none !important;
 	}
 }

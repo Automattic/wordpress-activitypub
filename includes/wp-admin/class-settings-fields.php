@@ -38,13 +38,6 @@ class Settings_Fields {
 		);
 
 		add_settings_section(
-			'activitypub_notifications',
-			__( 'Notifications', 'activitypub' ),
-			array( self::class, 'render_notifications_section' ),
-			'activitypub_settings'
-		);
-
-		add_settings_section(
 			'activitypub_general',
 			__( 'General', 'activitypub' ),
 			'__return_empty_string',
@@ -155,59 +148,6 @@ class Settings_Fields {
 			'activitypub_server',
 			array( 'label_for' => 'activitypub_relays' )
 		);
-	}
-
-	/**
-	 * Render notifications section.
-	 */
-	public static function render_notifications_section() {
-		?>
-		<p>
-			<?php \esc_html_e( 'Choose which notifications you want to receive. The plugin currently only supports e-mail notifications, but we will add more options in the future.', 'activitypub' ); ?>
-		</p>
-		<table class="form-table">
-			<tbody>
-			<tr>
-				<th scope="col">
-					<?php \esc_html_e( 'Type', 'activitypub' ); ?>
-				</th>
-				<th scope="col">
-					<?php \esc_html_e( 'E-Mail', 'activitypub' ); ?>
-				</th>
-			</tr>
-			<tr>
-				<td>
-					<?php \esc_html_e( 'New followers', 'activitypub' ); ?>
-				</td>
-				<td>
-					<label>
-						<input type="checkbox" name="activitypub_mailer_new_follower" id="activitypub_mailer_new_follower" value="1" <?php \checked( '1', \get_option( 'activitypub_mailer_new_follower', '0' ) ); ?> />
-					</label>
-				</td>
-			</tr>
-			<tr>
-				<td>
-					<?php \esc_html_e( 'Direct Messages', 'activitypub' ); ?>
-				</td>
-				<td>
-					<label>
-						<input type="checkbox" name="activitypub_mailer_new_dm" id="activitypub_mailer_new_dm" value="1" <?php \checked( '1', \get_option( 'activitypub_mailer_new_dm', '0' ) ); ?> />
-					</label>
-				</td>
-			</tr>
-			<tr>
-				<td>
-					<?php \esc_html_e( 'New Mentions', 'activitypub' ); ?>
-				</td>
-				<td>
-					<label>
-						<input type="checkbox" name="activitypub_mailer_new_mention" id="activitypub_mailer_new_mention" value="1" <?php \checked( '1', \get_option( 'activitypub_mailer_new_mention', '1' ) ); ?> />
-					</label>
-				</td>
-			</tr>
-			</tbody>
-		</table>
-		<?php
 	}
 
 	/**
