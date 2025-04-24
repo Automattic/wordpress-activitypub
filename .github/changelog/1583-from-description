@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-No more PHP warning when Mastodon Apps run out of posts to process.
