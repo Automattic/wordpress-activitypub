@@ -147,25 +147,42 @@ class Admin {
 			return;
 		}
 
-		$description = ! empty( $_POST['activitypub_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['activitypub_description'] ) ) : false;
-		if ( $description ) {
-			\update_user_option( $user_id, 'activitypub_description', $description );
-		} else {
-			\delete_user_option( $user_id, 'activitypub_description' );
+		// User options that should be processed with `sanitize_textarea_field()`.
+		$textarea_field_user_options = array(
+			'activitypub_blog_user_also_known_as',
+			'activitypub_description',
+		);
+
+		foreach ( $textarea_field_user_options as $option ) {
+			if ( ! empty( $_POST[ $option ] ) ) {
+				\update_user_option( $user_id, $option, sanitize_textarea_field( wp_unslash( $_POST[ $option ] ) ) );
+			} else {
+				\delete_user_option( $user_id, $option );
+			}
 		}
 
-		$header_image = ! empty( $_POST['activitypub_header_image'] ) ? sanitize_text_field( wp_unslash( $_POST['activitypub_header_image'] ) ) : false;
-		if ( $header_image && \wp_attachment_is_image( $header_image ) ) {
-			\update_user_option( $user_id, 'activitypub_header_image', $header_image );
-		} else {
-			\delete_user_option( $user_id, 'activitypub_header_image' );
+		// User options that should be processed with `sanitize_text_field()`.
+		$text_field_user_options = array(
+			'activitypub_header_image',
+		);
+
+		foreach ( $text_field_user_options as $option ) {
+			if ( ! empty( $_POST[ $option ] ) ) {
+				\update_user_option( $user_id, $option, sanitize_text_field( wp_unslash( $_POST[ $option ] ) ) );
+			} else {
+				\delete_user_option( $user_id, $option );
+			}
 		}
 
-		$also_known_as = ! empty( $_POST['activitypub_blog_user_also_known_as'] ) ? \sanitize_textarea_field( wp_unslash( $_POST['activitypub_blog_user_also_known_as'] ) ) : false;
-		if ( $also_known_as ) {
-			\update_user_option( $user_id, 'activitypub_also_known_as', $also_known_as );
-		} else {
-			\delete_user_option( $user_id, 'activitypub_also_known_as' );
+		// User options that have a default value and therefore can't be empty (Empty triggers the default value).
+		$required_user_options = array(
+			'activitypub_mailer_new_dm',
+			'activitypub_mailer_new_follower',
+			'activitypub_mailer_new_mention',
+		);
+
+		foreach ( $required_user_options as $option ) {
+			\update_user_option( $user_id, $option, sanitize_text_field( wp_unslash( $_POST[ $option ] ?? 0 ) ) );
 		}
 	}
 
