@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Updated default max attachment count to four, creating better-looking gallery grids for posts with 4 or more images.

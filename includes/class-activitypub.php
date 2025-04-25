@@ -98,6 +98,9 @@ class Activitypub {
 		\delete_option( 'activitypub_application_user_private_key' );
 		\delete_option( 'activitypub_application_user_public_key' );
 		\delete_option( 'activitypub_blog_user_also_known_as' );
+		\delete_option( 'activitypub_blog_user_mailer_new_dm' );
+		\delete_option( 'activitypub_blog_user_mailer_new_follower' );
+		\delete_option( 'activitypub_blog_user_mailer_new_mention' );
 		\delete_option( 'activitypub_blog_user_moved_to' );
 		\delete_option( 'activitypub_blog_user_private_key' );
 		\delete_option( 'activitypub_blog_user_public_key' );
@@ -110,9 +113,6 @@ class Activitypub {
 		\delete_option( 'activitypub_enable_users' );
 		\delete_option( 'activitypub_header_image' );
 		\delete_option( 'activitypub_last_post_with_permalink_as_id' );
-		\delete_option( 'activitypub_mailer_new_dm' );
-		\delete_option( 'activitypub_mailer_new_follower' );
-		\delete_option( 'activitypub_mailer_new_mention' );
 		\delete_option( 'activitypub_max_image_attachments' );
 		\delete_option( 'activitypub_migration_lock' );
 		\delete_option( 'activitypub_object_type' );
@@ -823,6 +823,42 @@ class Activitypub {
 
 		\register_meta(
 			'user',
+			$blog_prefix . 'activitypub_mailer_new_dm',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send a notification when someone sends this user a direct message.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
+		\add_filter( 'get_user_option_activitypub_mailer_new_dm', array( self::class, 'user_options_default' ) );
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_mailer_new_follower',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send a notification when someone starts to follow this user.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
+		\add_filter( 'get_user_option_activitypub_mailer_new_follower', array( self::class, 'user_options_default' ) );
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_mailer_new_mention',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send a notification when someone mentions this user.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
+		\add_filter( 'get_user_option_activitypub_mailer_new_mention', array( self::class, 'user_options_default' ) );
+
+		\register_meta(
+			'user',
 			'activitypub_show_welcome_tab',
 			array(
 				'type'              => 'integer',
@@ -844,5 +880,19 @@ class Activitypub {
 				'sanitize_callback' => 'absint',
 			)
 		);
+	}
+
+	/**
+	 * Set default values for user options.
+	 *
+	 * @param bool|string $value  Option value.
+	 * @return bool|string
+	 */
+	public static function user_options_default( $value ) {
+		if ( false === $value ) {
+			return '1';
+		}
+
+		return $value;
 	}
 }

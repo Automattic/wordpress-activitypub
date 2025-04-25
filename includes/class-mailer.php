@@ -20,20 +20,9 @@ class Mailer {
 		\add_filter( 'comment_notification_subject', array( self::class, 'comment_notification_subject' ), 10, 2 );
 		\add_filter( 'comment_notification_text', array( self::class, 'comment_notification_text' ), 10, 2 );
 
-		// New follower notification.
-		if ( '1' === \get_option( 'activitypub_mailer_new_follower', '0' ) ) {
-			\add_action( 'activitypub_notification_follow', array( self::class, 'new_follower' ) );
-		}
-
-		// Direct message notification.
-		if ( '1' === \get_option( 'activitypub_mailer_new_dm', '0' ) ) {
-			\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
-		}
-
-		// Direct message notification.
-		if ( '1' === \get_option( 'activitypub_mailer_new_mention', '1' ) ) {
-			\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 10, 2 );
-		}
+		\add_action( 'activitypub_inbox_follow', array( self::class, 'new_follower' ), 10, 2 );
+		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
+		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 10, 2 );
 	}
 
 	/**
@@ -115,38 +104,40 @@ class Mailer {
 	/**
 	 * Send a notification email for every new follower.
 	 *
-	 * @param Notification $notification The notification object.
+	 * @param array $activity The activity object.
+	 * @param int   $user_id  The id of the local blog-user.
 	 */
-	public static function new_follower( $notification ) {
-		$actor = get_remote_metadata_by_actor( $notification->actor );
+	public static function new_follower( $activity, $user_id ) {
+		if ( $user_id > Actors::BLOG_USER_ID ) {
+			if ( ! \get_user_option( 'activitypub_mailer_new_follower', $user_id ) ) {
+				return;
+			}
 
+			$email     = \get_userdata( $user_id )->user_email;
+			$admin_url = '/users.php?page=activitypub-followers-list';
+		} else {
+			if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_follower', '1' ) ) {
+				return;
+			}
+
+			$email     = \get_option( 'admin_email' );
+			$admin_url = '/options-general.php?page=activitypub&tab=followers';
+		}
+
+		$actor = get_remote_metadata_by_actor( $activity['actor'] );
 		if ( ! $actor || \is_wp_error( $actor ) ) {
 			return;
 		}
 
 		if ( empty( $actor['webfinger'] ) ) {
-			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . wp_parse_url( $actor['url'], PHP_URL_HOST );
-		}
-
-		$email     = \get_option( 'admin_email' );
-		$admin_url = '/options-general.php?page=activitypub&tab=followers';
-
-		if ( $notification->target > Actors::BLOG_USER_ID ) {
-			$user = \get_user_by( 'id', $notification->target );
-
-			if ( ! $user ) {
-				return;
-			}
-
-			$email     = $user->user_email;
-			$admin_url = '/users.php?page=activitypub-followers-list';
+			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . \wp_parse_url( $actor['url'], PHP_URL_HOST );
 		}
 
 		$template_args = array_merge(
 			$actor,
 			array(
 				'admin_url' => $admin_url,
-				'target'    => $notification->target,
+				'user_id'   => $user_id,
 				'stats'     => array(
 					'outbox'    => null,
 					'followers' => null,
@@ -161,8 +152,8 @@ class Mailer {
 			}
 
 			$result = Http::get( $actor[ $field ], true );
-			if ( 200 === wp_remote_retrieve_response_code( $result ) ) {
-				$body = \json_decode( wp_remote_retrieve_body( $result ), true );
+			if ( 200 === \wp_remote_retrieve_response_code( $result ) ) {
+				$body = \json_decode( \wp_remote_retrieve_body( $result ), true );
 				if ( isset( $body['totalItems'] ) ) {
 					$template_args['stats'][ $field ] = $body['totalItems'];
 				}
@@ -170,7 +161,7 @@ class Mailer {
 		}
 
 		/* translators: 1: Blog name, 2: Follower name */
-		$subject = \sprintf( \__( '[%1$s] New Follower: %2$s', 'activitypub' ), get_option( 'blogname' ), $actor['name'] );
+		$subject = \sprintf( \__( '[%1$s] New Follower: %2$s', 'activitypub' ), \get_option( 'blogname' ), $actor['name'] );
 
 		\ob_start();
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-follower.php', false, $template_args );
@@ -208,6 +199,20 @@ class Mailer {
 			return;
 		}
 
+		if ( $user_id > Actors::BLOG_USER_ID ) {
+			if ( ! \get_user_option( 'activitypub_mailer_new_dm', $user_id ) ) {
+				return;
+			}
+
+			$email = \get_userdata( $user_id )->user_email;
+		} else {
+			if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_dm', '1' ) ) {
+				return;
+			}
+
+			$email = \get_option( 'admin_email' );
+		}
+
 		$actor = get_remote_metadata_by_actor( $activity['actor'] );
 
 		if ( ! $actor || \is_wp_error( $actor ) || empty( $activity['object']['content'] ) ) {
@@ -215,19 +220,7 @@ class Mailer {
 		}
 
 		if ( empty( $actor['webfinger'] ) ) {
-			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . wp_parse_url( $actor['url'], PHP_URL_HOST );
-		}
-
-		$email = \get_option( 'admin_email' );
-
-		if ( (int) $user_id > Actors::BLOG_USER_ID ) {
-			$user = \get_user_by( 'id', $user_id );
-
-			if ( ! $user ) {
-				return;
-			}
-
-			$email = $user->user_email;
+			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . \wp_parse_url( $actor['url'], PHP_URL_HOST );
 		}
 
 		$template_args = array(
@@ -237,7 +230,7 @@ class Mailer {
 		);
 
 		/* translators: 1: Blog name, 2 Actor name */
-		$subject = \sprintf( \esc_html__( '[%1$s] Direct Message from: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
+		$subject = \sprintf( \esc_html__( '[%1$s] Direct Message from: %2$s', 'activitypub' ), \esc_html( \get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
 
 		\ob_start();
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-dm.php', false, $template_args );
@@ -282,25 +275,27 @@ class Mailer {
 			return;
 		}
 
+		if ( $user_id > Actors::BLOG_USER_ID ) {
+			if ( ! \get_user_option( 'activitypub_mailer_new_mention', $user_id ) ) {
+				return;
+			}
+
+			$email = \get_userdata( $user_id )->user_email;
+		} else {
+			if ( '1' !== \get_option( 'activitypub_blog_user_mailer_new_mention', '1' ) ) {
+				return;
+			}
+
+			$email = \get_option( 'admin_email' );
+		}
+
 		$actor = get_remote_metadata_by_actor( $activity['actor'] );
 		if ( \is_wp_error( $actor ) ) {
 			return;
 		}
 
 		if ( empty( $actor['webfinger'] ) ) {
-			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . wp_parse_url( $actor['url'], PHP_URL_HOST );
-		}
-
-		$email = \get_option( 'admin_email' );
-
-		if ( (int) $user_id > Actors::BLOG_USER_ID ) {
-			$user = \get_user_by( 'id', $user_id );
-
-			if ( ! $user ) {
-				return;
-			}
-
-			$email = $user->user_email;
+			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . \wp_parse_url( $actor['url'], PHP_URL_HOST );
 		}
 
 		$template_args = array(
@@ -310,7 +305,7 @@ class Mailer {
 		);
 
 		/* translators: 1: Blog name, 2 Actor name */
-		$subject = \sprintf( \esc_html__( '[%1$s] Mention from: %2$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
+		$subject = \sprintf( \esc_html__( '[%1$s] Mention from: %2$s', 'activitypub' ), \esc_html( \get_option( 'blogname' ) ), \esc_html( $actor['name'] ) );
 
 		\ob_start();
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-mention.php', false, $template_args );

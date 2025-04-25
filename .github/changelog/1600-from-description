@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Use a dedicated hook for the "Dismiss Welcome Page Welcome" link.

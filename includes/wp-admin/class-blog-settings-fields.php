@@ -63,6 +63,14 @@ class Blog_Settings_Fields {
 			array( 'label_for' => 'activitypub_blog_description' )
 		);
 
+		\add_settings_field(
+			'activitypub_notifications',
+			\esc_html__( 'Email Notifications', 'activitypub' ),
+			array( self::class, 'notifications_callback' ),
+			'activitypub_blog_settings',
+			'activitypub_blog_profile'
+		);
+
 		add_settings_field(
 			'activitypub_extra_fields',
 			__( 'Extra Fields', 'activitypub' ),
@@ -184,6 +192,34 @@ class Blog_Settings_Fields {
 		<p class="description">
 			<?php esc_html_e( 'By default the ActivityPub plugin uses the WordPress tagline as a description for the blog profile.', 'activitypub' ); ?>
 		</p>
+		<?php
+	}
+
+	/**
+	 * Notifications field callback.
+	 */
+	public static function notifications_callback() {
+		?>
+		<fieldset id="activitypub-notifications">
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_blog_user_mailer_new_follower" id="activitypub_blog_user_mailer_new_follower" value="1" <?php \checked( '1', \get_option( 'activitypub_blog_user_mailer_new_follower', '1' ) ); ?> />
+					<?php \esc_html_e( 'New Followers', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_blog_user_mailer_new_dm" id="activitypub_blog_user_mailer_new_dm" value="1" <?php \checked( '1', \get_option( 'activitypub_blog_user_mailer_new_dm', '1' ) ); ?> />
+					<?php \esc_html_e( 'Direct Messages', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_blog_user_mailer_new_mention" id="activitypub_blog_user_mailer_new_mention" value="1" <?php \checked( '1', \get_option( 'activitypub_blog_user_mailer_new_mention', '1' ) ); ?> />
+					<?php \esc_html_e( 'New Mentions', 'activitypub' ); ?>
+				</label>
+			</p>
+		</fieldset>
 		<?php
 	}
 

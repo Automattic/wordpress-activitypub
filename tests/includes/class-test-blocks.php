@@ -133,4 +133,48 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'u-in-reply-to', $output, 'Output should contain the reply link.' );
 		$this->assertStringContainsString( 'example.com/no-embed', $output, 'Output should contain the formatted URL.' );
 	}
+
+	/**
+	 * Test filter_import_mastodon_post_data with regular paragraphs.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_with_paragraphs() {
+		$data = array(
+			'post_content' => '<p>First paragraph</p><p>Second paragraph</p>',
+		);
+
+		$post = (object) array(
+			'object' => (object) array(
+				'inReplyTo' => null,
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		$this->assertSame( "<!-- wp:paragraph -->\n<p>First paragraph</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Second paragraph</p>\n<!-- /wp:paragraph -->", $result['post_content'] );
+	}
+
+	/**
+	 * Test filter_import_mastodon_post_data with a reply post.
+	 *
+	 * @covers ::filter_import_mastodon_post_data
+	 */
+	public function test_filter_import_mastodon_post_data_with_reply() {
+		$data = array(
+			'post_content' => '<p>This is a reply</p>',
+		);
+
+		$reply_url = 'https://mastodon.social/@user/123456';
+		$post      = (object) array(
+			'object' => (object) array(
+				'inReplyTo' => $reply_url,
+			),
+		);
+
+		$result = Blocks::filter_import_mastodon_post_data( $data, $post );
+
+		$this->assertStringContainsString( '<!-- wp:activitypub/reply {"url":"https://mastodon.social/@user/123456","embedPost":true} /-->', $result['post_content'] );
+		$this->assertStringContainsString( "<!-- wp:paragraph -->\n<p>This is a reply</p>\n<!-- /wp:paragraph -->", $result['post_content'] );
+	}
 }
