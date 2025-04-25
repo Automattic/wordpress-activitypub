@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Email templates now work for users from a wider range of Fediverse platforms.
+Improved support for users from more Fediverse platforms by automatically completing missing profile details.
