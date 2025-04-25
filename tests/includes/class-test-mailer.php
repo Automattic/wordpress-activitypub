@@ -220,7 +220,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'pre_get_remote_metadata_by_actor',
 			function () {
 				return array(
-					'id'               => 'https://example.com/author',
+					'id'                => 'https://example.com/author',
 					'preferredUsername' => 'follower',
 				);
 			}
@@ -349,7 +349,7 @@ class Test_Mailer extends WP_UnitTestCase {
 					'to'     => array( 'https://example.com/followers' ),
 					'cc'     => array( 'user_url' ),
 				),
-			)
+			),
 		);
 	}
 
