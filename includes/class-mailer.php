@@ -129,7 +129,7 @@ class Mailer {
 			return;
 		}
 
-		$actor = self::apply_actor_defaults( $actor );
+		$actor = self::normalize_actor( $actor );
 
 		$template_args = array_merge(
 			$actor,
@@ -217,7 +217,7 @@ class Mailer {
 			return;
 		}
 
-		$actor = self::apply_actor_defaults( $actor );
+		$actor = self::normalize_actor( $actor );
 
 		$template_args = array(
 			'activity' => $activity,
@@ -290,7 +290,7 @@ class Mailer {
 			return;
 		}
 
-		$actor = self::apply_actor_defaults( $actor );
+		$actor = self::normalize_actor( $actor );
 
 		$template_args = array(
 			'activity' => $activity,
@@ -338,7 +338,7 @@ class Mailer {
 	 *
 	 * @return array The inflated actor object.
 	 */
-	private static function apply_actor_defaults( $actor ) {
+	private static function normalize_actor( $actor ) {
 		if ( empty( $actor['name'] ) ) {
 			$actor['name'] = $actor['preferredUsername'];
 		}
