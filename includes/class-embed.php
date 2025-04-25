@@ -7,8 +7,6 @@
 
 namespace Activitypub;
 
-use WP_REST_Response;
-
 /**
  * Class to handle embedding ActivityPub content
  */
@@ -18,8 +16,9 @@ class Embed {
 	 * Initialize the embed handler
 	 */
 	public static function init() {
-		add_filter( 'pre_oembed_result', array( __CLASS__, 'maybe_use_activitypub_embed' ), 10, 3 );
-		add_filter( 'oembed_dataparse', array( __CLASS__, 'handle_filtered_oembed_result' ), 11, 3 );
+		\add_filter( 'pre_oembed_result', array( self::class, 'maybe_use_activitypub_embed' ), 10, 3 );
+		\add_filter( 'oembed_dataparse', array( self::class, 'handle_filtered_oembed_result' ), 11, 3 );
+		\add_filter( 'oembed_request_post_id', array( self::class, 'register_fallback_hook' ) );
 	}
 
 	/**
@@ -131,13 +130,13 @@ class Embed {
 	 */
 	public static function has_real_oembed( $url, $args = array() ) {
 		// Temporarily remove our filter to avoid infinite loops.
-		remove_filter( 'pre_oembed_result', array( __CLASS__, 'maybe_use_activitypub_embed' ), 10, 3 );
+		\remove_filter( 'pre_oembed_result', array( self::class, 'maybe_use_activitypub_embed' ), 10, 3 );
 
 		// Try to get a "real" oEmbed result. If found, it'll be cached to avoid unnecessary HTTP requests in `wp_oembed_get`.
-		$oembed_result = wp_oembed_get( $url, $args );
+		$oembed_result = \wp_oembed_get( $url, $args );
 
 		// Add our filter back.
-		add_filter( 'pre_oembed_result', array( __CLASS__, 'maybe_use_activitypub_embed' ), 10, 3 );
+		\add_filter( 'pre_oembed_result', array( self::class, 'maybe_use_activitypub_embed' ), 10, 3 );
 
 		return false !== $oembed_result;
 	}
@@ -192,12 +191,12 @@ class Embed {
 		}
 
 		// If this isn't a rich or video type, we can't help.
-		if ( ! isset( $data->type ) || ! in_array( $data->type, array( 'rich', 'video' ), true ) ) {
+		if ( ! isset( $data->type ) || ! \in_array( $data->type, array( 'rich', 'video' ), true ) ) {
 			return $html;
 		}
 
 		// If there's no HTML in the data, we can't help.
-		if ( empty( $data->html ) || ! is_string( $data->html ) ) {
+		if ( empty( $data->html ) || ! \is_string( $data->html ) ) {
 			return $html;
 		}
 
@@ -209,5 +208,56 @@ class Embed {
 
 		// Return our safer ActivityPub embed HTML.
 		return $activitypub_html;
+	}
+
+	/**
+	 * Register the fallback hook for oEmbed requests.
+	 *
+	 * Avoids filtering every single API request.
+	 *
+	 * @param int $post_id The post ID.
+	 * @return int The post ID.
+	 */
+	public static function register_fallback_hook( $post_id ) {
+		\add_filter( 'rest_request_after_callbacks', array( self::class, 'oembed_fediverse_fallback' ), 10, 3 );
+
+		return $post_id;
+	}
+
+	/**
+	 * Fallback for oEmbed requests to the Fediverse.
+	 *
+	 * @param \WP_REST_Response|\WP_Error $response Result to send to the client.
+	 * @param array                       $handler  Route handler used for the request.
+	 * @param \WP_REST_Request            $request  Request used to generate the response.
+	 *
+	 * @return \WP_REST_Response|\WP_Error The response to send to the client.
+	 */
+	public static function oembed_fediverse_fallback( $response, $handler, $request ) {
+		if ( is_wp_error( $response ) && 'oembed_invalid_url' === $response->get_error_code() ) {
+			$url  = $request->get_param( 'url' );
+			$html = get_embed_html( $url );
+
+			if ( $html ) {
+				$args = $request->get_params();
+				$data = (object) array(
+					'provider_name' => 'Embed Handler',
+					'html'          => $html,
+					'scripts'       => array(),
+				);
+
+				/** This filter is documented in wp-includes/class-wp-oembed.php */
+				$data->html = apply_filters( 'oembed_result', $data->html, $url, $args );
+
+				/** This filter is documented in wp-includes/class-wp-oembed-controller.php */
+				$ttl = apply_filters( 'rest_oembed_ttl', DAY_IN_SECONDS, $url, $args );
+
+				set_transient( 'oembed_' . md5( serialize( $args ) ), $data, $ttl ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+
+				$response = new \WP_REST_Response( $data );
+			}
+		}
+
+		return $response;
 	}
 }

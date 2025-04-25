@@ -31,6 +31,14 @@ class Welcome_Fields {
 	public static function register_welcome_fields() {
 		// Add settings sections.
 		\add_settings_section(
+			'activitypub_welcome_close',
+			'',
+			array( self::class, 'render_welcome_close_section' ),
+			'activitypub_welcome'
+		);
+
+		// Add settings sections.
+		\add_settings_section(
 			'activitypub_intro',
 			\__( 'Welcome', 'activitypub' ),
 			array( self::class, 'render_welcome_intro_section' ),
@@ -93,9 +101,17 @@ class Welcome_Fields {
 	/**
 	 * Render welcome intro section.
 	 */
-	public static function render_welcome_intro_section() {
+	public static function render_welcome_close_section() {
 		?>
 		<a class="welcome-tab-close" href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&welcome=0' ) ); ?>" aria-label="<?php \esc_attr_e( 'Dismiss the welcome page', 'activitypub' ); ?>"><?php \esc_html_e( 'Dismiss Welcome Page', 'activitypub' ); ?></a>
+		<?php
+	}
+
+	/**
+	 * Render welcome intro section.
+	 */
+	public static function render_welcome_intro_section() {
+		?>
 		<p><?php echo wp_kses( \__( 'Enter the fediverse with <strong>ActivityPub</strong>, broadcasting your blog to a wider audience. Attract followers, deliver updates, and receive comments from a diverse user base on <strong>Mastodon</strong>, <strong>Friendica</strong>, <strong>Pleroma</strong>, <strong>Pixelfed</strong>, and all <strong>ActivityPub</strong>-compliant platforms.', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
 		<?php
 	}

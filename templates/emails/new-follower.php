@@ -52,7 +52,7 @@ require __DIR__ . '/parts/header.php';
 </style>
 <h1>
 	<?php
-	if ( Actors::BLOG_USER_ID === $args['target'] ) :
+	if ( Actors::BLOG_USER_ID === $args['user_id'] ) :
 		esc_html_e( 'Your blog has a new follower!', 'activitypub' );
 	else :
 		esc_html_e( 'You have a new follower!', 'activitypub' );
@@ -62,7 +62,7 @@ require __DIR__ . '/parts/header.php';
 
 <p>
 	<?php
-	if ( Actors::BLOG_USER_ID === $args['target'] ) :
+	if ( Actors::BLOG_USER_ID === $args['user_id'] ) :
 		/* translators: %s: The name of the person who mentioned the blog. */
 		$message = __( 'Meet your blog&#8217;s newest follower, %s. Here&#8217;s a quick look at their profile:', 'activitypub' );
 	else :
