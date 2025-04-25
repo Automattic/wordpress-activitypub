@@ -178,8 +178,8 @@ class Inbox_Controller extends \WP_REST_Controller {
 				 */
 				\do_action( 'activitypub_inbox_' . $type, $data, $actor->get__id(), $activity );
 			}
-      
-      $response = \rest_ensure_response(
+
+			$response = \rest_ensure_response(
 				array(
 					'type'   => 'https://w3id.org/fep/c180#approval-required',
 					'title'  => 'Approval Required',
