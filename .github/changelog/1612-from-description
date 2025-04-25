@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Improved support for users from more Fediverse platforms by automatically completing missing profile details.
+Improved support for users from more Fediverse platforms in email notifications.
