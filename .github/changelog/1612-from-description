@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Add fallback to `id` and `preferredUsername` when `url` and `name` are missing.
