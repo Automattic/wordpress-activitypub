@@ -45,6 +45,17 @@ class Welcome_Fields {
 			'activitypub_welcome'
 		);
 
+		// Check if upgrade notice is set
+		$upgrade_notice = \get_option( 'activitypub_upgrade_notice' );
+		if ( $upgrade_notice ) {
+			\add_settings_section(
+				'activitypub_welcome_changelog',
+				\sprintf( \esc_html__( 'New in version %s', 'activitypub' ), ACTIVITYPUB_PLUGIN_VERSION ),
+				array( self::class, 'render_welcome_changelog_section' ),
+				'activitypub_welcome'
+			);
+		}
+
 		\add_settings_section(
 			'activitypub_bookmarklet',
 			\__( 'Bookmarklet', 'activitypub' ),
@@ -113,6 +124,16 @@ class Welcome_Fields {
 	public static function render_welcome_intro_section() {
 		?>
 		<p><?php echo wp_kses( \__( 'Enter the fediverse with <strong>ActivityPub</strong>, broadcasting your blog to a wider audience. Attract followers, deliver updates, and receive comments from a diverse user base on <strong>Mastodon</strong>, <strong>Friendica</strong>, <strong>Pleroma</strong>, <strong>Pixelfed</strong>, and all <strong>ActivityPub</strong>-compliant platforms.', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
+		<?php
+	}
+
+	/**
+	 * Render welcome changelog section.
+	 */
+	public static function render_welcome_changelog_section() {
+		?>
+		<p><?php echo \wp_kses( \get_option( 'activitypub_upgrade_notice' ), array( 'br' => array() ) ); ?></p>
+		<p><?php echo \wp_kses( \__( 'Read the full changelog <a href="https://github.com/Automattic/wordpress-activitypub/releases/tag/' . ACTIVITYPUB_PLUGIN_VERSION . '" target="_blank">here</a>.', 'activitypub' ), array( 'a' => array( 'href' => true, 'target' => true ) ) ); ?></p>
 		<?php
 	}
 

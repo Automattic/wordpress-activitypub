@@ -616,8 +616,11 @@ class Admin {
 	 */
 	public static function plugin_update_message( $data, $update ) {
 		if ( ! isset( $update->upgrade_notice ) ) {
+			\delete_option( 'activitypub_upgrade_notice' );
 			return;
 		}
+
+		\update_option( 'activitypub_upgrade_notice', wp_strip_all_tags( $update->upgrade_notice ) );
 
 		echo '<br>' . wp_strip_all_tags( $update->upgrade_notice ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
