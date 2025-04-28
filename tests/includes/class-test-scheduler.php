@@ -295,8 +295,8 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$mock_class->expects( $this->never() )
 			->method( 'callback' );
 
-		// Run async_batch with invalid callback.
-		Scheduler::async_batch( array( $mock_class, 'callback' ) );
+		// Run async_batch without registered callback.
+		Scheduler::async_batch();
 	}
 
 	/**
