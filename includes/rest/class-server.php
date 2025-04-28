@@ -193,7 +193,7 @@ class Server {
 		}
 
 		// Only alter responses that return an error status code.
-		if ( $response->get_status() < 300 ) {
+		if ( $response->get_status() < 400 ) {
 			return $response;
 		}
 
