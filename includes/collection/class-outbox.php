@@ -141,14 +141,13 @@ class Outbox {
 
 		foreach ( $existing_items as $existing_item_id ) {
 			$event_args = array(
-				Dispatcher::$callback,
 				$existing_item_id,
 				Dispatcher::$batch_size,
 				\get_post_meta( $existing_item_id, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
 			);
 
-			$timestamp = \wp_next_scheduled( 'activitypub_async_batch', $event_args );
-			\wp_unschedule_event( $timestamp, 'activitypub_async_batch', $event_args );
+			$timestamp = \wp_next_scheduled( 'activitypub_send_activity', $event_args );
+			\wp_unschedule_event( $timestamp, 'activitypub_send_activity', $event_args );
 
 			$timestamp = \wp_next_scheduled( 'activitypub_process_outbox', array( $existing_item_id ) );
 			\wp_unschedule_event( $timestamp, 'activitypub_process_outbox', array( $existing_item_id ) );
