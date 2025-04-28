@@ -9,6 +9,7 @@ namespace Activitypub\Rest;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
+use Activitypub\Debug;
 
 use function Activitypub\get_context;
 use function Activitypub\get_rest_url_by_path;
@@ -175,24 +176,29 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		$type     = $request->get_param( 'type' );
 		$type     = \strtolower( $type );
 
-		/**
-		 * ActivityPub inbox action.
-		 *
-		 * @param array              $data     The data array.
-		 * @param int|null           $user_id  The user ID.
-		 * @param string             $type     The type of the activity.
-		 * @param Activity|\WP_Error $activity The Activity object.
-		 */
-		\do_action( 'activitypub_inbox', $data, $user->get__id(), $type, $activity );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		if ( \wp_check_comment_disallowed_list( $activity->to_json( false ), '', '', '', $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '' ) ) {
+			Debug::write_log( 'Blocked activity from: ' . $activity->get_actor() );
+		} else {
+			/**
+			 * ActivityPub inbox action.
+			 *
+			 * @param array              $data     The data array.
+			 * @param int|null           $user_id  The user ID.
+			 * @param string             $type     The type of the activity.
+			 * @param Activity|\WP_Error $activity The Activity object.
+			 */
+			\do_action( 'activitypub_inbox', $data, $user->get__id(), $type, $activity );
 
-		/**
-		 * ActivityPub inbox action for specific activity types.
-		 *
-		 * @param array              $data     The data array.
-		 * @param int|null           $user_id  The user ID.
-		 * @param Activity|\WP_Error $activity The Activity object.
-		 */
-		\do_action( 'activitypub_inbox_' . $type, $data, $user->get__id(), $activity );
+			/**
+			 * ActivityPub inbox action for specific activity types.
+			 *
+			 * @param array              $data     The data array.
+			 * @param int|null           $user_id  The user ID.
+			 * @param Activity|\WP_Error $activity The Activity object.
+			 */
+			\do_action( 'activitypub_inbox_' . $type, $data, $user->get__id(), $activity );
+		}
 
 		$response = \rest_ensure_response( array() );
 		$response->set_status( 202 );
