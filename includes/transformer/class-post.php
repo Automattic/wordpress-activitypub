@@ -728,7 +728,7 @@ class Post extends Base {
 			}
 
 			$mime_type         = $enclosure['mediaType'];
-			$media_type        = \strtok( '/', $mime_type );
+			$media_type        = \strtok( $mime_type, '/' );
 			$enclosure['type'] = \ucfirst( $media_type );
 
 			switch ( $media_type ) {
@@ -975,7 +975,7 @@ class Post extends Base {
 		$id         = $media['id'];
 		$attachment = array();
 		$mime_type  = \get_post_mime_type( $id );
-		$media_type = \strtok( '/', $mime_type );
+		$media_type = \strtok( $mime_type, '/' );
 		// Switching on image/audio/video.
 		switch ( $media_type ) {
 			case 'image':
