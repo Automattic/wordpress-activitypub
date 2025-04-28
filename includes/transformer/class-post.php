@@ -972,10 +972,10 @@ class Post extends Base {
 			return $media;
 		}
 
-		$id              = $media['id'];
-		$attachment  = array();
-		$mime_type   = \get_post_mime_type( $id );
-		$media_type  = \strtok( '/', $mime_type );
+		$id         = $media['id'];
+		$attachment = array();
+		$mime_type  = \get_post_mime_type( $id );
+		$media_type = \strtok( '/', $mime_type );
 		// Switching on image/audio/video.
 		switch ( $media_type ) {
 			case 'image':
