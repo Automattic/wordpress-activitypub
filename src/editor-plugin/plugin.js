@@ -67,7 +67,7 @@ const EditorPlugin = () => {
 
 			<RangeControl
 				label={ __( 'Maximum Image Attachments', 'activitypub' ) }
-				value={ meta?.activitypub_max_image_attachments || window._activityPubOptions?.maxImageAttachments || 4 }
+				value={ meta?.activitypub_max_image_attachments ?? window._activityPubOptions?.maxImageAttachments ?? 4 }
 				onChange={ ( value ) => {
 					setMeta( { ...meta, activitypub_max_image_attachments: value } );
 				} }
