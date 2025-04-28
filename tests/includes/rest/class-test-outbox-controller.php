@@ -7,7 +7,6 @@
 
 namespace Activitypub\Tests\Rest;
 
-use Activitypub\Scheduler\Actor;
 use Activitypub\Collection\Outbox;
 use Activitypub\Rest\Outbox_Controller;
 
@@ -39,6 +38,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	public static function set_up_before_class() {
 		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 		\get_user_by( 'ID', self::$user_id )->add_cap( 'activitypub' );
+		\wp_set_current_user( self::$user_id );
 
 		self::$post_ids = self::factory()->post->create_many( 10, array( 'post_author' => self::$user_id ) );
 	}
@@ -46,14 +46,10 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	/**
 	 * Clean up test fixtures.
 	 */
-	public static function wpTearDownAfterClass() {
-		\wp_delete_user( self::$user_id );
-
-		foreach ( self::$post_ids as $post_id ) {
-			\wp_delete_post( $post_id, true );
-		}
-
+	public static function tear_down_after_class() {
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		parent::tear_down_after_class();
 	}
 
 	/**
@@ -195,44 +191,13 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::get_items
 	 */
 	public function test_get_items_specific_user() {
-		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
-		$post_id = self::factory()->post->create(
-			array(
-				'post_author'  => $user_id,
-				'post_type'    => Outbox::POST_TYPE,
-				'post_title'   => 'https://example.org/activity/1',
-				'post_status'  => 'pending',
-				'post_content' => wp_json_encode(
-					array(
-						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
-						'id'       => 'https://example.org/activity/1',
-						'type'     => 'Create',
-						'actor'    => 'https://example.org/user/' . $user_id,
-						'object'   => array(
-							'id'      => 'https://example.org/note/1',
-							'type'    => 'Note',
-							'content' => 'Test content',
-						),
-					)
-				),
-				'meta_input'   => array(
-					'_activitypub_activity_type'     => 'Create',
-					'_activitypub_activity_actor'    => 'user',
-					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
-				),
-			)
-		);
-
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame( 1, (int) $data['totalItems'] );
-		$this->assertStringContainsString( (string) $user_id, $data['actor'] );
-
-		\wp_delete_post( $post_id, true );
-		\wp_delete_user( $user_id );
+		$this->assertSame( 10, (int) $data['totalItems'] );
+		$this->assertStringContainsString( (string) self::$user_id, $data['actor'] );
 	}
 
 	/**
@@ -551,41 +516,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::get_items
 	 */
 	public function test_get_items_actor_type_filtering() {
-		\remove_action( 'add_option_activitypub_actor_mode', array( Actor::class, 'blog_user_update' ) );
-		\remove_action( 'update_option_activitypub_actor_mode', array( Actor::class, 'blog_user_update' ) );
-
-		$actor_mode = \get_option( 'activitypub_actor_mode' );
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
-
-		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
-
-		// Create a post with user actor type.
-		$user_post_id = self::factory()->post->create(
-			array(
-				'post_author'  => $user_id,
-				'post_type'    => Outbox::POST_TYPE,
-				'post_status'  => 'pending',
-				'post_title'   => 'https://example.org/activity/1',
-				'post_content' => wp_json_encode(
-					array(
-						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
-						'id'       => 'https://example.org/activity/1',
-						'type'     => 'Create',
-						'actor'    => 'https://example.org/user/' . $user_id,
-						'object'   => array(
-							'id'      => 'https://example.org/note/1',
-							'type'    => 'Note',
-							'content' => 'Test content',
-						),
-					)
-				),
-				'meta_input'   => array(
-					'_activitypub_activity_type'     => 'Create',
-					'_activitypub_activity_actor'    => 'user',
-					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
-				),
-			)
-		);
 
 		// Create a post with blog actor type.
 		$blog_post_id = self::factory()->post->create(
@@ -616,14 +547,13 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		);
 
 		// Test user outbox only returns user actor type.
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame( 1, (int) $data['totalItems'] );
-		$this->assertCount( 1, $data['orderedItems'] );
-		$this->assertSame( 'https://example.org/note/1', $data['orderedItems'][0]['object']['id'] );
+		$this->assertSame( 10, (int) $data['totalItems'] );
+		$this->assertCount( 10, $data['orderedItems'] );
 
 		// Test blog outbox only returns blog actor type.
 		$request  = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/0/outbox', ACTIVITYPUB_REST_NAMESPACE ) );
@@ -633,13 +563,8 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertSame( 1, (int) $data['totalItems'] );
 
-		\wp_delete_post( $user_post_id, true );
 		\wp_delete_post( $blog_post_id, true );
-		\wp_delete_user( $user_id );
-
-		\update_option( 'activitypub_actor_mode', $actor_mode );
-		\add_action( 'add_option_activitypub_actor_mode', array( Actor::class, 'blog_user_update' ) );
-		\add_action( 'update_option_activitypub_actor_mode', array( Actor::class, 'blog_user_update' ) );
+		\delete_option( 'activitypub_actor_mode' );
 	}
 
 	/**
@@ -648,41 +573,12 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 * @covers ::get_items
 	 */
 	public function test_get_items_meta_query_for_non_privileged_users() {
-		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
 		$viewer_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
-
-		// Create a public post.
-		$public_post_id = self::factory()->post->create(
-			array(
-				'post_author'  => $author_id,
-				'post_type'    => Outbox::POST_TYPE,
-				'post_status'  => 'draft',
-				'post_title'   => 'https://example.org/activity/1',
-				'post_content' => wp_json_encode(
-					array(
-						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
-						'id'       => 'https://example.org/activity/1',
-						'type'     => 'Create',
-						'actor'    => 'https://example.org/user/' . $author_id,
-						'object'   => array(
-							'id'      => 'https://example.org/note/1',
-							'type'    => 'Note',
-							'content' => 'Public content',
-						),
-					)
-				),
-				'meta_input'   => array(
-					'_activitypub_activity_type'     => 'Create',
-					'_activitypub_activity_actor'    => 'user',
-					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
-				),
-			)
-		);
 
 		// Create a private post.
 		$private_post_id = self::factory()->post->create(
 			array(
-				'post_author'  => $author_id,
+				'post_author'  => self::$user_id,
 				'post_type'    => Outbox::POST_TYPE,
 				'post_status'  => 'draft',
 				'post_title'   => 'https://example.org/activity/2',
@@ -691,7 +587,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
 						'id'       => 'https://example.org/activity/2',
 						'type'     => 'Follow',
-						'actor'    => 'https://example.org/user/' . $author_id,
+						'actor'    => 'https://example.org/user/' . self::$user_id,
 						'object'   => 'https://example.org/user/123',
 					)
 				),
@@ -705,29 +601,26 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 		// Test as non-privileged user.
 		wp_set_current_user( $viewer_id );
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $author_id . '/outbox' );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame( 1, (int) $data['totalItems'] );
-		$this->assertCount( 1, $data['orderedItems'] );
-		$this->assertSame( 'https://example.org/note/1', $data['orderedItems'][0]['object']['id'] );
+		$this->assertSame( 10, (int) $data['totalItems'] );
+		$this->assertCount( 10, $data['orderedItems'] );
 
 		// Test as privileged user.
 		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $admin_id );
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $author_id . '/outbox' );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
 		$this->assertEquals( 200, $response->get_status() );
-		$this->assertSame( 2, (int) $data['totalItems'] );
-		$this->assertCount( 2, $data['orderedItems'] );
+		$this->assertSame( 11, (int) $data['totalItems'] );
+		$this->assertCount( 11, $data['orderedItems'] );
 
-		\wp_delete_post( $public_post_id, true );
 		\wp_delete_post( $private_post_id, true );
-		\wp_delete_user( $author_id );
 		\wp_delete_user( $viewer_id );
 		\wp_delete_user( $admin_id );
 	}
