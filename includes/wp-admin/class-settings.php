@@ -398,7 +398,7 @@ class Settings {
 					'<h2>' . \esc_html__( 'What is the Fediverse?', 'activitypub' ) . '</h2>' . "\n" .
 					'<p>' . \esc_html__( 'The Fediverse is a collection of social networks that talk to each other, similar to how email works between different providers. It allows people on different platforms to follow and interact with each other, regardless of which service they use.', 'activitypub' ) . '</p>' . "\n" .
 					'<p>' . \esc_html__( 'Unlike traditional social media where everyone must use the same service (like Twitter or Facebook), the Fediverse lets you choose where your content lives while still reaching people across many different platforms.', 'activitypub' ) . '</p>' . "\n" .
-					'<p style="position: relative; padding-top: 56.25%;"><iframe title="' . \esc_attr__( 'What is the Fediverse?', 'activitypub' ) . '" width="100%" height="100%" src="https://framatube.org/videos/embed/9dRFC6Ya11NCVeYKn8ZhiD?subtitle=' . \esc_attr( \substr( \get_locale(), 0, 2 ) ) . '" frameborder="0" allowfullscreen="" sandbox="allow-same-origin allow-scripts allow-popups allow-forms" style="position: absolute; inset: 0px;"></iframe></p>' . "\n" .
+					'<p style="position: relative; padding-top: 56.25%;"><iframe title="' . \esc_attr__( 'What is the Fediverse?', 'activitypub' ) . '" width="100%" height="100%" src="https://framatube.org/videos/embed/9dRFC6Ya11NCVeYKn8ZhiD?subtitle=' . \esc_attr( \substr( \get_locale(), 0, 2 ) ) . '" frameborder="0" allowfullscreen="" sandbox="allow-same-origin allow-scripts allow-popups allow-forms" style="position: absolute; inset: 0;"></iframe></p>' . "\n" .
 
 					'<h2>' . \esc_html__( 'How WordPress fits into the Fediverse', 'activitypub' ) . '</h2>' . "\n" .
 					'<p>' . \esc_html__( 'This plugin turns your WordPress blog into part of the Fediverse. When activated, your blog becomes a Fediverse "instance" that can interact with other platforms like Mastodon.', 'activitypub' ) . '</p>' . "\n" .
@@ -627,26 +627,8 @@ class Settings {
 					'<dd>' . \esc_html__( 'The description of the site.', 'activitypub' ) . '</dd>' . "\n" .
 					'</dl>' . "\n" .
 
-					'<h2>' . \esc_html__( 'Template Examples', 'activitypub' ) . '</h2>' . "\n" .
-					'<p>' . \esc_html__( 'Basic post template:', 'activitypub' ) . '</p>' . "\n" .
-					'<pre>[ap_title]
-
-[ap_excerpt]
-
-[ap_permalink type="url"] [ap_hashtags]</pre>' . "\n" .
-
-					'<p>' . \esc_html__( 'Image-focused template:', 'activitypub' ) . '</p>' . "\n" .
-					'<pre>[ap_title]
-
-[ap_image]
-
-[ap_excerpt length="200"]
-
-[ap_permalink] [ap_hashtags]</pre>' . "\n" .
-
-					'<p>' . \esc_html__( 'Note: the old Template Tags are now deprecated and automatically converted to the new ones.', 'activitypub' ) . '</p>' . "\n" .
-					'<p>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues/new" target="_blank">Let us know</a> if you miss a Template Tag.', 'activitypub' ), $anchor_html ) . '</p>' . "\n" .
-					'<p>' . \esc_html__( 'You may also use any Shortcode normally available to you on your site, however be aware that Shortcodes may significantly increase the size of your content depending on what they do.', 'activitypub' ) . '</p>',
+					'<p>' . \esc_html__( 'You may also use any Shortcode normally available to you on your site, however be aware that Shortcodes may significantly increase the size of your content depending on what they do.', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \wp_kses( \__( '<a href="https://github.com/automattic/wordpress-activitypub/issues/new" target="_blank">Let us know</a> if you miss a Template Tag.', 'activitypub' ), $anchor_html ) . '</p>' . "\n",
 			)
 		);
 
