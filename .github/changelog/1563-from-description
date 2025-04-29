@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Use FEP-c180 schema for error responses.

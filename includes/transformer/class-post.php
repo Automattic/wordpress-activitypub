@@ -728,10 +728,10 @@ class Post extends Base {
 			}
 
 			$mime_type         = $enclosure['mediaType'];
-			$mime_type_parts   = \explode( '/', $mime_type );
-			$enclosure['type'] = \ucfirst( $mime_type_parts[0] );
+			$media_type        = \strtok( $mime_type, '/' );
+			$enclosure['type'] = \ucfirst( $media_type );
 
-			switch ( $mime_type_parts[0] ) {
+			switch ( $media_type ) {
 				case 'image':
 					$media['image'][] = $enclosure;
 					break;
@@ -972,12 +972,12 @@ class Post extends Base {
 			return $media;
 		}
 
-		$id              = $media['id'];
-		$attachment      = array();
-		$mime_type       = \get_post_mime_type( $id );
-		$mime_type_parts = \explode( '/', $mime_type );
+		$id         = $media['id'];
+		$attachment = array();
+		$mime_type  = \get_post_mime_type( $id );
+		$media_type = \strtok( $mime_type, '/' );
 		// Switching on image/audio/video.
-		switch ( $mime_type_parts[0] ) {
+		switch ( $media_type ) {
 			case 'image':
 				$image_size = 'large';
 
@@ -1018,7 +1018,7 @@ class Post extends Base {
 			case 'audio':
 			case 'video':
 				$attachment = array(
-					'type'      => 'Document',
+					'type'      => \ucfirst( $media_type ),
 					'mediaType' => \esc_attr( $mime_type ),
 					'url'       => \esc_url( \wp_get_attachment_url( $id ) ),
 					'name'      => \esc_attr( \get_the_title( $id ) ),

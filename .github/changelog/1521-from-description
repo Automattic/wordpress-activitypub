@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Batch processing jobs can now be scheduled with individual hooks.

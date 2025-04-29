@@ -8,7 +8,11 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Actors;
 use Activitypub\Debug;
+
+use function Activitypub\is_same_domain;
+use function Activitypub\extract_recipients_from_activity;
 
 /**
  * Inbox_Controller class.
@@ -134,27 +138,48 @@ class Inbox_Controller extends \WP_REST_Controller {
 		if ( \wp_check_comment_disallowed_list( $activity->to_json( false ), '', '', '', $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '' ) ) {
 			Debug::write_log( 'Blocked activity from: ' . $activity->get_actor() );
 		} else {
-			/**
-			 * ActivityPub inbox action.
-			 *
-			 * @param array              $data     The data array.
-			 * @param int|null           $user_id  The user ID.
-			 * @param string             $type     The type of the activity.
-			 * @param Activity|\WP_Error $activity The Activity object.
-			 */
-			\do_action( 'activitypub_inbox', $data, null, $type, $activity );
+			$recipients = extract_recipients_from_activity( $data );
 
-			/**
-			 * ActivityPub inbox action for specific activity types.
-			 *
-			 * @param array              $data     The data array.
-			 * @param int|null           $user_id  The user ID.
-			 * @param Activity|\WP_Error $activity The Activity object.
-			 */
-			\do_action( 'activitypub_inbox_' . $type, $data, null, $activity );
+			foreach ( $recipients as $recipient ) {
+				if ( ! is_same_domain( $recipient ) ) {
+					continue;
+				}
+
+				$actor = Actors::get_by_various( $recipient );
+
+				if ( ! $actor || \is_wp_error( $actor ) ) {
+					continue;
+				}
+
+				/**
+				 * ActivityPub inbox action.
+				 *
+				 * @param array              $data     The data array.
+				 * @param int                $user_id  The user ID.
+				 * @param string             $type     The type of the activity.
+				 * @param Activity|\WP_Error $activity The Activity object.
+				 */
+				\do_action( 'activitypub_inbox', $data, $actor->get__id(), $type, $activity );
+
+				/**
+				 * ActivityPub inbox action for specific activity types.
+				 *
+				 * @param array              $data     The data array.
+				 * @param int                $user_id  The user ID.
+				 * @param Activity|\WP_Error $activity The Activity object.
+				 */
+				\do_action( 'activitypub_inbox_' . $type, $data, $actor->get__id(), $activity );
+			}
 		}
 
-		$response = \rest_ensure_response( array() );
+		$response = \rest_ensure_response(
+			array(
+				'type'   => 'https://w3id.org/fep/c180#approval-required',
+				'title'  => 'Approval Required',
+				'status' => '202',
+				'detail' => 'This activity requires approval before it can be processed.',
+			)
+		);
 		$response->set_status( 202 );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 

@@ -150,6 +150,48 @@ const updateReadmeWithChangelog = (version) => {
 	console.log(`Updated readme.txt with changelog entries for version ${version} and other entries from major version ${majorVersion}`);
 };
 
+const updateReadmeWithUpgradeNotice = (version) => {
+	return new Promise((resolve) => {
+		rl.question('\nWould you like to add an upgrade notice for this version? (y/n): ', (answer) => {
+			if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
+				rl.question('Enter the upgrade notice (leave empty to skip): ', (notice) => {
+					if (notice.trim()) {
+						// Read the readme.txt file
+						let readmeContent = fs.readFileSync('readme.txt', 'utf8');
+
+						// Check if Upgrade Notice section already exists
+						const upgradeNoticeSectionRegex = /== Upgrade Notice ==([\s\S]*?)(?=== |$)/;
+						const upgradeNoticeSection = readmeContent.match(upgradeNoticeSectionRegex);
+
+						// Create the new upgrade notice section
+						const newUpgradeNotice = `== Upgrade Notice ==\n\n= ${version} =\n\n${notice.trim()}\n\n`;
+
+						if (upgradeNoticeSection) {
+							// Replace the entire existing Upgrade Notice section
+							readmeContent = readmeContent.replace(
+								upgradeNoticeSectionRegex,
+								newUpgradeNotice
+							);
+						} else {
+							// Create a new Upgrade Notice section at the end of the file
+							readmeContent += `\n\n${newUpgradeNotice}`;
+						}
+
+						fs.writeFileSync('readme.txt', readmeContent);
+						console.log(`Added upgrade notice for version ${version} to readme.txt`);
+					} else {
+						console.log('No upgrade notice added.');
+					}
+					resolve();
+				});
+			} else {
+				console.log('Skipping upgrade notice.');
+				resolve();
+			}
+		});
+	});
+};
+
 async function createRelease() {
 	// Start by generating the changelog.
 	// The changelog will automatically pick a version
@@ -198,6 +240,9 @@ async function createRelease() {
 
 	// Update the changelog section in readme.txt
 	updateReadmeWithChangelog(version);
+
+	// Prompt for and update the upgrade notice section in readme.txt
+	await updateReadmeWithUpgradeNotice(version);
 
 	updateVersionInFile('includes/class-migration.php', version, [
 		{

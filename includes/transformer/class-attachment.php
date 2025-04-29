@@ -30,8 +30,10 @@ class Attachment extends Post {
 
 		switch ( $mime_type_parts[0] ) {
 			case 'audio':
+				$type = 'Audio';
+				break;
 			case 'video':
-				$type = 'Document';
+				$type = 'Video';
 				break;
 			case 'image':
 				$type = 'Image';

@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Added WordPress disallowed list filtering to block unwanted ActivityPub interactions.
