@@ -633,16 +633,18 @@ class Settings {
 		);
 
 		// Recommended Plugins.
-		\get_current_screen()->add_help_tab(
-			array(
-				'id'      => 'recommended-plugins',
-				'title'   => __( 'Recommended Plugins', 'activitypub' ),
-				'content' =>
-					'<h2>' . esc_html__( 'Supercharge Your Fediverse Experience', 'activitypub' ) . '</h2>' .
-					'<p>' . esc_html__( 'Enhance your WordPress ActivityPub setup with these hand-picked plugins, each adding unique capabilities for a richer Fediverse experience.', 'activitypub' ) . '</p>' .
-					self::render_recommended_plugins_list(),
-			)
-		);
+		if ( ! empty( self::get_recommended_plugins() ) ) {
+			\get_current_screen()->add_help_tab(
+				array(
+					'id'      => 'recommended-plugins',
+					'title'   => __( 'Recommended Plugins', 'activitypub' ),
+					'content' =>
+						'<h2>' . esc_html__( 'Supercharge Your Fediverse Experience', 'activitypub' ) . '</h2>' .
+						'<p>' . esc_html__( 'Enhance your WordPress ActivityPub setup with these hand-picked plugins, each adding unique capabilities for a richer Fediverse experience.', 'activitypub' ) . '</p>' .
+						self::render_recommended_plugins_list(),
+				)
+			);
+		}
 
 		// Troubleshooting.
 		\get_current_screen()->add_help_tab(
@@ -904,8 +906,10 @@ class Settings {
 	 * Returns an array of recommended plugins for ActivityPub.
 	 */
 	public static function get_recommended_plugins() {
-		return array(
-			'friends'              => array(
+		$plugins = array();
+
+		if ( ! \is_plugin_active( 'friends/friends.php' ) ) {
+			$plugins['friends'] = array(
 				'slug'        => 'friends',
 				'author'      => 'Alex Kirk',
 				'author_url'  => 'https://profiles.wordpress.org/akirk/',
@@ -913,8 +917,11 @@ class Settings {
 				'name'        => \__( 'Friends', 'activitypub' ),
 				'description' => \__( 'Follow people on Mastodon or similar platforms and display their posts on your WordPress, making your site a true Fediverse instance.', 'activitypub' ),
 				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=friends&TB_iframe=true' ),
-			),
-			'event_bridge'         => array(
+			);
+		}
+
+		if ( ! \is_plugin_active( 'event-bridge-for-activitypub/event-bridge-for-activitypub.php' ) ) {
+			$plugins['event_bridge'] = array(
 				'slug'        => 'event-bridge-for-activitypub',
 				'author'      => 'André Menrath',
 				'author_url'  => 'https://profiles.wordpress.org/andremenrath/',
@@ -922,8 +929,11 @@ class Settings {
 				'name'        => \__( 'Event Bridge for ActivityPub', 'activitypub' ),
 				'description' => \__( 'Make your events discoverable and federate them across decentralized platforms like Mastodon or Gancio.', 'activitypub' ),
 				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=event-bridge-for-activitypub&TB_iframe=true' ),
-			),
-			'enable_mastodon_apps' => array(
+			);
+		}
+
+		if ( ! \is_plugin_active( 'enable-mastodon-apps/enable-mastodon-apps.php' ) ) {
+			$plugins['enable_mastodon_apps'] = array(
 				'slug'        => 'enable-mastodon-apps',
 				'author'      => 'Alex Kirk',
 				'author_url'  => 'https://profiles.wordpress.org/akirk/',
@@ -931,8 +941,11 @@ class Settings {
 				'name'        => \__( 'Enable Mastodon Apps', 'activitypub' ),
 				'description' => \__( 'Allow Mastodon apps to interact with your WordPress site, letting you write posts from your favorite app.', 'activitypub' ),
 				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=enable-mastodon-apps&TB_iframe=true' ),
-			),
-			'hum'                  => array(
+			);
+		}
+
+		if ( ! \is_plugin_active( 'hum/hum.php' ) ) {
+			$plugins['hum'] = array(
 				'slug'        => 'hum',
 				'author'      => 'Will Norris',
 				'author_url'  => 'https://profiles.wordpress.org/willnorris/',
@@ -940,26 +953,34 @@ class Settings {
 				'name'        => \__( 'Hum', 'activitypub' ),
 				'description' => \__( 'A personal URL shortener for WordPress, perfect for sharing short links on the Fediverse.', 'activitypub' ),
 				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=hum&TB_iframe=true' ),
-			),
-			'webfinger'            => array(
+			);
+		}
+
+		if ( ! \is_plugin_active( 'webfinger/webfinger.php' ) ) {
+			$plugins['webfinger'] = array(
 				'slug'        => 'webfinger',
 				'author'      => 'Matthias Pfefferle',
 				'author_url'  => 'https://profiles.wordpress.org/pfefferle/',
 				'icon'        => 'https://ps.w.org/webfinger/assets/icon-256x256.png',
 				'name'        => \__( 'WebFinger', 'activitypub' ),
-				'description' => \__( 'Advanced WebFinger protocol support for better discovery and compatibility.', 'activitypub' ),
+				'description' => \__( 'WebFinger protocol support for better discovery and compatibility.', 'activitypub' ),
 				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=webfinger&TB_iframe=true' ),
-			),
-			'nodeinfo'             => array(
+			);
+		}
+
+		if ( ! \is_plugin_active( 'nodeinfo/nodeinfo.php' ) ) {
+			$plugins['nodeinfo'] = array(
 				'slug'        => 'nodeinfo',
 				'author'      => 'Matthias Pfefferle',
 				'author_url'  => 'https://profiles.wordpress.org/pfefferle/',
 				'icon'        => 'https://ps.w.org/nodeinfo/assets/icon-256x256.png',
 				'name'        => \__( 'NodeInfo', 'activitypub' ),
-				'description' => \__( 'Expose enhanced metadata about your server for better insights and compatibility.', 'activitypub' ),
+				'description' => \__( 'Advanced NodeInfo protocol support for better discovery and compatibility.', 'activitypub' ),
 				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=nodeinfo&TB_iframe=true' ),
-			),
-		);
+			);
+		}
+
+		return $plugins;
 	}
 
 	/**
