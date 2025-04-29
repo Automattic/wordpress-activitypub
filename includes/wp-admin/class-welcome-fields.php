@@ -22,7 +22,6 @@ class Welcome_Fields {
 	 */
 	public static function init() {
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_welcome_fields' ) );
-		\add_action( 'load-settings_page_activitypub', array( self::class, 'add_admin_notices' ) );
 	}
 
 	/**
@@ -45,6 +44,16 @@ class Welcome_Fields {
 			'activitypub_welcome'
 		);
 
+		if ( Health_Check::count_results( 'critical' ) ) {
+			// Add settings sections.
+			\add_settings_section(
+				'activitypub_health_check',
+				\__( 'Site Health', 'activitypub' ),
+				array( self::class, 'render_site_health_section' ),
+				'activitypub_welcome'
+			);
+		}
+
 		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			\add_settings_section(
 				'activitypub_blog_profile',
@@ -61,24 +70,6 @@ class Welcome_Fields {
 				array( self::class, 'render_author_profile_section' ),
 				'activitypub_welcome'
 			);
-		}
-	}
-
-	/**
-	 * Add Health Check errors as admin notices.
-	 */
-	public static function add_admin_notices() {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( isset( $_GET['tab'] ) && 'welcome' !== $_GET['tab'] ) {
-			return;
-		}
-
-		if ( ! \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ) ) {
-			return;
-		}
-
-		if ( Health_Check::count_results( 'critical' ) ) {
-			\add_action( 'admin_notices', array( self::class, 'admin_notices' ) );
 		}
 	}
 
@@ -172,37 +163,47 @@ class Welcome_Fields {
 	/**
 	 * Render troubleshooting section.
 	 */
-	public static function admin_notices() {
+	public static function render_site_health_section() {
 		$results = Health_Check::count_results();
 		?>
-		<div class="activitypub-notice notice notice-warning">
-			<p>
-				<span class="dashicons dashicons-warning"></span>
-				<?php
-				echo wp_kses(
-					\sprintf(
-						/* translators: the placeholders are the number of critical and recommended issues on the site. */
-						\__(
-							'<strong>Important:</strong> There are <span class="count">%1$d</span> critical and <span class="count">%2$d</span> recommended issues affecting your site&#8217;s compatibility with the fediverse. Please check the <a href="%3$s">Site Health</a> page to resolve these issues.',
-							'activitypub'
-						),
-						$results['critical'],
-						$results['recommended'],
-						\esc_url( \admin_url( 'site-health.php' ) )
+		<p>
+			<span class="dashicons dashicons-warning"></span>
+			<?php
+			echo wp_kses(
+				\sprintf(
+					/* translators: the placeholders are the number of critical and recommended issues on the site. */
+					\__(
+						'<strong>Important:</strong> There are <span class="count">%1$d</span> critical and <span class="count">%2$d</span> recommended issues affecting your site&#8217;s compatibility with the fediverse.',
+						'activitypub'
 					),
-					array(
-						'strong' => array(),
-						'span'   => array(
-							'class' => array(),
-						),
-						'a'      => array(
-							'href' => array(),
-						),
-					)
-				);
-				?>
-			</p>
-		</div>
+					$results['critical'],
+					$results['recommended']
+				),
+				array(
+					'strong' => array(),
+					'span'   => array(
+						'class' => array(),
+					),
+				)
+			);
+			?>
+		</p>
+		<p>
+			<?php
+			echo wp_kses(
+				\sprintf(
+					/* translators: %s: URL to Site Health page. */
+					\__( 'Please check the <a href="%s">Site Health</a> page to resolve these issues.', 'activitypub' ),
+					\esc_url( \admin_url( 'site-health.php' ) )
+				),
+				array(
+					'a' => array(
+						'href' => array(),
+					),
+				)
+			);
+			?>
+		</p>
 		<?php
 	}
 }
