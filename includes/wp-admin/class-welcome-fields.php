@@ -45,13 +45,6 @@ class Welcome_Fields {
 			'activitypub_welcome'
 		);
 
-		\add_settings_section(
-			'activitypub_bookmarklet',
-			\__( 'Bookmarklet', 'activitypub' ),
-			array( self::class, 'render_bookmarklet_section' ),
-			'activitypub_welcome'
-		);
-
 		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			\add_settings_section(
 				'activitypub_blog_profile',
@@ -104,39 +97,6 @@ class Welcome_Fields {
 	public static function render_welcome_intro_section() {
 		?>
 		<p><?php echo wp_kses( \__( 'Enter the fediverse with <strong>ActivityPub</strong>, broadcasting your blog to a wider audience. Attract followers, deliver updates, and receive comments from a diverse user base on <strong>Mastodon</strong>, <strong>Friendica</strong>, <strong>Pleroma</strong>, <strong>Pixelfed</strong>, and all <strong>ActivityPub</strong>-compliant platforms.', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
-		<?php
-	}
-
-	/**
-	 * Render bookmarklet section.
-	 */
-	public static function render_bookmarklet_section() {
-		?>
-		<p>
-			<?php
-			$bookmarklet_js = get_reply_intent_js();
-
-			/* translators: %s is the domain of this site */
-			$reply_from_template = __( 'Reply from %s', 'activitypub' );
-
-			printf(
-				'<a href="%s" class="button">%s</a>',
-				esc_attr( $bookmarklet_js ), // Need to escape quotes for the bookmarklet.
-				sprintf( esc_html( $reply_from_template ), esc_html( \wp_parse_url( \home_url(), PHP_URL_HOST ) ) )
-			);
-			?>
-		</p>
-		<p>
-			<?php
-			/* translators: %s is where the button HTML will be rendered. */
-			\esc_html_e(
-				'Save this bookmarklet to reply to posts on other sites from your own blog! When visiting a post on another site, click the bookmarklet to start a reply.',
-				'activitypub'
-			);
-
-			printf( ' <a href="%s">%s</a>', esc_url( \admin_url( 'tools.php#activitypub' ) ), esc_html__( 'For additional information, please visit the Tools page.', 'activitypub' ) );
-			?>
-		</p>
 		<?php
 	}
 
