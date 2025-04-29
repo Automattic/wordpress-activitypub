@@ -680,7 +680,7 @@ class Admin {
 		\wp_widget_rss_output(
 			array(
 				'url'          => 'https://activitypub.blog/feed/',
-				'items'        => 10,
+				'items'        => 3,
 				'show_summary' => 1,
 				'show_author'  => 0,
 				'show_date'    => 1,
