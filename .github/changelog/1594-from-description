@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Better check for an empty `headers` array key in the Signature class.

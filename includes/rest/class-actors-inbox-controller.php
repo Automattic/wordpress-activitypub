@@ -200,7 +200,14 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			\do_action( 'activitypub_inbox_' . $type, $data, $user->get__id(), $activity );
 		}
 
-		$response = \rest_ensure_response( array() );
+		$response = \rest_ensure_response(
+			array(
+				'type'   => 'https://w3id.org/fep/c180#approval-required',
+				'title'  => 'Approval Required',
+				'status' => '202',
+				'detail' => 'This activity requires approval before it can be processed.',
+			)
+		);
 		$response->set_status( 202 );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
