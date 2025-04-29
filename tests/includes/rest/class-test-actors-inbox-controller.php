@@ -403,7 +403,6 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		// Dispatch the request.
 		$response = \rest_do_request( $request );
 
-		// Verify the response is still successful (202).
 		$this->assertEquals( 202, $response->get_status() );
 
 		// Verify that the hooks were not called.

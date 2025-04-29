@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Use `Audio` and `Video` type for Attachments, instead of the very generic `Document` type.

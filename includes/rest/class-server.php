@@ -35,6 +35,8 @@ class Server {
 	public static function add_hooks() {
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_requests' ), 9, 3 );
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
+
+		\add_filter( 'rest_post_dispatch', array( self::class, 'filter_output' ), 10, 3 );
 	}
 
 	/**
@@ -169,5 +171,49 @@ class Server {
 			'URL',
 			'defaults',
 		);
+	}
+
+	/**
+	 * Filters the REST API response to properly handle the ActivityPub error formatting.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md
+	 *
+	 * @param WP_HTTP_Response $response Result to send to the client. Usually a `WP_REST_Response`.
+	 * @param WP_REST_Server   $server   Server instance.
+	 * @param WP_REST_Request  $request  Request used to generate the response.
+	 *
+	 * @return WP_HTTP_Response The filtered response.
+	 */
+	public static function filter_output( $response, $server, $request ) {
+		$route = $request->get_route();
+
+		// Check if it is an activitypub request and exclude webfinger and nodeinfo endpoints.
+		if ( ! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ) {
+			return $response;
+		}
+
+		// Only alter responses that return an error status code.
+		if ( $response->get_status() < 400 ) {
+			return $response;
+		}
+
+		$data  = $response->get_data();
+		$error = array(
+			'type'     => 'about:blank',
+			'title'    => isset( $data['code'] ) ? $data['code'] : '',
+			'detail'   => isset( $data['message'] ) ? $data['message'] : '',
+			'status'   => $response->get_status(),
+
+			/*
+			 * Provides the unstructured error data.
+			 *
+			 * @see https://nodeinfo.diaspora.software/schema.html#metadata.
+			 */
+			'metadata' => $data,
+		);
+
+		$response->set_data( $error );
+
+		return $response;
 	}
 }
