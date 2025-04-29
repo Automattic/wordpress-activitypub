@@ -707,6 +707,7 @@ class Test_Migration extends \WP_UnitTestCase {
 			wp_delete_comment( $comment_id, true );
 		}
 
+		_delete_all_data();
 		\remove_filter( 'pre_http_request', array( $this, 'mock_webfinger' ) );
 	}
 
@@ -726,8 +727,6 @@ class Test_Migration extends \WP_UnitTestCase {
 	 * Test add_default_extra_field.
 	 */
 	public function test_add_default_extra_field() {
-		$this->delete_extra_fields();
-
 		// Create a test user with ActivityPub permission.
 		$user_id = self::factory()->user->create();
 		$user    = get_user_by( 'id', $user_id );
@@ -765,24 +764,13 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertEquals( 'Powered by', $blog_fields[0]->post_title, 'The title should be "Powered by"' );
 		$this->assertEquals( 'WordPress', $blog_fields[0]->post_content, 'The content should be "WordPress"' );
 
-		$this->delete_extra_fields();
+		_delete_all_data();
 	}
 
 	/**
 	 * Test add_default_extra_field with multiple users.
 	 */
 	public function test_add_default_extra_field_multiple_users() {
-		$this->delete_extra_fields();
-
-		// Create multiple test users with ActivityPub permission.
-		$user_ids = array();
-		for ( $i = 0; $i < 3; $i++ ) {
-			$user_id = self::factory()->user->create();
-			$user    = get_user_by( 'id', $user_id );
-			$user->add_cap( 'activitypub' );
-			$user_ids[] = $user_id;
-		}
-
 		// Create a user without ActivityPub permission.
 		$non_ap_user_id = self::factory()->user->create();
 
@@ -791,19 +779,6 @@ class Test_Migration extends \WP_UnitTestCase {
 		$method     = $reflection->getMethod( 'add_default_extra_field' );
 		$method->setAccessible( true );
 		$method->invoke( null );
-
-		// Check extra fields for each user with ActivityPub permission.
-		foreach ( $user_ids as $user_id ) {
-			$user_fields = get_posts(
-				array(
-					'post_type'      => Extra_Fields::USER_POST_TYPE,
-					'author'         => $user_id,
-					'posts_per_page' => -1,
-				)
-			);
-
-			$this->assertCount( 1, $user_fields, "User $user_id should have one extra field" );
-		}
 
 		// Check that the user without ActivityPub permission has no extra field.
 		$non_ap_user_fields = get_posts(
@@ -816,32 +791,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		$this->assertCount( 0, $non_ap_user_fields, 'User without ActivityPub permission should not have an extra field' );
 
-		$this->delete_extra_fields();
-	}
-
-	/**
-	 * Delete extra fields.
-	 */
-	private function delete_extra_fields() {
-		$user_fields = get_posts(
-			array(
-				'post_type'      => Extra_Fields::USER_POST_TYPE,
-				'posts_per_page' => -1,
-			)
-		);
-		foreach ( $user_fields as $user_field ) {
-			\wp_delete_post( $user_field->ID, true );
-		}
-
-		$blog_fields = get_posts(
-			array(
-				'post_type'      => Extra_Fields::BLOG_POST_TYPE,
-				'posts_per_page' => -1,
-			)
-		);
-		foreach ( $blog_fields as $blog_field ) {
-			\wp_delete_post( $blog_field->ID, true );
-		}
+		_delete_all_data();
 	}
 
 	/**

@@ -240,37 +240,15 @@ class Test_Move extends \WP_UnitTestCase {
 		$target = 'https://example.com/new-profile';
 		$origin = 'https://example.com/old-profile';
 
-		// Mock the HTTP response for the origin object.
-		$origin_object = array(
-			'type'    => 'Person',
-			'id'      => $origin,
-			'url'     => $origin,
-			'name'    => 'Old Profile',
-			'inbox'   => 'https://example.com/old-profile/inbox',
-			'movedTo' => $target,
-		);
-
-		// Mock the HTTP response for the target object.
-		$target_object = array(
-			'type'          => 'Person',
-			'id'            => $target,
-			'url'           => $target,
-			'name'          => 'New Profile',
-			'inbox'         => 'https://example.com/new-profile/inbox',
-			'also_known_as' => array(
-				$origin,
-			),
-		);
-
 		// Create followers for target and origin.
-		$target_follower = new Follower( $target );
+		$target_follower = new Follower();
 		$target_follower->set_inbox( 'https://example.com/new-profile/inbox' );
 		$target_follower->set_type( 'Person' );
 		$target_follower->set_id( $target );
 		$target_follower->set_url( $target );
 		$target_id = $target_follower->upsert();
 
-		$origin_follower = new Follower( $origin );
+		$origin_follower = new Follower();
 		$origin_follower->set_inbox( 'https://example.com/old-profile/inbox' );
 		$origin_follower->set_type( 'Person' );
 		$origin_follower->set_id( $origin );
@@ -286,16 +264,36 @@ class Test_Move extends \WP_UnitTestCase {
 		\wp_cache_delete( $origin_id, 'posts' );
 		\wp_cache_delete( $target_id, 'posts' );
 
-		$filter = function ( $preempt, $args, $url ) use ( $target, $target_object, $origin, $origin_object ) {
+		$filter = function ( $preempt, $args, $url ) use ( $target, $origin ) {
 			if ( $url === $target ) {
 				return array(
-					'body'     => wp_json_encode( $target_object ),
+					'body'     => wp_json_encode(
+						array(
+							'type'          => 'Person',
+							'id'            => $target,
+							'url'           => $target,
+							'name'          => 'New Profile',
+							'inbox'         => 'https://example.com/new-profile/inbox',
+							'also_known_as' => array(
+								$origin,
+							),
+						)
+					),
 					'response' => array( 'code' => 200 ),
 				);
 			}
 			if ( $url === $origin ) {
 				return array(
-					'body'     => wp_json_encode( $origin_object ),
+					'body'     => wp_json_encode(
+						array(
+							'type'    => 'Person',
+							'id'      => $origin,
+							'url'     => $origin,
+							'name'    => 'Old Profile',
+							'inbox'   => 'https://example.com/old-profile/inbox',
+							'movedTo' => $target,
+						)
+					),
 					'response' => array( 'code' => 200 ),
 				);
 			}
@@ -327,6 +325,6 @@ class Test_Move extends \WP_UnitTestCase {
 		// Check if the origin follower was deleted.
 		$this->assertNull( Followers::get_follower_by_actor( $origin, true ) );
 
-		remove_filter( 'pre_http_request', $filter, 10 );
+		remove_filter( 'pre_http_request', $filter );
 	}
 }
