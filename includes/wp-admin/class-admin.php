@@ -669,7 +669,7 @@ class Admin {
 	 * Add Dashboard widgets.
 	 */
 	public static function add_dashboard_widgets() {
-		\wp_add_dashboard_widget( 'activitypub_blog', __( 'ActivityPub News', 'activitypub' ), array( self::class, 'blog_dashboard_widget' ) );
+		\wp_add_dashboard_widget( 'activitypub_blog', __( 'ActivityPub Plugin News', 'activitypub' ), array( self::class, 'blog_dashboard_widget' ) );
 	}
 
 	/**
