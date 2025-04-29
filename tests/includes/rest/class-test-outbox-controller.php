@@ -226,6 +226,14 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 		);
 
 		\add_action(
+			'activitypub_rest_outbox_post',
+			function () use ( &$post_called ) {
+				$post_called = true;
+			}
+		);
+
+		$this->setExpectedDeprecated( 'activitypub_outbox_post' );
+		\add_action(
 			'activitypub_outbox_post',
 			function () use ( &$post_called ) {
 				$post_called = true;
@@ -241,6 +249,7 @@ class Test_Outbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 		\remove_all_filters( 'activitypub_rest_outbox_array' );
 		\remove_all_actions( 'activitypub_rest_outbox_pre' );
+		\remove_all_actions( 'activitypub_rest_outbox_post' );
 		\remove_all_actions( 'activitypub_outbox_post' );
 	}
 
