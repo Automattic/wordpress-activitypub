@@ -632,6 +632,18 @@ class Settings {
 			)
 		);
 
+		// Recommended Plugins.
+		\get_current_screen()->add_help_tab(
+			array(
+				'id'      => 'recommended-plugins',
+				'title'   => __( 'Recommended Plugins', 'activitypub' ),
+				'content' =>
+					'<h2>' . esc_html__( 'Supercharge Your Fediverse Experience', 'activitypub' ) . '</h2>' .
+					'<p>' . esc_html__( 'Enhance your WordPress ActivityPub setup with these hand-picked plugins, each adding unique capabilities for a richer Fediverse experience.', 'activitypub' ) . '</p>' .
+					self::render_recommended_plugins_list(),
+			)
+		);
+
 		// Troubleshooting.
 		\get_current_screen()->add_help_tab(
 			array(
@@ -886,5 +898,110 @@ class Settings {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Returns an array of recommended plugins for ActivityPub.
+	 */
+	public static function get_recommended_plugins() {
+		return array(
+			'friends'              => array(
+				'slug'        => 'friends',
+				'author'      => 'Alex Kirk',
+				'author_url'  => 'https://profiles.wordpress.org/akirk/',
+				'icon'        => 'https://ps.w.org/friends/assets/icon-256x256.png',
+				'name'        => \__( 'Friends', 'activitypub' ),
+				'description' => \__( 'Follow people on Mastodon or similar platforms and display their posts on your WordPress, making your site a true Fediverse instance.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=friends&TB_iframe=true' ),
+			),
+			'event_bridge'         => array(
+				'slug'        => 'event-bridge-for-activitypub',
+				'author'      => 'André Menrath',
+				'author_url'  => 'https://profiles.wordpress.org/andremenrath/',
+				'icon'        => 'https://ps.w.org/event-bridge-for-activitypub/assets/icon-256x256.gif',
+				'name'        => \__( 'Event Bridge for ActivityPub', 'activitypub' ),
+				'description' => \__( 'Make your events discoverable and federate them across decentralized platforms like Mastodon or Gancio.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=event-bridge-for-activitypub&TB_iframe=true' ),
+			),
+			'enable_mastodon_apps' => array(
+				'slug'        => 'enable-mastodon-apps',
+				'author'      => 'Alex Kirk',
+				'author_url'  => 'https://profiles.wordpress.org/akirk/',
+				'icon'        => 'https://ps.w.org/enable-mastodon-apps/assets/icon-256x256.png',
+				'name'        => \__( 'Enable Mastodon Apps', 'activitypub' ),
+				'description' => \__( 'Allow Mastodon apps to interact with your WordPress site, letting you write posts from your favorite app.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=enable-mastodon-apps&TB_iframe=true' ),
+			),
+			'hum'                  => array(
+				'slug'        => 'hum',
+				'author'      => 'Will Norris',
+				'author_url'  => 'https://profiles.wordpress.org/willnorris/',
+				'icon'        => 'https://s.w.org/plugins/geopattern-icon/hum.svg',
+				'name'        => \__( 'Hum', 'activitypub' ),
+				'description' => \__( 'A personal URL shortener for WordPress, perfect for sharing short links on the Fediverse.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=hum&TB_iframe=true' ),
+			),
+			'webfinger'            => array(
+				'slug'        => 'webfinger',
+				'author'      => 'Matthias Pfefferle',
+				'author_url'  => 'https://profiles.wordpress.org/pfefferle/',
+				'icon'        => 'https://ps.w.org/webfinger/assets/icon-256x256.png',
+				'name'        => \__( 'WebFinger', 'activitypub' ),
+				'description' => \__( 'Advanced WebFinger protocol support for better discovery and compatibility.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=webfinger&TB_iframe=true' ),
+			),
+			'nodeinfo'             => array(
+				'slug'        => 'nodeinfo',
+				'author'      => 'Matthias Pfefferle',
+				'author_url'  => 'https://profiles.wordpress.org/pfefferle/',
+				'icon'        => 'https://ps.w.org/nodeinfo/assets/icon-256x256.png',
+				'name'        => \__( 'NodeInfo', 'activitypub' ),
+				'description' => \__( 'Expose enhanced metadata about your server for better insights and compatibility.', 'activitypub' ),
+				'install_url' => \admin_url( 'plugin-install.php?tab=plugin-information&plugin=nodeinfo&TB_iframe=true' ),
+			),
+		);
+	}
+
+	/**
+	 * Render recommended plugins as a beautiful, rich showcase for the help tab.
+	 */
+	public static function render_recommended_plugins_list() {
+		$plugins = self::get_recommended_plugins();
+
+		\ob_start();
+
+		echo '<div class="plugin-list widefat">';
+
+		foreach ( $plugins as $plugin ) :
+			?>
+			<div class="plugin-card plugin-card-<?php echo \esc_attr( $plugin['slug'] ); ?>">
+				<div class="plugin-card-top">
+					<div class="name column-name">
+						<h3>
+							<a href="<?php echo \esc_url( $plugin['install_url'] ); ?>" class="thickbox open-plugin-details-modal">
+								<?php echo \esc_html( $plugin['name'] ); ?>
+								<img src="<?php echo \esc_url( $plugin['icon'] ); ?>" class="plugin-icon" alt="">
+							</a>
+						</h3>
+					</div>
+					<div class="action-links">
+						<ul class="plugin-action-buttons">
+							<li>
+								<a href="<?php echo \esc_url( $plugin['install_url'] ); ?>" class="button thickbox open-plugin-details-modal"><?php \esc_html_e( 'More Details', 'activitypub' ); ?></a>
+							</li>
+						</ul>
+					</div>
+					<div class="desc column-description">
+						<p><?php echo \esc_html( $plugin['description'] ); ?></p>
+						<p class="authors"> <cite>By <a href="<?php echo \esc_url( $plugin['author_url'] ); ?>"><?php echo \esc_html( $plugin['author'] ); ?></a></cite></p>
+					</div>
+				</div>
+			</div>
+			<?php
+		endforeach;
+
+		echo '</div>';
+
+		return \ob_get_clean();
 	}
 }
