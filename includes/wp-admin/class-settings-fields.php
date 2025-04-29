@@ -7,6 +7,8 @@
 
 namespace Activitypub\WP_Admin;
 
+use function Activitypub\site_supports_blocks;
+
 /**
  * Class Settings_Fields.
  */
@@ -80,7 +82,7 @@ class Settings_Fields {
 			);
 		}
 
-		if ( \is_plugin_active( 'classic-editor/classic-editor.php' ) ) {
+		if ( ! site_supports_blocks() || \is_plugin_active( 'classic-editor/classic-editor.php' ) ) {
 			add_settings_field(
 				'activitypub_max_image_attachments',
 				__( 'Media attachments', 'activitypub' ),
