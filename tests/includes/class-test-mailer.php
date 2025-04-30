@@ -204,6 +204,47 @@ class Test_Mailer extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test new follower notification when the actor has no url and name.
+	 *
+	 * @covers ::new_follower
+	 */
+	public function test_new_follower_no_url_and_name() {
+		$activity = array(
+			'type'   => 'Follow',
+			'actor'  => 'https://example.com/author',
+			'object' => 'https://example.com/follow/1',
+		);
+
+		// Mock remote metadata.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'id'                => 'https://example.com/author',
+					'preferredUsername' => 'follower',
+				);
+			}
+		);
+
+		// Capture email.
+		add_filter(
+			'wp_mail',
+			function ( $args ) {
+				$this->assertStringContainsString( 'follower', $args['subject'] );
+				$this->assertStringContainsString( 'https://example.com/author', $args['message'] );
+				$this->assertEquals( get_user_by( 'id', self::$user_id )->user_email, $args['to'] );
+				return $args;
+			}
+		);
+
+		Mailer::new_follower( $activity, self::$user_id );
+
+		// Clean up.
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'wp_mail' );
+	}
+
+	/**
 	 * Test initialization of filters and actions.
 	 *
 	 * @covers ::init

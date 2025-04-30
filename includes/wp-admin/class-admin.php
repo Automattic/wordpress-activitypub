@@ -62,6 +62,8 @@ class Admin {
 		}
 
 		\add_action( 'admin_print_footer_scripts-settings_page_activitypub', array( self::class, 'open_help_tab' ) );
+
+		\add_action( 'wp_dashboard_setup', array( self::class, 'add_dashboard_widgets' ) );
 	}
 
 	/**
@@ -661,5 +663,29 @@ class Admin {
 		});
 		</script>
 		<?php
+	}
+
+	/**
+	 * Add Dashboard widgets.
+	 */
+	public static function add_dashboard_widgets() {
+		\wp_add_dashboard_widget( 'activitypub_blog', \__( 'ActivityPub Plugin News', 'activitypub' ), array( self::class, 'blog_dashboard_widget' ) );
+	}
+
+	/**
+	 * Add the ActivityPub.blog feed as a Dashboard widget.
+	 */
+	public static function blog_dashboard_widget() {
+		echo '<div class="rss-widget">';
+		\wp_widget_rss_output(
+			array(
+				'url'          => 'https://activitypub.blog/feed/',
+				'items'        => 3,
+				'show_summary' => 1,
+				'show_author'  => 0,
+				'show_date'    => 1,
+			)
+		);
+		echo '</div>';
 	}
 }

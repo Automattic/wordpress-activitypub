@@ -134,11 +134,11 @@ class Test_Attachment extends WP_UnitTestCase {
 			),
 			'audio' => array(
 				'audio/mpeg',
-				'Document',
+				'Audio',
 			),
 			'video' => array(
 				'video/mp4',
-				'Document',
+				'Video',
 			),
 			'pdf'   => array(
 				'application/pdf',

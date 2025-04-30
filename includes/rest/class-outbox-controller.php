@@ -153,6 +153,8 @@ class Outbox_Controller extends \WP_REST_Controller {
 			);
 		}
 
+		$args = \apply_filters_deprecated( 'rest_activitypub_outbox_query', array( $args, $request ), 'unreleased', 'activitypub_rest_outbox_query' );
+
 		/**
 		 * Filters WP_Query arguments when querying Outbox items via the REST API.
 		 *
@@ -161,7 +163,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 * @param array            $args    Array of arguments for WP_Query.
 		 * @param \WP_REST_Request $request The REST API request.
 		 */
-		$args = apply_filters( 'rest_activitypub_outbox_query', $args, $request );
+		$args = \apply_filters( 'activitypub_rest_outbox_query', $args, $request );
 
 		$outbox_query = new \WP_Query();
 		$query_result = $outbox_query->query( $args );
@@ -194,12 +196,14 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 */
 		$response = \apply_filters( 'activitypub_rest_outbox_array', $response, $request );
 
+		\do_action_deprecated( 'activitypub_outbox_post', array( $request ), 'unreleased', 'activitypub_rest_outbox_post' );
+
 		/**
 		 * Action triggered after the ActivityPub profile has been created and sent to the client.
 		 *
 		 * @param \WP_REST_Request $request The request object.
 		 */
-		\do_action( 'activitypub_outbox_post', $request );
+		\do_action( 'activitypub_rest_outbox_post', $request );
 
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
