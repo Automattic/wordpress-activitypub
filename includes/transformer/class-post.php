@@ -280,6 +280,9 @@ class Post extends Base {
 			return array();
 		}
 
+		// phpcs:ignore Universal.Operators.DisallowShortTernary
+		$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true ) ?: \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
+
 		/**
 		 * Filters the maximum number of media attachments allowed in a post.
 		 *
@@ -289,12 +292,7 @@ class Post extends Base {
 		 *
 		 * @param int $max_media Maximum number of media attachments. Default ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS.
 		 */
-		$max_media = \intval(
-			\apply_filters(
-				'activitypub_max_image_attachments',
-				\get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS )
-			)
-		);
+		$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media );
 
 		$media = array(
 			'image' => array(),

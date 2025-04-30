@@ -1477,6 +1477,15 @@ function is_self_ping( $id ) {
  * @return boolean|int The ID of the outbox item or false on failure.
  */
 function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_visibility = null ) {
+	// If the user is disabled, fall back to the blog user when available.
+	if ( ! user_can_activitypub( $user_id ) ) {
+		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
+			$user_id = Actors::BLOG_USER_ID;
+		} else {
+			return false;
+		}
+	}
+
 	$transformer = Transformer_Factory::get_transformer( $data );
 
 	if ( ! $transformer || is_wp_error( $transformer ) ) {
@@ -1491,21 +1500,13 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 
 	if ( $activity_type ) {
 		$activity = $transformer->to_activity( $activity_type );
+		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
 	} else {
 		$activity = $transformer->to_object();
 	}
 
 	if ( ! $activity || \is_wp_error( $activity ) ) {
 		return false;
-	}
-
-	// If the user is disabled, fall back to the blog user when available.
-	if ( ! user_can_activitypub( $user_id ) ) {
-		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
-			$user_id = Actors::BLOG_USER_ID;
-		} else {
-			return false;
-		}
 	}
 
 	$outbox_activity_id = Outbox::add( $activity, $user_id, $content_visibility );

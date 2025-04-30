@@ -180,6 +180,20 @@ class Outbox_Controller extends \WP_REST_Controller {
 
 		\update_postmeta_cache( \wp_list_pluck( $query_result, 'ID' ) );
 		foreach ( $query_result as $outbox_item ) {
+			if ( ! $outbox_item instanceof \WP_Post ) {
+				/**
+				 * Action triggered when an outbox item is not a WP_Post.
+				 *
+				 * @param mixed            $outbox_item  The outbox item.
+				 * @param array            $args         The arguments used to query the outbox.
+				 * @param array            $query_result The result of the query.
+				 * @param \WP_REST_Request $request      The request object.
+				 */
+				do_action( 'activitypub_rest_outbox_item_error', $outbox_item, $args, $query_result, $request );
+
+				continue;
+			}
+
 			$response['orderedItems'][] = $this->prepare_item_for_response( $outbox_item, $request );
 		}
 
