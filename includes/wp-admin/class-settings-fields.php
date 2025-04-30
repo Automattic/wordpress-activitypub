@@ -17,20 +17,41 @@ class Settings_Fields {
 	 * Initialize the settings fields.
 	 */
 	public static function init() {
-		add_action( 'load-settings_page_activitypub', array( self::class, 'register_settings_fields' ) );
+		// TODO: Update option name.
+		if ( \get_option( 'activitypub_launchpad_settings_visited', false ) ) {
+			\add_action( 'load-settings_page_activitypub', array( self::class, 'register_settings_fields' ) );
+		} else {
+			\add_action( 'load-settings_page_activitypub', array( self::class, 'register_profile_fields' ) );
+		}
+	}
+
+	/**
+	 * Registers profile settings fields.
+	 *
+	 * Separate from register_settings_fields() so it can be displayed on its own during onboarding.
+	 */
+	public static function register_profile_fields() {
+		\add_settings_section(
+			'activitypub_profiles',
+			\__( 'Profiles', 'activitypub' ),
+			'__return_empty_string',
+			'activitypub_settings'
+		);
+
+		\add_settings_field(
+			'activitypub_actor_mode',
+			\__( 'Enable profiles by type', 'activitypub' ),
+			array( self::class, 'render_actor_mode_field' ),
+			'activitypub_settings',
+			'activitypub_profiles'
+		);
 	}
 
 	/**
 	 * Register settings fields.
 	 */
 	public static function register_settings_fields() {
-		// Add settings sections.
-		add_settings_section(
-			'activitypub_profiles',
-			__( 'Profiles', 'activitypub' ),
-			'__return_empty_string',
-			'activitypub_settings'
-		);
+		self::register_profile_fields();
 
 		add_settings_section(
 			'activitypub_activities',
@@ -54,14 +75,6 @@ class Settings_Fields {
 		);
 
 		// Add settings fields.
-		add_settings_field(
-			'activitypub_actor_mode',
-			__( 'Enable profiles by type', 'activitypub' ),
-			array( self::class, 'render_actor_mode_field' ),
-			'activitypub_settings',
-			'activitypub_profiles'
-		);
-
 		add_settings_field(
 			'activitypub_object_type',
 			__( 'Activity-Object-Type', 'activitypub' ),
