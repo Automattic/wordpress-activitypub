@@ -113,7 +113,9 @@ class Comment {
 		}
 
 		$activity['cc'][]           = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+		$activity['to'][]           = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 		$activity['object']['cc'][] = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+		$activity['object']['to'][] = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 
 		$announce = new Activity();
 		$announce->set_type( 'Announce' );
