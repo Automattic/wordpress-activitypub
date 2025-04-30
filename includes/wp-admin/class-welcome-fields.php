@@ -22,14 +22,12 @@ class Welcome_Fields {
 	 */
 	public static function init() {
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_welcome_fields' ) );
-		\add_action( 'load-settings_page_activitypub', array( self::class, 'add_admin_notices' ) );
 	}
 
 	/**
 	 * Register welcome fields.
 	 */
 	public static function register_welcome_fields() {
-		// Add settings sections.
 		\add_settings_section(
 			'activitypub_welcome_close',
 			'',
@@ -37,13 +35,28 @@ class Welcome_Fields {
 			'activitypub_welcome'
 		);
 
-		// Add settings sections.
 		\add_settings_section(
 			'activitypub_intro',
 			\__( 'Welcome', 'activitypub' ),
 			array( self::class, 'render_welcome_intro_section' ),
 			'activitypub_welcome'
 		);
+
+		\add_settings_section(
+			'activitypub_launchpad',
+			'',
+			array( self::class, 'render_launchpad_section' ),
+			'activitypub_welcome'
+		);
+
+		if ( Health_Check::count_results( 'critical' ) ) {
+			\add_settings_section(
+				'activitypub_health_check',
+				\__( 'Site Health', 'activitypub' ),
+				array( self::class, 'render_site_health_section' ),
+				'activitypub_welcome'
+			);
+		}
 
 		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			\add_settings_section(
@@ -62,24 +75,10 @@ class Welcome_Fields {
 				'activitypub_welcome'
 			);
 		}
-	}
 
-	/**
-	 * Add Health Check errors as admin notices.
-	 */
-	public static function add_admin_notices() {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( isset( $_GET['tab'] ) && 'welcome' !== $_GET['tab'] ) {
-			return;
-		}
-
-		if ( ! \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ) ) {
-			return;
-		}
-
-		if ( Health_Check::count_results( 'critical' ) ) {
-			\add_action( 'admin_notices', array( self::class, 'admin_notices' ) );
-		}
+		\add_action( 'activitypub_launchpad', array( self::class, 'render_launchpad_fediverse_intro' ), 10 );
+		\add_action( 'activitypub_launchpad', array( self::class, 'render_launchpad_profile_mode' ), 20 );
+		\add_action( 'activitypub_launchpad', array( self::class, 'render_launchpad_blocks' ), 30 );
 	}
 
 	/**
@@ -97,6 +96,72 @@ class Welcome_Fields {
 	public static function render_welcome_intro_section() {
 		?>
 		<p><?php echo wp_kses( \__( 'Enter the fediverse with <strong>ActivityPub</strong>, broadcasting your blog to a wider audience. Attract followers, deliver updates, and receive comments from a diverse user base on <strong>Mastodon</strong>, <strong>Friendica</strong>, <strong>Pleroma</strong>, <strong>Pixelfed</strong>, and all <strong>ActivityPub</strong>-compliant platforms.', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
+		<?php
+	}
+
+	/**
+	 * Render launchpad section.
+	 */
+	public static function render_launchpad_section() {
+		?>
+		<p>
+			<?php
+			\esc_html_e(
+				'New beginnings can feel daunting—but you’re not alone. Start by following the checklist below. Explore the documentation, fine-tune your profile settings, and visit the help section for tips on connecting your site to the fediverse. For the best experience, make sure your site is healthy and your profile info is up to date.',
+				'activitypub'
+			);
+			?>
+		</p>
+		<ol class="activitypub-launchpad">
+			<?php
+			\do_action( 'activitypub_launchpad' );
+			?>
+		</ol>
+		<?php
+	}
+
+	/**
+	 * Render the Fediverse-Intro Launchpad item.
+	 */
+	public static function render_launchpad_fediverse_intro() {
+		$checked = \get_option( 'activitypub_launchpad_fediverse_intro_visited', false );
+		?>
+		<li>
+			<label for="activitypub-launchpad-fediverse-intro">
+				<input type="checkbox" id="activitypub-launchpad-fediverse-intro" <?php checked( $checked ); ?> disabled />
+				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-getting-started' ) ); ?>"><?php \esc_html_e( 'Learn more about the Fediverse.', 'activitypub' ); ?></a>
+			</label>
+		</li>
+		<?php
+	}
+
+	/**
+	 * Render the Profile Mode Launchpad item.
+	 */
+	public static function render_launchpad_profile_mode() {
+		$checked = \get_option( 'activitypub_launchpad_settings_visited', false );
+		?>
+		<li>
+			<label for="activitypub-launchpad-settings">
+				<input type="checkbox" id="activitypub-launchpad-settings" <?php checked( $checked ); ?> disabled />
+				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&tab=settings#tab-core-features' ) ); ?>"><?php \esc_html_e( 'Decide which "profile mode" you want to use and check out the other settings as well.', 'activitypub' ); ?></a>
+			</label>
+		</li>
+		<?php
+	}
+
+	/**
+	 * Render the Blocks Launchpad item.
+	 */
+	public static function render_launchpad_blocks() {
+		$checked = \get_option( 'activitypub_launchpad_blocks_visited', false );
+		?>
+		<li>
+			<label for="activitypub-launchpad-blocks">
+				<input type="checkbox" id="activitypub-launchpad-blocks" <?php checked( $checked ); ?> disabled />
+				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-editor-blocks' ) ); ?>"><?php \esc_html_e( 'Whats next? How can I connect my blog to the fediverse?', 'activitypub' ); ?></a>
+			</label>
+		</li>
 		<?php
 	}
 
@@ -172,37 +237,47 @@ class Welcome_Fields {
 	/**
 	 * Render troubleshooting section.
 	 */
-	public static function admin_notices() {
+	public static function render_site_health_section() {
 		$results = Health_Check::count_results();
 		?>
-		<div class="activitypub-notice notice notice-warning">
-			<p>
-				<span class="dashicons dashicons-warning"></span>
-				<?php
-				echo wp_kses(
-					\sprintf(
-						/* translators: the placeholders are the number of critical and recommended issues on the site. */
-						\__(
-							'<strong>Important:</strong> There are <span class="count">%1$d</span> critical and <span class="count">%2$d</span> recommended issues affecting your site&#8217;s compatibility with the fediverse. Please check the <a href="%3$s">Site Health</a> page to resolve these issues.',
-							'activitypub'
-						),
-						$results['critical'],
-						$results['recommended'],
-						\esc_url( \admin_url( 'site-health.php' ) )
+		<p>
+			<span class="dashicons dashicons-warning"></span>
+			<?php
+			echo wp_kses(
+				\sprintf(
+					/* translators: the placeholders are the number of critical and recommended issues on the site. */
+					\__(
+						'<strong>Important:</strong> There are <span class="count">%1$d</span> critical and <span class="count">%2$d</span> recommended issues affecting your site&#8217;s compatibility with the fediverse.',
+						'activitypub'
 					),
-					array(
-						'strong' => array(),
-						'span'   => array(
-							'class' => array(),
-						),
-						'a'      => array(
-							'href' => array(),
-						),
-					)
-				);
-				?>
-			</p>
-		</div>
+					$results['critical'],
+					$results['recommended']
+				),
+				array(
+					'strong' => array(),
+					'span'   => array(
+						'class' => array(),
+					),
+				)
+			);
+			?>
+		</p>
+		<p>
+			<?php
+			echo wp_kses(
+				\sprintf(
+					/* translators: %s: URL to Site Health page. */
+					\__( 'Please check the <a href="%s">Site Health</a> page to resolve these issues.', 'activitypub' ),
+					\esc_url( \admin_url( 'site-health.php' ) )
+				),
+				array(
+					'a' => array(
+						'href' => array(),
+					),
+				)
+			);
+			?>
+		</p>
 		<?php
 	}
 }

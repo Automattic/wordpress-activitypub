@@ -242,7 +242,7 @@ input.blog-user-identifier {
 	font-size: 20px;
 }
 
-.activitypub-notice .count {
+.activitypub-welcome-page .count {
 	display: inline-block;
 	vertical-align: top;
 	box-sizing: border-box;
@@ -259,7 +259,7 @@ input.blog-user-identifier {
 	z-index: 26;
 }
 
-.activitypub-notice .dashicons-warning {
+.activitypub-welcome-page .dashicons-warning {
 	color: #dba617;
 }
 
