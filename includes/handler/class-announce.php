@@ -11,6 +11,7 @@ use Activitypub\Http;
 use Activitypub\Comment;
 use Activitypub\Collection\Interactions;
 
+use function Activitypub\is_activity;
 use function Activitypub\object_to_uri;
 use function Activitypub\is_activity_public;
 
@@ -61,7 +62,7 @@ class Announce {
 			return;
 		}
 
-		if ( ! isset( $object['type'] ) ) {
+		if ( ! is_activity( $object ) ) {
 			return;
 		}
 
@@ -94,7 +95,7 @@ class Announce {
 	 * @param int   $user_id  The id of the local blog-user.
 	 */
 	public static function maybe_save_announce( $activity, $user_id ) {
-		$url = object_to_uri( $activity['object'] );
+		$url = object_to_uri( $activity );
 
 		if ( empty( $url ) ) {
 			return;
