@@ -124,7 +124,7 @@ class Welcome_Fields {
 	 * Render the Fediverse-Intro Launchpad item.
 	 */
 	public static function render_launchpad_fediverse_intro() {
-		$checked = \get_option( 'activitypub_launchpad_fediverse_intro_visited', false ) ;
+		$checked = \get_option( 'activitypub_launchpad_fediverse_intro_visited', false );
 		?>
 		<li>
 			<label for="activitypub-launchpad-fediverse-intro">
@@ -139,7 +139,7 @@ class Welcome_Fields {
 	 * Render the Profile Mode Launchpad item.
 	 */
 	public static function render_launchpad_profile_mode() {
-		$checked = \get_option( 'activitypub_launchpad_settings_visited', false ) ;
+		$checked = \get_option( 'activitypub_launchpad_settings_visited', false );
 		?>
 		<li>
 			<label for="activitypub-launchpad-settings">
@@ -154,7 +154,7 @@ class Welcome_Fields {
 	 * Render the Blocks Launchpad item.
 	 */
 	public static function render_launchpad_blocks() {
-		$checked = \get_option( 'activitypub_launchpad_blocks_visited', false ) ;
+		$checked = \get_option( 'activitypub_launchpad_blocks_visited', false );
 		?>
 		<li>
 			<label for="activitypub-launchpad-blocks">
