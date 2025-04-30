@@ -270,3 +270,98 @@ input.blog-user-identifier {
 	margin-left: auto;
 	margin-right: 8px;
 }
+
+.contextual-help-tabs-wrap dt {
+	font-weight: 600;
+}
+.contextual-help-tabs-wrap .activitypub-block-screenshot {
+	margin: 10px 0;
+}
+.contextual-help-tabs-wrap .activitypub-block-screenshot img {
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+	height: auto;
+	max-width: 100%;
+}
+.contextual-help-tabs-wrap .activitypub-block-screenshot figcaption {
+	color: #555;
+	font-style: italic;
+	font-size: 0.9em;
+	margin-top: 5px;
+}
+
+/* Blockquote Styles */
+.contextual-help-tabs-wrap blockquote {
+	border-left: 4px solid #3582c4;
+	background-color: #f6f7f7;
+	padding: 16px 20px;
+	margin: 0 0 20px;
+}
+
+.contextual-help-tabs-wrap blockquote p {
+	margin: 0 0 10px;
+	line-height: 1.5;
+}
+
+.contextual-help-tabs-wrap blockquote p:last-child {
+	margin-bottom: 0;
+}
+
+.contextual-help-tabs-wrap blockquote cite {
+	display: block;
+	font-weight: 600;
+	margin-top: 8px;
+	font-size: 0.9em;
+	color: #50575e;
+}
+
+.contextual-help-tabs-wrap blockquote cite:before {
+	content: "—";
+}
+
+/* Plugin List Styles */
+.plugin-list .plugin-action-buttons li {
+	margin: 0 0 10px 0;
+}
+.plugin-list .plugin-card .action-links {
+	position: static;
+	margin-left: 148px;
+	width: auto;
+}
+
+.plugin-list .plugin-action-buttons {
+	float: none;
+	margin: 1em 0 0;
+	text-align: left;
+}
+
+.plugin-list .plugin-action-buttons li {
+	display: inline-block;
+	vertical-align: middle;
+}
+
+.plugin-list .plugin-action-buttons li .button {
+	margin-right: 20px;
+}
+
+.plugin-list .plugin-card h3 {
+	margin-right: 24px;
+}
+
+.plugin-list .plugin-card .name,
+.plugin-list .plugin-card .desc,
+.plugin-card .desc > p {
+	margin-right: 0;
+}
+
+.plugin-list .plugin-card .desc p:first-of-type {
+	margin-top: 0;
+}
+
+/* RTL Support for blockquotes */
+.rtl .contextual-help-tabs-wrap blockquote {
+	border-left: none;
+	border-right: 4px solid #3582c4;
+	padding: 16px 20px;
+}
