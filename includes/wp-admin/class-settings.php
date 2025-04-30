@@ -350,6 +350,9 @@ class Settings {
 				\add_thickbox();
 				\wp_enqueue_script( 'updates' );
 				break;
+			case 'settings':
+				\update_option( 'activitypub_launchpad_settings_visited', true );
+				break;
 		}
 
 		if ( ! isset( $settings_tabs[ $tab ] ) ) {

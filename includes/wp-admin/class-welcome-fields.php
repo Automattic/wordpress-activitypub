@@ -28,7 +28,6 @@ class Welcome_Fields {
 	 * Register welcome fields.
 	 */
 	public static function register_welcome_fields() {
-		// Add settings sections.
 		\add_settings_section(
 			'activitypub_welcome_close',
 			'',
@@ -36,7 +35,6 @@ class Welcome_Fields {
 			'activitypub_welcome'
 		);
 
-		// Add settings sections.
 		\add_settings_section(
 			'activitypub_intro',
 			\__( 'Welcome', 'activitypub' ),
@@ -44,8 +42,14 @@ class Welcome_Fields {
 			'activitypub_welcome'
 		);
 
+		\add_settings_section(
+			'activitypub_launchpad',
+			'',
+			array( self::class, 'render_launchpad_section' ),
+			'activitypub_welcome'
+		);
+
 		if ( Health_Check::count_results( 'critical' ) ) {
-			// Add settings sections.
 			\add_settings_section(
 				'activitypub_health_check',
 				\__( 'Site Health', 'activitypub' ),
@@ -71,6 +75,10 @@ class Welcome_Fields {
 				'activitypub_welcome'
 			);
 		}
+
+		\add_action( 'activitypub_launchpad', array( self::class, 'render_launchpad_fediverse_intro' ), 10 );
+		\add_action( 'activitypub_launchpad', array( self::class, 'render_launchpad_profile_mode' ), 20 );
+		\add_action( 'activitypub_launchpad', array( self::class, 'render_launchpad_blocks' ), 30 );
 	}
 
 	/**
@@ -88,6 +96,72 @@ class Welcome_Fields {
 	public static function render_welcome_intro_section() {
 		?>
 		<p><?php echo wp_kses( \__( 'Enter the fediverse with <strong>ActivityPub</strong>, broadcasting your blog to a wider audience. Attract followers, deliver updates, and receive comments from a diverse user base on <strong>Mastodon</strong>, <strong>Friendica</strong>, <strong>Pleroma</strong>, <strong>Pixelfed</strong>, and all <strong>ActivityPub</strong>-compliant platforms.', 'activitypub' ), array( 'strong' => array() ) ); ?></p>
+		<?php
+	}
+
+	/**
+	 * Render launchpad section.
+	 */
+	public static function render_launchpad_section() {
+		?>
+		<p>
+			<?php
+			\esc_html_e(
+				'Every beginning is a little tough—but you’re not alone. Start by following the checklist below. Explore the documentation, fine-tune your profile settings, and visit the help section for tips on connecting your site to the fediverse. For the best experience, make sure your site is healthy and your profile info is up to date.',
+				'activitypub'
+			);
+			?>
+		</p>
+		<ol class="activitypub-launchpad">
+			<?php
+			\do_action( 'activitypub_launchpad' );
+			?>
+		</ol>
+		<?php
+	}
+
+	/**
+	 * Render the Fediverse-Intro Launchpad item.
+	 */
+	public static function render_launchpad_fediverse_intro() {
+		$checked = \get_option( 'activitypub_launchpad_fediverse_intro_visited', false ) ;
+		?>
+		<li>
+			<label for="activitypub-launchpad-fediverse-intro">
+				<input type="checkbox" id="activitypub-launchpad-fediverse-intro" <?php checked( $checked ); ?> disabled />
+				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-getting-started' ) ); ?>"><?php \esc_html_e( 'Learn more about the Fediverse.', 'activitypub' ); ?></a>
+			</label>
+		</li>
+		<?php
+	}
+
+	/**
+	 * Render the Profile Mode Launchpad item.
+	 */
+	public static function render_launchpad_profile_mode() {
+		$checked = \get_option( 'activitypub_launchpad_settings_visited', false ) ;
+		?>
+		<li>
+			<label for="activitypub-launchpad-settings">
+				<input type="checkbox" id="activitypub-launchpad-settings" <?php checked( $checked ); ?> disabled />
+				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&tab=settings#tab-core-features' ) ); ?>"><?php \esc_html_e( 'Decide which "profile mode" you want to use and check out the other settings as well.', 'activitypub' ); ?></a>
+			</label>
+		</li>
+		<?php
+	}
+
+	/**
+	 * Render the Blocks Launchpad item.
+	 */
+	public static function render_launchpad_blocks() {
+		$checked = \get_option( 'activitypub_launchpad_blocks_visited', false ) ;
+		?>
+		<li>
+			<label for="activitypub-launchpad-blocks">
+				<input type="checkbox" id="activitypub-launchpad-blocks" <?php checked( $checked ); ?> disabled />
+				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-editor-blocks' ) ); ?>"><?php \esc_html_e( 'Whats next? How can I connect my blog to the fediverse?', 'activitypub' ); ?></a>
+			</label>
+		</li>
 		<?php
 	}
 
