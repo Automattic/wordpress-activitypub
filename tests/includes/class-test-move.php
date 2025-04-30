@@ -41,10 +41,8 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = Actors::get_by_id( self::$user_id )->get_id();
 		$to   = 'https://newsite.com/user/1';
 
+		add_filter( 'pre_http_request', '__return_false' );
 		Move::externally( $from, $to );
-
-		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
-		$this->assertEquals( $to, $moved_to );
 
 		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
 		$this->assertEquals( $to, $moved_to );
