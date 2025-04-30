@@ -16,6 +16,29 @@ use WP_UnitTestCase;
  * @coversDefaultClass \Activitypub\Blocks
  */
 class Test_Blocks extends \WP_UnitTestCase {
+	/**
+	 * Test register_post_meta.
+	 *
+	 * @covers ::register_postmeta
+	 */
+	public function test_register_post_meta() {
+		// Empty option should not trigger _doing_it_wrong() notice.
+		\update_option( 'activitypub_max_image_attachments', '' );
+
+		\register_post_meta(
+			'post',
+			'activitypub_max_image_attachments',
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'show_in_rest'      => true,
+				'default'           => \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		$this->expectedDeprecated();
+	}
 
 	/**
 	 * Test the reply block with a valid URL attribute.
