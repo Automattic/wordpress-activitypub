@@ -38,6 +38,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 		);
 
 		$this->expectedDeprecated();
+		$this->assertSame( ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS, \get_option( 'activitypub_max_image_attachments' ) );
 	}
 
 	/**
