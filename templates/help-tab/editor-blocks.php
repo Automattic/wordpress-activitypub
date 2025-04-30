@@ -90,8 +90,8 @@
 <p><?php esc_html_e( 'To use any of these blocks:', 'activitypub' ); ?></p>
 <ol>
 	<li><?php esc_html_e( 'Open the Block Editor when creating or editing a post/page.', 'activitypub' ); ?></li>
-	<li><?php esc_html_e( 'Click the "+" button to add a new block.', 'activitypub' ); ?></li>
-	<li><?php esc_html_e( 'Search for "ActivityPub" or the specific block name.', 'activitypub' ); ?></li>
+	<li><?php esc_html_e( 'Click the &#8220;+&#8221; button to add a new block.', 'activitypub' ); ?></li>
+	<li><?php esc_html_e( 'Search for &#8220;ActivityPub&#8221; or the specific block name.', 'activitypub' ); ?></li>
 	<li><?php esc_html_e( 'Select the desired block and configure its settings in the block sidebar.', 'activitypub' ); ?></li>
 </ol>
 <p><?php esc_html_e( 'These blocks help bridge the gap between your WordPress site and the Fediverse, enabling better integration and engagement with decentralized social networks.', 'activitypub' ); ?></p>
