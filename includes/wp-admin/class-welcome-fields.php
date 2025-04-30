@@ -107,7 +107,7 @@ class Welcome_Fields {
 		<p>
 			<?php
 			\esc_html_e(
-				'Every beginning is a little tough—but you’re not alone. Start by following the checklist below. Explore the documentation, fine-tune your profile settings, and visit the help section for tips on connecting your site to the fediverse. For the best experience, make sure your site is healthy and your profile info is up to date.',
+				'New beginnings can feel daunting—but you’re not alone. Start by following the checklist below. Explore the documentation, fine-tune your profile settings, and visit the help section for tips on connecting your site to the fediverse. For the best experience, make sure your site is healthy and your profile info is up to date.',
 				'activitypub'
 			);
 			?>
