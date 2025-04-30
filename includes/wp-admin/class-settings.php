@@ -509,6 +509,18 @@ class Settings {
 					'<p>' . \esc_html__( 'This block only works with URLs from federated social networks. URLs from non-federated platforms may not function as expected. Your reply will be published to the Fediverse when your WordPress post is published.', 'activitypub' ) . '</p>' . "\n" .
 					'<h4>' . \esc_html__( 'Usage Tips', 'activitypub' ) . '</h4>' . "\n" .
 					'<p>' . \esc_html__( 'Use this block to create responses to Fediverse discussions. It&#8217;s perfect for bloggers who want to participate in Fediverse conversations while maintaining their content on their own WordPress site.', 'activitypub' ) . '</p>' . "\n" .
+					'<h3>' . \esc_html__( 'Reply Bookmarklet', 'activitypub' ) . '</h3>' . "\n" .
+					'<p>' . \esc_html__( 'In addition to the Reply block, the ActivityPub plugin offers a Reply bookmarklet for your browser. This tool lets you quickly reply to any ActivityPub-enabled post on the web, even outside your own site. When you click the bookmarklet while viewing a post on another Fediverse site, you’ll be taken to your WordPress editor with a reply draft ready to go.', 'activitypub' ) . '</p>' . "\n" .
+					'<p>' . \sprintf(
+						/* translators: %s: Domain of the site where the bookmarklet is installed */
+						\esc_html__( 'To install the Reply bookmarklet, visit the Tools page in your WordPress dashboard, find the &#8220;Fediverse Bookmarklet&#8221; section, and drag the &#8220;Reply from %s&#8221; button to your bookmarks bar. You can also copy the provided code to create a new bookmark manually.', 'activitypub' ),
+						esc_attr( \wp_parse_url( \home_url(), PHP_URL_HOST ) )
+					) . '</p>' . "\n" .
+					'<p>' . \sprintf(
+						/* translators: %s: URL to the ActivityPub Tools page */
+						\wp_kses( \__( 'Get the Reply bookmarklet from the <a href="%s">Tools page</a>.', 'activitypub' ), $anchor_html ),
+						\esc_url( \admin_url( 'tools.php' ) )
+					) . '</p>' . "\n" .
 
 					'<h2>' . \esc_html__( 'General Usage Instructions', 'activitypub' ) . '</h2>' . "\n" .
 					'<p>' . \esc_html__( 'To use any of these blocks:', 'activitypub' ) . '</p>' . "\n" .
