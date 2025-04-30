@@ -16,12 +16,12 @@ class Sanitize {
 	/**
 	 * Sanitize a list of URLs.
 	 *
-	 * @param string|array $value The value to sanitize.
+	 * @param string|array|null $value The value to sanitize.
 	 * @return array The sanitized list of URLs.
 	 */
 	public static function url_list( $value ) {
 		if ( ! \is_array( $value ) ) {
-			$value = \explode( PHP_EOL, $value );
+			$value = \explode( PHP_EOL, (string) $value );
 		}
 
 		$value = \array_filter( $value );
@@ -35,11 +35,11 @@ class Sanitize {
 	/**
 	 * Sanitize a list of hosts.
 	 *
-	 * @param string $value The value to sanitize.
+	 * @param string|null $value The value to sanitize.
 	 * @return string The sanitized list of hosts.
 	 */
 	public static function host_list( $value ) {
-		$value = \explode( PHP_EOL, $value );
+		$value = \explode( PHP_EOL, (string) $value );
 		$value = \array_map(
 			function ( $host ) {
 				$host = \trim( $host );
