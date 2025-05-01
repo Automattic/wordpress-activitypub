@@ -20,6 +20,7 @@ use function Activitypub\snake_to_camel_case;
  * @since 5.3.0
  *
  * @method string|null             get_actor()         Gets one or more entities that performed or are expected to perform the activity.
+ * @method string[]|null           get_also_known_as() Gets the also known as property of the object.
  * @method string|null             get_attributed_to() Gets the entity attributed as the original author.
  * @method array|null              get_attachment()    Gets the attachment property of the object.
  * @method array|null              get_cc()            Gets the secondary recipients of the object.
