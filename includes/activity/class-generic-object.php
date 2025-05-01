@@ -62,6 +62,8 @@ class Generic_Object {
 	 *
 	 * @param string $method The method name.
 	 * @param string $params The method params.
+	 *
+	 * @return mixed
 	 */
 	public function __call( $method, $params ) {
 		$var = \strtolower( \substr( $method, 4 ) );
@@ -81,6 +83,8 @@ class Generic_Object {
 		if ( \strncasecmp( $method, 'add', 3 ) === 0 ) {
 			return $this->add( $var, $params[0] );
 		}
+
+		return null;
 	}
 
 	/**
@@ -114,7 +118,7 @@ class Generic_Object {
 	 * @param string $key   The key to set.
 	 * @param mixed  $value The value to add.
 	 *
-	 * @return mixed The value.
+	 * @return mixed|void The value.
 	 */
 	public function add( $key, $value ) {
 		if ( empty( $value ) ) {
