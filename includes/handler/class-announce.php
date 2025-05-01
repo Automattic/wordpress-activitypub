@@ -85,7 +85,7 @@ class Announce {
 		 * @param int                                 $user_id  The id of the local blog-user.
 		 * @param \Activitypub\Activity\Activity|null $activity The activity object.
 		 */
-		\do_action( "activitypub_inbox_{$type}", $object, $user_id, $activity );
+		\do_action( "activitypub_inbox_$type", $object, $user_id, $activity );
 	}
 
 	/**

@@ -7,7 +7,6 @@
 
 namespace Activitypub\Handler;
 
-use WP_REST_Request;
 use Activitypub\Http;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Interactions;
@@ -34,7 +33,7 @@ class Delete {
 	 * @param array $activity The delete activity.
 	 */
 	public static function handle_delete( $activity ) {
-		$object_type = isset( $activity['object']['type'] ) ? $activity['object']['type'] : '';
+		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {
 			/*
@@ -102,7 +101,6 @@ class Delete {
 	 * @param array $activity The delete activity.
 	 */
 	public static function maybe_delete_follower( $activity ) {
-		/* @var \Activitypub\Model\Follower $follower Follower object. */
 		$follower = Followers::get_follower_by_actor( $activity['actor'] );
 
 		// Verify that Actor is deleted.
@@ -165,8 +163,8 @@ class Delete {
 	/**
 	 * Defer signature verification for `Delete` requests.
 	 *
-	 * @param bool            $defer   Whether to defer signature verification.
-	 * @param WP_REST_Request $request The request object.
+	 * @param bool             $defer   Whether to defer signature verification.
+	 * @param \WP_REST_Request $request The request object.
 	 *
 	 * @return bool Whether to defer signature verification.
 	 */
