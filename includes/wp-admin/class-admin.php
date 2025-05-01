@@ -649,18 +649,20 @@ class Admin {
 		);
 		?>
 		<script type="text/javascript">
-		document.addEventListener('DOMContentLoaded', function() {
-			// add allowed ids to the hash.
-			const hash = window.location.hash;
+		function activitypub_open_help_tab(event) {
 			const allowed_ids = <?php echo \wp_json_encode( $ids ); ?>;
-			if (allowed_ids.includes(hash)) {
-				// Small delay to ensure the help tab is loaded.
-				setTimeout(function() {
-					document.getElementById('contextual-help-link').click();
-					document.querySelector(hash + ' > a[href^="#tab-panel-"]').click();
-				}, 500);
+
+			if ( allowed_ids.includes( window.location.hash ) ) {
+				const delay = ( event && event.type === 'hashchange' ) ? 0 : 500;
+
+				setTimeout( function() {
+					document.getElementById( 'contextual-help-link' ).click();
+					document.querySelector( window.location.hash + ' > a[href^="#tab-panel-"]' ).click();
+				}, delay );
 			}
-		});
+		}
+		window.addEventListener( 'DOMContentLoaded', activitypub_open_help_tab );
+		window.addEventListener( 'hashchange', activitypub_open_help_tab );
 		</script>
 		<?php
 	}

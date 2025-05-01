@@ -129,7 +129,7 @@ class Welcome_Fields {
 		<li>
 			<label for="activitypub-launchpad-fediverse-intro">
 				<input type="checkbox" id="activitypub-launchpad-fediverse-intro" <?php checked( $checked ); ?> disabled />
-				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-getting-started' ) ); ?>"><?php \esc_html_e( 'Learn more about the Fediverse.', 'activitypub' ); ?></a>
+				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-link-getting-started' ) ); ?>"><?php \esc_html_e( 'Learn more about the Fediverse.', 'activitypub' ); ?></a>
 			</label>
 		</li>
 		<?php
@@ -144,7 +144,7 @@ class Welcome_Fields {
 		<li>
 			<label for="activitypub-launchpad-settings">
 				<input type="checkbox" id="activitypub-launchpad-settings" <?php checked( $checked ); ?> disabled />
-				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&tab=settings#tab-core-features' ) ); ?>"><?php \esc_html_e( 'Decide which "profile mode" you want to use and check out the other settings as well.', 'activitypub' ); ?></a>
+				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&tab=settings#tab-link-core-features' ) ); ?>"><?php \esc_html_e( 'Decide which "profile mode" you want to use and check out the other settings as well.', 'activitypub' ); ?></a>
 			</label>
 		</li>
 		<?php
@@ -159,7 +159,7 @@ class Welcome_Fields {
 		<li>
 			<label for="activitypub-launchpad-blocks">
 				<input type="checkbox" id="activitypub-launchpad-blocks" <?php checked( $checked ); ?> disabled />
-				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-editor-blocks' ) ); ?>"><?php \esc_html_e( 'Whats next? How can I connect my blog to the fediverse?', 'activitypub' ); ?></a>
+				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-link-editor-blocks' ) ); ?>"><?php \esc_html_e( 'Whats next? How can I connect my blog to the fediverse?', 'activitypub' ); ?></a>
 			</label>
 		</li>
 		<?php
