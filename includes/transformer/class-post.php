@@ -275,11 +275,6 @@ class Post extends Base {
 	 * @return array The Attachments.
 	 */
 	protected function get_attachment() {
-		// Remove attachments from drafts.
-		if ( 'draft' === \get_post_status( $this->item ) ) {
-			return array();
-		}
-
 		// phpcs:ignore Universal.Operators.DisallowShortTernary
 		$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true ) ?: \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
 
