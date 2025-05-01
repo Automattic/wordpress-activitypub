@@ -166,14 +166,13 @@ class Actor extends Base_Object {
 	protected $endpoints;
 
 	/**
-	 * It's not part of the ActivityPub protocol but it's a quite common
+	 * It's not part of the ActivityPub protocol, but it's a quite common
 	 * practice to handle an actor public key with a publicKey array:
 	 * [
-	 *     'id' => 'https://my-example.com/actor#main-key'
-	 *     'owner' => 'https://my-example.com/actor',
+	 *     'id'           => 'https://my-example.com/actor#main-key'
+	 *     'owner'        => 'https://my-example.com/actor',
 	 *     'publicKeyPem' => '-----BEGIN PUBLIC KEY-----
-	 *                       MIIBI [...]
-	 *                       DQIDAQAB
+	 *                       [...]
 	 *                       -----END PUBLIC KEY-----'
 	 * ]
 	 *
@@ -184,8 +183,8 @@ class Actor extends Base_Object {
 	protected $public_key;
 
 	/**
-	 * It's not part of the ActivityPub protocol but it's a quite common
-	 * practice to lock an account. If anabled, new followers will not be
+	 * It's not part of the ActivityPub protocol, but it's a quite common
+	 * practice to lock an account. If enabled, new followers will not be
 	 * automatically accepted, but will instead require you to manually
 	 * approve them.
 	 *
