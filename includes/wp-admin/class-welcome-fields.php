@@ -10,7 +10,6 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Model\Blog;
 use Activitypub\Collection\Actors;
 
-use function Activitypub\get_reply_intent_js;
 use function Activitypub\user_can_activitypub;
 
 /**

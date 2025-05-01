@@ -249,16 +249,16 @@ class Admin {
 		// Disable the edit_comment capability for federated comments.
 		\add_filter(
 			'user_has_cap',
-			function ( $allcaps, $caps, $arg ) {
+			function ( $all_caps, $caps, $arg ) {
 				if ( 'edit_comment' !== $arg[0] ) {
-					return $allcaps;
+					return $all_caps;
 				}
 
 				if ( was_comment_received( $arg[2] ) ) {
 					return false;
 				}
 
-				return $allcaps;
+				return $all_caps;
 			},
 			1,
 			3
@@ -274,22 +274,22 @@ class Admin {
 		// Disable the edit_post capability for federated posts.
 		\add_filter(
 			'user_has_cap',
-			function ( $allcaps, $caps, $arg ) {
+			function ( $all_caps, $caps, $arg ) {
 				if ( 'edit_post' !== $arg[0] ) {
-					return $allcaps;
+					return $all_caps;
 				}
 
 				$post = get_post( $arg[2] );
 
 				if ( ! Extra_Fields::is_extra_field_post_type( $post->post_type ) ) {
-					return $allcaps;
+					return $all_caps;
 				}
 
-				if ( (int) get_current_user_id() !== (int) $post->post_author ) {
+				if ( get_current_user_id() !== (int) $post->post_author ) {
 					return false;
 				}
 
-				return $allcaps;
+				return $all_caps;
 			},
 			1,
 			3
@@ -335,8 +335,7 @@ class Admin {
 	 */
 	public static function comment_row_actions( $actions, $comment ) {
 		if ( was_comment_received( $comment ) ) {
-			unset( $actions['edit'] );
-			unset( $actions['quickedit'] );
+			unset( $actions['edit'], $actions['quickedit'] );
 		}
 
 		if ( in_array( get_comment_type( $comment ), Comment::get_comment_type_slugs(), true ) ) {
@@ -485,18 +484,18 @@ class Admin {
 	 * * `add_activitypub_cap` - Add the activitypub capability to the selected users.
 	 * * `remove_activitypub_cap` - Remove the activitypub capability from the selected users.
 	 *
-	 * @param string $sendback The URL to send the user back to.
-	 * @param string $action   The requested action.
-	 * @param array  $users    The selected users.
+	 * @param string $send_back The URL to send the user back to.
+	 * @param string $action    The requested action.
+	 * @param array  $users     The selected users.
 	 *
 	 * @return string The URL to send the user back to.
 	 */
-	public static function handle_bulk_request( $sendback, $action, $users ) {
+	public static function handle_bulk_request( $send_back, $action, $users ) {
 		if (
 			'remove_activitypub_cap' !== $action &&
 			'add_activitypub_cap' !== $action
 		) {
-			return $sendback;
+			return $send_back;
 		}
 
 		foreach ( $users as $user_id ) {
@@ -508,7 +507,7 @@ class Admin {
 			}
 		}
 
-		return $sendback;
+		return $send_back;
 	}
 
 	/**
@@ -519,7 +518,7 @@ class Admin {
 	 * @return array The extended glance items.
 	 */
 	public static function dashboard_glance_items( $items ) {
-		\add_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 3 );
+		\add_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 2 );
 
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			$follower_count = sprintf(
@@ -625,7 +624,7 @@ class Admin {
 	}
 
 	/**
-	 * Adds metabox on wp-admin/tools.php.
+	 * Adds meta box on wp-admin/tools.php.
 	 */
 	public static function tool_box() {
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
@@ -673,7 +672,7 @@ class Admin {
 	}
 
 	/**
-	 * Add the ActivityPub.blog feed as a Dashboard widget.
+	 * Add the `ActivityPub.blog` feed as a Dashboard widget.
 	 */
 	public static function blog_dashboard_widget() {
 		echo '<div class="rss-widget">';
