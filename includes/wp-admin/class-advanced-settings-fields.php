@@ -148,7 +148,7 @@ class Advanced_Settings_Fields {
 		<p>
 			<label>
 				<input type="checkbox" id="activitypub_content_negotiation" name="activitypub_content_negotiation" value="1" <?php checked( '1', $value ); ?> />
-				<?php \esc_html_e( 'Differentiates how content is shown to browsers versus Fediverse services.', 'activitypub' ); ?>
+				<?php \esc_html_e( 'Enable content negotiation for browsers and Fediverse services.', 'activitypub' ); ?>
 			</label>
 		</p>
 		<p class="description">
