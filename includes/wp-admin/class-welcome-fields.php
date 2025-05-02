@@ -57,15 +57,6 @@ class Welcome_Fields {
 			'activitypub_welcome'
 		);
 
-//		if ( user_can_activitypub( Actors::BLOG_USER_ID ) || user_can_activitypub( \get_current_user_id() ) ) {
-//			\add_settings_section(
-//				'activitypub_profiles_overview',
-//				\__( 'Your Fediverse Profiles', 'activitypub' ),
-//				array( self::class, 'render_profiles_overview_section' ),
-//				'activitypub_welcome'
-//			);
-//		}
-
 		\add_settings_section(
 			'activitypub_welcome_footer',
 			'',
@@ -369,97 +360,6 @@ class Welcome_Fields {
 						<?php \esc_html_e( 'Explore features', 'activitypub' ); ?>
 					</a>
 				</div>
-			</div>
-		</div>
-		<?php
-	}
-
-	/**
-	 * Render profiles overview section.
-	 */
-	public static function render_profiles_overview_section() {
-		?>
-		<div class="activitypub-profiles-section">
-			<h2><?php \esc_html_e( 'Your Fediverse Profiles', 'activitypub' ); ?></h2>
-			<p class="profiles-description">
-				<?php \esc_html_e( 'These are the profiles people can follow in the Fediverse:', 'activitypub' ); ?>
-			</p>
-			<div class="activitypub-profiles-container">
-				<?php
-				if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) :
-					self::render_blog_profile_card();
-				endif;
-
-				if ( user_can_activitypub( \get_current_user_id() ) ) :
-					self::render_author_profile_card();
-				endif;
-				?>
-			</div>
-		</div>
-		<?php
-	}
-
-	/**
-	 * Render blog profile card.
-	 */
-	private static function render_blog_profile_card() {
-		$blog_user = new Blog();
-		?>
-		<div class="activitypub-profile-card">
-			<div class="profile-card-header">
-				<div class="profile-icon">
-					<span class="dashicons dashicons-admin-site"></span>
-				</div>
-				<h3><?php \esc_html_e( 'Blog Profile', 'activitypub' ); ?></h3>
-			</div>
-			<div class="profile-card-content">
-				<div class="profile-field">
-					<label><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
-					<input type="text" class="code" value="<?php echo \esc_attr( $blog_user->get_webfinger() ); ?>" readonly />
-				</div>
-				<div class="profile-field">
-					<label><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label>
-					<input type="text" class="code" value="<?php echo \esc_attr( $blog_user->get_url() ); ?>" readonly />
-				</div>
-				<p class="profile-description">
-					<?php \esc_html_e( 'This blog profile will federate all posts written on your blog, regardless of the author.', 'activitypub' ); ?>
-				</p>
-				<a href="<?php echo \esc_url( \admin_url( '/options-general.php?page=activitypub&tab=blog-profile' ) ); ?>" class="button">
-					<?php \esc_html_e( 'Customize', 'activitypub' ); ?>
-				</a>
-			</div>
-		</div>
-		<?php
-	}
-
-	/**
-	 * Render author profile card.
-	 */
-	private static function render_author_profile_card() {
-		$user = Actors::get_by_id( \get_current_user_id() );
-		?>
-		<div class="activitypub-profile-card">
-			<div class="profile-card-header">
-				<div class="profile-icon">
-					<span class="dashicons dashicons-admin-users"></span>
-				</div>
-				<h3><?php \esc_html_e( 'Author Profile', 'activitypub' ); ?></h3>
-			</div>
-			<div class="profile-card-content">
-				<div class="profile-field">
-					<label><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
-					<input type="text" class="code" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly />
-				</div>
-				<div class="profile-field">
-					<label><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label>
-					<input type="text" class="code" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly />
-				</div>
-				<p class="profile-description">
-					<?php \esc_html_e( 'Your author profile will federate only posts you publish.', 'activitypub' ); ?>
-				</p>
-				<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>" class="button">
-					<?php \esc_html_e( 'Customize', 'activitypub' ); ?>
-				</a>
 			</div>
 		</div>
 		<?php
