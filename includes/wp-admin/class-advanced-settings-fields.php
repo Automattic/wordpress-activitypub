@@ -152,7 +152,7 @@ class Advanced_Settings_Fields {
 			</label>
 		</p>
 		<p class="description">
-			<?php \esc_html_e( 'Disable this if your site starts displaying raw technical data instead of normal pages, or if ActivityPub connections become unstable. This setting helps ensure your site serves the correct content format to browsers.', 'activitypub' ); ?>
+			<?php \esc_html_e( 'Content negotiation ensures your site displays regular web pages to browsers and machine-readable data to Fediverse services. Disable this if your site shows raw technical data to visitors or if ActivityPub connections have issues.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}
