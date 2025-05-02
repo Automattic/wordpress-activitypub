@@ -62,7 +62,7 @@ require __DIR__ . '/parts/header.php';
  *
  * @param array $args The template arguments.
  */
-\do_action( 'activitypub_new_mention_email', $args );
+do_action( 'activitypub_new_mention_email', $args );
 
 // Load footer.
 require __DIR__ . '/parts/footer.php';
