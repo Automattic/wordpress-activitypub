@@ -1565,7 +1565,7 @@ function is_activity_object( $data ) {
 	 *
 	 * @param array $types The activity object types.
 	 */
-	$types = apply_filters( 'activitypub_activity_object_types', Base_Object::TYPES );
+	$types = \apply_filters( 'activitypub_activity_object_types', Base_Object::TYPES );
 
 	return _is_type_of( $data, $types );
 }
@@ -1595,6 +1595,7 @@ function is_actor( $data ) {
  *
  * @param array|object|string $data  The data to check.
  * @param array               $types The types to check against.
+ *
  * @return boolean True if $data is of one of the types, false otherwise.
  */
 function _is_type_of( $data, $types ) {

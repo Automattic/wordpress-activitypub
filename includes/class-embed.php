@@ -33,7 +33,7 @@ class Embed {
 		// Try to get ActivityPub representation.
 		$object = Http::get_remote_object( $url );
 
-		if ( is_wp_error( $object ) || ! is_activity_object( $object ) ) {
+		if ( \is_wp_error( $object ) || ! is_activity_object( $object ) ) {
 			return false;
 		}
 
