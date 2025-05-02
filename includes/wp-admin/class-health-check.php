@@ -328,7 +328,7 @@ class Health_Check {
 
 		$info['activitypub']['fields']['vary_header'] = array(
 			'label'   => \__( 'Vary Header', 'activitypub' ),
-			'value'   => \esc_attr( (int) \get_option( 'activitypub_vary_header', '0' ) ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_vary_header', '1' ) ),
 			'private' => false,
 		);
 
