@@ -111,14 +111,14 @@ class Options {
 	/**
 	 * Disallow interactions if the constant is set.
 	 *
-	 * @param bool $pre_option The value of the option.
+	 * @param bool $pre The value of the option.
 	 * @return bool|string The value of the option.
 	 */
-	public static function maybe_disable_interactions( $pre_option ) {
+	public static function maybe_disable_interactions( $pre ) {
 		if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
 			return '0';
 		}
 
-		return $pre_option;
+		return $pre;
 	}
 }
