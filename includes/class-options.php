@@ -26,7 +26,6 @@ class Options {
 		\add_filter( 'pre_option_activitypub_allow_likes', array( self::class, 'maybe_disable_interactions' ) );
 		\add_filter( 'pre_option_activitypub_allow_replies', array( self::class, 'maybe_disable_interactions' ) );
 
-		\add_filter( 'default_option_activitypub_vary_header', array( self::class, 'default_option_activitypub_vary_header' ) );
 		\add_filter( 'default_option_activitypub_negotiate_content', array( self::class, 'default_option_activitypub_negotiate_content' ) );
 	}
 
@@ -124,30 +123,6 @@ class Options {
 		}
 
 		return $pre_option;
-	}
-
-	/**
-	 * Default option filter for the Vary Header.
-	 *
-	 * @see https://github.com/Automattic/wordpress-activitypub/wiki/Caching
-	 *
-	 * @param string $default_value The default value of the option.
-	 *
-	 * @return string The default value of the option.
-	 */
-	public static function default_option_activitypub_vary_header( $default_value ) {
-		$enable_for_plugins = array(
-			// @see https://wordpress.org/support/topic/avoiding-caching-activitypub-content/
-			'litespeed-cache/litespeed-cache.php',
-		);
-
-		foreach ( $enable_for_plugins as $plugin ) {
-			if ( \is_plugin_active( $plugin ) ) {
-				return '1';
-			}
-		}
-
-		return $default_value;
 	}
 
 	/**
