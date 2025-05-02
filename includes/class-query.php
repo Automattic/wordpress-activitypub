@@ -321,8 +321,7 @@ class Query {
 	public function negotiate_content() {
 		$return           = false;
 		$always_negotiate = array( 'p', 'c', 'author', 'actor', 'preview', 'activitypub' );
-		$url              = $this->get_request_url();
-		$url              = \wp_parse_url( $url, PHP_URL_QUERY );
+		$url              = \wp_parse_url( $this->get_request_url(), PHP_URL_QUERY );
 		$query            = array();
 		\wp_parse_str( $url, $query );
 		// check if any of the query params are in the `$always_negotiate` array.
