@@ -324,8 +324,9 @@ class Query {
 		$url              = \wp_parse_url( $this->get_request_url(), PHP_URL_QUERY );
 		$query            = array();
 		\wp_parse_str( $url, $query );
-		// check if any of the query params are in the `$always_negotiate` array.
-		if ( array_intersect( array_keys( $query ), $always_negotiate ) ) {
+
+		// Check if any of the query params are in the `$always_negotiate` array.
+		if ( \array_intersect( \array_keys( $query ), $always_negotiate ) ) {
 			$return = true;
 		}
 
