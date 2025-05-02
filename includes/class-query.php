@@ -329,9 +329,7 @@ class Query {
 			$return = true;
 		}
 
-		$option = \get_option( 'activitypub_content_negotiation', '1' );
-
-		if ( $option ) {
+		if ( \get_option( 'activitypub_content_negotiation', '1' ) ) {
 			$return = true;
 		}
 
