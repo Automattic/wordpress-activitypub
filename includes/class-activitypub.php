@@ -205,7 +205,7 @@ class Activitypub {
 		if ( ! headers_sent() ) {
 			\header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
 
-			if ( \get_option( 'activitypub_vary_header' ) ) {
+			if ( \get_option( 'activitypub_vary_header', '1' ) ) {
 				// Send Vary header for Accept header.
 				\header( 'Vary: Accept', false );
 			}

@@ -27,6 +27,7 @@ class Options {
 		\add_filter( 'pre_option_activitypub_allow_replies', array( self::class, 'maybe_disable_interactions' ) );
 
 		\add_filter( 'default_option_activitypub_negotiate_content', array( self::class, 'default_option_activitypub_negotiate_content' ) );
+		\add_filter( 'option_activitypub_max_image_attachments', array( self::class, 'default_max_image_attachments' ) );
 	}
 
 
@@ -113,16 +114,30 @@ class Options {
 	/**
 	 * Disallow interactions if the constant is set.
 	 *
-	 * @param bool $pre_option The value of the option.
-	 *
+	 * @param bool $pre The value of the option.
+   *
 	 * @return bool|string The value of the option.
 	 */
-	public static function maybe_disable_interactions( $pre_option ) {
+	public static function maybe_disable_interactions( $pre ) {
 		if ( ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS ) {
 			return '0';
 		}
 
-		return $pre_option;
+		return $pre;
+	}
+
+	/**
+	 * Default max image attachments.
+	 *
+	 * @param string $value The value of the option.
+	 * @return string|int
+	 */
+	public static function default_max_image_attachments( $value ) {
+		if ( ! \is_numeric( $value ) ) {
+			$value = ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
+		}
+
+		return $value;
 	}
 
 	/**

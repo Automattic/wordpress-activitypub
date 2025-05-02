@@ -116,7 +116,7 @@ class Advanced_Settings_Fields {
 	 * Render vary header field.
 	 */
 	public static function render_vary_header_field() {
-		$value = \get_option( 'activitypub_vary_header', '0' );
+		$value = \get_option( 'activitypub_vary_header', '1' );
 		?>
 		<p>
 			<label>
