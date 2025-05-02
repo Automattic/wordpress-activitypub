@@ -340,7 +340,7 @@ class Query {
 		 *
 		 * @param bool $return Whether content negotiation should be forced.
 		 */
-		return apply_filters( 'activitypub_negotiate_content', $return );
+		return \apply_filters( 'activitypub_negotiate_content', $return );
 	}
 
 	/**
