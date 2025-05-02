@@ -7,9 +7,6 @@
 
 namespace Activitypub\Rest;
 
-use WP_REST_Server;
-use WP_REST_Response;
-use WP_Error;
 use Activitypub\Comment;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Replies;
@@ -17,29 +14,36 @@ use Activitypub\Collection\Replies;
 use function Activitypub\get_rest_url_by_path;
 
 /**
- * Class Post
+ * Class Post_Controller
  *
  * @package Activitypub\Rest
  */
-class Post {
+class Post_Controller extends \WP_REST_Controller {
 
 	/**
-	 * Initialize the class and register routes.
+	 * The namespace of this controller's route.
+	 *
+	 * @var string
 	 */
-	public static function init() {
-		self::register_routes();
-	}
+	protected $namespace = ACTIVITYPUB_REST_NAMESPACE;
+
+	/**
+	 * The base of this controller's route.
+	 *
+	 * @var string
+	 */
+	protected $rest_base = 'posts/(?P<id>\d+)';
 
 	/**
 	 * Register routes.
 	 */
-	public static function register_routes() {
+	public function register_routes() {
 		register_rest_route(
-			ACTIVITYPUB_REST_NAMESPACE,
-			'/posts/(?P<id>\d+)/reactions',
+			$this->namespace,
+			'/' . $this->rest_base . '/reactions',
 			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => array( static::class, 'get_reactions' ),
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'get_reactions' ),
 				'permission_callback' => '__return_true',
 				'args'                => array(
 					'id' => array(
@@ -51,11 +55,11 @@ class Post {
 		);
 
 		register_rest_route(
-			ACTIVITYPUB_REST_NAMESPACE,
-			'/posts/(?P<id>\d+)/context',
+			$this->namespace,
+			'/' . $this->rest_base . '/context',
 			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => array( static::class, 'get_context' ),
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'get_context' ),
 				'permission_callback' => '__return_true',
 				'args'                => array(
 					'id' => array(
@@ -72,14 +76,14 @@ class Post {
 	 *
 	 * @param \WP_REST_Request $request The request.
 	 *
-	 * @return WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
+	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
-	public static function get_reactions( $request ) {
+	public function get_reactions( $request ) {
 		$post_id = $request->get_param( 'id' );
 		$post    = get_post( $post_id );
 
 		if ( ! $post ) {
-			return new WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
+			return new \WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
 		}
 
 		$reactions = array();
@@ -125,7 +129,7 @@ class Post {
 			);
 		}
 
-		return new WP_REST_Response( $reactions );
+		return new \WP_REST_Response( $reactions );
 	}
 
 	/**
@@ -133,9 +137,9 @@ class Post {
 	 *
 	 * @param \WP_REST_Request $request The request.
 	 *
-	 * @return WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
+	 * @return \WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
 	 */
-	public static function get_context( $request ) {
+	public function get_context( $request ) {
 		$post_id = $request->get_param( 'id' );
 
 		$collection = Replies::get_context_collection( $post_id );
