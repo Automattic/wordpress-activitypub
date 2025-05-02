@@ -156,6 +156,7 @@ class Followers {
 	 * @param int      $number  Maximum number of results to return.
 	 * @param int      $page    Page number.
 	 * @param array    $args    The WP_Query arguments.
+	 *
 	 * @return Follower[] List of `Follower` objects.
 	 */
 	public static function get_followers( $user_id, $number = -1, $page = null, $args = array() ) {
