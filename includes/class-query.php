@@ -318,7 +318,7 @@ class Query {
 	 *
 	 * @return bool True if content negotiation is allowed, false otherwise.
 	 */
-	public function negotiate_content() {
+	public function should_negotiate_content() {
 		$return           = false;
 		$always_negotiate = array( 'p', 'c', 'author', 'actor', 'preview', 'activitypub' );
 		$url              = \wp_parse_url( $this->get_request_url(), PHP_URL_QUERY );
@@ -339,7 +339,7 @@ class Query {
 		 *
 		 * @param bool $return Whether content negotiation should be forced.
 		 */
-		return \apply_filters( 'activitypub_negotiate_content', $return );
+		return \apply_filters( 'activitypub_should_negotiate_content', $return );
 	}
 
 	/**

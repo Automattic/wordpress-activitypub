@@ -294,8 +294,8 @@ function is_activitypub_request() {
  *
  * @return bool True if content negotiation is allowed, false otherwise.
  */
-function negotiate_content() {
-	return Query::get_instance()->negotiate_content();
+function should_negotiate_content() {
+	return Query::get_instance()->should_negotiate_content();
 }
 
 /**

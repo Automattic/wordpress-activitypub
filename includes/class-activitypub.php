@@ -140,7 +140,7 @@ class Activitypub {
 
 		self::add_headers();
 
-		if ( ! is_activitypub_request() || ! negotiate_content() ) {
+		if ( ! is_activitypub_request() || ! should_negotiate_content() ) {
 			return $template;
 		}
 
