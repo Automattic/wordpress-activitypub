@@ -115,7 +115,7 @@ class Options {
 	 * Disallow interactions if the constant is set.
 	 *
 	 * @param bool $pre The value of the option.
-   *
+	 *
 	 * @return bool|string The value of the option.
 	 */
 	public static function maybe_disable_interactions( $pre ) {
