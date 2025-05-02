@@ -374,9 +374,12 @@ class Test_Query extends \WP_UnitTestCase {
 	 * @covers ::negotiate_content
 	 */
 	public function test_negotiate_content() {
+		\add_option( 'permalink_structure', '/%postname%/' );
+
 		$this->assertTrue( Query::get_instance()->negotiate_content() );
 
 		\update_option( 'activitypub_content_negotiation', '0' );
+		$_SERVER['REQUEST_URI'] = get_permalink( self::$post_id );
 		$this->assertFalse( Query::get_instance()->negotiate_content() );
 
 		\update_option( 'activitypub_content_negotiation', '1' );
@@ -394,5 +397,6 @@ class Test_Query extends \WP_UnitTestCase {
 		unset( $_SERVER['REQUEST_URI'] );
 
 		\delete_option( 'activitypub_content_negotiation' );
+		\delete_option( 'permalink_structure' );
 	}
 }
