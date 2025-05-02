@@ -196,7 +196,7 @@ class Settings {
 			'activitypub_content_negotiation',
 			array(
 				'type'        => 'boolean',
-				'description' => \__( 'Enable content negotiation.', 'activitypub' ),
+				'description' => 'Enable content negotiation.',
 				'default'     => true,
 			)
 		);
