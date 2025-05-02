@@ -43,9 +43,9 @@ class Welcome_Fields {
 		);
 
 		\add_settings_section(
-			'activitypub_launchpad',
+			'activitypub_checklist',
 			'',
-			array( self::class, 'render_launchpad_section' ),
+			array( self::class, 'render_checklist_section' ),
 			'activitypub_welcome'
 		);
 
@@ -76,9 +76,9 @@ class Welcome_Fields {
 			);
 		}
 
-		\add_action( 'activitypub_launchpad', array( self::class, 'render_launchpad_fediverse_intro' ), 10 );
-		\add_action( 'activitypub_launchpad', array( self::class, 'render_launchpad_profile_mode' ), 20 );
-		\add_action( 'activitypub_launchpad', array( self::class, 'render_launchpad_blocks' ), 30 );
+		\add_action( 'activitypub_checklist', array( self::class, 'render_checklist_fediverse_intro' ), 10 );
+		\add_action( 'activitypub_checklist', array( self::class, 'render_checklist_profile_mode' ), 20 );
+		\add_action( 'activitypub_checklist', array( self::class, 'render_checklist_blocks' ), 30 );
 	}
 
 	/**
@@ -100,9 +100,9 @@ class Welcome_Fields {
 	}
 
 	/**
-	 * Render launchpad section.
+	 * Render checklist section.
 	 */
-	public static function render_launchpad_section() {
+	public static function render_checklist_section() {
 		?>
 		<p>
 			<?php
@@ -112,9 +112,9 @@ class Welcome_Fields {
 			);
 			?>
 		</p>
-		<ol class="activitypub-launchpad">
+		<ol class="activitypub-checklist">
 			<?php
-			\do_action( 'activitypub_launchpad' );
+			\do_action( 'activitypub_checklist' );
 			?>
 		</ol>
 		<?php
@@ -123,12 +123,12 @@ class Welcome_Fields {
 	/**
 	 * Render the Fediverse-Intro Launchpad item.
 	 */
-	public static function render_launchpad_fediverse_intro() {
-		$checked = \get_option( 'activitypub_launchpad_fediverse_intro_visited', false );
+	public static function render_checklist_fediverse_intro() {
+		$checked = \get_option( 'activitypub_checklist_fediverse_intro_visited', false );
 		?>
 		<li>
-			<label for="activitypub-launchpad-fediverse-intro">
-				<input type="checkbox" id="activitypub-launchpad-fediverse-intro" <?php checked( $checked ); ?> disabled />
+			<label for="activitypub-checklist-fediverse-intro">
+				<input type="checkbox" id="activitypub-checklist-fediverse-intro" <?php checked( $checked ); ?> disabled />
 				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-link-getting-started' ) ); ?>"><?php \esc_html_e( 'Learn more about the Fediverse.', 'activitypub' ); ?></a>
 			</label>
 		</li>
@@ -138,12 +138,12 @@ class Welcome_Fields {
 	/**
 	 * Render the Profile Mode Launchpad item.
 	 */
-	public static function render_launchpad_profile_mode() {
-		$checked = \get_option( 'activitypub_launchpad_settings_visited', false );
+	public static function render_checklist_profile_mode() {
+		$checked = \get_option( 'activitypub_checklist_settings_visited', false );
 		?>
 		<li>
-			<label for="activitypub-launchpad-settings">
-				<input type="checkbox" id="activitypub-launchpad-settings" <?php checked( $checked ); ?> disabled />
+			<label for="activitypub-checklist-settings">
+				<input type="checkbox" id="activitypub-checklist-settings" <?php checked( $checked ); ?> disabled />
 				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&tab=settings#tab-link-core-features' ) ); ?>"><?php \esc_html_e( 'Decide which "profile mode" you want to use and check out the other settings as well.', 'activitypub' ); ?></a>
 			</label>
 		</li>
@@ -153,12 +153,12 @@ class Welcome_Fields {
 	/**
 	 * Render the Blocks Launchpad item.
 	 */
-	public static function render_launchpad_blocks() {
-		$checked = \get_option( 'activitypub_launchpad_blocks_visited', false );
+	public static function render_checklist_blocks() {
+		$checked = \get_option( 'activitypub_checklist_blocks_visited', false );
 		?>
 		<li>
-			<label for="activitypub-launchpad-blocks">
-				<input type="checkbox" id="activitypub-launchpad-blocks" <?php checked( $checked ); ?> disabled />
+			<label for="activitypub-checklist-blocks">
+				<input type="checkbox" id="activitypub-checklist-blocks" <?php checked( $checked ); ?> disabled />
 				<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-link-editor-blocks' ) ); ?>"><?php \esc_html_e( 'Whats next? How can I connect my blog to the fediverse?', 'activitypub' ); ?></a>
 			</label>
 		</li>
