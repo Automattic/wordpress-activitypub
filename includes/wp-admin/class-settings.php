@@ -193,6 +193,16 @@ class Settings {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_content_negotiation',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable content negotiation.',
+				'default'     => true,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_authorized_fetch',
 			array(
 				'type'        => 'boolean',
