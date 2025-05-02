@@ -280,7 +280,7 @@ class Settings_Fields {
 	public static function render_max_image_attachments_field() {
 		$value = get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
 		?>
-		<input id="activitypub_max_image_attachments" value="<?php echo esc_attr( $value ); ?>" name="activitypub_max_image_attachments" type="number" min="0" class="small-text" />
+		<input id="activitypub_max_image_attachments" value="<?php echo esc_attr( $value ); ?>" name="activitypub_max_image_attachments" type="number" min="0" max="10" class="small-text" />
 		<p class="description">
 			<?php
 			echo wp_kses(
