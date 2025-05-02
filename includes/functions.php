@@ -290,6 +290,15 @@ function is_activitypub_request() {
 }
 
 /**
+ * Check if content negotiation is allowed for a request.
+ *
+ * @return bool True if content negotiation is allowed, false otherwise.
+ */
+function negotiate_content() {
+	return Query::get_instance()->negotiate_content();
+}
+
+/**
  * Check if a post is disabled for ActivityPub.
  *
  * This function checks if the post type supports ActivityPub and if the post is set to be local.

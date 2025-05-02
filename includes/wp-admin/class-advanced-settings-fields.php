@@ -50,6 +50,15 @@ class Advanced_Settings_Fields {
 			);
 		}
 
+		\add_settings_field(
+			'activitypub_content_negotiation',
+			\__( 'Content Negotiation', 'activitypub' ),
+			array( self::class, 'render_content_negotiation_field' ),
+			'activitypub_advanced_settings',
+			'activitypub_advanced_settings',
+			array( 'label_for' => 'activitypub_content_negotiation' )
+		);
+
 		if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
 			\add_settings_field(
 				'activitypub_authorized_fetch',
@@ -126,6 +135,24 @@ class Advanced_Settings_Fields {
 		</p>
 		<p class="description">
 			<?php \esc_html_e( 'Enable this if you notice your site showing technical content instead of normal web pages, or if your ActivityPub connections seem unreliable. This setting helps your site deliver the right format of content to different services automatically.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render content negotiation field.
+	 */
+	public static function render_content_negotiation_field() {
+		$value = \get_option( 'activitypub_content_negotiation', '1' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_content_negotiation" name="activitypub_content_negotiation" value="1" <?php checked( '1', $value ); ?> />
+				<?php \esc_html_e( 'Differentiates how content is shown to browsers versus Fediverse services.', 'activitypub' ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( 'Disable this if your site starts displaying raw technical data instead of normal pages, or if ActivityPub connections become unstable. This setting helps ensure your site serves the correct content format to browsers.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}
