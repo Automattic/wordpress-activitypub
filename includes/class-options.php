@@ -131,11 +131,11 @@ class Options {
 	 *
 	 * @see https://github.com/Automattic/wordpress-activitypub/wiki/Caching
 	 *
-	 * @param string $default The default value of the option.
+	 * @param string $default_value The default value of the option.
 	 *
 	 * @return string The default value of the option.
 	 */
-	public static function default_option_activitypub_vary_header( $default ) {
+	public static function default_option_activitypub_vary_header( $default_value ) {
 		$enable_for_plugins = array(
 			// @see https://wordpress.org/support/topic/avoiding-caching-activitypub-content/
 			'litespeed-cache/litespeed-cache.php',
@@ -147,7 +147,7 @@ class Options {
 			}
 		}
 
-		return $default;
+		return $default_value;
 	}
 
 	/**
@@ -155,11 +155,11 @@ class Options {
 	 *
 	 * @see https://github.com/Automattic/wordpress-activitypub/wiki/Caching
 	 *
-	 * @param string $default The default value of the option.
+	 * @param string $default_value The default value of the option.
 	 *
 	 * @return string The default value of the option.
 	 */
-	public static function default_option_activitypub_negotiate_content( $default ) {
+	public static function default_option_activitypub_negotiate_content( $default_value ) {
 		$disable_for_plugins = array(
 			'wp-optimize/wp-optimize.php',
 			'wp-rocket/wp-rocket.php',
@@ -174,6 +174,6 @@ class Options {
 			}
 		}
 
-		return $default;
+		return $default_value;
 	}
 }
