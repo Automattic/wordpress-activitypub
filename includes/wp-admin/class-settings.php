@@ -184,7 +184,7 @@ class Settings {
 			array(
 				'type'        => 'boolean',
 				'description' => \__( 'Add the Vary header to the ActivityPub response.', 'activitypub' ),
-				'default'     => false,
+				'default'     => true,
 			)
 		);
 
