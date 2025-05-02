@@ -275,8 +275,11 @@ class Post extends Base {
 	 * @return array The Attachments.
 	 */
 	protected function get_attachment() {
-		// Remove attachments from drafts.
-		if ( 'draft' === \get_post_status( $this->item ) ) {
+		/*
+		 * Remove attachments from the Fediverse if a post was federated and then set back to draft.
+		 * Except in preview mode, where we want to show attachments.
+		 */
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
 			return array();
 		}
 
@@ -302,7 +305,7 @@ class Post extends Base {
 		$id    = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
-		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
+		if ( \has_post_thumbnail( $id ) ) {
 			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
 		}
 

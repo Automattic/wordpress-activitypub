@@ -25,6 +25,8 @@ class Options {
 
 		\add_filter( 'pre_option_activitypub_allow_likes', array( self::class, 'maybe_disable_interactions' ) );
 		\add_filter( 'pre_option_activitypub_allow_replies', array( self::class, 'maybe_disable_interactions' ) );
+
+		\add_filter( 'option_activitypub_max_image_attachments', array( self::class, 'default_max_image_attachments' ) );
 	}
 
 
@@ -120,5 +122,19 @@ class Options {
 		}
 
 		return $pre;
+	}
+
+	/**
+	 * Default max image attachments.
+	 *
+	 * @param string $value The value of the option.
+	 * @return string|int
+	 */
+	public static function default_max_image_attachments( $value ) {
+		if ( ! \is_numeric( $value ) ) {
+			$value = ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
+		}
+
+		return $value;
 	}
 }
