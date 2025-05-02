@@ -93,7 +93,7 @@ class Embed {
 
 		ob_start();
 		load_template(
-			ACTIVITYPUB_PLUGIN_DIR . 'templates/reply-embed.php',
+			ACTIVITYPUB_PLUGIN_DIR . 'templates/embed.php',
 			false,
 			array(
 				'author_name' => $author_name,
