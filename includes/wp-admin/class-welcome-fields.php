@@ -10,7 +10,6 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Model\Blog;
 use Activitypub\Collection\Actors;
 
-use function Activitypub\get_reply_intent_js;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -21,16 +20,23 @@ class Welcome_Fields {
 	 * Initialize the welcome fields.
 	 */
 	public static function init() {
+		if ( '1' !== \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ) ) {
+			return;
+		}
+
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_welcome_fields' ) );
-		\add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_styles' ) );
+		\add_action( 'admin_print_styles-settings_page_activitypub', array( self::class, 'enqueue_styles' ) );
 	}
 
+	/**
+	 * Enqueue styles.
+	 */
 	public static function enqueue_styles() {
-		$current_screen = get_current_screen();
-		if ( 'settings_page_activitypub' === $current_screen->id ) {
-			wp_enqueue_style(
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( 'welcome' === ( isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : 'welcome' ) ) {
+			\wp_enqueue_style(
 				'activitypub-welcome',
-				plugins_url( 'assets/css/activitypub-welcome.css', ACTIVITYPUB_PLUGIN_FILE ),
+				\plugins_url( 'assets/css/activitypub-welcome.css', ACTIVITYPUB_PLUGIN_FILE ),
 				array(),
 				ACTIVITYPUB_PLUGIN_VERSION
 			);
@@ -55,20 +61,14 @@ class Welcome_Fields {
 			'activitypub_welcome'
 		);
 
-		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_plugin_installed' ), 10 );
-		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_site_health' ), 20 );
-		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_fediverse_intro' ), 30 );
-		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_profile_mode' ), 40 );
-		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_blocks' ), 50 );
-
-		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
-			\add_settings_section(
-				'activitypub_profiles_overview',
-				\__( 'Your Fediverse Profiles', 'activitypub' ),
-				array( self::class, 'render_profiles_overview_section' ),
-				'activitypub_welcome'
-			);
-		}
+//		if ( user_can_activitypub( Actors::BLOG_USER_ID ) || user_can_activitypub( \get_current_user_id() ) ) {
+//			\add_settings_section(
+//				'activitypub_profiles_overview',
+//				\__( 'Your Fediverse Profiles', 'activitypub' ),
+//				array( self::class, 'render_profiles_overview_section' ),
+//				'activitypub_welcome'
+//			);
+//		}
 
 		\add_settings_section(
 			'activitypub_welcome_footer',
@@ -76,26 +76,42 @@ class Welcome_Fields {
 			array( self::class, 'render_welcome_footer_section' ),
 			'activitypub_welcome'
 		);
+
+		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_plugin_installed' ), 10 );
+		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_fediverse_intro' ), 20 );
+		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_profile_setup' ), 40 );
+		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_profile_mode' ), 50 );
+		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_features' ), 60 );
+
+		// Only add site health step if there are issues.
+		if ( 0 < Health_Check::count_results( 'critical' ) || 0 < Health_Check::count_results( 'recommended' ) ) {
+			\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_site_health' ), 30 );
+		}
 	}
 
 	/**
 	 * Render welcome header section.
 	 */
 	public static function render_welcome_header_section() {
-		$completed_steps = self::get_completed_steps_count();
-		$total_steps = 5; // Total number of steps
-		$progress_percentage = min(100, round(($completed_steps / $total_steps) * 100));
+		$completed_steps     = self::get_completed_steps_count();
+		$total_steps         = self::get_total_steps_count();
+		$progress_percentage = \min( 100, \round( ( $completed_steps / $total_steps ) * 100 ) );
 		?>
+		<div class="activitypub-welcome-container">
 		<div class="activitypub-welcome-header">
-			<div class="activitypub-welcome-progress">
-				<div class="activitypub-progress-indicator">
-					<div class="activitypub-progress-bar" style="width: <?php echo esc_attr( $progress_percentage ); ?>%"></div>
+			<div class="activitypub-progress-circle">
+				<div class="activitypub-progress-circle-content">
+					<span><?php echo \esc_html( $completed_steps ); ?>/<?php echo \esc_html( $total_steps ); ?></span>
 				</div>
-				<div class="activitypub-progress-text"><?php echo esc_html( $completed_steps ); ?>/<?php echo esc_html( $total_steps ); ?></div>
+				<svg class="activitypub-progress-ring" width="120" height="120">
+					<circle class="activitypub-progress-ring-bg" cx="60" cy="60" r="54" />
+					<circle class="activitypub-progress-ring-circle" cx="60" cy="60" r="54"
+							stroke-dasharray="339.292"
+							stroke-dashoffset="<?php echo \esc_attr( 339.292 - ( 339.292 * $progress_percentage / 100 ) ); ?>" />
+				</svg>
 			</div>
-			<h2 class="activitypub-welcome-title"><?php esc_html_e( 'Let\'s get started!', 'activitypub' ); ?></h2>
-			<p class="activitypub-welcome-subtitle"><?php esc_html_e( 'It\'s time to finish setting up your plugin.', 'activitypub' ); ?></p>
-			<a class="welcome-tab-close" href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&welcome=0' ) ); ?>" aria-label="<?php \esc_attr_e( 'Dismiss the welcome page', 'activitypub' ); ?>"><?php \esc_html_e( 'Skip these steps', 'activitypub' ); ?></a>
+			<h2 class="activitypub-welcome-title"><?php \esc_html_e( 'Let&#8217;s get started!', 'activitypub' ); ?></h2>
+			<p class="activitypub-welcome-subtitle"><?php \esc_html_e( 'It&#8217;s time to finish setting up your plugin.', 'activitypub' ); ?></p>
 		</div>
 		<?php
 	}
@@ -104,27 +120,59 @@ class Welcome_Fields {
 	 * Get the count of completed steps.
 	 */
 	private static function get_completed_steps_count() {
-		$count = 1; // Plugin is already installed
+		$count = 1; // Plugin is already installed.
 
-		// Check if site health has no critical issues
-		if (Health_Check::count_results('critical') === 0) {
-			$count++;
+		// Check other completed steps.
+		if ( true === \get_option( 'activitypub_checklist_fediverse_intro_visited', false ) ) {
+			++$count;
 		}
 
-		// Check other completed steps
-		if (\get_option('activitypub_checklist_fediverse_intro_visited', false)) {
-			$count++;
+		if ( true === \get_option( 'activitypub_checklist_settings_visited', false ) ) {
+			++$count;
 		}
 
-		if (\get_option('activitypub_checklist_settings_visited', false)) {
-			$count++;
-		}
-
-		if (\get_option('activitypub_checklist_blocks_visited', false)) {
-			$count++;
+		if ( true === \get_option( 'activitypub_checklist_blocks_visited', false ) ) {
+			++$count;
 		}
 
 		return $count;
+	}
+
+	/**
+	 * Get the total number of steps.
+	 */
+	private static function get_total_steps_count() {
+		$count = 5; // Base number of steps (Plugin installed, Fediverse intro, Profile setup, Profile mode, Features).
+
+		// Add site health step if there are issues.
+		if ( 0 < Health_Check::count_results( 'critical' ) || 0 < Health_Check::count_results( 'recommended' ) ) {
+			++$count;
+		}
+
+		return $count;
+	}
+
+	/**
+	 * Get the next incomplete step.
+	 */
+	private static function get_next_incomplete_step() {
+		if ( false === \get_option( 'activitypub_checklist_fediverse_intro_visited', false ) ) {
+			return 'fediverse_intro';
+		}
+
+		if ( 0 < Health_Check::count_results( 'critical' ) ) {
+			return 'site_health';
+		}
+
+		if ( false === \get_option( 'activitypub_checklist_settings_visited', false ) ) {
+			return 'profile_mode';
+		}
+
+		if ( false === \get_option( 'activitypub_checklist_blocks_visited', false ) ) {
+			return 'features';
+		}
+
+		return '';
 	}
 
 	/**
@@ -147,54 +195,12 @@ class Welcome_Fields {
 		?>
 		<div class="activitypub-onboarding-step activitypub-step-completed">
 			<div class="step-indicator">
-				<span class="step-icon dashicons dashicons-yes-alt"></span>
+				<span class="step-icon dashicons dashicons-yes"></span>
 			</div>
 			<div class="step-content">
-				<h3><?php esc_html_e( 'Plugin installed', 'activitypub' ); ?></h3>
-				<p><?php esc_html_e( 'ActivityPub is ready to help you connect to the Fediverse.', 'activitypub' ); ?></p>
-			</div>
-		</div>
-		<?php
-	}
-
-	/**
-	 * Render site health step.
-	 */
-	public static function render_step_site_health() {
-		$critical_issues = Health_Check::count_results('critical');
-		$recommended_issues = Health_Check::count_results('recommended');
-		$is_completed = ($critical_issues === 0);
-		$step_class = $is_completed ? 'activitypub-step-completed' : 'activitypub-step-attention';
-		?>
-		<div class="activitypub-onboarding-step <?php echo esc_attr($step_class); ?>">
-			<div class="step-indicator">
-				<?php if ($is_completed) : ?>
-					<span class="step-icon dashicons dashicons-yes-alt"></span>
-				<?php else : ?>
-					<span class="step-icon dashicons dashicons-warning"></span>
-				<?php endif; ?>
-			</div>
-			<div class="step-content">
-				<h3><?php esc_html_e( 'Verify Site Health', 'activitypub' ); ?></h3>
-				<?php if ($critical_issues > 0 || $recommended_issues > 0) : ?>
-					<p>
-						<?php
-						echo wp_kses(
-							sprintf(
-								__('Your site has <strong>%1$d critical</strong> and <strong>%2$d recommended</strong> issues that may affect compatibility with the Fediverse.', 'activitypub'),
-								$critical_issues,
-								$recommended_issues
-							),
-							array('strong' => array())
-						);
-						?>
-					</p>
-					<a href="<?php echo esc_url(admin_url('site-health.php')); ?>" class="button button-primary">
-						<?php esc_html_e('Fix Site Health Issues', 'activitypub'); ?>
-					</a>
-				<?php else : ?>
-					<p><?php esc_html_e('No critical issues found. Your site is ready for the Fediverse!', 'activitypub'); ?></p>
-				<?php endif; ?>
+				<div class="step-text">
+					<h3><?php \esc_html_e( 'Plugin installed', 'activitypub' ); ?></h3>
+				</div>
 			</div>
 		</div>
 		<?php
@@ -204,24 +210,104 @@ class Welcome_Fields {
 	 * Render the Fediverse-Intro step.
 	 */
 	public static function render_step_fediverse_intro() {
-		$checked = \get_option( 'activitypub_checklist_fediverse_intro_visited', false );
-		$step_class = $checked ? 'activitypub-step-completed' : '';
+		$checked      = \get_option( 'activitypub_checklist_fediverse_intro_visited', false );
+		$step_class   = ( true === $checked ) ? 'activitypub-step-completed' : '';
+		$next_step    = self::get_next_incomplete_step();
+		$button_class = ( 'fediverse_intro' === $next_step ) ? 'button-primary' : 'button-secondary';
 		?>
-		<div class="activitypub-onboarding-step <?php echo esc_attr($step_class); ?>">
+		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
 			<div class="step-indicator">
-				<?php if ($checked) : ?>
-					<span class="step-icon dashicons dashicons-yes-alt"></span>
+				<?php if ( true === $checked ) : ?>
+					<span class="step-icon dashicons dashicons-yes"></span>
 				<?php else : ?>
 					<span class="step-icon dashicons dashicons-video-alt3"></span>
 				<?php endif; ?>
 			</div>
 			<div class="step-content">
-				<h3><?php esc_html_e('Learn about the Fediverse', 'activitypub'); ?></h3>
-				<p><?php esc_html_e('Understand what the Fediverse is and why it matters.', 'activitypub'); ?></p>
-				<a href="<?php echo \esc_url(\admin_url('options-general.php?page=activitypub#tab-link-getting-started')); ?>" class="button">
-					<?php esc_html_e('Watch Fediverse video series', 'activitypub'); ?>
-					<span class="dashicons dashicons-arrow-right-alt2"></span>
-				</a>
+				<div class="step-text">
+					<h3><?php \esc_html_e( 'Watch a short video: What&#8217;s the Fediverse?', 'activitypub' ); ?></h3>
+					<p><?php \esc_html_e( 'Learn what the Fediverse is and why it matters.', 'activitypub' ); ?></p>
+				</div>
+				<div class="step-action">
+					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-link-getting-started' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+						<?php \esc_html_e( 'Watch now', 'activitypub' ); ?>
+					</a>
+				</div>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render site health step.
+	 */
+	public static function render_step_site_health() {
+		$critical_issues    = Health_Check::count_results( 'critical' );
+		$recommended_issues = Health_Check::count_results( 'recommended' );
+		$total_issues       = $critical_issues + $recommended_issues;
+		$step_class         = ( 0 === $critical_issues ) ? 'activitypub-step-completed' : '';
+		$next_step          = self::get_next_incomplete_step();
+		$button_class       = ( 'site_health' === $next_step ) ? 'button-primary' : 'button-secondary';
+		?>
+		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
+			<div class="step-indicator">
+				<?php if ( 0 === $critical_issues ) : ?>
+					<span class="step-icon dashicons dashicons-yes"></span>
+				<?php else : ?>
+					<span class="step-icon dashicons dashicons-warning"></span>
+				<?php endif; ?>
+			</div>
+			<div class="step-content">
+				<div class="step-text">
+					<h3><?php \esc_html_e( 'Check your site&#8217;s health', 'activitypub' ); ?></h3>
+					<p>
+						<?php
+						echo \esc_html(
+							\sprintf(
+								/* translators: %d: Number of issues. */
+								\_n( '%d issue needs your attention.', '%d issues need your attention.', $total_issues, 'activitypub' ),
+								$total_issues
+							)
+						);
+						?>
+					</p>
+				</div>
+				<div class="step-action">
+					<a href="<?php echo \esc_url( \admin_url( 'site-health.php' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+						<?php \esc_html_e( 'Review issues', 'activitypub' ); ?>
+					</a>
+				</div>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render the Profile Setup step.
+	 */
+	public static function render_step_profile_setup() {
+		$user_can_activitypub = user_can_activitypub( \get_current_user_id() );
+		?>
+		<div class="activitypub-onboarding-step">
+			<div class="step-indicator">
+				<span class="step-icon dashicons dashicons-admin-users"></span>
+			</div>
+			<div class="step-content">
+				<div class="step-text">
+					<h3><?php \esc_html_e( 'Set up your public profile', 'activitypub' ); ?></h3>
+					<p><?php \esc_html_e( 'Choose your username and how you appear to others.', 'activitypub' ); ?></p>
+				</div>
+				<div class="step-action">
+					<?php if ( true === $user_can_activitypub ) : ?>
+						<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>" class="button button-secondary">
+							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
+						</a>
+					<?php else : ?>
+						<button class="button button-secondary" disabled>
+							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
+						</button>
+					<?php endif; ?>
+				</div>
 			</div>
 		</div>
 		<?php
@@ -231,51 +317,61 @@ class Welcome_Fields {
 	 * Render the Profile Mode step.
 	 */
 	public static function render_step_profile_mode() {
-		$checked = \get_option( 'activitypub_checklist_settings_visited', false );
-		$step_class = $checked ? 'activitypub-step-completed' : '';
+		$checked      = \get_option( 'activitypub_checklist_settings_visited', false );
+		$step_class   = ( true === $checked ) ? 'activitypub-step-completed' : '';
+		$next_step    = self::get_next_incomplete_step();
+		$button_class = ( 'profile_mode' === $next_step ) ? 'button-primary' : 'button-secondary';
 		?>
-		<div class="activitypub-onboarding-step <?php echo esc_attr($step_class); ?>">
+		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
 			<div class="step-indicator">
-				<?php if ($checked) : ?>
-					<span class="step-icon dashicons dashicons-yes-alt"></span>
+				<?php if ( true === $checked ) : ?>
+					<span class="step-icon dashicons dashicons-yes"></span>
 				<?php else : ?>
-					<span class="step-icon dashicons dashicons-admin-users"></span>
+					<span class="step-icon dashicons dashicons-groups"></span>
 				<?php endif; ?>
 			</div>
 			<div class="step-content">
-				<h3><?php esc_html_e('Select your user mode', 'activitypub'); ?></h3>
-				<p><?php esc_html_e('Choose whether to use blog profile, author profiles, or both.', 'activitypub'); ?></p>
-				<a href="<?php echo \esc_url(\admin_url('options-general.php?page=activitypub&tab=settings#tab-link-core-features')); ?>" class="button">
-					<?php esc_html_e('Configure profile settings', 'activitypub'); ?>
-					<span class="dashicons dashicons-arrow-right-alt2"></span>
-				</a>
+				<div class="step-text">
+					<h3><?php \esc_html_e( 'Select how you want to share', 'activitypub' ); ?></h3>
+					<p><?php \esc_html_e( 'Pick your preferred user mode for connecting with others.', 'activitypub' ); ?></p>
+				</div>
+				<div class="step-action">
+					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&tab=settings#tab-link-core-features' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+						<?php \esc_html_e( 'Choose mode', 'activitypub' ); ?>
+					</a>
+				</div>
 			</div>
 		</div>
 		<?php
 	}
 
 	/**
-	 * Render the Blocks step.
+	 * Render the Features step.
 	 */
-	public static function render_step_blocks() {
-		$checked = \get_option( 'activitypub_checklist_blocks_visited', false );
-		$step_class = $checked ? 'activitypub-step-completed' : '';
+	public static function render_step_features() {
+		$checked      = \get_option( 'activitypub_checklist_blocks_visited', false );
+		$step_class   = ( true === $checked ) ? 'activitypub-step-completed' : '';
+		$next_step    = self::get_next_incomplete_step();
+		$button_class = ( 'features' === $next_step ) ? 'button-primary' : 'button-secondary';
 		?>
-		<div class="activitypub-onboarding-step <?php echo esc_attr($step_class); ?>">
+		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
 			<div class="step-indicator">
-				<?php if ($checked) : ?>
-					<span class="step-icon dashicons dashicons-yes-alt"></span>
+				<?php if ( true === $checked ) : ?>
+					<span class="step-icon dashicons dashicons-yes"></span>
 				<?php else : ?>
-					<span class="step-icon dashicons dashicons-editor-code"></span>
+					<span class="step-icon dashicons dashicons-info"></span>
 				<?php endif; ?>
 			</div>
 			<div class="step-content">
-				<h3><?php esc_html_e('Explore Fediverse blocks', 'activitypub'); ?></h3>
-				<p><?php esc_html_e('Learn how to connect your blog to the Fediverse with special blocks.', 'activitypub'); ?></p>
-				<a href="<?php echo \esc_url(\admin_url('options-general.php?page=activitypub#tab-link-editor-blocks')); ?>" class="button">
-					<?php esc_html_e('Learn more about Fediverse blocks', 'activitypub'); ?>
-					<span class="dashicons dashicons-arrow-right-alt2"></span>
-				</a>
+				<div class="step-text">
+					<h3><?php \esc_html_e( 'Learn more about Fediverse features', 'activitypub' ); ?></h3>
+					<p><?php \esc_html_e( 'Discover blocks, privacy, and more.', 'activitypub' ); ?></p>
+				</div>
+				<div class="step-action">
+					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-link-editor-blocks' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+						<?php \esc_html_e( 'Explore features', 'activitypub' ); ?>
+					</a>
+				</div>
 			</div>
 		</div>
 		<?php
@@ -286,19 +382,22 @@ class Welcome_Fields {
 	 */
 	public static function render_profiles_overview_section() {
 		?>
-		<p class="profiles-description">
-			<?php esc_html_e('Once configured, these are the profiles people can follow in the Fediverse:', 'activitypub'); ?>
-		</p>
-		<div class="activitypub-profiles-container">
-			<?php
-			if (user_can_activitypub(Actors::BLOG_USER_ID)) {
-				self::render_blog_profile_card();
-			}
+		<div class="activitypub-profiles-section">
+			<h2><?php \esc_html_e( 'Your Fediverse Profiles', 'activitypub' ); ?></h2>
+			<p class="profiles-description">
+				<?php \esc_html_e( 'These are the profiles people can follow in the Fediverse:', 'activitypub' ); ?>
+			</p>
+			<div class="activitypub-profiles-container">
+				<?php
+				if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) :
+					self::render_blog_profile_card();
+				endif;
 
-			if (user_can_activitypub(\get_current_user_id())) {
-				self::render_author_profile_card();
-			}
-			?>
+				if ( user_can_activitypub( \get_current_user_id() ) ) :
+					self::render_author_profile_card();
+				endif;
+				?>
+			</div>
 		</div>
 		<?php
 	}
@@ -314,22 +413,22 @@ class Welcome_Fields {
 				<div class="profile-icon">
 					<span class="dashicons dashicons-admin-site"></span>
 				</div>
-				<h3><?php esc_html_e('Blog Profile', 'activitypub'); ?></h3>
+				<h3><?php \esc_html_e( 'Blog Profile', 'activitypub' ); ?></h3>
 			</div>
 			<div class="profile-card-content">
 				<div class="profile-field">
-					<label><?php esc_html_e('Username', 'activitypub'); ?></label>
-					<input type="text" class="code" value="<?php echo esc_attr($blog_user->get_webfinger()); ?>" readonly />
+					<label><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
+					<input type="text" class="code" value="<?php echo \esc_attr( $blog_user->get_webfinger() ); ?>" readonly />
 				</div>
 				<div class="profile-field">
-					<label><?php esc_html_e('Profile URL', 'activitypub'); ?></label>
-					<input type="text" class="code" value="<?php echo esc_attr($blog_user->get_url()); ?>" readonly />
+					<label><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label>
+					<input type="text" class="code" value="<?php echo \esc_attr( $blog_user->get_url() ); ?>" readonly />
 				</div>
 				<p class="profile-description">
-					<?php esc_html_e('This blog profile will federate all posts written on your blog, regardless of the author.', 'activitypub'); ?>
+					<?php \esc_html_e( 'This blog profile will federate all posts written on your blog, regardless of the author.', 'activitypub' ); ?>
 				</p>
-				<a href="<?php echo esc_url(admin_url('/options-general.php?page=activitypub&tab=blog-profile')); ?>" class="button">
-					<?php esc_html_e('Customize', 'activitypub'); ?>
+				<a href="<?php echo \esc_url( \admin_url( '/options-general.php?page=activitypub&tab=blog-profile' ) ); ?>" class="button">
+					<?php \esc_html_e( 'Customize', 'activitypub' ); ?>
 				</a>
 			</div>
 		</div>
@@ -340,29 +439,29 @@ class Welcome_Fields {
 	 * Render author profile card.
 	 */
 	private static function render_author_profile_card() {
-		$user = Actors::get_by_id(\get_current_user_id());
+		$user = Actors::get_by_id( \get_current_user_id() );
 		?>
 		<div class="activitypub-profile-card">
 			<div class="profile-card-header">
 				<div class="profile-icon">
 					<span class="dashicons dashicons-admin-users"></span>
 				</div>
-				<h3><?php esc_html_e('Author Profile', 'activitypub'); ?></h3>
+				<h3><?php \esc_html_e( 'Author Profile', 'activitypub' ); ?></h3>
 			</div>
 			<div class="profile-card-content">
 				<div class="profile-field">
-					<label><?php esc_html_e('Username', 'activitypub'); ?></label>
-					<input type="text" class="code" value="<?php echo esc_attr($user->get_webfinger()); ?>" readonly />
+					<label><?php \esc_html_e( 'Username', 'activitypub' ); ?></label>
+					<input type="text" class="code" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly />
 				</div>
 				<div class="profile-field">
-					<label><?php esc_html_e('Profile URL', 'activitypub'); ?></label>
-					<input type="text" class="code" value="<?php echo esc_attr($user->get_url()); ?>" readonly />
+					<label><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label>
+					<input type="text" class="code" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly />
 				</div>
 				<p class="profile-description">
-					<?php esc_html_e('Your author profile will federate only posts you publish.', 'activitypub'); ?>
+					<?php \esc_html_e( 'Your author profile will federate only posts you publish.', 'activitypub' ); ?>
 				</p>
-				<a href="<?php echo esc_url(admin_url('/profile.php#activitypub')); ?>" class="button">
-					<?php esc_html_e('Customize', 'activitypub'); ?>
+				<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>" class="button">
+					<?php \esc_html_e( 'Customize', 'activitypub' ); ?>
 				</a>
 			</div>
 		</div>
@@ -374,13 +473,11 @@ class Welcome_Fields {
 	 */
 	public static function render_welcome_footer_section() {
 		?>
+		</div><!-- closing welcome-container div -->
 		<div class="activitypub-welcome-footer">
-			<p><?php esc_html_e('Need help? Check out our documentation or ask in the WordPress support forums.', 'activitypub'); ?></p>
-			<div class="activitypub-footer-actions">
-				<a href="https://wordpress.org/plugins/activitypub/faq/" class="button" target="_blank"><?php esc_html_e('Documentation', 'activitypub'); ?></a>
-				<a href="https://wordpress.org/support/plugin/activitypub/" class="button" target="_blank"><?php esc_html_e('Support', 'activitypub'); ?></a>
-				<a href="<?php echo esc_url(admin_url('options-general.php?page=activitypub&welcome=0')); ?>" class="button button-primary"><?php esc_html_e('Go to Settings', 'activitypub'); ?></a>
-			</div>
+			<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&welcome=0' ) ); ?>" class="skip-steps-link">
+				<?php \esc_html_e( 'Skip these steps', 'activitypub' ); ?>
+			</a>
 		</div>
 		<?php
 	}
