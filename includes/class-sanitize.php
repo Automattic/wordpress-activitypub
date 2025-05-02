@@ -119,15 +119,4 @@ class Sanitize {
 
 		return $value;
 	}
-
-	/**
-	 * Sanitize the max image attachments.
-	 *
-	 * @param string $value The value to sanitize.
-	 *
-	 * @return int The sanitized value.
-	 */
-	public static function max_image_attachments( $value ) {
-		return \is_numeric( $value ) ? \absint( $value ) : ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
-	}
 }

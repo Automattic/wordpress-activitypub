@@ -65,7 +65,9 @@ class Settings {
 				'type'              => 'integer',
 				'description'       => \__( 'Number of images to attach to posts.', 'activitypub' ),
 				'default'           => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
-				'sanitize_callback' => array( Sanitize::class, 'max_image_attachments' ),
+				'sanitize_callback' => function ( $value ) {
+					return \is_numeric( $value ) ? \absint( $value ) : ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
+				},
 			)
 		);
 
