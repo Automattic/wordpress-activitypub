@@ -96,7 +96,7 @@ class Embed {
 
 				switch ( $type ) {
 					case 'image':
-						$images = wp_list_filter( $activity_object['attachment'], array( 'type' => 'Image' ) );
+						$images = \wp_list_filter( $activity_object['attachment'], array( 'type' => 'Image' ) );
 						$images = array_slice( $images, 0, 4 );
 						break 2;
 					case 'video':
