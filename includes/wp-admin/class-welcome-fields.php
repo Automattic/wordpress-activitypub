@@ -302,7 +302,7 @@ class Welcome_Fields {
 					<p><?php \esc_html_e( 'Pick your preferred user mode for connecting with others.', 'activitypub' ); ?></p>
 				</div>
 				<div class="step-action">
-					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&tab=settings#tab-link-core-features' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&tab=settings' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 						<?php \esc_html_e( 'Choose mode', 'activitypub' ); ?>
 					</a>
 				</div>
