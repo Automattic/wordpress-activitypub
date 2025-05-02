@@ -28,13 +28,6 @@ class Dispatcher {
 	public static $batch_size = ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE;
 
 	/**
-	 * Callback for the async batch processing.
-	 *
-	 * @var array
-	 */
-	public static $callback = array( self::class, 'send_to_followers' );
-
-	/**
 	 * Error codes that qualify for a retry.
 	 *
 	 * @see https://github.com/tfredrich/RestApiTutorial.com/blob/fd08b0f67f07450521d143b123cd6e1846cb2e3b/content/advanced/responses/retries.md
@@ -103,8 +96,8 @@ class Dispatcher {
 		self::send_to_additional_inboxes( $activity, $actor->get__id(), $outbox_item );
 
 		if ( self::should_send_to_followers( $activity, $actor, $outbox_item ) ) {
-			Scheduler::async_batch(
-				self::$callback,
+			\do_action(
+				'activitypub_send_activity',
 				$outbox_item->ID,
 				self::$batch_size,
 				\get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ) ?: 0 // phpcs:ignore
@@ -209,6 +202,15 @@ class Dispatcher {
 		$actor   = Outbox::get_actor( \get_post( $outbox_item_id ) );
 		$retries = array();
 
+		/**
+		 * Fires before sending an Activity to inboxes.
+		 *
+		 * @param string $json           The ActivityPub Activity JSON.
+		 * @param array  $inboxes        The inboxes to send to.
+		 * @param int    $outbox_item_id The Outbox item ID.
+		 */
+		\do_action( 'activitypub_pre_send_to_inboxes', $json, $inboxes, $outbox_item_id );
+
 		foreach ( $inboxes as $inbox ) {
 			$result = safe_remote_post( $inbox, $json, $actor->get__id() );
 
@@ -244,13 +246,8 @@ class Dispatcher {
 
 		\wp_schedule_single_event(
 			\time() + ( $attempt * $attempt * HOUR_IN_SECONDS ),
-			'activitypub_async_batch',
-			array(
-				array( self::class, 'retry_send_to_followers' ),
-				$transient_key,
-				$outbox_item_id,
-				$attempt,
-			)
+			'activitypub_retry_activity',
+			array( $transient_key, $outbox_item_id, $attempt )
 		);
 	}
 

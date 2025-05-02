@@ -11,8 +11,8 @@ use WP_Error;
 use Activitypub\Http;
 use Activitypub\Comment as Comment_Helper;
 
-use function Activitypub\is_user_disabled;
 use function Activitypub\is_post_disabled;
+use function Activitypub\user_can_activitypub;
 
 /**
  * Transformer Factory.
@@ -100,7 +100,7 @@ class Factory {
 				}
 				break;
 			case 'WP_User':
-				if ( ! is_user_disabled( $data->ID ) ) {
+				if ( user_can_activitypub( $data->ID ) ) {
 					return new User( $data );
 				}
 				break;

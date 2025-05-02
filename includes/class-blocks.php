@@ -7,8 +7,8 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Followers;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
 
 /**
  * Block class.
@@ -27,6 +27,8 @@ class Blocks {
 		// Add editor plugin.
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor_assets' ) );
 		\add_action( 'init', array( self::class, 'register_postmeta' ), 11 );
+
+		\add_filter( 'activitypub_import_mastodon_post_data', array( self::class, 'filter_import_mastodon_post_data' ), 10, 2 );
 	}
 
 	/**
@@ -74,6 +76,18 @@ class Blocks {
 					},
 				)
 			);
+
+			\register_post_meta(
+				$post_type,
+				'activitypub_max_image_attachments',
+				array(
+					'type'              => 'integer',
+					'single'            => true,
+					'show_in_rest'      => true,
+					'default'           => \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
+					'sanitize_callback' => 'absint',
+				)
+			);
 		}
 	}
 
@@ -112,12 +126,13 @@ class Blocks {
 	 */
 	public static function inject_activitypub_options() {
 		$data = array(
-			'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
-			'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
-			'enabled'          => array(
+			'namespace'           => ACTIVITYPUB_REST_NAMESPACE,
+			'defaultAvatarUrl'    => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+			'enabled'             => array(
 				'site'  => ! is_user_type_disabled( 'blog' ),
 				'users' => ! is_user_type_disabled( 'user' ),
 			),
+			'maxImageAttachments' => \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
 		);
 
 		printf(
@@ -339,10 +354,34 @@ class Blocks {
 	 * @return string The HTML to render.
 	 */
 	public static function render_reply_block( $attrs ) {
-		$html = '';
+		// Return early if no URL is provided.
+		if ( empty( $attrs['url'] ) ) {
+			return null;
+		}
 
-		if ( ! empty( $attrs['url'] ) ) {
-			$html = sprintf(
+		$show_embed = isset( $attrs['embedPost'] ) && $attrs['embedPost'];
+
+		$wrapper_attrs = get_block_wrapper_attributes(
+			array(
+				'aria-label'       => __( 'Reply', 'activitypub' ),
+				'class'            => 'activitypub-reply-block',
+				'data-in-reply-to' => $attrs['url'],
+			)
+		);
+
+		$html = '<div ' . $wrapper_attrs . '>';
+
+		// Try to get and append the embed if requested.
+		if ( $show_embed ) {
+			$embed = wp_oembed_get( $attrs['url'] );
+			if ( $embed ) {
+				$html .= $embed;
+			}
+		}
+
+		// Only show the link if we're not showing the embed.
+		if ( ! $show_embed ) {
+			$html .= sprintf(
 				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
 				esc_url( $attrs['url'] ),
 				esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
@@ -351,13 +390,9 @@ class Blocks {
 			);
 		}
 
-		/**
-		 * Filter the reply block.
-		 *
-		 * @param string $html  The HTML to render.
-		 * @param array  $attrs The block attributes.
-		 */
-		return apply_filters( 'activitypub_reply_block', $html, $attrs );
+		$html .= '</div>';
+
+		return $html;
 	}
 
 	/**
@@ -391,5 +426,34 @@ class Blocks {
 			esc_html( $data['preferredUsername'] ),
 			$external_svg
 		);
+	}
+
+	/**
+	 * Converts content to blocks before saving to the database.
+	 *
+	 * @param array  $data The post data to be inserted.
+	 * @param object $post The Mastodon Create activity.
+	 *
+	 * @return array
+	 */
+	public static function filter_import_mastodon_post_data( $data, $post ) {
+		// Convert paragraphs to blocks.
+		\preg_match_all( '#<p>.*?</p>#is', $data['post_content'], $matches );
+		$blocks = \array_map(
+			function ( $paragraph ) {
+				return '<!-- wp:paragraph -->' . PHP_EOL . $paragraph . PHP_EOL . '<!-- /wp:paragraph -->' . PHP_EOL;
+			},
+			$matches[0] ?? array()
+		);
+
+		$data['post_content'] = \rtrim( \implode( PHP_EOL, $blocks ), PHP_EOL );
+
+		// Add reply block if it's a reply.
+		if ( null !== $post->object->inReplyTo ) {
+			$reply_block          = \sprintf( '<!-- wp:activitypub/reply {"url":"%1$s","embedPost":true} /-->' . PHP_EOL, \esc_url( $post->object->inReplyTo ) );
+			$data['post_content'] = $reply_block . $data['post_content'];
+		}
+
+		return $data;
 	}
 }

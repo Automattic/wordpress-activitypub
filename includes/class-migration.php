@@ -188,6 +188,12 @@ class Migration {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_comment_author_emails' ) );
 			\add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
+		if ( \version_compare( $version_from_db, '5.7.0', '<' ) ) {
+			self::delete_mastodon_api_orphaned_extra_fields();
+		}
+		if ( \version_compare( $version_from_db, '5.8.0', '<' ) ) {
+			self::update_notification_options();
+		}
 
 		/*
 		 * Add new update routines above this comment. ^
@@ -737,7 +743,6 @@ class Migration {
 	 */
 	public static function add_default_settings() {
 		self::add_activitypub_capability();
-		self::add_notification_defaults();
 		self::add_default_extra_field();
 	}
 
@@ -761,11 +766,11 @@ class Migration {
 		}
 
 		// If the user is disabled, fall back to the blog user when available.
-		if ( is_user_disabled( $user_id ) ) {
-			if ( is_user_disabled( Actors::BLOG_USER_ID ) ) {
-				return;
-			} else {
+		if ( ! user_can_activitypub( $user_id ) ) {
+			if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 				$user_id = Actors::BLOG_USER_ID;
+			} else {
+				return;
 			}
 		}
 
@@ -790,14 +795,6 @@ class Migration {
 		foreach ( $users as $user ) {
 			$user->add_cap( 'activitypub' );
 		}
-	}
-
-	/**
-	 * Add default notification settings.
-	 */
-	private static function add_notification_defaults() {
-		\add_option( 'activitypub_mailer_new_follower', '1' );
-		\add_option( 'activitypub_mailer_new_dm', '1' );
 	}
 
 	/**
@@ -896,5 +893,52 @@ class Migration {
 		) {
 			\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
 		}
+	}
+
+	/**
+	 * Deletes user extra fields where the author is the blog user.
+	 *
+	 * These extra fields were created when the Enable Mastodon Apps integration passed
+	 * an author_url instead of a user_id to the mastodon_api_account filter. This caused
+	 * Extra_Fields::default_actor_extra_fields() to run but fail to cache the fact it ran
+	 * for non-existent users. The result is a number of user extra fields with no author.
+	 *
+	 * @ticket https://github.com/Automattic/wordpress-activitypub/pull/1554
+	 */
+	public static function delete_mastodon_api_orphaned_extra_fields() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->delete(
+			$wpdb->posts,
+			array(
+				'post_type'   => Extra_Fields::USER_POST_TYPE,
+				'post_author' => Actors::BLOG_USER_ID,
+			)
+		);
+	}
+
+	/**
+	 * Update notification options.
+	 */
+	public static function update_notification_options() {
+		$new_dm       = \get_option( 'activitypub_mailer_new_dm', '1' );
+		$new_follower = \get_option( 'activitypub_mailer_new_follower', '1' );
+
+		// Add the blog user notification options.
+		\add_option( 'activitypub_blog_user_mailer_new_dm', $new_dm );
+		\add_option( 'activitypub_blog_user_mailer_new_follower', $new_follower );
+		\add_option( 'activitypub_blog_user_mailer_new_mention', '1' );
+
+		// Add the actor notification options.
+		foreach ( Actors::get_collection() as $actor ) {
+			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_dm', $new_dm );
+			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_follower', $new_follower );
+			\update_user_option( $actor->get__id(), 'activitypub_mailer_new_mention', '1' );
+		}
+
+		// Delete the old notification options.
+		\delete_option( 'activitypub_mailer_new_dm' );
+		\delete_option( 'activitypub_mailer_new_follower' );
 	}
 }

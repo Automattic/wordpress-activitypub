@@ -7,12 +7,11 @@
 
 namespace Activitypub\Model;
 
-use WP_Query;
-
-use Activitypub\Signature;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Signature;
+use WP_Query;
 
 use function Activitypub\esc_hashtag;
 use function Activitypub\is_single_user;
@@ -93,6 +92,18 @@ class Blog extends Actor {
 	protected $posting_restricted_to_mods;
 
 	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		/**
+		 * Fires when a model actor is constructed.
+		 *
+		 * @param Blog $this The Blog model.
+		 */
+		\do_action( 'activitypub_construct_model_actor', $this );
+	}
+
+	/**
 	 * Whether the User manually approves followers.
 	 *
 	 * @return false
@@ -116,6 +127,12 @@ class Blog extends Actor {
 	 * @return string The User ID.
 	 */
 	public function get_id() {
+		$id = parent::get_id();
+
+		if ( $id ) {
+			return $id;
+		}
+
 		$permalink = \get_option( 'activitypub_use_permalink_as_id_for_blog', false );
 
 		if ( $permalink ) {
@@ -311,7 +328,7 @@ class Blog extends Actor {
 			$time = \time();
 		}
 
-		return \gmdate( 'Y-m-d\TH:i:s\Z', $time );
+		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $time );
 	}
 
 	/**
@@ -419,7 +436,7 @@ class Blog extends Actor {
 	public function get_endpoints() {
 		$endpoints = null;
 
-		if ( ACTIVITYPUB_SHARED_INBOX_FEATURE ) {
+		if ( \get_option( 'activitypub_shared_inbox' ) ) {
 			$endpoints = array(
 				'sharedInbox' => get_rest_url_by_path( 'inbox' ),
 			);
@@ -576,6 +593,8 @@ class Blog extends Actor {
 	 * @return string The movedTo.
 	 */
 	public function get_moved_to() {
-		return \get_option( 'activitypub_blog_user_moved_to' );
+		$moved_to = \get_option( 'activitypub_blog_user_moved_to' );
+
+		return $moved_to && $moved_to !== $this->get_id() ? $moved_to : null;
 	}
 }

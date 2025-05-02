@@ -280,6 +280,9 @@ class Post extends Base {
 			return array();
 		}
 
+		// phpcs:ignore Universal.Operators.DisallowShortTernary
+		$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true ) ?: \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
+
 		/**
 		 * Filters the maximum number of media attachments allowed in a post.
 		 *
@@ -289,12 +292,7 @@ class Post extends Base {
 		 *
 		 * @param int $max_media Maximum number of media attachments. Default ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS.
 		 */
-		$max_media = \intval(
-			\apply_filters(
-				'activitypub_max_image_attachments',
-				\get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS )
-			)
-		);
+		$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media );
 
 		$media = array(
 			'image' => array(),
@@ -500,9 +498,10 @@ class Post extends Base {
 		 *
 		 * @param WP_Post $post The post object.
 		 */
-		do_action( 'activitypub_before_get_content', $post );
+		\do_action( 'activitypub_before_get_content', $post );
 
-		add_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ), 10, 2 );
+		\add_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ), 10, 2 );
+		\add_filter( 'render_block_activitypub/reply', array( $this, 'generate_reply_link' ), 10, 2 );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$post    = $this->item;
@@ -535,10 +534,68 @@ class Post extends Base {
 		// Don't need these anymore, should never appear in a post.
 		Shortcodes::unregister();
 
+		// Get rid of the reply block filter.
+		\remove_filter( 'render_block_activitypub/reply', array( $this, 'generate_reply_link' ), 10, 2 );
 		\remove_filter( 'render_block_core/embed', array( $this, 'revert_embed_links' ) );
 		\remove_filter( 'activitypub_reply_block', '__return_empty_string' );
 
 		return $content;
+	}
+
+	/**
+	 * Generate HTML @ link for reply block.
+	 *
+	 * @param string $block_content The block content.
+	 * @param array  $block         The block data.
+	 *
+	 * @return string The HTML @ link.
+	 */
+	public function generate_reply_link( $block_content, $block ) {
+		// Return empty string if no URL is provided.
+		if ( empty( $block['attrs']['url'] ) ) {
+			return '';
+		}
+
+		$url = $block['attrs']['url'];
+
+		// Try to get ActivityPub representation. Is likely already cached.
+		$object = \Activitypub\Http::get_remote_object( $url );
+		if ( \is_wp_error( $object ) ) {
+			return '';
+		}
+
+		$author_url = $object['attributedTo'] ?? '';
+		if ( ! $author_url ) {
+			return '';
+		}
+
+		// Fetch author information.
+		$author = \Activitypub\Http::get_remote_object( $author_url );
+		if ( \is_wp_error( $author ) ) {
+			return '';
+		}
+
+		// Get webfinger identifier.
+		$webfinger = '';
+		if ( ! empty( $author['webfinger'] ) ) {
+			$webfinger = $author['webfinger'];
+		} elseif ( ! empty( $author['preferredUsername'] ) && ! empty( $author['url'] ) ) {
+			// Construct webfinger-style identifier from username and domain.
+			$domain    = \wp_parse_url( $author['url'], PHP_URL_HOST );
+			$webfinger = '@' . $author['preferredUsername'] . '@' . $domain;
+		}
+
+		if ( ! $webfinger ) {
+			return '';
+		}
+
+		// Generate HTML @ link.
+		return \sprintf(
+			'<p class="ap-reply-mention"><a rel="mention ugc" href="%1$s" title="%2$s">%3$s</a></p>',
+			\esc_url( $url ),
+			\esc_attr( $webfinger ),
+			\esc_html( '@' . strtok( $webfinger, '@' ) )
+		);
 	}
 
 	/**
@@ -573,7 +630,7 @@ class Post extends Base {
 	protected function get_published() {
 		$published = \strtotime( $this->item->post_date_gmt );
 
-		return \gmdate( 'Y-m-d\TH:i:s\Z', $published );
+		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $published );
 	}
 
 	/**
@@ -586,7 +643,7 @@ class Post extends Base {
 		$updated   = \strtotime( $this->item->post_modified_gmt );
 
 		if ( $updated > $published ) {
-			return \gmdate( 'Y-m-d\TH:i:s\Z', $updated );
+			return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $updated );
 		}
 
 		return null;
@@ -669,10 +726,10 @@ class Post extends Base {
 			}
 
 			$mime_type         = $enclosure['mediaType'];
-			$mime_type_parts   = \explode( '/', $mime_type );
-			$enclosure['type'] = \ucfirst( $mime_type_parts[0] );
+			$media_type        = \strtok( $mime_type, '/' );
+			$enclosure['type'] = \ucfirst( $media_type );
 
-			switch ( $mime_type_parts[0] ) {
+			switch ( $media_type ) {
 				case 'image':
 					$media['image'][] = $enclosure;
 					break;
@@ -913,12 +970,12 @@ class Post extends Base {
 			return $media;
 		}
 
-		$id              = $media['id'];
-		$attachment      = array();
-		$mime_type       = \get_post_mime_type( $id );
-		$mime_type_parts = \explode( '/', $mime_type );
+		$id         = $media['id'];
+		$attachment = array();
+		$mime_type  = \get_post_mime_type( $id );
+		$media_type = \strtok( $mime_type, '/' );
 		// Switching on image/audio/video.
-		switch ( $mime_type_parts[0] ) {
+		switch ( $media_type ) {
 			case 'image':
 				$image_size = 'large';
 
@@ -959,7 +1016,7 @@ class Post extends Base {
 			case 'audio':
 			case 'video':
 				$attachment = array(
-					'type'      => 'Document',
+					'type'      => \ucfirst( $media_type ),
 					'mediaType' => \esc_attr( $mime_type ),
 					'url'       => \esc_url( \wp_get_attachment_url( $id ) ),
 					'name'      => \esc_attr( \get_the_title( $id ) ),

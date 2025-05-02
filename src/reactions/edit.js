@@ -1,6 +1,6 @@
 import { useBlockProps, RichText } from '@wordpress/block-editor';
 import { useState } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, _x, sprintf } from '@wordpress/i18n';
 import { Reactions } from './reactions';
 
 /**
@@ -19,10 +19,10 @@ const generateWhimsicalName = () => {
 		'Giraffe', 'Hedgehog', 'Iguana', 'Jellyfish', 'Koala',
 		'Lemur', 'Manatee', 'Narwhal', 'Octopus', 'Penguin',
 	];
-	
+
 	const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
 	const noun = nouns[Math.floor(Math.random() * nouns.length)];
-	
+
 	return `${adjective} ${noun}`;
 };
 
@@ -44,30 +44,30 @@ const generateDummyReaction = ( index ) => {
 		'#3498DB', // Blue
 		'#E67E22', // Orange
 	];
-	
+
 	const name = generateWhimsicalName();
 	const color = colors[Math.floor(Math.random() * colors.length)];
 	const letter = name.charAt(0);
-	
+
 	// Create a data URL for a colored circle with a letter.
 	const canvas = document.createElement('canvas');
 	canvas.width = 64;
 	canvas.height = 64;
 	const ctx = canvas.getContext('2d');
-	
+
 	// Draw colored circle.
 	ctx.fillStyle = color;
 	ctx.beginPath();
 	ctx.arc(32, 32, 32, 0, 2 * Math.PI);
 	ctx.fill();
-	
+
 	// Draw letter.
 	ctx.fillStyle = '#FFFFFF';
 	ctx.font = '32px sans-serif';
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
 	ctx.fillText(letter, 32, 32);
-	
+
 	return {
 		name,
 		url: '#',
@@ -82,11 +82,19 @@ const generateDummyReaction = ( index ) => {
  */
 const generateDummyReactions = () => ( {
 	likes: {
-		label: '9 likes',
+		label: sprintf(
+			/* translators: %d: Number of likes */
+			_x( '%d likes', 'number of likes', 'activitypub' ),
+			9
+		),
 		items: Array.from( { length: 9 }, ( _, i ) => generateDummyReaction( i ) ),
 	},
 	reposts: {
-		label: '6 reposts',
+		label:  sprintf(
+			/* translators: %d: Number of reposts */
+			_x( '%d reposts', 'number of reposts', 'activitypub' ),
+			6
+		),
 		items: Array.from( { length: 6 }, ( _, i ) => generateDummyReaction( i + 9 ) ),
 	},
 } );
@@ -108,7 +116,7 @@ export default function Edit( { attributes, setAttributes, __unstableLayoutClass
 			tagName="h6"
 			value={ attributes.title }
 			onChange={ ( title ) => setAttributes( { title } ) }
-			placeholder={ __( 'Fediverse reactions', 'activitypub' ) }
+			placeholder={ __( 'Fediverse Reactions', 'activitypub' ) }
 			disableLineBreaks={ true }
 			allowedFormats={ [] }
 		/>

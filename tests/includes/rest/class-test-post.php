@@ -60,7 +60,7 @@ class Test_Post extends WP_UnitTestCase {
 		$response = $this->server->dispatch( $request );
 
 		$this->assertEquals( 404, $response->get_status() );
-		$this->assertEquals( 'post_not_found', $response->get_data()['code'] );
+		$this->assertEquals( 'activitypub_post_not_found', $response->get_data()['code'] );
 	}
 
 	/**

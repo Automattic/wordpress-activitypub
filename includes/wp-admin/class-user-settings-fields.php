@@ -56,6 +56,14 @@ class User_Settings_Fields {
 		);
 
 		\add_settings_field(
+			'activitypub_notifications',
+			\esc_html__( 'Email Notifications', 'activitypub' ),
+			array( self::class, 'notifications_callback' ),
+			'activitypub_user_settings',
+			'activitypub_user_profile'
+		);
+
+		\add_settings_field(
 			'activitypub_extra_fields',
 			\esc_html__( 'Extra Fields', 'activitypub' ),
 			array( self::class, 'extra_fields_callback' ),
@@ -172,6 +180,34 @@ class User_Settings_Fields {
 	}
 
 	/**
+	 * Notifications field callback.
+	 */
+	public static function notifications_callback() {
+		?>
+		<fieldset id="activitypub-notifications">
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_new_follower" id="activitypub_mailer_new_follower" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_new_follower' ) ); ?> />
+					<?php \esc_html_e( 'New Followers', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_new_dm" id="activitypub_mailer_new_dm" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_new_dm' ) ); ?> />
+					<?php \esc_html_e( 'Direct Messages', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_new_mention" id="activitypub_mailer_new_mention" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_new_mention' ) ); ?> />
+					<?php \esc_html_e( 'New Mentions', 'activitypub' ); ?>
+				</label>
+			</p>
+		</fieldset>
+		<?php
+	}
+
+	/**
 	 * Extra fields callback.
 	 */
 	public static function extra_fields_callback() {
@@ -197,7 +233,7 @@ class User_Settings_Fields {
 		</table>
 		<?php endif; ?>
 
-		<p>
+		<p class="extra-fields-nav">
 			<a href="<?php echo \esc_url( \admin_url( '/post-new.php?post_type=ap_extrafield' ) ); ?>" class="button">
 				<?php \esc_html_e( 'Add new', 'activitypub' ); ?>
 			</a>

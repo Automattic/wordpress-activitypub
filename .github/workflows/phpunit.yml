@@ -22,6 +22,8 @@ jobs:
           - wp-version: latest
           - wp-version: '6.4'
             php-versions: '7.2'
+          - wp-version: trunk
+            php-versions: '8.4'
     steps:
       - name: Install svn
         run: |
