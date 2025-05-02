@@ -79,7 +79,7 @@ class Post {
 		$post    = get_post( $post_id );
 
 		if ( ! $post ) {
-			return new WP_Error( 'post_not_found', 'Post not found', array( 'status' => 404 ) );
+			return new WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
 		}
 
 		$reactions = array();
@@ -141,7 +141,7 @@ class Post {
 		$collection = Replies::get_context_collection( $post_id );
 
 		if ( false === $collection ) {
-			return new WP_Error( 'post_not_found', 'Post not found', array( 'status' => 404 ) );
+			return new WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
 		}
 
 		$response = array_merge(

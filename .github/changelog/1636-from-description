@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Fediverse Previews in the Block Editor now show media items, even if the post has not been published yet.

@@ -275,10 +275,16 @@ class Post extends Base {
 	 * @return array The Attachments.
 	 */
 	protected function get_attachment() {
-		// Remove attachments from drafts.
-		if ( 'draft' === \get_post_status( $this->item ) ) {
+		/*
+		 * Remove attachments from the Fediverse if a post was federated and then set back to draft.
+		 * Except in preview mode, where we want to show attachments.
+		 */
+		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
 			return array();
 		}
+
+		// phpcs:ignore Universal.Operators.DisallowShortTernary
+		$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true ) ?: \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
 
 		/**
 		 * Filters the maximum number of media attachments allowed in a post.
@@ -289,12 +295,7 @@ class Post extends Base {
 		 *
 		 * @param int $max_media Maximum number of media attachments. Default ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS.
 		 */
-		$max_media = \intval(
-			\apply_filters(
-				'activitypub_max_image_attachments',
-				\get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS )
-			)
-		);
+		$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media );
 
 		$media = array(
 			'image' => array(),
@@ -304,7 +305,7 @@ class Post extends Base {
 		$id    = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
-		if ( \function_exists( 'has_post_thumbnail' ) && \has_post_thumbnail( $id ) ) {
+		if ( \has_post_thumbnail( $id ) ) {
 			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
 		}
 
@@ -728,10 +729,10 @@ class Post extends Base {
 			}
 
 			$mime_type         = $enclosure['mediaType'];
-			$mime_type_parts   = \explode( '/', $mime_type );
-			$enclosure['type'] = \ucfirst( $mime_type_parts[0] );
+			$media_type        = \strtok( $mime_type, '/' );
+			$enclosure['type'] = \ucfirst( $media_type );
 
-			switch ( $mime_type_parts[0] ) {
+			switch ( $media_type ) {
 				case 'image':
 					$media['image'][] = $enclosure;
 					break;
@@ -972,12 +973,12 @@ class Post extends Base {
 			return $media;
 		}
 
-		$id              = $media['id'];
-		$attachment      = array();
-		$mime_type       = \get_post_mime_type( $id );
-		$mime_type_parts = \explode( '/', $mime_type );
+		$id         = $media['id'];
+		$attachment = array();
+		$mime_type  = \get_post_mime_type( $id );
+		$media_type = \strtok( $mime_type, '/' );
 		// Switching on image/audio/video.
-		switch ( $mime_type_parts[0] ) {
+		switch ( $media_type ) {
 			case 'image':
 				$image_size = 'large';
 
@@ -1018,7 +1019,7 @@ class Post extends Base {
 			case 'audio':
 			case 'video':
 				$attachment = array(
-					'type'      => 'Document',
+					'type'      => \ucfirst( $media_type ),
 					'mediaType' => \esc_attr( $mime_type ),
 					'url'       => \esc_url( \wp_get_attachment_url( $id ) ),
 					'name'      => \esc_attr( \get_the_title( $id ) ),
