@@ -206,14 +206,14 @@ class Welcome_Fields {
 	 * Render the Fediverse-Intro step.
 	 */
 	public static function render_step_fediverse_intro() {
-		$checked      = \get_option( 'activitypub_checklist_fediverse_intro_visited', false );
-		$step_class   = ( true === $checked ) ? 'activitypub-step-completed' : '';
+		$checked      = '1' === \get_option( 'activitypub_checklist_fediverse_intro_visited', false );
+		$step_class   = $checked ? 'activitypub-step-completed' : '';
 		$next_step    = self::get_next_incomplete_step();
 		$button_class = ( 'fediverse_intro' === $next_step ) ? 'button-primary' : 'button-secondary';
 		?>
 		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
 			<div class="step-indicator">
-				<?php if ( true === $checked ) : ?>
+				<?php if ( $checked ) : ?>
 					<span class="step-icon dashicons dashicons-yes"></span>
 				<?php else : ?>
 					<span class="step-icon dashicons dashicons-video-alt3"></span>
@@ -313,14 +313,14 @@ class Welcome_Fields {
 	 * Render the Profile Mode step.
 	 */
 	public static function render_step_profile_mode() {
-		$checked      = \get_option( 'activitypub_checklist_settings_visited', false );
-		$step_class   = ( true === $checked ) ? 'activitypub-step-completed' : '';
+		$checked      = '1' === \get_option( 'activitypub_checklist_settings_visited', false );
+		$step_class   = $checked ? 'activitypub-step-completed' : '';
 		$next_step    = self::get_next_incomplete_step();
 		$button_class = ( 'profile_mode' === $next_step ) ? 'button-primary' : 'button-secondary';
 		?>
 		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
 			<div class="step-indicator">
-				<?php if ( true === $checked ) : ?>
+				<?php if ( $checked ) : ?>
 					<span class="step-icon dashicons dashicons-yes"></span>
 				<?php else : ?>
 					<span class="step-icon dashicons dashicons-groups"></span>
@@ -345,14 +345,14 @@ class Welcome_Fields {
 	 * Render the Features step.
 	 */
 	public static function render_step_features() {
-		$checked      = \get_option( 'activitypub_checklist_blocks_visited', false );
-		$step_class   = ( true === $checked ) ? 'activitypub-step-completed' : '';
+		$checked      = '1' === \get_option( 'activitypub_checklist_blocks_visited', false );
+		$step_class   = $checked ? 'activitypub-step-completed' : '';
 		$next_step    = self::get_next_incomplete_step();
 		$button_class = ( 'features' === $next_step ) ? 'button-primary' : 'button-secondary';
 		?>
 		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
 			<div class="step-indicator">
-				<?php if ( true === $checked ) : ?>
+				<?php if ( $checked ) : ?>
 					<span class="step-icon dashicons dashicons-yes"></span>
 				<?php else : ?>
 					<span class="step-icon dashicons dashicons-info"></span>
