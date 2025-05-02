@@ -20,10 +20,6 @@ class Welcome_Fields {
 	 * Initialize the welcome fields.
 	 */
 	public static function init() {
-		if ( '1' !== \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true ) ) {
-			return;
-		}
-
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_welcome_fields' ) );
 		\add_action( 'admin_print_styles-settings_page_activitypub', array( self::class, 'enqueue_styles' ) );
 	}
