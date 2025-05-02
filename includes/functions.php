@@ -1547,19 +1547,27 @@ function is_activity( $data ) {
 	 */
 	$types = apply_filters( 'activitypub_activity_types', Activity::TYPES );
 
-	if ( is_string( $data ) ) {
-		return in_array( $data, $types, true );
-	}
+	return _is_type_of( $data, $types );
+}
 
-	if ( is_array( $data ) && isset( $data['type'] ) ) {
-		return in_array( $data['type'], $types, true );
-	}
+/**
+ * Check if an `$data` is an Activity Object.
+ *
+ * @see https://www.w3.org/TR/activitystreams-vocabulary/#object-types
+ *
+ * @param array|object|string $data The data to check.
+ *
+ * @return boolean True if the `$data` is an Activity Object, false otherwise.
+ */
+function is_activity_object( $data ) {
+	/**
+	 * Filters the activity object types.
+	 *
+	 * @param array $types The activity object types.
+	 */
+	$types = apply_filters( 'activitypub_activity_object_types', Base_Object::TYPES );
 
-	if ( is_object( $data ) && $data instanceof Base_Object ) {
-		return in_array( $data->get_type(), $types, true );
-	}
-
-	return false;
+	return _is_type_of( $data, $types );
 }
 
 /**
@@ -1579,6 +1587,17 @@ function is_actor( $data ) {
 	 */
 	$types = apply_filters( 'activitypub_actor_types', Actor::TYPES );
 
+	return _is_type_of( $data, $types );
+}
+
+/**
+ * Private helper to check if $data is of a given type set.
+ *
+ * @param array|object|string $data  The data to check.
+ * @param array               $types The types to check against.
+ * @return boolean True if $data is of one of the types, false otherwise.
+ */
+function _is_type_of( $data, $types ) {
 	if ( is_string( $data ) ) {
 		return in_array( $data, $types, true );
 	}
@@ -1587,7 +1606,7 @@ function is_actor( $data ) {
 		return in_array( $data['type'], $types, true );
 	}
 
-	if ( is_object( $data ) && $data instanceof Base_Object ) {
+	if ( $data instanceof Base_Object ) {
 		return in_array( $data->get_type(), $types, true );
 	}
 

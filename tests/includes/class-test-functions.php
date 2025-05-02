@@ -278,6 +278,53 @@ class Test_Functions extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
+	 * Test is_activity_object with array input.
+	 *
+	 * @covers \Activitypub\is_activity_object
+	 *
+	 * @dataProvider is_activity_object_data
+	 *
+	 * @param mixed $activity The activity object.
+	 * @param bool  $expected The expected result.
+	 */
+	public function test_is_activity_object( $activity, $expected ) {
+		$this->assertEquals( $expected, \Activitypub\is_activity_object( $activity ) );
+	}
+
+	/**
+	 * Data provider for test_is_activity_object.
+	 *
+	 * @return array[][]
+	 */
+	public function is_activity_object_data() {
+		// Test Activity object.
+		$create = new \Activitypub\Activity\Activity();
+		$create->set_type( 'Create' );
+
+		// Test Base_Object.
+		$note = new \Activitypub\Activity\Base_Object();
+		$note->set_type( 'Note' );
+
+		return array(
+			array( array( 'type' => 'Article' ), true ),
+			array( array( 'type' => 'Image' ), true ),
+			array( array( 'type' => 'Video' ), true ),
+			array( array( 'type' => 'Audio' ), true ),
+			array( array( 'type' => '' ), false ),
+			array( array( 'type' => null ), false ),
+			array( array(), false ),
+			array( $create, false ),
+			array( $note, true ),
+			array( 'string', false ),
+			array( 123, false ),
+			array( true, false ),
+			array( false, false ),
+			array( null, false ),
+			array( new \stdClass(), false ),
+		);
+	}
+
+	/**
 	 * Test is_activity with invalid input.
 	 *
 	 * @covers \Activitypub\is_activity
