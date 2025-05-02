@@ -75,8 +75,8 @@ class Welcome_Fields {
 
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_plugin_installed' ), 10 );
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_fediverse_intro' ), 20 );
-		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_profile_setup' ), 40 );
-		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_profile_mode' ), 50 );
+		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_profile_mode' ), 40 );
+		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_profile_setup' ), 50 );
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_features' ), 60 );
 
 		// Only add site health step if there are issues.
@@ -138,11 +138,12 @@ class Welcome_Fields {
 	 * Get the total number of steps.
 	 */
 	private static function get_total_steps_count() {
-		$count = 5; // Base number of steps (Plugin installed, Fediverse intro, Profile setup, Profile mode, Features).
+		global $wp_filter;
 
-		// Add site health step if there are issues.
-		if ( 0 < Health_Check::count_results( 'critical' ) || 0 < Health_Check::count_results( 'recommended' ) ) {
-			++$count;
+		$count = 0;
+
+		if ( isset( $wp_filter['activitypub_onboarding_steps'] ) ) {
+			$count = \count( $wp_filter['activitypub_onboarding_steps']->callbacks );
 		}
 
 		return $count;
@@ -279,37 +280,6 @@ class Welcome_Fields {
 	}
 
 	/**
-	 * Render the Profile Setup step.
-	 */
-	public static function render_step_profile_setup() {
-		$user_can_activitypub = user_can_activitypub( \get_current_user_id() );
-		?>
-		<div class="activitypub-onboarding-step">
-			<div class="step-indicator">
-				<span class="step-icon dashicons dashicons-admin-users"></span>
-			</div>
-			<div class="step-content">
-				<div class="step-text">
-					<h3><?php \esc_html_e( 'Set up your public profile', 'activitypub' ); ?></h3>
-					<p><?php \esc_html_e( 'Choose your username and how you appear to others.', 'activitypub' ); ?></p>
-				</div>
-				<div class="step-action">
-					<?php if ( true === $user_can_activitypub ) : ?>
-						<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>" class="button button-secondary">
-							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
-						</a>
-					<?php else : ?>
-						<button class="button button-secondary" disabled>
-							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
-						</button>
-					<?php endif; ?>
-				</div>
-			</div>
-		</div>
-		<?php
-	}
-
-	/**
 	 * Render the Profile Mode step.
 	 */
 	public static function render_step_profile_mode() {
@@ -335,6 +305,37 @@ class Welcome_Fields {
 					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&tab=settings#tab-link-core-features' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 						<?php \esc_html_e( 'Choose mode', 'activitypub' ); ?>
 					</a>
+				</div>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render the Profile Setup step.
+	 */
+	public static function render_step_profile_setup() {
+		$user_can_activitypub = user_can_activitypub( \get_current_user_id() );
+		?>
+		<div class="activitypub-onboarding-step">
+			<div class="step-indicator">
+				<span class="step-icon dashicons dashicons-admin-users"></span>
+			</div>
+			<div class="step-content">
+				<div class="step-text">
+					<h3><?php \esc_html_e( 'Set up your public profile', 'activitypub' ); ?></h3>
+					<p><?php \esc_html_e( 'Choose your username and how you appear to others.', 'activitypub' ); ?></p>
+				</div>
+				<div class="step-action">
+					<?php if ( true === $user_can_activitypub ) : ?>
+						<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>" class="button button-secondary">
+							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
+						</a>
+					<?php else : ?>
+						<button class="button button-secondary" disabled>
+							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
+						</button>
+					<?php endif; ?>
 				</div>
 			</div>
 		</div>
