@@ -312,7 +312,11 @@ class Welcome_Fields {
 		?>
 		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
 			<div class="step-indicator">
-				<span class="step-icon dashicons dashicons-admin-users"></span>
+				<?php if ( $checked ) : ?>
+					<span class="step-icon dashicons dashicons-yes"></span>
+				<?php else : ?>
+					<span class="step-icon dashicons dashicons-users"></span>
+				<?php endif; ?>
 			</div>
 			<div class="step-content">
 				<div class="step-text">
