@@ -140,38 +140,8 @@ class Outbox {
 		);
 
 		foreach ( $existing_items as $existing_item_id ) {
-			$event_args = array(
-				$existing_item_id,
-				Dispatcher::$batch_size,
-				\get_post_meta( $existing_item_id, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
-			);
-
-			$timestamp = \wp_next_scheduled( 'activitypub_send_activity', $event_args );
-			\wp_unschedule_event( $timestamp, 'activitypub_send_activity', $event_args );
-
-			$timestamp = \wp_next_scheduled( 'activitypub_process_outbox', array( $existing_item_id ) );
-			\wp_unschedule_event( $timestamp, 'activitypub_process_outbox', array( $existing_item_id ) );
-
-			// Invalidate any retries for this outbox item.
-			$crons = _get_cron_array();
-			foreach ( $crons as $timestamp => $cron ) {
-				if ( ! isset( $cron['activitypub_async_batch'] ) ) {
-					continue;
-				}
-				foreach ( $cron['activitypub_async_batch'] as $event ) {
-					if (
-						isset( $event['args'][0][1] ) &&
-						'retry_send_to_followers' === $event['args'][0][1] &&
-						isset( $event['args'][2] ) &&
-						$existing_item_id === $event['args'][2]
-					) {
-						\wp_unschedule_event( $timestamp, 'activitypub_async_batch', $event['args'] );
-					}
-				}
-			}
-
+			Scheduler::unschedule_events_for_item( $existing_item_id );
 			\wp_publish_post( $existing_item_id );
-			\delete_post_meta( $existing_item_id, '_activitypub_outbox_offset' );
 		}
 	}
 
