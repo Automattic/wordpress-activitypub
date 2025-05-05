@@ -132,7 +132,7 @@ class Base_Object extends Generic_Object {
 
 	/**
 	 * One or more entities that represent the total population of
-	 * entities for which the object can considered to be relevant.
+	 * entities for which the object can be considered to be relevant.
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-audience
 	 *
@@ -395,9 +395,9 @@ class Base_Object extends Generic_Object {
 
 	/**
 	 * When the object describes a time-bound resource, such as an audio
-	 * or video, a meeting, etc, the duration property indicates the
+	 * or video, a meeting, etc., the duration property indicates the
 	 * object's approximate duration.
-	 * The value MUST be expressed as an xsd:duration as defined by
+	 * The value MUST be expressed as a xsd:duration as defined by
 	 * xmlschema11-2, section 3.3.6 (e.g. a period of 5 seconds is
 	 * represented as "PT5S").
 	 *

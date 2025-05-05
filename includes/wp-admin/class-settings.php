@@ -62,9 +62,12 @@ class Settings {
 			'activitypub',
 			'activitypub_max_image_attachments',
 			array(
-				'type'        => 'integer',
-				'description' => \__( 'Number of images to attach to posts.', 'activitypub' ),
-				'default'     => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
+				'type'              => 'integer',
+				'description'       => \__( 'Number of images to attach to posts.', 'activitypub' ),
+				'default'           => ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS,
+				'sanitize_callback' => function ( $value ) {
+					return \is_numeric( $value ) ? \absint( $value ) : ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS;
+				},
 			)
 		);
 
@@ -184,7 +187,17 @@ class Settings {
 			array(
 				'type'        => 'boolean',
 				'description' => \__( 'Add the Vary header to the ActivityPub response.', 'activitypub' ),
-				'default'     => false,
+				'default'     => true,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_content_negotiation',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable content negotiation.',
+				'default'     => true,
 			)
 		);
 

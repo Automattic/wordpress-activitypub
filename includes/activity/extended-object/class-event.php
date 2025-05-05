@@ -123,7 +123,7 @@ class Event extends Base_Object {
 	protected $name;
 
 	/**
-	 * The events contacts.
+	 * The event's contacts.
 	 *
 	 * @context {
 	 *   '@id'   => 'mz:contacts',

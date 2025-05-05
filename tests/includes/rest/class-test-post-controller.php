@@ -19,7 +19,7 @@ use WP_REST_Response;
  * @group rest
  * @coversDefaultClass \Activitypub\Rest\Post
  */
-class Test_Post extends WP_UnitTestCase {
+class Test_Post_Controller extends WP_UnitTestCase {
 	/**
 	 * REST Server.
 	 *
