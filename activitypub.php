@@ -106,8 +106,8 @@ function plugin_admin_init() {
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Advanced_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Blog_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\User_Settings_Fields', 'init' ) );
-	\add_action( 'wp_ajax_activitypub_help_tab_visited', array( __NAMESPACE__ . '\WP_Admin\Welcome_Fields', 'help_tab_visited' ) );
 
+	\add_action( 'wp_ajax_activitypub_help_tab_visited', array( __NAMESPACE__ . '\WP_Admin\Welcome_Fields', 'help_tab_visited' ) );
 
 	if ( defined( 'WP_LOAD_IMPORTERS' ) && WP_LOAD_IMPORTERS ) {
 		require_once __DIR__ . '/includes/wp-admin/import/load.php';
