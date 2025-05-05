@@ -314,6 +314,35 @@ class Query {
 	}
 
 	/**
+	 * Check if content negotiation is allowed for a request.
+	 *
+	 * @return bool True if content negotiation is allowed, false otherwise.
+	 */
+	public function should_negotiate_content() {
+		$return           = false;
+		$always_negotiate = array( 'p', 'c', 'author', 'actor', 'preview', 'activitypub' );
+		$url              = \wp_parse_url( $this->get_request_url(), PHP_URL_QUERY );
+		$query            = array();
+		\wp_parse_str( $url, $query );
+
+		// Check if any of the query params are in the `$always_negotiate` array.
+		if ( \array_intersect( \array_keys( $query ), $always_negotiate ) ) {
+			$return = true;
+		}
+
+		if ( \get_option( 'activitypub_content_negotiation', '1' ) ) {
+			$return = true;
+		}
+
+		/**
+		 * Filters whether content negotiation should be forced.
+		 *
+		 * @param bool $return Whether content negotiation should be forced.
+		 */
+		return \apply_filters( 'activitypub_should_negotiate_content', $return );
+	}
+
+	/**
 	 * Check if the current request is from the old host.
 	 *
 	 * @return bool True if the request is from the old host, false otherwise.

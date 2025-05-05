@@ -7,9 +7,6 @@
 
 namespace Activitypub\Rest;
 
-use WP_REST_Server;
-use WP_REST_Response;
-use WP_Error;
 use Activitypub\Comment;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Replies;
@@ -17,51 +14,62 @@ use Activitypub\Collection\Replies;
 use function Activitypub\get_rest_url_by_path;
 
 /**
- * Class Post
+ * Class Post_Controller
  *
  * @package Activitypub\Rest
  */
-class Post {
+class Post_Controller extends \WP_REST_Controller {
 
 	/**
-	 * Initialize the class and register routes.
+	 * The namespace of this controller's route.
+	 *
+	 * @var string
 	 */
-	public static function init() {
-		self::register_routes();
-	}
+	protected $namespace = ACTIVITYPUB_REST_NAMESPACE;
+
+	/**
+	 * The base of this controller's route.
+	 *
+	 * @var string
+	 */
+	protected $rest_base = 'posts/(?P<id>\d+)';
 
 	/**
 	 * Register routes.
 	 */
-	public static function register_routes() {
-		register_rest_route(
-			ACTIVITYPUB_REST_NAMESPACE,
-			'/posts/(?P<id>\d+)/reactions',
+	public function register_routes() {
+		\register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/reactions',
 			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => array( static::class, 'get_reactions' ),
-				'permission_callback' => '__return_true',
-				'args'                => array(
+				'args' => array(
 					'id' => array(
 						'required' => true,
 						'type'     => 'integer',
 					),
 				),
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_reactions' ),
+					'permission_callback' => '__return_true',
+				),
 			)
 		);
 
-		register_rest_route(
-			ACTIVITYPUB_REST_NAMESPACE,
-			'/posts/(?P<id>\d+)/context',
+		\register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/context',
 			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => array( static::class, 'get_context' ),
-				'permission_callback' => '__return_true',
-				'args'                => array(
+				'args' => array(
 					'id' => array(
 						'required' => true,
 						'type'     => 'integer',
 					),
+				),
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_context' ),
+					'permission_callback' => '__return_true',
 				),
 			)
 		);
@@ -72,20 +80,20 @@ class Post {
 	 *
 	 * @param \WP_REST_Request $request The request.
 	 *
-	 * @return WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
+	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
-	public static function get_reactions( $request ) {
+	public function get_reactions( $request ) {
 		$post_id = $request->get_param( 'id' );
-		$post    = get_post( $post_id );
+		$post    = \get_post( $post_id );
 
 		if ( ! $post ) {
-			return new WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
+			return new \WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
 		}
 
 		$reactions = array();
 
 		foreach ( Comment::get_comment_types() as $type_object ) {
-			$comments = get_comments(
+			$comments = \get_comments(
 				array(
 					'post_id' => $post_id,
 					'type'    => $type_object['type'],
@@ -97,27 +105,27 @@ class Post {
 				continue;
 			}
 
-			$count = count( $comments );
+			$count = \count( $comments );
 			// phpcs:disable WordPress.WP.I18n
-			$label = sprintf(
-				_n(
+			$label = \sprintf(
+				\_n(
 					$type_object['count_single'],
 					$type_object['count_plural'],
 					$count,
 					'activitypub'
 				),
-				number_format_i18n( $count )
+				\number_format_i18n( $count )
 			);
 			// phpcs:enable WordPress.WP.I18n
 
 			$reactions[ $type_object['collection'] ] = array(
 				'label' => $label,
-				'items' => array_map(
+				'items' => \array_map(
 					function ( $comment ) {
 						return array(
 							'name'   => $comment->comment_author,
 							'url'    => $comment->comment_author_url,
-							'avatar' => get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
+							'avatar' => \get_comment_meta( $comment->comment_ID, 'avatar_url', true ),
 						);
 					},
 					$comments
@@ -125,7 +133,7 @@ class Post {
 			);
 		}
 
-		return new WP_REST_Response( $reactions );
+		return new \WP_REST_Response( $reactions );
 	}
 
 	/**
@@ -133,21 +141,21 @@ class Post {
 	 *
 	 * @param \WP_REST_Request $request The request.
 	 *
-	 * @return WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
+	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
-	public static function get_context( $request ) {
+	public function get_context( $request ) {
 		$post_id = $request->get_param( 'id' );
 
 		$collection = Replies::get_context_collection( $post_id );
 
 		if ( false === $collection ) {
-			return new WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
+			return new \WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
 		}
 
 		$response = array_merge(
 			array(
 				'@context' => Base_Object::JSON_LD_CONTEXT,
-				'id'       => get_rest_url_by_path( sprintf( 'posts/%d/context', $post_id ) ),
+				'id'       => get_rest_url_by_path( \sprintf( 'posts/%d/context', $post_id ) ),
 			),
 			$collection
 		);

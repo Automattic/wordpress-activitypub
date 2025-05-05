@@ -280,7 +280,7 @@ input.blog-user-identifier {
 .contextual-help-tabs-wrap .activitypub-block-screenshot img {
 	border: 1px solid #ddd;
 	border-radius: 4px;
-	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 	height: auto;
 	max-width: 100%;
 }
@@ -321,6 +321,27 @@ input.blog-user-identifier {
 }
 
 /* Plugin List Styles */
+.plugin-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	align-items: stretch;
+}
+
+.plugin-list .plugin-card {
+	flex: 1 1 300px;
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+	border-radius: 4px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	margin: 0;
+}
+
+.plugin-list .plugin-card .desc {
+	flex: 1 1 auto;
+}
+
 .plugin-list .plugin-action-buttons li {
 	margin: 0 0 10px 0;
 }
