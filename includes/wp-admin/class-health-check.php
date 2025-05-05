@@ -104,6 +104,13 @@ class Health_Check {
 			'test'  => array( self::class, 'test_pretty_permalinks' ),
 		);
 
+		if ( \is_plugin_active( 'surge/surge.php' ) ) {
+			$tests['direct']['activitypub_test_surge_integration'] = array(
+				'label' => \__( 'Surge Test', 'activitypub' ),
+				'test'  => array( self::class, 'test_surge_integration' ),
+			);
+		}
+
 		return $tests;
 	}
 
@@ -442,6 +449,48 @@ class Health_Check {
 					/* translators: %s: Permalink settings URL. */
 					\__( 'Your current permalink structure includes <code>/index.php</code> which is not compatible with ActivityPub. Please <a href="%s">update your permalink settings</a> to use a standard format without <code>/index.php</code>.', 'activitypub' ),
 					esc_url( admin_url( 'options-permalink.php' ) )
+				)
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Surge integration test.
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_surge_integration() {
+		$result = array(
+			'label'       => \__( 'Compatibility with Surge', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'Surge is well configured to work with ActivityPub.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_surge_integration',
+		);
+
+		if ( ! \defined( 'WP_CACHE_CONFIG' ) ) {
+			$result['status']         = 'critical';
+			$result['label']          = \__( 'Surge might not be properly configured.', 'activitypub' );
+			$result['badge']['color'] = 'red';
+			$result['description']    = \sprintf(
+				'<p>%s</p>',
+				\__( 'Surge isn’t currently set up to work with ActivityPub. While this isn’t a major problem, it’s a good idea to enable support. Without it, some technical files (like JSON) might accidentally show up in your website’s cache and be visible to visitors.', 'activitypub' )
+			);
+			$result['actions']        = \sprintf(
+				'<p>%s</p>',
+				sprintf(
+					// translators: %s: Plugin directory path.
+					\__( 'To enable the ActivityPub integration with Surge, add the following line to your <code>wp-config.php</code> <file></file>: <br /><code>define( \'WP_CACHE_CONFIG\', %sintegration/surge.php );</code>', 'activitypub' ),
+					ACTIVITYPUB_PLUGIN_DIR
 				)
 			);
 		}
