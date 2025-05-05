@@ -186,7 +186,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param string             $type     The type of the activity.
 			 * @param Activity|\WP_Error $activity The Activity object.
 			 */
-			do_action( 'activitypub_inbox_disallowed_activity', $data, $user->get__id(), $type, $activity );
+			do_action( 'activitypub_rest_inbox_disallowed', $data, $user->get__id(), $type, $activity );
 		} else {
 			/**
 			 * ActivityPub inbox action.
