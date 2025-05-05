@@ -19,7 +19,6 @@ class Welcome_Fields {
 	public static function init() {
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_welcome_fields' ) );
 		\add_action( 'admin_print_styles-settings_page_activitypub', array( self::class, 'enqueue_styles' ) );
-		\add_action( 'admin_action_activitypub_help_tab_visited', array( self::class, 'help_tab_visited' ) );
 	}
 
 	/**
@@ -82,7 +81,7 @@ class Welcome_Fields {
 		$total_steps         = self::get_total_steps_count();
 		$progress_percentage = \min( 100, \round( ( $completed_steps / $total_steps ) * 100 ) );
 		?>
-		<div class="activitypub-welcome-container">
+		<div id="activitypub-welcome-checklist" class="activitypub-welcome-container" data-nonce="<?php echo \esc_attr( \wp_create_nonce( 'activitypub_help_tab_visited' ) ); ?>">
 		<div class="activitypub-welcome-header">
 			<div class="activitypub-progress-circle">
 				<div class="activitypub-progress-circle-content">
@@ -215,7 +214,7 @@ class Welcome_Fields {
 					<p><?php \esc_html_e( 'Learn what the Fediverse is and why it matters.', 'activitypub' ); ?></p>
 				</div>
 				<div class="step-action">
-					<a href="<?php echo \esc_url( self::get_tab_url( 'getting-started' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-link-getting-started' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 						<?php \esc_html_e( 'Watch now', 'activitypub' ); ?>
 					</a>
 				</div>
@@ -356,7 +355,7 @@ class Welcome_Fields {
 					<p><?php \esc_html_e( 'Discover blocks, privacy, and more.', 'activitypub' ); ?></p>
 				</div>
 				<div class="step-action">
-					<a href="<?php echo \esc_url( self::get_tab_url( 'editor-blocks' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-link-editor-blocks' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 						<?php \esc_html_e( 'Explore features', 'activitypub' ); ?>
 					</a>
 				</div>
@@ -380,29 +379,12 @@ class Welcome_Fields {
 	}
 
 	/**
-	 * Helper to generate a link to a tab.
-	 *
-	 * @param string $tab Tab slug (e.g. 'getting-started', 'editor-blocks').
-	 * @return string HTML link.
-	 */
-	public static function get_tab_url( $tab ) {
-		return \add_query_arg(
-			array(
-				'action'   => 'activitypub_help_tab_visited',
-				'tab'      => $tab,
-				'_wpnonce' => \wp_create_nonce( 'activitypub_help_tab_visited' ),
-			),
-			\admin_url( 'options-general.php' )
-		);
-	}
-
-	/**
 	 * Mark checklist item as visited.
 	 */
 	public static function help_tab_visited() {
-		\check_admin_referer( 'activitypub_help_tab_visited' );
+		\check_ajax_referer( 'activitypub_help_tab_visited' );
 
-		$tab     = \sanitize_key( $_GET['tab'] ?? '' );
+		$tab     = \sanitize_key( $_POST['tab'] ?? '' );
 		$options = array(
 			'getting-started' => 'activitypub_checklist_fediverse_intro_visited',
 			'editor-blocks'   => 'activitypub_checklist_blocks_visited',
@@ -411,7 +393,6 @@ class Welcome_Fields {
 			\update_option( $options[ $tab ], '1' );
 		}
 
-		\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub#tab-link-' . $tab ) );
-		exit;
+		\wp_send_json_success();
 	}
 }
