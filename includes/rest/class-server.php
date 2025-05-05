@@ -77,12 +77,8 @@ class Server {
 			return true;
 		}
 
-		if (
-			// POST-Requests always have to be signed.
-			'GET' !== $request->get_method() ||
-			// GET-Requests only require a signature in secure mode.
-			( 'GET' === $request->get_method() && use_authorized_fetch() )
-		) {
+		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode.
+		if ( 'GET' !== $request->get_method() || use_authorized_fetch() ) {
 			$verified_request = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_request ) ) {
 				return new WP_Error(
