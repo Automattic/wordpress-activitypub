@@ -386,7 +386,7 @@ class Health_Check {
 			$result['badge']['color'] = 'orange';
 			$result['description']    = \sprintf(
 				'<p>%s</p>',
-				\__( 'This is particularly important for fediverse users, as they rely on the visual hierarchy to understand conversation threads across different platforms. Without threaded comments, it becomes much more difficult to follow discussions that span multiple platforms in the fediverse.', 'activitypub' ),
+				\__( 'This is particularly important for fediverse users, as they rely on the visual hierarchy to understand conversation threads across different platforms. Without threaded comments, it becomes much more difficult to follow discussions that span multiple platforms in the fediverse.', 'activitypub' )
 			);
 			$result['actions']        = sprintf(
 				'<p>%s</p>',
