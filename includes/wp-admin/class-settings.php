@@ -364,7 +364,7 @@ class Settings {
 				\wp_enqueue_script( 'updates' );
 				break;
 			case 'settings':
-				\update_option( 'activitypub_launchpad_settings_visited', true );
+				\update_option( 'activitypub_checklist_settings_visited', true );
 				break;
 		}
 
