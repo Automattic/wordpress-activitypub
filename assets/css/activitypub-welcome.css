@@ -97,6 +97,9 @@
 .activitypub-step-completed .step-text h3 {
 	margin: 0;
 }
+.activitypub-step-completed .step-text h3::after {
+	content: ".";
+}
 
 .activitypub-step-completed .step-text p,
 .activitypub-step-completed .step-action {
