@@ -134,7 +134,7 @@ class Scheduler {
 			}
 
 			foreach ( $cron['activitypub_retry_activity'] as $event ) {
-				if ( isset( $event['args'][2] ) && $outbox_item_id === $event['args'][1] ) {
+				if ( isset( $event['args'][1] ) && $outbox_item_id === $event['args'][1] ) {
 					\wp_unschedule_event( $timestamp, 'activitypub_retry_activity', $event['args'] );
 				}
 			}
