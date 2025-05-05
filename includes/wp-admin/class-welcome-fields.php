@@ -307,8 +307,10 @@ class Welcome_Fields {
 	 */
 	public static function render_step_profile_setup() {
 		$user_can_activitypub = user_can_activitypub( \get_current_user_id() );
+		$checked              = '1' === \get_option( 'activitypub_checklist_profile_setup_visited', false );
+		$step_class           = $checked ? 'activitypub-step-completed' : '';
 		?>
-		<div class="activitypub-onboarding-step">
+		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
 			<div class="step-indicator">
 				<span class="step-icon dashicons dashicons-admin-users"></span>
 			</div>
