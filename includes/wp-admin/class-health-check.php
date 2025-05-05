@@ -489,7 +489,7 @@ class Health_Check {
 				'<p>%s</p>',
 				sprintf(
 					// translators: %s: Plugin directory path.
-					\__( 'To enable the ActivityPub integration with Surge, add the following line to your <code>wp-config.php</code> <file></file>: <br /><code>define( \'WP_CACHE_CONFIG\', %sintegration/surge.php );</code>', 'activitypub' ),
+					\__( 'To enable the ActivityPub integration with Surge, add the following line to your <code>wp-config.php</code> file: <br /><code>define( \'WP_CACHE_CONFIG\', %sintegration/surge.php );</code>', 'activitypub' ),
 					ACTIVITYPUB_PLUGIN_DIR
 				)
 			);
