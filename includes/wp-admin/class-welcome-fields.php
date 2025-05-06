@@ -63,14 +63,10 @@ class Welcome_Fields {
 
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_plugin_installed' ), 10 );
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_fediverse_intro' ), 20 );
+		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_site_health' ), 30 );
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_profile_mode' ), 40 );
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_profile_setup' ), 50 );
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_features' ), 60 );
-
-		// Only add site health step if there are issues.
-		if ( 0 < Health_Check::count_results( 'critical' ) || 0 < Health_Check::count_results( 'recommended' ) ) {
-			\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_site_health' ), 30 );
-		}
 	}
 
 	/**
