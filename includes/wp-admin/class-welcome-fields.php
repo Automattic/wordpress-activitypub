@@ -316,7 +316,7 @@ class Welcome_Fields {
 				<?php if ( $checked ) : ?>
 					<span class="step-icon dashicons dashicons-yes"></span>
 				<?php else : ?>
-					<span class="step-icon dashicons dashicons-users"></span>
+					<span class="step-icon dashicons dashicons-admin-users"></span>
 				<?php endif; ?>
 			</div>
 			<div class="step-content">
