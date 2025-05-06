@@ -56,7 +56,7 @@ class Debug {
 	}
 
 	/**
-	 * Log the sent to follower action.
+	 * Logs Follower notifications.
 	 *
 	 * @param array  $result The result of the remote post request.
 	 * @param string $inbox  The inbox URL.

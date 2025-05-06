@@ -9,7 +9,6 @@ namespace Activitypub\Model;
 
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Extra_Fields;
-use Activitypub\Http;
 use Activitypub\Signature;
 
 use function Activitypub\is_blog_public;

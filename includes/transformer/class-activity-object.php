@@ -30,9 +30,7 @@ class Activity_Object extends Base {
 			return $activity_object;
 		}
 
-		$activity_object = $this->set_audience( $activity_object );
-
-		return $activity_object;
+		return $this->set_audience( $activity_object );
 	}
 
 	/**

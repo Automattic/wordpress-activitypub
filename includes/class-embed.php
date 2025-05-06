@@ -151,7 +151,7 @@ class Embed {
 	 */
 	public static function has_real_oembed( $url, $args = array() ) {
 		// Temporarily remove our filter to avoid infinite loops.
-		\remove_filter( 'pre_oembed_result', array( self::class, 'maybe_use_activitypub_embed' ), 10, 3 );
+		\remove_filter( 'pre_oembed_result', array( self::class, 'maybe_use_activitypub_embed' ) );
 
 		// Try to get a "real" oEmbed result. If found, it'll be cached to avoid unnecessary HTTP requests in `wp_oembed_get`.
 		$oembed_result = \wp_oembed_get( $url, $args );
