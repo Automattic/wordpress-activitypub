@@ -39,6 +39,12 @@ class Extra_Fields {
 			$args['author'] = $user_id;
 		}
 
+		// Limit to 100 fields to prevent response size issues.
+		if ( ! is_admin() ) {
+			$args['nopaging']       = false;
+			$args['posts_per_page'] = 100;
+		}
+
 		$query  = new \WP_Query( $args );
 		$fields = $query->posts ?? array();
 
