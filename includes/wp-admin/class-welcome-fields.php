@@ -85,7 +85,7 @@ class Welcome_Fields {
 		<div class="activitypub-welcome-header">
 			<div class="activitypub-progress-circle">
 				<div class="activitypub-progress-circle-content">
-					<span><?php echo \esc_html( $completed_steps ); ?>/<?php echo \esc_html( $total_steps ); ?></span>
+					<span class="activitypub-progress-label"><?php echo \esc_html( $completed_steps ); ?>/<?php echo \esc_html( $total_steps ); ?></span>
 				</div>
 				<svg class="activitypub-progress-ring" width="120" height="120">
 					<circle class="activitypub-progress-ring-bg" cx="60" cy="60" r="54" />
