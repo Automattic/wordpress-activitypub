@@ -7,9 +7,6 @@
 
 namespace Activitypub\WP_Admin;
 
-use Activitypub\Model\Blog;
-use Activitypub\Collection\Actors;
-
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -84,7 +81,7 @@ class Welcome_Fields {
 		$total_steps         = self::get_total_steps_count();
 		$progress_percentage = \min( 100, \round( ( $completed_steps / $total_steps ) * 100 ) );
 		?>
-		<div class="activitypub-welcome-container">
+		<div id="activitypub-welcome-checklist" class="activitypub-welcome-container" data-nonce="<?php echo \esc_attr( \wp_create_nonce( 'activitypub_help_tab_visited' ) ); ?>">
 		<div class="activitypub-welcome-header">
 			<div class="activitypub-progress-circle">
 				<div class="activitypub-progress-circle-content">
@@ -387,5 +384,23 @@ class Welcome_Fields {
 			</a>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Mark checklist item as visited.
+	 */
+	public static function help_tab_visited() {
+		\check_ajax_referer( 'activitypub_help_tab_visited' );
+
+		$tab     = \sanitize_key( $_POST['tab'] ?? '' );
+		$options = array(
+			'getting-started' => 'activitypub_checklist_fediverse_intro_visited',
+			'editor-blocks'   => 'activitypub_checklist_blocks_visited',
+		);
+		if ( isset( $options[ $tab ] ) ) {
+			\update_option( $options[ $tab ], '1' );
+		}
+
+		\wp_send_json_success();
 	}
 }
