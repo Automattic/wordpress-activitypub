@@ -102,6 +102,10 @@ class Welcome_Fields {
 	private static function get_completed_steps_count() {
 		$count = 1; // Plugin is already installed.
 
+		if ( 0 === Health_Check::count_results( 'critical' ) ) {
+			++$count;
+		}
+
 		// Check other completed steps.
 		if ( '1' === \get_option( 'activitypub_checklist_fediverse_intro_visited' ) ) {
 			++$count;
