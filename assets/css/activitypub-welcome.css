@@ -94,6 +94,10 @@
 	background-color: #f0f7ee;
 }
 
+.activitypub-step-completed:hover {
+	background-color: #e2f1dc;
+}
+
 .activitypub-step-completed .step-text h3 {
 	margin: 0;
 }
