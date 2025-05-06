@@ -34,8 +34,8 @@ class Test_Surge extends \WP_UnitTestCase {
 		parent::set_up();
 
 		// Create a temporary wp-config.php file for testing.
-		$this->test_file = sys_get_temp_dir() . '/wp-config-test.php';
-		file_put_contents( $this->test_file, "<?php\n/* That's all, stop editing! */" );
+		$this->test_file = \sys_get_temp_dir() . '/wp-config-test.php';
+		\file_put_contents( $this->test_file, "<?php\n/* That's all, stop editing! */" );
 
 		// Store original config file path.
 		$reflection = new \ReflectionClass( 'Activitypub\Integration\Surge' );
@@ -54,8 +54,8 @@ class Test_Surge extends \WP_UnitTestCase {
 		parent::tear_down();
 
 		// Clean up the test file.
-		if ( file_exists( $this->test_file ) ) {
-			unlink( $this->test_file );
+		if ( \file_exists( $this->test_file ) ) {
+			\unlink( $this->test_file );
 		}
 	}
 
@@ -78,16 +78,16 @@ class Test_Surge extends \WP_UnitTestCase {
 	 */
 	public function test_remove_cache_config() {
 		// First add the config.
-		file_put_contents( $this->test_file, "<?php\ndefine( 'WP_CACHE_CONFIG', '/var/www/html/wp-content/plugins/activitypub/integration/surge-cache-config.php' );\n\n/* That's all, stop editing! */" );
+		\file_put_contents( $this->test_file, "<?php\ndefine( 'WP_CACHE_CONFIG', '/var/www/html/wp-content/plugins/activitypub/integration/surge-cache-config.php' );\n\n/* That's all, stop editing! */" );
 
-		$actual = file_get_contents( $this->test_file );
+		$actual = \file_get_contents( $this->test_file );
 		$this->assertStringContainsString( "define( 'WP_CACHE_CONFIG', '/var/www/html/wp-content/plugins/activitypub/integration/surge-cache-config.php' );", $actual, "Config line should be present" );
 
 		// Test removing config.
 		Surge::remove_cache_config();
 
 		// Verify the config was removed.
-		$actual = file_get_contents( $this->test_file );
+		$actual = \file_get_contents( $this->test_file );
 		$this->assertStringContainsString( "<?php", $actual, "File should start with PHP opening tag" );
 		$this->assertStringNotContainsString( "define( 'WP_CACHE_CONFIG'", $actual, "Config line should be removed" );
 		$this->assertStringContainsString( "/* That's all, stop editing! */", $actual, "Comment should be present" );
@@ -108,7 +108,7 @@ class Test_Surge extends \WP_UnitTestCase {
 		Surge::init();
 
 		// Verify the config was added.
-		$actual = file_get_contents( $this->test_file );
+		$actual = \file_get_contents( $this->test_file );
 		$this->assertStringContainsString( "<?php", $actual, "File should start with PHP opening tag" );
 		$this->assertStringContainsString( "define( 'WP_CACHE_CONFIG', '/var/www/html/wp-content/plugins/activitypub/integration/surge-cache-config.php' );", $actual, "Config line should be present" );
 		$this->assertStringContainsString( "/* That's all, stop editing! */", $actual, "Comment should be present" );
@@ -121,7 +121,7 @@ class Test_Surge extends \WP_UnitTestCase {
 	 */
 	public function test_init_with_surge_inactive() {
 		// First add the config.
-		file_put_contents( $this->test_file, "<?php\ndefine( 'WP_CACHE_CONFIG', '/var/www/html/wp-content/plugins/activitypub/integration/surge-cache-config.php' );\n\n/* That's all, stop editing! */" );
+		\file_put_contents( $this->test_file, "<?php\ndefine( 'WP_CACHE_CONFIG', '/var/www/html/wp-content/plugins/activitypub/integration/surge-cache-config.php' );\n\n/* That's all, stop editing! */" );
 
 		\define( 'WP_CACHE_CONFIG', '/var/www/html/wp-content/plugins/activitypub/integration/surge-cache-config.php' );
 
@@ -132,7 +132,7 @@ class Test_Surge extends \WP_UnitTestCase {
 		Surge::init();
 
 		// Verify the config was removed.
-		$actual = file_get_contents( $this->test_file );
+		$actual = \file_get_contents( $this->test_file );
 		$this->assertStringContainsString( "<?php", $actual, "File should start with PHP opening tag" );
 		$this->assertStringNotContainsString( "define( 'WP_CACHE_CONFIG'", $actual, "Config line should be removed" );
 		$this->assertStringContainsString( "/* That's all, stop editing! */", $actual, "Comment should be present" );
@@ -145,13 +145,13 @@ class Test_Surge extends \WP_UnitTestCase {
 	 */
 	public function test_no_duplicate_configs() {
 		// First add the config.
-		file_put_contents( $this->test_file, "<?php\ndefine( 'WP_CACHE_CONFIG', '/var/www/html/wp-content/plugins/activitypub/integration/surge-cache-config.php' );\n\n/* That's all, stop editing! */" );
+		\file_put_contents( $this->test_file, "<?php\ndefine( 'WP_CACHE_CONFIG', '/var/www/html/wp-content/plugins/activitypub/integration/surge-cache-config.php' );\n\n/* That's all, stop editing! */" );
 
 		// Try to add config when it already exists.
 		Surge::add_cache_config();
 
 		// Verify no duplicate was added.
-		$actual = file_get_contents( $this->test_file );
+		$actual = \file_get_contents( $this->test_file );
 		$this->assertStringContainsString( "<?php", $actual, "File should start with PHP opening tag" );
 		$this->assertEquals( 1, substr_count( $actual, "define( 'WP_CACHE_CONFIG'" ), "Config line should appear exactly once" );
 		$this->assertStringContainsString( "/* That's all, stop editing! */", $actual, "Comment should be present" );
