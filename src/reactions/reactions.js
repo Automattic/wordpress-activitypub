@@ -284,72 +284,66 @@ const ReactionGroup = ( { items, label } ) => {
 /**
  * The Reactions component.
  *
- * @param {Object}    props                  Component props.
- * @param {string}    props.title            The title text.
- * @param {?number}   props.postId           The post ID.
- * @param {?Object}   props.reactions        Optional reactions data.
- * @param {?JSX.Element} props.titleComponent Optional component for title editing.
- * @return {?JSX.Element}                    The rendered component.
+ * @param {Object}    props              Component props.
+ * @param {?number}   props.postId       The post ID.
+ * @param {?Object}   props.reactions    Optional reactions data.
+ * @return {?JSX.Element}               The rendered component.
  */
-export function Reactions( {
-	title = '',
-	postId = null,
-	reactions: providedReactions = null,
-	titleComponent = null,
-} ) {
-	const { namespace } = useOptions();
-	const [ reactions, setReactions ] = useState( providedReactions );
-	const [ loading, setLoading ] = useState( ! providedReactions );
+export function Reactions({
+    postId = null,
+    reactions: providedReactions = null,
+}) {
+    const { namespace } = useOptions();
+    const [reactions, setReactions] = useState(providedReactions);
+    const [loading, setLoading] = useState(!providedReactions);
 
-	useEffect( () => {
-		if ( providedReactions ) {
-			setReactions( providedReactions );
-			setLoading( false );
-			return;
-		}
+    useEffect(() => {
+        if (providedReactions) {
+            setReactions(providedReactions);
+            setLoading(false);
+            return;
+        }
 
-		if ( ! postId ) {
-			setLoading( false );
-			return;
-		}
+        if (!postId) {
+            setLoading(false);
+            return;
+        }
 
-		setLoading( true );
-		apiFetch( {
-			path: `/${ namespace }/posts/${ postId }/reactions`,
-		} )
-		.then( ( response ) => {
-			setReactions( response );
-			setLoading( false );
-		} )
-		.catch( () => setLoading( false ) );
-	}, [ postId, providedReactions ] );
+        setLoading(true);
+        apiFetch({
+            path: `/${namespace}/posts/${postId}/reactions`,
+        })
+            .then((response) => {
+                setReactions(response);
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
+    }, [postId, providedReactions, namespace]);
 
-	if ( loading ) {
-		return null;
-	}
+    if (loading) {
+        return null;
+    }
 
-	// Return null if there are no reactions
-	if ( ! reactions || ! Object.values( reactions ).some( group => group.items?.length > 0 ) ) {
-		return null;
-	}
+    // Return null if there are no reactions
+    if (!reactions || !Object.values(reactions).some(group => group.items?.length > 0)) {
+        return null;
+    }
 
-	return (
-		<div className="activitypub-reactions">
-			{ titleComponent || ( title && <h6>{ title }</h6> ) }
+    return (
+        <div className="activitypub-reactions">
+            {Object.entries(reactions).map(([key, group]) => {
+                if (!group.items?.length) {
+                    return null;
+                }
 
-			{ Object.entries( reactions ).map( ( [ key, group ] ) => {
-				if ( ! group.items?.length ) {
-					return null;
-				}
-
-				return (
-					<ReactionGroup
-						key={ key }
-						items={ group.items }
-						label={ group.label }
-					/>
-				);
-			} ) }
-		</div>
-	);
+                return (
+                    <ReactionGroup
+                        key={key}
+                        items={group.items}
+                        label={group.label}
+                    />
+                );
+            })}
+        </div>
+    );
 }

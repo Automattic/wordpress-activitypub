@@ -1,4 +1,4 @@
-import { useBlockProps, RichText } from '@wordpress/block-editor';
+import { useBlockProps, InnerBlocks } from '@wordpress/block-editor';
 import { useState } from '@wordpress/element';
 import { __, _x, sprintf } from '@wordpress/i18n';
 import { Reactions } from './reactions';
@@ -107,27 +107,29 @@ const generateDummyReactions = () => ( {
  * @param {Function} props.setAttributes Attribute update callback.
  * @return {JSX.Element}                 Component to render.
  */
-export default function Edit( { attributes, setAttributes, __unstableLayoutClassNames } ) {
-	const blockProps = useBlockProps( { className: __unstableLayoutClassNames } );
-	const [ dummyReactions ] = useState( generateDummyReactions() );
+export default function Edit({ attributes, __unstableLayoutClassNames }) {
+	const blockProps = useBlockProps({ className: __unstableLayoutClassNames });
+	const [dummyReactions] = useState(generateDummyReactions());
 
-	const titleEditor = (
-		<RichText
-			tagName="h6"
-			value={ attributes.title }
-			onChange={ ( title ) => setAttributes( { title } ) }
-			placeholder={ __( 'Fediverse Reactions', 'activitypub' ) }
-			disableLineBreaks={ true }
-			allowedFormats={ [] }
-		/>
-	);
+	// Template for InnerBlocks - allows only a heading block
+	const TEMPLATE = [
+		['core/heading', {
+			level: 6,
+			placeholder: __('Fediverse Reactions', 'activitypub'),
+			content: __('Fediverse Reactions', 'activitypub')
+		}]
+	];
+
+	const ALLOWED_BLOCKS = ['core/heading'];
 
 	return (
-		<div { ...blockProps }>
-			<Reactions
-				titleComponent={ titleEditor }
-				reactions={ dummyReactions }
+		<div {...blockProps}>
+			<InnerBlocks
+				template={TEMPLATE}
+				allowedBlocks={ALLOWED_BLOCKS}
+				templateLock={false}
 			/>
+			<Reactions reactions={dummyReactions} />
 		</div>
 	);
 }

@@ -18,12 +18,7 @@
       }
     }
   },
-  "attributes": {
-    "title": {
-      "type": "string",
-      "default": "Fediverse reactions"
-    }
-  },
+  "attributes": {},
   "blockHooks": {
     "core/post-content": "after"
   },
