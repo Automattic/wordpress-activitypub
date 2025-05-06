@@ -62,8 +62,8 @@ class Welcome_Fields {
 		);
 
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_plugin_installed' ), 10 );
-		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_fediverse_intro' ), 20 );
-		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_site_health' ), 30 );
+		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_site_health' ), 20 );
+		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_fediverse_intro' ), 30 );
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_profile_mode' ), 40 );
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_profile_setup' ), 50 );
 		\add_action( 'activitypub_onboarding_steps', array( self::class, 'render_step_features' ), 60 );
@@ -192,38 +192,6 @@ class Welcome_Fields {
 	}
 
 	/**
-	 * Render the Fediverse-Intro step.
-	 */
-	public static function render_step_fediverse_intro() {
-		$checked      = '1' === \get_option( 'activitypub_checklist_fediverse_intro_visited', false );
-		$step_class   = $checked ? 'activitypub-step-completed' : '';
-		$next_step    = self::get_next_incomplete_step();
-		$button_class = ( 'fediverse_intro' === $next_step ) ? 'button-primary' : 'button-secondary';
-		?>
-		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
-			<div class="step-indicator">
-				<?php if ( $checked ) : ?>
-					<span class="step-icon dashicons dashicons-yes"></span>
-				<?php else : ?>
-					<span class="step-icon dashicons dashicons-video-alt3"></span>
-				<?php endif; ?>
-			</div>
-			<div class="step-content">
-				<div class="step-text">
-					<h3><?php \esc_html_e( 'Watch a short video: What&#8217;s the Fediverse?', 'activitypub' ); ?></h3>
-					<p><?php \esc_html_e( 'Learn what the Fediverse is and why it matters.', 'activitypub' ); ?></p>
-				</div>
-				<div class="step-action">
-					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-link-getting-started' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
-						<?php \esc_html_e( 'Watch now', 'activitypub' ); ?>
-					</a>
-				</div>
-			</div>
-		</div>
-		<?php
-	}
-
-	/**
 	 * Render site health step.
 	 */
 	public static function render_step_site_health() {
@@ -260,6 +228,38 @@ class Welcome_Fields {
 				<div class="step-action">
 					<a href="<?php echo \esc_url( \admin_url( 'site-health.php' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 						<?php \esc_html_e( 'Review issues', 'activitypub' ); ?>
+					</a>
+				</div>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render the Fediverse-Intro step.
+	 */
+	public static function render_step_fediverse_intro() {
+		$checked      = '1' === \get_option( 'activitypub_checklist_fediverse_intro_visited', false );
+		$step_class   = $checked ? 'activitypub-step-completed' : '';
+		$next_step    = self::get_next_incomplete_step();
+		$button_class = ( 'fediverse_intro' === $next_step ) ? 'button-primary' : 'button-secondary';
+		?>
+		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
+			<div class="step-indicator">
+				<?php if ( $checked ) : ?>
+					<span class="step-icon dashicons dashicons-yes"></span>
+				<?php else : ?>
+					<span class="step-icon dashicons dashicons-video-alt3"></span>
+				<?php endif; ?>
+			</div>
+			<div class="step-content">
+				<div class="step-text">
+					<h3><?php \esc_html_e( 'Watch a short video: What&#8217;s the Fediverse?', 'activitypub' ); ?></h3>
+					<p><?php \esc_html_e( 'Learn what the Fediverse is and why it matters.', 'activitypub' ); ?></p>
+				</div>
+				<div class="step-action">
+					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-link-getting-started' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+						<?php \esc_html_e( 'Watch now', 'activitypub' ); ?>
 					</a>
 				</div>
 			</div>
