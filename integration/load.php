@@ -162,3 +162,12 @@ add_filter(
  * @see https://buddypress.org/
  */
 add_action( 'bp_include', array( __NAMESPACE__ . '\Buddypress', 'init' ), 0 );
+
+/**
+ * Load the Surge integration.
+ *
+ * Only load code that needs Surge to run once Surge is loaded and initialized.
+ *
+ * @see https://wordpress.org/plugins/surge/
+ */
+add_action( 'admin_init', array( __NAMESPACE__ . '\Surge', 'init' ) );

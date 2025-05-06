@@ -11,7 +11,7 @@ $representation = 'html';
 
 if ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
 	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-	$accept = strtolower( wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
+	$accept = strtolower( $_SERVER['HTTP_ACCEPT'] );
 
 	if ( str_contains( $accept, 'text/html' ) ) {
 		$representation = 'html';
