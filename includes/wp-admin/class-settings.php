@@ -358,15 +358,6 @@ class Settings {
 				\wp_enqueue_media();
 				\wp_enqueue_script( 'activitypub-header-image' );
 				break;
-			case 'welcome':
-				\wp_enqueue_script( 'plugin-install' );
-				\add_thickbox();
-				\wp_enqueue_script( 'updates' );
-				break;
-			case 'settings':
-				// Mark checklist item as done.
-				\update_option( 'activitypub_checklist_settings_visited', '1' );
-				break;
 		}
 
 		if ( ! isset( $settings_tabs[ $tab ] ) ) {
