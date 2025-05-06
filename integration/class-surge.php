@@ -21,7 +21,7 @@ class Surge {
 	 * The file to add the Surge cache config to.
 	 *
 	 * @var string
-	*/
+	 */
 	private static $config_file = ABSPATH . 'wp-config.php';
 	/**
 	 * The define for the Surge cache config.
@@ -69,7 +69,7 @@ class Surge {
 
 		$config = $wp_filesystem->get_contents( $file );
 
-		// Check if the define already exists
+		// Check if the define already exists.
 		if ( preg_match( self::$cache_config_pattern, $config ) ) {
 			return;
 		}
@@ -100,7 +100,7 @@ class Surge {
 
 		$config = $wp_filesystem->get_contents( $file );
 
-		// Remove the define line
+		// Remove the define line.
 		$config = preg_replace( self::$cache_config_pattern, '', $config );
 
 		$wp_filesystem->put_contents( $file, $config, FS_CHMOD_FILE );
