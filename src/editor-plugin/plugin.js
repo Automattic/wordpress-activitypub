@@ -1,6 +1,6 @@
 import { PluginDocumentSettingPanel, PluginPreviewMenuItem } from '@wordpress/editor';
 import { registerPlugin } from '@wordpress/plugins';
-import { TextControl, RadioControl, CheckboxControl, __experimentalText as Text, Tooltip } from '@wordpress/components';
+import { TextControl, RadioControl, RangeControl, __experimentalText as Text, Tooltip } from '@wordpress/components';
 import { Icon, globe, people, external } from '@wordpress/icons';
 import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
@@ -63,6 +63,17 @@ const EditorPlugin = () => {
 				} }
 				placeholder={ __( 'Optional content warning', 'activitypub' ) }
 				help={ __( 'Content warnings do not change the content on your site, only in the fediverse.', 'activitypub' ) }
+			/>
+
+			<RangeControl
+				label={ __( 'Maximum Image Attachments', 'activitypub' ) }
+				value={ meta?.activitypub_max_image_attachments ?? window._activityPubOptions?.maxImageAttachments ?? 4 }
+				onChange={ ( value ) => {
+					setMeta( { ...meta, activitypub_max_image_attachments: value } );
+				} }
+				min={ 0 }
+				max={ 10 }
+				help={ __( 'Maximum number of image attachments to include when sharing to the fediverse.', 'activitypub' ) }
 			/>
 
 			<RadioControl

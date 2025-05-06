@@ -126,4 +126,95 @@ class Test_Announce extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( 'WP_Comment', $result[0] );
 	}
+
+	/**
+	 * Test handle announces.
+	 *
+	 * @covers ::handle_announces
+	 *
+	 * @dataProvider data_handle_announces
+	 *
+	 * @param array  $announce  The announce.
+	 * @param int    $recursion The recursion.
+	 * @param string $message   The message.
+	 */
+	public function test_handle_announces( $announce, $recursion, $message ) {
+		// Set up mock action.
+		$inbox_action = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox_action, 'action' ) );
+
+		Announce::handle_announce( $announce, $this->user_id );
+
+		$this->assertEquals( $recursion, $inbox_action->get_call_count(), $message );
+	}
+
+	/**
+	 * Test handle announce with invalid object.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_maybe_save_announce() {
+		$activity = array(
+			'actor'  => $this->user_url,
+			'type'   => 'Announce',
+			'id'     => 'https://example.com/id/' . microtime( true ),
+			'to'     => array( $this->user_url ),
+			'object' => $this->post_permalink,
+		);
+
+		// Set up mock action.
+		$inbox_action = new \MockAction();
+		\add_action( 'activitypub_handled_announce', array( $inbox_action, 'action' ) );
+
+		Announce::maybe_save_announce( $activity, $this->user_id );
+		Announce::maybe_save_announce( $activity, $this->user_id );
+
+		$activity['id'] = 'https://example.com/id/' . microtime( true );
+		Announce::maybe_save_announce( $activity, $this->user_id );
+
+		$this->assertEquals( 2, $inbox_action->get_call_count() );
+	}
+
+	/**
+	 * Data provider for test_handle_announces.
+	 *
+	 * @return array The data provider.
+	 */
+	public function data_handle_announces() {
+		return array(
+			array(
+				'announce'  => $this->create_test_object(),
+				'recursion' => 0,
+				'message'   => 'Simple Announce of an URL.',
+			),
+			array(
+				'announce'  => array(
+					'actor'  => $this->user_url,
+					'type'   => 'Announce',
+					'id'     => 'https://example.com/id/' . microtime( true ),
+					'to'     => array( $this->user_url ),
+					'object' => array(
+						'actor'   => $this->user_url,
+						'type'    => 'Note',
+						'id'      => $this->post_permalink,
+						'to'      => array( $this->user_url ),
+						'content' => 'text',
+					),
+				),
+				'recursion' => 0,
+				'message'   => 'Announce of a Note-Object.',
+			),
+			array(
+				'announce'  => array(
+					'actor'  => $this->user_url,
+					'type'   => 'Announce',
+					'id'     => 'https://example.com/id/' . microtime( true ),
+					'to'     => array( $this->user_url ),
+					'object' => $this->create_test_object(),
+				),
+				'recursion' => 1,
+				'message'   => 'Announce of an Announce-Object.',
+			),
+		);
+	}
 }

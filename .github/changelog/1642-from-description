@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added a check to make sure we only attempt to embed activity objects, when processing fallback embeds.

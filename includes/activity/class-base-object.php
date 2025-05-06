@@ -20,49 +20,6 @@ namespace Activitypub\Activity;
  * 'Base_' for this reason.
  *
  * @see https://www.w3.org/TR/activitystreams-core/#object
- *
- * @method string|null             get_actor()         Gets one or more entities that performed or are expected to perform the activity.
- * @method string|null             get_attributed_to() Gets the entity attributed as the original author.
- * @method array|null              get_attachment()    Gets the attachment property of the object.
- * @method array|null              get_cc()            Gets the secondary recipients of the object.
- * @method string|null             get_content()       Gets the content property of the object.
- * @method array|null              get_icon()          Gets the icon property of the object.
- * @method string|null             get_id()            Gets the object's unique global identifier.
- * @method array|null              get_image()         Gets the image property of the object.
- * @method array|string|null       get_in_reply_to()   Gets the objects this object is in reply to.
- * @method string|null             get_name()          Gets the natural language name of the object.
- * @method Base_Object|string|null get_object()        Gets the direct object of the activity.
- * @method string|null             get_published()     Gets the date and time the object was published in ISO 8601 format.
- * @method string|null             get_summary()       Gets the natural language summary of the object.
- * @method array|null              get_tag()           Gets the tag property of the object.
- * @method array|string|null       get_to()            Gets the primary recipients of the object.
- * @method string                  get_type()          Gets the type of the object.
- * @method string|null             get_updated()       Gets the date and time the object was updated in ISO 8601 format.
- * @method string|null             get_url()           Gets the URL of the object.
- *
- * @method string|array add_cc( string|array $cc ) Adds one or more entities to the secondary audience of the object.
- * @method string|array add_to( string|array $to ) Adds one or more entities to the primary audience of the object.
- *
- * @method Base_Object set_actor( string|array $actor )           Sets one or more entities that performed the activity.
- * @method Base_Object set_attachment( array $attachment )        Sets the attachment property of the object.
- * @method Base_Object set_attributed_to( string $attributed_to ) Sets the entity attributed as the original author.
- * @method Base_Object set_cc( array|string $cc )                 Sets the secondary recipients of the object.
- * @method Base_Object set_content( string $content )             Sets the content property of the object.
- * @method Base_Object set_content_map( array $content_map )      Sets the content property of the object.
- * @method Base_Object set_icon( array $icon )                    Sets the icon property of the object.
- * @method Base_Object set_id( string $id )                       Sets the object's unique global identifier.
- * @method Base_Object set_image( array $image )                  Sets the image property of the object.
- * @method Base_Object set_name( string $name )                   Sets the natural language name of the object.
- * @method Base_Object set_origin( string $origin )               Sets the origin property of the object.
- * @method Base_Object set_published( string $published )         Sets the date and time the object was published in ISO 8601 format.
- * @method Base_Object set_sensitive( bool $sensitive )           Sets the sensitive property of the object.
- * @method Base_Object set_summary( string $summary )             Sets the natural language summary of the object.
- * @method Base_Object set_summary_map( array|null $summary_map ) Sets the summary property of the object.
- * @method Base_Object set_target( string $target )               Sets the target property of the object.
- * @method Base_Object set_to( array|string $to )                 Sets the primary recipients of the object.
- * @method Base_Object set_type( string $type )                   Sets the type of the object.
- * @method Base_Object set_updated( string $updated )             Sets the date and time the object was updated in ISO 8601 format.
- * @method Base_Object set_url( string $url )                     Sets the URL of the object.
  */
 class Base_Object extends Generic_Object {
 	/**
@@ -132,7 +89,7 @@ class Base_Object extends Generic_Object {
 
 	/**
 	 * One or more entities that represent the total population of
-	 * entities for which the object can considered to be relevant.
+	 * entities for which the object can be considered to be relevant.
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-audience
 	 *
@@ -395,9 +352,9 @@ class Base_Object extends Generic_Object {
 
 	/**
 	 * When the object describes a time-bound resource, such as an audio
-	 * or video, a meeting, etc, the duration property indicates the
+	 * or video, a meeting, etc., the duration property indicates the
 	 * object's approximate duration.
-	 * The value MUST be expressed as an xsd:duration as defined by
+	 * The value MUST be expressed as a xsd:duration as defined by
 	 * xmlschema11-2, section 3.3.6 (e.g. a period of 5 seconds is
 	 * represented as "PT5S").
 	 *

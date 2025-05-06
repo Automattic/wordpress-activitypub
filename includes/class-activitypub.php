@@ -106,6 +106,7 @@ class Activitypub {
 		\delete_option( 'activitypub_blog_user_public_key' );
 		\delete_option( 'activitypub_blog_description' );
 		\delete_option( 'activitypub_blog_identifier' );
+		\delete_option( 'activitypub_content_negotiation' );
 		\delete_option( 'activitypub_custom_post_content' );
 		\delete_option( 'activitypub_db_version' );
 		\delete_option( 'activitypub_default_extra_fields' );
@@ -139,7 +140,7 @@ class Activitypub {
 
 		self::add_headers();
 
-		if ( ! is_activitypub_request() ) {
+		if ( ! is_activitypub_request() || ! should_negotiate_content() ) {
 			return $template;
 		}
 
@@ -205,7 +206,7 @@ class Activitypub {
 		if ( ! headers_sent() ) {
 			\header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
 
-			if ( \get_option( 'activitypub_vary_header' ) ) {
+			if ( \get_option( 'activitypub_vary_header', '1' ) ) {
 				// Send Vary header for Accept header.
 				\header( 'Vary: Accept', false );
 			}

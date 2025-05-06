@@ -178,7 +178,15 @@ class Actors_Inbox_Controller extends Actors_Controller {
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		if ( \wp_check_comment_disallowed_list( $activity->to_json( false ), '', '', '', $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '' ) ) {
-			Debug::write_log( 'Blocked activity from: ' . $activity->get_actor() );
+			/**
+			 * ActivityPub inbox disallowed activity.
+			 *
+			 * @param array              $data     The data array.
+			 * @param int|null           $user_id  The user ID.
+			 * @param string             $type     The type of the activity.
+			 * @param Activity|\WP_Error $activity The Activity object.
+			 */
+			do_action( 'activitypub_rest_inbox_disallowed', $data, $user->get__id(), $type, $activity );
 		} else {
 			/**
 			 * ActivityPub inbox action.

@@ -76,6 +76,18 @@ class Blocks {
 					},
 				)
 			);
+
+			\register_post_meta(
+				$post_type,
+				'activitypub_max_image_attachments',
+				array(
+					'type'              => 'integer',
+					'single'            => true,
+					'show_in_rest'      => true,
+					'default'           => \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
+					'sanitize_callback' => 'absint',
+				)
+			);
 		}
 	}
 
@@ -114,12 +126,13 @@ class Blocks {
 	 */
 	public static function inject_activitypub_options() {
 		$data = array(
-			'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
-			'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
-			'enabled'          => array(
+			'namespace'           => ACTIVITYPUB_REST_NAMESPACE,
+			'defaultAvatarUrl'    => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+			'enabled'             => array(
 				'site'  => ! is_user_type_disabled( 'blog' ),
 				'users' => ! is_user_type_disabled( 'user' ),
 			),
+			'maxImageAttachments' => \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
 		);
 
 		printf(
