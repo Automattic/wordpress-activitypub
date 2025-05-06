@@ -364,7 +364,8 @@ class Settings {
 				\wp_enqueue_script( 'updates' );
 				break;
 			case 'settings':
-				\update_option( 'activitypub_checklist_settings_visited', true );
+				// Mark checklist item as done.
+				\update_option( 'activitypub_checklist_settings_visited', '1' );
 				break;
 		}
 
