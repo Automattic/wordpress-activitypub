@@ -358,11 +358,6 @@ class Settings {
 				\wp_enqueue_media();
 				\wp_enqueue_script( 'activitypub-header-image' );
 				break;
-			case 'welcome':
-				\wp_enqueue_script( 'plugin-install' );
-				\add_thickbox();
-				\wp_enqueue_script( 'updates' );
-				break;
 			case 'settings':
 				if ( isset( $_GET['help-tab'] ) && 'getting-started' === $_GET['help-tab'] ) { // phpcs:ignore WordPress.Security.NonceVerification
 					\update_option( 'activitypub_checklist_fediverse_intro_visited', true );
