@@ -84,7 +84,7 @@ class Health_Check {
 	public static function add_tests( $tests ) {
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			$tests['direct']['activitypub_test_author_url'] = array(
-				'label' => \__( 'Author URL test', 'activitypub' ),
+				'label' => \__( 'Author URL Test', 'activitypub' ),
 				'test'  => array( self::class, 'test_author_url' ),
 			);
 		}
@@ -385,9 +385,12 @@ class Health_Check {
 			$result['label']          = \__( 'Threaded (nested) comments are not enabled', 'activitypub' );
 			$result['badge']['color'] = 'orange';
 			$result['description']    = \sprintf(
-				'<p>%s</p><p>%s</p>',
-				\__( 'This is particularly important for fediverse users, as they rely on the visual hierarchy to understand conversation threads across different platforms. Without threaded comments, it becomes much more difficult to follow discussions that span multiple platforms in the fediverse.', 'activitypub' ),
-				\sprintf(
+				'<p>%s</p>',
+				\__( 'This is particularly important for fediverse users, as they rely on the visual hierarchy to understand conversation threads across different platforms. Without threaded comments, it becomes much more difficult to follow discussions that span multiple platforms in the fediverse.', 'activitypub' )
+			);
+			$result['actions']        = sprintf(
+				'<p>%s</p>',
+				sprintf(
 					// translators: %s: Discussion settings URL.
 					\__( 'You can enable them in the <a href="%s">Discussion Settings</a>.', 'activitypub' ),
 					esc_url( admin_url( 'options-discussion.php' ) )

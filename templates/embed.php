@@ -9,16 +9,18 @@
 $args = wp_parse_args(
 	$args,
 	array(
-		'avatar_url'  => '',
+		'audio'       => null,
 		'author_name' => '',
 		'author_url'  => '',
-		'title'       => '',
+		'avatar_url'  => '',
+		'boosts'      => null,
 		'content'     => '',
+		'favorites'   => null,
 		'image'       => '',
 		'published'   => '',
+		'title'       => '',
 		'url'         => '',
-		'boosts'      => null,
-		'favorites'   => null,
+		'video'       => null,
 		'webfinger'   => '',
 	)
 );
@@ -48,9 +50,19 @@ $args = wp_parse_args(
 			<div class="ap-subtitle p-summary e-content"><?php echo \wp_kses_post( $args['content'] ); ?></div>
 		<?php endif; ?>
 
-		<?php if ( $args['image'] ) : ?>
-			<div class="ap-preview">
-				<img class="u-photo u-featured" src="<?php echo \esc_url( $args['image'] ); ?>" alt="" />
+		<?php if ( $args['images'] ) : ?>
+			<div class="ap-preview <?php echo \esc_attr( 'layout-' . count( $args['images'] ) ); ?>">
+				<?php foreach ( $args['images'] as $image ) : ?>
+				<img class="u-photo u-featured" src="<?php echo \esc_url( $image['url'] ); ?>" alt="<?php echo \esc_attr( $image['name'] ?? '' ); ?>" />
+				<?php endforeach; ?>
+			</div>
+		<?php elseif ( $args['video'] ) : ?>
+			<div class="ap-preview layout-1">
+				<video controls class="u-photo u-featured" src="<?php echo \esc_url( $args['video']['url'] ); ?>" title="<?php echo \esc_attr( $args['video']['name'] ?? '' ); ?>"></video>
+			</div>
+		<?php elseif ( $args['audio'] ) : ?>
+			<div class="ap-preview layout-1">
+				<audio controls class="u-photo u-featured" src="<?php echo \esc_url( $args['audio']['url'] ); ?>" title="<?php echo \esc_attr( $args['audio']['name'] ?? '' ); ?>"></audio>
 			</div>
 		<?php endif; ?>
 	</div>

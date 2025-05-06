@@ -18,7 +18,7 @@ require __DIR__ . '/parts/header.php';
 		background: #fff;
 		border-radius: 8px;
 		overflow: hidden;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 	}
 	.card-header {
 		width: 100%;
