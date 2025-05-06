@@ -80,33 +80,53 @@ class Embed {
 		$boosts    = isset( $activity_object['shares']['totalItems'] ) ? (int) $activity_object['shares']['totalItems'] : null;
 		$favorites = isset( $activity_object['likes']['totalItems'] ) ? (int) $activity_object['likes']['totalItems'] : null;
 
-		$image = '';
+		$audio  = null;
+		$images = null;
+		$video  = null;
 		if ( isset( $activity_object['image']['url'] ) ) {
-			$image = $activity_object['image']['url'];
+			$images = array(
+				array(
+					'type' => 'Image',
+					'url'  => $activity_object['image']['url'],
+					'name' => $activity_object['image']['name'] ?? '',
+				),
+			);
 		} elseif ( isset( $activity_object['attachment'] ) ) {
 			foreach ( $activity_object['attachment'] as $attachment ) {
-				if ( isset( $attachment['type'] ) && in_array( $attachment['type'], array( 'Image', 'Document' ), true ) ) {
-					$image = $attachment['url'];
-					break;
+				$type = isset( $attachment['mediaType'] ) ? strtok( $attachment['mediaType'], '/' ) : strtolower( $attachment['type'] );
+
+				switch ( $type ) {
+					case 'image':
+						$images = \wp_list_filter( $activity_object['attachment'], array( 'type' => 'Image' ) );
+						$images = array_slice( $images, 0, 4 );
+						break 2;
+					case 'video':
+						$video = $attachment;
+						break 2;
+					case 'audio':
+						$audio = $attachment;
+						break 2;
 				}
 			}
 		}
 
 		ob_start();
 		load_template(
-			ACTIVITYPUB_PLUGIN_DIR . 'templates/reply-embed.php',
+			ACTIVITYPUB_PLUGIN_DIR . 'templates/embed.php',
 			false,
 			array(
+				'audio'       => $audio,
 				'author_name' => $author_name,
 				'author_url'  => $author_url,
 				'avatar_url'  => $avatar_url,
+				'boosts'      => $boosts,
+				'content'     => $content,
+				'favorites'   => $favorites,
+				'images'      => $images,
 				'published'   => $published,
 				'title'       => $title,
-				'content'     => $content,
-				'image'       => $image,
-				'boosts'      => $boosts,
-				'favorites'   => $favorites,
 				'url'         => $activity_object['id'],
+				'video'       => $video,
 				'webfinger'   => $author['webfinger'],
 			)
 		);
