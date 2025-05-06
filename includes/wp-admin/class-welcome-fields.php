@@ -110,15 +110,19 @@ class Welcome_Fields {
 		$count = 1; // Plugin is already installed.
 
 		// Check other completed steps.
-		if ( true === \get_option( 'activitypub_checklist_fediverse_intro_visited', false ) ) {
+		if ( '1' === \get_option( 'activitypub_checklist_fediverse_intro_visited' ) ) {
 			++$count;
 		}
 
-		if ( true === \get_option( 'activitypub_checklist_settings_visited', false ) ) {
+		if ( '1' === \get_option( 'activitypub_checklist_settings_visited' ) ) {
 			++$count;
 		}
 
-		if ( true === \get_option( 'activitypub_checklist_blocks_visited', false ) ) {
+		if ( '1' === \get_option( 'activitypub_checklist_profile_setup_visited' ) ) {
+			++$count;
+		}
+
+		if ( '1' === \get_option( 'activitypub_checklist_blocks_visited' ) ) {
 			++$count;
 		}
 
