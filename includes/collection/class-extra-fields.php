@@ -39,7 +39,7 @@ class Extra_Fields {
 			$args['author'] = $user_id;
 		}
 
-		// Limit to 100 fields to prevent response size issues.
+		// Limit to 20 fields to prevent response size issues.
 		if ( ! is_admin() ) {
 			/**
 			 * Filters the number of extra fields to retrieve for an ActivityPub actor.
