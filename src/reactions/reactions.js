@@ -290,60 +290,60 @@ const ReactionGroup = ( { items, label } ) => {
  * @return {?JSX.Element}               The rendered component.
  */
 export function Reactions({
-    postId = null,
-    reactions: providedReactions = null,
+	postId = null,
+	reactions: providedReactions = null,
 }) {
-    const { namespace } = useOptions();
-    const [reactions, setReactions] = useState(providedReactions);
-    const [loading, setLoading] = useState(!providedReactions);
+	const { namespace } = useOptions();
+	const [reactions, setReactions] = useState(providedReactions);
+	const [loading, setLoading] = useState(!providedReactions);
 
-    useEffect(() => {
-        if (providedReactions) {
-            setReactions(providedReactions);
-            setLoading(false);
-            return;
-        }
+	useEffect(() => {
+		if (providedReactions) {
+			setReactions(providedReactions);
+			setLoading(false);
+			return;
+		}
 
-        if (!postId) {
-            setLoading(false);
-            return;
-        }
+		if (!postId) {
+			setLoading(false);
+			return;
+		}
 
-        setLoading(true);
-        apiFetch({
-            path: `/${namespace}/posts/${postId}/reactions`,
-        })
-            .then((response) => {
-                setReactions(response);
-                setLoading(false);
-            })
-            .catch(() => setLoading(false));
-    }, [postId, providedReactions, namespace]);
+		setLoading(true);
+		apiFetch({
+			path: `/${namespace}/posts/${postId}/reactions`,
+		})
+			.then((response) => {
+				setReactions(response);
+				setLoading(false);
+			})
+			.catch(() => setLoading(false));
+	}, [postId, providedReactions, namespace]);
 
-    if (loading) {
-        return null;
-    }
+	if (loading) {
+		return null;
+	}
 
-    // Return null if there are no reactions
-    if (!reactions || !Object.values(reactions).some(group => group.items?.length > 0)) {
-        return null;
-    }
+	// Return null if there are no reactions
+	if (!reactions || !Object.values(reactions).some(group => group.items?.length > 0)) {
+		return null;
+	}
 
-    return (
-        <div className="activitypub-reactions">
-            {Object.entries(reactions).map(([key, group]) => {
-                if (!group.items?.length) {
-                    return null;
-                }
+	return (
+		<div className="activitypub-reactions">
+			{Object.entries(reactions).map(([key, group]) => {
+				if (!group.items?.length) {
+					return null;
+				}
 
-                return (
-                    <ReactionGroup
-                        key={key}
-                        items={group.items}
-                        label={group.label}
-                    />
-                );
-            })}
-        </div>
-    );
+				return (
+					<ReactionGroup
+						key={key}
+						items={group.items}
+						label={group.label}
+					/>
+				);
+			})}
+		</div>
+	);
 }
