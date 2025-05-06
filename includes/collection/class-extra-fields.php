@@ -41,8 +41,13 @@ class Extra_Fields {
 
 		// Limit to 100 fields to prevent response size issues.
 		if ( ! is_admin() ) {
+			/**
+			 * Filters the number of extra fields to retrieve for an ActivityPub actor.
+			 *
+			 * @param int $limit The number of extra fields to retrieve. Default 20.
+			 */
+			$args['posts_per_page'] = apply_filters( 'activitypub_actor_extra_fields_limit', 20 );
 			$args['nopaging']       = false;
-			$args['posts_per_page'] = 100;
 		}
 
 		$query  = new \WP_Query( $args );
