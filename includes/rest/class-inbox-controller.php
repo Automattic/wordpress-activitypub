@@ -136,7 +136,15 @@ class Inbox_Controller extends \WP_REST_Controller {
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		if ( \wp_check_comment_disallowed_list( $activity->to_json( false ), '', '', '', $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '' ) ) {
-			Debug::write_log( 'Blocked activity from: ' . $activity->get_actor() );
+			/**
+			 * ActivityPub inbox disallowed activity.
+			 *
+			 * @param array              $data     The data array.
+			 * @param null               $user_id  The user ID.
+			 * @param string             $type     The type of the activity.
+			 * @param Activity|\WP_Error $activity The Activity object.
+			 */
+			do_action( 'activitypub_rest_inbox_disallowed', $data, null, $type, $activity );
 		} else {
 			$recipients = extract_recipients_from_activity( $data );
 

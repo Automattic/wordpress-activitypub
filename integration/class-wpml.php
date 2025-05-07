@@ -24,7 +24,7 @@ class WPML {
 	 * Fetch the post locale from the WPML post data.
 	 *
 	 * @param string $lang The language code.
-	 * @param int    $post The post object.
+	 * @param mixed  $post The post object.
 	 *
 	 * @return string The modified language code.
 	 */

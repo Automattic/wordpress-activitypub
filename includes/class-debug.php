@@ -20,6 +20,7 @@ class Debug {
 		if ( \WP_DEBUG && \WP_DEBUG_LOG ) {
 			\add_action( 'activitypub_safe_remote_post_response', array( self::class, 'log_remote_post_responses' ), 10, 2 );
 			\add_action( 'activitypub_inbox', array( self::class, 'log_inbox' ), 10, 3 );
+			\add_action( 'activitypub_rest_inbox_disallowed', array( self::class, 'log_inbox' ), 10, 3 );
 
 			\add_action( 'activitypub_sent_to_inbox', array( self::class, 'log_sent_to_inbox' ), 10, 2 );
 		}
@@ -55,7 +56,7 @@ class Debug {
 	}
 
 	/**
-	 * Log the sent to follower action.
+	 * Logs Follower notifications.
 	 *
 	 * @param array  $result The result of the remote post request.
 	 * @param string $inbox  The inbox URL.
