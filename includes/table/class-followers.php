@@ -14,7 +14,7 @@ use Activitypub\Collection\Followers as FollowerCollection;
 use function Activitypub\object_to_uri;
 
 if ( ! \class_exists( '\WP_List_Table' ) ) {
-		require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
+	require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 }
 
 /**
@@ -170,7 +170,7 @@ class Followers extends WP_List_Table {
 	 */
 	public function column_avatar( $item ) {
 		return sprintf(
-			'<img src="%s" width="25px;" />',
+			'<img src="%s" width="25px;" alt="" />',
 			$item['icon']
 		);
 	}

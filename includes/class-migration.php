@@ -421,7 +421,7 @@ class Migration {
 	}
 
 	/**
-	 * Upate to 4.1.0
+	 * Update to 4.1.0
 	 *
 	 * * Migrate the `activitypub_post_content_type` to only use `activitypub_custom_post_content`.
 	 */

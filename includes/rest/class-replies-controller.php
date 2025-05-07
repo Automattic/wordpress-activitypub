@@ -167,13 +167,11 @@ class Replies_Controller extends \WP_REST_Controller {
 			$likes = 0;
 		}
 
-		$response = array(
+		return array(
 			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/likes', $wp_object->ID ) ),
 			'type'       => 'Collection',
 			'totalItems' => $likes,
 		);
-
-		return $response;
 	}
 
 	/**
@@ -191,13 +189,11 @@ class Replies_Controller extends \WP_REST_Controller {
 			$shares = 0;
 		}
 
-		$response = array(
+		return array(
 			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/shares', $wp_object->ID ) ),
 			'type'       => 'Collection',
 			'totalItems' => $shares,
 		);
-
-		return $response;
 	}
 
 	/**

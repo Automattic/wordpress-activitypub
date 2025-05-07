@@ -32,9 +32,9 @@ class Interactions {
 	 * @return int|false|\WP_Error The comment ID or false or WP_Error on failure.
 	 */
 	public static function add_comment( $activity ) {
-		$commentdata = self::activity_to_comment( $activity );
+		$comment_data = self::activity_to_comment( $activity );
 
-		if ( ! $commentdata || ! isset( $activity['object']['inReplyTo'] ) ) {
+		if ( ! $comment_data || ! isset( $activity['object']['inReplyTo'] ) ) {
 			return false;
 		}
 
@@ -53,10 +53,10 @@ class Interactions {
 			return false;
 		}
 
-		$commentdata['comment_post_ID'] = $comment_post_id;
-		$commentdata['comment_parent']  = $parent_comment_id ? $parent_comment_id : 0;
+		$comment_data['comment_post_ID'] = $comment_post_id;
+		$comment_data['comment_parent']  = $parent_comment_id ? $parent_comment_id : 0;
 
-		return self::persist( $commentdata, self::INSERT );
+		return self::persist( $comment_data );
 	}
 
 	/**
@@ -70,18 +70,18 @@ class Interactions {
 		$meta = get_remote_metadata_by_actor( $activity['actor'] );
 
 		// Determine comment_ID.
-		$comment     = object_id_to_comment( \esc_url_raw( $activity['object']['id'] ) );
-		$commentdata = \get_comment( $comment, ARRAY_A );
+		$comment      = object_id_to_comment( \esc_url_raw( $activity['object']['id'] ) );
+		$comment_data = \get_comment( $comment, ARRAY_A );
 
-		if ( ! $commentdata ) {
+		if ( ! $comment_data ) {
 			return false;
 		}
 
 		// Found a local comment id.
-		$commentdata['comment_author']  = \esc_attr( $meta['name'] ? $meta['name'] : $meta['preferredUsername'] );
-		$commentdata['comment_content'] = \addslashes( $activity['object']['content'] );
+		$comment_data['comment_author']  = \esc_attr( $meta['name'] ?? $meta['preferredUsername'] );
+		$comment_data['comment_content'] = \addslashes( $activity['object']['content'] );
 
-		return self::persist( $commentdata, self::UPDATE );
+		return self::persist( $comment_data, self::UPDATE );
 	}
 
 	/**
@@ -92,9 +92,9 @@ class Interactions {
 	 * @return array|false      Comment data or `false` on failure.
 	 */
 	public static function add_reaction( $activity ) {
-		$commentdata = self::activity_to_comment( $activity );
+		$comment_data = self::activity_to_comment( $activity );
 
-		if ( ! $commentdata ) {
+		if ( ! $comment_data ) {
 			return false;
 		}
 
@@ -121,12 +121,12 @@ class Interactions {
 
 		$comment_content = $comment_type['excerpt'];
 
-		$commentdata['comment_post_ID']           = $comment_post_id;
-		$commentdata['comment_content']           = \esc_html( $comment_content );
-		$commentdata['comment_type']              = \esc_attr( $comment_type['type'] );
-		$commentdata['comment_meta']['source_id'] = \esc_url_raw( $activity['id'] );
+		$comment_data['comment_post_ID']           = $comment_post_id;
+		$comment_data['comment_content']           = \esc_html( $comment_content );
+		$comment_data['comment_type']              = \esc_attr( $comment_type['type'] );
+		$comment_data['comment_meta']['source_id'] = \esc_url_raw( $activity['id'] );
 
-		return self::persist( $commentdata, self::INSERT );
+		return self::persist( $comment_data );
 	}
 
 	/**
@@ -263,7 +263,7 @@ class Interactions {
 			$webfinger = str_replace( 'acct:', '', $webfinger );
 		}
 
-		$commentdata = array(
+		$comment_data = array(
 			'comment_author'       => \esc_attr( $comment_author ),
 			'comment_author_url'   => \esc_url_raw( $url ),
 			'comment_content'      => $comment_content,
@@ -276,25 +276,25 @@ class Interactions {
 		);
 
 		if ( isset( $actor['icon']['url'] ) ) {
-			$commentdata['comment_meta']['avatar_url'] = \esc_url_raw( $actor['icon']['url'] );
+			$comment_data['comment_meta']['avatar_url'] = \esc_url_raw( $actor['icon']['url'] );
 		}
 
 		if ( isset( $activity['object']['url'] ) ) {
-			$commentdata['comment_meta']['source_url'] = \esc_url_raw( object_to_uri( $activity['object']['url'] ) );
+			$comment_data['comment_meta']['source_url'] = \esc_url_raw( object_to_uri( $activity['object']['url'] ) );
 		}
 
-		return $commentdata;
+		return $comment_data;
 	}
 
 	/**
 	 * Persist a comment.
 	 *
-	 * @param array  $commentdata The commentdata array.
-	 * @param string $action      Optional. Either 'insert' or 'update'. Default 'insert'.
+	 * @param array  $comment_data The comment data array.
+	 * @param string $action       Optional. Either 'insert' or 'update'. Default 'insert'.
 	 *
 	 * @return array|string|int|\WP_Error|false The comment data or false on failure
 	 */
-	public static function persist( $commentdata, $action = self::INSERT ) {
+	public static function persist( $comment_data, $action = self::INSERT ) {
 		// Disable flood control.
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
 		// Do not require email for AP entries.
@@ -309,9 +309,9 @@ class Interactions {
 		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
 
 		if ( self::INSERT === $action ) {
-			$state = \wp_new_comment( $commentdata, true );
+			$state = \wp_new_comment( $comment_data, true );
 		} else {
-			$state = \wp_update_comment( $commentdata, true );
+			$state = \wp_update_comment( $comment_data, true );
 		}
 
 		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ) );
@@ -320,7 +320,7 @@ class Interactions {
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
 		if ( 1 === $state ) {
-			return $commentdata;
+			return $comment_data;
 		} else {
 			return $state; // Either WP_Comment, false, a WP_Error, 0, or 1!
 		}
