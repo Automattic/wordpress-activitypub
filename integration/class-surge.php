@@ -23,6 +23,7 @@ class Surge {
 	 * @var string
 	 */
 	private static $config_file = ABSPATH . 'wp-config.php';
+
 	/**
 	 * The define for the Surge cache config.
 	 *
