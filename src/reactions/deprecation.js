@@ -29,8 +29,23 @@ const v1 = {
 	},
 
 	migrate( attributes ) {
-		// Remove the title attribute
 		const { title, ...newAttributes } = attributes;
+
+		if ( title ) {
+			return {
+				...newAttributes,
+				innerBlocks: [
+					[
+						'core/heading',
+						{
+							level: 6,
+							content: title,
+						},
+					],
+				],
+			};
+		}
+
 		return newAttributes;
 	},
 
