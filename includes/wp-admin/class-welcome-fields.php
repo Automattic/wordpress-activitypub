@@ -258,7 +258,7 @@ class Welcome_Fields {
 			</div>
 			<div class="step-content">
 				<div class="step-text">
-					<h3><?php \esc_html_e( 'Watch a short video: "What is the Fediverse?"', 'activitypub' ); ?></h3>
+					<h3><?php \esc_html_e( 'New to the Fediverse? Start Here', 'activitypub' ); ?></h3>
 					<p><?php \esc_html_e( 'Learn what the Fediverse is and why it matters.', 'activitypub' ); ?></p>
 				</div>
 				<div class="step-action">
