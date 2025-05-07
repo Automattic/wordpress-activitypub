@@ -90,8 +90,8 @@ class Welcome_Fields {
 							stroke-dashoffset="<?php echo \esc_attr( 339.292 - ( 339.292 * $progress_percentage / 100 ) ); ?>" />
 				</svg>
 			</div>
-			<h2 class="activitypub-welcome-title"><?php \esc_html_e( 'Let&#8217;s keep going!', 'activitypub' ); ?></h2>
-			<p class="activitypub-welcome-subtitle"><?php \esc_html_e( 'It&#8217;s time to finish setting up your plugin.', 'activitypub' ); ?></p>
+			<h2 class="activitypub-welcome-title"><?php \esc_html_e( 'Welcome to the Fediverse!', 'activitypub' ); ?></h2>
+			<p class="activitypub-welcome-subtitle"><?php \esc_html_e( 'Let&#8217;s get your WordPress site connected to the Fediverse in just a few simple steps.', 'activitypub' ); ?></p>
 		</div>
 		<?php
 	}
