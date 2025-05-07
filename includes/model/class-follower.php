@@ -399,8 +399,10 @@ class Follower extends Actor {
 			\strpos( $name, '@' ) === 0
 		) {
 			// Expected: user@example.com or acct:user@example (WebFinger).
-			$name  = \ltrim( $name, '@' );
-			$name  = \ltrim( $name, 'acct:' );
+			$name = \ltrim( $name, '@' );
+			if ( str_starts_with( $name, 'acct:' ) ) {
+				$name = \substr( $name, 5 );
+			}
 			$parts = \explode( '@', $name );
 			$name  = $parts[0];
 		}

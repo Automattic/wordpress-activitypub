@@ -732,12 +732,12 @@ class Comment {
 	/**
 	 * Filter the comment status before it is set.
 	 *
-	 * @param string $approved    The approved comment status.
-	 * @param array  $commentdata The comment data.
+	 * @param int|string|\WP_Error $approved     The approved comment status.
+	 * @param array                $comment_data The comment data.
 	 *
-	 * @return boolean `true` if the comment is approved, `false` otherwise.
+	 * @return int|string|\WP_Error The approval status. 1, 0, 'spam', 'trash', or WP_Error.
 	 */
-	public static function pre_comment_approved( $approved, $commentdata ) {
+	public static function pre_comment_approved( $approved, $comment_data ) {
 		if ( $approved || \is_wp_error( $approved ) ) {
 			return $approved;
 		}
@@ -747,16 +747,16 @@ class Comment {
 		}
 
 		if (
-			empty( $commentdata['comment_meta']['protocol'] ) ||
-			'activitypub' !== $commentdata['comment_meta']['protocol']
+			empty( $comment_data['comment_meta']['protocol'] ) ||
+			'activitypub' !== $comment_data['comment_meta']['protocol']
 		) {
 			return $approved;
 		}
 
 		global $wpdb;
 
-		$author     = $commentdata['comment_author'];
-		$author_url = $commentdata['comment_author_url'];
+		$author     = $comment_data['comment_author'];
+		$author_url = $comment_data['comment_author_url'];
 		// phpcs:ignore
 		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s and comment_approved = '1' LIMIT 1", $author, $author_url ) );
 

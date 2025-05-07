@@ -7,10 +7,6 @@
 
 namespace Activitypub\Transformer;
 
-use WP_Comment;
-use WP_Post;
-use WP_Term;
-
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Activity\Base_Object;
@@ -27,7 +23,7 @@ abstract class Base {
 	 *
 	 * This is the source object of the transformer.
 	 *
-	 * @var WP_Post|WP_Comment|Base_Object|string|array|WP_Term
+	 * @var \WP_Post|\WP_Comment|Base_Object|string|array|\WP_Term
 	 */
 	protected $item;
 
@@ -36,7 +32,7 @@ abstract class Base {
 	 *
 	 * @deprecated version 5.0.0
 	 *
-	 * @var WP_Post|WP_Comment
+	 * @var \WP_Post|\WP_Comment
 	 */
 	protected $wp_object;
 
@@ -52,7 +48,7 @@ abstract class Base {
 	 *
 	 * This helps to chain the output of the Transformer.
 	 *
-	 * @param WP_Post|WP_Comment|Base_Object|string|array|WP_term $item The item that should be transformed.
+	 * @param \WP_Post|\WP_Comment|Base_Object|string|array|\WP_term $item The item that should be transformed.
 	 *
 	 * @return Base
 	 */
@@ -63,7 +59,7 @@ abstract class Base {
 	/**
 	 * Base constructor.
 	 *
-	 * @param WP_Post|WP_Comment|Base_Object|string|array|WP_Term $item The item that should be transformed.
+	 * @param \WP_Post|\WP_Comment|Base_Object|string|array|\WP_Term $item The item that should be transformed.
 	 */
 	public function __construct( $item ) {
 		$this->item      = $item;
@@ -131,9 +127,7 @@ abstract class Base {
 			return $activity_object;
 		}
 
-		$activity_object = $this->set_audience( $activity_object );
-
-		return $activity_object;
+		return $this->set_audience( $activity_object );
 	}
 
 	/**
@@ -372,9 +366,9 @@ abstract class Base {
 		/**
 		 * Filter the mentions in the post content.
 		 *
-		 * @param array   $mentions The mentions.
-		 * @param string  $content  The post content.
-		 * @param WP_Post $post     The post object.
+		 * @param array    $mentions The mentions.
+		 * @param string   $content  The post content.
+		 * @param \WP_Post $post     The post object.
 		 *
 		 * @return array The filtered mentions.
 		 */
