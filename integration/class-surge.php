@@ -18,13 +18,6 @@ use function Activitypub\user_can_activitypub;
  */
 class Surge {
 	/**
-	 * The file to add the Surge cache config to.
-	 *
-	 * @var string
-	 */
-	private static $config_file = ABSPATH . 'wp-config.php';
-
-	/**
 	 * The define for the Surge cache config.
 	 *
 	 * @var string
@@ -55,7 +48,7 @@ class Surge {
 	 * Add the Surge cache config.
 	 */
 	public static function add_cache_config() {
-		$file = self::$config_file;
+		$file = self::get_config_file();
 
 		if ( ! \wp_is_writable( $file ) ) {
 			return;
@@ -90,11 +83,7 @@ class Surge {
 	 * Remove the Surge cache config.
 	 */
 	public static function remove_cache_config() {
-		$file = self::$config_file;
-
-		if ( ! \wp_is_writable( $file ) ) {
-			return;
-		}
+		$file = self::get_config_file();
 
 		global $wp_filesystem;
 		\WP_Filesystem();
@@ -105,5 +94,26 @@ class Surge {
 		$config = preg_replace( self::$cache_config_pattern, '', $config );
 
 		$wp_filesystem->put_contents( $file, $config, FS_CHMOD_FILE );
+	}
+
+	/**
+	 * Get the config file.
+	 *
+	 * @return string|false The config file or false.
+	 */
+	public static function get_config_file() {
+		// phpcs:ignore
+		if ( @file_exists( ABSPATH . 'wp-config.php' ) ) {
+
+			/** The config file resides in ABSPATH */
+			$config_file = ABSPATH . 'wp-config.php';
+		// phpcs:ignore
+		} elseif ( @file_exists( dirname( ABSPATH ) . '/wp-config.php' ) && ! @file_exists( dirname( ABSPATH ) . '/wp-settings.php' ) ) {
+
+			/** The config file resides one level above ABSPATH but is not part of another installation */
+			$config_file = dirname( ABSPATH ) . '/wp-config.php';
+		}
+
+		return \apply_filters( 'activitypub_surge_cache_config_file', $config_file );
 	}
 }
