@@ -358,6 +358,15 @@ class Settings {
 				\wp_enqueue_media();
 				\wp_enqueue_script( 'activitypub-header-image' );
 				break;
+			case 'settings':
+				if ( isset( $_GET['help-tab'] ) && 'getting-started' === $_GET['help-tab'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+					\update_option( 'activitypub_checklist_fediverse_intro_visited', true );
+				} elseif ( isset( $_GET['help-tab'] ) && 'editor-blocks' === $_GET['help-tab'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+					\update_option( 'activitypub_checklist_blocks_visited', true );
+				} else {
+					\update_option( 'activitypub_checklist_settings_visited', true );
+				}
+				break;
 		}
 
 		if ( ! isset( $settings_tabs[ $tab ] ) ) {
