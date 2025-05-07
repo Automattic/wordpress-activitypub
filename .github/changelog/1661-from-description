@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+ActivityPub profiles are now hidden for disabled users to avoid confusion—profiles can no longer be found or followed if the user is not active.
