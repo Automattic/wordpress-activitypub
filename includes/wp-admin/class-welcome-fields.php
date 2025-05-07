@@ -90,8 +90,8 @@ class Welcome_Fields {
 							stroke-dashoffset="<?php echo \esc_attr( 339.292 - ( 339.292 * $progress_percentage / 100 ) ); ?>" />
 				</svg>
 			</div>
-			<h2 class="activitypub-welcome-title"><?php \esc_html_e( 'Let&#8217;s keep going!', 'activitypub' ); ?></h2>
-			<p class="activitypub-welcome-subtitle"><?php \esc_html_e( 'It&#8217;s time to finish setting up your plugin.', 'activitypub' ); ?></p>
+			<h2 class="activitypub-welcome-title"><?php \esc_html_e( 'Welcome to the Fediverse!', 'activitypub' ); ?></h2>
+			<p class="activitypub-welcome-subtitle"><?php \esc_html_e( 'Get connected in just a few steps.', 'activitypub' ); ?></p>
 		</div>
 		<?php
 	}
@@ -258,7 +258,7 @@ class Welcome_Fields {
 			</div>
 			<div class="step-content">
 				<div class="step-text">
-					<h3><?php \esc_html_e( 'Watch a short video: What&#8217;s the Fediverse?', 'activitypub' ); ?></h3>
+					<h3><?php \esc_html_e( 'New to the Fediverse? Start Here', 'activitypub' ); ?></h3>
 					<p><?php \esc_html_e( 'Learn what the Fediverse is and why it matters.', 'activitypub' ); ?></p>
 				</div>
 				<div class="step-action">
@@ -322,7 +322,7 @@ class Welcome_Fields {
 			<div class="step-content">
 				<div class="step-text">
 					<h3><?php \esc_html_e( 'Set up your public profile', 'activitypub' ); ?></h3>
-					<p><?php \esc_html_e( 'Choose your username and how you appear to others.', 'activitypub' ); ?></p>
+					<p><?php \esc_html_e( 'Configure your display name and how you appear to others.', 'activitypub' ); ?></p>
 				</div>
 				<div class="step-action">
 					<?php if ( true === $user_can_activitypub ) : ?>
