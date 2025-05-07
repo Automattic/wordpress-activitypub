@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+NodeInfo endpoint response now correctly formats `localPosts` values.
