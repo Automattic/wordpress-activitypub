@@ -136,7 +136,7 @@ class Blocks {
 		);
 
 		printf(
-			"\n<script>let _activityPubOptions = %s;</script>",
+			"\n<script>var _activityPubOptions = %s;</script>",
 			wp_json_encode( $data )
 		);
 	}
