@@ -489,6 +489,6 @@ class Followers {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function clear_errors( $post_id ) {
-		return delete_post_meta( $post_id, '_activitypub_errors' );
+		return \delete_post_meta( $post_id, '_activitypub_errors' );
 	}
 }

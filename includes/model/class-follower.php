@@ -58,11 +58,7 @@ class Follower extends Actor {
 	 */
 	public function clear_errors() {
 		if ( ! $this->_id ) {
-			\_doing_it_wrong(
-				__METHOD__,
-				__( 'Follower ID is not set.', 'activitypub' ),
-				'unreleased'
-			);
+			\_doing_it_wrong( __METHOD__, 'Follower ID is not set.', 'unreleased' );
 
 			return false;
 		}

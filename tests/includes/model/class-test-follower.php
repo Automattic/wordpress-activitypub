@@ -24,7 +24,6 @@ class Test_Follower extends \WP_UnitTestCase {
 	public function test_clear_errors() {
 		// Mock request
 
-
 		$follower = new Follower();
 		$follower->from_array(
 			array(
