@@ -6,6 +6,6 @@ import './style.scss';
 import { deprecated } from './deprecation';
 
 registerBlockType( metadata.name, {
-    edit,
-    deprecated
-});
+	edit,
+	deprecated,
+} );
