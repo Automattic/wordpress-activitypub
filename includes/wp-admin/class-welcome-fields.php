@@ -91,7 +91,7 @@ class Welcome_Fields {
 				</svg>
 			</div>
 			<h2 class="activitypub-welcome-title"><?php \esc_html_e( 'Welcome to the Fediverse!', 'activitypub' ); ?></h2>
-			<p class="activitypub-welcome-subtitle"><?php \esc_html_e( 'Let&#8217;s get your WordPress site connected to the Fediverse in just a few simple steps.', 'activitypub' ); ?></p>
+			<p class="activitypub-welcome-subtitle"><?php \esc_html_e( 'Get connected in just a few steps.', 'activitypub' ); ?></p>
 		</div>
 		<?php
 	}
