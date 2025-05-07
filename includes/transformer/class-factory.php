@@ -7,9 +7,9 @@
 
 namespace Activitypub\Transformer;
 
-use WP_Error;
-use Activitypub\Http;
+use Activitypub\Activity\Base_Object;
 use Activitypub\Comment as Comment_Helper;
+use Activitypub\Http;
 
 use function Activitypub\is_post_disabled;
 use function Activitypub\user_can_activitypub;
@@ -23,7 +23,7 @@ class Factory {
 	 *
 	 * @param mixed $data The object to transform.
 	 *
-	 * @return Base|WP_Error The transformer to use, or an error.
+	 * @return Base|\WP_Error The transformer to use, or an error.
 	 */
 	public static function get_transformer( $data ) {
 		if ( \is_string( $data ) && \filter_var( $data, FILTER_VALIDATE_URL ) ) {
@@ -40,7 +40,7 @@ class Factory {
 		} elseif ( \is_object( $data ) ) {
 			$class = \get_class( $data );
 		} else {
-			return new WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
+			return new \WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
 		}
 
 		/**
@@ -79,7 +79,7 @@ class Factory {
 				! \is_object( $transformer ) ||
 				! $transformer instanceof Base
 			) {
-				return new WP_Error( 'invalid_transformer', __( 'Invalid transformer', 'activitypub' ) );
+				return new \WP_Error( 'invalid_transformer', __( 'Invalid transformer', 'activitypub' ) );
 			}
 
 			return $transformer;
@@ -108,10 +108,10 @@ class Factory {
 				return new Json( $data );
 		}
 
-		if ( $data instanceof \Activitypub\Activity\Base_Object ) {
+		if ( $data instanceof Base_Object ) {
 			return new Activity_Object( $data );
 		}
 
-		return new WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
+		return new \WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
 	}
 }

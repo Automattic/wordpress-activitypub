@@ -34,7 +34,7 @@ class Health_Check {
 	 *
 	 * @param string $type The type of results to count.
 	 *
-	 * @return array The number of critical and recommended results.
+	 * @return int|int[] The number of critical and recommended results.
 	 */
 	public static function count_results( $type = 'all' ) {
 		$tests = self::add_tests( array() );
@@ -84,7 +84,7 @@ class Health_Check {
 	public static function add_tests( $tests ) {
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			$tests['direct']['activitypub_test_author_url'] = array(
-				'label' => \__( 'Author URL test', 'activitypub' ),
+				'label' => \__( 'Author URL Test', 'activitypub' ),
 				'test'  => array( self::class, 'test_author_url' ),
 			);
 		}
@@ -338,13 +338,13 @@ class Health_Check {
 			'private' => false,
 		);
 
-		$consts = get_defined_constants( true );
+		$constants = get_defined_constants( true );
 
-		if ( ! isset( $consts['user'] ) ) {
+		if ( ! isset( $constants['user'] ) ) {
 			return $info;
 		}
 
-		foreach ( $consts['user'] as $key => $value ) {
+		foreach ( $constants['user'] as $key => $value ) {
 			if ( ! str_starts_with( $key, 'ACTIVITYPUB_' ) ) {
 				continue;
 			}
@@ -385,9 +385,12 @@ class Health_Check {
 			$result['label']          = \__( 'Threaded (nested) comments are not enabled', 'activitypub' );
 			$result['badge']['color'] = 'orange';
 			$result['description']    = \sprintf(
-				'<p>%s</p><p>%s</p>',
-				\__( 'This is particularly important for fediverse users, as they rely on the visual hierarchy to understand conversation threads across different platforms. Without threaded comments, it becomes much more difficult to follow discussions that span multiple platforms in the fediverse.', 'activitypub' ),
-				\sprintf(
+				'<p>%s</p>',
+				\__( 'This is particularly important for fediverse users, as they rely on the visual hierarchy to understand conversation threads across different platforms. Without threaded comments, it becomes much more difficult to follow discussions that span multiple platforms in the fediverse.', 'activitypub' )
+			);
+			$result['actions']        = sprintf(
+				'<p>%s</p>',
+				sprintf(
 					// translators: %s: Discussion settings URL.
 					\__( 'You can enable them in the <a href="%s">Discussion Settings</a>.', 'activitypub' ),
 					esc_url( admin_url( 'options-discussion.php' ) )

@@ -10,15 +10,14 @@ on:
 jobs:
   # Enforces the addition of a changelog entry (a file in the .github/changelog directory) every pull request.
   changelog:
-    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
-      - name: "Check for Skip Changelog label"
+      - name: "Check for Skip Changelog label, or if the PR is a draft"
         id: check-skip-label
         uses: actions/github-script@v7
         with:
           script: |
-            const { payload : { pull_request : { number, labels } } } = context;
+            const { payload : { pull_request : { number, labels, draft = false, base : { ref } } } } = context;
 
             // Check for Skip Changelog label
             core.debug( 'Changelog check: Check for Skip Changelog label' );
@@ -28,6 +27,12 @@ jobs:
 
             if ( hasSkipLabel ) {
               core.info( `Skipping changelog requirement for this PR (#${ number }) because of the "${ skipLabel }" label.` );
+              core.setOutput( 'skip-changelog', 'true' );
+            } else if ( draft ) {
+              core.info( `Skipping changelog requirement for this PR (#${ number }) because it is a draft.` );
+              core.setOutput( 'skip-changelog', 'true' );
+            } else if ( ref !== 'trunk' ) {
+              core.info( `Skipping changelog requirement for this PR (#${ number }) because it is not against the "trunk" branch.` );
               core.setOutput( 'skip-changelog', 'true' );
             } else {
               core.info( `No "${ skipLabel }" label found for PR #${ number }. Will check for changelog file.` );
