@@ -73,6 +73,9 @@ class Test_Nodeinfo_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 	 * @covers ::get_version_2_0
 	 */
 	public function test_get_item() {
+		self::factory()->post->create();
+		self::factory()->comment->create();
+
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo/2.0' );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
@@ -85,8 +88,9 @@ class Test_Nodeinfo_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 		$this->assertEquals( array( 'activitypub' ), $data['protocols'] );
 		$this->assertArrayHasKey( 'services', $data );
 		$this->assertEquals( (bool) \get_option( 'users_can_register' ), $data['openRegistrations'] );
-		$this->assertArrayHasKey( 'usage', $data );
-		$this->assertArrayHasKey( 'metadata', $data );
+		$this->assertIsInt( $data['usage']['localPosts'] );
+		$this->assertIsInt( $data['usage']['localComments'] );
+		$this->assertSame( \get_bloginfo( 'name' ), $data['metadata']['nodeName'] );
 	}
 
 	/**
