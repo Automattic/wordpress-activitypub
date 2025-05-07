@@ -480,4 +480,15 @@ class Followers {
 			$error_message
 		);
 	}
+
+	/**
+	 * Clear the errors for a Follower.
+	 *
+	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function clear_errors( $post_id ) {
+		return \delete_post_meta( $post_id, '_activitypub_errors' );
+	}
 }

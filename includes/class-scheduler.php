@@ -133,6 +133,8 @@ class Scheduler {
 			} else {
 				$follower->from_array( $meta );
 				$follower->update();
+
+				$follower->clear_errors();
 			}
 		}
 	}
