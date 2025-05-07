@@ -262,7 +262,7 @@ class Welcome_Fields {
 					<p><?php \esc_html_e( 'Learn what the Fediverse is and why it matters.', 'activitypub' ); ?></p>
 				</div>
 				<div class="step-action">
-					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-link-getting-started' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&help-tab=getting-started#tab-link-getting-started' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 						<?php \esc_html_e( 'Watch now', 'activitypub' ); ?>
 					</a>
 				</div>
