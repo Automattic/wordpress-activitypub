@@ -1,4 +1,4 @@
-import { useBlockProps } from '@wordpress/block-editor';
+import { createBlock } from '@wordpress/blocks';
 
 const v1 = {
 	attributes: {
@@ -20,39 +20,24 @@ const v1 = {
 		},
 	},
 
-	save( { attributes } ) {
-		return (
-			<div { ...useBlockProps.save() }>
-				{ attributes.title && <h2>{ attributes.title }</h2> }
-			</div>
-		);
+	isEligible( attributes ) {
+		// Run migration if title attribute exists.
+		return !! attributes.title;
 	},
 
 	migrate( attributes ) {
 		const { title, ...newAttributes } = attributes;
 
-		if ( title ) {
-			return {
-				...newAttributes,
-				innerBlocks: [
-					[
-						'core/heading',
-						{
-							level: 6,
-							content: title,
-						},
-					],
-				],
-			};
-		}
-
-		return newAttributes;
-	},
-
-	isEligible( attributes ) {
-		// Run migration if title attribute exists
-		return !! attributes.title;
+		return [
+			newAttributes,
+			[
+				createBlock( 'core/heading', {
+					content: title,
+					level: 6,
+				} ),
+			],
+		];
 	},
 };
 
-export const deprecated = [ v1 ];
+export default [ v1 ];
