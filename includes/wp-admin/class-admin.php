@@ -225,6 +225,11 @@ class Admin {
 				ACTIVITYPUB_PLUGIN_VERSION,
 				false
 			);
+
+			// Plugin cards in help tab.
+			\wp_enqueue_script( 'plugin-install' );
+			\add_thickbox();
+			\wp_enqueue_script( 'updates' );
 		}
 
 		if ( 'index.php' === $hook_suffix ) {
