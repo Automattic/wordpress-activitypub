@@ -44,8 +44,7 @@ const generateWhimsicalName = () => {
 		'Penguin',
 	];
 
-	const adjective =
-		adjectives[ Math.floor( Math.random() * adjectives.length ) ];
+	const adjective = adjectives[ Math.floor( Math.random() * adjectives.length ) ];
 	const noun = nouns[ Math.floor( Math.random() * nouns.length ) ];
 
 	return `${ adjective } ${ noun }`;
@@ -112,9 +111,7 @@ const generateDummyReactions = () => ( {
 			_x( '%d likes', 'number of likes', 'activitypub' ),
 			9
 		),
-		items: Array.from( { length: 9 }, ( _, i ) =>
-			generateDummyReaction( i )
-		),
+		items: Array.from( { length: 9 }, ( _, i ) => generateDummyReaction( i ) ),
 	},
 	reposts: {
 		label: sprintf(
@@ -122,9 +119,7 @@ const generateDummyReactions = () => ( {
 			_x( '%d reposts', 'number of reposts', 'activitypub' ),
 			6
 		),
-		items: Array.from( { length: 6 }, ( _, i ) =>
-			generateDummyReaction( i + 9 )
-		),
+		items: Array.from( { length: 6 }, ( _, i ) => generateDummyReaction( i + 9 ) ),
 	},
 } );
 
@@ -136,11 +131,7 @@ const generateDummyReactions = () => ( {
  * @param {Function} props.setAttributes Attribute update callback.
  * @return {JSX.Element}                 Component to render.
  */
-export default function Edit( {
-	attributes,
-	setAttributes,
-	__unstableLayoutClassNames,
-} ) {
+export default function Edit( { attributes, setAttributes, __unstableLayoutClassNames } ) {
 	const blockProps = useBlockProps( {
 		className: __unstableLayoutClassNames,
 	} );
@@ -159,10 +150,7 @@ export default function Edit( {
 
 	return (
 		<div { ...blockProps }>
-			<Reactions
-				titleComponent={ titleEditor }
-				reactions={ dummyReactions }
-			/>
+			<Reactions titleComponent={ titleEditor } reactions={ dummyReactions } />
 		</div>
 	);
 }

@@ -1,9 +1,4 @@
-import {
-	SelectControl,
-	RangeControl,
-	PanelBody,
-	TextControl,
-} from '@wordpress/components';
+import { SelectControl, RangeControl, PanelBody, TextControl } from '@wordpress/components';
 import { useState, useEffect } from '@wordpress/element';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { useSelect } from '@wordpress/data';
@@ -13,11 +8,7 @@ import { Followers } from './followers';
 import { useUserOptions } from '../shared/use-user-options';
 import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
 
-export default function Edit( {
-	attributes,
-	setAttributes,
-	context: { postType, postId },
-} ) {
+export default function Edit( { attributes, setAttributes, context: { postType, postId } } ) {
 	const { order, per_page, selectedUser, title } = attributes;
 	const blockProps = useBlockProps();
 	const [ page, setPage ] = useState( 1 );
@@ -35,11 +26,7 @@ export default function Edit( {
 	const authorId = useSelect(
 		( select ) => {
 			const { getEditedEntityRecord } = select( coreStore );
-			const _authorId = getEditedEntityRecord(
-				'postType',
-				postType,
-				postId
-			)?.author;
+			const _authorId = getEditedEntityRecord( 'postType', postType, postId )?.author;
 
 			return _authorId ?? null;
 		},
@@ -63,23 +50,16 @@ export default function Edit( {
 				<PanelBody title={ __( 'Followers Options', 'activitypub' ) }>
 					<TextControl
 						label={ __( 'Title', 'activitypub' ) }
-						help={ __(
-							'Title to display above the list of followers. Blank for none.',
-							'activitypub'
-						) }
+						help={ __( 'Title to display above the list of followers. Blank for none.', 'activitypub' ) }
 						value={ title }
-						onChange={ ( value ) =>
-							setAttributes( { title: value } )
-						}
+						onChange={ ( value ) => setAttributes( { title: value } ) }
 					/>
 					{ usersOptions.length > 1 && (
 						<SelectControl
 							label={ __( 'Select User', 'activitypub' ) }
 							value={ selectedUser }
 							options={ usersOptions }
-							onChange={ setAttributestAndResetPage(
-								'selectedUser'
-							) }
+							onChange={ setAttributestAndResetPage( 'selectedUser' ) }
 						/>
 					) }
 					<SelectControl
@@ -107,17 +87,10 @@ export default function Edit( {
 						selectedUser={ authorId }
 					/>
 				) : (
-					<InheritModeBlockFallback
-						name={ __( 'Followers', 'activitypub' ) }
-					/>
+					<InheritModeBlockFallback name={ __( 'Followers', 'activitypub' ) } />
 				)
 			) : (
-				<Followers
-					{ ...attributes }
-					page={ page }
-					setPage={ setPage }
-					followLinks={ false }
-				/>
+				<Followers { ...attributes } page={ page } setPage={ setPage } followLinks={ false } />
 			) }
 		</div>
 	);

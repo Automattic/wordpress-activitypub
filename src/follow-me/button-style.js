@@ -53,34 +53,19 @@ function getBlockStyles( base, style, backgroundColor ) {
 	// we misuse the link color for the button background
 	const buttonColor = getLinkColor( style?.elements?.link?.color?.text );
 	// hover!
-	const buttonHoverColor = getLinkColor(
-		style?.elements?.link?.[ ':hover' ]?.color?.text
-	);
+	const buttonHoverColor = getLinkColor( style?.elements?.link?.[ ':hover' ]?.color?.text );
 
-	return getStyles(
-		selector,
-		buttonColor,
-		buttonTextColor,
-		buttonHoverColor
-	);
+	return getStyles( selector, buttonColor, buttonTextColor, buttonHoverColor );
 }
 
 export function getPopupStyles( style ) {
 	// we don't acept backgroundColor because the popup is always white (right?)
-	const buttonColor =
-		getLinkColor( style?.elements?.link?.color?.text ) || '#111';
+	const buttonColor = getLinkColor( style?.elements?.link?.color?.text ) || '#111';
 	const buttonTextColor = '#fff';
-	const buttonHoverColor =
-		getLinkColor( style?.elements?.link?.[ ':hover' ]?.color?.text ) ||
-		'#333';
+	const buttonHoverColor = getLinkColor( style?.elements?.link?.[ ':hover' ]?.color?.text ) || '#333';
 	const selector = '.apfmd__button-group .components-button';
 
-	return getStyles(
-		selector,
-		buttonColor,
-		buttonTextColor,
-		buttonHoverColor
-	);
+	return getStyles( selector, buttonColor, buttonTextColor, buttonHoverColor );
 }
 
 export function ButtonStyle( { selector, style, backgroundColor } ) {

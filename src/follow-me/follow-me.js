@@ -61,19 +61,10 @@ function fetchProfile( userId ) {
  * @param {string} props.buttonSize Button size.
  * @return {JSX.Element} Profile component.
  */
-function Profile( {
-	profile,
-	popupStyles,
-	userId,
-	buttonText,
-	buttonOnly,
-	buttonSize,
-} ) {
+function Profile( { profile, popupStyles, userId, buttonText, buttonOnly, buttonSize } ) {
 	const { webfinger, avatar, name } = profile;
 	// check if webfinger starts with @ and add it if it doesn't
-	const webfingerWithAt = webfinger.startsWith( '@' )
-		? webfinger
-		: `@${ webfinger }`;
+	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
 
 	if ( buttonOnly ) {
 		return (
@@ -91,17 +82,10 @@ function Profile( {
 
 	return (
 		<div className="activitypub-profile">
-			<img
-				className="activitypub-profile__avatar"
-				src={ avatar }
-				alt={ name }
-			/>
+			<img className="activitypub-profile__avatar" src={ avatar } alt={ name } />
 			<div className="activitypub-profile__content">
 				<div className="activitypub-profile__name">{ name }</div>
-				<div
-					className="activitypub-profile__handle"
-					title={ webfingerWithAt }
-				>
+				<div className="activitypub-profile__handle" title={ webfingerWithAt }>
 					{ webfingerWithAt }
 				</div>
 			</div>
@@ -180,9 +164,7 @@ function DialogFollow( { profile, userId } ) {
 		'Copy and paste my profile into the search field of your favorite fediverse app or server.',
 		'activitypub'
 	);
-	const webfingerWithAt = webfinger.startsWith( '@' )
-		? webfinger
-		: `@${ webfinger }`;
+	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
 
 	return (
 		<Dialog
@@ -237,15 +219,8 @@ export default function FollowMe( {
 	}, [ userId, profileData ] );
 
 	return (
-		<div
-			{ ...wrapperProps }
-			className="activitypub-follow-me-block-wrapper"
-		>
-			<ButtonStyle
-				selector={ `#${ id }` }
-				style={ style }
-				backgroundColor={ backgroundColor }
-			/>
+		<div { ...wrapperProps } className="activitypub-follow-me-block-wrapper">
+			<ButtonStyle selector={ `#${ id }` } style={ style } backgroundColor={ backgroundColor } />
 			<Profile
 				profile={ profile }
 				userId={ userId }

@@ -19,24 +19,12 @@ export function Pagination( {
 	variant = PaginationVariant.outlined,
 } ) {
 	const getPageList = ( page, pageCount ) => {
-		let pageList = [
-			1,
-			page - 2,
-			page - 1,
-			page,
-			page + 1,
-			page + 2,
-			pageCount,
-		];
+		let pageList = [ 1, page - 2, page - 1, page, page + 1, page + 2, pageCount ];
 		pageList.sort( ( a, b ) => a - b );
 
 		// Remove pages less than 1, or greater than total number of pages, and remove duplicates
 		pageList = pageList.filter( ( pageNumber, index, originalPageList ) => {
-			return (
-				pageNumber >= 1 &&
-				pageNumber <= pageCount &&
-				originalPageList.lastIndexOf( pageNumber ) === index
-			);
+			return pageNumber >= 1 && pageNumber <= pageCount && originalPageList.lastIndexOf( pageNumber ) === index;
 		} );
 
 		for ( let i = pageList.length - 2; i >= 0; i-- ) {

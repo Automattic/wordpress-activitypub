@@ -1,12 +1,6 @@
 import classNames from 'classnames';
 
-export function PaginationPage( {
-	active,
-	children,
-	page,
-	pageClick,
-	className,
-} ) {
+export function PaginationPage( { active, children, page, pageClick, className } ) {
 	const handleClick = ( event ) => {
 		event.preventDefault();
 		! active && pageClick( page );

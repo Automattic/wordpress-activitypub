@@ -2,12 +2,7 @@ import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
-import {
-	SelectControl,
-	PanelBody,
-	ToggleControl,
-	TextControl,
-} from '@wordpress/components';
+import { SelectControl, PanelBody, ToggleControl, TextControl } from '@wordpress/components';
 import { useUserOptions } from '../shared/use-user-options';
 import FollowMe from './follow-me';
 import { useEffect } from '@wordpress/element';
@@ -24,11 +19,7 @@ import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
  * @param {number} props.context.postId Post ID.
  * @return {JSX.Element} Edit component.
  */
-export default function Edit( {
-	attributes,
-	setAttributes,
-	context: { postType, postId },
-} ) {
+export default function Edit( { attributes, setAttributes, context: { postType, postId } } ) {
 	const blockProps = useBlockProps( {
 		className: 'activitypub-follow-me-block-wrapper',
 	} );
@@ -39,11 +30,7 @@ export default function Edit( {
 	const authorId = useSelect(
 		( select ) => {
 			const { getEditedEntityRecord } = select( coreStore );
-			const _authorId = getEditedEntityRecord(
-				'postType',
-				postType,
-				postId
-			)?.author;
+			const _authorId = getEditedEntityRecord( 'postType', postType, postId )?.author;
 
 			return _authorId ?? null;
 		},
@@ -70,28 +57,19 @@ export default function Edit( {
 							label={ __( 'Select User', 'activitypub' ) }
 							value={ attributes.selectedUser }
 							options={ usersOptions }
-							onChange={ ( value ) =>
-								setAttributes( { selectedUser: value } )
-							}
+							onChange={ ( value ) => setAttributes( { selectedUser: value } ) }
 						/>
 					) }
 					<ToggleControl
 						label={ __( 'Button Only Mode', 'activitypub' ) }
 						checked={ buttonOnly }
-						onChange={ ( value ) =>
-							setAttributes( { buttonOnly: value } )
-						}
-						help={ __(
-							'Only show the follow button without profile information',
-							'activitypub'
-						) }
+						onChange={ ( value ) => setAttributes( { buttonOnly: value } ) }
+						help={ __( 'Only show the follow button without profile information', 'activitypub' ) }
 					/>
 					<TextControl
 						label={ __( 'Button Text', 'activitypub' ) }
 						value={ buttonText }
-						onChange={ ( value ) =>
-							setAttributes( { buttonText: value } )
-						}
+						onChange={ ( value ) => setAttributes( { buttonText: value } ) }
 					/>
 					<SelectControl
 						label={ __( 'Button Size', 'activitypub' ) }
@@ -110,27 +88,16 @@ export default function Edit( {
 								value: 'small',
 							},
 						] }
-						onChange={ ( value ) =>
-							setAttributes( { buttonSize: value } )
-						}
-						help={ __(
-							'Choose the size of the follow button',
-							'activitypub'
-						) }
+						onChange={ ( value ) => setAttributes( { buttonSize: value } ) }
+						help={ __( 'Choose the size of the follow button', 'activitypub' ) }
 					/>
 				</PanelBody>
 			</InspectorControls>
 			{ isInheritMode ? (
 				authorId ? (
-					<FollowMe
-						{ ...attributes }
-						id={ blockProps.id }
-						selectedUser={ authorId }
-					/>
+					<FollowMe { ...attributes } id={ blockProps.id } selectedUser={ authorId } />
 				) : (
-					<InheritModeBlockFallback
-						name={ __( 'Follow Me', 'activitypub' ) }
-					/>
+					<InheritModeBlockFallback name={ __( 'Follow Me', 'activitypub' ) } />
 				)
 			) : (
 				<FollowMe { ...attributes } id={ blockProps.id } />

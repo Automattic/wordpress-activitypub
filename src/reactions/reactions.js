@@ -45,11 +45,7 @@ const FacepileRow = ( { reactions } ) => {
 			const end = isRightward ? totalAvatars - 1 : 0;
 			const step = isRightward ? 1 : -1;
 
-			for (
-				let i = start;
-				isRightward ? i <= end : i >= end;
-				i += step
-			) {
+			for ( let i = start; isRightward ? i <= end : i >= end; i += step ) {
 				const delayMultiplier = Math.abs( i - startIndex );
 				const timeout = setTimeout( () => {
 					setActiveIndices( ( current ) => {
@@ -66,14 +62,8 @@ const FacepileRow = ( { reactions } ) => {
 						setRotationStates( ( current ) => {
 							const updated = new Map( current );
 							const neighborIndex = i - step;
-							const neighborRotation =
-								updated.get( neighborIndex );
-							updated.set(
-								i,
-								neighborRotation === 'clockwise'
-									? 'counter'
-									: 'clockwise'
-							);
+							const neighborRotation = updated.get( neighborIndex );
+							updated.set( i, neighborRotation === 'clockwise' ? 'counter' : 'clockwise' );
 							return updated;
 						} );
 					}
@@ -88,10 +78,7 @@ const FacepileRow = ( { reactions } ) => {
 
 		// Clear rotations when wave finishes retracting
 		if ( ! isEntering ) {
-			const maxDelay = Math.max(
-				( totalAvatars - startIndex ) * delay,
-				startIndex * delay
-			);
+			const maxDelay = Math.max( ( totalAvatars - startIndex ) * delay, startIndex * delay );
 			const timeout = setTimeout( () => {
 				setRotationStates( new Map() );
 			}, maxDelay + delay );
@@ -126,13 +113,7 @@ const FacepileRow = ( { reactions } ) => {
 							onMouseEnter={ () => startWave( index, true ) }
 							onMouseLeave={ () => startWave( index, false ) }
 						>
-							<img
-								src={ avatar }
-								alt={ reaction.name }
-								className={ classes }
-								width="32"
-								height="32"
-							/>
+							<img src={ avatar } alt={ reaction.name } className={ classes } width="32" height="32" />
 						</a>
 					</li>
 				);
@@ -162,18 +143,8 @@ const ReactionDropdown = ( { reactions, anchor, onClose } ) => (
 		<ul className="activitypub-reaction-list">
 			{ reactions.map( ( reaction, index ) => (
 				<li key={ index }>
-					<a
-						href={ reaction.url }
-						className="reaction-item"
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						<img
-							src={ reaction.avatar }
-							alt={ reaction.name }
-							width="32"
-							height="32"
-						/>
+					<a href={ reaction.url } className="reaction-item" target="_blank" rel="noopener noreferrer">
+						<img src={ reaction.avatar } alt={ reaction.name } width="32" height="32" />
 						<span>{ reaction.name }</span>
 					</a>
 				</li>
@@ -194,18 +165,8 @@ const ReactionList = ( { reactions, type } ) => (
 	<ul className="activitypub-reaction-list">
 		{ reactions.map( ( reaction, index ) => (
 			<li key={ index }>
-				<a
-					href={ reaction.url }
-					className="reaction-item"
-					target="_blank"
-					rel="noopener noreferrer"
-				>
-					<img
-						src={ reaction.avatar }
-						alt={ reaction.name }
-						width="32"
-						height="32"
-					/>
+				<a href={ reaction.url } className="reaction-item" target="_blank" rel="noopener noreferrer">
+					<img src={ reaction.avatar } alt={ reaction.name } width="32" height="32" />
 					<span>{ reaction.name }</span>
 				</a>
 			</li>
@@ -250,12 +211,7 @@ const ReactionGroup = ( { items, label } ) => {
 
 			// Calculate how many avatars can fit
 			// First avatar takes full width, rest take effective width
-			const maxAvatars = Math.max(
-				1,
-				Math.floor(
-					( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH
-				)
-			);
+			const maxAvatars = Math.max( 1, Math.floor( ( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH ) );
 
 			// Ensure we don't show more than we have
 			setVisibleCount( Math.min( maxAvatars, items.length ) );
@@ -287,10 +243,7 @@ const ReactionGroup = ( { items, label } ) => {
 				{ label }
 			</Button>
 			{ isOpen && buttonRef && (
-				<Popover
-					anchor={ buttonRef }
-					onClose={ () => setIsOpen( false ) }
-				>
+				<Popover anchor={ buttonRef } onClose={ () => setIsOpen( false ) }>
 					<ReactionList reactions={ items } />
 				</Popover>
 			) }
@@ -308,12 +261,7 @@ const ReactionGroup = ( { items, label } ) => {
  * @param {?JSX.Element} props.titleComponent Optional component for title editing.
  * @return {?JSX.Element}                    The rendered component.
  */
-export function Reactions( {
-	title = '',
-	postId = null,
-	reactions: providedReactions = null,
-	titleComponent = null,
-} ) {
+export function Reactions( { title = '', postId = null, reactions: providedReactions = null, titleComponent = null } ) {
 	const { namespace } = useOptions();
 	const [ reactions, setReactions ] = useState( providedReactions );
 	const [ loading, setLoading ] = useState( ! providedReactions );
@@ -346,12 +294,7 @@ export function Reactions( {
 	}
 
 	// Return null if there are no reactions
-	if (
-		! reactions ||
-		! Object.values( reactions ).some(
-			( group ) => group.items?.length > 0
-		)
-	) {
+	if ( ! reactions || ! Object.values( reactions ).some( ( group ) => group.items?.length > 0 ) ) {
 		return null;
 	}
 
@@ -364,13 +307,7 @@ export function Reactions( {
 					return null;
 				}
 
-				return (
-					<ReactionGroup
-						key={ key }
-						items={ group.items }
-						label={ group.label }
-					/>
-				);
+				return <ReactionGroup key={ key } items={ group.items } label={ group.label } />;
 			} ) }
 		</div>
 	);

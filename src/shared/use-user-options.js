@@ -5,11 +5,7 @@ import { useOptions } from './use-options';
 
 export function useUserOptions( { withInherit = false } ) {
 	const { enabled } = useOptions();
-	const users = enabled?.users
-		? useSelect( ( select ) =>
-				select( 'core' ).getUsers( { who: 'authors' } )
-		  )
-		: [];
+	const users = enabled?.users ? useSelect( ( select ) => select( 'core' ).getUsers( { who: 'authors' } ) ) : [];
 	return useMemo( () => {
 		if ( ! users ) {
 			return [];

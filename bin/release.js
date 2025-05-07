@@ -31,10 +31,7 @@ const updateVersionInFile = ( filePath, version, patterns ) => {
 	let content = fs.readFileSync( filePath, 'utf8' );
 
 	patterns.forEach( ( { search, replace } ) => {
-		content = content.replace(
-			search,
-			typeof replace === 'function' ? replace( version ) : replace
-		);
+		content = content.replace( search, typeof replace === 'function' ? replace( version ) : replace );
 	} );
 
 	fs.writeFileSync( filePath, content );
@@ -52,9 +49,7 @@ const generateChangelog = async () => {
 
 	// Grab the version from the generated changelog
 	const content = fs.readFileSync( 'CHANGELOG.md', 'utf8' );
-	const version = content.match(
-		/## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}/
-	)[ 1 ];
+	const version = content.match( /## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}/ )[ 1 ];
 
 	if ( ! version ) {
 		console.error( 'No version found in CHANGELOG.md' );
@@ -70,10 +65,7 @@ const updateReadmeWithChangelog = ( version ) => {
 	const readmeContent = fs.readFileSync( 'readme.txt', 'utf8' );
 
 	// Ensure the latest release entry was found in the list of latest releases we grabbed.
-	const latestReleaseRegex = new RegExp(
-		`## \\[${ version }\\].*?(?=## \\[|$)`,
-		's'
-	);
+	const latestReleaseRegex = new RegExp( `## \\[${ version }\\].*?(?=## \\[|$)`, 's' );
 	const latestReleaseMatch = changelogContent.match( latestReleaseRegex );
 	if ( ! latestReleaseMatch ) {
 		console.error( `No changelog entry found for version ${ version }` );
@@ -94,12 +86,8 @@ const updateReadmeWithChangelog = ( version ) => {
 		const [ , releaseVersion, releaseDate ] = match;
 		if ( releaseVersion.startsWith( `${ majorVersion }.` ) ) {
 			// Find the content for this release
-			const releaseContentRegex = new RegExp(
-				`## \\[${ releaseVersion }\\].*?(?=## \\[|$)`,
-				's'
-			);
-			const releaseContent =
-				changelogContent.match( releaseContentRegex );
+			const releaseContentRegex = new RegExp( `## \\[${ releaseVersion }\\].*?(?=## \\[|$)`, 's' );
+			const releaseContent = changelogContent.match( releaseContentRegex );
 
 			if ( releaseContent ) {
 				releases.push( {
@@ -169,61 +157,40 @@ const updateReadmeWithChangelog = ( version ) => {
 
 const updateReadmeWithUpgradeNotice = ( version ) => {
 	return new Promise( ( resolve ) => {
-		rl.question(
-			'\nWould you like to add an upgrade notice for this version? (y/n): ',
-			( answer ) => {
-				if (
-					answer.toLowerCase() === 'y' ||
-					answer.toLowerCase() === 'yes'
-				) {
-					rl.question(
-						'Enter the upgrade notice (leave empty to skip): ',
-						( notice ) => {
-							if ( notice.trim() ) {
-								// Read the readme.txt file
-								let readmeContent = fs.readFileSync(
-									'readme.txt',
-									'utf8'
-								);
+		rl.question( '\nWould you like to add an upgrade notice for this version? (y/n): ', ( answer ) => {
+			if ( answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes' ) {
+				rl.question( 'Enter the upgrade notice (leave empty to skip): ', ( notice ) => {
+					if ( notice.trim() ) {
+						// Read the readme.txt file
+						let readmeContent = fs.readFileSync( 'readme.txt', 'utf8' );
 
-								// Check if Upgrade Notice section already exists
-								const upgradeNoticeSectionRegex =
-									/== Upgrade Notice ==([\s\S]*?)(?=== |$)/;
-								const upgradeNoticeSection =
-									readmeContent.match(
-										upgradeNoticeSectionRegex
-									);
+						// Check if Upgrade Notice section already exists
+						const upgradeNoticeSectionRegex = /== Upgrade Notice ==([\s\S]*?)(?=== |$)/;
+						const upgradeNoticeSection = readmeContent.match( upgradeNoticeSectionRegex );
 
-								// Create the new upgrade notice section
-								const newUpgradeNotice = `== Upgrade Notice ==\n\n= ${ version } =\n\n${ notice.trim() }\n\n`;
+						// Create the new upgrade notice section
+						const newUpgradeNotice = `== Upgrade Notice ==\n\n= ${ version } =\n\n${ notice.trim() }\n\n`;
 
-								if ( upgradeNoticeSection ) {
-									// Replace the entire existing Upgrade Notice section
-									readmeContent = readmeContent.replace(
-										upgradeNoticeSectionRegex,
-										newUpgradeNotice
-									);
-								} else {
-									// Create a new Upgrade Notice section at the end of the file
-									readmeContent += `\n\n${ newUpgradeNotice }`;
-								}
-
-								fs.writeFileSync( 'readme.txt', readmeContent );
-								console.log(
-									`Added upgrade notice for version ${ version } to readme.txt`
-								);
-							} else {
-								console.log( 'No upgrade notice added.' );
-							}
-							resolve();
+						if ( upgradeNoticeSection ) {
+							// Replace the entire existing Upgrade Notice section
+							readmeContent = readmeContent.replace( upgradeNoticeSectionRegex, newUpgradeNotice );
+						} else {
+							// Create a new Upgrade Notice section at the end of the file
+							readmeContent += `\n\n${ newUpgradeNotice }`;
 						}
-					);
-				} else {
-					console.log( 'Skipping upgrade notice.' );
+
+						fs.writeFileSync( 'readme.txt', readmeContent );
+						console.log( `Added upgrade notice for version ${ version } to readme.txt` );
+					} else {
+						console.log( 'No upgrade notice added.' );
+					}
 					resolve();
-				}
+				} );
+			} else {
+				console.log( 'Skipping upgrade notice.' );
+				resolve();
 			}
-		);
+		} );
 	} );
 };
 
@@ -236,16 +203,11 @@ async function createRelease() {
 	const currentBranch = execWithOutput( 'git rev-parse --abbrev-ref HEAD' );
 
 	// Check if release branch already exists
-	const branchExists = execWithOutput(
-		`git branch --list release/${ version }`
-	);
+	const branchExists = execWithOutput( `git branch --list release/${ version }` );
 	if ( branchExists ) {
 		console.error( `\nError: Branch release/${ version } already exists.` );
 		// Return to original branch if we're not already there
-		if (
-			currentBranch !==
-			execWithOutput( 'git rev-parse --abbrev-ref HEAD' )
-		) {
+		if ( currentBranch !== execWithOutput( 'git rev-parse --abbrev-ref HEAD' ) ) {
 			exec( `git checkout ${ currentBranch }` );
 		}
 		process.exit( 1 );
@@ -342,9 +304,7 @@ async function release() {
 		try {
 			execSync( 'gh --version', { stdio: 'ignore' } );
 		} catch ( error ) {
-			console.error(
-				'GitHub CLI (gh) is not installed. Please install it first:'
-			);
+			console.error( 'GitHub CLI (gh) is not installed. Please install it first:' );
 			console.error( 'https://cli.github.com/' );
 			process.exit( 1 );
 		}

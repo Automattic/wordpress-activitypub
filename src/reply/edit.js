@@ -1,10 +1,5 @@
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
-import {
-	TextControl,
-	PanelBody,
-	ToggleControl,
-	Spinner,
-} from '@wordpress/components';
+import { TextControl, PanelBody, ToggleControl, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useEffect, useState, useRef, useCallback } from '@wordpress/element';
 import { useDebounce } from '@wordpress/compose';
@@ -93,10 +88,7 @@ function useIframeHeight( { html } ) {
 
 			// Remove event listener
 			if ( iframeRef.current ) {
-				iframeRef.current.removeEventListener(
-					'load',
-					handleIframeLoad
-				);
+				iframeRef.current.removeEventListener( 'load', handleIframeLoad );
 			}
 		};
 	}, [ handleIframeLoad, adjustIframeHeight ] );
@@ -224,10 +216,7 @@ function WpEmbedPreview( { html, onSelectBlock } ) {
 		 * @param {MessageEvent} event Message event.
 		 */
 		function resizeWPembeds( { data: { secret, message, value } = {} } ) {
-			if (
-				message !== 'height' ||
-				secret !== iframeProps[ 'data-secret' ]
-			) {
+			if ( message !== 'height' || secret !== iframeProps[ 'data-secret' ] ) {
 				return;
 			}
 
@@ -243,10 +232,7 @@ function WpEmbedPreview( { html, onSelectBlock } ) {
 	// If no iframe was found, render the HTML directly with an overlay
 	if ( ! iframeProps.src ) {
 		return (
-			<div
-				className="wp-block-embed__wrapper"
-				style={ { position: 'relative' } }
-			>
+			<div className="wp-block-embed__wrapper" style={ { position: 'relative' } }>
 				<div dangerouslySetInnerHTML={ { __html: html } } />
 				<EmbedOverlay onClick={ onSelectBlock } />
 			</div>
@@ -254,16 +240,10 @@ function WpEmbedPreview( { html, onSelectBlock } ) {
 	}
 
 	return (
-		<div
-			className="wp-block-embed__wrapper"
-			style={ { position: 'relative' } }
-		>
+		<div className="wp-block-embed__wrapper" style={ { position: 'relative' } }>
 			<iframe
 				ref={ ref }
-				title={
-					iframeProps.title ||
-					__( 'Embedded WordPress content', 'activitypub' )
-				}
+				title={ iframeProps.title || __( 'Embedded WordPress content', 'activitypub' ) }
 				{ ...iframeProps }
 				height={ height }
 				style={ {
@@ -286,8 +266,7 @@ function WpEmbedPreview( { html, onSelectBlock } ) {
  * @return {JSX.Element} The component.
  */
 function ThirdPartyEmbed( { html, onClick, isSelected } ) {
-	const { iframeRef, iframeHeight, adjustIframeHeight, handleIframeLoad } =
-		useIframeHeight( { html } );
+	const { iframeRef, iframeHeight, adjustIframeHeight, handleIframeLoad } = useIframeHeight( { html } );
 
 	// Create a sandboxed document with the HTML content
 	const createSandboxedContent = useCallback( () => {
@@ -309,10 +288,7 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 	}, [ html ] );
 
 	return (
-		<div
-			className="wp-block-embed__wrapper"
-			style={ { position: 'relative' } }
-		>
+		<div className="wp-block-embed__wrapper" style={ { position: 'relative' } }>
 			<iframe
 				ref={ iframeRef }
 				srcDoc={ createSandboxedContent() }
@@ -356,18 +332,11 @@ const HELP_TEXT = {
 	checking: () => (
 		<>
 			<Spinner />
-			{ ' ' +
-				__(
-					'Checking if this URL supports ActivityPub replies...',
-					'activitypub'
-				) }
+			{ ' ' + __( 'Checking if this URL supports ActivityPub replies...', 'activitypub' ) }
 		</>
 	),
 	valid: __( 'The author will be notified of your response.', 'activitypub' ),
-	error: __(
-		"This URL probably won't receive your reply. We'll still try.",
-		'activitypub'
-	),
+	error: __( "This URL probably won't receive your reply. We'll still try.", 'activitypub' ),
 };
 
 /**
@@ -389,12 +358,7 @@ const EMBED_HELP_TEXT = {
  * @param {string} props.clientId - Block client ID.
  * @param {boolean} props.isSelected - Whether the block is selected.
  */
-export default function Edit( {
-	attributes: attr,
-	setAttributes,
-	clientId,
-	isSelected,
-} ) {
+export default function Edit( { attributes: attr, setAttributes, clientId, isSelected } ) {
 	const { url } = attr;
 	const { namespace } = useOptions();
 
@@ -405,14 +369,10 @@ export default function Edit( {
 	const [ isCheckingEmbed, setIsCheckingEmbed ] = useState( false );
 	// Optimistic embeds mean that we will toggle embedPost to true whenever we find a valid embed.
 	// This will be true when the block is instantiated with `true` because it was saved that way, or because this is a new block with no initial URL.
-	const [ optimisticEmbed, setOptimisticEmbed ] = useState(
-		attr.embedPost === true || ! url
-	);
+	const [ optimisticEmbed, setOptimisticEmbed ] = useState( attr.embedPost === true || ! url );
 	const [ embedHtml, setEmbedHtml ] = useState( null );
-	const { iframeRef, iframeHeight, adjustIframeHeight, handleIframeLoad } =
-		useIframeHeight( { html: embedHtml } );
-	const { insertAfterBlock, removeBlock } =
-		useDispatch( 'core/block-editor' );
+	const { iframeRef, iframeHeight, adjustIframeHeight, handleIframeLoad } = useIframeHeight( { html: embedHtml } );
+	const { insertAfterBlock, removeBlock } = useDispatch( 'core/block-editor' );
 	// Get block props and dispatch functions.
 	const blockProps = useBlockProps();
 	const urlInputRef = useRef();
@@ -545,11 +505,7 @@ export default function Edit( {
 						checked={ attr.embedPost }
 						onChange={ onEmbedPostChange }
 						disabled={ ! isValidEmbed }
-						help={
-							isValidEmbed
-								? EMBED_HELP_TEXT.valid
-								: EMBED_HELP_TEXT.invalid
-						}
+						help={ isValidEmbed ? EMBED_HELP_TEXT.valid : EMBED_HELP_TEXT.invalid }
 					/>
 				</PanelBody>
 			</InspectorControls>
@@ -557,14 +513,9 @@ export default function Edit( {
 			<div { ...blockProps }>
 				{ isSelected && (
 					<TextControl
-						label={ __(
-							'Your post is a reply to the following URL',
-							'activitypub'
-						) }
+						label={ __( 'Your post is a reply to the following URL', 'activitypub' ) }
 						value={ url }
-						onChange={ ( value ) =>
-							setAttributes( { url: value } )
-						}
+						onChange={ ( value ) => setAttributes( { url: value } ) }
 						help={ helpText }
 						onKeyDown={ onKeyDown }
 						ref={ urlInputRef }
@@ -574,16 +525,9 @@ export default function Edit( {
 				{ isValidEmbed && attr.embedPost && embedHtml && (
 					<div className="activitypub-embed-container">
 						{ isRealOembed && isWordPressEmbed( embedHtml ) ? (
-							<WpEmbedPreview
-								html={ embedHtml }
-								onSelectBlock={ focusInput }
-							/>
+							<WpEmbedPreview html={ embedHtml } onSelectBlock={ focusInput } />
 						) : (
-							<ThirdPartyEmbed
-								html={ embedHtml }
-								onClick={ focusInput }
-								isSelected={ isSelected }
-							/>
+							<ThirdPartyEmbed html={ embedHtml } onClick={ focusInput } isSelected={ isSelected } />
 						) }
 					</div>
 				) }
@@ -595,12 +539,7 @@ export default function Edit( {
 						onClick={ focusInput }
 						style={ { cursor: 'pointer' } }
 					>
-						<a
-							href={ url }
-							className="u-in-reply-to"
-							target="_blank"
-							rel="noreferrer"
-						>
+						<a href={ url } className="u-in-reply-to" target="_blank" rel="noreferrer">
 							{ '↬' + url.replace( /^https?:\/\//, '' ) }
 						</a>
 					</div>

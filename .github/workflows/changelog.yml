@@ -1,4 +1,4 @@
-name: "Changelog entry"
+name: 'Changelog entry'
 on:
   pull_request_target:
     # The specific activity types are listed here to include "labeled" and "unlabeled"
@@ -12,7 +12,7 @@ jobs:
   changelog:
     runs-on: ubuntu-latest
     steps:
-      - name: "Check for Skip Changelog label, or if the PR is a draft"
+      - name: 'Check for Skip Changelog label, or if the PR is a draft'
         id: check-skip-label
         uses: actions/github-script@v7
         with:
@@ -39,7 +39,7 @@ jobs:
               core.setOutput( 'skip-changelog', 'false' );
             }
 
-      - name: "Check for changelog file"
+      - name: 'Check for changelog file'
         if: steps.check-skip-label.outputs.skip-changelog != 'true'
         id: check-changelog-file
         uses: actions/github-script@v7
@@ -82,7 +82,7 @@ jobs:
                 core.setOutput('has-changelog-file', 'false');
             }
 
-      - name: "Check for changelog information in PR body"
+      - name: 'Check for changelog information in PR body'
         id: check-pr-body
         if: steps.check-skip-label.outputs.skip-changelog != 'true' && steps.check-changelog-file.outputs.has-changelog-file != 'true'
         uses: actions/github-script@v7
@@ -160,7 +160,7 @@ jobs:
             core.setOutput( 'message', changelogMessage );
             core.setOutput( 'has-changelog-info', 'true' );
 
-      - name: "Create changelog file from PR description"
+      - name: 'Create changelog file from PR description'
         id: create-changelog-file
         if: steps.check-skip-label.outputs.skip-changelog != 'true' && steps.check-changelog-file.outputs.has-changelog-file != 'true' && steps.check-pr-body.outputs.has-changelog-info == 'true'
         env:

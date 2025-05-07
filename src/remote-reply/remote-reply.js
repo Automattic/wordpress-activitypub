@@ -36,11 +36,7 @@ function RemoteUser( { profileURL, template, commentURL, deleteRemoteUser } ) {
 
 	return (
 		<>
-			<Button
-				variant="link"
-				className="comment-reply-link activitypub-remote-reply__button"
-				onClick={ opener }
-			>
+			<Button variant="link" className="comment-reply-link activitypub-remote-reply__button" onClick={ opener }>
 				{
 					/* translators: %s: profile name */
 					sprintf( __( 'Reply as %s', 'activitypub' ), profileURL )
@@ -89,10 +85,7 @@ export default function RemoteReply( { selectedComment, commentId } ) {
 					onRequestClose={ () => setIsOpen( false ) }
 					title={ title }
 				>
-					<DialogReply
-						selectedComment={ selectedComment }
-						commentId={ commentId }
-					/>
+					<DialogReply selectedComment={ selectedComment } commentId={ commentId } />
 				</Modal>
 			) }
 		</>

@@ -46,24 +46,14 @@ export function Followers( {
 		/* translators: arrow for previous followers link */
 		__( '<span>←</span> Less', 'activitypub' ),
 		{
-			span: (
-				<span
-					className="wp-block-query-pagination-previous-arrow is-arrow-arrow"
-					aria-hidden="true"
-				/>
-			),
+			span: <span className="wp-block-query-pagination-previous-arrow is-arrow-arrow" aria-hidden="true" />,
 		}
 	);
 	const nextLabel = createInterpolateElement(
 		/* translators: arrow for next followers link */
 		__( 'More <span>→</span>', 'activitypub' ),
 		{
-			span: (
-				<span
-					className="wp-block-query-pagination-next-arrow is-arrow-arrow"
-					aria-hidden="true"
-				/>
-			),
+			span: <span className="wp-block-query-pagination-next-arrow is-arrow-arrow" aria-hidden="true" />,
 		}
 	);
 
@@ -90,10 +80,7 @@ export function Followers( {
 				{ followers &&
 					followers.map( ( follower ) => (
 						<li key={ follower.url }>
-							<Follower
-								{ ...follower }
-								followLinks={ followLinks }
-							/>
+							<Follower { ...follower } followLinks={ followLinks } />
 						</li>
 					) ) }
 			</ul>
@@ -112,32 +99,15 @@ export function Followers( {
 	);
 }
 
-function Follower( {
-	name,
-	icon,
-	url,
-	preferredUsername,
-	followLinks = true,
-} ) {
+function Follower( { name, icon, url, preferredUsername, followLinks = true } ) {
 	const handle = `@${ preferredUsername }`;
 	const extraProps = {};
 	if ( ! followLinks ) {
 		extraProps.onClick = ( event ) => event.preventDefault();
 	}
 	return (
-		<ExternalLink
-			className="activitypub-link"
-			href={ url }
-			title={ handle }
-			{ ...extraProps }
-		>
-			<img
-				width="40"
-				height="40"
-				src={ icon.url }
-				className="avatar activitypub-avatar"
-				alt={ name }
-			/>
+		<ExternalLink className="activitypub-link" href={ url } title={ handle } { ...extraProps }>
+			<img width="40" height="40" src={ icon.url } className="avatar activitypub-avatar" alt={ name } />
 			<span className="activitypub-actor">
 				<strong className="activitypub-name">{ name }</strong>
 				<span className="sep">/</span>

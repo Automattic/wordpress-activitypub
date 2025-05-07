@@ -1,15 +1,6 @@
-import {
-	PluginDocumentSettingPanel,
-	PluginPreviewMenuItem,
-} from '@wordpress/editor';
+import { PluginDocumentSettingPanel, PluginPreviewMenuItem } from '@wordpress/editor';
 import { registerPlugin } from '@wordpress/plugins';
-import {
-	TextControl,
-	RadioControl,
-	RangeControl,
-	__experimentalText as Text,
-	Tooltip,
-} from '@wordpress/components';
+import { TextControl, RadioControl, RangeControl, __experimentalText as Text, Tooltip } from '@wordpress/components';
 import { Icon, globe, people, external } from '@wordpress/icons';
 import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
@@ -30,10 +21,7 @@ const notAllowed = (
 );
 
 const EditorPlugin = () => {
-	const postType = useSelect(
-		( select ) => select( 'core/editor' ).getCurrentPostType(),
-		[]
-	);
+	const postType = useSelect( ( select ) => select( 'core/editor' ).getCurrentPostType(), [] );
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
 
 	const labelStyling = {
@@ -59,10 +47,7 @@ const EditorPlugin = () => {
 	}
 
 	return (
-		<PluginDocumentSettingPanel
-			name="activitypub"
-			title={ __( 'Fediverse ⁂', 'activitypub' ) }
-		>
+		<PluginDocumentSettingPanel name="activitypub" title={ __( 'Fediverse ⁂', 'activitypub' ) }>
 			<TextControl
 				label={ __( 'Content Warning', 'activitypub' ) }
 				value={ meta?.activitypub_content_warning }
@@ -79,9 +64,7 @@ const EditorPlugin = () => {
 			<RangeControl
 				label={ __( 'Maximum Image Attachments', 'activitypub' ) }
 				value={
-					meta?.activitypub_max_image_attachments ??
-					window._activityPubOptions?.maxImageAttachments ??
-					4
+					meta?.activitypub_max_image_attachments ?? window._activityPubOptions?.maxImageAttachments ?? 4
 				}
 				onChange={ ( value ) => {
 					setMeta( {
@@ -109,10 +92,7 @@ const EditorPlugin = () => {
 						label: enhancedLabel(
 							globe,
 							__( 'Public', 'activitypub' ),
-							__(
-								'Post will be visible to everyone and appear in public timelines.',
-								'activitypub'
-							)
+							__( 'Post will be visible to everyone and appear in public timelines.', 'activitypub' )
 						),
 						value: 'public',
 					},
@@ -131,10 +111,7 @@ const EditorPlugin = () => {
 						label: enhancedLabel(
 							notAllowed,
 							__( 'Do not federate', 'activitypub' ),
-							__(
-								'Post will not be shared to the Fediverse.',
-								'activitypub'
-							)
+							__( 'Post will not be shared to the Fediverse.', 'activitypub' )
 						),
 						value: 'local',
 					},
@@ -162,9 +139,7 @@ function onActivityPubPreview() {
 
 const EditorPreview = () => {
 	// check if post was saved
-	const post_status = useSelect(
-		( select ) => select( 'core/editor' ).getCurrentPost().status
-	);
+	const post_status = useSelect( ( select ) => select( 'core/editor' ).getCurrentPost().status );
 
 	return (
 		<>
