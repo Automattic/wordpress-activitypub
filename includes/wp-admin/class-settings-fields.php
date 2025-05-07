@@ -7,6 +7,7 @@
 
 namespace Activitypub\WP_Admin;
 
+use function Activitypub\home_host;
 use function Activitypub\site_supports_blocks;
 
 /**
@@ -389,14 +390,14 @@ class Settings_Fields {
 	 * Render attribution domains field.
 	 */
 	public static function render_attribution_domains_field() {
-		$value = get_option( 'activitypub_attribution_domains', \Activitypub\home_host() );
+		$value = get_option( 'activitypub_attribution_domains', home_host() );
 		?>
 		<textarea
 			id="activitypub_attribution_domains"
 			name="activitypub_attribution_domains"
 			class="large-text"
 			cols="50" rows="5"
-			placeholder="<?php echo esc_attr( \Activitypub\home_host() ); ?>"
+			placeholder="<?php echo esc_attr( home_host() ); ?>"
 		><?php echo esc_textarea( $value ); ?></textarea>
 		<p class="description"><?php esc_html_e( 'Websites allowed to credit you, one per line. Protects from false attributions.', 'activitypub' ); ?></p>
 		<?php

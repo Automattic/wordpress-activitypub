@@ -513,7 +513,7 @@ function site_supports_blocks() {
  * @return boolean True if the data is JSON, false otherwise.
  */
 function is_json( $data ) {
-	return \is_array( \json_decode( $data, true ) ) ? true : false;
+	return \is_array( \json_decode( $data, true ) );
 }
 
 /**
@@ -866,12 +866,8 @@ function get_wp_object_state( $wp_object ) {
  * @return string The description of the post type.
  */
 function get_post_type_description( $post_type ) {
-	$description = '';
-
 	switch ( $post_type->name ) {
 		case 'post':
-			$description = '';
-			break;
 		case 'page':
 			$description = '';
 			break;
@@ -879,6 +875,7 @@ function get_post_type_description( $post_type ) {
 			$description = ' - ' . __( 'The attachments that you have uploaded to a post (images, videos, documents or other files).', 'activitypub' );
 			break;
 		default:
+			$description = '';
 			if ( ! empty( $post_type->description ) ) {
 				$description = ' - ' . $post_type->description;
 			}
@@ -997,11 +994,10 @@ function get_comment_ancestors( $comment ) {
  *
  * @param string $formatted Converted number in string format.
  * @param float  $number    The number to convert based on locale.
- * @param int    $decimals  Precision of the number of decimal places.
  *
  * @return string Converted number in string format.
  */
-function custom_large_numbers( $formatted, $number, $decimals ) {
+function custom_large_numbers( $formatted, $number ) {
 	global $wp_locale;
 
 	$decimals      = 0;
@@ -1023,9 +1019,6 @@ function custom_large_numbers( $formatted, $number, $decimals ) {
 	} else { // At least a billion.
 		return \number_format( $number / 1000000000, $decimals, $decimal_point, $thousands_sep ) . 'B';
 	}
-
-	// Default fallback. We should not get here.
-	return $formatted;
 }
 
 /**

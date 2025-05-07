@@ -98,18 +98,18 @@ class Signature {
 			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
 		);
 
-		$key      = \openssl_pkey_new( $config );
-		$priv_key = null;
-		$detail   = array();
+		$key         = \openssl_pkey_new( $config );
+		$private_key = null;
+		$detail      = array();
 		if ( $key ) {
-			\openssl_pkey_export( $key, $priv_key );
+			\openssl_pkey_export( $key, $private_key );
 
 			$detail = \openssl_pkey_get_details( $key );
 		}
 
 		// Check if keys are valid.
 		if (
-			empty( $priv_key ) || ! is_string( $priv_key ) ||
+			empty( $private_key ) || ! is_string( $private_key ) ||
 			! isset( $detail['key'] ) || ! is_string( $detail['key'] )
 		) {
 			return array(
@@ -119,7 +119,7 @@ class Signature {
 		}
 
 		$key_pair = array(
-			'private_key' => $priv_key,
+			'private_key' => $private_key,
 			'public_key'  => $detail['key'],
 		);
 
@@ -291,16 +291,13 @@ class Signature {
 			if ( is_array( $headers['digest'] ) ) {
 				$headers['digest'] = $headers['digest'][0];
 			}
-			$hashalg = 'sha256';
-			$digest  = explode( '=', $headers['digest'], 2 );
-			if ( 'SHA-256' === $digest[0] ) {
-				$hashalg = 'sha256';
-			}
+			$algorithm = 'sha256';
+			$digest    = explode( '=', $headers['digest'], 2 );
 			if ( 'SHA-512' === $digest[0] ) {
-				$hashalg = 'sha512';
+				$algorithm = 'sha512';
 			}
 
-			if ( \base64_encode( \hash( $hashalg, $body, true ) ) !== $digest[1] ) { // phpcs:ignore
+			if ( \base64_encode( \hash( $algorithm, $body, true ) ) !== $digest[1] ) { // phpcs:ignore
 				return new WP_Error( 'activitypub_signature', __( 'Invalid Digest header', 'activitypub' ), array( 'status' => 401 ) );
 			}
 		}
@@ -465,10 +462,10 @@ class Signature {
 				$d->setTimeZone( new DateTimeZone( 'UTC' ) );
 				$c = $d->format( 'U' );
 
-				$dplus  = time() + ( 3 * HOUR_IN_SECONDS );
-				$dminus = time() - ( 3 * HOUR_IN_SECONDS );
+				$d_plus  = time() + ( 3 * HOUR_IN_SECONDS );
+				$d_minus = time() - ( 3 * HOUR_IN_SECONDS );
 
-				if ( $c > $dplus || $c < $dminus ) {
+				if ( $c > $d_plus || $c < $d_minus ) {
 					// Time out of range.
 					return false;
 				}

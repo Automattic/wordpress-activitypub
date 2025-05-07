@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+ActivityPub embeds now support audios, videos, and up to 4 images.
