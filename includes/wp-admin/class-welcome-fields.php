@@ -322,7 +322,7 @@ class Welcome_Fields {
 			<div class="step-content">
 				<div class="step-text">
 					<h3><?php \esc_html_e( 'Set up your public profile', 'activitypub' ); ?></h3>
-					<p><?php \esc_html_e( 'Choose your username and how you appear to others.', 'activitypub' ); ?></p>
+					<p><?php \esc_html_e( 'Configure your display name and how you appear to others.', 'activitypub' ); ?></p>
 				</div>
 				<div class="step-action">
 					<?php if ( true === $user_can_activitypub ) : ?>
