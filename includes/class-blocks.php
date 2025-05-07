@@ -175,25 +175,25 @@ class Blocks {
 	/**
 	 * Render the post reactions block.
 	 *
-	 * @param array $attrs The block attributes.
+	 * @param array  $attrs   The block attributes.
+	 * @param string $content Inner blocks.
 	 *
 	 * @return string The HTML to render.
 	 */
-	public static function render_post_reactions_block( $attrs ) {
+	public static function render_post_reactions_block( $attrs, $content ) {
 		if ( ! isset( $attrs['postId'] ) ) {
 			$attrs['postId'] = get_the_ID();
 		}
 
-		$wrapper_attributes = get_block_wrapper_attributes(
-			array(
-				'class'      => 'activitypub-reactions-block',
-				'data-attrs' => wp_json_encode( $attrs ),
-			)
-		);
+		$args = array( 'data-attrs' => wp_json_encode( $attrs ) );
+		if ( isset( $attrs['title'] ) ) {
+			$args['class'] = 'activitypub-reactions-block';
+		}
 
 		return sprintf(
-			'<div %s></div>',
-			$wrapper_attributes
+			'<div %1$s>%2$s</div>',
+			get_block_wrapper_attributes( $args ),
+			$content
 		);
 	}
 
