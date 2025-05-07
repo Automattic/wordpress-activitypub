@@ -38,5 +38,5 @@
 	],
 	"editorScript": "file:./index.js",
 	"viewScript": "file:./view.js",
-	"style": ["file:./style-view.css","wp-block-query-pagination"]
+	"style": [ "file:./style-view.css", "wp-block-query-pagination" ]
 }

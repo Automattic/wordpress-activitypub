@@ -1,66 +1,66 @@
 {
-    "name": "pfefferle/wordpress-activitypub",
-    "description": "The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.",
-    "type": "wordpress-plugin",
-    "require": {
-        "php": ">=7.2",
-        "composer/installers": "^1.0 || ^2.0"
-    },
-    "require-dev": {
-        "automattic/jetpack-changelogger": "6.0.0",
-        "phpunit/phpunit": "^8 || ^9",
-        "phpcompatibility/php-compatibility": "*",
-        "phpcompatibility/phpcompatibility-wp": "*",
-        "squizlabs/php_codesniffer": "3.*",
-        "wp-coding-standards/wpcs": "dev-develop",
-        "yoast/phpunit-polyfills": "^4.0",
-        "dealerdirect/phpcodesniffer-composer-installer": "^1.0.0",
-        "sirbrillig/phpcs-variable-analysis": "^2.11",
-        "phpcsstandards/phpcsextra": "^1.1.0",
-        "dms/phpunit-arraysubset-asserts": "^0.5.0"
-    },
-    "config": {
-        "allow-plugins": true
-    },
-    "allow-plugins": {
-        "composer/installers": true
-    },
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Matthias Pfefferle",
-            "email": "pfefferle@gmail.com"
-        }
-    ],
-    "extra": {
-        "installer-name": "activitypub",
-        "changelogger": {
-            "changes-dir": ".github/changelog/",
-            "link-template": "https://github.com/Automattic/wordpress-activitypub/compare/${old}...${new}"
-        }
-    },
-    "scripts": {
-        "test": [
-            "composer install",
-            "bin/install-wp-tests.sh activitypub-test root activitypub-test test-db latest true",
-            "vendor/bin/phpunit"
-        ],
-        "test:wp-env": [
-            "wp-env run tests-cli --env-cwd=\"wp-content/plugins/activitypub\" vendor/bin/phpunit"
-        ],
-        "lint": [
-            "vendor/bin/phpcs"
-        ],
-        "lint:fix": [
-            "vendor/bin/phpcbf"
-        ],
-        "changelog:add": [
-            "composer install",
-            "vendor/bin/changelogger add"
-        ],
-        "changelog:write": [
-            "composer install",
-            "vendor/bin/changelogger write --add-pr-num"
-        ]
-    }
+	"name": "pfefferle/wordpress-activitypub",
+	"description": "The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.",
+	"type": "wordpress-plugin",
+	"require": {
+		"php": ">=7.2",
+		"composer/installers": "^1.0 || ^2.0"
+	},
+	"require-dev": {
+		"automattic/jetpack-changelogger": "6.0.0",
+		"phpunit/phpunit": "^8 || ^9",
+		"phpcompatibility/php-compatibility": "*",
+		"phpcompatibility/phpcompatibility-wp": "*",
+		"squizlabs/php_codesniffer": "3.*",
+		"wp-coding-standards/wpcs": "dev-develop",
+		"yoast/phpunit-polyfills": "^4.0",
+		"dealerdirect/phpcodesniffer-composer-installer": "^1.0.0",
+		"sirbrillig/phpcs-variable-analysis": "^2.11",
+		"phpcsstandards/phpcsextra": "^1.1.0",
+		"dms/phpunit-arraysubset-asserts": "^0.5.0"
+	},
+	"config": {
+		"allow-plugins": true
+	},
+	"allow-plugins": {
+		"composer/installers": true
+	},
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Matthias Pfefferle",
+			"email": "pfefferle@gmail.com"
+		}
+	],
+	"extra": {
+		"installer-name": "activitypub",
+		"changelogger": {
+			"changes-dir": ".github/changelog/",
+			"link-template": "https://github.com/Automattic/wordpress-activitypub/compare/${old}...${new}"
+		}
+	},
+	"scripts": {
+		"test": [
+			"composer install",
+			"bin/install-wp-tests.sh activitypub-test root activitypub-test test-db latest true",
+			"vendor/bin/phpunit"
+		],
+		"test:wp-env": [
+			"wp-env run tests-cli --env-cwd=\"wp-content/plugins/activitypub\" vendor/bin/phpunit"
+		],
+		"lint": [
+			"vendor/bin/phpcs"
+		],
+		"lint:fix": [
+			"vendor/bin/phpcbf"
+		],
+		"changelog:add": [
+			"composer install",
+			"vendor/bin/changelogger add"
+		],
+		"changelog:write": [
+			"composer install",
+			"vendor/bin/changelogger write --add-pr-num"
+		]
+	}
 }

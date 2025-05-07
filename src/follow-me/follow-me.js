@@ -71,7 +71,9 @@ function Profile( {
 } ) {
 	const { webfinger, avatar, name } = profile;
 	// check if webfinger starts with @ and add it if it doesn't
-	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
+	const webfingerWithAt = webfinger.startsWith( '@' )
+		? webfinger
+		: `@${ webfinger }`;
 
 	if ( buttonOnly ) {
 		return (
@@ -89,10 +91,19 @@ function Profile( {
 
 	return (
 		<div className="activitypub-profile">
-			<img className="activitypub-profile__avatar" src={ avatar } alt={ name } />
+			<img
+				className="activitypub-profile__avatar"
+				src={ avatar }
+				alt={ name }
+			/>
 			<div className="activitypub-profile__content">
 				<div className="activitypub-profile__name">{ name }</div>
-				<div className="activitypub-profile__handle" title={ webfingerWithAt }>{ webfingerWithAt }</div>
+				<div
+					className="activitypub-profile__handle"
+					title={ webfingerWithAt }
+				>
+					{ webfingerWithAt }
+				</div>
 			</div>
 			<Follow
 				profile={ profile }
@@ -116,13 +127,7 @@ function Profile( {
  * @param {string} props.buttonSize Button size.
  * @return {JSX.Element} Follow component.
  */
-function Follow( {
-	profile,
-	popupStyles,
-	userId,
-	buttonText,
-	buttonSize,
-} ) {
+function Follow( { profile, popupStyles, userId, buttonText, buttonSize } ) {
 	const [ isOpen, setIsOpen ] = useState( false );
 	const title = sprintf(
 		/* translators: %s: profile name */
@@ -171,8 +176,13 @@ function DialogFollow( { profile, userId } ) {
 	const { webfinger } = profile;
 	const actionText = __( 'Follow', 'activitypub' );
 	const resourceUrl = `/${ namespace }/actors/${ userId }/remote-follow?resource=`;
-	const copyDescription = __( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' );
-	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
+	const copyDescription = __(
+		'Copy and paste my profile into the search field of your favorite fediverse app or server.',
+		'activitypub'
+	);
+	const webfingerWithAt = webfinger.startsWith( '@' )
+		? webfinger
+		: `@${ webfinger }`;
 
 	return (
 		<Dialog
@@ -227,8 +237,15 @@ export default function FollowMe( {
 	}, [ userId, profileData ] );
 
 	return (
-		<div { ...wrapperProps } className="activitypub-follow-me-block-wrapper">
-			<ButtonStyle selector={ `#${ id }` } style={ style } backgroundColor={ backgroundColor } />
+		<div
+			{ ...wrapperProps }
+			className="activitypub-follow-me-block-wrapper"
+		>
+			<ButtonStyle
+				selector={ `#${ id }` }
+				style={ style }
+				backgroundColor={ backgroundColor }
+			/>
 			<Profile
 				profile={ profile }
 				userId={ userId }

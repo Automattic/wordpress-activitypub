@@ -16,93 +16,105 @@ import { useOptions } from '../shared/use-options';
  */
 const FacepileRow = ( { reactions } ) => {
 	const { defaultAvatarUrl } = useOptions();
-	const [activeIndices, setActiveIndices] = useState(new Set());
-	const [rotationStates, setRotationStates] = useState(new Map());
-	const timeoutRefs = useRef([]);
+	const [ activeIndices, setActiveIndices ] = useState( new Set() );
+	const [ rotationStates, setRotationStates ] = useState( new Map() );
+	const timeoutRefs = useRef( [] );
 
 	const clearTimeouts = () => {
-		timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+		timeoutRefs.current.forEach( ( timeout ) => clearTimeout( timeout ) );
 		timeoutRefs.current = [];
 	};
 
-	const startWave = (startIndex, isEntering) => {
+	const startWave = ( startIndex, isEntering ) => {
 		clearTimeouts();
 		const delay = 100; // 100ms between each avatar
 		const totalAvatars = reactions.length;
 
-		if (isEntering) {
-			setRotationStates(current => {
-				const updated = new Map(current);
-				updated.set(startIndex, 'clockwise');
+		if ( isEntering ) {
+			setRotationStates( ( current ) => {
+				const updated = new Map( current );
+				updated.set( startIndex, 'clockwise' );
 				return updated;
-			});
+			} );
 		}
 
 		// Helper function to create wave in either direction
-		const createWave = (direction) => {
+		const createWave = ( direction ) => {
 			const isRightward = direction === 'right';
 			const start = isRightward ? startIndex : startIndex - 1;
 			const end = isRightward ? totalAvatars - 1 : 0;
 			const step = isRightward ? 1 : -1;
 
-			for (let i = start; isRightward ? i <= end : i >= end; i += step) {
-				const delayMultiplier = Math.abs(i - startIndex);
-				const timeout = setTimeout(() => {
-					setActiveIndices(current => {
-						const updated = new Set(current);
-						if (isEntering) {
-							updated.add(i);
+			for (
+				let i = start;
+				isRightward ? i <= end : i >= end;
+				i += step
+			) {
+				const delayMultiplier = Math.abs( i - startIndex );
+				const timeout = setTimeout( () => {
+					setActiveIndices( ( current ) => {
+						const updated = new Set( current );
+						if ( isEntering ) {
+							updated.add( i );
 						} else {
-							updated.delete(i);
+							updated.delete( i );
 						}
 						return updated;
-					});
+					} );
 
-					if (isEntering && i !== startIndex) {
-						setRotationStates(current => {
-							const updated = new Map(current);
+					if ( isEntering && i !== startIndex ) {
+						setRotationStates( ( current ) => {
+							const updated = new Map( current );
 							const neighborIndex = i - step;
-							const neighborRotation = updated.get(neighborIndex);
-							updated.set(i, neighborRotation === 'clockwise' ? 'counter' : 'clockwise');
+							const neighborRotation =
+								updated.get( neighborIndex );
+							updated.set(
+								i,
+								neighborRotation === 'clockwise'
+									? 'counter'
+									: 'clockwise'
+							);
 							return updated;
-						});
+						} );
 					}
-				}, delayMultiplier * delay);
-				timeoutRefs.current.push(timeout);
+				}, delayMultiplier * delay );
+				timeoutRefs.current.push( timeout );
 			}
 		};
 
 		// Create waves in both directions
-		createWave('right');
-		createWave('left');
+		createWave( 'right' );
+		createWave( 'left' );
 
 		// Clear rotations when wave finishes retracting
-		if (!isEntering) {
+		if ( ! isEntering ) {
 			const maxDelay = Math.max(
-				(totalAvatars - startIndex) * delay,
+				( totalAvatars - startIndex ) * delay,
 				startIndex * delay
 			);
-			const timeout = setTimeout(() => {
-				setRotationStates(new Map());
-			}, maxDelay + delay);
-			timeoutRefs.current.push(timeout);
+			const timeout = setTimeout( () => {
+				setRotationStates( new Map() );
+			}, maxDelay + delay );
+			timeoutRefs.current.push( timeout );
 		}
 	};
 
 	// Cleanup timeouts on unmount
-	useEffect(() => {
+	useEffect( () => {
 		return () => clearTimeouts();
-	}, []);
+	}, [] );
 
 	return (
 		<ul className="reaction-avatars">
 			{ reactions.map( ( reaction, index ) => {
-				const rotationClass = rotationStates.get(index);
+				const rotationClass = rotationStates.get( index );
 				const classes = [
 					'reaction-avatar',
-					activeIndices.has(index) ? 'wave-active' : '',
-					rotationClass ? `rotate-${rotationClass}` : ''
-				].filter(Boolean).join(' ');
+					activeIndices.has( index ) ? 'wave-active' : '',
+					rotationClass ? `rotate-${ rotationClass }` : '',
+				]
+					.filter( Boolean )
+					.join( ' ' );
 				const avatar = reaction.avatar || defaultAvatarUrl;
 
 				return (
@@ -111,8 +123,8 @@ const FacepileRow = ( { reactions } ) => {
 							href={ reaction.url }
 							target="_blank"
 							rel="noopener noreferrer"
-							onMouseEnter={() => startWave(index, true)}
-							onMouseLeave={() => startWave(index, false)}
+							onMouseEnter={ () => startWave( index, true ) }
+							onMouseLeave={ () => startWave( index, false ) }
 						>
 							<img
 								src={ avatar }
@@ -238,7 +250,12 @@ const ReactionGroup = ( { items, label } ) => {
 
 			// Calculate how many avatars can fit
 			// First avatar takes full width, rest take effective width
-			const maxAvatars = Math.max( 1, Math.floor( ( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH ) );
+			const maxAvatars = Math.max(
+				1,
+				Math.floor(
+					( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH
+				)
+			);
 
 			// Ensure we don't show more than we have
 			setVisibleCount( Math.min( maxAvatars, items.length ) );
@@ -317,11 +334,11 @@ export function Reactions( {
 		apiFetch( {
 			path: `/${ namespace }/posts/${ postId }/reactions`,
 		} )
-		.then( ( response ) => {
-			setReactions( response );
-			setLoading( false );
-		} )
-		.catch( () => setLoading( false ) );
+			.then( ( response ) => {
+				setReactions( response );
+				setLoading( false );
+			} )
+			.catch( () => setLoading( false ) );
 	}, [ postId, providedReactions ] );
 
 	if ( loading ) {
@@ -329,7 +346,12 @@ export function Reactions( {
 	}
 
 	// Return null if there are no reactions
-	if ( ! reactions || ! Object.values( reactions ).some( group => group.items?.length > 0 ) ) {
+	if (
+		! reactions ||
+		! Object.values( reactions ).some(
+			( group ) => group.items?.length > 0
+		)
+	) {
 		return null;
 	}
 

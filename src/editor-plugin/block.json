@@ -3,7 +3,6 @@
 	"title": "Editor Plugin: not a block, but block.json is very useful.",
 	"category": "widgets",
 	"icon": "admin-comments",
-	"keywords": [
-	],
+	"keywords": [],
 	"editorScript": "file:./plugin.js"
 }

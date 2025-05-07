@@ -48,11 +48,11 @@
 		"buttonSize": {
 			"type": "string",
 			"default": "default",
-			"enum": ["small", "default", "compact"]
+			"enum": [ "small", "default", "compact" ]
 		}
 	},
 	"usesContext": [ "postType", "postId" ],
 	"editorScript": "file:./index.js",
 	"viewScript": "file:./view.js",
-	"style": ["file:./style-view.css", "wp-components"]
+	"style": [ "file:./style-view.css", "wp-components" ]
 }

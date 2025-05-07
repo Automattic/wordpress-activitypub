@@ -8,9 +8,26 @@ const PaginationVariant = {
 	minimal: 'minimal',
 };
 
-export function Pagination( { compact, nextLabel, page, pageClick, perPage, prevLabel, total, variant = PaginationVariant.outlined } ) {
+export function Pagination( {
+	compact,
+	nextLabel,
+	page,
+	pageClick,
+	perPage,
+	prevLabel,
+	total,
+	variant = PaginationVariant.outlined,
+} ) {
 	const getPageList = ( page, pageCount ) => {
-		let pageList = [ 1, page - 2, page - 1, page, page + 1, page + 2, pageCount ];
+		let pageList = [
+			1,
+			page - 2,
+			page - 1,
+			page,
+			page + 1,
+			page + 2,
+			pageCount,
+		];
 		pageList.sort( ( a, b ) => a - b );
 
 		// Remove pages less than 1, or greater than total number of pages, and remove duplicates
@@ -32,9 +49,13 @@ export function Pagination( { compact, nextLabel, page, pageClick, perPage, prev
 	};
 
 	const pageList = getPageList( page, Math.ceil( total / perPage ) );
-	const className = classnames( 'alignwide wp-block-query-pagination is-content-justification-space-between is-layout-flex wp-block-query-pagination-is-layout-flex', `is-${ variant }`, {
-		'is-compact': compact,
-	} );
+	const className = classnames(
+		'alignwide wp-block-query-pagination is-content-justification-space-between is-layout-flex wp-block-query-pagination-is-layout-flex',
+		`is-${ variant }`,
+		{
+			'is-compact': compact,
+		}
+	);
 
 	return (
 		<nav className={ className }>
@@ -52,7 +73,7 @@ export function Pagination( { compact, nextLabel, page, pageClick, perPage, prev
 			) }
 			{ ! compact && (
 				<div className="block-editor-block-list__block wp-block wp-block-query-pagination-numbers">
-					{ pageList.map( pageNumber => (
+					{ pageList.map( ( pageNumber ) => (
 						<PaginationPage
 							key={ pageNumber }
 							page={ pageNumber }

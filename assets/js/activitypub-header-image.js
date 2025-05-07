@@ -10,7 +10,9 @@
 
 ( function ( $ ) {
 	var $chooseButton = $( '#activitypub-choose-from-library-button' ),
-		$headerImagePreviewWrapper = $( '#activitypub-header-image-preview-wrapper' ),
+		$headerImagePreviewWrapper = $(
+			'#activitypub-header-image-preview-wrapper'
+		),
 		$headerImagePreview = $( '#activitypub-header-image-preview' ),
 		$hiddenDataField = $( '#activitypub_header_image' ),
 		$removeButton = $( '#activitypub-remove-header-image' ),
@@ -22,34 +24,38 @@
 	 * for users who don't have the 'customize' capability.
 	 * See https://github.com/Automattic/wordpress-activitypub/issues/846
 	 */
-	ImageCropperNoCustomizer = wp.media.controller.CustomizeImageCropper.extend( {
-		doCrop: function( attachment ) {
-			var cropDetails = attachment.get( 'cropDetails' ),
-				control = this.get( 'control' ),
-				ratio = cropDetails.width / cropDetails.height;
+	ImageCropperNoCustomizer = wp.media.controller.CustomizeImageCropper.extend(
+		{
+			doCrop: function ( attachment ) {
+				var cropDetails = attachment.get( 'cropDetails' ),
+					control = this.get( 'control' ),
+					ratio = cropDetails.width / cropDetails.height;
 
-			// Use crop measurements when flexible in both directions.
-			if ( control.params.flex_width && control.params.flex_height ) {
-				cropDetails.dst_width  = cropDetails.width;
-				cropDetails.dst_height = cropDetails.height;
+				// Use crop measurements when flexible in both directions.
+				if ( control.params.flex_width && control.params.flex_height ) {
+					cropDetails.dst_width = cropDetails.width;
+					cropDetails.dst_height = cropDetails.height;
 
-			// Constrain flexible side based on image ratio and size of the fixed side.
-			} else {
-				cropDetails.dst_width  = control.params.flex_width  ? control.params.height * ratio : control.params.width;
-				cropDetails.dst_height = control.params.flex_height ? control.params.width  / ratio : control.params.height;
-			}
+					// Constrain flexible side based on image ratio and size of the fixed side.
+				} else {
+					cropDetails.dst_width = control.params.flex_width
+						? control.params.height * ratio
+						: control.params.width;
+					cropDetails.dst_height = control.params.flex_height
+						? control.params.width / ratio
+						: control.params.height;
+				}
 
-			return wp.ajax.post( 'crop-image', {
-				// where wp_customize: 'on' would be in Core, for no good reason I understand.
-				nonce: attachment.get( 'nonces' ).edit,
-				id: attachment.get( 'id' ),
-				context: control.id,
-				cropDetails: cropDetails
-			} );
+				return wp.ajax.post( 'crop-image', {
+					// where wp_customize: 'on' would be in Core, for no good reason I understand.
+					nonce: attachment.get( 'nonces' ).edit,
+					id: attachment.get( 'id' ),
+					context: control.id,
+					cropDetails: cropDetails,
+				} );
+			},
 		}
-	} );
-
-
+	);
 
 	/**
 	 * Calculate image selection options based on the attachment dimensions.
@@ -158,13 +164,16 @@
 			// Grab the selected attachment.
 			var attachment = frame.state().get( 'selection' ).first(),
 				targetRatio = $el.data( 'width' ) / $el.data( 'height' ),
-				currentRatio = attachment.attributes.width / attachment.attributes.height,
+				currentRatio =
+					attachment.attributes.width / attachment.attributes.height,
 				alreadyCropped = false;
 
 			// Check if the image already has the correct aspect ratio (with a small tolerance).
 			if ( Math.abs( currentRatio - targetRatio ) < 0.01 ) {
 				// Check if this is the same image that was already selected.
-				if ( attachment.id !== parseInt( $hiddenDataField.val(), 10 ) ) {
+				if (
+					attachment.id !== parseInt( $hiddenDataField.val(), 10 )
+				) {
 					// This is a new image with the correct aspect ratio.
 					$hiddenDataField.val( attachment.id );
 				}

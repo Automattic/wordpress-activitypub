@@ -1,5 +1,10 @@
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
-import { TextControl, PanelBody, ToggleControl, Spinner } from '@wordpress/components';
+import {
+	TextControl,
+	PanelBody,
+	ToggleControl,
+	Spinner,
+} from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useEffect, useState, useRef, useCallback } from '@wordpress/element';
 import { useDebounce } from '@wordpress/compose';
@@ -34,7 +39,11 @@ function useIframeHeight( { html } ) {
 				// Try to get the scrollHeight of the body
 				if ( iframe.contentDocument && iframe.contentDocument.body ) {
 					newHeight = iframe.contentDocument.body.scrollHeight;
-				} else if ( iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.body ) {
+				} else if (
+					iframe.contentWindow &&
+					iframe.contentWindow.document &&
+					iframe.contentWindow.document.body
+				) {
 					newHeight = iframe.contentWindow.document.body.scrollHeight;
 				}
 			} catch ( e ) {
@@ -84,7 +93,10 @@ function useIframeHeight( { html } ) {
 
 			// Remove event listener
 			if ( iframeRef.current ) {
-				iframeRef.current.removeEventListener( 'load', handleIframeLoad );
+				iframeRef.current.removeEventListener(
+					'load',
+					handleIframeLoad
+				);
 			}
 		};
 	}, [ handleIframeLoad, adjustIframeHeight ] );
@@ -132,7 +144,7 @@ function EmbedOverlay( { onClick } ) {
 		<div
 			className="activitypub-embed-overlay"
 			onClick={ onClick }
-			style={{
+			style={ {
 				position: 'absolute',
 				top: 0,
 				left: 0,
@@ -140,7 +152,7 @@ function EmbedOverlay( { onClick } ) {
 				height: '100%',
 				cursor: 'pointer',
 				zIndex: 1,
-			}}
+			} }
 		/>
 	);
 }
@@ -152,10 +164,11 @@ function EmbedOverlay( { onClick } ) {
  * @return {boolean} Whether the HTML contains a WordPress embed.
  */
 function isWordPressEmbed( html ) {
-	return html && (
-		html.includes('wp-embedded-content') ||
-		html.includes('wp-embed/') ||
-		html.includes('class="wp-embed"')
+	return (
+		html &&
+		( html.includes( 'wp-embedded-content' ) ||
+			html.includes( 'wp-embed/' ) ||
+			html.includes( 'class="wp-embed"' ) )
 	);
 }
 
@@ -211,7 +224,10 @@ function WpEmbedPreview( { html, onSelectBlock } ) {
 		 * @param {MessageEvent} event Message event.
 		 */
 		function resizeWPembeds( { data: { secret, message, value } = {} } ) {
-			if ( message !== 'height' || secret !== iframeProps[ 'data-secret' ] ) {
+			if (
+				message !== 'height' ||
+				secret !== iframeProps[ 'data-secret' ]
+			) {
 				return;
 			}
 
@@ -227,26 +243,35 @@ function WpEmbedPreview( { html, onSelectBlock } ) {
 	// If no iframe was found, render the HTML directly with an overlay
 	if ( ! iframeProps.src ) {
 		return (
-			<div className="wp-block-embed__wrapper" style={{ position: 'relative' }}>
-				<div dangerouslySetInnerHTML={{ __html: html }} />
-				<EmbedOverlay onClick={onSelectBlock} />
+			<div
+				className="wp-block-embed__wrapper"
+				style={ { position: 'relative' } }
+			>
+				<div dangerouslySetInnerHTML={ { __html: html } } />
+				<EmbedOverlay onClick={ onSelectBlock } />
 			</div>
 		);
 	}
 
 	return (
-		<div className="wp-block-embed__wrapper" style={{ position: 'relative' }}>
+		<div
+			className="wp-block-embed__wrapper"
+			style={ { position: 'relative' } }
+		>
 			<iframe
 				ref={ ref }
-				title={ iframeProps.title || __( 'Embedded WordPress content', 'activitypub' ) }
+				title={
+					iframeProps.title ||
+					__( 'Embedded WordPress content', 'activitypub' )
+				}
 				{ ...iframeProps }
 				height={ height }
-				style={{
+				style={ {
 					width: '100%',
-					maxWidth: '100%'
-				}}
+					maxWidth: '100%',
+				} }
 			/>
-			{ ! interactive && <EmbedOverlay onClick={onSelectBlock} />}
+			{ ! interactive && <EmbedOverlay onClick={ onSelectBlock } /> }
 		</div>
 	);
 }
@@ -261,7 +286,8 @@ function WpEmbedPreview( { html, onSelectBlock } ) {
  * @return {JSX.Element} The component.
  */
 function ThirdPartyEmbed( { html, onClick, isSelected } ) {
-	const { iframeRef, iframeHeight, adjustIframeHeight, handleIframeLoad } = useIframeHeight( { html } );
+	const { iframeRef, iframeHeight, adjustIframeHeight, handleIframeLoad } =
+		useIframeHeight( { html } );
 
 	// Create a sandboxed document with the HTML content
 	const createSandboxedContent = useCallback( () => {
@@ -285,24 +311,24 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 	return (
 		<div
 			className="wp-block-embed__wrapper"
-			style={{ position: 'relative' }}
+			style={ { position: 'relative' } }
 		>
 			<iframe
 				ref={ iframeRef }
 				srcDoc={ createSandboxedContent() }
 				sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-				style={{
+				style={ {
 					width: '100%',
 					height: `${ iframeHeight }px`,
 					border: 'none',
-					overflow: 'hidden'
-				}}
+					overflow: 'hidden',
+				} }
 				onLoad={ handleIframeLoad }
 			/>
 			{ isSelected && (
 				<div
 					onClick={ onClick }
-					style={{
+					style={ {
 						position: 'absolute',
 						top: 0,
 						left: 0,
@@ -311,8 +337,8 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 						cursor: 'pointer',
 						zIndex: 1,
 						// Only show the overlay when the block is selected
-						display: isSelected ? 'block' : 'none'
-					}}
+						display: isSelected ? 'block' : 'none',
+					} }
 				/>
 			) }
 		</div>
@@ -323,15 +349,25 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
  * Help text messages for different reply states.
  */
 const HELP_TEXT = {
-	default: __( 'Enter the URL of a post from the Fediverse (Mastodon, Pixelfed, etc.) that you want to reply to.', 'activitypub' ),
+	default: __(
+		'Enter the URL of a post from the Fediverse (Mastodon, Pixelfed, etc.) that you want to reply to.',
+		'activitypub'
+	),
 	checking: () => (
 		<>
 			<Spinner />
-			{ ' ' + __( 'Checking if this URL supports ActivityPub replies...', 'activitypub' ) }
+			{ ' ' +
+				__(
+					'Checking if this URL supports ActivityPub replies...',
+					'activitypub'
+				) }
 		</>
 	),
 	valid: __( 'The author will be notified of your response.', 'activitypub' ),
-	error: __( 'This URL probably won\'t receive your reply. We\'ll still try.', 'activitypub' ),
+	error: __(
+		"This URL probably won't receive your reply. We'll still try.",
+		'activitypub'
+	),
 };
 
 /**
@@ -353,7 +389,12 @@ const EMBED_HELP_TEXT = {
  * @param {string} props.clientId - Block client ID.
  * @param {boolean} props.isSelected - Whether the block is selected.
  */
-export default function Edit( { attributes: attr, setAttributes, clientId, isSelected } ) {
+export default function Edit( {
+	attributes: attr,
+	setAttributes,
+	clientId,
+	isSelected,
+} ) {
 	const { url } = attr;
 	const { namespace } = useOptions();
 
@@ -364,10 +405,14 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	const [ isCheckingEmbed, setIsCheckingEmbed ] = useState( false );
 	// Optimistic embeds mean that we will toggle embedPost to true whenever we find a valid embed.
 	// This will be true when the block is instantiated with `true` because it was saved that way, or because this is a new block with no initial URL.
-	const [ optimisticEmbed, setOptimisticEmbed ] = useState( attr.embedPost === true || ! url );
+	const [ optimisticEmbed, setOptimisticEmbed ] = useState(
+		attr.embedPost === true || ! url
+	);
 	const [ embedHtml, setEmbedHtml ] = useState( null );
-	const { iframeRef, iframeHeight, adjustIframeHeight, handleIframeLoad } = useIframeHeight( { html: embedHtml } );
-	const { insertAfterBlock, removeBlock } = useDispatch( 'core/block-editor' );
+	const { iframeRef, iframeHeight, adjustIframeHeight, handleIframeLoad } =
+		useIframeHeight( { html: embedHtml } );
+	const { insertAfterBlock, removeBlock } =
+		useDispatch( 'core/block-editor' );
 	// Get block props and dispatch functions.
 	const blockProps = useBlockProps();
 	const urlInputRef = useRef();
@@ -385,12 +430,15 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	}, [ optimisticEmbed ] );
 
 	// Create a stable callback that uses the ref value
-	const setIsValidEmbedAndMaybeEnableEmbed = useCallback( ( isValid ) => {
-		setIsValidEmbed( isValid );
-		if ( optimisticEmbedRef.current && isValid ) {
-			setAttributes( { embedPost: true } );
-		}
-	}, [ setAttributes ] );
+	const setIsValidEmbedAndMaybeEnableEmbed = useCallback(
+		( isValid ) => {
+			setIsValidEmbed( isValid );
+			if ( optimisticEmbedRef.current && isValid ) {
+				setAttributes( { embedPost: true } );
+			}
+		},
+		[ setAttributes ]
+	);
 
 	const resetEmbedState = ( isChecking = false ) => {
 		setIsCheckingEmbed( isChecking );
@@ -462,7 +510,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 				</style>
 			</head>
 			<body>
-				${html}
+				${ html }
 			</body>
 			</html>
 		`;
@@ -497,7 +545,11 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 						checked={ attr.embedPost }
 						onChange={ onEmbedPostChange }
 						disabled={ ! isValidEmbed }
-						help={ isValidEmbed ? EMBED_HELP_TEXT.valid : EMBED_HELP_TEXT.invalid }
+						help={
+							isValidEmbed
+								? EMBED_HELP_TEXT.valid
+								: EMBED_HELP_TEXT.invalid
+						}
 					/>
 				</PanelBody>
 			</InspectorControls>
@@ -505,9 +557,14 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 			<div { ...blockProps }>
 				{ isSelected && (
 					<TextControl
-						label={ __( 'Your post is a reply to the following URL', 'activitypub' ) }
+						label={ __(
+							'Your post is a reply to the following URL',
+							'activitypub'
+						) }
 						value={ url }
-						onChange={ ( value ) => setAttributes( { url: value } ) }
+						onChange={ ( value ) =>
+							setAttributes( { url: value } )
+						}
 						help={ helpText }
 						onKeyDown={ onKeyDown }
 						ref={ urlInputRef }
@@ -516,10 +573,10 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 
 				{ isValidEmbed && attr.embedPost && embedHtml && (
 					<div className="activitypub-embed-container">
-						{ isRealOembed && isWordPressEmbed(embedHtml) ? (
+						{ isRealOembed && isWordPressEmbed( embedHtml ) ? (
 							<WpEmbedPreview
 								html={ embedHtml }
-								onSelectBlock={ focusInput}
+								onSelectBlock={ focusInput }
 							/>
 						) : (
 							<ThirdPartyEmbed
