@@ -19,7 +19,6 @@ class Test_Surge extends \WP_UnitTestCase {
 	 * @var string
 	 */
 	private $test_file;
-
 	/**
 	 * Original config file path.
 	 *
@@ -31,36 +30,35 @@ class Test_Surge extends \WP_UnitTestCase {
 	 * Original cache config.
 	 *
 	 * @var string
-	 */
-	private $original_cache_config;
-
-	/**
 	 * Set up the test.
 	 */
 	public function set_up() {
 		parent::set_up();
 
-		// Create a temporary wp-config.php file for testing.
-		$this->test_file = \sys_get_temp_dir() . '/wp-config-test.php';
+		// Simulate a config file path.
+		$this->test_file       = \sys_get_temp_dir() . '/wp-config-test.php';
+		$this->config_contents = "<?php\n/* That's all, stop editing! */";
+
 		// phpcs:ignore
-		\file_put_contents( $this->test_file, "<?php\n/* That's all, stop editing! */" );
+		\file_put_contents( $this->test_file, $this->config_contents );
 
-		// Store original config file path.
-		$reflection = new \ReflectionClass( 'Activitypub\Integration\Surge' );
-		$property   = $reflection->getProperty( 'config_file' );
-		$property->setAccessible( true );
-		$this->original_config_file = $property->getValue();
+		// Patch Surge::get_config_file() to return our test file.
+		\add_filter( 'activitypub_surge_cache_config_file', array( $this, 'get_test_file' ) );
+	}
 
-		$property2 = $reflection->getProperty( 'cache_config' );
-		$property2->setAccessible( true );
-		$this->original_cache_config = $property2->getValue();
-
-		// Set test config file path.
-		$property->setValue( null, $this->test_file );
+	/**
+	 * Get test file.
+	 *
+	 * @access public
+	 */
+	public function get_test_file() {
+		return $this->test_file;
 	}
 
 	/**
 	 * Tear down the test.
+	 *
+	 * @access public
 	 */
 	public function tear_down() {
 		parent::tear_down();
@@ -68,96 +66,154 @@ class Test_Surge extends \WP_UnitTestCase {
 		if ( \file_exists( $this->test_file ) ) {
 			\wp_delete_file( $this->test_file );
 		}
+
+		\remove_all_filters( 'activitypub_surge_cache_config_file' );
 	}
 
 	/**
 	 * Test adding cache config.
+	 *
+	 * @access public
 	 */
 	public function test_add_cache_config() {
 		Surge::add_cache_config();
+		// phpcs:ignore
+		$file = \file_get_contents( Surge::get_config_file_path() );
 
-		$actual = \file_get_contents( $this->test_file ); // phpcs:ignore
-		$this->assertStringContainsString( '<?php', $actual, 'File should start with PHP opening tag' );
-		$this->assertStringContainsString( $this->original_cache_config, $actual, 'Config line should be present' );
-		$this->assertStringContainsString( "/* That's all, stop editing! */", $actual, 'Comment should be present' );
+		$this->assertStringContainsString( '<?php', $file, 'File should start with PHP opening tag' );
+		$this->assertStringContainsString( "/* That's all, stop editing! */", $file, 'Comment should be present' );
+		$this->assertStringContainsString( Surge::$cache_config, $file, 'Config line should be present' );
 	}
 
 	/**
 	 * Test removing cache config.
+	 *
+	 * @access public
 	 */
 	public function test_remove_cache_config() {
-		// phpcs:ignore
-		\file_put_contents( $this->test_file, "<?php\n" . $this->original_cache_config . "\n\n/* That's all, stop editing! */" );
-
-		// phpcs:ignore
-		$actual = \file_get_contents( $this->test_file );
-		$this->assertStringContainsString( $this->original_cache_config, $actual, 'Config line should be present' );
+		$this->config_contents = "<?php\n" . Surge::get_config_file_path() . "\n\n/* That's all, stop editing! */";
+		$actual                = $this->config_contents;
+		$this->assertStringContainsString( Surge::get_config_file_path(), $actual, 'Config line should be present' );
 
 		Surge::remove_cache_config();
 
 		// phpcs:ignore
-		$actual = \file_get_contents( $this->test_file );
+		$actual = \file_get_contents( Surge::get_config_file_path() );
 		$this->assertStringContainsString( '<?php', $actual, 'File should start with PHP opening tag' );
-		$this->assertStringNotContainsString( "define( 'WP_CACHE_CONFIG'", $actual, 'Config line should be removed' );
+		$this->assertStringNotContainsString( Surge::$cache_config, $actual, 'Config line should be removed' );
 		$this->assertStringContainsString( "/* That's all, stop editing! */", $actual, 'Comment should be present' );
 	}
 
 	/**
 	 * Test init method with Surge plugin active.
+	 *
+	 * @access public
 	 */
 	public function test_init_with_surge_active() {
-		$function = function () {
-			return array( 'surge/surge.php' );
-		};
+		\add_filter( 'pre_option_active_plugins', array( $this, 'get_active_plugins' ) );
 
-		add_filter( 'pre_option_active_plugins', $function );
+		// phpcs:ignore
+		$before = \file_get_contents( Surge::get_config_file_path() );
+		$this->assertStringNotContainsString( Surge::$cache_config, $before );
 
 		Surge::init();
 
 		// phpcs:ignore
-		$actual = \file_get_contents( $this->test_file );
-		$this->assertStringContainsString( '<?php', $actual, 'File should start with PHP opening tag' );
-		$this->assertStringContainsString( $this->original_cache_config, $actual, 'Config line should be present' );
-		$this->assertStringContainsString( "/* That's all, stop editing! */", $actual, 'Comment should be present' );
+		\do_action( 'activate_surge/surge.php' );
 
-		remove_filter( 'pre_option_active_plugins', $function );
+		// phpcs:ignore
+		$after = \file_get_contents( Surge::get_config_file_path() );
+		$this->assertStringContainsString( Surge::$cache_config, $after );
+
+		\remove_all_filters( 'pre_option_active_plugins' );
+	}
+
+	/**
+	 * Get active plugins.
+	 *
+	 * @access public
+	 */
+	public function get_active_plugins() {
+		return array( 'surge/surge.php' );
 	}
 
 	/**
 	 * Test init method with Surge plugin inactive.
+	 *
+	 * @access public
 	 */
 	public function test_init_with_surge_inactive() {
 		// phpcs:ignore
-		\file_put_contents( $this->test_file, "<?php\n" . $this->original_cache_config . "\n\n/* That's all, stop editing! */" );
-
-		\define( 'WP_CACHE_CONFIG', $this->original_cache_config );
-
-		add_filter( 'pre_option_active_plugins', '__return_empty_array' );
+		\file_put_contents( Surge::get_config_file_path(), "<?php\n" . Surge::$cache_config . "\n\n/* That's all, stop editing! */" );
+		\add_filter( 'pre_option_active_plugins', array( $this, 'get_inactive_plugins' ) );
 
 		Surge::init();
 
 		// phpcs:ignore
-		$actual = \file_get_contents( $this->test_file );
-		$this->assertStringContainsString( '<?php', $actual, 'File should start with PHP opening tag' );
-		$this->assertStringNotContainsString( $this->original_cache_config, $actual, 'Config line should be removed' );
-		$this->assertStringContainsString( "/* That's all, stop editing! */", $actual, 'Comment should be present' );
+		\do_action( 'deactivate_surge/surge.php' );
 
-		remove_filter( 'pre_option_active_plugins', '__return_empty_array' );
+		// phpcs:ignore
+		$after = \file_get_contents( Surge::get_config_file_path() );
+		$this->assertStringNotContainsString( Surge::$cache_config, $after );
+
+		\remove_all_filters( 'pre_option_active_plugins' );
+	}
+
+	/**
+	 * Get inactive plugins.
+	 *
+	 * @access public
+	 */
+	public function get_inactive_plugins() {
+		return array();
 	}
 
 	/**
 	 * Test that duplicate configs are not added.
+	 *
+	 * @access public
 	 */
 	public function test_no_duplicate_configs() {
-		// phpcs:ignore
-		\file_put_contents( $this->test_file, "<?php\n" . $this->original_cache_config . "\n\n/* That's all, stop editing! */" );
+		// Start with config containing the cache config.
+		$this->config_contents = "<?php\n" . Surge::get_config_file_path() . "\n\n/* That's all, stop editing! */";
 
 		Surge::add_cache_config();
 
-		// phpcs:ignore
-		$actual = \file_get_contents( $this->test_file );
-		$this->assertStringContainsString( '<?php', $actual, 'File should start with PHP opening tag' );
-		$this->assertEquals( 1, substr_count( $actual, $this->original_cache_config ), 'Config line should appear exactly once' );
-		$this->assertStringContainsString( "/* That's all, stop editing! */", $actual, 'Comment should be present' );
+		$actual = $this->config_contents;
+
+		$this->assertEquals( 1, substr_count( $actual, Surge::get_config_file_path() ), 'Config line should appear exactly once' );
+	}
+
+	/**
+	 * Test maybe_add_site_health adds test when Surge is active
+	 *
+	 * @access public
+	 */
+	public function test_maybe_add_site_health() {
+		\add_filter( 'pre_option_active_plugins', array( $this, 'get_active_plugins' ) );
+
+		$tests  = array( 'direct' => array() );
+		$result = Surge::maybe_add_site_health( $tests );
+
+		$this->assertArrayHasKey( 'activitypub_test_surge_integration', $result['direct'] );
+
+		\remove_all_filters( 'pre_option_active_plugins' );
+	}
+
+	/**
+	 * Test test_surge_integration returns good when WP_CACHE_CONFIG is defined
+	 *
+	 * @access public
+	 */
+	public function test_test_surge_integration_good() {
+		if ( ! \defined( 'WP_CACHE_CONFIG' ) ) {
+			// phpcs:ignore
+			\define( 'WP_CACHE_CONFIG', 'dummy' );
+		}
+
+		$result = Surge::test_surge_integration();
+
+		$this->assertEquals( 'good', $result['status'] );
+		$this->assertStringContainsString( 'Surge is well configured', $result['description'] );
 	}
 }

@@ -22,14 +22,14 @@ class Surge {
 	 *
 	 * @var string
 	 */
-	private static $cache_config = 'define( \'WP_CACHE_CONFIG\', \'' . ACTIVITYPUB_PLUGIN_DIR . 'integration/surge-cache-config.php\' );';
+	public static $cache_config = 'define( \'WP_CACHE_CONFIG\', \'' . ACTIVITYPUB_PLUGIN_DIR . 'integration/surge-cache-config.php\' );';
 
 	/**
 	 * The pattern to find the define for the Surge cache config.
 	 *
 	 * @var string
 	 */
-	private static $cache_config_pattern = '/define\s*\(\s*[\'"](WP_CACHE_CONFIG)[\'"]\s*,\s*[\'"](.*?)[\'"]\s*\)\s*;/i';
+	public static $cache_config_pattern = '/define\s*\(\s*[\'"](WP_CACHE_CONFIG)[\'"]\s*,\s*[\'"](.*?)[\'"]\s*\)\s*;/i';
 
 	/**
 	 * Initialize the Surge integration.
@@ -45,7 +45,7 @@ class Surge {
 	 * Add the Surge cache config.
 	 */
 	public static function add_cache_config() {
-		$file = self::get_config_file();
+		$file = self::get_config_file_path();
 
 		if ( ! \wp_is_writable( $file ) ) {
 			return;
@@ -80,7 +80,7 @@ class Surge {
 	 * Remove the Surge cache config.
 	 */
 	public static function remove_cache_config() {
-		$file = self::get_config_file();
+		$file = self::get_config_file_path();
 
 		if ( ! \wp_is_writable( $file ) ) {
 			return;
@@ -102,7 +102,7 @@ class Surge {
 	 *
 	 * @return string|false The config file or false.
 	 */
-	public static function get_config_file() {
+	public static function get_config_file_path() {
 		$config_file = false;
 
 		// phpcs:ignore
