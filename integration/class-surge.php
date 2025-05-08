@@ -58,7 +58,7 @@ class Surge {
 
 		$config = $wp_filesystem->get_contents( $file );
 
-		// Check if the define already exists.
+		// Check if the constant already exists.
 		if ( preg_match( self::$cache_config_pattern, $config ) ) {
 			return;
 		}
