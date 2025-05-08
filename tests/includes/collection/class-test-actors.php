@@ -138,4 +138,21 @@ class Test_Actors extends \WP_UnitTestCase {
 		$this->assertSame( 'user', Actors::get_type_by_id( 1 ) );
 		$this->assertSame( 'user', Actors::get_type_by_id( 2 ) );
 	}
+
+	/**
+	 * Test if Actor mode will be respected properly
+	 *
+	 * @covers ::get_type_by_id
+	 */
+	public function test_disabled_blog_profile() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$resource = 'http://example.org/@blog';
+
+		$this->assertEquals( 'Activitypub\Model\Blog', get_class( Actors::get_by_resource( $resource ) ) );
+
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$this->assertWPError( Actors::get_by_resource( $resource ) );
+	}
 }

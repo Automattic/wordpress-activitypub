@@ -40,6 +40,11 @@ class Welcome_Fields {
 	 * Register welcome fields.
 	 */
 	public static function register_welcome_fields() {
+		// Once we got to 0 issues, we won't update the option again. That step is completed.
+		if ( '0' !== \get_option( 'activitypub_checklist_health_check_issues' ) ) {
+			\update_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) );
+		}
+
 		\add_settings_section(
 			'activitypub_welcome_header',
 			'',
@@ -90,8 +95,8 @@ class Welcome_Fields {
 							stroke-dashoffset="<?php echo \esc_attr( 339.292 - ( 339.292 * $progress_percentage / 100 ) ); ?>" />
 				</svg>
 			</div>
-			<h2 class="activitypub-welcome-title"><?php \esc_html_e( 'Let&#8217;s keep going!', 'activitypub' ); ?></h2>
-			<p class="activitypub-welcome-subtitle"><?php \esc_html_e( 'It&#8217;s time to finish setting up your plugin.', 'activitypub' ); ?></p>
+			<h2 class="activitypub-welcome-title"><?php \esc_html_e( 'Welcome to the Fediverse!', 'activitypub' ); ?></h2>
+			<p class="activitypub-welcome-subtitle"><?php \esc_html_e( 'Get connected in just a few steps.', 'activitypub' ); ?></p>
 		</div>
 		<?php
 	}
@@ -102,7 +107,8 @@ class Welcome_Fields {
 	private static function get_completed_steps_count() {
 		$count = 1; // Plugin is already installed.
 
-		if ( 0 === Health_Check::count_results( 'critical' ) ) {
+		// We're looking for 0 issues.
+		if ( '0' !== \get_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) ) ) {
 			++$count;
 		}
 
@@ -145,16 +151,20 @@ class Welcome_Fields {
 	 * Get the next incomplete step.
 	 */
 	private static function get_next_incomplete_step() {
+		if ( '0' !== \get_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) ) ) {
+			return 'site_health';
+		}
+
 		if ( false === \get_option( 'activitypub_checklist_fediverse_intro_visited', false ) ) {
 			return 'fediverse_intro';
 		}
 
-		if ( 0 < Health_Check::count_results( 'critical' ) ) {
-			return 'site_health';
-		}
-
 		if ( false === \get_option( 'activitypub_checklist_settings_visited', false ) ) {
 			return 'profile_mode';
+		}
+
+		if ( false === \get_option( 'activitypub_checklist_profile_setup_visited', false ) ) {
+			return 'profile_setup';
 		}
 
 		if ( false === \get_option( 'activitypub_checklist_blocks_visited', false ) ) {
@@ -199,16 +209,16 @@ class Welcome_Fields {
 	 * Render site health step.
 	 */
 	public static function render_step_site_health() {
-		$critical_issues    = Health_Check::count_results( 'critical' );
-		$recommended_issues = Health_Check::count_results( 'recommended' );
-		$total_issues       = $critical_issues + $recommended_issues;
-		$step_class         = ( 0 === $critical_issues ) ? 'activitypub-step-completed' : '';
-		$next_step          = self::get_next_incomplete_step();
-		$button_class       = ( 'site_health' === $next_step ) ? 'button-primary' : 'button-secondary';
+		$health_issues = Health_Check::count_results();
+		$total_issues  = $health_issues['critical'] + $health_issues['warning'];
+		$checked       = '0' === \get_option( 'activitypub_checklist_health_check_issues', (string) $health_issues['critical'] );
+		$step_class    = $checked ? 'activitypub-step-completed' : '';
+		$next_step     = self::get_next_incomplete_step();
+		$button_class  = ( 'site_health' === $next_step ) ? 'button-primary' : 'button-secondary';
 		?>
 		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
 			<div class="step-indicator">
-				<?php if ( 0 === $critical_issues ) : ?>
+				<?php if ( $checked ) : ?>
 					<span class="step-icon dashicons dashicons-yes"></span>
 				<?php else : ?>
 					<span class="step-icon dashicons dashicons-warning"></span>
@@ -258,7 +268,7 @@ class Welcome_Fields {
 			</div>
 			<div class="step-content">
 				<div class="step-text">
-					<h3><?php \esc_html_e( 'Watch a short video: What&#8217;s the Fediverse?', 'activitypub' ); ?></h3>
+					<h3><?php \esc_html_e( 'New to the Fediverse? Start Here', 'activitypub' ); ?></h3>
 					<p><?php \esc_html_e( 'Learn what the Fediverse is and why it matters.', 'activitypub' ); ?></p>
 				</div>
 				<div class="step-action">
@@ -310,6 +320,8 @@ class Welcome_Fields {
 		$user_can_activitypub = user_can_activitypub( \get_current_user_id() );
 		$checked              = '1' === \get_option( 'activitypub_checklist_profile_setup_visited', false );
 		$step_class           = $checked ? 'activitypub-step-completed' : '';
+		$next_step            = self::get_next_incomplete_step();
+		$button_class         = ( 'profile_mode' === $next_step ) ? 'button-primary' : 'button-secondary';
 		?>
 		<div class="activitypub-onboarding-step <?php echo \esc_attr( $step_class ); ?>">
 			<div class="step-indicator">
@@ -322,15 +334,15 @@ class Welcome_Fields {
 			<div class="step-content">
 				<div class="step-text">
 					<h3><?php \esc_html_e( 'Set up your public profile', 'activitypub' ); ?></h3>
-					<p><?php \esc_html_e( 'Choose your username and how you appear to others.', 'activitypub' ); ?></p>
+					<p><?php \esc_html_e( 'Configure your display name and how you appear to others.', 'activitypub' ); ?></p>
 				</div>
 				<div class="step-action">
 					<?php if ( true === $user_can_activitypub ) : ?>
-						<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>" class="button button-secondary">
+						<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
 						</a>
 					<?php else : ?>
-						<button class="button button-secondary" disabled>
+						<button class="button <?php echo \esc_attr( $button_class ); ?>" disabled>
 							<?php \esc_html_e( 'Edit profile', 'activitypub' ); ?>
 						</button>
 					<?php endif; ?>
