@@ -10,7 +10,7 @@
 $representation = 'html';
 
 if ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
-	// phpcs:ignore
+	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 	$accept = strtolower( $_SERVER['HTTP_ACCEPT'] );
 
 	if ( str_contains( $accept, 'text/html' ) ) {
