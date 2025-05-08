@@ -174,7 +174,7 @@ class Surge {
 			);
 			$result['actions']        = \sprintf(
 				'<p>%s</p>',
-				sprintf(
+				\sprintf(
 					// translators: %s: Plugin directory path.
 					\__( 'To enable the ActivityPub integration with Surge, add the following line to your <code>wp-config.php</code> file: <br /><code>%s</code>', 'activitypub' ),
 					self::$cache_config
