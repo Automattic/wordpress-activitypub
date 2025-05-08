@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Mention notification emails now account for replies and link to the comment instead of the post editor.
