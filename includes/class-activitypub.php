@@ -106,6 +106,11 @@ class Activitypub {
 		\delete_option( 'activitypub_blog_user_public_key' );
 		\delete_option( 'activitypub_blog_description' );
 		\delete_option( 'activitypub_blog_identifier' );
+		\delete_option( 'activitypub_checklist_blocks_visited' );
+		\delete_option( 'activitypub_checklist_fediverse_intro_visited' );
+		\delete_option( 'activitypub_checklist_health_check_issues' );
+		\delete_option( 'activitypub_checklist_profile_setup_visited' );
+		\delete_option( 'activitypub_checklist_settings_visited' );
 		\delete_option( 'activitypub_content_negotiation' );
 		\delete_option( 'activitypub_custom_post_content' );
 		\delete_option( 'activitypub_db_version' );
