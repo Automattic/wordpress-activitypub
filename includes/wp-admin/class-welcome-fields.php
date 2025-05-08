@@ -287,7 +287,7 @@ class Welcome_Fields {
 				</div>
 				<div class="step-action">
 					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&help-tab=getting-started#tab-link-getting-started' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
-						<?php \esc_html_e( 'Watch now', 'activitypub' ); ?>
+						<?php \esc_html_e( 'View intro', 'activitypub' ); ?>
 					</a>
 				</div>
 			</div>
