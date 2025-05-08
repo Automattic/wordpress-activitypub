@@ -272,7 +272,7 @@ class Welcome_Fields {
 					<p><?php \esc_html_e( 'Learn what the Fediverse is and why it matters.', 'activitypub' ); ?></p>
 				</div>
 				<div class="step-action">
-					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub#tab-link-getting-started' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&help-tab=getting-started#tab-link-getting-started' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 						<?php \esc_html_e( 'Watch now', 'activitypub' ); ?>
 					</a>
 				</div>
@@ -375,7 +375,7 @@ class Welcome_Fields {
 					<p><?php \esc_html_e( 'Discover blocks, privacy, and more.', 'activitypub' ); ?></p>
 				</div>
 				<div class="step-action">
-					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&tab=settings&help-tab=editor-blocks#tab-link-editor-blocks' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
+					<a href="<?php echo \esc_url( \admin_url( 'options-general.php?page=activitypub&help-tab=editor-blocks#tab-link-editor-blocks' ) ); ?>" class="button <?php echo \esc_attr( $button_class ); ?>">
 						<?php \esc_html_e( 'Explore features', 'activitypub' ); ?>
 					</a>
 				</div>
