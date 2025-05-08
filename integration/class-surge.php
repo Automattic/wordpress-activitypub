@@ -108,7 +108,7 @@ class Surge {
 
 			/** The config file resides in ABSPATH */
 			$config_file = ABSPATH . 'wp-config.php';
-		// phpcs:ignore
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors
 		} elseif ( @file_exists( dirname( ABSPATH ) . '/wp-config.php' ) && ! @file_exists( dirname( ABSPATH ) . '/wp-settings.php' ) ) {
 
 			/** The config file resides one level above ABSPATH but is not part of another installation */
