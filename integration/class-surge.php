@@ -68,9 +68,9 @@ class Surge {
 		// Add a WP_CACHE_CONFIG to wp-config.php.
 		$anchor = "/* That's all, stop editing!";
 		if ( false !== \strpos( $config, $anchor ) ) {
-			$config = \str_replace( $anchor, self::$cache_config . "\n\n" . $anchor, $config );
+			$config = \str_replace( $anchor, self::$cache_config . PHP_EOL . PHP_EOL . $anchor, $config );
 		} elseif ( false !== \strpos( $config, '<?php' ) ) {
-			$config = \str_replace( '<?php', "<?php\n\n" . self::$cache_config . "\n", $config );
+			$config = \str_replace( '<?php', '<?php' . PHP_EOL . PHP_EOL . self::$cache_config . PHP_EOL, $config );
 		}
 
 		$wp_filesystem->put_contents( $file, $config, FS_CHMOD_FILE );
@@ -92,7 +92,7 @@ class Surge {
 		$config = $wp_filesystem->get_contents( $file );
 
 		// Remove the define line.
-		$config = preg_replace( self::$cache_config_pattern, '', $config );
+		$config = preg_replace( PHP_EOL . self::$cache_config_pattern . PHP_EOL, '', $config );
 
 		$wp_filesystem->put_contents( $file, $config, FS_CHMOD_FILE );
 	}

@@ -171,3 +171,4 @@ add_action( 'bp_include', array( __NAMESPACE__ . '\Buddypress', 'init' ), 0 );
  * @see https://wordpress.org/plugins/surge/
  */
 Surge::init();
+
