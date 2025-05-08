@@ -19,6 +19,7 @@ class Test_Surge extends \WP_UnitTestCase {
 	 * @var string
 	 */
 	private $test_file;
+
 	/**
 	 * Original config file path.
 	 *
