@@ -190,7 +190,14 @@ class Server {
 			return $response;
 		}
 
-		$data  = $response->get_data();
+		$data = $response->get_data();
+
+		// Ensure that `$data` was already converted to a response.
+		if ( \is_wp_error( $data ) ) {
+			$response = \rest_convert_error_to_response( $data );
+			$data     = $response->get_data();
+		}
+
 		$error = array(
 			'type'     => 'about:blank',
 			'title'    => $data['code'] ?? '',
