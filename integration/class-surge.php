@@ -37,6 +37,8 @@ class Surge {
 	public static function init() {
 		\add_action( 'activate_surge/surge.php', array( self::class, 'add_cache_config' ) );
 		\add_action( 'deactivate_surge/surge.php', array( self::class, 'remove_cache_config' ) );
+
+		\add_filter( 'site_status_tests', array( self::class, 'maybe_add_site_health' ) );
 	}
 
 	/**
@@ -80,6 +82,10 @@ class Surge {
 	public static function remove_cache_config() {
 		$file = self::get_config_file();
 
+		if ( ! \wp_is_writable( $file ) ) {
+			return;
+		}
+
 		global $wp_filesystem;
 		\WP_Filesystem();
 
@@ -112,5 +118,67 @@ class Surge {
 		}
 
 		return \apply_filters( 'activitypub_surge_cache_config_file', $config_file );
+	}
+
+	/**
+	 * Maybe add the Surge cache config to the site health.
+	 *
+	 * @param array $tests The site health tests.
+	 *
+	 * @return array The site health tests with the Surge cache config test.
+	 */
+	public static function maybe_add_site_health( $tests ) {
+		if ( ! \is_plugin_active( 'surge/surge.php' ) ) {
+			return $tests;
+		}
+
+		$tests['direct']['activitypub_test_surge_integration'] = array(
+			'label' => \__( 'Surge Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_surge_integration' ),
+		);
+
+		return $tests;
+	}
+
+	/**
+	 * Surge integration test.
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_surge_integration() {
+		$result = array(
+			'label'       => \__( 'Compatibility with Surge', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'Surge is well configured to work with ActivityPub.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_surge_integration',
+		);
+
+		if ( ! \defined( 'WP_CACHE_CONFIG' ) ) {
+			$result['status']         = 'critical';
+			$result['label']          = \__( 'Surge might not be properly configured.', 'activitypub' );
+			$result['badge']['color'] = 'red';
+			$result['description']    = \sprintf(
+				'<p>%s</p>',
+				\__( 'Surge isn&#8217;t currently set up to work with ActivityPub. While this isn&#8217;t a major problem, it&#8217;s a good idea to enable support. Without it, some technical files (like JSON) might accidentally show up in your website&#8217;s cache and be visible to visitors.', 'activitypub' )
+			);
+			$result['actions']        = \sprintf(
+				'<p>%s</p>',
+				sprintf(
+					// translators: %s: Plugin directory path.
+					\__( 'To enable the ActivityPub integration with Surge, add the following line to your <code>wp-config.php</code> file: <br /><code>%s</code>', 'activitypub' ),
+					self::$cache_config
+				)
+			);
+		}
+
+		return $result;
 	}
 }
