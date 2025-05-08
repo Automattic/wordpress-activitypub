@@ -20,7 +20,7 @@ class Surge {
 	 *
 	 * @var string
 	 */
-	public static $cache_config = 'define( \'WP_CACHE_CONFIG\', \'' . ACTIVITYPUB_PLUGIN_DIR . 'integration/surge-cache-config.php\' );';
+	public static $cache_config = "define( 'WP_CACHE_CONFIG', '' . ACTIVITYPUB_PLUGIN_DIR . 'integration/surge-cache-config.php' );";
 
 	/**
 	 * The pattern to find the define for the Surge cache config.
