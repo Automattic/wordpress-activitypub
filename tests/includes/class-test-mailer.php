@@ -9,7 +9,6 @@ namespace Activitypub\Tests;
 
 use Activitypub\Mailer;
 use Activitypub\Collection\Actors;
-use Activitypub\Notification;
 use WP_UnitTestCase;
 
 /**
@@ -410,9 +409,8 @@ class Test_Mailer extends WP_UnitTestCase {
 		} else {
 			add_filter(
 				'wp_mail',
-				function ( $args ) {
+				function () {
 					$this->fail( 'Email should not be sent for public activity' );
-					return $args;
 				}
 			);
 
@@ -426,6 +424,56 @@ class Test_Mailer extends WP_UnitTestCase {
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 		remove_all_filters( 'wp_mail' );
 		wp_delete_user( $user_id );
+	}
+
+	/**
+	 * Test direct message notification from Bridgy.
+	 *
+	 * @covers ::direct_message
+	 */
+	public function test_direct_message_from_bridgy() {
+		$activity = array(
+			'actor'  => 'https://example.com/author',
+			'object' => array(
+				'id'      => 'https://example.com/post/1',
+				'content' => 'Test direct message',
+			),
+			'to'     => array( Actors::get_by_id( self::$user_id )->get_id() ),
+		);
+
+		// Mock remote metadata.
+		add_filter(
+			'pre_get_remote_metadata_by_actor',
+			function () {
+				return array(
+					'name' => 'Test Sender',
+					'url'  => array(
+						'https://fed.brid.gy/r/https://example.com/author',
+						'acct:author@example.com',
+					),
+				);
+			}
+		);
+
+		// Capture email.
+		add_filter(
+			'wp_mail',
+			function ( $args ) {
+				$this->assertStringContainsString(
+					'<a href="https://fed.brid.gy/r/https://example.com/author">@Test Sender@fed.brid.gy</a>',
+					$args['message']
+				);
+				return $args;
+			}
+		);
+
+		// Call the method.
+		Mailer::direct_message( $activity, self::$user_id );
+
+		// Clean up.
+		remove_all_filters( 'wp_before_load_template' );
+		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
+		remove_all_filters( 'wp_mail' );
 	}
 
 	/**
