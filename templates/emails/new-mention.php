@@ -50,7 +50,7 @@ require __DIR__ . '/parts/header.php';
 
 <?php if ( site_supports_blocks() && ! is_plugin_active( 'classic-editor/classic-editor.php' ) ) : ?>
 <p>
-	<a class="button" href="<?php echo esc_url( admin_url( 'post-new.php?in_reply_to=' . $args['activity']['object']['id'] ) ); ?>">
+	<a class="button" href="<?php echo esc_url( $args['reply_url'] ); ?>">
 		<?php esc_html_e( 'Reply to the post', 'activitypub' ); ?>
 	</a>
 </p>

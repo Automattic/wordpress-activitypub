@@ -22,7 +22,7 @@ class Mailer {
 
 		\add_action( 'activitypub_inbox_follow', array( self::class, 'new_follower' ), 10, 2 );
 		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
-		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 10, 2 );
+		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 ); /** After @see \Activitypub\Handler\Create::handle_create() */
 	}
 
 	/**
@@ -292,10 +292,17 @@ class Mailer {
 
 		$actor = self::normalize_actor( $actor );
 
+		$reply_url = admin_url( 'post-new.php?in_reply_to=' . $activity['object']['id'] );
+		if ( is_activity_reply( $activity ) ) {
+			$comment   = object_id_to_comment( $activity['object']['id'] );
+			$reply_url = $comment ? \get_comment_link( $comment ) : $reply_url;
+		}
+
 		$template_args = array(
-			'activity' => $activity,
-			'actor'    => $actor,
-			'user_id'  => $user_id,
+			'activity'  => $activity,
+			'actor'     => $actor,
+			'user_id'   => $user_id,
+			'reply_url' => $reply_url,
 		);
 
 		/* translators: 1: Blog name, 2 Actor name */

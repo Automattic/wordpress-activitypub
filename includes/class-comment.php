@@ -391,7 +391,7 @@ class Comment {
 	 * @return string $url
 	 */
 	public static function remote_comment_link( $comment_link, $comment ) {
-		if ( ! $comment || is_admin() ) {
+		if ( ! $comment || is_admin() || wp_is_serving_rest_request() ) {
 			return $comment_link;
 		}
 
