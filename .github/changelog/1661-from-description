@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-ActivityPub profiles are now hidden for disabled users to avoid confusion—profiles can no longer be found or followed if the user is not active.
+The blog profile can no longer be queried when the blog actor option is disabled.
