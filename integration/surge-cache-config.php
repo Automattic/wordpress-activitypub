@@ -24,7 +24,7 @@ if ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
 	}
 }
 
-// phpcs:ignore
+// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable
 $config['variants']['representation'] = $representation;
 unset( $accept, $representation );
 
