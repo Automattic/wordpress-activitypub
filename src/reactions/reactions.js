@@ -156,9 +156,9 @@ const ReactionDropdown = ( { reactions, anchor, onClose } ) => (
 /**
  * A component that renders a dropdown list of reactions.
  *
- * @param {Object}   props           Component props.
- * @param {Array}    props.reactions Array of reaction objects.
- * @param {string}   props.type      Type of reaction (likes/reposts).
+ * @param {Object} props           Component props.
+ * @param {Array}  props.reactions Array of reaction objects.
+ * @param {string} props.type      Type of reaction (likes/reposts).
  * @return {JSX.Element}            The rendered component.
  */
 const ReactionList = ( { reactions, type } ) => (
@@ -177,9 +177,9 @@ const ReactionList = ( { reactions, type } ) => (
 /**
  * A component that renders a reaction group with facepile and dropdown.
  *
- * @param {Object} props           Component props.
- * @param {Array}  props.items     Array of reaction objects.
- * @param {string} props.label     Label for the reaction group.
+ * @param {Object} props       Component props.
+ * @param {Array}  props.items Array of reaction objects.
+ * @param {string} props.label Label for the reaction group.
  * @return {JSX.Element}          The rendered component.
  */
 const ReactionGroup = ( { items, label } ) => {
@@ -211,7 +211,12 @@ const ReactionGroup = ( { items, label } ) => {
 
 			// Calculate how many avatars can fit
 			// First avatar takes full width, rest take effective width
-			const maxAvatars = Math.max( 1, Math.floor( ( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH ) );
+			const maxAvatars = Math.max(
+				1,
+				Math.floor(
+					( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH
+				)
+			);
 
 			// Ensure we don't show more than we have
 			setVisibleCount( Math.min( maxAvatars, items.length ) );
@@ -254,12 +259,11 @@ const ReactionGroup = ( { items, label } ) => {
 /**
  * The Reactions component.
  *
- * @param {Object}    props                  Component props.
- * @param {string}    props.title            The title text.
- * @param {?number}   props.postId           The post ID.
- * @param {?Object}   props.reactions        Optional reactions data.
- * @param {?JSX.Element} props.titleComponent Optional component for title editing.
- * @return {?JSX.Element}                    The rendered component.
+ * @param {Object}  props           Component props.
+ * @param {?number} props.postId    The post ID.
+ * @param {?Object} props.reactions Optional reactions data.
+ * @param {?string} props.title     Optional title attribute.
+ * @return {?JSX.Element}               The rendered component.
  */
 export function Reactions( { title = '', postId = null, reactions: providedReactions = null, titleComponent = null } ) {
 	const { namespace } = useOptions();
@@ -299,9 +303,8 @@ export function Reactions( { title = '', postId = null, reactions: providedReact
 	}
 
 	return (
-		<div className="activitypub-reactions">
-			{ titleComponent || ( title && <h6>{ title }</h6> ) }
-
+		<>
+			{ title && <h6>{ title }</h6> }
 			{ Object.entries( reactions ).map( ( [ key, group ] ) => {
 				if ( ! group.items?.length ) {
 					return null;
@@ -309,6 +312,6 @@ export function Reactions( { title = '', postId = null, reactions: providedReact
 
 				return <ReactionGroup key={ key } items={ group.items } label={ group.label } />;
 			} ) }
-		</div>
+		</>
 	);
 }
