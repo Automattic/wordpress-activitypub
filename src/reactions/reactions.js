@@ -211,12 +211,7 @@ const ReactionGroup = ( { items, label } ) => {
 
 			// Calculate how many avatars can fit
 			// First avatar takes full width, rest take effective width
-			const maxAvatars = Math.max(
-				1,
-				Math.floor(
-					( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH
-				)
-			);
+			const maxAvatars = Math.max( 1, Math.floor( ( availableWidth - AVATAR_WIDTH ) / EFFECTIVE_AVATAR_WIDTH ) );
 
 			// Ensure we don't show more than we have
 			setVisibleCount( Math.min( maxAvatars, items.length ) );
