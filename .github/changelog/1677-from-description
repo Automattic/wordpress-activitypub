@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Email notifications for interactions with Brid.gy actors no longer trigger PHP Warnings.
