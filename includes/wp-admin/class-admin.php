@@ -659,7 +659,7 @@ class Admin {
 			const allowed_ids = <?php echo \wp_json_encode( $ids ); ?>;
 
 			if ( allowed_ids.includes( window.location.hash ) ) {
-				const delay = ( event && event.type === 'hashchange' ) ? 0 : 500;
+				const delay = ( event && event.type === 'hashchange' ) ? 0 : 200;
 
 				setTimeout( function() {
 					document.getElementById( 'contextual-help-link' ).click();
