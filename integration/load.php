@@ -122,6 +122,18 @@ function plugin_init() {
 	if ( \defined( 'ICL_SITEPRESS_VERSION' ) ) {
 		WPML::init();
 	}
+
+	/**
+	 * Load the Surge integration.
+	 *
+	 * Only load code that needs Surge to run once Surge is loaded and initialized.
+	 *
+	 * @see https://wordpress.org/plugins/surge/
+	 */
+	Surge::init();
+
+	\register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'add_cache_config' ) );
+	\register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'remove_cache_config' ) );
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
 
@@ -162,15 +174,3 @@ add_filter(
  * @see https://buddypress.org/
  */
 add_action( 'bp_include', array( __NAMESPACE__ . '\Buddypress', 'init' ), 0 );
-
-/**
- * Load the Surge integration.
- *
- * Only load code that needs Surge to run once Surge is loaded and initialized.
- *
- * @see https://wordpress.org/plugins/surge/
- */
-Surge::init();
-
-\register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'add_cache_config' ) );
-\register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'remove_cache_config' ) );
