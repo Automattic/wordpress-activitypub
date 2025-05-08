@@ -103,7 +103,7 @@ class Surge {
 	public static function get_config_file_path() {
 		$config_file = false;
 
-		// phpcs:ignore
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors
 		if ( @file_exists( ABSPATH . 'wp-config.php' ) ) {
 
 			/** The config file resides in ABSPATH */
