@@ -471,7 +471,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		Mailer::direct_message( $activity, self::$user_id );
 
 		// Clean up.
-		remove_all_filters( 'wp_before_load_template' );// Clean up.
+		remove_all_filters( 'wp_before_load_template' );
 		remove_all_filters( 'pre_get_remote_metadata_by_actor' );
 		remove_all_filters( 'wp_mail' );
 	}
