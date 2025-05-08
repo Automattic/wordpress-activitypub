@@ -7,8 +7,6 @@
 
 namespace Activitypub\Integration;
 
-use function Activitypub\user_can_activitypub;
-
 /**
  * Surge Cache integration.
  *
