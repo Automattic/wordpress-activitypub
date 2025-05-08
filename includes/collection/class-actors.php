@@ -90,7 +90,7 @@ class Actors {
 		// Check for blog user.
 		if (
 			Blog::get_default_username() === $username ||
-			get_option( 'activitypub_blog_identifier' ) === $username
+			\get_option( 'activitypub_blog_identifier' ) === $username
 		) {
 			if ( is_user_type_disabled( 'blog' ) ) {
 				return new WP_Error(
