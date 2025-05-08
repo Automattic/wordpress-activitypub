@@ -115,6 +115,11 @@ class Surge {
 			$config_file = dirname( ABSPATH ) . '/wp-config.php';
 		}
 
+		/**
+		 * Filter the config file path.
+		 *
+		 * @param string|false $config_file The config file path.
+		 */
 		return \apply_filters( 'activitypub_surge_cache_config_file', $config_file );
 	}
 
