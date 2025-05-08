@@ -44,7 +44,8 @@ const generateWhimsicalName = () => {
 		'Penguin',
 	];
 
-	const adjective = adjectives[ Math.floor( Math.random() * adjectives.length ) ];
+	const adjective =
+		adjectives[ Math.floor( Math.random() * adjectives.length ) ];
 	const noun = nouns[ Math.floor( Math.random() * nouns.length ) ];
 
 	return `${ adjective } ${ noun }`;
@@ -111,7 +112,9 @@ const generateDummyReactions = () => ( {
 			_x( '%d likes', 'number of likes', 'activitypub' ),
 			9
 		),
-		items: Array.from( { length: 9 }, ( _, i ) => generateDummyReaction( i ) ),
+		items: Array.from( { length: 9 }, ( _, i ) =>
+			generateDummyReaction( i )
+		),
 	},
 	reposts: {
 		label: sprintf(
@@ -119,7 +122,9 @@ const generateDummyReactions = () => ( {
 			_x( '%d reposts', 'number of reposts', 'activitypub' ),
 			6
 		),
-		items: Array.from( { length: 6 }, ( _, i ) => generateDummyReaction( i + 9 ) ),
+		items: Array.from( { length: 6 }, ( _, i ) =>
+			generateDummyReaction( i + 9 )
+		),
 	},
 } );
 
@@ -154,7 +159,11 @@ export default function Edit( { attributes, __unstableLayoutClassNames } ) {
 
 	return (
 		<div { ...blockProps }>
-			<InnerBlocks template={ TEMPLATE } allowedBlocks={ ALLOWED_BLOCKS } templateLock={ false } />
+			<InnerBlocks
+				template={ TEMPLATE }
+				allowedBlocks={ ALLOWED_BLOCKS }
+				templateLock={ false }
+			/>
 			<Reactions reactions={ dummyReactions } />
 		</div>
 	);

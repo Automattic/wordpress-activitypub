@@ -10,33 +10,28 @@ import './style.scss';
 function DialogReply( { selectedComment, commentId } ) {
 	const { namespace } = useOptions();
 	const actionText = __( 'Reply', 'activitypub' );
-	const resourceUrl = `/${ namespace }/comments/${ commentId }/remote-reply?resource=`;
-	const copyDescription = __(
-		'Copy and paste the Comment URL into the search field of your favorite fediverse app or server.',
-		'activitypub'
-	);
+	const resourceUrl = `/${ namespace }/comments/${commentId}/remote-reply?resource=`;
+	const copyDescription = __( 'Copy and paste the Comment URL into the search field of your favorite fediverse app or server.', 'activitypub' );
 
-	return (
-		<Dialog
-			actionText={ actionText }
-			copyDescription={ copyDescription }
-			handle={ selectedComment }
-			resourceUrl={ resourceUrl }
-			myProfile={ __( 'Original Comment URL', 'activitypub' ) }
-			rememberProfile={ true }
-		/>
-	);
+	return <Dialog
+		actionText={ actionText }
+		copyDescription={ copyDescription }
+		handle={ selectedComment }
+		resourceUrl={ resourceUrl }
+		myProfile={ __( 'Original Comment URL', 'activitypub' ) }
+		rememberProfile={true}
+	/>;
 }
 
 function RemoteUser( { profileURL, template, commentURL, deleteRemoteUser } ) {
 	const opener = () => {
 		const url = template.replace( '{uri}', commentURL );
 		window.open( url, '_blank' );
-	};
+	}
 
 	return (
 		<>
-			<Button variant="link" className="comment-reply-link activitypub-remote-reply__button" onClick={ opener }>
+			<Button variant="link" className="comment-reply-link activitypub-remote-reply__button" onClick={ opener } >
 				{
 					/* translators: %s: profile name */
 					sprintf( __( 'Reply as %s', 'activitypub' ), profileURL )
@@ -52,6 +47,7 @@ function RemoteUser( { profileURL, template, commentURL, deleteRemoteUser } ) {
 			</Button>
 		</>
 	);
+
 }
 
 export default function RemoteReply( { selectedComment, commentId } ) {
@@ -60,21 +56,12 @@ export default function RemoteReply( { selectedComment, commentId } ) {
 	const { profileURL, template, deleteRemoteUser } = useRemoteUser();
 	const hasProfile = profileURL && template;
 
-	return (
+	return(
 		<>
 			{ hasProfile ? (
-				<RemoteUser
-					profileURL={ profileURL }
-					template={ template }
-					commentURL={ selectedComment }
-					deleteRemoteUser={ deleteRemoteUser }
-				/>
+				<RemoteUser profileURL={ profileURL } template={ template } commentURL={ selectedComment } deleteRemoteUser={ deleteRemoteUser } />
 			) : (
-				<Button
-					variant="link"
-					className="comment-reply-link activitypub-remote-reply__button"
-					onClick={ () => setIsOpen( true ) }
-				>
+				<Button variant="link" className="comment-reply-link activitypub-remote-reply__button" onClick={ () => setIsOpen( true ) } >
 					{ __( 'Reply on the Fediverse', 'activitypub' ) }
 				</Button>
 			) }
@@ -84,10 +71,10 @@ export default function RemoteReply( { selectedComment, commentId } ) {
 					className="activitypub-remote-reply__modal activitypub__modal"
 					onRequestClose={ () => setIsOpen( false ) }
 					title={ title }
-				>
+					>
 					<DialogReply selectedComment={ selectedComment } commentId={ commentId } />
 				</Modal>
 			) }
 		</>
-	);
+	)
 }

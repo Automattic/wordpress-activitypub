@@ -15,7 +15,7 @@ export function useUserOptions( { withInherit = false } ) {
 		if ( enabled?.site ) {
 			userKeywords.push( {
 				label: __( 'Site', 'activitypub' ),
-				value: 'site',
+				value: 'site'
 			} );
 		}
 
@@ -23,14 +23,14 @@ export function useUserOptions( { withInherit = false } ) {
 		if ( withInherit && enabled?.users ) {
 			userKeywords.push( {
 				label: __( 'Dynamic User', 'activitypub' ),
-				value: 'inherit',
+				value: 'inherit'
 			} );
 		}
 
 		return users.reduce( ( acc, user ) => {
-			acc.push( {
+			acc.push({
 				label: user.name,
-				value: `${ user.id }`, // casting to string because that's how the attribute is stored by Gutenberg
+				value: `${ user.id }` // casting to string because that's how the attribute is stored by Gutenberg
 			} );
 			return acc;
 		}, userKeywords );

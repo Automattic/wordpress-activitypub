@@ -19,7 +19,14 @@ import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
  * @param {number} props.context.postId Post ID.
  * @return {JSX.Element} Edit component.
  */
-export default function Edit( { attributes, setAttributes, context: { postType, postId } } ) {
+export default function Edit( {
+	attributes,
+	setAttributes,
+	context: {
+		postType,
+		postId,
+	},
+} ) {
 	const blockProps = useBlockProps( {
 		className: 'activitypub-follow-me-block-wrapper',
 	} );
@@ -30,7 +37,11 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 	const authorId = useSelect(
 		( select ) => {
 			const { getEditedEntityRecord } = select( coreStore );
-			const _authorId = getEditedEntityRecord( 'postType', postType, postId )?.author;
+			const _authorId = getEditedEntityRecord(
+				'postType',
+				postType,
+				postId
+			)?.author;
 
 			return _authorId ?? null;
 		},
@@ -75,33 +86,24 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 						label={ __( 'Button Size', 'activitypub' ) }
 						value={ buttonSize }
 						options={ [
-							{
-								label: __( 'Default', 'activitypub' ),
-								value: 'default',
-							},
-							{
-								label: __( 'Compact', 'activitypub' ),
-								value: 'compact',
-							},
-							{
-								label: __( 'Small', 'activitypub' ),
-								value: 'small',
-							},
+							{ label: __( 'Default', 'activitypub' ), value: 'default' },
+							{ label: __( 'Compact', 'activitypub' ), value: 'compact' },
+							{ label: __( 'Small', 'activitypub' ), value: 'small' },
 						] }
 						onChange={ ( value ) => setAttributes( { buttonSize: value } ) }
 						help={ __( 'Choose the size of the follow button', 'activitypub' ) }
 					/>
 				</PanelBody>
 			</InspectorControls>
-			{ isInheritMode ? (
+			{ isInheritMode ?
 				authorId ? (
 					<FollowMe { ...attributes } id={ blockProps.id } selectedUser={ authorId } />
 				) : (
 					<InheritModeBlockFallback name={ __( 'Follow Me', 'activitypub' ) } />
 				)
-			) : (
-				<FollowMe { ...attributes } id={ blockProps.id } />
-			) }
+				: (
+					<FollowMe { ...attributes } id={ blockProps.id } />
+				) }
 		</div>
 	);
 }

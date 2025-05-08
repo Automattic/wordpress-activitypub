@@ -35,34 +35,33 @@ function generateSelector( selector, prop, value = null, pseudo = '' ) {
 }
 
 function getStyles( selector, button, text, hover ) {
-	return (
-		generateSelector( selector, 'background-color', button ) +
-		generateSelector( selector, 'color', text ) +
-		generateSelector( selector, 'background-color', hover, ':hover' ) +
-		generateSelector( selector, 'background-color', hover, ':focus' )
-	);
+	return generateSelector( selector, 'background-color', button )
+	+ generateSelector( selector, 'color', text )
+	+ generateSelector( selector, 'background-color', hover, ':hover' )
+	+ generateSelector( selector, 'background-color', hover, ':focus' );
 }
 
 function getBlockStyles( base, style, backgroundColor ) {
 	const selector = `${ base } .components-button`;
 	// we grab the background color if set as a good color for our button text
-	const buttonTextColor =
-		getBackgroundColor( backgroundColor ) ||
+	const buttonTextColor = getBackgroundColor( backgroundColor )
 		// bg might be in this form.
-		style?.color?.background;
+		|| style?.color?.background;
 	// we misuse the link color for the button background
 	const buttonColor = getLinkColor( style?.elements?.link?.color?.text );
 	// hover!
-	const buttonHoverColor = getLinkColor( style?.elements?.link?.[ ':hover' ]?.color?.text );
+	const buttonHoverColor = getLinkColor( style?.elements?.link?.[':hover']?.color?.text );
 
 	return getStyles( selector, buttonColor, buttonTextColor, buttonHoverColor );
 }
 
 export function getPopupStyles( style ) {
 	// we don't acept backgroundColor because the popup is always white (right?)
-	const buttonColor = getLinkColor( style?.elements?.link?.color?.text ) || '#111';
+	const buttonColor = getLinkColor( style?.elements?.link?.color?.text )
+		|| '#111';
 	const buttonTextColor = '#fff';
-	const buttonHoverColor = getLinkColor( style?.elements?.link?.[ ':hover' ]?.color?.text ) || '#333';
+	const buttonHoverColor = getLinkColor( style?.elements?.link?.[':hover']?.color?.text )
+		|| '#333';
 	const selector = '.apfmd__button-group .components-button';
 
 	return getStyles( selector, buttonColor, buttonTextColor, buttonHoverColor );
@@ -70,5 +69,7 @@ export function getPopupStyles( style ) {
 
 export function ButtonStyle( { selector, style, backgroundColor } ) {
 	const css = getBlockStyles( selector, style, backgroundColor );
-	return <style>{ css }</style>;
+	return (
+		<style>{ css }</style>
+	);
 }

@@ -20,23 +20,27 @@ const notAllowed = (
 	</SVG>
 );
 
+
 const EditorPlugin = () => {
-	const postType = useSelect( ( select ) => select( 'core/editor' ).getCurrentPostType(), [] );
+	const postType = useSelect(
+		( select ) => select( 'core/editor' ).getCurrentPostType(),
+		[]
+	);
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
 
 	const labelStyling = {
-		verticalAlign: 'middle',
-		gap: '4px',
-		justifyContent: 'start',
-		display: 'inline-flex',
-		alignItems: 'center',
-	};
+		verticalAlign: "middle",
+		gap: "4px",
+		justifyContent: "start",
+		display: "inline-flex",
+		alignItems: "center"
+	}
 
 	const enhancedLabel = ( icon, text, tooltip ) => (
 		<Tooltip text={ tooltip }>
 			<Text style={ labelStyling }>
 				<Icon icon={ icon } />
-				{ text }
+				{text}
 			</Text>
 		</Tooltip>
 	);
@@ -47,7 +51,10 @@ const EditorPlugin = () => {
 	}
 
 	return (
-		<PluginDocumentSettingPanel name="activitypub" title={ __( 'Fediverse ⁂', 'activitypub' ) }>
+		<PluginDocumentSettingPanel
+			name="activitypub"
+			title={ __( 'Fediverse ⁂', 'activitypub' ) }
+		>
 			<TextControl
 				label={ __( 'Content Warning', 'activitypub' ) }
 				value={ meta?.activitypub_content_warning }
@@ -55,37 +62,23 @@ const EditorPlugin = () => {
 					setMeta( { ...meta, activitypub_content_warning: value } );
 				} }
 				placeholder={ __( 'Optional content warning', 'activitypub' ) }
-				help={ __(
-					'Content warnings do not change the content on your site, only in the fediverse.',
-					'activitypub'
-				) }
+				help={ __( 'Content warnings do not change the content on your site, only in the fediverse.', 'activitypub' ) }
 			/>
 
 			<RangeControl
 				label={ __( 'Maximum Image Attachments', 'activitypub' ) }
-				value={
-					meta?.activitypub_max_image_attachments ?? window._activityPubOptions?.maxImageAttachments ?? 4
-				}
+				value={ meta?.activitypub_max_image_attachments ?? window._activityPubOptions?.maxImageAttachments ?? 4 }
 				onChange={ ( value ) => {
-					setMeta( {
-						...meta,
-						activitypub_max_image_attachments: value,
-					} );
+					setMeta( { ...meta, activitypub_max_image_attachments: value } );
 				} }
 				min={ 0 }
 				max={ 10 }
-				help={ __(
-					'Maximum number of image attachments to include when sharing to the fediverse.',
-					'activitypub'
-				) }
+				help={ __( 'Maximum number of image attachments to include when sharing to the fediverse.', 'activitypub' ) }
 			/>
 
 			<RadioControl
 				label={ __( 'Visibility', 'activitypub' ) }
-				help={ __(
-					"This adjusts the visibility of a post in the fediverse, but note that it won't affect how the post appears on the blog.",
-					'activitypub'
-				) }
+				help={ __( 'This adjusts the visibility of a post in the fediverse, but note that it won\'t affect how the post appears on the blog.', 'activitypub' ) }
 				selected={ meta?.activitypub_content_visibility || 'public' }
 				options={ [
 					{
@@ -94,18 +87,15 @@ const EditorPlugin = () => {
 							__( 'Public', 'activitypub' ),
 							__( 'Post will be visible to everyone and appear in public timelines.', 'activitypub' )
 						),
-						value: 'public',
+						value: 'public'
 					},
 					{
 						label: enhancedLabel(
 							people,
 							__( 'Quiet public', 'activitypub' ),
-							__(
-								'Post will be visible to everyone but will not appear in public timelines.',
-								'activitypub'
-							)
+							__( 'Post will be visible to everyone but will not appear in public timelines.', 'activitypub' )
 						),
-						value: 'quiet_public',
+						value: 'quiet_public'
 					},
 					{
 						label: enhancedLabel(
@@ -113,26 +103,21 @@ const EditorPlugin = () => {
 							__( 'Do not federate', 'activitypub' ),
 							__( 'Post will not be shared to the Fediverse.', 'activitypub' )
 						),
-						value: 'local',
+						value: 'local'
 					},
 				] }
 				onChange={ ( value ) => {
-					setMeta( {
-						...meta,
-						activitypub_content_visibility: value,
-					} );
+					setMeta( { ...meta, activitypub_content_visibility: value } );
 				} }
 				className="activitypub-visibility"
 			/>
 		</PluginDocumentSettingPanel>
 	);
-};
+}
 
 function onActivityPubPreview() {
 	const previewLink = select( 'core/editor' ).getEditedPostPreviewLink();
-	const fediversePreviewLink = addQueryArgs( previewLink, {
-		activitypub: 'true',
-	} );
+	const fediversePreviewLink = addQueryArgs( previewLink, { activitypub: 'true' } );
 
 	window.open( fediversePreviewLink, '_blank' );
 }

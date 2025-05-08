@@ -21,14 +21,7 @@ function isHandle( string ) {
 	return parts.length === 2 && isUrl( `https://${ parts[ 1 ] }` );
 }
 
-export function Dialog( {
-	actionText,
-	copyDescription,
-	handle,
-	resourceUrl,
-	myProfile = '',
-	rememberProfile = false,
-} ) {
+export function Dialog( { actionText, copyDescription, handle, resourceUrl, myProfile = '', rememberProfile = false } ) {
 	const loadingText = __( 'Loading...', 'activitypub' );
 	const openingText = __( 'Opening...', 'activitypub' );
 	const errorText = __( 'Error', 'activitypub' );
@@ -53,21 +46,19 @@ export function Dialog( {
 		// use the resourceUrl
 		const path = resourceUrl + remoteProfile;
 		setButtonText( loadingText );
-		apiFetch( { path } )
-			.then( ( { url, template } ) => {
-				if ( shouldSaveProfile ) {
-					setRemoteUser( { profileURL: remoteProfile, template } );
-				}
-				setButtonText( openingText );
-				setTimeout( () => {
-					window.open( url, '_blank' );
-					setButtonText( actionText );
-				}, 200 );
-			} )
-			.catch( () => {
-				setButtonText( errorText );
-				setTimeout( () => setButtonText( actionText ), 2000 );
-			} );
+		apiFetch( { path } ).then( ( { url, template } ) => {
+			if ( shouldSaveProfile ) {
+				setRemoteUser( { profileURL: remoteProfile, template } );
+			}
+			setButtonText( openingText );
+			setTimeout( () => {
+				window.open( url, '_blank' );
+				setButtonText( actionText );
+			}, 200 );
+		} ).catch( () => {
+			setButtonText( errorText );
+			setTimeout( () => setButtonText( actionText ), 2000 );
+		} );
 	}, [ remoteProfile ] );
 
 	return (
@@ -92,10 +83,7 @@ export function Dialog( {
 				<h4 id="remote-profile-title">{ __( 'Your Profile', 'activitypub' ) }</h4>
 				<div className="activitypub-dialog__description" id="remote-profile-description">
 					{ createInterpolateElement(
-						__(
-							'Or, if you know your own profile, we can start things that way! (eg <code>@yourusername@example.com</code>)',
-							'activitypub'
-						),
+						__( 'Or, if you know your own profile, we can start things that way! (eg <code>@yourusername@example.com</code>)', 'activitypub' ),
 						{ code: <code /> }
 					) }
 				</div>
@@ -107,10 +95,8 @@ export function Dialog( {
 						type="text"
 						id="remote-profile"
 						value={ remoteProfile }
-						onKeyDown={ ( event ) => {
-							event?.code === 'Enter' && retrieveAndFollow();
-						} }
-						onChange={ ( e ) => setRemoteProfile( e.target.value ) }
+						onKeyDown={ ( event ) => { event?.code === 'Enter' && retrieveAndFollow() } }
+						onChange={ e => setRemoteProfile( e.target.value ) }
 						aria-invalid={ buttonText === invalidText }
 					/>
 					<Button onClick={ retrieveAndFollow } aria-label={ __( 'Submit profile', 'activitypub' ) }>
@@ -118,17 +104,15 @@ export function Dialog( {
 						{ buttonText }
 					</Button>
 				</div>
-				{ rememberProfile && (
-					<div className="activitypub-dialog__remember">
-						<CheckboxControl
-							checked={ shouldSaveProfile }
-							label={ __( 'Remember me for easier comments', 'activitypub' ) }
-							onChange={ () => {
-								setShouldSaveProfile( ! shouldSaveProfile );
-							} }
-						/>
-					</div>
-				) }
+				{ rememberProfile &&
+				<div className="activitypub-dialog__remember">
+					<CheckboxControl
+						checked={ shouldSaveProfile }
+						label={ __( 'Remember me for easier comments', 'activitypub' ) }
+						onChange={ () => { setShouldSaveProfile( ! shouldSaveProfile ) } }
+					/>
+				</div>
+				}
 			</div>
 		</div>
 	);

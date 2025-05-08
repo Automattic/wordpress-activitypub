@@ -61,7 +61,14 @@ function fetchProfile( userId ) {
  * @param {string} props.buttonSize Button size.
  * @return {JSX.Element} Profile component.
  */
-function Profile( { profile, popupStyles, userId, buttonText, buttonOnly, buttonSize } ) {
+function Profile( {
+	profile,
+	popupStyles,
+	userId,
+	buttonText,
+	buttonOnly,
+	buttonSize,
+} ) {
 	const { webfinger, avatar, name } = profile;
 	// check if webfinger starts with @ and add it if it doesn't
 	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
@@ -85,9 +92,7 @@ function Profile( { profile, popupStyles, userId, buttonText, buttonOnly, button
 			<img className="activitypub-profile__avatar" src={ avatar } alt={ name } />
 			<div className="activitypub-profile__content">
 				<div className="activitypub-profile__name">{ name }</div>
-				<div className="activitypub-profile__handle" title={ webfingerWithAt }>
-					{ webfingerWithAt }
-				</div>
+				<div className="activitypub-profile__handle" title={ webfingerWithAt }>{ webfingerWithAt }</div>
 			</div>
 			<Follow
 				profile={ profile }
@@ -111,7 +116,13 @@ function Profile( { profile, popupStyles, userId, buttonText, buttonOnly, button
  * @param {string} props.buttonSize Button size.
  * @return {JSX.Element} Follow component.
  */
-function Follow( { profile, popupStyles, userId, buttonText, buttonSize } ) {
+function Follow( {
+	profile,
+	popupStyles,
+	userId,
+	buttonText,
+	buttonSize,
+} ) {
 	const [ isOpen, setIsOpen ] = useState( false );
 	const title = sprintf(
 		/* translators: %s: profile name */
@@ -160,10 +171,7 @@ function DialogFollow( { profile, userId } ) {
 	const { webfinger } = profile;
 	const actionText = __( 'Follow', 'activitypub' );
 	const resourceUrl = `/${ namespace }/actors/${ userId }/remote-follow?resource=`;
-	const copyDescription = __(
-		'Copy and paste my profile into the search field of your favorite fediverse app or server.',
-		'activitypub'
-	);
+	const copyDescription = __( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' );
 	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
 
 	return (

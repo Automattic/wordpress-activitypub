@@ -34,11 +34,7 @@ function useIframeHeight( { html } ) {
 				// Try to get the scrollHeight of the body
 				if ( iframe.contentDocument && iframe.contentDocument.body ) {
 					newHeight = iframe.contentDocument.body.scrollHeight;
-				} else if (
-					iframe.contentWindow &&
-					iframe.contentWindow.document &&
-					iframe.contentWindow.document.body
-				) {
+				} else if ( iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.body ) {
 					newHeight = iframe.contentWindow.document.body.scrollHeight;
 				}
 			} catch ( e ) {
@@ -136,7 +132,7 @@ function EmbedOverlay( { onClick } ) {
 		<div
 			className="activitypub-embed-overlay"
 			onClick={ onClick }
-			style={ {
+			style={{
 				position: 'absolute',
 				top: 0,
 				left: 0,
@@ -144,7 +140,7 @@ function EmbedOverlay( { onClick } ) {
 				height: '100%',
 				cursor: 'pointer',
 				zIndex: 1,
-			} }
+			}}
 		/>
 	);
 }
@@ -156,11 +152,10 @@ function EmbedOverlay( { onClick } ) {
  * @return {boolean} Whether the HTML contains a WordPress embed.
  */
 function isWordPressEmbed( html ) {
-	return (
-		html &&
-		( html.includes( 'wp-embedded-content' ) ||
-			html.includes( 'wp-embed/' ) ||
-			html.includes( 'class="wp-embed"' ) )
+	return html && (
+		html.includes('wp-embedded-content') ||
+		html.includes('wp-embed/') ||
+		html.includes('class="wp-embed"')
 	);
 }
 
@@ -232,26 +227,26 @@ function WpEmbedPreview( { html, onSelectBlock } ) {
 	// If no iframe was found, render the HTML directly with an overlay
 	if ( ! iframeProps.src ) {
 		return (
-			<div className="wp-block-embed__wrapper" style={ { position: 'relative' } }>
-				<div dangerouslySetInnerHTML={ { __html: html } } />
-				<EmbedOverlay onClick={ onSelectBlock } />
+			<div className="wp-block-embed__wrapper" style={{ position: 'relative' }}>
+				<div dangerouslySetInnerHTML={{ __html: html }} />
+				<EmbedOverlay onClick={onSelectBlock} />
 			</div>
 		);
 	}
 
 	return (
-		<div className="wp-block-embed__wrapper" style={ { position: 'relative' } }>
+		<div className="wp-block-embed__wrapper" style={{ position: 'relative' }}>
 			<iframe
 				ref={ ref }
 				title={ iframeProps.title || __( 'Embedded WordPress content', 'activitypub' ) }
 				{ ...iframeProps }
 				height={ height }
-				style={ {
+				style={{
 					width: '100%',
-					maxWidth: '100%',
-				} }
+					maxWidth: '100%'
+				}}
 			/>
-			{ ! interactive && <EmbedOverlay onClick={ onSelectBlock } /> }
+			{ ! interactive && <EmbedOverlay onClick={onSelectBlock} />}
 		</div>
 	);
 }
@@ -288,23 +283,26 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 	}, [ html ] );
 
 	return (
-		<div className="wp-block-embed__wrapper" style={ { position: 'relative' } }>
+		<div
+			className="wp-block-embed__wrapper"
+			style={{ position: 'relative' }}
+		>
 			<iframe
 				ref={ iframeRef }
 				srcDoc={ createSandboxedContent() }
 				sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-				style={ {
+				style={{
 					width: '100%',
 					height: `${ iframeHeight }px`,
 					border: 'none',
-					overflow: 'hidden',
-				} }
+					overflow: 'hidden'
+				}}
 				onLoad={ handleIframeLoad }
 			/>
 			{ isSelected && (
 				<div
 					onClick={ onClick }
-					style={ {
+					style={{
 						position: 'absolute',
 						top: 0,
 						left: 0,
@@ -313,8 +311,8 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
 						cursor: 'pointer',
 						zIndex: 1,
 						// Only show the overlay when the block is selected
-						display: isSelected ? 'block' : 'none',
-					} }
+						display: isSelected ? 'block' : 'none'
+					}}
 				/>
 			) }
 		</div>
@@ -325,10 +323,7 @@ function ThirdPartyEmbed( { html, onClick, isSelected } ) {
  * Help text messages for different reply states.
  */
 const HELP_TEXT = {
-	default: __(
-		'Enter the URL of a post from the Fediverse (Mastodon, Pixelfed, etc.) that you want to reply to.',
-		'activitypub'
-	),
+	default: __( 'Enter the URL of a post from the Fediverse (Mastodon, Pixelfed, etc.) that you want to reply to.', 'activitypub' ),
 	checking: () => (
 		<>
 			<Spinner />
@@ -336,7 +331,7 @@ const HELP_TEXT = {
 		</>
 	),
 	valid: __( 'The author will be notified of your response.', 'activitypub' ),
-	error: __( "This URL probably won't receive your reply. We'll still try.", 'activitypub' ),
+	error: __( 'This URL probably won\'t receive your reply. We\'ll still try.', 'activitypub' ),
 };
 
 /**
@@ -390,15 +385,12 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 	}, [ optimisticEmbed ] );
 
 	// Create a stable callback that uses the ref value
-	const setIsValidEmbedAndMaybeEnableEmbed = useCallback(
-		( isValid ) => {
-			setIsValidEmbed( isValid );
-			if ( optimisticEmbedRef.current && isValid ) {
-				setAttributes( { embedPost: true } );
-			}
-		},
-		[ setAttributes ]
-	);
+	const setIsValidEmbedAndMaybeEnableEmbed = useCallback( ( isValid ) => {
+		setIsValidEmbed( isValid );
+		if ( optimisticEmbedRef.current && isValid ) {
+			setAttributes( { embedPost: true } );
+		}
+	}, [ setAttributes ] );
 
 	const resetEmbedState = ( isChecking = false ) => {
 		setIsCheckingEmbed( isChecking );
@@ -470,7 +462,7 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 				</style>
 			</head>
 			<body>
-				${ html }
+				${html}
 			</body>
 			</html>
 		`;
@@ -524,10 +516,17 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 
 				{ isValidEmbed && attr.embedPost && embedHtml && (
 					<div className="activitypub-embed-container">
-						{ isRealOembed && isWordPressEmbed( embedHtml ) ? (
-							<WpEmbedPreview html={ embedHtml } onSelectBlock={ focusInput } />
+						{ isRealOembed && isWordPressEmbed(embedHtml) ? (
+							<WpEmbedPreview
+								html={ embedHtml }
+								onSelectBlock={ focusInput}
+							/>
 						) : (
-							<ThirdPartyEmbed html={ embedHtml } onClick={ focusInput } isSelected={ isSelected } />
+							<ThirdPartyEmbed
+								html={ embedHtml }
+								onClick={ focusInput }
+								isSelected={ isSelected }
+							/>
 						) }
 					</div>
 				) }
@@ -539,7 +538,12 @@ export default function Edit( { attributes: attr, setAttributes, clientId, isSel
 						onClick={ focusInput }
 						style={ { cursor: 'pointer' } }
 					>
-						<a href={ url } className="u-in-reply-to" target="_blank" rel="noreferrer">
+						<a
+							href={ url }
+							className="u-in-reply-to"
+							target="_blank"
+							rel="noreferrer"
+						>
 							{ '↬' + url.replace( /^https?:\/\//, '' ) }
 						</a>
 					</div>

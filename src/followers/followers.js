@@ -14,7 +14,7 @@ function getPath( userId, per_page, order, page ) {
 		per_page,
 		order,
 		page,
-		context: 'full',
+		context: 'full'
 	};
 	return addQueryArgs( path, args );
 }
@@ -33,7 +33,7 @@ export function Followers( {
 	setPage: passedSetPage,
 	className = '',
 	followLinks = true,
-	followerData = false,
+	followerData = false
 } ) {
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
 	const [ followers, setFollowers ] = useState( [] );
@@ -61,7 +61,7 @@ export function Followers( {
 		setFollowers( followers );
 		setTotal( total );
 		setPages( Math.ceil( total / per_page ) );
-	};
+	}
 
 	useEffect( () => {
 		if ( followerData && page === 1 ) {
@@ -74,27 +74,26 @@ export function Followers( {
 			.catch( () => {} );
 	}, [ userId, per_page, order, page, followerData ] );
 	return (
-		<div className={ 'activitypub-follower-block ' + className }>
+		<div className={ "activitypub-follower-block " + className }>
 			<h3>{ title }</h3>
-			<ul>
-				{ followers &&
-					followers.map( ( follower ) => (
-						<li key={ follower.url }>
-							<Follower { ...follower } followLinks={ followLinks } />
-						</li>
-					) ) }
-			</ul>
-			{ pages > 1 && (
-				<Pagination
-					page={ page }
-					perPage={ per_page }
-					total={ total }
-					pageClick={ setPage }
-					nextLabel={ nextLabel }
-					prevLabel={ prevLabel }
-					compact={ className === 'is-style-compact' }
-				/>
-			) }
+				<ul>
+				{ followers && followers.map( ( follower ) => (
+					<li key={ follower.url }>
+						<Follower { ...follower } followLinks={ followLinks } />
+					</li>
+				) ) }
+				</ul>
+				{ pages > 1 && (
+					<Pagination
+						page={ page }
+						perPage={ per_page }
+						total={ total }
+						pageClick={ setPage }
+						nextLabel={ nextLabel }
+						prevLabel={ prevLabel }
+						compact={ className === 'is-style-compact' }
+					/>
+				) }
 		</div>
 	);
 }
@@ -103,16 +102,22 @@ function Follower( { name, icon, url, preferredUsername, followLinks = true } ) 
 	const handle = `@${ preferredUsername }`;
 	const extraProps = {};
 	if ( ! followLinks ) {
-		extraProps.onClick = ( event ) => event.preventDefault();
+		extraProps.onClick = event => event.preventDefault();
 	}
 	return (
 		<ExternalLink className="activitypub-link" href={ url } title={ handle } { ...extraProps }>
-			<img width="40" height="40" src={ icon.url } className="avatar activitypub-avatar" alt={ name } />
+			<img
+				width="40"
+				height="40"
+				src={ icon.url }
+				className="avatar activitypub-avatar"
+				alt={ name }
+			/>
 			<span className="activitypub-actor">
 				<strong className="activitypub-name">{ name }</strong>
 				<span className="sep">/</span>
 				<span className="activitypub-handle">{ handle }</span>
 			</span>
 		</ExternalLink>
-	);
+	)
 }

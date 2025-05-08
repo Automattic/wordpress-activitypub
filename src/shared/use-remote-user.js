@@ -35,6 +35,7 @@ export function useRemoteUser() {
 		template: remoteUser?.template || false,
 		profileURL: remoteUser?.profileURL || false,
 		setRemoteUser,
-		deleteRemoteUser,
+		deleteRemoteUser
 	};
 }
+

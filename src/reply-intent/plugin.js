@@ -19,10 +19,7 @@ const HandleReplyIntent = () => {
 			// prepend an activitypub/reply block to the editor
 			// it appears to need a slight delay
 			setTimeout( () => {
-				const block = createBlock( 'activitypub/reply', {
-					url: inReplyTo,
-					embedPost: true,
-				} );
+				const block = createBlock( 'activitypub/reply', { url: inReplyTo, embedPost: true } );
 				const store = dispatch( blockEditorStore );
 				store.insertBlock( block );
 				// add a new block after it so the user can just type
