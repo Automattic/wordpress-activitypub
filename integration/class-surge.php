@@ -35,13 +35,8 @@ class Surge {
 	 * Initialize the Surge integration.
 	 */
 	public static function init() {
-		if ( \is_plugin_active( 'surge/surge.php' ) && ! \defined( 'WP_CACHE_CONFIG' ) ) {
-			self::add_cache_config();
-		}
-
-		if ( ! \is_plugin_active( 'surge/surge.php' ) && \defined( 'WP_CACHE_CONFIG' ) ) {
-			self::remove_cache_config();
-		}
+		\add_action( 'activate_surge/surge.php', array( self::class, 'add_cache_config' ) );
+		\add_action( 'deactivate_surge/surge.php', array( self::class, 'remove_cache_config' ) );
 	}
 
 	/**
@@ -102,6 +97,8 @@ class Surge {
 	 * @return string|false The config file or false.
 	 */
 	public static function get_config_file() {
+		$config_file = false;
+
 		// phpcs:ignore
 		if ( @file_exists( ABSPATH . 'wp-config.php' ) ) {
 
