@@ -131,11 +131,13 @@ function plugin_init() {
 	 * @see https://wordpress.org/plugins/surge/
 	 */
 	Surge::init();
-
-	\register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'add_cache_config' ) );
-	\register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'remove_cache_config' ) );
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
+
+// Register activation and deactivation hooks for Surge integration.
+\register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'add_cache_config' ) );
+\register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'remove_cache_config' ) );
+
 
 /**
  * Register the Stream Connector for ActivityPub.
