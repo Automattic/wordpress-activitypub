@@ -90,7 +90,7 @@ class Surge {
 		$config = $wp_filesystem->get_contents( $file );
 
 		// Remove the define line.
-		$config = preg_replace( PHP_EOL . self::$cache_config_pattern . PHP_EOL, '', $config );
+		$config = \preg_replace( PHP_EOL . self::$cache_config_pattern . PHP_EOL, '', $config );
 
 		$wp_filesystem->put_contents( $file, $config, FS_CHMOD_FILE );
 	}
