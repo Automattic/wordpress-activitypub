@@ -22,7 +22,7 @@ class Mailer {
 
 		\add_action( 'activitypub_inbox_follow', array( self::class, 'new_follower' ), 10, 2 );
 		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
-		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 10, 2 );
+		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 );
 	}
 
 	/**
@@ -267,6 +267,14 @@ class Mailer {
 			// Only accept messages that have the user in the "cc" field.
 			empty( $activity['cc'] ) ||
 			! in_array( Actors::get_by_id( $user_id )->get_id(), (array) $activity['cc'], true )
+		) {
+			return;
+		}
+
+		if (
+			// Do not send a mention notification if the activity is a reply to a local post.
+			is_activity_reply( $activity ) &&
+			Comment::url_to_commentid( $activity['object']['inReplyTo'] )
 		) {
 			return;
 		}
