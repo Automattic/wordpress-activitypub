@@ -272,7 +272,7 @@ class Mailer {
 		}
 
 		if (
-			// Do not send a mention notification if the activity is a reply to a local post.
+			// Do not send a mention notification if the activity is a reply to a local post or comment.
 			is_activity_reply( $activity ) &&
 			object_id_to_comment( $activity['object']['id'] )
 		) {
