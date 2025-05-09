@@ -5,27 +5,27 @@
 
 version: 2
 updates:
-  - package-ecosystem: "composer" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: 'composer' # See documentation for possible values
+    directory: '/' # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: 'daily'
     labels:
-      - "dependencies"
-      - "php"
-      - "Skip Changelog"
-  - package-ecosystem: "github-actions" # See documentation for possible values
-    directory: "/" # Location of package manifests
+      - 'dependencies'
+      - 'php'
+      - 'Skip Changelog'
+  - package-ecosystem: 'github-actions' # See documentation for possible values
+    directory: '/' # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: 'daily'
     labels:
-      - "dependencies"
-      - "github-actions"
-      - "Skip Changelog"
-  - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/" # Location of package manifests
+      - 'dependencies'
+      - 'github-actions'
+      - 'Skip Changelog'
+  - package-ecosystem: 'npm' # See documentation for possible values
+    directory: '/' # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: 'daily'
     labels:
-      - "dependencies"
-      - "javascript"
-      - "Skip Changelog"
+      - 'dependencies'
+      - 'javascript'
+      - 'Skip Changelog'
