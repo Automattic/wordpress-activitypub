@@ -131,12 +131,25 @@ function plugin_init() {
 	 * @see https://wordpress.org/plugins/surge/
 	 */
 	Surge::init();
+
+	/**
+	 * Load the LiteSpeed Cache integration.
+	 *
+	 * Only load code that needs LiteSpeed Cache to run once LiteSpeed Cache is loaded and initialized.
+	 *
+	 * @see https://wordpress.org/plugins/litespeed-cache/
+	 */
+	Litespeed_Cache::init();
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
 
 // Register activation and deactivation hooks for Surge integration.
 \register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'add_cache_config' ) );
 \register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Surge', 'remove_cache_config' ) );
+
+// Register activation and deactivation hooks for Litespeed Cache integration.
+\register_activation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Litespeed_Cache', 'add_htaccess_rules' ) );
+\register_deactivation_hook( ACTIVITYPUB_PLUGIN_FILE, array( __NAMESPACE__ . '\Litespeed_Cache', 'remove_htaccess_rules' ) );
 
 
 /**
