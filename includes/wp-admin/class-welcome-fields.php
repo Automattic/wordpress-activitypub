@@ -20,16 +20,8 @@ class Welcome_Fields {
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_welcome_fields' ) );
 		\add_action( 'admin_print_styles-settings_page_activitypub', array( self::class, 'enqueue_styles' ) );
 
-		\add_action( 'add_option_activitypub_checklist_health_check_issues', array( self::class, 'resolve_checklist' ) );
-		\add_action( 'update_option_activitypub_checklist_health_check_issues', array( self::class, 'resolve_checklist' ) );
-		\add_action( 'add_option_activitypub_checklist_fediverse_intro_visited', array( self::class, 'resolve_checklist' ) );
-		\add_action( 'update_option_activitypub_checklist_fediverse_intro_visited', array( self::class, 'resolve_checklist' ) );
-		\add_action( 'add_option_activitypub_checklist_settings_visited', array( self::class, 'resolve_checklist' ) );
-		\add_action( 'update_option_activitypub_checklist_settings_visited', array( self::class, 'resolve_checklist' ) );
-		\add_action( 'add_option_activitypub_checklist_profile_setup_visited', array( self::class, 'resolve_checklist' ) );
-		\add_action( 'update_option_activitypub_checklist_profile_setup_visited', array( self::class, 'resolve_checklist' ) );
-		\add_action( 'add_option_activitypub_checklist_blocks_visited', array( self::class, 'resolve_checklist' ) );
-		\add_action( 'update_option_activitypub_checklist_blocks_visited', array( self::class, 'resolve_checklist' ) );
+		\add_action( 'added_option', array( self::class, 'resolve_checklist' ) );
+		\add_action( 'updated_option', array( self::class, 'resolve_checklist' ) );
 	}
 
 	/**
@@ -414,8 +406,14 @@ class Welcome_Fields {
 
 	/**
 	 * Resolve the welcome checklist.
+	 *
+	 * @param string $option The option name.
 	 */
-	public static function resolve_checklist() {
+	public static function resolve_checklist( $option ) {
+		if ( ! \str_starts_with( $option, 'activitypub_checklist_' ) ) {
+			return;
+		}
+
 		if ( self::get_total_steps_count() === self::get_completed_steps_count() ) {
 			\update_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', 0 );
 		}
