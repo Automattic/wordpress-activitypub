@@ -255,7 +255,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( 10, \has_filter( 'comment_notification_text', array( Mailer::class, 'comment_notification_text' ) ) );
 		$this->assertEquals( 10, \has_action( 'activitypub_inbox_follow', array( Mailer::class, 'new_follower' ) ) );
 		$this->assertEquals( 10, \has_action( 'activitypub_inbox_create', array( Mailer::class, 'direct_message' ) ) );
-		$this->assertEquals( 10, \has_action( 'activitypub_inbox_create', array( Mailer::class, 'mention' ) ) );
+		$this->assertEquals( 20, \has_action( 'activitypub_inbox_create', array( Mailer::class, 'mention' ) ) );
 	}
 
 	/**
