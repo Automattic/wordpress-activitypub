@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Mention emails will no longer be sent for reply Activities.
