@@ -274,7 +274,7 @@ class Mailer {
 		if (
 			// Do not send a mention notification if the activity is a reply to a local post.
 			is_activity_reply( $activity ) &&
-			Comment::url_to_commentid( $activity['object']['inReplyTo'] )
+			object_id_to_comment( $activity['object']['id'] )
 		) {
 			return;
 		}
