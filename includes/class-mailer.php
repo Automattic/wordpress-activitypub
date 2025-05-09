@@ -346,6 +346,7 @@ class Mailer {
 		if ( empty( $actor['url'] ) ) {
 			$actor['url'] = $actor['id'];
 		}
+		$actor['url'] = object_to_uri( $actor['url'] );
 
 		if ( empty( $actor['webfinger'] ) ) {
 			$actor['webfinger'] = '@' . ( $actor['preferredUsername'] ?? $actor['name'] ) . '@' . \wp_parse_url( $actor['url'], PHP_URL_HOST );
