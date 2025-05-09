@@ -4,8 +4,8 @@
  *
  * @package Activitypub
  */
-?>
 
+?>
 <h2><?php esc_html_e( 'Managing ActivityPub Capabilities', 'activitypub' ); ?></h2>
 
 <p><?php esc_html_e( 'Use the bulk actions on this page to control which users have access to ActivityPub features:', 'activitypub' ); ?></p>
@@ -33,4 +33,3 @@
 <p><?php esc_html_e( 'By default, users who can publish posts are automatically granted this capability. You can override this using the bulk edit options above.', 'activitypub' ); ?></p>
 
 <p><em><?php esc_html_e( 'Note: If "Blog profile only" mode is enabled (where the site acts as a single ActivityPub profile), individual user capabilities do not affect ActivityPub functionality. All content is published under the blog\'s profile.', 'activitypub' ); ?></em></p>
-
