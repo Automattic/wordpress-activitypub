@@ -141,6 +141,10 @@ class Activitypub {
 		self::add_headers();
 
 		if ( ! is_activitypub_request() || ! should_negotiate_content() ) {
+			if ( \get_query_var( 'p' ) && Outbox::POST_TYPE === \get_post_type( \get_query_var( 'p' ) ) ) {
+				\set_query_var( 'is_404', true );
+				\status_header( 406 );
+			}
 			return $template;
 		}
 
