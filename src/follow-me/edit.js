@@ -60,6 +60,7 @@ function fetchProfile( userId ) {
 function EditorProfile( { profile, userId, buttonText, buttonOnly, buttonSize } ) {
 	const { webfinger, avatar, name } = profile;
 	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
+	const buttonClass = buttonSize === 'small' ? 'is-small' : buttonSize === 'compact' ? 'is-compact' : '';
 
 	if ( buttonOnly ) {
 		return (
@@ -80,7 +81,7 @@ function EditorProfile( { profile, userId, buttonText, buttonOnly, buttonSize } 
 					{ webfingerWithAt }
 				</div>
 			</div>
-			<button className="activitypub-profile__follow components-button is-primary" size={ buttonSize }>
+			<button className={ `activitypub-profile__follow components-button is-primary ${ buttonClass }` }>
 				{ buttonText }
 			</button>
 		</div>

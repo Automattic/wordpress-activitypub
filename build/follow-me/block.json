@@ -63,8 +63,7 @@
   "editorScript": "file:./index.js",
   "viewScriptModule": "file:./view.js",
   "viewScriptDependencies": [
-    "wp-api-fetch",
-    "wp-i18n"
+    "wp-api-fetch"
   ],
   "style": "file:./style-view.css",
   "render": "file:./render.php"

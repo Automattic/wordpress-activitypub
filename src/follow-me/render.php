@@ -25,6 +25,13 @@ $background_color = $style['color']['background'] ?? '';
 // Get button style from block attributes.
 $button_style = $attributes['style'] ?? array();
 
+$button_class = '';
+if ( 'small' === $button_size ) {
+	$button_class = 'is-small';
+} elseif ( 'compact' === $button_size ) {
+	$button_class = 'is-compact';
+}
+
 // Set up the Interactivity API state.
 wp_interactivity_state(
 	'activitypub/follow-me',
@@ -106,7 +113,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		<?php endif; ?>
 
 		<button
-			class="activitypub-profile__follow components-button is-primary"
+			class="activitypub-profile__follow components-button is-primary <?php echo esc_attr( $button_class ); ?>"
 			data-wp-on--click="actions.toggleModal"
 			aria-haspopup="dialog"
 			data-wp-bind--aria-expanded="state.isModalOpen"
