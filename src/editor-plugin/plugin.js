@@ -20,6 +20,11 @@ const notAllowed = (
 	</SVG>
 );
 
+/**
+ * Editor plugin for ActivityPub settings in the block editor.
+ *
+ * @returns {JSX.Element|null} The settings panel for ActivityPub or null for sync blocks.
+ */
 const EditorPlugin = () => {
 	const postType = useSelect( ( select ) => select( 'core/editor' ).getCurrentPostType(), [] );
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
@@ -32,6 +37,14 @@ const EditorPlugin = () => {
 		alignItems: 'center',
 	};
 
+	/**
+	 * Enhances a label with an icon and tooltip.
+	 *
+	 * @param {JSX.Element} icon    The icon to display.
+	 * @param {string}      text    The label text.
+	 * @param {string}      tooltip The tooltip text.
+	 * @returns {JSX.Element} The enhanced label component.
+	 */
 	const enhancedLabel = ( icon, text, tooltip ) => (
 		<Tooltip text={ tooltip }>
 			<Text style={ labelStyling }>
@@ -122,6 +135,9 @@ const EditorPlugin = () => {
 	);
 };
 
+/**
+ * Opens the Fediverse preview for the current post in a new tab.
+ */
 function onActivityPubPreview() {
 	const previewLink = select( 'core/editor' ).getEditedPostPreviewLink();
 	const fediversePreviewLink = addQueryArgs( previewLink, { activitypub: 'true' } );
@@ -129,6 +145,11 @@ function onActivityPubPreview() {
 	window.open( fediversePreviewLink, '_blank' );
 }
 
+/**
+ * Renders the preview menu item for Fediverse preview.
+ *
+ * @returns {JSX.Element} The preview menu item component.
+ */
 const EditorPreview = () => {
 	// check if post was saved
 	const post_status = useSelect( ( select ) => select( 'core/editor' ).getCurrentPost().status );
