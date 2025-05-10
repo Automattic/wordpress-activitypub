@@ -1,12 +1,12 @@
-import apiFetch from '@wordpress/api-fetch';
-import { InspectorControls, useBlockProps, useInnerBlocksProps } from '@wordpress/block-editor';
+import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
-import { SelectControl, PanelBody, ToggleControl } from '@wordpress/components';
-import { useEffect, useState } from '@wordpress/element';
+import { SelectControl, PanelBody, ToggleControl, TextControl } from '@wordpress/components';
 import { useUserOptions } from '../shared/use-user-options';
+import { useEffect, useState } from '@wordpress/element';
 import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
+import apiFetch from '@wordpress/api-fetch';
 import { useOptions } from '../shared/use-options';
 
 /**
@@ -31,15 +31,8 @@ function getNormalizedProfile( profile ) {
 	if ( ! profile ) {
 		return DEFAULT_PROFILE_DATA;
 	}
-
 	const data = { ...DEFAULT_PROFILE_DATA, ...profile };
 	data.avatar = data?.icon?.url;
-
-	// Ensure webfinger always has the @ prefix.
-	if ( data.webfinger && ! data.webfinger.startsWith( '@' ) ) {
-		data.webfinger = '@' + data.webfinger;
-	}
-
 	return data;
 }
 
@@ -64,13 +57,17 @@ function fetchProfile( userId ) {
  * @param {Object} props Component props.
  * @return {JSX.Element} Profile component.
  */
-function EditorProfile( { profile, buttonOnly, innerBlocksProps } ) {
+function EditorProfile( { profile, userId, buttonText, buttonOnly, buttonSize } ) {
 	const { webfinger, avatar, name } = profile;
+	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
+	const buttonClass = buttonSize === 'small' ? 'is-small' : buttonSize === 'compact' ? 'is-compact' : '';
 
 	if ( buttonOnly ) {
 		return (
 			<div className="activitypub-profile">
-				<div { ...innerBlocksProps } />
+				<button className="activitypub-profile__follow components-button is-primary" size={ buttonSize }>
+					{ buttonText }
+				</button>
 			</div>
 		);
 	}
@@ -80,11 +77,13 @@ function EditorProfile( { profile, buttonOnly, innerBlocksProps } ) {
 			<img className="activitypub-profile__avatar" src={ avatar } alt={ name } />
 			<div className="activitypub-profile__content">
 				<div className="activitypub-profile__name">{ name }</div>
-				<div className="activitypub-profile__handle" title={ webfinger }>
-					{ webfinger }
+				<div className="activitypub-profile__handle" title={ webfingerWithAt }>
+					{ webfingerWithAt }
 				</div>
 			</div>
-			<div { ...innerBlocksProps } />
+			<button className={ `activitypub-profile__follow components-button is-primary ${ buttonClass }` }>
+				{ buttonText }
+			</button>
 		</div>
 	);
 }
@@ -105,22 +104,10 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 		className: 'activitypub-follow-me-block-wrapper',
 	} );
 	const usersOptions = useUserOptions( { withInherit: true } );
-	const { selectedUser, buttonOnly } = attributes;
+	const { selectedUser, buttonOnly, buttonText, buttonSize } = attributes;
 	const isInheritMode = selectedUser === 'inherit';
-	const [ profile, setProfile ] = useState( getNormalizedProfile( DEFAULT_PROFILE_DATA ) );
+	const [ profile, setProfile ] = useState( getNormalizedProfile() );
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
-
-	const TEMPLATE = [ [ 'core/button', { text: __( 'Follow', 'activitypub' ), tagName: 'button' } ] ];
-
-	const innerBlocksProps = useInnerBlocksProps(
-		{},
-		{
-			allowedBlocks: [ 'core/button' ],
-			template: TEMPLATE,
-			templateLock: false,
-			renderAppender: false,
-		}
-	);
 
 	const authorId = useSelect(
 		( select ) => {
@@ -133,7 +120,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 	);
 
 	useEffect( () => {
-		// Fetch profile data when userId changes.
+		// Fetch profile data when userId changes
 		if ( isInheritMode && ! authorId ) {
 			return;
 		}
@@ -145,11 +132,11 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 	}, [ userId, authorId, isInheritMode ] );
 
 	useEffect( () => {
-		// If there are no users yet, do nothing.
+		// if there are no users yet, do nothing
 		if ( ! usersOptions.length ) {
 			return;
 		}
-		// Ensure that the selected user is in the list of options, if not, select the first available user.
+		// ensure that the selected user is in the list of options, if not, select the first available user
 		if ( ! usersOptions.find( ( { value } ) => value === selectedUser ) ) {
 			setAttributes( { selectedUser: usersOptions[ 0 ].value } );
 		}
@@ -173,6 +160,22 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 						onChange={ ( value ) => setAttributes( { buttonOnly: value } ) }
 						help={ __( 'Only show the follow button without profile information', 'activitypub' ) }
 					/>
+					<TextControl
+						label={ __( 'Button Text', 'activitypub' ) }
+						value={ buttonText }
+						onChange={ ( value ) => setAttributes( { buttonText: value } ) }
+					/>
+					<SelectControl
+						label={ __( 'Button Size', 'activitypub' ) }
+						value={ buttonSize }
+						options={ [
+							{ label: __( 'Default', 'activitypub' ), value: 'default' },
+							{ label: __( 'Compact', 'activitypub' ), value: 'compact' },
+							{ label: __( 'Small', 'activitypub' ), value: 'small' },
+						] }
+						onChange={ ( value ) => setAttributes( { buttonSize: value } ) }
+						help={ __( 'Choose the size of the follow button', 'activitypub' ) }
+					/>
 				</PanelBody>
 			</InspectorControls>
 
@@ -182,8 +185,9 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 				<EditorProfile
 					profile={ profile }
 					userId={ isInheritMode ? authorId : userId }
+					buttonText={ buttonText }
 					buttonOnly={ buttonOnly }
-					innerBlocksProps={ innerBlocksProps }
+					buttonSize={ buttonSize }
 				/>
 			) }
 		</div>
