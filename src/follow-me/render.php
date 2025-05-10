@@ -36,15 +36,6 @@ if ( 'small' === $button_size ) {
 wp_interactivity_state(
 	'activitypub/follow-me',
 	array(
-		'profile'   => array(
-			'loading' => true,
-			'data'    => array(
-				'avatar'    => 'https://secure.gravatar.com/avatar/default?s=120',
-				'webfinger' => '@well@hello.dolly',
-				'name'      => __( 'Hello Dolly Fan Account', 'activitypub' ),
-				'url'       => '#',
-			),
-		),
 		'namespace' => ACTIVITYPUB_REST_NAMESPACE,
 		'i18n'      => array(
 			'copied'              => __( 'Copied!', 'activitypub' ),
@@ -83,6 +74,15 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		'buttonSize'      => $button_size,
 		'buttonStyle'     => $button_style,
 		'backgroundColor' => $background_color,
+		'profile'         => array(
+			'loading' => true,
+			'data'    => array(
+				'avatar'    => 'https://secure.gravatar.com/avatar/default?s=120',
+				'webfinger' => '@well@hello.dolly',
+				'name'      => __( 'Hello Dolly Fan Account', 'activitypub' ),
+				'url'       => '#',
+			),
+		),
 	)
 );
 
@@ -95,19 +95,19 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		<?php if ( ! $button_only ) : ?>
 			<img
 				class="activitypub-profile__avatar"
-				data-wp-bind--src="state.profile.data.avatar"
-				data-wp-bind--alt="state.profile.data.name"
+				data-wp-bind--src="context.profile.data.avatar"
+				data-wp-bind--alt="context.profile.data.name"
 				alt=""
 			/>
 			<div class="activitypub-profile__content">
 				<div
 					class="activitypub-profile__name"
-					data-wp-text="state.profile.data.name"
+					data-wp-text="context.profile.data.name"
 				></div>
 				<div
 					class="activitypub-profile__handle"
-					data-wp-text="state.profile.data.webfinger"
-					data-wp-bind--title="state.profile.data.webfinger"
+					data-wp-text="context.profile.data.webfinger"
+					data-wp-bind--title="context.profile.data.webfinger"
 				></div>
 			</div>
 		<?php endif; ?>
@@ -116,10 +116,9 @@ $wrapper_context = wp_interactivity_data_wp_context(
 			class="activitypub-profile__follow components-button is-primary <?php echo esc_attr( $button_class ); ?>"
 			data-wp-on--click="actions.toggleModal"
 			aria-haspopup="dialog"
-			data-wp-bind--aria-expanded="state.isModalOpen"
+			data-wp-bind--aria-expanded="context.isModalOpen"
 			aria-label="<?php echo esc_attr__( 'Follow me on the Fediverse', 'activitypub' ); ?>"
-			data-wp-bind--size="state.buttonSize"
-			data-wp-text="state.buttonText"
+			data-wp-text="context.buttonText"
 		></button>
 	</div>
 
@@ -134,7 +133,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		<div class="activitypub-modal__frame">
 			<div class="activitypub-modal__header">
 				<h2 id="modal-heading" class="activitypub-modal__title">
-					<?php echo esc_html__( 'Follow', 'activitypub' ); ?> <span data-wp-text="state.profile.data.name"></span>
+					<?php echo esc_html__( 'Follow', 'activitypub' ); ?> <span data-wp-text="contex.profile.data.name"></span>
 				</h2>
 				<button
 					type="button"
@@ -157,7 +156,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 						<input
 							type="text"
 							id="profile-handle"
-							data-wp-bind--value="state.profile.data.webfinger"
+							data-wp-bind--value="context.profile.data.webfinger"
 							readonly
 						/>
 						<button
@@ -173,12 +172,12 @@ $wrapper_context = wp_interactivity_data_wp_context(
 					<h4><?php echo esc_html__( 'Your Profile', 'activitypub' ); ?></h4>
 					<div class="activitypub-dialog__description">
 						<?php echo esc_html__( 'Or, if you know your own profile, we can start things that way!', 'activitypub' ); ?>
-						(eg <code>@yourusername@example.com</code>)
 					</div>
 					<div class="activitypub-dialog__button-group">
 						<input
 							type="text"
 							id="remote-profile"
+							placeholder="<?php echo esc_attr__( '@username@example.com', 'activitypub' ); ?>"
 							data-wp-bind--value="context.remoteProfile"
 							data-wp-on--input="actions.updateRemoteProfile"
 							data-wp-on--keydown="actions.handleKeyDown"
