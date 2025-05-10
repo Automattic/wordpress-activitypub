@@ -129,7 +129,9 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 			context.isError = false;
 
 			// Construct the API path.
-			const path = `/${ namespace }/actors/${ context.userId }/remote-follow?resource=${ encodeURIComponent( input ) }`;
+			const path = `/${ namespace }/actors/${ context.userId }/remote-follow?resource=${ encodeURIComponent(
+				input
+			) }`;
 
 			try {
 				// Make the API request.
