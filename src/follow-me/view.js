@@ -1,27 +1,72 @@
 import { store, getContext } from '@wordpress/interactivity';
 import { getBlockStyles, getPopupStyles } from './button-style';
-import { createModalStore } from '../shared/modal';
+import './style.scss';
 
-/** @var {object} wp WordPress global. */
+// Get dependencies from the window.wp object.
 const { apiFetch } = window.wp;
 
-createModalStore( 'activitypub/follow-me' );
+/**
+ * Normalizes profile data.
+ *
+ * @param {Object} profile Profile data.
+ *
+ * @return {Object} Normalized profile data.
+ */
+function normalizeProfile( profile ) {
+	if ( ! profile ) {
+		return getContext().profile.data;
+	}
 
-const { actions, callbacks, state } = store( 'activitypub/follow-me', {
+	const data = { ...getContext().profile.data, ...profile };
+	data.avatar = data?.icon?.url;
+
+	// Ensure webfinger always has the @ prefix.
+	if ( data.webfinger && ! data.webfinger.startsWith( '@' ) ) {
+		data.webfinger = '@' + data.webfinger;
+	}
+
+	return data;
+}
+
+const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 	actions: {
+		/**
+		 * Open the modal.
+		 */
+		openModal() {
+			const context = getContext();
+			context.isModalOpen = true;
+			document.body.classList.add( 'modal-open' );
+		},
+
+		/**
+		 * Close the modal.
+		 */
+		closeModal() {
+			const context = getContext();
+			context.isModalOpen = false;
+			document.body.classList.remove( 'modal-open' );
+		},
+
+		toggleModal() {
+			const context = getContext();
+			context.isModalOpen ? actions.closeModal() : actions.openModal();
+		},
+
 		/**
 		 * Copy the webfinger to clipboard.
 		 */
 		copyToClipboard() {
 			const context = getContext();
+			const webfinger = context.profile.data.webfinger;
 
 			// Use the Clipboard API to copy text.
-			navigator.clipboard.writeText( context.webfinger ).then(
+			navigator.clipboard.writeText( webfinger ).then(
 				() => {
 					// Update button text to show success.
 					context.copyButtonText = state.i18n.copied;
 
-					// Reset button text after 1 second.
+					// Reset button text after 2 seconds.
 					setTimeout( () => {
 						context.copyButtonText = state.i18n.copy;
 					}, 1000 );
@@ -73,7 +118,7 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 				return;
 			}
 
-			if ( ! callbacks.isHandle( input ) ) {
+			if ( ! /^(https?:\/\/|@)/.test( input ) ) {
 				context.isError = true;
 				context.errorMessage = state.i18n.invalidProfileError;
 				return;
@@ -84,9 +129,7 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 			context.isError = false;
 
 			// Construct the API path.
-			const path = `/${ namespace }/actors/${ context.userId }/remote-follow?resource=${ encodeURIComponent(
-				input
-			) }`;
+			const path = `/${ namespace }/actors/${ context.userId }/remote-follow?resource=${ encodeURIComponent( input ) }`;
 
 			try {
 				// Make the API request.
@@ -111,6 +154,43 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 	},
 	callbacks: {
 		/**
+		 * Initialize the block.
+		 *
+		 * This function combines multiple initialization tasks.
+		 */
+		init: function* () {
+			// First initialize button styles.
+			callbacks.initButtonStyles();
+
+			// Then fetch the profile data.
+			yield callbacks.fetchProfile();
+		},
+
+		/**
+		 * Fetch profile data.
+		 *
+		 * @return {Promise} Promise resolving with profile data.
+		 */
+		fetchProfile: function* () {
+			const context = getContext();
+			const { namespace } = state;
+
+			try {
+				const fetchOptions = {
+					headers: { Accept: 'application/activity+json' },
+					path: `/${ namespace }/actors/${ context.userId }`,
+				};
+
+				const profileData = yield apiFetch( fetchOptions );
+				context.profile.data = normalizeProfile( profileData );
+				context.profile.loading = false;
+			} catch ( error ) {
+				console.error( 'Error fetching profile:', error );
+				context.profile.loading = false;
+			}
+		},
+
+		/**
 		 * Initialize button styles.
 		 */
 		initButtonStyles: () => {
@@ -129,42 +209,38 @@ const { actions, callbacks, state } = store( 'activitypub/follow-me', {
 				// Add popup styles.
 				const popupStyleElement = document.createElement( 'style' );
 				popupStyleElement.textContent = getPopupStyles( buttonStyle );
+
 				document.head.appendChild( popupStyleElement );
 			}
 		},
 
 		/**
-		 * Best guess whether a string is a valid ActivityPub handle.
+		 * Close modal when pressing ESC key.
 		 *
-		 * @param {string} string - String to check.
-		 * @returns {boolean} True if string is a valid handle, false otherwise.
+		 * @param {Event} event Keyboard event.
 		 */
-		isHandle( string ) {
-			// Check if the string starts with '@' and contains a valid URL.
-			const parts = string.replace( /^@/, '' ).split( '@' );
-
-			return parts.length === 2 && callbacks.isUrl( `https://${ parts[ 1 ] }` );
-		},
-
-		/**
-		 * Checks if a string is a valid URL.
-		 *
-		 * @param {string} string - String to check.
-		 * @returns {boolean} True if string is a valid URL, false otherwise.
-		 */
-		isUrl( string ) {
-			try {
-				new URL( string );
-				return true;
-			} catch ( _ ) {
-				return false;
+		documentKeydown: ( event ) => {
+			const context = getContext();
+			if ( context.isModalOpen && event.key === 'Escape' ) {
+				actions.closeModal();
 			}
 		},
 
-		onModalClose() {
+		/**
+		 * Close modal when clicking outside.
+		 *
+		 * @param {Event} event Click event.
+		 */
+		documentClick: ( event ) => {
 			const context = getContext();
-
-			context.isError = false;
+			// Update selector to match the new modal structure.
+			if (
+				context.isModalOpen &&
+				! event.target.closest( '.activitypub-modal__frame' ) &&
+				! event.target.closest( '.activitypub-profile__follow' )
+			) {
+				actions.closeModal();
+			}
 		},
 	},
 } );
