@@ -11,22 +11,15 @@ import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
 /**
  * Edit component.
  *
- * @param {Object} props Component props.
- * @param {Object} props.attributes Block attributes.
- * @param {Function} props.setAttributes Set block attributes.
- * @param {Object} props.context Block context.
- * @param {string} props.context.postType Post type.
- * @param {number} props.context.postId Post ID.
+ * @param {Object}   props                  Component props.
+ * @param {Object}   props.attributes       Block attributes.
+ * @param {Function} props.setAttributes    Set block attributes.
+ * @param {Object}   props.context          Block context.
+ * @param {string}   props.context.postType Post type.
+ * @param {number}   props.context.postId   Post ID.
  * @return {JSX.Element} Edit component.
  */
-export default function Edit( {
-	attributes,
-	setAttributes,
-	context: {
-		postType,
-		postId,
-	},
-} ) {
+export default function Edit( { attributes, setAttributes, context: { postType, postId } } ) {
 	const blockProps = useBlockProps( {
 		className: 'activitypub-follow-me-block-wrapper',
 	} );
@@ -37,11 +30,7 @@ export default function Edit( {
 	const authorId = useSelect(
 		( select ) => {
 			const { getEditedEntityRecord } = select( coreStore );
-			const _authorId = getEditedEntityRecord(
-				'postType',
-				postType,
-				postId
-			)?.author;
+			const _authorId = getEditedEntityRecord( 'postType', postType, postId )?.author;
 
 			return _authorId ?? null;
 		},
@@ -95,15 +84,15 @@ export default function Edit( {
 					/>
 				</PanelBody>
 			</InspectorControls>
-			{ isInheritMode ?
+			{ isInheritMode ? (
 				authorId ? (
 					<FollowMe { ...attributes } id={ blockProps.id } selectedUser={ authorId } />
 				) : (
 					<InheritModeBlockFallback name={ __( 'Follow Me', 'activitypub' ) } />
 				)
-				: (
-					<FollowMe { ...attributes } id={ blockProps.id } />
-				) }
+			) : (
+				<FollowMe { ...attributes } id={ blockProps.id } />
+			) }
 		</div>
 	);
 }

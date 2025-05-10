@@ -52,23 +52,16 @@ function fetchProfile( userId ) {
 /**
  * Profile component.
  *
- * @param {Object} props Component props.
- * @param {Object} props.profile Profile data.
- * @param {string} props.popupStyles Popup styles.
- * @param {number} props.userId User ID.
- * @param {string} props.buttonText Button text.
- * @param {boolean} props.buttonOnly Whether to render only the button.
- * @param {string} props.buttonSize Button size.
+ * @param {Object}  props             Component props.
+ * @param {Object}  props.profile     Profile data.
+ * @param {string}  props.popupStyles Popup styles.
+ * @param {number}  props.userId      User ID.
+ * @param {string}  props.buttonText  Button text.
+ * @param {boolean} props.buttonOnly  Whether to render only the button.
+ * @param {string}  props.buttonSize  Button size.
  * @return {JSX.Element} Profile component.
  */
-function Profile( {
-	profile,
-	popupStyles,
-	userId,
-	buttonText,
-	buttonOnly,
-	buttonSize,
-} ) {
+function Profile( { profile, popupStyles, userId, buttonText, buttonOnly, buttonSize } ) {
 	const { webfinger, avatar, name } = profile;
 	// check if webfinger starts with @ and add it if it doesn't
 	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
@@ -92,7 +85,9 @@ function Profile( {
 			<img className="activitypub-profile__avatar" src={ avatar } alt={ name } />
 			<div className="activitypub-profile__content">
 				<div className="activitypub-profile__name">{ name }</div>
-				<div className="activitypub-profile__handle" title={ webfingerWithAt }>{ webfingerWithAt }</div>
+				<div className="activitypub-profile__handle" title={ webfingerWithAt }>
+					{ webfingerWithAt }
+				</div>
 			</div>
 			<Follow
 				profile={ profile }
@@ -108,21 +103,15 @@ function Profile( {
 /**
  * Follow component.
  *
- * @param {Object} props Component props.
- * @param {Object} props.profile Profile data.
+ * @param {Object} props             Component props.
+ * @param {Object} props.profile     Profile data.
  * @param {string} props.popupStyles Popup styles.
- * @param {number} props.userId User ID.
- * @param {string} props.buttonText Button text.
- * @param {string} props.buttonSize Button size.
+ * @param {number} props.userId      User ID.
+ * @param {string} props.buttonText  Button text.
+ * @param {string} props.buttonSize  Button size.
  * @return {JSX.Element} Follow component.
  */
-function Follow( {
-	profile,
-	popupStyles,
-	userId,
-	buttonText,
-	buttonSize,
-} ) {
+function Follow( { profile, popupStyles, userId, buttonText, buttonSize } ) {
 	const [ isOpen, setIsOpen ] = useState( false );
 	const title = sprintf(
 		/* translators: %s: profile name */
@@ -161,9 +150,9 @@ function Follow( {
 /**
  * Dialog follow component.
  *
- * @param {Object} props Component props.
+ * @param {Object} props         Component props.
  * @param {Object} props.profile Profile data.
- * @param {number} props.userId User ID.
+ * @param {number} props.userId  User ID.
  * @return {JSX.Element} Dialog follow component.
  */
 function DialogFollow( { profile, userId } ) {
@@ -171,7 +160,10 @@ function DialogFollow( { profile, userId } ) {
 	const { webfinger } = profile;
 	const actionText = __( 'Follow', 'activitypub' );
 	const resourceUrl = `/${ namespace }/actors/${ userId }/remote-follow?resource=`;
-	const copyDescription = __( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' );
+	const copyDescription = __(
+		'Copy and paste my profile into the search field of your favorite fediverse app or server.',
+		'activitypub'
+	);
 	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
 
 	return (
@@ -187,16 +179,16 @@ function DialogFollow( { profile, userId } ) {
 /**
  * Follow me component.
  *
- * @param {Object} props Component props.
- * @param {number|string} props.selectedUser Selected user ID or 'site'.
- * @param {Object} props.style Style object.
- * @param {string} props.backgroundColor Background color.
- * @param {string} props.id Component ID.
- * @param {boolean} props.useId Whether to use the ID.
- * @param {Object} props.profileData Profile data.
- * @param {boolean} props.buttonOnly Whether to render only the button.
- * @param {string} props.buttonText Button text.
- * @param {string} props.buttonSize Button size.
+ * @param {Object}        props                 Component props.
+ * @param {number|string} props.selectedUser    Selected user ID or 'site'.
+ * @param {Object}        props.style           Style object.
+ * @param {string}        props.backgroundColor Background color.
+ * @param {string}        props.id              Component ID.
+ * @param {boolean}       props.useId           Whether to use the ID.
+ * @param {Object}        props.profileData     Profile data.
+ * @param {boolean}       props.buttonOnly      Whether to render only the button.
+ * @param {string}        props.buttonText      Button text.
+ * @param {string}        props.buttonSize      Button size.
  * @return {JSX.Element} Follow me component.
  */
 export default function FollowMe( {
