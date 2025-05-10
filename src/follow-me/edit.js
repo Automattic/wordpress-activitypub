@@ -1,12 +1,12 @@
+import apiFetch from '@wordpress/api-fetch';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import { SelectControl, PanelBody, ToggleControl, TextControl } from '@wordpress/components';
-import { useUserOptions } from '../shared/use-user-options';
 import { useEffect, useState } from '@wordpress/element';
+import { useUserOptions } from '../shared/use-user-options';
 import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
-import apiFetch from '@wordpress/api-fetch';
 import { useOptions } from '../shared/use-options';
 
 /**
@@ -31,8 +31,15 @@ function getNormalizedProfile( profile ) {
 	if ( ! profile ) {
 		return DEFAULT_PROFILE_DATA;
 	}
+
 	const data = { ...DEFAULT_PROFILE_DATA, ...profile };
 	data.avatar = data?.icon?.url;
+
+	// Ensure webfinger always has the @ prefix.
+	if ( data.webfinger && ! data.webfinger.startsWith( '@' ) ) {
+		data.webfinger = '@' + data.webfinger;
+	}
+
 	return data;
 }
 
@@ -59,7 +66,6 @@ function fetchProfile( userId ) {
  */
 function EditorProfile( { profile, userId, buttonText, buttonOnly, buttonSize } ) {
 	const { webfinger, avatar, name } = profile;
-	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
 	const buttonClass = buttonSize === 'small' ? 'is-small' : buttonSize === 'compact' ? 'is-compact' : '';
 
 	if ( buttonOnly ) {
@@ -77,8 +83,8 @@ function EditorProfile( { profile, userId, buttonText, buttonOnly, buttonSize } 
 			<img className="activitypub-profile__avatar" src={ avatar } alt={ name } />
 			<div className="activitypub-profile__content">
 				<div className="activitypub-profile__name">{ name }</div>
-				<div className="activitypub-profile__handle" title={ webfingerWithAt }>
-					{ webfingerWithAt }
+				<div className="activitypub-profile__handle" title={ webfinger }>
+					{ webfinger }
 				</div>
 			</div>
 			<button className={ `activitypub-profile__follow components-button is-primary ${ buttonClass }` }>
@@ -106,7 +112,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 	const usersOptions = useUserOptions( { withInherit: true } );
 	const { selectedUser, buttonOnly, buttonText, buttonSize } = attributes;
 	const isInheritMode = selectedUser === 'inherit';
-	const [ profile, setProfile ] = useState( getNormalizedProfile() );
+	const [ profile, setProfile ] = useState( getNormalizedProfile( DEFAULT_PROFILE_DATA ) );
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
 
 	const authorId = useSelect(
