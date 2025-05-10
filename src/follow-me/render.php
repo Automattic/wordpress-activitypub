@@ -45,6 +45,13 @@ wp_interactivity_state(
 		'buttonSize'      => $button_size,
 		'buttonStyle'     => $button_style,
 		'backgroundColor' => $background_color,
+		'i18n'            => array(
+			'copied'              => __( 'Copied!', 'activitypub' ),
+			'copy'                => __( 'Copy', 'activitypub' ),
+			'emptyProfileError'   => __( 'Please enter a profile URL or handle.', 'activitypub' ),
+			'invalidProfileError' => __( 'Please enter a valid URL or handle.', 'activitypub' ),
+			'genericError'        => __( 'An error occurred. Please try again.', 'activitypub' ),
+		),
 	)
 );
 
@@ -74,8 +81,8 @@ $wrapper_context = wp_interactivity_data_wp_context(
 
 ?>
 <div
-	<?php echo $wrapper_attributes; ?>
-	<?php echo $wrapper_context; ?>
+	<?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>
+	<?php echo $wrapper_context; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 >
 	<div class="activitypub-profile">
 		<?php if ( ! $button_only ) : ?>
@@ -83,6 +90,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 				class="activitypub-profile__avatar"
 				data-wp-bind--src="state.profile.data.avatar"
 				data-wp-bind--alt="state.profile.data.name"
+				alt=""
 			/>
 			<div class="activitypub-profile__content">
 				<div

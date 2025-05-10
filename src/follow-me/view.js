@@ -3,10 +3,7 @@ import { getBlockStyles, getPopupStyles } from './button-style';
 import './style.scss';
 
 // Get dependencies from the window.wp object.
-const {
-	apiFetch,
-	i18n: { __ },
-} = window.wp;
+const { apiFetch } = window.wp;
 
 /**
  * Normalizes profile data.
@@ -67,11 +64,11 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 			navigator.clipboard.writeText( webfinger ).then(
 				() => {
 					// Update button text to show success.
-					context.copyButtonText = __( 'Copied!', 'activitypub' );
+					context.copyButtonText = state.i18n.copied;
 
 					// Reset button text after 2 seconds.
 					setTimeout( () => {
-						context.copyButtonText = __( 'Copy', 'activitypub' );
+						context.copyButtonText = state.i18n.copy;
 					}, 1000 );
 				},
 				( error ) => {
@@ -117,13 +114,13 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 			// Validate input.
 			if ( ! input ) {
 				context.isError = true;
-				context.errorMessage = __( 'Please enter a profile URL or handle.', 'activitypub' );
+				context.errorMessage = state.i18n.emptyProfileError;
 				return;
 			}
 
 			if ( ! /^(https?:\/\/|@)/.test( input ) ) {
 				context.isError = true;
-				context.errorMessage = __( 'Please enter a valid URL or handle.', 'activitypub' );
+				context.errorMessage = state.i18n.invalidProfileError;
 				return;
 			}
 
@@ -151,7 +148,7 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 				console.error( 'Error submitting profile:', error );
 				context.isLoading = false;
 				context.isError = true;
-				context.errorMessage = error.message || __( 'An error occurred. Please try again.', 'activitypub' );
+				context.errorMessage = error.message || state.i18n.genericError;
 			}
 		},
 	},
