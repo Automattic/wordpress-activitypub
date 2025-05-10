@@ -42,7 +42,7 @@
 
 .activitypub-profile__follow {
 	flex-shrink: 0;
-	
+
 	// Only add left margin to the button when there's profile content
 	&:not(:only-child) {
 		margin-left: 1em;
@@ -69,7 +69,7 @@
 }
 
 .activitypub-modal__frame {
-	max-width: 500px;
+	max-width: 660px;
 	width: 100%;
 	background-color: #fff;
 	border-radius: 4px;
@@ -84,7 +84,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 1em;
+	padding: 1em 1em 1em 1.5em;
 	border-bottom: 1px solid #e2e4e7;
 	flex-shrink: 0;
 }
