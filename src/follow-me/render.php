@@ -36,7 +36,7 @@ if ( 'small' === $button_size ) {
 wp_interactivity_state(
 	'activitypub/follow-me',
 	array(
-		'profile'         => array(
+		'profile'   => array(
 			'loading' => true,
 			'data'    => array(
 				'avatar'    => 'https://secure.gravatar.com/avatar/default?s=120',
@@ -45,14 +45,8 @@ wp_interactivity_state(
 				'url'       => '#',
 			),
 		),
-		'userId'          => $user_id,
-		'namespace'       => ACTIVITYPUB_REST_NAMESPACE,
-		'buttonOnly'      => $button_only,
-		'buttonText'      => $button_text,
-		'buttonSize'      => $button_size,
-		'buttonStyle'     => $button_style,
-		'backgroundColor' => $background_color,
-		'i18n'            => array(
+		'namespace' => ACTIVITYPUB_REST_NAMESPACE,
+		'i18n'      => array(
 			'copied'              => __( 'Copied!', 'activitypub' ),
 			'copy'                => __( 'Copy', 'activitypub' ),
 			'emptyProfileError'   => __( 'Please enter a profile URL or handle.', 'activitypub' ),
@@ -76,13 +70,19 @@ $wrapper_attributes = get_block_wrapper_attributes(
 
 $wrapper_context = wp_interactivity_data_wp_context(
 	array(
-		'blockId'        => $block_id,
-		'isModalOpen'    => false,
-		'remoteProfile'  => '',
-		'isLoading'      => false,
-		'isError'        => false,
-		'errorMessage'   => '',
-		'copyButtonText' => __( 'Copy', 'activitypub' ),
+		'blockId'         => $block_id,
+		'isModalOpen'     => false,
+		'remoteProfile'   => '',
+		'isLoading'       => false,
+		'isError'         => false,
+		'errorMessage'    => '',
+		'copyButtonText'  => __( 'Copy', 'activitypub' ),
+		'userId'          => $user_id,
+		'buttonOnly'      => $button_only,
+		'buttonText'      => $button_text,
+		'buttonSize'      => $button_size,
+		'buttonStyle'     => $button_style,
+		'backgroundColor' => $background_color,
 	)
 );
 

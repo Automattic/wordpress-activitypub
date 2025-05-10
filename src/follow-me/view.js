@@ -14,10 +14,10 @@ const { apiFetch } = window.wp;
  */
 function normalizeProfile( profile ) {
 	if ( ! profile ) {
-		return state.profile.data;
+		return getContext().profile.data;
 	}
 
-	const data = { ...state.profile.data, ...profile };
+	const data = { ...getContext().profile.data, ...profile };
 	data.avatar = data?.icon?.url;
 
 	// Ensure webfinger always has the @ prefix.
@@ -57,8 +57,8 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 		 * Copy the webfinger to clipboard.
 		 */
 		copyToClipboard() {
-			const webfinger = state.profile.data.webfinger;
 			const context = getContext();
+			const webfinger = context.profile.data.webfinger;
 
 			// Use the Clipboard API to copy text.
 			navigator.clipboard.writeText( webfinger ).then(
@@ -108,7 +108,7 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 		 */
 		submitRemoteProfile: function* () {
 			const context = getContext();
-			const { userId, namespace } = state;
+			const { namespace } = state;
 			const input = context.remoteProfile.trim();
 
 			// Validate input.
@@ -129,7 +129,7 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 			context.isError = false;
 
 			// Construct the API path.
-			const path = `/${ namespace }/actors/${ userId }/remote-follow?resource=${ encodeURIComponent( input ) }`;
+			const path = `/${ namespace }/actors/${ context.userId }/remote-follow?resource=${ encodeURIComponent( input ) }`;
 
 			try {
 				// Make the API request.
@@ -172,20 +172,21 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 		 * @return {Promise} Promise resolving with profile data.
 		 */
 		fetchProfile: function* () {
-			const { userId, namespace } = state;
+			const context = getContext();
+			const { namespace } = state;
 
 			try {
 				const fetchOptions = {
 					headers: { Accept: 'application/activity+json' },
-					path: `/${ namespace }/actors/${ userId }`,
+					path: `/${ namespace }/actors/${ context.userId }`,
 				};
 
 				const profileData = yield apiFetch( fetchOptions );
-				state.profile.data = normalizeProfile( profileData );
-				state.profile.loading = false;
+				context.profile.data = normalizeProfile( profileData );
+				context.profile.loading = false;
 			} catch ( error ) {
 				console.error( 'Error fetching profile:', error );
-				state.profile.loading = false;
+				context.profile.loading = false;
 			}
 		},
 
@@ -193,8 +194,7 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 		 * Initialize button styles.
 		 */
 		initButtonStyles: () => {
-			const { buttonStyle, backgroundColor } = state;
-			const { blockId } = getContext();
+			const { buttonStyle, backgroundColor, blockId } = getContext();
 
 			// Add dynamic button styles to the document.
 			if ( blockId && buttonStyle ) {
