@@ -10,6 +10,7 @@
   "icon": "groups",
   "supports": {
     "html": false,
+    "interactivity": true,
     "color": {
       "gradients": true,
       "link": true,
@@ -60,9 +61,11 @@
     "postId"
   ],
   "editorScript": "file:./index.js",
-  "viewScript": "file:./view.js",
-  "style": [
-    "file:./style-view.css",
-    "wp-components"
-  ]
+  "viewScriptModule": "file:./view.js",
+  "viewScriptDependencies": [
+    "wp-api-fetch",
+    "wp-i18n"
+  ],
+  "style": "file:./style-view.css",
+  "render": "file:./render.php"
 }

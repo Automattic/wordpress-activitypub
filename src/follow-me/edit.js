@@ -4,9 +4,88 @@ import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import { SelectControl, PanelBody, ToggleControl, TextControl } from '@wordpress/components';
 import { useUserOptions } from '../shared/use-user-options';
-import FollowMe from './follow-me';
-import { useEffect } from '@wordpress/element';
+import { useEffect, useState } from '@wordpress/element';
 import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
+import apiFetch from '@wordpress/api-fetch';
+import { useOptions } from '../shared/use-options';
+
+/**
+ * Default profile data.
+ *
+ * @type {Object}
+ */
+const DEFAULT_PROFILE_DATA = {
+	avatar: 'https://secure.gravatar.com/avatar/default?s=120',
+	webfinger: '@well@hello.dolly',
+	name: __( 'Hello Dolly Fan Account', 'activitypub' ),
+	url: '#',
+};
+
+/**
+ * Get normalized profile data.
+ *
+ * @param {Object} profile Profile data.
+ * @return {Object} Normalized profile data.
+ */
+function getNormalizedProfile( profile ) {
+	if ( ! profile ) {
+		return DEFAULT_PROFILE_DATA;
+	}
+	const data = { ...DEFAULT_PROFILE_DATA, ...profile };
+	data.avatar = data?.icon?.url;
+	return data;
+}
+
+/**
+ * Fetch profile data.
+ *
+ * @param {number} userId User ID.
+ * @return {Promise} Promise resolving with profile data.
+ */
+function fetchProfile( userId ) {
+	const { namespace } = useOptions();
+	const fetchOptions = {
+		headers: { Accept: 'application/activity+json' },
+		path: `/${ namespace }/actors/${ userId }`,
+	};
+	return apiFetch( fetchOptions );
+}
+
+/**
+ * Profile component for the editor.
+ *
+ * @param {Object} props Component props.
+ * @return {JSX.Element} Profile component.
+ */
+function EditorProfile( { profile, userId, buttonText, buttonOnly, buttonSize } ) {
+	const { webfinger, avatar, name } = profile;
+	const webfingerWithAt = webfinger.startsWith( '@' ) ? webfinger : `@${ webfinger }`;
+
+	if ( buttonOnly ) {
+		return (
+			<div className="activitypub-profile">
+				<button className="activitypub-profile__follow components-button is-primary" size={ buttonSize }>
+					{ buttonText }
+				</button>
+			</div>
+		);
+	}
+
+	return (
+		<div className="activitypub-profile">
+			<img className="activitypub-profile__avatar" src={ avatar } alt={ name } />
+			<div className="activitypub-profile__content">
+				<div className="activitypub-profile__name">{ name }</div>
+				<div className="activitypub-profile__handle" title={ webfingerWithAt }>
+					{ webfingerWithAt }
+				</div>
+			</div>
+			<button className="activitypub-profile__follow components-button is-primary" size={ buttonSize }>
+				{ buttonText }
+			</button>
+		</div>
+	);
+}
 
 /**
  * Edit component.
@@ -19,34 +98,37 @@ import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
  * @param {number} props.context.postId Post ID.
  * @return {JSX.Element} Edit component.
  */
-export default function Edit( {
-	attributes,
-	setAttributes,
-	context: {
-		postType,
-		postId,
-	},
-} ) {
+export default function Edit( { attributes, setAttributes, context: { postType, postId } } ) {
 	const blockProps = useBlockProps( {
 		className: 'activitypub-follow-me-block-wrapper',
 	} );
 	const usersOptions = useUserOptions( { withInherit: true } );
 	const { selectedUser, buttonOnly, buttonText, buttonSize } = attributes;
 	const isInheritMode = selectedUser === 'inherit';
+	const [ profile, setProfile ] = useState( getNormalizedProfile() );
+	const userId = selectedUser === 'site' ? 0 : selectedUser;
 
 	const authorId = useSelect(
 		( select ) => {
 			const { getEditedEntityRecord } = select( coreStore );
-			const _authorId = getEditedEntityRecord(
-				'postType',
-				postType,
-				postId
-			)?.author;
+			const _authorId = getEditedEntityRecord( 'postType', postType, postId )?.author;
 
 			return _authorId ?? null;
 		},
 		[ postType, postId ]
 	);
+
+	useEffect( () => {
+		// Fetch profile data when userId changes
+		if ( isInheritMode && ! authorId ) {
+			return;
+		}
+
+		const effectiveUserId = isInheritMode ? authorId : userId;
+		fetchProfile( effectiveUserId ).then( ( data ) => {
+			setProfile( getNormalizedProfile( data ) );
+		} );
+	}, [ userId, authorId, isInheritMode ] );
 
 	useEffect( () => {
 		// if there are no users yet, do nothing
@@ -95,15 +177,18 @@ export default function Edit( {
 					/>
 				</PanelBody>
 			</InspectorControls>
-			{ isInheritMode ?
-				authorId ? (
-					<FollowMe { ...attributes } id={ blockProps.id } selectedUser={ authorId } />
-				) : (
-					<InheritModeBlockFallback name={ __( 'Follow Me', 'activitypub' ) } />
-				)
-				: (
-					<FollowMe { ...attributes } id={ blockProps.id } />
-				) }
+
+			{ isInheritMode && ! authorId ? (
+				<InheritModeBlockFallback name={ __( 'Follow Me', 'activitypub' ) } />
+			) : (
+				<EditorProfile
+					profile={ profile }
+					userId={ isInheritMode ? authorId : userId }
+					buttonText={ buttonText }
+					buttonOnly={ buttonOnly }
+					buttonSize={ buttonSize }
+				/>
+			) }
 		</div>
 	);
 }

@@ -1,32 +1,49 @@
-function presetVarColorCss( color ) {
-	return `var(--wp--preset--color--${ color })`;
-}
-
+/**
+ * Gets the background color from a style object.
+ *
+ * @param {Object|string} color Color object or string.
+ * @return {string|null} Background color.
+ */
 function getBackgroundColor( color ) {
-	// if color is a string, it's a var like this.
+	// If color is a string, it's a var like this.
 	if ( typeof color === 'string' ) {
-		return presetVarColorCss( color );
+		return `var(--wp--preset--color--${ color })`;
 	}
 
 	return color?.color?.background || null;
 }
 
+/**
+ * Gets the link color from a style object.
+ *
+ * @param {string} text Text color.
+ * @return {string|null} Link color.
+ */
 function getLinkColor( text ) {
 	if ( typeof text !== 'string' ) {
 		return null;
 	}
-	// if it starts with a hash, leave it be
+	// If it starts with a hash, leave it be.
 	if ( text.match( /^#/ ) ) {
-		// we don't handle the alpha channel if present.
+		// We don't handle the alpha channel if present.
 		return text.substring( 0, 7 );
 	}
 	// var:preset|color|luminous-vivid-amber
 	// var(--wp--preset--color--luminous-vivid-amber)
-	// we will receive the top format, we need to output the bottom format
+	// We will receive the top format, we need to output the bottom format.
 	const [ , , color ] = text.split( '|' );
-	return presetVarColorCss( color );
+	return `var(--wp--preset--color--${ color })`;
 }
 
+/**
+ * Generates a CSS selector.
+ *
+ * @param {string} selector CSS selector.
+ * @param {string} prop CSS property.
+ * @param {string|null} value CSS value.
+ * @param {string} pseudo Pseudo-selector.
+ * @return {string} CSS selector.
+ */
 function generateSelector( selector, prop, value = null, pseudo = '' ) {
 	if ( ! value ) {
 		return '';
@@ -34,42 +51,59 @@ function generateSelector( selector, prop, value = null, pseudo = '' ) {
 	return `${ selector }${ pseudo } { ${ prop }: ${ value }; }\n`;
 }
 
+/**
+ * Gets styles for a button.
+ *
+ * @param {string} selector CSS selector.
+ * @param {string} button Button color.
+ * @param {string} text Text color.
+ * @param {string} hover Hover color.
+ * @return {string} CSS styles.
+ */
 function getStyles( selector, button, text, hover ) {
-	return generateSelector( selector, 'background-color', button )
-	+ generateSelector( selector, 'color', text )
-	+ generateSelector( selector, 'background-color', hover, ':hover' )
-	+ generateSelector( selector, 'background-color', hover, ':focus' );
-}
-
-function getBlockStyles( base, style, backgroundColor ) {
-	const selector = `${ base } .components-button`;
-	// we grab the background color if set as a good color for our button text
-	const buttonTextColor = getBackgroundColor( backgroundColor )
-		// bg might be in this form.
-		|| style?.color?.background;
-	// we misuse the link color for the button background
-	const buttonColor = getLinkColor( style?.elements?.link?.color?.text );
-	// hover!
-	const buttonHoverColor = getLinkColor( style?.elements?.link?.[':hover']?.color?.text );
-
-	return getStyles( selector, buttonColor, buttonTextColor, buttonHoverColor );
-}
-
-export function getPopupStyles( style ) {
-	// we don't acept backgroundColor because the popup is always white (right?)
-	const buttonColor = getLinkColor( style?.elements?.link?.color?.text )
-		|| '#111';
-	const buttonTextColor = '#fff';
-	const buttonHoverColor = getLinkColor( style?.elements?.link?.[':hover']?.color?.text )
-		|| '#333';
-	const selector = '.apfmd__button-group .components-button';
-
-	return getStyles( selector, buttonColor, buttonTextColor, buttonHoverColor );
-}
-
-export function ButtonStyle( { selector, style, backgroundColor } ) {
-	const css = getBlockStyles( selector, style, backgroundColor );
 	return (
-		<style>{ css }</style>
+		generateSelector( selector, 'background-color', button ) +
+		generateSelector( selector, 'color', text ) +
+		generateSelector( selector, 'background-color', hover, ':hover' ) +
+		generateSelector( selector, 'background-color', hover, ':focus' )
 	);
+}
+
+/**
+ * Gets block styles.
+ *
+ * @param {string} base Base selector.
+ * @param {Object} style Style object.
+ * @param {Object|string} backgroundColor Background color.
+ * @return {string} CSS styles.
+ */
+export function getBlockStyles( base, style, backgroundColor ) {
+	const selector = `${ base } .components-button`;
+	// We grab the background color if set as a good color for our button text.
+	const buttonTextColor =
+		getBackgroundColor( backgroundColor ) ||
+		// Background might be in this form.
+		style?.color?.background;
+	// We misuse the link color for the button background.
+	const buttonColor = getLinkColor( style?.elements?.link?.color?.text );
+	// Hover!
+	const buttonHoverColor = getLinkColor( style?.elements?.link?.[ ':hover' ]?.color?.text );
+
+	return getStyles( selector, buttonColor, buttonTextColor, buttonHoverColor );
+}
+
+/**
+ * Gets popup styles.
+ *
+ * @param {Object} style Style object.
+ * @return {string} CSS styles.
+ */
+export function getPopupStyles( style ) {
+	// We don't accept backgroundColor because the popup is always white (right?).
+	const buttonColor = getLinkColor( style?.elements?.link?.color?.text ) || '#111';
+	const buttonTextColor = '#fff';
+	const buttonHoverColor = getLinkColor( style?.elements?.link?.[ ':hover' ]?.color?.text ) || '#333';
+	const selector = '.activitypub-dialog__button-group .components-button';
+
+	return getStyles( selector, buttonColor, buttonTextColor, buttonHoverColor );
 }
