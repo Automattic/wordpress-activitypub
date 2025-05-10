@@ -5,7 +5,6 @@ vendor
 
 # Temporary ignores while breaking out each component.
 assets
-src/editor-plugin
 src/follow-me
 src/followers
 src/reactions
