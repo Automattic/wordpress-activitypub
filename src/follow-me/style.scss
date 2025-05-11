@@ -108,7 +108,14 @@
 }
 
 .activitypub-modal__close:hover {
+	background: none;
 	color: #000;
+}
+.activitypub-modal__close:active {
+	background: none;
+	border: none;
+	color: #000;
+	padding: 0.5em;
 }
 
 .activitypub-modal__content {

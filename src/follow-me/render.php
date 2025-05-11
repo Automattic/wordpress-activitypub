@@ -97,6 +97,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 				class="activitypub-profile__avatar"
 				data-wp-bind--src="context.profile.data.avatar"
 				data-wp-bind--alt="context.profile.data.name"
+				src="https://secure.gravatar.com/avatar/default?s=120"
 				alt=""
 			/>
 			<div class="activitypub-profile__content">
@@ -133,7 +134,13 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		<div class="activitypub-modal__frame">
 			<div class="activitypub-modal__header">
 				<h2 id="modal-heading" class="activitypub-modal__title">
-					<?php echo esc_html__( 'Follow', 'activitypub' ); ?> <span data-wp-text="contex.profile.data.name"></span>
+					<?php
+					printf(
+						/* translators: %s: Profile name. */
+						esc_html__( 'Follow %s', 'activitypub' ),
+						'<span data-wp-text="context.profile.data.name"></span>'
+					);
+					?>
 				</h2>
 				<button
 					type="button"
