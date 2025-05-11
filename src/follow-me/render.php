@@ -33,7 +33,7 @@ if ( 'small' === $button_size ) {
 }
 
 // Set up the Interactivity API state.
-wp_interactivity_state(
+$state = wp_interactivity_state(
 	'activitypub/follow-me',
 	array(
 		'namespace' => ACTIVITYPUB_REST_NAMESPACE,
@@ -67,7 +67,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		'isLoading'       => false,
 		'isError'         => false,
 		'errorMessage'    => '',
-		'copyButtonText'  => __( 'Copy', 'activitypub' ),
+		'copyButtonText'  => $state['i18n']['copy'],
 		'userId'          => $user_id,
 		'buttonOnly'      => $button_only,
 		'buttonText'      => $button_text,
