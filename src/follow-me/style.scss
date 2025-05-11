@@ -10,6 +10,12 @@
 	padding: 1em 0;
 }
 
+.has-background > .activitypub-profile,
+.has-border > .activitypub-profile {
+	padding-left: 1em;
+	padding-right: 1em;
+}
+
 .activitypub-profile__avatar {
 	width: 48px;
 	height: 48px;
@@ -90,7 +96,7 @@
 }
 
 .activitypub-modal__title {
-	margin: 0;
+	margin: 0 !important;
 	font-size: 1.3em;
 	font-weight: 600;
 	line-height: 1.4;
@@ -162,6 +168,7 @@
 	border: 1px solid #ddd;
 	border-radius: 4px 0 0 4px;
 	font-size: 1em;
+	margin: 0;
 }
 
 .activitypub-dialog__button-group input[aria-invalid="true"] {

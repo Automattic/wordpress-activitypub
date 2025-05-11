@@ -20,7 +20,7 @@ $block_id = 'activitypub-follow-me-block-' . wp_unique_id();
 
 // Get block style information.
 $style            = wp_get_global_styles();
-$background_color = $style['color']['background'] ?? '';
+$background_color = $attributes['backgroundColor'] ?? $style['color']['background'] ?? '';
 
 // Get button style from block attributes.
 $button_style = $attributes['style'] ?? array();
