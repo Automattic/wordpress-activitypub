@@ -32,8 +32,7 @@ if ( 'small' === $button_size ) {
 	$button_class = 'is-compact';
 }
 
-$actor              =  \Activitypub\Collection\Actors::get_by_id( $user_id )->to_array( false );
-$actor['webfinger'] = '@' . $actor['webfinger'];
+$actor = \Activitypub\Collection\Actors::get_by_id( $user_id );
 
 // Set up the Interactivity API state.
 $state = wp_interactivity_state(
@@ -56,7 +55,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		'id'                           => $block_id,
 		'class'                        => 'activitypub-follow-me-block-wrapper',
 		'data-wp-interactive'          => 'activitypub/follow-me',
-		'data-wp-init'                 => 'callbacks.init',
+		'data-wp-init'                 => 'callbacks.initButtonStyles',
 		'data-wp-on-document--keydown' => 'callbacks.documentKeydown',
 		'data-wp-on-document--click'   => 'callbacks.documentClick',
 	)
@@ -73,14 +72,9 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		'copyButtonText'  => $state['i18n']['copy'],
 		'userId'          => $user_id,
 		'buttonOnly'      => $button_only,
-		'buttonText'      => $button_text,
-		'buttonSize'      => $button_size,
 		'buttonStyle'     => $button_style,
 		'backgroundColor' => $background_color,
-		'profile'         => array(
-			'loading' => true,
-			'data'    => $actor,
-		),
+		'webfinger'       => '@' . $actor->get_webfinger(),
 	)
 );
 
@@ -93,35 +87,24 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		<?php if ( ! $button_only ) : ?>
 			<img
 				class="activitypub-profile__avatar"
-				data-wp-bind--src="context.profile.data.avatar"
-				data-wp-bind--alt="context.profile.data.name"
-				src="https://secure.gravatar.com/avatar/default?s=120"
-				alt=""
+				src="<?php echo esc_url( $actor->get_icon()['url'] ); ?>"
+				alt="<?php echo esc_attr( $actor->get_name() ); ?>"
 			/>
 			<div class="activitypub-profile__content">
-				<div
-					class="activitypub-profile__name"
-					data-wp-text="context.profile.data.name"
-				></div>
-				<div
-					class="activitypub-profile__handle"
-					data-wp-text="context.profile.data.webfinger"
-					data-wp-bind--title="context.profile.data.webfinger"
-				></div>
+				<div class="activitypub-profile__name"><?php echo esc_html( $actor->get_name() ); ?></div>
+				<div class="activitypub-profile__handle"><?php echo esc_html( '@' . $actor->get_webfinger() ); ?></div>
 			</div>
 		<?php endif; ?>
 
 		<button
 			class="activitypub-profile__follow components-button is-primary <?php echo esc_attr( $button_class ); ?>"
 			data-wp-on--click="actions.toggleModal"
-			aria-haspopup="dialog"
 			data-wp-bind--aria-expanded="context.isModalOpen"
+			aria-haspopup="dialog"
 			aria-label="<?php echo esc_attr__( 'Follow me on the Fediverse', 'activitypub' ); ?>"
-			data-wp-text="context.buttonText"
-		></button>
+		><?php echo esc_html( $button_text ); ?></button>
 	</div>
 
-	<!-- Modal is placed inside the wrapper div alongside the profile section -->
 	<div
 		class="activitypub-modal__overlay"
 		data-wp-bind--hidden="!context.isModalOpen"
@@ -136,7 +119,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 					printf(
 						/* translators: %s: Profile name. */
 						esc_html__( 'Follow %s', 'activitypub' ),
-						'<span data-wp-text="context.profile.data.name"></span>'
+						esc_html( $actor->get_name() )
 					);
 					?>
 				</h2>
@@ -161,7 +144,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 						<input
 							type="text"
 							id="profile-handle"
-							data-wp-bind--value="context.profile.data.webfinger"
+							value="<?php echo esc_attr( '@' . $actor->get_webfinger() ); ?>"
 							readonly
 						/>
 						<button
