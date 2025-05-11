@@ -2,32 +2,6 @@ import { store, getContext } from '@wordpress/interactivity';
 import { getBlockStyles, getPopupStyles } from './button-style';
 import './style.scss';
 
-// Get dependencies from the window.wp object.
-const { apiFetch } = window.wp;
-
-/**
- * Normalizes profile data.
- *
- * @param {Object} profile Profile data.
- *
- * @return {Object} Normalized profile data.
- */
-function normalizeProfile( profile ) {
-	if ( ! profile ) {
-		return getContext().profile.data;
-	}
-
-	const data = { ...getContext().profile.data, ...profile };
-	data.avatar = data?.icon?.url;
-
-	// Ensure webfinger always has the @ prefix.
-	if ( data.webfinger && ! data.webfinger.startsWith( '@' ) ) {
-		data.webfinger = '@' + data.webfinger;
-	}
-
-	return data;
-}
-
 const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 	actions: {
 		/**
@@ -58,15 +32,14 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 		 */
 		copyToClipboard() {
 			const context = getContext();
-			const webfinger = context.profile.data.webfinger;
 
 			// Use the Clipboard API to copy text.
-			navigator.clipboard.writeText( webfinger ).then(
+			navigator.clipboard.writeText( context.webfinger ).then(
 				() => {
 					// Update button text to show success.
 					context.copyButtonText = state.i18n.copied;
 
-					// Reset button text after 2 seconds.
+					// Reset button text after 1 second.
 					setTimeout( () => {
 						context.copyButtonText = state.i18n.copy;
 					}, 1000 );
@@ -155,43 +128,6 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 		},
 	},
 	callbacks: {
-		/**
-		 * Initialize the block.
-		 *
-		 * This function combines multiple initialization tasks.
-		 */
-		init: function* () {
-			// First initialize button styles.
-			callbacks.initButtonStyles();
-
-			// Then fetch the profile data.
-			yield callbacks.fetchProfile();
-		},
-
-		/**
-		 * Fetch profile data.
-		 *
-		 * @return {Promise} Promise resolving with profile data.
-		 */
-		fetchProfile: function* () {
-			const context = getContext();
-			const { namespace } = state;
-
-			try {
-				const fetchOptions = {
-					headers: { Accept: 'application/activity+json' },
-					path: `/${ namespace }/actors/${ context.userId }`,
-				};
-
-				const profileData = yield apiFetch( fetchOptions );
-				context.profile.data = normalizeProfile( profileData );
-				context.profile.loading = false;
-			} catch ( error ) {
-				console.error( 'Error fetching profile:', error );
-				context.profile.loading = false;
-			}
-		},
-
 		/**
 		 * Initialize button styles.
 		 */
