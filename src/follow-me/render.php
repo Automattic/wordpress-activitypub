@@ -97,7 +97,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		<?php endif; ?>
 
 		<button
-			class="activitypub-profile__follow components-button is-primary <?php echo esc_attr( $button_class ); ?>"
+			class="activitypub-profile__follow components-button <?php echo esc_attr( $button_class ); ?>"
 			data-wp-on--click="actions.toggleModal"
 			data-wp-bind--aria-expanded="context.isModalOpen"
 			aria-haspopup="dialog"
