@@ -78,6 +78,10 @@ function getStyles( selector, button, text, hover ) {
  * @return {string} CSS styles.
  */
 export function getBlockStyles( base, style, backgroundColor ) {
+	if ( ! style.length ) {
+		return '';
+	}
+
 	const selector = `${ base } .components-button`;
 	// We grab the background color if set as a good color for our button text.
 	const buttonTextColor =
