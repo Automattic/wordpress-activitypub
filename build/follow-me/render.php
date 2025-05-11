@@ -32,6 +32,9 @@ if ( 'small' === $button_size ) {
 	$button_class = 'is-compact';
 }
 
+$actor              =  \Activitypub\Collection\Actors::get_by_id( $user_id )->to_array( false );
+$actor['webfinger'] = '@' . $actor['webfinger'];
+
 // Set up the Interactivity API state.
 $state = wp_interactivity_state(
 	'activitypub/follow-me',
@@ -76,12 +79,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 		'backgroundColor' => $background_color,
 		'profile'         => array(
 			'loading' => true,
-			'data'    => array(
-				'avatar'    => 'https://secure.gravatar.com/avatar/default?s=120',
-				'webfinger' => '@well@hello.dolly',
-				'name'      => __( 'Hello Dolly Fan Account', 'activitypub' ),
-				'url'       => '#',
-			),
+			'data'    => $actor,
 		),
 	)
 );
