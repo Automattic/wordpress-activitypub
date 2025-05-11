@@ -2,6 +2,39 @@ import { store, getContext } from '@wordpress/interactivity';
 import { getBlockStyles, getPopupStyles } from './button-style';
 import './style.scss';
 
+/**
+ * Traps focus within the specified element.
+ *
+ * @param {Element} element The element to trap focus within.
+ */
+function trapFocus( element ) {
+	var focusableElements = element.querySelectorAll(
+		'a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input[type="text"]:not([disabled]), input[type="radio"]:not([disabled]), input[type="checkbox"]:not([disabled]), select:not([disabled])'
+	);
+	var firstFocusableElement = focusableElements[ 0 ];
+	var lastFocusableElement = focusableElements[ focusableElements.length - 1 ];
+	firstFocusableElement.focus();
+
+	element.addEventListener( 'keydown', function ( event ) {
+		if ( event.key !== 'Tab' && event.keyCode !== 9 /* KEYCODE_TAB */ ) {
+			return;
+		}
+
+		if ( event.shiftKey ) {
+			/* shift + tab */
+			if ( document.activeElement === firstFocusableElement ) {
+				lastFocusableElement.focus();
+				event.preventDefault();
+			}
+		} /* tab */ else {
+			if ( document.activeElement === lastFocusableElement ) {
+				firstFocusableElement.focus();
+				event.preventDefault();
+			}
+		}
+	} );
+}
+
 const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 	actions: {
 		/**
@@ -11,6 +44,18 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 			const context = getContext();
 			context.isModalOpen = true;
 			document.body.classList.add( 'modal-open' );
+
+			// Set up the focus trap after modal is open.
+			setTimeout( () => {
+				// Use the blockId to find the specific modal frame for this block.
+				const blockWrapper = document.getElementById( context.blockId );
+				if ( blockWrapper ) {
+					const modalFrame = blockWrapper.querySelector( '.activitypub-modal__frame' );
+					if ( modalFrame ) {
+						trapFocus( modalFrame );
+					}
+				}
+			}, 50 );
 		},
 
 		/**
@@ -20,6 +65,15 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 			const context = getContext();
 			context.isModalOpen = false;
 			document.body.classList.remove( 'modal-open' );
+
+			// Return focus to the button that opened the modal.
+			const blockWrapper = document.getElementById( context.blockId );
+			if ( blockWrapper ) {
+				const openButton = blockWrapper.querySelector( '.activitypub-profile__follow' );
+				if ( openButton ) {
+					openButton.focus();
+				}
+			}
 		},
 
 		toggleModal() {
