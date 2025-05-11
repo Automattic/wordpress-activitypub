@@ -40,14 +40,12 @@
         "@wordpress/env": "^10.10.0",
         "@wordpress/i18n": "^5.22.0",
         "@wordpress/icons": "^10.10.0",
+        "@wordpress/interactivity": "^6.23.0",
         "@wordpress/plugins": "^7.22.0",
         "@wordpress/prettier-config": "^4.23.0",
         "@wordpress/primitives": "^4.22.0",
         "@wordpress/scripts": "^27.0.0",
         "@wordpress/url": "^4.22.0",
         "classnames": "^2.3.2"
-    },
-    "dependencies": {
-        "@wordpress/interactivity": "^6.23.0"
     }
 }
