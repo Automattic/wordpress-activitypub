@@ -145,7 +145,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 							type="text"
 							id="profile-handle"
 							value="<?php echo esc_attr( '@' . $actor->get_webfinger() ); ?>"
-							readonly
+							disabled
 						/>
 						<button
 							class="components-button is-primary"
