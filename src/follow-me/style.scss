@@ -8,196 +8,199 @@
 	display: flex;
 	align-items: center;
 	padding: 1em 0;
-}
 
-.has-background > .activitypub-profile,
-.has-border > .activitypub-profile {
-	padding-left: 1em;
-	padding-right: 1em;
-}
+	.has-background > &,
+	.has-border > & {
+		padding-left: 1em;
+		padding-right: 1em;
+	}
 
-.activitypub-profile__avatar {
-	width: 48px;
-	height: 48px;
-	border-radius: 50%;
-	margin-right: 1em;
-	object-fit: cover;
-}
+	&__avatar {
+		width: 48px;
+		height: 48px;
+		border-radius: 50%;
+		margin-right: 1em;
+		object-fit: cover;
+	}
 
-.activitypub-profile__content {
-	flex: 1;
-	margin-right: 1em;
-	min-width: 0;
-}
+	&__content {
+		flex: 1;
+		margin-right: 1em;
+		min-width: 0;
+	}
 
-.activitypub-profile__name {
-	font-weight: bold;
-	margin-bottom: 0.25em;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
+	&__name {
+		font-weight: bold;
+		margin-bottom: 0.25em;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
 
-.activitypub-profile__handle {
-	color: inherit;
-	font-size: 0.9em;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
+	&__handle {
+		color: inherit;
+		font-size: 0.9em;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
 
-.activitypub-profile__follow {
-	flex-shrink: 0;
+	&__follow {
+		flex-shrink: 0;
 
-	// Only add left margin to the button when there's profile content
-	&:not(:only-child) {
-		margin-left: 1em;
+		&:not(:only-child) {
+			margin-left: 1em;
+		}
 	}
 }
 
-/* Modal styles */
-.activitypub-modal__overlay {
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	background-color: rgba(0, 0, 0, 0.5);
-	z-index: 100000;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding: 1rem;
+.activitypub-modal {
+	&__overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.5);
+		z-index: 100000;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+
+		&[hidden] {
+			display: none;
+		}
+	}
+
+	&__frame {
+		max-width: 660px;
+		width: 100%;
+		background-color: #fff;
+		border-radius: 4px;
+		box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		max-height: calc(100vh - 2rem);
+		animation: activitypub-modal-appear 0.2s ease-out;
+	}
+
+	&__header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 1em 1em 1em 1.5em;
+		border-bottom: 1px solid #e2e4e7;
+		flex-shrink: 0;
+	}
+
+	&__title {
+		margin: 0 !important;
+		font-size: 1.3em;
+		font-weight: 600;
+		line-height: 1.4;
+	}
+
+	&__close {
+		background: none;
+		border: none;
+		padding: 0.5em;
+		cursor: pointer;
+		color: #555;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		&:hover {
+			background: none;
+			color: #000;
+		}
+
+		&:active {
+			background: none;
+			border: none;
+			color: #000;
+			padding: 0.5em;
+		}
+	}
+
+	&__content {
+		overflow-y: auto;
+	}
 }
 
-.activitypub-modal__overlay[hidden] {
-	display: none;
+.activitypub-dialog {
+	&__section {
+		padding: 1em 1.5em;
+		border-bottom: 1px solid #f0f0f0;
+
+		&:last-child {
+			border-bottom: none;
+		}
+
+		h4 {
+			margin-top: 0;
+			margin-bottom: 0.5em;
+			font-size: 1.1em;
+		}
+	}
+
+	&__description {
+		margin-bottom: 1em;
+		color: inherit;
+		font-size: 0.95em;
+
+		code {
+			background: #f0f0f0;
+			padding: 0.1em 0.3em;
+			border-radius: 3px;
+			font-size: 0.9em;
+		}
+	}
+
+	&__button-group {
+		display: flex;
+		width: 100%;
+		margin-bottom: 0.5em;
+
+		input {
+			flex: 1;
+			border: 1px solid #ddd;
+			border-radius: 4px 0 0 4px;
+			font-size: 1em;
+			margin: 0;
+
+			&[aria-invalid="true"] {
+				border-color: #cc1818;
+			}
+		}
+
+		button {
+			border-radius: 0 4px 4px 0 !important;
+			margin-left: -1px !important;
+		}
+	}
+
+	&__error {
+		color: #cc1818;
+		font-size: 0.9em;
+		margin-top: 0.5em;
+	}
 }
 
-.activitypub-modal__frame {
-	max-width: 660px;
-	width: 100%;
-	background-color: #fff;
-	border-radius: 4px;
-	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-	overflow: hidden;
-	display: flex;
-	flex-direction: column;
-	max-height: calc(100vh - 2rem);
+.components-button {
+	&.small {
+		padding: 0.25em 0.5em;
+		font-size: 0.8em;
+	}
+
+	&.compact {
+		padding: 0.4em 0.8em;
+		font-size: 0.9em;
+	}
 }
 
-.activitypub-modal__header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 1em 1em 1em 1.5em;
-	border-bottom: 1px solid #e2e4e7;
-	flex-shrink: 0;
-}
-
-.activitypub-modal__title {
-	margin: 0 !important;
-	font-size: 1.3em;
-	font-weight: 600;
-	line-height: 1.4;
-}
-
-.activitypub-modal__close {
-	background: none;
-	border: none;
-	padding: 0.5em;
-	cursor: pointer;
-	color: #555;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.activitypub-modal__close:hover {
-	background: none;
-	color: #000;
-}
-.activitypub-modal__close:active {
-	background: none;
-	border: none;
-	color: #000;
-	padding: 0.5em;
-}
-
-.activitypub-modal__content {
-	overflow-y: auto;
-}
-
-/* Dialog sections */
-.activitypub-dialog__section {
-	padding: 1em 1.5em;
-	border-bottom: 1px solid #f0f0f0;
-}
-
-.activitypub-dialog__section:last-child {
-	border-bottom: none;
-}
-
-.activitypub-dialog__section h4 {
-	margin-top: 0;
-	margin-bottom: 0.5em;
-	font-size: 1.1em;
-}
-
-.activitypub-dialog__description {
-	margin-bottom: 1em;
-	color: inherit;
-	font-size: 0.95em;
-}
-
-.activitypub-dialog__description code {
-	background: #f0f0f0;
-	padding: 0.1em 0.3em;
-	border-radius: 3px;
-	font-size: 0.9em;
-}
-
-.activitypub-dialog__button-group {
-	display: flex;
-	width: 100%;
-	margin-bottom: 0.5em;
-}
-
-.activitypub-dialog__button-group input {
-	flex: 1;
-	border: 1px solid #ddd;
-	border-radius: 4px 0 0 4px;
-	font-size: 1em;
-	margin: 0;
-}
-
-.activitypub-dialog__button-group input[aria-invalid="true"] {
-	border-color: #cc1818;
-}
-
-.activitypub-dialog__button-group button {
-	border-radius: 0 4px 4px 0 !important;
-	margin-left: -1px !important;
-}
-
-.activitypub-dialog__error {
-	color: #cc1818;
-	font-size: 0.9em;
-	margin-top: 0.5em;
-}
-
-/* Button sizes - using WordPress core button size conventions */
-.components-button.small {
-	padding: 0.25em 0.5em;
-	font-size: 0.8em;
-}
-
-.components-button.compact {
-	padding: 0.4em 0.8em;
-	font-size: 0.9em;
-}
-
-/* For when body has modal open */
 body.modal-open {
 	overflow: hidden;
 }
@@ -212,8 +215,4 @@ body.modal-open {
 		opacity: 1;
 		transform: translateY(0);
 	}
-}
-
-.activitypub-modal__frame {
-	animation: activitypub-modal-appear 0.2s ease-out;
 }
