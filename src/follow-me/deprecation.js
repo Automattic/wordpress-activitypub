@@ -52,7 +52,7 @@ const v1 = {
 	},
 
 	isEligible( attributes ) {
-		// Run migration if buttonText attribute exists and there are no innerBlocks.
+		// Run migration if buttonText attribute exists.
 		return !! attributes.buttonText;
 	},
 
@@ -69,8 +69,9 @@ const v1 = {
 
 		// Create a core button block with the buttonText and buttonSize.
 		const buttonBlock = createBlock( 'core/button', {
-			text: buttonText,
 			className,
+			tagName: 'button',
+			text: buttonText,
 		} );
 
 		return [ newAttributes, [ buttonBlock ] ];
