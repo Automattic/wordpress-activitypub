@@ -72,8 +72,8 @@ $wrapper_context = wp_interactivity_data_wp_context(
 );
 
 /* @var string $content Inner blocks content. */
-if ( empty( $content ) ) {
-	$content = '<button class="wp-block-button__link wp-block-button">' . esc_html__( 'Follow', 'activitypub' ) . '</button>';
+if ( empty( $content ) && isset( $attributes['buttonText'] ) ) {
+	$content = '<div class="wp-block-button"><button class="wp-block-button__link wp-element-button">' . esc_html( $attributes['buttonText'] ) . '</button></div>';
 }
 $content = Blocks::add_directions_to_button( $content, $attributes );
 
