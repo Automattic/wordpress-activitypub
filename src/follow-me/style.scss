@@ -42,13 +42,29 @@
 		text-overflow: ellipsis;
 	}
 
-	&__follow {
+	&__button-wrapper {
 		flex-shrink: 0;
-		background-color: var(--wp--preset--color--black);
-		color: var(--wp--preset--color--white);
 
 		&:not(:only-child) {
 			margin-left: 1em;
+		}
+
+		.wp-block-button {
+			margin: 0;
+		}
+
+		.wp-block-button__link {
+			margin: 0;
+		}
+
+		.is-small {
+			padding: 0.25em 0.5em;
+			font-size: 0.8em;
+		}
+
+		.is-compact {
+			padding: 0.4em 0.8em;
+			font-size: 0.9em;
 		}
 	}
 }
@@ -188,27 +204,14 @@
 	}
 }
 
-.components-button {
-	&.small {
-		padding: 0.25em 0.5em;
-		font-size: 0.8em;
-	}
-
-	&.compact {
-		padding: 0.4em 0.8em;
-		font-size: 0.9em;
-	}
-}
-
 body.modal-open {
 	overflow: hidden;
 }
 
-/* Animation for modal */
 @keyframes activitypub-modal-appear {
 	from {
 		opacity: 0;
-		transform: translateY(20px);
+		transform: translateY(15px);
 	}
 	to {
 		opacity: 1;

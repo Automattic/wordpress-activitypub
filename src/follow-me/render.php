@@ -5,6 +5,8 @@
  * @package ActivityPub
  */
 
+use Activitypub\Blocks;
+
 /* @var array $attributes Block attributes. */
 $attributes = wp_parse_args( $attributes );
 
@@ -12,8 +14,6 @@ $attributes = wp_parse_args( $attributes );
 $selected_user = $attributes['selectedUser'] ?? 'site';
 $user_id       = 'site' === $selected_user ? 0 : intval( $selected_user );
 $button_only   = $attributes['buttonOnly'] ?? false;
-$button_text   = $attributes['buttonText'] ?? __( 'Follow', 'activitypub' );
-$button_size   = $attributes['buttonSize'] ?? 'default';
 
 // Generate a unique ID for the block.
 $block_id = 'activitypub-follow-me-block-' . wp_unique_id();
@@ -24,13 +24,6 @@ $background_color = $attributes['backgroundColor'] ?? $style['color']['backgroun
 
 // Get button style from block attributes.
 $button_style = $attributes['style'] ?? array();
-
-$button_class = '';
-if ( 'small' === $button_size ) {
-	$button_class = 'is-small';
-} elseif ( 'compact' === $button_size ) {
-	$button_class = 'is-compact';
-}
 
 $actor = \Activitypub\Collection\Actors::get_by_id( $user_id );
 
@@ -78,6 +71,12 @@ $wrapper_context = wp_interactivity_data_wp_context(
 	)
 );
 
+/* @var string $content Inner blocks content. */
+if ( empty( $content ) ) {
+	$content = '<button class="wp-block-button__link wp-block-button">' . esc_html__( 'Follow', 'activitypub' ) . '</button>';
+}
+$content = Blocks::add_directions_to_button( $content, $attributes );
+
 ?>
 <div
 	<?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>
@@ -96,13 +95,7 @@ $wrapper_context = wp_interactivity_data_wp_context(
 			</div>
 		<?php endif; ?>
 
-		<button
-			class="activitypub-profile__follow components-button <?php echo esc_attr( $button_class ); ?>"
-			data-wp-on--click="actions.toggleModal"
-			data-wp-bind--aria-expanded="context.isModalOpen"
-			aria-haspopup="dialog"
-			aria-label="<?php echo esc_attr__( 'Follow me on the Fediverse', 'activitypub' ); ?>"
-		><?php echo esc_html( $button_text ); ?></button>
+		<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput ?>
 	</div>
 
 	<div

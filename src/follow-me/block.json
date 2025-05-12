@@ -10,9 +10,7 @@
     "icon": "groups",
     "example": {
         "attributes": {
-            "buttonText": "Follow",
-            "buttonOnly": false,
-            "buttonSize": "default"
+            "buttonOnly": false
         }
     },
     "supports": {
@@ -38,6 +36,9 @@
             "__experimentalDefaultControls": {
                 "fontSize": true
             }
+        },
+        "innerBlocks": {
+            "allowedBlocks": [ "core/button" ]
         }
     },
     "attributes": {
@@ -48,20 +49,12 @@
         "buttonOnly": {
             "type": "boolean",
             "default": false
-        },
-        "buttonText": {
-            "type": "string",
-            "default": "Follow"
-        },
-        "buttonSize": {
-            "type": "string",
-            "default": "default",
-            "enum": [ "small", "default", "compact" ]
         }
     },
     "usesContext": [ "postType", "postId" ],
     "editorScript": "file:./index.js",
     "viewScriptModule": "file:./view.js",
     "style": "file:./style-view.css",
-    "render": "file:./render.php"
+    "render": "file:./render.php",
+    "providesContext": {}
 }

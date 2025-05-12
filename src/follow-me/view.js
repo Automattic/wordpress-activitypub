@@ -69,7 +69,9 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 			// Return focus to the button that opened the modal.
 			const blockWrapper = document.getElementById( context.blockId );
 			if ( blockWrapper ) {
-				const openButton = blockWrapper.querySelector( '.activitypub-profile__follow' );
+				const openButton = blockWrapper.querySelector(
+					'.activitypub-profile__button-wrapper .wp-block-button__link'
+				);
 				if ( openButton ) {
 					openButton.focus();
 				}
@@ -78,6 +80,7 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 
 		toggleModal() {
 			const context = getContext();
+			console.log( context.isModalOpen );
 			context.isModalOpen ? actions.closeModal() : actions.openModal();
 		},
 
@@ -201,7 +204,6 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 				// Add popup styles.
 				const popupStyleElement = document.createElement( 'style' );
 				popupStyleElement.textContent = getPopupStyles( buttonStyle );
-
 				document.head.appendChild( popupStyleElement );
 			}
 		},
@@ -211,7 +213,7 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 		 *
 		 * @param {Event} event Keyboard event.
 		 */
-		documentKeydown: ( event ) => {
+		documentKeydown( event ) {
 			const context = getContext();
 			if ( context.isModalOpen && event.key === 'Escape' ) {
 				actions.closeModal();
@@ -223,16 +225,37 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 		 *
 		 * @param {Event} event Click event.
 		 */
-		documentClick: ( event ) => {
+		documentClick( event ) {
 			const context = getContext();
-			// Update selector to match the new modal structure.
-			if (
-				context.isModalOpen &&
-				! event.target.closest( '.activitypub-modal__frame' ) &&
-				! event.target.closest( '.activitypub-profile__follow' )
-			) {
-				actions.closeModal();
+			if ( ! context.isModalOpen ) {
+				return;
 			}
+
+			// Get the block wrapper element.
+			const blockWrapper = document.getElementById( context.blockId );
+			if ( ! blockWrapper ) {
+				return;
+			}
+
+			// Check if the click was on the toggle button.
+			// If the click was on the button or its children, we should not close the modal.
+			const toggleButton = blockWrapper.querySelector(
+				'.wp-element-button[data-wp-on--click="actions.toggleModal"]'
+			);
+			if ( toggleButton && ( toggleButton === event.target || toggleButton.contains( event.target ) ) ) {
+				// This is a click on the button that toggles the modal, so we should not close it.
+				return;
+			}
+
+			// Check if the click was inside the modal frame.
+			const modalFrame = blockWrapper.querySelector( '.activitypub-modal__frame' );
+			if ( ! modalFrame || modalFrame.contains( event.target ) ) {
+				// Either modal frame doesn't exist or click was inside it, so don't close.
+				return;
+			}
+
+			// If we got here, the click was outside both the button and the modal, so close it.
+			actions.closeModal();
 		},
 	},
 } );
