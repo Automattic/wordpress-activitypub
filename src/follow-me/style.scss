@@ -205,10 +205,11 @@ body.modal-open {
 	overflow: hidden;
 }
 
+/* Animation for modal */
 @keyframes activitypub-modal-appear {
 	from {
 		opacity: 0;
-		transform: translateY(15px);
+		transform: translateY(20px);
 	}
 	to {
 		opacity: 1;
