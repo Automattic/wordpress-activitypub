@@ -401,3 +401,10 @@ input.blog-user-identifier {
 		margin: 0 22px;
 	}
 }
+
+@media screen and (max-width: 782px) {
+	.activitypub-settings .row > div {
+		max-width: calc(100% - 36px);
+		width: 100%;
+	}
+}
