@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Broken avatars in the Reactions block are now displayed in the same size as other avatars.
