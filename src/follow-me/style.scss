@@ -42,14 +42,27 @@
 		text-overflow: ellipsis;
 	}
 
-	&__follow {
+	.wp-block-button {
 		flex-shrink: 0;
-		background-color: var(--wp--preset--color--black);
-		color: var(--wp--preset--color--white);
+		margin: 0;
 
 		&:not(:only-child) {
 			margin-left: 1em;
 		}
+	}
+
+	.wp-block-button__link {
+		margin: 0;
+	}
+
+	.is-small {
+		padding: 0.25em 0.5em;
+		font-size: 0.8em;
+	}
+
+	.is-compact {
+		padding: 0.4em 0.8em;
+		font-size: 0.9em;
 	}
 }
 
@@ -185,18 +198,6 @@
 		color: #cc1818;
 		font-size: 0.9em;
 		margin-top: 0.5em;
-	}
-}
-
-.components-button {
-	&.small {
-		padding: 0.25em 0.5em;
-		font-size: 0.8em;
-	}
-
-	&.compact {
-		padding: 0.4em 0.8em;
-		font-size: 0.9em;
 	}
 }
 

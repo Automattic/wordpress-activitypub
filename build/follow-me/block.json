@@ -10,9 +10,7 @@
   "icon": "groups",
   "example": {
     "attributes": {
-      "buttonText": "Follow",
-      "buttonOnly": false,
-      "buttonSize": "default"
+      "buttonOnly": false
     }
   },
   "supports": {
@@ -38,6 +36,11 @@
       "__experimentalDefaultControls": {
         "fontSize": true
       }
+    },
+    "innerBlocks": {
+      "allowedBlocks": [
+        "core/button"
+      ]
     }
   },
   "attributes": {
@@ -48,19 +51,6 @@
     "buttonOnly": {
       "type": "boolean",
       "default": false
-    },
-    "buttonText": {
-      "type": "string",
-      "default": "Follow"
-    },
-    "buttonSize": {
-      "type": "string",
-      "default": "default",
-      "enum": [
-        "small",
-        "default",
-        "compact"
-      ]
     }
   },
   "usesContext": [

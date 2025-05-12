@@ -35,7 +35,7 @@ function trapFocus( element ) {
 	} );
 }
 
-const { state, actions, callbacks } = store( 'activitypub/follow-me', {
+const { state, actions } = store( 'activitypub/follow-me', {
 	actions: {
 		/**
 		 * Open the modal.
@@ -69,7 +69,7 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 			// Return focus to the button that opened the modal.
 			const blockWrapper = document.getElementById( context.blockId );
 			if ( blockWrapper ) {
-				const openButton = blockWrapper.querySelector( '.activitypub-profile__follow' );
+				const openButton = blockWrapper.querySelector( '.wp-block-button__link' );
 				if ( openButton ) {
 					openButton.focus();
 				}
@@ -77,8 +77,9 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 		},
 
 		toggleModal() {
-			const context = getContext();
-			context.isModalOpen ? actions.closeModal() : actions.openModal();
+			const { isModalOpen } = getContext();
+
+			isModalOpen ? actions.closeModal() : actions.openModal();
 		},
 
 		/**
@@ -201,7 +202,6 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 				// Add popup styles.
 				const popupStyleElement = document.createElement( 'style' );
 				popupStyleElement.textContent = getPopupStyles( buttonStyle );
-
 				document.head.appendChild( popupStyleElement );
 			}
 		},
@@ -211,9 +211,10 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 		 *
 		 * @param {Event} event Keyboard event.
 		 */
-		documentKeydown: ( event ) => {
-			const context = getContext();
-			if ( context.isModalOpen && event.key === 'Escape' ) {
+		documentKeydown( event ) {
+			const { isModalOpen } = getContext();
+
+			if ( isModalOpen && event.key === 'Escape' ) {
 				actions.closeModal();
 			}
 		},
@@ -223,16 +224,33 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 		 *
 		 * @param {Event} event Click event.
 		 */
-		documentClick: ( event ) => {
-			const context = getContext();
-			// Update selector to match the new modal structure.
-			if (
-				context.isModalOpen &&
-				! event.target.closest( '.activitypub-modal__frame' ) &&
-				! event.target.closest( '.activitypub-profile__follow' )
-			) {
-				actions.closeModal();
+		documentClick( event ) {
+			const { blockId, isModalOpen } = getContext();
+			if ( ! isModalOpen ) {
+				return;
 			}
+
+			// Get the block wrapper element.
+			const blockWrapper = document.getElementById( blockId );
+			if ( ! blockWrapper ) {
+				return;
+			}
+
+			// If the click was on the button or its children, we should not close the modal.
+			const toggleButton = blockWrapper.querySelector(
+				'.wp-element-button[data-wp-on--click="actions.toggleModal"]'
+			);
+			if ( toggleButton && ( toggleButton === event.target || toggleButton.contains( event.target ) ) ) {
+				return;
+			}
+
+			// Check if the click was inside the modal frame.
+			const modalFrame = blockWrapper.querySelector( '.activitypub-modal__frame' );
+			if ( ! modalFrame || modalFrame.contains( event.target ) ) {
+				return;
+			}
+
+			actions.closeModal();
 		},
 	},
 } );
