@@ -396,13 +396,11 @@ input.blog-user-identifier {
 	padding: 16px 20px;
 }
 
-@media screen and (max-width: 844px) {
+@media screen and (max-width: 782px) {
 	.activitypub-settings {
 		margin: 0 22px;
 	}
-}
 
-@media screen and (max-width: 782px) {
 	.activitypub-settings .row > div {
 		max-width: calc(100% - 36px);
 		width: 100%;
