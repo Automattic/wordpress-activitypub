@@ -35,7 +35,7 @@ function trapFocus( element ) {
 	} );
 }
 
-const { state, actions, callbacks } = store( 'activitypub/follow-me', {
+const { state, actions } = store( 'activitypub/follow-me', {
 	actions: {
 		/**
 		 * Open the modal.
@@ -79,9 +79,9 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 		},
 
 		toggleModal() {
-			const context = getContext();
-			console.log( context.isModalOpen );
-			context.isModalOpen ? actions.closeModal() : actions.openModal();
+			const { isModalOpen } = getContext();
+
+			isModalOpen ? actions.closeModal() : actions.openModal();
 		},
 
 		/**
@@ -214,8 +214,9 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 		 * @param {Event} event Keyboard event.
 		 */
 		documentKeydown( event ) {
-			const context = getContext();
-			if ( context.isModalOpen && event.key === 'Escape' ) {
+			const { isModalOpen } = getContext();
+
+			if ( isModalOpen && event.key === 'Escape' ) {
 				actions.closeModal();
 			}
 		},
@@ -226,35 +227,31 @@ const { state, actions, callbacks } = store( 'activitypub/follow-me', {
 		 * @param {Event} event Click event.
 		 */
 		documentClick( event ) {
-			const context = getContext();
-			if ( ! context.isModalOpen ) {
+			const { blockId, isModalOpen } = getContext();
+			if ( ! isModalOpen ) {
 				return;
 			}
 
 			// Get the block wrapper element.
-			const blockWrapper = document.getElementById( context.blockId );
+			const blockWrapper = document.getElementById( blockId );
 			if ( ! blockWrapper ) {
 				return;
 			}
 
-			// Check if the click was on the toggle button.
 			// If the click was on the button or its children, we should not close the modal.
 			const toggleButton = blockWrapper.querySelector(
 				'.wp-element-button[data-wp-on--click="actions.toggleModal"]'
 			);
 			if ( toggleButton && ( toggleButton === event.target || toggleButton.contains( event.target ) ) ) {
-				// This is a click on the button that toggles the modal, so we should not close it.
 				return;
 			}
 
 			// Check if the click was inside the modal frame.
 			const modalFrame = blockWrapper.querySelector( '.activitypub-modal__frame' );
 			if ( ! modalFrame || modalFrame.contains( event.target ) ) {
-				// Either modal frame doesn't exist or click was inside it, so don't close.
 				return;
 			}
 
-			// If we got here, the click was outside both the button and the modal, so close it.
 			actions.closeModal();
 		},
 	},
