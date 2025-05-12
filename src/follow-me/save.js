@@ -9,13 +9,9 @@ import { useBlockProps, useInnerBlocksProps } from '@wordpress/block-editor';
  */
 function save() {
 	const blockProps = useBlockProps.save();
-	const innerBlocksProps = useInnerBlocksProps.save();
+	const innerBlocksProps = useInnerBlocksProps.save( blockProps );
 
-	return (
-		<div { ...blockProps }>
-			<div { ...innerBlocksProps } />
-		</div>
-	);
+	return <div { ...innerBlocksProps } />;
 }
 
 export default save;
