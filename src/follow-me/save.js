@@ -9,9 +9,7 @@ import { useBlockProps, useInnerBlocksProps } from '@wordpress/block-editor';
  */
 function save() {
 	const blockProps = useBlockProps.save();
-	const innerBlocksProps = useInnerBlocksProps.save( {
-		className: 'activitypub-profile__button-wrapper',
-	} );
+	const innerBlocksProps = useInnerBlocksProps.save();
 
 	return (
 		<div { ...blockProps }>

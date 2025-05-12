@@ -60,6 +60,5 @@
   "editorScript": "file:./index.js",
   "viewScriptModule": "file:./view.js",
   "style": "file:./style-view.css",
-  "render": "file:./render.php",
-  "providesContext": {}
+  "render": "file:./render.php"
 }

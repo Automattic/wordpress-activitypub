@@ -42,30 +42,27 @@
 		text-overflow: ellipsis;
 	}
 
-	&__button-wrapper {
+	.wp-block-button {
 		flex-shrink: 0;
+		margin: 0;
 
 		&:not(:only-child) {
 			margin-left: 1em;
 		}
+	}
 
-		.wp-block-button {
-			margin: 0;
-		}
+	.wp-block-button__link {
+		margin: 0;
+	}
 
-		.wp-block-button__link {
-			margin: 0;
-		}
+	.is-small {
+		padding: 0.25em 0.5em;
+		font-size: 0.8em;
+	}
 
-		.is-small {
-			padding: 0.25em 0.5em;
-			font-size: 0.8em;
-		}
-
-		.is-compact {
-			padding: 0.4em 0.8em;
-			font-size: 0.9em;
-		}
+	.is-compact {
+		padding: 0.4em 0.8em;
+		font-size: 0.9em;
 	}
 }
 

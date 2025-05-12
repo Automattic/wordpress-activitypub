@@ -113,7 +113,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 	const TEMPLATE = [ [ 'core/button', { text: __( 'Follow', 'activitypub' ), tagName: 'button' } ] ];
 
 	const innerBlocksProps = useInnerBlocksProps(
-		{ className: 'activitypub-profile__button-wrapper' },
+		{},
 		{
 			allowedBlocks: [ 'core/button' ],
 			template: TEMPLATE,

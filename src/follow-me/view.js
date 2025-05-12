@@ -69,9 +69,7 @@ const { state, actions } = store( 'activitypub/follow-me', {
 			// Return focus to the button that opened the modal.
 			const blockWrapper = document.getElementById( context.blockId );
 			if ( blockWrapper ) {
-				const openButton = blockWrapper.querySelector(
-					'.activitypub-profile__button-wrapper .wp-block-button__link'
-				);
+				const openButton = blockWrapper.querySelector( '.wp-block-button__link' );
 				if ( openButton ) {
 					openButton.focus();
 				}
