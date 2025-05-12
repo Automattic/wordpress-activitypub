@@ -82,7 +82,7 @@ export function getBlockStyles( base, style, backgroundColor ) {
 		return '';
 	}
 
-	const selector = `${ base } .components-button`;
+	const selector = `${ base } .wp-block-button__link`;
 	// We grab the background color if set as a good color for our button text.
 	const buttonTextColor =
 		getBackgroundColor( backgroundColor ) ||

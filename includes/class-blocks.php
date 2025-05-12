@@ -419,4 +419,37 @@ class Blocks {
 
 		return $data;
 	}
+
+	/**
+	 * Add directions to the button.
+	 *
+	 * @param string $content    The block content.
+	 * @param array  $attributes The block attributes.
+	 *
+	 * @return string The updated content.
+	 */
+	public static function add_directions_to_button( $content, $attributes ) {
+		$tags = new \WP_HTML_Tag_Processor( $content );
+
+		$button_class = '';
+		if ( isset( $attributes['buttonSize'] ) && 'small' === $attributes['buttonSize'] ) {
+			$button_class = 'is-small';
+		} elseif ( isset( $attributes['buttonSize'] ) && 'compact' === $attributes['buttonSize'] ) {
+			$button_class = 'is-compact';
+		}
+
+		while ( $tags->next_tag( array( 'class_name' => 'wp-element-button' ) ) ) {
+			if ( $button_class ) {
+				$tags->add_class( $button_class );
+			}
+
+			$tags->set_attribute( 'data-wp-on--click', 'actions.toggleModal' );
+			$tags->set_attribute( 'data-wp-bind--aria-expanded', 'context.isModalOpen' );
+			$tags->set_attribute( 'aria-haspopup', 'dialog' );
+			$tags->set_attribute( 'aria-controls', 'modal-heading' );
+			$tags->set_attribute( 'aria-label', \__( 'Follow me on the Fediverse', 'activitypub' ) );
+		}
+
+		return $tags->get_updated_html();
+	}
 }
