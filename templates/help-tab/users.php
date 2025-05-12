@@ -12,13 +12,13 @@
 
 <ol>
 	<li><?php esc_html_e( 'Select the users you want to update by checking the boxes next to their names.', 'activitypub' ); ?></li>
-	<li><?php esc_html_e( 'In the "Bulk Actions" dropdown, choose:', 'activitypub' ); ?>
+	<li><?php esc_html_e( 'In the &#8220;Bulk Actions&#8221; dropdown, choose:', 'activitypub' ); ?>
 		<ul>
-			<li><?php esc_html_e( '"Enable for ActivityPub" to grant ActivityPub capabilities.', 'activitypub' ); ?></li>
-			<li><?php esc_html_e( '"Disable for ActivityPub" to remove ActivityPub capabilities.', 'activitypub' ); ?></li>
+			<li><?php esc_html_e( '&#8220;Enable for ActivityPub&#8221; to grant ActivityPub capabilities.', 'activitypub' ); ?></li>
+			<li><?php esc_html_e( '&#8220;Disable for ActivityPub&#8221; to remove ActivityPub capabilities.', 'activitypub' ); ?></li>
 		</ul>
 	</li>
-	<li><?php esc_html_e( 'Click "Apply" to save your changes.', 'activitypub' ); ?></li>
+	<li><?php esc_html_e( 'Click &#8220;Apply&#8221; to save your changes.', 'activitypub' ); ?></li>
 </ol>
 
 <p><?php esc_html_e( 'The ActivityPub capability allows a user to:', 'activitypub' ); ?></p>
@@ -32,4 +32,4 @@
 
 <p><?php esc_html_e( 'By default, users who can publish posts are automatically granted this capability. You can override this using the bulk edit options above.', 'activitypub' ); ?></p>
 
-<p><em><?php esc_html_e( 'Note: If "Blog profile only" mode is enabled (where the site acts as a single ActivityPub profile), individual user capabilities do not affect ActivityPub functionality. All content is published under the blog\'s profile.', 'activitypub' ); ?></em></p>
+<p><em><?php esc_html_e( 'Note: If &#8220;Blog profile only&#8221; mode is enabled (where the site acts as a single ActivityPub profile), individual user capabilities do not affect ActivityPub functionality. All content is published under the blog&#8217;s profile.', 'activitypub' ); ?></em></p>
