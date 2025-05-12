@@ -6,14 +6,6 @@ import { createBlock } from '@wordpress/blocks';
  */
 const v1 = {
 	attributes: {
-		selectedUser: {
-			type: 'string',
-			default: 'site',
-		},
-		buttonOnly: {
-			type: 'boolean',
-			default: false,
-		},
 		buttonText: {
 			type: 'string',
 			default: 'Follow',
@@ -22,32 +14,6 @@ const v1 = {
 			type: 'string',
 			default: 'default',
 			enum: [ 'small', 'default', 'compact' ],
-		},
-	},
-
-	supports: {
-		html: false,
-		interactivity: true,
-		color: {
-			gradients: true,
-			link: true,
-			__experimentalDefaultControls: {
-				background: true,
-				text: true,
-				link: true,
-			},
-		},
-		__experimentalBorder: {
-			radius: true,
-			width: true,
-			color: true,
-			style: true,
-		},
-		typography: {
-			fontSize: true,
-			__experimentalDefaultControls: {
-				fontSize: true,
-			},
 		},
 	},
 
