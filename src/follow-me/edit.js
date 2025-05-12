@@ -64,7 +64,7 @@ function fetchProfile( userId ) {
  * @param {Object} props Component props.
  * @return {JSX.Element} Profile component.
  */
-function EditorProfile( { profile, userId, buttonOnly, innerBlocksProps } ) {
+function EditorProfile( { profile, buttonOnly, innerBlocksProps } ) {
 	const { webfinger, avatar, name } = profile;
 
 	if ( buttonOnly ) {
@@ -98,10 +98,9 @@ function EditorProfile( { profile, userId, buttonOnly, innerBlocksProps } ) {
  * @param {Object} props.context Block context.
  * @param {string} props.context.postType Post type.
  * @param {number} props.context.postId Post ID.
- * @param {Array} props.clientId Block client ID.
  * @return {JSX.Element} Edit component.
  */
-export default function Edit( { attributes, setAttributes, context: { postType, postId }, clientId } ) {
+export default function Edit( { attributes, setAttributes, context: { postType, postId } } ) {
 	const blockProps = useBlockProps( {
 		className: 'activitypub-follow-me-block-wrapper',
 	} );
@@ -111,13 +110,12 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 	const [ profile, setProfile ] = useState( getNormalizedProfile( DEFAULT_PROFILE_DATA ) );
 	const userId = selectedUser === 'site' ? 0 : selectedUser;
 
-	const ALLOWED_BLOCKS = [ 'core/button' ];
 	const TEMPLATE = [ [ 'core/button', { text: __( 'Follow', 'activitypub' ), tagName: 'button' } ] ];
 
 	const innerBlocksProps = useInnerBlocksProps(
 		{ className: 'activitypub-profile__button-wrapper' },
 		{
-			allowedBlocks: ALLOWED_BLOCKS,
+			allowedBlocks: [ 'core/button' ],
 			template: TEMPLATE,
 			templateLock: false,
 			renderAppender: false,
