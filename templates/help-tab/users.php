@@ -21,15 +21,30 @@
 	<li><?php esc_html_e( 'Click &#8220;Apply&#8221; to save your changes.', 'activitypub' ); ?></li>
 </ol>
 
+<h3><?php esc_html_e( 'What are ActivityPub Capabilities?', 'activitypub' ); ?></h3>
+
 <p><?php esc_html_e( 'The ActivityPub capability allows a user to:', 'activitypub' ); ?></p>
 
 <ul>
-	<li><?php esc_html_e( 'Have an individual ActivityPub profile', 'activitypub' ); ?></li>
-	<li><?php esc_html_e( 'Publish content to the Fediverse', 'activitypub' ); ?></li>
-	<li><?php esc_html_e( 'Manage followers', 'activitypub' ); ?></li>
-	<li><?php esc_html_e( 'Access ActivityPub-specific features', 'activitypub' ); ?></li>
+	<li><?php esc_html_e( 'Have an individual ActivityPub profile that can be followed from other Fediverse platforms.', 'activitypub' ); ?></li>
+	<li><?php esc_html_e( 'Publish content to the Fediverse automatically when posting on your WordPress site.', 'activitypub' ); ?></li>
+	<li><?php esc_html_e( 'Manage followers and interactions from Fediverse users.', 'activitypub' ); ?></li>
+	<li><?php esc_html_e( 'Access ActivityPub-specific settings and features.', 'activitypub' ); ?></li>
 </ul>
 
-<p><?php esc_html_e( 'By default, users who can publish posts are automatically granted this capability. You can override this using the bulk edit options above.', 'activitypub' ); ?></p>
+<h3><?php esc_html_e( 'Default Behavior', 'activitypub' ); ?></h3>
 
-<p><em><?php esc_html_e( 'Note: If &#8220;Blog profile only&#8221; mode is enabled (where the site acts as a single ActivityPub profile), individual user capabilities do not affect ActivityPub functionality. All content is published under the blog&#8217;s profile.', 'activitypub' ); ?></em></p>
+<p><?php esc_html_e( 'By default, users who can publish posts are automatically granted ActivityPub capabilities. You can override this default behavior using the bulk edit options described above.', 'activitypub' ); ?></p>
+
+<p><em>
+<?php
+printf(
+	wp_kses(
+		/* translators: %s: URL to ActivityPub settings */
+		__( 'Note: If <a href="%s">&#8220;Blog profile only&#8221; mode</a> is enabled (where the site acts as a single ActivityPub profile), individual user capabilities do not affect ActivityPub functionality. All content is published under the blog&#8217;s profile.', 'activitypub' ),
+		array( 'a' => array( 'href' => true ) )
+	),
+	esc_url( admin_url( 'options-general.php?page=activitypub&tab=settings' ) )
+);
+?>
+</em></p>
