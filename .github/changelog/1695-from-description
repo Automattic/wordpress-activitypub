@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Broken avatars in the Reactions and Follower block are now replaced with the default avatar.
