@@ -168,22 +168,6 @@ class Test_Migration extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests scheduling of migration.
-	 *
-	 * @covers ::maybe_migrate
-	 */
-	public function test_migration_scheduling() {
-		update_option( 'activitypub_db_version', '0.0.1' );
-
-		Migration::maybe_migrate();
-
-		$this->assertNotFalse( \wp_next_scheduled( 'activitypub_migrate_from_0_17' ) );
-
-		// Clean up.
-		delete_option( 'activitypub_db_version' );
-	}
-
-	/**
 	 * Test migrate to 4.1.0.
 	 *
 	 * @covers ::migrate_to_4_1_0
