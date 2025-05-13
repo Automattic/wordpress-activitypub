@@ -40,8 +40,10 @@
 		}
 
 		.reaction-avatar {
-			width: 32px;
-			height: 32px;
+			max-width: 32px;
+			max-height: 32px;
+			overflow: hidden;
+			-moz-force-broken-image-icon: 1;
 			border-radius: 50%;
 			border: 0.5px solid var( --wp--preset--color--contrast, rgba(255, 255, 255, 0.8) );
 			box-shadow:
