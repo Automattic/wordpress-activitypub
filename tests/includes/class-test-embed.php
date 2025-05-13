@@ -5,16 +5,20 @@
  * @package ActivityPub
  */
 
-namespace ActivityPub;
+namespace ActivityPub\Tests;
 
-use PHPUnit\Framework\TestCase;
+use ActivityPub\Embed;
 
 /**
  * Test the Embed class.
+ *
+ * @coversDefaultClass \ActivityPub\Embed
  */
-class Test_Embed extends TestCase {
+class Test_Embed extends \WP_UnitTestCase {
 	/**
 	 * Test the has_real_oembed method with a URL that has a real oEmbed.
+	 *
+	 * @covers ::has_real_oembed
 	 */
 	public function test_has_real_oembed_with_real_oembed() {
 		// Define the filter function.
@@ -36,6 +40,8 @@ class Test_Embed extends TestCase {
 
 	/**
 	 * Test the has_real_oembed method with a URL that doesn't have a real oEmbed.
+	 *
+	 * @covers ::has_real_oembed
 	 */
 	public function test_has_real_oembed_without_real_oembed() {
 		// Add our filter.
@@ -52,6 +58,8 @@ class Test_Embed extends TestCase {
 
 	/**
 	 * Test the maybe_use_activitypub_embed method when a result is already provided.
+	 *
+	 * @covers ::maybe_use_activitypub_embed
 	 */
 	public function test_maybe_use_activitypub_embed_with_result() {
 		// Call the method with a non-null result.
@@ -62,6 +70,8 @@ class Test_Embed extends TestCase {
 
 	/**
 	 * Test the maybe_use_activitypub_embed method when no result is provided but a real oEmbed is found.
+	 *
+	 * @covers ::maybe_use_activitypub_embed
 	 */
 	public function test_maybe_use_activitypub_embed_with_real_oembed() {
 		// Create a test double for Embed that returns true for has_real_oembed.
@@ -80,6 +90,8 @@ class Test_Embed extends TestCase {
 
 	/**
 	 * Test the handle_filtered_oembed_result method when HTML is already provided.
+	 *
+	 * @covers ::handle_filtered_oembed_result
 	 */
 	public function test_handle_filtered_oembed_result_with_html() {
 		// Call the method with HTML already provided.
@@ -90,6 +102,8 @@ class Test_Embed extends TestCase {
 
 	/**
 	 * Test the handle_filtered_oembed_result method when the data type is not rich or video.
+	 *
+	 * @covers ::handle_filtered_oembed_result
 	 */
 	public function test_handle_filtered_oembed_result_with_non_rich_data() {
 		// Call the method with a non-rich data type.
@@ -106,6 +120,8 @@ class Test_Embed extends TestCase {
 
 	/**
 	 * Test the handle_filtered_oembed_result method when there's no HTML in the data.
+	 *
+	 * @covers ::handle_filtered_oembed_result
 	 */
 	public function test_handle_filtered_oembed_result_without_html() {
 		// Call the method with no HTML in the data.
@@ -118,5 +134,37 @@ class Test_Embed extends TestCase {
 		);
 
 		$this->assertEquals( '', $result );
+	}
+
+	/**
+	 * Test the get_html_for_object method.
+	 *
+	 * @covers ::get_html_for_object
+	 */
+	public function test_get_html_for_object() {
+		// Create a test object.
+		$object = array(
+			'id'         => 'https://example.com/post',
+			'url'        => 'https://example.com/post',
+			'content'    => 'This is a test post.',
+			'attachment' => array(
+				array(
+					'type'      => 'Document',
+					'url'       => 'https://example.com/image1.jpg',
+					'mediaType' => 'image/jpeg',
+				),
+				array(
+					'type'      => 'Image',
+					'url'       => 'https://example.com/image2.jpg',
+					'mediaType' => 'image/jpeg',
+				),
+			),
+		);
+
+		// Call the method.
+		$result = Embed::get_html_for_object( $object );
+
+		$this->assertStringContainsString( 'https://example.com/image1.jpg', $result );
+		$this->assertStringContainsString( 'https://example.com/image2.jpg', $result );
 	}
 }
