@@ -6,6 +6,12 @@ import { useCopyToClipboard } from '@wordpress/compose';
 import { Button, CheckboxControl } from '@wordpress/components';
 import { useRemoteUser } from './use-remote-user';
 
+/**
+ * Checks if a string is a valid URL.
+ *
+ * @param {string} string - String to check.
+ * @returns {boolean} True if string is a valid URL, false otherwise.
+ */
 function isUrl( string ) {
 	try {
 		new URL( string );
@@ -15,13 +21,38 @@ function isUrl( string ) {
 	}
 }
 
+/**
+ * Checks if a string is a valid ActivityPub handle.
+ *
+ * @param {string} string - String to check.
+ * @returns {boolean} True if string is a valid handle, false otherwise.
+ */
 function isHandle( string ) {
 	// remove leading @, there should still be an @ in there
 	const parts = string.replace( /^@/, '' ).split( '@' );
 	return parts.length === 2 && isUrl( `https://${ parts[ 1 ] }` );
 }
 
-export function Dialog( { actionText, copyDescription, handle, resourceUrl, myProfile = '', rememberProfile = false } ) {
+/**
+ * Dialog component for remote user interaction and following in ActivityPub.
+ *
+ * @param {Object} props
+ * @param {string} props.actionText
+ * @param {string} props.copyDescription
+ * @param {string} props.handle
+ * @param {string} props.resourceUrl
+ * @param {string} [props.myProfile]
+ * @param {boolean} [props.rememberProfile]
+ * @returns {JSX.Element} Rendered dialog component.
+ */
+export function Dialog( {
+	actionText,
+	copyDescription,
+	handle,
+	resourceUrl,
+	myProfile = '',
+	rememberProfile = false,
+} ) {
 	const loadingText = __( 'Loading...', 'activitypub' );
 	const openingText = __( 'Opening...', 'activitypub' );
 	const errorText = __( 'Error', 'activitypub' );
@@ -36,6 +67,10 @@ export function Dialog( { actionText, copyDescription, handle, resourceUrl, myPr
 	const [ remoteProfile, setRemoteProfile ] = useState( '' );
 	const [ shouldSaveProfile, setShouldSaveProfile ] = useState( true );
 	const { setRemoteUser } = useRemoteUser();
+
+	/**
+	 * Callback to retrieve and follow a remote profile.
+	 */
 	const retrieveAndFollow = useCallback( () => {
 		let timeout;
 		if ( ! ( isUrl( remoteProfile ) || isHandle( remoteProfile ) ) ) {
@@ -46,19 +81,21 @@ export function Dialog( { actionText, copyDescription, handle, resourceUrl, myPr
 		// use the resourceUrl
 		const path = resourceUrl + remoteProfile;
 		setButtonText( loadingText );
-		apiFetch( { path } ).then( ( { url, template } ) => {
-			if ( shouldSaveProfile ) {
-				setRemoteUser( { profileURL: remoteProfile, template } );
-			}
-			setButtonText( openingText );
-			setTimeout( () => {
-				window.open( url, '_blank' );
-				setButtonText( actionText );
-			}, 200 );
-		} ).catch( () => {
-			setButtonText( errorText );
-			setTimeout( () => setButtonText( actionText ), 2000 );
-		} );
+		apiFetch( { path } )
+			.then( ( { url, template } ) => {
+				if ( shouldSaveProfile ) {
+					setRemoteUser( { profileURL: remoteProfile, template } );
+				}
+				setButtonText( openingText );
+				setTimeout( () => {
+					window.open( url, '_blank' );
+					setButtonText( actionText );
+				}, 200 );
+			} )
+			.catch( () => {
+				setButtonText( errorText );
+				setTimeout( () => setButtonText( actionText ), 2000 );
+			} );
 	}, [ remoteProfile ] );
 
 	return (
@@ -83,7 +120,10 @@ export function Dialog( { actionText, copyDescription, handle, resourceUrl, myPr
 				<h4 id="remote-profile-title">{ __( 'Your Profile', 'activitypub' ) }</h4>
 				<div className="activitypub-dialog__description" id="remote-profile-description">
 					{ createInterpolateElement(
-						__( 'Or, if you know your own profile, we can start things that way! (eg <code>@yourusername@example.com</code>)', 'activitypub' ),
+						__(
+							'Or, if you know your own profile, we can start things that way! (eg <code>@yourusername@example.com</code>)',
+							'activitypub'
+						),
 						{ code: <code /> }
 					) }
 				</div>
@@ -95,8 +135,10 @@ export function Dialog( { actionText, copyDescription, handle, resourceUrl, myPr
 						type="text"
 						id="remote-profile"
 						value={ remoteProfile }
-						onKeyDown={ ( event ) => { event?.code === 'Enter' && retrieveAndFollow() } }
-						onChange={ e => setRemoteProfile( e.target.value ) }
+						onKeyDown={ ( event ) => {
+							event?.code === 'Enter' && retrieveAndFollow();
+						} }
+						onChange={ ( event ) => setRemoteProfile( event.target.value ) }
 						aria-invalid={ buttonText === invalidText }
 					/>
 					<Button onClick={ retrieveAndFollow } aria-label={ __( 'Submit profile', 'activitypub' ) }>
@@ -104,15 +146,17 @@ export function Dialog( { actionText, copyDescription, handle, resourceUrl, myPr
 						{ buttonText }
 					</Button>
 				</div>
-				{ rememberProfile &&
-				<div className="activitypub-dialog__remember">
-					<CheckboxControl
-						checked={ shouldSaveProfile }
-						label={ __( 'Remember me for easier comments', 'activitypub' ) }
-						onChange={ () => { setShouldSaveProfile( ! shouldSaveProfile ) } }
-					/>
-				</div>
-				}
+				{ rememberProfile && (
+					<div className="activitypub-dialog__remember">
+						<CheckboxControl
+							checked={ shouldSaveProfile }
+							label={ __( 'Remember me for easier comments', 'activitypub' ) }
+							onChange={ () => {
+								setShouldSaveProfile( ! shouldSaveProfile );
+							} }
+						/>
+					</div>
+				) }
 			</div>
 		</div>
 	);
